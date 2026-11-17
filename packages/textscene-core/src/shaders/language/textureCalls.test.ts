@@ -51,6 +51,14 @@ describe('builtInCall of a texture function', () => {
     expect(glsl).toContain('floor(');
   });
 
+  it('reads a cube array from the layers of a 2D array, as WebGL 2 has no cube array texture', () => {
+    const cubes = texture(new DataArrayTexture(new Uint8Array(4 * 12), 1, 1, 12)) as unknown as Node;
+    const glsl = glslOf('texture(samplerCubeArray,vec4)', [cubes, vec4(1, 0.2, -0.3, 1) as unknown as Node]);
+    expect(glsl).toMatch(/uniform .*sampler2DArray/);
+    expect(glsl).toContain('texelFetch(');
+    expect(glsl).not.toMatch(/uniform \w*samplerCube/);
+  });
+
   it('samples a 3D texture with texture', () => {
     expect(glslOf('texture(sampler3D,vec3)', [volume(), vec3(0.5) as unknown as Node])).toMatch(
       /texture\( nodeUniform\d+, /

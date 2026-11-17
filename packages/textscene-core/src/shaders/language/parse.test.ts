@@ -160,6 +160,10 @@ describe('parse: operators', () => {
     ['float f(float a) { return (a; }', "Expected ')' in expression."],
     ['float f(float a) { return b; }', "Unknown identifier in expression: 'b'."],
     [
+      'uniform samplerCubeArray s; ivec2 f() { return textureSize(s, 0); }',
+      "Godot's GLSL of textureSize(samplerCubeArray, int) gives an ivec3 where Godot declares an ivec2, so Godot's shader does not compile.",
+    ],
+    [
       'vec4 f() { return texture(SCREEN_TEXTURE, vec2(0.0)); }',
       "SCREEN_TEXTURE has been removed in favor of using hint_screen_texture with a uniform.\nTo continue with minimal code changes add 'uniform sampler2D SCREEN_TEXTURE : hint_screen_texture, filter_linear_mipmap;' near the top of your shader.",
     ],

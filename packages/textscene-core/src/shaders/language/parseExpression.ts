@@ -44,6 +44,13 @@ interface TernaryPart {
   readonly endsAtColon: boolean;
 }
 
+/** The rows whose GLSL type differs from the type Godot declares, so Godot's shader never compiles. */
+const GLSL_TYPE_MISMATCHES: Readonly<Record<string, string>> = {
+  // `shader_language.cpp:3177` declares an ivec2. GLSL's textureSize of a samplerCubeArray is an ivec3.
+  'textureSize(samplerCubeArray,int)':
+    "Godot's GLSL of textureSize(samplerCubeArray, int) gives an ivec3 where Godot declares an ivec2, so Godot's shader does not compile.",
+};
+
 /** The screen textures Godot 4 reads through a hinted uniform (`shader_language.cpp:6560`). */
 const REMOVED_TEXTURES: ReadonlySet<string> = new Set([
   'SCREEN_TEXTURE',
@@ -346,6 +353,7 @@ export class ExpressionParser {
   private call(name: string, args: readonly Expression[], token: Token): Expression {
     const fail = (message: string) => this.tokens.fail(message);
     const builtIn = resolvedBuiltInCall(name, args, token.position, fail);
+    if (builtIn && builtIn.row.id in GLSL_TYPE_MISMATCHES) fail(GLSL_TYPE_MISMATCHES[builtIn.row.id]!);
     if (builtIn) return builtIn;
     const call = resolvedCall(this.scope, name, args, token.position, fail);
     return call.arraySize ? this.arrayAccess(call) : call;

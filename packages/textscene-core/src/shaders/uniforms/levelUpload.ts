@@ -23,7 +23,7 @@ function levelSource(texture: DataArrayTexture | Data3DTexture, level: Level): D
   return source;
 }
 
-/** three uploads level 0 only of these (`WebGLTextures.js:1229`, `:1272`), so this copies every later level. */
+/** three uploads only level 0 of these (`WebGLTextures.js:1229`, `:1272`): this copies the rest. */
 export function uploadLevels(renderer: WebGLRenderer, texture: Texture): void {
   if (!(renderer as { isWebGLRenderer?: boolean }).isWebGLRenderer || !hasLevelsThreeSkips(texture)) return;
   if (UPLOADED_VERSIONS.get(texture) === texture.version) return;

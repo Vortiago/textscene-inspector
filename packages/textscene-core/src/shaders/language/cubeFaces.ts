@@ -10,6 +10,8 @@ export interface CubeFace {
   readonly tAxis: Node;
   /** The face coordinate, from 0 to 1 across the face. */
   readonly st: Node;
+  /** The face's layer in a cube: +x, -x, +y, -y, +z, -z are 0 to 5. */
+  readonly index: Node;
 }
 
 type Lanes = Node & Record<'x' | 'y' | 'z', Node>;
@@ -36,7 +38,9 @@ export function cubeFaceOf(direction: Node): CubeFace {
     reach
   );
   const st = TSL.add(TSL.mul(faceCoordinate, 0.5), 0.5) as unknown as Node;
-  return { axis: axis as unknown as Node, sAxis, tAxis, st };
+  const isNegative = TSL.select(TSL.lessThan(untyped(major), 0), TSL.int(1), TSL.int(0));
+  const index = TSL.add(untyped(pick(TSL.int(0), TSL.int(2), TSL.int(4))), isNegative) as unknown as Node;
+  return { axis: axis as unknown as Node, sAxis, tAxis, st, index };
 }
 
 /** The direction of `st` on `face`: past an edge it folds onto the next face, as Vulkan reads it. */

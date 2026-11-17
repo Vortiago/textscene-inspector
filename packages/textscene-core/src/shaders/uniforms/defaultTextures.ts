@@ -19,6 +19,8 @@ function created(kind: TextureKind, fill: DefaultTexture): Texture {
       return new Data3DTexture(texels(fill, SIZE), SIZE, SIZE, SIZE);
     case 'layers':
       return new DataArrayTexture(texels(fill, 1), SIZE, SIZE, 1);
+    case 'cubes':
+      return new DataArrayTexture(texels(fill, 6), SIZE, SIZE, 6);
     case 'cube':
       return new CubeTexture(Array.from({ length: 6 }, () => new DataTexture(texels(fill, 1), SIZE, SIZE)));
   }

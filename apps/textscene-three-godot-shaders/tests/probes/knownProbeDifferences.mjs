@@ -53,6 +53,13 @@ const ANISOTROPIC_FOOTPRINT = {
     "driver (Mesa lavapipe) filters an anisotropic sampler with weighted linear taps, also for a nearest filter, on Godot's side",
 };
 
+// Mesa 25.2.8 `lp_bld_arit.c:1160` blends texels with `lp_build_fmuladd` (`:1028`). GLSL ES 3.00 has no fma.
+const FUSED_TEXEL_BLEND = {
+  owner: '#1829',
+  cause:
+    "driver (Mesa lavapipe) blends the texels of a cube array read with a fused multiply-add, rounded once, on Godot's side",
+};
+
 /** The probes of `textureQueryLod`, each off in the same three lanes. */
 function zeroDerivativeLevels() {
   const calls = [
@@ -75,8 +82,23 @@ function zeroDerivativeLevels() {
   return Object.fromEntries(calls.map((call) => [`texture-function-textureQueryLod-${call}`, difference]));
 }
 
+const fusedBlend = (lanesOff, first) => ({ ...FUSED_TEXEL_BLEND, lanesOff, first });
+
 export const KNOWN_PROBE_DIFFERENCES = {
   ...zeroDerivativeLevels(),
+  'texture-cubes-linear-edges': fusedBlend(4, 'lane 2: Godot 3db24be7, transpilation 3db24be6'),
+  'texture-function-texture-samplerCubeArray-vec4': fusedBlend(
+    1,
+    'lane 5: Godot 3daa43dd, transpilation 3daa43dc'
+  ),
+  'texture-function-texture-samplerCubeArray-vec4-float': fusedBlend(
+    1,
+    'lane 5: Godot 3daa43dd, transpilation 3daa43dc'
+  ),
+  'texture-function-textureGrad-samplerCubeArray-vec4-vec3-vec3': fusedBlend(
+    1,
+    'lane 5: Godot 3daa43dd, transpilation 3daa43dc'
+  ),
   'texture-2d-filter_nearest_mipmap_anisotropic': {
     ...ANISOTROPIC_FOOTPRINT,
     lanesOff: 11,

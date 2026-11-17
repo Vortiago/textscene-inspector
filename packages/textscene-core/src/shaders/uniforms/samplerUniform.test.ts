@@ -72,6 +72,11 @@ describe('SamplerBinding', () => {
     expect(textureOf(binding).minFilter).toBe(LinearMipmapLinearFilter);
   });
 
+  it('reads a cube array as a 2D array of six layers to a cube', () => {
+    const binding = bindingOf('uniform samplerCubeArray s;');
+    expect((textureOf(binding) as DataArrayTexture).image.depth).toBe(6);
+  });
+
   it('keeps one copy while the material texture stays the same', () => {
     const binding = bindingOf('uniform sampler2D s;');
     const texture = imageTexture();

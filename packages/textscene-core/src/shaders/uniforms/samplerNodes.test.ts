@@ -9,6 +9,7 @@ import { TextureCopies } from './textureCopies.js';
 const TEXTURES: Readonly<Record<TextureKind, () => Texture>> = {
   flat: () => new DataTexture(new Uint8Array(4), 1, 1),
   layers: () => new DataArrayTexture(new Uint8Array(4), 1, 1, 1),
+  cubes: () => new DataArrayTexture(new Uint8Array(24), 1, 1, 6),
   volume: () => new Data3DTexture(new Uint8Array(4), 1, 1, 1),
   cube: () => new CubeTexture(),
 };

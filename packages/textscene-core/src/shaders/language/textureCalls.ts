@@ -1,18 +1,13 @@
 import { IntType, UnsignedIntType } from 'three';
 import * as TSL from 'three/tsl';
-import {
-  Node as TslNode,
-  NodeUpdateType,
-  type Node,
-  type NodeBuilder,
-  type NodeFrame,
-  type TextureNode,
-} from 'three/webgpu';
+import { Node as TslNode, type Node, type NodeBuilder, type TextureNode } from 'three/webgpu';
 import { compositeOf } from './builtInComposites.js';
+import { CubeArrayReadNode, type CubeArrayLevel } from './cubeArray.js';
 import type { InstructionRow } from './instructionTable.generated.js';
 import { gathered } from './textureGather.js';
 import { levelCountOf, levelOfDetail } from './textureQueries.js';
 import { SizeNode } from './textureSize.js';
+import { TextureBuiltNode } from './textureBuiltNode.js';
 import { textureKindOf } from './types.js';
 
 /** The swizzle a node of a vector type takes, which three's types leave out. */
@@ -143,7 +138,31 @@ function elementCall(name: string, row: InstructionRow, operands: readonly Node[
   const [texture, operand] = operands as [TextureNode, Node];
   const query = QUERIES[name];
   if (query) return query(texture, operand, row);
+  if (textureKindOf(row.args![0]!) === 'cubes') return cubeArrayCall(name, operands);
   return asSamplerReads(sampledCall(name, row, operands), row.returns!, texture);
+}
+
+/** A value held in a variable where the call stands: the composite reads it inside branches. */
+const heldHere = (node: Node): Node => (node as unknown as { toVar(): Node }).toVar();
+
+// A derivative inside a branch of the composite is undefined, so the call takes its gradients first.
+const CUBE_ARRAY_LEVELS: Readonly<
+  Record<string, (direction: Node, rest: readonly Node[]) => CubeArrayLevel>
+> = {
+  texture: (direction, [bias]) => ({
+    kind: 'gradients',
+    dx: heldHere(TSL.dFdx(direction as never) as unknown as Node),
+    dy: heldHere(TSL.dFdy(direction as never) as unknown as Node),
+    bias,
+  }),
+  textureLod: (_, [level]) => ({ kind: 'explicit', level: level! }),
+  textureGrad: (_, [dx, dy]) => ({ kind: 'gradients', dx: heldHere(dx!), dy: heldHere(dy!) }),
+};
+
+function cubeArrayCall(name: string, [texture, coordinate, ...rest]: readonly Node[]): Node {
+  const held = heldHere(coordinate!);
+  const level = CUBE_ARRAY_LEVELS[name]!(lanes(held).xyz, rest);
+  return new CubeArrayReadNode(texture as TextureNode, held, level) as unknown as Node;
 }
 
 function sampledCall(name: string, row: InstructionRow, operands: readonly Node[]): Node {
@@ -161,11 +180,8 @@ const INTEGER_TYPES: ReadonlySet<number> = new Set([IntType, UnsignedIntType]);
 const isInteger = (texture: TextureNode) => INTEGER_TYPES.has(texture.value.type);
 
 /** An integer sampler over normalised or float texels reads their float bits, as Godot's driver does. */
-class IntegerReadNode extends TslNode {
-  override updateType = NodeUpdateType.RENDER;
-  /** Written only by `setup`: whether the program three built reads an integer texture. */
-  private isBuiltInteger: boolean | undefined;
-
+// GL types an integer sampler apart, so the bound texture decides the read.
+class IntegerReadNode extends TextureBuiltNode {
   constructor(
     private readonly read: Node,
     private readonly returns: string,
@@ -174,19 +190,14 @@ class IntegerReadNode extends TslNode {
     super(returns);
   }
 
-  // The texture bound when three builds the shader decides, since a `set` can bind another one.
-  override setup(): Node {
-    this.isBuiltInteger = isInteger(this.texture);
-    if (this.isBuiltInteger) return this.read;
-    const bits = this.returns.startsWith('u') ? TSL.floatBitsToUint : TSL.floatBitsToInt;
-    return bits(this.read as never) as unknown as Node;
+  protected override keyOf(): string {
+    return isInteger(this.texture) ? 'integer' : 'float';
   }
 
-  // GL types an integer sampler apart. three's program key leaves out a function body: dispose rebuilds.
-  override update(frame: NodeFrame): undefined {
-    if (this.isBuiltInteger !== undefined && this.isBuiltInteger !== isInteger(this.texture))
-      frame.material!.dispose();
-    return undefined;
+  protected override composite(): Node {
+    if (isInteger(this.texture)) return this.read;
+    const bits = this.returns.startsWith('u') ? TSL.floatBitsToUint : TSL.floatBitsToInt;
+    return bits(this.read as never) as unknown as Node;
   }
 }
 

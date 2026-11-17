@@ -56,6 +56,7 @@ class GodotCubeNode extends CubeTextureNode {
 const NODE_OF_KIND: Readonly<Record<TextureKind, (value: Texture) => TextureNode>> = {
   flat: (value) => new FollowingTextureNode(value),
   layers: (value) => new FollowingTextureNode(value),
+  cubes: (value) => new FollowingTextureNode(value),
   volume: (value) => new FollowingTexture3DNode(value) as unknown as TextureNode,
   cube: (value) => new GodotCubeNode(value as never),
 };

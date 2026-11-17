@@ -30,8 +30,10 @@ function created(spec) {
       if (spec.levels.length > 1) texture.mipmaps = mipmapsOf(spec, (level) => layerOf(spec, level, 0));
       return texture;
     }
-    case 'layers': {
-      const texture = new THREE.DataArrayTexture(bytesOf(spec.levels[0]), width, height, depth);
+    case 'layers':
+    case 'cubes': {
+      const layers = spec.kind === 'cubes' ? 6 * depth : depth;
+      const texture = new THREE.DataArrayTexture(bytesOf(spec.levels[0]), width, height, layers);
       texture.format = formatOf(spec).format;
       if (spec.levels.length > 1) texture.mipmaps = mipmapsOf(spec, (level) => bytesOf(spec.levels[level]));
       return texture;
@@ -52,7 +54,7 @@ function created(spec) {
         Array.from({ length: 6 }, (_, face) => new THREE.DataTexture(layerOf(spec, 0, face), width, height))
       );
   }
-  throw new Error(`expected a texture kind of flat, layers, volume or cube, got ${spec.kind}`);
+  throw new Error(`expected a texture kind of flat, layers, cubes, volume or cube, got ${spec.kind}`);
 }
 
 /** The three texture of a probe's texture spec, as Godot's harness builds the same texels. */

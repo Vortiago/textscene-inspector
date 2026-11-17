@@ -18,7 +18,7 @@ const TEXEL_BYTES = { rgba8: 4, rg8: 2 };
 
 /** A texture both harnesses build: each level's bytes, its layers in a row, down to 1 texel. */
 export function textureSpec(kind, width, height, { depth = 1, isMipmapped = false, format = 'rgba8' } = {}) {
-  const count = kind === 'cube' ? 6 : depth;
+  const count = { cube: 6, cubes: 6 * depth }[kind] ?? depth;
   const levelCount = isMipmapped ? Math.floor(Math.log2(Math.max(width, height))) + 1 : 1;
   const levels = Array.from({ length: levelCount }, (_, level) => {
     const layers = kind === 'volume' ? levelSize(count, level) : count;
@@ -332,6 +332,40 @@ function kindProbes() {
       }
     ),
     textureProbe(
+      'cubes',
+      ['samplerCubeArray', 'filter_nearest', 'texture(samplerCubeArray,vec4)'],
+      'uniform samplerCubeArray s : filter_nearest;\nvec4 probe(vec4 at) { return texture(s, at); }',
+      {
+        textures: { s: textureSpec('cubes', 2, 2, { depth: 2 }) },
+        inputs: [
+          [[1, 0.2, -0.3, 0]],
+          [[-1, 0.4, 0.3, 1]],
+          [[0.2, 1, 0.3, 0]],
+          [[0.2, -1, -0.3, 1]],
+          [[0.3, 0.2, 1, 0.5]],
+          [[-0.3, 0.2, -1, 1.5]],
+          [[0.3, 0.2, 1, -0.7]],
+          [[0.3, 0.2, 1, 7]],
+        ],
+      }
+    ),
+    textureProbe(
+      'cubes-linear-edges',
+      ['samplerCubeArray', 'filter_linear', 'texture(samplerCubeArray,vec4)'],
+      'uniform samplerCubeArray s : filter_linear;\nvec4 probe(vec4 at) { return texture(s, at); }',
+      {
+        textures: { s: textureSpec('cubes', 4, 4, { depth: 2 }) },
+        inputs: [
+          [[1, 0.1, -0.2, 0]],
+          [[1, 0.95, -0.2, 1]],
+          [[1, -0.2, 0.97, 0]],
+          [[0.9, 1, 0.3, 1]],
+          [[0.2, -0.3, -1, 0]],
+          [[-1, 0.96, 0.95, 1]],
+        ],
+      }
+    ),
+    textureProbe(
       'external',
       ['samplerExternalOES', 'filter_nearest', 'texture(samplerExternalOES,vec2)'],
       'uniform samplerExternalOES s : filter_nearest;\nvec4 probe(vec2 uv) { return texture(s, uv); }',
@@ -358,12 +392,14 @@ const SPEC_OF_KIND = {
   layers: textureSpec('layers', 4, 4, { depth: 3, isMipmapped: true }),
   volume: textureSpec('volume', 4, 4, { depth: 4 }),
   cube: textureSpec('cube', 2, 2),
+  cubes: textureSpec('cubes', 4, 4, { depth: 2, isMipmapped: true }),
 };
 
 function kindOf(sampler) {
   if (sampler.endsWith('2DArray')) return 'layers';
   if (sampler.endsWith('3D')) return 'volume';
   if (sampler === 'samplerCube') return 'cube';
+  if (sampler === 'samplerCubeArray') return 'cubes';
   return 'flat';
 }
 
@@ -387,6 +423,12 @@ function argumentValues(kind, type, place) {
         [1, 0.2, -0.3],
         [0.2, -1, 0.6],
         [-0.3, 0.2, -1],
+      ];
+    if (kind === 'cubes')
+      return [
+        [1, 0.2, -0.3, 0],
+        [0.2, -1, 0.6, 1],
+        [-0.3, 0.2, -1, 1.4],
       ];
     if (type === 'vec3')
       return [
@@ -480,14 +522,25 @@ function functionProbe(row) {
   );
 }
 
-/** Every texture function row but a cube array's and an external sampler's. */
+/** Every texture function row but an external sampler's. */
 const functionProbes = () =>
   INSTRUCTION_TABLE.filter(
-    (row) =>
-      row.owner === '#1829' && /^(texture|texel)\w*\(/.test(row.id) && !/CubeArray|ExternalOES/.test(row.id)
+    (row) => row.owner === '#1829' && /^(texture|texel)\w*\(/.test(row.id) && !/ExternalOES/.test(row.id)
   ).map(functionProbe);
 
+/** The screen textures Godot 4 removed: it refuses each name with its own message. */
+function removedTextureProbes() {
+  return ['SCREEN_TEXTURE', 'DEPTH_TEXTURE', 'NORMAL_ROUGHNESS_TEXTURE'].map((name) =>
+    textureProbe(
+      `removed-${name.toLowerCase().replaceAll('_', '-')}`,
+      ['sampler2D', 'texture(sampler2D,vec2)'],
+      `vec4 probe() { return texture(${name}, vec2(0.5)); }`
+    )
+  );
+}
+
 export const TEXTURE_PROBES = [
+  ...removedTextureProbes(),
   ...filterProbes(),
   ...defaultProbes(),
   ...levelProbes(),
