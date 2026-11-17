@@ -204,11 +204,14 @@ function chapterSections(chapters, rows, probes) {
 /** The width the guide shows a showcase image at: four screen pixels to each image pixel. */
 const SHOWCASE_SCALE = 4;
 
-/** What the page draws of a showcase: a function of UV, or a sky scene's sky as the background. */
-const showcaseText = (showcase) =>
-  showcase.camera
-    ? "Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values."
-    : 'Godot draws this shader. A plain three.js page draws the transpilation of its function `pattern` with the same UV.';
+/** What the page draws of a showcase: a function of UV, a sky scene's background, or a mesh scene's mesh. */
+function showcaseText(showcase) {
+  if (showcase.mesh)
+    return "Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values.";
+  if (showcase.camera)
+    return "Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values.";
+  return 'Godot draws this shader. A plain three.js page draws the transpilation of its function `pattern` with the same UV.';
+}
 
 function renderShowcase(showcase) {
   const image = (side, label) =>

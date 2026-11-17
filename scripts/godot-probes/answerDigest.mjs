@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { isNaNBits, returnsFloat } from './laneAgreement.mjs';
+import { NEXT_PASS } from './materialTexts.mjs';
 
 /** About one case in 32, read from the id alone, so a new case leaves the others where they are. */
 const SMOKE_BYTE_BELOW = 8;
@@ -39,26 +40,32 @@ const canonicalProbes = (record) => ({
 const adapterWithoutWidth = (adapter) => adapter.replace(/, \d+ bits\)$/, ')');
 
 /** The same on every CPU: one NaN form, and the adapter without its vector width. */
-export function canonicalAnswers({ probes, random, operators, corpus, expressions, heads }) {
-  return {
-    probes: canonicalProbes(probes),
-    random: canonicalProbes(random),
-    operators,
-    corpus,
-    expressions,
-    heads,
-  };
+export function canonicalAnswers({ probes, random, ...verdicts }) {
+  return { probes: canonicalProbes(probes), random: canonicalProbes(random), ...verdicts };
 }
 
-/** Each family's answers, `{ id: answer }`: probes and random by name, the other families by case id. */
-const familiesOf = ({ probes, random, operators, corpus, expressions, heads }) => ({
+/** Each family's answers, `{ id: answer }`: by probe name, by text hash for verdicts, else by case id. */
+const familiesOf = ({ probes, random, operators, corpus, expressions, heads, materials }) => ({
   probes: probes.probes,
   random: random.probes,
   operators: operators.cases,
   corpus: corpus.cases,
   expressions: expressions.cases,
   heads: heads.cases,
+  ...(materials && { materials: materials.cases, materialVerdicts: materials.verdicts }),
 });
+
+/** The families of the answers file, in its order. */
+const FAMILY_NAMES = [
+  'probes',
+  'random',
+  'operators',
+  'corpus',
+  'expressions',
+  'heads',
+  'materials',
+  'materialVerdicts',
+];
 
 /** The families of canonical `answers` whose digest is not the one `committed` holds. */
 export function staleFamilies(answers, committed) {
@@ -76,21 +83,48 @@ function renderEntries(answers) {
   return lines.length === 0 ? '{}' : `{\n${lines.join(',\n')}\n${indent}}`;
 }
 
-/** The committed answers file: `probes` and `random` keyed by probe name, the others by case id. */
-export function renderAnswersFile(records) {
+/** The counts the testing guide prints for a sweep: materials, next passes and distinct texts. */
+export function materialCounts(cases) {
+  const ids = Object.keys(cases);
+  return {
+    materials: ids.length,
+    nextPasses: ids.filter((id) => id.endsWith(`|${NEXT_PASS}`)).length,
+    texts: new Set(Object.values(cases)).size,
+  };
+}
+
+/** The sweep's counts, kept from `kept` when the run skipped the sweep, as the smoke cases hold too few. */
+function countsOf(answers, kept) {
+  if (answers.materials) return materialCounts(answers.materials.cases);
+  if (kept?.materialCounts === undefined)
+    throw new Error('expected the material counts recorded or in the committed answers file, found neither');
+  return kept.materialCounts;
+}
+
+/** The committed answers file. A family the run skipped keeps its digest and smoke cases from `kept`. */
+export function renderAnswersFile(records, kept) {
   const answers = canonicalAnswers(records);
   const families = familiesOf(answers);
-  const digests = Object.fromEntries(
-    Object.entries(families).map(([family, entries]) => [family, familyDigest(entries)])
-  );
-  const smoke = Object.entries(families).map(
-    ([family, entries]) => `  ${JSON.stringify(family)}: ${renderEntries(smokeOf(entries))}`
+  const keptFamily = (family) => {
+    if (kept?.digests[family] === undefined)
+      throw new Error(`expected family ${family} recorded or in the committed answers file, found neither`);
+    return { digest: kept.digests[family], smoke: kept.smoke[family] };
+  };
+  const recorded = (family) =>
+    family in families
+      ? { digest: familyDigest(families[family]), smoke: smokeOf(families[family]) }
+      : keptFamily(family);
+  const byFamily = FAMILY_NAMES.map((family) => [family, recorded(family)]);
+  const digests = Object.fromEntries(byFamily.map(([family, { digest }]) => [family, digest]));
+  const smoke = byFamily.map(
+    ([family, entries]) => `  ${JSON.stringify(family)}: ${renderEntries(entries.smoke)}`
   );
   return [
     '{',
     ` "godot": ${JSON.stringify(answers.probes.godot)},`,
     ` "adapter": ${JSON.stringify(answers.probes.adapter)},`,
     ` "digests": ${JSON.stringify(digests, null, 1).replace(/\n/g, '\n ')},`,
+    ` "materialCounts": ${JSON.stringify(countsOf(answers, kept))},`,
     ` "smoke": {\n${smoke.join(',\n')}\n }`,
     '}',
     '',

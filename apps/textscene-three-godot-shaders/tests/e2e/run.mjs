@@ -7,6 +7,9 @@ import { withConsumerPage, writeJobSummary } from '../consumer.mjs';
 import { compareImages, TOLERANCE_STEPS } from './compareImages.mjs';
 import { MAIN_SCRIPT, parseShowcaseOutput, showcaseProjectFiles } from './godotShowcases.mjs';
 import { SHOWCASES } from './showcases.mjs';
+import { ALL_SCENES, DRAWN_SCENES } from './drawnScenes.mjs';
+import { MESH_MAIN_SCRIPT, meshProjectFiles, parseMeshOutput } from './godotMeshScenes.mjs';
+import { MESH_SCENES } from './meshScenes.mjs';
 import { parseSkyOutput, SKY_MAIN_SCRIPT, skyProjectFiles, skyRuns } from './godotSkyScenes.mjs';
 import { SKY_SCENES } from './skyScenes.mjs';
 
@@ -15,29 +18,26 @@ const SHOWCASE_DIR = join(import.meta.dirname, '../../guide/showcase');
 
 const showcaseImage = (name, side) => join(SHOWCASE_DIR, `${name}-${side}.png`);
 
-/** Godot's image of each showcase and each sky scene, by name. */
+/** Godot's image of each showcase, each sky scene and each mesh scene, by name. */
 async function godotImages() {
-  const [showcases, ...skies] = await Promise.all([
+  const [showcases, ...runs] = await Promise.all([
     runGodotScript(MAIN_SCRIPT, showcaseProjectFiles(SHOWCASES)).then(parseShowcaseOutput),
+    runGodotScript(MESH_MAIN_SCRIPT, meshProjectFiles(MESH_SCENES)).then(parseMeshOutput),
     ...skyRuns(SKY_SCENES).map(({ scenes, options }) =>
       runGodotScript(SKY_MAIN_SCRIPT, skyProjectFiles(scenes), options).then(parseSkyOutput)
     ),
   ]);
-  for (const run of [showcases, ...skies]) requireGodotVersion(run.godot);
-  return new Map([...showcases.images, ...skies.flatMap((run) => [...run.images])]);
+  for (const run of [showcases, ...runs]) requireGodotVersion(run.godot);
+  return new Map([...showcases.images, ...runs.flatMap((run) => [...run.images])]);
 }
 
-/** The page's image of each showcase and each sky scene, by name. */
+/** The page's image of each showcase, each sky scene and each mesh scene, by name. */
 async function transpiledImages() {
   return withConsumerPage(
     { pageDir: join(import.meta.dirname, 'page'), module: 'e2ePage.js', harness: 'shaderEndToEnd' },
     async (page) => {
       const images = new Map();
-      const draws = [
-        ...SHOWCASES.map((spec) => [spec, 'drawShowcase']),
-        ...SKY_SCENES.map((spec) => [spec, 'drawSky']),
-      ];
-      for (const [spec, draw] of draws) {
+      for (const { spec, draw } of DRAWN_SCENES) {
         const drawn = await page.evaluate(([value, name]) => globalThis[name](value), [spec, draw]);
         if (drawn.error) throw new Error(`${spec.name}: ${drawn.error}`);
         images.set(spec.name, Uint8Array.from(drawn.pixels));
@@ -65,12 +65,12 @@ function staleImage(path, pixels) {
 
 function resultTable(results) {
   const lines = results.map(
-    ({ showcase, overTolerance, pixels, maxSteps }) =>
-      `| \`${showcase.name}\` | ${pixels} | ${overTolerance} | ${maxSteps}/255 |`
+    ({ showcase, overTolerance, pixels, maxSteps, meanSteps }) =>
+      `| \`${showcase.name}\` | ${pixels} | ${overTolerance} | ${maxSteps}/255 | ${meanSteps.toFixed(3)}/255 |`
   );
   return [
-    `| Showcase | Pixels | Over ${TOLERANCE_STEPS}/255 | Max |`,
-    '| --- | --- | --- | --- |',
+    `| Showcase | Pixels | Over ${TOLERANCE_STEPS}/255 | Max | Mean |`,
+    '| --- | --- | --- | --- | --- |',
     ...lines,
   ].join('\n');
 }
@@ -81,7 +81,7 @@ async function main() {
   const update = process.argv.includes('--update');
   if (update) mkdirSync(SHOWCASE_DIR, { recursive: true });
   const failures = [];
-  const results = [...SHOWCASES, ...SKY_SCENES].map((showcase) => {
+  const results = ALL_SCENES.map((showcase) => {
     const ours = transpilation.get(showcase.name);
     const theirs = godot.get(showcase.name);
     if (!theirs) throw new Error(`expected Godot's image of showcase ${showcase.name}, found none`);

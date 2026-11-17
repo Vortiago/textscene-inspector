@@ -7,7 +7,7 @@ export const SHADER_BRANCH = 'feature/shader-translator';
 
 /** No file outside them imports one (`shaderScope.test.mjs`), so the previewer's jobs cannot see a change. */
 const TRANSPILER_PATHS =
-  /^(?:packages\/textscene-core\/src\/shaders\/(?:language|preprocessor|sky|template|uniforms)\/|apps\/textscene-three-godot-shaders\/|scripts\/godot-shader-language\/|scripts\/godot-templates\/|scripts\/godot-probes\/)/;
+  /^(?:packages\/textscene-core\/src\/shaders\/(?:language|material|preprocessor|sky|spatial|template|uniforms)\/|apps\/textscene-three-godot-shaders\/|scripts\/godot-shader-language\/|scripts\/godot-templates\/|scripts\/godot-probes\/)/;
 
 /**
  * @param {string[]} changedPaths - repo-relative paths, as `git diff --name-only` prints them.

@@ -14,6 +14,7 @@ const answersOf = (source, lanes, adapter = 'a') => {
     corpus: { cases: {} },
     expressions: { cases: {} },
     heads: { cases: {} },
+    materials: { godot: 'g', cases: {}, verdicts: {} },
   };
 };
 
@@ -44,6 +45,8 @@ describe('the committed answers file', () => {
       'corpus',
       'expressions',
       'heads',
+      'materials',
+      'materialVerdicts',
     ]);
   });
 });
@@ -64,6 +67,32 @@ describe('the answers as every reader sees them', () => {
     expect(fileOf(FLOAT, ['3f800000'], 'llvmpipe (LLVM 20.1.2, 256 bits)')).toBe(
       fileOf(FLOAT, ['3f800000'], 'llvmpipe (LLVM 20.1.2, 512 bits)')
     );
+  });
+});
+
+describe('a run that skips the material sweep', () => {
+  const withoutMaterials = (answers) => ({ ...answers, materials: undefined });
+  const committed = fileOf(FLOAT, ['3f800000']);
+
+  it('keeps the committed material digests and smoke cases, so the file stays the same', () => {
+    const skipped = withoutMaterials(answersOf(FLOAT, ['3f800000']));
+    expect(renderAnswersFile(skipped, JSON.parse(committed))).toBe(committed);
+  });
+
+  it('keeps the committed counts of the sweep, as the smoke cases hold too few to count', () => {
+    const skipped = withoutMaterials(answersOf(FLOAT, ['3f800000']));
+    const kept = { ...JSON.parse(committed), materialCounts: { materials: 9, nextPasses: 2, texts: 5 } };
+    expect(JSON.parse(renderAnswersFile(skipped, kept)).materialCounts).toEqual(kept.materialCounts);
+  });
+
+  it('fails when the committed file has no material digest either', () => {
+    const skipped = withoutMaterials(answersOf(FLOAT, ['3f800000']));
+    expect(() => renderAnswersFile(skipped, { digests: {}, smoke: {} })).toThrow(/family materials/);
+  });
+
+  it('checks only the families it recorded against the committed digests', () => {
+    const skipped = canonicalAnswers(withoutMaterials(answersOf(FLOAT, ['3f800000'])));
+    expect(staleFamilies(skipped, JSON.parse(committed))).toEqual([]);
   });
 });
 

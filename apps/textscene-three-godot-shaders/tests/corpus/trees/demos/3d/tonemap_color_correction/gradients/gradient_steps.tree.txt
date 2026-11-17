@@ -1,0 +1,33 @@
+shader_type spatial;
+
+render_mode unshaded;
+
+uniform vec3 my_color : source_color = vec3(1.0, 1.0, 1.0);
+
+uniform int steps : hint_range(1.0, 20.0, 1.0);
+
+uniform bool exponential_view = true;
+
+void fragment() {
+	(ALBEDO = my_color);
+	if ((UV.y > 2.5e-1)) {
+		float scale = (UV.x * float(steps));
+		if (exponential_view) {
+			(scale = ((scale * scale) / float(steps)));
+		}
+		(ALBEDO *= scale);
+	}
+	else {
+		for (int i = 1; (i < steps); i++) {
+			float threshold = 2.0000000949949026e-3;
+			float target = float(i);
+			if (exponential_view) {
+				(target = sqrt((float(i) * float(steps))));
+			}
+			(target = (target / float(steps)));
+			if (((UV.x < (target + threshold)) && (UV.x > (target - threshold)))) {
+				(ALBEDO = vec3(0.0, 0.0, 0.0));
+			}
+		}
+	}
+}

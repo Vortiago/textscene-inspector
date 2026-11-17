@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import type { UniformNode } from 'three/webgpu';
 import type { TranspiledSky } from './transpileSky.js';
+import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
 
 /** A directional light as Godot hands it to the sky (`sky.cpp:1070-1098`). */
 export interface SkyLight {
@@ -46,15 +46,8 @@ export interface SkyScene {
 /** The four lights of a sky's light buffer, `MAX_DIRECTIONAL_LIGHT_DATA_STRUCTS`. */
 const SKY_LIGHTS = 4;
 
-interface Binding {
-  readonly uniform: string;
-  /** Where Godot's C++ writes the value. */
-  readonly godot: string;
-  readonly value: (scene: SkyScene) => unknown;
-}
-
 /** Each uniform the background pass reads. The others hold zero, as they do for this pass. */
-export const SKY_BINDINGS: readonly Binding[] = [
+export const SKY_BINDINGS: readonly Binding<SkyScene>[] = [
   { uniform: 'params.orientation', godot: 'sky.cpp:1501-1507, 237', value: orientationOf },
   { uniform: 'params.projection', godot: 'sky.cpp:224-227, 1174', value: projectionOf },
   {
@@ -118,14 +111,7 @@ export const SKY_BINDINGS: readonly Binding[] = [
 
 /** Writes each uniform of `sky` the binding table names, from `scene`. */
 export function writeSkyBindings(sky: TranspiledSky, scene: SkyScene): void {
-  for (const binding of SKY_BINDINGS) {
-    const node = sky.uniforms.get(binding.uniform) as
-      (UniformNode<unknown> & { array?: unknown[] }) | undefined;
-    if (!node) continue;
-    const value = binding.value(scene);
-    if (Array.isArray(value)) node.array!.splice(0, value.length, ...value);
-    else node.value = value;
-  }
+  writeBindings(SKY_BINDINGS, sky.uniforms, scene);
 }
 
 /** The sky's basis: the inverse sky rotation, then the camera's (`sky.cpp:1501-1507`). */

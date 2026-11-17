@@ -7,11 +7,9 @@ import { transpileParsedSky } from '../../../../packages/textscene-core/src/shad
 const TEMPLATE_ENTRIES = { sky: (parsed) => transpileParsedSky(parsed, '') };
 
 /** A throw other than a refusal is a crash, kept as its text. */
-export function transpilerVerdict(text) {
+function verdictOf(run) {
   try {
-    const parsed = parsedShader(text);
-    const entry = TEMPLATE_ENTRIES[parsed.tree.shaderType] ?? transpileParsedShader;
-    entry(parsed);
+    run();
     return { accepted: true };
   } catch (error) {
     if (!(error instanceof ShadingLanguageError)) return { crashed: String(error?.stack ?? error) };
@@ -19,6 +17,17 @@ export function transpilerVerdict(text) {
     return { accepted: false, message, line, ...(owner && { owner }) };
   }
 }
+
+/** The verdict on `text` of the whole transpiler, as a user calls it. */
+export const transpilerVerdict = (text) =>
+  verdictOf(() => {
+    const parsed = parsedShader(text);
+    const entry = TEMPLATE_ENTRIES[parsed.tree.shaderType] ?? transpileParsedShader;
+    entry(parsed);
+  });
+
+/** The verdict on `text` of the preprocessor and the parser alone. */
+export const parserVerdict = (text) => verdictOf(() => parsedShader(text));
 
 /** `transpiled`, `refused as Godot refuses`, `not transpiled yet` with the owner, or `mismatch`. */
 export function judge(godot, transpiler) {

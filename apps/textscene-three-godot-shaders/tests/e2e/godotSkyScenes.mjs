@@ -1,16 +1,13 @@
-import {
-  FRAMES_BEFORE_READ,
-  printedField,
-  printedImages,
-} from '../../../../scripts/godot-probes/godotRun.mjs';
+import { parseViewportOutput, viewportProjectFiles, viewportScript } from './godotViewports.mjs';
 
 const LINE_PREFIX = 'SKY ';
+const FILES = { dataFile: 'skies.json', shaderPrefix: 'sky' };
 
-export const SKY_MAIN_SCRIPT = `extends Node
-
-func degrees(values: Array) -> Vector3:
-	return Vector3(deg_to_rad(values[0]), deg_to_rad(values[1]), deg_to_rad(values[2]))
-
+/** A WorldEnvironment of the scene's sky and its suns in each viewport. */
+export const SKY_MAIN_SCRIPT = viewportScript({
+  dataFile: FILES.dataFile,
+  linePrefix: LINE_PREFIX,
+  functions: `
 func color(values: Array) -> Color:
 	return Color(values[0], values[1], values[2])
 
@@ -30,23 +27,8 @@ func environment(scene: Dictionary) -> Environment:
 		env.fog_sky_affect = scene.fog.skyAffect
 		env.fog_aerial_perspective = scene.fog.aerialPerspective
 	return env
-
-func _ready() -> void:
-	var data: Array = JSON.parse_string(FileAccess.get_file_as_string("res://skies.json"))
-	var viewports: Array = []
-	for scene in data:
-		var viewport := SubViewport.new()
-		viewport.size = Vector2i(int(scene.width), int(scene.height))
-		viewport.own_world_3d = true
-		viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-		add_child(viewport)
-		var camera := Camera3D.new()
-		camera.fov = scene.camera.fov
-		camera.rotation = degrees(scene.camera.rotation)
-		if scene.camera.has("position"):
-			camera.position = Vector3(scene.camera.position[0], scene.camera.position[1], scene.camera.position[2])
-		viewport.add_child(camera)
-		var world := WorldEnvironment.new()
+`,
+  fill: `		var world := WorldEnvironment.new()
 		world.environment = environment(scene)
 		viewport.add_child(world)
 		for light in scene.lights:
@@ -55,34 +37,15 @@ func _ready() -> void:
 			sun.light_color = color(light.color)
 			sun.light_energy = light.energy
 			sun.light_angular_distance = light.size
-			viewport.add_child(sun)
-		viewports.append(viewport)
-	for frame in ${FRAMES_BEFORE_READ}:
-		await RenderingServer.frame_post_draw
-	print("GODOT ", Engine.get_version_info().string)
-	for index in data.size():
-		var image: Image = viewports[index].get_texture().get_image()
-		image.convert(Image.FORMAT_RGBA8)
-		print("${LINE_PREFIX}", data[index].name, " ", image.get_data().hex_encode())
-	get_tree().quit()
-`;
+			viewport.add_child(sun)`,
+});
 
 /** The files beside the main script, keyed by their names in the project. */
-export function skyProjectFiles(scenes) {
-  const data = scenes.map((scene, index) => ({
-    name: scene.name,
-    width: scene.width,
-    height: scene.height,
-    camera: scene.camera,
+export const skyProjectFiles = (scenes) =>
+  viewportProjectFiles(FILES, scenes, (scene) => ({
     lights: scene.lights,
     ...(scene.fog ? { fog: scene.fog } : {}),
-    shader: `res://sky_${index}.gdshader`,
   }));
-  return {
-    'skies.json': JSON.stringify(data),
-    ...Object.fromEntries(scenes.map((scene, index) => [`sky_${index}.gdshader`, scene.source])),
-  };
-}
 
 /** One Godot run per clock, the scenes of no clock first: Godot holds one step and one rollover per run. */
 export function skyRuns(scenes) {
@@ -107,7 +70,4 @@ function runOptions(clock) {
 const ROLLOVER_SECTION = '[rendering]\nlimits/time/time_rollover_secs=';
 const NO_JITTER_FIX = '\n[physics]\ncommon/physics_jitter_fix=0.0\n';
 
-/** Each scene's RGBA8 bytes in `stdout`, top row first, keyed by name, with Godot's version. */
-export function parseSkyOutput(stdout) {
-  return { godot: printedField(stdout, 'GODOT '), images: printedImages(stdout, LINE_PREFIX) };
-}
+export const parseSkyOutput = (stdout) => parseViewportOutput(stdout, LINE_PREFIX);

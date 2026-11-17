@@ -2,36 +2,26 @@ import * as THREE from 'three';
 import { int, screenCoordinate, varyingProperty, vec4, vertexIndex } from 'three/tsl';
 import type { Node, TextureNode, UniformNode } from 'three/webgpu';
 import { parsedShader, type ParsedShader, type ShaderOptions } from '../language/parseShader.js';
-import { ShadingLanguageError } from '../language/shadingLanguageError.js';
-import { checkTranspiled } from '../language/transpiledRows.js';
-import { withGlslTypes } from '../language/glslTypes.js';
 import { emitTemplateStage } from '../template/emitTemplate.js';
-import { compileMaterial, linkTemplateStage, type CompiledMaterial } from '../template/link.js';
-import { GODOT_VERSION } from '../language/instructionTable.generated.js';
-import { MODE_TABLES } from '../template/modeTables.generated.js';
-import type { StageName } from '../template/stages.js';
-import type { TemplateStageNode } from '../template/templateTree.js';
-import { TemplateUniforms } from '../template/templateUniforms.js';
-import { godotId } from '../template/godotIds.js';
+import { linkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
+import { TreeMemo } from '../template/treeMemo.js';
 import { BoundNodeMaterial } from '../uniforms/boundMaterial.js';
 import { SKY_RENDER_ORDER } from './skyRenderOrder.js';
 import { GODOT_SAMPLING, type ProjectSampling } from '../uniforms/samplerState.js';
-import { bindParameters, type TranspiledUniform } from '../uniforms/transpiledUniform.js';
-import { TRANSPILER_VERSION, TreeMemo } from '../template/treeMemo.js';
-
-const SKY_TEMPLATE = 'environment/sky.glsl';
+import type { TranspiledUniform } from '../uniforms/transpiledUniform.js';
 
 /** Where a sky draws: behind the scene, or into the radiance octmap a bake filters. */
 export type SkyPass = 'background' | 'octmap';
 
-/** The defines of `SKY_VERSION_BACKGROUND` and `SKY_VERSION_OCTMAP` (`sky.cpp:719`, `:722`). */
-const PASS_VARIANTS: Readonly<Record<SkyPass, string>> = {
-  background: '',
-  octmap: '\n#define USE_CUBEMAP_PASS\n',
+/** `SKY_VERSION_BACKGROUND` and `SKY_VERSION_OCTMAP` (`sky.cpp:719`, `:722`), with memos for the page. */
+const PASS_TEMPLATES: Readonly<Record<SkyPass, ProgramTemplate>> = {
+  background: skyTemplate(''),
+  octmap: skyTemplate('\n#define USE_CUBEMAP_PASS\n'),
 };
 
-/** The linked sky stages of every sky this page transpiles. It lives as long as the page. */
-const linkedStages = new TreeMemo();
+function skyTemplate(defines: string): ProgramTemplate {
+  return { shaderType: 'sky', template: 'environment/sky.glsl', defines, memo: new TreeMemo() };
+}
 
 export interface TranspiledSky {
   /** The triangle that draws the sky at the far plane, after every opaque surface, where none drew. */
@@ -63,40 +53,17 @@ export function transpileSky(source: string, options: SkyOptions = {}): Transpil
 
 /** The sky of a parsed shader from `file` for `pass`, for a caller that has read its tree already. */
 export function transpileParsedSky(
-  { code, tree }: ParsedShader,
+  parsed: ParsedShader,
   file: string,
   sampling: ProjectSampling = GODOT_SAMPLING,
   pass: SkyPass = 'background'
 ): TranspiledSky {
-  if (tree.shaderType !== 'sky')
-    throw new ShadingLanguageError(
-      `expected a shader of 'shader_type sky', found ${tree.shaderType ?? 'none'}`,
-      tree.headPosition ?? { file, line: 1, column: 1 }
-    );
-  checkTranspiled(tree);
-  let material: CompiledMaterial | undefined;
-  const variant = PASS_VARIANTS[pass];
-  const linked = (stage: StageName): TemplateStageNode =>
-    linkedStages.tree(
-      {
-        source: code,
-        file,
-        shaderType: 'sky',
-        template: SKY_TEMPLATE,
-        stage,
-        defines: variant,
-        godotVersion: GODOT_VERSION,
-        transpilerVersion: TRANSPILER_VERSION,
-      },
-      () => {
-        material ??= compileMaterial(withGlslTypes(tree), MODE_TABLES.sky!);
-        return linkTemplateStage(SKY_TEMPLATE, stage, variant, material);
-      }
-    );
-  const uniforms = new TemplateUniforms();
-  // A sky converts a source colour to linear (`sky.cpp:193`).
-  const parameters = bindParameters(tree, { useLinearColor: true, sampling: defaultSamplers(sampling) });
-  const parameterValues = [...parameters].map(([name, binding]) => [godotId(name), binding.value] as const);
+  const { linked, resources, parameters, parameterValues } = linkedProgram(
+    parsed,
+    file,
+    PASS_TEMPLATES[pass],
+    defaultSamplers(sampling)
+  );
   const uvInterp = varyingProperty('vec2', 'uv_interp') as unknown as Node;
   const vertex = emitTemplateStage(
     linked('vertex'),
@@ -106,7 +73,7 @@ export function transpileParsedSky(
       ['uv_interp', uvInterp],
     ]),
     { name: 'gl_Position', type: 'vec4' },
-    uniforms
+    resources
   );
   const fragment = emitTemplateStage(
     linked('fragment'),
@@ -116,12 +83,12 @@ export function transpileParsedSky(
       ['gl_FragCoord', vec4(screenCoordinate, 0, 1) as unknown as Node],
     ]),
     { name: 'frag_color', type: 'vec4' },
-    uniforms
+    resources
   );
   return {
     mesh: skyMesh(glClipPosition(vertex.result, pass), fragment.result, [...parameters.values()]),
-    uniforms: uniforms.byName,
-    textures: fragment.textures,
+    uniforms: resources.uniforms.byName,
+    textures: resources.textures,
     parameters,
   };
 }

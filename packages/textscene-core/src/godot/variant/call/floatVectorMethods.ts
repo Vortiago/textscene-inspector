@@ -38,7 +38,7 @@ export function unitScaled(v: Components, squared: number): Components {
 }
 
 /** `Vector3::normalize` and `Vector4::normalize`: a zero vector becomes positive zeros. */
-export function normalized(v: Components): Components {
+function normalized(v: Components): Components {
   const squared = lengthSquared(v);
   return squared === 0 ? v.map(() => 0) : unitScaled(v, squared);
 }

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { materialCounts } from '../godot-probes/answerDigest.mjs';
 import { renderTestingGuide } from './renderTestingGuide.mjs';
 
 const KNOWN = {
@@ -36,6 +37,13 @@ const INPUT = {
     },
     knownMismatches: {},
   },
+  materials: materialCounts({
+    StandardMaterial3D: 'a',
+    'StandardMaterial3D|rim_enabled=true': 'b',
+    'StandardMaterial3D|stencil_mode=1': 'c',
+    'StandardMaterial3D|stencil_mode=1|next_pass': 'd',
+    'ORMMaterial3D|rim_enabled=true': 'b',
+  }),
 };
 
 const GUIDE = renderTestingGuide(INPUT);
@@ -73,6 +81,12 @@ describe('the chapter on the tests against Godot', () => {
     expect(GUIDE).toContain('It also fails when Godot is missing');
   });
 
+  it('counts the materials of the sweep, their next passes and the distinct texts Godot writes', () => {
+    expect(GUIDE).toContain(
+      'The sweep holds 5 materials, 1 of them next passes, and Godot writes 4 distinct texts for them.'
+    );
+  });
+
   it('lists each shader not transpiled yet with its owner', () => {
     expect(GUIDE).toContain('| `demos/a.gdshader` | #1794 |');
   });
@@ -98,6 +112,7 @@ describe('the table of known differences', () => {
         },
       },
       corpus: { corpus: [], corpusRecord: { cases: {} }, states: {}, knownMismatches: {} },
+      materials: INPUT.materials,
     });
     expect(guide).toContain('`bool probe(bool a0) { return a0 \\|\\| a0; }`');
   });

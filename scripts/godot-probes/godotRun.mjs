@@ -12,7 +12,7 @@ const GODOT_VERSION = '4.6.3';
 const OUTPUT_CHARACTERS_AT_MOST = 256 * 1024 * 1024;
 
 /** A run compiles on one core, so 4 runs take 8 s against 29 s for 1,822 probes. */
-const RUNS_AT_ONCE = availableParallelism();
+export const RUNS_AT_ONCE = availableParallelism();
 
 /** Runs start apart so two never race for one display. Written only by `spawnGodot`, wraps after 64. */
 let runsStarted = 0;
