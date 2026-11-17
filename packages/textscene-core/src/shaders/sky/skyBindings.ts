@@ -39,6 +39,8 @@ export interface SkyScene {
   readonly fog?: SkyFog;
   /** At most the four lights the sky reads (`sky.cpp:707`). */
   readonly lights: readonly SkyLight[];
+  /** The octmap's border size, 1 minus twice its padding in UV, for the octmap pass alone. */
+  readonly borderSize?: number;
 }
 
 /** The four lights of a sky's light buffer, `MAX_DIRECTIONAL_LIGHT_DATA_STRUCTS`. */
@@ -61,6 +63,7 @@ export const SKY_BINDINGS: readonly Binding[] = [
     value: (scene) => scene.camera.getWorldPosition(new THREE.Vector3()),
   },
   { uniform: 'params.time', godot: 'sky.cpp:232', value: (scene) => scene.time },
+  { uniform: 'params.border_size', godot: 'sky.cpp:233-234', value: borderSizeOf },
   // 1 / the luminance multiplier, 1 on the clustered renderer (`render_forward_clustered.cpp:1978`).
   { uniform: 'params.luminance_multiplier', godot: 'sky.cpp:235', value: () => 1 },
   {
@@ -137,6 +140,11 @@ function orientationOf(scene: SkyScene): THREE.Matrix3 {
 function projectionOf(scene: SkyScene): THREE.Vector4 {
   const columns = scene.camera.projectionMatrix.elements;
   return new THREE.Vector4(columns[8], columns[0], -columns[9]!, -columns[5]!);
+}
+
+/** The padding in UV, then 1 minus twice it, as `_render_sky` writes them from the padding. */
+function borderSizeOf({ borderSize = 1 }: SkyScene): THREE.Vector2 {
+  return new THREE.Vector2((1 - borderSize) / 2, borderSize);
 }
 
 function fogLightOf(scene: SkyScene): THREE.Vector3 {

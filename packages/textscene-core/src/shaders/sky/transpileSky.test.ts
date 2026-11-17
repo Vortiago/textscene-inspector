@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { NodeMaterial } from 'three/webgpu';
+import type { NodeMaterial, TextureNode } from 'three/webgpu';
 import { describe, expect, it } from 'vitest';
 import { generatedFragmentShader } from '../generatedShader.testkit';
 import { ShadingLanguageError } from '../language/shadingLanguageError.js';
@@ -69,6 +69,27 @@ describe('transpileSky', () => {
       'shader_type sky;\nfloat half_of(float x) { return x * 0.5; }\nvoid sky() { COLOR = vec3(fract(half_of(TIME))); }';
     const fragment = (transpileSky(source).mesh.material as NodeMaterial).fragmentNode!;
     expect(generatedFragmentShader(fragment)).toMatch(/fract\(/);
+  });
+
+  it("gives each texel of the octmap pass the direction through it, as Godot's octmap pass does", () => {
+    const fragment = (transpileSky(DEFAULT_SKY, { pass: 'octmap' }).mesh.material as NodeMaterial)
+      .fragmentNode!;
+    expect(generatedFragmentShader(fragment)).toMatch(/oct_to_vec3_with_border\(/);
+  });
+
+  it('gives each pixel behind the scene the direction of the camera through it', () => {
+    const fragment = (transpileSky(DEFAULT_SKY).mesh.material as NodeMaterial).fragmentNode!;
+    expect(generatedFragmentShader(fragment)).not.toMatch(/oct_to_vec3_with_border\(/);
+  });
+
+  it("reads Godot's default samplers, at 4x anisotropy whatever the project's level", () => {
+    const sky = transpileSky(
+      'shader_type sky;\nuniform sampler2D v : filter_linear_mipmap_anisotropic;\nvoid sky() { COLOR = texture(v, SKY_COORDS).rgb; }',
+      { sampling: { anisotropicFilteringLevel: 0, useNearestMipmapFilter: false } }
+    );
+    const binding = sky.parameters.get('v')!;
+    binding.set(new THREE.DataTexture(new Uint8Array(4), 1, 1));
+    expect(((binding as unknown as { value: TextureNode }).value.value as THREE.Texture).anisotropy).toBe(4);
   });
 
   it('gives equal GLSL for two runs of one text', () => {

@@ -21,8 +21,14 @@ import { TRANSPILER_VERSION, TreeMemo } from '../template/treeMemo.js';
 
 const SKY_TEMPLATE = 'environment/sky.glsl';
 
-/** The variant of the sky background, `SKY_VERSION_BACKGROUND` (`sky.cpp:746`): no defines. */
-const BACKGROUND_VARIANT = '';
+/** Where a sky draws: behind the scene, or into the radiance octmap a bake filters. */
+export type SkyPass = 'background' | 'octmap';
+
+/** The defines of `SKY_VERSION_BACKGROUND` and `SKY_VERSION_OCTMAP` (`sky.cpp:719`, `:722`). */
+const PASS_VARIANTS: Readonly<Record<SkyPass, string>> = {
+  background: '',
+  octmap: '\n#define USE_CUBEMAP_PASS\n',
+};
 
 /** The linked sky stages of every sky this page transpiles. It lives as long as the page. */
 const linkedStages = new TreeMemo();
@@ -41,18 +47,26 @@ export interface TranspiledSky {
 export interface SkyOptions extends ShaderOptions {
   /** The project's texture filter settings, Godot's defaults when left out. */
   readonly sampling?: ProjectSampling;
+  /** The pass the sky draws in, the background when left out. */
+  readonly pass?: SkyPass;
 }
 
 /** The sky of `source`, a shader of `shader_type sky`, preprocessed with `options`. */
 export function transpileSky(source: string, options: SkyOptions = {}): TranspiledSky {
-  return transpileParsedSky(parsedShader(source, options), options.file ?? '', options.sampling);
+  return transpileParsedSky(
+    parsedShader(source, options),
+    options.file ?? '',
+    options.sampling,
+    options.pass
+  );
 }
 
-/** The sky of a parsed shader from `file`, for a caller that has read its tree already. */
+/** The sky of a parsed shader from `file` for `pass`, for a caller that has read its tree already. */
 export function transpileParsedSky(
   { code, tree }: ParsedShader,
   file: string,
-  sampling: ProjectSampling = GODOT_SAMPLING
+  sampling: ProjectSampling = GODOT_SAMPLING,
+  pass: SkyPass = 'background'
 ): TranspiledSky {
   if (tree.shaderType !== 'sky')
     throw new ShadingLanguageError(
@@ -61,6 +75,7 @@ export function transpileParsedSky(
     );
   checkTranspiled(tree);
   let material: CompiledMaterial | undefined;
+  const variant = PASS_VARIANTS[pass];
   const linked = (stage: StageName): TemplateStageNode =>
     linkedStages.tree(
       {
@@ -69,18 +84,18 @@ export function transpileParsedSky(
         shaderType: 'sky',
         template: SKY_TEMPLATE,
         stage,
-        defines: BACKGROUND_VARIANT,
+        defines: variant,
         godotVersion: GODOT_VERSION,
         transpilerVersion: TRANSPILER_VERSION,
       },
       () => {
         material ??= compileMaterial(withGlslTypes(tree), MODE_TABLES.sky!);
-        return linkTemplateStage(SKY_TEMPLATE, stage, BACKGROUND_VARIANT, material);
+        return linkTemplateStage(SKY_TEMPLATE, stage, variant, material);
       }
     );
   const uniforms = new TemplateUniforms();
   // A sky converts a source colour to linear (`sky.cpp:193`).
-  const parameters = bindParameters(tree, { useLinearColor: true, sampling });
+  const parameters = bindParameters(tree, { useLinearColor: true, sampling: defaultSamplers(sampling) });
   const parameterValues = [...parameters].map(([name, binding]) => [godotId(name), binding.value] as const);
   const uvInterp = varyingProperty('vec2', 'uv_interp') as unknown as Node;
   const vertex = emitTemplateStage(
@@ -104,17 +119,23 @@ export function transpileParsedSky(
     uniforms
   );
   return {
-    mesh: skyMesh(glClipPosition(vertex.result), fragment.result, [...parameters.values()]),
+    mesh: skyMesh(glClipPosition(vertex.result, pass), fragment.result, [...parameters.values()]),
     uniforms: uniforms.byName,
     textures: fragment.textures,
     parameters,
   };
 }
 
-/** Godot's clip space has y down and a reversed depth of 0 at the far plane. GL's far plane is at `w`. */
-function glClipPosition(position: Node): Node {
+/** Godot's default samplers, which a sky reads (`sky.cpp:853`): 4x anisotropy at any project level. */
+function defaultSamplers(sampling: ProjectSampling): ProjectSampling {
+  return { ...sampling, anisotropicFilteringLevel: GODOT_SAMPLING.anisotropicFilteringLevel };
+}
+
+/** Godot's y points down and its far plane is depth 0; an octmap keeps y, as both APIs put y -1 on row 0. */
+function glClipPosition(position: Node, pass: SkyPass): Node {
   const godot = position as unknown as ReturnType<typeof vec4>;
-  return vec4(godot.x, godot.y.negate(), godot.w.sub(godot.z.mul(2)), godot.w) as unknown as Node;
+  const y = pass === 'octmap' ? godot.y : godot.y.negate();
+  return vec4(godot.x, y, godot.w.sub(godot.z.mul(2)), godot.w) as unknown as Node;
 }
 
 /** Three vertices, which the template's vertex stage places from their index alone. */

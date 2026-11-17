@@ -58,7 +58,7 @@ export interface SkyEnvironmentInput {
   textures?: Readonly<Record<string, SamplerValue>>;
   /** The decoders a shader sky's `#if` may decompress with. */
   decoders?: ShaderDecoders;
-  /** The project's filter settings, which a shader sky's samplers read. */
+  /** The project's filter settings, for a shader sky's samplers and each surface's read of the layers. */
   sampling?: ProjectSampling;
   /** The sky transpiler's builder for a shader sky, imported on demand to keep it off the first paint. */
   buildShaderSky?: ShaderSkyBuilder;
@@ -112,7 +112,7 @@ export function buildSkyEnvironment(
 function buildBuiltInSkyEnvironment(
   gl: THREE.WebGLRenderer,
   material: BuiltInSkyProperties,
-  { sky, lights, panorama, asBackground, energy }: SkyEnvironmentInput
+  { sky, lights, panorama, asBackground, energy, sampling }: SkyEnvironmentInput
 ): SkyEnvironment | null {
   const panoramaView = skyPanoramaTexture(gl, material, panorama);
   const uniforms = skyUniforms(material, lights, panoramaView);
@@ -121,7 +121,7 @@ function buildBuiltInSkyEnvironment(
   try {
     // Ahead of the bake, so a three whose background program moved frees no layers it baked.
     background = asBackground ? new SkyBackground(skyGlsl(material), uniforms) : null;
-    layers = bakeBuiltInRadiance(gl, sky, material, uniforms, energy);
+    layers = bakeBuiltInRadiance(gl, { sky, material, uniforms, energy, sampling });
   } catch (error) {
     warn('[Sky] could not render the sky environment', error);
     background?.dispose();
@@ -149,13 +149,20 @@ function buildBuiltInSkyEnvironment(
   };
 }
 
+/** What a built-in sky's bake reads. */
+interface BuiltInRadiance {
+  sky: Sky;
+  material: BuiltInSkyProperties;
+  uniforms: SkyUniforms;
+  energy: number;
+  /** The project's filter settings, which the surfaces' read of the layers takes. */
+  sampling?: ProjectSampling;
+}
+
 /** Renders the built-in sky of `uniforms` into a cube and bakes Godot's layers from it. */
 function bakeBuiltInRadiance(
   gl: THREE.WebGLRenderer,
-  sky: Sky,
-  material: BuiltInSkyProperties,
-  uniforms: SkyUniforms,
-  energy: number
+  { sky, material, uniforms, energy, sampling }: BuiltInRadiance
 ): SkyLayers {
   const geometry = new THREE.BoxGeometry(2, 2, 2);
   const shader = new THREE.ShaderMaterial({
@@ -169,7 +176,7 @@ function bakeBuiltInRadiance(
   const skyScene = new THREE.Scene();
   skyScene.add(new THREE.Mesh(geometry, shader));
   try {
-    return bakeRadiance(gl, skyScene, sky, radianceDebanding(material, energy));
+    return bakeRadiance(gl, skyScene, sky, radianceDebanding(material, energy), sampling);
   } finally {
     geometry.dispose();
     shader.dispose();

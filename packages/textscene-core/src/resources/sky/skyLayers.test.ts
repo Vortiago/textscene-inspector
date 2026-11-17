@@ -123,6 +123,21 @@ describe('bakeSkyLayers', () => {
     ]);
   });
 
+  it("picks the nearest mip for a surface's read in a project that asks for it, as Godot's samplers do", async () => {
+    const { renderer } = await testRenderer();
+    const sampling = { anisotropicFilteringLevel: 2, useNearestMipmapFilter: true };
+
+    const { texture } = bakeSkyLayers(
+      renderer,
+      radianceCube(renderer),
+      IMPORTANCE_SAMPLED,
+      0,
+      sampling
+    ).target;
+
+    expect(texture.minFilter).toBe(THREE.LinearMipmapNearestFilter);
+  });
+
   it('filters each of the layers 1 to 6 of a real-time sky with the fast filter (edge case)', async () => {
     const { renderer } = await testRenderer();
     const selected = vi.spyOn(fastFilter, 'layerUniforms');

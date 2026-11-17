@@ -58,10 +58,3 @@ export class ShaderSkyBackground extends SkyBackdrop {
     };
   }
 }
-
-/** The sky as the radiance bake renders it, with no fog (`sky.glsl:282`). */
-export class ShaderSkyCube extends ShaderSkyBackground {
-  protected override fog(): undefined {
-    return undefined;
-  }
-}
