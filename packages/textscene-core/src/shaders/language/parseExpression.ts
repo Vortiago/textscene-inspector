@@ -44,6 +44,21 @@ interface TernaryPart {
   readonly endsAtColon: boolean;
 }
 
+/** The screen textures Godot 4 reads through a hinted uniform (`shader_language.cpp:6560`). */
+const REMOVED_TEXTURES: ReadonlySet<string> = new Set([
+  'SCREEN_TEXTURE',
+  'DEPTH_TEXTURE',
+  'NORMAL_ROUGHNESS_TEXTURE',
+]);
+
+function removedTextureMessage(name: string): string {
+  const hint = `hint_${name.toLowerCase()}`;
+  return (
+    `${name} has been removed in favor of using ${hint} with a uniform.\n` +
+    `To continue with minimal code changes add 'uniform sampler2D ${name} : ${hint}, filter_linear_mipmap;' near the top of your shader.`
+  );
+}
+
 export class ExpressionParser {
   /** The array constructors, which read their elements with this parser. */
   readonly arrays: ArrayParser;
@@ -221,6 +236,7 @@ export class ExpressionParser {
     if (!found) {
       const builtIn = builtInInstruction(name);
       if (builtIn) throw notTranspiled(builtIn, token.position, name);
+      if (REMOVED_TEXTURES.has(name)) this.tokens.fail(removedTextureMessage(name));
       this.tokens.fail(`Unknown identifier in expression: '${name}'.`);
     }
     if (found.kind === 'function') this.tokens.fail(`Can't use function as identifier: '${name}'.`);

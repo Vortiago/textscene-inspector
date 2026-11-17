@@ -62,7 +62,7 @@ sampler3D	data type	servers/rendering/shader_language.h:236	#1829	TK_TYPE_SAMPLE
 isampler3D	data type	servers/rendering/shader_language.h:237	#1829	TK_TYPE_ISAMPLER3D			native	native
 usampler3D	data type	servers/rendering/shader_language.h:238	#1829	TK_TYPE_USAMPLER3D			native	native
 samplerCube	data type	servers/rendering/shader_language.h:239	#1829	TK_TYPE_SAMPLERCUBE			native	native
-samplerCubeArray	data type	servers/rendering/shader_language.h:240	#1829	TK_TYPE_SAMPLERCUBEARRAY				
+samplerCubeArray	data type	servers/rendering/shader_language.h:240	#1829	TK_TYPE_SAMPLERCUBEARRAY			native	native
 samplerExternalOES	data type	servers/rendering/shader_language.h:241	#1829	TK_TYPE_SAMPLEREXT			native	native
 struct type	data type	servers/rendering/shader_language.h:242	#1824				native	native
 float literal	literal	servers/rendering/shader_language.h:59	#1823				native	native
@@ -111,11 +111,11 @@ hint_default_black	uniform hint	servers/rendering/shader_language.cpp:382	#1829	
 hint_default_transparent	uniform hint	servers/rendering/shader_language.cpp:383	#1829	TK_HINT_DEFAULT_TRANSPARENT_TEXTURE			native	native
 hint_anisotropy	uniform hint	servers/rendering/shader_language.cpp:384	#1829	TK_HINT_ANISOTROPY_TEXTURE			native	native
 hint_roughness_r	uniform hint	servers/rendering/shader_language.cpp:385	#1829	TK_HINT_ROUGHNESS_R			native	native
-hint_roughness_g	uniform hint	servers/rendering/shader_language.cpp:386	#1829	TK_HINT_ROUGHNESS_G				
-hint_roughness_b	uniform hint	servers/rendering/shader_language.cpp:387	#1829	TK_HINT_ROUGHNESS_B				
-hint_roughness_a	uniform hint	servers/rendering/shader_language.cpp:388	#1829	TK_HINT_ROUGHNESS_A				
+hint_roughness_g	uniform hint	servers/rendering/shader_language.cpp:386	#1829	TK_HINT_ROUGHNESS_G			native	native
+hint_roughness_b	uniform hint	servers/rendering/shader_language.cpp:387	#1829	TK_HINT_ROUGHNESS_B			native	native
+hint_roughness_a	uniform hint	servers/rendering/shader_language.cpp:388	#1829	TK_HINT_ROUGHNESS_A			native	native
 hint_roughness_normal	uniform hint	servers/rendering/shader_language.cpp:389	#1829	TK_HINT_ROUGHNESS_NORMAL_TEXTURE			native	native
-hint_roughness_gray	uniform hint	servers/rendering/shader_language.cpp:390	#1829	TK_HINT_ROUGHNESS_GRAY				
+hint_roughness_gray	uniform hint	servers/rendering/shader_language.cpp:390	#1829	TK_HINT_ROUGHNESS_GRAY			native	native
 hint_screen_texture	uniform hint	servers/rendering/shader_language.cpp:391	#1524	TK_HINT_SCREEN_TEXTURE				
 hint_normal_roughness_texture	uniform hint	servers/rendering/shader_language.cpp:392	#1610	TK_HINT_NORMAL_ROUGHNESS_TEXTURE				
 hint_depth_texture	uniform hint	servers/rendering/shader_language.cpp:393	#1610	TK_HINT_DEPTH_TEXTURE				
@@ -1240,7 +1240,7 @@ textureSize(sampler3D,int)	function	servers/rendering/shader_language.cpp:3173	#
 textureSize(isampler3D,int)	function	servers/rendering/shader_language.cpp:3174	#1829		ivec3	(isampler3D,int)	native	native
 textureSize(usampler3D,int)	function	servers/rendering/shader_language.cpp:3175	#1829		ivec3	(usampler3D,int)	native	native
 textureSize(samplerCube,int)	function	servers/rendering/shader_language.cpp:3176	#1829		ivec2	(samplerCube,int)	native	native
-textureSize(samplerCubeArray,int)	function	servers/rendering/shader_language.cpp:3177	#1829		ivec2	(samplerCubeArray,int)		
+textureSize(samplerCubeArray,int)	function	servers/rendering/shader_language.cpp:3177	#1829		ivec2	(samplerCubeArray,int)	native	native
 texture(sampler2D,vec2)	function	servers/rendering/shader_language.cpp:3181	#1829		vec4	(sampler2D,vec2)	native	native
 texture(sampler2D,vec2,float)	function	servers/rendering/shader_language.cpp:3182	#1829		vec4	(sampler2D,vec2,float)	native	native
 texture(usampler2D,vec2)	function	servers/rendering/shader_language.cpp:3183	#1829		uvec4	(usampler2D,vec2)	native	native
@@ -1261,8 +1261,8 @@ texture(isampler3D,vec3)	function	servers/rendering/shader_language.cpp:3197	#18
 texture(isampler3D,vec3,float)	function	servers/rendering/shader_language.cpp:3198	#1829		ivec4	(isampler3D,vec3,float)	native	native
 texture(samplerCube,vec3)	function	servers/rendering/shader_language.cpp:3199	#1829		vec4	(samplerCube,vec3)	native	native
 texture(samplerCube,vec3,float)	function	servers/rendering/shader_language.cpp:3200	#1829		vec4	(samplerCube,vec3,float)	native	native
-texture(samplerCubeArray,vec4)	function	servers/rendering/shader_language.cpp:3201	#1829		vec4	(samplerCubeArray,vec4)		
-texture(samplerCubeArray,vec4,float)	function	servers/rendering/shader_language.cpp:3202	#1829		vec4	(samplerCubeArray,vec4,float)		
+texture(samplerCubeArray,vec4)	function	servers/rendering/shader_language.cpp:3201	#1829		vec4	(samplerCubeArray,vec4)	native	native
+texture(samplerCubeArray,vec4,float)	function	servers/rendering/shader_language.cpp:3202	#1829		vec4	(samplerCubeArray,vec4,float)	native	native
 texture(samplerExternalOES,vec2)	function	servers/rendering/shader_language.cpp:3203	#1829		vec4	(samplerExternalOES,vec2)	native	native
 texture(samplerExternalOES,vec2,float)	function	servers/rendering/shader_language.cpp:3204	#1829		vec4	(samplerExternalOES,vec2,float)	native	native
 textureProj(sampler2D,vec3)	function	servers/rendering/shader_language.cpp:3208	#1829		vec4	(sampler2D,vec3)	native	native
@@ -1293,7 +1293,7 @@ textureLod(sampler3D,vec3,float)	function	servers/rendering/shader_language.cpp:
 textureLod(isampler3D,vec3,float)	function	servers/rendering/shader_language.cpp:3236	#1829		ivec4	(isampler3D,vec3,float)	native	native
 textureLod(usampler3D,vec3,float)	function	servers/rendering/shader_language.cpp:3237	#1829		uvec4	(usampler3D,vec3,float)	native	native
 textureLod(samplerCube,vec3,float)	function	servers/rendering/shader_language.cpp:3238	#1829		vec4	(samplerCube,vec3,float)	native	native
-textureLod(samplerCubeArray,vec4,float)	function	servers/rendering/shader_language.cpp:3239	#1829		vec4	(samplerCubeArray,vec4,float)		
+textureLod(samplerCubeArray,vec4,float)	function	servers/rendering/shader_language.cpp:3239	#1829		vec4	(samplerCubeArray,vec4,float)	native	native
 texelFetch(sampler2D,ivec2,int)	function	servers/rendering/shader_language.cpp:3243	#1829		vec4	(sampler2D,ivec2,int)	native	native
 texelFetch(isampler2D,ivec2,int)	function	servers/rendering/shader_language.cpp:3244	#1829		ivec4	(isampler2D,ivec2,int)	native	native
 texelFetch(usampler2D,ivec2,int)	function	servers/rendering/shader_language.cpp:3245	#1829		uvec4	(usampler2D,ivec2,int)	native	native
@@ -1322,7 +1322,7 @@ textureGrad(sampler3D,vec3,vec3,vec3)	function	servers/rendering/shader_language
 textureGrad(isampler3D,vec3,vec3,vec3)	function	servers/rendering/shader_language.cpp:3274	#1829		ivec4	(isampler3D,vec3,vec3,vec3)	native	native
 textureGrad(usampler3D,vec3,vec3,vec3)	function	servers/rendering/shader_language.cpp:3275	#1829		uvec4	(usampler3D,vec3,vec3,vec3)	native	native
 textureGrad(samplerCube,vec3,vec3,vec3)	function	servers/rendering/shader_language.cpp:3276	#1829		vec4	(samplerCube,vec3,vec3,vec3)	native	native
-textureGrad(samplerCubeArray,vec4,vec3,vec3)	function	servers/rendering/shader_language.cpp:3277	#1829		vec4	(samplerCubeArray,vec4,vec3,vec3)		
+textureGrad(samplerCubeArray,vec4,vec3,vec3)	function	servers/rendering/shader_language.cpp:3277	#1829		vec4	(samplerCubeArray,vec4,vec3,vec3)	native	native
 textureProjGrad(sampler2D,vec3,vec2,vec2)	function	servers/rendering/shader_language.cpp:3281	#1829		vec4	(sampler2D,vec3,vec2,vec2)	native	native
 textureProjGrad(sampler2D,vec4,vec2,vec2)	function	servers/rendering/shader_language.cpp:3282	#1829		vec4	(sampler2D,vec4,vec2,vec2)	native	native
 textureProjGrad(isampler2D,vec3,vec2,vec2)	function	servers/rendering/shader_language.cpp:3283	#1829		ivec4	(isampler2D,vec3,vec2,vec2)	native	native

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CompressedArrayTexture,
   CubeTexture,
   Data3DTexture,
   DataArrayTexture,
@@ -73,20 +72,9 @@ describe('SamplerBinding', () => {
     expect(textureOf(binding).minFilter).toBe(LinearMipmapLinearFilter);
   });
 
-  it('uploads every mip level of a 2D-array texture, which three uploads only level 0 of', () => {
-    const binding = bindingOf('uniform sampler2DArray s;');
-    const layers = new DataArrayTexture(new Uint8Array(4 * 4 * 2 * 4), 4, 4, 2);
-    const levels = [4, 2, 1].map((size) => ({
-      data: new Uint8Array(size * size * 2 * 4),
-      width: size,
-      height: size,
-    }));
-    layers.mipmaps = levels as never;
-    binding.set(layers);
-    const copy = textureOf(binding) as CompressedArrayTexture;
-    expect(copy.isCompressedArrayTexture).toBe(true);
-    expect([copy.format, copy.type, copy.image.depth]).toEqual([layers.format, layers.type, 2]);
-    expect(copy.mipmaps.map((level) => level.data)).toEqual(levels.map((level) => level.data));
+  it('reads a cube array as a 2D array of six layers to a cube', () => {
+    const binding = bindingOf('uniform samplerCubeArray s;');
+    expect((textureOf(binding) as DataArrayTexture).image.depth).toBe(6);
   });
 
   it('keeps one copy while the material texture stays the same', () => {

@@ -159,6 +159,18 @@ describe('parse: operators', () => {
     ['float f(float a) { return ); }', "Expected expression, found: 'PARENTHESIS_CLOSE'."],
     ['float f(float a) { return (a; }', "Expected ')' in expression."],
     ['float f(float a) { return b; }', "Unknown identifier in expression: 'b'."],
+    [
+      'vec4 f() { return texture(SCREEN_TEXTURE, vec2(0.0)); }',
+      "SCREEN_TEXTURE has been removed in favor of using hint_screen_texture with a uniform.\nTo continue with minimal code changes add 'uniform sampler2D SCREEN_TEXTURE : hint_screen_texture, filter_linear_mipmap;' near the top of your shader.",
+    ],
+    [
+      'vec4 f() { return texture(DEPTH_TEXTURE, vec2(0.0)); }',
+      "DEPTH_TEXTURE has been removed in favor of using hint_depth_texture with a uniform.\nTo continue with minimal code changes add 'uniform sampler2D DEPTH_TEXTURE : hint_depth_texture, filter_linear_mipmap;' near the top of your shader.",
+    ],
+    [
+      'vec4 f() { return texture(NORMAL_ROUGHNESS_TEXTURE, vec2(0.0)); }',
+      "NORMAL_ROUGHNESS_TEXTURE has been removed in favor of using hint_normal_roughness_texture with a uniform.\nTo continue with minimal code changes add 'uniform sampler2D NORMAL_ROUGHNESS_TEXTURE : hint_normal_roughness_texture, filter_linear_mipmap;' near the top of your shader.",
+    ],
     ['float g() { return 1.0; } float f() { return g; }', "Can't use function as identifier: 'g'."],
   ])('refuses %s with Godot message', (source, message) => {
     expect(refusal(source)).toThrow(message);

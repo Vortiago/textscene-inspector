@@ -1,4 +1,5 @@
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
+import { textureKindOf } from '../../../../packages/textscene-core/src/shaders/language/types.ts';
 import { probeOf } from './languageProbes.mjs';
 
 const hex = (bytes) => bytes.map((byte) => byte.toString(16).padStart(2, '0')).join('');
@@ -13,19 +14,30 @@ const texelOf = (x, y, layer, level) => [
   (255 - 20 * x - 9 * level) & 255,
 ];
 
-/** A texture both harnesses build: each level's RGBA8 bytes, its layers in a row, down to 1 texel. */
-export function textureSpec(kind, width, height, { depth = 1, isMipmapped = false } = {}) {
-  const count = kind === 'cube' ? 6 : depth;
+/** The bytes of a texel in each format both harnesses build. */
+const TEXEL_BYTES = { rgba8: 4, rg8: 2 };
+
+/** A texture both harnesses build: each level's bytes, its layers in a row, down to 1 texel. */
+export function textureSpec(kind, width, height, { depth = 1, isMipmapped = false, format = 'rgba8' } = {}) {
+  const count = { cube: 6, cubes: 6 * depth }[kind] ?? depth;
   const levelCount = isMipmapped ? Math.floor(Math.log2(Math.max(width, height))) + 1 : 1;
   const levels = Array.from({ length: levelCount }, (_, level) => {
     const layers = kind === 'volume' ? levelSize(count, level) : count;
     const bytes = [];
     for (let layer = 0; layer < layers; layer++)
       for (let y = 0; y < levelSize(height, level); y++)
-        for (let x = 0; x < levelSize(width, level); x++) bytes.push(...texelOf(x, y, layer, level));
+        for (let x = 0; x < levelSize(width, level); x++)
+          bytes.push(...texelOf(x, y, layer, level).slice(0, TEXEL_BYTES[format]));
     return hex(bytes);
   });
-  return { kind, width, height, ...(kind === 'flat' || kind === 'cube' ? {} : { depth }), levels };
+  return {
+    kind,
+    width,
+    height,
+    ...(kind === 'flat' || kind === 'cube' ? {} : { depth }),
+    ...(format === 'rgba8' ? {} : { format }),
+    levels,
+  };
 }
 
 /** A probe whose material sets `textures`, a spec or a list of them per sampler, with `inputs` rows. */
@@ -109,6 +121,10 @@ function defaultProbes() {
     ' : hint_roughness_normal',
     ' : hint_anisotropy',
     ' : hint_roughness_r',
+    ' : hint_roughness_g',
+    ' : hint_roughness_b',
+    ' : hint_roughness_a',
+    ' : hint_roughness_gray',
   ];
   const unset = hints.map((hint) =>
     textureProbe(
@@ -117,8 +133,21 @@ function defaultProbes() {
       `uniform sampler2D s${hint};\nvec4 probe() { return texture(s, vec2(0.5)); }`
     )
   );
+  const unsetCubes = [
+    '',
+    ' : hint_default_white',
+    ' : hint_default_black',
+    ' : hint_default_transparent',
+  ].map((hint) =>
+    textureProbe(
+      `unset-cubes${hint.replace(' : ', '-') || '-none'}`,
+      ['samplerCubeArray', 'texture(samplerCubeArray,vec4)', ...(hint ? [hint.slice(3)] : [])],
+      `uniform samplerCubeArray s${hint};\nvec4 probe() { return texture(s, vec4(1.0, 0.0, 0.0, 0.0)); }`
+    )
+  );
   return [
     ...unset,
+    ...unsetCubes,
     textureProbe(
       'set-null-default-black',
       ['sampler2D', 'texture(sampler2D,vec2)', 'hint_default_black'],
@@ -174,6 +203,33 @@ function levelProbes() {
           [[0.375, 0.625], 0.25],
           [[0.375, 0.625], 1.0],
           [[0.375, 0.625], 1.75],
+        ],
+      }
+    ),
+    textureProbe(
+      'layers-lod-rg8',
+      ['sampler2DArray', 'filter_nearest_mipmap', 'textureLod(sampler2DArray,vec3,float)'],
+      'uniform sampler2DArray s : filter_nearest_mipmap;\nvec4 probe(vec3 uv, float lod) { return textureLod(s, uv, lod); }',
+      {
+        textures: { s: textureSpec('layers', 4, 4, { depth: 2, isMipmapped: true, format: 'rg8' }) },
+        inputs: [
+          [[0.375, 0.625, 1], 0],
+          [[0.375, 0.625, 1], 1],
+          [[0.375, 0.625, 0], 2],
+        ],
+      }
+    ),
+    textureProbe(
+      '3d-lod',
+      ['sampler3D', 'filter_nearest_mipmap', 'textureLod(sampler3D,vec3,float)'],
+      'uniform sampler3D s : filter_nearest_mipmap;\nvec4 probe(vec3 uvw, float lod) { return textureLod(s, uvw, lod); }',
+      {
+        textures: { s: textureSpec('volume', 4, 4, { depth: 4, isMipmapped: true }) },
+        inputs: [
+          [[0.375, 0.625, 0.875], 0],
+          [[0.375, 0.625, 0.875], 1],
+          [[0.375, 0.625, 0.875], 2],
+          [[0.375, 0.625, 0.875], 1.6],
         ],
       }
     ),
@@ -294,6 +350,40 @@ function kindProbes() {
       }
     ),
     textureProbe(
+      'cubes',
+      ['samplerCubeArray', 'filter_nearest', 'texture(samplerCubeArray,vec4)'],
+      'uniform samplerCubeArray s : filter_nearest;\nvec4 probe(vec4 at) { return texture(s, at); }',
+      {
+        textures: { s: textureSpec('cubes', 2, 2, { depth: 2 }) },
+        inputs: [
+          [[1, 0.2, -0.3, 0]],
+          [[-1, 0.4, 0.3, 1]],
+          [[0.2, 1, 0.3, 0]],
+          [[0.2, -1, -0.3, 1]],
+          [[0.3, 0.2, 1, 0.5]],
+          [[-0.3, 0.2, -1, 1.5]],
+          [[0.3, 0.2, 1, -0.7]],
+          [[0.3, 0.2, 1, 7]],
+        ],
+      }
+    ),
+    textureProbe(
+      'cubes-linear-edges',
+      ['samplerCubeArray', 'filter_linear', 'texture(samplerCubeArray,vec4)'],
+      'uniform samplerCubeArray s : filter_linear;\nvec4 probe(vec4 at) { return texture(s, at); }',
+      {
+        textures: { s: textureSpec('cubes', 4, 4, { depth: 2 }) },
+        inputs: [
+          [[1, 0.1, -0.2, 0]],
+          [[1, 0.95, -0.2, 1]],
+          [[1, -0.2, 0.97, 0]],
+          [[0.9, 1, 0.3, 1]],
+          [[0.2, -0.3, -1, 0]],
+          [[-1, 0.96, 0.95, 1]],
+        ],
+      }
+    ),
+    textureProbe(
       'external',
       ['samplerExternalOES', 'filter_nearest', 'texture(samplerExternalOES,vec2)'],
       'uniform samplerExternalOES s : filter_nearest;\nvec4 probe(vec2 uv) { return texture(s, uv); }',
@@ -320,14 +410,8 @@ const SPEC_OF_KIND = {
   layers: textureSpec('layers', 4, 4, { depth: 3, isMipmapped: true }),
   volume: textureSpec('volume', 4, 4, { depth: 4 }),
   cube: textureSpec('cube', 2, 2),
+  cubes: textureSpec('cubes', 4, 4, { depth: 2, isMipmapped: true }),
 };
-
-function kindOf(sampler) {
-  if (sampler.endsWith('2DArray')) return 'layers';
-  if (sampler.endsWith('3D')) return 'volume';
-  if (sampler === 'samplerCube') return 'cube';
-  return 'flat';
-}
 
 /** Three rows of each argument, by the argument's place in the call and its type. */
 function argumentValues(kind, type, place) {
@@ -349,6 +433,12 @@ function argumentValues(kind, type, place) {
         [1, 0.2, -0.3],
         [0.2, -1, 0.6],
         [-0.3, 0.2, -1],
+      ];
+    if (kind === 'cubes')
+      return [
+        [1, 0.2, -0.3, 0],
+        [0.2, -1, 0.6, 1],
+        [-0.3, 0.2, -1, 1.4],
       ];
     if (type === 'vec3')
       return [
@@ -420,7 +510,7 @@ const PLACES = {
 function functionProbe(row) {
   const name = row.id.slice(0, row.id.indexOf('('));
   const [sampler, ...types] = row.args;
-  const kind = kindOf(sampler);
+  const kind = textureKindOf(sampler);
   const isFloat = !/^[iu]/.test(sampler);
   const filter = isFloat ? 'filter_linear_mipmap' : 'filter_nearest_mipmap';
   // textureGather's component is a constant expression, so it stands in the source.
@@ -442,14 +532,58 @@ function functionProbe(row) {
   );
 }
 
-/** Every texture function row but a cube array's and an external sampler's. */
+/** Every texture function row but an external sampler's. */
 const functionProbes = () =>
   INSTRUCTION_TABLE.filter(
-    (row) =>
-      row.owner === '#1829' && /^(texture|texel)\w*\(/.test(row.id) && !/CubeArray|ExternalOES/.test(row.id)
+    (row) => row.owner === '#1829' && /^(texture|texel)\w*\(/.test(row.id) && !/ExternalOES/.test(row.id)
   ).map(functionProbe);
 
+/** Each use of a cube array's size: Godot declares an `ivec2`, and its GLSL gives an `ivec3`. */
+function cubeArraySizeProbes() {
+  const uses = [
+    ['lane', 'int probe(int lod) { return textureSize(s, lod).x; }'],
+    ['swizzle', 'ivec2 probe(int lod) { return textureSize(s, lod).yx; }'],
+    ['float-constructor', 'vec2 probe(int lod) { return vec2(textureSize(s, lod)); }'],
+    ['int-constructor', 'ivec2 probe(int lod) { return ivec2(textureSize(s, lod)); }'],
+    ['first-of-two', 'ivec4 probe(int lod) { return ivec4(textureSize(s, lod), ivec2(5, 6)); }'],
+    ['last-of-three', 'ivec4 probe(int lod) { return ivec4(1, 2, textureSize(s, lod)); }'],
+    ['before-scalar', 'ivec3 probe(int lod) { return ivec3(textureSize(s, lod), 7); }'],
+    ['scaled-lane', 'int probe(int lod) { return (textureSize(s, lod) * 2).y; }'],
+    ['vector-sum', 'int probe(int lod) { return (textureSize(s, lod) + ivec2(1)).x; }'],
+    ['component-wise-call', 'int probe(int lod) { return max(textureSize(s, lod), 1).x; }'],
+    ['equal-sizes', 'bool probe(int lod) { return textureSize(s, lod) == textureSize(s, 0); }'],
+    ['equal-vector', 'bool probe(int lod) { return textureSize(s, lod) == ivec2(4); }'],
+    ['choice', 'int probe(int lod) { return (lod > 0 ? textureSize(s, lod) : textureSize(s, 0)).x; }'],
+    ['returned', 'ivec2 probe(int lod) { return textureSize(s, lod); }'],
+    ['declared', 'ivec2 probe(int lod) { ivec2 size = textureSize(s, lod); return size; }'],
+  ];
+  return uses.map(([use, body]) =>
+    textureProbe(
+      `cubes-size-${use}`,
+      ['samplerCubeArray', 'textureSize(samplerCubeArray,int)'],
+      `uniform samplerCubeArray s;\n${body}`,
+      {
+        textures: { s: textureSpec('cubes', 4, 4, { depth: 3, isMipmapped: true }) },
+        inputs: [[0], [1], [2]],
+      }
+    )
+  );
+}
+
+/** The screen textures Godot 4 removed: it refuses each name with its own message. */
+function removedTextureProbes() {
+  return ['SCREEN_TEXTURE', 'DEPTH_TEXTURE', 'NORMAL_ROUGHNESS_TEXTURE'].map((name) =>
+    textureProbe(
+      `removed-${name.toLowerCase().replaceAll('_', '-')}`,
+      ['sampler2D', 'texture(sampler2D,vec2)'],
+      `vec4 probe() { return texture(${name}, vec2(0.5)); }`
+    )
+  );
+}
+
 export const TEXTURE_PROBES = [
+  ...removedTextureProbes(),
+  ...cubeArraySizeProbes(),
   ...filterProbes(),
   ...defaultProbes(),
   ...levelProbes(),

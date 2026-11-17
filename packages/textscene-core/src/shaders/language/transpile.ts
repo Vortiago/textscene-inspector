@@ -1,6 +1,7 @@
 import { GODOT_SAMPLING, type ProjectSampling } from '../uniforms/samplerState.js';
 import { bindParameters, type TranspiledUniform } from '../uniforms/transpiledUniform.js';
 import { emitShader, type TranspiledFunction } from './emitter.js';
+import { withGlslTypes } from './glslTypes.js';
 import { parsedShader, type ParsedShader, type ShaderOptions } from './parseShader.js';
 import { ShadingLanguageError } from './shadingLanguageError.js';
 import { checkTranspiled } from './transpiledRows.js';
@@ -41,7 +42,7 @@ export function transpileParsedShader(
     );
   const parameters = bindParameters(tree, { useLinearColor, sampling });
   const values = new Map([...parameters].map(([name, binding]) => [name, binding.value]));
-  return { functions: emitShader(tree, values), parameters };
+  return { functions: emitShader(withGlslTypes(tree), values), parameters };
 }
 
 /** A text with no head is a probe's, which Godot draws as a `canvas_item` in a viewport without HDR. */

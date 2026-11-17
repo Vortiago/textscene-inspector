@@ -1,4 +1,4 @@
-import { CompressedArrayTexture, DataArrayTexture, RGBAFormat, Source, type Texture } from 'three';
+import { Source, type Texture } from 'three';
 
 interface Follower {
   readonly source: Texture;
@@ -21,26 +21,8 @@ export function followSource(copy: Texture): void {
 
 /** Its own `Source`: three keeps one upload version per `Source` (`WebGLTextures.js:976`), not per state. */
 function cloneOf(source: Texture): Texture {
-  if (source instanceof DataArrayTexture && source.format === RGBAFormat && source.mipmaps.length > 1)
-    return levelledCopyOf(source);
   const copy = source.clone();
   copy.source = new Source(source.image);
-  return copy;
-}
-
-/** three uploads level 0 of a `DataArrayTexture` only (`WebGLTextures.js:1229`), every level of this one. */
-function levelledCopyOf(source: DataArrayTexture): CompressedArrayTexture {
-  const { width, height, depth } = source.image;
-  const copy = new CompressedArrayTexture(
-    source.mipmaps as never,
-    width,
-    height,
-    depth,
-    RGBAFormat as never,
-    source.type
-  );
-  copy.internalFormat = source.internalFormat;
-  copy.unpackAlignment = source.unpackAlignment;
   return copy;
 }
 

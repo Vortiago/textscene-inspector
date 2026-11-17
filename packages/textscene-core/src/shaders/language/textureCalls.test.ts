@@ -9,7 +9,11 @@ import {
 } from 'three';
 import { float, int, ivec2, ivec3, texture, texture3D, vec2, vec3, vec4 } from 'three/tsl';
 import { NodeMaterial, type Node, type NodeFrame, type TextureNode } from 'three/webgpu';
-import { generatedFragmentShader } from '../generatedShader.testkit.js';
+import {
+  generatedFragmentShader,
+  generatedProgram,
+  generatedVertexShader,
+} from '../generatedShader.testkit.js';
 import { builtInCall } from './emitBuiltIn.js';
 import { instruction } from './instructions.js';
 import { SamplerChoice } from './textureCalls.js';
@@ -49,6 +53,48 @@ describe('builtInCall of a texture function', () => {
   it('rounds a sampled layer half to even', () => {
     const glsl = glslOf('texture(sampler2DArray,vec3)', [layers(), vec3(0.25, 0.75, 1.5) as unknown as Node]);
     expect(glsl).toContain('floor(');
+  });
+
+  it('reads a cube array from the layers of a 2D array, as WebGL 2 has no cube array texture', () => {
+    const cubes = texture(new DataArrayTexture(new Uint8Array(4 * 12), 1, 1, 12)) as unknown as Node;
+    const glsl = glslOf('texture(samplerCubeArray,vec4)', [cubes, vec4(1, 0.2, -0.3, 1) as unknown as Node]);
+    expect(glsl).toMatch(/uniform .*sampler2DArray/);
+    expect(glsl).toContain('texelFetch(');
+    expect(glsl).not.toMatch(/uniform \w*samplerCube/);
+  });
+
+  // GLSL ES 3.00 has derivatives in the fragment stage only, and an implicit level outside it is level 0.
+  it('reads level 0 of a cube array in the vertex stage, with no derivative', () => {
+    const cubes = texture(new DataArrayTexture(new Uint8Array(4 * 6), 1, 1, 6)) as unknown as Node;
+    const operands = [cubes, vec4(1, 0.2, -0.3, 0) as unknown as Node];
+    const read = builtInCall('texture', instruction('texture(samplerCubeArray,vec4)')!, operands);
+    const glsl = generatedVertexShader((read as unknown as { xyz: Node }).xyz);
+    expect(glsl).toContain('texelFetch(');
+    expect(glsl).not.toMatch(/dFd[xy]/);
+  });
+
+  it('reads the implicit level of one cube array read in each stage that reaches it', () => {
+    const cubes = texture(new DataArrayTexture(new Uint8Array(4 * 6), 1, 1, 6)) as unknown as Node;
+    const operands = [cubes, vec4(1, 0.2, -0.3, 0) as unknown as Node];
+    const read = builtInCall('texture', instruction('texture(samplerCubeArray,vec4)')!, operands);
+    const { vertex, fragment } = generatedProgram({
+      positionNode: (read as unknown as { xyz: Node }).xyz,
+      fragmentNode: read,
+    });
+    expect(vertex).not.toMatch(/dFd[xy]/);
+    expect(fragment).toMatch(/dFd[xy]/);
+  });
+
+  it('holds the derivatives of the direction in one variable for every cube array of a sampler array', () => {
+    const cubes = () =>
+      texture(new DataArrayTexture(new Uint8Array(4 * 6), 1, 1, 6)) as unknown as TextureNode;
+    const choice = new SamplerChoice(
+      [cubes(), cubes()],
+      int(1).toVar() as unknown as Node
+    ) as unknown as Node;
+    const glsl = glslOf('texture(samplerCubeArray,vec4)', [choice, vec4(1, 0.2, -0.3, 0) as unknown as Node]);
+    const variables = new Set([...glsl.matchAll(/(\w+) = dFdx\(/g)].map(([, name]) => name));
+    expect(variables.size).toBe(1);
   });
 
   it('samples a 3D texture with texture', () => {

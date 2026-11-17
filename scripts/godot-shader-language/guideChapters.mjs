@@ -812,14 +812,14 @@ Godot keeps the filter and repeat on the sampler, and three keeps them on the te
     {
       heading: 'Sampler types',
       rows: (row) => /^[iu]?sampler/.test(row.id),
-      what: 'A sampler reads a 2D texture, a 2D array, a 3D texture or a cube, of floats, ints (`isampler`) or uints (`usampler`). A sampler can be an argument of a function: the transpiler writes the function once for each set of textures its calls pass.',
-      tsl: 'a `texture`, `texture3D` or cube texture node per element',
-      probes: textureProbes(/^(layers|volume|cube|unsigned|argument|array)/),
+      what: "A sampler reads a 2D texture, a 2D array, a 3D texture, a cube or a cube array, of floats, ints (`isampler`) or uints (`usampler`). WebGL 2 has no cube array, so a `samplerCubeArray` reads a three.js `DataArrayTexture` with six layers to a cube, in Godot's face order +x, -x, +y, -y, +z, -z. Its read follows Vulkan's cube sampling: a filter footprint past a face edge reads the next face, and at a cube corner the three other texels share the corner's weight. On WebGLRenderer, the node of a 2D array, a cube array or a 3D texture uploads every level of the texture, which three uploads at level 0 only. WebGPURenderer is untested (#1788). Godot refuses `SCREEN_TEXTURE`, `DEPTH_TEXTURE` and `NORMAL_ROUGHNESS_TEXTURE` with its own message. A sampler can be an argument of a function: the transpiler writes the function once for each set of textures its calls pass.",
+      tsl: 'a `texture`, `texture3D` or cube texture node per element, and a composite of texel loads for a cube array',
+      probes: textureProbes(/^(layers|volume|cube|unsigned|argument|array|removed)/),
     },
     {
       heading: 'Default textures',
       rows: (row) => /^hint_(default_|normal$|roughness_|anisotropy)/.test(row.id),
-      what: 'A hint names the texture a sampler reads while the material sets none: `hint_default_black` reads opaque black, `hint_default_transparent` transparent black, `hint_normal` and `hint_roughness_normal` the flat normal (128, 128, 255), and `hint_anisotropy` (255, 128, 255). Every other sampler reads white. A cube and a 3D texture have black, transparent and white only. The roughness hints change nothing the shader reads.',
+      what: 'A hint names the texture a sampler reads while the material sets none: `hint_default_black` reads opaque black, `hint_default_transparent` transparent black, `hint_normal` and `hint_roughness_normal` the flat normal (128, 128, 255), and `hint_anisotropy` (255, 128, 255). Every other sampler reads white. A cube and a 3D texture have black, transparent and white only. A cube array reads white under `hint_default_white`, transparent black under `hint_default_transparent`, and opaque black under every other hint. The roughness hints change nothing the shader reads.',
       tsl: "a 4 by 4 texture of Godot's texel",
       probes: textureProbes(/^unset-/),
     },
@@ -833,7 +833,7 @@ Godot keeps the filter and repeat on the sampler, and three keeps them on the te
     {
       heading: 'Texture functions',
       rows: (row) => /^(texture|texelFetch)\w*\(/.test(row.id),
-      what: '`texture` samples at a coordinate, with an optional bias. `textureLod` samples a level, `textureGrad` samples with gradients and `texelFetch` reads one texel of a level. `textureSize` gives the size of a level, and `textureQueryLevels` the level count of the texture. `textureQueryLod` gives the level of detail from the derivatives of the coordinate in texels, as Vulkan defines it. `textureGather` reads one channel of the four texels around the coordinate. A cube gathers on the face the direction picks, and a texel past the edge of the face comes from the next face. A 2D array keeps the layer in the last lane of the coordinate.',
+      what: '`texture` samples at a coordinate, with an optional bias. `textureLod` samples a level, `textureGrad` samples with gradients and `texelFetch` reads one texel of a level. `textureSize` gives the size of a level, and `textureQueryLevels` the level count of the texture. `textureQueryLod` gives the level of detail from the derivatives of the coordinate in texels, as Vulkan defines it. `textureGather` reads one channel of the four texels around the coordinate. A cube gathers on the face the direction picks, and a texel past the edge of the face comes from the next face. A 2D array and a cube array keep the layer in the last lane of the coordinate. `textureSize` of a cube array gives `ivec3(width, height, cubes)`, as the GLSL of Godot does, though Godot declares an `ivec2`. A swizzle, a constructor that uses every argument, a component-wise operator or call, and a choice take it. A return, a declaration, or an operator with an `ivec2` is refused, as GLSL refuses it in Godot.',
       tsl: 'the `sample`, `bias`, `level`, `grad`, `load` and `gather` nodes and `textureSize` of a texture node, a uniform for the level count, and a composite for the level of detail and a cube gather',
       probes: textureProbes(/^(2d-texel|2d-size|2d-lod|2d-source|function-)/),
     },
