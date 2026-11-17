@@ -3,6 +3,7 @@ import { BlendMode } from '../../godot/rendering/materials/blendMode.js';
 import { DetailUV } from '../../godot/rendering/materials/detailUv.js';
 import { DistanceFadeMode } from '../../godot/rendering/materials/distanceFadeMode.js';
 import { Transparency } from '../../godot/rendering/materials/transparency.js';
+import { MaterialFeature, MaterialFlag } from '../../godot/rendering/materials/materialFeatures.js';
 import { usesAlphaAntialiasing, type MaterialKey } from './materialKey.js';
 import { read, readOn } from './textureReads.js';
 
@@ -48,17 +49,17 @@ export function fragmentEffects(key: MaterialKey): string {
 }
 
 function refractionOrAlpha(key: MaterialKey): string {
-  if (key.features.has('REFRACTION')) return refraction(key);
+  if (key.features.has(MaterialFeature.REFRACTION)) return refraction(key);
   const isAlpha =
     key.transparency !== Transparency.DISABLED ||
-    key.flags.has('USE_SHADOW_TO_OPACITY') ||
+    key.flags.has(MaterialFlag.USE_SHADOW_TO_OPACITY) ||
     key.distanceFade === DistanceFadeMode.PIXEL_ALPHA ||
     key.proximityFade;
   return isAlpha ? '	ALPHA *= albedo.a * albedo_tex.a;\n' : '';
 }
 
 function refraction(key: MaterialKey): string {
-  let code = key.features.has('NORMAL_MAPPING')
+  let code = key.features.has(MaterialFeature.NORMAL_MAPPING)
     ? `
 	// Refraction: Enabled (with normal map texture)
 	vec3 unpacked_normal = NORMAL_MAP;
@@ -138,29 +139,29 @@ function distanceFade(key: MaterialKey): string {
 function surfaceLayers(key: MaterialKey): string {
   const { features } = key;
   let code = '';
-  if (features.has('RIM'))
+  if (features.has(MaterialFeature.RIM))
     code += `
 	// Rim: Enabled
 	vec2 rim_tex = ${read(key, 'texture_rim')}.xy;
 	RIM = rim * rim_tex.x;
 	RIM_TINT = rim_tint * rim_tex.y;
 `;
-  if (features.has('CLEARCOAT'))
+  if (features.has(MaterialFeature.CLEARCOAT))
     code += `
 	// Clearcoat: Enabled
 	vec2 clearcoat_tex = ${read(key, 'texture_clearcoat')}.xy;
 	CLEARCOAT = clearcoat * clearcoat_tex.x;
 	CLEARCOAT_ROUGHNESS = clearcoat_roughness * clearcoat_tex.y;
 `;
-  if (features.has('ANISOTROPY'))
+  if (features.has(MaterialFeature.ANISOTROPY))
     code += `
 	// Anisotropy: Enabled
 	vec3 anisotropy_tex = ${read(key, 'texture_flowmap')}.rga;
 	ANISOTROPY = anisotropy_ratio * anisotropy_tex.b;
 	ANISOTROPY_FLOW = anisotropy_tex.rg * 2.0 - 1.0;
 `;
-  if (features.has('AMBIENT_OCCLUSION')) {
-    const uv = key.flags.has('AO_ON_UV2') ? 2 : 1;
+  if (features.has(MaterialFeature.AMBIENT_OCCLUSION)) {
+    const uv = key.flags.has(MaterialFlag.AO_ON_UV2) ? 2 : 1;
     const occlusion = key.orm
       ? 'orm_tex.r'
       : `dot(${readOn(key, uv, 'texture_ambient_occlusion')}, ao_texture_channel)`;
@@ -177,13 +178,13 @@ function surfaceLayers(key: MaterialKey): string {
 function scattering(key: MaterialKey): string {
   const { features } = key;
   let code = '';
-  if (features.has('SUBSURFACE_SCATTERING'))
+  if (features.has(MaterialFeature.SUBSURFACE_SCATTERING))
     code += `
 	// Subsurface Scattering: Enabled
 	float sss_tex = ${read(key, 'texture_subsurface_scattering')}.r;
 	SSS_STRENGTH = subsurface_scattering_strength * sss_tex;
 `;
-  if (features.has('SUBSURFACE_TRANSMITTANCE'))
+  if (features.has(MaterialFeature.SUBSURFACE_TRANSMITTANCE))
     code += `
 	// Subsurface Scattering Transmittance: Enabled
 	vec4 trans_color_tex = ${read(key, 'texture_subsurface_transmittance')};
@@ -191,7 +192,7 @@ function scattering(key: MaterialKey): string {
 	SSS_TRANSMITTANCE_DEPTH = transmittance_depth;
 	SSS_TRANSMITTANCE_BOOST = transmittance_boost;
 `;
-  if (features.has('BACKLIGHT'))
+  if (features.has(MaterialFeature.BACKLIGHT))
     code += `
 	// Backlight: Enabled
 	vec3 backlight_tex = ${read(key, 'texture_backlight')}.rgb;
@@ -202,7 +203,7 @@ function scattering(key: MaterialKey): string {
 
 /** The detail albedo and normal read on the detail UV layer, and its mask on UV1. */
 function detail(key: MaterialKey): string {
-  if (!key.features.has('DETAIL')) return '';
+  if (!key.features.has(MaterialFeature.DETAIL)) return '';
   const uv = key.detailUv === DetailUV.DETAIL_UV_2 ? 2 : 1;
   return `
 	// Detail: Enabled

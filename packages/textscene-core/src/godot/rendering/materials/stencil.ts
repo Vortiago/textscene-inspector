@@ -28,7 +28,10 @@ export const StencilFlag = {
 
 const WRITE_FLAGS = StencilFlag.WRITE | StencilFlag.WRITE_DEPTH_FAIL;
 
-/** The flags `set_stencil_flags` (`material.cpp:3251`) stores for `requested` over `current`. */
+/**
+ * The flags `set_stencil_flags` (`material.cpp:3251`) stores for `requested` over `current`.
+ * @canonical Model the stencil flags Godot keeps after a set.
+ */
 export function stencilFlagsAfterSet(current: number, requested: number): number {
   let flags = requested;
   if (flags & StencilFlag.READ && current & WRITE_FLAGS) flags &= StencilFlag.READ;

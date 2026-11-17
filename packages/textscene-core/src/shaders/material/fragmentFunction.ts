@@ -1,6 +1,7 @@
 import type { EnumValue } from '../../godot/classdb/enumNames.js';
 import { EmissionOperator } from '../../godot/rendering/materials/emissionOperator.js';
 import { TextureChannel } from '../../godot/rendering/materials/textureChannel.js';
+import { MaterialFeature, MaterialFlag } from '../../godot/rendering/materials/materialFeatures.js';
 import { fragmentEffects } from './fragmentEffects.js';
 import { isMsdf, usesDetailUv2, type MaterialKey } from './materialKey.js';
 import { read, readOn } from './textureReads.js';
@@ -34,7 +35,8 @@ vec4 triplanar_texture(sampler2D p_sampler, vec3 p_weights, vec3 p_triplanar_pos
 export function helperFunctions(key: MaterialKey): string {
   let code = '';
   if (isMsdf(key)) code += MSDF_MEDIAN;
-  if (key.flags.has('UV1_USE_TRIPLANAR') || key.flags.has('UV2_USE_TRIPLANAR')) code += TRIPLANAR_TEXTURE;
+  if (key.flags.has(MaterialFlag.UV1_USE_TRIPLANAR) || key.flags.has(MaterialFlag.UV2_USE_TRIPLANAR))
+    code += TRIPLANAR_TEXTURE;
   return code;
 }
 
@@ -54,12 +56,12 @@ void fragment() {`;
 
 const usesUv2 = (key: MaterialKey): boolean =>
   usesDetailUv2(key) ||
-  (key.features.has('AMBIENT_OCCLUSION') && key.flags.has('AO_ON_UV2')) ||
-  (key.features.has('EMISSION') && key.flags.has('EMISSION_ON_UV2'));
+  (key.features.has(MaterialFeature.AMBIENT_OCCLUSION) && key.flags.has(MaterialFlag.AO_ON_UV2)) ||
+  (key.features.has(MaterialFeature.EMISSION) && key.flags.has(MaterialFlag.EMISSION_ON_UV2));
 
 /** UV1 and UV2 sit together: UV2 takes no blank line of its own after UV1's. */
 function baseUvs(key: MaterialKey): string {
-  const isTriplanar = key.flags.has('UV1_USE_TRIPLANAR');
+  const isTriplanar = key.flags.has(MaterialFlag.UV1_USE_TRIPLANAR);
   let code = '';
   if (!isTriplanar)
     code += `
@@ -75,9 +77,10 @@ function baseUvs(key: MaterialKey): string {
 
 /** A heightmap is ignored with a triplanar UV1. The binormal is negated for mikktspace. */
 function heightmap(key: MaterialKey): string {
-  if (!key.features.has('HEIGHT_MAPPING') || key.flags.has('UV1_USE_TRIPLANAR')) return '';
+  if (!key.features.has(MaterialFeature.HEIGHT_MAPPING) || key.flags.has(MaterialFlag.UV1_USE_TRIPLANAR))
+    return '';
   const depthOf = (uv: string) =>
-    key.flags.has('INVERT_HEIGHTMAP')
+    key.flags.has(MaterialFlag.INVERT_HEIGHTMAP)
       ? `texture(texture_heightmap, ${uv}).r`
       : `1.0 - texture(texture_heightmap, ${uv}).r`;
   let code = `
@@ -109,7 +112,9 @@ function heightmap(key: MaterialKey): string {
 		vec2 prev_ofs = ofs + delta;
 		float after_depth = depth - current_depth;
 `;
-    const beforeDepth = key.flags.has('INVERT_HEIGHTMAP') ? depthOf('prev_ofs') : `(${depthOf('prev_ofs')})`;
+    const beforeDepth = key.flags.has(MaterialFlag.INVERT_HEIGHTMAP)
+      ? depthOf('prev_ofs')
+      : `(${depthOf('prev_ofs')})`;
     code += `		float before_depth = ${beforeDepth} - current_depth + layer_depth;\n`;
     code += `
 		float weight = after_depth / (after_depth - before_depth);
@@ -126,7 +131,7 @@ function heightmap(key: MaterialKey): string {
 
 function albedo(key: MaterialKey): string {
   const { flags } = key;
-  let code = flags.has('USE_POINT_SIZE')
+  let code = flags.has(MaterialFlag.USE_POINT_SIZE)
     ? `
 	// Use Point Size: Enabled
 	vec4 albedo_tex = texture(texture_albedo, POINT_COORD);
@@ -135,7 +140,7 @@ function albedo(key: MaterialKey): string {
 	vec4 albedo_tex = ${read(key, 'texture_albedo')};
 `;
   if (isMsdf(key)) code += msdfAlbedo(key);
-  else if (flags.has('ALBEDO_TEXTURE_FORCE_SRGB'))
+  else if (flags.has(MaterialFlag.ALBEDO_TEXTURE_FORCE_SRGB))
     code += `
 	// Albedo Texture Force sRGB: Enabled
 	albedo_tex.rgb = mix(
@@ -143,7 +148,7 @@ function albedo(key: MaterialKey): string {
 			albedo_tex.rgb.rgb * (1.0 / 12.92),
 			lessThan(albedo_tex.rgb, vec3(0.04045)));
 `;
-  if (flags.has('ALBEDO_FROM_VERTEX_COLOR'))
+  if (flags.has(MaterialFlag.ALBEDO_FROM_VERTEX_COLOR))
     code += `
 	// Vertex Color Use as Albedo: Enabled
 	albedo_tex *= COLOR;
@@ -153,7 +158,7 @@ function albedo(key: MaterialKey): string {
 }
 
 function msdfAlbedo(key: MaterialKey): string {
-  const coordinate = key.flags.has('USE_POINT_SIZE') ? 'POINT_COORD' : 'base_uv';
+  const coordinate = key.flags.has(MaterialFlag.USE_POINT_SIZE) ? 'POINT_COORD' : 'base_uv';
   return `
 	{
 		// Albedo Texture MSDF: Enabled
@@ -188,7 +193,7 @@ function metallicSurface(key: MaterialKey): string {
 	SPECULAR = specular;
 `;
   code += `
-	vec4 roughness_texture_channel = ${ROUGHNESS_CHANNELS[key.roughnessTextureChannel]};
+	vec4 roughness_texture_channel = ${ROUGHNESS_CHANNELS[key.roughnessTextureChannel] ?? ''};
 `;
   code += `	float roughness_tex = dot(${read(key, 'texture_roughness')}, roughness_texture_channel);\n`;
   return `${code}	ROUGHNESS = roughness_tex * roughness;
@@ -206,14 +211,14 @@ function ormSurface(key: MaterialKey): string {
 
 function normalMaps(key: MaterialKey): string {
   let code = '';
-  if (key.features.has('NORMAL_MAPPING')) {
+  if (key.features.has(MaterialFeature.NORMAL_MAPPING)) {
     code += `
 	// Normal Map: Enabled
 `;
     code += `	NORMAL_MAP = ${read(key, 'texture_normal')}.rgb;\n`;
     code += '	NORMAL_MAP_DEPTH = normal_scale;\n';
   }
-  if (key.features.has('BENT_NORMAL_MAPPING')) {
+  if (key.features.has(MaterialFeature.BENT_NORMAL_MAPPING)) {
     code += `
 	// Bent Normal Map: Enabled
 `;
@@ -223,8 +228,8 @@ function normalMaps(key: MaterialKey): string {
 }
 
 function emission(key: MaterialKey): string {
-  if (!key.features.has('EMISSION')) return '';
-  const uv = key.flags.has('EMISSION_ON_UV2') ? 2 : 1;
+  if (!key.features.has(MaterialFeature.EMISSION)) return '';
+  const uv = key.flags.has(MaterialFlag.EMISSION_ON_UV2) ? 2 : 1;
   let code = `
 	// Emission: Enabled
 `;

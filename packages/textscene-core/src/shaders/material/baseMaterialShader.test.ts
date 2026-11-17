@@ -20,4 +20,16 @@ describe('baseMaterialShader', () => {
 
     expect(baseMaterialShader('ORMMaterial3D', { rim_enabled: true })).not.toBe(rim);
   });
+
+  it("writes nothing for an enum value Godot's switch has no case for", () => {
+    const text = baseMaterialShader('StandardMaterial3D', { blend_mode: 9, cull_mode: 9 });
+
+    expect(text).toContain('render_mode , depth_draw_opaque, diffuse_burley');
+  });
+
+  it('writes no filter for a texture filter past the last one, as Godot does', () => {
+    const text = baseMaterialShader('StandardMaterial3D', { texture_filter: 6 });
+
+    expect(text).toContain('uniform sampler2D texture_albedo : source_color, , repeat_enable;');
+  });
 });

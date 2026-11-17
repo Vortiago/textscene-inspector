@@ -1,7 +1,11 @@
 import type { EnumValue } from '../../godot/classdb/enumNames.js';
 import { clamp } from '../../godot/math/math.js';
 import { TextureChannel, textureChannelMask } from '../../godot/rendering/materials/textureChannel.js';
-import { BASE_MATERIAL_3D_DEFAULTS as D } from '../../godot/scene/baseMaterial3D.js';
+import {
+  BASE_MATERIAL_3D_DEFAULTS as D,
+  PROXIMITY_FADE_DISTANCE_MIN,
+  TRIPLANAR_SHARPNESS_RANGE,
+} from '../../godot/scene/baseMaterial3D.js';
 import type { MaterialState, MaterialTexture, MaterialValue } from './materialProperties.js';
 
 /** The value of each property the constructor sets (`material.cpp:3936`), under the property's name. */
@@ -152,10 +156,14 @@ export function materialParameters(state: MaterialState): Record<string, Materia
   parameters.metallic_texture_channel = maskOf(state, 'metallic_texture_channel');
   parameters.ao_texture_channel = maskOf(state, 'ao_texture_channel');
   parameters.refraction_texture_channel = maskOf(state, 'refraction_texture_channel');
-  // A sharpness below 0 or above 150 gives NaN weights (`material.cpp:2785`).
-  parameters.uv1_blend_sharpness = clamp(number('uv1_triplanar_sharpness'), 0, 150);
-  parameters.uv2_blend_sharpness = clamp(number('uv2_triplanar_sharpness'), 0, 150);
-  parameters.proximity_fade_distance = Math.max(number('proximity_fade_distance'), 0.01);
+  // A sharpness out of range gives NaN weights.
+  const { min, max } = TRIPLANAR_SHARPNESS_RANGE;
+  parameters.uv1_blend_sharpness = clamp(number('uv1_triplanar_sharpness'), min, max);
+  parameters.uv2_blend_sharpness = clamp(number('uv2_triplanar_sharpness'), min, max);
+  parameters.proximity_fade_distance = Math.max(
+    number('proximity_fade_distance'),
+    PROXIMITY_FADE_DISTANCE_MIN
+  );
   parameters.heightmap_flip = [
     valueOf(state, 'heightmap_flip_tangent') ? -1 : 1,
     valueOf(state, 'heightmap_flip_binormal') ? -1 : 1,

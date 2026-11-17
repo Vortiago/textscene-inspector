@@ -2,6 +2,7 @@ import type { EnumValue } from '../../godot/classdb/enumNames.js';
 import { BillboardMode } from '../../godot/rendering/materials/billboardMode.js';
 import { DetailUV } from '../../godot/rendering/materials/detailUv.js';
 import { ShadingMode } from '../../godot/rendering/materials/shadingMode.js';
+import { MaterialFlag } from '../../godot/rendering/materials/materialFeatures.js';
 import type { MaterialKey } from './materialKey.js';
 
 const KEEP_SCALE = `
@@ -108,7 +109,7 @@ export function vertexFunction(key: MaterialKey): string {
   const { flags } = key;
   let code = `
 void vertex() {`;
-  if (flags.has('SRGB_VERTEX_COLOR'))
+  if (flags.has(MaterialFlag.SRGB_VERTEX_COLOR))
     code += `
 	// Vertex Color is sRGB: Enabled
 	if (!OUTPUT_IS_SRGB) {
@@ -118,7 +119,7 @@ void vertex() {`;
 				lessThan(COLOR.rgb, vec3(0.04045)));
 	}
 `;
-  if (flags.has('USE_POINT_SIZE'))
+  if (flags.has(MaterialFlag.USE_POINT_SIZE))
     code += `
 	// Use Point Size: Enabled
 	POINT_SIZE = point_size;
@@ -130,18 +131,18 @@ void vertex() {`;
 `;
   code += uvTransforms(key);
   code += billboard(key);
-  if (flags.has('FIXED_SIZE')) code += FIXED_SIZE;
+  if (flags.has(MaterialFlag.FIXED_SIZE)) code += FIXED_SIZE;
   code += triplanar(key);
   if (key.grow)
     code += `
 	// Grow: Enabled
 	VERTEX += NORMAL * grow;
 `;
-  if (flags.has('USE_Z_CLIP_SCALE'))
+  if (flags.has(MaterialFlag.USE_Z_CLIP_SCALE))
     code += `
 	Z_CLIP_SCALE = z_clip_scale;
 `;
-  if (flags.has('USE_FOV_OVERRIDE')) code += FOV_OVERRIDE;
+  if (flags.has(MaterialFlag.USE_FOV_OVERRIDE)) code += FOV_OVERRIDE;
   return `${code}}\n`;
 }
 
@@ -149,12 +150,12 @@ void vertex() {`;
 function uvTransforms(key: MaterialKey): string {
   const { flags } = key;
   let code = '';
-  if (!flags.has('UV1_USE_TRIPLANAR'))
+  if (!flags.has(MaterialFlag.UV1_USE_TRIPLANAR))
     code += `
 	UV = UV * uv1_scale.xy + uv1_offset.xy;
 `;
-  if (key.detailUv === DetailUV.DETAIL_UV_2 && !flags.has('UV2_USE_TRIPLANAR')) {
-    if (flags.has('UV1_USE_TRIPLANAR')) code += '\n';
+  if (key.detailUv === DetailUV.DETAIL_UV_2 && !flags.has(MaterialFlag.UV2_USE_TRIPLANAR)) {
+    if (flags.has(MaterialFlag.UV1_USE_TRIPLANAR)) code += '\n';
     code += `	// Detail UV Layer: UV2
 	UV2 = UV2 * uv2_scale.xy + uv2_offset.xy;
 `;
@@ -164,17 +165,17 @@ function uvTransforms(key: MaterialKey): string {
 
 function billboard(key: MaterialKey): string {
   if (key.billboardMode === BillboardMode.BILLBOARD_DISABLED) return '';
-  const keepScale = key.flags.has('BILLBOARD_KEEP_SCALE') ? KEEP_SCALE : '';
+  const keepScale = key.flags.has(MaterialFlag.BILLBOARD_KEEP_SCALE) ? KEEP_SCALE : '';
   const after = key.billboardMode === BillboardMode.BILLBOARD_PARTICLES ? PARTICLE_ANIMATION : NORMAL_MATRIX;
-  return BILLBOARD_MATRICES[key.billboardMode] + keepScale + after;
+  return (BILLBOARD_MATRICES[key.billboardMode] ?? '') + keepScale + after;
 }
 
 /** The world tangent and binormal of a triplanar map, then each UV's weights and position. */
 function triplanar(key: MaterialKey): string {
   const { flags } = key;
-  const isWorld = flags.has('UV1_USE_WORLD_TRIPLANAR');
+  const isWorld = flags.has(MaterialFlag.UV1_USE_WORLD_TRIPLANAR);
   let code = '';
-  if (flags.has('UV1_USE_TRIPLANAR') || flags.has('UV2_USE_TRIPLANAR')) {
+  if (flags.has(MaterialFlag.UV1_USE_TRIPLANAR) || flags.has(MaterialFlag.UV2_USE_TRIPLANAR)) {
     code += isWorld
       ? `
 	vec3 normal = MODEL_NORMAL_MATRIX * NORMAL;
@@ -199,9 +200,9 @@ function triplanar(key: MaterialKey): string {
       ? '	BINORMAL = inverse(MODEL_NORMAL_MATRIX) * normalize(BINORMAL);\n'
       : '	BINORMAL = normalize(BINORMAL);\n';
   }
-  if (flags.has('UV1_USE_TRIPLANAR')) code += triplanarUv(1, isWorld, 'normal');
-  if (flags.has('UV2_USE_TRIPLANAR'))
-    code += triplanarUv(2, flags.has('UV2_USE_WORLD_TRIPLANAR'), 'mat3(MODEL_MATRIX) * NORMAL');
+  if (flags.has(MaterialFlag.UV1_USE_TRIPLANAR)) code += triplanarUv(1, isWorld, 'normal');
+  if (flags.has(MaterialFlag.UV2_USE_TRIPLANAR))
+    code += triplanarUv(2, flags.has(MaterialFlag.UV2_USE_WORLD_TRIPLANAR), 'mat3(MODEL_MATRIX) * NORMAL');
   return code;
 }
 

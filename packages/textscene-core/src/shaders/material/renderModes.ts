@@ -10,6 +10,7 @@ import { SpecularMode } from '../../godot/rendering/materials/specularMode.js';
 import { StencilCompare, StencilFlag, StencilMode } from '../../godot/rendering/materials/stencil.js';
 import { Transparency } from '../../godot/rendering/materials/transparency.js';
 import { GODOT_VERSION } from '../language/instructionTable.generated.js';
+import { MaterialFeature, MaterialFlag } from '../../godot/rendering/materials/materialFeatures.js';
 import { isAlphaTested, type MaterialKey } from './materialKey.js';
 
 /** The text of each of Godot's `render_mode` switches, by enum value. */
@@ -56,6 +57,9 @@ const STENCIL_COMPARES: Readonly<Record<EnumValue<typeof StencilCompare>, string
   [StencilCompare.GREATER_OR_EQUAL]: 'compare_greater_or_equal',
 };
 
+/** A mode after the first, or nothing for a value Godot's switch has no case for. */
+const listed = (mode: string | undefined): string => (mode === undefined ? '' : `, ${mode}`);
+
 /** The comment Godot writes first, with `GODOT_VERSION_FULL_CONFIG` of an official build. */
 export function originComment(key: MaterialKey): string {
   const materialClass = key.orm ? 'ORMMaterial3D' : 'StandardMaterial3D';
@@ -66,21 +70,26 @@ export function originComment(key: MaterialKey): string {
 export function renderModes(key: MaterialKey): string {
   const { flags, features } = key;
   let code = 'shader_type spatial;\nrender_mode ';
-  code += BLEND_MODES[key.blendMode];
-  code += `, ${DEPTH_DRAW_MODES[features.has('REFRACTION') ? DepthDrawMode.ALWAYS : key.depthDrawMode]}`;
-  code += `, ${CULL_MODES[key.cullMode]}`;
-  code += `, ${DIFFUSE_MODES[key.diffuseMode]}`;
-  code += `, ${SPECULAR_MODES[key.specularMode]}`;
-  if (features.has('SUBSURFACE_SCATTERING') && flags.has('SUBSURFACE_MODE_SKIN')) code += ', sss_mode_skin';
+  code += BLEND_MODES[key.blendMode] ?? '';
+  code += listed(
+    DEPTH_DRAW_MODES[features.has(MaterialFeature.REFRACTION) ? DepthDrawMode.ALWAYS : key.depthDrawMode]
+  );
+  code += listed(CULL_MODES[key.cullMode]);
+  code += listed(DIFFUSE_MODES[key.diffuseMode]);
+  code += listed(SPECULAR_MODES[key.specularMode]);
+  if (features.has(MaterialFeature.SUBSURFACE_SCATTERING) && flags.has(MaterialFlag.SUBSURFACE_MODE_SKIN))
+    code += ', sss_mode_skin';
   if (key.shadingMode === ShadingMode.UNSHADED) code += ', unshaded';
-  code += flags.has('DISABLE_DEPTH_TEST') ? ', depth_test_disabled' : DEPTH_TESTS[key.depthTest];
-  if (flags.has('PARTICLE_TRAILS_MODE')) code += ', particle_trails';
+  code += flags.has(MaterialFlag.DISABLE_DEPTH_TEST)
+    ? ', depth_test_disabled'
+    : (DEPTH_TESTS[key.depthTest] ?? '');
+  if (flags.has(MaterialFlag.PARTICLE_TRAILS_MODE)) code += ', particle_trails';
   if (key.shadingMode === ShadingMode.PER_VERTEX) code += ', vertex_lighting';
-  if (flags.has('DONT_RECEIVE_SHADOWS')) code += ', shadows_disabled';
-  if (flags.has('DISABLE_AMBIENT_LIGHT')) code += ', ambient_light_disabled';
-  if (flags.has('USE_SHADOW_TO_OPACITY')) code += ', shadow_to_opacity';
-  if (flags.has('DISABLE_FOG')) code += ', fog_disabled';
-  if (flags.has('DISABLE_SPECULAR_OCCLUSION')) code += ', specular_occlusion_disabled';
+  if (flags.has(MaterialFlag.DONT_RECEIVE_SHADOWS)) code += ', shadows_disabled';
+  if (flags.has(MaterialFlag.DISABLE_AMBIENT_LIGHT)) code += ', ambient_light_disabled';
+  if (flags.has(MaterialFlag.USE_SHADOW_TO_OPACITY)) code += ', shadow_to_opacity';
+  if (flags.has(MaterialFlag.DISABLE_FOG)) code += ', fog_disabled';
+  if (flags.has(MaterialFlag.DISABLE_SPECULAR_OCCLUSION)) code += ', specular_occlusion_disabled';
   if (key.transparency === Transparency.ALPHA_DEPTH_PRE_PASS) code += ', depth_prepass_alpha';
   if (isAlphaTested(key)) {
     if (key.alphaAntialiasingMode === AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE)
@@ -100,5 +109,5 @@ function stencilMode(key: MaterialKey): string {
     flags & StencilFlag.WRITE && 'write',
     flags & StencilFlag.WRITE_DEPTH_FAIL && 'write_depth_fail',
   ].filter(Boolean);
-  return `stencil_mode ${operations.join(', ')}, ${STENCIL_COMPARES[key.stencilCompare]}, ${key.stencilReference};\n`;
+  return `stencil_mode ${operations.join(', ')}${listed(STENCIL_COMPARES[key.stencilCompare])}, ${key.stencilReference};\n`;
 }

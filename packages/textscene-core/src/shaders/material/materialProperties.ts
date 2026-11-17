@@ -4,6 +4,8 @@ import {
   stencilFlagsAfterSet,
   StencilMode,
 } from '../../godot/rendering/materials/stencil.js';
+import { TextureChannel } from '../../godot/rendering/materials/textureChannel.js';
+import { MaterialFeature, MaterialFlag } from '../../godot/rendering/materials/materialFeatures.js';
 import { defaultKey, type Feature, type Flag, type MaterialKey } from './materialKey.js';
 
 /** A texture a material property holds: Godot sets `albedo_texture_size` from the albedo's size. */
@@ -30,47 +32,47 @@ export interface MaterialState {
 type KeySetter = (key: MaterialKey, value: MaterialValue) => void;
 
 const FEATURES: Readonly<Record<string, Feature>> = {
-  emission_enabled: 'EMISSION',
-  normal_enabled: 'NORMAL_MAPPING',
-  bent_normal_enabled: 'BENT_NORMAL_MAPPING',
-  rim_enabled: 'RIM',
-  clearcoat_enabled: 'CLEARCOAT',
-  anisotropy_enabled: 'ANISOTROPY',
-  ao_enabled: 'AMBIENT_OCCLUSION',
-  heightmap_enabled: 'HEIGHT_MAPPING',
-  subsurf_scatter_enabled: 'SUBSURFACE_SCATTERING',
-  subsurf_scatter_transmittance_enabled: 'SUBSURFACE_TRANSMITTANCE',
-  backlight_enabled: 'BACKLIGHT',
-  refraction_enabled: 'REFRACTION',
-  detail_enabled: 'DETAIL',
+  emission_enabled: MaterialFeature.EMISSION,
+  normal_enabled: MaterialFeature.NORMAL_MAPPING,
+  bent_normal_enabled: MaterialFeature.BENT_NORMAL_MAPPING,
+  rim_enabled: MaterialFeature.RIM,
+  clearcoat_enabled: MaterialFeature.CLEARCOAT,
+  anisotropy_enabled: MaterialFeature.ANISOTROPY,
+  ao_enabled: MaterialFeature.AMBIENT_OCCLUSION,
+  heightmap_enabled: MaterialFeature.HEIGHT_MAPPING,
+  subsurf_scatter_enabled: MaterialFeature.SUBSURFACE_SCATTERING,
+  subsurf_scatter_transmittance_enabled: MaterialFeature.SUBSURFACE_TRANSMITTANCE,
+  backlight_enabled: MaterialFeature.BACKLIGHT,
+  refraction_enabled: MaterialFeature.REFRACTION,
+  detail_enabled: MaterialFeature.DETAIL,
 };
 
 const FLAGS: Readonly<Record<string, Flag>> = {
-  no_depth_test: 'DISABLE_DEPTH_TEST',
-  disable_ambient_light: 'DISABLE_AMBIENT_LIGHT',
-  disable_fog: 'DISABLE_FOG',
-  disable_specular_occlusion: 'DISABLE_SPECULAR_OCCLUSION',
-  vertex_color_use_as_albedo: 'ALBEDO_FROM_VERTEX_COLOR',
-  vertex_color_is_srgb: 'SRGB_VERTEX_COLOR',
-  albedo_texture_force_srgb: 'ALBEDO_TEXTURE_FORCE_SRGB',
-  albedo_texture_msdf: 'ALBEDO_TEXTURE_MSDF',
-  emission_on_uv2: 'EMISSION_ON_UV2',
-  ao_on_uv2: 'AO_ON_UV2',
-  heightmap_flip_texture: 'INVERT_HEIGHTMAP',
-  subsurf_scatter_skin_mode: 'SUBSURFACE_MODE_SKIN',
-  uv1_triplanar: 'UV1_USE_TRIPLANAR',
-  uv1_world_triplanar: 'UV1_USE_WORLD_TRIPLANAR',
-  uv2_triplanar: 'UV2_USE_TRIPLANAR',
-  uv2_world_triplanar: 'UV2_USE_WORLD_TRIPLANAR',
-  texture_repeat: 'USE_TEXTURE_REPEAT',
-  disable_receive_shadows: 'DONT_RECEIVE_SHADOWS',
-  shadow_to_opacity: 'USE_SHADOW_TO_OPACITY',
-  billboard_keep_scale: 'BILLBOARD_KEEP_SCALE',
-  fixed_size: 'FIXED_SIZE',
-  use_point_size: 'USE_POINT_SIZE',
-  use_particle_trails: 'PARTICLE_TRAILS_MODE',
-  use_z_clip_scale: 'USE_Z_CLIP_SCALE',
-  use_fov_override: 'USE_FOV_OVERRIDE',
+  no_depth_test: MaterialFlag.DISABLE_DEPTH_TEST,
+  disable_ambient_light: MaterialFlag.DISABLE_AMBIENT_LIGHT,
+  disable_fog: MaterialFlag.DISABLE_FOG,
+  disable_specular_occlusion: MaterialFlag.DISABLE_SPECULAR_OCCLUSION,
+  vertex_color_use_as_albedo: MaterialFlag.ALBEDO_FROM_VERTEX_COLOR,
+  vertex_color_is_srgb: MaterialFlag.SRGB_VERTEX_COLOR,
+  albedo_texture_force_srgb: MaterialFlag.ALBEDO_TEXTURE_FORCE_SRGB,
+  albedo_texture_msdf: MaterialFlag.ALBEDO_TEXTURE_MSDF,
+  emission_on_uv2: MaterialFlag.EMISSION_ON_UV2,
+  ao_on_uv2: MaterialFlag.AO_ON_UV2,
+  heightmap_flip_texture: MaterialFlag.INVERT_HEIGHTMAP,
+  subsurf_scatter_skin_mode: MaterialFlag.SUBSURFACE_MODE_SKIN,
+  uv1_triplanar: MaterialFlag.UV1_USE_TRIPLANAR,
+  uv1_world_triplanar: MaterialFlag.UV1_USE_WORLD_TRIPLANAR,
+  uv2_triplanar: MaterialFlag.UV2_USE_TRIPLANAR,
+  uv2_world_triplanar: MaterialFlag.UV2_USE_WORLD_TRIPLANAR,
+  texture_repeat: MaterialFlag.USE_TEXTURE_REPEAT,
+  disable_receive_shadows: MaterialFlag.DONT_RECEIVE_SHADOWS,
+  shadow_to_opacity: MaterialFlag.USE_SHADOW_TO_OPACITY,
+  billboard_keep_scale: MaterialFlag.BILLBOARD_KEEP_SCALE,
+  fixed_size: MaterialFlag.FIXED_SIZE,
+  use_point_size: MaterialFlag.USE_POINT_SIZE,
+  use_particle_trails: MaterialFlag.PARTICLE_TRAILS_MODE,
+  use_z_clip_scale: MaterialFlag.USE_Z_CLIP_SCALE,
+  use_fov_override: MaterialFlag.USE_FOV_OVERRIDE,
 };
 
 type NumberMember = {
@@ -92,7 +94,6 @@ const NUMBERS: Readonly<Record<string, NumberMember>> = {
   shading_mode: 'shadingMode',
   diffuse_mode: 'diffuseMode',
   specular_mode: 'specularMode',
-  roughness_texture_channel: 'roughnessTextureChannel',
   emission_operator: 'emissionOp',
   detail_blend_mode: 'detailBlendMode',
   detail_uv_layer: 'detailUv',
@@ -122,6 +123,12 @@ function setStencilMode(key: MaterialKey, mode: MaterialKey['stencilMode']): voi
   key.stencilCompare = StencilCompare.ALWAYS;
 }
 
+/** `set_roughness_texture_channel` (`material.cpp:2973`) ignores a value that is not a channel. */
+function setRoughnessTextureChannel(key: MaterialKey, channel: number): void {
+  if (Object.values(TextureChannel).includes(channel as never))
+    key.roughnessTextureChannel = channel as never;
+}
+
 /** Each property the shader text reads, by name, with the setter that writes it into the key. */
 const KEY_SETTERS = new Map<string, KeySetter>([
   ...Object.entries(FEATURES).map(([name, feature]): [string, KeySetter] => [
@@ -142,6 +149,7 @@ const KEY_SETTERS = new Map<string, KeySetter>([
   ]),
   ['stencil_mode', (key, value) => setStencilMode(key, Number(value) as MaterialKey['stencilMode'])],
   ['stencil_flags', (key, value) => setStencilFlags(key, Number(value))],
+  ['roughness_texture_channel', (key, value) => setRoughnessTextureChannel(key, Number(value))],
 ]);
 
 /**

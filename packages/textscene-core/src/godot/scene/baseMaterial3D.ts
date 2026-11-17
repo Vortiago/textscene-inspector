@@ -6,10 +6,7 @@ import { TextureFilter } from '../rendering/materials/textureFilter.js';
 /** The operator a material stores no `emission_operator` for (`scene/resources/material.h:610`). */
 export const EMISSION_OPERATOR_DEFAULT = EmissionOperator.ADD;
 
-/**
- * The defaults `BaseMaterial3D::BaseMaterial3D` sets (`scene/resources/material.cpp:3937-4000`),
- * for the properties a material stores nothing for. The setters check no range.
- */
+/** What `BaseMaterial3D::BaseMaterial3D` sets (`material.cpp:3937-4000`) for a property stored as nothing. */
 export const BASE_MATERIAL_3D_DEFAULTS = {
   specular: 0.5, // :3941
   roughness: 1, // :3942
@@ -59,3 +56,9 @@ export const BASE_MATERIAL_3D_DEFAULTS = {
   /** `material.h:628`. */
   stencilEffectOutlineThickness: 0.01,
 } as const;
+
+/** The range `set_uv1_triplanar_blend_sharpness` and its UV2 twin clamp to (`material.cpp:2786`, :2814). */
+export const TRIPLANAR_SHARPNESS_RANGE = { min: 0, max: 150 } as const;
+
+/** The least distance `set_proximity_fade_distance` stores (`material.cpp:3087`). */
+export const PROXIMITY_FADE_DISTANCE_MIN = 0.01;

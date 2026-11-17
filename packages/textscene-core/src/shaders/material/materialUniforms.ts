@@ -4,6 +4,7 @@ import { DistanceFadeMode } from '../../godot/rendering/materials/distanceFadeMo
 import { TextureChannel } from '../../godot/rendering/materials/textureChannel.js';
 import { TextureFilter } from '../../godot/rendering/materials/textureFilter.js';
 import { Transparency } from '../../godot/rendering/materials/transparency.js';
+import { MaterialFeature, MaterialFlag } from '../../godot/rendering/materials/materialFeatures.js';
 import { isMsdf, usesAlphaAntialiasing, type MaterialKey } from './materialKey.js';
 
 /** Each filter's hint, then the hint of the heightmap, which reads linear under a nearest filter. */
@@ -32,8 +33,8 @@ const ROUGHNESS_HINTS: Readonly<Record<EnumValue<typeof TextureChannel>, string>
 
 /** The sampler hints of a texture and of the heightmap: the filter, then the repeat. */
 function samplerHints(key: MaterialKey): { texture: string; height: string } {
-  const [texture, height] = TEXTURE_FILTERS[key.textureFilter];
-  const repeat = key.flags.has('USE_TEXTURE_REPEAT') ? ', repeat_enable' : ', repeat_disable';
+  const [texture, height] = TEXTURE_FILTERS[key.textureFilter] ?? ['', ''];
+  const repeat = key.flags.has(MaterialFlag.USE_TEXTURE_REPEAT) ? ', repeat_enable' : ', repeat_disable';
   return { texture: texture + repeat, height: height + repeat };
 }
 
@@ -73,14 +74,14 @@ uniform bool particles_anim_loop;
   code += featureUniforms(key, filter);
   code += layerUniforms(key, filter);
   code += heightmapUniforms(key, hints.height);
-  if (flags.has('UV1_USE_TRIPLANAR')) code += 'varying vec3 uv1_triplanar_pos;\n';
-  if (flags.has('UV2_USE_TRIPLANAR')) code += 'varying vec3 uv2_triplanar_pos;\n';
-  if (flags.has('UV1_USE_TRIPLANAR'))
+  if (flags.has(MaterialFlag.UV1_USE_TRIPLANAR)) code += 'varying vec3 uv1_triplanar_pos;\n';
+  if (flags.has(MaterialFlag.UV2_USE_TRIPLANAR)) code += 'varying vec3 uv2_triplanar_pos;\n';
+  if (flags.has(MaterialFlag.UV1_USE_TRIPLANAR))
     code += `
 uniform float uv1_blend_sharpness : hint_range(0.0, 150.0, 0.001);
 varying vec3 uv1_power_normal;
 `;
-  if (flags.has('UV2_USE_TRIPLANAR'))
+  if (flags.has(MaterialFlag.UV2_USE_TRIPLANAR))
     code += `uniform float uv2_blend_sharpness : hint_range(0.0, 150.0, 0.001);
 varying vec3 uv2_power_normal;
 `;
@@ -90,8 +91,10 @@ uniform vec3 uv1_offset;
 uniform vec3 uv2_scale;
 uniform vec3 uv2_offset;
 `;
-  if (flags.has('USE_Z_CLIP_SCALE')) code += 'uniform float z_clip_scale : hint_range(0.01, 1.0, 0.01);\n';
-  if (flags.has('USE_FOV_OVERRIDE')) code += 'uniform float fov_override : hint_range(1.0, 179.0, 0.1);\n';
+  if (flags.has(MaterialFlag.USE_Z_CLIP_SCALE))
+    code += 'uniform float z_clip_scale : hint_range(0.01, 1.0, 0.01);\n';
+  if (flags.has(MaterialFlag.USE_FOV_OVERRIDE))
+    code += 'uniform float fov_override : hint_range(1.0, 179.0, 0.1);\n';
   return code;
 }
 
@@ -107,7 +110,7 @@ function alphaUniforms(key: MaterialKey): string {
 }
 
 function metallicUniforms(key: MaterialKey, filter: string): string {
-  const roughnessHint = ROUGHNESS_HINTS[key.roughnessTextureChannel];
+  const roughnessHint = ROUGHNESS_HINTS[key.roughnessTextureChannel] ?? '';
   return `
 uniform float roughness : hint_range(0.0, 1.0);
 uniform sampler2D texture_metallic : hint_default_white, ${filter};
@@ -123,48 +126,48 @@ uniform float metallic : hint_range(0.0, 1.0, 0.01);
 function featureUniforms(key: MaterialKey, filter: string): string {
   const { features } = key;
   let code = '';
-  if (features.has('EMISSION'))
+  if (features.has(MaterialFeature.EMISSION))
     code += `
 uniform sampler2D texture_emission : source_color, hint_default_black, ${filter};
 uniform vec4 emission : source_color;
 uniform float emission_energy : hint_range(0.0, 100.0, 0.01);
 `;
-  if (features.has('REFRACTION'))
+  if (features.has(MaterialFeature.REFRACTION))
     code += `
 uniform sampler2D texture_refraction : ${filter};
 uniform float refraction : hint_range(-1.0, 1.0, 0.001);
 uniform vec4 refraction_texture_channel;
 uniform sampler2D screen_texture : hint_screen_texture, repeat_disable, filter_linear_mipmap;
 `;
-  if (features.has('REFRACTION') || key.proximityFade)
+  if (features.has(MaterialFeature.REFRACTION) || key.proximityFade)
     code += 'uniform sampler2D depth_texture : hint_depth_texture, repeat_disable, filter_nearest;\n';
-  if (features.has('NORMAL_MAPPING'))
+  if (features.has(MaterialFeature.NORMAL_MAPPING))
     code += `
 uniform sampler2D texture_normal : hint_roughness_normal, ${filter};
 uniform float normal_scale : hint_range(-16.0, 16.0);
 `;
-  if (features.has('BENT_NORMAL_MAPPING'))
+  if (features.has(MaterialFeature.BENT_NORMAL_MAPPING))
     code += `
 uniform sampler2D texture_bent_normal : hint_roughness_normal, ${filter};
 `;
-  if (features.has('RIM'))
+  if (features.has(MaterialFeature.RIM))
     code += `
 uniform float rim : hint_range(0.0, 1.0, 0.01);
 uniform float rim_tint : hint_range(0.0, 1.0, 0.01);
 uniform sampler2D texture_rim : hint_default_white, ${filter};
 `;
-  if (features.has('CLEARCOAT'))
+  if (features.has(MaterialFeature.CLEARCOAT))
     code += `
 uniform float clearcoat : hint_range(0.0, 1.0, 0.01);
 uniform float clearcoat_roughness : hint_range(0.0, 1.0, 0.01);
 uniform sampler2D texture_clearcoat : hint_default_white, ${filter};
 `;
-  if (features.has('ANISOTROPY'))
+  if (features.has(MaterialFeature.ANISOTROPY))
     code += `
 uniform float anisotropy_ratio : hint_range(0.0, 1.0, 0.01);
 uniform sampler2D texture_flowmap : hint_anisotropy, ${filter};
 `;
-  if (features.has('AMBIENT_OCCLUSION'))
+  if (features.has(MaterialFeature.AMBIENT_OCCLUSION))
     code += `
 uniform sampler2D texture_ambient_occlusion : hint_default_white, ${filter};
 uniform vec4 ao_texture_channel;
@@ -177,25 +180,25 @@ uniform float ao_light_affect : hint_range(0.0, 1.0, 0.01);
 function layerUniforms(key: MaterialKey, filter: string): string {
   const { features } = key;
   let code = '';
-  if (features.has('DETAIL'))
+  if (features.has(MaterialFeature.DETAIL))
     code += `
 uniform sampler2D texture_detail_albedo : source_color, ${filter};
 uniform sampler2D texture_detail_normal : hint_normal, ${filter};
 uniform sampler2D texture_detail_mask : hint_default_white, ${filter};
 `;
-  if (features.has('SUBSURFACE_SCATTERING'))
+  if (features.has(MaterialFeature.SUBSURFACE_SCATTERING))
     code += `
 uniform float subsurface_scattering_strength : hint_range(0.0, 1.0, 0.01);
 uniform sampler2D texture_subsurface_scattering : hint_default_white, ${filter};
 `;
-  if (features.has('SUBSURFACE_TRANSMITTANCE'))
+  if (features.has(MaterialFeature.SUBSURFACE_TRANSMITTANCE))
     code += `
 uniform vec4 transmittance_color : source_color;
 uniform float transmittance_depth : hint_range(0.001, 8.0, 0.001);
 uniform sampler2D texture_subsurface_transmittance : hint_default_white, ${filter};
 uniform float transmittance_boost : hint_range(0.0, 1.0, 0.01);
 `;
-  if (features.has('BACKLIGHT'))
+  if (features.has(MaterialFeature.BACKLIGHT))
     code += `
 uniform vec4 backlight : source_color;
 uniform sampler2D texture_backlight : hint_default_black, ${filter};
@@ -204,7 +207,7 @@ uniform sampler2D texture_backlight : hint_default_black, ${filter};
 }
 
 function heightmapUniforms(key: MaterialKey, heightFilter: string): string {
-  if (!key.features.has('HEIGHT_MAPPING')) return '';
+  if (!key.features.has(MaterialFeature.HEIGHT_MAPPING)) return '';
   return `
 uniform sampler2D texture_heightmap : hint_default_black, ${heightFilter};
 uniform float heightmap_scale : hint_range(-16.0, 16.0, 0.001);
