@@ -112,8 +112,7 @@ export function transpileParsedSky(
 
 /** Godot's clip space has y down, as Vulkan's does, so the template's `uv_interp.y` of -1 is the top row. */
 function withVulkanY(position: Node): Node {
-  const clip = position as unknown as ReturnType<typeof vec4>;
-  return vec4(clip.x, clip.y.negate(), clip.z, clip.w) as unknown as Node;
+  return (position as unknown as ReturnType<typeof vec4>).mul(vec4(1, -1, 1, 1)) as unknown as Node;
 }
 
 /** Three vertices, which the template's vertex stage places from their index alone. */

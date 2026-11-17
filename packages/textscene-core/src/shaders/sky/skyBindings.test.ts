@@ -59,8 +59,7 @@ describe('writeSkyBindings', () => {
     const camera = new THREE.PerspectiveCamera(90, 2, 1, 10);
     camera.setViewOffset(4, 2, 1, 0.5, 4, 2);
     const projection = boundSky({ camera })('params.projection').value as THREE.Vector4;
-    const columns = camera.projectionMatrix.elements;
-    expect(projection.toArray()).toEqual([columns[8], columns[0], -columns[9]!, -columns[5]!]);
-    expect([projection.y, projection.w]).toEqual([0.5, -1].map((value) => expect.closeTo(value, 6)));
+    // The view offset moves the frustum to x from -1 to 3 and y from -1.5 to 0.5 at the near plane.
+    expect(projection.toArray()).toEqual([0.5, 0.5, 0.5, -1].map((value) => expect.closeTo(value, 6)));
   });
 });

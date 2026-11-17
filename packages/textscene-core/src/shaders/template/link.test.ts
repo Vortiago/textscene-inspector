@@ -35,7 +35,7 @@ describe('compileMaterial', () => {
     ]);
   });
 
-  it('keeps the define of a render mode once when the mode repeats', () => {
+  it('adds the define of a repeated render mode once, and the same text of another mode again', () => {
     const table = { ...MODE_TABLES.sky!, render_mode_defines: { a: '#define A\n', b: '#define A\n' } };
     const shader = { ...materialOf(DEFAULT_SKY), renderModes: [{ name: 'a' }, { name: 'a' }, { name: 'b' }] };
     expect(compileMaterial(shader as never, table).custom).toEqual(['#define A\n', '#define A\n']);

@@ -710,12 +710,6 @@ const SKY_CHAPTER = {
       tsl: 'a float constant',
     },
     {
-      heading: '`ALPHA`',
-      rows: (row) => row.id === 'sky.sky.ALPHA',
-      what: "`ALPHA` starts at 1 and goes to the frame's alpha (`sky.glsl:235`, `:274`). Godot draws the sky with no blending, so `ALPHA` changes no colour of an opaque view.",
-      tsl: "the template's local `alpha`",
-    },
-    {
       heading: '`FOG`',
       rows: (row) => row.id === 'sky.sky.FOG',
       what: "`FOG` starts at `vec4(0.0)`. After the scene's fog, Godot mixes the sky's colour toward `FOG.rgb` by `FOG.a` when `FOG.a` is above 0 (`sky.glsl:238`, `:297-298`). `disable_fog` turns off both.",

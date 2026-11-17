@@ -342,23 +342,6 @@ void sky() {
 | --- | --- |
 | <img src="showcase/sky-constants-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-constants-three.png" width="256" alt="Transpilation"> |
 
-## Showcase `sky-alpha`
-
-Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
-
-```glsl
-shader_type sky;
-
-void sky() {
-	COLOR = vec3(0.2, 0.6, 0.9);
-	ALPHA = 0.5;
-}
-```
-
-| Godot | Transpilation on three.js |
-| --- | --- |
-| <img src="showcase/sky-alpha-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-alpha-three.png" width="256" alt="Transpilation"> |
-
 ## Showcase `sky-fog-write`
 
 Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
@@ -469,15 +452,6 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 Godot writes each constant into the shader as the text of `String::num` of its C++ value (`sky.cpp:755-757`): 3.14159265358979, 6.28318530717959 and 2.71828182845905. The transpiler reads the same text as a float.
 
 The transpiler emits `a float constant`. Rows: `sky.constants.PI`, `sky.constants.TAU`, `sky.constants.E`. Godot source: `servers/rendering/shader_types.cpp:457`.
-
-Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
-
-
-## `ALPHA`
-
-`ALPHA` starts at 1 and goes to the frame's alpha (`sky.glsl:235`, `:274`). Godot draws the sky with no blending, so `ALPHA` changes no colour of an opaque view.
-
-The transpiler emits the template's local `alpha`. Rows: `sky.sky.ALPHA`. Godot source: `servers/rendering/shader_types.cpp:487`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 

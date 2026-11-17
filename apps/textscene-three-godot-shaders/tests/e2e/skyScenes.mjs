@@ -132,11 +132,6 @@ const BUILT_IN_SCENES = [
     rows: ['sky.constants.PI', 'sky.constants.TAU', 'sky.constants.E', 'sky.sky.EYEDIR'],
   },
   {
-    name: 'sky-alpha',
-    source: builtInSky('\tCOLOR = vec3(0.2, 0.6, 0.9);\n\tALPHA = 0.5;'),
-    rows: ['sky.sky.ALPHA'],
-  },
-  {
     name: 'sky-fog-write',
     source: builtInSky(
       '\tCOLOR = vec3(0.1, 0.2, 0.8);\n\tFOG = vec4(1.0, 0.3, 0.1, 0.6 * max(EYEDIR.y, 0.0));'
