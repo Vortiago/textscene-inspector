@@ -672,6 +672,52 @@ void sky() {
 | --- | --- |
 | <img src="showcase/sky-cubemap-pass-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-cubemap-pass-three.png" width="256" alt="Transpilation"> |
 
+## Showcase `sky-passes-odd-size`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+render_mode use_half_res_pass, use_quarter_res_pass;
+
+void sky() {
+	if (AT_QUARTER_RES_PASS) {
+		COLOR = vec3(fract(FRAGCOORD.xy / 4.0), SCREEN_UV.x);
+	} else if (AT_HALF_RES_PASS) {
+		COLOR = mix(QUARTER_RES_COLOR.rgb, EYEDIR * 0.5 + 0.5, 0.5);
+	} else {
+		COLOR = HALF_RES_COLOR.rgb;
+	}
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-passes-odd-size-godot.png" width="148" alt="Godot"> | <img src="showcase/sky-passes-odd-size-three.png" width="148" alt="Transpilation"> |
+
+## Showcase `sky-passes-under-4-px`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+render_mode use_half_res_pass, use_quarter_res_pass;
+
+void sky() {
+	if (AT_QUARTER_RES_PASS) {
+		COLOR = vec3(fract(FRAGCOORD.xy / 4.0), SCREEN_UV.x);
+	} else if (AT_HALF_RES_PASS) {
+		COLOR = mix(QUARTER_RES_COLOR.rgb, EYEDIR * 0.5 + 0.5, 0.5);
+	} else {
+		COLOR = HALF_RES_COLOR.rgb;
+	}
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-passes-under-4-px-godot.png" width="12" alt="Godot"> | <img src="showcase/sky-passes-under-4-px-three.png" width="12" alt="Transpilation"> |
+
 ## `COLOR`
 
 `COLOR` is the colour `sky()` writes, linear. Godot's sky template holds it in its local `color`, and writes it to the frame after the environment's brightness and fog.

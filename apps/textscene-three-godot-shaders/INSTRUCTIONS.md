@@ -1761,7 +1761,7 @@ canvases draw on WebGPURenderer (#1788).
 | `sky.global.POSITION` | transpiled (`sky-position`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:460` |
 | `sky.global.RADIANCE` | open, #1665 | | | `servers/rendering/shader_types.cpp:461` |
 | `sky.global.AT_HALF_RES_PASS` | transpiled (`sky-half-res`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:462` |
-| `sky.global.AT_QUARTER_RES_PASS` | transpiled (`sky-quarter-res`, `sky-quarter-res-alone`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:463` |
+| `sky.global.AT_QUARTER_RES_PASS` | transpiled (`sky-quarter-res`, `sky-quarter-res-alone`, `sky-passes-odd-size`, `sky-passes-under-4-px`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:463` |
 | `sky.global.AT_CUBEMAP_PASS` | transpiled (`sky-cubemap-pass`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:464` |
 | `sky.global.LIGHT0_ENABLED` | transpiled (`sky-light-0`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:465` |
 | `sky.global.LIGHT0_DIRECTION` | transpiled (`sky-light-0`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:466` |
@@ -1785,10 +1785,10 @@ canvases draw on WebGPURenderer (#1788).
 | `sky.global.LIGHT3_SIZE` | transpiled (`sky-light-3`, `sky-light-fifth`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:484` |
 | `sky.sky.EYEDIR` | transpiled (`sky-eyedir`, `sky-constants`, `sky-fog-write`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:488` |
 | `sky.sky.SCREEN_UV` | transpiled (`sky-screen-uv`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:489` |
-| `sky.sky.FRAGCOORD` | transpiled (`sky-fragcoord`, `sky-quarter-res`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:490` |
+| `sky.sky.FRAGCOORD` | transpiled (`sky-fragcoord`, `sky-quarter-res`, `sky-passes-odd-size`, `sky-passes-under-4-px`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:490` |
 | `sky.sky.SKY_COORDS` | transpiled (`sky-coords`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:491` |
 | `sky.sky.HALF_RES_COLOR` | transpiled (`sky-half-res`, `sky-quarter-res-alone`, `sky-half-res-unset`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:492` |
-| `sky.sky.QUARTER_RES_COLOR` | transpiled (`sky-quarter-res`, `sky-quarter-res-alone`, `sky-half-res-unset`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:493` |
+| `sky.sky.QUARTER_RES_COLOR` | transpiled (`sky-quarter-res`, `sky-quarter-res-alone`, `sky-half-res-unset`, `sky-passes-odd-size`, `sky-passes-under-4-px`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:493` |
 | `fog.global.TIME` | open, #1783 | | | `servers/rendering/shader_types.cpp:507` |
 | `fog.constants.PI` | open, #1783 | | | `servers/rendering/shader_types.cpp:508` |
 | `fog.constants.TAU` | open, #1783 | | | `servers/rendering/shader_types.cpp:509` |
@@ -1971,7 +1971,7 @@ canvases draw on WebGPURenderer (#1788).
 | `particles render_mode disable_velocity` | open, #1726 | | | `servers/rendering/shader_types.cpp:450` |
 | `particles render_mode keep_data` | open, #1726 | | | `servers/rendering/shader_types.cpp:451` |
 | `sky render_mode use_half_res_pass` | transpiled (`sky-half-res`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:499` |
-| `sky render_mode use_quarter_res_pass` | transpiled (`sky-quarter-res`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:500` |
+| `sky render_mode use_quarter_res_pass` | transpiled (`sky-quarter-res`, `sky-passes-odd-size`, `sky-passes-under-4-px`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:500` |
 | `sky render_mode disable_fog` | transpiled (`sky-disable-fog`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:501` |
 | `sky render_mode use_debanding` | transpiled (`sky-debanding`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:502` |
 
