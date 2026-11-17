@@ -39,8 +39,8 @@ import { useShaderSkyTextures } from './shaderSkyTextures';
 import { useShaderDecoders } from '../shaderDecoders';
 import { useShaderSkyErrorReport } from './shaderSkyError';
 import { useReadSky } from './readSky';
-import { useSkyTranspiler } from './skyTranspiler';
-import { useNodesHandlerReady } from '../canvasRenderer/canvasNodesHandler';
+import { useSkyTranslator } from './skyTranspiler';
+import { useShaderErrorReport } from '../contexts/ShaderErrorsContext';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext';
 import { projectSampling } from '../../parser/projectSettingsParser';
 import { isLiveTarget, liveTargetDrawCount } from '../liveTargets';
@@ -105,8 +105,8 @@ export function SkyLayer({
   const isPanoramaDrawn = useIsPanoramaDrawn(panorama);
   const shaderCode = authoredSky.material.kind === 'shader' ? authoredSky.material.code : null;
   const decoders = useShaderDecoders(shaderCode);
-  const transpiler = useSkyTranspiler(shaderCode !== null);
-  const isNodesHandlerReady = useNodesHandlerReady(gl, shaderCode !== null);
+  const { transpiler, isReady: isTranslatorReady, loadFailure } = useSkyTranslator(gl, shaderCode !== null);
+  useShaderErrorReport(loadFailure);
   const sky = useReadSky(authoredSky, transpiler, decoders);
   const [textures, textureSlots] = useShaderSkyTextures(sky?.material ?? null);
   useShaderSkyErrorReport(sky?.material ?? null, transpiler, decoders);
@@ -126,7 +126,7 @@ export function SkyLayer({
     // A bake samples the panorama once, so it waits for the pass to draw a live target.
     if (!isPanoramaDrawn) return undefined;
     // A shader sky waits for the transpiler, the nodes handler, and the decoders its text may need.
-    if (!sky || !decoders || !isNodesHandlerReady) return undefined;
+    if (!sky || !decoders || !isTranslatorReady) return undefined;
 
     const lights = directionalLights(scene);
     const skyRotation = skyEuler({ x: rotationX, y: rotationY, z: rotationZ });
@@ -232,7 +232,7 @@ export function SkyLayer({
     decoders,
     sampling,
     transpiler,
-    isNodesHandlerReady,
+    isTranslatorReady,
     isPanoramaDrawn,
     asBackground,
     lightsKey,

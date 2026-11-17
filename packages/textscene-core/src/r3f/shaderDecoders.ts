@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
 import type { ShaderDecoders } from '../shaders/preprocessor/decoders.js';
 import { memoisedImport } from '../resources/memoisedImport.js';
+import { useLazyModuleState } from '../resources/useLazyModule.js';
 import { loadBrotliDecoder } from './controls/native/text/brotliDecoder.js';
 
 /** Imported only for a text that may decompress, as the two decoders are about 60 kB gzipped. */
@@ -17,26 +17,11 @@ function mayDecompress(code: string): boolean {
   return code.includes('decompress');
 }
 
-/** The decoders once loaded, `{}` for a text that needs none, and null while they load. */
+/** The decoders once loaded, `{}` for a text that needs none or a failed import, and null while they load. */
 export function useShaderDecoders(code: string | null): ShaderDecoders | null {
-  const isNeeded = code !== null && mayDecompress(code);
-  const loaded = loadShaderDecoders.state();
-  const [decoders, setDecoders] = useState<ShaderDecoders | null>(
-    typeof loaded === 'object' ? loaded.module : null
-  );
-  useEffect(() => {
-    if (!isNeeded || decoders) return undefined;
-    let isCurrent = true;
-    loadShaderDecoders().then(
-      (module) => isCurrent && setDecoders(module),
-      () => isCurrent && setDecoders({})
-    );
-    return () => {
-      isCurrent = false;
-    };
-  }, [isNeeded, decoders]);
-  if (!isNeeded) return NO_DECODERS;
-  return decoders;
+  const state = useLazyModuleState(loadShaderDecoders, code !== null && mayDecompress(code));
+  if (state === null || state === 'failed') return NO_DECODERS;
+  return state === 'loading' ? null : state.module;
 }
 
 const NO_DECODERS: ShaderDecoders = {};
