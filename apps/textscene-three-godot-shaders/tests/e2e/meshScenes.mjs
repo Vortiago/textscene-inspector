@@ -135,6 +135,28 @@ const attributeScene = (name, builtIn, value, mesh = SPHERE) => ({
   rows: attributeRows(builtIn),
 });
 
+/** A scene of a varying on the sphere: its declaration, what `vertex()` writes, what `fragment()` shows. */
+const varyingScene = (name, declaration, vertex, fragment, rows) => ({
+  name,
+  ...SIZE,
+  source: `shader_type spatial;
+render_mode unshaded;
+${declaration}
+
+void vertex() {
+	${vertex}
+}
+
+void fragment() {
+	${fragment}
+}
+`,
+  camera: SPHERE_VIEW,
+  mesh: SPHERE,
+  object: STILL,
+  rows: ['spatial render_mode unshaded', 'spatial.fragment.ALBEDO', 'varying', ...rows],
+});
+
 const TURNED_ROTATION = [20, 35, -10];
 
 /** A quad at half size, at `position` and turned by `rotation`. */
@@ -212,4 +234,40 @@ export const MESH_SCENES = [
   attributeScene('spatial-uv2', 'UV2', 'vec3(UV2, 0.0)'),
   attributeScene('spatial-color', 'COLOR', 'COLOR.rgb'),
   { ...attributeScene('spatial-compressed', 'NORMAL', 'NORMAL * 0.5 + 0.5'), compressed: true },
+  varyingScene('spatial-varying-smooth', 'varying vec3 v;', 'v = NORMAL * 0.5 + 0.5;', 'ALBEDO = v;', [
+    'smooth',
+    'spatial.vertex.NORMAL',
+  ]),
+  varyingScene('spatial-varying-flat', 'varying flat vec3 v;', 'v = NORMAL * 0.5 + 0.5;', 'ALBEDO = v;', [
+    'flat',
+    'spatial.vertex.NORMAL',
+  ]),
+  varyingScene(
+    'spatial-varying-int',
+    'varying flat int band;',
+    'band = int(UV.y * 6.0);',
+    'ALBEDO = vec3(float(band) / 6.0);',
+    ['flat', 'spatial.vertex.UV']
+  ),
+  varyingScene(
+    'spatial-varying-matrix',
+    'varying mat3 frame;',
+    'frame = mat3(TANGENT, BINORMAL, NORMAL);',
+    'ALBEDO = frame[0] * 0.5 + 0.5;',
+    ['spatial.vertex.TANGENT', 'spatial.vertex.BINORMAL', 'spatial.vertex.NORMAL']
+  ),
+  varyingScene(
+    'spatial-varying-array',
+    'varying vec2 pair[2];',
+    'pair[0] = UV; pair[1] = UV2;',
+    'ALBEDO = vec3(pair[0], pair[1].x);',
+    ['NODE_TYPE_ARRAY', 'spatial.vertex.UV', 'spatial.vertex.UV2']
+  ),
+  varyingScene(
+    'spatial-varying-fragment',
+    'varying vec3 tint;',
+    '',
+    'tint = vec3(0.8, 0.4, 0.2); ALBEDO = tint * UV.x;',
+    []
+  ),
 ];

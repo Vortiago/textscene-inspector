@@ -156,8 +156,16 @@ function stageVaryings(
   const { words } = global.qualifiers;
   const passes = stage === 'vertex' ? words.includes('out') : stage === 'fragment' && words.includes('in');
   if (!passes) return;
-  for (const { name } of global.declarators)
-    if (name !== result.name) values.set(name, varyings.of(global.type, name, words.includes('flat')));
+  const isFlat = words.includes('flat');
+  for (const { name, arraySize } of global.declarators) {
+    if (name === result.name) continue;
+    values.set(
+      name,
+      arraySize
+        ? varyings.ofArray(global.type, name, arraySize, isFlat)
+        : varyings.of(global.type, name, isFlat)
+    );
+  }
 }
 
 /** Filled by `passedOnce`, an entry cleared with its stage, so `loweredOnce` finds the same functions. */

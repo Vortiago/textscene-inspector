@@ -757,6 +757,21 @@ const SPATIAL_CHAPTER = {
       what: "The mesh's attributes as `fragment()` reads them, interpolated: the normal, tangent and binormal in view space, the two UV sets and the vertex colour. `withGodotAttributes` stores them as Godot stores an uncompressed surface: the normal and tangent as 16-bit octahedrons, the colour as four bytes. With no tangent array, Godot makes a tangent up from the normal, and so does the transpiler.",
       tsl: "the template's varyings `normal_interp`, `tangent_interp`, `binormal_interp`, `uv_interp`, `uv2_interp` and `color_interp`",
     },
+    {
+      heading: '`NORMAL`, `TANGENT`, `BINORMAL`, `UV` and `UV2` in `vertex()`',
+      rows: (row) =>
+        ['NORMAL', 'TANGENT', 'BINORMAL', 'UV', 'UV2']
+          .map((name) => `spatial.vertex.${name}`)
+          .includes(row.id),
+      what: "The mesh's attributes as `vertex()` reads and writes them, for one vertex: the normal, tangent and binormal in model space, and the two UV sets. Godot's template holds each in a local of `vertex_shader`, which it turns to view space and writes to its varying after `vertex()` returns.",
+      tsl: "the template's locals `normal`, `tangent`, `binormal`, `uv_interp` and `uv2_interp` of the vertex stage",
+    },
+    {
+      heading: 'Varyings',
+      rows: (row) => ['varying', 'flat', 'smooth'].includes(row.id),
+      what: '`varying flat int band;` declares a value that `vertex()` writes and `fragment()` reads. Godot declares a varying that the vertex stage writes, or that no stage writes, as an `out` of the vertex stage and an `in` of the fragment stage, `flat` when the shader says so (`shader_compiler.cpp:688-737`). A `smooth` varying interpolates, as one with no qualifier does. A varying that `fragment()` writes is a global of the fragment stage only. Godot refuses a `bool` varying in `vertex()`, and declares none that no stage writes.',
+      tsl: 'a TSL varying for each varying, `flat` as Godot declares it, and one varying for each element of an array, as three declares no array varying',
+    },
   ],
 };
 

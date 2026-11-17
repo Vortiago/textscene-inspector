@@ -1,15 +1,16 @@
 import { glslBlock } from '../language/godotText.js';
 import { INSTRUCTION_TABLE } from '../language/instructionTable.generated.js';
-import type { BlockNode, FunctionNode, ShaderNode, StructNode } from '../language/shaderTree.js';
+import type { BlockNode, FunctionNode, ShaderNode, StructNode, VaryingNode } from '../language/shaderTree.js';
+import { shapeOf } from '../language/types.js';
 import { everyExpressionIn, withConstantsFirst } from '../language/treeWalk.js';
 import { GENERAL_DEFINES } from './generalDefines.js';
-import { GodotIds } from './godotIds.js';
+import { godotId, GodotIds } from './godotIds.js';
 import type { ModeTable } from './modeTable.js';
 import { parseTemplateStage } from './parseTemplate.js';
 import { preprocess } from './preprocess.js';
 import { splitStages, type StageName } from './stages.js';
 import { TEMPLATE_FILES } from './templateFiles.generated.js';
-import type { TemplateStageNode } from './templateTree.js';
+import type { GlobalNode, TemplateStageNode } from './templateTree.js';
 import { variantLines } from './variant.js';
 
 /** What a material gives each variant of a template: Godot's `GeneratedCode` and its defines. */
@@ -18,6 +19,8 @@ export interface CompiledMaterial {
   readonly code: ReadonlyMap<string, BlockNode>;
   /** The structs and the other functions, which the `#GLOBALS` slot takes. */
   readonly globals: readonly (StructNode | FunctionNode)[];
+  /** The varyings each stage's `#GLOBALS` slot declares first (`shader_compiler.cpp:688-737`). */
+  readonly varyings: Readonly<Record<'vertex' | 'fragment', readonly GlobalNode[]>>;
   /** The defines of the material's render modes, then of the built-ins it reads: `custom_defines`. */
   readonly custom: readonly string[];
   /** The GLSL text of each built-in. */
@@ -39,9 +42,41 @@ export function compileMaterial(shader: ShaderNode, table: ModeTable): CompiledM
   return {
     code,
     globals: [...shader.structs.map((struct) => ids.struct(struct)), ...functions],
+    varyings: varyingGlobals(shader.varyings),
     custom: [...renderModeDefines(shader, table), ...usageDefines(shader, table)],
     renames: table.renames,
   };
+}
+
+/** Each varying as an `out` and an `in`, or a fragment global when `fragment()` writes it. */
+function varyingGlobals(varyings: readonly VaryingNode[]): CompiledMaterial['varyings'] {
+  const vertex: GlobalNode[] = [];
+  const fragment: GlobalNode[] = [];
+  for (const varying of varyings) {
+    const declared = (words: string[]): GlobalNode => ({
+      kind: 'global',
+      qualifiers: { layout: [], words },
+      type: varying.type,
+      declarators: [
+        {
+          name: godotId(varying.name),
+          ...(varying.arraySize ? { arraySize: varying.arraySize } : {}),
+          position: varying.position,
+        },
+      ],
+      position: varying.position,
+    });
+    if (varying.stage === 'fragment') {
+      fragment.push(declared([]));
+      continue;
+    }
+    // A boolean varying never assigned has no GLSL declaration (`shader_compiler.cpp:697`).
+    if (shapeOf(varying.type)?.scalar === 'bool') continue;
+    const interpolation = varying.interpolation === 'flat' ? ['flat'] : [];
+    vertex.push(declared([...interpolation, 'out']));
+    fragment.push(declared([...interpolation, 'in']));
+  }
+  return { vertex, fragment };
 }
 
 /** One stage of a template variant, with `material` in its slots. */

@@ -479,6 +479,138 @@ void fragment() {
 | --- | --- |
 | <img src="showcase/spatial-compressed-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-compressed-three.png" width="256" alt="Transpilation"> |
 
+## Showcase `spatial-varying-smooth`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+varying vec3 v;
+
+void vertex() {
+	v = NORMAL * 0.5 + 0.5;
+}
+
+void fragment() {
+	ALBEDO = v;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-varying-smooth-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-varying-smooth-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-varying-flat`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+varying flat vec3 v;
+
+void vertex() {
+	v = NORMAL * 0.5 + 0.5;
+}
+
+void fragment() {
+	ALBEDO = v;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-varying-flat-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-varying-flat-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-varying-int`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+varying flat int band;
+
+void vertex() {
+	band = int(UV.y * 6.0);
+}
+
+void fragment() {
+	ALBEDO = vec3(float(band) / 6.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-varying-int-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-varying-int-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-varying-matrix`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+varying mat3 frame;
+
+void vertex() {
+	frame = mat3(TANGENT, BINORMAL, NORMAL);
+}
+
+void fragment() {
+	ALBEDO = frame[0] * 0.5 + 0.5;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-varying-matrix-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-varying-matrix-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-varying-array`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+varying vec2 pair[2];
+
+void vertex() {
+	pair[0] = UV; pair[1] = UV2;
+}
+
+void fragment() {
+	ALBEDO = vec3(pair[0], pair[1].x);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-varying-array-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-varying-array-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-varying-fragment`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+varying vec3 tint;
+
+void vertex() {
+	
+}
+
+void fragment() {
+	tint = vec3(0.8, 0.4, 0.2); ALBEDO = tint * UV.x;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-varying-fragment-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-varying-fragment-three.png" width="256" alt="Transpilation"> |
+
 ## Render mode `unshaded`
 
 `unshaded` defines `MODE_UNSHADED`, so the template writes `ALBEDO` and `ALPHA` to the frame with no light, fog or ambient light (`scene_forward_clustered.glsl:2978-2981`).
@@ -502,6 +634,24 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 The mesh's attributes as `fragment()` reads them, interpolated: the normal, tangent and binormal in view space, the two UV sets and the vertex colour. `withGodotAttributes` stores them as Godot stores an uncompressed surface: the normal and tangent as 16-bit octahedrons, the colour as four bytes. With no tangent array, Godot makes a tangent up from the normal, and so does the transpiler.
 
 The transpiler emits the template's varyings `normal_interp`, `tangent_interp`, `binormal_interp`, `uv_interp`, `uv2_interp` and `color_interp`. Rows: `spatial.fragment.NORMAL`, `spatial.fragment.TANGENT`, `spatial.fragment.BINORMAL`, `spatial.fragment.UV`, `spatial.fragment.UV2`, `spatial.fragment.COLOR`. Godot source: `servers/rendering/shader_types.cpp:139`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `NORMAL`, `TANGENT`, `BINORMAL`, `UV` and `UV2` in `vertex()`
+
+The mesh's attributes as `vertex()` reads and writes them, for one vertex: the normal, tangent and binormal in model space, and the two UV sets. Godot's template holds each in a local of `vertex_shader`, which it turns to view space and writes to its varying after `vertex()` returns.
+
+The transpiler emits the template's locals `normal`, `tangent`, `binormal`, `uv_interp` and `uv2_interp` of the vertex stage. Rows: `spatial.vertex.NORMAL`, `spatial.vertex.TANGENT`, `spatial.vertex.BINORMAL`, `spatial.vertex.UV`, `spatial.vertex.UV2`. Godot source: `servers/rendering/shader_types.cpp:90`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## Varyings
+
+`varying flat int band;` declares a value that `vertex()` writes and `fragment()` reads. Godot declares a varying that the vertex stage writes, or that no stage writes, as an `out` of the vertex stage and an `in` of the fragment stage, `flat` when the shader says so (`shader_compiler.cpp:688-737`). A `smooth` varying interpolates, as one with no qualifier does. A varying that `fragment()` writes is a global of the fragment stage only. Godot refuses a `bool` varying in `vertex()`, and declares none that no stage writes.
+
+The transpiler emits a TSL varying for each varying, `flat` as Godot declares it, and one varying for each element of an array, as three declares no array varying. Rows: `flat`, `smooth`, `varying`. Godot source: `servers/rendering/shader_language.cpp:324`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 

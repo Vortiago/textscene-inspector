@@ -72,14 +72,14 @@ int literal	literal	servers/rendering/shader_language.h:60	#1823					native	nati
 uint literal	literal	servers/rendering/shader_language.h:61	#1823					native	native
 true	literal	servers/rendering/shader_language.cpp:284	#1823		TK_TRUE			native	native
 false	literal	servers/rendering/shader_language.cpp:285	#1823		TK_FALSE			native	native
-flat	qualifier	servers/rendering/shader_language.cpp:324	#1831		TK_INTERPOLATION_FLAT				
-smooth	qualifier	servers/rendering/shader_language.cpp:325	#1831		TK_INTERPOLATION_SMOOTH				
+flat	qualifier	servers/rendering/shader_language.cpp:324	#1831		TK_INTERPOLATION_FLAT			native	native
+smooth	qualifier	servers/rendering/shader_language.cpp:325	#1831		TK_INTERPOLATION_SMOOTH			native	native
 lowp	qualifier	servers/rendering/shader_language.cpp:329	#1823		TK_PRECISION_LOW			lowered: dropped: every float is 32-bit	lowered: dropped: every float is 32-bit
 mediump	qualifier	servers/rendering/shader_language.cpp:330	#1823		TK_PRECISION_MID			lowered: dropped: every float is 32-bit	lowered: dropped: every float is 32-bit
 highp	qualifier	servers/rendering/shader_language.cpp:331	#1823		TK_PRECISION_HIGH			lowered: dropped: every float is 32-bit	lowered: dropped: every float is 32-bit
 uniform	shader head	servers/rendering/shader_language.cpp:335	#1829		TK_UNIFORM			native	native
 group_uniforms	shader head	servers/rendering/shader_language.cpp:336	#1829		TK_UNIFORM_GROUP			native	native
-varying	shader head	servers/rendering/shader_language.cpp:337	#1831		TK_VARYING				
+varying	shader head	servers/rendering/shader_language.cpp:337	#1831		TK_VARYING			native	native
 const	shader head	servers/rendering/shader_language.cpp:338	#1794		TK_CONST			native	native
 struct	shader head	servers/rendering/shader_language.cpp:339	#1794		TK_STRUCT			native	native
 shader_type	shader head	servers/rendering/shader_language.cpp:340	#1794		TK_SHADER_TYPE			native	native
@@ -1542,12 +1542,12 @@ spatial.constants.OUTPUT_IS_SRGB	built-in (read only)	servers/rendering/shader_t
 spatial.constants.CLIP_SPACE_FAR	built-in (read only)	servers/rendering/shader_types.cpp:86	#1831	forward_clustered/scene_forward_clustered.glsl		float			
 spatial.constants.IS_MULTIVIEW	built-in (read only)	servers/rendering/shader_types.cpp:87	#1831	forward_clustered/scene_forward_clustered.glsl		bool			
 spatial.vertex.VERTEX	built-in	servers/rendering/shader_types.cpp:89	#1831	forward_clustered/scene_forward_clustered.glsl		vec3			
-spatial.vertex.NORMAL	built-in	servers/rendering/shader_types.cpp:90	#1831	forward_clustered/scene_forward_clustered.glsl		vec3			
-spatial.vertex.TANGENT	built-in	servers/rendering/shader_types.cpp:91	#1831	forward_clustered/scene_forward_clustered.glsl		vec3			
-spatial.vertex.BINORMAL	built-in	servers/rendering/shader_types.cpp:92	#1831	forward_clustered/scene_forward_clustered.glsl		vec3			
+spatial.vertex.NORMAL	built-in	servers/rendering/shader_types.cpp:90	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
+spatial.vertex.TANGENT	built-in	servers/rendering/shader_types.cpp:91	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
+spatial.vertex.BINORMAL	built-in	servers/rendering/shader_types.cpp:92	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
 spatial.vertex.POSITION	built-in	servers/rendering/shader_types.cpp:93	#1831	forward_clustered/scene_forward_clustered.glsl		vec4			
-spatial.vertex.UV	built-in	servers/rendering/shader_types.cpp:94	#1831	forward_clustered/scene_forward_clustered.glsl		vec2			
-spatial.vertex.UV2	built-in	servers/rendering/shader_types.cpp:95	#1831	forward_clustered/scene_forward_clustered.glsl		vec2			
+spatial.vertex.UV	built-in	servers/rendering/shader_types.cpp:94	#1831	forward_clustered/scene_forward_clustered.glsl		vec2		native	native
+spatial.vertex.UV2	built-in	servers/rendering/shader_types.cpp:95	#1831	forward_clustered/scene_forward_clustered.glsl		vec2		native	native
 spatial.vertex.COLOR	built-in	servers/rendering/shader_types.cpp:96	#1831	forward_clustered/scene_forward_clustered.glsl		vec4			
 spatial.vertex.POINT_SIZE	built-in	servers/rendering/shader_types.cpp:97	#1831	forward_clustered/scene_forward_clustered.glsl		float			
 spatial.vertex.Z_CLIP_SCALE	built-in	servers/rendering/shader_types.cpp:98	#1831	forward_clustered/scene_forward_clustered.glsl		float			

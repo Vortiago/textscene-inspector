@@ -7,10 +7,15 @@ const VERTEX_ANGLE_ATTRIBUTE = 'vertex_angle_attrib';
 /** The attribute at location 1: the normal and the tangent as four 16-bit unsigned normalised lanes. */
 const AXIS_TANGENT_ATTRIBUTE = 'axis_tangent_attrib';
 
-/** `geometry` with an uncompressed Godot surface's attributes (`rendering_server.cpp:425-700`). */
+/** Written only by `withGodotAttributes`, so a second call turns no triangle again. */
+const preparedGeometries = new WeakSet<THREE.BufferGeometry>();
+
+/** `geometry` as an uncompressed Godot surface (`rendering_server.cpp:425-700`), first corners as Godot's. */
 export function withGodotAttributes(geometry: THREE.BufferGeometry): THREE.BufferGeometry {
   const position = geometry.getAttribute('position');
   if (!position) throw new Error('expected a geometry with a position attribute, found none');
+  if (!preparedGeometries.has(geometry)) withFirstCornerLast(geometry, position.count);
+  preparedGeometries.add(geometry);
   geometry.setAttribute(VERTEX_ANGLE_ATTRIBUTE, position);
   const normal = geometry.getAttribute('normal');
   if (normal) geometry.setAttribute(AXIS_TANGENT_ATTRIBUTE, axisTangent(normal, signedTangent(geometry)));
@@ -25,6 +30,17 @@ export function withGodotAttributes(geometry: THREE.BufferGeometry): THREE.Buffe
     if (uv) geometry.setAttribute(godot, uv);
   }
   return geometry;
+}
+
+/** Each triangle turned to draw its first corner last: `flat` reads Vulkan's first vertex, WebGL's last. */
+function withFirstCornerLast(geometry: THREE.BufferGeometry, vertexCount: number): void {
+  const corners = geometry.getIndex()?.array ?? Array.from({ length: vertexCount }, (_, vertex) => vertex);
+  if (corners.length % 3 !== 0)
+    throw new Error(`expected a triangle list of a multiple of 3 corners, got ${corners.length} corners`);
+  const turned = vertexCount > 0xffff ? new Uint32Array(corners.length) : new Uint16Array(corners.length);
+  for (let corner = 0; corner < corners.length; corner++)
+    turned[corner] = corners[corner - (corner % 3) + (((corner % 3) + 1) % 3)]!;
+  geometry.setIndex(new THREE.BufferAttribute(turned, 1));
 }
 
 /** A colour as Godot stores it, four bytes cut down from 255 times each lane (`rendering_server.cpp:712`). */

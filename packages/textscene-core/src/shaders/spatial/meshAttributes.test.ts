@@ -37,6 +37,27 @@ describe('withGodotAttributes', () => {
     expect([...(axisTangent.array as Uint16Array).slice(0, 4)]).toEqual([0x7fff, 0x7fff, 0xffff, 0xbfff]);
   });
 
+  it('turns each triangle so its first corner draws last, as WebGL takes a flat value from the last', () => {
+    expect([...withGodotAttributes(triangle()).getIndex()!.array]).toEqual([1, 2, 0]);
+  });
+
+  it('turns the corners of an indexed geometry by its index', () => {
+    const geometry = triangle();
+    geometry.setIndex([2, 0, 1]);
+    expect([...withGodotAttributes(geometry).getIndex()!.array]).toEqual([0, 1, 2]);
+  });
+
+  it('turns no triangle again when it prepares a geometry twice', () => {
+    const geometry = withGodotAttributes(triangle());
+    expect([...withGodotAttributes(geometry).getIndex()!.array]).toEqual([1, 2, 0]);
+  });
+
+  it('refuses a corner count that is no triangle list, by the count', () => {
+    const geometry = triangle();
+    geometry.setIndex([0, 1]);
+    expect(() => withGodotAttributes(geometry)).toThrow('got 2 corners');
+  });
+
   it('refuses a tangent with no lane for the sign, by its lane count', () => {
     const geometry = triangle();
     geometry.setAttribute('tangent', new THREE.Float32BufferAttribute([1, 0, 0, 1, 0, 0, 1, 0, 0], 3));

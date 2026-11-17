@@ -300,6 +300,8 @@ export interface VaryingNode {
   readonly type: ValueType;
   readonly interpolation?: 'flat' | 'smooth';
   readonly arraySize?: number;
+  /** The function that first assigns it, Godot's `Varying::stage`, or nothing for one never assigned. */
+  readonly stage?: 'vertex' | 'fragment';
   readonly position: SourcePosition;
 }
 

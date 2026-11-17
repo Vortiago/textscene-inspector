@@ -309,6 +309,11 @@ class ShaderParser implements ExpressionScope {
     }
   }
 
+  private withStage(varying: VaryingNode): VaryingNode {
+    const stage = this.varyingStages.stageOf(varying.name);
+    return stage ? { ...varying, stage } : varying;
+  }
+
   private tree(head: Pick<ShaderNode, 'shaderType' | 'headPosition'>): ShaderNode {
     return {
       kind: 'shader',
@@ -316,7 +321,7 @@ class ShaderParser implements ExpressionScope {
       renderModes: this.modes.modes.render_mode,
       stencilModes: this.modes.modes.stencil_mode,
       ...(this.modes.stencilReference !== undefined ? { stencilReference: this.modes.stencilReference } : {}),
-      varyings: [...this.varyings.values()],
+      varyings: [...this.varyings.values()].map((varying) => this.withStage(varying)),
       constants: this.constants,
       structs: this.structs,
       order: this.order,
