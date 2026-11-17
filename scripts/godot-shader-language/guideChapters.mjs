@@ -724,6 +724,33 @@ const SKY_CHAPTER = {
   ],
 };
 
+const SPATIAL_CHAPTER = {
+  file: 'spatial.md',
+  title: 'Spatial shaders',
+  intro:
+    "A shader of `shader_type spatial` draws a mesh of a 3D view. Godot links it into its scene template, `forward_clustered/scene_forward_clustered.glsl`: `vertex()` and `fragment()` fill the template's code slots, each built-in reads as the template's GLSL for it, and each name of the shader takes Godot's `m_` id. The transpiler links the shader the same way and transpiles both stages of the template's colour pass to TSL. `transpileSpatial` gives the material. `withGodotAttributes` writes a geometry's position, normal and tangent as Godot's mesh storage writes an uncompressed surface. `writeSpatialBindings` writes the template's scene data from the camera, and `SCENE_BINDINGS` names the line of Godot's C++ behind each value. `writeSpatialInstance` writes the object's transform as Godot's instance data.",
+  sections: [
+    {
+      heading: 'Render mode `unshaded`',
+      rows: (row) => row.id === 'spatial render_mode unshaded',
+      what: '`unshaded` defines `MODE_UNSHADED`, so the template writes `ALBEDO` and `ALPHA` to the frame with no light, fog or ambient light (`scene_forward_clustered.glsl:2978-2981`).',
+      tsl: 'the defines of the template variant',
+    },
+    {
+      heading: '`ALBEDO`, `ROUGHNESS` and `METALLIC`',
+      rows: (row) =>
+        [
+          'spatial.vertex.ROUGHNESS',
+          'spatial.fragment.ALBEDO',
+          'spatial.fragment.ROUGHNESS',
+          'spatial.fragment.METALLIC',
+        ].includes(row.id),
+      what: "`ALBEDO` is the surface colour `fragment()` writes, linear. `ROUGHNESS` and `METALLIC` are the surface's roughness and metalness, which an unshaded surface reads in no colour. Godot's template holds each in a local of `fragment_shader`, or of `vertex_shader` for the vertex stage's `ROUGHNESS`.",
+      tsl: "the template's locals `albedo`, `roughness` and `metallic`",
+    },
+  ],
+};
+
 const HEAD_CHAPTER = {
   file: 'head.md',
   title: 'The shader head and the processor functions',
@@ -939,4 +966,5 @@ export const GUIDE_CHAPTERS = [
   TEXTURES_CHAPTER,
   HEAD_CHAPTER,
   SKY_CHAPTER,
+  SPATIAL_CHAPTER,
 ];

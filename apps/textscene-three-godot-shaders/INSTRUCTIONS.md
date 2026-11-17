@@ -12,7 +12,7 @@ GLSL or WGSL operation itself, `lowered` with the name of the operations it writ
 probes run on WebGL 2. WebGPURenderer runs the same TSL nodes, and no probe runs there until the
 canvases draw on WebGPURenderer (#1788).
 
-1515 of 1889 instructions transpiled.
+1520 of 1889 instructions transpiled.
 
 ## data type
 
@@ -1813,7 +1813,7 @@ canvases draw on WebGPURenderer (#1788).
 | `spatial.vertex.COLOR` | open, #1831 | | | `servers/rendering/shader_types.cpp:96` |
 | `spatial.vertex.POINT_SIZE` | open, #1831 | | | `servers/rendering/shader_types.cpp:97` |
 | `spatial.vertex.Z_CLIP_SCALE` | open, #1831 | | | `servers/rendering/shader_types.cpp:98` |
-| `spatial.vertex.ROUGHNESS` | open, #1831 | | | `servers/rendering/shader_types.cpp:102` |
+| `spatial.vertex.ROUGHNESS` | transpiled (`spatial-default-unshaded`, `spatial-unshaded-moved`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:102` |
 | `spatial.vertex.PROJECTION_MATRIX` | open, #1831 | | | `servers/rendering/shader_types.cpp:117` |
 | `spatial.vertex.MODELVIEW_MATRIX` | open, #1831 | | | `servers/rendering/shader_types.cpp:119` |
 | `spatial.vertex.MODELVIEW_NORMAL_MATRIX` | open, #1831 | | | `servers/rendering/shader_types.cpp:120` |
@@ -1824,12 +1824,12 @@ canvases draw on WebGPURenderer (#1788).
 | `spatial.fragment.NORMAL_MAP` | open, #1831 | | | `servers/rendering/shader_types.cpp:143` |
 | `spatial.fragment.NORMAL_MAP_DEPTH` | open, #1831 | | | `servers/rendering/shader_types.cpp:144` |
 | `spatial.fragment.BENT_NORMAL_MAP` | open, #1831 | | | `servers/rendering/shader_types.cpp:145` |
-| `spatial.fragment.ALBEDO` | open, #1831 | | | `servers/rendering/shader_types.cpp:149` |
+| `spatial.fragment.ALBEDO` | transpiled (`spatial-default-unshaded`, `spatial-unshaded-moved`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:149` |
 | `spatial.fragment.PREMUL_ALPHA_FACTOR` | open, #1831 | | | `servers/rendering/shader_types.cpp:150` |
 | `spatial.fragment.ALPHA` | open, #1831 | | | `servers/rendering/shader_types.cpp:151` |
-| `spatial.fragment.METALLIC` | open, #1831 | | | `servers/rendering/shader_types.cpp:152` |
+| `spatial.fragment.METALLIC` | transpiled (`spatial-default-unshaded`, `spatial-unshaded-moved`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:152` |
 | `spatial.fragment.SPECULAR` | open, #1831 | | | `servers/rendering/shader_types.cpp:153` |
-| `spatial.fragment.ROUGHNESS` | open, #1831 | | | `servers/rendering/shader_types.cpp:154` |
+| `spatial.fragment.ROUGHNESS` | transpiled (`spatial-default-unshaded`, `spatial-unshaded-moved`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:154` |
 | `spatial.fragment.RIM` | open, #1831 | | | `servers/rendering/shader_types.cpp:155` |
 | `spatial.fragment.RIM_TINT` | open, #1831 | | | `servers/rendering/shader_types.cpp:156` |
 | `spatial.fragment.CLEARCOAT` | open, #1831 | | | `servers/rendering/shader_types.cpp:157` |
@@ -1934,7 +1934,7 @@ canvases draw on WebGPURenderer (#1788).
 | `spatial render_mode cull_back` | open, #1831 | | | `servers/rendering/shader_types.cpp:238` |
 | `spatial render_mode cull_front` | open, #1831 | | | `servers/rendering/shader_types.cpp:238` |
 | `spatial render_mode cull_disabled` | open, #1831 | | | `servers/rendering/shader_types.cpp:238` |
-| `spatial render_mode unshaded` | open, #1831 | | | `servers/rendering/shader_types.cpp:239` |
+| `spatial render_mode unshaded` | transpiled (`spatial-default-unshaded`, `spatial-unshaded-moved`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:239` |
 | `spatial render_mode wireframe` | open, #1831 | | | `servers/rendering/shader_types.cpp:240` |
 | `spatial render_mode diffuse_lambert` | open, #1453 | | | `servers/rendering/shader_types.cpp:241` |
 | `spatial render_mode diffuse_lambert_wrap` | open, #1453 | | | `servers/rendering/shader_types.cpp:241` |

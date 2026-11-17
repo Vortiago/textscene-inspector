@@ -59,7 +59,8 @@ export class CalledFunctions {
     const key = [name, ...[...samplers.values()].map(samplerKey)].join(' ');
     let built = this.built.get(key);
     if (built === undefined) {
-      const glslName = `sl${this.built.size}_${tree.lowered.rname}`;
+      // GLSL ES reserves every name with two underscores in a row (section 3.8), as in `_unpack`'s.
+      const glslName = `sl${this.built.size}_${tree.lowered.rname}`.replace(/__+/g, '_');
       built = new GlslFunction(tree, glslName, this.structOf, this.body, samplers);
       this.built.set(key, built);
     }

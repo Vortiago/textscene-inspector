@@ -6,6 +6,7 @@ import { columnOf } from './emitOperation.js';
 import { EXPONENT_COMPOSITES } from './exponentComposites.js';
 import { INTEGER_COMPOSITES } from './integerComposites.js';
 import { NEAREST_COMPOSITES } from './nearestComposites.js';
+import { SUBGROUP_COMPOSITES } from './subgroupComposites.js';
 import { shapeOf } from './types.js';
 
 /** `roundEven` of one float: `round(x)`, but a half goes to the even one of `floor(x) + mod(floor(x), 2)`. */
@@ -66,6 +67,7 @@ const COMPOSITES: Readonly<Record<string, Composite>> = {
   ...INTEGER_COMPOSITES,
   ...EXPONENT_COMPOSITES,
   ...NEAREST_COMPOSITES,
+  ...SUBGROUP_COMPOSITES,
   roundEven,
   modf,
   isnan,

@@ -20,6 +20,14 @@ export {
   type SkyLight,
   type SkyScene,
 } from './sky/skyBindings.js';
+export { transpileSpatial, type SpatialOptions, type TranspiledSpatial } from './spatial/transpileSpatial.js';
+export { withGodotAttributes } from './spatial/meshAttributes.js';
+export {
+  SCENE_BINDINGS,
+  writeSpatialBindings,
+  writeSpatialInstance,
+  type SpatialScene,
+} from './spatial/spatialBindings.js';
 export {
   DEFAULT_TIME_ROLLOVER_SECONDS,
   PlaybackShaderTime,

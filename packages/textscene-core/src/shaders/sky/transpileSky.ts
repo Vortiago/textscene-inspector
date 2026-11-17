@@ -5,13 +5,12 @@ import { parsedShader, type ParsedShader, type ShaderOptions } from '../language
 import { ShadingLanguageError } from '../language/shadingLanguageError.js';
 import { checkTranspiled } from '../language/transpiledRows.js';
 import { withGlslTypes } from '../language/glslTypes.js';
-import { emitTemplateStage } from '../template/emitTemplate.js';
+import { emitTemplateStage, programResources } from '../template/emitTemplate.js';
 import { compileMaterial, linkTemplateStage, type CompiledMaterial } from '../template/link.js';
 import { GODOT_VERSION } from '../language/instructionTable.generated.js';
 import { MODE_TABLES } from '../template/modeTables.generated.js';
 import type { StageName } from '../template/stages.js';
 import type { TemplateStageNode } from '../template/templateTree.js';
-import { TemplateUniforms } from '../template/templateUniforms.js';
 import { godotId } from '../template/godotIds.js';
 import { BoundNodeMaterial } from '../uniforms/boundMaterial.js';
 import { GODOT_SAMPLING, type ProjectSampling } from '../uniforms/samplerState.js';
@@ -77,7 +76,7 @@ export function transpileParsedSky(
         return linkTemplateStage(SKY_TEMPLATE, stage, BACKGROUND_VARIANT, material);
       }
     );
-  const uniforms = new TemplateUniforms();
+  const resources = programResources();
   // A sky converts a source colour to linear (`sky.cpp:193`).
   const parameters = bindParameters(tree, { useLinearColor: true, sampling });
   const parameterValues = [...parameters].map(([name, binding]) => [godotId(name), binding.value] as const);
@@ -90,7 +89,7 @@ export function transpileParsedSky(
       ['uv_interp', uvInterp],
     ]),
     { name: 'gl_Position', type: 'vec4' },
-    uniforms
+    resources
   );
   const fragment = emitTemplateStage(
     linked('fragment'),
@@ -100,11 +99,11 @@ export function transpileParsedSky(
       ['gl_FragCoord', vec4(screenCoordinate, 0, 1) as unknown as Node],
     ]),
     { name: 'frag_color', type: 'vec4' },
-    uniforms
+    resources
   );
   return {
     mesh: skyMesh(withVulkanY(vertex.result), fragment.result, [...parameters.values()]),
-    uniforms: uniforms.byName,
+    uniforms: resources.uniforms.byName,
     textures: fragment.textures,
     parameters,
   };
