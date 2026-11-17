@@ -22,5 +22,5 @@ Godot's `samplerCubeArray` reads a `CubemapArray`. WebGL 2 has no cube array tex
 
 - A cube array read equals Godot's bits, except where lavapipe blends with a fused multiply-add. GLSL ES 3.00 has no `fma`, so those lanes differ by 1 ULP. `knownProbeDifferences.mjs` lists them with Mesa's lines.
 - A read costs up to eight texel loads for two levels, where a native cube array costs one sample.
-- An anisotropic filter reads a cube array without anisotropy.
+- An anisotropic filter reads a cube array without anisotropy (#1970).
 - WebGPU has a cube array texture, and the composite is untested there (#1788).
