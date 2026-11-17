@@ -12,7 +12,7 @@ import { EditedRootProvider } from './contexts/InstanceOwnersContext.js';
 import { NodeDispatcher } from './NodeDispatcher.js';
 import { SelectionHighlight } from './components/SelectionHighlight.js';
 import { HoverHighlight } from './components/HoverHighlight.js';
-import { InternalTextLabel } from './internalTextLabel.js';
+import { EmptyScenePrompt } from './emptyScenePrompt.js';
 import { editorHelperUserData } from './editorHelpers.js';
 import { FrameSelectedShortcut } from './FrameSelectedShortcut.js';
 import { EditorControlsBridge } from './EditorControlsBridge.js';
@@ -104,12 +104,7 @@ function EmptySceneIndicator() {
   return (
     <group userData={{ tscnEmptyState: true }}>
       <GroundGrid />
-      <InternalTextLabel
-        text="Load a scene to begin"
-        position={[0, 0.4, 0]}
-        fontSize={0.35}
-        color="#888888"
-      />
+      <EmptyScenePrompt />
     </group>
   );
 }

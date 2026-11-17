@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { compositeProgram, GLOW_MAP_UNIFORM } from './godotCompositor';
+import { compositeProgram, FRAME_UNIFORM, GLOW_MAP_UNIFORM, RESOLUTION_UNIFORM } from './godotCompositor';
 import { AUTO_EXPOSURE_SCALE_UNIFORM, LUMINANCE_UNIFORM } from './godotLuminance';
 import type { AutoExposure } from '../cameraattributes/types';
 import { GLOW_TEXTURE_SIZE_UNIFORM, glowLevelUniform } from './godotGlowPyramid';
@@ -59,24 +59,35 @@ function shaderOf(
   }).fragmentShader;
 }
 
-/** `mainImage`'s body: above it sit the definitions, not the call order. */
+/** `main`'s body: above it sit the definitions, not the call order. */
 function body(
   glow: GlowParams | null,
   toneMapping: CompositeToneMapping = FILMIC,
   adjustments: EnvironmentAdjustments | null = null
 ) {
   const glsl = shaderOf(glow, toneMapping, adjustments);
-  return glsl.slice(glsl.indexOf('void mainImage'));
+  return glsl.slice(glsl.indexOf('void main()'));
 }
 
 describe('compositeProgram — the shader it emits', () => {
-  it('is self-contained: the curve and the blend are defined above mainImage', () => {
-    // The effect compiles this one string. A function it only calls would be a
+  it('is self-contained: the curve and the blend are defined above main', () => {
+    // The pass compiles this one string. A function it only calls would be a
     // link error at shader-compile time: a black frame.
     const glsl = composite(glowOn());
     expect(glsl).toContain('vec3 godotToneMap(vec3 color)');
     expect(glsl).toContain('vec3 godotGlowBlend(vec3 color, vec3 glow)');
-    expect(glsl).toContain('void mainImage(const in vec4 inputColor, const in vec2 uv,');
+    expect(glsl).toContain('void main() {');
+  });
+
+  it('reads the frame the world drew from its own sampler', () => {
+    const glsl = composite(glowOn());
+    expect(glsl).toContain(`uniform sampler2D ${FRAME_UNIFORM};`);
+    expect(body(glowOn())).toContain(`vec4 inputColor = texture2D(${FRAME_UNIFORM}, vUv);`);
+  });
+
+  it('encodes the finished colour for the target it writes, after the composite', () => {
+    const main = body(glowOn());
+    expect(main.indexOf('#include <colorspace_fragment>')).toBeGreaterThan(main.indexOf('gl_FragColor ='));
   });
 
   it('declares the glow texture size for the bicubic read, and not for the linear one', () => {
@@ -99,7 +110,7 @@ describe('compositeProgram — the shader it emits', () => {
   });
 
   it('writes an opaque alpha for an opaque window, whose screen blit drops the alpha', () => {
-    expect(body(glowOn())).toContain('outputColor = vec4(color, 1.0);');
+    expect(body(glowOn())).toContain('gl_FragColor = vec4(color, 1.0);');
   });
 
   it('preserves the input alpha under transparent_background, rather than the blended one', () => {
@@ -113,20 +124,20 @@ describe('compositeProgram — the shader it emits', () => {
       usesBicubicGlowUpscale: true,
       usesDebanding: false,
     });
-    expect(fragmentShader).toContain('outputColor = vec4(color, inputColor.a);');
+    expect(fragmentShader).toContain('gl_FragColor = vec4(color, clamp(inputColor.a, 0.0, 1.0));');
   });
 });
 
 describe('compositeProgram — the glow gather', () => {
   it('scales the gathered levels by glow_intensity, as gather_glow’s caller does', () => {
-    expect(body(glowOn({ glow_intensity: '0.75' }))).toContain('godotGlowGather(uv) * 0.75');
+    expect(body(glowOn({ glow_intensity: '0.75' }))).toContain('godotGlowGather(vUv) * 0.75');
   });
 
   it('gives MIX the glow_mix factor in the intensity slot Godot reuses', () => {
     // Godot fills the same uniform from `glow_mix` under MIX and lerps against
     // it, so the scale on the buffer and the lerp factor are one value.
     const glsl = body(glowOn({ glow_blend_mode: String(GlowBlendMode.MIX), glow_mix: '0.4' }));
-    expect(glsl).toContain('godotGlowGather(uv) * 0.4');
+    expect(glsl).toContain('godotGlowGather(vUv) * 0.4');
   });
 });
 
@@ -136,7 +147,7 @@ describe('compositeProgram — the glow map', () => {
   it('scales the gathered glow by the map, mixed in by glow_map_strength (tonemap.glsl:886)', () => {
     const glsl = composite(glowOn({ ...MAP, glow_map_strength: '0.6' }));
     expect(glsl).toContain('uniform sampler2D godotGlowMap;');
-    expect(glsl).toContain('glow = mix(glow, texture2D(godotGlowMap, uv).rgb * glow, 0.6);');
+    expect(glsl).toContain('glow = mix(glow, texture2D(godotGlowMap, vUv).rgb * glow, 0.6);');
   });
 
   it('applies the map before the SOFTLIGHT tone curve too (tonemap.glsl:908)', () => {
@@ -184,7 +195,7 @@ describe('compositeProgram — exposure', () => {
 
 const AUTO_EXPOSURE: AutoExposure = { scale: 0.4, minLuminance: 0, maxLuminance: 1 };
 
-/** `mainImage`'s body with an auto exposure on. */
+/** `main`'s body with an auto exposure on. */
 function autoBody(glow: GlowParams | null, tonemapExposure = 1): string {
   const { fragmentShader } = compositeProgram({
     glow,
@@ -196,7 +207,7 @@ function autoBody(glow: GlowParams | null, tonemapExposure = 1): string {
     usesBicubicGlowUpscale: true,
     usesDebanding: false,
   });
-  return fragmentShader.slice(fragmentShader.indexOf('void mainImage'));
+  return fragmentShader.slice(fragmentShader.indexOf('void main()'));
 }
 
 describe('compositeProgram — auto exposure (tonemap.glsl:869-873)', () => {
@@ -233,7 +244,7 @@ describe('compositeProgram — texture units', () => {
   const GUARANTEED_UNITS = 16;
   const EVERY_LEVEL = Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map((level) => [`glow_levels/${level}`, '1']));
 
-  it('holds every sampler of the shader and the frame under the units WebGL2 guarantees', () => {
+  it('holds every sampler of the shader under the units WebGL2 guarantees', () => {
     const { fragmentShader } = compositeProgram({
       glow: glowOn({ ...EVERY_LEVEL, glow_map: 'SubResource("Gradient_1")' }),
       toneMapping: FILMIC,
@@ -245,8 +256,7 @@ describe('compositeProgram — texture units', () => {
       usesDebanding: false,
     });
     const samplers = fragmentShader.match(/^\s*uniform\s+sampler2D\s/gm) ?? [];
-    const frame = 1;
-    expect(samplers.length + frame).toBeLessThanOrEqual(GUARANTEED_UNITS);
+    expect(samplers.length).toBeLessThanOrEqual(GUARANTEED_UNITS);
   });
 });
 
@@ -361,7 +371,7 @@ describe('compositeProgram — with the glow flag clear', () => {
   });
 
   it('writes the same alpha as the glow arm', () => {
-    expect(body(null, tone)).toContain('outputColor = vec4(color, 1.0);');
+    expect(body(null, tone)).toContain('gl_FragColor = vec4(color, 1.0);');
   });
 
   it('still emits a real curve under LINEAR, which is exposure and nothing else', () => {
@@ -397,10 +407,10 @@ describe('compositeProgram — the adjustments (FLAG_USE_BCS, tonemap.glsl:916-9
     expect(glsl.indexOf('mix(vec3(0.5)')).toBeLessThan(glsl.indexOf('mix(vec3(dot('));
   });
 
-  it('decodes back to linear last, since the effect pass encodes the output itself', () => {
+  it('decodes back to linear last, since the pass encodes the output itself', () => {
     const glsl = adjusted({});
     expect(glsl.indexOf('mix(vec3(dot(')).toBeLessThan(glsl.indexOf('godotToLinear('));
-    expect(glsl.indexOf('godotToLinear(')).toBeLessThan(glsl.indexOf('outputColor ='));
+    expect(glsl.indexOf('godotToLinear(')).toBeLessThan(glsl.indexOf('gl_FragColor ='));
   });
 
   it('clamps the sRGB colour at 0 before the decode, since the output encode cannot take a negative', () => {
@@ -476,6 +486,7 @@ describe('compositeProgram — the uniforms it returns', () => {
 
   it('adds a sampler per gathered level and the glow size with a glow, and the glow map with a map', () => {
     const glowUniforms = [
+      FRAME_UNIFORM,
       'godotExposure',
       ...DEFAULT_GATHERED_LEVELS.map(glowLevelUniform),
       GLOW_TEXTURE_SIZE_UNIFORM,
@@ -528,13 +539,14 @@ describe('compositeProgram — debanding', () => {
   });
 
   it('reads the fragment from the top-left corner, where Godot puts the origin', () => {
-    expect(debandedShader()).toMatch(/resolution\.y\s*-\s*gl_FragCoord\.y/);
+    expect(debandedShader()).toContain(`uniform vec2 ${RESOLUTION_UNIFORM};`);
+    expect(debandedShader()).toContain(`${RESOLUTION_UNIFORM}.y - gl_FragCoord.y`);
   });
 
   /** `tonemap.glsl:950-957`: the dither lands on the sRGB value, after the adjustments. */
   it('dithers the sRGB value after the adjustments', () => {
     const shader = debandedShader({ brightness: 1.2, contrast: 1, saturation: 1 });
-    const main = shader.slice(shader.indexOf('void mainImage'));
+    const main = shader.slice(shader.indexOf('void main()'));
     expect(main).toMatch(/godotToLinear\(max\(godotToSrgb\(color\) \+ godotDither3\(/);
     expect(main.indexOf('godotDither3(')).toBeGreaterThan(main.indexOf('color = godotToLinear(max(color'));
   });

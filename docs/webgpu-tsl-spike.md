@@ -334,11 +334,12 @@ stops. The ADR's owner decides which.
 
 ### 4. What happens to postprocessing?
 
-Two files use the `postprocessing` package: `GodotToneMapEffect.ts` and `toneMapPass.ts`. Under the
-handler they run unchanged. The 3D parity row above includes the tone map pass.
+The tone map no longer uses the `postprocessing` package. `GodotToneMapEffect.ts` draws it as one
+full-screen `ShaderMaterial` through `fullScreenPass.ts`, like the glow passes. Under the handler it
+runs unchanged. The 3D parity row above includes the tone map pass.
 
-The `postprocessing` package needs `WebGLRenderer`. On `WebGPURenderer`, the tone map effect
-becomes a node on three's `RenderPipeline`. The spike did not build that.
+A `ShaderMaterial` needs `WebGLRenderer`. On `WebGPURenderer`, the tone map pass becomes a node on
+three's `RenderPipeline`. The spike did not build that.
 
 ### 5. What changes in fiber?
 

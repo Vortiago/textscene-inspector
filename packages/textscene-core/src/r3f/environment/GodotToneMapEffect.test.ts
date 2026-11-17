@@ -7,7 +7,11 @@ import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { textureView } from '../../resources/textures/textureView';
 import { GLOW_MAP_SAMPLER, GodotToneMapEffect } from './GodotToneMapEffect';
-import { GLOW_MAP_UNIFORM } from '../../resources/environment/godotCompositor';
+import {
+  FRAME_UNIFORM,
+  GLOW_MAP_UNIFORM,
+  RESOLUTION_UNIFORM,
+} from '../../resources/environment/godotCompositor';
 import { GLOW_TEXTURE_SIZE_UNIFORM, glowLevelUniform } from '../../resources/environment/godotGlowPyramid';
 import { glowParamsFor } from '../../resources/environment/godotGlow';
 import { decodeEnvironment } from '../../resources/environment/decode';
@@ -44,7 +48,7 @@ function srgbTexture(): THREE.Texture {
 }
 
 function sampledMap(effect: GodotToneMapEffect): THREE.Texture {
-  return effect.uniforms.get(GLOW_MAP_UNIFORM)!.value as THREE.Texture;
+  return effect.uniforms[GLOW_MAP_UNIFORM]!.value as THREE.Texture;
 }
 
 const MAP = { glow_map: 'SubResource("Gradient_1")' };
@@ -85,13 +89,13 @@ describe('GodotToneMapEffect.setGlowMap', () => {
   it('binds no map when the environment names none (edge case)', () => {
     const effect = effectWith({});
     effect.setGlowMap(srgbTexture());
-    expect(effect.uniforms.has(GLOW_MAP_UNIFORM)).toBe(false);
+    expect(GLOW_MAP_UNIFORM in effect.uniforms).toBe(false);
   });
 });
 
 describe('GodotToneMapEffect glow levels', () => {
   const sizeOfLevel = (effect: GodotToneMapEffect, level: number) => {
-    const { image } = effect.uniforms.get(glowLevelUniform(level))!.value as THREE.Texture<{
+    const { image } = effect.uniforms[glowLevelUniform(level)]!.value as THREE.Texture<{
       width: number;
       height: number;
     }>;
@@ -108,8 +112,8 @@ describe('GodotToneMapEffect glow levels', () => {
 
   it('binds no level the weights leave out', () => {
     const effect = effectWith({});
-    expect(effect.uniforms.has(glowLevelUniform(0))).toBe(false);
-    expect(effect.uniforms.has(glowLevelUniform(4))).toBe(false);
+    expect(glowLevelUniform(0) in effect.uniforms).toBe(false);
+    expect(glowLevelUniform(4) in effect.uniforms).toBe(false);
   });
 
   const DEEPEST = { 'glow_levels/7': '0.5' };
@@ -137,7 +141,7 @@ describe('GodotToneMapEffect glow levels', () => {
 
 describe('GodotToneMapEffect glow texture size', () => {
   const textureSize = (effect: GodotToneMapEffect) =>
-    (effect.uniforms.get(GLOW_TEXTURE_SIZE_UNIFORM)!.value as THREE.Vector2).toArray();
+    (effect.uniforms[GLOW_TEXTURE_SIZE_UNIFORM]!.value as THREE.Vector2).toArray();
 
   it('is the half-size glow texture, which the bicubic read halves again for each level', () => {
     const effect = effectWith({});
@@ -154,7 +158,7 @@ describe('GodotToneMapEffect glow texture size', () => {
 });
 
 describe('GodotToneMapEffect auto exposure', () => {
-  const luminanceOf = (effect: GodotToneMapEffect) => effect.uniforms.get(LUMINANCE_UNIFORM)?.value;
+  const luminanceOf = (effect: GodotToneMapEffect) => effect.uniforms[LUMINANCE_UNIFORM]?.value;
 
   it('samples a luminance texture from construction, which the reduction fills for each frame', () => {
     expect(luminanceOf(effectWith({}, AUTO_EXPOSURE))).toBeInstanceOf(THREE.Texture);
@@ -172,7 +176,7 @@ describe('GodotToneMapEffect auto exposure', () => {
       drawn.push((quad as THREE.Mesh).material as THREE.ShaderMaterial);
     });
     effect.setSize(64, 64);
-    effect.update(renderer, new THREE.WebGLRenderTarget(64, 64));
+    effect.render(renderer, new THREE.WebGLRenderTarget(64, 64), null);
     const names = drawn.map(({ name }) => name.split('.')[0]);
     expect(names.indexOf('GodotGlow')).toBeGreaterThan(names.lastIndexOf('GodotLuminance'));
     expect(names).toContain('GodotLuminance');
@@ -186,8 +190,44 @@ describe('GodotToneMapEffect auto exposure', () => {
       drawn.push((quad as THREE.Mesh).material as THREE.ShaderMaterial);
     });
     effect.setSize(64, 64);
-    effect.update(renderer, new THREE.WebGLRenderTarget(64, 64));
+    effect.render(renderer, new THREE.WebGLRenderTarget(64, 64), null);
     const brightPass = drawn.find(({ name }) => name === 'GodotGlow.FirstVertical')!;
     expect(brightPass.uniforms[LUMINANCE_UNIFORM]!.value).toBe(luminanceOf(effect));
+  });
+});
+
+describe('GodotToneMapEffect.render', () => {
+  it('draws the composite last, into the target, reading the frame the world drew', async () => {
+    const { renderer } = await testRenderer();
+    const effect = effectWith({});
+    const draws: { pass: THREE.ShaderMaterial; target: THREE.WebGLRenderTarget | null; frame: unknown }[] =
+      [];
+    vi.spyOn(renderer, 'render').mockImplementation((quad) => {
+      const pass = (quad as THREE.Mesh).material as THREE.ShaderMaterial;
+      draws.push({ pass, target: renderer.getRenderTarget(), frame: pass.uniforms[FRAME_UNIFORM]?.value });
+    });
+    const frame = new THREE.WebGLRenderTarget(64, 64);
+    const target = new THREE.WebGLRenderTarget(64, 64);
+    effect.setSize(64, 64);
+    effect.render(renderer, frame, target);
+    const last = draws.at(-1)!;
+    expect(last.pass.name).toBe('GodotToneMap');
+    expect(last.target).toBe(target);
+    expect(last.frame).toBe(frame.texture);
+  });
+
+  it('gives the debanding dither the frame size, which flips the fragment row to the top-left origin', () => {
+    const effect = new GodotToneMapEffect({
+      glow: null,
+      adjustments: null,
+      autoExposure: null,
+      toneMapping: { mode: ToneMapper.FILMIC, white: 1 },
+      exposure: 1,
+      transparentBackground: false,
+      usesBicubicGlowUpscale: true,
+      usesDebanding: true,
+    });
+    effect.setSize(320, 200);
+    expect((effect.uniforms[RESOLUTION_UNIFORM]!.value as THREE.Vector2).toArray()).toEqual([320, 200]);
   });
 });

@@ -1,11 +1,10 @@
 /**
- * Godot's tonemap pass as one effect: the tone curve, plus the glow gather and blend under
+ * Godot's tonemap pass as one full-screen pass: the tone curve, plus the glow gather and blend under
  * `FLAG_USE_GLOW` and the colour adjustments under `FLAG_USE_BCS`, as in `tonemap.glsl`. One shader
  * lets SOFTLIGHT composite after the curve, with the glow buffer tonemapped, and every other mode
  * before it, which a fixed pass order cannot express.
  */
 
-import { BlendFunction, Effect } from 'postprocessing';
 import * as THREE from 'three';
 import { glowLevelCap, glowLevelSize, type GlowParams } from '../../resources/environment/godotGlow';
 import {
@@ -20,7 +19,9 @@ import {
 } from '../../resources/environment/godotGlowPyramid';
 import {
   compositeProgram,
+  FRAME_UNIFORM,
   GLOW_MAP_UNIFORM,
+  RESOLUTION_UNIFORM,
   type CompositeOptions,
 } from '../../resources/environment/godotCompositor';
 import { LUMINANCE_UNIFORM } from '../../resources/environment/godotLuminance';
@@ -31,7 +32,8 @@ import { drawOffscreen } from '../offscreen/draw';
 import { createPassTarget } from './passTarget';
 import { LuminanceReduction } from './LuminanceReduction';
 
-export class GodotToneMapEffect extends Effect {
+export class GodotToneMapEffect {
+  private readonly composite: THREE.ShaderMaterial;
   /** Null when the environment has no glow: nothing to gather, nothing to own. */
   private readonly pyramid: GlowPyramid | null;
   /** Null when the camera attributes hold no auto exposure. */
@@ -39,24 +41,29 @@ export class GodotToneMapEffect extends Effect {
 
   constructor(options: CompositeOptions) {
     const { fragmentShader, uniforms } = compositeProgram(options);
-    super('GodotToneMapEffect', fragmentShader, {
-      // The effect writes the finished frame, glow and curve applied, so the effect pass must not
-      // blend it into the scene again.
-      blendFunction: BlendFunction.SRC,
-      uniforms: new Map(Object.entries(uniforms).map(([name, value]) => [name, new THREE.Uniform(value)])),
-    });
-
+    this.composite = fullScreenPass(
+      'GodotToneMap',
+      fragmentShader,
+      Object.fromEntries(Object.entries(uniforms).map(([name, value]) => [name, { value }]))
+    );
     this.clearGlowMap();
     this.luminance = options.autoExposure && new LuminanceReduction(options.autoExposure);
-    if (this.luminance) this.uniforms.get(LUMINANCE_UNIFORM)!.value = this.luminance.texture;
+    if (this.luminance) this.uniforms[LUMINANCE_UNIFORM]!.value = this.luminance.texture;
     this.pyramid = options.glow
       ? new GlowPyramid(options.glow, this.uniforms, this.luminance?.gainUniforms ?? null)
       : null;
+    const resolution = this.uniforms[RESOLUTION_UNIFORM];
+    if (resolution) resolution.value = new THREE.Vector2();
+  }
+
+  /** The composite's uniforms, by the names `compositeProgram` declares. */
+  get uniforms(): Record<string, THREE.IUniform> {
+    return this.composite.uniforms;
   }
 
   /** Samples `map` as the glow map. The caller owns `map`. A no-op when the composite samples no map. */
   setGlowMap(map: THREE.Texture): void {
-    const uniform = this.uniforms.get(GLOW_MAP_UNIFORM);
+    const uniform = this.uniforms[GLOW_MAP_UNIFORM];
     if (uniform) uniform.value = map;
   }
 
@@ -65,23 +72,30 @@ export class GodotToneMapEffect extends Effect {
     this.setGlowMap(defaultWhiteTexture());
   }
 
-  override setSize(width: number, height: number): void {
+  setSize(width: number, height: number): void {
+    (this.uniforms[RESOLUTION_UNIFORM]?.value as THREE.Vector2 | undefined)?.set(width, height);
     this.pyramid?.setSize(width, height);
   }
 
   /**
-   * Reduces the frame to its luminance, then builds the pyramid the composite shader gathers from,
-   * since the bright pass reads the luminance (`renderer_scene_render_rd.cpp:551-607`).
+   * Reduces `frame` to its luminance, builds the glow pyramid, which reads the luminance
+   * (`renderer_scene_render_rd.cpp:551-607`), then composites into `target`, null for the canvas.
    */
-  override update(renderer: THREE.WebGLRenderer, inputBuffer: THREE.WebGLRenderTarget): void {
-    this.luminance?.reduce(renderer, inputBuffer);
-    this.pyramid?.build(renderer, inputBuffer);
+  render(
+    renderer: THREE.WebGLRenderer,
+    frame: THREE.WebGLRenderTarget,
+    target: THREE.WebGLRenderTarget | null
+  ): void {
+    this.luminance?.reduce(renderer, frame);
+    this.pyramid?.build(renderer, frame);
+    this.uniforms[FRAME_UNIFORM]!.value = frame.texture;
+    drawFullScreen(renderer, this.composite, target);
   }
 
-  override dispose(): void {
+  dispose(): void {
     this.luminance?.dispose();
     this.pyramid?.dispose();
-    super.dispose();
+    this.composite.dispose();
   }
 }
 
@@ -95,9 +109,8 @@ export const GLOW_MAP_SAMPLER: ViewSampler = {
 };
 
 /**
- * The glow levels and the passes that build them, owned as `BloomEffect` owns its own. Not a
- * `BloomEffect`: Godot weights its seven levels apart (`[0, 0.8, 0.4, 0.1, 0, 0, 0]` by default),
- * while `MipmapBlurPass` has one radius for every level, which gives a haze instead of a halo.
+ * The glow levels and the passes that build them. Godot weights its seven levels apart
+ * (`[0, 0.8, 0.4, 0.1, 0, 0, 0]` by default), each blurred from the one above.
  */
 class GlowPyramid {
   private readonly levelTargets: THREE.WebGLRenderTarget[] = [];
@@ -115,7 +128,7 @@ class GlowPyramid {
   /** Binds each gathered level's sampler in `compositeUniforms`, and rebinds it on every resize. */
   constructor(
     glow: GlowParams,
-    private readonly compositeUniforms: Map<string, THREE.Uniform>,
+    private readonly compositeUniforms: Record<string, THREE.IUniform>,
     autoExposureUniforms: Record<string, THREE.IUniform> | null
   ) {
     // `glowParamsFor` returns null rather than an empty pyramid, so a `GlowParams`
@@ -132,7 +145,7 @@ class GlowPyramid {
       this.levelTargets.push(createPassTarget(`GodotGlow.Level${level}`));
       this.horizontalTargets.push(createPassTarget(`GodotGlow.Horizontal${level}`));
     }
-    const sizeUniform = compositeUniforms.get(GLOW_TEXTURE_SIZE_UNIFORM);
+    const sizeUniform = compositeUniforms[GLOW_TEXTURE_SIZE_UNIFORM];
     this.textureSize = sizeUniform ? (sizeUniform.value = new THREE.Vector2()) : null;
     this.rebindLevels();
   }
@@ -143,7 +156,7 @@ class GlowPyramid {
    */
   private rebindLevels(): void {
     for (const level of this.gatheredLevels) {
-      this.compositeUniforms.get(glowLevelUniform(level))!.value =
+      this.compositeUniforms[glowLevelUniform(level)]!.value =
         this.levelTargets[Math.min(level, this.topLevel)]!.texture;
     }
   }

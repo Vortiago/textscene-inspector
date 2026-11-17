@@ -162,8 +162,7 @@ function toneMapExposureOf(scene: THREE.Object3D): number {
   let exposure: number | null = null;
   scene.traverse((object) => {
     const material = (object as THREE.Mesh).material as THREE.ShaderMaterial | undefined;
-    // postprocessing prefixes each effect's uniforms with its index in the pass.
-    const uniform = material?.uniforms?.e0GodotExposure;
+    const uniform = material?.uniforms?.godotExposure;
     if (uniform) exposure = uniform.value as number;
   });
   if (exposure === null) throw new Error(`expected a tonemap draw in ${scene.name}, found none`);

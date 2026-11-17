@@ -58,15 +58,12 @@
     "three-mesh-bvh": "catalog:"
   },
   "peerDependencies": {
-    "@react-three/drei": "catalog:",
     "@react-three/fiber": "catalog:",
-    "postprocessing": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "three": "catalog:"
   },
   "devDependencies": {
-    "@react-three/drei": "catalog:",
     "@react-three/fiber": "catalog:",
     "@textscene/core": "workspace:*",
     "@textscene/dev-kit": "workspace:*",
@@ -78,7 +75,6 @@
     "dts-bundle-generator": "catalog:",
     "esbuild": "catalog:",
     "fastnoise-lite": "catalog:",
-    "postprocessing": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "rimraf": "catalog:",

@@ -45,7 +45,7 @@ and re-point at the point.
 
 The viewport navigates like Godot's editor rather than like a web viewer
 (ADR-0029, `GodotEditorControls.tsx`, maths in `godotEditorCursor.ts`). Left-drag
-stays free for selection, as in Godot. drei remains a dependency for `Text` only.
+stays free for selection, as in Godot.
 
 ## What the matched frames depend on
 
