@@ -1,3 +1,4 @@
+import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
 import { probeOf } from './languageProbes.mjs';
 
 const hex = (bytes) => bytes.map((byte) => byte.toString(16).padStart(2, '0')).join('');
@@ -62,7 +63,14 @@ const uvRows = (uvs) => uvs.map((uv) => [uv]);
 
 /** Each filter word, then the default of the harness's canvas_item, which is filter_linear. */
 function filterProbes() {
-  const filters = ['filter_nearest', 'filter_linear', 'filter_nearest_mipmap', 'filter_linear_mipmap'];
+  const filters = [
+    'filter_nearest',
+    'filter_linear',
+    'filter_nearest_mipmap',
+    'filter_linear_mipmap',
+    'filter_nearest_mipmap_anisotropic',
+    'filter_linear_mipmap_anisotropic',
+  ];
   return [
     ...filters.map((filter) =>
       textureProbe(
@@ -275,6 +283,18 @@ function kindProbes() {
       }
     ),
     textureProbe(
+      'external',
+      ['samplerExternalOES', 'filter_nearest', 'texture(samplerExternalOES,vec2)'],
+      'uniform samplerExternalOES s : filter_nearest;\nvec4 probe(vec2 uv) { return texture(s, uv); }',
+      { textures: { s: FLAT }, inputs: uvRows(UVS.slice(0, 3)) }
+    ),
+    textureProbe(
+      'external-bias',
+      ['samplerExternalOES', 'filter_nearest', 'texture(samplerExternalOES,vec2,float)'],
+      'uniform samplerExternalOES s : filter_nearest;\nvec4 probe(vec2 uv) { return texture(s, uv, 0.5); }',
+      { textures: { s: FLAT }, inputs: uvRows(UVS.slice(0, 2)) }
+    ),
+    textureProbe(
       'unsigned',
       ['usampler2D', 'filter_nearest', 'texture(usampler2D,vec2)'],
       'uniform usampler2D s : filter_nearest;\nuvec4 probe(vec2 uv) { return texture(s, uv); }',
@@ -283,6 +303,141 @@ function kindProbes() {
   ];
 }
 
+/** The texture each sampler type reads in a function probe: mipmapped where both harnesses build mips. */
+const SPEC_OF_KIND = {
+  flat: textureSpec('flat', 4, 4, { isMipmapped: true }),
+  layers: textureSpec('layers', 4, 4, { depth: 3, isMipmapped: true }),
+  volume: textureSpec('volume', 4, 4, { depth: 4 }),
+  cube: textureSpec('cube', 2, 2),
+};
+
+function kindOf(sampler) {
+  if (sampler.endsWith('2DArray')) return 'layers';
+  if (sampler.endsWith('3D')) return 'volume';
+  if (sampler === 'samplerCube') return 'cube';
+  return 'flat';
+}
+
+/** Three rows of each argument, by the argument's place in the call and its type. */
+function argumentValues(kind, type, place) {
+  if (place === 'coordinate') {
+    if (type === 'vec2')
+      return [
+        [0.3, 0.6],
+        [0.875, 0.125],
+        [1.2, -0.3],
+      ];
+    if (kind === 'layers')
+      return [
+        [0.3, 0.6, 0],
+        [0.875, 0.125, 1.5],
+        [0.4, 0.4, 2.2],
+      ];
+    if (kind === 'cube')
+      return [
+        [1, 0.2, -0.3],
+        [0.2, -1, 0.6],
+        [-0.3, 0.2, -1],
+      ];
+    if (type === 'vec3')
+      return [
+        [0.3, 0.6, 0.1],
+        [0.875, 0.125, 0.6],
+        [0.4, 0.4, 0.9],
+      ];
+    if (type === 'vec4')
+      return [
+        [0.6, 1.2, 0.2, 2],
+        [0.875, 0.125, 0.6, 1],
+        [-0.2, 0.3, 0.45, -0.5],
+      ];
+    if (type === 'ivec2')
+      return [
+        [0, 0],
+        [3, 1],
+        [1, 2],
+      ];
+    return [
+      [0, 0, 0],
+      [3, 1, 2],
+      [1, 2, 1],
+    ];
+  }
+  if (type === 'int') return [[0], [1], [0]].map(([value]) => value);
+  if (type === 'float') return place === 'bias' ? [0, 0.7, -1] : [0, 1, 1.5];
+  if (type === 'vec2')
+    return place === 'dx'
+      ? [
+          [0.1, 0],
+          [0.5, 0],
+          [0, 0.02],
+        ]
+      : [
+          [0, 0.1],
+          [0, 0.3],
+          [0.02, 0],
+        ];
+  return place === 'dx'
+    ? [
+        [0.1, 0, 0],
+        [0.5, 0, 0],
+        [0, 0.02, 0],
+      ]
+    : [
+        [0, 0.1, 0],
+        [0, 0.3, 0.1],
+        [0.02, 0, 0],
+      ];
+}
+
+/** The place of each argument after the sampler, by function. */
+const PLACES = {
+  texture: ['coordinate', 'bias'],
+  textureProj: ['coordinate', 'bias'],
+  textureLod: ['coordinate', 'lod'],
+  textureProjLod: ['coordinate', 'lod'],
+  textureGrad: ['coordinate', 'dx', 'dy'],
+  textureProjGrad: ['coordinate', 'dx', 'dy'],
+  texelFetch: ['coordinate', 'lod'],
+  textureSize: ['lod'],
+  textureGather: ['coordinate'],
+  textureQueryLod: ['coordinate'],
+  textureQueryLevels: [],
+};
+
+/** A probe of one function row over a texture of known texels, with a filter fit for its sampler. */
+function functionProbe(row) {
+  const name = row.id.slice(0, row.id.indexOf('('));
+  const [sampler, ...types] = row.args;
+  const kind = kindOf(sampler);
+  const isFloat = !/^[iu]/.test(sampler);
+  const filter = isFloat ? 'filter_linear_mipmap' : 'filter_nearest_mipmap';
+  // textureGather's component is a constant expression, so it stands in the source.
+  const hasComponent = name === 'textureGather' && types.length === 2;
+  const passed = hasComponent ? types.slice(0, 1) : types;
+  const places = PLACES[name];
+  const parameters = passed.map((type, index) => `${type} a${index}`);
+  const call = [`s`, ...passed.map((_, index) => `a${index}`), ...(hasComponent ? ['2'] : [])].join(', ');
+  const columns = passed.map((type, index) => argumentValues(kind, type, places[index]));
+  const inputs =
+    passed.length === 0
+      ? undefined
+      : columns[0].map((_, rowIndex) => columns.map((column) => column[rowIndex]));
+  return textureProbe(
+    `function-${row.id.replace(/[(),]/g, '-').replace(/-+$/, '')}`,
+    [sampler, filter, row.id],
+    `uniform ${sampler} s : ${filter};\n${row.returns} probe(${parameters.join(', ')}) { return ${name}(s${call.slice(1)}); }`,
+    { textures: { s: SPEC_OF_KIND[kind] }, inputs }
+  );
+}
+
+/** Every texture function row but a cube array's, which WebGL 2 has no texture for (#1788). */
+const functionProbes = () =>
+  INSTRUCTION_TABLE.filter(
+    (row) =>
+      row.owner === '#1829' && /^(texture|texel)\w*\(/.test(row.id) && !/CubeArray|ExternalOES/.test(row.id)
+  ).map(functionProbe);
+
 export const TEXTURE_PROBES = [
   ...filterProbes(),
   ...defaultProbes(),
@@ -290,4 +445,5 @@ export const TEXTURE_PROBES = [
   ...colourProbes(),
   ...passingProbes(),
   ...kindProbes(),
+  ...functionProbes(),
 ];

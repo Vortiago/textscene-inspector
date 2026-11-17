@@ -18,7 +18,7 @@ Godot 4.6.3-stable (official), probed on llvmpipe (LLVM 20.1.2). Each table show
 
 A sampler reads a 2D texture, a 2D array, a 3D texture or a cube, of floats, ints (`isampler`) or uints (`usampler`). A sampler can be an argument of a function: the transpiler writes the function once for each set of textures its calls pass.
 
-The transpiler emits `a `texture`, `texture3D` or cube texture node per element`. Rows: `sampler2D`, `usampler2D`, `sampler2DArray`, `sampler3D`, `samplerCube`. Godot source: `servers/rendering/shader_language.h:230`.
+The transpiler emits `a `texture`, `texture3D` or cube texture node per element`. Rows: `sampler2D`, `isampler2D`, `usampler2D`, `sampler2DArray`, `isampler2DArray`, `usampler2DArray`, `sampler3D`, `isampler3D`, `usampler3D`, `samplerCube`, `samplerExternalOES`. Godot source: `servers/rendering/shader_language.h:230`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
@@ -45,7 +45,32 @@ vec4 probe(vec2 uv) { return texture(s[0], uv) + texture(s[1], uv) * 2.0 + textu
 | --- | --- |
 | `(0.125, 0.25)` | `(0.027450982, 0.054901965, 0.13725491, 7.0)` |
 
-### Probe `texture-layers`, 4 input rows
+### Probe `texture-array-computed-index`, 2 input rows
+
+```glsl
+uniform sampler2D s[2] : filter_nearest;
+vec4 probe(int index) { return texture(s[index], vec2(0.375, 0.25)); }
+```
+
+| `index` | Godot gives |
+| --- | --- |
+| `0` | `(0.06666667, 0.007843138, 0.04705883, 0.9215687)` |
+| `1` | `(0.003921569, 0.007843138, 0.019607844, 1.0)` |
+
+### Probe `texture-array-computed-argument`, 2 input rows
+
+```glsl
+uniform sampler2D s[2] : filter_nearest;
+vec4 read(sampler2D t) { return texture(t, vec2(0.375, 0.25)); }
+vec4 probe(int index) { return read(s[index]); }
+```
+
+| `index` | Godot gives |
+| --- | --- |
+| `0` | `(0.06666667, 0.007843138, 0.04705883, 0.9215687)` |
+| `1` | `(0.003921569, 0.007843138, 0.019607844, 1.0)` |
+
+### Probe `texture-layers`, 8 input rows
 
 ```glsl
 uniform sampler2DArray s : filter_nearest;
@@ -198,9 +223,9 @@ vec4 probe() { return texture(s, vec2(0.5)); }
 
 ## Filter and repeat
 
-A filter word and a repeat word set the sampler. A sampler without one takes its shader type's default: `filter_linear_mipmap` and `repeat_enable` for spatial, sky and particles, `filter_linear_mipmap` and `repeat_disable` for fog, and `filter_linear` and `repeat_disable` for canvas_item. Godot's Vulkan samplers read every mip level, so a filter without `_mipmap` reads the nearest level of a mipmapped texture. An anisotropic filter reads up to 4 samples, from the project's `anisotropic_filtering_level`.
+A filter word and a repeat word set the sampler. A sampler without one takes its shader type's default: `filter_linear_mipmap` and `repeat_enable` for spatial, sky and particles, `filter_linear_mipmap` and `repeat_disable` for fog, and `filter_linear` and `repeat_disable` for canvas_item. A filter without `_mipmap` reads level 0 only, at any level `textureLod` asks for. An anisotropic filter reads up to 4 samples, from the project's `anisotropic_filtering_level`.
 
-The transpiler emits `the texture's filters, wrap and anisotropy`. Rows: `filter_nearest`, `filter_linear`, `filter_nearest_mipmap`, `filter_linear_mipmap`, `repeat_enable`, `repeat_disable`. Godot source: `servers/rendering/shader_language.cpp:395`.
+The transpiler emits `the texture's filters, wrap and anisotropy`. Rows: `filter_nearest`, `filter_linear`, `filter_nearest_mipmap`, `filter_linear_mipmap`, `filter_nearest_mipmap_anisotropic`, `filter_linear_mipmap_anisotropic`, `repeat_enable`, `repeat_disable`. Godot source: `servers/rendering/shader_language.cpp:395`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
@@ -244,6 +269,30 @@ vec4 probe(vec2 uv) { return texture(s, uv); }
 
 ```glsl
 uniform sampler2D s : filter_linear_mipmap;
+vec4 probe(vec2 uv) { return texture(s, uv); }
+```
+
+| `uv` | Godot gives |
+| --- | --- |
+| `(0.125, 0.25)` | `(0.003921569, 0.007843138, 0.019607844, 1.0)` |
+| `(0.0, 0.0)` | `(0.003921569, 0.007843138, 0.019607844, 1.0)` |
+
+### Probe `texture-2d-filter_nearest_mipmap_anisotropic`, 10 input rows
+
+```glsl
+uniform sampler2D s : filter_nearest_mipmap_anisotropic;
+vec4 probe(vec2 uv) { return texture(s, uv); }
+```
+
+| `uv` | Godot gives |
+| --- | --- |
+| `(0.125, 0.25)` | `(0.003921569, 0.007843138, 0.019607844, 1.0)` |
+| `(0.0, 0.0)` | `(0.003921569, 0.007843138, 0.019607844, 1.0)` |
+
+### Probe `texture-2d-filter_linear_mipmap_anisotropic`, 10 input rows
+
+```glsl
+uniform sampler2D s : filter_linear_mipmap_anisotropic;
 vec4 probe(vec2 uv) { return texture(s, uv); }
 ```
 
@@ -314,7 +363,7 @@ vec4 probe(vec2 uv, float lod) { return textureLod(s, uv, lod); }
 
 `texture` samples at a coordinate, with an optional bias. `textureLod` samples a level, `textureGrad` samples with gradients and `texelFetch` reads one texel of a level. `textureSize` gives the size of a level. A 2D array keeps the layer in the last lane of the coordinate.
 
-The transpiler emits ``sample`, `bias`, `level`, `grad`, `load` and `textureSize` of the texture node`. Rows: `textureSize(sampler2D,int)`, `texture(sampler2D,vec2)`, `texture(usampler2D,vec2)`, `texture(sampler2DArray,vec3)`, `texture(sampler3D,vec3)`, `texture(samplerCube,vec3)`, `textureLod(sampler2D,vec2,float)`, `texelFetch(sampler2D,ivec2,int)`. Godot source: `servers/rendering/shader_language.cpp:3167`.
+The transpiler emits ``sample`, `bias`, `level`, `grad`, `load` and `textureSize` of the texture node`. Rows: `textureSize(sampler2D,int)`, `textureSize(isampler2D,int)`, `textureSize(usampler2D,int)`, `textureSize(sampler2DArray,int)`, `textureSize(isampler2DArray,int)`, `textureSize(usampler2DArray,int)`, `textureSize(sampler3D,int)`, `textureSize(isampler3D,int)`, `textureSize(usampler3D,int)`, `textureSize(samplerCube,int)`, `texture(sampler2D,vec2)`, `texture(sampler2D,vec2,float)`, `texture(usampler2D,vec2)`, `texture(usampler2D,vec2,float)`, `texture(isampler2D,vec2)`, `texture(isampler2D,vec2,float)`, `texture(sampler2DArray,vec3)`, `texture(sampler2DArray,vec3,float)`, `texture(usampler2DArray,vec3)`, `texture(usampler2DArray,vec3,float)`, `texture(isampler2DArray,vec3)`, `texture(isampler2DArray,vec3,float)`, `texture(sampler3D,vec3)`, `texture(sampler3D,vec3,float)`, `texture(usampler3D,vec3)`, `texture(usampler3D,vec3,float)`, `texture(isampler3D,vec3)`, `texture(isampler3D,vec3,float)`, `texture(samplerCube,vec3)`, `texture(samplerCube,vec3,float)`, `texture(samplerExternalOES,vec2)`, `texture(samplerExternalOES,vec2,float)`, `textureProj(sampler2D,vec3)`, `textureProj(sampler2D,vec4)`, `textureProj(sampler2D,vec3,float)`, `textureProj(sampler2D,vec4,float)`, `textureProj(isampler2D,vec3)`, `textureProj(isampler2D,vec4)`, `textureProj(isampler2D,vec3,float)`, `textureProj(isampler2D,vec4,float)`, `textureProj(usampler2D,vec3)`, `textureProj(usampler2D,vec4)`, `textureProj(usampler2D,vec3,float)`, `textureProj(usampler2D,vec4,float)`, `textureProj(sampler3D,vec4)`, `textureProj(sampler3D,vec4,float)`, `textureProj(isampler3D,vec4)`, `textureProj(isampler3D,vec4,float)`, `textureProj(usampler3D,vec4)`, `textureProj(usampler3D,vec4,float)`, `textureLod(sampler2D,vec2,float)`, `textureLod(isampler2D,vec2,float)`, `textureLod(usampler2D,vec2,float)`, `textureLod(sampler2DArray,vec3,float)`, `textureLod(isampler2DArray,vec3,float)`, `textureLod(usampler2DArray,vec3,float)`, `textureLod(sampler3D,vec3,float)`, `textureLod(isampler3D,vec3,float)`, `textureLod(usampler3D,vec3,float)`, `textureLod(samplerCube,vec3,float)`, `texelFetch(sampler2D,ivec2,int)`, `texelFetch(isampler2D,ivec2,int)`, `texelFetch(usampler2D,ivec2,int)`, `texelFetch(sampler2DArray,ivec3,int)`, `texelFetch(isampler2DArray,ivec3,int)`, `texelFetch(usampler2DArray,ivec3,int)`, `texelFetch(sampler3D,ivec3,int)`, `texelFetch(isampler3D,ivec3,int)`, `texelFetch(usampler3D,ivec3,int)`, `textureProjLod(sampler2D,vec3,float)`, `textureProjLod(sampler2D,vec4,float)`, `textureProjLod(isampler2D,vec3,float)`, `textureProjLod(isampler2D,vec4,float)`, `textureProjLod(usampler2D,vec3,float)`, `textureProjLod(usampler2D,vec4,float)`, `textureProjLod(sampler3D,vec4,float)`, `textureProjLod(isampler3D,vec4,float)`, `textureProjLod(usampler3D,vec4,float)`, `textureGrad(sampler2D,vec2,vec2,vec2)`, `textureGrad(isampler2D,vec2,vec2,vec2)`, `textureGrad(usampler2D,vec2,vec2,vec2)`, `textureGrad(sampler2DArray,vec3,vec2,vec2)`, `textureGrad(isampler2DArray,vec3,vec2,vec2)`, `textureGrad(usampler2DArray,vec3,vec2,vec2)`, `textureGrad(sampler3D,vec3,vec3,vec3)`, `textureGrad(isampler3D,vec3,vec3,vec3)`, `textureGrad(usampler3D,vec3,vec3,vec3)`, `textureGrad(samplerCube,vec3,vec3,vec3)`, `textureProjGrad(sampler2D,vec3,vec2,vec2)`, `textureProjGrad(sampler2D,vec4,vec2,vec2)`, `textureProjGrad(isampler2D,vec3,vec2,vec2)`, `textureProjGrad(isampler2D,vec4,vec2,vec2)`, `textureProjGrad(usampler2D,vec3,vec2,vec2)`, `textureProjGrad(usampler2D,vec4,vec2,vec2)`, `textureProjGrad(sampler3D,vec4,vec3,vec3)`, `textureProjGrad(isampler3D,vec4,vec3,vec3)`, `textureProjGrad(usampler3D,vec4,vec3,vec3)`, `textureGather(sampler2D,vec2)`, `textureGather(isampler2D,vec2)`, `textureGather(usampler2D,vec2)`, `textureGather(sampler2D,vec2,int)`, `textureGather(isampler2D,vec2,int)`, `textureGather(usampler2D,vec2,int)`, `textureGather(sampler2DArray,vec3)`, `textureGather(isampler2DArray,vec3)`, `textureGather(usampler2DArray,vec3)`, `textureGather(sampler2DArray,vec3,int)`, `textureGather(isampler2DArray,vec3,int)`, `textureGather(usampler2DArray,vec3,int)`, `textureGather(samplerCube,vec3)`, `textureGather(samplerCube,vec3,int)`, `textureQueryLod(sampler2D,vec2)`, `textureQueryLod(isampler2D,vec2)`, `textureQueryLod(usampler2D,vec2)`, `textureQueryLod(sampler2DArray,vec2)`, `textureQueryLod(isampler2DArray,vec2)`, `textureQueryLod(usampler2DArray,vec2)`, `textureQueryLod(sampler3D,vec3)`, `textureQueryLod(isampler3D,vec3)`, `textureQueryLod(usampler3D,vec3)`, `textureQueryLod(samplerCube,vec3)`, `textureQueryLevels(sampler2D)`, `textureQueryLevels(isampler2D)`, `textureQueryLevels(usampler2D)`, `textureQueryLevels(sampler2DArray)`, `textureQueryLevels(isampler2DArray)`, `textureQueryLevels(usampler2DArray)`, `textureQueryLevels(sampler3D)`, `textureQueryLevels(isampler3D)`, `textureQueryLevels(usampler3D)`, `textureQueryLevels(samplerCube)`. Godot source: `servers/rendering/shader_language.cpp:3167`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
