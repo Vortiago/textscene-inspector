@@ -93,10 +93,7 @@ export function skyRuns(scenes) {
   return [...runs.entries()].sort(([a], [b]) => (a === '' ? -1 : b === '' ? 1 : 0)).map(([, run]) => run);
 }
 
-/**
- * `--fixed-fps` steps `TIME` by 1/fps each frame (`rasterizer_gles3.cpp:101`). The jitter fix is off, as it
- * shortens some steps to meet the physics ticks, and the previewer's steps come from its own frames.
- */
+/** `--fixed-fps` steps `TIME` by 1/fps, with no jitter fix to shorten a step (`rasterizer_gles3.cpp:101`). */
 function runOptions(clock) {
   if (!clock) return { arguments: [], settings: '' };
   return {
