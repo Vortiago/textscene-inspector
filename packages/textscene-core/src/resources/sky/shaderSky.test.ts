@@ -3,6 +3,7 @@ import type * as THREE from 'three';
 import type { NodeMaterial } from 'three/webgpu';
 import * as logger from '../../logger';
 import * as parseShader from '../../shaders/language/parseShader';
+import * as transpileSky from '../../shaders/sky/transpileSky';
 import { generatedFragmentShader } from '../../shaders/generatedShader.testkit';
 import { testRenderer } from '../../testing/recordingWebGL';
 import { installNodesHandler } from '../../shaders/nodesHandler';
@@ -120,6 +121,30 @@ describe('buildSkyEnvironment of a shader sky', () => {
     expect(warn.mock.calls.map(([message]) => message)).toContainEqual(
       expect.stringMatching(
         /^\[Sky\] The previewer failed to draw this sky shader: .*res:\/\/tinted_sky\.gdshader.*ERROR: 0:1/
+      )
+    );
+    environment.dispose();
+  });
+
+  it('warns with the shader named when the GPU refuses the program of a half resolution pass', async () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    const transpile = vi.spyOn(transpileSky, 'transpileParsedSky');
+    const { renderer } = await testRenderer();
+    installNodesHandler(renderer, 'linear');
+    const halfResSky = TINTED_SKY.replace(
+      'shader_type sky;',
+      'shader_type sky;\nrender_mode use_half_res_pass;'
+    );
+    const environment = shaderSkyEnvironment(renderer, decodeSky({}, shaderMaterial(halfResSky)))!;
+    // The background draw of this shader, not the compile check, which has no file and is disposed.
+    const background = transpile.mock.calls.findIndex(
+      ([, file, , pass]) => file === SKY_FILE && pass === 'background'
+    );
+    const half = transpile.mock.results[background]!.value.half.mesh.material as BoundNodeMaterial;
+    half.reportFault(new TranslatorFault(half.source, 'fragment: ERROR: 0:7'));
+    expect(warn.mock.calls.map(([message]) => message)).toContainEqual(
+      expect.stringMatching(
+        /^\[Sky\] The previewer failed to draw .*res:\/\/tinted_sky\.gdshader.*ERROR: 0:7/
       )
     );
     environment.dispose();
