@@ -18,15 +18,24 @@ const vector2Value = ({ x, y }: { x: number; y: number }): VariantValue => ({
   value: [x, y],
 });
 
+/** The stored properties `transform` is made of. */
+const TRANSFORM_PARTS: ReadonlySet<string> = new Set(['position', 'rotation', 'scale', 'skew']);
+
 /** Node2D's `rotation_degrees` and `transform`, over the stored `position`, `rotation`, `scale` and `skew`. */
 export class Node2DProperties implements DerivedProperties {
-  storedWritten(): void {}
+  /** The transform `set_transform` keeps whole until a part is written (`node_2d.cpp:372-382`). */
+  private transform: VariantValue | null = null;
+
+  storedWritten(property: string): void {
+    if (TRANSFORM_PARTS.has(property)) this.transform = null;
+  }
 
   get(property: string, stored: StoredValue): VariantValue | undefined {
     switch (property) {
       case 'rotation_degrees':
         return floatValue(real(stored('rotation')) * RAD_TO_DEG);
       case 'transform': {
+        if (this.transform) return this.transform;
         const t = transform2DFromParts(
           real(stored('rotation')),
           pair(stored('scale')),
@@ -42,8 +51,10 @@ export class Node2DProperties implements DerivedProperties {
   set(property: string, value: VariantValue): readonly StoredWrite[] | undefined {
     switch (property) {
       case 'rotation_degrees':
+        this.transform = null;
         return [['rotation', floatValue(real(value) * DEG_TO_RAD)]];
       case 'transform': {
+        this.transform = value;
         const [a, b, c, d, tx, ty] = (value as { value: readonly number[] }).value;
         const parts = transform2DDecompose({ a: a!, b: b!, c: c!, d: d!, tx: tx!, ty: ty! });
         return [

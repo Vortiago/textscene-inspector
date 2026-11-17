@@ -79,7 +79,8 @@ export class SceneProperties {
     if (outcome.kind === 'dropped') return false;
     for (const [stored, written] of outcome.writes) {
       this.store.write('host', livePath, stored, this.textOf(written));
-      derived?.storedWritten(stored);
+      // A derived setter keeps its own cache: only a write of the stored property itself resets it.
+      if (stored === property) derived?.storedWritten(stored);
     }
     return outcome.isValid;
   }

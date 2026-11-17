@@ -3,6 +3,7 @@ import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext.js';
 import { openScene, type Scene } from '../scene/openScene.js';
 import { resourcePipelineOf } from './sceneResourcePipeline.js';
+import './sceneLiveTree.js';
 import { SceneChangeResetter } from './components/TscnPreviewShell/SceneChangeResetter.js';
 import { previewShellProviders } from './components/TscnPreviewShell/previewShellProviders.js';
 
@@ -47,8 +48,10 @@ function SceneTextProviders({ source, provider, rootScenePath, children }: Scene
 
 function SceneProviders({ scene, children }: OpenedSceneProps) {
   const panelId = useId();
-  const { sceneGraph, error } = useSyncExternalStore(scene.subscribe, scene.parse);
-  if (error) throw new Error(`expected the text of a .tscn scene, got: ${error}`);
+  const parsed = useSyncExternalStore(scene.subscribe, scene.parse);
+  // The views draw the parse with the host's writes laid on, so a write draws as a file value would.
+  const sceneGraph = useSyncExternalStore(scene.subscribe, scene.written);
+  if (parsed.error) throw new Error(`expected the text of a .tscn scene, got: ${parsed.error}`);
   const hierarchyValue = useMemo(() => ({ sceneGraph, panelId }), [sceneGraph, panelId]);
   const { loader } = resourcePipelineOf(scene);
   const withProviders = previewShellProviders({
@@ -58,11 +61,12 @@ function SceneProviders({ scene, children }: OpenedSceneProps) {
   });
 
   // The resetter clears the selection when the parse changes, or the highlight draws a removed node.
+  // A write keeps every node, so it keeps the selection.
   return (
     <ResourceLoaderProvider loader={loader}>
       {withProviders(
         <>
-          <SceneChangeResetter sceneGraph={hierarchyValue.sceneGraph} />
+          <SceneChangeResetter sceneGraph={parsed.sceneGraph} />
           {children}
         </>
       )}
