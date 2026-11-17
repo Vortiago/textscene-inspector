@@ -25,14 +25,12 @@ import { drawOffscreen } from '../offscreen/draw';
 import { createPassTarget } from './passTarget';
 import { LuminanceReduction } from './LuminanceReduction';
 
-export class GodotToneMapEffect {
+export class GodotToneMapper {
   private readonly composite: THREE.ShaderMaterial;
   /** Null when the environment has no glow: nothing to gather, nothing to own. */
   private readonly pyramid: GlowPyramid | null;
   /** Null when the camera attributes hold no auto exposure. */
   private readonly luminance: LuminanceReduction | null;
-  /** Null without debanding, the only reader of the frame size. */
-  private readonly resolution: THREE.Vector2 | null;
 
   constructor(options: CompositeOptions) {
     const { fragmentShader, uniforms } = compositeProgram(options);
@@ -47,8 +45,8 @@ export class GodotToneMapEffect {
     this.pyramid = options.glow
       ? new GlowPyramid(options.glow, this.uniforms, this.luminance?.gainUniforms ?? null)
       : null;
-    this.resolution = options.usesDebanding ? new THREE.Vector2() : null;
-    if (this.resolution) this.uniforms[RESOLUTION_UNIFORM]!.value = this.resolution;
+    const resolution = this.uniforms[RESOLUTION_UNIFORM];
+    if (resolution) resolution.value = new THREE.Vector2();
   }
 
   /** The composite's uniforms, by the names `compositeProgram` declares. */
@@ -68,7 +66,8 @@ export class GodotToneMapEffect {
   }
 
   setSize(width: number, height: number): void {
-    this.resolution?.set(width, height);
+    // Only debanding reads the frame size, so a composite without it declares no such uniform.
+    (this.uniforms[RESOLUTION_UNIFORM]?.value as THREE.Vector2 | undefined)?.set(width, height);
     this.pyramid?.setSize(width, height);
   }
 

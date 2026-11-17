@@ -1,9 +1,3 @@
-/**
- * Godot's tonemap pass of one viewport. The 3D world draws into a linear half-float buffer, which
- * resolves its samples (`render_forward_clustered.cpp:2402`), then the tonemap effect reads it and
- * writes the viewport's target (`:2514`). The root canvas and every SubViewport draw through it.
- */
-
 import { useCallback, useLayoutEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
@@ -12,7 +6,7 @@ import { NO_ENVIRONMENT_TONE_MAPPING } from '../../godot/rendering/environment/t
 import { useMultisampledTarget } from '../offscreen/multisampledTarget';
 import { drawOffscreen } from '../offscreen/draw';
 import { createPassTarget } from './passTarget';
-import { useGodotToneMapEffect } from './useGodotToneMapEffect';
+import { useGodotToneMapper } from './useGodotToneMapper';
 import { usePassToneMap } from './passToneMap';
 
 /**
@@ -61,7 +55,7 @@ export function useToneMapPass(options: ToneMapPassOptions): ToneMapPass {
   const passToneMap = usePassToneMap();
   const { settings } = passToneMap;
   const glow = useMemo(() => settings && glowParamsFor(settings), [settings]);
-  const effect = useGodotToneMapEffect({
+  const toneMapper = useGodotToneMapper({
     glow,
     adjustments: settings?.adjustments ?? null,
     toneMapping: settings?.toneMapping ?? NO_ENVIRONMENT_TONE_MAPPING,
@@ -72,9 +66,9 @@ export function useToneMapPass(options: ToneMapPassOptions): ToneMapPass {
   });
   const worldBuffer = useWorldBuffer(msaaMode, width, height, name);
   const gl = useThree((state) => state.gl);
-  useLayoutEffect(() => effect.setSize(width, height), [effect, width, height]);
+  useLayoutEffect(() => toneMapper.setSize(width, height), [toneMapper, width, height]);
   return useMemo(() => {
-    const toneMapDraw = () => effect.render(gl, worldBuffer, target);
+    const toneMapDraw = () => toneMapper.render(gl, worldBuffer, target);
     return {
       worldBuffer,
       drawWorld: (scene, camera) =>
@@ -85,7 +79,7 @@ export function useToneMapPass(options: ToneMapPassOptions): ToneMapPass {
         }),
       toneMap: () => drawOffscreen(gl, toneMapDraw),
     };
-  }, [gl, effect, worldBuffer, target]);
+  }, [gl, toneMapper, worldBuffer, target]);
 }
 
 /** The world buffer, resized in place as the viewport resizes. */

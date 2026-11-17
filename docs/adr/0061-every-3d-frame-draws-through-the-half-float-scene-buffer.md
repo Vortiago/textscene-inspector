@@ -14,7 +14,7 @@ directly, which skips that rounding.
 ## Decision
 
 Every 3D viewport draws through one tonemap pass (`toneMapPass.ts`): the world draws into the
-half-float scene buffer, and `GodotToneMapEffect` writes the viewport's target. The root canvas mounts
+half-float scene buffer, and `GodotToneMapper` writes the viewport's target. The root canvas mounts
 it as the compositor, and a SubViewport mounts it through `offscreenToneMap.ts`. A 2D canvas draws no
 3D frame, so it mounts none. No material applies a tone curve.
 

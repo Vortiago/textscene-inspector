@@ -310,7 +310,6 @@ These counts come from a text search, so each is approximate.
 | `ShaderMaterial` built directly | 8 |
 | `ShaderChunk`, `ShaderLib` or `UniformsLib` | 13 |
 | `WebGLRenderTarget` | 39 |
-| `postprocessing` | 2 |
 
 The handler step needs none of these ported, except the materials that move to nodes.
 `WebGPURenderer` needs all of them ported. Ten places also call WebGL directly, for example
@@ -332,10 +331,10 @@ Trigger 2 counts edits in the light and shadow chunks, and the count is at 78 of
 starts, the count needs no higher limit. If the port waits, the limit rises or new light work
 stops. The ADR's owner decides which.
 
-### 4. What happens to postprocessing?
+### 4. What happens to the tone map?
 
-The tone map no longer uses the `postprocessing` package. `GodotToneMapEffect.ts` draws it as one
-full-screen `ShaderMaterial` through `fullScreenPass.ts`, like the glow passes. Under the handler it
+`GodotToneMapper.ts` draws the tone map as one full-screen `ShaderMaterial` through
+`fullScreenPass.ts`, like the glow passes. Under the handler it
 runs unchanged. The 3D parity row above includes the tone map pass.
 
 A `ShaderMaterial` needs `WebGLRenderer`. On `WebGPURenderer`, the tone map pass becomes a node on

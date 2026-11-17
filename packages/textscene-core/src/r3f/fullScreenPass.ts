@@ -139,10 +139,7 @@ export function drawFullScreen(
   layer = 0,
   mip = 0
 ): void {
-  const quad = quadFor(renderer);
-  quad.material = pass;
-  renderer.setRenderTarget(target, layer, mip);
-  renderer.render(quad, quadCamera);
+  drawCovering(quadFor(renderer), renderer, pass, target, layer, mip);
 }
 
 /** `drawFullScreen` over one covering triangle, as `tonemap.glsl:15-25` draws. Null is the drawing buffer. */
@@ -151,8 +148,18 @@ export function drawFullScreenTriangle(
   pass: THREE.ShaderMaterial,
   target: THREE.WebGLRenderTarget | null
 ): void {
-  const triangle = triangleFor(renderer);
-  triangle.material = pass;
-  renderer.setRenderTarget(target);
-  renderer.render(triangle, quadCamera);
+  drawCovering(triangleFor(renderer), renderer, pass, target);
+}
+
+function drawCovering(
+  mesh: THREE.Mesh,
+  renderer: THREE.WebGLRenderer,
+  pass: THREE.ShaderMaterial,
+  target: THREE.WebGLRenderTarget | null,
+  layer = 0,
+  mip = 0
+): void {
+  mesh.material = pass;
+  renderer.setRenderTarget(target, layer, mip);
+  renderer.render(mesh, quadCamera);
 }
