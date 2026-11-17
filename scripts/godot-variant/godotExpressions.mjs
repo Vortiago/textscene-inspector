@@ -1,5 +1,9 @@
 import { printedField, requireGodotVersion, runGodotScriptToExit } from '../godot-probes/godotRun.mjs';
 import { DUMP_GDSCRIPT } from '../../apps/textscene-three-godot-shaders/tests/expressions/dump.mjs';
+import {
+  isRunDependent,
+  RUN_DEPENDENT_ANSWER,
+} from '../../apps/textscene-three-godot-shaders/tests/expressions/refusedCases.mjs';
 
 const TEXTS_FILE = 'expressions.json';
 
@@ -89,5 +93,6 @@ export async function runExpressionsInGodot(texts) {
 /** The `expressions` family of `pnpm godot:probes`: Godot's version and its answer to each case, by id. */
 export async function expressionRecord(cases) {
   const { godot, answers } = await askGodot(cases.map((each) => each.text));
-  return { godot, cases: Object.fromEntries(cases.map((each, index) => [each.id, answers[index]])) };
+  const answerOf = (each, index) => (isRunDependent(each) ? RUN_DEPENDENT_ANSWER : answers[index]);
+  return { godot, cases: Object.fromEntries(cases.map((each, index) => [each.id, answerOf(each, index)])) };
 }
