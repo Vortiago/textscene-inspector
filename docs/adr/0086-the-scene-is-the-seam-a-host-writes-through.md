@@ -26,7 +26,8 @@ the resource loader, and the host's writes. It imports no React and no three.js.
   the nearest instance. Every reader of the Live scene tree reads it as a file value, so no reader
   lays a second overlay.
 - **Layers**, lowest first: the file with its instance overrides, the host writes, the animated
-  values (empty today), the Live scene passes. A pass result lies over a host write.
+  values, the Live scene passes. A pass result lies over a host write. The animated layer stays empty
+  until #1500 writes its animated patch there.
 - **Setters.** A stored property takes the value cast as `Object::set` casts it, and answers whether
   the cast is strict (`class_db.cpp:1647-1690`). A property with no storage is ported per class
   family, with the cache Godot keeps. A class takes every family of its bases. A family answers first

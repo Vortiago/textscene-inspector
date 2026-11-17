@@ -1,0 +1,21 @@
+[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+uid="uid://cwritesframes"
+path="res://.godot/imported/writes-frames.png-00000000000000000000000000000003.ctex"
+metadata={
+"vram_texture": false
+}
+
+[deps]
+
+source_file="res://writes-frames.png"
+dest_files=["res://.godot/imported/writes-frames.png-00000000000000000000000000000003.ctex"]
+
+[params]
+
+compress/mode=0
+compress/high_quality=false
+compress/lossy_quality=0.7
+mipmaps/generate=false
