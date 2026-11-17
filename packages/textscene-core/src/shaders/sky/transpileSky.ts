@@ -178,7 +178,7 @@ export function skyDraws(sky: TranspiledSky): SkyDraw[] {
   return [sky, sky.half, sky.quarter].filter((draw) => draw !== undefined);
 }
 
-export function disposeSkyDraw({ mesh }: SkyDraw): void {
+function disposeSkyDraw({ mesh }: SkyDraw): void {
   mesh.geometry.dispose();
   mesh.material.dispose();
 }
