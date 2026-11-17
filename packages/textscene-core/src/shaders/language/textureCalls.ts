@@ -1,6 +1,12 @@
 import { IntType, UnsignedIntType } from 'three';
 import * as TSL from 'three/tsl';
-import { TextureSizeNode, type Node, type TextureNode } from 'three/webgpu';
+import {
+  Node as TslNode,
+  TextureSizeNode,
+  type Node,
+  type NodeBuilder,
+  type TextureNode,
+} from 'three/webgpu';
 import { compositeOf } from './builtInComposites.js';
 import type { InstructionRow } from './instructionTable.generated.js';
 
@@ -14,6 +20,21 @@ class SizeNode extends TextureSizeNode {
   constructor(textureNode: TextureNode, levelNode: Node, type: string) {
     super(textureNode, levelNode as never);
     this.nodeType = type;
+  }
+}
+
+/** A gradient of its own type: three builds each `textureGrad` gradient as a `vec2` (`TextureNode.js:699`). */
+class GradientNode extends TslNode {
+  constructor(private readonly gradient: Node) {
+    super();
+  }
+
+  override getNodeType(builder: NodeBuilder): string {
+    return this.gradient.getNodeType(builder);
+  }
+
+  override build(builder: NodeBuilder): string | null {
+    return this.gradient.build(builder, this.getNodeType(builder)) as string | null;
   }
 }
 
@@ -62,8 +83,10 @@ const CALLS: Readonly<Record<string, TextureCall>> = {
   },
   textureLod: (texture, coordinate, [level]) =>
     sampled(texture, coordinate).level(level as never) as unknown as Node,
-  textureGrad: (texture, coordinate, [dx, dy]) =>
-    sampled(texture, coordinate).grad(dx as never, dy as never) as unknown as Node,
+  textureGrad: (texture, coordinate, [dx, dy]) => {
+    const [x, y] = [dx!, dy!].map((gradient) => new GradientNode(gradient));
+    return sampled(texture, coordinate).grad(x as never, y as never) as unknown as Node;
+  },
   texelFetch: (texture, coordinate, [level]) =>
     loaded(texture, coordinate).level(level as never) as unknown as Node,
 };

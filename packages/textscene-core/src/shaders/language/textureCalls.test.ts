@@ -56,6 +56,19 @@ describe('builtInCall of a texture function', () => {
     );
   });
 
+  it('passes the gradients of a 3D texture as vec3', () => {
+    const gradient = () => vec3(0.01, 0, 0) as unknown as Node;
+    const glsl = glslOf('textureGrad(sampler3D,vec3,vec3,vec3)', [
+      volume(),
+      vec3(0.5) as unknown as Node,
+      gradient(),
+      gradient(),
+    ]);
+    expect(glsl).toMatch(
+      /textureGrad\( nodeUniform\d+, .*vec3\( 0\.01, 0\.0, 0\.0 \), vec3\( 0\.01, 0\.0, 0\.0 \) \)/
+    );
+  });
+
   it('reads a texel with texelFetch', () => {
     const texel = ivec2(1, 0) as unknown as Node;
     expect(glslOf('texelFetch(sampler2D,ivec2,int)', [flat(), texel, int(0) as unknown as Node])).toContain(

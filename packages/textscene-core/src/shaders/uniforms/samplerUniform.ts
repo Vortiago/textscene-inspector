@@ -1,4 +1,12 @@
-import { Data3DTexture, NoColorSpace, SRGBColorSpace, type Texture } from 'three';
+import {
+  CompressedArrayTexture,
+  Data3DTexture,
+  DataArrayTexture,
+  NoColorSpace,
+  RGBAFormat,
+  SRGBColorSpace,
+  type Texture,
+} from 'three';
 import { texture, texture3D } from 'three/tsl';
 import { CubeTextureNode, type Node, type NodeBuilder, type TextureNode } from 'three/webgpu';
 import type { ArrayValue, Value } from '../language/emitValue.js';
@@ -62,6 +70,27 @@ function levelsOf(source: Texture): number {
   return Math.floor(Math.log2(Math.max(width, height, 1))) + 1;
 }
 
+/**
+ * three r187 uploads only level 0 of a `DataArrayTexture` (`WebGLTextures.js:1229`), and every level of an
+ * RGBA `CompressedArrayTexture` (`:1108`), so an RGBA 2D array with levels reads through one.
+ */
+function cloneOf(source: Texture): Texture {
+  if (!(source instanceof DataArrayTexture) || source.format !== RGBAFormat || source.mipmaps.length < 2)
+    return source.clone();
+  const { width, height, depth } = source.image;
+  const copy = new CompressedArrayTexture(
+    source.mipmaps as never,
+    width,
+    height,
+    depth,
+    RGBAFormat as never,
+    source.type
+  );
+  copy.internalFormat = source.internalFormat;
+  copy.unpackAlignment = source.unpackAlignment;
+  return copy;
+}
+
 /** A sampler uniform: one texture node per element, each reading a copy with the shader's sampler. */
 export class SamplerBinding {
   private readonly nodes: TextureNode[];
@@ -107,7 +136,7 @@ export class SamplerBinding {
   private copyOf(source: Texture): Texture {
     let copy = this.copies.get(source);
     if (copy) return copy;
-    copy = source.clone();
+    copy = cloneOf(source);
     const state = samplerState(this.settings, levelsOf(source), this.context.sampling);
     copy.flipY = false;
     copy.magFilter = state.magFilter;
