@@ -14,7 +14,7 @@ import type {
   StructNode,
 } from './shaderTree.js';
 import { swizzled } from './swizzle.js';
-import { elementType, shapeOf } from './types.js';
+import { elementType, isSamplerType, shapeOf } from './types.js';
 import { arraySizeOf, isCall, isEmpty, PLACE_KINDS, typeName } from './treeWalk.js';
 
 /** The first fact `shader` breaks, or nothing when it holds them all. */
@@ -340,7 +340,8 @@ class FunctionCheck {
   }
 
   private isType(type: string): boolean {
-    return shapeOf(type) !== undefined || this.structs.some((struct) => struct.name === type);
+    if (shapeOf(type) !== undefined || isSamplerType(type)) return true;
+    return this.structs.some((struct) => struct.name === type);
   }
 }
 

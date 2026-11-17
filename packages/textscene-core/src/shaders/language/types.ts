@@ -34,6 +34,19 @@ const SHAPES = shapes();
 /** The shape of a type that holds values, or nothing for `void`, a sampler or a struct. */
 export const shapeOf = (type: ValueType): TypeShape | undefined => SHAPES.get(type);
 
+/** Whether `type` is a sampler: `sampler2D`, `isampler3D`, `samplerCube`, `samplerExternalOES`. */
+export const isSamplerType = (type: ValueType): boolean => /^[iu]?sampler/.test(type);
+
+/** The texture kind a sampler type reads: a 2D texture, a cube, a 3D texture or 2D layers. */
+export type TextureKind = 'flat' | 'cube' | 'volume' | 'layers';
+
+export function textureKindOf(sampler: ValueType): TextureKind {
+  if (sampler === 'samplerCube' || sampler === 'samplerCubeArray') return 'cube';
+  if (sampler.endsWith('sampler3D')) return 'volume';
+  if (sampler.endsWith('sampler2DArray')) return 'layers';
+  return 'flat';
+}
+
 /** The type of `lanes` lanes of `scalar`: `float` for one, `vec3` for three. */
 export function vectorType(scalar: ScalarKind, lanes: number): ValueType {
   return lanes === 1 ? scalar : `${VECTOR_PREFIX[scalar]}${lanes}`;

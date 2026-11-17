@@ -149,6 +149,9 @@ function statesText(rows) {
   return `Lowered rows:\n\n${lines.join('\n')}\n\n${rest.trim()} ${untested}`.trim();
 }
 
+/** A form with code spans of its own is prose. Any other is one expression, which takes a code span. */
+const emittedForm = (form) => (form.includes('`') ? form : `\`${form}\``);
+
 function renderSection(section, rows, probes, record) {
   const ids = new Set(rows.map((row) => row.id));
   // A sky scene has a camera and proves its rows in a showcase of its own, with no table of inputs.
@@ -160,7 +163,7 @@ function renderSection(section, rows, probes, record) {
 
 ${section.what}
 
-The transpiler emits \`${section.tsl}\`. Rows: ${rowList}. Godot source: \`${rows[0].source}\`.
+The transpiler emits ${emittedForm(section.tsl)}. Rows: ${rowList}. Godot source: \`${rows[0].source}\`.
 
 ${statesText(rows)}
 
