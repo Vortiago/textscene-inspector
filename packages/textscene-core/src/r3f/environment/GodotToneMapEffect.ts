@@ -20,7 +20,7 @@ import {
 import { LUMINANCE_UNIFORM } from '../../resources/environment/godotLuminance';
 import type { ViewSampler } from '../../resources/textures/textureView';
 import { defaultWhiteTexture } from '../materials/defaultWhiteTexture';
-import { drawFullScreen, fullScreenPass } from '../fullScreenPass';
+import { drawFullScreen, drawFullScreenTriangle, fullScreenPass } from '../fullScreenPass';
 import { drawOffscreen } from '../offscreen/draw';
 import { createPassTarget } from './passTarget';
 import { LuminanceReduction } from './LuminanceReduction';
@@ -82,7 +82,7 @@ export class GodotToneMapEffect {
     this.pyramid?.build(renderer, frame);
     const frameUniform = this.uniforms[FRAME_UNIFORM]!;
     frameUniform.value = frame.texture;
-    drawFullScreen(renderer, this.composite, target);
+    drawFullScreenTriangle(renderer, this.composite, target);
     // The world buffer can be replaced and disposed between frames.
     frameUniform.value = null;
   }

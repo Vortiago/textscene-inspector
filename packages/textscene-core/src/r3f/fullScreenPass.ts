@@ -32,6 +32,18 @@ const quadFor = perObject<THREE.WebGLRenderer, THREE.Mesh>(() => {
   return quad;
 });
 
+// In the unit plane's coordinates, so `FULL_SCREEN_VERTEX` maps it to (-1, -1), (3, -1), (-1, 3).
+const triangleFor = perObject<THREE.WebGLRenderer, THREE.Mesh>(() => {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute(
+    'position',
+    new THREE.BufferAttribute(new Float32Array([-0.5, -0.5, 0, 1.5, -0.5, 0, -0.5, 1.5, 0]), 3)
+  );
+  const triangle = new THREE.Mesh(geometry);
+  triangle.frustumCulled = false;
+  return triangle;
+});
+
 /**
  * A pass that overwrites its target with `fragmentShader`, reading `uniforms`.
  *
@@ -131,4 +143,16 @@ export function drawFullScreen(
   quad.material = pass;
   renderer.setRenderTarget(target, layer, mip);
   renderer.render(quad, quadCamera);
+}
+
+/** `drawFullScreen` over one covering triangle, as `tonemap.glsl:15-25` draws. Null is the drawing buffer. */
+export function drawFullScreenTriangle(
+  renderer: THREE.WebGLRenderer,
+  pass: THREE.ShaderMaterial,
+  target: THREE.WebGLRenderTarget | null
+): void {
+  const triangle = triangleFor(renderer);
+  triangle.material = pass;
+  renderer.setRenderTarget(target);
+  renderer.render(triangle, quadCamera);
 }
