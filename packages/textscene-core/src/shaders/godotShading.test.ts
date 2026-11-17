@@ -54,6 +54,14 @@ describe('installGodotShading', () => {
     expect(getParameter).not.toHaveBeenCalled();
   });
 
+  it('reads no GL limit for a method that names no renderer, which Godot draws with Forward+', () => {
+    const { renderer, getParameter } = rendererWithSlots(16);
+    installGodotShading(renderer, { renderingMethod: 'GL_Compatibility' })
+      .spatial(SEVENTEEN_VARYINGS)
+      .material.dispose();
+    expect(getParameter).not.toHaveBeenCalled();
+  });
+
   it("parses a sky with the project's rendering method", () => {
     const shading = installGodotShading(rendererWithSlots(16).renderer, { renderingMethod: 'mobile' });
     expect(() =>

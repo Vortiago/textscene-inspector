@@ -15,8 +15,11 @@ export interface ShaderInclude {
   readonly code: string;
 }
 
-/** The project's `rendering/renderer/rendering_method`. */
-export type RenderingMethod = 'forward_plus' | 'mobile' | 'gl_compatibility';
+/** The renderers Godot draws with. */
+export type Renderer = 'forward_plus' | 'mobile' | 'gl_compatibility';
+
+/** The project's `rendering/renderer/rendering_method` as written, which Godot's OS reports unchanged. */
+export type RenderingMethod = Renderer | (string & {});
 
 export interface PreprocessOptions {
   readonly file?: string;
@@ -27,11 +30,23 @@ export interface PreprocessOptions {
 }
 
 /** shader_preprocessor.cpp:1353 */
-const RENDERERS: Readonly<Record<RenderingMethod, string>> = {
+const RENDERERS: Readonly<Record<Renderer, string>> = {
   gl_compatibility: '0',
   mobile: '1',
   forward_plus: '2',
 };
+
+/** Any method but Forward+ and Mobile is compatibility here (`shader_preprocessor.cpp:1352-1358`). */
+function currentRenderer(method: RenderingMethod): string {
+  if (method === 'forward_plus') return RENDERERS.forward_plus;
+  return method === 'mobile' ? RENDERERS.mobile : RENDERERS.gl_compatibility;
+}
+
+/** The renderer that draws `method`: Forward+ for a name of no renderer, as Godot logs and draws it. */
+export function rendererOf(method: RenderingMethod): Renderer {
+  if (method === 'mobile') return 'mobile';
+  return method === 'gl_compatibility' ? 'gl_compatibility' : 'forward_plus';
+}
 
 // shader_preprocessor.cpp:752
 const INCLUDE_DEPTH_AT_MOST = 25;
@@ -58,7 +73,7 @@ interface State {
 
 /** Throws `PreprocessorError` for a text Godot's preprocessor refuses. */
 export function preprocess(code: string, options: PreprocessOptions = {}): string {
-  const renderer = RENDERERS[options.renderingMethod ?? 'forward_plus'];
+  const renderer = currentRenderer(options.renderingMethod ?? 'forward_plus');
   const builtIn = (body: string): Define => ({ body, arguments: [], isBuiltIn: true });
   const readInclude = options.readInclude ?? (() => undefined);
   const state: State = {

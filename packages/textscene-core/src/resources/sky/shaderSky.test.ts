@@ -97,11 +97,14 @@ describe('shaderSkyRefusal', () => {
     const material = shaderMaterial(
       'shader_type sky;\nuniform sampler2D t : hint_normal_roughness_texture;\nvoid sky() {}\n'
     );
-    const refusals = (['forward_plus', 'mobile'] as const).map((renderingMethod) =>
+    const refusals = ['forward_plus', 'mobile', 'Forward_Plus'].map((renderingMethod) =>
       shaderSkyRefusal(material, { decoders: {}, renderingMethod })
     );
     expect(refusals).toEqual([
       expect.stringContaining("'hint_normal_roughness_texture' is not supported in 'sky' shaders."),
+      expect.stringContaining(
+        "'hint_normal_roughness_texture' is only available when using the Forward+ renderer."
+      ),
       expect.stringContaining(
         "'hint_normal_roughness_texture' is only available when using the Forward+ renderer."
       ),

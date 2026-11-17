@@ -1,7 +1,7 @@
 import type * as THREE from 'three';
 import { glVaryingSlots } from './glVaryingSlots.js';
 import type { ShaderDecoders } from './preprocessor/decoders.js';
-import type { RenderingMethod } from './preprocessor/preprocessor.js';
+import { rendererOf, type RenderingMethod } from './preprocessor/preprocessor.js';
 
 /** The options of the renderer that every shader of its project parses with. */
 export interface RendererShaderOptions {
@@ -20,6 +20,6 @@ export function rendererShaderOptions(
   renderer: THREE.WebGLRenderer,
   renderingMethod: RenderingMethod
 ): RendererShaderOptions {
-  if (renderingMethod !== 'gl_compatibility') return { renderingMethod };
+  if (rendererOf(renderingMethod) !== 'gl_compatibility') return { renderingMethod };
   return { renderingMethod, glVaryings: glVaryingSlots(renderer.getContext() as WebGL2RenderingContext) };
 }

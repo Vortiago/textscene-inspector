@@ -796,8 +796,11 @@ describe('projectRenderingMethod', () => {
     expect(projectRenderingMethod(null)).toBe('forward_plus');
   });
 
-  it('takes Forward+ for a method Godot does not name', () => {
-    expect(projectRenderingMethod({ 'rendering/renderer/rendering_method': 'vulkan' })).toBe('forward_plus');
+  it('keeps a method as written, as Godot reports a name of no renderer and an empty one unchanged', () => {
+    const methods = ['vulkan', '', 'Forward_Plus'].map((method) =>
+      projectRenderingMethod({ 'rendering/renderer/rendering_method': method })
+    );
+    expect(methods).toEqual(['vulkan', '', 'Forward_Plus']);
   });
 
   it('reads no feature override, as a mobile one never applies on a desktop', () => {

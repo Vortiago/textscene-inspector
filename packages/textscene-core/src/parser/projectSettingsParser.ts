@@ -392,12 +392,9 @@ export function projectSampling(settings: ProjectSettings | null): ProjectSampli
   };
 }
 
-const RENDERING_METHODS: readonly RenderingMethod[] = ['forward_plus', 'mobile', 'gl_compatibility'];
-
-/** `rendering/renderer/rendering_method`, Forward+ for a name not Godot's. No feature override is read. */
+/** `rendering/renderer/rendering_method` as written, Forward+ with no key. No feature override is read. */
 export function projectRenderingMethod(settings: ProjectSettings | null): RenderingMethod {
-  const method = settings?.['rendering/renderer/rendering_method'];
-  return RENDERING_METHODS.find((known) => known === method) ?? 'forward_plus';
+  return settings?.['rendering/renderer/rendering_method'] ?? 'forward_plus';
 }
 
 /** `RS::DECAL_FILTER_LINEAR_MIPMAPS`, Godot's default `rendering/textures/decals/filter` (`rendering_server.cpp:3804`). */

@@ -60,6 +60,17 @@ describe('the varying limit of the parser', () => {
     );
   });
 
+  it('takes the slots of Forward+ for a method that names no renderer, which Godot draws with (edge case)', () => {
+    const limits = ['vulkan', '', 'GL_Compatibility'].map((method) =>
+      [17, 18].map((count) => isRefused(parseOf(`varying vec4 v[${count}];`, 'spatial', method, 64)))
+    );
+    expect(limits).toEqual([
+      [false, true],
+      [false, true],
+      [false, true],
+    ]);
+  });
+
   it("keeps Vulkan's 32 on Forward+, which asks Vulkan, not the GL context (edge case)", () => {
     expect(parseOf('varying vec4 v[17];', 'spatial', 'forward_plus', 15)).not.toThrow();
   });

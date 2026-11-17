@@ -12,7 +12,7 @@ Godot draws the probes and showcases on Vulkan over lavapipe (`llvmpipe (LLVM 20
 
 ## Install
 
-`installGodotShading(renderer, { renderingMethod })` gives a `WebGLRenderer` three's nodes handler and answers the shading of the project. Pass the project's `rendering/renderer/rendering_method`: `forward_plus` when left out. `shading.spatial(text)` gives the material of a spatial shader, and `shading.sky(text)` the draws of a sky. Each parses the text with the rendering method, and on `gl_compatibility` with the varying slots of the renderer's GL context, so a text gets the verdict Godot gives it on that renderer. `output: 'linear'` writes the lit colour for an app that tone maps and encodes the frame itself.
+`installGodotShading(renderer, { renderingMethod })` gives a `WebGLRenderer` three's nodes handler and answers the shading of the project. Pass the project's `rendering/renderer/rendering_method`: `forward_plus` when left out. Pass the value as the project writes it. Godot draws a name of no renderer, such as `Forward_Plus` or an empty one, with Forward+, but its preprocessor defines `CURRENT_RENDERER` as the Compatibility renderer and it refuses `hint_normal_roughness_texture`. The shading does the same. `shading.spatial(text)` gives the material of a spatial shader, and `shading.sky(text)` the draws of a sky. Each parses the text with the rendering method, and on `gl_compatibility` with the varying slots of the renderer's GL context, so a text gets the verdict Godot gives it on that renderer. `output: 'linear'` writes the lit colour for an app that tone maps and encodes the frame itself.
 
 ## Errors
 
