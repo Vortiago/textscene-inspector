@@ -12,7 +12,7 @@ export interface TranspiledUniform {
 }
 
 /** A uniform's node, holding Godot's value for a material that sets none. */
-export class UniformBinding implements TranspiledUniform {
+class UniformBinding implements TranspiledUniform {
   private readonly node;
 
   constructor(

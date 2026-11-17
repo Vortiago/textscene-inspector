@@ -54,7 +54,7 @@ function constantLanes(uniform: UniformNode, values: readonly Scalar[], useLinea
 const laneCount = (type: ValueType) => shapeOf(type)!.lanes;
 
 /** `_fill_std140_variant_ubo_value` (`material_storage.cpp:45`) without the std140 padding. */
-export function valueLanes(type: ValueType, arraySize: number, value: Variant, isLinear: boolean): Lanes {
+function valueLanes(type: ValueType, arraySize: number, value: Variant, isLinear: boolean): Lanes {
   if (arraySize > 0) return arrayLanes(type, arraySize, value, isLinear);
   const { scalar, lanes, columns } = shapeOf(type)!;
   if (columns !== undefined) return matrixLanes(type, value);
