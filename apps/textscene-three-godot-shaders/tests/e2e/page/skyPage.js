@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {
   PlaybackShaderTime,
   ShaderClock,
+  SkyResolutionPasses,
   transpileSky,
   writeSkyBindings,
 } from '@textscene/three-godot-shaders';
@@ -57,6 +58,8 @@ function drawSky(spec) {
     fog,
     lights: spec.lights.map(skyLight),
   });
+  const passes = new SkyResolutionPasses(sky);
+  passes.draw(displayRenderer, camera, new THREE.Vector2(width, height));
   const scene = new THREE.Scene();
   scene.add(sky.mesh);
   const pixels = framePixels(displayRenderer, scene, camera, {
@@ -64,7 +67,8 @@ function drawSky(spec) {
     height,
     colorSpace: THREE.SRGBColorSpace,
   });
-  sky.mesh.material.dispose();
+  passes.dispose();
+  for (const draw of [sky, sky.half, sky.quarter]) draw?.mesh.material.dispose();
   return { pixels: Array.from(opaque(pixels)) };
 }
 

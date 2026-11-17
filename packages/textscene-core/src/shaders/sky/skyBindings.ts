@@ -109,9 +109,10 @@ export const SKY_BINDINGS: readonly Binding<SkyScene>[] = [
   },
 ];
 
-/** Writes each uniform of `sky` the binding table names, from `scene`. */
+/** Writes each uniform the binding table names, from `scene`, in each pass of `sky`. */
 export function writeSkyBindings(sky: TranspiledSky, scene: SkyScene): void {
-  writeBindings(SKY_BINDINGS, sky.uniforms, scene);
+  for (const draw of [sky, sky.half, sky.quarter])
+    if (draw) writeBindings(SKY_BINDINGS, draw.uniforms, scene);
 }
 
 /** The sky's basis: the inverse sky rotation, then the camera's (`sky.cpp:1501-1507`). */
