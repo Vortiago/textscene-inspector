@@ -742,6 +742,56 @@ transpileShadingLanguage(code, { decoders: { zstd, brotli } });
   ],
 };
 
+const uniformProbes = (pattern) => (probe) =>
+  probe.name.startsWith('uniform-') && pattern.test(probe.name.slice(8));
+
+const UNIFORMS_CHAPTER = {
+  file: 'uniforms.md',
+  title: 'Uniforms',
+  intro: `A uniform is a value the material gives the shader. \`transpileShadingLanguage\` and \`transpileSky\` give back \`parameters\`, one per uniform by name, and \`set\` takes the value as \`ShaderMaterial.set_shader_parameter\` takes it, a Godot Variant. \`textToVariant\` reads one from the text a \`.tres\` or \`.tscn\` file holds:
+
+\`\`\`js
+const shader = transpileShadingLanguage('uniform vec4 tint : source_color;\\nvec4 probe() { return tint; }');
+shader.parameters.get('tint').set(textToVariant('Color(1, 0.5, 0, 1)'));
+\`\`\`
+
+\`set(undefined)\` gives back Godot's own value. The transpiler fills each uniform as Godot's \`update_uniform_buffer\` does (\`material_storage.cpp:741\`): it converts the value to the uniform's type as \`_fill_std140_variant_ubo_value\` does, and a default as \`_fill_std140_ubo_value\` does. A uniform the material does not set reads the shader's default. With no default, a \`source_color\` \`vec3\` or \`vec4\` reads opaque black, a matrix reads the identity, and everything else reads zero. An array element the value has no whole element for reads zero, or the identity for a matrix.
+
+Godot's \`p_use_linear_color\` decides whether a colour goes to linear. It is true for every material but a \`canvas_item\` one, which converts only in a viewport with \`use_hdr_2d\`. \`TranspileOptions.useLinearColor\` sets it for \`transpileShadingLanguage\`, and a sky always converts (\`sky.cpp:193\`). The probes run both ways.
+
+An array reaches the shader as the bits of one \`uvec4\` per column, as std140 lays it out, and the shader reads each lane back from its bits. So a float array whose first value is NaN reaches the shader whole.`,
+  sections: [
+    {
+      heading: 'Declarations',
+      rows: (row) => row.id === 'uniform',
+      what: "`uniform type name;` declares a uniform of any value type, with an array size before the name, after it or both, and an optional `= constant` default, which Godot converts to the uniform's type. A precision word is allowed, but not on a bool. Godot refuses an interpolation qualifier, a struct, `void`, a default on an array, a name another uniform, function or built-in has, an assignment to a uniform and a uniform passed as an `out` argument. `global uniform` and `instance uniform` parse, and the transpiler refuses them at their row until they are bound.",
+      tsl: 'a `uniform` node of the type, or a `uniformArray` of `uvec4`',
+      probes: uniformProbes(/^(default|unset|precision|material|array|computed|in-|as-|refused)/),
+    },
+    {
+      heading: '`group_uniforms`',
+      rows: (row) => row.id === 'group_uniforms',
+      what: '`group_uniforms name;` or `group_uniforms name.sub;` puts the uniforms after it in a group of the inspector, and `group_uniforms;` closes it. A group changes no value.',
+      tsl: 'none: a group is for the inspector',
+      probes: uniformProbes(/^group-/),
+    },
+    {
+      heading: 'Colour hints',
+      rows: (row) => /^(source_color|color_conversion_disabled)$/.test(row.id),
+      what: '`source_color` marks a `vec3` or `vec4` as an sRGB colour, which goes to linear where the material converts colours: its default, and a Color the material sets. `color_conversion_disabled` after it keeps the colour as it is. A Color the material sets on a `vec3` or `vec4` with no hint converts too, as Godot does.',
+      tsl: 'the converted value in the uniform',
+      probes: uniformProbes(/^color-/),
+    },
+    {
+      heading: 'Editor hints',
+      rows: (row) => /^(hint_range|hint_enum)$/.test(row.id),
+      what: '`hint_range(min, max, step)` and `hint_enum("a", "b")` tell the inspector how to edit an int or a float. Godot does not clamp the value to the range. A range gets a step of 1 on an int and 0.001 on a float when the text gives none.',
+      tsl: 'none: the hint is for the inspector',
+      probes: uniformProbes(/^hint-/),
+    },
+  ],
+};
+
 export const GUIDE_CHAPTERS = [
   TYPES_AND_LITERALS,
   ARITHMETIC_CHAPTER,
@@ -756,5 +806,6 @@ export const GUIDE_CHAPTERS = [
   FOLDING_CHAPTER,
   BIT_FUNCTIONS_CHAPTER,
   PREPROCESSOR_CHAPTER,
+  UNIFORMS_CHAPTER,
   SKY_CHAPTER,
 ];

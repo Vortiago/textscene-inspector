@@ -5,7 +5,7 @@ import { basisOfTransform3D, transform3DOf, type Transform3D } from '../../math/
 import { EMPTY_NODE_PATH, nodePathParts } from '../../string/nodePathParts.js';
 import { stringToInt64 } from '../../string/string.js';
 import { stringToFloat } from '../../string/strtod.js';
-import { doubleToInt32, doubleToInt64, wrapInt32 } from '../cInteger.js';
+import { doubleToInt32, doubleToInt64, int64ToFloat32, wrapInt32 } from '../cInteger.js';
 import { booleanize } from '../compare.js';
 import { STRICT_CONVERSIONS } from '../registrations.generated.js';
 import { stringify } from '../stringify.js';
@@ -73,6 +73,17 @@ function toInt64(value: Variant): bigint {
 /** `_to_int<int32_t>`: a double through the int32 cast, every other source through its int64 bits. */
 export function toInt32(value: Variant): number {
   return value.type === 'FLOAT' ? doubleToInt32(value.value) : wrapInt32(toInt64(value));
+}
+
+/** `_to_int<uint32_t>`: a double through the 64-bit cast a compiler emits, then its low 32 bits. */
+export function toUint32(value: Variant): number {
+  const int64 = value.type === 'FLOAT' ? doubleToInt64(value.value) : toInt64(value);
+  return Number(BigInt.asUintN(32, int64));
+}
+
+/** `Variant::operator float()`: an int64 rounds to a float once, every other source through its double. */
+export function toFloat32(value: Variant): number {
+  return value.type === 'INT' ? int64ToFloat32(value.value) : f(toDouble(value));
 }
 
 /** `Variant::operator double()`: a source type it does not take gives 0. */

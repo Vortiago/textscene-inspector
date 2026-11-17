@@ -23,6 +23,7 @@ const PUBLIC_VALUE_EXPORTS = [
   'SKY_BINDINGS',
   'ShadingLanguageError',
   'installNodesHandler',
+  'textToVariant',
   'transpileShadingLanguage',
   'transpileSky',
   'writeSkyBindings',
@@ -38,6 +39,12 @@ const PUBLIC_TYPE_EXPORTS = [
   'TranspiledFunction',
   'TranspiledShader',
   'TranspiledSky',
+  'TranspiledUniform',
+  'TranspileOptions',
+  'UniformHint',
+  'UniformNode',
+  'UniformScope',
+  'Variant',
 ];
 
 /** The entry's value names, and the handler it gives a renderer with no GL context. */

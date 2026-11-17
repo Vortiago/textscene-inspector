@@ -2,6 +2,8 @@ import { builtInInstruction, instruction, keywordInstruction, notTranspiled } fr
 import { INSTRUCTION_TABLE } from './instructionTable.generated.js';
 import { StatementParser, type ScopeHolder } from './parseBlock.js';
 import { ExpressionParser, type ExpressionScope } from './parseExpression.js';
+import { UniformParser } from './parseUniform.js';
+import type { RenderingMethod } from '../preprocessor/preprocessor.js';
 import { BlockScope, type Identifier } from './scope.js';
 import type { FunctionSignature } from './parseCall.js';
 import type {
@@ -24,9 +26,12 @@ const SHADER_TYPES = INSTRUCTION_TABLE.filter((row) => row.id.startsWith('shader
   row.id.slice(12)
 );
 
-/** The tree of the tokens of a shader text. */
-export function parse(tokens: readonly Token[]): ShaderNode {
-  return new ShaderParser(new TokenCursor(tokens)).shader();
+/** The tree of the tokens of a shader text, for the project's renderer. */
+export function parse(
+  tokens: readonly Token[],
+  renderingMethod: RenderingMethod = 'forward_plus'
+): ShaderNode {
+  return new ShaderParser(new TokenCursor(tokens), renderingMethod).shader();
 }
 
 class ShaderParser implements ExpressionScope {
@@ -42,9 +47,19 @@ class ShaderParser implements ExpressionScope {
   private readonly holder: ScopeHolder = { current: new BlockScope(undefined, 'plain', []) };
   private readonly expressions: ExpressionParser;
   private readonly statements: StatementParser;
+  private readonly uniforms: UniformParser;
 
-  constructor(private readonly tokens: TokenCursor) {
+  constructor(
+    private readonly tokens: TokenCursor,
+    renderingMethod: RenderingMethod
+  ) {
     this.expressions = new ExpressionParser(tokens, this);
+    this.uniforms = new UniformParser(tokens, this.expressions, {
+      shaderType: () => this.shaderType,
+      renderingMethod,
+      isStruct: (name) => this.struct(name) !== undefined,
+      isTaken: (name) => this.isGlobalName(name) || builtInInstruction(name) !== undefined,
+    });
     this.statements = new StatementParser(
       tokens,
       this.expressions,
@@ -55,10 +70,16 @@ class ShaderParser implements ExpressionScope {
   }
 
   identifier(name: string): Identifier | undefined {
-    const found = this.holder.current.find(name, false);
+    // Outside a body, the uniforms declared so far: a default that reads one is not a constant.
+    const found = this.holder.current.find(name, false) ?? this.uniforms.names().get(name);
     if (found) return found;
     if (this.signatures.has(name)) return { kind: 'function' };
     return this.builtIn(name);
+  }
+
+  /** A function or a uniform of the name, as `_find_identifier` finds one outside a function. */
+  private isGlobalName(name: string): boolean {
+    return this.signatures.has(name) || this.uniforms.uniform(name) !== undefined;
   }
 
   /** From the stage function, `global` or the constants (`servers/rendering/shader_types.cpp`). */
@@ -98,11 +119,23 @@ class ShaderParser implements ExpressionScope {
     const head = this.shaderType ? { shaderType: this.shaderType, headPosition } : {};
     for (;;) {
       const token = this.tokens.next();
-      if (token.type === 'TK_EOF')
-        return { kind: 'shader', ...head, structs: this.structs, functions: this.functions };
+      if (token.type === 'TK_EOF') return this.tree(head);
       if (token.type === 'TK_STRUCT') this.structs.push(this.structDefinition(token));
+      else if (isUniformWord(token.type)) this.uniforms.declaration(token);
+      else if (token.type === 'TK_UNIFORM_GROUP') this.uniforms.groupStatement(token);
       else this.functions.push(this.functionDefinition(token));
     }
+  }
+
+  private tree(head: Pick<ShaderNode, 'shaderType' | 'headPosition'>): ShaderNode {
+    return {
+      kind: 'shader',
+      ...head,
+      structs: this.structs,
+      uniforms: this.uniforms.uniforms,
+      uniformGroups: this.uniforms.groups,
+      functions: this.functions,
+    };
   }
 
   /** `shader_type sky;`, or nothing for a text with no head (`shader_language.cpp:9178`). */
@@ -190,7 +223,8 @@ class ShaderParser implements ExpressionScope {
     const nameToken = this.tokens.next();
     if (nameToken.type !== 'TK_IDENTIFIER') this.tokens.fail('Expected a function name after type.');
     const rname = nameToken.text!;
-    if (this.struct(rname) || builtInInstruction(rname)) this.tokens.fail(`Redefinition of '${rname}'.`);
+    if (this.struct(rname) || this.uniforms.uniform(rname) || builtInInstruction(rname))
+      this.tokens.fail(`Redefinition of '${rname}'.`);
     if (this.tokens.next().type !== 'TK_PARENTHESIS_OPEN') {
       if (returnType === 'void') this.tokens.fail("Expected '(' after function identifier.");
       throw notTranspiled(keywordInstruction('TK_CONST')!, isConst ? first.position : nameToken.position);
@@ -200,7 +234,7 @@ class ShaderParser implements ExpressionScope {
     const signature = this.declare({ rname, returnType, returnArraySize, arguments: args });
     this.tokens.expect('TK_CURLY_BRACKET_OPEN', "Expected a '{' to begin function.");
     this.current = signature;
-    const body = this.statements.body(args, this.tokens.lastPosition());
+    const body = this.statements.body(args, this.uniforms.names(), this.tokens.lastPosition());
     this.current = undefined;
     if (returnType !== 'void' && !hasReturn(body)) {
       this.tokens.fail("Expected at least one 'return' statement in a non-void function.");
@@ -291,7 +325,8 @@ class ShaderParser implements ExpressionScope {
     const nameToken = this.tokens.next();
     if (nameToken.type !== 'TK_IDENTIFIER') this.tokens.fail('Expected an identifier for argument name.');
     const name = nameToken.text!;
-    if (declared.some((argument) => argument.name === name) || builtInInstruction(name)) {
+    const isTaken = declared.some((argument) => argument.name === name) || this.uniforms.uniform(name);
+    if (isTaken || builtInInstruction(name)) {
       this.tokens.fail(`Redefinition of '${name}'.`);
     }
     if (this.tokens.peek().type === 'TK_BRACKET_OPEN') arraySize = this.arraySize();
@@ -341,6 +376,9 @@ const isSameArguments = (a: readonly Argument[], b: readonly Argument[]) =>
   );
 
 const isPrecisionToken = (type: string) => type.startsWith('TK_PRECISION_');
+
+const isUniformWord = (type: string) =>
+  type === 'TK_UNIFORM' || type === 'TK_GLOBAL' || type === 'TK_INSTANCE';
 
 /** Searches as `_find_last_flow_op_in_block` does (`shader_language.cpp:11088`). */
 function hasReturn(block: BlockNode): boolean {

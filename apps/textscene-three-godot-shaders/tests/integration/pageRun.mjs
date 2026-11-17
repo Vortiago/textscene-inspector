@@ -8,6 +8,8 @@ export function runOnPage(page, probe) {
     rows: probe.inputs.length,
     parameters: parameterBits(probe),
     shapes: PROBE_TYPES,
+    materialValues: probe.materialValues ?? {},
+    hdr2d: probe.hdr2d === true,
   };
   return page.evaluate((each) => globalThis.runProbe(each), spec);
 }

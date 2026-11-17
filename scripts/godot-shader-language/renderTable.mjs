@@ -99,7 +99,7 @@ export function owningIssue(row) {
     case 'uniform':
     case 'uniform hint':
     case 'sampler setting':
-      return '#1829';
+      return uniformOwner(row);
     case 'shader head':
       return /^(uniform|group_uniforms)$/.test(row.id) ? '#1829' : '#1794';
     case 'built-in':
@@ -113,6 +113,14 @@ export function owningIssue(row) {
     default:
       throw new Error(`expected a family with an owning issue, got ${row.family}`);
   }
+}
+
+/** Instance, global and screen uniforms bind from outside the material: each has its issue. */
+function uniformOwner(row) {
+  if (/^(instance|instance_index)$/.test(row.id)) return '#1792';
+  if (row.id === 'hint_screen_texture') return '#1524';
+  if (/^hint_(depth|normal_roughness)_texture$/.test(row.id)) return '#1610';
+  return row.id === 'global' ? '#1183' : '#1829';
 }
 
 /** Samplers to uniforms, structs to statements, `void` to functions, value types to this slice. */

@@ -3,7 +3,7 @@ import { keywordInstruction } from './instructions.js';
 import type { ExpressionParser } from './parseExpression.js';
 import { arraySizeOf, typeName } from './treeWalk.js';
 import { parseDeclaration } from './parseDeclaration.js';
-import { type BlockKind, BlockScope } from './scope.js';
+import { type BlockKind, BlockScope, type GlobalNames } from './scope.js';
 import type { Argument, BlockNode, ControlFlowNode, Expression, Flow, Statement } from './shaderTree.js';
 import type { SourcePosition } from './shadingLanguageError.js';
 import type { TokenCursor } from './tokenCursor.js';
@@ -36,9 +36,9 @@ export class StatementParser {
     private readonly returnType: () => { readonly returnType: string; readonly returnArraySize: number }
   ) {}
 
-  /** A function's body after its `{`, in a scope that sees its arguments. */
-  body(args: readonly Argument[], position: SourcePosition): BlockNode {
-    return this.block(new BlockScope(undefined, 'plain', args), position, BODY);
+  /** A function's body after its `{`, in a scope that sees its arguments and the shader's globals. */
+  body(args: readonly Argument[], globals: GlobalNames, position: SourcePosition): BlockNode {
+    return this.block(new BlockScope(undefined, 'plain', args, globals), position, BODY);
   }
 
   /** The statements of a new block of `kind` inside the current one. */

@@ -12,6 +12,20 @@
 import { hexDigitValue } from '../string/charUtils.js';
 import { cMax, cMin, type Rgba } from './math.js';
 
+const f = Math.fround;
+const SRGB_KNEE = f(0.04045);
+const LINEAR_SLOPE = f(1 / f(12.92));
+const LINEAR_KNEE = f(0.0031308);
+const SRGB_EXPONENT = f(1 / f(2.4));
+
+/** A channel of `Color::srgb_to_linear` (`color.h:192`): the shifted channel is a double until powf. */
+export const srgbToLinear = (c: number): number =>
+  c < SRGB_KNEE ? f(c * LINEAR_SLOPE) : f(Math.pow(f((c + 0.055) * (1 / 1.055)), f(2.4)));
+
+/** A channel of `Color::linear_to_srgb` (`color.h:199`). */
+export const linearToSrgb = (c: number): number =>
+  c < LINEAR_KNEE ? f(f(12.92) * c) : f(1.055 * f(Math.pow(c, SRGB_EXPONENT)) - 0.055);
+
 /**
  * `named_colors[]` (`color_names.inc:49-196`): normalised name to `0xRRGGBBAA`. Keys drop the
  * underscores, as `find_named_color` builds its hash map (`color.cpp:418-424`). Values are the

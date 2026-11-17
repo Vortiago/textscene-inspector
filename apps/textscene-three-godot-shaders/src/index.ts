@@ -24,4 +24,12 @@ export type {
   TranspiledFunction,
   TranspiledShader,
   TranspiledSky,
+  TranspiledUniform,
+  TranspileOptions,
+  UniformHint,
+  UniformNode,
+  UniformScope,
 } from '@textscene/core/shaders';
+// A parameter takes a Godot Variant, which an app reads from the text of a resource file.
+export type { Variant } from '@textscene/core/godot';
+export { textToVariant } from '@textscene/core/godot/variantReader';

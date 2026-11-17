@@ -9,7 +9,7 @@ const ANSWERS = godotAnswers();
 const RECORD = ANSWERS.probes;
 
 /** A slice that transpiles rows lowers this, and a row opened again fails here. */
-const OPEN_ROWS_AT_MOST = 713;
+const OPEN_ROWS_AT_MOST = 566;
 
 const transpiledRows = new Set(PROBES.flatMap((probe) => probe.rows));
 

@@ -8,6 +8,7 @@ import { FUNCTION_PROBES } from './functionProbes.mjs';
 import { STATEMENT_PROBES } from './statementProbes.mjs';
 import { LANGUAGE_PROBES, probeOf } from './languageProbes.mjs';
 import { PREPROCESSOR_PROBES } from './preprocessorProbes.mjs';
+import { UNIFORM_PROBES } from './uniformProbes.mjs';
 
 /** The float vector types of this slice. */
 const VECTORS = ['vec2', 'vec3', 'vec4'];
@@ -299,5 +300,6 @@ export const PROBES = [
   ...BIT_FUNCTION_PROBES,
   ...FOLDED_CALL_PROBES,
   ...PREPROCESSOR_PROBES,
+  ...UNIFORM_PROBES,
   ...generatedProbes(FLOAT_ROW_PROBES),
 ];

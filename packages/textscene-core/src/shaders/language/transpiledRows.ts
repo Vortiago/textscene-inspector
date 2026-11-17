@@ -1,7 +1,7 @@
 import { instruction, keywordInstruction, notTranspiled } from './instructions.js';
 import type { InstructionRow } from './instructionTable.generated.js';
 import type { SourcePosition } from './shadingLanguageError.js';
-import type { Expression, FunctionNode, ShaderNode, Statement } from './shaderTree.js';
+import type { Expression, FunctionNode, ShaderNode, Statement, UniformNode } from './shaderTree.js';
 import { everyExpression, everyStatement, statementExpressions } from './treeWalk.js';
 import { shapeOf } from './types.js';
 
@@ -15,7 +15,16 @@ export function checkTranspiled(shader: ShaderNode): void {
     checkRow(instruction('NODE_TYPE_STRUCT')!, struct.position);
     for (const member of struct.members) checkType(member.type, struct.position);
   }
+  for (const { position } of shader.uniformGroups) checkRow(instruction('group_uniforms')!, position);
+  for (const uniform of shader.uniforms) checkUniform(uniform);
   for (const definition of shader.functions) checkFunction(definition);
+}
+
+function checkUniform(uniform: UniformNode): void {
+  for (const row of uniform.rows) checkRow(row, uniform.position);
+  checkType(uniform.type, uniform.position);
+  if (uniform.arraySize) checkRow(instruction('NODE_TYPE_ARRAY')!, uniform.position);
+  if (uniform.defaultValue) checkRow(literalRow(uniform.type), uniform.position);
 }
 
 function checkFunction(definition: FunctionNode): void {
@@ -73,9 +82,10 @@ function checkExpression(expression: Expression): void {
   }
 }
 
-/** A value type's row, or the struct type's row for a struct's name. */
+/** A type's own row, `sampler2D` or `vec3`, or the struct row for the name of a struct. */
 function checkType(type: string, position: SourcePosition): void {
-  checkRow(instruction(shapeOf(type) || type === 'void' ? type : 'struct type')!, position);
+  const row = instruction(type);
+  checkRow(row?.family === 'data type' ? row : instruction('struct type')!, position);
 }
 
 function checkRow(row: InstructionRow, position: SourcePosition): void {

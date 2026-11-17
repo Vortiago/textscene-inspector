@@ -86,9 +86,30 @@ describe('transpileShadingLanguage', () => {
   });
 
   it('refuses a row that is not transpiled before it reaches the emitter', () => {
-    expect(() => transpileShadingLanguage('ivec2 probe(sampler2D s) { return textureSize(s, 0); }')).toThrow(
-      "'textureSize(sampler2D,int)' is not transpiled yet (#1829)"
+    expect(() => transpileShadingLanguage('uniform sampler2D s;')).toThrow(
+      "'sampler2D' is not transpiled yet (#1829)"
     );
+  });
+
+  it('refuses a global uniform with the issue that owns it', () => {
+    expect(() => transpileShadingLanguage('global uniform float u;')).toThrow(
+      "'global' is not transpiled yet (#1183)"
+    );
+  });
+
+  it('refuses a screen texture hint with the issue that binds the screen', () => {
+    expect(() => transpileShadingLanguage('uniform sampler2D s : hint_screen_texture;')).toThrow(
+      "'hint_screen_texture' is not transpiled yet (#1524)"
+    );
+  });
+
+  it('gives a parameter for each uniform by name, in the order of the text', () => {
+    const { parameters } = transpileShadingLanguage('uniform float b;\nuniform vec4 a[2];');
+    expect([...parameters.keys()]).toEqual(['b', 'a']);
+  });
+
+  it('reads a uniform in a function from its slot of bits', () => {
+    expect(glslOf('uniform int u;\nint probe() { return u; }')).toMatch(/uniform \w+ \{\s*uvec4 \w+\[1\];/);
   });
 
   it('refuses a shader type that is not transpiled, at its head', () => {

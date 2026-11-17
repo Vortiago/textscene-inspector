@@ -2260,6 +2260,298 @@ struct Pair { float x; vec2 y; }; vec2 probe(float a) { Pair list[] = Pair[](Pai
 
 Godot does not compile this shader: Godot refuses it at line 1, `Unknown identifier in expression: 'Pair'.`. The transpiler refuses it too.
 
+### Probe `uniform-array-float-unset`, no input
+
+```glsl
+uniform float u[4];
+vec4 probe() { return vec4(u[0], u[1], u[2], u[3]); }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `u[0]` | `0.0` | `00000000` |
+| `u[1]` | `0.0` | `00000000` |
+| `u[2]` | `0.0` | `00000000` |
+| `u[3]` | `0.0` | `00000000` |
+
+### Probe `uniform-array-float-nan-first`, no input
+
+```glsl
+uniform float u[4];
+vec4 probe() { return vec4(u[0], u[1], u[2], u[3]); }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `u[0]` | `NaN` | `7fc00000` |
+| `u[1]` | `1.0` | `3f800000` |
+| `u[2]` | `-0.0` | `80000000` |
+| `u[3]` | `inf` | `7f800000` |
+
+### Probe `uniform-array-float-short`, no input
+
+```glsl
+uniform float u[4];
+vec4 probe() { return vec4(u[0], u[1], u[2], u[3]); }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `u[0]` | `1.0` | `3f800000` |
+| `u[1]` | `2.0` | `40000000` |
+| `u[2]` | `0.0` | `00000000` |
+| `u[3]` | `0.0` | `00000000` |
+
+### Probe `uniform-array-int`, no input
+
+```glsl
+uniform int u[3];
+ivec3 probe() { return ivec3(u[0], u[1], u[2]); }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `u[0]` | `-1` | `ffffffff` |
+| `u[1]` | `2` | `00000002` |
+| `u[2]` | `2147483647` | `7fffffff` |
+
+### Probe `uniform-array-uint`, no input
+
+```glsl
+uniform uint u[2];
+uvec2 probe() { return uvec2(u[0], u[1]); }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `u[0]` | `4294967295u` | `ffffffff` |
+| `u[1]` | `5u` | `00000005` |
+
+### Probe `uniform-array-bool`, no input
+
+```glsl
+uniform bool u[3];
+bvec3 probe() { return bvec3(u[0], u[1], u[2]); }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `u[0]` | `true` | `00000001` |
+| `u[1]` | `false` | `00000000` |
+| `u[2]` | `true` | `00000001` |
+
+### Probe `uniform-array-vec2-of-array`, no input
+
+```glsl
+uniform vec2 u[3];
+vec4 probe() { return vec4(u[0], u[1].x, u[2].y); }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `u[0]` | `1.0` | `3f800000` |
+| `u[1].x` | `2.0` | `40000000` |
+| `u[2].y` | `0.0` | `00000000` |
+| `3` | `5.0` | `40a00000` |
+
+### Probe `uniform-array-vec2-of-numbers`, no input
+
+```glsl
+uniform vec2 u[2];
+vec4 probe() { return vec4(u[0], u[1]); }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `u[0]` | `1.0` | `3f800000` |
+| `u[1]` | `2.0` | `40000000` |
+| `2` | `3.5` | `40600000` |
+| `3` | `4.0` | `40800000` |
+
+### Probe `uniform-array-vec3-of-colors`, no input
+
+```glsl
+uniform vec3 u[2];
+mat2 probe() { return mat2(u[0].xy, u[1].yz); }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `u[0].xy` | `1.0` | `3f800000` |
+| `u[1].yz` | `0.5` | `3f000000` |
+| `2` | `2.0` | `40000000` |
+| `3` | `0.25` | `3e800000` |
+
+### Probe `uniform-array-vec4-of-colors`, no input
+
+```glsl
+uniform vec4 u[1];
+vec4 probe() { return u[0]; }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `0` | `1.0` | `3f800000` |
+| `1` | `0.5` | `3f000000` |
+| `2` | `0.01` | `3c23d70a` |
+| `3` | `0.5` | `3f000000` |
+
+### Probe `uniform-array-vec4-unset`, no input
+
+```glsl
+uniform vec4 u[2];
+vec4 probe() { return u[1]; }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `0` | `0.0` | `00000000` |
+| `1` | `0.0` | `00000000` |
+| `2` | `0.0` | `00000000` |
+| `3` | `0.0` | `00000000` |
+
+### Probe `uniform-array-ivec2`, no input
+
+```glsl
+uniform ivec2 u[2];
+ivec4 probe() { return ivec4(u[0], u[1]); }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `u[0]` | `1` | `00000001` |
+| `u[1]` | `-2` | `fffffffe` |
+| `2` | `3` | `00000003` |
+| `3` | `4` | `00000004` |
+
+### Probe `uniform-array-bvec2`, no input
+
+```glsl
+uniform bvec2 u[2];
+bvec4 probe() { return bvec4(u[0], u[1]); }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `u[0]` | `true` | `00000001` |
+| `u[1]` | `false` | `00000000` |
+| `2` | `false` | `00000000` |
+| `3` | `true` | `00000001` |
+
+### Probe `uniform-array-mat2-unset`, no input
+
+```glsl
+uniform mat2 u[2];
+mat2 probe() { return u[1]; }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `0` | `1.0` | `3f800000` |
+| `1` | `0.0` | `00000000` |
+| `2` | `0.0` | `00000000` |
+| `3` | `1.0` | `3f800000` |
+
+### Probe `uniform-array-mat2-short`, no input
+
+```glsl
+uniform mat2 u[2];
+mat2 probe() { return u[0] + u[1]; }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `0` | `2.0` | `40000000` |
+| `1` | `2.0` | `40000000` |
+| `2` | `3.0` | `40400000` |
+| `3` | `5.0` | `40a00000` |
+
+### Probe `uniform-array-mat3-of-bases`, no input
+
+```glsl
+uniform mat3 u[2];
+mat3 probe() { return u[0] + u[1]; }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `0` | `2.0` | `40000000` |
+| `1` | `4.0` | `40800000` |
+| `2` | `7.0` | `40e00000` |
+| `3` | `2.0` | `40000000` |
+| `4` | `6.0` | `40c00000` |
+| `5` | `8.0` | `41000000` |
+| `6` | `3.0` | `40400000` |
+| `7` | `6.0` | `40c00000` |
+| `8` | `10.0` | `41200000` |
+
+### Probe `uniform-array-mat4-of-floats`, no input
+
+```glsl
+uniform mat4 u[1];
+mat4 probe() { return u[0]; }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `0` | `1.0` | `3f800000` |
+| `1` | `2.0` | `40000000` |
+| `2` | `3.0` | `40400000` |
+| `3` | `4.0` | `40800000` |
+| `4` | `5.0` | `40a00000` |
+| `5` | `6.0` | `40c00000` |
+| `6` | `7.0` | `40e00000` |
+| `7` | `8.0` | `41000000` |
+| `8` | `9.0` | `41100000` |
+| `9` | `10.0` | `41200000` |
+| `10` | `11.0` | `41300000` |
+| `11` | `12.0` | `41400000` |
+| `12` | `13.0` | `41500000` |
+| `13` | `14.0` | `41600000` |
+| `14` | `15.0` | `41700000` |
+| `15` | `16.0` | `41800000` |
+
+### Probe `uniform-computed-index`, 16 input rows
+
+```glsl
+uniform float u[4];
+float probe(int i) { return u[i & 3]; }
+```
+
+| `i` | Godot gives |
+| --- | --- |
+| `0` | `1.5` |
+| `1` | `-2.5` |
+| `-1` | `NaN` |
+
+### Probe `uniform-color-array-ldr`, no input
+
+```glsl
+uniform vec4 u[2] : source_color;
+vec4 probe() { return u[0] + u[1] * 4.0; }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `0` | `2.0` | `40000000` |
+| `1` | `0.5` | `3f000000` |
+| `2` | `0.01` | `3c23d70a` |
+| `3` | `0.25` | `3e800000` |
+
+### Probe `uniform-color-array-hdr`, no input
+
+```glsl
+uniform vec4 u[2] : source_color;
+vec4 probe() { return u[0] + u[1] * 4.0; }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `0` | `4.953846` | `409e85e8` |
+| `1` | `0.21404114` | `3e5b2d9a` |
+| `2` | `0.0007739938` | `3a4ae5d8` |
+| `3` | `0.25` | `3e800000` |
+
 ## Structs
 
 `struct Pair { float x; vec2 y; };` declares a struct before the functions. `Pair(a, b)` constructs one from a value of each member, in order, and `p.x` reads or writes a member.

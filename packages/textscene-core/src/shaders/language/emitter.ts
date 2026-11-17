@@ -19,13 +19,19 @@ export interface TranspiledFunction {
   call(args: readonly Node[]): Node;
 }
 
-/** The tree holds only transpiled rows (`checkTranspiled`). */
-export function emitShader(shader: ShaderNode): ReadonlyMap<string, TranspiledFunction> {
+/** The tree holds only transpiled rows (`checkTranspiled`). A body reads each uniform from `uniforms`. */
+export function emitShader(
+  shader: ShaderNode,
+  uniforms: ReadonlyMap<string, Value>
+): ReadonlyMap<string, TranspiledFunction> {
   const structs = new Map(shader.structs.map((struct) => [struct.name, struct]));
   const structOf: StructOf = (type) => structs.get(type);
   const trees = new Map(shader.functions.map((definition) => [definition.name, emittedTree(definition)]));
   const body: BodyEmitter = (tree, names) =>
-    new StatementEmitter(tree.folding, context).body(tree.lowered.body, EmitScope.of(names));
+    new StatementEmitter(tree.folding, context).body(
+      tree.lowered.body,
+      EmitScope.of(new Map([...uniforms, ...names]))
+    );
   const context: EmitContext = { structOf, functions: new CalledFunctions(trees, structOf, body) };
   return new Map([...trees].map(([name, tree]) => [name, calledInPlace(tree, body, structOf)]));
 }

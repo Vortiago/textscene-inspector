@@ -290,10 +290,10 @@ describe('parse: whole arrays', () => {
 });
 
 describe('parse: what the transpiler does not read yet', () => {
-  it.each([
-    ['uniform float u;', "'uniform' is not transpiled yet (#1829)"],
-    ['float f() { return TIME; }', "'TIME' is not transpiled yet (#1794)"],
-  ])('names the issue that owns %s', (source, message) => {
-    expect(refusal(source)).toThrow(message);
-  });
+  it.each([['float f() { return TIME; }', "'TIME' is not transpiled yet (#1794)"]])(
+    'names the issue that owns %s',
+    (source, message) => {
+      expect(refusal(source)).toThrow(message);
+    }
+  );
 });

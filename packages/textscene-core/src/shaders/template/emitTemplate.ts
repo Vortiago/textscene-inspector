@@ -14,8 +14,8 @@ import type { ValueType } from '../language/types.js';
 import { TemplateUniforms } from './templateUniforms.js';
 import type { GlobalNode, TemplateStageNode } from './templateTree.js';
 
-/** Each `in` global and built-in a stage reads, and each varying the next stage reads, by name. */
-export type StageInputs = ReadonlyMap<string, Node>;
+/** Each `in` global, built-in and material uniform a stage reads, and each varying the next stage reads. */
+export type StageInputs = ReadonlyMap<string, Value>;
 
 /** The value `main` leaves in a variable of its own: `frag_color`, or `gl_Position`. */
 export interface StageResult {
