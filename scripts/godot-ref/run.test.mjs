@@ -195,6 +195,14 @@ describe('bootstrapScript — the 2D capture embeds a Window', () => {
   });
 });
 
+describe("bootstrapScript — the 2D capture clears to the project's colour", () => {
+  // The editor clears to the project's colour each frame (`renderer_viewport.cpp:750-752`), as ours does.
+  it('leaves the default clear colour as the project set it', () => {
+    const gd = bootstrap({ previews: true });
+    expect(gd).not.toContain('set_default_clear_color');
+  });
+});
+
 describe('bootstrapScript — a non-tool script never runs under previews', () => {
   /**
    * Like the editor, the default pauses the tree first, stops AnimationPlayers, never steps

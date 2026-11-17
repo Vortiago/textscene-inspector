@@ -192,6 +192,8 @@ export function materialConstructorLines(source: string): number[] {
  * absent because its `new THREE.ShaderMaterial({…})` is inside a doc comment.
  */
 const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
+  'packages/textscene-core/src/r3f/gameView/presentRootTarget.ts':
+    'the two present materials of a renderer, built once and never drawn through React; a frame moves only their `map`',
   'packages/textscene-core/src/r3f/fullScreenPass.ts':
     'one material per call, its shaders fixed at construction and owned by the caller that draws it; callers move only uniforms, and each `defines` change, the sky radiance layout and the volumetric fog integrate depth, sets `needsUpdate`',
   'packages/textscene-core/src/r3f/depthPrepass/depthPrepass.ts':
@@ -275,6 +277,8 @@ export function meshArgumentMounts(source: string): MeshArgumentMount[] {
  * to mount one.
  */
 const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
+  'packages/textscene-core/src/r3f/gameView/presentRootTarget.ts':
+    'puts one of its two present materials on its own quad, which is not React state, so there is no mount to key',
   'packages/textscene-core/src/r3f/fullScreenPass.ts':
     'lends the shared quad, which is not React state, the material of the pass it draws, each built with its shaders fixed at construction, so only uniforms and `needsUpdate`-flagged `defines` move',
   'packages/textscene-core/src/r3f/positionalShadow/atlasDepthPass.ts':
@@ -292,6 +296,8 @@ const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
  * and separate from both lists above for the same reason.
  */
 const CONSTRUCTED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
+  'packages/textscene-core/src/r3f/gameView/presentRootTarget.ts':
+    'the present quad: built once per renderer and drawn outside React, so the material never passes through it',
   'packages/textscene-core/src/r3f/opaqueSentinel.ts':
     'an opaque-list sentinel: its material writes nothing and is never mutated, and its owner removes it with its scene',
   'packages/textscene-core/src/resources/sky/build.ts':

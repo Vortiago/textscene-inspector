@@ -7,7 +7,13 @@
 export type { Follow, HeldResource, Read, ResourceKind, ResourceSnapshot, UnavailableReason } from './read';
 export { IMPORTED_FILE, optionalReference } from './read';
 export type { ScopedReference } from './scopedReference';
-export { nodeReference, referenceHeldBy, referenceKey, sameReference } from './scopedReference';
+export {
+  nodeReference,
+  projectSettingReference,
+  referenceHeldBy,
+  referenceKey,
+  sameReference,
+} from './scopedReference';
 export { mayName, snapshotOver } from './snapshot';
 export type { NodeRead } from './useNodeResource';
 export {

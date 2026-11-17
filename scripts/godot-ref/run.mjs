@@ -789,7 +789,6 @@ const SCENE_CAMERA_PATH := ${gdString(sceneCameraPath ?? '')}
 const FOV := ${fov}
 const PARTICLES_PROCESS := ${particles}
 const CANVAS_2D_SIZE := Vector2i(${canvas2DSize.width}, ${canvas2DSize.height})
-const CLEAR_2D := ${gdColor(CANVAS_2D_CAPTURE.clearColor)}
 const FOG_JITTER_CYCLE_FRAMES := ${FOG_JITTER_CYCLE_FRAMES}
 const FOG_HISTORY_MAX_CYCLES := ${FOG_HISTORY_MAX_CYCLES}
 const RENDER_QUIET_FRAMES := ${RENDER_QUIET_FRAMES}
@@ -914,7 +913,6 @@ func _linear_to_srgb_value(value: float) -> float:
 # previewer's 2D stage draws. No preview sun or environment: those are
 # Node3DEditor's, and 2D lighting is a scene's own business.
 func _render_2d(target: Node) -> void:
-	RenderingServer.set_default_clear_color(CLEAR_2D)
 	var vp := SubViewport.new()
 	vp.size = CANVAS_2D_SIZE
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
@@ -948,7 +946,6 @@ func _render_2d(target: Node) -> void:
 # capture reproducible under xvfb. This arm's caller checks the written image
 # is exactly that rect rather than trusting the window to have obeyed.
 func _render_2d_root(target: Node) -> void:
-	RenderingServer.set_default_clear_color(CLEAR_2D)
 	if not SCENE_CAMERA:
 		_disable_2d_cameras(target)
 	# One frame first: _ready runs while the root window is still adding THIS

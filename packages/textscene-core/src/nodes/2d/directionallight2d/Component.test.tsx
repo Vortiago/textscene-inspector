@@ -32,6 +32,7 @@ import {
 } from '../../../r3f/lighting2d/testing/apartLightProbe';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import { settleLoads } from '../../../r3f/testing/settleLoads';
+import { RunningGameScope } from '../../../r3f/contexts/EditorHintContext';
 import '../../../r3f/nodes'; // side-effect: registers every node's r3f component
 
 /** A bar 200 px wide, 100 px above the origin, which the test camera centres on. */
@@ -76,7 +77,7 @@ function underProbedLighting(nodes: ReactNode) {
   return underWhiteCanvasLighting(<RecordApartLights record={apartLights}>{nodes}</RecordApartLights>);
 }
 
-async function render(tscn: string) {
+async function render(tscn: string, around: (nodes: ReactNode) => ReactNode = underProbedLighting) {
   const parsed = new TscnParser().parse(tscn);
   const fake = createFakeResourceLoader();
   const renderer = await ReactThreeTestRenderer.create(
@@ -84,7 +85,7 @@ async function render(tscn: string) {
       sceneGraph={createSceneGraphFromTscnScene(parsed)}
       loader={fake.loader}
       workspace="2d"
-      around={underProbedLighting}
+      around={around}
     />,
     // An orthographic view of the canvas around the origin, as the 2D stage has.
     { orthographic: true, camera: { position: [0, 0, 10] } }
@@ -190,6 +191,15 @@ ${sun('', 'Sun', 'View')}`)
 
   it('lights no item while disabled', async () => {
     expect(isLit(await render(scene(sun('enabled = false') + panel('P'))), 'P')).toBe(false);
+  });
+
+  it('lights no item when editor_only where the game runs', async () => {
+    const inGame = (nodes: ReactNode) => underProbedLighting(<RunningGameScope>{nodes}</RunningGameScope>);
+    expect(isLit(await render(scene(sun('editor_only = true') + panel('P')), inGame), 'P')).toBe(false);
+  });
+
+  it('lights an item when editor_only in the editor', async () => {
+    expect(isLit(await render(scene(sun('editor_only = true') + panel('P'))), 'P')).toBe(true);
   });
 
   it('samples no shadow map until shadow_enabled is set', async () => {

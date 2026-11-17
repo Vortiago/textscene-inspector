@@ -324,6 +324,11 @@ function projectFilePath(settings: ProjectSettings | null, key: string): string 
   return settings?.[key]?.trim() || null;
 }
 
+/** The root world's fallback Environment, `default_environment` (`scene/main/scene_tree.cpp:2151-2179`). */
+export function projectDefaultEnvironmentPath(settings: ProjectSettings | null): string | null {
+  return projectFilePath(settings, 'rendering/environment/defaults/default_environment');
+}
+
 /** `gui/theme/custom`, the project theme (`ThemeDB::initialize_theme`, `scene/theme/theme_db.cpp:52`). */
 export function projectThemePath(settings: ProjectSettings | null): string | null {
   return projectFilePath(settings, 'gui/theme/custom');

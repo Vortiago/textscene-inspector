@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_ANISOTROPIC_FILTERING_LEVEL } from '../../godot/scene/viewport';
+import { DEFAULT_ANISOTROPIC_FILTERING_LEVEL, SubViewportClearMode } from '../../godot/scene/viewport';
 import { parseProjectSettings } from '../../parser/projectSettingsParser';
 import {
+  gameViewportDescription,
   probeCaptureDescription,
   rootViewportDescription,
   subViewportDescription,
@@ -14,12 +15,14 @@ describe('rootViewportDescription', () => {
       msaa3D: 0,
       usesDebanding: false,
       transparentBackground: false,
+      requestsClear: true,
       mipmapBias: 0,
       positionalShadowAtlas: { size: 4096, quadrantShadows: [4, 4, 16, 64] },
       anisotropicLevel: 2,
       camera: 'editor',
       drawsEditorChrome: true,
       previewsEnvironment: true,
+      fallbackEnvironment: null,
     });
   });
 
@@ -35,6 +38,7 @@ describe('rootViewportDescription', () => {
         'lights_and_shadows/positional_shadow/atlas_size=512',
         'lights_and_shadows/positional_shadow/atlas_quadrant_2_subdiv=1',
         'textures/default_filters/anisotropic_filtering_level=4',
+        'environment/defaults/default_environment="res://default_env.tres"',
       ].join('\n')
     );
 
@@ -46,6 +50,7 @@ describe('rootViewportDescription', () => {
       mipmapBias: -0.5,
       positionalShadowAtlas: { size: 512, quadrantShadows: [4, 4, 1, 64] },
       anisotropicLevel: 4,
+      fallbackEnvironment: 'res://default_env.tres',
     });
   });
 
@@ -58,6 +63,31 @@ describe('rootViewportDescription', () => {
   });
 });
 
+describe('gameViewportDescription', () => {
+  const settings = parseProjectSettings(
+    [
+      '[rendering]',
+      'anti_aliasing/quality/msaa_3d=2',
+      'environment/defaults/default_environment="res://env.tres"',
+    ].join('\n')
+  );
+
+  it("keeps the root's facts from the project", () => {
+    expect(gameViewportDescription(settings)).toMatchObject({
+      msaa3D: 2,
+      fallbackEnvironment: 'res://env.tres',
+    });
+  });
+
+  it("draws by the game's rules: the current camera, no editor element and no preview", () => {
+    expect(gameViewportDescription(settings)).toMatchObject({
+      camera: 'elected',
+      drawsEditorChrome: false,
+      previewsEnvironment: false,
+    });
+  });
+});
+
 describe('subViewportDescription', () => {
   const root = { ...rootViewportDescription(null), mipmapBias: -0.75, anisotropicLevel: 3 };
   const node = {
@@ -66,6 +96,7 @@ describe('subViewportDescription', () => {
     use_debanding: true,
     use_hdr_2d: false,
     transparent_bg: true,
+    render_target_clear_mode: SubViewportClearMode.NEVER,
     texture_mipmap_bias: 0.25,
     anisotropic_filtering_level: 4,
     positional_shadow_atlas_size: 1024,
@@ -81,12 +112,14 @@ describe('subViewportDescription', () => {
       msaa3D: 3,
       usesDebanding: true,
       transparentBackground: true,
+      requestsClear: false,
       mipmapBias: 0.25,
       positionalShadowAtlas: { size: 1024, quadrantShadows: [64, 16, 4, 1] },
       anisotropicLevel: 4,
       camera: 'elected',
       drawsEditorChrome: false,
       previewsEnvironment: false,
+      fallbackEnvironment: null,
     });
   });
 

@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { ControlCanvasLayer } from './controls/native/ControlCanvasLayer';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
-import { parseTscnContent } from './hooks/useParsedScene';
+import { parseTscnContent } from '../scene/parseScene';
 import { DispatchedScene } from './testing/DispatchedScene';
 import { settleLoads } from './testing/settleLoads';
 import { visibleInTree } from './visibleInTree';

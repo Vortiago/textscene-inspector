@@ -25,7 +25,7 @@ import { followSceneExposure } from '../exposure/sceneExposure';
 import { useExposureFactor } from './worldExposure';
 import { scaledRgb } from '../../utils/colorParser';
 import { LRUCache } from '../../resources/LRUCache';
-import { renderUnderWay } from '../viewportRender/worldRender';
+import { renderClearsBlack, renderUnderWay } from '../viewportRender/worldRender';
 import {
   DrawnEnvironment,
   registerEnvironmentPart,
@@ -110,6 +110,7 @@ function useFlatAmbient(ambient: EnvironmentSettings['ambient']): void {
   const environment = useEnvironmentKey();
   const color = ambient?.color;
   const energy = ambient?.energy ?? 0;
+  const isClearColor = ambient?.isClearColor === true;
   useEffect(() => {
     if (!color || energy <= 0) return undefined;
     const light = new THREE.AmbientLight(godotColorToLinear(color), energy * LIGHT_INTENSITY_SCALE);
@@ -118,7 +119,14 @@ function useFlatAmbient(ambient: EnvironmentSettings['ambient']): void {
     scene.add(light);
     const stopRegistering = registerEnvironmentPart(scene, environment, () => {
       light.visible = true;
+      // Each render lights by its own viewport's clear colour (`render_scene_data_rd.cpp:174-175`).
+      const stopFollowing = isClearColor
+        ? followSceneExposure(scene, () => {
+            light.visible = !renderClearsBlack();
+          })
+        : null;
       return () => {
+        stopFollowing?.();
         light.visible = false;
       };
     });
@@ -126,7 +134,7 @@ function useFlatAmbient(ambient: EnvironmentSettings['ambient']): void {
       stopRegistering();
       scene.remove(light);
     };
-  }, [scene, environment, color, energy]);
+  }, [scene, environment, color, energy, isClearColor]);
 }
 
 /**
@@ -137,9 +145,16 @@ function useFlatAmbient(ambient: EnvironmentSettings['ambient']): void {
  */
 function useColorBackground(settings: EnvironmentSettings, hasSky: boolean, hasFog: boolean): void {
   const scene = useThree((state) => state.scene);
-  const { mode, color: backgroundColor, energyMultiplier: backgroundEnergy } = settings.background;
+  const {
+    mode,
+    color: backgroundColor,
+    energyMultiplier: backgroundEnergy,
+    ignoresExposure,
+  } = settings.background;
   const showsColor = showsBackgroundColor(mode);
-  const exposure = useExposureFactor();
+  const isClearColor = mode === BackgroundMode.BG_CLEAR_COLOR;
+  const sceneExposure = useExposureFactor();
+  const exposure = ignoresExposure ? 1 : sceneExposure;
   const environment = useEnvironmentKey();
 
   // Each branch restores only what it wrote: a sky's background and intensity belong to `<SkyLayer>`.
@@ -166,7 +181,10 @@ function useColorBackground(settings: EnvironmentSettings, hasSky: boolean, hasF
         const restoreBackground = showAt(exposure);
         // An interior capture keeps the clear colour its stage drew (`captureStage.ts`).
         const stopFollowing = followSceneExposure(scene, (drawn) => {
-          if (!renderUnderWay()?.probeCapture?.isInterior) showAt(drawn ?? 1);
+          if (renderUnderWay()?.probeCapture?.isInterior) return;
+          // A BG_CLEAR_COLOR background is the clear of a viewport that clears to black.
+          if (isClearColor && renderClearsBlack()) scene.background = null;
+          else showAt(ignoresExposure ? 1 : (drawn ?? 1));
         });
         return () => {
           stopFollowing();
@@ -191,7 +209,19 @@ function useColorBackground(settings: EnvironmentSettings, hasSky: boolean, hasF
       };
     }
     return undefined;
-  }, [scene, environment, showsColor, mode, backgroundColor, backgroundEnergy, exposure, hasSky, hasFog]);
+  }, [
+    scene,
+    environment,
+    showsColor,
+    isClearColor,
+    mode,
+    backgroundColor,
+    backgroundEnergy,
+    exposure,
+    ignoresExposure,
+    hasSky,
+    hasFog,
+  ]);
 }
 
 /** The background factors kept drawn: a frame of a few viewports of one world draws at a few. */

@@ -1,0 +1,26 @@
+[gd_scene format=3]
+
+; The In-game mode draws the root viewport through the scene's current Camera3D, not the editor
+; orbit. Each current camera claims the viewport in tree order, and the last claim wins
+; (`viewport.cpp:4565-4581`), so the view is `Near`'s. With no WorldEnvironment, no project
+; environment and no light, Godot draws the clear colour, and the box takes it as ambient light
+; (`render_scene_data_rd.cpp:225-235`), with no preview sun or sky.
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+
+[sub_resource type="StandardMaterial3D" id="Material_1"]
+albedo_color = Color(0.9, 0.5, 0.2, 1)
+
+[node name="Main" type="Node3D"]
+
+[node name="Box" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("Material_1")
+
+[node name="Far" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 40)
+current = true
+
+[node name="Near" type="Camera3D" parent="."]
+transform = Transform3D(0.8660254, -0.25, 0.4330127, 0, 0.8660254, 0.5, -0.5, -0.4330127, 0.75, 1.5, 1.5, 2.5)
+current = true

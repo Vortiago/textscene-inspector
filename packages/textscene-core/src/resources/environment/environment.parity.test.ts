@@ -23,6 +23,7 @@ describe('Environment Godot parity', () => {
     expect(environmentSettingsOf({}).ambient).toEqual({
       color: { r: 0.3, g: 0.3, b: 0.3, a: 1 },
       energy: 1,
+      isClearColor: true,
     });
     expect(environmentSettingsOf({ ambient_light_source: '1' }).ambient).toBeNull(); // DISABLED
     const colored = environmentSettingsOf({

@@ -36,3 +36,17 @@ Which camera is current is the inverse of the 3D rule: `camera_2d.cpp`'s `NOTIFI
 ## Consequence of ADR-0037: the UI layer of the 2D workspace is inside the canvas
 
 Control/CanvasLayer subtrees draw as native canvas items *inside* `World2DCanvas`, in the same tree-order draw as the 2D world, not as a DOM sibling stacked above it. `Canvas2DStage` layers the project-viewport frame around that one canvas. The 2D workspace composites like Godot: one CanvasItem tree, one draw order. The DOM/WebGL split could only approximate this: an opaque Control drawn *behind* world content covered the whole canvas whatever the tree order.
+
+## Amendment: the In-game mode is a mode of the one view
+
+`ViewportMode` holds `'2D' | '3D' | 'in-game'`. The In-game mode is a property of the view, not a
+second view: `<TscnCanvas mode="in-game">` draws the root viewport as the game starts it, and the
+previewer mounts the same view when the toolbar selects In-game. The package exports no other view
+component.
+
+- The view clears the **editor hint** for its subtree (`RunningGameScope`). Every editor-only drawer
+  reads that one intent: the toggles of `ViewportModeContext` read as the game draws, whatever the
+  toolbar holds, and the dispatcher binds no pointer handler, so a click selects nothing.
+- Auto-select never picks In-game and never leaves it. In-game hides the gizmos and the navigation
+  that a user needs to edit a new scene, so a user picks it by hand. The choice persists as the
+  other modes do.

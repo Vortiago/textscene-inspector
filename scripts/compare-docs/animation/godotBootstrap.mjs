@@ -55,11 +55,9 @@ ${PREVIEW_LIGHTING_GD}
 // _render_2d it has no 3D camera and no editor preview (2D lighting is the scene's own). Each
 // Camera2D is disabled before the subtree is added, so none can offset the canvas.
 export function godotBootstrap2D(resPath, framesDir) {
-  const [r, g, b] = CANVAS_2D_CAPTURE.clearColor;
   return `extends Node
 
 func _ready() -> void:
-	RenderingServer.set_default_clear_color(Color(${r}, ${g}, ${b}, 1))
 	var vp := SubViewport.new()
 	vp.size = Vector2i(${CANVAS_2D_CAPTURE.width}, ${CANVAS_2D_CAPTURE.height})
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS

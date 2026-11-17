@@ -9,7 +9,7 @@ renders_as: a THREE.DirectionalLight
 
 # DirectionalLight3D
 
-A sun-like light that lights every surface from one direction, down the node's local -Z. The previewer draws a `THREE.DirectionalLight` with Godot's shadow, fitted to the camera in one, two or four splits. Each shadow draws into its share of one atlas texture and fades out at `directional_shadow_max_distance`. Every lit surface samples that one texture, as in Godot, so eight shadowed lights take one texture unit. Its highlight scales by `light_specular`, as Godot's does.
+A sun-like light that lights every surface from one direction, down the node's local -Z. The previewer draws a `THREE.DirectionalLight` with Godot's shadow, fitted to the camera in one, two or four splits. Each shadow draws into its share of one atlas texture and fades out at `directional_shadow_max_distance`. Every lit surface samples that one texture, as in Godot, so eight shadowed lights take one texture unit. Its highlight scales by `light_specular`, as Godot's does. With `editor_only`, it lights the editor views and gives no light in the In-game mode, as Godot's game does (`light_3d.cpp:287-288`).
 
 ## Linting
 

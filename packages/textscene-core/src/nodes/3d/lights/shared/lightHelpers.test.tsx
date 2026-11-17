@@ -28,6 +28,7 @@ import { AttenuationModel, DopplerTracking } from '../../../../godot/scene/audio
 function dirNode(name: string, overrides: Partial<DirectionalLight3DProperties> = {}): TscnNode {
   const props: DirectionalLight3DProperties = {
     name,
+    editor_only: false,
     layers: 1,
     light_color: 'Color(1, 1, 1, 1)',
     light_energy: 1,
@@ -41,6 +42,7 @@ function dirNode(name: string, overrides: Partial<DirectionalLight3DProperties> 
 function omniNode(name: string, overrides: Partial<OmniLight3DProperties> = {}): TscnNode {
   const props: OmniLight3DProperties = {
     name,
+    editor_only: false,
     layers: 1,
     light_color: 'Color(1, 1, 1, 1)',
     light_energy: 1,
@@ -56,6 +58,7 @@ function omniNode(name: string, overrides: Partial<OmniLight3DProperties> = {}):
 function spotNode(name: string, overrides: Partial<SpotLight3DProperties> = {}): TscnNode {
   const props: SpotLight3DProperties = {
     name,
+    editor_only: false,
     layers: 1,
     light_color: 'Color(1, 1, 1, 1)',
     light_energy: 1,

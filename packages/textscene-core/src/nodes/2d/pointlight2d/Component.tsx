@@ -14,6 +14,7 @@ import { useTextureView } from '../../../r3f/useTextureView';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import type { PointLight2DProperties } from './types';
 import { CanvasLight2D } from '../../../r3f/lighting2d/CanvasLight2D';
+import { useLight2DEnabled } from '../lights/shared/useLight2DEnabled';
 
 /**
  * Godot resolves a canvas item's DEFAULT repeat to the viewport's DISABLED default
@@ -25,13 +26,14 @@ const COOKIE_SAMPLER: ViewSampler = { colorSpace: THREE.NoColorSpace, wrap: THRE
 
 export function PointLight2D({ node, children }: NodeComponentProps) {
   const props = node.properties as PointLight2DProperties;
+  const isEnabled = useLight2DEnabled(props);
 
   // `useTexture2D` resolves a GradientTexture2D, a gradient-less one to Godot's placeholder at its
   // own size (`renderer_viewport.cpp:455-460`). The plain view, as `COOKIE_SAMPLER` reads texels raw.
   const scope = useSceneResources();
   const slot = useTexture2D(useNodeReference(props.texture, scope), 'plain');
   // A light that draws no quad makes no view: it would clone and upload a light texture nothing draws.
-  const cookie = useTextureView(props.enabled && !slot.missing ? slot.texture : null, COOKIE_SAMPLER);
+  const cookie = useTextureView(isEnabled && !slot.missing ? slot.texture : null, COOKIE_SAMPLER);
 
   // A disabled light still draws its children: `enabled` switches the light alone. With no light
   // texture, also one whose file fails to load, the light adds nothing and draws nothing, as Godot's

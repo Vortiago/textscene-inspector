@@ -31,6 +31,7 @@ function dirNode(overrides: Partial<DirectionalLight3DProperties> = {}): TscnNod
   const props: DirectionalLight3DProperties = {
     name: 'Sun',
     light_color: 'Color(1, 0.95, 0.9, 1)',
+    editor_only: false,
     layers: 1,
     light_energy: 1,
     light_bake_mode: LIGHT_3D_DEFAULTS.bakeMode,
@@ -50,6 +51,7 @@ function omniNode(overrides: Partial<OmniLight3DProperties> = {}): TscnNode {
   const props: OmniLight3DProperties = {
     name: 'Lamp',
     light_color: 'Color(1, 1, 1, 1)',
+    editor_only: false,
     layers: 1,
     light_energy: 1,
     light_bake_mode: LIGHT_3D_DEFAULTS.bakeMode,
@@ -71,6 +73,7 @@ function spotNode(overrides: Partial<SpotLight3DProperties> = {}): TscnNode {
   const props: SpotLight3DProperties = {
     name: 'Torch',
     light_color: 'Color(1, 1, 1, 1)',
+    editor_only: false,
     layers: 1,
     light_energy: 1,
     light_bake_mode: LIGHT_3D_DEFAULTS.bakeMode,
