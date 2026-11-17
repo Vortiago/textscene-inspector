@@ -6,7 +6,7 @@
  * viewport's tonemap pass (`toneMapPass.ts`).
  */
 
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import { BackgroundMode } from '../../godot/scene/environment';
@@ -18,6 +18,7 @@ import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { useDraws3D } from './draws3D';
 import { useViewportMode } from '../contexts/ViewportModeContext';
 import { SkyLayer } from '../sky/SkyLayer';
+import { NodePathProvider } from '../contexts/NodePathContext';
 import { FogLayer } from '../fog/FogLayer';
 import { ScreenSpaceEffectsLayer } from '../screenSpaceEffects/ScreenSpaceEffectsLayer';
 import { clearColorTexture, foggedClearColorTexture } from './colorBackground';
@@ -40,6 +41,8 @@ export interface EnvironmentLayerProps {
   sky: AuthoredSky | null;
   /** The texture a PanoramaSkyMaterial samples, resolved by the node that holds the Environment. */
   panorama: THREE.Texture | null;
+  /** The node that holds the Environment, whose details show its sky shader's errors. */
+  holderPath?: string | null;
 }
 
 /** The Environment its world's scene shows. */
@@ -63,7 +66,7 @@ export function DrawnEnvironmentLayer(props: EnvironmentLayerProps) {
   );
 }
 
-function EnvironmentParts({ settings, sky, panorama }: EnvironmentLayerProps) {
+function EnvironmentParts({ settings, sky, panorama, holderPath }: EnvironmentLayerProps) {
   // Godot draws the sky as the background under BG_SKY and takes ambient from
   // it whenever the source resolves to a cubemap. Surfaces reflect it by their own source. The three
   // are independent: a sky can light the scene without being shown (AMBIENT_SOURCE_SKY over a
@@ -85,19 +88,26 @@ function EnvironmentParts({ settings, sky, panorama }: EnvironmentLayerProps) {
         <ScreenSpaceEffectsLayer ssr={settings.ssr} ssao={settings.ssao} />
       )}
       {sky && (showsSky || skyAmbient || reflectsSky) && (
-        <SkyLayer
-          sky={sky}
-          asBackground={showsSky}
-          energyMultiplier={settings.background.energyMultiplier}
-          rotation={settings.skyRotation}
-          contribution={skyAmbient ? skyAmbient.contribution : 0}
-          reflects={reflectsSky}
-          panorama={panorama}
-          fogScattersSun={(settings.fog?.sunScatter ?? 0) > FOG_SUN_SCATTER_MIN}
-        />
+        <AtHolder path={holderPath}>
+          <SkyLayer
+            sky={sky}
+            asBackground={showsSky}
+            energyMultiplier={settings.background.energyMultiplier}
+            rotation={settings.skyRotation}
+            contribution={skyAmbient ? skyAmbient.contribution : 0}
+            reflects={reflectsSky}
+            panorama={panorama}
+            fogScattersSun={(settings.fog?.sunScatter ?? 0) > FOG_SUN_SCATTER_MIN}
+          />
+        </AtHolder>
       )}
     </>
   );
+}
+
+/** The layer mounts above every node, so it takes the holder's path back for what it reports. */
+function AtHolder({ path, children }: { path: string | null | undefined; children: ReactNode }) {
+  return path ? <NodePathProvider path={path}>{children}</NodePathProvider> : <>{children}</>;
 }
 
 /**
