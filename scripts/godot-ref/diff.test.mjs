@@ -10,6 +10,7 @@ import {
   comparePngs,
   diffAll,
   diffOne,
+  inGameUnavailableMessage,
   parseArgs,
   residueTable,
   resolveFixture,
@@ -32,6 +33,20 @@ function solidPng(width, height, [r, g, b] = [0, 0, 0]) {
 }
 
 describe('parseArgs', () => {
+  it('takes --mode in-game, the one mode a caller picks by hand', () => {
+    expect(parseArgs(['a.tscn', '--mode', 'in-game']).mode).toBe('in-game');
+    expect(parseArgs(['a.tscn']).mode).toBeNull();
+  });
+
+  it('refuses a mode that run.mjs picks from the scene, and reads the one it takes in any case', () => {
+    expect(() => parseArgs(['a.tscn', '--mode', '2d'])).toThrow(/--mode takes one of in-game, got "2d"/);
+    expect(parseArgs(['a.tscn', '--mode', 'In-Game']).mode).toBe('in-game');
+  });
+
+  it('names the issue that adds our side of --mode in-game', () => {
+    expect(inGameUnavailableMessage()).toContain('#1974');
+  });
+
   it('collects fixtures and leaves the mean bound unset by default', () => {
     const args = parseArgs(['unit-csg-box.tscn', 'unit-csg-sphere.tscn']);
     expect(args.fixtures).toEqual(['unit-csg-box.tscn', 'unit-csg-sphere.tscn']);
