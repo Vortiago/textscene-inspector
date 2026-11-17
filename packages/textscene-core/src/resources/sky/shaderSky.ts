@@ -5,7 +5,7 @@ import { textToVariant } from '../../godot/variant/reader/variantReader';
 import { ShadingLanguageError } from '../../shaders/language/shadingLanguageError';
 import { transpileSky, type TranspiledSky } from '../../shaders/sky/transpileSky';
 import type { TranspiledUniform } from '../../shaders/uniforms/transpiledUniform';
-import { ShaderSkyBackground } from '../../r3f/sky/shaderSkyBackground';
+import { ShaderSkyBackground, ShaderSkyCube } from '../../r3f/sky/shaderSkyBackground';
 import { bakeRadiance } from './radianceBake';
 import { disposeSkyLayers, type SkyLayers } from './skyLayers';
 import type { SkyLight } from './skyUniforms';
@@ -57,7 +57,7 @@ function bakeShaderRadiance(
   lights: readonly SkyLight[]
 ): SkyLayers {
   const skyScene = new THREE.Scene();
-  const cubeSky = new ShaderSkyBackground(transpiled, lights);
+  const cubeSky = new ShaderSkyCube(transpiled, lights);
   cubeSky.drawIn(skyScene, 1, new THREE.Euler());
   try {
     return bakeRadiance(gl, skyScene, sky, 0);

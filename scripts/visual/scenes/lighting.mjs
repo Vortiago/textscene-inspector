@@ -251,4 +251,5 @@ export const LIGHTING_SCENES = [
   // mid-blue, and the metallic sphere, with no sky to reflect, reads near-black.
   { name: 'shader-sky-env', file: 'unit-shader-sky-env.tscn' },
   { name: 'shader-sky-parameters', file: 'unit-shader-sky-parameters.tscn' },
+  { name: 'shader-sky-fog', file: 'unit-shader-sky-fog.tscn' },
 ];
