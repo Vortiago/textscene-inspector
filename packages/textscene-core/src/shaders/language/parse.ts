@@ -8,11 +8,14 @@ import { ModeParser } from './parseModes.js';
 import { parseDeclaration } from './parseDeclaration.js';
 import { parseVarying, VaryingStages } from './parseVarying.js';
 import { BlockScope, type Identifier } from './scope.js';
-import type { FunctionSignature } from './parseCall.js';
+import { callTarget, type FunctionSignature } from './parseCall.js';
+import { StageRules } from './stageRules.js';
 import type {
   Argument,
   BlockNode,
+  CallNode,
   DeclarationNode,
+  Expression,
   FunctionNode,
   Qualifier,
   ShaderNode,
@@ -21,6 +24,7 @@ import type {
   ValueType,
   VaryingNode,
 } from './shaderTree.js';
+import type { SourcePosition } from './shadingLanguageError.js';
 import { TokenCursor } from './tokenCursor.js';
 import type { Token } from './tokenizer.js';
 import { shapeOf } from './types.js';
@@ -61,6 +65,9 @@ class ShaderParser implements ExpressionScope {
   private readonly uniforms: UniformParser;
   private readonly modes: ModeParser;
   private readonly varyingStages: VaryingStages;
+  private readonly stageRules: StageRules;
+  /** The processor functions declared so far, which no call reaches (\`callable\`, :10673). */
+  private readonly processors = new Set<string>();
 
   constructor(
     private readonly tokens: TokenCursor,
@@ -76,12 +83,18 @@ class ShaderParser implements ExpressionScope {
     });
     this.modes = new ModeParser(tokens, () => this.shaderType);
     this.varyingStages = new VaryingStages(tokens);
+    this.stageRules = new StageRules(tokens, {
+      shaderType: () => this.shaderType,
+      currentFunction: () => this.current?.name,
+      varyingStage: (name) => this.varyingStages.stageOf(name),
+    });
     this.statements = new StatementParser(
       tokens,
       this.expressions,
       this.holder,
       (name) => this.struct(name) !== undefined,
-      () => this.current!
+      () => this.current!,
+      this.stageRules
     );
   }
 
@@ -89,7 +102,7 @@ class ShaderParser implements ExpressionScope {
     // Outside a body, the uniforms declared so far: a default that reads one is not a constant.
     const found = this.holder.current.find(name, false);
     if (found) return found;
-    if (this.signatures.has(name)) return { kind: 'function' };
+    if (this.signatures.has(name) || this.stageRules.isStageFunctionHere(name)) return { kind: 'function' };
     return this.builtIn(name);
   }
 
@@ -100,8 +113,32 @@ class ShaderParser implements ExpressionScope {
 
   /** Godot's checks of a read or a write of a varying, which only a function body has. */
   useVarying(name: string): void {
-    const varying = this.varyings.find((candidate) => candidate.name === name)!;
-    this.varyingStages.use(varying, this.current!.rname);
+    this.stageRules.useVarying(name);
+    this.varyingStages.use(this.varying(name)!, this.current!.rname);
+  }
+
+  private varying(name: string): VaryingNode | undefined {
+    return this.varyings.find((candidate) => candidate.name === name);
+  }
+
+  checkCall(rname: string, args: readonly Expression[]): void {
+    this.stageRules.call(callTarget(this, rname, args));
+  }
+
+  stageCall(name: string, args: readonly Expression[], position: SourcePosition): CallNode | undefined {
+    return this.stageRules.stageCall(name, args, position);
+  }
+
+  isProcessor(name: string): boolean {
+    return this.processors.has(name);
+  }
+
+  /** A varying, or an element of one, passed for a parameter (\`shader_language.cpp:6368\`). */
+  varyingRefusal(arg: Expression, qualifier: Qualifier): string | undefined {
+    const variable = arg.kind === 'array element' ? arg.array : arg;
+    const varying =
+      variable.kind === 'variable' && variable.isVarying ? this.varying(variable.name) : undefined;
+    return varying && this.varyingStages.argumentRefusal(varying, qualifier, this.current!.rname);
   }
 
   /** From the stage function, `global` or the constants; outside a function, the constants only. */
@@ -349,9 +386,13 @@ class ShaderParser implements ExpressionScope {
     if (this.tokens.peek().type !== 'TK_PARENTHESIS_OPEN')
       this.refuseGlobalVariable(returnType, returnArraySize);
     this.tokens.next();
+    if (this.processors.has(rname)) this.tokens.fail(`Redefinition of '${rname}'.`);
     const args = this.argumentList();
-    const signature = this.declare({ rname, returnType, returnArraySize, arguments: args });
+    const header = { rname, returnType, returnArraySize, arguments: args };
+    this.stageRules.checkSignature(rname, args.length, returnType);
+    const signature = this.stageRules.stage(rname) ? this.processor(header) : this.declare(header);
     this.tokens.expect('TK_CURLY_BRACKET_OPEN', "Expected a '{' to begin function.");
+    this.stageRules.begin(signature.name);
     this.current = signature;
     const body = this.statements.body(args, this.globals, this.tokens.lastPosition());
     this.current = undefined;
@@ -479,6 +520,12 @@ class ShaderParser implements ExpressionScope {
     const type = this.dataType(typeToken);
     if (type === 'void') this.tokens.fail('Void type not allowed as argument.');
     return type;
+  }
+
+  /** A processor function, which keeps its name and which no call reaches. */
+  private processor(header: Omit<FunctionSignature, 'name'>): FunctionSignature {
+    this.processors.add(header.rname);
+    return { name: header.rname, ...header };
   }
 
   /** `f@2` names the second `f`. Godot refuses equal argument types and sizes (:10921). */

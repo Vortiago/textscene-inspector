@@ -181,6 +181,25 @@ function godotEndingProbes() {
   }));
 }
 
+/** Constants outside a function, which every function reads and a size may name. */
+function globalConstantProbes() {
+  const probes = [
+    ['scalar', 'const float K = 1.5; float probe(float a) { return a * K; }'],
+    ['list', 'const int A = 2, B = A * 3; int probe(int a) { return a * A + B; }'],
+    [
+      'array',
+      'const vec2 V[2] = { vec2(1.0, 2.0), vec2(-3.0, 0.5) }; vec2 probe(vec2 a) { return a * V[1] + V[0]; }',
+    ],
+    [
+      'in-two-functions',
+      'const float K = 0.25; float add(float a) { return a + K; } float probe(float a) { return add(a) * K; }',
+    ],
+    ['as-size', 'const int N = 3; int probe(int a) { int v[N]; v[N - 1] = a; return v[2] * N; }'],
+    ['of-a-call', 'const float S = sqrt(2.0); float probe(float a) { return a * S; }'],
+  ];
+  return probes.map(([name, source]) => probeOf(`global-const-${name}`, ['const'], source));
+}
+
 export const LANGUAGE_PROBES = [
   ...typeProbes(),
   ...precisionProbes(),
@@ -192,4 +211,5 @@ export const LANGUAGE_PROBES = [
   ...negationTextProbes(),
   ...foldingProbes(),
   ...godotEndingProbes(),
+  ...globalConstantProbes(),
 ];

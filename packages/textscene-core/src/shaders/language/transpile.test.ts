@@ -141,11 +141,18 @@ describe('transpileShadingLanguage', () => {
     expect(glslOf(source).match(/uniform sampler2D \w+;/g)).toHaveLength(2);
   });
 
-  it('refuses a shader type that is not transpiled, at its head', () => {
-    expect(() => transpileShadingLanguage('\nshader_type canvas_item;')).toThrow(
+  it('gives the functions of a shader of a type whose template is not linked yet', () => {
+    const shader = transpileShadingLanguage('shader_type spatial;\nfloat half(float a) { return a * 0.5; }');
+    expect([...shader.functions.keys()]).toEqual(['half']);
+  });
+
+  it("refuses a built-in at the row of its type's template", () => {
+    expect(() =>
+      transpileShadingLanguage('shader_type spatial;\nvoid fragment() {\n\tALBEDO = vec3(1.0);\n}')
+    ).toThrow(
       expect.objectContaining({
-        message: expect.stringContaining('is not transpiled yet (#'),
-        position: expect.objectContaining({ line: 2, column: 1 }),
+        message: expect.stringContaining("'spatial.fragment.ALBEDO' is not transpiled yet (#1831)"),
+        position: expect.objectContaining({ line: 3 }),
       })
     );
   });

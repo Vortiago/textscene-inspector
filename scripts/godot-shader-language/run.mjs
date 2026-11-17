@@ -6,18 +6,11 @@ import { checkGenerated, writeGenerated } from '../generatedFile.mjs';
 import { godotSourceDir } from '../godotSource.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { SHOWCASES } from '../../apps/textscene-three-godot-shaders/tests/e2e/showcases.mjs';
-import { PROBES } from '../../apps/textscene-three-godot-shaders/tests/probes/probes.mjs';
+import { ROW_PROOFS } from '../../apps/textscene-three-godot-shaders/tests/rowProofs.mjs';
 import { SKY_SCENES } from '../../apps/textscene-three-godot-shaders/tests/e2e/skyScenes.mjs';
-import { HEAD_CASES } from '../../apps/textscene-three-godot-shaders/tests/heads/headCases.mjs';
-
-/** A sky scene and a head case prove their rows too: no probe runs a sky shader or has a head. */
-const ROW_PROOFS = [
-  ...PROBES,
-  ...SKY_SCENES,
-  ...HEAD_CASES.filter(({ rows }) => rows.length > 0).map(({ id, rows }) => ({ name: `head-${id}`, rows })),
-];
 import { GUIDE_CHAPTERS } from './guideChapters.mjs';
 import {
+  fragmentOnlyFunctions,
   godotVersion,
   instructionRows,
   shaderModes,
@@ -103,6 +96,7 @@ function main() {
         version: sources.version,
         modes: shaderModes(sources.types),
         stages: shaderStages(sources.types),
+        fragmentOnly: fragmentOnlyFunctions(sources.language),
         tokens: tokenNames(sources.header, sources.language),
       }),
     ],

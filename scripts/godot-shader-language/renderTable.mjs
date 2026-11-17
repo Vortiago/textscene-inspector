@@ -7,7 +7,7 @@ const ROW_FIELDS = ['id', 'family', 'source', 'owner', 'template', 'token', 'ret
 export const transpiledIds = (probes) => new Set(probes.flatMap((probe) => probe.rows));
 
 /** Rows as text split once: a literal of near 1,900 objects is past what TypeScript types (TS2590). */
-export function renderTableModule(rows, probes, { version, modes, stages, tokens }) {
+export function renderTableModule(rows, probes, { version, modes, stages, fragmentOnly, tokens }) {
   const transpiled = transpiledIds(probes);
   const lines = rows.map((row) => {
     const fields = {
@@ -99,6 +99,9 @@ export interface ShaderStage {
 
 /** Each shader type's function keys in Godot's order, which \`_parse_shader\` takes as \`p_functions\`. */
 export const SHADER_STAGES: readonly ShaderStage[] = ${listText(stages)};
+
+/** The built-in functions only a fragment stage reaches, \`frag_only_func_defs\` (\`shader_language.cpp:3559\`). */
+export const FRAGMENT_ONLY_FUNCTIONS: readonly string[] = ${JSON.stringify(fragmentOnly)};
 
 /** The name Godot's messages print for each token, \`get_token_text\` (\`shader_language.cpp:237\`). */
 export const TOKEN_NAMES: Readonly<Record<string, string>> = ${JSON.stringify(tokens, null, 2)};

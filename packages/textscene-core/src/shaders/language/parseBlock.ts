@@ -6,6 +6,7 @@ import { parseDeclaration } from './parseDeclaration.js';
 import { type BlockKind, BlockScope, type GlobalNames } from './scope.js';
 import type { Argument, BlockNode, ControlFlowNode, Expression, Flow, Statement } from './shaderTree.js';
 import type { SourcePosition } from './shadingLanguageError.js';
+import type { StageRules } from './stageRules.js';
 import type { TokenCursor } from './tokenCursor.js';
 import type { Token } from './tokenizer.js';
 import { isEmpty } from './treeWalk.js';
@@ -33,7 +34,8 @@ export class StatementParser {
     private readonly expressions: ExpressionParser,
     private readonly holder: ScopeHolder,
     private readonly isStruct: (name: string) => boolean,
-    private readonly returnType: () => { readonly returnType: string; readonly returnArraySize: number }
+    private readonly returnType: () => { readonly returnType: string; readonly returnArraySize: number },
+    private readonly stages: StageRules
   ) {}
 
   /** A function's body after its `{`, in a scope that sees its arguments and the shader's globals. */
@@ -116,6 +118,7 @@ export class StatementParser {
         statements.push(this.returnStatement(token));
         return this.endsCase();
       case 'TK_CF_DISCARD':
+        this.stages.discard();
         statements.push(this.simpleFlow(token, 'FLOW_OP_DISCARD', 'discard'));
         return this.refuseInForInit();
       case 'TK_CF_BREAK':
@@ -317,6 +320,7 @@ export class StatementParser {
 
   /** `return`, with an expression of the function's type (`shader_language.cpp:8852`). */
   private returnStatement(token: Token): ControlFlowNode {
+    this.stages.checkReturn();
     const { returnType, returnArraySize } = this.returnType();
     const returned = typeName(returnType, returnArraySize);
     const mark = this.tokens.mark();

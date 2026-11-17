@@ -180,15 +180,6 @@ void sky() {
 | --- | --- |
 | <img src="showcase/sky-camera-wide-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-camera-wide-three.png" width="256" alt="Transpilation"> |
 
-## The shader head
-
-`shader_type sky;` opens the shader and names its type. Godot refuses a type it does not have, with the valid ones, and a head with no `;`, at the line of the type. The shader node holds the type, the structs and the functions.
-
-The transpiler emits `the sky template, both stages, with the shader linked into its slots`. Rows: `shader_type`, `NODE_TYPE_SHADER`, `shader_type sky`. Godot source: `servers/rendering/shader_language.cpp:340`.
-
-Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
-
-
 ## `COLOR`
 
 `COLOR` is the colour `sky()` writes, linear. Godot's sky template holds it in its local `color`, and writes it to the frame after the environment's brightness and fog.

@@ -199,6 +199,14 @@ export function shaderStages(typesCpp) {
   return [...stages.values()];
 }
 
+/** The built-in functions that only a fragment stage may reach, `frag_only_func_defs`. */
+export function fragmentOnlyFunctions(languageCpp) {
+  const start = languageCpp.indexOf('ShaderLanguage::frag_only_func_defs[] = {');
+  if (start === -1) throw new Error('expected frag_only_func_defs in shader_language.cpp, found none');
+  const end = languageCpp.indexOf('{ nullptr }', start);
+  return [...languageCpp.slice(start, end).matchAll(/\{ "(\w+)" \}/g)].map((match) => match[1]);
+}
+
 /** A mode with values gives one `<mode>_<value>` row per value. */
 export function renderModes(typesCpp) {
   return shaderModes(typesCpp).flatMap(({ shaderType, kind, name, options, line }) => {

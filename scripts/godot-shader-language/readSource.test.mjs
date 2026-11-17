@@ -3,6 +3,7 @@ import {
   godotVersion,
   keywordList,
   renderModes,
+  fragmentOnlyFunctions,
   shaderModes,
   shaderStages,
   shaderTypes,
@@ -86,6 +87,24 @@ describe('shaderStages', () => {
       { shaderType: 'spatial', stage: 'vertex', canDiscard: false, isMain: true },
       { shaderType: 'spatial', stage: 'fragment', canDiscard: true, isMain: true },
     ]);
+  });
+});
+
+describe('fragmentOnlyFunctions', () => {
+  const cpp = [
+    'const ShaderLanguage::BuiltinEntry ShaderLanguage::frag_only_func_defs[] = {',
+    '\t{ "dFdx" },',
+    '\t{ "fwidth" },',
+    '\t{ nullptr }',
+    '};',
+  ].join('\n');
+
+  it('reads each name up to the closing entry', () => {
+    expect(fragmentOnlyFunctions(cpp)).toEqual(['dFdx', 'fwidth']);
+  });
+
+  it('refuses a source with no list', () => {
+    expect(() => fragmentOnlyFunctions('')).toThrow(/expected frag_only_func_defs/);
   });
 });
 

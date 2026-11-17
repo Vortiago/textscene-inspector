@@ -134,6 +134,11 @@ export class VaryingStages {
     );
   }
 
+  /** The stage `name` is assigned in so far, or nothing. */
+  stageOf(name: string): Stage | undefined {
+    return this.stages.get(name);
+  }
+
   /** Godot's message for `varying` passed for a parameter of `qualifier` in `current`, or nothing (:6380). */
   argumentRefusal(varying: VaryingNode, qualifier: string, current: string): string | undefined {
     const isOut = qualifier !== 'in';

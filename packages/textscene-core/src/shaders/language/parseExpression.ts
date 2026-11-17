@@ -15,7 +15,8 @@ import { assignmentRefusal } from './assignment.js';
 import { BINARY_OPERATOR_OF_TOKEN, OPERATOR_TOKENS, UNARY_OPERATOR_OF_TOKEN } from './operators.js';
 import { type Entry, reducedEntries } from './reduction.js';
 import type { Identifier } from './scope.js';
-import type { ConstantNode, Expression, OperatorNode, Scalar, StructNode } from './shaderTree.js';
+import type { CallNode, ConstantNode, Expression, OperatorNode, Scalar, StructNode } from './shaderTree.js';
+import type { SourcePosition } from './shadingLanguageError.js';
 import { ArrayParser } from './parseArray.js';
 import { resolvedBuiltInCall } from './parseBuiltInCall.js';
 import { type CallScope, resolvedCall } from './parseCall.js';
@@ -39,6 +40,10 @@ export interface ExpressionScope extends CallScope {
   struct(name: string): StructNode | undefined;
   /** Godot's checks of a read or a write of a varying, with the cursor after its name. */
   useVarying(name: string): void;
+  /** Godot's processor-function rules for a call, after its arguments and before its overload. */
+  checkCall(rname: string, args: readonly Expression[]): void;
+  /** A call of a stage function of the shader type, or nothing for any other name. */
+  stageCall(name: string, args: readonly Expression[], position: SourcePosition): CallNode | undefined;
 }
 
 /** `ExpressionInfo`: the list a ternary part joins when it ends, and whether a `:` ends it. */
@@ -332,9 +337,12 @@ export class ExpressionParser {
     );
   }
 
-  /** A call of a function of the shader. A built-in function is refused with its overload's row. */
+  /** A call of a stage function, a built-in function or a function of the shader. */
   private call(name: string, args: readonly Expression[], token: Token): Expression {
     const fail = (message: string) => this.tokens.fail(message);
+    this.scope.checkCall(name, args);
+    const stageCall = this.scope.stageCall(name, args, token.position);
+    if (stageCall) return stageCall;
     const builtIn = resolvedBuiltInCall(name, args, token.position, fail);
     if (builtIn) return builtIn;
     const call = resolvedCall(this.scope, name, args, token.position, fail);
