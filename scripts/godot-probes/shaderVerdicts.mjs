@@ -1,4 +1,4 @@
-import { inChunksAtOnce, oneGodot, printedField, runGodotScript } from './godotRun.mjs';
+import { inChunksOfAtMost, oneGodot, printedField, runGodotScript } from './godotRun.mjs';
 
 const MARKER = 'VERDICT ';
 const DONE = 'VERDICTS DONE';
@@ -18,9 +18,12 @@ func _ready() -> void:
 	get_tree().quit()
 `;
 
+/** A run frees no shader before it quits: 2,400 spatial shaders a run took 15 GB over four runs. */
+const SHADERS_A_RUN = 500;
+
 /** The texts run in chunks at once, and every run must name the same Godot. */
 export async function godotVerdicts(texts, includes = {}) {
-  const runs = await inChunksAtOnce(texts, async (chunk) => {
+  const runs = await inChunksOfAtMost(texts, SHADERS_A_RUN, async (chunk) => {
     const output = await runGodotScript(VERDICT_SCRIPT, {
       'shaders.json': JSON.stringify(chunk),
       ...includes,

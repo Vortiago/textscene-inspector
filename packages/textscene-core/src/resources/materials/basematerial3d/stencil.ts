@@ -13,10 +13,8 @@ import {
   STENCIL_COMPARE_NAMES,
   STENCIL_FLAG_NAMES,
   STENCIL_MODE_NAMES,
-  StencilFlag,
+  stencilFlagsAfterSet,
 } from '../../../godot/rendering/materials/stencil.js';
-
-const STENCIL_WRITE_FLAGS = StencilFlag.WRITE | StencilFlag.WRITE_DEPTH_FAIL;
 
 function stencilFlags(): PropertyValidator {
   const listed = hintedBitField('stencil_flags', {
@@ -34,11 +32,12 @@ function stencilFlags(): PropertyValidator {
     // 32 bits reads NaN and drops the warning `listed` produced.
     const bits = parseSlotInt(value, 'int64');
     if (bits === null || Number.isNaN(bits)) return null;
-    if ((bits & StencilFlag.READ) !== 0 && (bits & STENCIL_WRITE_FLAGS) !== 0) {
+    const stored = stencilFlagsAfterSet(0, bits);
+    if (stored !== bits) {
       return propertyError(
         key,
         line,
-        `Property 'stencil_flags' cannot READ and WRITE at once; Godot keeps only READ, so this stores ${StencilFlag.READ} rather than ${bits}`,
+        `Property 'stencil_flags' cannot READ and WRITE at once; Godot keeps only READ, so this stores ${stored} rather than ${bits}`,
         'INVALID_STENCIL_FLAGS_VALUE'
       );
     }

@@ -2,8 +2,11 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { canonicalAnswers, staleFamilies } from '../../../scripts/godot-probes/answerDigest.mjs';
 
-/** The families of answers, each a record file of the live run. */
+/** The families every live run records, each a record file. */
 const FAMILIES = ['probes', 'random', 'operators', 'corpus', 'expressions', 'heads'];
+
+/** Recorded only when an input of the material sweep changed (scripts/ci/materialScope.mjs). */
+const MATERIALS = 'materials';
 
 /** Written only by `pnpm godot:probes`, and left out of the repository. */
 export const LIVE_DIR = join(import.meta.dirname, '.godot-answers');
@@ -31,18 +34,23 @@ export function godotAnswers() {
   return smokeAnswers(smoke, godot, adapter);
 }
 
-/** The live run's answers. Throws when a family's digest is not the committed one: the run is stale. */
+/** The live run's answers, with smoke materials when it skipped the sweep. Throws on a stale digest. */
 function currentLiveAnswers() {
+  const recorded = [...FAMILIES, MATERIALS].filter((family) => existsSync(livePath(family)));
   const answers = canonicalAnswers(
-    Object.fromEntries(FAMILIES.map((family) => [family, readJson(livePath(family))]))
+    Object.fromEntries(recorded.map((family) => [family, readJson(livePath(family))]))
   );
-  const stale = staleFamilies(answers, readJson(ANSWERS_FILE));
+  const committed = readJson(ANSWERS_FILE);
+  const stale = staleFamilies(answers, committed);
   if (stale.length > 0) {
     throw new Error(
       `expected the live answers in ${LIVE_DIR} to match the digests of ${ANSWERS_FILE}, found ${stale.join(', ')} differ: run \`pnpm godot:probes\` again`
     );
   }
-  return answers;
+  const materials = answers.materials
+    ? { live: true, ...answers.materials }
+    : smokeAnswers(committed.smoke, committed.godot, committed.adapter).materials;
+  return { ...answers, materials };
 }
 
 function smokeAnswers(smoke, godot, adapter) {
@@ -54,6 +62,7 @@ function smokeAnswers(smoke, godot, adapter) {
     corpus: { godot, cases: smoke.corpus },
     expressions: { godot, cases: smoke.expressions },
     heads: { godot, cases: smoke.heads },
+    materials: { live: false, godot, cases: smoke.materials, verdicts: smoke.materialVerdicts },
   };
 }
 
@@ -66,4 +75,17 @@ export function liveGodotAnswers() {
     );
   }
   return answers;
+}
+
+/** Written only by `pnpm godot:probes`: Godot's text of each material by its hash, which no digest reads. */
+export const MATERIAL_TEXTS_FILE = join(LIVE_DIR, 'material-texts.json');
+
+/** Godot's text of each material by its hash. The live run alone has them: no Godot text is committed. */
+export function liveMaterialTexts() {
+  if (!existsSync(MATERIAL_TEXTS_FILE)) {
+    throw new Error(
+      `expected Godot's material texts in ${MATERIAL_TEXTS_FILE}, found none: run \`pnpm godot:probes\``
+    );
+  }
+  return readJson(MATERIAL_TEXTS_FILE);
 }

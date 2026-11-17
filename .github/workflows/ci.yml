@@ -20,7 +20,8 @@ jobs:
   # manual run always runs it. A pull request that changes no file the real-Godot tests read skips
   # them (godotRefScope.mjs). A pull request into the shader port's branch that changes only
   # transpiler files runs the shader package's own pipeline and skips the previewer's jobs
-  # (shaderScope.mjs).
+  # (shaderScope.mjs). A push or pull request that changes no input of the material sweep compares
+  # the committed smoke materials instead of recording all of them in Godot (materialScope.mjs).
   changes:
     name: Changed files
     runs-on: ubuntu-latest
@@ -30,6 +31,7 @@ jobs:
       visual-key: ${{ steps.inputs.outputs.key }}
       godot-ref: ${{ steps.godot-ref.outputs.godot-ref }}
       shader-only: ${{ steps.shader-only.outputs.shader-only }}
+      material-sweep: ${{ steps.material-sweep.outputs.material-sweep }}
     steps:
       # A pull request checks out its merge commit, whose first parent is the base branch.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -75,6 +77,16 @@ jobs:
             exit 0
           fi
           git diff --name-only HEAD^1 HEAD | node scripts/ci/shaderScope.mjs >> "$GITHUB_OUTPUT"
+      # A push to main is one squash commit, so its first parent is main before the merge.
+      - id: material-sweep
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            echo "material-sweep=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git diff --name-only HEAD^1 HEAD | node scripts/ci/materialScope.mjs >> "$GITHUB_OUTPUT"
 
   # Names the image the browser jobs run in (.github/ci-image), and builds and publishes it when no
   # run has yet. The tag is a hash of the image's inputs, so a commit that changes none of them
@@ -228,11 +240,13 @@ jobs:
   shaders:
     name: Shader package
     runs-on: ubuntu-latest
-    needs: image
+    needs: [changes, image]
     container: *ci-image
-    timeout-minutes: 25
+    # The material sweep compiles 28,318 materials in Godot, about 17 minutes more than the 25.
+    timeout-minutes: ${{ needs.changes.outputs.material-sweep == 'true' && 40 || 25 }}
     env:
       SHADER_ANSWERS: live
+      MATERIAL_SWEEP: ${{ needs.changes.outputs.material-sweep }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup

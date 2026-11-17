@@ -1,3 +1,5 @@
+import { NEXT_PASS, RANDOM_CASES } from '../godot-probes/materialTexts.mjs';
+
 export const TESTING_FILE = 'testing.md';
 
 const count = (items, test) => items.filter(test).length;
@@ -31,7 +33,7 @@ The printer writes a parsed tree back as shading language text. \`pnpm godot:pro
 
 const ANSWERS_SECTION = `## Godot's answers
 
-\`pnpm godot:probes\` asks Godot 4.6.3 for every answer on each run: the result bits of each probe and random program, and the verdict on each operator case and corpus shader. The tests, the real-GL comparison and this guide read that run. The repository keeps \`tests/godot-answers.json\` only: Godot's version and adapter, a SHA-256 digest of each family of answers, and a smoke subset of about one case in 32, picked by the digest of its name. The "Shader package" job fails when a digest of its run differs from the committed one, so a new Godot, Mesa or LLVM in the CI image shows as a change of that file in review. It also fails when Godot is missing, since \`SHADER_ANSWERS=live\` makes every reader refuse the smoke subset. Outside the CI image, \`pnpm test:unit\` compares the smoke subset only.
+\`pnpm godot:probes\` asks Godot 4.6.3 for every answer on each run: the result bits of each probe and random program, and the verdict on each operator case and corpus shader, and the shader text of each material. The tests, the real-GL comparison and this guide read that run. The repository keeps \`tests/godot-answers.json\` only: Godot's version and adapter, a SHA-256 digest of each family of answers, and a smoke subset of about one case in 32, picked by the digest of its name. The "Shader package" job fails when a digest of its run differs from the committed one, so a new Godot, Mesa or LLVM in the CI image shows as a change of that file in review. It also fails when Godot is missing, since \`SHADER_ANSWERS=live\` makes every reader refuse the smoke subset. Outside the CI image, \`pnpm test:unit\` compares the smoke subset only.
 
 lavapipe compiles each shader for the CPU it runs on, and the job prints the CPU model, its vector flags and the Mesa and LLVM packages on every run. A float lane that is NaN agrees with any NaN, in the digest and in the comparison on a real GL context alike (\`scripts/godot-probes/laneAgreement.mjs\`). GLSL ES 3.00 section 4.5.1 leaves the sign and payload of a NaN to the device, and lavapipe on the same Mesa 25.2.8 and LLVM 20.1.2 gives some matrix products a NaN of the other sign on an AMD EPYC 7763 (AVX2) than on an Intel Xeon with AVX-512. A NaN against a number, against an infinity, and -0 against +0 still differ, and an int, uint or bool lane agrees bit for bit.`;
 
@@ -145,11 +147,26 @@ ${openLines.join('\n')}
 </details>`;
 }
 
+/** The material family: each material's case count, and the distinct texts Godot wrote for them. */
+function materialSection(materialRecord) {
+  const ids = Object.keys(materialRecord.cases);
+  const nextPasses = count(ids, (id) => id.endsWith(`|${NEXT_PASS}`));
+  const texts = new Set(Object.values(materialRecord.cases)).size;
+  const number = (value) => value.toLocaleString('en-GB');
+  return `## BaseMaterial3D against Godot
+
+Godot writes the shader of a StandardMaterial3D or an ORMMaterial3D from the material's properties (\`BaseMaterial3D::_update_shader\`, \`material.cpp:685\`). \`baseMaterialShader\` in core writes the same text, character for character.
+
+\`pnpm godot:probes\` sweeps the properties Godot's \`ClassDB\` lists for BaseMaterial3D. Each bool is set to the value its default is not, each enum to each value, each flag set to each bit and to all bits, and each integer range to its minimum, the minimum plus 1 and its maximum. The sweep holds the default material, each value alone, and each pair of values of two properties, for both classes. Pairs do not reach a condition on three or more properties, such as a heightmap with deep parallax and a flipped texture. So the sweep also holds ${number(RANDOM_CASES)} materials of each class with 3 to 12 properties set at once, drawn from a fixed seed. An outline or x-ray stencil makes a next pass, and the sweep records that pass too. Godot gives a script no material's shader, so the recorder reads the one shader Godot makes between two shaders of its own (\`scripts/godot-probes/materialTexts.mjs\`).
+
+The sweep holds ${number(ids.length)} materials, ${number(nextPasses)} of them next passes, and Godot writes ${number(texts)} distinct texts for them. The test fails on the first material whose text differs, and shows both texts. Godot's compiler also gives a verdict on each distinct text, and the parser must accept each text Godot accepts and refuse each other with Godot's message and line. The repository keeps only a digest of each text, for the smoke subset.`;
+}
+
 /** The text of the chapter. */
-export function renderTestingGuide({ operators, random, corpus }) {
+export function renderTestingGuide({ operators, random, corpus, materials }) {
   return `# How the tests check the transpiler against Godot
 
-A probe checks one instruction on a table of inputs. Three more tests check what probes cannot: every operator rule, instructions combined in random programs, and whole shaders from the wild. Godot 4.6.3 is the judge of each, through its answers on every run. Generated by \`pnpm godot:shader-language\`: do not edit by hand.
+A probe checks one instruction on a table of inputs. Four more tests check what probes cannot: every operator rule, instructions combined in random programs, whole shaders from the wild, and the shader text of Godot's built-in material. Godot 4.6.3 is the judge of each, through its answers on every run. Generated by \`pnpm godot:shader-language\`: do not edit by hand.
 
 ${operatorSection(operators.cases, operators.record)}
 
@@ -160,5 +177,7 @@ ${ANSWERS_SECTION}
 ${PRINTER_SECTION}
 
 ${corpusSection(corpus)}
+
+${materialSection(materials)}
 `;
 }
