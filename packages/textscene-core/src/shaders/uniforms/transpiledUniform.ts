@@ -54,15 +54,23 @@ class UniformBinding implements TranspiledUniform {
 /** A text with no head is a probe's, which Godot's harness draws as a `canvas_item`. */
 const samplerDefaultsOf = (shaderType: string | undefined) => SAMPLER_DEFAULTS[shaderType ?? 'canvas_item']!;
 
+/** Only `local` uniforms take Godot's block offsets (`shader_compiler.cpp:567`, `:629`). */
+function valueNodes(values: readonly UniformNode[]): ReadonlyMap<UniformNode, UniformValue> {
+  const nodeOf = new Map<UniformNode, UniformValue>();
+  const locals = values.filter(({ scope }) => scope === 'local');
+  const others = values.filter(({ scope }) => scope !== 'local');
+  for (const block of [locals, others])
+    materialBits(block).forEach((node, index) => nodeOf.set(block[index]!, node));
+  return nodeOf;
+}
+
 /** A binding for each uniform of `shader`, by name, in the order of the text. */
 export function bindParameters(
   shader: ShaderNode,
   context: BindingContext
 ): ReadonlyMap<string, TranspiledUniform & { readonly value: Value }> {
   const samplerContext = { ...context, defaults: samplerDefaultsOf(shader.shaderType) };
-  const values = shader.uniforms.filter((uniform) => !isSamplerType(uniform.type));
-  const nodes = materialBits(values.map(({ type, arraySize }) => ({ type, arraySize: arraySize ?? 0 })));
-  const nodeOf = new Map(values.map((uniform, index) => [uniform, nodes[index]!]));
+  const nodeOf = valueNodes(shader.uniforms.filter((uniform) => !isSamplerType(uniform.type)));
   const bindingOf = (uniform: UniformNode) =>
     isSamplerType(uniform.type)
       ? new SamplerBinding(uniform, samplerContext)

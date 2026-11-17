@@ -164,7 +164,6 @@ void sky() {
 
 /** One scene per built-in of the sky stage, each read into the colour, against Godot's image. */
 const BUILT_IN_SCENES = [
-  { name: 'sky-twenty-uniforms', source: TWENTY_UNIFORMS_SKY, rows: ['uniform'] },
   { name: 'sky-eyedir', source: builtInSky('\tCOLOR = EYEDIR * 0.5 + 0.5;'), rows: ['sky.sky.EYEDIR'] },
   {
     name: 'sky-coords',
@@ -346,6 +345,14 @@ export const SKY_SCENES = [
   ...TIME_SCENES,
   ...SEEK_SCENES,
   ...BUILT_IN_SCENES,
+  {
+    name: 'sky-twenty-uniforms',
+    ...SIZE,
+    source: TWENTY_UNIFORMS_SKY,
+    camera: TURNED,
+    lights: [],
+    rows: ['uniform'],
+  },
   ...LIGHT_SCENES,
   ...PASS_SCENES,
   ...PASS_SIZE_SCENES,

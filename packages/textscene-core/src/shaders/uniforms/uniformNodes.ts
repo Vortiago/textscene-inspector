@@ -3,6 +3,7 @@ import { chained, tsl } from '../language/compositeParts.js';
 import { UniformArrayNode, type Node, type NodeBuilder } from 'three/webgpu';
 import { CONSTRUCTORS } from '../language/emitConstant.js';
 import type { ArrayValue, Value } from '../language/emitValue.js';
+import type { StructMember } from '../language/shaderTree.js';
 import { shapeOf, type ScalarKind, type ValueType } from '../language/types.js';
 import { blockLayout } from '../template/blockLayout.js';
 import type { Lanes } from './uniformLanes.js';
@@ -61,6 +62,8 @@ class BitsArrayNode extends UniformArrayNode<'uvec4'> {
     const { buffer } = (this as unknown as { value: Uint32Array }).value;
     (this as unknown as { value: Float32Array }).value = new Float32Array(buffer);
     this.uploaded = new Uint32Array(buffer);
+    // Again over the new buffer: the call inside `super.setup` ran before `uploaded` named it.
+    this.updateBuffer();
     return output;
   }
 
@@ -72,25 +75,12 @@ class BitsArrayNode extends UniformArrayNode<'uvec4'> {
 const SLOT_BYTES = 16;
 const LANE_BYTES = 4;
 
-/** A value uniform's type and its array size, 0 for a single value. */
-export interface UniformShape {
-  readonly type: ValueType;
-  readonly arraySize: number;
-}
-
 /** A node per uniform in one buffer at Godot's offsets (`shader_compiler.cpp:656`): WebGL 2 has 12 blocks. */
-export function materialBits(uniforms: readonly UniformShape[]): UniformValue[] {
-  const members = uniforms.map(({ type, arraySize }, index) => ({
-    name: String(index),
-    type,
-    ...(arraySize > 0 ? { arraySize } : {}),
-  }));
-  const { members: placed, size } = blockLayout(members, 'std140', () => undefined);
+export function materialBits(uniforms: readonly StructMember[]): UniformValue[] {
+  const { members: placed, size } = blockLayout(uniforms, 'std140', () => undefined);
   if (size === 0) return [];
   const node = new BitsArrayNode(size / SLOT_BYTES);
-  return uniforms.map(({ type, arraySize }, index) =>
-    bitsUniform(node, placed[index]!.offset, type, arraySize)
-  );
+  return placed.map(({ offset, type, arraySize = 0 }) => bitsUniform(node, offset, type, arraySize));
 }
 
 /** A uniform of `type` at byte `offset` of `node`. A matrix column and an array element start a slot. */
@@ -110,7 +100,7 @@ function bitsUniform(node: BitsArrayNode, offset: number, type: ValueType, array
     return rows === 1 ? parts[0]! : CONSTRUCTORS[columns === 1 ? type : `vec${rows}`]!(...parts);
   };
   const element = (index: Node | number): Node => {
-    const parts = Array.from({ length: columns }, (_, index_) => column(index, index_));
+    const parts = Array.from({ length: columns }, (_, columnIndex) => column(index, columnIndex));
     return columns === 1 ? parts[0]! : CONSTRUCTORS[type]!(...parts);
   };
   const value: Value =
