@@ -261,12 +261,14 @@
           "enum": [
             "auto",
             "2D",
-            "3D"
+            "3D",
+            "in-game"
           ],
           "enumDescriptions": [
             "Match the Godot editor: pick 2D or 3D from the scene root's node type.",
             "Always open new previews in the 2D viewport.",
-            "Always open new previews in the 3D viewport."
+            "Always open new previews in the 3D viewport.",
+            "Always open new previews in the In-game mode: the scene as the game draws it when it starts."
           ],
           "default": "auto",
           "description": "The viewport a new preview opens in. \"auto\" follows the Godot editor: a CanvasItem root opens in 2D, and a Node3D root in 3D. \"2D\" and \"3D\" force that viewport. The 2D/3D toggle in each preview still works, and open previews keep their viewport until you reopen them."

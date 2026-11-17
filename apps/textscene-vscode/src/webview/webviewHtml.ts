@@ -21,13 +21,8 @@ export function generateNonce(): string {
  * since the shell needs them on its first render, before any round-trip lands.
  */
 export interface WebviewInitialConfig {
-  /**
-   * `textscene.defaultViewportMode`. `'auto'` leaves Godot-parity auto-select
-   * (ADR-0006) in control; an explicit `'2D'`/`'3D'` seeds the viewport and
-   * suppresses auto-select for this panel (see `TscnPreviewShell`'s
-   * `initialViewportMode` prop).
-   */
-  viewportMode: 'auto' | '2D' | '3D';
+  /** `textscene.defaultViewportMode`: a named mode seeds the viewport and turns auto-select off. */
+  viewportMode: 'auto' | '2D' | '3D' | 'in-game';
 }
 
 export interface WebviewHtmlOptions {

@@ -1,8 +1,3 @@
-/**
- * The In-game mode of the view: the root viewport of the scene, drawn as a game draws it at its start
- * with no script run, fitted into the element.
- */
-
 import { Canvas } from '@react-three/fiber';
 import { useMemo } from 'react';
 import { useOptionalHierarchy } from '../contexts/HierarchyContext.js';

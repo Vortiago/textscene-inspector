@@ -95,6 +95,12 @@ const BOX_PIXEL_FLOOR = 2000;
  */
 const BOX_BLUE_TO_RED_CEILING = 0.5;
 
+/** A 2D scene in its own project, so its 320x180 window applies. The goldens check what it draws. */
+const IN_GAME_PROJECT = 'scenes/fixtures/in-game';
+const IN_GAME_SCENE = 'unit-in-game-camera2d.tscn';
+const IN_GAME_READOUT = path.join(REPO_ROOT, 'scripts/vscode/probes/inGameReadout.mjs');
+const IN_GAME_INK_FLOOR = 1000;
+
 const OUT_ROOT = path.join(REPO_ROOT, 'scripts/vscode/output/csp-gate');
 const BASE_PORT = 9464;
 
@@ -168,6 +174,13 @@ function prepareScenes() {
   cpSync(path.join(REPO_ROOT, GLTF_EXTERNAL_DIR), lampDir, { recursive: true });
   const gltfExternal = path.join(lampDir, GLTF_EXTERNAL_SCENE);
 
+  const inGameProject = path.join(workspace, 'in-game');
+  mkdirSync(inGameProject);
+  for (const file of ['project.godot', IN_GAME_SCENE]) {
+    copyFileSync(path.join(REPO_ROOT, IN_GAME_PROJECT, file), path.join(inGameProject, file));
+  }
+  const inGame = path.join(inGameProject, IN_GAME_SCENE);
+
   return {
     workspace,
     withText,
@@ -178,6 +191,7 @@ function prepareScenes() {
     box,
     boxHidden,
     gltfExternal,
+    inGame,
     replacements,
   };
 }
@@ -354,6 +368,21 @@ function checkGltfExternal(gate, report) {
   );
 }
 
+/** The preview opened in the In-game mode from the setting, and the game view drew the scene. */
+function checkInGame(gate, report) {
+  const readout = report.evalResult;
+  gate.check(
+    readout?.isPressed === true && readout?.showsStage === false,
+    `[in-game] the preview did not open in the In-game mode: ${brief(readout)}`
+  );
+  const ink = report.canvasReadback;
+  gate.check(
+    ink.inkPixels >= IN_GAME_INK_FLOOR,
+    `[in-game] only ${ink.inkPixels} ink pixels on a ${ink.width}x${ink.height} canvas, floor is ` +
+      `${IN_GAME_INK_FLOOR}: the game view painted nothing`
+  );
+}
+
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
 
@@ -385,6 +414,7 @@ async function main() {
     box,
     boxHidden,
     gltfExternal,
+    inGame,
     replacements,
   } = prepareScenes();
   console.log(`[gate] VS Code:   ${binary}`);
@@ -414,6 +444,12 @@ async function main() {
     { label: 'box', scene: box },
     { label: 'box-hidden', scene: boxHidden },
     { label: 'gltf-external', scene: gltfExternal },
+    {
+      label: 'in-game',
+      scene: inGame,
+      evalFile: IN_GAME_READOUT,
+      settings: { 'textscene.defaultViewportMode': 'in-game' },
+    },
   ];
 
   const reports = {};
@@ -441,6 +477,7 @@ async function main() {
         'workbench.secondarySideBar.defaultVisibility': 'hidden',
         'workbench.activityBar.location': 'hidden',
         'workbench.statusBar.visible': false,
+        ...run.settings,
       },
       // Kept for failure triage: CI uploads them.
       screenshots: true,
@@ -501,6 +538,7 @@ async function main() {
   checkHotReload(gate, reports['hot-reload'], reports['hot-reload-fresh']);
   const boxResult = checkBox(gate, reports.box, reports['box-hidden']);
   checkGltfExternal(gate, reports['gltf-external']);
+  checkInGame(gate, reports['in-game']);
 
   console.log('\n[gate] canvas readback');
   console.log(
@@ -524,6 +562,8 @@ async function main() {
     `  box           ${boxResult?.diffPixels} px differ from the twin` +
       `  mean=${JSON.stringify(boxResult?.colour)}  blue/red=${boxResult?.blueToRed}`
   );
+  const inGameInk = reports['in-game'].canvasReadback;
+  console.log(`  in-game       ${inGameInk.width}x${inGameInk.height}  ink=${inGameInk.inkPixels}`);
   for (const run of runs) {
     const webview = reports[run.label].webview;
     console.log(
@@ -543,7 +583,8 @@ async function main() {
   }
   console.log(
     '\n[gate] PASSED — a lit box draws in its material colour, glyphs and a worker-built texture paint in the real webview, offline, ' +
-      'under the real CSP, a mesh edited on disk redraws in place, and a text glTF loads its files'
+      'under the real CSP, a mesh edited on disk redraws in place, a text glTF loads its files, and ' +
+      'the In-game mode opens from its setting'
   );
 }
 

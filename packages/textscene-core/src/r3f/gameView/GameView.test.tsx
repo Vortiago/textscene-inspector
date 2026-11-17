@@ -1,8 +1,3 @@
-/**
- * The In-game mode draws the root viewport through the pass a SubViewport draws through, with the
- * game's description, and mounts nothing that takes input. A stand-in pass records what each
- * viewport gives it, since the test renderer draws no frame.
- */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import ReactThreeTestRenderer from '@react-three/test-renderer';

@@ -1,8 +1,3 @@
-/**
- * Shows the root viewport's target on the drawing buffer, fitted into it at one uniform scale. Bars
- * fill the rest: black, or transparent for a transparent root.
- */
-
 import * as THREE from 'three';
 import { fullScreenPass } from '../fullScreenPass.js';
 import { drawFullScreen } from '../fullScreenPass.js';
@@ -38,10 +33,7 @@ const presentPassFor = perObject<THREE.WebGLRenderer, THREE.ShaderMaterial>(() =
 
 const BAR_COLOR = new THREE.Color(0, 0, 0);
 
-/**
- * Draws the bytes of `source`, the plain view of the root's target, into the fitted rect of the
- * drawing buffer. A null `source` leaves only the bars.
- */
+/** Fits `source` into the buffer at one scale, with black or transparent bars. Null leaves the bars. */
 export function presentRootTarget(
   gl: THREE.WebGLRenderer,
   source: THREE.Texture | null,

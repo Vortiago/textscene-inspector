@@ -20,14 +20,18 @@ import {
 } from './appContract.mjs';
 
 /**
- * A browser context that renders only the scene: the source pane closed, the floating toolbar
- * painted out (a capture composites any DOM over the canvas), and frame-on-open set
- * explicitly. `canvas2DFrame` is the project-viewport rect, which widens the window only when it
- * does not fit the default one. `viewport` is the 3D window, which a scene shrinks to render a
- * small frame, and a 2D context ignores it. `showPerformance` turns the frame profile on, and its
- * overlay is painted out too. `showGizmos` turns the editor gizmos on. They are off by default, so no
- * golden or comparison capture draws one that Godot's running game does not. `inGameFrame` is the
- * window of the game: the context opens the In-game mode with a canvas of that size.
+ * A context that renders only the scene: the source pane closed and the floating chrome painted out.
+ * @param {import('playwright').Browser} browser
+ * @param {object} options
+ * @param {boolean} options.frameOnOpen set explicitly, never left to the app's default
+ * @param {boolean} [options.canvas2D] open the 2D workspace
+ * @param {{ width: number, height: number } | null} [options.canvas2DFrame] the project-viewport rect,
+ *   which widens the window only when it does not fit the default one
+ * @param {{ width: number, height: number }} [options.viewport] the 3D window, which a 2D context ignores
+ * @param {boolean} [options.showPerformance] turn the frame profile on, its overlay painted out too
+ * @param {boolean} [options.showGizmos] turn the editor gizmos on: off by default, as in Godot's running game
+ * @param {{ width: number, height: number } | null} [options.inGameFrame] the game window: the context
+ *   opens the In-game mode with a canvas of that size
  */
 export async function createCaptureContext(
   browser,

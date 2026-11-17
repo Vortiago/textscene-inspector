@@ -1,10 +1,3 @@
-/**
- * The browser pages a run captures on, one per distinct kind of scene: the framed 3D view, the 2D
- * parity frame, a 3D view per `canvas` size, and the In-game mode per game window. A page opens before the first scene and closes
- * after the last scene that needs it, so a small-frame context does not outlive its scenes. A scene
- * that sets `gizmos: true` gets a page of its own kind, since the toggle is set when the context opens.
- */
-
 import {
   attachDiagnostics,
   CANVAS_CAPTURE,

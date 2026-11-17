@@ -14,7 +14,7 @@ import { generateWebviewHtml, generateNonce, type WebviewInitialConfig } from '.
 function initialConfig(): WebviewInitialConfig {
   const viewportMode = vscode.workspace
     .getConfiguration('textscene')
-    .get<'auto' | '2D' | '3D'>('defaultViewportMode', 'auto');
+    .get<'auto' | '2D' | '3D' | 'in-game'>('defaultViewportMode', 'auto');
   return { viewportMode };
 }
 

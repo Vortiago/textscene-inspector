@@ -160,8 +160,7 @@ export async function diffOne(
   });
   const godotBuffer = await readFile(godotOut);
 
-  // The reference is the project-viewport rect our 2D stage lays out at 1:1, and the game window
-  // our In-game mode fills, so it sizes the capture, with nothing re-derived on this side.
+  // The reference sizes the capture: the rect our 2D stage lays out at 1:1, or the window In-game fills.
   const canvas2D = mode === '2d';
   const reference = PNG.sync.read(godotBuffer);
   const referenceFrame = { width: reference.width, height: reference.height };

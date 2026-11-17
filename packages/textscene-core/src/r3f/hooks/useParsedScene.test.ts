@@ -1,4 +1,3 @@
-/** The hook's memoisation of the parse. */
 import { describe, expect, it } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useParsedScene } from './useParsedScene.js';

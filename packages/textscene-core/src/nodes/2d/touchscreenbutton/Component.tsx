@@ -1,10 +1,3 @@
-/**
- * Draws a TouchScreenButton's `texture_normal` as a Sprite2D's uncentred quad at the node origin. The
- * editor draws it whatever `visibility_mode` says. The game draws a touch-screen-only button only on
- * a touch screen. No finger is down, so `texture_pressed` never shows (`touch_screen_button.cpp:136-155`). The Sprite2D root stays mounted with no texture set, so a
- * live edit does not remount the children.
- */
-
 import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import type { TscnNode } from '../../../parser/types';
@@ -22,6 +15,7 @@ function asUncentredSprite(
 ): TscnNode {
   const sprite: Sprite2DProperties = {
     ...props,
+    // The texture unsets, not the node, so a live edit keeps the children mounted.
     texture: drawsTexture ? props.texture_normal : undefined,
     centered: false,
     offset: { x: 0, y: 0 },
@@ -43,6 +37,7 @@ function hasTouchScreen(): boolean {
 export function TouchScreenButton({ node, children }: NodeComponentProps) {
   const props = node.properties as TouchScreenButtonProperties;
   const isEditorHint = useIsEditorHint();
+  // No finger is down, so `texture_pressed` never shows (`touch_screen_button.cpp:136-155`).
   const drawsTexture =
     isEditorHint ||
     props.visibility_mode !== TouchScreenButtonVisibilityMode.TOUCHSCREEN_ONLY ||

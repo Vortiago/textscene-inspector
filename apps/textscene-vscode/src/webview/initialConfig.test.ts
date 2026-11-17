@@ -18,6 +18,10 @@ describe('resolveInitialViewportMode', () => {
   it('passes through an explicit "3D" override', () => {
     expect(resolveInitialViewportMode({ viewportMode: '3D' })).toBe('3D');
   });
+
+  it('passes through an explicit "in-game" override', () => {
+    expect(resolveInitialViewportMode({ viewportMode: 'in-game' })).toBe('in-game');
+  });
 });
 
 describe('readInitialConfig', () => {

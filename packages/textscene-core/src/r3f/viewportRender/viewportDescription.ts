@@ -30,10 +30,7 @@ export interface ViewportDescription {
   drawsEditorChrome: boolean;
   /** Whether the editor's preview sun and preview Environment stand in (ADR-0025). */
   previewsEnvironment: boolean;
-  /**
-   * The `res://` Environment the viewport's own world draws with when no WorldEnvironment holds
-   * one. Godot sets it on the root's world only (`renderer_scene_cull.cpp:3608-3610`).
-   */
+  /** Drawn when no WorldEnvironment holds one, set on the root only (`renderer_scene_cull.cpp:3608-3610`). */
   fallbackEnvironment: string | null;
 }
 

@@ -1,10 +1,4 @@
 #!/usr/bin/env node
-/**
- * `pnpm test:renderer-consumer`: installs the packed `@textscene/renderer`
- * into a plain Vite React app with its own React and three.js, type-checks and builds the app,
- * and renders a fixture scene in headless Chromium, in the editor's 3D view and in the In-game mode. The app sets no `@textscene/source`
- * condition and no CSS-module support, so a bundle that needs either fails here.
- */
 import { cpSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -20,10 +14,7 @@ import { consumerManifest } from './consumerManifest.mjs';
 
 const APP_DIR = join(import.meta.dirname, 'app');
 
-/**
- * The fixture's cube fills about a fifth of its 320 x 240 viewport in either view. A blank canvas
- * scores 0.
- */
+/** The cube fills about a fifth of the 320 x 240 viewport in either view, and a blank canvas scores 0. */
 const INK_FLOOR = 2000;
 /** Software GL draws the first frame slowly. */
 const RENDER_TIMEOUT_MS = 90_000;
@@ -69,10 +60,7 @@ function buildConsumer(directory) {
 /** The views the app draws, by the query that opens each. */
 const VIEWS = { '3D': '', 'In-game': '?mode=in-game' };
 
-/**
- * What each view drew in the viewport, and what it threw, by view. Polls, since software GL is
- * slow.
- */
+/** What each view drew and threw. It polls, since software GL is slow. */
 async function renderInBrowser(directory) {
   const { port } = previewPort('rendererConsumer');
   const server = await preview({

@@ -1,8 +1,3 @@
-/**
- * `<TscnCanvas>`, the one view of a scene, in a mode: the game's start, or the editor's 3D view of
- * the scene in `HierarchyContext` with its resources in scope and the camera the user picks. With
- * no scene loaded, the 3D view renders an empty canvas with default lighting.
- */
 import { Canvas } from '@react-three/fiber';
 import { lazy, Suspense } from 'react';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
@@ -119,10 +114,7 @@ function EmptySceneIndicator() {
 
 const GameView = lazy(() => import('./gameView/GameView.js').then((m) => ({ default: m.GameView })));
 
-/**
- * How the view draws the scene: `in-game` as the game starts it with no script run, `3D` as the
- * editor's 3D view shows it.
- */
+/** `in-game` draws the scene as the game starts it with no script run, `3D` as the editor's 3D view. */
 export type TscnCanvasMode = 'in-game' | '3D';
 
 export interface TscnCanvasProps {

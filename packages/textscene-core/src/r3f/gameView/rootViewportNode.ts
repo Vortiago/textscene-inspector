@@ -1,19 +1,10 @@
-/**
- * The root viewport of a game as a node: the Viewport `SceneTree` sets up from the project
- * (`scene/main/scene_tree.cpp:2079-2110`), with the scene's root as its one child. The pass a
- * SubViewport draws through draws it.
- */
-
 import type { TscnNode } from '../../parser/types.js';
 import type { ProjectSettings } from '../../parser/projectSettingsParser.js';
 import { projectViewportSize } from '../../parser/projectSettingsParser.js';
 import { parseSubViewport } from '../../nodes/viewport/subviewport/parser.js';
 import { SubViewportUpdateMode } from '../../godot/scene/viewport.js';
 
-/**
- * The empty name makes the root's path the empty path, so `joinPath` gives each node below the path
- * the dispatcher gives it.
- */
+/** Empty, so `joinPath` gives each node below the path the dispatcher gives it. */
 export const ROOT_VIEWPORT_PATH = '';
 
 /** The project settings the root takes as Viewport properties, by the property each sets. */

@@ -1,7 +1,3 @@
-/**
- * The root's world falls back to the Environment the project's `default_environment` names, a
- * `res://` file no scene holds.
- */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useFallbackEnvironment } from './fallbackEnvironment';

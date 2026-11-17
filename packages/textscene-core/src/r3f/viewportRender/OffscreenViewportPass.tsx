@@ -91,7 +91,7 @@ export interface OffscreenViewportPassProps extends NodeComponentProps {
   canvasOverWorld: ReactNode | null;
   /** Whether the subtree holds a 2D item, which the viewport's World2D lights. */
   holdsCanvasItems: boolean;
-  /** What the viewport gives each render: a SubViewport's from its properties, the root's from the project. */
+  /** A SubViewport's from its properties, the root's from the project. */
   viewport: ViewportDescription;
 }
 

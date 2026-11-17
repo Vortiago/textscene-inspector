@@ -1,7 +1,3 @@
-/**
- * The view's mode picks the stage it mounts, and a scene given to the view needs no provider
- * around it. A happy-dom render creates no WebGL context, so a stand-in canvas marks each stage.
- */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { TscnCanvas } from './TscnCanvas';

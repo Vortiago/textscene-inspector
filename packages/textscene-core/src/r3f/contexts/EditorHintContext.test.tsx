@@ -1,4 +1,3 @@
-/** Where the game runs, the toolbar's toggles read as the game draws and no editor-only node draws. */
 import { describe, expect, it } from 'vitest';
 import type { ReactNode } from 'react';
 import { renderHook } from '@testing-library/react';

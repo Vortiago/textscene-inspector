@@ -62,12 +62,7 @@ export function usePublishCamera(path: string, current: boolean, held: CameraRes
   );
 }
 
-/**
- * The camera a viewport renders through, by the camera rule of its description. The editor's
- * renders through the previewed camera, whichever world holds it (`previewed`), and through none
- * without a preview, since the editor camera holds no attributes. A game's viewport elects one of its
- * own (`electCameraOfViewport`).
- */
+/** The editor renders through the previewed camera or none, since its own holds no attributes. */
 function renderCameraOf(
   rule: ViewportDescription['camera'],
   viewedPath: string | null,

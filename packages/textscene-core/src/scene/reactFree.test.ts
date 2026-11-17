@@ -1,8 +1,3 @@
-/**
- * Keeps the scene free of React and three.js, so it exists before any view and a page with no
- * React can hold one.
- */
-
 import { describe, expect, it } from 'vitest';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';

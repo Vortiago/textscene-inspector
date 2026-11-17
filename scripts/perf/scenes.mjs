@@ -1,9 +1,6 @@
 /**
- * The scenes whose work the budget check holds: one per render step that can run many times in a
- * frame, and larger demo scenes that run several steps together. A demo joins only when software GL
- * draws it at a frame or more a second: the 3D lights and material tester demos take seconds a
- * frame. `name` keys the scene's entry in budgets.json. `file` means what it means in
- * scripts/visual/scenes.mjs.
+ * Steps that can run many times a frame, and demos software GL draws at a frame a second or more.
+ * @type {Array<{ name: string, file: string, inGameFrame?: { width: number, height: number } }>}
  */
 export const BUDGET_SCENES = [
   { name: 'depth-fog', file: 'unit-depth-fog.tscn' },
@@ -14,4 +11,9 @@ export const BUDGET_SCENES = [
   { name: 'modulate-200-sprites', file: 'perf-modulate-200-sprites.tscn' },
   { name: 'demo-3d-platformer', file: 'demos/3d/platformer/game.tscn' },
   { name: 'demo-2d-lights-and-shadows', file: 'demos/2d/lights_and_shadows/light_shadows.tscn' },
+  {
+    name: 'in-game-camera3d',
+    file: 'in-game/unit-in-game-camera3d.tscn',
+    inGameFrame: { width: 320, height: 180 },
+  },
 ];

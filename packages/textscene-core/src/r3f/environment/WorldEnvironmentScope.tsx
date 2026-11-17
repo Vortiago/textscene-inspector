@@ -269,13 +269,11 @@ function useViewEnvironment(world: EnvironmentResolution | null): EnvironmentRes
   return replacesWorld(camera) ? camera : world;
 }
 
-/**
- * The world's Environment: its first valid WorldEnvironment's, else the viewport's fallback
- * (`renderer_scene_cull.cpp:3604-3610`). A WorldEnvironment that loads holds its place.
- */
+/** The first valid WorldEnvironment's, else the fallback (`renderer_scene_cull.cpp:3604-3610`). */
 function useWorldEnvironment(): EnvironmentResolution | null {
   const chosen = environments.useChosen();
   const fallback = useFallbackEnvironment();
+  // A loading WorldEnvironment holds its place.
   return chosen && chosen.status !== 'none' ? chosen : fallback;
 }
 

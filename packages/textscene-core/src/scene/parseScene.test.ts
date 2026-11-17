@@ -1,7 +1,3 @@
-/**
- * The parse of a scene's text: the happy path, both error paths (zero-node salvage and a parser
- * throw) and empty content.
- */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TscnParser } from '../parser/TscnParser.js';
 import { parseTscnContent } from './parseScene.js';

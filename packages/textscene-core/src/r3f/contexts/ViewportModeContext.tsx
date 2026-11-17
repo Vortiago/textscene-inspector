@@ -1,10 +1,3 @@
-/**
- * How the centre viewport shows the scene (ADR-0006). `'3D'` mounts the R3F
- * canvas, `'2D'` the Control overlay, `'in-game'` the root viewport as the game draws it. The default (3D, collisions off, labels
- * on, gizmos on, grid off, fog on, performance off) needs no provider, and the host layers
- * persistence on top.
- */
-
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 import { useIsEditorHint } from './EditorHintContext';
 
@@ -203,21 +196,14 @@ export function ViewportModeProvider({
   );
 }
 
-/**
- * The viewport mode and the overlay toggles. Safe without a provider. Where the game runs, the
- * toggles read as the game draws, whatever the toolbar holds.
- */
+/** Safe without a provider. Where the game runs, the toggles read as the game draws. */
 export function useViewportMode(): ViewportModeValue {
   const value = useContext(ViewportModeContext);
   const isEditorHint = useIsEditorHint();
   return useMemo(() => (isEditorHint ? value : runningGameToggles(value)), [isEditorHint, value]);
 }
 
-/**
- * The game draws no editor overlay and no preview. It draws every Label3D and every fog, which only
- * the editor's toolbar hides. Godot draws a debug overlay in a game only under a debug hint, and
- * each hint is off by default (`scene/main/scene_tree.h:142-144`).
- */
+/** The game draws no overlay or preview, and every Label3D and fog (`scene/main/scene_tree.h:142-144`). */
 function runningGameToggles(value: ViewportModeValue): ViewportModeValue {
   return {
     ...value,

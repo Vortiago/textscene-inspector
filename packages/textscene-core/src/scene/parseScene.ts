@@ -1,7 +1,3 @@
-/**
- * The text of a scene as the scene graph a view draws, or the reason it is not one. Pure, so it
- * runs with no view and no React.
- */
 import { TscnParser } from '../parser/TscnParser.js';
 import { tscnSceneToParsedScene, buildSceneGraph } from '../core/SceneGraph.js';
 import type { SceneGraph } from '../core/SceneGraph.js';
@@ -15,9 +11,7 @@ export interface ParseResult {
 }
 
 export function parseTscnContent(content: string, rootScenePath: string): ParseResult {
-  // A top-level .glb/.gltf is not TSCN text. Synthesise the single GLBSceneRoot that
-  // createSceneProcessor's instanced path uses. The node fetches the bytes through
-  // useResource('GLBMesh').
+  // A .glb/.gltf is not TSCN text, so one GLBSceneRoot stands in and fetches the bytes itself.
   if (isGltfPath(rootScenePath)) {
     return toParseResult(rootScenePath, synthesiseGLBScene(rootScenePath));
   }
@@ -28,8 +22,7 @@ export function parseTscnContent(content: string, rootScenePath: string): ParseR
     const parser = new TscnParser();
     const tscnScene = parser.parse(content);
 
-    // The lenient `TscnParser` salvages what it can. Text that yields zero nodes is probably a
-    // broken file, so it is an error rather than "No nodes to display".
+    // Text the lenient parser salvages to zero nodes is a broken file, not "No nodes to display".
     if (tscnScene.nodes.length === 0 && content.trim().length > 0) {
       return {
         sceneGraph: null,

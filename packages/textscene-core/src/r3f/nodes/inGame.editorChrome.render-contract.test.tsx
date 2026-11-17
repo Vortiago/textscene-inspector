@@ -1,8 +1,3 @@
-/**
- * Where the game runs, no node draws an editor element, whatever the toolbar holds and whatever is
- * selected. Every registered type draws as the editor draws it with every editor overlay off: no
- * gizmo, icon, collision, navigation or helper, in the world and in the canvas.
- */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import type { ReactNode } from 'react';

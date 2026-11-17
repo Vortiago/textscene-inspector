@@ -1,7 +1,3 @@
-/**
- * A Light3D with `editor_only` lights the editor's views and gives no light where the game runs
- * (`scene/3d/light_3d.cpp:287-288`). three.js gathers no light it does not see.
- */
 import { describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
 import type { ReactNode } from 'react';

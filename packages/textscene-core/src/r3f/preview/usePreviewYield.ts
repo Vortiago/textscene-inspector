@@ -1,8 +1,3 @@
-/**
- * Which editor previews the live scene leaves in place, under the user's toolbar toggles (ADR-0025),
- * in a viewport whose description lets the editor preview at all.
- */
-
 import { useMemo } from 'react';
 import { useViewportMode } from '../contexts/ViewportModeContext';
 import { useViewportDescription } from '../viewportRender/viewportDescriptionContext';

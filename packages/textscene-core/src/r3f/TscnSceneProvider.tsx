@@ -1,9 +1,3 @@
-/**
- * `<TscnSceneProvider>` mounts the contexts `<TscnCanvas>` reads, from an open scene, or from the
- * text of a scene and a `ResourceProvider`, which it opens itself. It is the preview shell's
- * provider stack with the shell's defaults, so a canvas inside it behaves as the shell's canvas
- * does, with none of the shell's UI around it.
- */
 import { useId, useLayoutEffect, useMemo, useSyncExternalStore, type ReactNode } from 'react';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext.js';

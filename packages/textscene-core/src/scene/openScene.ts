@@ -1,8 +1,3 @@
-/**
- * The scene a host opens: one object that owns the parse of a text and the provider its files load
- * through, before any view and with no React. Every view of the scene reads it from here.
- */
-
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { parseTscnContent, type ParseResult } from './parseScene.js';
 
