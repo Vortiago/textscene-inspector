@@ -1,4 +1,4 @@
-/** The writers whose values lie over the file, lowest first: the host's `set`, then a playing animation. */
+/** The writers whose values lie over the file, lowest first: the host's `set`, then the animated patch. */
 const WRITE_LAYERS = ['host', 'animated'] as const;
 
 export type WriteLayer = (typeof WRITE_LAYERS)[number];

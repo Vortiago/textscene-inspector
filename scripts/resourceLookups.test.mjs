@@ -22,7 +22,7 @@ const LAYER = new Set([
   'resources/subResourcePath.ts',
   'resources/rehomeOverride.ts',
   'resources/authoredSpelling.ts',
-  'r3f/hooks/useInstancedScene.ts',
+  'resources/registerInstanceResource.ts',
   'resources/loadFailure/failingReads.ts',
 ]);
 

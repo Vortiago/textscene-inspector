@@ -60,7 +60,7 @@ export class SceneNodes implements HandleHost {
     if (!tree) return null;
     const found = getNodeOrNull(this.walkedTree(tree), from, path);
     // A child whose scene has not loaded is listed by its parent, but Godot has no node there yet.
-    return found === null || this.typeOf(found) === null ? null : this.handleAt(found);
+    return found === null || this.typeOf(found, tree) === null ? null : this.handleAt(found);
   }
 
   /** `get_node` from the scene's root node. */
@@ -75,9 +75,9 @@ export class SceneNodes implements HandleHost {
     return root ? this.find(root, path) : null;
   }
 
-  typeOf(path: string): string | null {
+  typeOf(path: string, tree = this.source.tree()): string | null {
     if (path === ROOT_WINDOW_PATH) return ROOT_WINDOW_TYPE;
-    return this.nodeAt(path)?.type ?? null;
+    return this.nodeAt(path, tree)?.type ?? null;
   }
 
   childPaths(path: string): readonly string[] {
@@ -133,22 +133,23 @@ export class SceneNodes implements HandleHost {
     return { access, node };
   }
 
-  private nodeAt(path: string): SceneTreeNode | null {
+  /** One walk reads one tree: building the Live scene tree per step makes a deep lookup quadratic. */
+  private nodeAt(path: string, tree = this.source.tree()): SceneTreeNode | null {
     if (!path.startsWith(ROOT_WINDOW_PREFIX)) return null;
-    return this.source.tree()?.node(livePathOf(path)) ?? null;
+    return tree?.node(livePathOf(path)) ?? null;
   }
 
-  private childNames(path: string): readonly string[] | null {
+  private childNames(path: string, tree = this.source.tree()): readonly string[] | null {
     if (path === ROOT_WINDOW_PATH) {
       const root = this.rootPath();
       return root ? [livePathOf(root)] : [];
     }
-    return this.nodeAt(path)?.childNames ?? null;
+    return this.nodeAt(path, tree)?.childNames ?? null;
   }
 
   private walkedTree(tree: SceneTree): WalkedTree {
     return {
-      childNames: (path) => this.childNames(path),
+      childNames: (path) => this.childNames(path, tree),
       uniquePaths: (path) => {
         if (!path.startsWith(ROOT_WINDOW_PREFIX)) return new Map();
         const live = tree.uniquePaths(livePathOf(path));

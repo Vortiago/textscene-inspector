@@ -47,6 +47,9 @@ text = "Score"
 [node name="Popup" type="Window" parent="."]
 
 [node name="Cast" type="ShapeCast3D" parent="."]
+
+[node name="Music" type="AudioStreamPlayer" parent="."]
+volume_db = -6.0
 `;
 
 const sceneOfNodes = () => openScene({ source: NODES, provider, rootScenePath: 'res://main.tscn' });
@@ -118,6 +121,25 @@ describe('a setter that writes more than its own property', () => {
     const hud = sceneOfNodes().getNode('Hud');
     await hud.set('anchor_right', 0.75);
     expect(await hud.get('anchor_left')).toBe(0);
+  });
+});
+
+describe('a setter that refuses the value', () => {
+  it('keeps the volume where a linear volume has no level in decibels, as Godot refuses NaN', async () => {
+    const music = sceneOfNodes().getNode('Music');
+    await music.set('volume_linear', -1);
+    expect(await music.get('volume_db')).toBe(-6);
+  });
+});
+
+describe('a resource from scene.load', () => {
+  it.each([
+    ['a shader', 'res://glow.gdshader'],
+    ['a shader include', 'res://lib.gdshaderinc'],
+    ['a JSON file', 'res://levels.json'],
+  ])('refuses %s where the property takes another class', async (_kind, path) => {
+    const scene = sceneOfNodes();
+    expect(await scene.getNode('Hud').set('material', await scene.load(path))).toBe(false);
   });
 });
 

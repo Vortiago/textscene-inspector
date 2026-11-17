@@ -12,6 +12,8 @@ export class VolumeLinearProperties implements DerivedProperties {
 
   set(property: string, value: VariantValue): readonly StoredWrite[] | undefined {
     if (property !== 'volume_linear') return undefined;
-    return [['volume_db', realValue(linearToDb(numberOf(value)))]];
+    const db = linearToDb(numberOf(value));
+    // `set_volume_db` refuses NaN and keeps the volume (`audio_stream_player.cpp:69-71`).
+    return Number.isNaN(db) ? [] : [['volume_db', realValue(db)]];
   }
 }

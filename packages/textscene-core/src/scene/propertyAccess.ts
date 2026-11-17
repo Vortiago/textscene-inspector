@@ -42,7 +42,9 @@ export interface StoredTexts {
 /** A stored property as the setters read it: the last write, else the file, else the class default. */
 export function storedValueOf({ node, written, nodeReading, writtenReading }: StoredTexts): StoredValue {
   const raw = canonicalisePropertyBag(node.type, { ...node.rawProperties });
-  return (property) => {
+  // One parse per property for each call: a setter such as `global_position` reads one many times.
+  const values = new Map<string, VariantValue>();
+  const valueOf = (property: string): VariantValue => {
     const isWritten = Object.hasOwn(written, property);
     const text = isWritten
       ? written[property]
@@ -53,6 +55,11 @@ export function storedValueOf({ node, written, nodeReading, writtenReading }: St
     const stored = findClassProperty(node.type, property);
     const value = strToVar(text, isWritten ? writtenReading : nodeReading);
     return stored ? castVariant(value, valueTypeOf(stored)) : value;
+  };
+  return (property) => {
+    let value = values.get(property);
+    if (value === undefined) values.set(property, (value = valueOf(property)));
+    return value;
   };
 }
 
