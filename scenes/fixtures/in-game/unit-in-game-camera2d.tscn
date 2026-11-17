@@ -1,0 +1,26 @@
+[gd_scene format=3]
+
+; The In-game mode draws a 2D scene through its Camera2D, and the camera's `offset` moves the view
+; (`camera_2d.cpp:254`). A CanvasLayer draws its bar at the top of the window, apart from the camera.
+
+[node name="Main" type="Node2D"]
+
+[node name="Square" type="Polygon2D" parent="."]
+color = Color(0.2, 0.6, 0.9, 1)
+polygon = PackedVector2Array(0, 0, 60, 0, 60, 60, 0, 60)
+
+[node name="Triangle" type="Polygon2D" parent="."]
+position = Vector2(100, 20)
+color = Color(0.9, 0.3, 0.3, 1)
+polygon = PackedVector2Array(0, 40, 30, 0, 60, 40)
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(80, 30)
+offset = Vector2(-20, 10)
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="Bar" type="ColorRect" parent="HUD"]
+offset_right = 320.0
+offset_bottom = 16.0
+color = Color(0.1, 0.1, 0.1, 0.8)

@@ -2,14 +2,15 @@
  * The golden-scene manifest: WebGL-canvas scenes only, with no 2D DOM overlay, so the image depends
  * on the renderer alone. A resource load must resolve from local fixtures and settle (`arraymesh`,
  * `decal`). `file` is the fixture filename exactly as in apps/textscene-web/src/fixtures.ts. An
- * entry may set `mode: '2d'`, `collisions: true`, `navigation: true`, `gizmos: true`, which turns the
- * Gizmos toggle on (off in every other capture), `select: <node path>`,
- * `camera: <Camera3D node path>`, which the previewer looks through as `?camera=` opens it, or
- * `canvas: { width, height }`, the 3D canvas size a small frame renders at, or `settleTimeout: <ms>`,
- * each screenshot's limit where one frame outlasts Playwright's default. `pnpm recapture` takes the
- * same limit for the sheet image of the scene's fixture. `animationTime: <seconds>` seeks the
- * AnimationPlayer that `select` names to that time before the shot. `litSurface: 'nodes'` captures
- * a branch only the node lit surface draws, with the switch on.
+ * entry may set `mode: '2d'` or `mode: 'in-game'`, `collisions: true`, `navigation: true`,
+ * `gizmos: true`, which turns the Gizmos toggle on (off in every other capture),
+ * `select: <node path>`, `camera: <Camera3D node path>`, which the previewer looks through as
+ * `?camera=` opens it, or `canvas: { width, height }`, the 3D canvas size a small frame renders at
+ * or the In-game window, or `settleTimeout: <ms>`, each screenshot's limit where one frame outlasts
+ * Playwright's default. `pnpm recapture` takes the same limit for the sheet image of the scene's
+ * fixture. `animationTime: <seconds>` seeks the AnimationPlayer that `select` names to that time
+ * before the shot. `litSurface: 'nodes'` captures a branch only the node lit surface draws, with
+ * the switch on.
  */
 
 import { GEOMETRY_SCENES } from './scenes/geometry.mjs';
@@ -24,6 +25,7 @@ import { LIGHTING_2D_SCENES } from './scenes/lighting2d.mjs';
 import { PARTICLES_2D_SCENES } from './scenes/particles2d.mjs';
 import { MATERIAL_SCENES } from './scenes/materials.mjs';
 import { TILE_AND_TARGET_SCENES } from './scenes/targets.mjs';
+import { IN_GAME_SCENES } from './scenes/inGame.mjs';
 
 /** The 2D chapters list scenes that all capture in 2D mode, so a chapter entry leaves `mode` out. */
 const in2dMode = (scenes) => scenes.map((scene) => ({ mode: '2d', ...scene }));
@@ -64,4 +66,5 @@ export const GOLDEN_SCENES = [
   ...in2dMode(PARTICLES_2D_SCENES),
   ...MATERIAL_SCENES,
   ...TILE_AND_TARGET_SCENES,
+  ...IN_GAME_SCENES,
 ];

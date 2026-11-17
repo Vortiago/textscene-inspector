@@ -1,0 +1,14 @@
+; A res:// root of its own, because the In-game mode draws the root viewport at the PROJECT's
+; window size, which no .tscn can carry. A small window keeps each golden small.
+
+config_version=5
+
+[application]
+
+config/name="In-game"
+config/features=PackedStringArray("4.6")
+
+[display]
+
+window/size/viewport_width=320
+window/size/viewport_height=180
