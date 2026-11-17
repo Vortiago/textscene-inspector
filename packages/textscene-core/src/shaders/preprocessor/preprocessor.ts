@@ -348,5 +348,3 @@ class FilePreprocessor {
     return text;
   }
 }
-
-export type { RenderingMethod } from './renderingMethod.js';

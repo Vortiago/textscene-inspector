@@ -12,7 +12,7 @@ import {
 } from '../godot/string/string.js';
 import { boolSlotValue } from '../godot/variant/variantBool.js';
 import type { ProjectSampling } from '../shaders/uniforms/samplerState.js';
-import type { RenderingMethod } from '../shaders/preprocessor/preprocessor.js';
+import type { RenderingMethod } from '../shaders/preprocessor/renderingMethod.js';
 import { dataDirectoryPath, extensionListPath } from '../godot/project/project.js';
 import { standardizeLocale } from '../godot/text/standardizeLocale.js';
 import { isLocaleRightToLeft } from '../godot/text/textServer.js';

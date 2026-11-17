@@ -11,7 +11,7 @@ export function useProjectShaderOptions(code: string | null): ProjectShaderOptio
   const decoders = useShaderDecoders(code);
   const gl = useThree((state) => state.gl);
   const { settings } = useProjectSettings();
-  const renderingMethod = useMemo(() => projectRenderingMethod(settings), [settings]);
+  const renderingMethod = projectRenderingMethod(settings);
   return useMemo(
     () => decoders && projectShaderOptionsOf(decoders, rendererShaderOptions(gl, renderingMethod)),
     [decoders, gl, renderingMethod]

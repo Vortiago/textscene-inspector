@@ -2,7 +2,7 @@ import { convertedScalar } from './constants.js';
 import { instruction, keywordInstruction } from './instructions.js';
 import type { InstructionRow } from './instructionTable.generated.js';
 import type { ExpressionParser } from './parseExpression.js';
-import type { RenderingMethod } from '../preprocessor/preprocessor.js';
+import type { RenderingMethod } from '../preprocessor/renderingMethod.js';
 import type { Identifier } from './scope.js';
 import type { SourcePosition } from './shadingLanguageError.js';
 import type { Scalar, UniformHint, UniformNode, UniformScope, ValueType } from './shaderTree.js';

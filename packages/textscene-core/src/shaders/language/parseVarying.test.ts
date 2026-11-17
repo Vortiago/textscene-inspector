@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { RenderingMethod } from '../preprocessor/preprocessor.js';
+import type { RenderingMethod } from '../preprocessor/renderingMethod.js';
 import { parsedShader } from './parseShader.js';
 
 const TOO_MANY = /Too many varyings used in shader \(33 used, maximum supported is 32\)/;
