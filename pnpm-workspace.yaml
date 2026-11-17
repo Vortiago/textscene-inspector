@@ -45,8 +45,6 @@ catalog:
   '@types/react': ^19.3
   '@types/react-dom': ^19.3
   '@react-three/fiber': ^9.8.2
-  '@react-three/drei': ^10.7.9
-  postprocessing: ^6.39.6
   '@react-three/test-renderer': ^9.1.1
   # ^6 targets vite ^8 exclusively, the workspace's vite pin.
   '@vitejs/plugin-react': ^6.2.1
@@ -83,8 +81,7 @@ catalog:
   # Real CSG boolean evaluation (ADR-0026). three-bvh-csg is used DIRECTLY rather
   # than via @react-three/csg, whose latest release hard-pins three-bvh-csg ^0.0.16
   # and three-mesh-bvh ^0.6.8, both below what three-bvh-csg requires of the pinned three.
-  # three-mesh-bvh is a DIRECT dependency so pnpm satisfies the peer with this
-  # version rather than resolving to drei's nested 0.8.3.
+  # three-mesh-bvh is a direct dependency, since three-bvh-csg names it as a peer.
   three-bvh-csg: ^0.0.18
   three-mesh-bvh: ^0.9.18
 

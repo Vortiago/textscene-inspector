@@ -1,1 +1,4 @@
+; The empty canvas: no nodes, so the canvas draws only its ground grid and the prompt to load a
+; scene. No other scene shows the prompt, so this one golden owns it.
+
 [gd_scene format=3]

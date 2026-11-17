@@ -71,10 +71,7 @@ const extensionWebOptions = {
 const webviewOptions = {
   entryPoints: ['src/webview/webview.ts'],
   bundle: true,
-  // ESM, not iife, because only ESM code-splits: the DOM panels and their
-  // drei/three.js dependencies load on demand as chunks/<panel>-<hash>.js beside
-  // the initial webview.js and webview.css. The HTML loads it as a module script,
-  // and the CSP allows the chunks through `script-src ${cspSource}` (webviewHtml.ts).
+  // ESM, not iife: only ESM code-splits, so the panels load on demand as chunks/<panel>-<hash>.js.
   outdir: 'dist/webview',
   entryNames: '[name]',
   chunkNames: 'chunks/[name]-[hash]',

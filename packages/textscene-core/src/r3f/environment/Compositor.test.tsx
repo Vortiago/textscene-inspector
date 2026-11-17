@@ -102,13 +102,10 @@ function namesOf(draws: Draw[]): (string | null)[] {
   return draws.map(({ bound }) => bound?.texture.name ?? null);
 }
 
-/**
- * Whether the tonemap effect, which the frame's last draw writes onto the canvas, names `name`. The
- * effect pass prefixes each name of an effect's shader and capitalises it, so case is ignored.
- */
+/** Whether the tonemap pass, which the frame's last draw writes onto the canvas, names `name`. */
 function canvasShaderNames(draws: Draw[], name: string): boolean {
-  const quad = draws.at(-1)?.scene.children[0] as THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>;
-  return quad.material.fragmentShader.toLowerCase().includes(name.toLowerCase());
+  const quad = draws.at(-1)?.scene as THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>;
+  return quad.material.fragmentShader.includes(name);
 }
 
 const GLOW_LEVEL_0 = 'GodotGlow.Level0';
