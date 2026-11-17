@@ -35,14 +35,14 @@ export interface SamplerContext {
 export type SamplerValue = Texture | readonly (Texture | null)[] | null;
 
 /** A cube read with the direction as Vulkan and GL define it: three mirrors x for its own cubes. */
-export class GodotCubeNode extends CubeTextureNode {
+class GodotCubeNode extends CubeTextureNode {
   /** three's `CubeTextureNode.setupUV`, which its types leave out. */
   setupUV(_builder: NodeBuilder, uvNode: Node): Node {
     return uvNode;
   }
 }
 
-export function textureKind(type: ValueType): TextureKind {
+function textureKind(type: ValueType): TextureKind {
   if (type === 'samplerCube' || type === 'samplerCubeArray') return 'cube';
   if (type.endsWith('sampler3D')) return 'volume';
   if (type.endsWith('sampler2DArray')) return 'layers';

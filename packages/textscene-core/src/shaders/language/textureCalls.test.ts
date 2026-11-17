@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CubeTexture,
   Data3DTexture,
   DataArrayTexture,
   DataTexture,
@@ -15,7 +14,10 @@ import { builtInCall } from './emitBuiltIn.js';
 import { instruction } from './instructions.js';
 import { SamplerChoice } from './textureCalls.js';
 import { levelCountOf } from './textureQueries.js';
-import { GodotCubeNode } from '../uniforms/samplerUniform.js';
+import { treeOf } from './parsedTree.testkit.js';
+import { GODOT_SAMPLING } from '../uniforms/samplerState.js';
+import { SAMPLER_DEFAULTS } from '../uniforms/samplerTextures.js';
+import { SamplerBinding } from '../uniforms/samplerUniform.js';
 
 const flat = () => texture(new DataTexture(new Uint8Array(4), 1, 1)) as unknown as Node;
 const layers = () => texture(new DataArrayTexture(new Uint8Array(4), 1, 1, 1)) as unknown as Node;
@@ -128,7 +130,9 @@ describe('builtInCall of a texture function', () => {
   });
 
   it('gathers a cube texture from the four texel centres of the face the direction picks', () => {
-    const cube = new GodotCubeNode(new CubeTexture() as never) as unknown as Node;
+    const declaration = treeOf('uniform samplerCube s;').uniforms[0]!;
+    const context = { defaults: SAMPLER_DEFAULTS.spatial!, sampling: GODOT_SAMPLING, useLinearColor: false };
+    const cube = new SamplerBinding(declaration, context).value as unknown as Node;
     const glsl = glslOf('textureGather(samplerCube,vec3)', [cube, vec3(1, 0.2, -0.3) as unknown as Node]);
     expect(glsl.match(/textureLod\( nodeUniform/g)).toHaveLength(4);
   });
