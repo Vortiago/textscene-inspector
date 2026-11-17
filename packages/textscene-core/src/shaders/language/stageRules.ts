@@ -1,7 +1,3 @@
-/**
- * Godot's rules of the processor functions: the signature of each, `return` and `discard` in them,
- * the stage functions, and what `vertex` may not reach through the functions it calls.
- */
 import {
   FRAGMENT_ONLY_FUNCTIONS,
   INSTRUCTION_TABLE,
@@ -36,6 +32,7 @@ export interface StageContext {
   varyingStage(name: string): string | undefined;
 }
 
+/** Godot's rules of the processor functions, and what `vertex()` may reach through its calls. */
 export class StageRules {
   /** Written only by `begin`, `current` and the uses: an entry for each function declared so far. */
   private readonly calls = new Map<string, CallInfo>();
@@ -86,10 +83,7 @@ export class StageRules {
     this.use(name, true);
   }
 
-  /**
-   * A call of `target`, Godot's name of the function called, after its arguments and before Godot
-   * matches them (`shader_language.cpp:6280`).
-   */
+  /** A call of `target`, Godot's name of the callee, before Godot matches its arguments (:6280). */
   call(target: string): void {
     const current = this.current();
     if (target === current.name) return;
@@ -113,7 +107,7 @@ export class StageRules {
       this.checkRestricted(target, current, isBuiltIn);
   }
 
-  /** A call of a stage function, `emit_subparticle`, of any stage of the type (`shader_language.cpp:3594`). */
+  /** A call of a stage function, `emit_subparticle`, of any stage of the type (:3594). */
   stageCall(name: string, args: readonly Expression[], position: SourcePosition): CallNode | undefined {
     const row = this.stageFunctionRow(name);
     if (!row) return undefined;
@@ -177,7 +171,7 @@ export class StageRules {
     this.current().uses.push({ name, isVarying, mark: this.tokens.mark() });
   }
 
-  /** Outside a function, the entry of the empty name, which Godot's \`calls_info[current_function]\` makes. */
+  /** Outside a function, the entry of the empty name, as `calls_info[current_function]` makes it. */
   private current(): CallInfo {
     const name = this.context.currentFunction() ?? '';
     if (!this.calls.has(name)) this.begin(name);

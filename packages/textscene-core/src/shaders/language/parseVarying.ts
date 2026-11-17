@@ -123,7 +123,7 @@ export class VaryingStages {
 
   constructor(private readonly tokens: TokenCursor) {}
 
-  /** A read or a write of `varying` in the function `current`, after its name (`shader_language.cpp:6598`). */
+  /** A read or a write of `varying` in the function `current`, after its name (:6598). */
   use(varying: VaryingNode, current: string): void {
     if (this.isAssignment()) return this.assign(varying, current);
     if (this.stages.has(varying.name) || !isBoolean(varying.type)) return;

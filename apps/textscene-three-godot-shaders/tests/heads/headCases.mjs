@@ -1,8 +1,3 @@
-/**
- * Whole shaders that Godot accepts or refuses at their head or at a rule of a processor function.
- * An accepted case names the head rows it proves: Godot and the transpiler both accept it.
- */
-
 /** The processor functions of each shader type, empty, so a head alone decides the verdict. */
 const EMPTY_STAGES = {
   spatial: 'void vertex() {}\nvoid fragment() {}\nvoid light() {}',
@@ -12,6 +7,7 @@ const EMPTY_STAGES = {
   fog: 'void fog() {}',
 };
 
+/** An accepted case names the head rows it proves, which Godot and the transpiler both accept. */
 const headCase = (id, text, rows = []) => ({ id, text, rows });
 
 const typeCases = () =>

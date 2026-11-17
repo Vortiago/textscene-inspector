@@ -412,7 +412,7 @@ class ShaderParser implements ExpressionScope {
     };
   }
 
-  /** A global with no `const`: Godot reads it as a constant, then refuses it (`shader_language.cpp:10378`). */
+  /** A global with no `const`: Godot reads it as a constant, then refuses it (:10378). */
   private refuseGlobalVariable(type: ValueType, typeSize: number): never {
     let token = this.tokens.next();
     if (type === 'void') this.tokens.fail("Expected '(' after function identifier.");

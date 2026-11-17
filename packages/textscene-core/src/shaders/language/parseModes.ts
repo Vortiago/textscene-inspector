@@ -98,7 +98,7 @@ export class ModeParser {
     return false;
   }
 
-  /** The modes of the shader's type. A text with no head is a probe's, which Godot draws as a `canvas_item`. */
+  /** The modes of the shader's type, or of a `canvas_item` for a probe's text with no head. */
   private candidates(kind: ModeKind): readonly ShaderMode[] {
     const shaderType = this.shaderType() ?? 'canvas_item';
     return SHADER_MODES.filter((mode) => mode.kind === kind && mode.shaderType === shaderType);

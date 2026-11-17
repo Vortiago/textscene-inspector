@@ -235,10 +235,7 @@ export function preprocessorDirectives(preprocessorCpp) {
   return [...directives, { name: 'defined', line: lineAt(preprocessorCpp, defined) }, ...pragmas];
 }
 
-/**
- * The name `get_token_text` prints for each token: the entry of `token_names` at the token's index.
- * Godot 4.6.3's list has no entry for `TK_STENCIL_MODE`, so each later token prints the next one's name.
- */
+/** `token_names` at each token's index: it lacks `TK_STENCIL_MODE`, so later tokens print the next name. */
 export function tokenNames(header, languageCpp) {
   const start = languageCpp.indexOf('const char *ShaderLanguage::token_names[TK_MAX] = {');
   if (start === -1) throw new Error('expected token_names in shader_language.cpp, found none');
