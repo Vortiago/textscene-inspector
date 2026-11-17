@@ -819,7 +819,7 @@ Godot keeps the filter and repeat on the sampler, and three keeps them on the te
     {
       heading: 'Default textures',
       rows: (row) => /^hint_(default_|normal$|roughness_|anisotropy)/.test(row.id),
-      what: 'A hint names the texture a sampler reads while the material sets none: `hint_default_black` reads opaque black, `hint_default_transparent` transparent black, `hint_normal` and `hint_roughness_normal` the flat normal (128, 128, 255), and `hint_anisotropy` (255, 128, 255). Every other sampler reads white. A cube and a 3D texture have black, transparent and white only. A cube array reads black for every hint but `hint_default_white`. The roughness hints change nothing the shader reads.',
+      what: 'A hint names the texture a sampler reads while the material sets none: `hint_default_black` reads opaque black, `hint_default_transparent` transparent black, `hint_normal` and `hint_roughness_normal` the flat normal (128, 128, 255), and `hint_anisotropy` (255, 128, 255). Every other sampler reads white. A cube and a 3D texture have black, transparent and white only. A cube array reads white under `hint_default_white`, transparent black under `hint_default_transparent`, and opaque black under every other hint. The roughness hints change nothing the shader reads.',
       tsl: "a 4 by 4 texture of Godot's texel",
       probes: textureProbes(/^unset-/),
     },

@@ -147,6 +147,7 @@ const CUBE_ARRAY_LEVELS: Readonly<
     dx: heldHere(TSL.dFdx(direction as never) as unknown as Node),
     dy: heldHere(TSL.dFdy(direction as never) as unknown as Node),
     bias,
+    isImplicit: true,
   }),
   textureLod: (_, [level]) => ({ kind: 'explicit', level: level! }),
   textureGrad: (_, [dx, dy]) => ({ kind: 'gradients', dx: heldHere(dx!), dy: heldHere(dy!) }),
@@ -174,7 +175,7 @@ const isInteger = (texture: TextureNode) => INTEGER_TYPES.has(texture.value.type
 
 /** An integer sampler over normalised or float texels reads their float bits, as Godot's driver does. */
 // GL types an integer sampler apart, so the bound texture decides the read.
-class IntegerReadNode extends TextureBuiltNode {
+class IntegerReadNode extends TextureBuiltNode<boolean> {
   constructor(
     private readonly read: Node,
     private readonly returns: string,
@@ -183,12 +184,12 @@ class IntegerReadNode extends TextureBuiltNode {
     super(returns);
   }
 
-  protected override keyOf(): string {
-    return isInteger(this.texture) ? 'integer' : 'float';
+  protected override factsOf(): boolean {
+    return isInteger(this.texture);
   }
 
-  protected override composite(): Node {
-    if (isInteger(this.texture)) return this.read;
+  protected override composite(isIntegerTexture: boolean): Node {
+    if (isIntegerTexture) return this.read;
     const bits = this.returns.startsWith('u') ? TSL.floatBitsToUint : TSL.floatBitsToInt;
     return bits(this.read as never) as unknown as Node;
   }

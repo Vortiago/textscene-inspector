@@ -1,6 +1,6 @@
 import * as TSL from 'three/tsl';
 import type { Node } from 'three/webgpu';
-import { untyped } from './compositeParts.js';
+import { swizzles, untyped } from './compositeParts.js';
 
 /** The face a cube direction picks, in the axes of Vulkan's cube face table. */
 export interface CubeFace {
@@ -14,12 +14,10 @@ export interface CubeFace {
   readonly index: Node;
 }
 
-type Lanes = Node & Record<'x' | 'y' | 'z', Node>;
-
 /** Vulkan's cube face selection: the major axis is x, then y, then z on a tie. */
 export function cubeFaceOf(direction: Node): CubeFace {
-  const d = TSL.vec3(untyped(direction)).toVar() as unknown as Lanes;
-  const a = TSL.abs(untyped(d)) as unknown as Lanes;
+  const d = swizzles(TSL.vec3(untyped(direction)).toVar());
+  const a = swizzles(TSL.abs(untyped(d)));
   const isX = TSL.and(
     TSL.greaterThanEqual(untyped(a.x), untyped(a.y)),
     TSL.greaterThanEqual(untyped(a.x), untyped(a.z))
@@ -58,7 +56,7 @@ export function footprintOf(face: CubeFace, size: Node) {
 
 /** The direction of `st` on `face`: past an edge it folds onto the next face, as Vulkan reads it. */
 export function directionOf(face: CubeFace, st: Node): Node {
-  const lanes = st as unknown as Node & Record<'x' | 'y', Node>;
+  const lanes = swizzles(st);
   const [s, t] = [lanes.x, lanes.y].map((lane) => TSL.sub(TSL.mul(untyped(lane), 2), 1));
   const excess = (lane: unknown) => TSL.max(TSL.sub(TSL.abs(untyped(lane)), 1), 0);
   const folded = TSL.sub(TSL.sub(1, excess(s)), excess(t));

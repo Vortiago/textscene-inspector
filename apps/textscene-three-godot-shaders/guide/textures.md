@@ -181,7 +181,7 @@ uvec4 probe(vec2 uv) { return texture(s, uv); }
 
 ## Default textures
 
-A hint names the texture a sampler reads while the material sets none: `hint_default_black` reads opaque black, `hint_default_transparent` transparent black, `hint_normal` and `hint_roughness_normal` the flat normal (128, 128, 255), and `hint_anisotropy` (255, 128, 255). Every other sampler reads white. A cube and a 3D texture have black, transparent and white only. A cube array reads black for every hint but `hint_default_white`. The roughness hints change nothing the shader reads.
+A hint names the texture a sampler reads while the material sets none: `hint_default_black` reads opaque black, `hint_default_transparent` transparent black, `hint_normal` and `hint_roughness_normal` the flat normal (128, 128, 255), and `hint_anisotropy` (255, 128, 255). Every other sampler reads white. A cube and a 3D texture have black, transparent and white only. A cube array reads white under `hint_default_white`, transparent black under `hint_default_transparent`, and opaque black under every other hint. The roughness hints change nothing the shader reads.
 
 The transpiler emits `a 4 by 4 texture of Godot's texel`. Rows: `hint_normal`, `hint_default_white`, `hint_default_black`, `hint_default_transparent`, `hint_anisotropy`, `hint_roughness_r`, `hint_roughness_g`, `hint_roughness_b`, `hint_roughness_a`, `hint_roughness_normal`, `hint_roughness_gray`. Godot source: `servers/rendering/shader_language.cpp:380`.
 
@@ -340,6 +340,48 @@ vec4 probe() { return texture(s, vec2(0.5)); }
 | `vec2(0.5)` | `1.0` | `3f800000` |
 | `2` | `1.0` | `3f800000` |
 | `3` | `1.0` | `3f800000` |
+
+### Probe `texture-unset-cubes-hint_default_white`, no input
+
+```glsl
+uniform samplerCubeArray s : hint_default_white;
+vec4 probe() { return texture(s, vec4(1.0, 0.0, 0.0, 0.0)); }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `s` | `1.0` | `3f800000` |
+| `vec4(1.0` | `1.0` | `3f800000` |
+| `0.0` | `1.0` | `3f800000` |
+| `0.0` | `1.0` | `3f800000` |
+
+### Probe `texture-unset-cubes-hint_default_black`, no input
+
+```glsl
+uniform samplerCubeArray s : hint_default_black;
+vec4 probe() { return texture(s, vec4(1.0, 0.0, 0.0, 0.0)); }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `s` | `0.0` | `00000000` |
+| `vec4(1.0` | `0.0` | `00000000` |
+| `0.0` | `0.0` | `00000000` |
+| `0.0` | `1.0` | `3f800000` |
+
+### Probe `texture-unset-cubes-hint_default_transparent`, no input
+
+```glsl
+uniform samplerCubeArray s : hint_default_transparent;
+vec4 probe() { return texture(s, vec4(1.0, 0.0, 0.0, 0.0)); }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `s` | `0.0` | `00000000` |
+| `vec4(1.0` | `0.0` | `00000000` |
+| `0.0` | `0.0` | `00000000` |
+| `0.0` | `0.0` | `00000000` |
 
 ## Filter and repeat
 

@@ -133,8 +133,21 @@ function defaultProbes() {
       `uniform sampler2D s${hint};\nvec4 probe() { return texture(s, vec2(0.5)); }`
     )
   );
+  const unsetCubes = [
+    '',
+    ' : hint_default_white',
+    ' : hint_default_black',
+    ' : hint_default_transparent',
+  ].map((hint) =>
+    textureProbe(
+      `unset-cubes${hint.replace(' : ', '-') || '-none'}`,
+      ['samplerCubeArray', 'texture(samplerCubeArray,vec4)', ...(hint ? [hint.slice(3)] : [])],
+      `uniform samplerCubeArray s${hint};\nvec4 probe() { return texture(s, vec4(1.0, 0.0, 0.0, 0.0)); }`
+    )
+  );
   return [
     ...unset,
+    ...unsetCubes,
     textureProbe(
       'set-null-default-black',
       ['sampler2D', 'texture(sampler2D,vec2)', 'hint_default_black'],

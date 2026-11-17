@@ -36,7 +36,6 @@ function created(spec) {
     case 'cubes': {
       const layers = spec.kind === 'cubes' ? 6 * depth : depth;
       const texture = new THREE.DataArrayTexture(bytesOf(spec.levels[0]), width, height, layers);
-      texture.format = formatOf(spec).format;
       if (spec.levels.length > 1) texture.mipmaps = mipmapsOf(spec, (level) => bytesOf(spec.levels[level]));
       return texture;
     }
@@ -57,6 +56,7 @@ function created(spec) {
 export function textureOf(spec) {
   if (spec === null) return null;
   const texture = created(spec);
+  texture.format = formatOf(spec).format;
   texture.generateMipmaps = false;
   texture.needsUpdate = true;
   return texture;

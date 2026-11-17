@@ -131,11 +131,11 @@ func texture_of(spec):
 			var slices: Array[Image] = []
 			for level in levels.size():
 				var bytes: PackedByteArray = levels[level].hex_decode()
-				var size := level_size(width, level) * level_size(height, level) * 4
+				var size := level_size(width, level) * level_size(height, level) * int(IMAGE_FORMATS[format][1])
 				for slice in level_size(count, level):
-					slices.append(Image.create_from_data(level_size(width, level), level_size(height, level), false, Image.FORMAT_RGBA8, bytes.slice(slice * size, (slice + 1) * size)))
+					slices.append(Image.create_from_data(level_size(width, level), level_size(height, level), false, IMAGE_FORMATS[format][0], bytes.slice(slice * size, (slice + 1) * size)))
 			var volume := ImageTexture3D.new()
-			volume.create(Image.FORMAT_RGBA8, width, height, count, levels.size() > 1, slices)
+			volume.create(IMAGE_FORMATS[format][0], width, height, count, levels.size() > 1, slices)
 			return volume
 	push_error("unknown texture kind %s" % spec.kind)
 	get_tree().quit(1)

@@ -53,7 +53,7 @@ const VOLUME_DEFAULTS: Readonly<Partial<Record<UniformHint, DefaultTexture>>> = 
 /** The texture a sampler of `uniform`'s type and hint reads when the material gives none (:964-1050). */
 function hintedDefault({ type, hint }: UniformNode): DefaultTexture {
   if (type === 'samplerExternalOES') return 'none';
-  // A cube array reads black for every hint but hint_default_white (`material_storage.cpp:1005`).
+  // A cube array's other hints read black, not white (`material_storage.cpp:1005`).
   if (type === 'samplerCubeArray')
     return hint === 'hint_default_white' ? 'white' : (VOLUME_DEFAULTS[hint] ?? 'black');
   const isFlat = type.endsWith('sampler2D');

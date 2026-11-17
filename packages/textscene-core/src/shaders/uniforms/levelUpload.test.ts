@@ -3,13 +3,13 @@ import { Data3DTexture, DataArrayTexture, DataTexture, RGFormat } from 'three';
 import { uploadLevels } from './levelUpload.js';
 import { recordingRenderer } from './levelUpload.testkit.js';
 
-function volumeWithLevels(): Data3DTexture {
+function volumeWithLevels({ isDepthNamed = true } = {}): Data3DTexture {
   const volume = new Data3DTexture(new Uint8Array(4 * 64), 4, 4, 4);
   volume.mipmaps = [4, 2, 1].map((size) => ({
     data: new Uint8Array(4 * size ** 3),
     width: size,
     height: size,
-    depth: size,
+    ...(isDepthNamed && { depth: size }),
   })) as never;
   return volume;
 }
@@ -45,6 +45,29 @@ describe('uploadLevels', () => {
     uploadLevels(renderer, volume);
     uploadLevels(renderer, volume);
     volume.needsUpdate = true;
+    uploadLevels(renderer, volume);
+    expect(copies).toHaveLength(4);
+  });
+
+  it('halves the depth of a 3D level that names none', () => {
+    const { copies, renderer } = recordingRenderer();
+    uploadLevels(renderer, volumeWithLevels({ isDepthNamed: false }));
+    expect(copies.map(({ source }) => (source.image as { depth: number }).depth)).toEqual([2, 1]);
+  });
+
+  it('copies the levels again for each renderer, which holds a GL texture of its own', () => {
+    const [first, second] = [recordingRenderer(), recordingRenderer()];
+    const volume = volumeWithLevels();
+    uploadLevels(first.renderer, volume);
+    uploadLevels(second.renderer, volume);
+    expect([first.copies.length, second.copies.length]).toEqual([2, 2]);
+  });
+
+  it('copies the levels again into the new GL texture of a restored context', () => {
+    const { copies, renderer } = recordingRenderer();
+    const volume = volumeWithLevels();
+    uploadLevels(renderer, volume);
+    delete (renderer.properties.get(volume) as { __webglTexture?: object }).__webglTexture;
     uploadLevels(renderer, volume);
     expect(copies).toHaveLength(4);
   });

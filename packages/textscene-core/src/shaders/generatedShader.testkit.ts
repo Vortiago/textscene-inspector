@@ -15,6 +15,7 @@ interface ProgramBuilder {
   camera: THREE.Camera;
   build(): void;
   fragmentShader: string | null;
+  vertexShader: string | null;
 }
 
 /** What three's types leave out of a backend that has not started. */
@@ -27,20 +28,32 @@ interface UnstartedBackend {
 /** WebGL 2's lowest count of uniform buffers in a stage, which no generated program may pass. */
 const MIN_UNIFORM_BUFFERS = 12;
 
-/** The fragment shader of a material whose output is `fragmentNode`. */
-export function generatedFragmentShader(fragmentNode: Node): string {
+/** The program three builds for `material`, with no GL context. */
+function builtProgram(material: NodeMaterial): ProgramBuilder {
   const renderer = new WebGPURenderer({ forceWebGL: true, canvas: document.createElement('canvas') });
   const backend = renderer.backend as unknown as UnstartedBackend;
   backend.extensions = { has: () => false };
   backend.capabilities = { getUniformBufferLimit: () => MIN_UNIFORM_BUFFERS };
   // A renderer that has not started holds null here, and the builder shares groups unless it is undefined.
   (renderer as unknown as { _bindings: undefined })._bindings = undefined;
-  const material = new NodeMaterial();
-  material.fragmentNode = fragmentNode;
   const builder = backend.createNodeBuilder(new THREE.Mesh(new THREE.PlaneGeometry(), material), renderer);
   builder.scene = new THREE.Scene();
   builder.material = material;
   builder.camera = new THREE.PerspectiveCamera();
   builder.build();
-  return builder.fragmentShader ?? '';
+  return builder;
+}
+
+/** The fragment shader of a material whose output is `fragmentNode`. */
+export function generatedFragmentShader(fragmentNode: Node): string {
+  const material = new NodeMaterial();
+  material.fragmentNode = fragmentNode;
+  return builtProgram(material).fragmentShader ?? '';
+}
+
+/** The vertex shader of a material whose vertex position is `positionNode`. */
+export function generatedVertexShader(positionNode: Node): string {
+  const material = new NodeMaterial();
+  material.positionNode = positionNode;
+  return builtProgram(material).vertexShader ?? '';
 }

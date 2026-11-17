@@ -1,6 +1,6 @@
 import { LinearFilter, LinearMipmapLinearFilter, NearestMipmapLinearFilter, type Texture } from 'three';
 import * as TSL from 'three/tsl';
-import type { Node, TextureNode } from 'three/webgpu';
+import type { Node, NodeBuilder, TextureNode } from 'three/webgpu';
 import { lastLevelOf } from '../uniforms/textureLevels.js';
 import { swizzles, untyped, type Swizzles } from './compositeParts.js';
 import { cubeFaceOf, directionOf, footprintOf, type CubeFace } from './cubeFaces.js';
@@ -12,12 +12,24 @@ import { SizeNode } from './textureSize.js';
 /** How a call picks its level: from a level, or from the direction's gradients with a bias. */
 export type CubeArrayLevel =
   | { readonly kind: 'explicit'; readonly level: Node }
-  | { readonly kind: 'gradients'; readonly dx: Node; readonly dy: Node; readonly bias?: Node };
+  | {
+      readonly kind: 'gradients';
+      readonly dx: Node;
+      readonly dy: Node;
+      readonly bias?: Node;
+      /** Whether the call takes its gradients from the screen, which only the fragment stage has. */
+      readonly isImplicit?: boolean;
+    };
 
 const BLENDED_LEVELS: ReadonlySet<number> = new Set([LinearMipmapLinearFilter, NearestMipmapLinearFilter]);
 
 /** The filter facts the program is built from. Godot gives minification and magnification one filter. */
-const filterOf = (texture: Texture) => ({
+interface Filter {
+  readonly isLinear: boolean;
+  readonly blendsLevels: boolean;
+}
+
+const filterOf = (texture: Texture): Filter => ({
   isLinear: texture.magFilter === LinearFilter,
   blendsLevels: BLENDED_LEVELS.has(texture.minFilter) && lastLevelOf(texture) > 0,
 });
@@ -121,8 +133,16 @@ function levelRead(
   ) as unknown as Node;
 }
 
-function unclampedLevel(face: CubeFace, levelZero: Swizzles, direction: Node, choice: CubeArrayLevel): Node {
+function unclampedLevel(
+  face: CubeFace,
+  levelZero: Swizzles,
+  direction: Node,
+  choice: CubeArrayLevel,
+  stage: string
+): Node {
   if (choice.kind === 'explicit') return choice.level;
+  // An implicit level outside the fragment stage is level 0, as three reads it, and has no derivative.
+  if (choice.isImplicit && stage !== 'fragment') return TSL.float(0) as unknown as Node;
   const size = TSL.vec2(untyped(levelZero.xy)) as unknown as Node;
   const level = cubeLevelOf(face, size, direction, [choice.dx, choice.dy]);
   return choice.bias === undefined
@@ -131,7 +151,7 @@ function unclampedLevel(face: CubeFace, levelZero: Swizzles, direction: Node, ch
 }
 
 /** A cube array call, built from the texture bound when three builds the shader, which names the filter. */
-export class CubeArrayReadNode extends TextureBuiltNode {
+export class CubeArrayReadNode extends TextureBuiltNode<Filter> {
   constructor(
     private readonly textureNode: TextureNode,
     private readonly coordinate: Node,
@@ -140,21 +160,21 @@ export class CubeArrayReadNode extends TextureBuiltNode {
     super('vec4');
   }
 
-  protected override keyOf(): string {
-    const { isLinear, blendsLevels } = filterOf(this.textureNode.value);
-    return `${isLinear} ${blendsLevels}`;
+  protected override factsOf(): Filter {
+    return filterOf(this.textureNode.value);
   }
 
-  // A `toVar` here joins whichever stack three builds at the time, so the composite holds no variable.
-  protected override composite(): Node {
-    const { isLinear, blendsLevels } = filterOf(this.textureNode.value);
+  // The face variables come before any `select`: a `toVar` joins whichever stack three builds then.
+  protected override composite({ isLinear, blendsLevels }: Filter, builder: NodeBuilder): Node {
     const { xyz: direction, w: layer } = swizzles(this.coordinate);
     const face = cubeFaceOf(direction);
     const levelZero = arraySizeOf(this.textureNode, TSL.int(0) as unknown as Node);
-    const lastCube = TSL.sub(TSL.div(untyped(levelZero.z), 6), 1);
+    // A 2D array of fewer than six layers holds no whole cube, and `clamp` with min above max is undefined.
+    const lastCube = TSL.max(TSL.sub(TSL.div(untyped(levelZero.z), 6), 1), 0);
     const cube = TSL.clamp(untyped(roundedLayer(layer)), 0, lastCube) as unknown as Node;
     const lastLevel = lastLevelNodeOf(this.textureNode);
-    const unclamped = unclampedLevel(face, levelZero, direction, this.choice);
+    const { shaderStage } = builder as unknown as { shaderStage: string };
+    const unclamped = unclampedLevel(face, levelZero, direction, this.choice, shaderStage);
     const level = TSL.clamp(untyped(unclamped), 0, untyped(lastLevel)) as unknown as Node;
     const read = (at: unknown) => untyped(levelRead(this.textureNode, face, cube, untyped(at), isLinear));
     if (!blendsLevels) return read(TSL.int(TSL.sub(TSL.ceil(TSL.add(untyped(level), 0.5)), 1)));
