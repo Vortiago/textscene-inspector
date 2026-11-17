@@ -1,7 +1,9 @@
 import { NIL, type Variant } from '../../godot/variant/value/variant.js';
 import type { Value } from '../language/emitValue.js';
 import type { ShaderNode, UniformNode } from '../language/shaderTree.js';
+import { ShadingLanguageError } from '../language/shadingLanguageError.js';
 import { isSamplerType } from '../language/types.js';
+import { blockLayout } from '../template/blockLayout.js';
 import { isSamplerValue, SamplerBinding, type SamplerValue } from './samplerUniform.js';
 import type { ProjectSampling } from './samplerState.js';
 import { SAMPLER_DEFAULTS } from './samplerTextures.js';
@@ -54,13 +56,31 @@ class UniformBinding implements TranspiledUniform {
 /** A text with no head is a probe's, which Godot's harness draws as a `canvas_item`. */
 const samplerDefaultsOf = (shaderType: string | undefined) => SAMPLER_DEFAULTS[shaderType ?? 'canvas_item']!;
 
+/** Godot warns past it (`shader_language.cpp:9220`): Chromium on lavapipe has the same block size. */
+const BLOCK_BYTES_AT_MOST = 65536;
+
+/** Godot draws a larger block if its driver takes it. WebGL does not link it, so this names the uniform. */
+function refuseOverfullBlock(block: readonly UniformNode[]): void {
+  const { members, size } = blockLayout(block, 'std140', () => undefined);
+  if (size <= BLOCK_BYTES_AT_MOST) return;
+  const index = members.findIndex((_, at) => (members[at + 1]?.offset ?? size) > BLOCK_BYTES_AT_MOST);
+  const uniform = block[index]!;
+  throw new ShadingLanguageError(
+    `Uniform '${uniform.name}' ends past the ${BLOCK_BYTES_AT_MOST} bytes of a WebGL uniform block: the material's uniforms take ${size} bytes.`,
+    uniform.position,
+    '#2008'
+  );
+}
+
 /** Only `local` uniforms take Godot's block offsets (`shader_compiler.cpp:567`, `:629`). */
 function valueNodes(values: readonly UniformNode[]): ReadonlyMap<UniformNode, UniformValue> {
   const nodeOf = new Map<UniformNode, UniformValue>();
   const locals = values.filter(({ scope }) => scope === 'local');
   const others = values.filter(({ scope }) => scope !== 'local');
-  for (const block of [locals, others])
+  for (const block of [locals, others]) {
+    refuseOverfullBlock(block);
     materialBits(block).forEach((node, index) => nodeOf.set(block[index]!, node));
+  }
   return nodeOf;
 }
 

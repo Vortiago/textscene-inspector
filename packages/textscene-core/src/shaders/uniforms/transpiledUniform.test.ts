@@ -83,4 +83,18 @@ describe('bindParameters', () => {
   it('can draw with a sampler2D that has no texture, which reads its default', () => {
     expect(parametersOf('uniform sampler2D s;').get('s')!.isDrawable).toBe(true);
   });
+
+  it('binds a material block of exactly 65536 bytes', () => {
+    expect(() => parametersOf('uniform vec4 u[4096];')).not.toThrow();
+  });
+
+  it('names the uniform that ends past the 65536 bytes of a WebGL uniform block, at its line', () => {
+    expect(() => parametersOf('uniform float f;\nuniform vec4 u[4096];')).toThrow(
+      "2:1: Uniform 'u' ends past the 65536 bytes of a WebGL uniform block: the material's uniforms take 65552 bytes."
+    );
+  });
+
+  it('counts only the local uniforms toward the material block', () => {
+    expect(() => parametersOf('uniform vec4 u[4096];\nglobal uniform float g;')).not.toThrow();
+  });
 });
