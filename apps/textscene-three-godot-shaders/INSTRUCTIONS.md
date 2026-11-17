@@ -137,9 +137,9 @@ canvases draw on WebGPURenderer (#1788).
 | `hint_roughness_a` | open, #1829 | | | `servers/rendering/shader_language.cpp:388` |
 | `hint_roughness_normal` | open, #1829 | | | `servers/rendering/shader_language.cpp:389` |
 | `hint_roughness_gray` | open, #1829 | | | `servers/rendering/shader_language.cpp:390` |
-| `hint_screen_texture` | open, #1829 | | | `servers/rendering/shader_language.cpp:391` |
-| `hint_normal_roughness_texture` | open, #1829 | | | `servers/rendering/shader_language.cpp:392` |
-| `hint_depth_texture` | open, #1829 | | | `servers/rendering/shader_language.cpp:393` |
+| `hint_screen_texture` | open, #1524 | | | `servers/rendering/shader_language.cpp:391` |
+| `hint_normal_roughness_texture` | open, #1610 | | | `servers/rendering/shader_language.cpp:392` |
+| `hint_depth_texture` | open, #1610 | | | `servers/rendering/shader_language.cpp:393` |
 
 ## sampler setting
 

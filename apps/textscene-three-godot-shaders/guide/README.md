@@ -39,7 +39,7 @@ Godot draws the probes and showcases on Vulkan over lavapipe (`llvmpipe (LLVM 20
 | shader head | 4 of 13 | #1794 |
 | uniform | 0 of 2 | #1792, #1183 |
 | statement keyword | 12 of 12 | none |
-| uniform hint | 4 of 19 | #1792, #1829 |
+| uniform hint | 4 of 19 | #1792, #1829, #1524, #1610 |
 | sampler setting | 0 of 8 | #1829 |
 | operator | 588 of 588 | none |
 | statement | 11 of 11 | none |

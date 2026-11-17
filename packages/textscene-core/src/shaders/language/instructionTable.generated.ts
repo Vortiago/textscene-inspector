@@ -116,9 +116,9 @@ hint_roughness_b	uniform hint	servers/rendering/shader_language.cpp:387	#1829	TK
 hint_roughness_a	uniform hint	servers/rendering/shader_language.cpp:388	#1829	TK_HINT_ROUGHNESS_A				
 hint_roughness_normal	uniform hint	servers/rendering/shader_language.cpp:389	#1829	TK_HINT_ROUGHNESS_NORMAL_TEXTURE				
 hint_roughness_gray	uniform hint	servers/rendering/shader_language.cpp:390	#1829	TK_HINT_ROUGHNESS_GRAY				
-hint_screen_texture	uniform hint	servers/rendering/shader_language.cpp:391	#1829	TK_HINT_SCREEN_TEXTURE				
-hint_normal_roughness_texture	uniform hint	servers/rendering/shader_language.cpp:392	#1829	TK_HINT_NORMAL_ROUGHNESS_TEXTURE				
-hint_depth_texture	uniform hint	servers/rendering/shader_language.cpp:393	#1829	TK_HINT_DEPTH_TEXTURE				
+hint_screen_texture	uniform hint	servers/rendering/shader_language.cpp:391	#1524	TK_HINT_SCREEN_TEXTURE				
+hint_normal_roughness_texture	uniform hint	servers/rendering/shader_language.cpp:392	#1610	TK_HINT_NORMAL_ROUGHNESS_TEXTURE				
+hint_depth_texture	uniform hint	servers/rendering/shader_language.cpp:393	#1610	TK_HINT_DEPTH_TEXTURE				
 filter_nearest	sampler setting	servers/rendering/shader_language.cpp:395	#1829	TK_FILTER_NEAREST				
 filter_linear	sampler setting	servers/rendering/shader_language.cpp:396	#1829	TK_FILTER_LINEAR				
 filter_nearest_mipmap	sampler setting	servers/rendering/shader_language.cpp:397	#1829	TK_FILTER_NEAREST_MIPMAP				

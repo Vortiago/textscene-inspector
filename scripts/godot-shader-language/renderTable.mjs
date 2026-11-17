@@ -115,9 +115,11 @@ export function owningIssue(row) {
   }
 }
 
-/** Instance uniforms bind from a node's parameters, global ones from the project: each has an issue. */
+/** Instance, global and screen uniforms bind from outside the material: each has its issue. */
 function uniformOwner(row) {
   if (/^(instance|instance_index)$/.test(row.id)) return '#1792';
+  if (row.id === 'hint_screen_texture') return '#1524';
+  if (/^hint_(depth|normal_roughness)_texture$/.test(row.id)) return '#1610';
   return row.id === 'global' ? '#1183' : '#1829';
 }
 
