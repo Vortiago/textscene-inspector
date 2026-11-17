@@ -75,16 +75,17 @@ describe('SamplerBinding', () => {
   it('uploads every mip level of a 2D-array texture, which three uploads only level 0 of', () => {
     const binding = bindingOf('uniform sampler2DArray s;');
     const layers = new DataArrayTexture(new Uint8Array(4 * 4 * 2 * 4), 4, 4, 2);
-    layers.mipmaps = [4, 2, 1].map((size) => ({
+    const levels = [4, 2, 1].map((size) => ({
       data: new Uint8Array(size * size * 2 * 4),
       width: size,
       height: size,
-    })) as never;
+    }));
+    layers.mipmaps = levels as never;
     binding.set(layers);
     const copy = textureOf(binding) as CompressedArrayTexture;
     expect(copy.isCompressedArrayTexture).toBe(true);
     expect([copy.format, copy.type, copy.image.depth]).toEqual([layers.format, layers.type, 2]);
-    expect(copy.mipmaps.map((level) => level.data)).toEqual(layers.mipmaps.map((level) => level.data));
+    expect(copy.mipmaps.map((level) => level.data)).toEqual(levels.map((level) => level.data));
   });
 
   it('keeps one copy while the material texture stays the same', () => {
@@ -110,7 +111,7 @@ describe('SamplerBinding', () => {
   it('reads the 4 by 4 default of the hint while the material sets no texture', () => {
     const binding = bindingOf('uniform sampler2D s : hint_normal;');
     const texture = textureOf(binding) as DataTexture;
-    expect([texture.image.width, texture.image.height, ...texture.image.data.slice(0, 4)]).toEqual([
+    expect([texture.image.width, texture.image.height, ...texture.image.data!.slice(0, 4)]).toEqual([
       4, 4, 128, 128, 255, 255,
     ]);
   });
@@ -118,7 +119,7 @@ describe('SamplerBinding', () => {
   it('reads white for a value that is no texture', () => {
     const binding = bindingOf('uniform sampler2D s : hint_default_black;');
     binding.set(null);
-    expect([...(textureOf(binding) as DataTexture).image.data.slice(0, 4)]).toEqual([255, 255, 255, 255]);
+    expect([...(textureOf(binding) as DataTexture).image.data!.slice(0, 4)]).toEqual([255, 255, 255, 255]);
   });
 
   it.each([

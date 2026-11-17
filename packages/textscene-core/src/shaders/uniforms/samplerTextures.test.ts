@@ -82,7 +82,7 @@ describe('samplerTextures defaults by type', () => {
 describe('samplerSettings', () => {
   it('keeps the filter and repeat words of the declaration', () => {
     const uniform = uniformOf('uniform sampler2D s : filter_nearest, repeat_enable;');
-    expect(samplerSettings(uniform, SAMPLER_DEFAULTS.canvas_item)).toEqual({
+    expect(samplerSettings(uniform, SAMPLER_DEFAULTS.canvas_item!)).toEqual({
       filter: 'filter_nearest',
       repeat: 'repeat_enable',
     });
@@ -95,7 +95,7 @@ describe('samplerSettings', () => {
     ['fog', 'filter_linear_mipmap', 'repeat_disable'],
     ['canvas_item', 'filter_linear', 'repeat_disable'],
   ] as const)('fills a %s sampler with %s and %s', (shaderType, filter, repeat) => {
-    expect(samplerSettings(uniformOf('uniform sampler2D s;'), SAMPLER_DEFAULTS[shaderType])).toEqual({
+    expect(samplerSettings(uniformOf('uniform sampler2D s;'), SAMPLER_DEFAULTS[shaderType]!)).toEqual({
       filter,
       repeat,
     });

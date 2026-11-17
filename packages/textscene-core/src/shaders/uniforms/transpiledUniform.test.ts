@@ -33,7 +33,9 @@ describe('bindParameters', () => {
   it('reads white for a Variant on a sampler, which names no texture', () => {
     const binding = parametersOf('uniform sampler2D s : hint_default_black;').get('s')!;
     binding.set(textToVariant('1.5'));
-    expect([...(binding.value as TextureNode).value.image.data.slice(0, 4)]).toEqual([255, 255, 255, 255]);
+    expect([...((binding.value as TextureNode).value as DataTexture).image.data!.slice(0, 4)]).toEqual([
+      255, 255, 255, 255,
+    ]);
   });
 
   it('refuses a texture on a uniform of a value type', () => {
