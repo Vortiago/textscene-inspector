@@ -800,7 +800,7 @@ describe('projectRenderingMethod', () => {
     expect(projectRenderingMethod({ 'rendering/renderer/rendering_method': 'vulkan' })).toBe('forward_plus');
   });
 
-  it('reads no override of another feature, which the desktop editor does not take', () => {
+  it('reads no feature override, as a mobile one never applies on a desktop', () => {
     const settings = parseProjectSettings(
       '[rendering]\n\nrenderer/rendering_method="forward_plus"\nrenderer/rendering_method.mobile="gl_compatibility"\n'
     );

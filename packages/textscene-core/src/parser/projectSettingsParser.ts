@@ -394,7 +394,7 @@ export function projectSampling(settings: ProjectSettings | null): ProjectSampli
 
 const RENDERING_METHODS: readonly RenderingMethod[] = ['forward_plus', 'mobile', 'gl_compatibility'];
 
-/** `rendering/renderer/rendering_method`, Forward+ for a name not Godot's. `.mobile` is not read. */
+/** `rendering/renderer/rendering_method`, Forward+ for a name not Godot's. No feature override is read. */
 export function projectRenderingMethod(settings: ProjectSettings | null): RenderingMethod {
   const method = settings?.['rendering/renderer/rendering_method'];
   return RENDERING_METHODS.find((known) => known === method) ?? 'forward_plus';
