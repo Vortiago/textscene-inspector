@@ -8,13 +8,11 @@
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
 import {
   optionalReference,
-  referenceKey,
+  referenceAddress,
   type Follow,
   type HeldResource,
   type ResourceKind,
-  type ScopedReference,
 } from '../../reading';
-import { parseResourceReference } from '../../SubResourceResolver';
 import { resourceRef } from '../../../godot/variant/resourceRef';
 import { arrayLiteralBody } from '../../../godot/variant/variantParser';
 import { dropTrailingComma, splitTopLevel } from '../../../godot/string/string';
@@ -77,16 +75,15 @@ function shaderSkyMaterial(properties: Readonly<Record<string, string>>, follow:
   return {
     form: 'sky',
     type: 'ShaderMaterial',
-    properties: { kind: 'shader', code, file: shaderAddress(follow.reference(shader)), parameters, textures },
+    properties: {
+      kind: 'shader',
+      code,
+      file: referenceAddress(follow.reference(shader)),
+      parameters,
+      textures,
+    },
     panorama: null,
   };
-}
-
-/** A shader's address: a path, `path::id` in another file, or the reference for the scene's own. */
-function shaderAddress(reference: ScopedReference): string {
-  const isScenesOwn =
-    reference.origin === undefined && parseResourceReference(reference.ref ?? '')?.type === 'SubResource';
-  return isScenesOwn ? reference.ref! : referenceKey(reference);
 }
 
 /** A resource, or an array of resources and nulls that holds one resource at least, as a sampler takes. */
