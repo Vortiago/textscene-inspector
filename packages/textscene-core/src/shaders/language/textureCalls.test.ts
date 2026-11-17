@@ -1,11 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { Data3DTexture, DataArrayTexture, DataTexture, RGBAIntegerFormat, UnsignedIntType } from 'three';
+import {
+  CubeTexture,
+  Data3DTexture,
+  DataArrayTexture,
+  DataTexture,
+  LinearMipmapLinearFilter,
+  RGBAIntegerFormat,
+  UnsignedIntType,
+} from 'three';
 import { float, int, ivec2, ivec3, texture, texture3D, vec2, vec3, vec4 } from 'three/tsl';
 import type { Node, TextureNode } from 'three/webgpu';
 import { generatedFragmentShader } from '../generatedShader.testkit.js';
 import { builtInCall } from './emitBuiltIn.js';
 import { instruction } from './instructions.js';
 import { SamplerChoice } from './textureCalls.js';
+import { levelCountOf } from './textureQueries.js';
+import { GodotCubeNode } from '../uniforms/samplerUniform.js';
 
 const flat = () => texture(new DataTexture(new Uint8Array(4), 1, 1)) as unknown as Node;
 const layers = () => texture(new DataArrayTexture(new Uint8Array(4), 1, 1, 1)) as unknown as Node;
@@ -110,5 +120,41 @@ describe('builtInCall of a texture function', () => {
   it('divides the coordinate by its last lane for textureProj', () => {
     const glsl = glslOf('textureProj(sampler2D,vec3)', [flat(), vec3(0.5, 0.25, 2) as unknown as Node]);
     expect([glsl.includes('texture('), / \/ /.test(glsl)]).toEqual([true, true]);
+  });
+
+  it('gathers one channel of the four texels around the coordinate', () => {
+    const glsl = glslOf('textureGather(sampler2D,vec2,int)', [flat(), uv(), int(2) as unknown as Node]);
+    expect(glsl).toMatch(/tsl_textureGather\( 2, /);
+  });
+
+  it('gathers a cube texture from the four texel centres of the face the direction picks', () => {
+    const cube = new GodotCubeNode(new CubeTexture() as never) as unknown as Node;
+    const glsl = glslOf('textureGather(samplerCube,vec3)', [cube, vec3(1, 0.2, -0.3) as unknown as Node]);
+    expect(glsl.match(/textureLod\( nodeUniform/g)).toHaveLength(4);
+  });
+});
+
+describe('builtInCall of a texture query', () => {
+  const mipmapped = () => {
+    const levels = new DataTexture(new Uint8Array(64), 4, 4);
+    levels.mipmaps = [4, 2, 1].map((size) => ({
+      data: new Uint8Array(size * size * 4),
+      width: size,
+      height: size,
+    })) as never;
+    levels.minFilter = LinearMipmapLinearFilter;
+    return levels;
+  };
+
+  it('counts the levels of the texture the sampler reads', () => {
+    const node = texture(new DataTexture(new Uint8Array(4), 1, 1)) as unknown as TextureNode;
+    const count = levelCountOf(node);
+    node.value = mipmapped();
+    expect(count.value).toBe(3);
+  });
+
+  it('takes the level of detail from the scaled derivatives of the coordinate', () => {
+    const glsl = glslOf('textureQueryLod(sampler2D,vec2)', [texture(mipmapped()) as unknown as Node, uv()]);
+    expect([/dFdx\(/.test(glsl), /dFdy\(/.test(glsl), /log2\(/.test(glsl)]).toEqual([true, true, true]);
   });
 });

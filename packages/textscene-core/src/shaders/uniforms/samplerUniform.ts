@@ -14,6 +14,7 @@ import { SamplerChoice } from '../language/textureCalls.js';
 import type { UniformNode, ValueType } from '../language/shaderTree.js';
 import { defaultTexture, type TextureKind } from './defaultTextures.js';
 import { samplerState, type ProjectSampling } from './samplerState.js';
+import { levelsOf } from './textureLevels.js';
 import {
   samplerSettings,
   samplerTextures,
@@ -34,7 +35,7 @@ export interface SamplerContext {
 export type SamplerValue = Texture | readonly (Texture | null)[] | null;
 
 /** A cube read with the direction as Vulkan and GL define it: three mirrors x for its own cubes. */
-class GodotCubeNode extends CubeTextureNode {
+export class GodotCubeNode extends CubeTextureNode {
   /** three's `CubeTextureNode.setupUV`, which its types leave out. */
   setupUV(_builder: NodeBuilder, uvNode: Node): Node {
     return uvNode;
@@ -60,14 +61,6 @@ function nodeOf(kind: TextureKind, value: Texture): TextureNode {
   const node = NODE_OF_KIND[kind](value);
   node.updateMatrix = false;
   return node;
-}
-
-/** The mip levels a texture holds: its own list, or the chain three generates for it. */
-function levelsOf(source: Texture): number {
-  if (source.mipmaps && source.mipmaps.length > 0) return source.mipmaps.length;
-  if (!source.generateMipmaps) return 1;
-  const { width = 1, height = 1 } = (source.image ?? {}) as { width?: number; height?: number };
-  return Math.floor(Math.log2(Math.max(width, height, 1))) + 1;
 }
 
 /**
