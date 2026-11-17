@@ -12,7 +12,7 @@ function shaderSky(code: string): SkyProperties {
     code,
     parameters: {},
     textures: {},
-    usage: { light: false, time: false, position: false, colorSamplers: [] },
+    usage: { light: false, time: false, position: false, samplers: {} },
   };
 }
 

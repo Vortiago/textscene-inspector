@@ -123,6 +123,11 @@ export function decodeMipmappedImage(image: SavedImage): MipmappedImage | null {
   return { ...top, levels: hasMipmaps ? decodeLevels(bytes, top, reader) : [] };
 }
 
+/** Whether `image` saves a mip chain, read without its pixels. */
+export function savedImageHasMipmaps(image: SavedImage): boolean {
+  return boolSlotValue(readMipmaps.exec(image.dictionary)?.[1]) === true;
+}
+
 /** The size of `image`, read without its pixels. */
 export function savedImageSize(image: SavedImage): ImageSize | null {
   const header = readHeader(image.dictionary);

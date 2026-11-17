@@ -20,7 +20,7 @@ function shaderMaterial(code: string): ShaderSkyProperties {
     code,
     parameters: {},
     textures: {},
-    usage: { light: false, time: false, position: false, colorSamplers: [] },
+    usage: { light: false, time: false, position: false, samplers: {} },
   };
 }
 

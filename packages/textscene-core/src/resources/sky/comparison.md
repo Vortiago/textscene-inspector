@@ -37,9 +37,9 @@ An atmospheric-scattering sky. The grey-blue gradient, the horizon band, and the
 ## ShaderMaterial
 <!-- compare: image=unit-shader-sky-parameters status=limitation fixture=unit-shader-sky-parameters.tscn -->
 
-A user's sky shader reads a GradientTexture2D through a `source_color` sampler and a float the material sets. The transpiled sky template draws the background at each pixel, and a cube render of it bakes the radiance the metal sphere reflects. Both match Godot within 2/255. The environment's depth fog, its sun scatter and its aerial perspective fog the sky as in Godot. `TIME` follows the playback controls. A shader Godot does not compile draws Godot's black default sky, and the previewer logs the error.
+A user's sky shader reads a GradientTexture2D through a `source_color` sampler and a float the material sets. The transpiled sky template draws the background at each pixel, and a cube render of it bakes the radiance the metal sphere reflects. Both match Godot within 2/255. A `samplerCube` reads a Cubemap saved with its faces or an image imported as a cubemap, in Godot's face order. The environment's depth fog, its sun scatter and its aerial perspective fog the sky as in Godot. `TIME` follows the playback controls. A shader Godot does not compile draws Godot's black default sky, and the node details show Godot's error.
 
-A sky shader that reads `TIME` or `POSITION` keeps the radiance of its first bake, where Godot bakes it again in each frame. Volumetric fog does not reach a sky shader. A Cubemap, Texture3D or texture array parameter is not loaded, so its sampler reads its default. A sky shader that reads the half or quarter resolution passes, or a light, draws the default sky.
+A sky shader that reads `TIME` or `POSITION` keeps the radiance of its first bake, where Godot bakes it again in each frame. Volumetric fog does not reach a sky shader. A texture array or cubemap array parameter is not loaded, so its sampler reads its default. A sky shader that reads the half or quarter resolution passes, or a light, draws the default sky.
 
 ## Sun disc size
 <!-- compare: image=unit-sky-sun-angular-distance status=done fixture=unit-sky-sun-angular-distance.tscn -->
@@ -74,7 +74,3 @@ Strict parsing format-checks these `Sky` properties, plus 2 inherited from Resou
 <!-- lint:end -->
 
 The lenient parser never rejects. An unreadable Sky property falls back to Godot's default through the shared value decoders. An unresolvable material or panorama leaves the background at its fallback rather than failing the scene.
-
-## Known limitations
-
-- **Resource gap** A `CompressedCubemap` panorama is not resolved, so the background falls back to a mid-blue solid and metals reflect near-black.

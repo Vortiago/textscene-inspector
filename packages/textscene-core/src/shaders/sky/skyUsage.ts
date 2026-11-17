@@ -2,6 +2,7 @@ import { parsedShader } from '../language/parseShader.js';
 import { ShadingLanguageError } from '../language/shadingLanguageError.js';
 import type { ShaderNode } from '../language/shaderTree.js';
 import { everyExpressionIn } from '../language/treeWalk.js';
+import { isSamplerType, textureKindOf, type TextureKind } from '../language/types.js';
 
 /** What a sky shader reads that decides how Godot draws, bakes and samples it (`sky.cpp:70-103`). */
 export interface SkyUsage {
@@ -9,11 +10,18 @@ export interface SkyUsage {
   readonly light: boolean;
   readonly time: boolean;
   readonly position: boolean;
-  /** The sampler uniforms marked `source_color`, which decode an sRGB texture. */
-  readonly colorSamplers: readonly string[];
+  /** Each sampler uniform by name. */
+  readonly samplers: Readonly<Record<string, SkySampler>>;
 }
 
-const NO_USAGE: SkyUsage = { light: false, time: false, position: false, colorSamplers: [] };
+export interface SkySampler {
+  /** The texture the sampler reads: a Cubemap for `samplerCube`. */
+  readonly kind: TextureKind;
+  /** `source_color`, which decodes an sRGB texture. */
+  readonly isColor: boolean;
+}
+
+const NO_USAGE: SkyUsage = { light: false, time: false, position: false, samplers: {} };
 
 const LIGHT_BUILT_IN = /^LIGHT[0-3]_/;
 
@@ -31,8 +39,18 @@ export function skyUsage(source: string): SkyUsage {
     light: [...names].some((name) => LIGHT_BUILT_IN.test(name)),
     time: names.has('TIME'),
     position: names.has('POSITION'),
-    colorSamplers: tree.uniforms.filter((uniform) => uniform.usesColor).map((uniform) => uniform.name),
+    samplers: samplersOf(tree),
   };
+}
+
+function samplersOf(tree: ShaderNode): Record<string, SkySampler> {
+  const samplers = tree.uniforms.filter((uniform) => isSamplerType(uniform.type));
+  return Object.fromEntries(
+    samplers.map((uniform) => [
+      uniform.name,
+      { kind: textureKindOf(uniform.type), isColor: uniform.usesColor },
+    ])
+  );
 }
 
 /** Every function's, as Godot's compiler writes the code of each (`shader_compiler.cpp:768-774`). */

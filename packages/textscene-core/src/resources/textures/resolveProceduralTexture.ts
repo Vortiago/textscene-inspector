@@ -8,6 +8,8 @@
 import { gradientTexture2D } from './gradienttexture2d/resolveGradientTexture.js';
 import { imageTexture } from './imagetexture/resolveImageTexture.js';
 import { imageTexture3D } from './imagetexture3d/resolveImageTexture3D.js';
+import { imageCubemap } from './cubemap/resolveImageCubemap.js';
+import type { CubemapSource } from './cubemap/types.js';
 import { noiseTexture2D } from './noisetexture2d/resolveNoiseTexture.js';
 import { noiseTexture3D } from './noisetexture3d/resolveNoiseTexture.js';
 import type { ProceduralTextureLookup } from './proceduralBuilds.js';
@@ -38,6 +40,11 @@ export function proceduralTexture3D(source: Texture3D | null): ProceduralTexture
     default:
       return null;
   }
+}
+
+/** {@link proceduralTexture2D} for a Cubemap. */
+export function proceduralCubemap(source: CubemapSource | null): ProceduralTextureLookup | null {
+  return source?.form === 'image' ? ready(imageCubemap(source)) : null;
 }
 
 function ready(resolution: ProceduralTextureResolution | null): ProceduralTextureLookup | null {
