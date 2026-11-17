@@ -14,6 +14,8 @@ export const MATERIAL_CLASSES = ['StandardMaterial3D', 'ORMMaterial3D'];
 const MATERIAL_SCRIPT = `extends Node
 
 const SLOT_BITS := 4294967296
+## Every shader of the sweep sits in one of the first 64 slots of its counter.
+const SLOTS := 64
 
 func values_of(p: Dictionary) -> Array:
 	if p.type == TYPE_BOOL:
@@ -65,7 +67,7 @@ func shader_between(before: RID, after: RID) -> String:
 	var first_slot: int = mini(before.get_id() % SLOT_BITS, after.get_id() % SLOT_BITS)
 	var last_slot: int = maxi(before.get_id() % SLOT_BITS, after.get_id() % SLOT_BITS)
 	var code := shader_in(before, after, range(maxi(first_slot - 1, 0), last_slot + 2))
-	return code if code != "" else shader_in(before, after, range(64))
+	return code if code != "" else shader_in(before, after, range(SLOTS))
 
 func made(cls: String, settings: Array) -> Material:
 	var material: Material = ClassDB.instantiate(cls)
@@ -159,7 +161,7 @@ export async function materialRecord() {
   const entries = runs
     .flatMap((run) => run.texts)
     .map(({ id, text }) => ({ id, text, hash: sha256(text) }))
-    .sort((a, b) => (a.id < b.id ? -1 : 1));
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   const cases = Object.fromEntries(entries.map(({ id, hash }) => [id, hash]));
   const texts = Object.fromEntries(entries.map(({ text, hash }) => [hash, text]));
   return { record: { godot, cases }, texts };

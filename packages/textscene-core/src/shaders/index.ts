@@ -21,7 +21,7 @@ export {
   type SkyScene,
 } from './sky/skyBindings.js';
 export { baseMaterialShader, shaderTextOf } from './material/baseMaterialShader.js';
-export { materialParameters, type ParameterValue } from './material/materialParameters.js';
+export { materialParameters } from './material/materialParameters.js';
 export {
   materialStateOf,
   type MaterialClass,

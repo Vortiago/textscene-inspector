@@ -4,11 +4,8 @@ import { TextureChannel, textureChannelMask } from '../../godot/rendering/materi
 import { BASE_MATERIAL_3D_DEFAULTS as D } from '../../godot/scene/baseMaterial3D.js';
 import type { MaterialState, MaterialTexture, MaterialValue } from './materialProperties.js';
 
-/** A shader parameter's value: a bool, a number, a vector's lanes, or a texture. */
-export type ParameterValue = MaterialValue;
-
 /** The value of each property the constructor sets (`material.cpp:3936`), under the property's name. */
-const DEFAULTS: Readonly<Record<string, ParameterValue>> = {
+const DEFAULTS: Readonly<Record<string, MaterialValue>> = {
   albedo_color: D.albedo,
   metallic_specular: D.specular,
   roughness: D.roughness,
@@ -142,9 +139,9 @@ const valueOf = (state: MaterialState, name: string): MaterialValue => state.val
  * The value of each shader parameter Godot's setters give a material in state `state`.
  * @canonical Fill a BaseMaterial3D shader's parameters from the material's properties.
  */
-export function materialParameters(state: MaterialState): Record<string, ParameterValue> {
+export function materialParameters(state: MaterialState): Record<string, MaterialValue> {
   const number = (name: string) => Number(valueOf(state, name));
-  const parameters: Record<string, ParameterValue> = {};
+  const parameters: Record<string, MaterialValue> = {};
   for (const [parameter, property] of COPIED) parameters[parameter] = valueOf(state, property);
   for (const [property, parameter] of TEXTURES) {
     const texture = state.values[property];

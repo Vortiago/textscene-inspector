@@ -5,7 +5,7 @@ import { materialUniforms } from './materialUniforms.js';
 import { originComment, renderModes } from './renderModes.js';
 import { vertexFunction } from './vertexFunction.js';
 
-/** Written only by `shaderTextOf`: one text per key, as Godot's `shader_map` holds one shader per key. */
+/** Written only by `shaderTextOf`, one text per key as Godot's `shader_map`. It never clears. */
 const textsByKey = new Map<string, string>();
 
 /**

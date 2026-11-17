@@ -81,8 +81,8 @@ type BooleanMember = {
   [Member in keyof MaterialKey]: MaterialKey[Member] extends boolean ? Member : never;
 }[keyof MaterialKey];
 
-/** The enum properties whose setter only stores the value, by the key member each one sets. */
-const ENUMS: Readonly<Record<string, NumberMember>> = {
+/** The enum and integer properties whose setter only stores the value, by the key member each one sets. */
+const NUMBERS: Readonly<Record<string, NumberMember>> = {
   transparency: 'transparency',
   alpha_antialiasing_mode: 'alphaAntialiasingMode',
   blend_mode: 'blendMode',
@@ -109,9 +109,8 @@ const BOOLEANS: Readonly<Record<string, BooleanMember>> = {
   proximity_fade_enabled: 'proximityFade',
 };
 
-/** `set_stencil_flags` (`material.cpp:3251`) keeps equal flags as they are. */
 function setStencilFlags(key: MaterialKey, requested: number): void {
-  if (key.stencilFlags !== requested) key.stencilFlags = stencilFlagsAfterSet(key.stencilFlags, requested);
+  key.stencilFlags = stencilFlagsAfterSet(key.stencilFlags, requested);
 }
 
 /** `set_stencil_mode` (`material.cpp:3231`): an outline or x-ray writes the stencil, always. */
@@ -133,7 +132,7 @@ const KEY_SETTERS = new Map<string, KeySetter>([
     name,
     (key, value) => void (value ? key.flags.add(flag) : key.flags.delete(flag)),
   ]),
-  ...Object.entries(ENUMS).map(([name, member]): [string, KeySetter] => [
+  ...Object.entries(NUMBERS).map(([name, member]): [string, KeySetter] => [
     name,
     (key, value) => void (key[member] = Number(value) as never),
   ]),

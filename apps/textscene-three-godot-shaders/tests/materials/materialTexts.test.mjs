@@ -5,15 +5,17 @@ import { stencilPassOf } from '../../../../packages/textscene-core/src/shaders/m
 import { MATERIAL_CLASSES, parseCaseId, sha256 } from '../../../../scripts/godot-probes/materialTexts.mjs';
 import { godotAnswers, liveMaterialTexts } from '../godotAnswers.mjs';
 
-/** The state of the material a case id names, or of the next pass its stencil makes. */
-function stateOf(id) {
-  const { materialClass, settings, isNextPass } = parseCaseId(id);
+/** The state of the material a parsed case names, or of the next pass its stencil makes. */
+function stateOf({ id, materialClass, settings, isNextPass }) {
   const state = materialStateOf(materialClass, settings);
-  return isNextPass ? materialStateOf('StandardMaterial3D', stencilPassOf(state).settings) : state;
+  if (!isNextPass) return state;
+  const pass = stencilPassOf(state);
+  if (!pass) throw new Error(`expected an outline or x-ray stencil for next pass ${id}, found none`);
+  return materialStateOf(pass.materialClass, pass.settings);
 }
 
 const answers = godotAnswers();
-const cases = Object.entries(answers.materials.cases);
+const cases = Object.entries(answers.materials.cases).map(([id, hash]) => ({ id, hash, ...parseCaseId(id) }));
 
 /** The cache hands one string to every material of a key, so each distinct text is hashed once. */
 const hashes = new Map();
@@ -22,8 +24,8 @@ const hashOf = (text) => hashes.get(text) ?? hashes.set(text, sha256(text)).get(
 /** Each case of `materialClass` whose text is not Godot's. */
 const mismatches = (materialClass) =>
   cases
-    .filter(([id]) => parseCaseId(id).materialClass === materialClass)
-    .map(([id, hash]) => ({ id, hash, text: shaderTextOf(stateOf(id).key) }))
+    .filter((parsed) => parsed.materialClass === materialClass)
+    .map((parsed) => ({ id: parsed.id, hash: parsed.hash, text: shaderTextOf(stateOf(parsed).key) }))
     .filter(({ hash, text }) => hashOf(text) !== hash);
 
 /** Godot's text of the case, which only the live run holds. */
