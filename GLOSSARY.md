@@ -584,9 +584,21 @@ A node that a layer adds to the live tree and the edited scene does not own. The
 _Avoid_: "internal node" for this, "hidden node".
 
 **Viewport mode**:
-The single `'2D' | '3D'` display state of the centre viewport: `3D` mounts the R3F canvas, and `2D` mounts the pannable 2D stage.
-A heuristic on the scene root type picks the default, and the toolbar toggle overrides it.
+The single `'2D' | '3D' | 'in-game'` display state of the centre viewport: `3D` mounts the R3F canvas, `2D` mounts the pannable 2D stage, and `in-game` mounts the **In-game mode** of the view.
+A heuristic on the scene root type picks 2D or 3D, never In-game, and the toolbar toggle overrides it.
 _Avoid_: "2D mode" alone.
+
+**In-game mode** (`<TscnCanvas mode="in-game">`, `r3f/gameView/`, ADR-0006):
+The mode of the one view that draws the root viewport as the game starts it: the scene's own cameras, the game's lighting, no **editor hint** and no input. The root viewport draws through the pass a **sub-viewport** draws through, with the game's **viewport description**. Scripts do not run.
+_Avoid_: "game view" for a component of its own: one view draws every mode. "Play mode", "runtime view".
+
+**Editor hint** (`EditorHintContext`, `RunningGameScope`):
+Godot's `Engine::is_editor_hint()`: true in the editor's views, false where the game runs. It is the one intent every editor-only drawer reads. The toggles of `ViewportModeContext` read as the game draws where it is false, and a node with `editor_only` draws only where it is true.
+_Avoid_: "game flag", a per-node "in game" prop.
+
+**Scene** (`Scene` from `openScene` in `scene/openScene.ts`):
+An open `.tscn` text with its resource provider: one parse, made the first time a view reads it, and one resource loader. Each view of a scene reads the parse, the loader and the project settings from it. It holds no React and no three.js.
+_Avoid_: "scene context", "document". "scene graph" for the parse.
 
 **Frame profile** (`r3f/frameProfile/`):
 The measurement of every frame on one renderer while the Performance toggle is on: frame rate, frame interval, and the CPU time, GPU time and draw calls of each **render step**, averaged over half a second (ADR-0053).
@@ -617,7 +629,7 @@ What displays a **sub-viewport**'s render target (a `SubViewportContainer` or a 
 _Avoid_: "viewport container" for the concept. "render target" for the surface.
 
 **Viewport description** (`ViewportDescription` in `r3f/viewportRender/viewportDescription.ts`, ADR-0078):
-What a viewport gives each render it draws: its MSAA, debanding, transparent background, mipmap bias, positional shadow atlas and anisotropic level, and its rules for the camera, the editor chrome and the preview environment. An adapter builds it from a source: `rootViewportDescription` from the project settings.
+What a viewport gives each render it draws: its MSAA, debanding, transparent background, mipmap bias, positional shadow atlas, anisotropic level and fallback Environment, and its rules for the camera, the editor chrome and the preview environment. An adapter builds it from a source: `rootViewportDescription` from the project settings with the editor's rules, `gameViewportDescription` with the game's, and `subViewportDescription` from a SubViewport's properties.
 _Avoid_: "viewport config", "viewport settings" for the value. A `project*` read beside a render.
 
 **Embedded window** (`nodes/windows/window/`):
