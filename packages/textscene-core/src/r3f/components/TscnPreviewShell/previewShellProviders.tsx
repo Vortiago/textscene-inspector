@@ -30,8 +30,6 @@ import { composeProviders } from '../../composeProviders.js';
 import { FrameStatsProvider } from '../../frameProfile/FrameStatsContext.js';
 import { SoftwareRenderingProvider } from '../../softwareRendering/SoftwareRenderingContext.js';
 
-export const DEFAULT_ROOT_SCENE_PATH = 'res://__inline__.tscn';
-
 interface PreviewShellProviderOptions {
   hierarchyValue: HierarchyContextValue;
   initialPreviewedCameraPath?: string | null;

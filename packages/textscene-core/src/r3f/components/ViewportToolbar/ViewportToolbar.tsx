@@ -31,7 +31,9 @@ import {
 import { DisplayMenu, type DisplayToggle } from './DisplayMenu.js';
 import styles from './ViewportToolbar.module.css';
 
-const MODES: ViewportMode[] = ['3D', '2D'];
+const MODES: ViewportMode[] = ['3D', '2D', 'in-game'];
+
+const MODE_LABELS: Record<ViewportMode, string> = { '3D': '3D', '2D': '2D', 'in-game': 'In-game' };
 
 const FREELOOK_TITLE =
   'Fly through the scene: the mouse looks around and W A S D move (Shift+F). Escape leaves.';
@@ -300,7 +302,7 @@ export function ViewportToolbar() {
             aria-pressed={m === mode}
             onClick={() => handleModeClick(m)}
           >
-            {m}
+            {MODE_LABELS[m]}
           </button>
         ))}
       </div>

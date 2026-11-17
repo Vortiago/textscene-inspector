@@ -11,7 +11,7 @@ import '../../base/node3d/index';
 import '../worldenvironment/index';
 import { Camera3D } from './Component';
 import { WorldEnvironment } from '../worldenvironment/Component';
-import { WorldEnvironmentScope } from '../../../r3f/environment/WorldEnvironmentScope';
+import { ViewportWorld } from '../../../r3f/testing/ViewportWorld';
 import { ViewportActionsProvider } from '../../../r3f/contexts/ViewportActionsContext';
 import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
@@ -49,12 +49,12 @@ async function backgroundOf(
     <SceneResourcesProvider internalResources={RESOURCES}>
       <ViewportModeProvider initialShowPreviewEnvironment={false}>
         <ViewportActionsProvider initialPreviewedCameraPath={viewed}>
-          <WorldEnvironmentScope world={world}>
+          <ViewportWorld world={world}>
             {worldEnvironment && <WorldEnvironment node={worldEnvironment} />}
             {cameras.map((node) => (
               <Camera3D key={node.name} node={node} />
             ))}
-          </WorldEnvironmentScope>
+          </ViewportWorld>
         </ViewportActionsProvider>
       </ViewportModeProvider>
     </SceneResourcesProvider>

@@ -48,6 +48,14 @@ export function rootViewportDescription(settings: ProjectSettings | null): Viewp
   };
 }
 
+/** The root viewport as a game draws it: its facts from the project, and the game's rules. */
+export function gameViewportDescription(settings: ProjectSettings | null): ViewportDescription {
+  return { ...rootViewportDescription(settings), ...GAME_RULES };
+}
+
+/** A game draws through the viewport's current camera, with no editor element and no preview. */
+const GAME_RULES = { camera: 'elected', drawsEditorChrome: false, previewsEnvironment: false } as const;
+
 /** The node's properties the SubViewport adapter reads. */
 type SubViewportFacts = Pick<
   SubViewportProperties,
@@ -88,9 +96,7 @@ export function subViewportDescription(
       VIEWPORT_POSITIONAL_SHADOW_ATLAS
     ),
     anisotropicLevel: properties.anisotropic_filtering_level ?? root.anisotropicLevel,
-    camera: 'elected',
-    drawsEditorChrome: false,
-    previewsEnvironment: false,
+    ...GAME_RULES,
   };
 }
 

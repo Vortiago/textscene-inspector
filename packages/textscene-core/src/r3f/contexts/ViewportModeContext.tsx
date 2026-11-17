@@ -7,7 +7,7 @@
 
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 
-export type ViewportMode = '2D' | '3D';
+export type ViewportMode = '2D' | '3D' | 'in-game';
 
 /**
  * The localStorage keys of the persisted viewport preferences. The shell

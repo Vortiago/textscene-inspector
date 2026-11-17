@@ -43,7 +43,8 @@ import { HelpLink } from './HelpLink.js';
 import { AnimationTabWatcher } from './AnimationTabWatcher.js';
 import { DetailTabs, type DetailTab } from './DetailTabs.js';
 import { SceneTreePane } from './SceneTreePane.js';
-import { DEFAULT_ROOT_SCENE_PATH, previewShellProviders } from './previewShellProviders.js';
+import { previewShellProviders } from './previewShellProviders.js';
+import { DEFAULT_ROOT_SCENE_PATH } from '../../../scene/openScene.js';
 import { CaptureStateReporter } from './CaptureStateReporter.js';
 import type { TscnPreviewShellProps } from './previewShellProps.js';
 import styles from './TscnPreviewShell.module.css';
@@ -58,7 +59,7 @@ function isBoolean(value: unknown): value is boolean {
   return typeof value === 'boolean';
 }
 function isViewportMode(value: unknown): value is ViewportMode {
-  return value === '2D' || value === '3D';
+  return value === '2D' || value === '3D' || value === 'in-game';
 }
 
 export function TscnPreviewShell({

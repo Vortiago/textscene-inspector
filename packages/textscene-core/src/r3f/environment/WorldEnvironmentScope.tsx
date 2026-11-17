@@ -17,7 +17,6 @@ import { PreviewEnvironment } from '../preview/PreviewEnvironment';
 import { previewEnvironment } from '../preview/godotPreviewLighting';
 import { PreviewSun } from '../preview/PreviewSun';
 import { usePreviewYield } from '../preview/usePreviewYield';
-import { WorldKindProvider, type WorldKind } from './WorldKindContext';
 import {
   SharedWorldExposureScope,
   WorldAttributesExposure,
@@ -46,6 +45,9 @@ export interface ResolvedEnvironment extends EnvironmentLayerProps {
 /** What a WorldEnvironment's `environment` resolves to, when it holds a valid one. */
 export type EnvironmentResolution = WorldResolution<{ environment: ResolvedEnvironment }>;
 
+/** Which viewport's world a scope holds: the root's or a SubViewport's. */
+export type WorldKind = 'root' | 'subViewport';
+
 const environments = createWorldGroup<{ environment: ResolvedEnvironment }>();
 
 export const usePublishEnvironment = environments.usePublish;
@@ -59,17 +61,15 @@ const WorldOwnEnvironmentContext = createContext<ResolvedEnvironment | null>(nul
  */
 export function WorldEnvironmentScope({ world, children }: { world: WorldKind; children: ReactNode }) {
   return (
-    <WorldKindProvider world={world}>
-      <environments.Provider>
-        <WorldExposureScope>
-          {world === 'root' ? (
-            <RootEnvironment>{children}</RootEnvironment>
-          ) : (
-            <SubViewportEnvironment>{children}</SubViewportEnvironment>
-          )}
-        </WorldExposureScope>
-      </environments.Provider>
-    </WorldKindProvider>
+    <environments.Provider>
+      <WorldExposureScope>
+        {world === 'root' ? (
+          <RootEnvironment>{children}</RootEnvironment>
+        ) : (
+          <SubViewportEnvironment>{children}</SubViewportEnvironment>
+        )}
+      </WorldExposureScope>
+    </environments.Provider>
   );
 }
 
@@ -118,12 +118,10 @@ function CanvasWorldEnvironment({ scene, children }: { scene: THREE.Scene | null
     scene &&
     createPortal(
       <CanvasWorkspaceProvider workspace="3d">
-        <WorldKindProvider world="subViewport">
-          <WorldAttributesExposure>
-            {own && <EnvironmentLayer {...own} />}
-            <DrawnEnvironments shown={own} own={own} />
-          </WorldAttributesExposure>
-        </WorldKindProvider>
+        <WorldAttributesExposure>
+          {own && <EnvironmentLayer {...own} />}
+          <DrawnEnvironments shown={own} own={own} />
+        </WorldAttributesExposure>
       </CanvasWorkspaceProvider>,
       scene
     );
@@ -142,11 +140,7 @@ function CanvasWorldEnvironment({ scene, children }: { scene: THREE.Scene | null
  * world draws its Environments into the shared scene.
  */
 export function SharedWorldEnvironmentScope({ children }: { children: ReactNode }) {
-  return (
-    <WorldKindProvider world="subViewport">
-      <SharedWorldExposureScope>{children}</SharedWorldExposureScope>
-    </WorldKindProvider>
-  );
+  return <SharedWorldExposureScope>{children}</SharedWorldExposureScope>;
 }
 
 /**

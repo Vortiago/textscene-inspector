@@ -20,6 +20,9 @@ import { worldExposureOfScene } from '../exposure/sceneExposure';
 import { EMISSION_EXPOSURE } from '../exposure/emissionExposure';
 import { fireSceneRender, fireSceneRenderEnd } from '../testing/fireSceneRender';
 import { SceneCamerasProvider } from '../sceneCameras';
+import { ViewportWorld } from '../testing/ViewportWorld';
+import { ViewportDescriptionProvider } from '../viewportRender/viewportDescriptionContext';
+import { gameViewportDescription } from '../viewportRender/viewportDescription';
 import type { AutoExposure } from '../../resources/cameraattributes/types';
 import {
   useAutoExposure,
@@ -393,12 +396,12 @@ describe('the exposure of a world seen through a Camera3D', () => {
   it('elects the last current camera of a sub-viewport, as the viewport does', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       inRoot(
-        <WorldEnvironmentScope world="subViewport">
+        <ViewportWorld world="subViewport">
           <CameraAt order={[0]} path="Root/Sub/A" cameraAttributes={attributes(2)} />
           <CameraAt order={[1]} path="Root/Sub/B" current cameraAttributes={attributes(3)} />
           <CameraAt order={[2]} path="Root/Sub/C" current cameraAttributes={attributes(4)} />
           <Reader />
-        </WorldEnvironmentScope>
+        </ViewportWorld>
       )
     );
     const factors = renderer.scene
@@ -410,17 +413,32 @@ describe('the exposure of a world seen through a Camera3D', () => {
   it('elects the first camera of a sub-viewport when none is current', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       inRoot(
-        <WorldEnvironmentScope world="subViewport">
+        <ViewportWorld world="subViewport">
           <CameraAt order={[0]} path="Root/Sub/A" cameraAttributes={attributes(2)} />
           <CameraAt order={[1]} path="Root/Sub/B" cameraAttributes={attributes(3)} />
           <Reader />
-        </WorldEnvironmentScope>
+        </ViewportWorld>
       )
     );
     const factors = renderer.scene
       .findAll((node) => node.props.name === 'Reader')
       .map((node) => node.props.userData.factor);
     expect(factors.sort()).toEqual([1, 2]);
+  });
+
+  it('elects the last current camera of a root whose viewport draws through its elected camera', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <ViewportDescriptionProvider description={gameViewportDescription(null)}>
+        {inRoot(
+          <>
+            <CameraAt order={[0]} path="Root/A" cameraAttributes={attributes(2)} />
+            <CameraAt order={[1]} path="Root/B" current cameraAttributes={attributes(3)} />
+            <CameraAt order={[2]} path="Root/C" current cameraAttributes={attributes(4)} />
+          </>
+        )}
+      </ViewportDescriptionProvider>
+    );
+    expect(read(renderer).factor).toBe(4);
   });
 
   it("holds the world's exposure while a camera's attributes still load", async () => {

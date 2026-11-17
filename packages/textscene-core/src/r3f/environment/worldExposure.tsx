@@ -18,7 +18,8 @@ import { useSceneExposure } from '../exposure/sceneExposure';
 import { useByValue } from '../hooks/useByValue';
 import { sameElements } from '../../utils/sameElements';
 import { useRegisterSceneCameraResources, useSceneCameraResources } from '../sceneCameras';
-import { useWorldKind, type WorldKind } from './WorldKindContext';
+import { useViewportDescription } from '../viewportRender/viewportDescriptionContext';
+import type { ViewportDescription } from '../viewportRender/viewportDescription';
 import { createWorldGroup, createWorldPublications, type WorldResolution } from './worldGroup';
 import type { EnvironmentResolution } from './WorldEnvironmentScope';
 
@@ -62,18 +63,19 @@ export function usePublishCamera(path: string, current: boolean, held: CameraRes
 }
 
 /**
- * The camera `world` renders through. The root viewport renders through the previewed camera,
- * whichever world holds it (`previewed`), and through none without a preview, since the editor
- * camera holds no attributes. A sub-viewport elects one of its own (`electCameraOfViewport`).
+ * The camera a viewport renders through, by the camera rule of its description. The editor's
+ * renders through the previewed camera, whichever world holds it (`previewed`), and through none
+ * without a preview, since the editor camera holds no attributes. A game's viewport elects one of its
+ * own (`electCameraOfViewport`).
  */
 function renderCameraOf(
-  world: WorldKind,
+  rule: ViewportDescription['camera'],
   viewedPath: string | null,
   previewed: CameraResources | null,
   viewportPath: string | null,
   worldCameras: readonly WorldCamera[]
 ): CameraResources | null {
-  if (world === 'subViewport') return electCameraOfViewport(worldCameras, viewportPath);
+  if (rule === 'elected') return electCameraOfViewport(worldCameras, viewportPath);
   return previewed ?? worldCameras.find((camera) => camera.path === viewedPath) ?? null;
 }
 
@@ -156,10 +158,10 @@ export function useRenderCameraEnvironment(): EnvironmentResolution | null {
 }
 
 function RenderCameraProvider({ children }: { children: ReactNode }) {
-  const world = useWorldKind();
+  const rule = useViewportDescription().camera;
   const viewedPath = useOptionalViewportActions()?.previewedCameraPath ?? null;
   const renderCamera = renderCameraOf(
-    world,
+    rule,
     viewedPath,
     useSceneCameraResources(viewedPath),
     useEnclosingViewportPath(),

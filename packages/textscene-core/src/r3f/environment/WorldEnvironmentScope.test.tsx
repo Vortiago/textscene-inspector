@@ -16,6 +16,8 @@ import {
   type EnvironmentResolution,
 } from './WorldEnvironmentScope';
 import { NO_RESOLUTION, PENDING_RESOLUTION } from './worldGroup';
+import { ViewportDescriptionProvider } from '../viewportRender/viewportDescriptionContext';
+import { gameViewportDescription } from '../viewportRender/viewportDescription';
 
 vi.mock('./EnvironmentLayer', () => ({
   EnvironmentLayer: ({ settings }: EnvironmentLayerProps) => (
@@ -261,6 +263,27 @@ describe('<WorldEnvironmentScope world="root"> preview sun', () => {
       inRoot(<Publisher resolution={PENDING_RESOLUTION} />)
     );
     expect(previewSunCount(renderer)).toBe(1);
+  });
+});
+
+describe('<WorldEnvironmentScope world="root"> of a viewport that previews nothing', () => {
+  /** The root as a game draws it, whatever the toolbar toggles hold. */
+  function inGameRoot(children: ReactNode) {
+    return (
+      <ViewportDescriptionProvider description={gameViewportDescription(null)}>
+        {inRoot(children)}
+      </ViewportDescriptionProvider>
+    );
+  }
+
+  it('draws no preview environment', async () => {
+    expect(mountedLayers(await ReactThreeTestRenderer.create(inGameRoot(null)))).toEqual([
+      'NoEnvironmentLayer',
+    ]);
+  });
+
+  it('draws no preview sun', async () => {
+    expect(previewSunCount(await ReactThreeTestRenderer.create(inGameRoot(null)))).toBe(0);
   });
 });
 

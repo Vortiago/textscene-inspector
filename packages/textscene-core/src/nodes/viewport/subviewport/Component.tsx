@@ -33,6 +33,8 @@ import { useStableVector2 } from '../../../r3f/hooks/useStableVector2';
 import { useInCanvasOverWorld } from '../../../r3f/viewportRender/canvasOverWorldScope';
 import { ViewportCanvasScope } from '../../../r3f/viewportCanvasScope';
 import { viewportCanvasColorSpace } from '../../../r3f/viewportRender/viewportTargetOptions';
+import { useSubViewportDescription } from '../../../r3f/viewportRender/useSubViewportDescription';
+import type { ViewportDescription } from '../../../r3f/viewportRender/viewportDescription';
 
 // Lazy: the Control painters register on import, and a viewport with no Controls never needs them.
 const ViewportControls = lazy(() =>
@@ -74,6 +76,20 @@ export function SubViewport(props: NodeComponentProps) {
 }
 
 function SubViewportMount({ node, children }: NodeComponentProps) {
+  const description = useSubViewportDescription(node.properties as SubViewportProperties);
+  return (
+    <ViewportMount node={node} description={description}>
+      {children}
+    </ViewportMount>
+  );
+}
+
+/** A viewport and its subtree, drawn by its pass with what `description` gives each render. */
+export function ViewportMount({
+  node,
+  description,
+  children,
+}: NodeComponentProps & { description: ViewportDescription }) {
   const properties = node.properties as SubViewportProperties;
   const { own_world_3d: ownWorld3D } = properties;
   const workspace = useCanvasWorkspace();
@@ -149,6 +165,7 @@ function SubViewportMount({ node, children }: NodeComponentProps) {
             canvasModulate={canvasModulate}
             canvasOverWorld={drawsCanvasOverWorld ? canvasContents : null}
             holdsCanvasItems={holdsCanvasItems}
+            viewport={description}
           >
             {rendersInline ? null : contents}
           </OffscreenViewportPass>

@@ -61,7 +61,6 @@ import { useCanvasPass } from './useCanvasPass';
 import type { SubViewportProperties } from '../../nodes/viewport/subviewport/types';
 import type { Vector2 } from '../../godot/math/vector';
 import { useProjectClearColor } from '../useProjectClearColor.js';
-import { useSubViewportDescription } from './useSubViewportDescription';
 import type { ViewportDescription } from './viewportDescription';
 import { drawWorld, type WorldRender } from './worldRender';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
@@ -92,6 +91,8 @@ export interface OffscreenViewportPassProps extends NodeComponentProps {
   canvasOverWorld: ReactNode | null;
   /** Whether the subtree holds a 2D item, which the viewport's World2D lights. */
   holdsCanvasItems: boolean;
+  /** What the viewport gives each render: a SubViewport's from its properties, the root's from the project. */
+  viewport: ViewportDescription;
 }
 
 /**
@@ -110,11 +111,11 @@ export function OffscreenViewportPass({
   canvasModulate,
   canvasOverWorld,
   holdsCanvasItems,
+  viewport,
   children,
 }: OffscreenViewportPassProps) {
   const properties = node.properties as SubViewportProperties;
   const { own_world_3d: ownWorld3D } = properties;
-  const viewport = useSubViewportDescription(properties);
   const transparentBg = viewport.transparentBackground;
   const { x: width, y: height } = size;
 

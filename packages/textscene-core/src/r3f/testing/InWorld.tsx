@@ -4,14 +4,8 @@
  * are excluded from the build.
  */
 import type { ReactNode } from 'react';
-import { WorldKindProvider, type WorldKind } from '../environment/WorldKindContext';
 import { WorldExposureScope } from '../environment/worldExposure';
 
-/** The root world unless `world` says otherwise. */
-export function InWorld({ world = 'root', children }: { world?: WorldKind; children: ReactNode }) {
-  return (
-    <WorldKindProvider world={world}>
-      <WorldExposureScope>{children}</WorldExposureScope>
-    </WorldKindProvider>
-  );
+export function InWorld({ children }: { children: ReactNode }) {
+  return <WorldExposureScope>{children}</WorldExposureScope>;
 }

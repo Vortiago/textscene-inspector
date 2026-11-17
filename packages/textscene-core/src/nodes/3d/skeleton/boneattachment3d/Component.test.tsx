@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { parseTscnContent } from '../../../../r3f/hooks/useParsedScene';
+import { parseTscnContent } from '../../../../scene/parseScene';
 import type { SceneGraph } from '../../../../core/SceneGraph';
 import { DispatchedScene } from '../../../../r3f/testing/DispatchedScene';
 import { settleLoads } from '../../../../r3f/testing/settleLoads';

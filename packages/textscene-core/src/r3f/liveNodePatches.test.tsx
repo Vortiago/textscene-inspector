@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { parseTscnContent } from './hooks/useParsedScene';
+import { parseTscnContent } from '../scene/parseScene';
 import { DispatchedScene } from './testing/DispatchedScene';
 import { settleLoads } from './testing/settleLoads';
 import { ProjectSettingsProvider } from './contexts/ProjectSettingsContext';

@@ -138,10 +138,11 @@ function classify(node: TscnNode, drawsAWindow: boolean): ViewportContent {
     if (nodeComponentRegistry.isContainer(child.type)) {
       return hasNode3DContent(child.children);
     }
-    // A registered non-container type is Node3D content by elimination:
-    // CanvasItems and Controls were both matched above.
-    if (nodeComponentRegistry.get(child.type)) return true;
-    return hasNode3DContent(child.children);
+    // A registered non-container type is Node3D content by elimination: CanvasItems and Controls
+    // were both matched above. Its children are still visited, since a CanvasLayer or a CanvasItem
+    // below a Node3D draws in the viewport's canvas.
+    const below = hasNode3DContent(child.children);
+    return nodeComponentRegistry.get(child.type) !== undefined || below;
   };
 
   const found = (kind: ViewportContentKind): ViewportContent => ({
