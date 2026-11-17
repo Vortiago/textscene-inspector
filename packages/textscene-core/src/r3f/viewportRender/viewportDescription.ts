@@ -111,6 +111,11 @@ export function subViewportDescription(
   };
 }
 
+/** A transparent target, or one that never asks, clears black (`renderer_viewport.cpp:371`). */
+export function clearsBlack(viewport: ViewportDescription): boolean {
+  return viewport.transparentBackground || !viewport.requestsClear;
+}
+
 /** Godot's default samplers (`render_forward_clustered.cpp:1824`, `material_storage.h:370`). */
 export function probeCaptureDescription(viewport: ViewportDescription): ViewportDescription {
   return { ...viewport, mipmapBias: 0, anisotropicLevel: DEFAULT_ANISOTROPIC_FILTERING_LEVEL };

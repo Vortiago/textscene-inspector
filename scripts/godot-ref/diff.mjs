@@ -37,7 +37,7 @@ function usage() {
       '                   (default: report only)\n' +
       '  --frame          fit-the-bounds camera on BOTH sides instead of the editor orbit\n' +
       '  --keep           keep the per-side PNGs, not just the diff\n' +
-      '  --collisions     show collision shapes on both sides (Visible Collision Shapes)\n' +
+      '  --collisions     show collision shapes on both sides (Visible Collision Shapes), not in-game\n' +
       '  --mode in-game   measure the scene as the game starts it, against our In-game mode\n' +
       '  --table <file>   also write the results as a Markdown table, one row per scene'
   );
@@ -72,6 +72,9 @@ export function parseArgs(argv) {
     else if (arg === '--collisions') args.collisions = true;
     else if (arg.startsWith('--')) throw new Error(`unknown flag: ${arg}`);
     else args.fixtures.push(arg);
+  }
+  if (args.collisions && args.mode === IN_GAME_MODE) {
+    throw new Error(`--collisions cannot take --mode ${IN_GAME_MODE}: our In-game mode draws no debug hint`);
   }
   return args;
 }

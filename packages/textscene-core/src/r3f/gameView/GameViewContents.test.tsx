@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { GameViewContents } from './GameView';
+import { GameViewContents } from './GameViewContents';
 import { TscnSceneProvider } from '../TscnSceneProvider';
 import { openScene } from '../../scene/openScene';
 import { ROOT_VIEWPORT_PATH } from './rootViewportNode';

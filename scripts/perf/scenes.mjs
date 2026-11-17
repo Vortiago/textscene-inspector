@@ -1,7 +1,4 @@
-/**
- * Steps that can run many times a frame, and demos software GL draws at a frame a second or more.
- * @type {Array<{ name: string, file: string, inGameFrame?: { width: number, height: number } }>}
- */
+/** @type {Array<{ name: string, file: string, inGameFrame?: { width: number, height: number } }>} */
 export const BUDGET_SCENES = [
   { name: 'depth-fog', file: 'unit-depth-fog.tscn' },
   { name: 'fog-volume', file: 'unit-fog-volume.tscn' },

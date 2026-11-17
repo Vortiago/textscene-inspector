@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type * as THREE from 'three';
 import type { ReactNode } from 'react';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -6,6 +6,7 @@ import { DirectionalLight3D } from '../directionallight3d/Component';
 import { OmniLight3D } from '../omnilight3d/Component';
 import { SpotLight3D } from '../spotlight3d/Component';
 import { AreaLight3D } from '../arealight3d/Component';
+import { useLtcTexturesSettled } from '../../../../r3f/areaLight/useLtcTexturesSettled';
 import { RunningGameScope } from '../../../../r3f/contexts/EditorHintContext';
 import { nodeRegistry } from '../../../../core/NodeRegistry';
 import { heading } from '../../../../parser/testing/parserKit';
@@ -37,7 +38,23 @@ async function threeLight(
   return renderer.scene.findByType(threeType).instance as THREE.Light;
 }
 
+/** Settles the LTC load an area light waits on, so its `visible` reads the editor hint alone. */
+async function settleLtcTextures(): Promise<void> {
+  let isSettled = false;
+  function Probe() {
+    isSettled = useLtcTexturesSettled();
+    return null;
+  }
+  const renderer = await ReactThreeTestRenderer.create(<Probe />);
+  await vi.waitFor(async () => {
+    await renderer.update(<Probe />);
+    expect(isSettled).toBe(true);
+  });
+}
+
 describe('a Light3D with editor_only', () => {
+  beforeAll(settleLtcTextures);
+
   it.each(LIGHTS)('%s gives no light where the game runs', async (type, Light, threeType) => {
     const inGame = (light: ReactNode) => <RunningGameScope>{light}</RunningGameScope>;
     expect((await threeLight(Light, type, threeType, inGame)).visible).toBe(false);

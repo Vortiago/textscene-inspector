@@ -27,7 +27,7 @@ async function fallbackIn(
   if (file !== undefined) fake.resources.seed(DEFAULT_ENV_PATH, file);
   let seen: EnvironmentResolution | null = null;
   function Probe() {
-    seen = useFallbackEnvironment();
+    seen = useFallbackEnvironment(path);
     return null;
   }
   const tree = (
@@ -53,6 +53,13 @@ describe('useFallbackEnvironment', () => {
 
   it('lights a viewport with no fallback by the clear colour at energy 1', async () => {
     expect(ambientOf(await fallbackIn(null))).toEqual({ color: GODOT_CLEAR_COLOR, energy: 1 });
+  });
+
+  it('draws the clear colour of a viewport with no fallback at no exposure', async () => {
+    const resolution = await fallbackIn(null);
+    expect(
+      resolution.status === 'resolved' && resolution.environment.settings.background.ignoresExposure
+    ).toBe(true);
   });
 
   it('lights by the clear colour when the fallback file fails to load (error case)', async () => {

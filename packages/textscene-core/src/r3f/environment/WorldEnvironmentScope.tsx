@@ -30,6 +30,7 @@ import { PassToneMapProvider } from './passToneMap';
 import { CanvasWorkspaceProvider } from '../contexts/CanvasWorkspaceContext';
 import { useSceneShadowFit } from '../SceneShadowFitter';
 import { useRootViewportDescription } from '../viewportRender/useRootViewportDescription.js';
+import { useViewportDescription } from '../viewportRender/viewportDescriptionContext.js';
 import { useSceneDepthPrepass } from '../depthPrepass/SceneDepthPrepass';
 import { CanvasWorldContext, type CanvasWorld } from './canvasWorldScene';
 import { identityKey } from '../../utils/identityKey';
@@ -167,8 +168,12 @@ function RootEnvironment({ children }: { children: ReactNode }) {
 /** The preview stands in while no WorldEnvironment node does, even one with no valid Environment. */
 function useRootWorldEnvironment(previewsEnvironment: boolean): EnvironmentResolution | null {
   const chosen = environments.useChosen();
-  const fallback = useFallbackEnvironment();
-  if (!chosen) return previewsEnvironment ? previewResolution() : fallback;
+  const { fallbackEnvironment } = useViewportDescription();
+  const isPreviewShown = previewsEnvironment && !chosen;
+  // The preview draws in place of the fallback, so its file is not loaded.
+  const fallback = useFallbackEnvironment(isPreviewShown ? null : fallbackEnvironment);
+  if (isPreviewShown) return previewResolution();
+  if (!chosen) return fallback;
   return chosen.status === 'none' ? fallback : chosen;
 }
 
@@ -269,7 +274,7 @@ function useViewEnvironment(world: EnvironmentResolution | null): EnvironmentRes
 /** The first valid WorldEnvironment's, else the fallback (`renderer_scene_cull.cpp:3604-3610`). */
 function useWorldEnvironment(): EnvironmentResolution | null {
   const chosen = environments.useChosen();
-  const fallback = useFallbackEnvironment();
+  const fallback = useFallbackEnvironment(useViewportDescription().fallbackEnvironment);
   // A loading WorldEnvironment holds its place.
   return chosen && chosen.status !== 'none' ? chosen : fallback;
 }

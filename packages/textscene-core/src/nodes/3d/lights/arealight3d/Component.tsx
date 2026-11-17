@@ -101,7 +101,7 @@ export function AreaLight3D({ node, children }: NodeComponentProps) {
   useLightDistanceFade(lightRef, properties, { intensity, shadowOpacity });
   const userData = useAreaLightUserData(properties);
   const isLtcLoadSettled = useLtcTexturesSettled();
-  const drawsLight = useDrawsEditorOnly(properties.editor_only === true);
+  const drawsLight = useDrawsEditorOnly(properties.editor_only);
 
   return (
     <group name={node.name} {...node3dGroupSpread(transform)}>

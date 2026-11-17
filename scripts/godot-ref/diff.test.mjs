@@ -67,6 +67,12 @@ describe('parseArgs', () => {
     expect(parseArgs(['a.tscn']).collisions).toBe(false);
   });
 
+  it('refuses --collisions with --mode in-game, whose capture draws no collision shape', () => {
+    expect(() => parseArgs(['a.tscn', '--collisions', '--mode', 'in-game'])).toThrow(
+      /--collisions cannot take --mode in-game/
+    );
+  });
+
   it('rejects a table flag with no file (error path)', () => {
     expect(() => parseArgs(['a.tscn', '--table'])).toThrow('--table needs a file path, got "undefined"');
   });

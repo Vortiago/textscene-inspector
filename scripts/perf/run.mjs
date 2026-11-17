@@ -83,7 +83,12 @@ class ProfiledPages {
 
   for({ inGameFrame = null }) {
     const key = inGameFrame ? `in-game:${inGameFrame.width}x${inGameFrame.height}` : 'editor';
-    if (!this.pages.has(key)) this.pages.set(key, this.open(inGameFrame));
+    if (!this.pages.has(key)) {
+      // A failed open is forgotten, so the next scene of this key tries again and shows its own cause.
+      const opened = this.open(inGameFrame);
+      opened.catch(() => this.pages.delete(key));
+      this.pages.set(key, opened);
+    }
     return this.pages.get(key);
   }
 

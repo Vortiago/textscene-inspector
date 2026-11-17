@@ -36,16 +36,15 @@ vi.mock('./NoEnvironmentLayer', () => ({
 vi.mock('./Compositor', () => ({
   Compositor: () => <group name="Compositor" />,
 }));
-vi.mock('./fallbackEnvironment', async () => {
-  const { useViewportDescription } = await import('../viewportRender/viewportDescriptionContext');
-  return {
-    // The fallback resolves to a settings object named after its path, and to none with no path.
-    useFallbackEnvironment: (): EnvironmentResolution => {
-      const path = useViewportDescription().fallbackEnvironment;
-      return path ? resolved(path) : NO_RESOLUTION;
-    },
-  };
-});
+/** Each path the fallback hook was asked to load, in call order. Cleared by the test that reads it. */
+const askedFallbacks = vi.hoisted(() => [] as (string | null)[]);
+vi.mock('./fallbackEnvironment', () => ({
+  // The fallback resolves to a settings object named after its path, and to none with no path.
+  useFallbackEnvironment: (path: string | null): EnvironmentResolution => {
+    askedFallbacks.push(path);
+    return path ? resolved(path) : NO_RESOLUTION;
+  },
+}));
 vi.mock('../preview/PreviewSun', () => ({
   PreviewSun: () => <group name="PreviewSun" />,
 }));
@@ -330,6 +329,34 @@ describe('<WorldEnvironmentScope world="subViewport">', () => {
       inRoot(inSubViewport(<Publisher resolution={resolved('a')} />))
     );
     expect(mountedLayers(renderer).sort()).toEqual(['EnvironmentLayer', 'PreviewEnvironment']);
+  });
+});
+
+describe('<WorldEnvironmentScope world="root"> of an editor viewport with a fallback Environment', () => {
+  const FALLBACK = 'res://default_env.tres';
+
+  function inEditorRoot(showPreviewEnvironment: boolean) {
+    return (
+      <ViewportDescriptionProvider
+        description={{
+          ...gameViewportDescription(null),
+          previewsEnvironment: true,
+          fallbackEnvironment: FALLBACK,
+        }}
+      >
+        {inRoot(null, showPreviewEnvironment)}
+      </ViewportDescriptionProvider>
+    );
+  }
+
+  it('loads no fallback file while the preview environment stands in', async () => {
+    askedFallbacks.length = 0;
+    await ReactThreeTestRenderer.create(inEditorRoot(true));
+    expect(askedFallbacks.filter((path) => path !== null)).toEqual([]);
+  });
+
+  it('draws the fallback when the user turns the preview off', async () => {
+    expect(appliedName(await ReactThreeTestRenderer.create(inEditorRoot(false)))).toBe(FALLBACK);
   });
 });
 

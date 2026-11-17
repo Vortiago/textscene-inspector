@@ -1,8 +1,3 @@
-/**
- * The In-game mode: the root viewport as the game starts it, at the game window of the fixture
- * project, through the scene's own camera, with no editor element.
- */
-
 const GAME_WINDOW = { width: 320, height: 180 };
 
 export const IN_GAME_SCENES = [

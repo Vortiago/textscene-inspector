@@ -1,5 +1,4 @@
 /* global document */
-// `document` exists only in the webview frame, where `frame.evaluate` runs this.
 export default function inGameReadout() {
   const button = [...document.querySelectorAll('button')].find((each) => each.textContent === 'In-game');
   return {

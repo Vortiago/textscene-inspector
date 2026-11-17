@@ -37,7 +37,7 @@ export function SpotLight3D({ node, children }: NodeComponentProps) {
     properties,
     properties.spot_angle_attenuation
   );
-  const drawsLight = useDrawsEditorOnly(properties.editor_only === true);
+  const drawsLight = useDrawsEditorOnly(properties.editor_only);
 
   return (
     <LightWithTarget

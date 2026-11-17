@@ -79,7 +79,7 @@ export function DirectionalLight3D({ node, children }: NodeComponentProps) {
     ]
   );
 
-  const drawsLight = useDrawsEditorOnly(properties.editor_only === true);
+  const drawsLight = useDrawsEditorOnly(properties.editor_only);
   return (
     <LightWithTarget
       name={node.name}

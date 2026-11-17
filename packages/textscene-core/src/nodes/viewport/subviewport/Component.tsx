@@ -146,13 +146,14 @@ export function ViewportMount({
       ) : null}
     </YSortProvider>
   );
-  // A nested shared viewport draws the own world above it, as `find_world_3d()` does (`viewport.cpp:4670`).
+  // A nested shared viewport draws the nearest own world, as `find_world_3d()` does (`viewport.cpp:4670`).
   function controlOnlyContents() {
-    const walked = <CanvasWorkspaceProvider workspace="2d">{inViewport(children)}</CanvasWorkspaceProvider>;
-    if (!ownWorld3D) return walked;
+    if (!ownWorld3D) return inViewport(children);
     return (
       <ViewportDescriptionProvider description={description}>
-        <OwnCanvasWorldScope>{walked}</OwnCanvasWorldScope>
+        <OwnCanvasWorldScope>
+          <CanvasWorkspaceProvider workspace="2d">{inViewport(children)}</CanvasWorkspaceProvider>
+        </OwnCanvasWorldScope>
       </ViewportDescriptionProvider>
     );
   }
