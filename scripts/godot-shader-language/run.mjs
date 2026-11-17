@@ -58,6 +58,7 @@ function testingChapter(answers) {
       states: readJson('corpus/states.json'),
       knownMismatches: KNOWN_MISMATCHES,
     },
+    materials: answers.materials,
   });
 }
 

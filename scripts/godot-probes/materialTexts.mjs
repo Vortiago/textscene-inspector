@@ -6,6 +6,9 @@ import { oneGodot, printedField, runGodotScript } from './godotRun.mjs';
 const MARKER = 'MATERIAL ';
 const DONE = 'MATERIALS DONE';
 
+/** The last part of the id of a stencil's next pass, after its material's id. */
+export const NEXT_PASS = 'next_pass';
+
 /** The material classes whose text BaseMaterial3D writes: ORMMaterial3D sets the key's `orm` bit. */
 export const MATERIAL_CLASSES = ['StandardMaterial3D', 'ORMMaterial3D'];
 
@@ -66,10 +69,13 @@ func shader_between(before: RID, after: RID) -> String:
 	var code := shader_in(before, after, range(maxi(first_slot - 1, 0), last_slot + 2))
 	return code if code != "" else shader_in(before, after, range(64))
 
-func text_of(cls: String, settings: Array) -> String:
+func made(cls: String, settings: Array) -> Material:
 	var material: Material = ClassDB.instantiate(cls)
 	for setting in settings:
 		material.set(setting[0], setting[1])
+	return material
+
+func text_of(material: Material) -> String:
 	var before := RenderingServer.shader_create()
 	material.get_rid()
 	await get_tree().process_frame
@@ -79,6 +85,29 @@ func text_of(cls: String, settings: Array) -> String:
 	RenderingServer.free_rid(after)
 	return code
 
+## The next pass an outline or x-ray stencil makes, with the material that made it freed.
+func next_pass_of(cls: String, settings: Array) -> Material:
+	var material := made(cls, settings)
+	var next := material.next_pass
+	material.next_pass = null
+	return next
+
+func record(id: String, material: Material) -> void:
+	printerr("${MARKER}", id, " ", Marshalls.utf8_to_base64(await text_of(material)))
+
+## Each material's shader is the only one made in its window: a next pass is measured alone, first.
+func record_case(cls: String, settings: Array) -> void:
+	var next := next_pass_of(cls, settings)
+	if next != null:
+		await record(id_of(cls, settings) + "|${NEXT_PASS}", next)
+		next = null
+		await get_tree().process_frame
+	var material := made(cls, settings)
+	material.next_pass = null
+	await record(id_of(cls, settings), material)
+	material = null
+	await get_tree().process_frame
+
 func _ready() -> void:
 	var run: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://run.json"))
 	printerr("GODOT ", Engine.get_version_info().string)
@@ -87,9 +116,7 @@ func _ready() -> void:
 	for cls in run.classes:
 		for settings in cases:
 			if index % int(run.chunks) == int(run.chunk):
-				var code := await text_of(cls, settings)
-				printerr("${MARKER}", id_of(cls, settings), " ", Marshalls.utf8_to_base64(code))
-				await get_tree().process_frame
+				await record_case(cls, settings)
 			index += 1
 	printerr("${DONE}")
 	get_tree().quit()
