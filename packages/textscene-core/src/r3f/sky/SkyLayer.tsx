@@ -200,11 +200,10 @@ export function SkyLayer({
     const stepRadiance = (render: SkyRender, camera?: THREE.Camera) => {
       const read = lightsRead.current ?? lights;
       bakes.followLights(read);
-      const isLightDirtied = noteSkyLights(
-        gl,
-        readsLights ? read.key : NO_SKY_LIGHTS,
-        lightExposure(read, render)
-      );
+      // The exposure scales the light data, and so dirties the sky, unless every energy is 0.
+      const isExposed = readsLights && read.lights.some((light) => light.energy !== 0);
+      const lightData = readsLights ? read.key : NO_SKY_LIGHTS;
+      const isLightDirtied = noteSkyLights(gl, lightData, isExposed ? render.exposure : 1);
       if (shaderTime.jumps !== seenJumps) {
         seenJumps = shaderTime.jumps;
         restartSkyClock(update);
@@ -226,9 +225,6 @@ export function SkyLayer({
       steppedRadiances.add(inPlace);
       if (isFrameRead) inPlace.bakeAgain(position);
     };
-    // The exposure scales the light data, and so dirties the sky, unless every energy is 0.
-    const lightExposure = ({ lights: read }: SkyLightsRead, render: SkyRender) =>
-      readsLights && read.some((light) => light.energy !== 0) ? render.exposure : 1;
     // Each view runs its render through the radiance update, the first of a frame after the faces
     // Godot draws for the ALWAYS probes at the world's exposure. A capture reads that bake and steps
     // nothing, as ours captures again only on change. An interior capture draws no sky.

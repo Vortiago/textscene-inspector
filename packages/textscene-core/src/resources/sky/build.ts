@@ -17,9 +17,9 @@ import { skyFragmentShader, skyGlsl, SKY_VERTEX_SHADER } from './skyShaders';
 import { skyUniforms, writeSkyLights, type SkyLight, type SkyUniforms } from './skyUniforms';
 import { releaseView, textureView } from '../textures/textureView';
 import { fillLiveCopy, isLiveTarget } from '../../r3f/liveTargets';
-import { cubeRadiance, disposeSkyLayers, type SkyLayers } from './skyLayers';
+import { cubeRadiance, type SkyLayers } from './skyLayers';
 import { cappedBake } from './radianceBake';
-import { OctmapRadiance, type OctmapSky } from './octmapRadiance';
+import { OctmapRadiance, octmapSkyEnvironment, type OctmapSky } from './octmapRadiance';
 import { materialReadsLights } from './readsLights';
 import type { SkyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
 import { isDebanded } from './debanding';
@@ -166,25 +166,12 @@ function buildBuiltInSkyEnvironment(
       ? () => fillLiveCopy(panorama, panoramaView, gl)
       : undefined;
   // A built-in sky reads neither `TIME` nor `POSITION`, so only a change of its lights bakes it again.
-  if (!materialReadsLights(material)) {
-    const layers = radiance.releaseLayers();
-    const dispose = () => {
-      disposeBackground();
-      disposeSkyLayers(layers);
-    };
-    return { background, layers, redrawBackground, dispose };
-  }
-  return {
+  return octmapSkyEnvironment(radiance, materialReadsLights(material), {
     background,
-    layers: radiance.layers,
+    disposeBackground,
     redrawBackground,
-    radianceInPlace: radiance,
-    setLights: (lights) => writeSkyLights(uniforms, lights),
-    dispose: () => {
-      disposeBackground();
-      radiance.dispose();
-    },
-  };
+    setLights: (next) => writeSkyLights(uniforms, next),
+  });
 }
 
 /** A built-in sky's octmap pass, through a cube as wide as the radiance size (`sky.cpp:1554-1557`). */
@@ -193,6 +180,8 @@ class CubeSkyOctmap implements OctmapSky {
   private readonly shader: THREE.ShaderMaterial;
   private readonly scene = new THREE.Scene();
   private readonly cube: THREE.WebGLCubeRenderTarget;
+  // At the origin, so each face samples the directions Godot's `EYEDIR` covers.
+  private readonly camera: THREE.CubeCamera;
 
   /** `debanding` scales the radiance's debanding noise, 0 for none. */
   constructor(
@@ -202,6 +191,7 @@ class CubeSkyOctmap implements OctmapSky {
     private readonly debanding: number
   ) {
     this.cube = new THREE.WebGLCubeRenderTarget(radianceSize, { type: THREE.HalfFloatType });
+    this.camera = new THREE.CubeCamera(0.1, 10, this.cube);
     this.shader = new THREE.ShaderMaterial({
       uniforms,
       vertexShader: SKY_VERTEX_SHADER,
@@ -214,12 +204,9 @@ class CubeSkyOctmap implements OctmapSky {
   }
 
   draw(gl: THREE.WebGLRenderer, octmap: THREE.WebGLRenderTarget, layout: SkyOctmapLayout): void {
-    // The cube camera sits at the origin, so each face samples the directions Godot's `EYEDIR` covers.
-    new THREE.CubeCamera(0.1, 10, this.cube).update(gl, this.scene);
+    this.camera.update(gl, this.scene);
     cubeRadiance(gl, this.cube.texture, this.debanding)(octmap, layout);
   }
-
-  keepRadiance(): void {}
 
   dispose(): void {
     this.geometry.dispose();

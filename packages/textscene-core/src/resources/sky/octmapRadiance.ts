@@ -3,7 +3,8 @@ import type { SkyOctmapLayout } from '../../godot/rendering/environment/skyRefle
 import { VECTOR3_ZERO, type Vector3 } from '../../godot/math/vector';
 import type { ProjectSampling } from '../../shaders/uniforms/samplerState';
 import { createSkyLayers, disposeSkyLayers, SkyLayerBaker, type SkyLayers } from './skyLayers';
-import type { RadianceInPlace } from './build';
+import type { RadianceInPlace, SkyEnvironment, SkyLight } from './build';
+import type { SkyBackdrop } from '../../r3f/sky/skyBackground';
 import type { SkyBake } from './types';
 
 /** A sky drawn into Godot's octmap for each bake of its radiance (`sky.cpp:1322`). */
@@ -15,8 +16,8 @@ export interface OctmapSky {
     layout: SkyOctmapLayout,
     position: Readonly<Vector3>
   ): void;
-  /** Keeps what the next draw reads of the radiance just baked into `layers`. */
-  keepRadiance(gl: THREE.WebGLRenderer, layers: SkyLayers): void;
+  /** Keeps what the next draw reads of the radiance just baked into `layers`, absent when it reads none. */
+  keepRadiance?(gl: THREE.WebGLRenderer, layers: SkyLayers): void;
   dispose(): void;
 }
 
@@ -52,12 +53,12 @@ export class OctmapRadiance implements RadianceInPlace {
 
   bakeAgain(position: Readonly<Vector3>): void {
     this.baker.bakeEveryLayer(this.drawnAt(position));
-    this.octmapSky.keepRadiance(this.gl, this.layers);
+    this.octmapSky.keepRadiance?.(this.gl, this.layers);
   }
 
   bakeFirstLayerAgain(position: Readonly<Vector3>): void {
     this.baker.bakeFirstLayer(this.drawnAt(position));
-    this.octmapSky.keepRadiance(this.gl, this.layers);
+    this.octmapSky.keepRadiance?.(this.gl, this.layers);
   }
 
   filterLayer(layer: number): void {
@@ -79,4 +80,40 @@ export class OctmapRadiance implements RadianceInPlace {
     return (octmap: THREE.WebGLRenderTarget, layout: SkyOctmapLayout) =>
       this.octmapSky.draw(this.gl, octmap, layout, position);
   }
+}
+
+/** What a sky's environment holds beside its radiance. */
+interface SkyEnvironmentParts {
+  background: SkyBackdrop | null;
+  disposeBackground: () => void;
+  redrawBackground?: () => void;
+  setLights: (lights: readonly SkyLight[]) => void;
+}
+
+/** The environment of `radiance`. A sky no render dirties after its build keeps only its layers. */
+export function octmapSkyEnvironment(
+  radiance: OctmapRadiance,
+  isDirtiable: boolean,
+  { background, disposeBackground, redrawBackground, setLights }: SkyEnvironmentParts
+): SkyEnvironment {
+  if (!isDirtiable) {
+    const layers = radiance.releaseLayers();
+    const dispose = () => {
+      disposeBackground();
+      disposeSkyLayers(layers);
+    };
+    return { background, layers, redrawBackground, dispose };
+  }
+  const dispose = () => {
+    disposeBackground();
+    radiance.dispose();
+  };
+  return {
+    background,
+    layers: radiance.layers,
+    redrawBackground,
+    radianceInPlace: radiance,
+    setLights,
+    dispose,
+  };
 }

@@ -256,9 +256,8 @@ function bakeSky(gl: THREE.WebGLRenderer, input: SkyBakeInput, exposure: number)
   const energy = energyMultiplier * exposure;
   const built = buildSkyEnvironment(gl, { ...sky, lights: exposed(lights.lights, exposure), energy });
   if (!built) return null;
-  const radiance = new SkyRadiance(gl, built.layers, rotation);
-  const { background, redrawBackground, radianceInPlace, setLights, dispose } = built;
-  return { background, radiance, redrawBackground, radianceInPlace, setLights, dispose };
+  const { layers, ...baked } = built;
+  return { ...baked, radiance: new SkyRadiance(gl, layers, rotation) };
 }
 
 function exposed(lights: readonly SkyLight[], exposure: number): SkyLight[] {

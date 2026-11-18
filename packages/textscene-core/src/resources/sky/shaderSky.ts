@@ -19,8 +19,7 @@ import type { ProjectShaderOptions } from '../../shaders/rendererShaderOptions';
 import { ShaderSkyBackground } from '../../r3f/sky/shaderSkyBackground';
 import { ShaderSkyOctmap } from '../../r3f/sky/shaderSkyOctmap';
 import { cappedBake } from './radianceBake';
-import { disposeSkyLayers } from './skyLayers';
-import { OctmapRadiance } from './octmapRadiance';
+import { OctmapRadiance, octmapSkyEnvironment } from './octmapRadiance';
 import { skyUsage } from '../../shaders/sky/skyUsage';
 import { GODOT_DEFAULT_SKY } from '../../godot/rendering/environment/skyShader';
 import type { ShaderSkyProperties, ShaderSkyText } from './types';
@@ -60,28 +59,14 @@ export function buildShaderSkyEnvironment(
     return null;
   }
   const { usage } = material;
-  // A sky that reads none of them never bakes again, so it keeps only its layers.
-  if (!usage.time && !usage.position && !usage.light) {
-    const layers = radiance.releaseLayers();
-    const dispose = () => {
-      background?.dispose();
-      disposeSkyLayers(layers);
-    };
-    return { background, layers, dispose };
-  }
-  return {
+  return octmapSkyEnvironment(radiance, usage.time || usage.position || usage.light, {
     background,
-    layers: radiance.layers,
-    radianceInPlace: radiance,
+    disposeBackground: () => background?.dispose(),
     setLights: (next) => {
       background?.setLights(next);
       octmapSky.setLights(next);
     },
-    dispose: () => {
-      background?.dispose();
-      radiance.dispose();
-    },
-  };
+  });
 }
 
 /** Sky texts kept compiled for each options: the Source pane makes a new text at each keystroke. */
