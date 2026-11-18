@@ -27,10 +27,10 @@ function drawsOf(sky: TranspiledSky, size: THREE.Vector2): string[] {
   return draws;
 }
 
-/** The targets, by the radiance mip each stands for. */
+/** The targets a draw can read before its own pass, by the radiance mip each stands for. */
 function targetsByMip(passes: SkyResolutionPasses): Map<number, THREE.WebGLRenderTarget> {
   const targets = new Map<number, THREE.WebGLRenderTarget>();
-  passes.forEachTarget((target, mip) => targets.set(mip, target));
+  passes.forEachTargetReadFirst((target, mip) => targets.set(mip, target));
   return targets;
 }
 
@@ -80,9 +80,16 @@ void sky() { COLOR = HALF_RES_COLOR.rgb + QUARTER_RES_COLOR.rgb; }`);
     expect(passes.isEmpty).toBe(true);
   });
 
-  it('lists the target of a size the sky draws a pass of, as a smaller pass reads it first (edge case)', () => {
+  it('lists the half target of a sky with both passes, as its quarter pass draws first (edge case)', () => {
     const sky = transpileSky(BOTH_PASSES);
-    expect([...targetsByMip(new SkyResolutionPasses(sky)).keys()]).toEqual([2, 1]);
+    expect([...targetsByMip(new SkyResolutionPasses(sky)).keys()]).toEqual([1]);
+  });
+
+  it('lists no target of a sky whose one pass draws before any read', () => {
+    const sky = transpileSky(
+      'shader_type sky;\nrender_mode use_half_res_pass;\nvoid sky() { COLOR = HALF_RES_COLOR.rgb; }'
+    );
+    expect(targetsByMip(new SkyResolutionPasses(sky)).size).toBe(0);
   });
 
   it('leaves the renderer on the target it had', () => {

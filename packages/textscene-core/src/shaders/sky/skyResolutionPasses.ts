@@ -33,11 +33,13 @@ export class SkyResolutionPasses {
     return !this.sky.half && !this.sky.quarter;
   }
 
-  /** Each target, with its size as the radiance mip it stands for in an octmap pass: half is mip 1. */
-  forEachTarget(visit: (target: THREE.WebGLRenderTarget, mip: number) => void): void {
+  /** Each target a draw can read before its own pass draws it, with its mip in an octmap: half is mip 1. */
+  forEachTargetReadFirst(visit: (target: THREE.WebGLRenderTarget, mip: number) => void): void {
+    let hasPassBefore = false;
     for (const { resolution, shift } of PASSES) {
       const target = this.targets[resolution];
-      if (target) visit(target, shift);
+      if (target && (hasPassBefore || !this.sky[resolution])) visit(target, shift);
+      hasPassBefore ||= !!this.sky[resolution];
     }
   }
 

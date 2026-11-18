@@ -60,6 +60,15 @@ export function buildShaderSkyEnvironment(
     background?.dispose();
     return null;
   }
+  // A sky that reads neither never bakes again, so it keeps only its layers.
+  if (!material.usage.time && !material.usage.position) {
+    const layers = radiance.releaseLayers();
+    const dispose = () => {
+      background?.dispose();
+      disposeSkyLayers(layers);
+    };
+    return { background, layers, dispose };
+  }
   return {
     background,
     layers: radiance.layers,
@@ -115,10 +124,15 @@ class ShaderRadiance implements RadianceInPlace {
     this.baker.filterLayer(layer);
   }
 
-  dispose(): void {
+  /** Frees what bakes the layers, and hands the layers to the caller, who frees them. */
+  releaseLayers(): SkyLayers {
     this.baker.dispose();
     this.octmapSky.dispose();
-    disposeSkyLayers(this.layers);
+    return this.layers;
+  }
+
+  dispose(): void {
+    disposeSkyLayers(this.releaseLayers());
   }
 
   private drawnAt(position: Readonly<Vector3>): DrawRadiance {
