@@ -179,14 +179,22 @@ async function shoot(page) {
   return buffer;
 }
 
+/** Resolves on a frame requested now, so after each frame the steps before it requested. */
+function nextFrame(page) {
+  return page.evaluate(() => new Promise((resolve) => window.requestAnimationFrame(() => resolve())));
+}
+
 async function observe(page) {
+  const buffer = await shoot(page);
+  // The tab hears a step on the frame after it (`SceneListeners.written`), so the read waits a frame.
+  await nextFrame(page);
   return {
+    buffer,
     view: await readView(page),
     rows: await readRows(page, 'button[class*="camRow"]'),
     active: await readRows(page, 'button[data-active="true"]'),
     disabled: await readRows(page, 'button[class*="camRow"]:disabled'),
     isEmpty: (await page.getByText('No camera nodes in this scene.').count()) > 0,
-    buffer: await shoot(page),
   };
 }
 
