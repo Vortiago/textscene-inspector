@@ -1,15 +1,6 @@
-/**
- * The host's `rootScenePath` reaches `<Canvas2DStage>` through `<ViewportArea>`. The
- * stage starts load time again on a new path, so an edit under the same path must keep it.
- */
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
-vi.mock('../../TscnCanvas', () => ({
-  TscnCanvas: () => <div data-testid="canvas-stub" />,
-  TscnSceneContents: () => null,
-}));
-// Canvas2DStage.test.tsx covers what the stage does with the path.
 vi.mock('../Canvas2DStage/Canvas2DStage', () => ({
   Canvas2DStage: ({ scenePath }: { scenePath: string }) => (
     <div data-testid="stage-2d-stub" data-scene-path={scenePath} />

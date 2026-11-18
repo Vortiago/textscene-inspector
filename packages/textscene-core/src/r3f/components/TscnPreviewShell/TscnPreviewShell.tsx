@@ -157,7 +157,7 @@ export function TscnPreviewShell({
           </div>
         )}
         <div className={styles.columns}>
-          {/* The 3D canvas or the 2D overlay takes all width left of the dock. */}
+          {/* The view takes all width left of the dock, in every mode. */}
           <main className={styles.center} aria-label="Viewport">
             {/* Over the viewport, not the header: .viewportToolbarOverlay says why. */}
             <div className={styles.viewportToolbarOverlay} data-testid="viewport-toolbar-overlay">
@@ -165,7 +165,7 @@ export function TscnPreviewShell({
             </div>
             <PerformanceOverlay />
             <PreviewErrorBoundary sceneGraph={sceneGraph} onViewportErrorChange={setViewportError}>
-              <ViewportArea sceneGraph={sceneGraph} scenePath={rootScenePath} />
+              <ViewportArea />
             </PreviewErrorBoundary>
           </main>
 

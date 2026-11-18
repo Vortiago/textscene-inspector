@@ -1,14 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 
+const TESTID_OF_MODE: Record<string, string> = { '2D': 'canvas-2d', '3D': 'canvas-3d', 'in-game': 'in-game' };
+
 vi.mock('../../TscnCanvas', () => ({
-  TscnCanvas: ({ mode }: { mode?: string }) => (
-    <div data-testid={mode === 'in-game' ? 'in-game' : 'canvas-3d'} />
-  ),
+  TscnCanvas: ({ mode = '3D' }: { mode?: string }) => <div data-testid={TESTID_OF_MODE[mode]} />,
   TscnSceneContents: () => null,
-}));
-vi.mock('../Canvas2DStage/Canvas2DStage', () => ({
-  Canvas2DStage: () => <div data-testid="canvas-2d" />,
 }));
 
 import { TscnPreviewShell } from './TscnPreviewShell';
