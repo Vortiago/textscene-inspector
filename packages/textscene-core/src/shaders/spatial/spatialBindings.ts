@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { NodeFrame } from 'three/webgpu';
 import { depthCorrection } from '../../godot/math/projection.js';
 import { transposed3x4 } from './instanceData.js';
 import type { TranspiledSpatial } from './transpileSpatial.js';
@@ -120,6 +121,24 @@ export function writeSpatialBindings(spatial: TranspiledSpatial, scene: SpatialS
   const projection = projectionOf(scene);
   const frame = { ...scene, projection, inverseProjection: projection.clone().invert() };
   writeBindings(SCENE_BINDINGS, spatial.uniforms, frame);
+}
+
+/** The uniform every vertex stage of the scene template reads, so its object update runs before each draw. */
+const DRAW_HOOK = `${DATA}.projection_matrix`;
+
+/**
+ * Writes each uniform of `spatial` the binding table names before each draw, from the scene of the
+ * draw's camera. One scene can render through several cameras, as a viewport and its reflections do.
+ */
+export function writeSpatialBindingsEachDraw(
+  spatial: TranspiledSpatial,
+  sceneOf: (camera: THREE.Camera) => SpatialScene
+): void {
+  const hook = spatial.uniforms.get(DRAW_HOOK);
+  if (!hook) throw new Error(`expected the scene template to read ${DRAW_HOOK}, found no such uniform`);
+  hook.onObjectUpdate(({ camera }: NodeFrame) => {
+    writeSpatialBindings(spatial, sceneOf(camera!));
+  });
 }
 
 /** The camera's projection with y flipped and depth reversed into 0 to 1. */

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { NodeFrame, UniformNode } from 'three/webgpu';
 import { describe, expect, it } from 'vitest';
-import { writeSpatialBindings } from './spatialBindings.js';
+import { writeSpatialBindings, writeSpatialBindingsEachDraw } from './spatialBindings.js';
 import { transpileSpatial } from './transpileSpatial.js';
 
 const UNSHADED = 'shader_type spatial;\nrender_mode unshaded;\nvoid fragment() {\n\tALBEDO = vec3(0.6);\n}\n';
@@ -40,6 +40,39 @@ describe('writeSpatialBindings', () => {
     expect((value('screen_pixel_size') as THREE.Vector2).toArray()).toEqual([1 / 128, 1 / 64]);
     expect(value('time')).toBe(2.5);
     expect((value('ambient_light_color_energy') as THREE.Vector4).toArray()).toEqual([0.1, 0.2, 0.3, 1]);
+  });
+});
+
+describe('writeSpatialBindingsEachDraw', () => {
+  /** A spatial shader whose scene the object update of three's node handler writes before each draw. */
+  function eachDraw() {
+    const spatial = transpileSpatial(UNSHADED);
+    writeSpatialBindingsEachDraw(spatial, (camera) => ({
+      camera: camera as THREE.PerspectiveCamera,
+      width: 32,
+      height: 16,
+      time: 1,
+      clearColor: new THREE.Color(),
+    }));
+    const uniform = (name: string) => spatial.uniforms.get(`scene_data_block.data.${name}`)!;
+    return {
+      draw: (camera: THREE.Camera) => uniform('projection_matrix').update({ camera } as NodeFrame),
+      value: (name: string) => (uniform(name) as UniformNode<unknown>).value,
+    };
+  }
+
+  it('writes the scene of the camera a draw renders through', () => {
+    const { draw, value } = eachDraw();
+    draw(new THREE.PerspectiveCamera(60, 2, 0.5, 90));
+    expect([value('z_near'), value('z_far')]).toEqual([0.5, 90]);
+    expect((value('viewport_size') as THREE.Vector2).toArray()).toEqual([32, 16]);
+  });
+
+  it("writes the next draw's camera over the last one's", () => {
+    const { draw, value } = eachDraw();
+    draw(new THREE.PerspectiveCamera(60, 2, 0.5, 90));
+    draw(new THREE.PerspectiveCamera(60, 2, 2, 40));
+    expect([value('z_near'), value('z_far')]).toEqual([2, 40]);
   });
 });
 

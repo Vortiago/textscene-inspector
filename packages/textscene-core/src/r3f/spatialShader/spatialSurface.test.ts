@@ -1,0 +1,34 @@
+import * as THREE from 'three';
+import { describe, expect, it } from 'vitest';
+import { withGodotSurface } from './spatialSurface';
+
+/** A triangle whose first UV set holds `v` at each corner, from the bottom row as the previewer stores it. */
+function triangleWithV(...v: number[]): THREE.BufferGeometry {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(9), 3));
+  geometry.setAttribute('uv', new THREE.BufferAttribute(Float32Array.from(v.flatMap((y) => [0.25, y])), 2));
+  geometry.setAttribute('uv1', new THREE.BufferAttribute(Float32Array.from(v.flatMap((y) => [0.5, y])), 2));
+  return geometry;
+}
+
+describe('withGodotSurface', () => {
+  it("hands the shader's UV the first UV set from the top row, as Godot stores it", () => {
+    const geometry = triangleWithV(0, 0.25, 1);
+    withGodotSurface(geometry);
+    const uv = geometry.getAttribute('uv_attrib');
+
+    expect([0, 1, 2].map((i) => [uv.getX(i), uv.getY(i)])).toEqual([
+      [0.25, 1],
+      [0.25, 0.75],
+      [0.25, 0],
+    ]);
+  });
+
+  it('hands on the second UV set as it is, which the previewer already stores from the top row', () => {
+    const geometry = triangleWithV(0, 0.25, 1);
+    withGodotSurface(geometry);
+    const uv2 = geometry.getAttribute('uv2_attrib');
+
+    expect([0, 1, 2].map((i) => uv2.getY(i))).toEqual([0, 0.25, 1]);
+  });
+});
