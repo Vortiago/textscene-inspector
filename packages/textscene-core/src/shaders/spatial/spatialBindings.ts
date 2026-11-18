@@ -126,10 +126,7 @@ export function writeSpatialBindings(spatial: TranspiledSpatial, scene: SpatialS
 /** The uniform every vertex stage of the scene template reads, so its object update runs before each draw. */
 const DRAW_HOOK = `${DATA}.projection_matrix`;
 
-/**
- * Writes each uniform of `spatial` the binding table names before each draw, from the scene of the
- * draw's camera. One scene can render through several cameras, as a viewport and its reflections do.
- */
+/** Writes the bindings before each draw from its camera, as one scene renders through several cameras. */
 export function writeSpatialBindingsEachDraw(
   spatial: TranspiledSpatial,
   sceneOf: (camera: THREE.Camera) => SpatialScene

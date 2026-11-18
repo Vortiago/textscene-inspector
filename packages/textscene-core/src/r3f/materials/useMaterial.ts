@@ -30,10 +30,7 @@ export function readyMaterial(loaded: LoadedMaterial): StandardMaterial | null {
   return loaded.status === 'ready' ? loaded.material : null;
 }
 
-/**
- * What `reference` loads to. A ShaderMaterial is declined with a warning (ADR-0041), but for a spatial
- * one under the node lit surface.
- */
+/** What `reference` loads to. A ShaderMaterial declines with a warning (ADR-0041), but for a spatial one. */
 export function useMaterial(reference: ScopedReference | undefined): LoadedMaterial {
   const read = useReferencedResource(reference ?? null, MATERIAL);
   const loaded = useMemo(() => loadedOf(read), [read]);

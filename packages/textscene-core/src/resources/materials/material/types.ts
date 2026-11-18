@@ -1,9 +1,3 @@
-/**
- * What a Material resource decodes to, from any origin: a StandardMaterial3D the previewer
- * builds on a surface, a sky material it builds as a sky, a spatial ShaderMaterial, or another
- * Material class it declines and draws as Godot's default surface (ADR-0041).
- */
-
 import type { ScopedReference } from '../../reading';
 import type { AuthoredSkyProperties } from '../../sky/types';
 import type { ShaderText } from '../shadermaterial/types';
@@ -33,7 +27,7 @@ export interface SpatialShaderMaterial {
   readonly shader: ShaderText;
 }
 
-/** A Material class this previewer does not build, such as an ORMMaterial3D or a canvas item ShaderMaterial. */
+/** A Material class the previewer does not build, such as an ORMMaterial3D or a canvas_item shader. */
 export interface DeclinedMaterial {
   readonly form: 'declined';
   readonly type: string;

@@ -11,7 +11,7 @@ export type SpatialCompile =
   /** A defect, which is no refusal of the text. */
   | { readonly failure: unknown };
 
-/** The material of `code`, or why it draws none: a refusal can come from the parse, the checks or the link. */
+/** The material of `code`, or why it draws none: the parse, the checks or the link can refuse it. */
 export function compileSpatial(code: string, options: SpatialOptions): SpatialCompile {
   try {
     const spatial = transpileSpatial(code, options);

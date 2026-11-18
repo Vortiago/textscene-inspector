@@ -35,13 +35,7 @@ interface SurfaceMaterialSlotProps {
 const UNDRAWN_SHADER =
   "[material] The previewer draws a spatial shader only on a plain mesh yet, and draws Godot's default 3D surface on this MultiMesh, line, point or particle surface.";
 
-/**
- * One surface's material slot, textures and all, whichever file the material came from.
- * A surface with no usable material draws Godot's default one, which
- * `useSurfaceMaterial` derives from null scalars (ADR-0041). A surface whose texture
- * never draws, a file that cannot load or a ViewportTexture in a pass cycle, draws the
- * magenta placeholder. A plain mesh draws a spatial shader the node lit surface hands on.
- */
+/** Godot's default surface for no usable material (ADR-0041), magenta for a texture that never draws. */
 export function SurfaceMaterialSlot({
   source,
   attach,

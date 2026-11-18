@@ -1,10 +1,3 @@
-/**
- * The `MATERIAL` kind: every Material class, from a scene or from a file. A StandardMaterial3D
- * decodes to its data, with each gated texture slot and its `next_pass` as a reference in the
- * material's own file, a sky material to its properties, and a ShaderMaterial to its shader's text.
- * Any other Material class is declined, the same from either arrival. No THREE.
- */
-
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
 import { optionalReference, type Follow, type HeldResource, type ResourceKind } from '../../reading';
 import { ShaderMode, shaderModeOf } from '../../../godot/rendering/shaderLanguage';

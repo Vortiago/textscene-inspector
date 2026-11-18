@@ -171,10 +171,7 @@ function NextPassLink(props: PassProps) {
     () => nextPassStep({ source, ordinal, visited }, loadedPass),
     [source, ordinal, visited, loadedPass]
   );
-  // The pass's fate reported once it is known, in the layout pass: a resolved one
-  // reached its position whether it drew or was skipped over, and any other ends its
-  // chain there. A pass still loading waits, and the overlay's own order then moves past
-  // it in the same frame the link draws, before paint.
+  // Reported in the layout pass, so the overlay's order moves past a loaded pass before paint.
   useLayoutEffect(() => {
     if (loaded.status !== 'absent') onOrdinal?.(ordinal);
   }, [loaded.status, ordinal, onOrdinal]);

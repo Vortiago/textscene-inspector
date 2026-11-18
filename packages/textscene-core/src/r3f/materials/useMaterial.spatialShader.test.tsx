@@ -1,4 +1,3 @@
-/** A spatial ShaderMaterial loads as its shader under the node lit surface, and declines under the patched one. */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';

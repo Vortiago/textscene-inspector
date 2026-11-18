@@ -35,10 +35,7 @@ export function spatialSurfaceOf(
   return compile;
 }
 
-/**
- * `geometry` with Godot's attributes. A surface of the previewer holds its first UV set from the
- * bottom row, as three uploads a texture, and Godot's shader reads it from the top row.
- */
+/** Godot's attributes. The previewer holds the first UV set from the bottom row, Godot from the top row. */
 export function withGodotSurface(geometry: THREE.BufferGeometry): void {
   withGodotAttributes(geometry);
   const uv = geometry.getAttribute('uv');

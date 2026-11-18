@@ -7,7 +7,7 @@ import type { ShaderText, ShaderTextureReference } from './types';
 
 const SHADER_PARAMETER = 'shader_parameter/';
 
-/** The shader text of a ShaderMaterial's `properties`, or null while it names no shader or its code is unread. */
+/** A ShaderMaterial's shader text, or null while it names no shader or its code is unread. */
 export function decodeShaderText(
   properties: Readonly<Record<string, string>>,
   follow: Follow

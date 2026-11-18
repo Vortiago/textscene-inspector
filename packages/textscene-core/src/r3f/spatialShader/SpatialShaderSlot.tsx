@@ -1,9 +1,3 @@
-/**
- * A surface whose material is a spatial ShaderMaterial, drawn through its transpiled material on
- * Godot's vertex attributes. While the translator loads, and for a shader it refuses, the surface
- * draws the material its caller hands as the fallback.
- */
-
 import { useEffect, useLayoutEffect, useMemo, type ReactNode } from 'react';
 import { useThree } from '@react-three/fiber';
 import type * as THREE from 'three';
@@ -29,7 +23,7 @@ interface SpatialShaderSlotProps {
   shader: ShaderText;
   /** R3F attach key: `material-N` for a mesh of several surfaces. */
   attach?: string;
-  /** The material element the surface draws while the shader does not. */
+  /** What the surface draws while the translator loads, and for a shader it refuses. */
   fallback: ReactNode;
 }
 
@@ -84,10 +78,7 @@ interface GodotSurfaceHost extends MaterialHost {
   geometry: THREE.BufferGeometry;
 }
 
-/**
- * Attaches a material at the draw group `attach` names, once the host's geometry holds Godot's
- * attributes: three builds the program from the attributes the geometry holds at the first draw.
- */
+/** Godot's attributes before the material: three builds the program from the attributes of the first draw. */
 function godotSurfaceAttach(
   attach: string | undefined,
   withGodotSurface: (geometry: THREE.BufferGeometry) => void
