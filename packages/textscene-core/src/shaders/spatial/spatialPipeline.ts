@@ -4,6 +4,7 @@ import {
   AlphaAntiAliasing,
   turnsOnAlphaToCoverage,
 } from '../../godot/rendering/materials/alphaAntialiasing.js';
+import { passMembership, usesBlendAlpha } from '../../godot/rendering/materials/alphaPass.js';
 import { BlendMode } from '../../godot/rendering/materials/blendMode.js';
 import { CullMode } from '../../godot/rendering/materials/cullMode.js';
 import { DepthDrawMode } from '../../godot/rendering/materials/depthDrawMode.js';
@@ -34,6 +35,8 @@ export interface SpatialPipeline {
   readonly usesAlphaClip: boolean;
   /** `uses_alpha_antialiasing`: a function names ALPHA_ANTIALIASING_EDGE or ALPHA_TEXTURE_COORDINATE. */
   readonly usesAlphaAntialiasing: boolean;
+  /** `render_mode depth_prepass_alpha` (`scene_shader_forward_clustered.cpp:128`). */
+  readonly usesDepthPrepassAlpha: boolean;
   /** A function reads a uniform of the screen, depth or normal roughness texture. */
   readonly readsScreen: boolean;
 }
@@ -77,6 +80,7 @@ export function spatialPipeline(tree: ShaderNode): SpatialPipeline {
     depthTest: pick(DEPTH_TESTS, 'enabled'),
     cullMode: pick(CULL_MODE_OF, CullMode.BACK),
     alphaAntialiasing: pick(ALPHA_ANTIALIASING_OF, AlphaAntiAliasing.ALPHA_ANTIALIASING_OFF),
+    usesDepthPrepassAlpha: modes.includes('depth_prepass_alpha'),
     usesAlpha: reads('ALPHA'),
     usesAlphaClip: reads('ALPHA_SCISSOR_THRESHOLD', 'ALPHA_HASH_SCALE'),
     usesAlphaAntialiasing: reads('ALPHA_ANTIALIASING_EDGE', 'ALPHA_TEXTURE_COORDINATE'),
@@ -94,17 +98,15 @@ function namesRead(tree: ShaderNode): ReadonlySet<string> {
   return names;
 }
 
-/** `uses_alpha_pass` (`scene_shader_forward_clustered.h:279-287`). */
+/** `uses_alpha_pass` (`scene_shader_forward_clustered.h:279`). */
 export function usesAlphaPass(pipeline: SpatialPipeline): boolean {
-  const hasBaseAlpha =
-    (pipeline.usesAlpha && (!pipeline.usesAlphaClip || pipeline.usesAlphaAntialiasing)) ||
-    pipeline.readsScreen;
-  // `blend_mode_uses_blend_alpha` is false for MIX and ALPHA_TO_COVERAGE (`material_storage.cpp:718-735`).
-  const hasBlendAlpha =
-    !turnsOnAlphaToCoverage(pipeline.alphaAntialiasing) && pipeline.blendMode !== BlendMode.MIX;
-  const noDepthDraw = pipeline.depthDrawMode === DepthDrawMode.DISABLED;
-  const noDepthTest = pipeline.depthTest !== 'enabled';
-  return hasBaseAlpha || hasBlendAlpha || noDepthDraw || noDepthTest;
+  return passMembership({
+    ...pipeline,
+    hasReadScreenAlpha: pipeline.readsScreen,
+    usesBlendAlpha: usesBlendAlpha(pipeline.blendMode, pipeline.alphaAntialiasing),
+    depthDraw: pipeline.depthDrawMode,
+    isDepthTestEnabled: pipeline.depthTest === 'enabled',
+  }).alphaPass;
 }
 
 /** Godot's pipeline (`scene_shader_forward_clustered.cpp:343-447`) as `material`'s draw state. */

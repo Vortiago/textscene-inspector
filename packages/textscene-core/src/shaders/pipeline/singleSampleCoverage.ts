@@ -27,11 +27,7 @@ export function drawsMultisampled(renderer: THREE.WebGLRenderer): boolean {
 
 type Vec4 = ReturnType<typeof vec4>;
 
-/**
- * `colour` under alpha to coverage on a target with one sample, where WebGL skips it (GLES 3.0.6 §4.1.3).
- * Vulkan leaves the one-sample mask to the implementation, so the sample is covered from alpha 0.5,
- * the mean of a dithered mask. Alpha to one forces the alpha after.
- */
+/** WebGL skips alpha to coverage on one sample (GLES 3.0.6 §4.1.3): cut at 0.5, a dithered mask's mean. */
 export function coveredOnOneSample(colour: Node, mode: AlphaToCoverageMode): Node {
   const coversOneSample = uniform(0).onObjectUpdate(({ renderer }) =>
     drawsMultisampled(renderer as unknown as THREE.WebGLRenderer) ? 0 : 1

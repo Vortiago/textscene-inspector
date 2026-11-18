@@ -520,10 +520,7 @@ const FADING = 'ALBEDO = vec3(UV * 0.4, 0.3);\n\tALPHA = UV.x;';
 const alphaScene = (name, modes, extra = '', rows = []) =>
   blendScene(name, modes, `${FADING}${extra ? `\n\t${extra}` : ''}`, ['spatial.fragment.ALPHA', ...rows]);
 
-/**
- * A blend scene of alpha 0 on the left half and 1 on the right under alpha to coverage. Each driver picks
- * its own mask of one sample for an alpha between: lavapipe dithers it, the transpiler cuts at 0.5.
- */
+/** Alpha 0 or 1 only: between, lavapipe dithers its one-sample mask and the transpiler cuts at 0.5. */
 const coverageScene = (name, modes) =>
   blendScene(name, modes, 'ALBEDO = vec3(UV * 0.4, 0.3);\n\tALPHA = step(0.5, UV.x);', [
     'spatial.fragment.ALPHA',

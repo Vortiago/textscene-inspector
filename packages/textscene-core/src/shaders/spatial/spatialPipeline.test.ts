@@ -155,6 +155,7 @@ describe('spatialPipeline', () => {
       depthTest: 'enabled',
       cullMode: CullMode.BACK,
       alphaAntialiasing: AlphaAntiAliasing.ALPHA_ANTIALIASING_OFF,
+      usesDepthPrepassAlpha: false,
       usesAlpha: false,
       usesAlphaClip: false,
       usesAlphaAntialiasing: false,
