@@ -7,7 +7,7 @@ type GlContext = WebGLRenderingContext | WebGL2RenderingContext;
 const canvasAntialias = new WeakMap<GlContext, boolean>();
 
 /** Whether the renderer draws into a target with more than one sample per pixel. */
-export function drawsMultisampled(renderer: THREE.WebGLRenderer): boolean {
+function drawsMultisampled(renderer: THREE.WebGLRenderer): boolean {
   const target = renderer.getRenderTarget();
   if (target) return target.samples > 0;
   const context = renderer.getContext();

@@ -1,6 +1,6 @@
 import type * as THREE from 'three';
 import { describe, expect, it, vi } from 'vitest';
-import { coversOneSample, drawsMultisampled } from './oneSampleTarget.js';
+import { coversOneSample } from './oneSampleTarget.js';
 
 /** A renderer that draws into `target`, or into a canvas whose context is `antialias`. */
 function rendererOn(target: { samples: number } | null, antialias = false) {
@@ -11,28 +11,6 @@ function rendererOn(target: { samples: number } | null, antialias = false) {
 }
 
 const material = (alphaToCoverage: boolean) => ({ alphaToCoverage }) as THREE.Material;
-
-describe('drawsMultisampled', () => {
-  it('reads the samples of the target the renderer draws into', () => {
-    expect(drawsMultisampled(rendererOn({ samples: 4 }).renderer)).toBe(true);
-  });
-
-  it('is false for a target of one sample', () => {
-    expect(drawsMultisampled(rendererOn({ samples: 0 }).renderer)).toBe(false);
-  });
-
-  it('reads the canvas context’s antialias attribute when no target is bound', () => {
-    expect(drawsMultisampled(rendererOn(null, true).renderer)).toBe(true);
-    expect(drawsMultisampled(rendererOn(null, false).renderer)).toBe(false);
-  });
-
-  it('asks a context for its attributes once', () => {
-    const { renderer, getContextAttributes } = rendererOn(null, true);
-    drawsMultisampled(renderer);
-    drawsMultisampled(renderer);
-    expect(getContextAttributes).toHaveBeenCalledTimes(1);
-  });
-});
 
 describe('coversOneSample', () => {
   it('is true for alpha to coverage on a target of one sample', () => {
@@ -45,5 +23,17 @@ describe('coversOneSample', () => {
 
   it('is false for a material with no alpha to coverage', () => {
     expect(coversOneSample(material(false), rendererOn({ samples: 0 }).renderer)).toBe(false);
+  });
+
+  it('reads the canvas context’s antialias attribute when no target is bound', () => {
+    expect(coversOneSample(material(true), rendererOn(null, true).renderer)).toBe(false);
+    expect(coversOneSample(material(true), rendererOn(null, false).renderer)).toBe(true);
+  });
+
+  it('asks a context for its attributes once', () => {
+    const { renderer, getContextAttributes } = rendererOn(null, true);
+    coversOneSample(material(true), renderer);
+    coversOneSample(material(true), renderer);
+    expect(getContextAttributes).toHaveBeenCalledTimes(1);
   });
 });
