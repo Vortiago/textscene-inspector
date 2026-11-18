@@ -698,6 +698,70 @@ void sky() {
 | --- | --- |
 | <img src="showcase/sky-half-res-unset-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-half-res-unset-three.png" width="256" alt="Transpilation"> |
 
+## Showcase `sky-alpha-half-res`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+render_mode use_half_res_pass;
+
+void sky() {
+	if (AT_HALF_RES_PASS) {
+		COLOR = EYEDIR * 0.5 + 0.5;
+		ALPHA = SCREEN_UV.x;
+	} else {
+		COLOR = mix(vec3(0.1, 0.2, 0.8), HALF_RES_COLOR.rgb, HALF_RES_COLOR.a);
+	}
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-alpha-half-res-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-alpha-half-res-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-alpha-quarter-res`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+render_mode use_half_res_pass, use_quarter_res_pass;
+
+void sky() {
+	if (AT_QUARTER_RES_PASS) {
+		COLOR = vec3(0.9, 0.5, 0.1);
+		ALPHA = SCREEN_UV.y * 2.0 - 0.5;
+	} else if (AT_HALF_RES_PASS) {
+		COLOR = EYEDIR * 0.5 + 0.5;
+		ALPHA = QUARTER_RES_COLOR.a * 0.5 + 0.25;
+	} else {
+		COLOR = mix(QUARTER_RES_COLOR.rgb, HALF_RES_COLOR.rgb, HALF_RES_COLOR.a);
+	}
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-alpha-quarter-res-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-alpha-quarter-res-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-alpha-background`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	COLOR = vec3(0.2, 0.6, 0.4) * (0.5 + 0.5 * EYEDIR.y);
+	ALPHA = 0.25;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-alpha-background-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-alpha-background-three.png" width="256" alt="Transpilation"> |
+
 ## Showcase `sky-cubemap-pass`
 
 Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
@@ -846,6 +910,15 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 `use_quarter_res_pass` and `use_half_res_pass` make Godot run `sky()` into a target of a quarter and a half of the screen first, with `AT_QUARTER_RES_PASS` or `AT_HALF_RES_PASS` true (`sky.cpp:1427-1457`). The full pass then reads them as `QUARTER_RES_COLOR` and `HALF_RES_COLOR` at its `uv` (`sky.glsl:251-265`), and the half pass reads the quarter target. A colour with no pass to read is white behind the scene and black in the radiance octmap. `transpileSky` gives each pass as `half` and `quarter` of the sky, and `SkyResolutionPasses` draws them before the full pass.
 
 The transpiler emits `the defines of the template variant, and a render target for each pass`. Rows: `sky.global.AT_HALF_RES_PASS`, `sky.global.AT_QUARTER_RES_PASS`, `sky.sky.HALF_RES_COLOR`, `sky.sky.QUARTER_RES_COLOR`, `sky render_mode use_half_res_pass`, `sky render_mode use_quarter_res_pass`. Godot source: `servers/rendering/shader_types.cpp:462`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `ALPHA`
+
+`ALPHA` starts at 1.0 and goes to the alpha of the pass's colour (`sky.glsl:235`, `:274`). Godot draws the sky with no blending. The half and quarter passes keep it in RGBA16F, outside 0 to 1 too, and a later pass reads it as `HALF_RES_COLOR.a` or `QUARTER_RES_COLOR.a`. Behind the scene the pass writes alpha 0 (`sky.glsl:309-311`).
+
+The transpiler emits the template's local `alpha`. Rows: `sky.sky.ALPHA`. Godot source: `servers/rendering/shader_types.cpp:487`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 

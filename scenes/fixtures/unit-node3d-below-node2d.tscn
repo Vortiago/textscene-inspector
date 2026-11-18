@@ -1,0 +1,35 @@
+[gd_scene load_steps=4 format=3 uid="uid://unitnode3dbelownode2d"]
+
+; One variable: the orange box is a Node3D under a moved, hidden Node2D. A Node3D below a node that
+; is no Node3D is a root of the world (node_3d.cpp:150), so the box draws beside the grey reference,
+; neither moved nor hidden. No other golden puts a Node3D below a CanvasItem in the 3D view, so a box
+; dropped below its 2D parent shows only here.
+
+[sub_resource type="BoxMesh" id="BoxMesh_box"]
+size = Vector3(0.8, 0.8, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="Material_reference"]
+albedo_color = Color(0.5, 0.5, 0.5, 1)
+
+[sub_resource type="StandardMaterial3D" id="Material_escaped"]
+albedo_color = Color(0.9, 0.45, 0.1, 1)
+
+[node name="Scene" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 4, 6)
+fov = 70.0
+
+[node name="Reference" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0, 0)
+mesh = SubResource("BoxMesh_box")
+surface_material_override/0 = SubResource("Material_reference")
+
+[node name="Hud" type="Node2D" parent="."]
+visible = false
+position = Vector2(300, 300)
+
+[node name="Escaped" type="MeshInstance3D" parent="Hud"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0)
+mesh = SubResource("BoxMesh_box")
+surface_material_override/0 = SubResource("Material_escaped")

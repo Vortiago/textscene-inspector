@@ -8,6 +8,7 @@ import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import { is2DUIType } from './controls/has2DUIContent.js';
 import { isViewportBoundary, isViewportSurface } from './viewportRender/viewportBoundary.js';
 import type { CanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
+import type { TscnNode } from '../parser/types.js';
 
 /** A type Godot's CanvasItemEditor would claim: 2D world content or Control and CanvasLayer UI. */
 export function isClaimedByCanvasItemEditor(type: string): boolean {
@@ -41,4 +42,10 @@ export function drawsInWorkspace(type: string, workspace: CanvasWorkspace): bool
   // `ViewportTexture` consumer here needs its target, and its component portals its
   // subtree into a detached scene, so it never reaches this canvas (ADR-0033).
   return !isClaimedByNode3DEditor(type);
+}
+
+/** An instance resolves its type once it loads. A viewport surface's pass is the Control walk's. */
+export function drawsBelowUndrawnParent(node: TscnNode, workspace: CanvasWorkspace): boolean {
+  if (node.instance) return true;
+  return drawsInWorkspace(node.type, workspace) && !isViewportSurface(node.type);
 }

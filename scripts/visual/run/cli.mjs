@@ -4,7 +4,8 @@
  */
 
 import { GOLDEN_SCENES } from '../scenes.mjs';
-import { shardOf } from '../shards/balance.mjs';
+import { parseShard, shardOf } from '../../shards/shards.mjs';
+import SCENE_SECONDS from '../shards/sceneSeconds.json' with { type: 'json' };
 
 /**
  * Parses `--update`, `--scene <name>` and `--shard <index>/<count>`. Anything else, and `--scene`
@@ -24,9 +25,10 @@ export function parseArgs(argv) {
         process.exit(2);
       }
       opts.scene = value;
-    } else if (a === '--shard') opts.shard = parseShard(argv[++i]);
+    } else if (a === '--shard') opts.shard = shardArgument(argv[++i]);
     else {
-      console.error(`[visual] unknown argument: ${a}`);
+      const hint = a === '--' ? '. Drop the "--": pnpm passes it to the script' : '';
+      console.error(`[visual] unknown argument: ${a}${hint}`);
       process.exit(2);
     }
   }
@@ -37,16 +39,13 @@ export function parseArgs(argv) {
   return opts;
 }
 
-/** `2/4` → `{ index: 2, count: 4 }`, with 1 <= index <= count. */
-function parseShard(value) {
-  const match = /^(\d+)\/(\d+)$/.exec(value ?? '');
-  const index = Number(match?.[1]);
-  const count = Number(match?.[2]);
-  if (!match || index < 1 || index > count) {
+function shardArgument(value) {
+  const shard = parseShard(value);
+  if (!shard) {
     console.error(`[visual] --shard needs <index>/<count>, 1 <= index <= count, got "${value}"`);
     process.exit(2);
   }
-  return { index, count };
+  return shard;
 }
 
 /**
@@ -65,7 +64,7 @@ export function selectScenes(opts) {
     );
     process.exit(2);
   }
-  if (opts.shard) return shardOf(GOLDEN_SCENES, opts.shard);
+  if (opts.shard) return shardOf(GOLDEN_SCENES, opts.shard, SCENE_SECONDS);
   if (!opts.scene) return GOLDEN_SCENES;
   const scenes = GOLDEN_SCENES.filter((s) => s.name === opts.scene);
   if (scenes.length === 0) {

@@ -1,20 +1,11 @@
 /**
- * Splits the golden scenes into CI shards that finish close together. Each shard runs on its own
- * runner and computes the same split, so the split depends only on the manifest and the table.
- */
-
-import SCENE_SECONDS from './sceneSeconds.json' with { type: 'json' };
-
-/**
- * The scenes of shard `index` of `count`, in manifest order. The split is longest first: each
- * scene, slowest first, goes to the shard with the least seconds so far. A scene the table has not
- * measured counts as the table's median. The shards of one count cover each scene exactly once.
+ * Shard `index` of `count`, in input order: slowest first, each joins the lightest shard so far.
  *
  * @param {{ name: string }[]} scenes
  * @param {{ index: number, count: number }} shard - `index` counts from 1.
- * @param {Record<string, number>} [secondsByScene] - capture seconds on a CI runner, by name.
+ * @param {Record<string, number>} secondsByScene - seconds on a CI runner, by name.
  */
-export function shardOf(scenes, { index, count }, secondsByScene = SCENE_SECONDS) {
+export function shardOf(scenes, { index, count }, secondsByScene) {
   const unmeasuredSeconds = median(Object.values(secondsByScene));
   const secondsOf = (scene) => secondsByScene[scene.name] ?? unmeasuredSeconds;
   // Manifest order breaks a tie, so equal seconds split the same way on every runner.
@@ -30,6 +21,15 @@ export function shardOf(scenes, { index, count }, secondsByScene = SCENE_SECONDS
     shardOfScene.set(scene, lightest);
   }
   return scenes.filter((scene) => shardOfScene.get(scene) === index - 1);
+}
+
+/** `2/4` → `{ index: 2, count: 4 }`, or null for anything but `<index>/<count>` with 1 <= index <= count. */
+export function parseShard(value) {
+  const match = /^(\d+)\/(\d+)$/.exec(value ?? '');
+  const index = Number(match?.[1]);
+  const count = Number(match?.[2]);
+  if (!match || index < 1 || index > count) return null;
+  return { index, count };
 }
 
 /** The middle value, or 1 for an empty table, so every scene then weighs the same. */

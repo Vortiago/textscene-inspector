@@ -309,6 +309,48 @@ const PASS_SCENES = [
     rows: ['sky.sky.HALF_RES_COLOR', 'sky.sky.QUARTER_RES_COLOR'],
   },
   {
+    name: 'sky-alpha-half-res',
+    source: builtInSky(
+      [
+        '\tif (AT_HALF_RES_PASS) {',
+        '\t\tCOLOR = EYEDIR * 0.5 + 0.5;',
+        '\t\tALPHA = SCREEN_UV.x;',
+        '\t} else {',
+        '\t\tCOLOR = mix(vec3(0.1, 0.2, 0.8), HALF_RES_COLOR.rgb, HALF_RES_COLOR.a);',
+        '\t}',
+      ].join('\n'),
+      'use_half_res_pass'
+    ),
+    rows: ['sky.sky.ALPHA', 'sky.sky.HALF_RES_COLOR'],
+  },
+  // An alpha outside 0 to 1 survives, as Godot's passes hold RGBA16F (`sky.cpp:921`).
+  {
+    name: 'sky-alpha-quarter-res',
+    source: builtInSky(
+      [
+        '\tif (AT_QUARTER_RES_PASS) {',
+        '\t\tCOLOR = vec3(0.9, 0.5, 0.1);',
+        '\t\tALPHA = SCREEN_UV.y * 2.0 - 0.5;',
+        '\t} else if (AT_HALF_RES_PASS) {',
+        '\t\tCOLOR = EYEDIR * 0.5 + 0.5;',
+        '\t\tALPHA = QUARTER_RES_COLOR.a * 0.5 + 0.25;',
+        '\t} else {',
+        '\t\tCOLOR = mix(QUARTER_RES_COLOR.rgb, HALF_RES_COLOR.rgb, HALF_RES_COLOR.a);',
+        '\t}',
+      ].join('\n'),
+      'use_half_res_pass, use_quarter_res_pass'
+    ),
+    rows: ['sky.sky.ALPHA', 'sky.sky.QUARTER_RES_COLOR', 'sky.sky.HALF_RES_COLOR'],
+  },
+  {
+    name: 'sky-alpha-background',
+    source: builtInSky(
+      ['\tCOLOR = vec3(0.2, 0.6, 0.4) * (0.5 + 0.5 * EYEDIR.y);', '\tALPHA = 0.25;'].join('\n')
+    ),
+    // Behind the scene Godot writes alpha 0 (`sky.glsl:309-311`), so this shows only that no blend applies.
+    rows: ['sky.sky.EYEDIR'],
+  },
+  {
     name: 'sky-cubemap-pass',
     source: builtInSky('\tCOLOR = AT_CUBEMAP_PASS ? vec3(1.0, 0.0, 0.0) : vec3(0.1, 0.7, 0.3);'),
     rows: ['sky.global.AT_CUBEMAP_PASS'],

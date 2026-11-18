@@ -12,7 +12,7 @@ GLSL or WGSL operation itself, `lowered` with the name of the operations it writ
 probes run on WebGL 2. WebGPURenderer runs the same TSL nodes, and no probe runs there until the
 canvases draw on WebGPURenderer (#1788).
 
-1650 of 1889 instructions transpiled.
+1651 of 1889 instructions transpiled.
 
 ## data type
 
@@ -1783,12 +1783,12 @@ canvases draw on WebGPURenderer (#1788).
 | `sky.global.LIGHT3_ENERGY` | transpiled (`sky-light-3`, `sky-light-fifth`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:482` |
 | `sky.global.LIGHT3_COLOR` | transpiled (`sky-light-3`, `sky-light-fifth`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:483` |
 | `sky.global.LIGHT3_SIZE` | transpiled (`sky-light-3`, `sky-light-fifth`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:484` |
-| `sky.sky.EYEDIR` | transpiled (`sky-eyedir`, `sky-constants`, `sky-fog-write`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:488` |
+| `sky.sky.EYEDIR` | transpiled (`sky-eyedir`, `sky-constants`, `sky-fog-write`, `sky-alpha-background`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:488` |
 | `sky.sky.SCREEN_UV` | transpiled (`sky-screen-uv`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:489` |
 | `sky.sky.FRAGCOORD` | transpiled (`sky-fragcoord`, `sky-quarter-res`, `sky-passes-odd-size`, `sky-passes-under-4-px`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:490` |
 | `sky.sky.SKY_COORDS` | transpiled (`sky-coords`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:491` |
-| `sky.sky.HALF_RES_COLOR` | transpiled (`sky-half-res`, `sky-quarter-res-alone`, `sky-half-res-unset`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:492` |
-| `sky.sky.QUARTER_RES_COLOR` | transpiled (`sky-quarter-res`, `sky-quarter-res-alone`, `sky-half-res-unset`, `sky-passes-odd-size`, `sky-passes-under-4-px`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:493` |
+| `sky.sky.HALF_RES_COLOR` | transpiled (`sky-half-res`, `sky-quarter-res-alone`, `sky-half-res-unset`, `sky-alpha-half-res`, `sky-alpha-quarter-res`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:492` |
+| `sky.sky.QUARTER_RES_COLOR` | transpiled (`sky-quarter-res`, `sky-quarter-res-alone`, `sky-half-res-unset`, `sky-alpha-quarter-res`, `sky-passes-odd-size`, `sky-passes-under-4-px`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:493` |
 | `fog.global.TIME` | open, #1783 | | | `servers/rendering/shader_types.cpp:507` |
 | `fog.constants.PI` | open, #1783 | | | `servers/rendering/shader_types.cpp:508` |
 | `fog.constants.TAU` | open, #1783 | | | `servers/rendering/shader_types.cpp:509` |
@@ -1893,7 +1893,7 @@ canvases draw on WebGPURenderer (#1788).
 | `particles.process.USERDATA6` | open, #1726 | | | `servers/rendering/shader_types.cpp:412` |
 | `particles.process.TRANSFORM` | open, #1726 | | | `servers/rendering/shader_types.cpp:413` |
 | `sky.sky.COLOR` | transpiled (`sky-default`, `sky-fog`, `sky-fog-sun`, `sky-fog-energy-0`, `sky-fog-energy-3`, `sky-fog-affect-0`, `sky-fog-affect-half`, `sky-sun-coloured`, `sky-sun-below`, `sky-sun-energy-0`, `sky-camera-wide`, `head-writable/sky-color`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:486` |
-| `sky.sky.ALPHA` | open, #1665 | | | `servers/rendering/shader_types.cpp:487` |
+| `sky.sky.ALPHA` | transpiled (`sky-alpha-half-res`, `sky-alpha-quarter-res`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:487` |
 | `sky.sky.FOG` | transpiled (`sky-fog-write`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:494` |
 | `fog.fog.ALBEDO` | open, #1783 | | | `servers/rendering/shader_types.cpp:517` |
 | `fog.fog.DENSITY` | open, #1783 | | | `servers/rendering/shader_types.cpp:518` |

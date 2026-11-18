@@ -1,7 +1,8 @@
 /** Tests the harness's scene selection: `--shard` parsing and which scenes a shard selects. */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { GOLDEN_SCENES } from '../scenes.mjs';
-import { shardOf } from '../shards/balance.mjs';
+import { shardOf } from '../../shards/shards.mjs';
+import SCENE_SECONDS from '../shards/sceneSeconds.json' with { type: 'json' };
 import { parseArgs, selectScenes } from './cli.mjs';
 
 /** Makes `process.exit` throw, so a usage error stops the parse and the test can assert it. */
@@ -34,6 +35,6 @@ describe('parseArgs --shard', () => {
 describe('selectScenes', () => {
   it('returns the shard when --shard is set', () => {
     const selected = selectScenes({ scene: null, shard: { index: 1, count: 4 } });
-    expect(selected).toEqual(shardOf(GOLDEN_SCENES, { index: 1, count: 4 }));
+    expect(selected).toEqual(shardOf(GOLDEN_SCENES, { index: 1, count: 4 }, SCENE_SECONDS));
   });
 });
