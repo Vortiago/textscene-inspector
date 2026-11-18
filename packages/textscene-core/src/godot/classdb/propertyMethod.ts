@@ -10,9 +10,6 @@ export interface PropertyMethod {
   readonly properties: ReadonlyMap<number | null, string>;
 }
 
-const SETTER_PREFIX = 'set_';
-const GETTER_PREFIX = 'get_';
-
 function declaredProperty(className: string, name: string): string | undefined {
   return (findClassProperty(className, name) ?? findDerivedProperty(className, name))?.declaredBy;
 }
@@ -21,7 +18,7 @@ function rowOf(declaredBy: string, name: string): PropertyMethodsRow | undefined
   return PROPERTY_METHODS[declaredBy]?.find(([rowName]) => rowName === name);
 }
 
-const PREFIX = { setter: SETTER_PREFIX, getter: GETTER_PREFIX } as const;
+const PREFIX = { setter: 'set_', getter: 'get_' } as const;
 const COLUMN = { setter: 1, getter: 2 } as const;
 
 /** `ClassDB::get_property_setter` or `get_property_getter`: the empty name for a property with none. */
@@ -50,11 +47,7 @@ function namedMethod(className: string, method: string): PropertyMethod | undefi
 
 /** `set_<name>` or `get_<name>` of a property whose methods carry those names. */
 function prefixedMethod(className: string, method: string): PropertyMethod | undefined {
-  const role = method.startsWith(SETTER_PREFIX)
-    ? 'setter'
-    : method.startsWith(GETTER_PREFIX)
-      ? 'getter'
-      : null;
+  const role = (['setter', 'getter'] as const).find((candidate) => method.startsWith(PREFIX[candidate]));
   if (!role) return undefined;
   const property = method.slice(PREFIX[role].length);
   return accessorOf(role, className, property) === method

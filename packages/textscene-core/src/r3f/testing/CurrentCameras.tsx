@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { HierarchyProvider } from '../contexts/HierarchyContext';
 import type { Scene } from '../../scene/openScene';
 
@@ -26,7 +26,8 @@ export function CurrentCameras({
   cameras2D?: CurrentCameraPaths;
   children: ReactNode;
 }) {
-  const scene = sceneWithCurrentCameras(cameras3D, cameras2D);
+  // One scene while the maps hold, so the camera hooks keep their subscription across renders.
+  const scene = useMemo(() => sceneWithCurrentCameras(cameras3D, cameras2D), [cameras3D, cameras2D]);
   return (
     <HierarchyProvider value={{ sceneGraph: null, panelId: 'current-cameras', scene }}>
       {children}

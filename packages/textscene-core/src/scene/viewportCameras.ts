@@ -75,7 +75,7 @@ export class ViewportCameras {
     const state = this.stateOf(camera.viewport);
     if (state.camera3D !== path) return;
     this.moved(camera, () => {
-      state.camera3D = enableNext ? (state.cameras3D.find((other) => other !== path) ?? null) : null;
+      state.camera3D = enableNext ? this.next3D(state, path) : null;
     });
   }
 
@@ -124,11 +124,10 @@ export class ViewportCameras {
     if (!this.isMoved) this.reset();
     this.seen = cameras;
     const inTree = new Map((cameras ?? []).map((camera) => [camera.path, camera]));
-    for (const camera of [...this.entered.values()]) {
-      if (inTree.has(camera.path)) continue;
-      this.entered.delete(camera.path);
-      this.exit(camera);
-    }
+    const exiting = [...this.entered.values()].filter((camera) => !inTree.has(camera.path));
+    // Each leaves `entered` first, since a hand-over skips a camera outside the tree (`viewport.cpp:4614`).
+    for (const camera of exiting) this.entered.delete(camera.path);
+    for (const camera of exiting) this.exit(camera);
     for (const camera of inTree.values()) {
       const isEntering = !this.entered.has(camera.path);
       // The newest node of the path, whose texts the hand-over of a Camera2D reads.
@@ -151,18 +150,23 @@ export class ViewportCameras {
     if (isCurrent || state.cameras3D.length === 1) state.camera3D = camera.path;
   }
 
-  /** `Viewport::_camera_3d_remove` (`viewport.cpp:4602-4607`), and a Camera2D's `NOTIFICATION_EXIT_TREE`. */
+  /** A current camera hands over as it leaves (`camera_3d.cpp:215-219`, `camera_2d.cpp:377-379`). */
   private exit(camera: TreeCamera): void {
     const state = this.stateOf(camera.viewport);
     if (camera.dimension === '2D') {
       if (state.camera2D === camera.path) state.camera2D = this.nextEnabled2D(camera.viewport);
       return;
     }
+    if (state.camera3D === camera.path) state.camera3D = this.next3D(state, camera.path);
     // `HashSet::erase` moves the last key into the hole, so the next camera changes (`hash_set.h:290-296`).
     const at = state.cameras3D.indexOf(camera.path);
     const last = state.cameras3D.pop()!;
     if (at < state.cameras3D.length) state.cameras3D[at] = last;
-    if (state.camera3D === camera.path) state.camera3D = null;
+  }
+
+  /** `Viewport::_camera_3d_make_next_current` (`viewport.cpp:4609-4623`). */
+  private next3D(state: ViewportState, excluded: string): string | null {
+    return state.cameras3D.find((other) => other !== excluded && this.entered.has(other)) ?? null;
   }
 
   /** `Viewport::assign_next_enabled_camera_2d`: the first enabled camera of the group, in tree order. */

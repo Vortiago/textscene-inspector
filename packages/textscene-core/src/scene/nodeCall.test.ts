@@ -50,9 +50,34 @@ describe('call', () => {
     );
   });
 
+  it('checks the count of an indexed call before its index (edge case)', async () => {
+    await expect(scene().getNode('View').call('set_limit')).rejects.toThrow(
+      'expected 2 arguments for set_limit, got 0'
+    );
+  });
+
+  it('throws for a node a new text freed while the call waited', async () => {
+    const opened = scene();
+    const call = opened.getNode('View').call('set_zoom', variant('Vector2(2, 3)'));
+    opened.setSource(`${SOURCE}\n[node name="Other" type="Node2D" parent="."]\n`);
+    await expect(call).rejects.toThrow('freed by a new text');
+  });
+
   it('throws for a count of arguments the binding does not take', async () => {
     await expect(scene().getNode('Eye').call('make_current', true)).rejects.toThrow(
       'expected 0 arguments for make_current, got 1'
     );
+  });
+});
+
+describe('set through a ported setter', () => {
+  it('reports a value the binding cannot cast as an invalid write', async () => {
+    expect(await scene().getNode('Eye').set('current', 'yes')).toBe(false);
+  });
+
+  it('runs the setter for a value it can cast', async () => {
+    const opened = scene();
+    expect(await opened.getNode('Eye').set('current', true)).toBe(true);
+    expect(await opened.getNode('Eye').get('current')).toBe(true);
   });
 });

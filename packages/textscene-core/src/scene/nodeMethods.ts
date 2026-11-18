@@ -11,7 +11,8 @@ export type CallResult = SceneValue | NodeHandle | null;
 export interface MethodTarget {
   /** The node's live path, null for the root window. */
   readonly livePath: string | null;
-  readonly cameras: ViewportCameras;
+  /** The scene's cameras, while the node is still of the text the call began in. */
+  cameras(): ViewportCameras;
   /** A stored property as `get` reads it, with no ported getter run. */
   readStored(property: string): Promise<SceneValue | null>;
   /** A stored property as `set` writes it, with no ported setter run. */
@@ -28,12 +29,15 @@ export interface PortedMethod {
   run(target: MethodTarget, args: readonly SceneValue[]): CallResult | Promise<CallResult>;
 }
 
+/** An argument the binding cannot cast: `Object::set` reports the write invalid (`class_db.cpp:1683`). */
+export class ArgumentTypeError extends Error {}
+
 /** The bool a binding's cast makes of an argument: a number is true when it is not zero. */
 function boolArgument(value: SceneValue, method: string): boolean {
   const cast = valueOfSceneValue(value);
   if (cast.type === T.BOOL) return cast.value as boolean;
   if (cast.type === T.INT || cast.type === T.FLOAT) return cast.value !== 0;
-  throw new Error(`expected a bool for ${method}, got ${JSON.stringify(value)}`);
+  throw new ArgumentTypeError(`expected a bool for ${method}, got ${JSON.stringify(value)}`);
 }
 
 /** A ported method is called only on a node, so its live path is never the root window's. */
@@ -49,13 +53,13 @@ const CAMERA_3D_METHODS: Readonly<Record<string, PortedMethod>> = {
   make_current: {
     minArguments: 0,
     maxArguments: 0,
-    run: (target) => (target.cameras.makeCurrent3D(nodePath(target)), null),
+    run: (target) => (target.cameras().makeCurrent3D(nodePath(target)), null),
   },
   clear_current: {
     minArguments: 0,
     maxArguments: 1,
     run: (target, [enableNext = true]) => {
-      target.cameras.clearCurrent3D(nodePath(target), boolArgument(enableNext, 'clear_current'));
+      target.cameras().clearCurrent3D(nodePath(target), boolArgument(enableNext, 'clear_current'));
       return null;
     },
   },
@@ -64,15 +68,15 @@ const CAMERA_3D_METHODS: Readonly<Record<string, PortedMethod>> = {
     minArguments: 1,
     maxArguments: 1,
     run: (target, [enabled]) => {
-      if (boolArgument(enabled!, 'set_current')) target.cameras.makeCurrent3D(nodePath(target));
-      else target.cameras.clearCurrent3D(nodePath(target), true);
+      if (boolArgument(enabled!, 'set_current')) target.cameras().makeCurrent3D(nodePath(target));
+      else target.cameras().clearCurrent3D(nodePath(target), true);
       return null;
     },
   },
   is_current: {
     minArguments: 0,
     maxArguments: 0,
-    run: (target) => target.cameras.isCurrent3D(nodePath(target)),
+    run: (target) => target.cameras().isCurrent3D(nodePath(target)),
   },
 };
 
@@ -80,12 +84,12 @@ const CAMERA_2D_METHODS: Readonly<Record<string, PortedMethod>> = {
   make_current: {
     minArguments: 0,
     maxArguments: 0,
-    run: (target) => (target.cameras.makeCurrent2D(nodePath(target)), null),
+    run: (target) => (target.cameras().makeCurrent2D(nodePath(target)), null),
   },
   is_current: {
     minArguments: 0,
     maxArguments: 0,
-    run: (target) => target.cameras.isCurrent2D(nodePath(target)),
+    run: (target) => target.cameras().isCurrent2D(nodePath(target)),
   },
   // camera_2d.cpp:522-536: an unchanged value returns before the hand-over.
   set_enabled: {
@@ -95,7 +99,7 @@ const CAMERA_2D_METHODS: Readonly<Record<string, PortedMethod>> = {
       const isEnabled = boolArgument(value!, 'set_enabled');
       if ((await target.readStored('enabled')) === isEnabled) return null;
       await target.writeStored('enabled', isEnabled);
-      target.cameras.enabledChanged2D(nodePath(target), isEnabled);
+      target.cameras().enabledChanged2D(nodePath(target), isEnabled);
       return null;
     },
   },
@@ -105,12 +109,12 @@ const VIEWPORT_METHODS: Readonly<Record<string, PortedMethod>> = {
   get_camera_3d: {
     minArguments: 0,
     maxArguments: 0,
-    run: (target) => cameraHandle(target, target.cameras.camera3D(target.livePath)),
+    run: (target) => cameraHandle(target, target.cameras().camera3D(target.livePath)),
   },
   get_camera_2d: {
     minArguments: 0,
     maxArguments: 0,
-    run: (target) => cameraHandle(target, target.cameras.camera2D(target.livePath)),
+    run: (target) => cameraHandle(target, target.cameras().camera2D(target.livePath)),
   },
 };
 

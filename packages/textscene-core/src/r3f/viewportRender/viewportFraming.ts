@@ -8,26 +8,32 @@ import { camera2DView, type Camera2DTag } from './camera2DView';
 import type { Vector2 } from '../../godot/math/vector';
 import type { Rect2 } from '../../godot/math/rect2';
 
-/** The scene's camera at `cameraPath`, the viewport's current camera, or null before it mounts. */
-export function cameraAtPath(root: THREE.Object3D, cameraPath: string | null): THREE.Camera | null {
+/** The first object under `root` drawn for the node at `cameraPath` that `isCamera` accepts. */
+function objectAtPath(
+  root: THREE.Object3D,
+  cameraPath: string | null,
+  isCamera: (object: THREE.Object3D) => boolean
+): THREE.Object3D | null {
   if (cameraPath === null) return null;
-  let found: THREE.Camera | null = null;
+  let found: THREE.Object3D | null = null;
   root.traverse((object) => {
-    if (!found && (object as THREE.Camera).isCamera && object.userData?.tscnPath === cameraPath) {
-      found = object as THREE.Camera;
-    }
+    if (!found && isCamera(object) && object.userData?.tscnPath === cameraPath) found = object;
   });
   return found;
 }
 
+/** The scene's camera at `cameraPath`, the viewport's current camera, or null before it mounts. */
+export function cameraAtPath(root: THREE.Object3D, cameraPath: string | null): THREE.Camera | null {
+  return objectAtPath(
+    root,
+    cameraPath,
+    (object) => (object as THREE.Camera).isCamera === true
+  ) as THREE.Camera | null;
+}
+
 /** The group of the Camera2D at `cameraPath`, the viewport's current one, or null before it mounts. */
 export function camera2DAtPath(root: THREE.Object3D, cameraPath: string | null): THREE.Object3D | null {
-  if (cameraPath === null) return null;
-  let found: THREE.Object3D | null = null;
-  root.traverse((object) => {
-    if (!found && object.userData?.camera2d && object.userData.tscnPath === cameraPath) found = object;
-  });
-  return found;
+  return objectAtPath(root, cameraPath, (object) => Boolean(object.userData?.camera2d));
 }
 
 /**
