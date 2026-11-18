@@ -65,9 +65,9 @@ import {
   UNSHADED_ROUGHNESS,
   unshadedRoughnessUserData,
 } from '../../../r3f/screenSpaceEffects/unshadedRoughness';
+import type { MaterialBlendState } from '../../../shaders/pipeline/blendState';
 import {
   TEXTURE_SLOTS,
-  type MaterialBlendState,
   type ResolvedTextures,
   type StandardMaterial3DScalars,
   type TextureSlot,

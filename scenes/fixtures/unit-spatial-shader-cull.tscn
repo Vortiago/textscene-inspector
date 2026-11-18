@@ -1,7 +1,8 @@
 [gd_scene format=3 uid="uid://unit_spatial_shader_cull"]
 
 ; Three unshaded spatial shaders with cull_back, cull_front and cull_disabled, each on a quad that
-; faces the camera (top row) and on one turned away from it (bottom row).
+; faces the camera (top row) and on one turned away from it (bottom row). Only the cull mode moves: every other
+; golden spatial shader draws with the default cull_back.
 
 [sub_resource type="Shader" id="Shader_back"]
 code = "shader_type spatial;

@@ -14,19 +14,19 @@ import { MaterialFeature, MaterialFlag } from '../../godot/rendering/materials/m
 import { isAlphaTested, type MaterialKey } from './materialKey.js';
 
 /** The text of each of Godot's `render_mode` switches, by enum value. */
-const BLEND_MODES: Readonly<Record<EnumValue<typeof BlendMode>, string>> = {
+export const BLEND_MODES: Readonly<Record<EnumValue<typeof BlendMode>, string>> = {
   [BlendMode.MIX]: 'blend_mix',
   [BlendMode.ADD]: 'blend_add',
   [BlendMode.SUB]: 'blend_sub',
   [BlendMode.MUL]: 'blend_mul',
   [BlendMode.PREMULT_ALPHA]: 'blend_premul_alpha',
 };
-const DEPTH_DRAW_MODES: Readonly<Record<EnumValue<typeof DepthDrawMode>, string>> = {
+export const DEPTH_DRAW_MODES: Readonly<Record<EnumValue<typeof DepthDrawMode>, string>> = {
   [DepthDrawMode.OPAQUE_ONLY]: 'depth_draw_opaque',
   [DepthDrawMode.ALWAYS]: 'depth_draw_always',
   [DepthDrawMode.DISABLED]: 'depth_draw_never',
 };
-const CULL_MODES: Readonly<Record<EnumValue<typeof CullMode>, string>> = {
+export const CULL_MODES: Readonly<Record<EnumValue<typeof CullMode>, string>> = {
   [CullMode.BACK]: 'cull_back',
   [CullMode.FRONT]: 'cull_front',
   [CullMode.DISABLED]: 'cull_disabled',

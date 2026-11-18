@@ -75,9 +75,11 @@ function drawMesh(spec) {
   const geometry = geometryOf(spec.mesh);
   const objects = [{ object: spec.object, source: spec.source }, ...(spec.others ?? [])];
   const meshes = objects.map(({ object, source = spec.source }, order) => {
-    const mesh = placed(new THREE.Mesh(geometry, transpiled.get(source).material), object);
+    const { material } = transpiled.get(source);
+    const mesh = placed(new THREE.Mesh(geometry, material), object);
     mesh.frustumCulled = false;
-    mesh.renderOrder = order;
+    // The alpha pass sorts by depth, as Godot's does (`render_forward_clustered.cpp:955`).
+    mesh.renderOrder = material.transparent ? 0 : order;
     return mesh;
   });
   const scene = new THREE.Scene();

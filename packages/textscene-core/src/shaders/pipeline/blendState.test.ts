@@ -6,12 +6,12 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { alphaToCoverageBlendState, godotBlendState } from './blendState';
-import { AlphaAntiAliasing } from '../../../godot/rendering/materials/alphaAntialiasing';
+import { AlphaAntiAliasing } from '../../godot/rendering/materials/alphaAntialiasing';
 import {
   BlendMode,
   GODOT_BLEND_ATTACHMENTS,
   type GodotBlendAttachment,
-} from '../../../godot/rendering/materials/blendMode';
+} from '../../godot/rendering/materials/blendMode';
 
 describe('godotBlendState over every mode', () => {
   it('resolves every blend mode the enum declares', () => {
@@ -50,17 +50,6 @@ const PRESET_FACTORS: Readonly<Record<number, GodotBlendAttachment>> = {
     srcAlpha: 'src-alpha',
     dstAlpha: 'one',
   },
-  // `blendFunc(ZERO, SRC_COLOR)`: the operands of Godot's `DST_COLOR/ZERO` are
-  // swapped, and multiplication commutes, so colour and alpha both land on the
-  // same products (`src × dst`, `a_src × a_dst`).
-  [THREE.MultiplyBlending]: {
-    colorOp: 'add',
-    srcColor: 'dst-color',
-    dstColor: 'zero',
-    alphaOp: 'add',
-    srcAlpha: 'dst-alpha',
-    dstAlpha: 'zero',
-  },
 };
 
 const THREE_EQUATION: Readonly<Record<string, THREE.BlendingEquation>> = {
@@ -78,14 +67,13 @@ const THREE_FACTOR: Readonly<Record<string, THREE.BlendingDstFactor>> = {
 };
 
 describe('godotBlendState', () => {
-  it('resolves MIX, ADD and MUL to the presets that match the ported factors', () => {
+  it('resolves MIX and ADD to the presets that match the ported factors', () => {
     expect(godotBlendState(BlendMode.MIX)).toEqual({ blending: THREE.NormalBlending });
     expect(godotBlendState(BlendMode.ADD)).toEqual({ blending: THREE.AdditiveBlending });
-    expect(godotBlendState(BlendMode.MUL)).toEqual({ blending: THREE.MultiplyBlending });
   });
 
   it('each preset it uses programs the factors Godot programs', () => {
-    for (const mode of [BlendMode.MIX, BlendMode.ADD, BlendMode.MUL]) {
+    for (const mode of [BlendMode.MIX, BlendMode.ADD]) {
       const { blending } = godotBlendState(mode);
       expect(PRESET_FACTORS[blending as number], `preset for mode ${mode}`).toEqual(
         GODOT_BLEND_ATTACHMENTS[mode]
@@ -93,8 +81,8 @@ describe('godotBlendState', () => {
     }
   });
 
-  it('spells SUB and PREMULT_ALPHA out, because no preset matches', () => {
-    for (const mode of [BlendMode.SUB, BlendMode.PREMULT_ALPHA]) {
+  it('spells SUB, MUL and PREMULT_ALPHA out, because no preset matches', () => {
+    for (const mode of [BlendMode.SUB, BlendMode.MUL, BlendMode.PREMULT_ALPHA]) {
       const attachment = GODOT_BLEND_ATTACHMENTS[mode];
       expect(godotBlendState(mode)).toEqual({
         blending: THREE.CustomBlending,
@@ -112,6 +100,10 @@ describe('godotBlendState', () => {
     // three spells that as `FUNC_ADD` with `ZERO / ONE_MINUS_SRC_COLOR`, a different
     // operation from Godot's reverse-subtract.
     expect(godotBlendState(BlendMode.SUB).blending).not.toBe(THREE.SubtractiveBlending);
+  });
+
+  it('does not use three’s MultiplyBlending, which programs no factors on a material that is not premultiplied', () => {
+    expect(godotBlendState(BlendMode.MUL).blending).not.toBe(THREE.MultiplyBlending);
   });
 
   it('omits the factor fields entirely for a preset', () => {

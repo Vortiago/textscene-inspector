@@ -84,3 +84,58 @@ describe('RowTexture', () => {
     expect(generatedFragmentShader(shown(columnOf(transform, 0)))).toMatch(/mat4\(/);
   });
 });
+
+describe('RowTexture.writeEachDraw', () => {
+  /** A WebGLRenderer that has uploaded `rows`' texture once, and records each upload after it. */
+  function rendererFor(rows: RowTexture) {
+    const uploads: number[] = [];
+    const properties = { __webglTexture: {}, __version: rows.texture.version };
+    const gl = {
+      TEXTURE_2D: 1,
+      TEXTURE_BINDING_2D: 2,
+      getParameter: () => null,
+      bindTexture: () => undefined,
+      texSubImage2D: (...args: unknown[]) => uploads.push((args.at(-1) as Uint32Array)[0]!),
+    };
+    const renderer = {
+      properties: { get: () => properties },
+      getContext: () => gl,
+      state: { pixelStorei: () => undefined },
+    };
+    return { renderer, uploads, properties };
+  }
+
+  /** Draws `object` as the draw `renderId` of the node handler. */
+  const draw = (rows: RowTexture, renderer: object, renderId: number, object: object) =>
+    rows['node'].update({ renderer, renderId, object } as never);
+
+  const wordsOf = (object: { word: number }) => new Uint32Array([object.word]);
+
+  it('uploads the words of a draw that follows a draw of the same material', () => {
+    const { rows } = instancesBlock();
+    const { renderer, uploads } = rendererFor(rows);
+    rows.writeEachDraw(wordsOf as never);
+    draw(rows, renderer, 1, { word: 5 });
+    draw(rows, renderer, 2, { word: 9 });
+    expect(uploads).toEqual([9]);
+  });
+
+  it('leaves the upload to three after a draw of another material', () => {
+    const { rows } = instancesBlock();
+    const { renderer, uploads } = rendererFor(rows);
+    rows.writeEachDraw(wordsOf as never);
+    draw(rows, renderer, 1, { word: 5 });
+    draw(rows, renderer, 3, { word: 9 });
+    expect(uploads).toEqual([]);
+  });
+
+  it('leaves a texture this renderer has not uploaded yet to three', () => {
+    const { rows } = instancesBlock();
+    const { renderer, uploads, properties } = rendererFor(rows);
+    properties.__webglTexture = undefined as never;
+    rows.writeEachDraw(wordsOf as never);
+    draw(rows, renderer, 1, { word: 5 });
+    draw(rows, renderer, 2, { word: 9 });
+    expect(uploads).toEqual([]);
+  });
+});

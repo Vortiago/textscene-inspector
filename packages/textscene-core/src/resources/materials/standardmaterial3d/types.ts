@@ -7,6 +7,7 @@
 
 import type * as THREE from 'three';
 import type { EmissionScalars } from './emission';
+import type { MaterialBlendState } from '../../../shaders/pipeline/blendState';
 import type { TextureChannel, TextureChannelMask } from '../../../godot/rendering/materials/textureChannel';
 import type { Vector2, Vector3 } from '../../../godot/math/vector';
 import { BASE_MATERIAL_3D_DEFAULTS } from '../../../godot/scene/baseMaterial3D';
@@ -268,22 +269,6 @@ export interface StandardMaterial3DData {
    * no coverage in this previewer, which requests no stencil buffer.
    */
   readsStencil: boolean;
-}
-
-/**
- * three's blending state for one Godot `blend_mode`, spelled with three's own
- * material property names so it can be spread onto a material or a JSX slot.
- * The factor fields are absent for the modes a three preset already expresses
- * exactly (see `blendState.ts`).
- */
-export interface MaterialBlendState {
-  blending: THREE.Blending;
-  blendEquation?: THREE.BlendingEquation;
-  blendSrc?: THREE.BlendingSrcFactor;
-  blendDst?: THREE.BlendingDstFactor;
-  blendEquationAlpha?: THREE.BlendingEquation;
-  blendSrcAlpha?: THREE.BlendingSrcFactor;
-  blendDstAlpha?: THREE.BlendingDstFactor;
 }
 
 /**

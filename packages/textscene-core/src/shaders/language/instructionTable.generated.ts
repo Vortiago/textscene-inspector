@@ -1844,22 +1844,22 @@ canvas_item.fragment.screen_uv_to_sdf(vec2)	stage function	servers/rendering/sha
 canvas_item.light.screen_uv_to_sdf(vec2)	stage function	servers/rendering/shader_types.cpp:329	#1785	canvas.glsl		vec2	(vec2)		
 particles.start.emit_subparticle(mat4,vec3,vec4,vec4,uint)	stage function	servers/rendering/shader_types.cpp:442	#1726	particles.glsl		bool	(mat4,vec3,vec4,vec4,uint)		
 particles.process.emit_subparticle(mat4,vec3,vec4,vec4,uint)	stage function	servers/rendering/shader_types.cpp:443	#1726	particles.glsl		bool	(mat4,vec3,vec4,vec4,uint)		
-spatial render_mode blend_mix	render mode	servers/rendering/shader_types.cpp:233	#1831	forward_clustered/scene_forward_clustered.glsl					
-spatial render_mode blend_add	render mode	servers/rendering/shader_types.cpp:233	#1831	forward_clustered/scene_forward_clustered.glsl					
-spatial render_mode blend_sub	render mode	servers/rendering/shader_types.cpp:233	#1831	forward_clustered/scene_forward_clustered.glsl					
-spatial render_mode blend_mul	render mode	servers/rendering/shader_types.cpp:233	#1831	forward_clustered/scene_forward_clustered.glsl					
-spatial render_mode blend_premul_alpha	render mode	servers/rendering/shader_types.cpp:233	#1831	forward_clustered/scene_forward_clustered.glsl					
-spatial render_mode depth_draw_opaque	render mode	servers/rendering/shader_types.cpp:234	#1831	forward_clustered/scene_forward_clustered.glsl					
-spatial render_mode depth_draw_always	render mode	servers/rendering/shader_types.cpp:234	#1831	forward_clustered/scene_forward_clustered.glsl					
-spatial render_mode depth_draw_never	render mode	servers/rendering/shader_types.cpp:234	#1831	forward_clustered/scene_forward_clustered.glsl					
+spatial render_mode blend_mix	render mode	servers/rendering/shader_types.cpp:233	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
+spatial render_mode blend_add	render mode	servers/rendering/shader_types.cpp:233	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
+spatial render_mode blend_sub	render mode	servers/rendering/shader_types.cpp:233	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
+spatial render_mode blend_mul	render mode	servers/rendering/shader_types.cpp:233	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
+spatial render_mode blend_premul_alpha	render mode	servers/rendering/shader_types.cpp:233	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
+spatial render_mode depth_draw_opaque	render mode	servers/rendering/shader_types.cpp:234	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
+spatial render_mode depth_draw_always	render mode	servers/rendering/shader_types.cpp:234	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
+spatial render_mode depth_draw_never	render mode	servers/rendering/shader_types.cpp:234	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
 spatial render_mode depth_prepass_alpha	render mode	servers/rendering/shader_types.cpp:235	#1831	forward_clustered/scene_forward_clustered.glsl					
-spatial render_mode depth_test_default	render mode	servers/rendering/shader_types.cpp:236	#1831	forward_clustered/scene_forward_clustered.glsl					
-spatial render_mode depth_test_disabled	render mode	servers/rendering/shader_types.cpp:236	#1831	forward_clustered/scene_forward_clustered.glsl					
-spatial render_mode depth_test_inverted	render mode	servers/rendering/shader_types.cpp:236	#1831	forward_clustered/scene_forward_clustered.glsl					
+spatial render_mode depth_test_default	render mode	servers/rendering/shader_types.cpp:236	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
+spatial render_mode depth_test_disabled	render mode	servers/rendering/shader_types.cpp:236	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
+spatial render_mode depth_test_inverted	render mode	servers/rendering/shader_types.cpp:236	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
 spatial render_mode sss_mode_skin	render mode	servers/rendering/shader_types.cpp:237	#1782	forward_clustered/scene_forward_clustered.glsl					
-spatial render_mode cull_back	render mode	servers/rendering/shader_types.cpp:238	#1831	forward_clustered/scene_forward_clustered.glsl					
-spatial render_mode cull_front	render mode	servers/rendering/shader_types.cpp:238	#1831	forward_clustered/scene_forward_clustered.glsl					
-spatial render_mode cull_disabled	render mode	servers/rendering/shader_types.cpp:238	#1831	forward_clustered/scene_forward_clustered.glsl					
+spatial render_mode cull_back	render mode	servers/rendering/shader_types.cpp:238	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
+spatial render_mode cull_front	render mode	servers/rendering/shader_types.cpp:238	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
+spatial render_mode cull_disabled	render mode	servers/rendering/shader_types.cpp:238	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
 spatial render_mode unshaded	render mode	servers/rendering/shader_types.cpp:239	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
 spatial render_mode wireframe	render mode	servers/rendering/shader_types.cpp:240	#1831	forward_clustered/scene_forward_clustered.glsl					
 spatial render_mode diffuse_lambert	render mode	servers/rendering/shader_types.cpp:241	#1453	forward_clustered/scene_forward_clustered.glsl					
@@ -1869,9 +1869,9 @@ spatial render_mode diffuse_toon	render mode	servers/rendering/shader_types.cpp:
 spatial render_mode specular_schlick_ggx	render mode	servers/rendering/shader_types.cpp:242	#1453	forward_clustered/scene_forward_clustered.glsl					
 spatial render_mode specular_toon	render mode	servers/rendering/shader_types.cpp:242	#1453	forward_clustered/scene_forward_clustered.glsl					
 spatial render_mode specular_disabled	render mode	servers/rendering/shader_types.cpp:242	#1453	forward_clustered/scene_forward_clustered.glsl					
-spatial render_mode skip_vertex_transform	render mode	servers/rendering/shader_types.cpp:243	#1831	forward_clustered/scene_forward_clustered.glsl					
-spatial render_mode world_vertex_coords	render mode	servers/rendering/shader_types.cpp:244	#1831	forward_clustered/scene_forward_clustered.glsl					
-spatial render_mode ensure_correct_normals	render mode	servers/rendering/shader_types.cpp:245	#1831	forward_clustered/scene_forward_clustered.glsl					
+spatial render_mode skip_vertex_transform	render mode	servers/rendering/shader_types.cpp:243	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
+spatial render_mode world_vertex_coords	render mode	servers/rendering/shader_types.cpp:244	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
+spatial render_mode ensure_correct_normals	render mode	servers/rendering/shader_types.cpp:245	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
 spatial render_mode shadows_disabled	render mode	servers/rendering/shader_types.cpp:246	#1453	forward_clustered/scene_forward_clustered.glsl					
 spatial render_mode ambient_light_disabled	render mode	servers/rendering/shader_types.cpp:247	#1453	forward_clustered/scene_forward_clustered.glsl					
 spatial render_mode shadow_to_opacity	render mode	servers/rendering/shader_types.cpp:248	#1453	forward_clustered/scene_forward_clustered.glsl					

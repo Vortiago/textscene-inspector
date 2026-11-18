@@ -5,6 +5,8 @@ import {
   frontFacing,
   int,
   screenCoordinate,
+  select,
+  uniform,
   varyingProperty,
   vec4,
   vertexIndex,
@@ -20,6 +22,7 @@ import { emitTemplateStage } from '../template/emitTemplate.js';
 import { linkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
 import type { RowTexture } from '../template/rowTexture.js';
 import { instanceWords } from './instanceData.js';
+import { applySpatialPipeline, spatialPipeline } from './spatialPipeline.js';
 import type { TemplateStageNode } from '../template/templateTree.js';
 import { TreeMemo } from '../template/treeMemo.js';
 import { BoundNodeMaterial, type MaterialShader } from '../uniforms/boundMaterial.js';
@@ -87,7 +90,7 @@ export function transpileParsedSpatial(
     new Map([
       ...parameterValues,
       ['gl_FragCoord', vulkanFragCoord(vulkanClip)],
-      ['gl_FrontFacing', frontFacing as unknown as Node],
+      ['gl_FrontFacing', godotFrontFacing()],
     ]),
     { name: 'frag_color', type: 'vec4' },
     resources
@@ -96,6 +99,7 @@ export function transpileParsedSpatial(
     parameters: [...parameters.values()],
     source: shaderSource(parsed, options.file ?? ''),
   });
+  applySpatialPipeline(material, spatialPipeline(parsed.tree));
   resources.buffers.byName.get('instances')?.writeEachDraw(instanceWordsOf);
   return {
     material,
@@ -143,6 +147,14 @@ function glClipPosition(position: Node, vulkanClip: Vec4): Node {
   })() as unknown as Node;
 }
 
+/** Godot reverses a mirrored cull (`render_forward_clustered.cpp:411`). three turns a mesh's winding. */
+function godotFrontFacing(): Node {
+  const isMirrored = uniform(0).onObjectUpdate(({ object }) =>
+    (object as THREE.Mesh).isMesh === true && object!.matrixWorld.determinantAffine() < 0 ? 1 : 0
+  );
+  return select(isMirrored.equal(1), frontFacing.not(), frontFacing) as unknown as Node;
+}
+
 /** Vulkan's `gl_FragCoord`: three's pixel position, which starts at the top row, Godot's depth and 1 / w. */
 function vulkanFragCoord(clip: Vec4): Node {
   return vec4(screenCoordinate, clip.z.div(clip.w), clip.w.reciprocal()) as unknown as Node;
@@ -152,7 +164,5 @@ function sceneMaterial(position: Node, colour: Node, shader: MaterialShader): Bo
   const material = new BoundNodeMaterial(shader);
   material.vertexNode = position;
   material.fragmentNode = colour;
-  // `cull_back`, Godot's default cull mode.
-  material.side = THREE.FrontSide;
   return material;
 }

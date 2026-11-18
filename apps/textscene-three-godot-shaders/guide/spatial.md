@@ -1800,11 +1800,401 @@ void fragment() {
 | --- | --- |
 | <img src="showcase/spatial-exposure-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-exposure-three.png" width="256" alt="Transpilation"> |
 
+## Showcase `spatial-cull-back`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, cull_back;
+
+void fragment() {
+	ALBEDO = FRONT_FACING ? vec3(UV, 0.3) : vec3(0.9, 0.3, UV.y);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-cull-back-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-cull-back-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-cull-front`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, cull_front;
+
+void fragment() {
+	ALBEDO = FRONT_FACING ? vec3(UV, 0.3) : vec3(0.9, 0.3, UV.y);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-cull-front-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-cull-front-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-cull-disabled`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, cull_disabled;
+
+void fragment() {
+	ALBEDO = FRONT_FACING ? vec3(UV, 0.3) : vec3(0.9, 0.3, UV.y);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-cull-disabled-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-cull-disabled-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-cull-front-mirrored`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, cull_front;
+
+void fragment() {
+	ALBEDO = FRONT_FACING ? vec3(UV, 0.3) : vec3(0.9, 0.3, UV.y);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-cull-front-mirrored-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-cull-front-mirrored-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-cull-disabled-normal`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, cull_disabled;
+
+void fragment() {
+	ALBEDO = NORMAL * 0.5 + 0.5;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-cull-disabled-normal-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-cull-disabled-normal-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-depth-test-default`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, depth_test_default;
+
+void fragment() {
+	ALBEDO = vec3(0.2, 0.5, UV.y);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-depth-test-default-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-depth-test-default-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-depth-test-disabled`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, depth_test_disabled;
+
+void fragment() {
+	ALBEDO = vec3(0.2, 0.5, UV.y);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-depth-test-disabled-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-depth-test-disabled-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-depth-test-inverted`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, depth_test_inverted;
+
+void fragment() {
+	ALBEDO = vec3(0.2, 0.5, UV.y);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-depth-test-inverted-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-depth-test-inverted-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-depth-draw-opaque`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, depth_draw_opaque;
+
+void fragment() {
+	ALBEDO = vec3(0.1, UV.x * 0.5, 0.6);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-depth-draw-opaque-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-depth-draw-opaque-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-depth-draw-always`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, blend_add, depth_draw_always;
+
+void fragment() {
+	ALBEDO = vec3(0.1, UV.x * 0.5, 0.6);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-depth-draw-always-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-depth-draw-always-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-depth-draw-opaque-alpha-pass`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, blend_add, depth_draw_opaque;
+
+void fragment() {
+	ALBEDO = vec3(0.1, UV.x * 0.5, 0.6);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-depth-draw-opaque-alpha-pass-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-depth-draw-opaque-alpha-pass-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-depth-draw-never`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, depth_draw_never;
+
+void fragment() {
+	ALBEDO = vec3(0.1, UV.x * 0.5, 0.6);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-depth-draw-never-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-depth-draw-never-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-blend-mix`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, blend_mix;
+
+void fragment() {
+	ALBEDO = vec3(UV * 0.4, 0.3);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-blend-mix-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-blend-mix-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-blend-add`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, blend_add;
+
+void fragment() {
+	ALBEDO = vec3(UV * 0.4, 0.3);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-blend-add-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-blend-add-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-blend-sub`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, blend_sub;
+
+void fragment() {
+	ALBEDO = vec3(UV * 0.4, 0.3);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-blend-sub-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-blend-sub-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-blend-mul`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, blend_mul;
+
+void fragment() {
+	ALBEDO = vec3(UV * 0.4, 0.3);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-blend-mul-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-blend-mul-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-blend-premul-alpha`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, blend_premul_alpha;
+
+void fragment() {
+	ALBEDO = vec3(UV * 0.4, 0.3);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-blend-premul-alpha-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-blend-premul-alpha-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-skip-vertex-transform`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, skip_vertex_transform;
+
+void vertex() {
+	VERTEX = (MODELVIEW_MATRIX * vec4(VERTEX * vec3(1.0, 0.7, 1.0), 1.0)).xyz;
+	NORMAL = normalize(MODELVIEW_NORMAL_MATRIX * NORMAL);
+}
+
+void fragment() {
+	ALBEDO = NORMAL * 0.5 + 0.5;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-skip-vertex-transform-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-skip-vertex-transform-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-world-vertex-coords`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, world_vertex_coords;
+
+void vertex() {
+	VERTEX.y += 0.4 * VERTEX.x;
+	NORMAL = normalize(NORMAL + vec3(0.0, 0.3, 0.0));
+}
+
+void fragment() {
+	ALBEDO = NORMAL * 0.5 + 0.5;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-world-vertex-coords-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-world-vertex-coords-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-ensure-correct-normals`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, ensure_correct_normals;
+
+void vertex() {
+	
+}
+
+void fragment() {
+	ALBEDO = NORMAL * 0.5 + 0.5;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-ensure-correct-normals-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-ensure-correct-normals-three.png" width="256" alt="Transpilation"> |
+
 ## Render mode `unshaded`
 
 `unshaded` defines `MODE_UNSHADED`, so the template writes `ALBEDO` and `ALPHA` to the frame with no light, fog or ambient light (`scene_forward_clustered.glsl:2978-2981`).
 
 The transpiler emits `the defines of the template variant`. Rows: `spatial render_mode unshaded`. Godot source: `servers/rendering/shader_types.cpp:239`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## Cull modes
+
+`cull_back`, the default, culls the faces seen from behind, `cull_front` the faces seen from the front, and `cull_disabled` none. Godot turns the cull round for a mesh of a negative scale (`render_forward_clustered.cpp:411`). three turns the winding of the mesh round instead, which turns `gl_FrontFacing` round too, so the transpiler turns `FRONT_FACING` back for a mirrored mesh and reads as Godot does. `cull_front` and `cull_disabled` define `DO_SIDE_CHECK`, so the template turns `NORMAL` round on a face seen from behind (`scene_forward_clustered.glsl:1263`).
+
+The transpiler emits the material's `side`, and the defines of the template variant. Rows: `spatial render_mode cull_back`, `spatial render_mode cull_front`, `spatial render_mode cull_disabled`. Godot source: `servers/rendering/shader_types.cpp:238`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## Depth modes
+
+`depth_test_disabled` draws with no depth test, and `depth_test_inverted` draws only the fragments behind the depth already drawn (`scene_shader_forward_clustered.cpp:352-360`). `depth_draw_never` writes no depth. `depth_draw_opaque`, the default, writes depth in the opaque pass only, and `depth_draw_always` in the alpha pass too. A shader with `depth_draw_never` or with a depth test other than the default draws in the alpha pass (`scene_shader_forward_clustered.h:279`), after the opaque objects, the farthest object first.
+
+The transpiler emits the material's `depthTest`, `depthFunc`, `depthWrite` and `transparent`. Rows: `spatial render_mode depth_draw_opaque`, `spatial render_mode depth_draw_always`, `spatial render_mode depth_draw_never`, `spatial render_mode depth_test_default`, `spatial render_mode depth_test_disabled`, `spatial render_mode depth_test_inverted`. Godot source: `servers/rendering/shader_types.cpp:234`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## Blend modes
+
+`blend_mix`, the default, draws in the opaque pass with no blend. `blend_add`, `blend_sub`, `blend_mul` and `blend_premul_alpha` draw in the alpha pass and blend with Godot's factors for the mode (`material_storage.cpp:651-716`), the colour and the alpha each with its own.
+
+The transpiler emits the material's `blending` and its blend factors, and `transparent`. Rows: `spatial render_mode blend_mix`, `spatial render_mode blend_add`, `spatial render_mode blend_sub`, `spatial render_mode blend_mul`, `spatial render_mode blend_premul_alpha`. Godot source: `servers/rendering/shader_types.cpp:233`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## The space of `VERTEX` in `vertex()`
+
+`skip_vertex_transform` leaves `VERTEX`, `NORMAL`, `TANGENT` and `BINORMAL` as `vertex()` writes them, so `vertex()` turns them to view space itself. `world_vertex_coords` hands `vertex()` the vertex and its normals in world space, and the template turns them to view space after it. `ensure_correct_normals` defines `ENSURE_CORRECT_NORMALS`, which no line of Godot 4.6.3's scene template reads.
+
+The transpiler emits `the defines of the template variant`. Rows: `spatial render_mode skip_vertex_transform`, `spatial render_mode world_vertex_coords`, `spatial render_mode ensure_correct_normals`. Godot source: `servers/rendering/shader_types.cpp:243`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 

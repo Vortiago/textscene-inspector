@@ -1,12 +1,4 @@
-/**
- * `BaseMaterial3D.blend_mode` → three.js blending state. `_update_shader` in
- * `scene/resources/material.cpp` emits `render_mode blend_*`, which
- * `scene_shader_forward_clustered.cpp` maps to a `BlendMode`. `godot/rendering/materials/blendMode.ts`
- * holds the attachment of each `BlendMode`.
- */
-
 import * as THREE from 'three';
-import type { MaterialBlendState } from './types';
 import {
   ALPHA_TO_COVERAGE_ATTACHMENT,
   BlendMode,
@@ -14,12 +6,23 @@ import {
   type GodotBlendAttachment,
   type GodotBlendFactor,
   type GodotBlendOp,
-} from '../../../godot/rendering/materials/blendMode';
+} from '../../godot/rendering/materials/blendMode.js';
 import {
   AlphaAntiAliasing,
   type AlphaToCoverageMode,
-} from '../../../godot/rendering/materials/alphaAntialiasing';
-import type { EnumValue } from '../../../godot/classdb/enumNames.js';
+} from '../../godot/rendering/materials/alphaAntialiasing.js';
+import type { EnumValue } from '../../godot/classdb/enumNames.js';
+
+/** three's blending state for one Godot blend mode, in three's material property names. */
+export interface MaterialBlendState {
+  blending: THREE.Blending;
+  blendEquation?: THREE.BlendingEquation;
+  blendSrc?: THREE.BlendingSrcFactor;
+  blendDst?: THREE.BlendingDstFactor;
+  blendEquationAlpha?: THREE.BlendingEquation;
+  blendSrcAlpha?: THREE.BlendingSrcFactor;
+  blendDstAlpha?: THREE.BlendingDstFactor;
+}
 
 const THREE_EQUATION: Readonly<Record<GodotBlendOp, THREE.BlendingEquation>> = {
   add: THREE.AddEquation,
@@ -35,21 +38,13 @@ const THREE_FACTOR: Readonly<Record<GodotBlendFactor, THREE.BlendingDstFactor>> 
   'dst-alpha': THREE.DstAlphaFactor,
 };
 
-/**
- * The modes a three preset expresses exactly, kept as presets for the blending constant
- * consumers assert on (`WebGLState.setBlending`, non-premultiplied; `blendState.test.ts`).
- * SUB is not `SubtractiveBlending` (`FUNC_ADD` with `ZERO/ONE_MINUS_SRC_COLOR`), and
- * PREMULT_ALPHA is not `premultipliedAlpha`, which premultiplies a premultiplied source again.
- * Every Godot mode gives alpha its own factors, so no colour-only `gl.blendFunc` reading fits one.
- */
+/** The modes a three preset draws with Godot's factors (`WebGLState.setBlending`, non-premultiplied). */
 const PRESETS: Readonly<Partial<Record<EnumValue<typeof BlendMode>, THREE.Blending>>> = {
   // `blendFuncSeparate(SRC_ALPHA, ONE_MINUS_SRC_ALPHA, ONE, ONE_MINUS_SRC_ALPHA)`, `FUNC_ADD`.
   [BlendMode.MIX]: THREE.NormalBlending,
   // `blendFunc(SRC_ALPHA, ONE)` sets colour and alpha, so alpha gets Godot's pair.
   [BlendMode.ADD]: THREE.AdditiveBlending,
-  // `blendFunc(ZERO, SRC_COLOR)`: `src × dst` and `a_src × a_dst`, Godot's
-  // `DST_COLOR/ZERO` and `DST_ALPHA/ZERO` products with the operands swapped.
-  [BlendMode.MUL]: THREE.MultiplyBlending,
+  // Not SUB, MUL, PREMULT_ALPHA: their presets add, program nothing, or premultiply again (`setBlending`).
 };
 
 /**

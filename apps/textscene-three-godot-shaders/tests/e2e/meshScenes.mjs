@@ -57,14 +57,20 @@ const attributeRows = (builtIn) => [
   `spatial.fragment.${builtIn}`,
 ];
 
-/** An unshaded shader that shows `value`, a `vec3` of the fragment stage, as its colour. */
-const showing = (value) => `shader_type spatial;
-render_mode unshaded;
+/** The head of an unshaded shader with `modes` after `unshaded`. */
+const unshadedHead = (modes) => `shader_type spatial;
+render_mode ${['unshaded', ...modes].join(', ')};
+`;
 
+/** An unshaded shader with `modes` after `unshaded`, and `fragment()` as given. */
+const withModes = (modes, fragment) => `${unshadedHead(modes)}
 void fragment() {
-	ALBEDO = ${value};
+	${fragment}
 }
 `;
+
+/** An unshaded shader that shows `value`, a `vec3` of the fragment stage, as its colour. */
+const showing = (value) => withModes([], `ALBEDO = ${value};`);
 
 const RINGS = 8;
 const SEGMENTS = 12;
@@ -408,6 +414,150 @@ const GLOBAL_SCENES = [
   ),
 ];
 
+/** The rows of a render mode scene: unshaded, `ALBEDO`, and each mode. */
+const modeRows = (modes, rows = []) => [
+  'spatial render_mode unshaded',
+  'spatial.fragment.ALBEDO',
+  ...modes.map((mode) => `spatial render_mode ${mode}`),
+  ...rows,
+];
+
+/** Front faces show their UV, back faces a red of their own, so a culled side shows as missing. */
+const SIDES = 'ALBEDO = FRONT_FACING ? vec3(UV, 0.3) : vec3(0.9, 0.3, UV.y);';
+
+/** A render mode scene: one quad under `modes` showing `fragment()`, seen from the back camera. */
+const modeScene = (name, modes, fragment, placement, rows) => ({
+  name,
+  ...SIZE,
+  source: withModes(modes, fragment),
+  camera: BACK,
+  mesh: QUAD,
+  ...placement,
+  rows: modeRows(modes, rows),
+});
+
+/** A quad that faces the camera, on the left, and one turned away from it, on the right. */
+const facingAndTurned = (scale) => ({
+  object: { position: [-0.45, 0, 0], rotation: [0, 20, 0], scale },
+  others: [{ object: { position: [0.45, 0, 0], rotation: [0, 160, 0], scale } }],
+});
+
+/** A cull mode scene: the two quads, `fragment()` shown on each face, with the scale `scale`. */
+const cullScene = (name, modes, fragment = SIDES, scale = [0.8, 0.8, 0.8], rows = []) =>
+  modeScene(name, modes, fragment, facingAndTurned(scale), [
+    'spatial.fragment.FRONT_FACING',
+    'spatial.fragment.UV',
+    ...rows,
+  ]);
+
+/** An opaque quad in front, at the lower right, that the scene's own quad meets. */
+const ORANGE_IN_FRONT = {
+  object: { position: [0.25, -0.2, 0.4], rotation: [0, 0, 0], scale: [0.7, 0.7, 0.7] },
+  source: showing('vec3(0.9, 0.3, 0.1)'),
+};
+
+/** A depth test scene: the scene's quad, behind the orange quad. */
+const depthTestScene = (name, modes) =>
+  modeScene(
+    name,
+    modes,
+    'ALBEDO = vec3(0.2, 0.5, UV.y);',
+    {
+      object: { position: [-0.1, 0.1, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+      others: [ORANGE_IN_FRONT],
+    },
+    ['spatial.fragment.UV']
+  );
+
+/** Two crossing quads: the alpha pass draws the far one first, so its depth write cuts the near one. */
+const crossingScene = (name, modes) =>
+  modeScene(
+    name,
+    modes,
+    'ALBEDO = vec3(0.1, UV.x * 0.5, 0.6);',
+    {
+      object: { position: [-0.15, 0, 0.1], rotation: [0, 45, 0], scale: [1.2, 0.8, 1] },
+      others: [
+        {
+          object: { position: [0.15, 0, -0.2], rotation: [0, -45, 0], scale: [1.2, 0.8, 1] },
+          source: withModes(modes, 'ALBEDO = vec3(0.6, 0.2, UV.y * 0.5);'),
+        },
+      ],
+    },
+    ['spatial.fragment.UV']
+  );
+
+/** A blend scene: the scene's quad over the orange quad and the clear colour, each blended in. */
+const blendScene = (name, modes) =>
+  modeScene(
+    name,
+    modes,
+    'ALBEDO = vec3(UV * 0.4, 0.3);',
+    {
+      object: { position: [-0.1, 0.1, 0.5], rotation: [0, 0, 0], scale: [1, 1, 1] },
+      others: [{ ...ORANGE_IN_FRONT, object: { ...ORANGE_IN_FRONT.object, position: [0.25, -0.2, 0] } }],
+    },
+    ['spatial.fragment.UV']
+  );
+
+/** A shader that moves the sphere in `vertex()` under `modes`, and shows its normal. */
+const vertexSpaceScene = (name, modes, vertex, rows) => ({
+  name,
+  ...SIZE,
+  source: `${unshadedHead(modes)}
+void vertex() {
+	${vertex}
+}
+
+void fragment() {
+	ALBEDO = NORMAL * 0.5 + 0.5;
+}
+`,
+  camera: SPHERE_VIEW,
+  mesh: SPHERE,
+  object: SPHERE_MOVED,
+  rows: modeRows(modes, ['spatial.fragment.NORMAL', ...rows]),
+});
+
+/** Each render mode the pipeline or a template define reads, against Godot. */
+const RENDER_MODE_SCENES = [
+  cullScene('spatial-cull-back', ['cull_back']),
+  cullScene('spatial-cull-front', ['cull_front']),
+  cullScene('spatial-cull-disabled', ['cull_disabled']),
+  cullScene('spatial-cull-front-mirrored', ['cull_front'], SIDES, [-0.8, 0.8, 0.8]),
+  cullScene('spatial-cull-disabled-normal', ['cull_disabled'], 'ALBEDO = NORMAL * 0.5 + 0.5;', undefined, [
+    'spatial.fragment.NORMAL',
+  ]),
+  depthTestScene('spatial-depth-test-default', ['depth_test_default']),
+  depthTestScene('spatial-depth-test-disabled', ['depth_test_disabled']),
+  depthTestScene('spatial-depth-test-inverted', ['depth_test_inverted']),
+  crossingScene('spatial-depth-draw-opaque', ['depth_draw_opaque']),
+  crossingScene('spatial-depth-draw-always', ['blend_add', 'depth_draw_always']),
+  crossingScene('spatial-depth-draw-opaque-alpha-pass', ['blend_add', 'depth_draw_opaque']),
+  crossingScene('spatial-depth-draw-never', ['depth_draw_never']),
+  ...['blend_mix', 'blend_add', 'blend_sub', 'blend_mul', 'blend_premul_alpha'].map((mode) =>
+    blendScene(`spatial-${mode.replaceAll('_', '-')}`, [mode])
+  ),
+  vertexSpaceScene(
+    'spatial-skip-vertex-transform',
+    ['skip_vertex_transform'],
+    'VERTEX = (MODELVIEW_MATRIX * vec4(VERTEX * vec3(1.0, 0.7, 1.0), 1.0)).xyz;\n\tNORMAL = normalize(MODELVIEW_NORMAL_MATRIX * NORMAL);',
+    [
+      'spatial.vertex.VERTEX',
+      'spatial.vertex.NORMAL',
+      'spatial.vertex.MODELVIEW_MATRIX',
+      'spatial.vertex.MODELVIEW_NORMAL_MATRIX',
+    ]
+  ),
+  vertexSpaceScene(
+    'spatial-world-vertex-coords',
+    ['world_vertex_coords'],
+    'VERTEX.y += 0.4 * VERTEX.x;\n\tNORMAL = normalize(NORMAL + vec3(0.0, 0.3, 0.0));',
+    ['spatial.vertex.VERTEX', 'spatial.vertex.NORMAL']
+  ),
+  vertexSpaceScene('spatial-ensure-correct-normals', ['ensure_correct_normals'], '', []),
+];
+
 /** A quad at half size, at `position` and turned by `rotation`. */
 const SMALL_AT = (position, rotation) => ({ position, rotation, scale: [0.5, 0.5, 0.5] });
 
@@ -530,6 +680,7 @@ export const MESH_SCENES = [
   ...VERTEX_SCENES,
   ...FRAGMENT_SCENES,
   ...GLOBAL_SCENES,
+  ...RENDER_MODE_SCENES,
 ];
 
 /** Scenes whose program the GPU refuses: each must reach the material as a fault with this log. */

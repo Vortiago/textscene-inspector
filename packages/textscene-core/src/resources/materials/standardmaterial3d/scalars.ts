@@ -4,23 +4,10 @@
  * closure (ADR-0031), while `blending` and `side` are three constants.
  */
 
-import * as THREE from 'three';
-import { godotBlendState } from './blendState';
+import { godotBlendState } from '../../../shaders/pipeline/blendState';
 import { textureChannelMask } from '../../../godot/rendering/materials/textureChannel';
-import { CullMode } from '../../../godot/rendering/materials/cullMode';
+import { CULL_SIDES } from '../../../shaders/pipeline/cullSide';
 import type { StandardMaterial3DData, StandardMaterial3DScalars } from './types';
-import type { EnumValue } from '../../../godot/classdb/enumNames.js';
-
-/**
- * Godot's cull mode names the faces it discards, and three's `side` names the ones it
- * keeps. `_update_shader` emits `cull_back` / `cull_front` / `cull_disabled`, so
- * CULL_BACK (the default) draws front faces.
- */
-const SIDE: Readonly<Record<EnumValue<typeof CullMode>, THREE.Side>> = {
-  [CullMode.BACK]: THREE.FrontSide,
-  [CullMode.FRONT]: THREE.BackSide,
-  [CullMode.DISABLED]: THREE.DoubleSide,
-};
 
 /** The renderer's view of a decoded StandardMaterial3D. */
 export function standardMaterial3DScalars(data: StandardMaterial3DData): StandardMaterial3DScalars {
@@ -64,7 +51,7 @@ export function standardMaterial3DScalars(data: StandardMaterial3DData): Standar
     aoTextureChannelMask: textureChannelMask(data.aoTextureChannel),
     roughnessTextureChannelMask: textureChannelMask(data.roughnessTextureChannel),
     metallicTextureChannelMask: textureChannelMask(data.metallicTextureChannel),
-    side: SIDE[data.cullMode],
+    side: CULL_SIDES[data.cullMode],
     cullModeExplicit: data.cullModeExplicit,
     normalScale: data.normalScale,
     triplanar: data.triplanar,
