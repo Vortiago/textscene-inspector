@@ -2,7 +2,8 @@
 
 ; Each Camera3D holds one projection setting, and a call makes it current in a window taller than wide.
 ; `Near` cuts the box with its near and far planes, `Ortho` and `Frustum` take a non-default size and
-; offset, and `Width` keeps the width. No other scene calls them.
+; offset, and `Width` keeps the width at a field of view the default's height does not give. No other
+; scene calls them.
 
 [sub_resource type="BoxMesh" id="BoxMesh_1"]
 
@@ -53,4 +54,4 @@ near = 1.2
 [node name="Width" type="Camera3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 0.3, 5)
 keep_aspect = 0
-fov = 60.0
+fov = 90.0
