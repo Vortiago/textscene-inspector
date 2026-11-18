@@ -186,6 +186,14 @@ describe('generateWebviewHtml CSP', () => {
     expect(policy).not.toContain('font-src');
     expect(policy).not.toContain('child-src');
   });
+
+  it("names no host but the extension's own resource origin, so nothing loads from a CDN", () => {
+    const sources = csp()
+      .split(';')
+      .flatMap((directive) => directive.trim().split(/\s+/).slice(1));
+    const hosts = sources.filter((source) => !source.startsWith("'") && !source.endsWith(':'));
+    expect(new Set(hosts)).toEqual(new Set([BASE_OPTIONS.cspSource]));
+  });
 });
 
 describe('generateNonce', () => {

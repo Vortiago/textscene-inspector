@@ -159,8 +159,6 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'bitmask',
       'passby_press',
       'texture_pressed',
-      // The editor draws `texture_normal` whatever the mode says (touch_screen_button.cpp:140).
-      'visibility_mode',
     ],
     reason: 'The input keys of a button change no frame, since no finger is down in a preview.',
   },

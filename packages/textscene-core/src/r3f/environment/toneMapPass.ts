@@ -1,21 +1,12 @@
-/**
- * Godot's tonemap pass of one viewport. The 3D world draws into a linear half-float buffer, which
- * resolves its samples (`render_forward_clustered.cpp:2402`), then the tonemap effect reads it and
- * writes the viewport's target (`:2514`). The root canvas and every SubViewport draw through it.
- */
-
 import { useCallback, useLayoutEffect, useMemo } from 'react';
 import * as THREE from 'three';
-import { EffectPass } from 'postprocessing';
 import { useThree } from '@react-three/fiber';
 import { glowParamsFor } from '../../resources/environment/godotGlow';
 import { NO_ENVIRONMENT_TONE_MAPPING } from '../../godot/rendering/environment/toneMapping';
 import { useMultisampledTarget } from '../offscreen/multisampledTarget';
-import { useDisposeOnRelease } from '../useDisposeOnRelease';
 import { drawOffscreen } from '../offscreen/draw';
 import { createPassTarget } from './passTarget';
-import { useGodotToneMapEffect } from './useGodotToneMapEffect';
-import type { GodotToneMapEffect } from './GodotToneMapEffect';
+import { useGodotToneMapper } from './useGodotToneMapper';
 import { usePassToneMap } from './passToneMap';
 
 /**
@@ -52,9 +43,6 @@ export interface ToneMapPassOptions {
   name: string;
 }
 
-/** The tonemap effect reads no time, since a frame draws at its settled luminance. */
-const NO_ELAPSED_TIME = 0;
-
 /**
  * The world buffer and the tonemap pass of one viewport, tonemapped with the Environment and the
  * auto exposure its pass draws with (`usePassToneMap`). Glow runs on the Environment's flag alone, as Godot's
@@ -67,7 +55,7 @@ export function useToneMapPass(options: ToneMapPassOptions): ToneMapPass {
   const passToneMap = usePassToneMap();
   const { settings } = passToneMap;
   const glow = useMemo(() => settings && glowParamsFor(settings), [settings]);
-  const effect = useGodotToneMapEffect({
+  const toneMapper = useGodotToneMapper({
     glow,
     adjustments: settings?.adjustments ?? null,
     toneMapping: settings?.toneMapping ?? NO_ENVIRONMENT_TONE_MAPPING,
@@ -78,9 +66,9 @@ export function useToneMapPass(options: ToneMapPassOptions): ToneMapPass {
   });
   const worldBuffer = useWorldBuffer(msaaMode, width, height, name);
   const gl = useThree((state) => state.gl);
-  const pass = useEffectPass(effect, width, height);
+  useLayoutEffect(() => toneMapper.setSize(width, height), [toneMapper, width, height]);
   return useMemo(() => {
-    const toneMapDraw = () => pass.render(gl, worldBuffer, target, NO_ELAPSED_TIME);
+    const toneMapDraw = () => toneMapper.render(gl, worldBuffer, target);
     return {
       worldBuffer,
       drawWorld: (scene, camera) =>
@@ -91,7 +79,7 @@ export function useToneMapPass(options: ToneMapPassOptions): ToneMapPass {
         }),
       toneMap: () => drawOffscreen(gl, toneMapDraw),
     };
-  }, [gl, pass, worldBuffer, target]);
+  }, [gl, toneMapper, worldBuffer, target]);
 }
 
 /** The world buffer, resized in place as the viewport resizes. */
@@ -111,29 +99,4 @@ function worldBufferOf(name: string): THREE.WebGLRenderTarget {
   const buffer = createPassTarget(`${name}::world`, { type: SCENE_BUFFER_TYPE });
   buffer.depthBuffer = true;
   return buffer;
-}
-
-/** `effect` in a pass of its own, sized to the target. */
-function useEffectPass(effect: GodotToneMapEffect, width: number, height: number): EffectPass {
-  const gl = useThree((state) => state.gl);
-  const pass = useMemo(() => {
-    const built = new BorrowedEffectPass(effect);
-    built.initialize(gl, true, SCENE_BUFFER_TYPE);
-    return built;
-  }, [gl, effect]);
-  useLayoutEffect(() => pass.setSize(width, height), [pass, width, height]);
-  useDisposeOnRelease(pass);
-  return pass;
-}
-
-/** An effect pass that leaves its effect to the effect's owner, `useGodotToneMapEffect`. */
-class BorrowedEffectPass extends EffectPass {
-  constructor(effect: GodotToneMapEffect) {
-    super(undefined, effect);
-  }
-
-  override dispose(): void {
-    this.setEffects([]);
-    super.dispose();
-  }
 }

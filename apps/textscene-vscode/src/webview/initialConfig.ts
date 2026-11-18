@@ -5,11 +5,7 @@
  */
 import type { WebviewInitialConfig } from './webviewHtml.js';
 
-/**
- * The subset of `TscnPreviewShellProps['initialViewportMode']` this host passes:
- * a local union, not core's internal `ViewportMode`, since only `'2D'`/`'3D'`
- * override.
- */
+/** A local union, not core's internal `ViewportMode`: only the modes the setting names override. */
 export type ForcedViewportMode = Exclude<WebviewInitialConfig['viewportMode'], 'auto'>;
 
 /**
@@ -23,13 +19,8 @@ export function readInitialConfig(): TextSceneWebviewConfig {
   return (globalThis as { __TEXTSCENE_CONFIG__?: TextSceneWebviewConfig }).__TEXTSCENE_CONFIG__ ?? {};
 }
 
-/**
- * `'auto'` or an absent setting gives `undefined`, which keeps Godot-parity
- * auto-select. `'2D'`/`'3D'` passes through to seed the viewport and suppress it.
- */
+/** `'auto'` or no setting keeps auto-select, and a named mode seeds the viewport and turns it off. */
 export function resolveInitialViewportMode(config: TextSceneWebviewConfig): ForcedViewportMode | undefined {
-  if (config.viewportMode === '2D' || config.viewportMode === '3D') {
-    return config.viewportMode;
-  }
-  return undefined;
+  const mode = config.viewportMode;
+  return mode === '2D' || mode === '3D' || mode === 'in-game' ? mode : undefined;
 }

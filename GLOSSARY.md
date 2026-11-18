@@ -584,9 +584,29 @@ A node that a layer adds to the live tree and the edited scene does not own. The
 _Avoid_: "internal node" for this, "hidden node".
 
 **Viewport mode**:
-The single `'2D' | '3D'` display state of the centre viewport: `3D` mounts the R3F canvas, and `2D` mounts the pannable 2D stage.
-A heuristic on the scene root type picks the default, and the toolbar toggle overrides it.
+The single `'2D' | '3D' | 'in-game'` display state of the centre viewport: `3D` mounts the R3F canvas, `2D` mounts the pannable 2D stage, and `in-game` mounts the **In-game mode** of the view.
+A heuristic on the scene root type picks 2D or 3D, never In-game, and the toolbar toggle overrides it.
 _Avoid_: "2D mode" alone.
+
+**In-game mode** (`<TscnCanvas mode="in-game">`, `r3f/gameView/`, ADR-0006):
+The mode of the one view that draws the root viewport as the game starts it: the scene's own cameras, the game's lighting, no **editor hint** and no input. The root viewport draws through the pass a **sub-viewport** draws through, with the game's **viewport description**. Scripts do not run.
+_Avoid_: "game view" for a component of its own: one view draws every mode. "Play mode", "runtime view".
+
+**Editor hint** (`EditorHintContext`, `RunningGameScope`):
+Godot's `Engine::is_editor_hint()`: true in the editor's views, false where the game runs. It is the one intent every editor-only drawer reads. The toggles of `ViewportModeContext` read as the game draws where it is false, and a node with `editor_only` draws only where it is true.
+_Avoid_: "game flag", a per-node "in game" prop.
+
+**Scene** (`Scene` from `openScene` in `scene/openScene.ts`, ADR-0086):
+An open `.tscn` text with its resource provider: one parse, made the first time a view reads it, one resource loader, and the **host writes**. It is the seam of the renderer: a host's code finds a node with `getNode` and reads and writes its properties through a **node handle**, and every view draws the parse with the writes laid on. It holds no React and no three.js.
+_Avoid_: "scene context", "document". "scene graph" for the parse.
+
+**Node handle** (`NodeHandle`, `scene/nodeHandle.ts`):
+A node of a **scene** as a script holds it: by identity for the life of the text, with `get`, `set` and the NodePath walk of `get_node`. Two lookups of one node give one handle. After a new text the handle answers `isInsideTree() === false`.
+_Avoid_: a node path string as a handle, "node reference".
+
+**Host write** (`WriteStore`, `scene/sceneWrites.ts`):
+A property value a host's code gave `set`, kept as Variant text by live path and laid over the file as an instance override, so every reader of the **Live scene tree** reads it as a file value. The layers are, lowest first: the file, the host writes, the animated values, the **Live scene passes**.
+_Avoid_: "patch" for a host write. A **node patch** is a pass result laid over the tree.
 
 **Frame profile** (`r3f/frameProfile/`):
 The measurement of every frame on one renderer while the Performance toggle is on: frame rate, frame interval, and the CPU time, GPU time and draw calls of each **render step**, averaged over half a second (ADR-0053).
@@ -617,7 +637,7 @@ What displays a **sub-viewport**'s render target (a `SubViewportContainer` or a 
 _Avoid_: "viewport container" for the concept. "render target" for the surface.
 
 **Viewport description** (`ViewportDescription` in `r3f/viewportRender/viewportDescription.ts`, ADR-0078):
-What a viewport gives each render it draws: its MSAA, debanding, transparent background, mipmap bias, positional shadow atlas and anisotropic level, and its rules for the camera, the editor chrome and the preview environment. An adapter builds it from a source: `rootViewportDescription` from the project settings.
+What a viewport gives each render it draws: its MSAA, debanding, transparent background, mipmap bias, positional shadow atlas, anisotropic level and fallback Environment, and its rules for the camera, the editor chrome and the preview environment. An adapter builds it from a source: `rootViewportDescription` from the project settings with the editor's rules, `gameViewportDescription` with the game's, and `subViewportDescription` from a SubViewport's properties.
 _Avoid_: "viewport config", "viewport settings" for the value. A `project*` read beside a render.
 
 **Embedded window** (`nodes/windows/window/`):
@@ -778,6 +798,10 @@ _Avoid_: "default light", "fill light".
 **Preview environment**:
 The stand-in **WorldEnvironment** from Godot's editor, a procedural sky for background and ambient light, added to a scene with no `WorldEnvironment` (ADR-0025).
 _Avoid_: "default environment", "skybox". Coupling it to the **Preview sun**.
+
+**Clear-colour ambient** (`useFallbackEnvironment` in `r3f/environment/fallbackEnvironment.ts`):
+The ambient light of a world with no Environment: the viewport's clear colour at energy 1, as Godot gives it (`render_scene_data_rd.cpp:225-235`). A transparent viewport's world takes none.
+_Avoid_: "default ambient", "fallback light".
 
 **Yield** (of preview lighting):
 What a preview element does when the scene has a node of its type anywhere in the **Live scene tree**: it does not mount.

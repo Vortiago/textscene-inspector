@@ -1,10 +1,3 @@
-/**
- * The browser pages a run captures on, one per distinct kind of scene: the framed 3D view, the 2D
- * parity frame, and a 3D view per `canvas` size. A page opens before the first scene and closes
- * after the last scene that needs it, so a small-frame context does not outlive its scenes. A scene
- * that sets `gizmos: true` gets a page of its own kind, since the toggle is set when the context opens.
- */
-
 import {
   attachDiagnostics,
   CANVAS_CAPTURE,
@@ -29,6 +22,12 @@ function gizmosSpec(scene, key) {
  * frame, and a baseline of empty space cannot fail. The parity harness keeps the fixed orbit.
  */
 export function pageSpecFor(scene) {
+  if (scene.mode === 'in-game') {
+    // The game view fills the canvas with the game window, so the canvas is the window.
+    const window = scene.canvas ?? CANVAS_CAPTURE;
+    const gizmos = gizmosSpec(scene, `in-game:${canvasKey(window)}`);
+    return { key: gizmos.key, options: { frameOnOpen: false, inGameFrame: window, ...gizmos.options } };
+  }
   if (scene.mode === '2d') {
     if (scene.canvas) {
       throw new Error(

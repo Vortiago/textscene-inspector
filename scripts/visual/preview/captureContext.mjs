@@ -16,16 +16,22 @@ import {
   SOURCE_PANE_STORAGE_KEY,
   VIEWPORT,
   VIEWPORT_MODE_STORAGE_KEY,
+  windowForCanvas,
 } from './appContract.mjs';
 
 /**
- * A browser context that renders only the scene: the source pane closed, the floating toolbar
- * painted out (a capture composites any DOM over the canvas), and frame-on-open set
- * explicitly. `canvas2DFrame` is the project-viewport rect, which widens the window only when it
- * does not fit the default one. `viewport` is the 3D window, which a scene shrinks to render a
- * small frame, and a 2D context ignores it. `showPerformance` turns the frame profile on, and its
- * overlay is painted out too. `showGizmos` turns the editor gizmos on. They are off by default, so no
- * golden or comparison capture draws one that Godot's running game does not.
+ * A context that renders only the scene: the source pane closed and the floating chrome painted out.
+ * @param {import('playwright').Browser} browser
+ * @param {object} options
+ * @param {boolean} options.frameOnOpen set explicitly, never left to the app's default
+ * @param {boolean} [options.canvas2D] open the 2D workspace
+ * @param {{ width: number, height: number } | null} [options.canvas2DFrame] the project-viewport rect,
+ *   which widens the window only when it does not fit the default one
+ * @param {{ width: number, height: number }} [options.viewport] the 3D window, which a 2D context ignores
+ * @param {boolean} [options.showPerformance] turn the frame profile on, its overlay painted out too
+ * @param {boolean} [options.showGizmos] turn the editor gizmos on: off by default, as in Godot's running game
+ * @param {{ width: number, height: number } | null} [options.inGameFrame] the game window: the context
+ *   opens the In-game mode with a canvas of that size
  */
 export async function createCaptureContext(
   browser,
@@ -36,10 +42,11 @@ export async function createCaptureContext(
     viewport = VIEWPORT,
     showPerformance = false,
     showGizmos = false,
+    inGameFrame = null,
   }
 ) {
   const context = await browser.newContext({
-    viewport: canvas2D ? canvas2DViewportFor(canvas2DFrame) : viewport,
+    viewport: contextViewport({ canvas2D, canvas2DFrame, inGameFrame, viewport }),
     deviceScaleFactor: 1,
   });
   await context.addInitScript(
@@ -75,8 +82,21 @@ export async function createCaptureContext(
       [VIEWPORT_MODE_STORAGE_KEY, JSON.stringify('2D')]
     );
   }
+  if (inGameFrame) {
+    await context.addInitScript(
+      ([key, value]) => window.localStorage.setItem(key, value),
+      [VIEWPORT_MODE_STORAGE_KEY, JSON.stringify('in-game')]
+    );
+  }
   await context.addInitScript(installStyle, paintedOutChromeCss({ canvas2D }));
   return context;
+}
+
+/** The window of a context: the 2D frame's, the game window's, or the 3D window. */
+function contextViewport({ canvas2D, canvas2DFrame, inGameFrame, viewport }) {
+  if (canvas2D) return canvas2DViewportFor(canvas2DFrame);
+  if (inGameFrame) return windowForCanvas(inGameFrame);
+  return viewport;
 }
 
 /** The "switch to 2D" hint carries no testid, so a capture finds it by its title. */

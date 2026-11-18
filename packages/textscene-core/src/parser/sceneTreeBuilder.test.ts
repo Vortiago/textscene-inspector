@@ -3,7 +3,14 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { orphanedNodes, sceneSeating, seatedParents, seatScene } from './sceneTreeBuilder';
+import {
+  orphanedNodes,
+  reseatedRoots,
+  sceneSeating,
+  seatedParents,
+  seatScene,
+  shareSeating,
+} from './sceneTreeBuilder';
 import { node, originsOf, withOrigin } from './testing/seatingKit';
 import { inheritingTrailBase } from '../r3f/idTrail.testkit';
 import type { NodeOrigin, TscnNode } from './types';
@@ -1131,5 +1138,27 @@ unique_name_in_owner = true
 
   it('answers the path of the claimant itself', () => {
     expect(seating.resolve('Foo').status).toBe('found');
+  });
+});
+
+describe('shareSeating', () => {
+  const lamp: TscnNode = {
+    ...node('Lamp', '.', { owner: 'Player/Gone' }),
+    rawProperties: { unique_name_in_owner: 'true' },
+  };
+  const nodes = [node('Root'), node('Player', '.', { instance: 'ExtResource("1")' }), lamp];
+  const { roots } = seatScene(withOrigin(originsOf(nodes, { Root: 5, Player: 7 }), 2, { ownerIdTrail: [5] }));
+  const renamed = (seated: readonly TscnNode[]) => seated.map((root) => ({ ...root, name: 'Written' }));
+
+  it('seats the laid roots as the parse seated them', () => {
+    expect(sceneSeating(shareSeating(renamed(roots), roots, renamed)).ownership).toBe(
+      sceneSeating(roots).ownership
+    );
+  });
+
+  it('lays the relay again over a seating again from the headings', () => {
+    const written = shareSeating(renamed(roots), roots, renamed);
+
+    expect(reseatedRoots(written, new Set([lamp]))[0]?.name).toBe('Written');
   });
 });

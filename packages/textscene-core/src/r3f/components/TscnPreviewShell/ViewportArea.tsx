@@ -53,6 +53,8 @@ export function ViewportArea({
     );
   }
 
+  if (mode === 'in-game') return <TscnCanvas mode="in-game" />;
+
   // CanvasItem content renders only in the 2D workspace, so the 3D one shows a hint.
   return (
     <>

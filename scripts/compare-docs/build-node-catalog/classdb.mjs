@@ -29,7 +29,7 @@ function blobAfter(out, marker, what) {
   );
 }
 
-/** One engine run for all six answers: Godot start-up dominates, and two runs could straddle a version. */
+/** One engine run for all seven answers: start-up dominates, and two runs could straddle a version. */
 export function enumerateGodotNodes() {
   const proj = mkdtempSync(join(tmpdir(), 'godot-nodes-'));
   const res = spawnSync('xvfb-run', ['-a', 'godot', '--headless', '--path', proj, '-s', ENUM_GD], {
@@ -55,6 +55,7 @@ export function enumerateGodotNodes() {
     resourceBases: blobAfter(out, '###RESOURCE_BASES_JSON###', 'the resource base-class map'),
     resourceGetters: blobAfter(out, '###RESOURCE_GETTERS_JSON###', 'the fresh resource values'),
     allClasses: blobAfter(out, '###CLASSES_JSON###', 'the class list'),
+    nodeDefaults: blobAfter(out, '###NODE_DEFAULTS_JSON###', 'the node property defaults'),
   };
 }
 

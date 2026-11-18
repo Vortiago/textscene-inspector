@@ -33,7 +33,11 @@ describe('ambient from the background source', () => {
 
   it("uses Godot's default clear colour for BG_CLEAR_COLOR (0), the default mode", () => {
     // ProjectSettings rendering/environment/defaults/default_clear_color.
-    expect(ambientFor({})).toEqual({ color: { r: 0.3, g: 0.3, b: 0.3, a: 1 }, energy: 1 });
+    expect(ambientFor({})).toEqual({
+      color: { r: 0.3, g: 0.3, b: 0.3, a: 1 },
+      energy: 1,
+      isClearColor: true,
+    });
   });
 
   it("uses the project's clear colour for BG_CLEAR_COLOR when the project sets one", () => {

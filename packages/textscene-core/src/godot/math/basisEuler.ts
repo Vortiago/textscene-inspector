@@ -1,12 +1,10 @@
 import { basisMultiply, IDENTITY_BASIS, type BasisComponents } from './basis.js';
+import { EulerOrder } from './euler.js';
 import { atan2Real } from './realAtan2.js';
 import { asinf, cosf, sinf } from './realMath.js';
 import { VECTOR3_ZERO, type Vector3 } from './vector.js';
 
 const f = Math.fround;
-
-/** `EulerOrder` (math_defs.h:129): the order the three axis turns apply in. */
-export const EulerOrder = { XYZ: 0, XZY: 1, YXZ: 2, YZX: 3, ZXY: 4, ZYX: 5 } as const;
 
 const EPSILON = f(0.00000025);
 const NEAR_ONE = f(1 - EPSILON);

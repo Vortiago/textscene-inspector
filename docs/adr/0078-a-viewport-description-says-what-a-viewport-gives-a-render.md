@@ -23,9 +23,12 @@ viewport gives each render it draws.** It is free of React and three.
 
 - Its facts are `msaa2D`, `msaa3D`, `usesDebanding`, `transparentBackground`, `mipmapBias`,
   `positionalShadowAtlas` and `anisotropicLevel`.
+- Its facts are also `fallbackEnvironment`, the `res://` Environment the viewport's own world draws
+  with when no WorldEnvironment holds one. The root takes the project's `default_environment`. A
+  SubViewport takes none.
 - Its rules are `camera` (`editor` or `elected`), `drawsEditorChrome` and `previewsEnvironment`.
-  They are fields, not a kind of viewport: the In-game view is a root viewport with the game's
-  rules, and the editor's view is a root viewport with the editor's.
+  They are fields, not a kind of viewport: the In-game mode draws a root viewport with the game's
+  rules, and the editor's view draws a root viewport with the editor's.
 - An adapter builds a description from its source. `rootViewportDescription` reads the project
   through the `project*` readers and gives the editor's rules. `useRootViewportDescription` keeps
   one object while the project settings object holds.
@@ -44,9 +47,12 @@ viewport gives each render it draws.** It is free of React and three.
   the root description, as Godot gives every viewport its own (`renderer_viewport.cpp:961`). A
   reflection probe capture draws in its scene's own 1024 atlas, as Godot's scenario does
   (`renderer_scene_cull.cpp:430-435`, `:3691`).
-- `drawsEditorChrome` has its reader in the SubViewport pass. `camera` and `previewsEnvironment`
-  keep their rules in the pass's world kind until the In-game view, the third adapter, reads them.
-  That is the one exception to the rule that a field arrives with its first reader.
+- `gameViewportDescription` is the third adapter: the root's facts with the game's rules. The In-game
+  mode draws the root viewport through the SubViewport pass with it, so the root and a SubViewport
+  share one pass module and each brings its own description.
+- `drawsEditorChrome` has its reader in the SubViewport pass. The world reads `camera`
+  (`worldExposure.tsx`) and `previewsEnvironment` (`usePreviewYield`) from the description, and no
+  kind of world decides them.
 
 ## Consequences
 

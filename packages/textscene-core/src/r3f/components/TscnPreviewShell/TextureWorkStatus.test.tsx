@@ -17,10 +17,10 @@ describe('<TextureWorkStatus>', () => {
     expect(screen.queryByTestId(TEXTURE_WORK_STATUS_TESTID)).toBeNull();
   });
 
-  it('announces pending work as a polite status, and leaves once it ends', () => {
+  it('announces pending work as a polite status, and leaves once it ends', async () => {
     render(<TextureWorkStatus />);
     let end: () => void = () => {};
-    act(() => {
+    await act(async () => {
       end = textureWork.begin();
     });
     const status = screen.getByTestId(TEXTURE_WORK_STATUS_TESTID);
@@ -28,18 +28,18 @@ describe('<TextureWorkStatus>', () => {
     expect(status.getAttribute('aria-live')).toBe('polite');
     expect(status.textContent).toBe('Building textures…');
 
-    act(() => end());
+    await act(async () => end());
     expect(screen.queryByTestId(TEXTURE_WORK_STATUS_TESTID)).toBeNull();
   });
 
-  it('wears the stat chip, which never wraps inside the fixed-height top bar', () => {
+  it('wears the stat chip, which never wraps inside the fixed-height top bar', async () => {
     render(<TextureWorkStatus />);
     let end: () => void = () => {};
-    act(() => {
+    await act(async () => {
       end = textureWork.begin();
     });
     expect(screen.getByTestId(TEXTURE_WORK_STATUS_TESTID).className).toMatch(/statChip/);
-    act(() => end());
+    await act(async () => end());
 
     const css = readFileSync(path.join(import.meta.dirname, 'TscnPreviewShell.module.css'), 'utf8');
     const chip = /\.statChip\s*\{[^}]*\}/.exec(css)?.[0] ?? '';

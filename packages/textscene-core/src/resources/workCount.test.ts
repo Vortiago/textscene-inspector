@@ -28,14 +28,26 @@ describe('work count', () => {
     expect(work.pending()).toBe(1);
   });
 
-  it('notifies a subscriber on each change, until it unsubscribes', () => {
+  it('notifies a subscriber once for the changes of one task, until it unsubscribes', async () => {
     const listener = vi.fn();
     const unsubscribe = work.subscribe(listener);
     const end = begin();
+    begin();
+    await Promise.resolve();
     end();
+    await Promise.resolve();
     unsubscribe();
     begin();
+    await Promise.resolve();
     expect(listener).toHaveBeenCalledTimes(2);
+  });
+
+  it('notifies no subscriber while the change runs, as work begins inside a React render', () => {
+    const listener = vi.fn();
+    work.subscribe(listener);
+    begin();
+    expect(work.pending()).toBe(1);
+    expect(listener).not.toHaveBeenCalled();
   });
 
   it('keeps one count apart from another', () => {

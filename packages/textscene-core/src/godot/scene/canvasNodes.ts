@@ -16,10 +16,10 @@ export const BACK_BUFFER_COPY_MODE_NAMES = relabelEnumNames(enumNamesByValue(Cop
  * `TouchScreenButton::VisibilityMode` (`scene/2d/physics/touch_screen_button.h:42-45`), whose
  * members carry a `VISIBILITY_` prefix.
  */
-const VisibilityMode = {
+export const TouchScreenButtonVisibilityMode = {
   ALWAYS: 0,
   TOUCHSCREEN_ONLY: 1,
 } as const;
 
 /** Each visibility mode by its integer, spelled as its constant (`touch_screen_button.cpp:442` is the hint site). */
-export const TOUCH_SCREEN_BUTTON_VISIBILITY_MODE_NAMES = enumNamesByValue(VisibilityMode);
+export const TOUCH_SCREEN_BUTTON_VISIBILITY_MODE_NAMES = enumNamesByValue(TouchScreenButtonVisibilityMode);

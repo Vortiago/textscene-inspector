@@ -10,6 +10,7 @@ import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext'
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { heading } from '../../../parser/testing/parserKit';
+import { RunningGameScope } from '../../../r3f/contexts/EditorHintContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 
 const TEXTURE_PATH = 'res://button.png';
@@ -30,7 +31,10 @@ function buttonNode(raw: Record<string, string>): TscnNode {
   };
 }
 
-function scene(node: TscnNode, { showCollisions = false, children = null as ReactElement | null } = {}) {
+function scene(
+  node: TscnNode,
+  { showCollisions = false, children = null as ReactElement | null, isRunningGame = false } = {}
+) {
   const fake = createFakeResourceLoader();
   const texture = new THREE.Texture();
   (texture as unknown as { image: { width: number; height: number } }).image = { width: 64, height: 32 };
@@ -42,7 +46,13 @@ function scene(node: TscnNode, { showCollisions = false, children = null as Reac
           internalResources={[circleShape]}
           externalResources={[{ id: '1', type: 'Texture2D', path: TEXTURE_PATH }]}
         >
-          <TouchScreenButton node={node}>{children}</TouchScreenButton>
+          {isRunningGame ? (
+            <RunningGameScope>
+              <TouchScreenButton node={node}>{children}</TouchScreenButton>
+            </RunningGameScope>
+          ) : (
+            <TouchScreenButton node={node}>{children}</TouchScreenButton>
+          )}
         </SceneResourcesProvider>
       </ViewportModeProvider>
     </ResourceLoaderProvider>
@@ -155,5 +165,33 @@ describe('TouchScreenButton collision shape overlay', () => {
     const r = await render(buttonNode(TEXTURED), { showCollisions: true });
 
     expect(shapeLines(r)).toHaveLength(0);
+  });
+});
+
+describe('TouchScreenButton visibility_mode', () => {
+  const TOUCH_ONLY = { ...TEXTURED, visibility_mode: '1' };
+
+  it('draws a touch-screen-only button in the editor', async () => {
+    expect((await render(buttonNode(TOUCH_ONLY))).scene.findAllByType('Mesh')).toHaveLength(1);
+  });
+
+  it('draws no touch-screen-only button where the game runs with no touch screen', async () => {
+    const r = await render(buttonNode(TOUCH_ONLY), { isRunningGame: true });
+    expect(r.scene.findAllByType('Mesh')).toHaveLength(0);
+  });
+
+  it('draws a touch-screen-only button where the game runs on a touch screen', async () => {
+    Object.defineProperty(window, 'ontouchstart', { value: null, configurable: true });
+    try {
+      const r = await render(buttonNode(TOUCH_ONLY), { isRunningGame: true });
+      expect(r.scene.findAllByType('Mesh')).toHaveLength(1);
+    } finally {
+      delete (window as { ontouchstart?: unknown }).ontouchstart;
+    }
+  });
+
+  it('draws an always-visible button where the game runs', async () => {
+    const r = await render(buttonNode(TEXTURED), { isRunningGame: true });
+    expect(r.scene.findAllByType('Mesh')).toHaveLength(1);
   });
 });

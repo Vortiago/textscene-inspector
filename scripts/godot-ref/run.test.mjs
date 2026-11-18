@@ -48,6 +48,9 @@ import {
   ROOT_ONLY_VIEWPORT_PROPERTIES,
   rootOnlyDriftMessage,
   harnessWarnings,
+  parseSet,
+  projectWindowSizeFromIni,
+  renderReference,
 } from './run.mjs';
 import { resolveProjectRoot } from './projectRoot.mjs';
 
@@ -193,6 +196,14 @@ describe('bootstrapScript — the 2D capture embeds a Window', () => {
   });
 });
 
+describe("bootstrapScript — the 2D capture clears to the project's colour", () => {
+  // The editor clears to the project's colour each frame (`renderer_viewport.cpp:750-752`), as ours does.
+  it('leaves the default clear colour as the project set it', () => {
+    const gd = bootstrap({ previews: true });
+    expect(gd).not.toContain('set_default_clear_color');
+  });
+});
+
 describe('bootstrapScript — a non-tool script never runs under previews', () => {
   /**
    * Like the editor, the default pauses the tree first, stops AnimationPlayers, never steps
@@ -209,8 +220,29 @@ describe('bootstrapScript — a non-tool script never runs under previews', () =
 
   it('leaves scripts alone under --no-previews, which asks for runtime semantics', () => {
     const gd = bootstrap({ previews: false });
-    expect(gd).toMatch(/if PREVIEWS:\n\t\t_strip_runtime_scripts\(target\)/);
+    expect(gd).toMatch(/if PREVIEWS or IN_GAME:\n\t\t_strip_runtime_scripts\(target\)/);
+    expect(gd).toMatch(/const IN_GAME := false/);
     expect(gd).toMatch(/const PREVIEWS := false/);
+  });
+});
+
+describe('--set', () => {
+  it('reads the node path, the property and the text after the first =', () => {
+    expect(parseSet('HUD/Score:text="a=b"')).toEqual({ path: 'HUD/Score', property: 'text', text: '"a=b"' });
+  });
+
+  it('collects each write in order', () => {
+    const { sets } = parseArgs(['a.tscn', '--set', 'A:visible=false', '--set', 'B:z_index=3']);
+    expect(sets.map(({ path }) => path)).toEqual(['A', 'B']);
+  });
+
+  it('refuses a write that names no property', () => {
+    expect(() => parseSet('HUD/Score=1')).toThrow(/expects <path>:<property>=<variant text>/);
+  });
+
+  it('applies each write with str_to_var before the capture', () => {
+    const script = bootstrap({ sets: [{ path: 'Cube', property: 'position', text: 'Vector3(1, 0, 0)' }] });
+    expect(script).toContain('["Cube", "position", "Vector3(1, 0, 0)"],');
   });
 });
 
@@ -265,6 +297,54 @@ describe('parseArgs', () => {
   it('takes 2d-root, the mode that renders the scene as the root window', () => {
     expect(parseArgs(['a.tscn', '--mode', '2d-root']).mode).toBe('2d-root');
     expect(parseArgs(['a.tscn', '--mode', '2D-ROOT']).mode).toBe('2d-root');
+  });
+
+  it('takes in-game, the mode that renders the scene as the game starts it', () => {
+    expect(parseArgs(['a.tscn', '--mode', 'in-game']).mode).toBe('in-game');
+    expect(parseArgs(['a.tscn', '--mode', 'In-Game', '--debug-collisions']).debugCollisions).toBe(true);
+  });
+
+  it.each([
+    ['--scene-camera', ['--scene-camera']],
+    ['--scene-camera', ['--scene-camera', 'Level/Camera']],
+    ['--no-previews', ['--no-previews']],
+    ['--camera', ['--camera', '0,1,4']],
+    ['--look-at', ['--look-at', '0,0,0']],
+    ['--frame', ['--frame']],
+    ['--fov', ['--fov', '60']],
+    ['--emit-bounds', ['--emit-bounds']],
+    ['--width', ['--width', '800']],
+    ['--height', ['--height', '600']],
+  ])('refuses --mode in-game with %s, which the mode would ignore', (flag, given) => {
+    const expected = new RegExp(`--mode in-game cannot take ${flag}: `);
+    expect(() => parseArgs(['a.tscn', '--mode', 'in-game', ...given])).toThrow(expected);
+    // Order must not matter: the flag may come first.
+    expect(() => parseArgs(['a.tscn', ...given, '--mode', 'in-game'])).toThrow(expected);
+  });
+
+  it.each([
+    ['--scene-camera', { sceneCamera: true }],
+    ['--no-previews', { previews: false }],
+    ['--camera', { camera: [0, 1, 4] }],
+    ['--look-at', { lookAt: [0, 0, 0] }],
+    ['--frame', { frame: true }],
+    ['--fov', { fovExplicit: true }],
+    ['--emit-bounds', { boundsOut: '/tmp/bounds.json' }],
+    ['--width', { width: 800 }],
+    ['--height', { height: 600 }],
+  ])('refuses the renderReference option behind %s as the command line does', async (flag, option) => {
+    await expect(
+      renderReference({
+        scene: join(REPO_ROOT, 'scenes/fixtures/unit-plane-mesh.tscn'),
+        out: '/tmp/never.png',
+        mode: 'in-game',
+        ...option,
+      })
+    ).rejects.toThrow(new RegExp(`--mode in-game cannot take ${flag}: `));
+  });
+
+  it('takes the flags in-game ignores with every other mode', () => {
+    expect(() => parseArgs(['a.tscn', '--mode', '3d', '--scene-camera', '--no-previews'])).not.toThrow();
   });
 });
 
@@ -369,6 +449,50 @@ describe('projectConfig', () => {
     const ini = projectConfig(windowOverrides, { width: 400, height: 300 });
     expect(ini).toMatch(/window_width_override=1920/);
     expect(ini).toMatch(/window\/size\/mode=3/);
+  });
+
+  describe('for the game', () => {
+    const gameIni = projectConfig(`${withDefaultEnv}\n${windowOverrides}`, {
+      width: 1152,
+      height: 648,
+      inGame: true,
+    });
+
+    it('keeps the default environment, which the game starts with', () => {
+      expect(gameIni).toMatch(/default_environment="res:\/\/default_env.tres"/);
+    });
+
+    it('keeps the window size, and drops only the window mode, whose screen is unknown', () => {
+      expect(gameIni).toMatch(/window_width_override=1920/);
+      expect(gameIni).toMatch(/window_height_override=1080/);
+      expect(gameIni).not.toMatch(/window\/size\/mode=/);
+    });
+  });
+});
+
+describe('projectWindowSizeFromIni', () => {
+  it('is the viewport size when the project sets no override', () => {
+    expect(projectWindowSizeFromIni(null)).toEqual({ width: 1152, height: 648 });
+    expect(
+      projectWindowSizeFromIni('window/size/viewport_width=400\nwindow/size/viewport_height=300')
+    ).toEqual({
+      width: 400,
+      height: 300,
+    });
+  });
+
+  it('is the override when both axes set one, even a smaller one', () => {
+    const ini = ['window/size/window_width_override=320', 'window/size/window_height_override=200'].join(
+      '\n'
+    );
+    expect(projectWindowSizeFromIni(ini)).toEqual({ width: 320, height: 200 });
+  });
+
+  it('ignores an override that sets one axis, as the engine does', () => {
+    expect(projectWindowSizeFromIni('window/size/window_width_override=1920')).toEqual({
+      width: 1152,
+      height: 648,
+    });
   });
 });
 
@@ -505,6 +629,56 @@ describe('--mode 2d-root renders the scene as the root window', () => {
   });
 });
 
+describe('--mode in-game renders the scene as the game starts it', () => {
+  const script = bootstrap({ mode: 'in-game' });
+
+  it('adds the scene to the root window, which the game does, and saves the root capture', () => {
+    expect(script).toContain('get_tree().root.add_child(target)');
+    expect(script).toContain('_save_capture(get_tree().root)');
+  });
+
+  it('adds no camera and no preview lighting, and hides no canvas', () => {
+    const body = script.slice(
+      script.indexOf('func _render_in_game'),
+      script.indexOf('func _run_skeleton_stacks')
+    );
+    expect(body).not.toMatch(
+      /_place_camera|_apply_preview_lighting|_hide_2d|_disable_2d_cameras|set_default_clear_color/
+    );
+  });
+
+  it('removes every script, a tool script too, and pauses the tree so the time stays 0', () => {
+    expect(script).toContain('const IN_GAME := true');
+    expect(script).toContain('script != null and (IN_GAME or not script.is_tool())');
+    expect(script).toContain('if PREVIEWS or IN_GAME:\n\t\tget_tree().paused = true');
+  });
+
+  it('stops no player after ready, which is the freeze the editor view runs', () => {
+    expect(script).toContain('const PREVIEWS := false');
+    expect(bootstrap({ mode: '3d' })).toContain('const PREVIEWS := true');
+  });
+
+  it('runs a Skeleton2D modification stack after the scene enters the tree, as the game does', () => {
+    const body = script.slice(
+      script.indexOf('func _render_in_game'),
+      script.indexOf('func _run_skeleton_stacks')
+    );
+    expect(body.indexOf('add_child(target)')).toBeLessThan(body.indexOf('_run_skeleton_stacks(target)'));
+  });
+
+  it('asks for the particle advance before the scene enters the tree, where a 3D emitter spends it', () => {
+    const body = script.slice(
+      script.indexOf('func _render_in_game'),
+      script.indexOf('func _run_skeleton_stacks')
+    );
+    expect(body.indexOf('_advance_particles(target)')).toBeLessThan(body.indexOf('add_child(target)'));
+  });
+
+  it('reports itself as in-game, since neither 2D nor 3D describes the image', () => {
+    expect(script).toContain('return "in-game"');
+  });
+});
+
 describe('bootstrapScript — the capture of an HDR viewport', () => {
   it('converts the float image to sRGB before it saves, and the settle comparison reads the raw texels', () => {
     const script = bootstrap();
@@ -574,12 +748,12 @@ describe('physics pause follows the previews flag', () => {
     expect(script(true)).toContain('child.process_mode = Node.PROCESS_MODE_PAUSABLE');
   });
 
-  it('still emits the pause behind the PREVIEWS gate rather than hard-coding it', () => {
+  it('still emits the pause behind the PREVIEWS and IN_GAME gate rather than hard-coding it', () => {
     // A copy of the line outside the `if` would pause a --no-previews render too.
     const lines = script(false).split('\n');
     const pauseLine = lines.findIndex((l) => l.includes('get_tree().paused = true'));
     expect(pauseLine).toBeGreaterThan(-1);
-    expect(lines[pauseLine - 1].trim()).toBe('if PREVIEWS:');
+    expect(lines[pauseLine - 1].trim()).toBe('if PREVIEWS or IN_GAME:');
     expect(script(false)).toContain('const PREVIEWS := false');
   });
 });

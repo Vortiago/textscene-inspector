@@ -212,6 +212,14 @@ export function namedColor(name: string): Rgba | undefined {
   };
 }
 
+/** `Color()`: opaque black, what Godot answers for a colour it cannot read. */
+export const DEFAULT_COLOR: Rgba = Object.freeze({ r: 0, g: 0, b: 0, a: 1 });
+
+/** `Color(const String &)` (`color.h:274-280`): hex, else a colour name, else `Color()`. */
+export function colorFromString(text: string): Rgba {
+  return htmlColor(text) ?? namedColor(text) ?? DEFAULT_COLOR;
+}
+
 /** The colour channels `darkened` and `lightened` change. Alpha, when present, stays. */
 interface ColorChannels {
   r: number;

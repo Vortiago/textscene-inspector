@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { IDENTITY_BASIS, type BasisComponents } from './basis.js';
-import { basisFromEuler, basisGetEuler, EulerOrder } from './basisEuler.js';
+import { basisFromEuler, basisGetEuler } from './basisEuler.js';
+import { EulerOrder } from './euler.js';
 
 const f = Math.fround;
 

@@ -69,6 +69,15 @@ describe('<TscnPreviewShell> persisted dock layout + viewport mode (#224)', () =
     expect(screen.getByRole('button', { name: '2D' }).getAttribute('aria-pressed')).toBe('true');
   });
 
+  it('persists the In-game mode across a remount', () => {
+    const { unmount } = render(<TscnPreviewShell panelId="p1" content={PLAIN_ROOT_TSCN} />);
+    fireEvent.click(screen.getByRole('button', { name: 'In-game' }));
+    unmount();
+
+    render(<TscnPreviewShell panelId="p1" content={PLAIN_ROOT_TSCN} />);
+    expect(screen.getByRole('button', { name: 'In-game' }).getAttribute('aria-pressed')).toBe('true');
+  });
+
   it('persists hidden gizmos across a remount', () => {
     const { unmount } = render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} />);
     openDisplayMenu();

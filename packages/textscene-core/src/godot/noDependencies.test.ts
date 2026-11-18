@@ -30,8 +30,9 @@ function sourceFiles(dir: string = here, prefix = ''): string[] {
  * Any `import`/`export … from` specifier, `import type` included, plus bare side-effect imports and
  * dynamic `import()`. The clause is `[^;]*?`, not `[^\n;]*?`, as a braced specifier list spans lines.
  */
+// `[\s}]from`, not `from`: a generated table holds keys such as `"origin_from": "`.
 const IMPORT_RE =
-  /(?:^|\n)\s*(?:import|export)\b[^;]*?from\s*['"]([^'"]+)['"]|(?:^|\n)\s*import\s*['"]([^'"]+)['"]|\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
+  /(?:^|\n)\s*(?:import|export)\b[^;]*?[\s}]from\s*['"]([^'"]+)['"]|(?:^|\n)\s*import\s*['"]([^'"]+)['"]|\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
 
 function specifiersIn(source: string): string[] {
   const found: string[] = [];
