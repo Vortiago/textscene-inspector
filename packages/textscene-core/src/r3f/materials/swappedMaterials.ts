@@ -118,6 +118,12 @@ class SwappedMaterials implements FadedSurface {
 }
 
 /** Puts `material` on `host` at `drawGroup`, or as its one material for null. */
+/** The material `host` draws `drawGroup` with now, if any. */
+export function materialAt(host: MaterialHost, drawGroup: number | null): THREE.Material | undefined {
+  if (drawGroup === null) return Array.isArray(host.material) ? undefined : host.material;
+  return Array.isArray(host.material) ? host.material[drawGroup] : undefined;
+}
+
 export function placeMaterial(host: MaterialHost, drawGroup: number | null, material: THREE.Material): void {
   if (drawGroup === null) {
     host.material = material;

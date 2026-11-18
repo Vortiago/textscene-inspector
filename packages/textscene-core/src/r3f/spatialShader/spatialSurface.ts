@@ -1,10 +1,12 @@
 import * as THREE from 'three';
-import { compileSpatial, type SpatialCompile } from '../../shaders/spatial/compileSpatial.js';
+import { unDrawnMessage } from '../../shaders/fault/shaderRefusal.js';
+import { compileSpatial } from '../../shaders/spatial/compileSpatial.js';
 import { withGodotAttributes } from '../../shaders/spatial/meshAttributes.js';
 import { writeSpatialBindingsEachDraw, type SpatialScene } from '../../shaders/spatial/spatialBindings.js';
 import type { SpatialOptions, TranspiledSpatial } from '../../shaders/spatial/transpileSpatial.js';
 import type { ShaderSampler } from '../../shaders/uniforms/shaderSamplers.js';
 import type { ShaderText } from '../../resources/materials/shadermaterial/types.js';
+import { perObject } from '../../utils/perObject.js';
 import { warnOnce } from '../../utils/warnOnce.js';
 import { canvasShaderTime } from '../shaderTime/canvasShaderTime.js';
 import { renderTargetSize } from '../renderTargetSize.js';
@@ -23,7 +25,8 @@ export function spatialSurfaceOf(
   options: SpatialOptions
 ): SpatialSurface {
   const compile = compileSpatial(shader.code, { ...options, file: shader.file });
-  if (!('spatial' in compile)) return { refusal: unDrawnMessage(compile) };
+  if (!('spatial' in compile))
+    return { refusal: `[material] ${unDrawnMessage(compile, 'spatial', '3D surface')}` };
   const { spatial } = compile;
   writeSpatialBindingsEachDraw(spatial, (camera) => sceneOf(gl, camera));
   spatial.material.onTranslatorFault = (fault) =>
@@ -42,7 +45,14 @@ export function withGodotSurface(geometry: THREE.BufferGeometry): void {
   if (uv) geometry.setAttribute('uv_attrib', fromTopRow(uv));
 }
 
-function fromTopRow(uv: THREE.BufferAttribute | THREE.InterleavedBufferAttribute): THREE.BufferAttribute {
+type UvAttribute = THREE.BufferAttribute | THREE.InterleavedBufferAttribute;
+
+/** Each first UV set flipped once while it is unchanged: every pass of a surface attaches it again. */
+const fromTopRow = perObject(flippedCopy, {
+  stamp: (uv: UvAttribute) => (uv instanceof THREE.InterleavedBufferAttribute ? uv.data.version : uv.version),
+});
+
+function flippedCopy(uv: UvAttribute): THREE.BufferAttribute {
   const flipped = new Float32Array(uv.count * 2);
   for (let i = 0; i < uv.count; i++) {
     flipped[i * 2] = uv.getX(i);
@@ -56,12 +66,13 @@ export function disposeSpatial({ material, buffers }: TranspiledSpatial): void {
   for (const rows of buffers.values()) rows.texture.dispose();
 }
 
-/** Scratch for the clear colour of one draw, overwritten by the next. */
+/** Scratch for the clear colour and target size of one draw, overwritten by the next. */
 const clearColor = new THREE.Color();
+const targetSize = new THREE.Vector2();
 
 /** What the colour pass reads from the frame `gl` draws through `camera`. */
 function sceneOf(gl: THREE.WebGLRenderer, camera: THREE.Camera): SpatialScene {
-  const { x: width, y: height } = renderTargetSize(gl, new THREE.Vector2());
+  const { x: width, y: height } = renderTargetSize(gl, targetSize);
   return {
     camera: camera as SpatialScene['camera'],
     width,
@@ -69,15 +80,4 @@ function sceneOf(gl: THREE.WebGLRenderer, camera: THREE.Camera): SpatialScene {
     time: canvasShaderTime(gl).time,
     clearColor: gl.getClearColor(clearColor),
   };
-}
-
-type UnDrawnSpatial = Exclude<SpatialCompile, { readonly spatial: unknown }>;
-
-function unDrawnMessage(compile: UnDrawnSpatial): string {
-  if ('failure' in compile)
-    return `[material] The previewer failed to translate this spatial shader, and draws Godot's default 3D surface: ${String(compile.failure)}`;
-  const { refusal } = compile;
-  if (refusal.owner === undefined)
-    return `[material] Godot does not compile the spatial shader, and draws its default 3D surface: ${refusal.message}`;
-  return `[material] The previewer does not translate this spatial shader yet (${refusal.owner}), and draws Godot's default 3D surface: ${refusal.message}`;
 }

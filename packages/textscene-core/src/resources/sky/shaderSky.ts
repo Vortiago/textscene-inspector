@@ -8,6 +8,7 @@ import {
   type TranspiledSky,
 } from '../../shaders/sky/transpileSky';
 import { compileSky, type SkyCompile } from '../../shaders/sky/compileSky';
+import { unDrawnMessage } from '../../shaders/fault/shaderRefusal';
 import { perObject } from '../../utils/perObject';
 import { LRUCache } from '../LRUCache';
 import { GODOT_SAMPLING, type ProjectSampling } from '../../shaders/uniforms/samplerState';
@@ -126,7 +127,7 @@ function transpiledShaderSky(
 ): TranspiledSky {
   const compile = skyCompileOf(material.code, shaderOptions);
   if (!('parsed' in compile)) {
-    warnOnce(material, 'refused', `[Sky] ${unDrawnMessage(compile)}`);
+    warnOnce(material, 'refused', `[Sky] ${unDrawnMessage(compile, 'sky', 'sky')}`);
     return transpiledDefaultSky(pass);
   }
   const sky = transpileParsedSky(compile.parsed, material.file, sampling, pass);
@@ -150,16 +151,5 @@ function transpiledDefaultSky(pass: SkyPass): TranspiledSky {
 /** Why the previewer draws Godot's default sky for `material`, or null when it draws the shader. */
 export function shaderSkyRefusal(material: ShaderSkyText, options: ProjectShaderOptions): string | null {
   const compile = skyCompileOf(material.code, options);
-  return 'parsed' in compile ? null : unDrawnMessage(compile);
-}
-
-type UnDrawnSky = Exclude<SkyCompile, { readonly parsed: unknown }>;
-
-function unDrawnMessage(compile: UnDrawnSky): string {
-  if ('failure' in compile)
-    return `The previewer failed to translate this sky shader, and draws Godot's default sky: ${String(compile.failure)}`;
-  const { refusal } = compile;
-  if (refusal.owner === undefined)
-    return `Godot does not compile the sky shader, and draws its default sky: ${refusal.message}`;
-  return `The previewer does not translate this sky shader yet (${refusal.owner}), and draws Godot's default sky: ${refusal.message}`;
+  return 'parsed' in compile ? null : unDrawnMessage(compile, 'sky', 'sky');
 }

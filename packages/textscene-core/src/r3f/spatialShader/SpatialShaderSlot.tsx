@@ -9,7 +9,7 @@ import { useLazyModuleState } from '../../resources/useLazyModule';
 import { warnOnce } from '../../utils/warnOnce';
 import { useNodesHandler } from '../canvasRenderer/canvasNodesHandler';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext';
-import { drawGroupOf, placeMaterial, type MaterialHost } from '../materials/swappedMaterials';
+import { drawGroupOf, materialAt, placeMaterial, type MaterialHost } from '../materials/swappedMaterials';
 import { useProjectShaderOptions } from '../projectShaderOptions';
 import { useShaderTextures } from '../shaderTextures/shaderTextures';
 
@@ -41,7 +41,8 @@ export function SpatialShaderSlot({ shader, attach, fallback }: SpatialShaderSlo
     () => (isReady ? module.spatialSurfaceOf(gl, shader, { ...options, sampling }) : null),
     [isReady, module, gl, shader, options, sampling]
   );
-  const spatial = surface && 'spatial' in surface ? surface.spatial : null;
+  const drawn = surface && 'spatial' in surface ? surface : null;
+  const spatial = drawn?.spatial ?? null;
   useEffect(() => (spatial ? () => module!.disposeSpatial(spatial) : undefined), [module, spatial]);
 
   const refusal = surface && 'refusal' in surface ? surface.refusal : null;
@@ -51,7 +52,7 @@ export function SpatialShaderSlot({ shader, attach, fallback }: SpatialShaderSlo
     else if (isLoadFailed) warn(LOAD_FAILURE);
   }, [shader, refusal, isLoadFailed]);
 
-  const samplers = surface && 'spatial' in surface ? surface.samplers : null;
+  const samplers = drawn?.samplers ?? null;
   const [textures, textureSlots] = useShaderTextures(
     useMemo(() => samplers && { references: shader.textures, samplers }, [samplers, shader.textures])
   );
@@ -86,10 +87,10 @@ function godotSurfaceAttach(
   const drawGroup = drawGroupOf(attach);
   return (host: GodotSurfaceHost, material: THREE.Material) => {
     if (host.geometry.getAttribute('position')) withGodotSurface(host.geometry);
-    const previous = drawGroup === null ? host.material : (host.material as THREE.Material[])[drawGroup];
+    const previous = materialAt(host, drawGroup);
     placeMaterial(host, drawGroup, material);
     return () => {
-      if (previous) placeMaterial(host, drawGroup, previous as THREE.Material);
+      if (previous) placeMaterial(host, drawGroup, previous);
     };
   };
 }

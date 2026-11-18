@@ -24,6 +24,16 @@ describe('withGodotSurface', () => {
     ]);
   });
 
+  it('flips a first UV set once, however many passes of the surface attach it', () => {
+    const geometry = triangleWithV(0, 0.25, 1);
+    withGodotSurface(geometry);
+    const first = geometry.getAttribute('uv_attrib');
+    withGodotSurface(geometry);
+
+    expect(geometry.getAttribute('uv_attrib')).toBe(first);
+    expect(first.getY(0)).toBe(1);
+  });
+
   it('hands on the second UV set as it is, which the previewer already stores from the top row', () => {
     const geometry = triangleWithV(0, 0.25, 1);
     withGodotSurface(geometry);
