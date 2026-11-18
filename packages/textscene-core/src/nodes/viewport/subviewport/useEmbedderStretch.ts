@@ -5,8 +5,8 @@ import { useSharedLiveTree } from '../../../r3f/useLiveSceneTree.js';
 import { enclosingViewport, type EnclosingViewport } from './controlRasterViewports.js';
 import { embedderStretch } from './targetSize.js';
 import { useIsEditorHint } from '../../../r3f/contexts/EditorHintContext.js';
-import { useProjectSettings } from '../../../r3f/contexts/ProjectSettingsContext.js';
-import { rootWindow, rootWindowStretch } from '../../../r3f/gameView/rootWindow.js';
+import { rootWindowStretch } from '../../../r3f/gameView/rootWindow.js';
+import { useDrawnRootWindow, useProjectRootWindow } from '../../../r3f/gameView/useDrawnRootWindow.js';
 
 /** The stretch `embedder` renders its windows at, or the root window's where no node stands for it. */
 export function useEmbedderStretch(embedder: EnclosingViewport | null): number {
@@ -15,14 +15,11 @@ export function useEmbedderStretch(embedder: EnclosingViewport | null): number {
   return embedder ? embedderStretch(embedder.node, forced) : rootStretch;
 }
 
-/** The editor draws its root window unstretched. The In-game view stretches it as the project does. */
+/** The editor draws its root window unstretched. The In-game view stretches it as its pane draws the root. */
 function useRootWindowStretch(): number {
   const isEditorHint = useIsEditorHint();
-  const { settings } = useProjectSettings();
-  return useMemo(
-    () => (isEditorHint ? 1 : rootWindowStretch(rootWindow(settings))),
-    [isEditorHint, settings]
-  );
+  const drawnWindow = useDrawnRootWindow(useProjectRootWindow());
+  return isEditorHint ? 1 : rootWindowStretch(drawnWindow);
 }
 
 /** The stretch the embedder of the window at `path` renders it at, found in the shared live tree. */

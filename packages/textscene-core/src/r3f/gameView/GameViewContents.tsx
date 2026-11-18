@@ -11,9 +11,7 @@ import { ControlRasterLayer } from '../../nodes/viewport/subviewport/ControlRast
 import { gameViewportDescription } from '../viewportRender/viewportDescription.js';
 import { rootViewportNode } from './rootViewportNode.js';
 import { RootViewportPresenter } from './RootViewportPresenter.js';
-import { fittedTargetSize, rootWindow, shrinkRootWindow, type RootWindow } from './rootWindow.js';
-import { useDrawingBufferSize } from '../useDrawingBufferSize.js';
-import { paneScale } from './windowFit.js';
+import { useDrawnRootWindow, useProjectRootWindow } from './useDrawnRootWindow.js';
 import { RunningGameScope } from '../contexts/EditorHintContext.js';
 
 /** The root viewport and its presenter, as the game view's `<Canvas>` holds them. */
@@ -30,8 +28,8 @@ function RootViewport() {
   const rootScene = sceneGraph?.scenes.get(sceneGraph.rootScene);
   const nodes = useSeatedRoots();
   const { settings } = useProjectSettings();
-  const projectWindow = useMemo(() => rootWindow(settings), [settings]);
-  const drawnWindow = useDrawnWindow(projectWindow);
+  const projectWindow = useProjectRootWindow();
+  const drawnWindow = useDrawnRootWindow(projectWindow);
   const root = useMemo(
     () => rootViewportNode(settings, drawnWindow, nodes ? [...nodes] : []),
     [settings, drawnWindow, nodes]
@@ -65,12 +63,4 @@ function RootViewport() {
       />
     </>
   );
-}
-
-/** A smaller pane renders the target at the fitted size, rebuilt only as its pixels change. */
-function useDrawnWindow(projectWindow: RootWindow): RootWindow {
-  const pane = useDrawingBufferSize();
-  const scale = paneScale({ x: pane.width, y: pane.height }, projectWindow.size);
-  const { x, y } = fittedTargetSize(projectWindow, scale);
-  return useMemo(() => shrinkRootWindow(projectWindow, { x, y }), [projectWindow, x, y]);
 }

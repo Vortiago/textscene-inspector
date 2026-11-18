@@ -11,9 +11,10 @@ import type { ResourceProvider } from '../../resources/ResourceProvider';
 import { settleLoads } from '../testing/settleLoads';
 import { useSelection } from '../contexts/SelectionContext';
 import { useEffect } from 'react';
+import type { Vector2 } from '../../godot/math/vector';
 import '../nodes';
 
-const passes: { path: string; viewport: ViewportDescription }[] = [];
+const passes: { path: string; viewport: ViewportDescription; renderSize: Vector2 }[] = [];
 /** The camera each viewport's pass draws through, by the viewport's path, written as the pass renders. */
 const passCameras = new Map<string, string | null>();
 
@@ -31,13 +32,15 @@ vi.mock('../viewportRender/OffscreenViewportPass', async (importOriginal) => {
     OffscreenViewportPass: ({
       path,
       viewport,
+      renderSize,
       children,
     }: {
       path: string;
       viewport: ViewportDescription;
+      renderSize: Vector2;
       children: ReactNode;
     }) => {
-      passes.push({ path, viewport });
+      passes.push({ path, viewport, renderSize });
       return (
         <ViewportDescriptionProvider description={viewport}>
           <WorldEnvironmentScope world="subViewport">
@@ -70,9 +73,9 @@ current = true
 [node name="Inner" type="CSGBox3D" parent="Sub"]
 `;
 
-const provider: ResourceProvider = {
-  loadResource: async (path) => (path === 'res://project.godot' ? PROJECT : null),
-};
+function providerOf(project: string): ResourceProvider {
+  return { loadResource: async (path) => (path === 'res://project.godot' ? project : null) };
+}
 
 const CONTROL_ROOT_SCENE = `[gd_scene format=3]
 
@@ -96,12 +99,27 @@ function SelectInTree({ path }: { path: string }) {
 }
 
 async function mountGame(source = SCENE, selectedPath?: string) {
-  const scene = openScene({ source, provider });
+  return mountGameOf({ source, selectedPath });
+}
+
+async function mountGameOf({
+  source,
+  selectedPath,
+  project = PROJECT,
+  pane,
+}: {
+  source: string;
+  selectedPath?: string;
+  project?: string;
+  pane?: { width: number; height: number };
+}) {
+  const scene = openScene({ source, provider: providerOf(project) });
   const renderer = await ReactThreeTestRenderer.create(
     <TscnSceneProvider scene={scene}>
       {selectedPath && <SelectInTree path={selectedPath} />}
       <GameViewContents />
-    </TscnSceneProvider>
+    </TscnSceneProvider>,
+    pane
   );
   await settleLoads();
   return Object.assign(renderer, { opened: scene });
@@ -131,6 +149,31 @@ async function called(
     await renderer.opened.getNode(path).call(method, ...args);
     await new Promise((resolve) => requestAnimationFrame(resolve));
   });
+}
+
+/** A 320 x 180 game in a 640 x 360 window: `canvas_items` stretches it by 2. */
+const STRETCHED_PROJECT = `[display]
+window/size/viewport_width=320
+window/size/viewport_height=180
+window/size/window_width_override=640
+window/size/window_height_override=360
+window/stretch/mode="canvas_items"
+`;
+
+const WINDOW_WITH_2D = `[gd_scene format=3]
+
+[node name="Main" type="Node2D"]
+
+[node name="Window" type="Window" parent="."]
+size = Vector2i(100, 50)
+
+[node name="Shape" type="Polygon2D" parent="Window"]
+polygon = PackedVector2Array(0, 0, 10, 0, 10, 10)
+`;
+
+/** The last render size each viewport's pass drew at, by the viewport's path. */
+function renderSizesByPath(): Map<string, Vector2> {
+  return new Map(passes.map(({ path, renderSize }) => [path, renderSize]));
 }
 
 /** The last description each viewport's pass drew with, by the viewport's path. */
@@ -212,6 +255,16 @@ describe('the In-game mode', () => {
     const names: string[] = [];
     renderer.scene.instance.traverse((object) => names.push(object.name));
     expect(names).not.toContain('tscn-selection-highlight');
+  });
+
+  it("renders an embedded window at the stretch of the root the pane draws, not of the project's window", async () => {
+    // The pane is half the window, so the drawn root is 320 x 180 over a 320 x 180 override: a stretch of 1.
+    await mountGameOf({
+      source: WINDOW_WITH_2D,
+      project: STRETCHED_PROJECT,
+      pane: { width: 320, height: 180 },
+    });
+    expect(renderSizesByPath().get('Main/Window')).toEqual({ x: 100, y: 50 });
   });
 
   it('binds no listener on the window', async () => {
