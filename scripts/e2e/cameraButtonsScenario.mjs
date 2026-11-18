@@ -3,20 +3,151 @@ import { findCanvas, settleCanvas } from '../visual/previewServer.mjs';
 import { checkDiagnostics } from './diagnostics.mjs';
 import { openFixture } from './openFixture.mjs';
 
+/* global window */
+// `window` exists only in the browser that runs the `page.evaluate` callback.
+
 const FIXTURE_3D = 'in-game/unit-in-game-call-camera3d.tscn';
 const FIXTURE_2D = 'in-game/unit-in-game-call-camera2d.tscn';
+const FIXTURE_SUBVIEWPORT = 'in-game/unit-in-game-call-subviewport.tscn';
+const FIXTURE_NO_CAMERA = 'unit-box-mesh.tscn';
 
-// A camera switch moves thousands of pixels, and an unchanged view differs by none.
+// A camera switch moves hundreds of pixels or more, and an unchanged view differs by none.
 export const MOVED_PIXELS = 100;
 export const STILL_PIXELS = 20;
 
-/** Each case opens a fixture in one view and clicks its rows in order. */
+const ROWS_3D = ['Front', 'Side', 'Top'];
+const ROWS_2D = ['Left', 'Off', 'Right'];
+const EDITOR_ROW = 'Editor camera';
+
+/** Each case opens a fixture in one view and runs its clicks, outside calls and view switches in order. */
 export const CASES = [
-  { name: '3D preview', fixture: FIXTURE_3D, view: '3D', clicks: ['Side', 'Editor camera'] },
-  { name: '2D opens 3D', fixture: FIXTURE_3D, view: '2D', clicks: ['Side'] },
-  { name: 'In-game 3D', fixture: FIXTURE_3D, view: 'In-game', clicks: ['Side', 'Front'] },
-  { name: 'In-game 2D', fixture: FIXTURE_2D, view: 'In-game', clicks: ['Right'] },
-  { name: '2D frame', fixture: FIXTURE_2D, view: '2D', clicks: ['Right'] },
+  {
+    name: '3D preview',
+    fixture: FIXTURE_3D,
+    view: '3D',
+    steps: [{ click: 'Side' }, { click: EDITOR_ROW }],
+    expected: {
+      start: { view: '3D', rows: [EDITOR_ROW, ...ROWS_3D], active: [EDITOR_ROW] },
+      steps: [
+        { view: '3D', active: ['Side'], moved: true },
+        { view: '3D', active: [EDITOR_ROW], moved: false },
+      ],
+    },
+  },
+  {
+    name: '2D opens 3D',
+    fixture: FIXTURE_3D,
+    view: '2D',
+    steps: [{ click: 'Side' }],
+    expected: {
+      start: { view: '2D', rows: [EDITOR_ROW, ...ROWS_3D], active: [] },
+      steps: [{ view: '3D', active: ['Side'], moved: true }],
+    },
+  },
+  {
+    name: 'In-game click',
+    fixture: FIXTURE_3D,
+    view: 'In-game',
+    steps: [{ click: 'Side' }, { click: 'Front' }],
+    expected: {
+      start: { view: 'In-game', rows: ROWS_3D, active: ['Front'] },
+      steps: [
+        { view: 'In-game', active: ['Side'], moved: true },
+        { view: 'In-game', active: ['Front'], moved: false },
+      ],
+    },
+  },
+  {
+    // `clear_current` hands the viewport to the first camera that entered it (`viewport.cpp:4609-4623`).
+    name: 'In-game outside calls',
+    fixture: FIXTURE_3D,
+    view: 'In-game',
+    steps: [{ call: ['Side', 'make_current'] }, { call: ['Side', 'clear_current'] }],
+    expected: {
+      start: { view: 'In-game', active: ['Front'] },
+      steps: [
+        { view: 'In-game', active: ['Side'], moved: true },
+        { view: 'In-game', active: ['Front'], moved: false },
+      ],
+    },
+  },
+  {
+    // Godot's editor preview never moves the game's current camera.
+    name: 'In-game kept across views',
+    fixture: FIXTURE_3D,
+    view: 'In-game',
+    steps: [{ click: 'Side' }, { view: '3D' }, { click: 'Top' }, { view: 'In-game' }],
+    expected: {
+      start: { view: 'In-game', active: ['Front'] },
+      steps: [
+        { view: 'In-game', active: ['Side'], moved: true },
+        { view: '3D', active: [EDITOR_ROW] },
+        { view: '3D', active: ['Top'] },
+        { view: 'In-game', active: ['Side'], sameAs: 0 },
+      ],
+    },
+  },
+  {
+    // A view that drew the preview would not move when the game's own camera moves to it.
+    name: 'Preview then In-game',
+    fixture: FIXTURE_3D,
+    view: '3D',
+    steps: [{ click: 'Side' }, { view: 'In-game' }, { click: 'Side' }],
+    expected: {
+      start: { view: '3D', active: [EDITOR_ROW] },
+      steps: [
+        { view: '3D', active: ['Side'], moved: true },
+        { view: 'In-game', active: ['Front'] },
+        { view: 'In-game', active: ['Side'], differsFrom: 1 },
+      ],
+    },
+  },
+  {
+    // `make_current` refuses a Camera2D that is not enabled (`camera_2d.cpp:585`), so its row takes no click.
+    name: 'In-game 2D',
+    fixture: FIXTURE_2D,
+    view: 'In-game',
+    steps: [{ click: 'Right' }],
+    expected: {
+      start: { view: 'In-game', rows: ROWS_2D, active: ['Left'], disabled: ['Off'] },
+      steps: [{ view: 'In-game', active: ['Right'], disabled: ['Off'], moved: true }],
+    },
+  },
+  {
+    name: '2D frame',
+    fixture: FIXTURE_2D,
+    view: '2D',
+    steps: [{ click: 'Right' }],
+    expected: {
+      start: { view: '2D', rows: [EDITOR_ROW, ...ROWS_2D], active: [] },
+      steps: [{ view: '2D', active: [], moved: true }],
+    },
+  },
+  {
+    name: 'Camera2D rows in 3D',
+    fixture: FIXTURE_2D,
+    view: '3D',
+    steps: [],
+    expected: { start: { view: '3D', rows: [EDITOR_ROW, ...ROWS_2D], active: [EDITOR_ROW] }, steps: [] },
+  },
+  {
+    // Each viewport keeps its own current camera, so a pick inside the SubViewport leaves the root's.
+    name: 'In-game SubViewport',
+    fixture: FIXTURE_SUBVIEWPORT,
+    view: 'In-game',
+    steps: [{ click: 'Close' }],
+    expected: {
+      start: { view: 'In-game', rows: ['Far', 'Close', 'Root'], active: ['Far', 'Root'] },
+      steps: [{ view: 'In-game', active: ['Close', 'Root'], moved: true }],
+    },
+  },
+  ...['3D', '2D', 'In-game'].map((view) => ({
+    name: `No camera in ${view}`,
+    fixture: FIXTURE_NO_CAMERA,
+    view,
+    steps: [],
+    expected: { start: { view, rows: [], active: [], isEmpty: true }, steps: [] },
+  })),
 ];
 
 const viewButtons = (page) => page.getByRole('group', { name: 'Viewport dimension' }).getByRole('button');
@@ -28,7 +159,7 @@ async function readView(page) {
   return pressed.join(' ');
 }
 
-/** The names of the panel's rows that match `selector`. */
+/** The names of the tab's rows that match `selector`. */
 function readRows(page, selector) {
   return page
     .locator(selector)
@@ -43,21 +174,39 @@ async function shoot(page) {
   return buffer;
 }
 
-async function observe(page, start) {
-  const buffer = await shoot(page);
+async function observe(page) {
   return {
     view: await readView(page),
+    rows: await readRows(page, 'button[class*="camRow"]'),
     active: await readRows(page, 'button[data-active="true"]'),
-    disabled: await readRows(page, 'button[data-active]:disabled'),
-    moved: start ? diffMask(start, buffer).diffPixels : 0,
-    buffer,
+    disabled: await readRows(page, 'button[class*="camRow"]:disabled'),
+    isEmpty: (await page.getByText('No camera nodes in this scene.').count()) > 0,
+    buffer: await shoot(page),
   };
 }
 
-/** The observation without its image, which only the steps after it compare against. */
-function withoutImage(observation) {
-  const { view, active, disabled, moved, row } = observation;
-  return { row, view, active, disabled, moved };
+function describeStep(step) {
+  if (step.click) return `a click on ${step.click}`;
+  if (step.call) return `${step.call[0]}.${step.call[1]}() from outside code`;
+  return `a switch to the ${step.view} view`;
+}
+
+async function runStep(page, step) {
+  if (step.click) return page.getByRole('button', { name: new RegExp(`^${step.click}`) }).click();
+  if (step.call) {
+    return page.evaluate(([path, method]) => window.textscene.scene.getNode(path).call(method), step.call);
+  }
+  return viewButtons(page).getByText(step.view, { exact: true }).click();
+}
+
+/** Pixel counts against the start and against each earlier step, so the checks compare any pair. */
+function withMovement(observation, start, earlier) {
+  const { buffer, ...state } = observation;
+  return {
+    ...state,
+    moved: diffMask(start, buffer).diffPixels,
+    movedFrom: earlier.map((before) => diffMask(before, buffer).diffPixels),
+  };
 }
 
 async function runCase(browser, baseUrl, testCase) {
@@ -67,14 +216,17 @@ async function runCase(browser, baseUrl, testCase) {
   });
   await viewButtons(page).getByText(testCase.view, { exact: true }).click();
   await page.getByRole('tab', { name: 'Cameras' }).click();
-  const start = await observe(page, null);
+  const start = await observe(page);
+  const buffers = [];
   const steps = [];
-  for (const row of testCase.clicks) {
-    await page.getByRole('button', { name: new RegExp(`^${row}`) }).click();
-    steps.push({ row, ...(await observe(page, start.buffer)) });
+  for (const step of testCase.steps) {
+    await runStep(page, step);
+    const observation = await observe(page);
+    steps.push({ step: describeStep(step), ...withMovement(observation, start.buffer, buffers) });
+    buffers.push(observation.buffer);
   }
   await context.close();
-  return { name: testCase.name, start: withoutImage(start), steps: steps.map(withoutImage), diagnostics };
+  return { name: testCase.name, start: withMovement(start, start.buffer, []), steps, diagnostics };
 }
 
 export async function runCameraButtonsScenario(browser, baseUrl) {
@@ -83,38 +235,8 @@ export async function runCameraButtonsScenario(browser, baseUrl) {
   return results;
 }
 
-/** What each step of each case must show: the view, the marked rows, and whether the canvas moved. */
-export const EXPECTED = {
-  '3D preview': {
-    start: { view: '3D', active: ['Editor camera'] },
-    steps: [
-      { view: '3D', active: ['Side'], moved: true },
-      { view: '3D', active: ['Editor camera'], moved: false },
-    ],
-  },
-  '2D opens 3D': {
-    start: { view: '2D', active: [] },
-    steps: [{ view: '3D', active: ['Side'], moved: true }],
-  },
-  'In-game 3D': {
-    start: { view: 'In-game', active: ['Front'] },
-    steps: [
-      { view: 'In-game', active: ['Side'], moved: true },
-      { view: 'In-game', active: ['Front'], moved: false },
-    ],
-  },
-  'In-game 2D': {
-    // `make_current` refuses a Camera2D that is not enabled (`camera_2d.cpp:585`), so its row takes no click.
-    start: { view: 'In-game', active: ['Left'], disabled: ['Off'] },
-    steps: [{ view: 'In-game', active: ['Right'], disabled: ['Off'], moved: true }],
-  },
-  '2D frame': {
-    start: { view: '2D', active: [] },
-    steps: [{ view: '2D', active: [], moved: true }],
-  },
-};
-
 function checkRows(gate, label, what, expected, found) {
+  if (expected === undefined) return;
   gate.check(
     JSON.stringify(found) === JSON.stringify(expected),
     `${label} shows ${JSON.stringify(found)} ${what}, expected ${JSON.stringify(expected)}`
@@ -126,35 +248,51 @@ function checkState(gate, label, expected, found) {
     found.view === expected.view,
     `${label} shows the ${found.view} view, expected ${expected.view}`
   );
+  checkRows(gate, label, 'as rows', expected.rows, found.rows);
   checkRows(gate, label, 'as active', expected.active, found.active);
   checkRows(gate, label, 'as disabled', expected.disabled ?? [], found.disabled);
+  gate.check(
+    found.isEmpty === (expected.isEmpty ?? false),
+    `${label} ${found.isEmpty ? 'shows' : 'does not show'} the empty-tab note`
+  );
 }
 
-function checkMoved(gate, label, isMoved, pixels) {
-  if (isMoved) {
-    gate.check(
-      pixels > MOVED_PIXELS,
-      `${label} moved ${pixels} px of the view, expected over ${MOVED_PIXELS}`
-    );
-  } else {
-    gate.check(
-      pixels < STILL_PIXELS,
-      `${label} moved ${pixels} px of the view, expected under ${STILL_PIXELS}`
-    );
+function checkChanged(gate, label, pixels, against) {
+  gate.check(
+    pixels > MOVED_PIXELS,
+    `${label} moved ${pixels} px of the view against ${against}, expected over ${MOVED_PIXELS}`
+  );
+}
+
+function checkStill(gate, label, pixels, against) {
+  gate.check(
+    pixels < STILL_PIXELS,
+    `${label} moved ${pixels} px of the view against ${against}, expected under ${STILL_PIXELS}`
+  );
+}
+
+function checkDrawing(gate, label, expected, found) {
+  if (expected.moved === true) checkChanged(gate, label, found.moved, 'the start');
+  if (expected.moved === false) checkStill(gate, label, found.moved, 'the start');
+  if (expected.sameAs !== undefined) {
+    checkStill(gate, label, found.movedFrom[expected.sameAs], `step ${expected.sameAs + 1}`);
+  }
+  if (expected.differsFrom !== undefined) {
+    checkChanged(gate, label, found.movedFrom[expected.differsFrom], `step ${expected.differsFrom + 1}`);
   }
 }
 
 /** Records the scenario's claims on `gate`. */
 export function checkCameraButtons(gate, results) {
   for (const result of results) {
-    const expected = EXPECTED[result.name];
+    const { expected } = CASES.find((testCase) => testCase.name === result.name);
     const label = `[camera buttons] ${result.name}`;
     checkState(gate, `${label} at the start`, expected.start, result.start);
     expected.steps.forEach((step, index) => {
       const found = result.steps[index];
-      const stepLabel = `${label} after a click on ${found.row}`;
+      const stepLabel = `${label} after ${found.step}`;
       checkState(gate, stepLabel, step, found);
-      checkMoved(gate, stepLabel, step.moved, found.moved);
+      checkDrawing(gate, stepLabel, step, found);
     });
     checkDiagnostics(gate, label, result.diagnostics);
   }
