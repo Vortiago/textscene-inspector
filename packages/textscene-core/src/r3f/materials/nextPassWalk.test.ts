@@ -94,7 +94,7 @@ describe('loadedPassOf', () => {
       'SubResource("A")',
       `[sub_resource type="StandardMaterial3D" id="B"]\n\n[sub_resource type="StandardMaterial3D" id="A"]\n${properties}\n`
     );
-    if (material.form !== 'standard') throw new Error(`expected a StandardMaterial3D, got ${material.type}`);
+    if (material.form !== 'standard') throw new Error(`expected the standard form, got ${material.form}`);
     return material;
   };
 

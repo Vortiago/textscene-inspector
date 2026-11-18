@@ -64,7 +64,7 @@ describe('MATERIAL of a StandardMaterial3D', () => {
       'SubResource("m")',
       `[sub_resource type="StandardMaterial3D" id="m"]\n${body}\n`
     );
-    if (material.form !== 'standard') throw new Error(`expected a StandardMaterial3D, got ${material.type}`);
+    if (material.form !== 'standard') throw new Error(`expected the standard form, got ${material.form}`);
     return material;
   };
 
