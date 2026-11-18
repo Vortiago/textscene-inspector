@@ -302,8 +302,11 @@ describe('the imperative adapter — blend modes', () => {
     expect(build({}).blending).toBe(THREE.NormalBlending);
   });
 
-  it('uses the ADD preset, and spells MUL out as three has no non-premultiplied preset for it', () => {
+  it('uses the ADD preset', () => {
     expect(build({ blend_mode: '1' }).blending).toBe(THREE.AdditiveBlending);
+  });
+
+  it('spells MUL out, as three has no non-premultiplied preset for it', () => {
     expect(build({ blend_mode: '3' })).toMatchObject({
       blending: THREE.CustomBlending,
       blendSrc: THREE.DstColorFactor,

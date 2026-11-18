@@ -2165,7 +2165,7 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 
 ## Cull modes
 
-`cull_back`, the default, culls the faces seen from behind, `cull_front` the faces seen from the front, and `cull_disabled` none. Godot turns the cull round for an object of a negative scale (`render_forward_clustered.cpp:411`), as three does. `cull_front` and `cull_disabled` define `DO_SIDE_CHECK`, so the template turns `NORMAL` round on a face seen from behind (`scene_forward_clustered.glsl:1263`).
+`cull_back`, the default, culls the faces seen from behind, `cull_front` the faces seen from the front, and `cull_disabled` none. Godot turns the cull round for a mesh of a negative scale (`render_forward_clustered.cpp:411`), and three turns its winding round to the same effect. `cull_front` and `cull_disabled` define `DO_SIDE_CHECK`, so the template turns `NORMAL` round on a face seen from behind (`scene_forward_clustered.glsl:1263`).
 
 The transpiler emits the material's `side`, and the defines of the template variant. Rows: `spatial render_mode cull_back`, `spatial render_mode cull_front`, `spatial render_mode cull_disabled`. Godot source: `servers/rendering/shader_types.cpp:238`.
 

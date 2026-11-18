@@ -147,10 +147,10 @@ function glClipPosition(position: Node, vulkanClip: Vec4): Node {
   })() as unknown as Node;
 }
 
-/** Godot reverses a mirrored object's cull (`render_forward_clustered.cpp:411`). three turns its winding. */
+/** Godot reverses a mirrored cull (`render_forward_clustered.cpp:411`). three turns a mesh's winding. */
 function godotFrontFacing(): Node {
   const isMirrored = uniform(0).onObjectUpdate(({ object }) =>
-    object!.matrixWorld.determinant() < 0 ? 1 : 0
+    (object as THREE.Mesh).isMesh === true && object!.matrixWorld.determinantAffine() < 0 ? 1 : 0
   );
   return select(isMirrored.equal(1), frontFacing.not(), frontFacing) as unknown as Node;
 }
