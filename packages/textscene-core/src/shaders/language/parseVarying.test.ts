@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { RenderingMethod } from '../preprocessor/preprocessor.js';
+import type { RenderingMethod } from '../preprocessor/renderingMethod.js';
 import { parsedShader } from './parseShader.js';
 
 const TOO_MANY = /Too many varyings used in shader \(33 used, maximum supported is 32\)/;
@@ -58,6 +58,17 @@ describe('the varying limit of the parser', () => {
     expect(parseOf('varying vec4 v[16];', 'spatial', 'gl_compatibility', 15)).toThrow(
       'Too many varyings used in shader (16 used, maximum supported is 15).'
     );
+  });
+
+  it('takes the slots of Forward+ for a method that names no renderer, which Godot draws with (edge case)', () => {
+    const limits = ['vulkan', '', 'GL_Compatibility'].map((method) =>
+      [17, 18].map((count) => isRefused(parseOf(`varying vec4 v[${count}];`, 'spatial', method, 64)))
+    );
+    expect(limits).toEqual([
+      [false, true],
+      [false, true],
+      [false, true],
+    ]);
   });
 
   it("keeps Vulkan's 32 on Forward+, which asks Vulkan, not the GL context (edge case)", () => {

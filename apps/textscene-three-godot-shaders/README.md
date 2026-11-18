@@ -14,15 +14,18 @@ a plain three.js app then draws a Godot scene from the package alone, a user's s
 
 ```ts
 import * as THREE from 'three';
-import { installNodesHandler } from '@textscene/three-godot-shaders';
+import { installGodotShading, withGodotAttributes } from '@textscene/three-godot-shaders';
 
 const renderer = new THREE.WebGLRenderer();
-installNodesHandler(renderer);
+const shading = installGodotShading(renderer, { renderingMethod: 'forward_plus' });
+const { material } = shading.spatial(shaderText);
+const mesh = new THREE.Mesh(withGodotAttributes(geometry), material);
 ```
 
-`installNodesHandler` gives the renderer three's `WebGLNodesHandler`, so a TSL node material draws
-on it. By default a node material writes the renderer's tone mapping and `outputColorSpace`. Pass
-`'linear'` when your app tone maps and encodes the frame itself.
+`installGodotShading` gives the renderer three's `WebGLNodesHandler`, so a TSL node material draws
+on it. Pass the project's `rendering/renderer/rendering_method`: the shading parses each shader as
+Godot does on that renderer. By default a node material writes the renderer's tone mapping and
+`outputColorSpace`. Pass `output: 'linear'` when your app tone maps and encodes the frame itself.
 
 ## The port
 

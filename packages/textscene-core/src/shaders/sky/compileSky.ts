@@ -1,6 +1,6 @@
 import { parsedShader, type ParsedShader } from '../language/parseShader.js';
 import { ShadingLanguageError } from '../language/shadingLanguageError.js';
-import type { ShaderDecoders } from '../preprocessor/decoders.js';
+import type { ProjectShaderOptions } from '../rendererShaderOptions.js';
 import { disposeSky, transpileParsedSky } from './transpileSky.js';
 
 /** Godot's refusal of a text, or the transpiler's for a construct it does not port yet. */
@@ -13,9 +13,9 @@ export type SkyCompile =
   | { readonly failure: unknown; readonly refusal: null };
 
 /** A first transpile proves the text, as a refusal can come from the parse, the checks or the link. */
-export function compileSky(code: string, decoders: ShaderDecoders): SkyCompile {
+export function compileSky(code: string, options: ProjectShaderOptions): SkyCompile {
   try {
-    const parsed = parsedShader(code, { decoders });
+    const parsed = parsedShader(code, options);
     disposeSky(transpileParsedSky(parsed, ''));
     return { parsed, refusal: null };
   } catch (error) {

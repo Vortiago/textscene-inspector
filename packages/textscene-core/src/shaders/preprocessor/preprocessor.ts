@@ -8,15 +8,13 @@ import { PreprocessedOutput } from './preprocessedOutput.js';
 import { END, isCharEnd, isCharSpace } from './preprocessorChars.js';
 import { type Define, Defines, expandMacros } from './macros.js';
 import { PreprocessorError } from './preprocessorError.js';
+import type { Renderer, RenderingMethod } from './renderingMethod.js';
 
 /** `path` is the loaded resource's path, which marks the include and keeps it from loading twice. */
 export interface ShaderInclude {
   readonly path: string;
   readonly code: string;
 }
-
-/** The project's `rendering/renderer/rendering_method`. */
-export type RenderingMethod = 'forward_plus' | 'mobile' | 'gl_compatibility';
 
 export interface PreprocessOptions {
   readonly file?: string;
@@ -27,11 +25,17 @@ export interface PreprocessOptions {
 }
 
 /** shader_preprocessor.cpp:1353 */
-const RENDERERS: Readonly<Record<RenderingMethod, string>> = {
+const RENDERERS: Readonly<Record<Renderer, string>> = {
   gl_compatibility: '0',
   mobile: '1',
   forward_plus: '2',
 };
+
+/** Any method but Forward+ and Mobile is compatibility here (`shader_preprocessor.cpp:1352-1358`). */
+function currentRenderer(method: RenderingMethod): string {
+  if (method === 'forward_plus') return RENDERERS.forward_plus;
+  return method === 'mobile' ? RENDERERS.mobile : RENDERERS.gl_compatibility;
+}
 
 // shader_preprocessor.cpp:752
 const INCLUDE_DEPTH_AT_MOST = 25;
@@ -58,7 +62,7 @@ interface State {
 
 /** Throws `PreprocessorError` for a text Godot's preprocessor refuses. */
 export function preprocess(code: string, options: PreprocessOptions = {}): string {
-  const renderer = RENDERERS[options.renderingMethod ?? 'forward_plus'];
+  const renderer = currentRenderer(options.renderingMethod ?? 'forward_plus');
   const builtIn = (body: string): Define => ({ body, arguments: [], isBuiltIn: true });
   const readInclude = options.readInclude ?? (() => undefined);
   const state: State = {

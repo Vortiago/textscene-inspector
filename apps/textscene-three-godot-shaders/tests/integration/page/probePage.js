@@ -26,7 +26,7 @@ import {
   vec4,
 } from 'three/tsl';
 import {
-  installNodesHandler,
+  installGodotShading,
   ShadingLanguageError,
   textToVariant,
   transpileShadingLanguage,
@@ -55,7 +55,7 @@ const CONSTRUCT = {
 const renderer = new THREE.WebGLRenderer({ canvas: document.createElement('canvas') });
 // Godot's harness clears to transparent black, which a discarded pixel keeps.
 renderer.setClearColor(0x000000, 0);
-installNodesHandler(renderer, 'linear');
+installGodotShading(renderer, { output: 'linear' });
 const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2));
 const scene = new THREE.Scene();

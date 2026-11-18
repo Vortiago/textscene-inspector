@@ -3,7 +3,7 @@ import { INSTRUCTION_TABLE } from './instructionTable.generated.js';
 import { StatementParser, type ScopeHolder } from './parseBlock.js';
 import { ExpressionParser, type ExpressionScope } from './parseExpression.js';
 import { UniformParser } from './parseUniform.js';
-import type { RenderingMethod } from '../preprocessor/preprocessor.js';
+import { rendererOf, type RenderingMethod } from '../preprocessor/renderingMethod.js';
 import { ModeParser } from './parseModes.js';
 import { parseDeclaration } from './parseDeclaration.js';
 import { ShadingLanguageError } from './shadingLanguageError.js';
@@ -320,13 +320,13 @@ class ShaderParser implements ExpressionScope {
 
   /** The varying slots the renderer's own template takes first: none on the compatibility renderer's GL. */
   private baseVaryingIndex(): number {
-    if (this.renderingMethod === 'gl_compatibility') return 0;
+    if (rendererOf(this.renderingMethod) === 'gl_compatibility') return 0;
     return MODE_TABLES[this.shaderTypeName()]?.base_varying_index ?? 0;
   }
 
   /** The slots of the device: Godot asks the GL driver on the compatibility renderer (`config.cpp:121`). */
   private maxVaryings(): number {
-    return this.renderingMethod === 'gl_compatibility' ? this.glVaryings : VULKAN_VARYINGS;
+    return rendererOf(this.renderingMethod) === 'gl_compatibility' ? this.glVaryings : VULKAN_VARYINGS;
   }
 
   private tree(head: Pick<ShaderNode, 'shaderType' | 'headPosition'>): ShaderNode {

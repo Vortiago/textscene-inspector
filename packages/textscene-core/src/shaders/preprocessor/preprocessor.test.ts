@@ -34,6 +34,13 @@ describe('directives', () => {
     expect(preprocess(code).replace(/\s+/g, ' ').trim()).toBe('x');
   });
 
+  it('sets CURRENT_RENDERER to the compatibility renderer for a method that names no renderer', () => {
+    const renderers = ['vulkan', '', 'Forward_Plus'].map((renderingMethod) =>
+      preprocess('CURRENT_RENDERER', { renderingMethod }).trim()
+    );
+    expect(renderers).toEqual(['0', '0', '0']);
+  });
+
   it('sets CURRENT_RENDERER from the rendering method, forward_plus when none is given', () => {
     expect(preprocess('CURRENT_RENDERER').trim()).toBe('2');
     expect(preprocess('CURRENT_RENDERER', { renderingMethod: 'gl_compatibility' }).trim()).toBe('0');

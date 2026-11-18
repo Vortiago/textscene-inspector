@@ -8,7 +8,7 @@ export {
   DEFAULT_TIME_ROLLOVER_SECONDS,
   GODOT_VERSION,
   glVaryingSlots,
-  installNodesHandler,
+  installGodotShading,
   PlaybackShaderTime,
   ShaderClock,
   ShadingLanguageError,
@@ -24,8 +24,11 @@ export {
   writeSpatialBindings,
 } from '@textscene/core/shaders';
 export type {
+  GodotShading,
+  GodotShadingOptions,
   NodeOutput,
   Playback,
+  RendererShaderOptions,
   RenderingMethod,
   ShaderInclude,
   ShaderSource,
@@ -33,6 +36,7 @@ export type {
   SkyDraw,
   SkyFog,
   SkyLight,
+  SkyOptions,
   SkyScene,
   SpatialOptions,
   SpatialScene,

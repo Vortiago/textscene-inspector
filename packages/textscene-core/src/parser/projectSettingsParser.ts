@@ -12,6 +12,7 @@ import {
 } from '../godot/string/string.js';
 import { boolSlotValue } from '../godot/variant/variantBool.js';
 import type { ProjectSampling } from '../shaders/uniforms/samplerState.js';
+import type { RenderingMethod } from '../shaders/preprocessor/renderingMethod.js';
 import { dataDirectoryPath, extensionListPath } from '../godot/project/project.js';
 import { standardizeLocale } from '../godot/text/standardizeLocale.js';
 import { isLocaleRightToLeft } from '../godot/text/textServer.js';
@@ -389,6 +390,11 @@ export function projectSampling(settings: ProjectSettings | null): ProjectSampli
     useNearestMipmapFilter:
       boolSlotValue(settings?.['rendering/textures/default_filters/use_nearest_mipmap_filter']) === true,
   };
+}
+
+/** `rendering/renderer/rendering_method` as written, Forward+ with no key. No feature override is read. */
+export function projectRenderingMethod(settings: ProjectSettings | null): RenderingMethod {
+  return settings?.['rendering/renderer/rendering_method'] ?? 'forward_plus';
 }
 
 /** `RS::DECAL_FILTER_LINEAR_MIPMAPS`, Godot's default `rendering/textures/decals/filter` (`rendering_server.cpp:3804`). */

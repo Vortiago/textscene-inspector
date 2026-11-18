@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 import { NodeMaterial } from 'three/webgpu';
 import { screenCoordinate, screenSize, vec4 } from 'three/tsl';
-import { installNodesHandler, transpileShadingLanguage } from '@textscene/three-godot-shaders';
+import { installGodotShading, transpileShadingLanguage } from '@textscene/three-godot-shaders';
 import { framePixels } from './framePixels.js';
 
 const renderer = new THREE.WebGLRenderer({ canvas: document.createElement('canvas') });
-installNodesHandler(renderer, 'linear');
+installGodotShading(renderer, { output: 'linear' });
 const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2));
 const scene = new THREE.Scene();

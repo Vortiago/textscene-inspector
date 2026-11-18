@@ -15,7 +15,7 @@ import { GODOT_SAMPLING, type ProjectSampling } from '../../shaders/uniforms/sam
 import type { TranspiledUniform } from '../../shaders/uniforms/transpiledUniform';
 import type { BoundNodeMaterial } from '../../shaders/uniforms/boundMaterial';
 import type { SamplerValue } from '../../shaders/uniforms/samplerUniform';
-import type { ShaderDecoders } from '../../shaders/preprocessor/decoders';
+import type { ProjectShaderOptions } from '../../shaders/rendererShaderOptions';
 import { ShaderSkyBackground } from '../../r3f/sky/shaderSkyBackground';
 import { ShaderSkyOctmap } from '../../r3f/sky/shaderSkyOctmap';
 import { cappedBake } from './radianceBake';
@@ -27,8 +27,8 @@ import type { ShaderSkyProperties, ShaderSkyText, Sky } from './types';
 import type { SkyEnvironment, SkyEnvironmentInput } from './build';
 
 /** The sky shader with the built-ins it reads, which decide what draws and bakes it again. */
-export function readShaderSky(material: ShaderSkyText, decoders: ShaderDecoders): ShaderSkyProperties {
-  const compile = skyCompileOf(material.code, decoders);
+export function readShaderSky(material: ShaderSkyText, options: ProjectShaderOptions): ShaderSkyProperties {
+  const compile = skyCompileOf(material.code, options);
   return { ...material, usage: skyUsage('parsed' in compile ? compile.parsed.tree : null) };
 }
 
@@ -36,9 +36,17 @@ export function readShaderSky(material: ShaderSkyText, decoders: ShaderDecoders)
 export function buildShaderSkyEnvironment(
   gl: THREE.WebGLRenderer,
   material: ShaderSkyProperties,
-  { sky, lights, asBackground, textures = {}, decoders = {}, sampling = GODOT_SAMPLING }: SkyEnvironmentInput
+  {
+    sky,
+    lights,
+    asBackground,
+    textures = {},
+    shaderOptions = NO_OPTIONS,
+    sampling = GODOT_SAMPLING,
+  }: SkyEnvironmentInput
 ): SkyEnvironment | null {
-  const transpiled = (pass: SkyPass) => transpiledShaderSky(material, { textures, decoders, sampling }, pass);
+  const transpiled = (pass: SkyPass) =>
+    transpiledShaderSky(material, { textures, shaderOptions, sampling }, pass);
   let background: ShaderSkyBackground | null = null;
   let layers: SkyLayers;
   try {
@@ -85,17 +93,22 @@ function bakeShaderRadiance(
   }
 }
 
-/** Sky texts kept compiled for each decoders: the Source pane makes a new text at each keystroke. */
+/** Sky texts kept compiled for each options: the Source pane makes a new text at each keystroke. */
 const KEPT_SKY_COMPILES = 8;
 
 /** Written only by `skyCompileOf`: one compile per text, for the usage, every bake and the node details. */
-const skyCompiles = perObject((_decoders: ShaderDecoders) => new LRUCache<SkyCompile>(KEPT_SKY_COMPILES));
+const skyCompiles = perObject(
+  (_options: ProjectShaderOptions) => new LRUCache<SkyCompile>(KEPT_SKY_COMPILES)
+);
 
-function skyCompileOf(code: string, decoders: ShaderDecoders): SkyCompile {
-  const compiles = skyCompiles(decoders);
+/** The options of a caller that gives none: Forward+ and no decoders. */
+const NO_OPTIONS: ProjectShaderOptions = { decoders: {} };
+
+function skyCompileOf(code: string, options: ProjectShaderOptions): SkyCompile {
+  const compiles = skyCompiles(options);
   const kept = compiles.get(code);
   if (kept) return kept;
-  const compile = compileSky(code, decoders);
+  const compile = compileSky(code, options);
   compiles.set(code, compile);
   return compile;
 }
@@ -106,10 +119,14 @@ let defaultSky: SkyCompile | undefined;
 /** The sky of `material` for `pass` with its parameters, or Godot's default sky for one it cannot draw. */
 function transpiledShaderSky(
   material: ShaderSkyProperties,
-  { textures, decoders, sampling }: Required<Pick<SkyEnvironmentInput, 'textures' | 'decoders' | 'sampling'>>,
+  {
+    textures,
+    shaderOptions,
+    sampling,
+  }: Required<Pick<SkyEnvironmentInput, 'textures' | 'shaderOptions' | 'sampling'>>,
   pass: SkyPass
 ): TranspiledSky {
-  const compile = skyCompileOf(material.code, decoders);
+  const compile = skyCompileOf(material.code, shaderOptions);
   if (!('parsed' in compile)) {
     warnOnce(material, 'refused', `[Sky] ${unDrawnMessage(compile)}`);
     return transpiledDefaultSky(pass);
@@ -127,7 +144,7 @@ function transpiledShaderSky(
 }
 
 function transpiledDefaultSky(pass: SkyPass): TranspiledSky {
-  defaultSky ??= compileSky(GODOT_DEFAULT_SKY, {});
+  defaultSky ??= compileSky(GODOT_DEFAULT_SKY, NO_OPTIONS);
   if (!('parsed' in defaultSky)) throw new Error("expected Godot's default sky to compile");
   return transpileParsedSky(defaultSky.parsed, '', GODOT_SAMPLING, pass);
 }
@@ -143,8 +160,8 @@ function setParameters(
 }
 
 /** Why the previewer draws Godot's default sky for `material`, or null when it draws the shader. */
-export function shaderSkyRefusal(material: ShaderSkyText, decoders: ShaderDecoders): string | null {
-  const compile = skyCompileOf(material.code, decoders);
+export function shaderSkyRefusal(material: ShaderSkyText, options: ProjectShaderOptions): string | null {
+  const compile = skyCompileOf(material.code, options);
   return 'parsed' in compile ? null : unDrawnMessage(compile);
 }
 

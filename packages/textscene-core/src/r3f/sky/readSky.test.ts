@@ -19,7 +19,7 @@ function shaderSky(code: string): AuthoredSky {
 
 describe('useReadSky', () => {
   it('reads the samplers behind a decompressing `#if` with the decoders', () => {
-    const { result } = renderHook(() => useReadSky(shaderSky(CODE), transpiler, { zstd }));
+    const { result } = renderHook(() => useReadSky(shaderSky(CODE), transpiler, { decoders: { zstd } }));
     const material = result.current?.material;
     expect(material?.kind === 'shader' && material.usage.samplers).toEqual({
       faces: { kind: 'cube', isColor: false },
@@ -28,9 +28,9 @@ describe('useReadSky', () => {
 
   it('gives one read sky to each viewport that draws the sky, so they share its bake', () => {
     const sky = shaderSky(CODE);
-    const decoders = { zstd };
-    const first = renderHook(() => useReadSky(sky, transpiler, decoders)).result.current;
-    expect(renderHook(() => useReadSky(sky, transpiler, decoders)).result.current).toBe(first);
+    const options = { decoders: { zstd } };
+    const first = renderHook(() => useReadSky(sky, transpiler, options)).result.current;
+    expect(renderHook(() => useReadSky(sky, transpiler, options)).result.current).toBe(first);
   });
 
   it('gives no sky while the decoders load', () => {
@@ -38,7 +38,9 @@ describe('useReadSky', () => {
   });
 
   it('gives no sky while the transpiler loads', () => {
-    expect(renderHook(() => useReadSky(shaderSky(CODE), null, { zstd })).result.current).toBeNull();
+    expect(
+      renderHook(() => useReadSky(shaderSky(CODE), null, { decoders: { zstd } })).result.current
+    ).toBeNull();
   });
 
   it('keeps a built-in sky, which needs no transpiler (edge case)', () => {
@@ -48,6 +50,8 @@ describe('useReadSky', () => {
 
   it('bakes an Automatic sky whose shader reads TIME with the fast filter, as Godot runs it in real time', () => {
     const sky = shaderSky('shader_type sky;\nvoid sky() { COLOR = vec3(fract(TIME)); }\n');
-    expect(renderHook(() => useReadSky(sky, transpiler, {})).result.current?.radianceFilter).toBe('fast');
+    expect(
+      renderHook(() => useReadSky(sky, transpiler, { decoders: {} })).result.current?.radianceFilter
+    ).toBe('fast');
   });
 });

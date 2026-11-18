@@ -5,7 +5,7 @@ import { ShaderErrorsProvider, useShaderErrors } from '../contexts/ShaderErrorsC
 import * as transpiler from '../../resources/sky/shaderSky';
 import type { SkyProperties } from '../../resources/sky/types';
 import type { SkyTranspiler } from './skyTranspiler';
-import type { ShaderDecoders } from '../../shaders/preprocessor/decoders';
+import type { ProjectShaderOptions } from '../../shaders/rendererShaderOptions';
 import { useShaderSkyErrorReport } from './shaderSkyError';
 
 function shaderSky(code: string): SkyProperties {
@@ -24,11 +24,11 @@ const UNCOMPILED = shaderSky('shader_type sky;\nvoid sky() { COLOR = 1.0; }\n');
 interface SkyProps {
   material: SkyProperties;
   transpiler: SkyTranspiler | null;
-  decoders: ShaderDecoders | null;
+  options: ProjectShaderOptions | null;
 }
 
-function Sky({ material, transpiler, decoders }: SkyProps) {
-  useShaderSkyErrorReport(material, transpiler, decoders);
+function Sky({ material, transpiler, options }: SkyProps) {
+  useShaderSkyErrorReport(material, transpiler, options);
   return null;
 }
 
@@ -40,13 +40,13 @@ function renderSky(
   material: SkyProperties,
   {
     loaded = transpiler,
-    decoders = {},
-  }: { loaded?: SkyTranspiler | null; decoders?: ShaderDecoders | null } = {}
+    options = { decoders: {} },
+  }: { loaded?: SkyTranspiler | null; options?: ProjectShaderOptions | null } = {}
 ) {
   render(
     <ShaderErrorsProvider>
       <NodePathProvider path="World/Environment">
-        <Sky material={material} transpiler={loaded} decoders={decoders} />
+        <Sky material={material} transpiler={loaded} options={options} />
       </NodePathProvider>
       <Errors />
     </ShaderErrorsProvider>
@@ -63,8 +63,8 @@ describe('useShaderSkyErrorReport', () => {
     expect(renderSky(shaderSky('shader_type sky;\nvoid sky() { COLOR = vec3(1.0); }\n'))).toBe('');
   });
 
-  it('reports nothing while the decoders load', () => {
-    expect(renderSky(UNCOMPILED, { decoders: null })).toBe('');
+  it('reports nothing while the options load', () => {
+    expect(renderSky(UNCOMPILED, { options: null })).toBe('');
   });
 
   it('reports nothing while the transpiler loads', () => {

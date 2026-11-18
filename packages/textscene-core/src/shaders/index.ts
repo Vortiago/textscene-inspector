@@ -1,7 +1,9 @@
-export { installNodesHandler, type NodeOutput } from './nodesHandler.js';
+export type { NodeOutput } from './nodesHandler.js';
+export { installGodotShading, type GodotShading, type GodotShadingOptions } from './godotShading.js';
+export type { RendererShaderOptions } from './rendererShaderOptions.js';
 export { GODOT_VERSION } from './language/instructionTable.generated.js';
 export { ShadingLanguageError } from './language/shadingLanguageError.js';
-export { glVaryingSlots } from './language/glVaryingSlots.js';
+export { glVaryingSlots } from './glVaryingSlots.js';
 export { TranslatorFault, type ShaderSource } from './fault/translatorFault.js';
 export {
   transpileShadingLanguage,
@@ -11,10 +13,11 @@ export {
 export type { TranspiledUniform } from './uniforms/transpiledUniform.js';
 export type { UniformHint, UniformNode, UniformScope } from './language/shaderTree.js';
 export type { ShaderOptions } from './language/parseShader.js';
-export type { RenderingMethod, ShaderInclude } from './preprocessor/preprocessor.js';
+export type { ShaderInclude } from './preprocessor/preprocessor.js';
+export type { RenderingMethod } from './preprocessor/renderingMethod.js';
 export type { ShaderDecoders } from './preprocessor/decoders.js';
 export type { TranspiledFunction } from './language/emitter.js';
-export { transpileSky, type SkyDraw, type TranspiledSky } from './sky/transpileSky.js';
+export { transpileSky, type SkyDraw, type SkyOptions, type TranspiledSky } from './sky/transpileSky.js';
 export { SkyResolutionPasses } from './sky/skyResolutionPasses.js';
 export {
   SKY_BINDINGS,
