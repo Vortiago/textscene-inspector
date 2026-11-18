@@ -3,12 +3,13 @@ import type { EnumValue } from '../../godot/classdb/enumNames.js';
 import {
   AlphaAntiAliasing,
   turnsOnAlphaToCoverage,
+  type AlphaToCoverageMode,
 } from '../../godot/rendering/materials/alphaAntialiasing.js';
 import { passMembership, usesBlendAlpha } from '../../godot/rendering/materials/alphaPass.js';
 import { BlendMode } from '../../godot/rendering/materials/blendMode.js';
 import { CullMode } from '../../godot/rendering/materials/cullMode.js';
 import { DepthDrawMode } from '../../godot/rendering/materials/depthDrawMode.js';
-import type { ShaderNode } from '../language/shaderTree.js';
+import type { ShaderNode, UniformHint } from '../language/shaderTree.js';
 import { variablesRead } from '../language/treeWalk.js';
 import {
   ALPHA_TO_COVERAGE_MODES,
@@ -62,7 +63,7 @@ const CULL_MODE_OF = byWord(CULL_MODES);
 const ALPHA_ANTIALIASING_OF = byWord(ALPHA_TO_COVERAGE_MODES);
 
 /** The hints whose texture Godot reads from the frame (`shader_compiler.cpp:926-940`). */
-const SCREEN_HINTS: ReadonlySet<string> = new Set([
+const SCREEN_HINTS: ReadonlySet<UniformHint> = new Set<UniformHint>([
   'hint_screen_texture',
   'hint_depth_texture',
   'hint_normal_roughness_texture',
@@ -93,7 +94,7 @@ export function spatialPipeline(tree: ShaderNode): SpatialPipeline {
 }
 
 /** `uses_alpha_pass` (`scene_shader_forward_clustered.h:279`). */
-export function usesAlphaPass(pipeline: SpatialPipeline): boolean {
+function usesAlphaPass(pipeline: SpatialPipeline): boolean {
   return passMembership({
     ...pipeline,
     hasReadScreenAlpha: pipeline.readsScreen,
@@ -103,7 +104,9 @@ export function usesAlphaPass(pipeline: SpatialPipeline): boolean {
 }
 
 /** Godot turns alpha to coverage on in the transparent colour pass only (`:431-437`). */
-export const drawsAlphaToCoverage = (pipeline: SpatialPipeline): boolean =>
+export const drawsAlphaToCoverage = (
+  pipeline: SpatialPipeline
+): pipeline is SpatialPipeline & { readonly alphaAntialiasing: AlphaToCoverageMode } =>
   usesAlphaPass(pipeline) && turnsOnAlphaToCoverage(pipeline.alphaAntialiasing);
 
 /** Godot's pipeline (`scene_shader_forward_clustered.cpp:343-447`) as `material`'s draw state. */
@@ -111,7 +114,7 @@ export function applySpatialPipeline(material: THREE.Material, pipeline: Spatial
   const isAlphaPass = usesAlphaPass(pipeline);
   Object.assign(material, isAlphaPass ? alphaPassBlendState(pipeline) : { blending: THREE.NoBlending });
   material.transparent = isAlphaPass;
-  material.alphaToCoverage = drawsAlphaToCoverage(pipeline);
+  material.alphaToCoverage = isAlphaPass && turnsOnAlphaToCoverage(pipeline.alphaAntialiasing);
   material.depthTest = pipeline.depthTest !== 'disabled';
   // `scene_shader_forward_clustered.cpp:355-358`, turned round for GL's depth, which is not reversed.
   material.depthFunc = pipeline.depthTest === 'inverted' ? THREE.GreaterDepth : THREE.LessEqualDepth;

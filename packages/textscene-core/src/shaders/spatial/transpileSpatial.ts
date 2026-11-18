@@ -22,7 +22,6 @@ import { emitTemplateStage } from '../template/emitTemplate.js';
 import { linkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
 import type { RowTexture } from '../template/rowTexture.js';
 import { instanceWords } from './instanceData.js';
-import { turnsOnAlphaToCoverage } from '../../godot/rendering/materials/alphaAntialiasing.js';
 import { coveredOnOneSample } from '../pipeline/singleSampleCoverage.js';
 import {
   applySpatialPipeline,
@@ -171,10 +170,7 @@ function vulkanFragCoord(clip: Vec4): Node {
 
 /** The colour alpha to coverage draws, which a target of one sample cuts at alpha 0.5. */
 function alphaCovered(colour: Node, pipeline: SpatialPipeline): Node {
-  const mode = pipeline.alphaAntialiasing;
-  return drawsAlphaToCoverage(pipeline) && turnsOnAlphaToCoverage(mode)
-    ? coveredOnOneSample(colour, mode)
-    : colour;
+  return drawsAlphaToCoverage(pipeline) ? coveredOnOneSample(colour, pipeline.alphaAntialiasing) : colour;
 }
 
 function sceneMaterial(position: Node, colour: Node, shader: MaterialShader): BoundNodeMaterial {
