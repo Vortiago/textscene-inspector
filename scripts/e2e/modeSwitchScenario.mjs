@@ -11,7 +11,7 @@ const SELECTED_NODE = 'Main/Box';
 /** The switches in order: away from 3D through each mode and back. */
 export const SWITCHES = ['2D', 'In-game', '3D'];
 
-// The In-game view draws through the scene's camera, so its frame differs from the editor's in thousands of pixels.
+// In-game draws through the scene camera, so its frame differs from the editor frame in thousands of px.
 export const OTHER_VIEW_PIXELS = 1_000;
 export const SAME_VIEW_PIXELS = 20;
 
