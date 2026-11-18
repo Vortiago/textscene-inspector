@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { SCENARIOS, scenariosOf } from './gateScenarios.mjs';
 
 const namesOf = (scenarios) => scenarios.map(({ name }) => name);
+const secondsOf = (scenarios) => scenarios.reduce((sum, { seconds }) => sum + seconds, 0);
 
 describe('scenariosOf', () => {
   it('runs every scenario without a shard', () => {
@@ -22,10 +23,9 @@ describe('scenariosOf', () => {
   });
 
   it('gives each of 2 shards less than 60 % of the seconds', () => {
-    const total = SCENARIOS.reduce((sum, { seconds }) => sum + seconds, 0);
+    const total = secondsOf(SCENARIOS);
     for (const index of [1, 2]) {
-      const seconds = scenariosOf({ index, count: 2 }).reduce((sum, scenario) => sum + scenario.seconds, 0);
-      expect(seconds / total).toBeLessThan(0.6);
+      expect(secondsOf(scenariosOf({ index, count: 2 })) / total).toBeLessThan(0.6);
     }
   });
 });
