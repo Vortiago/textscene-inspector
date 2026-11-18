@@ -1,8 +1,10 @@
-import { useId, useLayoutEffect, useMemo, useSyncExternalStore, type ReactNode } from 'react';
+import { useId, useMemo, type ReactNode } from 'react';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext.js';
 import { openScene, type Scene } from '../scene/openScene.js';
 import { resourcePipelineOf } from './sceneResourcePipeline.js';
+import { useSceneGraphs, useSceneText } from './hooks/useOpenedScene.js';
+import './sceneLiveTree.js';
 import { SceneChangeResetter } from './components/TscnPreviewShell/SceneChangeResetter.js';
 import { previewShellProviders } from './components/TscnPreviewShell/previewShellProviders.js';
 
@@ -40,15 +42,14 @@ function SceneTextProviders({ source, provider, rootScenePath, children }: Scene
   // `source` is left out: a new text replaces the parse of the same scene, below.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const scene = useMemo(() => openScene({ source, provider, rootScenePath }), [provider, rootScenePath]);
-  useLayoutEffect(() => scene.setSource(source), [scene, source]);
-  useLayoutEffect(() => () => scene.dispose(), [scene]);
+  useSceneText(scene, source);
   return <SceneProviders scene={scene}>{children}</SceneProviders>;
 }
 
 function SceneProviders({ scene, children }: OpenedSceneProps) {
   const panelId = useId();
-  const { sceneGraph, error } = useSyncExternalStore(scene.subscribe, scene.parse);
-  if (error) throw new Error(`expected the text of a .tscn scene, got: ${error}`);
+  const { parsed, sceneGraph } = useSceneGraphs(scene);
+  if (parsed.error) throw new Error(`expected the text of a .tscn scene, got: ${parsed.error}`);
   const hierarchyValue = useMemo(() => ({ sceneGraph, panelId }), [sceneGraph, panelId]);
   const { loader } = resourcePipelineOf(scene);
   const withProviders = previewShellProviders({
@@ -57,12 +58,12 @@ function SceneProviders({ scene, children }: OpenedSceneProps) {
     rootScenePath: scene.rootScenePath,
   });
 
-  // The resetter clears the selection when the parse changes, or the highlight draws a removed node.
+  // A new parse clears the selection, or the highlight draws a removed node. A write keeps every node.
   return (
     <ResourceLoaderProvider loader={loader}>
       {withProviders(
         <>
-          <SceneChangeResetter sceneGraph={hierarchyValue.sceneGraph} />
+          <SceneChangeResetter sceneGraph={parsed.sceneGraph} />
           {children}
         </>
       )}

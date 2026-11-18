@@ -1,5 +1,11 @@
 import { createRoot } from 'react-dom/client';
-import { TscnCanvas, TscnSceneProvider, openScene, type ResourceProvider } from '@textscene/renderer';
+import {
+  TscnCanvas,
+  TscnSceneProvider,
+  openScene,
+  variant,
+  type ResourceProvider,
+} from '@textscene/renderer';
 
 const FIXTURE_SCENE = `[gd_scene format=3]
 
@@ -40,10 +46,17 @@ const projectOnly: ResourceProvider = {
 };
 
 const gameScene = openScene({ source: FIXTURE_SCENE, provider: projectOnly });
+const query = new URLSearchParams(location.search);
+
+/** `?write=scale` halves the cube from the host's code before the view mounts, so it draws a quarter. */
+const written =
+  query.get('write') === 'scale'
+    ? gameScene.getNode('Cube').set('scale', variant('Vector3(0.5, 0.5, 0.5)'))
+    : Promise.resolve(true);
 
 /** `?mode=in-game` opens the scene and draws it as the game starts it. The page holds one view. */
 function View() {
-  if (new URLSearchParams(location.search).get('mode') === 'in-game') {
+  if (query.get('mode') === 'in-game') {
     return <TscnCanvas scene={gameScene} mode="in-game" />;
   }
   return (
@@ -53,8 +66,10 @@ function View() {
   );
 }
 
-createRoot(document.getElementById('root')!).render(
-  <div id="viewport" style={{ width: 320, height: 240 }}>
-    <View />
-  </div>
+void written.then(() =>
+  createRoot(document.getElementById('root')!).render(
+    <div id="viewport" style={{ width: 320, height: 240 }}>
+      <View />
+    </div>
+  )
 );

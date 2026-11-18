@@ -1,6 +1,6 @@
-# Dumps what only a running engine can answer, as five JSON blobs each after a
+# Dumps what only a running engine can answer, as six JSON blobs each after a
 # marker line. Driven by build-node-catalog/classdb.mjs. Re-run against a newer
-# Godot to refresh all five.
+# Godot to refresh all six.
 #
 # ###NODES_JSON### every INSTANTIABLE Node class, with its dimension (3D / 2D /
 #   Other) and full ancestor chain.
@@ -29,6 +29,15 @@
 #   "variant_properties" names, per instantiable class, each stored property
 #   declared as a Variant. The text saver keeps a Nil only on such a property
 #   and leaves out an empty Object (resource_format_text.cpp:1980).
+#
+# ###NODE_DEFAULTS_JSON### what `ClassDB.class_get_property_default_value`
+#   answers for each stored property of a Node class, as var_to_str writes it.
+#   "declared" holds each property under the class that declares it, read on that
+#   class or, where it is abstract, on its first instantiable inheritor by name.
+#   "overrides" holds, per instantiable class, each value that differs from it:
+#   a Label's `mouse_filter` is 2 where Control's is 0. "derived" holds, per
+#   declaring class, each property a script reaches that the file does not
+#   store, such as Node3D's `position`: its setter writes a stored property.
 extends SceneTree
 
 # PROPERTY_USAGE_STORAGE. The one flag that decides whether a property can reach
@@ -111,6 +120,67 @@ func variant_properties(instance: Object) -> Array:
 			names.append(p["name"])
 	return names
 
+# The class an abstract declarer's defaults are read on: itself, or its first instantiable inheritor.
+func default_reader(c: String) -> String:
+	if ClassDB.can_instantiate(c):
+		return c
+	var inheritors: Array = Array(ClassDB.get_inheriters_from_class(c))
+	inheritors.sort()
+	for inheritor in inheritors:
+		if ClassDB.can_instantiate(inheritor):
+			return inheritor
+	return ""
+
+# PROPERTY_USAGE_GROUP, CATEGORY and SUBGROUP rows name no property.
+const USAGE_HEADINGS := 64 | 128 | 256
+
+# Each own property without STORAGE that a getter or a setter backs, as [name, type, has_setter].
+func derived_properties(c: String) -> Array:
+	var rows: Array = []
+	for p in ClassDB.class_get_property_list(c, true):
+		var usage: int = int(p["usage"])
+		if usage & USAGE_STORAGE != 0 or usage & USAGE_HEADINGS != 0:
+			continue
+		var setter: String = ClassDB.class_get_property_setter(c, p["name"])
+		if setter == "" and ClassDB.class_get_property_getter(c, p["name"]) == "":
+			continue
+		rows.append([p["name"], int(p["type"]), setter != ""])
+	return rows
+
+func node_defaults(properties: Dictionary) -> Dictionary:
+	var declared: Dictionary = {}
+	for c in properties:
+		var reader: String = default_reader(c)
+		if reader == "":
+			continue
+		var values: Dictionary = {}
+		for p in properties[c]:
+			values[p["name"]] = var_to_str(ClassDB.class_get_property_default_value(reader, p["name"]))
+		declared[c] = values
+	var overrides: Dictionary = {}
+	for c in ClassDB.get_class_list():
+		if not ClassDB.is_parent_class(c, "Node") or not ClassDB.can_instantiate(c):
+			continue
+		var differing: Dictionary = {}
+		var declarer: String = c
+		while declarer != "":
+			for name in declared.get(declarer, {}):
+				if differing.has(name):
+					continue
+				var value: String = var_to_str(ClassDB.class_get_property_default_value(c, name))
+				if value != declared[declarer][name]:
+					differing[name] = value
+			declarer = ClassDB.get_parent_class(declarer)
+		if differing.size() > 0:
+			overrides[c] = differing
+	var derived: Dictionary = {}
+	for c in ClassDB.get_class_list():
+		if ClassDB.is_parent_class(c, "Node"):
+			var rows: Array = derived_properties(c)
+			if rows.size() > 0:
+				derived[c] = rows
+	return {"declared": declared, "overrides": overrides, "derived": derived}
+
 func _init() -> void:
 	var classes: Array = []
 	var properties: Dictionary = {}
@@ -168,4 +238,6 @@ func _init() -> void:
 	print(JSON.stringify(resource_bases))
 	print("###RESOURCE_GETTERS_JSON###")
 	print(JSON.stringify({"collections": collections, "variant_properties": variant_property_names}))
+	print("###NODE_DEFAULTS_JSON###")
+	print(JSON.stringify(node_defaults(properties)))
 	quit()

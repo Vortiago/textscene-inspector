@@ -48,6 +48,7 @@ import {
   ROOT_ONLY_VIEWPORT_PROPERTIES,
   rootOnlyDriftMessage,
   harnessWarnings,
+  parseSet,
   projectWindowSizeFromIni,
   renderReference,
 } from './run.mjs';
@@ -222,6 +223,26 @@ describe('bootstrapScript — a non-tool script never runs under previews', () =
     expect(gd).toMatch(/if PREVIEWS or IN_GAME:\n\t\t_strip_runtime_scripts\(target\)/);
     expect(gd).toMatch(/const IN_GAME := false/);
     expect(gd).toMatch(/const PREVIEWS := false/);
+  });
+});
+
+describe('--set', () => {
+  it('reads the node path, the property and the text after the first =', () => {
+    expect(parseSet('HUD/Score:text="a=b"')).toEqual({ path: 'HUD/Score', property: 'text', text: '"a=b"' });
+  });
+
+  it('collects each write in order', () => {
+    const { sets } = parseArgs(['a.tscn', '--set', 'A:visible=false', '--set', 'B:z_index=3']);
+    expect(sets.map(({ path }) => path)).toEqual(['A', 'B']);
+  });
+
+  it('refuses a write that names no property', () => {
+    expect(() => parseSet('HUD/Score=1')).toThrow(/expects <path>:<property>=<variant text>/);
+  });
+
+  it('applies each write with str_to_var before the capture', () => {
+    const script = bootstrap({ sets: [{ path: 'Cube', property: 'position', text: 'Vector3(1, 0, 0)' }] });
+    expect(script).toContain('["Cube", "position", "Vector3(1, 0, 0)"],');
   });
 });
 

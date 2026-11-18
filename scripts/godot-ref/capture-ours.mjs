@@ -10,7 +10,8 @@
 
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
-import { probePixels, vec3 } from './run.mjs';
+import { parseSet, probePixels, vec3 } from './run.mjs';
+import { applySceneWrites } from '../visual/sceneWrites.mjs';
 import { freeCameraPath, sceneCameraPath, withFreeCamera } from './ourCamera.mjs';
 import { launchGodotComparisonBrowser } from '../showcase/browser.mjs';
 import {
@@ -34,6 +35,7 @@ export function parseArgs(argv) {
     lookAt: null,
     sceneCamera: null,
     showCollisions: false,
+    sets: [],
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -67,6 +69,10 @@ export function parseArgs(argv) {
       case '--scene-camera':
         args.sceneCamera = argv[i + 1] && !String(argv[i + 1]).startsWith('--') ? argv[++i] : true;
         break;
+      // As `ref:godot --set`: the same write before the capture.
+      case '--set':
+        args.sets.push(parseSet(argv[++i]));
+        break;
       case '--probe': {
         const raw = argv[++i];
         const parts = String(raw).split(',').map(Number);
@@ -98,6 +104,7 @@ export function captureOurs({
   sceneCamera = null,
   showCollisions = false,
   inGameFrame = null,
+  sets = [],
 }) {
   return withPreviewBrowser(
     { ...previewPort('parity'), launchBrowser: launchGodotComparisonBrowser },
@@ -119,6 +126,7 @@ export function captureOurs({
         onSlow: (ms) => console.log(`[ours] no network idle within ${ms}ms`),
       });
       if (!target) throw new Error(targetReason);
+      await applySceneWrites(page, sets);
       const collisionsReason = showCollisions ? await showDisplayOverlay(page, 'Collisions') : null;
       if (collisionsReason) throw new Error(collisionsReason);
       const { buffer, reason } = await settleCanvas(page, target);
@@ -164,7 +172,7 @@ async function main() {
     console.error(
       '       [--probe x,y] [--patch n] [--frame] [--2d] [--collisions] [--camera x,y,z] [--look-at x,y,z]'
     );
-    console.error('       [--scene-camera [path]]');
+    console.error('       [--scene-camera [path]] [--set path:property=text]');
     process.exit(2);
   }
 

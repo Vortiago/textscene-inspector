@@ -12,6 +12,7 @@ import { groupOf } from './build-node-catalog/groups.mjs';
 import { attachLinks } from './build-node-catalog/links.mjs';
 import {
   CATALOG_OUT,
+  NODE_DEFAULTS_OUT,
   PROPS_OUT,
   RESOURCE_BASES_OUT,
   RESOURCE_GETTERS_OUT,
@@ -64,6 +65,27 @@ function writeEngineTables(enumerated) {
   writeJson(RESOURCE_BASES_OUT, bases);
   console.log(`Wrote ${RESOURCE_BASES_OUT} - ${Object.keys(bases).length} classes.`);
   writeGetters(enumerated.resourceGetters);
+  writeDefaults(enumerated.nodeDefaults);
+}
+
+/** Each table sorted by class and by property, so a regenerated file diffs by content. */
+function writeDefaults({ declared, overrides, derived }) {
+  const byClass = (table) =>
+    Object.fromEntries(
+      Object.entries(sortedByKey(table)).map(([className, values]) => [className, sortedByKey(values)])
+    );
+  const defaults = {
+    declared: byClass(declared),
+    overrides: byClass(overrides),
+    derived: Object.fromEntries(
+      Object.entries(sortedByKey(derived)).map(([className, rows]) => [
+        className,
+        [...rows].sort(([a], [b]) => byName(a, b)),
+      ])
+    ),
+  };
+  writeJson(NODE_DEFAULTS_OUT, defaults);
+  console.log(`Wrote ${NODE_DEFAULTS_OUT} - ${Object.keys(defaults.declared).length} declaring classes.`);
 }
 
 function writeGetters({ collections, variant_properties }) {

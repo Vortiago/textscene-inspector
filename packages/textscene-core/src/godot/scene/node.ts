@@ -3,7 +3,7 @@
 import { enumNamesByValue, relabelEnumNames } from '../classdb/enumNames.js';
 
 /** `Node::AutoTranslateMode` (`scene/main/node.h:126-130`). */
-const AutoTranslateMode = {
+export const AutoTranslateMode = {
   INHERIT: 0,
   ALWAYS: 1,
   DISABLED: 2,

@@ -1,16 +1,7 @@
 /** Godot 4.6.3's Node3D facts a scene's properties carry. */
 
 import { enumNamesByValue, pascalCaseLabel, relabelEnumNames } from '../classdb/enumNames.js';
-
-/** `EulerOrder` (`core/math/math_defs.h:129-136`), the order `rotation_order` stores. */
-const EulerOrder = {
-  XYZ: 0,
-  XZY: 1,
-  YXZ: 2,
-  YZX: 3,
-  ZXY: 4,
-  ZYX: 5,
-} as const;
+import { EulerOrder } from '../math/euler.js';
 
 /** `Node3D::RotationEditMode` (`scene/3d/node_3d.h:62-66`). */
 const RotationEditMode = {

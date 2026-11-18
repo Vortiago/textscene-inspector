@@ -16,5 +16,9 @@ export { COMPACT_LAYOUT_QUERY, isCompactLayout } from './components/TscnPreviewS
 // The debounced persistence `<TscnPreviewShell>` uses, for a host such as the web app's Source pane.
 export { usePersistedState } from './hooks/usePersistedState.js';
 
+// The scene the shell opens, so a host's code finds its nodes and writes their properties.
+export type { Scene } from '../scene/openScene.js';
+export { variant } from '../scene/variant.js';
+
 // The shell's parse pipeline, so a host makes the same renderability decision the shell makes.
 export { parseTscnContent } from '../scene/parseScene.js';

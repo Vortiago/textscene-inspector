@@ -21,8 +21,8 @@ const bundlePath = join(distDir, 'index.js');
 const bundleKey = 'dist/index.js';
 
 /** One view draws both modes, so no second view component is public, and core's internals stay out. */
-const PUBLIC_VALUE_EXPORTS = ['TscnCanvas', 'TscnSceneProvider', 'openScene', 'useSelection'];
-const PUBLIC_TYPE_EXPORTS = ['ResourceProvider', 'Scene'];
+const PUBLIC_VALUE_EXPORTS = ['TscnCanvas', 'TscnSceneProvider', 'openScene', 'useSelection', 'variant'];
+const PUBLIC_TYPE_EXPORTS = ['NodeHandle', 'ResourceProvider', 'Scene', 'SceneValue', 'Variant'];
 
 /** The packages the bundle imports from the consumer, so it has one React and one three.js. */
 const IMPORTED_PEERS = ['@react-three/fiber', 'react', 'three'];

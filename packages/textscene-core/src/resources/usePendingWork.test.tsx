@@ -5,17 +5,17 @@ import { textureWork } from './textures/textureWork';
 import { usePendingWork } from './usePendingWork';
 
 describe('usePendingWork', () => {
-  it('follows the count from zero, up, and back to zero', () => {
+  it('follows the count from zero, up, and back to zero', async () => {
     const { result } = renderHook(() => usePendingWork(textureWork));
     expect(result.current).toBe(0);
 
     let end: () => void = () => {};
-    act(() => {
+    await act(async () => {
       end = textureWork.begin();
     });
     expect(result.current).toBe(1);
 
-    act(() => end());
+    await act(async () => end());
     expect(result.current).toBe(0);
   });
 

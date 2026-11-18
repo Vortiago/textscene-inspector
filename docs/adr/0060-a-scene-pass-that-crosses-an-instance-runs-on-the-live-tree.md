@@ -1,7 +1,8 @@
 # A scene pass that crosses an instance runs on the live tree
 
 - Status: Accepted
-- Related: ADR-0013 (the instance root merge), ADR-0045 (a scene pass is an implemented drive).
+- Related: ADR-0013 (the instance root merge), ADR-0045 (a scene pass is an implemented drive), ADR-0086
+  (a host write lies under every pass, in the graph the tree is built from).
 
 ## Context
 

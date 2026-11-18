@@ -596,9 +596,17 @@ _Avoid_: "game view" for a component of its own: one view draws every mode. "Pla
 Godot's `Engine::is_editor_hint()`: true in the editor's views, false where the game runs. It is the one intent every editor-only drawer reads. The toggles of `ViewportModeContext` read as the game draws where it is false, and a node with `editor_only` draws only where it is true.
 _Avoid_: "game flag", a per-node "in game" prop.
 
-**Scene** (`Scene` from `openScene` in `scene/openScene.ts`):
-An open `.tscn` text with its resource provider: one parse, made the first time a view reads it, and one resource loader. Each view of a scene reads the parse, the loader and the project settings from it. It holds no React and no three.js.
+**Scene** (`Scene` from `openScene` in `scene/openScene.ts`, ADR-0086):
+An open `.tscn` text with its resource provider: one parse, made the first time a view reads it, one resource loader, and the **host writes**. It is the seam of the renderer: a host's code finds a node with `getNode` and reads and writes its properties through a **node handle**, and every view draws the parse with the writes laid on. It holds no React and no three.js.
 _Avoid_: "scene context", "document". "scene graph" for the parse.
+
+**Node handle** (`NodeHandle`, `scene/nodeHandle.ts`):
+A node of a **scene** as a script holds it: by identity for the life of the text, with `get`, `set` and the NodePath walk of `get_node`. Two lookups of one node give one handle. After a new text the handle answers `isInsideTree() === false`.
+_Avoid_: a node path string as a handle, "node reference".
+
+**Host write** (`WriteStore`, `scene/sceneWrites.ts`):
+A property value a host's code gave `set`, kept as Variant text by live path and laid over the file as an instance override, so every reader of the **Live scene tree** reads it as a file value. The layers are, lowest first: the file, the host writes, the animated values, the **Live scene passes**.
+_Avoid_: "patch" for a host write. A **node patch** is a pass result laid over the tree.
 
 **Frame profile** (`r3f/frameProfile/`):
 The measurement of every frame on one renderer while the Performance toggle is on: frame rate, frame interval, and the CPU time, GPU time and draw calls of each **render step**, averaged over half a second (ADR-0053).

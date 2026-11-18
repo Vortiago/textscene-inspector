@@ -5,7 +5,7 @@
 import { useEffect, useMemo } from 'react';
 import type { TscnExternalResource, TscnScene } from '../../parser/types.js';
 import { useResource, useResourceLoader, type ResourceResult } from '../../resources/useResource.js';
-import { findExtResource, parseResourceReference } from '../../resources/SubResourceResolver.js';
+import { registerInstanceResource } from '../../resources/registerInstanceResource.js';
 import { useFirstLoadFailure } from '../../resources/loadFailure/useFirstLoadFailure.js';
 import { useMissingReport } from '../contexts/MissingResourcesContext.js';
 
@@ -23,11 +23,7 @@ export function useInstancedScene(
   // Ahead of `useResource`, since a component runs its effects in order and the
   // load checks the registered type. Idempotent.
   useEffect(() => {
-    if (!loader || !loadPath) return;
-    const parsed = parseResourceReference(instanceRef);
-    if (parsed?.type !== 'ExtResource') return;
-    const ext = findExtResource(externalResources, parsed.id);
-    if (ext) loader.register(ext);
+    if (loader && loadPath) registerInstanceResource(loader, instanceRef, externalResources);
   }, [loader, loadPath, instanceRef, externalResources]);
 
   // `useResource` requests nothing for '', so the hook count stays stable.

@@ -255,12 +255,23 @@ const HALF_PI_FLOAT = f(f(Math.PI) * 0.5);
  * `Transform2D::get_skew` (`transform_2d.cpp:72-75`) in `real_t` float: the angle of the y axis
  * from perpendicular to the x axis, mirrored with the sign of the determinant.
  */
-function transform2DGetSkew(t: Transform2DColumns): number {
+export function transform2DGetSkew(t: Transform2DColumns): number {
   const detSign = sign(transform2DDeterminant(t));
   const x = normalizedVector2({ x: t.a, y: t.b });
   const y = normalizedVector2({ x: t.c, y: t.d });
   const cosine = f(f(x.x * f(detSign * y.x)) + f(x.y * f(detSign * y.y)));
   return f(f(acosClamped(cosine)) - HALF_PI_FLOAT);
+}
+
+/** `Transform2D::set_skew` (`transform_2d.cpp:77-80`) in float: the y axis turns, keeping its length. */
+export function transform2DSetSkew(t: Transform2DColumns, skew: number): Transform2DColumns {
+  const detSign = sign(transform2DDeterminant(t));
+  const angle = f(HALF_PI_FLOAT + f(skew));
+  const sin = f(Math.sin(angle));
+  const cos = f(Math.cos(angle));
+  const turned = normalizedVector2({ x: f(f(t.a * cos) - f(t.b * sin)), y: f(f(t.a * sin) + f(t.b * cos)) });
+  const length = vector2Length({ x: t.c, y: t.d });
+  return { ...t, c: f(f(detSign * turned.x) * length), d: f(f(detSign * turned.y) * length) };
 }
 
 /**

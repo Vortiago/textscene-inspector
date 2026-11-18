@@ -75,6 +75,57 @@ into the element at its aspect ratio, with bars around it.
 Draw one view per page. The Decal atlas and the area light atlas are shared by every view on a
 page, and #1005 gives each view its own.
 
+### Change the scene from your code
+
+The scene is the interface a script would use. Find a node, then read and write its properties, and
+every view of the scene draws the change.
+
+```tsx
+import { openScene, variant } from '@textscene/renderer';
+
+const scene = openScene({ source, provider });
+
+await scene.getNode('HUD/Score').set('text', 'Score: 10');
+await scene.getNode('%Player').set('position', variant('Vector3(4, 0, 2)'));
+const visible = await scene.getNode('Enemy').get('visible');
+```
+
+- **Find.** `scene.getNode(path)` follows a NodePath as Godot's `get_node` does: from the root node
+  of the scene, with `..`, `%Name`, and `/root` for the root window. A miss throws Godot's
+  `Node not found` message, and `getNodeOrNull` answers `null`. A node inside a sub-scene is found
+  once that sub-scene loads. `scene.observe(null, listener)` tells you when the tree changes.
+- **Node handles.** A handle has `path`, `name`, `type` (the Godot class), `getNode`,
+  `getNodeOrNull`, `getParent`, `getChildren` and `isInsideTree`. Two lookups of one node give the
+  same handle. `scene.setSource(text)` frees every node: an old handle answers
+  `isInsideTree() === false`, and a write to it throws.
+- **Read and write.** `get(property)` and `set(property, value)` take every property of the class
+  and its bases. They return promises, since the class table loads on the first call. `get` answers
+  the last write, else the value in the file, else the class default. `set` answers `true` where
+  Godot reports the write valid. A name the class does not have answers `false` and warns once.
+- **Values.** A boolean, a number and a string pass as they are, and convert to the type of the
+  property as Godot converts them. A whole number is an `int`. Any other type is `variant(text)`,
+  with the text as a `.tscn` file spells it. `get` answers in the same forms.
+- **Resources.** `await scene.load('res://icon.png')` gives a value that a property of a resource
+  type takes, so you can swap a texture, a mesh, a material or a theme. A missing file draws as a
+  missing resource.
+- **Redraw.** The writes of one task draw one frame. A write before any view mounts shows on the
+  first frame. `scene.observe(path, listener)` tells you when that node is written.
+
+The limits of this release:
+
+- No node is added, removed, moved or renamed. `set` of `script`, `instance` or `name` throws.
+- A write replaces a whole property. A write inside a resource, such as the colour of a material,
+  is not possible: swap the whole resource.
+- A property that Godot computes from the layout, such as the `size` and `position` of a `Control`,
+  throws with the name of the property. So do a running property, such as `playing`, and the global
+  transform of a `Node2D` under a `Control` (#2003).
+- Most setters store the value as Godot casts it, and run none of their own checks. The global
+  transforms, the anchors of a `Control`, `frame_coords` and `volume_linear` run Godot's setter
+  (#2002).
+- `get` of a property that a scene pass drives, such as the target of a `RemoteTransform3D`, answers
+  the value under the pass.
+- Scripts do not run, no signal reaches your code, and no input reaches the scene.
+
 ### The 3D mode
 
 With no `mode`, or `mode="3D"`, the view draws the scene as the Godot editor's 3D view does: an
@@ -99,12 +150,17 @@ export function SceneView({ source }: { source: string }) {
 
 ## API
 
-The package exports six names.
+The package exports these names.
 
 - `openScene({ source, provider, rootScenePath? })`: opens the text of a scene and returns a
   `Scene`. It parses the text once, the first time a view reads it.
 - `Scene` (a type): an open scene. `setSource(text)` replaces its text, and every view of it draws
-  the new text. `dispose()` closes it.
+  the new text. `getNode`, `getNodeOrNull`, `load` and `observe` are in "Change the scene from your
+  code". `dispose()` closes it.
+- `NodeHandle` (a type): a node of a scene, which `getNode` gives.
+- `variant(text)`: a value of any Godot type, as a `.tscn` file spells it. It throws for a text
+  Godot cannot read.
+- `Variant` and `SceneValue` (types): what `variant` gives, and what `get` and `set` take.
 - `TscnCanvas`: the view. Its props are `scene` (a `Scene`, optional inside
   `<TscnSceneProvider>`), `mode` (`'in-game'` or `'3D'`, default `'3D'`) and `className`.
 - `TscnSceneProvider`: mounts what the view reads. Give it `scene` (a `Scene`), or `source` (the
