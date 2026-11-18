@@ -52,12 +52,13 @@ export function ownProgramDraw(material: THREE.Material): PrepassDraw | null {
 /** Draws with `material`'s own depth state and no colour, then gives back the state it found. */
 function asDepthOnly(material: THREE.Material): (draw: () => void) => void {
   return (draw) => {
-    const { colorWrite } = material;
-    material.colorWrite = false;
+    // A stencil op would run twice a frame, once here and once in the colour pass.
+    const { colorWrite, stencilWrite } = material;
+    Object.assign(material, { colorWrite: false, stencilWrite: false });
     try {
       drawWithOwnDepth(material, draw);
     } finally {
-      material.colorWrite = colorWrite;
+      Object.assign(material, { colorWrite, stencilWrite });
     }
   };
 }
@@ -114,6 +115,8 @@ function glRendererOf(webgl: THREE.WebGLRenderer): string {
 export interface DepthPrepass {
   readonly first: OpaqueSentinel;
   readonly last: OpaqueSentinel;
+  /** Disposes both sentinels, and gives back any state a render that threw left changed. */
+  readonly dispose: () => void;
 }
 
 /** The depth state of an opaque material's colour pass. */
@@ -132,7 +135,7 @@ const colourDepthNow = ({ depthFunc, depthWrite }: THREE.Material): ColourDepth 
 });
 
 /** Its own depth state, also inside a render nested in one whose prepass has changed it. */
-const colourDepthOf = (material: THREE.Material): ColourDepth =>
+export const colourDepthOf = (material: THREE.Material): ColourDepth =>
   depthBeforePrepass.get(material) ?? colourDepthNow(material);
 
 /** A prepass to add to a scene, both sentinels together. */
@@ -162,7 +165,12 @@ export function createDepthPrepass({
     });
   });
   const last = createLastOpaqueSentinel('DepthPrepassEnd', () => restoreColourDepth(changed));
-  return { first, last };
+  const dispose = (): void => {
+    restoreColourDepth(changed);
+    first.dispose();
+    last.dispose();
+  };
+  return { first, last, dispose };
 }
 
 function drawPrepass(

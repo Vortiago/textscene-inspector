@@ -17,12 +17,11 @@ export function useSceneDepthPrepass(scene: THREE.Scene | null): void {
   const disabledVendors = projectDepthPrepassDisabledVendors(settings);
   useEffect(() => {
     if (!scene || !isDrawn) return undefined;
-    const { first, last } = createSceneDepthPrepass({ renderingMethod, disabledVendors });
-    scene.add(first, last);
+    const prepass = createSceneDepthPrepass({ renderingMethod, disabledVendors });
+    scene.add(prepass.first, prepass.last);
     return () => {
-      scene.remove(first, last);
-      first.dispose();
-      last.dispose();
+      scene.remove(prepass.first, prepass.last);
+      prepass.dispose();
     };
   }, [scene, isDrawn, renderingMethod, disabledVendors]);
 }

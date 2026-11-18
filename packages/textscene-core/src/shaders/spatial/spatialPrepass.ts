@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { vec4 } from 'three/tsl';
 import type { Node, UniformNode } from 'three/webgpu';
 import { DEPTH_PREPASS_OPAQUE_THRESHOLD } from '../../godot/rendering/opaquePrepass.js';
-import type { PrepassDraw } from '../pipeline/depthPrepass.js';
+import { colourDepthOf, type PrepassDraw } from '../pipeline/depthPrepass.js';
 import type { Renderer } from '../preprocessor/renderingMethod.js';
 import { BoundNodeMaterial, type MaterialShader } from '../uniforms/boundMaterial.js';
 import {
@@ -112,7 +112,8 @@ function depthMaterial(
     colorWrite: false,
     depthWrite: true,
     depthTest: material.depthTest,
-    depthFunc: material.depthFunc,
+    // Built at the first draw, which can be in a render nested inside another's prepass.
+    depthFunc: colourDepthOf(material).depthFunc,
     forceSinglePass: true,
   });
   depth.onTranslatorFault = (fault) => material.reportFault(fault);

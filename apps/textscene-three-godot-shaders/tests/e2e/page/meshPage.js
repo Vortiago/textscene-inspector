@@ -107,8 +107,7 @@ function drawMesh(spec) {
     samples: spec.msaa ?? 0,
   });
   for (const spatial of transpiled.values()) spatial.material.dispose();
-  prepass.first.dispose();
-  prepass.last.dispose();
+  prepass.dispose();
   geometry.dispose();
   if (faults.length > 0) return { faults: faults.map(({ name, message, log }) => ({ name, message, log })) };
   return { pixels: Array.from(pixels) };

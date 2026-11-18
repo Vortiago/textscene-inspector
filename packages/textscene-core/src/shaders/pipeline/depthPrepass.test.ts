@@ -12,6 +12,7 @@ interface RecordedDraw {
   readonly material: THREE.Material;
   readonly colorWrite: boolean;
   readonly depthWrite: boolean;
+  readonly stencilWrite: boolean;
   readonly group: THREE.GeometryGroup | null;
 }
 
@@ -33,6 +34,7 @@ function recordingRenderer(draws: RecordedDraw[], gpu: string): THREE.WebGLRende
         material,
         colorWrite: material.colorWrite,
         depthWrite: material.depthWrite,
+        stencilWrite: material.stencilWrite,
         group,
       });
     },
@@ -98,6 +100,21 @@ describe('createDepthPrepass', () => {
     const inverted = new THREE.MeshBasicMaterial({ depthFunc: THREE.GreaterDepth });
     const glass = new THREE.MeshPhysicalMaterial({ transmission: 1 });
     expect(prepassDraws(meshOf(overlay), meshOf(inverted), meshOf(glass))).toEqual([]);
+  });
+
+  it('draws no stencil op in the prepass, so the colour pass runs it once', () => {
+    const material = new THREE.MeshBasicMaterial({ stencilWrite: true });
+    const [draw] = prepassDraws(meshOf(material));
+    expect(draw!.stencilWrite).toBe(false);
+    expect(material.stencilWrite).toBe(true);
+  });
+
+  it('gives the colour pass its own state back on dispose, after a render that never reached the last sentinel', () => {
+    const material = new THREE.MeshBasicMaterial();
+    const { prepass, reach } = prepassScene(FORWARD_PLUS, meshOf(material));
+    reach(prepass.first);
+    prepass.dispose();
+    expect(material).toMatchObject({ depthFunc: THREE.LessEqualDepth, depthWrite: true });
   });
 
   it('gives the colour back when a draw throws', () => {
