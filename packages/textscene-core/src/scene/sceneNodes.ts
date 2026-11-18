@@ -3,16 +3,16 @@ import { nodeNotFound, SceneNodeHandle, type HandleHost, type NodeHandle } from 
 import { getNodeOrNull, ROOT_WINDOW_PATH, type WalkedTree } from './nodePathWalk.js';
 import { loadPropertyAccess, type PropertyAccess, type SceneProperties } from './sceneProperties.js';
 import type { SceneTree, SceneTreeNode } from './sceneRuntime.js';
-import type { SceneValue } from './variant.js';
+import { sceneValueOf, valueOfSceneValue, type SceneValue } from './variant.js';
 import { isWritable } from './writtenScene.js';
 import {
-  ArgumentTypeError,
+  argumentCountError,
   findPortedMethod,
-  hasPortedMethods,
+  findPortedAccessor,
+  intArgument,
   runPortedMethod,
   type CallResult,
   type MethodTarget,
-  type PortedMethod,
 } from './nodeMethods.js';
 import { memoisedImport } from '../resources/memoisedImport.js';
 import { ViewportCameras } from './viewportCameras.js';
@@ -124,41 +124,31 @@ export class SceneNodes implements HandleHost {
   /** `Object::get`: a getter this release ports as a method runs it. */
   async get(path: string, property: string): Promise<SceneValue | null> {
     const generation = this.generation;
-    const accessor = await this.portedAccessor(path, property, 'getter');
+    const accessor = findPortedAccessor(this.typeOfNode(path), 'getter', property);
     if (!accessor) return this.getStored(path, property);
     const { name, method } = accessor;
     const target = this.methodTarget(path, generation);
-    return (await runPortedMethod(method, name, target, [])) as SceneValue | null;
+    return (await runPortedMethod(
+      method,
+      `${this.typeOfNode(path)}::${name}`,
+      target,
+      []
+    )) as SceneValue | null;
   }
 
   /** `Object::set`: a setter this release ports as a method runs it. */
   async set(path: string, property: string, value: SceneValue): Promise<boolean> {
     const generation = this.generation;
-    const accessor = await this.portedAccessor(path, property, 'setter');
+    const accessor = findPortedAccessor(this.typeOfNode(path), 'setter', property);
     if (!accessor) return this.setStored(path, property, value);
-    try {
-      await runPortedMethod(accessor.method, accessor.name, this.methodTarget(path, generation), [value]);
-    } catch (error) {
-      if (error instanceof ArgumentTypeError) return false;
-      throw error;
-    }
-    return true;
-  }
-
-  /** The ported setter or getter of `property`, if the node's class ports it. */
-  private async portedAccessor(
-    path: string,
-    property: string,
-    role: 'setter' | 'getter'
-  ): Promise<{ name: string; method: PortedMethod } | undefined> {
-    const generation = this.generation;
-    const type = this.typeOfNode(path);
-    if (!hasPortedMethods(type)) return undefined;
-    const methods = await loadPropertyMethods();
-    this.assertSameText(generation, path);
-    const name = methods.accessorOf(role, type, property);
-    const method = name ? findPortedMethod(type, name) : undefined;
-    return name && method ? { name, method } : undefined;
+    // `Object::set` casts as `VariantCaster` does, and reports the call valid only for a strict cast.
+    const { access } = await this.propertyTarget(path);
+    const cast = access.castForSetter(this.typeOfNode(path), property, valueOfSceneValue(value));
+    const target = this.methodTarget(path, generation);
+    await runPortedMethod(accessor.method, `${this.typeOfNode(path)}::${accessor.name}`, target, [
+      sceneValueOf(cast.value),
+    ]);
+    return cast.isValid;
   }
 
   /** `Object::callv`: a ported method, else the property a setter or a getter reaches. */
@@ -166,16 +156,17 @@ export class SceneNodes implements HandleHost {
     const generation = this.generation;
     const type = this.typeOfNode(path);
     const ported = findPortedMethod(type, method);
-    if (ported) return runPortedMethod(ported, method, this.methodTarget(path, generation), args);
+    const name = `${type}::${method}`;
+    if (ported) return runPortedMethod(ported, name, this.methodTarget(path, generation), args);
     const methods = await loadPropertyMethods();
     this.assertSameText(generation, path);
     const reached = methods.findPropertyMethod(type, method);
     if (!reached) {
       throw new Error(
-        `expected a method this release ports, got "${method}" of ${type}: it ports the camera methods and the property setters and getters, and no other method`
+        `${name}: not a method this release ports. It ports the camera methods and the property setters and getters.`
       );
     }
-    return this.callPropertyMethod(path, method, reached, args);
+    return this.callPropertyMethod(path, name, reached, args);
   }
 
   /** A setter or a getter: an indexed one takes the index first (`class_db.cpp:1667-1673`). */
@@ -188,12 +179,10 @@ export class SceneNodes implements HandleHost {
     const isIndexed = !properties.has(null);
     const argumentCount = Number(isIndexed) + (role === 'setter' ? 1 : 0);
     // The count is checked before the index, as a bound call checks it first (`method_bind.h`).
-    if (args.length !== argumentCount) {
-      throw new Error(`expected ${argumentCount} arguments for ${method}, got ${args.length}`);
-    }
-    const index = isIndexed ? args[0] : null;
+    if (args.length !== argumentCount) throw argumentCountError(method, argumentCount, args.length);
+    const index = isIndexed ? intArgument(args[0]!, method) : null;
     const values = isIndexed ? args.slice(1) : args;
-    const property = properties.get(index as number | null);
+    const property = properties.get(index);
     if (property === undefined) {
       throw new Error(
         `expected one of the indexes ${[...properties.keys()].join(', ')} for ${method}, got ${String(index)}`

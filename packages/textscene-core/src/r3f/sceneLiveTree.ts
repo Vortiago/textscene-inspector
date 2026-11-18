@@ -62,7 +62,7 @@ const camerasOf = perObject((tree: LiveTree): readonly TreeCamera[] => {
     if (awaitedInstancePath(link)) return;
     const { type, rawProperties } = link.step.node;
     const dimension = isCamera3DType(type) ? '3D' : isCamera2DType(type) ? '2D' : null;
-    if (dimension) cameras.push({ path: link.path, dimension, viewport, rawProperties });
+    if (dimension) cameras.push({ path: link.path, type, dimension, viewport, rawProperties });
     descend(descendsFromClass(type, 'Viewport') ? link.path : viewport);
   });
   return cameras;

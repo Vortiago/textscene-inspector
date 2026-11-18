@@ -526,6 +526,9 @@ export function parseCall(text) {
     throw new Error(`--call expects <path>:<method>[=<variant text>;...], got "${text}"`);
   }
   const args = equals < 0 ? [] : source.slice(equals + 1).split(CALL_ARGUMENT_SEPARATOR);
+  if (args.some((arg) => arg.trim() === '')) {
+    throw new Error(`--call expects a Variant text for each argument, got an empty argument in "${text}"`);
+  }
   return { path: target.slice(0, colon), method: target.slice(colon + 1), args };
 }
 

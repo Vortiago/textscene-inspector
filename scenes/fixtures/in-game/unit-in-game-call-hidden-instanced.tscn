@@ -1,0 +1,39 @@
+[gd_scene load_steps=2 format=3]
+
+; `make_current` on a hidden Camera3D and on a Camera3D inside an instanced sub-scene. Godot draws
+; through both: `visible` hides nothing of a camera's view (`camera_3d.cpp:352-360`). No other scene
+; calls a camera that is hidden or instanced.
+
+[ext_resource type="PackedScene" path="res://call-camera-rig.tscn" id="1_rig"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+
+[sub_resource type="StandardMaterial3D" id="Material_box"]
+albedo_color = Color(0.9, 0.5, 0.2, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+radius = 0.4
+height = 0.8
+
+[sub_resource type="StandardMaterial3D" id="Material_ball"]
+albedo_color = Color(0.2, 0.5, 0.9, 1)
+
+[node name="Main" type="Node3D"]
+
+[node name="Box" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("Material_box")
+
+[node name="Ball" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, -1)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Material_ball")
+
+[node name="Front" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0.5, 5)
+
+[node name="Hidden" type="Camera3D" parent="."]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 5, 0.5, -0.5)
+visible = false
+
+[node name="Rig" parent="." instance=ExtResource("1_rig")]

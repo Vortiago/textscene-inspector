@@ -104,6 +104,17 @@ export function resolveSet(
   return { kind: 'written', writes, isValid: canConvertStrict(value.type, derivedProperty.type) };
 }
 
+/** The value a setter takes, cast to the property's type, and whether `Object::set` reports it valid. */
+export function castForSetter(
+  className: string,
+  property: string,
+  value: VariantValue
+): { readonly value: VariantValue; readonly isValid: boolean } {
+  const stored = findClassProperty(className, property);
+  const to = stored ? valueTypeOf(stored) : (findDerivedProperty(className, property)?.type ?? T.NIL);
+  return { value: castVariant(value, to), isValid: canConvertStrict(value.type, to) };
+}
+
 /** What `get` reads of one property, or `unknown` for a name the class does not have. */
 export type GetOutcome =
   | { readonly kind: 'unknown' }

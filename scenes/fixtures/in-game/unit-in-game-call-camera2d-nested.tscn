@@ -1,0 +1,50 @@
+[gd_scene load_steps=2 format=3]
+
+; A Camera2D inside a SubViewport frames that viewport alone, and a call to it leaves the root's
+; camera. A Camera2D under a CanvasLayer still frames the root viewport (`camera_2d.cpp:353-355`).
+; No other scene calls a Camera2D in either place.
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_1"]
+viewport_path = NodePath("SubViewport")
+
+[node name="Main" type="Node2D"]
+
+[node name="Square" type="Polygon2D" parent="."]
+color = Color(0.2, 0.6, 0.9, 1)
+polygon = PackedVector2Array(0, 0, 60, 0, 60, 60, 0, 60)
+
+[node name="Triangle" type="Polygon2D" parent="."]
+position = Vector2(220, 40)
+color = Color(0.9, 0.3, 0.3, 1)
+polygon = PackedVector2Array(0, 40, 30, 0, 60, 40)
+
+[node name="Root" type="Camera2D" parent="."]
+position = Vector2(140, 70)
+
+[node name="SubViewport" type="SubViewport" parent="."]
+size = Vector2i(96, 96)
+render_target_update_mode = 4
+
+[node name="Disc" type="Polygon2D" parent="SubViewport"]
+color = Color(0.9, 0.8, 0.2, 1)
+polygon = PackedVector2Array(0, 0, 40, 0, 40, 40, 0, 40)
+
+[node name="Mark" type="Polygon2D" parent="SubViewport"]
+position = Vector2(70, 50)
+color = Color(0.6, 0.3, 0.9, 1)
+polygon = PackedVector2Array(0, 0, 20, 0, 20, 20, 0, 20)
+
+[node name="Centre" type="Camera2D" parent="SubViewport"]
+position = Vector2(20, 20)
+
+[node name="Corner" type="Camera2D" parent="SubViewport"]
+position = Vector2(80, 60)
+
+[node name="Screen" type="Sprite2D" parent="."]
+position = Vector2(240, 130)
+texture = SubResource("ViewportTexture_1")
+
+[node name="Layer" type="CanvasLayer" parent="."]
+
+[node name="LayerCam" type="Camera2D" parent="Layer"]
+position = Vector2(60, 40)

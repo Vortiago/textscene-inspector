@@ -4,6 +4,7 @@ import { ViewportCameras } from './viewportCameras';
 
 const camera3D = (name: string): TreeCamera => ({
   path: `Main/${name}`,
+  type: 'Camera3D',
   dimension: '3D',
   viewport: null,
   rawProperties: {},
@@ -31,6 +32,14 @@ describe('ViewportCameras', () => {
     cameras.makeCurrent3D(a.path);
     swapTree([]);
     expect(cameras.camera3D(null)).toBeNull();
+  });
+
+  it('moves a camera whose path a load seats under another viewport, as an exit and an enter', () => {
+    const [a, b] = [camera3D('A'), camera3D('B')];
+    const { cameras, swapTree } = camerasOver([a, b]);
+    cameras.makeCurrent3D(b.path);
+    swapTree([a, { ...b, viewport: 'Main/View' }]);
+    expect([cameras.camera3D(null), cameras.camera3D('Main/View')]).toEqual([a.path, b.path]);
   });
 
   it('throws for a path no camera of the tree holds', () => {

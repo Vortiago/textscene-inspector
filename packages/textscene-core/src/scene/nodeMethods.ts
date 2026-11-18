@@ -1,6 +1,6 @@
 import { findInClassChain } from '../godot/classdb/classBaseTypes.js';
 import type { NodeHandle } from './nodeHandle.js';
-import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
+import { VARIANT_TYPE as T, variantTypeName } from '../godot/variant/variantType.js';
 import { valueOfSceneValue, type SceneValue } from './variant.js';
 import type { ViewportCameras } from './viewportCameras.js';
 
@@ -23,21 +23,30 @@ export interface MethodTarget {
 
 /** A method of Godot's class this release ports, with the count of arguments its binding takes. */
 export interface PortedMethod {
+  /** The property ClassDB names this method the setter or the getter of, if any. */
+  readonly accessor?: { readonly role: 'setter' | 'getter'; readonly property: string };
   readonly minArguments: number;
   readonly maxArguments: number;
   /** `args` holds `minArguments` at least, as `runPortedMethod` checks first. */
-  run(target: MethodTarget, args: readonly SceneValue[]): CallResult | Promise<CallResult>;
+  /** `name` is `Class::method` of the node's own class, for Godot's error text. */
+  run(target: MethodTarget, args: readonly SceneValue[], name: string): CallResult | Promise<CallResult>;
 }
 
-/** An argument the binding cannot cast: `Object::set` reports the write invalid (`class_db.cpp:1683`). */
-export class ArgumentTypeError extends Error {}
-
-/** The bool a binding's cast makes of an argument: a number is true when it is not zero. */
-function boolArgument(value: SceneValue, method: string): boolean {
+/** A bound call casts between bool, int and float, and refuses any other type (measured in Godot 4.6.3). */
+function numberArgument(value: SceneValue, name: string, to: 'bool' | 'int'): number | boolean {
   const cast = valueOfSceneValue(value);
-  if (cast.type === T.BOOL) return cast.value as boolean;
-  if (cast.type === T.INT || cast.type === T.FLOAT) return cast.value !== 0;
-  throw new ArgumentTypeError(`expected a bool for ${method}, got ${JSON.stringify(value)}`);
+  if (cast.type === T.BOOL || cast.type === T.INT || cast.type === T.FLOAT)
+    return cast.value as number | boolean;
+  throw new Error(`${name}: Cannot convert argument 1 from ${variantTypeName(cast.type)} to ${to}.`);
+}
+
+function boolArgument(value: SceneValue, name: string): boolean {
+  return Number(numberArgument(value, name, 'bool')) !== 0;
+}
+
+/** A float truncates, as Godot's cast to `int64_t` does. */
+export function intArgument(value: SceneValue, name: string): number {
+  return Math.trunc(Number(numberArgument(value, name, 'int')));
 }
 
 /** A ported method is called only on a node, so its live path is never the root window's. */
@@ -58,22 +67,24 @@ const CAMERA_3D_METHODS: Readonly<Record<string, PortedMethod>> = {
   clear_current: {
     minArguments: 0,
     maxArguments: 1,
-    run: (target, [enableNext = true]) => {
-      target.cameras().clearCurrent3D(nodePath(target), boolArgument(enableNext, 'clear_current'));
+    run: (target, [enableNext = true], name) => {
+      target.cameras().clearCurrent3D(nodePath(target), boolArgument(enableNext, name));
       return null;
     },
   },
   // camera_3d.cpp:377-383
   set_current: {
+    accessor: { role: 'setter', property: 'current' },
     minArguments: 1,
     maxArguments: 1,
-    run: (target, [enabled]) => {
-      if (boolArgument(enabled!, 'set_current')) target.cameras().makeCurrent3D(nodePath(target));
+    run: (target, [enabled], name) => {
+      if (boolArgument(enabled!, name)) target.cameras().makeCurrent3D(nodePath(target));
       else target.cameras().clearCurrent3D(nodePath(target), true);
       return null;
     },
   },
   is_current: {
+    accessor: { role: 'getter', property: 'current' },
     minArguments: 0,
     maxArguments: 0,
     run: (target) => target.cameras().isCurrent3D(nodePath(target)),
@@ -93,11 +104,13 @@ const CAMERA_2D_METHODS: Readonly<Record<string, PortedMethod>> = {
   },
   // camera_2d.cpp:522-536: an unchanged value returns before the hand-over.
   set_enabled: {
+    accessor: { role: 'setter', property: 'enabled' },
     minArguments: 1,
     maxArguments: 1,
-    run: async (target, [value]) => {
-      const isEnabled = boolArgument(value!, 'set_enabled');
+    run: async (target, [value], name) => {
+      const isEnabled = boolArgument(value!, name);
       if ((await target.readStored('enabled')) === isEnabled) return null;
+      target.cameras().keep();
       await target.writeStored('enabled', isEnabled);
       target.cameras().enabledChanged2D(nodePath(target), isEnabled);
       return null;
@@ -124,9 +137,27 @@ const PORTED_METHODS: Readonly<Record<string, Readonly<Record<string, PortedMeth
   Viewport: VIEWPORT_METHODS,
 };
 
-/** Whether `className` or a base ports a method, so a property access of another class skips the lookup. */
-export function hasPortedMethods(className: string): boolean {
-  return findInClassChain(className, (type) => (PORTED_METHODS[type] ? true : undefined)) ?? false;
+/** The nearest class's port of the setter or the getter of `property`, with the method's name. */
+export function findPortedAccessor(
+  className: string,
+  role: 'setter' | 'getter',
+  property: string
+): { name: string; method: PortedMethod } | undefined {
+  return findInClassChain(className, (type) => {
+    const found = Object.entries(PORTED_METHODS[type] ?? {}).find(
+      ([, method]) => method.accessor?.role === role && method.accessor.property === property
+    );
+    return found && { name: found[0], method: found[1] };
+  });
+}
+
+/** Each class's ported methods that are a property's setter or getter, for the check against ClassDB. */
+export function portedAccessors(): readonly { className: string; name: string; method: PortedMethod }[] {
+  return Object.entries(PORTED_METHODS).flatMap(([className, methods]) =>
+    Object.entries(methods)
+      .filter(([, method]) => method.accessor)
+      .map(([name, method]) => ({ className, name, method }))
+  );
 }
 
 /** The nearest class's port of `method`, as a call resolves a method up the class chain. */
@@ -138,19 +169,19 @@ export function findPortedMethod(className: string, method: string): PortedMetho
   );
 }
 
-/** Runs a ported method after Godot's count check of a bound call (`method_bind.h`). */
+/** Godot's error for a bound call with the wrong count, `name` as `Class::method` (`object.cpp:888`). */
+export function argumentCountError(name: string, expected: number, given: number): Error {
+  return new Error(`${name}: Method expected ${expected} argument(s), but called with ${given}.`);
+}
+
+/** Runs a ported method after Godot's count check of a bound call, `name` as `Class::method`. */
 export function runPortedMethod(
   method: PortedMethod,
   name: string,
   target: MethodTarget,
   args: readonly SceneValue[]
 ): CallResult | Promise<CallResult> {
-  if (args.length < method.minArguments || args.length > method.maxArguments) {
-    const expected =
-      method.minArguments === method.maxArguments
-        ? `${method.minArguments}`
-        : `${method.minArguments} to ${method.maxArguments}`;
-    throw new Error(`expected ${expected} arguments for ${name}, got ${args.length}`);
-  }
-  return method.run(target, args);
+  if (args.length > method.maxArguments) throw argumentCountError(name, method.maxArguments, args.length);
+  if (args.length < method.minArguments) throw argumentCountError(name, method.minArguments, args.length);
+  return method.run(target, args, name);
 }

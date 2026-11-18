@@ -1,0 +1,48 @@
+[gd_scene format=3]
+
+; Each Camera2D holds one framing property, and a call makes it current: `zoom`, `offset`, a rotation
+; with `ignore_rotation` off, the top-left anchor, and limits the camera's position is past. No other
+; scene draws these through a camera a call made current.
+
+[node name="Main" type="Node2D"]
+
+[node name="Square" type="Polygon2D" parent="."]
+color = Color(0.2, 0.6, 0.9, 1)
+polygon = PackedVector2Array(0, 0, 60, 0, 60, 60, 0, 60)
+
+[node name="Triangle" type="Polygon2D" parent="."]
+position = Vector2(220, 40)
+color = Color(0.9, 0.3, 0.3, 1)
+polygon = PackedVector2Array(0, 40, 30, 0, 60, 40)
+
+[node name="Bar" type="Polygon2D" parent="."]
+position = Vector2(-80, 120)
+color = Color(0.3, 0.8, 0.3, 1)
+polygon = PackedVector2Array(0, 0, 400, 0, 400, 12, 0, 12)
+
+[node name="Base" type="Camera2D" parent="."]
+position = Vector2(120, 60)
+
+[node name="Zoom" type="Camera2D" parent="."]
+position = Vector2(120, 60)
+zoom = Vector2(2, 1.5)
+
+[node name="Offset" type="Camera2D" parent="."]
+position = Vector2(120, 60)
+offset = Vector2(30, -20)
+
+[node name="Rotated" type="Camera2D" parent="."]
+position = Vector2(120, 60)
+rotation = 0.4
+ignore_rotation = false
+
+[node name="TopLeft" type="Camera2D" parent="."]
+position = Vector2(-20, -10)
+anchor_mode = 0
+
+[node name="Limited" type="Camera2D" parent="."]
+position = Vector2(300, 140)
+limit_left = -40
+limit_top = -30
+limit_right = 300
+limit_bottom = 150

@@ -51,9 +51,13 @@ The Inspector's **Preview** checkbox draws the viewport through the camera, as G
 
 ## Current camera
 
-The In-game mode draws each viewport through its current Camera3D, as Godot's `Viewport` holds it. A camera that enters claims its viewport when it is `current` or the first camera there (`camera_3d.cpp:189-191`), so the last `current` camera in the tree wins, else the first. A host's `make_current`, `clear_current(enable_next)`, `set_current` and `set('current')` move it as Godot's do (`camera_3d.cpp:352-383`). `clear_current` passes the viewport to the next camera that entered it (`viewport.cpp:4609-4623`), and `clear_current(false)` leaves the viewport with no camera, so it draws the clear colour. The 3D mode keeps its orbit camera.
+The In-game mode draws each viewport through its current Camera3D, as Godot's `Viewport` holds it.
 
-`unit-in-game-call-camera3d.tscn` holds three cameras, the last orthogonal. Against `pnpm ref:godot --mode in-game --call`, every call order lands within 1/255 of Godot, with no pixel over 2/255: no call, `Side.make_current()`, `Top` then `Side`, `Side.make_current()` then `clear_current()`, `clear_current(false)`, `Front.clear_current()` with three cameras, `set('current', true)` on the orthogonal `Top`, `set('current', false)` on a camera that is not current, and `call('set_current', true)`.
+- A camera that enters claims its viewport when it is `current` or the first camera there (`camera_3d.cpp:189-191`). So the last `current` camera in the tree wins, else the first.
+- A host's `make_current`, `clear_current(enable_next)`, `set_current` and `set('current')` move it as Godot's do (`camera_3d.cpp:352-383`).
+- `clear_current` passes the viewport to the next camera that entered it (`viewport.cpp:4609-4623`).
+- `clear_current(false)` leaves the viewport with no camera, so the viewport draws the clear colour.
+- The 3D mode keeps its orbit camera.
 
 ## Exposure and Environment
 

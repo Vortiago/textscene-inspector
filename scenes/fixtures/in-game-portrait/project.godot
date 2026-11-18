@@ -1,0 +1,14 @@
+; A res:// root whose window is taller than wide, so `keep_aspect` and each projection meet a view
+; that is not 16:9.
+
+config_version=5
+
+[application]
+
+config/name="In-game portrait"
+config/features=PackedStringArray("4.6")
+
+[display]
+
+window/size/viewport_width=180
+window/size/viewport_height=240

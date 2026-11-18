@@ -1,0 +1,79 @@
+[gd_scene format=3]
+
+; Two SubViewports, each with two Camera3D nodes and a world of its own. A call in one moves only
+; that viewport's camera, and the root keeps its own (`viewport.cpp:4565-4581`). No other scene holds
+; two.
+
+[sub_resource type="QuadMesh" id="QuadMesh_1"]
+size = Vector2(1.6, 1.6)
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_a"]
+viewport_path = NodePath("ViewA")
+
+[sub_resource type="StandardMaterial3D" id="Material_a"]
+resource_local_to_scene = true
+shading_mode = 0
+albedo_texture = SubResource("ViewportTexture_a")
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_b"]
+viewport_path = NodePath("ViewB")
+
+[sub_resource type="StandardMaterial3D" id="Material_b"]
+resource_local_to_scene = true
+shading_mode = 0
+albedo_texture = SubResource("ViewportTexture_b")
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+
+[sub_resource type="StandardMaterial3D" id="Material_box"]
+albedo_color = Color(0.9, 0.5, 0.2, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+
+[sub_resource type="StandardMaterial3D" id="Material_ball"]
+albedo_color = Color(0.2, 0.5, 0.9, 1)
+
+[node name="Main" type="Node3D"]
+
+[node name="ViewA" type="SubViewport" parent="."]
+size = Vector2i(96, 96)
+own_world_3d = true
+render_target_update_mode = 4
+
+[node name="Box" type="MeshInstance3D" parent="ViewA"]
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("Material_box")
+
+[node name="Far" type="Camera3D" parent="ViewA"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4)
+
+[node name="Close" type="Camera3D" parent="ViewA"]
+transform = Transform3D(0.8660254, -0.25, 0.4330127, 0, 0.8660254, 0.5, -0.5, -0.4330127, 0.75, 1.5, 1.5, 2.5)
+
+[node name="ViewB" type="SubViewport" parent="."]
+size = Vector2i(96, 96)
+own_world_3d = true
+render_target_update_mode = 4
+
+[node name="Ball" type="MeshInstance3D" parent="ViewB"]
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Material_ball")
+
+[node name="Far" type="Camera3D" parent="ViewB"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4)
+
+[node name="Close" type="Camera3D" parent="ViewB"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 1.8)
+
+[node name="ScreenA" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.9, 0, 0)
+mesh = SubResource("QuadMesh_1")
+surface_material_override/0 = SubResource("Material_a")
+
+[node name="ScreenB" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.9, 0, 0)
+mesh = SubResource("QuadMesh_1")
+surface_material_override/0 = SubResource("Material_b")
+
+[node name="Root" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)

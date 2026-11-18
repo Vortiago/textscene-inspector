@@ -132,6 +132,9 @@ const current = await scene.getNode('/root').call('get_camera_3d');
   The root window is `/root`. Each SubViewport keeps its own camera.
 - **Setters and getters.** `call('set_<property>', value)` and `call('get_<property>')` reach `set`
   and `get`, by the names Godot gives them. Any other method throws with the class and the method.
+- **Errors.** Where Godot's `call` prints an error, `call` throws with the same text: a wrong count
+  of arguments, or an argument it cannot convert, such as a string for a bool. `set('current', value)`
+  converts the value as Godot's `set` does, and answers `false` when the conversion is not exact.
 
 The In-game mode draws through the current camera. The 3D mode keeps its orbit camera.
 

@@ -32,30 +32,29 @@ export function accessorOf(
   return rowOf(declaredBy, property)?.[COLUMN[role]] ?? `${PREFIX[role]}${property}`;
 }
 
-/** The rows of the nearest class that names `method` as a setter or a getter. */
-function namedMethod(className: string, method: string): PropertyMethod | undefined {
-  return findInClassChain(className, (type) => {
-    const rows = (PROPERTY_METHODS[type] ?? []).filter(
-      ([, setter, getter]) => setter === method || getter === method
-    );
-    const [first] = rows;
-    if (!first) return undefined;
-    const role = first[1] === method ? 'setter' : 'getter';
-    return { role, properties: new Map(rows.map(([name, , , index]) => [index ?? null, name])) };
-  });
+/** The rows of `type` that name `method` as a setter or a getter. */
+function namedMethodOf(type: string, method: string): PropertyMethod | undefined {
+  const rows = (PROPERTY_METHODS[type] ?? []).filter(
+    ([, setter, getter]) => setter === method || getter === method
+  );
+  const [first] = rows;
+  if (!first) return undefined;
+  const role = first[1] === method ? 'setter' : 'getter';
+  return { role, properties: new Map(rows.map(([name, , , index]) => [index ?? null, name])) };
 }
 
-/** `set_<name>` or `get_<name>` of a property whose methods carry those names. */
-function prefixedMethod(className: string, method: string): PropertyMethod | undefined {
+/** `set_<name>` or `get_<name>` of a property `type` declares under those names. */
+function prefixedMethodOf(type: string, method: string): PropertyMethod | undefined {
   const role = (['setter', 'getter'] as const).find((candidate) => method.startsWith(PREFIX[candidate]));
   if (!role) return undefined;
   const property = method.slice(PREFIX[role].length);
-  return accessorOf(role, className, property) === method
+  if (declaredProperty(type, property) !== type) return undefined;
+  return accessorOf(role, type, property) === method
     ? { role, properties: new Map([[null, property]]) }
     : undefined;
 }
 
-/** The property a call of `method` on a `className` node reaches, if `method` is a setter or a getter. */
+/** The property a call of `method` on a `className` node reaches, from the nearest class as ClassDB. */
 export function findPropertyMethod(className: string, method: string): PropertyMethod | undefined {
-  return namedMethod(className, method) ?? prefixedMethod(className, method);
+  return findInClassChain(className, (type) => namedMethodOf(type, method) ?? prefixedMethodOf(type, method));
 }

@@ -16,6 +16,7 @@ export interface SceneTreeNode {
 /** A Camera3D or a Camera2D of the loaded tree, as it enters its viewport. */
 export interface TreeCamera {
   readonly path: string;
+  readonly type: string;
   readonly dimension: '3D' | '2D';
   /** The live path of the nearest Viewport above the camera, null for the root window. */
   readonly viewport: string | null;

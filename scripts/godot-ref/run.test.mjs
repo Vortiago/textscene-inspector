@@ -271,6 +271,10 @@ describe('--call', () => {
     expect(() => parseCall('Camera')).toThrow(/expects <path>:<method>/);
   });
 
+  it('refuses an empty argument, which Godot reads as null and the scene cannot', () => {
+    expect(() => parseCall('Camera:clear_current=')).toThrow(/an empty argument/);
+  });
+
   it('calls each method with the str_to_var of each argument', () => {
     const script = bootstrap({ hostCalls: [{ path: 'A', method: 'clear_current', args: ['false'] }] });
     expect(script).toContain('["call", "A", "clear_current", ["false"]],');

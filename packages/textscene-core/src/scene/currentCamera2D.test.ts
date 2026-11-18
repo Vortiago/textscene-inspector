@@ -57,6 +57,12 @@ describe('the current Camera2D of a viewport', () => {
     expect(await currentOf(scene)).toBe('/root/Main/A');
   });
 
+  it('leaves the current camera when an earlier camera is enabled', async () => {
+    const scene = sceneOf(camera('A', 'enabled = false') + camera('B'));
+    await scene.getNode('A').set('enabled', true);
+    expect(await currentOf(scene)).toBe('/root/Main/B');
+  });
+
   it('answers is_current from the viewport', async () => {
     const scene = sceneOf(camera('A') + camera('B'));
     await scene.getNode('B').call('make_current');

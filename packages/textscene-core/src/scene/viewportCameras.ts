@@ -1,10 +1,7 @@
+import { nodeDefaultText } from '../godot/classdb/nodeDefault.js';
 import { boolSlotValue } from '../godot/variant/variantBool.js';
 import * as logger from '../logger.js';
 import type { TreeCamera } from './sceneRuntime.js';
-
-/** `camera_3d.h:63`, `camera_2d.h:67` */
-const CAMERA_3D_CURRENT_DEFAULT = false;
-const CAMERA_2D_ENABLED_DEFAULT = true;
 
 /** What the cameras read of the scene. */
 export interface CameraSource {
@@ -22,9 +19,12 @@ interface ViewportState {
   camera2D: string | null;
 }
 
-/** A text's bool, as the setter's cast reads it. */
-function boolOf(text: string | undefined, fallback: boolean): boolean {
-  return boolSlotValue(text) ?? fallback;
+/** A camera's bool as the setter's cast reads it: the text, else ClassDB's default of the class. */
+function boolOf(camera: TreeCamera, property: 'current' | 'enabled', text: string | undefined): boolean {
+  const value = boolSlotValue(text) ?? boolSlotValue(nodeDefaultText(camera.type, property));
+  if (value === undefined)
+    throw new Error(`expected a bool default of ${camera.type}.${property}, found none`);
+  return value;
 }
 
 /** Until a call moves the state, the enter rule over the loaded tree gives it, in game order. */
@@ -49,6 +49,12 @@ export class ViewportCameras {
     this.entered.clear();
     this.seen = null;
     this.isMoved = false;
+  }
+
+  /** Keeps the state through a write of a camera's text, which moves only what its setter hands over. */
+  keep(): void {
+    this.sync();
+    this.isMoved = true;
   }
 
   /** `Viewport::get_camera_3d`. */
@@ -124,7 +130,10 @@ export class ViewportCameras {
     if (!this.isMoved) this.reset();
     this.seen = cameras;
     const inTree = new Map((cameras ?? []).map((camera) => [camera.path, camera]));
-    const exiting = [...this.entered.values()].filter((camera) => !inTree.has(camera.path));
+    // A camera seated under another viewport leaves the one it entered and enters the new one.
+    const exiting = [...this.entered.values()].filter(
+      (camera) => inTree.get(camera.path)?.viewport !== camera.viewport
+    );
     // Each leaves `entered` first, since a hand-over skips a camera outside the tree (`viewport.cpp:4614`).
     for (const camera of exiting) this.entered.delete(camera.path);
     for (const camera of exiting) this.exit(camera);
@@ -144,7 +153,7 @@ export class ViewportCameras {
       if (state.camera2D === null && this.isEnabled(camera)) state.camera2D = camera.path;
       return;
     }
-    const isCurrent = boolOf(camera.rawProperties.current, CAMERA_3D_CURRENT_DEFAULT);
+    const isCurrent = boolOf(camera, 'current', camera.rawProperties.current);
     state.cameras3D.push(camera.path);
     // camera_3d.cpp:189-191
     if (isCurrent || state.cameras3D.length === 1) state.camera3D = camera.path;
@@ -193,7 +202,7 @@ export class ViewportCameras {
   }
 
   private isEnabled(camera: TreeCamera): boolean {
-    return boolOf(this.source.enabledText(camera), CAMERA_2D_ENABLED_DEFAULT);
+    return boolOf(camera, 'enabled', this.source.enabledText(camera));
   }
 
   private stateOf(viewport: string | null): ViewportState {

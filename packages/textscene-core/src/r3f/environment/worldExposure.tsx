@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import type { AutoExposure, CameraAttributes } from '../../resources/cameraattributes/types';
-import { useEnclosingViewportPath } from '../contexts/EnclosingViewportContext';
+import { ROOT_VIEWPORT_PATH, useEnclosingViewportPath } from '../contexts/EnclosingViewportContext';
 import { useOptionalViewportActions } from '../contexts/ViewportActionsContext';
 import { useSceneExposure } from '../exposure/sceneExposure';
 import { useByValue } from '../hooks/useByValue';
@@ -188,11 +188,16 @@ export function usePassCameraPath(): string | null {
   return useContext(PassCameraContext)?.path ?? null;
 }
 
+/** A viewport a pass draws: not the editor's root (null) nor the In-game root window. */
+function isPassViewport(path: string | null): path is string {
+  return path !== null && path !== ROOT_VIEWPORT_PATH;
+}
+
 /** The Environment of the current camera of each viewport pass of the world, apart from the root's. */
 export function usePassCameraEnvironments(): readonly EnvironmentResolution[] {
   const worldCameras = cameras.useAll();
   const viewports = useByValue(
-    [...new Set(worldCameras.map((camera) => camera.viewport).filter((path) => path !== null))],
+    [...new Set(worldCameras.map((camera) => camera.viewport).filter(isPassViewport))],
     sameElements
   );
   const currentPaths = useCurrentCameras3D(viewports);

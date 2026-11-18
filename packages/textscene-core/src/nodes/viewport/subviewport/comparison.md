@@ -118,9 +118,9 @@ Strict and lenient parsing diverge only on out-of-range enums. The lenient parse
 
 ## Current camera
 
-Each SubViewport keeps its own current Camera3D and Camera2D, apart from the root window's (`viewport.cpp:4565-4607`). A call to `make_current` on a camera inside it moves its camera and leaves the root's. `unit-in-game-call-subviewport.tscn` draws the SubViewport on a quad in front of the root camera. Against `pnpm ref:godot --mode in-game --call`, the capture with no call lands within 1/255 of Godot, and the capture after `SubViewport/Close.make_current()` within 2/255, with no pixel over 2/255.
+Each SubViewport keeps its own current Camera3D and Camera2D, apart from the root window's (`viewport.cpp:4565-4607`). A call to `make_current` on a camera inside it moves its camera and leaves the root's.
 
 ## Known limitations
 
 - **Approximated** A consumer surface inside its own viewport's frustum samples a target still being written, with a driver-defined result.
-- **Needs runtime** A viewport whose camera or world is assigned by script shows only its clear colour in 3D, and frames from the origin in 2D. A host's `make_current` call on a camera inside it moves its camera.
+- **Needs runtime** A viewport whose camera or world is assigned by script shows only its clear colour in 3D, and frames from the origin in 2D.

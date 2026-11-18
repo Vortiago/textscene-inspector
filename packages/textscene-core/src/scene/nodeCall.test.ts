@@ -13,6 +13,8 @@ const SOURCE = `[gd_scene format=3]
 [node name="View" type="Camera2D" parent="."]
 
 [node name="Eye" type="Camera3D" parent="."]
+
+[node name="Second" type="Camera3D" parent="."]
 `;
 
 const scene = () => openScene({ source: SOURCE, provider });
@@ -34,6 +36,18 @@ describe('call', () => {
     expect(await opened.getNode('View').get('limit_right')).toBe(640);
   });
 
+  it('casts an index the host passes as a Variant to an int', async () => {
+    const opened = scene();
+    await opened.getNode('View').call('set_limit', variant('2.0'), 640);
+    expect(await opened.getNode('View').get('limit_right')).toBe(640);
+  });
+
+  it("throws Godot's error for an index the binding cannot convert", async () => {
+    await expect(scene().getNode('View').call('get_limit', 'right')).rejects.toThrow(
+      'Camera2D::get_limit: Cannot convert argument 1 from String to int.'
+    );
+  });
+
   it('passes the index of an indexed getter as its only argument', async () => {
     expect(await scene().getNode('View').call('get_limit', 0)).toBe(-10000000);
   });
@@ -44,15 +58,33 @@ describe('call', () => {
     expect(await opened.getNode('Eye').get('keep_aspect')).toBe(0);
   });
 
-  it('throws for a method it does not port, naming the class and the method', async () => {
+  it('throws for a camera method it does not port, naming the class and the method', async () => {
     await expect(scene().getNode('Eye').call('project_ray_normal', variant('Vector2(0, 0)'))).rejects.toThrow(
-      /"project_ray_normal" of Camera3D/
+      'Camera3D::project_ray_normal: not a method this release ports'
     );
+  });
+
+  it('throws for a method of a class with no ported method, naming the class and the method', async () => {
+    await expect(scene().getNode('.').call('look_at', variant('Vector2(0, 0)'))).rejects.toThrow(
+      'Node2D::look_at: not a method this release ports'
+    );
+  });
+
+  it("throws Godot's error for an argument the binding cannot convert", async () => {
+    await expect(scene().getNode('Eye').call('clear_current', 'yes')).rejects.toThrow(
+      'Camera3D::clear_current: Cannot convert argument 1 from String to bool.'
+    );
+  });
+
+  it('converts a float argument to bool, as the binding does', async () => {
+    const opened = scene();
+    await opened.getNode('Eye').call('clear_current', 0.5);
+    expect(await opened.getNode('Second').call('is_current')).toBe(true);
   });
 
   it('checks the count of an indexed call before its index (edge case)', async () => {
     await expect(scene().getNode('View').call('set_limit')).rejects.toThrow(
-      'expected 2 arguments for set_limit, got 0'
+      'Camera2D::set_limit: Method expected 2 argument(s), but called with 0.'
     );
   });
 
@@ -65,14 +97,26 @@ describe('call', () => {
 
   it('throws for a count of arguments the binding does not take', async () => {
     await expect(scene().getNode('Eye').call('make_current', true)).rejects.toThrow(
-      'expected 0 arguments for make_current, got 1'
+      'Camera3D::make_current: Method expected 0 argument(s), but called with 1.'
     );
   });
 });
 
 describe('set through a ported setter', () => {
-  it('reports a value the binding cannot cast as an invalid write', async () => {
-    expect(await scene().getNode('Eye').set('current', 'yes')).toBe(false);
+  it('reports a value with no strict cast as an invalid write (class_db.cpp:1683)', async () => {
+    expect(await scene().getNode('Second').set('current', 'yes')).toBe(false);
+  });
+
+  it('still runs the setter with the value booleanised, as Godot does', async () => {
+    const opened = scene();
+    await opened.getNode('Second').set('current', 'yes');
+    expect(await opened.getNode('Second').get('current')).toBe(true);
+  });
+
+  it('booleanises a zero vector to false', async () => {
+    const opened = scene();
+    await opened.getNode('Eye').set('current', variant('Vector3(0, 0, 0)'));
+    expect(await opened.getNode('Second').get('current')).toBe(true);
   });
 
   it('runs the setter for a value it can cast', async () => {
