@@ -8,9 +8,8 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { matchVector3 } from '../../../linter/validators/vectorValidators.js';
-import { isEqualApprox } from '../../../godot/math/math.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
-import type { Vector3 } from '../../../godot/math/vector.js';
+import { vector3IsEqualApprox, type Vector3 } from '../../../godot/math/vector.js';
 
 const arms = {
   startEqualsEnd: groundedArm('navigationlink3d-start-position-equals-end-position', {
@@ -33,11 +32,6 @@ function readPosition(properties: Record<string, string>, key: string): Vector3 
   return matchVector3(raw);
 }
 
-/** `Vector3::is_equal_approx` (core/math/vector3.cpp:141-143): each component by `isEqualApprox`. */
-function vector3EqualApprox(a: Vector3, b: Vector3): boolean {
-  return isEqualApprox(a.x, b.x) && isEqualApprox(a.y, b.y) && isEqualApprox(a.z, b.z);
-}
-
 function checkNavigationLink3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
   const properties = node.rawProperties;
@@ -46,7 +40,7 @@ function checkNavigationLink3D(context: RuleContext): Diagnostic[] {
   const end = readPosition(properties, 'end_position');
   // A malformed literal is the format validator's finding, so this rule stays silent.
   if (start === null || end === null) return [];
-  if (!vector3EqualApprox(start, end)) return [];
+  if (!vector3IsEqualApprox(start, end)) return [];
 
   return [
     armDiagnostic(

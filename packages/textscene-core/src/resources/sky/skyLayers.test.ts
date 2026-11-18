@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { bakeAtlasLayers, bakeSkyLayers, createReflectionAtlas, disposeSkyLayers } from './skyLayers';
+import {
+  bakeAtlasLayers,
+  bakeSkyLayers,
+  createReflectionAtlas,
+  createSkyLayers,
+  disposeSkyLayers,
+  SkyLayerBaker,
+} from './skyLayers';
 import { reflectionAtlasLayout } from '../../godot/rendering/environment/reflectionProbe';
 import { fastFilter } from './fastFilter';
 import { testRenderer } from '../../testing/recordingWebGL';
@@ -188,6 +195,49 @@ describe('bakeSkyLayers', () => {
 
     expect(() => bakeSkyLayers(renderer, radiance, IMPORTANCE_SAMPLED, 0)).toThrow('lost context');
     expect(disposed).toHaveBeenCalledOnce();
+  });
+});
+
+/** The layers of `target` that `run` copies a mip 0 into, in order. */
+function layersStoredBy(
+  renderer: THREE.WebGLRenderer,
+  target: THREE.WebGLArrayRenderTarget,
+  run: () => void
+) {
+  const copies = vi.spyOn(renderer, 'copyTextureToTexture');
+  run();
+  return copies.mock.calls
+    .filter(([, destination, , , , mip]) => destination === target.texture && mip === 0)
+    .map(([, , , position]) => (position as THREE.Vector3).z);
+}
+
+describe('SkyLayerBaker', () => {
+  const drawNothing = () => {};
+
+  it('stores layer 0 alone for a bake of the first layer, as an incremental sky does', async () => {
+    const { renderer } = await testRenderer();
+    const layers = createSkyLayers(IMPORTANCE_SAMPLED);
+    const baker = new SkyLayerBaker(renderer, layers, IMPORTANCE_SAMPLED.radianceFilter);
+    expect(layersStoredBy(renderer, layers.target, () => baker.bakeFirstLayer(drawNothing))).toEqual([0]);
+  });
+
+  it('stores only the layer it filters', async () => {
+    const { renderer } = await testRenderer();
+    const layers = createSkyLayers(IMPORTANCE_SAMPLED);
+    const baker = new SkyLayerBaker(renderer, layers, IMPORTANCE_SAMPLED.radianceFilter);
+    baker.bakeFirstLayer(drawNothing);
+    expect(layersStoredBy(renderer, layers.target, () => baker.filterLayer(3))).toEqual([3]);
+  });
+
+  it('keeps its targets from one bake to the next (edge case)', async () => {
+    const { renderer } = await testRenderer();
+    const layers = createSkyLayers(IMPORTANCE_SAMPLED);
+    const baker = new SkyLayerBaker(renderer, layers, IMPORTANCE_SAMPLED.radianceFilter);
+    const targets: THREE.WebGLRenderTarget[] = [];
+    const draw = (octmap: THREE.WebGLRenderTarget) => void targets.push(octmap);
+    baker.bakeEveryLayer(draw);
+    baker.bakeEveryLayer(draw);
+    expect(targets[0]).toBe(targets[1]);
   });
 });
 

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { skyDraws, type SkyDraw, type TranspiledSky } from './transpileSky.js';
 
-type Resolution = 'half' | 'quarter';
+export type SkyPassResolution = 'half' | 'quarter';
 
 /** Godot sizes the passes from a screen of at least 4 by 4 (`sky.cpp:996-997`). */
 const MIN_SCREEN = 4;
@@ -10,22 +10,37 @@ const MIN_SCREEN = 4;
 const PASSES = [
   { resolution: 'quarter', shift: 2, texture: 'quarter_res' },
   { resolution: 'half', shift: 1, texture: 'half_res' },
-] as const satisfies readonly { resolution: Resolution; shift: number; texture: string }[];
+] as const satisfies readonly { resolution: SkyPassResolution; shift: number; texture: string }[];
 
-/** Godot's half and quarter resolution passes of a sky: targets, order and reads (`sky.cpp:525-578`). */
+/** Godot's half and quarter passes (`sky.cpp:525-578`), with a target for each pass and each colour read. */
 export class SkyResolutionPasses {
   /** Written only by the constructor, and resized by `draw`. Freed by `dispose`. */
-  private readonly targets: Partial<Record<Resolution, THREE.WebGLRenderTarget>> = {};
+  private readonly targets: Partial<Record<SkyPassResolution, THREE.WebGLRenderTarget>> = {};
   private readonly scene = new THREE.Scene();
 
-  constructor(private readonly sky: TranspiledSky) {
-    for (const { resolution } of PASSES) if (sky[resolution]) this.targets[resolution] = passTarget();
+  /** `colorsRead` are the sizes a draw reads with no pass of its own: an octmap pass reads radiance mips. */
+  constructor(
+    private readonly sky: TranspiledSky,
+    colorsRead: readonly SkyPassResolution[] = []
+  ) {
+    for (const { resolution } of PASSES)
+      if (sky[resolution] || colorsRead.includes(resolution)) this.targets[resolution] = passTarget();
     this.bindTargets();
   }
 
   /** Whether the sky draws any pass of its own before its full one. */
   get isEmpty(): boolean {
-    return !this.targets.half && !this.targets.quarter;
+    return !this.sky.half && !this.sky.quarter;
+  }
+
+  /** Each target a draw can read before its own pass draws it, with its mip in an octmap: half is mip 1. */
+  forEachTargetReadFirst(visit: (target: THREE.WebGLRenderTarget, mip: number) => void): void {
+    let hasPassBefore = false;
+    for (const { resolution, shift } of PASSES) {
+      const target = this.targets[resolution];
+      if (target && (hasPassBefore || !this.sky[resolution])) visit(target, shift);
+      hasPassBefore ||= !!this.sky[resolution];
+    }
   }
 
   /** Draws the quarter pass, then the half pass (`sky.cpp:1427-1457`), and keeps the render target. */
@@ -41,7 +56,7 @@ export class SkyResolutionPasses {
     for (const target of Object.values(this.targets)) target.dispose();
   }
 
-  /** Draws the sky's pass of `resolution` into its target, when the sky has that pass. */
+  /** Sizes the target of `resolution`, then draws the sky's pass into it, when the sky has that pass. */
   private drawPass(
     renderer: THREE.WebGLRenderer,
     camera: THREE.Camera,
@@ -49,9 +64,10 @@ export class SkyResolutionPasses {
     { resolution, shift }: (typeof PASSES)[number]
   ): void {
     const target = this.targets[resolution];
-    const pass = this.sky[resolution];
-    if (!target || !pass) return;
+    if (!target) return;
     target.setSize(Math.max(size.x, MIN_SCREEN) >> shift, Math.max(size.y, MIN_SCREEN) >> shift);
+    const pass = this.sky[resolution];
+    if (!pass) return;
     this.scene.add(pass.mesh);
     renderer.setRenderTarget(target);
     renderer.render(this.scene, camera);

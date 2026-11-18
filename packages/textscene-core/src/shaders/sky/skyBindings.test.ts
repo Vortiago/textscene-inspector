@@ -30,6 +30,19 @@ describe('writeSkyBindings', () => {
     expect(borderSize.toArray()).toEqual([expect.closeTo(0.05, 9), 0.9]);
   });
 
+  it("writes POSITION as the camera's origin", () => {
+    const camera = new THREE.PerspectiveCamera();
+    camera.position.set(1, 2, 3);
+    camera.updateMatrixWorld();
+    expect((boundSky({ camera })('params.position').value as THREE.Vector3).toArray()).toEqual([1, 2, 3]);
+  });
+
+  it('writes POSITION as the position the octmap pass names, which views from the origin', () => {
+    const position = new THREE.Vector3(-4, 0.5, 2);
+    const written = boundSky({ position }, 'octmap')('params.position').value as THREE.Vector3;
+    expect(written.toArray()).toEqual([-4, 0.5, 2]);
+  });
+
   it('writes the fog as off when the scene has none', () => {
     expect(boundSky({})('sky_scene_data.fog_enabled').value).toBe(false);
   });

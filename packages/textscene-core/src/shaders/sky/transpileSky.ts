@@ -105,9 +105,8 @@ export function transpileParsedSky(
   return sky;
 }
 
-/** A pass colour with no pass reads white behind the scene and black in the octmap (`sky.cpp:545-575`). */
+/** A pass colour with no target: white behind the scene, black for its own size in the octmap. */
 function unsetPassTexture(pass: SkyPass): THREE.Texture {
-  // Godot's octmap reads a mip of its last radiance there, which the previewer does not keep.
   return defaultTexture('flat', pass === 'background' ? 'white' : 'black');
 }
 

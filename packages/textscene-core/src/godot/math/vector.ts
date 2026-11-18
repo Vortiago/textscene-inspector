@@ -1,7 +1,7 @@
 /** Godot's vector types as plain components, for engine facts that import nothing. */
 
 // Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
-import { cubicInterpolateInTimef, lerpf, type KeyTimes } from './math.js';
+import { cubicInterpolateInTimef, isEqualApprox, lerpf, type KeyTimes } from './math.js';
 import { storedReal as f } from './real.js';
 
 /** A point, a size or a direction: two components, as Godot's `Vector2` and `Vector2i` hold them. */
@@ -151,6 +151,15 @@ export function normalizedVector2({ x, y }: Vector2): Vector2 {
   if (lengthSquared === 0) return { x, y };
   const length = f(Math.sqrt(lengthSquared));
   return { x: f(x / length), y: f(y / length) };
+}
+
+/**
+ * `Vector3::is_equal_approx` (`core/math/vector3.cpp:141-143`): each component by `isEqualApprox`.
+ *
+ * @canonical Two Vector3 values equal within Godot's tolerance
+ */
+export function vector3IsEqualApprox(a: Vector3, b: Vector3): boolean {
+  return isEqualApprox(a.x, b.x) && isEqualApprox(a.y, b.y) && isEqualApprox(a.z, b.z);
 }
 
 /**

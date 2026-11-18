@@ -34,6 +34,32 @@ const playback = (playState: 'stopped' | 'playing' | 'paused', playhead = 0, see
   seeks,
 });
 
+describe('PlaybackShaderTime jumps', () => {
+  const paused = { hasPlayer: true, playState: 'paused', playhead: 0, seeks: 0 } as const;
+
+  it('counts a seek that moves TIME', () => {
+    const time = new PlaybackShaderTime(new ShaderClock());
+    time.frame(paused, 0);
+    time.frame({ ...paused, seeks: 1, playhead: 2 }, 0);
+    expect(time.jumps).toBe(1);
+  });
+
+  it('counts a stop that moves TIME to 0 once, while it stays stopped', () => {
+    const time = new PlaybackShaderTime(new ShaderClock());
+    time.frame({ ...paused, playState: 'playing' }, 0.5);
+    time.frame({ ...paused, playState: 'stopped' }, 0.5);
+    time.frame({ ...paused, playState: 'stopped' }, 0.5);
+    expect(time.jumps).toBe(1);
+  });
+
+  it('counts no frame that advances TIME, nor a seek to the TIME it holds (edge case)', () => {
+    const time = new PlaybackShaderTime(new ShaderClock());
+    time.frame({ ...paused, playState: 'playing' }, 0.5);
+    time.frame({ ...paused, seeks: 1, playhead: 0.5 }, 0);
+    expect(time.jumps).toBe(0);
+  });
+});
+
 describe('PlaybackShaderTime', () => {
   it('advances every frame in a scene with no AnimationPlayer', () => {
     const time = new PlaybackShaderTime(new ShaderClock());

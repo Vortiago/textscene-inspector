@@ -69,7 +69,7 @@ export function skyUpdateMode(sky: Sky, fogScattersSun: boolean): SkyUpdateMode 
 
 /** Every built-in sky material holds uniforms and reads neither `TIME` nor `POSITION`. */
 function builtInUsage(material: BuiltInSkyProperties) {
-  return { light: materialReadsLights(material), timeOrPosition: false, hasBufferUniforms: true };
+  return { light: materialReadsLights(material), time: false, position: false, hasBufferUniforms: true };
 }
 
 /** `sky` with the fast filter when Automatic runs it real-time, which the scene's fog never decides. */

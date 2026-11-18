@@ -8,7 +8,7 @@ const shaderSky = (light: boolean): ShaderSkyProperties => ({
   file: 'res://sky.gdshader',
   parameters: {},
   textures: {},
-  usage: { light, timeOrPosition: false, hasBufferUniforms: false, samplers: {} },
+  usage: { light, time: false, position: false, hasBufferUniforms: false, passColors: [], samplers: {} },
 });
 
 describe('materialReadsLights', () => {

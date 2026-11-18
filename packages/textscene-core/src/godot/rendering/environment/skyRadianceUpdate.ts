@@ -6,6 +6,7 @@
  */
 
 import { REAL_TIME_RADIANCE_SIZE } from './skyReflection';
+import { vector3IsEqualApprox, type Vector3 } from '../../math/vector';
 
 /** `Sky.process_mode` (`scene/resources/sky.h:51-56`). */
 export type SkyProcessMode = 'automatic' | 'quality' | 'incremental' | 'real-time';
@@ -14,9 +15,7 @@ export type SkyProcessMode = 'automatic' | 'quality' | 'incremental' | 'real-tim
 export type SkyUpdateMode = Exclude<SkyProcessMode, 'automatic'>;
 
 /** What Godot's Automatic mode reads of a sky, its shader and its scene (`sky.cpp:1001-1012`). */
-export interface AutomaticSkyInput {
-  /** The shader reads `TIME` or `POSITION`. */
-  readonly timeOrPosition: boolean;
+export interface AutomaticSkyInput extends SkyFrameReads {
   /** The shader reads a `LIGHTn_*` built-in. */
   readonly light: boolean;
   /** The material has a uniform that is not a sampler: `ubo_size > 0`. */
@@ -28,7 +27,7 @@ export interface AutomaticSkyInput {
 
 /** The mode Godot runs a sky of `process_mode` Automatic in (`sky.cpp:1001-1012`). */
 export function automaticSkyMode(sky: AutomaticSkyInput): SkyUpdateMode {
-  if (sky.timeOrPosition && sky.radianceSize === REAL_TIME_RADIANCE_SIZE) return 'real-time';
+  if ((sky.time || sky.position) && sky.radianceSize === REAL_TIME_RADIANCE_SIZE) return 'real-time';
   if (sky.light || sky.fogScattersSun || sky.hasBufferUniforms) return 'incremental';
   return 'quality';
 }
@@ -53,12 +52,32 @@ export interface SkyRadianceUpdate {
   isDirty: boolean;
   /** The render that last baked the first layer, null before any did. */
   baked: SkyRender | null;
+  /** `prev_time`: the `TIME` that last dirtied a sky that reads it, a float as Godot keeps it. */
+  previousTime: number;
+  /** `prev_position`: the camera origin that last dirtied a sky that reads `POSITION`. */
+  previousPosition: Vector3;
 }
 
 /** A sky no render has drawn yet, which the first render bakes (`sky.cpp:1025-1029`). */
 export function newSkyRadianceUpdate(): SkyRadianceUpdate {
-  return { processingLayer: 0, isDirty: true, baked: null };
+  return {
+    processingLayer: 0,
+    isDirty: true,
+    baked: null,
+    previousTime: 0,
+    previousPosition: { x: 0, y: 0, z: 0 },
+  };
 }
+
+/** What one render did to the radiance: nothing, a bake of every layer or of layer 0, or one filter. */
+export type SkyRadianceStep =
+  | { readonly kind: 'none' }
+  | { readonly kind: 'bake'; readonly isFirstLayerOnly: boolean }
+  | { readonly kind: 'filter'; readonly layer: number };
+
+const NO_STEP: SkyRadianceStep = { kind: 'none' };
+const EVERY_LAYER: SkyRadianceStep = { kind: 'bake', isFirstLayerOnly: false };
+const FIRST_LAYER: SkyRadianceStep = { kind: 'bake', isFirstLayerOnly: true };
 
 /**
  * Runs `render` of the sky through Godot's update, `isDirtied` when the render changed what the sky
@@ -70,14 +89,54 @@ export function stepSkyRadiance(
   { mode, layers }: SkyUpdatePlan,
   render: SkyRender,
   isDirtied: boolean
-): void {
+): SkyRadianceStep {
   if (isDirtied) update.isDirty = true;
   const isSingleFrame = mode !== 'incremental' || update.processingLayer === 0;
   if (update.isDirty && (update.processingLayer >= layers || isSingleFrame)) {
     update.baked = { ...render };
     if (mode !== 'real-time') update.processingLayer = 1;
     update.isDirty = false;
-  } else if (mode === 'incremental' && update.processingLayer < layers) {
-    update.processingLayer += 1;
+    return isSingleFrame ? EVERY_LAYER : FIRST_LAYER;
   }
+  if (mode !== 'incremental' || update.processingLayer >= layers) return NO_STEP;
+  update.processingLayer += 1;
+  return { kind: 'filter', layer: update.processingLayer - 1 };
 }
+
+/** What a sky shader reads that changes from render to render. */
+export interface SkyFrameReads {
+  /** `TIME`. */
+  readonly time: boolean;
+  /** `POSITION`, the camera's origin. */
+  readonly position: boolean;
+}
+
+/** Whether a render dirties a sky that reads its `TIME` or camera origin, as `sky.cpp:1031-1050` decides. */
+export function noteSkyFrame(
+  update: SkyRadianceUpdate,
+  reads: SkyFrameReads,
+  time: number,
+  position: Vector3
+): boolean {
+  let isDirtied = false;
+  if (reads.time && time - update.previousTime > TIME_STEP_THAT_DIRTIES) {
+    update.previousTime = Math.fround(time);
+    isDirtied = true;
+  }
+  if (reads.position && !vector3IsEqualApprox(position, update.previousPosition)) {
+    const previous = update.previousPosition;
+    previous.x = position.x;
+    previous.y = position.y;
+    previous.z = position.z;
+    isDirtied = true;
+  }
+  return isDirtied;
+}
+
+/** Dirties the next render of a `TIME` sky: our controls stop and seek `TIME`, which Godot never does. */
+export function restartSkyClock(update: SkyRadianceUpdate): void {
+  update.previousTime = Number.NEGATIVE_INFINITY;
+}
+
+/** `sky.cpp:1031`: the smallest step of `TIME` that dirties the sky. */
+const TIME_STEP_THAT_DIRTIES = 0.00001;

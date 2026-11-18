@@ -255,4 +255,12 @@ export const LIGHTING_SCENES = [
   { name: 'shader-sky-cubemap', file: 'unit-shader-sky-cubemap.tscn' },
   { name: 'shader-sky-light', file: 'unit-shader-sky-light.tscn' },
   { name: 'shader-sky-half-res', file: 'unit-shader-sky-half-res.tscn' },
+  // The balls reflect the sky baked again at 0.75 s, within 1/255 of Godot 4.6.3 at frame 75.
+  {
+    name: 'shader-sky-time',
+    file: 'unit-shader-sky-time.tscn',
+    camera: 'Root/Camera3D',
+    select: 'Root/Clock',
+    animationTime: 0.75,
+  },
 ];

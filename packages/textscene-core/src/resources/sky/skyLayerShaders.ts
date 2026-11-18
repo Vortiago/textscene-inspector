@@ -99,6 +99,17 @@ void main() {
 }
 `;
 
+/** One mip of radiance layer 0, texel for texel, top row first as the half and quarter passes draw. */
+export const RADIANCE_MIP_FRAGMENT_SHADER = /* glsl */ `
+uniform highp sampler2DArray layers;
+uniform int mip;
+
+void main() {
+  int rows = textureSize(layers, mip).y;
+  gl_FragColor = texelFetch(layers, ivec3(int(gl_FragCoord.x), rows - 1 - int(gl_FragCoord.y), 0), mip);
+}
+`;
+
 /**
  * One mip of the chain, from the mip above (`octmap_downsampler.glsl:46-76`): four bilinear taps,
  * each weighed half by the octahedral Jacobian and half evenly.
