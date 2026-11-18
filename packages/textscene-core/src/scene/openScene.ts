@@ -1,0 +1,128 @@
+import type { SceneGraph } from '../core/SceneGraph.js';
+import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
+import type { TscnExternalResource } from '../parser/types.js';
+import type { ResourceProvider } from '../resources/ResourceProvider.js';
+import { loadedResourceType } from './loadedResourceType.js';
+import type { NodeHandle } from './nodeHandle.js';
+import { parseTscnContent, type ParseResult } from './parseScene.js';
+import { SceneListeners } from './sceneListeners.js';
+import { SceneNodes } from './sceneNodes.js';
+import { SceneProperties } from './sceneProperties.js';
+import type { SceneWrites } from './sceneWrites.js';
+import { createSceneRuntime, type SceneRuntime, type SceneTree } from './sceneRuntime.js';
+import { variantOf, type Variant } from './variant.js';
+import { writtenSceneGraph } from './writtenScene.js';
+
+/** The path a scene opens under when the host names none. */
+export const DEFAULT_ROOT_SCENE_PATH = 'res://__inline__.tscn';
+
+export interface OpenSceneOptions {
+  /** The text of the `.tscn` scene. */
+  source: string;
+  /** How the scene's `res://` files load. */
+  provider: ResourceProvider;
+  /** The path the scene opens under, which its relative paths resolve from. */
+  rootScenePath?: string;
+}
+
+export interface Scene {
+  readonly rootScenePath: string;
+  readonly provider: ResourceProvider;
+  /** The parse of the current text. The same object until `setSource` gives another text. */
+  parse(): ParseResult;
+  /** The parse with the host's writes laid on as instance overrides: what every view draws. */
+  written(): SceneGraph | null;
+  /** Replaces the text and frees every node, as a scene change does in Godot. The writes are dropped. */
+  setSource(source: string): void;
+  /** Calls `listener` after each new parse, and once after the writes of one task. Returns the removal. */
+  subscribe(listener: () => void): () => void;
+  /** Lets go of every listener. A view of a disposed scene draws its last parse. */
+  dispose(): void;
+  /** `get_node` from the scene's root node: throws `Node not found` where `path` names no node. */
+  getNode(path: string): NodeHandle;
+  getNodeOrNull(path: string): NodeHandle | null;
+  /** `load`: a value a property of a resource type takes. A missing file draws as a Missing resource. */
+  load(path: string): Promise<Variant>;
+  /** Calls `listener` when the node at `path` changes, or the tree's shape for null. Returns the removal. */
+  observe(path: string | null, listener: () => void): () => void;
+}
+
+/** `written` of one parse, writes and resources: the graph is built again only when one of them moves. */
+interface WrittenGraph {
+  readonly parse: ParseResult;
+  readonly writes: SceneWrites;
+  readonly resources: readonly TscnExternalResource[];
+  readonly graph: SceneGraph | null;
+}
+
+export function openScene({
+  source,
+  provider,
+  rootScenePath = DEFAULT_ROOT_SCENE_PATH,
+}: OpenSceneOptions): Scene {
+  let currentSource = source;
+  let parsed: ParseResult | null = null;
+  let written: WrittenGraph | null = null;
+  /** Written only by `runtime`: made at the first lookup, so a scene no host asks of loads no tree. */
+  let sceneRuntime: SceneRuntime | null = null;
+
+  const parse = (): ParseResult => (parsed ??= parseTscnContent(currentSource, rootScenePath));
+  const graph = (): SceneGraph | null => parse().sceneGraph;
+  const properties = new SceneProperties(
+    rootScenePath,
+    () => graph()?.scenes.get(rootScenePath),
+    (livePath) => tree()?.node(livePath) ?? null
+  );
+  const tree = (): SceneTree | null => {
+    const current = graph();
+    return current ? runtime().tree(current) : null;
+  };
+  const nodes = new SceneNodes({ graph, tree }, properties, (path) => listeners.written(path));
+  const listeners = new SceneListeners((path) => nodes.getNodeOrNull(path)?.path ?? null);
+
+  const scene: Scene = {
+    rootScenePath,
+    provider,
+    parse,
+    written() {
+      const current = parse();
+      const writes = properties.writes();
+      const resources = properties.resources();
+      if (written?.parse !== current || written.writes !== writes || written.resources !== resources) {
+        const laid = current.sceneGraph && writtenSceneGraph(current.sceneGraph, writes, resources);
+        written = { parse: current, writes, resources, graph: laid };
+      }
+      return written.graph;
+    },
+    setSource(next) {
+      if (next === currentSource) return;
+      currentSource = next;
+      parsed = null;
+      nodes.clear();
+      listeners.textChanged();
+    },
+    subscribe: (listener) => listeners.subscribe(listener),
+    dispose() {
+      listeners.clear();
+      sceneRuntime?.dispose();
+      sceneRuntime = null;
+    },
+    getNode: (path) => nodes.getNode(path),
+    getNodeOrNull: (path) => nodes.getNodeOrNull(path),
+    async load(path) {
+      const className = (await loadedResourceType(provider, path)) ?? undefined;
+      return variantOf({ type: T.OBJECT, resource: { path }, ...(className ? { className } : {}) });
+    },
+    observe: (path, listener) => listeners.observe(path, listener),
+  };
+
+  function runtime(): SceneRuntime {
+    if (!sceneRuntime) {
+      sceneRuntime = createSceneRuntime(scene);
+      sceneRuntime.subscribe(() => listeners.treeChanged());
+    }
+    return sceneRuntime;
+  }
+
+  return scene;
+}

@@ -1,12 +1,3 @@
-/**
- * Derives the Node and Resource class → base-type tables and the ClassDB property tables from
- * the committed engine captures (`pnpm nodes:base-types` writes
- * packages/textscene-core/src/godot/classdb/{node,resource}BaseTypes.generated.ts,
- * classProperties.generated.ts, resourceTypeExclusions.generated.ts,
- * typedCollectionProperties.generated.ts and variantProperties.generated.ts). It never runs
- * Godot: CI has no engine, and the test beside it re-derives every output to prove it current.
- */
-
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -16,6 +7,7 @@ import { resourceTypeHint } from '../../packages/textscene-core/src/godot/classd
 import {
   CATALOG_OUT,
   CLASSES_OUT,
+  NODE_DEFAULTS_OUT,
   PROPS_OUT,
   RESOURCE_BASES_OUT,
   RESOURCE_GETTERS_OUT,
@@ -34,6 +26,7 @@ export const EXCLUSIONS_OUT = classdbModule('resourceTypeExclusions.generated.ts
 export const TYPED_COLLECTIONS_OUT = classdbModule('typedCollectionProperties.generated.ts');
 export const VARIANT_PROPERTIES_OUT = classdbModule('variantProperties.generated.ts');
 export const CLASS_LIST_OUT = classdbModule('classList.generated.ts');
+export const NODE_DEFAULTS_MODULE_OUT = classdbModule('nodeDefaults.generated.ts');
 
 /**
  * Refuses to write a table a walk cannot leave. Every consumer (`descendsFromClass`, `classBaseChain`,
@@ -369,6 +362,58 @@ ${classes}
 `;
 }
 
+/** One `class: { property: text }` table, as module source. */
+function renderTextTable(table) {
+  return Object.entries(table)
+    .map(([className, values]) => {
+      const rows = Object.entries(values)
+        .map(([name, text]) => `    ${JSON.stringify(name)}: ${JSON.stringify(text)},`)
+        .join('\n');
+      return `  ${JSON.stringify(className)}: {\n${rows}\n  },`;
+    })
+    .join('\n');
+}
+
+/**
+ * The module source for the Node property defaults and the properties no file stores.
+ *
+ * @param defaults - `node-defaults.json`.
+ */
+function renderNodeDefaultsModule({ declared, overrides, derived }, version) {
+  const derivedRows = Object.entries(derived)
+    .map(([className, rows]) => {
+      const lines = rows.map(
+        ([name, type, hasSetter]) => `    [${JSON.stringify(name)}, ${type}, ${hasSetter}],`
+      );
+      return `  ${JSON.stringify(className)}: [\n${lines.join('\n')}\n  ],`;
+    })
+    .join('\n');
+  return `/**
+ * The default of each stored Node property and the properties a script reaches that no file
+ * stores, derived from Godot ${version}'s \`class_get_property_default_value\` captures.
+ * AUTO-GENERATED - Do not edit manually. Run: pnpm nodes:base-types
+ *
+ * \`NODE_DEFAULTS\` holds each value as \`var_to_str\` writes it, under the class that declares the
+ * property. \`NODE_DEFAULT_OVERRIDES\` holds, per instantiable class, each value that differs from
+ * it. \`DERIVED_NODE_PROPERTIES\` rows are \`[name, Variant::Type, has setter]\`.
+ */
+
+export const NODE_DEFAULTS: Readonly<Record<string, Readonly<Record<string, string>>>> = Object.freeze({
+${renderTextTable(declared)}
+});
+
+export const NODE_DEFAULT_OVERRIDES: Readonly<Record<string, Readonly<Record<string, string>>>> = Object.freeze({
+${renderTextTable(overrides)}
+});
+
+export type DerivedPropertyRow = readonly [name: string, type: number, hasSetter: boolean];
+
+export const DERIVED_NODE_PROPERTIES: Readonly<Record<string, readonly DerivedPropertyRow[]>> = Object.freeze({
+${derivedRows}
+});
+`;
+}
+
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
 }
@@ -420,6 +465,12 @@ export function renderFromPropertyCaptures() {
   const nodeProperties = readJson(PROPS_OUT);
   const resourceProperties = readJson(RESOURCE_PROPS_OUT);
   return renderPropertiesModule(nodeProperties, resourceProperties, godotVersionOf(catalog));
+}
+
+/** The Node defaults module the committed artifact must equal. */
+export function renderFromNodeDefaultCaptures() {
+  const catalog = readJson(CATALOG_OUT);
+  return renderNodeDefaultsModule(readJson(NODE_DEFAULTS_OUT), godotVersionOf(catalog));
 }
 
 /** The module source the committed artifact must equal. */
@@ -493,6 +544,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       renderFromClassList(),
       (source) => `${source.match(/^ {2}\w+: \[/gm)?.length ?? 0} classes`,
     ],
+    [NODE_DEFAULTS_MODULE_OUT, renderFromNodeDefaultCaptures(), describeNestedRows('default rows')],
   ];
   for (const [path, source, describe] of artifacts) {
     writeFileSync(path, source);

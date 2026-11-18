@@ -1,4 +1,4 @@
-import type { ViewportDescription } from './viewportDescription.js';
+import { clearsBlack, type ViewportDescription } from './viewportDescription.js';
 import type { ViewportShadowAtlas } from '../positionalShadow/viewportShadowAtlas.js';
 import type { ProbeCapture } from '../reflectionProbe/captureCameras.js';
 import { drawAtMipmapBias } from '../materials/godotMipmapBias.js';
@@ -27,6 +27,12 @@ export function drawWorld(render: WorldRender, draw: () => void): void {
   } finally {
     rendersUnderWay.pop();
   }
+}
+
+/** Whether the render under way clears to black, so a BG_CLEAR_COLOR part draws black. False outside any. */
+export function renderClearsBlack(): boolean {
+  const render = renderUnderWay();
+  return render !== null && clearsBlack(render.viewport);
 }
 
 /** The render under way, or null outside any `drawWorld`. */

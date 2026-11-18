@@ -20,10 +20,10 @@ import { TEXTURE_WORK_STATUS_TESTID } from './statusTestIds';
 const SCENE = `[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n`;
 
 describe('<TscnPreviewShell> texture work status', () => {
-  it('shows the status in the top bar while texture work is pending', () => {
+  it('shows the status in the top bar while texture work is pending', async () => {
     render(<TscnPreviewShell panelId="texture-work" content={SCENE} />);
     let end: () => void = () => {};
-    act(() => {
+    await act(async () => {
       end = textureWork.begin();
     });
 
@@ -31,7 +31,7 @@ describe('<TscnPreviewShell> texture work status', () => {
     expect(status.closest('header')).not.toBeNull();
     expect(status.closest('main')).toBeNull();
 
-    act(() => end());
+    await act(async () => end());
     expect(screen.queryByTestId(TEXTURE_WORK_STATUS_TESTID)).toBeNull();
   });
 });

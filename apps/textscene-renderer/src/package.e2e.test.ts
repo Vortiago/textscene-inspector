@@ -20,12 +20,12 @@ const distDir = join(packageDir, 'dist');
 const bundlePath = join(distDir, 'index.js');
 const bundleKey = 'dist/index.js';
 
-/** What a consumer needs to draw a parsed scene. Core's internals stay out. */
-const PUBLIC_VALUE_EXPORTS = ['TscnCanvas', 'TscnSceneProvider', 'useSelection'];
-const PUBLIC_TYPE_EXPORTS = ['ResourceProvider'];
+/** One view draws both modes, so no second view component is public, and core's internals stay out. */
+const PUBLIC_VALUE_EXPORTS = ['TscnCanvas', 'TscnSceneProvider', 'openScene', 'useSelection', 'variant'];
+const PUBLIC_TYPE_EXPORTS = ['NodeHandle', 'ResourceProvider', 'Scene', 'SceneValue', 'Variant'];
 
 /** The packages the bundle imports from the consumer, so it has one React and one three.js. */
-const IMPORTED_PEERS = ['@react-three/drei', '@react-three/fiber', 'postprocessing', 'react', 'three'];
+const IMPORTED_PEERS = ['@react-three/fiber', 'react', 'three'];
 
 /** `react-dom` is a peer of `@react-three/fiber`, which the bundle imports and the consumer installs. */
 const PEER_PACKAGES = [...IMPORTED_PEERS, 'react-dom'];

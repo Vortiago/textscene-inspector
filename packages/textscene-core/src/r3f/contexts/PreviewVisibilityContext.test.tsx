@@ -47,12 +47,12 @@ describe('usePreviewFrameloop', () => {
     expect(result.current).toBe('always');
   });
 
-  it('keeps the loop on while a hidden preview still uploads a texture, and stops it once that ends (edge case)', () => {
+  it('keeps the loop on while a hidden preview still uploads a texture, and stops it once that ends (edge case)', async () => {
     const endWork = textureWork.begin();
     const { result } = renderUnderHost(false);
     expect(result.current).toBe('always');
 
-    act(() => endWork());
+    await act(async () => endWork());
 
     expect(result.current).toBe('never');
   });

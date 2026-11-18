@@ -27,9 +27,13 @@ import { GODOT_TO_LINEAR_GLSL, GODOT_TO_SRGB_GLSL } from '../../godot/rendering/
 export type CompositeToneMapping = Pick<EnvironmentSettings['toneMapping'], 'mode' | 'white'> &
   Partial<Pick<EnvironmentSettings['toneMapping'], 'agxContrast'>>;
 
-/** Fixed at construction: a new exposure rebuilds the effect. */
+/** The linear frame the world drew, which the composite reads. */
+export const FRAME_UNIFORM = 'godotFrame';
+/** Fixed at construction: a new exposure rebuilds the pass. */
 const EXPOSURE_UNIFORM = 'godotExposure';
-/** Bound by the effect when the environment names a glow map. */
+/** The frame size in pixels, which the debanding dither reads. */
+export const RESOLUTION_UNIFORM = 'godotResolution';
+/** Bound by the tone map pass when the environment names a glow map. */
 export const GLOW_MAP_UNIFORM = 'godotGlowMap';
 
 /** One field per `tonemap.glsl` flag group. A null clears that flag. */
@@ -93,6 +97,7 @@ export function compositeProgram({
   usesDebanding,
 }: CompositeOptions): CompositeProgram {
   const declarations: Record<string, UniformDeclaration> = {
+    [FRAME_UNIFORM]: { glslType: 'sampler2D', value: null },
     [EXPOSURE_UNIFORM]: { glslType: 'float', value: exposure },
     ...(autoExposure && {
       [LUMINANCE_UNIFORM]: { glslType: 'sampler2D', value: null },
@@ -106,24 +111,28 @@ export function compositeProgram({
     ),
     ...(glow && usesBicubicGlowUpscale && { [GLOW_TEXTURE_SIZE_UNIFORM]: { glslType: 'vec2', value: null } }),
     ...(glow && samplesGlowMap(glow) && { [GLOW_MAP_UNIFORM]: { glslType: 'sampler2D', value: null } }),
+    ...(usesDebanding && { [RESOLUTION_UNIFORM]: { glslType: 'vec2', value: null } }),
   };
   // SCREEN normalises against the floored white, not the authored one
   // (`renderer_scene_render_rd.cpp`: `tonemap.white = environment_get_white(...)`): Godot's
   // `apply_glow` says "white cannot be smaller than the maximum output value".
   const flooredWhite = resolvedWhite(toneMapping.mode, toneMapping.white);
   const fragmentShader = /* glsl */ `
+varying vec2 vUv;
 ${declarationsGlsl(declarations)}
 ${autoExposure ? AUTO_EXPOSURE_GAIN_GLSL : NO_AUTO_EXPOSURE_GAIN_GLSL}
 ${toneMappingEffectGlsl(toneMapping.mode, toneMapping.white, toneMapping.agxContrast)}
 ${glow ? glowGatherGlsl(glow, usesBicubicGlowUpscale) + blendGlsl(glow, flooredWhite) : ''}
 ${adjustments || usesDebanding ? GODOT_TO_SRGB_GLSL + GODOT_TO_LINEAR_GLSL : ''}
 ${usesDebanding ? DITHER_GLSL : ''}
-void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
+void main() {
+  vec4 inputColor = texture2D(${FRAME_UNIFORM}, vUv);
 ${FRAME_EXPOSURE_GLSL}
 ${glow ? glowAndToneMapGlsl(glow) : TONE_MAP_ONLY_GLSL}
 ${adjustments ? adjustmentsGlsl(adjustments) : ''}
 ${usesDebanding ? DEBANDING_GLSL : ''}
-  outputColor = vec4(color, ${transparentBackground ? 'inputColor.a' : '1.0'});
+  gl_FragColor = vec4(color, ${transparentBackground ? 'clamp(inputColor.a, 0.0, 1.0)' : '1.0'});
+  #include <colorspace_fragment>
 }
 `;
   return {
@@ -157,9 +166,9 @@ function glowAndToneMapGlsl(glow: GlowParams): string {
     : /* glsl */ `  vec3 color = godotGlowBlend(inputColor.rgb * ${FRAME_EXPOSURE}, glow);
   color = godotToneMap(color);`;
   const map = samplesGlowMap(glow)
-    ? /* glsl */ `  glow = mix(glow, texture2D(${GLOW_MAP_UNIFORM}, uv).rgb * glow, ${glslFloat(glow.mapStrength)});\n`
+    ? /* glsl */ `  glow = mix(glow, texture2D(${GLOW_MAP_UNIFORM}, vUv).rgb * glow, ${glslFloat(glow.mapStrength)});\n`
     : '';
-  return /* glsl */ `  vec3 glow = godotGlowGather(uv) * ${glslFloat(glow.intensity)};
+  return /* glsl */ `  vec3 glow = godotGlowGather(vUv) * ${glslFloat(glow.intensity)};
 ${map}${blend}`;
 }
 
@@ -185,20 +194,11 @@ vec3 godotDither3(vec2 fragCoord) {
 }
 `;
 
-/**
- * `tonemap.glsl:950-957`: the dither lands on the sRGB value just before the 8-bit store. The
- * fragment counts from the top-left corner, as in Godot. The colour goes back to linear for the
- * effect pass's encode, clamped at 0 as the 8-bit store clamps, since three's encode takes `pow`.
- */
-const DEBANDING_GLSL = /* glsl */ `  vec2 godotFragCoord = vec2(gl_FragCoord.x, resolution.y - gl_FragCoord.y);
+/** `tonemap.glsl:950-957`. Back to linear for the output encode, clamped at 0 as the 8-bit store clamps. */
+const DEBANDING_GLSL = /* glsl */ `  vec2 godotFragCoord = vec2(gl_FragCoord.x, ${RESOLUTION_UNIFORM}.y - gl_FragCoord.y);
   color = godotToLinear(max(godotToSrgb(color) + godotDither3(godotFragCoord), vec3(0.0)));`;
 
-/**
- * `tonemap.glsl:916-946`: brightness on linear values, contrast and an equal-weight saturation on
- * sRGB values, then back to linear, because the effect pass encodes the output as Godot's sRGB
- * framebuffer does. The decode clamps at 0, as Godot's 8-bit store does: three's encode takes
- * `pow` of the value, and GLSL leaves `pow` of a negative undefined.
- */
+/** `tonemap.glsl:916-946`. Back to linear for the output encode: the clamp keeps its `pow` defined. */
 function adjustmentsGlsl({ brightness, contrast, saturation }: EnvironmentAdjustments): string {
   return /* glsl */ `  color *= ${glslFloat(brightness)};
   color = godotToSrgb(color);

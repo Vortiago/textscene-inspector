@@ -1,0 +1,40 @@
+[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://writes-frames.png" id="1"]
+
+; Host writes that go through a ported setter: `pnpm ref:diff --mode in-game` sets one property with
+; `--set` on both sides. Patch sits under Tilted, which is rotated, skewed and scaled unevenly. Frames
+; is a 2x2 sheet of four colours. Bar lies in Frame, a Control the size of the window, so an anchor
+; of Bar moves it, and a write of one anchor past the other pushes the other along.
+
+[node name="Main" type="Node2D"]
+
+[node name="Tilted" type="Node2D" parent="."]
+position = Vector2(100, 60)
+rotation = 0.4
+scale = Vector2(1.5, 0.8)
+skew = 0.2
+
+[node name="Patch" type="Polygon2D" parent="Tilted"]
+position = Vector2(20, 10)
+color = Color(0.2, 0.6, 0.9, 1)
+polygon = PackedVector2Array(0, 0, 30, 0, 30, 30, 0, 30)
+
+[node name="Frames" type="Sprite2D" parent="."]
+position = Vector2(260, 50)
+scale = Vector2(4, 4)
+texture = ExtResource("1")
+hframes = 2
+vframes = 2
+
+[node name="Frame" type="Control" parent="."]
+offset_right = 320.0
+offset_bottom = 180.0
+mouse_filter = 2
+
+[node name="Bar" type="ColorRect" parent="Frame"]
+offset_left = 20.0
+offset_top = 120.0
+offset_right = 60.0
+offset_bottom = 160.0
+color = Color(0.5, 0.2, 0.7, 1)

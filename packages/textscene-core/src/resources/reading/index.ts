@@ -10,6 +10,7 @@ export type { ScopedReference } from './scopedReference';
 export {
   nodeReference,
   referenceAddress,
+  projectSettingReference,
   referenceHeldBy,
   referenceKey,
   sameReference,

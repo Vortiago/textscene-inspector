@@ -23,7 +23,7 @@ completion. A host supplies files and a place to draw or edit.
 | `apps/textscene-renderer` | `@textscene/renderer`: core's renderer as one npm bundle, with React and three.js as peers | esbuild |
 | `apps/textscene-three-godot-shaders` | `@textscene/three-godot-shaders`: core's shader module as one npm bundle, with three.js as its only peer | esbuild |
 
-Stack: TypeScript (strict), React, react-three-fiber and drei over three.js, Vitest. The
+Stack: TypeScript (strict), React and react-three-fiber over three.js, Vitest. The
 `pnpm-workspace.yaml` catalog holds every shared dependency version.
 
 | Core directory | Holds |
@@ -301,8 +301,8 @@ and CSS side effects, and grows the host bundle about four times. The `languageF
 carries the generated ClassDB property tables, which the webview never loads.
 
 The webview builds ESM with code splitting (`apps/textscene-vscode/esbuild.config.mjs`), and
-loads the dock panels, the Control canvas, drei's `<Text>`, the GLB loader, the area light's LTC
-tables and the in-thread noise jobs on demand. `pnpm check:bundle-size` prints the current sizes,
-and fails when a module that loads on demand reaches the canvas-paint path. The DFG and LTC tables
+loads the dock panels, the Control canvas, the empty canvas's prompt, the GLB loader, the area
+light's LTC tables and the in-thread noise jobs on demand. `pnpm check:bundle-size` prints the
+current sizes, and fails when a module that loads on demand reaches the canvas-paint path. The DFG and LTC tables
 are stored as residuals of a linear prediction (`tableResiduals.ts`), which gzip packs about three
 times tighter than base64.

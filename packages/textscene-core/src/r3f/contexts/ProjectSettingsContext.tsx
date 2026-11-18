@@ -7,7 +7,6 @@
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
-  parseProjectSettings,
   projectThemeScale,
   projectViewportSize,
   projectDefaultFontHinting,
@@ -19,9 +18,8 @@ import {
 } from '../../parser/projectSettingsParser.js';
 import type { FontHinting } from '../../godot/text/textServerEnums.js';
 import { PROJECT_FILE_PATH } from '../../godot/project/project.js';
-import type { FileEventBus } from '../../resources/FileEventBus.js';
 import { useResourceLoader } from '../../resources/useResource.js';
-import * as logger from '../../logger.js';
+import { readProjectSettings } from '../../resources/projectSettingsFile.js';
 
 export interface ProjectSettingsValue {
   /** Raw settings by full name, such as `gui/theme/default_theme_scale`, or null. */
@@ -61,16 +59,6 @@ export interface ProjectSettingsProviderProps {
 }
 
 /** The project's settings, or null when the file is absent or is not a `project.godot`. */
-async function readProjectSettings(bus: FileEventBus): Promise<ProjectSettings | null> {
-  const content = await bus.tryLoad(PROJECT_FILE_PATH, 'ProjectSettings');
-  if (typeof content !== 'string') return null;
-  const parsed = parseProjectSettings(content);
-  if (parsed) {
-    logger.info(`[ProjectSettings] Loaded ${Object.keys(parsed).length} settings from ${PROJECT_FILE_PATH}`);
-  }
-  return parsed;
-}
-
 export function ProjectSettingsProvider({ children, sceneKey }: ProjectSettingsProviderProps) {
   const loader = useResourceLoader();
   const [settings, setSettings] = useState<ProjectSettings | null>(null);

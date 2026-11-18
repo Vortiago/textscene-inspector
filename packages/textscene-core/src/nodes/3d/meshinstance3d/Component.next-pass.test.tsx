@@ -14,7 +14,7 @@ import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 import { DispatchedScene } from '../../../r3f/testing/DispatchedScene';
 import { settleLoads } from '../../../r3f/testing/settleLoads';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
-import { parseTscnContent } from '../../../r3f/hooks/useParsedScene';
+import { parseTscnContent } from '../../../scene/parseScene';
 import { instanceAs } from '../testing/reactThreeTestInstance';
 import { ribbonScene } from '../testing/skinnedRibbon.testkit';
 import './index.r3f';

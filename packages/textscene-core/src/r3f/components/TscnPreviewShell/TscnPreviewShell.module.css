@@ -478,6 +478,8 @@
   color: var(--tsi-danger-fg);
   padding: var(--tsi-space-2) var(--tsi-space-3);
   font-size: var(--tsi-font-md);
+  /* A set line height, not the font's own, so the canvas below keeps one size on every machine. */
+  line-height: 1.4;
 }
 
 .errorBanner strong {

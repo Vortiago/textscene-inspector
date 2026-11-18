@@ -42,6 +42,14 @@ export function referenceHeldBy(
   return { ref, resources, isHeldLocally };
 }
 
+/** No scene holds a project setting, so its file resolves in no tables and is local to none. */
+const NO_TABLES: SceneResources = { internalResources: [], externalResources: [] };
+
+/** A `res://` file a project setting names, such as `default_environment`. */
+export function projectSettingReference(path: string): ScopedReference {
+  return referenceHeldBy(path, NO_TABLES, false);
+}
+
 /** Whether two references name the same resource, held the same way. */
 export function sameReference(a: ScopedReference | null, b: ScopedReference | null): boolean {
   if (a === null || b === null) return a === b;

@@ -66,11 +66,12 @@ describe('<WorldEnvironment>', () => {
     expect(instanceAs<THREE.Scene>(renderer.scene).fog).not.toBeNull();
   });
 
-  it('renders nothing extra when environment reference is missing', async () => {
+  it('draws the clear colour and no fog when the environment reference is missing', async () => {
     const node = makeNode('SubResource("Nope")');
     const renderer = await render(node, []);
     const scene = instanceAs<THREE.Scene>(renderer.scene);
-    expect(scene.background).toBeNull();
+    const [red, green, blue] = textureTexel(scene.background as THREE.DataTexture);
+    expect([green, blue]).toEqual([red, red]);
     expect(scene.fog).toBeNull();
   });
 });

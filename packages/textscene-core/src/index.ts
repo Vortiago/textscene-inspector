@@ -23,6 +23,8 @@ export {
   isCompactLayout,
   parseTscnContent,
   usePersistedState,
+  type Scene,
+  variant,
 } from './r3f/index';
 
 export { ResourceLoaderProvider } from './resources/ResourceLoaderContext';

@@ -1,0 +1,34 @@
+[gd_scene format=3]
+
+; Host writes that go through a ported setter: `pnpm ref:diff --mode in-game` sets one property of
+; Peg with `--set` on both sides. Peg sits under Tilted, which is rotated and scaled unevenly, so a
+; global setter reads back through a parent that is no rotation alone.
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+size = Vector3(0.6, 0.6, 0.6)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_1"]
+size = Vector2(8, 8)
+
+[sub_resource type="StandardMaterial3D" id="Material_1"]
+albedo_color = Color(0.3, 0.6, 0.9, 1)
+
+[node name="Main" type="Node3D"]
+
+[node name="Floor" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_1")
+
+[node name="Tilted" type="Node3D" parent="."]
+transform = Transform3D(1.25758, 0.4432803, -0.6870191, -0.2074747, 0.7642692, 0.1133439, 0.5753106, 0, 1.053099, 0.5, 0.3, -0.5)
+
+[node name="Peg" type="MeshInstance3D" parent="Tilted"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0.6, 0)
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("Material_1")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.8660254, -0.35355338, 0.35355338, 0, 0.70710677, 0.70710677, -0.5, -0.6123724, 0.6123724, 0, 4, 0)
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(0.8660254, -0.25, 0.4330127, 0, 0.8660254, 0.5, -0.5, -0.4330127, 0.75, 3, 3, 5)
+current = true

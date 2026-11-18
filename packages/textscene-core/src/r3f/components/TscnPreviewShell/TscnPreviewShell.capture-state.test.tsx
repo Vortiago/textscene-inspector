@@ -145,7 +145,7 @@ describe('<TscnPreviewShell> capture state', () => {
     expect(state?.status === 'ready' && state.capture()).toBe(DATA_URL);
   });
 
-  it('reports the renderer error when the canvas cannot create a WebGL context', () => {
+  it('reports the renderer error when the canvas cannot create a WebGL context', async () => {
     arrangeCanvas({
       registersHandler: false,
       error: new Error('THREE.WebGLRenderer: Error creating WebGL context.'),
@@ -173,33 +173,33 @@ describe('<TscnPreviewShell> capture state', () => {
     expect(state?.status === 'ready' && state.capture()).toBe(DATA_URL_2D);
   });
 
-  it('reports pending as the shell unmounts', () => {
+  it('reports pending as the shell unmounts', async () => {
     arrangeCanvas({});
     const { states, unmount } = renderShell();
 
-    act(() => unmount());
+    await act(async () => unmount());
 
     expect(latest(states)).toEqual({ status: 'pending' });
   });
 
-  it('reports pending while a resource the scene uses is loading, and ready once it lands', () => {
+  it('reports pending while a resource the scene uses is loading, and ready once it lands', async () => {
     arrangeCanvas({ holdsResource: true });
     const { states } = renderShell();
     expect(latest(states)).toEqual({ status: 'pending' });
 
-    act(() => canvasStub.releaseResource());
+    await act(async () => canvasStub.releaseResource());
 
     expect(latest(states)?.status).toBe('ready');
   });
 
-  it('reports pending while a texture is building, and ready once it is done', () => {
+  it('reports pending while a texture is building, and ready once it is done', async () => {
     arrangeCanvas({});
     const endTextureWork = textureWork.begin();
     try {
       const { states } = renderShell();
       expect(latest(states)).toEqual({ status: 'pending' });
 
-      act(() => endTextureWork());
+      await act(async () => endTextureWork());
 
       expect(latest(states)?.status).toBe('ready');
     } finally {
@@ -207,14 +207,14 @@ describe('<TscnPreviewShell> capture state', () => {
     }
   });
 
-  it('reports pending while a scene font is loading, and ready once it settles', () => {
+  it('reports pending while a scene font is loading, and ready once it settles', async () => {
     arrangeCanvas({});
     const endFontWork = fontWork.begin();
     try {
       const { states } = renderShell();
       expect(latest(states)).toEqual({ status: 'pending' });
 
-      act(() => endFontWork());
+      await act(async () => endFontWork());
 
       expect(latest(states)?.status).toBe('ready');
     } finally {
@@ -244,14 +244,14 @@ describe('<TscnPreviewShell> capture state', () => {
 describe('<TscnPreviewShell> scene load status', () => {
   const sceneLoadStatus = () => screen.queryByTestId(SCENE_LOAD_STATUS_TESTID);
 
-  it('shows "Loading scene…" in the top bar while a resource is on its way, and leaves once it lands', () => {
+  it('shows "Loading scene…" in the top bar while a resource is on its way, and leaves once it lands', async () => {
     arrangeCanvas({ holdsResource: true });
     renderShell();
     const status = sceneLoadStatus();
     expect(status?.textContent).toBe('Loading scene…');
     expect(status?.closest('header')).not.toBeNull();
 
-    act(() => canvasStub.releaseResource());
+    await act(async () => canvasStub.releaseResource());
 
     expect(sceneLoadStatus()).toBeNull();
   });
@@ -266,14 +266,14 @@ describe('<TscnPreviewShell> scene load status', () => {
     expect(sceneLoadStatus()).not.toBeNull();
   });
 
-  it('shows "Loading scene…" while a scene font is loading, and leaves once it settles', () => {
+  it('shows "Loading scene…" while a scene font is loading, and leaves once it settles', async () => {
     arrangeCanvas({});
     const endFontWork = fontWork.begin();
     try {
       renderShell();
       expect(sceneLoadStatus()?.textContent).toBe('Loading scene…');
 
-      act(() => endFontWork());
+      await act(async () => endFontWork());
 
       expect(sceneLoadStatus()).toBeNull();
     } finally {
@@ -281,7 +281,7 @@ describe('<TscnPreviewShell> scene load status', () => {
     }
   });
 
-  it('gives way to the texture work status, so one status shows at a time (edge case)', () => {
+  it('gives way to the texture work status, so one status shows at a time (edge case)', async () => {
     arrangeCanvas({});
     const endTextureWork = textureWork.begin();
     try {
@@ -289,7 +289,7 @@ describe('<TscnPreviewShell> scene load status', () => {
       expect(sceneLoadStatus()).toBeNull();
       expect(screen.queryByTestId(TEXTURE_WORK_STATUS_TESTID)).not.toBeNull();
     } finally {
-      act(() => endTextureWork());
+      await act(async () => endTextureWork());
     }
   });
 

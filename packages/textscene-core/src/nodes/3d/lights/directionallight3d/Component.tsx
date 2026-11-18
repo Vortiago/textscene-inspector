@@ -34,6 +34,7 @@ import { lightSizeUserData } from '../../../../r3f/lightSize/lightSize';
 import { directionalLightSize } from '../../../../godot/rendering/lights/directionalSoftShadow';
 import { degToRad } from '../../../../godot/math/math';
 import { fogLightUserData } from '../../../../r3f/fog/fogLightDeclaration';
+import { useDrawsEditorOnly } from '../../../../r3f/contexts/EditorHintContext';
 
 export function DirectionalLight3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as DirectionalLight3DProperties;
@@ -78,6 +79,7 @@ export function DirectionalLight3D({ node, children }: NodeComponentProps) {
     ]
   );
 
+  const drawsLight = useDrawsEditorOnly(properties.editor_only);
   return (
     <LightWithTarget
       name={node.name}
@@ -87,6 +89,7 @@ export function DirectionalLight3D({ node, children }: NodeComponentProps) {
         <>
           <directionalLight
             ref={lightRef}
+            visible={drawsLight}
             position={[0, 0, 0]}
             color={color}
             intensity={intensity}

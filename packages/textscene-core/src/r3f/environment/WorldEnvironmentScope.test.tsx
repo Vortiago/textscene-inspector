@@ -16,21 +16,34 @@ import {
   type EnvironmentResolution,
 } from './WorldEnvironmentScope';
 import { NO_RESOLUTION, PENDING_RESOLUTION } from './worldGroup';
+import { ViewportDescriptionProvider } from '../viewportRender/viewportDescriptionContext';
+import { gameViewportDescription } from '../viewportRender/viewportDescription';
 
-vi.mock('./EnvironmentLayer', () => ({
-  EnvironmentLayer: ({ settings }: EnvironmentLayerProps) => (
-    <group name="EnvironmentLayer" userData={{ settings }} />
-  ),
-}));
+vi.mock('./EnvironmentLayer', async () => {
+  const { previewEnvironment } = await import('../preview/godotPreviewLighting');
+  return {
+    EnvironmentLayer: ({ settings }: EnvironmentLayerProps) => (
+      <group
+        name={settings === previewEnvironment().settings ? 'PreviewEnvironment' : 'EnvironmentLayer'}
+        userData={{ settings }}
+      />
+    ),
+  };
+});
 vi.mock('./NoEnvironmentLayer', () => ({
   NoEnvironmentLayer: () => <group name="NoEnvironmentLayer" />,
 }));
-vi.mock('../preview/PreviewEnvironment', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../preview/PreviewEnvironment')>()),
-  PreviewEnvironment: () => <group name="PreviewEnvironment" />,
-}));
 vi.mock('./Compositor', () => ({
   Compositor: () => <group name="Compositor" />,
+}));
+/** Each path the fallback hook was asked to load, in call order. Cleared by the test that reads it. */
+const askedFallbacks = vi.hoisted(() => [] as (string | null)[]);
+vi.mock('./fallbackEnvironment', () => ({
+  // The fallback resolves to a settings object named after its path, and to none with no path.
+  useFallbackEnvironment: (path: string | null): EnvironmentResolution => {
+    askedFallbacks.push(path);
+    return path ? resolved(path) : NO_RESOLUTION;
+  },
 }));
 vi.mock('../preview/PreviewSun', () => ({
   PreviewSun: () => <group name="PreviewSun" />,
@@ -264,6 +277,27 @@ describe('<WorldEnvironmentScope world="root"> preview sun', () => {
   });
 });
 
+describe('<WorldEnvironmentScope world="root"> of a viewport that previews nothing', () => {
+  /** The root as a game draws it, whatever the toolbar toggles hold. */
+  function inGameRoot(children: ReactNode) {
+    return (
+      <ViewportDescriptionProvider description={gameViewportDescription(null)}>
+        {inRoot(children)}
+      </ViewportDescriptionProvider>
+    );
+  }
+
+  it('draws no preview environment', async () => {
+    expect(mountedLayers(await ReactThreeTestRenderer.create(inGameRoot(null)))).toEqual([
+      'NoEnvironmentLayer',
+    ]);
+  });
+
+  it('draws no preview sun', async () => {
+    expect(previewSunCount(await ReactThreeTestRenderer.create(inGameRoot(null)))).toBe(0);
+  });
+});
+
 describe('<WorldEnvironmentScope world="subViewport">', () => {
   it('draws a resolved Environment', async () => {
     const renderer = await ReactThreeTestRenderer.create(
@@ -295,6 +329,73 @@ describe('<WorldEnvironmentScope world="subViewport">', () => {
       inRoot(inSubViewport(<Publisher resolution={resolved('a')} />))
     );
     expect(mountedLayers(renderer).sort()).toEqual(['EnvironmentLayer', 'PreviewEnvironment']);
+  });
+});
+
+describe('<WorldEnvironmentScope world="root"> of an editor viewport with a fallback Environment', () => {
+  const FALLBACK = 'res://default_env.tres';
+
+  function inEditorRoot(showPreviewEnvironment: boolean) {
+    return (
+      <ViewportDescriptionProvider
+        description={{
+          ...gameViewportDescription(null),
+          previewsEnvironment: true,
+          fallbackEnvironment: FALLBACK,
+        }}
+      >
+        {inRoot(null, showPreviewEnvironment)}
+      </ViewportDescriptionProvider>
+    );
+  }
+
+  it('loads no fallback file while the preview environment stands in', async () => {
+    askedFallbacks.length = 0;
+    await ReactThreeTestRenderer.create(inEditorRoot(true));
+    expect(askedFallbacks.filter((path) => path !== null)).toEqual([]);
+  });
+
+  it('draws the fallback when the user turns the preview off', async () => {
+    expect(appliedName(await ReactThreeTestRenderer.create(inEditorRoot(false)))).toBe(FALLBACK);
+  });
+});
+
+describe('<WorldEnvironmentScope world="subViewport"> of a viewport with a fallback Environment', () => {
+  const FALLBACK = 'res://default_env.tres';
+
+  function inGameRoot(children: ReactNode) {
+    return (
+      <ViewportDescriptionProvider
+        description={{ ...gameViewportDescription(null), fallbackEnvironment: FALLBACK }}
+      >
+        {inSubViewport(children)}
+      </ViewportDescriptionProvider>
+    );
+  }
+
+  it('draws the fallback for a world with no WorldEnvironment', async () => {
+    expect(appliedName(await ReactThreeTestRenderer.create(inGameRoot(null)))).toBe(FALLBACK);
+  });
+
+  it("draws a WorldEnvironment's Environment ahead of the fallback", async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      inGameRoot(<Publisher resolution={resolved('a')} />)
+    );
+    expect(appliedName(renderer)).toBe('a');
+  });
+
+  it('draws the fallback past a WorldEnvironment whose Environment is missing (edge case)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      inGameRoot(<Publisher resolution={NO_RESOLUTION} />)
+    );
+    expect(appliedName(renderer)).toBe(FALLBACK);
+  });
+
+  it('draws nothing while the WorldEnvironment loads, which holds its place', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      inGameRoot(<Publisher resolution={PENDING_RESOLUTION} />)
+    );
+    expect(mountedLayers(renderer)).toEqual([]);
   });
 });
 

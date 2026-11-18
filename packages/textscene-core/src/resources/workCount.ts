@@ -8,24 +8,36 @@ export interface WorkCount {
   /** Counts one piece of work until the returned end runs. The end is idempotent. */
   begin(): () => void;
   pending(): number;
-  /** Calls `onChange` on every change of the count. Returns the unsubscribe. */
+  /** Calls `onChange` a microtask after each task that changes the count. Returns the unsubscribe. */
   subscribe(onChange: () => void): () => void;
 }
 
 /** @canonical A page-wide count of work in flight */
 export function createWorkCount(): WorkCount {
-  const store = createExternalStore(0);
+  const notices = createExternalStore(0);
+  let count = 0;
+  let isNoticeQueued = false;
+  // Work starts inside a React render, so the subscribers hear a microtask later, never mid-render.
+  const change = (by: number) => {
+    count += by;
+    if (isNoticeQueued) return;
+    isNoticeQueued = true;
+    queueMicrotask(() => {
+      isNoticeQueued = false;
+      notices.set(notices.get() + 1);
+    });
+  };
   return {
     begin() {
-      store.set(store.get() + 1);
+      change(1);
       let ended = false;
       return () => {
         if (ended) return;
         ended = true;
-        store.set(store.get() - 1);
+        change(-1);
       };
     },
-    pending: store.get,
-    subscribe: store.subscribe,
+    pending: () => count,
+    subscribe: notices.subscribe,
   };
 }

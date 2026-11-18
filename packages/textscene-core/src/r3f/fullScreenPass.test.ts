@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import {
   drawFullScreen,
+  drawFullScreenTriangle,
   FULL_SCREEN_VERTEX,
   fullScreenDepthPass,
   fullScreenPass,
@@ -104,6 +105,32 @@ describe('drawFullScreen', () => {
 
     expect(drawnQuads[0]).not.toBe(drawnQuads[1]);
     expect(drawnQuads[0]!.geometry).not.toBe(drawnQuads[1]!.geometry);
+  });
+});
+
+describe('drawFullScreenTriangle', () => {
+  /** Where `FULL_SCREEN_VERTEX` puts a vertex: `gl_Position.xy = position.xy * 2.0`. */
+  const clipPositionOf = (position: THREE.BufferAttribute, index: number) => [
+    position.getX(index) * 2,
+    position.getY(index) * 2,
+  ];
+
+  it('draws the pass into the target over one triangle with corners (-1, -1), (3, -1), (-1, 3)', async () => {
+    const { renderer } = await testRenderer();
+    const pass = fullScreenPass('ToneMap', FRAGMENT, {});
+    const target = new THREE.WebGLRenderTarget(4, 4);
+    const rendered = vi.spyOn(renderer, 'render');
+
+    drawFullScreenTriangle(renderer, pass, target);
+
+    const triangle = rendered.mock.calls[0]![0] as THREE.Mesh;
+    const position = triangle.geometry.getAttribute('position') as THREE.BufferAttribute;
+    expect([0, 1, 2].map((index) => clipPositionOf(position, index))).toEqual([
+      [-1, -1],
+      [3, -1],
+      [-1, 3],
+    ]);
+    expect([renderer.getRenderTarget(), triangle.material]).toEqual([target, pass]);
   });
 });
 

@@ -201,6 +201,7 @@ function ambientFor(
       ambient: {
         color: backgroundColor,
         energy: properties.background_energy_multiplier,
+        ...(background === BackgroundMode.BG_CLEAR_COLOR && { isClearColor: true as const }),
       },
       skyAmbient: null,
     };

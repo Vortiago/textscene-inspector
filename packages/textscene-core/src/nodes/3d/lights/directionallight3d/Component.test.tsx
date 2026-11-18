@@ -13,6 +13,7 @@ import { skyLightEnergy, skyLightSize } from '../../../../r3f/sky/skyLight';
 function makeNode(overrides: Partial<DirectionalLight3DProperties> = {}): TscnNode {
   const props: DirectionalLight3DProperties = {
     name: 'Sun',
+    editor_only: false,
     layers: 1,
     light_color: 'Color(1, 0.95, 0.9, 1)',
     light_energy: 0.8,

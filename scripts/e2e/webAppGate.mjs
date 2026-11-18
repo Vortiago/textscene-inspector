@@ -1,10 +1,4 @@
 #!/usr/bin/env node
-/**
- * `pnpm test:e2e:web`: the gate for the web app's outliner, inspector, mode switching, phone
- * layout, file upload and drop, camera preview and load health, through `?fixture=` in the real
- * running app. It observes from outside (`cameraProbe.mjs`, DOM shape), so no production file
- * carries a test hook.
- */
 import { inkStats } from '../vscode/pixels.mjs';
 import { previewPort, readViewportMode, settleCanvas, withPreviewBrowser } from '../visual/previewServer.mjs';
 import { installViewMatrixProbe, matricesEqual, formatMatrix, readViewProbe } from './cameraProbe.mjs';
@@ -38,6 +32,7 @@ import {
   checkCameraPreview,
   runCameraPreviewScenario,
 } from './cameraPreviewScenario.mjs';
+import { checkInGame, IN_GAME_FIXTURE, runInGameScenario } from './inGameScenario.mjs';
 
 // No external resource, so the geometry and node set are deterministic. The
 // order is the fixture's authored child order, which TreeNode renders.
@@ -175,6 +170,9 @@ async function runScenarios(browser, baseUrl) {
   console.log(`[gate] camera preview: ${CAMERA_PREVIEW_FIXTURE}`);
   const cameraPreview = await runCameraPreviewScenario(browser, baseUrl);
 
+  console.log(`[gate] In-game mode: ${IN_GAME_FIXTURE}`);
+  const inGame = await runInGameScenario(browser, baseUrl);
+
   return {
     threeD,
     twoD,
@@ -186,6 +184,7 @@ async function runScenarios(browser, baseUrl) {
     phone,
     uploads,
     cameraPreview,
+    inGame,
   };
 }
 
@@ -202,6 +201,7 @@ function checkScenarios(gate, results) {
     phone,
     uploads,
     cameraPreview,
+    inGame,
   } = results;
   checkSizedCanvas(gate, '[3D]', threeD.dims);
   checkInk(gate, '[3D]', threeD.ink, INK_FLOOR_3D);
@@ -259,6 +259,7 @@ function checkScenarios(gate, results) {
   checkPhoneLayout(gate, phone, { expectedPaths: EXPECTED_3D_PATHS, selectName: 'Title' });
   checkUploadScenarios(gate, uploads);
   checkCameraPreview(gate, cameraPreview);
+  checkInGame(gate, inGame);
 }
 
 /** Prints what each scenario measured, pass or fail, for a run's log. */
@@ -272,6 +273,7 @@ function logMeasurements({
   stalled,
   phone,
   uploads,
+  inGame,
 }) {
   console.log('\n[gate] measurements');
   console.log(
@@ -305,6 +307,10 @@ function logMeasurements({
     `  uploads  file-input ink=${uploads.fileInput.ink?.inkPixels} drop ink=${uploads.drop.ink?.inkPixels} ` +
       `scene-only drop ink=${uploads.repeatedDrop.sceneOnly.ink?.inkPixels} ` +
       `texture drop ink=${uploads.repeatedDrop.filled.ink?.inkPixels}`
+  );
+  console.log(
+    `  in-game  opened-in=${inGame.openedIn} pressed=${inGame.isPressed} ` +
+      `canvas=${inGame.dims.width}x${inGame.dims.height} ink=${inGame.ink?.inkPixels}`
   );
 }
 

@@ -268,6 +268,8 @@ export interface EnvironmentSettings {
     energyMultiplier: number;
     /** The highest canvas layer drawn behind the 3D render under BG_CANVAS. */
     canvasMaxLayer: number;
+    /** No exposure scales it: a world with no Environment (`render_forward_clustered.cpp:2064`). */
+    ignoresExposure?: true;
   };
   /**
    * Flat ambient. Null when the source emits none (DISABLED) or when the ambient is
@@ -276,6 +278,8 @@ export interface EnvironmentSettings {
   ambient: {
     color: Rgba;
     energy: number;
+    /** Set when the colour is BG_CLEAR_COLOR's, which each render takes from its own viewport. */
+    isClearColor?: true;
   } | null;
   /**
    * The sky as an image-based light (IBL) for the diffuse ambient. Present when the sky is the
