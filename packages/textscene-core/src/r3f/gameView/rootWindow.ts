@@ -28,3 +28,19 @@ export function rootWindow(settings: ProjectSettings | null): RootWindow {
   const size2dOverride = contentScale.mode === ContentScaleMode.VIEWPORT ? VECTOR2_ZERO : layoutSize;
   return { size, targetSize: renderSize, size2dOverride, drawRect };
 }
+
+/** The window as a pane that shows it at `scale` renders it: below 1, at the fitted size (ADR-0087). */
+export function shrinkRootWindow(window: RootWindow, scale: number): RootWindow {
+  if (scale >= 1) return window;
+  const { targetSize, size2dOverride } = window;
+  const hasOverride = size2dOverride.x !== 0 || size2dOverride.y !== 0;
+  return {
+    ...window,
+    targetSize: { x: shrunkExtent(targetSize.x, scale), y: shrunkExtent(targetSize.y, scale) },
+    size2dOverride: hasOverride ? size2dOverride : targetSize,
+  };
+}
+
+function shrunkExtent(extent: number, scale: number): number {
+  return Math.max(1, Math.round(extent * scale));
+}

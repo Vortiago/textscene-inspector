@@ -3,7 +3,7 @@ import type { ProjectSettings } from '../../parser/projectSettingsParser.js';
 import { parseSubViewport } from '../../nodes/viewport/subviewport/parser.js';
 import { SubViewportUpdateMode } from '../../godot/scene/viewport.js';
 import { ROOT_VIEWPORT_PATH } from '../contexts/EnclosingViewportContext.js';
-import { rootWindow } from './rootWindow.js';
+import type { RootWindow } from './rootWindow.js';
 
 const ROOT_TYPE = 'SubViewport';
 
@@ -18,9 +18,13 @@ const ROOT_PROPERTY_SETTINGS: Readonly<Record<string, string>> = {
   canvas_item_default_texture_repeat: 'rendering/textures/canvas_textures/default_texture_repeat',
 };
 
-/** The root viewport over `sceneRoots`, sized and set as `settings` give it. */
-export function rootViewportNode(settings: ProjectSettings | null, sceneRoots: TscnNode[]): TscnNode {
-  const { targetSize, size2dOverride } = rootWindow(settings);
+/** The root viewport over `sceneRoots`, sized as `window` stretches it and set as `settings` give it. */
+export function rootViewportNode(
+  settings: ProjectSettings | null,
+  window: RootWindow,
+  sceneRoots: TscnNode[]
+): TscnNode {
+  const { targetSize, size2dOverride } = window;
   const raw: Record<string, string> = {
     size: `Vector2i(${targetSize.x}, ${targetSize.y})`,
     // A window always stretches its 2D override (`viewport.h:727`).

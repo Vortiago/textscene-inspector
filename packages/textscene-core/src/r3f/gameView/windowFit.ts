@@ -4,9 +4,14 @@ import type { RootWindow } from './rootWindow.js';
 
 /** A WebGL viewport, from the bottom-left: the window fills the pane at one scale, centred. */
 export function targetRectInPane(pane: Vector2, window: Pick<RootWindow, 'size' | 'drawRect'>): Rect2 {
-  const scale = Math.min(pane.x / window.size.x, pane.y / window.size.y);
+  const scale = paneScale(pane, window.size);
   const left = (pane.x - window.size.x * scale) / 2;
   const top = (pane.y - window.size.y * scale) / 2;
   const { x, y, w, h } = window.drawRect;
   return { x: left + x * scale, y: pane.y - top - (y + h) * scale, w: w * scale, h: h * scale };
+}
+
+/** The one scale at which a window of `size` fills `pane`. */
+export function paneScale(pane: Vector2, size: Vector2): number {
+  return Math.min(pane.x / size.x, pane.y / size.y);
 }

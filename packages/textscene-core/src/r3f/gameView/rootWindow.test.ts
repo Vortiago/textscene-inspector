@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ProjectSettings } from '../../parser/projectSettingsParser';
-import { rootWindow } from './rootWindow';
+import { rootWindow, shrinkRootWindow } from './rootWindow';
 
 /** A project at Godot's default viewport, 1152 x 648, with `stretch` keys under `display/window/stretch/`. */
 function project(window: [number, number] | null, stretch: Record<string, string>): ProjectSettings {
@@ -58,6 +58,32 @@ describe('rootWindow', () => {
     expect([root.targetSize, root.size2dOverride]).toEqual([
       { x: 800, y: 450 },
       { x: 768, y: 432 },
+    ]);
+  });
+});
+
+describe('shrinkRootWindow', () => {
+  const stretched = rootWindow(project([800, 800], { mode: 'canvas_items' }));
+
+  it('keeps a window the pane shows at full size or larger', () => {
+    expect(shrinkRootWindow(stretched, 1)).toBe(stretched);
+    expect(shrinkRootWindow(stretched, 2.5)).toBe(stretched);
+  });
+
+  it('renders a smaller target in a smaller pane, laid out in the same 2D override', () => {
+    const shrunk = shrinkRootWindow(stretched, 0.5);
+    expect([shrunk.targetSize, shrunk.size2dOverride, shrunk.drawRect]).toEqual([
+      { x: 400, y: 225 },
+      { x: 1152, y: 648 },
+      stretched.drawRect,
+    ]);
+  });
+
+  it('lays a viewport-mode target out at its full size, which had no 2D override', () => {
+    const shrunk = shrinkRootWindow(rootWindow(project([800, 800], { mode: 'viewport' })), 0.5);
+    expect([shrunk.targetSize, shrunk.size2dOverride]).toEqual([
+      { x: 576, y: 324 },
+      { x: 1152, y: 648 },
     ]);
   });
 });

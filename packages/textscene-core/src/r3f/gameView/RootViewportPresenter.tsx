@@ -19,21 +19,27 @@ const PRESENT_PRIORITY = 1;
 const BLIT_FILTER = canvasItemFilterState(CanvasItemTextureFilter.NEAREST);
 
 /** Retains the root target, so its pass renders, and draws it in the window fitted to the pane. */
-export function RootViewportPresenter({ root, window }: { root: TscnNode; window: RootWindow }) {
+export function RootViewportPresenter({
+  root,
+  projectWindow,
+}: {
+  root: TscnNode;
+  projectWindow: RootWindow;
+}) {
   const entry = useViewportTexture(ROOT_VIEWPORT_PATH);
   useEffect(() => entry?.plain.retain(), [entry]);
   const target = entry?.plain.texture ?? null;
-  const texture = useTextureView(target, useBlitSampler(target, window));
+  const texture = useTextureView(target, useBlitSampler(target, projectWindow));
   const { transparent_bg: isTransparent } = root.properties as SubViewportProperties;
   useFrame(({ gl }) => {
-    presentRootTarget(gl, texture, window, isTransparent);
+    presentRootTarget(gl, texture, projectWindow, isTransparent);
   }, PRESENT_PRIORITY);
   return null;
 }
 
 /** Only where the window scales the target: at 1:1 nearest reads the same texels, and no copy is made. */
-function useBlitSampler(target: THREE.Texture | null, window: RootWindow): ViewSampler | null {
-  const { targetSize, drawRect } = window;
+function useBlitSampler(target: THREE.Texture | null, projectWindow: RootWindow): ViewSampler | null {
+  const { targetSize, drawRect } = projectWindow;
   const scalesTarget = drawRect.w !== targetSize.x || drawRect.h !== targetSize.y;
   // The target's own space: the view reads the bytes the window shows as the target does.
   const colorSpace = (target?.colorSpace ?? THREE.NoColorSpace) as THREE.ColorSpace;
