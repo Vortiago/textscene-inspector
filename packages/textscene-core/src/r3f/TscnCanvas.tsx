@@ -25,7 +25,9 @@ import { SceneCamerasProvider } from './sceneCameras.js';
 import { CANVAS_RENDERER_GL, CANVAS_RENDERER_PROPS } from './canvasRenderer/canvasRendererProps.js';
 import { CanvasRendererScope } from './canvasRenderer/CanvasRendererScope.js';
 import { TscnSceneProvider } from './TscnSceneProvider.js';
-import type { Scene } from '../scene/openScene.js';
+import { DEFAULT_ROOT_SCENE_PATH, type Scene } from '../scene/openScene.js';
+import type { ViewportMode } from './contexts/ViewportModeContext.js';
+import { Canvas2DStage } from './components/Canvas2DStage/Canvas2DStage.js';
 import { rootClassName } from './stageClassName.js';
 
 // Lazy, so the glyph engine and the parse of the prompt load only for an empty canvas.
@@ -114,8 +116,8 @@ function EmptySceneIndicator() {
 
 const GameView = lazy(() => import('./gameView/GameView.js').then((m) => ({ default: m.GameView })));
 
-/** `in-game` draws the scene as the game starts it with no script run, `3D` as the editor's 3D view. */
-export type TscnCanvasMode = 'in-game' | '3D';
+/** `in-game` draws the game's start with no script run, `3D` and `2D` the editor's views. */
+export type TscnCanvasMode = ViewportMode;
 
 export interface TscnCanvasProps {
   /** The scene `openScene` gave. Without it, the view reads the `<TscnSceneProvider>` above it. */
@@ -127,9 +129,14 @@ export interface TscnCanvasProps {
 }
 
 export function TscnCanvas({ scene, mode = '3D', className }: TscnCanvasProps) {
-  const stage =
-    mode === 'in-game' ? <GameStage className={className} /> : <EditorCanvas className={className} />;
+  const stage = stageOf(mode, className);
   return scene ? <TscnSceneProvider scene={scene}>{stage}</TscnSceneProvider> : stage;
+}
+
+function stageOf(mode: TscnCanvasMode, className: string | undefined) {
+  if (mode === 'in-game') return <GameStage className={className} />;
+  if (mode === '2D') return <Editor2DStage className={className} />;
+  return <EditorCanvas className={className} />;
 }
 
 /** Loads on demand, so a host that never shows a game keeps it out of its first chunk. */
@@ -138,6 +145,25 @@ function GameStage({ className }: { className?: string }) {
     <Suspense fallback={null}>
       <GameView className={className} />
     </Suspense>
+  );
+}
+
+/** The root scene as the editor's 2D view lays it out, over the scene the view reads. */
+function Editor2DStage({ className }: { className?: string }) {
+  const hierarchy = useOptionalHierarchy();
+  const sceneGraph = hierarchy?.sceneGraph ?? null;
+  const rootScene = sceneGraph?.scenes.get(sceneGraph.rootScene);
+  const nodes = useSeatedRoots() ?? rootScene?.nodes ?? [];
+  return (
+    <div className={rootClassName(className)}>
+      <Canvas2DStage
+        nodes={nodes}
+        internalResources={rootScene?.internalResources ?? []}
+        externalResources={rootScene?.externalResources ?? []}
+        editableInstances={rootScene?.editableInstances}
+        scenePath={hierarchy?.scene?.rootScenePath ?? DEFAULT_ROOT_SCENE_PATH}
+      />
+    </div>
   );
 }
 

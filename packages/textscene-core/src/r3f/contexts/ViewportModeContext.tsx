@@ -204,19 +204,20 @@ export function useViewportMode(): ViewportModeValue {
 }
 
 /** The game draws no overlay or preview, and every Label3D and fog (`scene/main/scene_tree.h:142-144`). */
+export const RUNNING_GAME_TOGGLES = {
+  showCollisions: false,
+  showLabels: true,
+  showNavigation: false,
+  showGizmos: false,
+  showGrid: false,
+  showPreviewSun: false,
+  showPreviewEnvironment: false,
+  frameOnOpen: false,
+  showFog: true,
+} as const satisfies Partial<ViewportModeValue>;
+
 function runningGameToggles(value: ViewportModeValue): ViewportModeValue {
-  return {
-    ...value,
-    showCollisions: false,
-    showLabels: true,
-    showNavigation: false,
-    showGizmos: false,
-    showGrid: false,
-    showPreviewSun: false,
-    showPreviewEnvironment: false,
-    frameOnOpen: false,
-    showFog: true,
-  };
+  return { ...value, ...RUNNING_GAME_TOGGLES };
 }
 
 /**

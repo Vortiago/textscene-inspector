@@ -62,29 +62,30 @@ function useStubScreenshotHandler(dataUrl: string, shownScene: SceneGraph | null
 
 // happy-dom has no WebGL, so the R3F canvas is a stub that registers or throws on demand.
 vi.mock('../../TscnCanvas', () => ({
-  TscnCanvas: function StubCanvas() {
-    const loader = useResourceLoader();
-    const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
-    const firstScene = useRef(sceneGraph);
-    const shownScene = canvasStub.lagsScene ? firstScene.current : sceneGraph;
-    useEffect(() => {
-      if (!canvasStub.holdsResource || !loader) return undefined;
-      canvasStub.releaseResource = loader.beginPending();
-      return canvasStub.releaseResource;
-    }, [loader]);
-    useStubScreenshotHandler(DATA_URL, shownScene, canvasStub.registersHandler);
-    if (canvasStub.error) throw canvasStub.error;
-    return <div data-testid="canvas-stub" />;
-  },
+  TscnCanvas: ({ mode }: { mode?: string }) => (mode === '2D' ? <StubStage /> : <StubCanvas />),
   TscnSceneContents: () => null,
 }));
+
+function StubCanvas() {
+  const loader = useResourceLoader();
+  const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
+  const firstScene = useRef(sceneGraph);
+  const shownScene = canvasStub.lagsScene ? firstScene.current : sceneGraph;
+  useEffect(() => {
+    if (!canvasStub.holdsResource || !loader) return undefined;
+    canvasStub.releaseResource = loader.beginPending();
+    return canvasStub.releaseResource;
+  }, [loader]);
+  useStubScreenshotHandler(DATA_URL, shownScene, canvasStub.registersHandler);
+  if (canvasStub.error) throw canvasStub.error;
+  return <div data-testid="canvas-stub" />;
+}
+
 // The 2D stage registers its own handler, as its world canvas's `ScreenshotBridge` does.
-vi.mock('../Canvas2DStage/Canvas2DStage', () => ({
-  Canvas2DStage: function StubStage() {
-    useStubScreenshotHandler(DATA_URL_2D, useOptionalHierarchy()?.sceneGraph ?? null);
-    return <div data-testid="stage-2d-stub" />;
-  },
-}));
+function StubStage() {
+  useStubScreenshotHandler(DATA_URL_2D, useOptionalHierarchy()?.sceneGraph ?? null);
+  return <div data-testid="stage-2d-stub" />;
+}
 
 import { TscnPreviewShell } from './TscnPreviewShell';
 

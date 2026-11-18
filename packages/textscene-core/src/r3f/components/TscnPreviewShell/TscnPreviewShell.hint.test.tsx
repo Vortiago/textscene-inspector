@@ -8,11 +8,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 vi.mock('../../TscnCanvas', () => ({
-  TscnCanvas: () => <div data-testid="canvas-stub" />,
+  TscnCanvas: ({ mode }: { mode?: string }) => (
+    <div data-testid={mode === '2D' ? 'canvas-2d' : 'canvas-stub'} />
+  ),
   TscnSceneContents: () => null,
-}));
-vi.mock('../Canvas2DStage/Canvas2DStage', () => ({
-  Canvas2DStage: () => <div data-testid="canvas-2d" />,
 }));
 
 import { TscnPreviewShell } from './TscnPreviewShell';

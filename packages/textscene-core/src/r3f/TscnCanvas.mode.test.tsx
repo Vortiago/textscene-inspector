@@ -13,9 +13,21 @@ vi.mock('@react-three/fiber', async (importOriginal) => ({
   )),
 }));
 
+// Canvas2DStage.test.tsx covers the stage. This records what the view hands it.
+vi.mock('./components/Canvas2DStage/Canvas2DStage', () => ({
+  Canvas2DStage: ({ nodes, scenePath }: { nodes: readonly { name: string }[]; scenePath: string }) => (
+    <div data-testid="stage-2d" data-roots={nodes.map((node) => node.name).join(',')} data-path={scenePath} />
+  ),
+}));
+
 const SCENE = `[gd_scene format=3]
 
 [node name="Root" type="Node3D"]
+`;
+
+const SCENE_2D = `[gd_scene format=3]
+
+[node name="Menu" type="Control"]
 `;
 
 const provider: ResourceProvider = { loadResource: async () => null };
@@ -65,5 +77,17 @@ describe('<TscnCanvas> mode', () => {
     );
     await screen.findAllByTestId('canvas');
     expect(parse).toHaveBeenCalledTimes(1);
+  });
+
+  it('mounts the editor’s 2D stage in the 2D mode, and no canvas of a 3D stage', () => {
+    render(<TscnCanvas scene={openScene({ source: SCENE_2D, provider })} mode="2D" />);
+    expect(screen.getByTestId('stage-2d').dataset.roots).toBe('Menu');
+    expect(stages()).toEqual([]);
+  });
+
+  it('hands the 2D stage the path the scene opened under', () => {
+    const scene = openScene({ source: SCENE_2D, provider, rootScenePath: 'res://ui/menu.tscn' });
+    render(<TscnCanvas scene={scene} mode="2D" />);
+    expect(screen.getByTestId('stage-2d').dataset.path).toBe('res://ui/menu.tscn');
   });
 });

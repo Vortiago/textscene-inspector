@@ -37,6 +37,21 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.6)
 environment = SubResource("Environment_1")
 `;
 
+/** A red rectangle in the middle of the window, which only a view that draws 2D shows. */
+const FIXTURE_2D_SCENE = `[gd_scene format=3]
+
+[node name="Menu" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+
+[node name="Panel" type="ColorRect" parent="."]
+offset_left = 40.0
+offset_top = 30.0
+offset_right = 280.0
+offset_bottom = 210.0
+color = Color(1, 0, 0, 1)
+`;
+
 /** The game window matches the element, so the In-game mode draws no bars around it. */
 const PROJECT = `[display]
 
@@ -61,10 +76,15 @@ const written =
 const called =
   query.get('call') === 'close' ? gameScene.getNode('Close').call('make_current') : Promise.resolve(null);
 
-/** `?mode=in-game` opens the scene and draws it as the game starts it. The page holds one view. */
+const menuScene = openScene({ source: FIXTURE_2D_SCENE, provider: projectOnly });
+
+/** `?mode=in-game` draws the game's start, `?mode=2D` the editor's 2D view. The page holds one view. */
 function View() {
   if (query.get('mode') === 'in-game') {
     return <TscnCanvas scene={gameScene} mode="in-game" />;
+  }
+  if (query.get('mode') === '2D') {
+    return <TscnCanvas scene={menuScene} mode="2D" />;
   }
   return (
     <TscnSceneProvider source={FIXTURE_SCENE} provider={projectOnly}>

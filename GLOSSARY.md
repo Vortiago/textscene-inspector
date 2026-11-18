@@ -584,7 +584,7 @@ A node that a layer adds to the live tree and the edited scene does not own. The
 _Avoid_: "internal node" for this, "hidden node".
 
 **Viewport mode**:
-The single `'2D' | '3D' | 'in-game'` display state of the centre viewport: `3D` mounts the R3F canvas, `2D` mounts the pannable 2D stage, and `in-game` mounts the **In-game mode** of the view.
+The single `'2D' | '3D' | 'in-game'` display state of the centre viewport, and the `mode` of the one view `<TscnCanvas>`: `3D` is the editor's 3D view, `2D` the pannable 2D stage, and `in-game` the **In-game mode**.
 A heuristic on the scene root type picks 2D or 3D, never In-game, and the toolbar toggle overrides it.
 _Avoid_: "2D mode" alone.
 

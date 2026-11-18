@@ -165,7 +165,7 @@ export function TscnPreviewShell({
             </div>
             <PerformanceOverlay />
             <PreviewErrorBoundary sceneGraph={sceneGraph} onViewportErrorChange={setViewportError}>
-              <ViewportArea sceneGraph={sceneGraph} scenePath={rootScenePath} />
+              <ViewportArea />
             </PreviewErrorBoundary>
           </main>
 

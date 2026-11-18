@@ -8,11 +8,10 @@ import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 vi.mock('../../TscnCanvas', () => ({
-  TscnCanvas: ({ mode }: { mode?: string }) => <div data-testid="canvas-stub" data-mode={mode ?? '3D'} />,
+  TscnCanvas: ({ mode }: { mode?: string }) => (
+    <div data-testid={mode === '2D' ? 'stage-2d-stub' : 'canvas-stub'} data-mode={mode ?? '3D'} />
+  ),
   TscnSceneContents: () => null,
-}));
-vi.mock('../Canvas2DStage/Canvas2DStage', () => ({
-  Canvas2DStage: () => <div data-testid="stage-2d-stub" />,
 }));
 
 import { TscnPreviewShell } from './TscnPreviewShell';

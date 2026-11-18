@@ -460,6 +460,25 @@
   color: #fff;
 }
 
+/* What the In-game view leaves out, bottom centre like the hint of the 3D view. */
+.gameStartNotes {
+  position: absolute;
+  bottom: var(--tsi-space-3);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  width: max-content;
+  max-width: calc(100% - 2 * var(--tsi-space-3));
+  margin: 0;
+  padding: var(--tsi-space-1) var(--tsi-space-3);
+  list-style: none;
+  font-size: var(--tsi-font-sm);
+  color: var(--tsi-fg-default);
+  border-radius: var(--tsi-radius-md);
+  background: color-mix(in srgb, var(--tsi-bg-panel) 94%, transparent);
+  pointer-events: none;
+}
+
 .treePane {
   flex: 1;
   min-height: 0;
