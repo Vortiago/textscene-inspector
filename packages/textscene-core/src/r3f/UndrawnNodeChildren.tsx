@@ -1,11 +1,11 @@
 import { useMemo, type ReactNode } from 'react';
 import type { TscnNode } from '../parser/types.js';
 import { joinPath } from '../utils/nodePath.js';
-import { isViewportBoundary, isViewportSurface } from './viewportRender/viewportBoundary.js';
+import { isViewportBoundary } from './viewportRender/viewportBoundary.js';
 import { usePlaceViewport } from './contexts/ViewportPassRegistryContext.js';
 import { childOrders, TreeOrderProvider, useTreeOrder } from './contexts/TreeOrderContext.js';
 import { useCanvasWorkspace, type CanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
-import { drawsInWorkspace } from './nodeWorkspaceVisibility.js';
+import { drawsBelowUndrawnParent } from './nodeWorkspaceVisibility.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import { ParentTypeProvider } from './parentSpaceScope.js';
 import { DispatchedNode } from './NodeDispatcher.js';
@@ -23,26 +23,27 @@ export function UndrawnNodeChildren({ node, path }: UndrawnChildrenProps): React
   return node.children.map((child, i) =>
     reachesWorkspace(child, workspace) ? (
       <TreeOrderProvider key={child.name} order={orders[i]!}>
-        <ParentTypeProvider value={node.type}>
-          <UndrawnChild node={child} path={joinPath(path, child.name)} />
-        </ParentTypeProvider>
+        <UndrawnChild node={child} path={joinPath(path, child.name)} parentType={node.type} />
       </TreeOrderProvider>
     ) : null
   );
 }
 
-function UndrawnChild({ node, path }: UndrawnChildrenProps): ReactNode {
+function UndrawnChild({ node, path, parentType }: UndrawnChildrenProps & { parentType: string }): ReactNode {
   const workspace = useCanvasWorkspace();
-  const isViewport = isViewportBoundary(node.type);
-  usePlaceViewport(isViewport ? path : null);
-  if (isViewport) return null;
-  if (isDispatched(node, workspace)) return <DispatchedNode node={node} path={path} />;
-  return <UndrawnNodeChildren node={node} path={path} />;
+  if (isViewportBoundary(node.type)) return <ViewportPlacement path={path} />;
+  if (!drawsBelowUndrawnParent(node, workspace)) return <UndrawnNodeChildren node={node} path={path} />;
+  return (
+    <ParentTypeProvider value={parentType}>
+      <DispatchedNode node={node} path={path} />
+    </ParentTypeProvider>
+  );
 }
 
-/** A viewport surface stays undrawn: the Control walk mounts its pass. */
-function isDispatched(node: TscnNode, workspace: CanvasWorkspace): boolean {
-  return Boolean(node.instance) || (drawsInWorkspace(node.type, workspace) && !isViewportSurface(node.type));
+/** A viewport's pass draws elsewhere, so it only takes its place in tree order here. */
+function ViewportPlacement({ path }: { path: string }): null {
+  usePlaceViewport(path);
+  return null;
 }
 
 /** Written only by {@link reachesWorkspace}. A parsed node is replaced, never changed. */
@@ -58,7 +59,7 @@ function reachesWorkspace(node: TscnNode, workspace: CanvasWorkspace): boolean {
   if (known !== undefined) return known;
   const reaches =
     isViewportBoundary(node.type) ||
-    (isDispatched(node, workspace) && !nodeComponentRegistry.passesThrough(node.type)) ||
+    (drawsBelowUndrawnParent(node, workspace) && !nodeComponentRegistry.passesThrough(node.type)) ||
     node.children.some((child) => reachesWorkspace(child, workspace));
   cache.set(node, reaches);
   return reaches;

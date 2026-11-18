@@ -9,6 +9,7 @@ import { CaptureRenderer } from '../testing/CaptureRenderer';
 import { settleLoads } from '../testing/settleLoads';
 import { withStubbedGl } from '../testing/stubbedGl';
 import { compareKeys, firstMeshUnder, paintKey } from '../testing/paintOrder';
+import { isMesh } from '../testing/threeNarrow';
 import { OVER_EVERY_LAYER } from '../canvasKeyWindow';
 import type { ResourceProvider } from '../../resources/ResourceProvider';
 import '../nodes';
@@ -139,7 +140,7 @@ function findObject(root: THREE.Object3D, accepts: (object: THREE.Object3D) => b
 }
 
 function hasMesh(object: THREE.Object3D): boolean {
-  return findObject(object, (o) => (o as THREE.Mesh).isMesh === true) !== undefined;
+  return findObject(object, isMesh) !== undefined;
 }
 
 /** The labels of `drawn`, in the order three paints their first mesh. */
@@ -199,9 +200,8 @@ describe('the In-game view composite', () => {
 
   it('draws a canvas item below a hidden Node3D, which passes it no visibility', async () => {
     const canvas = (await drawsOf(CANVAS_UNDER_HIDDEN_NODE3D)).find(isCanvas)!.scene;
-    const item = drawnNamed(canvas, 'Item')!;
-    let isShown = true;
-    item.traverseAncestors((ancestor) => (isShown &&= ancestor.visible));
-    expect(isShown && item.visible).toBe(true);
+    for (let object: THREE.Object3D | null = drawnNamed(canvas, 'Item')!; object; object = object.parent) {
+      expect(object.visible, object.name).toBe(true);
+    }
   });
 });
