@@ -605,7 +605,7 @@ function readPass(renderer: Renderer): { factor: number; autoExposure: AutoExpos
 }
 
 describe('the attributes of a viewport pass', () => {
-  it('are those of the camera it elects below its path, with their auto exposure', async () => {
+  it('are those of the current camera of the viewport at its path, with their auto exposure', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       passIn(
         <CameraAt

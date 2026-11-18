@@ -55,7 +55,7 @@ function treeNodeOf(link: LiveLink, rootScenePath: string): SceneTreeNode {
   };
 }
 
-/** Each camera of the loaded tree with its viewport, in pre-order: the order `NOTIFICATION_ENTER_TREE` takes. */
+/** Each camera of the loaded tree with its viewport, in the pre-order `NOTIFICATION_ENTER_TREE` takes. */
 const camerasOf = perObject((tree: LiveTree): readonly TreeCamera[] => {
   const cameras: TreeCamera[] = [];
   tree.fold<string | null, void>(null, (link, viewport, descend) => {

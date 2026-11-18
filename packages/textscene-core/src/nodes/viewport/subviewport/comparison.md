@@ -116,7 +116,11 @@ Strict parsing format-checks these `SubViewport` properties, plus 47 inherited f
 
 Strict and lenient parsing diverge only on out-of-range enums. The lenient parser warns and falls back to Godot's default (`render_target_update_mode` 2, `render_target_clear_mode` 0, `msaa_2d` 0, `msaa_3d` 0, `canvas_item_default_texture_filter` 1, `canvas_item_default_texture_repeat` 0), while the strict parser reports an error. A `size` Godot cannot read at all falls back to `Vector2i(512, 512)`. A component below 2 is a strict error, because `Viewport::_set_size` raises it (`viewport.cpp:1120`).
 
+## Current camera
+
+Each SubViewport keeps its own current Camera3D and Camera2D, apart from the root window's (`viewport.cpp:4565-4607`). A call to `make_current` on a camera inside it moves its camera and leaves the root's. `unit-in-game-call-subviewport.tscn` draws the SubViewport on a quad in front of the root camera. Against `pnpm ref:godot --mode in-game --call`, the capture with no call lands within 1/255 of Godot, and the capture after `SubViewport/Close.make_current()` within 2/255, with no pixel over 2/255.
+
 ## Known limitations
 
 - **Approximated** A consumer surface inside its own viewport's frustum samples a target still being written, with a driver-defined result.
-- **Needs runtime** A viewport whose camera or world is assigned by script shows only its clear colour in 3D, and frames from the origin in 2D.
+- **Needs runtime** A viewport whose camera or world is assigned by script shows only its clear colour in 3D, and frames from the origin in 2D. A host's `make_current` call on a camera inside it moves its camera.

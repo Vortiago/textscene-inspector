@@ -9,7 +9,7 @@ import { findPortedMethod, runPortedMethod, type CallResult, type MethodTarget }
 import { ViewportCameras } from './viewportCameras.js';
 import type { PropertyMethod } from '../godot/classdb/propertyMethod.js';
 
-/** The setter and getter names of every class: tens of kB, so they load on the first `get`, `set` or `call`. */
+/** The setter and getter names of every class are tens of kB, so they load on the first use. */
 function loadPropertyMethods(): Promise<typeof import('../godot/classdb/propertyMethod.js')> {
   return import('../godot/classdb/propertyMethod.js');
 }

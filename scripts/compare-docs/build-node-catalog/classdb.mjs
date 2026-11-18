@@ -70,12 +70,7 @@ function isNodeClass(className, inheritsOf) {
   return false;
 }
 
-/**
- * Each Node class's own properties whose setter is not `set_<name>`, whose getter is not `get_<name>`,
- * or that pass an index, as `[name, setter, getter, index?]`. A script's call of a setter or a getter
- * reaches the property through these. The ClassDB API a script sees holds no index, so the rows come
- * from `--dump-extension-api`, which reads `ClassDB::get_property_index` (`extension_api_dump.cpp`).
- */
+/** From `--dump-extension-api`: only it holds `ClassDB::get_property_index` (`extension_api_dump.cpp`). */
 export function propertyMethodsFromApi(api) {
   const inheritsOf = new Map(api.classes.map((c) => [c.name, c.inherits]));
   const table = {};

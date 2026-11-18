@@ -61,7 +61,7 @@ function prefixedMethod(className: string, method: string): PropertyMethod | und
   return named === method ? { role, properties: new Map([[null, property]]) } : undefined;
 }
 
-/** The property a script reaches by calling `method` on a node of `className`, if it is a setter or a getter. */
+/** The property a call of `method` on a `className` node reaches, if `method` is a setter or a getter. */
 export function findPropertyMethod(className: string, method: string): PropertyMethod | undefined {
   return namedMethod(className, method) ?? prefixedMethod(className, method);
 }

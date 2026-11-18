@@ -37,7 +37,7 @@ function useCurrentCamera(read: CurrentCamera, viewportPath: string | null): str
   return useSyncExternalStore(subscribe, () => (scene ? read(scene, sceneViewportOf(viewportPath)) : null));
 }
 
-/** No path holds two slashes in a row, as no node name is empty, so the paths of several viewports join on it. */
+/** No node name is empty, so no path holds two slashes in a row and several paths join on them. */
 const SNAPSHOT_SEPARATOR = '//';
 const NO_CAMERA = '';
 

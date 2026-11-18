@@ -1,0 +1,45 @@
+[gd_scene format=3]
+
+; A SubViewport keeps a current Camera3D of its own. A call to `SubViewport/Close.make_current()`
+; moves the SubViewport's camera, and the root viewport still draws through `Root`
+; (`viewport.cpp:4565-4581`).
+
+[sub_resource type="QuadMesh" id="QuadMesh_1"]
+size = Vector2(2, 2)
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_1"]
+viewport_path = NodePath("SubViewport")
+
+[sub_resource type="StandardMaterial3D" id="Material_screen"]
+resource_local_to_scene = true
+shading_mode = 0
+albedo_texture = SubResource("ViewportTexture_1")
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+
+[sub_resource type="StandardMaterial3D" id="Material_box"]
+albedo_color = Color(0.9, 0.5, 0.2, 1)
+
+[node name="Main" type="Node3D"]
+
+[node name="SubViewport" type="SubViewport" parent="."]
+size = Vector2i(128, 128)
+own_world_3d = true
+render_target_update_mode = 4
+
+[node name="Box" type="MeshInstance3D" parent="SubViewport"]
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("Material_box")
+
+[node name="Far" type="Camera3D" parent="SubViewport"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 8)
+
+[node name="Close" type="Camera3D" parent="SubViewport"]
+transform = Transform3D(0.8660254, -0.25, 0.4330127, 0, 0.8660254, 0.5, -0.5, -0.4330127, 0.75, 1.5, 1.5, 2.5)
+
+[node name="Screen" type="MeshInstance3D" parent="."]
+mesh = SubResource("QuadMesh_1")
+surface_material_override/0 = SubResource("Material_screen")
+
+[node name="Root" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2.5)

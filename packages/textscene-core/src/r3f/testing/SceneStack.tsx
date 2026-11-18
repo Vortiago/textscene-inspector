@@ -34,15 +34,12 @@ export interface SceneStackProps {
   selectedPath?: string | null;
   /** The Gizmos toggle. Omitted, no viewport provider mounts: the toggle is on. */
   showGizmos?: boolean;
-  /** The text of `scene`, opened as the views open it, for a test of what the scene holds, as its current cameras. */
+  /** The text of `scene`, opened as the views open it, for a test of its current cameras. */
   source?: string;
   children: ReactNode;
 }
 
-/**
- * The scene of `source` over the stack's loader, beside the hierarchy a test gives, or none. The graph
- * stays the test's: the scene takes a new text a commit after the nodes the test draws.
- */
+/** The graph stays the test's: the scene takes a new text a commit after the nodes the test draws. */
 function OpenedScene({ source, children }: { source: string; children: ReactNode }) {
   const scene = useOpenedScene(source, DEFAULT_ROOT_SCENE_PATH);
   const outer = useOptionalHierarchy();

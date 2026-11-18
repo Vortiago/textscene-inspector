@@ -36,24 +36,3 @@ export const CAMERA_3D_KEEP_ASPECT_HINT_NAMES = labelEnumNames(Camera3DKeepAspec
   KEEP_WIDTH: 'Keep Width',
   KEEP_HEIGHT: 'Keep Height',
 });
-
-/**
- * The camera `viewportPath` renders through, from the cameras of its world in tree order. A camera
- * belongs to its nearest viewport above it, null for the root viewport, so a camera of a nested
- * viewport never claims the outer one (`camera_3d.cpp`, `NOTIFICATION_ENTER_WORLD`). Each camera
- * entering the tree claims its viewport when it is `current` or the first (`camera_3d.cpp:189-190`),
- * and a claim overwrites (`viewport.cpp:4565`), so the last `current` wins, or else the first.
- *
- * @canonical The camera a viewport renders through
- */
-export function electCameraOfViewport<T extends { viewport: string | null; current: boolean }>(
-  cameras: readonly T[],
-  viewportPath: string | null
-): T | null {
-  const own = cameras.filter((camera) => camera.viewport === viewportPath);
-  let lastCurrent: T | null = null;
-  for (const camera of own) {
-    if (camera.current) lastCurrent = camera;
-  }
-  return lastCurrent ?? own[0] ?? null;
-}

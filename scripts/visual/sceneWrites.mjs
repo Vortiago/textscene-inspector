@@ -3,12 +3,12 @@
 /** How long a write waits for its node, which a sub-scene holds once it loads. */
 const NODE_WAIT_MS = 10000;
 
-/** Applies `sets`, each `{ path, property, text }`, in order. Throws where a path names no node. */
-export async function applySceneWrites(page, sets = []) {
-  if (sets.length === 0) return;
+/** Applies each `{ path, property, text }` write and `{ path, method, args }` call in order. */
+export async function applySceneWrites(page, hostCalls = []) {
+  if (hostCalls.length === 0) return;
   await page.waitForFunction(() => window.textscene !== undefined);
   await page.evaluate(
-    async ({ writes, waitMs }) => {
+    async ({ calls, waitMs }) => {
       const { scene, variant } = window.textscene;
       const nodeAt = async (path) => {
         const giveUpAt = Date.now() + waitMs;
@@ -25,10 +25,12 @@ export async function applySceneWrites(page, sets = []) {
         const file = /^Resource\("([^"]+)"\)$/.exec(text)?.[1];
         return file ? scene.load(file) : variant(text);
       };
-      for (const { path, property, text } of writes) {
-        await (await nodeAt(path)).set(property, await valueOf(text));
+      for (const call of calls) {
+        const node = await nodeAt(call.path);
+        if ('property' in call) await node.set(call.property, await valueOf(call.text));
+        else await node.call(call.method, ...(await Promise.all(call.args.map(valueOf))));
       }
     },
-    { writes: sets, waitMs: NODE_WAIT_MS }
+    { calls: hostCalls, waitMs: NODE_WAIT_MS }
   );
 }

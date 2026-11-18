@@ -1,10 +1,3 @@
-/**
- * <Camera2D> renders no geometry. It tags its group with `userData.camera2d`, the
- * parsed framing properties, and its path, for the 2D pass of the viewport it is current
- * in (`camera2DAtPath`), which reads the position off the group's world matrix. The main
- * 2D stage frames fit-to-content (ADR-0006).
- */
-
 import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { node2dGroupProps, node2dGroupSpread } from '../../../r3f/node2dTransform';

@@ -20,7 +20,7 @@ export interface NodeHandle {
   get(property: string): Promise<SceneValue | null>;
   /** `Object::set`: true where Godot reports the write valid. */
   set(property: string, value: SceneValue): Promise<boolean>;
-  /** `Object::call` of a method this release ports, or of a property's setter or getter. Throws for another. */
+  /** `Object::call` of a ported method, or of a property's setter or getter. Throws for another. */
   call(method: string, ...args: SceneValue[]): Promise<CallResult>;
 }
 

@@ -39,7 +39,7 @@ export const RESOURCE_GETTERS_OUT = join(here, '../resource-getters.json');
 /** Each stored Node property's default, the overrides of instantiable classes, and the derived properties. */
 export const NODE_DEFAULTS_OUT = join(here, '../node-defaults.json');
 
-/** Each Node property whose setter or getter a script calls by another name than `set_` or `get_` and its own. */
+/** Each Node property whose setter or getter is not `set_` or `get_` and its own name. */
 export const PROPERTY_METHODS_OUT = join(here, '../node-property-methods.json');
 
 export const ENUM_GD = join(REPO_ROOT, 'scripts/godot-ref/enumerate-nodes.gd');

@@ -10,7 +10,7 @@ import type { Scene } from '../../scene/openScene.js';
 export interface HierarchyContextValue {
   sceneGraph: SceneGraph | null;
   panelId: string;
-  /** The scene the graph is drawn from, which holds the state a view reads beside it, as the current cameras. */
+  /** The scene the graph is drawn from, which holds the current cameras a view reads. */
   scene?: Scene;
 }
 

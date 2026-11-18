@@ -11,7 +11,7 @@ export const IN_GAME_SCENES = [
     file: 'in-game/unit-in-game-writes-3d.tscn',
     mode: 'in-game',
     canvas: GAME_WINDOW,
-    sets: [
+    hostCalls: [
       { path: 'Group/Box', property: 'rotation', text: 'Vector3(0, -0.6, 0.3)' },
       { path: 'Omni', property: 'light_energy', text: '16.0' },
       { path: 'Group/Box', property: 'material_override', text: 'Resource("res://writes-red.tres")' },
@@ -23,7 +23,7 @@ export const IN_GAME_SCENES = [
     file: 'in-game/unit-in-game-writes-2d.tscn',
     mode: 'in-game',
     canvas: GAME_WINDOW,
-    sets: [
+    hostCalls: [
       { path: 'Group', property: 'rotation', text: '-0.8' },
       { path: 'Score', property: 'text', text: '"Score: 10"' },
       { path: 'Panel', property: 'anchor_right', text: '0.5' },
@@ -36,6 +36,22 @@ export const IN_GAME_SCENES = [
     file: 'in-game/unit-in-game-writes-instance.tscn',
     mode: 'in-game',
     canvas: GAME_WINDOW,
-    sets: [{ path: 'Level/Group/Box', property: 'position', text: 'Vector3(1, 0.5, 1)' }],
+    hostCalls: [{ path: 'Level/Group/Box', property: 'position', text: 'Vector3(1, 0.5, 1)' }],
+  },
+  // A host's call moves the current Camera3D from the first camera to the second.
+  {
+    name: 'in-game-call-camera3d',
+    file: 'in-game/unit-in-game-call-camera3d.tscn',
+    mode: 'in-game',
+    canvas: GAME_WINDOW,
+    hostCalls: [{ path: 'Side', method: 'make_current', args: [] }],
+  },
+  // A host's call moves the current Camera2D from the first enabled camera to the last.
+  {
+    name: 'in-game-call-camera2d',
+    file: 'in-game/unit-in-game-call-camera2d.tscn',
+    mode: 'in-game',
+    canvas: GAME_WINDOW,
+    hostCalls: [{ path: 'Right', method: 'make_current', args: [] }],
   },
 ];

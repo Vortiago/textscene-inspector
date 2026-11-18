@@ -1,7 +1,3 @@
-/**
- * The editor's 3D view draws through its own camera or a previewed one, never the current camera
- * of the root viewport, so a host's `make_current` leaves it where it is.
- */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer, { act } from '@react-three/test-renderer';
 import { TscnSceneContents } from './TscnCanvas';

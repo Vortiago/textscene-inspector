@@ -1,8 +1,3 @@
-/**
- * Gives the views below a scene whose current cameras are fixed, for a test of what a view draws
- * through a current camera apart from how the scene moves it. Test-only: the `testing/` directories
- * under `src` are excluded from the build.
- */
 import type { ReactNode } from 'react';
 import { HierarchyProvider } from '../contexts/HierarchyContext';
 import type { Scene } from '../../scene/openScene';

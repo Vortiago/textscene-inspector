@@ -28,7 +28,7 @@ export interface ViewportDescription {
   mipmapBias: number;
   positionalShadowAtlas: PositionalShadowAtlasSettings;
   anisotropicLevel: number;
-  /** `editor`: the free or previewed camera. `current`: the viewport's current camera, as the scene holds it. */
+  /** `editor`: the free or previewed camera. `current`: the current camera the scene holds. */
   camera: 'editor' | 'current';
   drawsEditorChrome: boolean;
   /** Whether the editor's preview sun and preview Environment stand in (ADR-0025). */

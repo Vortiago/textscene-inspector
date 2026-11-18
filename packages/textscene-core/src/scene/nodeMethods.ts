@@ -1,6 +1,7 @@
 import { findInClassChain } from '../godot/classdb/classBaseTypes.js';
 import type { NodeHandle } from './nodeHandle.js';
-import type { SceneValue } from './variant.js';
+import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
+import { valueOfSceneValue, type SceneValue } from './variant.js';
 import type { ViewportCameras } from './viewportCameras.js';
 
 /** What `call` answers: a value, a node, or null for a method that returns nothing. */
@@ -27,9 +28,11 @@ interface PortedMethod {
   run(target: MethodTarget, args: readonly SceneValue[]): CallResult | Promise<CallResult>;
 }
 
+/** The bool a binding's cast makes of an argument: a number is true when it is not zero. */
 function boolArgument(value: SceneValue, method: string): boolean {
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'number') return value !== 0;
+  const cast = valueOfSceneValue(value);
+  if (cast.type === T.BOOL) return cast.value as boolean;
+  if (cast.type === T.INT || cast.type === T.FLOAT) return cast.value !== 0;
   throw new Error(`expected a bool for ${method}, got ${JSON.stringify(value)}`);
 }
 

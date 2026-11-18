@@ -68,6 +68,12 @@ component that strict rejects renders as authored. `anchor_mode` falls back to
 `true` and `offset` to `(0, 0)`. `enabled` is `true` unless the value reads as `false`.
 The smoothing, drag and `editor_draw_*` keys are never read.
 
+## Current camera
+
+The In-game mode draws each viewport through its current Camera2D. The first enabled camera to enter claims a viewport with none (`camera_2d.cpp:353-355`). A host's `make_current` moves it, and on a camera that is not enabled changes nothing and warns, as Godot's `ERR_FAIL_COND` does (`camera_2d.cpp:584-586`). `set('enabled', false)` on the current camera passes the viewport to the first enabled camera in tree order, and `set('enabled', true)` claims a viewport with none (`camera_2d.cpp:522-536`). The 2D mode keeps the editor's view.
+
+`unit-in-game-call-camera2d.tscn` holds two enabled cameras and one that is not. Against `pnpm ref:godot --mode in-game --call`, each case lands within 1/255 of Godot: no call, `Right.make_current()`, `Off.make_current()`, and `enabled` set false on the current camera through `set` and through `call('set_enabled')`.
+
 ## Known limitations
 
 - **Approximated** The main 2D stage opens on the whole scene rather than the enabled

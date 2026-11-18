@@ -10,10 +10,7 @@ import { camera2DAtPath } from '../../../r3f/viewportRender/viewportFraming';
 import type { Camera2DTag } from '../../../r3f/viewportRender/camera2DView';
 import { parallaxViewFraming, type ParallaxViewFraming } from './parallaxScroll';
 
-/**
- * Null on the main 2D stage, which frames no camera, and in a viewport with no current Camera2D.
- * An offscreen pass draws the viewport's own scene, so `scene` holds the current one at `cameraPath`.
- */
+/** Null on the main 2D stage, which frames no camera, and in a viewport with no current Camera2D. */
 export function currentCameraFraming(
   scene: THREE.Scene,
   camera: THREE.Camera,

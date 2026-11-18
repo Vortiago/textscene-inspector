@@ -58,7 +58,7 @@ The In-game mode draws the root viewport of the scene as the game starts it:
 
 - The scene's own cameras. Of two current Camera3D nodes, the last one in the tree wins, and with
   none current the first one wins. A 3D scene with no Camera3D shows the clear colour. A 2D scene
-  draws through its Camera2D.
+  draws through its Camera2D. A call from your code moves the camera: see "Set the camera".
 - The 3D world first, then the canvas items, the Controls and each CanvasLayer over it.
 - The lighting of the game: the camera's Environment, else the scene's WorldEnvironment, else the
   project's default Environment, else none. No preview sun and no preview sky.
@@ -111,6 +111,30 @@ const visible = await scene.getNode('Enemy').get('visible');
 - **Redraw.** The writes of one task draw one frame. A write before any view mounts shows on the
   first frame. `scene.observe(path, listener)` tells you when that node is written.
 
+### Set the camera
+
+A host's code moves the camera of a viewport as a script does, with `call`:
+
+```tsx
+await scene.getNode('Cameras/Close').call('make_current');
+await scene.getNode('Cameras/Close').call('clear_current', false);
+const current = await scene.getNode('/root').call('get_camera_3d');
+```
+
+- **Camera3D.** `make_current`, `clear_current(enableNext = true)` and `is_current`.
+  `set('current', value)` runs `set_current`, and `get('current')` runs `is_current`. With
+  `enableNext`, the next camera of the viewport takes over. Without it, the viewport draws the clear
+  colour.
+- **Camera2D.** `make_current` and `is_current`. `make_current` on a camera that is not enabled
+  changes nothing and warns. `set('enabled', false)` on the current camera passes the view to the
+  first enabled camera in the tree.
+- **Viewport.** `get_camera_3d` and `get_camera_2d` give the handle of the current camera, or `null`.
+  The root window is `/root`. Each SubViewport keeps its own camera.
+- **Setters and getters.** `call('set_<property>', value)` and `call('get_<property>')` reach `set`
+  and `get`, by the names Godot gives them. Any other method throws with the class and the method.
+
+The In-game mode draws through the current camera. The 3D mode keeps its orbit camera.
+
 The limits of this release:
 
 - No node is added, removed, moved or renamed. `set` of `script`, `instance` or `name` throws.
@@ -157,7 +181,8 @@ The package exports these names.
 - `Scene` (a type): an open scene. `setSource(text)` replaces its text, and every view of it draws
   the new text. `getNode`, `getNodeOrNull`, `load` and `observe` are in "Change the scene from your
   code". `dispose()` closes it.
-- `NodeHandle` (a type): a node of a scene, which `getNode` gives.
+- `NodeHandle` (a type): a node of a scene, which `getNode` gives. Its `call` is in "Set the
+  camera".
 - `variant(text)`: a value of any Godot type, as a `.tscn` file spells it. It throws for a text
   Godot cannot read.
 - `Variant` and `SceneValue` (types): what `variant` gives, and what `get` and `set` take.

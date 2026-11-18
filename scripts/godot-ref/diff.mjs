@@ -13,7 +13,7 @@ import { PNG } from 'pngjs';
 import { tableLines } from '../compare-docs/markdownTable.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { compareImages } from '../visual/imageDelta.mjs';
-import { IN_GAME_MODE, oneOf, parseSet, renderReference } from './run.mjs';
+import { IN_GAME_MODE, oneOf, parseCall, parseSet, renderReference } from './run.mjs';
 import { captureOurs } from './capture-ours.mjs';
 import { FLATTENED_CORPUS_ROOTS } from '../corpusRoots.mjs';
 
@@ -53,7 +53,7 @@ export function parseArgs(argv) {
     collisions: false,
     mode: null,
     table: null,
-    sets: [],
+    hostCalls: [],
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -68,7 +68,9 @@ export function parseArgs(argv) {
         throw new Error(`--table needs a file path, got "${argv[i]}"`);
       }
     } else if (arg === '--set') {
-      args.sets.push(parseSet(argv[++i]));
+      args.hostCalls.push(parseSet(argv[++i]));
+    } else if (arg === '--call') {
+      args.hostCalls.push(parseCall(argv[++i]));
     } else if (arg === '--mode') {
       args.mode = oneOf('--mode', [IN_GAME_MODE], argv[++i]);
     } else if (arg === '--frame') args.frame = true;
@@ -148,7 +150,7 @@ export function comparePngs(godotBuffer, oursBuffer) {
  */
 export async function diffOne(
   { scenePath, fixtureName, label },
-  { frame, keep, collisions = false, mode: pickedMode = null, sets = [] },
+  { frame, keep, collisions = false, mode: pickedMode = null, hostCalls = [] },
   { render = renderReference, capture = captureOurs, outDir = OUT_DIR } = {}
 ) {
   const renderAs = async (renderMode) =>
@@ -158,7 +160,7 @@ export async function diffOne(
       frame,
       mode: renderMode,
       debugCollisions: collisions,
-      sets,
+      hostCalls,
     });
   // `run.mjs` refuses a root-window-only viewport setting in the nested arm and
   // names the arm that can answer it, so the scene is retried there.
@@ -179,7 +181,7 @@ export async function diffOne(
     canvas2DFrame: canvas2D ? referenceFrame : null,
     inGameFrame: pickedMode === IN_GAME_MODE ? referenceFrame : null,
     showCollisions: collisions,
-    sets,
+    hostCalls,
   });
   if (keep) await writeFile(join(outDir, `${label}.ours.png`), oursBuffer);
 

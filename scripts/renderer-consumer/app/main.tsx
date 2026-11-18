@@ -30,6 +30,9 @@ mesh = SubResource("BoxMesh_1")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2.5)
 current = true
 
+[node name="Close" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.6)
+
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_1")
 `;
@@ -54,6 +57,10 @@ const written =
     ? gameScene.getNode('Cube').set('scale', variant('Vector3(0.5, 0.5, 0.5)'))
     : Promise.resolve(true);
 
+/** `?call=close` makes the nearer camera current from the host's code, so the cube draws larger. */
+const called =
+  query.get('call') === 'close' ? gameScene.getNode('Close').call('make_current') : Promise.resolve(null);
+
 /** `?mode=in-game` opens the scene and draws it as the game starts it. The page holds one view. */
 function View() {
   if (query.get('mode') === 'in-game') {
@@ -66,7 +73,7 @@ function View() {
   );
 }
 
-void written.then(() =>
+void Promise.all([written, called]).then(() =>
   createRoot(document.getElementById('root')!).render(
     <div id="viewport" style={{ width: 320, height: 240 }}>
       <View />

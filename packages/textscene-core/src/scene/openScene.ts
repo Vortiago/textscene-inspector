@@ -45,7 +45,7 @@ export interface Scene {
   load(path: string): Promise<Variant>;
   /** Calls `listener` when the node at `path` changes, or the tree's shape for null. Returns the removal. */
   observe(path: string | null, listener: () => void): () => void;
-  /** The live path of the Camera3D a view draws the viewport at live path `viewport` through, null for the root. */
+  /** The live path of the current Camera3D of the viewport at `viewport`, null for the root window. */
   currentCamera3D(viewport: string | null): string | null;
   /** The live path of the viewport's current Camera2D, null for none. */
   currentCamera2D(viewport: string | null): string | null;

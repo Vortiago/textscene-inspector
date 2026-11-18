@@ -1,9 +1,10 @@
-import { readVariant } from '../godot/variant/strToVar.js';
 import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
+import type { VariantValue } from '../godot/variant/variantValue.js';
 import * as logger from '../logger.js';
 import type { TreeCamera } from './sceneRuntime.js';
+import { valueOfSceneValue, variant } from './variant.js';
 
-/** `Camera3D::current` and `Camera2D::enabled` as a fresh node holds them (`camera_3d.h:79`, `camera_2d.h:66`). */
+/** `camera_3d.h:63`, `camera_2d.h:67` */
 const CAMERA_3D_CURRENT_DEFAULT = false;
 const CAMERA_2D_ENABLED_DEFAULT = true;
 
@@ -26,19 +27,19 @@ interface ViewportState {
 /** A text's bool, as the setter's cast reads it. */
 function boolOf(text: string | undefined, fallback: boolean): boolean {
   if (text === undefined) return fallback;
-  const read = readVariant(text);
-  if ('error' in read) return fallback;
-  const { type, value } = read.value as { type: number; value: unknown };
-  if (type === T.BOOL) return value as boolean;
-  if (type === T.INT || type === T.FLOAT) return value !== 0;
+  let read: VariantValue;
+  try {
+    read = valueOfSceneValue(variant(text));
+  } catch {
+    // A text Godot cannot read leaves the property at its default, as the loader skips it.
+    return fallback;
+  }
+  if (read.type === T.BOOL) return read.value as boolean;
+  if (read.type === T.INT || read.type === T.FLOAT) return read.value !== 0;
   return fallback;
 }
 
-/**
- * The current Camera3D and Camera2D of each viewport, as Godot's viewports hold them, by live path.
- * Until a call moves one, the state is the enter rule over the whole loaded tree, so a sub-scene that
- * loads late enters where the game would have entered it.
- */
+/** Until a call moves the state, the enter rule over the loaded tree gives it, in game order. */
 export class ViewportCameras {
   /** Written only by `sync`, `reset` and the calls: each viewport's state, null for the root window. */
   private readonly viewports = new Map<string | null, ViewportState>();
@@ -111,10 +112,7 @@ export class ViewportCameras {
     return this.camera2D(this.camera(path).viewport) === path;
   }
 
-  /**
-   * The hand-over of `Camera2D::set_enabled`, after the host's write of `enabled` (`camera_2d.cpp:522-536`).
-   * An enabled camera claims only a viewport with none, and a disabled current one passes it on.
-   */
+  /** The hand-over of `Camera2D::set_enabled` after the write of `enabled` (`camera_2d.cpp:522-536`). */
   enabledChanged2D(path: string, isEnabled: boolean): void {
     const camera = this.camera(path);
     const state = this.stateOf(camera.viewport);
@@ -173,7 +171,7 @@ export class ViewportCameras {
       if (state.camera2D === camera.path) state.camera2D = this.nextEnabled2D(camera.viewport);
       return;
     }
-    // `HashSet::erase` moves the last key into the hole, so the next camera can change (`hash_set.h:290-296`).
+    // `HashSet::erase` moves the last key into the hole, so the next camera changes (`hash_set.h:290-296`).
     const at = state.cameras3D.indexOf(camera.path);
     const last = state.cameras3D.pop()!;
     if (at < state.cameras3D.length) state.cameras3D[at] = last;

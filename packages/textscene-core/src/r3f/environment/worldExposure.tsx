@@ -1,14 +1,3 @@
-/**
- * The exposure of a world: the CameraAttributes of the camera it renders through, else those of its
- * first valid WorldEnvironment, which chooses apart from the Environment (`world_environment.cpp:87-93`).
- * Godot scales the frame by the attributes' exposure normalisation factor, which this code calls the
- * exposure factor. It is the `exposure_multiplier` while the project uses no physical light units
- * (`camera_attributes_storage.cpp:133-138`, `camera_attributes.cpp:56-64`). Its current camera
- * gives its Environment to the world's chooser too (`WorldEnvironmentScope.tsx`). A world holds one
- * exposure for its lights and its sky; a viewport pass that shares the world draws at its own
- * (`ViewportPassAttributes`).
- */
-
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import type { AutoExposure, CameraAttributes } from '../../resources/cameraattributes/types';
 import { useEnclosingViewportPath } from '../contexts/EnclosingViewportContext';
@@ -109,10 +98,7 @@ export function WorldExposureScope({ children }: { children: ReactNode }) {
   );
 }
 
-/**
- * Gathers the CameraAttributes and the cameras of a world that only its shared viewports draw, as a
- * 2D canvas's World3D. Each viewport draws through its own current camera (`ViewportPassAttributes`).
- */
+/** The CameraAttributes and cameras of a world only its shared viewports draw, as a canvas World3D. */
 export function WorldCamerasScope({ children }: { children: ReactNode }) {
   return (
     <cameraAttributes.Provider>
@@ -180,10 +166,7 @@ function RenderCameraProvider({ children }: { children: ReactNode }) {
 const PassCameraContext = createContext<WorldCamera | null>(null);
 
 /**
- * Gives `children`, the tonemap stage of the viewport pass at `path`, the attributes the pass draws
- * with: those of the viewport's current camera, else the world's own. The scene holds the current
- * camera, and the pass draws through it (`usePassCameraPath`). A pass in a shared
- * world draws at the exposure of those attributes, whatever its scene holds (`drawAtExposure`).
+ * Gives the tonemap stage at `path` the attributes of the viewport's current camera, else the world's.
  *
  * @canonical The attributes a viewport pass draws with
  */
@@ -205,11 +188,7 @@ export function usePassCameraPath(): string | null {
   return useContext(PassCameraContext)?.path ?? null;
 }
 
-/**
- * The Environment of the current camera of each viewport pass of the world. A viewport with no camera
- * draws nothing of the world. The root viewport's own camera is the view's
- * (`useRenderCameraEnvironment`).
- */
+/** The Environment of the current camera of each viewport pass of the world, apart from the root's. */
 export function usePassCameraEnvironments(): readonly EnvironmentResolution[] {
   const worldCameras = cameras.useAll();
   const viewports = useByValue(

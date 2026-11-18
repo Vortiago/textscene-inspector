@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import '../r3f/sceneLiveTree.js';
 import { openScene } from './openScene';
+import { variant } from './variant';
 import type { ResourceProvider } from '../resources/ResourceProvider';
 
 const provider: ResourceProvider = { loadResource: async () => null };
@@ -46,6 +47,12 @@ describe('the current Camera3D of a viewport', () => {
   it('leaves the viewport with no camera after clear_current(false)', async () => {
     const scene = sceneOf(camera('A') + camera('B'));
     await scene.getNode('A').call('clear_current', false);
+    expect(await currentOf(scene)).toBeNull();
+  });
+
+  it('casts a Variant argument as the binding does', async () => {
+    const scene = sceneOf(camera('A') + camera('B'));
+    await scene.getNode('A').call('clear_current', variant('false'));
     expect(await currentOf(scene)).toBeNull();
   });
 
