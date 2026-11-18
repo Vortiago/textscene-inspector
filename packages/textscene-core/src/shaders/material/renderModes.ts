@@ -1,5 +1,9 @@
 import type { EnumValue } from '../../godot/classdb/enumNames.js';
-import { AlphaAntiAliasing } from '../../godot/rendering/materials/alphaAntialiasing.js';
+import {
+  AlphaAntiAliasing,
+  turnsOnAlphaToCoverage,
+  type AlphaToCoverageMode,
+} from '../../godot/rendering/materials/alphaAntialiasing.js';
 import { BlendMode } from '../../godot/rendering/materials/blendMode.js';
 import { CullMode } from '../../godot/rendering/materials/cullMode.js';
 import { DepthDrawMode } from '../../godot/rendering/materials/depthDrawMode.js';
@@ -30,6 +34,10 @@ export const CULL_MODES: Readonly<Record<EnumValue<typeof CullMode>, string>> = 
   [CullMode.BACK]: 'cull_back',
   [CullMode.FRONT]: 'cull_front',
   [CullMode.DISABLED]: 'cull_disabled',
+};
+export const ALPHA_TO_COVERAGE_MODES: Readonly<Record<AlphaToCoverageMode, string>> = {
+  [AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE]: 'alpha_to_coverage',
+  [AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE_AND_TO_ONE]: 'alpha_to_coverage_and_one',
 };
 const DIFFUSE_MODES: Readonly<Record<EnumValue<typeof DiffuseMode>, string>> = {
   [DiffuseMode.DIFFUSE_BURLEY]: 'diffuse_burley',
@@ -91,12 +99,8 @@ export function renderModes(key: MaterialKey): string {
   if (flags.has(MaterialFlag.DISABLE_FOG)) code += ', fog_disabled';
   if (flags.has(MaterialFlag.DISABLE_SPECULAR_OCCLUSION)) code += ', specular_occlusion_disabled';
   if (key.transparency === Transparency.ALPHA_DEPTH_PRE_PASS) code += ', depth_prepass_alpha';
-  if (isAlphaTested(key)) {
-    if (key.alphaAntialiasingMode === AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE)
-      code += ', alpha_to_coverage';
-    else if (key.alphaAntialiasingMode === AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE_AND_TO_ONE)
-      code += ', alpha_to_coverage_and_one';
-  }
+  if (isAlphaTested(key) && turnsOnAlphaToCoverage(key.alphaAntialiasingMode))
+    code += `, ${ALPHA_TO_COVERAGE_MODES[key.alphaAntialiasingMode]}`;
   return `${code};\n${stencilMode(key)}`;
 }
 

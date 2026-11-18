@@ -2154,6 +2154,228 @@ void fragment() {
 | --- | --- |
 | <img src="showcase/spatial-ensure-correct-normals-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-ensure-correct-normals-three.png" width="256" alt="Transpilation"> |
 
+## Showcase `spatial-alpha`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+void fragment() {
+	ALBEDO = vec3(UV * 0.4, 0.3);
+	ALPHA = UV.x;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-alpha-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-alpha-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-alpha-blend-mix`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, blend_mix;
+
+void fragment() {
+	ALBEDO = vec3(UV * 0.4, 0.3);
+	ALPHA = UV.x;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-alpha-blend-mix-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-alpha-blend-mix-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-alpha-blend-premul-alpha`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, blend_premul_alpha;
+
+void fragment() {
+	ALBEDO = vec3(UV * 0.4, 0.3);
+	ALPHA = UV.x;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-alpha-blend-premul-alpha-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-alpha-blend-premul-alpha-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-alpha-premul-alpha-factor`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, blend_premul_alpha;
+
+void fragment() {
+	ALBEDO = vec3(UV * 0.4, 0.3);
+	ALPHA = UV.x;
+	PREMUL_ALPHA_FACTOR = UV.y;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-alpha-premul-alpha-factor-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-alpha-premul-alpha-factor-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-alpha-scissor`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+void fragment() {
+	ALBEDO = vec3(0.1, UV.x * 0.5, 0.6);
+	ALPHA = UV.y;
+	ALPHA_SCISSOR_THRESHOLD = 0.5;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-alpha-scissor-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-alpha-scissor-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-alpha-hash`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+void fragment() {
+	ALBEDO = vec3(UV * 0.4, 0.3);
+	ALPHA = UV.x;
+	ALPHA_HASH_SCALE = 1.0;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-alpha-hash-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-alpha-hash-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-alpha-antialiasing-edge`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+void fragment() {
+	ALBEDO = vec3(UV * 0.4, 0.3);
+	ALPHA = UV.x;
+	ALPHA_SCISSOR_THRESHOLD = 0.5;
+	ALPHA_ANTIALIASING_EDGE = 0.2;
+	ALPHA_TEXTURE_COORDINATE = UV * 64.0;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-alpha-antialiasing-edge-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-alpha-antialiasing-edge-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-alpha-to-coverage`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, alpha_to_coverage;
+
+void fragment() {
+	ALBEDO = vec3(UV * 0.4, 0.3);
+	ALPHA = step(0.5, UV.x);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-alpha-to-coverage-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-alpha-to-coverage-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-alpha-to-coverage-and-one`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, alpha_to_coverage_and_one;
+
+void fragment() {
+	ALBEDO = vec3(UV * 0.4, 0.3);
+	ALPHA = step(0.5, UV.x);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-alpha-to-coverage-and-one-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-alpha-to-coverage-and-one-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-alpha-to-coverage-blend-add`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, blend_add, alpha_to_coverage;
+
+void fragment() {
+	ALBEDO = vec3(UV * 0.4, 0.3);
+	ALPHA = step(0.5, UV.x);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-alpha-to-coverage-blend-add-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-alpha-to-coverage-blend-add-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-alpha-to-coverage-msaa-4x`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, alpha_to_coverage;
+
+void fragment() {
+	ALBEDO = vec3(UV * 0.4, 0.3);
+	ALPHA = step(0.5, UV.x);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-alpha-to-coverage-msaa-4x-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-alpha-to-coverage-msaa-4x-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-alpha-to-coverage-and-one-msaa-4x`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, alpha_to_coverage_and_one;
+
+void fragment() {
+	ALBEDO = vec3(UV * 0.4, 0.3);
+	ALPHA = step(0.5, UV.x);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-alpha-to-coverage-and-one-msaa-4x-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-alpha-to-coverage-and-one-msaa-4x-three.png" width="256" alt="Transpilation"> |
+
 ## Render mode `unshaded`
 
 `unshaded` defines `MODE_UNSHADED`, so the template writes `ALBEDO` and `ALPHA` to the frame with no light, fog or ambient light (`scene_forward_clustered.glsl:2978-2981`).
@@ -2183,9 +2405,18 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 
 ## Blend modes
 
-`blend_mix`, the default, draws in the opaque pass with no blend. `blend_add`, `blend_sub`, `blend_mul` and `blend_premul_alpha` draw in the alpha pass and blend with Godot's factors for the mode (`material_storage.cpp:651-716`), the colour and the alpha each with its own.
+`blend_mix`, the default, draws in the opaque pass with no blend. It draws in the alpha pass when the shader names `ALPHA` with no alpha cut, or with a cut and `ALPHA_ANTIALIASING_EDGE` or `ALPHA_TEXTURE_COORDINATE`. It also does when the shader reads a screen, depth or normal roughness texture, or has `depth_draw_never`, `depth_test_disabled` or `depth_test_inverted` (`scene_shader_forward_clustered.h:279-287`). `blend_add`, `blend_sub`, `blend_mul` and `blend_premul_alpha` draw in the alpha pass and blend with Godot's factors for the mode (`material_storage.cpp:651-716`), the colour and the alpha each with its own.
 
 The transpiler emits the material's `blending` and its blend factors, and `transparent`. Rows: `spatial render_mode blend_mix`, `spatial render_mode blend_add`, `spatial render_mode blend_sub`, `spatial render_mode blend_mul`, `spatial render_mode blend_premul_alpha`. Godot source: `servers/rendering/shader_types.cpp:233`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## Alpha to coverage modes
+
+`alpha_to_coverage` and `alpha_to_coverage_and_one` replace the blend mode with Godot's alpha to coverage blend (`scene_shader_forward_clustered.cpp:239-241`), so a shader that names no `ALPHA` stays in the opaque pass whatever its blend mode. In the alpha pass Godot turns on alpha to coverage, and `alpha_to_coverage_and_one` alpha to one too (`scene_shader_forward_clustered.cpp:431-437`). WebGL skips alpha to coverage on a target of one sample (GLES 3.0.6 §4.1.3), which Godot's default `msaa_3d` draws into. There the transpiler discards a fragment of alpha below 0.5 and `alpha_to_coverage_and_one` sets the alpha of the rest to 1. Vulkan leaves the coverage mask to the driver. On one sample lavapipe covers a 2 by 2 ordered dither by the alpha, so on an alpha ramp the transpiler covers other pixels than Godot does on lavapipe, in about the same share. Another driver can cut at a threshold or dither in another pattern. On a target of 4 samples WebGL turns alpha to coverage on, and a mask of alpha 0 or 1 matches Godot. On 2 samples the browser's GL places the samples elsewhere than lavapipe does, so every edge covers other samples: an opaque quad's edges differ by 67 pixels over 2/255 in a 64 by 64 scene. 4 samples place them alike. WebGL has no alpha to one, so there the stored alpha stays the shader's: the blend takes the colour at weight 1, and an opaque viewport drops the alpha.
+
+The transpiler emits the material's `alphaToCoverage` and blend factors, and a `Discard` behind a uniform that reads the target's samples. Rows: `spatial render_mode alpha_to_coverage`, `spatial render_mode alpha_to_coverage_and_one`. Godot source: `servers/rendering/shader_types.cpp:251`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
@@ -2267,6 +2498,24 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 A view with one eye has a `VIEW_INDEX` of 0 and an `EYE_OFFSET` of zero. `VIEW_MONO_LEFT` is 0 and `VIEW_RIGHT` is 1.
 
 The transpiler emits `the template's text with no multiview define`. Rows: `spatial.vertex.VIEW_INDEX`, `spatial.vertex.VIEW_MONO_LEFT`, `spatial.vertex.VIEW_RIGHT`, `spatial.vertex.EYE_OFFSET`, `spatial.fragment.VIEW_INDEX`, `spatial.fragment.VIEW_MONO_LEFT`, `spatial.fragment.VIEW_RIGHT`, `spatial.fragment.EYE_OFFSET`. Godot source: `servers/rendering/shader_types.cpp:130`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `ALPHA` and `PREMUL_ALPHA_FACTOR`
+
+`ALPHA` is the surface's opacity, which the template writes as the alpha of the frame's colour. A shader that names `ALPHA` draws in the alpha pass and blends with its blend mode, unless it also names `ALPHA_SCISSOR_THRESHOLD` or `ALPHA_HASH_SCALE` with no `ALPHA_ANTIALIASING_EDGE` (`scene_shader_forward_clustered.h:279-287`). Under `blend_premul_alpha`, `PREMUL_ALPHA_FACTOR` scales the colour before the blend (`scene_forward_clustered.glsl:2991-2993`).
+
+The transpiler emits the template's locals `alpha` and `premul_alpha`, and the material's `transparent`. Rows: `spatial.fragment.PREMUL_ALPHA_FACTOR`, `spatial.fragment.ALPHA`. Godot source: `servers/rendering/shader_types.cpp:150`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## The alpha cut
+
+`ALPHA_SCISSOR_THRESHOLD` discards a fragment whose alpha is below it. `ALPHA_HASH_SCALE` discards a fragment whose alpha is below a hash of its position in the object, at that scale. Either sets the alpha of the rest to 1 (`scene_forward_clustered.glsl:1383-1416`). `ALPHA_ANTIALIASING_EDGE` keeps the alpha instead and ramps it across one pixel at the edge, past the scissor threshold, with `ALPHA_TEXTURE_COORDINATE` for the mip level (`scene_forward_aa_inc.glsl:45-56`).
+
+The transpiler emits the template's alpha cut and `compute_alpha_antialiasing_edge`. Rows: `spatial.fragment.ALPHA_SCISSOR_THRESHOLD`, `spatial.fragment.ALPHA_HASH_SCALE`, `spatial.fragment.ALPHA_ANTIALIASING_EDGE`, `spatial.fragment.ALPHA_TEXTURE_COORDINATE`. Godot source: `servers/rendering/shader_types.cpp:197`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 

@@ -13,6 +13,7 @@ import {
   type AlphaAntialiasingCut,
 } from '../../godot/rendering/materials/alphaAntialiasing';
 import { alphaToCoverageBlendState, type MaterialBlendState } from '../../shaders/pipeline/blendState';
+import { coversOneSample } from '../../shaders/pipeline/oneSampleTarget';
 import { ALPHA_HASH_CHUNK, ALPHA_TEST_CHUNK } from './surfaceAlphaPatch';
 import { perObject } from '../../utils/perObject';
 
@@ -90,19 +91,6 @@ export function alphaAntialiasingProps(
   return { alphaToCoverage: true, ...alphaToCoverageBlendState(cut.mode) };
 }
 
-/** Each context's `antialias` attribute, fixed for the context's life. Collected with it. */
-const canvasAntialias = perObject(
-  (context: WebGLRenderingContext | WebGL2RenderingContext) =>
-    context.getContextAttributes()?.antialias === true
-);
-
-/** Whether the renderer draws into a target with more than one sample per pixel. */
-function drawsMultisampled(renderer: THREE.WebGLRenderer): boolean {
-  const target = renderer.getRenderTarget();
-  if (target) return target.samples > 0;
-  return canvasAntialias(renderer.getContext());
-}
-
 /** The uniforms of one antialiased material's program. */
 interface EdgeUniforms extends Record<string, THREE.IUniform> {
   godotSingleSampleCoverage: THREE.IUniform<number>;
@@ -143,8 +131,7 @@ const edgeUniformsOf = perObject(
  * turns no alpha to coverage on, so it never emulates it.
  */
 export function coverOneSampleTarget(this: THREE.Material, renderer: THREE.WebGLRenderer): void {
-  const coversOneSample = this.alphaToCoverage && !drawsMultisampled(renderer);
-  edgeUniformsOf(this).godotSingleSampleCoverage.value = coversOneSample
+  edgeUniformsOf(this).godotSingleSampleCoverage.value = coversOneSample(this, renderer)
     ? (alphaAntialiasingOf(this)?.mode ?? 0)
     : 0;
 }

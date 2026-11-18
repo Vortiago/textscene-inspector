@@ -22,7 +22,13 @@ import { emitTemplateStage } from '../template/emitTemplate.js';
 import { linkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
 import type { RowTexture } from '../template/rowTexture.js';
 import { instanceWords } from './instanceData.js';
-import { applySpatialPipeline, spatialPipeline } from './spatialPipeline.js';
+import { coveredOnOneSample } from '../pipeline/singleSampleCoverage.js';
+import {
+  applySpatialPipeline,
+  spatialPipeline,
+  drawsAlphaToCoverage,
+  type SpatialPipeline,
+} from './spatialPipeline.js';
 import type { TemplateStageNode } from '../template/templateTree.js';
 import { TreeMemo } from '../template/treeMemo.js';
 import { BoundNodeMaterial, type MaterialShader } from '../uniforms/boundMaterial.js';
@@ -71,6 +77,7 @@ export function transpileParsedSpatial(
     SCENE,
     options.sampling
   );
+  const pipeline = spatialPipeline(parsed.tree);
   const vulkanClip = varyingProperty('vec4', 'godot_clip_position') as unknown as Vec4;
   const vertexStage = linked('vertex');
   const vertex = emitTemplateStage(
@@ -95,11 +102,12 @@ export function transpileParsedSpatial(
     { name: 'frag_color', type: 'vec4' },
     resources
   );
-  const material = sceneMaterial(glClipPosition(vertex.result, vulkanClip), fragment.result, {
+  const colour = alphaCovered(fragment.result, pipeline);
+  const material = sceneMaterial(glClipPosition(vertex.result, vulkanClip), colour, {
     parameters: [...parameters.values()],
     source: shaderSource(parsed, options.file ?? ''),
   });
-  applySpatialPipeline(material, spatialPipeline(parsed.tree));
+  applySpatialPipeline(material, pipeline);
   resources.buffers.byName.get('instances')?.writeEachDraw(instanceWordsOf);
   return {
     material,
@@ -158,6 +166,11 @@ function godotFrontFacing(): Node {
 /** Vulkan's `gl_FragCoord`: three's pixel position, which starts at the top row, Godot's depth and 1 / w. */
 function vulkanFragCoord(clip: Vec4): Node {
   return vec4(screenCoordinate, clip.z.div(clip.w), clip.w.reciprocal()) as unknown as Node;
+}
+
+/** The colour alpha to coverage draws, which a target of one sample cuts at alpha 0.5. */
+function alphaCovered(colour: Node, pipeline: SpatialPipeline): Node {
+  return drawsAlphaToCoverage(pipeline) ? coveredOnOneSample(colour, pipeline.alphaAntialiasing) : colour;
 }
 
 function sceneMaterial(position: Node, colour: Node, shader: MaterialShader): BoundNodeMaterial {

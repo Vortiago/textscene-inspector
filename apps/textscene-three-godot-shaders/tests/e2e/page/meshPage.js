@@ -96,6 +96,7 @@ function drawMesh(spec) {
     width,
     height,
     colorSpace: THREE.SRGBColorSpace,
+    samples: spec.msaa ?? 0,
   });
   for (const spatial of transpiled.values()) spatial.material.dispose();
   geometry.dispose();
