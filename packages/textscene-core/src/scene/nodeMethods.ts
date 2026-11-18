@@ -151,15 +151,6 @@ export function findPortedAccessor(
   });
 }
 
-/** Each class's ported methods that are a property's setter or getter, for the check against ClassDB. */
-export function portedAccessors(): readonly { className: string; name: string; method: PortedMethod }[] {
-  return Object.entries(PORTED_METHODS).flatMap(([className, methods]) =>
-    Object.entries(methods)
-      .filter(([, method]) => method.accessor)
-      .map(([name, method]) => ({ className, name, method }))
-  );
-}
-
 /** The nearest class's port of `method`, as a call resolves a method up the class chain. */
 export function findPortedMethod(className: string, method: string): PortedMethod | undefined {
   return findInClassChain(className, (type) =>
