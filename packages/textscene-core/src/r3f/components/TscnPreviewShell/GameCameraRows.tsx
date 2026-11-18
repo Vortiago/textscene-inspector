@@ -9,7 +9,7 @@ import styles from './TscnPreviewShell.module.css';
 
 function tagOf({ isCurrent, canBeCurrent, viewport }: CameraState): string {
   const state = isCurrent ? 'current' : canBeCurrent ? 'make current' : 'not enabled';
-  return viewport === null ? state : `${state} · ${viewport.slice(viewport.lastIndexOf('/') + 1)}`;
+  return viewport === null ? state : `${state} · ${viewport}`;
 }
 
 /** Logs a refused call, since a click handler has no caller to hand the error to. */

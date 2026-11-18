@@ -39,8 +39,8 @@ function Probe() {
   );
 }
 
-function renderPanel(mode: ViewportMode): Scene {
-  const scene = openScene({ source: SCENE, provider });
+function renderPanel(mode: ViewportMode, source = SCENE): Scene {
+  const scene = openScene({ source, provider });
   render(
     <HierarchyProvider value={{ sceneGraph: scene.written(), panelId: 'cams-in-game', scene }}>
       <ViewportActionsProvider>
@@ -58,7 +58,30 @@ const row = (name: string) => screen.getByRole('button', { name: new RegExp(`^${
 const isActive = (name: string) => row(name).getAttribute('data-active') === 'true';
 const probe = () => screen.getByTestId('probe');
 
+const TWIN_BOOTHS = `[gd_scene format=3]
+
+[node name="Main" type="Node3D"]
+
+[node name="A" type="Node" parent="."]
+
+[node name="Booth" type="SubViewport" parent="A"]
+
+[node name="Near" type="Camera3D" parent="A/Booth"]
+
+[node name="B" type="Node" parent="."]
+
+[node name="Booth" type="SubViewport" parent="B"]
+
+[node name="Near" type="Camera3D" parent="B/Booth"]
+`;
+
 describe('<CamerasPanel> in the In-game mode', () => {
+  it('names the whole path of a SubViewport, so two viewports of one name differ', () => {
+    renderPanel('in-game', TWIN_BOOTHS);
+    const tags = screen.getAllByRole('button', { name: /^Near/ }).map((button) => button.textContent);
+    expect(tags).toEqual(['Nearcurrent · Main/A/Booth', 'Nearcurrent · Main/B/Booth']);
+  });
+
   it('marks the current Camera3D and Camera2D of the root viewport', () => {
     renderPanel('in-game');
     expect([isActive('Front'), isActive('Side'), isActive('Left'), isActive('Right')]).toEqual([
