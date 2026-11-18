@@ -16,6 +16,7 @@ import {
 } from '../../godot/rendering/msaaSampleLocations.js';
 import { perObject } from '../../utils/perObject.js';
 import { drawSurface, visibleSurfaces, type Surface } from '../../shaders/pipeline/opaqueSurfaces';
+import { drawWithOwnDepth } from '../../shaders/pipeline/depthPrepass';
 import { beginStep, endStep } from '../frameProfile/frameProfile.js';
 import { SCREEN_SPACE_STATE, screenSpaceState } from './screenSpaceState.js';
 import { showBestFitNormals } from './bestFitNormals.js';
@@ -151,7 +152,7 @@ function drawPrepassSurface(
     );
   }
   try {
-    drawSurface(renderer, scene, camera, surface, material);
+    drawWithOwnDepth(material, () => drawSurface(renderer, scene, camera, surface, material));
   } finally {
     material.blending = blending;
     material.depthWrite = depthWrite;

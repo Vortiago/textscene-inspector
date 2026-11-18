@@ -52,14 +52,25 @@ export function ownProgramDraw(material: THREE.Material): PrepassDraw | null {
 /** Draws with `material`'s own depth state and no colour, then gives back the state it found. */
 function asDepthOnly(material: THREE.Material): (draw: () => void) => void {
   return (draw) => {
-    const found = { colorWrite: material.colorWrite, ...colourDepthNow(material) };
-    Object.assign(material, { colorWrite: false, ...colourDepthOf(material) });
+    const { colorWrite } = material;
+    material.colorWrite = false;
     try {
-      draw();
+      drawWithOwnDepth(material, draw);
     } finally {
-      Object.assign(material, found);
+      material.colorWrite = colorWrite;
     }
   };
+}
+
+/** Runs `draw` with `material`'s depth state from before the prepass, for another pass of its own. */
+export function drawWithOwnDepth(material: THREE.Material, draw: () => void): void {
+  const found = colourDepthNow(material);
+  Object.assign(material, colourDepthOf(material));
+  try {
+    draw();
+  } finally {
+    Object.assign(material, found);
+  }
 }
 
 /** Which renderer draws the prepass, and what it draws after one. */

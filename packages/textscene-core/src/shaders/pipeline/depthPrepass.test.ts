@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { createDepthPrepass, setPrepassDraw, type DepthPrepassOptions } from './depthPrepass';
+import {
+  createDepthPrepass,
+  drawWithOwnDepth,
+  setPrepassDraw,
+  type DepthPrepassOptions,
+} from './depthPrepass';
 
 interface RecordedDraw {
   readonly object: THREE.Object3D;
@@ -184,6 +189,18 @@ describe('createDepthPrepass', () => {
     expect(material).toMatchObject({ depthFunc: THREE.EqualDepth, depthWrite: false });
     reach(prepass.last);
     expect(material).toMatchObject({ depthFunc: THREE.LessEqualDepth, depthWrite: true });
+  });
+
+  it("lets another pass draw a surface with its own depth state while the prepass's state holds", () => {
+    const material = new THREE.MeshBasicMaterial();
+    const { prepass, reach } = prepassScene(FORWARD_PLUS, meshOf(material));
+    reach(prepass.first);
+    const seen: Partial<THREE.Material>[] = [];
+    drawWithOwnDepth(material, () =>
+      seen.push({ depthFunc: material.depthFunc, depthWrite: material.depthWrite })
+    );
+    expect(seen).toEqual([{ depthFunc: THREE.LessEqualDepth, depthWrite: true }]);
+    expect(material).toMatchObject({ depthFunc: THREE.EqualDepth, depthWrite: false });
   });
 
   it('runs its draws inside `timed`', () => {
