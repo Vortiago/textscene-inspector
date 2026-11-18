@@ -180,7 +180,7 @@ async function shoot(page) {
 }
 
 async function observe(page) {
-  // The tab hears a call on the next frame (`SceneListeners.written`), so it is read after the canvas settles.
+  // The tab hears a call on the next frame (`SceneListeners.written`), so the read follows a settled canvas.
   const buffer = await shoot(page);
   return {
     buffer,
