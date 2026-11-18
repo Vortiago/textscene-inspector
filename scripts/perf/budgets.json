@@ -240,5 +240,26 @@
         "runs": 1
       }
     }
+  },
+  "in-game-hud-over-world": {
+    "drawCalls": 8,
+    "steps": {
+      "SubViewports": {
+        "drawCalls": 6,
+        "runs": 1
+      },
+      "Depth prepass": {
+        "drawCalls": 0,
+        "runs": 1
+      },
+      "Canvas copy": {
+        "drawCalls": 1,
+        "runs": 1
+      },
+      "Other": {
+        "drawCalls": 1,
+        "runs": 1
+      }
+    }
   }
 }

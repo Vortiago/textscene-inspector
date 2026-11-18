@@ -1,0 +1,31 @@
+[gd_scene format=3]
+
+; A CanvasItem whose parent is a Node3D draws on the root canvas (`canvas_item.cpp:246-267`), so the
+; Camera2D below the Node3D root moves the square by its `offset`. The variable is the parent of a
+; canvas item: a Node3D. Every other canvas golden parents its items to a CanvasItem or a Node, so no
+; other scene shows a regression in it.
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+
+[sub_resource type="StandardMaterial3D" id="Material_box"]
+shading_mode = 0
+albedo_color = Color(0.9, 0.2, 0.2, 1)
+
+[node name="Main" type="Node3D"]
+
+[node name="Box" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("Material_box")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+current = true
+
+[node name="Camera2D" type="Camera2D" parent="."]
+anchor_mode = 0
+offset = Vector2(40, 20)
+
+[node name="Square" type="Polygon2D" parent="."]
+position = Vector2(80, 50)
+color = Color(0.2, 0.6, 0.9, 1)
+polygon = PackedVector2Array(0, 0, 60, 0, 60, 60, 0, 60)
