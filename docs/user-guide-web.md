@@ -83,7 +83,7 @@ A WorldEnvironment whose Sky has a ShaderMaterial draws the shader as Godot does
 - If the previewer does not translate a part of the shader yet, it also draws the default sky. The message under **Shader Error** names the part.
 - An `#if` can call `decompress` in Zstandard or Brotli mode. The previewer loads its decoders only for a shader that names `decompress`.
 - The shader reads the scene's suns through `LIGHT0_*` to `LIGHT3_*`, and draws its half and quarter resolution passes when it sets `use_half_res_pass` or `use_quarter_res_pass`.
-- The reflections and the ambient light show the sky at the first frame. A sky that moves with `TIME` or with the camera moves only in the background (#1779).
+- A sky that reads `TIME` or `POSITION` bakes its radiance again when `TIME` moves forward or the camera moves, as Godot does. A stop or a seek bakes it again too. After `TIME` wraps, the radiance waits until `TIME` passes its last value again, as in Godot. The reflections and the ambient light then follow the background. The sky's process mode sets how: Real-Time and Quality bake every layer at once, and Incremental bakes one layer in each frame.
 
 `TIME` follows the **Timeline** while it shows an AnimationPlayer. Play advances `TIME`, pause holds it, a seek sets it to the playhead, and stop sets it to 0. With no AnimationPlayer, `TIME` advances every frame, as in a running game. `TIME` wraps at the project setting `rendering/limits/time/time_rollover_secs`, 3600 seconds by default. Drop `project.godot` with the scene to use another value.
 

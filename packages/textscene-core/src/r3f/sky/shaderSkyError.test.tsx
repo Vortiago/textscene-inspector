@@ -15,7 +15,14 @@ function shaderSky(code: string): SkyProperties {
     file: 'res://sky.gdshader',
     parameters: {},
     textures: {},
-    usage: { light: false, timeOrPosition: false, hasBufferUniforms: false, samplers: {} },
+    usage: {
+      light: false,
+      time: false,
+      position: false,
+      hasBufferUniforms: false,
+      passColors: [],
+      samplers: {},
+    },
   };
 }
 

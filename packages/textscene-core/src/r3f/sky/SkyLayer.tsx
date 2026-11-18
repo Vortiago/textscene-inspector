@@ -14,14 +14,22 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { visibleInTree } from '../visibleInTree';
 import { useFrame, useThree } from '@react-three/fiber';
-import type { AuthoredSky } from '../../resources/sky/types';
-import type { SkyLight } from '../../resources/sky/build';
+import type { AuthoredSky, Sky } from '../../resources/sky/types';
+import type { RadianceInPlace, SkyLight } from '../../resources/sky/build';
 import { NO_SKY_LIGHTS, noteSkyLights, skyLightEnergy, skyLightSize } from './skyLight';
 import { skyEuler } from './skyRotation';
 import { hideShownSky } from './skyRadiance';
 import { holdSkyBakes, radianceUpdateOf, type SkyBakes, skyUpdatePlan } from './skyBakes';
 import { materialReadsLights } from '../../resources/sky/readsLights';
-import { stepSkyRadiance, type SkyRender } from '../../godot/rendering/environment/skyRadianceUpdate';
+import {
+  noteSkyFrame,
+  restartSkyClock,
+  stepSkyRadiance,
+  type SkyFrameReads,
+  type SkyRender,
+  type SkyRadianceStep,
+} from '../../godot/rendering/environment/skyRadianceUpdate';
+import { canvasShaderTime } from '../shaderTime/canvasShaderTime';
 import { renderUnderWay } from '../viewportRender/worldRender';
 import { takeRealTimeCaptureRenders } from '../reflectionProbe/realTimeCaptures';
 import { ENVIRONMENT_SWITCH } from './environmentSwitch';
@@ -77,6 +85,23 @@ interface SkyLayerProps {
 
 /** Godot's sky shader has four light slots. The other lights do not reach it. */
 const LIGHT_SLOTS = 4;
+
+/** Scratch for one render's camera origin. */
+const cameraOrigin = new THREE.Vector3();
+
+const NO_FRAME_READS: SkyFrameReads = { time: false, position: false };
+
+/** Runs `step` on the radiance in place, with `POSITION` at `position`. */
+function stepInPlace(inPlace: RadianceInPlace, step: SkyRadianceStep, position: Vector3): void {
+  if (step.kind === 'filter') inPlace.filterLayer(step.layer);
+  else if (step.kind === 'bake' && step.isFirstLayerOnly) inPlace.bakeFirstLayerAgain(position);
+  else if (step.kind === 'bake') inPlace.bakeAgain(position);
+}
+
+/** What `material` reads that changes from render to render: a built-in sky reads neither. */
+function frameReadsOf(material: Sky['material']): SkyFrameReads {
+  return material.kind === 'shader' ? material.usage : NO_FRAME_READS;
+}
 
 export function SkyLayer({
   sky: authoredSky,
@@ -169,14 +194,43 @@ export function SkyLayer({
       radiance = bakes.at(baked.exposure) ?? radiance;
       scene.environmentIntensity = baked.brightness * render.brightness;
     };
-    const stepRadiance = (render: SkyRender) => {
-      const isDirtied = noteSkyLights(gl, lightData, exposureScalesLights ? render.exposure : 1);
-      stepSkyRadiance(update, plan, render, isDirtied);
+    const frameReads = frameReadsOf(sky.material);
+    const isFrameRead = frameReads.time || frameReads.position;
+    // A `TIME` or camera dirt waits for a bake in place. A light's dirt rebuilds the bakes.
+    let isFrameDirty = false;
+    let bakedInPlace: RadianceInPlace | undefined;
+    const shaderTime = canvasShaderTime(gl);
+    let seenJumps = shaderTime.jumps;
+    const stepRadiance = (render: SkyRender, camera?: THREE.Camera) => {
+      const isLightDirtied = noteSkyLights(gl, lightData, exposureScalesLights ? render.exposure : 1);
+      if (shaderTime.jumps !== seenJumps) {
+        seenJumps = shaderTime.jumps;
+        restartSkyClock(update);
+      }
+      const isFrameDirtied =
+        !!camera &&
+        isFrameRead &&
+        noteSkyFrame(update, frameReads, shaderTime.time, camera.getWorldPosition(cameraOrigin));
+      isFrameDirty ||= isFrameDirtied;
+      const step = stepSkyRadiance(update, plan, render, isLightDirtied || isFrameDirtied);
+      const inPlace = update.baked && bakes.inPlaceAt(update.baked.exposure);
+      if (!inPlace) return;
+      // The camera origin that last dirtied the sky: a replayed probe render has none of its own.
+      const position = update.previousPosition;
+      if (isFrameRead && inPlace !== bakedInPlace) {
+        // A radiance this effect has not baked holds the `TIME` and the origin it was built at.
+        inPlace.bakeAgain(position);
+        bakedInPlace = inPlace;
+        isFrameDirty = false;
+      } else if (step.kind === 'filter' || (step.kind === 'bake' && isFrameDirty)) {
+        stepInPlace(inPlace, step, position);
+        if (step.kind === 'bake') isFrameDirty = false;
+      }
     };
     // Each view runs its render through the radiance update, the first of a frame after the faces
     // Godot draws for the ALWAYS probes at the world's exposure. A capture reads that bake and steps
     // nothing, as ours captures again only on change. An interior capture draws no sky.
-    const showForRender = (drawn: number) => {
+    const showForRender = (drawn: number, camera: THREE.Camera) => {
       const render = renderAt(drawn);
       const capture = renderUnderWay()?.probeCapture;
       if (capture?.isInterior) return;
@@ -184,7 +238,7 @@ export function SkyLayer({
         const captureRenders = takeRealTimeCaptureRenders(scene);
         const world = renderAt(worldExposureOfScene(scene) ?? 1);
         for (let replayed = 0; replayed < captureRenders; replayed += 1) stepRadiance(world);
-        stepRadiance(render);
+        stepRadiance(render, camera);
       }
       const baked = update.baked ?? render;
       showAt(baked, render);
@@ -199,7 +253,9 @@ export function SkyLayer({
       const previousEnvironment = scene.environment;
       const previousIntensity = scene.environmentIntensity;
       scene.environment = ENVIRONMENT_SWITCH;
-      const stopShowingRadiance = followSceneExposure(scene, (drawn) => showForRender(drawn ?? 1));
+      const stopShowingRadiance = followSceneExposure(scene, (drawn, camera) =>
+        showForRender(drawn ?? 1, camera)
+      );
       const stopHidingRadiance = observeSceneRenderEnd(scene, hideShownSky);
       const stopShowingBackground = asBackground ? showSkyBackground(scene) : undefined;
       showAt(update.baked ?? renderAt(exposure), renderAt(exposure));

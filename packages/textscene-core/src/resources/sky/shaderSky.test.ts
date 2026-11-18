@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import type { NodeMaterial } from 'three/webgpu';
 import * as logger from '../../logger';
 import * as parseShader from '../../shaders/language/parseShader';
@@ -16,6 +16,8 @@ import { decodeSky } from './decode';
 import type { ShaderSkyProperties, Sky } from './types';
 
 const SKY_FILE = 'res://tinted_sky.gdshader';
+
+const TIME_SKY = 'shader_type sky;\nvoid sky() {\n\tCOLOR = vec3(fract(TIME));\n}\n';
 
 const TINTED_SKY = 'shader_type sky;\nuniform float tint = 0.5;\nvoid sky() {\n\tCOLOR = vec3(tint);\n}\n';
 
@@ -147,6 +149,16 @@ describe('buildSkyEnvironment of a shader sky', () => {
         /^\[Sky\] The previewer failed to draw .*res:\/\/tinted_sky\.gdshader.*ERROR: 0:7/
       )
     );
+    environment.dispose();
+  });
+
+  it('bakes the radiance again into the layers its readers sample', async () => {
+    const { renderer } = await testRenderer();
+    installNodesHandler(renderer, 'linear');
+    const environment = shaderSkyEnvironment(renderer, decodeSky({}, shaderMaterial(TIME_SKY)))!;
+    const copy = vi.spyOn(renderer, 'copyTextureToTexture');
+    environment.radianceInPlace!.bakeAgain(new THREE.Vector3(0, 1, 0));
+    expect(copy.mock.calls.map(([, into]) => into)).toContain(environment.layers.target.texture);
     environment.dispose();
   });
 

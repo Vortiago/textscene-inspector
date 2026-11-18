@@ -27,6 +27,13 @@ function drawsOf(sky: TranspiledSky, size: THREE.Vector2): string[] {
   return draws;
 }
 
+/** The targets no pass draws, by the radiance mip each stands for. */
+function undrawnTargets(passes: SkyResolutionPasses): Map<number, THREE.WebGLRenderTarget> {
+  const targets = new Map<number, THREE.WebGLRenderTarget>();
+  passes.forEachUndrawnTarget((target, mip) => targets.set(mip, target));
+  return targets;
+}
+
 describe('SkyResolutionPasses', () => {
   it('draws the quarter pass, then the half pass, at a quarter and a half of the size', () => {
     expect(drawsOf(transpileSky(BOTH_PASSES), new THREE.Vector2(800, 600))).toEqual(['200x150', '400x300']);
@@ -49,6 +56,33 @@ describe('SkyResolutionPasses', () => {
     expect(read(sky, 'half_res')).not.toBe(read(sky, 'quarter_res'));
     expect(read(sky.half, 'quarter_res')).toBe(read(sky, 'quarter_res'));
     expect(read(sky.half, 'half_res')).toBe(unset);
+  });
+
+  it('gives every draw the target of a size it has no pass of, as the octmap pass reads its mips', () => {
+    const sky = transpileSky(`shader_type sky;
+render_mode use_quarter_res_pass;
+void sky() { COLOR = HALF_RES_COLOR.rgb + QUARTER_RES_COLOR.rgb; }`);
+    const half = undrawnTargets(new SkyResolutionPasses(sky, ['half', 'quarter'])).get(1)!.texture;
+    expect(sky.textures.get('half_res')?.value).toBe(half);
+    expect(sky.quarter!.textures.get('half_res')?.value).toBe(half);
+  });
+
+  it('sizes the target of a size it has no pass of, and draws only the passes the sky has', () => {
+    const sky = transpileSky('shader_type sky;\nvoid sky() { COLOR = HALF_RES_COLOR.rgb; }');
+    const { renderer, draws } = recordingRenderer();
+    const passes = new SkyResolutionPasses(sky, ['half', 'quarter']);
+    passes.draw(renderer, new THREE.Camera(), new THREE.Vector2(80, 80));
+    expect(draws).toEqual([]);
+    expect([...undrawnTargets(passes)].map(([mip, target]) => [mip, target.width])).toEqual([
+      [2, 20],
+      [1, 40],
+    ]);
+    expect(passes.isEmpty).toBe(true);
+  });
+
+  it('lists no undrawn target for a size the sky draws a pass of (edge case)', () => {
+    const sky = transpileSky(BOTH_PASSES);
+    expect(undrawnTargets(new SkyResolutionPasses(sky, ['half', 'quarter'])).size).toBe(0);
   });
 
   it('leaves the renderer on the target it had', () => {
