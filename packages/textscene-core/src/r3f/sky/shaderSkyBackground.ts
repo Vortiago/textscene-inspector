@@ -27,11 +27,16 @@ export class ShaderSkyBackground extends SkyBackdrop {
 
   constructor(
     private readonly sky: TranspiledSky,
-    private readonly lights: readonly SkyLight[]
+    private lights: readonly SkyLight[]
   ) {
     super(sky.mesh.geometry, sky.mesh.material);
     this.name = 'ShaderSkyBackground';
     this.passes = new SkyResolutionPasses(sky);
+  }
+
+  /** The lights of the renders from now on. */
+  setLights(lights: readonly SkyLight[]): void {
+    this.lights = lights;
   }
 
   protected paint(intensity: number, rotation: THREE.Euler): void {

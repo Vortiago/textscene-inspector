@@ -263,4 +263,12 @@ export const LIGHTING_SCENES = [
     select: 'Root/Clock',
     animationTime: 0.75,
   },
+  // The balls reflect the sun the clip turned at 0.3 s, baked again in place at the 1.0 s seek.
+  {
+    name: 'sky-light-step',
+    file: 'unit-sky-light-step.tscn',
+    camera: 'Root/Camera3D',
+    select: 'Root/Clock',
+    animationTime: 1.0,
+  },
 ];

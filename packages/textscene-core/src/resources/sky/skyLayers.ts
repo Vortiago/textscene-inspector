@@ -98,44 +98,6 @@ function releasePasses(gl: THREE.WebGLRenderer, filter: LayerFilter): void {
     releaseTextures(passFor(gl));
 }
 
-/**
- * Godot's baked sky layers in `radiance`, a cube as wide as the radiance size. It stands for Godot's
- * octmap of that size, twice as wide for a cube's texel density (`sky.cpp:1554-1557`). Mips shrink as
- * `update_reflection_mipmaps` does (`sky.cpp:481-500`). `debanding` scales the radiance's debanding
- * noise, 0 for none. The caller owns the array, and frees it with `disposeSkyLayers`.
- */
-export function bakeSkyLayers(
-  gl: THREE.WebGLRenderer,
-  radiance: THREE.CubeTexture,
-  bake: SkyBake,
-  debanding: number,
-  sampling?: ProjectSampling
-): SkyLayers {
-  return bakeSkyLayersDrawnBy(gl, cubeRadiance(gl, radiance, debanding), bake, sampling);
-}
-
-/** Godot's sky layers of what `drawRadiance` draws. The caller frees them with `disposeSkyLayers`. */
-function bakeSkyLayersDrawnBy(
-  gl: THREE.WebGLRenderer,
-  drawRadiance: DrawRadiance,
-  bake: SkyBake,
-  sampling?: ProjectSampling
-): SkyLayers {
-  const layers = createSkyLayers(bake, sampling);
-  try {
-    const baker = new SkyLayerBaker(gl, layers, bake.radianceFilter);
-    try {
-      baker.bakeEveryLayer(drawRadiance);
-    } finally {
-      baker.dispose();
-    }
-    return layers;
-  } catch (error) {
-    disposeSkyLayers(layers);
-    throw error;
-  }
-}
-
 /** Godot's sky layers for `bake`, which nothing has drawn. The caller frees them with `disposeSkyLayers`. */
 export function createSkyLayers(bake: SkyBake, sampling?: ProjectSampling): SkyLayers {
   const layout = skyLayersLayout(bake);
@@ -300,8 +262,12 @@ export function bakeAtlasLayers(
 /** Draws a bake's radiance over `octmap`, laid out as `layout`. */
 export type DrawRadiance = (octmap: THREE.WebGLRenderTarget, layout: SkyOctmapLayout) => void;
 
-/** The radiance of the cube `radiance` drawn into Godot's octmap, with `debanding` scaling its noise. */
-function cubeRadiance(gl: THREE.WebGLRenderer, radiance: THREE.CubeTexture, debanding: number): DrawRadiance {
+/** The cube `radiance`, as wide as the radiance size, drawn into Godot's octmap with `debanding` noise. */
+export function cubeRadiance(
+  gl: THREE.WebGLRenderer,
+  radiance: THREE.CubeTexture,
+  debanding: number
+): DrawRadiance {
   return (target, layout) => {
     const pass = radianceOctmapPassFor(gl);
     setUniforms(pass, { radiance, size: layout.size, borderSize: layout.borderSize, debanding });

@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import {
   bakeAtlasLayers,
-  bakeSkyLayers,
   createReflectionAtlas,
   createSkyLayers,
   disposeSkyLayers,
@@ -12,7 +11,7 @@ import { reflectionAtlasLayout } from '../../godot/rendering/environment/reflect
 import { fastFilter } from './fastFilter';
 import { testRenderer } from '../../testing/recordingWebGL';
 import type { SkyBake } from './types';
-import { debandingDrawnBy } from './skyLayers.testkit';
+import { bakeSkyLayers, debandingDrawnBy } from './skyLayers.testkit';
 
 const IMPORTANCE_SAMPLED: SkyBake = { radianceFilter: 'importance-sample', radianceSize: 32 };
 const FAST: SkyBake = { radianceFilter: 'fast', radianceSize: 256 };

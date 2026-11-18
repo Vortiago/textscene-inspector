@@ -14,11 +14,14 @@ import type { BuiltInSkyProperties, ShaderSkyProperties, Sky } from './types';
 import { warn } from '../../logger';
 import type { Vector3 } from '../../godot/math/vector';
 import { skyFragmentShader, skyGlsl, SKY_VERTEX_SHADER } from './skyShaders';
-import { skyUniforms, type SkyLight, type SkyUniforms } from './skyUniforms';
+import { skyUniforms, writeSkyLights, type SkyLight, type SkyUniforms } from './skyUniforms';
 import { releaseView, textureView } from '../textures/textureView';
 import { fillLiveCopy, isLiveTarget } from '../../r3f/liveTargets';
-import { disposeSkyLayers, type SkyLayers } from './skyLayers';
-import { bakeRadiance } from './radianceBake';
+import { cubeRadiance, type SkyLayers } from './skyLayers';
+import { cappedBake } from './radianceBake';
+import { OctmapRadiance, octmapSkyEnvironment, type OctmapSky } from './octmapRadiance';
+import { materialReadsLights } from './readsLights';
+import type { SkyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
 import { isDebanded } from './debanding';
 import { godotTextureFilterState } from '../textures/godotTextureFilter';
 import { TextureFilter } from '../../godot/rendering/materials/textureFilter';
@@ -43,8 +46,10 @@ export interface SkyEnvironment {
    * the sky paints the background.
    */
   redrawBackground?: () => void;
-  /** The bake of the layers in place. Absent for a sky the previewer draws with its own GLSL. */
+  /** The bake of the layers in place, absent for a sky no render dirties after its build. */
   radianceInPlace?: RadianceInPlace;
+  /** Shows `lights` to the background and to the next bake, absent for a sky that reads none. */
+  setLights?: (lights: readonly SkyLight[]) => void;
   /** Frees the background, the panorama it samples, and the layers. */
   dispose: () => void;
 }
@@ -130,11 +135,18 @@ function buildBuiltInSkyEnvironment(
   const panoramaView = skyPanoramaTexture(gl, material, panorama);
   const uniforms = skyUniforms(material, lights, panoramaView);
   let background: SkyBackground | null = null;
-  let layers: SkyLayers;
+  let radiance: OctmapRadiance;
   try {
     // Ahead of the bake, so a three whose background program moved frees no layers it baked.
     background = asBackground ? new SkyBackground(skyGlsl(material), uniforms) : null;
-    layers = bakeBuiltInRadiance(gl, { sky, material, uniforms, energy, sampling });
+    const bake = cappedBake(sky);
+    const octmapSky = new CubeSkyOctmap(
+      material,
+      uniforms,
+      bake.radianceSize,
+      radianceDebanding(material, energy)
+    );
+    radiance = new OctmapRadiance(gl, bake, octmapSky, sampling);
   } catch (error) {
     warn('[Sky] could not render the sky environment', error);
     background?.dispose();
@@ -144,55 +156,62 @@ function buildBuiltInSkyEnvironment(
 
   // After the bake only the background samples the panorama.
   if (!background) releaseView(panoramaView);
+  const disposeBackground = () => {
+    if (!background) return;
+    background.dispose();
+    releaseView(panoramaView);
+  };
   const redrawBackground =
     background && panorama && panoramaView && isLiveTarget(panorama)
       ? () => fillLiveCopy(panorama, panoramaView, gl)
       : undefined;
-  return {
+  // A built-in sky reads neither `TIME` nor `POSITION`, so only a change of its lights bakes it again.
+  return octmapSkyEnvironment(radiance, materialReadsLights(material), {
     background,
-    layers,
+    disposeBackground,
     redrawBackground,
-    dispose: () => {
-      if (background) {
-        background.dispose();
-        releaseView(panoramaView);
-      }
-      disposeSkyLayers(layers);
-    },
-  };
-}
-
-/** What a built-in sky's bake reads. */
-interface BuiltInRadiance {
-  sky: Sky;
-  material: BuiltInSkyProperties;
-  uniforms: SkyUniforms;
-  energy: number;
-  /** The project's filter settings, which the surfaces' read of the layers takes. */
-  sampling?: ProjectSampling;
-}
-
-/** Renders the built-in sky of `uniforms` into a cube and bakes Godot's layers from it. */
-function bakeBuiltInRadiance(
-  gl: THREE.WebGLRenderer,
-  { sky, material, uniforms, energy, sampling }: BuiltInRadiance
-): SkyLayers {
-  const geometry = new THREE.BoxGeometry(2, 2, 2);
-  const shader = new THREE.ShaderMaterial({
-    uniforms,
-    vertexShader: SKY_VERTEX_SHADER,
-    fragmentShader: skyFragmentShader(material),
-    side: THREE.BackSide,
-    depthWrite: false,
-    depthTest: false,
+    setLights: (next) => writeSkyLights(uniforms, next),
   });
-  const skyScene = new THREE.Scene();
-  skyScene.add(new THREE.Mesh(geometry, shader));
-  try {
-    return bakeRadiance(gl, skyScene, sky, radianceDebanding(material, energy), sampling);
-  } finally {
-    geometry.dispose();
-    shader.dispose();
+}
+
+/** A built-in sky's octmap pass, through a cube as wide as the radiance size (`sky.cpp:1554-1557`). */
+class CubeSkyOctmap implements OctmapSky {
+  private readonly geometry = new THREE.BoxGeometry(2, 2, 2);
+  private readonly shader: THREE.ShaderMaterial;
+  private readonly scene = new THREE.Scene();
+  private readonly cube: THREE.WebGLCubeRenderTarget;
+  // At the origin, so each face samples the directions Godot's `EYEDIR` covers.
+  private readonly camera: THREE.CubeCamera;
+
+  /** `debanding` scales the radiance's debanding noise, 0 for none. */
+  constructor(
+    material: BuiltInSkyProperties,
+    uniforms: SkyUniforms,
+    radianceSize: number,
+    private readonly debanding: number
+  ) {
+    this.cube = new THREE.WebGLCubeRenderTarget(radianceSize, { type: THREE.HalfFloatType });
+    this.camera = new THREE.CubeCamera(0.1, 10, this.cube);
+    this.shader = new THREE.ShaderMaterial({
+      uniforms,
+      vertexShader: SKY_VERTEX_SHADER,
+      fragmentShader: skyFragmentShader(material),
+      side: THREE.BackSide,
+      depthWrite: false,
+      depthTest: false,
+    });
+    this.scene.add(new THREE.Mesh(this.geometry, this.shader));
+  }
+
+  draw(gl: THREE.WebGLRenderer, octmap: THREE.WebGLRenderTarget, layout: SkyOctmapLayout): void {
+    this.camera.update(gl, this.scene);
+    cubeRadiance(gl, this.cube.texture, this.debanding)(octmap, layout);
+  }
+
+  dispose(): void {
+    this.geometry.dispose();
+    this.shader.dispose();
+    this.cube.dispose();
   }
 }
 

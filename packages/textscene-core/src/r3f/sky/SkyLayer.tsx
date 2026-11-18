@@ -15,11 +15,11 @@ import * as THREE from 'three';
 import { visibleInTree } from '../visibleInTree';
 import { useFrame, useThree } from '@react-three/fiber';
 import type { AuthoredSky, Sky, SkyProperties } from '../../resources/sky/types';
-import type { RadianceInPlace, SkyLight } from '../../resources/sky/build';
+import type { SkyLight } from '../../resources/sky/build';
 import { NO_SKY_LIGHTS, noteSkyLights, skyLightEnergy, skyLightSize } from './skyLight';
 import { skyEuler } from './skyRotation';
 import { hideShownSky } from './skyRadiance';
-import { holdSkyBakes, radianceUpdateOf, type SkyBakes, skyUpdatePlan } from './skyBakes';
+import { holdSkyBakes, radianceUpdateOf, type SkyBakes, type SkyLightsRead, skyUpdatePlan } from './skyBakes';
 import { materialReadsLights } from '../../resources/sky/readsLights';
 import {
   noteSkyFrame,
@@ -27,7 +27,6 @@ import {
   stepSkyRadiance,
   type SkyFrameReads,
   type SkyRender,
-  type SkyRadianceStep,
 } from '../../godot/rendering/environment/skyRadianceUpdate';
 import { canvasShaderTime } from '../shaderTime/canvasShaderTime';
 import { renderUnderWay } from '../viewportRender/worldRender';
@@ -91,13 +90,6 @@ const cameraOrigin = new THREE.Vector3();
 
 const NO_FRAME_READS: SkyFrameReads = { time: false, position: false };
 
-/** Runs `step` on the radiance in place, with `POSITION` at `position`. */
-function stepInPlace(inPlace: RadianceInPlace, step: SkyRadianceStep, position: Vector3): void {
-  if (step.kind === 'filter') inPlace.filterLayer(step.layer);
-  else if (step.kind === 'bake' && step.isFirstLayerOnly) inPlace.bakeFirstLayerAgain(position);
-  else if (step.kind === 'bake') inPlace.bakeAgain(position);
-}
-
 /** What `material` reads that changes from render to render: a built-in sky reads neither. */
 function frameReadsOf(material: Sky['material']): SkyFrameReads {
   return material.kind === 'shader' ? material.usage : NO_FRAME_READS;
@@ -118,7 +110,7 @@ export function SkyLayer({
   const exposure = useExposureFactor();
   const environment = useEnvironmentKey();
 
-  const lightsKey = useSkyLightsKey(scene);
+  const { lightsRead, areLightsRead } = useSkyLights(scene);
   const contextRestores = useContextRestores(gl);
   const { x: rotationX, y: rotationY, z: rotationZ } = rotation;
   // Refs, not effect dependencies: a new share or reflection source needs no new bake.
@@ -148,15 +140,14 @@ export function SkyLayer({
   });
 
   useEffect(() => {
-    // No frame has read the lights yet. A bake now would be replaced before it
-    // is seen, and each bake costs a six-face cube render and the layer passes.
-    if (lightsKey === null) return undefined;
+    // A bake before the first frame reads the lights would bake again unseen, at the cost of a whole bake.
+    if (!areLightsRead || !lightsRead.current) return undefined;
     // A bake samples the panorama once, so it waits for the pass to draw a live target.
     if (!isPanoramaDrawn) return undefined;
     // A shader sky waits for the transpiler, the nodes handler, and its parse options with their decoders.
     if (!sky || !shaderOptions || !isTranslatorReady) return undefined;
 
-    const lights = directionalLights(scene);
+    const lights = lightsRead.current;
     const skyRotation = skyEuler({ x: rotationX, y: rotationY, z: rotationZ });
     const input = {
       sky,
@@ -170,13 +161,10 @@ export function SkyLayer({
       energyMultiplier,
       rotation: skyRotation,
     };
-    const { bakes, release } = holdSkyBakes(gl, input, lightsKey, contextRestores);
+    const { bakes, release } = holdSkyBakes(gl, input, contextRestores);
     const update = radianceUpdateOf(sky);
     const plan = skyUpdatePlan(sky, fogScattersSun);
-    const readsLights = (materialReadsLights(sky.material) || fogScattersSun) && lights.length > 0;
-    const lightData = readsLights ? lightsKey : NO_SKY_LIGHTS;
-    // The exposure scales the light data, and so dirties the sky, unless every energy is 0.
-    const exposureScalesLights = readsLights && lights.some((light) => light.energy !== 0);
+    const readsLights = materialReadsLights(sky.material) || fogScattersSun;
     const first = bakes.bakeNow(update.baked?.exposure ?? exposure);
     if (!first) {
       release();
@@ -199,13 +187,15 @@ export function SkyLayer({
     };
     const frameReads = frameReadsOf(sky.material);
     const isFrameRead = frameReads.time || frameReads.position;
-    // A `TIME` or camera dirt waits for a bake in place. A light's dirt rebuilds the bakes.
-    let isFrameDirty = false;
-    let bakedInPlace: RadianceInPlace | undefined;
     const shaderTime = canvasShaderTime(gl);
     let seenJumps = shaderTime.jumps;
     const stepRadiance = (render: SkyRender, camera?: THREE.Camera) => {
-      const isLightDirtied = noteSkyLights(gl, lightData, exposureScalesLights ? render.exposure : 1);
+      const read = lightsRead.current!;
+      bakes.followLights(read);
+      // The exposure scales the light data, and so dirties the sky, unless every energy is 0.
+      const isExposed = readsLights && read.lights.some((light) => light.energy !== 0);
+      const lightData = readsLights ? read.key : NO_SKY_LIGHTS;
+      const isLightDirtied = noteSkyLights(gl, lightData, isExposed ? render.exposure : 1);
       if (shaderTime.jumps !== seenJumps) {
         seenJumps = shaderTime.jumps;
         restartSkyClock(update);
@@ -214,21 +204,11 @@ export function SkyLayer({
         !!camera &&
         isFrameRead &&
         noteSkyFrame(update, frameReads, shaderTime.time, camera.getWorldPosition(cameraOrigin));
-      isFrameDirty ||= isFrameDirtied;
       const step = stepSkyRadiance(update, plan, render, isLightDirtied || isFrameDirtied);
-      const inPlace = update.baked && bakes.inPlaceAt(update.baked.exposure);
-      if (!inPlace) return;
-      // The camera origin that last dirtied the sky: a replayed probe render has none of its own.
-      const position = update.previousPosition;
-      if (isFrameRead && inPlace !== bakedInPlace) {
-        // A radiance this effect has not baked holds the `TIME` and the origin it was built at.
-        inPlace.bakeAgain(position);
-        bakedInPlace = inPlace;
-        isFrameDirty = false;
-      } else if (step.kind === 'filter' || (step.kind === 'bake' && isFrameDirty)) {
-        stepInPlace(inPlace, step, position);
-        if (step.kind === 'bake') isFrameDirty = false;
-      }
+      if (!update.baked) return;
+      const isDrawn = bakes.stepInPlaceAt(update.baked.exposure, step, update.previousPosition, isFrameRead);
+      // A probe captures again on a change of the Environment, as a new bake of the lights notes one.
+      if (isDrawn && !isFrameRead) noteEnvironmentChange(scene, environment);
     };
     // Each view runs its render through the radiance update, the first of a frame after the faces
     // Godot draws for the ALWAYS probes at the world's exposure. A capture reads that bake and steps
@@ -294,7 +274,8 @@ export function SkyLayer({
     isTranslatorReady,
     isPanoramaDrawn,
     asBackground,
-    lightsKey,
+    areLightsRead,
+    lightsRead,
     contextRestores,
     rotationX,
     rotationY,
@@ -350,22 +331,21 @@ function useContextRestores(gl: THREE.WebGLRenderer): number {
   return restores;
 }
 
-/**
- * Changes whenever the lights the sky draws change, read every frame, as Godot re-renders the sky
- * on a change of light count, direction, energy, colour or size (`sky.cpp:1104-1142`). A sub-scene
- * or GLB brings a light late, and the preview sun unmounts for the scene's own (ADR-0025). Null
- * until the first frame.
- */
-function useSkyLightsKey(scene: THREE.Scene): string | null {
-  const [key, setKey] = useState<string | null>(null);
-  const latest = useRef<string | null>(null);
+/** The lights the sky draws, read every frame as Godot reads them in each render (`sky.cpp:1059-1143`). */
+function useSkyLights(scene: THREE.Scene): {
+  lightsRead: React.RefObject<SkyLightsRead | null>;
+  areLightsRead: boolean;
+} {
+  const lightsRead = useRef<SkyLightsRead | null>(null);
+  const [areLightsRead, setAreLightsRead] = useState(false);
   useFrame(() => {
-    const next = skyLightsKey(directionalLights(scene));
-    if (next === latest.current) return;
-    latest.current = next;
-    setKey(next);
+    const lights = directionalLights(scene);
+    const key = skyLightsKey(lights);
+    if (key === lightsRead.current?.key) return;
+    lightsRead.current = { lights, key };
+    setAreLightsRead(true);
   });
-  return key;
+  return { lightsRead, areLightsRead };
 }
 
 function skyLightsKey(lights: readonly SkyLight[]): string {
