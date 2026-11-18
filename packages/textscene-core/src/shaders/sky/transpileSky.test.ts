@@ -26,10 +26,10 @@ describe('transpileSky', () => {
     expect(errorOf(source).position).toMatchObject({ file: 'user.gdshader', line: 4 });
   });
 
-  it("writes a pass's ALPHA into the program that a later pass reads", () => {
+  it("emits the ALPHA a half pass writes in that pass's program", () => {
     const source =
       'shader_type sky;\nrender_mode use_half_res_pass;\nvoid sky() {\n' +
-      '\tALPHA = 0.375;\n\tCOLOR = vec3(HALF_RES_COLOR.a);\n}\n';
+      '\tALPHA = AT_HALF_RES_PASS ? 0.375 : 1.0;\n\tCOLOR = vec3(0.5);\n}\n';
     const fragment = (transpileSky(source).half!.mesh.material as NodeMaterial).fragmentNode!;
     expect(generatedFragmentShader(fragment)).toMatch(/0\.375/);
   });
