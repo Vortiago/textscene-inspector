@@ -179,9 +179,15 @@ async function shoot(page) {
   return buffer;
 }
 
+/** Resolves on a frame requested now, so after each frame the steps before it requested. */
+function nextFrame(page) {
+  return page.evaluate(() => new Promise((resolve) => window.requestAnimationFrame(() => resolve())));
+}
+
 async function observe(page) {
-  // The tab hears a call on the next frame (`SceneListeners.written`), so the read follows a settled canvas.
   const buffer = await shoot(page);
+  // The tab hears a step on the frame after it (`SceneListeners.written`), so the read waits a frame.
+  await nextFrame(page);
   return {
     buffer,
     view: await readView(page),

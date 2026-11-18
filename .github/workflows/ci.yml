@@ -278,7 +278,7 @@ jobs:
           name: visual-diffs-${{ matrix.shard }}
           path: scripts/visual/output/
 
-  # Shards of equal seconds (scripts/e2e/gateScenarios.mjs): on one slow runner the gate nears 20 minutes.
+  # Shards of equal seconds (scripts/e2e/gateScenarios.mjs): one slow runner took 15 min for the whole gate.
   e2e-web:
     name: E2E (web previewer, ${{ matrix.shard }}/2)
     runs-on: ubuntu-latest

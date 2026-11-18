@@ -1,9 +1,4 @@
 #!/usr/bin/env node
-/**
- * @example
- *   pnpm test:e2e:web                 # every scenario
- *   pnpm test:e2e:web --shard 1/2     # the 1st of 2 shards of equal seconds, as CI runs it
- */
 import { previewPort, withPreviewBrowser } from '../visual/previewServer.mjs';
 import { parseShard } from '../shards/shards.mjs';
 import { scenariosOf } from './gateScenarios.mjs';
@@ -20,7 +15,7 @@ class GateFailures {
   }
 }
 
-/** `--shard <index>/<count>`, or null for every scenario. Anything else is a usage error (exit 2). */
+/** `--shard <index>/<count>`, a shard of equal seconds as CI runs it, else null for every scenario. */
 function parseArgs(argv) {
   if (argv.length === 0) return null;
   const shard = argv[0] === '--shard' && argv.length === 2 ? parseShard(argv[1]) : null;
@@ -48,7 +43,7 @@ async function main() {
     runScenarios(scenarios, browser, baseUrl)
   );
   const gate = new GateFailures();
-  scenarios.forEach((scenario, index) => scenario.check(gate, results[index]));
+  scenarios.forEach((scenario, index) => checkScenario(gate, scenario, results[index]));
   logMeasurements(scenarios, results);
 
   if (!gate.ok) {
@@ -60,21 +55,33 @@ async function main() {
   console.log('\n[gate] PASSED');
 }
 
-/** Runs each scenario in order, and answers what each measured. */
+/** Runs each scenario in order, and answers what each measured or the error that stopped it. */
 async function runScenarios(scenarios, browser, baseUrl) {
   const results = [];
   for (const scenario of scenarios) {
     console.log(`[gate] ${scenario.title}`);
-    results.push(await scenario.run(browser, baseUrl));
+    try {
+      results.push({ measured: await scenario.run(browser, baseUrl) });
+    } catch (error) {
+      // One scenario that throws still leaves the claims of the others in the shard to report.
+      console.error(error);
+      results.push({ error });
+    }
   }
   return results;
+}
+
+function checkScenario(gate, scenario, { measured, error }) {
+  if (error) gate.check(false, `[${scenario.name}] did not finish: ${error.message ?? error}`);
+  else scenario.check(gate, measured);
 }
 
 /** Prints what each scenario measured, pass or fail, for a run's log. */
 function logMeasurements(scenarios, results) {
   console.log('\n[gate] measurements');
   scenarios.forEach(({ measure }, index) => {
-    if (measure) console.log(`  ${measure(results[index])}`);
+    const { measured } = results[index];
+    if (measure && measured) console.log(`  ${measure(measured)}`);
   });
 }
 
