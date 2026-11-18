@@ -40,13 +40,26 @@ export function prepassDrawOf(
   return prepassDraws.has(material) ? prepassDraws.get(material)! : unset(material);
 }
 
+/** Written only by `ownProgramDraw`, once for each material. An entry goes with its material. */
+// eslint-disable-next-line no-restricted-syntax -- perObject is outside the shader module, which imports only its own files (ADR-0072).
+const ownProgramDraws = new WeakMap<THREE.Material, PrepassDraw>();
+
 /** Its own program with no colour. Godot draws a sky, an overlay and a refraction in no prepass. */
 export function ownProgramDraw(material: THREE.Material): PrepassDraw | null {
+  if (!drawsOwnProgram(material)) return null;
+  let draw = ownProgramDraws.get(material);
+  if (!draw) {
+    draw = { material, around: asDepthOnly(material) };
+    ownProgramDraws.set(material, draw);
+  }
+  return draw;
+}
+
+function drawsOwnProgram(material: THREE.Material): boolean {
   const { depthFunc, depthWrite } = colourDepthOf(material);
   const isRefracting = ((material as THREE.MeshPhysicalMaterial).transmission ?? 0) > 0;
-  if (material.transparent || !material.depthTest || !depthWrite || isRefracting) return null;
-  const keepsNearest = depthFunc === THREE.LessEqualDepth || depthFunc === THREE.LessDepth;
-  return keepsNearest ? { material, around: asDepthOnly(material) } : null;
+  if (material.transparent || !material.depthTest || !depthWrite || isRefracting) return false;
+  return depthFunc === THREE.LessEqualDepth || depthFunc === THREE.LessDepth;
 }
 
 /** Draws with `material`'s own depth state and no colour, then gives back the state it found. */
@@ -102,13 +115,13 @@ function colourDepthFuncAfter(
 // eslint-disable-next-line no-restricted-syntax -- perObject is outside the shader module, which imports only its own files (ADR-0072).
 const glRenderers = new WeakMap<THREE.WebGLRenderer, string>();
 
+/** An empty name, uncached, for a lost context, so a restored one reads its name. */
 function glRendererOf(webgl: THREE.WebGLRenderer): string {
-  let name = glRenderers.get(webgl);
-  if (name === undefined) {
-    name = glRendererName(webgl.getContext() as WebGL2RenderingContext) ?? '';
-    glRenderers.set(webgl, name);
-  }
-  return name;
+  const cached = glRenderers.get(webgl);
+  if (cached !== undefined) return cached;
+  const name = glRendererName(webgl.getContext() as WebGL2RenderingContext);
+  if (name !== null) glRenderers.set(webgl, name);
+  return name ?? '';
 }
 
 /** The two sentinels of a scene's prepass: the first draws it, the last ends the colour pass's state. */
@@ -148,11 +161,13 @@ export function createDepthPrepass({
   const renderer = rendererOf(renderingMethod);
   // Written by the first sentinel and emptied by the last, inside one render.
   const changed: THREE.Material[] = [];
+  // Written by the first sentinel, and emptied at the start of each prepass.
+  const draws = new Map<THREE.Material, PrepassDraw | null>();
   const first = createFirstOpaqueSentinel('DepthPrepass', (webgl, scene, camera) => {
     const colourDepthFunc = colourDepthFuncAfter(renderer, webgl, disabledVendors);
     if (colourDepthFunc === null) return;
     timed(webgl, () => {
-      const draws = new Map<THREE.Material, PrepassDraw | null>();
+      draws.clear();
       const drawOf = (material: THREE.Material): PrepassDraw | null => {
         if (!draws.has(material))
           draws.set(material, material.visible ? prepassDrawOf(material, unset) : null);

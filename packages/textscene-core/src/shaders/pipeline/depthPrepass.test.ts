@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import {
   createDepthPrepass,
   drawWithOwnDepth,
+  ownProgramDraw,
   setPrepassDraw,
   type DepthPrepassOptions,
 } from './depthPrepass';
@@ -16,9 +17,9 @@ interface RecordedDraw {
   readonly group: THREE.GeometryGroup | null;
 }
 
-/** A renderer on the GPU `gpu` that records each draw instead of drawing it. */
-function recordingRenderer(draws: RecordedDraw[], gpu: string): THREE.WebGLRenderer {
-  const gl = { RENDERER: 0x1f01, getParameter: () => gpu };
+/** A renderer on the GPU `gpu` that records each draw instead of drawing it. Null names no GPU. */
+function recordingRenderer(draws: RecordedDraw[], gpu: () => string | null): THREE.WebGLRenderer {
+  const gl = { RENDERER: 0x1f01, getParameter: gpu };
   return {
     getContext: () => gl,
     renderBufferDirect(
@@ -62,17 +63,20 @@ function prepassScene(options: DepthPrepassOptions, ...objects: THREE.Object3D[]
   return prepassSceneOn('Test GPU', options, ...objects);
 }
 
-function prepassSceneOn(gpu: string, options: DepthPrepassOptions, ...objects: THREE.Object3D[]) {
+function prepassSceneOn(
+  gpu: string | (() => string | null),
+  options: DepthPrepassOptions,
+  ...objects: THREE.Object3D[]
+) {
   const prepass = createDepthPrepass(options);
   const scene = new THREE.Scene();
   scene.add(...objects, prepass.first, prepass.last);
   scene.updateMatrixWorld(true);
   const draws: RecordedDraw[] = [];
+  const renderer = recordingRenderer(draws, typeof gpu === 'string' ? () => gpu : gpu);
   const reach = (sentinel: typeof prepass.first) =>
     sentinel.mesh.onBeforeRender(
-      ...([recordingRenderer(draws, gpu), scene, CAMERA] as unknown as Parameters<
-        THREE.Object3D['onBeforeRender']
-      >)
+      ...([renderer, scene, CAMERA] as unknown as Parameters<THREE.Object3D['onBeforeRender']>)
     );
   return { prepass, draws, reach };
 }
@@ -247,6 +251,26 @@ describe('createDepthPrepass', () => {
     reach(prepass.first);
     expect(draws).toEqual([]);
     expect(material).toMatchObject({ depthFunc: THREE.LessEqualDepth, depthWrite: true });
+  });
+
+  it('reads the GPU name again after a context that named none, as a lost one does', () => {
+    let gpu: string | null = null;
+    const { prepass, draws, reach } = prepassSceneOn(
+      () => gpu,
+      COMPATIBILITY,
+      meshOf(new THREE.MeshBasicMaterial())
+    );
+    reach(prepass.first);
+    reach(prepass.last);
+    gpu = 'Apple M2';
+    draws.length = 0;
+    reach(prepass.first);
+    expect(draws).toEqual([]);
+  });
+
+  it('draws a material with the same prepass draw each frame', () => {
+    const material = new THREE.MeshBasicMaterial();
+    expect(ownProgramDraw(material)).toBe(ownProgramDraw(material));
   });
 
   it('draws on Forward+ whatever the GPU, as only gl_compatibility reads the vendors', () => {

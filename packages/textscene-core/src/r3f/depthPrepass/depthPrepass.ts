@@ -30,7 +30,7 @@ function timed(renderer: THREE.WebGLRenderer, draw: () => void): void {
 /** A cut surface draws its depth copy, as Godot draws its own program cut at the threshold. */
 function previewerDraw(material: THREE.Material): PrepassDraw | null {
   if (opaquePrepassOf(material).drawsPrepass) return { material: alphaPrepassMaterialOf(material) };
-  return material.transparent ? null : ownProgramDraw(material);
+  return ownProgramDraw(material);
 }
 
 /** The surface's depth copy, cut at its prepass threshold. */

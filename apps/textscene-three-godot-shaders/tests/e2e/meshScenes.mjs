@@ -618,6 +618,39 @@ void fragment() {
   },
 ];
 
+const RED = showing('vec3(1.0, 0.0, 0.0)');
+
+/** Each surface's own depth draw on gl_compatibility, in colours of 0 or 1, where both outputs agree. */
+const COMPATIBILITY_DEPTH_SCENES = [
+  {
+    ...modeScene(
+      'spatial-depth-compatibility',
+      [],
+      fragmentOf('ALBEDO = vec3(0.0, 1.0, 1.0);', 'DEPTH = UV.x;'),
+      {
+        object: { position: [-0.1, 0.1, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+        others: [{ ...ORANGE_IN_FRONT, source: RED }],
+      },
+      ['spatial.fragment.DEPTH']
+    ),
+    renderingMethod: 'gl_compatibility',
+  },
+  // The quad facing the camera draws no prepass depth, so the red quad behind it shows.
+  (() => {
+    const scene = cullScene(
+      'spatial-cull-front-compatibility',
+      ['cull_front'],
+      'ALBEDO = vec3(0.0, 1.0, 1.0);'
+    );
+    const behindFacing = { position: [-0.45, 0, -0.4], rotation: [0, 0, 0], scale: [0.6, 0.6, 0.6] };
+    return {
+      ...scene,
+      others: [...scene.others, { object: behindFacing, source: RED }],
+      renderingMethod: 'gl_compatibility',
+    };
+  })(),
+];
+
 /** A shader that moves the sphere in `vertex()` under `modes`, and shows its normal. */
 const vertexSpaceScene = (name, modes, vertex, rows) => ({
   name,
@@ -801,6 +834,7 @@ export const MESH_SCENES = [
   ...RENDER_MODE_SCENES,
   ...ALPHA_SCENES,
   ...DEPTH_SCENES,
+  ...COMPATIBILITY_DEPTH_SCENES,
 ];
 
 /** Scenes whose program the GPU refuses: each must reach the material as a fault with this log. */

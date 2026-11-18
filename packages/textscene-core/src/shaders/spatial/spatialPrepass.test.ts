@@ -56,12 +56,11 @@ describe('spatialPrepassDraw', () => {
     expect((uniforms.get(THRESHOLD) as UniformNode<number>).value).toBe(0.99);
   });
 
-  it('draws a gl_compatibility surface that writes POSITION under cull_front with the shared depth', () => {
-    const { material } = transpileSpatial(
-      'shader_type spatial;\nrender_mode unshaded, cull_front;\nvoid vertex() {\n\tPOSITION = vec4(VERTEX, 1.0);\n}\n',
-      { renderingMethod: 'gl_compatibility' }
-    );
-    expect(depthOf(material).side).toBe(THREE.FrontSide);
+  it('draws every gl_compatibility surface with its own depth draw, on the faces its cull mode keeps', () => {
+    const { material } = transpileSpatial('shader_type spatial;\nrender_mode unshaded, cull_front;\n', {
+      renderingMethod: 'gl_compatibility',
+    });
+    expect(depthOf(material).side).toBe(THREE.BackSide);
   });
 
   it('keeps a gl_compatibility alpha surface with only alpha antialiasing out', () => {

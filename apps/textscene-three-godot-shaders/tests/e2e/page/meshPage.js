@@ -56,7 +56,8 @@ function placed(node, { position, rotation, scale }) {
 /** The transpiled shader of each source, one for each source, so objects of one source share it. */
 function transpiledBySource(spec) {
   const sources = new Set([spec.source, ...(spec.others ?? []).map(({ source }) => source ?? spec.source)]);
-  return new Map([...sources].map((source) => [source, transpileSpatial(source)]));
+  const options = { renderingMethod: spec.renderingMethod ?? 'forward_plus' };
+  return new Map([...sources].map((source) => [source, transpileSpatial(source, options)]));
 }
 
 /** The pixels of the meshes, `{ error }` for a refused text, or `{ faults }` for a refused program. */
@@ -87,7 +88,7 @@ function drawMesh(spec) {
     mesh.renderOrder = material.transparent ? 0 : order;
     return mesh;
   });
-  const prepass = createDepthPrepass({ renderingMethod: 'forward_plus' });
+  const prepass = createDepthPrepass({ renderingMethod: spec.renderingMethod ?? 'forward_plus' });
   const scene = new THREE.Scene();
   scene.add(
     spec.parent ? placed(new THREE.Group(), spec.parent).add(...meshes) : new THREE.Group().add(...meshes),

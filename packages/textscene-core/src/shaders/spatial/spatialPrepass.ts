@@ -5,20 +5,14 @@ import { DEPTH_PREPASS_OPAQUE_THRESHOLD } from '../../godot/rendering/opaquePrep
 import { colourDepthOf, type PrepassDraw } from '../pipeline/depthPrepass.js';
 import type { Renderer } from '../preprocessor/renderingMethod.js';
 import { BoundNodeMaterial, type MaterialShader } from '../uniforms/boundMaterial.js';
-import {
-  DEPTH_FLAGS,
-  spatialPassMembership,
-  type DepthFlag,
-  type SpatialPipeline,
-} from './spatialPipeline.js';
+import { DEPTH_FLAGS, spatialPassMembership, type SpatialPipeline } from './spatialPipeline.js';
 import { setPosition, type EmittedStages } from './emittedStages.js';
 
 const THRESHOLD = 'scene_data_block.data.opaque_prepass_threshold';
 
 /** Which surfaces a renderer's depth prepass draws, and which it draws with the default material. */
 interface PrepassRule {
-  /** The flags that keep a surface off the default material. */
-  readonly ownDepthFlags: readonly DepthFlag[];
+  readonly drawsOwnDepth: (pipeline: SpatialPipeline) => boolean;
   readonly drawsAlphaSurface: (pipeline: SpatialPipeline) => boolean;
 }
 
@@ -26,21 +20,12 @@ interface PrepassRule {
 const PREPASS_RULES: Readonly<Record<Renderer, PrepassRule | null>> = {
   // `scene_shader_forward_clustered.h:288-298`.
   forward_plus: {
-    ownDepthFlags: DEPTH_FLAGS,
+    drawsOwnDepth: (pipeline) => DEPTH_FLAGS.some((flag) => pipeline.depthFlags.has(flag)),
     drawsAlphaSurface: (pipeline) => spatialPassMembership(pipeline).depthInAlphaPass,
   },
-  // `rasterizer_scene_gles3.cpp:242-269`: alpha antialiasing puts no alpha surface in the prepass.
+  // Its own shader, and no alpha antialiasing surface (`rasterizer_scene_gles3.cpp:242-269, 3124-3143`).
   gl_compatibility: {
-    ownDepthFlags: [
-      'uses_particle_trails',
-      'writes_modelview_or_projection',
-      'uses_vertex',
-      'uses_discard',
-      'uses_depth_prepass_alpha',
-      'uses_alpha_clip',
-      'uses_world_coordinates',
-      'wireframe',
-    ],
+    drawsOwnDepth: () => true,
     drawsAlphaSurface: (pipeline) =>
       pipeline.usesDepthPrepassAlpha && spatialPassMembership(pipeline).depthInAlphaPass,
   },
@@ -64,9 +49,9 @@ export function spatialPrepassDraw(
 ): PrepassDraw | null {
   const rule = PREPASS_RULES[renderer];
   if (!rule || (material.transparent && !rule.drawsAlphaSurface(pipeline))) return null;
-  const isShared = !rule.ownDepthFlags.some((flag) => pipeline.depthFlags.has(flag));
+  const drawsOwnDepth = rule.drawsOwnDepth(pipeline);
   return builtAtFirstDraw(() =>
-    isShared ? defaultDepthMaterial(material, program) : ownDepthMaterial(material, program)
+    drawsOwnDepth ? ownDepthMaterial(material, program) : defaultDepthMaterial(material, program)
   );
 }
 
