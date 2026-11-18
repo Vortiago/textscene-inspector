@@ -243,7 +243,7 @@ jobs:
           path: apps/textscene-web/dist/
 
   visual-regression:
-    name: Visual regression (${{ matrix.shard }}/12)
+    name: Visual regression (${{ matrix.shard }}/16)
     runs-on: ubuntu-latest
     needs: [image, web-previewer, changes]
     if: needs.changes.outputs.visual == 'true'
@@ -255,7 +255,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
@@ -268,7 +268,7 @@ jobs:
           name: web-previewer
           path: apps/textscene-web/dist/
 
-      - run: pnpm test:visual --shard ${{ matrix.shard }}/12
+      - run: pnpm test:visual --shard ${{ matrix.shard }}/16
         env:
           VISUAL_SKIP_BUILD: '1'
 
