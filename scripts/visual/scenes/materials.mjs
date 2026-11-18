@@ -36,6 +36,8 @@ export const MATERIAL_SCENES = [
   { name: 'material-spatial-shader-depth-test', file: 'unit-spatial-shader-depth-test.tscn' },
   // A depth_draw_never spatial shader through an orange quad that crosses it.
   { name: 'material-spatial-shader-depth-draw', file: 'unit-spatial-shader-depth-draw.tscn' },
+  // Spatial shaders that write ALPHA: a fade, a scissor cut, a hash cut and alpha to coverage, over orange quads.
+  { name: 'material-spatial-shader-alpha', file: 'unit-spatial-shader-alpha.tscn' },
   { name: 'surface-material-override', file: 'unit-surface-material-override.tscn' },
   // Multi-property guard, one row each: basic PBR, emission and normal,
   // advanced PBR, transparency and glass.

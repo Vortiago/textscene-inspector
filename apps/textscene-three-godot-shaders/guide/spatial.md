@@ -2340,6 +2340,42 @@ void fragment() {
 | --- | --- |
 | <img src="showcase/spatial-alpha-to-coverage-blend-add-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-alpha-to-coverage-blend-add-three.png" width="256" alt="Transpilation"> |
 
+## Showcase `spatial-alpha-to-coverage-msaa-4x`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, alpha_to_coverage;
+
+void fragment() {
+	ALBEDO = vec3(UV * 0.4, 0.3);
+	ALPHA = step(0.5, UV.x);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-alpha-to-coverage-msaa-4x-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-alpha-to-coverage-msaa-4x-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-alpha-to-coverage-and-one-msaa-4x`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, alpha_to_coverage_and_one;
+
+void fragment() {
+	ALBEDO = vec3(UV * 0.4, 0.3);
+	ALPHA = step(0.5, UV.x);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-alpha-to-coverage-and-one-msaa-4x-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-alpha-to-coverage-and-one-msaa-4x-three.png" width="256" alt="Transpilation"> |
+
 ## Render mode `unshaded`
 
 `unshaded` defines `MODE_UNSHADED`, so the template writes `ALBEDO` and `ALPHA` to the frame with no light, fog or ambient light (`scene_forward_clustered.glsl:2978-2981`).
@@ -2378,7 +2414,7 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 
 ## Alpha to coverage modes
 
-`alpha_to_coverage` and `alpha_to_coverage_and_one` replace the blend mode with Godot's alpha to coverage blend (`scene_shader_forward_clustered.cpp:239-241`), so a shader that names no `ALPHA` stays in the opaque pass whatever its blend mode. In the alpha pass Godot turns on alpha to coverage, and `alpha_to_coverage_and_one` alpha to one too (`scene_shader_forward_clustered.cpp:431-437`). WebGL skips alpha to coverage on a target of one sample, which Godot's default `msaa_3d` draws into. Vulkan leaves the mask of one sample to the driver: lavapipe dithers it by the alpha. There the transpiler discards a fragment of alpha below 0.5, the mean of a dithered mask, and `alpha_to_coverage_and_one` sets the alpha of the rest to 1. So for an alpha between 0 and 1, the transpiler covers other pixels than Godot does on lavapipe, in about the same share. WebGL has no alpha to one, so on a multisampled target the stored alpha stays the shader's.
+`alpha_to_coverage` and `alpha_to_coverage_and_one` replace the blend mode with Godot's alpha to coverage blend (`scene_shader_forward_clustered.cpp:239-241`), so a shader that names no `ALPHA` stays in the opaque pass whatever its blend mode. In the alpha pass Godot turns on alpha to coverage, and `alpha_to_coverage_and_one` alpha to one too (`scene_shader_forward_clustered.cpp:431-437`). WebGL skips alpha to coverage on a target of one sample (GLES 3.0.6 §4.1.3), which Godot's default `msaa_3d` draws into. There the transpiler discards a fragment of alpha below 0.5 and `alpha_to_coverage_and_one` sets the alpha of the rest to 1. Vulkan leaves the coverage mask to the driver. On one sample lavapipe covers a 2 by 2 ordered dither by the alpha, so on an alpha ramp the transpiler covers other pixels than Godot does on lavapipe, in about the same share. Another driver can cut at a threshold or dither in another pattern. On a target of 4 samples WebGL turns alpha to coverage on, and a mask of alpha 0 or 1 matches Godot. WebGL has no alpha to one, so there the stored alpha stays the shader's: the blend takes the colour at weight 1, and an opaque viewport drops the alpha.
 
 The transpiler emits the material's `alphaToCoverage` and blend factors, and a `Discard` behind a uniform that reads the target's samples. Rows: `spatial render_mode alpha_to_coverage`, `spatial render_mode alpha_to_coverage_and_one`. Godot source: `servers/rendering/shader_types.cpp:251`.
 

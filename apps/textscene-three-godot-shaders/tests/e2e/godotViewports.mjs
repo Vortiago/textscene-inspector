@@ -14,6 +14,8 @@ export function viewportScript({ dataFile, linePrefix, functions = '', fill }) {
 func degrees(values: Array) -> Vector3:
 	return Vector3(deg_to_rad(values[0]), deg_to_rad(values[1]), deg_to_rad(values[2]))
 
+const MSAA_OF_SAMPLES := {1: Viewport.MSAA_DISABLED, 2: Viewport.MSAA_2X, 4: Viewport.MSAA_4X, 8: Viewport.MSAA_8X}
+
 func vector(values: Array) -> Vector3:
 	return Vector3(values[0], values[1], values[2])
 ${functions}
@@ -25,6 +27,7 @@ func _ready() -> void:
 		viewport.size = Vector2i(int(scene.width), int(scene.height))
 		viewport.own_world_3d = true
 		viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		viewport.msaa_3d = MSAA_OF_SAMPLES[int(scene.get("msaa", 1))]
 		add_child(viewport)
 		var camera := Camera3D.new()
 		camera.fov = scene.camera.fov
@@ -63,6 +66,7 @@ export function viewportProjectFiles({ dataFile, shaderPrefix }, scenes, fieldsO
     width: scene.width,
     height: scene.height,
     camera: scene.camera,
+    ...(scene.msaa ? { msaa: scene.msaa } : {}),
     ...fieldsOf(scene, index),
     shader: `res://${shaderPrefix}_${index}.gdshader`,
   }));

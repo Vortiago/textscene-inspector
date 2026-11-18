@@ -530,6 +530,9 @@ const alphaScene = (name, modes, extra = [], rows = []) =>
 const coverageScene = (name, modes) =>
   blendScene(name, modes, fragmentOf(BLEND_ALBEDO, 'ALPHA = step(0.5, UV.x);'), ['spatial.fragment.ALPHA']);
 
+/** A coverage scene on a target of 4 samples, alone: lavapipe and the page's GL place a corner's samples apart. */
+const multisampledCoverageScene = (name, modes) => ({ ...coverageScene(name, modes), msaa: 4, others: [] });
+
 /** Each fragment built-in of the alpha and each alpha antialiasing mode, against Godot. */
 const ALPHA_SCENES = [
   alphaScene('spatial-alpha', []),
@@ -565,6 +568,8 @@ const ALPHA_SCENES = [
   coverageScene('spatial-alpha-to-coverage', ['alpha_to_coverage']),
   coverageScene('spatial-alpha-to-coverage-and-one', ['alpha_to_coverage_and_one']),
   coverageScene('spatial-alpha-to-coverage-blend-add', ['blend_add', 'alpha_to_coverage']),
+  multisampledCoverageScene('spatial-alpha-to-coverage-msaa-4x', ['alpha_to_coverage']),
+  multisampledCoverageScene('spatial-alpha-to-coverage-and-one-msaa-4x', ['alpha_to_coverage_and_one']),
 ];
 
 /** A shader that moves the sphere in `vertex()` under `modes`, and shows its normal. */
