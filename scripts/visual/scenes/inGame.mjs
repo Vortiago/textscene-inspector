@@ -5,6 +5,20 @@ export const IN_GAME_SCENES = [
   { name: 'in-game-camera3d', file: 'in-game/unit-in-game-camera3d.tscn', mode: 'in-game', canvas: GAME_WINDOW },
   // The Camera2D's offset moves the view, and a CanvasLayer bar stays at the top of the window.
   { name: 'in-game-camera2d', file: 'in-game/unit-in-game-camera2d.tscn', mode: 'in-game', canvas: GAME_WINDOW },
+  // A CanvasLayer's ColorRect over the 3D world of the root viewport.
+  {
+    name: 'in-game-hud-over-world',
+    file: 'in-game/unit-in-game-hud-over-world.tscn',
+    mode: 'in-game',
+    canvas: GAME_WINDOW,
+  },
+  // A Polygon2D and a Camera2D whose parent is the Node3D root draw on the root canvas.
+  {
+    name: 'in-game-canvas-under-node3d',
+    file: 'in-game/unit-in-game-canvas-under-node3d.tscn',
+    mode: 'in-game',
+    canvas: GAME_WINDOW,
+  },
   // Host writes through the open scene: a transform, a light's energy and a material from `scene.load`.
   {
     name: 'in-game-writes-3d',

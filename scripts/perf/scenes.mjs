@@ -21,4 +21,9 @@ export const BUDGET_SCENES = [
     file: 'in-game/unit-in-game-camera3d.tscn',
     inGameFrame: { width: 320, height: 180 },
   },
+  {
+    name: 'in-game-hud-over-world',
+    file: 'in-game/unit-in-game-hud-over-world.tscn',
+    inGameFrame: { width: 320, height: 180 },
+  },
 ];

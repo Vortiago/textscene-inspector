@@ -82,6 +82,7 @@ The In-game mode draws each viewport through its current Camera2D. The first ena
 - With `ignore_rotation` off, the view turns with the camera's global rotation, and the limits clamp the turned corner (`camera_2d.cpp:212-259`).
 - A top-left view clamps to the limits over no width, as Godot's corner test does.
 - A camera under a CanvasLayer frames from its position in the layer's canvas (`canvas_item.cpp:176-185`).
+- A camera whose parent is a Node3D frames the viewport's canvas, as any canvas item there draws on it (`canvas_item.cpp:246-267`).
 
 ## Known limitations
 

@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useEffect } from 'react';
 import { TscnParser } from '../parser/TscnParser';
-import { UndrawnViewportPlacements } from './UndrawnViewportPlacements';
+import { UndrawnNodeChildren } from './UndrawnNodeChildren';
 import {
   ViewportPassOrchestrator,
   ViewportPassProvider,
@@ -31,7 +31,7 @@ function Registrar({ path, pass }: { path: string; pass: ViewportPass }) {
   return null;
 }
 
-describe('UndrawnViewportPlacements', () => {
+describe('UndrawnNodeChildren', () => {
   it('places the viewports below an undrawn node in tree order', async () => {
     const panel = new TscnParser().parse(SCENE).nodes[0]!;
     const order: string[] = [];
@@ -39,7 +39,7 @@ describe('UndrawnViewportPlacements', () => {
       <ViewportPassProvider>
         <Registrar path="Panel/Box/Late" pass={{ dependsOn: [], render: () => order.push('Late') }} />
         <Registrar path="Panel/Early" pass={{ dependsOn: [], render: () => order.push('Early') }} />
-        <UndrawnViewportPlacements node={panel} path="Panel" />
+        <UndrawnNodeChildren node={panel} path="Panel" />
         <ViewportPassOrchestrator />
       </ViewportPassProvider>
     );

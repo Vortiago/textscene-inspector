@@ -20,8 +20,9 @@ against.
 canvas. A Control and a Node2D inside it both draw through that transform, while the
 square outside stays put.
 
-In a sub-viewport that draws through a Camera2D (ADR-0006), the layer stays in viewport
-pixels. With `follow_viewport_enabled` it draws through the camera's view, scaled about
+In a sub-viewport or the In-game view that draws through a Camera2D (ADR-0006), the layer
+stays in viewport pixels. Over a 3D world, every layer draws over it, a negative `layer` too,
+unless the Environment's background is the canvas (`renderer_viewport.cpp:380-385`). With `follow_viewport_enabled` it draws through the camera's view, scaled about
 the view's centre by `follow_viewport_scale`. The editor view has no Camera2D transform
 to follow, and the editor turns the follow scale off.
 
