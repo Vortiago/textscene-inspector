@@ -73,6 +73,20 @@ describe('fittedTargetSize', () => {
   it('scales the target of a window the pane shows smaller, to whole pixels', () => {
     expect(fittedTargetSize(stretched, 0.5)).toEqual({ x: 400, y: 225 });
   });
+
+  it('keeps a viewport-mode target the pane still draws larger than its pixels', () => {
+    const magnified = rootWindow(project([2400, 1400], { mode: 'viewport', scale_mode: 'integer' }));
+    expect(fittedTargetSize(magnified, 0.5)).toBe(magnified.targetSize);
+  });
+
+  it('scales a viewport-mode target by the size the pane draws it at', () => {
+    const magnified = rootWindow(project([2400, 1400], { mode: 'viewport', scale_mode: 'integer' }));
+    expect(fittedTargetSize(magnified, 0.25)).toEqual({ x: 576, y: 324 });
+  });
+
+  it('keeps the target of a pane with no pixels', () => {
+    expect(fittedTargetSize(stretched, 0)).toBe(stretched.targetSize);
+  });
 });
 
 describe('shrinkRootWindow', () => {

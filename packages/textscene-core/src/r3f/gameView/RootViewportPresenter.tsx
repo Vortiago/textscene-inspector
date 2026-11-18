@@ -34,7 +34,7 @@ export function RootViewportPresenter({
   return null;
 }
 
-/** Only where the window scales the target: at 1:1 nearest reads the same texels, and no copy is made. */
+/** Only where the window scales the target. The pane's own scale keeps the target's linear filter. */
 function useBlitSampler(target: THREE.Texture | null, projectWindow: RootWindow): ViewSampler | null {
   const { targetSize, drawRect } = projectWindow;
   const scalesTarget = drawRect.w !== targetSize.x || drawRect.h !== targetSize.y;

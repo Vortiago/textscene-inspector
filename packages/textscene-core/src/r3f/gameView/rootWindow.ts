@@ -29,11 +29,18 @@ export function rootWindow(settings: ProjectSettings | null): RootWindow {
   return { size, targetSize: renderSize, size2dOverride, drawRect };
 }
 
-/** The target a pane that shows the window at `scale` renders: below 1, the fitted size (ADR-0087). */
-export function fittedTargetSize(window: RootWindow, scale: number): Vector2 {
-  if (scale >= 1) return window.targetSize;
+/** The target at the size the pane draws it, when smaller (ADR-0087). A hidden pane keeps it. */
+export function fittedTargetSize(window: RootWindow, paneScale: number): Vector2 {
+  const scale = paneScale * windowPixelsPerTargetPixel(window);
+  if (!(scale > 0) || scale >= 1) return window.targetSize;
   const { targetSize } = window;
   return { x: shrunkExtent(targetSize.x, scale), y: shrunkExtent(targetSize.y, scale) };
+}
+
+/** The window's screen pixels per target pixel: above 1 where the viewport mode magnifies the target. */
+function windowPixelsPerTargetPixel({ targetSize, drawRect }: RootWindow): number {
+  if (targetSize.x <= 0 || targetSize.y <= 0) return 1;
+  return Math.min(drawRect.w / targetSize.x, drawRect.h / targetSize.y);
 }
 
 /** The window rendered into a smaller target, laid out in the rect the full target had. */
