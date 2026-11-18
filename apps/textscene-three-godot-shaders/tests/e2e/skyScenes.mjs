@@ -344,7 +344,9 @@ const PASS_SCENES = [
   },
   {
     name: 'sky-alpha-background',
-    source: builtInSky('\tCOLOR = vec3(0.2, 0.6, 0.4) * (0.5 + 0.5 * EYEDIR.y);\n\tALPHA = 0.25;'),
+    source: builtInSky(
+      ['\tCOLOR = vec3(0.2, 0.6, 0.4) * (0.5 + 0.5 * EYEDIR.y);', '\tALPHA = 0.25;'].join('\n')
+    ),
     rows: ['sky.sky.ALPHA', 'sky.sky.EYEDIR'],
   },
   {

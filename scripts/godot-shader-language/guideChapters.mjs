@@ -733,7 +733,7 @@ const SKY_CHAPTER = {
     {
       heading: '`ALPHA`',
       rows: (row) => row.id === 'sky.sky.ALPHA',
-      what: "`ALPHA` starts at 1.0 and goes to the alpha of the pass's colour (`sky.glsl:235`, `:274`). Godot draws the sky with no blending. The half and quarter passes keep it in their RGBA16F targets, out of 0 to 1 too, and a later pass reads it as `HALF_RES_COLOR.a` or `QUARTER_RES_COLOR.a`. The radiance octmap keeps it too. Behind the scene the pass writes alpha 0 (`sky.glsl:309-311`).",
+      what: "`ALPHA` starts at 1.0 and goes to the alpha of the pass's colour (`sky.glsl:235`, `:274`). Godot draws the sky with no blending. The half and quarter passes and the radiance octmap keep it in RGBA16F, out of 0 to 1, and a later pass reads it as `HALF_RES_COLOR.a` or `QUARTER_RES_COLOR.a`. Behind the scene the pass writes alpha 0 (`sky.glsl:309-311`).",
       tsl: "the template's local `alpha`",
     },
     {
