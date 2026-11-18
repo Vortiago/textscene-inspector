@@ -33,11 +33,11 @@ export class SkyResolutionPasses {
     return !this.sky.half && !this.sky.quarter;
   }
 
-  /** Each target that no pass draws, with its size as the radiance mip it stands for: half is mip 1. */
-  forEachUndrawnTarget(visit: (target: THREE.WebGLRenderTarget, mip: number) => void): void {
+  /** Each target, with its size as the radiance mip it stands for in an octmap pass: half is mip 1. */
+  forEachTarget(visit: (target: THREE.WebGLRenderTarget, mip: number) => void): void {
     for (const { resolution, shift } of PASSES) {
       const target = this.targets[resolution];
-      if (target && !this.sky[resolution]) visit(target, shift);
+      if (target) visit(target, shift);
     }
   }
 

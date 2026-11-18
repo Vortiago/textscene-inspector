@@ -48,7 +48,7 @@ export class ShaderSkyOctmap {
 
   /** Leaves mips 1 and 2 of the radiance `layers` in the targets the next bake reads (`sky.cpp:545-575`). */
   keepRadianceMips(gl: THREE.WebGLRenderer, layers: SkyLayers): void {
-    this.passes.forEachUndrawnTarget((target, mip) => copyRadianceMip(gl, layers, mip, target));
+    this.passes.forEachTarget((target, mip) => copyRadianceMip(gl, layers, mip, target));
   }
 
   dispose(): void {

@@ -27,10 +27,10 @@ function drawsOf(sky: TranspiledSky, size: THREE.Vector2): string[] {
   return draws;
 }
 
-/** The targets no pass draws, by the radiance mip each stands for. */
-function undrawnTargets(passes: SkyResolutionPasses): Map<number, THREE.WebGLRenderTarget> {
+/** The targets, by the radiance mip each stands for. */
+function targetsByMip(passes: SkyResolutionPasses): Map<number, THREE.WebGLRenderTarget> {
   const targets = new Map<number, THREE.WebGLRenderTarget>();
-  passes.forEachUndrawnTarget((target, mip) => targets.set(mip, target));
+  passes.forEachTarget((target, mip) => targets.set(mip, target));
   return targets;
 }
 
@@ -62,7 +62,7 @@ describe('SkyResolutionPasses', () => {
     const sky = transpileSky(`shader_type sky;
 render_mode use_quarter_res_pass;
 void sky() { COLOR = HALF_RES_COLOR.rgb + QUARTER_RES_COLOR.rgb; }`);
-    const half = undrawnTargets(new SkyResolutionPasses(sky, ['half', 'quarter'])).get(1)!.texture;
+    const half = targetsByMip(new SkyResolutionPasses(sky, ['half', 'quarter'])).get(1)!.texture;
     expect(sky.textures.get('half_res')?.value).toBe(half);
     expect(sky.quarter!.textures.get('half_res')?.value).toBe(half);
   });
@@ -73,16 +73,16 @@ void sky() { COLOR = HALF_RES_COLOR.rgb + QUARTER_RES_COLOR.rgb; }`);
     const passes = new SkyResolutionPasses(sky, ['half', 'quarter']);
     passes.draw(renderer, new THREE.Camera(), new THREE.Vector2(80, 80));
     expect(draws).toEqual([]);
-    expect([...undrawnTargets(passes)].map(([mip, target]) => [mip, target.width])).toEqual([
+    expect([...targetsByMip(passes)].map(([mip, target]) => [mip, target.width])).toEqual([
       [2, 20],
       [1, 40],
     ]);
     expect(passes.isEmpty).toBe(true);
   });
 
-  it('lists no undrawn target for a size the sky draws a pass of (edge case)', () => {
+  it('lists the target of a size the sky draws a pass of, as a smaller pass reads it first (edge case)', () => {
     const sky = transpileSky(BOTH_PASSES);
-    expect(undrawnTargets(new SkyResolutionPasses(sky, ['half', 'quarter'])).size).toBe(0);
+    expect([...targetsByMip(new SkyResolutionPasses(sky)).keys()]).toEqual([2, 1]);
   });
 
   it('leaves the renderer on the target it had', () => {
