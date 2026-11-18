@@ -120,7 +120,7 @@ const PORTED_METHODS: Readonly<Record<string, Readonly<Record<string, PortedMeth
   Viewport: VIEWPORT_METHODS,
 };
 
-/** Whether `className` or a base has a ported method, so a property access of any other class skips the lookup. */
+/** Whether `className` or a base ports a method, so a property access of another class skips the lookup. */
 export function hasPortedMethods(className: string): boolean {
   return findInClassChain(className, (type) => (PORTED_METHODS[type] ? true : undefined)) ?? false;
 }
