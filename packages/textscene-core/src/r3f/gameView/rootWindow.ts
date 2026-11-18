@@ -1,6 +1,7 @@
 import type { Rect2 } from '../../godot/math/rect2.js';
 import { VECTOR2_ZERO, vector2Equals, type Vector2 } from '../../godot/math/vector.js';
 import { windowContentScale } from '../../nodes/windows/window/contentScale.js';
+import { smallerStretchAxis } from '../../nodes/viewport/subviewport/targetSize.js';
 import {
   projectContentScale,
   projectWindowSize,
@@ -30,8 +31,7 @@ export function rootWindow(settings: ProjectSettings | null): RootWindow {
 
 /** The smaller axis of the root's stretch transform, which its windows render at (`window.cpp:1363`). */
 export function rootWindowStretch({ targetSize, size2dOverride }: RootWindow): number {
-  if (size2dOverride.x <= 0 || size2dOverride.y <= 0) return 1;
-  return Math.min(targetSize.x / size2dOverride.x, targetSize.y / size2dOverride.y);
+  return smallerStretchAxis(targetSize, size2dOverride);
 }
 
 /** The target at the size the pane draws it, when smaller (ADR-0087). A hidden pane keeps it. */

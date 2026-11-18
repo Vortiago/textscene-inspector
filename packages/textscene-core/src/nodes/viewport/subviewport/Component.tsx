@@ -34,6 +34,7 @@ import type { SubViewportProperties } from './types';
 import type { Vector2 } from '../../../godot/math/vector';
 import { viewportPassSizes, warnOfCappedTarget } from './targetSize';
 import { useEmbedderStretchAt } from './useEmbedderStretch';
+import { isEmbeddedWindow } from '../../../r3f/viewportRender/viewportBoundary';
 import { useStableVector2 } from '../../../r3f/hooks/useStableVector2';
 import { useInCanvasOverWorld } from '../../../r3f/viewportRender/canvasOverWorldScope';
 import { ViewportCanvasScope } from '../../../r3f/viewportCanvasScope';
@@ -115,7 +116,8 @@ export function ViewportMount({
   const rendersInline = rasterizes ? kind === '3d' && !ownWorld3D && workspace === '3d' : true;
   // On either path the subtree's canvas items are in this viewport's World2D, never the parent's.
   // So are its CanvasModulate and its lights: the parent canvas's tint stops at this viewport.
-  const sizes = viewportPassSizes(node, useViewportRect(path), useEmbedderStretchAt(path));
+  const stretchOfEmbedder = useEmbedderStretchAt(isEmbeddedWindow(node.type) ? path : null);
+  const sizes = viewportPassSizes(node, useViewportRect(path), stretchOfEmbedder);
   // Stable while the numbers are, so the pass and the light host do not follow a new object.
   const size = useStableVector2(sizes.target);
   const renderSize = useStableVector2(sizes.render);

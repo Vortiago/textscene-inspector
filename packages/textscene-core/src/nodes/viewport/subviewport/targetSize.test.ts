@@ -170,7 +170,7 @@ describe('warnOfCappedTarget', () => {
     warnOfCappedTarget('Root/Capped', sizesOf({ x: 65536, y: 100 }));
     expect(warn.mock.calls).toEqual([
       [
-        `Root/Capped: the 65536 x 100 viewport is drawn at ${MAX_TEXTURE_EXTENT} x 100, the largest texture WebGL allocates`,
+        `[SubViewport] Root/Capped: the 65536 x 100 viewport is drawn at ${MAX_TEXTURE_EXTENT} x 100, the largest texture WebGL allocates`,
       ],
     ]);
   });

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { nearestTieShift, targetRectInPane } from './windowFit';
+import * as THREE from 'three';
+import { blitShift, targetRectInPane } from './windowFit';
 
 const WINDOW = { size: { x: 100, y: 100 }, drawRect: { x: 10, y: 20, w: 50, h: 30 } };
 
@@ -13,8 +14,17 @@ describe('targetRectInPane', () => {
   });
 });
 
-describe('nearestTieShift', () => {
-  it('moves each sample 1/1024 texel right and down the target, in clip space', () => {
-    expect(nearestTieShift({ x: 2304, y: 1296 })).toEqual({ x: -2 / 1024 / 2304, y: 2 / 1024 / 1296 });
+describe('blitShift', () => {
+  const image = { width: 2304, height: 1296 };
+
+  it('moves each sample of a nearest blit 1/1024 texel right and down the target, in clip space', () => {
+    expect(blitShift({ image, magFilter: THREE.NearestFilter })).toEqual({
+      x: -2 / 1024 / 2304,
+      y: 2 / 1024 / 1296,
+    });
+  });
+
+  it('leaves a linear blit unshifted, since a shift there moves every bilinear sample', () => {
+    expect(blitShift({ image, magFilter: THREE.LinearFilter })).toEqual({ x: 0, y: 0 });
   });
 });

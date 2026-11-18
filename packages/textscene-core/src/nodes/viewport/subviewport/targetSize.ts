@@ -96,7 +96,13 @@ export function viewportLayoutSize(node: TscnNode, forced: ViewportRect | null):
 export function embedderStretch(node: TscnNode, forced: ViewportRect | null): number {
   const args = setSizeArguments(node, forced);
   const view = stretchedView(args);
-  return Math.min(args.size.x / view.x, args.size.y / view.y);
+  return smallerStretchAxis(args.size, view);
+}
+
+/** The smaller axis of `size` stretched over `view`: 1 where no 2D override stretches. */
+export function smallerStretchAxis(size: Vector2, view: Vector2): number {
+  if (view.x <= 0 || view.y <= 0) return 1;
+  return Math.min(size.x / view.x, size.y / view.y);
 }
 
 /** An embedded window renders at its embedder's stretch, its canvas at that times its factor. */
@@ -132,7 +138,7 @@ export function warnOfCappedTarget(
   warnOnce(
     CAPPED_TARGETS,
     `${path} ${render.x}x${render.y}`,
-    `${path}: the ${render.x} x ${render.y} viewport is drawn at ${target.x} x ${target.y}, ` +
+    `[SubViewport] ${path}: the ${render.x} x ${render.y} viewport is drawn at ${target.x} x ${target.y}, ` +
       'the largest texture WebGL allocates'
   );
 }

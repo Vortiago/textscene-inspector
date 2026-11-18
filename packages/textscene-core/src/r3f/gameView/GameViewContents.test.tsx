@@ -267,6 +267,21 @@ describe('the In-game mode', () => {
     expect(renderSizesByPath().get('Main/Window')).toEqual({ x: 100, y: 50 });
   });
 
+  it("renders an embedded window at the root's stretch in a pane the window's size", async () => {
+    await mountGameOf({
+      source: WINDOW_WITH_2D,
+      project: STRETCHED_PROJECT,
+      pane: { width: 640, height: 360 },
+    });
+    expect(renderSizesByPath().get('Main/Window')).toEqual({ x: 200, y: 100 });
+  });
+
+  it("renders a native window at its own size, since the root's stretch is not its embedder's", async () => {
+    const project = `${STRETCHED_PROJECT}window/subwindows/embed_subwindows=false\n`;
+    await mountGameOf({ source: WINDOW_WITH_2D, project, pane: { width: 640, height: 360 } });
+    expect(renderSizesByPath().get('Main/Window')).toEqual({ x: 100, y: 50 });
+  });
+
   it('binds no listener on the window', async () => {
     const addListener = vi.spyOn(window, 'addEventListener');
     await mountGame();

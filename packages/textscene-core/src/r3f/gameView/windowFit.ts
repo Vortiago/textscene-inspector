@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import type { Rect2 } from '../../godot/math/rect2.js';
 import type { Vector2 } from '../../godot/math/vector.js';
 import type { RootWindow } from './rootWindow.js';
@@ -19,7 +20,14 @@ export function paneScale(pane: Vector2, size: Vector2): number {
 /** A nearest sample this far into a texel edge lands where an exact one would. */
 const TIE_TEXELS = 1 / 1024;
 
+/** The quad shift of a blit of `source`: the tie shift where it samples nearest, none where linear. */
+export function blitShift(source: Pick<THREE.Texture, 'image' | 'magFilter'>): Vector2 {
+  if (source.magFilter !== THREE.NearestFilter) return { x: 0, y: 0 };
+  const { width, height } = source.image as { width: number; height: number };
+  return nearestTieShift({ x: width, y: height });
+}
+
 /** The quad shift, in clip space, that floors an edge sample as Godot does (`image.cpp:1081,1085`). */
-export function nearestTieShift(targetSize: Vector2): Vector2 {
+function nearestTieShift(targetSize: Vector2): Vector2 {
   return { x: (-2 * TIE_TEXELS) / targetSize.x, y: (2 * TIE_TEXELS) / targetSize.y };
 }

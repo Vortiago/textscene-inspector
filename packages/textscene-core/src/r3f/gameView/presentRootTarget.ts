@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { perObject } from '../../utils/perObject.js';
 import { BLACK } from '../offscreen/draw.js';
 import type { RootWindow } from './rootWindow.js';
-import { nearestTieShift, targetRectInPane } from './windowFit.js';
+import { blitShift, targetRectInPane } from './windowFit.js';
 
 interface Presenter {
   quad: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
@@ -58,8 +58,7 @@ export function presentRootTarget(
   const material = isTransparent ? transparent : opaque;
   material.map = source;
   quad.material = material;
-  const { width, height } = source.image as { width: number; height: number };
-  const shift = nearestTieShift({ x: width, y: height });
+  const shift = blitShift(source);
   quad.position.set(shift.x, shift.y, 0);
   quad.updateMatrixWorld();
   // The target holds the bytes Godot shows, so the draw encodes nothing.
