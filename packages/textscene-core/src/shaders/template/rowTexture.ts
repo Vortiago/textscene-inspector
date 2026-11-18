@@ -189,7 +189,7 @@ function uploadBetweenDraws(renderer: THREE.WebGLRenderer, texture: THREE.DataTe
     __webglTexture?: WebGLTexture;
     __version?: number;
   };
-  // Nothing uploaded at this size yet: three allocates and uploads it as it binds it.
+  // Not uploaded by this renderer yet: three allocates and uploads it as it binds it for this draw.
   if (!properties.__webglTexture || properties.__version === undefined) return;
   const gl = renderer.getContext() as WebGL2RenderingContext;
   const { data, width, height } = texture.image as { data: Uint32Array; width: number; height: number };

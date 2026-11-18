@@ -2,6 +2,10 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { BlendMode } from '../../godot/rendering/materials/blendMode.js';
 import { godotBlendState } from '../pipeline/blendState.js';
+import { CullMode } from '../../godot/rendering/materials/cullMode.js';
+import { DepthDrawMode } from '../../godot/rendering/materials/depthDrawMode.js';
+import { parsedShader } from '../language/parseShader.js';
+import { spatialPipeline } from './spatialPipeline.js';
 import { transpileSpatial } from './transpileSpatial.js';
 
 /** The material of an unshaded shader with `modes` after `unshaded`. */
@@ -74,5 +78,34 @@ describe('a spatial shader’s draw state', () => {
       depthTest: true,
       depthFunc: THREE.GreaterDepth,
     });
+  });
+});
+
+describe('spatialPipeline', () => {
+  const pipelineOf = (modes: string) =>
+    spatialPipeline(parsedShader(`shader_type spatial;\nrender_mode ${modes};\n`).tree);
+
+  it('reads one mode of each group', () => {
+    expect(pipelineOf('blend_sub, depth_draw_always, depth_test_inverted, cull_front')).toEqual({
+      blendMode: BlendMode.SUB,
+      depthDrawMode: DepthDrawMode.ALWAYS,
+      depthTest: 'inverted',
+      cullMode: CullMode.FRONT,
+    });
+  });
+
+  it('keeps Godot’s defaults when the modes name no pipeline group', () => {
+    expect(pipelineOf('unshaded, skip_vertex_transform')).toEqual({
+      blendMode: BlendMode.MIX,
+      depthDrawMode: DepthDrawMode.OPAQUE_ONLY,
+      depthTest: 'enabled',
+      cullMode: CullMode.BACK,
+    });
+  });
+
+  it('never sees two modes of one group, which the parser refuses as Godot does', () => {
+    expect(() => transpileSpatial('shader_type spatial;\nrender_mode blend_add, blend_sub;\n')).toThrow(
+      /blend/
+    );
   });
 });

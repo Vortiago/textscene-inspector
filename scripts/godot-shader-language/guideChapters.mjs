@@ -760,7 +760,7 @@ const SPATIAL_CHAPTER = {
     {
       heading: 'Cull modes',
       rows: (row) => /^spatial render_mode cull_/.test(row.id),
-      what: '`cull_back`, the default, culls the faces seen from behind, `cull_front` the faces seen from the front, and `cull_disabled` none. Godot turns the cull round for a mesh of a negative scale (`render_forward_clustered.cpp:411`), and three turns its winding round to the same effect. `cull_front` and `cull_disabled` define `DO_SIDE_CHECK`, so the template turns `NORMAL` round on a face seen from behind (`scene_forward_clustered.glsl:1263`).',
+      what: '`cull_back`, the default, culls the faces seen from behind, `cull_front` the faces seen from the front, and `cull_disabled` none. Godot turns the cull round for a mesh of a negative scale (`render_forward_clustered.cpp:411`). three turns the winding of the mesh round instead, which turns `gl_FrontFacing` round too, so the transpiler turns `FRONT_FACING` back for a mirrored mesh and reads as Godot does. `cull_front` and `cull_disabled` define `DO_SIDE_CHECK`, so the template turns `NORMAL` round on a face seen from behind (`scene_forward_clustered.glsl:1263`).',
       tsl: "the material's `side`, and the defines of the template variant",
     },
     {

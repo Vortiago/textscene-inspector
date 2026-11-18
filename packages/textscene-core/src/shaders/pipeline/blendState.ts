@@ -44,6 +44,7 @@ const PRESETS: Readonly<Partial<Record<EnumValue<typeof BlendMode>, THREE.Blendi
   [BlendMode.MIX]: THREE.NormalBlending,
   // `blendFunc(SRC_ALPHA, ONE)` sets colour and alpha, so alpha gets Godot's pair.
   [BlendMode.ADD]: THREE.AdditiveBlending,
+  // Not SUB, MUL, PREMULT_ALPHA: their presets add, program nothing, or premultiply again (`setBlending`).
 };
 
 /**

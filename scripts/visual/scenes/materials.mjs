@@ -30,8 +30,12 @@ export const MATERIAL_SCENES = [
   { name: 'material-spatial-shader-uniforms', file: 'unit-spatial-shader-uniforms.tscn' },
   // Spatial shaders with cull_back, cull_front and cull_disabled, on quads that face the camera and away.
   { name: 'material-spatial-shader-cull', file: 'unit-spatial-shader-cull.tscn' },
-  // Spatial shaders with the blend modes, the depth test and the depth draw modes.
-  { name: 'material-spatial-shader-render-modes', file: 'unit-spatial-shader-render-modes.tscn' },
+  // Spatial shaders with blend_add, blend_sub, blend_mul and blend_premul_alpha over an orange quad.
+  { name: 'material-spatial-shader-blend-modes', file: 'unit-spatial-shader-blend-modes.tscn' },
+  // Spatial shaders with depth_test_disabled and depth_test_inverted behind an orange quad.
+  { name: 'material-spatial-shader-depth-test', file: 'unit-spatial-shader-depth-test.tscn' },
+  // A depth_draw_never spatial shader through an orange quad that crosses it.
+  { name: 'material-spatial-shader-depth-draw', file: 'unit-spatial-shader-depth-draw.tscn' },
   { name: 'surface-material-override', file: 'unit-surface-material-override.tscn' },
   // Multi-property guard, one row each: basic PBR, emission and normal,
   // advanced PBR, transparency and glass.

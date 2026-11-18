@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://unit_material_blend_mul"]
 
 ; StandardMaterial3D with blend_mode MUL over an opaque orange quad and the background, unshaded and lit.
+; Only the blend mode moves: no other golden draws a StandardMaterial3D with blend_mode MUL.
 
 [sub_resource type="StandardMaterial3D" id="Mat_orange"]
 shading_mode = 0

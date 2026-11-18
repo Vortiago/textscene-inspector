@@ -61,7 +61,7 @@ export function applySpatialPipeline(material: THREE.Material, pipeline: Spatial
   Object.assign(material, isAlphaPass ? godotBlendState(pipeline.blendMode) : { blending: THREE.NoBlending });
   material.transparent = isAlphaPass;
   material.depthTest = pipeline.depthTest !== 'disabled';
-  // Godot's reversed depth compares GREATER_OR_EQUAL, and inverted LESS, which GL's depth turns round.
+  // `scene_shader_forward_clustered.cpp:355-358`, turned round for GL's depth, which is not reversed.
   material.depthFunc = pipeline.depthTest === 'inverted' ? THREE.GreaterDepth : THREE.LessEqualDepth;
   material.depthWrite = material.depthTest && depthWrites(pipeline.depthDrawMode, isAlphaPass);
   material.side = CULL_SIDES[pipeline.cullMode];
