@@ -5,10 +5,13 @@
  */
 import { createContext, useContext, type ReactNode } from 'react';
 import type { SceneGraph } from '../../core/SceneGraph.js';
+import type { Scene } from '../../scene/openScene.js';
 
 export interface HierarchyContextValue {
   sceneGraph: SceneGraph | null;
   panelId: string;
+  /** The scene the graph is drawn from, which holds the current cameras a view reads. */
+  scene?: Scene;
 }
 
 const HierarchyContext = createContext<HierarchyContextValue | null>(null);

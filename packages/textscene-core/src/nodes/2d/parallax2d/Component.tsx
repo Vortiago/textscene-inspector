@@ -10,6 +10,8 @@ import type * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useViewportSize } from '../../../r3f/contexts/ViewportSizeContext';
 import { observeSceneCamera } from '../../../r3f/sceneRenderCamera';
+import { useCurrentCamera2D } from '../../../r3f/currentCamera';
+import { useEnclosingViewportPath } from '../../../r3f/contexts/EnclosingViewportContext';
 import { Node2D } from '../../base/node2d/Component';
 import { currentCameraFraming } from '../parallaxbackground/currentCameraFraming';
 import { parallaxRepeatOffsets } from '../parallaxbackground/parallaxScroll';
@@ -20,6 +22,7 @@ import type { Parallax2DProperties } from './types';
 export function Parallax2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Parallax2DProperties;
   const scene = useThree((state) => state.scene);
+  const cameraPath = useCurrentCamera2D(useEnclosingViewportPath());
   const viewportSize = useViewportSize();
   const isOuterBaseCopy = useIsRepeatBaseCopy();
   const groupRef = useRef<THREE.Group>(null);
@@ -31,7 +34,7 @@ export function Parallax2D({ node, children }: NodeComponentProps) {
 
       // The camera writes `screen_offset` unless `ignore_camera_scroll` is on
       // (`parallax_2d.cpp:84-96`); the main 2D stage frames no camera.
-      const view = props.ignore_camera_scroll ? null : currentCameraFraming(scene, camera);
+      const view = props.ignore_camera_scroll ? null : currentCameraFraming(scene, camera, cameraPath);
       const screenOffset = view ? parallax2DCameraScreenOffset(view) : props.screen_offset;
       const position = parallax2DPosition(props, screenOffset, viewportSize);
       const x = position.x - props.position.x;
@@ -41,7 +44,7 @@ export function Parallax2D({ node, children }: NodeComponentProps) {
       group.position.set(x, y, 0);
       group.updateMatrixWorld(true);
     });
-  }, [scene, props, viewportSize]);
+  }, [scene, props, viewportSize, cameraPath]);
 
   const copies = useMemo(
     () => parallaxRepeatOffsets(props.repeat_size, props.repeat_times),

@@ -37,7 +37,7 @@ describe('<SubViewport> viewport size', () => {
   it('sets the aspect of the camera gizmo inside it to the aspect of its size', async () => {
     const parsed = new TscnParser().parse(SCENE);
     const renderer = await ReactThreeTestRenderer.create(
-      <SceneStack loader={createFakeResourceLoader().loader} scene={parsed} showGizmos>
+      <SceneStack loader={createFakeResourceLoader().loader} scene={parsed} source={SCENE} showGizmos>
         <InWorld>
           <NodeDispatcher nodes={parsed.nodes} />
         </InWorld>

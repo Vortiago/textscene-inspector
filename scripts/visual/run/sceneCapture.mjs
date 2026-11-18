@@ -50,7 +50,7 @@ export async function captureScene(pageState, baseUrl, scene) {
   if (!canvas) return { buffer: null, reason: withFailedRequests(canvasReason, diagnostics) };
 
   try {
-    await applySceneWrites(page, scene.sets);
+    await applySceneWrites(page, scene.hostCalls);
   } catch (error) {
     return { buffer: null, reason: withFailedRequests(`scene writes: ${error.message}`, diagnostics) };
   }

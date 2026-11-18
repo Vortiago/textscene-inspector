@@ -1,0 +1,57 @@
+[gd_scene format=3]
+
+; Each Camera3D holds one projection setting, and a call makes it current in a window taller than wide.
+; `Near` cuts the box with its near and far planes, `Ortho` and `Frustum` take a non-default size and
+; offset, and `Width` keeps the width at a field of view the default's height does not give. No other
+; scene calls them.
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+
+[sub_resource type="StandardMaterial3D" id="Material_box"]
+albedo_color = Color(0.9, 0.5, 0.2, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+radius = 0.4
+height = 0.8
+
+[sub_resource type="StandardMaterial3D" id="Material_ball"]
+albedo_color = Color(0.2, 0.5, 0.9, 1)
+
+[node name="Main" type="Node3D"]
+
+[node name="Box" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("Material_box")
+
+[node name="Ball" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, 0, -1.5)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Material_ball")
+
+[node name="Default" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 0.3, 5)
+
+[node name="Near" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 0.3, 5)
+fov = 40.0
+near = 4.6
+far = 6.0
+
+[node name="Ortho" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 0.3, 5)
+projection = 1
+size = 2.5
+near = 1.0
+far = 10.0
+
+[node name="Frustum" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 0.3, 5)
+projection = 2
+size = 0.8
+frustum_offset = Vector2(0.3, 0.1)
+near = 1.2
+
+[node name="Width" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 0.3, 5)
+keep_aspect = 0
+fov = 90.0

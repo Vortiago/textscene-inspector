@@ -68,6 +68,18 @@ component that strict rejects renders as authored. `anchor_mode` falls back to
 `true` and `offset` to `(0, 0)`. `enabled` is `true` unless the value reads as `false`.
 The smoothing, drag and `editor_draw_*` keys are never read.
 
+## Current camera
+
+The In-game mode draws each viewport through its current Camera2D. The first enabled camera to enter claims a viewport with none (`camera_2d.cpp:353-355`).
+
+- A host's `make_current` moves it. On a camera that is not enabled, it changes nothing and warns, as Godot's `ERR_FAIL_COND` does (`camera_2d.cpp:584-586`).
+- `set('enabled', false)` on the current camera passes the viewport to the first enabled camera in tree order (`camera_2d.cpp:522-536`).
+- `set('enabled', true)` claims a viewport with no camera, and leaves a viewport that has one.
+- The 2D mode keeps the editor's view.
+- With `ignore_rotation` off, the view turns with the camera's global rotation, and the limits clamp the turned corner (`camera_2d.cpp:212-259`).
+- A top-left view clamps to the limits over no width, as Godot's corner test does.
+- A camera under a CanvasLayer frames from its position in the layer's canvas (`canvas_item.cpp:176-185`).
+
 ## Known limitations
 
 - **Approximated** The main 2D stage opens on the whole scene rather than the enabled

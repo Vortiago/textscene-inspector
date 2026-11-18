@@ -1,7 +1,7 @@
 /** What Godot says exists, and what this previewer says it parses. */
 
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { loadCoreParser } from '../loadCoreLinter.mjs';
@@ -62,4 +62,44 @@ export function godotVersion() {
   return (
     (spawnSync('godot', ['--version'], { encoding: 'utf8' }).stdout ?? '').trim().split('\n')[0] || 'unknown'
   );
+}
+
+/** Whether `className` is Node or descends from it, by the `inherits` links of the dump. */
+function isNodeClass(className, inheritsOf) {
+  for (let c = className; c; c = inheritsOf.get(c)) if (c === 'Node') return true;
+  return false;
+}
+
+/** From `--dump-extension-api`: only it holds `ClassDB::get_property_index` (`extension_api_dump.cpp`). */
+export function propertyMethodsFromApi(api) {
+  const inheritsOf = new Map(api.classes.map((c) => [c.name, c.inherits]));
+  const table = {};
+  for (const c of api.classes) {
+    if (!isNodeClass(c.name, inheritsOf)) continue;
+    const rows = (c.properties ?? [])
+      .filter(
+        (p) =>
+          (p.setter ?? '') !== `set_${p.name}` ||
+          (p.getter ?? '') !== `get_${p.name}` ||
+          p.index !== undefined
+      )
+      .map((p) => [p.name, p.setter ?? '', p.getter ?? '', ...(p.index === undefined ? [] : [p.index])]);
+    if (rows.length > 0) table[c.name] = rows;
+  }
+  return table;
+}
+
+/** The setter and getter names of every Node property, from a second engine run that dumps the API. */
+export function dumpNodePropertyMethods() {
+  const dir = mkdtempSync(join(tmpdir(), 'godot-api-'));
+  const res = spawnSync('godot', ['--headless', '--dump-extension-api'], {
+    cwd: dir,
+    encoding: 'utf8',
+    timeout: 120_000,
+  });
+  if (res.error) throw new Error(`Could not run Godot to dump the API: ${res.error.message}`);
+  if (res.status !== 0) {
+    throw new Error(`Godot exited ${res.status} while dumping the API:\n${(res.stderr ?? '').slice(-800)}`);
+  }
+  return propertyMethodsFromApi(JSON.parse(readFileSync(join(dir, 'extension_api.json'), 'utf8')));
 }

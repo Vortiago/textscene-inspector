@@ -16,7 +16,7 @@ describe('useSubViewportDescription', () => {
       wrapper: withProject(null),
     });
 
-    expect(result.current).toMatchObject({ msaa3D: 2, camera: 'elected', drawsEditorChrome: false });
+    expect(result.current).toMatchObject({ msaa3D: 2, camera: 'current', drawsEditorChrome: false });
   });
 
   it("takes the project's bias where the node sets none", async () => {

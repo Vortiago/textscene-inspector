@@ -20,6 +20,8 @@ export interface Camera2DProperties extends Node2DProperties {
   limitBottom: number;
   /** When false the four limits are ignored entirely. Godot default true. */
   limitEnabled: boolean;
+  /** Whether the view keeps square to the canvas, not turning with the camera. Godot default true. */
+  ignoreRotation: boolean;
   /** Whether this camera is the active one (default true). */
   enabled: boolean;
 }

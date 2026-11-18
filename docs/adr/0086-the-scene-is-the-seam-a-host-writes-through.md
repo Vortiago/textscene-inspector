@@ -34,6 +34,24 @@ the resource loader, and the host's writes. It imports no React and no three.js.
   for a stored property too, where Godot's setter writes more than the property, as a Control's anchor
   does. A setter that reads up the tree, such as `global_position`, reads the parent through the
   parent's own getter, so one port serves each level.
+- **Calls.** `call(method, ...args)` runs a method this release ports, else a setter or a getter by
+  the name ClassDB gives it (`get_property_setter`, `get_property_getter`), which reaches `set` or
+  `get`. An indexed setter, such as `set_anchor`, takes the index first. Any other method throws with
+  the class and the method. `set` and `get` of a property whose setter or getter is a ported method
+  run that method, so `set('current', true)` is `set_current(true)`.
+- **Current cameras.** The scene keeps the current Camera3D and Camera2D of each viewport, as
+  `Viewport` keeps them: the root window and each SubViewport apart. Until a call moves it, the state
+  is the enter rule over the loaded tree (`camera_3d.cpp:189-191`, `camera_2d.cpp:353-355`), so a
+  sub-scene that loads late enters where the game enters it. After a call, a camera that enters or
+  exits moves the state as `_camera_3d_add` and `_camera_3d_remove` do (`viewport.cpp:4565-4607`). A
+  new text fills the state again. The In-game mode draws through it, and the editor's 3D view keeps
+  its orbit. A current Camera3D that leaves hands the viewport over, and Godot keeps its `current`
+  flag so it claims the viewport again when it re-enters (`camera_3d.cpp:215-219`). No node leaves
+  and comes back in this release, so the scene keeps no such flag. A release that lets a host add or
+  remove nodes must keep it.
+- **Call errors.** A wrong count of arguments and an argument the binding cannot convert throw the
+  text of Godot's error (`object.cpp:888`). `set` of a ported setter casts the value as `Object::set`
+  does and answers whether the cast is strict (`class_db.cpp:1683`).
 - **Loading.** The class table and the defaults load on the first `get` or `set`, outside the first
   chunk of the webview (ADR-0055).
 - **Redraw.** The writes of one task make one notice, so every view draws one frame for them.

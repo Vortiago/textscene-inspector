@@ -45,6 +45,10 @@ export interface Scene {
   load(path: string): Promise<Variant>;
   /** Calls `listener` when the node at `path` changes, or the tree's shape for null. Returns the removal. */
   observe(path: string | null, listener: () => void): () => void;
+  /** The live path of the current Camera3D of the viewport at `viewport`, null for the root window. */
+  currentCamera3D(viewport: string | null): string | null;
+  /** The live path of the viewport's current Camera2D, null for none. */
+  currentCamera2D(viewport: string | null): string | null;
 }
 
 /** `written` of one parse, writes and resources: the graph is built again only when one of them moves. */
@@ -114,6 +118,8 @@ export function openScene({
       return variantOf({ type: T.OBJECT, resource: { path }, ...(className ? { className } : {}) });
     },
     observe: (path, listener) => listeners.observe(path, listener),
+    currentCamera3D: (viewport) => nodes.cameras.camera3D(viewport),
+    currentCamera2D: (viewport) => nodes.cameras.camera2D(viewport),
   };
 
   function runtime(): SceneRuntime {

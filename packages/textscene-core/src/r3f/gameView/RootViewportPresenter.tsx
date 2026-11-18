@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import type { TscnNode } from '../../parser/types.js';
 import type { SubViewportProperties } from '../../nodes/viewport/subviewport/types.js';
 import { useViewportTexture } from '../contexts/ViewportTextureContext.js';
-import { ROOT_VIEWPORT_PATH } from './rootViewportNode.js';
+import { ROOT_VIEWPORT_PATH } from '../contexts/EnclosingViewportContext.js';
 import { presentRootTarget } from './presentRootTarget.js';
 
 /** A priority of its own takes the frame from R3F's own render, after every viewport pass. */

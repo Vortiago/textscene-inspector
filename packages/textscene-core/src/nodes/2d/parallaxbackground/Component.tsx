@@ -14,6 +14,8 @@ import { CanvasSpaceProvider } from '../../../r3f/canvasRootScope';
 import { parallaxLayerDelta, parallaxLayerPose, parallaxScroll } from './parallaxScroll';
 import { currentCameraFraming } from './currentCameraFraming';
 import { observeSceneCamera } from '../../../r3f/sceneRenderCamera';
+import { useCurrentCamera2D } from '../../../r3f/currentCamera';
+import { useEnclosingViewportPath } from '../../../r3f/contexts/EnclosingViewportContext';
 import { ParallaxScrollProvider, type RegisteredParallaxLayer } from './scrollContext';
 import type { ParallaxBackgroundProperties } from './types';
 
@@ -21,6 +23,7 @@ export function ParallaxBackground({ node, children }: NodeComponentProps) {
   const props = node.properties as ParallaxBackgroundProperties;
   const path = useNodePath() ?? node.name;
   const scene = useThree((state) => state.scene);
+  const cameraPath = useCurrentCamera2D(useEnclosingViewportPath());
 
   const groupRef = useRef<THREE.Group>(null);
   const layers = useRef(new Map<string, RegisteredParallaxLayer>()).current;
@@ -44,7 +47,7 @@ export function ParallaxBackground({ node, children }: NodeComponentProps) {
       // With no current Camera2D, `set_base_offset_and_scale` never runs and the
       // layers keep their authored pose: `_update_scroll` early-returns outside the
       // tree, and a `.tscn` applies properties before `add_child`.
-      const view = currentCameraFraming(scene, camera);
+      const view = currentCameraFraming(scene, camera, cameraPath);
       const scroll = view ? parallaxScroll(props, view) : null;
       for (const layer of layers.values()) {
         if (!scroll) {
@@ -61,7 +64,7 @@ export function ParallaxBackground({ node, children }: NodeComponentProps) {
       // cut chain take effect in this frame, not the next.
       group.updateMatrixWorld(true);
     });
-  }, [scene, props, layers]);
+  }, [scene, props, layers, cameraPath]);
 
   return (
     <ParallaxScrollProvider value={registry}>

@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+; A sub-scene that holds a camera, for `unit-in-game-call-hidden-instanced.tscn`.
+
+[node name="Rig" type="Node3D"]
+
+[node name="Eye" type="Camera3D" parent="."]
+transform = Transform3D(0.8660254, -0.25, 0.4330127, 0, 0.8660254, 0.5, -0.5, -0.4330127, 0.75, 2, 2, 3.5)

@@ -1,0 +1,41 @@
+[gd_scene format=3]
+
+; A host's call moves the current Camera3D of the root viewport. With no call, `Front` draws, since
+; the first camera to enter claims a viewport with none (`camera_3d.cpp:189-191`). The golden calls
+; `Side.make_current()` (`camera_3d.cpp:352-360`). `Top` is orthogonal, so a call to it swaps the
+; projection too.
+; No other golden calls a camera method, so no other scene shows a regression in the current camera.
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+
+[sub_resource type="StandardMaterial3D" id="Material_box"]
+albedo_color = Color(0.9, 0.5, 0.2, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+radius = 0.4
+height = 0.8
+
+[sub_resource type="StandardMaterial3D" id="Material_ball"]
+albedo_color = Color(0.2, 0.5, 0.9, 1)
+
+[node name="Main" type="Node3D"]
+
+[node name="Box" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("Material_box")
+
+[node name="Ball" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, -1)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Material_ball")
+
+[node name="Front" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0.5, 5)
+
+[node name="Side" type="Camera3D" parent="."]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 5, 0.5, -0.5)
+
+[node name="Top" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0.5, 6, -0.5)
+projection = 1
+size = 4.0

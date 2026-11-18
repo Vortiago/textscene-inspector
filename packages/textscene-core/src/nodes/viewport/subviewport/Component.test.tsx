@@ -50,7 +50,7 @@ async function render(source: string, workspace?: '2d' | '3d') {
   const parsed = new TscnParser().parse(source);
   const fake = createFakeResourceLoader();
   return ReactThreeTestRenderer.create(
-    <SceneStack workspace={workspace} loader={fake.loader} scene={parsed}>
+    <SceneStack workspace={workspace} loader={fake.loader} scene={parsed} source={source}>
       <NodeDispatcher nodes={parsed.nodes} />
     </SceneStack>
   );

@@ -23,6 +23,7 @@ import { SceneCamerasProvider } from '../sceneCameras';
 import { ViewportWorld } from '../testing/ViewportWorld';
 import { ViewportDescriptionProvider } from '../viewportRender/viewportDescriptionContext';
 import { gameViewportDescription } from '../viewportRender/viewportDescription';
+import { CurrentCameras, type CurrentCameraPaths } from '../testing/CurrentCameras';
 import type { AutoExposure } from '../../resources/cameraattributes/types';
 import {
   useAutoExposure,
@@ -111,17 +112,15 @@ function CameraAt({
   order,
   path,
   viewport = null,
-  current = false,
   cameraAttributes = NO_RESOLUTION,
 }: {
   order: TreeOrder;
   path: string;
   /** The nearest viewport above the camera, null for the root viewport. */
   viewport?: string | null;
-  current?: boolean;
   cameraAttributes?: CameraAttributesResolution;
 }) {
-  const camera = <PublishingCamera path={path} current={current} cameraAttributes={cameraAttributes} />;
+  const camera = <PublishingCamera path={path} cameraAttributes={cameraAttributes} />;
   return (
     <TreeOrderProvider order={order}>
       {viewport === null ? (
@@ -135,29 +134,35 @@ function CameraAt({
 
 function PublishingCamera({
   path,
-  current,
   cameraAttributes,
 }: {
   path: string;
-  current: boolean;
   cameraAttributes: CameraAttributesResolution;
 }) {
-  usePublishCamera(path, current, { attributes: cameraAttributes, environment: NO_RESOLUTION });
+  usePublishCamera(path, { attributes: cameraAttributes, environment: NO_RESOLUTION });
   return null;
 }
 
-function inRoot(children: ReactNode, previewedCameraPath: string | null = null) {
+const NO_CURRENT_CAMERAS: CurrentCameraPaths = new Map();
+
+function inRoot(
+  children: ReactNode,
+  previewedCameraPath: string | null = null,
+  current: CurrentCameraPaths = NO_CURRENT_CAMERAS
+) {
   return (
-    <ViewportModeProvider>
-      <ViewportActionsProvider initialPreviewedCameraPath={previewedCameraPath}>
-        <SceneCamerasProvider>
-          <WorldEnvironmentScope world="root">
-            {children}
-            <Reader />
-          </WorldEnvironmentScope>
-        </SceneCamerasProvider>
-      </ViewportActionsProvider>
-    </ViewportModeProvider>
+    <CurrentCameras cameras3D={current}>
+      <ViewportModeProvider>
+        <ViewportActionsProvider initialPreviewedCameraPath={previewedCameraPath}>
+          <SceneCamerasProvider>
+            <WorldEnvironmentScope world="root">
+              {children}
+              <Reader />
+            </WorldEnvironmentScope>
+          </SceneCamerasProvider>
+        </ViewportActionsProvider>
+      </ViewportModeProvider>
+    </CurrentCameras>
   );
 }
 
@@ -389,71 +394,56 @@ describe('the exposure of a world seen through a Camera3D', () => {
     expect(read(renderer)).toEqual({ optionalFactor: 0, factor: 0 });
   });
 
-  it('elects the last current camera of a sub-viewport, as the viewport does', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      inRoot(
-        <ViewportWorld world="subViewport">
-          <CameraAt order={[0]} path="Root/Sub/A" cameraAttributes={attributes(2)} />
-          <CameraAt order={[1]} path="Root/Sub/B" current cameraAttributes={attributes(3)} />
-          <CameraAt order={[2]} path="Root/Sub/C" current cameraAttributes={attributes(4)} />
-          <Reader />
-        </ViewportWorld>
-      )
-    );
-    const factors = renderer.scene
-      .findAll((node) => node.props.name === 'Reader')
-      .map((node) => node.props.userData.factor);
-    expect(factors.sort()).toEqual([1, 4]);
-  });
-
-  it('elects the first camera of a sub-viewport when none is current', async () => {
+  it('draws a sub-viewport through the current camera the scene holds for it', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       inRoot(
         <ViewportWorld world="subViewport">
           <CameraAt order={[0]} path="Root/Sub/A" cameraAttributes={attributes(2)} />
           <CameraAt order={[1]} path="Root/Sub/B" cameraAttributes={attributes(3)} />
           <Reader />
-        </ViewportWorld>
+        </ViewportWorld>,
+        null,
+        new Map([[null, 'Root/Sub/B']])
       )
     );
     const factors = renderer.scene
       .findAll((node) => node.props.name === 'Reader')
       .map((node) => node.props.userData.factor);
-    expect(factors.sort()).toEqual([1, 2]);
+    expect(factors.sort()).toEqual([1, 3]);
   });
 
-  it('elects the last current camera of a root whose viewport draws through its elected camera', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <ViewportDescriptionProvider description={gameViewportDescription(null)}>
-        {inRoot(
-          <>
-            <CameraAt order={[0]} path="Root/A" cameraAttributes={attributes(2)} />
-            <CameraAt order={[1]} path="Root/B" current cameraAttributes={attributes(3)} />
-            <CameraAt order={[2]} path="Root/C" current cameraAttributes={attributes(4)} />
-          </>
-        )}
-      </ViewportDescriptionProvider>
-    );
-    expect(read(renderer).factor).toBe(4);
-  });
-
-  it('elects the first camera of a root whose viewport draws through its elected camera when none is current', async () => {
+  it('draws a root that the game draws through the current camera the scene holds for it', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <ViewportDescriptionProvider description={gameViewportDescription(null)}>
         {inRoot(
           <>
             <CameraAt order={[0]} path="Root/A" cameraAttributes={attributes(2)} />
             <CameraAt order={[1]} path="Root/B" cameraAttributes={attributes(3)} />
-          </>
+          </>,
+          null,
+          new Map([[null, 'Root/B']])
         )}
       </ViewportDescriptionProvider>
     );
-    expect(read(renderer).factor).toBe(2);
+    expect(read(renderer).factor).toBe(3);
   });
 
-  it('elects no camera of a root that the editor draws through its own camera', async () => {
+  it('draws a root that the game draws with no camera at the factor 1 when the scene holds none', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      inRoot(<CameraAt order={[0]} path="Root/A" current cameraAttributes={attributes(2)} />)
+      <ViewportDescriptionProvider description={gameViewportDescription(null)}>
+        {inRoot(<CameraAt order={[0]} path="Root/A" cameraAttributes={attributes(2)} />)}
+      </ViewportDescriptionProvider>
+    );
+    expect(read(renderer).factor).toBe(1);
+  });
+
+  it('draws a root that the editor draws through its own camera with no current camera', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      inRoot(
+        <CameraAt order={[0]} path="Root/A" cameraAttributes={attributes(2)} />,
+        null,
+        new Map([[null, 'Root/A']])
+      )
     );
     expect(read(renderer).factor).toBe(1);
   });
@@ -602,7 +592,8 @@ function passIn(children: ReactNode) {
         <Reader name="PassReader" />
       </ViewportPassAttributes>
     </>,
-    'Root/Main'
+    'Root/Main',
+    new Map([['Root/View', 'Root/View/Camera3D']])
   );
 }
 
@@ -614,7 +605,7 @@ function readPass(renderer: Renderer): { factor: number; autoExposure: AutoExpos
 }
 
 describe('the attributes of a viewport pass', () => {
-  it('are those of the camera it elects below its path, with their auto exposure', async () => {
+  it('are those of the current camera of the viewport at its path, with their auto exposure', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       passIn(
         <CameraAt

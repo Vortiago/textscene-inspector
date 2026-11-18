@@ -215,7 +215,12 @@ describe('a SubViewport with 3D content and a 2D item', () => {
     const registered: { current: Map<string, THREE.Object3D> | null } = { current: null };
     const captured: { current: THREE.WebGLRenderer | null } = { current: null };
     const renderer = await ReactThreeTestRenderer.create(
-      <SceneStack workspace="2d" loader={createFakeResourceLoader().loader} scene={parsed}>
+      <SceneStack
+        workspace="2d"
+        loader={createFakeResourceLoader().loader}
+        scene={parsed}
+        source={SCENE_3D_WITH_SHARED_CONTAINER}
+      >
         <ViewportModeProvider initialShowPreviewEnvironment={false}>
           <ViewportPassStack captured={captured}>
             <SelectionProbe out={registered} />

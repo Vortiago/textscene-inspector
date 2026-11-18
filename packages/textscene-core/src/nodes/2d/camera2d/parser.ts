@@ -26,6 +26,7 @@ export function parseCamera2D(
     limitRight: intOr(properties.limit_right, 10000000),
     limitBottom: intOr(properties.limit_bottom, 10000000),
     limitEnabled: boolOr(properties.limit_enabled, true),
+    ignoreRotation: boolOr(properties.ignore_rotation, true),
     enabled: properties.enabled === undefined ? true : boolSlotValue(properties.enabled) !== false,
   };
 }

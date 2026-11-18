@@ -48,6 +48,7 @@ import {
   ROOT_ONLY_VIEWPORT_PROPERTIES,
   rootOnlyDriftMessage,
   harnessWarnings,
+  parseCall,
   parseSet,
   projectWindowSizeFromIni,
   renderReference,
@@ -232,8 +233,8 @@ describe('--set', () => {
   });
 
   it('collects each write in order', () => {
-    const { sets } = parseArgs(['a.tscn', '--set', 'A:visible=false', '--set', 'B:z_index=3']);
-    expect(sets.map(({ path }) => path)).toEqual(['A', 'B']);
+    const { hostCalls } = parseArgs(['a.tscn', '--set', 'A:visible=false', '--set', 'B:z_index=3']);
+    expect(hostCalls.map(({ path }) => path)).toEqual(['A', 'B']);
   });
 
   it('refuses a write that names no property', () => {
@@ -241,8 +242,42 @@ describe('--set', () => {
   });
 
   it('applies each write with str_to_var before the capture', () => {
-    const script = bootstrap({ sets: [{ path: 'Cube', property: 'position', text: 'Vector3(1, 0, 0)' }] });
-    expect(script).toContain('["Cube", "position", "Vector3(1, 0, 0)"],');
+    const script = bootstrap({
+      hostCalls: [{ path: 'Cube', property: 'position', text: 'Vector3(1, 0, 0)' }],
+    });
+    expect(script).toContain('["set", "Cube", "position", "Vector3(1, 0, 0)"],');
+  });
+});
+
+describe('--call', () => {
+  it('reads the node path and the method of a call with no arguments', () => {
+    expect(parseCall('Cameras/B:make_current')).toEqual({
+      path: 'Cameras/B',
+      method: 'make_current',
+      args: [],
+    });
+  });
+
+  it('splits the arguments on ; so a Variant text keeps its commas', () => {
+    expect(parseCall('A:look_at=Vector3(1, 2, 3);true').args).toEqual(['Vector3(1, 2, 3)', 'true']);
+  });
+
+  it('keeps each call in order with each write', () => {
+    const { hostCalls } = parseArgs(['a.tscn', '--call', 'A:make_current', '--set', 'B:current=true']);
+    expect(hostCalls.map((call) => call.method ?? call.property)).toEqual(['make_current', 'current']);
+  });
+
+  it('refuses a call that names no method', () => {
+    expect(() => parseCall('Camera')).toThrow(/expects <path>:<method>/);
+  });
+
+  it('refuses an empty argument, which Godot reads as null and the scene cannot', () => {
+    expect(() => parseCall('Camera:clear_current=')).toThrow(/an empty argument/);
+  });
+
+  it('calls each method with the str_to_var of each argument', () => {
+    const script = bootstrap({ hostCalls: [{ path: 'A', method: 'clear_current', args: ['false'] }] });
+    expect(script).toContain('["call", "A", "clear_current", ["false"]],');
   });
 });
 

@@ -32,6 +32,7 @@ function tag(overrides: Partial<Camera2DTag> = {}): Camera2DTag {
     limitRight: 10000000,
     limitBottom: 10000000,
     limitEnabled: true,
+    ignoreRotation: true,
     enabled: true,
     ...overrides,
   };
@@ -54,6 +55,14 @@ describe('viewportLayerMatrix for a layer that does not follow', () => {
     const anchor = viewportLayerMatrix(NOT_FOLLOWING, camera(frame), SIZE, new THREE.Matrix4());
     expect(landing(anchor, { x: 0, y: 0 })).toEqual({ x: 350, y: 300 });
     expect(landing(anchor, { x: 300, y: 200 })).toEqual({ x: 650, y: 500 });
+  });
+
+  it("turns the layer with a turned Camera2D's view, so it stays on the screen", () => {
+    const turned = tag({ ignoreRotation: false });
+    const frame = orthoFrameForCamera2D(turned, { x: 500, y: 400, rotation: Math.PI / 2 }, SIZE);
+    const anchor = viewportLayerMatrix(NOT_FOLLOWING, camera(frame), SIZE, new THREE.Matrix4());
+    const corner = landing(anchor, { x: 0, y: 0 });
+    expect([corner.x, corner.y].map(Math.round)).toEqual([600, 250]);
   });
 
   it("keeps a layer pixel one viewport pixel under a zoomed Camera2D's view", () => {

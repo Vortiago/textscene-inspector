@@ -55,7 +55,7 @@ describe('a SubViewport canvas frame', () => {
     const parsed = new TscnParser().parse(SCENE);
     const captured: { current: THREE.WebGLRenderer | null } = { current: null };
     const renderer = await ReactThreeTestRenderer.create(
-      <SceneStack workspace="2d" loader={cookieLoader()} scene={parsed}>
+      <SceneStack workspace="2d" loader={cookieLoader()} scene={parsed} source={SCENE}>
         <ViewportPassStack captured={captured}>
           {underWhiteCanvasLighting(<NodeDispatcher nodes={parsed.nodes} />)}
         </ViewportPassStack>

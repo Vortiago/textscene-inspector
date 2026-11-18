@@ -4,56 +4,49 @@
  */
 
 import * as THREE from 'three';
-import { camera2DView, type Camera2DTag } from './camera2DView';
+import { canvasFrameOf } from '../canvasFrame';
+import { camera2DView, type Camera2DPlacement, type Camera2DTag } from './camera2DView';
 import type { Vector2 } from '../../godot/math/vector';
 import type { Rect2 } from '../../godot/math/rect2';
 
-/**
- * The scene's camera at `cameraPath`, or null before it mounts. The world elects the camera
- * (`electCameraOfViewport`) from what the cameras publish, so the pass draws through the one whose
- * attributes it draws at.
- */
-export function cameraAtPath(root: THREE.Object3D, cameraPath: string | null): THREE.Camera | null {
+/** The first object under `root` drawn for the node at `cameraPath` that `isCamera` accepts. */
+function objectAtPath(
+  root: THREE.Object3D,
+  cameraPath: string | null,
+  isCamera: (object: THREE.Object3D) => boolean
+): THREE.Object3D | null {
   if (cameraPath === null) return null;
-  let found: THREE.Camera | null = null;
+  let found: THREE.Object3D | null = null;
   root.traverse((object) => {
-    if (!found && (object as THREE.Camera).isCamera && object.userData?.tscnPath === cameraPath) {
-      found = object as THREE.Camera;
-    }
+    if (!found && isCamera(object) && object.userData?.tscnPath === cameraPath) found = object;
   });
   return found;
 }
 
-/**
- * The first enabled Camera2D in tree order, or null. `scene/2d/camera_2d.cpp` claims
- * the viewport only while `!viewport->get_camera_2d()`, the inverse of the 3D rule.
- * The editor-only branch is not modelled: the previewer shows the running scene.
- * No path filter: a 2D subtree is always portalled, so `root` holds only its cameras.
- */
-export function selectViewportCamera2D(root: THREE.Object3D): THREE.Object3D | null {
-  let chosen: THREE.Object3D | null = null;
-
-  // Depth-first pre-order, which is the order nodes enter the tree.
-  root.traverse((object) => {
-    if (chosen) return;
-    const tag = object.userData?.camera2d as Camera2DTag | undefined;
-    // `set_enabled` makes the same guarded claim, so a disabled camera never
-    // becomes current and never blocks a later one.
-    if (!tag || tag.enabled === false) return;
-    chosen = object;
-  });
-
-  return chosen;
+/** The scene's camera at `cameraPath`, the viewport's current camera, or null before it mounts. */
+export function cameraAtPath(root: THREE.Object3D, cameraPath: string | null): THREE.Camera | null {
+  return objectAtPath(
+    root,
+    cameraPath,
+    (object) => (object as THREE.Camera).isCamera === true
+  ) as THREE.Camera | null;
 }
 
-/**
- * An Object3D's position in Godot canvas pixels: `node2dTransform` negates Y, so
- * the trip back is one negation. The world matrix, not the parsed tree, also
- * composes an instanced sub-scene's ancestors.
- */
-export function godotCanvasPosition(object: THREE.Object3D): { x: number; y: number } {
-  const world = object.getWorldPosition(new THREE.Vector3());
-  return { x: world.x, y: -world.y };
+/** The group of the Camera2D at `cameraPath`, the viewport's current one, or null before it mounts. */
+export function camera2DAtPath(root: THREE.Object3D, cameraPath: string | null): THREE.Object3D | null {
+  return objectAtPath(root, cameraPath, (object) => Boolean(object.userData?.camera2d));
+}
+
+/** Written only by {@link godotCanvasPlacement}, which reads it before returning. */
+const inCanvas = new THREE.Matrix4();
+
+/** The global position and rotation Godot reads, in a CanvasLayer's own canvas (`canvas_item.cpp:176`). */
+export function godotCanvasPlacement(object: THREE.Object3D): { x: number; y: number; rotation: number } {
+  inCanvas.copy(object.matrixWorld);
+  const frame = canvasFrameOf(object);
+  if (frame) inCanvas.premultiply(frame.matrixWorld.clone().invert());
+  const m = inCanvas.elements;
+  return { x: m[12]!, y: -m[13]!, rotation: 0 - Math.atan2(m[1]!, m[0]!) };
 }
 
 /**
@@ -63,12 +56,12 @@ export function godotCanvasPosition(object: THREE.Object3D): { x: number; y: num
  */
 export function orthoFrameForCamera2D(
   framing: Camera2DTag,
-  worldPosition: { x: number; y: number },
+  placement: Camera2DPlacement,
   size: Vector2
 ): OrthoFrame {
   const width = size.x > 0 ? size.x : 1;
   const height = size.y > 0 ? size.y : 1;
-  const view = camera2DView(framing, worldPosition, { x: width, y: height });
+  const view = camera2DView(framing, placement, { x: width, y: height });
   // The framed extent the view already computed, per axis, so the Y zoom
   // applies too.
   const halfWidth = view.size.x / 2;
@@ -79,6 +72,7 @@ export function orthoFrameForCamera2D(
     top: halfHeight,
     bottom: -halfHeight,
     position: [view.center.x, -view.center.y, 1000],
+    rotation: -view.rotation,
   };
 }
 
@@ -93,6 +87,7 @@ export function applyOrthoFrame(camera: THREE.OrthographicCamera, frame: OrthoFr
     camera.right !== frame.right ||
     camera.top !== frame.top ||
     camera.bottom !== frame.bottom;
+  camera.rotation.z = frame.rotation;
 
   camera.left = frame.left;
   camera.right = frame.right;
@@ -130,6 +125,8 @@ interface OrthoFrame {
   top: number;
   bottom: number;
   position: [number, number, number];
+  /** The camera's turn about Z in three's +Y up space, the negated Camera2D view rotation. */
+  rotation: number;
 }
 
 /**
@@ -147,6 +144,7 @@ export function orthoFrameForSize(size: Vector2): OrthoFrame {
     top: height / 2,
     bottom: -height / 2,
     position: [width / 2, -height / 2, 1000],
+    rotation: 0,
   };
 }
 

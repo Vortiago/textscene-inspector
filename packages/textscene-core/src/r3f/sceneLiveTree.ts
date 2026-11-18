@@ -13,7 +13,11 @@ import {
   type SceneRuntime,
   type SceneTree,
   type SceneTreeNode,
+  type TreeCamera,
 } from '../scene/sceneRuntime.js';
+import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
+import { isCamera2DType, isCamera3DType } from './cameraNodeTypes.js';
+import { perObject } from '../utils/perObject.js';
 import { liveTreeOf, type LiveLink, type LiveTree } from './liveSceneTree.js';
 import { nodePathUniquePaths } from './nodePathUniqueNames.js';
 import { resourcePipelineOf } from './sceneResourcePipeline.js';
@@ -51,6 +55,19 @@ function treeNodeOf(link: LiveLink, rootScenePath: string): SceneTreeNode {
   };
 }
 
+/** Each camera of the loaded tree with its viewport, in the pre-order `NOTIFICATION_ENTER_TREE` takes. */
+const camerasOf = perObject((tree: LiveTree): readonly TreeCamera[] => {
+  const cameras: TreeCamera[] = [];
+  tree.fold<string | null, void>(null, (link, viewport, descend) => {
+    if (awaitedInstancePath(link)) return;
+    const { type, rawProperties } = link.step.node;
+    const dimension = isCamera3DType(type) ? '3D' : isCamera2DType(type) ? '2D' : null;
+    if (dimension) cameras.push({ path: link.path, type, dimension, viewport, rawProperties });
+    descend(descendsFromClass(type, 'Viewport') ? link.path : viewport);
+  });
+  return cameras;
+});
+
 /** The scene's view of one Live scene tree: a node is found once every instance above it has loaded. */
 function sceneTreeOf(tree: LiveTree, loader: ResourceLoader, rootScenePath: string): SceneTree {
   return {
@@ -69,10 +86,12 @@ function sceneTreeOf(tree: LiveTree, loader: ResourceLoader, rootScenePath: stri
       return link && treeNodeOf(link, rootScenePath);
     },
     uniquePaths: (livePath) => nodePathUniquePaths(livePath, tree.roots, tree.ctx),
+    cameras: () => camerasOf(tree),
   };
 }
 
-const NO_TREE: SceneTree = { node: () => null, uniquePaths: () => new Map() };
+const NO_CAMERAS: readonly TreeCamera[] = [];
+const NO_TREE: SceneTree = { node: () => null, uniquePaths: () => new Map(), cameras: () => NO_CAMERAS };
 
 /** The Live scene tree of `scene`, over the loader every view of it shares. */
 function sceneRuntimeOf(scene: Scene): SceneRuntime {

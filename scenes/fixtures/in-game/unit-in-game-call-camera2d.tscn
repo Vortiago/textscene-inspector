@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+; A host's call moves the current Camera2D of the root viewport. With no call, `Left` draws, since
+; the first enabled camera to enter claims a viewport with none (`camera_2d.cpp:353-355`). The golden
+; calls `Right.make_current()`. `Off` is not enabled, so `make_current` on it changes nothing
+; (`camera_2d.cpp:584-586`).
+; No other golden calls a camera method, so no other scene shows a regression in the current camera.
+
+[node name="Main" type="Node2D"]
+
+[node name="Square" type="Polygon2D" parent="."]
+color = Color(0.2, 0.6, 0.9, 1)
+polygon = PackedVector2Array(0, 0, 60, 0, 60, 60, 0, 60)
+
+[node name="Triangle" type="Polygon2D" parent="."]
+position = Vector2(220, 40)
+color = Color(0.9, 0.3, 0.3, 1)
+polygon = PackedVector2Array(0, 40, 30, 0, 60, 40)
+
+[node name="Left" type="Camera2D" parent="."]
+position = Vector2(60, 40)
+
+[node name="Off" type="Camera2D" parent="."]
+position = Vector2(150, 200)
+enabled = false
+
+[node name="Right" type="Camera2D" parent="."]
+position = Vector2(220, 60)

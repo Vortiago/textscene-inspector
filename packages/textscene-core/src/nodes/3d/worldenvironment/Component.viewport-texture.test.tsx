@@ -111,7 +111,7 @@ async function renderScene(source: string, files: Record<string, ParsedResource>
   const fake = createFakeResourceLoader();
   for (const [path, resource] of Object.entries(files)) fake.resources.seed(path, resource);
   const tree = (
-    <SceneStack workspace="3d" loader={fake.loader} scene={parsed}>
+    <SceneStack workspace="3d" loader={fake.loader} scene={parsed} source={source}>
       <ViewportTextureProvider>
         <WorldEnvironmentScope world="root">
           <NodeDispatcher nodes={parsed.nodes} />

@@ -1,0 +1,25 @@
+[gd_scene format=3]
+
+; The first Camera2D is not enabled, so the second, the first enabled one to enter, draws
+; (`camera_2d.cpp:353-355`). No other scene opens with a disabled first camera.
+
+[node name="Main" type="Node2D"]
+
+[node name="Square" type="Polygon2D" parent="."]
+color = Color(0.2, 0.6, 0.9, 1)
+polygon = PackedVector2Array(0, 0, 60, 0, 60, 60, 0, 60)
+
+[node name="Triangle" type="Polygon2D" parent="."]
+position = Vector2(220, 40)
+color = Color(0.9, 0.3, 0.3, 1)
+polygon = PackedVector2Array(0, 40, 30, 0, 60, 40)
+
+[node name="First" type="Camera2D" parent="."]
+position = Vector2(30, 30)
+enabled = false
+
+[node name="Second" type="Camera2D" parent="."]
+position = Vector2(120, 50)
+
+[node name="Third" type="Camera2D" parent="."]
+position = Vector2(250, 60)
