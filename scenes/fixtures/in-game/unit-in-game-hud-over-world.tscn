@@ -1,0 +1,31 @@
+[gd_scene format=3]
+
+; The In-game view draws its 3D world, then a CanvasLayer over it (`renderer_viewport.cpp:380-385`).
+; The variable is the composite: a current Camera3D over one unshaded box, and one ColorRect on a
+; CanvasLayer. No other golden draws a canvas over the root viewport's world, so no other scene shows
+; a regression in it.
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+
+[sub_resource type="StandardMaterial3D" id="Material_box"]
+shading_mode = 0
+albedo_color = Color(0.9, 0.2, 0.2, 1)
+
+[node name="Main" type="Node3D"]
+
+[node name="Box" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("Material_box")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+current = true
+
+[node name="Hud" type="CanvasLayer" parent="."]
+
+[node name="Bar" type="ColorRect" parent="Hud"]
+offset_left = 120.0
+offset_top = 70.0
+offset_right = 220.0
+offset_bottom = 110.0
+color = Color(0.2, 0.8, 0.3, 1)

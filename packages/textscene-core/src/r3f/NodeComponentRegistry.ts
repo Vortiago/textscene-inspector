@@ -122,6 +122,12 @@ class NodeComponentRegistryImpl {
   // The whole registration is stored and answers every flag, so a new flag needs no
   // plumbing in `register` or `clear`.
   private readonly registry = createTypeRegistry<NodeComponentRegistration>('NodeComponentRegistry');
+  private registrations = 0;
+
+  /** Moves on each registration, so a reader that caches an answer of the registry knows it is stale. */
+  get version(): number {
+    return this.registrations;
+  }
 
   /**
    * A GeometryInstance3D type's component is mounted inside the node's place in the scene cull,
@@ -134,6 +140,7 @@ class NodeComponentRegistryImpl {
       ? withGeometryInstance(Component)
       : Component;
     this.registry.register(typeName, { ...registration, Component: mounted });
+    this.registrations += 1;
   }
 
   get(typeName: string): NodeComponent | undefined {
@@ -199,6 +206,7 @@ class NodeComponentRegistryImpl {
 
   clear(): void {
     this.registry.clear();
+    this.registrations += 1;
   }
 }
 
