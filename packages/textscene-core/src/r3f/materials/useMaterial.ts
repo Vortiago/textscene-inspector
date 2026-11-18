@@ -8,12 +8,16 @@ import { useEffect, useMemo } from 'react';
 import { warn } from '../../logger';
 import { MATERIAL } from '../../resources/materials/material/kind';
 import type { Material, StandardMaterial } from '../../resources/materials/material/types';
+import type { ShaderText } from '../../resources/materials/shadermaterial/types';
+import { litSurfaceForm } from '../litSurface/litSurfaceForm';
 import { useReferencedResource, type Read, type ScopedReference } from '../../resources/reading';
 
 /** What a material reference loads to. */
 type LoadedMaterial =
   /** A StandardMaterial3D to draw. */
   | { status: 'ready'; material: StandardMaterial }
+  /** A spatial ShaderMaterial, which the node lit surface draws. */
+  | { status: 'spatial-shader'; shader: ShaderText }
   /** A material type this previewer does not build: Godot's default 3D surface (ADR-0041). */
   | { status: 'declined'; type: string }
   /** No reference, a file still loading or a missing one: nothing replaces what the surface had. */
@@ -26,7 +30,10 @@ export function readyMaterial(loaded: LoadedMaterial): StandardMaterial | null {
   return loaded.status === 'ready' ? loaded.material : null;
 }
 
-/** What `reference` loads to. A ShaderMaterial is declined with a warning (ADR-0041). */
+/**
+ * What `reference` loads to. A ShaderMaterial is declined with a warning (ADR-0041), but for a spatial
+ * one under the node lit surface.
+ */
 export function useMaterial(reference: ScopedReference | undefined): LoadedMaterial {
   const read = useReferencedResource(reference ?? null, MATERIAL);
   const loaded = useMemo(() => loadedOf(read), [read]);
@@ -43,7 +50,9 @@ export function useMaterial(reference: ScopedReference | undefined): LoadedMater
 function loadedOf(read: Read<Material>): LoadedMaterial {
   if (read.status !== 'loaded') return ABSENT;
   const material = read.value;
-  return material.form === 'standard'
-    ? { status: 'ready', material }
-    : { status: 'declined', type: material.type };
+  if (material.form === 'standard') return { status: 'ready', material };
+  if (material.form !== 'spatial-shader') return { status: 'declined', type: material.type };
+  return litSurfaceForm() === 'nodes'
+    ? { status: 'spatial-shader', shader: material.shader }
+    : { status: 'declined', type: 'ShaderMaterial' };
 }
