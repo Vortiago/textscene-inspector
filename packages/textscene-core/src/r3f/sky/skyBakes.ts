@@ -20,8 +20,10 @@ import { materialReadsLights } from '../../resources/sky/readsLights';
 import { isDebanded } from '../../resources/sky/debanding';
 import {
   newSkyRadianceUpdate,
+  type SkyRadianceStep,
   type SkyUpdatePlan,
 } from '../../godot/rendering/environment/skyRadianceUpdate';
+import type { Vector3 } from '../../godot/math/vector';
 import { skyUpdateMode } from '../../resources/sky/decode';
 import { perObject } from '../../utils/perObject';
 import { holdUntilReleased } from '../useDisposeOnRelease';
@@ -39,10 +41,19 @@ interface BakedSky {
   radianceInPlace?: RadianceInPlace;
   /** Shows the lights at the bake's exposure to its background and its next bake in place. */
   setLights?: (lights: readonly SkyLight[]) => void;
-  /** The key of the lights its build drew, which a bake in place since then may have replaced. */
-  buildLightsKey: string;
+  /** What layer 0 of the radiance in place drew last. */
+  drawn: DrawnLayers;
   /** Frees the background and the radiance layers. */
   dispose: () => void;
+}
+
+/** What layer 0 of a radiance in place drew last, written only by `stepInPlace`. */
+interface DrawnLayers {
+  lightsKey: string;
+  /** Whether a render has stepped the radiance since its build. */
+  isStepped: boolean;
+  /** Whether the other layers filter from a layer 0 that changed. */
+  isFiltering: boolean;
 }
 
 /** The lights a render reads for its sky, and the key that tells one reading from the next. */
@@ -208,14 +219,17 @@ export class SkyBakes {
     for (const [exposure, baked] of this.bakes) baked?.setLights?.(exposed(lights.lights, exposure));
   }
 
-  /** Whether the build of the bake at `exposure` drew the lights read last. */
-  isBuiltWithLightsAt(exposure: number): boolean {
-    return this.bakes.get(this.keyOf(exposure))?.buildLightsKey === this.lights.key;
-  }
-
-  /** The bake in place of the radiance at `exposure`, absent for a sky with none. */
-  inPlaceAt(exposure: number): RadianceInPlace | undefined {
-    return this.bakes.get(this.keyOf(exposure))?.radianceInPlace;
+  /** Runs `step` on the radiance at `exposure` and answers whether it drew, as `stepInPlace` does. */
+  stepInPlaceAt(
+    exposure: number,
+    step: SkyRadianceStep,
+    position: Vector3,
+    isDrawnEachBake: boolean
+  ): boolean {
+    const baked = this.bakes.get(this.keyOf(exposure));
+    if (!baked?.radianceInPlace) return false;
+    const draw = { position, lightsKey: this.lights.key, isDrawnEachBake };
+    return stepInPlace(baked.radianceInPlace, baked.drawn, step, draw);
   }
 
   dispose(): void {
@@ -264,7 +278,47 @@ function bakeSky(gl: THREE.WebGLRenderer, input: SkyBakeInput, exposure: number)
   const built = buildSkyEnvironment(gl, { ...sky, lights: exposed(lights.lights, exposure), energy });
   if (!built) return null;
   const { layers, ...baked } = built;
-  return { ...baked, radiance: new SkyRadiance(gl, layers, rotation), buildLightsKey: lights.key };
+  const drawn = { lightsKey: lights.key, isStepped: false, isFiltering: false };
+  return { ...baked, radiance: new SkyRadiance(gl, layers, rotation), drawn };
+}
+
+/** What a render asks of a radiance in place. */
+interface InPlaceDraw {
+  /** `POSITION` of the draw. */
+  position: Vector3;
+  lightsKey: string;
+  /** Whether each bake draws again, as for a sky that reads `TIME` or `POSITION`. */
+  isDrawnEachBake: boolean;
+}
+
+/** Runs `step` in place and answers whether it drew. A cycle of lights layer 0 holds draws nothing. */
+function stepInPlace(
+  inPlace: RadianceInPlace,
+  drawn: DrawnLayers,
+  step: SkyRadianceStep,
+  draw: InPlaceDraw
+): boolean {
+  if (!drawn.isStepped) {
+    // A radiance no render has stepped holds the lights, the `TIME` and the origin of its build.
+    drawn.isStepped = true;
+    if (!draw.isDrawnEachBake && drawn.lightsKey === draw.lightsKey) return false;
+    drawn.lightsKey = draw.lightsKey;
+    inPlace.bakeAgain(draw.position);
+    return true;
+  }
+  if (step.kind === 'filter') {
+    if (drawn.isFiltering) inPlace.filterLayer(step.layer);
+    return drawn.isFiltering;
+  }
+  if (step.kind !== 'bake') return false;
+  // Each bake holds one exposure, so a dirt from the exposure alone redraws what layer 0 holds.
+  const isChanged = draw.isDrawnEachBake || drawn.lightsKey !== draw.lightsKey;
+  drawn.isFiltering = isChanged && step.isFirstLayerOnly;
+  if (!isChanged) return false;
+  drawn.lightsKey = draw.lightsKey;
+  if (step.isFirstLayerOnly) inPlace.bakeFirstLayerAgain(draw.position);
+  else inPlace.bakeAgain(draw.position);
+  return true;
 }
 
 function exposed(lights: readonly SkyLight[], exposure: number): SkyLight[] {

@@ -12,11 +12,10 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { perObject } from '../../utils/perObject.js';
 import { visibleInTree } from '../visibleInTree';
 import { useFrame, useThree } from '@react-three/fiber';
 import type { AuthoredSky, Sky, SkyProperties } from '../../resources/sky/types';
-import type { RadianceInPlace, SkyLight } from '../../resources/sky/build';
+import type { SkyLight } from '../../resources/sky/build';
 import { NO_SKY_LIGHTS, noteSkyLights, skyLightEnergy, skyLightSize } from './skyLight';
 import { skyEuler } from './skyRotation';
 import { hideShownSky } from './skyRadiance';
@@ -28,7 +27,6 @@ import {
   stepSkyRadiance,
   type SkyFrameReads,
   type SkyRender,
-  type SkyRadianceStep,
 } from '../../godot/rendering/environment/skyRadianceUpdate';
 import { canvasShaderTime } from '../shaderTime/canvasShaderTime';
 import { renderUnderWay } from '../viewportRender/worldRender';
@@ -91,55 +89,6 @@ const LIGHT_SLOTS = 4;
 const cameraOrigin = new THREE.Vector3();
 
 const NO_FRAME_READS: SkyFrameReads = { time: false, position: false };
-
-/** What layer 0 of a radiance in place last drew: null lights for one no render has stepped. */
-interface DrawnRadiance {
-  lightsKey: string | null;
-  /** Whether the other layers filter from a layer 0 that changed. */
-  isFiltering: boolean;
-}
-
-/** Written only by `stepInPlace`, once for each radiance, which viewports of one sky share. */
-const drawnRadianceOf = perObject((_inPlace: RadianceInPlace): DrawnRadiance => ({
-  lightsKey: null,
-  isFiltering: false,
-}));
-
-/** What a render asks of a radiance in place. */
-interface InPlaceDraw {
-  /** The camera origin that last dirtied the sky: a replayed probe render has none of its own. */
-  position: Vector3;
-  lightsKey: string;
-  /** Whether each bake draws again, as for a sky that reads `TIME` or `POSITION`. */
-  isDrawnEachBake: boolean;
-  /** Whether the build of the radiance drew the lights of `lightsKey`. */
-  isBuiltWithLights: boolean;
-}
-
-/** Runs `step` in place and answers whether it drew. A cycle of lights layer 0 holds draws nothing. */
-function stepInPlace(inPlace: RadianceInPlace, step: SkyRadianceStep, draw: InPlaceDraw): boolean {
-  const drawn = drawnRadianceOf(inPlace);
-  if (drawn.lightsKey === null) {
-    // A radiance no render has stepped holds the lights, the `TIME` and the origin of its build.
-    drawn.lightsKey = draw.lightsKey;
-    if (!draw.isDrawnEachBake && draw.isBuiltWithLights) return false;
-    inPlace.bakeAgain(draw.position);
-    return true;
-  }
-  if (step.kind === 'filter') {
-    if (drawn.isFiltering) inPlace.filterLayer(step.layer);
-    return drawn.isFiltering;
-  }
-  if (step.kind !== 'bake') return false;
-  // Each bake holds one exposure, so a dirt from the exposure alone redraws what layer 0 holds.
-  const isChanged = draw.isDrawnEachBake || drawn.lightsKey !== draw.lightsKey;
-  drawn.isFiltering = isChanged && step.isFirstLayerOnly;
-  if (!isChanged) return false;
-  drawn.lightsKey = draw.lightsKey;
-  if (step.isFirstLayerOnly) inPlace.bakeFirstLayerAgain(draw.position);
-  else inPlace.bakeAgain(draw.position);
-  return true;
-}
 
 /** What `material` reads that changes from render to render: a built-in sky reads neither. */
 function frameReadsOf(material: Sky['material']): SkyFrameReads {
@@ -241,7 +190,7 @@ export function SkyLayer({
     const shaderTime = canvasShaderTime(gl);
     let seenJumps = shaderTime.jumps;
     const stepRadiance = (render: SkyRender, camera?: THREE.Camera) => {
-      const read = lightsRead.current ?? lights;
+      const read = lightsRead.current!;
       bakes.followLights(read);
       // The exposure scales the light data, and so dirties the sky, unless every energy is 0.
       const isExposed = readsLights && read.lights.some((light) => light.energy !== 0);
@@ -257,14 +206,7 @@ export function SkyLayer({
         noteSkyFrame(update, frameReads, shaderTime.time, camera.getWorldPosition(cameraOrigin));
       const step = stepSkyRadiance(update, plan, render, isLightDirtied || isFrameDirtied);
       if (!update.baked) return;
-      const inPlace = bakes.inPlaceAt(update.baked.exposure);
-      if (!inPlace) return;
-      const isDrawn = stepInPlace(inPlace, step, {
-        position: update.previousPosition,
-        lightsKey: read.key,
-        isDrawnEachBake: isFrameRead,
-        isBuiltWithLights: bakes.isBuiltWithLightsAt(update.baked.exposure),
-      });
+      const isDrawn = bakes.stepInPlaceAt(update.baked.exposure, step, update.previousPosition, isFrameRead);
       // A probe captures again on a change of the Environment, as a new bake of the lights notes one.
       if (isDrawn && !isFrameRead) noteEnvironmentChange(scene, environment);
     };

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { vi } from 'vitest';
-import { createSkyLayers, cubeRadiance, disposeSkyLayers, SkyLayerBaker, type SkyLayers } from './skyLayers';
+import { cubeRadiance, type SkyLayers } from './skyLayers';
+import { OctmapRadiance, type OctmapSky } from './octmapRadiance';
 import type { SkyBake } from './types';
 import type { ProjectSampling } from '../../shaders/uniforms/samplerState';
 
@@ -18,7 +19,7 @@ export function debandingDrawnBy(renderer: THREE.WebGLRenderer, bake: () => void
   return drawn;
 }
 
-/** Godot's sky layers of the cube `radiance`, every layer baked at once. The caller frees them. */
+/** Godot's sky layers of the cube `radiance`, baked through the real bake. The caller frees them. */
 export function bakeSkyLayers(
   gl: THREE.WebGLRenderer,
   radiance: THREE.CubeTexture,
@@ -26,17 +27,9 @@ export function bakeSkyLayers(
   debanding: number,
   sampling?: ProjectSampling
 ): SkyLayers {
-  const layers = createSkyLayers(bake, sampling);
-  try {
-    const baker = new SkyLayerBaker(gl, layers, bake.radianceFilter);
-    try {
-      baker.bakeEveryLayer(cubeRadiance(gl, radiance, debanding));
-    } finally {
-      baker.dispose();
-    }
-    return layers;
-  } catch (error) {
-    disposeSkyLayers(layers);
-    throw error;
-  }
+  const cubeSky: OctmapSky = {
+    draw: (renderer, octmap, layout) => cubeRadiance(renderer, radiance, debanding)(octmap, layout),
+    dispose: () => {},
+  };
+  return new OctmapRadiance(gl, bake, cubeSky, sampling).releaseLayers();
 }
