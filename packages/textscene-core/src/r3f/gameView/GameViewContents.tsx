@@ -58,7 +58,11 @@ function RootViewport() {
           </EditedRootProvider>
         </SceneResourcesProvider>
       )}
-      <RootViewportPresenter projectWindow={projectWindow} isTransparent={isTransparent} />
+      <RootViewportPresenter
+        projectWindow={projectWindow}
+        drawnWindow={drawnWindow}
+        isTransparent={isTransparent}
+      />
     </>
   );
 }

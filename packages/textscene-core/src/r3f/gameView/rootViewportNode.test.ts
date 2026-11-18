@@ -58,6 +58,13 @@ describe('rootViewportNode', () => {
     });
   });
 
+  it('writes the 2D override in its raw properties too, so a re-parse lays out the same', () => {
+    const settings = parseProjectSettings(
+      ['[display]', 'window/size/window_width_override=800', 'window/stretch/mode="canvas_items"'].join('\n')
+    );
+    expect(nodeFor(settings, []).rawProperties.size_2d_override).toBe('Vector2(1152, 648)');
+  });
+
   it('owns its World3D and draws every frame', () => {
     expect(propertiesOf(nodeFor(null, []))).toMatchObject({
       own_world_3d: true,

@@ -19,9 +19,12 @@ export interface RootWindow {
   drawRect: Rect2;
 }
 
+/** The root's minimum size, against tiny-window bugs (`scene_tree.cpp:2043`). */
+const ROOT_MIN_EXTENT = 64;
+
 export function rootWindow(settings: ProjectSettings | null): RootWindow {
   const { width, height } = projectWindowSize(settings);
-  const size = { x: width, y: height };
+  const size = { x: Math.max(ROOT_MIN_EXTENT, width), y: Math.max(ROOT_MIN_EXTENT, height) };
   const contentScale = projectContentScale(settings);
   const { renderSize, layoutSize, drawRect } = windowContentScale(size, contentScale);
   // Viewport mode sets no 2D override (`window.cpp:1337-1347`).
@@ -31,7 +34,8 @@ export function rootWindow(settings: ProjectSettings | null): RootWindow {
 
 /** The target at the size the pane draws it, when smaller (ADR-0087). A hidden pane keeps it. */
 export function fittedTargetSize(window: RootWindow, paneScale: number): Vector2 {
-  const scale = paneScale * windowPixelsPerTargetPixel(window);
+  // A window that minifies its target keeps Godot's ratio: only the pane, or a magnification, shrinks it.
+  const scale = paneScale * Math.max(1, windowPixelsPerTargetPixel(window));
   if (!(scale > 0) || scale >= 1) return window.targetSize;
   const { targetSize } = window;
   return { x: shrunkExtent(targetSize.x, scale), y: shrunkExtent(targetSize.y, scale) };
@@ -49,6 +53,13 @@ export function shrinkRootWindow(window: RootWindow, targetSize: Vector2): RootW
   const { size2dOverride } = window;
   const hasOverride = !vector2Equals(size2dOverride, VECTOR2_ZERO);
   return { ...window, targetSize, size2dOverride: hasOverride ? size2dOverride : window.targetSize };
+}
+
+/** The window magnifies the drawn target only at full size: a shrunk one is drawn at about its own pixels. */
+export function magnifiesTarget(projectWindow: RootWindow, drawnWindow: RootWindow): boolean {
+  const { targetSize, drawRect } = projectWindow;
+  if (!vector2Equals(drawnWindow.targetSize, targetSize)) return false;
+  return drawRect.w !== targetSize.x || drawRect.h !== targetSize.y;
 }
 
 function shrunkExtent(extent: number, scale: number): number {

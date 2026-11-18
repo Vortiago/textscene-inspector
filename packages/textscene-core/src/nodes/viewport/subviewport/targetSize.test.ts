@@ -120,25 +120,24 @@ describe('warnOfCappedTarget', () => {
   const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
   afterEach(() => warn.mockClear());
 
-  function nodeSized(size: Vector2): TscnNode {
+  function sizesOf(size: Vector2) {
     const properties = { size, size_2d_override: { x: 0, y: 0 }, size_2d_override_stretch: false };
-    return { name: 'View', type: 'SubViewport', children: [], properties } as unknown as TscnNode;
+    const node = { name: 'View', type: 'SubViewport', children: [], properties } as unknown as TscnNode;
+    return viewportPassSizes(node, null);
   }
 
-  it('logs once the size Godot renders and the size WebGL draws', () => {
-    const node = nodeSized({ x: 65536, y: 100 });
-    warnOfCappedTarget(node, viewportPassSizes(node, null));
-    warnOfCappedTarget(node, viewportPassSizes(node, null));
+  it('logs once for a path, over each rebuild of its node, the size Godot renders and the size WebGL draws', () => {
+    warnOfCappedTarget('Root/Capped', sizesOf({ x: 65536, y: 100 }));
+    warnOfCappedTarget('Root/Capped', sizesOf({ x: 65536, y: 100 }));
     expect(warn.mock.calls).toEqual([
       [
-        `View: the 65536 x 100 viewport is drawn at ${MAX_TEXTURE_EXTENT} x 100, the largest texture WebGL allocates`,
+        `Root/Capped: the 65536 x 100 viewport is drawn at ${MAX_TEXTURE_EXTENT} x 100, the largest texture WebGL allocates`,
       ],
     ]);
   });
 
   it('logs nothing for a target under the cap', () => {
-    const node = nodeSized({ x: 800, y: 450 });
-    warnOfCappedTarget(node, viewportPassSizes(node, null));
+    warnOfCappedTarget('Root/Small', sizesOf({ x: 800, y: 450 }));
     expect(warn).not.toHaveBeenCalled();
   });
 });

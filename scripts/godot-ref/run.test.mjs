@@ -523,6 +523,13 @@ describe('projectWindowSizeFromIni', () => {
     expect(projectWindowSizeFromIni(ini)).toEqual({ width: 320, height: 200 });
   });
 
+  it('truncates a fractional override, as the engine reads an INT setting', () => {
+    expect(projectWindowSizeFromIni('window/size/window_width_override=800.6')).toEqual({
+      width: 800,
+      height: 648,
+    });
+  });
+
   it('takes an override on one axis alone, as the engine does', () => {
     expect(projectWindowSizeFromIni('window/size/window_width_override=1920')).toEqual({
       width: 1920,

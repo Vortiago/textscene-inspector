@@ -556,7 +556,8 @@ export function projectViewportSizeFromIni(sourceIni) {
 function windowSizeSetting(sourceIni, key) {
   const match = new RegExp(`^\\s*window/size/${key}\\s*=\\s*(\\S+)`, 'm').exec(sourceIni ?? '');
   const value = Number(match?.[1]);
-  return Number.isFinite(value) && value > 0 ? Math.round(value) : null;
+  const whole = Math.trunc(value);
+  return Number.isFinite(whole) && whole > 0 ? whole : null;
 }
 
 /** The window the project opens: each axis its override above 0, else the viewport's (main.cpp:2635-2644). */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ProjectSettings } from '../../parser/projectSettingsParser';
-import { fittedTargetSize, rootWindow, shrinkRootWindow } from './rootWindow';
+import { fittedTargetSize, magnifiesTarget, rootWindow, shrinkRootWindow } from './rootWindow';
 
 /** A project at Godot's default viewport, 1152 x 648, with `stretch` keys under `display/window/stretch/`. */
 function project(window: [number, number] | null, stretch: Record<string, string>): ProjectSettings {
@@ -37,6 +37,11 @@ describe('rootWindow', () => {
       expect([size(root.targetSize), size(root.size2dOverride), `${x},${y} ${w}x${h}`]).toEqual(expected);
     }
   );
+
+  it('opens no smaller than the root minimum of 64 on each axis (`scene_tree.cpp:2043`)', () => {
+    expect(rootWindow(project([120, 60], {})).size).toEqual({ x: 120, y: 64 });
+    expect(rootWindow(project([10, 10], {})).size).toEqual({ x: 64, y: 64 });
+  });
 
   it('opens at the window override, else at the viewport size', () => {
     expect(rootWindow(project([800, 600], {})).size).toEqual({ x: 800, y: 600 });
@@ -84,6 +89,16 @@ describe('fittedTargetSize', () => {
     expect(fittedTargetSize(magnified, 0.25)).toEqual({ x: 576, y: 324 });
   });
 
+  it('keeps the target a window minifies, as Godot renders it, in a pane that shows the whole window', () => {
+    const minified = rootWindow(project(null, { mode: 'viewport', scale: '0.5' }));
+    expect(fittedTargetSize(minified, 1)).toBe(minified.targetSize);
+  });
+
+  it('scales a target the window minifies by the pane alone', () => {
+    const minified = rootWindow(project(null, { mode: 'viewport', scale: '0.5' }));
+    expect(fittedTargetSize(minified, 0.5)).toEqual({ x: 1152, y: 648 });
+  });
+
   it('keeps the target of a pane with no pixels', () => {
     expect(fittedTargetSize(stretched, 0)).toBe(stretched.targetSize);
   });
@@ -114,5 +129,23 @@ describe('shrinkRootWindow', () => {
       { x: 576, y: 324 },
       { x: 1152, y: 648 },
     ]);
+  });
+});
+
+describe('magnifiesTarget', () => {
+  const magnified = rootWindow(project([2400, 1400], { mode: 'viewport', scale_mode: 'integer' }));
+
+  it('is true where the window draws its full target larger than its pixels', () => {
+    expect(magnifiesTarget(magnified, magnified)).toBe(true);
+  });
+
+  it('is false for a target the window draws 1:1', () => {
+    const canvasItems = rootWindow(project([800, 800], { mode: 'canvas_items' }));
+    expect(magnifiesTarget(canvasItems, canvasItems)).toBe(false);
+  });
+
+  it('is false for a target shrunk to the size the pane draws it', () => {
+    const shrunk = shrinkRootWindow(magnified, fittedTargetSize(magnified, 0.2));
+    expect(magnifiesTarget(magnified, shrunk)).toBe(false);
   });
 });

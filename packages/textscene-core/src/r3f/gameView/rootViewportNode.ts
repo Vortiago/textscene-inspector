@@ -27,6 +27,7 @@ export function rootViewportNode(
   const { targetSize, size2dOverride } = window;
   const raw: Record<string, string> = {
     size: `Vector2i(${targetSize.x}, ${targetSize.y})`,
+    size_2d_override: `Vector2(${size2dOverride.x}, ${size2dOverride.y})`,
     // A window always stretches its 2D override (`viewport.h:727`).
     size_2d_override_stretch: 'true',
     // The root owns its World3D, and it draws every frame.

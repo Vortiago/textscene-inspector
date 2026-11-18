@@ -5,7 +5,7 @@
  * so Node3D descendants draw in the parent's view and CanvasItem descendants do not.
  */
 
-import { lazy, useMemo, type ReactNode } from 'react';
+import { lazy, useEffect, useMemo, type ReactNode } from 'react';
 import {
   OffscreenViewportPass,
   OwnCanvasWorldScope,
@@ -115,10 +115,10 @@ export function ViewportMount({
   // On either path the subtree's canvas items are in this viewport's World2D, never the parent's.
   // So are its CanvasModulate and its lights: the parent canvas's tint stops at this viewport.
   const sizes = viewportPassSizes(node, useViewportRect(path));
-  warnOfCappedTarget(node, sizes);
   // Stable while the numbers are, so the pass and the light host do not follow a new object.
   const size = useStableVector2(sizes.target);
   const renderSize = useStableVector2(sizes.render);
+  useEffect(() => warnOfCappedTarget(path, { render: renderSize, target: size }), [path, renderSize, size]);
   // Godot lays Controls out by the visible rect (`viewport.cpp:1202-1216`). Only the target is capped.
   const layoutSize = useStableVector2(sizes.layout);
   const viewSize = useStableVector2(sizes.view);

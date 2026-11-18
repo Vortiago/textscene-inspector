@@ -78,13 +78,19 @@ function subViewportPassSizes(size: Vector2, properties: SubViewportProperties):
   };
 }
 
-/** Logs once for each node whose target the cap makes smaller than Godot renders it. */
-export function warnOfCappedTarget(node: TscnNode, { render, target }: ViewportPassSizes): void {
+/** The owner of the cap warnings: one per path and size, for the session. */
+const CAPPED_TARGETS = {};
+
+/** Logs once for each path whose target the cap makes smaller than Godot renders it. */
+export function warnOfCappedTarget(
+  path: string,
+  { render, target }: Pick<ViewportPassSizes, 'render' | 'target'>
+): void {
   if (vector2Equals(render, target)) return;
   warnOnce(
-    node,
-    'capped-target',
-    `${node.name}: the ${render.x} x ${render.y} viewport is drawn at ${target.x} x ${target.y}, ` +
+    CAPPED_TARGETS,
+    `${path} ${render.x}x${render.y}`,
+    `${path}: the ${render.x} x ${render.y} viewport is drawn at ${target.x} x ${target.y}, ` +
       'the largest texture WebGL allocates'
   );
 }

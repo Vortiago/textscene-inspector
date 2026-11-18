@@ -15,3 +15,11 @@ export function targetRectInPane(pane: Vector2, window: Pick<RootWindow, 'size' 
 export function paneScale(pane: Vector2, size: Vector2): number {
   return Math.min(pane.x / size.x, pane.y / size.y);
 }
+
+/** A nearest sample this far into a texel edge lands where an exact one would. */
+const TIE_TEXELS = 1 / 1024;
+
+/** The quad shift, in clip space, that floors an edge sample as Godot does (`image.cpp:1081,1085`). */
+export function nearestTieShift(targetSize: Vector2): Vector2 {
+  return { x: (-2 * TIE_TEXELS) / targetSize.x, y: (2 * TIE_TEXELS) / targetSize.y };
+}
