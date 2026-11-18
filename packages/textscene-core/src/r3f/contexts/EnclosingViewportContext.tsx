@@ -5,6 +5,9 @@
  */
 import { createContext, useContext, type ReactNode } from 'react';
 
+/** The In-game view's root viewport, the scene's root window: empty, so each node below keeps its live path. */
+export const ROOT_VIEWPORT_PATH = '';
+
 const EnclosingViewportContext = createContext<string | null>(null);
 EnclosingViewportContext.displayName = 'EnclosingViewportContext';
 

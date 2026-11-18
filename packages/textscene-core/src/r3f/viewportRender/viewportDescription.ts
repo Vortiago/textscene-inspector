@@ -28,8 +28,8 @@ export interface ViewportDescription {
   mipmapBias: number;
   positionalShadowAtlas: PositionalShadowAtlasSettings;
   anisotropicLevel: number;
-  /** `editor`: the free or previewed camera. `elected`: the viewport's current camera. */
-  camera: 'editor' | 'elected';
+  /** `editor`: the free or previewed camera. `current`: the viewport's current camera, as the scene holds it. */
+  camera: 'editor' | 'current';
   drawsEditorChrome: boolean;
   /** Whether the editor's preview sun and preview Environment stand in (ADR-0025). */
   previewsEnvironment: boolean;
@@ -62,7 +62,7 @@ export function gameViewportDescription(settings: ProjectSettings | null): Viewp
 }
 
 /** A game draws through the viewport's current camera, with no editor element and no preview. */
-const GAME_RULES = { camera: 'elected', drawsEditorChrome: false, previewsEnvironment: false } as const;
+const GAME_RULES = { camera: 'current', drawsEditorChrome: false, previewsEnvironment: false } as const;
 
 /** The node's properties the SubViewport adapter reads. */
 type SubViewportFacts = Pick<

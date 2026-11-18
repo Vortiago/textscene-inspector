@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseProjectSettings } from '../../parser/projectSettingsParser';
-import { ROOT_VIEWPORT_PATH, rootViewportNode } from './rootViewportNode';
+import { rootViewportNode } from './rootViewportNode';
+import { ROOT_VIEWPORT_PATH } from '../contexts/EnclosingViewportContext';
 import type { SubViewportProperties } from '../../nodes/viewport/subviewport/types';
 import type { TscnNode } from '../../parser/types';
 import { SubViewportUpdateMode } from '../../godot/scene/viewport';

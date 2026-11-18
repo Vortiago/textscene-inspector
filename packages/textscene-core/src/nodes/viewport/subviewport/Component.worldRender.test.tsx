@@ -34,7 +34,7 @@ async function rendersUnderWay(source: string): Promise<(WorldRender | null)[]> 
   const parsed = new TscnParser().parse(source);
   const captured: { current: THREE.WebGLRenderer | null } = { current: null };
   const renderer = await ReactThreeTestRenderer.create(
-    <SceneStack loader={createFakeResourceLoader().loader} scene={parsed} workspace="3d">
+    <SceneStack loader={createFakeResourceLoader().loader} scene={parsed} source={source} workspace="3d">
       <ViewportTextureProvider>
         <ViewportPassProvider>
           <NodeDispatcher nodes={parsed.nodes} />
@@ -65,7 +65,7 @@ describe('<SubViewport> world draw', () => {
     );
 
     expect(render).toMatchObject({
-      viewport: { msaa3D: 2, camera: 'elected', drawsEditorChrome: false, previewsEnvironment: false },
+      viewport: { msaa3D: 2, camera: 'current', drawsEditorChrome: false, previewsEnvironment: false },
       hasCanvasTransform: false,
     });
     expect(render?.shadowAtlas).not.toBeNull();

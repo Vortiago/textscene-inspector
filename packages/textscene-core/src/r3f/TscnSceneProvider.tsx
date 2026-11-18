@@ -50,7 +50,7 @@ function SceneProviders({ scene, children }: OpenedSceneProps) {
   const panelId = useId();
   const { parsed, sceneGraph } = useSceneGraphs(scene);
   if (parsed.error) throw new Error(`expected the text of a .tscn scene, got: ${parsed.error}`);
-  const hierarchyValue = useMemo(() => ({ sceneGraph, panelId }), [sceneGraph, panelId]);
+  const hierarchyValue = useMemo(() => ({ sceneGraph, panelId, scene }), [sceneGraph, panelId, scene]);
   const { loader } = resourcePipelineOf(scene);
   const withProviders = previewShellProviders({
     hierarchyValue,

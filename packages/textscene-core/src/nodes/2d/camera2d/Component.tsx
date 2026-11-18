@@ -1,8 +1,8 @@
 /**
  * <Camera2D> renders no geometry. It tags its group with `userData.camera2d`, the
- * parsed framing properties, for a sub-viewport's 2D pass (`selectViewportCamera2D`),
- * which reads the position off the group's world matrix. The main 2D stage frames
- * fit-to-content (ADR-0006).
+ * parsed framing properties, and its path, for the 2D pass of the viewport it is current
+ * in (`camera2DAtPath`), which reads the position off the group's world matrix. The main
+ * 2D stage frames fit-to-content (ADR-0006).
  */
 
 import { useMemo } from 'react';
@@ -11,6 +11,7 @@ import { node2dGroupProps, node2dGroupSpread } from '../../../r3f/node2dTransfor
 import { node2dZStep, useCanvasKeyOfNode } from '../../../r3f/canvasItemState';
 import type { Camera2DTag } from '../../../r3f/viewportRender/camera2DView';
 import type { Camera2DProperties } from './types';
+import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 
 export function Camera2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Camera2DProperties;
@@ -19,6 +20,7 @@ export function Camera2D({ node, children }: NodeComponentProps) {
   // directly rather than deriving a second one of its own.
   const renderOrder = useCanvasKeyOfNode(node, node2dZStep(props));
   const visible = props.visible !== false;
+  const tscnPath = useNodePath() ?? node.name;
   return (
     <group
       name={node.name}
@@ -26,6 +28,7 @@ export function Camera2D({ node, children }: NodeComponentProps) {
       visible={visible}
       renderOrder={renderOrder}
       userData={{
+        tscnPath,
         camera2d: {
           zoom: props.zoom,
           offset: props.offset,

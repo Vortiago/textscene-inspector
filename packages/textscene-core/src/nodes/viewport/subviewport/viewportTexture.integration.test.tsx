@@ -21,7 +21,7 @@ async function renderScene(source: string, workspace: '2d' | '3d' = '3d') {
   const parsed = new TscnParser().parse(source);
   const fake = createFakeResourceLoader();
   return ReactThreeTestRenderer.create(
-    <SceneStack workspace={workspace} loader={fake.loader} scene={parsed}>
+    <SceneStack workspace={workspace} loader={fake.loader} scene={parsed} source={source}>
       <ViewportTextureProvider>
         <NodeDispatcher nodes={parsed.nodes} />
       </ViewportTextureProvider>

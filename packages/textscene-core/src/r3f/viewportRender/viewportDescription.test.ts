@@ -81,7 +81,7 @@ describe('gameViewportDescription', () => {
 
   it("draws by the game's rules: the current camera, no editor element and no preview", () => {
     expect(gameViewportDescription(settings)).toMatchObject({
-      camera: 'elected',
+      camera: 'current',
       drawsEditorChrome: false,
       previewsEnvironment: false,
     });
@@ -116,7 +116,7 @@ describe('subViewportDescription', () => {
       mipmapBias: 0.25,
       positionalShadowAtlas: { size: 1024, quadrantShadows: [64, 16, 4, 1] },
       anisotropicLevel: 4,
-      camera: 'elected',
+      camera: 'current',
       drawsEditorChrome: false,
       previewsEnvironment: false,
       fallbackEnvironment: null,

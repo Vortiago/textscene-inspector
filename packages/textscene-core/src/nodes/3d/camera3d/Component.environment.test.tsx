@@ -12,6 +12,7 @@ import '../worldenvironment/index';
 import { Camera3D } from './Component';
 import { WorldEnvironment } from '../worldenvironment/Component';
 import { ViewportWorld } from '../../../r3f/testing/ViewportWorld';
+import { CurrentCameras, type CurrentCameraPaths } from '../../../r3f/testing/CurrentCameras';
 import { ViewportActionsProvider } from '../../../r3f/contexts/ViewportActionsContext';
 import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
@@ -25,11 +26,10 @@ const RESOURCES: TscnInternalResource[] = [
   subResource('Environment', 'Blue', { background_mode: '1', background_color: 'Color(0, 0, 1, 1)' }),
 ];
 
-function cameraNode(name: string, environment?: string, current = false): TscnNode {
+function cameraNode(name: string, environment?: string): TscnNode {
   return makeNode(name, 'Camera3D', {
     rawProperties: {
       ...(environment ? { environment } : {}),
-      ...(current ? { current: 'true' } : {}),
     },
   });
 }
@@ -43,18 +43,21 @@ async function backgroundOf(
   world: 'root' | 'subViewport',
   viewed: string | null,
   cameras: TscnNode[],
-  worldEnvironment?: TscnNode
+  worldEnvironment?: TscnNode,
+  current: CurrentCameraPaths = new Map()
 ) {
   const renderer = await ReactThreeTestRenderer.create(
     <SceneResourcesProvider internalResources={RESOURCES}>
       <ViewportModeProvider initialShowPreviewEnvironment={false}>
         <ViewportActionsProvider initialPreviewedCameraPath={viewed}>
-          <ViewportWorld world={world}>
-            {worldEnvironment && <WorldEnvironment node={worldEnvironment} />}
-            {cameras.map((node) => (
-              <Camera3D key={node.name} node={node} />
-            ))}
-          </ViewportWorld>
+          <CurrentCameras cameras3D={current}>
+            <ViewportWorld world={world}>
+              {worldEnvironment && <WorldEnvironment node={worldEnvironment} />}
+              {cameras.map((node) => (
+                <Camera3D key={node.name} node={node} />
+              ))}
+            </ViewportWorld>
+          </CurrentCameras>
         </ViewportActionsProvider>
       </ViewportModeProvider>
     </SceneResourcesProvider>
@@ -83,8 +86,8 @@ describe('Camera3D environment', () => {
     expect(await backgroundOf('root', 'Main', [cameraNode('Main')], WORLD_BLUE)).toBe('blue');
   });
 
-  it('applies in a sub-viewport through the camera it elects', async () => {
-    const cameras = [cameraNode('A', 'SubResource("Blue")'), cameraNode('B', 'SubResource("Red")', true)];
-    expect(await backgroundOf('subViewport', null, cameras)).toBe('red');
+  it('applies in a sub-viewport through its current camera', async () => {
+    const cameras = [cameraNode('A', 'SubResource("Blue")'), cameraNode('B', 'SubResource("Red")')];
+    expect(await backgroundOf('subViewport', null, cameras, undefined, new Map([[null, 'B']]))).toBe('red');
   });
 });

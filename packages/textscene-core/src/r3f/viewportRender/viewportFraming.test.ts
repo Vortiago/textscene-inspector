@@ -11,7 +11,7 @@ import {
   orthoFrameForCamera2D,
   orthoFrameForSize,
   cameraAtPath,
-  selectViewportCamera2D,
+  camera2DAtPath,
   viewportAspect,
 } from './viewportFraming';
 import type { Camera2DTag } from './camera2DView';
@@ -29,8 +29,9 @@ function camera(tscnPath: string): THREE.PerspectiveCamera {
  * A group tagged the way `<Camera2D>` tags one. Defaults mirror Godot's: zoom 1,
  * no offset, DRAG_CENTER, enabled, and the +/-10000000 "unlimited" limits.
  */
-function camera2d(overrides: Partial<Camera2DTag> = {}): THREE.Object3D {
+function camera2d(overrides: Partial<Camera2DTag> = {}, tscnPath = 'Root/Camera2D'): THREE.Object3D {
   const group = new THREE.Object3D();
+  group.userData.tscnPath = tscnPath;
   group.userData.camera2d = {
     zoom: { x: 1, y: 1 },
     offset: { x: 0, y: 0 },
@@ -63,7 +64,7 @@ describe('cameraAtPath', () => {
     expect(cameraAtPath(new THREE.Scene(), 'Root/SubViewport/Camera3D')).toBeNull();
   });
 
-  it('is null for no elected camera', () => {
+  it('is null for a viewport with no current camera', () => {
     const scene = new THREE.Scene();
     scene.add(camera('Root/SubViewport/Camera3D'));
     expect(cameraAtPath(scene, null)).toBeNull();
@@ -77,75 +78,26 @@ describe('cameraAtPath', () => {
   });
 });
 
-describe('selectViewportCamera2D', () => {
-  it('picks the enabled Camera2D in the subtree', () => {
+describe('camera2DAtPath', () => {
+  it('finds the Camera2D group tagged with the path', () => {
     const scene = new THREE.Scene();
-    const cam = camera2d();
-    scene.add(new THREE.Object3D(), cam);
-    expect(selectViewportCamera2D(scene)).toBe(cam);
+    const mine = camera2d({}, 'Root/Sub/Mine');
+    scene.add(camera2d({}, 'Root/Sub/Other'), mine);
+    expect(camera2DAtPath(scene, 'Root/Sub/Mine')).toBe(mine);
   });
 
-  /**
-   * The inverse of the 3D rule: `scene/2d/camera_2d.cpp` on `NOTIFICATION_ENTER_TREE`
-   * claims the viewport only while `!viewport->get_camera_2d()`, so the first
-   * enabled camera in tree order keeps it. With two players in one SubViewport,
-   * the difference is a visible change of framing.
-   */
-  it('with several Camera2Ds the FIRST in tree order wins, unlike Camera3D', () => {
+  it('is null for a viewport with no current Camera2D', () => {
     const scene = new THREE.Scene();
-    const earlier = camera2d();
-    const later = camera2d();
-    scene.add(earlier, later);
-    expect(selectViewportCamera2D(scene)).toBe(earlier);
-    expect(selectViewportCamera2D(scene)).not.toBe(later);
+    scene.add(camera2d({}, 'Root/Sub/Mine'));
+    expect(camera2DAtPath(scene, null)).toBeNull();
   });
 
-  /**
-   * `enabled` gates the claim in the same `if`, and `set_enabled` repeats it, so
-   * a disabled camera neither becomes current nor blocks a later one.
-   */
-  it('skips a disabled camera and elects the next enabled one', () => {
+  it('ignores an object with the path that carries no camera2d tag', () => {
     const scene = new THREE.Scene();
-    const disabled = camera2d({ enabled: false });
-    const enabled = camera2d();
-    scene.add(disabled, enabled);
-    expect(selectViewportCamera2D(scene)).toBe(enabled);
-  });
-
-  it('returns null when every Camera2D is disabled', () => {
-    const scene = new THREE.Scene();
-    scene.add(camera2d({ enabled: false }), camera2d({ enabled: false }));
-    expect(selectViewportCamera2D(scene)).toBeNull();
-  });
-
-  /** Godot leaves the canvas transform at identity, which is origin framing. */
-  it('returns null for a subtree with no Camera2D rather than throwing', () => {
-    const scene = new THREE.Scene();
-    scene.add(new THREE.Object3D());
-    expect(selectViewportCamera2D(scene)).toBeNull();
-  });
-
-  /** Every other CanvasItem group is untagged; only `<Camera2D>` tags itself. */
-  it('ignores objects carrying no camera2d tag', () => {
-    const scene = new THREE.Scene();
-    const sprite = new THREE.Object3D();
-    sprite.userData.tscnPath = 'Root/Sprite2D';
-    scene.add(sprite);
-    expect(selectViewportCamera2D(scene)).toBeNull();
-  });
-
-  /**
-   * Pre-order traversal is the order nodes enter the tree, so a camera nested
-   * inside an earlier instanced sub-scene beats a shallower later sibling.
-   */
-  it('prefers a deeply nested earlier camera over a shallow later one', () => {
-    const scene = new THREE.Scene();
-    const player = new THREE.Object3D();
-    const nested = camera2d();
-    player.add(nested);
-    const laterSibling = camera2d();
-    scene.add(player, laterSibling);
-    expect(selectViewportCamera2D(scene)).toBe(nested);
+    const plain = new THREE.Object3D();
+    plain.userData.tscnPath = 'Root/Sub/Mine';
+    scene.add(plain);
+    expect(camera2DAtPath(scene, 'Root/Sub/Mine')).toBeNull();
   });
 });
 

@@ -38,7 +38,7 @@ import {
   orthoFrameForCamera2D,
   orthoFrameForSize,
   cameraAtPath,
-  selectViewportCamera2D,
+  camera2DAtPath,
   viewportAspect,
 } from './viewportFraming';
 import { createCanvasTarget, createSceneTarget } from '../offscreen/targets';
@@ -52,6 +52,7 @@ import {
 import { viewportCanvasColorSpace } from './viewportTargetOptions';
 import { OffscreenToneMapStage, type OffscreenToneMap } from '../environment/offscreenToneMap';
 import { ViewportPassAttributes } from '../environment/worldExposure';
+import { useCurrentCamera2D } from '../currentCamera';
 import type { Camera2DTag } from './camera2DView';
 import { fitToAspect, fittedAspect } from './projectionFit';
 import { PendingSuspense } from '../../resources/PendingSuspense';
@@ -229,6 +230,7 @@ export function OffscreenViewportPass({
 
   // Godot draws a viewport's canvas through its canvas transform, the identity until a Camera2D in
   // the subtree makes itself current, so the pass narrows this camera to that view each frame.
+  const camera2DPath = useCurrentCamera2D(path);
   const backdropAnchor = useRef<THREE.Group>(null);
   const anchorBackdrop = useCallback(() => {
     const anchor = backdropAnchor.current;
@@ -242,7 +244,7 @@ export function OffscreenViewportPass({
       // transform, and nothing has refreshed it yet this frame: `gl.render`
       // updates matrices, and this pass runs before the main one.
       canvas.updateMatrixWorld(true);
-      const camera2d = selectViewportCamera2D(canvas);
+      const camera2d = camera2DAtPath(canvas, camera2DPath);
       const tag = camera2d?.userData.camera2d as Camera2DTag | undefined;
       const framed =
         camera2d && tag
@@ -251,7 +253,7 @@ export function OffscreenViewportPass({
       applyOrthoFrame(orthoCamera, frameOverView(framed, layoutSize, viewSize));
       anchorBackdrop();
     },
-    [orthoCamera, layoutSize, viewSize, anchorBackdrop]
+    [orthoCamera, layoutSize, viewSize, anchorBackdrop, camera2DPath]
   );
 
   const drawPass = useCallback(() => {

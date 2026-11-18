@@ -26,6 +26,8 @@ import {
   TYPED_COLLECTIONS_OUT,
   VARIANT_PROPERTIES_OUT,
   NODE_DEFAULTS_MODULE_OUT,
+  PROPERTY_METHODS_MODULE_OUT,
+  renderFromPropertyMethodCaptures,
 } from './build-node-base-types.mjs';
 import { RESOURCE_CLASSES } from './build-node-catalog/extraClasses.mjs';
 import { PROPS_OUT, RESOURCE_BASES_OUT, RESOURCE_PROPS_OUT } from './build-node-catalog/paths.mjs';
@@ -166,6 +168,10 @@ describe('deriveBaseTypes', () => {
 
   it('the committed nodeDefaults.generated.ts matches the captures', () => {
     expect(readFileSync(NODE_DEFAULTS_MODULE_OUT, 'utf8')).toBe(renderFromNodeDefaultCaptures());
+  });
+
+  it('the committed propertyMethods.generated.ts matches the captures', () => {
+    expect(readFileSync(PROPERTY_METHODS_MODULE_OUT, 'utf8')).toBe(renderFromPropertyMethodCaptures());
   });
 
   it('the committed variantProperties.generated.ts matches the captures', () => {

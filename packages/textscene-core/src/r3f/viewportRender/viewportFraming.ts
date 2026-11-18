@@ -8,11 +8,7 @@ import { camera2DView, type Camera2DTag } from './camera2DView';
 import type { Vector2 } from '../../godot/math/vector';
 import type { Rect2 } from '../../godot/math/rect2';
 
-/**
- * The scene's camera at `cameraPath`, or null before it mounts. The world elects the camera
- * (`electCameraOfViewport`) from what the cameras publish, so the pass draws through the one whose
- * attributes it draws at.
- */
+/** The scene's camera at `cameraPath`, the viewport's current camera, or null before it mounts. */
 export function cameraAtPath(root: THREE.Object3D, cameraPath: string | null): THREE.Camera | null {
   if (cameraPath === null) return null;
   let found: THREE.Camera | null = null;
@@ -24,26 +20,14 @@ export function cameraAtPath(root: THREE.Object3D, cameraPath: string | null): T
   return found;
 }
 
-/**
- * The first enabled Camera2D in tree order, or null. `scene/2d/camera_2d.cpp` claims
- * the viewport only while `!viewport->get_camera_2d()`, the inverse of the 3D rule.
- * The editor-only branch is not modelled: the previewer shows the running scene.
- * No path filter: a 2D subtree is always portalled, so `root` holds only its cameras.
- */
-export function selectViewportCamera2D(root: THREE.Object3D): THREE.Object3D | null {
-  let chosen: THREE.Object3D | null = null;
-
-  // Depth-first pre-order, which is the order nodes enter the tree.
+/** The group of the Camera2D at `cameraPath`, the viewport's current one, or null before it mounts. */
+export function camera2DAtPath(root: THREE.Object3D, cameraPath: string | null): THREE.Object3D | null {
+  if (cameraPath === null) return null;
+  let found: THREE.Object3D | null = null;
   root.traverse((object) => {
-    if (chosen) return;
-    const tag = object.userData?.camera2d as Camera2DTag | undefined;
-    // `set_enabled` makes the same guarded claim, so a disabled camera never
-    // becomes current and never blocks a later one.
-    if (!tag || tag.enabled === false) return;
-    chosen = object;
+    if (!found && object.userData?.camera2d && object.userData.tscnPath === cameraPath) found = object;
   });
-
-  return chosen;
+  return found;
 }
 
 /**

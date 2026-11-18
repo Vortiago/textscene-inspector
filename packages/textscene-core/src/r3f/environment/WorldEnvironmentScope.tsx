@@ -207,7 +207,7 @@ function SubViewportEnvironment({ children }: { children: ReactNode }) {
 
 /**
  * Gives the tonemap stage of a viewport pass, below, the Environment the pass draws with. It reads
- * the camera the enclosing `ViewportPassAttributes` elects.
+ * the camera the enclosing `ViewportPassAttributes` draws through.
  *
  * @canonical The Environment a viewport pass draws with
  */

@@ -21,6 +21,7 @@ import { fireSceneRender } from '../../../r3f/testing/fireSceneRender';
 import { World2DCamera } from '../../../r3f/components/Canvas2DStage/world2DCamera';
 import { drawAsCanvasPass } from '../../../r3f/testing/worldRenders';
 import { Camera2DAnchorMode } from '../../../godot/scene/camera2d';
+import { CurrentCameras } from '../../../r3f/testing/CurrentCameras';
 
 function backgroundNode(properties: Record<string, string> = {}): TscnNode {
   return {
@@ -44,6 +45,10 @@ function layerNode(name: string, properties: Record<string, string> = {}): TscnN
     properties: parseParallaxLayer({ type: 'node', attributes: { name } }, properties),
   };
 }
+
+/** The current Camera2D of the root viewport, as the scene holds it. */
+const CAMERA_PATH = 'Cam';
+const CURRENT_2D = new Map([[null, CAMERA_PATH]]);
 
 const CAMERA_TAG: Camera2DTag = {
   enabled: true,
@@ -91,12 +96,12 @@ describe('<ParallaxBackground>', () => {
   it('ignores the ancestor transform chain, like a CanvasLayer attached to the viewport', async () => {
     const storeCamera = { current: null as THREE.Camera | null };
     const renderer = await ReactThreeTestRenderer.create(
-      <>
+      <CurrentCameras cameras2D={CURRENT_2D}>
         <StoreCamera into={storeCamera} />
         <group position={[300, -200, 0]}>
           <ParallaxBackground node={backgroundNode()} />
         </group>
-      </>
+      </CurrentCameras>
     );
     const scene = renderer.scene.instance;
     fireSceneRender(scene, storeCamera.current!);
@@ -113,14 +118,14 @@ describe('<ParallaxBackground>', () => {
     // The anchor is `CanvasLayerScope`'s, which every CanvasLayer's subtree draws in.
     const node = backgroundNode();
     const renderer = await ReactThreeTestRenderer.create(
-      <>
-        <group userData={{ camera2d: CAMERA_TAG }} position={[600, -400, 0]} />
+      <CurrentCameras cameras2D={CURRENT_2D}>
+        <group userData={{ camera2d: CAMERA_TAG, tscnPath: CAMERA_PATH }} position={[600, -400, 0]} />
         <ParallaxBackground node={node}>
           <CanvasLayerScope node={node}>
             <group name="Probe" />
           </CanvasLayerScope>
         </ParallaxBackground>
-      </>
+      </CurrentCameras>
     );
     const scene = renderer.scene.instance;
     scene.updateMatrixWorld();
@@ -138,11 +143,11 @@ describe('<ParallaxBackground>', () => {
     // camera, which carries no Godot canvas transform.
     const storeCamera = { current: null as THREE.Camera | null };
     const renderer = await ReactThreeTestRenderer.create(
-      <>
+      <CurrentCameras cameras2D={CURRENT_2D}>
         <StoreCamera into={storeCamera} />
-        <group userData={{ camera2d: CAMERA_TAG }} position={[600, -400, 0]} />
+        <group userData={{ camera2d: CAMERA_TAG, tscnPath: CAMERA_PATH }} position={[600, -400, 0]} />
         <ParallaxBackground node={backgroundNode()} />
-      </>
+      </CurrentCameras>
     );
     const scene = renderer.scene.instance;
     fireSceneRender(scene, storeCamera.current!);
@@ -158,8 +163,8 @@ describe('<ParallaxBackground>', () => {
     const worldFixed = layerNode('WorldFixed', { motion_scale: 'Vector2(1, 1)' });
     const nested = layerNode('Nested', { motion_scale: 'Vector2(1, 1)' });
     const renderer = await ReactThreeTestRenderer.create(
-      <>
-        <group userData={{ camera2d: CAMERA_TAG }} position={[600, -400, 0]} />
+      <CurrentCameras cameras2D={CURRENT_2D}>
+        <group userData={{ camera2d: CAMERA_TAG, tscnPath: CAMERA_PATH }} position={[600, -400, 0]} />
         <NodePathProvider path="BG">
           <ParallaxBackground node={backgroundNode()}>
             <NodePathProvider path="BG/WorldFixed">
@@ -170,7 +175,7 @@ describe('<ParallaxBackground>', () => {
             </NodePathProvider>
           </ParallaxBackground>
         </NodePathProvider>
-      </>
+      </CurrentCameras>
     );
     const scene = renderer.scene.instance;
     drawAsCanvasPass(() => fireSceneRender(scene, viewportPassCamera()));
@@ -189,8 +194,8 @@ describe('<ParallaxBackground>', () => {
     // (`parallax_background.cpp:48-52`), so the authored value never reaches a layer.
     const worldFixed = layerNode('WorldFixed', { motion_scale: 'Vector2(1, 1)' });
     const renderer = await ReactThreeTestRenderer.create(
-      <>
-        <group userData={{ camera2d: CAMERA_TAG }} position={[600, -400, 0]} />
+      <CurrentCameras cameras2D={CURRENT_2D}>
+        <group userData={{ camera2d: CAMERA_TAG, tscnPath: CAMERA_PATH }} position={[600, -400, 0]} />
         <NodePathProvider path="BG">
           <ParallaxBackground node={backgroundNode({ scroll_offset: 'Vector2(300, 200)' })}>
             <NodePathProvider path="BG/WorldFixed">
@@ -198,7 +203,7 @@ describe('<ParallaxBackground>', () => {
             </NodePathProvider>
           </ParallaxBackground>
         </NodePathProvider>
-      </>
+      </CurrentCameras>
     );
     const scene = renderer.scene.instance;
     drawAsCanvasPass(() => fireSceneRender(scene, viewportPassCamera()));
@@ -218,9 +223,9 @@ describe('<ParallaxBackground>', () => {
       motion_offset: 'Vector2(-550, 0)',
     });
     const renderer = await ReactThreeTestRenderer.create(
-      <>
+      <CurrentCameras cameras2D={CURRENT_2D}>
         <StoreCamera into={storeCamera} />
-        <group userData={{ camera2d: CAMERA_TAG }} position={[600, -400, 0]} />
+        <group userData={{ camera2d: CAMERA_TAG, tscnPath: CAMERA_PATH }} position={[600, -400, 0]} />
         <NodePathProvider path="BG">
           <ParallaxBackground node={backgroundNode({ scroll_base_scale: 'Vector2(0.1, 0)' })}>
             <NodePathProvider path="BG/Clouds">
@@ -228,7 +233,7 @@ describe('<ParallaxBackground>', () => {
             </NodePathProvider>
           </ParallaxBackground>
         </NodePathProvider>
-      </>
+      </CurrentCameras>
     );
     const scene = renderer.scene.instance;
     fireSceneRender(scene, storeCamera.current!);

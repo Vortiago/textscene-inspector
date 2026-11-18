@@ -77,7 +77,7 @@ export async function portalSceneOf(
   const ProjectFixture = withProject(project);
   const captured: { current: THREE.WebGLRenderer | null } = { current: null };
   const renderer = await ReactThreeTestRenderer.create(
-    <SceneStack workspace="2d" loader={createFakeResourceLoader().loader} scene={parsed}>
+    <SceneStack workspace="2d" loader={createFakeResourceLoader().loader} scene={parsed} source={tscn}>
       <ProjectFixture>
         <ViewportPassStack captured={captured}>
           <NodeDispatcher nodes={parsed.nodes} />
@@ -185,7 +185,7 @@ export async function framesOf(
           <CaptureAnimatedValues captured={animated} />
           <ViewportRectProvider>
             <CaptureRectPublisher captured={rectPublisher} />
-            <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
+            <SceneStack workspace="2d" loader={fake.loader} scene={parsed} source={source}>
               <ViewportModeProvider initialShowPreviewEnvironment={false}>
                 <ViewportPassStack captured={captured}>
                   <CanvasWorldScope>

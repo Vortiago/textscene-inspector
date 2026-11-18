@@ -87,7 +87,7 @@ export function TscnPreviewShell({
     onSceneOpen?.(scene);
   }, [scene, onSceneOpen]);
 
-  const hierarchyValue = useMemo(() => ({ sceneGraph, panelId }), [sceneGraph, panelId]);
+  const hierarchyValue = useMemo(() => ({ sceneGraph, panelId, scene }), [sceneGraph, panelId, scene]);
   const [viewportError, setViewportError] = useState<Error | null>(null);
 
   // `treeShare` is the tree's fraction of the dock height (0..1). The dock

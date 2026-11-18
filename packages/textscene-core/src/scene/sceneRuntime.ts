@@ -13,12 +13,23 @@ export interface SceneTreeNode {
   resourceOf(kind: 'ExtResource' | 'SubResource', id: string): ResourceReference | null;
 }
 
+/** A Camera3D or a Camera2D of the loaded tree, as it enters its viewport. */
+export interface TreeCamera {
+  readonly path: string;
+  readonly dimension: '3D' | '2D';
+  /** The live path of the nearest Viewport above the camera, null for the root window. */
+  readonly viewport: string | null;
+  readonly rawProperties: Readonly<Record<string, string>>;
+}
+
 /** The Live scene tree over one written graph and one snapshot of the loads. */
 export interface SceneTree {
   /** Null where the loaded tree has no such node. It loads each scene the walk enters unloaded. */
   node(livePath: string): SceneTreeNode | null;
   /** The `%Name` table a NodePath on the node reads, to live paths (`node.cpp:1930-1938`). */
   uniquePaths(livePath: string): ReadonlyMap<string, string>;
+  /** The cameras of the loaded nodes in the order they enter the tree. The same array while no load moves. */
+  cameras(): readonly TreeCamera[];
 }
 
 /** What the scene reads of the renderer: the Live scene tree and its loads. */
