@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ProjectSettings } from '../../parser/projectSettingsParser';
-import { rootWindow, shrinkRootWindow } from './rootWindow';
+import { fittedTargetSize, rootWindow, shrinkRootWindow } from './rootWindow';
 
 /** A project at Godot's default viewport, 1152 x 648, with `stretch` keys under `display/window/stretch/`. */
 function project(window: [number, number] | null, stretch: Record<string, string>): ProjectSettings {
@@ -62,16 +62,28 @@ describe('rootWindow', () => {
   });
 });
 
+describe('fittedTargetSize', () => {
+  const stretched = rootWindow(project([800, 800], { mode: 'canvas_items' }));
+
+  it('keeps the target of a window the pane shows at full size or larger', () => {
+    expect(fittedTargetSize(stretched, 1)).toBe(stretched.targetSize);
+    expect(fittedTargetSize(stretched, 2.5)).toBe(stretched.targetSize);
+  });
+
+  it('scales the target of a window the pane shows smaller, to whole pixels', () => {
+    expect(fittedTargetSize(stretched, 0.5)).toEqual({ x: 400, y: 225 });
+  });
+});
+
 describe('shrinkRootWindow', () => {
   const stretched = rootWindow(project([800, 800], { mode: 'canvas_items' }));
 
-  it('keeps a window the pane shows at full size or larger', () => {
-    expect(shrinkRootWindow(stretched, 1)).toBe(stretched);
-    expect(shrinkRootWindow(stretched, 2.5)).toBe(stretched);
+  it('keeps the window for its own target size', () => {
+    expect(shrinkRootWindow(stretched, { ...stretched.targetSize })).toBe(stretched);
   });
 
-  it('renders a smaller target in a smaller pane, laid out in the same 2D override', () => {
-    const shrunk = shrinkRootWindow(stretched, 0.5);
+  it('renders a smaller target laid out in the same 2D override', () => {
+    const shrunk = shrinkRootWindow(stretched, { x: 400, y: 225 });
     expect([shrunk.targetSize, shrunk.size2dOverride, shrunk.drawRect]).toEqual([
       { x: 400, y: 225 },
       { x: 1152, y: 648 },
@@ -80,7 +92,10 @@ describe('shrinkRootWindow', () => {
   });
 
   it('lays a viewport-mode target out at its full size, which had no 2D override', () => {
-    const shrunk = shrinkRootWindow(rootWindow(project([800, 800], { mode: 'viewport' })), 0.5);
+    const shrunk = shrinkRootWindow(rootWindow(project([800, 800], { mode: 'viewport' })), {
+      x: 576,
+      y: 324,
+    });
     expect([shrunk.targetSize, shrunk.size2dOverride]).toEqual([
       { x: 576, y: 324 },
       { x: 1152, y: 648 },

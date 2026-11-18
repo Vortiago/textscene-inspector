@@ -6,7 +6,7 @@
 import type { ViewportRect } from '../../../r3f/contexts/ViewportRectContext';
 import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
 import { VIEWPORT_MIN_SIZE } from '../../../godot/rendering/viewport.js';
-import type { Vector2 } from '../../../godot/math/vector.js';
+import { VECTOR2_ZERO, vector2Equals, type Vector2 } from '../../../godot/math/vector.js';
 import type { TscnNode } from '../../../parser/types.js';
 import { windowContentScale } from '../../windows/window/contentScale.js';
 import type { WindowProperties } from '../../windows/window/types.js';
@@ -64,7 +64,7 @@ export function viewportPassSizes(node: TscnNode, forced: ViewportRect | null): 
 /** The 2D override's visible rect and stretch (`viewport.cpp:1103-1105,1212-1214`). */
 function subViewportPassSizes(size: Vector2, properties: SubViewportProperties): ViewportPassSizes {
   const { size_2d_override: override, size_2d_override_stretch: stretches } = properties;
-  const hasOverride = override.x !== 0 || override.y !== 0;
+  const hasOverride = !vector2Equals(override, VECTOR2_ZERO);
   const isStretched = stretches && override.x > 0 && override.y > 0;
   return {
     target: cappedTargetSize(size),

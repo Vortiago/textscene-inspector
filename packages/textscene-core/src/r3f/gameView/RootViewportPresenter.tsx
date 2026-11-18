@@ -1,8 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
-import type { TscnNode } from '../../parser/types.js';
-import type { SubViewportProperties } from '../../nodes/viewport/subviewport/types.js';
 import { CanvasItemTextureFilter } from '../../godot/scene/canvasItem.js';
 import type { ViewSampler } from '../../resources/textures/textureView.js';
 import { canvasItemFilterState } from '../canvasItemTextureSampler.js';
@@ -20,17 +18,16 @@ const BLIT_FILTER = canvasItemFilterState(CanvasItemTextureFilter.NEAREST);
 
 /** Retains the root target, so its pass renders, and draws it in the window fitted to the pane. */
 export function RootViewportPresenter({
-  root,
   projectWindow,
+  isTransparent,
 }: {
-  root: TscnNode;
   projectWindow: RootWindow;
+  isTransparent: boolean;
 }) {
   const entry = useViewportTexture(ROOT_VIEWPORT_PATH);
   useEffect(() => entry?.plain.retain(), [entry]);
   const target = entry?.plain.texture ?? null;
   const texture = useTextureView(target, useBlitSampler(target, projectWindow));
-  const { transparent_bg: isTransparent } = root.properties as SubViewportProperties;
   useFrame(({ gl }) => {
     presentRootTarget(gl, texture, projectWindow, isTransparent);
   }, PRESENT_PRIORITY);

@@ -157,7 +157,10 @@ export function projectViewportSize(settings: ProjectSettings | null): ProjectVi
 
 /** A `display/window/size/<key>` pixel count above 0, else `fallback`. */
 function windowSizeOr(settings: ProjectSettings | null, key: string, fallback: number): number {
-  const value = parseOptionalInt(settings?.[`display/window/size/${key}`]);
+  return positiveOr(parseOptionalInt(settings?.[`display/window/size/${key}`]), fallback);
+}
+
+function positiveOr(value: number | undefined, fallback: number): number {
   return value === undefined || value <= 0 ? fallback : value;
 }
 
@@ -186,14 +189,13 @@ const CONTENT_SCALE_ASPECTS = new Map<string, number>([
 export function projectContentScale(settings: ProjectSettings | null): ContentScale {
   const setting = (key: string) => settings?.[`display/window/stretch/${key}`];
   const { width, height } = projectViewportSize(settings);
-  const factor = parseOptionalFloat(setting('scale'));
   return {
     mode: CONTENT_SCALE_MODES.get(setting('mode') ?? 'disabled') ?? ContentScaleMode.DISABLED,
     aspect: CONTENT_SCALE_ASPECTS.get(setting('aspect') ?? 'keep') ?? ContentScaleAspect.IGNORE,
     stretch:
       setting('scale_mode') === 'integer' ? ContentScaleStretch.INTEGER : ContentScaleStretch.FRACTIONAL,
     size: { x: width, y: height },
-    factor: factor !== undefined && factor > 0 ? factor : 1,
+    factor: positiveOr(parseOptionalFloat(setting('scale')), 1),
   };
 }
 

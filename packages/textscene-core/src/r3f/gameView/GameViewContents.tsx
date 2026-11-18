@@ -1,17 +1,18 @@
 import { useMemo } from 'react';
-import { useThree } from '@react-three/fiber';
 import { useOptionalHierarchy } from '../contexts/HierarchyContext.js';
 import { useSeatedRoots } from '../useLiveSceneTree.js';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext.js';
 import { SceneResourcesProvider } from '../SceneResourcesContext.js';
 import { EditedRootProvider } from '../contexts/InstanceOwnersContext.js';
 import { NodeDispatcher } from '../NodeDispatcher.js';
+import type { SubViewportProperties } from '../../nodes/viewport/subviewport/types.js';
 import { ViewportMount } from '../../nodes/viewport/subviewport/Component.js';
 import { ControlRasterLayer } from '../../nodes/viewport/subviewport/ControlRasterLayer.js';
 import { gameViewportDescription } from '../viewportRender/viewportDescription.js';
 import { rootViewportNode } from './rootViewportNode.js';
 import { RootViewportPresenter } from './RootViewportPresenter.js';
-import { rootWindow, shrinkRootWindow, type RootWindow } from './rootWindow.js';
+import { fittedTargetSize, rootWindow, shrinkRootWindow, type RootWindow } from './rootWindow.js';
+import { useDrawingBufferSize } from '../useDrawingBufferSize.js';
 import { paneScale } from './windowFit.js';
 import { RunningGameScope } from '../contexts/EditorHintContext.js';
 
@@ -36,6 +37,7 @@ function RootViewport() {
     [settings, drawnWindow, nodes]
   );
   const rasterRoots = useMemo(() => [root], [root]);
+  const { transparent_bg: isTransparent } = root.properties as SubViewportProperties;
   const description = useMemo(() => gameViewportDescription(settings), [settings]);
   return (
     <>
@@ -56,15 +58,15 @@ function RootViewport() {
           </EditedRootProvider>
         </SceneResourcesProvider>
       )}
-      <RootViewportPresenter root={root} projectWindow={projectWindow} />
+      <RootViewportPresenter projectWindow={projectWindow} isTransparent={isTransparent} />
     </>
   );
 }
 
-/** A pane smaller than the window renders the target at the fitted size. */
+/** A pane smaller than the window renders the target at the fitted size, rebuilt only as its pixels change. */
 function useDrawnWindow(projectWindow: RootWindow): RootWindow {
-  const pane = useThree((state) => state.size);
-  const dpr = useThree((state) => state.viewport.dpr);
-  const scale = paneScale({ x: pane.width * dpr, y: pane.height * dpr }, projectWindow.size);
-  return useMemo(() => shrinkRootWindow(projectWindow, scale), [projectWindow, scale]);
+  const pane = useDrawingBufferSize();
+  const scale = paneScale({ x: pane.width, y: pane.height }, projectWindow.size);
+  const { x, y } = fittedTargetSize(projectWindow, scale);
+  return useMemo(() => shrinkRootWindow(projectWindow, { x, y }), [projectWindow, x, y]);
 }

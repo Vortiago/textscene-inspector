@@ -1,10 +1,10 @@
 import { PNG } from 'pngjs';
 import { findCanvas, settleCanvas } from '../visual/previewServer.mjs';
 import { checkDiagnostics } from './diagnostics.mjs';
+import { IN_GAME_BUTTON } from './inGameScenario.mjs';
 import { openFixture } from './openFixture.mjs';
 
 export const STRETCH_FIXTURE = 'in-game-stretch/unit-in-game-stretch.tscn';
-const IN_GAME_BUTTON = 'In-game';
 
 // The 240 x 135 target reaches 0.28 of the 240 x 240 window from its centre: 0.4 is bar, 0.1 is scene.
 const BAR_OFFSET = 0.4;
@@ -25,8 +25,7 @@ export function readProbes(buffer) {
     const i = (y * png.width + x) * 4;
     return [png.data[i], png.data[i + 1], png.data[i + 2]];
   };
-  const probes = stretchProbes(png);
-  return { top: rgbAt(probes.top), scene: rgbAt(probes.scene), bottom: rgbAt(probes.bottom) };
+  return Object.fromEntries(Object.entries(stretchProbes(png)).map(([name, probe]) => [name, rgbAt(probe)]));
 }
 
 export async function runInGameStretchScenario(browser, baseUrl) {

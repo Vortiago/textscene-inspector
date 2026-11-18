@@ -5,11 +5,12 @@
  */
 
 import { useMemo } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import { useRootViewportDescription } from '../viewportRender/useRootViewportDescription';
 import { drawWorld, type WorldRender } from '../viewportRender/worldRender';
 import { SubscriberStep } from '../frameProfile/FrameProfiler';
 import { useToneMapPass } from './toneMapPass';
+import { useDrawingBufferSize } from '../useDrawingBufferSize';
 
 /** The pass's `useFrame` priority. A positive one takes the canvas's render over from R3F. */
 const COMPOSITOR_PRIORITY = 1;
@@ -36,11 +37,4 @@ export function Compositor() {
     toneMap.toneMap();
   }, COMPOSITOR_PRIORITY);
   return <SubscriberStep step="Compositor" priority={COMPOSITOR_PRIORITY} />;
-}
-
-/** The canvas's size in device pixels, floored as three floors its drawing buffer (r187 `WebGLRenderer.js:713`). */
-function useDrawingBufferSize(): { width: number; height: number } {
-  const size = useThree((state) => state.size);
-  const dpr = useThree((state) => state.viewport.dpr);
-  return { width: Math.floor(size.width * dpr), height: Math.floor(size.height * dpr) };
 }
