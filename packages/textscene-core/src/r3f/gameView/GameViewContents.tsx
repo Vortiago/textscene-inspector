@@ -63,7 +63,7 @@ function RootViewport() {
   );
 }
 
-/** A pane smaller than the window renders the target at the fitted size, rebuilt only as its pixels change. */
+/** A smaller pane renders the target at the fitted size, rebuilt only as its pixels change. */
 function useDrawnWindow(projectWindow: RootWindow): RootWindow {
   const pane = useDrawingBufferSize();
   const scale = paneScale({ x: pane.width, y: pane.height }, projectWindow.size);
