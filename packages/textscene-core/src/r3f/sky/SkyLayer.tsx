@@ -116,27 +116,29 @@ interface InPlaceDraw {
   isBuiltWithLights: boolean;
 }
 
-/** Runs `step` on the radiance in place, skipping a cycle whose lights layer 0 already drew. */
-function stepInPlace(inPlace: RadianceInPlace, step: SkyRadianceStep, draw: InPlaceDraw): void {
+/** Runs `step` in place and answers whether it drew. A cycle of lights layer 0 holds draws nothing. */
+function stepInPlace(inPlace: RadianceInPlace, step: SkyRadianceStep, draw: InPlaceDraw): boolean {
   const drawn = drawnRadianceOf(inPlace);
   if (drawn.lightsKey === null) {
     // A radiance no render has stepped holds the lights, the `TIME` and the origin of its build.
     drawn.lightsKey = draw.lightsKey;
-    if (draw.isDrawnEachBake || !draw.isBuiltWithLights) inPlace.bakeAgain(draw.position);
-    return;
+    if (!draw.isDrawnEachBake && draw.isBuiltWithLights) return false;
+    inPlace.bakeAgain(draw.position);
+    return true;
   }
   if (step.kind === 'filter') {
     if (drawn.isFiltering) inPlace.filterLayer(step.layer);
-    return;
+    return drawn.isFiltering;
   }
-  if (step.kind !== 'bake') return;
+  if (step.kind !== 'bake') return false;
   // Each bake holds one exposure, so a dirt from the exposure alone redraws what layer 0 holds.
   const isChanged = draw.isDrawnEachBake || drawn.lightsKey !== draw.lightsKey;
   drawn.isFiltering = isChanged && step.isFirstLayerOnly;
-  if (!isChanged) return;
+  if (!isChanged) return false;
   drawn.lightsKey = draw.lightsKey;
   if (step.isFirstLayerOnly) inPlace.bakeFirstLayerAgain(draw.position);
   else inPlace.bakeAgain(draw.position);
+  return true;
 }
 
 /** What `material` reads that changes from render to render: a built-in sky reads neither. */
@@ -257,12 +259,14 @@ export function SkyLayer({
       if (!update.baked) return;
       const inPlace = bakes.inPlaceAt(update.baked.exposure);
       if (!inPlace) return;
-      stepInPlace(inPlace, step, {
+      const isDrawn = stepInPlace(inPlace, step, {
         position: update.previousPosition,
         lightsKey: read.key,
         isDrawnEachBake: isFrameRead,
         isBuiltWithLights: bakes.isBuiltWithLightsAt(update.baked.exposure),
       });
+      // A probe captures again on a change of the Environment, as a new bake of the lights notes one.
+      if (isDrawn && !isFrameRead) noteEnvironmentChange(scene, environment);
     };
     // Each view runs its render through the radiance update, the first of a frame after the faces
     // Godot draws for the ALWAYS probes at the world's exposure. A capture reads that bake and steps

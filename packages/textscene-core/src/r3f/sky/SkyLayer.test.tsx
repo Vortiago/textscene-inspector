@@ -1112,6 +1112,25 @@ describe('SkyLayer under a change of its lights', () => {
     expect(recorded.steps).toEqual(['every layer']);
   });
 
+  it('notes a change of its Environment for the probes when the moved sun bakes', async () => {
+    built.next = recordedEnvironment().build;
+    const ownLitSky = (sun: [number, number, number]) => (
+      <>
+        <OwnEnvironment />
+        <LitSky sky={proceduralSky} sun={sun} />
+      </>
+    );
+    const { scene, update, advanceFrames } = await mount(ownLitSky([1, 2, 3]));
+    for (let render = 0; render < 10; render += 1) fireSceneRender(scene, camera);
+    const changes = ownEnvironmentChanges(scene);
+    await update(ownLitSky([3, 2, 1]));
+    await advanceFrames(1);
+
+    fireSceneRender(scene, camera);
+
+    expect(ownEnvironmentChanges(scene)).toBeGreaterThan(changes);
+  });
+
   // The probe faces of an ALWAYS probe and the view dirty the sky at two exposures in each frame.
   it('draws nothing in place for renders that change the exposure alone', async () => {
     const recorded = recordedEnvironment();
