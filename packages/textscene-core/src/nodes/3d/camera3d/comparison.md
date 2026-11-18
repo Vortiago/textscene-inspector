@@ -52,6 +52,9 @@ The Inspector's **Preview** checkbox draws the viewport through the camera, as G
 ## Current camera
 
 The In-game mode draws each viewport through its current Camera3D, as Godot's `Viewport` holds it.
+In that mode the Cameras tab marks the current camera of each viewport, and a click runs
+`make_current`. In the 3D view the tab previews a camera as Godot's editor does, and the current
+camera of the game stays where it was.
 
 - A camera that enters claims its viewport when it is `current` or the first camera there (`camera_3d.cpp:189-191`). So the last `current` camera in the tree wins, else the first.
 - A host's `make_current`, `clear_current(enable_next)`, `set_current` and `set('current')` move it as Godot's do (`camera_3d.cpp:352-383`).

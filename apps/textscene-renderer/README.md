@@ -136,6 +136,10 @@ const current = await scene.getNode('/root').call('get_camera_3d');
   of arguments, or an argument it cannot convert, such as a string for a bool. `set('current', value)`
   converts the value as Godot's `set` does, and answers `false` when the conversion is not exact.
 
+`scene.cameras()` lists every camera inside the tree by its live path, with its viewport (`null` for the
+root window), `isCurrent`, and `canBeCurrent`, which is false for a Camera2D that is not enabled. A
+camera list in your page reads it, and `scene.subscribe` tells you when a call or a load moves it.
+
 The In-game mode draws through the current camera. The 3D mode keeps its orbit camera.
 
 The limits of this release:

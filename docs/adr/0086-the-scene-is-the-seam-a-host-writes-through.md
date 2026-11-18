@@ -49,6 +49,9 @@ the resource loader, and the host's writes. It imports no React and no three.js.
   flag so it claims the viewport again when it re-enters (`camera_3d.cpp:215-219`). No node leaves
   and comes back in this release, so the scene keeps no such flag. A release that lets a host add or
   remove nodes must keep it.
+- **Camera list.** `scene.cameras()` reads that state as one `CameraState` per camera inside the
+  tree: its viewport, `isCurrent` for Godot's `is_current`, and `canBeCurrent`, false for a Camera2D
+  that `make_current` refuses (`camera_2d.cpp:585`). The Cameras tab of the In-game view reads it.
 - **Call errors.** A wrong count of arguments and an argument the binding cannot convert throw the
   text of Godot's error (`object.cpp:888`). `set` of a ported setter casts the value as `Object::set`
   does and answers whether the cast is strict (`class_db.cpp:1683`).

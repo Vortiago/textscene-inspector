@@ -33,6 +33,7 @@ import {
   runCameraPreviewScenario,
 } from './cameraPreviewScenario.mjs';
 import { checkInGame, IN_GAME_FIXTURE, runInGameScenario } from './inGameScenario.mjs';
+import { checkCameraButtons, runCameraButtonsScenario } from './cameraButtonsScenario.mjs';
 
 // No external resource, so the geometry and node set are deterministic. The
 // order is the fixture's authored child order, which TreeNode renders.
@@ -173,6 +174,9 @@ async function runScenarios(browser, baseUrl) {
   console.log(`[gate] In-game mode: ${IN_GAME_FIXTURE}`);
   const inGame = await runInGameScenario(browser, baseUrl);
 
+  console.log('[gate] camera buttons: each Cameras row in the 3D, 2D and In-game views');
+  const cameraButtons = await runCameraButtonsScenario(browser, baseUrl);
+
   return {
     threeD,
     twoD,
@@ -185,6 +189,7 @@ async function runScenarios(browser, baseUrl) {
     uploads,
     cameraPreview,
     inGame,
+    cameraButtons,
   };
 }
 
@@ -202,6 +207,7 @@ function checkScenarios(gate, results) {
     uploads,
     cameraPreview,
     inGame,
+    cameraButtons,
   } = results;
   checkSizedCanvas(gate, '[3D]', threeD.dims);
   checkInk(gate, '[3D]', threeD.ink, INK_FLOOR_3D);
@@ -260,6 +266,7 @@ function checkScenarios(gate, results) {
   checkUploadScenarios(gate, uploads);
   checkCameraPreview(gate, cameraPreview);
   checkInGame(gate, inGame);
+  checkCameraButtons(gate, cameraButtons);
 }
 
 /** Prints what each scenario measured, pass or fail, for a run's log. */

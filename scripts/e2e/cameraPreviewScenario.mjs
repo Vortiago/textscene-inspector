@@ -41,7 +41,7 @@ async function switchView(page, step) {
   return readViewMatrix(page);
 }
 
-function clickCameraRow(page, name) {
+export function clickCameraRow(page, name) {
   return page.getByRole('button', { name: new RegExp(`^${name}`) }).click();
 }
 
