@@ -103,7 +103,7 @@ function usesAlphaPass(pipeline: SpatialPipeline): boolean {
   }).alphaPass;
 }
 
-/** The transparent colour pass alone turns alpha to coverage on (`scene_shader_forward_clustered.cpp:431-437`). */
+/** Alpha to coverage, which the transparent colour pass alone turns on (`scene_shader_forward_clustered.cpp:431`). */
 export const drawsAlphaToCoverage = (
   pipeline: SpatialPipeline
 ): pipeline is SpatialPipeline & { readonly alphaAntialiasing: AlphaToCoverageMode } =>
