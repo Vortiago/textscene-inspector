@@ -3,10 +3,8 @@
  * and reads every texel of every layer back, so the gate can judge what the shaders wrote.
  */
 import * as THREE from 'three';
-import {
-  bakeSkyLayers,
-  disposeSkyLayers,
-} from '../../packages/textscene-core/src/resources/sky/skyLayers.ts';
+import { disposeSkyLayers } from '../../packages/textscene-core/src/resources/sky/skyLayers.ts';
+import { bakeSkyLayers } from '../../packages/textscene-core/src/resources/sky/skyLayers.testkit.ts';
 
 /* global window, document */
 // `window` and `document` exist only in the browser that loads this page.
@@ -80,7 +78,12 @@ function rangeOf(layer, mip, pixels) {
 /** The ranges of the layers `radianceFilter` bakes from the sky `colourOf` describes. */
 function bake(colourOf, radianceFilter) {
   const radiance = radianceCube(colourOf);
-  const layers = bakeSkyLayers(renderer, radiance.texture, { radianceFilter, radianceSize: RADIANCE_SIZE });
+  const layers = bakeSkyLayers(
+    renderer,
+    radiance.texture,
+    { radianceFilter, radianceSize: RADIANCE_SIZE },
+    0
+  );
   const ranges = rangesOf(layers);
   disposeSkyLayers(layers);
   radiance.dispose();
