@@ -68,16 +68,22 @@ async function setGrid(page) {
   await page.getByTestId('display-menu-button').click();
 }
 
+/** The notes In-game, and those the 3D and 2D views show of the same scene. */
 async function runNotes(browser, baseUrl, fixture) {
   const { context, page, diagnostics } = await openFixture(browser, baseUrl, {
     fixture,
     label: 'In-game notes',
   });
+  const editorNotes = {};
+  for (const view of ['3D', '2D']) {
+    await viewButton(page, view).click();
+    editorNotes[view] = await readNotes(page);
+  }
   await viewButton(page, 'In-game').click();
   await shoot(page);
   const notes = await readNotes(page);
   await context.close();
-  return { notes, diagnostics };
+  return { notes, editorNotes, diagnostics };
 }
 
 /** Grid on in 3D, then In-game, then 3D again. */
@@ -88,12 +94,13 @@ async function runToggles(browser, baseUrl) {
   });
   await viewButton(page, '3D').click();
   await setGrid(page);
+  const before = await readToggles(page);
   await viewButton(page, 'In-game').click();
   const inGame = await readToggles(page);
   await viewButton(page, '3D').click();
   const backIn3D = await readToggles(page);
   await context.close();
-  return { inGame, backIn3D, diagnostics };
+  return { before, inGame, backIn3D, diagnostics };
 }
 
 const isRowSelected = (page, path) =>
@@ -146,30 +153,45 @@ function checkNotes(gate, { notes, noNotes }) {
     JSON.stringify(notes.notes) === JSON.stringify(EXPECTED_NOTES),
     `[In-game notes] ${NOTES_FIXTURE} shows ${JSON.stringify(notes.notes)}, expected ${JSON.stringify(EXPECTED_NOTES)}`
   );
+  for (const [view, shown] of Object.entries(notes.editorNotes)) {
+    gate.check(
+      shown.length === 0,
+      `[In-game notes] the ${view} view of ${NOTES_FIXTURE} shows ${JSON.stringify(shown)}, expected no note`
+    );
+  }
   gate.check(
     noNotes.notes.length === 0,
     `[In-game notes] ${CAMERA_FIXTURE} shows ${JSON.stringify(noNotes.notes)}, expected no note`
   );
 }
 
-function checkToggles(gate, { inGame, backIn3D }) {
+/** The labels whose checked state in `toggles` differs from that in `before`. */
+const changedValues = (before, toggles) =>
+  toggles
+    .filter((toggle) => before.find((kept) => kept.label === toggle.label)?.checked !== toggle.checked)
+    .map((toggle) => toggle.label);
+
+function checkToggles(gate, { before, inGame, backIn3D }) {
+  // Grid differs from its default, so a toggle reset by the switch shows as a change.
+  const grid = before.find((toggle) => toggle.label === 'Grid');
+  gate.check(grid?.checked === true, '[In-game toggles] Grid is off in 3D after the run set it on');
+  for (const [where, toggles] of Object.entries({ 'In-game': inGame, 'back in 3D': backIn3D })) {
+    const changed = changedValues(before, toggles);
+    gate.check(
+      changed.length === 0,
+      `[In-game toggles] ${where}, ${JSON.stringify(changed)} changed value, expected each kept`
+    );
+  }
   const disabled = inGame.filter((toggle) => toggle.disabled).map((toggle) => toggle.label);
   gate.check(
     JSON.stringify(disabled) === JSON.stringify(NO_EFFECT_IN_GAME),
     `[In-game toggles] In-game disables ${JSON.stringify(disabled)}, expected ${JSON.stringify(NO_EFFECT_IN_GAME)}`
-  );
-  const gridInGame = inGame.find((toggle) => toggle.label === 'Grid');
-  gate.check(
-    gridInGame?.checked === true,
-    '[In-game toggles] In-game shows Grid off, expected the 3D choice, on'
   );
   const liveIn3D = backIn3D.filter((toggle) => toggle.disabled).map((toggle) => toggle.label);
   gate.check(
     liveIn3D.length === 0,
     `[In-game toggles] back in 3D, ${JSON.stringify(liveIn3D)} stay disabled`
   );
-  const gridIn3D = backIn3D.find((toggle) => toggle.label === 'Grid');
-  gate.check(gridIn3D?.checked === true, '[In-game toggles] back in 3D, Grid is off, expected on');
 }
 
 function checkSelection(gate, { threeD, inGame }) {

@@ -35,6 +35,7 @@ import {
 import { checkInGame, IN_GAME_FIXTURE, runInGameScenario } from './inGameScenario.mjs';
 import { checkCameraButtons, runCameraButtonsScenario } from './cameraButtonsScenario.mjs';
 import { checkInGameToolbar, runInGameToolbarScenario } from './inGameToolbarScenario.mjs';
+import { checkModeSwitch, runModeSwitchScenario } from './modeSwitchScenario.mjs';
 
 // No external resource, so the geometry and node set are deterministic. The
 // order is the fixture's authored child order, which TreeNode renders.
@@ -181,6 +182,9 @@ async function runScenarios(browser, baseUrl) {
   console.log('[gate] In-game toolbar: the notes, the disabled toggles and the selection');
   const inGameToolbar = await runInGameToolbarScenario(browser, baseUrl);
 
+  console.log('[gate] mode switch: 3D, 2D, In-game and back');
+  const modeSwitch = await runModeSwitchScenario(browser, baseUrl);
+
   return {
     threeD,
     twoD,
@@ -195,6 +199,7 @@ async function runScenarios(browser, baseUrl) {
     inGame,
     cameraButtons,
     inGameToolbar,
+    modeSwitch,
   };
 }
 
@@ -214,6 +219,7 @@ function checkScenarios(gate, results) {
     inGame,
     cameraButtons,
     inGameToolbar,
+    modeSwitch,
   } = results;
   checkSizedCanvas(gate, '[3D]', threeD.dims);
   checkInk(gate, '[3D]', threeD.ink, INK_FLOOR_3D);
@@ -274,6 +280,7 @@ function checkScenarios(gate, results) {
   checkInGame(gate, inGame);
   checkCameraButtons(gate, cameraButtons);
   checkInGameToolbar(gate, inGameToolbar);
+  checkModeSwitch(gate, modeSwitch);
 }
 
 /** Prints what each scenario measured, pass or fail, for a run's log. */
@@ -289,6 +296,7 @@ function logMeasurements({
   uploads,
   inGame,
   inGameToolbar,
+  modeSwitch,
 }) {
   console.log('\n[gate] measurements');
   console.log(
@@ -331,6 +339,10 @@ function logMeasurements({
   console.log(
     `  in-game toolbar  notes=${JSON.stringify(inGameToolbar.notes.notes)} ` +
       `selection-box 3D=${selection.threeD.pixels}px In-game=${selection.inGame.pixels}px`
+  );
+  console.log(
+    `  mode switch  In-game against 3D=${modeSwitch.inGamePixels}px ` +
+      `3D after the round trip=${modeSwitch.back3DPixels}px`
   );
 }
 
