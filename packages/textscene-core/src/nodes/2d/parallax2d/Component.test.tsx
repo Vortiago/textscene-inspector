@@ -10,6 +10,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../parser/types';
 import type { Camera2DTag } from '../../../r3f/viewportRender/camera2DView';
 import { Camera2DAnchorMode } from '../../../godot/scene/camera2d';
+import { CurrentCameras } from '../../../r3f/testing/CurrentCameras';
 import { fireSceneRender } from '../../../r3f/testing/fireSceneRender';
 import { World2DCamera } from '../../../r3f/components/Canvas2DStage/world2DCamera';
 import { drawAsCanvasPass } from '../../../r3f/testing/worldRenders';
@@ -27,6 +28,10 @@ function parallaxNode(properties: Record<string, string> = {}, children: TscnNod
   };
 }
 
+/** The current Camera2D of the root viewport, as the scene holds it. */
+const CAMERA_PATH = 'Cam';
+const CURRENT_2D = new Map([[null, CAMERA_PATH]]);
+
 const CAMERA_TAG: Camera2DTag = {
   enabled: true,
   zoom: { x: 1, y: 1 },
@@ -37,6 +42,7 @@ const CAMERA_TAG: Camera2DTag = {
   limitRight: 10000000,
   limitBottom: 10000000,
   limitEnabled: true,
+  ignoreRotation: true,
 };
 
 /** The 1152x648 view a Camera2D at (600, 400) frames: top-left (24, 76) in canvas pixels. */
@@ -65,11 +71,11 @@ describe('<Parallax2D>', () => {
   async function scrolledGroup(properties: Record<string, string>, pass: 'stage' | 'viewport') {
     const storeCamera = { current: null as THREE.Camera | null };
     const renderer = await ReactThreeTestRenderer.create(
-      <>
+      <CurrentCameras cameras2D={CURRENT_2D}>
         <StoreCamera into={storeCamera} />
-        <group userData={{ camera2d: CAMERA_TAG }} position={[600, -400, 0]} />
+        <group userData={{ camera2d: CAMERA_TAG, tscnPath: CAMERA_PATH }} position={[600, -400, 0]} />
         <Parallax2D node={parallaxNode(properties)} />
-      </>
+      </CurrentCameras>
     );
     const scene = renderer.scene.instance;
     if (pass === 'stage') fireSceneRender(scene, storeCamera.current!);
@@ -102,10 +108,10 @@ describe('<Parallax2D>', () => {
   it('replaces the authored position, so the delta cancels it', async () => {
     const storeCamera = { current: null as THREE.Camera | null };
     const renderer = await ReactThreeTestRenderer.create(
-      <>
+      <CurrentCameras cameras2D={CURRENT_2D}>
         <StoreCamera into={storeCamera} />
         <Parallax2D node={parallaxNode({ ...SCROLLED, position: 'Vector2(40, 10)' })} />
-      </>
+      </CurrentCameras>
     );
     const scene = renderer.scene.instance;
     fireSceneRender(scene, storeCamera.current!);

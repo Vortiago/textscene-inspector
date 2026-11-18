@@ -6,7 +6,12 @@
  * `pnpm --filter @textscene/core build` first: "supported" is the live registry.
  */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { enumerateGodotNodes, godotVersion, supportedTypes } from './build-node-catalog/classdb.mjs';
+import {
+  dumpNodePropertyMethods,
+  enumerateGodotNodes,
+  godotVersion,
+  supportedTypes,
+} from './build-node-catalog/classdb.mjs';
 import { EXTRA_CLASSES, RESOURCE_CLASSES } from './build-node-catalog/extraClasses.mjs';
 import { groupOf } from './build-node-catalog/groups.mjs';
 import { attachLinks } from './build-node-catalog/links.mjs';
@@ -14,6 +19,7 @@ import {
   CATALOG_OUT,
   CLASSES_OUT,
   NODE_DEFAULTS_OUT,
+  PROPERTY_METHODS_OUT,
   PROPS_OUT,
   RESOURCE_BASES_OUT,
   RESOURCE_GETTERS_OUT,
@@ -70,6 +76,19 @@ function writeEngineTables(enumerated) {
   writeJson(CLASSES_OUT, classes);
   console.log(`Wrote ${CLASSES_OUT} - ${Object.keys(classes).length} classes.`);
   writeDefaults(enumerated.nodeDefaults);
+  writePropertyMethods(dumpNodePropertyMethods());
+}
+
+/** Each class's rows sorted by name. */
+function writePropertyMethods(table) {
+  const sorted = Object.fromEntries(
+    Object.entries(sortedByKey(table)).map(([className, rows]) => [
+      className,
+      [...rows].sort(([a], [b]) => byName(a, b)),
+    ])
+  );
+  writeJson(PROPERTY_METHODS_OUT, sorted);
+  console.log(`Wrote ${PROPERTY_METHODS_OUT} - ${Object.keys(sorted).length} classes.`);
 }
 
 /** Each table sorted by class and by property, so a regenerated file diffs by content. */

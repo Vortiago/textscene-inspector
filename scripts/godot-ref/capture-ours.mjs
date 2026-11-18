@@ -10,7 +10,7 @@
 
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
-import { parseSet, probePixels, vec3 } from './run.mjs';
+import { parseCall, parseSet, probePixels, vec3 } from './run.mjs';
 import { applySceneWrites } from '../visual/sceneWrites.mjs';
 import { freeCameraPath, sceneCameraPath, withFreeCamera } from './ourCamera.mjs';
 import { launchGodotComparisonBrowser } from '../showcase/browser.mjs';
@@ -35,7 +35,7 @@ export function parseArgs(argv) {
     lookAt: null,
     sceneCamera: null,
     showCollisions: false,
-    sets: [],
+    hostCalls: [],
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -69,9 +69,12 @@ export function parseArgs(argv) {
       case '--scene-camera':
         args.sceneCamera = argv[i + 1] && !String(argv[i + 1]).startsWith('--') ? argv[++i] : true;
         break;
-      // As `ref:godot --set`: the same write before the capture.
+      // As `ref:godot --set` and `--call`: the same write or call before the capture, in order.
       case '--set':
-        args.sets.push(parseSet(argv[++i]));
+        args.hostCalls.push(parseSet(argv[++i]));
+        break;
+      case '--call':
+        args.hostCalls.push(parseCall(argv[++i]));
         break;
       case '--probe': {
         const raw = argv[++i];
@@ -105,7 +108,7 @@ export function captureOurs({
   showCollisions = false,
   litSurface = null,
   inGameFrame = null,
-  sets = [],
+  hostCalls = [],
 }) {
   return withPreviewBrowser(
     { ...previewPort('parity'), launchBrowser: launchGodotComparisonBrowser },
@@ -128,7 +131,7 @@ export function captureOurs({
         onSlow: (ms) => console.log(`[ours] no network idle within ${ms}ms`),
       });
       if (!target) throw new Error(targetReason);
-      await applySceneWrites(page, sets);
+      await applySceneWrites(page, hostCalls);
       const collisionsReason = showCollisions ? await showDisplayOverlay(page, 'Collisions') : null;
       if (collisionsReason) throw new Error(collisionsReason);
       const { buffer, reason } = await settleCanvas(page, target);

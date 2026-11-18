@@ -105,7 +105,12 @@ async function mount(
   const captured: { current: THREE.WebGLRenderer | null } = { current: null };
   const WorldScope = workspace === '2d' ? CanvasWorldScope : RootWorldScope;
   const renderer = await ReactThreeTestRenderer.create(
-    <SceneStack loader={createFakeResourceLoader().loader} scene={parsed} workspace={workspace}>
+    <SceneStack
+      loader={createFakeResourceLoader().loader}
+      scene={parsed}
+      source={source}
+      workspace={workspace}
+    >
       <ViewportModeProvider initialShowPreviewEnvironment={false}>
         <ViewportPassStack captured={captured}>
           <WorldScope>

@@ -174,7 +174,12 @@ async function drawFrame(source: string, workspace: '2d' | '3d'): Promise<Frame>
   const captured: { current: THREE.WebGLRenderer | null } = { current: null };
   const World = workspace === '2d' ? CanvasWorldScope : RootWorldScope;
   const renderer = await ReactThreeTestRenderer.create(
-    <SceneStack loader={createFakeResourceLoader().loader} scene={parsed} workspace={workspace}>
+    <SceneStack
+      loader={createFakeResourceLoader().loader}
+      scene={parsed}
+      source={source}
+      workspace={workspace}
+    >
       <ViewportPassStack captured={captured}>
         <World>
           <NodeDispatcher nodes={parsed.nodes} />

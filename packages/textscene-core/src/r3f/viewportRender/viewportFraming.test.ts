@@ -7,14 +7,15 @@ import * as THREE from 'three';
 import {
   frameOverView,
   applyOrthoFrame,
-  godotCanvasPosition,
+  godotCanvasPlacement,
   orthoFrameForCamera2D,
   orthoFrameForSize,
   cameraAtPath,
-  selectViewportCamera2D,
+  camera2DAtPath,
   viewportAspect,
 } from './viewportFraming';
 import type { Camera2DTag } from './camera2DView';
+import { markCanvasFrame } from '../canvasFrame';
 
 import { Camera2DAnchorMode } from '../../godot/scene/camera2d';
 
@@ -29,8 +30,9 @@ function camera(tscnPath: string): THREE.PerspectiveCamera {
  * A group tagged the way `<Camera2D>` tags one. Defaults mirror Godot's: zoom 1,
  * no offset, DRAG_CENTER, enabled, and the +/-10000000 "unlimited" limits.
  */
-function camera2d(overrides: Partial<Camera2DTag> = {}): THREE.Object3D {
+function camera2d(overrides: Partial<Camera2DTag> = {}, tscnPath = 'Root/Camera2D'): THREE.Object3D {
   const group = new THREE.Object3D();
+  group.userData.tscnPath = tscnPath;
   group.userData.camera2d = {
     zoom: { x: 1, y: 1 },
     offset: { x: 0, y: 0 },
@@ -40,6 +42,7 @@ function camera2d(overrides: Partial<Camera2DTag> = {}): THREE.Object3D {
     limitRight: 10000000,
     limitBottom: 10000000,
     limitEnabled: true,
+    ignoreRotation: true,
     enabled: true,
     ...overrides,
   } satisfies Camera2DTag;
@@ -63,7 +66,7 @@ describe('cameraAtPath', () => {
     expect(cameraAtPath(new THREE.Scene(), 'Root/SubViewport/Camera3D')).toBeNull();
   });
 
-  it('is null for no elected camera', () => {
+  it('is null for a viewport with no current camera', () => {
     const scene = new THREE.Scene();
     scene.add(camera('Root/SubViewport/Camera3D'));
     expect(cameraAtPath(scene, null)).toBeNull();
@@ -77,75 +80,26 @@ describe('cameraAtPath', () => {
   });
 });
 
-describe('selectViewportCamera2D', () => {
-  it('picks the enabled Camera2D in the subtree', () => {
+describe('camera2DAtPath', () => {
+  it('finds the Camera2D group tagged with the path', () => {
     const scene = new THREE.Scene();
-    const cam = camera2d();
-    scene.add(new THREE.Object3D(), cam);
-    expect(selectViewportCamera2D(scene)).toBe(cam);
+    const mine = camera2d({}, 'Root/Sub/Mine');
+    scene.add(camera2d({}, 'Root/Sub/Other'), mine);
+    expect(camera2DAtPath(scene, 'Root/Sub/Mine')).toBe(mine);
   });
 
-  /**
-   * The inverse of the 3D rule: `scene/2d/camera_2d.cpp` on `NOTIFICATION_ENTER_TREE`
-   * claims the viewport only while `!viewport->get_camera_2d()`, so the first
-   * enabled camera in tree order keeps it. With two players in one SubViewport,
-   * the difference is a visible change of framing.
-   */
-  it('with several Camera2Ds the FIRST in tree order wins, unlike Camera3D', () => {
+  it('is null for a viewport with no current Camera2D', () => {
     const scene = new THREE.Scene();
-    const earlier = camera2d();
-    const later = camera2d();
-    scene.add(earlier, later);
-    expect(selectViewportCamera2D(scene)).toBe(earlier);
-    expect(selectViewportCamera2D(scene)).not.toBe(later);
+    scene.add(camera2d({}, 'Root/Sub/Mine'));
+    expect(camera2DAtPath(scene, null)).toBeNull();
   });
 
-  /**
-   * `enabled` gates the claim in the same `if`, and `set_enabled` repeats it, so
-   * a disabled camera neither becomes current nor blocks a later one.
-   */
-  it('skips a disabled camera and elects the next enabled one', () => {
+  it('ignores an object with the path that carries no camera2d tag', () => {
     const scene = new THREE.Scene();
-    const disabled = camera2d({ enabled: false });
-    const enabled = camera2d();
-    scene.add(disabled, enabled);
-    expect(selectViewportCamera2D(scene)).toBe(enabled);
-  });
-
-  it('returns null when every Camera2D is disabled', () => {
-    const scene = new THREE.Scene();
-    scene.add(camera2d({ enabled: false }), camera2d({ enabled: false }));
-    expect(selectViewportCamera2D(scene)).toBeNull();
-  });
-
-  /** Godot leaves the canvas transform at identity, which is origin framing. */
-  it('returns null for a subtree with no Camera2D rather than throwing', () => {
-    const scene = new THREE.Scene();
-    scene.add(new THREE.Object3D());
-    expect(selectViewportCamera2D(scene)).toBeNull();
-  });
-
-  /** Every other CanvasItem group is untagged; only `<Camera2D>` tags itself. */
-  it('ignores objects carrying no camera2d tag', () => {
-    const scene = new THREE.Scene();
-    const sprite = new THREE.Object3D();
-    sprite.userData.tscnPath = 'Root/Sprite2D';
-    scene.add(sprite);
-    expect(selectViewportCamera2D(scene)).toBeNull();
-  });
-
-  /**
-   * Pre-order traversal is the order nodes enter the tree, so a camera nested
-   * inside an earlier instanced sub-scene beats a shallower later sibling.
-   */
-  it('prefers a deeply nested earlier camera over a shallow later one', () => {
-    const scene = new THREE.Scene();
-    const player = new THREE.Object3D();
-    const nested = camera2d();
-    player.add(nested);
-    const laterSibling = camera2d();
-    scene.add(player, laterSibling);
-    expect(selectViewportCamera2D(scene)).toBe(nested);
+    const plain = new THREE.Object3D();
+    plain.userData.tscnPath = 'Root/Sub/Mine';
+    scene.add(plain);
+    expect(camera2DAtPath(scene, 'Root/Sub/Mine')).toBeNull();
   });
 });
 
@@ -229,13 +183,13 @@ describe('orthoFrameForCamera2D', () => {
   });
 });
 
-describe('godotCanvasPosition', () => {
+describe('godotCanvasPlacement', () => {
   /** `node2dTransform` conjugates by diag(1,-1,1): Godot (100,50) is three (100,-50). */
   it('negates Y back out of three space', () => {
     const object = new THREE.Object3D();
     object.position.set(100, -50, 0);
     object.updateMatrixWorld(true);
-    expect(godotCanvasPosition(object)).toEqual({ x: 100, y: 50 });
+    expect(godotCanvasPlacement(object)).toEqual({ x: 100, y: 50, rotation: 0 });
   });
 
   /**
@@ -243,6 +197,30 @@ describe('godotCanvasPosition', () => {
    * tree: a Camera2D inside an instanced sub-scene composes its ancestors' 2D
    * transforms for free.
    */
+  it("reads a camera under a CanvasLayer in its layer's canvas, without the layer or its anchor", () => {
+    const anchor = new THREE.Object3D();
+    anchor.position.set(-60, 40, 0);
+    const frame = new THREE.Object3D();
+    frame.position.set(500, -200, 0);
+    markCanvasFrame(frame);
+    const camera = new THREE.Object3D();
+    camera.position.set(60, -40, 0);
+    anchor.add(frame);
+    frame.add(camera);
+    anchor.updateMatrixWorld(true);
+    expect(godotCanvasPlacement(camera)).toEqual({ x: 60, y: 40, rotation: 0 });
+  });
+
+  it("reads the global rotation in Godot's sense, clockwise on screen", () => {
+    const parent = new THREE.Object3D();
+    parent.rotation.z = -0.3;
+    const camera = new THREE.Object3D();
+    camera.rotation.z = -0.1;
+    parent.add(camera);
+    parent.updateMatrixWorld(true);
+    expect(godotCanvasPlacement(camera).rotation).toBeCloseTo(0.4);
+  });
+
   it('composes an instanced ancestor transform', () => {
     const player = new THREE.Object3D();
     player.position.set(100, -636.5, 0);
@@ -250,11 +228,18 @@ describe('godotCanvasPosition', () => {
     cam.position.set(0, 28, 0);
     player.add(cam);
     player.updateMatrixWorld(true);
-    expect(godotCanvasPosition(cam)).toEqual({ x: 100, y: 608.5 });
+    expect(godotCanvasPlacement(cam)).toEqual({ x: 100, y: 608.5, rotation: 0 });
   });
 });
 
 describe('applyOrthoFrame', () => {
+  it('turns the camera opposite to a Camera2D view rotation, since three is +Y up', () => {
+    const cam = new THREE.OrthographicCamera();
+    const turned = tagOf(camera2d({ ignoreRotation: false }));
+    applyOrthoFrame(cam, orthoFrameForCamera2D(turned, { x: 0, y: 0, rotation: 0.4 }, { x: 300, y: 200 }));
+    expect(cam.rotation.z).toBeCloseTo(-0.4);
+  });
+
   it('applies the frustum and position to the camera', () => {
     const cam = new THREE.OrthographicCamera();
     applyOrthoFrame(cam, orthoFrameForSize({ x: 300, y: 200 }));

@@ -1,0 +1,39 @@
+[gd_scene format=3]
+
+; Three Camera3D nodes that all hold `current = true`. Each claims the viewport as it enters, so the
+; last one in the tree, `Third`, draws (`camera_3d.cpp:189-191`). No other scene has three.
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+
+[sub_resource type="StandardMaterial3D" id="Material_box"]
+albedo_color = Color(0.9, 0.5, 0.2, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+radius = 0.4
+height = 0.8
+
+[sub_resource type="StandardMaterial3D" id="Material_ball"]
+albedo_color = Color(0.2, 0.5, 0.9, 1)
+
+[node name="Main" type="Node3D"]
+
+[node name="Box" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("Material_box")
+
+[node name="Ball" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, -1)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Material_ball")
+
+[node name="First" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0.5, 5)
+current = true
+
+[node name="Second" type="Camera3D" parent="."]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 5, 0.5, -0.5)
+current = true
+
+[node name="Third" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0.5, 3)
+current = true

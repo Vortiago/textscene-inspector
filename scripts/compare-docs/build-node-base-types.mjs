@@ -8,6 +8,7 @@ import {
   CATALOG_OUT,
   CLASSES_OUT,
   NODE_DEFAULTS_OUT,
+  PROPERTY_METHODS_OUT,
   PROPS_OUT,
   RESOURCE_BASES_OUT,
   RESOURCE_GETTERS_OUT,
@@ -27,6 +28,7 @@ export const TYPED_COLLECTIONS_OUT = classdbModule('typedCollectionProperties.ge
 export const VARIANT_PROPERTIES_OUT = classdbModule('variantProperties.generated.ts');
 export const CLASS_LIST_OUT = classdbModule('classList.generated.ts');
 export const NODE_DEFAULTS_MODULE_OUT = classdbModule('nodeDefaults.generated.ts');
+export const PROPERTY_METHODS_MODULE_OUT = classdbModule('propertyMethods.generated.ts');
 
 /**
  * Refuses to write a table a walk cannot leave. Every consumer (`descendsFromClass`, `classBaseChain`,
@@ -414,6 +416,32 @@ ${derivedRows}
 `;
 }
 
+/** The module source for the setter and getter names a script calls a property by. */
+function renderPropertyMethodsModule(table, version) {
+  const rows = Object.entries(table)
+    .map(([className, list]) => {
+      const lines = list.map((row) => `    ${JSON.stringify(row)},`);
+      return `  ${JSON.stringify(className)}: [\n${lines.join('\n')}\n  ],`;
+    })
+    .join('\n');
+  return `/**
+ * The setter and getter of each Node property a script calls by another name than \`set_\` or
+ * \`get_\` and the property's, or with an index, from Godot ${version}'s \`--dump-extension-api\`.
+ * AUTO-GENERATED - Do not edit manually. Run: pnpm nodes:base-types
+ *
+ * Rows are \`[name, setter, getter, index]\`: an empty name for none, the index only where one passes.
+ */
+
+export type PropertyMethodsRow =
+  | readonly [name: string, setter: string, getter: string]
+  | readonly [name: string, setter: string, getter: string, index: number];
+
+export const PROPERTY_METHODS: Readonly<Record<string, readonly PropertyMethodsRow[]>> = Object.freeze({
+${rows}
+});
+`;
+}
+
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
 }
@@ -471,6 +499,12 @@ export function renderFromPropertyCaptures() {
 export function renderFromNodeDefaultCaptures() {
   const catalog = readJson(CATALOG_OUT);
   return renderNodeDefaultsModule(readJson(NODE_DEFAULTS_OUT), godotVersionOf(catalog));
+}
+
+/** The property method module the committed artifact must equal. */
+export function renderFromPropertyMethodCaptures() {
+  const catalog = readJson(CATALOG_OUT);
+  return renderPropertyMethodsModule(readJson(PROPERTY_METHODS_OUT), godotVersionOf(catalog));
 }
 
 /** The module source the committed artifact must equal. */
@@ -545,6 +579,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       (source) => `${source.match(/^ {2}\w+: \[/gm)?.length ?? 0} classes`,
     ],
     [NODE_DEFAULTS_MODULE_OUT, renderFromNodeDefaultCaptures(), describeNestedRows('default rows')],
+    [PROPERTY_METHODS_MODULE_OUT, renderFromPropertyMethodCaptures(), describeProperties],
   ];
   for (const [path, source, describe] of artifacts) {
     writeFileSync(path, source);

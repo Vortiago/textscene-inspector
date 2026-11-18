@@ -3,9 +3,7 @@ import type { ProjectSettings } from '../../parser/projectSettingsParser.js';
 import { projectViewportSize } from '../../parser/projectSettingsParser.js';
 import { parseSubViewport } from '../../nodes/viewport/subviewport/parser.js';
 import { SubViewportUpdateMode } from '../../godot/scene/viewport.js';
-
-/** Empty, so `joinPath` gives each node below the path the dispatcher gives it. */
-export const ROOT_VIEWPORT_PATH = '';
+import { ROOT_VIEWPORT_PATH } from '../contexts/EnclosingViewportContext.js';
 
 const ROOT_TYPE = 'SubViewport';
 

@@ -8,8 +8,10 @@ import * as THREE from 'three';
 import { orthoViewRect } from './viewportRender/viewportFraming.js';
 import type { Rect2 } from '../godot/math/rect2.js';
 
-/** Written only by {@link viewAnchorMatrix}, which reads it before returning. */
+/** Written only by {@link viewAnchorMatrix}, which reads them before returning. */
 const view: Rect2 = { x: 0, y: 0, w: 0, h: 0 };
+const turn = new THREE.Matrix4();
+const shift = new THREE.Matrix4();
 
 /** How a CanvasLayer follows the viewport's canvas transform. */
 export interface ViewportLayerFollow {
@@ -38,15 +40,15 @@ export function viewportLayerMatrix(
   return viewAnchorMatrix(camera, size, target);
 }
 
-/**
- * Writes into `target` the matrix that puts the top-left of a viewport-sized layout on the top-left
- * of the view `camera` frames, one viewport pixel per pixel. What a Camera2D does not move sits there.
- */
+/** Puts a viewport-sized layout on the view's top-left corner, one pixel per pixel, turned with the view. */
 export function viewAnchorMatrix(
   camera: THREE.OrthographicCamera,
   size: { x: number; y: number },
   target: THREE.Matrix4
 ): THREE.Matrix4 {
-  const { x: left, y: bottom, w, h } = orthoViewRect(camera, view);
-  return target.makeScale(w / size.x, h / size.y, 1).setPosition(left, bottom + h, 0);
+  const { w, h } = orthoViewRect(camera, view);
+  const corner = target.makeScale(w / size.x, h / size.y, 1).setPosition(camera.left, camera.top, 0);
+  return corner
+    .premultiply(turn.makeRotationZ(camera.rotation.z))
+    .premultiply(shift.makeTranslation(camera.position.x, camera.position.y, 0));
 }

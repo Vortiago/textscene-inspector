@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { waitFor } from '@testing-library/react';
+import { openScene } from '../../../scene/openScene';
 import { TscnParser } from '../../../parser/TscnParser';
 import { NodeDispatcher } from '../../../r3f/NodeDispatcher';
 import {
@@ -54,7 +55,13 @@ async function renderedChrome(): Promise<PassSnapshot[]> {
   const parsed = new TscnParser().parse(SCENE);
   const captured: { current: THREE.WebGLRenderer | null } = { current: null };
   const renderer = await ReactThreeTestRenderer.create(
-    <SceneStack loader={createFakeResourceLoader().loader} scene={parsed} workspace="3d" showGizmos>
+    <SceneStack
+      loader={createFakeResourceLoader().loader}
+      scene={parsed}
+      source={SCENE}
+      workspace="3d"
+      showGizmos
+    >
       <ViewportTextureProvider>
         <ViewportPassProvider>
           <InWorld>
@@ -129,9 +136,10 @@ function isEditorOnly(object: THREE.Object3D): boolean {
 async function visibleEditorOnlyPerRender(): Promise<number[]> {
   const parsed = new TscnParser().parse(SHARED_WORLD_SCENE);
   const graph = createSceneGraphFromTscnScene(parsed);
+  const scene = openScene({ source: SHARED_WORLD_SCENE, provider: { loadResource: async () => null } });
   const captured: { current: THREE.WebGLRenderer | null } = { current: null };
   const renderer = await ReactThreeTestRenderer.create(
-    <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
+    <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p', scene }}>
       <ViewportModeProvider initialShowGizmos initialShowGrid>
         <SelectionProvider>
           <SelectSeeder path="Light" />

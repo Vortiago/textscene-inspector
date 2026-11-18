@@ -49,6 +49,19 @@ The numeric keys (`fov`, `size`, `near`, `far`, `h_offset`, `v_offset`, `frustum
 
 The Inspector's **Preview** checkbox draws the viewport through the camera, as Godot's does, also for a camera inside a SubViewport. As in Godot, navigation is off during the preview, and the editor camera keeps its pose until the preview ends.
 
+## Current camera
+
+The In-game mode draws each viewport through its current Camera3D, as Godot's `Viewport` holds it.
+In that mode the Cameras tab marks the current camera of each viewport, and a click runs
+`make_current`. In the 3D view the tab previews a camera as Godot's editor does, and the current
+camera of the game stays where it was.
+
+- A camera that enters claims its viewport when it is `current` or the first camera there (`camera_3d.cpp:189-191`). So the last `current` camera in the tree wins, else the first.
+- A host's `make_current`, `clear_current(enable_next)`, `set_current` and `set('current')` move it as Godot's do (`camera_3d.cpp:352-383`).
+- `clear_current` passes the viewport to the next camera that entered it (`viewport.cpp:4609-4623`).
+- `clear_current(false)` leaves the viewport with no camera, so the viewport draws the clear colour.
+- The 3D mode keeps its orbit camera.
+
 ## Exposure and Environment
 
 A valid `attributes` replaces the exposure of the world while the world renders through that camera (`renderer_scene_cull.cpp`). The WorldEnvironment sheet lists what the exposure scales. A valid `environment` replaces the Environment of the world the same way (`renderer_scene_cull.cpp:3594-3597`).

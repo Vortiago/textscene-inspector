@@ -6,6 +6,7 @@ import './index';
 import '../../base/node3d/index';
 import { Camera3D } from './Component';
 import { ViewportWorld } from '../../../r3f/testing/ViewportWorld';
+import { CurrentCameras, type CurrentCameraPaths } from '../../../r3f/testing/CurrentCameras';
 import { useExposureFactor } from '../../../r3f/environment/worldExposure';
 import { ViewportActionsProvider } from '../../../r3f/contexts/ViewportActionsContext';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
@@ -13,11 +14,10 @@ import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import { makeNode } from '../../../parser/testing/parserKit';
 import { subResource } from '../../../testing/subResource';
 
-function cameraNode(name: string, attributes?: string, current = false): TscnNode {
+function cameraNode(name: string, attributes?: string): TscnNode {
   return makeNode(name, 'Camera3D', {
     rawProperties: {
       ...(attributes ? { attributes } : {}),
-      ...(current ? { current: 'true' } : {}),
     },
   });
 }
@@ -31,16 +31,23 @@ const RESOURCES: TscnInternalResource[] = [
   subResource('CameraAttributesPhysical', 'Other', { exposure_multiplier: '6' }),
 ];
 
-async function exposureOf(world: 'root' | 'subViewport', viewed: string | null, nodes: TscnNode[]) {
+async function exposureOf(
+  world: 'root' | 'subViewport',
+  viewed: string | null,
+  nodes: TscnNode[],
+  current: CurrentCameraPaths = new Map()
+) {
   const renderer = await ReactThreeTestRenderer.create(
     <SceneResourcesProvider internalResources={RESOURCES}>
       <ViewportActionsProvider initialPreviewedCameraPath={viewed}>
-        <ViewportWorld world={world}>
-          {nodes.map((node) => (
-            <Camera3D key={node.name} node={node} />
-          ))}
-          <ExposureReader />
-        </ViewportWorld>
+        <CurrentCameras cameras3D={current}>
+          <ViewportWorld world={world}>
+            {nodes.map((node) => (
+              <Camera3D key={node.name} node={node} />
+            ))}
+            <ExposureReader />
+          </ViewportWorld>
+        </CurrentCameras>
       </ViewportActionsProvider>
     </SceneResourcesProvider>
   );
@@ -60,9 +67,9 @@ describe('Camera3D attributes', () => {
     expect(await exposureOf('root', 'Main', [cameraNode('Main', 'SubResource("Other")')])).toBe(6);
   });
 
-  it('scales a sub-viewport by the camera it elects', async () => {
-    const nodes = [cameraNode('A', 'SubResource("Cam")'), cameraNode('B', 'SubResource("Other")', true)];
-    expect(await exposureOf('subViewport', null, nodes)).toBe(6);
+  it('scales a sub-viewport by its current camera', async () => {
+    const nodes = [cameraNode('A', 'SubResource("Cam")'), cameraNode('B', 'SubResource("Other")')];
+    expect(await exposureOf('subViewport', null, nodes, new Map([[null, 'B']]))).toBe(6);
   });
 
   it('leaves the frame alone for a camera with no attributes', async () => {

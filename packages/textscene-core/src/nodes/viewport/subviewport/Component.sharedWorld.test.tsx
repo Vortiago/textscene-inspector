@@ -79,7 +79,7 @@ async function mountCanvas(source: string, beside?: ReactNode) {
   const parsed = new TscnParser().parse(source);
   const captured: { current: THREE.WebGLRenderer | null } = { current: null };
   const renderer = await ReactThreeTestRenderer.create(
-    <SceneStack loader={createFakeResourceLoader().loader} scene={parsed} workspace="2d">
+    <SceneStack loader={createFakeResourceLoader().loader} scene={parsed} source={source} workspace="2d">
       <ViewportPassStack captured={captured}>
         <CanvasWorldScope>
           {beside}

@@ -1,76 +1,57 @@
-/**
- * The centre viewport: the R3F canvas in 3D, the 2D stage in 2D. The stage
- * gets the scene's nodes and resources as explicit props, not an ambient
- * provider (ADR-0009). A sub-viewport's offscreen pass mounts inside the
- * active canvas, since it needs an R3F root.
- */
-import type { SceneGraph } from '../../../core/SceneGraph.js';
-import { useViewportMode } from '../../contexts/ViewportModeContext.js';
+import { useViewportMode, type ViewportMode } from '../../contexts/ViewportModeContext.js';
 // The claim reads the slice registrations, loaded here so the hint works
 // whichever canvas, if any, imported them first.
 import '../../nodes/index.js';
 import { isClaimedByCanvasItemEditor } from '../../nodeWorkspaceVisibility.js';
-import { useLiveSceneNodes, useSeatedRoots } from '../../useLiveSceneTree.js';
+import { useLiveSceneNodes } from '../../useLiveSceneTree.js';
 import { keepsChildrenInViewport } from '../../viewportRender/viewportBoundary.js';
 import type { TscnNode } from '../../../parser/types.js';
 import { TscnCanvas } from '../../TscnCanvas.js';
-import { Canvas2DStage } from '../Canvas2DStage/Canvas2DStage.js';
 import { FreelookSpeedReadout } from '../FreelookSpeedReadout/FreelookSpeedReadout.js';
+import { GameStartNotes } from './GameStartNotes.js';
 import { ViewportControlsHelp } from '../ViewportControlsHelp/ViewportControlsHelp.js';
 import styles from './TscnPreviewShell.module.css';
 
 // Module-level, so the memo of `useLiveSceneNodes` does not recompute each render.
 const IS_2D_CONTENT = (node: TscnNode): boolean => isClaimedByCanvasItemEditor(node.type);
 
-export function ViewportArea({
-  sceneGraph,
-  scenePath,
-}: {
-  sceneGraph: SceneGraph | null;
-  /** The path the host opened the scene under, whatever its parse gave. */
-  scenePath: string;
-}) {
-  const { mode, setMode } = useViewportMode();
-  const rootScene = sceneGraph?.scenes.get(sceneGraph.rootScene);
-  const rootNodes = useSeatedRoots() ?? rootScene?.nodes ?? [];
-  // The live tree finds 2D content inside a sub-scene too. The walk stops at a
-  // sub-viewport, whose Controls show only through a viewport surface. A
-  // SubViewportContainer still counts, since it draws in 2D (ADR-0033).
-  const has2DContent = useLiveSceneNodes(IS_2D_CONTENT, keepsChildrenInViewport).length > 0;
-
-  if (mode === '2D') {
-    return (
-      <>
-        <Canvas2DStage
-          nodes={rootNodes}
-          internalResources={rootScene?.internalResources ?? []}
-          externalResources={rootScene?.externalResources ?? []}
-          editableInstances={rootScene?.editableInstances}
-          scenePath={scenePath}
-        />
-        <ViewportControlsHelp mode="2D" />
-      </>
-    );
-  }
-
-  if (mode === 'in-game') return <TscnCanvas mode="in-game" />;
-
-  // CanvasItem content renders only in the 2D workspace, so the 3D one shows a hint.
+export function ViewportArea() {
+  const { mode } = useViewportMode();
+  // The view reads the shell's providers: a `scene` prop would mount a second selection and pass.
   return (
     <>
-      <TscnCanvas />
+      <TscnCanvas mode={mode} />
+      <ViewportChrome mode={mode} />
+    </>
+  );
+}
+
+function ViewportChrome({ mode }: { mode: ViewportMode }) {
+  if (mode === 'in-game') return <GameStartNotes />;
+  if (mode === '2D') return <ViewportControlsHelp mode="2D" />;
+  return (
+    <>
       <ViewportControlsHelp mode="3D" />
       <FreelookSpeedReadout />
-      {has2DContent && (
-        <button
-          type="button"
-          className={styles.viewportHint}
-          onClick={() => setMode('2D')}
-          title="This scene contains 2D content — switch to the 2D view"
-        >
-          Has 2D&nbsp;content — switch to 2D
-        </button>
-      )}
+      <SwitchTo2DHint />
     </>
+  );
+}
+
+/** CanvasItem content renders only in the 2D workspace, so the 3D one shows a hint. */
+function SwitchTo2DHint() {
+  const { setMode } = useViewportMode();
+  // The walk stops at a sub-viewport, whose Controls show only on a surface (ADR-0033).
+  const has2DContent = useLiveSceneNodes(IS_2D_CONTENT, keepsChildrenInViewport).length > 0;
+  if (!has2DContent) return null;
+  return (
+    <button
+      type="button"
+      className={styles.viewportHint}
+      onClick={() => setMode('2D')}
+      title="This scene contains 2D content — switch to the 2D view"
+    >
+      Has 2D&nbsp;content — switch to 2D
+    </button>
   );
 }

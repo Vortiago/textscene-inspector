@@ -1,0 +1,16 @@
+[gd_scene format=3]
+
+; Two nodes hold a script and no Camera3D exists, so the In-game view shows both of its notes:
+; Godot readies each script before the first frame (`node.cpp:273`), and a root window with no
+; camera draws no 3D (`renderer_viewport.cpp:362`).
+
+[ext_resource type="Script" path="res://notes-spin.gd" id="1_spin"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_spin")
+
+[node name="Box" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_1")
+script = ExtResource("1_spin")

@@ -9,12 +9,10 @@ import userEvent from '@testing-library/user-event';
 
 // happy-dom has no WebGL, so the R3F canvas is a stub.
 vi.mock('../../TscnCanvas', () => ({
-  TscnCanvas: () => <div data-testid="canvas-stub" />,
+  TscnCanvas: ({ mode }: { mode?: string }) => (
+    <div data-testid={mode === '2D' ? 'stage-2d-stub' : 'canvas-stub'} />
+  ),
   TscnSceneContents: () => null,
-}));
-// Only the mounted viewport matters here. Canvas2DStage.test.tsx covers the stage.
-vi.mock('../Canvas2DStage/Canvas2DStage', () => ({
-  Canvas2DStage: () => <div data-testid="stage-2d-stub" />,
 }));
 
 import { TscnPreviewShell } from './TscnPreviewShell';

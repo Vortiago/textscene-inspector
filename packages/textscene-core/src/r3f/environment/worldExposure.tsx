@@ -1,22 +1,11 @@
-/**
- * The exposure of a world: the CameraAttributes of the camera it renders through, else those of its
- * first valid WorldEnvironment, which chooses apart from the Environment (`world_environment.cpp:87-93`).
- * Godot scales the frame by the attributes' exposure normalisation factor, which this code calls the
- * exposure factor. It is the `exposure_multiplier` while the project uses no physical light units
- * (`camera_attributes_storage.cpp:133-138`, `camera_attributes.cpp:56-64`). The camera it elects
- * gives its Environment to the world's chooser too (`WorldEnvironmentScope.tsx`). A world holds one
- * exposure for its lights and its sky; a viewport pass that shares the world draws at its own
- * (`ViewportPassAttributes`).
- */
-
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import type { AutoExposure, CameraAttributes } from '../../resources/cameraattributes/types';
-import { electCameraOfViewport } from '../../godot/scene/camera3d';
-import { useEnclosingViewportPath } from '../contexts/EnclosingViewportContext';
+import { ROOT_VIEWPORT_PATH, useEnclosingViewportPath } from '../contexts/EnclosingViewportContext';
 import { useOptionalViewportActions } from '../contexts/ViewportActionsContext';
 import { useSceneExposure } from '../exposure/sceneExposure';
 import { useByValue } from '../hooks/useByValue';
 import { sameElements } from '../../utils/sameElements';
+import { useCurrentCamera3D, useCurrentCameras3D } from '../currentCamera';
 import { useRegisterSceneCameraResources, useSceneCameraResources } from '../sceneCameras';
 import { useViewportDescription } from '../viewportRender/viewportDescriptionContext';
 import type { ViewportDescription } from '../viewportRender/viewportDescription';
@@ -41,13 +30,12 @@ interface WorldCamera extends CameraResources {
   path: string;
   /** The nearest viewport above the camera, null for the root viewport. */
   viewport: string | null;
-  current: boolean;
 }
 
 const cameras = createWorldPublications<WorldCamera>();
 
 /** Puts a Camera3D and what it holds in its world, whether or not the world renders through it. */
-export function usePublishCamera(path: string, current: boolean, held: CameraResources): void {
+export function usePublishCamera(path: string, held: CameraResources): void {
   const { attributes, environment } = held;
   useRegisterSceneCameraResources(
     path,
@@ -55,11 +43,13 @@ export function usePublishCamera(path: string, current: boolean, held: CameraRes
   );
   const viewport = useEnclosingViewportPath();
   cameras.usePublish(
-    useMemo(
-      () => ({ path, viewport, current, attributes, environment }),
-      [path, viewport, current, attributes, environment]
-    )
+    useMemo(() => ({ path, viewport, attributes, environment }), [path, viewport, attributes, environment])
   );
+}
+
+/** The published camera at `path`, null for none. */
+function cameraAt(worldCameras: readonly WorldCamera[], path: string | null): WorldCamera | null {
+  return path === null ? null : (worldCameras.find((camera) => camera.path === path) ?? null);
 }
 
 /** The editor renders through the previewed camera or none, since its own holds no attributes. */
@@ -67,11 +57,11 @@ function renderCameraOf(
   rule: ViewportDescription['camera'],
   viewedPath: string | null,
   previewed: CameraResources | null,
-  viewportPath: string | null,
+  currentPath: string | null,
   worldCameras: readonly WorldCamera[]
 ): CameraResources | null {
-  if (rule === 'elected') return electCameraOfViewport(worldCameras, viewportPath);
-  return previewed ?? worldCameras.find((camera) => camera.path === viewedPath) ?? null;
+  if (rule === 'current') return cameraAt(worldCameras, currentPath);
+  return previewed ?? cameraAt(worldCameras, viewedPath);
 }
 
 /** The attributes of a resolution, or null while there are none to read. */
@@ -108,10 +98,7 @@ export function WorldExposureScope({ children }: { children: ReactNode }) {
   );
 }
 
-/**
- * Gathers the CameraAttributes and the cameras of a world that only its shared viewports draw, as a
- * 2D canvas's World3D. Each viewport elects its own camera by its path (`ViewportPassAttributes`).
- */
+/** The CameraAttributes and cameras of a world only its shared viewports draw, as a canvas World3D. */
 export function WorldCamerasScope({ children }: { children: ReactNode }) {
   return (
     <cameraAttributes.Provider>
@@ -159,7 +146,7 @@ function RenderCameraProvider({ children }: { children: ReactNode }) {
     rule,
     viewedPath,
     useSceneCameraResources(viewedPath),
-    useEnclosingViewportPath(),
+    useCurrentCamera3D(useEnclosingViewportPath()),
     cameras.useAll()
   );
   const worldAttributes = cameraAttributes.useChosen();
@@ -179,17 +166,15 @@ function RenderCameraProvider({ children }: { children: ReactNode }) {
 const PassCameraContext = createContext<WorldCamera | null>(null);
 
 /**
- * Gives `children`, the tonemap stage of the viewport pass at `path`, the attributes the pass draws
- * with: those of the camera it elects, else the world's own. The world elects the camera once, from
- * what the cameras publish, and the pass draws through it (`usePassCameraPath`). A pass in a shared
- * world draws at the exposure of those attributes, whatever its scene holds (`drawAtExposure`).
+ * Gives the tonemap stage at `path` the attributes of the viewport's current camera, else the world's.
  *
  * @canonical The attributes a viewport pass draws with
  */
 export function ViewportPassAttributes({ path, children }: { path: string; children: ReactNode }) {
   const worldCameras = cameras.useAll();
   const worldAttributes = cameraAttributes.useChosen();
-  const camera = useMemo(() => electCameraOfViewport(worldCameras, path), [worldCameras, path]);
+  const currentPath = useCurrentCamera3D(path);
+  const camera = useMemo(() => cameraAt(worldCameras, currentPath), [worldCameras, currentPath]);
   const attributes = drawnAttributes(camera, worldAttributes);
   return (
     <PassCameraContext.Provider value={camera}>
@@ -198,27 +183,36 @@ export function ViewportPassAttributes({ path, children }: { path: string; child
   );
 }
 
-/** The path of the camera the enclosing `ViewportPassAttributes` elects, null for none. */
+/** The path of the camera the enclosing `ViewportPassAttributes` draws through, null for none. */
 export function usePassCameraPath(): string | null {
   return useContext(PassCameraContext)?.path ?? null;
 }
 
-/**
- * The Environment of the camera each viewport pass of the world elects. A viewport with no camera
- * draws nothing of the world. The root viewport's own camera is the view's
- * (`useRenderCameraEnvironment`).
- */
-export function usePassCameraEnvironments(): readonly EnvironmentResolution[] {
-  const worldCameras = cameras.useAll();
-  const elected = useMemo(() => {
-    const viewports = new Set(worldCameras.map((camera) => camera.viewport).filter((path) => path !== null));
-    return [...viewports].map((path) => electCameraOfViewport(worldCameras, path)!.environment);
-  }, [worldCameras]);
-  // A camera that toggles `current` publishes again, and mostly elects the same Environments.
-  return useByValue(elected, sameElements);
+/** A viewport a pass draws: not the editor's root (null) nor the In-game root window. */
+function isPassViewport(path: string | null): path is string {
+  return path !== null && path !== ROOT_VIEWPORT_PATH;
 }
 
-/** The Environment of the camera the enclosing `ViewportPassAttributes` elects, null for none. */
+/** The Environment of the current camera of each viewport pass of the world, apart from the root's. */
+export function usePassCameraEnvironments(): readonly EnvironmentResolution[] {
+  const worldCameras = cameras.useAll();
+  const viewports = useByValue(
+    [...new Set(worldCameras.map((camera) => camera.viewport).filter(isPassViewport))],
+    sameElements
+  );
+  const currentPaths = useCurrentCameras3D(viewports);
+  const current = useMemo(
+    () =>
+      currentPaths
+        .map((path) => cameraAt(worldCameras, path)?.environment)
+        .filter((environment) => environment !== undefined),
+    [currentPaths, worldCameras]
+  );
+  // A camera that publishes again mostly leaves the same Environments current.
+  return useByValue(current, sameElements);
+}
+
+/** The Environment of the camera the enclosing `ViewportPassAttributes` draws through, null for none. */
 export function usePassCameraEnvironment(): EnvironmentResolution | null {
   return useContext(PassCameraContext)?.environment ?? null;
 }

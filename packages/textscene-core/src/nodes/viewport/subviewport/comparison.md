@@ -116,6 +116,10 @@ Strict parsing format-checks these `SubViewport` properties, plus 47 inherited f
 
 Strict and lenient parsing diverge only on out-of-range enums. The lenient parser warns and falls back to Godot's default (`render_target_update_mode` 2, `render_target_clear_mode` 0, `msaa_2d` 0, `msaa_3d` 0, `canvas_item_default_texture_filter` 1, `canvas_item_default_texture_repeat` 0), while the strict parser reports an error. A `size` Godot cannot read at all falls back to `Vector2i(512, 512)`. A component below 2 is a strict error, because `Viewport::_set_size` raises it (`viewport.cpp:1120`).
 
+## Current camera
+
+Each SubViewport keeps its own current Camera3D and Camera2D, apart from the root window's (`viewport.cpp:4565-4607`). A call to `make_current` on a camera inside it moves its camera and leaves the root's.
+
 ## Known limitations
 
 - **Approximated** A consumer surface inside its own viewport's frustum samples a target still being written, with a driver-defined result.

@@ -3,8 +3,23 @@ import { nodeNotFound, SceneNodeHandle, type HandleHost, type NodeHandle } from 
 import { getNodeOrNull, ROOT_WINDOW_PATH, type WalkedTree } from './nodePathWalk.js';
 import { loadPropertyAccess, type PropertyAccess, type SceneProperties } from './sceneProperties.js';
 import type { SceneTree, SceneTreeNode } from './sceneRuntime.js';
-import type { SceneValue } from './variant.js';
+import { sceneValueOf, valueOfSceneValue, type SceneValue } from './variant.js';
 import { isWritable } from './writtenScene.js';
+import {
+  argumentCountError,
+  findPortedMethod,
+  findPortedAccessor,
+  intArgument,
+  runPortedMethod,
+  type CallResult,
+  type MethodTarget,
+} from './nodeMethods.js';
+import { memoisedImport } from '../resources/memoisedImport.js';
+import { ViewportCameras } from './viewportCameras.js';
+import type { PropertyMethod } from '../godot/classdb/propertyMethod.js';
+
+/** The setter and getter names of every class are tens of kB, so they load on the first use. */
+const loadPropertyMethods = memoisedImport(() => import('../godot/classdb/propertyMethod.js'));
 
 /** `get_class` of the root viewport, the window above the scene's root node. */
 const ROOT_WINDOW_TYPE = 'Window';
@@ -34,17 +49,28 @@ export class SceneNodes implements HandleHost {
   private readonly handles = new Map<string, NodeHandle>();
   /** Written only by `clear`: moves with each new text, so a write that waited on the load lands nowhere. */
   private generation = 0;
+  readonly cameras: ViewportCameras;
 
   constructor(
     private readonly source: SceneNodesSource,
     private readonly properties: SceneProperties,
     private readonly onWritten: (path: string) => void
-  ) {}
+  ) {
+    this.cameras = new ViewportCameras(
+      {
+        cameras: () => this.source.tree()?.cameras() ?? null,
+        enabledText: ({ path, rawProperties }) =>
+          this.properties.writes().get(path)?.enabled ?? rawProperties.enabled,
+      },
+      (livePaths) => livePaths.forEach((livePath) => this.onWritten(absolutePathOf(livePath)))
+    );
+  }
 
   /** A new text frees every node. */
   clear(): void {
     this.handles.clear();
     this.properties.clear();
+    this.cameras.reset();
     this.generation++;
   }
 
@@ -95,12 +121,84 @@ export class SceneNodes implements HandleHost {
     return handle;
   }
 
+  /** `Object::get`: a getter this release ports as a method runs it. */
   async get(path: string, property: string): Promise<SceneValue | null> {
+    const generation = this.generation;
+    const accessor = findPortedAccessor(this.typeOfNode(path), 'getter', property);
+    if (!accessor) return this.getStored(path, property);
+    const { name, method } = accessor;
+    const target = this.methodTarget(path, generation);
+    return (await runPortedMethod(
+      method,
+      `${this.typeOfNode(path)}::${name}`,
+      target,
+      []
+    )) as SceneValue | null;
+  }
+
+  /** `Object::set`: a setter this release ports as a method runs it. */
+  async set(path: string, property: string, value: SceneValue): Promise<boolean> {
+    const generation = this.generation;
+    const accessor = findPortedAccessor(this.typeOfNode(path), 'setter', property);
+    if (!accessor) return this.setStored(path, property, value);
+    // `Object::set` casts as `VariantCaster` does, and reports the call valid only for a strict cast.
+    const { access } = await this.propertyTarget(path);
+    const cast = access.castForSetter(this.typeOfNode(path), property, valueOfSceneValue(value));
+    const target = this.methodTarget(path, generation);
+    await runPortedMethod(accessor.method, `${this.typeOfNode(path)}::${accessor.name}`, target, [
+      sceneValueOf(cast.value),
+    ]);
+    return cast.isValid;
+  }
+
+  /** `Object::callv`: a ported method, else the property a setter or a getter reaches. */
+  async call(path: string, method: string, args: readonly SceneValue[]): Promise<CallResult> {
+    const generation = this.generation;
+    const type = this.typeOfNode(path);
+    const ported = findPortedMethod(type, method);
+    const name = `${type}::${method}`;
+    if (ported) return runPortedMethod(ported, name, this.methodTarget(path, generation), args);
+    const methods = await loadPropertyMethods();
+    this.assertSameText(generation, path);
+    const reached = methods.findPropertyMethod(type, method);
+    if (!reached) {
+      throw new Error(
+        `${name}: not a method this release ports. It ports the camera methods and the property setters and getters.`
+      );
+    }
+    return this.callPropertyMethod(path, name, reached, args);
+  }
+
+  /** A setter or a getter: an indexed one takes the index first (`class_db.cpp:1667-1673`). */
+  private async callPropertyMethod(
+    path: string,
+    method: string,
+    { role, properties }: PropertyMethod,
+    args: readonly SceneValue[]
+  ): Promise<CallResult> {
+    const isIndexed = !properties.has(null);
+    const argumentCount = Number(isIndexed) + (role === 'setter' ? 1 : 0);
+    // The count is checked before the index, as a bound call checks it first (`method_bind.h`).
+    if (args.length !== argumentCount) throw argumentCountError(method, argumentCount, args.length);
+    const index = isIndexed ? intArgument(args[0]!, method) : null;
+    const values = isIndexed ? args.slice(1) : args;
+    const property = properties.get(index);
+    if (property === undefined) {
+      throw new Error(
+        `expected one of the indexes ${[...properties.keys()].join(', ')} for ${method}, got ${String(index)}`
+      );
+    }
+    if (role === 'getter') return this.get(path, property);
+    await this.set(path, property, values[0]!);
+    return null;
+  }
+
+  private async getStored(path: string, property: string): Promise<SceneValue | null> {
     const { access, node } = await this.propertyTarget(path);
     return this.properties.get(access, livePathOf(path), node, property);
   }
 
-  async set(path: string, property: string, value: SceneValue): Promise<boolean> {
+  private async setStored(path: string, property: string, value: SceneValue): Promise<boolean> {
     if (SHAPE_PROPERTIES.has(property)) {
       throw new Error(
         `expected a property that keeps the tree's shape, got "${property}": a write of it is not in this release`
@@ -117,6 +215,40 @@ export class SceneNodes implements HandleHost {
     const isValid = this.properties.set(access, livePathOf(path), node, property, value);
     if (this.properties.writes() !== before) this.onWritten(path);
     return isValid;
+  }
+
+  /** A target that refuses each step once a new text has freed the node the call began on. */
+  private methodTarget(path: string, generation: number): MethodTarget {
+    return {
+      livePath: path === ROOT_WINDOW_PATH ? null : livePathOf(path),
+      cameras: () => {
+        this.assertSameText(generation, path);
+        return this.cameras;
+      },
+      readStored: (property) => {
+        this.assertSameText(generation, path);
+        return this.getStored(path, property);
+      },
+      writeStored: (property, value) => {
+        this.assertSameText(generation, path);
+        return this.setStored(path, property, value);
+      },
+      handleAt: (livePath) => this.handleAt(absolutePathOf(livePath)),
+    };
+  }
+
+  /** A call that awaited still acts on the text it began in, never on a node of a newer text. */
+  private assertSameText(generation: number, path: string): void {
+    if (generation !== this.generation)
+      throw new Error(`expected a node inside the tree at ${path}, found it freed by a new text`);
+  }
+
+  /** The class of the node at `path`, which a handle reached inside the tree. */
+  private typeOfNode(path: string): string {
+    const type = this.typeOf(path);
+    if (type === null)
+      throw new Error(`expected a node inside the tree at ${path}, found it freed by a new text`);
+    return type;
   }
 
   /** The class table, once loaded, and the node at `path`, still in the text the call was made in. */

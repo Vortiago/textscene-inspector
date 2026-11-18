@@ -47,7 +47,7 @@ async function sceneUnder(source: string, project: string | null) {
   const ProjectFixture = withProject(project);
   const captured: { current: THREE.WebGLRenderer | null } = { current: null };
   const renderer = await ReactThreeTestRenderer.create(
-    <SceneStack loader={createFakeResourceLoader().loader} scene={parsed} workspace="3d">
+    <SceneStack loader={createFakeResourceLoader().loader} scene={parsed} source={source} workspace="3d">
       <ProjectFixture>
         <ViewportTextureProvider>
           <ViewportPassProvider>

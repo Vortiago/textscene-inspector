@@ -74,7 +74,7 @@ async function renderScene(
   const seen: (ViewportTextureEntry | null)[] = [];
   const capturedGl: { current: THREE.WebGLRenderer | null } = { current: null };
   const wrap = (nodes: ReactNode) => (
-    <SceneStack workspace={workspace} loader={fake.loader} scene={parsed}>
+    <SceneStack workspace={workspace} loader={fake.loader} scene={parsed} source={source}>
       <ViewportPassStack captured={capturedGl}>
         <InWorld>{nodes}</InWorld>
         <Probe path={viewportPath} seen={seen} />

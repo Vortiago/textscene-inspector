@@ -20,6 +20,9 @@ import { errorsOf } from './testing/tierLists';
 import { fixturesDir, sceneFiles } from '../parser/testing/parserKit.js';
 import { isGodotTextResourcePath } from '../godot/project/resourceFormats.js';
 
+const CAMERA_2D_ENTER_ORDER =
+  'several enabled cameras are the point: the first to enter claims the viewport (camera_2d.cpp:353-355), and a call or a write of enabled moves it';
+
 /**
  * Fixtures allowed an advisory (warning or info), keyed by the exact rules they may trip and asserted as set equality.
  * Only `edge-*` fixtures are exempt, by pattern. A fixture shows one thing configured correctly, so an advisory usually
@@ -47,6 +50,27 @@ const FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[]; re
     rules: ['camera3d-multiple-current'],
     reason:
       'two current cameras are the point: each claims the viewport in tree order and the last claim wins (viewport.cpp:4565-4581), which the In-game golden shows',
+  },
+  'in-game/unit-in-game-call-camera2d.tscn': {
+    rules: ['camera2d-multiple-enabled'],
+    reason: CAMERA_2D_ENTER_ORDER,
+  },
+  'in-game/unit-in-game-call-camera2d-nested.tscn': {
+    rules: ['camera2d-multiple-enabled'],
+    reason: CAMERA_2D_ENTER_ORDER,
+  },
+  'in-game/unit-in-game-call-camera2d-properties.tscn': {
+    rules: ['camera2d-multiple-enabled'],
+    reason: CAMERA_2D_ENTER_ORDER,
+  },
+  'in-game/unit-in-game-call-start-2d.tscn': {
+    rules: ['camera2d-multiple-enabled'],
+    reason: CAMERA_2D_ENTER_ORDER,
+  },
+  'in-game/unit-in-game-call-start-current.tscn': {
+    rules: ['camera3d-multiple-current'],
+    reason:
+      'three current cameras are the point: each claims the viewport as it enters and the last claim wins (camera_3d.cpp:189-191)',
   },
   'unit-collision-shapes-2d.tscn': {
     rules: ['collisionshape2d-polygon-shape-limited-editing'],

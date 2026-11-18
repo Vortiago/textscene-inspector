@@ -51,7 +51,7 @@ height = 20.0
 async function renderUnderLayer(frame: THREE.Object3D, layer: number) {
   const parsed = new TscnParser().parse(SCENE);
   await ReactThreeTestRenderer.create(
-    <SceneStack workspace="2d" loader={cookieLoader()} scene={parsed}>
+    <SceneStack workspace="2d" loader={cookieLoader()} scene={parsed} source={SCENE}>
       <ViewportPassStack captured={{ current: null }}>
         <CanvasLayerIndexProvider value={layer}>
           <CanvasFrameContext.Provider value={frame}>

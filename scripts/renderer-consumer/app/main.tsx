@@ -30,8 +30,26 @@ mesh = SubResource("BoxMesh_1")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2.5)
 current = true
 
+[node name="Close" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.6)
+
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_1")
+`;
+
+/** A red rectangle in the middle of the window, which only a view that draws 2D shows. */
+const FIXTURE_2D_SCENE = `[gd_scene format=3]
+
+[node name="Menu" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+
+[node name="Panel" type="ColorRect" parent="."]
+offset_left = 40.0
+offset_top = 30.0
+offset_right = 280.0
+offset_bottom = 210.0
+color = Color(1, 0, 0, 1)
 `;
 
 /** The game window matches the element, so the In-game mode draws no bars around it. */
@@ -54,10 +72,19 @@ const written =
     ? gameScene.getNode('Cube').set('scale', variant('Vector3(0.5, 0.5, 0.5)'))
     : Promise.resolve(true);
 
-/** `?mode=in-game` opens the scene and draws it as the game starts it. The page holds one view. */
+/** `?call=close` makes the nearer camera current from the host's code, so the cube draws larger. */
+const called =
+  query.get('call') === 'close' ? gameScene.getNode('Close').call('make_current') : Promise.resolve(null);
+
+const menuScene = openScene({ source: FIXTURE_2D_SCENE, provider: projectOnly });
+
+/** `?mode=in-game` draws the game's start, `?mode=2D` the editor's 2D view. The page holds one view. */
 function View() {
   if (query.get('mode') === 'in-game') {
     return <TscnCanvas scene={gameScene} mode="in-game" />;
+  }
+  if (query.get('mode') === '2D') {
+    return <TscnCanvas scene={menuScene} mode="2D" />;
   }
   return (
     <TscnSceneProvider source={FIXTURE_SCENE} provider={projectOnly}>
@@ -66,7 +93,7 @@ function View() {
   );
 }
 
-void written.then(() =>
+void Promise.all([written, called]).then(() =>
   createRoot(document.getElementById('root')!).render(
     <div id="viewport" style={{ width: 320, height: 240 }}>
       <View />

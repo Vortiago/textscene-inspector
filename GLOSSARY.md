@@ -584,7 +584,7 @@ A node that a layer adds to the live tree and the edited scene does not own. The
 _Avoid_: "internal node" for this, "hidden node".
 
 **Viewport mode**:
-The single `'2D' | '3D' | 'in-game'` display state of the centre viewport: `3D` mounts the R3F canvas, `2D` mounts the pannable 2D stage, and `in-game` mounts the **In-game mode** of the view.
+The single `'2D' | '3D' | 'in-game'` display state of the centre viewport, and the `mode` of the one view `<TscnCanvas>`: `3D` is the editor's 3D view, `2D` the pannable 2D stage, and `in-game` the **In-game mode**.
 A heuristic on the scene root type picks 2D or 3D, never In-game, and the toolbar toggle overrides it.
 _Avoid_: "2D mode" alone.
 
@@ -603,6 +603,10 @@ _Avoid_: "scene context", "document". "scene graph" for the parse.
 **Node handle** (`NodeHandle`, `scene/nodeHandle.ts`):
 A node of a **scene** as a script holds it: by identity for the life of the text, with `get`, `set` and the NodePath walk of `get_node`. Two lookups of one node give one handle. After a new text the handle answers `isInsideTree() === false`.
 _Avoid_: a node path string as a handle, "node reference".
+
+**Current camera** (`ViewportCameras`, `scene/viewportCameras.ts`):
+The Camera3D and the Camera2D a viewport draws through, as Godot's `Viewport` holds them: one of each for the root window and for each **sub-viewport**. The enter rule fills it, and `make_current`, `clear_current`, `set('current')` and `set('enabled')` move it. The In-game mode reads it, and the editor's 3D view does not.
+_Avoid_: "elected camera", "active camera".
 
 **Host write** (`WriteStore`, `scene/sceneWrites.ts`):
 A property value a host's code gave `set`, kept as Variant text by live path and laid over the file as an instance override, so every reader of the **Live scene tree** reads it as a file value. The layers are, lowest first: the file, the host writes, the animated values, the **Live scene passes**.

@@ -27,7 +27,6 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     linterOnly: [
       // Viewport behaviour and editor aids, with no effect on the static
       // preview.
-      'ignore_rotation',
       'process_callback',
       'limit_smoothed',
       'position_smoothing_enabled',

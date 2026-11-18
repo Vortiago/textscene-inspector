@@ -29,7 +29,7 @@ const DEFAULT_ASPECT = 16 / 9;
 export function Camera3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as Camera3DProperties;
   const tscnPath = useNodePath() ?? node.name;
-  usePublishCamera(tscnPath, properties.current, {
+  usePublishCamera(tscnPath, {
     attributes: useResolvedCameraAttributes(properties.attributes),
     environment: useResolvedEnvironment(properties.environment),
   });

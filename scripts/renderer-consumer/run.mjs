@@ -16,6 +16,8 @@ const APP_DIR = join(import.meta.dirname, 'app');
 
 /** The drawn pixels that prove a view drew the cube: a blank canvas scores 0. */
 const INK_FLOOR = 2000;
+/** The red rectangle draws about 26,000 pixels, and the stage with no content about 1,000. */
+const INK_FLOOR_2D = 10_000;
 /** A cube at half scale draws about a quarter of the pixels, so its view proves less. */
 const WRITTEN_INK_FLOOR = INK_FLOOR / 4;
 /** Software GL draws the first frame slowly. */
@@ -64,6 +66,8 @@ const VIEWS = {
   '3D': { query: '', inkFloor: INK_FLOOR },
   'In-game': { query: '?mode=in-game', inkFloor: INK_FLOOR },
   'In-game after a write': { query: '?mode=in-game&write=scale', inkFloor: WRITTEN_INK_FLOOR },
+  'In-game after a call': { query: '?mode=in-game&call=close', inkFloor: INK_FLOOR },
+  '2D': { query: '?mode=2D', inkFloor: INK_FLOOR_2D },
 };
 
 /** A cube at half scale draws a quarter of its pixels, so its ink stays under half of the whole cube's. */
@@ -136,11 +140,23 @@ function writeFailures(drawn) {
   return [`In-game after a write: expected under ${whole * WRITTEN_INK_SHARE} drawn pixels, got ${written}`];
 }
 
+/** The nearer camera draws the cube at about 2.4 times the area, so its ink passes 1.5 times the whole. */
+const CALLED_INK_SHARE = 1.5;
+
+/** A line when the host's `make_current` did not move the view to the nearer camera, or none. */
+function callFailures(drawn) {
+  const whole = drawn['In-game'].ink;
+  const called = drawn['In-game after a call'].ink;
+  if (called > whole * CALLED_INK_SHARE) return [];
+  return [`In-game after a call: expected over ${whole * CALLED_INK_SHARE} drawn pixels, got ${called}`];
+}
+
 /** One line per failed check of every view. */
 function failures(drawn) {
   return [
     ...Object.entries(drawn).flatMap(([view, result]) => failuresOf(view, result)),
     ...writeFailures(drawn),
+    ...callFailures(drawn),
   ];
 }
 

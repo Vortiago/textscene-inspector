@@ -42,6 +42,7 @@ const NEEDS_NO_OVERLAY = new Map([
     'nodes/2d/tiles/shared/useSceneTiles.ts',
     'Hands the scene tile children of a layer to the dispatcher, which lays the patches over each node it draws.',
   ],
+  ['r3f/gameView/gameStartFacts.ts', 'Counts the nodes by type and by their script, which no pass patches.'],
   [
     'nodes/windows/window/themeOwners.ts',
     'Reads the type and the `theme` of the nodes above a window, which no pass patches.',
@@ -77,6 +78,10 @@ const NEEDS_NO_OVERLAY = new Map([
   ['r3f/preview/usePreviewYield.ts', 'Asks whether a node yields the preview, by type.'],
   ['r3f/uniqueNameOwner.ts', 'Reads the `%Name` tables, which no pass patches.'],
   ['r3f/useLiveSceneTree.ts', 'The hooks that hand out the tree and its nodes.'],
+  [
+    'r3f/sceneLiveTree.ts',
+    'Reads the type and the authored `current` and `enabled` of each camera for the enter rule, which no pass patches.',
+  ],
 ]);
 
 const READS_LIVE_NODE = 'const node = link.step.node;\n';

@@ -32,8 +32,9 @@ const in2dMode = (scenes) => scenes.map((scene) => ({ mode: '2d', ...scene }));
  *   Playwright's default, which `pnpm recapture` takes for the sheet image too
  * @property {number} [animationTime] the seconds to seek the AnimationPlayer `select` names to
  * @property {'nodes'} [litSurface] capture a branch only the node lit surface draws, with the switch on
- * @property {{ path: string, property: string, text: string }[]} [sets] host writes through the
- *   open scene, each a Variant text or `Resource("res://…")`, applied in order before the settle
+ * @property {({ path: string, property: string, text: string } | { path: string, method: string, args: string[] })[]} [hostCalls]
+ *   host writes and calls through the open scene, each value a Variant text or `Resource("res://…")`,
+ *   applied in order before the settle
  */
 
 /** The options an entry may set. The capture reads no other, so `scenes.test.mjs` refuses one. */
@@ -50,7 +51,7 @@ export const SCENE_OPTIONS = [
   'settleTimeout',
   'animationTime',
   'litSurface',
-  'sets',
+  'hostCalls',
 ];
 
 /**
