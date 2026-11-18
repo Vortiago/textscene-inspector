@@ -758,6 +758,33 @@ const SPATIAL_CHAPTER = {
       tsl: 'the defines of the template variant',
     },
     {
+      heading: 'Cull modes',
+      rows: (row) => /^spatial render_mode cull_/.test(row.id),
+      what: '`cull_back`, the default, culls the faces seen from behind, `cull_front` the faces seen from the front, and `cull_disabled` none. Godot turns the cull round for an object of a negative scale (`render_forward_clustered.cpp:411`), as three does. `cull_front` and `cull_disabled` define `DO_SIDE_CHECK`, so the template turns `NORMAL` round on a face seen from behind (`scene_forward_clustered.glsl:1263`).',
+      tsl: "the material's `side`, and the defines of the template variant",
+    },
+    {
+      heading: 'Depth modes',
+      rows: (row) => /^spatial render_mode depth_(draw|test)_/.test(row.id),
+      what: '`depth_test_disabled` draws with no depth test, and `depth_test_inverted` draws only the fragments behind the depth already drawn (`scene_shader_forward_clustered.cpp:352-360`). `depth_draw_never` writes no depth. `depth_draw_opaque`, the default, writes depth in the opaque pass only, and `depth_draw_always` in the alpha pass too. A shader with `depth_draw_never` or with a depth test other than the default draws in the alpha pass (`scene_shader_forward_clustered.h:279`), after the opaque objects, the farthest object first.',
+      tsl: "the material's `depthTest`, `depthFunc`, `depthWrite` and `transparent`",
+    },
+    {
+      heading: 'Blend modes',
+      rows: (row) => /^spatial render_mode blend_/.test(row.id),
+      what: "`blend_mix`, the default, draws in the opaque pass with no blend. `blend_add`, `blend_sub`, `blend_mul` and `blend_premul_alpha` draw in the alpha pass and blend with Godot's factors for the mode (`material_storage.cpp:651-716`), the colour and the alpha each with its own.",
+      tsl: "the material's `blending` and its blend factors, and `transparent`",
+    },
+    {
+      heading: 'The space of `VERTEX` in `vertex()`',
+      rows: (row) =>
+        ['skip_vertex_transform', 'world_vertex_coords', 'ensure_correct_normals']
+          .map((mode) => `spatial render_mode ${mode}`)
+          .includes(row.id),
+      what: "`skip_vertex_transform` leaves `VERTEX`, `NORMAL`, `TANGENT` and `BINORMAL` as `vertex()` writes them, so `vertex()` turns them to view space itself. `world_vertex_coords` hands `vertex()` the vertex and its normals in world space, and the template turns them to view space after it. `ensure_correct_normals` defines `ENSURE_CORRECT_NORMALS`, which no line of Godot 4.6.3's scene template reads.",
+      tsl: 'the defines of the template variant',
+    },
+    {
       heading: '`ALBEDO`, `ROUGHNESS` and `METALLIC`',
       rows: (row) =>
         [

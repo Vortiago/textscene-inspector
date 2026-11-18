@@ -302,9 +302,13 @@ describe('the imperative adapter — blend modes', () => {
     expect(build({}).blending).toBe(THREE.NormalBlending);
   });
 
-  it('uses the three presets that equal Godot’s factors exactly', () => {
+  it('uses the ADD preset, and spells MUL out as three has no non-premultiplied preset for it', () => {
     expect(build({ blend_mode: '1' }).blending).toBe(THREE.AdditiveBlending);
-    expect(build({ blend_mode: '3' }).blending).toBe(THREE.MultiplyBlending);
+    expect(build({ blend_mode: '3' })).toMatchObject({
+      blending: THREE.CustomBlending,
+      blendSrc: THREE.DstColorFactor,
+      blendDst: THREE.ZeroFactor,
+    });
   });
 
   it('gives SUB the ported reverse-subtract factors, not a preset', () => {

@@ -94,8 +94,11 @@ export class RowTexture {
     let writtenFor: number | undefined;
     this.node.drawWrite.write = (frame) => {
       if (frame.renderId === writtenFor) return;
+      // The handler counts one render for each draw of a node material (`WebGLNodesHandler.js:598`).
+      const followsOwnDraw = frame.renderId === (writtenFor ?? Number.NaN) + 1;
       writtenFor = frame.renderId;
       this.write(wordsOf(frame.object!));
+      if (followsOwnDraw) uploadBetweenDraws(frame.renderer as unknown as THREE.WebGLRenderer, this.texture);
     };
   }
 
@@ -169,6 +172,34 @@ export class RowTexture {
     return this.node.load(tsl(ivec2)(x, y) as never).level(intNode(0) as never) as unknown as Node;
   }
 }
+
+/** three uploads textures only after a draw of another material (`WebGLRenderer.js:2760`): this uploads. */
+function uploadBetweenDraws(renderer: THREE.WebGLRenderer, texture: THREE.DataTexture): void {
+  const properties = renderer.properties.get(texture) as {
+    __webglTexture?: WebGLTexture;
+    __version?: number;
+  };
+  // Nothing uploaded at this size yet: three allocates and uploads it as it binds it.
+  if (!properties.__webglTexture || properties.__version === undefined) return;
+  const gl = renderer.getContext() as WebGL2RenderingContext;
+  const { data, width, height } = texture.image as { data: Uint32Array; width: number; height: number };
+  const bound = gl.getParameter(gl.TEXTURE_BINDING_2D) as WebGLTexture | null;
+  gl.bindTexture(gl.TEXTURE_2D, properties.__webglTexture);
+  for (const [name, value] of UNPACK_PLAIN) renderer.state.pixelStorei(gl[name], value);
+  gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, gl.RGBA_INTEGER, gl.UNSIGNED_INT, data);
+  gl.bindTexture(gl.TEXTURE_2D, bound);
+  properties.__version = texture.version;
+}
+
+/** The unpack state of a plain row upload, which three's last upload may have left otherwise. */
+const UNPACK_PLAIN = [
+  ['UNPACK_FLIP_Y_WEBGL', 0],
+  ['UNPACK_PREMULTIPLY_ALPHA_WEBGL', 0],
+  ['UNPACK_ALIGNMENT', 4],
+  ['UNPACK_ROW_LENGTH', 0],
+  ['UNPACK_SKIP_PIXELS', 0],
+  ['UNPACK_SKIP_ROWS', 0],
+] as const;
 
 /** `base + words`. */
 function plus(base: Index, words: number): Index {

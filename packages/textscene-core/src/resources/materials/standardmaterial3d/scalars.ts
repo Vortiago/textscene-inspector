@@ -5,7 +5,7 @@
  */
 
 import * as THREE from 'three';
-import { godotBlendState } from './blendState';
+import { godotBlendState } from '../../../shaders/pipeline/blendState';
 import { textureChannelMask } from '../../../godot/rendering/materials/textureChannel';
 import { CullMode } from '../../../godot/rendering/materials/cullMode';
 import type { StandardMaterial3DData, StandardMaterial3DScalars } from './types';

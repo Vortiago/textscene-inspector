@@ -165,6 +165,12 @@ At equal `render_priority`, the two engines can disagree, and the measured case 
 - **Approximated** A GLB chain sibling never joins the range fade. `fadedMeshMaterials` tracks the clone's own slots, so a fading surface's link stays opaque while its surface fades.
 - **Unimplemented** `grow` offsets the colour pass's vertices only. The alpha-depth prepass and the shadow depth draw the un-offset position, where Godot's depth variant runs the same vertex body. `surfaceDepthMaterial` clones the depth base without the grow injection. The billboard offset records its depth injection at `materialBag.ts:235-236`.
 
+## Blend mode
+
+<!-- compare: image=material-blend-mul status=done fixture=unit-material-blend-mul.tscn -->
+
+`blend_mode = 3` (multiply) draws the surface colour times the colour behind it, with Godot's attachment: source factor `DST_COLOR`, destination factor `ZERO` (`material_storage.cpp:651-716`). An unshaded and a lit quad each cover an orange quad. Both engines draw the same darkened orange.
+
 ## Linting
 
 <!-- lint:begin StandardMaterial3D -->

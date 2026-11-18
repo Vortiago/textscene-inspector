@@ -10,7 +10,13 @@ export function framePixels(renderer, scene, camera, { width, height, colorSpace
   renderer.readRenderTargetPixels(target, 0, 0, width, height, pixels);
   renderer.setRenderTarget(null);
   target.dispose();
-  return topRowFirst(pixels, width, height);
+  return withOpaqueAlpha(topRowFirst(pixels, width, height));
+}
+
+/** An opaque viewport's image is RGB8, so its alpha reads as 1 (`texture_storage.cpp:3574`). */
+function withOpaqueAlpha(pixels) {
+  for (let alpha = 3; alpha < pixels.length; alpha += 4) pixels[alpha] = 255;
+  return pixels;
 }
 
 /** GL reads the bottom row first, and Godot's image holds the top row first. */
