@@ -14,7 +14,15 @@ import { OVER_EVERY_LAYER } from '../canvasKeyWindow';
 import type { ResourceProvider } from '../../resources/ResourceProvider';
 import '../nodes';
 
-const provider: ResourceProvider = { loadResource: async () => null };
+const POLYGON_SCENE = `[gd_scene format=3]
+
+[node name="Item" type="Polygon2D"]
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100)
+`;
+
+const provider: ResourceProvider = {
+  loadResource: async (path) => (path === 'res://item.tscn' ? POLYGON_SCENE : null),
+};
 
 const POLYGON = 'polygon = PackedVector2Array(0, 0, 100, 0, 100, 100)';
 
@@ -92,6 +100,21 @@ current = true
 [node name="Hud" type="Node2D" parent="."]
 
 [node name="Box" type="CSGBox3D" parent="Hud"]
+`;
+
+/** An instanced 2D scene, with no children of its own, whose parent is a Node3D. */
+const INSTANCE_UNDER_NODE3D = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://item.tscn" id="1"]
+
+[node name="Main" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+current = true
+
+[node name="Box" type="CSGBox3D" parent="."]
+
+[node name="Placed" parent="." instance=ExtResource("1")]
 `;
 
 interface Draw {
@@ -200,8 +223,15 @@ describe('the In-game view composite', () => {
 
   it('draws a canvas item below a hidden Node3D, which passes it no visibility', async () => {
     const canvas = (await drawsOf(CANVAS_UNDER_HIDDEN_NODE3D)).find(isCanvas)!.scene;
-    for (let object: THREE.Object3D | null = drawnNamed(canvas, 'Item')!; object; object = object.parent) {
+    const item = drawnNamed(canvas, 'Item');
+    expect(item, 'a drawn Item').toBeDefined();
+    for (let object: THREE.Object3D | null = item!; object; object = object.parent) {
       expect(object.visible, object.name).toBe(true);
     }
+  });
+
+  it('draws an instanced 2D scene whose parent is a Node3D on the root canvas', async () => {
+    const canvas = (await drawsOf(INSTANCE_UNDER_NODE3D)).find(isCanvas)!.scene;
+    expect(drawnNamed(canvas, 'Placed')).toBeDefined();
   });
 });

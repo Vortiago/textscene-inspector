@@ -3,7 +3,7 @@ import type { TscnNode } from '../parser/types.js';
 import { joinPath } from '../utils/nodePath.js';
 import { isViewportBoundary } from './viewportRender/viewportBoundary.js';
 import { usePlaceViewport } from './contexts/ViewportPassRegistryContext.js';
-import { childOrders, TreeOrderProvider, useTreeOrder } from './contexts/TreeOrderContext.js';
+import { childEnterOrders, TreeOrderProvider, useTreeOrder } from './contexts/TreeOrderContext.js';
 import { useCanvasWorkspace, type CanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
 import { drawsBelowUndrawnParent } from './nodeWorkspaceVisibility.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
@@ -19,7 +19,7 @@ interface UndrawnChildrenProps {
 export function UndrawnNodeChildren({ node, path }: UndrawnChildrenProps): ReactNode {
   const workspace = useCanvasWorkspace();
   const order = useTreeOrder();
-  const orders = useMemo(() => childOrders(order, node.children.length), [order, node.children.length]);
+  const orders = useMemo(() => childEnterOrders(order, node.children), [order, node.children]);
   return node.children.map((child, i) =>
     reachesWorkspace(child, workspace) ? (
       <TreeOrderProvider key={child.name} order={orders[i]!}>
@@ -52,13 +52,14 @@ const reachCache: Record<CanvasWorkspace, WeakMap<TscnNode, boolean>> = {
   '3d': new WeakMap(),
 };
 
-/** Whether `workspace` draws or places `node` or a node below it. A container alone does not count. */
+/** A container alone does not count. An instance does: it parses as `Node` until its scene merges. */
 function reachesWorkspace(node: TscnNode, workspace: CanvasWorkspace): boolean {
   const cache = reachCache[workspace];
   const known = cache.get(node);
   if (known !== undefined) return known;
   const reaches =
     isViewportBoundary(node.type) ||
+    node.instance !== undefined ||
     (drawsBelowUndrawnParent(node, workspace) && !nodeComponentRegistry.passesThrough(node.type)) ||
     node.children.some((child) => reachesWorkspace(child, workspace));
   cache.set(node, reaches);
