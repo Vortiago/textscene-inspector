@@ -16,7 +16,7 @@ import type { StandardMaterial3DScalars } from '../../resources/materials/standa
 import type { ScopedReference } from '../../resources/reading';
 import type { FadeVariants } from './fadeVariants';
 import { useSurfaceTextures, type TexturedSurface } from './surfaceTextures';
-import { readyMaterial, useMaterial } from './useMaterial';
+import { readyMaterial, useMaterial, useShadedMaterial, type LoadedMaterial } from './useMaterial';
 
 const NO_TEXTURES: StandardMaterial['textures'] = {};
 
@@ -41,7 +41,15 @@ export function useSurfaceMaterial(
   reference: ScopedReference | undefined,
   surface?: TexturedSurface
 ): SurfaceMaterial {
-  const loaded = useMaterial(reference);
+  return useSurfaceOf(useMaterial(reference), surface);
+}
+
+/** The material `reference` draws on the surface of a mesh, a spatial shader included. */
+export function useShadedSurfaceMaterial(reference: ScopedReference | undefined): SurfaceMaterial {
+  return useSurfaceOf(useShadedMaterial(reference));
+}
+
+function useSurfaceOf(loaded: LoadedMaterial, surface?: TexturedSurface): SurfaceMaterial {
   const material = readyMaterial(loaded);
   // A decoded material keeps its identity while its text holds, so the scalars do too.
   const scalars = useMemo(() => material && standardMaterial3DScalars(material.data), [material]);

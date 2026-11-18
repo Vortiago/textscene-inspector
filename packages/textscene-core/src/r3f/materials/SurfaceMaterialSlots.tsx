@@ -43,11 +43,16 @@ interface SurfaceMaterialSlotsProps {
   listed?: ListedSurface;
   /** The mesh draws a particle emitter's instances: the patch that colours them and cuts the flipbook frame. */
   particles?: ParticleProgram;
-  /** The mesh draws at every instance of a MultiMesh or a GridMap. */
-  isInstanced?: boolean;
+  /** The mesh is one unskinned mesh, the one draw a spatial shader takes yet. */
+  isMeshSurface?: boolean;
 }
 
-export function SurfaceMaterialSlots({ sources, listed, particles, isInstanced }: SurfaceMaterialSlotsProps) {
+export function SurfaceMaterialSlots({
+  sources,
+  listed,
+  particles,
+  isMeshSurface,
+}: SurfaceMaterialSlotsProps) {
   const slotSources = surfaceSources(sources);
   return (
     <>
@@ -58,7 +63,7 @@ export function SurfaceMaterialSlots({ sources, listed, particles, isInstanced }
           attach={surfaceAttach(i, slotSources.length)}
           listed={listed}
           particles={particles}
-          isInstanced={isInstanced}
+          isMeshSurface={isMeshSurface}
         />
       ))}
     </>

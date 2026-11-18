@@ -12,7 +12,7 @@ import { drawnBag, materialBagElement, StandardMaterialSlot } from './StandardMa
 import { pointDrawOf, type ListedSurface } from './godotPoint';
 import { particleDrawOf, type ParticleProgram } from './godotParticles';
 import type { ScopedReference } from '../../resources/reading';
-import { useSurfaceMaterial } from './useSurfaceMaterial';
+import { useShadedSurfaceMaterial } from './useSurfaceMaterial';
 import { SpatialShaderSlot } from '../spatialShader/SpatialShaderSlot';
 import { warnOnce } from '../../utils/warnOnce';
 
@@ -28,12 +28,12 @@ interface SurfaceMaterialSlotProps {
   listed?: ListedSurface;
   /** The surface draws a particle emitter's instances: the patch that colours them and cuts the flipbook frame. */
   particles?: ParticleProgram;
-  /** The surface draws at every instance of a MultiMesh or a GridMap. */
-  isInstanced?: boolean;
+  /** The surface draws one unskinned mesh, the one draw a spatial shader takes yet. */
+  isMeshSurface?: boolean;
 }
 
 const UNDRAWN_SHADER =
-  "[material] The previewer draws a spatial shader only on a plain mesh yet, and draws Godot's default 3D surface on this MultiMesh, line, point or particle surface.";
+  "[material] The previewer draws a spatial shader only on an unskinned mesh yet, and draws Godot's default 3D surface on this skinned, MultiMesh, line, point or particle surface.";
 
 /** Godot's default surface for no usable material (ADR-0041), magenta for a texture that never draws. */
 export function SurfaceMaterialSlot({
@@ -41,9 +41,9 @@ export function SurfaceMaterialSlot({
   attach,
   listed,
   particles,
-  isInstanced,
+  isMeshSurface,
 }: SurfaceMaterialSlotProps) {
-  const { scalars, bags, shader } = useSurfaceMaterial(source);
+  const { scalars, bags, shader } = useShadedSurfaceMaterial(source);
   const pixelRatio = useThree((state) => state.viewport.dpr);
   // Primitive and placement are strings: `listed` is a new object each render.
   const primitive = listed?.primitive;
@@ -64,15 +64,15 @@ export function SurfaceMaterialSlot({
     }),
     [pointDraw, primitive, placement, particleDraw]
   );
-  const isPlainMesh = !listed && !particles && !isInstanced;
+  const drawsShader = isMeshSurface === true && !listed && !particles;
   useEffect(() => {
-    if (shader && !isPlainMesh) warnOnce(shader, 'undrawn', UNDRAWN_SHADER);
-  }, [shader, isPlainMesh]);
+    if (shader && !drawsShader) warnOnce(shader, 'undrawn', UNDRAWN_SHADER);
+  }, [shader, drawsShader]);
   const standard = bags ? (
     <StandardMaterialSlot bags={bags} attach={attach} draws={draws} />
   ) : (
     materialBagElement(drawnBag(MISSING_TEXTURE_MATERIAL, draws), attach, null)
   );
-  if (!shader || !isPlainMesh) return standard;
+  if (!shader || !drawsShader) return standard;
   return <SpatialShaderSlot shader={shader} attach={attach} fallback={standard} />;
 }

@@ -1,7 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, type ReactNode } from 'react';
 import { useThree } from '@react-three/fiber';
 import type * as THREE from 'three';
-import { warn } from '../../logger';
 import { projectSampling } from '../../parser/projectSettingsParser';
 import type { ShaderText } from '../../resources/materials/shadermaterial/types';
 import { memoisedImport } from '../../resources/memoisedImport';
@@ -49,7 +48,7 @@ export function SpatialShaderSlot({ shader, attach, fallback }: SpatialShaderSlo
   const isLoadFailed = loaded === 'failed' || nodesHandler === 'failed';
   useEffect(() => {
     if (refusal) warnOnce(shader, 'refused', refusal);
-    else if (isLoadFailed) warn(LOAD_FAILURE);
+    else if (isLoadFailed) warnOnce(loadSpatialSurface, 'failed', LOAD_FAILURE);
   }, [shader, refusal, isLoadFailed]);
 
   const samplers = drawn?.samplers ?? null;

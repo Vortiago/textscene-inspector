@@ -106,7 +106,7 @@ function OwnInstancedDraw({
       surfaceCount={sources.length}
       settings={{ ...drawHookProps(shadow), raycast }}
     >
-      <SurfaceMaterialSlots sources={sources} {...listedSlotOf(geometry)} particles={particles} isInstanced />
+      <SurfaceMaterialSlots sources={sources} {...listedSlotOf(geometry)} particles={particles} />
     </InstancedDraw>
   );
 }
@@ -129,7 +129,6 @@ function ExtraInstancedDraw({ spec, placed }: { spec: ChainDrawSpec; placed: Par
         attach={spec.attach}
         {...listedSlotOf(placed.geometry)}
         particles={placed.particles}
-        isInstanced
       />
     </InstancedDraw>
   );

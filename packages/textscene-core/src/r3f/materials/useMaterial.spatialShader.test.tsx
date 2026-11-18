@@ -7,7 +7,7 @@ import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import type { LitSurfaceForm } from '../litSurface/litSurfaceForm';
 import { inlineSource } from './surfaceMaterial.testkit';
-import { useMaterial } from './useMaterial';
+import { useMaterial, useShadedMaterial } from './useMaterial';
 
 /** Written by each test before it renders. */
 let form: LitSurfaceForm = 'patched';
@@ -24,20 +24,20 @@ const RESOURCES: TscnInternalResource[] = [
   },
 ];
 
-function loadedPaint() {
+function loadedPaint(load: typeof useMaterial = useShadedMaterial) {
   const fake = createFakeResourceLoader();
   const wrapper = ({ children }: { children: ReactNode }) => (
     <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>
   );
   const source = inlineSource(RESOURCES[1]!, RESOURCES);
-  return renderHook(() => useMaterial(source), { wrapper }).result.current;
+  return renderHook(() => load(source), { wrapper }).result.current;
 }
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('useMaterial of a spatial ShaderMaterial', () => {
+describe('useShadedMaterial of a spatial ShaderMaterial', () => {
   it('hands on the shader text and its parameters under the node lit surface, with no warning', () => {
     const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     form = 'nodes';
@@ -55,5 +55,15 @@ describe('useMaterial of a spatial ShaderMaterial', () => {
 
     expect(loadedPaint()).toEqual({ status: 'declined', type: 'ShaderMaterial' });
     expect(warn).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('useMaterial of a spatial ShaderMaterial', () => {
+  it('declines it with a warning under the node lit surface, for a draw that builds no shader', () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    form = 'nodes';
+
+    expect(loadedPaint(useMaterial)).toEqual({ status: 'declined', type: 'ShaderMaterial' });
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('only on the surface of a mesh'));
   });
 });

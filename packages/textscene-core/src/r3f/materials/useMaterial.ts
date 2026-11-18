@@ -13,7 +13,7 @@ import { litSurfaceForm } from '../litSurface/litSurfaceForm';
 import { useReferencedResource, type Read, type ScopedReference } from '../../resources/reading';
 
 /** What a material reference loads to. */
-type LoadedMaterial =
+export type LoadedMaterial =
   /** A StandardMaterial3D to draw. */
   | { status: 'ready'; material: StandardMaterial }
   /** A spatial ShaderMaterial, which the node lit surface draws. */
@@ -24,23 +24,40 @@ type LoadedMaterial =
   | { status: 'absent' };
 
 const ABSENT: LoadedMaterial = { status: 'absent' };
+const DECLINED_SHADER: LoadedMaterial = { status: 'declined', type: 'ShaderMaterial' };
 
 /** The material to draw, or null for Godot's default surface. */
 export function readyMaterial(loaded: LoadedMaterial): StandardMaterial | null {
   return loaded.status === 'ready' ? loaded.material : null;
 }
 
-/** What `reference` loads to. A ShaderMaterial declines with a warning (ADR-0041), but for a spatial one. */
+const UNCOMPILED_SHADER =
+  "[material] ShaderMaterial is not compiled, and the surface draws Godot's default 3D surface.";
+
+const UNDRAWN_SPATIAL_SHADER =
+  "[material] The previewer draws a spatial shader only on the surface of a mesh yet, and draws Godot's default 3D surface for this next pass, glTF override or trail.";
+
+/** What `reference` loads to for a draw that builds no shader: a ShaderMaterial declines with a warning. */
 export function useMaterial(reference: ScopedReference | undefined): LoadedMaterial {
+  const loaded = useLoadedMaterial(reference);
+  const isShader = loaded.status === 'spatial-shader';
+  useEffect(() => {
+    if (isShader) warn(UNDRAWN_SPATIAL_SHADER);
+  }, [isShader]);
+  return isShader ? DECLINED_SHADER : loaded;
+}
+
+/** What `reference` loads to for a mesh surface, which draws a spatial shader under the node lit surface. */
+export function useShadedMaterial(reference: ScopedReference | undefined): LoadedMaterial {
+  return useLoadedMaterial(reference);
+}
+
+function useLoadedMaterial(reference: ScopedReference | undefined): LoadedMaterial {
   const read = useReferencedResource(reference ?? null, MATERIAL);
   const loaded = useMemo(() => loadedOf(read), [read]);
-
   useEffect(() => {
-    if (loaded.status === 'declined' && loaded.type === 'ShaderMaterial') {
-      warn("[material] ShaderMaterial is not compiled — rendering Godot's default 3D surface.");
-    }
+    if (loaded.status === 'declined' && loaded.type === 'ShaderMaterial') warn(UNCOMPILED_SHADER);
   }, [loaded]);
-
   return loaded;
 }
 
@@ -51,5 +68,5 @@ function loadedOf(read: Read<Material>): LoadedMaterial {
   if (material.form !== 'spatial-shader') return { status: 'declined', type: material.type };
   return litSurfaceForm() === 'nodes'
     ? { status: 'spatial-shader', shader: material.shader }
-    : { status: 'declined', type: 'ShaderMaterial' };
+    : DECLINED_SHADER;
 }

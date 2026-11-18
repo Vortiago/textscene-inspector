@@ -28,7 +28,12 @@ export function spatialSurfaceOf(
   if (!('spatial' in compile))
     return { refusal: `[material] ${unDrawnMessage(compile, 'spatial', '3D surface')}` };
   const { spatial } = compile;
-  writeSpatialBindingsEachDraw(spatial, (camera) => sceneOf(gl, camera));
+  try {
+    writeSpatialBindingsEachDraw(spatial, (camera) => sceneOf(gl, camera));
+  } catch (failure) {
+    disposeSpatial(spatial);
+    return { refusal: `[material] ${unDrawnMessage({ failure }, 'spatial', '3D surface')}` };
+  }
   spatial.material.onTranslatorFault = (fault) =>
     warnOnce(
       shader,
