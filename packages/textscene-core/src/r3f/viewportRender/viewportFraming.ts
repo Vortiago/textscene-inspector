@@ -136,8 +136,8 @@ interface OrthoFrame {
  * camera centres on (w/2, -h/2). The z of 1000 mirrors the 2D world canvas.
  */
 export function orthoFrameForSize(size: Vector2): OrthoFrame {
-  const width = size.x > 0 ? size.x : 1;
-  const height = size.y > 0 ? size.y : 1;
+  const width = framedExtent(size.x);
+  const height = framedExtent(size.y);
   return {
     left: -width / 2,
     right: width / 2,
@@ -146,6 +146,11 @@ export function orthoFrameForSize(size: Vector2): OrthoFrame {
     position: [width / 2, -height / 2, 1000],
     rotation: 0,
   };
+}
+
+/** A zero or negative extent frames as one pixel, so a frame never collapses. */
+function framedExtent(extent: number): number {
+  return extent > 0 ? extent : 1;
 }
 
 /**
@@ -157,7 +162,7 @@ export function frameOverView(frame: OrthoFrame, layoutSize: Vector2, viewSize: 
   if (layoutSize.x === viewSize.x && layoutSize.y === viewSize.y) return frame;
   return {
     ...frame,
-    right: frame.left + ((frame.right - frame.left) * viewSize.x) / layoutSize.x,
-    bottom: frame.top - ((frame.top - frame.bottom) * viewSize.y) / layoutSize.y,
+    right: frame.left + ((frame.right - frame.left) * viewSize.x) / framedExtent(layoutSize.x),
+    bottom: frame.top - ((frame.top - frame.bottom) * viewSize.y) / framedExtent(layoutSize.y),
   };
 }
