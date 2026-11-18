@@ -18,18 +18,10 @@ export interface GameStartFacts {
 const holdsScript = (node: TscnNode): boolean => holdsResource(node.rawProperties.script);
 const is3DContent = (node: TscnNode): boolean => isClaimedByNode3DEditor(node.type);
 
-export function gameStartFacts(
-  scriptedNodes: number,
-  rootWindow3DNodes: number,
-  currentCamera3D: string | null
-): GameStartFacts {
-  return { scriptedNodes, lacksCamera3D: rootWindow3DNodes > 0 && currentCamera3D === null };
-}
-
 /** A script inside a SubViewport runs too, and 3D content there draws through that viewport's camera. */
 export function useGameStartFacts(): GameStartFacts {
   const scripted = useLiveSceneNodes(holdsScript).length;
   const rootWindow3D = useLiveSceneNodes(is3DContent, keepsChildrenInViewport).length;
   const currentCamera3D = useCurrentCamera3D(ROOT_VIEWPORT_PATH);
-  return gameStartFacts(scripted, rootWindow3D, currentCamera3D);
+  return { scriptedNodes: scripted, lacksCamera3D: rootWindow3D > 0 && currentCamera3D === null };
 }

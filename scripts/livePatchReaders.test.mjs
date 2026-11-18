@@ -43,6 +43,10 @@ const NEEDS_NO_OVERLAY = new Map([
     'Hands the scene tile children of a layer to the dispatcher, which lays the patches over each node it draws.',
   ],
   [
+    'r3f/gameView/gameStartFacts.ts',
+    'Counts the nodes by type and by their script, which no pass patches.',
+  ],
+  [
     'nodes/windows/window/themeOwners.ts',
     'Reads the type and the `theme` of the nodes above a window, which no pass patches.',
   ],

@@ -29,6 +29,8 @@ async function frameloopOf(type: 'Node2D' | 'Node3D', isVisible?: boolean) {
     />
   );
   await screen.findAllByText('Root');
+  // The 2D stage loads on demand, so its canvas mounts a tick after the tree.
+  await vi.waitFor(() => expect(Canvas).toHaveBeenCalled());
   return vi.mocked(Canvas).mock.calls.at(-1)![0].frameloop;
 }
 

@@ -79,15 +79,15 @@ describe('<TscnCanvas> mode', () => {
     expect(parse).toHaveBeenCalledTimes(1);
   });
 
-  it('mounts the editor’s 2D stage in the 2D mode, and no canvas of a 3D stage', () => {
+  it('mounts the editor’s 2D stage in the 2D mode, and no canvas of a 3D stage', async () => {
     render(<TscnCanvas scene={openScene({ source: SCENE_2D, provider })} mode="2D" />);
-    expect(screen.getByTestId('stage-2d').dataset.roots).toBe('Menu');
+    expect((await screen.findByTestId('stage-2d')).dataset.roots).toBe('Menu');
     expect(stages()).toEqual([]);
   });
 
-  it('hands the 2D stage the path the scene opened under', () => {
+  it('hands the 2D stage the path the scene opened under', async () => {
     const scene = openScene({ source: SCENE_2D, provider, rootScenePath: 'res://ui/menu.tscn' });
     render(<TscnCanvas scene={scene} mode="2D" />);
-    expect(screen.getByTestId('stage-2d').dataset.path).toBe('res://ui/menu.tscn');
+    expect((await screen.findByTestId('stage-2d')).dataset.path).toBe('res://ui/menu.tscn');
   });
 });

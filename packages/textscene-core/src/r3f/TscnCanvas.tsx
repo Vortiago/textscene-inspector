@@ -27,7 +27,6 @@ import { CanvasRendererScope } from './canvasRenderer/CanvasRendererScope.js';
 import { TscnSceneProvider } from './TscnSceneProvider.js';
 import { DEFAULT_ROOT_SCENE_PATH, type Scene } from '../scene/openScene.js';
 import type { ViewportMode } from './contexts/ViewportModeContext.js';
-import { Canvas2DStage } from './components/Canvas2DStage/Canvas2DStage.js';
 import { rootClassName } from './stageClassName.js';
 
 // Lazy, so the glyph engine and the parse of the prompt load only for an empty canvas.
@@ -39,10 +38,7 @@ const EmptyScenePrompt = lazy(() => import('./emptyScenePrompt.js'));
  * provider it renders the empty default-lighting scene.
  */
 export function TscnSceneContents() {
-  const hierarchy = useOptionalHierarchy();
-  const sceneGraph = hierarchy?.sceneGraph ?? null;
-  const rootScene = sceneGraph?.scenes.get(sceneGraph.rootScene);
-  const nodes = useSeatedRoots() ?? null;
+  const { rootScene, nodes } = useRootScene();
   // A grid and a prompt, since an empty black canvas looks like a renderer crash.
   const isEmpty = nodes === null || nodes.length === 0;
 
@@ -76,6 +72,13 @@ export function TscnSceneContents() {
       </WorldEnvironmentScope>
     </CanvasRendererScope>
   );
+}
+
+/** The root scene of the scene the view reads, and its seated roots: null before the scene loads. */
+function useRootScene() {
+  const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
+  const rootScene = sceneGraph?.scenes.get(sceneGraph.rootScene);
+  return { rootScene, nodes: useSeatedRoots() ?? null };
 }
 
 /**
@@ -115,6 +118,9 @@ function EmptySceneIndicator() {
 }
 
 const GameView = lazy(() => import('./gameView/GameView.js').then((m) => ({ default: m.GameView })));
+const Canvas2DStage = lazy(() =>
+  import('./components/Canvas2DStage/Canvas2DStage.js').then((m) => ({ default: m.Canvas2DStage }))
+);
 
 /** `in-game` draws the game's start with no script run, `3D` and `2D` the editor's views. */
 export type TscnCanvasMode = ViewportMode;
@@ -139,7 +145,7 @@ function stageOf(mode: TscnCanvasMode, className: string | undefined) {
   return <EditorCanvas className={className} />;
 }
 
-/** Loads on demand, so a host that never shows a game keeps it out of its first chunk. */
+// The game and 2D stages load on demand, so a host that never shows one keeps it out of its first chunk.
 function GameStage({ className }: { className?: string }) {
   return (
     <Suspense fallback={null}>
@@ -150,19 +156,19 @@ function GameStage({ className }: { className?: string }) {
 
 /** The root scene as the editor's 2D view lays it out, over the scene the view reads. */
 function Editor2DStage({ className }: { className?: string }) {
-  const hierarchy = useOptionalHierarchy();
-  const sceneGraph = hierarchy?.sceneGraph ?? null;
-  const rootScene = sceneGraph?.scenes.get(sceneGraph.rootScene);
-  const nodes = useSeatedRoots() ?? rootScene?.nodes ?? [];
+  const { rootScene, nodes } = useRootScene();
+  const scenePath = useOptionalHierarchy()?.scene?.rootScenePath ?? DEFAULT_ROOT_SCENE_PATH;
   return (
     <div className={rootClassName(className)}>
-      <Canvas2DStage
-        nodes={nodes}
-        internalResources={rootScene?.internalResources ?? []}
-        externalResources={rootScene?.externalResources ?? []}
-        editableInstances={rootScene?.editableInstances}
-        scenePath={hierarchy?.scene?.rootScenePath ?? DEFAULT_ROOT_SCENE_PATH}
-      />
+      <Suspense fallback={null}>
+        <Canvas2DStage
+          nodes={nodes ?? rootScene?.nodes ?? []}
+          internalResources={rootScene?.internalResources ?? []}
+          externalResources={rootScene?.externalResources ?? []}
+          editableInstances={rootScene?.editableInstances}
+          scenePath={scenePath}
+        />
+      </Suspense>
     </div>
   );
 }
