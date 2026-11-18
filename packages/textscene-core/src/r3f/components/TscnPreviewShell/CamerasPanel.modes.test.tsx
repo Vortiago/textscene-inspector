@@ -117,6 +117,27 @@ describe('<CamerasPanel> in the In-game mode', () => {
   });
 });
 
+describe('<CamerasPanel> in the In-game mode before a camera enters', () => {
+  // A camera of a sub-scene that has not loaded is in the live tree's list but not yet in the scene.
+  it('says no camera has entered rather than showing an empty list', () => {
+    const scene = openScene({
+      source: '[gd_scene format=3]\n\n[node name="Main" type="Node3D"]\n',
+      provider,
+    });
+    const graphWithCameras = openScene({ source: SCENE, provider }).written();
+    render(
+      <HierarchyProvider value={{ sceneGraph: graphWithCameras, panelId: 'cams-not-entered', scene }}>
+        <ViewportActionsProvider>
+          <ViewportModeProvider initialMode="in-game">
+            <CamerasPanel />
+          </ViewportModeProvider>
+        </ViewportActionsProvider>
+      </HierarchyProvider>
+    );
+    expect(screen.getByText('No camera has entered the running scene.')).toBeTruthy();
+  });
+});
+
 describe('<CamerasPanel> in the 2D mode', () => {
   it('opens the 3D view to preview a clicked Camera3D, as a Camera2D opens the 2D view', () => {
     renderPanel('2D');

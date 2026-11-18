@@ -36,13 +36,17 @@ export const CASES = [
     },
   },
   {
+    // The editor camera draws another picture than the preview, so the preview drew through Side.
     name: '2D opens 3D',
     fixture: FIXTURE_3D,
     view: '2D',
-    steps: [{ click: 'Side' }],
+    steps: [{ click: 'Side' }, { click: EDITOR_ROW }],
     expected: {
       start: { view: '2D', rows: [EDITOR_ROW, ...ROWS_3D], active: [] },
-      steps: [{ view: '3D', active: ['Side'], moved: true }],
+      steps: [
+        { view: '3D', active: ['Side'], moved: true },
+        { view: '3D', active: [EDITOR_ROW], differsFrom: 0 },
+      ],
     },
   },
   {
