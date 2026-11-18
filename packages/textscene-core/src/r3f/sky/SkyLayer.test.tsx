@@ -192,17 +192,18 @@ describe('SkyLayer', () => {
     expect(lastBake()?.lights).toHaveLength(1);
   });
 
-  it('bakes again when a light unmounts after the bake', async () => {
+  it('moves the lights into its bake when a light unmounts after the bake, with no new bake', async () => {
     // The editor preview sun does this when the scene's own sun arrives. A stale bake keeps its
     // disc, and every glossy surface reflects it.
-    const renderer = await ReactThreeTestRenderer.create(<Scene lights={2} />);
-    await advance(renderer, 1);
-    expect(lastBake()?.lights).toHaveLength(2);
+    const recorded = recordedEnvironment();
+    built.next = recorded.build;
+    const { scene, update, advanceFrames } = await mount(<Scene lights={2} />);
 
-    await renderer.update(<Scene lights={1} />);
-    await advance(renderer, 1);
+    await update(<Scene lights={1} />);
+    await advanceFrames(1);
+    fireSceneRender(scene, new THREE.PerspectiveCamera());
 
-    expect(lastBake()?.lights).toHaveLength(1);
+    expect([bakes.length, recorded.lightCounts.at(-1)]).toEqual([1, 1]);
   });
 
   it.each([true, false])(
@@ -1047,6 +1048,84 @@ describe('SkyLayer under an exposure', () => {
     });
   });
 });
+
+/**
+ * A change of the lights dirties a sky that reads them (`sky.cpp:1105-1143`). An Incremental sky
+ * then bakes layer 0 and filters one more layer in each render (`sky.cpp:1265-1369`).
+ */
+describe('SkyLayer under a change of its lights', () => {
+  const camera = new THREE.PerspectiveCamera();
+  function LitSky({ sky, sun }: { sky: Sky; sun: [number, number, number] }) {
+    return (
+      <>
+        <ShownSkyLayer sky={sky} rotation={NO_ROTATION} panorama={null} />
+        <directionalLight position={sun} userData={skyLightUserData({ drawsInSky: true, energy: 1, size: 0 })} />
+      </>
+    );
+  }
+  /** `sky` under a sun that moves once its layers settle, and the steps of the renders that follow. */
+  async function stepsAfterSunMoves(sky: Sky, renders: number) {
+    const recorded = recordedEnvironment();
+    built.next = recorded.build;
+    const { scene, update, advanceFrames } = await mount(<LitSky sky={sky} sun={[1, 2, 3]} />);
+    for (let render = 0; render < 10; render += 1) fireSceneRender(scene, camera);
+    recorded.steps.length = 0;
+    await update(<LitSky sky={sky} sun={[3, 2, 1]} />);
+    await advanceFrames(1);
+    for (let render = 0; render < renders; render += 1) fireSceneRender(scene, camera);
+    return recorded;
+  }
+
+  it('bakes layer 0 of an Incremental sky, then filters one more layer in each render', async () => {
+    const { steps } = await stepsAfterSunMoves(proceduralSky, 3);
+
+    expect(steps).toEqual(['layer 0', 'filter 1', 'filter 2']);
+  });
+
+  it('bakes every layer of a Quality sky in the render after the change', async () => {
+    const { steps } = await stepsAfterSunMoves({ ...proceduralSky, processMode: 'quality' }, 3);
+
+    expect(steps).toEqual(['every layer']);
+  });
+
+  it('builds no new bake for the change', async () => {
+    await stepsAfterSunMoves(proceduralSky, 3);
+
+    expect(bakes).toHaveLength(1);
+  });
+
+  it('shows the moved sun to the bake before the render that bakes it', async () => {
+    const { lightDirections } = await stepsAfterSunMoves(proceduralSky, 1);
+
+    expect(lightDirections.at(-1)?.toArray()).toEqual(new THREE.Vector3(3, 2, 1).normalize().toArray());
+  });
+
+  it('steps nothing for a sky that reads no lights (edge case)', async () => {
+    const { steps } = await stepsAfterSunMoves(panoramaSky, 3);
+
+    expect(steps).toEqual([]);
+  });
+});
+
+/** An environment that records each step of its bake in place and each light list it is shown. */
+function recordedEnvironment() {
+  const steps: string[] = [];
+  const lightCounts: number[] = [];
+  const lightDirections: THREE.Vector3[] = [];
+  const build = (gl: THREE.WebGLRenderer): SkyEnvironment => ({
+    ...skyEnvironment()(gl),
+    setLights: (lights) => {
+      lightCounts.push(lights.length);
+      if (lights[0]) lightDirections.push(lights[0].direction.clone());
+    },
+    radianceInPlace: {
+      bakeAgain: () => steps.push('every layer'),
+      bakeFirstLayerAgain: () => steps.push('layer 0'),
+      filterLayer: (layer) => steps.push(`filter ${layer}`),
+    },
+  });
+  return { build, steps, lightCounts, lightDirections };
+}
 
 /** Names the Environment of these tests the world's own, as a probe captures with. */
 function OwnEnvironment() {

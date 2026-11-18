@@ -11,7 +11,7 @@ import {
 import { compileSky, type SkyCompile } from '../../shaders/sky/compileSky';
 import { perObject } from '../../utils/perObject';
 import { LRUCache } from '../LRUCache';
-import { GODOT_SAMPLING, type ProjectSampling } from '../../shaders/uniforms/samplerState';
+import { GODOT_SAMPLING } from '../../shaders/uniforms/samplerState';
 import type { TranspiledUniform } from '../../shaders/uniforms/transpiledUniform';
 import type { BoundNodeMaterial } from '../../shaders/uniforms/boundMaterial';
 import type { SamplerValue } from '../../shaders/uniforms/samplerUniform';
@@ -19,18 +19,12 @@ import type { ProjectShaderOptions } from '../../shaders/rendererShaderOptions';
 import { ShaderSkyBackground } from '../../r3f/sky/shaderSkyBackground';
 import { ShaderSkyOctmap } from '../../r3f/sky/shaderSkyOctmap';
 import { cappedBake } from './radianceBake';
-import {
-  createSkyLayers,
-  disposeSkyLayers,
-  SkyLayerBaker,
-  type DrawRadiance,
-  type SkyLayers,
-} from './skyLayers';
+import { disposeSkyLayers } from './skyLayers';
+import { OctmapRadiance } from './octmapRadiance';
 import { skyUsage } from '../../shaders/sky/skyUsage';
-import { VECTOR3_ZERO, type Vector3 } from '../../godot/math/vector';
 import { GODOT_DEFAULT_SKY } from '../../godot/rendering/environment/skyShader';
-import type { ShaderSkyProperties, ShaderSkyText, SkyBake } from './types';
-import type { RadianceInPlace, SkyEnvironment, SkyEnvironmentInput } from './build';
+import type { ShaderSkyProperties, ShaderSkyText } from './types';
+import type { SkyEnvironment, SkyEnvironmentInput } from './build';
 
 /** The sky shader with the built-ins it reads, which decide what draws and bakes it again. */
 export function readShaderSky(material: ShaderSkyText, options: ProjectShaderOptions): ShaderSkyProperties {
@@ -54,22 +48,20 @@ export function buildShaderSkyEnvironment(
   const transpiled = (pass: SkyPass) =>
     transpiledShaderSky(material, { textures, shaderOptions, sampling }, pass);
   let background: ShaderSkyBackground | null = null;
-  let radiance: ShaderRadiance;
+  let octmapSky: ShaderSkyOctmap | null = null;
+  let radiance: OctmapRadiance;
   try {
     background = asBackground ? new ShaderSkyBackground(transpiled('background'), lights) : null;
-    radiance = new ShaderRadiance(
-      gl,
-      cappedBake(sky),
-      new ShaderSkyOctmap(transpiled('octmap'), lights, material.usage.passColors),
-      sampling
-    );
+    octmapSky = new ShaderSkyOctmap(transpiled('octmap'), lights, material.usage.passColors);
+    radiance = new OctmapRadiance(gl, cappedBake(sky), octmapSky, sampling);
   } catch (error) {
     warn('[Sky] could not render the sky environment', error);
     background?.dispose();
     return null;
   }
-  // A sky that reads neither never bakes again, so it keeps only its layers.
-  if (!material.usage.time && !material.usage.position) {
+  const { usage } = material;
+  // A sky that reads none of them never bakes again, so it keeps only its layers.
+  if (!usage.time && !usage.position && !usage.light) {
     const layers = radiance.releaseLayers();
     const dispose = () => {
       background?.dispose();
@@ -77,75 +69,20 @@ export function buildShaderSkyEnvironment(
     };
     return { background, layers, dispose };
   }
+  const shownOctmap = octmapSky;
   return {
     background,
     layers: radiance.layers,
     radianceInPlace: radiance,
+    setLights: (next) => {
+      background?.setLights(next);
+      shownOctmap.setLights(next);
+    },
     dispose: () => {
       background?.dispose();
       radiance.dispose();
     },
   };
-}
-
-/** A shader sky's radiance from its octmap pass (`sky.cpp:1322`), kept for a dirty render to bake. */
-class ShaderRadiance implements RadianceInPlace {
-  readonly layers: SkyLayers;
-  private readonly baker: SkyLayerBaker;
-
-  /** Bakes the first radiance with `POSITION` at the origin. Disposes `octmapSky` if that fails. */
-  constructor(
-    private readonly gl: THREE.WebGLRenderer,
-    bake: SkyBake,
-    private readonly octmapSky: ShaderSkyOctmap,
-    sampling: ProjectSampling
-  ) {
-    let layers: SkyLayers | undefined;
-    try {
-      layers = createSkyLayers(bake, sampling);
-      this.baker = new SkyLayerBaker(gl, layers, bake.radianceFilter);
-    } catch (error) {
-      if (layers) disposeSkyLayers(layers);
-      octmapSky.dispose();
-      throw error;
-    }
-    this.layers = layers;
-    try {
-      this.bakeAgain(VECTOR3_ZERO);
-    } catch (error) {
-      this.dispose();
-      throw error;
-    }
-  }
-
-  bakeAgain(position: Readonly<Vector3>): void {
-    this.baker.bakeEveryLayer(this.drawnAt(position));
-    this.octmapSky.keepRadianceMips(this.gl, this.layers);
-  }
-
-  bakeFirstLayerAgain(position: Readonly<Vector3>): void {
-    this.baker.bakeFirstLayer(this.drawnAt(position));
-    this.octmapSky.keepRadianceMips(this.gl, this.layers);
-  }
-
-  filterLayer(layer: number): void {
-    this.baker.filterLayer(layer);
-  }
-
-  /** Frees what bakes the layers, and hands the layers to the caller, who frees them. */
-  releaseLayers(): SkyLayers {
-    this.baker.dispose();
-    this.octmapSky.dispose();
-    return this.layers;
-  }
-
-  dispose(): void {
-    disposeSkyLayers(this.releaseLayers());
-  }
-
-  private drawnAt(position: Readonly<Vector3>): DrawRadiance {
-    return (octmap, layout) => this.octmapSky.draw(this.gl, octmap, layout.borderSize, position);
-  }
 }
 
 /** Sky texts kept compiled for each options: the Source pane makes a new text at each keystroke. */

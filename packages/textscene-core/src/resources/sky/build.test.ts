@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { buildSkyEnvironment } from './build';
+import { buildSkyEnvironment, type SkyLight } from './build';
+import { SkyBackground } from '../../r3f/sky/skyBackground';
 import { decodeSky, decodeSkyMaterial } from './decode';
 import type { Sky } from './types';
 import { testRenderer } from '../../testing/recordingWebGL';
@@ -286,5 +287,76 @@ describe('buildSkyEnvironment over a live panorama', () => {
   it('offers no redraw over a panorama no pass draws', async () => {
     const { env } = await buildOver(new THREE.Texture());
     expect(env.redrawBackground).toBeUndefined();
+  });
+});
+
+describe('buildSkyEnvironment lights after the build', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const SUN: SkyLight = {
+    direction: new THREE.Vector3(0, 0, 1),
+    color: new THREE.Color(1, 0.5, 0.25),
+    energy: 3,
+    size: 0.1,
+  };
+
+  /** The `LIGHT0_ENERGY` of each cube face `renderer` draws while `bake` runs. */
+  function cubeLightEnergiesDrawnBy(renderer: THREE.WebGLRenderer, bake: () => void): number[] {
+    const drawn: number[] = [];
+    const render = renderer.render.bind(renderer);
+    vi.spyOn(renderer, 'render').mockImplementation((object, camera) => {
+      const mesh = object.children[0] as THREE.Mesh | undefined;
+      const uniforms = (mesh?.material as THREE.ShaderMaterial | undefined)?.uniforms;
+      if (uniforms?.['LIGHT0_ENERGY']) drawn.push(uniforms['LIGHT0_ENERGY'].value as number);
+      render(object, camera);
+    });
+    bake();
+    return drawn;
+  }
+
+  it('draws them in the background of a sky that reads lights', async () => {
+    const { renderer } = await testRenderer();
+    const env = buildSkyEnvironment(renderer, {
+      sky: defaultSky('ProceduralSkyMaterial'),
+      lights: [],
+      asBackground: true,
+      energy: 1,
+    })!;
+
+    env.setLights!([SUN]);
+
+    const uniforms = (env.background as SkyBackground).material.uniforms;
+    expect([uniforms['LIGHT0_ENABLED']!.value, uniforms['LIGHT0_ENERGY']!.value]).toEqual([true, 3]);
+  });
+
+  it('bakes layer 0 again in place with them', async () => {
+    const { renderer } = await testRenderer();
+    const env = buildSkyEnvironment(renderer, {
+      sky: defaultSky('ProceduralSkyMaterial'),
+      lights: [],
+      asBackground: false,
+      energy: 1,
+    })!;
+    env.setLights!([SUN]);
+
+    const drawn = cubeLightEnergiesDrawnBy(renderer, () =>
+      env.radianceInPlace!.bakeFirstLayerAgain(new THREE.Vector3())
+    );
+
+    expect(drawn).toEqual([3, 3, 3, 3, 3, 3]);
+  });
+
+  it('keeps nothing to bake again for a sky that reads no lights (edge case)', async () => {
+    const { renderer } = await testRenderer();
+    const env = buildSkyEnvironment(renderer, {
+      sky: defaultSky('PanoramaSkyMaterial'),
+      lights: [SUN],
+      asBackground: true,
+      energy: 1,
+    })!;
+
+    expect([env.radianceInPlace, env.setLights]).toEqual([undefined, undefined]);
   });
 });
