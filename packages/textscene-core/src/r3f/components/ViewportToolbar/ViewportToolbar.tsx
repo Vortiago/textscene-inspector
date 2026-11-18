@@ -69,13 +69,9 @@ interface DisplayToggleState {
 
 const NO_EFFECT_IN_GAME_TITLE = 'No effect in the In-game view, which draws as the game does';
 
-/** The viewport setting a Display toggle writes. */
-type ToggleSetting = keyof typeof RUNNING_GAME_TOGGLES | 'showPerformance';
-
-/** Disabled in the In-game view where the running game overrides `setting`. It keeps the user's value. */
-function toggleForMode(mode: ViewportMode, setting: ToggleSetting, toggle: DisplayToggle): DisplayToggle {
-  if (mode !== 'in-game' || !(setting in RUNNING_GAME_TOGGLES)) return toggle;
-  return { ...toggle, title: NO_EFFECT_IN_GAME_TITLE, disabled: true };
+/** A Display toggle the running game overrides, disabled In-game. It keeps the user's value. */
+function editorOnlyToggle(mode: ViewportMode, toggle: DisplayToggle): DisplayToggle {
+  return mode === 'in-game' ? { ...toggle, title: NO_EFFECT_IN_GAME_TITLE, disabled: true } : toggle;
 }
 
 /**
@@ -83,63 +79,64 @@ function toggleForMode(mode: ViewportMode, setting: ToggleSetting, toggle: Displ
  * the 3D-only ones are one readable list.
  */
 function buildDisplayToggles(state: DisplayToggleState): readonly DisplayToggle[] {
-  const forMode = (setting: ToggleSetting, toggle: DisplayToggle) =>
-    toggleForMode(state.mode, setting, toggle);
+  // Keyed by its setting, so a toggle the game does not override fails to compile here.
+  const editorOnly = (_setting: keyof typeof RUNNING_GAME_TOGGLES, toggle: DisplayToggle) =>
+    editorOnlyToggle(state.mode, toggle);
   return [
-    forMode('showGizmos', {
+    editorOnly('showGizmos', {
       label: 'Gizmos',
       title: "Show the editor gizmos, faint on a node that is not selected, as Godot's View Gizmos does",
       checked: state.showGizmos,
       onChange: state.setShowGizmos,
     }),
-    forMode('showCollisions', {
+    editorOnly('showCollisions', {
       label: 'Collisions',
       title: 'Show CollisionShape3D wireframes',
       checked: state.showCollisions,
       onChange: state.setShowCollisions,
     }),
-    forMode('showLabels', {
+    editorOnly('showLabels', {
       label: 'Labels',
       title: 'Show Label3D text in the viewport',
       checked: state.showLabels,
       onChange: state.setShowLabels,
     }),
-    forMode('showNavigation', {
+    editorOnly('showNavigation', {
       label: 'Navigation',
       title: 'Show NavigationRegion overlays',
       checked: state.showNavigation,
       onChange: state.setShowNavigation,
     }),
-    forMode('showPerformance', {
+    {
       label: 'Performance',
       title: 'Show the frame rate and the time each render step takes',
       checked: state.showPerformance,
       onChange: state.setShowPerformance,
-    }),
+    },
     // The grid, the framing, the fog and the preview lighting mean nothing over the 2D Control overlay.
     ...(state.mode === '2D'
       ? []
       : [
-          forMode('frameOnOpen', {
+          editorOnly('frameOnOpen', {
             label: 'Frame on open',
             title:
               'Frame the whole scene when it loads. Off matches Godot, which opens at a fixed orbit — press F to frame.',
             checked: state.frameOnOpen,
             onChange: state.setFrameOnOpen,
           }),
-          forMode('showGrid', {
+          editorOnly('showGrid', {
             label: 'Grid',
             title: 'Show a ground-plane reference grid',
             checked: state.showGrid,
             onChange: state.setShowGrid,
           }),
-          forMode('showFog', {
+          editorOnly('showFog', {
             label: 'Fog',
             title: "Draw the Environment's depth and volumetric fog. Off skips the fog passes.",
             checked: state.showFog,
             onChange: state.setShowFog,
           }),
-          forMode('showPreviewSun', {
+          editorOnly('showPreviewSun', {
             label: 'Preview Sun',
             title: state.sceneHasSun
               ? 'Scene contains DirectionalLight3D. Preview disabled.'
@@ -148,7 +145,7 @@ function buildDisplayToggles(state: DisplayToggleState): readonly DisplayToggle[
             disabled: state.sceneHasSun,
             onChange: state.setShowPreviewSun,
           }),
-          forMode('showPreviewEnvironment', {
+          editorOnly('showPreviewEnvironment', {
             label: 'Preview Sky',
             title: state.sceneHasEnvironment
               ? 'Scene contains WorldEnvironment. Preview disabled.'

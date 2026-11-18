@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
 import { ROOT_VIEWPORT_PATH } from '../contexts/EnclosingViewportContext.js';
 import { useCurrentCamera3D } from '../currentCamera.js';
-import type { LiveTreeEntry } from '../liveSceneTree.js';
 import { isClaimedByNode3DEditor } from '../nodeWorkspaceVisibility.js';
 import { useLiveSceneNodes } from '../useLiveSceneTree.js';
-import { isViewportBoundary } from '../viewportRender/viewportBoundary.js';
+import { keepsChildrenInViewport } from '../viewportRender/viewportBoundary.js';
+import { holdsResource } from '../../godot/scene/resourceLiteral.js';
 import type { TscnNode } from '../../parser/types.js';
 
 /** What the In-game view cannot show of the game's first frame. */
@@ -15,31 +15,25 @@ export interface GameStartFacts {
   lacksCamera3D: boolean;
 }
 
-const holdsScript = (node: TscnNode): boolean => {
-  const script = node.rawProperties.script;
-  return script !== undefined && script !== 'null';
-};
-
 /** Module level, so the memo of `useLiveSceneNodes` holds. */
-const isGameStartFact = (node: TscnNode): boolean =>
-  holdsScript(node) || isClaimedByNode3DEditor(node.type) || isViewportBoundary(node.type);
+const holdsScript = (node: TscnNode): boolean => holdsResource(node.rawProperties.script);
+const is3DContent = (node: TscnNode): boolean => isClaimedByNode3DEditor(node.type);
 
-/** `entries` from one walk of the live tree, and the root window's current Camera3D. */
 export function gameStartFacts(
-  entries: readonly LiveTreeEntry[],
+  scriptedNodes: number,
+  rootWindow3DNodes: number,
   currentCamera3D: string | null
 ): GameStartFacts {
-  const viewportPaths = entries.filter((e) => isViewportBoundary(e.node.type)).map((e) => `${e.path}/`);
-  const isInRootWindow = (e: LiveTreeEntry) => !viewportPaths.some((viewport) => e.path.startsWith(viewport));
-  const has3DContent = entries.some((e) => isClaimedByNode3DEditor(e.node.type) && isInRootWindow(e));
-  return {
-    scriptedNodes: entries.filter((e) => holdsScript(e.node)).length,
-    lacksCamera3D: has3DContent && currentCamera3D === null,
-  };
+  return { scriptedNodes, lacksCamera3D: rootWindow3DNodes > 0 && currentCamera3D === null };
 }
 
+/** A script inside a SubViewport runs too, and 3D content there draws through that viewport's camera. */
 export function useGameStartFacts(): GameStartFacts {
-  const entries = useLiveSceneNodes(isGameStartFact);
+  const scripted = useLiveSceneNodes(holdsScript).length;
+  const rootWindow3D = useLiveSceneNodes(is3DContent, keepsChildrenInViewport).length;
   const currentCamera3D = useCurrentCamera3D(ROOT_VIEWPORT_PATH);
-  return useMemo(() => gameStartFacts(entries, currentCamera3D), [entries, currentCamera3D]);
+  return useMemo(
+    () => gameStartFacts(scripted, rootWindow3D, currentCamera3D),
+    [scripted, rootWindow3D, currentCamera3D]
+  );
 }

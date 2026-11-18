@@ -37,6 +37,24 @@ const SPRITE_2D = `[gd_scene format=3]
 [node name="Sprite" type="Sprite2D" parent="."]
 `;
 
+const NIL_SCRIPT = `[gd_scene format=3]
+
+[node name="Main" type="Node2D"]
+script = nil
+`;
+
+const SUBVIEWPORT_3D = `[gd_scene format=3]
+
+[ext_resource type="Script" path="res://hud.gd" id="1_hud"]
+
+[node name="Main" type="Control"]
+
+[node name="View" type="SubViewport" parent="."]
+
+[node name="Box" type="MeshInstance3D" parent="View"]
+script = ExtResource("1_hud")
+`;
+
 async function openIn(mode: ViewportMode, content: string) {
   render(<TscnPreviewShell panelId={`notes-${mode}`} content={content} initialViewportMode={mode} />);
   await screen.findAllByText('Main');
@@ -63,5 +81,15 @@ describe('<TscnPreviewShell> In-game notes', () => {
   it('shows no note in the editor’s 3D view, which draws through the editor camera', async () => {
     await openIn('3D', NO_CAMERA_3D);
     expect(notes()).toEqual([]);
+  });
+
+  it('counts no script for a script slot that holds nil', async () => {
+    await openIn('in-game', NIL_SCRIPT);
+    expect(notes()).toEqual([]);
+  });
+
+  it('counts a script inside a SubViewport, and needs no root camera for its 3D content', async () => {
+    await openIn('in-game', SUBVIEWPORT_3D);
+    expect(notes()).toEqual(['Scripts do not run: 1 node holds a script.']);
   });
 });

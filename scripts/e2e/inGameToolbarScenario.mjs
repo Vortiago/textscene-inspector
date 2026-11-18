@@ -99,7 +99,7 @@ async function runToggles(browser, baseUrl) {
 const isRowSelected = (page, path) =>
   page.locator(`[data-node-path="${path}"] > [role="treeitem"]`).first().getAttribute('aria-selected');
 
-/** How many pixels a selection changes in `view`: a box in 3D, none In-game. */
+/** How many pixels clearing the selection changes in `view`: a box in 3D, none In-game. */
 async function selectionPixels(page, view) {
   await viewButton(page, view).click();
   const selected = await shoot(page);
@@ -109,9 +109,12 @@ async function selectionPixels(page, view) {
   await page.evaluate(() => document.activeElement?.blur());
   await page.waitForTimeout(SELECT_SETTLE_MS);
   const cleared = await shoot(page);
+  return { isSelected, pixels: diffMask(selected, cleared).diffPixels };
+}
+
+async function selectBox(page) {
   await selectOutlinerNode(page, SELECTED_NODE);
   await page.waitForTimeout(SELECT_SETTLE_MS);
-  return { isSelected, pixels: diffMask(selected, cleared).diffPixels };
 }
 
 async function runSelection(browser, baseUrl) {
@@ -121,9 +124,9 @@ async function runSelection(browser, baseUrl) {
   });
   await viewButton(page, '3D').click();
   await expandAllTreeRows(page);
-  await selectOutlinerNode(page, SELECTED_NODE);
-  await page.waitForTimeout(SELECT_SETTLE_MS);
+  await selectBox(page);
   const threeD = await selectionPixels(page, '3D');
+  await selectBox(page);
   const inGame = await selectionPixels(page, 'In-game');
   await context.close();
   return { threeD, inGame, diagnostics };
