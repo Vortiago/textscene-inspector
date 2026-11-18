@@ -12,6 +12,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { perObject } from '../../utils/perObject.js';
 import { visibleInTree } from '../visibleInTree';
 import { useFrame, useThree } from '@react-three/fiber';
 import type { AuthoredSky, Sky, SkyProperties } from '../../resources/sky/types';
@@ -91,14 +92,51 @@ const cameraOrigin = new THREE.Vector3();
 
 const NO_FRAME_READS: SkyFrameReads = { time: false, position: false };
 
-/** Each radiance a render has stepped, written only by `stepRadiance` in `<SkyLayer>`. */
-const steppedRadiances = new WeakSet<RadianceInPlace>();
+/** What layer 0 of a radiance in place last drew: null lights for one no render has stepped. */
+interface DrawnRadiance {
+  lightsKey: string | null;
+  /** Whether the other layers filter from a layer 0 that changed. */
+  isFiltering: boolean;
+}
 
-/** Runs `step` on the radiance in place, with `POSITION` at `position`. */
-function stepInPlace(inPlace: RadianceInPlace, step: SkyRadianceStep, position: Vector3): void {
-  if (step.kind === 'filter') inPlace.filterLayer(step.layer);
-  else if (step.kind === 'bake' && step.isFirstLayerOnly) inPlace.bakeFirstLayerAgain(position);
-  else if (step.kind === 'bake') inPlace.bakeAgain(position);
+/** Written only by `stepInPlace`, once for each radiance, which viewports of one sky share. */
+const drawnRadianceOf = perObject((_inPlace: RadianceInPlace): DrawnRadiance => ({
+  lightsKey: null,
+  isFiltering: false,
+}));
+
+/** What a render asks of a radiance in place. */
+interface InPlaceDraw {
+  /** The camera origin that last dirtied the sky: a replayed probe render has none of its own. */
+  position: Vector3;
+  lightsKey: string;
+  /** Whether each bake draws again, as for a sky that reads `TIME` or `POSITION`. */
+  isDrawnEachBake: boolean;
+  /** Whether the build of the radiance drew the lights of `lightsKey`. */
+  isBuiltWithLights: boolean;
+}
+
+/** Runs `step` on the radiance in place, skipping a cycle whose lights layer 0 already drew. */
+function stepInPlace(inPlace: RadianceInPlace, step: SkyRadianceStep, draw: InPlaceDraw): void {
+  const drawn = drawnRadianceOf(inPlace);
+  if (drawn.lightsKey === null) {
+    // A radiance no render has stepped holds the lights, the `TIME` and the origin of its build.
+    drawn.lightsKey = draw.lightsKey;
+    if (draw.isDrawnEachBake || !draw.isBuiltWithLights) inPlace.bakeAgain(draw.position);
+    return;
+  }
+  if (step.kind === 'filter') {
+    if (drawn.isFiltering) inPlace.filterLayer(step.layer);
+    return;
+  }
+  if (step.kind !== 'bake') return;
+  // Each bake holds one exposure, so a dirt from the exposure alone redraws what layer 0 holds.
+  const isChanged = draw.isDrawnEachBake || drawn.lightsKey !== draw.lightsKey;
+  drawn.isFiltering = isChanged && step.isFirstLayerOnly;
+  if (!isChanged) return;
+  drawn.lightsKey = draw.lightsKey;
+  if (step.isFirstLayerOnly) inPlace.bakeFirstLayerAgain(draw.position);
+  else inPlace.bakeAgain(draw.position);
 }
 
 /** What `material` reads that changes from render to render: a built-in sky reads neither. */
@@ -219,15 +257,12 @@ export function SkyLayer({
       if (!update.baked) return;
       const inPlace = bakes.inPlaceAt(update.baked.exposure);
       if (!inPlace) return;
-      // The camera origin that last dirtied the sky: a replayed probe render has none of its own.
-      const position = update.previousPosition;
-      if (steppedRadiances.has(inPlace)) {
-        stepInPlace(inPlace, step, position);
-        return;
-      }
-      // A radiance no render has stepped holds the lights, the `TIME` and the origin of its build.
-      steppedRadiances.add(inPlace);
-      if (isFrameRead || !bakes.isBuiltWithLightsAt(update.baked.exposure)) inPlace.bakeAgain(position);
+      stepInPlace(inPlace, step, {
+        position: update.previousPosition,
+        lightsKey: read.key,
+        isDrawnEachBake: isFrameRead,
+        isBuiltWithLights: bakes.isBuiltWithLightsAt(update.baked.exposure),
+      });
     };
     // Each view runs its render through the radiance update, the first of a frame after the faces
     // Godot draws for the ALWAYS probes at the world's exposure. A capture reads that bake and steps

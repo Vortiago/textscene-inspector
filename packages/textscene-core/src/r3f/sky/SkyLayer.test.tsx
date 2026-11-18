@@ -1112,6 +1112,23 @@ describe('SkyLayer under a change of its lights', () => {
     expect(recorded.steps).toEqual(['every layer']);
   });
 
+  // The probe faces of an ALWAYS probe and the view dirty the sky at two exposures in each frame.
+  it('draws nothing in place for renders that change the exposure alone', async () => {
+    const recorded = recordedEnvironment();
+    built.next = recorded.build;
+    const { scene } = await mount(exposed(2, <LitSky sky={proceduralSky} sun={[1, 2, 3]} />));
+    for (let render = 0; render < 10; render += 1) fireSceneRender(scene, camera);
+    recorded.steps.length = 0;
+
+    for (let frame = 0; frame < 20; frame += 1) {
+      drawAtExposure(scene, 4, () => fireSceneRender(scene, camera));
+      fireSceneRender(scene, camera);
+      fireSceneRender(scene, camera);
+    }
+
+    expect(recorded.steps).toEqual([]);
+  });
+
   it('steps nothing for a sky that reads no lights (edge case)', async () => {
     const { steps } = await stepsAfterSunMoves(panoramaSky, 3);
 
