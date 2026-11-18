@@ -26,6 +26,13 @@ describe('transpileSky', () => {
     expect(errorOf(source).position).toMatchObject({ file: 'user.gdshader', line: 4 });
   });
 
+  it('translates a pass that writes ALPHA, which a later pass reads', () => {
+    const source =
+      'shader_type sky;\nrender_mode use_half_res_pass;\nvoid sky() {\n' +
+      '\tALPHA = 0.5;\n\tCOLOR = vec3(HALF_RES_COLOR.a);\n}\n';
+    expect(transpileSky(source).half).toBeDefined();
+  });
+
   it('writes no depth', () => {
     expect(transpileSky(DEFAULT_SKY).mesh.material.depthWrite).toBe(false);
   });
