@@ -530,7 +530,7 @@ const alphaScene = (name, modes, extra = [], rows = []) =>
 const coverageScene = (name, modes) =>
   blendScene(name, modes, fragmentOf(BLEND_ALBEDO, 'ALPHA = step(0.5, UV.x);'), ['spatial.fragment.ALPHA']);
 
-/** A coverage scene on a target of 4 samples, alone: lavapipe and the page's GL place a corner's samples apart. */
+/** A coverage scene on 4 samples, alone: lavapipe and the page's GL cover the orange quad's corner apart. */
 const multisampledCoverageScene = (name, modes) => ({ ...coverageScene(name, modes), msaa: 4, others: [] });
 
 /** Each fragment built-in of the alpha and each alpha antialiasing mode, against Godot. */
