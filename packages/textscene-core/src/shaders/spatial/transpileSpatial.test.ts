@@ -27,8 +27,8 @@ function errorOf(source: string): ShadingLanguageError {
   throw new Error('expected a ShadingLanguageError, got none');
 }
 
-function program() {
-  const material = transpileSpatial(DEFAULT_UNSHADED).material as unknown as NodeMaterial;
+function program(source = DEFAULT_UNSHADED) {
+  const material = transpileSpatial(source).material as unknown as NodeMaterial;
   return generatedProgram({
     vertexNode: material.vertexNode!,
     fragmentNode: material.fragmentNode!,
@@ -57,5 +57,17 @@ describe('transpileSpatial', () => {
 
   it('gives the instance buffer a row texture by its instance name', () => {
     expect(transpileSpatial(DEFAULT_UNSHADED).buffers.has('instances')).toBe(true);
+  });
+
+  it('cuts at alpha 0.5 under alpha to coverage, for a target of one sample', () => {
+    const source =
+      'shader_type spatial;\nrender_mode unshaded, alpha_to_coverage;\nvoid fragment() {\n\tALPHA = 0.3;\n}\n';
+    expect(program(source).fragment).toMatch(/if \( \( nodeVar\d+\.w < 0\.5 \) \) \{\s+discard;/);
+  });
+
+  it('forces the alpha to 1 after the cut under alpha_to_coverage_and_one', () => {
+    const source =
+      'shader_type spatial;\nrender_mode unshaded, alpha_to_coverage_and_one;\nvoid fragment() {\n\tALPHA = 0.3;\n}\n';
+    expect(program(source).fragment).toMatch(/discard;\s+\}\s+nodeVar\d+\.w = 1\.0;/);
   });
 });

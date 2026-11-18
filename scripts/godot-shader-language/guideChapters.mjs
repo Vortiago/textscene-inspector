@@ -772,8 +772,14 @@ const SPATIAL_CHAPTER = {
     {
       heading: 'Blend modes',
       rows: (row) => /^spatial render_mode blend_/.test(row.id),
-      what: "`blend_mix`, the default, draws in the opaque pass with no blend. `blend_add`, `blend_sub`, `blend_mul` and `blend_premul_alpha` draw in the alpha pass and blend with Godot's factors for the mode (`material_storage.cpp:651-716`), the colour and the alpha each with its own.",
+      what: "`blend_mix`, the default, draws in the opaque pass with no blend, unless the shader names `ALPHA`. `blend_add`, `blend_sub`, `blend_mul` and `blend_premul_alpha` draw in the alpha pass and blend with Godot's factors for the mode (`material_storage.cpp:651-716`), the colour and the alpha each with its own.",
       tsl: "the material's `blending` and its blend factors, and `transparent`",
+    },
+    {
+      heading: 'Alpha to coverage modes',
+      rows: (row) => /^spatial render_mode alpha_to_coverage/.test(row.id),
+      what: "`alpha_to_coverage` and `alpha_to_coverage_and_one` replace the blend mode with Godot's alpha to coverage blend (`scene_shader_forward_clustered.cpp:239-241`), so a shader that names no `ALPHA` stays in the opaque pass whatever its blend mode. In the alpha pass Godot turns on alpha to coverage, and `alpha_to_coverage_and_one` alpha to one too (`scene_shader_forward_clustered.cpp:431-437`). WebGL skips alpha to coverage on a target of one sample, which Godot's default `msaa_3d` draws into. Vulkan leaves the mask of one sample to the driver: lavapipe dithers it by the alpha. There the transpiler discards a fragment of alpha below 0.5, the mean of a dithered mask, and `alpha_to_coverage_and_one` sets the alpha of the rest to 1. So for an alpha between 0 and 1, the transpiler covers other pixels than Godot does on lavapipe, in about the same share. WebGL has no alpha to one, so on a multisampled target the stored alpha stays the shader's.",
+      tsl: "the material's `alphaToCoverage` and blend factors, and a `Discard` behind a uniform that reads the target's samples",
     },
     {
       heading: 'The space of `VERTEX` in `vertex()`',
@@ -856,6 +862,21 @@ const SPATIAL_CHAPTER = {
         /^spatial\.(vertex|fragment)\.(VIEW_INDEX|VIEW_MONO_LEFT|VIEW_RIGHT|EYE_OFFSET)$/.test(row.id),
       what: 'A view with one eye has a `VIEW_INDEX` of 0 and an `EYE_OFFSET` of zero. `VIEW_MONO_LEFT` is 0 and `VIEW_RIGHT` is 1.',
       tsl: "the template's text with no multiview define",
+    },
+    {
+      heading: '`ALPHA` and `PREMUL_ALPHA_FACTOR`',
+      rows: (row) => ['spatial.fragment.ALPHA', 'spatial.fragment.PREMUL_ALPHA_FACTOR'].includes(row.id),
+      what: "`ALPHA` is the surface's opacity, which the template writes as the alpha of the frame's colour. A shader that names `ALPHA` draws in the alpha pass and blends with its blend mode, unless it also names `ALPHA_SCISSOR_THRESHOLD` or `ALPHA_HASH_SCALE` with no `ALPHA_ANTIALIASING_EDGE` (`scene_shader_forward_clustered.h:279-287`). Under `blend_premul_alpha`, `PREMUL_ALPHA_FACTOR` scales the colour before the blend (`scene_forward_clustered.glsl:2991-2993`).",
+      tsl: "the template's locals `alpha` and `premul_alpha`, and the material's `transparent`",
+    },
+    {
+      heading: 'The alpha cut',
+      rows: (row) =>
+        ['ALPHA_SCISSOR_THRESHOLD', 'ALPHA_HASH_SCALE', 'ALPHA_ANTIALIASING_EDGE', 'ALPHA_TEXTURE_COORDINATE']
+          .map((name) => `spatial.fragment.${name}`)
+          .includes(row.id),
+      what: '`ALPHA_SCISSOR_THRESHOLD` discards a fragment whose alpha is below it. `ALPHA_HASH_SCALE` discards a fragment whose alpha is below a hash of its position in the object, at that scale. Either sets the alpha of the rest to 1 (`scene_forward_clustered.glsl:1383-1416`). `ALPHA_ANTIALIASING_EDGE` keeps the alpha instead and ramps it across one pixel at the edge, past the scissor threshold, with `ALPHA_TEXTURE_COORDINATE` for the mip level (`scene_forward_aa_inc.glsl:45-56`).',
+      tsl: "the template's alpha cut and `compute_alpha_antialiasing_edge`",
     },
     {
       heading: 'The fragment and the view in `fragment()`',

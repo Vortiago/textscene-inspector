@@ -13,6 +13,7 @@ import {
   type AlphaAntialiasingCut,
 } from '../../godot/rendering/materials/alphaAntialiasing';
 import { alphaToCoverageBlendState, type MaterialBlendState } from '../../shaders/pipeline/blendState';
+import { drawsMultisampled } from '../../shaders/pipeline/singleSampleCoverage';
 import { ALPHA_HASH_CHUNK, ALPHA_TEST_CHUNK } from './surfaceAlphaPatch';
 import { perObject } from '../../utils/perObject';
 
@@ -88,19 +89,6 @@ export function alphaAntialiasingProps(
 ): Partial<MaterialBlendState> & { alphaToCoverage?: true } {
   if (!cut || !turnsOnAlphaToCoverage(cut.mode)) return {};
   return { alphaToCoverage: true, ...alphaToCoverageBlendState(cut.mode) };
-}
-
-/** Each context's `antialias` attribute, fixed for the context's life. Collected with it. */
-const canvasAntialias = perObject(
-  (context: WebGLRenderingContext | WebGL2RenderingContext) =>
-    context.getContextAttributes()?.antialias === true
-);
-
-/** Whether the renderer draws into a target with more than one sample per pixel. */
-function drawsMultisampled(renderer: THREE.WebGLRenderer): boolean {
-  const target = renderer.getRenderTarget();
-  if (target) return target.samples > 0;
-  return canvasAntialias(renderer.getContext());
 }
 
 /** The uniforms of one antialiased material's program. */
