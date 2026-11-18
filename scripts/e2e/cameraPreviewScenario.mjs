@@ -16,8 +16,7 @@ export const CAMERA_PREVIEW_FIXTURE = 'unit-multi-camera.tscn';
 const PREVIEWED_CAMERA = 'TopCamera';
 const EDITOR_CAMERA_ROW = 'Editor camera';
 
-// Navigation that moves nothing draws no frame to wait for, so it waits a fixed time, as a
-// selection does in `webAppGate.mjs`.
+// Navigation that moves nothing draws no frame, so it waits a fixed time, as `editorViewScenarios.mjs` does.
 const NAVIGATION_SETTLE_MS = 400;
 // Each camera switch draws a new view in a frame or two. A switch that never draws one
 // times out here, and the check below reports the unchanged matrix.
