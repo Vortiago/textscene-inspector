@@ -1,5 +1,3 @@
-/** Bakes of the sky layers for tests, and the debanding scale each bake draws. */
-
 import * as THREE from 'three';
 import { vi } from 'vitest';
 import { createSkyLayers, cubeRadiance, disposeSkyLayers, SkyLayerBaker, type SkyLayers } from './skyLayers';

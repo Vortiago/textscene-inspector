@@ -140,7 +140,12 @@ function buildBuiltInSkyEnvironment(
     // Ahead of the bake, so a three whose background program moved frees no layers it baked.
     background = asBackground ? new SkyBackground(skyGlsl(material), uniforms) : null;
     const bake = cappedBake(sky);
-    const octmapSky = new CubeSkyOctmap(material, uniforms, bake.radianceSize, radianceDebanding(material, energy));
+    const octmapSky = new CubeSkyOctmap(
+      material,
+      uniforms,
+      bake.radianceSize,
+      radianceDebanding(material, energy)
+    );
     radiance = new OctmapRadiance(gl, bake, octmapSky, sampling);
   } catch (error) {
     warn('[Sky] could not render the sky environment', error);
@@ -182,10 +187,7 @@ function buildBuiltInSkyEnvironment(
   };
 }
 
-/**
- * A built-in sky's octmap pass: the sky drawn into a cube as wide as the radiance size, which stands
- * for Godot's octmap of that size, twice as wide for a cube's texel density (`sky.cpp:1554-1557`).
- */
+/** A built-in sky's octmap pass, through a cube as wide as the radiance size (`sky.cpp:1554-1557`). */
 class CubeSkyOctmap implements OctmapSky {
   private readonly geometry = new THREE.BoxGeometry(2, 2, 2);
   private readonly shader: THREE.ShaderMaterial;

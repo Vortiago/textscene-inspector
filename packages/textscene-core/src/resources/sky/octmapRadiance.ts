@@ -9,7 +9,12 @@ import type { SkyBake } from './types';
 /** A sky drawn into Godot's octmap for each bake of its radiance (`sky.cpp:1322`). */
 export interface OctmapSky {
   /** Draws the sky over `octmap`, laid out as `layout`, with `POSITION` at `position`. */
-  draw(gl: THREE.WebGLRenderer, octmap: THREE.WebGLRenderTarget, layout: SkyOctmapLayout, position: Readonly<Vector3>): void;
+  draw(
+    gl: THREE.WebGLRenderer,
+    octmap: THREE.WebGLRenderTarget,
+    layout: SkyOctmapLayout,
+    position: Readonly<Vector3>
+  ): void;
   /** Keeps what the next draw reads of the radiance just baked into `layers`. */
   keepRadiance(gl: THREE.WebGLRenderer, layers: SkyLayers): void;
   dispose(): void;

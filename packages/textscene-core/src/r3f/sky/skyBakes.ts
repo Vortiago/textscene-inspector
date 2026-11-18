@@ -76,11 +76,7 @@ const heldBakesOf = perObject((_gl: THREE.WebGLRenderer) =>
   perObject((_sky: Sky) => new Map<string, SkyBakes>())
 );
 
-/**
- * The bakes of `input` on `gl`, which every layer that draws the same sky with the same input
- * shares, as Godot shares one radiance. The lights of `input` are the first the bakes draw, and
- * `contextRestores` names the context the bakes live in. The caller owns the release.
- */
+/** The bakes of `input` on `gl`, shared as Godot shares one radiance. The caller owns the release. */
 export function holdSkyBakes(
   gl: THREE.WebGLRenderer,
   input: SkyBakeInput,
@@ -203,10 +199,7 @@ export class SkyBakes {
     for (const baked of this.bakes.values()) baked?.redrawBackground?.();
   }
 
-  /**
-   * Shows `lights` to each bake, at its own exposure, and bakes with them from now on. Every layer
-   * that shares these bakes may call it in each render: lights it holds already change nothing.
-   */
+  /** Shows `lights` to each bake at its own exposure, and to the bakes to come. A repeat changes nothing. */
   followLights(lights: SkyLightsRead): void {
     if (lights.key === this.lights.key) return;
     this.lights = lights;

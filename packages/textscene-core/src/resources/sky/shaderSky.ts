@@ -48,7 +48,7 @@ export function buildShaderSkyEnvironment(
   const transpiled = (pass: SkyPass) =>
     transpiledShaderSky(material, { textures, shaderOptions, sampling }, pass);
   let background: ShaderSkyBackground | null = null;
-  let octmapSky: ShaderSkyOctmap | null = null;
+  let octmapSky: ShaderSkyOctmap;
   let radiance: OctmapRadiance;
   try {
     background = asBackground ? new ShaderSkyBackground(transpiled('background'), lights) : null;
@@ -69,14 +69,13 @@ export function buildShaderSkyEnvironment(
     };
     return { background, layers, dispose };
   }
-  const shownOctmap = octmapSky;
   return {
     background,
     layers: radiance.layers,
     radianceInPlace: radiance,
     setLights: (next) => {
       background?.setLights(next);
-      shownOctmap.setLights(next);
+      octmapSky.setLights(next);
     },
     dispose: () => {
       background?.dispose();

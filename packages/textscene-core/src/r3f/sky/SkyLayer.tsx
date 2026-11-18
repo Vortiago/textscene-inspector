@@ -148,8 +148,7 @@ export function SkyLayer({
   });
 
   useEffect(() => {
-    // No frame has read the lights yet. A bake now would be baked again before it
-    // is seen, and each bake costs a six-face cube render and the layer passes.
+    // A bake before the first frame reads the lights would bake again unseen, at the cost of a whole bake.
     if (!areLightsRead || !lightsRead.current) return undefined;
     // A bake samples the panorama once, so it waits for the pass to draw a live target.
     if (!isPanoramaDrawn) return undefined;
@@ -201,7 +200,11 @@ export function SkyLayer({
     const stepRadiance = (render: SkyRender, camera?: THREE.Camera) => {
       const read = lightsRead.current ?? lights;
       bakes.followLights(read);
-      const isLightDirtied = noteSkyLights(gl, readsLights ? read.key : NO_SKY_LIGHTS, lightExposure(read, render));
+      const isLightDirtied = noteSkyLights(
+        gl,
+        readsLights ? read.key : NO_SKY_LIGHTS,
+        lightExposure(read, render)
+      );
       if (shaderTime.jumps !== seenJumps) {
         seenJumps = shaderTime.jumps;
         restartSkyClock(update);
@@ -219,8 +222,7 @@ export function SkyLayer({
         stepInPlace(inPlace, step, position);
         return;
       }
-      // A radiance no render has stepped holds the lights now read, and the `TIME` and the origin
-      // it was built at.
+      // A radiance no render has stepped holds the lights now read, and the `TIME` and origin of its build.
       steppedRadiances.add(inPlace);
       if (isFrameRead) inPlace.bakeAgain(position);
     };
@@ -348,12 +350,7 @@ function useContextRestores(gl: THREE.WebGLRenderer): number {
   return restores;
 }
 
-/**
- * The lights the sky draws, read every frame, as Godot reads them in each render and bakes again on
- * a change of light count, direction, energy, colour or size (`sky.cpp:1059-1143`). A sub-scene or
- * GLB brings a light late, and the preview sun unmounts for the scene's own (ADR-0025). The reading
- * is null, and `areLightsRead` false, until the first frame.
- */
+/** The lights the sky draws, read every frame as Godot reads them in each render (`sky.cpp:1059-1143`). */
 function useSkyLights(scene: THREE.Scene): {
   lightsRead: React.RefObject<SkyLightsRead | null>;
   areLightsRead: boolean;

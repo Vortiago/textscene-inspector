@@ -262,11 +262,12 @@ export function bakeAtlasLayers(
 /** Draws a bake's radiance over `octmap`, laid out as `layout`. */
 export type DrawRadiance = (octmap: THREE.WebGLRenderTarget, layout: SkyOctmapLayout) => void;
 
-/**
- * The radiance of the cube `radiance`, as wide as the radiance size, drawn into Godot's octmap, with
- * `debanding` scaling its noise.
- */
-export function cubeRadiance(gl: THREE.WebGLRenderer, radiance: THREE.CubeTexture, debanding: number): DrawRadiance {
+/** The cube `radiance`, as wide as the radiance size, drawn into Godot's octmap with `debanding` noise. */
+export function cubeRadiance(
+  gl: THREE.WebGLRenderer,
+  radiance: THREE.CubeTexture,
+  debanding: number
+): DrawRadiance {
   return (target, layout) => {
     const pass = radianceOctmapPassFor(gl);
     setUniforms(pass, { radiance, size: layout.size, borderSize: layout.borderSize, debanding });

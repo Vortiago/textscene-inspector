@@ -1049,17 +1049,17 @@ describe('SkyLayer under an exposure', () => {
   });
 });
 
-/**
- * A change of the lights dirties a sky that reads them (`sky.cpp:1105-1143`). An Incremental sky
- * then bakes layer 0 and filters one more layer in each render (`sky.cpp:1265-1369`).
- */
+// A light change dirties a sky that reads lights (`sky.cpp:1105-1143`), and steps as `sky.cpp:1265-1369`.
 describe('SkyLayer under a change of its lights', () => {
   const camera = new THREE.PerspectiveCamera();
   function LitSky({ sky, sun }: { sky: Sky; sun: [number, number, number] }) {
     return (
       <>
         <ShownSkyLayer sky={sky} rotation={NO_ROTATION} panorama={null} />
-        <directionalLight position={sun} userData={skyLightUserData({ drawsInSky: true, energy: 1, size: 0 })} />
+        <directionalLight
+          position={sun}
+          userData={skyLightUserData({ drawsInSky: true, energy: 1, size: 0 })}
+        />
       </>
     );
   }

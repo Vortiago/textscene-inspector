@@ -98,7 +98,11 @@ export function writeSkyLights(uniforms: SkyUniforms, lights: readonly SkyLight[
   for (let i = 0; i < LIGHT_SLOTS; i++) {
     const light = lights[i];
     slot(uniforms, `LIGHT${i}_ENABLED`, !!light);
-    slot(uniforms, `LIGHT${i}_DIRECTION`, light ? light.direction.clone().normalize() : new THREE.Vector3(0, 1, 0));
+    slot(
+      uniforms,
+      `LIGHT${i}_DIRECTION`,
+      light ? light.direction.clone().normalize() : new THREE.Vector3(0, 1, 0)
+    );
     slot(uniforms, `LIGHT${i}_COLOR`, light ? light.color.clone() : new THREE.Color(1, 1, 1));
     slot(uniforms, `LIGHT${i}_ENERGY`, light?.energy ?? 0);
     slot(uniforms, `LIGHT${i}_SIZE`, light?.size ?? 0);
