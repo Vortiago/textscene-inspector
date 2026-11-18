@@ -323,7 +323,7 @@ const PASS_SCENES = [
     ),
     rows: ['sky.sky.ALPHA', 'sky.sky.HALF_RES_COLOR'],
   },
-  // An alpha out of 0 to 1 survives, as Godot's passes hold RGBA16F (`sky.cpp:921`).
+  // An alpha outside 0 to 1 survives, as Godot's passes hold RGBA16F (`sky.cpp:921`).
   {
     name: 'sky-alpha-quarter-res',
     source: builtInSky(
@@ -347,7 +347,8 @@ const PASS_SCENES = [
     source: builtInSky(
       ['\tCOLOR = vec3(0.2, 0.6, 0.4) * (0.5 + 0.5 * EYEDIR.y);', '\tALPHA = 0.25;'].join('\n')
     ),
-    rows: ['sky.sky.ALPHA', 'sky.sky.EYEDIR'],
+    // Behind the scene Godot writes alpha 0 (`sky.glsl:309-311`), so this shows only that no blend applies.
+    rows: ['sky.sky.EYEDIR'],
   },
   {
     name: 'sky-cubemap-pass',

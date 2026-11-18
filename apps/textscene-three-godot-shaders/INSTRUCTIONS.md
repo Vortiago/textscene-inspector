@@ -1893,7 +1893,7 @@ canvases draw on WebGPURenderer (#1788).
 | `particles.process.USERDATA6` | open, #1726 | | | `servers/rendering/shader_types.cpp:412` |
 | `particles.process.TRANSFORM` | open, #1726 | | | `servers/rendering/shader_types.cpp:413` |
 | `sky.sky.COLOR` | transpiled (`sky-default`, `sky-fog`, `sky-fog-sun`, `sky-fog-energy-0`, `sky-fog-energy-3`, `sky-fog-affect-0`, `sky-fog-affect-half`, `sky-sun-coloured`, `sky-sun-below`, `sky-sun-energy-0`, `sky-camera-wide`, `head-writable/sky-color`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:486` |
-| `sky.sky.ALPHA` | transpiled (`sky-alpha-half-res`, `sky-alpha-quarter-res`, `sky-alpha-background`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:487` |
+| `sky.sky.ALPHA` | transpiled (`sky-alpha-half-res`, `sky-alpha-quarter-res`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:487` |
 | `sky.sky.FOG` | transpiled (`sky-fog-write`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:494` |
 | `fog.fog.ALBEDO` | open, #1783 | | | `servers/rendering/shader_types.cpp:517` |
 | `fog.fog.DENSITY` | open, #1783 | | | `servers/rendering/shader_types.cpp:518` |

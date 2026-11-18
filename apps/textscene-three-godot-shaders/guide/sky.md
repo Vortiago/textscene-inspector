@@ -916,7 +916,7 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 
 ## `ALPHA`
 
-`ALPHA` starts at 1.0 and goes to the alpha of the pass's colour (`sky.glsl:235`, `:274`). Godot draws the sky with no blending. The half and quarter passes and the radiance octmap keep it in RGBA16F, out of 0 to 1, and a later pass reads it as `HALF_RES_COLOR.a` or `QUARTER_RES_COLOR.a`. Behind the scene the pass writes alpha 0 (`sky.glsl:309-311`).
+`ALPHA` starts at 1.0 and goes to the alpha of the pass's colour (`sky.glsl:235`, `:274`). Godot draws the sky with no blending. The half and quarter passes keep it in RGBA16F, outside 0 to 1 too, and a later pass reads it as `HALF_RES_COLOR.a` or `QUARTER_RES_COLOR.a`. Behind the scene the pass writes alpha 0 (`sky.glsl:309-311`).
 
 The transpiler emits the template's local `alpha`. Rows: `sky.sky.ALPHA`. Godot source: `servers/rendering/shader_types.cpp:487`.
 
