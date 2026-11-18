@@ -2552,6 +2552,19 @@ vec4 probe() { return u[0] + u[1] * 4.0; }
 | `2` | `0.0007739938` | `3a4ae5d8` |
 | `3` | `0.25` | `3e800000` |
 
+### Probe `uniform-layout-computed-index-after-float`, 16 input rows
+
+```glsl
+uniform float a;
+uniform mat3 m[2];
+vec3 probe(int i) { return m[i & 1][1] + a; }
+```
+
+| `i` | Godot gives |
+| --- | --- |
+| `0` | `(1002.0, 1005.0, 1008.0)` |
+| `1` | `(1000.0, 1003.0, 1000.0)` |
+
 ## Structs
 
 `struct Pair { float x; vec2 y; };` declares a struct before the functions. `Pair(a, b)` constructs one from a value of each member, in order, and `p.x` reads or writes a member.

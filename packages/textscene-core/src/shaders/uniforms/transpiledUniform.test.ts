@@ -6,6 +6,7 @@ import { NIL } from '../../godot/variant/value/variant.js';
 import { treeOf } from '../language/parsedTree.testkit.js';
 import { GODOT_SAMPLING } from './samplerState.js';
 import { bindParameters } from './transpiledUniform.js';
+import { wordsOf } from './uniformNodes.testkit.js';
 
 const parametersOf = (source: string) =>
   bindParameters(treeOf(source), { useLinearColor: false, sampling: GODOT_SAMPLING });
@@ -21,7 +22,24 @@ const sampledTexture = (source: string) => {
   return (binding.value as TextureNode).value;
 };
 
+const sharesBuffer = (source: string) => {
+  const parameters = parametersOf(source);
+  return wordsOf(parameters.get('a')!.value) === wordsOf(parameters.get('b')!.value);
+};
+
 describe('bindParameters', () => {
+  it("holds two local uniforms in Godot's one material block", () => {
+    expect(sharesBuffer('shader_type spatial;\nuniform float a;\nuniform vec3 b;')).toBe(true);
+  });
+
+  it('keeps an instance uniform out of the material block', () => {
+    expect(sharesBuffer('shader_type spatial;\nuniform float a;\ninstance uniform float b;')).toBe(false);
+  });
+
+  it('keeps a global uniform out of the material block', () => {
+    expect(sharesBuffer('shader_type spatial;\nuniform float a;\nglobal uniform float b;')).toBe(false);
+  });
+
   it("samples with the shader type's filter and repeat", () => {
     const copy = sampledTexture('shader_type spatial;\nuniform sampler2D s;');
     expect([copy.minFilter, copy.wrapS]).toEqual([LinearMipmapLinearFilter, RepeatWrapping]);
@@ -64,5 +82,19 @@ describe('bindParameters', () => {
 
   it('can draw with a sampler2D that has no texture, which reads its default', () => {
     expect(parametersOf('uniform sampler2D s;').get('s')!.isDrawable).toBe(true);
+  });
+
+  it('binds a material block of exactly 65536 bytes', () => {
+    expect(() => parametersOf('uniform vec4 u[4096];')).not.toThrow();
+  });
+
+  it('names the uniform that ends past the 65536 bytes of a WebGL uniform block, at its line', () => {
+    expect(() => parametersOf('uniform float f;\nuniform vec4 u[4096];')).toThrow(
+      "2:1: Uniform 'u' ends past the 65536 bytes of a WebGL uniform block: the material's uniforms take 65552 bytes."
+    );
+  });
+
+  it('counts only the local uniforms toward the material block', () => {
+    expect(() => parametersOf('uniform vec4 u[4096];\nglobal uniform float g;')).not.toThrow();
   });
 });
