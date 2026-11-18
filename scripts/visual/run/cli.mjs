@@ -4,7 +4,8 @@
  */
 
 import { GOLDEN_SCENES } from '../scenes.mjs';
-import { parseShard, shardOf } from '../shards/balance.mjs';
+import { parseShard, shardOf } from '../../shards/shards.mjs';
+import SCENE_SECONDS from '../shards/sceneSeconds.json' with { type: 'json' };
 
 /**
  * Parses `--update`, `--scene <name>` and `--shard <index>/<count>`. Anything else, and `--scene`
@@ -26,7 +27,8 @@ export function parseArgs(argv) {
       opts.scene = value;
     } else if (a === '--shard') opts.shard = shardArgument(argv[++i]);
     else {
-      console.error(`[visual] unknown argument: ${a}`);
+      const hint = a === '--' ? '. Drop the "--": pnpm passes it to the script' : '';
+      console.error(`[visual] unknown argument: ${a}${hint}`);
       process.exit(2);
     }
   }
@@ -62,7 +64,7 @@ export function selectScenes(opts) {
     );
     process.exit(2);
   }
-  if (opts.shard) return shardOf(GOLDEN_SCENES, opts.shard);
+  if (opts.shard) return shardOf(GOLDEN_SCENES, opts.shard, SCENE_SECONDS);
   if (!opts.scene) return GOLDEN_SCENES;
   const scenes = GOLDEN_SCENES.filter((s) => s.name === opts.scene);
   if (scenes.length === 0) {

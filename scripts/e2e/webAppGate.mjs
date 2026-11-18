@@ -5,7 +5,7 @@
  *   pnpm test:e2e:web --shard 1/2     # the 1st of 2 shards of equal seconds, as CI runs it
  */
 import { previewPort, withPreviewBrowser } from '../visual/previewServer.mjs';
-import { parseShard } from '../visual/shards/balance.mjs';
+import { parseShard } from '../shards/shards.mjs';
 import { scenariosOf } from './gateScenarios.mjs';
 
 class GateFailures {
@@ -25,7 +25,8 @@ function parseArgs(argv) {
   if (argv.length === 0) return null;
   const shard = argv[0] === '--shard' && argv.length === 2 ? parseShard(argv[1]) : null;
   if (!shard) {
-    console.error(`[gate] expected no argument or --shard <index>/<count>, got "${argv.join(' ')}"`);
+    const hint = argv[0] === '--' ? '. Drop the "--": pnpm passes it to the script' : '';
+    console.error(`[gate] expected no argument or --shard <index>/<count>, got "${argv.join(' ')}"${hint}`);
     process.exit(2);
   }
   return shard;

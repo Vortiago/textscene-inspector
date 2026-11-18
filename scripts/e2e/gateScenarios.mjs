@@ -1,5 +1,5 @@
 import { inkStats } from '../vscode/pixels.mjs';
-import { shardOf } from '../visual/shards/balance.mjs';
+import { shardOf } from '../shards/shards.mjs';
 import { longTasksAfterFirstReply, longTasksDuringTextureWork } from './textureWorkProbe.mjs';
 import {
   checkBlockedControl,

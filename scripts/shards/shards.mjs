@@ -1,15 +1,11 @@
-import SCENE_SECONDS from './sceneSeconds.json' with { type: 'json' };
-
 /**
- * The scenes of shard `index` of `count`, in manifest order. The split is longest first: each
- * scene, slowest first, goes to the shard with the least seconds so far. A scene the table has not
- * measured counts as the table's median. The shards of one count cover each scene exactly once.
+ * Shard `index` of `count`, in input order: slowest first, each joins the lightest shard so far.
  *
  * @param {{ name: string }[]} scenes
  * @param {{ index: number, count: number }} shard - `index` counts from 1.
- * @param {Record<string, number>} [secondsByScene] - capture seconds on a CI runner, by name.
+ * @param {Record<string, number>} secondsByScene - seconds on a CI runner, by name.
  */
-export function shardOf(scenes, { index, count }, secondsByScene = SCENE_SECONDS) {
+export function shardOf(scenes, { index, count }, secondsByScene) {
   const unmeasuredSeconds = median(Object.values(secondsByScene));
   const secondsOf = (scene) => secondsByScene[scene.name] ?? unmeasuredSeconds;
   // Manifest order breaks a tie, so equal seconds split the same way on every runner.
