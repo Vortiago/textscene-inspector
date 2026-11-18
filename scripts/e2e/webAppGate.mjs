@@ -31,8 +31,18 @@ function parseArgs(argv) {
   return shard;
 }
 
+/** The scenarios to run. A shard with none is a usage error (exit 2), since an empty run passes. */
+function selectScenarios(shard) {
+  const scenarios = scenariosOf(shard);
+  if (scenarios.length === 0) {
+    console.error(`[gate] expected a shard with scenarios, got none in ${shard.index}/${shard.count}`);
+    process.exit(2);
+  }
+  return scenarios;
+}
+
 async function main() {
-  const scenarios = scenariosOf(parseArgs(process.argv.slice(2)));
+  const scenarios = selectScenarios(parseArgs(process.argv.slice(2)));
   const results = await withPreviewBrowser(previewPort('e2eWeb'), (browser, baseUrl) =>
     runScenarios(scenarios, browser, baseUrl)
   );

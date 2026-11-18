@@ -119,13 +119,13 @@ function checkCameraStill(gate, { before, afterA, afterB }) {
   );
   if (!before) return;
   gate.check(
-    matricesEqual(before.matrix, afterA.matrix),
+    matricesEqual(before.matrix, afterA?.matrix),
     `[camera] view matrix changed after selecting ${SELECT_A} — camera moved on selection\n` +
       `    before: ${formatMatrix(before.matrix)}\n` +
       `    after:  ${formatMatrix(afterA?.matrix)}`
   );
   gate.check(
-    matricesEqual(afterA.matrix, afterB.matrix),
+    matricesEqual(afterA?.matrix, afterB?.matrix),
     `[camera] view matrix changed after selecting ${SELECT_B} (a SECOND, different selection) — ` +
       `camera moved on selection\n` +
       `    after ${SELECT_A}: ${formatMatrix(afterA?.matrix)}\n` +
