@@ -7,7 +7,12 @@
  */
 
 import type * as THREE from 'three';
-import { buildSkyEnvironment, type SkyEnvironmentInput, type SkyLight } from '../../resources/sky/build';
+import {
+  buildSkyEnvironment,
+  type RadianceInPlace,
+  type SkyEnvironmentInput,
+  type SkyLight,
+} from '../../resources/sky/build';
 import type { Sky } from '../../resources/sky/types';
 import type { SamplerValue } from '../../shaders/uniforms/samplerUniform';
 import { roughnessLayersOf } from '../../resources/sky/skyLayers';
@@ -30,6 +35,8 @@ interface BakedSky {
   radiance: SkyRadiance;
   /** Draws the background again from a live panorama, absent for any other. */
   redrawBackground?: () => void;
+  /** The bake of the radiance layers in place, absent for a sky the previewer draws with its own GLSL. */
+  radianceInPlace?: RadianceInPlace;
   /** Frees the background and the radiance layers. */
   dispose: () => void;
 }
@@ -182,6 +189,11 @@ export class SkyBakes {
     for (const baked of this.bakes.values()) baked?.redrawBackground?.();
   }
 
+  /** The bake in place of the radiance at `exposure`, absent for a sky with none. */
+  inPlaceAt(exposure: number): RadianceInPlace | undefined {
+    return this.bakes.get(this.keyOf(exposure))?.radianceInPlace;
+  }
+
   dispose(): void {
     for (const baked of this.bakes.values()) free(baked);
     this.onDispose();
@@ -228,8 +240,8 @@ function bakeSky(gl: THREE.WebGLRenderer, input: SkyBakeInput, exposure: number)
   const built = buildSkyEnvironment(gl, { ...sky, lights: exposed(lights, exposure), energy });
   if (!built) return null;
   const radiance = new SkyRadiance(gl, built.layers, rotation);
-  const { background, redrawBackground, dispose } = built;
-  return { background, radiance, redrawBackground, dispose };
+  const { background, redrawBackground, radianceInPlace, dispose } = built;
+  return { background, radiance, redrawBackground, radianceInPlace, dispose };
 }
 
 function exposed(lights: readonly SkyLight[], exposure: number): SkyLight[] {

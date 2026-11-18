@@ -38,6 +38,8 @@ export interface Playback {
 export class PlaybackShaderTime {
   /** The seeks of the last frame, so a frame after a new seek sets `TIME` to the playhead. */
   private lastSeeks: number | undefined;
+  /** Counts frames whose `TIME` a stop or a seek moved, as Godot's clock never does. Written by `frame`. */
+  jumps = 0;
 
   constructor(private readonly clock: ShaderClock) {}
 
@@ -46,8 +48,15 @@ export class PlaybackShaderTime {
     const hasSought = this.lastSeeks !== undefined && playback.seeks !== this.lastSeeks;
     this.lastSeeks = playback.seeks;
     if (!playback.hasPlayer) return this.clock.advance(step);
-    if (playback.playState === 'stopped') return this.clock.set(0);
-    if (hasSought) return this.clock.set(playback.playhead);
+    if (playback.playState === 'stopped') return this.jumpTo(0);
+    if (hasSought) return this.jumpTo(playback.playhead);
     return playback.playState === 'playing' ? this.clock.advance(step) : this.clock.time;
+  }
+
+  private jumpTo(seconds: number): number {
+    const before = this.clock.time;
+    const time = this.clock.set(seconds);
+    if (time !== before) this.jumps += 1;
+    return time;
   }
 }

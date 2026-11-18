@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { skyDraws, type TranspiledSky } from './transpileSky.js';
 import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
+import type { Vector3 } from '../../godot/math/vector.js';
 
 /** A directional light as Godot hands it to the sky (`sky.cpp:1070-1098`). */
 export interface SkyLight {
@@ -29,6 +30,8 @@ export interface SkyFog {
 export interface SkyScene {
   /** The camera of the render: the sky reads its projection and its world matrix. */
   readonly camera: THREE.Camera;
+  /** `POSITION` when it is not the camera's origin, as in the octmap pass, which views from the origin. */
+  readonly position?: Readonly<Vector3>;
   /** The environment's sky rotation, `environment_get_sky_orientation`, or none. */
   readonly skyOrientation?: THREE.Matrix3;
   /** The shader time in seconds, `TIME`. */
@@ -53,7 +56,10 @@ export const SKY_BINDINGS: readonly Binding<SkyScene>[] = [
   {
     uniform: 'params.position',
     godot: 'sky.cpp:229-231',
-    value: (scene) => scene.camera.getWorldPosition(new THREE.Vector3()),
+    value: ({ position, camera }) =>
+      position
+        ? new THREE.Vector3(position.x, position.y, position.z)
+        : camera.getWorldPosition(new THREE.Vector3()),
   },
   { uniform: 'params.time', godot: 'sky.cpp:232', value: (scene) => scene.time },
   { uniform: 'params.border_size', godot: 'sky.cpp:233-234', value: borderSizeOf },

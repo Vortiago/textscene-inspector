@@ -10,8 +10,10 @@ describe('skyUsage', () => {
   it('reads no built-in of a sky that writes only COLOR', () => {
     expect(skyUsage(skyOf('COLOR = vec3(1.0);'))).toEqual({
       light: false,
-      timeOrPosition: false,
+      time: false,
+      position: false,
       hasBufferUniforms: false,
+      passColors: [],
       samplers: {},
     });
   });
@@ -29,14 +31,29 @@ describe('skyUsage', () => {
   it("reads no built-in of a sky that draws Godot's default sky (edge case)", () => {
     expect(usageOfTree(null)).toEqual({
       light: false,
-      timeOrPosition: false,
+      time: false,
+      position: false,
       hasBufferUniforms: false,
+      passColors: [],
       samplers: {},
     });
   });
 
-  it.each(['TIME', 'POSITION.x'])('reads TIME or POSITION of a sky that reads %s', (read) => {
-    expect(skyUsage(skyOf(`COLOR = vec3(${read});`)).timeOrPosition).toBe(true);
+  it('reads TIME of a sky that reads it, and not POSITION', () => {
+    expect(skyUsage(skyOf('COLOR = vec3(TIME);'))).toMatchObject({ time: true, position: false });
+  });
+
+  it('reads the pass colours a sky reads', () => {
+    const body = 'COLOR = HALF_RES_COLOR.rgb + QUARTER_RES_COLOR.rgb;';
+    expect(skyUsage(skyOf(body)).passColors).toEqual(['half', 'quarter']);
+  });
+
+  it('reads no pass colour of a sky that reads neither', () => {
+    expect(skyUsage(skyOf('COLOR = vec3(TIME);')).passColors).toEqual([]);
+  });
+
+  it('reads POSITION of a sky that reads it, and not TIME', () => {
+    expect(skyUsage(skyOf('COLOR = vec3(POSITION.x);'))).toMatchObject({ time: false, position: true });
   });
 
   it('holds a buffer for a uniform that is not a sampler', () => {

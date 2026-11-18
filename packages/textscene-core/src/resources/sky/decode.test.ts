@@ -213,7 +213,14 @@ describe('decodeSky — the size a Sky’s radiance bakes at', () => {
 });
 
 describe('skyUpdateMode — the mode Godot picks for an Automatic sky', () => {
-  const NO_USAGE: SkyUsage = { light: false, timeOrPosition: false, hasBufferUniforms: false, samplers: {} };
+  const NO_USAGE: SkyUsage = {
+    light: false,
+    time: false,
+    position: false,
+    hasBufferUniforms: false,
+    passColors: [],
+    samplers: {},
+  };
   const shaderSky = (usage: Partial<SkyUsage>, data: Record<string, string> = {}): Sky =>
     decodeSky(data, {
       kind: 'shader',
@@ -224,12 +231,15 @@ describe('skyUpdateMode — the mode Godot picks for an Automatic sky', () => {
       usage: { ...NO_USAGE, ...usage },
     });
 
-  it('runs a shader that reads TIME or POSITION at radiance size 256 in real time', () => {
-    expect(skyUpdateMode(shaderSky({ timeOrPosition: true, light: true }), false)).toBe('real-time');
-  });
+  it.each(['time', 'position'] as const)(
+    'runs a shader that reads %s at radiance size 256 in real time',
+    (read) => {
+      expect(skyUpdateMode(shaderSky({ [read]: true, light: true }), false)).toBe('real-time');
+    }
+  );
 
   it('runs a shader that reads TIME at another radiance size incrementally when it has a uniform (edge case)', () => {
-    const sky = shaderSky({ timeOrPosition: true, hasBufferUniforms: true }, { radiance_size: '1' });
+    const sky = shaderSky({ time: true, hasBufferUniforms: true }, { radiance_size: '1' });
     expect(skyUpdateMode(sky, false)).toBe('incremental');
   });
 
@@ -255,19 +265,19 @@ describe('skyUpdateMode — the mode Godot picks for an Automatic sky', () => {
   });
 
   it('keeps the mode a Sky names', () => {
-    expect(skyUpdateMode(shaderSky({ timeOrPosition: true }, { process_mode: '1' }), false)).toBe('quality');
+    expect(skyUpdateMode(shaderSky({ time: true }, { process_mode: '1' }), false)).toBe('quality');
   });
 });
 
 describe('withAutomaticBake — the filter of an Automatic shader sky', () => {
-  const shaderSky = (timeOrPosition: boolean, data: Record<string, string> = {}): Sky =>
+  const shaderSky = (time: boolean, data: Record<string, string> = {}): Sky =>
     decodeSky(data, {
       kind: 'shader',
       code: '',
       file: 'res://sky.gdshader',
       parameters: {},
       textures: {},
-      usage: { light: false, timeOrPosition, hasBufferUniforms: false, samplers: {} },
+      usage: { light: false, time, position: false, hasBufferUniforms: false, passColors: [], samplers: {} },
     });
 
   it('bakes a sky that Automatic runs in real time with the fast filter', () => {

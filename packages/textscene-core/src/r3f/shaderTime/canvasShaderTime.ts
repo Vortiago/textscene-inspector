@@ -15,6 +15,8 @@ class CanvasShaderTime {
   private advancedFrame: number | undefined;
   /** `TIME` of the frame now drawing. */
   time = 0;
+  /** Grows by one with each frame whose `TIME` a stop or a seek moved, as `PlaybackShaderTime.jumps`. */
+  jumps = 0;
 
   /** Moves `TIME` for `frame` by `step` seconds under `playback`, once per frame. */
   advance(frame: number, playback: Playback, step: number, rolloverSeconds: number): void {
@@ -26,7 +28,9 @@ class CanvasShaderTime {
       clock.set(this.time);
       this.playbackTime = new PlaybackShaderTime(clock);
     }
+    const jumpsBefore = this.playbackTime.jumps;
     this.time = this.playbackTime.frame(playback, step);
+    if (this.playbackTime.jumps !== jumpsBefore) this.jumps += 1;
   }
 }
 

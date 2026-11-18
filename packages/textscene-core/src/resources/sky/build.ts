@@ -12,6 +12,7 @@ import type { SamplerValue } from '../../shaders/uniforms/samplerUniform';
 import type { ProjectShaderOptions } from '../../shaders/rendererShaderOptions';
 import type { BuiltInSkyProperties, ShaderSkyProperties, Sky } from './types';
 import { warn } from '../../logger';
+import type { Vector3 } from '../../godot/math/vector';
 import { skyFragmentShader, skyGlsl, SKY_VERTEX_SHADER } from './skyShaders';
 import { skyUniforms, type SkyLight, type SkyUniforms } from './skyUniforms';
 import { releaseView, textureView } from '../textures/textureView';
@@ -42,8 +43,20 @@ export interface SkyEnvironment {
    * the sky paints the background.
    */
   redrawBackground?: () => void;
+  /** The bake of the layers in place. Absent for a sky the previewer draws with its own GLSL. */
+  radianceInPlace?: RadianceInPlace;
   /** Frees the background, the panorama it samples, and the layers. */
   dispose: () => void;
+}
+
+/** Bakes the layers again into the array the readers sample, as for a dirty sky (`sky.cpp:1273`). */
+export interface RadianceInPlace {
+  /** Bakes every layer, as a real-time or a quality sky does. */
+  bakeAgain(position: Readonly<Vector3>): void;
+  /** Bakes layer 0 alone, as an incremental sky does: `filterLayer` then filters the others. */
+  bakeFirstLayerAgain(position: Readonly<Vector3>): void;
+  /** Filters `layer` from the last bake of layer 0. */
+  filterLayer(layer: number): void;
 }
 
 export interface SkyEnvironmentInput {
