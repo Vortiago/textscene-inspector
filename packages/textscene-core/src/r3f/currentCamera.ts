@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import type { Scene } from '../scene/openScene.js';
+import type { CameraState } from '../scene/viewportCameras.js';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { ROOT_VIEWPORT_PATH } from './contexts/EnclosingViewportContext.js';
 // The scene reads its cameras off the Live scene tree that this binds.
@@ -58,20 +59,17 @@ export function useCurrentCameras3D(viewportPaths: readonly string[]): readonly 
   );
 }
 
-/** The current Camera3D and Camera2D of each viewport at `viewportPaths`: what In-game draws. */
-export function useCurrentCameraPaths(viewportPaths: readonly string[]): ReadonlySet<string> {
+/** Each camera of the scene by live path: its viewport, whether it is current, and whether it can be. */
+export function useSceneCameras(): ReadonlyMap<string, CameraState> {
   const { scene, subscribe } = useCameraSubscription();
+  // A string snapshot, since the scene builds a new map on each read.
   const snapshot = useSyncExternalStore(subscribe, () =>
-    viewportPaths
-      .flatMap((path) => {
-        if (!scene) return [];
-        const viewport = sceneViewportOf(path);
-        return [scene.currentCamera3D(viewport), scene.currentCamera2D(viewport)];
-      })
-      .filter((path): path is string => path !== null)
-      .join(SNAPSHOT_SEPARATOR)
+    scene ? JSON.stringify([...scene.cameras().values()]) : '[]'
   );
-  return useMemo(() => new Set(snapshot === '' ? [] : snapshot.split(SNAPSHOT_SEPARATOR)), [snapshot]);
+  return useMemo(
+    () => new Map((JSON.parse(snapshot) as CameraState[]).map((camera) => [camera.path, camera])),
+    [snapshot]
+  );
 }
 
 /**

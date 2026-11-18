@@ -1,6 +1,7 @@
 import { diffMask } from '../vscode/pixels.mjs';
 import { findCanvas, settleCanvas } from '../visual/previewServer.mjs';
 import { checkDiagnostics } from './diagnostics.mjs';
+import { clickCameraRow } from './cameraPreviewScenario.mjs';
 import { openFixture } from './openFixture.mjs';
 
 /* global window */
@@ -192,22 +193,15 @@ function describeStep(step) {
 }
 
 async function runStep(page, step) {
-  if (step.click) return page.getByRole('button', { name: new RegExp(`^${step.click}`) }).click();
+  if (step.click) return clickCameraRow(page, step.click);
   if (step.call) {
     return page.evaluate(([path, method]) => window.textscene.scene.getNode(path).call(method), step.call);
   }
   return viewButtons(page).getByText(step.view, { exact: true }).click();
 }
 
-/** Pixel counts against the start and against each earlier step, so the checks compare any pair. */
-function withMovement(observation, start, earlier) {
-  const { buffer, ...state } = observation;
-  return {
-    ...state,
-    moved: diffMask(start, buffer).diffPixels,
-    movedFrom: earlier.map((before) => diffMask(before, buffer).diffPixels),
-  };
-}
+/** The step an expected step compares its drawing with, beside the start. */
+const referenceOf = (expected) => expected.sameAs ?? expected.differsFrom;
 
 async function runCase(browser, baseUrl, testCase) {
   const { context, page, diagnostics } = await openFixture(browser, baseUrl, {
@@ -216,17 +210,23 @@ async function runCase(browser, baseUrl, testCase) {
   });
   await viewButtons(page).getByText(testCase.view, { exact: true }).click();
   await page.getByRole('tab', { name: 'Cameras' }).click();
-  const start = await observe(page);
-  const buffers = [];
+  const { buffer: startImage, ...start } = await observe(page);
+  const images = [];
   const steps = [];
-  for (const step of testCase.steps) {
+  for (const [index, step] of testCase.steps.entries()) {
     await runStep(page, step);
-    const observation = await observe(page);
-    steps.push({ step: describeStep(step), ...withMovement(observation, start.buffer, buffers) });
-    buffers.push(observation.buffer);
+    const { buffer, ...state } = await observe(page);
+    const reference = referenceOf(testCase.expected.steps[index]);
+    steps.push({
+      step: describeStep(step),
+      ...state,
+      moved: diffMask(startImage, buffer).diffPixels,
+      movedFromReference: reference === undefined ? null : diffMask(images[reference], buffer).diffPixels,
+    });
+    images.push(buffer);
   }
   await context.close();
-  return { name: testCase.name, start: withMovement(start, start.buffer, []), steps, diagnostics };
+  return { name: testCase.name, expected: testCase.expected, start, steps, diagnostics };
 }
 
 export async function runCameraButtonsScenario(browser, baseUrl) {
@@ -257,35 +257,23 @@ function checkState(gate, label, expected, found) {
   );
 }
 
-function checkChanged(gate, label, pixels, against) {
-  gate.check(
-    pixels > MOVED_PIXELS,
-    `${label} moved ${pixels} px of the view against ${against}, expected over ${MOVED_PIXELS}`
-  );
-}
-
-function checkStill(gate, label, pixels, against) {
-  gate.check(
-    pixels < STILL_PIXELS,
-    `${label} moved ${pixels} px of the view against ${against}, expected under ${STILL_PIXELS}`
-  );
+function checkMovement(gate, label, pixels, against, shouldMove) {
+  const isRight = shouldMove ? pixels > MOVED_PIXELS : pixels < STILL_PIXELS;
+  const bound = shouldMove ? `over ${MOVED_PIXELS}` : `under ${STILL_PIXELS}`;
+  gate.check(isRight, `${label} moved ${pixels} px of the view against ${against}, expected ${bound}`);
 }
 
 function checkDrawing(gate, label, expected, found) {
-  if (expected.moved === true) checkChanged(gate, label, found.moved, 'the start');
-  if (expected.moved === false) checkStill(gate, label, found.moved, 'the start');
-  if (expected.sameAs !== undefined) {
-    checkStill(gate, label, found.movedFrom[expected.sameAs], `step ${expected.sameAs + 1}`);
-  }
-  if (expected.differsFrom !== undefined) {
-    checkChanged(gate, label, found.movedFrom[expected.differsFrom], `step ${expected.differsFrom + 1}`);
-  }
+  if (expected.moved !== undefined) checkMovement(gate, label, found.moved, 'the start', expected.moved);
+  const reference = referenceOf(expected);
+  if (reference === undefined) return;
+  const shouldMove = expected.differsFrom !== undefined;
+  checkMovement(gate, label, found.movedFromReference, `step ${reference + 1}`, shouldMove);
 }
 
 /** Records the scenario's claims on `gate`. */
 export function checkCameraButtons(gate, results) {
-  for (const result of results) {
-    const { expected } = CASES.find((testCase) => testCase.name === result.name);
+  for (const { expected, ...result } of results) {
     const label = `[camera buttons] ${result.name}`;
     checkState(gate, `${label} at the start`, expected.start, result.start);
     expected.steps.forEach((step, index) => {

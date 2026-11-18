@@ -4,17 +4,17 @@ import { CASES, checkCameraButtons, MOVED_PIXELS } from './cameraButtonsScenario
 
 const MOVED = MOVED_PIXELS * 10;
 
-/** The pixels a step moved against the start and each earlier step, as the expected step asks. */
-function movementOf(expected, index) {
-  const movedFrom = Array.from({ length: index }, () => MOVED);
-  if (expected.sameAs !== undefined) movedFrom[expected.sameAs] = 0;
-  return { moved: expected.moved === false ? 0 : MOVED, movedFrom };
+/** The pixels a step moved against the start and against the step it names, as the expected step asks. */
+function movementOf(expected) {
+  const movedFromReference = expected.sameAs !== undefined ? 0 : MOVED;
+  return { moved: expected.moved === false ? 0 : MOVED, movedFromReference };
 }
 
 /** A run that shows each step as expected, the way the fixed tab measures. */
 function passingRun() {
   return CASES.map(({ name, expected }) => ({
     name,
+    expected,
     start: { rows: [], disabled: [], isEmpty: false, ...expected.start },
     steps: expected.steps.map((step, index) => ({
       step: `step ${index + 1}`,
@@ -22,7 +22,7 @@ function passingRun() {
       disabled: [],
       isEmpty: false,
       ...step,
-      ...movementOf(step, index),
+      ...movementOf(step),
     })),
     diagnostics: CLEAN_LOAD,
   }));
@@ -67,7 +67,7 @@ describe('checkCameraButtons', () => {
 
   it('fails an In-game view that draws the editor preview instead of the game camera', () => {
     const run = passingRun();
-    caseOf(run, 'Preview then In-game').steps[2].movedFrom[1] = 0;
+    caseOf(run, 'Preview then In-game').steps[2].movedFromReference = 0;
     expect(failuresOf(run)).toEqual([
       '[camera buttons] Preview then In-game after step 3 moved 0 px of the view against step 2, expected over 100',
     ]);

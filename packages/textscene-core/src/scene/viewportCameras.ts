@@ -11,6 +11,16 @@ export interface CameraSource {
   enabledText(camera: TreeCamera): string | undefined;
 }
 
+/** A camera inside the tree, as the In-game view and the Cameras tab read it. */
+export interface CameraState {
+  readonly path: string;
+  /** The live path of the camera's viewport, null for the root window. */
+  readonly viewport: string | null;
+  readonly isCurrent: boolean;
+  /** Whether `make_current` moves it: a Camera2D that is not enabled refuses (`camera_2d.cpp:584-586`). */
+  readonly canBeCurrent: boolean;
+}
+
 /** The state `Viewport` keeps of its cameras (`viewport.h`). */
 interface ViewportState {
   camera3D: string | null;
@@ -67,6 +77,27 @@ export class ViewportCameras {
   camera2D(viewport: string | null): string | null {
     this.sync();
     return this.viewports.get(viewport)?.camera2D ?? null;
+  }
+
+  /** Each camera inside the tree with its viewport, by live path. */
+  states(): ReadonlyMap<string, CameraState> {
+    this.sync();
+    return new Map(
+      [...this.entered.values()].map((camera) => {
+        const state = this.viewports.get(camera.viewport);
+        const is2D = camera.dimension === '2D';
+        const current = is2D ? state?.camera2D : state?.camera3D;
+        return [
+          camera.path,
+          {
+            path: camera.path,
+            viewport: camera.viewport,
+            isCurrent: current === camera.path,
+            canBeCurrent: !is2D || this.isEnabled(camera),
+          },
+        ];
+      })
+    );
   }
 
   /** `Camera3D::make_current` (`camera_3d.cpp:352-360`). */

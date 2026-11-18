@@ -96,6 +96,12 @@ describe('<CamerasPanel> in the In-game mode', () => {
     expect((row('Off') as HTMLButtonElement).disabled).toBe(true);
   });
 
+  it('offers no click on a Camera2D that outside code disables', async () => {
+    const scene = renderPanel('in-game');
+    await act(() => scene.getNode('Right').set('enabled', false));
+    expect((row('Right') as HTMLButtonElement).disabled).toBe(true);
+  });
+
   it('marks a camera that outside code makes current', async () => {
     const scene = renderPanel('in-game');
     await act(() => scene.getNode('Side').call('make_current'));

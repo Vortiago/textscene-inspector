@@ -1,44 +1,27 @@
 import { useOptionalHierarchy } from '../../contexts/HierarchyContext.js';
-import { ROOT_VIEWPORT_PATH } from '../../contexts/EnclosingViewportContext.js';
-import { useCurrentCameraPaths } from '../../currentCamera.js';
-import { isCamera2DType } from '../../cameraNodeTypes.js';
+import { useSceneCameras } from '../../currentCamera.js';
 import type { LiveTreeEntry } from '../../liveSceneTree.js';
-import type { Camera2DProperties } from '../../../nodes/2d/camera2d/types.js';
+import { ROOT_WINDOW_PATH } from '../../../scene/nodePathWalk.js';
+import type { CameraState } from '../../../scene/viewportCameras.js';
 import styles from './TscnPreviewShell.module.css';
 
-/** The scene names the root window `/root`, and a live path starts at the scene's root node. */
-const ROOT_WINDOW_PREFIX = '/root/';
-
-/** `make_current` refuses a Camera2D that is not enabled (`camera_2d.cpp:585`), so its row takes no click. */
-function canBeCurrent(camera: LiveTreeEntry): boolean {
-  return (
-    !isCamera2DType(camera.node.type) || (camera.node.properties as Camera2DProperties).enabled !== false
-  );
-}
-
-/** The viewport whose current camera `camera` can be: the nearest viewport above it, else the root window. */
-function viewportOf(camera: LiveTreeEntry, viewportPaths: readonly string[]): string {
-  const enclosing = viewportPaths.filter((viewport) => camera.path.startsWith(`${viewport}/`));
-  return enclosing.reduce(
-    (nearest, viewport) => (viewport.length > nearest.length ? viewport : nearest),
-    ROOT_VIEWPORT_PATH
-  );
+function tagOf({ isCurrent, canBeCurrent, viewport }: CameraState): string {
+  const state = isCurrent ? 'current' : canBeCurrent ? 'make current' : 'not enabled';
+  return viewport === null ? state : `${state} · ${viewport.slice(viewport.lastIndexOf('/') + 1)}`;
 }
 
 interface GameCameraRowsProps {
   cameras: readonly LiveTreeEntry[];
-  viewportPaths: readonly string[];
 }
 
 /** The In-game rows: each viewport's current camera, moved by `make_current` as outside code moves it. */
-export function GameCameraRows({ cameras, viewportPaths }: GameCameraRowsProps) {
+export function GameCameraRows({ cameras }: GameCameraRowsProps) {
   const scene = useOptionalHierarchy()?.scene;
-  const viewports = [ROOT_VIEWPORT_PATH, ...viewportPaths];
-  const currentPaths = useCurrentCameraPaths(viewports);
+  const states = useSceneCameras();
 
   function makeCurrent(path: string) {
     void scene
-      ?.getNode(`${ROOT_WINDOW_PREFIX}${path}`)
+      ?.getNode(`${ROOT_WINDOW_PATH}/${path}`)
       .call('make_current')
       .catch((error: unknown) => {
         throw new Error(`make_current of the camera at ${path} failed: ${String(error)}`);
@@ -48,24 +31,20 @@ export function GameCameraRows({ cameras, viewportPaths }: GameCameraRowsProps) 
   return (
     <div className={styles.camList}>
       {cameras.map((camera) => {
-        const isCurrent = currentPaths.has(camera.path);
-        const viewport = viewportOf(camera, viewportPaths);
-        const isEnabled = canBeCurrent(camera);
-        const viewportName = viewport.slice(viewport.lastIndexOf('/') + 1);
+        // A camera of a sub-scene that has not loaded is listed before the scene holds it.
+        const state = states.get(camera.path);
+        if (!state) return null;
         return (
           <button
             key={camera.path}
             type="button"
             className={styles.camRow}
-            data-active={isCurrent}
-            disabled={!isEnabled}
+            data-active={state.isCurrent}
+            disabled={!state.canBeCurrent}
             onClick={() => makeCurrent(camera.path)}
           >
             <span className={styles.camName}>{camera.node.name}</span>
-            <span className={styles.camTag}>
-              {isCurrent ? 'current' : isEnabled ? 'make current' : 'not enabled'}
-              {viewport === ROOT_VIEWPORT_PATH ? '' : ` · ${viewportName}`}
-            </span>
+            <span className={styles.camTag}>{tagOf(state)}</span>
           </button>
         );
       })}

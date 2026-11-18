@@ -36,7 +36,7 @@ export function CamerasPanel() {
   if (cameras.length === 0) {
     return <div className={styles.emptyState}>No camera nodes in this scene.</div>;
   }
-  if (mode === 'in-game') return <GameCameraRows cameras={cameras} viewportPaths={viewportPaths} />;
+  if (mode === 'in-game') return <GameCameraRows cameras={cameras} />;
   // A Camera2D inside a SubViewport is that viewport's camera (`camera_2d.cpp:342`), not the stage's.
   const cameras2d = cameras.filter((e) => isCamera2DType(e.node.type) && !isInsideViewport(e, viewportPaths));
   return (

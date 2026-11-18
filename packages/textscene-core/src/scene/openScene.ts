@@ -7,6 +7,7 @@ import type { NodeHandle } from './nodeHandle.js';
 import { parseTscnContent, type ParseResult } from './parseScene.js';
 import { SceneListeners } from './sceneListeners.js';
 import { SceneNodes } from './sceneNodes.js';
+import type { CameraState } from './viewportCameras.js';
 import { SceneProperties } from './sceneProperties.js';
 import type { SceneWrites } from './sceneWrites.js';
 import { createSceneRuntime, type SceneRuntime, type SceneTree } from './sceneRuntime.js';
@@ -49,6 +50,8 @@ export interface Scene {
   currentCamera3D(viewport: string | null): string | null;
   /** The live path of the viewport's current Camera2D, null for none. */
   currentCamera2D(viewport: string | null): string | null;
+  /** Each camera inside the tree by live path: its viewport, whether it is current and whether it can be. */
+  cameras(): ReadonlyMap<string, CameraState>;
 }
 
 /** `written` of one parse, writes and resources: the graph is built again only when one of them moves. */
@@ -120,6 +123,7 @@ export function openScene({
     observe: (path, listener) => listeners.observe(path, listener),
     currentCamera3D: (viewport) => nodes.cameras.camera3D(viewport),
     currentCamera2D: (viewport) => nodes.cameras.camera2D(viewport),
+    cameras: () => nodes.cameras.states(),
   };
 
   function runtime(): SceneRuntime {
