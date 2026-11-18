@@ -175,6 +175,8 @@ export const SCENE_COMPOSITION_SCENES = [
   { name: 'node3d-plain-node-transform', file: 'unit-node3d-plain-node-transform.tscn' },
   { name: 'node3d-plain-node-visibility', file: 'unit-node3d-plain-node-visibility.tscn' },
   { name: 'node3d-top-level', file: 'unit-node3d-top-level.tscn' },
+  // A Node3D under a moved, hidden Node2D is a root of the world: the orange box beside the grey one.
+  { name: 'node3d-below-node2d', file: 'unit-node3d-below-node2d.tscn' },
   // A `parent="Gone"` that does not walk, and a `parent_id_path` naming `Moved`: the orange box sits
   // under Moved at x = 1.5, right of the grey reference, not under the root at x = 0.5.
   { name: 'node-parent-id-path', file: 'unit-node-parent-id-path.tscn' },

@@ -2,7 +2,8 @@
 
 ; Moves one variable: the visible of a Node3D above a Polygon2D. Visibility resets below a node that is
 ; no CanvasItem (canvas_item.cpp:330-350), so Godot still draws the polygon: pixel (100, 100) is
-; (76, 51, 153).
+; (76, 51, 153). No other golden puts a Node3D between two CanvasItems, so a hide that crosses it shows
+; only here.
 
 [node name="Root" type="Node2D"]
 
