@@ -14,7 +14,7 @@ import { particleDrawOf, type ParticleProgram } from './godotParticles';
 import type { ScopedReference } from '../../resources/reading';
 import { useShadedSurfaceMaterial } from './useSurfaceMaterial';
 import { SpatialShaderSlot } from '../spatialShader/SpatialShaderSlot';
-import { warnOnce } from '../../utils/warnOnce';
+import { warnUndrawnShader, type UndrawnShaderSurface } from './useMaterial';
 
 interface SurfaceMaterialSlotProps {
   /** The material this surface renders with; undefined = the renderer's default. */
@@ -28,12 +28,12 @@ interface SurfaceMaterialSlotProps {
   listed?: ListedSurface;
   /** The surface draws a particle emitter's instances: the patch that colours them and cuts the flipbook frame. */
   particles?: ParticleProgram;
-  /** The surface draws one unskinned mesh, the one draw a spatial shader takes yet. */
-  isMeshSurface?: boolean;
+  /** The draw the surface is: `mesh`, which a spatial shader draws on, or the draw it falls back on. */
+  drawnOn: ShaderSurface;
 }
 
-const UNDRAWN_SHADER =
-  "[material] The previewer draws a spatial shader only on an unskinned mesh yet, and draws Godot's default 3D surface on this skinned, MultiMesh, line, point or particle surface.";
+/** What draws a surface, as a spatial shader's fallback warning names it. */
+export type ShaderSurface = 'mesh' | UndrawnShaderSurface;
 
 /** Godot's default surface for no usable material (ADR-0041), magenta for a texture that never draws. */
 export function SurfaceMaterialSlot({
@@ -41,7 +41,7 @@ export function SurfaceMaterialSlot({
   attach,
   listed,
   particles,
-  isMeshSurface,
+  drawnOn,
 }: SurfaceMaterialSlotProps) {
   const { scalars, bags, shader } = useShadedSurfaceMaterial(source);
   const pixelRatio = useThree((state) => state.viewport.dpr);
@@ -64,15 +64,27 @@ export function SurfaceMaterialSlot({
     }),
     [pointDraw, primitive, placement, particleDraw]
   );
-  const drawsShader = isMeshSurface === true && !listed && !particles;
+  const undrawnOn = undrawnSurfaceOf(drawnOn, primitive, particles !== undefined);
   useEffect(() => {
-    if (shader && !drawsShader) warnOnce(shader, 'undrawn', UNDRAWN_SHADER);
-  }, [shader, drawsShader]);
+    if (shader && undrawnOn) warnUndrawnShader(shader, undrawnOn);
+  }, [shader, undrawnOn]);
   const standard = bags ? (
     <StandardMaterialSlot bags={bags} attach={attach} draws={draws} />
   ) : (
     materialBagElement(drawnBag(MISSING_TEXTURE_MATERIAL, draws), attach, null)
   );
-  if (!shader || !drawsShader) return standard;
+  if (!shader || undrawnOn) return standard;
   return <SpatialShaderSlot shader={shader} attach={attach} fallback={standard} />;
+}
+
+/** The surface a spatial shader falls back on, or null for a mesh of triangles, which draws it. */
+function undrawnSurfaceOf(
+  drawnOn: ShaderSurface,
+  primitive: ListedSurface['primitive'] | undefined,
+  isParticles: boolean
+): UndrawnShaderSurface | null {
+  if (primitive === 'lines') return 'line mesh';
+  if (primitive === 'points') return 'point mesh';
+  if (isParticles) return 'particle draw pass';
+  return drawnOn === 'mesh' ? null : drawnOn;
 }

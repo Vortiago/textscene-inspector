@@ -9,7 +9,7 @@ import { warn } from '../../logger';
 import { MATERIAL } from '../../resources/materials/material/kind';
 import type { Material, StandardMaterial } from '../../resources/materials/material/types';
 import type { ShaderText } from '../../resources/materials/shadermaterial/types';
-import { litSurfaceForm } from '../litSurface/litSurfaceForm';
+import { warnOnce } from '../../utils/warnOnce';
 import { useReferencedResource, type Read, type ScopedReference } from '../../resources/reading';
 
 /** What a material reference loads to. */
@@ -34,20 +34,40 @@ export function readyMaterial(loaded: LoadedMaterial): StandardMaterial | null {
 const UNCOMPILED_SHADER =
   "[material] ShaderMaterial is not compiled, and the surface draws Godot's default 3D surface.";
 
-const UNDRAWN_SPATIAL_SHADER =
-  "[material] The previewer draws a spatial shader only on the surface of a mesh yet, and draws Godot's default 3D surface for this next pass, glTF override or trail.";
+/** A surface that draws Godot's default 3D surface for a spatial shader, named in its warning. */
+export type UndrawnShaderSurface =
+  | 'skinned mesh'
+  | 'MultiMesh or GridMap'
+  | 'particle draw pass'
+  | 'particle trail'
+  | 'line mesh'
+  | 'point mesh'
+  | 'next pass'
+  | 'glTF surface';
 
-/** What `reference` loads to for a draw that builds no shader: a ShaderMaterial declines with a warning. */
-export function useMaterial(reference: ScopedReference | undefined): LoadedMaterial {
-  const loaded = useLoadedMaterial(reference);
-  const isShader = loaded.status === 'spatial-shader';
-  useEffect(() => {
-    if (isShader) warn(UNDRAWN_SPATIAL_SHADER);
-  }, [isShader]);
-  return isShader ? DECLINED_SHADER : loaded;
+/** Warns once for `shader`, which `surface` draws as Godot's default 3D surface. */
+export function warnUndrawnShader(shader: ShaderText, surface: UndrawnShaderSurface): void {
+  warnOnce(
+    shader,
+    'undrawn',
+    `[material] The previewer draws a spatial shader only on an unskinned mesh yet, and draws Godot's default 3D surface on this ${surface}.`
+  );
 }
 
-/** What `reference` loads to for a mesh surface, which draws a spatial shader under the node lit surface. */
+/** What `reference` loads to on `surface`, which builds no shader: a ShaderMaterial declines and warns. */
+export function useMaterial(
+  reference: ScopedReference | undefined,
+  surface: UndrawnShaderSurface
+): LoadedMaterial {
+  const loaded = useLoadedMaterial(reference);
+  const shader = loaded.status === 'spatial-shader' ? loaded.shader : null;
+  useEffect(() => {
+    if (shader) warnUndrawnShader(shader, surface);
+  }, [shader, surface]);
+  return shader ? DECLINED_SHADER : loaded;
+}
+
+/** What `reference` loads to for a mesh surface, which draws a spatial shader. */
 export function useShadedMaterial(reference: ScopedReference | undefined): LoadedMaterial {
   return useLoadedMaterial(reference);
 }
@@ -65,8 +85,6 @@ function loadedOf(read: Read<Material>): LoadedMaterial {
   if (read.status !== 'loaded') return ABSENT;
   const material = read.value;
   if (material.form === 'standard') return { status: 'ready', material };
-  if (material.form !== 'spatial-shader') return { status: 'declined', type: material.type };
-  return litSurfaceForm() === 'nodes'
-    ? { status: 'spatial-shader', shader: material.shader }
-    : DECLINED_SHADER;
+  if (material.form === 'spatial-shader') return { status: 'spatial-shader', shader: material.shader };
+  return { status: 'declined', type: material.type };
 }

@@ -103,7 +103,12 @@ function ChainDraw({
       // The node's layers mask, which a decal's and a reflection probe's masks filter on.
       userData={visualLayersUserData(godotLayers)}
     >
-      <SurfaceMaterialSlot source={source} attach={attach} {...listedSlot(primitive, 'mesh')} />
+      <SurfaceMaterialSlot
+        source={source}
+        attach={attach}
+        {...listedSlot(primitive, 'mesh')}
+        drawnOn="next pass"
+      />
     </Drawn>
   );
 }
@@ -162,7 +167,7 @@ const drawAtOnePlace: ChainDrawFactory = (spec) => <ChainDraw {...spec} />;
  */
 function NextPassLink(props: PassProps) {
   const { source, ordinal, drawsSelf, visited, geometry, onOrdinal, draw } = props;
-  const loaded = useMaterial(source);
+  const loaded = useMaterial(source, 'next pass');
   const material = readyMaterial(loaded);
   // Stable between loads: a re-render of an already-loaded link re-scans nothing.
   const loadedPass = useMemo(() => loadedPassOf(material), [material]);

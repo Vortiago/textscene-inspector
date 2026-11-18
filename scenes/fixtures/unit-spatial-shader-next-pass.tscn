@@ -1,0 +1,40 @@
+[gd_scene format=3 uid="uid://unit_spatial_shader_next_pass"]
+
+; A StandardMaterial3D whose next_pass is an unshaded spatial shader. Godot draws the box with the
+; standard material, then the shader's pass over it at the same depth.
+
+[sub_resource type="Shader" id="Shader_1"]
+code = "shader_type spatial;
+render_mode unshaded;
+
+void fragment() {
+	ALBEDO = vec3(UV.x, 0.2, UV.y);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_1"]
+shader = SubResource("Shader_1")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1"]
+next_pass = SubResource("ShaderMaterial_1")
+shading_mode = 0
+albedo_color = Color(0.2, 0.7, 0.3, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+material = SubResource("StandardMaterial3D_1")
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.1, 0.12, 0.16, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.9659258, 0.258819, 0, -0.258819, 0.9659258, 0, 1, 3)
+
+[node name="Box" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.7071068, 0, 0.7071068, 0, 1, 0, -0.7071068, 0, 0.7071068, 0, 0, 0)
+mesh = SubResource("BoxMesh_1")

@@ -16,7 +16,13 @@ import type { StandardMaterial3DScalars } from '../../resources/materials/standa
 import type { ScopedReference } from '../../resources/reading';
 import type { FadeVariants } from './fadeVariants';
 import { useSurfaceTextures, type TexturedSurface } from './surfaceTextures';
-import { readyMaterial, useMaterial, useShadedMaterial, type LoadedMaterial } from './useMaterial';
+import {
+  readyMaterial,
+  useMaterial,
+  useShadedMaterial,
+  type LoadedMaterial,
+  type UndrawnShaderSurface,
+} from './useMaterial';
 
 const NO_TEXTURES: StandardMaterial['textures'] = {};
 
@@ -39,9 +45,10 @@ export interface SurfaceMaterial {
 /** The material `reference` draws on `surface`, whichever file it came from: a glTF surface's UVs run top-down. */
 export function useSurfaceMaterial(
   reference: ScopedReference | undefined,
+  drawnOn: UndrawnShaderSurface,
   surface?: TexturedSurface
 ): SurfaceMaterial {
-  return useSurfaceOf(useMaterial(reference), surface);
+  return useSurfaceOf(useMaterial(reference, drawnOn), surface);
 }
 
 /** The material `reference` draws on the surface of a mesh, a spatial shader included. */

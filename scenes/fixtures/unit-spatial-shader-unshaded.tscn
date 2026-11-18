@@ -1,7 +1,9 @@
 [gd_scene format=3 uid="uid://unit_spatial_shader_unshaded"]
 
-; A user's unshaded spatial shader on three meshes: the UV and the view-space normal as colours,
-; one ShaderMaterial shared by two meshes, so each draw writes its own transform and camera.
+; The one variable: a user's unshaded spatial ShaderMaterial on a mesh. Two shaders draw the UV and
+; the view-space normal as colours, and one ShaderMaterial is shared by two boxes, so each draw writes
+; its own transform. No other golden draws a spatial shader, so only this one and
+; unit-spatial-shader-uniforms move when the spatial template or its bindings change.
 
 [sub_resource type="Shader" id="Shader_uv"]
 code = "shader_type spatial;

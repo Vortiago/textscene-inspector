@@ -10,7 +10,12 @@ import {
   vertexIndex,
 } from 'three/tsl';
 import type { Node, TextureNode, UniformNode } from 'three/webgpu';
-import { parsedShader, shaderSource, type ShaderOptions } from '../language/parseShader.js';
+import {
+  parsedShader,
+  shaderSource,
+  type ParsedShader,
+  type ShaderOptions,
+} from '../language/parseShader.js';
 import { emitTemplateStage } from '../template/emitTemplate.js';
 import { linkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
 import type { RowTexture } from '../template/rowTexture.js';
@@ -49,7 +54,14 @@ export interface SpatialOptions extends ShaderOptions {
 
 /** The material of `source`, a shader of `shader_type spatial`, preprocessed with `options`. */
 export function transpileSpatial(source: string, options: SpatialOptions = {}): TranspiledSpatial {
-  const parsed = parsedShader(source, options);
+  return transpileParsedSpatial(parsedShader(source, options), options);
+}
+
+/** The material of `parsed`, a parse of a `shader_type spatial` text with `options`. */
+export function transpileParsedSpatial(
+  parsed: ParsedShader,
+  options: SpatialOptions = {}
+): TranspiledSpatial {
   const { linked, resources, parameters, parameterValues } = linkedProgram(
     parsed,
     options.file ?? '',
