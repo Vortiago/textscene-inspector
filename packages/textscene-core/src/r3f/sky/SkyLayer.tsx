@@ -14,7 +14,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { visibleInTree } from '../visibleInTree';
 import { useFrame, useThree } from '@react-three/fiber';
-import type { AuthoredSky } from '../../resources/sky/types';
+import type { AuthoredSky, SkyProperties } from '../../resources/sky/types';
 import type { SkyLight } from '../../resources/sky/build';
 import { NO_SKY_LIGHTS, noteSkyLights, skyLightEnergy, skyLightSize } from './skyLight';
 import { skyEuler } from './skyRotation';
@@ -35,7 +35,7 @@ import {
 } from '../environment/sceneEnvironment';
 import { debandSky } from './skyDebanding';
 import { showSkyBackground } from './skyBackground';
-import { useShaderSkyTextures } from './shaderSkyTextures';
+import { useShaderTextures, type ShaderTextures } from '../shaderTextures/shaderTextures';
 import { useProjectShaderOptions } from '../projectShaderOptions';
 import { useShaderSkyErrorReport } from './shaderSkyError';
 import { useReadSky } from './readSky';
@@ -108,7 +108,10 @@ export function SkyLayer({
   const { transpiler, isReady: isTranslatorReady, loadFailure } = useSkyTranslator(gl, shaderCode !== null);
   useShaderErrorReport(loadFailure);
   const sky = useReadSky(authoredSky, transpiler, shaderOptions);
-  const [textures, textureSlots] = useShaderSkyTextures(sky?.material ?? null);
+  const skyMaterial = sky?.material ?? null;
+  const [textures, textureSlots] = useShaderTextures(
+    useMemo(() => shaderTexturesOf(skyMaterial), [skyMaterial])
+  );
   useShaderSkyErrorReport(sky?.material ?? null, transpiler, shaderOptions);
   const { settings } = useProjectSettings();
   const sampling = useMemo(() => projectSampling(settings), [settings]);
@@ -352,4 +355,10 @@ function directionalLights(scene: THREE.Scene): SkyLight[] {
   });
 
   return lights;
+}
+
+/** The texture parameters of a shader sky, or null for a built-in sky. */
+function shaderTexturesOf(material: SkyProperties | null): ShaderTextures | null {
+  if (material?.kind !== 'shader') return null;
+  return { references: material.textures, samplers: material.usage.samplers };
 }

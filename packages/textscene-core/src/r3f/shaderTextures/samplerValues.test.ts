@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import type { ScopedReference } from '../../resources/reading';
-import { elementsOf, samplerValues } from './shaderSkySamplers';
+import { elementsOf, samplerValues } from './samplerValues';
 
 const reference = (ref: string) => ({ ref }) as unknown as ScopedReference;
 
