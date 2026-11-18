@@ -879,6 +879,12 @@ const SPATIAL_CHAPTER = {
       tsl: "the template's alpha cut and `compute_alpha_antialiasing_edge`",
     },
     {
+      heading: '`DEPTH`',
+      rows: (row) => row.id === 'spatial.fragment.DEPTH',
+      what: "`DEPTH` is the fragment's depth, which starts at `FRAGCOORD.z`: Godot's depth, 1 at the near plane and 0 at the far plane (`scene_shader_forward_clustered.cpp:770`). An opaque shader that writes no `VERTEX`, `POSITION` or matrix in `vertex()`, uses no `discard` and keeps `cull_back` draws its depth prepass with Godot's default material, then its colour pass tests EQUAL against that depth (`scene_shader_forward_clustered.h:295`, `scene_shader_forward_clustered.cpp:448-453`). Such a shader shows only where `DEPTH` equals the rasterised depth. Any other shader draws its prepass with its own `DEPTH`.",
+      tsl: "`gl_FragDepth` as 1 minus `DEPTH`, since GL's depth is not reversed",
+    },
+    {
       heading: 'The fragment and the view in `fragment()`',
       rows: (row) =>
         ['VERTEX', 'LIGHT_VERTEX', 'FRAGCOORD', 'FRONT_FACING', 'VIEW', 'SCREEN_UV']

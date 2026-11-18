@@ -2376,6 +2376,28 @@ void fragment() {
 | --- | --- |
 | <img src="showcase/spatial-alpha-to-coverage-and-one-msaa-4x-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-alpha-to-coverage-and-one-msaa-4x-three.png" width="256" alt="Transpilation"> |
 
+## Showcase `spatial-depth-own-prepass`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+void vertex() {
+	VERTEX = VERTEX;
+}
+
+void fragment() {
+	ALBEDO = vec3(0.2, 0.5, UV.y);
+	DEPTH = UV.x;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-depth-own-prepass-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-depth-own-prepass-three.png" width="256" alt="Transpilation"> |
+
 ## Render mode `unshaded`
 
 `unshaded` defines `MODE_UNSHADED`, so the template writes `ALBEDO` and `ALPHA` to the frame with no light, fog or ambient light (`scene_forward_clustered.glsl:2978-2981`).
@@ -2516,6 +2538,15 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 `ALPHA_SCISSOR_THRESHOLD` discards a fragment whose alpha is below it. `ALPHA_HASH_SCALE` discards a fragment whose alpha is below a hash of its position in the object, at that scale. Either sets the alpha of the rest to 1 (`scene_forward_clustered.glsl:1383-1416`). `ALPHA_ANTIALIASING_EDGE` keeps the alpha instead and ramps it across one pixel at the edge, past the scissor threshold, with `ALPHA_TEXTURE_COORDINATE` for the mip level (`scene_forward_aa_inc.glsl:45-56`).
 
 The transpiler emits the template's alpha cut and `compute_alpha_antialiasing_edge`. Rows: `spatial.fragment.ALPHA_SCISSOR_THRESHOLD`, `spatial.fragment.ALPHA_HASH_SCALE`, `spatial.fragment.ALPHA_ANTIALIASING_EDGE`, `spatial.fragment.ALPHA_TEXTURE_COORDINATE`. Godot source: `servers/rendering/shader_types.cpp:197`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `DEPTH`
+
+`DEPTH` is the fragment's depth, which starts at `FRAGCOORD.z`: Godot's depth, 1 at the near plane and 0 at the far plane (`scene_shader_forward_clustered.cpp:770`). An opaque shader that writes no `VERTEX`, `POSITION` or matrix in `vertex()`, uses no `discard` and keeps `cull_back` draws its depth prepass with Godot's default material, then its colour pass tests EQUAL against that depth (`scene_shader_forward_clustered.h:295`, `scene_shader_forward_clustered.cpp:448-453`). Such a shader shows only where `DEPTH` equals the rasterised depth. Any other shader draws its prepass with its own `DEPTH`.
+
+The transpiler emits `gl_FragDepth` as 1 minus `DEPTH`, since GL's depth is not reversed. Rows: `spatial.fragment.DEPTH`. Godot source: `servers/rendering/shader_types.cpp:169`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 

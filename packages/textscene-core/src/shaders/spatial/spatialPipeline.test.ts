@@ -160,6 +160,7 @@ describe('spatialPipeline', () => {
       usesAlphaClip: false,
       usesAlphaAntialiasing: false,
       readsScreen: false,
+      writesDepth: false,
     });
   });
 
@@ -180,6 +181,7 @@ describe('spatialPipeline', () => {
     ['ALPHA_HASH_SCALE = 0.5;', 'usesAlphaClip'],
     ['ALPHA_ANTIALIASING_EDGE = 0.5;', 'usesAlphaAntialiasing'],
     ['ALPHA_TEXTURE_COORDINATE = UV;', 'usesAlphaAntialiasing'],
+    ['DEPTH = 0.5;', 'writesDepth'],
   ])('`%s` sets %s, as Godot’s usage flag', (fragment, flag) => {
     expect(fragmentPipeline(fragment)).toMatchObject({ [flag]: true });
   });

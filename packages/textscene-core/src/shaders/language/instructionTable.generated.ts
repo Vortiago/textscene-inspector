@@ -1614,7 +1614,7 @@ spatial.fragment.BACKLIGHT	built-in	servers/rendering/shader_types.cpp:165	#1831
 spatial.fragment.AO	built-in	servers/rendering/shader_types.cpp:166	#1831	forward_clustered/scene_forward_clustered.glsl		float			
 spatial.fragment.AO_LIGHT_AFFECT	built-in	servers/rendering/shader_types.cpp:167	#1831	forward_clustered/scene_forward_clustered.glsl		float			
 spatial.fragment.EMISSION	built-in	servers/rendering/shader_types.cpp:168	#1831	forward_clustered/scene_forward_clustered.glsl		vec3			
-spatial.fragment.DEPTH	built-in	servers/rendering/shader_types.cpp:169	#1831	forward_clustered/scene_forward_clustered.glsl		float			
+spatial.fragment.DEPTH	built-in	servers/rendering/shader_types.cpp:169	#1831	forward_clustered/scene_forward_clustered.glsl		float		native	native
 spatial.fragment.SCREEN_UV	built-in (read only)	servers/rendering/shader_types.cpp:170	#1831	forward_clustered/scene_forward_clustered.glsl		vec2		native	native
 spatial.fragment.POINT_COORD	built-in (read only)	servers/rendering/shader_types.cpp:171	#2001	forward_clustered/scene_forward_clustered.glsl		vec2			
 spatial.fragment.NODE_POSITION_WORLD	built-in (read only)	servers/rendering/shader_types.cpp:173	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native

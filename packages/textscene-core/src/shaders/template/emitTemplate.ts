@@ -26,6 +26,16 @@ export type StageInputs = ReadonlyMap<string, Value>;
 export interface StageResult {
   readonly name: string;
   readonly type: string;
+  /** The built-ins `main` writes beside it, `gl_FragDepth`. */
+  readonly beside?: readonly WrittenBuiltIn[];
+}
+
+/** A built-in `main` writes, which starts at `initial`, and whose last value `store` takes. */
+export interface WrittenBuiltIn {
+  readonly name: string;
+  readonly type: string;
+  readonly initial: Node;
+  readonly store: (value: Node) => void;
 }
 
 /** A stage as TSL: the value `main` leaves in the result, its uniforms, and its textures. */
@@ -93,11 +103,20 @@ export function emitTemplateStage(
     const arrays = written.map(
       ({ name, type, count }) => [name, declareVariables(type, count, structOf)] as const
     );
-    body(main, new Map([[result.name, variable], ...plainVariables(plain, result, structOf), ...arrays]));
+    const beside = (result.beside ?? []).map(({ name, initial }) => [name, toVar(initial)] as const);
+    body(
+      main,
+      new Map([[result.name, variable], ...plainVariables(plain, result, structOf), ...arrays, ...beside])
+    );
     written.forEach(({ varying }, index) => copyInto(varying, arrays[index]![1]));
+    result.beside?.forEach(({ store }, index) => store(beside[index]![1]));
     return variable;
   });
   return { result: run() as unknown as Node, uniforms: resources.uniforms.byName, textures };
+}
+
+function toVar(initial: Node): Node {
+  return (initial as unknown as { toVar(): Node }).toVar();
 }
 
 /** The structs and buffer blocks as the template declares them, before `withSquareMatrices`. */
@@ -192,8 +211,10 @@ const PASSED = new WeakMap<TemplateStageNode, Map<string, TemplateStageNode>>();
 function passedOnce(stage: TemplateStageNode, result: StageResult): TemplateStageNode {
   let byResult = PASSED.get(stage);
   if (!byResult) PASSED.set(stage, (byResult = new Map()));
-  let passed = byResult.get(result.name);
-  if (!passed) byResult.set(result.name, (passed = withGlobalParameters(withSquareMatrices(stage), result)));
+  const beside = (result.beside ?? []).map(({ name, type }) => ({ name, type }));
+  const key = [result.name, ...beside.map(({ name }) => name)].join(' ');
+  let passed = byResult.get(key);
+  if (!passed) byResult.set(key, (passed = withGlobalParameters(withSquareMatrices(stage), result, beside)));
   return passed;
 }
 

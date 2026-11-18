@@ -45,6 +45,8 @@ export interface SpatialPipeline {
   readonly usesDepthPrepassAlpha: boolean;
   /** A function reads a uniform of the screen, depth or normal roughness texture. */
   readonly readsScreen: boolean;
+  /** A function names DEPTH, renamed `gl_FragDepth` (`scene_shader_forward_clustered.cpp:770`). */
+  readonly writesDepth: boolean;
 }
 
 const DEPTH_TESTS: Readonly<Record<string, DepthTest>> = {
@@ -89,6 +91,7 @@ export function spatialPipeline(tree: ShaderNode): SpatialPipeline {
     usesAlpha: reads('ALPHA'),
     usesAlphaClip: reads('ALPHA_SCISSOR_THRESHOLD', 'ALPHA_HASH_SCALE'),
     usesAlphaAntialiasing: reads('ALPHA_ANTIALIASING_EDGE', 'ALPHA_TEXTURE_COORDINATE'),
+    writesDepth: reads('DEPTH'),
     readsScreen: tree.uniforms.some((uniform) => SCREEN_HINTS.has(uniform.hint) && names.has(uniform.name)),
   };
 }

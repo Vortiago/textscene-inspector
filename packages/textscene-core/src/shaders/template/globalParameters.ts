@@ -13,9 +13,13 @@ import type { GlobalNode, TemplateDeclaration, TemplateStageNode } from './templ
 /** The storage words of a global whose value a stage function cannot write, or the next stage gives. */
 const READ_ONLY_WORDS = new Set(['uniform', 'buffer', 'const', 'in', 'shared']);
 
-/** A TSL function reads only its parameters, so each writable global a function touches is an `inout` one. */
-export function withGlobalParameters(stage: TemplateStageNode, result: StructMember): TemplateStageNode {
-  const writable = writableGlobals(stage, result);
+/** A TSL function reads only its parameters, so each writable global it touches is an `inout` one. */
+export function withGlobalParameters(
+  stage: TemplateStageNode,
+  result: StructMember,
+  written: readonly StructMember[] = []
+): TemplateStageNode {
+  const writable = writableGlobals(stage, [result, ...written]);
   const functions = stage.declarations.filter(
     (declaration): declaration is FunctionNode => declaration.kind === 'function'
   );
@@ -35,9 +39,12 @@ export function withGlobalParameters(stage: TemplateStageNode, result: StructMem
   return { ...stage, declarations: stage.declarations.map(declaration) };
 }
 
-/** The result and each global of the stage a function may write: no storage, or `out`. */
-function writableGlobals(stage: TemplateStageNode, result: StructMember): ReadonlyMap<string, StructMember> {
-  const globals = new Map<string, StructMember>([[result.name, result]]);
+/** The results and each global of the stage a function may write: no storage, or `out`. */
+function writableGlobals(
+  stage: TemplateStageNode,
+  results: readonly StructMember[]
+): ReadonlyMap<string, StructMember> {
+  const globals = new Map<string, StructMember>(results.map((result) => [result.name, result]));
   const isWritable = (global: GlobalNode) =>
     !global.qualifiers.words.some((word) => READ_ONLY_WORDS.has(word));
   for (const declaration of stage.declarations)

@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import {
   attribute,
+  depth,
+  float,
   Fn,
   frontFacing,
   int,
@@ -18,7 +20,7 @@ import {
   type ParsedShader,
   type ShaderOptions,
 } from '../language/parseShader.js';
-import { emitTemplateStage } from '../template/emitTemplate.js';
+import { emitTemplateStage, type WrittenBuiltIn } from '../template/emitTemplate.js';
 import { linkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
 import type { RowTexture } from '../template/rowTexture.js';
 import { instanceWords } from './instanceData.js';
@@ -79,6 +81,7 @@ export function transpileParsedSpatial(
   );
   const pipeline = spatialPipeline(parsed.tree);
   const vulkanClip = varyingProperty('vec4', 'godot_clip_position') as unknown as Vec4;
+  const fragCoord = vulkanFragCoord(vulkanClip);
   const vertexStage = linked('vertex');
   const vertex = emitTemplateStage(
     vertexStage,
@@ -94,12 +97,8 @@ export function transpileParsedSpatial(
   );
   const fragment = emitTemplateStage(
     linked('fragment'),
-    new Map([
-      ...parameterValues,
-      ['gl_FragCoord', vulkanFragCoord(vulkanClip)],
-      ['gl_FrontFacing', godotFrontFacing()],
-    ]),
-    { name: 'frag_color', type: 'vec4' },
+    new Map([...parameterValues, ['gl_FragCoord', fragCoord], ['gl_FrontFacing', godotFrontFacing()]]),
+    { name: 'frag_color', type: 'vec4', beside: pipeline.writesDepth ? [fragDepth(fragCoord)] : [] },
     resources
   );
   const colour = alphaCovered(fragment.result, pipeline);
@@ -166,6 +165,24 @@ function godotFrontFacing(): Node {
 /** Vulkan's `gl_FragCoord`: three's pixel position, which starts at the top row, Godot's depth and 1 / w. */
 function vulkanFragCoord(clip: Vec4): Node {
   return vec4(screenCoordinate, clip.z.div(clip.w), clip.w.reciprocal()) as unknown as Node;
+}
+
+/** A node three's types give no `toStack`, which adds it to the function being built. */
+interface Stacked {
+  toStack(): void;
+}
+
+/** `gl_FragDepth`, which starts at Godot's depth: GL's depth is 1 minus it, as `glClipPosition` turns it. */
+function fragDepth(fragCoord: Node): WrittenBuiltIn {
+  return {
+    name: 'gl_FragDepth',
+    type: 'float',
+    initial: (fragCoord as unknown as Vec4).z as unknown as Node,
+    store: (value) => {
+      const glDepth = float(1).sub(value as unknown as ReturnType<typeof float>);
+      (depth.assign(glDepth) as unknown as Stacked).toStack();
+    },
+  };
 }
 
 /** The colour alpha to coverage draws, which a target of one sample cuts at alpha 0.5. */

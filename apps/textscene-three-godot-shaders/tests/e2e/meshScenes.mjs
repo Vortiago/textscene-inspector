@@ -572,6 +572,34 @@ const ALPHA_SCENES = [
   multisampledCoverageScene('spatial-alpha-to-coverage-and-one-msaa-4x', ['alpha_to_coverage_and_one']),
 ];
 
+/** A quad whose DEPTH runs from far at the left edge to near at the right, so the orange quad cuts it. */
+const DEPTH_FRAGMENT = fragmentOf('ALBEDO = vec3(0.2, 0.5, UV.y);', 'DEPTH = UV.x;');
+
+/** Writing VERTEX keeps the shader off the shared prepass material, so its own DEPTH draws. */
+const DEPTH_SCENES = [
+  {
+    ...modeScene(
+      'spatial-depth-own-prepass',
+      [],
+      DEPTH_FRAGMENT,
+      {
+        object: { position: [-0.1, 0.1, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+        others: [ORANGE_IN_FRONT],
+      },
+      ['spatial.fragment.UV', 'spatial.fragment.DEPTH', 'spatial.vertex.VERTEX']
+    ),
+    source: `${unshadedHead([])}
+void vertex() {
+	VERTEX = VERTEX;
+}
+
+void fragment() {
+	${DEPTH_FRAGMENT}
+}
+`,
+  },
+];
+
 /** A shader that moves the sphere in `vertex()` under `modes`, and shows its normal. */
 const vertexSpaceScene = (name, modes, vertex, rows) => ({
   name,
@@ -754,6 +782,7 @@ export const MESH_SCENES = [
   ...GLOBAL_SCENES,
   ...RENDER_MODE_SCENES,
   ...ALPHA_SCENES,
+  ...DEPTH_SCENES,
 ];
 
 /** Scenes whose program the GPU refuses: each must reach the material as a fault with this log. */
