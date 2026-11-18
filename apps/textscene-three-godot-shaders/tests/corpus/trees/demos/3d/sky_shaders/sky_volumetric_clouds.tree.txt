@@ -1,0 +1,279 @@
+shader_type sky;
+
+render_mode use_half_res_pass, use_quarter_res_pass;
+
+uniform sampler3D worlnoise : filter_linear_mipmap, repeat_enable;
+
+uniform sampler3D perlworlnoise : filter_linear_mipmap, repeat_enable;
+
+uniform sampler2D cloud_map : filter_linear_mipmap, repeat_enable;
+
+uniform float cloud_density : hint_range(9.999999776482582e-3, 9.900000095367432e-1, 1.0000000474974513e-3) = 5.000000074505806e-2;
+
+uniform float cloud_coverage : hint_range(0.0, 9.900000095367432e-1, 1.0000000474974513e-3) = 2.0000000298023224e-1;
+
+uniform float cloud_time_scale : hint_range(0.0, 20.0, 1.0000000474974513e-3) = 1.0;
+
+uniform float cloud_time_offset : hint_range(0.0, 1000.0, 1.0000000149011612e-1) = 0.0;
+
+uniform vec2 cloud_direction = vec2(8.999999761581421e-1, 1.0);
+
+uniform vec2 cloud_steps_range = vec2(192.0, 108.0);
+
+uniform float clouds_screen_lod : hint_range(0.0, 1.0, 1.0000000149011612e-1) = 1.0;
+
+uniform vec4 cloud_modulate : source_color = vec4(1.0, 1.0, 1.0, 1.0);
+
+uniform vec2 cloud_camera_position_mult = vec2(1.0000000149011612e-1, 2.0000000298023224e-1);
+
+uniform float cloud_camera_height;
+
+uniform float rayleigh : hint_range(0.0, 64.0, 1.0000000474974513e-3) = 2.0;
+
+uniform vec4 rayleigh_color : source_color = vec4(2.5999999046325684e-1, 4.099999964237213e-1, 5.799999833106995e-1, 1.0);
+
+uniform float mie : hint_range(0.0, 1.0, 1.0000000474974513e-3) = 4.999999888241291e-3;
+
+uniform float mie_eccentricity : hint_range((-1.0), 1.0, 1.0000000474974513e-3) = 8.00000011920929e-1;
+
+uniform vec4 mie_color : source_color = vec4(6.299999952316284e-1, 7.699999809265137e-1, 9.200000166893005e-1, 1.0);
+
+uniform float turbidity : hint_range(0.0, 1000.0, 1.0000000474974513e-3) = 10.0;
+
+uniform float sun_disk_scale : hint_range(0.0, 360.0, 1.0000000474974513e-3) = 1.0;
+
+uniform vec4 ground_color : source_color = vec4(1.0, 1.0, 1.0, 1.0);
+
+uniform float exposure : hint_range(0.0, 128.0, 1.0000000474974513e-3) = 1.0000000149011612e-1;
+
+uniform sampler2D space_emit : hint_default_transparent, filter_linear;
+
+uniform vec4 space_emit_color : source_color = vec4(1.0, 1.0, 1.0, 1.0);
+
+uniform float space_emit_angle : hint_range(0.0, 1.0, 1.0000000474974513e-3);
+
+uniform float space_emit_strength = 1.0;
+
+const vec3 UP = vec3(0.0, 1.0, 0.0);
+
+const float GROUND_RADIUS = 6000000.0;
+
+const float SKY_BOTTOM_RADIUS = 6001500.0;
+
+const float SKY_TOP_RADIUS = 6004000.0;
+
+const float SOL_SIZE = 8.726637810468674e-3;
+
+const float SUN_ENERGY = 1000.0;
+
+const float rayleigh_zenith_size = 8400.0;
+
+const float mie_zenith_size = 1250.0;
+
+float parabola(float x, float k) {
+	return pow(((4.0 * x) * (1.0 - x)), k);
+}
+
+float hash(vec3 p) {
+	(p = fract(((p * 3.183099031448364e-1) + 1.0000000149011612e-1)));
+	(p *= 17.0);
+	return fract((((p.x * p.y) * p.z) * ((p.x + p.y) + p.z)));
+}
+
+float remap(float original_value, float original_min, float original_max, float new_min, float new_max) {
+	return (new_min + (((original_value - original_min) / (original_max - original_min)) * (new_max - new_min)));
+}
+
+float henyey_greenstein(float cos_theta, float g) {
+	const float k = 7.957746833562851e-2;
+	return ((k * (1.0 - (g * g))) / pow(((1.0 + (g * g)) - ((2.0 * g) * cos_theta)), 1.5e+0));
+}
+
+vec3 atmosphere(vec3 eye_dir, vec2 coords, float space) {
+	float zenith_angle = clamp(dot(UP, normalize(LIGHT0_DIRECTION)), (-1.0), 1.0);
+	float sun_energy = ((max(0.0, (1.0 - exp(-(((PI * 5.0e-1) - acos(zenith_angle)))))) * SUN_ENERGY) * LIGHT0_ENERGY);
+	float sun_fade = (1.0 - clamp((1.0 - exp(LIGHT0_DIRECTION.y)), 0.0, 1.0));
+	float rayleigh_coefficient = (rayleigh - (1.0 * (1.0 - sun_fade)));
+	vec3 rayleigh_beta = ((rayleigh_coefficient * rayleigh_color.rgb) * 9.999999747378752e-5);
+	vec3 mie_beta = (((turbidity * mie) * mie_color.rgb) * 4.3399998685345054e-4);
+	float zenith = acos(max(0.0, dot(UP, eye_dir)));
+	float optical_mass = (1.0 / (cos(zenith) + (1.5000000596046448e-1 * pow((9.388500213623047e+1 - degrees(zenith)), (-1.253000020980835e+0)))));
+	float rayleigh_scatter = (rayleigh_zenith_size * optical_mass);
+	float mie_scatter = (mie_zenith_size * optical_mass);
+	vec3 extinction = exp(-(((rayleigh_beta * rayleigh_scatter) + (mie_beta * mie_scatter))));
+	float cos_theta = dot(eye_dir, normalize(LIGHT0_DIRECTION));
+	float rayleigh_phase = ((3.0 / (16.0 * PI)) * (1.0 + pow(((cos_theta * 5.0e-1) + 5.0e-1), 2.0)));
+	vec3 betaRTheta = (rayleigh_beta * rayleigh_phase);
+	float mie_phase = henyey_greenstein(cos_theta, mie_eccentricity);
+	vec3 betaMTheta = (mie_beta * mie_phase);
+	vec3 Lin = pow(((sun_energy * ((betaRTheta + betaMTheta) / (rayleigh_beta + mie_beta))) * (1.0 - extinction)), vec3(1.5e+0, 1.5e+0, 1.5e+0));
+	(Lin *= mix(vec3(1.0, 1.0, 1.0), pow(((sun_energy * ((betaRTheta + betaMTheta) / (rayleigh_beta + mie_beta))) * extinction), vec3(5.0e-1, 5.0e-1, 5.0e-1)), clamp(pow((1.0 - zenith_angle), 5.0), 0.0, 1.0)));
+	(Lin *= mix(ground_color.rgb, vec3(1.0, 1.0, 1.0), smoothstep((-1.0000000149011612e-1), 1.0000000149011612e-1, dot(UP, eye_dir))));
+	float sunAngularDiameterCos = cos((SOL_SIZE * sun_disk_scale));
+	float sunAngularDiameterCos2 = cos(((SOL_SIZE * sun_disk_scale) * 5.0e-1));
+	float sundisk = smoothstep(sunAngularDiameterCos, sunAngularDiameterCos2, cos_theta);
+	vec3 L0 = ((((sun_energy * 1900.0) * extinction) * sundisk) * LIGHT0_COLOR);
+	vec2 space_coords = vec2(fract((coords.x + space_emit_angle)), coords.y);
+	vec4 space_tex = texture(space_emit, (space_coords * vec2(1.0, 2.0)));
+	vec3 space_color = (((space_tex.rgb * space_tex.a) * space_emit_color.rgb) * space_emit_color.a);
+	(L0 += ((((space_color * 5000.0) * space_emit_strength) * extinction) * space));
+	vec3 color = ((Lin + L0) * 3.999999910593033e-2);
+	(color = pow(color, vec3((1.0 / (1.2000000476837158e+0 + (1.2000000476837158e+0 * sun_fade))))));
+	(color *= exposure);
+	return color;
+}
+
+float get_height_fraction_for_point(float in_position) {
+	float height_fraction = ((in_position - SKY_BOTTOM_RADIUS) / (SKY_TOP_RADIUS - SKY_BOTTOM_RADIUS));
+	return clamp(height_fraction, 0.0, 1.0);
+}
+
+vec4 mix_gradients(float cloud_type) {
+	const vec4 STRATUS_GRADIENT = vec4(1.9999999552965164e-2, 5.000000074505806e-2, 9.000000357627869e-2, 1.0999999940395355e-1);
+	const vec4 STRATOCUMULUS_GRADIENT = vec4(1.9999999552965164e-2, 2.0000000298023224e-1, 4.7999998927116394e-1, 6.25e-1);
+	const vec4 CUMULUS_GRADIENT = vec4(9.999999776482582e-3, 6.25e-2, 7.799999713897705e-1, 1.0);
+	float stratus = (1.0 - clamp((cloud_type * 2.0), 0.0, 1.0));
+	float stratocumulus = (1.0 - (abs((cloud_type - 5.0e-1)) * 2.0));
+	float cumulus = (clamp((cloud_type - 5.0e-1), 0.0, 1.0) * 2.0);
+	return (((STRATUS_GRADIENT * stratus) + (STRATOCUMULUS_GRADIENT * stratocumulus)) + (CUMULUS_GRADIENT * cumulus));
+}
+
+float density_height_gradient(float height_frac, float cloud_type) {
+	vec4 cloud_gradient = mix_gradients(cloud_type);
+	return (smoothstep(cloud_gradient.x, cloud_gradient.y, height_frac) - smoothstep(cloud_gradient.z, cloud_gradient.w, height_frac));
+}
+
+float intersect_sphere(vec3 pos, vec3 dir, float r) {
+	float a = dot(dir, dir);
+	float b = (2.0 * dot(dir, pos));
+	float c = (dot(pos, pos) - (r * r));
+	float d = sqrt(((b * b) - ((4.0 * a) * c)));
+	float p = (-(b) - d);
+	float p2 = (-(b) + d);
+	return (max(p, p2) / (2.0 * a));
+}
+
+float density(vec3 pip, vec3 weather, float mip) {
+	vec3 p = pip;
+	(p.x += ((10.0 * cloud_time_offset) * cloud_time_scale));
+	float height_fraction = get_height_fraction_for_point(length(p));
+	vec4 n = textureLod(perlworlnoise, (p.xyz * 7.999999797903001e-5), (mip - 2.0));
+	float fbm = (((n.g * 6.25e-1) + (n.b * 2.5e-1)) + (n.a * 1.25e-1));
+	float g = density_height_gradient(height_fraction, weather.r);
+	float base_cloud = remap(n.r, -((1.0 - fbm)), 1.0, 0.0, 1.0);
+	float weather_coverage = (cloud_coverage * weather.b);
+	(base_cloud = remap((base_cloud * g), (1.0 - weather_coverage), 1.0, 0.0, 1.0));
+	(base_cloud *= weather_coverage);
+	(p.xy -= ((40.0 * cloud_time_offset) * cloud_time_scale));
+	vec3 hn = textureLod(worlnoise, (p * 1.0000000474974513e-3), mip).rgb;
+	float hfbm = (((hn.r * 6.25e-1) + (hn.g * 2.5e-1)) + (hn.b * 1.25e-1));
+	(hfbm = mix(hfbm, (1.0 - hfbm), clamp((height_fraction * 4.0), 0.0, 1.0)));
+	(base_cloud = remap(base_cloud, ((hfbm * 4.000000059604645e-1) * height_fraction), 1.0, 0.0, 1.0));
+	return pow(clamp(base_cloud, 0.0, 1.0), (((1.0 - height_fraction) * 8.00000011920929e-1) + 5.0e-1));
+}
+
+vec4 march(vec3 pos, vec3 end, vec3 dir, int depth) {
+	const vec3 RANDOM_VECTORS[6] = {vec3(3.805130422115326e-1, 9.245344996452332e-1, (-2.1113449707627296e-2)), vec3((-5.062580108642578e-1), (-3.590792044997215e-2), (-8.616341948509216e-1)), vec3((-3.250921666622162e-1), (-9.455744028091431e-1), 1.4287929981946945e-2), vec3(9.026238322257996e-2, (-2.737654447555542e-1), 9.575516581535339e-1), vec3(2.8128597140312195e-1, 4.2443639039993286e-1, (-8.606578707695007e-1)), vec3((-1.6852402687072754e-1), 1.4748696982860565e-1, 9.746010303497314e-1)};
+	float T = 1.0;
+	float alpha = 0.0;
+	float ss = length(dir);
+	(dir = normalize(dir));
+	vec3 p = (pos + (hash((pos * 10.0)) * ss));
+	const float t_dist = (SKY_TOP_RADIUS - SKY_BOTTOM_RADIUS);
+	float lss = (t_dist / 36.0);
+	vec3 ldir = normalize(LIGHT0_DIRECTION);
+	vec3 L = vec3(0.0, 0.0, 0.0);
+	int count = 0;
+	float t = 1.0;
+	float cos_theta = dot(ldir, dir);
+	float phase = max(max(henyey_greenstein(cos_theta, 6.000000238418579e-1), henyey_greenstein(cos_theta, (4.000000059604645e-1 - (1.399999976158142e+0 * ldir.y)))), henyey_greenstein(cos_theta, (-2.0000000298023224e-1)));
+	vec3 atmosphere_sun = (((atmosphere(LIGHT0_DIRECTION, vec2(0.0, 0.0), 0.0) * LIGHT0_ENERGY) * ss) * 1.0000000149011612e-1);
+	vec3 atmosphere_ambient = atmosphere(normalize(vec3(1.0, 1.0, 0.0)), vec2(0.0, 0.0), 0.0);
+	vec3 atmosphere_ground = atmosphere(normalize(vec3(1.0, (-1.0), 0.0)), vec2(0.0, 0.0), 0.0);
+	const float WEATHER_SCALE = 5.999999848427251e-5;
+	float time = ((3.000000026077032e-3 * cloud_time_offset) * cloud_time_scale);
+	vec2 weather_pos = vec2((time * cloud_direction.x), (time * cloud_direction.y));
+	for (int i = 0; (i < depth); i++) {
+		(p += (dir * ss));
+		vec3 weather_sample = texture(cloud_map, (((p.xz * WEATHER_SCALE) + 5.0e-1) + weather_pos)).xyz;
+		float height_fraction = get_height_fraction_for_point(length(p));
+		(t = density(p, weather_sample, 0.0));
+		float dt = exp(((-(cloud_density) * t) * ss));
+		(T *= dt);
+		vec3 lp = p;
+		float lt = 1.0;
+		float cd = 0.0;
+		if ((t > 0.0)) {
+			float lheight_fraction = 0.0;
+			for (int j = 0; (j < 6); j++) {
+				(lp += ((ldir + (RANDOM_VECTORS[j] * float(j))) * lss));
+				(lheight_fraction = get_height_fraction_for_point(length(lp)));
+				vec3 lweather = texture(cloud_map, (((lp.xz * WEATHER_SCALE) + 5.0e-1) + weather_pos)).xyz;
+				(lt = density(lp, lweather, float(j)));
+				(cd += lt);
+			}
+			(lp = (p + ((ldir * 18.0) * lss)));
+			(lheight_fraction = get_height_fraction_for_point(length(lp)));
+			vec3 lweather = texture(cloud_map, ((lp.xz * WEATHER_SCALE) + 5.0e-1)).xyz;
+			(lt = pow(density(lp, lweather, 5.0), (((1.0 - lheight_fraction) * 8.00000011920929e-1) + 5.0e-1)));
+			(cd += lt);
+			float beers = exp(((-(cloud_density) * cd) * lss));
+			float beers2 = (exp((((-(cloud_density) * cd) * lss) * 2.5e-1)) * 6.99999988079071e-1);
+			float beers_total = max(beers, beers2);
+			vec3 ambient = (((mix(atmosphere_ground, vec3(1.0, 1.0, 1.0), smoothstep(0.0, 1.0, height_fraction)) * cloud_density) * mix(atmosphere_ambient, vec3(1.0, 1.0, 1.0), 4.000000059604645e-1)) * LIGHT0_DIRECTION.y);
+			(alpha += ((1.0 - dt) * (1.0 - alpha)));
+			(L += (((ambient + (((beers_total * atmosphere_sun) * phase) * alpha)) * T) * t));
+		}
+	}
+	return clamp(vec4(L, alpha), 0.0, 1.0);
+}
+
+vec4 clouds(vec3 dir, vec3 background, vec2 steps_in, float screen_x, vec3 camera) {
+	vec4 col;
+	if ((dir.y > 0.0)) {
+		vec3 camera_position = (vec3(0.0, GROUND_RADIUS, 0.0) + vec3((camera.x * cloud_camera_position_mult.x), ((camera.y * cloud_camera_position_mult.y) + cloud_camera_height), (camera.z * cloud_camera_position_mult.x)));
+		vec3 start = (camera_position + (dir * intersect_sphere(camera_position, dir, SKY_BOTTOM_RADIUS)));
+		vec3 end = (camera_position + (dir * intersect_sphere(camera_position, dir, SKY_TOP_RADIUS)));
+		float shell_distance = length((end - start));
+		float steps = mix(steps_in.y, steps_in.x, clamp((dot(dir, vec3(0.0, 1.0, 0.0)) * mix(1.0, parabola(screen_x, 7.5e-1), clouds_screen_lod)), 0.0, 1.0));
+		vec3 ray_step = ((dir * shell_distance) / steps);
+		vec4 volume = march(start, end, ray_step, int(steps));
+		(volume *= cloud_modulate);
+		(col = vec4(((background * (1.0 - volume.a)) + volume.xyz), 1.0));
+		(col.xyz = mix(clamp(col.xyz, vec3(0.0, 0.0, 0.0), vec3(1.0, 1.0, 1.0)), clamp(background, vec3(0.0, 0.0, 0.0), vec3(1.0, 1.0, 1.0)), smoothstep(6.000000238418579e-1, 1.0, (1.0 - dir.y))));
+		(col = volume);
+	}
+	return col;
+}
+
+vec4 clouds_post(vec3 direction, vec4 volume, vec3 background) {
+	vec4 col;
+	if ((direction.y > 0.0)) {
+		(col = vec4(((background * (1.0 - volume.a)) + volume.xyz), 1.0));
+		(col.xyz = mix(clamp(col.xyz, vec3(0.0, 0.0, 0.0), vec3(1.0, 1.0, 1.0)), clamp(background, vec3(0.0, 0.0, 0.0), vec3(1.0, 1.0, 1.0)), smoothstep(6.000000238418579e-1, 1.0, (1.0 - direction.y))));
+	}
+	else {
+		(col = vec4(atmosphere(direction, vec2(0.0, 0.0), 0.0), 1.0));
+	}
+	return col;
+}
+
+void sky() {
+	vec3 background = atmosphere(EYEDIR, SKY_COORDS, 1.0);
+	if ((AT_HALF_RES_PASS && !(AT_CUBEMAP_PASS))) {
+		vec4 col = clouds(EYEDIR, background, cloud_steps_range, SCREEN_UV.x, POSITION);
+		(COLOR = col.rgb);
+		(ALPHA = col.a);
+	}
+	else if ((AT_QUARTER_RES_PASS && AT_CUBEMAP_PASS)) {
+		(COLOR = clouds_post(EYEDIR, clouds(EYEDIR, background, vec2(15.0, 10.0), SCREEN_UV.x, POSITION), background).rgb);
+		(ALPHA = 1.0);
+	}
+	else if (AT_CUBEMAP_PASS) {
+		(COLOR = QUARTER_RES_COLOR.rgb);
+	}
+	else {
+		(COLOR = clouds_post(EYEDIR, vec4(HALF_RES_COLOR), background).rgb);
+		(ALPHA = 1.0);
+	}
+}

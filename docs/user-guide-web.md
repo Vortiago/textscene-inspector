@@ -83,6 +83,7 @@ A WorldEnvironment whose Sky has a ShaderMaterial draws the shader as Godot does
 - If the previewer does not translate a part of the shader yet, it also draws the default sky. The message under **Shader Error** names the part.
 - An `#if` can call `decompress` in Zstandard or Brotli mode. The previewer loads its decoders only for a shader that names `decompress`.
 - The shader reads the scene's suns through `LIGHT0_*` to `LIGHT3_*`, and draws its half and quarter resolution passes when it sets `use_half_res_pass` or `use_quarter_res_pass`.
+- A pass can write `ALPHA`, and a later pass reads it as `HALF_RES_COLOR.a` or `QUARTER_RES_COLOR.a`, as in Godot. A sky can lay clouds over itself this way. `ALPHA` does not make the background see-through.
 - A sky that reads `TIME` or `POSITION` bakes its radiance again when `TIME` moves forward or the camera moves, as Godot does. A stop or a seek bakes it again too. After `TIME` wraps, the radiance waits until `TIME` passes its last value again, as in Godot. The reflections and the ambient light then follow the background. The sky's process mode sets how: Real-Time and Quality bake every layer at once, and Incremental bakes one layer in each frame.
 - A sky that reads the suns bakes its radiance again when a sun moves or changes, as Godot does. This holds for a ProceduralSkyMaterial and a PhysicalSkyMaterial too. The process mode sets how, as for `TIME`. Under Incremental, rough reflections follow a moving sun a few frames late, as in Godot.
 

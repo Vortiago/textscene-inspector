@@ -1814,7 +1814,7 @@ sky.global.LIGHT3_ENERGY	built-in (read only)	servers/rendering/shader_types.cpp
 sky.global.LIGHT3_COLOR	built-in (read only)	servers/rendering/shader_types.cpp:483	#1666	environment/sky.glsl		vec3		native	native
 sky.global.LIGHT3_SIZE	built-in (read only)	servers/rendering/shader_types.cpp:484	#1666	environment/sky.glsl		float		native	native
 sky.sky.COLOR	built-in	servers/rendering/shader_types.cpp:486	#1665	environment/sky.glsl		vec3		native	native
-sky.sky.ALPHA	built-in	servers/rendering/shader_types.cpp:487	#1665	environment/sky.glsl		float			
+sky.sky.ALPHA	built-in	servers/rendering/shader_types.cpp:487	#1665	environment/sky.glsl		float		native	native
 sky.sky.EYEDIR	built-in (read only)	servers/rendering/shader_types.cpp:488	#1665	environment/sky.glsl		vec3		native	native
 sky.sky.SCREEN_UV	built-in (read only)	servers/rendering/shader_types.cpp:489	#1665	environment/sky.glsl		vec2		native	native
 sky.sky.FRAGCOORD	built-in (read only)	servers/rendering/shader_types.cpp:490	#1665	environment/sky.glsl		vec4		native	native

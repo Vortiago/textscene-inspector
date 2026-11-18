@@ -56,7 +56,7 @@ The sky shader adds a glow toward the sun it reads through `LIGHT0_DIRECTION`, `
 
 <!-- compare: image=unit-shader-sky-half-res status=done fixture=unit-shader-sky-half-res.tscn -->
 
-The sky draws its gradient in the half resolution pass. The full pass reads it through `HALF_RES_COLOR`. The background and the metal sphere's reflection match Godot's. With `use_half_res_pass` or `use_quarter_res_pass`, the sky draws at a half or a quarter of the size first, the quarter pass before the half pass. A shader that reads `HALF_RES_COLOR` or `QUARTER_RES_COLOR` without its render mode reads white in the background. In the radiance bake, Godot draws those passes into the smaller mips of the radiance. The previewer draws them into octmaps of their own at the same sizes. In the radiance bake, a read without its pass gets mip 1 or 2 of the last radiance, as in Godot.
+The sky draws its gradient in the half resolution pass. The full pass reads it through `HALF_RES_COLOR`. The background and the metal sphere's reflection match Godot's. With `use_half_res_pass` or `use_quarter_res_pass`, the sky draws at a half or a quarter of the size first, the quarter pass before the half pass. A shader that reads `HALF_RES_COLOR` or `QUARTER_RES_COLOR` without its render mode reads white in the background. In the radiance bake, Godot draws those passes into the smaller mips of the radiance. The previewer draws them into octmaps of their own at the same sizes. In the radiance bake, a read without its pass gets mip 1 or 2 of the last radiance, as in Godot. A pass can write `ALPHA`, and a later pass reads it as `HALF_RES_COLOR.a` or `QUARTER_RES_COLOR.a`. The value can be outside 0 to 1, as Godot's passes keep RGBA16F.
 
 ## Sun disc size
 
