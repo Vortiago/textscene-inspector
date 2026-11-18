@@ -42,6 +42,7 @@ const CAMERA_TAG: Camera2DTag = {
   limitRight: 10000000,
   limitBottom: 10000000,
   limitEnabled: true,
+  ignoreRotation: true,
 };
 
 /** The 1152x648 view a Camera2D at (600, 400) frames: top-left (24, 76) in canvas pixels. */

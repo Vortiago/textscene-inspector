@@ -60,6 +60,7 @@ const CAMERA_TAG: Camera2DTag = {
   limitRight: 10000000,
   limitBottom: 10000000,
   limitEnabled: true,
+  ignoreRotation: true,
 };
 
 /**

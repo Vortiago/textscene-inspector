@@ -36,7 +36,14 @@ describe('createViewportLightPassHost', () => {
 
   it('follows a Camera2D that frames the canvas away from the origin', () => {
     const { camera, host } = hostOf();
-    applyOrthoFrame(camera, { left: -100, right: 100, top: 75, bottom: -75, position: [500, -300, 1000] });
+    applyOrthoFrame(camera, {
+      left: -100,
+      right: 100,
+      top: 75,
+      bottom: -75,
+      position: [500, -300, 1000],
+      rotation: 0,
+    });
     expect(host.readClip().rect).toEqual({ x: 400, y: -375, w: 200, h: 150 });
   });
 
@@ -52,6 +59,7 @@ describe('createViewportLightPassHost', () => {
       limitRight: 10000000,
       limitBottom: 10000000,
       limitEnabled: false,
+      ignoreRotation: true,
     };
     applyOrthoFrame(camera, orthoFrameForCamera2D(zoomed, { x: 100, y: 75 }, SIZE));
     const { rect, scale } = host.readClip();
