@@ -40,17 +40,25 @@ export function prepassDrawOf(
   return prepassDraws.has(material) ? prepassDraws.get(material)! : unset(material);
 }
 
-/** Its own program with no colour. A surface that writes no depth, such as a sky, draws none. */
+/** Its own program with no colour. Godot draws a sky, an overlay and a refraction in no prepass. */
 export function ownProgramDraw(material: THREE.Material): PrepassDraw | null {
-  return material.transparent || !material.depthWrite ? null : { material, around: withoutColour(material) };
+  const { depthFunc, depthWrite } = colourDepthOf(material);
+  const isRefracting = ((material as THREE.MeshPhysicalMaterial).transmission ?? 0) > 0;
+  if (material.transparent || !material.depthTest || !depthWrite || isRefracting) return null;
+  const keepsNearest = depthFunc === THREE.LessEqualDepth || depthFunc === THREE.LessDepth;
+  return keepsNearest ? { material, around: asDepthOnly(material) } : null;
 }
 
-function withoutColour(material: THREE.Material): (draw: () => void) => void {
+/** Draws with `material`'s own depth state and no colour, then gives back the state it found. */
+function asDepthOnly(material: THREE.Material): (draw: () => void) => void {
   return (draw) => {
-    const { colorWrite } = material;
-    material.colorWrite = false;
-    draw();
-    material.colorWrite = colorWrite;
+    const found = { colorWrite: material.colorWrite, ...colourDepthNow(material) };
+    Object.assign(material, { colorWrite: false, ...colourDepthOf(material) });
+    try {
+      draw();
+    } finally {
+      Object.assign(material, found);
+    }
   };
 }
 
@@ -97,11 +105,24 @@ export interface DepthPrepass {
   readonly last: OpaqueSentinel;
 }
 
-/** The depth state of an opaque material before the prepass changed it for one render. */
+/** The depth state of an opaque material's colour pass. */
 interface ColourDepth {
   readonly depthFunc: THREE.DepthModes;
   readonly depthWrite: boolean;
 }
+
+/** Written only by `testAgainstPrepass`, and emptied by the prepass that wrote an entry, at its end. */
+// eslint-disable-next-line no-restricted-syntax -- perObject is outside the shader module, which imports only its own files (ADR-0072).
+const depthBeforePrepass = new WeakMap<THREE.Material, ColourDepth>();
+
+const colourDepthNow = ({ depthFunc, depthWrite }: THREE.Material): ColourDepth => ({
+  depthFunc,
+  depthWrite,
+});
+
+/** Its own depth state, also inside a render nested in one whose prepass has changed it. */
+const colourDepthOf = (material: THREE.Material): ColourDepth =>
+  depthBeforePrepass.get(material) ?? colourDepthNow(material);
 
 /** A prepass to add to a scene, both sentinels together. */
 export function createDepthPrepass({
@@ -111,18 +132,19 @@ export function createDepthPrepass({
   timed = (_renderer, draw) => draw(),
 }: DepthPrepassOptions = {}): DepthPrepass {
   const renderer = rendererOf(renderingMethod);
-  const drawOf = (material: THREE.Material) => prepassDrawOf(material, unset);
   // Written by the first sentinel and emptied by the last, inside one render.
-  const changed = new Map<THREE.Material, ColourDepth>();
+  const changed: THREE.Material[] = [];
   const first = createFirstOpaqueSentinel('DepthPrepass', (webgl, scene, camera) => {
     const colourDepthFunc = colourDepthFuncAfter(renderer, webgl, disabledVendors);
     if (colourDepthFunc === null) return;
     timed(webgl, () => {
-      const surfaces = visibleSurfaces(
-        scene,
-        camera,
-        (material) => material.visible && drawOf(material) !== null
-      );
+      const draws = new Map<THREE.Material, PrepassDraw | null>();
+      const drawOf = (material: THREE.Material): PrepassDraw | null => {
+        if (!draws.has(material))
+          draws.set(material, material.visible ? prepassDrawOf(material, unset) : null);
+        return draws.get(material)!;
+      };
+      const surfaces = visibleSurfaces(scene, camera, (material) => drawOf(material) !== null);
       for (const surface of surfaces) drawPrepass(webgl, scene, camera, surface, drawOf(surface.material)!);
       for (const { material } of surfaces)
         if (!material.transparent) testAgainstPrepass(material, colourDepthFunc, changed);
@@ -146,16 +168,18 @@ function drawPrepass(
 function testAgainstPrepass(
   material: THREE.Material,
   depthFunc: THREE.DepthModes,
-  changed: Map<THREE.Material, ColourDepth>
+  changed: THREE.Material[]
 ): void {
-  if (changed.has(material)) return;
-  changed.set(material, { depthFunc: material.depthFunc, depthWrite: material.depthWrite });
-  material.depthFunc = depthFunc;
-  material.depthWrite = false;
+  if (depthBeforePrepass.has(material)) return;
+  depthBeforePrepass.set(material, colourDepthNow(material));
+  changed.push(material);
+  Object.assign(material, { depthFunc, depthWrite: false });
 }
 
-function restoreColourDepth(changed: Map<THREE.Material, ColourDepth>): void {
-  for (const [material, { depthFunc, depthWrite }] of changed)
-    Object.assign(material, { depthFunc, depthWrite });
-  changed.clear();
+function restoreColourDepth(changed: THREE.Material[]): void {
+  for (const material of changed) {
+    Object.assign(material, depthBeforePrepass.get(material));
+    depthBeforePrepass.delete(material);
+  }
+  changed.length = 0;
 }

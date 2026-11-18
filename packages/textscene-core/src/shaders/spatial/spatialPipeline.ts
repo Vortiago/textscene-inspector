@@ -75,22 +75,26 @@ const SCREEN_HINTS: ReadonlySet<UniformHint> = new Set<UniformHint>([
   'hint_normal_roughness_texture',
 ]);
 
-/** A flag of Godot's that can keep a surface off the shared depth material, by Godot's name. */
-export type DepthFlag =
-  | 'uses_particle_trails'
-  | 'writes_modelview_or_projection'
-  | 'uses_vertex'
-  | 'uses_position'
-  | 'uses_discard'
-  | 'uses_depth_prepass_alpha'
-  | 'uses_alpha_clip'
-  | 'uses_alpha_antialiasing'
-  | 'cull_not_back'
-  | 'uses_point_size'
-  | 'uses_world_coordinates'
-  | 'wireframe'
-  | 'uses_z_clip_scale'
-  | 'stencil_enabled';
+/** Each flag that keeps a surface off the shared depth material (`scene_shader_forward_clustered.h:295`). */
+export const DEPTH_FLAGS = [
+  'uses_particle_trails',
+  'writes_modelview_or_projection',
+  'uses_vertex',
+  'uses_position',
+  'uses_discard',
+  'uses_depth_prepass_alpha',
+  'uses_alpha_clip',
+  'uses_alpha_antialiasing',
+  'cull_not_back',
+  'uses_point_size',
+  'uses_world_coordinates',
+  'wireframe',
+  'uses_z_clip_scale',
+  'stencil_enabled',
+] as const;
+
+/** A flag of {@link DEPTH_FLAGS}, by Godot's name. */
+export type DepthFlag = (typeof DEPTH_FLAGS)[number];
 
 /** The render mode behind each flag that one sets (`scene_shader_forward_clustered.cpp:119-128`). */
 const MODE_FLAGS: Readonly<Record<string, DepthFlag>> = {
@@ -146,7 +150,7 @@ function depthFlags(
   sources: FlagSources
 ): ReadonlySet<DepthFlag> {
   const written = new Set(tree.functions.flatMap((definition) => [...writtenNames(definition.body)]));
-  const isSet: Readonly<Record<string, boolean>> = {
+  const isSet: Readonly<Partial<Record<DepthFlag, boolean>>> = {
     uses_discard: usesDiscard(tree),
     uses_alpha_clip: sources.usesAlphaClip,
     uses_alpha_antialiasing: sources.usesAlphaAntialiasing,
@@ -158,7 +162,7 @@ function depthFlags(
   return new Set<DepthFlag>([
     ...modes.flatMap((mode) => MODE_FLAGS[mode] ?? []),
     ...[...written].flatMap((name) => WRITE_FLAGS[name] ?? []),
-    ...(Object.keys(isSet) as DepthFlag[]).filter((flag) => isSet[flag]),
+    ...DEPTH_FLAGS.filter((flag) => isSet[flag]),
   ]);
 }
 

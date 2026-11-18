@@ -1,4 +1,5 @@
 import { IntType, UnsignedIntType } from 'three';
+import { heldInVariable } from './heldInVariable.js';
 import * as TSL from 'three/tsl';
 import { Node as TslNode, type Node, type NodeBuilder, type TextureNode } from 'three/webgpu';
 import { CubeArrayReadNode, type CubeArrayLevel } from './cubeArray.js';
@@ -139,21 +140,18 @@ function readerOf(name: string, row: InstructionRow, rest: readonly Node[]): (te
   return (texture) => asSamplerReads(sampledCall(name, row, [texture, ...rest]), row.returns!, texture);
 }
 
-/** A value held in a variable where the call stands: the composite reads it inside branches. */
-const heldHere = (node: Node): Node => (node as unknown as { toVar(): Node }).toVar();
-
 // A derivative inside a branch of the composite is undefined, so the call takes its gradients first.
 const CUBE_ARRAY_LEVELS: Readonly<
   Record<string, (direction: Node, rest: readonly Node[]) => CubeArrayLevel>
 > = {
   texture: (direction, [bias]) => ({
     kind: 'implicit',
-    dx: heldHere(TSL.dFdx(direction as never) as unknown as Node),
-    dy: heldHere(TSL.dFdy(direction as never) as unknown as Node),
+    dx: heldInVariable(TSL.dFdx(direction as never) as unknown as Node),
+    dy: heldInVariable(TSL.dFdy(direction as never) as unknown as Node),
     bias,
   }),
   textureLod: (_, [level]) => ({ kind: 'explicit', level: level! }),
-  textureGrad: (_, [dx, dy]) => ({ kind: 'gradients', dx: heldHere(dx!), dy: heldHere(dy!) }),
+  textureGrad: (_, [dx, dy]) => ({ kind: 'gradients', dx: heldInVariable(dx!), dy: heldInVariable(dy!) }),
 };
 
 /** One coordinate and level for every element of a sampler array. */
@@ -161,7 +159,7 @@ function cubeArrayReader(
   name: string,
   [coordinate, ...rest]: readonly Node[]
 ): (texture: TextureNode) => Node {
-  const held = heldHere(coordinate!);
+  const held = heldInVariable(coordinate!);
   const level = CUBE_ARRAY_LEVELS[name]!(swizzles(held).xyz, rest);
   return (texture) => new CubeArrayReadNode(texture, held, level) as unknown as Node;
 }

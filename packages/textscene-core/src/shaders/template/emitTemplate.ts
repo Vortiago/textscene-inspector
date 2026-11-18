@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { heldInVariable } from '../language/heldInVariable.js';
 import { cubeTexture, Fn, int, texture, texture3D } from 'three/tsl';
 import type { Node, TextureNode } from 'three/webgpu';
 import { type BodyEmitter, CalledFunctions } from '../language/emitCall.js';
@@ -103,7 +104,7 @@ export function emitTemplateStage(
     const arrays = written.map(
       ({ name, type, count }) => [name, declareVariables(type, count, structOf)] as const
     );
-    const beside = (result.beside ?? []).map(({ name, initial }) => [name, toVar(initial)] as const);
+    const beside = (result.beside ?? []).map(({ name, initial }) => [name, heldInVariable(initial)] as const);
     body(
       main,
       new Map([[result.name, variable], ...plainVariables(plain, result, structOf), ...arrays, ...beside])
@@ -113,10 +114,6 @@ export function emitTemplateStage(
     return variable;
   });
   return { result: run() as unknown as Node, uniforms: resources.uniforms.byName, textures };
-}
-
-function toVar(initial: Node): Node {
-  return (initial as unknown as { toVar(): Node }).toVar();
 }
 
 /** The structs and buffer blocks as the template declares them, before `withSquareMatrices`. */

@@ -5,7 +5,12 @@ import { DEPTH_PREPASS_OPAQUE_THRESHOLD } from '../../godot/rendering/opaquePrep
 import type { PrepassDraw } from '../pipeline/depthPrepass.js';
 import type { Renderer } from '../preprocessor/renderingMethod.js';
 import { BoundNodeMaterial, type MaterialShader } from '../uniforms/boundMaterial.js';
-import { spatialPassMembership, type DepthFlag, type SpatialPipeline } from './spatialPipeline.js';
+import {
+  DEPTH_FLAGS,
+  spatialPassMembership,
+  type DepthFlag,
+  type SpatialPipeline,
+} from './spatialPipeline.js';
 import { setPosition, type EmittedStages } from './emittedStages.js';
 
 const THRESHOLD = 'scene_data_block.data.opaque_prepass_threshold';
@@ -21,22 +26,7 @@ interface PrepassRule {
 const PREPASS_RULES: Readonly<Record<Renderer, PrepassRule | null>> = {
   // `scene_shader_forward_clustered.h:288-298`.
   forward_plus: {
-    ownDepthFlags: [
-      'uses_particle_trails',
-      'writes_modelview_or_projection',
-      'uses_vertex',
-      'uses_position',
-      'uses_discard',
-      'uses_depth_prepass_alpha',
-      'uses_alpha_clip',
-      'uses_alpha_antialiasing',
-      'cull_not_back',
-      'uses_point_size',
-      'uses_world_coordinates',
-      'wireframe',
-      'uses_z_clip_scale',
-      'stencil_enabled',
-    ],
+    ownDepthFlags: DEPTH_FLAGS,
     drawsAlphaSurface: (pipeline) => spatialPassMembership(pipeline).depthInAlphaPass,
   },
   // `rasterizer_scene_gles3.cpp:242-269`: alpha antialiasing puts no alpha surface in the prepass.

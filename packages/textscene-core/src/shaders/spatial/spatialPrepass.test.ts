@@ -40,6 +40,11 @@ describe('spatialPrepassDraw', () => {
     expect(depthOf(material)).toMatchObject({ colorWrite: false, depthWrite: true, side: THREE.DoubleSide });
   });
 
+  it('keeps a depth_draw_never or depth_test_disabled surface out, as Godot draws it in the alpha pass', () => {
+    expect(prepassDrawOf(spatialOf('', 'depth_draw_never').material)).toBeNull();
+    expect(prepassDrawOf(spatialOf('', 'depth_test_disabled').material)).toBeNull();
+  });
+
   it('keeps an alpha surface with no depth_prepass_alpha out', () => {
     expect(prepassDrawOf(spatialOf('void fragment() {\n\tALPHA = 0.5;\n}\n').material)).toBeNull();
   });

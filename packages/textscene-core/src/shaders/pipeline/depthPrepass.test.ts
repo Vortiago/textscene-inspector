@@ -6,6 +6,7 @@ interface RecordedDraw {
   readonly object: THREE.Object3D;
   readonly material: THREE.Material;
   readonly colorWrite: boolean;
+  readonly depthWrite: boolean;
   readonly group: THREE.GeometryGroup | null;
 }
 
@@ -22,7 +23,13 @@ function recordingRenderer(draws: RecordedDraw[], gpu: string): THREE.WebGLRende
       object: THREE.Object3D,
       group: THREE.GeometryGroup | null
     ) {
-      draws.push({ object, material, colorWrite: material.colorWrite, group });
+      draws.push({
+        object,
+        material,
+        colorWrite: material.colorWrite,
+        depthWrite: material.depthWrite,
+        group,
+      });
     },
   } as unknown as THREE.WebGLRenderer;
 }
@@ -79,6 +86,36 @@ describe('createDepthPrepass', () => {
 
   it('draws no surface of the alpha pass', () => {
     expect(prepassDraws(meshOf(new THREE.MeshBasicMaterial({ transparent: true })))).toEqual([]);
+  });
+
+  it('draws no surface that skips the depth test, keeps the farthest depth or refracts', () => {
+    const overlay = new THREE.MeshBasicMaterial({ depthTest: false });
+    const inverted = new THREE.MeshBasicMaterial({ depthFunc: THREE.GreaterDepth });
+    const glass = new THREE.MeshPhysicalMaterial({ transmission: 1 });
+    expect(prepassDraws(meshOf(overlay), meshOf(inverted), meshOf(glass))).toEqual([]);
+  });
+
+  it('gives the colour back when a draw throws', () => {
+    const material = new THREE.MeshBasicMaterial();
+    const mesh = meshOf(material);
+    mesh.onBeforeRender = () => {
+      throw new Error('a hook of the app');
+    };
+    expect(() => prepassDraws(mesh)).toThrow('a hook of the app');
+    expect(material.colorWrite).toBe(true);
+  });
+
+  it('draws a surface again in a render nested inside one whose prepass has changed its depth', () => {
+    const material = new THREE.MeshBasicMaterial();
+    const outer = prepassScene(FORWARD_PLUS, meshOf(material));
+    const inner = prepassScene(FORWARD_PLUS, meshOf(material));
+    outer.reach(outer.prepass.first);
+    inner.reach(inner.prepass.first);
+    expect(inner.draws[0]).toMatchObject({ material, colorWrite: false, depthWrite: true });
+    inner.reach(inner.prepass.last);
+    expect(material).toMatchObject({ depthFunc: THREE.EqualDepth, depthWrite: false });
+    outer.reach(outer.prepass.last);
+    expect(material).toMatchObject({ depthFunc: THREE.LessEqualDepth, depthWrite: true });
   });
 
   it('draws the material its maker set, such as the shared default material', () => {

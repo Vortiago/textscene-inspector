@@ -80,6 +80,11 @@ describe('the previewer’s depth prepass', () => {
     expect(prepassDraws(meshOf(material))[0]!.material.alphaTest).toBe(0.995);
   });
 
+  it('draws the cut depth copy of an opaque prepass surface too, not its uncut program', () => {
+    const material = new THREE.MeshBasicMaterial({ userData: opaquePrepassUserData(DRAWN_OPAQUE_PREPASS) });
+    expect(prepassDraws(meshOf(material))[0]!.material.alphaTest).toBe(DEPTH_PREPASS_OPAQUE_THRESHOLD);
+  });
+
   it('draws an opaque surface with its own program', () => {
     const material = new THREE.MeshBasicMaterial();
     expect(prepassDraws(meshOf(material))[0]!.material).toBe(material);
