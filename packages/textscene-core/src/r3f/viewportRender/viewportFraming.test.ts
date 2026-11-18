@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import {
   frameOverView,
   applyOrthoFrame,
-  godotCanvasPosition,
+  godotCanvasPlacement,
   orthoFrameForCamera2D,
   orthoFrameForSize,
   cameraAtPath,
@@ -15,6 +15,7 @@ import {
   viewportAspect,
 } from './viewportFraming';
 import type { Camera2DTag } from './camera2DView';
+import { markCanvasFrame } from '../canvasFrame';
 
 import { Camera2DAnchorMode } from '../../godot/scene/camera2d';
 
@@ -41,6 +42,7 @@ function camera2d(overrides: Partial<Camera2DTag> = {}, tscnPath = 'Root/Camera2
     limitRight: 10000000,
     limitBottom: 10000000,
     limitEnabled: true,
+    ignoreRotation: true,
     enabled: true,
     ...overrides,
   } satisfies Camera2DTag;
@@ -181,13 +183,13 @@ describe('orthoFrameForCamera2D', () => {
   });
 });
 
-describe('godotCanvasPosition', () => {
+describe('godotCanvasPlacement', () => {
   /** `node2dTransform` conjugates by diag(1,-1,1): Godot (100,50) is three (100,-50). */
   it('negates Y back out of three space', () => {
     const object = new THREE.Object3D();
     object.position.set(100, -50, 0);
     object.updateMatrixWorld(true);
-    expect(godotCanvasPosition(object)).toEqual({ x: 100, y: 50 });
+    expect(godotCanvasPlacement(object)).toEqual({ x: 100, y: 50, rotation: 0 });
   });
 
   /**
@@ -195,6 +197,30 @@ describe('godotCanvasPosition', () => {
    * tree: a Camera2D inside an instanced sub-scene composes its ancestors' 2D
    * transforms for free.
    */
+  it("reads a camera under a CanvasLayer in its layer's canvas, without the layer or its anchor", () => {
+    const anchor = new THREE.Object3D();
+    anchor.position.set(-60, 40, 0);
+    const frame = new THREE.Object3D();
+    frame.position.set(500, -200, 0);
+    markCanvasFrame(frame);
+    const camera = new THREE.Object3D();
+    camera.position.set(60, -40, 0);
+    anchor.add(frame);
+    frame.add(camera);
+    anchor.updateMatrixWorld(true);
+    expect(godotCanvasPlacement(camera)).toEqual({ x: 60, y: 40, rotation: 0 });
+  });
+
+  it("reads the global rotation in Godot's sense, clockwise on screen", () => {
+    const parent = new THREE.Object3D();
+    parent.rotation.z = -0.3;
+    const camera = new THREE.Object3D();
+    camera.rotation.z = -0.1;
+    parent.add(camera);
+    parent.updateMatrixWorld(true);
+    expect(godotCanvasPlacement(camera).rotation).toBeCloseTo(0.4);
+  });
+
   it('composes an instanced ancestor transform', () => {
     const player = new THREE.Object3D();
     player.position.set(100, -636.5, 0);
@@ -202,11 +228,18 @@ describe('godotCanvasPosition', () => {
     cam.position.set(0, 28, 0);
     player.add(cam);
     player.updateMatrixWorld(true);
-    expect(godotCanvasPosition(cam)).toEqual({ x: 100, y: 608.5 });
+    expect(godotCanvasPlacement(cam)).toEqual({ x: 100, y: 608.5, rotation: 0 });
   });
 });
 
 describe('applyOrthoFrame', () => {
+  it('turns the camera opposite to a Camera2D view rotation, since three is +Y up', () => {
+    const cam = new THREE.OrthographicCamera();
+    const turned = tagOf(camera2d({ ignoreRotation: false }));
+    applyOrthoFrame(cam, orthoFrameForCamera2D(turned, { x: 0, y: 0, rotation: 0.4 }, { x: 300, y: 200 }));
+    expect(cam.rotation.z).toBeCloseTo(-0.4);
+  });
+
   it('applies the frustum and position to the camera', () => {
     const cam = new THREE.OrthographicCamera();
     applyOrthoFrame(cam, orthoFrameForSize({ x: 300, y: 200 }));

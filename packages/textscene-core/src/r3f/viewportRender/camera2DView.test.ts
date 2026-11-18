@@ -19,6 +19,7 @@ function props(overrides: Partial<Camera2DTag> = {}): Camera2DTag {
     limitRight: 10000000,
     limitBottom: 10000000,
     limitEnabled: true,
+    ignoreRotation: true,
     enabled: true,
     ...overrides,
   };
@@ -130,5 +131,30 @@ describe('a zoom set_zoom refuses leaves the default (1, 1) on BOTH axes', () =>
     const view = camera2DView(props({ zoom: { x: 2, y: 1e-9 } }), { x: 0, y: 0 }, VIEWPORT);
     expect(view.size).toEqual(VIEWPORT);
     expect(view.zoom).toBe(1);
+  });
+
+  it('turns the view with the global rotation when ignore_rotation is off (camera_2d.cpp:214-221)', () => {
+    const view = camera2DView(props({ ignoreRotation: false }), { x: 300, y: 200, rotation: 0.4 }, VIEWPORT);
+    expect(view.rotation).toBe(0.4);
+  });
+
+  it('keeps the view square to the canvas while ignore_rotation is on', () => {
+    expect(camera2DView(props(), { x: 300, y: 200, rotation: 0.4 }, VIEWPORT).rotation).toBe(0);
+  });
+
+  it('clamps the turned corner of the view to the limits, as Godot does (camera_2d.cpp:223-248)', () => {
+    const turned = props({ ignoreRotation: false, limitTop: 0 });
+    const view = camera2DView(turned, { x: 0, y: 0, rotation: Math.PI / 2 }, VIEWPORT);
+    expect(view.center.x).toBeCloseTo(0);
+    expect(view.center.y).toBeCloseTo(288);
+  });
+
+  it('clamps a top-left view over no width, as Godot does (camera_2d.cpp:212, :226)', () => {
+    const corner = props({
+      anchor_mode: Camera2DAnchorMode.FIXED_TOP_LEFT,
+      zoom: { x: 1, y: 1 },
+      limitRight: 300,
+    });
+    expect(camera2DView(corner, { x: 100, y: 20 }, { x: 320, y: 180 }).center.x).toBe(260);
   });
 });

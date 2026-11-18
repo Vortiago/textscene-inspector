@@ -33,7 +33,7 @@ import { viewportTransfer } from '../texelCopy';
 import type { Rgba } from '../../godot/math/math';
 import {
   applyOrthoFrame,
-  godotCanvasPosition,
+  godotCanvasPlacement,
   frameOverView,
   orthoFrameForCamera2D,
   orthoFrameForSize,
@@ -248,7 +248,7 @@ export function OffscreenViewportPass({
       const tag = camera2d?.userData.camera2d as Camera2DTag | undefined;
       const framed =
         camera2d && tag
-          ? orthoFrameForCamera2D(tag, godotCanvasPosition(camera2d), layoutSize)
+          ? orthoFrameForCamera2D(tag, godotCanvasPlacement(camera2d), layoutSize)
           : orthoFrameForSize(layoutSize);
       applyOrthoFrame(orthoCamera, frameOverView(framed, layoutSize, viewSize));
       anchorBackdrop();

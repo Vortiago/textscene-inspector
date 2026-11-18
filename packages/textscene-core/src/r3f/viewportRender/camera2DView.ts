@@ -23,6 +23,15 @@ interface Camera2DView {
    * {@link Camera2DView.size}.
    */
   zoom: number;
+  /** The angle the view turns by, in radians clockwise on screen: 0 while `ignore_rotation` is on. */
+  rotation: number;
+}
+
+/** Where a Camera2D stands in its canvas: the position, and the global rotation where one is read. */
+export interface Camera2DPlacement {
+  x: number;
+  y: number;
+  rotation?: number;
 }
 
 /**
@@ -32,7 +41,15 @@ interface Camera2DView {
  */
 type Camera2DFraming = Pick<
   Camera2DProperties,
-  'zoom' | 'offset' | 'anchor_mode' | 'limitLeft' | 'limitTop' | 'limitRight' | 'limitBottom' | 'limitEnabled'
+  | 'zoom'
+  | 'offset'
+  | 'anchor_mode'
+  | 'limitLeft'
+  | 'limitTop'
+  | 'limitRight'
+  | 'limitBottom'
+  | 'limitEnabled'
+  | 'ignoreRotation'
 >;
 
 /**
@@ -46,7 +63,7 @@ export interface Camera2DTag extends Camera2DFraming {
 
 export function camera2DView(
   props: Camera2DFraming,
-  worldPosition: { x: number; y: number },
+  placement: Camera2DPlacement,
   viewportSize: { x: number; y: number }
 ): Camera2DView {
   // `set_zoom` refuses the whole write when either component is zero-approx
@@ -56,31 +73,37 @@ export function camera2DView(
   const refused = isZeroApprox(props.zoom.x) || isZeroApprox(props.zoom.y);
   const zoom = refused ? 1 : props.zoom.x;
   const zoomY = refused ? 1 : props.zoom.y;
-  const viewWidth = viewportSize.x / zoom;
-  const viewHeight = viewportSize.y / zoomY;
+  const half = { x: viewportSize.x / zoom / 2, y: viewportSize.y / zoomY / 2 };
+  const rotation = props.ignoreRotation === false ? (placement.rotation ?? 0) : 0;
 
-  // Godot clamps the view rect before it adds `offset`, so work in top-left space
-  // and convert back. The offset camera can go past the limits.
-  let left = worldPosition.x;
-  let top = worldPosition.y;
-  if (props.anchor_mode !== Camera2DAnchorMode.FIXED_TOP_LEFT) {
-    left -= viewWidth / 2;
-    top -= viewHeight / 2;
-  }
+  // camera_2d.cpp:212-224: the anchor's offset turns with the view, and the rect starts there.
+  const anchor =
+    props.anchor_mode === Camera2DAnchorMode.FIXED_TOP_LEFT ? { x: 0, y: 0 } : turned(half, rotation);
+  let left = placement.x - anchor.x;
+  let top = placement.y - anchor.y;
 
+  // Godot clamps the corner before it adds `offset`, over twice the turned anchor offset.
   if (props.limitEnabled !== false) {
-    left = clampToLimits(left, viewWidth, props.limitLeft, props.limitRight);
-    top = clampToLimits(top, viewHeight, props.limitTop, props.limitBottom);
+    left = clampToLimits(left, 2 * anchor.x, props.limitLeft, props.limitRight);
+    top = clampToLimits(top, 2 * anchor.y, props.limitTop, props.limitBottom);
   }
 
+  // `camera_screen_center`: the corner, then half the screen turned with the view (camera_2d.cpp:259).
+  const toCentre = turned(half, rotation);
   return {
-    center: {
-      x: left + viewWidth / 2 + props.offset.x,
-      y: top + viewHeight / 2 + props.offset.y,
-    },
-    size: { x: viewWidth, y: viewHeight },
+    center: { x: left + props.offset.x + toCentre.x, y: top + props.offset.y + toCentre.y },
+    size: { x: half.x * 2, y: half.y * 2 },
     zoom,
+    rotation,
   };
+}
+
+/** `Vector2::rotated`, in Godot's canvas pixels with +Y down. */
+function turned(vector: { x: number; y: number }, angle: number): { x: number; y: number } {
+  if (angle === 0) return vector;
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  return { x: vector.x * cos - vector.y * sin, y: vector.x * sin + vector.y * cos };
 }
 
 /**

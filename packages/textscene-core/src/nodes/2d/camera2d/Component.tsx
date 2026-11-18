@@ -31,6 +31,7 @@ export function Camera2D({ node, children }: NodeComponentProps) {
           limitRight: props.limitRight,
           limitBottom: props.limitBottom,
           limitEnabled: props.limitEnabled,
+          ignoreRotation: props.ignoreRotation,
           enabled: props.enabled,
         } satisfies Camera2DTag,
       }}

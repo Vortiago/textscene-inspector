@@ -4,7 +4,8 @@
  */
 
 import * as THREE from 'three';
-import { camera2DView, type Camera2DTag } from './camera2DView';
+import { canvasFrameOf } from '../canvasFrame';
+import { camera2DView, type Camera2DPlacement, type Camera2DTag } from './camera2DView';
 import type { Vector2 } from '../../godot/math/vector';
 import type { Rect2 } from '../../godot/math/rect2';
 
@@ -36,14 +37,16 @@ export function camera2DAtPath(root: THREE.Object3D, cameraPath: string | null):
   return objectAtPath(root, cameraPath, (object) => Boolean(object.userData?.camera2d));
 }
 
-/**
- * An Object3D's position in Godot canvas pixels: `node2dTransform` negates Y, so
- * the trip back is one negation. The world matrix, not the parsed tree, also
- * composes an instanced sub-scene's ancestors.
- */
-export function godotCanvasPosition(object: THREE.Object3D): { x: number; y: number } {
-  const world = object.getWorldPosition(new THREE.Vector3());
-  return { x: world.x, y: -world.y };
+/** Written only by {@link godotCanvasPlacement}, which reads it before returning. */
+const inCanvas = new THREE.Matrix4();
+
+/** The global position and rotation Godot reads, in a CanvasLayer's own canvas (`canvas_item.cpp:176`). */
+export function godotCanvasPlacement(object: THREE.Object3D): { x: number; y: number; rotation: number } {
+  inCanvas.copy(object.matrixWorld);
+  const frame = canvasFrameOf(object);
+  if (frame) inCanvas.premultiply(frame.matrixWorld.clone().invert());
+  const m = inCanvas.elements;
+  return { x: m[12]!, y: -m[13]!, rotation: 0 - Math.atan2(m[1]!, m[0]!) };
 }
 
 /**
@@ -53,12 +56,12 @@ export function godotCanvasPosition(object: THREE.Object3D): { x: number; y: num
  */
 export function orthoFrameForCamera2D(
   framing: Camera2DTag,
-  worldPosition: { x: number; y: number },
+  placement: Camera2DPlacement,
   size: Vector2
 ): OrthoFrame {
   const width = size.x > 0 ? size.x : 1;
   const height = size.y > 0 ? size.y : 1;
-  const view = camera2DView(framing, worldPosition, { x: width, y: height });
+  const view = camera2DView(framing, placement, { x: width, y: height });
   // The framed extent the view already computed, per axis, so the Y zoom
   // applies too.
   const halfWidth = view.size.x / 2;
@@ -69,6 +72,7 @@ export function orthoFrameForCamera2D(
     top: halfHeight,
     bottom: -halfHeight,
     position: [view.center.x, -view.center.y, 1000],
+    rotation: -view.rotation,
   };
 }
 
@@ -83,6 +87,7 @@ export function applyOrthoFrame(camera: THREE.OrthographicCamera, frame: OrthoFr
     camera.right !== frame.right ||
     camera.top !== frame.top ||
     camera.bottom !== frame.bottom;
+  camera.rotation.z = frame.rotation;
 
   camera.left = frame.left;
   camera.right = frame.right;
@@ -120,6 +125,8 @@ interface OrthoFrame {
   top: number;
   bottom: number;
   position: [number, number, number];
+  /** The camera's turn about Z in three's +Y up space, the negated Camera2D view rotation. */
+  rotation: number;
 }
 
 /**
@@ -137,6 +144,7 @@ export function orthoFrameForSize(size: Vector2): OrthoFrame {
     top: height / 2,
     bottom: -height / 2,
     position: [width / 2, -height / 2, 1000],
+    rotation: 0,
   };
 }
 

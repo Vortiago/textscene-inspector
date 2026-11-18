@@ -1,8 +1,9 @@
 [gd_scene format=3]
 
 ; Each Camera2D holds one framing property, and a call makes it current: `zoom`, `offset`, a rotation
-; with `ignore_rotation` off, the top-left anchor, and limits the camera's position is past. No other
-; scene draws these through a camera a call made current.
+; with `ignore_rotation` off, the top-left anchor, limits the camera's position is past, and the
+; top-left anchor under limits, which Godot clamps over no width. No other scene draws these through
+; a camera a call made current.
 
 [node name="Main" type="Node2D"]
 
@@ -44,5 +45,11 @@ anchor_mode = 0
 position = Vector2(300, 140)
 limit_left = -40
 limit_top = -30
+limit_right = 300
+limit_bottom = 150
+
+[node name="TopLeftLimited" type="Camera2D" parent="."]
+position = Vector2(100, 20)
+anchor_mode = 0
 limit_right = 300
 limit_bottom = 150
