@@ -33,6 +33,7 @@ import {
   runCameraPreviewScenario,
 } from './cameraPreviewScenario.mjs';
 import { checkInGame, IN_GAME_FIXTURE, runInGameScenario } from './inGameScenario.mjs';
+import { checkInGameStretch, runInGameStretchScenario, STRETCH_FIXTURE } from './inGameStretchScenario.mjs';
 import { checkCameraButtons, runCameraButtonsScenario } from './cameraButtonsScenario.mjs';
 import { checkInGameToolbar, runInGameToolbarScenario } from './inGameToolbarScenario.mjs';
 import { checkModeSwitch, runModeSwitchScenario } from './modeSwitchScenario.mjs';
@@ -176,6 +177,9 @@ async function runScenarios(browser, baseUrl) {
   console.log(`[gate] In-game mode: ${IN_GAME_FIXTURE}`);
   const inGame = await runInGameScenario(browser, baseUrl);
 
+  console.log(`[gate] In-game window stretch: ${STRETCH_FIXTURE}`);
+  const inGameStretch = await runInGameStretchScenario(browser, baseUrl);
+
   console.log('[gate] camera buttons: each Cameras row in the 3D, 2D and In-game views');
   const cameraButtons = await runCameraButtonsScenario(browser, baseUrl);
 
@@ -197,6 +201,7 @@ async function runScenarios(browser, baseUrl) {
     uploads,
     cameraPreview,
     inGame,
+    inGameStretch,
     cameraButtons,
     inGameToolbar,
     modeSwitch,
@@ -217,6 +222,7 @@ function checkScenarios(gate, results) {
     uploads,
     cameraPreview,
     inGame,
+    inGameStretch,
     cameraButtons,
     inGameToolbar,
     modeSwitch,
@@ -278,6 +284,7 @@ function checkScenarios(gate, results) {
   checkUploadScenarios(gate, uploads);
   checkCameraPreview(gate, cameraPreview);
   checkInGame(gate, inGame);
+  checkInGameStretch(gate, inGameStretch);
   checkCameraButtons(gate, cameraButtons);
   checkInGameToolbar(gate, inGameToolbar);
   checkModeSwitch(gate, modeSwitch);

@@ -18,10 +18,7 @@ const PRESENT_PRIORITY = 1;
 /** The screen blit's sampler (`rasterizer_gles3.cpp:440`, `renderer_compositor_rd.cpp:160`). */
 const BLIT_FILTER = canvasItemFilterState(CanvasItemTextureFilter.NEAREST);
 
-/**
- * Shows the target the root viewport's pass publishes in `window`, fitted to the pane, and keeps
- * it sampled so the pass renders.
- */
+/** Retains the root target, so its pass renders, and draws it in the window fitted to the pane. */
 export function RootViewportPresenter({ root, window }: { root: TscnNode; window: RootWindow }) {
   const entry = useViewportTexture(ROOT_VIEWPORT_PATH);
   useEffect(() => entry?.plain.retain(), [entry]);
@@ -34,10 +31,7 @@ export function RootViewportPresenter({ root, window }: { root: TscnNode; window
   return null;
 }
 
-/**
- * The blit's nearest filter where the window scales the target, else none. Unscaled, nearest and
- * the target's own filter read the same texels, so a 1:1 window keeps the target and copies nothing.
- */
+/** Only where the window scales the target: at 1:1 nearest reads the same texels, and no copy is made. */
 function useBlitSampler(target: THREE.Texture | null, window: RootWindow): ViewSampler | null {
   const { targetSize, drawRect } = window;
   const scalesTarget = drawRect.w !== targetSize.x || drawRect.h !== targetSize.y;

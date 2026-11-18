@@ -47,11 +47,7 @@ export interface ViewportPassSizes {
   view: Vector2;
 }
 
-/**
- * A viewport renders and lays out by its content scale (`contentScale.ts`), and its canvas draws
- * scaled by the factor, so the target shows its pixels over the factor in canvas units
- * (`window.cpp:1362-1367`). A SubViewport has no content scale but may have a 2D override.
- */
+/** An embedded window's canvas draws scaled by its content scale factor (`window.cpp:1362-1367`). */
 export function viewportPassSizes(node: TscnNode, forced: ViewportRect | null): ViewportPassSizes {
   const size = viewportSize((node.properties as SubViewportProperties).size, forced);
   if (!isEmbeddedWindow(node.type))
@@ -65,10 +61,7 @@ export function viewportPassSizes(node: TscnNode, forced: ViewportRect | null): 
   };
 }
 
-/**
- * A 2D override other than zero is the visible rect (`viewport.cpp:1212-1214`). With the stretch on
- * and both axes above 0, the canvas scales by the size over the override (`:1103-1105`).
- */
+/** The 2D override's visible rect and stretch (`viewport.cpp:1103-1105,1212-1214`). */
 function subViewportPassSizes(size: Vector2, properties: SubViewportProperties): ViewportPassSizes {
   const { size_2d_override: override, size_2d_override_stretch: stretches } = properties;
   const hasOverride = override.x !== 0 || override.y !== 0;

@@ -12,6 +12,13 @@ export const IN_GAME_SCENES = [
     mode: 'in-game',
     canvas: GAME_WINDOW,
   },
+  // The project's window stretch: canvas_items keeps the base aspect in a square window, with black bars.
+  {
+    name: 'in-game-stretch',
+    file: 'in-game-stretch/unit-in-game-stretch.tscn',
+    mode: 'in-game',
+    canvas: { width: 240, height: 240 },
+  },
   // A Polygon2D and a Camera2D whose parent is the Node3D root draw on the root canvas.
   {
     name: 'in-game-canvas-under-node3d',

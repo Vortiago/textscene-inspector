@@ -161,11 +161,7 @@ function windowSizeOr(settings: ProjectSettings | null, key: string, fallback: n
   return value === undefined || value <= 0 ? fallback : value;
 }
 
-/**
- * The size the root window opens at: each axis its override above 0, else the viewport's
- * (`main.cpp:2635-2644`). It keeps this size under every `display/window/size/mode`: the screen a
- * fullscreen window fills is unknown, and the pane is not the window.
- */
+/** Each axis its override above 0 (`main.cpp:2635-2644`), under every window mode (ADR-0087). */
 export function projectWindowSize(settings: ProjectSettings | null): ProjectViewportSize {
   const viewport = projectViewportSize(settings);
   return {
@@ -186,12 +182,7 @@ const CONTENT_SCALE_ASPECTS = new Map<string, number>([
   ['expand', ContentScaleAspect.EXPAND],
 ]);
 
-/**
- * The root window's content scale from `display/window/stretch/*`, at the viewport size
- * (`main.cpp:4528-4562`). An absent key takes its default (`project_settings.cpp:1776-1779`), an
- * unknown name Godot's fallback: disabled, ignore or fractional. The setter refuses a factor at or
- * below 0 (`window.cpp:1774`), which keeps 1.
- */
+/** `main.cpp:4528-4562`, defaults at `project_settings.cpp:1776-1779`, factor setter `window.cpp:1774`. */
 export function projectContentScale(settings: ProjectSettings | null): ContentScale {
   const setting = (key: string) => settings?.[`display/window/stretch/${key}`];
   const { width, height } = projectViewportSize(settings);

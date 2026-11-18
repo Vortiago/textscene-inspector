@@ -13,7 +13,7 @@ function project(window: [number, number] | null, stretch: Record<string, string
   return settings;
 }
 
-/** `[window, mode, aspect, scale mode, target size, 2D override, rect in the window]`, from `window.cpp:1232-1352`. */
+/** `[window, mode, aspect, scale mode, target, 2D override, rect in the window]` (`window.cpp:1232-1352`). */
 const VECTORS: [[number, number] | null, string, string, string, string, string, string][] = [
   [[800, 800], 'disabled', 'keep', 'fractional', '800x800', '800x800', '0,0 800x800'],
   [[800, 800], 'canvas_items', 'keep', 'fractional', '800x450', '1152x648', '0,175 800x450'],
