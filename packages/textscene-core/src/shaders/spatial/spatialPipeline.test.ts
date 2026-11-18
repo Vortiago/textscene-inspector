@@ -1,30 +1,19 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
+import { BlendMode } from '../../godot/rendering/materials/blendMode.js';
+import { godotBlendState } from '../pipeline/blendState.js';
 import { transpileSpatial } from './transpileSpatial.js';
 
 /** The material of an unshaded shader with `modes` after `unshaded`. */
 const materialWith = (...modes: string[]) =>
   transpileSpatial(`shader_type spatial;\nrender_mode ${['unshaded', ...modes].join(', ')};\n`).material;
 
-/** Godot's attachment of a blend mode (`material_storage.cpp:651-716`), in three's names. */
-const ATTACHMENTS = {
-  blend_add: [THREE.SrcAlphaFactor, THREE.OneFactor, THREE.AddEquation],
-  blend_sub: [THREE.SrcAlphaFactor, THREE.OneFactor, THREE.ReverseSubtractEquation],
-  blend_mul: [THREE.DstColorFactor, THREE.ZeroFactor, THREE.AddEquation],
-  blend_premul_alpha: [THREE.OneFactor, THREE.OneMinusSrcAlphaFactor, THREE.AddEquation],
+const ALPHA_PASS_BLEND_MODES = {
+  blend_add: BlendMode.ADD,
+  blend_sub: BlendMode.SUB,
+  blend_mul: BlendMode.MUL,
+  blend_premul_alpha: BlendMode.PREMULT_ALPHA,
 } as const;
-
-/** The colour factors and equation a material blends with, from its preset or its own factors. */
-function colourBlend(material: THREE.Material) {
-  switch (material.blending) {
-    case THREE.AdditiveBlending:
-      return [THREE.SrcAlphaFactor, THREE.OneFactor, THREE.AddEquation];
-    case THREE.CustomBlending:
-      return [material.blendSrc, material.blendDst, material.blendEquation];
-    default:
-      return material.blending;
-  }
-}
 
 describe('a spatial shader’s draw state', () => {
   it.each([
@@ -49,12 +38,14 @@ describe('a spatial shader’s draw state', () => {
     });
   });
 
-  it.each(Object.keys(ATTACHMENTS) as (keyof typeof ATTACHMENTS)[])(
+  it.each(Object.entries(ALPHA_PASS_BLEND_MODES))(
     '%s draws in the alpha pass with Godot’s attachment and writes no depth',
-    (mode) => {
-      const material = materialWith(mode);
-      expect(material).toMatchObject({ transparent: true, depthWrite: false });
-      expect(colourBlend(material)).toEqual(ATTACHMENTS[mode]);
+    (mode, blendMode) => {
+      expect(materialWith(mode)).toMatchObject({
+        ...godotBlendState(blendMode),
+        transparent: true,
+        depthWrite: false,
+      });
     }
   );
 

@@ -57,14 +57,20 @@ const attributeRows = (builtIn) => [
   `spatial.fragment.${builtIn}`,
 ];
 
-/** An unshaded shader that shows `value`, a `vec3` of the fragment stage, as its colour. */
-const showing = (value) => `shader_type spatial;
-render_mode unshaded;
+/** The head of an unshaded shader with `modes` after `unshaded`. */
+const unshadedHead = (modes) => `shader_type spatial;
+render_mode ${['unshaded', ...modes].join(', ')};
+`;
 
+/** An unshaded shader with `modes` after `unshaded`, and `fragment()` as given. */
+const withModes = (modes, fragment) => `${unshadedHead(modes)}
 void fragment() {
-	ALBEDO = ${value};
+	${fragment}
 }
 `;
+
+/** An unshaded shader that shows `value`, a `vec3` of the fragment stage, as its colour. */
+const showing = (value) => withModes([], `ALBEDO = ${value};`);
 
 const RINGS = 8;
 const SEGMENTS = 12;
@@ -408,15 +414,6 @@ const GLOBAL_SCENES = [
   ),
 ];
 
-/** An unshaded shader with `modes` after `unshaded`, and `fragment()` as given. */
-const withModes = (modes, fragment) => `shader_type spatial;
-render_mode ${['unshaded', ...modes].join(', ')};
-
-void fragment() {
-	${fragment}
-}
-`;
-
 /** The rows of a render mode scene: unshaded, `ALBEDO`, and each mode. */
 const modeRows = (modes, rows = []) => [
   'spatial render_mode unshaded',
@@ -428,23 +425,30 @@ const modeRows = (modes, rows = []) => [
 /** Front faces show their UV, back faces a red of their own, so a culled side shows as missing. */
 const SIDES = 'ALBEDO = FRONT_FACING ? vec3(UV, 0.3) : vec3(0.9, 0.3, UV.y);';
 
-/** A quad that faces the camera, on the left, and one turned away from it, on the right. */
-const FACING_AND_TURNED = {
-  object: { position: [-0.45, 0, 0], rotation: [0, 20, 0], scale: [0.8, 0.8, 0.8] },
-  others: [{ object: { position: [0.45, 0, 0], rotation: [0, 160, 0], scale: [0.8, 0.8, 0.8] } }],
-};
-
-/** A cull mode scene: the two quads, `fragment()` shown on each face, with the scale `scale`. */
-const cullScene = (name, modes, fragment = SIDES, scale = [0.8, 0.8, 0.8], rows = []) => ({
+/** A render mode scene: one quad under `modes` showing `fragment()`, seen from the back camera. */
+const modeScene = (name, modes, fragment, placement, rows) => ({
   name,
   ...SIZE,
   source: withModes(modes, fragment),
   camera: BACK,
   mesh: QUAD,
-  object: { ...FACING_AND_TURNED.object, scale },
-  others: FACING_AND_TURNED.others.map(({ object }) => ({ object: { ...object, scale } })),
-  rows: modeRows(modes, ['spatial.fragment.FRONT_FACING', 'spatial.fragment.UV', ...rows]),
+  ...placement,
+  rows: modeRows(modes, rows),
 });
+
+/** A quad that faces the camera, on the left, and one turned away from it, on the right. */
+const facingAndTurned = (scale) => ({
+  object: { position: [-0.45, 0, 0], rotation: [0, 20, 0], scale },
+  others: [{ object: { position: [0.45, 0, 0], rotation: [0, 160, 0], scale } }],
+});
+
+/** A cull mode scene: the two quads, `fragment()` shown on each face, with the scale `scale`. */
+const cullScene = (name, modes, fragment = SIDES, scale = [0.8, 0.8, 0.8], rows = []) =>
+  modeScene(name, modes, fragment, facingAndTurned(scale), [
+    'spatial.fragment.FRONT_FACING',
+    'spatial.fragment.UV',
+    ...rows,
+  ]);
 
 /** An opaque quad in front, at the lower right, that the scene's own quad meets. */
 const ORANGE_IN_FRONT = {
@@ -453,53 +457,54 @@ const ORANGE_IN_FRONT = {
 };
 
 /** A depth test scene: the scene's quad, behind the orange quad. */
-const depthTestScene = (name, modes) => ({
-  name,
-  ...SIZE,
-  source: withModes(modes, 'ALBEDO = vec3(0.2, 0.5, UV.y);'),
-  camera: BACK,
-  mesh: QUAD,
-  object: { position: [-0.1, 0.1, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
-  others: [ORANGE_IN_FRONT],
-  rows: modeRows(modes, ['spatial.fragment.UV']),
-});
+const depthTestScene = (name, modes) =>
+  modeScene(
+    name,
+    modes,
+    'ALBEDO = vec3(0.2, 0.5, UV.y);',
+    {
+      object: { position: [-0.1, 0.1, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+      others: [ORANGE_IN_FRONT],
+    },
+    ['spatial.fragment.UV']
+  );
 
 /** Two crossing quads: the alpha pass draws the far one first, so its depth write cuts the near one. */
-const crossingScene = (name, modes) => ({
-  name,
-  ...SIZE,
-  source: withModes(modes, 'ALBEDO = vec3(0.1, UV.x * 0.5, 0.6);'),
-  camera: BACK,
-  mesh: QUAD,
-  object: { position: [-0.15, 0, 0.1], rotation: [0, 45, 0], scale: [1.2, 0.8, 1] },
-  others: [
+const crossingScene = (name, modes) =>
+  modeScene(
+    name,
+    modes,
+    'ALBEDO = vec3(0.1, UV.x * 0.5, 0.6);',
     {
-      object: { position: [0.15, 0, -0.2], rotation: [0, -45, 0], scale: [1.2, 0.8, 1] },
-      source: withModes(modes, 'ALBEDO = vec3(0.6, 0.2, UV.y * 0.5);'),
+      object: { position: [-0.15, 0, 0.1], rotation: [0, 45, 0], scale: [1.2, 0.8, 1] },
+      others: [
+        {
+          object: { position: [0.15, 0, -0.2], rotation: [0, -45, 0], scale: [1.2, 0.8, 1] },
+          source: withModes(modes, 'ALBEDO = vec3(0.6, 0.2, UV.y * 0.5);'),
+        },
+      ],
     },
-  ],
-  rows: modeRows(modes, ['spatial.fragment.UV']),
-});
+    ['spatial.fragment.UV']
+  );
 
 /** A blend scene: the scene's quad over the orange quad and the clear colour, each blended in. */
-const blendScene = (name, modes) => ({
-  name,
-  ...SIZE,
-  source: withModes(modes, 'ALBEDO = vec3(UV * 0.4, 0.3);'),
-  camera: BACK,
-  mesh: QUAD,
-  object: { position: [-0.1, 0.1, 0.5], rotation: [0, 0, 0], scale: [1, 1, 1] },
-  others: [{ ...ORANGE_IN_FRONT, object: { ...ORANGE_IN_FRONT.object, position: [0.25, -0.2, 0] } }],
-  rows: modeRows(modes, ['spatial.fragment.UV']),
-});
+const blendScene = (name, modes) =>
+  modeScene(
+    name,
+    modes,
+    'ALBEDO = vec3(UV * 0.4, 0.3);',
+    {
+      object: { position: [-0.1, 0.1, 0.5], rotation: [0, 0, 0], scale: [1, 1, 1] },
+      others: [{ ...ORANGE_IN_FRONT, object: { ...ORANGE_IN_FRONT.object, position: [0.25, -0.2, 0] } }],
+    },
+    ['spatial.fragment.UV']
+  );
 
 /** A shader that moves the sphere in `vertex()` under `modes`, and shows its normal. */
 const vertexSpaceScene = (name, modes, vertex, rows) => ({
   name,
   ...SIZE,
-  source: `shader_type spatial;
-render_mode ${['unshaded', ...modes].join(', ')};
-
+  source: `${unshadedHead(modes)}
 void vertex() {
 	${vertex}
 }

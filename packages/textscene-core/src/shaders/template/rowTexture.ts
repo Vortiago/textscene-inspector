@@ -173,6 +173,16 @@ export class RowTexture {
   }
 }
 
+/** The unpack state of a plain row upload, which three's last upload may have left otherwise. */
+const UNPACK_PLAIN = [
+  ['UNPACK_FLIP_Y_WEBGL', 0],
+  ['UNPACK_PREMULTIPLY_ALPHA_WEBGL', 0],
+  ['UNPACK_ALIGNMENT', 4],
+  ['UNPACK_ROW_LENGTH', 0],
+  ['UNPACK_SKIP_PIXELS', 0],
+  ['UNPACK_SKIP_ROWS', 0],
+] as const;
+
 /** three uploads textures only after a draw of another material (`WebGLRenderer.js:2760`): this uploads. */
 function uploadBetweenDraws(renderer: THREE.WebGLRenderer, texture: THREE.DataTexture): void {
   const properties = renderer.properties.get(texture) as {
@@ -190,16 +200,6 @@ function uploadBetweenDraws(renderer: THREE.WebGLRenderer, texture: THREE.DataTe
   gl.bindTexture(gl.TEXTURE_2D, bound);
   properties.__version = texture.version;
 }
-
-/** The unpack state of a plain row upload, which three's last upload may have left otherwise. */
-const UNPACK_PLAIN = [
-  ['UNPACK_FLIP_Y_WEBGL', 0],
-  ['UNPACK_PREMULTIPLY_ALPHA_WEBGL', 0],
-  ['UNPACK_ALIGNMENT', 4],
-  ['UNPACK_ROW_LENGTH', 0],
-  ['UNPACK_SKIP_PIXELS', 0],
-  ['UNPACK_SKIP_ROWS', 0],
-] as const;
 
 /** `base + words`. */
 function plus(base: Index, words: number): Index {
