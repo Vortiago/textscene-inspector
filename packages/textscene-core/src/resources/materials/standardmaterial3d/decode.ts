@@ -156,7 +156,7 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
       blendMode,
       alphaAntialiasing?.mode ?? AlphaAntiAliasing.ALPHA_ANTIALIASING_OFF
     ),
-    depthDraw: depthDrawMode,
+    depthDrawMode,
     isDepthTestEnabled: depthTest,
   });
   const { alphaPass, depthInAlphaPass } = membership;

@@ -1,5 +1,5 @@
 import type { ShaderNode } from '../language/shaderTree.js';
-import { everyExpressionIn } from '../language/treeWalk.js';
+import { variablesRead } from '../language/treeWalk.js';
 import { SKY_LIGHT_BUILT_IN } from '../../godot/rendering/environment/skyShader.js';
 import { isSamplerType } from '../language/types.js';
 import { shaderSamplers, type ShaderSampler } from '../uniforms/shaderSamplers.js';
@@ -35,7 +35,7 @@ const PASS_COLORS = [
 /** What `tree` reads, as Godot's compiler flags it, or nothing for a sky that draws Godot's default sky. */
 export function skyUsage(tree: ShaderNode | null): SkyUsage {
   if (tree === null) return NO_USAGE;
-  const names = builtInsRead(tree);
+  const names = variablesRead(tree, (variable) => variable.builtIn !== undefined);
   return {
     light: [...names].some((name) => SKY_LIGHT_BUILT_IN.test(name)),
     time: names.has('TIME'),
@@ -44,13 +44,4 @@ export function skyUsage(tree: ShaderNode | null): SkyUsage {
     passColors: PASS_COLORS.filter(({ builtIn }) => names.has(builtIn)).map(({ resolution }) => resolution),
     samplers: shaderSamplers(tree.uniforms),
   };
-}
-
-/** Every function's, as Godot's compiler writes the code of each (`shader_compiler.cpp:768-774`). */
-function builtInsRead(tree: ShaderNode): Set<string> {
-  const names = new Set<string>();
-  for (const definition of tree.functions)
-    for (const expression of everyExpressionIn(definition.body))
-      if (expression.kind === 'variable' && expression.builtIn) names.add(expression.name);
-  return names;
 }

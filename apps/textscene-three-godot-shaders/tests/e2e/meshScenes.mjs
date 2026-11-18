@@ -478,18 +478,21 @@ const depthTestScene = (name, modes) =>
     ['spatial.fragment.UV']
   );
 
+/** The lines of a fragment function's body, one statement each. */
+const fragmentOf = (...lines) => lines.join('\n\t');
+
 /** Two crossing quads: the alpha pass draws the far one first, so its depth write cuts the near one. */
-const crossingScene = (name, modes, extra = '', rows = []) =>
+const crossingScene = (name, modes, extra = [], rows = []) =>
   modeScene(
     name,
     modes,
-    `ALBEDO = vec3(0.1, UV.x * 0.5, 0.6);${extra}`,
+    fragmentOf('ALBEDO = vec3(0.1, UV.x * 0.5, 0.6);', ...extra),
     {
       object: { position: [-0.15, 0, 0.1], rotation: [0, 45, 0], scale: [1.2, 0.8, 1] },
       others: [
         {
           object: { position: [0.15, 0, -0.2], rotation: [0, -45, 0], scale: [1.2, 0.8, 1] },
-          source: withModes(modes, `ALBEDO = vec3(0.6, 0.2, UV.y * 0.5);${extra}`),
+          source: withModes(modes, fragmentOf('ALBEDO = vec3(0.6, 0.2, UV.y * 0.5);', ...extra)),
         },
       ],
     },
@@ -498,10 +501,13 @@ const crossingScene = (name, modes, extra = '', rows = []) =>
 
 /** Crossing quads cut below half height: an opaque cut writes depth, so the near quad hides the far one. */
 const cutScene = (name, cut, row) =>
-  crossingScene(name, [], `\n\tALPHA = UV.y;\n\t${cut}`, ['spatial.fragment.ALPHA', row]);
+  crossingScene(name, [], ['ALPHA = UV.y;', cut], ['spatial.fragment.ALPHA', row]);
+
+/** The blend scene's colour. */
+const BLEND_ALBEDO = 'ALBEDO = vec3(UV * 0.4, 0.3);';
 
 /** A blend scene: the scene's quad over the orange quad and the clear colour, each blended in. */
-const blendScene = (name, modes, fragment = 'ALBEDO = vec3(UV * 0.4, 0.3);', rows = []) =>
+const blendScene = (name, modes, fragment = BLEND_ALBEDO, rows = []) =>
   modeScene(
     name,
     modes,
@@ -513,38 +519,43 @@ const blendScene = (name, modes, fragment = 'ALBEDO = vec3(UV * 0.4, 0.3);', row
     ['spatial.fragment.UV', ...rows]
   );
 
-/** The blend scene's colour, with an alpha that runs from 0 at the left edge to 1 at the right. */
-const FADING = 'ALBEDO = vec3(UV * 0.4, 0.3);\n\tALPHA = UV.x;';
-
-/** A blend scene whose alpha runs across the quad, with `extra` after it and `rows` beside ALPHA's. */
-const alphaScene = (name, modes, extra = '', rows = []) =>
-  blendScene(name, modes, `${FADING}${extra ? `\n\t${extra}` : ''}`, ['spatial.fragment.ALPHA', ...rows]);
+/** A blend scene whose alpha runs from 0 at the left edge to 1 at the right, then the `extra` lines. */
+const alphaScene = (name, modes, extra = [], rows = []) =>
+  blendScene(name, modes, fragmentOf(BLEND_ALBEDO, 'ALPHA = UV.x;', ...extra), [
+    'spatial.fragment.ALPHA',
+    ...rows,
+  ]);
 
 /** Alpha 0 or 1 only: between, lavapipe dithers its one-sample mask and the transpiler cuts at 0.5. */
 const coverageScene = (name, modes) =>
-  blendScene(name, modes, 'ALBEDO = vec3(UV * 0.4, 0.3);\n\tALPHA = step(0.5, UV.x);', [
-    'spatial.fragment.ALPHA',
-  ]);
+  blendScene(name, modes, fragmentOf(BLEND_ALBEDO, 'ALPHA = step(0.5, UV.x);'), ['spatial.fragment.ALPHA']);
 
 /** Each fragment built-in of the alpha and each alpha antialiasing mode, against Godot. */
 const ALPHA_SCENES = [
   alphaScene('spatial-alpha', []),
   alphaScene('spatial-alpha-blend-mix', ['blend_mix']),
   alphaScene('spatial-alpha-blend-premul-alpha', ['blend_premul_alpha']),
-  alphaScene('spatial-alpha-premul-alpha-factor', ['blend_premul_alpha'], 'PREMUL_ALPHA_FACTOR = UV.y;', [
-    'spatial.fragment.PREMUL_ALPHA_FACTOR',
-  ]),
+  alphaScene(
+    'spatial-alpha-premul-alpha-factor',
+    ['blend_premul_alpha'],
+    ['PREMUL_ALPHA_FACTOR = UV.y;'],
+    ['spatial.fragment.PREMUL_ALPHA_FACTOR']
+  ),
   cutScene(
     'spatial-alpha-scissor',
     'ALPHA_SCISSOR_THRESHOLD = 0.5;',
     'spatial.fragment.ALPHA_SCISSOR_THRESHOLD'
   ),
   // Not crossing: a turned quad's matrix differs in its last bits, which the hash's `1e4 * sin` shows.
-  alphaScene('spatial-alpha-hash', [], 'ALPHA_HASH_SCALE = 1.0;', ['spatial.fragment.ALPHA_HASH_SCALE']),
+  alphaScene('spatial-alpha-hash', [], ['ALPHA_HASH_SCALE = 1.0;'], ['spatial.fragment.ALPHA_HASH_SCALE']),
   alphaScene(
     'spatial-alpha-antialiasing-edge',
     [],
-    'ALPHA_SCISSOR_THRESHOLD = 0.5;\n\tALPHA_ANTIALIASING_EDGE = 0.2;\n\tALPHA_TEXTURE_COORDINATE = UV * 64.0;',
+    [
+      'ALPHA_SCISSOR_THRESHOLD = 0.5;',
+      'ALPHA_ANTIALIASING_EDGE = 0.2;',
+      'ALPHA_TEXTURE_COORDINATE = UV * 64.0;',
+    ],
     [
       'spatial.fragment.ALPHA_SCISSOR_THRESHOLD',
       'spatial.fragment.ALPHA_ANTIALIASING_EDGE',

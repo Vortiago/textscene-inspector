@@ -11,7 +11,7 @@ const OPAQUE: ShaderPassFlags = {
   usesDepthPrepassAlpha: false,
   hasReadScreenAlpha: false,
   usesBlendAlpha: false,
-  depthDraw: DepthDrawMode.OPAQUE_ONLY,
+  depthDrawMode: DepthDrawMode.OPAQUE_ONLY,
   isDepthTestEnabled: true,
 };
 
@@ -47,7 +47,7 @@ describe('passMembership', () => {
   });
 
   it('puts depth_draw_never in the alpha pass', () => {
-    expect(passMembership({ ...OPAQUE, depthDraw: DepthDrawMode.DISABLED }).alphaPass).toBe(true);
+    expect(passMembership({ ...OPAQUE, depthDrawMode: DepthDrawMode.DISABLED }).alphaPass).toBe(true);
   });
 });
 

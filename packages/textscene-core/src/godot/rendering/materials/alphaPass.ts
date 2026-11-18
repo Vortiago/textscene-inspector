@@ -13,7 +13,7 @@ export interface ShaderPassFlags {
   /** `uses_screen_texture || uses_depth_texture || uses_normal_texture`. */
   readonly hasReadScreenAlpha: boolean;
   readonly usesBlendAlpha: boolean;
-  readonly depthDraw: EnumValue<typeof DepthDrawMode>;
+  readonly depthDrawMode: EnumValue<typeof DepthDrawMode>;
   /** `depth_test == DEPTH_TEST_ENABLED`: neither disabled nor inverted. */
   readonly isDepthTestEnabled: boolean;
 }
@@ -23,7 +23,7 @@ export function passMembership(flags: ShaderPassFlags): PassMembership {
   const hasBaseAlpha =
     (flags.usesAlpha && (!flags.usesAlphaClip || flags.usesAlphaAntialiasing)) || flags.hasReadScreenAlpha;
   const hasAlpha = hasBaseAlpha || flags.usesBlendAlpha;
-  const noDepthDraw = flags.depthDraw === DepthDrawMode.DISABLED;
+  const noDepthDraw = flags.depthDrawMode === DepthDrawMode.DISABLED;
   const noDepthTest = !flags.isDepthTestEnabled;
   return {
     alphaPass: hasAlpha || flags.hasReadScreenAlpha || noDepthDraw || noDepthTest,

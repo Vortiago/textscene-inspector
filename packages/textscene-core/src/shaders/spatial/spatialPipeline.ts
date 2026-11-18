@@ -9,8 +9,13 @@ import { BlendMode } from '../../godot/rendering/materials/blendMode.js';
 import { CullMode } from '../../godot/rendering/materials/cullMode.js';
 import { DepthDrawMode } from '../../godot/rendering/materials/depthDrawMode.js';
 import type { ShaderNode } from '../language/shaderTree.js';
-import { everyExpressionIn } from '../language/treeWalk.js';
-import { BLEND_MODES, CULL_MODES, DEPTH_DRAW_MODES } from '../material/renderModes.js';
+import { variablesRead } from '../language/treeWalk.js';
+import {
+  ALPHA_TO_COVERAGE_MODES,
+  BLEND_MODES,
+  CULL_MODES,
+  DEPTH_DRAW_MODES,
+} from '../material/renderModes.js';
 import {
   alphaToCoverageBlendState,
   godotBlendState,
@@ -47,11 +52,6 @@ const DEPTH_TESTS: Readonly<Record<string, DepthTest>> = {
   depth_test_inverted: 'inverted',
 };
 
-const ALPHA_ANTIALIASING_OF: Readonly<Record<string, EnumValue<typeof AlphaAntiAliasing>>> = {
-  alpha_to_coverage: AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE,
-  alpha_to_coverage_and_one: AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE_AND_TO_ONE,
-};
-
 function byWord<T extends number>(words: Readonly<Record<T, string>>): Readonly<Record<string, T>> {
   return Object.fromEntries(Object.entries(words).map(([value, word]) => [word, Number(value) as T]));
 }
@@ -59,6 +59,7 @@ function byWord<T extends number>(words: Readonly<Record<T, string>>): Readonly<
 const BLEND_MODE_OF = byWord(BLEND_MODES);
 const DEPTH_DRAW_MODE_OF = byWord(DEPTH_DRAW_MODES);
 const CULL_MODE_OF = byWord(CULL_MODES);
+const ALPHA_ANTIALIASING_OF = byWord(ALPHA_TO_COVERAGE_MODES);
 
 /** The hints whose texture Godot reads from the frame (`shader_compiler.cpp:926-940`). */
 const SCREEN_HINTS: ReadonlySet<string> = new Set([
@@ -72,7 +73,10 @@ export function spatialPipeline(tree: ShaderNode): SpatialPipeline {
   const modes = tree.renderModes.map((mode) => mode.name);
   const pick = <T>(table: Readonly<Record<string, T>>, fallback: T) =>
     modes.reduce((picked, mode) => table[mode] ?? picked, fallback);
-  const names = namesRead(tree);
+  const names = variablesRead(
+    tree,
+    (variable) => variable.builtIn !== undefined || variable.isUniform === true
+  );
   const reads = (...wanted: string[]) => wanted.some((name) => names.has(name));
   return {
     blendMode: pick(BLEND_MODE_OF, BlendMode.MIX),
@@ -88,34 +92,26 @@ export function spatialPipeline(tree: ShaderNode): SpatialPipeline {
   };
 }
 
-/** Each built-in and uniform a function names: the compiler's usage flags (`shader_compiler.cpp:914`). */
-function namesRead(tree: ShaderNode): ReadonlySet<string> {
-  const names = new Set<string>();
-  for (const definition of tree.functions)
-    for (const expression of everyExpressionIn(definition.body))
-      if (expression.kind === 'variable' && (expression.builtIn || expression.isUniform))
-        names.add(expression.name);
-  return names;
-}
-
 /** `uses_alpha_pass` (`scene_shader_forward_clustered.h:279`). */
 export function usesAlphaPass(pipeline: SpatialPipeline): boolean {
   return passMembership({
     ...pipeline,
     hasReadScreenAlpha: pipeline.readsScreen,
     usesBlendAlpha: usesBlendAlpha(pipeline.blendMode, pipeline.alphaAntialiasing),
-    depthDraw: pipeline.depthDrawMode,
     isDepthTestEnabled: pipeline.depthTest === 'enabled',
   }).alphaPass;
 }
+
+/** Godot turns alpha to coverage on in the transparent colour pass only (`:431-437`). */
+export const drawsAlphaToCoverage = (pipeline: SpatialPipeline): boolean =>
+  usesAlphaPass(pipeline) && turnsOnAlphaToCoverage(pipeline.alphaAntialiasing);
 
 /** Godot's pipeline (`scene_shader_forward_clustered.cpp:343-447`) as `material`'s draw state. */
 export function applySpatialPipeline(material: THREE.Material, pipeline: SpatialPipeline): void {
   const isAlphaPass = usesAlphaPass(pipeline);
   Object.assign(material, isAlphaPass ? alphaPassBlendState(pipeline) : { blending: THREE.NoBlending });
   material.transparent = isAlphaPass;
-  // Godot turns alpha to coverage on in the transparent colour pass only (`:431-437`).
-  material.alphaToCoverage = isAlphaPass && turnsOnAlphaToCoverage(pipeline.alphaAntialiasing);
+  material.alphaToCoverage = drawsAlphaToCoverage(pipeline);
   material.depthTest = pipeline.depthTest !== 'disabled';
   // `scene_shader_forward_clustered.cpp:355-358`, turned round for GL's depth, which is not reversed.
   material.depthFunc = pipeline.depthTest === 'inverted' ? THREE.GreaterDepth : THREE.LessEqualDepth;

@@ -27,7 +27,7 @@ import { coveredOnOneSample } from '../pipeline/singleSampleCoverage.js';
 import {
   applySpatialPipeline,
   spatialPipeline,
-  usesAlphaPass,
+  drawsAlphaToCoverage,
   type SpatialPipeline,
 } from './spatialPipeline.js';
 import type { TemplateStageNode } from '../template/templateTree.js';
@@ -172,7 +172,9 @@ function vulkanFragCoord(clip: Vec4): Node {
 /** The colour alpha to coverage draws, which a target of one sample cuts at alpha 0.5. */
 function alphaCovered(colour: Node, pipeline: SpatialPipeline): Node {
   const mode = pipeline.alphaAntialiasing;
-  return usesAlphaPass(pipeline) && turnsOnAlphaToCoverage(mode) ? coveredOnOneSample(colour, mode) : colour;
+  return drawsAlphaToCoverage(pipeline) && turnsOnAlphaToCoverage(mode)
+    ? coveredOnOneSample(colour, mode)
+    : colour;
 }
 
 function sceneMaterial(position: Node, colour: Node, shader: MaterialShader): BoundNodeMaterial {

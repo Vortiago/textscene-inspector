@@ -13,7 +13,7 @@ import {
   type AlphaAntialiasingCut,
 } from '../../godot/rendering/materials/alphaAntialiasing';
 import { alphaToCoverageBlendState, type MaterialBlendState } from '../../shaders/pipeline/blendState';
-import { drawsMultisampled } from '../../shaders/pipeline/singleSampleCoverage';
+import { coversOneSample } from '../../shaders/pipeline/singleSampleCoverage';
 import { ALPHA_HASH_CHUNK, ALPHA_TEST_CHUNK } from './surfaceAlphaPatch';
 import { perObject } from '../../utils/perObject';
 
@@ -131,8 +131,7 @@ const edgeUniformsOf = perObject(
  * turns no alpha to coverage on, so it never emulates it.
  */
 export function coverOneSampleTarget(this: THREE.Material, renderer: THREE.WebGLRenderer): void {
-  const coversOneSample = this.alphaToCoverage && !drawsMultisampled(renderer);
-  edgeUniformsOf(this).godotSingleSampleCoverage.value = coversOneSample
+  edgeUniformsOf(this).godotSingleSampleCoverage.value = coversOneSample(this, renderer)
     ? (alphaAntialiasingOf(this)?.mode ?? 0)
     : 0;
 }
