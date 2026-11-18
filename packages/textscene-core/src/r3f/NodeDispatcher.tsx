@@ -283,7 +283,8 @@ function PlainNode({
   // outside this walk.
   usePlaceViewport(isViewportBoundary(node.type) ? path : null);
 
-  if (!drawsInWorkspace(node.type, workspace)) return <UndrawnNodeChildren node={node} path={path} />;
+  if (!drawsInWorkspace(node.type, workspace))
+    return <UndrawnNodeChildren node={node} path={path} frames={childFrames} />;
 
   const sortsChildren = ysortsChildren(node);
   const inlineChildren = sortsChildren
@@ -492,7 +493,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
 }
 
 /** `children` in `frame`, or as they are where they read the paint pass themselves. */
-function InPaintFrame({
+export function InPaintFrame({
   frame,
   children,
 }: {
