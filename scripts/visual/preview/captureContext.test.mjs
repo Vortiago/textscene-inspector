@@ -72,6 +72,10 @@ describe('paintedOutChromeCss', () => {
     }
   });
 
+  it('hides the In-game notes, which no Godot frame holds', () => {
+    expect(paintedOutChromeCss({ canvas2D: false })).toContain('[data-testid="game-start-notes"]');
+  });
+
   it('paints out the 2D stage only for a 2D capture', () => {
     const css2D = paintedOutChromeCss({ canvas2D: true });
     expect(css2D).toContain(`[data-testid="${CANVAS_2D_TESTIDS.frame}"]`);

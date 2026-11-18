@@ -161,7 +161,7 @@ The limits of this release:
 
 With no `mode`, or `mode="3D"`, the view draws the scene as the Godot editor's 3D view does: an
 orbit camera, the preview sun and sky, and the gizmos. It draws 3D content. A scene of 2D nodes,
-such as `Control` or `Node2D`, draws nothing in it.
+such as `Control` or `Node2D`, draws nothing in it: use the 2D mode.
 
 `<TscnSceneProvider>` opens the scene from its text for a view and for `useSelection`:
 
@@ -179,6 +179,16 @@ export function SceneView({ source }: { source: string }) {
 }
 ```
 
+### The 2D mode
+
+With `mode="2D"`, the view draws the scene as the Godot editor's 2D view does: the canvas items and
+the Controls inside the frame of the project's window, with the gizmos. A drag pans the view, the
+wheel zooms it, and the buttons in the corner zoom it and fit the frame. It draws no 3D content.
+
+```tsx
+<TscnCanvas scene={scene} mode="2D" />
+```
+
 ## API
 
 The package exports these names.
@@ -194,7 +204,7 @@ The package exports these names.
   Godot cannot read.
 - `Variant` and `SceneValue` (types): what `variant` gives, and what `get` and `set` take.
 - `TscnCanvas`: the view. Its props are `scene` (a `Scene`, optional inside
-  `<TscnSceneProvider>`), `mode` (`'in-game'` or `'3D'`, default `'3D'`) and `className`.
+  `<TscnSceneProvider>`), `mode` (`'in-game'`, `'3D'` or `'2D'`, default `'3D'`) and `className`.
 - `TscnSceneProvider`: mounts what the view reads. Give it `scene` (a `Scene`), or `source` (the
   text of a `.tscn` scene), `provider` (a `ResourceProvider`) and `rootScenePath` (the `res://` path
   the scene opens under, optional). It takes `children`. A new `provider` starts a new resource

@@ -1,12 +1,6 @@
-/**
- * The controls over the viewport: Reset Camera and Freelook in 3D, Screenshot, the 3D/2D
- * switch, and the display toggles in `<DisplayMenu>`. It writes through
- * `useViewportMode()`. Screenshot downloads a PNG through the handler that the
- * active canvas's `ScreenshotBridge` registers.
- */
-
 import {
   useViewportMode,
+  RUNNING_GAME_TOGGLES,
   FRAME_ON_OPEN_STORAGE_KEY,
   SHOW_FOG_STORAGE_KEY,
   SHOW_GIZMOS_STORAGE_KEY,
@@ -73,66 +67,76 @@ interface DisplayToggleState {
   sceneHasEnvironment: boolean;
 }
 
+const NO_EFFECT_IN_GAME_TITLE = 'No effect in the In-game view, which draws as the game does';
+
+/** A Display toggle the running game overrides, disabled In-game. It keeps the user's value. */
+function editorOnlyToggle(mode: ViewportMode, toggle: DisplayToggle): DisplayToggle {
+  return mode === 'in-game' ? { ...toggle, title: NO_EFFECT_IN_GAME_TITLE, disabled: true } : toggle;
+}
+
 /**
  * The overlays the Display menu offers, and their state. At module scope, so
  * the 3D-only ones are one readable list.
  */
 function buildDisplayToggles(state: DisplayToggleState): readonly DisplayToggle[] {
+  // The key is the setting the toggle shows: only a setting the running game overrides compiles.
+  const editorOnly = (_setting: keyof typeof RUNNING_GAME_TOGGLES, toggle: DisplayToggle) =>
+    editorOnlyToggle(state.mode, toggle);
   return [
-    {
+    editorOnly('showGizmos', {
       label: 'Gizmos',
       title: "Show the editor gizmos, faint on a node that is not selected, as Godot's View Gizmos does",
       checked: state.showGizmos,
       onChange: state.setShowGizmos,
-    },
-    {
+    }),
+    editorOnly('showCollisions', {
       label: 'Collisions',
       title: 'Show CollisionShape3D wireframes',
       checked: state.showCollisions,
       onChange: state.setShowCollisions,
-    },
-    {
+    }),
+    editorOnly('showLabels', {
       label: 'Labels',
       title: 'Show Label3D text in the viewport',
       checked: state.showLabels,
       onChange: state.setShowLabels,
-    },
-    {
+    }),
+    editorOnly('showNavigation', {
       label: 'Navigation',
       title: 'Show NavigationRegion overlays',
       checked: state.showNavigation,
       onChange: state.setShowNavigation,
-    },
+    }),
     {
       label: 'Performance',
       title: 'Show the frame rate and the time each render step takes',
       checked: state.showPerformance,
       onChange: state.setShowPerformance,
     },
-    // 3D-only: the grid, the framing preference, the fog and both preview-lighting
-    // stand-ins have no meaning over the 2D Control overlay.
-    ...(state.mode === '3D'
-      ? ([
-          {
+    // The grid, the framing, the fog and the preview lighting mean nothing over the 2D Control overlay.
+    ...(state.mode === '2D'
+      ? []
+      : [
+          editorOnly('frameOnOpen', {
             label: 'Frame on open',
             title:
               'Frame the whole scene when it loads. Off matches Godot, which opens at a fixed orbit — press F to frame.',
             checked: state.frameOnOpen,
             onChange: state.setFrameOnOpen,
-          },
-          {
+          }),
+          editorOnly('showGrid', {
             label: 'Grid',
             title: 'Show a ground-plane reference grid',
             checked: state.showGrid,
             onChange: state.setShowGrid,
-          },
-          {
+          }),
+          editorOnly('showFog', {
             label: 'Fog',
             title: "Draw the Environment's depth and volumetric fog. Off skips the fog passes.",
             checked: state.showFog,
             onChange: state.setShowFog,
-          },
-          {
+          }),
+          editorOnly('showPreviewSun', {
             label: 'Preview Sun',
             title: state.sceneHasSun
               ? 'Scene contains DirectionalLight3D. Preview disabled.'
@@ -140,8 +144,8 @@ function buildDisplayToggles(state: DisplayToggleState): readonly DisplayToggle[
             checked: state.showPreviewSun && !state.sceneHasSun,
             disabled: state.sceneHasSun,
             onChange: state.setShowPreviewSun,
-          },
-          {
+          }),
+          editorOnly('showPreviewEnvironment', {
             label: 'Preview Sky',
             title: state.sceneHasEnvironment
               ? 'Scene contains WorldEnvironment. Preview disabled.'
@@ -149,9 +153,8 @@ function buildDisplayToggles(state: DisplayToggleState): readonly DisplayToggle[
             checked: state.showPreviewEnvironment && !state.sceneHasEnvironment,
             disabled: state.sceneHasEnvironment,
             onChange: state.setShowPreviewEnvironment,
-          },
-        ] satisfies DisplayToggle[])
-      : []),
+          }),
+        ]),
   ];
 }
 

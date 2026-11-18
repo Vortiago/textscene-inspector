@@ -9,6 +9,8 @@ import { ROOT_VIEWPORT_PATH } from '../contexts/EnclosingViewportContext';
 import type { ViewportDescription } from '../viewportRender/viewportDescription';
 import type { ResourceProvider } from '../../resources/ResourceProvider';
 import { settleLoads } from '../testing/settleLoads';
+import { useSelection } from '../contexts/SelectionContext';
+import { useEffect } from 'react';
 import '../nodes';
 
 const passes: { path: string; viewport: ViewportDescription }[] = [];
@@ -86,10 +88,18 @@ current = true
 [node name="Box" type="CSGBox3D" parent="Box2/SubViewport"]
 `;
 
-async function mountGame(source = SCENE) {
+/** A selection made in the scene tree panel, which shares the view's providers. */
+function SelectInTree({ path }: { path: string }) {
+  const { setSelectedNodePath } = useSelection();
+  useEffect(() => setSelectedNodePath(path), [setSelectedNodePath, path]);
+  return null;
+}
+
+async function mountGame(source = SCENE, selectedPath?: string) {
   const scene = openScene({ source, provider });
   const renderer = await ReactThreeTestRenderer.create(
     <TscnSceneProvider scene={scene}>
+      {selectedPath && <SelectInTree path={selectedPath} />}
       <GameViewContents />
     </TscnSceneProvider>
   );
@@ -194,6 +204,14 @@ describe('the In-game mode', () => {
       )
     );
     expect(handled.map((node) => node.props.name)).toEqual([]);
+  });
+
+  it('draws no box around a node selected in the scene tree', async () => {
+    const renderer = await mountGame(SCENE, 'Main/Box');
+    // The box is added to the three.js scene by hand, so only a walk of that scene finds it.
+    const names: string[] = [];
+    renderer.scene.instance.traverse((object) => names.push(object.name));
+    expect(names).not.toContain('tscn-selection-highlight');
   });
 
   it('binds no listener on the window', async () => {

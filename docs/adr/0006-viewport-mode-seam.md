@@ -50,3 +50,23 @@ component.
 - Auto-select never picks In-game and never leaves it. In-game hides the gizmos and the navigation
   that a user needs to edit a new scene, so a user picks it by hand. The choice persists as the
   other modes do.
+
+## Amendment: the shell mounts the one view in every mode
+
+The 2D mode is a mode of the view too: `<TscnCanvas mode="2D">` mounts `Canvas2DStage` on the scene
+the view reads. So the package draws all three modes, and `ViewportArea` mounts one `<TscnCanvas>`
+in the shell's mode. It passes no `scene`: the view reads the shell's providers, so the scene tree,
+the selection and the passes stay one set. The switch between stages lives in the view.
+`ViewportArea` keeps only the shell's own chrome: the controls help, the freelook readout, the
+"Has 2D content" hint and the In-game notes.
+
+- In In-game the shell lists what the view cannot show of the game's first frame. "Scripts do not
+  run" counts the nodes of the live tree that hold a script, since Godot readies each one before
+  the first frame (`node.cpp:273`). "No Camera3D is current" shows when the root window holds 3D
+  content and no current Camera3D, since Godot then draws no 3D (`renderer_viewport.cpp:362`).
+  Both read `gameStartFacts`, one function over the live tree and the scene's current camera.
+- The toolbar disables each Display toggle that the running game overrides
+  (`RUNNING_GAME_TOGGLES`, the list the editor hint reads) in In-game, and keeps its value for the
+  other modes. Performance stays live.
+- A selection made in the scene tree stays selected in In-game. The view draws no box for it.
+
