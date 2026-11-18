@@ -80,6 +80,8 @@ const CanvasOverWorld = lazy(() =>
 export interface OffscreenViewportPassProps extends NodeComponentProps {
   path: string;
   size: Vector2;
+  /** The pixels Godot renders, before the cap: the 3D camera's aspect. */
+  renderSize: Vector2;
   /** The viewport's visible rect, which a Camera2D centres in. `size` is the capped target. */
   layoutSize: Vector2;
   /** The canvas units the target shows, which frame the canvas: `layoutSize` unless a window scales its content. */
@@ -105,6 +107,7 @@ export function OffscreenViewportPass({
   node,
   path,
   size,
+  renderSize,
   layoutSize,
   viewSize,
   kind,
@@ -267,8 +270,8 @@ export function OffscreenViewportPass({
     if (backdrop) renderCanvas(backdrop, isBehindWorld(behindTo!));
     const keepsColor = toneMap?.environment?.background.mode === BackgroundMode.BG_KEEP;
 
-    // The target's aspect, not the 2D override's (`renderer_viewport.cpp:318`). The canvas gets its own back.
-    const aspect = viewportAspect(size);
+    // Godot's rendered size, not the 2D override (`renderer_viewport.cpp:318`). The canvas gets its own back.
+    const aspect = viewportAspect(renderSize);
     const restoreAspect = camera === canvasCamera ? fittedAspect(camera) : null;
     if (camera && fittedAspect(camera) !== aspect) fitToAspect(camera, aspect);
 
@@ -320,7 +323,7 @@ export function OffscreenViewportPass({
     worldRender,
     clearColor,
     transparentBg,
-    size,
+    renderSize,
     canvasScene,
     renderCanvas,
     backdropTarget,

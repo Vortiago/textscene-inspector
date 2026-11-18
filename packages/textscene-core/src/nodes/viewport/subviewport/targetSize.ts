@@ -11,6 +11,7 @@ import type { TscnNode } from '../../../parser/types.js';
 import { windowContentScale } from '../../windows/window/contentScale.js';
 import type { WindowProperties } from '../../windows/window/types.js';
 import { isEmbeddedWindow } from '../../../r3f/viewportRender/viewportBoundary.js';
+import { warnOnce } from '../../../utils/warnOnce.js';
 import type { SubViewportProperties } from './types.js';
 
 /**
@@ -39,6 +40,8 @@ function flooredExtent(raw: number): number {
 
 /** The three sizes a viewport pass reads. */
 export interface ViewportPassSizes {
+  /** The pixels Godot renders, whose aspect the 3D camera takes (`renderer_viewport.cpp:318`). */
+  render: Vector2;
   /** The render target's pixels, capped. */
   target: Vector2;
   /** The rect Controls lay out in: `get_visible_rect()`. */
@@ -55,6 +58,7 @@ export function viewportPassSizes(node: TscnNode, forced: ViewportRect | null): 
   const scale = windowContentScale(size, (node.properties as WindowProperties).content_scale);
   const render = viewportSize(scale.renderSize, null);
   return {
+    render,
     target: cappedTargetSize(render),
     layout: scale.layoutSize,
     view: { x: render.x / scale.canvasScale, y: render.y / scale.canvasScale },
@@ -67,8 +71,20 @@ function subViewportPassSizes(size: Vector2, properties: SubViewportProperties):
   const hasOverride = !vector2Equals(override, VECTOR2_ZERO);
   const isStretched = stretches && override.x > 0 && override.y > 0;
   return {
+    render: size,
     target: cappedTargetSize(size),
     layout: hasOverride ? override : size,
     view: isStretched ? override : size,
   };
+}
+
+/** Logs once for each node whose target the cap makes smaller than Godot renders it. */
+export function warnOfCappedTarget(node: TscnNode, { render, target }: ViewportPassSizes): void {
+  if (vector2Equals(render, target)) return;
+  warnOnce(
+    node,
+    'capped-target',
+    `${node.name}: the ${render.x} x ${render.y} viewport is drawn at ${target.x} x ${target.y}, ` +
+      'the largest texture WebGL allocates'
+  );
 }

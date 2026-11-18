@@ -3,13 +3,14 @@
  * forced rect wins over the authored `size` (`subviewport_container.cpp:94`), each axis floors at 2
  * (`viewport.cpp:1120`, `p_size.maxi(2)`), and the previewer caps it at `MAX_TEXTURE_EXTENT`.
  */
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import * as logger from '../../../logger';
 import type { TscnNode } from '../../../parser/types';
 import type { Vector2 } from '../../../godot/math/vector';
 import type { ViewportRect } from '../../../r3f/contexts/ViewportRectContext';
 import { heading } from '../../../parser/testing/parserKit';
 import { parseWindow } from '../../windows/window/parser';
-import { viewportPassSizes, viewportSize } from './targetSize';
+import { viewportPassSizes, viewportSize, warnOfCappedTarget } from './targetSize';
 import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
 
 function targetOf(size: Vector2, forced: ViewportRect | null): Vector2 {
@@ -39,6 +40,16 @@ describe('viewportPassSizes: the target', () => {
     });
   });
 
+  it('keeps the size Godot renders beside the capped target', () => {
+    const properties = {
+      size: { x: 65536, y: 100 },
+      size_2d_override: { x: 0, y: 0 },
+      size_2d_override_stretch: false,
+    };
+    const node = { name: 'View', type: 'SubViewport', children: [], properties } as unknown as TscnNode;
+    expect(viewportPassSizes(node, null).render).toEqual({ x: 65536, y: 100 });
+  });
+
   it('gives a non-finite axis the 2-pixel floor', () => {
     expect(targetOf({ x: Number.NaN, y: Number.POSITIVE_INFINITY }, null)).toEqual({ x: 2, y: 2 });
   });
@@ -57,6 +68,7 @@ describe('viewportPassSizes: a 2D override', () => {
 
   it('stretches the override over the target, so the canvas shows the override (`viewport.cpp:1103-1105`)', () => {
     expect(sizesOf({ x: 1152, y: 648 }, true)).toEqual({
+      render: { x: 800, y: 450 },
       target: { x: 800, y: 450 },
       layout: { x: 1152, y: 648 },
       view: { x: 1152, y: 648 },
@@ -65,6 +77,7 @@ describe('viewportPassSizes: a 2D override', () => {
 
   it('lays out in the override but draws the canvas 1:1 without the stretch (`:1212-1214`)', () => {
     expect(sizesOf({ x: 1152, y: 648 }, false)).toEqual({
+      render: { x: 800, y: 450 },
       target: { x: 800, y: 450 },
       layout: { x: 1152, y: 648 },
       view: { x: 800, y: 450 },
@@ -73,6 +86,7 @@ describe('viewportPassSizes: a 2D override', () => {
 
   it('does not stretch an override with a zero axis, yet lays out in it', () => {
     expect(sizesOf({ x: 1152, y: 0 }, true)).toEqual({
+      render: { x: 800, y: 450 },
       target: { x: 800, y: 450 },
       layout: { x: 1152, y: 0 },
       view: { x: 800, y: 450 },
@@ -94,9 +108,37 @@ describe('viewportPassSizes: an embedded window', () => {
     });
     const node = { name: 'Win', type: 'Window', children: [], properties } as unknown as TscnNode;
     expect(viewportPassSizes(node, null)).toEqual({
+      render: { x: 240, y: 160 },
       target: { x: 240, y: 160 },
       layout: { x: 120, y: 80 },
       view: { x: 120, y: 80 },
     });
+  });
+});
+
+describe('warnOfCappedTarget', () => {
+  const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+  afterEach(() => warn.mockClear());
+
+  function nodeSized(size: Vector2): TscnNode {
+    const properties = { size, size_2d_override: { x: 0, y: 0 }, size_2d_override_stretch: false };
+    return { name: 'View', type: 'SubViewport', children: [], properties } as unknown as TscnNode;
+  }
+
+  it('logs once the size Godot renders and the size WebGL draws', () => {
+    const node = nodeSized({ x: 65536, y: 100 });
+    warnOfCappedTarget(node, viewportPassSizes(node, null));
+    warnOfCappedTarget(node, viewportPassSizes(node, null));
+    expect(warn.mock.calls).toEqual([
+      [
+        `View: the 65536 x 100 viewport is drawn at ${MAX_TEXTURE_EXTENT} x 100, the largest texture WebGL allocates`,
+      ],
+    ]);
+  });
+
+  it('logs nothing for a target under the cap', () => {
+    const node = nodeSized({ x: 800, y: 450 });
+    warnOfCappedTarget(node, viewportPassSizes(node, null));
+    expect(warn).not.toHaveBeenCalled();
   });
 });

@@ -463,6 +463,11 @@ polygon = PackedVector2Array(0, 0, 10, 0, 10, 10)
     expect(fittedAspect(camera)).toBeCloseTo(320 / 240, 6);
   });
 
+  it('fits its camera to the size Godot renders, not to the target WebGL caps', async () => {
+    const camera = await viewportCameraAfterTwoPasses(null, 'size = Vector2i(65536, 16384)');
+    expect(fittedAspect(camera)).toBeCloseTo(4, 6);
+  });
+
   it('gives the canvas its camera back when the canvas renders through it too (edge case)', async () => {
     const camera = await viewportCameraAfterTwoPasses(<CanvasRendersThrough name="Camera3D" />);
     expect(fittedAspect(camera)).not.toBeCloseTo(320 / 240, 6);
