@@ -1,7 +1,8 @@
-import type { ShadingLanguageError } from '../language/shadingLanguageError.js';
-
-/** Godot's refusal of a text, or the transpiler's for a construct it does not port yet. */
-export type ShaderRefusal = Pick<ShadingLanguageError, 'message' | 'owner'>;
+/** Godot's refusal of a text, or the transpiler's for a construct it does not port yet, with its owner. */
+export interface ShaderRefusal {
+  readonly message: string;
+  readonly owner?: string;
+}
 
 /** Why a shader draws Godot's default instead: a refusal of its text, or a defect, which is no refusal. */
 export type ShaderUnDrawn = { readonly refusal: ShaderRefusal } | { readonly failure: unknown };
