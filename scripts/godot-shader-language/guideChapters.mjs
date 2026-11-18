@@ -731,6 +731,12 @@ const SKY_CHAPTER = {
       tsl: 'the defines of the template variant, and a render target for each pass',
     },
     {
+      heading: '`ALPHA`',
+      rows: (row) => row.id === 'sky.sky.ALPHA',
+      what: "`ALPHA` starts at 1.0 and goes to the alpha of the pass's colour (`sky.glsl:235`, `:274`). Godot draws the sky with no blending. The half and quarter passes keep it in their RGBA16F targets, out of 0 to 1 too, and a later pass reads it as `HALF_RES_COLOR.a` or `QUARTER_RES_COLOR.a`. The radiance octmap keeps it too. Behind the scene the pass writes alpha 0 (`sky.glsl:309-311`).",
+      tsl: "the template's local `alpha`",
+    },
+    {
       heading: '`AT_CUBEMAP_PASS`',
       rows: (row) => row.id === 'sky.global.AT_CUBEMAP_PASS',
       what: '`AT_CUBEMAP_PASS` is true while Godot draws the sky into the radiance octmap that reflections read, and false behind the scene (`sky.glsl:119-123`). `transpileSky` with the `octmap` pass gives that variant.',
