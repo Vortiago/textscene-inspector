@@ -6,7 +6,7 @@ import type { PrepassDraw } from '../pipeline/depthPrepass.js';
 import type { Renderer } from '../preprocessor/renderingMethod.js';
 import { BoundNodeMaterial, type MaterialShader } from '../uniforms/boundMaterial.js';
 import { spatialPassMembership, type DepthFlag, type SpatialPipeline } from './spatialPipeline.js';
-import type { EmittedStages } from './transpileSpatial.js';
+import { setPosition, type EmittedStages } from './emittedStages.js';
 
 const THRESHOLD = 'scene_data_block.data.opaque_prepass_threshold';
 
@@ -92,7 +92,7 @@ function builtAtFirstDraw(build: () => THREE.Material): PrepassDraw {
 
 /** Godot's default material in the depth variant: the surface's vertex stage, and back faces culled. */
 function defaultDepthMaterial(material: BoundNodeMaterial, program: PrepassProgram): BoundNodeMaterial {
-  const depth = depthMaterial(material, program.shader, program.depthStages().position);
+  const depth = depthMaterial(material, program.shader, program.depthStages());
   depth.fragmentNode = vec4(0) as unknown as Node;
   depth.side = THREE.FrontSide;
   return depth;
@@ -101,7 +101,7 @@ function defaultDepthMaterial(material: BoundNodeMaterial, program: PrepassProgr
 /** The surface's depth variant: alpha cut at the threshold (`scene_forward_clustered.glsl:1426`). */
 function ownDepthMaterial(material: BoundNodeMaterial, program: PrepassProgram): BoundNodeMaterial {
   const stages = program.depthStages();
-  const depth = depthMaterial(material, program.shader, stages.position);
+  const depth = depthMaterial(material, program.shader, stages);
   depth.fragmentNode = stages.fragment();
   depth.side = material.side;
   // Only the depth variant reads it.
@@ -114,10 +114,10 @@ function ownDepthMaterial(material: BoundNodeMaterial, program: PrepassProgram):
 function depthMaterial(
   material: BoundNodeMaterial,
   shader: MaterialShader,
-  position: Node
+  stages: EmittedStages
 ): BoundNodeMaterial {
   const depth = new BoundNodeMaterial(shader);
-  depth.vertexNode = position;
+  setPosition(depth, stages);
   Object.assign(depth, {
     colorWrite: false,
     depthWrite: true,

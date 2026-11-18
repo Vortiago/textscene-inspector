@@ -37,6 +37,7 @@ import {
   type SpatialPipeline,
 } from './spatialPipeline.js';
 import type { TemplateStageNode } from '../template/templateTree.js';
+import { declaresInvariantPosition, setPosition, type EmittedStages } from './emittedStages.js';
 import { TreeMemo } from '../template/treeMemo.js';
 import { setPrepassDraw } from '../pipeline/depthPrepass.js';
 import { spatialPrepassDraw } from './spatialPrepass.js';
@@ -95,7 +96,7 @@ export function transpileParsedSpatial(
   const colourStages = emitStages(SCENE.defines);
   const colour = alphaCovered(colourStages.fragment(), pipeline);
   const shader = { parameters: [...parameters.values()], source: shaderSource(parsed, options.file ?? '') };
-  const material = sceneMaterial(colourStages.position, colour, shader);
+  const material = sceneMaterial(colourStages, colour, shader);
   applySpatialPipeline(material, pipeline);
   const renderer = rendererOf(options.renderingMethod ?? 'forward_plus');
   const program = {
@@ -112,12 +113,6 @@ export function transpileParsedSpatial(
     buffers: resources.buffers.byName,
     parameters,
   };
-}
-
-/** A stage pair of one variant: the clip position, and the fragment's colour, emitted when asked. */
-export interface EmittedStages {
-  readonly position: Node;
-  readonly fragment: () => Node;
 }
 
 /** Emits a variant's stages anew each call: three caches function code by node (`NodeBuilder.js:2759`). */
@@ -156,6 +151,7 @@ function stageEmitter(
     };
     return {
       position: glClipPosition(vertex.result, vulkanClip),
+      isPositionInvariant: declaresInvariantPosition(vertexStage),
       fragment: () =>
         emitTemplateStage(linked('fragment', defines), fragmentInputs, fragmentResult, resources).result,
     };
@@ -235,9 +231,9 @@ function alphaCovered(colour: Node, pipeline: SpatialPipeline): Node {
   return drawsAlphaToCoverage(pipeline) ? coveredOnOneSample(colour, pipeline.alphaAntialiasing) : colour;
 }
 
-function sceneMaterial(position: Node, colour: Node, shader: MaterialShader): BoundNodeMaterial {
+function sceneMaterial(stages: EmittedStages, colour: Node, shader: MaterialShader): BoundNodeMaterial {
   const material = new BoundNodeMaterial(shader);
-  material.vertexNode = position;
+  setPosition(material, stages);
   material.fragmentNode = colour;
   return material;
 }
