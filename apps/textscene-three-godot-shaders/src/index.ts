@@ -5,6 +5,7 @@
  */
 
 export {
+  createDepthPrepass,
   DEFAULT_TIME_ROLLOVER_SECONDS,
   GODOT_VERSION,
   glVaryingSlots,
@@ -24,6 +25,8 @@ export {
   writeSpatialBindings,
 } from '@textscene/core/shaders';
 export type {
+  DepthPrepass,
+  DepthPrepassOptions,
   GodotShading,
   GodotShadingOptions,
   NodeOutput,

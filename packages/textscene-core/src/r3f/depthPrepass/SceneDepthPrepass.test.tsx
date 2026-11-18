@@ -2,18 +2,19 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { renderHook } from '@testing-library/react';
 import { useSceneDepthPrepass } from './SceneDepthPrepass';
-import type { OpaqueSentinel } from '../opaqueSentinel';
+import type { OpaqueSentinel } from '../../shaders/pipeline/opaqueSentinel';
 
-const sentinelsIn = (scene: THREE.Scene) => scene.children.filter((child) => child.name === 'DepthPrepass');
+const sentinelsIn = (scene: THREE.Scene) =>
+  scene.children.filter((child) => child.name === 'DepthPrepass' || child.name === 'DepthPrepassEnd');
 
 describe('useSceneDepthPrepass', () => {
-  it('mounts one sentinel in the scene', () => {
+  it('mounts the first and the last sentinel in the scene', () => {
     const scene = new THREE.Scene();
     renderHook(() => useSceneDepthPrepass(scene));
-    expect(sentinelsIn(scene)).toHaveLength(1);
+    expect(sentinelsIn(scene)).toHaveLength(2);
   });
 
-  it('removes and disposes the sentinel on unmount', () => {
+  it('removes and disposes the sentinels on unmount', () => {
     const scene = new THREE.Scene();
     const { unmount } = renderHook(() => useSceneDepthPrepass(scene));
     const [sentinel] = sentinelsIn(scene) as OpaqueSentinel[];

@@ -565,6 +565,13 @@ const ALPHA_SCENES = [
       'spatial.fragment.ALPHA_TEXTURE_COORDINATE',
     ]
   ),
+  // The prepass writes depth where ALPHA reaches 0.99, so there the near quad cuts the far one.
+  crossingScene(
+    'spatial-depth-prepass-alpha',
+    ['depth_prepass_alpha'],
+    ['ALPHA = min(UV.y * 1.5, 1.0);'],
+    ['spatial.fragment.ALPHA']
+  ),
   coverageScene('spatial-alpha-to-coverage', ['alpha_to_coverage']),
   coverageScene('spatial-alpha-to-coverage-and-one', ['alpha_to_coverage_and_one']),
   coverageScene('spatial-alpha-to-coverage-blend-add', ['blend_add', 'alpha_to_coverage']),
@@ -575,8 +582,19 @@ const ALPHA_SCENES = [
 /** A quad whose DEPTH runs from far at the left edge to near at the right, so the orange quad cuts it. */
 const DEPTH_FRAGMENT = fragmentOf('ALBEDO = vec3(0.2, 0.5, UV.y);', 'DEPTH = UV.x;');
 
-/** Writing VERTEX keeps the shader off the shared prepass material, so its own DEPTH draws. */
+/** The quad's DEPTH: the shared prepass material writes the rasterised depth, so the EQUAL test drops it. */
 const DEPTH_SCENES = [
+  modeScene(
+    'spatial-depth',
+    [],
+    DEPTH_FRAGMENT,
+    {
+      object: { position: [-0.1, 0.1, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+      others: [ORANGE_IN_FRONT],
+    },
+    ['spatial.fragment.UV', 'spatial.fragment.DEPTH']
+  ),
+  // Writing VERTEX keeps the shader off the shared prepass material, so its own DEPTH draws.
   {
     ...modeScene(
       'spatial-depth-own-prepass',

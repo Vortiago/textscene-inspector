@@ -20,8 +20,13 @@ import {
   type ParsedShader,
   type ShaderOptions,
 } from '../language/parseShader.js';
-import { emitTemplateStage, type WrittenBuiltIn } from '../template/emitTemplate.js';
-import { linkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
+import {
+  emitTemplateStage,
+  type ProgramResources,
+  type StageResult,
+  type WrittenBuiltIn,
+} from '../template/emitTemplate.js';
+import { linkedProgram, type LinkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
 import type { RowTexture } from '../template/rowTexture.js';
 import { instanceWords } from './instanceData.js';
 import { coveredOnOneSample } from '../pipeline/singleSampleCoverage.js';
@@ -33,9 +38,15 @@ import {
 } from './spatialPipeline.js';
 import type { TemplateStageNode } from '../template/templateTree.js';
 import { TreeMemo } from '../template/treeMemo.js';
+import { setPrepassDraw } from '../pipeline/depthPrepass.js';
+import { spatialPrepassDraw } from './spatialPrepass.js';
+import { rendererOf } from '../preprocessor/renderingMethod.js';
 import { BoundNodeMaterial, type MaterialShader } from '../uniforms/boundMaterial.js';
 import type { ProjectSampling } from '../uniforms/samplerState.js';
 import type { TranspiledUniform } from '../uniforms/transpiledUniform.js';
+
+/** `SHADER_VERSION_DEPTH_PASS`, which the depth prepass draws (`scene_shader_forward_clustered.cpp:644`). */
+const DEPTH_DEFINES = '\n#define MODE_RENDER_DEPTH\n';
 
 /** The colour pass with no pass flags (`scene_shader_forward_clustered.cpp:640-690`): no defines. */
 const SCENE: ProgramTemplate = {
@@ -80,33 +91,19 @@ export function transpileParsedSpatial(
     options.sampling
   );
   const pipeline = spatialPipeline(parsed.tree);
-  const vulkanClip = varyingProperty('vec4', 'godot_clip_position') as unknown as Vec4;
-  const fragCoord = vulkanFragCoord(vulkanClip);
-  const vertexStage = linked('vertex');
-  const vertex = emitTemplateStage(
-    vertexStage,
-    new Map([
-      ...parameterValues,
-      ...vertexAttributes(vertexStage),
-      ['gl_VertexIndex', int(vertexIndex) as unknown as Node],
-      // One draw for each object, so the first instance of the draw is the object.
-      ['gl_InstanceIndex', int(0) as unknown as Node],
-    ]),
-    { name: 'gl_Position', type: 'vec4' },
-    resources
-  );
-  const fragment = emitTemplateStage(
-    linked('fragment'),
-    new Map([...parameterValues, ['gl_FragCoord', fragCoord], ['gl_FrontFacing', godotFrontFacing()]]),
-    { name: 'frag_color', type: 'vec4', beside: pipeline.writesDepth ? [fragDepth(fragCoord)] : [] },
-    resources
-  );
-  const colour = alphaCovered(fragment.result, pipeline);
-  const material = sceneMaterial(glClipPosition(vertex.result, vulkanClip), colour, {
-    parameters: [...parameters.values()],
-    source: shaderSource(parsed, options.file ?? ''),
-  });
+  const emitStages = stageEmitter(linked, resources, parameterValues, pipeline);
+  const colourStages = emitStages(SCENE.defines);
+  const colour = alphaCovered(colourStages.fragment(), pipeline);
+  const shader = { parameters: [...parameters.values()], source: shaderSource(parsed, options.file ?? '') };
+  const material = sceneMaterial(colourStages.position, colour, shader);
   applySpatialPipeline(material, pipeline);
+  const renderer = rendererOf(options.renderingMethod ?? 'forward_plus');
+  const program = {
+    depthStages: () => emitStages(DEPTH_DEFINES),
+    shader,
+    uniforms: resources.uniforms.byName,
+  };
+  setPrepassDraw(material, spatialPrepassDraw(material, pipeline, renderer, program));
   resources.buffers.byName.get('instances')?.writeEachDraw(instanceWordsOf);
   return {
     material,
@@ -114,6 +111,54 @@ export function transpileParsedSpatial(
     textures: resources.textures,
     buffers: resources.buffers.byName,
     parameters,
+  };
+}
+
+/** A stage pair of one variant: the clip position, and the fragment's colour, emitted when asked. */
+export interface EmittedStages {
+  readonly position: Node;
+  readonly fragment: () => Node;
+}
+
+/** Emits a variant's stages anew each call: three caches function code by node (`NodeBuilder.js:2759`). */
+function stageEmitter(
+  linked: LinkedProgram['linked'],
+  resources: ProgramResources,
+  parameterValues: LinkedProgram['parameterValues'],
+  pipeline: SpatialPipeline
+): (defines: string) => EmittedStages {
+  return (defines) => {
+    const vertexStage = linked('vertex', defines);
+    const vertexInputs = new Map([
+      ...parameterValues,
+      ...vertexAttributes(vertexStage),
+      ['gl_VertexIndex', int(vertexIndex) as unknown as Node],
+      // One draw for each object, so the first instance of the draw is the object.
+      ['gl_InstanceIndex', int(0) as unknown as Node],
+    ]);
+    const vulkanClip = varyingProperty('vec4', 'godot_clip_position') as unknown as Vec4;
+    const fragCoord = vulkanFragCoord(vulkanClip);
+    const vertex = emitTemplateStage(
+      vertexStage,
+      vertexInputs,
+      { name: 'gl_Position', type: 'vec4' },
+      resources
+    );
+    const fragmentInputs = new Map([
+      ...parameterValues,
+      ['gl_FragCoord', fragCoord],
+      ['gl_FrontFacing', godotFrontFacing()],
+    ]);
+    const fragmentResult: StageResult = {
+      name: 'frag_color',
+      type: 'vec4',
+      beside: pipeline.writesDepth ? [fragDepth(fragCoord)] : [],
+    };
+    return {
+      position: glClipPosition(vertex.result, vulkanClip),
+      fragment: () =>
+        emitTemplateStage(linked('fragment', defines), fragmentInputs, fragmentResult, resources).result,
+    };
   };
 }
 

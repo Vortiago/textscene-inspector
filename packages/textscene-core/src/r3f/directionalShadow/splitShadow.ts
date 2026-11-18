@@ -13,7 +13,7 @@ import {
   type DirectionalShadowAtlasRect,
   type DirectionalShadowFade,
 } from '../../godot/rendering/lights/directionalShadow.js';
-import { cameraFrustum } from '../cameraFrustum.js';
+import { cameraFrustum } from '../../shaders/pipeline/cameraFrustum';
 import { confineShadowScissor, type LightShadowInternals } from '../sharedAtlasShadow.js';
 import { holdDirectionalShadowAtlas, releaseDirectionalShadowAtlas } from './shadowAtlas.js';
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { createDepthPrepassSentinel } from './depthPrepass';
+import { createSceneDepthPrepass } from './depthPrepass';
 import {
   DRAWN_OPAQUE_PREPASS,
   FADED_OPAQUE_PREPASS,
@@ -50,9 +50,9 @@ CAMERA.updateProjectionMatrix();
 
 /** The prepass draws a sentinel makes when three draws it in a scene of `objects`. */
 function prepassDraws(...objects: THREE.Object3D[]): PrepassDraw[] {
-  const sentinel = createDepthPrepassSentinel();
+  const { first: sentinel, last } = createSceneDepthPrepass();
   const scene = new THREE.Scene();
-  scene.add(...objects, sentinel);
+  scene.add(...objects, sentinel, last);
   scene.updateMatrixWorld(true);
   const draws: PrepassDraw[] = [];
   const args = [recordingRenderer(draws), scene, CAMERA] as unknown as Parameters<
@@ -62,7 +62,7 @@ function prepassDraws(...objects: THREE.Object3D[]): PrepassDraw[] {
   return draws;
 }
 
-describe('the depth prepass a sentinel draws', () => {
+describe('the previewer’s depth prepass', () => {
   it("draws a prepass surface's depth alone, cut at the depth prepass threshold", () => {
     const mesh = meshOf(surface(DRAWN_OPAQUE_PREPASS));
     const [draw] = prepassDraws(mesh);
@@ -80,8 +80,13 @@ describe('the depth prepass a sentinel draws', () => {
     expect(prepassDraws(meshOf(material))[0]!.material.alphaTest).toBe(0.995);
   });
 
+  it('draws an opaque surface with its own program', () => {
+    const material = new THREE.MeshBasicMaterial();
+    expect(prepassDraws(meshOf(material))[0]!.material).toBe(material);
+  });
+
   it('draws only the groups of a mesh whose surfaces draw a prepass', () => {
-    const mesh = meshOf([new THREE.MeshBasicMaterial(), surface(DRAWN_OPAQUE_PREPASS)]);
+    const mesh = meshOf([surface(FADED_OPAQUE_PREPASS), surface(DRAWN_OPAQUE_PREPASS)]);
     mesh.geometry.clearGroups();
     mesh.geometry.addGroup(0, 6, 0);
     mesh.geometry.addGroup(6, 6, 1);
@@ -122,9 +127,16 @@ describe('the depth prepass a sentinel draws', () => {
   });
 });
 
-describe('createDepthPrepassSentinel', () => {
-  it('sorts before every opaque draw, so the prepass precedes the opaque pass', () => {
-    expect(createDepthPrepassSentinel().renderOrder).toBe(Number.MIN_SAFE_INTEGER);
+describe('createSceneDepthPrepass', () => {
+  it('tests the opaque colour pass EQUAL, as Forward+ does', () => {
+    const material = new THREE.MeshBasicMaterial();
+    const { first, last } = createSceneDepthPrepass();
+    const scene = new THREE.Scene().add(meshOf(material), first, last);
+    const args = [recordingRenderer([]), scene, CAMERA] as unknown as Parameters<
+      THREE.Object3D['onBeforeRender']
+    >;
+    first.mesh.onBeforeRender(...args);
+    expect(material.depthFunc).toBe(THREE.EqualDepth);
   });
 });
 
@@ -135,7 +147,7 @@ describe('the depth prepass under a frame profile', () => {
       renderBufferDirect: () => (time += 1),
       ...profiledRendererMembers(),
     } as unknown as THREE.WebGLRenderer;
-    const sentinel = createDepthPrepassSentinel();
+    const { first: sentinel } = createSceneDepthPrepass();
     const scene = new THREE.Scene();
     scene.add(meshOf(surface(DRAWN_OPAQUE_PREPASS)), meshOf(surface(DRAWN_OPAQUE_PREPASS)), sentinel);
     scene.updateMatrixWorld(true);

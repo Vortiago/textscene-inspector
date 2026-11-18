@@ -15,7 +15,7 @@ import {
   type SampleLocation,
 } from '../../godot/rendering/msaaSampleLocations.js';
 import { perObject } from '../../utils/perObject.js';
-import { drawSurface, visibleSurfaces, type Surface } from '../opaqueSurfaces.js';
+import { drawSurface, visibleSurfaces, type Surface } from '../../shaders/pipeline/opaqueSurfaces';
 import { beginStep, endStep } from '../frameProfile/frameProfile.js';
 import { SCREEN_SPACE_STATE, screenSpaceState } from './screenSpaceState.js';
 import { showBestFitNormals } from './bestFitNormals.js';

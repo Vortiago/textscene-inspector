@@ -885,9 +885,15 @@ const SPATIAL_CHAPTER = {
       tsl: "the template's alpha cut and `compute_alpha_antialiasing_edge`",
     },
     {
+      heading: 'The depth prepass and `depth_prepass_alpha`',
+      rows: (row) => row.id === 'spatial render_mode depth_prepass_alpha',
+      what: "Godot's Forward+ draws a depth prepass before the opaque colour pass, which then tests EQUAL and writes no depth (`render_forward_clustered.cpp:2081-2112`, `scene_shader_forward_clustered.cpp:448-453`). The prepass draws each opaque surface, and each alpha surface with `depth_prepass_alpha` or alpha antialiasing (`scene_shader_forward_clustered.h:288-293`). A surface is shared unless it writes `VERTEX`, `POSITION`, `MODELVIEW_MATRIX`, `PROJECTION_MATRIX` or `Z_CLIP_SCALE`, or uses `discard`, an alpha cut, alpha antialiasing, point size or a stencil reference. Render modes `depth_prepass_alpha`, `particle_trails`, `world_vertex_coords`, `wireframe` and a cull mode other than `cull_back` also give a surface its own depth draw (`scene_shader_forward_clustered.h:295-298`). The prepass draws a shared surface with Godot's default material, and any other surface with its own program. In the prepass `opaque_prepass_threshold` is 0.99, so `depth_prepass_alpha` writes depth only where `ALPHA` reaches 0.99 (`scene_forward_clustered.glsl:1427-1431`).",
+      tsl: "`createDepthPrepass`, whose first object draws the prepass with the surface's vertex stage or its own program and no colour",
+    },
+    {
       heading: '`DEPTH`',
       rows: (row) => row.id === 'spatial.fragment.DEPTH',
-      what: "`DEPTH` is the fragment's depth, which starts at `FRAGCOORD.z`: Godot's depth, 1 at the near plane and 0 at the far plane (`scene_shader_forward_clustered.cpp:770`). An opaque shader that writes no `VERTEX`, `POSITION` or matrix in `vertex()`, uses no `discard` and keeps `cull_back` draws its depth prepass with Godot's default material, then its colour pass tests EQUAL against that depth (`scene_shader_forward_clustered.h:295`, `scene_shader_forward_clustered.cpp:448-453`). Such a shader shows only where `DEPTH` equals the rasterised depth. Any other shader draws its prepass with its own `DEPTH`.",
+      what: "`DEPTH` is the fragment's depth, which starts at `FRAGCOORD.z`: Godot's depth, 1 at the near plane and 0 at the far plane (`scene_shader_forward_clustered.cpp:770`). The depth prepass draws a shared surface with Godot's default material, which writes the rasterised depth, and the opaque colour pass tests EQUAL against it. So an opaque shared shader shows only where `DEPTH` equals the rasterised depth. A shader with its own depth draw writes its own `DEPTH` in the prepass. The section on the depth prepass names the shared surfaces.",
       tsl: "`gl_FragDepth` as 1 minus `DEPTH`, since GL's depth is not reversed",
     },
     {

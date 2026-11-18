@@ -1852,7 +1852,7 @@ spatial render_mode blend_premul_alpha	render mode	servers/rendering/shader_type
 spatial render_mode depth_draw_opaque	render mode	servers/rendering/shader_types.cpp:234	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
 spatial render_mode depth_draw_always	render mode	servers/rendering/shader_types.cpp:234	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
 spatial render_mode depth_draw_never	render mode	servers/rendering/shader_types.cpp:234	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
-spatial render_mode depth_prepass_alpha	render mode	servers/rendering/shader_types.cpp:235	#1831	forward_clustered/scene_forward_clustered.glsl					
+spatial render_mode depth_prepass_alpha	render mode	servers/rendering/shader_types.cpp:235	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
 spatial render_mode depth_test_default	render mode	servers/rendering/shader_types.cpp:236	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
 spatial render_mode depth_test_disabled	render mode	servers/rendering/shader_types.cpp:236	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
 spatial render_mode depth_test_inverted	render mode	servers/rendering/shader_types.cpp:236	#1831	forward_clustered/scene_forward_clustered.glsl				native	native

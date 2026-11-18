@@ -28,6 +28,7 @@ const PUBLIC_VALUE_EXPORTS = [
   'ShadingLanguageError',
   'SkyResolutionPasses',
   'TranslatorFault',
+  'createDepthPrepass',
   'glVaryingSlots',
   'installGodotShading',
   'textToVariant',
@@ -39,6 +40,8 @@ const PUBLIC_VALUE_EXPORTS = [
   'writeSpatialBindings',
 ];
 const PUBLIC_TYPE_EXPORTS = [
+  'DepthPrepass',
+  'DepthPrepassOptions',
   'GodotShading',
   'GodotShadingOptions',
   'NodeOutput',

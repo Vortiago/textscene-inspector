@@ -6,11 +6,13 @@ import {
   type AlphaToCoverageMode,
 } from '../../godot/rendering/materials/alphaAntialiasing.js';
 import { passMembership, usesBlendAlpha } from '../../godot/rendering/materials/alphaPass.js';
+import type { PassMembership } from '../../godot/rendering/shadowPass.js';
 import { BlendMode } from '../../godot/rendering/materials/blendMode.js';
 import { CullMode } from '../../godot/rendering/materials/cullMode.js';
 import { DepthDrawMode } from '../../godot/rendering/materials/depthDrawMode.js';
 import type { ShaderNode, UniformHint } from '../language/shaderTree.js';
-import { variablesRead } from '../language/treeWalk.js';
+import { writtenNames } from '../language/assignment.js';
+import { everyStatement, variablesRead } from '../language/treeWalk.js';
 import {
   ALPHA_TO_COVERAGE_MODES,
   BLEND_MODES,
@@ -47,6 +49,8 @@ export interface SpatialPipeline {
   readonly readsScreen: boolean;
   /** A function names DEPTH, renamed `gl_FragDepth` (`scene_shader_forward_clustered.cpp:770`). */
   readonly writesDepth: boolean;
+  /** Each flag that is set of those that keep a surface off the shared depth material. */
+  readonly depthFlags: ReadonlySet<DepthFlag>;
 }
 
 const DEPTH_TESTS: Readonly<Record<string, DepthTest>> = {
@@ -71,6 +75,40 @@ const SCREEN_HINTS: ReadonlySet<UniformHint> = new Set<UniformHint>([
   'hint_normal_roughness_texture',
 ]);
 
+/** A flag of Godot's that can keep a surface off the shared depth material, by Godot's name. */
+export type DepthFlag =
+  | 'uses_particle_trails'
+  | 'writes_modelview_or_projection'
+  | 'uses_vertex'
+  | 'uses_position'
+  | 'uses_discard'
+  | 'uses_depth_prepass_alpha'
+  | 'uses_alpha_clip'
+  | 'uses_alpha_antialiasing'
+  | 'cull_not_back'
+  | 'uses_point_size'
+  | 'uses_world_coordinates'
+  | 'wireframe'
+  | 'uses_z_clip_scale'
+  | 'stencil_enabled';
+
+/** The render mode behind each flag that one sets (`scene_shader_forward_clustered.cpp:119-128`). */
+const MODE_FLAGS: Readonly<Record<string, DepthFlag>> = {
+  particle_trails: 'uses_particle_trails',
+  depth_prepass_alpha: 'uses_depth_prepass_alpha',
+  world_vertex_coords: 'uses_world_coordinates',
+  wireframe: 'wireframe',
+};
+
+/** The built-in whose write sets each flag (`scene_shader_forward_clustered.cpp:148-152`). */
+const WRITE_FLAGS: Readonly<Record<string, DepthFlag>> = {
+  MODELVIEW_MATRIX: 'writes_modelview_or_projection',
+  PROJECTION_MATRIX: 'writes_modelview_or_projection',
+  VERTEX: 'uses_vertex',
+  POSITION: 'uses_position',
+  Z_CLIP_SCALE: 'uses_z_clip_scale',
+};
+
 /** The pipeline state of `tree`. Godot's parser refuses two modes of one group, so each group has one. */
 export function spatialPipeline(tree: ShaderNode): SpatialPipeline {
   const modes = tree.renderModes.map((mode) => mode.name);
@@ -81,7 +119,7 @@ export function spatialPipeline(tree: ShaderNode): SpatialPipeline {
     (variable) => variable.builtIn !== undefined || variable.isUniform === true
   );
   const reads = (...wanted: string[]) => wanted.some((name) => names.has(name));
-  return {
+  const pipeline = {
     blendMode: pick(BLEND_MODE_OF, BlendMode.MIX),
     depthDrawMode: pick(DEPTH_DRAW_MODE_OF, DepthDrawMode.OPAQUE_ONLY),
     depthTest: pick(DEPTH_TESTS, 'enabled'),
@@ -94,17 +132,55 @@ export function spatialPipeline(tree: ShaderNode): SpatialPipeline {
     writesDepth: reads('DEPTH'),
     readsScreen: tree.uniforms.some((uniform) => SCREEN_HINTS.has(uniform.hint) && names.has(uniform.name)),
   };
+  const usesPointSize = reads('POINT_SIZE', 'POINT_COORD');
+  return { ...pipeline, depthFlags: depthFlags(tree, modes, { ...pipeline, usesPointSize }) };
 }
 
-/** `uses_alpha_pass` (`scene_shader_forward_clustered.h:279`). */
-function usesAlphaPass(pipeline: SpatialPipeline): boolean {
+type FlagSources = Pick<SpatialPipeline, 'cullMode' | 'usesAlphaClip' | 'usesAlphaAntialiasing'> & {
+  readonly usesPointSize: boolean;
+};
+
+function depthFlags(
+  tree: ShaderNode,
+  modes: readonly string[],
+  sources: FlagSources
+): ReadonlySet<DepthFlag> {
+  const written = new Set(tree.functions.flatMap((definition) => [...writtenNames(definition.body)]));
+  const isSet: Readonly<Record<string, boolean>> = {
+    uses_discard: usesDiscard(tree),
+    uses_alpha_clip: sources.usesAlphaClip,
+    uses_alpha_antialiasing: sources.usesAlphaAntialiasing,
+    cull_not_back: sources.cullMode !== CullMode.BACK,
+    uses_point_size: sources.usesPointSize,
+    // `stencil_referencei != -1` (`scene_shader_forward_clustered.cpp:208`).
+    stencil_enabled: tree.stencilReference !== undefined,
+  };
+  return new Set<DepthFlag>([
+    ...modes.flatMap((mode) => MODE_FLAGS[mode] ?? []),
+    ...[...written].flatMap((name) => WRITE_FLAGS[name] ?? []),
+    ...(Object.keys(isSet) as DepthFlag[]).filter((flag) => isSet[flag]),
+  ]);
+}
+
+function usesDiscard(tree: ShaderNode): boolean {
+  return tree.functions.some((definition) =>
+    [...everyStatement(definition.body)].some(
+      (statement) => statement.kind === 'control flow' && statement.flow === 'FLOW_OP_DISCARD'
+    )
+  );
+}
+
+/** `uses_alpha_pass` and `uses_depth_in_alpha_pass` (`scene_shader_forward_clustered.h:279-293`). */
+export function spatialPassMembership(pipeline: SpatialPipeline): PassMembership {
   return passMembership({
     ...pipeline,
     hasReadScreenAlpha: pipeline.readsScreen,
     usesBlendAlpha: usesBlendAlpha(pipeline.blendMode, pipeline.alphaAntialiasing),
     isDepthTestEnabled: pipeline.depthTest === 'enabled',
-  }).alphaPass;
+  });
 }
+
+const usesAlphaPass = (pipeline: SpatialPipeline): boolean => spatialPassMembership(pipeline).alphaPass;
 
 /** Alpha to coverage: on in the transparent colour pass only (`scene_shader_forward_clustered.cpp:431`). */
 export const drawsAlphaToCoverage = (

@@ -5,7 +5,8 @@
  */
 
 import * as THREE from 'three';
-import { cameraFrustum } from './cameraFrustum';
+import { cameraFrustum } from './cameraFrustum.js';
+import { setNodeObject } from './nodeObject.js';
 
 /** One draw of a mesh: its material, and its draw group, null for a mesh of one material. */
 export interface Surface {
@@ -49,8 +50,7 @@ function meshSurfaces(mesh: THREE.Mesh, isDrawn: (material: THREE.Material) => b
 }
 
 /**
- * Draws `surface` with `drawn`, between its mesh's own draw hooks, which pose it and skip a draw its
- * range culls, as three's colour draw runs them (r187 `WebGLRenderer.js:2171-2196`).
+ * Draws `surface` with `drawn` between the hooks three runs around a draw (`WebGLRenderer.js:2168`).
  *
  * @canonical A draw of one surface outside three's render list
  */
@@ -64,9 +64,11 @@ export function drawSurface(
   const { mesh, material, group } = surface;
   // three's hooks and draw take a null group for a mesh of one material, typed as a group.
   const hookGroup = group as unknown as THREE.Group;
+  setNodeObject(renderer, mesh, drawn);
   mesh.onBeforeRender(renderer, scene, camera, mesh.geometry, material, hookGroup);
   mesh.modelViewMatrix.multiplyMatrices(camera.matrixWorldInverse, mesh.matrixWorld);
   mesh.normalMatrix.getNormalMatrix(mesh.modelViewMatrix);
+  drawn.onBeforeRender(renderer, scene, camera, mesh.geometry, mesh, hookGroup);
   renderer.renderBufferDirect(camera, scene, mesh.geometry, drawn, mesh, group as THREE.GeometryGroup);
   mesh.onAfterRender(renderer, scene, camera, mesh.geometry, material, hookGroup);
 }

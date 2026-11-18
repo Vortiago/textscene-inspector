@@ -9,6 +9,7 @@ import type { Node } from 'three/webgpu';
 import { driverLog, TranslatorFault } from './fault/translatorFault.js';
 import { shaderErrorReport, type ProgramNames } from './fault/shaderErrorReport.js';
 import { boundMaterials } from './uniforms/boundMaterial.js';
+import { hasNodesHandler, registerNodesHandler } from './pipeline/nodeObject.js';
 
 /**
  * What a node material writes. `display` is the handler's own form: the renderer's tone mapping,
@@ -23,22 +24,16 @@ interface OutputHook {
 }
 
 /**
- * The renderers that hold a handler. Written only by `installNodesHandler`. three keeps the
- * handler in a closure with no getter (r187 `WebGLRenderer.js:1077-1082`), so this is the one record.
- */
-const withHandler = new WeakSet<THREE.WebGLRenderer>();
-
-/**
  * Gives `renderer` a nodes handler before its first frame. A second call for the same renderer
  * changes nothing, whatever its `output`.
  */
 export function installNodesHandler(renderer: THREE.WebGLRenderer, output: NodeOutput = 'display'): void {
-  if (withHandler.has(renderer)) return;
+  if (hasNodesHandler(renderer)) return;
   const handler = new WebGLNodesHandler();
   if (output === 'linear') (handler as unknown as OutputHook).getOutputCallback = (outputNode) => outputNode;
   renderer.setNodesHandler(handler);
   reportTranslatorFaults(renderer);
-  withHandler.add(renderer);
+  registerNodesHandler(renderer, handler);
 }
 
 type ShaderErrorHook = (

@@ -11,6 +11,7 @@ import {
   splitTopLevel,
 } from '../godot/string/string.js';
 import { boolSlotValue } from '../godot/variant/variantBool.js';
+import { DEPTH_PREPASS_DISABLED_VENDORS } from '../godot/rendering/depthPrepassVendors.js';
 import type { ProjectSampling } from '../shaders/uniforms/samplerState.js';
 import type { RenderingMethod } from '../shaders/preprocessor/renderingMethod.js';
 import { dataDirectoryPath, extensionListPath } from '../godot/project/project.js';
@@ -464,6 +465,11 @@ function projectEmbedsSubwindows(settings: ProjectSettings | null): boolean {
  */
 export function projectDrawsDepthPrepass(settings: ProjectSettings | null): boolean {
   return boolSlotValue(settings?.['rendering/driver/depth_prepass/enable']) ?? true;
+}
+
+/** `rendering/driver/depth_prepass/disable_for_vendors`, which only gl_compatibility reads. */
+export function projectDepthPrepassDisabledVendors(settings: ProjectSettings | null): string {
+  return settings?.['rendering/driver/depth_prepass/disable_for_vendors'] ?? DEPTH_PREPASS_DISABLED_VENDORS;
 }
 
 /**

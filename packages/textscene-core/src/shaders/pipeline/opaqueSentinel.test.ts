@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { WebGLRenderList } from 'three/src/renderers/webgl/WebGLRenderLists.js';
 import { describe, expect, it } from 'vitest';
 import { createFirstOpaqueSentinel, createLastOpaqueSentinel } from './opaqueSentinel';
-import { nearestGroupOrder } from './testing/paintOrder';
+import { nearestGroupOrder } from '../../r3f/testing/paintOrder';
 
 const CAMERA = new THREE.PerspectiveCamera();
 
