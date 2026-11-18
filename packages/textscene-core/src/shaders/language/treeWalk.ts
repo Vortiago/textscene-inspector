@@ -6,6 +6,7 @@ import type {
   FunctionNode,
   ShaderNode,
   Statement,
+  VariableNode,
 } from './shaderTree.js';
 
 /** Whether `statement` is the empty statement `;`. */
@@ -118,6 +119,15 @@ export function* everyStatement(block: BlockNode): Generator<Statement> {
 export function* everyExpressionIn(block: BlockNode): Generator<Expression> {
   for (const statement of everyStatement(block))
     for (const expression of statementExpressions(statement)) yield* everyExpression(expression);
+}
+
+/** The name of each variable a function of `shader` reads that `keeps` keeps (`shader_compiler.cpp:914`). */
+export function variablesRead(shader: ShaderNode, keeps: (variable: VariableNode) => boolean): Set<string> {
+  const names = new Set<string>();
+  for (const definition of shader.functions)
+    for (const expression of everyExpressionIn(definition.body))
+      if (expression.kind === 'variable' && keeps(expression)) names.add(expression.name);
+  return names;
 }
 
 /** Every expression of `expression`, itself first. */

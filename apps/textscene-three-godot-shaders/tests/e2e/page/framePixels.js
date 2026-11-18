@@ -1,8 +1,13 @@
 import * as THREE from 'three';
 
-/** The pixels of `scene` from `camera` at `width` by `height`, in a target of `colorSpace`. */
-export function framePixels(renderer, scene, camera, { width, height, colorSpace = THREE.NoColorSpace }) {
-  const target = new THREE.WebGLRenderTarget(width, height);
+/** The pixels of `scene` from `camera` at `width` by `height`, in a target of `colorSpace` and `samples`. */
+export function framePixels(
+  renderer,
+  scene,
+  camera,
+  { width, height, colorSpace = THREE.NoColorSpace, samples = 0 }
+) {
+  const target = new THREE.WebGLRenderTarget(width, height, { samples });
   target.texture.colorSpace = colorSpace;
   renderer.setRenderTarget(target);
   renderer.render(scene, camera);

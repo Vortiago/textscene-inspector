@@ -9,7 +9,8 @@ import { parseColorOrUndefined } from '../../../utils/colorParser';
 import { sRGBToLinearRGB } from '../../../utils/colorSpace';
 import { boolOr, enumOr, floatOr, intOr, vec3Or } from '../../../parser/valueParsers';
 import { parseVector3 } from '../../../parser/vectors';
-import { drawsInShadowPass, type PassMembership } from '../../../godot/rendering/shadowPass';
+import { drawsInShadowPass } from '../../../godot/rendering/shadowPass';
+import { passMembership, usesBlendAlpha } from '../../../godot/rendering/materials/alphaPass';
 import { TEXTURE_CHANNELS, TextureChannel } from '../../../godot/rendering/materials/textureChannel';
 import { DiffuseMode } from '../../../godot/rendering/materials/diffuseMode';
 import { SpecularMode } from '../../../godot/rendering/materials/specularMode';
@@ -147,11 +148,16 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     refractionEnabled,
     alphaAntialiasing !== null
   );
-  const membership = alphaPassMembership(alphaFlags, {
-    blendMode,
-    refractionEnabled,
+  const membership = passMembership({
+    ...alphaFlags,
+    // Refraction samples `screen_texture`, and refraction or proximity fade samples `depth_texture`.
+    hasReadScreenAlpha: refractionEnabled || alphaFlags.proximityFade,
+    usesBlendAlpha: usesBlendAlpha(
+      blendMode,
+      alphaAntialiasing?.mode ?? AlphaAntiAliasing.ALPHA_ANTIALIASING_OFF
+    ),
     depthDrawMode,
-    depthTest,
+    isDepthTestEnabled: depthTest,
   });
   const { alphaPass, depthInAlphaPass } = membership;
   const castsShadow = drawsInShadowPass(membership);
@@ -294,13 +300,6 @@ function readsStencilOf(properties: Record<string, string>): boolean {
   );
 }
 
-interface PassInputs {
-  blendMode: EnumValue<typeof BlendMode>;
-  refractionEnabled: boolean;
-  depthDrawMode: EnumValue<typeof DepthDrawMode>;
-  depthTest: boolean;
-}
-
 /** The alpha usage flags of a surface's generated shader, in Godot's own variable names. */
 interface ShaderAlphaFlags {
   usesAlpha: boolean;
@@ -369,32 +368,6 @@ function decodeAlphaAntialiasing(
   if (transparency === Transparency.ALPHA_SCISSOR) return scissorAntialiasing(mode, scissorThreshold, edge);
   if (transparency === Transparency.ALPHA_HASH) return hashAntialiasing(mode, edge);
   return null;
-}
-
-/**
- * Godot's `ShaderData::uses_alpha_pass()` and `uses_depth_in_alpha_pass()`
- * (`scene_shader_forward_clustered.h:279-293`), in its own variable names so the two diff
- * line by line. `transparency` alone never decides either.
- */
-function alphaPassMembership(alphaFlags: ShaderAlphaFlags, inputs: PassInputs): PassMembership {
-  const { usesAlpha, usesAlphaClip, usesAlphaAntialiasing, usesDepthPrepassAlpha, proximityFade } =
-    alphaFlags;
-  const { blendMode, refractionEnabled, depthDrawMode, depthTest } = inputs;
-
-  // Refraction samples `screen_texture`, and refraction or proximity fade samples
-  // `depth_texture`.
-  const hasReadScreenAlpha = refractionEnabled || proximityFade;
-  const hasBaseAlpha = (usesAlpha && (!usesAlphaClip || usesAlphaAntialiasing)) || hasReadScreenAlpha;
-  // `uses_blend_alpha` is true for ADD, SUB, MUL and PREMULT_ALPHA, which puts an
-  // additive material in the alpha pass whatever its `transparency` says.
-  const hasAlpha = hasBaseAlpha || blendMode !== BlendMode.MIX;
-  const noDepthDraw = depthDrawMode === DepthDrawMode.DISABLED;
-  const noDepthTest = !depthTest;
-
-  return {
-    alphaPass: hasAlpha || hasReadScreenAlpha || noDepthDraw || noDepthTest,
-    depthInAlphaPass: (usesDepthPrepassAlpha || usesAlphaAntialiasing) && !(noDepthDraw || noDepthTest),
-  };
 }
 
 /**
