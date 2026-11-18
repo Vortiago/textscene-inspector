@@ -202,12 +202,14 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the depth prepass base, cloned per surface and never drawn itself, and never mutated',
   'packages/textscene-core/src/r3f/canvasGroup/compositeMaterial.ts':
     'one material per group buffer, its shaders fixed at construction; a render moves only its colour uniform',
-  'packages/textscene-core/src/r3f/opaqueSentinel.ts':
+  'packages/textscene-core/src/shaders/pipeline/opaqueSentinel.ts':
     "an opaque-list sentinel's material, which writes nothing and is never mutated",
   'packages/textscene-core/src/shaders/sky/transpileSky.ts':
     'the shader package draws a sky for a plain three.js app with no React: one material per transpiled sky, its nodes fixed at construction, and the caller moves only uniforms',
   'packages/textscene-core/src/shaders/spatial/transpileSpatial.ts':
     'the shader package draws a mesh for a plain three.js app with no React: one material per transpiled spatial shader, its nodes fixed at construction, and the caller moves only uniforms and row textures',
+  'packages/textscene-core/src/shaders/spatial/spatialPrepass.ts':
+    "the depth prepass draw of a transpiled spatial shader, built once at its first draw from the surface's nodes and disposed with it; the caller moves only uniforms",
   'packages/textscene-core/src/r3f/controls/native/text/canvasTextPainter.ts':
     'one material per built text run, replaced and disposed together with its geometry; its single `defines` write happens before the material has ever been rendered',
   'packages/textscene-core/src/r3f/materials/useOneSurfaceStartingMaterial.ts':
@@ -304,7 +306,7 @@ const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
 const CONSTRUCTED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
   'packages/textscene-core/src/r3f/gameView/presentRootTarget.ts':
     'the present quad: built once per renderer and drawn outside React, so the material never passes through it',
-  'packages/textscene-core/src/r3f/opaqueSentinel.ts':
+  'packages/textscene-core/src/shaders/pipeline/opaqueSentinel.ts':
     'an opaque-list sentinel: its material writes nothing and is never mutated, and its owner removes it with its scene',
   'packages/textscene-core/src/resources/sky/build.ts':
     'the sky cube: built once, consumed by a single cube render, disposed with the environment',
