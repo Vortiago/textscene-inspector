@@ -58,6 +58,22 @@ export function useCurrentCameras3D(viewportPaths: readonly string[]): readonly 
   );
 }
 
+/** The current Camera3D and Camera2D of each viewport at `viewportPaths`: what In-game draws. */
+export function useCurrentCameraPaths(viewportPaths: readonly string[]): ReadonlySet<string> {
+  const { scene, subscribe } = useCameraSubscription();
+  const snapshot = useSyncExternalStore(subscribe, () =>
+    viewportPaths
+      .flatMap((path) => {
+        if (!scene) return [];
+        const viewport = sceneViewportOf(path);
+        return [scene.currentCamera3D(viewport), scene.currentCamera2D(viewport)];
+      })
+      .filter((path): path is string => path !== null)
+      .join(SNAPSHOT_SEPARATOR)
+  );
+  return useMemo(() => new Set(snapshot === '' ? [] : snapshot.split(SNAPSHOT_SEPARATOR)), [snapshot]);
+}
+
 /**
  * The path of the Camera3D the viewport at `viewportPath` draws through, null for none or with no scene.
  *
