@@ -103,7 +103,12 @@ function ChainDraw({
       // The node's layers mask, which a decal's and a reflection probe's masks filter on.
       userData={visualLayersUserData(godotLayers)}
     >
-      <SurfaceMaterialSlot source={source} attach={attach} {...listedSlot(primitive, 'mesh')} />
+      <SurfaceMaterialSlot
+        source={source}
+        attach={attach}
+        {...listedSlot(primitive, 'mesh')}
+        drawnOn="next pass"
+      />
     </Drawn>
   );
 }
@@ -162,7 +167,7 @@ const drawAtOnePlace: ChainDrawFactory = (spec) => <ChainDraw {...spec} />;
  */
 function NextPassLink(props: PassProps) {
   const { source, ordinal, drawsSelf, visited, geometry, onOrdinal, draw } = props;
-  const loaded = useMaterial(source);
+  const loaded = useMaterial(source, 'next pass');
   const material = readyMaterial(loaded);
   // Stable between loads: a re-render of an already-loaded link re-scans nothing.
   const loadedPass = useMemo(() => loadedPassOf(material), [material]);
@@ -171,13 +176,10 @@ function NextPassLink(props: PassProps) {
     () => nextPassStep({ source, ordinal, visited }, loadedPass),
     [source, ordinal, visited, loadedPass]
   );
-  // The pass's fate reported once it is known, in the layout pass: a resolved one
-  // reached its position whether it drew or was skipped over, and a declined one ends
-  // its chain there. A pass still loading waits, and the overlay's own order then
-  // moves past it in the same frame the link draws, before paint.
+  // Reported in the layout pass, so the overlay's order moves past a loaded pass before paint.
   useLayoutEffect(() => {
-    if (material || loaded.status === 'declined') onOrdinal?.(ordinal);
-  }, [loaded.status, material, ordinal, onOrdinal]);
+    if (loaded.status !== 'absent') onOrdinal?.(ordinal);
+  }, [loaded.status, ordinal, onOrdinal]);
 
   if (!source || step.fate === 'ends' || step.fate === 'waits') return null;
   const continuation = step.next && <NextPassLink {...props} {...step.next} drawsSelf />;

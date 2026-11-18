@@ -3,7 +3,7 @@
  * two rules every per-surface slot keeps: the default surface and the attach key.
  */
 import type { ScopedReference } from '../../resources/reading';
-import { SurfaceMaterialSlot } from './SurfaceMaterialSlot';
+import { SurfaceMaterialSlot, type ShaderSurface } from './SurfaceMaterialSlot';
 import type { ListedSurface } from './godotPoint';
 import type { ParticleProgram } from './godotParticles';
 
@@ -43,9 +43,11 @@ interface SurfaceMaterialSlotsProps {
   listed?: ListedSurface;
   /** The mesh draws a particle emitter's instances: the patch that colours them and cuts the flipbook frame. */
   particles?: ParticleProgram;
+  /** The draw the mesh is, which decides whether a spatial shader draws on it. */
+  drawnOn: ShaderSurface;
 }
 
-export function SurfaceMaterialSlots({ sources, listed, particles }: SurfaceMaterialSlotsProps) {
+export function SurfaceMaterialSlots({ sources, listed, particles, drawnOn }: SurfaceMaterialSlotsProps) {
   const slotSources = surfaceSources(sources);
   return (
     <>
@@ -56,6 +58,7 @@ export function SurfaceMaterialSlots({ sources, listed, particles }: SurfaceMate
           attach={surfaceAttach(i, slotSources.length)}
           listed={listed}
           particles={particles}
+          drawnOn={drawnOn}
         />
       ))}
     </>

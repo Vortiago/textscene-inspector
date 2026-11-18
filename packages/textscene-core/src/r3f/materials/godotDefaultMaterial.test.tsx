@@ -60,12 +60,14 @@ describe('Godot default 3D material constants', () => {
 
 describe('<SurfaceMaterialSlot> fallback', () => {
   it('renders Godot’s default material when there is no material', async () => {
-    expectGodotDefault(await renderSlot(<SurfaceMaterialSlot source={undefined} />));
+    expectGodotDefault(await renderSlot(<SurfaceMaterialSlot source={undefined} drawnOn="mesh" />));
   });
 
   it('renders Godot’s default material while a .tres has not resolved', async () => {
     expectGodotDefault(
-      await renderSlot(<SurfaceMaterialSlot source={fileMaterial('res://not_yet_loaded.tres')} />)
+      await renderSlot(
+        <SurfaceMaterialSlot source={fileMaterial('res://not_yet_loaded.tres')} drawnOn="mesh" />
+      )
     );
   });
 });

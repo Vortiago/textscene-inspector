@@ -54,7 +54,7 @@ export function GlbSurfaceMaterialOverride({
 }: GlbSurfaceMaterialOverrideProps) {
   // The geometry is the glTF's: no Godot mesh sub-resource for a triplanar material to tile
   // against, and UVs in Godot's top-down V.
-  const loaded = useSurfaceMaterial(source, GLTF_SURFACE);
+  const loaded = useSurfaceMaterial(source, 'glTF surface', GLTF_SURFACE);
   const { isAbsent, bags } = loaded;
   const material = useMemo(() => {
     if (isAbsent) return null;

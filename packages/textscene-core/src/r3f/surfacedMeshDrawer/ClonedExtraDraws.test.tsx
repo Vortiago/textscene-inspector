@@ -37,7 +37,7 @@ function extraDrawsOf(clone: THREE.Object3D): THREE.Mesh[] {
 /** The chain of the material `id` names, which a caller drew on every surface of the clone. */
 function Chain({ clone, id }: { clone: THREE.Object3D; id: string }) {
   const source = nodeMaterial(`SubResource("${id}")`, useSceneResources());
-  const drawn = useSurfaceMaterial(source, GLTF_SURFACE);
+  const drawn = useSurfaceMaterial(source, 'glTF surface', GLTF_SURFACE);
   return source ? <ClonedChain covered={surfaceSlotsUnder(clone)} source={source} drawn={drawn} /> : null;
 }
 

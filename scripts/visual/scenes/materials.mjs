@@ -22,6 +22,10 @@ export const MATERIAL_SCENES = [
   // projects it. A sample at the tile's UV shifts the stripes with each tile.
   { name: 'material-world-triplanar-floor', file: 'unit-material-world-triplanar-floor.tscn' },
   { name: 'material-override', file: 'unit-material-override.tscn' },
+  // A user's unshaded spatial shader on three meshes, two of them sharing one ShaderMaterial.
+  { name: 'material-spatial-shader-unshaded', file: 'unit-spatial-shader-unshaded.tscn' },
+  // A spatial shader's parameters of six types, a vertex() that moves the vertices, and a varying.
+  { name: 'material-spatial-shader-uniforms', file: 'unit-spatial-shader-uniforms.tscn' },
   { name: 'surface-material-override', file: 'unit-surface-material-override.tscn' },
   // Multi-property guard, one row each: basic PBR, emission and normal,
   // advanced PBR, transparency and glass.

@@ -62,7 +62,7 @@ function renderMaterial(
   const fake = createFakeResourceLoader();
   seed?.(fake);
   const source = inlineMaterial(properties, INTERNAL, EXTERNAL);
-  const hook = renderHook(() => useSurfaceMaterial(source), {
+  const hook = renderHook(() => useSurfaceMaterial(source, 'glTF surface'), {
     wrapper: ({ children }: { children: ReactNode }) => (
       <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>
     ),

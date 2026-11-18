@@ -1,7 +1,8 @@
 import type { ShaderNode } from '../language/shaderTree.js';
 import { everyExpressionIn } from '../language/treeWalk.js';
 import { SKY_LIGHT_BUILT_IN } from '../../godot/rendering/environment/skyShader.js';
-import { isSamplerType, textureKindOf, type TextureKind } from '../language/types.js';
+import { isSamplerType } from '../language/types.js';
+import { shaderSamplers, type ShaderSampler } from '../uniforms/shaderSamplers.js';
 import type { SkyFrameReads } from '../../godot/rendering/environment/skyRadianceUpdate.js';
 import type { SkyPassResolution } from './skyResolutionPasses.js';
 
@@ -14,14 +15,7 @@ export interface SkyUsage extends SkyFrameReads {
   /** Each pass whose colour the shader reads, `HALF_RES_COLOR` or `QUARTER_RES_COLOR`. */
   readonly passColors: readonly SkyPassResolution[];
   /** Each sampler uniform by name. */
-  readonly samplers: Readonly<Record<string, SkySampler>>;
-}
-
-export interface SkySampler {
-  /** The texture the sampler reads: a Cubemap for `samplerCube`. */
-  readonly kind: TextureKind;
-  /** `source_color`, which decodes an sRGB texture. */
-  readonly isColor: boolean;
+  readonly samplers: Readonly<Record<string, ShaderSampler>>;
 }
 
 const NO_USAGE: SkyUsage = {
@@ -48,18 +42,8 @@ export function skyUsage(tree: ShaderNode | null): SkyUsage {
     position: names.has('POSITION'),
     hasBufferUniforms: tree.uniforms.some((uniform) => !isSamplerType(uniform.type)),
     passColors: PASS_COLORS.filter(({ builtIn }) => names.has(builtIn)).map(({ resolution }) => resolution),
-    samplers: samplersOf(tree),
+    samplers: shaderSamplers(tree.uniforms),
   };
-}
-
-function samplersOf(tree: ShaderNode): Record<string, SkySampler> {
-  const samplers = tree.uniforms.filter((uniform) => isSamplerType(uniform.type));
-  return Object.fromEntries(
-    samplers.map((uniform) => [
-      uniform.name,
-      { kind: textureKindOf(uniform.type), isColor: uniform.usesColor },
-    ])
-  );
 }
 
 /** Every function's, as Godot's compiler writes the code of each (`shader_compiler.cpp:768-774`). */

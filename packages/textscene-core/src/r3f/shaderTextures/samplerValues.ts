@@ -1,6 +1,6 @@
 import type * as THREE from 'three';
 import type { ScopedReference } from '../../resources/reading';
-import type { ShaderTextureReference } from '../../resources/sky/types';
+import type { ShaderTextureReference } from '../../resources/materials/shadermaterial/types';
 import type { SamplerValue } from '../../shaders/uniforms/samplerUniform';
 
 /** Each element of a sampler's reference with the key its texture reports under: `name` or `name[index]`. */

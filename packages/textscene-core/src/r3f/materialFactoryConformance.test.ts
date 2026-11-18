@@ -145,6 +145,8 @@ export function offTagMounts(source: string): OffTagMount[] {
  * that stops matching fails the staleness check below.
  */
 const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
+  'packages/textscene-core/src/r3f/spatialShader/SpatialShaderSlot.tsx':
+    "the translated material of a user's spatial shader: memoised on the shader text and the project options, disposed on replacement, with its parameters written to its uniforms",
   'packages/textscene-core/src/nodes/2d/camera2d/Component.tsx':
     'spreads the shared Node2D transform bag onto a `<group>`, which has no material slot',
   'packages/textscene-core/src/r3f/canvasGroup/CompositeGroupRect.tsx':

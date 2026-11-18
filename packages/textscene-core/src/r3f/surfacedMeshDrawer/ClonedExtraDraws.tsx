@@ -92,7 +92,7 @@ function asOneSurface(slot: SurfaceSlot): SurfaceSlot {
  * material, disposed with the pass, and what the walk reads of it once its resource is in.
  */
 function useClonedPass(source: ScopedReference | undefined) {
-  const loaded = useSurfaceMaterial(source, GLTF_SURFACE);
+  const loaded = useSurfaceMaterial(source, 'glTF surface', GLTF_SURFACE);
   const { isAbsent, bags } = loaded;
   const material = useMemo(() => {
     // The pass's own file cannot load: Godot's `!material` guard ends the chain there

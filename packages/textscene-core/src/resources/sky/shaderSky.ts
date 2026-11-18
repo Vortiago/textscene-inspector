@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { warn } from '../../logger';
 import { warnOnce } from '../../utils/warnOnce';
-import { textToVariant } from '../../godot/variant/reader/variantReader';
 import {
   skyDraws,
   transpileParsedSky,
@@ -9,12 +8,12 @@ import {
   type TranspiledSky,
 } from '../../shaders/sky/transpileSky';
 import { compileSky, type SkyCompile } from '../../shaders/sky/compileSky';
+import { unDrawnMessage } from '../../shaders/fault/shaderRefusal';
 import { perObject } from '../../utils/perObject';
 import { LRUCache } from '../LRUCache';
 import { GODOT_SAMPLING, type ProjectSampling } from '../../shaders/uniforms/samplerState';
-import type { TranspiledUniform } from '../../shaders/uniforms/transpiledUniform';
+import { setMaterialParameters } from '../../shaders/uniforms/materialParameters';
 import type { BoundNodeMaterial } from '../../shaders/uniforms/boundMaterial';
-import type { SamplerValue } from '../../shaders/uniforms/samplerUniform';
 import type { ProjectShaderOptions } from '../../shaders/rendererShaderOptions';
 import { ShaderSkyBackground } from '../../r3f/sky/shaderSkyBackground';
 import { ShaderSkyOctmap } from '../../r3f/sky/shaderSkyOctmap';
@@ -183,11 +182,11 @@ function transpiledShaderSky(
 ): TranspiledSky {
   const compile = skyCompileOf(material.code, shaderOptions);
   if (!('parsed' in compile)) {
-    warnOnce(material, 'refused', `[Sky] ${unDrawnMessage(compile)}`);
+    warnOnce(material, 'refused', `[Sky] ${unDrawnMessage(compile, 'sky', 'sky')}`);
     return transpiledDefaultSky(pass);
   }
   const sky = transpileParsedSky(compile.parsed, material.file, sampling, pass);
-  setParameters(sky.parameters, material.parameters, textures);
+  setMaterialParameters(sky.parameters, material.parameters, textures);
   for (const draw of skyDraws(sky))
     (draw.mesh.material as BoundNodeMaterial).onTranslatorFault = (fault) =>
       warnOnce(
@@ -204,29 +203,8 @@ function transpiledDefaultSky(pass: SkyPass): TranspiledSky {
   return transpileParsedSky(defaultSky.parsed, '', GODOT_SAMPLING, pass);
 }
 
-/** Writes each value its uniform takes. Godot ignores a value no uniform declares. */
-function setParameters(
-  uniforms: ReadonlyMap<string, Pick<TranspiledUniform, 'set'>>,
-  texts: Readonly<Record<string, string>>,
-  textures: Readonly<Record<string, SamplerValue>>
-): void {
-  for (const [name, text] of Object.entries(texts)) uniforms.get(name)?.set(textToVariant(text));
-  for (const [name, texture] of Object.entries(textures)) uniforms.get(name)?.set(texture);
-}
-
 /** Why the previewer draws Godot's default sky for `material`, or null when it draws the shader. */
 export function shaderSkyRefusal(material: ShaderSkyText, options: ProjectShaderOptions): string | null {
   const compile = skyCompileOf(material.code, options);
-  return 'parsed' in compile ? null : unDrawnMessage(compile);
-}
-
-type UnDrawnSky = Exclude<SkyCompile, { readonly parsed: unknown }>;
-
-function unDrawnMessage(compile: UnDrawnSky): string {
-  if ('failure' in compile)
-    return `The previewer failed to translate this sky shader, and draws Godot's default sky: ${String(compile.failure)}`;
-  const { refusal } = compile;
-  if (refusal.owner === undefined)
-    return `Godot does not compile the sky shader, and draws its default sky: ${refusal.message}`;
-  return `The previewer does not translate this sky shader yet (${refusal.owner}), and draws Godot's default sky: ${refusal.message}`;
+  return 'parsed' in compile ? null : unDrawnMessage(compile, 'sky', 'sky');
 }
