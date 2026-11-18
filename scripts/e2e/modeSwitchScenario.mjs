@@ -1,3 +1,4 @@
+import { PNG } from 'pngjs';
 import { diffMask } from '../vscode/pixels.mjs';
 import { CANVAS_2D_TESTIDS } from '../visual/preview/appContract.mjs';
 import { findCanvas, settleCanvas } from '../visual/previewServer.mjs';
@@ -5,7 +6,7 @@ import { checkDiagnostics } from './diagnostics.mjs';
 import { openFixture } from './openFixture.mjs';
 import { expandAllTreeRows, selectOutlinerNode, SELECT_SETTLE_MS } from './outliner.mjs';
 
-export const SWITCH_FIXTURE = 'in-game/unit-in-game-call-camera3d.tscn';
+export const SWITCH_FIXTURE = 'in-game/unit-mode-switch.tscn';
 const SELECTED_NODE = 'Main/Box';
 
 /** The switches in order: away from 3D through each mode and back. */
@@ -14,6 +15,18 @@ export const SWITCHES = ['2D', 'In-game', '3D'];
 // In-game draws through the scene camera, so its frame differs from the editor frame in thousands of px.
 export const OTHER_VIEW_PIXELS = 1_000;
 export const SAME_VIEW_PIXELS = 20;
+// The ColorRect covers 240 by 180 px at zoom 1: the first 2D view, on a cold load, draws it.
+export const PANEL_PIXELS = 20_000;
+
+/** The pure red pixels of a shot: the fixture's ColorRect, which only a view that draws 2D shows. */
+export function redPixels(buffer) {
+  const { data } = PNG.sync.read(buffer);
+  let red = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i] > 230 && data[i + 1] < 30 && data[i + 2] < 30) red++;
+  }
+  return red;
+}
 
 const viewButton = (page, view) =>
   page.getByRole('group', { name: 'Viewport dimension' }).getByText(view, { exact: true });
@@ -76,17 +89,18 @@ export async function runModeSwitchScenario(browser, baseUrl) {
     views.push(await readView(page, view));
   }
   await context.close();
-  const [first3D, , inGame, last3D] = views;
+  const [first3D, twoD, inGame, last3D] = views;
   return {
     views: views.map(withoutShot),
     inGamePixels: diffMask(first3D.shot, inGame.shot).diffPixels,
     back3DPixels: diffMask(first3D.shot, last3D.shot).diffPixels,
+    panelPixels2D: redPixels(twoD.shot),
     diagnostics,
   };
 }
 
 /** Records the scenario's claims on `gate`. */
-export function checkModeSwitch(gate, { views, inGamePixels, back3DPixels, diagnostics }) {
+export function checkModeSwitch(gate, { views, inGamePixels, back3DPixels, panelPixels2D, diagnostics }) {
   for (const view of views) {
     const at = `[Mode switch] ${view.view}`;
     gate.check(view.isPressed, `${at}: the toolbar does not show ${view.view} pressed`);
@@ -97,6 +111,10 @@ export function checkModeSwitch(gate, { views, inGamePixels, back3DPixels, diagn
     );
     gate.check(view.isSelected, `${at}: ${SELECTED_NODE} lost its selection in the scene tree`);
   }
+  gate.check(
+    panelPixels2D > PANEL_PIXELS,
+    `[Mode switch] the first 2D view drew ${panelPixels2D} px of the ColorRect, expected over ${PANEL_PIXELS}`
+  );
   gate.check(
     inGamePixels > OTHER_VIEW_PIXELS,
     `[Mode switch] In-game differs from 3D in ${inGamePixels} px, expected over ${OTHER_VIEW_PIXELS}`

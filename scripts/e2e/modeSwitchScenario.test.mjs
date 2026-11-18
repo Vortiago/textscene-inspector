@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CLEAN_LOAD, fakeGate } from './gate.testkit.mjs';
-import { checkModeSwitch, OTHER_VIEW_PIXELS, SAME_VIEW_PIXELS } from './modeSwitchScenario.mjs';
+import { checkModeSwitch, OTHER_VIEW_PIXELS, PANEL_PIXELS, SAME_VIEW_PIXELS } from './modeSwitchScenario.mjs';
 
 const view = (name) => ({
   view: name,
@@ -16,6 +16,7 @@ function passingRun() {
     views: ['3D', '2D', 'In-game', '3D'].map(view),
     inGamePixels: OTHER_VIEW_PIXELS * 400,
     back3DPixels: 0,
+    panelPixels2D: PANEL_PIXELS * 2,
     diagnostics: CLEAN_LOAD,
   };
 }
@@ -35,6 +36,14 @@ describe('checkModeSwitch', () => {
     const run = passingRun();
     run.views[1].has2DStage = false;
     expect(failuresOf(run)).toEqual(['[Mode switch] 2D: the 2D stage is absent, expected it only in 2D']);
+  });
+
+  it('fails a first 2D view that stays blank while its stage loads', () => {
+    const run = passingRun();
+    run.panelPixels2D = 0;
+    expect(failuresOf(run)).toEqual([
+      `[Mode switch] the first 2D view drew 0 px of the ColorRect, expected over ${PANEL_PIXELS}`,
+    ]);
   });
 
   it('fails a view switch that leaves a second canvas mounted', () => {

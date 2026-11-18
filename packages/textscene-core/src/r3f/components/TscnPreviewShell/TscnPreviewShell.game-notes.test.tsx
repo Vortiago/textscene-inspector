@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import type { ViewportMode } from '../../contexts/ViewportModeContext';
+import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
+import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 
 // happy-dom has no WebGL. The notes sit beside the view, so the view is a stub.
 vi.mock('../../TscnCanvas', () => ({
@@ -55,6 +57,20 @@ const SUBVIEWPORT_3D = `[gd_scene format=3]
 script = ExtResource("1_hud")
 `;
 
+const MISSING_SCRIPT = `[gd_scene format=3]
+
+[ext_resource type="Script" path="res://player.gd" id="1_player"]
+[ext_resource type="Script" path="res://gone.gd" id="2_gone"]
+
+[node name="Main" type="Node3D"]
+script = ExtResource("2_gone")
+
+[node name="Player" type="Node3D" parent="."]
+script = ExtResource("1_player")
+
+[node name="Camera" type="Camera3D" parent="."]
+`;
+
 async function openIn(mode: ViewportMode, content: string) {
   render(<TscnPreviewShell panelId={`notes-${mode}`} content={content} initialViewportMode={mode} />);
   await screen.findAllByText('Main');
@@ -90,6 +106,25 @@ describe('<TscnPreviewShell> In-game notes', () => {
 
   it('counts a script inside a SubViewport, and needs no root camera for its 3D content', async () => {
     await openIn('in-game', SUBVIEWPORT_3D);
+    expect(notes()).toEqual(['Scripts do not run: 1 node holds a script.']);
+  });
+
+  it('counts no script for a node whose script file is missing, as Godot readies none', async () => {
+    const fake = createFakeResourceLoader();
+    render(
+      <ResourceLoaderProvider loader={fake.loader}>
+        <TscnPreviewShell panelId="notes-missing" content={MISSING_SCRIPT} initialViewportMode="in-game" />
+      </ResourceLoaderProvider>
+    );
+    await screen.findAllByText('Main');
+    act(() => {
+      fake.loadOutcomes._resolve('res://gone.gd', {
+        isFailed: true,
+        chain: ['res://gone.gd'],
+        cause: 'missing',
+      });
+      fake.loadOutcomes._resolve('res://player.gd', { isFailed: false });
+    });
     expect(notes()).toEqual(['Scripts do not run: 1 node holds a script.']);
   });
 });
