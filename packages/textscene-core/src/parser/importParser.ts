@@ -56,6 +56,8 @@ const SECTION = /^\[([A-Za-z_][A-Za-z0-9_]*)\]$/;
 export interface ParsedImportFile {
   /** The `[remap] importer=` value: `scene` for glTF/GLB, `wavefront_obj` for OBJ. */
   importer: string | null;
+  /** The `[remap] type=` value: the class `load` gives for the asset, `CompressedTexture2D` for an image. */
+  resourceType: string | null;
   /**
    * The `[params]` block: a string literal's decoded text, as `VariantParser` reads it back
    * (`resource_importer.cpp:76`), and any other value as written. The typed readers cover only
@@ -80,6 +82,7 @@ export interface ParsedImportFile {
 export function parseImportFile(content: string): ParsedImportFile | null {
   let section: string | null = null;
   let importer: string | null = null;
+  let resourceType: string | null = null;
   let isValid = true;
   const params: Record<string, string> = {};
   let sawSection = false;
@@ -134,11 +137,12 @@ export function parseImportFile(content: string): ParsedImportFile | null {
     const value = unquoteLiteral(raw);
     if (section === 'params') params[key!] = value;
     else if (section === 'remap' && key === 'importer') importer = value;
+    else if (section === 'remap' && key === 'type') resourceType = value;
     else if (section === 'remap' && key === 'valid') isValid = boolSlotValue(value) !== false;
   }
   storePending();
 
-  return sawSection ? { importer, params, isValid } : null;
+  return sawSection ? { importer, resourceType, params, isValid } : null;
 }
 
 /**

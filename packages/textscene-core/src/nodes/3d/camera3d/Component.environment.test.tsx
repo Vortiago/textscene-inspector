@@ -11,7 +11,7 @@ import '../../base/node3d/index';
 import '../worldenvironment/index';
 import { Camera3D } from './Component';
 import { WorldEnvironment } from '../worldenvironment/Component';
-import { WorldEnvironmentScope } from '../../../r3f/environment/WorldEnvironmentScope';
+import { ViewportWorld } from '../../../r3f/testing/ViewportWorld';
 import { ViewportActionsProvider } from '../../../r3f/contexts/ViewportActionsContext';
 import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
@@ -38,7 +38,7 @@ const WORLD_BLUE = makeNode('World', 'WorldEnvironment', {
   rawProperties: { environment: 'SubResource("Blue")' },
 });
 
-/** The colour of the background the world's viewport renders, or null without an Environment. */
+/** The colour of the background the world's viewport renders: red, blue or the grey clear colour. */
 async function backgroundOf(
   world: 'root' | 'subViewport',
   viewed: string | null,
@@ -49,19 +49,19 @@ async function backgroundOf(
     <SceneResourcesProvider internalResources={RESOURCES}>
       <ViewportModeProvider initialShowPreviewEnvironment={false}>
         <ViewportActionsProvider initialPreviewedCameraPath={viewed}>
-          <WorldEnvironmentScope world={world}>
+          <ViewportWorld world={world}>
             {worldEnvironment && <WorldEnvironment node={worldEnvironment} />}
             {cameras.map((node) => (
               <Camera3D key={node.name} node={node} />
             ))}
-          </WorldEnvironmentScope>
+          </ViewportWorld>
         </ViewportActionsProvider>
       </ViewportModeProvider>
     </SceneResourcesProvider>
   );
   const background = (renderer.scene.instance as THREE.Scene).background as THREE.DataTexture | null;
-  if (!background) return null;
-  const [red, , blue] = textureTexel(background);
+  const [red, , blue] = textureTexel(background!);
+  if (red === blue) return 'clear colour';
   return red! > blue! ? 'red' : 'blue';
 }
 
@@ -70,8 +70,8 @@ describe('Camera3D environment', () => {
     expect(await backgroundOf('root', 'Main', [cameraNode('Main', 'SubResource("Red")')])).toBe('red');
   });
 
-  it('leaves the world alone with no camera preview', async () => {
-    expect(await backgroundOf('root', null, [cameraNode('Main', 'SubResource("Red")')])).toBeNull();
+  it("leaves the world's clear colour alone with no camera preview", async () => {
+    expect(await backgroundOf('root', null, [cameraNode('Main', 'SubResource("Red")')])).toBe('clear colour');
   });
 
   it("replaces the WorldEnvironment's Environment", async () => {

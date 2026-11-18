@@ -14,6 +14,7 @@ import { omniLight3DAabb } from '../../../../godot/scene/light';
 import { NodeAabb } from '../../../../r3f/components/NodeAabb';
 import { PointLightGizmo } from '../shared/lightHelpers';
 import { positionalLightRange, usePositionalLight } from '../shared/positionalLight';
+import { useDrawsEditorOnly } from '../../../../r3f/contexts/EditorHintContext';
 
 export function OmniLight3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as OmniLight3DProperties;
@@ -23,12 +24,14 @@ export function OmniLight3D({ node, children }: NodeComponentProps) {
   const { distance, shadowNear, shadowFar } = positionalLightRange(properties.omni_range);
   const { intensity, shadowOpacity, userData } = usePositionalLight(lightRef, properties);
   const aabb = useMemo(() => omniLight3DAabb(properties.omni_range), [properties.omni_range]);
+  const drawsLight = useDrawsEditorOnly(properties.editor_only);
 
   return (
     <group name={node.name} {...node3dGroupSpread(transform)}>
       <NodeAabb aabb={aabb} />
       <pointLight
         ref={lightRef}
+        visible={drawsLight}
         color={color}
         intensity={intensity}
         distance={distance}

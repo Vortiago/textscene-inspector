@@ -15,6 +15,7 @@ import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { ReferenceRect } from './Component';
 import { SelectSeeder } from '../../../../r3f/testing/SelectSeeder';
+import { RunningGameScope } from '../../../../r3f/contexts/EditorHintContext';
 
 const RECT = { x: 0, y: 0, w: 100, h: 50 };
 
@@ -71,6 +72,17 @@ describe('<ReferenceRect> (isolated painter contract)', () => {
           <SelectSeeder path="MyRect" />
           <ReferenceRect {...painterEnv()} solveNode={refRectNode({})} rect={RECT} renderOrder={0} />
         </SelectionProvider>
+      </ViewportModeProvider>
+    );
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+  });
+
+  it('draws nothing in the running game when editor_only is true, with the Gizmos toggle on', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <ViewportModeProvider initialShowGizmos>
+        <RunningGameScope>
+          <ReferenceRect {...painterEnv()} solveNode={refRectNode({})} rect={RECT} renderOrder={0} />
+        </RunningGameScope>
       </ViewportModeProvider>
     );
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);

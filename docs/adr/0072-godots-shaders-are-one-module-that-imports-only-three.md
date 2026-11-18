@@ -19,7 +19,7 @@ React or borrow the shadow atlas and the sky radiance from the renderer's passes
 
 The node materials are a port of Godot's scene shader. A three.js app with no React can draw with
 them, and the owner wants to publish them for that use. `@textscene/renderer` cannot serve such an
-app: react, react-dom, react-three-fiber, drei and postprocessing are its peers.
+app: react, react-dom and react-three-fiber are its peers.
 
 ## Decision
 

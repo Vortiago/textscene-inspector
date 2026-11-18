@@ -15,6 +15,7 @@ import {
   settleCanvas,
 } from '../previewServer.mjs';
 import { pausePlayer, seekPlayer } from './seekAnimation.mjs';
+import { applySceneWrites } from '../sceneWrites.mjs';
 
 /**
  * `reason` with the requests the page lost, so a scene that never loads names the chunk or file
@@ -47,6 +48,12 @@ export async function captureScene(pageState, baseUrl, scene) {
     onSlow: (ms) => console.log(`[visual]   ${scene.name}: no network idle within ${ms}ms`),
   });
   if (!canvas) return { buffer: null, reason: withFailedRequests(canvasReason, diagnostics) };
+
+  try {
+    await applySceneWrites(page, scene.sets);
+  } catch (error) {
+    return { buffer: null, reason: withFailedRequests(`scene writes: ${error.message}`, diagnostics) };
+  }
 
   if (scene.navigation) {
     // The navmesh overlay defaults on, but is set explicitly, so the baseline rests on no default.

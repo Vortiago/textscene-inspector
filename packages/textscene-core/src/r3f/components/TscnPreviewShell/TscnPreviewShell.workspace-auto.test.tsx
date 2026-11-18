@@ -1,14 +1,10 @@
-/**
- * ADR-0006: a scene opens in the workspace its root claims. A CanvasItem root
- * gives 2D, a Node3D root gives 3D, and a plain Node keeps the current one. A
- * manual toggle lasts until the next scene switch.
- */
-
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 
 vi.mock('../../TscnCanvas', () => ({
-  TscnCanvas: () => <div data-testid="canvas-3d" />,
+  TscnCanvas: ({ mode }: { mode?: string }) => (
+    <div data-testid={mode === 'in-game' ? 'in-game' : 'canvas-3d'} />
+  ),
   TscnSceneContents: () => null,
 }));
 vi.mock('../Canvas2DStage/Canvas2DStage', () => ({
@@ -74,5 +70,17 @@ describe('<TscnPreviewShell> workspace auto-select (Godot parity)', () => {
       </ResourceLoaderProvider>
     );
     expect(await screen.findByTestId('canvas-2d')).toBeTruthy();
+  });
+
+  it('keeps the In-game mode when the scene switches', async () => {
+    const { rerender } = render(<TscnPreviewShell panelId="auto-f" content={THREED_SCENE} />);
+    await screen.findByTestId('canvas-3d');
+    fireEvent.click(screen.getByRole('button', { name: 'In-game' }));
+    expect(await screen.findByTestId('in-game')).toBeTruthy();
+
+    rerender(<TscnPreviewShell panelId="auto-f" content={SPRITE_SCENE} />);
+    await screen.findAllByText('World');
+    expect(screen.getByTestId('in-game')).toBeTruthy();
+    expect(screen.queryByTestId('canvas-2d')).toBeNull();
   });
 });

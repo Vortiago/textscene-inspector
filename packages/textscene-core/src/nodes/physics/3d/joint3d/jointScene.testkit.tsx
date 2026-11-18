@@ -4,7 +4,7 @@
  */
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { parseTscnContent } from '../../../../r3f/hooks/useParsedScene';
+import { parseTscnContent } from '../../../../scene/parseScene';
 import { loaderServing } from '../../../../resources/testing/servingResourceLoader';
 import { DispatchedScene } from '../../../../r3f/testing/DispatchedScene';
 import type { GizmoNodeCase } from '../../../../r3f/testing/gizmoContract';

@@ -1,10 +1,4 @@
 #!/usr/bin/env node
-/**
- * `pnpm test:renderer-consumer`: installs the packed `@textscene/renderer`
- * into a plain Vite React app with its own React and three.js, type-checks and builds the app,
- * and renders a fixture scene in headless Chromium. The app sets no `@textscene/source`
- * condition and no CSS-module support, so a bundle that needs either fails here.
- */
 import { cpSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -20,8 +14,10 @@ import { consumerManifest } from './consumerManifest.mjs';
 
 const APP_DIR = join(import.meta.dirname, 'app');
 
-/** The fixture's cube fills about a fifth of its 320 x 240 viewport. A blank canvas scores 0. */
+/** The drawn pixels that prove a view drew the cube: a blank canvas scores 0. */
 const INK_FLOOR = 2000;
+/** A cube at half scale draws about a quarter of the pixels, so its view proves less. */
+const WRITTEN_INK_FLOOR = INK_FLOOR / 4;
 /** Software GL draws the first frame slowly. */
 const RENDER_TIMEOUT_MS = 90_000;
 const POLL_INTERVAL_MS = 500;
@@ -63,7 +59,17 @@ function buildConsumer(directory) {
   run('node', ['node_modules/vite/bin/vite.js', 'build'], directory);
 }
 
-/** What the page drew in the viewport, and what it threw. Polls, since software GL is slow. */
+/** The views the app draws, by the query that opens each. */
+const VIEWS = {
+  '3D': { query: '', inkFloor: INK_FLOOR },
+  'In-game': { query: '?mode=in-game', inkFloor: INK_FLOOR },
+  'In-game after a write': { query: '?mode=in-game&write=scale', inkFloor: WRITTEN_INK_FLOOR },
+};
+
+/** A cube at half scale draws a quarter of its pixels, so its ink stays under half of the whole cube's. */
+const WRITTEN_INK_SHARE = 0.5;
+
+/** What each view drew and threw. It polls, since software GL is slow. */
 async function renderInBrowser(directory) {
   const { port } = previewPort('rendererConsumer');
   const server = await preview({
@@ -74,42 +80,67 @@ async function renderInBrowser(directory) {
   });
   const browser = await launchSwiftShaderBrowser();
   try {
-    const page = await browser.newPage();
-    const diagnostics = attachDiagnostics(page);
-    await page.goto(`http://localhost:${port}/`);
-    const ink = await pollInk(page);
-    const hasCanvasStyles = await page.evaluate(() => {
-      for (let node = document.querySelector('canvas'); node; node = node.parentElement) {
-        if (getComputedStyle(node).touchAction === 'none') return true;
-      }
-      return false;
-    });
-    return { ink, hasCanvasStyles, errors: loggedErrors(diagnostics) };
+    const drawn = {};
+    for (const [view, { query, inkFloor }] of Object.entries(VIEWS)) {
+      const page = await browser.newPage();
+      drawn[view] = await renderView(page, `http://localhost:${port}/${query}`, inkFloor);
+    }
+    return drawn;
   } finally {
     await browser.close();
     await server.close();
   }
 }
 
-async function pollInk(page) {
+async function renderView(page, url, inkFloor) {
+  const diagnostics = attachDiagnostics(page);
+  await page.goto(url);
+  const ink = await pollInk(page, inkFloor);
+  const hasCanvasStyles = await page.evaluate(() => {
+    for (let node = document.querySelector('canvas'); node; node = node.parentElement) {
+      if (getComputedStyle(node).touchAction === 'none') return true;
+    }
+    return false;
+  });
+  return { ink, hasCanvasStyles, errors: loggedErrors(diagnostics) };
+}
+
+async function pollInk(page, inkFloor) {
   const viewport = page.locator('#viewport');
   const deadline = Date.now() + RENDER_TIMEOUT_MS;
-  let ink = inkStats(await viewport.screenshot()).ink;
-  while (ink < INK_FLOOR && Date.now() < deadline) {
+  let ink = inkStats(await viewport.screenshot()).inkPixels;
+  while (ink < inkFloor && Date.now() < deadline) {
     await page.waitForTimeout(POLL_INTERVAL_MS);
-    ink = inkStats(await viewport.screenshot()).ink;
+    ink = inkStats(await viewport.screenshot()).inkPixels;
   }
   return ink;
 }
 
-/** One line per failed check, or none when the consumer rendered the fixture. */
-function failures({ ink, hasCanvasStyles, errors }) {
+/** One line per failed check of a view, or none when it rendered the fixture. */
+function failuresOf(view, { ink, hasCanvasStyles, errors }) {
+  const { inkFloor } = VIEWS[view];
   return [
-    ...(ink < INK_FLOOR ? [`expected at least ${INK_FLOOR} drawn pixels in the viewport, got ${ink}`] : []),
+    ...(ink < inkFloor ? [`expected at least ${inkFloor} drawn pixels in the viewport, got ${ink}`] : []),
     ...(hasCanvasStyles
       ? []
       : ['expected the canvas root to carry the bundle’s touch-action style, got none']),
     ...errors.map((message) => `page error: ${message}`),
+  ].map((failure) => `${view}: ${failure}`);
+}
+
+/** A line when the host's write did not change the drawn frame as it should, or none. */
+function writeFailures(drawn) {
+  const whole = drawn['In-game'].ink;
+  const written = drawn['In-game after a write'].ink;
+  if (written < whole * WRITTEN_INK_SHARE) return [];
+  return [`In-game after a write: expected under ${whole * WRITTEN_INK_SHARE} drawn pixels, got ${written}`];
+}
+
+/** One line per failed check of every view. */
+function failures(drawn) {
+  return [
+    ...Object.entries(drawn).flatMap(([view, result]) => failuresOf(view, result)),
+    ...writeFailures(drawn),
   ];
 }
 
@@ -121,7 +152,9 @@ try {
   buildConsumer(app);
   const found = failures(await renderInBrowser(app));
   for (const failure of found) console.error(`[renderer-consumer] ${failure}`);
-  console.log(`[renderer-consumer] ${found.length === 0 ? 'the fixture scene rendered' : 'failed'}`);
+  console.log(
+    `[renderer-consumer] ${found.length === 0 ? 'the fixture scene rendered in every view' : 'failed'}`
+  );
   process.exitCode = found.length === 0 ? 0 : 1;
 } finally {
   rmSync(work, { recursive: true, force: true });

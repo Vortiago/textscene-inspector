@@ -32,6 +32,16 @@ function solidPng(width, height, [r, g, b] = [0, 0, 0]) {
 }
 
 describe('parseArgs', () => {
+  it('takes --mode in-game, the one mode a caller picks by hand', () => {
+    expect(parseArgs(['a.tscn', '--mode', 'in-game']).mode).toBe('in-game');
+    expect(parseArgs(['a.tscn']).mode).toBeNull();
+  });
+
+  it('refuses a mode that run.mjs picks from the scene, and reads the one it takes in any case', () => {
+    expect(() => parseArgs(['a.tscn', '--mode', '2d'])).toThrow(/--mode takes one of in-game, got "2d"/);
+    expect(parseArgs(['a.tscn', '--mode', 'In-Game']).mode).toBe('in-game');
+  });
+
   it('collects fixtures and leaves the mean bound unset by default', () => {
     const args = parseArgs(['unit-csg-box.tscn', 'unit-csg-sphere.tscn']);
     expect(args.fixtures).toEqual(['unit-csg-box.tscn', 'unit-csg-sphere.tscn']);
@@ -64,7 +74,13 @@ describe('parseArgs', () => {
 
   it('rejects a lit surface form the previewer does not know (error path)', () => {
     expect(() => parseArgs(['a.tscn', '--lit-surface', 'node'])).toThrow(
-      '--lit-surface takes "nodes", got "node"'
+      '--lit-surface takes one of nodes, got "node"'
+    );
+  });
+
+  it('refuses --collisions with --mode in-game, whose capture draws no collision shape', () => {
+    expect(() => parseArgs(['a.tscn', '--collisions', '--mode', 'in-game'])).toThrow(
+      /--collisions cannot take --mode in-game/
     );
   });
 
@@ -284,6 +300,45 @@ describe('diffOne', () => {
       await rm(dir, { recursive: true, force: true });
     }
     expect(asked.canvas2DFrame).toEqual({ width: 1280, height: 720 });
+  });
+
+  /** `--mode in-game` renders the Godot game start and captures our In-game mode at its window. */
+  async function inGamePair(mode) {
+    const dir = await mkdtemp(join(tmpdir(), 'refdiff-'));
+    const godotOut = join(dir, 'g.png');
+    await writeFile(godotOut, solidPng(640, 360));
+    const asked = {};
+    try {
+      await diffOne(
+        { scenePath: '/x/s.tscn', fixtureName: 's.tscn', label: 's' },
+        { frame: false, keep: false, mode },
+        {
+          render: async (args) => {
+            asked.renderMode = args.mode;
+            return { out: godotOut, mode: args.mode };
+          },
+          capture: async (args) => {
+            asked.inGameFrame = args.inGameFrame;
+            return solidPng(640, 360);
+          },
+          outDir: dir,
+        }
+      );
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+    return asked;
+  }
+
+  it('pairs the Godot game start with our In-game mode at the game window', async () => {
+    expect(await inGamePair('in-game')).toEqual({
+      renderMode: 'in-game',
+      inGameFrame: { width: 640, height: 360 },
+    });
+  });
+
+  it("captures our editor's view, not the In-game mode, with no mode", async () => {
+    expect(await inGamePair(null)).toEqual({ renderMode: 'auto', inGameFrame: null });
   });
 
   /**

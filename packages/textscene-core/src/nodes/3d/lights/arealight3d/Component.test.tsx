@@ -38,6 +38,7 @@ function untexturedPlacement() {
 function makeNode(overrides: Partial<AreaLight3DProperties> = {}): TscnNode {
   const props: AreaLight3DProperties = {
     name: 'Area',
+    editor_only: false,
     layers: 1,
     light_color: 'Color(1, 1, 1, 1)',
     light_energy: 1,

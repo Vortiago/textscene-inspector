@@ -278,6 +278,17 @@ export function transform2DGetSkew(t: Transform2DColumns): number {
   return f(acosf(cosine) - HALF_PI_FLOAT);
 }
 
+/** `Transform2D::set_skew` (`transform_2d.cpp:77-80`) in float: the y axis turns, keeping its length. */
+export function transform2DSetSkew(t: Transform2DColumns, skew: number): Transform2DColumns {
+  const detSign = sign(transform2DDeterminant(t));
+  const angle = f(HALF_PI_FLOAT + f(skew));
+  const sin = f(Math.sin(angle));
+  const cos = f(Math.cos(angle));
+  const turned = normalizedVector2({ x: f(f(t.a * cos) - f(t.b * sin)), y: f(f(t.a * sin) + f(t.b * cos)) });
+  const length = vector2Length({ x: t.c, y: t.d });
+  return { ...t, c: f(f(detSign * turned.x) * length), d: f(f(detSign * turned.y) * length) };
+}
+
 /**
  * The position, rotation, scale and skew a Node2D reads from its transform
  * (`Node2D::_update_xform_values`, `node_2d.cpp:127-133`), in `real_t` float. It is the inverse of

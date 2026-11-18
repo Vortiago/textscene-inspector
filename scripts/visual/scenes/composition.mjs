@@ -5,6 +5,8 @@
  */
 
 export const SCENE_COMPOSITION_SCENES = [
+  // No nodes: the grid and the prompt the empty canvas draws.
+  { name: 'empty-scene-prompt', file: 'unit-empty-scene.tscn' },
   { name: 'mixed-nodes', file: 'integration-mixed-nodes.tscn' },
   { name: 'hallway-mockup', file: 'example-hallway-mockup.tscn' },
   // Instance root merge (ADR-0013): two instances of unit-instance-child.tscn

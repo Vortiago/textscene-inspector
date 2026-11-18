@@ -46,6 +46,13 @@ describe('pageSpecFor', () => {
     });
   });
 
+  it('opens an In-game scene in the In-game mode, its canvas the game window', () => {
+    expect(pageSpecFor(scene('game', { mode: 'in-game', canvas: { width: 320, height: 180 } }))).toEqual({
+      key: 'in-game:320x180',
+      options: { frameOnOpen: false, inGameFrame: { width: 320, height: 180 } },
+    });
+  });
+
   it('sizes the window for a scene that names a canvas', () => {
     const spec = pageSpecFor(scene('small', { canvas: { width: 200, height: 156 } }));
     expect(spec.key).toBe('200x156');

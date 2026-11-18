@@ -11,7 +11,7 @@
  *   node scripts/perf/run.mjs --scene glow
  */
 
-/* global document */ // The evaluate callback runs in the browser.
+/* global document, window, requestAnimationFrame */
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -48,9 +48,9 @@ async function main() {
   const measured = {};
   const unmeasured = [];
   await withPreviewBrowser(previewPort('perf'), async (browser, baseUrl) => {
-    const profiled = await profiledPage(browser);
+    const pages = new ProfiledPages(browser);
     for (const scene of scenes) {
-      const { work, reason } = await measureScene(profiled, baseUrl, scene);
+      const { work, reason } = await measureScene(await pages.for(scene), baseUrl, scene);
       if (work) measured[scene.name] = work;
       else unmeasured.push(`${scene.name}: ${reason}`);
       console.log(`[perf] ${scene.name} ${work ? `${work.drawCalls} draw calls` : 'not measured'}`);
@@ -74,14 +74,33 @@ function parseArgs(argv) {
   return opts;
 }
 
-/**
- * A capture page with the Performance toggle on before the app reads it. The app opens a 2D-rooted
- * scene in its 2D workspace, so one page serves both.
- */
-async function profiledPage(browser) {
-  const context = await createCaptureContext(browser, { frameOnOpen: true, showPerformance: true });
-  const page = await context.newPage();
-  return { page, diagnostics: attachDiagnostics(page) };
+/** Profiled pages: the editor's serves 2D and 3D scenes, and an In-game scene needs one of its window. */
+class ProfiledPages {
+  constructor(browser) {
+    this.browser = browser;
+    this.pages = new Map();
+  }
+
+  for({ inGameFrame = null }) {
+    const key = inGameFrame ? `in-game:${inGameFrame.width}x${inGameFrame.height}` : 'editor';
+    if (!this.pages.has(key)) {
+      // A failed open is forgotten, so the next scene of this key tries again and shows its own cause.
+      const opened = this.open(inGameFrame);
+      opened.catch(() => this.pages.delete(key));
+      this.pages.set(key, opened);
+    }
+    return this.pages.get(key);
+  }
+
+  async open(inGameFrame) {
+    const context = await createCaptureContext(this.browser, {
+      frameOnOpen: !inGameFrame,
+      showPerformance: true,
+      inGameFrame,
+    });
+    const page = await context.newPage();
+    return { page, diagnostics: attachDiagnostics(page) };
+  }
 }
 
 /**
@@ -97,11 +116,37 @@ async function measureScene({ page, diagnostics }, baseUrl, scene) {
   if (!target) return { work: null, reason };
   const loading = await sceneStillLoading(page);
   if (loading) return { work: null, reason: loading };
+  if (scene.writesEachFrame) await startWritesEachFrame(page, scene.writesEachFrame);
   const { work, reason: unsteady } = await steadyWork(page);
   if (loggedErrors(diagnostics).length > 0) {
     return { work: null, reason: `console error(s): ${errorReport(diagnostics)}` };
   }
   return { work, reason: unsteady };
+}
+
+/** Writes the position of `count` children of `parent` on every frame, as a host's code would. */
+async function startWritesEachFrame(page, { parent, count }) {
+  await page.waitForFunction(() => window.textscene !== undefined);
+  await page.evaluate(
+    ({ parentPath, writes }) => {
+      const { scene, variant } = window.textscene;
+      const children = scene.getNode(parentPath).getChildren();
+      let frame = 0;
+      const writeFrame = () => {
+        frame += 1;
+        for (let i = 0; i < writes; i++) {
+          const node = children[i % children.length];
+          void node.set(
+            'position',
+            variant(`Vector3(${i % 10}, ${(frame % 60) / 30}, ${Math.floor(i / 10)})`)
+          );
+        }
+        requestAnimationFrame(writeFrame);
+      };
+      requestAnimationFrame(writeFrame);
+    },
+    { parentPath: parent, writes: count }
+  );
 }
 
 /** The scene's work once it is steady, or a reason it never was. */
@@ -118,7 +163,10 @@ async function steadyWork(page) {
     lastWindow = window;
     lastWindowAt = Date.now();
     const work = steady.observe(parseWorkCounts(snapshot), frames);
-    if (work) return { work, reason: null };
+    if (work) {
+      console.log(`[perf]   frame interval ${snapshot.frameMs}`);
+      return { work, reason: null };
+    }
   }
   return {
     work: null,

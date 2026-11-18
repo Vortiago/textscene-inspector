@@ -130,3 +130,20 @@ the sky IBL must land together.
   the environment enables glow, as Godot runs its glow chain on that flag alone
   (`renderer_scene_render_rd.cpp:575`). The bright pass then picks the pixels, so a lit
   specular highlight blooms as much as an emissive surface.
+
+## Amendment: the runtime half, in the In-game mode
+
+The In-game mode draws what `godot --path` draws: Godot's runtime answer, which the editor views
+leave out.
+
+- No preview sun and no preview Environment. The game's viewport description sets
+  `previewsEnvironment` false, and `usePreviewYield` reads it.
+- The root's world falls back to the project's `default_environment` when no WorldEnvironment holds
+  a valid Environment (`scene_tree.cpp:2151-2179`, `renderer_scene_cull.cpp:3594-3610`). The order
+  is the camera's Environment, the world's WorldEnvironment, the fallback, then none. Only the root
+  carries a fallback: a SubViewport's description gives none.
+- With no Environment, Godot lights each surface with the clear colour as ambient light at energy 1
+  (`render_scene_data_rd.cpp:225-235`), as a default Environment does. The previewer resolves such a
+  world to an Environment built from the project's `default_clear_color`. A viewport with
+  `transparent_bg` clears to transparent black, so its world takes no ambient light. The rule holds wherever no
+  Environment applies: in the editor views and in every SubViewport too.

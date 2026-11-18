@@ -18,7 +18,7 @@ import {
   type ViewportMode,
 } from '../../contexts/ViewportModeContext.js';
 import { readPersisted, usePersistedState } from '../../hooks/usePersistedState.js';
-import { useParsedScene } from '../../hooks/useParsedScene.js';
+import { useOpenedScene, useSceneGraphs } from '../../hooks/useOpenedScene.js';
 import { ViewportToolbar } from '../ViewportToolbar/ViewportToolbar.js';
 import { Splitter } from '../Splitter/Splitter.js';
 import { ViewportArea } from './ViewportArea.js';
@@ -43,7 +43,8 @@ import { HelpLink } from './HelpLink.js';
 import { AnimationTabWatcher } from './AnimationTabWatcher.js';
 import { DetailTabs, type DetailTab } from './DetailTabs.js';
 import { SceneTreePane } from './SceneTreePane.js';
-import { DEFAULT_ROOT_SCENE_PATH, previewShellProviders } from './previewShellProviders.js';
+import { previewShellProviders } from './previewShellProviders.js';
+import { DEFAULT_ROOT_SCENE_PATH } from '../../../scene/openScene.js';
 import { CaptureStateReporter } from './CaptureStateReporter.js';
 import type { TscnPreviewShellProps } from './previewShellProps.js';
 import styles from './TscnPreviewShell.module.css';
@@ -58,7 +59,7 @@ function isBoolean(value: unknown): value is boolean {
   return typeof value === 'boolean';
 }
 function isViewportMode(value: unknown): value is ViewportMode {
-  return value === '2D' || value === '3D';
+  return value === '2D' || value === '3D' || value === 'in-game';
 }
 
 export function TscnPreviewShell({
@@ -76,8 +77,15 @@ export function TscnPreviewShell({
   onCaptureStateChange,
   isVisible,
   onCopyNodePath,
+  onSceneOpen,
 }: TscnPreviewShellProps) {
-  const { sceneGraph, error } = useParsedScene(content, rootScenePath);
+  const scene = useOpenedScene(content, rootScenePath);
+  const { parsed, sceneGraph } = useSceneGraphs(scene);
+  const { sceneGraph: parsedGraph, error } = parsed;
+  // A block body: an arrow body would hand the host's return value to React as the cleanup.
+  useEffect(() => {
+    onSceneOpen?.(scene);
+  }, [scene, onSceneOpen]);
 
   const hierarchyValue = useMemo(() => ({ sceneGraph, panelId }), [sceneGraph, panelId]);
   const [viewportError, setViewportError] = useState<Error | null>(null);
@@ -128,7 +136,7 @@ export function TscnPreviewShell({
     <>
       {/* A host-forced mode turns auto-select off, or the root's claim overrides it. */}
       {initialViewportMode === undefined && <WorkspaceAutoSelect />}
-      <SceneChangeResetter sceneGraph={sceneGraph} />
+      <SceneChangeResetter sceneGraph={parsedGraph} />
       <AnimationTabWatcher onVisibleChange={setAnimationTabVisible} />
       <CaptureStateReporter onCaptureStateChange={onCaptureStateChange} viewportError={viewportError} />
       <EscapeDeselect />

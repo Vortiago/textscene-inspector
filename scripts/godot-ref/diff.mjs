@@ -13,7 +13,7 @@ import { PNG } from 'pngjs';
 import { tableLines } from '../compare-docs/markdownTable.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { compareImages } from '../visual/imageDelta.mjs';
-import { renderReference } from './run.mjs';
+import { IN_GAME_MODE, oneOf, parseSet, renderReference } from './run.mjs';
 import { captureOurs } from './capture-ours.mjs';
 import { FLATTENED_CORPUS_ROOTS } from '../corpusRoots.mjs';
 
@@ -31,7 +31,7 @@ const FLATTENED_ROOTS = ['fixtures', ...FLATTENED_CORPUS_ROOTS].map((root) => `$
 
 function usage() {
   console.error(
-    'Usage: pnpm ref:diff <fixture.tscn> [more.tscn ...] [--max-mean <n>] [--frame] [--keep] [--collisions] [--lit-surface nodes] [--table <file.md>]\n' +
+    'Usage: pnpm ref:diff <fixture.tscn> [more.tscn ...] [--max-mean <n>] [--frame] [--keep] [--collisions] [--mode in-game] [--set path:property=text] [--lit-surface nodes] [--table <file.md>]\n' +
       '\n' +
       '  <fixture.tscn>   fixture filename as listed in apps/textscene-web/src/fixtures.ts,\n' +
       '                   or a path to a .tscn under scenes/\n' +
@@ -39,7 +39,9 @@ function usage() {
       '                   (default: report only)\n' +
       '  --frame          fit-the-bounds camera on BOTH sides instead of the editor orbit\n' +
       '  --keep           keep the per-side PNGs, not just the diff\n' +
-      '  --collisions     show collision shapes on both sides (Visible Collision Shapes)\n' +
+      '  --collisions     show collision shapes on both sides (Visible Collision Shapes), not in-game\n' +
+      '  --mode in-game   measure the scene as the game starts it, against our In-game mode\n' +
+      '  --set p:prop=v   on both sides, get_node(p).set(prop, str_to_var(v)) before the capture\n' +
       '  --lit-surface nodes  open our side with the node lit surface (?litSurface=nodes)\n' +
       '  --table <file>   also write the results as a Markdown table, one row per scene'
   );
@@ -53,7 +55,9 @@ export function parseArgs(argv) {
     keep: false,
     collisions: false,
     litSurface: null,
+    mode: null,
     table: null,
+    sets: [],
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -68,15 +72,19 @@ export function parseArgs(argv) {
         throw new Error(`--table needs a file path, got "${argv[i]}"`);
       }
     } else if (arg === '--lit-surface') {
-      args.litSurface = argv[++i];
-      if (args.litSurface !== LIT_SURFACE_NODES) {
-        throw new Error(`--lit-surface takes "${LIT_SURFACE_NODES}", got "${argv[i]}"`);
-      }
+      args.litSurface = oneOf('--lit-surface', [LIT_SURFACE_NODES], argv[++i]);
+    } else if (arg === '--set') {
+      args.sets.push(parseSet(argv[++i]));
+    } else if (arg === '--mode') {
+      args.mode = oneOf('--mode', [IN_GAME_MODE], argv[++i]);
     } else if (arg === '--frame') args.frame = true;
     else if (arg === '--keep') args.keep = true;
     else if (arg === '--collisions') args.collisions = true;
     else if (arg.startsWith('--')) throw new Error(`unknown flag: ${arg}`);
     else args.fixtures.push(arg);
+  }
+  if (args.collisions && args.mode === IN_GAME_MODE) {
+    throw new Error(`--collisions cannot take --mode ${IN_GAME_MODE}: our In-game mode draws no debug hint`);
   }
   return args;
 }
@@ -146,7 +154,7 @@ export function comparePngs(godotBuffer, oursBuffer) {
  */
 export async function diffOne(
   { scenePath, fixtureName, label },
-  { frame, keep, collisions = false, litSurface = null },
+  { frame, keep, collisions = false, mode: pickedMode = null, sets = [], litSurface = null },
   { render = renderReference, capture = captureOurs, outDir = OUT_DIR } = {}
 ) {
   const renderAs = async (renderMode) =>
@@ -156,26 +164,29 @@ export async function diffOne(
       frame,
       mode: renderMode,
       debugCollisions: collisions,
+      sets,
     });
   // `run.mjs` refuses a root-window-only viewport setting in the nested arm and
   // names the arm that can answer it, so the scene is retried there.
-  const { out: godotOut, mode } = await renderAs('auto').catch((error) => {
+  const { out: godotOut, mode } = await renderAs(pickedMode ?? 'auto').catch((error) => {
     if (!error?.rootOnlyDrift) throw error;
     return renderAs('2d-root');
   });
   const godotBuffer = await readFile(godotOut);
 
-  // The reference is the project-viewport rect our 2D stage lays out at 1:1,
-  // so it sizes the capture window, with nothing re-derived on this side.
+  // The reference sizes the capture: the rect our 2D stage lays out at 1:1, or the window In-game fills.
   const canvas2D = mode === '2d';
   const reference = PNG.sync.read(godotBuffer);
+  const referenceFrame = { width: reference.width, height: reference.height };
   const oursBuffer = await capture({
     fixture: fixtureName,
     frame,
     canvas2D,
-    canvas2DFrame: canvas2D ? { width: reference.width, height: reference.height } : null,
+    canvas2DFrame: canvas2D ? referenceFrame : null,
+    inGameFrame: pickedMode === IN_GAME_MODE ? referenceFrame : null,
     showCollisions: collisions,
     litSurface,
+    sets,
   });
   if (keep) await writeFile(join(outDir, `${label}.ours.png`), oursBuffer);
 

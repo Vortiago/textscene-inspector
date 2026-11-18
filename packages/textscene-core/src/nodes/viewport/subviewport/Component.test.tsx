@@ -104,4 +104,23 @@ mesh = SubResource("1")
 `);
     expect(r.scene.findAllByProps({ name: 'Contained' }).length).toBeGreaterThan(0);
   });
+
+  it('a viewport nested in a shared Control-only one still shares the 3D view', async () => {
+    const r = await render(`[gd_scene format=3]
+
+[sub_resource type="BoxMesh" id="1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Hud" type="SubViewport" parent="."]
+
+[node name="Booth" type="SubViewportContainer" parent="Hud"]
+
+[node name="View" type="SubViewport" parent="Hud/Booth"]
+
+[node name="Nested" type="MeshInstance3D" parent="Hud/Booth/View"]
+mesh = SubResource("1")
+`);
+    expect(r.scene.findAllByProps({ name: 'Nested' }).length).toBeGreaterThan(0);
+  });
 });

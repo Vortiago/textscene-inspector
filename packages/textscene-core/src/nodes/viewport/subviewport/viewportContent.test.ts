@@ -340,6 +340,25 @@ describe('viewportContent — Controls beside the drawn kind', () => {
       holdsCanvasItems: true,
     });
   });
+  /** A CanvasLayer below a Node3D draws in the viewport's canvas (`canvas_layer.cpp:217`). */
+  it('finds a Control in a CanvasLayer below a Node3D', () => {
+    const HUD =
+      '\n[node name="World" type="Node3D" parent="Viewport"]' +
+      '\n[node name="HUD" type="CanvasLayer" parent="Viewport/World"]' +
+      '\n[node name="Score" type="Label" parent="Viewport/World/HUD"]';
+    expect(viewportContent(viewport(HUD)).holdsControls).toBe(true);
+  });
+
+  it('finds a 2D item below a Node3D', () => {
+    const NESTED_SPRITE =
+      '\n[node name="World" type="Node3D" parent="Viewport"]' +
+      '\n[node name="Sprite" type="Sprite2D" parent="Viewport/World"]';
+    expect(viewportContent(viewport(NESTED_SPRITE))).toEqual({
+      kind: '3d',
+      holdsControls: false,
+      holdsCanvasItems: true,
+    });
+  });
 });
 
 describe('standaloneViewportContent: instanced sub-scenes', () => {
