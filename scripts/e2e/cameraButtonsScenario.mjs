@@ -180,13 +180,15 @@ async function shoot(page) {
 }
 
 async function observe(page) {
+  // The tab hears a call on the next frame (sceneListeners.ts:40), so it is read after the canvas settles.
+  const buffer = await shoot(page);
   return {
+    buffer,
     view: await readView(page),
     rows: await readRows(page, 'button[class*="camRow"]'),
     active: await readRows(page, 'button[data-active="true"]'),
     disabled: await readRows(page, 'button[class*="camRow"]:disabled'),
     isEmpty: (await page.getByText('No camera nodes in this scene.').count()) > 0,
-    buffer: await shoot(page),
   };
 }
 
