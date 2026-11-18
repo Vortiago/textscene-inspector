@@ -523,9 +523,9 @@ describe('projectWindowSizeFromIni', () => {
     expect(projectWindowSizeFromIni(ini)).toEqual({ width: 320, height: 200 });
   });
 
-  it('ignores an override that sets one axis, as the engine does', () => {
+  it('takes an override on one axis alone, as the engine does', () => {
     expect(projectWindowSizeFromIni('window/size/window_width_override=1920')).toEqual({
-      width: 1152,
+      width: 1920,
       height: 648,
     });
   });

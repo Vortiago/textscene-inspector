@@ -118,8 +118,8 @@ async function explicitClearsNextFrame(
 }
 
 /** The sub-viewport's Camera3D after two passes, and the aspect each pass last fitted it to. */
-async function viewportCameraAfterTwoPasses(canvasCamera: ReactNode = null) {
-  const { renderer, gl } = await renderScene(scene3D(), '3d', 'Root/Viewport', canvasCamera);
+async function viewportCameraAfterTwoPasses(canvasCamera: ReactNode = null, viewportProps = '') {
+  const { renderer, gl } = await renderScene(scene3D(viewportProps), '3d', 'Root/Viewport', canvasCamera);
   await advanceFrameWithStubbedGl(renderer, gl());
   await advanceFrameWithStubbedGl(renderer, gl());
   return instanceAs<THREE.PerspectiveCamera>(renderer.scene.findByProps({ name: 'Camera3D' }));
@@ -452,6 +452,14 @@ polygon = PackedVector2Array(0, 0, 10, 0, 10, 10)
 
   it('leaves its own camera fitted to the target, which only the pass renders through', async () => {
     const camera = await viewportCameraAfterTwoPasses();
+    expect(fittedAspect(camera)).toBeCloseTo(320 / 240, 6);
+  });
+
+  it("fits its camera to the target, not to a stretched 2D override's aspect (`renderer_viewport.cpp:318`)", async () => {
+    const camera = await viewportCameraAfterTwoPasses(
+      null,
+      'size_2d_override = Vector2i(100, 100)\nsize_2d_override_stretch = true'
+    );
     expect(fittedAspect(camera)).toBeCloseTo(320 / 240, 6);
   });
 

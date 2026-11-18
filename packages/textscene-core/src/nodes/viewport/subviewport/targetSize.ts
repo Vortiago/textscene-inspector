@@ -8,11 +8,7 @@ import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
 import { VIEWPORT_MIN_SIZE } from '../../../godot/rendering/viewport.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
 import type { TscnNode } from '../../../parser/types.js';
-import {
-  DEFAULT_CONTENT_SCALE,
-  windowContentScale,
-  type ContentScale,
-} from '../../windows/window/contentScale.js';
+import { windowContentScale } from '../../windows/window/contentScale.js';
 import type { WindowProperties } from '../../windows/window/types.js';
 import { isEmbeddedWindow } from '../../../r3f/viewportRender/viewportBoundary.js';
 import type { SubViewportProperties } from './types.js';
@@ -51,25 +47,35 @@ export interface ViewportPassSizes {
   view: Vector2;
 }
 
-/** A SubViewport draws its content 1:1, as a window with every `content_scale_*` key unset. */
-function contentScaleOf(node: TscnNode): ContentScale {
-  return isEmbeddedWindow(node.type)
-    ? (node.properties as WindowProperties).content_scale
-    : DEFAULT_CONTENT_SCALE;
-}
-
 /**
  * A viewport renders and lays out by its content scale (`contentScale.ts`), and its canvas draws
  * scaled by the factor, so the target shows its pixels over the factor in canvas units
- * (`window.cpp:1362-1367`).
+ * (`window.cpp:1362-1367`). A SubViewport has no content scale but may have a 2D override.
  */
 export function viewportPassSizes(node: TscnNode, forced: ViewportRect | null): ViewportPassSizes {
   const size = viewportSize((node.properties as SubViewportProperties).size, forced);
-  const scale = windowContentScale(size, contentScaleOf(node));
+  if (!isEmbeddedWindow(node.type))
+    return subViewportPassSizes(size, node.properties as SubViewportProperties);
+  const scale = windowContentScale(size, (node.properties as WindowProperties).content_scale);
   const render = viewportSize(scale.renderSize, null);
   return {
     target: cappedTargetSize(render),
     layout: scale.layoutSize,
     view: { x: render.x / scale.canvasScale, y: render.y / scale.canvasScale },
+  };
+}
+
+/**
+ * A 2D override other than zero is the visible rect (`viewport.cpp:1212-1214`). With the stretch on
+ * and both axes above 0, the canvas scales by the size over the override (`:1103-1105`).
+ */
+function subViewportPassSizes(size: Vector2, properties: SubViewportProperties): ViewportPassSizes {
+  const { size_2d_override: override, size_2d_override_stretch: stretches } = properties;
+  const hasOverride = override.x !== 0 || override.y !== 0;
+  const isStretched = stretches && override.x > 0 && override.y > 0;
+  return {
+    target: cappedTargetSize(size),
+    layout: hasOverride ? override : size,
+    view: isStretched ? override : size,
   };
 }

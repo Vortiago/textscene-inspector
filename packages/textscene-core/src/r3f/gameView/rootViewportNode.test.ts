@@ -35,6 +35,22 @@ describe('rootViewportNode', () => {
     expect(propertiesOf(rootViewportNode(settings, [])).size).toEqual({ x: 640, y: 360 });
   });
 
+  it('renders at the stretched target and lays its canvas out in the 2D override', () => {
+    const settings = parseProjectSettings(
+      [
+        '[display]',
+        'window/size/window_width_override=800',
+        'window/size/window_height_override=800',
+        'window/stretch/mode="canvas_items"',
+      ].join('\n')
+    );
+    expect(propertiesOf(rootViewportNode(settings, []))).toMatchObject({
+      size: { x: 800, y: 450 },
+      size_2d_override: { x: 1152, y: 648 },
+      size_2d_override_stretch: true,
+    });
+  });
+
   it('owns its World3D and draws every frame', () => {
     expect(propertiesOf(rootViewportNode(null, []))).toMatchObject({
       own_world_3d: true,

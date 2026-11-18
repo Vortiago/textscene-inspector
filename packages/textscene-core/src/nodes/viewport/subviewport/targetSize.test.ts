@@ -13,7 +13,8 @@ import { viewportPassSizes, viewportSize } from './targetSize';
 import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
 
 function targetOf(size: Vector2, forced: ViewportRect | null): Vector2 {
-  const node = { name: 'View', type: 'SubViewport', children: [], properties: { size } };
+  const properties = { size, size_2d_override: { x: 0, y: 0 }, size_2d_override_stretch: false };
+  const node = { name: 'View', type: 'SubViewport', children: [], properties };
   return viewportPassSizes(node as unknown as TscnNode, forced).target;
 }
 
@@ -40,6 +41,42 @@ describe('viewportPassSizes: the target', () => {
 
   it('gives a non-finite axis the 2-pixel floor', () => {
     expect(targetOf({ x: Number.NaN, y: Number.POSITIVE_INFINITY }, null)).toEqual({ x: 2, y: 2 });
+  });
+});
+
+describe('viewportPassSizes: a 2D override', () => {
+  function sizesOf(size2dOverride: Vector2, stretches: boolean) {
+    const properties = {
+      size: { x: 800, y: 450 },
+      size_2d_override: size2dOverride,
+      size_2d_override_stretch: stretches,
+    };
+    const node = { name: 'View', type: 'SubViewport', children: [], properties };
+    return viewportPassSizes(node as unknown as TscnNode, null);
+  }
+
+  it('stretches the override over the target, so the canvas shows the override (`viewport.cpp:1103-1105`)', () => {
+    expect(sizesOf({ x: 1152, y: 648 }, true)).toEqual({
+      target: { x: 800, y: 450 },
+      layout: { x: 1152, y: 648 },
+      view: { x: 1152, y: 648 },
+    });
+  });
+
+  it('lays out in the override but draws the canvas 1:1 without the stretch (`:1212-1214`)', () => {
+    expect(sizesOf({ x: 1152, y: 648 }, false)).toEqual({
+      target: { x: 800, y: 450 },
+      layout: { x: 1152, y: 648 },
+      view: { x: 800, y: 450 },
+    });
+  });
+
+  it('does not stretch an override with a zero axis, yet lays out in it', () => {
+    expect(sizesOf({ x: 1152, y: 0 }, true)).toEqual({
+      target: { x: 800, y: 450 },
+      layout: { x: 1152, y: 0 },
+      view: { x: 800, y: 450 },
+    });
   });
 });
 

@@ -10,6 +10,7 @@ import { ControlRasterLayer } from '../../nodes/viewport/subviewport/ControlRast
 import { gameViewportDescription } from '../viewportRender/viewportDescription.js';
 import { rootViewportNode } from './rootViewportNode.js';
 import { RootViewportPresenter } from './RootViewportPresenter.js';
+import { rootWindow } from './rootWindow.js';
 import { RunningGameScope } from '../contexts/EditorHintContext.js';
 
 /** The root viewport and its presenter, as the game view's `<Canvas>` holds them. */
@@ -29,6 +30,7 @@ function RootViewport() {
   const root = useMemo(() => rootViewportNode(settings, nodes ? [...nodes] : []), [settings, nodes]);
   const rasterRoots = useMemo(() => [root], [root]);
   const description = useMemo(() => gameViewportDescription(settings), [settings]);
+  const window = useMemo(() => rootWindow(settings), [settings]);
   return (
     <>
       {nodes && rootScene && (
@@ -48,7 +50,7 @@ function RootViewport() {
           </EditedRootProvider>
         </SceneResourcesProvider>
       )}
-      <RootViewportPresenter root={root} />
+      <RootViewportPresenter root={root} window={window} />
     </>
   );
 }

@@ -1,9 +1,9 @@
 import type { TscnNode } from '../../parser/types.js';
 import type { ProjectSettings } from '../../parser/projectSettingsParser.js';
-import { projectViewportSize } from '../../parser/projectSettingsParser.js';
 import { parseSubViewport } from '../../nodes/viewport/subviewport/parser.js';
 import { SubViewportUpdateMode } from '../../godot/scene/viewport.js';
 import { ROOT_VIEWPORT_PATH } from '../contexts/EnclosingViewportContext.js';
+import { rootWindow } from './rootWindow.js';
 
 const ROOT_TYPE = 'SubViewport';
 
@@ -20,9 +20,11 @@ const ROOT_PROPERTY_SETTINGS: Readonly<Record<string, string>> = {
 
 /** The root viewport over `sceneRoots`, sized and set as `settings` give it. */
 export function rootViewportNode(settings: ProjectSettings | null, sceneRoots: TscnNode[]): TscnNode {
-  const { width, height } = projectViewportSize(settings);
+  const { targetSize, size2dOverride } = rootWindow(settings);
   const raw: Record<string, string> = {
-    size: `Vector2i(${width}, ${height})`,
+    size: `Vector2i(${targetSize.x}, ${targetSize.y})`,
+    // A window always stretches its 2D override (`viewport.h:727`).
+    size_2d_override_stretch: 'true',
     // The root owns its World3D, and it draws every frame.
     own_world_3d: 'true',
     render_target_update_mode: String(SubViewportUpdateMode.ALWAYS),
@@ -37,6 +39,7 @@ export function rootViewportNode(settings: ProjectSettings | null, sceneRoots: T
     type: ROOT_TYPE,
     children: sceneRoots,
     rawProperties: raw,
-    properties: parseSubViewport(heading, raw),
+    // Set after the parse: a window's override is a `Size2`, which a factor can leave fractional.
+    properties: { ...parseSubViewport(heading, raw), size_2d_override: size2dOverride },
   };
 }

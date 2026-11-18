@@ -268,8 +268,9 @@ export function OffscreenViewportPass({
     const keepsColor = toneMap?.environment?.background.mode === BackgroundMode.BG_KEEP;
 
     // A `<Camera3D>` camera mounts at the canvas aspect, and inside the viewport it frames the
-    // target rect. Only a camera the canvas also renders through gets its fit back after the pass.
-    const aspect = viewportAspect(viewSize);
+    // target (`renderer_viewport.cpp:318`), not the 2D override. Only a camera the canvas also
+    // renders through gets its fit back after the pass.
+    const aspect = viewportAspect(size);
     const restoreAspect = camera === canvasCamera ? fittedAspect(camera) : null;
     if (camera && fittedAspect(camera) !== aspect) fitToAspect(camera, aspect);
 
@@ -321,7 +322,7 @@ export function OffscreenViewportPass({
     worldRender,
     clearColor,
     transparentBg,
-    viewSize,
+    size,
     canvasScene,
     renderCanvas,
     backdropTarget,

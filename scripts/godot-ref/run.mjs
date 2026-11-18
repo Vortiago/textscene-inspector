@@ -559,11 +559,13 @@ function windowSizeSetting(sourceIni, key) {
   return Number.isFinite(value) && value > 0 ? Math.round(value) : null;
 }
 
-/** The window the project opens: the override when both axes set one, else the viewport (measured). */
+/** The window the project opens: each axis its override above 0, else the viewport's (main.cpp:2635-2644). */
 export function projectWindowSizeFromIni(sourceIni) {
-  const width = windowSizeSetting(sourceIni, 'window_width_override');
-  const height = windowSizeSetting(sourceIni, 'window_height_override');
-  return width && height ? { width, height } : projectViewportSizeFromIni(sourceIni);
+  const viewport = projectViewportSizeFromIni(sourceIni);
+  return {
+    width: windowSizeSetting(sourceIni, 'window_width_override') ?? viewport.width,
+    height: windowSizeSetting(sourceIni, 'window_height_override') ?? viewport.height,
+  };
 }
 
 /** Removes a whole `[name]` section of a Godot ConfigFile, whose keys no pattern can match. */
@@ -1174,7 +1176,27 @@ func _render_in_game(target: Node) -> void:
 	_apply_host_calls(target)
 	_run_skeleton_stacks(target)
 	await _converge(get_tree().root)
-	_save_capture(get_tree().root)
+	_save_window_capture(get_tree().root)
+
+# The window as the screen shows it: the root's target where the window attaches it, scaled with the
+# blit's nearest filter (rasterizer_gles3.cpp:440), on the black the blit clears to (:420).
+func _save_window_capture(root: Window) -> void:
+	var target := _viewport_image(root)
+	var rect := _attach_rect(root, target.get_size())
+	var window := Image.create(root.size.x, root.size.y, false, target.get_format())
+	window.fill(Color.BLACK)
+	target.resize(rect.size.x, rect.size.y, Image.INTERPOLATE_NEAREST)
+	window.blit_rect(target, Rect2i(Vector2i.ZERO, rect.size), rect.position)
+	window.save_png(OUT)
+
+# The rect window.cpp:1327-1348 attaches the target to. The final transform starts with the window
+# transform (window.cpp:3110), whose scale only the viewport mode sets.
+func _attach_rect(root: Window, target_size: Vector2i) -> Rect2i:
+	var final := root.get_final_transform()
+	var size := Vector2(target_size)
+	if root.content_scale_mode == Window.CONTENT_SCALE_MODE_VIEWPORT:
+		size = final.basis_xform(size)
+	return Rect2i(Vector2i(final.origin.round()), Vector2i(size.round()))
 
 # The pause would stop a modification stack, which the game runs (skeleton_2d.cpp:630-639).
 func _run_skeleton_stacks(node: Node) -> void:

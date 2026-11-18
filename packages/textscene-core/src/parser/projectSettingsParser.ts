@@ -19,6 +19,8 @@ import type { LayoutDirectionEnv } from '../godot/scene/control.js';
 import { DEFAULT_CLEAR_COLOR } from '../godot/rendering/rendering.js';
 import { DEFAULT_PHYSICS_CLOCK, type PhysicsClock } from '../godot/scene/physicsTicks.js';
 import { unquoteLiteral } from './utils.js';
+import { ContentScaleAspect, ContentScaleMode, ContentScaleStretch } from '../godot/scene/window.js';
+import type { ContentScale } from '../nodes/windows/window/contentScale.js';
 import { colorOr } from '../utils/colorParser.js';
 import { perObject } from '../utils/perObject.js';
 import { enumOr, parseOptionalFloat, parseOptionalInt } from './valueParsers.js';
@@ -147,13 +149,60 @@ export interface ProjectViewportSize {
  * non-positive value takes the default: a zero-width viewport cannot be laid out.
  */
 export function projectViewportSize(settings: ProjectSettings | null): ProjectViewportSize {
-  const axis = (key: string, fallback: number): number => {
-    const value = parseOptionalInt(settings?.[key]);
-    return value === undefined || value <= 0 ? fallback : value;
-  };
   return {
-    width: axis('display/window/size/viewport_width', DEFAULT_VIEWPORT_WIDTH),
-    height: axis('display/window/size/viewport_height', DEFAULT_VIEWPORT_HEIGHT),
+    width: windowSizeOr(settings, 'viewport_width', DEFAULT_VIEWPORT_WIDTH),
+    height: windowSizeOr(settings, 'viewport_height', DEFAULT_VIEWPORT_HEIGHT),
+  };
+}
+
+/** A `display/window/size/<key>` pixel count above 0, else `fallback`. */
+function windowSizeOr(settings: ProjectSettings | null, key: string, fallback: number): number {
+  const value = parseOptionalInt(settings?.[`display/window/size/${key}`]);
+  return value === undefined || value <= 0 ? fallback : value;
+}
+
+/**
+ * The size the root window opens at: each axis its override above 0, else the viewport's
+ * (`main.cpp:2635-2644`). It keeps this size under every `display/window/size/mode`: the screen a
+ * fullscreen window fills is unknown, and the pane is not the window.
+ */
+export function projectWindowSize(settings: ProjectSettings | null): ProjectViewportSize {
+  const viewport = projectViewportSize(settings);
+  return {
+    width: windowSizeOr(settings, 'window_width_override', viewport.width),
+    height: windowSizeOr(settings, 'window_height_override', viewport.height),
+  };
+}
+
+const CONTENT_SCALE_MODES = new Map<string, number>([
+  ['canvas_items', ContentScaleMode.CANVAS_ITEMS],
+  ['viewport', ContentScaleMode.VIEWPORT],
+]);
+
+const CONTENT_SCALE_ASPECTS = new Map<string, number>([
+  ['keep', ContentScaleAspect.KEEP],
+  ['keep_width', ContentScaleAspect.KEEP_WIDTH],
+  ['keep_height', ContentScaleAspect.KEEP_HEIGHT],
+  ['expand', ContentScaleAspect.EXPAND],
+]);
+
+/**
+ * The root window's content scale from `display/window/stretch/*`, at the viewport size
+ * (`main.cpp:4528-4562`). An absent key takes its default (`project_settings.cpp:1776-1779`), an
+ * unknown name Godot's fallback: disabled, ignore or fractional. The setter refuses a factor at or
+ * below 0 (`window.cpp:1774`), which keeps 1.
+ */
+export function projectContentScale(settings: ProjectSettings | null): ContentScale {
+  const setting = (key: string) => settings?.[`display/window/stretch/${key}`];
+  const { width, height } = projectViewportSize(settings);
+  const factor = parseOptionalFloat(setting('scale'));
+  return {
+    mode: CONTENT_SCALE_MODES.get(setting('mode') ?? 'disabled') ?? ContentScaleMode.DISABLED,
+    aspect: CONTENT_SCALE_ASPECTS.get(setting('aspect') ?? 'keep') ?? ContentScaleAspect.IGNORE,
+    stretch:
+      setting('scale_mode') === 'integer' ? ContentScaleStretch.INTEGER : ContentScaleStretch.FRACTIONAL,
+    size: { x: width, y: height },
+    factor: factor !== undefined && factor > 0 ? factor : 1,
   };
 }
 

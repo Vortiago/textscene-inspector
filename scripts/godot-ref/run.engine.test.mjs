@@ -697,7 +697,7 @@ initial_velocity_max = 1.0
         expect([png.width, png.height]).toEqual([800, 600]);
       });
 
-      it('ignores an override that sets only one axis', async () => {
+      it('takes an override on one axis alone, as each axis is read on its own (main.cpp:2635-2644)', async () => {
         const { png } = await renderProject({
           'project.godot': display([
             'window/size/viewport_width=400',
@@ -707,10 +707,25 @@ initial_velocity_max = 1.0
           ]),
           'main.tscn': main,
         });
-        expect([png.width, png.height]).toEqual([400, 300]);
+        expect([png.width, png.height]).toEqual([800, 300]);
       });
 
-      it('is the viewport size under the viewport stretch mode, which scales it at the blit', async () => {
+      it('fills the window outside the kept aspect with black bars', async () => {
+        const { png, at } = await renderProject({
+          'project.godot': display([
+            'window/size/viewport_width=400',
+            'window/size/viewport_height=300',
+            'window/size/window_width_override=800',
+            'window/size/window_height_override=800',
+            'window/stretch/mode="canvas_items"',
+          ]),
+          'main.tscn': main,
+        });
+        expect([png.width, png.height]).toEqual([800, 800]);
+        expect([at([400, 50]), at([400, 400]), at([400, 750])]).toEqual([[0, 0, 0], RED, [0, 0, 0]]);
+      });
+
+      it('is the window under the viewport stretch mode, which scales the viewport at the blit', async () => {
         const { png } = await renderProject({
           'project.godot': display([
             'window/size/viewport_width=400',
@@ -721,7 +736,7 @@ initial_velocity_max = 1.0
           ]),
           'main.tscn': main,
         });
-        expect([png.width, png.height]).toEqual([400, 300]);
+        expect([png.width, png.height]).toEqual([800, 600]);
       });
     });
   });
