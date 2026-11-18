@@ -180,7 +180,7 @@ export function OffscreenViewportPass({
   useSceneShadowFit(portalLightScene, viewport.positionalShadowAtlas);
   useSceneDepthPrepass(portalLightScene);
   const shadowAtlas = useViewportShadowAtlas(viewport.positionalShadowAtlas);
-  const { worldRender, canvasRender } = useWorldRenders(viewport, shadowAtlas);
+  const { worldRender, canvasRender } = useWorldRenders(viewport, shadowAtlas, viewSize);
 
   // Both canvas draws take the viewport's `msaa_2d`: the 2D world's and the Controls'.
   const canvasMsaaMode = viewport.msaa2D;
@@ -465,14 +465,15 @@ function LitCanvas({
 /** The pass's 3D world draw, and the canvas draw around the whole pass. */
 function useWorldRenders(
   viewport: ViewportDescription,
-  shadowAtlas: ViewportShadowAtlas
+  shadowAtlas: ViewportShadowAtlas,
+  viewSize: Vector2
 ): { worldRender: WorldRender; canvasRender: WorldRender } {
   return useMemo(
     () => ({
-      worldRender: { viewport, shadowAtlas, hasCanvasTransform: false },
-      canvasRender: { viewport, shadowAtlas, hasCanvasTransform: true },
+      worldRender: { viewport, shadowAtlas, canvasView: null },
+      canvasRender: { viewport, shadowAtlas, canvasView: viewSize },
     }),
-    [viewport, shadowAtlas]
+    [viewport, shadowAtlas, viewSize]
   );
 }
 

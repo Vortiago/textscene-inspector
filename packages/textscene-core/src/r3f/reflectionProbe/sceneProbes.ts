@@ -219,7 +219,7 @@ export class SceneProbes {
     const render = {
       viewport: probeCaptureDescription(viewport),
       shadowAtlas: this.shadowAtlas,
-      hasCanvasTransform: false,
+      canvasView: null,
       probeCapture: capture,
     };
     drawAsWorld(this.scene, () => {

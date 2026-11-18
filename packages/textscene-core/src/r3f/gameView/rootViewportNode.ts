@@ -1,5 +1,5 @@
 import type { TscnNode } from '../../parser/types.js';
-import type { ProjectSettings } from '../../parser/projectSettingsParser.js';
+import { projectEmbedsSubwindows, type ProjectSettings } from '../../parser/projectSettingsParser.js';
 import { parseSubViewport } from '../../nodes/viewport/subviewport/parser.js';
 import { SubViewportUpdateMode } from '../../godot/scene/viewport.js';
 import { ROOT_VIEWPORT_PATH } from '../contexts/EnclosingViewportContext.js';
@@ -33,6 +33,7 @@ export function rootViewportNode(
     // The root owns its World3D, and it draws every frame.
     own_world_3d: 'true',
     render_target_update_mode: String(SubViewportUpdateMode.ALWAYS),
+    gui_embed_subwindows: String(projectEmbedsSubwindows(settings)),
   };
   for (const [property, setting] of Object.entries(ROOT_PROPERTY_SETTINGS)) {
     const value = settings?.[setting];

@@ -471,7 +471,7 @@ export function projectTracesHalfSizeReflections(settings: ProjectSettings | nul
  * `display/window/subwindows/embed_subwindows`, which `main/main.cpp` hands the root window: whether
  * it embeds its windows. It does by default (`project_settings.cpp:1756`).
  */
-function projectEmbedsSubwindows(settings: ProjectSettings | null): boolean {
+export function projectEmbedsSubwindows(settings: ProjectSettings | null): boolean {
   return boolSlotValue(settings?.['display/window/subwindows/embed_subwindows']) ?? true;
 }
 

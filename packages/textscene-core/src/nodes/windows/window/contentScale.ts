@@ -40,6 +40,8 @@ export const DEFAULT_CONTENT_SCALE: Readonly<ContentScale> = Object.freeze({
 export interface WindowViewportScale {
   /** The target's pixels: `final_size`. */
   renderSize: Vector2;
+  /** `final_size_override`: the 2D override the window stretches over its target, zero for none. */
+  sizeOverride: Vector2;
   /** The rect the Controls lay out in: `get_visible_rect()`, the 2D override when one is set. */
   layoutSize: Vector2;
   /** The canvas transform's scale: the content scale factor (`window.cpp:1366`). */
@@ -105,7 +107,8 @@ function barMargin(size: Vector2, screen: Vector2): Vector2 {
  */
 function unknownModeScale(factor: number): WindowViewportScale {
   const none = { x: 0, y: 0 };
-  return { renderSize: none, layoutSize: none, canvasScale: factor, drawRect: { x: 0, y: 0, w: 0, h: 0 } };
+  const drawRect = { x: 0, y: 0, w: 0, h: 0 };
+  return { renderSize: none, sizeOverride: none, layoutSize: none, canvasScale: factor, drawRect };
 }
 
 /** How the window at `size` renders and lays out its content, and where its embedder draws it. */
@@ -114,17 +117,17 @@ export function windowContentScale(size: Vector2, scale: ContentScale): WindowVi
   const whole: Rect2 = { x: 0, y: 0, w: size.x, h: size.y };
   if (scale.mode === ContentScaleMode.DISABLED || scale.size.x === 0 || scale.size.y === 0) {
     const layoutSize = { x: storedReal(size.x / factor), y: storedReal(size.y / factor) };
-    return { renderSize: size, layoutSize, canvasScale: factor, drawRect: whole };
+    return { renderSize: size, sizeOverride: layoutSize, layoutSize, canvasScale: factor, drawRect: whole };
   }
   const { viewport, screen } = fitDesignSize(size, scale);
   const margin = barMargin(size, screen);
   const drawRect: Rect2 = { x: margin.x, y: margin.y, w: screen.x, h: screen.y };
   if (scale.mode === ContentScaleMode.CANVAS_ITEMS) {
     const layoutSize = { x: storedReal(viewport.x / factor), y: storedReal(viewport.y / factor) };
-    return { renderSize: screen, layoutSize, canvasScale: factor, drawRect };
+    return { renderSize: screen, sizeOverride: layoutSize, layoutSize, canvasScale: factor, drawRect };
   }
   if (scale.mode !== ContentScaleMode.VIEWPORT) return unknownModeScale(factor);
   // VIEWPORT: no 2D override, so the window lays out in its target (`viewport.cpp:1212-1214`).
   const renderSize = { x: Math.floor(viewport.x / factor), y: Math.floor(viewport.y / factor) };
-  return { renderSize, layoutSize: renderSize, canvasScale: factor, drawRect };
+  return { renderSize, sizeOverride: { x: 0, y: 0 }, layoutSize: renderSize, canvasScale: factor, drawRect };
 }

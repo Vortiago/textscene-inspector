@@ -50,32 +50,74 @@ export interface ViewportPassSizes {
   view: Vector2;
 }
 
-/** An embedded window's canvas draws scaled by its content scale factor (`window.cpp:1362-1367`). */
-export function viewportPassSizes(node: TscnNode, forced: ViewportRect | null): ViewportPassSizes {
-  const size = viewportSize((node.properties as SubViewportProperties).size, forced);
-  if (!isEmbeddedWindow(node.type))
-    return subViewportPassSizes(size, node.properties as SubViewportProperties);
+/** What a viewport hands `Viewport::_set_size` (`viewport.cpp:1100`), and the factor of a window. */
+interface SetSizeArguments {
+  size: Vector2;
+  sizeOverride: Vector2;
+  stretches: boolean;
+  /** The content scale factor of an embedded window, 1 for any other viewport. */
+  factor: number;
+}
+
+/** A SubViewport passes its own properties, a window what its content scale gives (`window.cpp:1351`). */
+function setSizeArguments(node: TscnNode, forced: ViewportRect | null): SetSizeArguments {
+  const properties = node.properties as SubViewportProperties;
+  const size = viewportSize(properties.size, forced);
+  if (!isEmbeddedWindow(node.type)) {
+    const { size_2d_override: sizeOverride, size_2d_override_stretch: stretches } = properties;
+    return { size, sizeOverride, stretches, factor: 1 };
+  }
   const scale = windowContentScale(size, (node.properties as WindowProperties).content_scale);
-  const render = viewportSize(scale.renderSize, null);
+  // A window always stretches its 2D override (`viewport.h:727`).
   return {
-    render,
-    target: cappedTargetSize(render),
-    layout: scale.layoutSize,
-    view: { x: render.x / scale.canvasScale, y: render.y / scale.canvasScale },
+    size: viewportSize(scale.renderSize, null),
+    sizeOverride: scale.sizeOverride,
+    stretches: true,
+    factor: scale.canvasScale,
   };
 }
 
-/** The 2D override's visible rect and stretch (`viewport.cpp:1103-1105,1212-1214`). */
-function subViewportPassSizes(size: Vector2, properties: SubViewportProperties): ViewportPassSizes {
-  const { size_2d_override: override, size_2d_override_stretch: stretches } = properties;
-  const hasOverride = !vector2Equals(override, VECTOR2_ZERO);
-  const isStretched = stretches && override.x > 0 && override.y > 0;
-  return {
-    render: size,
-    target: cappedTargetSize(size),
-    layout: hasOverride ? override : size,
-    view: isStretched ? override : size,
+/** The canvas units the size shows: the 2D override where it stretches (`viewport.cpp:1103-1105`). */
+function stretchedView({ size, sizeOverride, stretches }: SetSizeArguments): Vector2 {
+  return stretches && sizeOverride.x > 0 && sizeOverride.y > 0 ? sizeOverride : size;
+}
+
+/** `get_visible_rect()`: the 2D override where one is set (`viewport.cpp:1212-1214`). */
+function visibleSize({ size, sizeOverride }: SetSizeArguments): Vector2 {
+  return vector2Equals(sizeOverride, VECTOR2_ZERO) ? size : sizeOverride;
+}
+
+/** The rect the viewport's Controls lay out in, which its embedder's stretch leaves as it is. */
+export function viewportLayoutSize(node: TscnNode, forced: ViewportRect | null): Vector2 {
+  return visibleSize(setSizeArguments(node, forced));
+}
+
+/** The smaller axis of the stretch transform, which the windows it embeds render at (`window.cpp:1363`). */
+export function embedderStretch(node: TscnNode, forced: ViewportRect | null): number {
+  const args = setSizeArguments(node, forced);
+  const view = stretchedView(args);
+  return Math.min(args.size.x / view.x, args.size.y / view.y);
+}
+
+/** An embedded window renders at its embedder's stretch, its canvas at that times its factor. */
+export function viewportPassSizes(
+  node: TscnNode,
+  forced: ViewportRect | null,
+  stretchOfEmbedder: number
+): ViewportPassSizes {
+  const args = setSizeArguments(node, forced);
+  const layout = visibleSize(args);
+  if (!isEmbeddedWindow(node.type)) {
+    return { render: args.size, target: cappedTargetSize(args.size), layout, view: stretchedView(args) };
+  }
+  const render = {
+    x: Math.ceil(args.size.x * stretchOfEmbedder),
+    y: Math.ceil(args.size.y * stretchOfEmbedder),
   };
+  // The ceiling of the stretched size, and the stretch on the canvas transform (`window.cpp:1364-1366`).
+  const canvasScale = stretchOfEmbedder * args.factor;
+  const view = { x: render.x / canvasScale, y: render.y / canvasScale };
+  return { render, target: cappedTargetSize(render), layout, view };
 }
 
 /** The owner of the cap warnings: one per path and size, for the session. */

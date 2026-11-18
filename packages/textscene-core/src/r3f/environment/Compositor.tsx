@@ -29,7 +29,7 @@ export function Compositor() {
     name: 'Canvas',
   });
   const render = useMemo<WorldRender>(
-    () => ({ viewport: root, shadowAtlas: null, hasCanvasTransform: false }),
+    () => ({ viewport: root, shadowAtlas: null, canvasView: null }),
     [root]
   );
   useFrame(({ scene, camera }) => {

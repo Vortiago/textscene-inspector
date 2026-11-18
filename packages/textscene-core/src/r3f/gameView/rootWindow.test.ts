@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { ProjectSettings } from '../../parser/projectSettingsParser';
-import { fittedTargetSize, magnifiesTarget, rootWindow, shrinkRootWindow } from './rootWindow';
+import {
+  fittedTargetSize,
+  magnifiesTarget,
+  rootWindow,
+  rootWindowStretch,
+  shrinkRootWindow,
+} from './rootWindow';
 
 /** A project at Godot's default viewport, 1152 x 648, with `stretch` keys under `display/window/stretch/`. */
 function project(window: [number, number] | null, stretch: Record<string, string>): ProjectSettings {
@@ -147,5 +153,18 @@ describe('magnifiesTarget', () => {
   it('is false for a target shrunk to the size the pane draws it', () => {
     const shrunk = shrinkRootWindow(magnified, fittedTargetSize(magnified, 0.2));
     expect(magnifiesTarget(magnified, shrunk)).toBe(false);
+  });
+});
+
+describe('rootWindowStretch', () => {
+  it("is the smaller axis of a canvas-items window's stretch", () => {
+    const window = rootWindow(project([1728, 1296], { mode: 'canvas_items', aspect: 'keep' }));
+    expect(rootWindowStretch(window)).toBe(1.5);
+  });
+
+  it('is 1 for a viewport-mode window, which sets no 2D override', () => {
+    expect(rootWindowStretch(rootWindow(project([2304, 1296], { mode: 'viewport', aspect: 'keep' })))).toBe(
+      1
+    );
   });
 });

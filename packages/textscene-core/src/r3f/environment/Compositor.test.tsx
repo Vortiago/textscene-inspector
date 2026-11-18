@@ -173,7 +173,7 @@ describe('<Compositor> on the root canvas', () => {
     expect((await nextFrame())[0]?.render).toMatchObject({
       viewport: { camera: 'editor', mipmapBias: -0.5 },
       shadowAtlas: null,
-      hasCanvasTransform: false,
+      canvasView: null,
     });
   });
 

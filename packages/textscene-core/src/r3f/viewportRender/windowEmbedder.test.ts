@@ -5,7 +5,9 @@ import type { TscnNode } from '../../parser/types';
 import { liveTreeOf } from '../liveSceneTree';
 import { ROOT_EMBEDS_NO_WINDOWS } from '../../parser/projectSettings.testkit';
 import { sourcesOver } from '../liveSceneTree.testkit';
-import { embedsAWindow, embedsSubwindows } from './windowEmbedder';
+import { embedsAWindow, embedsSubwindows, windowEmbedderPathAt } from './windowEmbedder';
+import { rootViewportNode } from '../gameView/rootViewportNode';
+import { rootWindow } from '../gameView/rootWindow';
 import '../nodes/index';
 
 const node = (type: string, properties: Record<string, unknown> = {}, children: TscnNode[] = []) =>
@@ -95,5 +97,22 @@ describe('embedsSubwindows: whether a viewport is the embedder of the windows be
   it('answers for the root window where no viewport is named', () => {
     expect(embeds(null)).toBe(true);
     expect(embeds(null, ROOT_EMBEDS_NO_WINDOWS)).toBe(false);
+  });
+});
+
+describe('windowEmbedderPathAt', () => {
+  /** The live tree whose roots are `roots`, under an embedding root window. */
+  const treeOf = (roots: TscnNode[]) =>
+    liveTreeOf(roots, { externalResources: [], internalResources: [], ...sourcesOver() });
+
+  it("names the In-game root viewport as the embedder of a window in the scene's root", () => {
+    const sceneRoot = { ...node('Control', {}, [node('Window')]), name: 'Main' };
+    const tree = treeOf([rootViewportNode(null, rootWindow(null), [sceneRoot])]);
+    expect(windowEmbedderPathAt(tree, 'Main/Window')).toBe('');
+  });
+
+  it('names no embedder above a scene that no root viewport holds: the root window embeds it', () => {
+    const tree = treeOf([{ ...node('Control', {}, [node('Window')]), name: 'Main' }]);
+    expect(windowEmbedderPathAt(tree, 'Main/Window')).toBeNull();
   });
 });

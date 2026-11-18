@@ -15,7 +15,7 @@ import { CHAIN_START_PARENT, CanvasParentProvider } from './canvasItemPass/inher
 import { CanvasLayerIndexProvider } from './lighting2d/canvasItemPlacement.js';
 import { observeSceneCamera } from './sceneRenderCamera.js';
 import { renderUnderWay } from './viewportRender/worldRender.js';
-import { viewportLayerMatrix, type ViewportLayerFollow } from './viewportLayerAnchor.js';
+import { canvasLayerAnchor, type ViewportLayerFollow } from './viewportLayerAnchor.js';
 import { CanvasFrameContext, markCanvasFrame } from './canvasFrame.js';
 
 /** Places `layer` for each render of the scene, unanchored outside a sub-viewport's pass. */
@@ -23,15 +23,11 @@ function useViewportLayerAnchor(layer: RefObject<THREE.Object3D | null>, follow:
   const scene = useThree((state) => state.scene);
   const { enabled, scale } = follow;
   useEffect(() => {
-    const size = new THREE.Vector2();
     const next = new THREE.Matrix4();
     return observeSceneCamera(scene, (camera, target) => {
       const object = layer.current;
       if (!object) return;
-      const isViewportCanvasDraw =
-        target && renderUnderWay()?.hasCanvasTransform && camera instanceof THREE.OrthographicCamera;
-      if (!isViewportCanvasDraw) next.identity();
-      else viewportLayerMatrix({ enabled, scale }, camera, size.set(target.width, target.height), next);
+      canvasLayerAnchor({ enabled, scale }, camera, target ? renderUnderWay() : null, next);
       if (next.equals(object.matrix)) return;
       object.matrix.copy(next);
       // `onBeforeRender` runs after the scene's own matrix update, so the subtree is refreshed here.

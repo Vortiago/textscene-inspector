@@ -1,6 +1,5 @@
 import type { Rect2 } from '../../godot/math/rect2.js';
 import { VECTOR2_ZERO, vector2Equals, type Vector2 } from '../../godot/math/vector.js';
-import { ContentScaleMode } from '../../godot/scene/window.js';
 import { windowContentScale } from '../../nodes/windows/window/contentScale.js';
 import {
   projectContentScale,
@@ -25,11 +24,14 @@ const ROOT_MIN_EXTENT = 64;
 export function rootWindow(settings: ProjectSettings | null): RootWindow {
   const { width, height } = projectWindowSize(settings);
   const size = { x: Math.max(ROOT_MIN_EXTENT, width), y: Math.max(ROOT_MIN_EXTENT, height) };
-  const contentScale = projectContentScale(settings);
-  const { renderSize, layoutSize, drawRect } = windowContentScale(size, contentScale);
-  // Viewport mode sets no 2D override (`window.cpp:1337-1347`).
-  const size2dOverride = contentScale.mode === ContentScaleMode.VIEWPORT ? VECTOR2_ZERO : layoutSize;
-  return { size, targetSize: renderSize, size2dOverride, drawRect };
+  const { renderSize, sizeOverride, drawRect } = windowContentScale(size, projectContentScale(settings));
+  return { size, targetSize: renderSize, size2dOverride: sizeOverride, drawRect };
+}
+
+/** The smaller axis of the root's stretch transform, which its windows render at (`window.cpp:1363`). */
+export function rootWindowStretch({ targetSize, size2dOverride }: RootWindow): number {
+  if (size2dOverride.x <= 0 || size2dOverride.y <= 0) return 1;
+  return Math.min(targetSize.x / size2dOverride.x, targetSize.y / size2dOverride.y);
 }
 
 /** The target at the size the pane draws it, when smaller (ADR-0087). A hidden pane keeps it. */

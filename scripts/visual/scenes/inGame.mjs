@@ -19,6 +19,13 @@ export const IN_GAME_SCENES = [
     mode: 'in-game',
     canvas: { width: 240, height: 240 },
   },
+  // The stretch on a CanvasLayer and on an embedded window, beside the root canvas.
+  {
+    name: 'in-game-stretch-canvases',
+    file: 'in-game-stretch-canvases/unit-in-game-stretch-canvases.tscn',
+    mode: 'in-game',
+    canvas: GAME_WINDOW,
+  },
   // A Polygon2D and a Camera2D whose parent is the Node3D root draw on the root canvas.
   {
     name: 'in-game-canvas-under-node3d',

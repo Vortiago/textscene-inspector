@@ -26,6 +26,15 @@ function nodeFor(settings: ProjectSettings | null, roots: TscnNode[]): TscnNode 
 }
 
 describe('rootViewportNode', () => {
+  it('embeds its windows by default, as the root window does', () => {
+    expect(propertiesOf(nodeFor(null, [])).gui_embed_subwindows).toBe(true);
+  });
+
+  it('embeds no window where the project turns embedding off', () => {
+    const settings = parseProjectSettings('[display]\nwindow/subwindows/embed_subwindows=false');
+    expect(propertiesOf(nodeFor(settings, [])).gui_embed_subwindows).toBe(false);
+  });
+
   it("holds the scene's root as its one child, at the empty path", () => {
     const root = nodeFor(null, [SCENE_ROOT]);
     expect([root.name, root.children]).toEqual([ROOT_VIEWPORT_PATH, [SCENE_ROOT]]);

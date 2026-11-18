@@ -104,7 +104,7 @@ async function spriteDrawLevels(source: string, project: string | null): Promise
       {
         onRender: (_, renderedScene) => {
           const render = renderUnderWay();
-          if (textureOf(renderedScene) && render && !render.hasCanvasTransform)
+          if (textureOf(renderedScene) && render && !render.canvasView)
             seen.push(render.viewport.anisotropicLevel);
         },
       },
