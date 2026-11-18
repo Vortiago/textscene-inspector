@@ -21,18 +21,18 @@ function rowOf(declaredBy: string, name: string): PropertyMethodsRow | undefined
   return PROPERTY_METHODS[declaredBy]?.find(([rowName]) => rowName === name);
 }
 
-/** `ClassDB::get_property_setter`: the empty name for a property with none. */
-export function setterOf(className: string, property: string): string | undefined {
-  const declaredBy = declaredProperty(className, property);
-  if (!declaredBy) return undefined;
-  return rowOf(declaredBy, property)?.[1] ?? `${SETTER_PREFIX}${property}`;
-}
+const PREFIX = { setter: SETTER_PREFIX, getter: GETTER_PREFIX } as const;
+const COLUMN = { setter: 1, getter: 2 } as const;
 
-/** `ClassDB::get_property_getter`: the empty name for a property with none. */
-export function getterOf(className: string, property: string): string | undefined {
+/** `ClassDB::get_property_setter` or `get_property_getter`: the empty name for a property with none. */
+export function accessorOf(
+  role: PropertyMethod['role'],
+  className: string,
+  property: string
+): string | undefined {
   const declaredBy = declaredProperty(className, property);
   if (!declaredBy) return undefined;
-  return rowOf(declaredBy, property)?.[2] ?? `${GETTER_PREFIX}${property}`;
+  return rowOf(declaredBy, property)?.[COLUMN[role]] ?? `${PREFIX[role]}${property}`;
 }
 
 /** The rows of the nearest class that names `method` as a setter or a getter. */
@@ -56,9 +56,10 @@ function prefixedMethod(className: string, method: string): PropertyMethod | und
       ? 'getter'
       : null;
   if (!role) return undefined;
-  const property = method.slice((role === 'setter' ? SETTER_PREFIX : GETTER_PREFIX).length);
-  const named = role === 'setter' ? setterOf(className, property) : getterOf(className, property);
-  return named === method ? { role, properties: new Map([[null, property]]) } : undefined;
+  const property = method.slice(PREFIX[role].length);
+  return accessorOf(role, className, property) === method
+    ? { role, properties: new Map([[null, property]]) }
+    : undefined;
 }
 
 /** The property a call of `method` on a `className` node reaches, if `method` is a setter or a getter. */

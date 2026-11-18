@@ -760,12 +760,6 @@ export function harnessWarnings(output) {
   return output.split('\n').filter((line) => line.startsWith(HARNESS_WARNING_PREFIX));
 }
 
-/**
- * The bootstrap scene's script: it instantiates the target scene, picks its 2D or 3D path and
- * writes one settled frame. `simSeconds` (`SETTLE_SIM_SECONDS`) is a parameter only so a test can
- * drive the refusal of a non-zero value, which neither side can honour. It governs the preview
- * path. `--no-previews` renders a live runtime, where the authored instant is not the question.
- */
 /** One HOST_CALLS row of GDScript for a `--set` or a `--call`. */
 function hostCallRow(call) {
   if ('property' in call)
@@ -773,6 +767,12 @@ function hostCallRow(call) {
   return `["call", ${gdString(call.path)}, ${gdString(call.method)}, [${call.args.map(gdString).join(', ')}]]`;
 }
 
+/**
+ * The bootstrap scene's script: it instantiates the target scene, picks its 2D or 3D path and
+ * writes one settled frame. `simSeconds` (`SETTLE_SIM_SECONDS`) is a parameter only so a test can
+ * drive the refusal of a non-zero value, which neither side can honour. It governs the preview
+ * path. `--no-previews` renders a live runtime, where the authored instant is not the question.
+ */
 export function bootstrapScript({
   scenePath,
   previews,

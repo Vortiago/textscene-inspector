@@ -21,7 +21,7 @@ export interface MethodTarget {
 }
 
 /** A method of Godot's class this release ports, with the count of arguments its binding takes. */
-interface PortedMethod {
+export interface PortedMethod {
   readonly minArguments: number;
   readonly maxArguments: number;
   /** `args` holds `minArguments` at least, as `runPortedMethod` checks first. */
@@ -119,6 +119,11 @@ const PORTED_METHODS: Readonly<Record<string, Readonly<Record<string, PortedMeth
   Camera2D: CAMERA_2D_METHODS,
   Viewport: VIEWPORT_METHODS,
 };
+
+/** Whether `className` or a base has a ported method, so a property access of any other class skips the lookup. */
+export function hasPortedMethods(className: string): boolean {
+  return findInClassChain(className, (type) => (PORTED_METHODS[type] ? true : undefined)) ?? false;
+}
 
 /** The nearest class's port of `method`, as a call resolves a method up the class chain. */
 export function findPortedMethod(className: string, method: string): PortedMethod | undefined {

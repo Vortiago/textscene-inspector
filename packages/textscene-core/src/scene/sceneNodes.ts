@@ -5,14 +5,20 @@ import { loadPropertyAccess, type PropertyAccess, type SceneProperties } from '.
 import type { SceneTree, SceneTreeNode } from './sceneRuntime.js';
 import type { SceneValue } from './variant.js';
 import { isWritable } from './writtenScene.js';
-import { findPortedMethod, runPortedMethod, type CallResult, type MethodTarget } from './nodeMethods.js';
+import {
+  findPortedMethod,
+  hasPortedMethods,
+  runPortedMethod,
+  type CallResult,
+  type MethodTarget,
+  type PortedMethod,
+} from './nodeMethods.js';
+import { memoisedImport } from '../resources/memoisedImport.js';
 import { ViewportCameras } from './viewportCameras.js';
 import type { PropertyMethod } from '../godot/classdb/propertyMethod.js';
 
 /** The setter and getter names of every class are tens of kB, so they load on the first use. */
-function loadPropertyMethods(): Promise<typeof import('../godot/classdb/propertyMethod.js')> {
-  return import('../godot/classdb/propertyMethod.js');
-}
+const loadPropertyMethods = memoisedImport(() => import('../godot/classdb/propertyMethod.js'));
 
 /** `get_class` of the root viewport, the window above the scene's root node. */
 const ROOT_WINDOW_TYPE = 'Window';
@@ -116,22 +122,31 @@ export class SceneNodes implements HandleHost {
 
   /** `Object::get`: a getter this release ports as a method runs it. */
   async get(path: string, property: string): Promise<SceneValue | null> {
-    const type = this.typeOfNode(path);
-    const getter = (await loadPropertyMethods()).getterOf(type, property);
-    const ported = getter ? findPortedMethod(type, getter) : undefined;
-    if (ported)
-      return (await runPortedMethod(ported, getter!, this.methodTarget(path), [])) as SceneValue | null;
-    return this.getStored(path, property);
+    const accessor = await this.portedAccessor(path, property, 'getter');
+    if (!accessor) return this.getStored(path, property);
+    const { name, method } = accessor;
+    return (await runPortedMethod(method, name, this.methodTarget(path), [])) as SceneValue | null;
   }
 
   /** `Object::set`: a setter this release ports as a method runs it. */
   async set(path: string, property: string, value: SceneValue): Promise<boolean> {
-    const type = this.typeOfNode(path);
-    const setter = (await loadPropertyMethods()).setterOf(type, property);
-    const ported = setter ? findPortedMethod(type, setter) : undefined;
-    if (!ported) return this.setStored(path, property, value);
-    await runPortedMethod(ported, setter!, this.methodTarget(path), [value]);
+    const accessor = await this.portedAccessor(path, property, 'setter');
+    if (!accessor) return this.setStored(path, property, value);
+    await runPortedMethod(accessor.method, accessor.name, this.methodTarget(path), [value]);
     return true;
+  }
+
+  /** The ported setter or getter of `property`, if the node's class ports it. */
+  private async portedAccessor(
+    path: string,
+    property: string,
+    role: 'setter' | 'getter'
+  ): Promise<{ name: string; method: PortedMethod } | undefined> {
+    const type = this.typeOfNode(path);
+    if (!hasPortedMethods(type)) return undefined;
+    const name = (await loadPropertyMethods()).accessorOf(role, type, property);
+    const method = name ? findPortedMethod(type, name) : undefined;
+    return name && method ? { name, method } : undefined;
   }
 
   /** `Object::callv`: a ported method, else the property a setter or a getter reaches. */

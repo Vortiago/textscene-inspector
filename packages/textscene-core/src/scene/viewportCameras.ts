@@ -1,8 +1,6 @@
-import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
-import type { VariantValue } from '../godot/variant/variantValue.js';
+import { boolSlotValue } from '../godot/variant/variantBool.js';
 import * as logger from '../logger.js';
 import type { TreeCamera } from './sceneRuntime.js';
-import { valueOfSceneValue, variant } from './variant.js';
 
 /** `camera_3d.h:63`, `camera_2d.h:67` */
 const CAMERA_3D_CURRENT_DEFAULT = false;
@@ -26,17 +24,7 @@ interface ViewportState {
 
 /** A text's bool, as the setter's cast reads it. */
 function boolOf(text: string | undefined, fallback: boolean): boolean {
-  if (text === undefined) return fallback;
-  let read: VariantValue;
-  try {
-    read = valueOfSceneValue(variant(text));
-  } catch {
-    // A text Godot cannot read leaves the property at its default, as the loader skips it.
-    return fallback;
-  }
-  if (read.type === T.BOOL) return read.value as boolean;
-  if (read.type === T.INT || read.type === T.FLOAT) return read.value !== 0;
-  return fallback;
+  return boolSlotValue(text) ?? fallback;
 }
 
 /** Until a call moves the state, the enter rule over the loaded tree gives it, in game order. */
@@ -87,8 +75,7 @@ export class ViewportCameras {
     const state = this.stateOf(camera.viewport);
     if (state.camera3D !== path) return;
     this.moved(camera, () => {
-      state.camera3D = null;
-      if (enableNext) state.camera3D = state.cameras3D.find((other) => other !== path) ?? null;
+      state.camera3D = enableNext ? (state.cameras3D.find((other) => other !== path) ?? null) : null;
     });
   }
 
@@ -180,10 +167,10 @@ export class ViewportCameras {
 
   /** `Viewport::assign_next_enabled_camera_2d`: the first enabled camera of the group, in tree order. */
   private nextEnabled2D(viewport: string | null): string | null {
-    for (const { path } of this.seen ?? []) {
-      const camera = this.entered.get(path);
-      if (camera?.dimension !== '2D' || camera.viewport !== viewport) continue;
-      if (this.isEnabled(camera)) return path;
+    for (const camera of this.seen ?? []) {
+      if (camera.dimension !== '2D' || camera.viewport !== viewport || !this.entered.has(camera.path))
+        continue;
+      if (this.isEnabled(camera)) return camera.path;
     }
     return null;
   }
