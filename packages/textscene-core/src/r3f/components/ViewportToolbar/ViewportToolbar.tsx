@@ -79,7 +79,7 @@ function editorOnlyToggle(mode: ViewportMode, toggle: DisplayToggle): DisplayTog
  * the 3D-only ones are one readable list.
  */
 function buildDisplayToggles(state: DisplayToggleState): readonly DisplayToggle[] {
-  // Keyed by its setting, so a toggle the game does not override fails to compile here.
+  // The key is the setting the toggle shows: only a setting the running game overrides compiles.
   const editorOnly = (_setting: keyof typeof RUNNING_GAME_TOGGLES, toggle: DisplayToggle) =>
     editorOnlyToggle(state.mode, toggle);
   return [

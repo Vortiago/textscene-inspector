@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { ROOT_VIEWPORT_PATH } from '../contexts/EnclosingViewportContext.js';
 import { useCurrentCamera3D } from '../currentCamera.js';
 import { isClaimedByNode3DEditor } from '../nodeWorkspaceVisibility.js';
@@ -32,8 +31,5 @@ export function useGameStartFacts(): GameStartFacts {
   const scripted = useLiveSceneNodes(holdsScript).length;
   const rootWindow3D = useLiveSceneNodes(is3DContent, keepsChildrenInViewport).length;
   const currentCamera3D = useCurrentCamera3D(ROOT_VIEWPORT_PATH);
-  return useMemo(
-    () => gameStartFacts(scripted, rootWindow3D, currentCamera3D),
-    [scripted, rootWindow3D, currentCamera3D]
-  );
+  return gameStartFacts(scripted, rootWindow3D, currentCamera3D);
 }

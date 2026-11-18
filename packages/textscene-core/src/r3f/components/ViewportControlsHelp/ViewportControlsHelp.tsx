@@ -1,9 +1,3 @@
-/**
- * The controls legend: a summary pill, and a panel with the binding table for
- * every input device. Godot's editor bindings leave a plain left-drag inert,
- * so the viewport says what to press. `<ViewportArea>` mounts it in both
- * modes, and the rows come from `bindings.ts`.
- */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDismissable } from '../../hooks/useDismissable.js';
 import { useGlobalShortcut } from '../../hooks/useGlobalShortcut.js';
