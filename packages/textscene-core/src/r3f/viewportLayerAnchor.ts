@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { orthoViewRect } from './viewportRender/viewportFraming.js';
 import type { Rect2 } from '../godot/math/rect2.js';
+import type { WorldRender } from './viewportRender/worldRender.js';
 
 /** Written only by {@link viewAnchorMatrix}, which reads them before returning. */
 const view: Rect2 = { x: 0, y: 0, w: 0, h: 0 };
@@ -21,12 +22,8 @@ export interface ViewportLayerFollow {
   readonly scale: number;
 }
 
-/**
- * Writes into `target` the matrix a layer's canvas draws through in the pass, before its own
- * transform. A layer that does not follow keeps its origin at the view's top-left and one viewport
- * pixel per pixel. A following layer takes the view as world content does, scaled about its centre.
- */
-export function viewportLayerMatrix(
+/** A layer sits on the view's top-left, or takes the view scaled about its centre where it follows. */
+function viewportLayerMatrix(
   follow: ViewportLayerFollow,
   camera: THREE.OrthographicCamera,
   size: { x: number; y: number },
@@ -40,7 +37,19 @@ export function viewportLayerMatrix(
   return viewAnchorMatrix(camera, size, target);
 }
 
-/** Puts a viewport-sized layout on the view's top-left corner, one pixel per pixel, turned with the view. */
+/** The layer's matrix in `render`: anchored in a SubViewport's 2D pass, else the identity. */
+export function canvasLayerAnchor(
+  follow: ViewportLayerFollow,
+  camera: THREE.Camera,
+  render: WorldRender | null,
+  target: THREE.Matrix4
+): THREE.Matrix4 {
+  const canvasView = render?.canvasView;
+  if (!canvasView || !(camera instanceof THREE.OrthographicCamera)) return target.identity();
+  return viewportLayerMatrix(follow, camera, canvasView, target);
+}
+
+/** Puts a layout of the canvas size on the view's top-left corner, unit for unit, turned with the view. */
 export function viewAnchorMatrix(
   camera: THREE.OrthographicCamera,
   size: { x: number; y: number },

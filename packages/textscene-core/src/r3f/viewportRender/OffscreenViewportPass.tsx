@@ -80,6 +80,8 @@ const CanvasOverWorld = lazy(() =>
 export interface OffscreenViewportPassProps extends NodeComponentProps {
   path: string;
   size: Vector2;
+  /** The pixels Godot renders, before the cap: the 3D camera's aspect. */
+  renderSize: Vector2;
   /** The viewport's visible rect, which a Camera2D centres in. `size` is the capped target. */
   layoutSize: Vector2;
   /** The canvas units the target shows, which frame the canvas: `layoutSize` unless a window scales its content. */
@@ -105,6 +107,7 @@ export function OffscreenViewportPass({
   node,
   path,
   size,
+  renderSize,
   layoutSize,
   viewSize,
   kind,
@@ -177,7 +180,7 @@ export function OffscreenViewportPass({
   useSceneShadowFit(portalLightScene, viewport.positionalShadowAtlas);
   useSceneDepthPrepass(portalLightScene);
   const shadowAtlas = useViewportShadowAtlas(viewport.positionalShadowAtlas);
-  const { worldRender, canvasRender } = useWorldRenders(viewport, shadowAtlas);
+  const { worldRender, canvasRender } = useWorldRenders(viewport, shadowAtlas, viewSize);
 
   // Both canvas draws take the viewport's `msaa_2d`: the 2D world's and the Controls'.
   const canvasMsaaMode = viewport.msaa2D;
@@ -267,9 +270,8 @@ export function OffscreenViewportPass({
     if (backdrop) renderCanvas(backdrop, isBehindWorld(behindTo!));
     const keepsColor = toneMap?.environment?.background.mode === BackgroundMode.BG_KEEP;
 
-    // A `<Camera3D>` camera mounts at the canvas aspect, and inside the viewport it frames the
-    // target rect. Only a camera the canvas also renders through gets its fit back after the pass.
-    const aspect = viewportAspect(viewSize);
+    // Godot's rendered size, not the 2D override (`renderer_viewport.cpp:318`). The canvas gets its own back.
+    const aspect = viewportAspect(renderSize);
     const restoreAspect = camera === canvasCamera ? fittedAspect(camera) : null;
     if (camera && fittedAspect(camera) !== aspect) fitToAspect(camera, aspect);
 
@@ -321,7 +323,7 @@ export function OffscreenViewportPass({
     worldRender,
     clearColor,
     transparentBg,
-    viewSize,
+    renderSize,
     canvasScene,
     renderCanvas,
     backdropTarget,
@@ -463,14 +465,15 @@ function LitCanvas({
 /** The pass's 3D world draw, and the canvas draw around the whole pass. */
 function useWorldRenders(
   viewport: ViewportDescription,
-  shadowAtlas: ViewportShadowAtlas
+  shadowAtlas: ViewportShadowAtlas,
+  viewSize: Vector2
 ): { worldRender: WorldRender; canvasRender: WorldRender } {
   return useMemo(
     () => ({
-      worldRender: { viewport, shadowAtlas, hasCanvasTransform: false },
-      canvasRender: { viewport, shadowAtlas, hasCanvasTransform: true },
+      worldRender: { viewport, shadowAtlas, canvasView: null },
+      canvasRender: { viewport, shadowAtlas, canvasView: viewSize },
     }),
-    [viewport, shadowAtlas]
+    [viewport, shadowAtlas, viewSize]
   );
 }
 

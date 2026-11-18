@@ -21,6 +21,7 @@ import {
   runCameraPreviewScenario,
 } from './cameraPreviewScenario.mjs';
 import { checkInGame, IN_GAME_FIXTURE, runInGameScenario } from './inGameScenario.mjs';
+import { checkInGameStretch, runInGameStretchScenario, STRETCH_FIXTURE } from './inGameStretchScenario.mjs';
 import { checkCameraButtons, runCameraButtonsScenario } from './cameraButtonsScenario.mjs';
 import { checkInGameToolbar, runInGameToolbarScenario } from './inGameToolbarScenario.mjs';
 import { checkModeSwitch, runModeSwitchScenario } from './modeSwitchScenario.mjs';
@@ -136,6 +137,14 @@ export const SCENARIOS = [
     check: checkInGame,
     measure: ({ openedIn, isPressed, dims, ink }) =>
       `in-game  opened-in=${openedIn} pressed=${isPressed} canvas=${dims.width}x${dims.height} ink=${ink?.inkPixels}`,
+  },
+  {
+    name: 'In-game stretch',
+    title: `In-game window stretch: ${STRETCH_FIXTURE}`,
+    seconds: 4,
+    run: runInGameStretchScenario,
+    check: checkInGameStretch,
+    measure: ({ pixels }) => `in-game stretch  ${JSON.stringify(pixels)}`,
   },
   {
     name: 'camera buttons',

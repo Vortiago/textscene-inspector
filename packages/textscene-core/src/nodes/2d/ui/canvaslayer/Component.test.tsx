@@ -163,7 +163,7 @@ describe('<CanvasLayer> in a sub-viewport pass', () => {
     camera.position.set(...VIEW.position);
     const target = new THREE.WebGLRenderTarget(SIZE.x, SIZE.y);
     scene.updateMatrixWorld();
-    drawAsCanvasPass(() => fireSceneRender(scene, camera, target));
+    drawAsCanvasPass(() => fireSceneRender(scene, camera, target), SIZE);
     return renderer.scene.findAllByType('Group')[0]!.instance as THREE.Object3D;
   }
 

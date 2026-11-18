@@ -52,7 +52,7 @@ function renderThrough(renderer: Renderer, camera: THREE.Camera): void {
 
 /** A SubViewport's world draw, fitting its lights in `shadowAtlas`. */
 function drawInViewport(shadowAtlas: ViewportShadowAtlas, draw: () => void): void {
-  drawWorld({ viewport: rootViewportDescription(null), shadowAtlas, hasCanvasTransform: false }, draw);
+  drawWorld({ viewport: rootViewportDescription(null), shadowAtlas, canvasView: null }, draw);
 }
 
 /** Godot's editor view of a scene: the fixed orbit round the origin. */

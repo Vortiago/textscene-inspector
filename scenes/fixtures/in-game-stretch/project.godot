@@ -1,0 +1,17 @@
+; A res:// root of its own, because the window size and its stretch are PROJECT settings, which no
+; .tscn can carry. The 240 x 240 window keeps the 320 x 180 base's aspect with bars above and below.
+
+config_version=5
+
+[application]
+
+config/name="In-game stretch"
+config/features=PackedStringArray("4.6")
+
+[display]
+
+window/size/viewport_width=320
+window/size/viewport_height=180
+window/size/window_width_override=240
+window/size/window_height_override=240
+window/stretch/mode="canvas_items"

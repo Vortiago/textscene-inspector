@@ -5,11 +5,13 @@ import { useProjectSettings } from '../contexts/ProjectSettingsContext.js';
 import { SceneResourcesProvider } from '../SceneResourcesContext.js';
 import { EditedRootProvider } from '../contexts/InstanceOwnersContext.js';
 import { NodeDispatcher } from '../NodeDispatcher.js';
+import type { SubViewportProperties } from '../../nodes/viewport/subviewport/types.js';
 import { ViewportMount } from '../../nodes/viewport/subviewport/Component.js';
 import { ControlRasterLayer } from '../../nodes/viewport/subviewport/ControlRasterLayer.js';
 import { gameViewportDescription } from '../viewportRender/viewportDescription.js';
 import { rootViewportNode } from './rootViewportNode.js';
 import { RootViewportPresenter } from './RootViewportPresenter.js';
+import { useDrawnRootWindow, useProjectRootWindow } from './useDrawnRootWindow.js';
 import { RunningGameScope } from '../contexts/EditorHintContext.js';
 
 /** The root viewport and its presenter, as the game view's `<Canvas>` holds them. */
@@ -26,8 +28,14 @@ function RootViewport() {
   const rootScene = sceneGraph?.scenes.get(sceneGraph.rootScene);
   const nodes = useSeatedRoots();
   const { settings } = useProjectSettings();
-  const root = useMemo(() => rootViewportNode(settings, nodes ? [...nodes] : []), [settings, nodes]);
+  const projectWindow = useProjectRootWindow();
+  const drawnWindow = useDrawnRootWindow(projectWindow);
+  const root = useMemo(
+    () => rootViewportNode(settings, drawnWindow, nodes ? [...nodes] : []),
+    [settings, drawnWindow, nodes]
+  );
   const rasterRoots = useMemo(() => [root], [root]);
+  const { transparent_bg: isTransparent } = root.properties as SubViewportProperties;
   const description = useMemo(() => gameViewportDescription(settings), [settings]);
   return (
     <>
@@ -48,7 +56,11 @@ function RootViewport() {
           </EditedRootProvider>
         </SceneResourcesProvider>
       )}
-      <RootViewportPresenter root={root} />
+      <RootViewportPresenter
+        projectWindow={projectWindow}
+        drawnWindow={drawnWindow}
+        isTransparent={isTransparent}
+      />
     </>
   );
 }

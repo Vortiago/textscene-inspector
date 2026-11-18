@@ -69,8 +69,11 @@ The In-game mode draws the root viewport of the scene as the game starts it:
 Scripts do not run. The view shows the scene as Godot loads it, before any script changes it.
 
 The provider serves `res://project.godot` when the project has one. The mode reads the window size,
-the clear colour, the transparent background and the default Environment from it. The window fits
-into the element at its aspect ratio, with bars around it.
+the stretch settings, the clear colour, the transparent background and the default Environment from
+it. The window is the size `display/window/size/*` gives it, also under a fullscreen window mode.
+`display/window/stretch/*` maps the scene into the window as the game does, with black bars where
+the aspect is kept. The window fits into the element at one scale. A resize of the element changes
+that fit, not the window size.
 
 Draw one view per page. The Decal atlas and the area light atlas are shared by every view on a
 page, and #1005 gives each view its own.

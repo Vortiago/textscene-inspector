@@ -158,7 +158,7 @@ describe('SceneDecals', () => {
       {
         viewport: { ...rootViewportDescription(null), mipmapBias: -1.5 },
         shadowAtlas: null,
-        hasCanvasTransform: false,
+        canvasView: null,
       },
       render
     );

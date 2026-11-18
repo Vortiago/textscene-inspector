@@ -66,7 +66,7 @@ describe('<SubViewport> world draw', () => {
 
     expect(render).toMatchObject({
       viewport: { msaa3D: 2, camera: 'current', drawsEditorChrome: false, previewsEnvironment: false },
-      hasCanvasTransform: false,
+      canvasView: null,
     });
     expect(render?.shadowAtlas).not.toBeNull();
   });
@@ -75,6 +75,6 @@ describe('<SubViewport> world draw', () => {
     const renders = await rendersUnderWay(scene('Node2D', ''));
 
     expect(renders.length).toBeGreaterThan(0);
-    expect(renders.every((render) => render?.hasCanvasTransform === true)).toBe(true);
+    expect(renders.every((render) => Boolean(render?.canvasView))).toBe(true);
   });
 });

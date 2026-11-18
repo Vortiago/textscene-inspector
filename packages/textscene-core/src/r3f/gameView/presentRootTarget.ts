@@ -1,21 +1,8 @@
 import * as THREE from 'three';
 import { perObject } from '../../utils/perObject.js';
 import { BLACK } from '../offscreen/draw.js';
-
-interface FitRect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-/** Where a `target` of pixels lands in a `view`: the largest whole fit at one scale, centred. */
-function fitRect(view: THREE.Vector2, target: { x: number; y: number }): FitRect {
-  const scale = Math.min(view.x / target.x, view.y / target.y);
-  const width = target.x * scale;
-  const height = target.y * scale;
-  return { x: (view.x - width) / 2, y: (view.y - height) / 2, width, height };
-}
+import type { RootWindow } from './rootWindow.js';
+import { blitShift, targetRectInPane } from './windowFit.js';
 
 interface Presenter {
   quad: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
@@ -51,11 +38,11 @@ const identityCamera = new THREE.Camera();
 const viewScratch = new THREE.Vector2();
 const clearColorScratch = new THREE.Color();
 
-/** Fits `source` into the buffer at one scale, with black or transparent bars. Null leaves the bars. */
+/** Draws `source` where the window puts it, with black or transparent bars. Null leaves the bars. */
 export function presentRootTarget(
   gl: THREE.WebGLRenderer,
   source: THREE.Texture | null,
-  targetSize: { x: number; y: number },
+  window: Pick<RootWindow, 'size' | 'drawRect'>,
   isTransparent: boolean
 ): void {
   const view = gl.getSize(viewScratch);
@@ -66,19 +53,26 @@ export function presentRootTarget(
   gl.clear(true, false, false);
   gl.setClearColor(previousColor, previousAlpha);
   if (!source) return;
-  const rect = fitRect(view, targetSize);
+  const rect = targetRectInPane(view, window);
   const { quad, opaque, transparent } = presenterFor(gl);
   const material = isTransparent ? transparent : opaque;
   material.map = source;
   quad.material = material;
+  const shift = blitShift(source);
+  quad.position.set(shift.x, shift.y, 0);
+  quad.updateMatrixWorld();
   // The target holds the bytes Godot shows, so the draw encodes nothing.
   const outputColorSpace = gl.outputColorSpace;
   gl.outputColorSpace = THREE.LinearSRGBColorSpace;
-  gl.setViewport(rect.x, rect.y, rect.width, rect.height);
+  // An auto-clear ignores the viewport, and would clear the bars to the canvas's clear colour.
+  const autoClear = gl.autoClear;
+  gl.autoClear = false;
+  gl.setViewport(rect.x, rect.y, rect.w, rect.h);
   try {
     gl.render(quad, identityCamera);
   } finally {
     gl.setViewport(0, 0, view.x, view.y);
+    gl.autoClear = autoClear;
     gl.outputColorSpace = outputColorSpace;
     material.map = null;
   }

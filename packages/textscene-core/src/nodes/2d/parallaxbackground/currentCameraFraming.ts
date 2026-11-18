@@ -16,7 +16,7 @@ export function currentCameraFraming(
   camera: THREE.Camera,
   cameraPath: string | null
 ): ParallaxViewFraming | null {
-  if (!renderUnderWay()?.hasCanvasTransform || !(camera instanceof THREE.OrthographicCamera)) return null;
+  if (!renderUnderWay()?.canvasView || !(camera instanceof THREE.OrthographicCamera)) return null;
   const { left, right, top, bottom, position, zoom } = camera;
   const tag = camera2DAtPath(scene, cameraPath)?.userData.camera2d as Camera2DTag | undefined;
   if (!tag) return null;

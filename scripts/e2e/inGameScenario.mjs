@@ -5,7 +5,7 @@ import { checkInk, checkSizedCanvas, checkStage, INK_FLOOR_2D } from './canvasCh
 import { openFixture } from './openFixture.mjs';
 
 export const IN_GAME_FIXTURE = 'in-game/unit-in-game-camera2d.tscn';
-const IN_GAME_BUTTON = 'In-game';
+export const IN_GAME_BUTTON = 'In-game';
 
 export async function runInGameScenario(browser, baseUrl) {
   const { context, page, diagnostics } = await openFixture(browser, baseUrl, {

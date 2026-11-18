@@ -589,8 +589,12 @@ A heuristic on the scene root type picks 2D or 3D, never In-game, and the toolba
 _Avoid_: "2D mode" alone.
 
 **In-game mode** (`<TscnCanvas mode="in-game">`, `r3f/gameView/`, ADR-0006):
-The mode of the one view that draws the root viewport as the game starts it: the scene's own cameras, the game's lighting, no **editor hint** and no input. The root viewport draws through the pass a **sub-viewport** draws through, with the game's **viewport description**. Scripts do not run.
+The mode of the one view that draws the root viewport as the game starts it: the scene's own cameras, the game's lighting, no **editor hint** and no input. The root viewport draws through the pass a **sub-viewport** draws through, with the game's **viewport description**. Scripts do not run. It shows the **root window**, fitted to the pane at one scale.
 _Avoid_: "game view" for a component of its own: one view draws every mode. "Play mode", "runtime view".
+
+**Root window** (`rootWindow`, `r3f/gameView/rootWindow.ts`, ADR-0087):
+The window the project opens: its size from `display/window/size/*`, and how `display/window/stretch/*` maps the root viewport into it, with the black bars around it. The pane is not the root window: a pane resize changes only the fit.
+_Avoid_: "game window" for the pane, "screen".
 
 **Editor hint** (`EditorHintContext`, `RunningGameScope`):
 Godot's `Engine::is_editor_hint()`: true in the editor's views, false where the game runs. It is the one intent every editor-only drawer reads. The toggles of `ViewportModeContext` read as the game draws where it is false, and a node with `editor_only` draws only where it is true.
