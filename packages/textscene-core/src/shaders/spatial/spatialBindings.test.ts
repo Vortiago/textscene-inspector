@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { NodeFrame, UniformNode } from 'three/webgpu';
 import { describe, expect, it } from 'vitest';
-import { writeSpatialBindings, writeSpatialBindingsEachDraw } from './spatialBindings.js';
+import { beforeEachDraw, writeSpatialBindings } from './spatialBindings.js';
 import { transpileSpatial } from './transpileSpatial.js';
 
 const UNSHADED = 'shader_type spatial;\nrender_mode unshaded;\nvoid fragment() {\n\tALBEDO = vec3(0.6);\n}\n';
@@ -43,21 +43,27 @@ describe('writeSpatialBindings', () => {
   });
 });
 
-describe('writeSpatialBindingsEachDraw', () => {
+describe('beforeEachDraw', () => {
   /** A spatial shader whose scene the object update of three's node handler writes before each draw. */
   function eachDraw() {
     const spatial = transpileSpatial(UNSHADED);
-    writeSpatialBindingsEachDraw(spatial, (camera) => ({
-      camera: camera as THREE.PerspectiveCamera,
-      width: 32,
-      height: 16,
-      time: 1,
-      clearColor: new THREE.Color(),
-    }));
+    const drawnObjects: THREE.Object3D[] = [];
+    beforeEachDraw(spatial, (camera, object) => {
+      drawnObjects.push(object);
+      writeSpatialBindings(spatial, {
+        camera: camera as THREE.PerspectiveCamera,
+        width: 32,
+        height: 16,
+        time: 1,
+        clearColor: new THREE.Color(),
+      });
+    });
     const uniform = (name: string) => spatial.uniforms.get(`scene_data_block.data.${name}`)!;
     return {
-      draw: (camera: THREE.Camera) => uniform('projection_matrix').update({ camera } as NodeFrame),
+      draw: (camera: THREE.Camera, object: THREE.Object3D = new THREE.Mesh()) =>
+        uniform('projection_matrix').update({ camera, object } as NodeFrame),
       value: (name: string) => (uniform(name) as UniformNode<unknown>).value,
+      drawnObjects,
     };
   }
 
@@ -73,6 +79,13 @@ describe('writeSpatialBindingsEachDraw', () => {
     draw(new THREE.PerspectiveCamera(60, 2, 0.5, 90));
     draw(new THREE.PerspectiveCamera(60, 2, 2, 40));
     expect([value('z_near'), value('z_far')]).toEqual([2, 40]);
+  });
+
+  it('hands on the object the draw renders', () => {
+    const { draw, drawnObjects } = eachDraw();
+    const mesh = new THREE.Mesh();
+    draw(new THREE.PerspectiveCamera(), mesh);
+    expect(drawnObjects).toEqual([mesh]);
   });
 });
 

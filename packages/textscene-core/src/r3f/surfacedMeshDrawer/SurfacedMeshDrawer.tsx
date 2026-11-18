@@ -138,9 +138,7 @@ function PartPasses({
   return (
     <>
       <primitive object={part.geometry} attach="geometry" />
-      {/* Keyed: a spatial shader writes Godot's attributes on the geometry its slot attaches to. */}
       <InstancePasses
-        key={part.geometry.uuid}
         meshRef={drawRef}
         sources={part.materials}
         primitive={geometryPrimitive(part.geometry)}

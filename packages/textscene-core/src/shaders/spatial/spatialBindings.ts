@@ -126,16 +126,14 @@ export function writeSpatialBindings(spatial: TranspiledSpatial, scene: SpatialS
 /** The uniform every vertex stage of the scene template reads, so its object update runs before each draw. */
 const DRAW_HOOK = `${DATA}.projection_matrix`;
 
-/** Writes the bindings before each draw from its camera, as one scene renders through several cameras. */
-export function writeSpatialBindingsEachDraw(
+/** Runs `draw` before each draw of the material, with the camera and the object of that draw. */
+export function beforeEachDraw(
   spatial: TranspiledSpatial,
-  sceneOf: (camera: THREE.Camera) => SpatialScene
+  draw: (camera: THREE.Camera, object: THREE.Object3D) => void
 ): void {
   const hook = spatial.uniforms.get(DRAW_HOOK);
   if (!hook) throw new Error(`expected the scene template to read ${DRAW_HOOK}, found no such uniform`);
-  hook.onObjectUpdate(({ camera }: NodeFrame) => {
-    writeSpatialBindings(spatial, sceneOf(camera!));
-  });
+  hook.onObjectUpdate(({ camera, object }: NodeFrame) => draw(camera!, object!));
 }
 
 /** The camera's projection with y flipped and depth reversed into 0 to 1. */
