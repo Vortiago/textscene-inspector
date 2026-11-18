@@ -1100,6 +1100,18 @@ describe('SkyLayer under a change of its lights', () => {
     expect(lightDirections.at(-1)?.toArray()).toEqual(new THREE.Vector3(3, 2, 1).normalize().toArray());
   });
 
+  it('bakes again in its first render a radiance whose sun moved after its build', async () => {
+    const recorded = recordedEnvironment();
+    built.next = recorded.build;
+    const { scene, update, advanceFrames } = await mount(<LitSky sky={proceduralSky} sun={[1, 2, 3]} />);
+    await update(<LitSky sky={proceduralSky} sun={[3, 2, 1]} />);
+    await advanceFrames(1);
+
+    fireSceneRender(scene, camera);
+
+    expect(recorded.steps).toEqual(['every layer']);
+  });
+
   it('steps nothing for a sky that reads no lights (edge case)', async () => {
     const { steps } = await stepsAfterSunMoves(panoramaSky, 3);
 

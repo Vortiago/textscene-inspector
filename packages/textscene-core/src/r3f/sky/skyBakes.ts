@@ -39,17 +39,19 @@ interface BakedSky {
   radianceInPlace?: RadianceInPlace;
   /** Shows the lights at the bake's exposure to its background and its next bake in place. */
   setLights?: (lights: readonly SkyLight[]) => void;
+  /** The key of the lights its build drew, which a bake in place since then may have replaced. */
+  buildLightsKey: string;
   /** Frees the background and the radiance layers. */
   dispose: () => void;
 }
 
-/** What a bake of the sky takes beside the exposure. */
 /** The lights a render reads for its sky, and the key that tells one reading from the next. */
 export interface SkyLightsRead {
   readonly lights: readonly SkyLight[];
   readonly key: string;
 }
 
+/** What a bake of the sky takes beside the exposure. */
 interface SkyBakeInput extends Omit<SkyEnvironmentInput, 'energy' | 'lights'> {
   lights: SkyLightsRead;
   /** `background_energy_multiplier`, which the exposure scales into the debanding noise. */
@@ -206,6 +208,11 @@ export class SkyBakes {
     for (const [exposure, baked] of this.bakes) baked?.setLights?.(exposed(lights.lights, exposure));
   }
 
+  /** Whether the build of the bake at `exposure` drew the lights read last. */
+  isBuiltWithLightsAt(exposure: number): boolean {
+    return this.bakes.get(this.keyOf(exposure))?.buildLightsKey === this.lights.key;
+  }
+
   /** The bake in place of the radiance at `exposure`, absent for a sky with none. */
   inPlaceAt(exposure: number): RadianceInPlace | undefined {
     return this.bakes.get(this.keyOf(exposure))?.radianceInPlace;
@@ -257,7 +264,7 @@ function bakeSky(gl: THREE.WebGLRenderer, input: SkyBakeInput, exposure: number)
   const built = buildSkyEnvironment(gl, { ...sky, lights: exposed(lights.lights, exposure), energy });
   if (!built) return null;
   const { layers, ...baked } = built;
-  return { ...baked, radiance: new SkyRadiance(gl, layers, rotation) };
+  return { ...baked, radiance: new SkyRadiance(gl, layers, rotation), buildLightsKey: lights.key };
 }
 
 function exposed(lights: readonly SkyLight[], exposure: number): SkyLight[] {

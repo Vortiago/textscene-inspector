@@ -213,7 +213,8 @@ export function SkyLayer({
         isFrameRead &&
         noteSkyFrame(update, frameReads, shaderTime.time, camera.getWorldPosition(cameraOrigin));
       const step = stepSkyRadiance(update, plan, render, isLightDirtied || isFrameDirtied);
-      const inPlace = update.baked && bakes.inPlaceAt(update.baked.exposure);
+      if (!update.baked) return;
+      const inPlace = bakes.inPlaceAt(update.baked.exposure);
       if (!inPlace) return;
       // The camera origin that last dirtied the sky: a replayed probe render has none of its own.
       const position = update.previousPosition;
@@ -221,9 +222,9 @@ export function SkyLayer({
         stepInPlace(inPlace, step, position);
         return;
       }
-      // A radiance no render has stepped holds the lights now read, and the `TIME` and origin of its build.
+      // A radiance no render has stepped holds the lights, the `TIME` and the origin of its build.
       steppedRadiances.add(inPlace);
-      if (isFrameRead) inPlace.bakeAgain(position);
+      if (isFrameRead || !bakes.isBuiltWithLightsAt(update.baked.exposure)) inPlace.bakeAgain(position);
     };
     // Each view runs its render through the radiance update, the first of a frame after the faces
     // Godot draws for the ALWAYS probes at the world's exposure. A capture reads that bake and steps
