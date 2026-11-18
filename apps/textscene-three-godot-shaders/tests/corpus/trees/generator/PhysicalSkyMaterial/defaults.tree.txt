@@ -1,0 +1,68 @@
+shader_type sky;
+
+render_mode use_debanding;
+
+uniform float rayleigh : hint_range(0.0, 64.0, 1.0000000474974513e-3) = 2.0;
+
+uniform vec4 rayleigh_color : source_color = vec4(3.0000001192092896e-1, 4.050000011920929e-1, 6.000000238418579e-1, 1.0);
+
+uniform float mie : hint_range(0.0, 1.0, 1.0000000474974513e-3) = 4.999999888241291e-3;
+
+uniform float mie_eccentricity : hint_range((-1.0), 1.0, 1.0000000474974513e-3) = 8.00000011920929e-1;
+
+uniform vec4 mie_color : source_color = vec4(6.899999976158142e-1, 7.289999723434448e-1, 8.119999766349792e-1, 1.0);
+
+uniform float turbidity : hint_range(0.0, 1000.0, 1.0000000474974513e-3) = 10.0;
+
+uniform float sun_disk_scale : hint_range(0.0, 360.0, 1.0000000474974513e-3) = 1.0;
+
+uniform vec4 ground_color : source_color = vec4(1.0000000149011612e-1, 7.000000029802322e-2, 3.400000184774399e-2, 1.0);
+
+uniform float exposure : hint_range(0.0, 128.0, 1.0000000474974513e-3) = 1.0;
+
+uniform sampler2D night_sky : filter_linear, source_color, hint_default_black;
+
+const vec3 UP = vec3(0.0, 1.0, 0.0);
+
+const float rayleigh_zenith_size = 8400.0;
+
+const float mie_zenith_size = 1250.0;
+
+float henyey_greenstein(float cos_theta, float g) {
+	const float k = 7.957746833562851e-2;
+	return ((k * (1.0 - (g * g))) / pow(((1.0 + (g * g)) - ((2.0 * g) * cos_theta)), 1.5e+0));
+}
+
+void sky() {
+	if (LIGHT0_ENABLED) {
+		float zenith_angle = clamp(dot(UP, normalize(LIGHT0_DIRECTION)), (-1.0), 1.0);
+		float sun_energy = (max(0.0, (7.570000290870667e-1 * zenith_angle)) * LIGHT0_ENERGY);
+		float sun_fade = (1.0 - clamp((1.0 - exp(LIGHT0_DIRECTION.y)), 0.0, 1.0));
+		float rayleigh_coefficient = (rayleigh - (1.0 * (1.0 - sun_fade)));
+		vec3 rayleigh_beta = ((rayleigh_coefficient * rayleigh_color.rgb) * 9.999999747378752e-5);
+		vec3 mie_beta = (((turbidity * mie) * mie_color.rgb) * 4.3399998685345054e-4);
+		float zenith = max(0.0, dot(UP, EYEDIR));
+		float optical_mass = (1.0 / (zenith + (1.5000000596046448e-1 * pow((3.884999990463257e+0 + (5.45e+1 * zenith)), (-1.253000020980835e+0)))));
+		float rayleigh_scatter = (rayleigh_zenith_size * optical_mass);
+		float mie_scatter = (mie_zenith_size * optical_mass);
+		vec3 extinction = exp(-(((rayleigh_beta * rayleigh_scatter) + (mie_beta * mie_scatter))));
+		float cos_theta = dot(EYEDIR, normalize(LIGHT0_DIRECTION));
+		float rayleigh_phase = ((3.0 / (16.0 * PI)) * (1.0 + pow(((cos_theta * 5.0e-1) + 5.0e-1), 2.0)));
+		vec3 betaRTheta = (rayleigh_beta * rayleigh_phase);
+		float mie_phase = henyey_greenstein(cos_theta, mie_eccentricity);
+		vec3 betaMTheta = (mie_beta * mie_phase);
+		vec3 Lin = pow(((sun_energy * ((betaRTheta + betaMTheta) / (rayleigh_beta + mie_beta))) * (1.0 - extinction)), vec3(1.5e+0, 1.5e+0, 1.5e+0));
+		(Lin *= mix(vec3(1.0, 1.0, 1.0), pow(((sun_energy * ((betaRTheta + betaMTheta) / (rayleigh_beta + mie_beta))) * extinction), vec3(5.0e-1, 5.0e-1, 5.0e-1)), clamp(pow((1.0 - zenith_angle), 5.0), 0.0, 1.0)));
+		(Lin *= mix(ground_color.rgb, vec3(1.0, 1.0, 1.0), smoothstep((-1.0000000149011612e-1), 1.0000000149011612e-1, dot(UP, EYEDIR))));
+		float sunAngularDiameterCos = cos((LIGHT0_SIZE * sun_disk_scale));
+		float sunAngularDiameterCos2 = cos(((LIGHT0_SIZE * sun_disk_scale) * 5.0e-1));
+		float sundisk = smoothstep(sunAngularDiameterCos, sunAngularDiameterCos2, cos_theta);
+		vec3 L0 = (((sun_energy * extinction) * sundisk) * LIGHT0_COLOR);
+		vec3 color = (Lin + L0);
+		(COLOR = pow(color, vec3((1.0 / (1.2000000476837158e+0 + (1.2000000476837158e+0 * sun_fade))))));
+		(COLOR *= exposure);
+	}
+	else {
+		(COLOR *= exposure);
+	}
+}

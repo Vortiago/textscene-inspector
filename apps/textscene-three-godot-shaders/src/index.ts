@@ -4,5 +4,52 @@
  * become a promise to every consumer.
  */
 
-export { installNodesHandler } from '@textscene/core/shaders';
-export type { NodeOutput } from '@textscene/core/shaders';
+export {
+  DEFAULT_TIME_ROLLOVER_SECONDS,
+  GODOT_VERSION,
+  glVaryingSlots,
+  installGodotShading,
+  PlaybackShaderTime,
+  ShaderClock,
+  ShadingLanguageError,
+  SCENE_BINDINGS,
+  TranslatorFault,
+  SKY_BINDINGS,
+  SkyResolutionPasses,
+  transpileShadingLanguage,
+  transpileSky,
+  transpileSpatial,
+  withGodotAttributes,
+  writeSkyBindings,
+  writeSpatialBindings,
+} from '@textscene/core/shaders';
+export type {
+  GodotShading,
+  GodotShadingOptions,
+  NodeOutput,
+  Playback,
+  RendererShaderOptions,
+  RenderingMethod,
+  ShaderInclude,
+  ShaderSource,
+  ShaderOptions,
+  SkyDraw,
+  SkyFog,
+  SkyLight,
+  SkyOptions,
+  SkyScene,
+  SpatialOptions,
+  SpatialScene,
+  TranspiledFunction,
+  TranspiledShader,
+  TranspiledSky,
+  TranspiledSpatial,
+  TranspiledUniform,
+  TranspileOptions,
+  UniformHint,
+  UniformNode,
+  UniformScope,
+} from '@textscene/core/shaders';
+// A parameter takes a Godot Variant, which an app reads from the text of a resource file.
+export type { Variant } from '@textscene/core/godot';
+export { textToVariant } from '@textscene/core/godot/variantReader';

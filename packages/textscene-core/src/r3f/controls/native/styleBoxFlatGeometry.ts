@@ -12,6 +12,7 @@
 
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { Rect2 } from '../../../godot/math/rect2';
+import { Side } from '../../../godot/math/side';
 import type { Rgba } from '../../../godot/math/math';
 import type { Vector2 } from '../../../godot/math/vector';
 import type { GeometryBuffers } from '../../../godot/rendering/canvasPolyline';
@@ -20,12 +21,7 @@ import type { GeometryBuffers } from '../../../godot/rendering/canvasPolyline';
 // vertices take `border_color_inner` and its outer ones `border_color`, and three
 // interpolates across each triangle as Godot's flat triangle array does.
 
-// --- Side/Corner index conventions, matching Godot's `Side`/`Corner` enums --
-
-const SIDE_LEFT = 0;
-const SIDE_TOP = 1;
-const SIDE_RIGHT = 2;
-const SIDE_BOTTOM = 3;
+// `Corner` (math_defs.h:122), in the order a radius array keeps them.
 
 const CORNER_TOP_LEFT = 0;
 const CORNER_TOP_RIGHT = 1;
@@ -88,8 +84,8 @@ function adaptBorderAndCorner(
   height: number
 ): { border: number[]; corner: number[] } {
   const border = [1e6, 1e6, 1e6, 1e6];
-  adaptValues(SIDE_TOP, SIDE_BOTTOM, border, borderWidth, height, height, height);
-  adaptValues(SIDE_LEFT, SIDE_RIGHT, border, borderWidth, width, width, width);
+  adaptValues(Side.TOP, Side.BOTTOM, border, borderWidth, height, height, height);
+  adaptValues(Side.LEFT, Side.RIGHT, border, borderWidth, width, width, width);
 
   const corner = [1e6, 1e6, 1e6, 1e6];
   adaptValues(
@@ -98,8 +94,8 @@ function adaptBorderAndCorner(
     corner,
     cornerRadius,
     height,
-    height - border[SIDE_BOTTOM]!,
-    height - border[SIDE_TOP]!
+    height - border[Side.BOTTOM]!,
+    height - border[Side.TOP]!
   );
   adaptValues(
     CORNER_TOP_LEFT,
@@ -107,8 +103,8 @@ function adaptBorderAndCorner(
     corner,
     cornerRadius,
     height,
-    height - border[SIDE_BOTTOM]!,
-    height - border[SIDE_TOP]!
+    height - border[Side.BOTTOM]!,
+    height - border[Side.TOP]!
   );
   adaptValues(
     CORNER_TOP_LEFT,
@@ -116,8 +112,8 @@ function adaptBorderAndCorner(
     corner,
     cornerRadius,
     width,
-    width - border[SIDE_RIGHT]!,
-    width - border[SIDE_LEFT]!
+    width - border[Side.RIGHT]!,
+    width - border[Side.LEFT]!
   );
   adaptValues(
     CORNER_BOTTOM_LEFT,
@@ -125,8 +121,8 @@ function adaptBorderAndCorner(
     corner,
     cornerRadius,
     width,
-    width - border[SIDE_RIGHT]!,
-    width - border[SIDE_LEFT]!
+    width - border[Side.RIGHT]!,
+    width - border[Side.LEFT]!
   );
 
   return { border, corner };
@@ -167,31 +163,31 @@ function cornerScale(styleRect: Rect2, targetRect: Rect2, cornerRadius: readonly
   const bl = cornerRadius[CORNER_BOTTOM_LEFT]!;
 
   const edgeOverflow = [
-    -Math.min(0, targetRect.h - tl - bl), // SIDE_LEFT
-    -Math.min(0, targetRect.w - tl - tr), // SIDE_TOP
-    -Math.min(0, targetRect.h - tr - br), // SIDE_RIGHT
-    -Math.min(0, targetRect.w - bl - br), // SIDE_BOTTOM
+    -Math.min(0, targetRect.h - tl - bl), // Side.LEFT
+    -Math.min(0, targetRect.w - tl - tr), // Side.TOP
+    -Math.min(0, targetRect.h - tr - br), // Side.RIGHT
+    -Math.min(0, targetRect.w - bl - br), // Side.BOTTOM
   ];
 
   const hbSum = borderLeft + borderRight;
   const vbSum = borderTop + borderBottom;
   const ratios = [
-    hbSum > 0 ? borderLeft / hbSum : 0, // SIDE_LEFT
-    vbSum > 0 ? borderTop / vbSum : 0, // SIDE_TOP
-    hbSum > 0 ? borderRight / hbSum : 0, // SIDE_RIGHT
-    vbSum > 0 ? borderBottom / vbSum : 0, // SIDE_BOTTOM
+    hbSum > 0 ? borderLeft / hbSum : 0, // Side.LEFT
+    vbSum > 0 ? borderTop / vbSum : 0, // Side.TOP
+    hbSum > 0 ? borderRight / hbSum : 0, // Side.RIGHT
+    vbSum > 0 ? borderBottom / vbSum : 0, // Side.BOTTOM
   ];
 
   const reduction: Point[] = [
-    { x: edgeOverflow[SIDE_TOP]! * ratios[SIDE_LEFT]!, y: edgeOverflow[SIDE_LEFT]! * ratios[SIDE_TOP]! },
-    { x: edgeOverflow[SIDE_TOP]! * ratios[SIDE_RIGHT]!, y: edgeOverflow[SIDE_RIGHT]! * ratios[SIDE_TOP]! },
+    { x: edgeOverflow[Side.TOP]! * ratios[Side.LEFT]!, y: edgeOverflow[Side.LEFT]! * ratios[Side.TOP]! },
+    { x: edgeOverflow[Side.TOP]! * ratios[Side.RIGHT]!, y: edgeOverflow[Side.RIGHT]! * ratios[Side.TOP]! },
     {
-      x: edgeOverflow[SIDE_BOTTOM]! * ratios[SIDE_RIGHT]!,
-      y: edgeOverflow[SIDE_RIGHT]! * ratios[SIDE_BOTTOM]!,
+      x: edgeOverflow[Side.BOTTOM]! * ratios[Side.RIGHT]!,
+      y: edgeOverflow[Side.RIGHT]! * ratios[Side.BOTTOM]!,
     },
     {
-      x: edgeOverflow[SIDE_BOTTOM]! * ratios[SIDE_LEFT]!,
-      y: edgeOverflow[SIDE_LEFT]! * ratios[SIDE_BOTTOM]!,
+      x: edgeOverflow[Side.BOTTOM]! * ratios[Side.LEFT]!,
+      y: edgeOverflow[Side.LEFT]! * ratios[Side.BOTTOM]!,
     },
   ];
 
@@ -379,10 +375,10 @@ export function styleBoxFlatGeometry(data: StyleBoxFlatData, rect: Rect2): Geome
 
   const infillRect = growIndividual(
     styleRect,
-    -adaptedBorder[SIDE_LEFT]!,
-    -adaptedBorder[SIDE_TOP]!,
-    -adaptedBorder[SIDE_RIGHT]!,
-    -adaptedBorder[SIDE_BOTTOM]!
+    -adaptedBorder[Side.LEFT]!,
+    -adaptedBorder[Side.TOP]!,
+    -adaptedBorder[Side.RIGHT]!,
+    -adaptedBorder[Side.BOTTOM]!
   );
 
   // style_box_flat.cpp:475-477.
@@ -405,12 +401,12 @@ export function styleBoxFlatGeometry(data: StyleBoxFlatData, rect: Rect2): Geome
   // feather ring inside style_rect.
   let borderStyleRect = styleRect;
   if (aaOn) {
-    if (borderWidth[SIDE_LEFT]! > 0)
+    if (borderWidth[Side.LEFT]! > 0)
       borderStyleRect = growIndividual(borderStyleRect, -aaSizeScaled, 0, 0, 0);
-    if (borderWidth[SIDE_TOP]! > 0) borderStyleRect = growIndividual(borderStyleRect, 0, -aaSizeScaled, 0, 0);
-    if (borderWidth[SIDE_RIGHT]! > 0)
+    if (borderWidth[Side.TOP]! > 0) borderStyleRect = growIndividual(borderStyleRect, 0, -aaSizeScaled, 0, 0);
+    if (borderWidth[Side.RIGHT]! > 0)
       borderStyleRect = growIndividual(borderStyleRect, 0, 0, -aaSizeScaled, 0);
-    if (borderWidth[SIDE_BOTTOM]! > 0)
+    if (borderWidth[Side.BOTTOM]! > 0)
       borderStyleRect = growIndividual(borderStyleRect, 0, 0, 0, -aaSizeScaled);
   }
 
@@ -506,17 +502,17 @@ export function styleBoxFlatGeometry(data: StyleBoxFlatData, rect: Rect2): Geome
     if (data.drawCenter) {
       const infillRectAaTransparent = growIndividual(
         infillRect,
-        aaFillWidthHalf[SIDE_LEFT]!,
-        aaFillWidthHalf[SIDE_TOP]!,
-        aaFillWidthHalf[SIDE_RIGHT]!,
-        aaFillWidthHalf[SIDE_BOTTOM]!
+        aaFillWidthHalf[Side.LEFT]!,
+        aaFillWidthHalf[Side.TOP]!,
+        aaFillWidthHalf[Side.RIGHT]!,
+        aaFillWidthHalf[Side.BOTTOM]!
       );
       const infillRectAaColored = growIndividual(
         infillRectAaTransparent,
-        -aaFillWidth[SIDE_LEFT]!,
-        -aaFillWidth[SIDE_TOP]!,
-        -aaFillWidth[SIDE_RIGHT]!,
-        -aaFillWidth[SIDE_BOTTOM]!
+        -aaFillWidth[Side.LEFT]!,
+        -aaFillWidth[Side.TOP]!,
+        -aaFillWidth[Side.RIGHT]!,
+        -aaFillWidth[Side.BOTTOM]!
       );
 
       if (!blendOn) {
@@ -554,31 +550,31 @@ export function styleBoxFlatGeometry(data: StyleBoxFlatData, rect: Rect2): Geome
     if (drawBorder) {
       const innerRectAaColored = growIndividual(
         infillRect,
-        aaBorderWidthHalf[SIDE_LEFT]!,
-        aaBorderWidthHalf[SIDE_TOP]!,
-        aaBorderWidthHalf[SIDE_RIGHT]!,
-        aaBorderWidthHalf[SIDE_BOTTOM]!
+        aaBorderWidthHalf[Side.LEFT]!,
+        aaBorderWidthHalf[Side.TOP]!,
+        aaBorderWidthHalf[Side.RIGHT]!,
+        aaBorderWidthHalf[Side.BOTTOM]!
       );
       const innerRectAaTransparent = growIndividual(
         innerRectAaColored,
-        -aaBorderWidth[SIDE_LEFT]!,
-        -aaBorderWidth[SIDE_TOP]!,
-        -aaBorderWidth[SIDE_RIGHT]!,
-        -aaBorderWidth[SIDE_BOTTOM]!
+        -aaBorderWidth[Side.LEFT]!,
+        -aaBorderWidth[Side.TOP]!,
+        -aaBorderWidth[Side.RIGHT]!,
+        -aaBorderWidth[Side.BOTTOM]!
       );
       const outerRectAaTransparent = growIndividual(
         styleRect,
-        aaBorderWidthHalf[SIDE_LEFT]!,
-        aaBorderWidthHalf[SIDE_TOP]!,
-        aaBorderWidthHalf[SIDE_RIGHT]!,
-        aaBorderWidthHalf[SIDE_BOTTOM]!
+        aaBorderWidthHalf[Side.LEFT]!,
+        aaBorderWidthHalf[Side.TOP]!,
+        aaBorderWidthHalf[Side.RIGHT]!,
+        aaBorderWidthHalf[Side.BOTTOM]!
       );
       const outerRectAaColored = growIndividual(
         borderStyleRect,
-        aaBorderWidthHalf[SIDE_LEFT]!,
-        aaBorderWidthHalf[SIDE_TOP]!,
-        aaBorderWidthHalf[SIDE_RIGHT]!,
-        aaBorderWidthHalf[SIDE_BOTTOM]!
+        aaBorderWidthHalf[Side.LEFT]!,
+        aaBorderWidthHalf[Side.TOP]!,
+        aaBorderWidthHalf[Side.RIGHT]!,
+        aaBorderWidthHalf[Side.BOTTOM]!
       );
 
       // Border ring, not antialiased yet.

@@ -1,20 +1,37 @@
-/**
- * The shader module (ADR-0072): Godot's scene shader as TSL node materials for a three.js
- * `WebGLRenderer`, with no React. `@textscene/three-godot-shaders` publishes this entry, and the
- * renderer bundles it.
- *
- * The rules every file here keeps, as the port adds nodes:
- * - A file imports `three`, `three/tsl`, `three/webgpu`, `three/addons/*`, a file of `godot/` or a
- *   file of its own. `importRule.test.ts` walks the imports.
- * - A node is built once. It reads each value in its update callback, from the pipeline inputs of
- *   the renderer that draws, and imports no owner of a value. Each pipeline input is optional:
- *   without it, the surface draws what Godot draws without that feature.
- * - The caller fills the pipeline inputs. Under the handler, the frame's renderer is a proxy of the
- *   caller's renderer (r187 `WebGLNodesHandler.js:364-370`), so no node looks its inputs up by the
- *   renderer's identity.
- * - The registration of a light node is page-wide, because three keeps the node class on the light
- *   class (r187 `src/lights/Light.js:18-22`). It happens in an install call, never on import.
- * - The lighting model reads only the surface outputs, the values Godot's `fragment()` writes.
- */
-
-export { installNodesHandler, type NodeOutput } from './nodesHandler.js';
+export type { NodeOutput } from './nodesHandler.js';
+export { installGodotShading, type GodotShading, type GodotShadingOptions } from './godotShading.js';
+export type { RendererShaderOptions } from './rendererShaderOptions.js';
+export { GODOT_VERSION } from './language/instructionTable.generated.js';
+export { ShadingLanguageError } from './language/shadingLanguageError.js';
+export { glVaryingSlots } from './glVaryingSlots.js';
+export { TranslatorFault, type ShaderSource } from './fault/translatorFault.js';
+export {
+  transpileShadingLanguage,
+  type TranspiledShader,
+  type TranspileOptions,
+} from './language/transpile.js';
+export type { TranspiledUniform } from './uniforms/transpiledUniform.js';
+export type { UniformHint, UniformNode, UniformScope } from './language/shaderTree.js';
+export type { ShaderOptions } from './language/parseShader.js';
+export type { ShaderInclude } from './preprocessor/preprocessor.js';
+export type { RenderingMethod } from './preprocessor/renderingMethod.js';
+export type { ShaderDecoders } from './preprocessor/decoders.js';
+export type { TranspiledFunction } from './language/emitter.js';
+export { transpileSky, type SkyDraw, type SkyOptions, type TranspiledSky } from './sky/transpileSky.js';
+export { SkyResolutionPasses } from './sky/skyResolutionPasses.js';
+export {
+  SKY_BINDINGS,
+  writeSkyBindings,
+  type SkyFog,
+  type SkyLight,
+  type SkyScene,
+} from './sky/skyBindings.js';
+export { transpileSpatial, type SpatialOptions, type TranspiledSpatial } from './spatial/transpileSpatial.js';
+export { withGodotAttributes } from './spatial/meshAttributes.js';
+export { SCENE_BINDINGS, writeSpatialBindings, type SpatialScene } from './spatial/spatialBindings.js';
+export {
+  DEFAULT_TIME_ROLLOVER_SECONDS,
+  PlaybackShaderTime,
+  ShaderClock,
+  type Playback,
+} from './time/shaderClock.js';

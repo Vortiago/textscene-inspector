@@ -15,6 +15,7 @@ import { useProjectClearColorSrgb } from '../../../r3f/useProjectClearColor';
 import type { EnvironmentResolution } from '../../../r3f/environment/WorldEnvironmentScope';
 import { NO_RESOLUTION, PENDING_RESOLUTION } from '../../../r3f/environment/worldGroup';
 import { useGlowMap, usePanorama } from './environmentTextures';
+import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 
 /**
  * The resolution is `pending` only while the Environment itself loads. The inline case resolves on
@@ -43,10 +44,11 @@ export function useEnvironmentOf(reference: ScopedReference | null): Environment
 
   const panorama = usePanorama(skyRead.value?.panorama ?? null);
   const glowMap = useGlowMap(settings, environment?.glowMap ?? null);
+  const holderPath = useNodePath();
 
   return useMemo((): EnvironmentResolution => {
     if (read.status === 'pending') return PENDING_RESOLUTION;
     if (!settings) return NO_RESOLUTION;
-    return { status: 'resolved', environment: { settings, sky, panorama, glowMap } };
-  }, [read.status, settings, sky, panorama, glowMap]);
+    return { status: 'resolved', environment: { settings, sky, panorama, glowMap, holderPath } };
+  }, [read.status, settings, sky, panorama, glowMap, holderPath]);
 }

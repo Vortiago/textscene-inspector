@@ -12,6 +12,7 @@ import { ResourceEventBus, type ResourceChange, type ResourceType } from './Reso
 import { MetadataStore } from './MetadataStore';
 import { createTextureProcessor } from './processors/createTextureProcessor';
 import { createTexture3DProcessor } from './processors/createTexture3DProcessor';
+import { createCubemapProcessor } from './processors/createCubemapProcessor';
 import { createTexture2DArrayProcessor } from './processors/createTexture2DArrayProcessor';
 import { createGLBProcessor } from './processors/createGLBProcessor';
 import { createSceneProcessor } from './processors/createSceneProcessor';
@@ -336,6 +337,10 @@ export class ResourceLoader {
           this.eventBus,
           this.dependencies
         ) as ResourceProcessor<unknown>,
+      ],
+      [
+        'cubemap',
+        createCubemapProcessor(fileEventBus, this.eventBus, this.dependencies) as ResourceProcessor<unknown>,
       ],
       ['glb', this.glbMeshes as ResourceProcessor<unknown>],
       ['scene', this.scenes as ResourceProcessor<unknown>],

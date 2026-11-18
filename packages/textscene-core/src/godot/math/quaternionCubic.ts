@@ -2,7 +2,7 @@
 
 // Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
 import { basisFromQuaternion, basisGetRotationQuaternion } from './basis.js';
-import { acosClamped, CMP_EPSILON, UNIT_EPSILON, type KeyTimes } from './math.js';
+import { acosClamped, CMP_EPSILON, isUnitWithinEpsilon, type KeyTimes } from './math.js';
 import {
   QUATERNION_IDENTITY,
   quaternionDot,
@@ -39,7 +39,7 @@ function quaternionLog({ x, y, z, w }: Quaternion): Vector3 {
 function quaternionExp({ x, y, z }: Vector3): Quaternion {
   const theta = vector3Length(x, y, z);
   const axis = normalizedVector3(x, y, z);
-  const isUnitAxis = Math.abs(vector3Dot(axis, axis) - 1) < UNIT_EPSILON;
+  const isUnitAxis = isUnitWithinEpsilon(vector3Dot(axis, axis));
   if (theta < CMP_EPSILON || !isUnitAxis) return QUATERNION_IDENTITY;
   return quaternionFromAxisAngle({ x: axis[0], y: axis[1], z: axis[2] }, theta);
 }

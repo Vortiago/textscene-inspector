@@ -1,0 +1,124 @@
+[gd_scene format=3 uid="uid://unit_spatial_shader_alpha"]
+
+; Unshaded spatial shaders that write ALPHA: a fade, a scissor cut, a hash cut and alpha_to_coverage_and_one,
+; each over an opaque orange quad and the background. Only ALPHA moves: no other golden spatial shader names it.
+
+[sub_resource type="Shader" id="Shader_orange"]
+code = "shader_type spatial;
+render_mode unshaded;
+
+void fragment() {
+	ALBEDO = vec3(0.9, 0.3, 0.1);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_orange"]
+shader = SubResource("Shader_orange")
+
+[sub_resource type="Shader" id="Shader_fade"]
+code = "shader_type spatial;
+render_mode unshaded;
+
+void fragment() {
+	ALBEDO = vec3(UV * 0.4, 0.3);
+	ALPHA = UV.x;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_fade"]
+shader = SubResource("Shader_fade")
+
+[sub_resource type="Shader" id="Shader_scissor"]
+code = "shader_type spatial;
+render_mode unshaded;
+
+void fragment() {
+	ALBEDO = vec3(UV * 0.4, 0.3);
+	ALPHA = UV.x;
+	ALPHA_SCISSOR_THRESHOLD = 0.5;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_scissor"]
+shader = SubResource("Shader_scissor")
+
+[sub_resource type="Shader" id="Shader_hash"]
+code = "shader_type spatial;
+render_mode unshaded;
+
+void fragment() {
+	ALBEDO = vec3(UV * 0.4, 0.3);
+	ALPHA = UV.x;
+	ALPHA_HASH_SCALE = 1.0;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_hash"]
+shader = SubResource("Shader_hash")
+
+[sub_resource type="Shader" id="Shader_coverage"]
+code = "shader_type spatial;
+render_mode unshaded, alpha_to_coverage_and_one;
+
+void fragment() {
+	ALBEDO = vec3(UV * 0.4, 0.3);
+	ALPHA = step(0.5, UV.x);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_coverage"]
+shader = SubResource("Shader_coverage")
+
+[sub_resource type="QuadMesh" id="QuadMesh_1"]
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.1, 0.12, 0.16, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4.2)
+
+[node name="Orange_fade" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, -2.15, -0.15, 0)
+mesh = SubResource("QuadMesh_1")
+material_override = SubResource("ShaderMaterial_orange")
+
+[node name="Tile_fade" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0.15, 0.3)
+mesh = SubResource("QuadMesh_1")
+material_override = SubResource("ShaderMaterial_fade")
+
+[node name="Orange_scissor" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, -0.55, -0.15, 0)
+mesh = SubResource("QuadMesh_1")
+material_override = SubResource("ShaderMaterial_orange")
+
+[node name="Tile_scissor" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.9, 0.15, 0.3)
+mesh = SubResource("QuadMesh_1")
+material_override = SubResource("ShaderMaterial_scissor")
+
+[node name="Orange_hash" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 1.05, -0.15, 0)
+mesh = SubResource("QuadMesh_1")
+material_override = SubResource("ShaderMaterial_orange")
+
+[node name="Tile_hash" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.7, 0.15, 0.3)
+mesh = SubResource("QuadMesh_1")
+material_override = SubResource("ShaderMaterial_hash")
+
+[node name="Orange_coverage" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 2.65, -0.15, 0)
+mesh = SubResource("QuadMesh_1")
+material_override = SubResource("ShaderMaterial_orange")
+
+[node name="Tile_coverage" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.3, 0.15, 0.3)
+mesh = SubResource("QuadMesh_1")
+material_override = SubResource("ShaderMaterial_coverage")

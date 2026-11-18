@@ -10,18 +10,25 @@
  * (`render_forward_clustered.cpp:1993`, `render_scene_data_rd.cpp:169`, `:241-246`, `sky.cpp:1086`).
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { visibleInTree } from '../visibleInTree';
 import { useFrame, useThree } from '@react-three/fiber';
-import type { Sky } from '../../resources/sky/types';
+import type { AuthoredSky, Sky, SkyProperties } from '../../resources/sky/types';
 import type { SkyLight } from '../../resources/sky/build';
 import { NO_SKY_LIGHTS, noteSkyLights, skyLightEnergy, skyLightSize } from './skyLight';
 import { skyEuler } from './skyRotation';
 import { hideShownSky } from './skyRadiance';
-import { holdSkyBakes, radianceUpdateOf, type SkyBakes, skyUpdatePlan } from './skyBakes';
+import { holdSkyBakes, radianceUpdateOf, type SkyBakes, type SkyLightsRead, skyUpdatePlan } from './skyBakes';
 import { materialReadsLights } from '../../resources/sky/readsLights';
-import { stepSkyRadiance, type SkyRender } from '../../godot/rendering/environment/skyRadianceUpdate';
+import {
+  noteSkyFrame,
+  restartSkyClock,
+  stepSkyRadiance,
+  type SkyFrameReads,
+  type SkyRender,
+} from '../../godot/rendering/environment/skyRadianceUpdate';
+import { canvasShaderTime } from '../shaderTime/canvasShaderTime';
 import { renderUnderWay } from '../viewportRender/worldRender';
 import { takeRealTimeCaptureRenders } from '../reflectionProbe/realTimeCaptures';
 import { ENVIRONMENT_SWITCH } from './environmentSwitch';
@@ -35,12 +42,20 @@ import {
 } from '../environment/sceneEnvironment';
 import { debandSky } from './skyDebanding';
 import { showSkyBackground } from './skyBackground';
+import { useShaderTextures, type ShaderTextures } from '../shaderTextures/shaderTextures';
+import { useProjectShaderOptions } from '../projectShaderOptions';
+import { useShaderSkyErrorReport } from './shaderSkyError';
+import { useReadSky } from './readSky';
+import { useSkyTranslator } from './skyTranspiler';
+import { useShaderErrorReport } from '../contexts/ShaderErrorsContext';
+import { useProjectSettings } from '../contexts/ProjectSettingsContext';
+import { projectSampling } from '../../parser/projectSettingsParser';
 import { isLiveTarget, liveTargetDrawCount } from '../liveTargets';
 import { isDebanded } from '../../resources/sky/debanding';
 import type { Vector3 } from '../../godot/math/vector';
 
 interface SkyLayerProps {
-  sky: Sky;
+  sky: AuthoredSky;
   /**
    * `background_energy_multiplier`, which scales the drawn background once and the radiance twice:
    * the bake holds it, and each surface reads the radiance at it again, whatever the ambient source.
@@ -70,8 +85,18 @@ interface SkyLayerProps {
 /** Godot's sky shader has four light slots. The other lights do not reach it. */
 const LIGHT_SLOTS = 4;
 
+/** Scratch for one render's camera origin. */
+const cameraOrigin = new THREE.Vector3();
+
+const NO_FRAME_READS: SkyFrameReads = { time: false, position: false };
+
+/** What `material` reads that changes from render to render: a built-in sky reads neither. */
+function frameReadsOf(material: Sky['material']): SkyFrameReads {
+  return material.kind === 'shader' ? material.usage : NO_FRAME_READS;
+}
+
 export function SkyLayer({
-  sky,
+  sky: authoredSky,
   energyMultiplier = 1,
   contribution = 1,
   reflects = true,
@@ -85,7 +110,7 @@ export function SkyLayer({
   const exposure = useExposureFactor();
   const environment = useEnvironmentKey();
 
-  const lightsKey = useSkyLightsKey(scene);
+  const { lightsRead, areLightsRead } = useSkyLights(scene);
   const contextRestores = useContextRestores(gl);
   const { x: rotationX, y: rotationY, z: rotationZ } = rotation;
   // Refs, not effect dependencies: a new share or reflection source needs no new bake.
@@ -95,6 +120,18 @@ export function SkyLayer({
   reflectsRef.current = reflects;
 
   const isPanoramaDrawn = useIsPanoramaDrawn(panorama);
+  const shaderCode = authoredSky.material.kind === 'shader' ? authoredSky.material.code : null;
+  const shaderOptions = useProjectShaderOptions(shaderCode);
+  const { transpiler, isReady: isTranslatorReady, loadFailure } = useSkyTranslator(gl, shaderCode !== null);
+  useShaderErrorReport(loadFailure);
+  const sky = useReadSky(authoredSky, transpiler, shaderOptions);
+  const skyMaterial = sky?.material ?? null;
+  const [textures, textureSlots] = useShaderTextures(
+    useMemo(() => shaderTexturesOf(skyMaterial), [skyMaterial])
+  );
+  useShaderSkyErrorReport(sky?.material ?? null, transpiler, shaderOptions);
+  const { settings } = useProjectSettings();
+  const sampling = useMemo(() => projectSampling(settings), [settings]);
 
   // Written only by the effect below, while it holds bakes.
   const bakeWantedRef = useRef<(() => boolean) | null>(null);
@@ -103,22 +140,31 @@ export function SkyLayer({
   });
 
   useEffect(() => {
-    // No frame has read the lights yet. A bake now would be replaced before it
-    // is seen, and each bake costs a six-face cube render and the layer passes.
-    if (lightsKey === null) return undefined;
+    // A bake before the first frame reads the lights would bake again unseen, at the cost of a whole bake.
+    if (!areLightsRead || !lightsRead.current) return undefined;
     // A bake samples the panorama once, so it waits for the pass to draw a live target.
     if (!isPanoramaDrawn) return undefined;
+    // A shader sky waits for the transpiler, the nodes handler, and its parse options with their decoders.
+    if (!sky || !shaderOptions || !isTranslatorReady) return undefined;
 
-    const lights = directionalLights(scene);
+    const lights = lightsRead.current;
     const skyRotation = skyEuler({ x: rotationX, y: rotationY, z: rotationZ });
-    const input = { sky, lights, panorama, asBackground, energyMultiplier, rotation: skyRotation };
-    const { bakes, release } = holdSkyBakes(gl, input, lightsKey, contextRestores);
+    const input = {
+      sky,
+      lights,
+      panorama,
+      textures,
+      shaderOptions,
+      sampling,
+      buildShaderSky: transpiler?.buildShaderSkyEnvironment,
+      asBackground,
+      energyMultiplier,
+      rotation: skyRotation,
+    };
+    const { bakes, release } = holdSkyBakes(gl, input, contextRestores);
     const update = radianceUpdateOf(sky);
-    const plan = skyUpdatePlan(sky);
-    const readsLights = (materialReadsLights(sky.material) || fogScattersSun) && lights.length > 0;
-    const lightData = readsLights ? lightsKey : NO_SKY_LIGHTS;
-    // The exposure scales the light data, and so dirties the sky, unless every energy is 0.
-    const exposureScalesLights = readsLights && lights.some((light) => light.energy !== 0);
+    const plan = skyUpdatePlan(sky, fogScattersSun);
+    const readsLights = materialReadsLights(sky.material) || fogScattersSun;
     const first = bakes.bakeNow(update.baked?.exposure ?? exposure);
     if (!first) {
       release();
@@ -139,14 +185,35 @@ export function SkyLayer({
       radiance = bakes.at(baked.exposure) ?? radiance;
       scene.environmentIntensity = baked.brightness * render.brightness;
     };
-    const stepRadiance = (render: SkyRender) => {
-      const isDirtied = noteSkyLights(gl, lightData, exposureScalesLights ? render.exposure : 1);
-      stepSkyRadiance(update, plan, render, isDirtied);
+    const frameReads = frameReadsOf(sky.material);
+    const isFrameRead = frameReads.time || frameReads.position;
+    const shaderTime = canvasShaderTime(gl);
+    let seenJumps = shaderTime.jumps;
+    const stepRadiance = (render: SkyRender, camera?: THREE.Camera) => {
+      const read = lightsRead.current!;
+      bakes.followLights(read);
+      // The exposure scales the light data, and so dirties the sky, unless every energy is 0.
+      const isExposed = readsLights && read.lights.some((light) => light.energy !== 0);
+      const lightData = readsLights ? read.key : NO_SKY_LIGHTS;
+      const isLightDirtied = noteSkyLights(gl, lightData, isExposed ? render.exposure : 1);
+      if (shaderTime.jumps !== seenJumps) {
+        seenJumps = shaderTime.jumps;
+        restartSkyClock(update);
+      }
+      const isFrameDirtied =
+        !!camera &&
+        isFrameRead &&
+        noteSkyFrame(update, frameReads, shaderTime.time, camera.getWorldPosition(cameraOrigin));
+      const step = stepSkyRadiance(update, plan, render, isLightDirtied || isFrameDirtied);
+      if (!update.baked) return;
+      const isDrawn = bakes.stepInPlaceAt(update.baked.exposure, step, update.previousPosition, isFrameRead);
+      // A probe captures again on a change of the Environment, as a new bake of the lights notes one.
+      if (isDrawn && !isFrameRead) noteEnvironmentChange(scene, environment);
     };
     // Each view runs its render through the radiance update, the first of a frame after the faces
     // Godot draws for the ALWAYS probes at the world's exposure. A capture reads that bake and steps
     // nothing, as ours captures again only on change. An interior capture draws no sky.
-    const showForRender = (drawn: number) => {
+    const showForRender = (drawn: number, camera: THREE.Camera) => {
       const render = renderAt(drawn);
       const capture = renderUnderWay()?.probeCapture;
       if (capture?.isInterior) return;
@@ -154,7 +221,7 @@ export function SkyLayer({
         const captureRenders = takeRealTimeCaptureRenders(scene);
         const world = renderAt(worldExposureOfScene(scene) ?? 1);
         for (let replayed = 0; replayed < captureRenders; replayed += 1) stepRadiance(world);
-        stepRadiance(render);
+        stepRadiance(render, camera);
       }
       const baked = update.baked ?? render;
       showAt(baked, render);
@@ -169,7 +236,9 @@ export function SkyLayer({
       const previousEnvironment = scene.environment;
       const previousIntensity = scene.environmentIntensity;
       scene.environment = ENVIRONMENT_SWITCH;
-      const stopShowingRadiance = followSceneExposure(scene, (drawn) => showForRender(drawn ?? 1));
+      const stopShowingRadiance = followSceneExposure(scene, (drawn, camera) =>
+        showForRender(drawn ?? 1, camera)
+      );
       const stopHidingRadiance = observeSceneRenderEnd(scene, hideShownSky);
       const stopShowingBackground = asBackground ? showSkyBackground(scene) : undefined;
       showAt(update.baked ?? renderAt(exposure), renderAt(exposure));
@@ -198,16 +267,22 @@ export function SkyLayer({
     energyMultiplier,
     exposure,
     panorama,
+    textures,
+    shaderOptions,
+    sampling,
+    transpiler,
+    isTranslatorReady,
     isPanoramaDrawn,
     asBackground,
-    lightsKey,
+    areLightsRead,
+    lightsRead,
     contextRestores,
     rotationX,
     rotationY,
     rotationZ,
   ]);
 
-  return null;
+  return <>{textureSlots}</>;
 }
 
 /**
@@ -256,22 +331,21 @@ function useContextRestores(gl: THREE.WebGLRenderer): number {
   return restores;
 }
 
-/**
- * Changes whenever the lights the sky draws change, read every frame, as Godot re-renders the sky
- * on a change of light count, direction, energy, colour or size (`sky.cpp:1104-1142`). A sub-scene
- * or GLB brings a light late, and the preview sun unmounts for the scene's own (ADR-0025). Null
- * until the first frame.
- */
-function useSkyLightsKey(scene: THREE.Scene): string | null {
-  const [key, setKey] = useState<string | null>(null);
-  const latest = useRef<string | null>(null);
+/** The lights the sky draws, read every frame as Godot reads them in each render (`sky.cpp:1059-1143`). */
+function useSkyLights(scene: THREE.Scene): {
+  lightsRead: React.RefObject<SkyLightsRead | null>;
+  areLightsRead: boolean;
+} {
+  const lightsRead = useRef<SkyLightsRead | null>(null);
+  const [areLightsRead, setAreLightsRead] = useState(false);
   useFrame(() => {
-    const next = skyLightsKey(directionalLights(scene));
-    if (next === latest.current) return;
-    latest.current = next;
-    setKey(next);
+    const lights = directionalLights(scene);
+    const key = skyLightsKey(lights);
+    if (key === lightsRead.current?.key) return;
+    lightsRead.current = { lights, key };
+    setAreLightsRead(true);
   });
-  return key;
+  return { lightsRead, areLightsRead };
 }
 
 function skyLightsKey(lights: readonly SkyLight[]): string {
@@ -317,4 +391,10 @@ function directionalLights(scene: THREE.Scene): SkyLight[] {
   });
 
   return lights;
+}
+
+/** The texture parameters of a shader sky, or null for a built-in sky. */
+function shaderTexturesOf(material: SkyProperties | null): ShaderTextures | null {
+  if (material?.kind !== 'shader') return null;
+  return { references: material.textures, samplers: material.usage.samplers };
 }

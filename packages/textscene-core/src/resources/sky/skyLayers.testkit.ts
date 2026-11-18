@@ -1,7 +1,9 @@
-/** The debanding scale of the radiance octmaps a bake draws, read at each draw as the pass is reused. */
-
 import * as THREE from 'three';
 import { vi } from 'vitest';
+import { cubeRadiance, type SkyLayers } from './skyLayers';
+import { OctmapRadiance, type OctmapSky } from './octmapRadiance';
+import type { SkyBake } from './types';
+import type { ProjectSampling } from '../../shaders/uniforms/samplerState';
 
 /** The debanding scale of each radiance octmap `renderer` draws while `bake` runs. */
 export function debandingDrawnBy(renderer: THREE.WebGLRenderer, bake: () => void): number[] {
@@ -15,4 +17,19 @@ export function debandingDrawnBy(renderer: THREE.WebGLRenderer, bake: () => void
   });
   bake();
   return drawn;
+}
+
+/** Godot's sky layers of the cube `radiance`, baked through the real bake. The caller frees them. */
+export function bakeSkyLayers(
+  gl: THREE.WebGLRenderer,
+  radiance: THREE.CubeTexture,
+  bake: SkyBake,
+  debanding: number,
+  sampling?: ProjectSampling
+): SkyLayers {
+  const cubeSky: OctmapSky = {
+    draw: (renderer, octmap, layout) => cubeRadiance(renderer, radiance, debanding)(octmap, layout),
+    dispose: () => {},
+  };
+  return new OctmapRadiance(gl, bake, cubeSky, sampling).releaseLayers();
 }

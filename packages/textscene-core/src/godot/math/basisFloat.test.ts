@@ -9,7 +9,7 @@ describe('basisSetAxisAngle', () => {
     const turned = basisSetAxisAngle(basis, { x: 0, y: 0, z: 1 }, Math.PI);
 
     expect(turned).toBe(basis);
-    expect(basis.map((component) => Math.round(component))).toEqual([-1, -0, 0, 0, -1, 0, 0, 0, 1]);
+    expect(basis.map((component) => Math.round(component))).toEqual([-1, 0, 0, -0, -1, 0, 0, 0, 1]);
   });
 
   it('writes the identity for an axis that is not normalised, as MATH_CHECKS leaves it (edge case)', () => {

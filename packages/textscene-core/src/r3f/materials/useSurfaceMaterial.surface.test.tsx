@@ -41,7 +41,7 @@ function materialProps(
 ): THREE.MeshPhysicalMaterialParameters {
   const source = inlineMaterial(properties, resources);
   const { loader } = createFakeResourceLoader();
-  const { result } = renderHook(() => useSurfaceMaterial(source, surface), {
+  const { result } = renderHook(() => useSurfaceMaterial(source, 'glTF surface', surface), {
     wrapper: ({ children }: { children: ReactNode }) => (
       <ResourceLoaderProvider loader={loader}>{around(children)}</ResourceLoaderProvider>
     ),

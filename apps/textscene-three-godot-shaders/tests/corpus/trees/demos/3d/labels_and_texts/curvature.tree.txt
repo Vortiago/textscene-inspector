@@ -1,0 +1,10 @@
+shader_type spatial;
+
+void vertex() {
+	(VERTEX.z -= (6.000000238418579e-1 - (cos(VERTEX.x) * 6.000000238418579e-1)));
+	(VERTEX.x *= (8.00000011920929e-1 + (cos(VERTEX.x) * 2.0000000298023224e-1)));
+}
+
+void fragment() {
+	(ALBEDO = vec3(1.0, 6.000000238418579e-1, 1.0000000149011612e-1));
+}

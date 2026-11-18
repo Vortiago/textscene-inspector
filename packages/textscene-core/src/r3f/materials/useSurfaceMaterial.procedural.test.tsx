@@ -55,7 +55,7 @@ function renderMaterial(tiles = false) {
   // The hook reads this on each render, so an edit swaps it and re-renders.
   let resources = scene(1);
   const uploads = fakeTiledUploads();
-  const hook = renderHook(() => useSurfaceMaterial(inlineSource(MATERIAL, resources)), {
+  const hook = renderHook(() => useSurfaceMaterial(inlineSource(MATERIAL, resources), 'glTF surface'), {
     wrapper: ({ children }: { children: ReactNode }) => {
       const tree = <ResourceLoaderProvider loader={loader}>{children}</ResourceLoaderProvider>;
       return tiles ? <uploads.wrapper>{tree}</uploads.wrapper> : tree;

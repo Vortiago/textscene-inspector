@@ -1,0 +1,104 @@
+import { doubleToUint64, wrapInt32 } from '../cInteger.js';
+import { booleanize } from '../compare.js';
+import { castVariant, canConvertStrict, toFloat32, toInt32, toUint32 } from '../construct/variantCast.js';
+import type { Variant, VariantTypeName } from '../value/variant.js';
+
+/** The C++ parameter types of the utility functions a FUNCBINDR binding checks and casts. */
+export type CppParameter =
+  | 'bool'
+  | 'double'
+  | 'float'
+  | 'int32_t'
+  | 'int64_t'
+  | 'uint8_t'
+  | 'uint32_t'
+  | 'uint64_t'
+  | 'Error'
+  | 'EulerOrder'
+  | 'Projection::Planes'
+  | 'Side'
+  | 'Variant::Type'
+  | 'String'
+  | 'PackedByteArray'
+  | 'Variant';
+
+/** The value a caster gives: a flag, a number, an int64 or uint64 as a bigint, a text, or the Variant. */
+export type CastArgument = boolean | number | bigint | string | Variant;
+
+/** The value of a Variant argument, which a method declares with a Variant type. */
+export const valueAt = <T>(args: readonly CastArgument[], index: number) =>
+  (args[index] as Variant).value as T;
+export const numberAt = (args: readonly CastArgument[], index: number) => args[index] as number;
+
+// GetTypeInfo<T>::VARIANT_TYPE: an enum is an INT, and a Variant parameter takes any type as NIL.
+const CHECKED_TYPE: Readonly<Record<CppParameter, VariantTypeName>> = {
+  bool: 'BOOL',
+  double: 'FLOAT',
+  float: 'FLOAT',
+  int32_t: 'INT',
+  int64_t: 'INT',
+  uint8_t: 'INT',
+  uint32_t: 'INT',
+  uint64_t: 'INT',
+  Error: 'INT',
+  EulerOrder: 'INT',
+  'Projection::Planes': 'INT',
+  Side: 'INT',
+  'Variant::Type': 'INT',
+  String: 'STRING',
+  PackedByteArray: 'PACKED_BYTE_ARRAY',
+  Variant: 'NIL',
+};
+
+export const isCppParameter = (name: string): name is CppParameter => Object.hasOwn(CHECKED_TYPE, name);
+
+/** The type `VariantCasterAndValidate` checks a parameter of `parameter` against (binder_common.h:172). */
+export const checkedType = (parameter: CppParameter): VariantTypeName => CHECKED_TYPE[parameter];
+
+/** Whether `Variant::can_convert_strict` lets `argument` through to a parameter of `parameter`. */
+export const isAccepted = (argument: Variant, parameter: CppParameter): boolean =>
+  canConvertStrict(argument.type, checkedType(parameter));
+
+// `_to_int<uint64_t>`: a double through the unsigned cast, every other source through its int64 bits.
+function toUint64(argument: Variant): bigint {
+  if (argument.type === 'FLOAT') return doubleToUint64(argument.value);
+  return BigInt.asUintN(64, castVariant(argument, 'INT').value as bigint);
+}
+
+/** `VariantCaster<T>::cast` of a scalar parameter, or `Variant::operator T()` of a Variant type. */
+export const castTo = (argument: Variant, parameter: CppParameter | VariantTypeName): CastArgument =>
+  isCppParameter(parameter) ? castArgument(argument, parameter) : castVariant(argument, parameter);
+
+/** `VariantCaster<T>::cast`: the value the function runs with, also for an argument the check refused. */
+export function castArgument(argument: Variant, parameter: CppParameter): CastArgument {
+  switch (parameter) {
+    case 'bool':
+      return booleanize(argument);
+    case 'double':
+      return castVariant(argument, 'FLOAT').value as number;
+    case 'float':
+      return toFloat32(argument);
+    case 'int32_t':
+      return toInt32(argument);
+    case 'int64_t':
+      return castVariant(argument, 'INT').value as bigint;
+    case 'uint8_t':
+      return toInt32(argument) & 0xff;
+    case 'uint32_t':
+      return toUint32(argument);
+    case 'uint64_t':
+      return toUint64(argument);
+    case 'Error':
+    case 'EulerOrder':
+    case 'Projection::Planes':
+    case 'Side':
+    case 'Variant::Type':
+      return wrapInt32(castVariant(argument, 'INT').value as bigint);
+    case 'String':
+      return castVariant(argument, 'STRING').value as string;
+    case 'PackedByteArray':
+      return castVariant(argument, 'PACKED_BYTE_ARRAY');
+    case 'Variant':
+      return argument;
+  }
+}

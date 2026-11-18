@@ -1,11 +1,15 @@
 /** The background, the fog and the screen-space effects one Environment draws into its world's scene. */
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { EnvironmentLayer } from './EnvironmentLayer';
 import { environmentSettingsOf } from '../../resources/environment/testing/environmentSettings';
 import { ViewportModeProvider } from '../contexts/ViewportModeContext';
 import { SCREEN_SPACE_STATE, screenSpaceState } from '../screenSpaceEffects/screenSpaceState';
+import { ShaderErrorsProvider, useShaderErrors } from '../contexts/ShaderErrorsContext';
+import { decodeSky } from '../../resources/sky/decode';
+import type { AuthoredSky } from '../../resources/sky/types';
+import * as logger from '../../logger';
 
 /** `showFog` is the viewport's Fog toggle. */
 interface MountOptions {
@@ -81,5 +85,48 @@ describe('<EnvironmentLayer> screen-space effects', () => {
     const { scene, unmount } = await mountLayer({ ssao_enabled: 'true' });
     await unmount();
     expect(scene.getObjectByName(EFFECTS)).toBeUndefined();
+  });
+});
+
+describe('<EnvironmentLayer> sky shader errors', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const UNCOMPILED: AuthoredSky = decodeSky(
+    {},
+    {
+      kind: 'shader',
+      code: 'shader_type sky;\nvoid sky() { COLOR = 1.0; }\n',
+      file: 'res://sky.gdshader',
+      parameters: {},
+      textures: {},
+    }
+  );
+
+  async function errorsAt(holderPath: string) {
+    const seen: string[][] = [];
+    function Errors() {
+      seen.push(useShaderErrors('World/Environment'));
+      return null;
+    }
+    await ReactThreeTestRenderer.create(
+      <ShaderErrorsProvider>
+        <EnvironmentLayer
+          settings={environmentSettingsOf({ background_mode: '2' })}
+          sky={UNCOMPILED}
+          panorama={null}
+          holderPath={holderPath}
+        />
+        <Errors />
+      </ShaderErrorsProvider>
+    );
+    return seen;
+  }
+
+  it("shows Godot's error in the details of the node that holds the Environment", async () => {
+    vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    const seen = await errorsAt('World/Environment');
+    await vi.waitFor(() => expect(seen.at(-1)?.[0]).toMatch(/^Godot does not compile the sky shader/));
   });
 });

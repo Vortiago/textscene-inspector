@@ -17,6 +17,8 @@ const PREVIEW_PORTS = {
   e2eWeb: { port: 4329, envName: 'E2E_WEB_PORT' },
   uniformVectors: { port: 4331, envName: 'UNIFORM_VECTORS_PORT' },
   rendererConsumer: { port: 4335, envName: 'RENDERER_CONSUMER_PORT' },
+  shaderProbes: { port: 4343, envName: 'SHADER_PROBES_PORT' },
+  shaderEndToEnd: { port: 4345, envName: 'SHADER_E2E_PORT' },
   showcase: { port: 4188, envName: 'SHOWCASE_PORT' },
   /** The run-textscene-web skill's driver, which an agent runs beside any gate. */
   runWeb: { port: 4339, envName: 'RUN_WEB_PORT' },

@@ -7,6 +7,7 @@
 
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
+import { TRIPLANAR_SHARPNESS_RANGE } from '../../../godot/scene/baseMaterial3D.js';
 import { TEXTURE_FILTER_NAMES } from '../../../godot/rendering/materials/textureFilter.js';
 
 export const uvKeys: Record<string, PropertyValidator> = {
@@ -16,8 +17,7 @@ export const uvKeys: Record<string, PropertyValidator> = {
   uv1_offset: v.vector3('uv1_offset'),
   uv1_triplanar: v.boolean('uv1_triplanar'),
   uv1_triplanar_sharpness: v.float('uv1_triplanar_sharpness', {
-    min: 0,
-    max: 150,
+    ...TRIPLANAR_SHARPNESS_RANGE,
     enforced: 'material.cpp:2786',
   }),
   uv1_world_triplanar: v.boolean('uv1_world_triplanar'),
@@ -26,8 +26,7 @@ export const uvKeys: Record<string, PropertyValidator> = {
   uv2_offset: v.vector3('uv2_offset'),
   uv2_triplanar: v.boolean('uv2_triplanar'),
   uv2_triplanar_sharpness: v.float('uv2_triplanar_sharpness', {
-    min: 0,
-    max: 150,
+    ...TRIPLANAR_SHARPNESS_RANGE,
     enforced: 'material.cpp:2814',
   }),
   uv2_world_triplanar: v.boolean('uv2_world_triplanar'),

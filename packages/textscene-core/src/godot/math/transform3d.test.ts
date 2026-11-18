@@ -146,6 +146,22 @@ describe('interpolateTransform3D', () => {
     expect(blended.basis_z.z).toBeCloseTo(1.787451, 5);
   });
 
+  it('gives the float32 bits Godot 4.6.3 gives for a non-uniform scale at weight 1.3', () => {
+    const blended = interpolateTransform3D(
+      transform3DFromColumnBits(
+        '0000803f0000000000000000000000000000004000000000000000000000000000004040000000000000000000000000'
+      ),
+      transform3DFromColumnBits(
+        '000040400000000000000000000000009e067f3fb57e323d00000000b57eb2bd9e06ff3e000000000000803f00000000'
+      ),
+      Math.fround(1.3)
+    );
+
+    expect(columnBits(blended)).toBe(
+      '666666400000000000000000000000007ef6313f16ff213d000000005dcd613cb00e78be000000006666a63f00000000'
+    );
+  });
+
   it('returns the first transform at weight 0 (edge case)', () => {
     const blended = interpolateTransform3D(from, to, 0);
 
@@ -178,4 +194,17 @@ function transform3DFromRows(rows: number[], origin: Transform3D['origin']): Tra
     basis_z: { x: rows[6]!, y: rows[7]!, z: rows[8]! },
     origin,
   };
+}
+
+/** Godot's `Transform3D` columns and origin, as twelve float32 values in hex. */
+function transform3DFromColumnBits(hex: string): Transform3D {
+  const [xx, xy, xz, yx, yy, yz, zx, zy, zz, ox, oy, oz] = new Float32Array(
+    new Uint8Array(Buffer.from(hex, 'hex')).buffer
+  );
+  return transform3DFromRows([xx!, yx!, zx!, xy!, yy!, zy!, xz!, yz!, zz!], { x: ox!, y: oy!, z: oz! });
+}
+
+function columnBits({ basis_x: x, basis_y: y, basis_z: z, origin }: Transform3D): string {
+  const columns = [x.x, y.x, z.x, x.y, y.y, z.y, x.z, y.z, z.z, origin.x, origin.y, origin.z];
+  return Buffer.from(Float32Array.from(columns).buffer).toString('hex');
 }

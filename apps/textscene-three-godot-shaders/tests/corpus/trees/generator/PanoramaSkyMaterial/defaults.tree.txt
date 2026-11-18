@@ -1,0 +1,9 @@
+shader_type sky;
+
+uniform sampler2D source_panorama : filter_linear, source_color, hint_default_black;
+
+uniform float exposure : hint_range(0.0, 128.0, 1.0000000474974513e-3) = 1.0;
+
+void sky() {
+	(COLOR = (texture(source_panorama, SKY_COORDS).rgb * exposure));
+}

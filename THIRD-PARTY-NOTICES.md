@@ -30,6 +30,10 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/r3f/areaLight/areaTextureFetch.ts` | `servers/rendering/renderer_rd/shaders/area_lights_inc.glsl` (`fetch_ltc_lod` and the form-factor texture fetch) |
 | `packages/textscene-core/src/r3f/areaLight/atlasLayout.ts` | `servers/rendering/renderer_rd/storage_rd/texture_storage.cpp` (`update_area_light_atlas`: the cell sizes) |
 | `packages/textscene-core/src/r3f/textureAtlas/atlasPacking.ts` | `servers/rendering/renderer_rd/storage_rd/texture_storage.cpp` (`update_area_light_atlas` and `update_decal_atlas`: the best-fit skyline packing and the doubling of the width) |
+| `packages/textscene-core/src/shaders/language/godotNumber.ts` | `core/string/ustring.cpp` (`built_in_strtod` and `String::num`) and `servers/rendering/shader_compiler.cpp` (`get_constant_text`) |
+| `packages/textscene-core/src/shaders/language/tokenizer.ts` | `servers/rendering/shader_language.cpp` (`_get_token` and its messages) |
+| `packages/textscene-core/src/shaders/language/parse.ts` | `servers/rendering/shader_language.cpp` (`_parse_expression`, the swizzle rules and their messages) |
+| `packages/textscene-core/src/shaders/language/instructionTable.generated.ts` | `servers/rendering/shader_language.h`, `shader_language.cpp`, `shader_types.cpp` and `shader_preprocessor.cpp` (the rows of the instruction table) |
 | `packages/textscene-core/src/nodes/3d/decal/decalAtlasLayout.ts` | `servers/rendering/renderer_rd/storage_rd/texture_storage.cpp` (`update_decal_atlas`: the cell sizes, the atlas size and each rectangle) |
 | `packages/textscene-core/src/r3f/areaLight/atlasMipmaps.ts` | `servers/rendering/renderer_rd/storage_rd/texture_storage.cpp` (the atlas's mip chain) and `servers/rendering/renderer_rd/shaders/effects/copy.glsl` (the Gaussian blur) |
 | `packages/textscene-core/src/godot/rendering/lights/ltcTable.generated.ts` | `servers/rendering/storage/ltc/ltc_lut1.dds` and `ltc_lut2.dds` (Godot 4.7.2's LTC tables, which Eric Heitz fitted, baked by `scripts/godot-ltc/bake-ltc.mjs`) |
@@ -133,9 +137,9 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/windows/acceptdialog/dialogParts.ts` | `scene/gui/dialogs.cpp` (`AcceptDialog::AcceptDialog`'s internal Label, Button row and panel, `_update_theme_item_cache`) |
 | `packages/textscene-core/src/nodes/windows/filedialog/body.ts` | `scene/gui/file_dialog.cpp` (`FileDialog::FileDialog`'s Control tree, `update_customization`, `_update_option_controls`) |
 | `packages/textscene-core/src/nodes/windows/filedialog/fileList.ts` | `scene/gui/file_dialog.cpp` (`FileDialog::update_file_list`: the folders then files, the hidden names, the first filter and the selected row) |
-| `packages/textscene-core/src/godot/string/fileNameOrder.ts` | `core/string/ustring.cpp` (`String::filenocasecmp_to`) |
-| `packages/textscene-core/src/godot/string/wildcard.ts` | `core/string/ustring.cpp` (`String::matchn`) |
-| `packages/textscene-core/src/godot/string/simpleUpper.ts` | `core/string/ustring.cpp` (`_find_upper`) |
+| `packages/textscene-core/src/godot/string/stringCompare.ts` | `core/string/ustring.cpp` (`String::casecmp_to` and the other comparisons) |
+| `packages/textscene-core/src/godot/string/wildcard.ts` | `core/string/ustring.cpp` (`String::match`, `String::matchn`) |
+| `packages/textscene-core/src/godot/string/caseMapping.ts` | `core/string/ucaps.h` (`_find_upper`, `_find_lower`) |
 | `packages/textscene-core/src/nodes/2d/ui/shared/fitChildInRect.ts` | `scene/gui/container.cpp` (`Container::fit_child_in_rect`) and `scene/gui/control.h` (the `SizeFlags` bitmask, `Container::as_sortable_control`'s visibility test) |
 | `packages/textscene-core/src/nodes/2d/ui/shared/boxContainerResort.ts` | `scene/gui/box_container.cpp` (`BoxContainer::_resort`) |
 | `packages/textscene-core/src/nodes/2d/ui/shared/boxContainerSolver.ts` | `scene/gui/box_container.cpp` (`BoxContainer::get_minimum_size`) |
@@ -384,6 +388,19 @@ orchestrator-owned:
 
 Each theme key is simply its SVG filename without extension (`default_theme_icons_builders.py`).
 Licensed under the same Godot Engine MIT licence below.
+
+### Bundled renderer templates
+
+`packages/textscene-core/src/shaders/template/templateFiles.generated.ts` holds unmodified copies of
+Godot 4.6.3's renderer templates, the files under `servers/rendering/renderer_rd/shaders/`, so the
+shader package links a user's shader into the template Godot links it into. The repository holds no
+copy: `scripts/godot-templates/templateFiles.mjs` renders the file, `scripts/godot-templates/install.mjs`
+writes it at install from Godot's source, or on Cloudflare Pages from Godot's GitHub tree at the
+release tag, and the shader package's bundle carries it.
+`packages/textscene-core/src/shaders/template/modeTables.generated.ts` holds the mode tables those
+templates read, generated from the renderer's C++ (`environment/sky.cpp` and the other shader
+types). `scripts/godot-templates/run.mjs` writes it. Both files carry the Godot notice, and they are
+Godot Engine files under the same MIT licence below.
 
 ### Vendored viewport icon
 
@@ -667,6 +684,8 @@ and ambient light ARE that table's output. Godot vendors it as `thirdparty/misc/
 It is by Activision Publishing and is licensed MIT, separately from Godot's own MIT licence above.
 `packages/textscene-core/src/resources/sky/skyLayerShaders.ts` ports Godot's `octmap_downsampler.glsl`
 and `octmap_filter.glsl`, which carry the same Activision notice.
+`packages/textscene-core/src/shaders/template/templateFiles.generated.ts` holds those two templates
+unmodified, with the notice.
 
 ```
 Copyright 2016 Activision Publishing, Inc.
@@ -721,15 +740,50 @@ limitations under the License.
 
 ---
 
-## GNU C Library atan2f
+## Grisu2
+
+<https://florian.loitsch.com/publications>
+
+`packages/textscene-core/src/godot/string/grisu2.ts` ports `grisu2::to_chars`, because Godot spells a
+float with it in `String::num_scientific` and `var_to_str`, and its digits are not always the shortest.
+Godot vendors it as `thirdparty/grisu2/grisu2.h`, adapted from JSON for Modern C++. It is by Florian
+Loitsch and is licensed MIT, separately from Godot's own MIT licence above.
+
+```
+Copyright (c) 2009 Florian Loitsch
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+---
+
+## GNU C Library atan2f and acosf
 
 <https://sourceware.org/glibc/>
 
 `packages/textscene-core/src/godot/math/realAtan2.ts` ports `__ieee754_atan2f` and `__atanf`
 (`sysdeps/ieee754/flt-32/e_atan2f.c` and `s_atanf.c` of glibc 2.39), because Godot hands a
 `real_t` `atan2` to the C library, and a chain of bones that folds onto one line bends to the
-side the last bit of that angle picks. Both files carry the
-notice below, separately from Godot's own MIT licence above.
+side the last bit of that angle picks. `packages/textscene-core/src/godot/math/realAcos.ts` ports
+`__ieee754_acosf` (`sysdeps/ieee754/flt-32/e_acosf.c` of glibc 2.39) for the same reason: Godot
+hands a `real_t` `acos` to the C library. The three files carry the notice below, separately from
+Godot's own MIT licence above.
 
 ```
 Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
@@ -738,6 +792,42 @@ Developed at SunPro, a Sun Microsystems, Inc. business.
 Permission to use, copy, modify, and distribute this
 software is freely granted, provided that this notice
 is preserved.
+```
+
+---
+
+## Arm Optimized Routines sinf and cosf
+
+<https://github.com/ARM-software/optimized-routines>
+
+`packages/textscene-core/src/godot/math/realSin.ts` ports `sinf` and `cosf` (`math/sinf.c`,
+`math/cosf.c`, `math/sincosf.h` and `math/sincosf_data.c`), because Godot hands a `real_t` `sin`
+and `cos` to the C library, and glibc 2.39 runs these routines. They are by Arm Limited and are
+licensed MIT OR Apache-2.0 WITH LLVM-exception. This project takes them under the MIT licence
+below, separately from Godot's own MIT licence above.
+
+```
+MIT License
+
+Copyright (c) 1999-2022, Arm Limited.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 ```
 
 ---
@@ -991,9 +1081,9 @@ Legal Terms
 
 <https://github.com/ariya/FastLZ>
 
-`packages/textscene-core/src/resources/formats/binaryresource/fastlz.ts` ports FastLZ's level 1
-decompressor, because Godot compresses a binary resource saved in FastLZ mode with it
-(`core/io/compression.cpp`). Godot vendors it as `thirdparty/misc/fastlz.c`. It is by Ariya
+`packages/textscene-core/src/godot/io/compression/fastlz.ts` ports FastLZ's decompressor, because
+Godot decompresses a binary resource saved in FastLZ mode, and `PackedByteArray.decompress` in FastLZ
+mode, with it (`core/io/compression.cpp`). Godot vendors it as `thirdparty/misc/fastlz.c`. It is by Ariya
 Hidayat and is licensed MIT, separately from Godot's own MIT licence above.
 
 ```

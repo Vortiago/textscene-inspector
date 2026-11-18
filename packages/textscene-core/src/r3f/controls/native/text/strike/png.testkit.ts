@@ -3,6 +3,7 @@
  * samples of each pixel, at any colour type, bit depth, filter and interlace.
  */
 import { unzlibSync, zlibSync } from 'three/addons/libs/fflate.module.js';
+import { crc32 } from '../../../../../godot/io/compression/checksums';
 import type { ZlibInflate } from './png';
 
 export const inflate: ZlibInflate = (stream) => unzlibSync(stream);
@@ -65,7 +66,7 @@ export function encodePng(png: TestPng): Uint8Array {
 /** A chunk of `type` with its CRC. */
 export function pngChunk(type: string, body: readonly number[] = []): number[] {
   const typed = [...type].map((c) => c.charCodeAt(0)).concat(body);
-  return [...u32(body.length), ...typed, ...u32(crc32(typed))];
+  return [...u32(body.length), ...typed, ...u32(crc32(Uint8Array.from(typed)))];
 }
 
 function filteredData(png: TestPng, bitDepth: number): number[] {
@@ -129,13 +130,4 @@ function paeth(left: number, up: number, upLeft: number): number {
 
 function u32(value: number): number[] {
   return [24, 16, 8, 0].map((shift) => (value >>> shift) & 0xff);
-}
-
-function crc32(bytes: readonly number[]): number {
-  let crc = 0xffffffff;
-  for (const byte of bytes) {
-    crc ^= byte;
-    for (let k = 0; k < 8; k++) crc = crc & 1 ? 0xedb88320 ^ (crc >>> 1) : crc >>> 1;
-  }
-  return (crc ^ 0xffffffff) >>> 0;
 }

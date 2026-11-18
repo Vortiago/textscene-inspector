@@ -1,0 +1,9 @@
+shader_type spatial;
+
+uniform vec4 color : source_color;
+
+uniform float amount : hint_range(0.0, 1.0, 1.0000000474974513e-3);
+
+uniform vec4 other_color : source_color = vec4(1.0, 1.0, 1.0, 1.0);
+
+uniform sampler2D image : source_color;

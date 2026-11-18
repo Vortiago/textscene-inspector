@@ -9,6 +9,7 @@ export { IMPORTED_FILE, optionalReference } from './read';
 export type { ScopedReference } from './scopedReference';
 export {
   nodeReference,
+  referenceAddress,
   projectSettingReference,
   referenceHeldBy,
   referenceKey,

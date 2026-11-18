@@ -343,10 +343,18 @@ describe('animationPass', () => {
     expect(poses.poseScale(0)).toEqual({ x: 4, y: 5, z: 6 });
   });
 
-  it('normalises a rotation, as the blend of the mixer returns it', () => {
-    const { poses } = passOver(new Map([['b0', { rotation: [{ x: 0, y: 0, z: 2, w: 0 }] }]]));
+  it('normalises a rotation within UNIT_EPSILON of unit length, as the blend of the mixer returns it', () => {
+    const { poses } = passOver(new Map([['b0', { rotation: [{ x: 0, y: 0, z: 1.000004, w: 0 }] }]]));
 
-    expectQuaternionClose(poses.poseRotation(0), { x: 0, y: 0, z: 1, w: 0 });
+    expect(poses.poseRotation(0)).toEqual({ x: 0, y: 0, z: 1, w: 0 });
+  });
+
+  it('writes the identity for a key that is not normalised, as MATH_CHECKS does (edge case)', () => {
+    const rotated = [bone('b0', -1, [0, 0, 0], { rotation: QUARTER_TURN_Z, rest: quarterTurnZ() })];
+
+    const { poses } = passOver(new Map([['b0', { rotation: [{ x: 0, y: 0, z: 2, w: 0 }] }]]), 1, rotated);
+
+    expect(poses.poseRotation(0)).toEqual({ x: 0, y: 0, z: 0, w: 1 });
   });
 
   it('writes a rotation relative to the rest rotation, so one track gives the keyed value (edge case)', () => {

@@ -11,6 +11,7 @@ import type { TscnNode } from '../../../parser/types';
 import { NodePathProvider } from '../../contexts/NodePathContext';
 import { UndrawnMeshesProvider, useUndrawnMeshReport } from '../../contexts/UndrawnMeshesContext';
 import { EmptyShapesProvider, useReportEmptyShape } from '../../contexts/EmptyShapesContext';
+import { ShaderErrorsProvider, useShaderErrorReport } from '../../contexts/ShaderErrorsContext';
 
 function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): TscnNode {
   return { rawProperties: {}, name, type, children: [], properties: {}, ...extras };
@@ -46,6 +47,15 @@ function FutureMeshHolder() {
 /** A CSG shape whose brush is empty. */
 function EmptyShapeHolder() {
   useReportEmptyShape(true);
+  return null;
+}
+
+const SHADER_ERROR =
+  'Godot does not compile the sky shader, and draws its default sky: 3:14: Unknown identifier.';
+
+/** A node whose shader does not compile. */
+function ShaderErrorHolder() {
+  useShaderErrorReport(SHADER_ERROR);
   return null;
 }
 
@@ -173,6 +183,27 @@ describe('<NodeDetailsPanel>', () => {
     });
 
     expect(screen.queryByText('The CSGShape3D has an empty shape.')).toBeNull();
+  });
+
+  it("shows a shader's error text", async () => {
+    nodeRegistry.register({ typeName: FAKE_TYPE, parser: () => ({}) });
+    const graph = createSceneGraphFromTscnScene({ nodes: [makeNode('Environment', FAKE_TYPE)] });
+
+    render(
+      <ShaderErrorsProvider>
+        <NodeDetailsPanel />
+        <Selector path="Environment" />
+        <NodePathProvider path="Environment">
+          <ShaderErrorHolder />
+        </NodePathProvider>
+      </ShaderErrorsProvider>,
+      { wrapper: panelWrap(graph) }
+    );
+    await act(async () => {
+      screen.getByTestId('select-node').click();
+    });
+
+    expect(screen.getByText(SHADER_ERROR)).toBeTruthy();
   });
 
   it('renders propertyFormatter sections from the registry', async () => {

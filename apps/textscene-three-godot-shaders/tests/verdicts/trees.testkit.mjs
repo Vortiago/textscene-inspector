@@ -1,0 +1,60 @@
+import { emittedTree } from '../../../../packages/textscene-core/src/shaders/language/emittedTree.ts';
+import { parsedShader } from '../../../../packages/textscene-core/src/shaders/language/parseShader.ts';
+import { printShader } from '../../../../packages/textscene-core/src/shaders/language/printer.ts';
+import { treeFault } from '../../../../packages/textscene-core/src/shaders/language/treeCheck.ts';
+import { probeShaderOptions } from '../integration/page/probeIncludes.mjs';
+import { LOWERED_AWAY } from './loweredAway.mjs';
+
+/** The tree of `source` after Godot's preprocessor, which reads `includes` by name. */
+export const treeOf = (source, includes) => parsedShader(source, probeShaderOptions(includes)).tree;
+
+/** The tree the emitter walks, which Godot's printed-text check reads too. */
+export const loweredTreeOf = (source, includes) => {
+  const tree = treeOf(source, includes);
+  return { ...tree, functions: tree.functions.map((definition) => emittedTree(definition).lowered) };
+};
+
+export const shapeOf = (tree) =>
+  JSON.parse(JSON.stringify(tree, (key, value) => (key === 'position' ? undefined : value)));
+
+/** Nothing when the printed text of `tree` parses to the same tree, else the fault. */
+export const printsBack = (tree) =>
+  JSON.stringify(shapeOf(treeOf(printShader(tree)))) === JSON.stringify(shapeOf(tree))
+    ? undefined
+    : 'its printed text parses to another tree';
+
+/** Nothing when the lowered tree keeps every fact. */
+export function loweredFault(tree) {
+  const fault = treeFault(tree);
+  if (fault !== undefined) return fault;
+  for (const definition of tree.functions) {
+    const found = leftoverIn(definition.body, true);
+    if (found !== undefined) return `${definition.name}: ${found} after lowering`;
+  }
+  return undefined;
+}
+
+function leftoverIn(block, isFunctionBody) {
+  const last = block.statements.length - 1;
+  for (const [index, statement] of block.statements.entries()) {
+    const found = leftoverAt(statement, isFunctionBody && index === last);
+    if (found !== undefined) return found;
+  }
+  return undefined;
+}
+
+function leftoverAt(statement, isLastOfFunction) {
+  if (statement.kind === 'block') return leftoverIn(statement, false);
+  if (statement.kind !== 'control flow') return undefined;
+  if (statement.flow in LOWERED_AWAY) return LOWERED_AWAY[statement.flow].name;
+  if (statement.flow === 'FLOW_OP_WHILE' && !isTrue(statement.expressions[0]))
+    return 'a while loop with a condition';
+  if (statement.flow === 'FLOW_OP_RETURN' && !isLastOfFunction) return 'a return before the last statement';
+  for (const inner of statement.blocks) {
+    const found = leftoverIn(inner, false);
+    if (found !== undefined) return found;
+  }
+  return undefined;
+}
+
+const isTrue = (expression) => expression?.kind === 'constant' && expression.values?.[0] === true;

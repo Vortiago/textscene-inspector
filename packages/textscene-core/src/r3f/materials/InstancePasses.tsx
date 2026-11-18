@@ -85,7 +85,11 @@ export function InstancePasses(props: InstancePassesProps) {
       {drawsOwnMaterial ? (
         ownMaterial
       ) : (
-        <SurfaceMaterialSlots sources={sources} {...listedSlot(primitive, 'mesh')} />
+        <SurfaceMaterialSlots
+          sources={sources}
+          {...listedSlot(primitive, 'mesh')}
+          drawnOn={skeleton ? 'skinned mesh' : 'mesh'}
+        />
       )}
       <NextPassChain
         meshRef={meshRef}

@@ -59,8 +59,10 @@
     "@types/node": "catalog:",
     "@types/three": "catalog:",
     "@typescript/native": "catalog:",
+    "brotli": "catalog:",
     "dts-bundle-generator": "catalog:",
     "esbuild": "catalog:",
+    "fzstd": "catalog:",
     "rimraf": "catalog:",
     "three": "catalog:",
     "vitest": "catalog:"

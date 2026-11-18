@@ -4,7 +4,7 @@ import { act, render } from '@testing-library/react';
 import { ResourceLoader } from './ResourceLoader';
 import { ResourceLoaderContext } from './ResourceLoaderContext';
 import { memoisedImport, type LazyImport } from './memoisedImport';
-import { useLazyModule } from './useLazyModule';
+import { useLazyModule, useLazyModuleState } from './useLazyModule';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -73,5 +73,39 @@ describe('useLazyModule', () => {
     const seen: (string | null)[] = [];
     mount(loader, load, seen);
     expect([seen[0], loader.pendingResourceCount]).toEqual([null, 0]);
+  });
+});
+
+function StateReader({
+  load,
+  isNeeded,
+  seen,
+}: {
+  load: LazyImport<string>;
+  isNeeded: boolean;
+  seen: unknown[];
+}) {
+  seen.push(useLazyModuleState(load, isNeeded));
+  return null;
+}
+
+describe('useLazyModuleState', () => {
+  it('reads failed once the import fails, so the caller can say so', async () => {
+    const chunk = deferred<string>();
+    const seen: unknown[] = [];
+    render(<StateReader load={memoisedImport(() => chunk.promise)} isNeeded seen={seen} />);
+    await act(async () => chunk.reject(new Error('chunk lost')));
+    expect(seen.at(-1)).toBe('failed');
+  });
+
+  it('reads null and starts no import for a caller that needs none (edge case)', () => {
+    let imports = 0;
+    const load = memoisedImport(() => {
+      imports += 1;
+      return Promise.resolve('module');
+    });
+    const seen: unknown[] = [];
+    render(<StateReader load={load} isNeeded={false} seen={seen} />);
+    expect([seen.at(-1), imports]).toEqual([null, 0]);
   });
 });

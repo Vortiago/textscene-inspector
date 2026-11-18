@@ -6,6 +6,7 @@
  * Portions ported from ThorVG (MIT License). Copyright (c) 2020 - 2024 the ThorVG project.
  */
 import { atan2, deg2rad, f32, isEqual, isZero, MATH_PI, MATH_PI2, type Point } from './math';
+import { sqrtf } from '../../../../../../godot/math/realMath';
 import { PathCommand, type RenderPath } from './renderPath';
 import { strToFloat } from './strToFloat';
 import { skipComma } from './svgNumbers';
@@ -279,7 +280,6 @@ function appendArcCommand(path: RenderPath, arr: number[], cursor: PathCursor): 
 
 const cosf = (x: number): number => f32(Math.cos(x));
 const sinf = (x: number): number => f32(Math.sin(x));
-const sqrtf = (x: number): number => f32(Math.sqrt(x));
 
 /** The centre and radii of an arc (SVG implementation notes F.6.5 and F.6.6), in single precision. */
 function arcCentre(

@@ -53,11 +53,11 @@ function renderMaterial(source: ScopedReference | undefined, seeded: Record<stri
   const wrapper = ({ children }: { children: ReactNode }) => (
     <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>
   );
-  return { fake, ...renderHook(() => useMaterial(source), { wrapper }) };
+  return { fake, ...renderHook(() => useMaterial(source, 'next pass'), { wrapper }) };
 }
 
 function MaterialReader({ path }: { path: string }) {
-  useMaterial(fileMaterial(path));
+  useMaterial(fileMaterial(path), 'next pass');
   return null;
 }
 
@@ -99,7 +99,7 @@ describe('useMaterial', () => {
     );
     const scope = { internalResources: SCENE_INTERNAL, externalResources: SCENE_EXTERNAL };
     const { result, rerender } = renderHook(
-      () => useMaterial(nodeReference('SubResource("Mat_body")', scope)),
+      () => useMaterial(nodeReference('SubResource("Mat_body")', scope), 'next pass'),
       {
         wrapper,
       }
@@ -160,7 +160,7 @@ describe('useMaterial', () => {
     fake.resources.seed(TRES_PATH, parseTresFile(PAINT_TRES));
     const { result } = renderHook(
       () => {
-        useMaterial(fileMaterial(`${TRES_PATH}::Late_mat`));
+        useMaterial(fileMaterial(`${TRES_PATH}::Late_mat`), 'next pass');
         return useMissingResources();
       },
       { wrapper: missingResourcesWrapper(fake.loader) }
@@ -181,7 +181,7 @@ describe('useMaterial', () => {
     fake.resources.seed(TRES_PATH, null);
     const { result } = renderHook(
       () => {
-        useMaterial(fileMaterial(`${TRES_PATH}::Late_mat`));
+        useMaterial(fileMaterial(`${TRES_PATH}::Late_mat`), 'next pass');
         return useMissingResources().missingPaths;
       },
       { wrapper: missingResourcesWrapper(fake.loader) }

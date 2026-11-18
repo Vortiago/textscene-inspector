@@ -12,6 +12,10 @@ import {
 const TURN_ABOUT_Z: Quaternion = quaternionFromAxisAngle({ x: 0, y: 0, z: 1 }, 0.5);
 const TURN_ABOUT_X: Quaternion = quaternionFromAxisAngle({ x: 1, y: 0, z: 0 }, 1.9);
 
+function bitsOf(q: Quaternion): string {
+  return Buffer.from(Float32Array.from([q.x, q.y, q.z, q.w]).buffer).toString('hex');
+}
+
 function expectQuaternion(actual: Quaternion, x: number, y: number, z: number, w: number): void {
   expect(actual.x).toBeCloseTo(x, 6);
   expect(actual.y).toBeCloseTo(y, 6);
@@ -38,6 +42,14 @@ describe('quaternionMultiply', () => {
       0.1439107,
       0.5636
     );
+  });
+
+  it('sums each component left to right, to the float32 bits Godot 4.6.3 gives', () => {
+    const f = Math.fround;
+    const left = { x: f(0.683), y: f(0.045), z: f(0.366), w: f(-0.55) };
+    const right = { x: f(0.533), y: f(-0.504), z: f(0.453), w: f(-0.531) };
+    const bits = new Uint8Array(Float32Array.from(Object.values(quaternionMultiply(left, right))).buffer);
+    expect(Buffer.from(bits).toString('hex')).toBe('0fe6e6bed4510e3e6ecc4fbf03455cbe');
   });
 });
 
@@ -68,6 +80,21 @@ describe('quaternionSlerp', () => {
     const nearly = quaternionFromAxisAngle({ x: 0, y: 0, z: 1 }, 0.5000001);
     const halfway = quaternionSlerp(TURN_ABOUT_Z, nearly, 0.5);
     expect(halfway.z).toBeCloseTo(TURN_ABOUT_Z.z, 6);
+  });
+
+  it('gives the float32 bits Godot 4.6.3 gives near 180 degrees, with the float sine of weight * omega', () => {
+    const f = Math.fround;
+    const halfway = quaternionSlerp(
+      { x: 0, y: 0, z: 0, w: 1 },
+      { x: 0, y: f(0.99999), z: 0, w: f(0.0044721) },
+      0.5
+    );
+    expect(bitsOf(halfway)).toBe('00000000379d343f00000000756c353f');
+  });
+
+  it('gives the identity for a quaternion that is not normalised, as MATH_CHECKS does (edge case)', () => {
+    const halfway = quaternionSlerp({ x: 0, y: 0, z: 0, w: 1 }, { x: 0, y: 0.8, z: 0, w: 0.8 }, 0.5);
+    expect(halfway).toEqual({ x: 0, y: 0, z: 0, w: 1 });
   });
 
   it('takes the shorter arc when the dot product is negative (edge case)', () => {

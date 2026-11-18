@@ -30,6 +30,9 @@
 #   declared as a Variant. The text saver keeps a Nil only on such a property
 #   and leaves out an empty Object (resource_format_text.cpp:1980).
 #
+# ###CLASSES_JSON### every ClassDB class: its immediate base ("" for Object),
+#   whether ClassDB.can_instantiate answers yes, and whether its API is the
+#   editor's. A Variant literal such as Array[WeakRef] names any of them.
 # ###NODE_DEFAULTS_JSON### what `ClassDB.class_get_property_default_value`
 #   answers for each stored property of a Node class, as var_to_str writes it.
 #   "declared" holds each property under the class that declares it, read on that
@@ -188,8 +191,14 @@ func _init() -> void:
 	var resource_bases: Dictionary = {}
 	var collections: Dictionary = {}
 	var variant_property_names: Dictionary = {}
+	var all_classes: Dictionary = {}
 
 	for c in ClassDB.get_class_list():
+		all_classes[c] = [
+			ClassDB.get_parent_class(c),
+			ClassDB.can_instantiate(c),
+			ClassDB.class_get_api_type(c) == ClassDB.API_EDITOR,
+		]
 		if ClassDB.is_parent_class(c, "Resource"):
 			var res_own: Array = own_properties(c)
 			if res_own.size() > 0:
@@ -238,6 +247,8 @@ func _init() -> void:
 	print(JSON.stringify(resource_bases))
 	print("###RESOURCE_GETTERS_JSON###")
 	print(JSON.stringify({"collections": collections, "variant_properties": variant_property_names}))
+	print("###CLASSES_JSON###")
+	print(JSON.stringify(all_classes))
 	print("###NODE_DEFAULTS_JSON###")
 	print(JSON.stringify(node_defaults(properties)))
 	quit()

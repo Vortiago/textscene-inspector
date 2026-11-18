@@ -71,6 +71,7 @@ import './textures/viewporttexture/index.js';
 import './textures/noisetexture2d/index.js';
 import './textures/noisetexture3d/index.js';
 import './textures/imagetexture3d/index.js';
+import './textures/cubemap/index.js';
 
 // Noise
 import './noise/fastnoiselite/index.js';
@@ -86,6 +87,7 @@ import './formats/binaryresource/index.js';
 import './formats/glb/index.js';
 import './formats/image/index.js';
 import './formats/image3d/index.js';
+import './formats/imagecubemap/index.js';
 import './formats/image2darray/index.js';
 import './formats/theoravideo/index.js';
 import './formats/packedscene/index.js';

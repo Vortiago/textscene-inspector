@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import type { SkyProperties } from './types';
+import type { BuiltInSkyProperties } from './types';
 import { materialReadsLights } from './readsLights';
 import { scaledRgb } from '../../utils/colorParser';
 import { godotColorToLinear } from '../../r3f/godotColor';
@@ -37,7 +37,7 @@ function scaledColor(color: Rgba, energy: number): THREE.Color {
 }
 
 export function skyUniforms(
-  sky: SkyProperties,
+  sky: BuiltInSkyProperties,
   lights: readonly SkyLight[],
   panorama?: THREE.Texture | null
 ): SkyUniforms {
@@ -88,18 +88,29 @@ export function skyUniforms(
   }
 
   // A sky that reads no lights has no light slots, which would declare uniforms its GLSL never reads.
-  if (materialReadsLights(sky)) {
-    for (let i = 0; i < LIGHT_SLOTS; i++) {
-      const light = lights[i];
-      uniforms[`LIGHT${i}_ENABLED`] = { value: !!light };
-      uniforms[`LIGHT${i}_DIRECTION`] = {
-        value: light ? light.direction.clone().normalize() : new THREE.Vector3(0, 1, 0),
-      };
-      uniforms[`LIGHT${i}_COLOR`] = { value: light ? light.color.clone() : new THREE.Color(1, 1, 1) };
-      uniforms[`LIGHT${i}_ENERGY`] = { value: light?.energy ?? 0 };
-      uniforms[`LIGHT${i}_SIZE`] = { value: light?.size ?? 0 };
-    }
-  }
+  if (materialReadsLights(sky)) writeSkyLights(uniforms, lights);
 
   return uniforms;
+}
+
+/** Writes `lights` into the light slots of `uniforms`, in the objects every reader of them shares. */
+export function writeSkyLights(uniforms: SkyUniforms, lights: readonly SkyLight[]): void {
+  for (let i = 0; i < LIGHT_SLOTS; i++) {
+    const light = lights[i];
+    setUniform(uniforms, `LIGHT${i}_ENABLED`, !!light);
+    setUniform(
+      uniforms,
+      `LIGHT${i}_DIRECTION`,
+      light ? light.direction.clone().normalize() : new THREE.Vector3(0, 1, 0)
+    );
+    setUniform(uniforms, `LIGHT${i}_COLOR`, light ? light.color.clone() : new THREE.Color(1, 1, 1));
+    setUniform(uniforms, `LIGHT${i}_ENERGY`, light?.energy ?? 0);
+    setUniform(uniforms, `LIGHT${i}_SIZE`, light?.size ?? 0);
+  }
+}
+
+function setUniform(uniforms: SkyUniforms, name: string, value: unknown): void {
+  const uniform = uniforms[name];
+  if (uniform) uniform.value = value;
+  else uniforms[name] = { value };
 }

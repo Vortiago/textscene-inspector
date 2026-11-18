@@ -1,0 +1,2 @@
+shader_type spatial;
+render_mode depth_prepass_alpha, cull_disabled, world_vertex_coords

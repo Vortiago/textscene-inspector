@@ -1,0 +1,501 @@
+import { reduced } from './constants.js';
+import { matchedConstructor } from './constructors.js';
+import { godotIntegerConstant, godotLiteralScalar, godotUintScalar } from './godotNumber.js';
+import { stringNum } from '../../godot/string/stringNumber.js';
+import { stringToFloat } from '../../godot/string/strtod.js';
+import { doubleToInt32 } from '../../godot/variant/cInteger.js';
+import {
+  builtInInstruction,
+  instruction,
+  keywordInstruction,
+  notTranspiled,
+  signatureInstruction,
+} from './instructions.js';
+import { assignmentRefusal } from './assignment.js';
+import { BINARY_OPERATOR_OF_TOKEN, OPERATOR_TOKENS, UNARY_OPERATOR_OF_TOKEN } from './operators.js';
+import { type Entry, reducedEntries } from './reduction.js';
+import type { Identifier } from './scope.js';
+import type { CallNode, ConstantNode, Expression, OperatorNode, Scalar, StructNode } from './shaderTree.js';
+import type { SourcePosition } from './shadingLanguageError.js';
+import { ArrayParser } from './parseArray.js';
+import { resolvedBuiltInCall } from './parseBuiltInCall.js';
+import { type CallScope, resolvedCall } from './parseCall.js';
+import { arraySizeOf, typeName } from './treeWalk.js';
+import { TOKEN_NAMES } from './instructionTable.generated.js';
+import { swizzled } from './swizzle.js';
+import type { TokenCursor } from './tokenCursor.js';
+import type { Token } from './tokenizer.js';
+import { elementType, shapeOf } from './types.js';
+import {
+  DEPTH_MESSAGE,
+  expressionDepth,
+  LENGTH_MESSAGE,
+  MAX_EXPRESSION_DEPTH,
+  MAX_LIST_ENTRIES,
+} from './expressionLimits.js';
+
+/** What a name stands for where the expression stands, and the structs of the shader. */
+export interface ExpressionScope extends CallScope {
+  identifier(name: string): Identifier | undefined;
+  struct(name: string): StructNode | undefined;
+  /** Godot's checks of a read or a write of a varying, with the cursor after its name. */
+  useVarying(name: string): void;
+  /** Godot's processor-function rules for a call, after its arguments and before its overload. */
+  checkCall(rname: string, args: readonly Expression[]): void;
+  /** A call of a stage function of the shader type, or nothing for any other name. */
+  stageCall(name: string, args: readonly Expression[], position: SourcePosition): CallNode | undefined;
+}
+
+/** `ExpressionInfo`: the list a ternary part joins when it ends, and whether a `:` ends it. */
+interface TernaryPart {
+  readonly entries: Entry[];
+  readonly endsAtColon: boolean;
+}
+
+/** The screen textures Godot 4 reads through a hinted uniform (`shader_language.cpp:6560`). */
+const REMOVED_TEXTURES: ReadonlySet<string> = new Set([
+  'SCREEN_TEXTURE',
+  'DEPTH_TEXTURE',
+  'NORMAL_ROUGHNESS_TEXTURE',
+]);
+
+function removedTextureMessage(name: string): string {
+  const hint = `hint_${name.toLowerCase()}`;
+  return (
+    `${name} has been removed in favor of using ${hint} with a uniform.\n` +
+    `To continue with minimal code changes add 'uniform sampler2D ${name} : ${hint}, filter_linear_mipmap;' near the top of your shader.`
+  );
+}
+
+export class ExpressionParser {
+  /** The array constructors, which read their elements with this parser. */
+  readonly arrays: ArrayParser;
+
+  constructor(
+    private readonly tokens: TokenCursor,
+    private readonly scope: ExpressionScope
+  ) {
+    this.arrays = new ArrayParser(tokens, this, scope);
+  }
+
+  /** Godot's `is_const_decl`, set by the declaration parser around each value. */
+  isConstDeclaration = false;
+
+  /** Godot's `TAG_ARRAY`: after an array's `.`, `length()` is the one method. */
+  private arrayOfCall: Expression | undefined;
+
+  /** How many lists `unreducedExpression` reads at once: brackets, arguments and ternary parts. */
+  private nesting = 0;
+
+  /** `_parse_and_reduce_expression` (`shader_language.cpp:7949`). */
+  expression(): Expression {
+    return reduced(this.unreducedExpression());
+  }
+
+  /** Set while a step of a `for` is read, where a `)` stands for the empty expression. */
+  private isForStep = false;
+
+  /** A step of a `for`: an expression, or nothing before the `)` (`shader_language.cpp:6766`). */
+  forStepExpression(): Expression {
+    this.isForStep = true;
+    try {
+      return this.expression();
+    } finally {
+      this.isForStep = false;
+    }
+  }
+
+  private unreducedExpression(part?: TernaryPart): Expression {
+    if (this.nesting >= MAX_EXPRESSION_DEPTH) this.tokens.fail(DEPTH_MESSAGE);
+    this.nesting += 1;
+    try {
+      return this.unreducedList(part);
+    } finally {
+      this.nesting -= 1;
+    }
+  }
+
+  private unreducedList(part: TernaryPart | undefined): Expression {
+    const entries: Entry[] = [];
+    for (;;) {
+      if (entries.length > MAX_LIST_ENTRIES) this.tokens.fail(LENGTH_MESSAGE);
+      const operand = this.operand(entries);
+      if (operand === undefined) continue;
+      entries.push({ isOperator: false, node: this.postfix(operand) });
+      const mark = this.tokens.mark();
+      const token = this.tokens.next();
+      if (part?.endsAtColon && token.type === 'TK_COLON') break;
+      if (!OPERATOR_TOKENS.has(token.type)) {
+        this.tokens.reset(mark);
+        break;
+      }
+      const op = BINARY_OPERATOR_OF_TOKEN.get(token.type);
+      if (op === undefined) this.tokens.fail(`Invalid token for the operator: '${tokenText(token)}'.`);
+      entries.push({ isOperator: true, op, position: token.position });
+      if (op === 'OP_SELECT_IF') {
+        this.ternaryParts(entries, part);
+        break;
+      }
+    }
+    const node = reducedEntries(entries, (message) => this.tokens.fail(message));
+    if (expressionDepth(node) > MAX_EXPRESSION_DEPTH) this.tokens.fail(DEPTH_MESSAGE);
+    part?.entries.push({ isOperator: false, node: ternaryOperand(node) });
+    return node;
+  }
+
+  /** A `:` ends the then part and a nested else part (`shader_language.cpp:7461`). */
+  private ternaryParts(entries: Entry[], part: TernaryPart | undefined): void {
+    this.unreducedExpression({ entries, endsAtColon: true });
+    entries.push({ isOperator: true, op: 'OP_SELECT_ELSE', position: this.tokens.lastPosition() });
+    this.unreducedExpression({ entries, endsAtColon: part?.endsAtColon ?? false });
+  }
+
+  /** One operand, or nothing after a unary operator, which joins `entries` (`shader_language.cpp:5968`). */
+  private operand(entries: Entry[]): Expression | undefined {
+    const mark = this.tokens.mark();
+    const token = this.tokens.next();
+    const unary = UNARY_OPERATOR_OF_TOKEN.get(token.type);
+    if (unary !== undefined) {
+      entries.push({ isOperator: true, op: unary, position: token.position });
+      return undefined;
+    }
+    switch (token.type) {
+      case 'TK_PARENTHESIS_OPEN': {
+        const inner = this.expression();
+        this.tokens.expect('TK_PARENTHESIS_CLOSE', "Expected ')' in expression.");
+        return inner;
+      }
+      case 'TK_FLOAT_CONSTANT':
+        return constantOf(token, 'float', this.floatLiteral(token));
+      case 'TK_INT_CONSTANT':
+        return constantOf(token, 'int', doubleToInt32(godotIntegerConstant(token.text!)));
+      case 'TK_UINT_CONSTANT':
+        return constantOf(token, 'uint', godotUintScalar(godotIntegerConstant(token.text!)));
+      case 'TK_TRUE':
+      case 'TK_FALSE':
+        return constantOf(token, 'bool', token.type === 'TK_TRUE');
+      case 'TK_TYPE_VOID':
+        return this.tokens.fail('Void value not allowed in expression.');
+      case 'TK_CURLY_BRACKET_OPEN':
+        this.tokens.reset(mark);
+        return this.arrays.constructed();
+      case 'TK_IDENTIFIER':
+        return this.identifier(token);
+      case 'TK_OP_ADD':
+        return undefined;
+      case 'TK_SEMICOLON':
+        this.tokens.reset(mark);
+        return emptyExpression(token);
+      case 'TK_PARENTHESIS_CLOSE':
+        if (!this.isForStep) break;
+        this.tokens.reset(mark);
+        return emptyExpression(token);
+    }
+    if (isDataTypeToken(token.type)) {
+      if (this.tokens.peek().type !== 'TK_BRACKET_OPEN') return this.construction(token);
+      this.tokens.reset(mark);
+      return this.arrays.constructed();
+    }
+    this.tokens.fail(`Expected expression, found: '${tokenText(token)}'.`);
+  }
+
+  /** A constructor, `vec3(a, 1.0)` (`shader_language.cpp:6046`), folded when its arguments are constants. */
+  private construction(typeToken: Token): Expression {
+    const type = keywordInstruction(typeToken.type)!.id;
+    const token = this.tokens.next();
+    if (token.type !== 'TK_PARENTHESIS_OPEN') this.tokens.fail("Expected '(' after the type name.");
+    const overload = matchedConstructor(type, this.argumentList());
+    if (!overload) this.tokens.fail(`No matching constructor found for: '${type}'.`);
+    const construction: OperatorNode = {
+      kind: 'operator',
+      type: overload.row.returns!,
+      op: 'OP_CONSTRUCT',
+      row: overload.row,
+      operands: overload.operands,
+      position: typeToken.position,
+    };
+    return reduced(construction);
+  }
+
+  /** `_parse_function_arguments` (`shader_language.cpp:4075`), after the `(`. */
+  private argumentList(): Expression[] {
+    const args: Expression[] = [];
+    if (this.tokens.accept('TK_PARENTHESIS_CLOSE')) return args;
+    for (;;) {
+      args.push(this.expression());
+      const token = this.tokens.next();
+      if (token.type === 'TK_PARENTHESIS_CLOSE') return args;
+      if (token.type !== 'TK_COMMA') this.tokens.fail("Expected ',' or ')' after argument.");
+    }
+  }
+
+  /** `shader_language.cpp:6106`. Inside an array's call only `length()` is known. */
+  private identifier(token: Token): Expression {
+    const name = token.text!;
+    const struct = this.scope.struct(name);
+    if (this.tokens.peek().type === 'TK_PARENTHESIS_OPEN') {
+      this.tokens.next();
+      if (struct) return this.structConstruction(struct, token);
+      if (this.arrayOfCall) return this.arrayCall(name, token);
+      return this.call(name, this.argumentList(), token);
+    }
+    if (this.arrayOfCall) this.tokens.fail(`Unknown identifier in expression: '${name}'.`);
+    const found = this.scope.identifier(name);
+    if (!found) {
+      const builtIn = builtInInstruction(name);
+      if (builtIn) throw notTranspiled(builtIn, token.position, name);
+      if (REMOVED_TEXTURES.has(name)) this.tokens.fail(removedTextureMessage(name));
+      this.tokens.fail(`Unknown identifier in expression: '${name}'.`);
+    }
+    const isConst = found.kind !== 'function' && found.isConst;
+    if (this.isConstDeclaration && !isConst) this.tokens.fail('Expected constant expression.');
+    if (found.kind === 'function') this.tokens.fail(`Can't use function as identifier: '${name}'.`);
+    if (found.kind === 'varying') this.scope.useVarying(name);
+    const variable = {
+      kind: 'variable',
+      type: found.type,
+      name,
+      position: token.position,
+      ...(found.arraySize > 0 ? { arraySize: found.arraySize } : {}),
+      ...(found.isConst ? { isConst: true } : {}),
+      ...(found.kind === 'built-in' ? { builtIn: found.row } : {}),
+      ...(found.kind === 'uniform' ? { isUniform: true } : {}),
+      ...(found.kind === 'varying' ? { isVarying: true } : {}),
+    } as const;
+    return found.arraySize > 0 ? this.arrayAccess(variable) : variable;
+  }
+
+  /** `Pair(a, b)`: one value of each member's type, in order (`shader_language.cpp:6123`). */
+  private structConstruction(struct: StructNode, token: Token): Expression {
+    const operands = struct.members.map((member, index) => {
+      if (index > 0 && this.tokens.next().type !== 'TK_COMMA') this.tokens.fail("Expected a ','.");
+      const value =
+        member.arraySize !== undefined
+          ? this.arrays.typedConstructed(member.type, member.arraySize)
+          : this.expression();
+      this.requireType(member.type, member.arraySize, value);
+      return value;
+    });
+    if (this.tokens.next().type !== 'TK_PARENTHESIS_CLOSE') this.tokens.fail("Expected a ')'.");
+    return {
+      kind: 'operator',
+      type: struct.name,
+      op: 'OP_STRUCT',
+      row: instruction('OP_STRUCT')!,
+      operands,
+      position: token.position,
+    };
+  }
+
+  /** `length()` of the array before the `.`, the one method of an array (`shader_language.cpp:3400`). */
+  private arrayCall(name: string, token: Token): Expression {
+    if (name !== 'length') this.tokens.fail(`Unknown identifier in expression: '${name}'.`);
+    if (this.argumentList().length > 0)
+      this.tokens.fail(`Invalid arguments for the built-in function: '${name}()'.`);
+    return { kind: 'array length', type: 'int', array: this.arrayOfCall!, position: token.position };
+  }
+
+  /** A new value after `=`, a method after `.`, one element in `[]`, or nothing (:6657). */
+  private arrayAccess(array: Expression & { readonly arraySize?: number }): Expression {
+    const mark = this.tokens.mark();
+    const token = this.tokens.next();
+    if (token.type === 'TK_OP_ASSIGN') {
+      const refusal = assignmentRefusal(array);
+      if (refusal !== undefined) this.tokens.fail(refusal);
+      const value = this.arrays.typedConstructed(array.type, array.arraySize!);
+      return {
+        kind: 'whole assign',
+        type: array.type,
+        arraySize: array.arraySize!,
+        target: array,
+        value,
+        position: array.position,
+      };
+    }
+    if (token.type === 'TK_PERIOD') return this.arrayMethods(array);
+    if (token.type === 'TK_BRACKET_OPEN') return this.arrayElement(array);
+    this.tokens.reset(mark);
+    return array;
+  }
+
+  /** The expression after an array's `.`, read where only the array's methods are known. */
+  private arrayMethods(array: Expression): Expression {
+    const outer = this.arrayOfCall;
+    this.arrayOfCall = array;
+    try {
+      return this.expression();
+    } finally {
+      this.arrayOfCall = outer;
+    }
+  }
+
+  /** `array[index]`: Godot refuses a constant index out of range, as a signed number. */
+  private arrayElement(array: Expression & { readonly arraySize?: number }): Expression {
+    const index = this.expression();
+    if (arraySizeOf(index) !== 0 || (index.type !== 'int' && index.type !== 'uint'))
+      this.tokens.fail('Only integer expressions are allowed for indexing.');
+    const size = array.arraySize!;
+    if (index.kind === 'constant') {
+      const value = index.values[0] as number | 0;
+      const signed = value | 0;
+      if (signed < 0 || signed >= size) this.tokens.fail(`Index [${signed}] out of range [0..${size - 1}].`);
+    }
+    if (this.tokens.next().type !== 'TK_BRACKET_CLOSE') this.tokens.fail("Expected a ']'.");
+    return { kind: 'array element', type: array.type, array, index, position: array.position };
+  }
+
+  /** Godot's `_compare_datatypes`: `value` must be of `type`, with `arraySize` elements. */
+  requireType(type: string, arraySize: number | undefined, value: Expression): void {
+    const valueSize = arraySizeOf(value);
+    if (value.type === type && valueSize === (arraySize ?? 0)) return;
+    this.tokens.fail(
+      `Invalid assignment of '${typeName(value.type, valueSize)}' to '${typeName(type, arraySize ?? 0)}'.`
+    );
+  }
+
+  /** A call of a stage function, a built-in function or a function of the shader. */
+  private call(name: string, args: readonly Expression[], token: Token): Expression {
+    const fail = (message: string) => this.tokens.fail(message);
+    this.scope.checkCall(name, args);
+    const stageCall = this.scope.stageCall(name, args, token.position);
+    if (stageCall) return stageCall;
+    const builtIn = resolvedBuiltInCall(name, args, token.position, fail);
+    if (builtIn) return builtIn;
+    const call = resolvedCall(this.scope, name, args, token.position, fail);
+    return call.arraySize ? this.arrayAccess(call) : call;
+  }
+
+  /** The members, indexes and increments after an operand (`shader_language.cpp:6800`). */
+  private postfix(operand: Expression): Expression {
+    let node = operand;
+    for (;;) {
+      const mark = this.tokens.mark();
+      const token = this.tokens.next();
+      if (token.type === 'TK_PERIOD') node = this.member(node);
+      else if (token.type === 'TK_BRACKET_OPEN') node = this.index(node);
+      else if (token.type === 'TK_OP_INCREMENT' || token.type === 'TK_OP_DECREMENT') {
+        node = this.postIncrement(
+          node,
+          token.type === 'TK_OP_INCREMENT' ? 'OP_POST_INCREMENT' : 'OP_POST_DECREMENT'
+        );
+      } else {
+        this.tokens.reset(mark);
+        return node;
+      }
+    }
+  }
+
+  /** An unindexed array's methods, a struct's member, or a swizzle (`shader_language.cpp:6805`). */
+  private member(owner: Expression): Expression {
+    if (arraySizeOf(owner) > 0) return this.arrayMethods(owner);
+    const token = this.tokens.next();
+    if (token.type !== 'TK_IDENTIFIER') this.tokens.fail('Expected an identifier as a member.');
+    const struct = this.scope.struct(owner.type);
+    if (struct) return this.field(owner, struct, token);
+    const member = swizzled(owner, token.text!);
+    if (typeof member === 'string') this.tokens.fail(member);
+    return member;
+  }
+
+  /** The member `name` of a struct value, and what follows it when it is an array. */
+  private field(owner: Expression, struct: StructNode, token: Token): Expression {
+    const name = token.text!;
+    const member = struct.members.find((candidate) => candidate.name === name);
+    if (!member) this.tokens.fail(`Invalid member for '${struct.name}' expression: '.${name}'.`);
+    const field = {
+      kind: 'field',
+      type: member.type,
+      owner,
+      name,
+      position: owner.position,
+      ...(member.arraySize !== undefined ? { arraySize: member.arraySize } : {}),
+    } as const;
+    return member.arraySize !== undefined ? this.arrayAccess(field) : field;
+  }
+
+  /** `owner[index]` on a vector or a matrix (`shader_language.cpp:7180`). */
+  private index(owner: Expression): Expression {
+    const index = this.expression();
+    if (index.type !== 'int' && index.type !== 'uint')
+      this.tokens.fail('Only integer expressions are allowed for indexing.');
+    const type = elementType(owner.type);
+    if (type === undefined) this.tokens.fail(`An object of type '${owner.type}' can't be indexed.`);
+    const shape = shapeOf(owner.type)!;
+    const size = shape.columns ?? shape.lanes;
+    if (index.kind === 'constant') {
+      // Godot reads the constant's lane as unsigned, so -1 is out of range as 4294967295.
+      const lane = (index.values[0] as number) >>> 0;
+      if (lane >= size) this.tokens.fail(`Index [${lane}] out of range [0..${size - 1}].`);
+    }
+    this.tokens.expect('TK_BRACKET_CLOSE', "Expected a ']'.");
+    return {
+      kind: 'operator',
+      type,
+      op: 'OP_INDEX',
+      row: instruction('OP_INDEX')!,
+      operands: [owner, index],
+      position: owner.position,
+    };
+  }
+
+  private postIncrement(operand: Expression, op: string): Expression {
+    const row = signatureInstruction(op, [operand.type]);
+    if (!row) this.tokens.fail('Invalid base type for increment/decrement operator.');
+    const refusal = assignmentRefusal(operand);
+    if (refusal !== undefined) this.tokens.fail(refusal);
+    return { kind: 'operator', type: row.returns!, op, row, operands: [operand], position: operand.position };
+  }
+
+  /** The float Godot holds for a literal, or the refusal of one whose text no GLSL compiler reads. */
+  private floatLiteral(token: Token): number {
+    try {
+      return godotLiteralScalar(token.text!);
+    } catch (error) {
+      this.tokens.fail(`float literal '${token.text}': ${(error as Error).message}`);
+    }
+  }
+}
+
+/** Godot takes the part before it reduces it, then negates a constant in place (:7832). */
+function ternaryOperand(node: Expression): Expression {
+  if (node.kind !== 'operator' || node.op !== 'OP_NEGATE') return reduced(node);
+  const folded = reduced(node);
+  return folded.kind === 'constant' ? { ...node, operands: [folded] } : folded;
+}
+
+const isDataTypeToken = (type: string) => keywordInstruction(type)?.family === 'data type';
+
+/** A constant of one scalar, at its token. */
+const constantOf = (token: Token, type: string, value: Scalar): ConstantNode => ({
+  kind: 'constant',
+  type,
+  values: [value],
+  position: token.position,
+});
+
+/** `;` where an operand stands: Godot's empty expression of type `void` (`shader_language.cpp:6778`). */
+const emptyExpression = (token: Token): OperatorNode => ({
+  kind: 'operator',
+  type: 'void',
+  op: 'OP_EMPTY',
+  row: instruction('OP_EMPTY')!,
+  operands: [],
+  position: token.position,
+});
+
+/** `get_token_text` (`shader_language.cpp:237`): the token's name, and a number's value or an identifier. */
+export function tokenText(token: Token): string {
+  const name = TOKEN_NAMES[token.type] ?? token.type;
+  switch (token.type) {
+    case 'TK_FLOAT_CONSTANT':
+      return `${name}(${stringNum(stringToFloat(token.text!))})`;
+    case 'TK_INT_CONSTANT':
+    case 'TK_UINT_CONSTANT':
+      return `${name}(${stringNum(godotIntegerConstant(token.text!))})`;
+    case 'TK_IDENTIFIER':
+    case 'TK_ERROR':
+      return `${name}(${token.text})`;
+    default:
+      return name;
+  }
+}

@@ -18,7 +18,10 @@ jobs:
   # A pull request that changes no file a golden scene renders through skips the golden run. A push
   # or pull request whose rendering files already passed it skips it too (renderInputsKey.mjs). A
   # manual run always runs it. A pull request that changes no file the real-Godot tests read skips
-  # them (godotRefScope.mjs).
+  # them (godotRefScope.mjs). A pull request into the shader port's branch that changes only
+  # transpiler files runs the shader package's own pipeline and skips the previewer's jobs
+  # (shaderScope.mjs). A push or pull request that changes no input of the material sweep compares
+  # the committed smoke materials instead of recording all of them in Godot (materialScope.mjs).
   changes:
     name: Changed files
     runs-on: ubuntu-latest
@@ -27,6 +30,8 @@ jobs:
       visual: ${{ steps.passed.outputs.cache-hit == 'true' && 'false' || steps.scope.outputs.visual }}
       visual-key: ${{ steps.inputs.outputs.key }}
       godot-ref: ${{ steps.godot-ref.outputs.godot-ref }}
+      shader-only: ${{ steps.shader-only.outputs.shader-only }}
+      material-sweep: ${{ steps.material-sweep.outputs.material-sweep }}
     steps:
       # A pull request checks out its merge commit, whose first parent is the base branch.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -62,6 +67,26 @@ jobs:
             exit 0
           fi
           git diff --name-only HEAD^1 HEAD | node scripts/ci/godotRefScope.mjs >> "$GITHUB_OUTPUT"
+      - id: shader-only
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "shader-only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git diff --name-only HEAD^1 HEAD | node scripts/ci/shaderScope.mjs >> "$GITHUB_OUTPUT"
+      # A push to main is one squash commit, so its first parent is main before the merge.
+      - id: material-sweep
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            echo "material-sweep=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git diff --name-only HEAD^1 HEAD | node scripts/ci/materialScope.mjs >> "$GITHUB_OUTPUT"
 
   # Names the image the browser jobs run in (.github/ci-image), and builds and publishes it when no
   # run has yet. The tag is a hash of the image's inputs, so a commit that changes none of them
@@ -114,6 +139,7 @@ jobs:
   static:
     name: Lint, type check and generated files
     runs-on: ubuntu-latest
+    needs: godot-templates
     timeout-minutes: 15
     steps:
       # Depth 2: `comments:check` reads the change from the first parent, the base or the main before it.
@@ -121,6 +147,8 @@ jobs:
         with:
           fetch-depth: 2
       - uses: ./.github/actions/setup
+        with:
+          template-files: artifact
 
       # First: it needs no build and fails in seconds.
       - run: pnpm format:check
@@ -150,6 +178,7 @@ jobs:
   unit:
     name: Unit tests (${{ matrix.shard }}/4)
     runs-on: ubuntu-latest
+    needs: godot-templates
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -158,6 +187,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
+        with:
+          template-files: artifact
 
       # Before the tests: loadCoreLinter.test.mjs skips itself when core's dist is absent.
       - run: pnpm --filter @textscene/core build
@@ -169,7 +200,7 @@ jobs:
     name: Real-Godot reference tests
     runs-on: ubuntu-latest
     needs: [image, changes]
-    if: needs.changes.outputs.godot-ref == 'true'
+    if: needs.changes.outputs.godot-ref == 'true' && needs.changes.outputs.shader-only != 'true'
     # Chromium keeps its shared memory in /dev/shm, which Docker limits to 64 MB, so every job in
     # the image shares the runner's.
     container: &ci-image
@@ -184,13 +215,76 @@ jobs:
       # The image holds all three.
       - run: pnpm test:godot-ref
 
+  # The shader package's own layers, in the image, which holds Godot's binary and source. Godot
+  # answers every probe, random program, operator case and corpus shader live, and the committed
+  # digests of those answers, the guide, the tests and the real-GL run are checked against them.
+  # SHADER_ANSWERS=live makes every reader of the answers fail when the live run is missing.
+  # The repository holds no copy of Godot's template files, so this job writes them from the
+  # image's Godot source for the jobs that build core outside the image (the setup action's
+  # `template-files: artifact`).
+  godot-templates:
+    name: Godot's template files
+    runs-on: ubuntu-latest
+    needs: image
+    container: *ci-image
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: godot-template-files
+          path: packages/textscene-core/src/shaders/template/templateFiles.generated.ts
+          if-no-files-found: error
+
+  shaders:
+    name: Shader package
+    runs-on: ubuntu-latest
+    needs: [changes, image]
+    container: *ci-image
+    # The material sweep compiles 28,318 materials in Godot, about 17 minutes more than the 25.
+    timeout-minutes: ${{ needs.changes.outputs.material-sweep == 'true' && 40 || 25 }}
+    env:
+      SHADER_ANSWERS: live
+      MATERIAL_SWEEP: ${{ needs.changes.outputs.material-sweep }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      # lavapipe compiles each shader for the runner's CPU, so every run prints the CPU, its
+      # vector flags and the driver's packages.
+      - name: Print the CPU and the driver
+        run: |
+          grep -m1 'model name' /proc/cpuinfo
+          grep -m1 '^flags' /proc/cpuinfo | grep -o -w 'avx512f\|avx2\|fma\|sse4_2' | sort -u | tr '\n' ' '
+          echo
+          dpkg-query -W mesa-vulkan-drivers mesa-libgallium 'libllvm*'
+      - run: pnpm godot:probes --check
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: godot-answers
+          path: apps/textscene-three-godot-shaders/tests/.godot-answers/
+          if-no-files-found: ignore
+          include-hidden-files: true
+      - run: pnpm godot:shader-language --check
+      - run: pnpm godot:variant --check
+      - run: pnpm godot:templates --check
+      - run: pnpm test:shaders:templates
+      - run: pnpm vitest run apps/textscene-three-godot-shaders
+      - run: pnpm vitest run packages/textscene-core/src/shaders/shaderTextRule.test.ts
+      - run: pnpm test:shaders:gpu
+      - run: pnpm test:shaders:e2e
+
   build:
     name: Build and package
     runs-on: ubuntu-latest
+    needs: godot-templates
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
+        with:
+          template-files: artifact
 
       # The prebuild hook builds @textscene/core.
       - run: pnpm build:linter
@@ -229,10 +323,14 @@ jobs:
   web-previewer:
     name: Build the web previewer
     runs-on: ubuntu-latest
+    needs: [changes, godot-templates]
+    if: needs.changes.outputs.shader-only != 'true'
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
+        with:
+          template-files: artifact
 
       # The prebuild hook builds @textscene/core.
       - run: pnpm --filter @textscene/web-previewer build
@@ -333,7 +431,8 @@ jobs:
   renderer-consumer:
     name: Renderer in a plain Vite app
     runs-on: ubuntu-latest
-    needs: image
+    needs: [image, changes]
+    if: needs.changes.outputs.shader-only != 'true'
     container: *ci-image
     timeout-minutes: 20
     steps:
@@ -344,6 +443,8 @@ jobs:
   integration:
     name: Integration tests (${{ matrix.os }}, VS Code ${{ matrix.vscode }})
     runs-on: ${{ matrix.os }}
+    needs: [changes, godot-templates]
+    if: needs.changes.outputs.shader-only != 'true'
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -362,6 +463,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
+        with:
+          template-files: artifact
 
       # textscene-inspector is the VS Code extension package (apps/textscene-vscode).
       - if: runner.os == 'Linux'
@@ -389,7 +492,8 @@ jobs:
   vsix:
     name: VSIX contents
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, changes]
+    if: needs.changes.outputs.shader-only != 'true'
     timeout-minutes: 5
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -420,7 +524,8 @@ jobs:
   installed:
     name: Installed package (VS Code ${{ matrix.vscode }})
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, changes, godot-templates]
+    if: needs.changes.outputs.shader-only != 'true'
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -432,6 +537,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
+        with:
+          template-files: artifact
 
       # The runner reads the package beside the extension manifest, where `vsce package` writes it.
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -446,7 +553,8 @@ jobs:
   web:
     name: VS Code for the Web
     runs-on: ubuntu-latest
-    needs: image
+    needs: [image, changes]
+    if: needs.changes.outputs.shader-only != 'true'
     container: *ci-image
     timeout-minutes: 20
     steps:
@@ -466,9 +574,9 @@ jobs:
           path: scripts/vscode/output/web-preview-gate/
 
   # The one check that branch protection requires, so a new or renamed job needs no settings change.
-  # Every job it needs must succeed. The allowed skips are the golden run and the real-Godot tests,
-  # each only when the changes job ruled it out. This job checks that itself, so the gate costs no
-  # queued job of its own.
+  # Every job it needs must succeed. The allowed skips are the golden run and the real-Godot tests
+  # when the changes job ruled them out, and the previewer's jobs on a shader-only pull request.
+  # This job checks that itself, so the gate costs no queued job of its own.
   ci-ok:
     name: CI passed
     if: always()
@@ -476,9 +584,11 @@ jobs:
       [
         changes,
         image,
+        godot-templates,
         static,
         unit,
         godot-ref,
+        shaders,
         build,
         web-previewer,
         visual-regression,
@@ -497,10 +607,14 @@ jobs:
           NEEDS: ${{ toJSON(needs) }}
         run: |
           # A job may skip only when the changes job put it out of scope.
-          failed=$(jq -r '{"visual-regression": .changes.outputs.visual,
-              "godot-ref": .changes.outputs["godot-ref"]} as $scopes | to_entries
+          failed=$(jq -r '(.changes.outputs["shader-only"] == "true") as $shaderOnly
+            | {"visual-regression": (.changes.outputs.visual == "false" or $shaderOnly),
+              "godot-ref": (.changes.outputs["godot-ref"] == "false" or $shaderOnly),
+              "web-previewer": $shaderOnly, "e2e-web": $shaderOnly, "renderer-consumer": $shaderOnly,
+              "integration": $shaderOnly, "vsix": $shaderOnly, "installed": $shaderOnly,
+              "web": $shaderOnly} as $skippable | to_entries
             | map(select(.value.result != "success"
-                and (.value.result != "skipped" or $scopes[.key] != "false")))
+                and (.value.result != "skipped" or ($skippable[.key] | not))))
             | map("\(.key) (\(.value.result))") | join(", ")' <<< "$NEEDS")
           if [ -n "$failed" ]; then
             echo "::error::these jobs did not pass: $failed"

@@ -4,7 +4,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { act, renderHook } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { parseTresFile } from '../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
@@ -72,9 +72,7 @@ describe('useTexture3D', () => {
       () => useTexture3D(referenceIn('SubResource("volume")', [], NOISE_TEXTURE)),
       { wrapper }
     );
-    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
-
-    expect(result.current).toBeInstanceOf(THREE.Data3DTexture);
+    await waitFor(() => expect(result.current).toBeInstanceOf(THREE.Data3DTexture));
     expect(request).not.toHaveBeenCalled();
   });
 
@@ -87,9 +85,7 @@ describe('useTexture3D', () => {
     const { result } = renderHook(() => useTexture3D(referenceIn('ExtResource("1")', TEXT_RESOURCE, [])), {
       wrapper,
     });
-    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
-
-    expect(result.current).toBeInstanceOf(THREE.Data3DTexture);
+    await waitFor(() => expect(result.current).toBeInstanceOf(THREE.Data3DTexture));
     expect(request).not.toHaveBeenCalled();
   });
 

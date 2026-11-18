@@ -6,6 +6,7 @@
  */
 
 import * as THREE from 'three';
+import { depthCorrection } from '../../godot/math/projection.js';
 import type { ScreenSpaceReflection } from '../../resources/environment/types.js';
 import { beginStep, endStep } from '../frameProfile/frameProfile.js';
 import { leaveSlot } from '../sharedTexture.js';
@@ -23,11 +24,8 @@ export interface ReflectionSettings {
   isHalfSize: boolean;
 }
 
-/**
- * Godot's `set_depth_correction(true)`: y flipped, so screen rows run top-down, and depth reversed
- * into 0 to 1 (`projection.cpp`, `ss_effects.cpp:1489`).
- */
-const DEPTH_CORRECTION = new THREE.Matrix4().set(1, 0, 0, 0, 0, -1, 0, 0, 0, 0, -0.5, 0.5, 0, 0, 0, 1);
+/** Flipped, so screen rows run top-down (`ss_effects.cpp:1489`). */
+const DEPTH_CORRECTION = new THREE.Matrix4().fromArray(depthCorrection(true));
 
 /** Scratch for one trace. */
 const projection = new THREE.Matrix4();

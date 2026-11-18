@@ -11,7 +11,7 @@ export default mergeConfig(
     test: {
       name: 'textscene-three-godot-shaders',
       environment: 'node',
-      include: ['src/**/*.{test,spec}.ts'],
+      include: ['src/**/*.{test,spec}.ts', 'tests/**/*.test.mjs'],
     },
   })
 );

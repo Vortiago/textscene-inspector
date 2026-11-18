@@ -17,6 +17,7 @@ import { groupOf } from './build-node-catalog/groups.mjs';
 import { attachLinks } from './build-node-catalog/links.mjs';
 import {
   CATALOG_OUT,
+  CLASSES_OUT,
   NODE_DEFAULTS_OUT,
   PROPERTY_METHODS_OUT,
   PROPS_OUT,
@@ -71,6 +72,9 @@ function writeEngineTables(enumerated) {
   writeJson(RESOURCE_BASES_OUT, bases);
   console.log(`Wrote ${RESOURCE_BASES_OUT} - ${Object.keys(bases).length} classes.`);
   writeGetters(enumerated.resourceGetters);
+  const classes = sortedByKey(enumerated.allClasses);
+  writeJson(CLASSES_OUT, classes);
+  console.log(`Wrote ${CLASSES_OUT} - ${Object.keys(classes).length} classes.`);
   writeDefaults(enumerated.nodeDefaults);
   writePropertyMethods(dumpNodePropertyMethods());
 }

@@ -12,10 +12,3 @@ export const CompressionMode = {
   Gzip: 3,
   Brotli: 4,
 } as const;
-
-/**
- * Bit 5 of a FastLZ stream's first byte marks level 2. `fastlz_compress` picks level 2 only for an
- * input of 65536 bytes or more, and Godot compresses each 4096-byte block on its own
- * (`file_access_compressed.h:69`), so a block Godot writes is always level 1.
- */
-export const FASTLZ_LEVEL_2_FLAG = 0x20;

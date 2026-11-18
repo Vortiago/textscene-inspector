@@ -250,4 +250,25 @@ export const LIGHTING_SCENES = [
   // collapse it: AgX and flat ambient still apply, the background falls back to
   // mid-blue, and the metallic sphere, with no sky to reflect, reads near-black.
   { name: 'shader-sky-env', file: 'unit-shader-sky-env.tscn' },
+  { name: 'shader-sky-parameters', file: 'unit-shader-sky-parameters.tscn' },
+  { name: 'shader-sky-fog', file: 'unit-shader-sky-fog.tscn' },
+  { name: 'shader-sky-cubemap', file: 'unit-shader-sky-cubemap.tscn' },
+  { name: 'shader-sky-light', file: 'unit-shader-sky-light.tscn' },
+  { name: 'shader-sky-half-res', file: 'unit-shader-sky-half-res.tscn' },
+  // The balls reflect the sky baked again at 0.75 s, within 1/255 of Godot 4.6.3 at frame 75.
+  {
+    name: 'shader-sky-time',
+    file: 'unit-shader-sky-time.tscn',
+    camera: 'Root/Camera3D',
+    select: 'Root/Clock',
+    animationTime: 0.75,
+  },
+  // The balls reflect the sun the clip turned at 0.3 s, baked again in place at the 1.0 s seek.
+  {
+    name: 'sky-light-step',
+    file: 'unit-sky-light-step.tscn',
+    camera: 'Root/Camera3D',
+    select: 'Root/Clock',
+    animationTime: 1.0,
+  },
 ];

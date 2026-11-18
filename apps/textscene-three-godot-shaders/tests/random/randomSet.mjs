@@ -1,0 +1,15 @@
+import { generateFunctionPrograms } from './functionPrograms.mjs';
+import { generatePrograms } from './programs.mjs';
+
+export const FIXED_SEED = 1847;
+
+/** About a second each in one Godot run and one page run, inside the job's budget. */
+const RANDOM_ROOTS = 200;
+
+/** The programs that declare functions of their own, called from `probe`. */
+const FUNCTION_PROGRAMS = 100;
+
+export const RANDOM_PROGRAMS = [
+  ...generatePrograms({ seed: FIXED_SEED, count: RANDOM_ROOTS }),
+  ...generateFunctionPrograms({ seed: FIXED_SEED, count: FUNCTION_PROGRAMS }),
+];

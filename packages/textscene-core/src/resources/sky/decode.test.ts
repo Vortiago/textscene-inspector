@@ -5,9 +5,16 @@
  * converts it on upload.
  */
 import { describe, expect, it } from 'vitest';
-import { decodeSky, decodeSkyMaterial, decodeSkyProcessing } from './decode';
+import {
+  decodeSky,
+  decodeSkyMaterial,
+  decodeSkyProcessing,
+  skyUpdateMode,
+  withAutomaticBake,
+} from './decode';
 import { warningsOf } from '../../r3f/testing/logWarnings';
-import type { SkyBake } from './types';
+import type { Sky, SkyBake } from './types';
+import type { SkyUsage } from '../../shaders/sky/skyUsage';
 
 describe('decodeSkyMaterial — ProceduralSkyMaterial', () => {
   it('applies Godot’s constructor defaults for a bare material', () => {
@@ -202,5 +209,89 @@ describe('decodeSky — the size a Sky’s radiance bakes at', () => {
     const fastAt32: SkyBake = { radianceFilter: 'fast', radianceSize: 32 };
     const importanceAt32: SkyBake = { radianceFilter: 'importance-sample', radianceSize: 32 };
     expect(fastAt32.radianceSize).toBe(importanceAt32.radianceSize);
+  });
+});
+
+describe('skyUpdateMode — the mode Godot picks for an Automatic sky', () => {
+  const NO_USAGE: SkyUsage = {
+    light: false,
+    time: false,
+    position: false,
+    hasBufferUniforms: false,
+    passColors: [],
+    samplers: {},
+  };
+  const shaderSky = (usage: Partial<SkyUsage>, data: Record<string, string> = {}): Sky =>
+    decodeSky(data, {
+      kind: 'shader',
+      code: '',
+      file: 'res://sky.gdshader',
+      parameters: {},
+      textures: {},
+      usage: { ...NO_USAGE, ...usage },
+    });
+
+  it.each(['time', 'position'] as const)(
+    'runs a shader that reads %s at radiance size 256 in real time',
+    (read) => {
+      expect(skyUpdateMode(shaderSky({ [read]: true, light: true }), false)).toBe('real-time');
+    }
+  );
+
+  it('runs a shader that reads TIME at another radiance size incrementally when it has a uniform (edge case)', () => {
+    const sky = shaderSky({ time: true, hasBufferUniforms: true }, { radiance_size: '1' });
+    expect(skyUpdateMode(sky, false)).toBe('incremental');
+  });
+
+  it('runs a shader that reads a light incrementally', () => {
+    expect(skyUpdateMode(shaderSky({ light: true }), false)).toBe('incremental');
+  });
+
+  it('runs a shader with a uniform and no light incrementally', () => {
+    expect(skyUpdateMode(shaderSky({ hasBufferUniforms: true }), false)).toBe('incremental');
+  });
+
+  it('runs a shader that reads nothing incrementally under fog that scatters the sun', () => {
+    expect(skyUpdateMode(shaderSky({}), true)).toBe('incremental');
+  });
+
+  it('runs a shader that reads nothing at full quality', () => {
+    expect(skyUpdateMode(shaderSky({}), false)).toBe('quality');
+  });
+
+  it('runs every built-in material incrementally, since each holds uniforms', () => {
+    const panorama = decodeSky({}, decodeSkyMaterial('PanoramaSkyMaterial', {})!);
+    expect(skyUpdateMode(panorama, false)).toBe('incremental');
+  });
+
+  it('keeps the mode a Sky names', () => {
+    expect(skyUpdateMode(shaderSky({ time: true }, { process_mode: '1' }), false)).toBe('quality');
+  });
+});
+
+describe('withAutomaticBake — the filter of an Automatic shader sky', () => {
+  const shaderSky = (time: boolean, data: Record<string, string> = {}): Sky =>
+    decodeSky(data, {
+      kind: 'shader',
+      code: '',
+      file: 'res://sky.gdshader',
+      parameters: {},
+      textures: {},
+      usage: { light: false, time, position: false, hasBufferUniforms: false, passColors: [], samplers: {} },
+    });
+
+  it('bakes a sky that Automatic runs in real time with the fast filter', () => {
+    expect(withAutomaticBake(shaderSky(true)).radianceFilter).toBe('fast');
+  });
+
+  it('importance-samples a sky that reads TIME at another radiance size (edge case)', () => {
+    expect(withAutomaticBake(shaderSky(true, { radiance_size: '1' }))).toMatchObject({
+      radianceFilter: 'importance-sample',
+      radianceSize: 64,
+    });
+  });
+
+  it('importance-samples a sky that reads neither TIME nor POSITION', () => {
+    expect(withAutomaticBake(shaderSky(false)).radianceFilter).toBe('importance-sample');
   });
 });

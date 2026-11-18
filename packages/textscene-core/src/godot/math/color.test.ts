@@ -8,7 +8,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   colorHue,
+  colorHuef,
   colorSaturation,
+  colorSaturationf,
   darkened,
   inverted,
   hsvToRgb,
@@ -123,6 +125,17 @@ describe('colorHue', () => {
   });
 });
 
+describe('colorHuef', () => {
+  // Each value is Godot 4.6.3's `Color(r, g, b).h`, read as the bits of a double.
+  it.each([
+    [{ r: 0.1, g: 0.2, b: 0.3 }, 0.5833333134651184],
+    [{ r: 0.2, g: 0.4, b: 0.8 }, 0.6111111044883728],
+    [{ r: 0.7, g: 0.3, b: 0.1 }, 0.0555555634200573],
+  ])('reads the hue of double channels as Godot reads float channels', (color, hue) => {
+    expect(colorHuef(color)).toBe(hue);
+  });
+});
+
 describe('colorSaturation', () => {
   it('is the span of the channels over the brightest', () => {
     expect(colorSaturation({ r: 0.5, g: 0.25, b: 0.25 })).toBe(0.5);
@@ -130,5 +143,15 @@ describe('colorSaturation', () => {
 
   it('is 0 for black, which has no brightest channel to divide by', () => {
     expect(colorSaturation({ r: 0, g: 0, b: 0 })).toBe(0);
+  });
+});
+
+describe('colorSaturationf', () => {
+  // Each value is Godot 4.6.3's `Color(r, g, b).s`, read as the bits of a double.
+  it.each([
+    [{ r: 0.1, g: 0.2, b: 0.3 }, 0.6666666865348816],
+    [{ r: 0.7, g: 0.3, b: 0.1 }, 0.8571428060531616],
+  ])('reads the saturation of double channels as Godot reads float channels', (color, saturation) => {
+    expect(colorSaturationf(color)).toBe(saturation);
   });
 });

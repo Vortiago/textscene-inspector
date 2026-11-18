@@ -1,0 +1,87 @@
+[gd_scene format=3 uid="uid://unit_spatial_shader_cull"]
+
+; Three unshaded spatial shaders with cull_back, cull_front and cull_disabled, each on a quad that
+; faces the camera (top row) and on one turned away from it (bottom row). Only the cull mode moves: every other
+; golden spatial shader draws with the default cull_back.
+
+[sub_resource type="Shader" id="Shader_back"]
+code = "shader_type spatial;
+render_mode unshaded, cull_back;
+
+void fragment() {
+	ALBEDO = FRONT_FACING ? vec3(UV, 0.3) : vec3(0.9, 0.3, UV.y);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_back"]
+shader = SubResource("Shader_back")
+
+[sub_resource type="QuadMesh" id="QuadMesh_back"]
+material = SubResource("ShaderMaterial_back")
+
+[sub_resource type="Shader" id="Shader_front"]
+code = "shader_type spatial;
+render_mode unshaded, cull_front;
+
+void fragment() {
+	ALBEDO = FRONT_FACING ? vec3(UV, 0.3) : vec3(0.9, 0.3, UV.y);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_front"]
+shader = SubResource("Shader_front")
+
+[sub_resource type="QuadMesh" id="QuadMesh_front"]
+material = SubResource("ShaderMaterial_front")
+
+[sub_resource type="Shader" id="Shader_disabled"]
+code = "shader_type spatial;
+render_mode unshaded, cull_disabled;
+
+void fragment() {
+	ALBEDO = FRONT_FACING ? vec3(UV, 0.3) : vec3(0.9, 0.3, UV.y);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_disabled"]
+shader = SubResource("Shader_disabled")
+
+[sub_resource type="QuadMesh" id="QuadMesh_disabled"]
+material = SubResource("ShaderMaterial_disabled")
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.1, 0.12, 0.16, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3.6)
+
+[node name="Front_back" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.6, 0.7, 0)
+mesh = SubResource("QuadMesh_back")
+
+[node name="Back_back" type="MeshInstance3D" parent="."]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -1.6, -0.7, 0)
+mesh = SubResource("QuadMesh_back")
+
+[node name="Front_front" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0)
+mesh = SubResource("QuadMesh_front")
+
+[node name="Back_front" type="MeshInstance3D" parent="."]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, -0.7, 0)
+mesh = SubResource("QuadMesh_front")
+
+[node name="Front_disabled" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.6, 0.7, 0)
+mesh = SubResource("QuadMesh_disabled")
+
+[node name="Back_disabled" type="MeshInstance3D" parent="."]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 1.6, -0.7, 0)
+mesh = SubResource("QuadMesh_disabled")
+

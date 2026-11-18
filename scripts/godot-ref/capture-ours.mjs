@@ -106,6 +106,7 @@ export function captureOurs({
   lookAt = null,
   sceneCamera = null,
   showCollisions = false,
+  litSurface = null,
   inGameFrame = null,
   hostCalls = [],
 }) {
@@ -126,6 +127,7 @@ export function captureOurs({
       const { target, reason: targetReason } = await openScene(page, baseUrl, fixture, {
         canvas2D,
         camera: cameraPath,
+        litSurface: litSurface ?? undefined,
         onSlow: (ms) => console.log(`[ours] no network idle within ${ms}ms`),
       });
       if (!target) throw new Error(targetReason);

@@ -33,7 +33,7 @@ function renderSurface(
 ) {
   const fake = createFakeResourceLoader();
   const uploads = fakeTiledUploads();
-  const hook = renderHook(() => useSurfaceMaterial(source), {
+  const hook = renderHook(() => useSurfaceMaterial(source, 'glTF surface'), {
     wrapper: ({ children }: { children: ReactNode }) => {
       const tree = (
         <Outer>

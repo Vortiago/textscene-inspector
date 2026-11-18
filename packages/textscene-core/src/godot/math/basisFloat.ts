@@ -5,7 +5,8 @@
  */
 
 import { storedReal as f } from './real.js';
-import { UNIT_EPSILON } from './math.js';
+import { isUnitWithinEpsilon } from './math.js';
+import { cosf, sinf } from './realMath.js';
 import { basisCopy, IDENTITY_BASIS, type BasisComponents, type MutableBasis } from './basis.js';
 import { vector3DotComponents, vector3LengthSquared, type Vector3 } from './vector.js';
 
@@ -32,12 +33,11 @@ export function basisXform(n: BasisComponents, v: Vector3): Vector3 {
 export function basisSetAxisAngle(n: MutableBasis, axis: Vector3, angle: number): MutableBasis {
   const { x, y, z } = axis;
   const lengthSquared = vector3LengthSquared(x, y, z);
-  // `Vector3::is_normalized` (`vector3.h:566-569`): within `UNIT_EPSILON` of 1, squared.
-  if (lengthSquared !== 1 && !(Math.abs(lengthSquared - 1) < UNIT_EPSILON)) {
+  if (!isUnitWithinEpsilon(lengthSquared)) {
     return basisCopy(n, IDENTITY_BASIS);
   }
-  const cosine = f(Math.cos(angle));
-  const sine = f(Math.sin(angle));
+  const cosine = cosf(angle);
+  const sine = sinf(angle);
   const t = f(1 - cosine);
   // `xyzt ± zyxs`: the product of two axis components and `t`, then one component and `sine`.
   const xy = f(f(x * y) * t);

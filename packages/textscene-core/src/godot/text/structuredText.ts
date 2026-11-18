@@ -9,6 +9,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
+import { isUnicodeIdentifierContinue, isUnicodeIdentifierStart } from '../string/characterClass.js';
 import { StructuredTextParser, TextDirection } from './textServerEnums.js';
 
 /** `[start, end)` of the text and the `TextDirection` its bidi pass runs at: Godot's `Vector3i(start, end, direction)`. */
@@ -24,11 +25,6 @@ const INHERITED = TextDirection.TEXT_DIRECTION_INHERITED;
 
 const URI_SEPARATORS = new Set(['\\', '/', '.', ':', '&', '=', '@', '?', '#']);
 const FILE_SEPARATORS = new Set(['\\', '/', ':']);
-
-/** `is_unicode_identifier_start`: Godot's `xid_start` table, which adds `_` (`core/string/char_range.inc:47`). */
-const IDENTIFIER_START = /[\p{XID_Start}_]/u;
-/** `is_unicode_identifier_continue` (`core/string/char_range.inc:733`). */
-const IDENTIFIER_CONTINUE = /\p{XID_Continue}/u;
 
 /** Adds the AUTO range `[start, end)`, unless it is empty. */
 function pushAuto(ranges: StructuredTextRange[], start: number, end: number): void {
@@ -115,12 +111,12 @@ function splitGdscript(text: string): StructuredTextRange[] {
         quote = null;
       }
     } else if (isInIdentifier) {
-      if (!IDENTIFIER_CONTINUE.test(char)) {
+      if (!isUnicodeIdentifierContinue(char)) {
         pushAuto(ranges, prev, i);
         prev = i;
         isInIdentifier = false;
       }
-    } else if (IDENTIFIER_START.test(char)) {
+    } else if (isUnicodeIdentifierStart(char)) {
       pushAuto(ranges, prev, i);
       prev = i;
       isInIdentifier = true;

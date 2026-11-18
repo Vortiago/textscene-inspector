@@ -5,10 +5,11 @@
  */
 
 import { hsvToRgb } from '../../godot/math/color.js';
-import { hashIntArray } from '../../godot/math/hashFuncs.js';
 import type { Rgba } from '../../godot/math/math.js';
 import type { Vector2 } from '../../godot/math/vector.js';
 import { GodotRandomPCG } from '../../godot/math/randomPcg.js';
+import { variant } from '../../godot/variant/value/variant.js';
+import { variantHash } from '../../godot/variant/variantHash.js';
 import { mapToLocalPx } from './tilePlacement.js';
 import type { SceneTileCell } from './sceneTileCells.js';
 import type { TileGrid } from './types.js';
@@ -17,6 +18,12 @@ import type { TileGrid } from './types.js';
 export const PLACEHOLDER_SEGMENTS = 64;
 
 const PLACEHOLDER_ALPHA = 0.8;
+
+const idArray = (...ids: number[]) =>
+  variant(
+    'ARRAY',
+    ids.map((id) => variant('INT', BigInt(id)))
+  );
 
 export interface PlaceholderCircle {
   /** The cell's centre, in the layer's pixels (+Y down). */
@@ -31,7 +38,7 @@ export interface PlaceholderCircle {
  * and value take the next two bytes, each lerped into the upper half.
  */
 function placeholderColor(sourceId: number, alternativeId: number): Rgba {
-  const word = new GodotRandomPCG(hashIntArray([sourceId, alternativeId])).rand();
+  const word = new GodotRandomPCG(variantHash(idArray(sourceId, alternativeId))).rand();
   const byte = (shift: number) => ((word >>> shift) & 0xff) / 256;
   const rgb = hsvToRgb(byte(24), 0.5 + 0.5 * byte(16), 0.5 + 0.5 * byte(8));
   return { ...rgb, a: PLACEHOLDER_ALPHA };

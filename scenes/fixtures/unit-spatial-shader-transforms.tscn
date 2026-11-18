@@ -1,0 +1,49 @@
+[gd_scene format=3 uid="uid://unit_spatial_shader_transforms"]
+
+; One unshaded spatial shader shared by three boxes: one under a rotated parent scaled unevenly, one
+; under a parent with a negative scale, which turns its winding, and one with no parent.
+
+[sub_resource type="Shader" id="Shader_1"]
+code = "shader_type spatial;
+render_mode unshaded;
+
+void fragment() {
+	ALBEDO = vec3(UV, 0.5) * (NORMAL.z * 0.25 + 0.75);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_1"]
+shader = SubResource("Shader_1")
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+material = SubResource("ShaderMaterial_1")
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.1, 0.12, 0.16, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.9659258, 0.258819, 0, -0.258819, 0.9659258, 0, 1.2, 4.2)
+
+[node name="Rotated" type="Node3D" parent="."]
+transform = Transform3D(0.9396926, 0.6840403, 0, -0.3420201, 1.8793852, 0, 0, 0, 0.5, -1.5, 0, 0)
+
+[node name="Box" type="MeshInstance3D" parent="Rotated"]
+transform = Transform3D(0.7071068, 0, 0.7071068, 0, 1, 0, -0.7071068, 0, 0.7071068, 0, 0, 0)
+mesh = SubResource("BoxMesh_1")
+
+[node name="Mirrored" type="Node3D" parent="."]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+
+[node name="Box" type="MeshInstance3D" parent="Mirrored"]
+transform = Transform3D(0.8660254, 0, 0.5, 0, 1, 0, -0.5, 0, 0.8660254, 0, 0, 0)
+mesh = SubResource("BoxMesh_1")
+
+[node name="Plain" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 1.5, 0, 0)
+mesh = SubResource("BoxMesh_1")

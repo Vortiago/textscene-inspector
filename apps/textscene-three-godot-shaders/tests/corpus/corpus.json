@@ -1,0 +1,4464 @@
+[
+ {
+  "id": "generator/StandardMaterial3D/defaults",
+  "source": {
+   "generator": "StandardMaterial3D"
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/defaults.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/transparency=2",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "transparency",
+   "value": 2
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/transparency-2.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/blend_mode=3",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "blend_mode",
+   "value": 3
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/blend_mode-3.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/cull_mode=1",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "cull_mode",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/cull_mode-1.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/depth_draw_mode=1",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "depth_draw_mode",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/depth_draw_mode-1.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/shading_mode=0",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "shading_mode",
+   "value": 0
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/shading_mode-0.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/diffuse_mode=1",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "diffuse_mode",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/diffuse_mode-1.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/diffuse_mode=3",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "diffuse_mode",
+   "value": 3
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/diffuse_mode-3.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/specular_mode=2",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "specular_mode",
+   "value": 2
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/specular_mode-2.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/disable_ambient_light=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "disable_ambient_light",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/disable_ambient_light-true.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/disable_fog=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "disable_fog",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/disable_fog-true.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/vertex_color_use_as_albedo=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "vertex_color_use_as_albedo",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/vertex_color_use_as_albedo-true.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/vertex_color_is_srgb=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "vertex_color_is_srgb",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/vertex_color_is_srgb-true.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/albedo_texture_msdf=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "albedo_texture_msdf",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/albedo_texture_msdf-true.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/roughness_texture_channel=1",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "roughness_texture_channel",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/roughness_texture_channel-1.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/roughness_texture_channel=2",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "roughness_texture_channel",
+   "value": 2
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/roughness_texture_channel-2.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/roughness_texture_channel=4",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "roughness_texture_channel",
+   "value": 4
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/roughness_texture_channel-4.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/emission_enabled=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "emission_enabled",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/emission_enabled-true.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/normal_enabled=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "normal_enabled",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/normal_enabled-true.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/clearcoat_enabled=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "clearcoat_enabled",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/clearcoat_enabled-true.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/heightmap_enabled=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "heightmap_enabled",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/heightmap_enabled-true.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/subsurf_scatter_enabled=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "subsurf_scatter_enabled",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/subsurf_scatter_enabled-true.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/backlight_enabled=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "backlight_enabled",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/backlight_enabled-true.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/refraction_enabled=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "refraction_enabled",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/refraction_enabled-true.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/detail_uv_layer=1",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "detail_uv_layer",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/detail_uv_layer-1.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/uv2_triplanar=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "uv2_triplanar",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/uv2_triplanar-true.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/texture_filter=0",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "texture_filter",
+   "value": 0
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/texture_filter-0.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/texture_filter=2",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "texture_filter",
+   "value": 2
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/texture_filter-2.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/texture_filter=5",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "texture_filter",
+   "value": 5
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/texture_filter-5.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/disable_receive_shadows=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "disable_receive_shadows",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/disable_receive_shadows-true.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/billboard_mode=2",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "billboard_mode",
+   "value": 2
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/billboard_mode-2.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/fixed_size=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "fixed_size",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/fixed_size-true.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/use_z_clip_scale=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "use_z_clip_scale",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/use_z_clip_scale-true.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/distance_fade_mode=1",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "distance_fade_mode",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/distance_fade_mode-1.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/distance_fade_mode=2",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "distance_fade_mode",
+   "value": 2
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/distance_fade_mode-2.gdshader"
+ },
+ {
+  "id": "generator/StandardMaterial3D/stencil_mode=1",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "stencil_mode",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/StandardMaterial3D/stencil_mode-1.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/transparency=1",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "transparency",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/transparency-1.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/transparency=2",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "transparency",
+   "value": 2
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/transparency-2.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/transparency=4",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "transparency",
+   "value": 4
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/transparency-4.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/blend_mode=0",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "blend_mode",
+   "value": 0
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/blend_mode-0.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/blend_mode=2",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "blend_mode",
+   "value": 2
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/blend_mode-2.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/blend_mode=3",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "blend_mode",
+   "value": 3
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/blend_mode-3.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/cull_mode=1",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "cull_mode",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/cull_mode-1.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/depth_draw_mode=1",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "depth_draw_mode",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/depth_draw_mode-1.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/no_depth_test=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "no_depth_test",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/no_depth_test-true.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/diffuse_mode=2",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "diffuse_mode",
+   "value": 2
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/diffuse_mode-2.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/diffuse_mode=3",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "diffuse_mode",
+   "value": 3
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/diffuse_mode-3.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/specular_mode=1",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "specular_mode",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/specular_mode-1.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/specular_mode=2",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "specular_mode",
+   "value": 2
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/specular_mode-2.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/disable_fog=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "disable_fog",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/disable_fog-true.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/disable_specular_occlusion=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "disable_specular_occlusion",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/disable_specular_occlusion-true.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/vertex_color_is_srgb=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "vertex_color_is_srgb",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/vertex_color_is_srgb-true.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/albedo_texture_force_srgb=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "albedo_texture_force_srgb",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/albedo_texture_force_srgb-true.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/emission_enabled=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "emission_enabled",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/emission_enabled-true.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/normal_enabled=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "normal_enabled",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/normal_enabled-true.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/clearcoat_enabled=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "clearcoat_enabled",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/clearcoat_enabled-true.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/subsurf_scatter_transmittance_enabled=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "subsurf_scatter_transmittance_enabled",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/subsurf_scatter_transmittance_enabled-true.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/detail_enabled=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "detail_enabled",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/detail_enabled-true.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/uv1_triplanar=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "uv1_triplanar",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/uv1_triplanar-true.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/texture_filter=1",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "texture_filter",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/texture_filter-1.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/texture_filter=4",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "texture_filter",
+   "value": 4
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/texture_filter-4.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/texture_repeat=false",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "texture_repeat",
+   "value": false
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/texture_repeat-false.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/shadow_to_opacity=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "shadow_to_opacity",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/shadow_to_opacity-true.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/billboard_mode=1",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "billboard_mode",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/billboard_mode-1.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/billboard_mode=3",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "billboard_mode",
+   "value": 3
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/billboard_mode-3.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/grow=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "grow",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/grow-true.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/use_point_size=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "use_point_size",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/use_point_size-true.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/use_particle_trails=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "use_particle_trails",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/use_particle_trails-true.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/use_fov_override=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "use_fov_override",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/use_fov_override-true.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/proximity_fade_enabled=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "proximity_fade_enabled",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/proximity_fade_enabled-true.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/distance_fade_mode=3",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "distance_fade_mode",
+   "value": 3
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/distance_fade_mode-3.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/stencil_mode=1",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "stencil_mode",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/stencil_mode-1.gdshader"
+ },
+ {
+  "id": "generator/ORMMaterial3D/stencil_mode=2",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "stencil_mode",
+   "value": 2
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "file": "generator/ORMMaterial3D/stencil_mode-2.gdshader"
+ },
+ {
+  "id": "generator/CanvasItemMaterial/resource_local_to_scene=true",
+  "source": {
+   "generator": "CanvasItemMaterial",
+   "property": "resource_local_to_scene",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "canvas_item",
+  "file": "generator/CanvasItemMaterial/resource_local_to_scene-true.gdshader"
+ },
+ {
+  "id": "generator/CanvasItemMaterial/blend_mode=1",
+  "source": {
+   "generator": "CanvasItemMaterial",
+   "property": "blend_mode",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "canvas_item",
+  "file": "generator/CanvasItemMaterial/blend_mode-1.gdshader"
+ },
+ {
+  "id": "generator/CanvasItemMaterial/blend_mode=2",
+  "source": {
+   "generator": "CanvasItemMaterial",
+   "property": "blend_mode",
+   "value": 2
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "canvas_item",
+  "file": "generator/CanvasItemMaterial/blend_mode-2.gdshader"
+ },
+ {
+  "id": "generator/CanvasItemMaterial/blend_mode=3",
+  "source": {
+   "generator": "CanvasItemMaterial",
+   "property": "blend_mode",
+   "value": 3
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "canvas_item",
+  "file": "generator/CanvasItemMaterial/blend_mode-3.gdshader"
+ },
+ {
+  "id": "generator/CanvasItemMaterial/blend_mode=4",
+  "source": {
+   "generator": "CanvasItemMaterial",
+   "property": "blend_mode",
+   "value": 4
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "canvas_item",
+  "file": "generator/CanvasItemMaterial/blend_mode-4.gdshader"
+ },
+ {
+  "id": "generator/ParticleProcessMaterial/particle_flag_align_y=true",
+  "source": {
+   "generator": "ParticleProcessMaterial",
+   "property": "particle_flag_align_y",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "particles",
+  "file": "generator/ParticleProcessMaterial/particle_flag_align_y-true.gdshader"
+ },
+ {
+  "id": "generator/ParticleProcessMaterial/particle_flag_rotate_y=true",
+  "source": {
+   "generator": "ParticleProcessMaterial",
+   "property": "particle_flag_rotate_y",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "particles",
+  "file": "generator/ParticleProcessMaterial/particle_flag_rotate_y-true.gdshader"
+ },
+ {
+  "id": "generator/ParticleProcessMaterial/particle_flag_rotate_y=false",
+  "source": {
+   "generator": "ParticleProcessMaterial",
+   "property": "particle_flag_rotate_y",
+   "value": false
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "particles",
+  "file": "generator/ParticleProcessMaterial/particle_flag_rotate_y-false.gdshader"
+ },
+ {
+  "id": "generator/ParticleProcessMaterial/particle_flag_damping_as_friction=true",
+  "source": {
+   "generator": "ParticleProcessMaterial",
+   "property": "particle_flag_damping_as_friction",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "particles",
+  "file": "generator/ParticleProcessMaterial/particle_flag_damping_as_friction-true.gdshader"
+ },
+ {
+  "id": "generator/ParticleProcessMaterial/emission_shape=1",
+  "source": {
+   "generator": "ParticleProcessMaterial",
+   "property": "emission_shape",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "particles",
+  "file": "generator/ParticleProcessMaterial/emission_shape-1.gdshader"
+ },
+ {
+  "id": "generator/ParticleProcessMaterial/emission_shape=4",
+  "source": {
+   "generator": "ParticleProcessMaterial",
+   "property": "emission_shape",
+   "value": 4
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "particles",
+  "file": "generator/ParticleProcessMaterial/emission_shape-4.gdshader"
+ },
+ {
+  "id": "generator/ParticleProcessMaterial/collision_mode=2",
+  "source": {
+   "generator": "ParticleProcessMaterial",
+   "property": "collision_mode",
+   "value": 2
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "particles",
+  "file": "generator/ParticleProcessMaterial/collision_mode-2.gdshader"
+ },
+ {
+  "id": "generator/ParticleProcessMaterial/collision_use_scale=true",
+  "source": {
+   "generator": "ParticleProcessMaterial",
+   "property": "collision_use_scale",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "particles",
+  "file": "generator/ParticleProcessMaterial/collision_use_scale-true.gdshader"
+ },
+ {
+  "id": "generator/ParticleProcessMaterial/sub_emitter_mode=1",
+  "source": {
+   "generator": "ParticleProcessMaterial",
+   "property": "sub_emitter_mode",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "particles",
+  "file": "generator/ParticleProcessMaterial/sub_emitter_mode-1.gdshader"
+ },
+ {
+  "id": "generator/ParticleProcessMaterial/sub_emitter_mode=3",
+  "source": {
+   "generator": "ParticleProcessMaterial",
+   "property": "sub_emitter_mode",
+   "value": 3
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "particles",
+  "file": "generator/ParticleProcessMaterial/sub_emitter_mode-3.gdshader"
+ },
+ {
+  "id": "generator/ProceduralSkyMaterial/defaults",
+  "source": {
+   "generator": "ProceduralSkyMaterial"
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "sky",
+  "file": "generator/ProceduralSkyMaterial/defaults.gdshader"
+ },
+ {
+  "id": "generator/ProceduralSkyMaterial/use_debanding=false",
+  "source": {
+   "generator": "ProceduralSkyMaterial",
+   "property": "use_debanding",
+   "value": false
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "sky",
+  "file": "generator/ProceduralSkyMaterial/use_debanding-false.gdshader"
+ },
+ {
+  "id": "generator/PanoramaSkyMaterial/defaults",
+  "source": {
+   "generator": "PanoramaSkyMaterial"
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "sky",
+  "file": "generator/PanoramaSkyMaterial/defaults.gdshader"
+ },
+ {
+  "id": "generator/PanoramaSkyMaterial/filter=false",
+  "source": {
+   "generator": "PanoramaSkyMaterial",
+   "property": "filter",
+   "value": false
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "sky",
+  "file": "generator/PanoramaSkyMaterial/filter-false.gdshader"
+ },
+ {
+  "id": "generator/PhysicalSkyMaterial/defaults",
+  "source": {
+   "generator": "PhysicalSkyMaterial"
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "sky",
+  "file": "generator/PhysicalSkyMaterial/defaults.gdshader"
+ },
+ {
+  "id": "generator/PhysicalSkyMaterial/use_debanding=false",
+  "source": {
+   "generator": "PhysicalSkyMaterial",
+   "property": "use_debanding",
+   "value": false
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "sky",
+  "file": "generator/PhysicalSkyMaterial/use_debanding-false.gdshader"
+ },
+ {
+  "id": "generator/FogMaterial/defaults",
+  "source": {
+   "generator": "FogMaterial"
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "fog",
+  "file": "generator/FogMaterial/defaults.gdshader"
+ },
+ {
+  "id": "demos/2d/screen_space_shaders/shaders/BCS.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/screen_space_shaders/shaders/BCS.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "file": "demos/2d/screen_space_shaders/shaders/BCS.gdshader"
+ },
+ {
+  "id": "demos/2d/screen_space_shaders/shaders/blur.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/screen_space_shaders/shaders/blur.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "file": "demos/2d/screen_space_shaders/shaders/blur.gdshader"
+ },
+ {
+  "id": "demos/2d/screen_space_shaders/shaders/contrasted.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/screen_space_shaders/shaders/contrasted.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "file": "demos/2d/screen_space_shaders/shaders/contrasted.gdshader"
+ },
+ {
+  "id": "demos/2d/screen_space_shaders/shaders/mirage.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/screen_space_shaders/shaders/mirage.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "file": "demos/2d/screen_space_shaders/shaders/mirage.gdshader"
+ },
+ {
+  "id": "demos/2d/screen_space_shaders/shaders/negative.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/screen_space_shaders/shaders/negative.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "file": "demos/2d/screen_space_shaders/shaders/negative.gdshader"
+ },
+ {
+  "id": "demos/2d/screen_space_shaders/shaders/normalized.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/screen_space_shaders/shaders/normalized.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "file": "demos/2d/screen_space_shaders/shaders/normalized.gdshader"
+ },
+ {
+  "id": "demos/2d/screen_space_shaders/shaders/old_film.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/screen_space_shaders/shaders/old_film.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "file": "demos/2d/screen_space_shaders/shaders/old_film.gdshader"
+ },
+ {
+  "id": "demos/2d/screen_space_shaders/shaders/pixelize.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/screen_space_shaders/shaders/pixelize.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "file": "demos/2d/screen_space_shaders/shaders/pixelize.gdshader"
+ },
+ {
+  "id": "demos/2d/screen_space_shaders/shaders/sepia.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/screen_space_shaders/shaders/sepia.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "file": "demos/2d/screen_space_shaders/shaders/sepia.gdshader"
+ },
+ {
+  "id": "demos/2d/screen_space_shaders/shaders/vignette.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/screen_space_shaders/shaders/vignette.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "file": "demos/2d/screen_space_shaders/shaders/vignette.gdshader"
+ },
+ {
+  "id": "demos/2d/screen_space_shaders/shaders/whirl.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/screen_space_shaders/shaders/whirl.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "file": "demos/2d/screen_space_shaders/shaders/whirl.gdshader"
+ },
+ {
+  "id": "demos/2d/sprite_shaders/shaders/aura.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/sprite_shaders/shaders/aura.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "file": "demos/2d/sprite_shaders/shaders/aura.gdshader"
+ },
+ {
+  "id": "demos/2d/sprite_shaders/shaders/blur.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/sprite_shaders/shaders/blur.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "file": "demos/2d/sprite_shaders/shaders/blur.gdshader"
+ },
+ {
+  "id": "demos/2d/sprite_shaders/shaders/dissintegrate.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/sprite_shaders/shaders/dissintegrate.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "file": "demos/2d/sprite_shaders/shaders/dissintegrate.gdshader"
+ },
+ {
+  "id": "demos/2d/sprite_shaders/shaders/dropshadow.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/sprite_shaders/shaders/dropshadow.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "file": "demos/2d/sprite_shaders/shaders/dropshadow.gdshader"
+ },
+ {
+  "id": "demos/2d/sprite_shaders/shaders/fatty.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/sprite_shaders/shaders/fatty.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "file": "demos/2d/sprite_shaders/shaders/fatty.gdshader"
+ },
+ {
+  "id": "demos/2d/sprite_shaders/shaders/glow.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/sprite_shaders/shaders/glow.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "file": "demos/2d/sprite_shaders/shaders/glow.gdshader"
+ },
+ {
+  "id": "demos/2d/sprite_shaders/shaders/offsetshadow.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/sprite_shaders/shaders/offsetshadow.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "file": "demos/2d/sprite_shaders/shaders/offsetshadow.gdshader"
+ },
+ {
+  "id": "demos/2d/sprite_shaders/shaders/outline.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/sprite_shaders/shaders/outline.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "file": "demos/2d/sprite_shaders/shaders/outline.gdshader"
+ },
+ {
+  "id": "demos/2d/sprite_shaders/shaders/silouette.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/sprite_shaders/shaders/silouette.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "file": "demos/2d/sprite_shaders/shaders/silouette.gdshader"
+ },
+ {
+  "id": "demos/3d/labels_and_texts/curvature.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "3d/labels_and_texts/curvature.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "file": "demos/3d/labels_and_texts/curvature.gdshader"
+ },
+ {
+  "id": "demos/3d/platformer/stage/skybox.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "3d/platformer/stage/skybox.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "sky",
+  "file": "demos/3d/platformer/stage/skybox.gdshader"
+ },
+ {
+  "id": "demos/3d/procedural_materials/shaders/plasma.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "3d/procedural_materials/shaders/plasma.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "file": "demos/3d/procedural_materials/shaders/plasma.gdshader"
+ },
+ {
+  "id": "demos/3d/sky_shaders/sky_volumetric_clouds.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "3d/sky_shaders/sky_volumetric_clouds.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "sky",
+  "file": "demos/3d/sky_shaders/sky_volumetric_clouds.gdshader"
+ },
+ {
+  "id": "demos/3d/sprites/shaders/negative.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "3d/sprites/shaders/negative.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "file": "demos/3d/sprites/shaders/negative.gdshader"
+ },
+ {
+  "id": "demos/3d/sprites/shaders/paper.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "3d/sprites/shaders/paper.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "file": "demos/3d/sprites/shaders/paper.gdshader"
+ },
+ {
+  "id": "demos/3d/sprites/shaders/paper_emission.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "3d/sprites/shaders/paper_emission.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "file": "demos/3d/sprites/shaders/paper_emission.gdshader"
+ },
+ {
+  "id": "demos/3d/sprites/shaders/paper_material.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "3d/sprites/shaders/paper_material.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "file": "demos/3d/sprites/shaders/paper_material.gdshader"
+ },
+ {
+  "id": "demos/3d/sprites/shaders/paper_rainbow.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "3d/sprites/shaders/paper_rainbow.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "file": "demos/3d/sprites/shaders/paper_rainbow.gdshader"
+ },
+ {
+  "id": "demos/3d/tonemap_color_correction/gradients/gradient_steps.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "3d/tonemap_color_correction/gradients/gradient_steps.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "file": "demos/3d/tonemap_color_correction/gradients/gradient_steps.gdshader"
+ },
+ {
+  "id": "demos/3d/tonemap_color_correction/gradients/hues.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "3d/tonemap_color_correction/gradients/hues.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "file": "demos/3d/tonemap_color_correction/gradients/hues.gdshader"
+ },
+ {
+  "id": "demos/3d/variable_rate_shading/vrs_texture.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "3d/variable_rate_shading/vrs_texture.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "file": "demos/3d/variable_rate_shading/vrs_texture.gdshader"
+ },
+ {
+  "id": "demos/compute/texture/water_plane/water_shader.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "compute/texture/water_plane/water_shader.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "file": "demos/compute/texture/water_plane/water_shader.gdshader"
+ },
+ {
+  "id": "demos/misc/hdr_output/color_sweep/color_sweep.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "misc/hdr_output/color_sweep/color_sweep.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "file": "demos/misc/hdr_output/color_sweep/color_sweep.gdshader"
+ },
+ {
+  "id": "demos/misc/noise_viewer/noise_viewer.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "misc/noise_viewer/noise_viewer.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "file": "demos/misc/noise_viewer/noise_viewer.gdshader"
+ },
+ {
+  "id": "demos/viewport/dynamic_split_screen/split_screen.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "viewport/dynamic_split_screen/split_screen.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "file": "demos/viewport/dynamic_split_screen/split_screen.gdshader"
+ },
+ {
+  "id": "demos/xr/openxr_character_centric_movement/objects/black_out.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "xr/openxr_character_centric_movement/objects/black_out.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "file": "demos/xr/openxr_character_centric_movement/objects/black_out.gdshader"
+ },
+ {
+  "id": "demos/xr/openxr_composition_layers/cursor.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "xr/openxr_composition_layers/cursor.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "file": "demos/xr/openxr_composition_layers/cursor.gdshader"
+ },
+ {
+  "id": "demos/xr/openxr_composition_layers/pointer.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "xr/openxr_composition_layers/pointer.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "file": "demos/xr/openxr_composition_layers/pointer.gdshader"
+ },
+ {
+  "id": "demos/xr/openxr_passthrough/holepunch.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "xr/openxr_passthrough/holepunch.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "file": "demos/xr/openxr_passthrough/holepunch.gdshader"
+ },
+ {
+  "id": "demos/xr/openxr_spectator_view/shaders/color.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "xr/openxr_spectator_view/shaders/color.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "file": "demos/xr/openxr_spectator_view/shaders/color.gdshader"
+ },
+ {
+  "id": "demos/xr/openxr_spectator_view/shaders/color_unshaded.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "xr/openxr_spectator_view/shaders/color_unshaded.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "file": "demos/xr/openxr_spectator_view/shaders/color_unshaded.gdshader"
+ },
+ {
+  "id": "demos/xr/openxr_spectator_view/shaders/eye_output.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "xr/openxr_spectator_view/shaders/eye_output.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "file": "demos/xr/openxr_spectator_view/shaders/eye_output.gdshader"
+ },
+ {
+  "id": "demos/xr/openxr_spectator_view/shaders/textured.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "xr/openxr_spectator_view/shaders/textured.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "file": "demos/xr/openxr_spectator_view/shaders/textured.gdshader"
+ },
+ {
+  "id": "demos/xr/openxr_spectator_view/shaders/textured_unshaded.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "xr/openxr_spectator_view/shaders/textured_unshaded.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "file": "demos/xr/openxr_spectator_view/shaders/textured_unshaded.gdshader"
+ },
+ {
+  "id": "demos/2d/platformer/level/props/wind_sway.tres#0",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/platformer/level/props/wind_sway.tres"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "file": "demos/2d/platformer/level/props/wind_sway-0.gdshader"
+ },
+ {
+  "id": "demos/3d/antialiasing/anti_aliasing.tscn#0",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "3d/antialiasing/anti_aliasing.tscn"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "file": "demos/3d/antialiasing/anti_aliasing-0.gdshader"
+ },
+ {
+  "id": "demos/3d/antialiasing/anti_aliasing.tscn#1",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "3d/antialiasing/anti_aliasing.tscn"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "file": "demos/3d/antialiasing/anti_aliasing-1.gdshader"
+ },
+ {
+  "id": "demos/3d/volumetric_fog/volumetric_fog.tscn#0",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "3d/volumetric_fog/volumetric_fog.tscn"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "fog",
+  "file": "demos/3d/volumetric_fog/volumetric_fog-0.gdshader"
+ },
+ {
+  "id": "demos/xr/openxr_hand_tracking_demo/shaders/highlight_shader.tres#0",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "xr/openxr_hand_tracking_demo/shaders/highlight_shader.tres"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "file": "demos/xr/openxr_hand_tracking_demo/shaders/highlight_shader-0.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/advanced_postprocessing.rst#0",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/advanced_postprocessing.rst",
+   "block": 0
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "file": "docs/tutorials/shaders/advanced_postprocessing-0.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/advanced_postprocessing.rst#7",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/advanced_postprocessing.rst",
+   "block": 7
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "file": "docs/tutorials/shaders/advanced_postprocessing-7.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/custom_postprocessing.rst#0",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/custom_postprocessing.rst",
+   "block": 0
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "canvas_item",
+  "file": "docs/tutorials/shaders/custom_postprocessing-0.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/custom_postprocessing.rst#1",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/custom_postprocessing.rst",
+   "block": 1
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "canvas_item",
+  "file": "docs/tutorials/shaders/custom_postprocessing-1.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/custom_postprocessing.rst#2",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/custom_postprocessing.rst",
+   "block": 2
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "canvas_item",
+  "file": "docs/tutorials/shaders/custom_postprocessing-2.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/introduction_to_shaders.rst#0",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/introduction_to_shaders.rst",
+   "block": 0
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "canvas_item",
+  "file": "docs/tutorials/shaders/introduction_to_shaders-0.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/introduction_to_shaders.rst#1",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/introduction_to_shaders.rst",
+   "block": 1
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "file": "docs/tutorials/shaders/introduction_to_shaders-1.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/introduction_to_shaders.rst#2",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/introduction_to_shaders.rst",
+   "block": 2
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "file": "docs/tutorials/shaders/introduction_to_shaders-2.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/making_trees.rst#0",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/making_trees.rst",
+   "block": 0
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "file": "docs/tutorials/shaders/making_trees-0.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/screen-reading_shaders.rst#0",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/screen-reading_shaders.rst",
+   "block": 0
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "canvas_item",
+  "file": "docs/tutorials/shaders/screen-reading_shaders-0.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/screen-reading_shaders.rst#1",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/screen-reading_shaders.rst",
+   "block": 1
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "canvas_item",
+  "file": "docs/tutorials/shaders/screen-reading_shaders-1.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/shader_reference/canvas_item_shader.rst#0",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/canvas_item_shader.rst",
+   "block": 0
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "canvas_item",
+  "file": "docs/tutorials/shaders/shader_reference/canvas_item_shader-0.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#1",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shader_preprocessor.rst",
+   "block": 1
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "file": "docs/tutorials/shaders/shader_reference/shader_preprocessor-1.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#13",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shader_preprocessor.rst",
+   "block": 13
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "file": "docs/tutorials/shaders/shader_reference/shader_preprocessor-13.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#18",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shader_preprocessor.rst",
+   "block": 18
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "file": "docs/tutorials/shaders/shader_reference/shader_preprocessor-18.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/shader_reference/shading_language.rst#14",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shading_language.rst",
+   "block": 14
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "file": "docs/tutorials/shaders/shader_reference/shading_language-14.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/shader_reference/shading_language.rst#18",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shading_language.rst",
+   "block": 18
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "file": "docs/tutorials/shaders/shader_reference/shading_language-18.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/shader_reference/shading_language.rst#24",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shading_language.rst",
+   "block": 24
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "file": "docs/tutorials/shaders/shader_reference/shading_language-24.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/shader_reference/shading_language.rst#25",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shading_language.rst",
+   "block": 25
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "canvas_item",
+  "file": "docs/tutorials/shaders/shader_reference/shading_language-25.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/shader_reference/shading_language.rst#32",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shading_language.rst",
+   "block": 32
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "file": "docs/tutorials/shaders/shader_reference/shading_language-32.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/shader_reference/shading_language.rst#33",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shading_language.rst",
+   "block": 33
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "file": "docs/tutorials/shaders/shader_reference/shading_language-33.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/shader_reference/shading_language.rst#34",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shading_language.rst",
+   "block": 34
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "file": "docs/tutorials/shaders/shader_reference/shading_language-34.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/shader_reference/shading_language.rst#35",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shading_language.rst",
+   "block": 35
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "file": "docs/tutorials/shaders/shader_reference/shading_language-35.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/shader_reference/shading_language.rst#36",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shading_language.rst",
+   "block": 36
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "file": "docs/tutorials/shaders/shader_reference/shading_language-36.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/shader_reference/shading_language.rst#37",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shading_language.rst",
+   "block": 37
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "file": "docs/tutorials/shaders/shader_reference/shading_language-37.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/shader_reference/shading_language.rst#38",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shading_language.rst",
+   "block": 38
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "file": "docs/tutorials/shaders/shader_reference/shading_language-38.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/shader_reference/shading_language.rst#39",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shading_language.rst",
+   "block": 39
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "file": "docs/tutorials/shaders/shader_reference/shading_language-39.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/shader_reference/shading_language.rst#43",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shading_language.rst",
+   "block": 43
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "canvas_item",
+  "file": "docs/tutorials/shaders/shader_reference/shading_language-43.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/shader_reference/shading_language.rst#44",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shading_language.rst",
+   "block": 44
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "file": "docs/tutorials/shaders/shader_reference/shading_language-44.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/shader_reference/sky_shader.rst#0",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/sky_shader.rst",
+   "block": 0
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "sky",
+  "file": "docs/tutorials/shaders/shader_reference/sky_shader-0.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/shader_reference/sky_shader.rst#1",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/sky_shader.rst",
+   "block": 1
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "sky",
+  "file": "docs/tutorials/shaders/shader_reference/sky_shader-1.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/shader_reference/sky_shader.rst#2",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/sky_shader.rst",
+   "block": 2
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "sky",
+  "file": "docs/tutorials/shaders/shader_reference/sky_shader-2.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/shader_reference/spatial_shader.rst#0",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/spatial_shader.rst",
+   "block": 0
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "file": "docs/tutorials/shaders/shader_reference/spatial_shader-0.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/shaders_style_guide.rst#0",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shaders_style_guide.rst",
+   "block": 0
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "canvas_item",
+  "file": "docs/tutorials/shaders/shaders_style_guide-0.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/using_viewport_as_texture.rst#0",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/using_viewport_as_texture.rst",
+   "block": 0
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "canvas_item",
+  "file": "docs/tutorials/shaders/using_viewport_as_texture-0.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/your_first_shader/your_first_2d_shader.rst#0",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/your_first_shader/your_first_2d_shader.rst",
+   "block": 0
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "canvas_item",
+  "file": "docs/tutorials/shaders/your_first_shader/your_first_2d_shader-0.gdshader"
+ },
+ {
+  "id": "docs/tutorials/shaders/your_first_shader/your_first_3d_shader.rst#10",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/your_first_shader/your_first_3d_shader.rst",
+   "block": 10
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "file": "docs/tutorials/shaders/your_first_shader/your_first_3d_shader-10.gdshader"
+ },
+ {
+  "id": "scenes/fixtures/fog-volume-spatial.gdshader",
+  "source": {
+   "path": "fog-volume-spatial.gdshader"
+  },
+  "licence": "MIT, this repository",
+  "shaderType": "spatial",
+  "file": "scenes/fixtures/fog-volume-spatial.gdshader"
+ },
+ {
+  "id": "scenes/fixtures/sky-shader-stub.gdshader",
+  "source": {
+   "path": "sky-shader-stub.gdshader"
+  },
+  "licence": "MIT, this repository",
+  "shaderType": "sky",
+  "file": "scenes/fixtures/sky-shader-stub.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/defaults",
+  "source": {
+   "generator": "StandardMaterial3D"
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/defaults",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/StandardMaterial3D/defaults.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/transparency=2",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "transparency",
+   "value": 2
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/transparency=2",
+  "change": "misspells the first vector type",
+  "file": "rejected/generator/StandardMaterial3D/transparency-2.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/blend_mode=3",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "blend_mode",
+   "value": 3
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/blend_mode=3",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/generator/StandardMaterial3D/blend_mode-3.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/cull_mode=1",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "cull_mode",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/cull_mode=1",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/StandardMaterial3D/cull_mode-1.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/depth_draw_mode=1",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "depth_draw_mode",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/depth_draw_mode=1",
+  "change": "misspells the first vector type",
+  "file": "rejected/generator/StandardMaterial3D/depth_draw_mode-1.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/shading_mode=0",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "shading_mode",
+   "value": 0
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/shading_mode=0",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/generator/StandardMaterial3D/shading_mode-0.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/diffuse_mode=1",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "diffuse_mode",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/diffuse_mode=1",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/StandardMaterial3D/diffuse_mode-1.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/diffuse_mode=3",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "diffuse_mode",
+   "value": 3
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/diffuse_mode=3",
+  "change": "misspells the first vector type",
+  "file": "rejected/generator/StandardMaterial3D/diffuse_mode-3.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/specular_mode=2",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "specular_mode",
+   "value": 2
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/specular_mode=2",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/generator/StandardMaterial3D/specular_mode-2.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/disable_ambient_light=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "disable_ambient_light",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/disable_ambient_light=true",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/StandardMaterial3D/disable_ambient_light-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/disable_fog=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "disable_fog",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/disable_fog=true",
+  "change": "misspells the first vector type",
+  "file": "rejected/generator/StandardMaterial3D/disable_fog-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/vertex_color_use_as_albedo=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "vertex_color_use_as_albedo",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/vertex_color_use_as_albedo=true",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/generator/StandardMaterial3D/vertex_color_use_as_albedo-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/vertex_color_is_srgb=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "vertex_color_is_srgb",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/vertex_color_is_srgb=true",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/StandardMaterial3D/vertex_color_is_srgb-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/albedo_texture_msdf=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "albedo_texture_msdf",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/albedo_texture_msdf=true",
+  "change": "misspells the first vector type",
+  "file": "rejected/generator/StandardMaterial3D/albedo_texture_msdf-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/roughness_texture_channel=1",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "roughness_texture_channel",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/roughness_texture_channel=1",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/generator/StandardMaterial3D/roughness_texture_channel-1.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/roughness_texture_channel=2",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "roughness_texture_channel",
+   "value": 2
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/roughness_texture_channel=2",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/StandardMaterial3D/roughness_texture_channel-2.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/roughness_texture_channel=4",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "roughness_texture_channel",
+   "value": 4
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/roughness_texture_channel=4",
+  "change": "misspells the first vector type",
+  "file": "rejected/generator/StandardMaterial3D/roughness_texture_channel-4.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/emission_enabled=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "emission_enabled",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/emission_enabled=true",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/generator/StandardMaterial3D/emission_enabled-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/normal_enabled=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "normal_enabled",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/normal_enabled=true",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/StandardMaterial3D/normal_enabled-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/clearcoat_enabled=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "clearcoat_enabled",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/clearcoat_enabled=true",
+  "change": "misspells the first vector type",
+  "file": "rejected/generator/StandardMaterial3D/clearcoat_enabled-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/heightmap_enabled=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "heightmap_enabled",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/heightmap_enabled=true",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/generator/StandardMaterial3D/heightmap_enabled-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/subsurf_scatter_enabled=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "subsurf_scatter_enabled",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/subsurf_scatter_enabled=true",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/StandardMaterial3D/subsurf_scatter_enabled-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/backlight_enabled=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "backlight_enabled",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/backlight_enabled=true",
+  "change": "misspells the first vector type",
+  "file": "rejected/generator/StandardMaterial3D/backlight_enabled-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/refraction_enabled=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "refraction_enabled",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/refraction_enabled=true",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/generator/StandardMaterial3D/refraction_enabled-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/detail_uv_layer=1",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "detail_uv_layer",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/detail_uv_layer=1",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/StandardMaterial3D/detail_uv_layer-1.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/uv2_triplanar=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "uv2_triplanar",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/uv2_triplanar=true",
+  "change": "misspells the first vector type",
+  "file": "rejected/generator/StandardMaterial3D/uv2_triplanar-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/texture_filter=0",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "texture_filter",
+   "value": 0
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/texture_filter=0",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/generator/StandardMaterial3D/texture_filter-0.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/texture_filter=2",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "texture_filter",
+   "value": 2
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/texture_filter=2",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/StandardMaterial3D/texture_filter-2.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/texture_filter=5",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "texture_filter",
+   "value": 5
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/texture_filter=5",
+  "change": "misspells the first vector type",
+  "file": "rejected/generator/StandardMaterial3D/texture_filter-5.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/disable_receive_shadows=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "disable_receive_shadows",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/disable_receive_shadows=true",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/generator/StandardMaterial3D/disable_receive_shadows-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/billboard_mode=2",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "billboard_mode",
+   "value": 2
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/billboard_mode=2",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/StandardMaterial3D/billboard_mode-2.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/fixed_size=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "fixed_size",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/fixed_size=true",
+  "change": "misspells the first vector type",
+  "file": "rejected/generator/StandardMaterial3D/fixed_size-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/use_z_clip_scale=true",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "use_z_clip_scale",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/use_z_clip_scale=true",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/generator/StandardMaterial3D/use_z_clip_scale-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/distance_fade_mode=1",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "distance_fade_mode",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/distance_fade_mode=1",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/StandardMaterial3D/distance_fade_mode-1.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/distance_fade_mode=2",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "distance_fade_mode",
+   "value": 2
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/distance_fade_mode=2",
+  "change": "misspells the first vector type",
+  "file": "rejected/generator/StandardMaterial3D/distance_fade_mode-2.gdshader"
+ },
+ {
+  "id": "rejected/generator/StandardMaterial3D/stencil_mode=1",
+  "source": {
+   "generator": "StandardMaterial3D",
+   "property": "stencil_mode",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/StandardMaterial3D/stencil_mode=1",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/generator/StandardMaterial3D/stencil_mode-1.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/transparency=1",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "transparency",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/transparency=1",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/ORMMaterial3D/transparency-1.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/transparency=2",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "transparency",
+   "value": 2
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/transparency=2",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/ORMMaterial3D/transparency-2.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/transparency=4",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "transparency",
+   "value": 4
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/transparency=4",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/generator/ORMMaterial3D/transparency-4.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/blend_mode=0",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "blend_mode",
+   "value": 0
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/blend_mode=0",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/ORMMaterial3D/blend_mode-0.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/blend_mode=2",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "blend_mode",
+   "value": 2
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/blend_mode=2",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/ORMMaterial3D/blend_mode-2.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/blend_mode=3",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "blend_mode",
+   "value": 3
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/blend_mode=3",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/generator/ORMMaterial3D/blend_mode-3.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/cull_mode=1",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "cull_mode",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/cull_mode=1",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/ORMMaterial3D/cull_mode-1.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/depth_draw_mode=1",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "depth_draw_mode",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/depth_draw_mode=1",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/ORMMaterial3D/depth_draw_mode-1.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/no_depth_test=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "no_depth_test",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/no_depth_test=true",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/generator/ORMMaterial3D/no_depth_test-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/diffuse_mode=2",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "diffuse_mode",
+   "value": 2
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/diffuse_mode=2",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/ORMMaterial3D/diffuse_mode-2.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/diffuse_mode=3",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "diffuse_mode",
+   "value": 3
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/diffuse_mode=3",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/ORMMaterial3D/diffuse_mode-3.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/specular_mode=1",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "specular_mode",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/specular_mode=1",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/generator/ORMMaterial3D/specular_mode-1.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/specular_mode=2",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "specular_mode",
+   "value": 2
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/specular_mode=2",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/ORMMaterial3D/specular_mode-2.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/disable_fog=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "disable_fog",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/disable_fog=true",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/ORMMaterial3D/disable_fog-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/disable_specular_occlusion=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "disable_specular_occlusion",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/disable_specular_occlusion=true",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/generator/ORMMaterial3D/disable_specular_occlusion-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/vertex_color_is_srgb=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "vertex_color_is_srgb",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/vertex_color_is_srgb=true",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/ORMMaterial3D/vertex_color_is_srgb-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/albedo_texture_force_srgb=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "albedo_texture_force_srgb",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/albedo_texture_force_srgb=true",
+  "change": "misspells the first vector type",
+  "file": "rejected/generator/ORMMaterial3D/albedo_texture_force_srgb-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/emission_enabled=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "emission_enabled",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/emission_enabled=true",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/generator/ORMMaterial3D/emission_enabled-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/normal_enabled=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "normal_enabled",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/normal_enabled=true",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/ORMMaterial3D/normal_enabled-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/clearcoat_enabled=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "clearcoat_enabled",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/clearcoat_enabled=true",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/ORMMaterial3D/clearcoat_enabled-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/subsurf_scatter_transmittance_enabled=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "subsurf_scatter_transmittance_enabled",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/subsurf_scatter_transmittance_enabled=true",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/generator/ORMMaterial3D/subsurf_scatter_transmittance_enabled-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/detail_enabled=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "detail_enabled",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/detail_enabled=true",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/ORMMaterial3D/detail_enabled-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/uv1_triplanar=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "uv1_triplanar",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/uv1_triplanar=true",
+  "change": "misspells the first vector type",
+  "file": "rejected/generator/ORMMaterial3D/uv1_triplanar-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/texture_filter=1",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "texture_filter",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/texture_filter=1",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/generator/ORMMaterial3D/texture_filter-1.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/texture_filter=4",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "texture_filter",
+   "value": 4
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/texture_filter=4",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/ORMMaterial3D/texture_filter-4.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/texture_repeat=false",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "texture_repeat",
+   "value": false
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/texture_repeat=false",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/ORMMaterial3D/texture_repeat-false.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/shadow_to_opacity=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "shadow_to_opacity",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/shadow_to_opacity=true",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/generator/ORMMaterial3D/shadow_to_opacity-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/billboard_mode=1",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "billboard_mode",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/billboard_mode=1",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/ORMMaterial3D/billboard_mode-1.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/billboard_mode=3",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "billboard_mode",
+   "value": 3
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/billboard_mode=3",
+  "change": "misspells the first vector type",
+  "file": "rejected/generator/ORMMaterial3D/billboard_mode-3.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/grow=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "grow",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/grow=true",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/generator/ORMMaterial3D/grow-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/use_point_size=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "use_point_size",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/use_point_size=true",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/ORMMaterial3D/use_point_size-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/use_particle_trails=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "use_particle_trails",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/use_particle_trails=true",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/ORMMaterial3D/use_particle_trails-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/use_fov_override=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "use_fov_override",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/use_fov_override=true",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/generator/ORMMaterial3D/use_fov_override-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/proximity_fade_enabled=true",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "proximity_fade_enabled",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/proximity_fade_enabled=true",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/ORMMaterial3D/proximity_fade_enabled-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/distance_fade_mode=3",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "distance_fade_mode",
+   "value": 3
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/distance_fade_mode=3",
+  "change": "misspells the first vector type",
+  "file": "rejected/generator/ORMMaterial3D/distance_fade_mode-3.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/stencil_mode=1",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "stencil_mode",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/stencil_mode=1",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/generator/ORMMaterial3D/stencil_mode-1.gdshader"
+ },
+ {
+  "id": "rejected/generator/ORMMaterial3D/stencil_mode=2",
+  "source": {
+   "generator": "ORMMaterial3D",
+   "property": "stencil_mode",
+   "value": 2
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "spatial",
+  "changedFrom": "generator/ORMMaterial3D/stencil_mode=2",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/ORMMaterial3D/stencil_mode-2.gdshader"
+ },
+ {
+  "id": "rejected/generator/CanvasItemMaterial/resource_local_to_scene=true",
+  "source": {
+   "generator": "CanvasItemMaterial",
+   "property": "resource_local_to_scene",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "canvas_item",
+  "changedFrom": "generator/CanvasItemMaterial/resource_local_to_scene=true",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/CanvasItemMaterial/resource_local_to_scene-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/CanvasItemMaterial/blend_mode=1",
+  "source": {
+   "generator": "CanvasItemMaterial",
+   "property": "blend_mode",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "canvas_item",
+  "changedFrom": "generator/CanvasItemMaterial/blend_mode=1",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/CanvasItemMaterial/blend_mode-1.gdshader"
+ },
+ {
+  "id": "rejected/generator/CanvasItemMaterial/blend_mode=2",
+  "source": {
+   "generator": "CanvasItemMaterial",
+   "property": "blend_mode",
+   "value": 2
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "canvas_item",
+  "changedFrom": "generator/CanvasItemMaterial/blend_mode=2",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/CanvasItemMaterial/blend_mode-2.gdshader"
+ },
+ {
+  "id": "rejected/generator/CanvasItemMaterial/blend_mode=3",
+  "source": {
+   "generator": "CanvasItemMaterial",
+   "property": "blend_mode",
+   "value": 3
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "canvas_item",
+  "changedFrom": "generator/CanvasItemMaterial/blend_mode=3",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/CanvasItemMaterial/blend_mode-3.gdshader"
+ },
+ {
+  "id": "rejected/generator/CanvasItemMaterial/blend_mode=4",
+  "source": {
+   "generator": "CanvasItemMaterial",
+   "property": "blend_mode",
+   "value": 4
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "canvas_item",
+  "changedFrom": "generator/CanvasItemMaterial/blend_mode=4",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/CanvasItemMaterial/blend_mode-4.gdshader"
+ },
+ {
+  "id": "rejected/generator/ParticleProcessMaterial/particle_flag_align_y=true",
+  "source": {
+   "generator": "ParticleProcessMaterial",
+   "property": "particle_flag_align_y",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "particles",
+  "changedFrom": "generator/ParticleProcessMaterial/particle_flag_align_y=true",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/ParticleProcessMaterial/particle_flag_align_y-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/ParticleProcessMaterial/particle_flag_rotate_y=true",
+  "source": {
+   "generator": "ParticleProcessMaterial",
+   "property": "particle_flag_rotate_y",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "particles",
+  "changedFrom": "generator/ParticleProcessMaterial/particle_flag_rotate_y=true",
+  "change": "misspells the first vector type",
+  "file": "rejected/generator/ParticleProcessMaterial/particle_flag_rotate_y-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/ParticleProcessMaterial/particle_flag_rotate_y=false",
+  "source": {
+   "generator": "ParticleProcessMaterial",
+   "property": "particle_flag_rotate_y",
+   "value": false
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "particles",
+  "changedFrom": "generator/ParticleProcessMaterial/particle_flag_rotate_y=false",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/generator/ParticleProcessMaterial/particle_flag_rotate_y-false.gdshader"
+ },
+ {
+  "id": "rejected/generator/ParticleProcessMaterial/particle_flag_damping_as_friction=true",
+  "source": {
+   "generator": "ParticleProcessMaterial",
+   "property": "particle_flag_damping_as_friction",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "particles",
+  "changedFrom": "generator/ParticleProcessMaterial/particle_flag_damping_as_friction=true",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/ParticleProcessMaterial/particle_flag_damping_as_friction-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/ParticleProcessMaterial/emission_shape=1",
+  "source": {
+   "generator": "ParticleProcessMaterial",
+   "property": "emission_shape",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "particles",
+  "changedFrom": "generator/ParticleProcessMaterial/emission_shape=1",
+  "change": "misspells the first vector type",
+  "file": "rejected/generator/ParticleProcessMaterial/emission_shape-1.gdshader"
+ },
+ {
+  "id": "rejected/generator/ParticleProcessMaterial/emission_shape=4",
+  "source": {
+   "generator": "ParticleProcessMaterial",
+   "property": "emission_shape",
+   "value": 4
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "particles",
+  "changedFrom": "generator/ParticleProcessMaterial/emission_shape=4",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/generator/ParticleProcessMaterial/emission_shape-4.gdshader"
+ },
+ {
+  "id": "rejected/generator/ParticleProcessMaterial/collision_mode=2",
+  "source": {
+   "generator": "ParticleProcessMaterial",
+   "property": "collision_mode",
+   "value": 2
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "particles",
+  "changedFrom": "generator/ParticleProcessMaterial/collision_mode=2",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/ParticleProcessMaterial/collision_mode-2.gdshader"
+ },
+ {
+  "id": "rejected/generator/ParticleProcessMaterial/collision_use_scale=true",
+  "source": {
+   "generator": "ParticleProcessMaterial",
+   "property": "collision_use_scale",
+   "value": true
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "particles",
+  "changedFrom": "generator/ParticleProcessMaterial/collision_use_scale=true",
+  "change": "misspells the first vector type",
+  "file": "rejected/generator/ParticleProcessMaterial/collision_use_scale-true.gdshader"
+ },
+ {
+  "id": "rejected/generator/ParticleProcessMaterial/sub_emitter_mode=1",
+  "source": {
+   "generator": "ParticleProcessMaterial",
+   "property": "sub_emitter_mode",
+   "value": 1
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "particles",
+  "changedFrom": "generator/ParticleProcessMaterial/sub_emitter_mode=1",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/generator/ParticleProcessMaterial/sub_emitter_mode-1.gdshader"
+ },
+ {
+  "id": "rejected/generator/ParticleProcessMaterial/sub_emitter_mode=3",
+  "source": {
+   "generator": "ParticleProcessMaterial",
+   "property": "sub_emitter_mode",
+   "value": 3
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "particles",
+  "changedFrom": "generator/ParticleProcessMaterial/sub_emitter_mode=3",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/ParticleProcessMaterial/sub_emitter_mode-3.gdshader"
+ },
+ {
+  "id": "rejected/generator/ProceduralSkyMaterial/defaults",
+  "source": {
+   "generator": "ProceduralSkyMaterial"
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "sky",
+  "changedFrom": "generator/ProceduralSkyMaterial/defaults",
+  "change": "misspells the first vector type",
+  "file": "rejected/generator/ProceduralSkyMaterial/defaults.gdshader"
+ },
+ {
+  "id": "rejected/generator/ProceduralSkyMaterial/use_debanding=false",
+  "source": {
+   "generator": "ProceduralSkyMaterial",
+   "property": "use_debanding",
+   "value": false
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "sky",
+  "changedFrom": "generator/ProceduralSkyMaterial/use_debanding=false",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/generator/ProceduralSkyMaterial/use_debanding-false.gdshader"
+ },
+ {
+  "id": "rejected/generator/PanoramaSkyMaterial/defaults",
+  "source": {
+   "generator": "PanoramaSkyMaterial"
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "sky",
+  "changedFrom": "generator/PanoramaSkyMaterial/defaults",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/PanoramaSkyMaterial/defaults.gdshader"
+ },
+ {
+  "id": "rejected/generator/PanoramaSkyMaterial/filter=false",
+  "source": {
+   "generator": "PanoramaSkyMaterial",
+   "property": "filter",
+   "value": false
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "sky",
+  "changedFrom": "generator/PanoramaSkyMaterial/filter=false",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/PanoramaSkyMaterial/filter-false.gdshader"
+ },
+ {
+  "id": "rejected/generator/PhysicalSkyMaterial/defaults",
+  "source": {
+   "generator": "PhysicalSkyMaterial"
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "sky",
+  "changedFrom": "generator/PhysicalSkyMaterial/defaults",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/generator/PhysicalSkyMaterial/defaults.gdshader"
+ },
+ {
+  "id": "rejected/generator/PhysicalSkyMaterial/use_debanding=false",
+  "source": {
+   "generator": "PhysicalSkyMaterial",
+   "property": "use_debanding",
+   "value": false
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "sky",
+  "changedFrom": "generator/PhysicalSkyMaterial/use_debanding=false",
+  "change": "drops the last semicolon",
+  "file": "rejected/generator/PhysicalSkyMaterial/use_debanding-false.gdshader"
+ },
+ {
+  "id": "rejected/generator/FogMaterial/defaults",
+  "source": {
+   "generator": "FogMaterial"
+  },
+  "licence": "MIT, Godot Engine 4.6.3: the text its material generator writes",
+  "shaderType": "fog",
+  "changedFrom": "generator/FogMaterial/defaults",
+  "change": "misspells the first vector type",
+  "file": "rejected/generator/FogMaterial/defaults.gdshader"
+ },
+ {
+  "id": "rejected/demos/2d/screen_space_shaders/shaders/BCS.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/screen_space_shaders/shaders/BCS.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "changedFrom": "demos/2d/screen_space_shaders/shaders/BCS.gdshader",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/demos/2d/screen_space_shaders/shaders/BCS.gdshader"
+ },
+ {
+  "id": "rejected/demos/2d/screen_space_shaders/shaders/blur.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/screen_space_shaders/shaders/blur.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "changedFrom": "demos/2d/screen_space_shaders/shaders/blur.gdshader",
+  "change": "drops the last semicolon",
+  "file": "rejected/demos/2d/screen_space_shaders/shaders/blur.gdshader"
+ },
+ {
+  "id": "rejected/demos/2d/screen_space_shaders/shaders/contrasted.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/screen_space_shaders/shaders/contrasted.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "changedFrom": "demos/2d/screen_space_shaders/shaders/contrasted.gdshader",
+  "change": "misspells the first vector type",
+  "file": "rejected/demos/2d/screen_space_shaders/shaders/contrasted.gdshader"
+ },
+ {
+  "id": "rejected/demos/2d/screen_space_shaders/shaders/mirage.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/screen_space_shaders/shaders/mirage.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "changedFrom": "demos/2d/screen_space_shaders/shaders/mirage.gdshader",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/demos/2d/screen_space_shaders/shaders/mirage.gdshader"
+ },
+ {
+  "id": "rejected/demos/2d/screen_space_shaders/shaders/negative.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/screen_space_shaders/shaders/negative.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "changedFrom": "demos/2d/screen_space_shaders/shaders/negative.gdshader",
+  "change": "drops the last semicolon",
+  "file": "rejected/demos/2d/screen_space_shaders/shaders/negative.gdshader"
+ },
+ {
+  "id": "rejected/demos/2d/screen_space_shaders/shaders/normalized.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/screen_space_shaders/shaders/normalized.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "changedFrom": "demos/2d/screen_space_shaders/shaders/normalized.gdshader",
+  "change": "drops the last semicolon",
+  "file": "rejected/demos/2d/screen_space_shaders/shaders/normalized.gdshader"
+ },
+ {
+  "id": "rejected/demos/2d/screen_space_shaders/shaders/old_film.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/screen_space_shaders/shaders/old_film.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "changedFrom": "demos/2d/screen_space_shaders/shaders/old_film.gdshader",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/demos/2d/screen_space_shaders/shaders/old_film.gdshader"
+ },
+ {
+  "id": "rejected/demos/2d/screen_space_shaders/shaders/pixelize.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/screen_space_shaders/shaders/pixelize.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "changedFrom": "demos/2d/screen_space_shaders/shaders/pixelize.gdshader",
+  "change": "drops the last semicolon",
+  "file": "rejected/demos/2d/screen_space_shaders/shaders/pixelize.gdshader"
+ },
+ {
+  "id": "rejected/demos/2d/screen_space_shaders/shaders/sepia.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/screen_space_shaders/shaders/sepia.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "changedFrom": "demos/2d/screen_space_shaders/shaders/sepia.gdshader",
+  "change": "misspells the first vector type",
+  "file": "rejected/demos/2d/screen_space_shaders/shaders/sepia.gdshader"
+ },
+ {
+  "id": "rejected/demos/2d/screen_space_shaders/shaders/vignette.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/screen_space_shaders/shaders/vignette.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "changedFrom": "demos/2d/screen_space_shaders/shaders/vignette.gdshader",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/demos/2d/screen_space_shaders/shaders/vignette.gdshader"
+ },
+ {
+  "id": "rejected/demos/2d/screen_space_shaders/shaders/whirl.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/screen_space_shaders/shaders/whirl.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "changedFrom": "demos/2d/screen_space_shaders/shaders/whirl.gdshader",
+  "change": "drops the last semicolon",
+  "file": "rejected/demos/2d/screen_space_shaders/shaders/whirl.gdshader"
+ },
+ {
+  "id": "rejected/demos/2d/sprite_shaders/shaders/aura.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/sprite_shaders/shaders/aura.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "changedFrom": "demos/2d/sprite_shaders/shaders/aura.gdshader",
+  "change": "misspells the first vector type",
+  "file": "rejected/demos/2d/sprite_shaders/shaders/aura.gdshader"
+ },
+ {
+  "id": "rejected/demos/2d/sprite_shaders/shaders/blur.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/sprite_shaders/shaders/blur.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "changedFrom": "demos/2d/sprite_shaders/shaders/blur.gdshader",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/demos/2d/sprite_shaders/shaders/blur.gdshader"
+ },
+ {
+  "id": "rejected/demos/2d/sprite_shaders/shaders/dissintegrate.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/sprite_shaders/shaders/dissintegrate.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "changedFrom": "demos/2d/sprite_shaders/shaders/dissintegrate.gdshader",
+  "change": "drops the last semicolon",
+  "file": "rejected/demos/2d/sprite_shaders/shaders/dissintegrate.gdshader"
+ },
+ {
+  "id": "rejected/demos/2d/sprite_shaders/shaders/dropshadow.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/sprite_shaders/shaders/dropshadow.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "changedFrom": "demos/2d/sprite_shaders/shaders/dropshadow.gdshader",
+  "change": "misspells the first vector type",
+  "file": "rejected/demos/2d/sprite_shaders/shaders/dropshadow.gdshader"
+ },
+ {
+  "id": "rejected/demos/2d/sprite_shaders/shaders/fatty.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/sprite_shaders/shaders/fatty.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "changedFrom": "demos/2d/sprite_shaders/shaders/fatty.gdshader",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/demos/2d/sprite_shaders/shaders/fatty.gdshader"
+ },
+ {
+  "id": "rejected/demos/2d/sprite_shaders/shaders/glow.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/sprite_shaders/shaders/glow.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "changedFrom": "demos/2d/sprite_shaders/shaders/glow.gdshader",
+  "change": "drops the last semicolon",
+  "file": "rejected/demos/2d/sprite_shaders/shaders/glow.gdshader"
+ },
+ {
+  "id": "rejected/demos/2d/sprite_shaders/shaders/offsetshadow.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/sprite_shaders/shaders/offsetshadow.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "changedFrom": "demos/2d/sprite_shaders/shaders/offsetshadow.gdshader",
+  "change": "misspells the first vector type",
+  "file": "rejected/demos/2d/sprite_shaders/shaders/offsetshadow.gdshader"
+ },
+ {
+  "id": "rejected/demos/2d/sprite_shaders/shaders/outline.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/sprite_shaders/shaders/outline.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "changedFrom": "demos/2d/sprite_shaders/shaders/outline.gdshader",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/demos/2d/sprite_shaders/shaders/outline.gdshader"
+ },
+ {
+  "id": "rejected/demos/2d/sprite_shaders/shaders/silouette.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/sprite_shaders/shaders/silouette.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "changedFrom": "demos/2d/sprite_shaders/shaders/silouette.gdshader",
+  "change": "drops the last semicolon",
+  "file": "rejected/demos/2d/sprite_shaders/shaders/silouette.gdshader"
+ },
+ {
+  "id": "rejected/demos/3d/labels_and_texts/curvature.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "3d/labels_and_texts/curvature.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "changedFrom": "demos/3d/labels_and_texts/curvature.gdshader",
+  "change": "misspells the first vector type",
+  "file": "rejected/demos/3d/labels_and_texts/curvature.gdshader"
+ },
+ {
+  "id": "rejected/demos/3d/platformer/stage/skybox.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "3d/platformer/stage/skybox.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "sky",
+  "changedFrom": "demos/3d/platformer/stage/skybox.gdshader",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/demos/3d/platformer/stage/skybox.gdshader"
+ },
+ {
+  "id": "rejected/demos/3d/procedural_materials/shaders/plasma.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "3d/procedural_materials/shaders/plasma.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "changedFrom": "demos/3d/procedural_materials/shaders/plasma.gdshader",
+  "change": "drops the last semicolon",
+  "file": "rejected/demos/3d/procedural_materials/shaders/plasma.gdshader"
+ },
+ {
+  "id": "rejected/demos/3d/sky_shaders/sky_volumetric_clouds.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "3d/sky_shaders/sky_volumetric_clouds.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "sky",
+  "changedFrom": "demos/3d/sky_shaders/sky_volumetric_clouds.gdshader",
+  "change": "misspells the first vector type",
+  "file": "rejected/demos/3d/sky_shaders/sky_volumetric_clouds.gdshader"
+ },
+ {
+  "id": "rejected/demos/3d/sprites/shaders/negative.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "3d/sprites/shaders/negative.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "changedFrom": "demos/3d/sprites/shaders/negative.gdshader",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/demos/3d/sprites/shaders/negative.gdshader"
+ },
+ {
+  "id": "rejected/demos/3d/sprites/shaders/paper.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "3d/sprites/shaders/paper.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "changedFrom": "demos/3d/sprites/shaders/paper.gdshader",
+  "change": "drops the last semicolon",
+  "file": "rejected/demos/3d/sprites/shaders/paper.gdshader"
+ },
+ {
+  "id": "rejected/demos/3d/sprites/shaders/paper_emission.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "3d/sprites/shaders/paper_emission.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "changedFrom": "demos/3d/sprites/shaders/paper_emission.gdshader",
+  "change": "misspells the first vector type",
+  "file": "rejected/demos/3d/sprites/shaders/paper_emission.gdshader"
+ },
+ {
+  "id": "rejected/demos/3d/sprites/shaders/paper_material.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "3d/sprites/shaders/paper_material.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "changedFrom": "demos/3d/sprites/shaders/paper_material.gdshader",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/demos/3d/sprites/shaders/paper_material.gdshader"
+ },
+ {
+  "id": "rejected/demos/3d/sprites/shaders/paper_rainbow.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "3d/sprites/shaders/paper_rainbow.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "changedFrom": "demos/3d/sprites/shaders/paper_rainbow.gdshader",
+  "change": "drops the last semicolon",
+  "file": "rejected/demos/3d/sprites/shaders/paper_rainbow.gdshader"
+ },
+ {
+  "id": "rejected/demos/3d/tonemap_color_correction/gradients/gradient_steps.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "3d/tonemap_color_correction/gradients/gradient_steps.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "changedFrom": "demos/3d/tonemap_color_correction/gradients/gradient_steps.gdshader",
+  "change": "misspells the first vector type",
+  "file": "rejected/demos/3d/tonemap_color_correction/gradients/gradient_steps.gdshader"
+ },
+ {
+  "id": "rejected/demos/3d/tonemap_color_correction/gradients/hues.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "3d/tonemap_color_correction/gradients/hues.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "changedFrom": "demos/3d/tonemap_color_correction/gradients/hues.gdshader",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/demos/3d/tonemap_color_correction/gradients/hues.gdshader"
+ },
+ {
+  "id": "rejected/demos/3d/variable_rate_shading/vrs_texture.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "3d/variable_rate_shading/vrs_texture.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "changedFrom": "demos/3d/variable_rate_shading/vrs_texture.gdshader",
+  "change": "drops the last semicolon",
+  "file": "rejected/demos/3d/variable_rate_shading/vrs_texture.gdshader"
+ },
+ {
+  "id": "rejected/demos/compute/texture/water_plane/water_shader.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "compute/texture/water_plane/water_shader.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "changedFrom": "demos/compute/texture/water_plane/water_shader.gdshader",
+  "change": "misspells the first vector type",
+  "file": "rejected/demos/compute/texture/water_plane/water_shader.gdshader"
+ },
+ {
+  "id": "rejected/demos/misc/hdr_output/color_sweep/color_sweep.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "misc/hdr_output/color_sweep/color_sweep.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "changedFrom": "demos/misc/hdr_output/color_sweep/color_sweep.gdshader",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/demos/misc/hdr_output/color_sweep/color_sweep.gdshader"
+ },
+ {
+  "id": "rejected/demos/misc/noise_viewer/noise_viewer.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "misc/noise_viewer/noise_viewer.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "changedFrom": "demos/misc/noise_viewer/noise_viewer.gdshader",
+  "change": "drops the last semicolon",
+  "file": "rejected/demos/misc/noise_viewer/noise_viewer.gdshader"
+ },
+ {
+  "id": "rejected/demos/viewport/dynamic_split_screen/split_screen.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "viewport/dynamic_split_screen/split_screen.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "changedFrom": "demos/viewport/dynamic_split_screen/split_screen.gdshader",
+  "change": "misspells the first vector type",
+  "file": "rejected/demos/viewport/dynamic_split_screen/split_screen.gdshader"
+ },
+ {
+  "id": "rejected/demos/xr/openxr_character_centric_movement/objects/black_out.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "xr/openxr_character_centric_movement/objects/black_out.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "changedFrom": "demos/xr/openxr_character_centric_movement/objects/black_out.gdshader",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/demos/xr/openxr_character_centric_movement/objects/black_out.gdshader"
+ },
+ {
+  "id": "rejected/demos/xr/openxr_composition_layers/cursor.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "xr/openxr_composition_layers/cursor.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "changedFrom": "demos/xr/openxr_composition_layers/cursor.gdshader",
+  "change": "drops the last semicolon",
+  "file": "rejected/demos/xr/openxr_composition_layers/cursor.gdshader"
+ },
+ {
+  "id": "rejected/demos/xr/openxr_composition_layers/pointer.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "xr/openxr_composition_layers/pointer.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "changedFrom": "demos/xr/openxr_composition_layers/pointer.gdshader",
+  "change": "misspells the first vector type",
+  "file": "rejected/demos/xr/openxr_composition_layers/pointer.gdshader"
+ },
+ {
+  "id": "rejected/demos/xr/openxr_passthrough/holepunch.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "xr/openxr_passthrough/holepunch.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "changedFrom": "demos/xr/openxr_passthrough/holepunch.gdshader",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/demos/xr/openxr_passthrough/holepunch.gdshader"
+ },
+ {
+  "id": "rejected/demos/xr/openxr_spectator_view/shaders/color.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "xr/openxr_spectator_view/shaders/color.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "changedFrom": "demos/xr/openxr_spectator_view/shaders/color.gdshader",
+  "change": "drops the last semicolon",
+  "file": "rejected/demos/xr/openxr_spectator_view/shaders/color.gdshader"
+ },
+ {
+  "id": "rejected/demos/xr/openxr_spectator_view/shaders/color_unshaded.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "xr/openxr_spectator_view/shaders/color_unshaded.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "changedFrom": "demos/xr/openxr_spectator_view/shaders/color_unshaded.gdshader",
+  "change": "misspells the first vector type",
+  "file": "rejected/demos/xr/openxr_spectator_view/shaders/color_unshaded.gdshader"
+ },
+ {
+  "id": "rejected/demos/xr/openxr_spectator_view/shaders/eye_output.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "xr/openxr_spectator_view/shaders/eye_output.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "changedFrom": "demos/xr/openxr_spectator_view/shaders/eye_output.gdshader",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/demos/xr/openxr_spectator_view/shaders/eye_output.gdshader"
+ },
+ {
+  "id": "rejected/demos/xr/openxr_spectator_view/shaders/textured.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "xr/openxr_spectator_view/shaders/textured.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "changedFrom": "demos/xr/openxr_spectator_view/shaders/textured.gdshader",
+  "change": "drops the last semicolon",
+  "file": "rejected/demos/xr/openxr_spectator_view/shaders/textured.gdshader"
+ },
+ {
+  "id": "rejected/demos/xr/openxr_spectator_view/shaders/textured_unshaded.gdshader",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "xr/openxr_spectator_view/shaders/textured_unshaded.gdshader"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "changedFrom": "demos/xr/openxr_spectator_view/shaders/textured_unshaded.gdshader",
+  "change": "misspells the first vector type",
+  "file": "rejected/demos/xr/openxr_spectator_view/shaders/textured_unshaded.gdshader"
+ },
+ {
+  "id": "rejected/demos/2d/platformer/level/props/wind_sway.tres#0",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "2d/platformer/level/props/wind_sway.tres"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "canvas_item",
+  "changedFrom": "demos/2d/platformer/level/props/wind_sway.tres#0",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/demos/2d/platformer/level/props/wind_sway-0.gdshader"
+ },
+ {
+  "id": "rejected/demos/3d/antialiasing/anti_aliasing.tscn#0",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "3d/antialiasing/anti_aliasing.tscn"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "changedFrom": "demos/3d/antialiasing/anti_aliasing.tscn#0",
+  "change": "drops the last semicolon",
+  "file": "rejected/demos/3d/antialiasing/anti_aliasing-0.gdshader"
+ },
+ {
+  "id": "rejected/demos/3d/antialiasing/anti_aliasing.tscn#1",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "3d/antialiasing/anti_aliasing.tscn"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "changedFrom": "demos/3d/antialiasing/anti_aliasing.tscn#1",
+  "change": "misspells the first vector type",
+  "file": "rejected/demos/3d/antialiasing/anti_aliasing-1.gdshader"
+ },
+ {
+  "id": "rejected/demos/3d/volumetric_fog/volumetric_fog.tscn#0",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "3d/volumetric_fog/volumetric_fog.tscn"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "fog",
+  "changedFrom": "demos/3d/volumetric_fog/volumetric_fog.tscn#0",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/demos/3d/volumetric_fog/volumetric_fog-0.gdshader"
+ },
+ {
+  "id": "rejected/demos/xr/openxr_hand_tracking_demo/shaders/highlight_shader.tres#0",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-demo-projects",
+   "commit": "b761b4cd5718a7118f2c95eb55f181d0a5f004f1",
+   "path": "xr/openxr_hand_tracking_demo/shaders/highlight_shader.tres"
+  },
+  "licence": "MIT, godotengine/godot-demo-projects LICENSE.md",
+  "shaderType": "spatial",
+  "changedFrom": "demos/xr/openxr_hand_tracking_demo/shaders/highlight_shader.tres#0",
+  "change": "drops the last semicolon",
+  "file": "rejected/demos/xr/openxr_hand_tracking_demo/shaders/highlight_shader-0.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/advanced_postprocessing.rst#0",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/advanced_postprocessing.rst",
+   "block": 0
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "changedFrom": "docs/tutorials/shaders/advanced_postprocessing.rst#0",
+  "change": "misspells the first vector type",
+  "file": "rejected/docs/tutorials/shaders/advanced_postprocessing-0.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/advanced_postprocessing.rst#7",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/advanced_postprocessing.rst",
+   "block": 7
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "changedFrom": "docs/tutorials/shaders/advanced_postprocessing.rst#7",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/docs/tutorials/shaders/advanced_postprocessing-7.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/custom_postprocessing.rst#0",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/custom_postprocessing.rst",
+   "block": 0
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "canvas_item",
+  "changedFrom": "docs/tutorials/shaders/custom_postprocessing.rst#0",
+  "change": "drops the last semicolon",
+  "file": "rejected/docs/tutorials/shaders/custom_postprocessing-0.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/custom_postprocessing.rst#1",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/custom_postprocessing.rst",
+   "block": 1
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "canvas_item",
+  "changedFrom": "docs/tutorials/shaders/custom_postprocessing.rst#1",
+  "change": "misspells the first vector type",
+  "file": "rejected/docs/tutorials/shaders/custom_postprocessing-1.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/custom_postprocessing.rst#2",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/custom_postprocessing.rst",
+   "block": 2
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "canvas_item",
+  "changedFrom": "docs/tutorials/shaders/custom_postprocessing.rst#2",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/docs/tutorials/shaders/custom_postprocessing-2.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/introduction_to_shaders.rst#0",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/introduction_to_shaders.rst",
+   "block": 0
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "canvas_item",
+  "changedFrom": "docs/tutorials/shaders/introduction_to_shaders.rst#0",
+  "change": "drops the last semicolon",
+  "file": "rejected/docs/tutorials/shaders/introduction_to_shaders-0.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/introduction_to_shaders.rst#1",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/introduction_to_shaders.rst",
+   "block": 1
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "changedFrom": "docs/tutorials/shaders/introduction_to_shaders.rst#1",
+  "change": "drops the last semicolon",
+  "file": "rejected/docs/tutorials/shaders/introduction_to_shaders-1.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/introduction_to_shaders.rst#2",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/introduction_to_shaders.rst",
+   "block": 2
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "changedFrom": "docs/tutorials/shaders/introduction_to_shaders.rst#2",
+  "change": "drops the last semicolon",
+  "file": "rejected/docs/tutorials/shaders/introduction_to_shaders-2.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/making_trees.rst#0",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/making_trees.rst",
+   "block": 0
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "changedFrom": "docs/tutorials/shaders/making_trees.rst#0",
+  "change": "drops the last semicolon",
+  "file": "rejected/docs/tutorials/shaders/making_trees-0.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/screen-reading_shaders.rst#0",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/screen-reading_shaders.rst",
+   "block": 0
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "canvas_item",
+  "changedFrom": "docs/tutorials/shaders/screen-reading_shaders.rst#0",
+  "change": "drops the last semicolon",
+  "file": "rejected/docs/tutorials/shaders/screen-reading_shaders-0.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/screen-reading_shaders.rst#1",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/screen-reading_shaders.rst",
+   "block": 1
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "canvas_item",
+  "changedFrom": "docs/tutorials/shaders/screen-reading_shaders.rst#1",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/docs/tutorials/shaders/screen-reading_shaders-1.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/shader_reference/canvas_item_shader.rst#0",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/canvas_item_shader.rst",
+   "block": 0
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "canvas_item",
+  "changedFrom": "docs/tutorials/shaders/shader_reference/canvas_item_shader.rst#0",
+  "change": "drops the last semicolon",
+  "file": "rejected/docs/tutorials/shaders/shader_reference/canvas_item_shader-0.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#1",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shader_preprocessor.rst",
+   "block": 1
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "changedFrom": "docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#1",
+  "change": "misspells the first vector type",
+  "file": "rejected/docs/tutorials/shaders/shader_reference/shader_preprocessor-1.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#13",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shader_preprocessor.rst",
+   "block": 13
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "changedFrom": "docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#13",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/docs/tutorials/shaders/shader_reference/shader_preprocessor-13.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#18",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shader_preprocessor.rst",
+   "block": 18
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "changedFrom": "docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#18",
+  "change": "drops the last semicolon",
+  "file": "rejected/docs/tutorials/shaders/shader_reference/shader_preprocessor-18.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#14",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shading_language.rst",
+   "block": 14
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "changedFrom": "docs/tutorials/shaders/shader_reference/shading_language.rst#14",
+  "change": "misspells the first vector type",
+  "file": "rejected/docs/tutorials/shaders/shader_reference/shading_language-14.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#18",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shading_language.rst",
+   "block": 18
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "changedFrom": "docs/tutorials/shaders/shader_reference/shading_language.rst#18",
+  "change": "drops the last semicolon",
+  "file": "rejected/docs/tutorials/shaders/shader_reference/shading_language-18.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#24",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shading_language.rst",
+   "block": 24
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "changedFrom": "docs/tutorials/shaders/shader_reference/shading_language.rst#24",
+  "change": "drops the last semicolon",
+  "file": "rejected/docs/tutorials/shaders/shader_reference/shading_language-24.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#25",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shading_language.rst",
+   "block": 25
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "canvas_item",
+  "changedFrom": "docs/tutorials/shaders/shader_reference/shading_language.rst#25",
+  "change": "misspells the first vector type",
+  "file": "rejected/docs/tutorials/shaders/shader_reference/shading_language-25.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#32",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shading_language.rst",
+   "block": 32
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "changedFrom": "docs/tutorials/shaders/shader_reference/shading_language.rst#32",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/docs/tutorials/shaders/shader_reference/shading_language-32.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#33",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shading_language.rst",
+   "block": 33
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "changedFrom": "docs/tutorials/shaders/shader_reference/shading_language.rst#33",
+  "change": "drops the last semicolon",
+  "file": "rejected/docs/tutorials/shaders/shader_reference/shading_language-33.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#34",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shading_language.rst",
+   "block": 34
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "changedFrom": "docs/tutorials/shaders/shader_reference/shading_language.rst#34",
+  "change": "drops the last semicolon",
+  "file": "rejected/docs/tutorials/shaders/shader_reference/shading_language-34.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#35",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shading_language.rst",
+   "block": 35
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "changedFrom": "docs/tutorials/shaders/shader_reference/shading_language.rst#35",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/docs/tutorials/shaders/shader_reference/shading_language-35.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#36",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shading_language.rst",
+   "block": 36
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "changedFrom": "docs/tutorials/shaders/shader_reference/shading_language.rst#36",
+  "change": "drops the last semicolon",
+  "file": "rejected/docs/tutorials/shaders/shader_reference/shading_language-36.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#37",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shading_language.rst",
+   "block": 37
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "changedFrom": "docs/tutorials/shaders/shader_reference/shading_language.rst#37",
+  "change": "drops the last semicolon",
+  "file": "rejected/docs/tutorials/shaders/shader_reference/shading_language-37.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#38",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shading_language.rst",
+   "block": 38
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "changedFrom": "docs/tutorials/shaders/shader_reference/shading_language.rst#38",
+  "change": "drops the last semicolon",
+  "file": "rejected/docs/tutorials/shaders/shader_reference/shading_language-38.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#39",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shading_language.rst",
+   "block": 39
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "changedFrom": "docs/tutorials/shaders/shader_reference/shading_language.rst#39",
+  "change": "drops the last semicolon",
+  "file": "rejected/docs/tutorials/shaders/shader_reference/shading_language-39.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#43",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shading_language.rst",
+   "block": 43
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "canvas_item",
+  "changedFrom": "docs/tutorials/shaders/shader_reference/shading_language.rst#43",
+  "change": "drops the last semicolon",
+  "file": "rejected/docs/tutorials/shaders/shader_reference/shading_language-43.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#44",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/shading_language.rst",
+   "block": 44
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "changedFrom": "docs/tutorials/shaders/shader_reference/shading_language.rst#44",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/docs/tutorials/shaders/shader_reference/shading_language-44.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/shader_reference/sky_shader.rst#0",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/sky_shader.rst",
+   "block": 0
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "sky",
+  "changedFrom": "docs/tutorials/shaders/shader_reference/sky_shader.rst#0",
+  "change": "drops the last semicolon",
+  "file": "rejected/docs/tutorials/shaders/shader_reference/sky_shader-0.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/shader_reference/sky_shader.rst#1",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/sky_shader.rst",
+   "block": 1
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "sky",
+  "changedFrom": "docs/tutorials/shaders/shader_reference/sky_shader.rst#1",
+  "change": "misspells the first vector type",
+  "file": "rejected/docs/tutorials/shaders/shader_reference/sky_shader-1.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/shader_reference/sky_shader.rst#2",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/sky_shader.rst",
+   "block": 2
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "sky",
+  "changedFrom": "docs/tutorials/shaders/shader_reference/sky_shader.rst#2",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/docs/tutorials/shaders/shader_reference/sky_shader-2.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/shader_reference/spatial_shader.rst#0",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shader_reference/spatial_shader.rst",
+   "block": 0
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "changedFrom": "docs/tutorials/shaders/shader_reference/spatial_shader.rst#0",
+  "change": "drops the last semicolon",
+  "file": "rejected/docs/tutorials/shaders/shader_reference/spatial_shader-0.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/shaders_style_guide.rst#0",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/shaders_style_guide.rst",
+   "block": 0
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "canvas_item",
+  "changedFrom": "docs/tutorials/shaders/shaders_style_guide.rst#0",
+  "change": "misspells the first vector type",
+  "file": "rejected/docs/tutorials/shaders/shaders_style_guide-0.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/using_viewport_as_texture.rst#0",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/using_viewport_as_texture.rst",
+   "block": 0
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "canvas_item",
+  "changedFrom": "docs/tutorials/shaders/using_viewport_as_texture.rst#0",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/docs/tutorials/shaders/using_viewport_as_texture-0.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/your_first_shader/your_first_2d_shader.rst#0",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/your_first_shader/your_first_2d_shader.rst",
+   "block": 0
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "canvas_item",
+  "changedFrom": "docs/tutorials/shaders/your_first_shader/your_first_2d_shader.rst#0",
+  "change": "drops the last semicolon",
+  "file": "rejected/docs/tutorials/shaders/your_first_shader/your_first_2d_shader-0.gdshader"
+ },
+ {
+  "id": "rejected/docs/tutorials/shaders/your_first_shader/your_first_3d_shader.rst#10",
+  "source": {
+   "repository": "https://github.com/godotengine/godot-docs",
+   "commit": "c5b3485cb4b6e14ae3d8a45271bcddac7caad66a",
+   "path": "tutorials/shaders/your_first_shader/your_first_3d_shader.rst",
+   "block": 10
+  },
+  "licence": "CC BY 3.0, godotengine/godot-docs LICENSE.txt",
+  "shaderType": "spatial",
+  "changedFrom": "docs/tutorials/shaders/your_first_shader/your_first_3d_shader.rst#10",
+  "change": "drops the last semicolon",
+  "file": "rejected/docs/tutorials/shaders/your_first_shader/your_first_3d_shader-10.gdshader"
+ },
+ {
+  "id": "rejected/scenes/fixtures/fog-volume-spatial.gdshader",
+  "source": {
+   "path": "fog-volume-spatial.gdshader"
+  },
+  "licence": "MIT, this repository",
+  "shaderType": "spatial",
+  "changedFrom": "scenes/fixtures/fog-volume-spatial.gdshader",
+  "change": "calls a function the shader does not define",
+  "file": "rejected/scenes/fixtures/fog-volume-spatial.gdshader"
+ },
+ {
+  "id": "rejected/scenes/fixtures/sky-shader-stub.gdshader",
+  "source": {
+   "path": "sky-shader-stub.gdshader"
+  },
+  "licence": "MIT, this repository",
+  "shaderType": "sky",
+  "changedFrom": "scenes/fixtures/sky-shader-stub.gdshader",
+  "change": "drops the last semicolon",
+  "file": "rejected/scenes/fixtures/sky-shader-stub.gdshader"
+ }
+]

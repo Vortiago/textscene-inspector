@@ -13,13 +13,7 @@ export const FRAMEBUFFER_HEIGHT_UNIFORM = 'godotFramebufferHeight';
 
 const installedHeight = installedUniformValue(FRAMEBUFFER_HEIGHT_UNIFORM);
 
-/**
- * One shared value. `UniformsUtils.cloneUniforms` keeps a typed array by reference
- * (three r187 `UniformsUtils.js:43-64`), so every material's clone reads this buffer. Written only by
- * `writeFramebufferHeight`, which the renderer's shadow pass calls before each render's draw
- * (`../shadowPass.ts`). After a dev server reloads this module, it is the
- * buffer the earlier evaluation installed, which every compiled program reads.
- */
+/** One buffer every material's clone shares (three r187 `UniformsUtils.js:43-64`), kept across a reload. */
 const framebufferHeight = installedHeight instanceof Float32Array ? installedHeight : new Float32Array(1);
 
 /** Written only by `writeFramebufferHeight`, which reads it at once. */

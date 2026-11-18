@@ -18,22 +18,68 @@ const repoRoot = resolve(packageDir, '../..');
 const bundleKey = 'dist/index.js';
 
 /** What a three.js app needs from the shader module. Core's internals stay out. */
-const PUBLIC_VALUE_EXPORTS = ['installNodesHandler'];
-const PUBLIC_TYPE_EXPORTS = ['NodeOutput'];
+const PUBLIC_VALUE_EXPORTS = [
+  'DEFAULT_TIME_ROLLOVER_SECONDS',
+  'GODOT_VERSION',
+  'PlaybackShaderTime',
+  'SCENE_BINDINGS',
+  'SKY_BINDINGS',
+  'ShaderClock',
+  'ShadingLanguageError',
+  'SkyResolutionPasses',
+  'TranslatorFault',
+  'glVaryingSlots',
+  'installGodotShading',
+  'textToVariant',
+  'transpileShadingLanguage',
+  'transpileSky',
+  'transpileSpatial',
+  'withGodotAttributes',
+  'writeSkyBindings',
+  'writeSpatialBindings',
+];
+const PUBLIC_TYPE_EXPORTS = [
+  'GodotShading',
+  'GodotShadingOptions',
+  'NodeOutput',
+  'Playback',
+  'RendererShaderOptions',
+  'RenderingMethod',
+  'ShaderInclude',
+  'ShaderOptions',
+  'ShaderSource',
+  'SkyDraw',
+  'SkyFog',
+  'SkyLight',
+  'SkyOptions',
+  'SkyScene',
+  'SpatialOptions',
+  'SpatialScene',
+  'TranspiledFunction',
+  'TranspiledShader',
+  'TranspiledSky',
+  'TranspiledSpatial',
+  'TranspiledUniform',
+  'TranspileOptions',
+  'UniformHint',
+  'UniformNode',
+  'UniformScope',
+  'Variant',
+];
 
 /** The entry's value names, and the handler it gives a renderer with no GL context. */
 const CONSUMER_SCRIPT = `
 import * as entry from '@textscene/three-godot-shaders';
 let handler = null;
-entry.installNodesHandler({ setNodesHandler: (given) => { handler = given; } });
+entry.installGodotShading({ setNodesHandler: (given) => { handler = given; }, debug: {} });
 console.log(JSON.stringify({ exports: Object.keys(entry).sort(), handler: handler?.constructor.name }));
 `;
 
 const CONSUMER_TYPES = `
 import type { WebGLRenderer } from 'three';
-import { installNodesHandler, type NodeOutput } from '@textscene/three-godot-shaders';
-export function install(renderer: WebGLRenderer, output: NodeOutput): void {
-  installNodesHandler(renderer, output);
+import { installGodotShading, type GodotShading, type NodeOutput } from '@textscene/three-godot-shaders';
+export function install(renderer: WebGLRenderer, output: NodeOutput): GodotShading {
+  return installGodotShading(renderer, { output, renderingMethod: 'gl_compatibility' });
 }
 `;
 

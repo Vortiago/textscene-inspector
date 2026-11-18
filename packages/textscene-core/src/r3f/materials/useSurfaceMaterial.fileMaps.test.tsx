@@ -25,7 +25,7 @@ const SOURCE = inlineMaterial(
 
 function renderMaterial() {
   const fake = createFakeResourceLoader();
-  const hook = renderHook(() => useSurfaceMaterial(SOURCE), {
+  const hook = renderHook(() => useSurfaceMaterial(SOURCE, 'glTF surface'), {
     wrapper: ({ children }: { children: ReactNode }) => (
       <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>
     ),

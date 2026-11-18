@@ -362,10 +362,21 @@ export default [
       '**/scripts/**/*.js',
       '**/scripts/**/*.mjs',
       'githooks/*.mjs',
+      'apps/textscene-three-godot-shaders/tests/**/*.mjs',
     ],
     languageOptions: {
       globals: {
         ...globals.node,
+      },
+    },
+  },
+
+  // The shader package's test pages run in the browser, beside three.js alone.
+  {
+    files: ['apps/textscene-three-godot-shaders/tests/**/page/*.js'],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
       },
     },
   },
