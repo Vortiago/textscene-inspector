@@ -59,6 +59,8 @@ export const KEPT_TEST_ONLY_EXPORTS = [
   'shaders/material/baseMaterialShader.ts#shaderTextOf',
   'shaders/material/materialParameters.ts#materialParameters',
   'shaders/material/stencilEffect.ts#stencilPassOf',
+  // The prepass tests read a surface's depth draw without a WebGL context to draw it with.
+  'shaders/pipeline/depthPrepass.ts#prepassDrawOf',
   // The template check prints each parsed template stage back to text, which no draw needs.
   'shaders/template/printTemplate.ts#printTemplateStage',
 ];
