@@ -772,7 +772,7 @@ const SPATIAL_CHAPTER = {
     {
       heading: 'Blend modes',
       rows: (row) => /^spatial render_mode blend_/.test(row.id),
-      what: "`blend_mix`, the default, draws in the opaque pass with no blend, unless the shader names `ALPHA`. `blend_add`, `blend_sub`, `blend_mul` and `blend_premul_alpha` draw in the alpha pass and blend with Godot's factors for the mode (`material_storage.cpp:651-716`), the colour and the alpha each with its own.",
+      what: "`blend_mix`, the default, draws in the opaque pass with no blend. It draws in the alpha pass when the shader names `ALPHA` with no alpha cut, or with a cut and `ALPHA_ANTIALIASING_EDGE` or `ALPHA_TEXTURE_COORDINATE`. It also does when the shader reads a screen, depth or normal roughness texture, or has `depth_draw_never`, `depth_test_disabled` or `depth_test_inverted` (`scene_shader_forward_clustered.h:279-287`). `blend_add`, `blend_sub`, `blend_mul` and `blend_premul_alpha` draw in the alpha pass and blend with Godot's factors for the mode (`material_storage.cpp:651-716`), the colour and the alpha each with its own.",
       tsl: "the material's `blending` and its blend factors, and `transparent`",
     },
     {

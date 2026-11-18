@@ -6,7 +6,7 @@ import { alphaToCoverageBlendState, godotBlendState } from '../pipeline/blendSta
 import { CullMode } from '../../godot/rendering/materials/cullMode.js';
 import { DepthDrawMode } from '../../godot/rendering/materials/depthDrawMode.js';
 import { parsedShader } from '../language/parseShader.js';
-import { spatialPipeline } from './spatialPipeline.js';
+import { drawsAlphaToCoverage, spatialPipeline } from './spatialPipeline.js';
 import { transpileSpatial } from './transpileSpatial.js';
 
 /** The material of an unshaded shader with `modes` after `unshaded`. */
@@ -161,6 +161,17 @@ describe('spatialPipeline', () => {
       usesAlphaAntialiasing: false,
       readsScreen: false,
     });
+  });
+
+  it('draws alpha to coverage in the alpha pass only', () => {
+    const pipelineWith = (fragment: string, modes: string) =>
+      spatialPipeline(
+        parsedShader(`shader_type spatial;\nrender_mode ${modes};\nvoid fragment() {\n\t${fragment}\n}\n`)
+          .tree
+      );
+    expect(drawsAlphaToCoverage(pipelineWith('ALPHA = 0.5;', 'alpha_to_coverage'))).toBe(true);
+    expect(drawsAlphaToCoverage(pipelineWith('ALBEDO = vec3(1.0);', 'alpha_to_coverage'))).toBe(false);
+    expect(drawsAlphaToCoverage(pipelineWith('ALPHA = 0.5;', 'blend_add'))).toBe(false);
   });
 
   it.each([

@@ -103,7 +103,7 @@ function usesAlphaPass(pipeline: SpatialPipeline): boolean {
   }).alphaPass;
 }
 
-/** Godot turns alpha to coverage on in the transparent colour pass only (`:431-437`). */
+/** The transparent colour pass alone turns alpha to coverage on (`scene_shader_forward_clustered.cpp:431-437`). */
 export const drawsAlphaToCoverage = (
   pipeline: SpatialPipeline
 ): pipeline is SpatialPipeline & { readonly alphaAntialiasing: AlphaToCoverageMode } =>
@@ -114,7 +114,7 @@ export function applySpatialPipeline(material: THREE.Material, pipeline: Spatial
   const isAlphaPass = usesAlphaPass(pipeline);
   Object.assign(material, isAlphaPass ? alphaPassBlendState(pipeline) : { blending: THREE.NoBlending });
   material.transparent = isAlphaPass;
-  material.alphaToCoverage = isAlphaPass && turnsOnAlphaToCoverage(pipeline.alphaAntialiasing);
+  material.alphaToCoverage = drawsAlphaToCoverage(pipeline);
   material.depthTest = pipeline.depthTest !== 'disabled';
   // `scene_shader_forward_clustered.cpp:355-358`, turned round for GL's depth, which is not reversed.
   material.depthFunc = pipeline.depthTest === 'inverted' ? THREE.GreaterDepth : THREE.LessEqualDepth;

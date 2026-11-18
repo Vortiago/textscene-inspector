@@ -13,7 +13,7 @@ import {
   type AlphaAntialiasingCut,
 } from '../../godot/rendering/materials/alphaAntialiasing';
 import { alphaToCoverageBlendState, type MaterialBlendState } from '../../shaders/pipeline/blendState';
-import { coversOneSample } from '../../shaders/pipeline/singleSampleCoverage';
+import { coversOneSample } from '../../shaders/pipeline/oneSampleTarget';
 import { ALPHA_HASH_CHUNK, ALPHA_TEST_CHUNK } from './surfaceAlphaPatch';
 import { perObject } from '../../utils/perObject';
 
