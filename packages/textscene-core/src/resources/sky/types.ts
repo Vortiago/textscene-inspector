@@ -1,4 +1,4 @@
-import type { ScopedReference } from '../reading';
+import type { ShaderText } from '../materials/shadermaterial/types';
 import type { SkyUsage } from '../../shaders/sky/skyUsage';
 import type { REAL_TIME_RADIANCE_SIZE } from '../../godot/rendering/environment/skyReflection';
 import type { SkyProcessMode } from '../../godot/rendering/environment/skyRadianceUpdate';
@@ -47,20 +47,10 @@ export interface PhysicalSkyProperties {
   use_debanding: boolean;
 }
 
-/** A ShaderMaterial whose shader is `shader_type sky`: its text and its `shader_parameter/*` values. */
-export interface ShaderSkyText {
+/** A ShaderMaterial whose shader is `shader_type sky`. */
+export interface ShaderSkyText extends ShaderText {
   kind: 'shader';
-  code: string;
-  /** The shader's address, which a fault names: a path, `path::id`, or the scene's own reference. */
-  file: string;
-  /** Each `shader_parameter/<name>` the file writes as a Variant, by name, in the file's text. */
-  parameters: Readonly<Record<string, string>>;
-  /** Each `shader_parameter/<name>` the file writes as a resource or as an array of them, by name. */
-  textures: Readonly<Record<string, ShaderTextureReference>>;
 }
-
-/** A sampler's resource, or a sampler array's with null for an empty element. */
-export type ShaderTextureReference = ScopedReference | readonly (ScopedReference | null)[];
 
 /** A sky shader with what the transpiler, which the previewer loads on demand, reads of it. */
 export interface ShaderSkyProperties extends ShaderSkyText {

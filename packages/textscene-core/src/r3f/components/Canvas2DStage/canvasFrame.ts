@@ -10,6 +10,7 @@ import { copyTexels, reversedTexelRows, type TexelPlacement, type TexelTransfer 
 import { takeOutputLikeDrawingBuffer } from '../../outputTarget';
 import { beginStep, endStep } from '../../frameProfile/frameProfile';
 import { drawOffscreen } from '../../offscreen/draw';
+import { renderTargetSize } from '../../renderTargetSize';
 import type { CanvasColorSpace } from '../../canvasColorSpace';
 import { drawCanvasGroups } from '../../canvasGroup/canvasGroupPass';
 
@@ -72,7 +73,7 @@ class CanvasFrame extends THREE.WebGLRenderTarget {
     transfer: TexelTransfer = 'none'
   ): void {
     const previous = gl.getRenderTarget();
-    this.sizeLike(gl, previous);
+    this.sizeLikeOutput(gl);
     try {
       gl.setRenderTarget(this);
       if (!gl.autoClear) gl.clear(true, true, true);
@@ -108,7 +109,7 @@ class CanvasFrame extends THREE.WebGLRenderTarget {
     transfer: TexelTransfer
   ): void {
     const target = gl.getRenderTarget();
-    this.sizeLike(gl, target);
+    this.sizeLikeOutput(gl);
     if (target) drawOffscreen(gl, () => copyTexels(gl, target.texture, this, this.rowsReversed()));
     const clearsColor = gl.autoClearColor;
     gl.autoClearColor = false;
@@ -120,9 +121,8 @@ class CanvasFrame extends THREE.WebGLRenderTarget {
   }
 
   /** The copy neither scales nor filters, so the frame is as large as the output it copies to. */
-  private sizeLike(gl: THREE.WebGLRenderer, output: THREE.WebGLRenderTarget | null): void {
-    if (output) this.outputSize.set(output.width, output.height);
-    else gl.getDrawingBufferSize(this.outputSize);
+  private sizeLikeOutput(gl: THREE.WebGLRenderer): void {
+    renderTargetSize(gl, this.outputSize);
     if (this.width !== this.outputSize.x || this.height !== this.outputSize.y) {
       this.setSize(this.outputSize.x, this.outputSize.y);
     }

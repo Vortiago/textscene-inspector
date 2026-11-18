@@ -5,14 +5,16 @@
  * for any surface count.
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useThree } from '@react-three/fiber';
 import { MISSING_TEXTURE_MATERIAL } from '../../resources/materials/standardmaterial3d/materialBag';
 import { drawnBag, materialBagElement, StandardMaterialSlot } from './StandardMaterialSlot';
 import { pointDrawOf, type ListedSurface } from './godotPoint';
 import { particleDrawOf, type ParticleProgram } from './godotParticles';
 import type { ScopedReference } from '../../resources/reading';
-import { useSurfaceMaterial } from './useSurfaceMaterial';
+import { useShadedSurfaceMaterial } from './useSurfaceMaterial';
+import { SpatialShaderSlot } from '../spatialShader/SpatialShaderSlot';
+import { warnUndrawnShader, type UndrawnShaderSurface } from './useMaterial';
 
 interface SurfaceMaterialSlotProps {
   /** The material this surface renders with; undefined = the renderer's default. */
@@ -26,17 +28,22 @@ interface SurfaceMaterialSlotProps {
   listed?: ListedSurface;
   /** The surface draws a particle emitter's instances: the patch that colours them and cuts the flipbook frame. */
   particles?: ParticleProgram;
+  /** The draw the surface is: `mesh`, which a spatial shader draws on, or the draw it falls back on. */
+  drawnOn: ShaderSurface;
 }
 
-/**
- * One surface's material slot, textures and all, whichever file the material came from.
- * A surface with no usable material draws Godot's default one, which
- * `useSurfaceMaterial` derives from null scalars (ADR-0041). A surface whose texture
- * never draws, a file that cannot load or a ViewportTexture in a pass cycle, draws the
- * magenta placeholder.
- */
-export function SurfaceMaterialSlot({ source, attach, listed, particles }: SurfaceMaterialSlotProps) {
-  const { scalars, bags } = useSurfaceMaterial(source);
+/** What draws a surface, as a spatial shader's fallback warning names it. */
+export type ShaderSurface = 'mesh' | UndrawnShaderSurface;
+
+/** Godot's default surface for no usable material (ADR-0041), magenta for a texture that never draws. */
+export function SurfaceMaterialSlot({
+  source,
+  attach,
+  listed,
+  particles,
+  drawnOn,
+}: SurfaceMaterialSlotProps) {
+  const { scalars, bags, shader } = useShadedSurfaceMaterial(source);
   const pixelRatio = useThree((state) => state.viewport.dpr);
   // Primitive and placement are strings: `listed` is a new object each render.
   const primitive = listed?.primitive;
@@ -57,6 +64,27 @@ export function SurfaceMaterialSlot({ source, attach, listed, particles }: Surfa
     }),
     [pointDraw, primitive, placement, particleDraw]
   );
-  if (!bags) return materialBagElement(drawnBag(MISSING_TEXTURE_MATERIAL, draws), attach, null);
-  return <StandardMaterialSlot bags={bags} attach={attach} draws={draws} />;
+  const undrawnOn = undrawnSurfaceOf(drawnOn, primitive, particles !== undefined);
+  useEffect(() => {
+    if (shader && undrawnOn) warnUndrawnShader(shader, undrawnOn);
+  }, [shader, undrawnOn]);
+  const standard = bags ? (
+    <StandardMaterialSlot bags={bags} attach={attach} draws={draws} />
+  ) : (
+    materialBagElement(drawnBag(MISSING_TEXTURE_MATERIAL, draws), attach, null)
+  );
+  if (!shader || undrawnOn) return standard;
+  return <SpatialShaderSlot shader={shader} attach={attach} fallback={standard} />;
+}
+
+/** The surface a spatial shader falls back on, or null for a mesh of triangles, which draws it. */
+function undrawnSurfaceOf(
+  drawnOn: ShaderSurface,
+  primitive: ListedSurface['primitive'] | undefined,
+  isParticles: boolean
+): UndrawnShaderSurface | null {
+  if (primitive === 'lines') return 'line mesh';
+  if (primitive === 'points') return 'point mesh';
+  if (isParticles) return 'particle draw pass';
+  return drawnOn === 'mesh' ? null : drawnOn;
 }

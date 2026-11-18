@@ -24,12 +24,14 @@ const OUT_DIR = join(import.meta.dirname, 'output');
  * So each result counts the pixels past it, which decide whether a difference is residue.
  */
 const RESIDUE_MAX_DELTA = 2;
+/** The one lit surface form beside the default that the previewer opens with `?litSurface=`. */
+const LIT_SURFACE_NODES = 'nodes';
 /** The trees the catalog lists from their own `res://` root, so a name drops the prefix. */
 const FLATTENED_ROOTS = ['fixtures', ...FLATTENED_CORPUS_ROOTS].map((root) => `${root}/`);
 
 function usage() {
   console.error(
-    'Usage: pnpm ref:diff <fixture.tscn> [more.tscn ...] [--max-mean <n>] [--frame] [--keep] [--collisions] [--mode in-game] [--set path:property=text] [--table <file.md>]\n' +
+    'Usage: pnpm ref:diff <fixture.tscn> [more.tscn ...] [--max-mean <n>] [--frame] [--keep] [--collisions] [--mode in-game] [--set path:property=text] [--lit-surface nodes] [--table <file.md>]\n' +
       '\n' +
       '  <fixture.tscn>   fixture filename as listed in apps/textscene-web/src/fixtures.ts,\n' +
       '                   or a path to a .tscn under scenes/\n' +
@@ -40,6 +42,7 @@ function usage() {
       '  --collisions     show collision shapes on both sides (Visible Collision Shapes), not in-game\n' +
       '  --mode in-game   measure the scene as the game starts it, against our In-game mode\n' +
       '  --set p:prop=v   on both sides, get_node(p).set(prop, str_to_var(v)) before the capture\n' +
+      '  --lit-surface nodes  open our side with the node lit surface (?litSurface=nodes)\n' +
       '  --table <file>   also write the results as a Markdown table, one row per scene'
   );
 }
@@ -51,6 +54,7 @@ export function parseArgs(argv) {
     frame: false,
     keep: false,
     collisions: false,
+    litSurface: null,
     mode: null,
     table: null,
     sets: [],
@@ -67,6 +71,8 @@ export function parseArgs(argv) {
       if (!args.table || args.table.startsWith('--')) {
         throw new Error(`--table needs a file path, got "${argv[i]}"`);
       }
+    } else if (arg === '--lit-surface') {
+      args.litSurface = oneOf('--lit-surface', [LIT_SURFACE_NODES], argv[++i]);
     } else if (arg === '--set') {
       args.sets.push(parseSet(argv[++i]));
     } else if (arg === '--mode') {
@@ -148,7 +154,7 @@ export function comparePngs(godotBuffer, oursBuffer) {
  */
 export async function diffOne(
   { scenePath, fixtureName, label },
-  { frame, keep, collisions = false, mode: pickedMode = null, sets = [] },
+  { frame, keep, collisions = false, mode: pickedMode = null, sets = [], litSurface = null },
   { render = renderReference, capture = captureOurs, outDir = OUT_DIR } = {}
 ) {
   const renderAs = async (renderMode) =>
@@ -179,6 +185,7 @@ export async function diffOne(
     canvas2DFrame: canvas2D ? referenceFrame : null,
     inGameFrame: pickedMode === IN_GAME_MODE ? referenceFrame : null,
     showCollisions: collisions,
+    litSurface,
     sets,
   });
   if (keep) await writeFile(join(outDir, `${label}.ours.png`), oursBuffer);

@@ -6,6 +6,7 @@ import { SkyResolutionPasses } from '../../shaders/sky/skyResolutionPasses.js';
 import { SkyBackdrop } from './skyBackground.js';
 import { writeFramebufferHeight } from '../shadowFilter/framebufferRows.js';
 import { canvasShaderTime } from '../shaderTime/canvasShaderTime.js';
+import { renderTargetSize } from '../renderTargetSize.js';
 
 /** Scratch for one conversion, overwritten by each. */
 const rotationMatrix = new THREE.Matrix4();
@@ -55,7 +56,7 @@ export class ShaderSkyBackground extends SkyBackdrop {
     });
     // Godot draws the quarter and half passes before the scene, at the size of its buffers (`sky.cpp:1427`).
     if (this.passes.isEmpty) return;
-    this.passes.draw(renderer, camera, renderSize(renderer, targetSize));
+    this.passes.draw(renderer, camera, renderTargetSize(renderer, targetSize));
     // A pass's render writes its target's height, which the lit surfaces after the sky must not read.
     writeFramebufferHeight(renderer);
   }
@@ -80,10 +81,4 @@ export class ShaderSkyBackground extends SkyBackdrop {
       density: depthShape[0]!,
     };
   }
-}
-
-/** The size of the target `renderer` draws into now. */
-function renderSize(renderer: THREE.WebGLRenderer, size: THREE.Vector2): THREE.Vector2 {
-  const target = renderer.getRenderTarget();
-  return target ? size.set(target.width, target.height) : renderer.getDrawingBufferSize(size);
 }

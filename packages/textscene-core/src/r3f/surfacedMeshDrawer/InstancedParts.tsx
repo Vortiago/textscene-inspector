@@ -106,7 +106,12 @@ function OwnInstancedDraw({
       surfaceCount={sources.length}
       settings={{ ...drawHookProps(shadow), raycast }}
     >
-      <SurfaceMaterialSlots sources={sources} {...listedSlotOf(geometry)} particles={particles} />
+      <SurfaceMaterialSlots
+        sources={sources}
+        {...listedSlotOf(geometry)}
+        particles={particles}
+        drawnOn="MultiMesh or GridMap"
+      />
     </InstancedDraw>
   );
 }
@@ -129,6 +134,7 @@ function ExtraInstancedDraw({ spec, placed }: { spec: ChainDrawSpec; placed: Par
         attach={spec.attach}
         {...listedSlotOf(placed.geometry)}
         particles={placed.particles}
+        drawnOn="next pass"
       />
     </InstancedDraw>
   );
