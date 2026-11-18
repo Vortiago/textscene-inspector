@@ -74,9 +74,9 @@ export function basisFromEulerScale(
   return basisMultiply(basisFromEuler(euler, order), basisDiagonal(sx, sy, sz));
 }
 
-/** Where a pole test of `get_euler` lands: inside the band, at +1, or at -1. */
+/** Where `get_euler`'s pole test lands: in the band, at +1 or at -1. NaN lands at +1 (`basis.cpp:472`). */
 function poleOf(value: number): 'inside' | 'plus' | 'minus' {
-  if (value >= f(1 - POLE_EPSILON)) return 'plus';
+  if (!(value < f(1 - POLE_EPSILON))) return 'plus';
   return value > -f(1 - POLE_EPSILON) ? 'inside' : 'minus';
 }
 
