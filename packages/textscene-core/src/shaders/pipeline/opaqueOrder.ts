@@ -15,7 +15,7 @@ function godotOpaqueOrder(a: RenderItem, b: RenderItem): number {
   return a.id - b.id;
 }
 
-/** Sorts by {@link godotOpaqueOrder}, over any opaque sort. Forward+ and gl_compatibility draw alike after their stencil prepass. */
+/** Replaces any opaque sort. Forward+ and gl_compatibility draw alike after their stencil prepass. */
 export function installGodotOpaqueOrder(renderer: THREE.WebGLRenderer): void {
   renderer.setOpaqueSort(godotOpaqueOrder);
 }
