@@ -68,6 +68,7 @@ export function CameraFit() {
       }
       wasSettled = isSettled;
     };
+    // The status fires between frames: a fit inside one moves the camera between its passes.
     const unsubscribe = status?.subscribe(fitOnSettle);
 
     return () => {

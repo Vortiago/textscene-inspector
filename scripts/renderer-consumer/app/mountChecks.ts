@@ -1,5 +1,6 @@
 import { mountScene, openScene, type ResourceProvider } from '@textscene/renderer';
 import { base64Of, capturePng, elementOf, NO_FILES } from './capture';
+import { unitCubeGlb } from './unitCubeGlb';
 
 /** A Camera3D, one light, one mesh and a Control over the world, in a window of the default size. */
 const CONSUMER_SCENE = `[gd_scene format=3]
@@ -67,6 +68,45 @@ window/stretch/mode="canvas_items"
 viewport/transparent_background=true
 `;
 
+/** A root that instances a `.glb` cube, so the 3D view settles only once that file arrives. */
+const INSTANCING_SCENE = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://cube.glb" id="1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Cube" parent="." instance=ExtResource("1")]
+`;
+
+/** Past the 3D view's last open-time timer, as a slow host's file arrives. */
+const LATE_FILE_DELAY_MS = 1500;
+/** Long enough for any fit or draw that follows the settle. */
+const LATER_CAPTURE_DELAY_MS = 1000;
+
+function lateFileProvider(): ResourceProvider {
+  return {
+    loadResource: (path) =>
+      new Promise((loaded) =>
+        setTimeout(() => loaded(path === 'res://cube.glb' ? unitCubeGlb() : null), LATE_FILE_DELAY_MS)
+      ),
+  };
+}
+
+/** A 3D capture taken as `settled` resolves, and one taken later, of a scene whose file arrives late. */
+async function settledPictureChecks() {
+  const scene = openScene({ source: INSTANCING_SCENE, provider: lateFileProvider() });
+  const view = mountScene(elementOf(320, 240), scene, { mode: '3D' });
+  try {
+    await view.settled;
+    const atSettledPng = await base64Of(await view.captureImage());
+    await new Promise((later) => setTimeout(later, LATER_CAPTURE_DELAY_MS));
+    const laterPng = await base64Of(await view.captureImage());
+    return { atSettledPng, laterPng };
+  } finally {
+    view.dispose();
+  }
+}
+
 export function projectOf(project: string): ResourceProvider {
   return { loadResource: async (path) => (path === 'res://project.godot' ? project : null) };
 }
@@ -79,6 +119,8 @@ export interface MountCheckResults {
   noProjectSize: { width: number; height: number };
   editorSettledValue: unknown;
   editorCaptureSize: { width: number; height: number };
+  atSettledPng: string;
+  laterPng: string;
   canvasesAfterDispose: number;
   isContextLostAfterDispose: boolean;
   transparentPng: string;
@@ -131,6 +173,7 @@ export async function runMountChecks(): Promise<MountCheckResults> {
   const editorCaptureSize = await sizeOf(await editor.captureImage());
   editor.dispose();
 
+  const settledPicture = await settledPictureChecks();
   const disposed = await disposeChecks(consumer);
 
   const transparent = openScene({ source: TRANSPARENT_SCENE, provider: projectOf(TRANSPARENT_PROJECT) });
@@ -144,6 +187,7 @@ export async function runMountChecks(): Promise<MountCheckResults> {
     noProjectSize,
     editorSettledValue,
     editorCaptureSize,
+    ...settledPicture,
     ...disposed,
     transparentPng,
   };
