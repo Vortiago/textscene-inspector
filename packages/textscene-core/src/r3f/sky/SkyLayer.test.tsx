@@ -736,10 +736,10 @@ describe('SkyLayer under an exposure', () => {
       for (let render = 0; render < 10; render += 1) fireSceneRender(mounted.scene, view);
       return mounted;
     }
-    /** The ambient energy a capture at the world's exposure of 1 reads. */
-    const capturedAmbient = (scene: THREE.Scene, isInterior = false) =>
+    /** The ambient energy a capture at the world's exposure of 1 reads, of a ONCE probe unless named. */
+    const capturedAmbient = (scene: THREE.Scene, { isInterior = false, updatesAlways = false } = {}) =>
       drawAtExposure(scene, 1, () => {
-        drawAsProbeCapture({ isInterior, hasShadows: true }, () =>
+        drawAsProbeCapture({ isInterior, hasShadows: true, updatesAlways }, () =>
           fireSceneRender(scene, new THREE.PerspectiveCamera())
         );
         return scene.environmentIntensity;
@@ -784,6 +784,12 @@ describe('SkyLayer under an exposure', () => {
       expect(capturedAmbient(scene)).toBeCloseTo(ENERGY * ENERGY, 10);
     });
 
+    it('bakes the sky it finds dirty in a face of an ALWAYS capture, which Godot draws as a render', async () => {
+      const { scene } = await viewedAtFour();
+
+      expect(capturedAmbient(scene, { updatesAlways: true })).toBeCloseTo(ENERGY * ENERGY, 10);
+    });
+
     it("reads the view's own bake again once the ALWAYS probe leaves", async () => {
       const { scene } = await viewedAtFour();
       viewAmbientOverRealTimeProbe(scene);
@@ -796,7 +802,7 @@ describe('SkyLayer under an exposure', () => {
     it('shows no sky to an interior capture, which draws without the environment', async () => {
       const { scene } = await viewedAtFour();
       const restore = stageCapture(scene, { cullMask: 0xfffff, interior: true }, CLEAR_COLOR);
-      capturedAmbient(scene, true);
+      capturedAmbient(scene, { isInterior: true });
       const shown = [scene.environmentIntensity, scene.background];
       restore();
 
