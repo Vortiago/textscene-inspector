@@ -15,7 +15,7 @@ import { EditorControlsBridge } from './EditorControlsBridge.js';
 import { GodotEditorControls } from './GodotEditorControls.js';
 import { WorldEnvironmentScope } from './environment/WorldEnvironmentScope.js';
 import { editorCameraPosition, editorCameraProjection } from './godotEditorCamera.js';
-import { usePreviewFrameloop } from './contexts/PreviewVisibilityContext.js';
+import { PreviewVisibilityProvider, usePreviewFrameloop } from './contexts/PreviewVisibilityContext.js';
 import { ControlRasterLayer } from '../nodes/viewport/subviewport/ControlRasterLayer.js';
 import { SceneShadowFitter } from './SceneShadowFitter.js';
 import { SceneDepthPrepass } from './depthPrepass/SceneDepthPrepass.js';
@@ -130,12 +130,16 @@ export interface TscnCanvasProps {
   scene?: Scene;
   /** `3D` by default. A change replaces the stage, so one canvas is live. */
   mode?: TscnCanvasMode;
+  /** `false` draws only the frames a load, a settle or a capture needs. Without it, the host decides. */
+  visible?: boolean;
   /** The class of the element the view fills. */
   className?: string;
 }
 
-export function TscnCanvas({ scene, mode = '3D', className }: TscnCanvasProps) {
-  const stage = stageOf(mode, className);
+export function TscnCanvas({ scene, mode = '3D', visible, className }: TscnCanvasProps) {
+  const stage = (
+    <PreviewVisibilityProvider isVisible={visible}>{stageOf(mode, className)}</PreviewVisibilityProvider>
+  );
   return scene ? <TscnSceneProvider scene={scene}>{stage}</TscnSceneProvider> : stage;
 }
 

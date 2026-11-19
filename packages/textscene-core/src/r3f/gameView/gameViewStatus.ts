@@ -32,8 +32,7 @@ export interface GameViewStatus {
   whenSettled(signal?: AbortSignal): Promise<GameViewSettled>;
   /** Rejects before the view settles, and names the pending work. */
   captureImage(): Promise<RgbaImage>;
-  /** A capture reads the full window, so the view draws its target at full size until then. */
-  holdsFullWindow(): boolean;
+  isCapturePending(): boolean;
   /** Null while another view is attached: one status serves one In-game view. */
   attach(scene: LiveScene): (() => void) | null;
   /** Keeps `frame` as the last frame: a view may fill the same record again for its next frame. */
@@ -159,7 +158,7 @@ export function createGameViewStatus(): GameViewStatus {
     subscribe: announcements.subscribe,
     whenSettled,
     captureImage,
-    holdsFullWindow: () => capture !== null,
+    isCapturePending: () => capture !== null,
     attach,
     frameDrawn,
     isCaptureDue: () => capture !== null && lastFrame?.isFullWindow === true && settled() !== null,

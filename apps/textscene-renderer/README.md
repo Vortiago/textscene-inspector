@@ -203,9 +203,9 @@ export function GameView() {
 
 ### Mount the view with no React code
 
-`mountScene(element, scene, { mode })` mounts the view in a page element, for a page with no React
-code of its own. React stays a peer dependency. `mode` is the mode of `TscnCanvas`, and here it is
-`'in-game'` by default. The page changes the scene through the same `scene`, as a React app does.
+`mountScene(element, scene, { mode, visible })` mounts the view in a page element, for a page with
+no React code of its own. React stays a peer dependency. `mode` is the mode of `TscnCanvas`, and
+here it is `'in-game'` by default. The page changes the scene through the same `scene`, as a React app does.
 
 A whole page, with a button that saves the window as a PNG file:
 
@@ -254,7 +254,7 @@ save.onclick = async () => {
 };
 ```
 
-`mountScene` returns three members:
+`mountScene` returns a `View` with four members:
 
 - `settled`: a promise of the settled value. Each read gives a new promise, which waits again
   after the scene changes. It rejects in a mode other than In-game, and once the view is disposed.
@@ -264,8 +264,32 @@ save.onclick = async () => {
   in Godot. It rejects before the view is settled, and the
   message names the pending work. It rejects in a mode other than In-game, since the 2D and 3D
   modes have no window.
+- `update(options)`: changes the mounted view. It takes the options of `mountScene` and changes
+  only the keys it gives a value. See "Change a mounted view".
 - `dispose()`: unmounts the view and loses its WebGL context, since a browser keeps few contexts
   alive. The scene stays open, so another view can mount it.
+
+### Change a mounted view
+
+`update` switches the mode, and stops or starts the frames, of a view that is mounted:
+
+```ts
+const view = mountScene(document.getElementById('game')!, scene);
+
+// The editor's 3D view of the same scene. Every write to the scene stays.
+view.update({ mode: '3D' });
+
+// A hidden panel draws no frame. A load, a settle and a capture still draw the frames they need.
+view.update({ visible: false });
+view.update({ visible: true });
+```
+
+A change of mode replaces the canvas and loses the WebGL context of the old one. A `settled`
+promise read before a switch out of In-game rejects. `update` throws once the view is disposed. A
+view that failed to mount stays failed: dispose it and mount again.
+`visible` is `true` by default. While it is `false`, the view draws only the frames a load, a settle or a capture needs: a write to a
+hidden In-game view draws until the view settles again.
+`<TscnCanvas visible={false} />` does the same in React.
 
 ### Save a PNG from headless Chromium
 
@@ -360,7 +384,8 @@ The package exports these names.
   Godot cannot read.
 - `Variant` and `SceneValue` (types): what `variant` gives, and what `get` and `set` take.
 - `TscnCanvas`: the view. Its props are `scene` (a `Scene`, optional inside
-  `<TscnSceneProvider>`), `mode` (`'in-game'`, `'3D'` or `'2D'`, default `'3D'`) and `className`.
+  `<TscnSceneProvider>`), `mode` (`'in-game'`, `'3D'` or `'2D'`, default `'3D'`), `visible` (`false`
+  stops the frames) and `className`.
 - `TscnSceneProvider`: mounts what the view reads. Give it `scene` (a `Scene`), or `source` (the
   text of a `.tscn` scene), `provider` (a `ResourceProvider`) and `rootScenePath` (the `res://` path
   the scene opens under, optional). It takes `children`. A new `provider` starts a new resource
@@ -371,8 +396,11 @@ The package exports these names.
   inside `<TscnSceneProvider>`.
 - `useGameViewSettled()`: the settled value of the In-game view below the same
   `<TscnSceneProvider>`, or `null` while it is pending. See "Know when the scene is whole".
-- `mountScene(element, scene, { mode? })`: mounts the view with no React code of the page's own,
-  and returns `settled`, `captureImage` and `dispose`. See "Mount the view with no React code".
+- `mountScene(element, scene, options?)`: mounts the view with no React code of the page's own,
+  and returns a `View`: `settled`, `captureImage`, `update` and `dispose`. See "Mount the view with
+  no React code".
+- `View` and `ViewOptions` (types): what `mountScene` returns, and the options of `mountScene` and
+  `update`: `mode` (default `'in-game'`) and `visible` (default `true`).
 
 ## Styles and workers
 

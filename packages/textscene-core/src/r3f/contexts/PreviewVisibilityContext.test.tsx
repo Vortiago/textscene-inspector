@@ -82,4 +82,32 @@ describe('usePreviewFrameloop', () => {
 
     expect(result.current).toBe('never');
   });
+
+  it('keeps the loop on while a hidden In-game view owes a capture, and stops it once it answers', async () => {
+    const status = createGameViewStatus();
+    status.attach({ revision: () => 0, subscribe: () => () => {} });
+    status.frameDrawn({
+      revision: 0,
+      isFullWindow: true,
+      work: { resources: 0, textures: 0, fonts: 0 },
+      facts: { scriptedNodeCount: 0, hasCurrentCamera: false },
+    });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <GameViewStatusProvider status={status}>
+        <PreviewVisibilityProvider isVisible={false}>{children}</PreviewVisibilityProvider>
+      </GameViewStatusProvider>
+    );
+    const { result } = renderHook(() => usePreviewFrameloop(), { wrapper });
+    expect(result.current).toBe('never');
+
+    let image!: Promise<unknown>;
+    await act(async () => {
+      image = status.captureImage();
+    });
+    expect(result.current).toBe('always');
+
+    await act(async () => status.capture(() => ({ width: 1, height: 1, data: new Uint8ClampedArray(4) })));
+    await image;
+    expect(result.current).toBe('never');
+  });
 });

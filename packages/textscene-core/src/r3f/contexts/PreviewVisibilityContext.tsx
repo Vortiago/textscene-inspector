@@ -9,6 +9,7 @@ import { textureWork } from '../../resources/textures/textureWork.js';
 import { fontWork } from '../controls/native/text/settledChannel.js';
 import { hasPendingWork, pendingSceneWork } from '../sceneWork.js';
 import { useGameViewStatus } from '../gameView/GameViewStatusContext.js';
+import type { GameViewStatus } from '../gameView/gameViewStatus.js';
 
 const NO_UNSUBSCRIBE = () => {};
 
@@ -16,7 +17,7 @@ const NO_UNSUBSCRIBE = () => {};
 const PreviewVisibilityContext = createContext(true);
 PreviewVisibilityContext.displayName = 'PreviewVisibilityContext';
 
-/** Without `isVisible`, the context keeps its default. */
+/** One provider either way, so a change to or from no value keeps the canvas below mounted. */
 export function PreviewVisibilityProvider({
   isVisible,
   children,
@@ -24,11 +25,15 @@ export function PreviewVisibilityProvider({
   isVisible?: boolean;
   children: ReactNode;
 }) {
-  if (isVisible === undefined) return children;
-  return <PreviewVisibilityContext.Provider value={isVisible}>{children}</PreviewVisibilityContext.Provider>;
+  const inherited = useContext(PreviewVisibilityContext);
+  return (
+    <PreviewVisibilityContext.Provider value={isVisible ?? inherited}>
+      {children}
+    </PreviewVisibilityContext.Provider>
+  );
 }
 
-/** A hidden preview draws while its scene loads: a texture upload and an In-game settle advance per frame. */
+/** A hidden preview draws while its scene loads or owes a capture: each advances only in a frame. */
 export function usePreviewFrameloop(): 'always' | 'never' {
   const isVisible = useContext(PreviewVisibilityContext);
   const loader = useResourceLoader();
@@ -50,7 +55,11 @@ export function usePreviewFrameloop(): 'always' | 'never' {
   );
   const isLoading = useSyncExternalStore(
     subscribe,
-    () => !isVisible && (hasPendingWork(pendingSceneWork(loader)) || gameView?.isPending() === true)
+    () => !isVisible && (hasPendingWork(pendingSceneWork(loader)) || isGameViewWaiting(gameView))
   );
   return isVisible || isLoading ? 'always' : 'never';
+}
+
+function isGameViewWaiting(gameView: GameViewStatus | null): boolean {
+  return gameView !== null && (gameView.isPending() || gameView.isCapturePending());
 }
