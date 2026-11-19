@@ -104,43 +104,50 @@ async function renderInBrowser(directory) {
   try {
     const drawn = {};
     for (const [view, { query, inkFloor }] of Object.entries(VIEWS)) {
-      const page = await browser.newPage();
-      drawn[view] = await renderView(page, `http://localhost:${port}/${query}`, inkFloor);
+      drawn[view] = await inPage(browser, (page) =>
+        renderView(page, `http://localhost:${port}/${query}`, inkFloor)
+      );
     }
-    const mounted = await runPageChecks(
-      await browser.newPage(),
-      `http://localhost:${port}/?checks=mount`,
-      'mountChecks',
-      MOUNT_CHECKS_TIMEOUT_MS
+    const mounted = await inPage(browser, (page) =>
+      runPageChecks(page, `http://localhost:${port}/?checks=mount`, 'mountChecks', MOUNT_CHECKS_TIMEOUT_MS)
     );
-    const held = await runPageChecks(
-      await browser.newPage(),
-      `http://localhost:${port}/?checks=held`,
-      'heldResourceChecks',
-      HELD_CHECKS_TIMEOUT_MS
+    const held = await inPage(browser, (page) =>
+      runPageChecks(
+        page,
+        `http://localhost:${port}/?checks=held`,
+        'heldResourceChecks',
+        HELD_CHECKS_TIMEOUT_MS
+      )
     );
-    const missing = await runPageChecks(
-      await browser.newPage(),
-      `http://localhost:${port}/?checks=missing`,
-      'missingFileChecks',
-      RENDER_TIMEOUT_MS
+    const missing = await inPage(browser, (page) =>
+      runPageChecks(page, `http://localhost:${port}/?checks=missing`, 'missingFileChecks', RENDER_TIMEOUT_MS)
     );
-    const switched = await runSwitchChecks(
-      await browser.newPage(),
-      `http://localhost:${port}/?checks=switch`
+    const switched = await inPage(browser, (page) =>
+      runSwitchChecks(page, `http://localhost:${port}/?checks=switch`)
     );
-    const cameras = await runCameraChecks(await browser.newPage(), `http://localhost:${port}/?checks=camera`);
-    const loaded = await runPageChecks(
-      await browser.newPage(),
-      `http://localhost:${port}/?checks=load`,
-      'loadChecks',
-      LOAD_CHECKS_TIMEOUT_MS
+    const cameras = await inPage(browser, (page) =>
+      runCameraChecks(page, `http://localhost:${port}/?checks=camera`)
     );
-    const picked = await runPickChecks(await browser.newPage(), `http://localhost:${port}/?checks=pick`);
+    const loaded = await inPage(browser, (page) =>
+      runPageChecks(page, `http://localhost:${port}/?checks=load`, 'loadChecks', LOAD_CHECKS_TIMEOUT_MS)
+    );
+    const picked = await inPage(browser, (page) =>
+      runPickChecks(page, `http://localhost:${port}/?checks=pick`)
+    );
     return { drawn, mounted, held, missing, loaded, switched, cameras, picked };
   } finally {
     await browser.close();
     await server.close();
+  }
+}
+
+// Closed after each check: an open page keeps drawing in software GL and slows every check after it.
+async function inPage(browser, check) {
+  const page = await browser.newPage();
+  try {
+    return await check(page);
+  } finally {
+    await page.close();
   }
 }
 
