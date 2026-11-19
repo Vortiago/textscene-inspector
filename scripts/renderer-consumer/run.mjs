@@ -218,6 +218,11 @@ try {
     .map(([mode, delta]) => `${mode} ${delta.changedPixels ?? 'size mismatch'}`)
     .join(', ');
   console.log(`[renderer-consumer] captureImage against the view, changed pixels: ${captureDeltas}`);
+  const { onCube, onNothing, hostSelected, onNothingHostOwned } = results.picked.results;
+  console.log(
+    `[renderer-consumer] outline pixels: after a click on the cube ${onCube.outline}, on nothing ` +
+      `${onNothing.outline}, the host's cube ${hostSelected}, then a click on nothing ${onNothingHostOwned.outline}`
+  );
   const found = failures(results);
   for (const failure of found) console.error(`[renderer-consumer] ${failure}`);
   console.log(
