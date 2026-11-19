@@ -1,11 +1,7 @@
 import * as THREE from 'three';
-import {
-  writeSkyBindings,
-  type SkyFog,
-  type SkyLight,
-  type SkyVolumetricFog,
-} from '../../shaders/sky/skyBindings.js';
+import { writeSkyBindings, type SkyLight, type SkyVolumetricFog } from '../../shaders/sky/skyBindings.js';
 import { fogUniforms } from '../fog/fogUniforms.js';
+import { renderedEnvironmentFog } from '../fog/fogFrame.js';
 import { bindRadiance, disposeSky, type TranspiledSky } from '../../shaders/sky/transpileSky.js';
 import type { SkyLayers } from '../../resources/sky/skyLayers.js';
 import { SkyResolutionPasses } from '../../shaders/sky/skyResolutionPasses.js';
@@ -17,9 +13,6 @@ import { skyEnergies } from './skyRadiance.js';
 
 /** Scratch for one conversion, overwritten by each. */
 const rotationMatrix = new THREE.Matrix4();
-
-/** Scratch for one render's fog colour, which the fog's energy has scaled. */
-const renderedFogColor = new THREE.Color();
 
 /** Scratch for one render's target size. */
 const targetSize = new THREE.Vector2();
@@ -69,7 +62,7 @@ export class ShaderSkyBackground extends SkyBackdrop {
       skyOrientation: this.skyOrientation,
       time: canvasShaderTime(renderer).time,
       brightness: this.brightness,
-      fog: this.fog(),
+      fog: renderedEnvironmentFog(),
       volumetricFog: volumetricFog(),
       lights: this.lights,
       borderSize: this.radianceBorder,
@@ -86,21 +79,6 @@ export class ShaderSkyBackground extends SkyBackdrop {
     super.dispose();
     disposeSky(this.sky);
     this.passes.dispose();
-  }
-
-  /** The depth fog of the render now drawing, which `prepareFog` wrote, or none while it is off. */
-  protected fog(): SkyFog | undefined {
-    const { depthColor, depthShape, depthLayer, depthSky } = fogUniforms;
-    if (depthColor[3] === 0) return undefined;
-    renderedFogColor.setRGB(depthColor[0]!, depthColor[1]!, depthColor[2]!);
-    return {
-      lightColor: renderedFogColor,
-      lightEnergy: 1,
-      sunScatter: depthSky[1]!,
-      skyAffect: depthSky[0]!,
-      aerialPerspective: depthLayer[3]!,
-      density: depthShape[0]!,
-    };
   }
 }
 

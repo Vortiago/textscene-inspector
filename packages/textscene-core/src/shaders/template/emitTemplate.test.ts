@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { generatedFragmentShader } from '../generatedShader.testkit';
 import { parse } from '../language/parse.js';
 import { tokenize } from '../language/tokenizer.js';
-import { emitTemplateStage } from './emitTemplate.js';
+import { emitTemplateStage, programResources } from './emitTemplate.js';
 import { compileMaterial, linkTemplateStage } from './link.js';
 import { MODE_TABLES } from './modeTables.generated.js';
 import { parseTemplateStage } from './parseTemplate.js';
@@ -14,14 +14,19 @@ import { DEFAULT_SKY } from '../sky/defaultSky.testkit';
 
 const NO_DEFINES = { general: '', variant: '', custom: [], hasUniforms: false, codeSections: [] };
 
-/** The fragment GLSL of a template stage whose `main` is `body` and leaves its result in `color`. */
-function fragmentOf(globals: string, body: string): string {
+/** The emitted template stage whose `main` is `body` and leaves its result in `color`. */
+function stageOf(globals: string, body: string, resources = programResources()) {
   const text = `layout(location = 0) out vec4 color;\n${globals}\nvoid main() {\n${body}\n}`;
   const lines = text.split('\n').map((line, index) => ({ text: line, file: 't.glsl', line: index + 1 }));
   const stage = parseTemplateStage('fragment', preprocess(variantLines(lines, NO_DEFINES)));
-  const { result } = emitTemplateStage(stage, new Map(), { name: 'color', type: 'vec4' });
-  return generatedFragmentShader(result);
+  return emitTemplateStage(stage, new Map(), { name: 'color', type: 'vec4' }, resources);
 }
+
+const SPECIALISED = 'layout(constant_id = 0) const uint packed = 3u;';
+const SPECIALISED_BODY = 'color = vec4(float(packed));';
+
+/** The fragment GLSL of `stageOf(globals, body)`. */
+const fragmentOf = (globals: string, body: string) => generatedFragmentShader(stageOf(globals, body).result);
 
 function skyFragment() {
   const material = compileMaterial(parse(tokenize(DEFAULT_SKY, 'user.gdshader')), MODE_TABLES.sky!);
@@ -52,6 +57,19 @@ describe('emitTemplateStage', () => {
 
   it('gives a const global its folded value', () => {
     expect(fragmentOf('const float HALF = 1.0 / 2.0;', 'color = vec4(HALF);')).toMatch(/vec4\(\s*0\.5\s*\)/);
+  });
+
+  it('folds a specialisation constant to its declared value', () => {
+    expect(fragmentOf(SPECIALISED, SPECIALISED_BODY)).toMatch(/vec4\(\s*3\.0\s*\)/);
+  });
+
+  it('folds a specialisation constant to the value a binding writes, at the next emission', () => {
+    const resources = programResources();
+    stageOf(SPECIALISED, SPECIALISED_BODY, resources);
+    resources.uniforms.specialisations.get('packed')!.value = 64;
+    expect(generatedFragmentShader(stageOf(SPECIALISED, SPECIALISED_BODY, resources).result)).toMatch(
+      /vec4\(\s*64\.0\s*\)/
+    );
   });
 
   it('writes a call of a built-in that stands as a statement', () => {

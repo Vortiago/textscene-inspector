@@ -33,6 +33,7 @@ const PUBLIC_VALUE_EXPORTS = [
   'glVaryingSlots',
   'installGodotShading',
   'skyMaterialShader',
+  'specialiseSpatial',
   'textToVariant',
   'transpileShadingLanguage',
   'transpileSky',
@@ -44,6 +45,7 @@ const PUBLIC_VALUE_EXPORTS = [
 const PUBLIC_TYPE_EXPORTS = [
   'DepthPrepass',
   'DepthPrepassOptions',
+  'EnvironmentFog',
   'GodotShading',
   'GodotShadingOptions',
   'NodeOutput',

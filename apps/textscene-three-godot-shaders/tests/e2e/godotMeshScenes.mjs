@@ -38,6 +38,16 @@ func colors(values: Array) -> PackedColorArray:
 		packed.append(Color(value[0], value[1], value[2], value[3]))
 	return packed
 
+func fogged_world(fog: Dictionary) -> WorldEnvironment:
+	var environment := Environment.new()
+	environment.fog_enabled = true
+	for property in fog:
+		var value = fog[property]
+		environment.set(property, Color(value[0], value[1], value[2]) if value is Array else value)
+	var world := WorldEnvironment.new()
+	world.environment = environment
+	return world
+
 func mesh_of(scene: Dictionary) -> ArrayMesh:
 	var arrays := []
 	arrays.resize(Mesh.ARRAY_MAX)
@@ -91,7 +101,9 @@ func mesh_of(scene: Dictionary) -> ArrayMesh:
 			drawn.position = vector(other.object.position)
 			drawn.rotation = degrees(other.object.rotation)
 			drawn.scale = vector(other.object.scale)
-			holder.add_child(drawn)`,
+			holder.add_child(drawn)
+		if scene.has("fog"):
+			viewport.add_child(fogged_world(scene.fog))`,
 });
 
 /** The shader file of the other object `other` of scene `index`, which has a source of its own. */
@@ -104,6 +116,7 @@ export function meshProjectFiles(scenes) {
     object: scene.object,
     ...(scene.parent ? { parent: scene.parent } : {}),
     ...(scene.compressed ? { compressed: true } : {}),
+    ...(scene.fog ? { fog: scene.fog } : {}),
     ...(scene.others
       ? {
           others: scene.others.map(({ object, source }, other) => ({

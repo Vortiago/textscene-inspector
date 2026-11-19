@@ -42,7 +42,8 @@ import { TreeMemo } from '../template/treeMemo.js';
 import { setPrepassDraw } from '../pipeline/depthPrepass.js';
 import { spatialPrepassDraw } from './spatialPrepass.js';
 import { rendererOf } from '../preprocessor/renderingMethod.js';
-import { BoundNodeMaterial, type MaterialShader } from '../uniforms/boundMaterial.js';
+import { BoundNodeMaterial } from '../uniforms/boundMaterial.js';
+import type { Specialisation } from '../template/specialisation.js';
 import type { ProjectSampling } from '../uniforms/samplerState.js';
 import type { TranspiledUniform } from '../uniforms/transpiledUniform.js';
 
@@ -62,6 +63,8 @@ export interface TranspiledSpatial {
   readonly material: BoundNodeMaterial;
   /** The template's uniforms of both stages, by `instance.member`: `scene_data_block.data.time`. */
   readonly uniforms: ReadonlyMap<string, UniformNode<unknown>>;
+  /** The template's specialisation constants, by name: `pso_sc_packed_0`. */
+  readonly specialisations: ReadonlyMap<string, Specialisation>;
   /** The template's textures, by name. */
   readonly textures: ReadonlyMap<string, TextureNode>;
   /** The template's storage buffers, by instance name: `instances`. */
@@ -93,10 +96,13 @@ export function transpileParsedSpatial(
   );
   const pipeline = spatialPipeline(parsed.tree);
   const emitStages = stageEmitter(linked, resources, parameterValues, pipeline);
-  const colourStages = emitStages(SCENE.defines);
-  const colour = alphaCovered(colourStages.fragment(), pipeline);
-  const shader = { parameters: [...parameters.values()], source: shaderSource(parsed, options.file ?? '') };
-  const material = sceneMaterial(colourStages, colour, shader);
+  const shader = {
+    parameters: [...parameters.values()],
+    source: shaderSource(parsed, options.file ?? ''),
+    specialisations: resources.uniforms.specialisations,
+  };
+  const material = new BoundNodeMaterial(shader);
+  material.stageWith(() => setColourStages(material, emitStages(SCENE.defines), pipeline));
   applySpatialPipeline(material, pipeline);
   const renderer = rendererOf(options.renderingMethod ?? 'forward_plus');
   const program = {
@@ -109,6 +115,7 @@ export function transpileParsedSpatial(
   return {
     material,
     uniforms: resources.uniforms.byName,
+    specialisations: resources.uniforms.specialisations,
     textures: resources.textures,
     buffers: resources.buffers.byName,
     parameters,
@@ -231,9 +238,12 @@ function alphaCovered(colour: Node, pipeline: SpatialPipeline): Node {
   return drawsAlphaToCoverage(pipeline) ? coveredOnOneSample(colour, pipeline.alphaAntialiasing) : colour;
 }
 
-function sceneMaterial(stages: EmittedStages, colour: Node, shader: MaterialShader): BoundNodeMaterial {
-  const material = new BoundNodeMaterial(shader);
+/** The colour variant's stages as `material` draws them. */
+function setColourStages(
+  material: BoundNodeMaterial,
+  stages: EmittedStages,
+  pipeline: SpatialPipeline
+): void {
   setPosition(material, stages);
-  material.fragmentNode = colour;
-  return material;
+  material.fragmentNode = alphaCovered(stages.fragment(), pipeline);
 }

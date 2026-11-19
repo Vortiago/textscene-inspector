@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { fogLightColor, type EnvironmentFog } from '../pipeline/environmentFog.js';
 import { skyDraws, type TranspiledSky } from './transpileSky.js';
 import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
 import { RADIANCE_ENERGY } from '../template/radianceCalls.js';
@@ -17,15 +18,10 @@ export interface SkyLight {
 }
 
 /** The environment's fog as the sky reads it (`sky.cpp:1216-1228`). */
-export interface SkyFog {
-  /** The fog light colour, linear. */
-  readonly lightColor: THREE.Color;
-  readonly lightEnergy: number;
-  readonly sunScatter: number;
-  readonly skyAffect: number;
-  readonly aerialPerspective: number;
-  readonly density: number;
-}
+export type SkyFog = Pick<
+  EnvironmentFog,
+  'lightColor' | 'lightEnergy' | 'sunScatter' | 'skyAffect' | 'aerialPerspective' | 'density'
+>;
 
 /** The environment's volumetric fog as the background reads it (`sky.cpp:1148-1165`, `:1227-1228`). */
 export interface SkyVolumetricFog {
@@ -96,7 +92,11 @@ export const SKY_BINDINGS: readonly Binding<SkyScene>[] = [
     godot: 'sky.cpp:1218',
     value: (scene) => scene.fog?.aerialPerspective ?? 0,
   },
-  { uniform: 'sky_scene_data.fog_light_color', godot: 'sky.cpp:1219-1223', value: fogLightOf },
+  {
+    uniform: 'sky_scene_data.fog_light_color',
+    godot: 'sky.cpp:1219-1223',
+    value: (scene) => fogLightColor(scene.fog),
+  },
   {
     uniform: 'sky_scene_data.fog_sun_scatter',
     godot: 'sky.cpp:1224',
@@ -185,14 +185,6 @@ function projectionOf(scene: SkyScene): THREE.Vector4 {
 /** The padding in UV, then 1 minus twice it, as `_render_sky` writes them from the padding. */
 function borderSizeOf({ borderSize = 1 }: SkyScene): THREE.Vector2 {
   return new THREE.Vector2((1 - borderSize) / 2, borderSize);
-}
-
-function fogLightOf(scene: SkyScene): THREE.Vector3 {
-  const fog = scene.fog;
-  if (!fog) return new THREE.Vector3();
-  return new THREE.Vector3(fog.lightColor.r, fog.lightColor.g, fog.lightColor.b).multiplyScalar(
-    fog.lightEnergy
-  );
 }
 
 /** One value per light slot: the light's, then `empty` for each slot past the last light. */
