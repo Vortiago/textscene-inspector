@@ -3,6 +3,7 @@ import type { UniformNode } from 'three/webgpu';
 import { describe, expect, it } from 'vitest';
 import { writeSkyBindings, type SkyScene } from './skyBindings.js';
 import { transpileSky } from './transpileSky.js';
+import { RADIANCE_ENERGY } from '../template/radianceCalls.js';
 import { DEFAULT_SKY } from './defaultSky.testkit';
 
 const SUN = {
@@ -28,6 +29,18 @@ describe('writeSkyBindings', () => {
   it("writes the octmap's padding in UV and its border size, as `_render_sky` does", () => {
     const borderSize = boundSky({ borderSize: 0.9 }, 'octmap')('params.border_size').value as THREE.Vector2;
     expect(borderSize.toArray()).toEqual([expect.closeTo(0.05, 9), 0.9]);
+  });
+
+  it("writes the energy of the radiance's layer 0, which a RADIANCE read scales by", () => {
+    expect(boundSky({ radianceEnergy: 0.5 })(RADIANCE_ENERGY).value).toBe(0.5);
+  });
+
+  it('writes a radiance energy of 1 for a scene that names none', () => {
+    const sky = transpileSky(DEFAULT_SKY);
+    const scene = { camera: new THREE.PerspectiveCamera(), time: 0, brightness: 1, lights: [] };
+    writeSkyBindings(sky, { ...scene, radianceEnergy: 4 });
+    writeSkyBindings(sky, scene);
+    expect(sky.uniforms.get(RADIANCE_ENERGY)!.value).toBe(1);
   });
 
   it("writes POSITION as the camera's origin", () => {

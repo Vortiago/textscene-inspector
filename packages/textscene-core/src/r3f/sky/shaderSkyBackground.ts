@@ -8,6 +8,7 @@ import { SkyBackdrop } from './skyBackground.js';
 import { writeFramebufferHeight } from '../shadowFilter/framebufferRows.js';
 import { canvasShaderTime } from '../shaderTime/canvasShaderTime.js';
 import { renderTargetSize } from '../renderTargetSize.js';
+import { skyEnergies } from './skyRadiance.js';
 
 /** Scratch for one conversion, overwritten by each. */
 const rotationMatrix = new THREE.Matrix4();
@@ -63,6 +64,7 @@ export class ShaderSkyBackground extends SkyBackdrop {
       fog: this.fog(),
       lights: this.lights,
       borderSize: this.radianceBorder,
+      radianceEnergy: skyEnergies[0],
     });
     // Godot draws the quarter and half passes before the scene, at the size of its buffers (`sky.cpp:1427`).
     if (this.passes.isEmpty) return;

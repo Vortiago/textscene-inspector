@@ -38,7 +38,11 @@ import {
 } from '../../godot/rendering/environment/skyRadianceUpdate';
 import { canvasShaderTime } from '../shaderTime/canvasShaderTime';
 import { renderUnderWay } from '../viewportRender/worldRender';
-import { takeRealTimeCaptureRender, takeRealTimeCaptureRenders } from '../reflectionProbe/realTimeCaptures';
+import {
+  noteRealTimeSkyChange,
+  takeRealTimeCaptureRender,
+  takeRealTimeCaptureRenders,
+} from '../reflectionProbe/realTimeCaptures';
 import { ENVIRONMENT_SWITCH } from './environmentSwitch';
 import { observeSceneRenderEnd } from '../sceneRenderCamera';
 import { useExposureFactor } from '../environment/worldExposure';
@@ -207,7 +211,9 @@ export function SkyLayer({
       const step = stepSkyRadiance(update, plan, render, isLightDirtied || isFrameDirtied);
       const position = update.previousPosition;
       const draw = { position, isDrawnEachBake: isFrameRead, lightData: lightDataKey(lightData) };
+      const energiesBefore = radiance.drawn.energies.join();
       const isDrawn = bake.step(render, step, draw);
+      if (isDrawn && radiance.drawn.energies.join() !== energiesBefore) noteRealTimeSkyChange(scene);
       // New lights note a change of the Environment, which probes capture again. An exposure alone does not.
       if (!isDrawn || isFrameRead || lightData.lights === notedLights) return;
       notedLights = lightData.lights;

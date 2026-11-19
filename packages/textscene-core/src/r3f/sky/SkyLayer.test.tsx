@@ -775,14 +775,37 @@ describe('SkyLayer under an exposure', () => {
       ]);
     });
 
-    it('reads the bake at its own exposure in 2 of every 8 frames over an ALWAYS probe, as Godot does', async () => {
-      const { scene } = await viewedAtFour();
-      const isOwnBake = () =>
-        Math.abs(viewAmbientOverRealTimeProbe(scene) - ENERGY * 4 * ENERGY * 4) < 1e-9 ? 'own' : 'world';
-      const frames = Array.from({ length: 24 }, isOwnBake);
+    /** The layer energies each of `frames` views over an ALWAYS probe reads, in units of the sky's energy. */
+    function layersOverRealTimeProbe(scene: THREE.Scene, frames: number) {
+      return Array.from({ length: frames }, () => {
+        viewAmbientOverRealTimeProbe(scene);
+        return layerEnergies().map((energy) => energy / ENERGY);
+      });
+    }
 
-      expect(frames.slice(8)).toEqual(frames.slice(0, 16));
-      expect(frames.slice(0, 8).filter((read) => read === 'own')).toHaveLength(2);
+    it('holds the layers of an 8 frame cycle over an ALWAYS probe, as Godot does', async () => {
+      const { scene } = await viewedAtFour();
+      const frames = layersOverRealTimeProbe(scene, 16);
+      const world = Array<number>(8).fill(1);
+
+      expect(frames.slice(0, 8)).toEqual([
+        [1, 1, 1, 1, 1, 1, 1, 4],
+        ...Array<number[]>(5).fill(world),
+        [4, 1, 1, 1, 1, 1, 1, 1],
+        Array<number>(8).fill(4),
+      ]);
+      expect(frames.slice(8)).toEqual(frames.slice(0, 8));
+    });
+
+    it('draws 2 of every 8 frames over an ALWAYS probe unlike the other 6, so 3 frames change, as in Godot', async () => {
+      const { scene } = await viewedAtFour();
+      // The ambient reads the last layer, and the shiny ball, at roughness 0.2, reads layers 1 and 2.
+      const drawnReads = layersOverRealTimeProbe(scene, 9).map((layers) => `${layers[1]} ${layers[7]}`);
+      const changed = drawnReads
+        .slice(1)
+        .flatMap((reads, frame) => (reads === drawnReads[frame] ? [] : [frame + 1]));
+
+      expect([changed, new Set(drawnReads).size]).toEqual([[1, 7, 8], 3]);
     });
 
     it("reads, in a view over an ALWAYS probe, the layers its capture's faces baked at the world's exposure", async () => {

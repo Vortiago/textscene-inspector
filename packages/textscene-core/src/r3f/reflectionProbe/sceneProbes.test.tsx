@@ -10,7 +10,7 @@ import { renderUnderWay } from '../viewportRender/worldRender';
 import { mipmapBiasUniform } from '../testing/mipmapBiasUniform';
 import type { ViewportShadowAtlas } from '../positionalShadow/viewportShadowAtlas';
 import { ReflectionProbeObject } from './reflectionProbeObject';
-import { takeRealTimeCaptureRenders } from './realTimeCaptures';
+import { noteRealTimeSkyChange, takeRealTimeCaptureRenders } from './realTimeCaptures';
 import { SceneProbes } from './sceneProbes';
 import { rootViewportDescription } from '../viewportRender/viewportDescription';
 import { shownProbes } from './probeSlots';
@@ -139,7 +139,7 @@ describe('SceneProbes.update', () => {
     expect([facesDrawn(), facesDrawn()]).toEqual([6, 0]);
   });
 
-  it('captures one probe a frame, as Godot captures one at a time', async () => {
+  it('captures one ONCE probe a frame, as Godot captures one at a time', async () => {
     const { facesDrawn, settle } = await sceneWith(probeObject(), probeObject());
     settle();
 
@@ -230,6 +230,32 @@ describe('SceneProbes ALWAYS renders', () => {
     facesDrawn();
 
     expect(takeRealTimeCaptureRenders(scene)).toBe(6);
+  });
+
+  it('captures every ALWAYS probe in a frame and one ONCE probe (renderer_scene_cull.cpp:3739-3763)', async () => {
+    const always = () => probeObject({ update_mode: '1' });
+    const { facesDrawn, settle } = await sceneWith(always(), probeObject(), always(), probeObject());
+    settle();
+
+    expect([facesDrawn(), facesDrawn()]).toEqual([3 * 6, 6]);
+  });
+
+  it("captures an ALWAYS probe again once its sky's layer energies change", async () => {
+    const { scene, facesDrawn, settle } = await sceneWith(probeObject({ update_mode: '1' }));
+    settle();
+    facesDrawn();
+    noteRealTimeSkyChange(scene);
+
+    expect(facesDrawn()).toBe(6);
+  });
+
+  it("keeps a ONCE capture when its sky's layer energies change", async () => {
+    const { scene, facesDrawn, settle } = await sceneWith(probeObject());
+    settle();
+    facesDrawn();
+    noteRealTimeSkyChange(scene);
+
+    expect(facesDrawn()).toBe(0);
   });
 
   it('counts no interior ALWAYS probe, which draws no sky (render_forward_clustered.cpp:1819)', async () => {

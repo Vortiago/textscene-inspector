@@ -36,13 +36,23 @@ import { ViewportShadowAtlas } from '../positionalShadow/viewportShadowAtlas.js'
 import { ProbeRows, type DrawnProbe } from './probeRows.js';
 import { atlasSlot, NO_RENDER_EXPOSURE, shownProbes } from './probeSlots.js';
 import { isReflectionProbe, type ReflectionProbeObject } from './reflectionProbeObject.js';
-import { noteRealTimeProbes } from './realTimeCaptures.js';
+import { noteRealTimeProbes, realTimeSkyChanges } from './realTimeCaptures.js';
 import { sameElements } from '../../utils/sameElements.js';
 import { followSceneExposure, worldExposureOfScene } from '../exposure/sceneExposure.js';
 import { drawAsWorld, ownEnvironmentChanges } from '../environment/sceneEnvironment.js';
 
 function isRealTimeProbe({ probe }: ReflectionProbeObject): boolean {
   return probe.updateMode === ReflectionProbeUpdateMode.ALWAYS;
+}
+
+/** The stale layers a frame captures: every ALWAYS probe, and one other (`renderer_scene_cull.cpp:3739`). */
+function layersToCapture(
+  probes: readonly ReflectionProbeObject[],
+  isStale: (probe: ReflectionProbeObject, layer: number) => boolean
+): number[] {
+  const stale = probes.flatMap((probe, layer) => (isStale(probe, layer) ? [layer] : []));
+  const firstOther = stale.find((layer) => !isRealTimeProbe(probes[layer]!));
+  return stale.filter((layer) => layer === firstOther || isRealTimeProbe(probes[layer]!));
 }
 
 /** What a probe's capture shows: changed, it captures again. */
@@ -52,6 +62,8 @@ interface Capture {
   generation: number;
   probe: ReflectionProbeObject['probe'];
   matrixWorld: THREE.Matrix4;
+  /** `realTimeSkyChanges` when the capture drew, which an ALWAYS capture compares. */
+  skyChanges: number;
 }
 
 export class SceneProbes {
@@ -118,7 +130,7 @@ export class SceneProbes {
     ];
   }
 
-  /** Captures one probe that needs it once the scene settles, for `viewport`. Answers whether it drew. */
+  /** Captures the probes that need it once the scene settles, for `viewport`. Answers whether it drew. */
   update(pendingResources: number, clearColor: THREE.Color, viewport: ViewportDescription): boolean {
     this.settledFrames = pendingResources > 0 ? 0 : this.settledFrames + 1;
     if (pendingResources > 0) this.hasNewContent = true;
@@ -135,15 +147,15 @@ export class SceneProbes {
     const atlas = this.atlasFor(probes);
     if (this.settledFrames < COMMIT_FRAMES_AFTER_SETTLE) return false;
     this.markCapturesStale(clearColor);
-    const stale = probes.findIndex((probe, layer) => !this.isCaptured(probe, layer));
-    if (stale !== -1) {
+    const drawn = layersToCapture(probes, (probe, layer) => !this.isCaptured(probe, layer));
+    if (drawn.length > 0) {
       beginStep(this.renderer, 'Reflection probes');
-      this.capture(probes[stale]!, stale, atlas, clearColor, viewport);
+      for (const layer of drawn) this.capture(probes[layer]!, layer, atlas, clearColor, viewport);
       endStep(this.renderer, 'Reflection probes');
     }
     const captured = probes.filter((probe) => this.captures.has(probe));
-    if (stale !== -1 || !sameElements(captured, this.packed)) this.pack(captured);
-    return stale !== -1;
+    if (drawn.length > 0 || !sameElements(captured, this.packed)) this.pack(captured);
+    return drawn.length > 0;
   }
 
   dispose(): void {
@@ -192,11 +204,7 @@ export class SceneProbes {
     this.generation += 1;
   }
 
-  /**
-   * Whether `object`'s capture still shows what it would capture now. A probe that updates ALWAYS
-   * captures again only then too, where Godot captures it every frame, so a node that moves under
-   * it is not reflected until the scene's content changes.
-   */
+  /** Whether `object`'s capture shows its content now. ALWAYS adds the sky, not every frame as in Godot. */
   private isCaptured(object: ReflectionProbeObject, layer: number): boolean {
     const capture = this.captures.get(object);
     return (
@@ -204,7 +212,8 @@ export class SceneProbes {
       capture.layer === layer &&
       capture.generation === this.generation &&
       capture.probe === object.probe &&
-      capture.matrixWorld.equals(object.matrixWorld)
+      capture.matrixWorld.equals(object.matrixWorld) &&
+      (!isRealTimeProbe(object) || capture.skyChanges === realTimeSkyChanges(this.scene))
     );
   }
 
@@ -249,7 +258,14 @@ export class SceneProbes {
     const radianceFilter = isRealTimeProbe(object) ? 'fast' : 'importance-sample';
     bakeAtlasLayers(this.renderer, this.cube.texture, atlas, layer, radianceFilter);
     const { generation } = this;
-    this.captures.set(object, { layer, generation, probe, matrixWorld: object.matrixWorld.clone() });
+    const skyChanges = realTimeSkyChanges(this.scene);
+    this.captures.set(object, {
+      layer,
+      generation,
+      probe,
+      matrixWorld: object.matrixWorld.clone(),
+      skyChanges,
+    });
     const worldExposure = worldExposureOfScene(this.scene);
     if (worldExposure !== null) this.bakedExposures.set(object, worldExposure);
   }

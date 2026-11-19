@@ -34,3 +34,17 @@ export function takeRealTimeCaptureRenders(scene: THREE.Scene): number {
   pendingRenders.delete(scene);
   return renders;
 }
+
+/** Written only by `noteRealTimeSkyChange`, and kept for the scene's life. */
+// eslint-disable-next-line no-restricted-syntax -- a scene that is collected drops its count
+const skyChanges = new WeakMap<THREE.Scene, number>();
+
+/** Notes that a step changed a layer energy of `scene`'s sky, so an ALWAYS capture shows an old sky. */
+export function noteRealTimeSkyChange(scene: THREE.Scene): void {
+  skyChanges.set(scene, realTimeSkyChanges(scene) + 1);
+}
+
+/** How many times a step changed a layer energy of `scene`'s sky. */
+export function realTimeSkyChanges(scene: THREE.Scene): number {
+  return skyChanges.get(scene) ?? 0;
+}
