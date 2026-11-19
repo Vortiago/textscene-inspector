@@ -2,7 +2,7 @@ import type { ColorValue, Variant } from '../../../godot/variant/value/variant.j
 import { real, variant } from '../../../godot/variant/value/variant.js';
 import { toFloat32 } from '../../../godot/variant/construct/variantCast.js';
 import { multiplyColor } from '../../../godot/math/math.js';
-import { storedColor } from '../../../godot/math/real.js';
+import { storedColor, storedReal } from '../../../godot/math/real.js';
 
 /** A sky material's properties as its file sets them. */
 export interface SkyMaterialProperties {
@@ -24,10 +24,10 @@ export interface SkyMaterialShader {
 
 export type SkyMaterialGenerator = (material: SkyMaterialProperties) => SkyMaterialShader;
 
-/** The `float` property `name`, or `fallback` for one left out or of a type a float setter refuses. */
+/** The `float` property `name`, or the float `fallback` for one left out or of a type a setter refuses. */
 export function floatProperty({ properties }: SkyMaterialProperties, name: string, fallback: number): number {
   const value = properties[name];
-  return value?.type === 'FLOAT' || value?.type === 'INT' ? toFloat32(value) : fallback;
+  return value?.type === 'FLOAT' || value?.type === 'INT' ? toFloat32(value) : storedReal(fallback);
 }
 
 export function colorProperty(

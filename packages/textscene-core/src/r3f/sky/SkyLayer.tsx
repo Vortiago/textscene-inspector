@@ -267,13 +267,14 @@ export function SkyLayer({
 
 /** A bake samples a live target once, so it waits for the target's first draw. */
 function useAreLiveTexturesDrawn(textures: Readonly<Record<string, SamplerValue>>): boolean {
-  const undrawn = Object.values(textures)
+  const liveTextures = Object.values(textures)
     .flat()
     .filter((texture): texture is THREE.Texture => !!texture && isLiveTarget(texture));
   const [drawnTextures, setDrawnTextures] = useState<Readonly<Record<string, SamplerValue>> | null>(null);
-  const isDrawn = undrawn.length === 0 || drawnTextures === textures;
+  const isDrawn = liveTextures.length === 0 || drawnTextures === textures;
   useFrame(() => {
-    if (!isDrawn && undrawn.every((texture) => liveTargetDrawCount(texture) > 0)) setDrawnTextures(textures);
+    if (!isDrawn && liveTextures.every((texture) => liveTargetDrawCount(texture) > 0))
+      setDrawnTextures(textures);
   });
   return isDrawn;
 }
