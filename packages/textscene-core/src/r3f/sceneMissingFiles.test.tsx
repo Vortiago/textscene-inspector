@@ -43,8 +43,8 @@ function lateIcon() {
 
 async function drawScene(provider: ResourceProvider) {
   const scene = openScene({ source: SPRITE, provider });
-  let notices = 0;
-  scene.subscribe(() => notices++);
+  const heard: string[][] = [];
+  scene.subscribe(() => heard.push([...scene.missingFiles()]));
   const renderer = await ReactThreeTestRenderer.create(
     <TscnSceneProvider scene={scene}>
       <GameViewContents />
@@ -52,14 +52,14 @@ async function drawScene(provider: ResourceProvider) {
   );
   await settleLoads();
   await renderer.advanceFrames(2, 1 / 60);
-  return { scene, renderer, notices: () => notices };
+  return { scene, renderer, heard };
 }
 
 describe('the missing files of a scene', () => {
   it('holds a texture path the provider answers null for, and tells the subscribers', async () => {
-    const { scene, notices } = await drawScene(lateIcon().provider);
+    const { scene, heard } = await drawScene(lateIcon().provider);
     expect([...scene.missingFiles()]).toEqual([ICON_PATH]);
-    expect(notices()).toBeGreaterThan(0);
+    expect(heard).toContainEqual([ICON_PATH]);
   });
 
   it('lets go of a file that loads after it was missing', async () => {

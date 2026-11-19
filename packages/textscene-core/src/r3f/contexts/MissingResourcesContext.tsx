@@ -62,9 +62,9 @@ export interface MissingResourcesProviderProps {
 export function MissingResourcesProvider({ children, onMissingPathsChange }: MissingResourcesProviderProps) {
   const scene = useOptionalHierarchy()?.scene;
   // With no scene above, as in a test of one reader, the provider keeps a record of its own.
-  const files = useMemo(() => (scene ? missingResourcesOf(scene) : new CountedReports()), [scene]);
-  const missingPaths = useSyncExternalStore(files.subscribe, files.keys);
-  const { report, clear, clearAll } = files;
+  const missingReports = useMemo(() => (scene ? missingResourcesOf(scene) : new CountedReports()), [scene]);
+  const missingPaths = useSyncExternalStore(missingReports.subscribe, missingReports.keys);
+  const { report, clear, clearAll } = missingReports;
   const [uploadedPaths, setUploadedPaths] = useState<ReadonlySet<string>>(() => new Set<string>());
 
   const markUploaded = useCallback(

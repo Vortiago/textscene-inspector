@@ -78,6 +78,8 @@ export function openScene({
   let written: WrittenGraph | null = null;
   /** Written only by `runtime`: made at the first lookup, so a scene no host asks of loads no tree. */
   let sceneRuntime: SceneRuntime | null = null;
+  /** Written once, after `scene` exists: its views' missing-file reports reach `listeners`. */
+  let stopMissingFiles: () => void = () => {};
 
   const parse = (): ParseResult => (parsed ??= parseTscnContent(currentSource, rootScenePath));
   const graph = (): SceneGraph | null => parse().sceneGraph;
@@ -123,6 +125,7 @@ export function openScene({
     revision: () => listeners.revision(),
     missingFiles: () => filesOf(missingResourcesOf(scene).keys()),
     dispose() {
+      stopMissingFiles();
       listeners.clear();
       sceneRuntime?.dispose();
       sceneRuntime = null;
@@ -147,6 +150,7 @@ export function openScene({
     return sceneRuntime;
   }
 
-  missingResourcesOf(scene).subscribe(() => listeners.missingFilesChanged());
+  stopMissingFiles = missingResourcesOf(scene).subscribe(() => listeners.missingFilesChanged());
+
   return scene;
 }

@@ -29,7 +29,7 @@ export interface MissingFileCheckResults {
 export async function runMissingFileChecks(): Promise<MissingFileCheckResults> {
   const scene = openScene({ source: MISSING_TEXTURE_SCENE, provider: NO_FILES });
   const heard: string[][] = [];
-  scene.subscribe(() => heard.push([...scene.missingFiles()]));
+  const stopHearing = scene.subscribe(() => heard.push([...scene.missingFiles()]));
   const view = mountScene(elementOf(320, 240), scene);
   try {
     const atSettled = [...(await view.settled).missingFiles];
@@ -39,5 +39,7 @@ export async function runMissingFileChecks(): Promise<MissingFileCheckResults> {
     return { atSettled, ofScene, heard, afterWrite };
   } finally {
     view.dispose();
+    stopHearing();
+    scene.dispose();
   }
 }

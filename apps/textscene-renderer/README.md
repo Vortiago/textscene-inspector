@@ -179,18 +179,7 @@ reports nothing and logs an error. Give each view its own provider.
 `{ scriptedNodeCount, hasCurrentCamera, missingFiles }`: the count of nodes that hold a script, which
 do not run, whether the root viewport has a current Camera3D or Camera2D, and the files the frame
 asked for and did not get. The first two are facts of the game's start, so the 3D and 2D modes give
-the same value.
-
-### Know which files are missing
-
-`scene.missingFiles()` gives the `res://` paths that the views of the scene asked for and did not get:
-a `null` from `loadResource`, or a file that fails to load. A path leaves the set when no view asks
-for it any more, or when it loads. `scene.subscribe` tells you when the set changes. The scene asks
-for a file only when a view draws a node that reads it, so a scene with no view has no missing files.
-
-Godot's editor lists the same files when it opens a scene: each file a property reads that fails to
-load. A file that the scene declares and no property reads is in neither list. Call it in a component below the same
-`<TscnSceneProvider>` as the view:
+the same value. Call it in a component below the same `<TscnSceneProvider>` as the view:
 
 ```tsx
 import { TscnCanvas, TscnSceneProvider, useGameViewSettled } from '@textscene/renderer';
@@ -212,6 +201,16 @@ export function GameView() {
   );
 }
 ```
+
+### Know which files are missing
+
+`scene.missingFiles()` gives the `res://` paths that the views of the scene asked for and did not get:
+a `null` from `loadResource`, or a file that fails to load. A path leaves the set when no view asks
+for it any more, or when it loads. `scene.subscribe` tells you when the set changes. The scene asks
+for a file only when a view draws a node that reads it, so a scene with no view has no missing files.
+
+Godot's editor lists the same files when it opens a scene: each file a property reads that fails to
+load. A file that the scene declares and no property reads is in neither list.
 
 ### Mount the view with no React code
 
