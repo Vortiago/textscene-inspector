@@ -6,7 +6,7 @@ import { heldLiveTargetCopy } from '../liveTargets.js';
 import { installShaderPatches } from '../shaderPatch/installShaderPatches.js';
 import { installGodotOpaqueOrder } from '../../shaders/pipeline/opaqueOrder.js';
 
-/** Installs the shader patches, the live target copies and Godot's opaque order. A node material's user loads the nodes handler. */
+/** Installs the shader patches, the live target copies and Godot's opaque order. */
 export function prepareCanvasRenderer({ gl }: Pick<RootState, 'gl'>): void {
   installShaderPatches();
   installTargetCopies(heldLiveTargetCopy);
