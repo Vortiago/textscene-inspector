@@ -244,7 +244,7 @@ function redrawBuild(
 ): boolean {
   if (!draw.isDrawnEachBake && drawn.lightData === draw.lightData) return false;
   drawn.lightData = draw.lightData;
-  inPlace.bakeAgain(draw.position, energy);
+  inPlace.bakeAgain(draw.position, energy, texelKeyOf(draw, energy));
   return true;
 }
 
@@ -267,8 +267,13 @@ function drawStep(
   if (!isChanged) return false;
   drawn.lightData = draw.lightData;
   if (step.isFirstLayerOnly) inPlace.bakeFirstLayerAgain(draw.position, energy);
-  else inPlace.bakeAgain(draw.position, energy);
+  else inPlace.bakeAgain(draw.position, energy, texelKeyOf(draw, energy));
   return true;
+}
+
+/** What a full bake's texels follow, beside the bake's input: none for a sky drawn each bake. */
+function texelKeyOf(draw: LayersDraw, energy: number): string | undefined {
+  return draw.isDrawnEachBake ? undefined : `${draw.lightData}|${energy}`;
 }
 
 function exposed(lights: readonly SkyLight[], exposure: number): SkyLight[] {

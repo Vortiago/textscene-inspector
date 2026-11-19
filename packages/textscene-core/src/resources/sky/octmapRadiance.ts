@@ -2,7 +2,13 @@ import type * as THREE from 'three';
 import type { SkyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
 import { VECTOR3_ZERO, type Vector3 } from '../../godot/math/vector';
 import type { ProjectSampling } from '../../shaders/uniforms/samplerState';
-import { createSkyLayers, disposeSkyLayers, SkyLayerBaker, type SkyLayers } from './skyLayers';
+import {
+  createSkyLayers,
+  disposeSkyLayers,
+  SkyLayerBaker,
+  swapSkyLayerTargets,
+  type SkyLayers,
+} from './skyLayers';
 import type { RadianceInPlace, SkyEnvironment, SkyLight } from './build';
 import type { SkyBackdrop } from '../../r3f/sky/skyBackground';
 import type { SkyBake } from './types';
@@ -26,6 +32,11 @@ export interface OctmapSky {
 export class OctmapRadiance implements RadianceInPlace {
   readonly layers: SkyLayers;
   private readonly baker: SkyLayerBaker;
+  /** The key of the full bake `layers` hold, null for layers drawn in steps or under no key. */
+  private heldKey: string | null = null;
+  private readonly bake: SkyBake;
+  /** The full bake before, by key: a software WebGL bake takes 0.9 s. Freed with the radiance. */
+  private kept: { layers: SkyLayers; key: string | null } | null = null;
 
   /** Bakes the first radiance at `energy`, `POSITION` at the origin. Disposes `octmapSky` if that fails. */
   constructor(
@@ -33,8 +44,9 @@ export class OctmapRadiance implements RadianceInPlace {
     bake: SkyBake,
     private readonly octmapSky: OctmapSky,
     energy: number,
-    sampling?: ProjectSampling
+    private readonly sampling?: ProjectSampling
   ) {
+    this.bake = bake;
     let layers: SkyLayers | undefined;
     try {
       layers = createSkyLayers(bake, sampling);
@@ -53,13 +65,21 @@ export class OctmapRadiance implements RadianceInPlace {
     }
   }
 
-  bakeAgain(position: Readonly<Vector3>, energy: number): void {
+  bakeAgain(position: Readonly<Vector3>, energy: number, key?: string): void {
+    if (key !== undefined && this.kept?.key === key) {
+      this.takeKept(key);
+      return;
+    }
+    if (key === undefined) this.freeKept();
+    else if (this.heldKey !== null) this.keepHeld();
     this.baker.bakeEveryLayer(this.drawnAt(position, energy));
+    this.heldKey = key ?? null;
     this.octmapSky.keepRadiance?.(this.gl, this.layers);
   }
 
   bakeFirstLayerAgain(position: Readonly<Vector3>, energy: number): void {
     this.baker.bakeFirstLayer(this.drawnAt(position, energy));
+    this.heldKey = null;
     this.octmapSky.keepRadiance?.(this.gl, this.layers);
   }
 
@@ -69,6 +89,7 @@ export class OctmapRadiance implements RadianceInPlace {
 
   /** Frees what bakes the layers, and hands the layers to the caller, who frees them. */
   releaseLayers(): SkyLayers {
+    this.freeKept();
     this.baker.dispose();
     this.octmapSky.dispose();
     return this.layers;
@@ -76,6 +97,27 @@ export class OctmapRadiance implements RadianceInPlace {
 
   dispose(): void {
     disposeSkyLayers(this.releaseLayers());
+  }
+
+  /** Holds the kept layers of `key` again, and keeps the layers held until now. */
+  private takeKept(key: string): void {
+    const kept = this.kept!;
+    swapSkyLayerTargets(this.layers, kept.layers);
+    kept.key = this.heldKey;
+    this.heldKey = key;
+    this.octmapSky.keepRadiance?.(this.gl, this.layers);
+  }
+
+  /** Keeps the held layers under their key, and leaves the kept array, or a new one, to bake into. */
+  private keepHeld(): void {
+    this.kept ??= { layers: createSkyLayers(this.bake, this.sampling), key: null };
+    swapSkyLayerTargets(this.layers, this.kept.layers);
+    this.kept.key = this.heldKey;
+  }
+
+  private freeKept(): void {
+    if (this.kept) disposeSkyLayers(this.kept.layers);
+    this.kept = null;
   }
 
   private drawnAt(position: Readonly<Vector3>, energy: number) {

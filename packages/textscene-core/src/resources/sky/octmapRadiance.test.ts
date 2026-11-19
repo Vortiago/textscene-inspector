@@ -74,6 +74,67 @@ describe('OctmapRadiance', () => {
   });
 });
 
+describe('OctmapRadiance kept layers', () => {
+  const ORIGIN = { x: 0, y: 0, z: 0 };
+
+  /** A radiance baked under key `A`, then `B`, with the array each bake drew into. */
+  async function bakedTwice() {
+    const { renderer } = await testRenderer();
+    const { sky } = recordedSky();
+    const radiance = new OctmapRadiance(renderer, BAKE, sky, 1);
+    radiance.bakeAgain(ORIGIN, 1, 'A');
+    const drawnForA = radiance.layers.target;
+    radiance.bakeAgain(ORIGIN, 4, 'B');
+    return { radiance, sky, drawnForA, drawnForB: radiance.layers.target };
+  }
+
+  it('bakes the next key into another array, so the layers of the key before stay as drawn', async () => {
+    const { drawnForA, drawnForB } = await bakedTwice();
+
+    expect(drawnForB).not.toBe(drawnForA);
+  });
+
+  it('holds the array the bake of the key before drew again, and draws nothing', async () => {
+    const { radiance, sky, drawnForA } = await bakedTwice();
+    const draws = sky.draw.mock.calls.length;
+
+    radiance.bakeAgain(ORIGIN, 1, 'A');
+
+    expect([radiance.layers.target, sky.draw.mock.calls.length]).toEqual([drawnForA, draws]);
+  });
+
+  it('keeps one array beside its layers, whatever keys bake in turn', async () => {
+    const { radiance, drawnForA, drawnForB } = await bakedTwice();
+    const held = new Set([drawnForA, drawnForB]);
+    for (const key of ['C', 'A', 'D', 'C']) {
+      radiance.bakeAgain(ORIGIN, 1, key);
+      held.add(radiance.layers.target);
+    }
+
+    expect(held.size).toBe(2);
+  });
+
+  it('draws a bake under no key, as for a sky that reads TIME, and frees the kept layers', async () => {
+    const { radiance, sky, drawnForA } = await bakedTwice();
+    const freed = vi.spyOn(drawnForA, 'dispose');
+    const draws = sky.draw.mock.calls.length;
+
+    radiance.bakeAgain(ORIGIN, 1);
+    radiance.bakeAgain(ORIGIN, 1, 'A');
+
+    expect([freed.mock.calls.length, sky.draw.mock.calls.length - draws]).toEqual([1, 2]);
+  });
+
+  it('frees the kept layers with the radiance', async () => {
+    const { radiance, drawnForA } = await bakedTwice();
+    const freed = vi.spyOn(drawnForA, 'dispose');
+
+    radiance.dispose();
+
+    expect(freed).toHaveBeenCalledOnce();
+  });
+});
+
 describe('octmapSkyEnvironment', () => {
   it('keeps a bake in place for a sky a render can dirty', async () => {
     const { renderer } = await testRenderer();

@@ -1163,6 +1163,12 @@ describe('SkyLayer under a change of its lights', () => {
     expect(steps).toEqual(['every layer']);
   });
 
+  it('names the texels of a Quality bake by its lights, their exposure and its energy', async () => {
+    const { bakeKeys } = await stepsAfterSunMoves({ ...proceduralSky, processMode: 'quality' }, 1);
+
+    expect(bakeKeys.at(-1)).toMatch(/@1\|1$/);
+  });
+
   it('builds no new bake for the change', async () => {
     await stepsAfterSunMoves(proceduralSky, 3);
 
@@ -1249,6 +1255,8 @@ function recordedEnvironment() {
   const lightEnergies: number[] = [];
   /** The energy each bake in place is read at. */
   const bakeEnergies: number[] = [];
+  /** The texel key each full bake in place names. */
+  const bakeKeys: (string | undefined)[] = [];
   const build = (gl: THREE.WebGLRenderer): SkyEnvironment => ({
     ...skyEnvironment()(gl),
     setLights: (lights) => {
@@ -1257,12 +1265,16 @@ function recordedEnvironment() {
       if (lights[0]) lightEnergies.push(lights[0].energy);
     },
     radianceInPlace: {
-      bakeAgain: (_position, energy) => steps.push('every layer') && bakeEnergies.push(energy),
+      bakeAgain: (_position, energy, key) => {
+        steps.push('every layer');
+        bakeEnergies.push(energy);
+        bakeKeys.push(key);
+      },
       bakeFirstLayerAgain: (_position, energy) => steps.push('layer 0') && bakeEnergies.push(energy),
       filterLayer: (layer) => steps.push(`filter ${layer}`),
     },
   });
-  return { build, steps, lightCounts, lightDirections, lightEnergies, bakeEnergies };
+  return { build, steps, lightCounts, lightDirections, lightEnergies, bakeEnergies, bakeKeys };
 }
 
 /** Names the Environment of these tests the world's own, as a probe captures with. */

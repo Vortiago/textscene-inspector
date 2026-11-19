@@ -56,8 +56,8 @@ export interface SkyEnvironment {
 
 /** Bakes the layers again into the array the readers sample, as for a dirty sky (`sky.cpp:1273`). */
 export interface RadianceInPlace {
-  /** Bakes every layer to be read at `energy`, as a real-time or a quality sky does. */
-  bakeAgain(position: Readonly<Vector3>, energy: number): void;
+  /** Bakes every layer at `energy`. A `key` names the texels, and the bake before keeps its layers. */
+  bakeAgain(position: Readonly<Vector3>, energy: number, key?: string): void;
   /** Bakes layer 0 alone to be read at `energy`, as an incremental sky does. `filterLayer` does the rest. */
   bakeFirstLayerAgain(position: Readonly<Vector3>, energy: number): void;
   /** Filters `layer` from the last bake of layer 0. */
