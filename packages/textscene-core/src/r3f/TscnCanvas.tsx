@@ -82,13 +82,7 @@ function useRootScene() {
   return { rootScene, nodes: useSeatedRoots() ?? null };
 }
 
-/**
- * The ground-plane grid shared by the empty-scene indicator and the content grid.
- * It carries the `tscnEmptyState` tag `frameSceneBounds` skips on itself:
- * `traverse()` visits every descendant whatever the tag of an ancestor, and the
- * 10-unit grid would otherwise frame a mesh-free scene, such as a lone Path3D.
- * It is editor chrome too, so a SubViewport pass draws none of it.
- */
+/** The 10-unit grid frames no mesh-free scene, such as a lone Path3D, and a SubViewport draws none of it. */
 function GroundGrid() {
   return <gridHelper args={[10, 10, 0x444444, 0x222222]} userData={GROUND_GRID_USER_DATA} />;
 }
