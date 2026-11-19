@@ -111,6 +111,12 @@ const visible = await scene.getNode('Enemy').get('visible');
 - **Resources.** `await scene.load('res://icon.png')` gives a value that a property of a resource
   type takes, so you can swap a texture, a mesh, a material or a theme. A missing file draws as a
   missing resource.
+- **Resources the scene file holds.** Name a `[sub_resource]` by its path, as Godot's `load` does:
+  `scene.load('res://main.tscn::SphereMesh_1')` or `variant('Resource("res://main.tscn::SphereMesh_1")')`,
+  with the path the scene opens under. `SubResource("…")` has a meaning only inside a file: Godot
+  reads `variant('SubResource("SphereMesh_1")')` as the file `res://SphereMesh_1`.
+- **The class of a resource.** A resource of a class the property does not take writes `null`, and
+  `set` answers `false`, as in Godot.
 - **Redraw.** The writes of one task draw one frame. A write before any view mounts shows on the
   first frame. `scene.observe(path, listener)` tells you when that node is written.
 
