@@ -6,7 +6,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 
 vi.mock('../../TscnCanvas', () => ({
-  TscnCanvas: () => <div data-testid="canvas-stub" />,
+  TscnCanvas: ({ show }: { show?: { performance?: boolean } }) => (
+    <div data-testid="canvas-stub" data-performance={String(show?.performance)} />
+  ),
   TscnSceneContents: () => null,
 }));
 
@@ -43,15 +45,15 @@ describe('<TscnPreviewShell> persisted dock layout + viewport mode (#224)', () =
     expect(screen.queryByLabelText('Collapse the side panel')).toBeNull();
   });
 
-  it('shows the performance overlay when the last session turned it on', () => {
+  it('asks the view for the performance panel when the last session turned it on', () => {
     globalThis.window.localStorage.setItem('tsi.showPerformance', 'true');
     render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} />);
-    expect(screen.getByTestId('performance-overlay')).toBeTruthy();
+    expect(screen.getByTestId('canvas-stub').dataset.performance).toBe('true');
   });
 
-  it('a session with no persisted value shows no performance overlay (default)', () => {
+  it('a session with no persisted value asks for no performance panel (default)', () => {
     render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} />);
-    expect(screen.queryByTestId('performance-overlay')).toBeNull();
+    expect(screen.getByTestId('canvas-stub').dataset.performance).toBe('false');
   });
 
   it('a session with no persisted value starts with the dock expanded (default)', () => {

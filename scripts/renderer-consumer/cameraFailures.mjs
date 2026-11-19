@@ -1,7 +1,7 @@
 /** A leftover of at most this many levels is residue, as `ref:diff` counts it. */
 export const RESIDUE_MAX_DELTA = 2;
-/** The 3D mode adds a camera gizmo and the light icon, about 600 px. A wrong camera moves 11,000. */
-export const GIZMO_PIXELS_MAX = 1000;
+/** The camera gizmo and the light icon of the 3D mode, which `show.gizmos` turns off. */
+export const GIZMO_PIXELS_MIN = 100;
 /** The cube moves from the middle of the front view to a square seen from above, over thousands of pixels. */
 export const MOVED_PIXELS_MIN = 2000;
 
@@ -11,13 +11,20 @@ export const MISSING_MESSAGE = `expected a Camera3D at "${MISSING_PATH}", got no
 
 /** One line per failed check of the view's camera, or none. */
 export function cameraFailures({ results, errors }) {
-  const { overFromGameView, changedBetweenCameras, changedFromFreshEditor, refused, missing } = results;
+  const { overFromGameView, gizmoPixels, changedBetweenCameras, changedFromFreshEditor, refused, missing } =
+    results;
   return [
     ...Object.entries(overFromGameView)
-      .filter(([, over]) => over > GIZMO_PIXELS_MAX)
+      .filter(([, over]) => over > 0)
       .map(
         ([camera, over]) =>
-          `through ${camera}: expected at most ${GIZMO_PIXELS_MAX} pixels past residue from the game's view, got ${over}`
+          `through ${camera} with no gizmo: expected no pixel past residue from the game's view, got ${over}`
+      ),
+    ...Object.entries(gizmoPixels)
+      .filter(([, changed]) => changed < GIZMO_PIXELS_MIN)
+      .map(
+        ([camera, changed]) =>
+          `through ${camera}: expected the gizmos to change at least ${GIZMO_PIXELS_MIN} pixels, got ${changed}`
       ),
     ...(changedBetweenCameras >= MOVED_PIXELS_MIN
       ? []

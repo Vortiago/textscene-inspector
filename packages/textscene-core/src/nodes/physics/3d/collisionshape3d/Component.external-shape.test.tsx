@@ -9,7 +9,7 @@ import { CollisionShape3D } from './Component';
 import { linePositions } from '../../../../r3f/testing/GizmoScene';
 import { CollisionShape2D } from '../../2d/collisionshape2d/Component';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
-import { ViewportModeProvider } from '../../../../r3f/contexts/ViewportModeContext';
+import { ViewShowProvider } from '../../../../r3f/viewShow/ViewShowContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import type { ParsedResource } from '../../../../parser/parsedResource';
@@ -46,11 +46,11 @@ async function render3D(shape: string | undefined, tres?: ParsedResource) {
   if (tres) fake.resources.seed(SHAPE_PATH, tres);
   return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
-      <ViewportModeProvider initialShowCollisions>
+      <ViewShowProvider show={{ collisions: true }}>
         <SceneResourcesProvider internalResources={INLINE_BOX} externalResources={EXTERNALS}>
           <CollisionShape3D node={node('CollisionShape3D', shape)} />
         </SceneResourcesProvider>
-      </ViewportModeProvider>
+      </ViewShowProvider>
     </ResourceLoaderProvider>
   );
 }
@@ -97,11 +97,11 @@ describe('<CollisionShape2D> shape resolution', () => {
     });
     const renderer = await ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={fake.loader}>
-        <ViewportModeProvider initialShowCollisions>
+        <ViewShowProvider show={{ collisions: true }}>
           <SceneResourcesProvider internalResources={[]} externalResources={EXTERNALS}>
             <CollisionShape2D node={node('CollisionShape2D', 'ExtResource("1")')} />
           </SceneResourcesProvider>
-        </ViewportModeProvider>
+        </ViewShowProvider>
       </ResourceLoaderProvider>
     );
     expect(renderer.scene.findAllByType('LineSegments').length).toBeGreaterThan(0);

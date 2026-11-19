@@ -8,11 +8,17 @@ import { MISSING_PATH, RESIDUE_MAX_DELTA } from './cameraFailures.mjs';
 
 const CAMERAS = ['Rig/Front', 'Above'];
 
-/** The view's frame once `update` moves it to `camera`. */
-async function shotThrough(page, camera) {
-  await page.evaluate((next) => window.cameraView.update({ camera: next }), camera);
+/** The view's frame once `update` applies `options`. */
+async function shotAfterUpdate(page, options) {
+  await page.evaluate((next) => window.cameraView.update(next), options);
   return stillShot(page);
 }
+
+/** The view's frame through `camera`, with the editor gizmos on. */
+const shotThrough = (page, camera) => shotAfterUpdate(page, { camera, show: { gizmos: true } });
+
+/** The view's frame through `camera`, with the editor gizmos off. */
+const shotWithoutGizmos = (page, camera) => shotAfterUpdate(page, { camera, show: { gizmos: false } });
 
 /** The pixels past residue in which the game's view through `camera` differs from `shot`. */
 async function overFromGame(page, camera, shot) {
@@ -56,12 +62,26 @@ export async function runCameraChecks(page, url) {
   await page.evaluate(() => window.mountCamera({ mode: '3D' }));
   const changedFromFreshEditor = compareImages(await stillShot(page), editor).changedPixels;
   const changedBetweenCameras = compareImages(shots['Rig/Front'], shots.Above).changedPixels;
+  const gizmoPixels = {};
+  const withoutGizmos = {};
+  for (const camera of CAMERAS) {
+    withoutGizmos[camera] = await shotWithoutGizmos(page, camera);
+    gizmoPixels[camera] = compareImages(shots[camera], withoutGizmos[camera]).changedPixels;
+  }
   const overFromGameView = {};
-  for (const camera of CAMERAS) overFromGameView[camera] = await overFromGame(page, camera, shots[camera]);
+  for (const camera of CAMERAS)
+    overFromGameView[camera] = await overFromGame(page, camera, withoutGizmos[camera]);
   const missing = await missingCameraRejection(page);
   await page.evaluate(() => window.cameraView.dispose());
   return {
-    results: { overFromGameView, changedBetweenCameras, changedFromFreshEditor, refused, missing },
+    results: {
+      overFromGameView,
+      gizmoPixels,
+      changedBetweenCameras,
+      changedFromFreshEditor,
+      refused,
+      missing,
+    },
     errors: loggedErrors(diagnostics),
   };
 }

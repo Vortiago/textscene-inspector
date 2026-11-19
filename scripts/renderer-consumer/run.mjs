@@ -236,6 +236,11 @@ try {
     `[renderer-consumer] outline pixels: after a click on the cube ${onCube.outline}, on nothing ` +
       `${onNothing.outline}, the host's cube ${hostSelected}, then a click on nothing ${onNothingHostOwned.outline}`
   );
+  const { gizmoPixels, overFromGameView } = results.cameras.results;
+  console.log(
+    `[renderer-consumer] through each camera, pixels the gizmos change: ${JSON.stringify(gizmoPixels)}, ` +
+      `with no gizmo, past residue from the game's view: ${JSON.stringify(overFromGameView)}`
+  );
   const found = failures(results);
   for (const failure of found) console.error(`[renderer-consumer] ${failure}`);
   console.log(

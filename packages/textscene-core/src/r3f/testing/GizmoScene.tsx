@@ -9,7 +9,7 @@ import { InstancedScenePathsProvider } from '../contexts/InstancedScenePathsCont
 import { InstanceOwnerProvider } from '../contexts/InstanceOwnersContext';
 import { NodePathProvider } from '../contexts/NodePathContext';
 import { SelectionProvider } from '../contexts/SelectionContext';
-import { ViewportModeProvider } from '../contexts/ViewportModeContext';
+import { ViewShowProvider } from '../viewShow/ViewShowContext';
 import type { GizmoVariant } from '../gizmo/gizmoVariant';
 import { PluginGizmo } from '../gizmo/PluginGizmo';
 import { SelectSeeder } from './SelectSeeder';
@@ -46,12 +46,12 @@ export function GizmoScene({
 }: GizmoSceneProps) {
   const node = nodePath === null ? children : <NodePathProvider path={nodePath}>{children}</NodePathProvider>;
   return (
-    <ViewportModeProvider initialShowGizmos={showGizmos}>
+    <ViewShowProvider show={{ gizmos: showGizmos }}>
       <SelectionProvider>
         <SelectSeeder path={selectedPath} />
         {instantiated ? <InsideLockedInstance>{node}</InsideLockedInstance> : node}
       </SelectionProvider>
-    </ViewportModeProvider>
+    </ViewShowProvider>
   );
 }
 

@@ -9,20 +9,18 @@ import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import {
   DEFAULT_VIEWPORT,
   FRAME_ON_OPEN_STORAGE_KEY,
-  SHOW_FOG_STORAGE_KEY,
-  SHOW_GIZMOS_STORAGE_KEY,
-  SHOW_GRID_STORAGE_KEY,
-  SHOW_PERFORMANCE_STORAGE_KEY,
+  SHOW_STORAGE_KEYS,
   VIEWPORT_MODE_STORAGE_KEY,
+  type PersistedShowKey,
   type PersistedViewport,
   type ViewportMode,
 } from '../../contexts/ViewportModeContext.js';
 import { readPersisted, usePersistedState } from '../../hooks/usePersistedState.js';
+import { DEFAULT_SHOW } from '../../viewShow/viewShow.js';
 import { useOpenedScene, useSceneGraphs } from '../../hooks/useOpenedScene.js';
 import { ViewportToolbar } from '../ViewportToolbar/ViewportToolbar.js';
 import { Splitter } from '../Splitter/Splitter.js';
 import { ViewportArea } from './ViewportArea.js';
-import { PerformanceOverlay } from '../../frameProfile/PerformanceOverlay.js';
 import { PreviewErrorBoundary } from './PreviewErrorBoundary.js';
 import { EscapeDeselect } from './EscapeDeselect.js';
 import { SceneChangeResetter } from './SceneChangeResetter.js';
@@ -114,11 +112,13 @@ export function TscnPreviewShell({
   // persists.
   const [initialViewport] = useState<PersistedViewport>(() => ({
     mode: readPersisted<ViewportMode>(VIEWPORT_MODE_STORAGE_KEY, DEFAULT_VIEWPORT.mode, isViewportMode),
-    showGizmos: readPersisted(SHOW_GIZMOS_STORAGE_KEY, DEFAULT_VIEWPORT.showGizmos, isBoolean),
-    showGrid: readPersisted(SHOW_GRID_STORAGE_KEY, DEFAULT_VIEWPORT.showGrid, isBoolean),
+    show: Object.fromEntries(
+      Object.entries(SHOW_STORAGE_KEYS).map(([key, storageKey]) => [
+        key,
+        readPersisted(storageKey, DEFAULT_SHOW[key as PersistedShowKey], isBoolean),
+      ])
+    ),
     frameOnOpen: readPersisted(FRAME_ON_OPEN_STORAGE_KEY, DEFAULT_VIEWPORT.frameOnOpen, isBoolean),
-    showFog: readPersisted(SHOW_FOG_STORAGE_KEY, DEFAULT_VIEWPORT.showFog, isBoolean),
-    showPerformance: readPersisted(SHOW_PERFORMANCE_STORAGE_KEY, DEFAULT_VIEWPORT.showPerformance, isBoolean),
   }));
 
   const withProviders = previewShellProviders({
@@ -163,7 +163,6 @@ export function TscnPreviewShell({
             <div className={styles.viewportToolbarOverlay} data-testid="viewport-toolbar-overlay">
               <ViewportToolbar />
             </div>
-            <PerformanceOverlay />
             <PreviewErrorBoundary sceneGraph={sceneGraph} onViewportErrorChange={setViewportError}>
               <ViewportArea />
             </PreviewErrorBoundary>

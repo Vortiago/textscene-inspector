@@ -22,11 +22,8 @@ function withShellProviders() {
     initialViewportMode: undefined,
     initialViewport: {
       mode: '2D',
-      showGizmos: true,
-      showGrid: false,
+      show: { gizmos: true, grid: false, fog: true, performance: false },
       frameOnOpen: false,
-      showFog: true,
-      showPerformance: false,
     },
     panelId: 'p',
     rootScenePath: 'main.tscn',

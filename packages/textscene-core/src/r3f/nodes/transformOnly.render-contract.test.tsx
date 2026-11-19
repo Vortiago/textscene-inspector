@@ -10,7 +10,7 @@ import type { TscnNode } from '../../parser/types';
 import type { Transform3D } from '../../godot/math/transform3d';
 import { NodeDispatcher } from '../NodeDispatcher';
 import { SelectionProvider } from '../contexts/SelectionContext';
-import { ViewportModeProvider } from '../contexts/ViewportModeContext';
+import { ViewShowProvider } from '../viewShow/ViewShowContext';
 import { nodeComponentRegistry } from '../NodeComponentRegistry';
 import { descendsFromClass } from '../../godot/classdb/classBaseTypes.js';
 import { visibleInTree } from '../visibleInTree';
@@ -70,9 +70,9 @@ function kidNode(): TscnNode {
 async function renderScene(nodes: TscnNode[]) {
   return ReactThreeTestRenderer.create(
     <SelectionProvider>
-      <ViewportModeProvider initialShowGizmos={false}>
+      <ViewShowProvider show={{ gizmos: false }}>
         <NodeDispatcher nodes={nodes} />
-      </ViewportModeProvider>
+      </ViewShowProvider>
     </SelectionProvider>
   );
 }
