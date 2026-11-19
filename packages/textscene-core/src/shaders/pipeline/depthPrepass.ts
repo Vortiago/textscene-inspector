@@ -33,10 +33,7 @@ export function setPrepassDraw(material: THREE.Material, draw: PrepassDraw | nul
 }
 
 /** The draw its maker set, else `unset`'s. */
-export function prepassDrawOf(
-  material: THREE.Material,
-  unset: PrepassDrawOf = ownProgramDraw
-): PrepassDraw | null {
+function prepassDrawOf(material: THREE.Material, unset: PrepassDrawOf = ownProgramDraw): PrepassDraw | null {
   return prepassDraws.has(material) ? prepassDraws.get(material)! : unset(material);
 }
 

@@ -15,7 +15,8 @@ camera the view renders through (`renderer_scene_cull.cpp:3692`).
 Each render shows the capture at its own exposure over the capture's (`light_storage.cpp:1810-1814`).
 Over a sky, a ONCE probe reflects the bake of the view, as Godot captures it while that bake holds.
 An ALWAYS probe draws its faces at the world's exposure before the view in each frame. Those
-renders bake the sky for the view too (`renderer_scene_cull.cpp:3755-3762`).
+renders bake the sky for the view too (`renderer_scene_cull.cpp:3755-3762`). A Quality sky bakes
+again in the view's render at the view's exposure, so every frame is the same, as in Godot.
 A capture draws its positional shadows in the scene's own probe atlas, size 1024 with quadrants
 [4, 4, 4, 8], not in the viewport's (`renderer_scene_cull.cpp:430-435`, `:3691`). It samples each
 texture at mipmap bias 0 and 4 anisotropic taps, with Godot's default samplers
@@ -86,3 +87,4 @@ The lenient parser reads every property above. A malformed value keeps Godot's d
 ## Known limitations
 
 - **Approximated** A probe that updates ALWAYS captures only when the content changes, where Godot captures it in each frame.
+- **Approximated** An Incremental sky under an ALWAYS probe, with a camera exposure other than the world's, is not drawn as Godot draws it. Godot bakes it at two exposures and flashes in 2 of every 8 frames. The previewer does not repeat that cycle.
