@@ -1,6 +1,13 @@
 import type { SceneGraph } from '../core/SceneGraph.js';
 import { nodeNotFound, SceneNodeHandle, type HandleHost, type NodeHandle } from './nodeHandle.js';
-import { getNodeOrNull, ROOT_WINDOW_PATH, type WalkedTree } from './nodePathWalk.js';
+import {
+  absolutePathOf,
+  getNodeOrNull,
+  livePathOf,
+  ROOT_WINDOW_PATH,
+  ROOT_WINDOW_PREFIX,
+  type WalkedTree,
+} from './nodePathWalk.js';
 import { loadPropertyAccess, type PropertyAccess, type SceneProperties } from './sceneProperties.js';
 import type { SceneTree, SceneTreeNode } from './sceneRuntime.js';
 import { sceneValueOf, valueOfSceneValue, variantOf, type SceneValue } from './variant.js';
@@ -24,18 +31,9 @@ const loadPropertyMethods = memoisedImport(() => import('../godot/classdb/proper
 
 /** `get_class` of the root viewport, the window above the scene's root node. */
 const ROOT_WINDOW_TYPE = 'Window';
-const ROOT_WINDOW_PREFIX = `${ROOT_WINDOW_PATH}/`;
 
 /** The properties whose write changes the shape of the tree, which this release does not port. */
 const SHAPE_PROPERTIES: ReadonlySet<string> = new Set(['script', 'instance', 'name']);
-
-function livePathOf(path: string): string {
-  return path.slice(ROOT_WINDOW_PREFIX.length);
-}
-
-function absolutePathOf(livePath: string): string {
-  return `${ROOT_WINDOW_PREFIX}${livePath}`;
-}
 
 /** What the nodes read of their scene: its parse and the Live scene tree over it. */
 export interface SceneNodesSource {

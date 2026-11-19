@@ -149,7 +149,8 @@ const current = await scene.getNode('/root').call('get_camera_3d');
 root window), `isCurrent`, and `canBeCurrent`, which is false for a Camera2D that is not enabled. A
 camera list in your page reads it, and `scene.subscribe` tells you when a call or a load moves it.
 
-The In-game mode draws through the current camera. The 3D mode keeps its orbit camera.
+The In-game mode draws through the current camera. The 3D mode keeps its editor camera, until the
+`camera` option looks it through a Camera3D: see "Look through a camera in the 3D mode".
 
 The limits of this release:
 
@@ -214,7 +215,7 @@ load. A file that the scene declares and no property reads is in neither list.
 
 ### Mount the view with no React code
 
-`mountScene(element, scene, { mode, visible })` mounts the view in a page element, for a page with
+`mountScene(element, scene, { mode, visible, camera })` mounts the view in a page element, for a page with
 no React code of its own. React stays a peer dependency. `mode` is the mode of `TscnCanvas`, and
 here it is `'in-game'` by default. The page changes the scene through the same `scene`, as a React app does.
 
@@ -309,6 +310,29 @@ view that failed to mount stays failed: dispose it and mount again.
 `visible` is `true` by default. While it is `false`, the view draws only the frames a load, a settle or a capture needs: a write to a
 hidden view draws until the view settles again.
 `<TscnCanvas visible={false} />` does the same in React.
+
+### Look through a camera in the 3D mode
+
+`camera` looks the 3D mode through a Camera3D of the scene, as the Preview check box of a Camera3D
+does in the Godot editor. The view draws what the game draws through that camera: its projection,
+`fov` or `size`, `near` and `far`, `keep_aspect` and the offsets. `null`, the default, gives the
+editor camera, at the pose it had before the look, as in Godot:
+
+```ts
+const view = mountScene(element, scene, { mode: '3D', camera: 'Rig/TopCamera' });
+
+view.update({ camera: 'Player/Camera3D' });
+view.update({ camera: null });
+```
+
+The path is from the scene's root, as `scene.getNode` takes it. A node there that is not a
+Camera3D throws, with the type found. A path that names no node yet does not throw, since a
+sub-scene can still be loading: the view draws through the camera once the load brings it in,
+and through the editor camera until then. If the path still names no Camera3D once the loads end,
+`settled` rejects with the path in the message. A camera that leaves the scene ends the look, as in Godot, also when a node comes back at the path:
+set `camera` to `null` and then to the path to look again. The option does not make the camera
+current, and the In-game mode keeps the current camera: use `call('make_current')` for that.
+`<TscnCanvas camera="Rig/TopCamera" />` does the same in React.
 
 ### Save a PNG from headless Chromium
 
@@ -405,7 +429,7 @@ The package exports these names.
 - `Variant` and `SceneValue` (types): what `variant` gives, and what `get` and `set` take.
 - `TscnCanvas`: the view. Its props are `scene` (a `Scene`, optional inside
   `<TscnSceneProvider>`), `mode` (`'in-game'`, `'3D'` or `'2D'`, default `'3D'`), `visible` (`false`
-  stops the frames) and `className`.
+  stops the frames), `camera` (the Camera3D the 3D mode looks through) and `className`.
 - `TscnSceneProvider`: mounts what the view reads. Give it `scene` (a `Scene`), or `source` (the
   text of a `.tscn` scene), `provider` (a `ResourceProvider`) and `rootScenePath` (the `res://` path
   the scene opens under, optional). It takes `children`. A new `provider` starts a new resource
@@ -420,7 +444,7 @@ The package exports these names.
   and returns a `View`: `settled`, `captureImage`, `update` and `dispose`. See "Mount the view with
   no React code".
 - `View` and `ViewOptions` (types): what `mountScene` returns, and the options of `mountScene` and
-  `update`: `mode` (default `'in-game'`) and `visible` (default `true`).
+  `update`: `mode` (default `'in-game'`), `visible` (default `true`) and `camera` (default `null`).
 
 ## Styles and workers
 

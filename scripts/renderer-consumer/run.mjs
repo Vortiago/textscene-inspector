@@ -15,6 +15,8 @@ import { mountFailures } from './mountFailures.mjs';
 import { RENDER_TIMEOUT_MS, pollInk } from './pollInk.mjs';
 import { runSwitchChecks } from './switchChecks.mjs';
 import { switchFailures } from './switchFailures.mjs';
+import { runCameraChecks } from './cameraChecks.mjs';
+import { cameraFailures } from './cameraFailures.mjs';
 
 /* global document, getComputedStyle, window */
 // These exist only in the browser that runs the `page.evaluate` calls.
@@ -122,7 +124,8 @@ async function renderInBrowser(directory) {
       await browser.newPage(),
       `http://localhost:${port}/?checks=switch`
     );
-    return { drawn, mounted, held, missing, switched };
+    const cameras = await runCameraChecks(await browser.newPage(), `http://localhost:${port}/?checks=camera`);
+    return { drawn, mounted, held, missing, switched, cameras };
   } finally {
     await browser.close();
     await server.close();
@@ -196,7 +199,7 @@ function callFailures(drawn) {
 }
 
 /** One line per failed check of every view and of `mountScene`. */
-function failures({ drawn, mounted, held, missing, switched }) {
+function failures({ drawn, mounted, held, missing, switched, cameras }) {
   return [
     ...Object.entries(drawn).flatMap(([view, result]) => failuresOf(view, result)),
     ...writeFailures(drawn),
@@ -209,6 +212,7 @@ function failures({ drawn, mounted, held, missing, switched }) {
     ...missingFileFailures(missing.results),
     ...missing.errors.map((message) => `missing files: page error: ${message}`),
     ...switchFailures(switched),
+    ...cameraFailures(cameras),
   ];
 }
 

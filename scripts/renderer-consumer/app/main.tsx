@@ -4,6 +4,7 @@ import { runHeldResourceChecks, type HeldResourceCheckResults } from './heldReso
 import { runMissingFileChecks, type MissingFileCheckResults } from './missingFileChecks';
 import { projectOf, runMountChecks, type MountCheckResults } from './mountChecks';
 import { WINDOW_320_PROJECT, exposeSwitchChecks } from './switchView';
+import { exposeCameraChecks } from './cameraView';
 
 const FIXTURE_SCENE = `[gd_scene format=3]
 
@@ -82,6 +83,15 @@ function View() {
   );
 }
 
+/** `#viewport`, the element the runner's screenshots read. */
+function screenshotElement(): HTMLElement {
+  const viewport = document.createElement('div');
+  viewport.id = 'viewport';
+  viewport.style.cssText = 'width: 320px; height: 240px';
+  document.getElementById('root')!.append(viewport);
+  return viewport;
+}
+
 declare global {
   interface Window {
     /** Written once the checks of `mountScene` end, for the runner to read. */
@@ -101,12 +111,9 @@ if (query.get('checks') === 'mount') {
 } else if (query.get('checks') === 'missing') {
   void runMissingFileChecks().then((results) => (window.missingFileChecks = results));
 } else if (query.get('checks') === 'switch') {
-  // `#viewport` is the element the runner's screenshots read.
-  const viewport = document.createElement('div');
-  viewport.id = 'viewport';
-  viewport.style.cssText = 'width: 320px; height: 240px';
-  document.getElementById('root')!.append(viewport);
-  exposeSwitchChecks(viewport);
+  exposeSwitchChecks(screenshotElement());
+} else if (query.get('checks') === 'camera') {
+  exposeCameraChecks(screenshotElement());
 } else {
   void Promise.all([written, called]).then(() =>
     createRoot(document.getElementById('root')!).render(
