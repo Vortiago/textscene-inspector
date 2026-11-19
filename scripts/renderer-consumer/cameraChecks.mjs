@@ -8,11 +8,17 @@ import { MISSING_PATH, RESIDUE_MAX_DELTA } from './cameraFailures.mjs';
 
 const CAMERAS = ['Rig/Front', 'Above'];
 
-/** The view's frame once `update` moves it to `camera`, with the editor gizmos on or off. */
-async function shotThrough(page, camera, gizmos = true) {
-  await page.evaluate((options) => window.cameraView.update(options), { camera, show: { gizmos } });
+/** The view's frame once `update` applies `options`. */
+async function shotAfterUpdate(page, options) {
+  await page.evaluate((next) => window.cameraView.update(next), options);
   return stillShot(page);
 }
+
+/** The view's frame through `camera`, with the editor gizmos on. */
+const shotThrough = (page, camera) => shotAfterUpdate(page, { camera, show: { gizmos: true } });
+
+/** The view's frame through `camera`, with the editor gizmos off. */
+const shotWithoutGizmos = (page, camera) => shotAfterUpdate(page, { camera, show: { gizmos: false } });
 
 /** The pixels past residue in which the game's view through `camera` differs from `shot`. */
 async function overFromGame(page, camera, shot) {
@@ -59,7 +65,7 @@ export async function runCameraChecks(page, url) {
   const gizmoPixels = {};
   const withoutGizmos = {};
   for (const camera of CAMERAS) {
-    withoutGizmos[camera] = await shotThrough(page, camera, false);
+    withoutGizmos[camera] = await shotWithoutGizmos(page, camera);
     gizmoPixels[camera] = compareImages(shots[camera], withoutGizmos[camera]).changedPixels;
   }
   const overFromGameView = {};
