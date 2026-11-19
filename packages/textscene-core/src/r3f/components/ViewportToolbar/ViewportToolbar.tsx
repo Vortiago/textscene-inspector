@@ -3,6 +3,7 @@ import {
   FRAME_ON_OPEN_STORAGE_KEY,
   SHOW_STORAGE_KEYS,
   VIEWPORT_MODE_STORAGE_KEY,
+  type PersistedShowKey,
   type ViewportMode,
 } from '../../contexts/ViewportModeContext.js';
 import { RUNNING_GAME_SHOW, type ViewShow } from '../../viewShow/viewShow.js';
@@ -41,7 +42,7 @@ function freelookTitle(isPreviewing: boolean, isAvailable: boolean): string {
 interface DisplayToggleState {
   mode: ViewportMode;
   show: ViewShow;
-  setShow: (show: Partial<ViewShow>) => void;
+  setShowKey: (key: keyof ViewShow, on: boolean) => void;
   frameOnOpen: boolean;
   setFrameOnOpen: (frame: boolean) => void;
   sceneHasSun: boolean;
@@ -61,9 +62,19 @@ function buildDisplayToggles(state: DisplayToggleState): readonly DisplayToggle[
       label,
       title,
       checked: show[key],
-      onChange: (on: boolean) => state.setShow({ [key]: on }),
+      onChange: (on: boolean) => state.setShowKey(key, on),
     };
     return key in RUNNING_GAME_SHOW ? editorOnly(toggle) : toggle;
+  };
+  // A preview the scene supplies its own of is disabled and unchecked, as Godot's button (ADR-0025).
+  const ofPreview = (
+    key: 'previewSun' | 'previewEnvironment',
+    label: string,
+    isYielded: boolean,
+    titles: { yielded: string; shown: string }
+  ): DisplayToggle => {
+    const toggle = ofShow(key, label, isYielded ? titles.yielded : titles.shown);
+    return isYielded ? { ...toggle, checked: false, disabled: true } : toggle;
   };
   return [
     ofShow(
@@ -88,28 +99,14 @@ function buildDisplayToggles(state: DisplayToggleState): readonly DisplayToggle[
           }),
           ofShow('grid', 'Grid', 'Show a ground-plane reference grid'),
           ofShow('fog', 'Fog', "Draw the Environment's depth and volumetric fog. Off skips the fog passes."),
-          {
-            ...ofShow(
-              'previewSun',
-              'Preview Sun',
-              state.sceneHasSun
-                ? 'Scene contains DirectionalLight3D. Preview disabled.'
-                : "Godot's editor preview sun, for a scene with no light of its own"
-            ),
-            checked: show.previewSun && !state.sceneHasSun,
-            ...(state.sceneHasSun && { disabled: true }),
-          },
-          {
-            ...ofShow(
-              'previewEnvironment',
-              'Preview Sky',
-              state.sceneHasEnvironment
-                ? 'Scene contains WorldEnvironment. Preview disabled.'
-                : "Godot's editor preview sky, for a scene with no environment of its own"
-            ),
-            checked: show.previewEnvironment && !state.sceneHasEnvironment,
-            ...(state.sceneHasEnvironment && { disabled: true }),
-          },
+          ofPreview('previewSun', 'Preview Sun', state.sceneHasSun, {
+            yielded: 'Scene contains DirectionalLight3D. Preview disabled.',
+            shown: "Godot's editor preview sun, for a scene with no light of its own",
+          }),
+          ofPreview('previewEnvironment', 'Preview Sky', state.sceneHasEnvironment, {
+            yielded: 'Scene contains WorldEnvironment. Preview disabled.',
+            shown: "Godot's editor preview sky, for a scene with no environment of its own",
+          }),
         ]),
   ];
 }
@@ -157,18 +154,15 @@ export function ViewportToolbar() {
   // WorkspaceAutoSelect, must not overwrite the stored preference.
   const handleModeClick = persisting(setMode, VIEWPORT_MODE_STORAGE_KEY);
   const handleFrameOnOpenChange = persisting(setFrameOnOpen, FRAME_ON_OPEN_STORAGE_KEY);
-  const handleShowChange = (given: Partial<ViewShow>) => {
-    setShow(given);
-    for (const [key, on] of Object.entries(given)) {
-      if (key in SHOW_STORAGE_KEYS)
-        writePersisted(SHOW_STORAGE_KEYS[key as keyof typeof SHOW_STORAGE_KEYS], on);
-    }
+  const handleShowChange = (key: keyof ViewShow, on: boolean) => {
+    setShow({ [key]: on });
+    if (key in SHOW_STORAGE_KEYS) writePersisted(SHOW_STORAGE_KEYS[key as PersistedShowKey], on);
   };
 
   const displayToggles = buildDisplayToggles({
     mode,
     show,
-    setShow: handleShowChange,
+    setShowKey: handleShowChange,
     frameOnOpen,
     setFrameOnOpen: handleFrameOnOpenChange,
     sceneHasSun,

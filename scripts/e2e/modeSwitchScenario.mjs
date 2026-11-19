@@ -1,9 +1,8 @@
 import { PNG } from 'pngjs';
 import { diffMask } from '../vscode/pixels.mjs';
 import { CANVAS_2D_TESTIDS } from '../visual/preview/appContract.mjs';
-import { findCanvas, settleCanvas } from '../visual/previewServer.mjs';
 import { checkDiagnostics } from './diagnostics.mjs';
-import { openFixture } from './openFixture.mjs';
+import { openFixture, shootCanvas } from './openFixture.mjs';
 import { expandAllTreeRows, selectOutlinerNode, SELECT_SETTLE_MS } from './outliner.mjs';
 
 export const SWITCH_FIXTURE = 'in-game/unit-mode-switch.tscn';
@@ -31,13 +30,7 @@ export function redPixels(buffer) {
 const viewButton = (page, view) =>
   page.getByRole('group', { name: 'Viewport dimension' }).getByText(view, { exact: true });
 
-async function shoot(page) {
-  const { canvas, reason } = await findCanvas(page);
-  if (reason) throw new Error(`[Mode switch] ${reason}`);
-  const { buffer, reason: settleReason } = await settleCanvas(page, canvas);
-  if (!buffer) throw new Error(`[Mode switch] the canvas never settled: ${settleReason}`);
-  return buffer;
-}
+const shoot = (page) => shootCanvas(page, 'Mode switch');
 
 /** What the viewport holds in the mode the toolbar shows pressed. */
 async function readView(page, view) {

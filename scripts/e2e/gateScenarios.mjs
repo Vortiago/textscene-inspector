@@ -180,7 +180,7 @@ export const SCENARIOS = [
   {
     name: 'editor helpers',
     title: 'editor helpers: each Display toggle on and off in the 3D view',
-    seconds: 150,
+    seconds: 133,
     run: runEditorHelpersScenario,
     check: checkEditorHelpers,
     measure: measureEditorHelpers,

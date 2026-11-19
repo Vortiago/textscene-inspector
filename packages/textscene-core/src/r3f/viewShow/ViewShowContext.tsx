@@ -1,5 +1,7 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { useIsEditorHint } from '../contexts/EditorHintContext.js';
+import { useByValue } from '../hooks/useByValue.js';
+import { sameData } from '../../utils/sameData.js';
 import { DEFAULT_SHOW, RUNNING_GAME_SHOW, withShown, type ViewShow } from './viewShow.js';
 
 const ViewShowContext = createContext<ViewShow>(DEFAULT_SHOW);
@@ -11,11 +13,8 @@ ShowGizmosContext.displayName = 'ShowGizmosContext';
 
 /** A key `show` leaves out has its default. */
 export function ViewShowProvider({ show, children }: { show?: Partial<ViewShow>; children: ReactNode }) {
-  const shown = withShown(DEFAULT_SHOW, show);
-  const keys = Object.values(shown).join();
-  // `keys` stands for `shown`, so a host that passes a new object of the same keys re-renders no reader.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const value = useMemo(() => shown, [keys]);
+  // By value, so a host that passes a new object of the same keys re-renders no reader.
+  const value = useByValue(withShown(DEFAULT_SHOW, show), sameData);
   return (
     <ViewShowContext.Provider value={value}>
       <ShowGizmosContext.Provider value={value.gizmos}>{children}</ShowGizmosContext.Provider>

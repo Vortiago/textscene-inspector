@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { CLEAN_LOAD, fakeGate } from './gate.testkit.mjs';
-import { checkEditorHelpers, FOG_FIXTURE, HELPERS_FIXTURE } from './editorHelpersScenario.mjs';
+import { checkEditorHelpers, FOG_FIXTURE, HELPER_PIXELS, HELPERS_FIXTURE } from './editorHelpersScenario.mjs';
+
+const PANEL_ON_THEN_OFF = { shownOn: true, shownOff: false };
 
 /** A run that shows each claim as the fixed view measures it, the counts of a run on SwiftShader. */
 function passingRun() {
@@ -15,10 +17,10 @@ function passingRun() {
         'Preview Sun': 16168,
         'Preview Sky': 439064,
       },
+      performance: PANEL_ON_THEN_OFF,
       diagnostics: CLEAN_LOAD,
     },
-    fog: { pixels: { Fog: 463392 }, diagnostics: CLEAN_LOAD },
-    performance: { shownOn: true, shownOff: false, diagnostics: CLEAN_LOAD },
+    fog: { pixels: { Fog: 463392 }, performance: PANEL_ON_THEN_OFF, diagnostics: CLEAN_LOAD },
   };
 }
 
@@ -37,7 +39,7 @@ describe('checkEditorHelpers', () => {
     const run = passingRun();
     run.helpers.pixels.Gizmos = 0;
     expect(failuresOf(run)).toEqual([
-      `[Editor helpers] Gizmos on ${HELPERS_FIXTURE} changed 0 px, expected over 300`,
+      `[Editor helpers] Gizmos on ${HELPERS_FIXTURE} changed 0 px, expected over ${HELPER_PIXELS}`,
     ]);
   });
 
@@ -45,19 +47,23 @@ describe('checkEditorHelpers', () => {
     const run = passingRun();
     run.fog.pixels.Fog = 12;
     expect(failuresOf(run)).toEqual([
-      `[Editor helpers] Fog on ${FOG_FIXTURE} changed 12 px, expected over 300`,
+      `[Editor helpers] Fog on ${FOG_FIXTURE} changed 12 px, expected over ${HELPER_PIXELS}`,
     ]);
   });
 
   it('fails a Performance toggle that shows no panel', () => {
     const run = passingRun();
-    run.performance.shownOn = false;
-    expect(failuresOf(run)).toEqual(['[Editor helpers] Performance on shows no panel over the view']);
+    run.helpers.performance = { shownOn: false, shownOff: false };
+    expect(failuresOf(run)).toEqual([
+      `[Editor helpers] Performance on ${HELPERS_FIXTURE} shows no panel over the view`,
+    ]);
   });
 
   it('fails a panel that stays after the toggle turns off', () => {
     const run = passingRun();
-    run.performance.shownOff = true;
-    expect(failuresOf(run)).toEqual(['[Editor helpers] Performance off still shows the panel']);
+    run.fog.performance = { shownOn: true, shownOff: true };
+    expect(failuresOf(run)).toEqual([
+      `[Editor helpers] Performance off on ${FOG_FIXTURE} still shows the panel`,
+    ]);
   });
 });

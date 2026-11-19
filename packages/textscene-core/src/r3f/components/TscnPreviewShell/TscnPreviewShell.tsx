@@ -11,10 +11,12 @@ import {
   FRAME_ON_OPEN_STORAGE_KEY,
   SHOW_STORAGE_KEYS,
   VIEWPORT_MODE_STORAGE_KEY,
+  type PersistedShowKey,
   type PersistedViewport,
   type ViewportMode,
 } from '../../contexts/ViewportModeContext.js';
 import { readPersisted, usePersistedState } from '../../hooks/usePersistedState.js';
+import { DEFAULT_SHOW } from '../../viewShow/viewShow.js';
 import { useOpenedScene, useSceneGraphs } from '../../hooks/useOpenedScene.js';
 import { ViewportToolbar } from '../ViewportToolbar/ViewportToolbar.js';
 import { Splitter } from '../Splitter/Splitter.js';
@@ -110,12 +112,12 @@ export function TscnPreviewShell({
   // persists.
   const [initialViewport] = useState<PersistedViewport>(() => ({
     mode: readPersisted<ViewportMode>(VIEWPORT_MODE_STORAGE_KEY, DEFAULT_VIEWPORT.mode, isViewportMode),
-    show: {
-      gizmos: readPersisted(SHOW_STORAGE_KEYS.gizmos, DEFAULT_VIEWPORT.show.gizmos, isBoolean),
-      grid: readPersisted(SHOW_STORAGE_KEYS.grid, DEFAULT_VIEWPORT.show.grid, isBoolean),
-      fog: readPersisted(SHOW_STORAGE_KEYS.fog, DEFAULT_VIEWPORT.show.fog, isBoolean),
-      performance: readPersisted(SHOW_STORAGE_KEYS.performance, DEFAULT_VIEWPORT.show.performance, isBoolean),
-    },
+    show: Object.fromEntries(
+      Object.entries(SHOW_STORAGE_KEYS).map(([key, storageKey]) => [
+        key,
+        readPersisted(storageKey, DEFAULT_SHOW[key as PersistedShowKey], isBoolean),
+      ])
+    ),
     frameOnOpen: readPersisted(FRAME_ON_OPEN_STORAGE_KEY, DEFAULT_VIEWPORT.frameOnOpen, isBoolean),
   }));
 

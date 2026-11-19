@@ -23,10 +23,12 @@ export const SHOW_STORAGE_KEYS = {
   performance: 'tsi.showPerformance',
 } as const satisfies Partial<Record<keyof ViewShow, string>>;
 
+export type PersistedShowKey = keyof typeof SHOW_STORAGE_KEYS;
+
 /** The viewport preferences a session persists, read once to seed the provider. */
 export interface PersistedViewport {
   mode: ViewportMode;
-  show: Pick<ViewShow, keyof typeof SHOW_STORAGE_KEYS>;
+  show: Partial<ViewShow>;
   frameOnOpen: boolean;
 }
 

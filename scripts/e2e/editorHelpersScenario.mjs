@@ -1,14 +1,13 @@
 import { diffMask } from '../vscode/pixels.mjs';
-import { findCanvas, settleCanvas } from '../visual/previewServer.mjs';
 import { PERFORMANCE_TESTIDS } from '../visual/preview/appContract.mjs';
 import { checkDiagnostics } from './diagnostics.mjs';
-import { openFixture } from './openFixture.mjs';
+import { openFixture, shootCanvas } from './openFixture.mjs';
 
 export const HELPERS_FIXTURE = 'unit-editor-helpers.tscn';
 export const FOG_FIXTURE = 'unit-editor-helpers-fog.tscn';
 
 /** The Display toggles that change what the 3D view of each fixture draws, by label. */
-export const DRAWN_TOGGLES = {
+const DRAWN_TOGGLES = {
   [HELPERS_FIXTURE]: ['Gizmos', 'Collisions', 'Labels', 'Navigation', 'Grid', 'Preview Sun', 'Preview Sky'],
   [FOG_FIXTURE]: ['Fog'],
 };
@@ -16,13 +15,7 @@ export const DRAWN_TOGGLES = {
 // The smallest change, the gizmos, covers about 800 pixels at this size.
 export const HELPER_PIXELS = 300;
 
-async function shoot(page) {
-  const { canvas, reason } = await findCanvas(page);
-  if (reason) throw new Error(`[Editor helpers] ${reason}`);
-  const { buffer, reason: settleReason } = await settleCanvas(page, canvas);
-  if (!buffer) throw new Error(`[Editor helpers] the canvas never settled: ${settleReason}`);
-  return buffer;
-}
+const shoot = (page) => shootCanvas(page, 'Editor helpers');
 
 async function flip(page, label) {
   await toggleMenu(page);
@@ -32,6 +25,16 @@ async function flip(page, label) {
 
 async function toggleMenu(page) {
   await page.getByTestId('display-menu-button').click();
+}
+
+const hasPerformancePanel = (page) => page.getByTestId(PERFORMANCE_TESTIDS.overlay).isVisible();
+
+/** Whether the panel shows after the Performance toggle turns on, and after it turns off. */
+async function performancePanels(page) {
+  await flip(page, 'Performance');
+  const shownOn = await hasPerformancePanel(page);
+  await flip(page, 'Performance');
+  return { shownOn, shownOff: await hasPerformancePanel(page) };
 }
 
 /** The pixels each flip changes, each against the frame before it, so every frame is shot once. */
@@ -51,50 +54,35 @@ async function runDrawnToggles(browser, baseUrl, fixture) {
     pixels[label] = diffMask(previous, flipped).diffPixels;
     previous = flipped;
   }
+  // After the last shot, so the panel over the canvas is in no frame.
+  const performance = await performancePanels(page);
   await context.close();
-  return { pixels, diagnostics };
-}
-
-const hasPerformancePanel = (page) => page.getByTestId(PERFORMANCE_TESTIDS.overlay).isVisible();
-
-/** Whether the panel shows after the Performance toggle turns on, and after it turns off. */
-async function runPerformance(browser, baseUrl) {
-  const { context, page, diagnostics } = await openFixture(browser, baseUrl, {
-    fixture: HELPERS_FIXTURE,
-    label: 'Editor helpers performance',
-  });
-  await flip(page, 'Performance');
-  const shownOn = await hasPerformancePanel(page);
-  await flip(page, 'Performance');
-  const shownOff = await hasPerformancePanel(page);
-  await context.close();
-  return { shownOn, shownOff, diagnostics };
+  return { pixels, performance, diagnostics };
 }
 
 export async function runEditorHelpersScenario(browser, baseUrl) {
   return {
     helpers: await runDrawnToggles(browser, baseUrl, HELPERS_FIXTURE),
     fog: await runDrawnToggles(browser, baseUrl, FOG_FIXTURE),
-    performance: await runPerformance(browser, baseUrl),
   };
 }
 
-function checkDrawn(gate, fixture, { pixels }) {
+function checkDrawn(gate, fixture, { pixels, performance }) {
   for (const label of DRAWN_TOGGLES[fixture]) {
     gate.check(
       pixels[label] > HELPER_PIXELS,
       `[Editor helpers] ${label} on ${fixture} changed ${pixels[label]} px, expected over ${HELPER_PIXELS}`
     );
   }
+  gate.check(performance.shownOn, `[Editor helpers] Performance on ${fixture} shows no panel over the view`);
+  gate.check(!performance.shownOff, `[Editor helpers] Performance off on ${fixture} still shows the panel`);
 }
 
 /** Records the scenario's claims on `gate`. */
-export function checkEditorHelpers(gate, { helpers, fog, performance }) {
+export function checkEditorHelpers(gate, { helpers, fog }) {
   checkDrawn(gate, HELPERS_FIXTURE, helpers);
   checkDrawn(gate, FOG_FIXTURE, fog);
-  gate.check(performance.shownOn, '[Editor helpers] Performance on shows no panel over the view');
-  gate.check(!performance.shownOff, '[Editor helpers] Performance off still shows the panel');
-  for (const [label, run] of Object.entries({ helpers, fog, performance })) {
+  for (const [label, run] of Object.entries({ helpers, fog })) {
     checkDiagnostics(gate, `[Editor helpers ${label}]`, run.diagnostics);
   }
 }
