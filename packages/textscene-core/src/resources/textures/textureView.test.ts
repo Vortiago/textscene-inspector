@@ -10,7 +10,6 @@ import {
   applyViewSampler,
   ownedTextureView,
   pinColorSpace,
-  releaseView,
   sameViewSampler,
   textureView,
   viewToRelease,
@@ -44,14 +43,6 @@ function tiling(): THREE.Texture {
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
   return texture;
-}
-
-function disposals(texture: THREE.Texture): { count: number } {
-  const seen = { count: 0 };
-  texture.addEventListener('dispose', () => {
-    seen.count += 1;
-  });
-  return seen;
 }
 
 describe('textureView', () => {
@@ -423,49 +414,7 @@ describe('ownedTextureView', () => {
   });
 });
 
-describe('release', () => {
-  it('disposes a clone a view made', () => {
-    const view = textureView(new THREE.Texture(), sampler({ filter: filterOf(0) }));
-    const seen = disposals(view);
-
-    releaseView(view);
-
-    expect(seen.count).toBe(1);
-  });
-
-  it('disposes an owned view', () => {
-    const view = ownedTextureView(new THREE.Texture(), sampler());
-    const seen = disposals(view);
-
-    releaseView(view);
-
-    expect(seen.count).toBe(1);
-  });
-
-  it('leaves the loader’s shared entry alone', () => {
-    const shared = tiling();
-    const seen = disposals(shared);
-
-    releaseView(textureView(shared, sampler()));
-    releaseView(shared);
-
-    expect(seen.count).toBe(0);
-  });
-
-  it('leaves a render target alone', () => {
-    const target = new THREE.WebGLRenderTarget(8, 8);
-    const seen = disposals(target.texture);
-
-    releaseView(textureView(target.texture, sampler()));
-
-    expect(seen.count).toBe(0);
-  });
-
-  it('tolerates an empty slot (edge case)', () => {
-    expect(() => releaseView(undefined)).not.toThrow();
-    expect(() => releaseView(null)).not.toThrow();
-  });
-
+describe('viewToRelease', () => {
   it('names the texture of a clone, and none for a shared entry', () => {
     const shared = tiling();
     const clone = textureView(new THREE.Texture(), sampler());
@@ -478,12 +427,14 @@ describe('release', () => {
 
   it('does not own a clone of a view, which no view made', () => {
     const view = textureView(new THREE.Texture(), sampler());
-    const copy = view.clone();
-    const seen = disposals(copy);
 
-    releaseView(copy);
+    expect(viewToRelease(view.clone())).toBeNull();
+  });
 
-    expect(seen.count).toBe(0);
+  it('does not own a render target, which its viewport owns', () => {
+    const target = new THREE.WebGLRenderTarget(8, 8);
+
+    expect(viewToRelease(textureView(target.texture, sampler()))).toBeNull();
   });
 });
 

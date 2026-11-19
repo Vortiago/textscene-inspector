@@ -57,7 +57,7 @@ function installGodotFog(): void {
 }
 
 /** three's background tone curve line, ahead of which the sky fog and the debanding go. */
-export const THREE_BACKGROUND_TONE_CURVE = '\t#include <tonemapping_fragment>';
+const THREE_BACKGROUND_TONE_CURVE = '\t#include <tonemapping_fragment>';
 
 /** The sky fog's function, which marks a background chunk that holds the fog. */
 const SKY_FOG = 'godotSkyFog';

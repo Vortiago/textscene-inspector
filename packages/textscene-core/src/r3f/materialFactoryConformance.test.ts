@@ -224,10 +224,6 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'one material per light per parameter set, memoised on every input including the shadow `defines` and disposed on replacement',
   'packages/textscene-core/src/r3f/lighting2d/lightQuad.ts':
     'one material per light per parameter set, memoised on every input including the shadow `defines` and disposed on replacement',
-  'packages/textscene-core/src/r3f/sky/skyBackground.ts':
-    'one material per sky bake, its shaders fixed at construction; a render moves only its brightness and rotation uniforms, and it is disposed with the bake',
-  'packages/textscene-core/src/resources/sky/build.ts':
-    'built once per sky, consumed by a single cube render, disposed with the environment',
   'packages/textscene-core/src/resources/materials/standardmaterial3d/build.ts':
     'the imperative half of the resource pipeline: every texture is already resolved before it is called, so the material is constructed complete',
 };
@@ -308,8 +304,6 @@ const CONSTRUCTED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the present quad: built once per renderer and drawn outside React, so the material never passes through it',
   'packages/textscene-core/src/shaders/pipeline/opaqueSentinel.ts':
     'an opaque-list sentinel: its material writes nothing and is never mutated, and its owner removes it with its scene',
-  'packages/textscene-core/src/resources/sky/build.ts':
-    'the sky cube: built once, consumed by a single cube render, disposed with the environment',
   'packages/textscene-core/src/shaders/sky/transpileSky.ts':
     'the sky triangle of the shader package, which a plain three.js app with no React adds to its scene; the caller owns and disposes it',
   'packages/textscene-core/src/r3f/surfacedMeshDrawer/ClonedExtraDraws.tsx':

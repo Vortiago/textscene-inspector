@@ -12,7 +12,7 @@ const GENERATORS: Readonly<Record<string, SkyMaterialGenerator>> = {
 };
 
 /** Whether `className` is a sky material whose shader a generator writes. */
-export const isSkyMaterialClass = (className: string): boolean => Object.hasOwn(GENERATORS, className);
+const isSkyMaterialClass = (className: string): boolean => Object.hasOwn(GENERATORS, className);
 
 /**
  * Null for a class that is not one of Godot's three sky materials.

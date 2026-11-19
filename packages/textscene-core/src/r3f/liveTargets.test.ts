@@ -6,7 +6,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
-  fillLiveCopy,
   hasHeldCopies,
   heldLiveTargetCopy,
   liveTargetCopy,
@@ -16,7 +15,7 @@ import {
   publishLiveTargets,
   unrenderedTexel,
 } from './liveTargets';
-import { ownedTextureView, releaseView, textureView } from '../resources/textures/textureView';
+import { ownedTextureView, textureView } from '../resources/textures/textureView';
 import { createCanvasTarget, createSceneTarget } from './offscreen/targets';
 import { copiesFilledFrom, recordingRenderer } from './liveTargets.testkit';
 import { holdUntilReleased } from './useDisposeOnRelease';
@@ -101,10 +100,12 @@ describe('a reader of a live target', () => {
     expect(copiesFilledFrom(target.texture)).toEqual([view]);
   });
 
-  it('is no longer filled once released', () => {
+  it('is no longer filled once released', async () => {
     const target = liveCanvasTarget();
-    const view = ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED });
-    releaseView(view);
+    holdUntilReleased(
+      ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED })
+    )();
+    await Promise.resolve();
     expect(copiesFilledFrom(target.texture)).toEqual([]);
   });
 
@@ -119,11 +120,14 @@ describe('a reader of a live target', () => {
     expect(copiesFilledFrom(target.texture)).toEqual([first]);
   });
 
-  it('keeps a shared copy filled while another reader still holds it', () => {
+  it('keeps a shared copy filled while another reader still holds it', async () => {
     const target = liveCanvasTarget();
     const held = ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED });
     const release = holdUntilReleased(held);
-    releaseView(ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED }));
+    holdUntilReleased(
+      ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED })
+    )();
+    await Promise.resolve();
     expect(copiesFilledFrom(target.texture)).toEqual([held]);
     release();
   });
@@ -257,15 +261,6 @@ describe('a copy no reader holds', () => {
     await Promise.resolve();
     expect(isDisposed).toBe(true);
   });
-
-  it('is filled on demand, alone, for a reader that samples it before the next render', () => {
-    const target = liveCanvasTarget();
-    const view = ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED });
-    held(ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: UPRIGHT_CELL }));
-    const { gl, drawnInto } = recordingRenderer();
-    fillLiveCopy(target.texture, view, gl);
-    expect(drawnInto.map((drawn) => drawn?.texture)).toEqual([view]);
-  });
 });
 
 describe('liveTargetCrop', () => {
@@ -372,10 +367,11 @@ describe('heldLiveTargetCopy', () => {
     expect(heldLiveTargetCopy(target.texture, NO_SAMPLER)).toBeNull();
   });
 
-  it('fills the copy now from the renderer that publishes the target', () => {
+  it('fills only its own copy now, from the renderer that publishes the target', () => {
     const target = createCanvasTarget(32, 16, 'SubViewport', canvasColorSpaceOf(false));
     const { gl, drawnInto } = recordingRenderer();
     withdrawals.push(publishLiveTargets([target.texture], gl, false));
+    held(ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: UPRIGHT_CELL }));
     const { copy, release } = heldLiveTargetCopy(target.texture, NO_SAMPLER)!;
     withdrawals.push(release);
     expect(drawnInto.map((drawn) => drawn?.texture)).toEqual([copy]);

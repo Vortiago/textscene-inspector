@@ -15,7 +15,7 @@ const SRC = path.resolve(import.meta.dirname, '../..');
 const VIEW_HOOK = 'packages/textscene-core/src/r3f/useTextureView.ts';
 
 /** A texture clone, or a direct call to the view module. */
-const BY_HAND = /\b(?:\w*[Tt]exture|decoded)\.clone\(\)|\b(?:textureView|ownedTextureView|releaseView)\(/;
+const BY_HAND = /\b(?:\w*[Tt]exture|decoded)\.clone\(\)|\b(?:textureView|ownedTextureView)\(/;
 
 describe('texture views a component draws', () => {
   const offending = walkSources([path.join(SRC, 'nodes'), path.join(SRC, 'r3f')], isProductionSource)
