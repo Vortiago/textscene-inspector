@@ -43,6 +43,7 @@ import { setPrepassDraw } from '../pipeline/depthPrepass.js';
 import { spatialPrepassDraw } from './spatialPrepass.js';
 import { rendererOf } from '../preprocessor/renderingMethod.js';
 import { BoundNodeMaterial } from '../uniforms/boundMaterial.js';
+import type { Specialisation } from '../template/specialisation.js';
 import type { ProjectSampling } from '../uniforms/samplerState.js';
 import type { TranspiledUniform } from '../uniforms/transpiledUniform.js';
 
@@ -62,6 +63,8 @@ export interface TranspiledSpatial {
   readonly material: BoundNodeMaterial;
   /** The template's uniforms of both stages, by `instance.member`: `scene_data_block.data.time`. */
   readonly uniforms: ReadonlyMap<string, UniformNode<unknown>>;
+  /** The template's specialisation constants, by name: `pso_sc_packed_0`. */
+  readonly specialisations: ReadonlyMap<string, Specialisation>;
   /** The template's textures, by name. */
   readonly textures: ReadonlyMap<string, TextureNode>;
   /** The template's storage buffers, by instance name: `instances`. */
@@ -99,10 +102,7 @@ export function transpileParsedSpatial(
     specialisations: resources.uniforms.specialisations,
   };
   const material = new BoundNodeMaterial(shader);
-  const stageColour = () => setColourStages(material, emitStages(SCENE.defines), pipeline);
-  stageColour();
-  // three keeps a function's first build (`NodeBuilder.js:2759`), so a new value emits the stages anew.
-  for (const constant of shader.specialisations) constant.readers.add(stageColour);
+  material.stageWith(() => setColourStages(material, emitStages(SCENE.defines), pipeline));
   applySpatialPipeline(material, pipeline);
   const renderer = rendererOf(options.renderingMethod ?? 'forward_plus');
   const program = {
@@ -115,6 +115,7 @@ export function transpileParsedSpatial(
   return {
     material,
     uniforms: resources.uniforms.byName,
+    specialisations: resources.uniforms.specialisations,
     textures: resources.textures,
     buffers: resources.buffers.byName,
     parameters,

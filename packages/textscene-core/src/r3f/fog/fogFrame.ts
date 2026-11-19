@@ -6,7 +6,9 @@
  */
 
 import * as THREE from 'three';
-import { renderedDepthFogRange } from '../../godot/rendering/environment/depthFog.js';
+import { FogMode, renderedDepthFogRange } from '../../godot/rendering/environment/depthFog.js';
+import type { EnumValue } from '../../godot/classdb/enumNames.js';
+import type { EnvironmentFog } from '../../shaders/pipeline/environmentFog.js';
 import type { VolumetricFogProjectSettings } from '../../godot/rendering/environment/volumetricFog.js';
 import type { DepthFog, VolumetricFog } from '../../resources/environment/types.js';
 import { setGodotColorLinear } from '../godotColor.js';
@@ -94,6 +96,45 @@ function writeDepthFog(fog: DepthFog | null, camera: THREE.Camera): void {
   writeVec4(fogUniforms.depthShape, 0, fog.density, range.begin, range.end, fog.depthCurve);
   writeVec4(fogUniforms.depthLayer, 0, fog.mode, fog.height, fog.heightDensity, fog.aerialPerspective);
   writeVec4(fogUniforms.depthSky, 0, fog.skyAffect, fog.sunScatter, near, far);
+  writeRenderedFog(fog, range);
+}
+
+/** Written only by `writeDepthFog`: the depth fog of the render now drawing, which `fogUniforms` packs. */
+const renderedFog = {
+  lightColor: new THREE.Color(),
+  lightEnergy: 1,
+  mode: FogMode.EXPONENTIAL as EnumValue<typeof FogMode>,
+  density: 0,
+  height: 0,
+  heightDensity: 0,
+  depthCurve: 1,
+  depthBegin: 0,
+  depthEnd: 0,
+  sunScatter: 0,
+  skyAffect: 0,
+  aerialPerspective: 0,
+};
+
+function writeRenderedFog(fog: DepthFog, range: { begin: number; end: number }): void {
+  setGodotColorLinear(renderedFog.lightColor, fog.color);
+  Object.assign(renderedFog, {
+    lightEnergy: fog.lightEnergy,
+    mode: fog.mode,
+    density: fog.density,
+    height: fog.height,
+    heightDensity: fog.heightDensity,
+    depthCurve: fog.depthCurve,
+    depthBegin: range.begin,
+    depthEnd: range.end,
+    sunScatter: fog.sunScatter,
+    skyAffect: fog.skyAffect,
+    aerialPerspective: fog.aerialPerspective,
+  });
+}
+
+/** The depth fog `prepareFog` wrote for the render now drawing, or nothing while it is off. */
+export function renderedEnvironmentFog(): EnvironmentFog | undefined {
+  return fogUniforms.depthColor[3] === 0 ? undefined : renderedFog;
 }
 
 /**

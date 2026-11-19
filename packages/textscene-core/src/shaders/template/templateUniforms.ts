@@ -9,11 +9,11 @@ import type { InterfaceBlockNode } from './templateTree.js';
 
 /** The stages of one program share them, so a block both stages declare is one set. */
 export class TemplateUniforms {
-  /** Written only by `array`, `uniformOf` and `specialisation`, at a name's first declaration. */
+  /** Written only by `array` and `uniformOf`, at a member's first block. */
   readonly byName = new Map<string, UniformNode<unknown>>();
 
   /** Written only by `specialisation`: the program's specialisation constants, which its materials key on. */
-  readonly specialisations: Specialisation[] = [];
+  readonly specialisations = new Map<string, Specialisation>();
 
   /** The value of a uniform block's instance: a struct of its members' uniforms. */
   block(block: InterfaceBlockNode, structOf: StructOf): StructValue {
@@ -78,11 +78,10 @@ export class TemplateUniforms {
 
   /** The literal of the specialisation constant `name`, at its declared value until a binding writes it. */
   specialisation(name: string, type: string, declared: number | boolean): Node {
-    let constant = this.byName.get(name) as unknown as Specialisation | undefined;
+    let constant = this.specialisations.get(name);
     if (!constant) {
       constant = new Specialisation(type, declared);
-      this.byName.set(name, constant as unknown as UniformNode<unknown>);
-      this.specialisations.push(constant);
+      this.specialisations.set(name, constant);
     }
     return constant.literal();
   }

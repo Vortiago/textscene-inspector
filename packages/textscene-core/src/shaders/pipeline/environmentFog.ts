@@ -1,4 +1,4 @@
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import type { EnumValue } from '../../godot/classdb/enumNames.js';
 import type { FogMode } from '../../godot/rendering/environment/depthFog.js';
 
@@ -18,4 +18,14 @@ export interface EnvironmentFog {
   readonly sunScatter: number;
   readonly skyAffect: number;
   readonly aerialPerspective: number;
+}
+
+/** The fog light colour times its energy, as Godot hands it to each shader, black with no fog. */
+export function fogLightColor(
+  fog: Pick<EnvironmentFog, 'lightColor' | 'lightEnergy'> | undefined
+): THREE.Vector3 {
+  if (!fog) return new THREE.Vector3();
+  return new THREE.Vector3(fog.lightColor.r, fog.lightColor.g, fog.lightColor.b).multiplyScalar(
+    fog.lightEnergy
+  );
 }

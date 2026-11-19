@@ -13,9 +13,10 @@ function written(fog?: EnvironmentFog) {
   camera.position.set(0, 1, 3);
   const clearColor = new THREE.Color(0.1, 0.2, 0.3);
   writeSpatialBindings(spatial, { camera, width: 128, height: 64, time: 2.5, clearColor, fog });
-  const uniform = (name: string) => (spatial.uniforms.get(name) as UniformNode<unknown>).value;
-  const value = (name: string) => uniform(`scene_data_block.data.${name}`);
-  return { spatial, camera, value, uniform };
+  const value = (name: string) =>
+    (spatial.uniforms.get(`scene_data_block.data.${name}`) as UniformNode<unknown>).value;
+  const specialisation = (name: string) => spatial.specialisations.get(name)!.value;
+  return { spatial, camera, value, specialisation };
 }
 
 /** A depth fog with no depth end, so it ends at the far plane. */
@@ -62,15 +63,15 @@ describe('writeSpatialBindings', () => {
 
 describe('the fog bindings', () => {
   it('leaves the fog flag and the depth fog off with no fog', () => {
-    const { value, uniform } = written();
+    const { value, specialisation } = written();
     expect((value('flags') as number) & (1 << 4)).toBe(0);
-    expect(uniform('pso_sc_packed_0')).toBe(0);
+    expect(specialisation('pso_sc_packed_0')).toBe(0);
   });
 
   it('turns on the fog flag and the depth fog bit for a depth fog', () => {
-    const { value, uniform } = written(DEPTH_FOG);
+    const { value, specialisation } = written(DEPTH_FOG);
     expect((value('flags') as number) & (1 << 4)).toBe(1 << 4);
-    expect(uniform('pso_sc_packed_0')).toBe(1 << 6);
+    expect(specialisation('pso_sc_packed_0')).toBe(1 << 6);
   });
 
   it('emits the stages again for the program of a depth fog', () => {

@@ -34,7 +34,9 @@ const FOG_DEFAULTS = {
 /** The environment's fog from a scene's Godot `fog_*` properties, or nothing when it has none. */
 function environmentFog(properties) {
   if (!properties) return undefined;
-  const fog = { ...FOG_DEFAULTS, ...properties };
+  // `set_fog_mode` sets DEPTH mode's density to 1 (`scene/resources/environment.cpp:778-784`).
+  const density = properties.fog_mode === 1 ? 1 : FOG_DEFAULTS.fog_density;
+  const fog = { ...FOG_DEFAULTS, fog_density: density, ...properties };
   return {
     lightColor: linear(fog.fog_light_color),
     lightEnergy: fog.fog_light_energy,

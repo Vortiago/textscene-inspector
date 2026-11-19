@@ -66,7 +66,7 @@ describe('emitTemplateStage', () => {
   it('folds a specialisation constant to the value a binding writes, at the next emission', () => {
     const resources = programResources();
     stageOf(SPECIALISED, SPECIALISED_BODY, resources);
-    (resources.uniforms.byName.get('packed') as unknown as { value: number }).value = 64;
+    resources.uniforms.specialisations.get('packed')!.value = 64;
     expect(generatedFragmentShader(stageOf(SPECIALISED, SPECIALISED_BODY, resources).result)).toMatch(
       /vec4\(\s*64\.0\s*\)/
     );

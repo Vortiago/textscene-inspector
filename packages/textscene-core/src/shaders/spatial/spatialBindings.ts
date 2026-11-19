@@ -5,7 +5,7 @@ import { transposed3x4 } from './instanceData.js';
 import type { TranspiledSpatial } from './transpileSpatial.js';
 import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
 import type { EnvironmentFog } from '../pipeline/environmentFog.js';
-import { FOG_BINDINGS, USE_FOG } from './fogBindings.js';
+import { FOG_BINDINGS, FOG_SPECIALISATIONS, USE_FOG } from './fogBindings.js';
 
 /** What the colour pass reads from a frame with no light and no camera attributes. */
 export interface SpatialScene {
@@ -130,6 +130,7 @@ export function writeSpatialBindings(spatial: TranspiledSpatial, scene: SpatialS
   const frame = { ...scene, projection, inverseProjection: projection.clone().invert() };
   writeBindings(SCENE_BINDINGS, spatial.uniforms, frame);
   writeBindings(FOG_BINDINGS, spatial.uniforms, frame);
+  writeBindings(FOG_SPECIALISATIONS, spatial.specialisations, frame);
 }
 
 /** The uniform every vertex stage of the scene template reads, so its object update runs before each draw. */

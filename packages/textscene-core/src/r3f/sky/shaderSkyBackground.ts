@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { writeSkyBindings, type SkyLight } from '../../shaders/sky/skyBindings.js';
-import { renderedEnvironmentFog } from '../fog/renderedFog.js';
+import { renderedEnvironmentFog } from '../fog/fogFrame.js';
 import { bindRadiance, disposeSky, type TranspiledSky } from '../../shaders/sky/transpileSky.js';
 import type { SkyLayers } from '../../resources/sky/skyLayers.js';
 import { SkyResolutionPasses } from '../../shaders/sky/skyResolutionPasses.js';

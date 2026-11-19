@@ -8,7 +8,7 @@ export interface MaterialShader {
   readonly parameters: readonly TranspiledUniform[];
   readonly source: ShaderSource;
   /** The specialisation constants its programs fold, one program for each set of values. */
-  readonly specialisations?: readonly Specialisation[];
+  readonly specialisations?: ReadonlyMap<string, Specialisation>;
 }
 
 const NO_SHADER: MaterialShader = { parameters: [], source: { text: '', file: '' } };
@@ -38,14 +38,17 @@ export class BoundNodeMaterial extends NodeMaterial {
   /** Takes each program the GPU refuses for this material. Null logs the fault to the console. */
   onTranslatorFault: ((fault: TranslatorFault) => void) | null = null;
 
+  /** Written only by `stageWith`: emits the stages again, as three keeps a function's first build. */
+  private stage: (() => void) | null = null;
+
   private readonly respecialise = () => {
+    this.stage?.();
     this.needsUpdate = true;
   };
 
   constructor(private shader: MaterialShader = NO_SHADER) {
     super();
     liveMaterials.add(this.ref);
-    for (const constant of shader.specialisations ?? []) constant.readers.add(this.respecialise);
     // three reads `visible` before it draws (`WebGLRenderer.js:1969`), so the gate holds for each mesh.
     Object.defineProperty(this, 'visible', {
       get: () => this.isShown && this.shader.parameters.every((parameter) => parameter.isDrawable),
@@ -59,6 +62,17 @@ export class BoundNodeMaterial extends NodeMaterial {
     return this.shader.source;
   }
 
+  /** Emits the material's stages with `stage` now, and again at each new specialisation value. */
+  stageWith(stage: () => void): void {
+    this.stage = stage;
+    stage();
+    for (const constant of this.specialisations) constant.readers.add(this.respecialise);
+  }
+
+  private get specialisations(): Iterable<Specialisation> {
+    return this.shader.specialisations?.values() ?? [];
+  }
+
   /** Hands `fault` to `onTranslatorFault`, or logs it. */
   reportFault(fault: TranslatorFault): void {
     if (this.onTranslatorFault) this.onTranslatorFault(fault);
@@ -67,13 +81,13 @@ export class BoundNodeMaterial extends NodeMaterial {
 
   /** three keeps one program for each key, so a draw with other specialisation values gets its own. */
   override customProgramCacheKey(): string {
-    const values = (this.shader.specialisations ?? []).map((constant) => constant.value);
+    const values = [...this.specialisations].map((constant) => constant.value);
     return `${super.customProgramCacheKey()}|${values.join(',')}`;
   }
 
   override dispose(): void {
     liveMaterials.delete(this.ref);
-    for (const constant of this.shader.specialisations ?? []) constant.readers.delete(this.respecialise);
+    for (const constant of this.specialisations) constant.readers.delete(this.respecialise);
     super.dispose();
   }
 

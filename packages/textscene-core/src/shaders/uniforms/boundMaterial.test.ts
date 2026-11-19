@@ -13,7 +13,9 @@ const materialOf = (parameters: TranspiledUniform[]) => new BoundNodeMaterial({ 
 /** A material whose programs fold one specialisation constant, which starts at 0. */
 function specialised() {
   const constant = new Specialisation('uint', 0);
-  const material = new BoundNodeMaterial({ parameters: [], source: SOURCE, specialisations: [constant] });
+  const specialisations = new Map([['packed', constant]]);
+  const material = new BoundNodeMaterial({ parameters: [], source: SOURCE, specialisations });
+  material.stageWith(() => {});
   return { constant, material };
 }
 
@@ -30,6 +32,14 @@ describe('the specialisation constants of a BoundNodeMaterial', () => {
     const version = material.version;
     constant.value = 64;
     expect(material.version).toBe(version + 1);
+  });
+
+  it('emit the stages again for a new value', () => {
+    const { constant, material } = specialised();
+    let stagings = 0;
+    material.stageWith(() => stagings++);
+    constant.value = 64;
+    expect(stagings).toBe(2);
   });
 
   it('ask for no program when a binding writes the same value', () => {

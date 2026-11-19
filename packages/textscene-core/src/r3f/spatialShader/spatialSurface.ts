@@ -14,7 +14,7 @@ import { perObject } from '../../utils/perObject.js';
 import { warnOnce } from '../../utils/warnOnce.js';
 import { canvasShaderTime } from '../shaderTime/canvasShaderTime.js';
 import { renderTargetSize } from '../renderTargetSize.js';
-import { renderedEnvironmentFog } from '../fog/renderedFog.js';
+import { renderedEnvironmentFog } from '../fog/fogFrame.js';
 
 export { setMaterialParameters } from '../../shaders/uniforms/materialParameters.js';
 

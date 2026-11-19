@@ -1,6 +1,6 @@
-import * as THREE from 'three';
 import { FogMode, renderedDepthFogRange } from '../../godot/rendering/environment/depthFog.js';
 import type { Binding } from '../uniforms/bindingTable.js';
+import { fogLightColor } from '../pipeline/environmentFog.js';
 import type { SpatialFrame } from './spatialBindings.js';
 
 /** `SCENE_DATA_FLAGS_USE_FOG` (`scene_data_inc.glsl:10`). */
@@ -14,13 +14,8 @@ const DATA = 'scene_data_block.data';
 const depthRangeOf = ({ fog, camera }: SpatialFrame) =>
   renderedDepthFogRange({ begin: fog?.depthBegin ?? 0, end: fog?.depthEnd ?? 0 }, camera.far);
 
-/** Each fog member of `SceneData` and the depth fog's specialisation constant. */
+/** Each fog member of `SceneData`. */
 export const FOG_BINDINGS: readonly Binding<SpatialFrame>[] = [
-  {
-    uniform: 'pso_sc_packed_0',
-    godot: 'render_forward_clustered.cpp:2084',
-    value: ({ fog }) => (fog?.mode === FogMode.DEPTH ? USE_DEPTH_FOG : 0),
-  },
   {
     uniform: `${DATA}.fog_density`,
     godot: 'render_scene_data_rd.cpp:209',
@@ -56,16 +51,20 @@ export const FOG_BINDINGS: readonly Binding<SpatialFrame>[] = [
   {
     uniform: `${DATA}.fog_light_color`,
     godot: 'render_scene_data_rd.cpp:218-223',
-    value: ({ fog }) =>
-      fog
-        ? new THREE.Vector3(fog.lightColor.r, fog.lightColor.g, fog.lightColor.b).multiplyScalar(
-            fog.lightEnergy
-          )
-        : new THREE.Vector3(),
+    value: ({ fog }) => fogLightColor(fog),
   },
   {
     uniform: `${DATA}.fog_sun_scatter`,
     godot: 'render_scene_data_rd.cpp:225',
     value: ({ fog }) => fog?.sunScatter ?? 0,
+  },
+];
+
+/** The depth fog's specialisation constant, one program for each mode. */
+export const FOG_SPECIALISATIONS: readonly Binding<SpatialFrame>[] = [
+  {
+    uniform: 'pso_sc_packed_0',
+    godot: 'render_forward_clustered.cpp:2084',
+    value: ({ fog }) => (fog?.mode === FogMode.DEPTH ? USE_DEPTH_FOG : 0),
   },
 ];
