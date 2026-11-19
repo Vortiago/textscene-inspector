@@ -8,8 +8,8 @@ import { useResourceLoader } from '../../resources/useResource.js';
 import { textureWork } from '../../resources/textures/textureWork.js';
 import { fontWork } from '../controls/native/text/settledChannel.js';
 import { hasPendingWork, pendingSceneWork } from '../sceneWork.js';
-import { useGameViewStatus } from '../gameView/GameViewStatusContext.js';
-import type { GameViewStatus } from '../gameView/gameViewStatus.js';
+import { useViewStatus } from '../viewStatus/ViewStatusContext.js';
+import type { ViewStatus } from '../viewStatus/viewStatus.js';
 
 const NO_UNSUBSCRIBE = () => {};
 
@@ -37,7 +37,7 @@ export function PreviewVisibilityProvider({
 export function usePreviewFrameloop(): 'always' | 'never' {
   const isVisible = useContext(PreviewVisibilityContext);
   const loader = useResourceLoader();
-  const gameView = useGameViewStatus();
+  const gameView = useViewStatus();
   // A visible preview subscribes to nothing: its canvas would re-render on every count change
   // of a load, and rebuild its whole tree, for a `frameloop` that stays 'always'.
   const subscribe = useCallback(
@@ -60,6 +60,6 @@ export function usePreviewFrameloop(): 'always' | 'never' {
   return isVisible || isLoading ? 'always' : 'never';
 }
 
-function isGameViewWaiting(gameView: GameViewStatus | null): boolean {
+function isGameViewWaiting(gameView: ViewStatus | null): boolean {
   return gameView !== null && (gameView.isPending() || gameView.isCapturePending());
 }

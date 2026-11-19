@@ -47,11 +47,11 @@ export function mountFailures(results) {
       : ['captureImage: expected the same PNG bytes from a 320 x 240 and a 1920 x 1080 element, got others']),
     ...equalityFailure('captureImage size with no project', DEFAULT_WINDOW, results.noProjectSize),
     ...equalityFailure(
-      'captureImage in 3D',
-      'expected the in-game mode, got 3D',
-      results.editorModeCaptureError
+      'settled in 3D',
+      { scriptedNodeCount: 0, hasCurrentCamera: true },
+      results.editorSettledValue
     ),
-    ...equalityFailure('settled in 3D', 'expected the in-game mode, got 3D', results.editorModeSettledError),
+    ...equalityFailure('captureImage size in 3D', { width: 320, height: 240 }, results.editorCaptureSize),
     ...equalityFailure('canvases after dispose', 0, results.canvasesAfterDispose),
     ...equalityFailure('context lost after dispose', true, results.isContextLostAfterDispose),
     ...transparentFailures(results.transparentPng),

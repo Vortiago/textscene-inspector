@@ -162,17 +162,18 @@ The limits of this release:
 
 ### Know when the scene is whole
 
-The In-game mode is settled when a frame shows the scene whole: the frame drew the latest change to
-the scene, and no file, texture or font of the scene was still loading. A write or a camera call
-from your code, or a new text, makes it pending again until a frame shows the change.
+A view is settled when a frame shows the scene whole: the frame drew the latest change to the scene,
+and no file, texture or font of the scene was still loading. This holds in every mode. A write or a
+camera call from your code, or a new text, makes it pending again until a frame shows the change.
 
-One In-game view reports to each `<TscnSceneProvider>`. A second In-game view under the same provider
-draws, but it reports nothing and logs an error. Give each In-game view its own provider.
+One view reports to each `<TscnSceneProvider>`. A second view under the same provider draws, but it
+reports nothing and logs an error. Give each view its own provider.
 
 `useGameViewSettled()` answers `null` while the view is pending, and then
 `{ scriptedNodeCount, hasCurrentCamera }`: the count of nodes that hold a script, which do not run,
-and whether the root viewport has a current Camera3D or Camera2D. Call it in a component below the
-same `<TscnSceneProvider>` as the In-game view:
+and whether the root viewport has a current Camera3D or Camera2D. Both are facts of the game's start,
+so the 3D and 2D modes give the same value. Call it in a component below the same
+`<TscnSceneProvider>` as the view:
 
 ```tsx
 import { TscnCanvas, TscnSceneProvider, useGameViewSettled } from '@textscene/renderer';
@@ -250,14 +251,15 @@ save.onclick = async () => {
 
 `mountScene` returns a `View` with four members:
 
-- `settled`: a promise of the settled value. Each read gives a new promise, which waits again
-  after the scene changes. It rejects in a mode other than In-game, and once the view is disposed.
-- `captureImage()`: a PNG `Blob` of the game window, at the window's size, whatever the size of the
-  element: 1152 x 648 for a project that sets no size. It has the black bars of the window. Where the
-  project has a transparent background, the clear colour has alpha 0 and the bars stay opaque, as
-  in Godot. It rejects before the view is settled, and the
-  message names the pending work. It rejects in a mode other than In-game, since the 2D and 3D
-  modes have no window.
+- `settled`: a promise of the settled value, in every mode. Each read gives a new promise, which
+  waits again after the scene changes. It rejects once the view is disposed.
+- `captureImage()`: a PNG `Blob` of what the view draws. It rejects before the view is settled, and
+  the message names the pending work.
+  - In-game, it is the game window at the window's size, whatever the size of the element: 1152 x
+    648 for a project that sets no size. It has the black bars of the window. Where the project has
+    a transparent background, the clear colour has alpha 0 and the bars stay opaque, as in Godot.
+  - In the 3D and 2D modes, it is the canvas at its own size: the element's size times the device
+    pixel ratio. The 2D mode's rulers, axes and zoom buttons are not part of it.
 - `update(options)`: changes the mounted view. It takes the options of `mountScene` and changes
   only the keys it gives a value. See "Change a mounted view".
 - `dispose()`: unmounts the view and loses its WebGL context, since a browser keeps few contexts
@@ -279,10 +281,10 @@ view.update({ visible: true });
 ```
 
 A change of mode replaces the canvas and loses the WebGL context of the old one. A `settled`
-promise read before a switch out of In-game rejects. `update` throws once the view is disposed. A
+promise read before a switch resolves once the new mode settles. `update` throws once the view is disposed. A
 view that failed to mount stays failed: dispose it and mount again.
 `visible` is `true` by default. While it is `false`, the view draws only the frames a load, a settle or a capture needs: a write to a
-hidden In-game view draws until the view settles again.
+hidden view draws until the view settles again.
 `<TscnCanvas visible={false} />` does the same in React.
 
 ### Save a PNG from headless Chromium
@@ -388,7 +390,7 @@ The package exports these names.
   `ArrayBuffer`, or `null` when the file is missing.
 - `useSelection`: the selected node path and the functions that change it. Call it in a component
   inside `<TscnSceneProvider>`.
-- `useGameViewSettled()`: the settled value of the In-game view below the same
+- `useGameViewSettled()`: the settled value of the view below the same
   `<TscnSceneProvider>`, or `null` while it is pending. See "Know when the scene is whole".
 - `mountScene(element, scene, options?)`: mounts the view with no React code of the page's own,
   and returns a `View`: `settled`, `captureImage`, `update` and `dispose`. See "Mount the view with
