@@ -9,9 +9,9 @@ const loadNodesHandler = memoisedImport(() => import('../../shaders/nodesHandler
 /** Whether `gl` can draw a node material yet, or `failed` when the handler did not load. */
 export type NodesHandlerState = 'ready' | 'loading' | 'failed';
 
-/** The handler writes linear for the compositor (ADR-0061). A caller that draws no node material is ready. */
-export function useNodesHandler(gl: THREE.WebGLRenderer, isNeeded: boolean): NodesHandlerState {
-  const loaded = useLazyModuleState(loadNodesHandler, isNeeded);
+/** The handler writes linear for the compositor (ADR-0061). */
+export function useNodesHandler(gl: THREE.WebGLRenderer): NodesHandlerState {
+  const loaded = useLazyModuleState(loadNodesHandler, true);
   const [handled, setHandled] = useState<THREE.WebGLRenderer | null>(null);
   const module = typeof loaded === 'object' && loaded !== null ? loaded.module : null;
   useEffect(() => {
@@ -19,6 +19,6 @@ export function useNodesHandler(gl: THREE.WebGLRenderer, isNeeded: boolean): Nod
     module.installNodesHandler(gl, 'linear');
     setHandled(gl);
   }, [gl, module, handled]);
-  if (!isNeeded || handled === gl) return 'ready';
+  if (handled === gl) return 'ready';
   return loaded === 'failed' ? 'failed' : 'loading';
 }

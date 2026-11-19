@@ -31,7 +31,7 @@ export function SpatialShaderSlot({ shader, attach, fallback }: SpatialShaderSlo
   const invalidate = useThree((state) => state.invalidate);
   const loaded = useLazyModuleState(loadSpatialSurface, true);
   const module = typeof loaded === 'object' && loaded !== null ? loaded.module : null;
-  const nodesHandler = useNodesHandler(gl, true);
+  const nodesHandler = useNodesHandler(gl);
   const options = useProjectShaderOptions(shader.code);
   const { settings } = useProjectSettings();
   const sampling = useMemo(() => projectSampling(settings), [settings]);

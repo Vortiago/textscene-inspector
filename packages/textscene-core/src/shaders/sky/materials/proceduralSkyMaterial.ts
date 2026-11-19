@@ -1,4 +1,6 @@
 import { GODOT_VERSION } from '../../language/instructionTable.generated.js';
+import { degToRadf } from '../../../godot/math/math.js';
+import { cosReal } from '../../../godot/math/realSin.js';
 import {
   boolProperty,
   colorParameter,
@@ -9,21 +11,16 @@ import {
   scaledColor,
   type SkyMaterialGenerator,
   type SkyMaterialProperties,
+  textPerVariant,
 } from './skyMaterial.js';
 
-/** One text per variant, as Godot caches four shaders (`sky_material.cpp:296`). */
-const textsByVariant = new Map<string, string>();
+const textOf = textPerVariant(proceduralSkyText);
 
 /** `ProceduralSkyMaterial`: `_update_shader` (`sky_material.cpp:296`) and the setters' values. */
 export const proceduralSkyMaterial: SkyMaterialGenerator = (material) => {
   const useDebanding = boolProperty(material, 'use_debanding', true);
   const useSkyCover = material.textures.has('sky_cover');
-  const variant = `${useDebanding}${useSkyCover}`;
-  let code = textsByVariant.get(variant);
-  if (code === undefined) {
-    code = proceduralSkyText(useDebanding, useSkyCover);
-    textsByVariant.set(variant, code);
-  }
+  const code = textOf(useDebanding, useSkyCover);
   return { code, parameters: proceduralSkyParameters(material), textureUniforms: { sky_cover: 'sky_cover' } };
 };
 
@@ -43,16 +40,12 @@ function proceduralSkyParameters(material: SkyMaterialProperties) {
       groundEnergy
     ),
     inv_ground_curve: floatParameter(0.6 / float('ground_curve', 0.02)),
-    sun_angle_max: floatParameter(cosOfDegrees(float('sun_angle_max', 30))),
+    sun_angle_max: floatParameter(cosReal(degToRadf(float('sun_angle_max', 30)))),
     inv_sun_curve: floatParameter(Math.fround(1.6 / Math.fround(Math.pow(float('sun_curve', 0.15), 1.4)))),
     exposure: floatParameter(float('energy_multiplier', 1)),
     sky_cover_modulate: colorParameter({ ...cover, a: Math.fround(cover.a * skyEnergy) }),
   };
 }
-
-/** `Math::cos(Math::deg_to_rad(p_angle))` on a float (`math_funcs.h`), each step in 32 bits. */
-const cosOfDegrees = (degrees: number) =>
-  Math.fround(Math.cos(Math.fround(degrees * Math.fround(Math.PI / 180))));
 
 function proceduralSkyText(useDebanding: boolean, useSkyCover: boolean): string {
   const renderMode = useDebanding ? 'render_mode use_debanding;' : '';

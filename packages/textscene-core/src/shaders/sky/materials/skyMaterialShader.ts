@@ -11,9 +11,6 @@ const GENERATORS: Readonly<Record<string, SkyMaterialGenerator>> = {
   PhysicalSkyMaterial: physicalSkyMaterial,
 };
 
-/** Whether `className` is a sky material whose shader a generator writes. */
-const isSkyMaterialClass = (className: string): boolean => Object.hasOwn(GENERATORS, className);
-
 /**
  * Null for a class that is not one of Godot's three sky materials.
  * @canonical Write the shader text of a ProceduralSkyMaterial, a PanoramaSkyMaterial or a PhysicalSkyMaterial.
@@ -22,5 +19,5 @@ export function skyMaterialShader(
   className: string,
   material: SkyMaterialProperties
 ): SkyMaterialShader | null {
-  return isSkyMaterialClass(className) ? GENERATORS[className]!(material) : null;
+  return Object.hasOwn(GENERATORS, className) ? GENERATORS[className]!(material) : null;
 }

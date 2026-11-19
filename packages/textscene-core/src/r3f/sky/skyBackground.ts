@@ -3,11 +3,8 @@ import { SKY_RENDER_ORDER } from '../../shaders/sky/skyRenderOrder.js';
 import { observeSceneRenderEnd } from '../sceneRenderCamera.js';
 
 /** A sky drawn at each pixel behind a scene, and hidden outside the renders that draw it. */
-export abstract class SkyBackdrop<
-  TGeometry extends THREE.BufferGeometry = THREE.BufferGeometry,
-  TMaterial extends THREE.Material = THREE.Material,
-> extends THREE.Mesh<TGeometry, TMaterial> {
-  protected constructor(geometry: TGeometry, material: TMaterial) {
+export abstract class SkyBackdrop extends THREE.Mesh<THREE.BufferGeometry, THREE.Material> {
+  protected constructor(geometry: THREE.BufferGeometry, material: THREE.Material) {
     super(geometry, material);
     this.renderOrder = SKY_RENDER_ORDER;
     this.frustumCulled = false;

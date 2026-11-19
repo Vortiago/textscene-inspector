@@ -65,12 +65,7 @@ export class SamplerBinding implements TranspiledUniform {
       copy.wrapS = copy.wrapT = state.wrap;
       if (copy instanceof Data3DTexture) copy.wrapR = state.wrap;
       copy.anisotropy = state.anisotropy;
-      // A render target's copy holds the target's bytes, so it decodes them as the target does.
-      copy.colorSpace = copy.isRenderTargetTexture
-        ? source.colorSpace
-        : isSrgb
-          ? SRGBColorSpace
-          : NoColorSpace;
+      copy.colorSpace = copyColorSpace(copy, source, isSrgb);
     });
     const placeholder = this.textureOf('white');
     this.nodes = Array.from({ length: Math.max(1, declaration.arraySize ?? 0) }, () =>
@@ -103,4 +98,10 @@ export class SamplerBinding implements TranspiledUniform {
     if (typeof index === 'number') return this.nodes[index]!;
     return new SamplerChoice(this.nodes, index) as unknown as Value;
   }
+}
+
+/** A render target's copy holds the target's bytes, so it decodes them as the target does. */
+function copyColorSpace(copy: Texture, source: Texture, isSrgb: boolean): Texture['colorSpace'] {
+  if (copy.isRenderTargetTexture) return source.colorSpace;
+  return isSrgb ? SRGBColorSpace : NoColorSpace;
 }

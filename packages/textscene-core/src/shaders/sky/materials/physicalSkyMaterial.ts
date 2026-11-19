@@ -8,21 +8,16 @@ import {
   rgb,
   type SkyMaterialGenerator,
   type SkyMaterialProperties,
+  textPerVariant,
 } from './skyMaterial.js';
 
-/** One text per variant, as Godot caches four shaders (`sky_material.cpp:728`). */
-const textsByVariant = new Map<string, string>();
+const textOf = textPerVariant(physicalSkyText);
 
 /** `PhysicalSkyMaterial`: `_update_shader` (`sky_material.cpp:728`) and the setters' values. */
 export const physicalSkyMaterial: SkyMaterialGenerator = (material) => {
   const useDebanding = boolProperty(material, 'use_debanding', true);
   const useNightSky = material.textures.has('night_sky');
-  const variant = `${useDebanding}${useNightSky}`;
-  let code = textsByVariant.get(variant);
-  if (code === undefined) {
-    code = physicalSkyText(useDebanding, useNightSky);
-    textsByVariant.set(variant, code);
-  }
+  const code = textOf(useDebanding, useNightSky);
   return { code, parameters: physicalSkyParameters(material), textureUniforms: { night_sky: 'night_sky' } };
 };
 

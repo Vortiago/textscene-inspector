@@ -1,5 +1,8 @@
 import type { ColorValue, Variant } from '../../../godot/variant/value/variant.js';
 import { real, variant } from '../../../godot/variant/value/variant.js';
+import { toFloat32 } from '../../../godot/variant/construct/variantCast.js';
+import { multiplyColor } from '../../../godot/math/math.js';
+import { storedColor } from '../../../godot/math/real.js';
 
 /** A sky material's properties as its file sets them. */
 export interface SkyMaterialProperties {
@@ -24,9 +27,7 @@ export type SkyMaterialGenerator = (material: SkyMaterialProperties) => SkyMater
 /** The `float` property `name`, or `fallback` for one left out or of a type a float setter refuses. */
 export function floatProperty({ properties }: SkyMaterialProperties, name: string, fallback: number): number {
   const value = properties[name];
-  if (value?.type === 'FLOAT') return Math.fround(value.value);
-  if (value?.type === 'INT') return Math.fround(Number(value.value));
-  return fallback;
+  return value?.type === 'FLOAT' || value?.type === 'INT' ? toFloat32(value) : fallback;
 }
 
 export function colorProperty(
@@ -50,18 +51,23 @@ export function boolProperty(
 }
 
 /** `Color * float` in Godot's 32-bit components, alpha included (`color.h:327`). */
-export function scaledColor({ r, g, b, a }: ColorValue, scale: number): Variant {
-  const times = (component: number) => Math.fround(component * scale);
-  return variant('COLOR', { r: times(r), g: times(g), b: times(b), a: times(a) });
+export function scaledColor(color: ColorValue, scale: number): Variant {
+  return variant('COLOR', multiplyColor(color, { r: scale, g: scale, b: scale, a: scale }));
 }
 
 export const colorParameter = (value: ColorValue): Variant => variant('COLOR', value);
 
 export const floatParameter = (value: number): Variant => real(value);
 
-export const rgb = (r: number, g: number, b: number): ColorValue => ({
-  r: Math.fround(r),
-  g: Math.fround(g),
-  b: Math.fround(b),
-  a: 1,
-});
+export const rgb = (r: number, g: number, b: number): ColorValue => storedColor({ r, g, b, a: 1 });
+
+/** `build` cached by its two switches, as Godot caches one shader per variant. */
+export function textPerVariant(build: (first: boolean, second: boolean) => string) {
+  const texts = new Map<string, string>();
+  return (first: boolean, second: boolean): string => {
+    const key = `${first}${second}`;
+    const text = texts.get(key) ?? build(first, second);
+    texts.set(key, text);
+    return text;
+  };
+}

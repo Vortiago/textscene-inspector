@@ -16,16 +16,10 @@ function fakeRenderer() {
 describe('useNodesHandler', () => {
   it('gives the renderer a nodes handler that writes linear, for the compositor to encode once', async () => {
     const { gl, setNodesHandler } = fakeRenderer();
-    const { result } = renderHook(() => useNodesHandler(gl, true));
+    const { result } = renderHook(() => useNodesHandler(gl));
     await waitFor(() => expect(result.current).toBe('ready'));
     const handler = setNodesHandler.mock.calls[0]![0] as OutputHook;
     const output = float(0.25);
     expect(handler.getOutputCallback(output)).toBe(output);
-  });
-
-  it('is ready at once, and installs nothing, for a caller that draws no node material (edge case)', () => {
-    const { gl, setNodesHandler } = fakeRenderer();
-    expect(renderHook(() => useNodesHandler(gl, false)).result.current).toBe('ready');
-    expect(setNodesHandler).not.toHaveBeenCalled();
   });
 });

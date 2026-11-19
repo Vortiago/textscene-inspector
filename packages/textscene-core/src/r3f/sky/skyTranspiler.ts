@@ -24,7 +24,7 @@ const LOAD_FAILURE =
 /** The transpiler and the nodes handler a sky draws with. */
 export function useSkyTranslator(gl: THREE.WebGLRenderer): SkyTranslator {
   const transpiler = useLazyModuleState(loadSkyTranspiler, true);
-  const nodesHandler = useNodesHandler(gl, true);
+  const nodesHandler = useNodesHandler(gl);
   return {
     transpiler: typeof transpiler === 'object' && transpiler !== null ? transpiler.module : null,
     isReady: nodesHandler === 'ready',
