@@ -17,7 +17,7 @@ describe('the judge of the transpiler against Godot', () => {
   it('names the open row and its owner for a shader not transpiled yet', () => {
     const outcome = judge(
       ACCEPTED,
-      transpilerVerdict('shader_type spatial; stencil_mode read; float f() { return 1.0; }')
+      transpilerVerdict('shader_type spatial; render_mode particle_trails; float f() { return 1.0; }')
     );
     expect(outcome).toMatchObject({ state: 'not transpiled yet', owner: '#1831' });
   });

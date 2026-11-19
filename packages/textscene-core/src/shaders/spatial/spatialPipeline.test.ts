@@ -5,8 +5,9 @@ import { BlendMode } from '../../godot/rendering/materials/blendMode.js';
 import { alphaToCoverageBlendState, godotBlendState } from '../pipeline/blendState.js';
 import { CullMode } from '../../godot/rendering/materials/cullMode.js';
 import { DepthDrawMode } from '../../godot/rendering/materials/depthDrawMode.js';
+import { StencilCompare, StencilFlag } from '../../godot/rendering/materials/stencil.js';
 import { parsedShader } from '../language/parseShader.js';
-import { drawsAlphaToCoverage, spatialPipeline } from './spatialPipeline.js';
+import { drawsAlphaToCoverage, spatialPipeline, stencilQueueError } from './spatialPipeline.js';
 import { transpileSpatial } from './transpileSpatial.js';
 
 /** The material of an unshaded shader with `modes` after `unshaded`. */
@@ -162,6 +163,7 @@ describe('spatialPipeline', () => {
       readsScreen: false,
       writesDepth: false,
       depthFlags: new Set(),
+      stencil: null,
     });
   });
 
@@ -258,5 +260,95 @@ describe('spatialPipeline', () => {
     expect(() => transpileSpatial('shader_type spatial;\nrender_mode blend_add, blend_sub;\n')).toThrow(
       /blend/
     );
+  });
+});
+
+describe('a spatial shader’s stencil modes', () => {
+  const stencilOf = (head: string, modes = 'unshaded') =>
+    spatialPipeline(parsedShader(`shader_type spatial;\nrender_mode ${modes};\n${head}`).tree).stencil;
+
+  it('a stencil_mode with no reference turns the test off, as Godot’s -1 does', () => {
+    expect(stencilOf('stencil_mode read, compare_equal;\n')).toBeNull();
+  });
+
+  it('a reference with no compare compares ALWAYS', () => {
+    expect(stencilOf('stencil_mode write, 4;\n')).toEqual({
+      flags: StencilFlag.WRITE,
+      compare: StencilCompare.ALWAYS,
+      reference: 4,
+    });
+  });
+
+  it('reads every flag and the compare', () => {
+    expect(stencilOf('stencil_mode write, write_depth_fail, compare_greater_or_equal, 255;\n')).toEqual({
+      flags: StencilFlag.WRITE | StencilFlag.WRITE_DEPTH_FAIL,
+      compare: StencilCompare.GREATER_OR_EQUAL,
+      reference: 255,
+    });
+  });
+
+  it.each([
+    ['compare_always', StencilCompare.ALWAYS],
+    ['compare_less', StencilCompare.LESS],
+    ['compare_equal', StencilCompare.EQUAL],
+    ['compare_less_or_equal', StencilCompare.LESS_OR_EQUAL],
+    ['compare_greater', StencilCompare.GREATER],
+    ['compare_not_equal', StencilCompare.NOT_EQUAL],
+    ['compare_greater_or_equal', StencilCompare.GREATER_OR_EQUAL],
+  ])('%s is the compare %i', (mode, compare) => {
+    expect(stencilOf(`stencil_mode read, ${mode}, 1;\n`)).toMatchObject({ compare });
+  });
+
+  it('draws with the stencil state in the colour pass', () => {
+    const { material } = transpileSpatial(
+      'shader_type spatial;\nrender_mode unshaded, depth_test_disabled;\nstencil_mode read, compare_not_equal, 2;\n'
+    );
+    expect(material).toMatchObject({
+      stencilWrite: true,
+      stencilRef: 2,
+      stencilFunc: THREE.NotEqualStencilFunc,
+      stencilFuncMask: 255,
+      stencilWriteMask: 0,
+    });
+  });
+
+  it('draws with no stencil test when the shader names no reference', () => {
+    expect(transpileSpatial('shader_type spatial;\nrender_mode unshaded;\n').material.stencilWrite).toBe(
+      false
+    );
+  });
+
+  it('gives Godot’s error for a stencil read in the opaque pass', () => {
+    const pipeline = spatialPipeline(
+      parsedShader('shader_type spatial;\nstencil_mode read, compare_equal, 1;\n').tree
+    );
+    expect(stencilQueueError(pipeline, 'res://reader.gdshader')).toBe(
+      'Attempting to use a shader (res://reader.gdshader) that reads stencil but is not in the alpha queue. Ensure the material uses alpha blending or has depth_draw disabled or depth_test disabled.'
+    );
+  });
+
+  it.each([
+    ['a read in the alpha pass', 'render_mode depth_test_disabled;\nstencil_mode read, compare_equal, 1;\n'],
+    ['a write in the opaque pass', 'stencil_mode write, 1;\n'],
+    ['a read with no reference', 'stencil_mode read, compare_equal;\n'],
+  ])('gives no error for %s', (_case, head) => {
+    expect(
+      stencilQueueError(spatialPipeline(parsedShader(`shader_type spatial;\n${head}`).tree), '')
+    ).toBeUndefined();
+  });
+
+  it('hands Godot’s error to the caller with the material', () => {
+    const { printedErrors } = transpileSpatial(
+      'shader_type spatial;\nrender_mode unshaded;\nstencil_mode read, compare_equal, 1;\n',
+      { file: 'res://reader.gdshader' }
+    );
+    expect(printedErrors).toEqual([
+      expect.stringMatching(/^Attempting to use a shader \(res:\/\/reader.gdshader\) that reads stencil/),
+    ]);
+  });
+
+  it('names no path for a shader with none, as Godot does', () => {
+    const pipeline = spatialPipeline(parsedShader('shader_type spatial;\nstencil_mode read, 1;\n').tree);
+    expect(stencilQueueError(pipeline, '')).toMatch(/^Attempting to use a shader {2}that reads stencil/);
   });
 });

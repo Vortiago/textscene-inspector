@@ -292,6 +292,78 @@ describe('createDepthPrepass', () => {
     expect(draws).toEqual([]);
   });
 
+  it('draws nothing where the project turns the prepass off', () => {
+    const material = new THREE.MeshBasicMaterial();
+    const { prepass, draws, reach } = prepassScene({ ...FORWARD_PLUS, isEnabled: false }, meshOf(material));
+    reach(prepass.first);
+    expect(draws).toEqual([]);
+    expect(material).toMatchObject({ depthFunc: THREE.LessEqualDepth, depthWrite: true });
+  });
+
+  it.each([
+    ['Forward+ with the prepass turned off', 'Test GPU', { ...FORWARD_PLUS, isEnabled: false }],
+    ['gl_compatibility with the prepass turned off', 'Test GPU', { ...COMPATIBILITY, isEnabled: false }],
+    ['gl_compatibility on a GPU of a disabled vendor', 'Apple M2', COMPATIBILITY],
+  ] as const)('an opaque stencil surface turns the prepass on, on %s', (_case, gpu, options) => {
+    const plain = new THREE.MeshBasicMaterial();
+    const stencil = new THREE.MeshBasicMaterial({ stencilWrite: true });
+    const { prepass, draws, reach } = prepassSceneOn(gpu, options, meshOf(plain), meshOf(stencil));
+    reach(prepass.first);
+    expect(draws.map((draw) => draw.material)).toEqual([plain, stencil]);
+  });
+
+  it('keeps the colour pass depth state after a prepass that a stencil forces', () => {
+    const plain = new THREE.MeshBasicMaterial();
+    const stencil = new THREE.MeshBasicMaterial({ stencilWrite: true });
+    const { prepass, reach } = prepassScene(
+      { ...FORWARD_PLUS, isEnabled: false },
+      meshOf(plain),
+      meshOf(stencil)
+    );
+    reach(prepass.first);
+    expect(plain).toMatchObject({ depthFunc: THREE.LessEqualDepth, depthWrite: true });
+  });
+
+  it('an alpha-pass stencil surface that draws in the prepass turns it on', () => {
+    const stencil = new THREE.MeshBasicMaterial({ stencilWrite: true, transparent: true });
+    setPrepassDraw(stencil, { material: stencil });
+    const { prepass, draws, reach } = prepassScene({ ...FORWARD_PLUS, isEnabled: false }, meshOf(stencil));
+    reach(prepass.first);
+    expect(draws.map((draw) => draw.material)).toEqual([stencil]);
+  });
+
+  it('an opaque stencil surface the prepass skips still turns it on for the others', () => {
+    const plain = new THREE.MeshBasicMaterial();
+    const stencil = new THREE.MeshBasicMaterial({ stencilWrite: true });
+    setPrepassDraw(stencil, null);
+    const { prepass, draws, reach } = prepassScene(
+      { ...FORWARD_PLUS, isEnabled: false },
+      meshOf(plain),
+      meshOf(stencil)
+    );
+    reach(prepass.first);
+    expect(draws.map((draw) => draw.material)).toEqual([plain]);
+  });
+
+  it('an alpha-pass stencil surface leaves the prepass off', () => {
+    const stencil = new THREE.MeshBasicMaterial({ stencilWrite: true, transparent: true });
+    const plain = new THREE.MeshBasicMaterial();
+    const { prepass, draws, reach } = prepassScene(
+      { ...FORWARD_PLUS, isEnabled: false },
+      meshOf(stencil),
+      meshOf(plain)
+    );
+    reach(prepass.first);
+    expect(draws).toEqual([]);
+  });
+
+  it('an opaque stencil surface leaves Mobile with no prepass', () => {
+    const stencil = new THREE.MeshBasicMaterial({ stencilWrite: true });
+    const { prepass, draws, reach } = prepassScene({ renderingMethod: 'mobile' }, meshOf(stencil));
+    reach(prepass.first);
+    expect(draws).toEqual([]);
+  });
+
   it('sorts its first sentinel before every opaque draw and its last after', () => {
     const { first, last } = createDepthPrepass();
     expect([first.renderOrder, last.renderOrder]).toEqual([Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER]);

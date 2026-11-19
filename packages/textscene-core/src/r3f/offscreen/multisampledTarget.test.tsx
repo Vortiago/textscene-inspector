@@ -4,6 +4,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useMultisampledTarget } from './multisampledTarget';
 import { MSAA_DISABLED } from '../../godot/rendering/msaa';
 import {
+  DEPTH24_STENCIL8,
   DEPTH_COMPONENT24,
   fakeWebGL2Context,
   type FakeContextOptions,
@@ -95,6 +96,15 @@ describe('useMultisampledTarget', () => {
     const context = splitDevice({ lost });
     expect(await targetSamples(context, MSAA_4X, linearTarget)).toBe(0);
     lost.current = false;
+    expect(await targetSamples(context, MSAA_4X, linearTarget)).toBe(4);
+  });
+
+  it('gives a target with a stencil buffer the count its colour and DEPTH24_STENCIL8 share', async () => {
+    const context = fakeWebGL2Context({
+      counts: { [RGBA8]: [8, 4, 2], [DEPTH_COMPONENT24]: [8, 4, 2], [DEPTH24_STENCIL8]: [2] },
+    });
+    const stencilTarget = () => new THREE.WebGLRenderTarget(4, 4, { depthBuffer: true, stencilBuffer: true });
+    expect(await targetSamples(context, MSAA_4X, stencilTarget)).toBe(2);
     expect(await targetSamples(context, MSAA_4X, linearTarget)).toBe(4);
   });
 

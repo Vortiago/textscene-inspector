@@ -26,6 +26,8 @@ const mesh = new THREE.Mesh(withGodotAttributes(geometry), material);
 on it. Pass the project's `rendering/renderer/rendering_method`: the shading parses each shader as
 Godot does on that renderer. By default a node material writes the renderer's tone mapping and
 `outputColorSpace`. Pass `output: 'linear'` when your app tone maps and encodes the frame itself.
+It also sets the renderer's opaque sort to Godot's: a material with `stencilWrite` draws after the
+other opaque surfaces of its Group order, as on Mobile. This replaces any opaque sort you set before.
 
 ## The port
 

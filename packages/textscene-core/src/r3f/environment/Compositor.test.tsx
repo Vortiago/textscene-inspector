@@ -11,6 +11,8 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useThree } from '@react-three/fiber';
 import { waitFor } from '@testing-library/react';
 import { Compositor } from './Compositor';
+import { applyGodotStencil } from '../../shaders/pipeline/stencilState';
+import { StencilCompare, StencilFlag } from '../../godot/rendering/materials/stencil';
 import { PassToneMapProvider } from './passToneMap';
 import { usePublishCameraAttributes } from './worldExposure';
 import { environmentSettingsOf } from '../../resources/environment/testing/environmentSettings';
@@ -21,7 +23,7 @@ import { withProject } from '../testing/ProjectFixture';
 import { withStubbedGl } from '../testing/stubbedGl';
 import { CaptureRenderer } from '../testing/CaptureRenderer';
 import { InWorld } from '../testing/InWorld';
-import { DEPTH_COMPONENT24, fakeWebGL2Context, rendererOver, RGBA16F } from '../testing/fakeWebGL2Context';
+import { DEPTH24_STENCIL8, fakeWebGL2Context, rendererOver, RGBA16F } from '../testing/fakeWebGL2Context';
 import { mipmapBiasUniform } from '../testing/mipmapBiasUniform';
 import { renderUnderWay, type WorldRender } from '../viewportRender/worldRender';
 
@@ -144,6 +146,35 @@ describe('<Compositor> on the root canvas', () => {
     expect(draws[0]?.autoClear).toBe(true);
   });
 
+  it('gives the world buffer no stencil buffer while no material tests the stencil', async () => {
+    const { nextFrame } = await mount();
+    const draws = await nextFrame();
+
+    expect(draws[0]?.bound).toMatchObject({ depthBuffer: true, stencilBuffer: false });
+  });
+
+  it('gives the world buffer a stencil buffer while a material tests the stencil', async () => {
+    const material = new THREE.MeshBasicMaterial();
+    applyGodotStencil(material, { flags: StencilFlag.WRITE, compare: StencilCompare.ALWAYS, reference: 1 });
+    const { nextFrame } = await mount();
+    const draws = await nextFrame();
+    material.dispose();
+
+    expect(draws[0]?.bound).toMatchObject({ depthBuffer: true, stencilBuffer: true });
+  });
+
+  it('adds the stencil buffer when a stencil material appears later, and drops it when it leaves', async () => {
+    const { nextFrame } = await mount();
+    const before = (await nextFrame())[0]?.bound?.stencilBuffer;
+    const material = new THREE.MeshBasicMaterial();
+    applyGodotStencil(material, { flags: StencilFlag.WRITE, compare: StencilCompare.ALWAYS, reference: 1 });
+    const during = (await nextFrame())[0]?.bound?.stencilBuffer;
+    material.dispose();
+    const after = (await nextFrame())[0]?.bound?.stencilBuffer;
+
+    expect([before, during, after]).toEqual([false, true, false]);
+  });
+
   // A blended draw anywhere, even off-screen, must not move the rest of the frame by a level.
   it('draws a scene with a blended surface through the same buffer', async () => {
     const blended = new THREE.Mesh(
@@ -158,7 +189,7 @@ describe('<Compositor> on the root canvas', () => {
   it('multisamples the world buffer at the msaa_3d samples', async () => {
     const { nextFrame } = await mount({
       Wrapper: withProject('[rendering]\nanti_aliasing/quality/msaa_3d=2\n'),
-      context: fakeWebGL2Context({ counts: { [RGBA16F]: [4], [DEPTH_COMPONENT24]: [4] } }),
+      context: fakeWebGL2Context({ counts: { [RGBA16F]: [4], [DEPTH24_STENCIL8]: [4] } }),
     });
 
     await waitFor(async () => expect((await nextFrame())[0]?.bound?.samples).toBe(4));

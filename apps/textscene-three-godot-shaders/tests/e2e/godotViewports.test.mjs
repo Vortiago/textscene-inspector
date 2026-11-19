@@ -30,4 +30,14 @@ describe('godotRuns', () => {
       settings: '[rendering]\nrenderer/rendering_method="gl_compatibility"\n',
     });
   });
+
+  it('runs a scene with the depth prepass turned off apart, in a project that turns it off', () => {
+    const prepassOff = { ...scene('b'), depthPrepass: false };
+    const runs = godotRuns([scene('a'), prepassOff]);
+    expect(runs.map((run) => run.scenes)).toEqual([[scene('a')], [prepassOff]]);
+    expect(runs[1].options).toEqual({
+      arguments: [],
+      settings: '[rendering]\ndriver/depth_prepass/enable=false\n',
+    });
+  });
 });
