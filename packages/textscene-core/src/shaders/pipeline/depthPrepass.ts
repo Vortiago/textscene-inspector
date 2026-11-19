@@ -115,9 +115,9 @@ function projectDrawsPrepass(
   return renderer !== 'gl_compatibility' || !vendorDisablesDepthPrepass(glRendererOf(webgl), disabledVendors);
 }
 
-/** `used_opaque_stencil`, which turns the prepass on (`render_forward_clustered.cpp:1166, 2080`). */
-const usesOpaqueStencil = (surfaces: readonly Surface[]): boolean =>
-  surfaces.some(({ material }) => material.stencilWrite && !material.transparent);
+/** `used_opaque_stencil`: a prepass stencil surface turns it on (`render_forward_clustered.cpp:1166`). */
+const usesOpaqueStencil = (prepassSurfaces: readonly Surface[]): boolean =>
+  prepassSurfaces.some(({ material }) => material.stencilWrite);
 
 /** Written only by `glRendererOf`. An entry goes with its renderer. */
 // eslint-disable-next-line no-restricted-syntax -- perObject is outside the shader module, which imports only its own files (ADR-0072).
@@ -171,24 +171,25 @@ export function createDepthPrepass({
   const colourDepthFunc = colourDepthFuncAfter(renderer);
   // Written by the first sentinel and emptied by the last, inside one render.
   const changed: THREE.Material[] = [];
-  // Written by the first sentinel, and emptied at the start of each prepass.
+  // Written only by `drawOf`, and emptied at the start of each prepass.
   const draws = new Map<THREE.Material, PrepassDraw | null>();
+  const drawOf = (material: THREE.Material): PrepassDraw | null => {
+    if (!draws.has(material)) draws.set(material, material.visible ? prepassDrawOf(material, unset) : null);
+    return draws.get(material)!;
+  };
   const first = createFirstOpaqueSentinel('DepthPrepass', (webgl, scene, camera) => {
     if (colourDepthFunc === null) return;
+    draws.clear();
+    const surfaces = visibleSurfaces(scene, camera, (material) => drawOf(material) !== null);
+    const isDrawn = projectDrawsPrepass(renderer, webgl, { isEnabled, disabledVendors });
+    if (!isDrawn && !usesOpaqueStencil(surfaces)) return;
     timed(webgl, () => {
-      draws.clear();
-      const drawOf = (material: THREE.Material): PrepassDraw | null => {
-        if (!draws.has(material))
-          draws.set(material, material.visible ? prepassDrawOf(material, unset) : null);
-        return draws.get(material)!;
-      };
-      const surfaces = visibleSurfaces(scene, camera, (material) => drawOf(material) !== null);
-      const isDrawn = projectDrawsPrepass(renderer, webgl, { isEnabled, disabledVendors });
-      if (!isDrawn && !usesOpaqueStencil(surfaces)) return;
       for (const surface of surfaces) drawPrepass(webgl, scene, camera, surface, drawOf(surface.material)!);
-      for (const { material } of surfaces)
-        if (!material.transparent) testAgainstPrepass(material, colourDepthFunc, changed);
     });
+    // A forced prepass leaves the colour pass's depth state (`scene_shader_forward_clustered.cpp:404`).
+    if (!isDrawn) return;
+    for (const { material } of surfaces)
+      if (!material.transparent) testAgainstPrepass(material, colourDepthFunc, changed);
   });
   const last = createLastOpaqueSentinel('DepthPrepassEnd', () => restoreColourDepth(changed));
   const dispose = (): void => {

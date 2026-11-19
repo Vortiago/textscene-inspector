@@ -107,10 +107,7 @@ function useClonedPass(source: ScopedReference | undefined) {
   return { material, loaded: walked };
 }
 
-/**
- * One link of a `next_pass` chain over the covered slots, as `nextPassStep` decides it. A link that
- * is skipped draws nothing here, which requests no stencil buffer.
- */
+/** One `next_pass` link over the covered slots. A skipped link draws nothing: its stencil is unported. */
 function ClonedLink({
   covered,
   source,

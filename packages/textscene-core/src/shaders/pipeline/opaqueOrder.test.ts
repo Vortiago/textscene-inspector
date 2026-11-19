@@ -55,9 +55,9 @@ function sortedOpaqueList(scene: THREE.Scene, order: OpaqueOrder | null): THREE.
   return list.opaque.map((item) => item.object);
 }
 
-/** A mesh at `z` and `renderOrder`, whose material tests the stencil when `testsStencil` holds. */
-function surface({ renderOrder = 0, z = 0, testsStencil = false, material = new THREE.MeshBasicMaterial() }) {
-  material.stencilWrite = testsStencil;
+/** A mesh at `z` and `renderOrder`, whose material has a stencil state when `usesStencil` holds. */
+function surface({ renderOrder = 0, z = 0, usesStencil = false, material = new THREE.MeshBasicMaterial() }) {
+  material.stencilWrite = usesStencil;
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(), material);
   mesh.renderOrder = renderOrder;
   mesh.position.z = z;
@@ -66,7 +66,7 @@ function surface({ renderOrder = 0, z = 0, testsStencil = false, material = new 
 
 describe('Godot’s opaque order', () => {
   it('draws a surface that tests the stencil after one that does not, whatever their render orders', () => {
-    const stencil = surface({ renderOrder: -5, testsStencil: true });
+    const stencil = surface({ renderOrder: -5, usesStencil: true });
     const plain = surface({ renderOrder: 5 });
     expect(sortedOpaqueList(new THREE.Scene().add(stencil, plain), godotOpaqueOrder())).toEqual([
       plain,
@@ -77,7 +77,7 @@ describe('Godot’s opaque order', () => {
   it('keeps the sentinels at the ends of the list around a stencil surface', () => {
     const first = createFirstOpaqueSentinel('First', () => {});
     const last = createLastOpaqueSentinel('Last', () => {});
-    const stencil = surface({ testsStencil: true });
+    const stencil = surface({ usesStencil: true });
     const scene = new THREE.Scene().add(last, stencil, first);
     expect(sortedOpaqueList(scene, godotOpaqueOrder())).toEqual([first.mesh, stencil, last.mesh]);
   });

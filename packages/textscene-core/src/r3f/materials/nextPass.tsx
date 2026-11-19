@@ -183,8 +183,7 @@ function NextPassLink(props: PassProps) {
 
   if (!source || step.fate === 'ends' || step.fate === 'waits') return null;
   const continuation = step.next && <NextPassLink {...props} {...step.next} drawsSelf />;
-  // No stencil buffer is requested, so a link that reads the stencil draws nothing, and the
-  // starting pass keeps its own draw.
+  // BaseMaterial3D's stencil is not ported: a link that reads it draws nothing, the start keeps its draw.
   if (step.fate === 'skipped') return continuation;
   if (!geometry) return null;
   const site: ChainDrawSpec = {

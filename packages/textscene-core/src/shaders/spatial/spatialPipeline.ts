@@ -125,7 +125,7 @@ const WRITE_FLAGS: Readonly<Record<string, DepthFlag>> = {
 const STENCIL_FLAGS = byWord(STENCIL_FLAG_WORDS);
 const STENCIL_COMPARES = byWord(STENCIL_COMPARE_WORDS);
 
-/** The value of the first mode of `table`'s group, or `fallback`. Godot refuses two modes of one group. */
+/** The value of the last mode of `table`'s group, or `fallback`. Godot refuses two modes of one group. */
 const pickMode = <T>(modes: readonly string[], table: Readonly<Record<string, T>>, fallback: T): T =>
   modes.reduce((picked, mode) => table[mode] ?? picked, fallback);
 
