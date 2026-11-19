@@ -16,6 +16,7 @@ Each render shows the capture at its own exposure over the capture's (`light_sto
 Over a sky, a ONCE probe reflects the bake of the view, as Godot captures it while that bake holds.
 An ALWAYS probe draws its faces at the world's exposure before the view in each frame. Those
 renders bake the sky for the view too (`renderer_scene_cull.cpp:3755-3762`).
+A frame captures every ALWAYS probe and one ONCE probe, in reverse tree order (`renderer_scene_cull.cpp:531`, `:3739-3763`).
 A capture draws its positional shadows in the scene's own probe atlas, size 1024 with quadrants
 [4, 4, 4, 8], not in the viewport's (`renderer_scene_cull.cpp:430-435`, `:3691`). It samples each
 texture at mipmap bias 0 and 4 anisotropic taps, with Godot's default samplers
@@ -85,4 +86,4 @@ The lenient parser reads every property above. A malformed value keeps Godot's d
 
 ## Known limitations
 
-- **Approximated** A probe that updates ALWAYS captures only when the content changes, where Godot captures it in each frame.
+- **Approximated** A probe that updates ALWAYS captures only when the content or the energy of a sky layer changes, where Godot captures it in each frame.

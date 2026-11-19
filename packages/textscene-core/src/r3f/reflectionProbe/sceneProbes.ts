@@ -50,7 +50,8 @@ function layersToCapture(
   probes: readonly ReflectionProbeObject[],
   isStale: (probe: ReflectionProbeObject, layer: number) => boolean
 ): number[] {
-  const stale = probes.flatMap((probe, layer) => (isStale(probe, layer) ? [layer] : []));
+  // A new instance queues first, so Godot meets probes in reverse tree order (`renderer_scene_cull.cpp:531`).
+  const stale = probes.flatMap((probe, layer) => (isStale(probe, layer) ? [layer] : [])).reverse();
   const firstOther = stale.find((layer) => !isRealTimeProbe(probes[layer]!));
   return stale.filter((layer) => layer === firstOther || isRealTimeProbe(probes[layer]!));
 }

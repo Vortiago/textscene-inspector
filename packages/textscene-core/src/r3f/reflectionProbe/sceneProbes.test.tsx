@@ -146,11 +146,11 @@ describe('SceneProbes.update', () => {
     expect([facesDrawn(), facesDrawn(), facesDrawn()]).toEqual([6, 6, 0]);
   });
 
-  it('captures the probes in tree order, whatever order they mount in', async () => {
+  it('captures the probes in reverse tree order, whatever order they mount in (renderer_scene_cull.cpp:531)', async () => {
     const second = probeObject({}, [1]);
     const first = probeObject({}, [0]);
-    first.position.x = 1;
-    const { renderer, facesDrawn, settle } = await sceneWith(second, first);
+    second.position.x = 1;
+    const { renderer, facesDrawn, settle } = await sceneWith(first, second);
     settle();
     const renders = vi.spyOn(renderer, 'render');
     facesDrawn();
