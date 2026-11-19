@@ -34,7 +34,13 @@ import { FogDensityAtlas } from './fogDensityAtlas.js';
 import { RowTexture } from '../rowTexture/rowTexture.js';
 import type { FogVolumeObject } from './fogVolumeObject.js';
 import { FOG_VOLUME_TEXELS, FogVolumeRows, type FogVolumeView } from './fogVolumeRows.js';
-import { SHOWN_ENERGY, shownLayers, shownSky, skyRadianceUniforms, skyRotation } from '../sky/skyRadiance.js';
+import {
+  SHOWN_LAYER_ENERGIES,
+  shownLayers,
+  shownSky,
+  skyRadianceUniforms,
+  skyRotation,
+} from '../sky/skyRadiance.js';
 import { fogUniforms } from './fogUniforms.js';
 import {
   FOG_COPY_FRAGMENT,
@@ -131,12 +137,8 @@ function resize(target: THREE.WebGL3DRenderTarget, { width, height, depth }: Vol
  * render that changes nothing allocates nothing.
  */
 class VolumeKey {
-  /**
-   * The camera's world and projection matrices, then the shown sky's rotation. The volume reads the
-   * sky's energy too, and its layout, which comes with its `layers`, but not its share of the ambient.
-   */
-  private readonly view = new Float64Array(16 + 16 + skyRotation.length);
-  private skyEnergy = 0;
+  /** The camera's matrices, the sky's rotation and its layer energies: the layout comes with `layers`. */
+  private readonly view = new Float64Array(32 + skyRotation.length + shownSky.length - SHOWN_LAYER_ENERGIES);
   private width = 0;
   private height = 0;
   private inputs: Omit<VolumetricFogInputs, 'lights' | 'casters' | 'volumes'> | null = null;
@@ -157,16 +159,15 @@ class VolumeKey {
       this.width !== viewport.z ||
       this.height !== viewport.w ||
       this.sky !== layers ||
-      this.skyEnergy !== shownSky[SHOWN_ENERGY] ||
       this.inputs.fog !== inputs.fog ||
       this.inputs.project !== inputs.project;
     if (this.take(0, camera.matrixWorld.elements)) hasChanged = true;
     if (this.take(16, camera.projectionMatrix.elements)) hasChanged = true;
     if (this.take(32, skyRotation)) hasChanged = true;
+    if (this.take(32 + skyRotation.length, shownSky.subarray(SHOWN_LAYER_ENERGIES))) hasChanged = true;
     this.width = viewport.z;
     this.height = viewport.w;
     this.sky = layers;
-    this.skyEnergy = shownSky[SHOWN_ENERGY]!;
     this.inputs = inputs;
     return hasChanged;
   }

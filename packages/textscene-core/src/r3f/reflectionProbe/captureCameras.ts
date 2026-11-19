@@ -8,6 +8,8 @@ export interface ProbeCapture {
   readonly isInterior: boolean;
   /** Whether the lights cast their shadows (`render_forward_clustered.cpp:1627-1630`). */
   readonly hasShadows: boolean;
+  /** Whether the probe updates ALWAYS, so Godot draws its faces in every frame. */
+  readonly isRealTime: boolean;
 }
 
 /**

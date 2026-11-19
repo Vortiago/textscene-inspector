@@ -10,7 +10,7 @@ A `Sky` resource's `sky_material` is the source of the background and of the ima
 
 Viewports that draw one Sky share one radiance, as in Godot (`sky.h:251`). A render that finds the sky changed bakes it at its own exposure, and the children of a viewport render first (`renderer_viewport.cpp:91-127`). A sky that reads the lights changes at each new exposure, so two viewports of one world read the bake of the first. An incremental sky bakes again only after it filters every layer (`sky.cpp:1263-1369`). A change of the lights a sky reads bakes it again in place, for every sky material (`sky.cpp:1105-1143`). Real-Time and Quality bake every layer in the next frame. Incremental bakes layer 0, then one more layer in each frame. The faces an ALWAYS ReflectionProbe draws before the view in each frame are renders at the world's exposure too. Each viewport draws the background at its own exposure.
 
-The Environment's `background_energy_multiplier` scales the background once, and the ambient and the reflection twice. The radiance bakes it in, and each surface reads the radiance at it again (`render_scene_data_rd.cpp:169`, `scene_forward_clustered.glsl:1732`, `:1756`). A fog reads the radiance as baked.
+The Environment's `background_energy_multiplier` scales the background once, and the ambient and the reflection twice. The radiance bakes it in, and each surface reads the radiance at it again (`render_scene_data_rd.cpp:169`, `scene_forward_clustered.glsl:1732`, `:1756`). A fog reads the radiance as baked. Each layer holds the energy of the render that baked or filtered it last. Over an ALWAYS probe, layer 0 holds the world's exposure while the last layer, which the ambient reads, still holds the view's.
 
 ## ProceduralSkyMaterial
 

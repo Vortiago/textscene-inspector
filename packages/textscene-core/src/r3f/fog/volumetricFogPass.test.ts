@@ -137,9 +137,9 @@ function settle(
   }
 }
 
-/** What a shown sky holds that the volume reads: its radiance energy and its rotation. */
+/** What a shown sky holds that the volume reads: its layers' energies and its rotation. */
 interface ShownSky {
-  energy: number;
+  energies: readonly number[];
   rotation: THREE.Euler;
 }
 
@@ -149,7 +149,7 @@ function showSky(renderer: RecordingRenderer, shown: Partial<ShownSky>): void {
   new SkyRadiance(renderer.asWebGL, layers, shown.rotation ?? new THREE.Euler()).show(
     1,
     true,
-    shown.energy ?? 1
+    shown.energies ?? [1]
   );
 }
 
@@ -341,7 +341,8 @@ describe('VolumetricFogPass.prepare', () => {
 
   it.each([
     ['turns', { rotation: new THREE.Euler(0, 0.5, 0) }],
-    ['takes another energy', { energy: 2 }],
+    ['takes another energy', { energies: [2] }],
+    ['takes another energy for one layer', { energies: [1, 1, 2] }],
   ])('draws again when the sky %s', (_change, bake: Partial<ShownSky>) => {
     const renderer = new RecordingRenderer();
     const pass = new VolumetricFogPass();
@@ -365,11 +366,11 @@ describe('VolumetricFogPass.prepare', () => {
     const fog = inputs({ volumetric_fog_temporal_reprojection_enabled: 'false' });
     const layers = { layout: skyOctmapLayout(32, 8), target: new THREE.WebGLArrayRenderTarget(1, 1, 1) };
     const sky = new SkyRadiance(renderer.asWebGL, layers, new THREE.Euler());
-    sky.show(1, true, 1);
+    sky.show(1, true, [1]);
     pass.prepare(renderer.asWebGL, scene, view, fog);
     renderer.take();
 
-    sky.show(0.25, true, 1);
+    sky.show(0.25, true, [1]);
     pass.prepare(renderer.asWebGL, scene, view, fog);
     expect(renderer.take().lightDraws).toHaveLength(0);
   });

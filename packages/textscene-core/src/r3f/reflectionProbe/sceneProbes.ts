@@ -213,7 +213,11 @@ export class SceneProbes {
     viewport: ViewportDescription
   ): void {
     const { probe } = object;
-    const capture = { isInterior: probe.interior, hasShadows: probe.enableShadows };
+    const capture = {
+      isInterior: probe.interior,
+      hasShadows: probe.enableShadows,
+      isRealTime: isRealTimeProbe(object),
+    };
     const farPlanes = captureFarPlanes(probe.size, probe.originOffset, probe.maxDistance);
     const cameras = captureCameras(object.matrixWorld, probe.originOffset, farPlanes);
     const render = {

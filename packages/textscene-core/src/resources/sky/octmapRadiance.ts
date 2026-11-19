@@ -88,13 +88,14 @@ interface SkyEnvironmentParts {
   disposeBackground: () => void;
   redrawBackground?: () => void;
   setLights: (lights: readonly SkyLight[]) => void;
+  setBakeEnergy?: (energy: number) => void;
 }
 
 /** The environment of `radiance`. A sky no render dirties after its build keeps only its layers. */
 export function octmapSkyEnvironment(
   radiance: OctmapRadiance,
   isDirtiable: boolean,
-  { background, disposeBackground, redrawBackground, setLights }: SkyEnvironmentParts
+  { background, disposeBackground, redrawBackground, setLights, setBakeEnergy }: SkyEnvironmentParts
 ): SkyEnvironment {
   if (!isDirtiable) {
     const layers = radiance.releaseLayers();
@@ -114,6 +115,7 @@ export function octmapSkyEnvironment(
     redrawBackground,
     radianceInPlace: radiance,
     setLights,
+    setBakeEnergy,
     dispose,
   };
 }

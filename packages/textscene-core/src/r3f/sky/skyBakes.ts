@@ -1,11 +1,3 @@
-/**
- * The bakes of one sky, one for each exposure that bakes it. Godot bakes a sky's radiance at the
- * exposure of the render that finds it dirty (`sky.cpp:1275`, `:1295`), and a sky that reads lights
- * is dirty in each render whose light energies, which the exposure scales, differ from the last
- * (`sky.cpp:1085-1087`, `:1105-1143`). So viewports that draw one sky at two exposures can read two
- * bakes. A bake holds the exposure only in its light energies and its debanding noise.
- */
-
 import type * as THREE from 'three';
 import {
   buildSkyEnvironment,
@@ -16,11 +8,11 @@ import {
 import type { Sky } from '../../resources/sky/types';
 import type { SamplerValue } from '../../shaders/uniforms/samplerUniform';
 import { roughnessLayersOf } from '../../resources/sky/skyLayers';
-import { materialReadsLights } from '../../resources/sky/readsLights';
 import { isDebanded } from '../../resources/sky/debanding';
 import {
   newSkyRadianceUpdate,
   type SkyRadianceStep,
+  type SkyRender,
   type SkyUpdatePlan,
 } from '../../godot/rendering/environment/skyRadianceUpdate';
 import type { Vector3 } from '../../godot/math/vector';
@@ -31,7 +23,7 @@ import { SkyRadiance } from './skyRadiance';
 import type { SkyBackdrop } from './skyBackground';
 import { isLiveTarget, liveTargetDrawCount } from '../liveTargets';
 
-/** A sky baked at one exposure: its background and the radiance its readers sample. */
+/** A baked sky: its background and the radiance its readers sample. */
 interface BakedSky {
   background: SkyBackdrop | null;
   radiance: SkyRadiance;
@@ -39,21 +31,26 @@ interface BakedSky {
   redrawBackground?: () => void;
   /** The bake of the radiance layers in place, absent for a sky no render dirties after its build. */
   radianceInPlace?: RadianceInPlace;
-  /** Shows the lights at the bake's exposure to its background and its next bake in place. */
+  /** Shows the lights at a render's exposure to its background and its next bake in place. */
   setLights?: (lights: readonly SkyLight[]) => void;
-  /** What layer 0 of the radiance in place drew last. */
+  /** Sets the energy the next bake in place is read at. */
+  setBakeEnergy?: (energy: number) => void;
+  /** What the radiance layers drew last. */
   drawn: DrawnLayers;
   /** Frees the background and the radiance layers. */
   dispose: () => void;
 }
 
-/** What layer 0 of a radiance in place drew last, written only by `stepInPlace`. */
+/** What the layers of a radiance drew last, written only by `bakeSky` and `stepLayers`. */
 interface DrawnLayers {
-  lightsKey: string;
+  /** The light data layer 0 drew with, at the exposure of the render that drew it. */
+  lightData: string;
   /** Whether a render has stepped the radiance since its build. */
   isStepped: boolean;
   /** Whether the other layers filter from a layer 0 that changed. */
   isFiltering: boolean;
+  /** The energy each layer was baked or filtered at, which Godot bakes into the layer. */
+  energies: number[];
 }
 
 /** The lights a render reads for its sky, and the key that tells one reading from the next. */
@@ -128,32 +125,15 @@ function inputKey({
   ].join('|');
 }
 
-/** The one exposure a bake that holds none bakes at, as every exposure would bake it alike. */
-const ANY_EXPOSURE = 1;
-
-/**
- * The bakes of one input by exposure. Godot keeps one radiance for a sky, so a bake that no render
- * read since the last sweep is freed, and a render whose bake waits draws with the latest one.
- */
+/** The one bake of an input, which every render steps, as Godot keeps one radiance (`sky.h:271`). */
 export class SkyBakes {
-  /** Each bake by its exposure, null for one the renderer could not make. */
-  private readonly bakes = new Map<number, BakedSky | null>();
-  /** The exposures a render asked for while it drew, which `bakeWanted` bakes. */
-  private readonly wanted = new Set<number>();
-  /** The exposures read since the last sweep, written by `at` and `bakeNow`, cleared by each sweep. */
-  private readonly read = new Set<number>();
-  /** The bake read last, which a render whose bake waits draws with, and which no sweep frees. */
-  private latest: { exposure: number; baked: BakedSky } | null = null;
-  /** Whether the exposure changes a bake: through the light energies, or the debanding noise. */
-  private readonly holdsExposure: boolean;
-  /** The lights each bake draws, written only by `followLights`. */
+  /** The bake, null for one the renderer could not make, absent before `bakeNow`. */
+  private baked: BakedSky | null | undefined;
+  /** The lights each render shows, written only by `followLights`. */
   private lights: SkyLightsRead;
-  /** Grows by one with each bake made, so a reader tells a new one. */
-  bakeCount = 0;
-  /**
-   * The draw of a live panorama the backgrounds show, written only by `followPanorama`. Null for a
-   * panorama no pass draws.
-   */
+  /** The exposure the bake's lights show now, null once `followLights` takes new lights. */
+  private shownExposure: number | null;
+  /** The live panorama draw the background shows, written only by `followPanorama`, null for none. */
   private backgroundDraws: number | null;
 
   constructor(
@@ -161,108 +141,58 @@ export class SkyBakes {
     private readonly input: SkyBakeInput,
     private readonly onDispose: () => void
   ) {
-    const { sky, lights, panorama } = input;
+    const { lights, panorama } = input;
     this.lights = lights;
-    // Whatever the energies: a change of the lights moves into each bake, which keeps its exposure.
-    this.holdsExposure = materialReadsLights(sky.material) || isDebanded(sky.material);
+    this.shownExposure = null;
     this.backgroundDraws = panorama && isLiveTarget(panorama) ? liveTargetDrawCount(panorama) : null;
   }
 
-  /** Bakes the sky at `exposure` now, outside any render, or answers the bake it holds. */
-  bakeNow(exposure: number): BakedSky | null {
-    const key = this.keyOf(exposure);
-    if (!this.bakes.has(key)) this.bake(key);
-    return this.readOf(key);
+  /** Bakes the sky at `exposure` now, outside any render, unless it holds its bake. */
+  bakeNow(exposure: number, lightData: string): BakedSky | null {
+    if (this.baked === undefined) {
+      this.baked = bakeSky(this.gl, { ...this.input, lights: this.lights }, exposure, lightData);
+      this.shownExposure = exposure;
+    }
+    return this.baked;
   }
 
-  /**
-   * The bake at `exposure`, else the latest while it waits for `bakeWanted`, since a bake renders
-   * cubes of its own. Null only before any bake.
-   */
-  at(exposure: number): BakedSky | null {
-    const key = this.keyOf(exposure);
-    if (!this.bakes.has(key)) this.wanted.add(key);
-    return this.readOf(key) ?? (this.latest && this.readOf(this.latest.exposure));
-  }
-
-  /**
-   * Frees each bake no render read since the last sweep, then bakes each exposure a render asked
-   * for. Answers whether it baked any. A sweep with no read between runs nothing, so several
-   * holders can call this in one frame.
-   */
-  bakeWanted(): boolean {
-    if (this.read.size > 0) this.sweep();
-    if (this.wanted.size === 0) return false;
-    for (const exposure of this.wanted) this.bake(exposure);
-    this.wanted.clear();
-    return true;
-  }
-
-  /**
-   * Draws the background of each bake again once per new draw of a live panorama, as Godot draws
-   * the background from the sky shader each frame (`sky.cpp:1463`). The radiance keeps its bake, as
-   * a draw of the target leaves Godot's sky clean. Every layer that shares these bakes may call it.
-   */
+  /** Draws the background again for each new draw of a live panorama, as Godot does (`sky.cpp:1463`). */
   followPanorama(): void {
     const { panorama } = this.input;
     if (this.backgroundDraws === null || !panorama) return;
     const draws = liveTargetDrawCount(panorama);
     if (draws === this.backgroundDraws) return;
     this.backgroundDraws = draws;
-    for (const baked of this.bakes.values()) baked?.redrawBackground?.();
+    this.baked?.redrawBackground?.();
   }
 
-  /** Shows `lights` to each bake at its own exposure, and to the bakes to come. A repeat changes nothing. */
+  /** Takes `lights` for the renders to come. A repeat changes nothing. */
   followLights(lights: SkyLightsRead): void {
     if (lights.key === this.lights.key) return;
     this.lights = lights;
-    for (const [exposure, baked] of this.bakes) baked?.setLights?.(exposed(lights.lights, exposure));
+    this.shownExposure = null;
   }
 
-  /** Runs `step` on the radiance at `exposure` and answers whether it drew, as `stepInPlace` does. */
-  stepInPlaceAt(
-    exposure: number,
-    step: SkyRadianceStep,
-    position: Vector3,
-    isDrawnEachBake: boolean
-  ): boolean {
-    const baked = this.bakes.get(this.keyOf(exposure));
-    if (!baked?.radianceInPlace) return false;
-    const draw = { position, lightsKey: this.lights.key, isDrawnEachBake };
-    return stepInPlace(baked.radianceInPlace, baked.drawn, step, draw);
+  /** Shows the lights at `exposure` to the background and the next bake in place. */
+  showLightsAt(exposure: number): void {
+    if (exposure === this.shownExposure) return;
+    this.shownExposure = exposure;
+    this.baked?.setLights?.(exposed(this.lights.lights, exposure));
+  }
+
+  /** Runs `step` of `render`, whose sky reads `lightData`, and answers whether it drew. */
+  step(render: SkyRender, step: SkyRadianceStep, lightData: string, draw: InPlaceRender): boolean {
+    const baked = this.baked;
+    if (!baked) return false;
+    if (baked.radianceInPlace) this.showLightsAt(render.exposure);
+    if (step.kind === 'bake') baked.setBakeEnergy?.(render.brightness);
+    const layersDraw = { ...draw, lightData, energy: render.brightness };
+    return stepLayers(baked.radianceInPlace, baked.drawn, step, layersDraw);
   }
 
   dispose(): void {
-    for (const baked of this.bakes.values()) free(baked);
+    if (this.baked) free(this.baked);
     this.onDispose();
-  }
-
-  private bake(exposure: number): void {
-    const baked = bakeSky(this.gl, { ...this.input, lights: this.lights }, exposure);
-    this.bakes.set(exposure, baked);
-    this.read.add(exposure);
-    if (baked) this.bakeCount++;
-  }
-
-  private readOf(exposure: number): BakedSky | null {
-    const baked = this.bakes.get(exposure) ?? null;
-    if (!baked) return null;
-    this.read.add(exposure);
-    this.latest = { exposure, baked };
-    return baked;
-  }
-
-  private sweep(): void {
-    for (const [exposure, baked] of this.bakes) {
-      if (this.read.has(exposure) || exposure === this.latest?.exposure) continue;
-      free(baked);
-      this.bakes.delete(exposure);
-    }
-    this.read.clear();
-  }
-
-  private keyOf(exposure: number): number {
-    return this.holdsExposure ? exposure : ANY_EXPOSURE;
   }
 }
 
@@ -272,28 +202,39 @@ function free(baked: BakedSky | null): void {
 }
 
 /** The sky baked at `exposure`, which scales the energy of each light and the debanding noise. */
-function bakeSky(gl: THREE.WebGLRenderer, input: SkyBakeInput, exposure: number): BakedSky | null {
+function bakeSky(
+  gl: THREE.WebGLRenderer,
+  input: SkyBakeInput,
+  exposure: number,
+  lightData: string
+): BakedSky | null {
   const { energyMultiplier, rotation, lights, ...sky } = input;
   const energy = energyMultiplier * exposure;
   const built = buildSkyEnvironment(gl, { ...sky, lights: exposed(lights.lights, exposure), energy });
   if (!built) return null;
   const { layers, ...baked } = built;
-  const drawn = { lightsKey: lights.key, isStepped: false, isFiltering: false };
+  const energies = new Array<number>(roughnessLayersOf(sky.sky.radianceFilter)).fill(energy);
+  const drawn = { lightData, isStepped: false, isFiltering: false, energies };
   return { ...baked, radiance: new SkyRadiance(gl, layers, rotation), drawn };
 }
 
 /** What a render asks of a radiance in place. */
-interface InPlaceDraw {
+export interface InPlaceRender {
   /** `POSITION` of the draw. */
   position: Vector3;
-  lightsKey: string;
   /** Whether each bake draws again, as for a sky that reads `TIME` or `POSITION`. */
   isDrawnEachBake: boolean;
 }
 
-/** Runs `step` in place and answers whether it drew. A cycle of lights layer 0 holds draws nothing. */
-function stepInPlace(
-  inPlace: RadianceInPlace,
+/** What a render asks of a radiance in place, with the light data its sky reads and its energy. */
+interface InPlaceDraw extends InPlaceRender {
+  lightData: string;
+  energy: number;
+}
+
+/** Runs `step` on the layers' energies and, where their content changes, on the bake in place. */
+function stepLayers(
+  inPlace: RadianceInPlace | undefined,
   drawn: DrawnLayers,
   step: SkyRadianceStep,
   draw: InPlaceDraw
@@ -301,21 +242,26 @@ function stepInPlace(
   if (!drawn.isStepped) {
     // A radiance no render has stepped holds the lights, the `TIME` and the origin of its build.
     drawn.isStepped = true;
-    if (!draw.isDrawnEachBake && drawn.lightsKey === draw.lightsKey) return false;
-    drawn.lightsKey = draw.lightsKey;
+    drawn.energies.fill(draw.energy);
+    if (!inPlace || (!draw.isDrawnEachBake && drawn.lightData === draw.lightData)) return false;
+    drawn.lightData = draw.lightData;
     inPlace.bakeAgain(draw.position);
     return true;
   }
   if (step.kind === 'filter') {
-    if (drawn.isFiltering) inPlace.filterLayer(step.layer);
-    return drawn.isFiltering;
+    drawn.energies[step.layer] = drawn.energies[0]!;
+    if (!inPlace || !drawn.isFiltering) return false;
+    inPlace.filterLayer(step.layer);
+    return true;
   }
   if (step.kind !== 'bake') return false;
-  // Each bake holds one exposure, so a dirt from the exposure alone redraws what layer 0 holds.
-  const isChanged = draw.isDrawnEachBake || drawn.lightsKey !== draw.lightsKey;
+  if (step.isFirstLayerOnly) drawn.energies[0] = draw.energy;
+  else drawn.energies.fill(draw.energy);
+  // The light data holds the exposure, so a render at another exposure redraws layer 0.
+  const isChanged = draw.isDrawnEachBake || drawn.lightData !== draw.lightData;
   drawn.isFiltering = isChanged && step.isFirstLayerOnly;
-  if (!isChanged) return false;
-  drawn.lightsKey = draw.lightsKey;
+  if (!inPlace || !isChanged) return false;
+  drawn.lightData = draw.lightData;
   if (step.isFirstLayerOnly) inPlace.bakeFirstLayerAgain(draw.position);
   else inPlace.bakeAgain(draw.position);
   return true;

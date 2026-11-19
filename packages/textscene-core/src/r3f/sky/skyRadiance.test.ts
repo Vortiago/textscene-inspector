@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { skyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
 import type { SkyLayers } from '../../resources/sky/skyLayers';
-import { hideShownSky, SHOWN_ENERGY, SkyRadiance, shownSky, skyRotation } from './skyRadiance';
+import { hideShownSky, SHOWN_LAYER_ENERGIES, SkyRadiance, shownSky, skyRotation } from './skyRadiance';
 import { REFLECTION_SLOT, skyLayersSlot } from './skyRadiance.testkit';
 import { boundHandle, testRenderer } from '../../testing/recordingWebGL';
 
@@ -22,6 +22,9 @@ function radianceOf(
 ): SkyRadiance {
   return new SkyRadiance(renderer, bakedLayers(renderer, radianceSize), rotation);
 }
+
+/** The energy each layer of the shown sky is read at. */
+const layerEnergies = () => shownSky.subarray(SHOWN_LAYER_ENERGIES);
 
 /** The array handle every reader samples on `renderer`. */
 const sampledArray = (renderer: THREE.WebGLRenderer) => boundHandle(renderer, skyLayersSlot);
@@ -44,11 +47,11 @@ describe('SkyRadiance', () => {
     const first = radianceOf(renderer);
     const second = radianceOf(renderer);
 
-    first.show(1, true, 1);
+    first.show(1, true, [1]);
     const firstArray = sampledArray(renderer);
-    second.show(1, true, 1);
+    second.show(1, true, [1]);
     const secondArray = sampledArray(renderer);
-    first.show(1, true, 1);
+    first.show(1, true, [1]);
 
     expect(firstArray).not.toBe(secondArray);
     expect(sampledArray(renderer)).toBe(firstArray);
@@ -59,7 +62,7 @@ describe('SkyRadiance', () => {
     const skies = [radianceOf(renderer), radianceOf(renderer)];
     const bakedUploads = recording.uploads();
 
-    for (let frame = 0; frame < 3; frame++) for (const sky of skies) sky.show(1, true, 1);
+    for (let frame = 0; frame < 3; frame++) for (const sky of skies) sky.show(1, true, [1]);
 
     expect(recording.uploads()).toBe(bakedUploads);
   });
@@ -67,7 +70,7 @@ describe('SkyRadiance', () => {
   it("shows the sky's share of the ambient, its border size, and its derivative scale", async () => {
     const { renderer } = await testRenderer();
 
-    radianceOf(renderer, 256).show(0.25, true, 1);
+    radianceOf(renderer, 256).show(0.25, true, [1]);
 
     // One over `4 * pixel_size * pixel_size` at a pixel size of 1/256.
     expect(Array.from(shownSky.subarray(0, 3))).toEqual([0.25, Math.fround(0.8), 256 ** 2 / 4]);
@@ -75,9 +78,9 @@ describe('SkyRadiance', () => {
 
   it('shows the layout of the sky shown last (edge case)', async () => {
     const { renderer } = await testRenderer();
-    radianceOf(renderer, 256).show(1, true, 1);
+    radianceOf(renderer, 256).show(1, true, [1]);
 
-    radianceOf(renderer, 32).show(1, true, 1);
+    radianceOf(renderer, 32).show(1, true, [1]);
 
     expect(shownSky[2]).toBe(32 ** 2 / 4);
   });
@@ -85,7 +88,7 @@ describe('SkyRadiance', () => {
   it('leaves the readers sampling none of its array when hidden, as it is freed next (error case)', async () => {
     const { renderer } = await testRenderer();
     const sky = radianceOf(renderer);
-    sky.show(1, true, 1);
+    sky.show(1, true, [1]);
 
     sky.hide();
 
@@ -96,8 +99,8 @@ describe('SkyRadiance', () => {
     const { renderer } = await testRenderer();
     const shown = radianceOf(renderer);
     const hidden = radianceOf(renderer);
-    hidden.show(1, true, 1);
-    shown.show(1, true, 1);
+    hidden.show(1, true, [1]);
+    shown.show(1, true, [1]);
     const shownArray = sampledArray(renderer);
 
     hidden.hide();
@@ -105,21 +108,29 @@ describe('SkyRadiance', () => {
     expect(sampledArray(renderer)).toBe(shownArray);
   });
 
-  it('shows the energy its radiance is read at, which the fogs read', async () => {
+  it('shows the energy each layer was baked at, which every reader reads it at', async () => {
     const { renderer } = await testRenderer();
 
-    radianceOf(renderer).show(1, true, 2.5);
+    radianceOf(renderer).show(1, true, [4, 1, 2, 1, 1, 1, 1, 3]);
 
-    expect(shownSky[SHOWN_ENERGY]).toBe(2.5);
+    expect(Array.from(layerEnergies())).toEqual([4, 1, 2, 1, 1, 1, 1, 3]);
+  });
+
+  it('shows the last energy for each layer past the last, which a read of it reads (edge case)', async () => {
+    const { renderer } = await testRenderer();
+
+    radianceOf(renderer).show(1, true, [4, 2]);
+
+    expect(Array.from(layerEnergies())).toEqual([4, 2, 2, 2, 2, 2, 2, 2]);
   });
 
   it('shows 0 for a sky no surface reflects, and 1 for one they do', async () => {
     const { renderer } = await testRenderer();
     const radiance = radianceOf(renderer);
 
-    radiance.show(1, false, 1);
+    radiance.show(1, false, [1]);
     const unreflected = shownSky[REFLECTION_SLOT];
-    radiance.show(1, true, 1);
+    radiance.show(1, true, [1]);
 
     expect([unreflected, shownSky[REFLECTION_SLOT]]).toEqual([0, 1]);
   });
@@ -127,7 +138,7 @@ describe('SkyRadiance', () => {
   it("shows world to sky space, the inverse of the sky's rotation", async () => {
     const { renderer } = await testRenderer();
 
-    radianceOf(renderer, 32, new THREE.Euler(0, Math.PI / 2, 0)).show(1, true, 1);
+    radianceOf(renderer, 32, new THREE.Euler(0, Math.PI / 2, 0)).show(1, true, [1]);
 
     // A quarter turn about Y takes the sky's +X to the world's -Z, so world -Z is sky +X.
     const worldForward = new THREE.Vector3(0, 0, -1).applyMatrix3(new THREE.Matrix3().fromArray(skyRotation));
@@ -138,10 +149,10 @@ describe('SkyRadiance', () => {
 describe('hideShownSky', () => {
   it('leaves a scene without a sky reading black, unturned', async () => {
     const { renderer } = await testRenderer();
-    radianceOf(renderer, 32, new THREE.Euler(1, 2, 3)).show(1, true, 3);
+    radianceOf(renderer, 32, new THREE.Euler(1, 2, 3)).show(1, true, [3]);
 
     hideShownSky();
 
-    expect([shownSky[SHOWN_ENERGY], Array.from(skyRotation)]).toEqual([0, [1, 0, 0, 0, 1, 0, 0, 0, 1]]);
+    expect([Math.max(...layerEnergies()), Array.from(skyRotation)]).toEqual([0, [1, 0, 0, 0, 1, 0, 0, 0, 1]]);
   });
 });

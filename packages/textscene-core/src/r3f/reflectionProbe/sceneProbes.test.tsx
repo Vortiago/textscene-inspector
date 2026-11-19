@@ -288,7 +288,7 @@ describe('SceneProbes rendering', () => {
     const { scene, facesDrawn, settle } = await sceneWith(probeObject());
     settle();
     facesDrawn();
-    drawAsProbeCapture({ isInterior: false, hasShadows: true }, () =>
+    drawAsProbeCapture({ isInterior: false, hasShadows: true, isRealTime: false }, () =>
       fireSceneRender(scene, new THREE.PerspectiveCamera())
     );
 
@@ -343,7 +343,7 @@ describe('SceneProbes rendering', () => {
     const camera = new THREE.PerspectiveCamera();
     let during: number | null = null;
 
-    drawAsProbeCapture({ isInterior: false, hasShadows: false }, () => {
+    drawAsProbeCapture({ isInterior: false, hasShadows: false, isRealTime: false }, () => {
       fireSceneRender(scene, camera);
       during = light.shadow.intensity;
       fireSceneRenderEnd(scene, camera);

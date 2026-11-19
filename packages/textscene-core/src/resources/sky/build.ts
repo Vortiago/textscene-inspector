@@ -50,6 +50,8 @@ export interface SkyEnvironment {
   radianceInPlace?: RadianceInPlace;
   /** Shows `lights` to the background and to the next bake, absent for a sky that reads none. */
   setLights?: (lights: readonly SkyLight[]) => void;
+  /** Sets the energy the next bake in place is read at, which scales its debanding noise. */
+  setBakeEnergy?: (energy: number) => void;
   /** Frees the background, the panorama it samples, and the layers. */
   dispose: () => void;
 }
@@ -136,16 +138,12 @@ function buildBuiltInSkyEnvironment(
   const uniforms = skyUniforms(material, lights, panoramaView);
   let background: SkyBackground | null = null;
   let radiance: OctmapRadiance;
+  let octmapSky: CubeSkyOctmap;
   try {
     // Ahead of the bake, so a three whose background program moved frees no layers it baked.
     background = asBackground ? new SkyBackground(skyGlsl(material), uniforms) : null;
     const bake = cappedBake(sky);
-    const octmapSky = new CubeSkyOctmap(
-      material,
-      uniforms,
-      bake.radianceSize,
-      radianceDebanding(material, energy)
-    );
+    octmapSky = new CubeSkyOctmap(material, uniforms, bake.radianceSize, radianceDebanding(material, energy));
     radiance = new OctmapRadiance(gl, bake, octmapSky, sampling);
   } catch (error) {
     warn('[Sky] could not render the sky environment', error);
@@ -171,6 +169,7 @@ function buildBuiltInSkyEnvironment(
     disposeBackground,
     redrawBackground,
     setLights: (next) => writeSkyLights(uniforms, next),
+    setBakeEnergy: (bakeEnergy) => octmapSky.setDebanding(radianceDebanding(material, bakeEnergy)),
   });
 }
 
@@ -188,7 +187,7 @@ class CubeSkyOctmap implements OctmapSky {
     material: BuiltInSkyProperties,
     uniforms: SkyUniforms,
     radianceSize: number,
-    private readonly debanding: number
+    private debanding: number
   ) {
     this.cube = new THREE.WebGLCubeRenderTarget(radianceSize, { type: THREE.HalfFloatType });
     this.camera = new THREE.CubeCamera(0.1, 10, this.cube);
@@ -201,6 +200,11 @@ class CubeSkyOctmap implements OctmapSky {
       depthTest: false,
     });
     this.scene.add(new THREE.Mesh(this.geometry, this.shader));
+  }
+
+  /** Scales the noise of the next draw, written only by the environment's `setBakeEnergy`. */
+  setDebanding(debanding: number): void {
+    this.debanding = debanding;
   }
 
   draw(gl: THREE.WebGLRenderer, octmap: THREE.WebGLRenderTarget, layout: SkyOctmapLayout): void {
