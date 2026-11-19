@@ -28,7 +28,7 @@ function CameraProbe({ onCamera }: { onCamera: (camera: THREE.Camera) => void })
   return null;
 }
 
-const FACTS = { scriptedNodeCount: 0, hasCurrentCamera: false };
+const FACTS = { scriptedNodeCount: 0, hasCurrentCamera: false, missingFiles: new Set<string>() };
 
 /** A frame of `revision`, with one resource still loading or none. */
 function frameDrawn(status: ViewStatus, resources: number, revision: number): void {

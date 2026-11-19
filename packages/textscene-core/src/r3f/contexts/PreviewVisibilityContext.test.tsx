@@ -75,7 +75,7 @@ describe('usePreviewFrameloop', () => {
       isFullSize: true,
       work: { resources: 0, textures: 0, fonts: 0 },
     };
-    const facts = { scriptedNodeCount: 0, hasCurrentCamera: false };
+    const facts = { scriptedNodeCount: 0, hasCurrentCamera: false, missingFiles: new Set<string>() };
     await act(async () => {
       status.frameDrawn({ ...frame, facts });
     });
@@ -90,7 +90,7 @@ describe('usePreviewFrameloop', () => {
       revision: 0,
       isFullSize: true,
       work: { resources: 0, textures: 0, fonts: 0 },
-      facts: { scriptedNodeCount: 0, hasCurrentCamera: false },
+      facts: { scriptedNodeCount: 0, hasCurrentCamera: false, missingFiles: new Set() },
     });
     const wrapper = ({ children }: { children: ReactNode }) => (
       <ViewStatusProvider status={status}>

@@ -176,9 +176,20 @@ One view reports to each `<TscnSceneProvider>`. A second view under the same pro
 reports nothing and logs an error. Give each view its own provider.
 
 `useGameViewSettled()` answers `null` while the view is pending, and then
-`{ scriptedNodeCount, hasCurrentCamera }`: the count of nodes that hold a script, which do not run,
-and whether the root viewport has a current Camera3D or Camera2D. Both are facts of the game's start,
-so the 3D and 2D modes give the same value. Call it in a component below the same
+`{ scriptedNodeCount, hasCurrentCamera, missingFiles }`: the count of nodes that hold a script, which
+do not run, whether the root viewport has a current Camera3D or Camera2D, and the files the frame
+asked for and did not get. The first two are facts of the game's start, so the 3D and 2D modes give
+the same value.
+
+### Know which files are missing
+
+`scene.missingFiles()` gives the `res://` paths that the views of the scene asked for and did not get:
+a `null` from `loadResource`, or a file that fails to load. A path leaves the set when no view asks
+for it any more, or when it loads. `scene.subscribe` tells you when the set changes. The scene asks
+for a file only when a view draws a node that reads it, so a scene with no view has no missing files.
+
+Godot's editor lists the same files when it opens a scene: each file a property reads that fails to
+load. A file that the scene declares and no property reads is in neither list. Call it in a component below the same
 `<TscnSceneProvider>` as the view:
 
 ```tsx
@@ -216,6 +227,7 @@ A whole page, with a button that saves the window as a PNG file:
   <body>
     <div id="game" style="width: 640px; height: 360px"></div>
     <p id="status">Loading…</p>
+    <p id="missing"></p>
     <button id="save" disabled>Save PNG</button>
     <script type="module" src="./main.ts"></script>
   </body>
@@ -243,6 +255,12 @@ const { scriptedNodeCount, hasCurrentCamera } = await view.settled;
 document.getElementById('status')!.textContent = hasCurrentCamera
   ? `Settled. ${scriptedNodeCount} nodes hold a script, and scripts do not run.`
   : 'Settled, with no current camera.';
+
+// The list follows the scene: a write that stops reading a file takes it off.
+const showMissing = () =>
+  (document.getElementById('missing')!.textContent = [...scene.missingFiles()].join(', '));
+showMissing();
+scene.subscribe(showMissing);
 
 const save = document.getElementById('save') as HTMLButtonElement;
 save.disabled = false;
@@ -378,8 +396,9 @@ The package exports these names.
   `Scene`. It parses the text once, the first time a view reads it.
 - `Scene` (a type): an open scene. `setSource(text)` replaces its text, and every view of it draws
   the new text. `revision()` gives a number that changes with each change a view draws: a new text,
-  a write or a load that changes the tree. `getNode`, `getNodeOrNull`, `load` and `observe` are in "Change the scene from your
-  code". `dispose()` closes it.
+  a write or a load that changes the tree. `missingFiles()` gives the files its views asked for and
+  did not get, see "Know which files are missing". `getNode`, `getNodeOrNull`, `load` and `observe`
+  are in "Change the scene from your code". `dispose()` closes it.
 - `NodeHandle` (a type): a node of a scene, which `getNode` gives. Its `call` is in "Set the
   camera".
 - `variant(text)`: a value of any Godot type, as a `.tscn` file spells it. It throws for a text

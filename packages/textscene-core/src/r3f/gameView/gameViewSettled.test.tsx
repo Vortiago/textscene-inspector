@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { act } from 'react';
 import { GameViewContents } from './GameViewContents';
@@ -9,7 +10,16 @@ import { openScene } from '../../scene/openScene';
 import type { ResourceProvider } from '../../resources/ResourceProvider';
 import { settleLoads } from '../testing/settleLoads';
 import * as logger from '../../logger';
+import { createTextureFromBuffer } from '../../resources/formats/image/textureProcessing';
 import '../nodes';
+
+vi.mock('../../resources/formats/image/textureProcessing', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../resources/formats/image/textureProcessing')>();
+  return { ...actual, createTextureFromBuffer: vi.fn() };
+});
+
+// happy-dom decodes no image.
+vi.mocked(createTextureFromBuffer).mockImplementation(async () => new THREE.Texture());
 
 const SCRIPT = 'extends Node\n';
 
@@ -39,18 +49,19 @@ const NO_CAMERA = `[gd_scene format=3]
 
 const SPRITE = `[gd_scene format=3]
 
-[ext_resource type="Texture2D" path="res://icon.svg" id="1"]
+[ext_resource type="Texture2D" path="res://icon.png" id="1"]
 
 [node name="Main" type="Sprite2D"]
 texture = ExtResource("1")
 `;
 
-const ICON =
-  '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"><rect width="4" height="4"/></svg>';
+const ICON = new Uint8Array([0x89, 0x50, 0x4e, 0x47]).buffer;
 
 const files: ResourceProvider = {
   loadResource: async (path) => (path === 'res://mover.gd' ? SCRIPT : null),
 };
+
+const NONE: ReadonlySet<string> = new Set();
 
 /** Written by the view's host each render: what `useGameViewSettled` answers now. */
 let seen: ViewSettled | null = null;
@@ -83,13 +94,13 @@ describe('the settled value of the In-game view', () => {
   it('counts the nodes that hold a script, and sees the current camera', async () => {
     const renderer = await mountGame(TWO_SCRIPTS_AND_A_CAMERA);
     await drawFrames(renderer, FRAMES_TO_SETTLE);
-    expect(seen).toEqual({ scriptedNodeCount: 2, hasCurrentCamera: true });
+    expect(seen).toEqual({ scriptedNodeCount: 2, hasCurrentCamera: true, missingFiles: NONE });
   });
 
   it('reports no current camera for a 3D scene with no Camera3D', async () => {
     const renderer = await mountGame(NO_CAMERA);
     await drawFrames(renderer, FRAMES_TO_SETTLE);
-    expect(seen).toEqual({ scriptedNodeCount: 0, hasCurrentCamera: false });
+    expect(seen).toEqual({ scriptedNodeCount: 0, hasCurrentCamera: false, missingFiles: NONE });
   });
 
   it('is pending again after the text of the scene changes, until frames show the new text', async () => {
@@ -99,14 +110,14 @@ describe('the settled value of the In-game view', () => {
     await settleLoads();
     expect(seen).toBeNull();
     await drawFrames(renderer, FRAMES_TO_SETTLE);
-    expect(seen).toEqual({ scriptedNodeCount: 2, hasCurrentCamera: true });
+    expect(seen).toEqual({ scriptedNodeCount: 2, hasCurrentCamera: true, missingFiles: NONE });
   });
 
   it('is pending while a texture file is on its way, and settles after it lands', async () => {
-    let land: (text: string) => void = () => {};
+    let land: (bytes: ArrayBuffer) => void = () => {};
     const slowIcon: ResourceProvider = {
       loadResource: (path) =>
-        path === 'res://icon.svg' ? new Promise((resolve) => (land = resolve)) : Promise.resolve(null),
+        path === 'res://icon.png' ? new Promise((resolve) => (land = resolve)) : Promise.resolve(null),
     };
     const renderer = await mountGame(SPRITE, slowIcon);
     await drawFrames(renderer, FRAMES_TO_SETTLE);
@@ -114,7 +125,13 @@ describe('the settled value of the In-game view', () => {
     await act(async () => land(ICON));
     await settleLoads();
     await drawFrames(renderer, FRAMES_TO_SETTLE);
-    expect(seen).toEqual({ scriptedNodeCount: 0, hasCurrentCamera: false });
+    expect(seen).toEqual({ scriptedNodeCount: 0, hasCurrentCamera: false, missingFiles: NONE });
+  });
+
+  it('names the file the scene asked for and did not get', async () => {
+    const renderer = await mountGame(SPRITE);
+    await drawFrames(renderer, FRAMES_TO_SETTLE);
+    expect(seen?.missingFiles).toEqual(new Set(['res://icon.png']));
   });
 
   it('refuses a second In-game view under one provider, and keeps the first one settled', async () => {
@@ -122,7 +139,7 @@ describe('the settled value of the In-game view', () => {
     const renderer = await mountGame(TWO_SCRIPTS_AND_A_CAMERA, files, 2);
     await drawFrames(renderer, FRAMES_TO_SETTLE);
     expect(error).toHaveBeenCalledWith('[View] expected one view under a TscnSceneProvider, got a second');
-    expect(seen).toEqual({ scriptedNodeCount: 2, hasCurrentCamera: true });
+    expect(seen).toEqual({ scriptedNodeCount: 2, hasCurrentCamera: true, missingFiles: NONE });
     error.mockRestore();
   });
 });

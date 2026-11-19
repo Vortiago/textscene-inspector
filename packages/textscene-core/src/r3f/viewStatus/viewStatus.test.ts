@@ -4,7 +4,7 @@ import type { PendingSceneWork } from '../sceneWork';
 
 const NO_PENDING_WORK: PendingSceneWork = { resources: 0, textures: 0, fonts: 0 };
 
-const FACTS: ViewSettled = { scriptedNodeCount: 2, hasCurrentCamera: true };
+const FACTS: ViewSettled = { scriptedNodeCount: 2, hasCurrentCamera: true, missingFiles: new Set() };
 
 function frameOf(revision: number, work: PendingSceneWork = NO_PENDING_WORK): DrawnFrame {
   return { revision, isFullSize: true, work, facts: FACTS };

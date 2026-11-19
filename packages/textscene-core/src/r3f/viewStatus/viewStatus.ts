@@ -7,6 +7,8 @@ export interface ViewSettled {
   scriptedNodeCount: number;
   /** A current Camera3D or Camera2D in the root viewport. */
   hasCurrentCamera: boolean;
+  /** The `res://` paths the frame asked for and did not get: `scene.missingFiles()` as it drew. */
+  missingFiles: ReadonlySet<string>;
 }
 
 export interface LiveScene {
