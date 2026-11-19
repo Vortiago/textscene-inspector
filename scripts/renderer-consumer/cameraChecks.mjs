@@ -1,7 +1,7 @@
 import { attachDiagnostics, loggedErrors } from '../visual/previewServer.mjs';
 import { compareImages } from '../visual/imageDelta.mjs';
 import { stillShot } from './stillShot.mjs';
-import { RESIDUE_MAX_DELTA } from './cameraFailures.mjs';
+import { MISSING_PATH, RESIDUE_MAX_DELTA } from './cameraFailures.mjs';
 
 /* global window */
 // These exist only in the browser that runs the `page.evaluate` calls.
@@ -32,6 +32,19 @@ function refusedUpdate(page) {
   });
 }
 
+/** The message `settled` rejects with for a view mounted through a path that names no node, or null. */
+function missingCameraRejection(page) {
+  return page.evaluate(async (camera) => {
+    window.mountCamera({ mode: '3D', camera });
+    try {
+      await window.cameraView.settled;
+      return null;
+    } catch (error) {
+      return error.message;
+    }
+  }, MISSING_PATH);
+}
+
 export async function runCameraChecks(page, url) {
   const diagnostics = attachDiagnostics(page);
   await page.goto(url);
@@ -45,9 +58,10 @@ export async function runCameraChecks(page, url) {
   const changedBetweenCameras = compareImages(shots['Rig/Front'], shots.Above).changedPixels;
   const overFromGameView = {};
   for (const camera of CAMERAS) overFromGameView[camera] = await overFromGame(page, camera, shots[camera]);
+  const missing = await missingCameraRejection(page);
   await page.evaluate(() => window.cameraView.dispose());
   return {
-    results: { overFromGameView, changedBetweenCameras, changedFromFreshEditor, refused },
+    results: { overFromGameView, changedBetweenCameras, changedFromFreshEditor, refused, missing },
     errors: loggedErrors(diagnostics),
   };
 }

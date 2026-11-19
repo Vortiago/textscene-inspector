@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { cameraFailures, REFUSED_MESSAGE } from './cameraFailures.mjs';
+import { cameraFailures, MISSING_MESSAGE, REFUSED_MESSAGE } from './cameraFailures.mjs';
 
 const PASSING = {
   overFromGameView: { 'Rig/Front': 0, Above: 0 },
   changedBetweenCameras: 9000,
   changedFromFreshEditor: 0,
   refused: REFUSED_MESSAGE,
+  missing: MISSING_MESSAGE,
 };
 
 const failuresOf = (results) => cameraFailures({ results: { ...PASSING, ...results }, errors: [] });
@@ -34,6 +35,12 @@ describe('cameraFailures', () => {
   it('fails an update that took a MeshInstance3D', () => {
     expect(failuresOf({ refused: null })).toEqual([
       `camera: a MeshInstance3D: expected "${REFUSED_MESSAGE}", got null`,
+    ]);
+  });
+
+  it('fails a settled view whose camera path still names no node', () => {
+    expect(failuresOf({ missing: null })).toEqual([
+      `camera: a path to no node: expected settled to reject with "${MISSING_MESSAGE}", got null`,
     ]);
   });
 });

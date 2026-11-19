@@ -7,7 +7,7 @@ import { SceneCamerasProvider } from './sceneCameras';
 import { ViewportActionsProvider } from './contexts/ViewportActionsContext';
 import { GodotEditorControls } from './GodotEditorControls';
 import { EditorControlsBridge } from './EditorControlsBridge';
-import { ViewCamera } from './viewCamera';
+import { ViewCamera, assertLoadedCamera } from './viewCamera';
 import { r3fStateProbe } from './testing/R3FStateProbe';
 import { settleLoads } from './testing/settleLoads';
 import { openScene } from '../scene/openScene';
@@ -69,8 +69,15 @@ async function mountedWith(camera: string | null, source = SCENE) {
     await renderer.update(tree(option));
     await act(async () => renderer.advanceFrames(1, 16));
   };
-  return { state, update };
+  const setSource = async (source: string) => {
+    await act(async () => scene.setSource(source));
+    await settleLoads();
+    await act(async () => renderer.advanceFrames(1, 16));
+  };
+  return { state, update, setSource };
 }
+
+const SCENE_WITHOUT_SIDE = SCENE.replace('[node name="Side" type="Camera3D" parent="."]\n', '');
 
 describe('the camera option of the 3D view', () => {
   it('draws through the Camera3D its path names', async () => {
@@ -103,6 +110,23 @@ describe('the camera option of the 3D view', () => {
     expect(state().camera.userData).toMatchObject({ tscnPath: 'Main/Crane/Lens' });
   });
 
+  it('ends the preview when its camera leaves the scene', async () => {
+    const { state, setSource } = await mountedWith('Side');
+
+    await setSource(SCENE_WITHOUT_SIDE);
+
+    expect(state().camera.userData).not.toHaveProperty('tscnPath');
+  });
+
+  it('keeps the preview off when a node comes back at the path of a camera that left', async () => {
+    const { state, setSource } = await mountedWith('Side');
+    await setSource(SCENE_WITHOUT_SIDE);
+
+    await setSource(SCENE);
+
+    expect(state().camera.userData).not.toHaveProperty('tscnPath');
+  });
+
   it('draws through the editor camera at the pose it had before the preview, for null', async () => {
     const { state, update } = await mountedWith(null);
     const editor = state().camera;
@@ -113,5 +137,23 @@ describe('the camera option of the 3D view', () => {
 
     expect(state().camera).toBe(editor);
     expect(editor.position.toArray()).toEqual([9, 9, 9]);
+  });
+});
+
+describe('the camera of a loaded scene', () => {
+  const scene = () => openScene({ source: SCENE, provider: RIG_FILE });
+
+  it('passes a path to a Camera3D', () => {
+    expect(() => assertLoadedCamera(scene(), 'Rig/Top')).not.toThrow();
+  });
+
+  it('refuses a path that names no node once the scene has loaded', () => {
+    expect(() => assertLoadedCamera(scene(), 'Rig/Gone')).toThrow(
+      'expected a Camera3D at "Rig/Gone", got no node once the scene loaded'
+    );
+  });
+
+  it('refuses a path to a node that is not a Camera3D', () => {
+    expect(() => assertLoadedCamera(scene(), 'Rig')).toThrow('expected a Camera3D at "Rig", got a Node3D');
   });
 });

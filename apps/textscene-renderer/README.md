@@ -299,7 +299,7 @@ hidden view draws until the view settles again.
 `camera` looks the 3D mode through a Camera3D of the scene, as the Preview check box of a Camera3D
 does in the Godot editor. The view draws what the game draws through that camera: its projection,
 `fov` or `size`, `near` and `far`, `keep_aspect` and the offsets. `null`, the default, gives the
-editor camera at the pose it opens with:
+editor camera, at the pose it had before the look, as in Godot:
 
 ```ts
 const view = mountScene(element, scene, { mode: '3D', camera: 'Rig/TopCamera' });
@@ -311,7 +311,9 @@ view.update({ camera: null });
 The path is from the scene's root, as `scene.getNode` takes it. A node there that is not a
 Camera3D throws, with the type found. A path that names no node yet does not throw, since a
 sub-scene can still be loading: the view draws through the camera once the load brings it in,
-and through the editor camera until then. A camera that leaves the scene ends the look, as in Godot. The option does not make the camera
+and through the editor camera until then. If the path still names no Camera3D once the loads end,
+`settled` rejects with the path in the message. A camera that leaves the scene ends the look, as in Godot, also when a node comes back at the path:
+set `camera` to `null` and then to the path to look again. The option does not make the camera
 current, and the In-game mode keeps the current camera: use `call('make_current')` for that.
 `<TscnCanvas camera="Rig/TopCamera" />` does the same in React.
 

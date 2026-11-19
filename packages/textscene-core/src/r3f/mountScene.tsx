@@ -5,7 +5,7 @@ import type { Scene } from '../scene/openScene.js';
 import { encodePng } from '../utils/encodePng.js';
 import { TscnCanvas, type TscnCanvasMode } from './TscnCanvas.js';
 import { TscnSceneProvider } from './TscnSceneProvider.js';
-import { assertCameraPath } from './viewCamera.js';
+import { assertCameraPath, assertLoadedCamera } from './viewCamera.js';
 import { ViewStatusProvider } from './viewStatus/ViewStatusContext.js';
 import { createViewStatus, type ViewSettled } from './viewStatus/viewStatus.js';
 
@@ -19,7 +19,7 @@ export interface ViewOptions {
 }
 
 export interface View {
-  /** A new read waits again after the scene changes. Rejects once the view fails to mount or is disposed. */
+  /** Waits again after a scene change. Rejects for a failed mount, a dispose or a path to no Camera3D. */
   readonly settled: Promise<ViewSettled>;
   /** In-game at the window's size, 3D and 2D at the canvas's size. Rejects before `settled`. */
   captureImage(): Promise<Blob>;
@@ -55,7 +55,10 @@ export function mountScene(element: HTMLElement, scene: Scene, options: ViewOpti
   const ended = () => Promise.reject(ending.signal.reason as Error);
   return {
     get settled() {
-      return status.whenSettled(ending.signal);
+      return status.whenSettled(ending.signal).then((settled) => {
+        if (current.mode === '3D' && current.camera !== null) assertLoadedCamera(scene, current.camera);
+        return settled;
+      });
     },
     captureImage() {
       if (ending.signal.aborted) return ended();
@@ -65,9 +68,12 @@ export function mountScene(element: HTMLElement, scene: Scene, options: ViewOpti
       if (isDisposed) throw new Error('expected a mounted view to update, got a disposed one');
       current = withGiven(current, checked(scene, next));
       const canvases = [...element.querySelectorAll('canvas')];
+      const loseReplaced = () => canvases.filter((canvas) => !canvas.isConnected).forEach(loseContext);
       // Synchronous, so the replaced stage has left the element before its contexts are lost.
       flushSync(render);
-      canvases.filter((canvas) => !canvas.isConnected).forEach(loseContext);
+      loseReplaced();
+      // Inside a host's own React commit, flushSync defers the render past this call.
+      setTimeout(loseReplaced);
     },
     dispose() {
       isDisposed = true;

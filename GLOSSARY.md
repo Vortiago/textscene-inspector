@@ -800,7 +800,7 @@ Godot's flight navigation of the 3D viewport: the mouse turns the **Editor camer
 _Avoid_: "fly mode", "first-person camera", "WASD mode".
 
 **Camera preview**:
-The state in which the 3D viewport draws through a scene Camera3D, as Godot's **Preview** checkbox does. Navigation is off, and the **Editor camera** keeps its pose until the preview ends. A host starts it with the view's `camera` option, and `camera: null` ends it with the **Editor camera** back at its opening pose, where Godot keeps the pose.
+The state in which the 3D viewport draws through a scene Camera3D, as Godot's **Preview** checkbox does. Navigation is off, and the **Editor camera** keeps its pose until the preview ends. A host starts it with the view's `camera` option, and `camera: null` ends it with the **Editor camera** at the pose it had before, as in Godot.
 _Avoid_: "use this camera", and "current camera", which is Godot's `current` property.
 
 **Preview sun**:

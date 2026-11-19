@@ -47,7 +47,7 @@ The numeric keys (`fov`, `size`, `near`, `far`, `h_offset`, `v_offset`, `frustum
 
 ## Preview
 
-The Inspector's **Preview** checkbox draws the viewport through the camera, as Godot's does, also for a camera inside a SubViewport. As in Godot, navigation is off during the preview, and the editor camera keeps its pose until the preview ends. A host starts the same preview with the view's `camera` option. `camera: null` ends it and puts the editor camera back at its opening pose.
+The Inspector's **Preview** checkbox draws the viewport through the camera, as Godot's does, also for a camera inside a SubViewport. As in Godot, navigation is off during the preview, and the editor camera keeps its pose until the preview ends. A host starts the same preview with the view's `camera` option. `camera: null` ends it, and the editor camera keeps the pose it had before, as in Godot. A path that names no Camera3D once the loads end rejects the view's `settled`.
 
 ## Current camera
 
@@ -73,5 +73,5 @@ The radiance of a sky that two such viewports draw is baked once, at the exposur
 ## Known limitations
 
 - **Not drawn** A CameraAttributesPhysical sets no `fov`, `near` or `far`, and no depth of field draws.
-- **Approximated** An orthogonal camera lights a surface with one view direction, where Godot reads the direction to each point, so specular and Fresnel differ across a wide surface. Owner: #2062.
+- **Approximated** An orthogonal camera lights a surface with one view direction, where Godot reads the direction to each point, so specular and Fresnel differ across a wide surface.
 - **Editor only** The frustum gizmo and the icon appear only in Godot's editor, and here they draw for every camera when the Gizmos toggle is on.
