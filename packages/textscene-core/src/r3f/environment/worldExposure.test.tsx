@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { ViewportModeProvider } from '../contexts/ViewportModeContext';
+import { ViewShowProvider } from '../viewShow/ViewShowContext';
 import { EnclosingViewportProvider } from '../contexts/EnclosingViewportContext';
 import { ViewportActionsProvider } from '../contexts/ViewportActionsContext';
 import { TreeOrderProvider, type TreeOrder } from '../contexts/TreeOrderContext';
@@ -152,7 +152,7 @@ function inRoot(
 ) {
   return (
     <CurrentCameras cameras3D={current}>
-      <ViewportModeProvider>
+      <ViewShowProvider>
         <ViewportActionsProvider initialPreviewedCameraPath={previewedCameraPath}>
           <SceneCamerasProvider>
             <WorldEnvironmentScope world="root">
@@ -161,7 +161,7 @@ function inRoot(
             </WorldEnvironmentScope>
           </SceneCamerasProvider>
         </ViewportActionsProvider>
-      </ViewportModeProvider>
+      </ViewShowProvider>
     </CurrentCameras>
   );
 }

@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { EnvironmentLayer } from './EnvironmentLayer';
 import { environmentSettingsOf } from '../../resources/environment/testing/environmentSettings';
-import { ViewportModeProvider } from '../contexts/ViewportModeContext';
+import { ViewShowProvider } from '../viewShow/ViewShowContext';
 import { SCREEN_SPACE_STATE, screenSpaceState } from '../screenSpaceEffects/screenSpaceState';
 
 /** `showFog` is the viewport's Fog toggle. */
@@ -14,9 +14,9 @@ interface MountOptions {
 
 function layer(properties: Record<string, string>, { showFog = true }: MountOptions) {
   return (
-    <ViewportModeProvider initialShowFog={showFog}>
+    <ViewShowProvider show={{ fog: showFog }}>
       <EnvironmentLayer settings={environmentSettingsOf(properties)} sky={null} panorama={null} />
-    </ViewportModeProvider>
+    </ViewShowProvider>
   );
 }
 

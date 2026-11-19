@@ -12,7 +12,7 @@ import { parseNavigationRegion3D } from './parser';
 import { NavigationRegion3D } from './Component';
 import { NAV_OVERLAY_COLOR } from '../../../r3f/navigationOverlay';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
+import { ViewShowProvider } from '../../../r3f/viewShow/ViewShowContext';
 import { ResourceLoaderProvider, ResourceLoader } from '../../../index';
 import { instanceAs } from '../testing/reactThreeTestInstance';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
@@ -53,13 +53,13 @@ function navNode(): TscnNode {
 async function render(showNavigation: boolean) {
   const loader = makeLoaderWith('res://navmesh.tres', NAVMESH_TRES);
   const renderer = await ReactThreeTestRenderer.create(
-    <ViewportModeProvider initialShowNavigation={showNavigation}>
+    <ViewShowProvider show={{ navigation: showNavigation }}>
       <ResourceLoaderProvider loader={loader}>
         <SceneResourcesProvider internalResources={[]} externalResources={EXT}>
           <NavigationRegion3D node={navNode()} />
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
-    </ViewportModeProvider>
+    </ViewShowProvider>
   );
   await settleLoads();
   return renderer;

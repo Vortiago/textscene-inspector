@@ -14,7 +14,7 @@ import { WorldEnvironment } from '../worldenvironment/Component';
 import { ViewportWorld } from '../../../r3f/testing/ViewportWorld';
 import { CurrentCameras, type CurrentCameraPaths } from '../../../r3f/testing/CurrentCameras';
 import { ViewportActionsProvider } from '../../../r3f/contexts/ViewportActionsContext';
-import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
+import { ViewShowProvider } from '../../../r3f/viewShow/ViewShowContext';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import { makeNode } from '../../../parser/testing/parserKit';
@@ -48,7 +48,7 @@ async function backgroundOf(
 ) {
   const renderer = await ReactThreeTestRenderer.create(
     <SceneResourcesProvider internalResources={RESOURCES}>
-      <ViewportModeProvider initialShowPreviewEnvironment={false}>
+      <ViewShowProvider show={{ previewEnvironment: false }}>
         <ViewportActionsProvider initialPreviewedCameraPath={viewed}>
           <CurrentCameras cameras3D={current}>
             <ViewportWorld world={world}>
@@ -59,7 +59,7 @@ async function backgroundOf(
             </ViewportWorld>
           </CurrentCameras>
         </ViewportActionsProvider>
-      </ViewportModeProvider>
+      </ViewShowProvider>
     </SceneResourcesProvider>
   );
   const background = (renderer.scene.instance as THREE.Scene).background as THREE.DataTexture | null;

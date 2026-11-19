@@ -16,11 +16,11 @@ import styles from './TscnPreviewShell.module.css';
 const IS_2D_CONTENT = (node: TscnNode): boolean => isClaimedByCanvasItemEditor(node.type);
 
 export function ViewportArea() {
-  const { mode } = useViewportMode();
+  const { mode, show } = useViewportMode();
   // The view reads the shell's providers: a `scene` prop would mount a second selection and pass.
   return (
     <>
-      <TscnCanvas mode={mode} />
+      <TscnCanvas mode={mode} show={show} />
       <ViewportChrome mode={mode} />
     </>
   );

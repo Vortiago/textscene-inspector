@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { GizmoMesh } from '../../../../r3f/components/GizmoMesh';
 import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
-import { useShowGizmos } from '../../../../r3f/contexts/ViewportModeContext';
+import { useShowGizmos } from '../../../../r3f/viewShow/ViewShowContext';
 import type { Rgba } from '../../../../godot/math/math';
 import type { SceneTileCell } from '../../../../resources/tileset/sceneTileCells';
 import {

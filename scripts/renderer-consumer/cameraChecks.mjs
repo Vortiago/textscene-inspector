@@ -8,9 +8,9 @@ import { MISSING_PATH, RESIDUE_MAX_DELTA } from './cameraFailures.mjs';
 
 const CAMERAS = ['Rig/Front', 'Above'];
 
-/** The view's frame once `update` moves it to `camera`. */
-async function shotThrough(page, camera) {
-  await page.evaluate((next) => window.cameraView.update({ camera: next }), camera);
+/** The view's frame once `update` moves it to `camera`, with the editor gizmos on or off. */
+async function shotThrough(page, camera, gizmos = true) {
+  await page.evaluate((options) => window.cameraView.update(options), { camera, show: { gizmos } });
   return stillShot(page);
 }
 
@@ -56,12 +56,26 @@ export async function runCameraChecks(page, url) {
   await page.evaluate(() => window.mountCamera({ mode: '3D' }));
   const changedFromFreshEditor = compareImages(await stillShot(page), editor).changedPixels;
   const changedBetweenCameras = compareImages(shots['Rig/Front'], shots.Above).changedPixels;
+  const gizmoPixels = {};
+  const withoutGizmos = {};
+  for (const camera of CAMERAS) {
+    withoutGizmos[camera] = await shotThrough(page, camera, false);
+    gizmoPixels[camera] = compareImages(shots[camera], withoutGizmos[camera]).changedPixels;
+  }
   const overFromGameView = {};
-  for (const camera of CAMERAS) overFromGameView[camera] = await overFromGame(page, camera, shots[camera]);
+  for (const camera of CAMERAS)
+    overFromGameView[camera] = await overFromGame(page, camera, withoutGizmos[camera]);
   const missing = await missingCameraRejection(page);
   await page.evaluate(() => window.cameraView.dispose());
   return {
-    results: { overFromGameView, changedBetweenCameras, changedFromFreshEditor, refused, missing },
+    results: {
+      overFromGameView,
+      gizmoPixels,
+      changedBetweenCameras,
+      changedFromFreshEditor,
+      refused,
+      missing,
+    },
     errors: loggedErrors(diagnostics),
   };
 }

@@ -4,7 +4,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { CollisionShape2D } from './Component';
 import { parseCollisionShape2D } from './parser';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
-import { ViewportModeProvider } from '../../../../r3f/contexts/ViewportModeContext';
+import { ViewShowProvider } from '../../../../r3f/viewShow/ViewShowContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { loaderServing } from '../../../../resources/testing/servingResourceLoader';
 import { settleLoads } from '../../../../r3f/testing/settleLoads';
@@ -41,22 +41,22 @@ async function render(
   extra: Record<string, string> = {}
 ) {
   return ReactThreeTestRenderer.create(
-    <ViewportModeProvider initialShowCollisions={showCollisions}>
+    <ViewShowProvider show={{ collisions: showCollisions }}>
       <SceneResourcesProvider internalResources={resources}>
         <CollisionShape2D node={makeNode(shapeRef, extra)} />
       </SceneResourcesProvider>
-    </ViewportModeProvider>
+    </ViewShowProvider>
   );
 }
 
 async function renderFromFile(shape: TscnInternalResource) {
   const renderer = await ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={loaderServing({ 'res://shape.tres': resourceFileText(shape) })}>
-      <ViewportModeProvider initialShowCollisions>
+      <ViewShowProvider show={{ collisions: true }}>
         <SceneResourcesProvider externalResources={[{ id: '1', type: shape.type, path: 'res://shape.tres' }]}>
           <CollisionShape2D node={makeNode('ExtResource("1")')} />
         </SceneResourcesProvider>
-      </ViewportModeProvider>
+      </ViewShowProvider>
     </ResourceLoaderProvider>
   );
   await settleLoads();
@@ -110,13 +110,13 @@ describe('<CollisionShape2D> gizmo', () => {
 
   it('renders children regardless of the gizmo', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ViewportModeProvider initialShowCollisions={false}>
+      <ViewShowProvider show={{ collisions: false }}>
         <SceneResourcesProvider internalResources={[]}>
           <CollisionShape2D node={makeNode(undefined)}>
             <mesh name="child" />
           </CollisionShape2D>
         </SceneResourcesProvider>
-      </ViewportModeProvider>
+      </ViewShowProvider>
     );
     expect(renderer.scene.findByProps({ name: 'child' })).toBeDefined();
   });

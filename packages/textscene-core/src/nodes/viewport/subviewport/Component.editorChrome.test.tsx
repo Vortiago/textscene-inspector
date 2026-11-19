@@ -24,7 +24,7 @@ import { createFakeResourceLoader } from '../../../resources/testing/createFakeR
 import { TscnSceneContents } from '../../../r3f/TscnCanvas';
 import { HierarchyProvider } from '../../../r3f/contexts/HierarchyContext';
 import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
-import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
+import { ViewShowProvider } from '../../../r3f/viewShow/ViewShowContext';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import { HoverSeeder } from '../../../r3f/testing/HoverSeeder';
 import { SelectSeeder } from '../../../r3f/testing/SelectSeeder';
@@ -140,7 +140,7 @@ async function visibleEditorOnlyPerRender(): Promise<number[]> {
   const captured: { current: THREE.WebGLRenderer | null } = { current: null };
   const renderer = await ReactThreeTestRenderer.create(
     <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p', scene }}>
-      <ViewportModeProvider initialShowGizmos initialShowGrid>
+      <ViewShowProvider show={{ gizmos: true, grid: true }}>
         <SelectionProvider>
           <SelectSeeder path="Light" />
           <HoverSeeder path="Box" />
@@ -151,7 +151,7 @@ async function visibleEditorOnlyPerRender(): Promise<number[]> {
             </ViewportPassProvider>
           </ViewportTextureProvider>
         </SelectionProvider>
-      </ViewportModeProvider>
+      </ViewShowProvider>
     </HierarchyProvider>
   );
   const counts: number[] = [];

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useFrame } from '@react-three/fiber';
-import { ViewportModeProvider } from '../contexts/ViewportModeContext';
+import { ViewShowProvider } from '../viewShow/ViewShowContext';
 import { RendererProbe } from '../../testing/recordingWebGL';
 import { FrameStatsProvider, useFrameStatsStore } from './FrameStatsContext';
 import { FrameProfiler, SubscriberStep } from './FrameProfiler';
@@ -27,12 +27,12 @@ async function profiledCanvas(showPerformance: boolean) {
     return null;
   }
   const root = await ReactThreeTestRenderer.create(
-    <ViewportModeProvider initialShowPerformance={showPerformance}>
+    <ViewShowProvider show={{ performance: showPerformance }}>
       <FrameStatsProvider>
         <StoreProbe />
         <FrameProfiler />
       </FrameStatsProvider>
-    </ViewportModeProvider>
+    </ViewShowProvider>
   );
   store!.set(STATS);
   return { store: store!, unmount: () => root.unmount() };
@@ -62,11 +62,11 @@ describe('SubscriberStep', () => {
       return null;
     }
     const root = await ReactThreeTestRenderer.create(
-      <ViewportModeProvider initialShowPerformance={showPerformance}>
+      <ViewShowProvider show={{ performance: showPerformance }}>
         <RendererProbe onRenderer={(found) => (renderer = found)} />
         <SubscriberStep step="Compositor" priority={1} />
         <Subscriber />
-      </ViewportModeProvider>
+      </ViewShowProvider>
     );
     const profile = startFrameProfile(renderer!, () => {});
     profile.beginFrame(0);

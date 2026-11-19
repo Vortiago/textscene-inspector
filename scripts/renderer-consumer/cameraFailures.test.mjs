@@ -3,6 +3,7 @@ import { cameraFailures, MISSING_MESSAGE, REFUSED_MESSAGE } from './cameraFailur
 
 const PASSING = {
   overFromGameView: { 'Rig/Front': 0, Above: 0 },
+  gizmoPixels: { 'Rig/Front': 600, Above: 560 },
   changedBetweenCameras: 9000,
   changedFromFreshEditor: 0,
   refused: REFUSED_MESSAGE,
@@ -16,8 +17,16 @@ describe('cameraFailures', () => {
     expect(failuresOf({})).toEqual([]);
   });
 
-  it('fails a view whose picture through a camera is not the game’s', () => {
-    expect(failuresOf({ overFromGameView: { 'Rig/Front': 600, Above: 1200 } })).toHaveLength(1);
+  it('fails a view with no gizmo whose picture through a camera is not the game’s', () => {
+    expect(failuresOf({ overFromGameView: { 'Rig/Front': 1, Above: 0 } })).toEqual([
+      "camera: through Rig/Front with no gizmo: expected no pixel past residue from the game's view, got 1",
+    ]);
+  });
+
+  it('fails a view whose gizmos key changed nothing', () => {
+    expect(failuresOf({ gizmoPixels: { 'Rig/Front': 600, Above: 0 } })).toEqual([
+      'camera: through Above: expected the gizmos to change at least 100 pixels, got 0',
+    ]);
   });
 
   it('fails a view that did not move to the new camera', () => {

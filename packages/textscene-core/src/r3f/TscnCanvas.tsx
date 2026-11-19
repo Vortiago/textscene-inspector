@@ -2,7 +2,7 @@ import { Canvas } from '@react-three/fiber';
 import { lazy, Suspense, type ReactNode } from 'react';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useSeatedRoots } from './useLiveSceneTree.js';
-import { useViewportMode } from './contexts/ViewportModeContext.js';
+import { useViewShow } from './viewShow/ViewShowContext.js';
 import { SceneResourcesProvider } from './SceneResourcesContext.js';
 import { EditedRootProvider } from './contexts/InstanceOwnersContext.js';
 import { NodeDispatcher } from './NodeDispatcher.js';
@@ -27,7 +27,10 @@ import { CanvasRendererScope } from './canvasRenderer/CanvasRendererScope.js';
 import { TscnSceneProvider } from './TscnSceneProvider.js';
 import { DEFAULT_ROOT_SCENE_PATH, type Scene } from '../scene/openScene.js';
 import type { ViewportMode } from './contexts/ViewportModeContext.js';
-import { rootClassName } from './stageClassName.js';
+import { StageRoot } from './StageRoot.js';
+import { FrameStatsProvider } from './frameProfile/FrameStatsContext.js';
+import { ViewShowProvider } from './viewShow/ViewShowContext.js';
+import type { ViewShow } from './viewShow/viewShow.js';
 import { ViewportActionsProvider, useOptionalViewportActions } from './contexts/ViewportActionsContext.js';
 import { ViewCamera } from './viewCamera.js';
 import { EditorViewReport } from './viewStatus/EditorViewReport.js';
@@ -93,12 +96,12 @@ function GroundGrid() {
 const GROUND_GRID_USER_DATA = { tscnEmptyState: true, ...editorHelperUserData() };
 
 /**
- * The opt-in grid for a non-empty scene, off by default (see ViewportModeContext).
+ * The opt-in grid for a non-empty scene, off by default (see `DEFAULT_SHOW`).
  * A child component, so a toolbar toggle re-renders this and not the node tree.
  */
 function ContentGroundGrid() {
-  const { showGrid } = useViewportMode();
-  return showGrid ? <GroundGrid /> : null;
+  const { grid } = useViewShow();
+  return grid ? <GroundGrid /> : null;
 }
 
 function EmptySceneIndicator() {
@@ -131,14 +134,20 @@ export interface TscnCanvasProps {
   visible?: boolean;
   /** As `mountScene`'s `camera`. Without it, the host decides. */
   camera?: string | null;
+  /** The editor helpers the 3D and 2D modes draw. A key left out has its default. */
+  show?: Partial<ViewShow>;
   /** The class of the element the view fills. */
   className?: string;
 }
 
-export function TscnCanvas({ scene, mode = '3D', visible, camera, className }: TscnCanvasProps) {
+export function TscnCanvas({ scene, mode = '3D', visible, camera, show, className }: TscnCanvasProps) {
   const stage = (
     <PreviewVisibilityProvider isVisible={visible}>
-      <ViewportActionsScope>{stageOf({ mode, camera, className })}</ViewportActionsScope>
+      <ViewShowProvider show={show}>
+        <FrameStatsProvider>
+          <ViewportActionsScope>{stageOf({ mode, camera, className })}</ViewportActionsScope>
+        </FrameStatsProvider>
+      </ViewShowProvider>
     </PreviewVisibilityProvider>
   );
   return scene ? <TscnSceneProvider scene={scene}>{stage}</TscnSceneProvider> : stage;
@@ -170,7 +179,7 @@ function Editor2DStage({ className }: { className?: string }) {
   const { rootScene, nodes } = useRootScene();
   const scenePath = useOptionalHierarchy()?.scene?.rootScenePath ?? DEFAULT_ROOT_SCENE_PATH;
   return (
-    <div className={rootClassName(className)}>
+    <StageRoot className={className}>
       <Suspense fallback={null}>
         <Canvas2DStage
           nodes={nodes ?? rootScene?.nodes ?? []}
@@ -180,14 +189,14 @@ function Editor2DStage({ className }: { className?: string }) {
           scenePath={scenePath}
         />
       </Suspense>
-    </div>
+    </StageRoot>
   );
 }
 
 function EditorCanvas({ className, camera }: Pick<TscnCanvasProps, 'camera' | 'className'>) {
   const frameloop = usePreviewFrameloop();
   return (
-    <div className={rootClassName(className)}>
+    <StageRoot className={className}>
       {/* Godot's editor opens every scene at the same fixed orbit, 70-degree FOV and
           clip planes (godotEditorCamera.ts). Framing is F there and opt-in here. */}
       <Canvas
@@ -207,6 +216,6 @@ function EditorCanvas({ className, camera }: Pick<TscnCanvasProps, 'camera' | 'c
         <EditorControlsBridge />
         <EditorViewReport />
       </Canvas>
-    </div>
+    </StageRoot>
   );
 }

@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { parseLabel3D } from './parser';
-import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
+import { ViewShowProvider } from '../../../r3f/viewShow/ViewShowContext';
 import { heading } from '../../../parser/testing/parserKit';
 import type { TscnNode } from '../../../parser/types';
 import './index.r3f';
@@ -52,9 +52,9 @@ async function labelAfterFrame(
   camera: THREE.PerspectiveCamera | THREE.OrthographicCamera
 ) {
   const renderer = await ReactThreeTestRenderer.create(
-    <ViewportModeProvider initialShowLabels>
+    <ViewShowProvider show={{ labels: true }}>
       <Label3D node={node(raw)} />
-    </ViewportModeProvider>,
+    </ViewShowProvider>,
     { camera }
   );
   await renderer.advanceFrames(2, 16);
@@ -102,9 +102,9 @@ describe('<Label3D> fixed_size', () => {
   it('multiplies the AUTHORED scale rather than replacing it, and never compounds across frames', async () => {
     const halfScale = 'Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, 0, 0)';
     const renderer = await ReactThreeTestRenderer.create(
-      <ViewportModeProvider initialShowLabels>
+      <ViewShowProvider show={{ labels: true }}>
         <Label3D node={node({ fixed_size: 'true', transform: halfScale })} />
-      </ViewportModeProvider>,
+      </ViewShowProvider>,
       { camera: perspective() }
     );
     await renderer.advanceFrames(2, 16);

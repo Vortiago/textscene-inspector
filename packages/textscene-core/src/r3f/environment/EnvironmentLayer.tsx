@@ -16,7 +16,7 @@ import type { Sky } from '../../resources/sky/types';
 import { godotColorToLinear } from '../godotColor';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { useDraws3D } from './draws3D';
-import { useViewportMode } from '../contexts/ViewportModeContext';
+import { useViewShow } from '../viewShow/ViewShowContext';
 import { SkyLayer } from '../sky/SkyLayer';
 import { FogLayer } from '../fog/FogLayer';
 import { ScreenSpaceEffectsLayer } from '../screenSpaceEffects/ScreenSpaceEffectsLayer';
@@ -72,7 +72,7 @@ function EnvironmentParts({ settings, sky, panorama }: EnvironmentLayerProps) {
   const skyAmbient = settings.skyAmbient;
   const reflectsSky = settings.skyReflection;
   const draws3D = useDraws3D();
-  const { showFog } = useViewportMode();
+  const { fog: showFog } = useViewShow();
   // One value decides the fog programs, the fogged colour background and the fog passes.
   const hasFog = draws3D && showFog && (!!settings.fog || !!settings.volumetricFog);
   useColorBackground(settings, !!sky, hasFog);

@@ -1,19 +1,19 @@
 import { useMemo } from 'react';
-import { useViewportMode } from '../contexts/ViewportModeContext';
+import { useViewShow } from '../viewShow/ViewShowContext';
 import { useViewportDescription } from '../viewportRender/viewportDescriptionContext';
 import { useLiveSceneNodes } from '../useLiveSceneTree';
 import { YIELDS_A_PREVIEW, previewYield, type PreviewToggles } from './godotPreviewLighting';
 
 export function usePreviewYield(): PreviewToggles {
-  const { showPreviewSun, showPreviewEnvironment } = useViewportMode();
+  const { previewSun, previewEnvironment } = useViewShow();
   const previews = useViewportDescription().previewsEnvironment;
   const yielding = useLiveSceneNodes(YIELDS_A_PREVIEW);
   return useMemo(
     () =>
       previewYield(
         yielding.map((entry) => entry.node.type),
-        { sun: previews && showPreviewSun, environment: previews && showPreviewEnvironment }
+        { sun: previews && previewSun, environment: previews && previewEnvironment }
       ),
-    [yielding, previews, showPreviewSun, showPreviewEnvironment]
+    [yielding, previews, previewSun, previewEnvironment]
   );
 }

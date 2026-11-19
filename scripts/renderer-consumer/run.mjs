@@ -218,6 +218,11 @@ try {
     .map(([mode, delta]) => `${mode} ${delta.changedPixels ?? 'size mismatch'}`)
     .join(', ');
   console.log(`[renderer-consumer] captureImage against the view, changed pixels: ${captureDeltas}`);
+  const { gizmoPixels, overFromGameView } = results.cameras.results;
+  console.log(
+    `[renderer-consumer] through each camera, pixels the gizmos change: ${JSON.stringify(gizmoPixels)}, ` +
+      `with no gizmo, past residue from the game's view: ${JSON.stringify(overFromGameView)}`
+  );
   const found = failures(results);
   for (const failure of found) console.error(`[renderer-consumer] ${failure}`);
   console.log(

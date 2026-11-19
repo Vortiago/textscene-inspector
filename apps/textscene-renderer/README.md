@@ -205,7 +205,7 @@ export function GameView() {
 
 ### Mount the view with no React code
 
-`mountScene(element, scene, { mode, visible, camera })` mounts the view in a page element, for a page with
+`mountScene(element, scene, { mode, visible, camera, show })` mounts the view in a page element, for a page with
 no React code of its own. React stays a peer dependency. `mode` is the mode of `TscnCanvas`, and
 here it is `'in-game'` by default. The page changes the scene through the same `scene`, as a React app does.
 
@@ -316,6 +316,33 @@ and through the editor camera until then. If the path still names no Camera3D on
 set `camera` to `null` and then to the path to look again. The option does not make the camera
 current, and the In-game mode keeps the current camera: use `call('make_current')` for that.
 `<TscnCanvas camera="Rig/TopCamera" />` does the same in React.
+
+### Turn the editor helpers on and off
+
+`show` turns on and off the helpers the 3D and 2D modes draw over the scene. Each key is a
+boolean, and a key that `show` leaves out keeps its value:
+
+```ts
+const view = mountScene(element, scene, { mode: '3D', show: { gizmos: false } });
+
+view.update({ show: { grid: true, collisions: true } });
+```
+
+| Key | Default | What it draws | Godot |
+|---|---|---|---|
+| `grid` | `false` | A ground-plane grid in 3D | View Grid, on by default in Godot |
+| `gizmos` | `true` | The editor gizmos and node icons. Collision shapes follow `collisions` alone. | View Gizmos |
+| `collisions` | `false` | The CollisionShape3D, CollisionShape2D and TouchScreenButton shapes | Debug > Visible Collision Shapes |
+| `labels` | `true` | The Label3D text | none, Godot always draws it |
+| `navigation` | `true` | The NavigationRegion3D and NavigationRegion2D meshes | Debug > Visible Navigation |
+| `previewSun` | `true` | The editor preview sun, while the scene has no DirectionalLight3D | The preview sunlight button |
+| `previewEnvironment` | `true` | The editor preview sky, while the scene has no WorldEnvironment | The preview environment button |
+| `fog` | `true` | The Environment's depth and volumetric fog | none, Godot always draws it |
+| `performance` | `false` | A panel over the view with the frame rate and the time of each render step | View Frame Time |
+
+The In-game mode draws as the game does: no helper, every Label3D and the fog, whatever `show`
+holds. Only `performance` works there too. `<TscnCanvas show={{ grid: true }} />` does the same in
+React, where a key left out has its default.
 
 ### Save a PNG from headless Chromium
 

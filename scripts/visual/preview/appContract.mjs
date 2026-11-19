@@ -22,12 +22,12 @@ export const FIT_ON_OPEN_2D_STORAGE_KEY = 'tsi.fitOnOpen2D';
  */
 export const VIEWPORT_MODE_STORAGE_KEY = 'tsi.viewportMode';
 /**
- * `SHOW_GIZMOS_STORAGE_KEY` in r3f/contexts/ViewportModeContext.tsx: the Gizmos toggle, on by default
+ * `SHOW_STORAGE_KEYS.gizmos` in r3f/contexts/ViewportModeContext.tsx: the Gizmos toggle, on by default
  * in the app. `previewServer.test.mjs` pins it.
  */
 export const SHOW_GIZMOS_STORAGE_KEY = 'tsi.showGizmos';
 /**
- * `SHOW_PERFORMANCE_STORAGE_KEY` in r3f/contexts/ViewportModeContext.tsx: the Performance toggle.
+ * `SHOW_STORAGE_KEYS.performance` in r3f/contexts/ViewportModeContext.tsx: the Performance toggle.
  * `previewServer.test.mjs` pins it.
  */
 export const SHOW_PERFORMANCE_STORAGE_KEY = 'tsi.showPerformance';

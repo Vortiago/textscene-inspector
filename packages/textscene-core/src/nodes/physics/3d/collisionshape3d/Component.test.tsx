@@ -4,7 +4,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { CollisionShape3D } from './Component';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { linePositions } from '../../../../r3f/testing/GizmoScene';
-import { ViewportModeProvider } from '../../../../r3f/contexts/ViewportModeContext';
+import { ViewShowProvider } from '../../../../r3f/viewShow/ViewShowContext';
 import type { TscnInternalResource, TscnNode } from '../../../../parser/types';
 import type { CollisionShape3DProperties } from './types';
 import { settlePendingLoads } from '../../../../r3f/testing/settleLoads';
@@ -47,11 +47,11 @@ async function render(
   internalResources: TscnInternalResource[] = [boxShape]
 ) {
   return ReactThreeTestRenderer.create(
-    <ViewportModeProvider initialShowCollisions={showCollisions}>
+    <ViewShowProvider show={{ collisions: showCollisions }}>
       <SceneResourcesProvider internalResources={internalResources}>
         <CollisionShape3D node={makeNode(properties)} />
       </SceneResourcesProvider>
-    </ViewportModeProvider>
+    </ViewShowProvider>
   );
 }
 
@@ -73,11 +73,11 @@ describe('<CollisionShape3D> gizmo', () => {
     const { loader } = createFakeResourceLoader();
     const tree = (
       <ResourceLoaderProvider loader={loader}>
-        <ViewportModeProvider initialShowCollisions>
+        <ViewShowProvider show={{ collisions: true }}>
           <SceneResourcesProvider internalResources={[convexShape]}>
             <CollisionShape3D node={makeNode({ shape: 'SubResource("ConvexPolygonShape3D_1")' })} />
           </SceneResourcesProvider>
-        </ViewportModeProvider>
+        </ViewShowProvider>
       </ResourceLoaderProvider>
     );
     const renderer = await ReactThreeTestRenderer.create(tree);

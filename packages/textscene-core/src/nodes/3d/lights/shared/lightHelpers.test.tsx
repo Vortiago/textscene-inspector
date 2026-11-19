@@ -17,7 +17,7 @@ import { NodeDispatcher } from '../../../../r3f/NodeDispatcher';
 import { TscnSceneContents } from '../../../../r3f/TscnCanvas';
 import { HierarchyProvider } from '../../../../r3f/contexts/HierarchyContext';
 import { SelectionProvider } from '../../../../r3f/contexts/SelectionContext';
-import { ViewportModeProvider } from '../../../../r3f/contexts/ViewportModeContext';
+import { ViewShowProvider } from '../../../../r3f/viewShow/ViewShowContext';
 import { createSceneGraphFromTscnScene } from '../../../../core/SceneGraph.testkit';
 import { HoverSeeder } from '../../../../r3f/testing/HoverSeeder';
 import { SelectSeeder } from '../../../../r3f/testing/SelectSeeder';
@@ -160,12 +160,12 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
 
         const renderer = await ReactThreeTestRenderer.create(
           <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
-            <ViewportModeProvider initialShowGizmos={false}>
+            <ViewShowProvider show={{ gizmos: false }}>
               <SelectionProvider>
                 <SelectSeeder path={c.selectedPath} />
                 <NodeDispatcher nodes={rootNodes} />
               </SelectionProvider>
-            </ViewportModeProvider>
+            </ViewShowProvider>
           </HierarchyProvider>
         );
 

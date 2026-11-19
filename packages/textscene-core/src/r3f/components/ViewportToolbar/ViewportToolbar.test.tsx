@@ -6,11 +6,7 @@
 import { useEffect } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import {
-  SHOW_GIZMOS_STORAGE_KEY,
-  SHOW_PERFORMANCE_STORAGE_KEY,
-  ViewportModeProvider,
-} from '../../contexts/ViewportModeContext';
+import { SHOW_STORAGE_KEYS, ViewportModeProvider } from '../../contexts/ViewportModeContext';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext';
 import { useViewportActions } from '../../testing/ViewportActionsProbe';
@@ -19,7 +15,7 @@ import { openDisplayMenu } from './DisplayMenu.testkit';
 
 function renderToolbar(initialMode?: '2D' | '3D', initialShowCollisions?: boolean) {
   return render(
-    <ViewportModeProvider initialMode={initialMode} initialShowCollisions={initialShowCollisions}>
+    <ViewportModeProvider initialMode={initialMode} initialShow={{ collisions: initialShowCollisions }}>
       <ViewportToolbar />
     </ViewportModeProvider>
   );
@@ -88,7 +84,7 @@ describe('ViewportToolbar', () => {
     expect(checkbox.checked).toBe(true);
     fireEvent.click(checkbox);
     expect(checkbox.checked).toBe(false);
-    expect(window.localStorage.getItem(SHOW_GIZMOS_STORAGE_KEY)).toBe('false');
+    expect(window.localStorage.getItem(SHOW_STORAGE_KEYS.gizmos)).toBe('false');
   });
 
   it('offers the gizmos checkbox in 2D mode, whose helpers the toggle hides too', () => {
@@ -119,7 +115,7 @@ describe('ViewportToolbar', () => {
     expect(checkbox.checked).toBe(false);
     fireEvent.click(checkbox);
     expect(checkbox.checked).toBe(true);
-    expect(window.localStorage.getItem(SHOW_PERFORMANCE_STORAGE_KEY)).toBe('true');
+    expect(window.localStorage.getItem(SHOW_STORAGE_KEYS.performance)).toBe('true');
   });
 
   it('offers the performance checkbox in 2D mode, whose canvas renders frames too', () => {
