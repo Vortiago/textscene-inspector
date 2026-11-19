@@ -87,4 +87,4 @@ The lenient parser reads every property above. A malformed value keeps Godot's d
 ## Known limitations
 
 - **Approximated** A probe that updates ALWAYS captures only when the content changes, where Godot captures it in each frame.
-- **Approximated** An Incremental sky under an ALWAYS probe, with a camera exposure other than the world's, is not drawn as Godot draws it. Godot bakes it at two exposures and flashes in 2 of every 8 frames. The previewer does not repeat that cycle.
+- **Approximated** Godot flashes an Incremental sky under an ALWAYS probe at another camera exposure in 2 of 8 frames, and the previewer does not.
