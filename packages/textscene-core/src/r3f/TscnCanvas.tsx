@@ -31,6 +31,7 @@ import { rootClassName } from './stageClassName.js';
 import { ViewportActionsProvider, useOptionalViewportActions } from './contexts/ViewportActionsContext.js';
 import { ViewCamera } from './viewCamera.js';
 import { EditorViewReport } from './viewStatus/EditorViewReport.js';
+import { HostSelection, type HostSelectionProps } from './hostSelection/HostSelection.js';
 
 // Lazy, so the glyph engine and the parse of the prompt load only for an empty canvas.
 const EmptyScenePrompt = lazy(() => import('./emptyScenePrompt.js'));
@@ -122,7 +123,7 @@ const Canvas2DStage = lazy(() =>
 /** `in-game` draws the game's start with no script run, `3D` and `2D` the editor's views. */
 export type TscnCanvasMode = ViewportMode;
 
-export interface TscnCanvasProps {
+export interface TscnCanvasProps extends Omit<HostSelectionProps, 'children'> {
   /** The scene `openScene` gave. Without it, the view reads the `<TscnSceneProvider>` above it. */
   scene?: Scene;
   /** `3D` by default. A change replaces the stage, so one canvas is live. */
@@ -135,11 +136,22 @@ export interface TscnCanvasProps {
   className?: string;
 }
 
-export function TscnCanvas({ scene, mode = '3D', visible, camera, className }: TscnCanvasProps) {
+export function TscnCanvas({
+  scene,
+  mode = '3D',
+  visible,
+  camera,
+  selected,
+  onSelect,
+  className,
+}: TscnCanvasProps) {
   const stage = (
-    <PreviewVisibilityProvider isVisible={visible}>
-      <ViewportActionsScope>{stageOf({ mode, camera, className })}</ViewportActionsScope>
-    </PreviewVisibilityProvider>
+    // The In-game mode takes no pointer, and the 2D mode picks no node yet.
+    <HostSelection selected={selected} onSelect={mode === '3D' ? onSelect : undefined}>
+      <PreviewVisibilityProvider isVisible={visible}>
+        <ViewportActionsScope>{stageOf({ mode, camera, className })}</ViewportActionsScope>
+      </PreviewVisibilityProvider>
+    </HostSelection>
   );
   return scene ? <TscnSceneProvider scene={scene}>{stage}</TscnSceneProvider> : stage;
 }

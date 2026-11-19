@@ -334,6 +334,34 @@ set `camera` to `null` and then to the path to look again. The option does not m
 current, and the In-game mode keeps the current camera: use `call('make_current')` for that.
 `<TscnCanvas camera="Rig/TopCamera" />` does the same in React.
 
+### Learn which node a click picked
+
+`onSelect` hears the node a click picks in the 3D mode, and `selected` sets the node the view
+outlines:
+
+```ts
+const view = mountScene(document.getElementById('game')!, scene, {
+  mode: '3D',
+  onSelect(node) {
+    console.log(node ? node.path : 'a click on nothing');
+  },
+});
+
+view.update({ selected: scene.getNode('Player') });
+view.update({ selected: null });
+```
+
+The view picks a node as the Godot editor's 3D view does. A click on a mesh of an instanced scene
+picks the instance, or the mesh's own node when the instance is editable. A click on nothing gives
+`null` and clears the outline. Only the left button picks, and a drag that moves the camera picks
+nothing. `onSelect: null` stops the calls.
+
+With no `selected`, a click also outlines the node it picks. Once the page gives `selected`, the
+page owns the outline: a click calls `onSelect` and leaves the outline as it is, as a controlled
+input does. `onSelect` hears no click in the In-game mode, which takes no pointer, or in the 2D
+mode, which picks no node yet. `<TscnCanvas selected={node} onSelect={setNode} />` does the same
+in React.
+
 ### Save a PNG from headless Chromium
 
 A browser draws the view: the renderer needs WebGL 2, and Node has no WebGL 2. Build a page that
@@ -429,7 +457,8 @@ The package exports these names.
 - `Variant` and `SceneValue` (types): what `variant` gives, and what `get` and `set` take.
 - `TscnCanvas`: the view. Its props are `scene` (a `Scene`, optional inside
   `<TscnSceneProvider>`), `mode` (`'in-game'`, `'3D'` or `'2D'`, default `'3D'`), `visible` (`false`
-  stops the frames), `camera` (the Camera3D the 3D mode looks through) and `className`.
+  stops the frames), `camera` (the Camera3D the 3D mode looks through), `selected`, `onSelect` and
+  `className`.
 - `TscnSceneProvider`: mounts what the view reads. Give it `scene` (a `Scene`), or `source` (the
   text of a `.tscn` scene), `provider` (a `ResourceProvider`) and `rootScenePath` (the `res://` path
   the scene opens under, optional). It takes `children`. A new `provider` starts a new resource
@@ -445,7 +474,8 @@ The package exports these names.
   and returns a `View`: `settled`, `captureImage`, `update` and `dispose`. See "Mount the view with
   no React code".
 - `View` and `ViewOptions` (types): what `mountScene` returns, and the options of `mountScene` and
-  `update`: `mode` (default `'in-game'`), `visible` (default `true`) and `camera` (default `null`).
+  `update`: `mode` (default `'in-game'`), `visible` (default `true`), `camera` (default `null`),
+  `selected` and `onSelect`. See "Learn which node a click picked".
 
 ## Styles and workers
 

@@ -78,7 +78,7 @@ function hitThrough(probe: Probe, mesh: THREE.Mesh, ndc: [number, number]): THRE
 
 async function click(renderer: Awaited<ReturnType<typeof renderScene>>['renderer'], object: THREE.Object3D) {
   const root = renderer.scene.find((instance) => typeof instance.props.onPointerUp === 'function');
-  const at = { clientX: 10, clientY: 10, object };
+  const at = { button: 0, clientX: 10, clientY: 10, object };
   await renderer.fireEvent(root, 'onPointerDown', at);
   await renderer.fireEvent(root, 'onPointerUp', at);
 }

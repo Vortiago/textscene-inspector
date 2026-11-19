@@ -2,6 +2,7 @@ import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import * as logger from '../logger.js';
 import type { Scene } from '../scene/openScene.js';
+import type { NodeHandle } from '../scene/nodeHandle.js';
 import { encodePng } from '../utils/encodePng.js';
 import { TscnCanvas, type TscnCanvasMode } from './TscnCanvas.js';
 import { TscnSceneProvider } from './TscnSceneProvider.js';
@@ -16,7 +17,14 @@ export interface ViewOptions {
   visible?: boolean;
   /** The 3D mode's Camera3D, by path from the scene's root. `null`, the default, is the editor camera. */
   camera?: string | null;
+  /** The node the view outlines, or null for none. Given, a click leaves the outline to the host. */
+  selected?: NodeHandle | null;
+  /** The node a click in the 3D mode picks, or null for a click on nothing. `null` stops the calls. */
+  onSelect?: ((node: NodeHandle | null) => void) | null;
 }
+
+/** The options a view holds: `mode`, `visible` and `camera` always, the selection keys once given. */
+type MountedOptions = ViewOptions & Required<Pick<ViewOptions, 'mode' | 'visible' | 'camera'>>;
 
 export interface View {
   /** Waits again after a scene change. Rejects for a failed mount, a dispose or a path to no Camera3D. */
@@ -29,7 +37,7 @@ export interface View {
   dispose(): void;
 }
 
-const DEFAULT_OPTIONS: Required<ViewOptions> = { mode: 'in-game', visible: true, camera: null };
+const DEFAULT_OPTIONS: MountedOptions = { mode: 'in-game', visible: true, camera: null };
 
 export function mountScene(element: HTMLElement, scene: Scene, options: ViewOptions = {}): View {
   let current = withGiven(DEFAULT_OPTIONS, checked(scene, options));
@@ -47,7 +55,7 @@ export function mountScene(element: HTMLElement, scene: Scene, options: ViewOpti
     root.render(
       <TscnSceneProvider scene={scene}>
         <ViewStatusProvider status={status}>
-          <TscnCanvas mode={current.mode} visible={current.visible} camera={current.camera} />
+          <TscnCanvas {...current} />
         </ViewStatusProvider>
       </TscnSceneProvider>
     );
@@ -86,12 +94,14 @@ export function mountScene(element: HTMLElement, scene: Scene, options: ViewOpti
   };
 }
 
-// A key set to `undefined` keeps its value, as if `given` left it out.
-function withGiven(options: Required<ViewOptions>, given: ViewOptions): Required<ViewOptions> {
+// A key set to `undefined` keeps its value, as if `given` left it out. `null` is a value.
+function withGiven(options: MountedOptions, given: ViewOptions): MountedOptions {
   return {
     mode: given.mode ?? options.mode,
     visible: given.visible ?? options.visible,
     camera: given.camera === undefined ? options.camera : given.camera,
+    selected: given.selected === undefined ? options.selected : given.selected,
+    onSelect: given.onSelect === undefined ? options.onSelect : given.onSelect,
   };
 }
 

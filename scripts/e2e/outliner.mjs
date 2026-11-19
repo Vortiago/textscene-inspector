@@ -20,6 +20,13 @@ export async function readOutlinerPaths(page) {
   return page.$$eval('[data-node-path]', (nodes) => nodes.map((node) => node.getAttribute('data-node-path')));
 }
 
+/** The node paths of the selected rows, in document order. */
+export async function readSelectedPaths(page) {
+  return page.$$eval('[role="treeitem"][aria-selected="true"]', (rows) =>
+    rows.map((row) => row.parentElement?.getAttribute('data-node-path'))
+  );
+}
+
 /**
  * How long a selection takes to show. It re-renders synchronously off React state, so a fixed wait
  * suffices, as in `clickNode` in `scripts/showcase/record.mjs`.
