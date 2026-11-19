@@ -25,23 +25,19 @@ function useNodeAt(scene: Scene | undefined, path: string | null): NodeHandle | 
   return useSyncExternalStore(subscribe, () => (scene && path !== null ? scene.getNodeOrNull(path) : null));
 }
 
-/** Godot's Preview check box (node_3d_editor_plugin.cpp:4480). For null, the editor camera's start orbit. */
+/** Godot's Preview check box: null puts the editor camera back where it was (node_3d_editor_plugin.cpp:4491). */
 export function ViewCamera({ camera }: { camera: string | null }): null {
   const node = useNodeAt(useOptionalHierarchy()?.scene, camera);
   const actions = useOptionalViewportActions();
   const previewCamera = actions?.previewCamera;
   const endCameraPreview = actions?.endCameraPreview;
-  const resetCamera = actions?.resetCamera;
   useEffect(() => {
-    if (camera === null) {
-      resetCamera?.();
-      return;
-    }
+    if (camera === null) return endCameraPreview?.();
     const problem = notACamera(camera, node);
     if (problem) logger.error(problem.message);
     // A path with no Camera3D yet ends the old preview, so the view never draws a camera it no longer names.
     if (node && !problem) previewCamera?.(livePathOf(node.path));
     else endCameraPreview?.();
-  }, [camera, node, previewCamera, endCameraPreview, resetCamera]);
+  }, [camera, node, previewCamera, endCameraPreview]);
   return null;
 }

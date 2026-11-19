@@ -8,7 +8,6 @@ import { ViewportActionsProvider } from './contexts/ViewportActionsContext';
 import { GodotEditorControls } from './GodotEditorControls';
 import { EditorControlsBridge } from './EditorControlsBridge';
 import { ViewCamera } from './viewCamera';
-import { editorCameraPosition } from './godotEditorCamera';
 import { r3fStateProbe } from './testing/R3FStateProbe';
 import { settleLoads } from './testing/settleLoads';
 import { openScene } from '../scene/openScene';
@@ -104,7 +103,7 @@ describe('the camera option of the 3D view', () => {
     expect(state().camera.userData).toMatchObject({ tscnPath: 'Main/Crane/Lens' });
   });
 
-  it('draws through the editor camera at its start orbit for null', async () => {
+  it('draws through the editor camera at the pose it had before the preview, for null', async () => {
     const { state, update } = await mountedWith(null);
     const editor = state().camera;
     editor.position.set(9, 9, 9);
@@ -113,8 +112,6 @@ describe('the camera option of the 3D view', () => {
     await update(null);
 
     expect(state().camera).toBe(editor);
-    expect(editor.position.toArray().map((axis) => axis.toFixed(6))).toEqual(
-      editorCameraPosition().map((axis) => axis.toFixed(6))
-    );
+    expect(editor.position.toArray()).toEqual([9, 9, 9]);
   });
 });
