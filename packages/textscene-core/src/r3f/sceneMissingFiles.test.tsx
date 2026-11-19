@@ -6,6 +6,7 @@ import { GameViewContents } from './gameView/GameViewContents';
 import { TscnSceneProvider } from './TscnSceneProvider';
 import { resourcePipelineOf } from './sceneResourcePipeline';
 import { openScene } from '../scene/openScene';
+import { variant } from '../scene/variant';
 import type { ResourceProvider } from '../resources/ResourceProvider';
 import { createTextureFromBuffer } from '../resources/formats/image/textureProcessing';
 import { settleLoads } from './testing/settleLoads';
@@ -73,6 +74,13 @@ describe('the missing files of a scene', () => {
 
   it('is empty for a scene no view has drawn', () => {
     const scene = openScene({ source: SPRITE, provider: lateIcon().provider });
+    expect(scene.missingFiles().size).toBe(0);
+  });
+
+  it('lets go of a file after a write that stops reading it', async () => {
+    const { scene, renderer } = await drawScene(lateIcon().provider);
+    await act(async () => void (await scene.getNode('.').set('texture', variant('null'))));
+    await renderer.advanceFrames(2, 1 / 60);
     expect(scene.missingFiles().size).toBe(0);
   });
 });

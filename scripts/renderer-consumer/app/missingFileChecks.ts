@@ -8,7 +8,9 @@ const MISSING_TEXTURE_SCENE = `[gd_scene format=3]
 
 [ext_resource type="Texture2D" path="${MISSING_PATH}" id="1"]
 
-[node name="Sprite" type="Sprite2D"]
+[node name="Root" type="Node2D"]
+
+[node name="Sprite" type="Sprite2D" parent="."]
 position = Vector2(160, 120)
 texture = ExtResource("1")
 `;
