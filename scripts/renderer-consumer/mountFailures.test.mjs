@@ -22,8 +22,8 @@ const PASSING = {
   smallElementPng: WINDOW_PNG,
   largeElementPng: WINDOW_PNG,
   noProjectSize: { width: 1152, height: 648 },
-  editorModeCaptureError: 'expected the in-game mode, got 3D',
-  editorModeSettledError: 'expected the in-game mode, got 3D',
+  editorSettledValue: { scriptedNodeCount: 0, hasCurrentCamera: true },
+  editorCaptureSize: { width: 320, height: 240 },
   canvasesAfterDispose: 0,
   isContextLostAfterDispose: true,
   transparentPng: TRANSPARENT_PNG,
@@ -43,6 +43,12 @@ describe('mountFailures', () => {
   it('names a capture whose bytes follow the size of the element', () => {
     expect(mountFailures({ ...PASSING, largeElementPng: pngOf(1152, 648, () => [1, 0, 0, 255]) })).toEqual([
       'mountScene: captureImage: expected the same PNG bytes from a 320 x 240 and a 1920 x 1080 element, got others',
+    ]);
+  });
+
+  it('names a 3D capture that took the game window’s size, not the element’s', () => {
+    expect(mountFailures({ ...PASSING, editorCaptureSize: { width: 1152, height: 648 } })).toEqual([
+      'mountScene: captureImage size in 3D: expected {"width":320,"height":240}, got {"width":1152,"height":648}',
     ]);
   });
 

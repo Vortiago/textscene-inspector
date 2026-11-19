@@ -251,3 +251,22 @@ describe('frameSceneBounds: a boxless draw', () => {
     expect(framed(true)).toEqual(framed(false));
   });
 });
+
+describe('frameSceneBounds: an extra draw of a frame-excluded draw', () => {
+  it('frames the scene without the overlay of a Label3D glyph run', () => {
+    const framed = (withRun: boolean) => {
+      const scene = new THREE.Scene();
+      scene.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
+      if (withRun) {
+        const run = new THREE.Mesh(new THREE.PlaneGeometry(20, 20));
+        run.userData = { tscnFrameExcluded: true };
+        run.add(new THREE.Mesh(new THREE.PlaneGeometry(20, 20)));
+        scene.add(run);
+      }
+      const camera = makeCamera();
+      frameSceneBounds(scene, camera, null);
+      return camera.position.toArray();
+    };
+    expect(framed(true)).toEqual(framed(false));
+  });
+});

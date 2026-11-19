@@ -213,7 +213,12 @@ try {
   const app = join(work, 'app');
   writeConsumer(app, tarballs);
   buildConsumer(app);
-  const found = failures(await renderInBrowser(app));
+  const results = await renderInBrowser(app);
+  const captureDeltas = Object.entries(results.switched.results.capturedVsShown)
+    .map(([mode, delta]) => `${mode} ${delta.changedPixels ?? 'size mismatch'}`)
+    .join(', ');
+  console.log(`[renderer-consumer] captureImage against the view, changed pixels: ${captureDeltas}`);
+  const found = failures(results);
   for (const failure of found) console.error(`[renderer-consumer] ${failure}`);
   console.log(
     `[renderer-consumer] ${found.length === 0 ? 'the fixture scene rendered in every view' : 'failed'}`

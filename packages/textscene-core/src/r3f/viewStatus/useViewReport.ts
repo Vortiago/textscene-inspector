@@ -4,12 +4,10 @@ import { useResourceLoader } from '../../resources/useResource.js';
 import type { Scene } from '../../scene/openScene.js';
 import * as logger from '../../logger.js';
 import { subscribeToNothing } from '../../utils/subscribeToNothing.js';
-import type { RgbaImage } from '../../utils/encodePng.js';
 import { pendingSceneWork } from '../sceneWork.js';
-import { useGameStartFacts } from './gameStartFacts.js';
-import { useGameViewStatus } from './GameViewStatusContext.js';
-import type { DrawnFrame, GameViewSettled } from './gameViewStatus.js';
-import type { RootWindow } from './rootWindow.js';
+import { useGameStartFacts } from '../gameView/gameStartFacts.js';
+import { useViewStatus } from './ViewStatusContext.js';
+import type { DrawnFrame, ViewSettled } from './viewStatus.js';
 
 /** The revision the views last heard of, so a frame names what its components rendered. */
 function useNoticedRevision(scene: Scene | undefined): number {
@@ -31,13 +29,13 @@ function useNoticedRevision(scene: Scene | undefined): number {
 
 /** Attaches the view to the status, or logs why a second view under one provider reports nothing. */
 function useAttachedView(scene: Scene | undefined): { readonly current: boolean } {
-  const status = useGameViewStatus();
+  const status = useViewStatus();
   const isAttached = useRef(false);
   useEffect(() => {
     if (!status || !scene) return undefined;
     const detach = status.attach(scene);
     if (!detach) {
-      logger.error('[GameView] expected one In-game view under a TscnSceneProvider, got a second');
+      logger.error('[View] expected one view under a TscnSceneProvider, got a second');
       return undefined;
     }
     isAttached.current = true;
@@ -49,15 +47,13 @@ function useAttachedView(scene: Scene | undefined): { readonly current: boolean 
   return isAttached;
 }
 
-export function useGameViewReport(
-  drawnWindow: RootWindow,
-  projectWindow: RootWindow
-): (readWindow: () => RgbaImage) => void {
-  const status = useGameViewStatus();
+/** Reports each frame the view draws. `isFullSize`: the frame drew at the size a capture reads. */
+export function useViewReport(): (isFullSize: boolean) => void {
+  const status = useViewStatus();
   const scene = useOptionalHierarchy()?.scene;
   const loader = useResourceLoader();
   const { scriptedNodeCount, hasCurrentCamera } = useGameStartFacts();
-  const facts: GameViewSettled = useMemo(
+  const facts: ViewSettled = useMemo(
     () => ({ scriptedNodeCount, hasCurrentCamera }),
     [scriptedNodeCount, hasCurrentCamera]
   );
@@ -66,17 +62,16 @@ export function useGameViewReport(
   // One record per view, filled in place each frame: the status reads only the last one.
   const [frame] = useState<DrawnFrame>(() => ({
     revision: 0,
-    isFullWindow: false,
+    isFullSize: false,
     work: { resources: 0, textures: 0, fonts: 0 },
     facts,
   }));
-  return (readWindow) => {
+  return (isFullSize) => {
     if (!status || !isAttached.current) return;
     frame.revision = revision;
-    frame.isFullWindow = drawnWindow === projectWindow;
+    frame.isFullSize = isFullSize;
     pendingSceneWork(loader, frame.work);
     frame.facts = facts;
     status.frameDrawn(frame);
-    if (status.isCaptureDue()) status.capture(readWindow);
   };
 }

@@ -1,9 +1,9 @@
 /** Frames the 3D scene on load when the viewport asks for it. */
 import { useThree } from '@react-three/fiber';
-import { useContext, useEffect } from 'react';
+import { useEffect } from 'react';
 import type * as THREE from 'three';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
-import { ResourceLoaderContext } from '../resources/ResourceLoaderContext.js';
+import { useViewStatus } from './viewStatus/ViewStatusContext.js';
 import { isDrawingPreview } from './EditorControlsHandle.js';
 import { useViewportMode } from './contexts/ViewportModeContext.js';
 import { frameSceneBounds, type OrbitLike } from './frameSceneBounds.js';
@@ -21,7 +21,7 @@ export function CameraFit() {
   const rootKey = hierarchy?.sceneGraph?.rootScene ?? '';
   const hasScene = !!hierarchy?.sceneGraph;
 
-  const loader = useContext(ResourceLoaderContext);
+  const status = useViewStatus();
 
   useEffect(() => {
     if (!frameOnOpen || !hasScene) return undefined;
@@ -40,21 +40,20 @@ export function CameraFit() {
     // The visual harness clicks for a `-selected` capture only after the last timer.
     const timers = [150, 500, 1100].map((delay) => setTimeout(fit, delay));
 
-    // The timers guess when async content has arrived. The loader knows, so a
-    // fit each time nothing is pending frames large external meshes whole. Each
-    // time, not once: the count touches zero before an instanced `.glb` starts
-    // its load. The release runs in the commit that mounts the loaded mesh.
-    const unsubscribe = loader?.subscribePending(() => {
-      if (loader.pendingResourceCount > 0) return;
-      if (lastSet && !get().camera.position.equals(lastSet)) return;
-      fit();
-    });
+    // Fits on each settle of the view, not once: the scene can settle before an instanced `.glb` loads.
+    let wasSettled = false;
+    const fitOnSettle = () => {
+      const isSettled = status?.settled() != null;
+      if (isSettled && !wasSettled && !(lastSet && !get().camera.position.equals(lastSet))) fit();
+      wasSettled = isSettled;
+    };
+    const unsubscribe = status?.subscribe(fitOnSettle);
 
     return () => {
       timers.forEach(clearTimeout);
       unsubscribe?.();
     };
-  }, [rootKey, hasScene, frameOnOpen, get, loader]);
+  }, [rootKey, hasScene, frameOnOpen, get, status]);
 
   return null;
 }

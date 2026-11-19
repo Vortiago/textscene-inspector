@@ -21,6 +21,12 @@ function maxExtent(box: THREE.Box3): number {
   return Math.max(size.x, size.y, size.z);
 }
 
+/** A `material_overlay` or `next_pass` draw mounts inside the draw it covers, so it is excluded with it. */
+function isUnderFrameExcluded(object: THREE.Object3D): boolean {
+  for (let o: THREE.Object3D | null = object; o; o = o.parent) if (o.userData?.tscnFrameExcluded) return true;
+  return false;
+}
+
 /** Minimal shape we touch on the viewport controls instance for framing. */
 export interface OrbitLike {
   target?: THREE.Vector3;
@@ -49,7 +55,7 @@ export function frameSceneBounds(
     if (obj.userData?.tscnEmptyState) return;
     // A Label3D glyph mesh is skipped, so async mount timing cannot change the frame. Label3D frames
     // by its zero-size `FramePoint` alone, as Godot's reference camera does.
-    if (obj.userData?.tscnFrameExcluded) return;
+    if (isUnderFrameExcluded(obj)) return;
     // A node whose `get_aabb` Godot frames on, drawn or not, an empty one as the point it is.
     const nodeBox = frameBoxOf(obj, nodeBoxScratch);
     if (nodeBox) {

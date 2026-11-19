@@ -77,8 +77,8 @@ export interface MountCheckResults {
   smallElementPng: string;
   largeElementPng: string;
   noProjectSize: { width: number; height: number };
-  editorModeCaptureError: string;
-  editorModeSettledError: string;
+  editorSettledValue: unknown;
+  editorCaptureSize: { width: number; height: number };
   canvasesAfterDispose: number;
   isContextLostAfterDispose: boolean;
   transparentPng: string;
@@ -127,8 +127,8 @@ export async function runMountChecks(): Promise<MountCheckResults> {
   const noProjectSize = await sizeOf(await capturePng(noProject, 320, 240));
 
   const editor = mountScene(elementOf(320, 240), consumer, { mode: '3D' });
-  const editorModeCaptureError = await errorOf(editor.captureImage());
-  const editorModeSettledError = await errorOf(editor.settled);
+  const editorSettledValue = await editor.settled;
+  const editorCaptureSize = await sizeOf(await editor.captureImage());
   editor.dispose();
 
   const disposed = await disposeChecks(consumer);
@@ -142,8 +142,8 @@ export async function runMountChecks(): Promise<MountCheckResults> {
     smallElementPng,
     largeElementPng,
     noProjectSize,
-    editorModeCaptureError,
-    editorModeSettledError,
+    editorSettledValue,
+    editorCaptureSize,
     ...disposed,
     transparentPng,
   };

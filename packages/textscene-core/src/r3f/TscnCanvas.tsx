@@ -30,6 +30,7 @@ import type { ViewportMode } from './contexts/ViewportModeContext.js';
 import { rootClassName } from './stageClassName.js';
 import { ViewportActionsProvider, useOptionalViewportActions } from './contexts/ViewportActionsContext.js';
 import { ViewCamera } from './viewCamera.js';
+import { EditorViewReport } from './viewStatus/EditorViewReport.js';
 
 // Lazy, so the glyph engine and the parse of the prompt load only for an empty canvas.
 const EmptyScenePrompt = lazy(() => import('./emptyScenePrompt.js'));
@@ -210,6 +211,7 @@ function EditorCanvas({ className, camera }: Pick<TscnCanvasProps, 'camera' | 'c
         <FrameSelectedShortcut />
         <GodotEditorControls />
         <EditorControlsBridge />
+        <EditorViewReport />
       </Canvas>
     </div>
   );

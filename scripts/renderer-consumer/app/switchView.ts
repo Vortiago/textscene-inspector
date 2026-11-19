@@ -1,4 +1,5 @@
 import { mountScene, openScene, variant, type Scene, type View, type ViewOptions } from '@textscene/renderer';
+import { base64Of } from './capture';
 import { projectOf } from './mountChecks';
 
 /** A cube that the In-game and 3D modes draw, and a red bar left of it that the 2D mode draws. */
@@ -53,6 +54,8 @@ export interface SwitchView {
   shrinkCube(): Promise<boolean>;
   /** Turns the bar green, which the 2D and In-game modes draw. */
   recolourBar(): Promise<boolean>;
+  /** The PNG of the settled view, in base64 for the runner. */
+  capture(): Promise<string>;
 }
 
 declare global {
@@ -68,10 +71,15 @@ declare global {
 
 function mountSwitchView(element: HTMLElement): SwitchView {
   const scene = openSwitchScene();
+  const view = mountScene(element, scene);
   return {
-    view: mountScene(element, scene),
+    view,
     shrinkCube: () => shrinkCube(scene),
     recolourBar: () => recolourBar(scene),
+    capture: async () => {
+      await view.settled;
+      return base64Of(await view.captureImage());
+    },
   };
 }
 

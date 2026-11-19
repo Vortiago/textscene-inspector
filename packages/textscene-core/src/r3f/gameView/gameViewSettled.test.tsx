@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { act } from 'react';
 import { GameViewContents } from './GameViewContents';
-import { useGameViewSettled } from './GameViewStatusContext';
-import type { GameViewSettled } from './gameViewStatus';
+import { useGameViewSettled } from '../viewStatus/ViewStatusContext';
+import type { ViewSettled } from '../viewStatus/viewStatus';
 import { TscnSceneProvider } from '../TscnSceneProvider';
 import { openScene } from '../../scene/openScene';
 import type { ResourceProvider } from '../../resources/ResourceProvider';
@@ -53,7 +53,7 @@ const files: ResourceProvider = {
 };
 
 /** Written by the view's host each render: what `useGameViewSettled` answers now. */
-let seen: GameViewSettled | null = null;
+let seen: ViewSettled | null = null;
 
 function Host() {
   seen = useGameViewSettled();
@@ -121,9 +121,7 @@ describe('the settled value of the In-game view', () => {
     const error = vi.spyOn(logger, 'error').mockImplementation(() => {});
     const renderer = await mountGame(TWO_SCRIPTS_AND_A_CAMERA, files, 2);
     await drawFrames(renderer, FRAMES_TO_SETTLE);
-    expect(error).toHaveBeenCalledWith(
-      '[GameView] expected one In-game view under a TscnSceneProvider, got a second'
-    );
+    expect(error).toHaveBeenCalledWith('[View] expected one view under a TscnSceneProvider, got a second');
     expect(seen).toEqual({ scriptedNodeCount: 2, hasCurrentCamera: true });
     error.mockRestore();
   });

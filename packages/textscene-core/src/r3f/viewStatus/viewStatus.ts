@@ -2,7 +2,7 @@ import { createExternalStore } from '../hooks/createExternalStore.js';
 import type { RgbaImage } from '../../utils/encodePng.js';
 import { describePendingWork, hasPendingWork, type PendingSceneWork } from '../sceneWork.js';
 
-export interface GameViewSettled {
+export interface ViewSettled {
   /** Godot readies each script before the first frame (`node.cpp:273`), and this view runs none. */
   scriptedNodeCount: number;
   /** A current Camera3D or Camera2D in the root viewport. */
@@ -17,23 +17,23 @@ export interface LiveScene {
 
 export interface DrawnFrame {
   revision: number;
-  isFullWindow: boolean;
+  isFullSize: boolean;
   work: PendingSceneWork;
-  facts: GameViewSettled;
+  facts: ViewSettled;
 }
 
-export interface GameViewStatus {
+export interface ViewStatus {
   /** Null while pending, and with no view attached. The drawn frame's own facts, so a hook renders once. */
-  settled(): GameViewSettled | null;
+  settled(): ViewSettled | null;
   /** An attached view that has not settled: no view at all waits on nothing. */
   isPending(): boolean;
   subscribe(listener: () => void): () => void;
   /** Stays pending while no view is attached, and rejects with the reason of `signal` once it aborts. */
-  whenSettled(signal?: AbortSignal): Promise<GameViewSettled>;
+  whenSettled(signal?: AbortSignal): Promise<ViewSettled>;
   /** Rejects before the view settles, and names the pending work. */
   captureImage(): Promise<RgbaImage>;
   isCapturePending(): boolean;
-  /** Null while another view is attached: one status serves one In-game view. */
+  /** Null while another view is attached: one status serves one view. */
   attach(scene: LiveScene): (() => void) | null;
   /** Keeps `frame` as the last frame: a view may fill the same record again for its next frame. */
   frameDrawn(frame: DrawnFrame): void;
@@ -48,18 +48,18 @@ interface PendingCapture {
   reject(error: Error): void;
 }
 
-export function createGameViewStatus(): GameViewStatus {
+export function createViewStatus(): ViewStatus {
   // A count of announcements, so the store notifies on each one.
   const announcements = createExternalStore(0);
   let live: LiveScene | null = null;
   let lastFrame: DrawnFrame | null = null;
   // What subscribers last heard, so a view that settles again on the same facts still tells them.
-  let announced: GameViewSettled | null = null;
+  let announced: ViewSettled | null = null;
   let capture: PendingCapture | null = null;
 
   const showsDrawnState = () => live !== null && lastFrame !== null && live.revision() === lastFrame.revision;
   // Nested viewports draw before their parent in one frame, so one frame shows a revision whole.
-  const settled = (): GameViewSettled | null =>
+  const settled = (): ViewSettled | null =>
     showsDrawnState() && !hasPendingWork(lastFrame!.work) ? lastFrame!.facts : null;
 
   const notify = () => announcements.set(announcements.get() + 1);
@@ -75,13 +75,13 @@ export function createGameViewStatus(): GameViewStatus {
   }
 
   function pendingReason(): string {
-    if (!live) return 'no In-game view mounted';
+    if (!live) return 'no view mounted';
     if (!lastFrame) return 'no frame drawn';
     if (hasPendingWork(lastFrame.work)) return `${describePendingWork(lastFrame.work)} still loading`;
     return 'a change to the scene that no frame has drawn';
   }
 
-  function whenSettled(signal?: AbortSignal): Promise<GameViewSettled> {
+  function whenSettled(signal?: AbortSignal): Promise<ViewSettled> {
     const now = settled();
     if (now) return Promise.resolve(now);
     if (signal?.aborted) return Promise.reject(signal.reason);
@@ -131,7 +131,7 @@ export function createGameViewStatus(): GameViewStatus {
       lastFrame = null;
       const left = capture;
       capture = null;
-      left?.reject(new Error('expected the In-game view to stay mounted until its capture'));
+      left?.reject(new Error('expected the view to stay mounted until its capture'));
       announce();
     };
   }
@@ -147,7 +147,7 @@ export function createGameViewStatus(): GameViewStatus {
     try {
       done?.resolve(read());
     } catch (error) {
-      done?.reject(new Error(`expected the window's pixels, got ${String(error)}`));
+      done?.reject(new Error(`expected the view's pixels, got ${String(error)}`));
     }
     notify();
   }
@@ -161,7 +161,7 @@ export function createGameViewStatus(): GameViewStatus {
     isCapturePending: () => capture !== null,
     attach,
     frameDrawn,
-    isCaptureDue: () => capture !== null && lastFrame?.isFullWindow === true && settled() !== null,
+    isCaptureDue: () => capture !== null && lastFrame?.isFullSize === true && settled() !== null,
     capture: captureWith,
   };
 }

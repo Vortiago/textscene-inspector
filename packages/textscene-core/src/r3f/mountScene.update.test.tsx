@@ -69,23 +69,22 @@ describe('View.update', () => {
     view.dispose();
   });
 
-  it('answers settled for the mode it switched to', async () => {
+  it('waits with a settled read from before a switch, as the new mode settles it', async () => {
+    const view = await mountedIn(element());
+    const settled = view.settled;
+
+    await act(async () => view.update({ mode: '3D' }));
+    view.dispose();
+
+    await expect(settled).rejects.toThrow('expected the view to settle before its dispose');
+  });
+
+  it('refuses a capture until the mode it switched to draws a frame', async () => {
     const view = await mountedIn(element());
 
     await act(async () => view.update({ mode: '2D' }));
 
-    await expect(view.settled).rejects.toThrow('expected the in-game mode, got 2D');
-    await expect(view.captureImage()).rejects.toThrow('expected the in-game mode, got 2D');
-    view.dispose();
-  });
-
-  it('rejects a settled read from before a switch out of In-game', async () => {
-    const view = await mountedIn(element());
-    const settled = expect(view.settled).rejects.toThrow('expected the in-game mode, got 3D');
-
-    await act(async () => view.update({ mode: '3D' }));
-
-    await settled;
+    await expect(view.captureImage()).rejects.toThrow('expected a settled view, got no view mounted');
     view.dispose();
   });
 
