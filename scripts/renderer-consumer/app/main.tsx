@@ -6,6 +6,7 @@ import {
   variant,
   type ResourceProvider,
 } from '@textscene/renderer';
+import { runHeldResourceChecks, type HeldResourceCheckResults } from './heldResourceChecks';
 import { runMountChecks, type MountCheckResults } from './mountChecks';
 
 const FIXTURE_SCENE = `[gd_scene format=3]
@@ -98,12 +99,16 @@ declare global {
   interface Window {
     /** Written once the checks of `mountScene` end, for the runner to read. */
     mountChecks?: MountCheckResults;
+    /** Written once the checks of a resource the scene file holds end. */
+    heldResourceChecks?: HeldResourceCheckResults;
   }
 }
 
-/** `?checks=mount` runs the checks of `mountScene`, which mount views of their own. */
+/** `?checks=mount` and `?checks=held` run checks that mount views of their own. */
 if (query.get('checks') === 'mount') {
   void runMountChecks().then((results) => (window.mountChecks = results));
+} else if (query.get('checks') === 'held') {
+  void runHeldResourceChecks().then((results) => (window.heldResourceChecks = results));
 } else {
   void Promise.all([written, called]).then(() =>
     createRoot(document.getElementById('root')!).render(

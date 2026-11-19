@@ -143,6 +143,13 @@ export class SceneProperties {
     return answer;
   }
 
+  /** The class of the root scene's sub-resource that `path` names, or null for any other path. */
+  subResourceClass(path: string): string | null {
+    const [file, subId] = path.split(SUB_RESOURCE_SEPARATOR);
+    if (subId === undefined || file !== this.rootScenePath) return null;
+    return this.rootScene()?.internalResources.find((resource) => resource.id === subId)?.type ?? null;
+  }
+
   /** The resource an id of the host's writes names: a file `scene.load` gave, else one of the root scene. */
   private rootResourceOf(kind: 'ExtResource' | 'SubResource', id: string): ResourceReference | null {
     if (kind === 'SubResource') return { path: `${this.rootScenePath}${SUB_RESOURCE_SEPARATOR}${id}` };

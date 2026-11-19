@@ -86,7 +86,10 @@ export function openScene({
     const current = graph();
     return current ? runtime().tree(current) : null;
   };
-  const nodes = new SceneNodes({ graph, tree }, properties, (path) => listeners.written(path));
+  /** The class `load` gives: a sub-resource's heading names it, else the file does. */
+  const resourceClass = async (path: string): Promise<string | null> =>
+    properties.subResourceClass(path) ?? (await loadedResourceType(provider, path));
+  const nodes = new SceneNodes({ graph, tree, resourceClass }, properties, (path) => listeners.written(path));
   const listeners = new SceneListeners((path) => nodes.getNodeOrNull(path)?.path ?? null);
 
   const scene: Scene = {
@@ -120,7 +123,7 @@ export function openScene({
     getNode: (path) => nodes.getNode(path),
     getNodeOrNull: (path) => nodes.getNodeOrNull(path),
     async load(path) {
-      const className = (await loadedResourceType(provider, path)) ?? undefined;
+      const className = (await resourceClass(path)) ?? undefined;
       return variantOf({ type: T.OBJECT, resource: { path }, ...(className ? { className } : {}) });
     },
     observe: (path, listener) => listeners.observe(path, listener),
