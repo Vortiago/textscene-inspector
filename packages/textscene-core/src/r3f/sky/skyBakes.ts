@@ -126,7 +126,7 @@ function inputKey({
 }
 
 /** The one bake of an input, which every render steps, as Godot keeps one radiance (`sky.h:271`). */
-export class SkyBakes {
+class SkyBakes {
   /** The bake, null for one the renderer could not make, absent before `bakeNow`. */
   private baked: BakedSky | null | undefined;
   /** The lights each render shows, written only by `followLights`. */
