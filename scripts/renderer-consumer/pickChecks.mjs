@@ -2,20 +2,18 @@ import { attachDiagnostics, loggedErrors } from '../visual/previewServer.mjs';
 import { pollInk } from './pollInk.mjs';
 import { pixelsWhere } from '../vscode/pixels.mjs';
 import { BAR_INK_FLOOR, CUBE_INK_FLOOR } from './switchFailures.mjs';
+import { stillShot } from './stillShot.mjs';
 
-/* global requestAnimationFrame, window */
+/* global window */
 // These exist only in the browser that runs the `page.evaluate` calls.
 
 /** The green of `SelectionHighlight`, which nothing else in the pick scene draws. */
 const isOutlineGreen = (r, g, b) => g > 180 && r < 80 && b < 80;
 
-const outlineOf = async (page) => pixelsWhere(await page.locator('#viewport').screenshot(), isOutlineGreen);
+// A still shot, so a slow software frame has drawn the outline a click or an update changed.
+const outlineOf = async (page) => pixelsWhere(await stillShot(page), isOutlineGreen);
 
 const picksOf = (page) => page.evaluate(() => [...window.pickView.picks]);
-
-// The view draws a change on the next frame, so the second frame callback runs after it has drawn.
-const twoFrames = (page) =>
-  page.evaluate(() => new Promise((drawn) => requestAnimationFrame(() => requestAnimationFrame(drawn))));
 
 /** The picks `onSelect` heard of a click at `centre` or `corner`, and the outline after it. */
 async function clickAt(page, box, at) {
@@ -23,7 +21,6 @@ async function clickAt(page, box, at) {
   const [x, y] = at === 'centre' ? [box.width / 2, box.height / 2] : [8, 8];
   // The view picks inside the pointer and click events, so `onSelect` has run when the click returns.
   await page.mouse.click(box.x + x, box.y + y);
-  await twoFrames(page);
   return { picks: (await picksOf(page)).slice(heard), outline: await outlineOf(page) };
 }
 
@@ -47,7 +44,6 @@ export async function runPickChecks(page, url) {
     const { view, scene } = window.pickView;
     view.update({ selected: scene.getNode('Cube') });
   });
-  await twoFrames(page);
   const hostSelected = await outlineOf(page);
   const onNothingHostOwned = await clickAt(page, box, 'corner');
   await switchTo(page, '2D', BAR_INK_FLOOR);
