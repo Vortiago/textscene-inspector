@@ -9,6 +9,7 @@ import type * as THREE from 'three';
 import type { ResourceEventBus } from './ResourceEventBus';
 import { cloneWithMaterials, disposeClonedMaterials } from './processing/glbProcessing';
 import { ResourceLoaderContext } from './ResourceLoaderContext';
+import type { ResourceLoader } from './ResourceLoader';
 import { useMissingReport } from '../r3f/contexts/MissingResourcesContext';
 import { resourceSliceRegistry, type ResourceBusType } from './sliceRegistration';
 
@@ -195,11 +196,25 @@ function useResourceLoad<T>(path: string, type: ResourceBusType): ResourceResult
     };
   }, [loader, path, type]);
 
-  // A layout effect: the loader counts a pending path from its commit, before any frame draws it.
-  useLayoutEffect(() => {
-    if (!loader || !path || result.status !== 'pending') return undefined;
-    return loader.beginPending();
-  }, [loader, path, result.status]);
+  useLoaderPending(loader, path && result.status === 'pending' ? path : null);
 
   return result;
+}
+
+// Counted from the commit that shows it pending, released after the effects of the content that ends it.
+function useLoaderPending(loader: ResourceLoader | null, pendingPath: string | null): void {
+  const [releases] = useState<Array<() => void>>(() => []);
+  useLayoutEffect(() => {
+    if (!loader || !pendingPath) return undefined;
+    const release = loader.beginPending();
+    return () => {
+      releases.push(release);
+    };
+  }, [loader, pendingPath, releases]);
+  useEffect(() => releaseAll(releases));
+  useEffect(() => () => releaseAll(releases), [releases]);
+}
+
+function releaseAll(releases: Array<() => void>): void {
+  while (releases.length) releases.pop()?.();
 }
