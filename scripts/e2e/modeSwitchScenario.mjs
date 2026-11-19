@@ -1,5 +1,4 @@
-import { PNG } from 'pngjs';
-import { diffMask } from '../vscode/pixels.mjs';
+import { diffMask, pixelsWhere } from '../vscode/pixels.mjs';
 import { CANVAS_2D_TESTIDS } from '../visual/preview/appContract.mjs';
 import { checkDiagnostics } from './diagnostics.mjs';
 import { openFixture, shootCanvas } from './openFixture.mjs';
@@ -19,12 +18,7 @@ export const PANEL_PIXELS = 20_000;
 
 /** The pure red pixels of a shot: the fixture's ColorRect, which only a view that draws 2D shows. */
 export function redPixels(buffer) {
-  const { data } = PNG.sync.read(buffer);
-  let red = 0;
-  for (let i = 0; i < data.length; i += 4) {
-    if (data[i] > 230 && data[i + 1] < 30 && data[i + 2] < 30) red++;
-  }
-  return red;
+  return pixelsWhere(buffer, (r, g, b) => r > 230 && g < 30 && b < 30);
 }
 
 const viewButton = (page, view) =>

@@ -4,6 +4,7 @@ import { mountScene, type ViewOptions } from './mountScene';
 import { openScene } from '../scene/openScene';
 import type { ResourceProvider } from '../resources/ResourceProvider';
 import { PERFORMANCE_TESTIDS } from './frameProfile/performanceTestIds';
+import type { ViewShow } from './viewShow/viewShow';
 
 // A happy-dom render creates no WebGL context.
 vi.mock('@react-three/fiber', async (importOriginal) => ({
@@ -68,7 +69,23 @@ describe('the show option of a mounted view', () => {
 
     await act(async () => view.update({ mode: 'in-game' }));
 
-    expect(hasPerformancePanel()).toBe(true);
+    // The game stage loads on demand, so its panel lands with the stage's chunk.
+    await vi.waitFor(() => expect(hasPerformancePanel()).toBe(true));
+    view.dispose();
+  });
+
+  it('throws for a show key the view does not know', () => {
+    expect(() => sceneView({ show: { gird: true } as Partial<ViewShow> })).toThrow(
+      'expected a key of show, got "gird"'
+    );
+  });
+
+  it('throws for a show value that is not a boolean, through update too', async () => {
+    const view = await act(async () => sceneView({ mode: '3D' }));
+
+    expect(() => view.update({ show: { gizmos: 'false' as unknown as boolean } })).toThrow(
+      'expected show.gizmos to be a boolean, got "false"'
+    );
     view.dispose();
   });
 });

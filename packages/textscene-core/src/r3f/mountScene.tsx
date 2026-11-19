@@ -2,13 +2,14 @@ import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import * as logger from '../logger.js';
 import type { Scene } from '../scene/openScene.js';
+import type { NodeHandle } from '../scene/nodeHandle.js';
 import { encodePng } from '../utils/encodePng.js';
 import { TscnCanvas, type TscnCanvasMode } from './TscnCanvas.js';
 import { TscnSceneProvider } from './TscnSceneProvider.js';
 import { assertCameraPath, assertLoadedCamera } from './viewCamera.js';
 import { ViewStatusProvider } from './viewStatus/ViewStatusContext.js';
 import { createViewStatus, type ViewSettled } from './viewStatus/viewStatus.js';
-import { DEFAULT_SHOW, withShown, type ViewShow } from './viewShow/viewShow.js';
+import { assertShow, DEFAULT_SHOW, withShown, type ViewShow } from './viewShow/viewShow.js';
 
 export interface ViewOptions {
   /** `in-game` by default. */
@@ -17,12 +18,17 @@ export interface ViewOptions {
   visible?: boolean;
   /** The 3D mode's Camera3D, by path from the scene's root. `null`, the default, is the editor camera. */
   camera?: string | null;
+  /** The node the view outlines, or null for none. Given, a click leaves the outline to the host. */
+  selected?: NodeHandle | null;
+  /** The node a click in the 3D mode picks, or null for a click on nothing. `null` stops the calls. */
+  onSelect?: ((node: NodeHandle | null) => void) | null;
   /** The editor helpers the 3D and 2D modes draw. In-game draws none but `performance`. */
   show?: Partial<ViewShow>;
 }
 
-/** Every key of the options, with each helper of `show` too. */
-type CurrentOptions = Required<Omit<ViewOptions, 'show'>> & { show: ViewShow };
+/** The options a view holds: `mode`, `visible`, `camera` and `show` always, the selection keys once given. */
+type MountedOptions = Omit<ViewOptions, 'show'> &
+  Required<Pick<ViewOptions, 'mode' | 'visible' | 'camera'>> & { show: ViewShow };
 
 export interface View {
   /** Waits again after a scene change. Rejects for a failed mount, a dispose or a path to no Camera3D. */
@@ -35,7 +41,7 @@ export interface View {
   dispose(): void;
 }
 
-const DEFAULT_OPTIONS: CurrentOptions = { mode: 'in-game', visible: true, camera: null, show: DEFAULT_SHOW };
+const DEFAULT_OPTIONS: MountedOptions = { mode: 'in-game', visible: true, camera: null, show: DEFAULT_SHOW };
 
 export function mountScene(element: HTMLElement, scene: Scene, options: ViewOptions = {}): View {
   let current = withGiven(DEFAULT_OPTIONS, checked(scene, options));
@@ -92,19 +98,22 @@ export function mountScene(element: HTMLElement, scene: Scene, options: ViewOpti
   };
 }
 
-// A key set to `undefined` keeps its value, as if `given` left it out.
-function withGiven(options: CurrentOptions, given: ViewOptions): CurrentOptions {
+// A key set to `undefined` keeps its value, as if `given` left it out. `null` is a value.
+function withGiven(options: MountedOptions, given: ViewOptions): MountedOptions {
   return {
     mode: given.mode ?? options.mode,
     visible: given.visible ?? options.visible,
     camera: given.camera === undefined ? options.camera : given.camera,
+    selected: given.selected === undefined ? options.selected : given.selected,
+    onSelect: given.onSelect === undefined ? options.onSelect : given.onSelect,
     show: withShown(options.show, given.show),
   };
 }
 
-// Before the render, so the caller gets the throw, and only for a camera the caller gives now.
+// Before the render, so the caller gets the throw, and only for a camera or a show the caller gives now.
 function checked(scene: Scene, given: ViewOptions): ViewOptions {
   if (typeof given.camera === 'string') assertCameraPath(scene, given.camera);
+  if (given.show) assertShow(given.show);
   return given;
 }
 

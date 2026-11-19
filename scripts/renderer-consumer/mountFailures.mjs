@@ -1,6 +1,9 @@
 import { compareImages, formatDelta } from '../visual/imageDelta.mjs';
 import { PNG } from 'pngjs';
 
+/** A scene with no script and a current camera, which asks for no file it lacks. */
+const SETTLED = { scriptedNodeCount: 0, hasCurrentCamera: true, missingFiles: [] };
+
 /** Godot's window with no project size (`project_settings.cpp:1732`). */
 const DEFAULT_WINDOW = { width: 1152, height: 648 };
 
@@ -16,7 +19,7 @@ function rgbaAt(png, { x, y }) {
   return [...png.data.subarray(at, at + 4)];
 }
 
-function equalityFailure(name, expected, actual) {
+export function equalityFailure(name, expected, actual) {
   const [want, got] = [JSON.stringify(expected), JSON.stringify(actual)];
   return want === got ? [] : [`${name}: expected ${want}, got ${got}`];
 }
@@ -70,17 +73,13 @@ export function mountFailures(results) {
       : [
           `captureImage before settled: expected a rejection that names the pending work, got ${results.earlyCaptureError}`,
         ]),
-    ...equalityFailure('settled', { scriptedNodeCount: 0, hasCurrentCamera: true }, results.settledValue),
+    ...equalityFailure('settled', SETTLED, results.settledValue),
     ...equalityFailure('captureImage size', DEFAULT_WINDOW, sizeOfPng(results.smallElementPng)),
     ...(results.smallElementPng === results.largeElementPng
       ? []
       : ['captureImage: expected the same PNG bytes from a 320 x 240 and a 1920 x 1080 element, got others']),
     ...equalityFailure('captureImage size with no project', DEFAULT_WINDOW, results.noProjectSize),
-    ...equalityFailure(
-      'settled in 3D',
-      { scriptedNodeCount: 0, hasCurrentCamera: true },
-      results.editorSettledValue
-    ),
+    ...equalityFailure('settled in 3D', SETTLED, results.editorSettledValue),
     ...equalityFailure('captureImage size in 3D', { width: 320, height: 240 }, results.editorCaptureSize),
     ...settledPictureFailures(results),
     ...equalityFailure('canvases after dispose', 0, results.canvasesAfterDispose),

@@ -4,7 +4,7 @@
  * in one preview wakes no reader of another.
  */
 import type { FontResource } from '../../../../resources/fonts/font/types';
-import { createExternalStore } from '../../../hooks/createExternalStore';
+import { createExternalStore } from '../../../../utils/externalStore';
 import { perObject } from '../../../../utils/perObject';
 import type { FontMetrics } from './fontMetrics';
 import type { RegisteredCanvasFontMetrics } from './runtimeFontMetrics';

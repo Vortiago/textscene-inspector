@@ -7,12 +7,8 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type * as THREE from 'three';
-import {
-  createExternalStore,
-  useExternalStoreSelection,
-  useExternalStoreValue,
-  type ExternalStore,
-} from '../hooks/createExternalStore.js';
+import { createExternalStore, type ExternalStore } from '../../utils/externalStore.js';
+import { useExternalStoreSelection, useExternalStoreValue } from '../hooks/createExternalStore.js';
 
 /**
  * A target carries Godot's two views of one storage (`scene/main/viewport.cpp:168-172`,

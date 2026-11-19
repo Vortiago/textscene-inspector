@@ -51,3 +51,13 @@ export function withShown(base: ViewShow, show: Partial<ViewShow> | undefined): 
   for (const key of Object.keys(base) as (keyof ViewShow)[]) shown[key] = show[key] ?? base[key];
   return shown;
 }
+
+/** Throws for a key `ViewShow` does not have, or a value that is neither a boolean nor `undefined`. */
+export function assertShow(show: Partial<ViewShow>): void {
+  for (const [key, value] of Object.entries(show)) {
+    if (!(key in DEFAULT_SHOW)) throw new Error(`expected a key of show, got "${key}"`);
+    if (value !== undefined && typeof value !== 'boolean') {
+      throw new Error(`expected show.${key} to be a boolean, got ${JSON.stringify(value)}`);
+    }
+  }
+}

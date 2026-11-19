@@ -177,10 +177,10 @@ One view reports to each `<TscnSceneProvider>`. A second view under the same pro
 reports nothing and logs an error. Give each view its own provider.
 
 `useGameViewSettled()` answers `null` while the view is pending, and then
-`{ scriptedNodeCount, hasCurrentCamera }`: the count of nodes that hold a script, which do not run,
-and whether the root viewport has a current Camera3D or Camera2D. Both are facts of the game's start,
-so the 3D and 2D modes give the same value. Call it in a component below the same
-`<TscnSceneProvider>` as the view:
+`{ scriptedNodeCount, hasCurrentCamera, missingFiles }`: the count of nodes that hold a script, which
+do not run, whether the root viewport has a current Camera3D or Camera2D, and the files the frame
+asked for and did not get. The first two are facts of the game's start, so the 3D and 2D modes give
+the same value. Call it in a component below the same `<TscnSceneProvider>` as the view:
 
 ```tsx
 import { TscnCanvas, TscnSceneProvider, useGameViewSettled } from '@textscene/renderer';
@@ -203,6 +203,16 @@ export function GameView() {
 }
 ```
 
+### Know which files are missing
+
+`scene.missingFiles()` gives the `res://` paths that the views of the scene asked for and did not get:
+a `null` from `loadResource`, or a file that fails to load. A path leaves the set when no view asks
+for it any more, or when it loads. `scene.subscribe` tells you when the set changes. The scene asks
+for a file only when a view draws a node that reads it, so a scene with no view has no missing files.
+
+Godot's editor lists the same files when it opens a scene: each file a property reads that fails to
+load. A file that the scene declares and no property reads is in neither list.
+
 ### Mount the view with no React code
 
 `mountScene(element, scene, { mode, visible, camera, show })` mounts the view in a page element, for a page with
@@ -217,6 +227,7 @@ A whole page, with a button that saves the window as a PNG file:
   <body>
     <div id="game" style="width: 640px; height: 360px"></div>
     <p id="status">Loading…</p>
+    <p id="missing"></p>
     <button id="save" disabled>Save PNG</button>
     <script type="module" src="./main.ts"></script>
   </body>
@@ -244,6 +255,12 @@ const { scriptedNodeCount, hasCurrentCamera } = await view.settled;
 document.getElementById('status')!.textContent = hasCurrentCamera
   ? `Settled. ${scriptedNodeCount} nodes hold a script, and scripts do not run.`
   : 'Settled, with no current camera.';
+
+// The list follows the scene: a write that stops reading a file takes it off.
+const showMissing = () =>
+  (document.getElementById('missing')!.textContent = [...scene.missingFiles()].join(', '));
+showMissing();
+scene.subscribe(showMissing);
 
 const save = document.getElementById('save') as HTMLButtonElement;
 save.disabled = false;
@@ -317,6 +334,34 @@ set `camera` to `null` and then to the path to look again. The option does not m
 current, and the In-game mode keeps the current camera: use `call('make_current')` for that.
 `<TscnCanvas camera="Rig/TopCamera" />` does the same in React.
 
+### Learn which node a click picked
+
+`onSelect` hears the node a click picks in the 3D mode, and `selected` sets the node the view
+outlines:
+
+```ts
+const view = mountScene(document.getElementById('game')!, scene, {
+  mode: '3D',
+  onSelect(node) {
+    console.log(node ? node.path : 'a click on nothing');
+  },
+});
+
+view.update({ selected: scene.getNode('Player') });
+view.update({ selected: null });
+```
+
+The view picks a node as the Godot editor's 3D view does. A click on a mesh of an instanced scene
+picks the instance, or the mesh's own node when the instance is editable. A click on nothing gives
+`null` and clears the outline. Only the left button picks, and a drag that moves the camera picks
+nothing. `onSelect: null` stops the calls.
+
+With no `selected`, a click also outlines the node it picks. Once the page gives `selected`, the
+page owns the outline: a click calls `onSelect` and leaves the outline as it is, as a controlled
+input does. `onSelect` hears no click in the In-game mode, which takes no pointer, or in the 2D
+mode, which picks no node yet. `<TscnCanvas selected={node} onSelect={setNode} />` does the same
+in React.
+
 ### Turn the editor helpers on and off
 
 `show` turns on and off the helpers the 3D and 2D modes draw over the scene. Each key is a
@@ -343,6 +388,8 @@ view.update({ show: { grid: true, collisions: true } });
 The In-game mode draws as the game does: no helper, every Label3D and the fog, whatever `show`
 holds. Only `performance` works there too. `<TscnCanvas show={{ grid: true }} />` does the same in
 React, where a key left out has its default.
+
+A key `show` does not have, or a value that is not a boolean, throws from `mountScene` and `update`.
 
 ### Save a PNG from headless Chromium
 
@@ -429,8 +476,9 @@ The package exports these names.
   `Scene`. It parses the text once, the first time a view reads it.
 - `Scene` (a type): an open scene. `setSource(text)` replaces its text, and every view of it draws
   the new text. `revision()` gives a number that changes with each change a view draws: a new text,
-  a write or a load that changes the tree. `getNode`, `getNodeOrNull`, `load` and `observe` are in "Change the scene from your
-  code". `dispose()` closes it.
+  a write or a load that changes the tree. `missingFiles()` gives the files its views asked for and
+  did not get, see "Know which files are missing". `getNode`, `getNodeOrNull`, `load` and `observe`
+  are in "Change the scene from your code". `dispose()` closes it.
 - `NodeHandle` (a type): a node of a scene, which `getNode` gives. Its `call` is in "Set the
   camera".
 - `variant(text)`: a value of any Godot type, as a `.tscn` file spells it. It throws for a text
@@ -438,7 +486,8 @@ The package exports these names.
 - `Variant` and `SceneValue` (types): what `variant` gives, and what `get` and `set` take.
 - `TscnCanvas`: the view. Its props are `scene` (a `Scene`, optional inside
   `<TscnSceneProvider>`), `mode` (`'in-game'`, `'3D'` or `'2D'`, default `'3D'`), `visible` (`false`
-  stops the frames), `camera` (the Camera3D the 3D mode looks through) and `className`.
+  stops the frames), `camera` (the Camera3D the 3D mode looks through), `selected`, `onSelect` and
+  `className`.
 - `TscnSceneProvider`: mounts what the view reads. Give it `scene` (a `Scene`), or `source` (the
   text of a `.tscn` scene), `provider` (a `ResourceProvider`) and `rootScenePath` (the `res://` path
   the scene opens under, optional). It takes `children`. A new `provider` starts a new resource
@@ -453,7 +502,8 @@ The package exports these names.
   and returns a `View`: `settled`, `captureImage`, `update` and `dispose`. See "Mount the view with
   no React code".
 - `View` and `ViewOptions` (types): what `mountScene` returns, and the options of `mountScene` and
-  `update`: `mode` (default `'in-game'`), `visible` (default `true`) and `camera` (default `null`).
+  `update`: `mode` (default `'in-game'`), `visible` (default `true`), `camera` (default `null`),
+  `selected` and `onSelect`. See "Learn which node a click picked".
 
 ## Styles and workers
 

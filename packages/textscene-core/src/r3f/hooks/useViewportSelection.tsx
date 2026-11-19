@@ -1,11 +1,8 @@
-/**
- * The canvas mesh picker: one set of delegated pointer handlers, for the single root group in
- * `NodeDispatcher`, that drive `<SelectionContext>`. A pointer-up selects only when travel stayed
- * within `dragThresholdPx`, so a navigation drag does not select.
- */
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { ThreeEvent } from '@react-three/fiber';
 import { useSelection } from '../contexts/SelectionContext.js';
+import { useCanvasWorkspace } from '../contexts/CanvasWorkspaceContext.js';
+import { useHostPick } from '../hostSelection/HostSelection.js';
 import { resolvePathFromObject } from './resolvePathFromObject.js';
 import { getAncestorPaths } from '../../utils/nodePath.js';
 
@@ -25,6 +22,8 @@ export interface DelegatedPointerHandlers {
   onPointerUp: (e: ThreeEvent<PointerEvent>) => void;
   onPointerMove: (e: ThreeEvent<PointerEvent>) => void;
   onPointerOut: (e: ThreeEvent<PointerEvent>) => void;
+  /** A miss, which on a click clears the selection in 3D (`node_3d_editor_plugin.cpp:998-1003`). */
+  onPointerMissed?: (e: MouseEvent) => void;
 }
 
 export interface UseViewportSelectionResult {
@@ -38,6 +37,9 @@ export function useViewportSelection(options: UseViewportSelectionOptions = {}):
   const { dragThresholdPx = DEFAULT_DRAG_THRESHOLD_PX, autoExpandAncestors = true } = options;
   const { setSelectedNodePath, hoverStore, expandedNodePaths, setExpandedNodePaths, objectPathMap } =
     useSelection();
+  const host = useHostPick();
+  // The 2D workspace picks no node yet, so a click on a sprite there would read as a click on nothing.
+  const takesMiss = useCanvasWorkspace() === '3d';
 
   const downPosRef = useRef<{ x: number; y: number } | null>(null);
   const expandedRef = useRef<ReadonlySet<string>>(expandedNodePaths);
@@ -64,10 +66,21 @@ export function useViewportSelection(options: UseViewportSelectionOptions = {}):
     [setSelectedNodePath, autoExpandAncestors, setExpandedNodePaths]
   );
 
+  const pick = useCallback(
+    (nodePath: string | null) => {
+      host.picked(nodePath);
+      if (host.ownsSelection) return;
+      if (nodePath === null) setSelectedNodePath(null);
+      else select(nodePath);
+    },
+    [host, select, setSelectedNodePath]
+  );
+
   const handlers = useMemo<DelegatedPointerHandlers>(
     () => ({
       onPointerDown(e) {
-        downPosRef.current = { x: e.clientX, y: e.clientY };
+        // Only the left button selects (`node_3d_editor_plugin.cpp:1978`): the others orbit and look.
+        downPosRef.current = e.button === 0 ? { x: e.clientX, y: e.clientY } : null;
       },
       onPointerUp(e) {
         const down = downPosRef.current;
@@ -79,7 +92,7 @@ export function useViewportSelection(options: UseViewportSelectionOptions = {}):
         const path = resolvePathFromObject(e.object, objectPathMap);
         if (!path) return;
         e.stopPropagation();
-        select(path);
+        pick(path);
       },
       // Over and out fire once for the whole root, so move carries the per-mesh `e.object`. R3F
       // calls it per intersected mesh, nearest first, until `stopPropagation()`: without the stop
@@ -93,8 +106,14 @@ export function useViewportSelection(options: UseViewportSelectionOptions = {}):
       onPointerOut() {
         hoverStore.set(null);
       },
+      // R3F also reports a miss for a right click, and for the release of a drag that starts on nothing.
+      onPointerMissed: takesMiss
+        ? (e) => {
+            if (e.type === 'click') pick(null);
+          }
+        : undefined,
     }),
-    [dragThresholdPx, select, hoverStore, objectPathMap]
+    [dragThresholdPx, pick, hoverStore, objectPathMap, takesMiss]
   );
 
   return useMemo<UseViewportSelectionResult>(() => ({ handlers }), [handlers]);

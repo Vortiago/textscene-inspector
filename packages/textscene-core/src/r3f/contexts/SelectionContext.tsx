@@ -14,11 +14,8 @@ import {
   type ReactNode,
 } from 'react';
 import type * as THREE from 'three';
-import {
-  createExternalStore,
-  useExternalStoreValue,
-  type ExternalStore,
-} from '../hooks/createExternalStore.js';
+import { createExternalStore, type ExternalStore } from '../../utils/externalStore.js';
+import { useExternalStoreValue } from '../hooks/createExternalStore.js';
 
 export interface SelectionContextValue {
   selectedNodePath: string | null;
@@ -53,6 +50,8 @@ export interface SelectionContextValue {
    */
   objectPathMap: WeakMap<THREE.Object3D, string>;
   registerNodeObject: (path: string, object: THREE.Object3D) => void;
+  /** Into `nodeObjectMap` only: a click on the object picks the nearest node registered for picking. */
+  registerUnpickableNodeObject: (path: string, object: THREE.Object3D) => void;
   unregisterNodeObject: (path: string) => void;
 }
 
@@ -128,6 +127,12 @@ export function SelectionProvider({ children }: SelectionProviderProps) {
     objectPathMapRef.current.set(object, path);
   }, []);
 
+  const registerUnpickableNodeObject = useCallback((path: string, object: THREE.Object3D) => {
+    const previous = nodeObjectMapRef.current.get(path);
+    if (previous) objectPathMapRef.current.delete(previous);
+    nodeObjectMapRef.current.set(path, object);
+  }, []);
+
   const unregisterNodeObject = useCallback((path: string) => {
     const object = nodeObjectMapRef.current.get(path);
     if (object) objectPathMapRef.current.delete(object);
@@ -160,6 +165,7 @@ export function SelectionProvider({ children }: SelectionProviderProps) {
       nodeObjectMap: nodeObjectMapRef.current,
       objectPathMap: objectPathMapRef.current,
       registerNodeObject,
+      registerUnpickableNodeObject,
       unregisterNodeObject,
     }),
     [
@@ -174,6 +180,7 @@ export function SelectionProvider({ children }: SelectionProviderProps) {
       clearHidden,
       clearAll,
       registerNodeObject,
+      registerUnpickableNodeObject,
       unregisterNodeObject,
     ]
   );
