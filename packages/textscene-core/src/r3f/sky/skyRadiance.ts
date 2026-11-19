@@ -33,7 +33,7 @@ const SHOWN_REFLECTION = 5;
 const skyLayersSlot = installedSlot(LAYERS, THREE.DataArrayTexture);
 
 /** The shown sky's values, one buffer each material reads by reference (three r187 `UniformsUtils.js:43`). */
-export const shownSky = installedOr(SHOWN, Float32Array, () => Float32Array.of(1, 1, 1, 0, 0, 0, 0, 0));
+const shownSky = installedOr(SHOWN, Float32Array, () => Float32Array.of(1, 1, 1, 0, 0, 0, 0, 0));
 
 /** The energy each layer of the shown sky holds, read as `shownSky` is. 0 while no sky shows. */
 export const skyEnergies = installedOr(

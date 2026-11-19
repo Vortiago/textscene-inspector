@@ -57,7 +57,7 @@ export function skyLightSize(light: THREE.DirectionalLight): number {
 }
 
 /** The light data of a render whose sky reads no lights: Godot gives it a count of 0. */
-export const NO_SKY_LIGHTS = '';
+const NO_SKY_LIGHTS = '';
 
 /** The light data a render's sky reads: its lights' key at the exposure that scales their energies. */
 export interface SkyLightData {
