@@ -19,18 +19,18 @@ afterEach(() => {
 });
 
 describe('mountScene', () => {
-  it('rejects settled and captureImage outside the In-game mode, and names the mode', async () => {
-    const view = mountScene(element(), openScene({ source: SCENE, provider: NO_FILES }), { mode: '2D' });
-    await expect(view.settled).rejects.toThrow('expected the in-game mode, got 2D');
-    await expect(view.captureImage()).rejects.toThrow('expected the in-game mode, got 2D');
+  it.each(['3D', '2D'] as const)('waits for a %s view to settle, as for an In-game one', async (mode) => {
+    const view = mountScene(element(), openScene({ source: SCENE, provider: NO_FILES }), { mode });
+    const settled = view.settled;
     view.dispose();
+    await expect(settled).rejects.toThrow('expected the view to settle before its dispose');
   });
 
   it('rejects settled and captureImage with the error of a view that fails to mount', async () => {
     vi.spyOn(logger, 'error').mockImplementation(() => {});
     const view = mountScene(element(), openScene({ source: 'not a scene', provider: NO_FILES }));
-    await expect(view.settled).rejects.toThrow(/^expected the In-game view to mount, got .*\.tscn scene/);
-    await expect(view.captureImage()).rejects.toThrow(/^expected the In-game view to mount/);
+    await expect(view.settled).rejects.toThrow(/^expected the view to mount, got .*\.tscn scene/);
+    await expect(view.captureImage()).rejects.toThrow(/^expected the view to mount/);
     view.dispose();
   });
 
@@ -39,7 +39,7 @@ describe('mountScene', () => {
     const view = mountScene(element(), scene);
     const settled = view.settled;
     view.dispose();
-    await expect(settled).rejects.toThrow('expected the In-game view to settle before its dispose');
+    await expect(settled).rejects.toThrow('expected the view to settle before its dispose');
     expect(scene.written()).not.toBeNull();
   });
 });

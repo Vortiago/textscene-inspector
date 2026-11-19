@@ -3,7 +3,7 @@ import { useProjectSettings } from '../contexts/ProjectSettingsContext.js';
 import { useDrawingBufferSize } from '../useDrawingBufferSize.js';
 import { fittedTargetSize, rootWindow, shrinkRootWindow, type RootWindow } from './rootWindow.js';
 import { paneScale } from './windowFit.js';
-import { useIsCapturePending } from './GameViewStatusContext.js';
+import { useIsCapturePending } from '../viewStatus/ViewStatusContext.js';
 
 /** The root window as the project opens it. */
 export function useProjectRootWindow(): RootWindow {

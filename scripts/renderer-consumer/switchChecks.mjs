@@ -1,13 +1,12 @@
 import { attachDiagnostics, loggedErrors } from '../visual/previewServer.mjs';
 import { compareImages } from '../visual/imageDelta.mjs';
 import { RENDER_TIMEOUT_MS, pollInk } from './pollInk.mjs';
-import { CUBE_INK_FLOOR, BAR_INK_FLOOR, SHRUNK_INK_DROP } from './switchFailures.mjs';
+import { CUBE_INK_FLOOR, BAR_INK_FLOOR } from './switchFailures.mjs';
+import { inkStats } from '../vscode/pixels.mjs';
 
-/* global document, window */
+/* global document, requestAnimationFrame, window */
 // These exist only in the browser that runs the `page.evaluate` calls.
 
-/** Long enough for a frame loop that still ran to draw the write. */
-const HIDDEN_WAIT_MS = 3000;
 /** Software GL draws a frame in well under this, so two shots this far apart that match show a still view. */
 const STILL_INTERVAL_MS = 1000;
 
@@ -32,6 +31,19 @@ async function changedFromFresh(page, mode, writes, switched) {
   await page.evaluate(({ next, given }) => window.mountFresh(next, given), { next: mode, given: writes });
   if (mode === 'in-game') await page.evaluate(() => window.freshView.settled);
   return compareImages(await stillShot(page), switched).changedPixels;
+}
+
+/** Hides the 2D stage's rulers, axes and zoom buttons, which a capture leaves out, and the page shows. */
+const STAGE_CHROME_HIDDEN = '#viewport div:not(:has(canvas)) { visibility: hidden !important; }';
+
+/** The pixels in which the view's capture differs from what the page shows of it, or the two sizes. */
+async function captureDelta(page) {
+  const captured = Buffer.from(await page.evaluate(() => window.switchView.capture()), 'base64');
+  const chrome = await page.addStyleTag({ content: STAGE_CHROME_HIDDEN });
+  const shown = await page.locator('#viewport canvas').screenshot();
+  await chrome.evaluate((style) => style.remove());
+  const delta = compareImages(shown, captured);
+  return delta.sizeMismatch ?? { changedPixels: delta.changedPixels, maxChannelDelta: delta.maxChannelDelta };
 }
 
 /** Switches the view to `mode`, and answers what the element holds after it. */
@@ -62,17 +74,22 @@ function captureWhileHidden(page) {
   });
 }
 
-/** The ink before a write to a hidden view, while it stays hidden, and once it shows again. */
+/** The ink before a write to a hidden view, once the hidden view settles, and once it shows again. */
 async function writeWhileHidden(page) {
   const before = await pollInk(page, (drawn) => drawn >= CUBE_INK_FLOOR);
-  await page.evaluate(() => {
-    window.switchView.view.update({ visible: false });
-    return window.switchView.shrinkCube();
+  await page.evaluate(async () => {
+    const { view, shrinkCube } = window.switchView;
+    view.update({ visible: false });
+    await shrinkCube();
+    await view.settled;
   });
-  await page.waitForTimeout(HIDDEN_WAIT_MS);
   const hidden = await pollInk(page, () => true);
-  await page.evaluate(() => window.switchView.view.update({ visible: true }));
-  const shown = await pollInk(page, (drawn) => drawn <= before - SHRUNK_INK_DROP);
+  // Two animation frames, so the shown view has drawn before the still shot reads it.
+  await page.evaluate(() => {
+    window.switchView.view.update({ visible: true });
+    return new Promise((drawn) => requestAnimationFrame(() => requestAnimationFrame(drawn)));
+  });
+  const shown = inkStats(await stillShot(page)).inkPixels;
   return { before, hidden, shown };
 }
 
@@ -86,13 +103,16 @@ export async function runSwitchChecks(page, url) {
   const hiddenCapture = await captureWhileHidden(page);
   const editor3D = await switchTo(page, '3D', CUBE_INK_FLOOR);
   const shots = { '3D': await stillShot(page) };
+  const capturedVsShown = { '3D': await captureDelta(page) };
   const hiddenWrite = await writeWhileHidden(page);
   await page.evaluate(() => window.switchView.recolourBar());
   const editor2D = await switchTo(page, '2D', BAR_INK_FLOOR);
   shots['2D'] = await stillShot(page);
+  capturedVsShown['2D'] = await captureDelta(page);
   const backInGame = await switchTo(page, 'in-game', CUBE_INK_FLOOR);
   await page.evaluate(() => window.switchView.view.settled);
   shots['in-game'] = await stillShot(page);
+  capturedVsShown['in-game'] = await captureDelta(page);
   const changedFromFirstInGame = compareImages(firstInGame, shots['in-game']).changedPixels;
   const changedFromFreshMount = {
     '3D': await changedFromFresh(page, '3D', NO_WRITES, shots['3D']),
@@ -108,6 +128,7 @@ export async function runSwitchChecks(page, url) {
       hiddenWrite,
       changedFromFreshMount,
       changedFromFirstInGame,
+      capturedVsShown,
     },
     errors: loggedErrors(diagnostics),
   };

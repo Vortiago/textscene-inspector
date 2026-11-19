@@ -28,6 +28,7 @@ import { TscnSceneProvider } from './TscnSceneProvider.js';
 import { DEFAULT_ROOT_SCENE_PATH, type Scene } from '../scene/openScene.js';
 import type { ViewportMode } from './contexts/ViewportModeContext.js';
 import { rootClassName } from './stageClassName.js';
+import { EditorViewReport } from './viewStatus/EditorViewReport.js';
 
 // Lazy, so the glyph engine and the parse of the prompt load only for an empty canvas.
 const EmptyScenePrompt = lazy(() => import('./emptyScenePrompt.js'));
@@ -81,13 +82,7 @@ function useRootScene() {
   return { rootScene, nodes: useSeatedRoots() ?? null };
 }
 
-/**
- * The ground-plane grid shared by the empty-scene indicator and the content grid.
- * It carries the `tscnEmptyState` tag `frameSceneBounds` skips on itself:
- * `traverse()` visits every descendant whatever the tag of an ancestor, and the
- * 10-unit grid would otherwise frame a mesh-free scene, such as a lone Path3D.
- * It is editor chrome too, so a SubViewport pass draws none of it.
- */
+/** The 10-unit grid frames no mesh-free scene, such as a lone Path3D, and a SubViewport draws none of it. */
 function GroundGrid() {
   return <gridHelper args={[10, 10, 0x444444, 0x222222]} userData={GROUND_GRID_USER_DATA} />;
 }
@@ -197,6 +192,7 @@ function EditorCanvas({ className }: { className?: string }) {
         <FrameSelectedShortcut />
         <GodotEditorControls />
         <EditorControlsBridge />
+        <EditorViewReport />
       </Canvas>
     </div>
   );

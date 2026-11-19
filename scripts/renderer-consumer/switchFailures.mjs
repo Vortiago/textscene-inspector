@@ -15,16 +15,17 @@ function modeFailures(mode, { ink, canvases, isReplacedContextLost }, inkFloor) 
   ];
 }
 
+/** A hidden view draws the frames that settle a write, and showing it again draws nothing new. */
 function hiddenWriteFailures({ before, hidden, shown }) {
   return [
-    ...(hidden === before
-      ? []
-      : [`a write while hidden: expected the hidden view to keep its ${before} drawn pixels, got ${hidden}`]),
-    ...(shown <= before - SHRUNK_INK_DROP
+    ...(hidden <= before - SHRUNK_INK_DROP
       ? []
       : [
-          `a write while hidden: expected at most ${before - SHRUNK_INK_DROP} drawn pixels once shown, got ${shown}`,
+          `a write while hidden: expected at most ${before - SHRUNK_INK_DROP} drawn pixels once it settles, got ${hidden}`,
         ]),
+    ...(shown === hidden
+      ? []
+      : [`a write while hidden: expected the shown view to keep its ${hidden} drawn pixels, got ${shown}`]),
   ];
 }
 
@@ -35,6 +36,17 @@ function freshMountFailures(changedFromFreshMount) {
       ([mode, changed]) =>
         `${mode} after a switch: expected the frame of a fresh mount, got ${changed} changed pixels`
     );
+}
+
+function captureFailures(capturedVsShown) {
+  return Object.entries(capturedVsShown).flatMap(([mode, delta]) => {
+    if (delta.changedPixels === 0) return [];
+    const found =
+      delta.changedPixels === undefined
+        ? `a ${delta.actual.width} x ${delta.actual.height} PNG for a ${delta.expected.width} x ${delta.expected.height} view`
+        : `${delta.changedPixels} changed pixels, at most ${delta.maxChannelDelta}/255`;
+    return [`captureImage in ${mode}: expected the pixels the view shows, got ${found}`];
+  });
 }
 
 /** One line per failed check of the switched view, or none. */
@@ -50,6 +62,7 @@ export function switchFailures({ results, errors }) {
     ...modeFailures('2D', results.modes['2D'], BAR_INK_FLOOR),
     ...modeFailures('In-game again', results.modes['in-game'], CUBE_INK_FLOOR),
     ...freshMountFailures(results.changedFromFreshMount),
+    ...captureFailures(results.capturedVsShown),
     ...(results.changedFromFirstInGame > 0
       ? []
       : [

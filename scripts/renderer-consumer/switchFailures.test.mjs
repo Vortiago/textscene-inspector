@@ -7,27 +7,32 @@ const PASSING = {
   inGameInk: 9000,
   hiddenCapture: 1400,
   modes: { '3D': SWITCHED, '2D': { ...SWITCHED, ink: 18_000 }, 'in-game': SWITCHED },
-  hiddenWrite: { before: 25_000, hidden: 25_000, shown: 23_000 },
+  hiddenWrite: { before: 25_000, hidden: 23_000, shown: 23_000 },
   changedFromFreshMount: { '3D': 0, '2D': 0, 'in-game': 0 },
   changedFromFirstInGame: 3000,
+  capturedVsShown: {
+    '3D': { changedPixels: 0, maxChannelDelta: 0 },
+    '2D': { changedPixels: 0, maxChannelDelta: 0 },
+    'in-game': { changedPixels: 0, maxChannelDelta: 0 },
+  },
 };
 
 const failuresOf = (results) => switchFailures({ results: { ...PASSING, ...results }, errors: [] });
 
 describe('switchFailures', () => {
-  it('passes a view that drew every mode and a write only once shown', () => {
+  it('passes a view that drew every mode, and settled a write while hidden', () => {
     expect(failuresOf({})).toEqual([]);
   });
 
-  it('fails a hidden view that drew the write', () => {
-    expect(failuresOf({ hiddenWrite: { before: 25_000, hidden: 23_000, shown: 23_000 } })).toEqual([
-      'update: a write while hidden: expected the hidden view to keep its 25000 drawn pixels, got 23000',
+  it('fails a hidden view that settled without drawing the write', () => {
+    expect(failuresOf({ hiddenWrite: { before: 25_000, hidden: 25_000, shown: 25_000 } })).toEqual([
+      'update: a write while hidden: expected at most 24000 drawn pixels once it settles, got 25000',
     ]);
   });
 
-  it('fails a view that did not draw the write once shown', () => {
-    expect(failuresOf({ hiddenWrite: { before: 25_000, hidden: 25_000, shown: 25_000 } })).toEqual([
-      'update: a write while hidden: expected at most 24000 drawn pixels once shown, got 25000',
+  it('fails a view that drew something new once shown', () => {
+    expect(failuresOf({ hiddenWrite: { before: 25_000, hidden: 23_000, shown: 21_000 } })).toEqual([
+      'update: a write while hidden: expected the shown view to keep its 23000 drawn pixels, got 21000',
     ]);
   });
 
@@ -59,6 +64,24 @@ describe('switchFailures', () => {
   it('fails a switch that dropped a write made before it', () => {
     expect(failuresOf({ changedFromFirstInGame: 0 })).toEqual([
       'update: a write before a switch: expected the In-game frame after the switches to differ from the first, got the same',
+    ]);
+  });
+
+  it('fails a capture whose pixels differ from what the view shows', () => {
+    const capturedVsShown = {
+      ...PASSING.capturedVsShown,
+      '2D': { changedPixels: 76_800, maxChannelDelta: 255 },
+    };
+    expect(failuresOf({ capturedVsShown })).toEqual([
+      'update: captureImage in 2D: expected the pixels the view shows, got 76800 changed pixels, at most 255/255',
+    ]);
+  });
+
+  it('fails a capture of another size than the view', () => {
+    const sizeMismatch = { expected: { width: 320, height: 240 }, actual: { width: 1152, height: 648 } };
+    const capturedVsShown = { ...PASSING.capturedVsShown, 'in-game': sizeMismatch };
+    expect(failuresOf({ capturedVsShown })).toEqual([
+      'update: captureImage in in-game: expected the pixels the view shows, got a 1152 x 648 PNG for a 320 x 240 view',
     ]);
   });
 });

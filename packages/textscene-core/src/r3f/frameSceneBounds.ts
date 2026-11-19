@@ -21,6 +21,13 @@ function maxExtent(box: THREE.Box3): number {
   return Math.max(size.x, size.y, size.z);
 }
 
+/** Skips a tagged subtree whole: a frame-excluded draw holds its `material_overlay` and `next_pass` draws. */
+function forEachFramed(root: THREE.Object3D, visit: (object: THREE.Object3D) => void): void {
+  if (root.userData?.tscnEmptyState || root.userData?.tscnFrameExcluded) return;
+  visit(root);
+  for (const child of root.children) forEachFramed(child, visit);
+}
+
 /** Minimal shape we touch on the viewport controls instance for framing. */
 export interface OrbitLike {
   target?: THREE.Vector3;
@@ -45,11 +52,8 @@ export function frameSceneBounds(
   const gizmoBox = new THREE.Box3();
   let hasMesh = false;
   let hasGizmo = false;
-  scene.traverse((obj) => {
-    if (obj.userData?.tscnEmptyState) return;
-    // A Label3D glyph mesh is skipped, so async mount timing cannot change the frame. Label3D frames
-    // by its zero-size `FramePoint` alone, as Godot's reference camera does.
-    if (obj.userData?.tscnFrameExcluded) return;
+  // A Label3D frames by its zero-size `FramePoint` alone, as Godot's reference camera does, never by glyphs.
+  forEachFramed(scene, (obj) => {
     // A node whose `get_aabb` Godot frames on, drawn or not, an empty one as the point it is.
     const nodeBox = frameBoxOf(obj, nodeBoxScratch);
     if (nodeBox) {
