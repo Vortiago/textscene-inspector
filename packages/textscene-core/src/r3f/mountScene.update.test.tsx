@@ -81,6 +81,25 @@ describe('View.update', () => {
     view.dispose();
   });
 
+  it('rejects a settled read from before a switch out of In-game', async () => {
+    const view = await mountedIn(element());
+    const settled = expect(view.settled).rejects.toThrow('expected the in-game mode, got 3D');
+
+    await act(async () => view.update({ mode: '3D' }));
+
+    await settled;
+    view.dispose();
+  });
+
+  it('refuses an update once disposed', async () => {
+    const view = await mountedIn(element());
+    view.dispose();
+
+    expect(() => view.update({ mode: '3D' })).toThrow(
+      'expected a mounted view to update, got a disposed one'
+    );
+  });
+
   it('draws no frame while visible is false', async () => {
     const host = element();
     const view = await mountedIn(host, { mode: '3D', visible: false });

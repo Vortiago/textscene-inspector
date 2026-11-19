@@ -17,7 +17,7 @@ const NO_UNSUBSCRIBE = () => {};
 const PreviewVisibilityContext = createContext(true);
 PreviewVisibilityContext.displayName = 'PreviewVisibilityContext';
 
-/** Without `isVisible`, the context keeps its default. */
+/** One provider either way, so a change between a value and none keeps the canvas below it mounted. */
 export function PreviewVisibilityProvider({
   isVisible,
   children,
@@ -25,8 +25,12 @@ export function PreviewVisibilityProvider({
   isVisible?: boolean;
   children: ReactNode;
 }) {
-  if (isVisible === undefined) return children;
-  return <PreviewVisibilityContext.Provider value={isVisible}>{children}</PreviewVisibilityContext.Provider>;
+  const inherited = useContext(PreviewVisibilityContext);
+  return (
+    <PreviewVisibilityContext.Provider value={isVisible ?? inherited}>
+      {children}
+    </PreviewVisibilityContext.Provider>
+  );
 }
 
 /** A hidden preview draws while its scene loads or owes a capture: each advances only in a frame. */

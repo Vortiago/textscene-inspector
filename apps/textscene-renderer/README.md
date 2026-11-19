@@ -278,8 +278,9 @@ view.update({ visible: false });
 view.update({ visible: true });
 ```
 
-A change of mode replaces the canvas and loses the WebGL context of the old one. `visible` is
-`true` by default. While it is `false`, the view draws only the frames a load or a capture needs.
+A change of mode replaces the canvas and loses the WebGL context of the old one. A `settled`
+promise read before a switch out of In-game rejects. `update` throws once the view is disposed.
+`visible` is `true` by default. While it is `false`, the view draws only the frames a load or a capture needs.
 `<TscnCanvas visible={false} />` does the same in React.
 
 ### Save a PNG from headless Chromium

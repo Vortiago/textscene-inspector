@@ -7,6 +7,10 @@ import { CUBE_INK_FLOOR, BAR_INK_FLOOR, SHRUNK_INK_DROP } from './switchFailures
 
 /** Long enough for a frame loop that still ran to draw the write. */
 const HIDDEN_WAIT_MS = 3000;
+/** R3F loses the context of an unmounted canvas a timer after the unmount, well inside this. */
+const CONTEXT_LOSS_TIMEOUT_MS = 10_000;
+/** Long enough for React to commit `visible: false`, so no frame of the old loop draws the write. */
+const COMMIT_WAIT_MS = 500;
 
 /** Switches the view to `mode`, and answers what the element holds after it. */
 async function switchTo(page, mode, inkFloor) {
@@ -14,13 +18,16 @@ async function switchTo(page, mode, inkFloor) {
     window.replacedContext = document.querySelector('#viewport canvas').getContext('webgl2');
     window.switchView.view.update({ mode: next });
   }, mode);
-  const ink = await pollInk(page, (drawn) => drawn >= inkFloor);
+  // The context loss first: until then, a screenshot can read the replaced canvas's ink.
   const isReplacedContextLost = await page
-    .waitForFunction(() => window.replacedContext.isContextLost(), null, { timeout: 10_000 })
+    .waitForFunction(() => window.replacedContext.isContextLost(), null, {
+      timeout: CONTEXT_LOSS_TIMEOUT_MS,
+    })
     .then(
       () => true,
       () => false
     );
+  const ink = await pollInk(page, (drawn) => drawn >= inkFloor);
   const canvases = await page.evaluate(() => document.querySelectorAll('#viewport canvas').length);
   return { ink, canvases, isReplacedContextLost };
 }
@@ -43,10 +50,9 @@ function captureWhileHidden(page) {
 /** The ink before a write to a hidden view, while it stays hidden, and once it shows again. */
 async function writeWhileHidden(page) {
   const before = await pollInk(page, (drawn) => drawn >= CUBE_INK_FLOOR);
-  await page.evaluate(() => {
-    window.switchView.view.update({ visible: false });
-    return window.switchView.shrinkCube();
-  });
+  await page.evaluate(() => window.switchView.view.update({ visible: false }));
+  await page.waitForTimeout(COMMIT_WAIT_MS);
+  await page.evaluate(() => window.switchView.shrinkCube());
   await page.waitForTimeout(HIDDEN_WAIT_MS);
   const hidden = await pollInk(page, () => true);
   await page.evaluate(() => window.switchView.view.update({ visible: true }));

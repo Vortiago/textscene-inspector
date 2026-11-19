@@ -19,7 +19,7 @@ export interface View {
   readonly settled: Promise<GameViewSettled>;
   /** At the window's size whatever the element's. Rejects before `settled`, and outside In-game. */
   captureImage(): Promise<Blob>;
-  /** Changes only the keys `options` gives a value. The scene keeps every write across a change of mode. */
+  /** Changes only the keys `options` gives a value. A `settled` read before a switch out of In-game rejects. */
   update(options: ViewOptions): void;
   /** The scene stays open for another view. */
   dispose(): void;
@@ -32,6 +32,9 @@ export function mountScene(element: HTMLElement, scene: Scene, options: ViewOpti
   const status = createGameViewStatus();
   // Aborts with the reason the view will never settle: a failed mount, or the dispose.
   const ending = new AbortController();
+  // Aborts when the view leaves In-game, so a `settled` read before the switch does not wait forever.
+  let inGame = new AbortController();
+  let isDisposed = false;
   const root = createRoot(element, {
     onUncaughtError(error) {
       logger.error('[GameView] the view failed to mount', error);
@@ -51,19 +54,27 @@ export function mountScene(element: HTMLElement, scene: Scene, options: ViewOpti
   const ended = () => Promise.reject(ending.signal.reason as Error);
   return {
     get settled() {
+      if (ending.signal.aborted) return ended();
       if (current.mode !== 'in-game') return outsideInGame();
-      return status.whenSettled(ending.signal);
+      return status.whenSettled(AbortSignal.any([ending.signal, inGame.signal]));
     },
     captureImage() {
-      if (current.mode !== 'in-game') return outsideInGame();
       if (ending.signal.aborted) return ended();
+      if (current.mode !== 'in-game') return outsideInGame();
       return status.captureImage().then(encodePng);
     },
     update(next) {
+      if (isDisposed) throw new Error('expected a mounted view to update, got a disposed one');
+      const previousMode = current.mode;
       current = withGiven(current, next);
+      if (previousMode === 'in-game' && current.mode !== 'in-game') {
+        inGame.abort(new Error(`expected the in-game mode, got ${current.mode}`));
+        inGame = new AbortController();
+      }
       render();
     },
     dispose() {
+      isDisposed = true;
       const canvases = [...element.querySelectorAll('canvas')];
       root.unmount();
       ending.abort(new Error('expected the In-game view to settle before its dispose'));
