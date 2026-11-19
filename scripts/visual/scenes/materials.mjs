@@ -40,7 +40,7 @@ export const MATERIAL_SCENES = [
   { name: 'material-spatial-shader-alpha', file: 'unit-spatial-shader-alpha.tscn' },
   // Spatial shaders that write DEPTH, shared and own, and a depth_prepass_alpha fade, across orange quads.
   { name: 'material-spatial-shader-depth', file: 'unit-spatial-shader-depth.tscn' },
-  // Spatial shaders that write FOG, FOG.rgb alone, FOG under fog_disabled, and RADIANCE, over orange quads.
+  // Spatial shaders that write FOG, FOG.rgb alone, FOG under fog_disabled, RADIANCE and IRRADIANCE, over orange quads.
   { name: 'material-spatial-shader-fog', file: 'unit-spatial-shader-fog.tscn' },
   { name: 'surface-material-override', file: 'unit-surface-material-override.tscn' },
   // Multi-property guard, one row each: basic PBR, emission and normal,

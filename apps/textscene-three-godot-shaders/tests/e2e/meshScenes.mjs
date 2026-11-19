@@ -465,12 +465,21 @@ const ORANGE_IN_FRONT = {
   source: showing('vec3(0.9, 0.3, 0.1)'),
 };
 
+/** The orange quad at the same lower right, at depth `z`. */
+const orangeAt = (z) => ({
+  ...ORANGE_IN_FRONT,
+  object: { ...ORANGE_IN_FRONT.object, position: [0.25, -0.2, z] },
+});
+
+/** The scene quad's colour in the depth and fog scenes. */
+const QUAD_ALBEDO = 'ALBEDO = vec3(0.2, 0.5, UV.y);';
+
 /** A depth test scene: the scene's quad, behind the orange quad. */
 const depthTestScene = (name, modes) =>
   modeScene(
     name,
     modes,
-    'ALBEDO = vec3(0.2, 0.5, UV.y);',
+    QUAD_ALBEDO,
     {
       object: { position: [-0.1, 0.1, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
       others: [ORANGE_IN_FRONT],
@@ -514,7 +523,7 @@ const blendScene = (name, modes, fragment = BLEND_ALBEDO, rows = []) =>
     fragment,
     {
       object: { position: [-0.1, 0.1, 0.5], rotation: [0, 0, 0], scale: [1, 1, 1] },
-      others: [{ ...ORANGE_IN_FRONT, object: { ...ORANGE_IN_FRONT.object, position: [0.25, -0.2, 0] } }],
+      others: [orangeAt(0)],
     },
     ['spatial.fragment.UV', ...rows]
   );
@@ -580,7 +589,7 @@ const ALPHA_SCENES = [
 ];
 
 /** A quad whose DEPTH runs from far at the left edge to near at the right, so the orange quad cuts it. */
-const DEPTH_FRAGMENT = fragmentOf('ALBEDO = vec3(0.2, 0.5, UV.y);', 'DEPTH = UV.x;');
+const DEPTH_FRAGMENT = fragmentOf(QUAD_ALBEDO, 'DEPTH = UV.x;');
 
 /** The quad's DEPTH: the shared prepass material writes the rasterised depth, so the EQUAL test drops it. */
 const DEPTH_SCENES = [
@@ -651,18 +660,15 @@ const COMPATIBILITY_DEPTH_SCENES = [
   })(),
 ];
 
-/** The quad's colour, which the fog scenes cover. */
-const FOGGED_ALBEDO = 'ALBEDO = vec3(0.2, 0.5, UV.y);';
-
 /** A fog scene: the quad in front of the orange quad, so a write that leaks onto another surface shows. */
-const fogScene = (name, modes, fog, rows = ['spatial.fragment.FOG']) =>
+const fogScene = (name, modes, lines, rows = ['spatial.fragment.FOG']) =>
   modeScene(
     name,
     modes,
-    fragmentOf(FOGGED_ALBEDO, fog),
+    fragmentOf(QUAD_ALBEDO, ...lines),
     {
       object: { position: [-0.1, 0.1, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
-      others: [{ ...ORANGE_IN_FRONT, object: { ...ORANGE_IN_FRONT.object, position: [0.25, -0.2, -0.3] } }],
+      others: [orangeAt(-0.3)],
     },
     ['spatial.fragment.UV', ...rows]
   );
@@ -670,11 +676,11 @@ const fogScene = (name, modes, fog, rows = ['spatial.fragment.FOG']) =>
 /** A shader's own FOG, RADIANCE and IRRADIANCE on an unshaded surface, against Godot. */
 const FOG_SCENES = [
   // The fog's amount runs from 0 at the left edge to 1 at the right.
-  fogScene('spatial-fog', [], 'FOG = vec4(0.9, 0.2, 0.1, UV.x);'),
+  fogScene('spatial-fog', [], ['FOG = vec4(0.9, 0.2, 0.1, UV.x);']),
   // FOG starts at (0, 0, 0, 1), so a write of its colour alone covers the whole quad.
-  fogScene('spatial-fog-colour', [], 'FOG.rgb = vec3(0.1, 0.6, 0.3) * UV.y;'),
-  fogScene('spatial-fog-disabled', ['fog_disabled'], 'FOG = vec4(0.9, 0.2, 0.1, 1.0);'),
-  // The fog mixes in before the premultiplied alpha scales the colour.
+  fogScene('spatial-fog-colour', [], ['FOG.rgb = vec3(0.1, 0.6, 0.3) * UV.y;']),
+  fogScene('spatial-fog-disabled', ['fog_disabled'], ['FOG = vec4(0.9, 0.2, 0.1, 1.0);']),
+  // An alpha ramp under the premultiplied blend: the fog mixes in before the alpha scales the colour.
   alphaScene(
     'spatial-fog-premul-alpha',
     ['blend_premul_alpha'],
@@ -685,7 +691,7 @@ const FOG_SCENES = [
   fogScene(
     'spatial-radiance-irradiance',
     [],
-    'RADIANCE = vec4(1.0, 0.0, 0.0, 1.0);\n\tIRRADIANCE = vec4(0.0, 1.0, 0.0, 1.0);',
+    ['RADIANCE = vec4(1.0, 0.0, 0.0, 1.0);', 'IRRADIANCE = vec4(0.0, 1.0, 0.0, 1.0);'],
     ['spatial.fragment.RADIANCE', 'spatial.fragment.IRRADIANCE']
   ),
 ];

@@ -235,3 +235,4 @@ The lenient parser never rejects. Every scalar goes through the shared `floatOr`
 
 - **Resource gap** `adjustment_color_correction` is not applied, so a colour-correction texture leaves the frame unchanged.
 - **Renderer gap** A refracting surface draws an opaque outline behind it unlike Godot: three's transmission reads its own copy of the opaque pass.
+- **Renderer gap** The depth fog leaves a surface that a translated spatial shader draws unfogged, unlike Godot: the scene template gets no fog values.
