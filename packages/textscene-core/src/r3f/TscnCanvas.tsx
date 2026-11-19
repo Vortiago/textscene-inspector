@@ -1,5 +1,5 @@
 import { Canvas } from '@react-three/fiber';
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, type ReactNode } from 'react';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useSeatedRoots } from './useLiveSceneTree.js';
 import { useViewportMode } from './contexts/ViewportModeContext.js';
@@ -28,6 +28,8 @@ import { TscnSceneProvider } from './TscnSceneProvider.js';
 import { DEFAULT_ROOT_SCENE_PATH, type Scene } from '../scene/openScene.js';
 import type { ViewportMode } from './contexts/ViewportModeContext.js';
 import { rootClassName } from './stageClassName.js';
+import { ViewportActionsProvider, useOptionalViewportActions } from './contexts/ViewportActionsContext.js';
+import { ViewCamera } from './viewCamera.js';
 
 // Lazy, so the glyph engine and the parse of the prompt load only for an empty canvas.
 const EmptyScenePrompt = lazy(() => import('./emptyScenePrompt.js'));
@@ -132,21 +134,31 @@ export interface TscnCanvasProps {
   mode?: TscnCanvasMode;
   /** `false` draws only the frames a load, a settle or a capture needs. Without it, the host decides. */
   visible?: boolean;
+  /** As `mountScene`'s `camera`. Without it, the host decides. */
+  camera?: string | null;
   /** The class of the element the view fills. */
   className?: string;
 }
 
-export function TscnCanvas({ scene, mode = '3D', visible, className }: TscnCanvasProps) {
+export function TscnCanvas({ scene, mode = '3D', visible, camera, className }: TscnCanvasProps) {
   const stage = (
-    <PreviewVisibilityProvider isVisible={visible}>{stageOf(mode, className)}</PreviewVisibilityProvider>
+    <PreviewVisibilityProvider isVisible={visible}>
+      <ViewportActionsScope>{stageOf({ mode, camera, className })}</ViewportActionsScope>
+    </PreviewVisibilityProvider>
   );
   return scene ? <TscnSceneProvider scene={scene}>{stage}</TscnSceneProvider> : stage;
 }
 
-function stageOf(mode: TscnCanvasMode, className: string | undefined) {
+/** A host's own provider wins, so its panels and the `camera` prop move the same preview. */
+function ViewportActionsScope({ children }: { children: ReactNode }) {
+  if (useOptionalViewportActions()) return children;
+  return <ViewportActionsProvider>{children}</ViewportActionsProvider>;
+}
+
+function stageOf({ mode, camera, className }: Pick<TscnCanvasProps, 'mode' | 'camera' | 'className'>) {
   if (mode === 'in-game') return <GameStage className={className} />;
   if (mode === '2D') return <Editor2DStage className={className} />;
-  return <EditorCanvas className={className} />;
+  return <EditorCanvas className={className} camera={camera} />;
 }
 
 // The game and 2D stages load on demand, so a host that never shows one keeps it out of its first chunk.
@@ -177,7 +189,7 @@ function Editor2DStage({ className }: { className?: string }) {
   );
 }
 
-function EditorCanvas({ className }: { className?: string }) {
+function EditorCanvas({ className, camera }: Pick<TscnCanvasProps, 'camera' | 'className'>) {
   const frameloop = usePreviewFrameloop();
   return (
     <div className={rootClassName(className)}>
@@ -192,6 +204,7 @@ function EditorCanvas({ className }: { className?: string }) {
         <SceneCamerasProvider>
           <TscnSceneContents />
           <ActiveCameraSwitcher />
+          {camera !== undefined && <ViewCamera camera={camera} />}
         </SceneCamerasProvider>
         <CameraFit />
         <FrameSelectedShortcut />

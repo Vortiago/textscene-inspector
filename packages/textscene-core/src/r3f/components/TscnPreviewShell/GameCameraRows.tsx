@@ -1,7 +1,7 @@
 import { useOptionalHierarchy } from '../../contexts/HierarchyContext.js';
 import { useSceneCameras } from '../../currentCamera.js';
 import type { LiveTreeEntry } from '../../liveSceneTree.js';
-import { ROOT_WINDOW_PATH } from '../../../scene/nodePathWalk.js';
+import { absolutePathOf } from '../../../scene/nodePathWalk.js';
 import type { CameraState } from '../../../scene/viewportCameras.js';
 import type { Scene } from '../../../scene/openScene.js';
 import * as logger from '../../../logger.js';
@@ -15,7 +15,7 @@ function tagOf({ isCurrent, canBeCurrent, viewport }: CameraState): string {
 /** Logs a refused call, since a click handler has no caller to hand the error to. */
 async function makeCurrent(scene: Scene, path: string): Promise<void> {
   try {
-    await scene.getNode(`${ROOT_WINDOW_PATH}/${path}`).call('make_current');
+    await scene.getNode(absolutePathOf(path)).call('make_current');
   } catch (error) {
     logger.error(`expected make_current of the camera at ${path} to run, got ${String(error)}`);
   }
