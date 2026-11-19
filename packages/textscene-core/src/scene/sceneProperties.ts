@@ -4,6 +4,8 @@ import { varToStr } from '../godot/variant/varToStr.js';
 import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
 import type { ResourceReference, VariantValue } from '../godot/variant/variantValue.js';
 import * as logger from '../logger.js';
+import { findSubResource } from '../resources/SubResourceResolver.js';
+import { parseSubResourcePath, subResourcePath } from '../resources/subResourcePath.js';
 import type { DerivedProperties, NodeReader, NodeReads } from './derived/derivedProperty.js';
 import type { SceneTreeNode } from './sceneRuntime.js';
 import { WriteStore, type SceneWrites } from './sceneWrites.js';
@@ -18,9 +20,6 @@ export function loadPropertyAccess(): Promise<PropertyAccess> {
 
 /** The id prefix of a file `scene.load` gave, which no Godot-written id starts with. */
 const LOADED_ID_PREFIX = 'textscene_load_';
-
-/** The separator of a sub-resource's path, `res://main.tscn::Material_1`. */
-const SUB_RESOURCE_SEPARATOR = '::';
 
 /** The host's reads and writes of the properties of the scene's nodes, by live path. */
 export class SceneProperties {
@@ -143,9 +142,17 @@ export class SceneProperties {
     return answer;
   }
 
+  /** The class of the root scene's sub-resource that `path` names, or null for any other path. */
+  subResourceClass(path: string): string | null {
+    const { filePath, subResourceId } = parseSubResourcePath(path);
+    if (subResourceId === undefined || filePath !== this.rootScenePath) return null;
+    const scene = this.rootScene();
+    return (scene && findSubResource(scene.internalResources, subResourceId)?.type) ?? null;
+  }
+
   /** The resource an id of the host's writes names: a file `scene.load` gave, else one of the root scene. */
   private rootResourceOf(kind: 'ExtResource' | 'SubResource', id: string): ResourceReference | null {
-    if (kind === 'SubResource') return { path: `${this.rootScenePath}${SUB_RESOURCE_SEPARATOR}${id}` };
+    if (kind === 'SubResource') return { path: subResourcePath(this.rootScenePath, id) };
     const ext =
       [...this.loaded.values()].find((loaded) => loaded.id === id) ??
       this.rootScene()?.externalResources.find((resource) => resource.id === id);
@@ -159,9 +166,9 @@ export class SceneProperties {
 
   /** A resource as an id of the root scene, which the parser of the written heading reads. */
   private resourceText({ path }: ResourceReference, className: string | undefined): string {
-    const [file, subId] = path.split(SUB_RESOURCE_SEPARATOR);
-    if (subId !== undefined) {
-      if (file === this.rootScenePath) return `SubResource("${subId}")`;
+    const { filePath, subResourceId } = parseSubResourcePath(path);
+    if (subResourceId !== undefined) {
+      if (filePath === this.rootScenePath) return `SubResource("${subResourceId}")`;
       throw new Error(
         `expected a resource of ${this.rootScenePath} or a file, got ${path}: a write of another scene's sub-resource is not in this release`
       );

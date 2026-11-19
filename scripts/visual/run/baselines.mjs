@@ -9,7 +9,7 @@ import { dirname, join } from 'node:path';
 import { PNG } from 'pngjs';
 import { REPO_ROOT } from '../../repoRoot.mjs';
 import { baselinePath } from '../baselinePath.mjs';
-import { compareImages, formatDelta } from '../imageDelta.mjs';
+import { compareImages, formatDelta, isSameImage } from '../imageDelta.mjs';
 import { isUniformImage } from '../previewServer.mjs';
 
 const OUTPUT_DIR = join(REPO_ROOT, 'scripts/visual/output');
@@ -51,7 +51,7 @@ export function pixelsMatchBaseline(baselineBuffer, actualBuffer) {
   } catch {
     return false;
   }
-  return !result.sizeMismatch && result.changedPixels === 0;
+  return isSameImage(result);
 }
 
 /**

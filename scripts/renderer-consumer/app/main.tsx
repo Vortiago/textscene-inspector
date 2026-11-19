@@ -1,5 +1,6 @@
 import { createRoot } from 'react-dom/client';
 import { TscnCanvas, TscnSceneProvider, openScene, variant } from '@textscene/renderer';
+import { runHeldResourceChecks, type HeldResourceCheckResults } from './heldResourceChecks';
 import { projectOf, runMountChecks, type MountCheckResults } from './mountChecks';
 import { WINDOW_320_PROJECT, exposeSwitchChecks } from './switchView';
 
@@ -84,12 +85,16 @@ declare global {
   interface Window {
     /** Written once the checks of `mountScene` end, for the runner to read. */
     mountChecks?: MountCheckResults;
+    /** Written once the checks of a resource the scene file holds end. */
+    heldResourceChecks?: HeldResourceCheckResults;
   }
 }
 
-/** `?checks=mount` runs the checks of `mountScene`, which mount views of their own. */
+/** `?checks=mount`, `?checks=held` and `?checks=switch` run checks that mount views of their own. */
 if (query.get('checks') === 'mount') {
   void runMountChecks().then((results) => (window.mountChecks = results));
+} else if (query.get('checks') === 'held') {
+  void runHeldResourceChecks().then((results) => (window.heldResourceChecks = results));
 } else if (query.get('checks') === 'switch') {
   // `#viewport` is the element the runner's screenshots read.
   const viewport = document.createElement('div');
