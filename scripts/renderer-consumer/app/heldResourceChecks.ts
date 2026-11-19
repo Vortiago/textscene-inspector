@@ -1,4 +1,5 @@
-import { mountScene, openScene, variant, type ResourceProvider } from '@textscene/renderer';
+import { openScene, variant, type ResourceProvider } from '@textscene/renderer';
+import { base64Of, capturePng } from './capture';
 
 const ROOT_SCENE_PATH = 'res://main.tscn';
 
@@ -35,26 +36,9 @@ ${cubeMesh === null ? '' : `mesh = ${cubeMesh}`}
 
 const NO_FILES: ResourceProvider = { loadResource: async () => null };
 
+const capture = async (scene: ReturnType<typeof openScene>) => base64Of(await capturePng(scene, 320, 240));
+
 const open = (source: string) => openScene({ source, provider: NO_FILES, rootScenePath: ROOT_SCENE_PATH });
-
-async function base64Of(blob: Blob): Promise<string> {
-  const bytes = new Uint8Array(await blob.arrayBuffer());
-  let binary = '';
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary);
-}
-
-async function capture(scene: ReturnType<typeof openScene>): Promise<string> {
-  const element = document.createElement('div');
-  element.style.width = '320px';
-  element.style.height = '240px';
-  document.body.append(element);
-  const view = mountScene(element, scene);
-  await view.settled;
-  const png = await view.captureImage();
-  view.dispose();
-  return base64Of(png);
-}
 
 /** The cube after the host writes `text` to its mesh, which starts as the box. */
 async function captureCubeWrite(text: string): Promise<string> {

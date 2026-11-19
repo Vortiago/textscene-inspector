@@ -142,7 +142,8 @@ export class SceneNodes implements HandleHost {
   /** `Object::set`: a setter this release ports as a method runs it. */
   async set(path: string, property: string, written: SceneValue): Promise<boolean> {
     const generation = this.generation;
-    const value = await this.withResourceClass(written);
+    // A boolean, a number and a string name no resource, so they skip the wait of a class read.
+    const value = typeof written === 'object' ? await this.withResourceClass(written) : written;
     this.assertSameText(generation, path);
     const accessor = findPortedAccessor(this.typeOfNode(path), 'setter', property);
     if (!accessor) return this.setStored(path, property, value);

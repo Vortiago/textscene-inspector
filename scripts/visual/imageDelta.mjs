@@ -109,6 +109,11 @@ function writeDiffPixel(out, expected, i, delta) {
   out[i + 3] = 255;
 }
 
+/** Whether a compare found the same size and no changed pixel. */
+export function isSameImage(result) {
+  return !result.sizeMismatch && result.changedPixels === 0;
+}
+
 /** One-line summary of a comparison, in the units the gate asserts on. */
 export function formatDelta(result) {
   if (result.sizeMismatch) {

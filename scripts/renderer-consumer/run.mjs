@@ -7,7 +7,7 @@ import { launchSwiftShaderBrowser } from '../showcase/browser.mjs';
 import { installedVersion, packTarball, run } from '../packTarball.mjs';
 import { REPO_ROOT, attachDiagnostics, loggedErrors, previewPort } from '../visual/previewServer.mjs';
 import { inkStats } from '../vscode/pixels.mjs';
-import { compareImages, formatDelta } from '../visual/imageDelta.mjs';
+import { compareImages, formatDelta, isSameImage } from '../visual/imageDelta.mjs';
 import { writeBaselineFile } from '../visual/run/baselines.mjs';
 import { consumerManifest } from './consumerManifest.mjs';
 import { heldResourceFailures } from './heldResourceFailures.mjs';
@@ -150,7 +150,7 @@ function baselineFailures(png) {
   if (!existsSync(BASELINE_PATH))
     return [`expected a baseline at ${BASELINE_PATH}, got none: run with --update`];
   const delta = compareImages(readFileSync(BASELINE_PATH), png);
-  if (!delta.sizeMismatch && delta.changedPixels === 0) return [];
+  if (isSameImage(delta)) return [];
   return [`captureImage: expected the baseline, got ${formatDelta(delta)}`];
 }
 

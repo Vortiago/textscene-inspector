@@ -1,10 +1,10 @@
-import { compareImages, formatDelta } from '../visual/imageDelta.mjs';
+import { compareImages, formatDelta, isSameImage } from '../visual/imageDelta.mjs';
 
 const pngOf = (base64) => Buffer.from(base64, 'base64');
 
 function sameImageFailures(name, expected, actual) {
   const delta = compareImages(pngOf(expected), pngOf(actual));
-  if (!delta.sizeMismatch && delta.changedPixels === 0) return [];
+  if (isSameImage(delta)) return [];
   return [`${name}: ${formatDelta(delta)}`];
 }
 
