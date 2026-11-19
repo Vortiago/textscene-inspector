@@ -28,6 +28,7 @@ const PUBLIC_VALUE_EXPORTS = [
   'ShadingLanguageError',
   'SkyResolutionPasses',
   'TranslatorFault',
+  'bindRadiance',
   'createDepthPrepass',
   'glVaryingSlots',
   'installGodotShading',

@@ -174,7 +174,7 @@
  "docs/tutorials/shaders/shader_reference/shading_language.rst#43": "refused as Godot refuses",
  "docs/tutorials/shaders/shader_reference/shading_language.rst#44": "not transpiled yet (#1792)",
  "docs/tutorials/shaders/shader_reference/sky_shader.rst#0": "refused as Godot refuses",
- "docs/tutorials/shaders/shader_reference/sky_shader.rst#1": "not transpiled yet (#1665)",
+ "docs/tutorials/shaders/shader_reference/sky_shader.rst#1": "transpiled",
  "docs/tutorials/shaders/shader_reference/sky_shader.rst#2": "refused as Godot refuses",
  "docs/tutorials/shaders/shader_reference/spatial_shader.rst#0": "transpiled",
  "docs/tutorials/shaders/shaders_style_guide.rst#0": "not transpiled yet (#1524)",

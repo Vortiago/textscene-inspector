@@ -12,7 +12,7 @@ GLSL or WGSL operation itself, `lowered` with the name of the operations it writ
 probes run on WebGL 2. WebGPURenderer runs the same TSL nodes, and no probe runs there until the
 canvases draw on WebGPURenderer (#1788).
 
-1652 of 1889 instructions transpiled.
+1653 of 1889 instructions transpiled.
 
 ## data type
 
@@ -1759,10 +1759,10 @@ canvases draw on WebGPURenderer (#1788).
 | `sky.constants.TAU` | transpiled (`sky-constants`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:458` |
 | `sky.constants.E` | transpiled (`sky-constants`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:459` |
 | `sky.global.POSITION` | transpiled (`sky-position`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:460` |
-| `sky.global.RADIANCE` | open, #1665 | | | `servers/rendering/shader_types.cpp:461` |
+| `sky.global.RADIANCE` | transpiled (`sky-radiance`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:461` |
 | `sky.global.AT_HALF_RES_PASS` | transpiled (`sky-half-res`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:462` |
 | `sky.global.AT_QUARTER_RES_PASS` | transpiled (`sky-quarter-res`, `sky-quarter-res-alone`, `sky-passes-odd-size`, `sky-passes-under-4-px`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:463` |
-| `sky.global.AT_CUBEMAP_PASS` | transpiled (`sky-cubemap-pass`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:464` |
+| `sky.global.AT_CUBEMAP_PASS` | transpiled (`sky-radiance`, `sky-cubemap-pass`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:464` |
 | `sky.global.LIGHT0_ENABLED` | transpiled (`sky-light-0`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:465` |
 | `sky.global.LIGHT0_DIRECTION` | transpiled (`sky-light-0`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:466` |
 | `sky.global.LIGHT0_ENERGY` | transpiled (`sky-light-0`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:467` |

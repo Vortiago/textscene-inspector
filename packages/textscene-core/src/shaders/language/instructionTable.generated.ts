@@ -1789,7 +1789,7 @@ sky.constants.PI	built-in (read only)	servers/rendering/shader_types.cpp:457	#16
 sky.constants.TAU	built-in (read only)	servers/rendering/shader_types.cpp:458	#1665	environment/sky.glsl		float		native	native
 sky.constants.E	built-in (read only)	servers/rendering/shader_types.cpp:459	#1665	environment/sky.glsl		float		native	native
 sky.global.POSITION	built-in (read only)	servers/rendering/shader_types.cpp:460	#1665	environment/sky.glsl		vec3		native	native
-sky.global.RADIANCE	built-in (read only)	servers/rendering/shader_types.cpp:461	#1665	environment/sky.glsl		samplerCube			
+sky.global.RADIANCE	built-in (read only)	servers/rendering/shader_types.cpp:461	#1665	environment/sky.glsl		samplerCube		native	native
 sky.global.AT_HALF_RES_PASS	built-in (read only)	servers/rendering/shader_types.cpp:462	#1666	environment/sky.glsl		bool		native	native
 sky.global.AT_QUARTER_RES_PASS	built-in (read only)	servers/rendering/shader_types.cpp:463	#1666	environment/sky.glsl		bool		native	native
 sky.global.AT_CUBEMAP_PASS	built-in (read only)	servers/rendering/shader_types.cpp:464	#1666	environment/sky.glsl		bool		native	native
