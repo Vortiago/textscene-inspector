@@ -40,6 +40,9 @@ function frameDrawn(status: ViewStatus, resources: number, revision = 1): void {
   status.frameDrawn(frame);
 }
 
+/** A settle fits after the frame that reported it, in a microtask. */
+const settledFit = () => Promise.resolve();
+
 /** A view that settled once, then drew a frame with a `.glb` load pending, with every fit timer run out. */
 async function mountWithLateLoad() {
   const status = createViewStatus();
@@ -64,17 +67,23 @@ async function mountWithLateLoad() {
     </ViewStatusProvider>
   );
   frameDrawn(status, 0);
+  await settledFit();
   frameDrawn(status, 1);
   vi.advanceTimersByTime(PAST_LAST_TIMER_MS);
   frameSceneBoundsMock.mockClear();
   if (!camera) throw new Error('expected the probe to report the render camera, got none');
   // A frame from before the write is pending, and the frame that draws it settles.
-  const settleWrite = () => {
+  const settleWrite = async () => {
     revision++;
     frameDrawn(status, 0, revision - 1);
     frameDrawn(status, 0, revision);
+    await settledFit();
   };
-  return { settle: () => frameDrawn(status, 0), settleWrite, camera: camera as THREE.Camera };
+  const settle = async () => {
+    frameDrawn(status, 0);
+    await settledFit();
+  };
+  return { settle, settleWrite, camera: camera as THREE.Camera };
 }
 
 describe('CameraFit after the view settles', () => {
@@ -90,7 +99,7 @@ describe('CameraFit after the view settles', () => {
   it('frames a load that finishes after an earlier settle and after every timer', async () => {
     const { settle } = await mountWithLateLoad();
 
-    settle();
+    await settle();
 
     expect(frameSceneBoundsMock).toHaveBeenCalledTimes(1);
   });
@@ -99,7 +108,7 @@ describe('CameraFit after the view settles', () => {
     const { settle, camera } = await mountWithLateLoad();
     camera.position.x += 1;
 
-    settle();
+    await settle();
 
     expect(frameSceneBoundsMock).not.toHaveBeenCalled();
   });
@@ -108,7 +117,7 @@ describe('CameraFit after the view settles', () => {
     const { settle, camera } = await mountWithLateLoad();
     camera.rotateY(0.1);
 
-    settle();
+    await settle();
 
     expect(frameSceneBoundsMock).not.toHaveBeenCalled();
   });
@@ -117,17 +126,17 @@ describe('CameraFit after the view settles', () => {
     const { settle, camera } = await mountWithLateLoad();
     (camera as THREE.PerspectiveCamera).zoom = 2;
 
-    settle();
+    await settle();
 
     expect(frameSceneBoundsMock).not.toHaveBeenCalled();
   });
 
   it('does not frame again when a property write settles the view', async () => {
     const { settle, settleWrite } = await mountWithLateLoad();
-    settle();
+    await settle();
     frameSceneBoundsMock.mockClear();
 
-    settleWrite();
+    await settleWrite();
 
     expect(frameSceneBoundsMock).not.toHaveBeenCalled();
   });

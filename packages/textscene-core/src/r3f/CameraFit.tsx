@@ -61,7 +61,8 @@ export function CameraFit() {
       if (isSettled && !wasSettled) {
         const revision = scene?.revision() ?? 0;
         openedRevision ??= revision;
-        if (revision === openedRevision && !hasCameraMoved()) fit();
+        // After the frame: a fit inside it leaves `environment-ssao` settled on another picture.
+        if (revision === openedRevision && !hasCameraMoved()) queueMicrotask(fit);
       }
       wasSettled = isSettled;
     };
