@@ -33,22 +33,25 @@ function parseColorStops(value: string): Rgba[] {
   return colors;
 }
 
-/**
- * Pairs `offsets` with `colors` into sorted stops. Absent `offsets` spreads the
- * stops evenly across 0..1, the default two-point spacing. Mismatched lengths
- * use the shorter of the two.
- */
-function decodeGradient(data: Readonly<Record<string, string>>): Gradient {
-  const colors = data.colors ? safeColors(data.colors) : [];
-  const offsets = data.offsets ? safeOffsets(data.offsets) : null;
+/** A `Point` that `resize` adds: offset 0 and `Color()` (`gradient.h:54-56`). */
+const ADDED_POINT: GradientColorStop = { offset: 0, color: { r: 0, g: 0, b: 0, a: 1 } };
 
-  const count = offsets ? Math.min(offsets.length, colors.length) : colors.length;
-  const stops: GradientColorStop[] = [];
-  for (let i = 0; i < count; i++) {
+/** `Gradient::Gradient()` (`gradient.cpp:35-42`). */
+const DEFAULT_STOPS: readonly GradientColorStop[] = [
+  { offset: 0, color: { r: 0, g: 0, b: 0, a: 1 } },
+  { offset: 1, color: { r: 1, g: 1, b: 1, a: 1 } },
+];
+
+/** Offsets, then colours, as the saver orders them (`gradient.cpp:80-81`); each resizes the points. */
+function decodeGradient(data: Readonly<Record<string, string>>): Gradient {
+  let stops: GradientColorStop[] = [...DEFAULT_STOPS];
+  const offsets = data.offsets ? safeOffsets(data.offsets) : null;
+  if (offsets) {
     // A `Point` stores its offset as a float (`gradient.h:55`).
-    const offset = Math.fround(offsets ? offsets[i]! : count > 1 ? i / (count - 1) : 0);
-    stops.push({ offset, color: colors[i]! });
+    stops = offsets.map((offset, i) => ({ ...(stops[i] ?? ADDED_POINT), offset: Math.fround(offset) }));
   }
+  const colors = data.colors ? safeColors(data.colors) : null;
+  if (colors) stops = colors.map((color, i) => ({ ...(stops[i] ?? ADDED_POINT), color }));
   // Godot sorts points by offset before sampling. A stable sort keeps equal
   // offsets in authored order, as the binary search expects.
   stops.sort((a, b) => a.offset - b.offset);
@@ -112,11 +115,11 @@ export function decodeGradientTexture2D(data: Record<string, string>): GradientT
   };
 }
 
-function safeColors(value: string): Rgba[] {
+function safeColors(value: string): Rgba[] | null {
   try {
     return parseColorStops(value);
   } catch {
-    return [];
+    return null;
   }
 }
 
