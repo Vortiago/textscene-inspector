@@ -36,7 +36,7 @@ const WRITTEN_INK_FLOOR = INK_FLOOR / 4;
 const MOUNT_CHECKS_TIMEOUT_MS = 4 * RENDER_TIMEOUT_MS;
 /** The checks of a resource the scene file holds draw four views, each a short 320 x 240 window. */
 const HELD_CHECKS_TIMEOUT_MS = 2 * RENDER_TIMEOUT_MS;
-/** The load checks draw five views, two of them a 512 x 512 noise built on each thread. */
+/** The load checks draw four views, one of them a 512 x 512 noise, and poll one for a repaint. */
 const LOAD_CHECKS_TIMEOUT_MS = 3 * RENDER_TIMEOUT_MS;
 
 const versionsOf = (names, base) =>

@@ -441,10 +441,10 @@ the same pixels on the main thread.
 
 ## Load a file again when it changes
 
-Give the provider a `watch` method. The renderer calls it once for each scene and keeps the function
-it returns. Call the listener with the `res://` path of a file that changed, appeared or went away,
-and every view of the scene draws the new file, with no new mount. `scene.dispose()` calls the
-returned function.
+Give the provider a `watch` method. The renderer calls it once for each scene that a view shows, and
+calls the function it returns when the last view of that scene goes. Call the listener with the
+`res://` path of a file that changed, appeared or went away, and every view of the scene draws the
+new file, with no new mount.
 
 ```ts
 const listeners = new Set<(path: string) => void>();

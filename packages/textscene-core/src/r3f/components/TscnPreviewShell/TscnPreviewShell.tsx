@@ -45,7 +45,7 @@ import { DetailTabs, type DetailTab } from './DetailTabs.js';
 import { SceneTreePane } from './SceneTreePane.js';
 import { previewShellProviders } from './previewShellProviders.js';
 import { DEFAULT_ROOT_SCENE_PATH } from '../../../scene/openScene.js';
-import { resourcePipelineOf } from '../../sceneResourcePipeline.js';
+import { useSceneLoader } from '../../sceneResourcePipeline.js';
 import { CaptureStateReporter } from './CaptureStateReporter.js';
 import type { TscnPreviewShellProps } from './previewShellProps.js';
 import styles from './TscnPreviewShell.module.css';
@@ -125,7 +125,7 @@ export function TscnPreviewShell({
 
   const withProviders = previewShellProviders({
     hierarchyValue,
-    loader: resourcePipelineOf(scene).loader,
+    loader: useSceneLoader(scene),
     initialPreviewedCameraPath,
     onMissingPathsChange,
     initialViewportMode,

@@ -14,7 +14,7 @@ export interface TscnPreviewShellProps {
   content: string;
   /** The scene path of the SceneGraph root. The synthetic default suits inline content. */
   rootScenePath?: string;
-  /** How the scene's `res://` files load. Without it the scene draws with no file. */
+  /** How the scene's `res://` files load, or no file. A new object opens a new scene and loader. */
   provider?: ResourceProvider;
   /** Fired when a row is double-clicked, so the host can jump to the source. */
   onNodeReveal?: (path: string, node: TscnNode) => void;

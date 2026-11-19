@@ -85,8 +85,8 @@ class SwatchProvider implements ResourceProvider {
   }
 }
 
-/** The worker constructor the page had, wrapped to count what the package starts. */
-function countWorkers(): () => number {
+/** The workers the package starts while `run` runs, counted by a wrapper that `run`'s end removes. */
+async function countWorkers<T>(run: () => Promise<T>): Promise<{ result: T; workersStarted: number }> {
   const PageWorker = window.Worker;
   let started = 0;
   window.Worker = class extends PageWorker {
@@ -95,7 +95,11 @@ function countWorkers(): () => number {
       started += 1;
     }
   };
-  return () => started;
+  try {
+    return { result: await run(), workersStarted: started };
+  } finally {
+    window.Worker = PageWorker;
+  }
 }
 
 async function capturePlain(source: string): Promise<string> {
@@ -109,9 +113,8 @@ async function capturePlain(source: string): Promise<string> {
 
 /** The noise the package's worker builds, and the quad with no texture, which the noise must change. */
 async function noiseChecks() {
-  const started = countWorkers();
-  const noisePng = await capturePlain(NOISE_SCENE);
-  return { workersStarted: started(), noisePng, untexturedPng: await capturePlain(UNTEXTURED_SCENE) };
+  const { result: noisePng, workersStarted } = await countWorkers(() => capturePlain(NOISE_SCENE));
+  return { workersStarted, noisePng, untexturedPng: await capturePlain(UNTEXTURED_SCENE) };
 }
 
 /** A view of the swatch, repainted through `watch`: the same canvas draws the new colour. */

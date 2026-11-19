@@ -1,7 +1,7 @@
 import { useId, useMemo, type ReactNode } from 'react';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { openScene, type Scene } from '../scene/openScene.js';
-import { resourcePipelineOf } from './sceneResourcePipeline.js';
+import { useSceneLoader } from './sceneResourcePipeline.js';
 import { useSceneGraphs, useSceneText } from './hooks/useOpenedScene.js';
 import './sceneLiveTree.js';
 import { SceneChangeResetter } from './components/TscnPreviewShell/SceneChangeResetter.js';
@@ -52,7 +52,7 @@ function SceneProviders({ scene, children }: OpenedSceneProps) {
   const hierarchyValue = useMemo(() => ({ sceneGraph, panelId, scene }), [sceneGraph, panelId, scene]);
   const withProviders = previewShellProviders({
     hierarchyValue,
-    loader: resourcePipelineOf(scene).loader,
+    loader: useSceneLoader(scene),
     panelId,
     rootScenePath: scene.rootScenePath,
   });

@@ -24,8 +24,9 @@ describe('createResourcePipeline with a provider that watches', () => {
   it('shows a mounted texture consumer the new file when the provider says it changed', async () => {
     const provider = new EditableProvider();
     provider.write(TEXTURE_PATH, png(1));
-    const { loader } = createResourcePipeline(provider);
-    const shown = mountProbe<THREE.Texture>(loader, {
+    const pipeline = createResourcePipeline(provider);
+    pipeline.hold();
+    const shown = mountProbe<THREE.Texture>(pipeline.loader, {
       path: TEXTURE_PATH,
       type: 'texture',
       read: (texture) => texture.name,
@@ -38,13 +39,28 @@ describe('createResourcePipeline with a provider that watches', () => {
     await expectShown(shown, '2');
   });
 
-  it('stops listening when the pipeline is disposed', () => {
+  it('watches once for two holds, and stops at the last release', () => {
     const provider = new EditableProvider();
     const pipeline = createResourcePipeline(provider);
+    const releaseFirst = pipeline.hold();
+    const releaseSecond = pipeline.hold();
     expect(provider.watcherCount()).toBe(1);
 
-    pipeline.dispose();
+    releaseFirst();
+    releaseFirst();
+    expect(provider.watcherCount()).toBe(1);
 
+    releaseSecond();
     expect(provider.watcherCount()).toBe(0);
+  });
+
+  it('watches again when a view holds it after the last release, as a StrictMode remount does', () => {
+    const provider = new EditableProvider();
+    const pipeline = createResourcePipeline(provider);
+    pipeline.hold()();
+
+    pipeline.hold();
+
+    expect(provider.watcherCount()).toBe(1);
   });
 });

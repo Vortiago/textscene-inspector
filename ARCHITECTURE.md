@@ -269,7 +269,7 @@ the selected node (ADR-0012). Playback starts stopped.
 - **Job workers.** The loader of each opened scene starts one worker from a `blob:` URL of a
   script that every build embeds (`packages/textscene-core/src/workers/bundler/`, ADR-0042).
 - **Changed files.** A host's `ResourceProvider.watch` names a file that changed, and every
-  scene over the provider loads it again (`resources/createResourcePipeline.ts`).
+  scene a mounted view shows loads it again (`resources/createResourcePipeline.ts`).
 
 ## Enforced boundaries
 
