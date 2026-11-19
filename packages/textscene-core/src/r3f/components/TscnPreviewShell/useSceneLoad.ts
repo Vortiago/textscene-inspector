@@ -21,11 +21,11 @@ export function useSceneLoad(): SceneLoad {
     control?.screenshotScene ?? NO_SCENE
   );
   const { isSettled: areAssetsSettled, pendingTextures } = useSceneAssetsSettled();
-  const isGameViewPending = useViewPending();
+  const isViewPending = useViewPending();
   const hasScene = currentScene !== null;
   return {
     hasScene,
-    isComplete: hasScene && renderedScene === currentScene && areAssetsSettled && !isGameViewPending,
+    isComplete: hasScene && renderedScene === currentScene && areAssetsSettled && !isViewPending,
     pendingTextures,
   };
 }

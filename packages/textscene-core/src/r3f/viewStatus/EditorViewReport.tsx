@@ -29,7 +29,9 @@ function useCanvasCapture(): void {
       });
     };
     // A microtask, so a capture that a frame's report makes due draws after that frame, not inside it.
-    const stopListening = status.subscribe(() => queueMicrotask(captureIfDue));
+    const stopListening = status.subscribe(() => {
+      if (status.isCapturePending()) queueMicrotask(captureIfDue);
+    });
     return () => {
       isMounted = false;
       stopListening();

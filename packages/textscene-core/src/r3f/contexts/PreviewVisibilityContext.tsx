@@ -37,7 +37,7 @@ export function PreviewVisibilityProvider({
 export function usePreviewFrameloop(): 'always' | 'never' {
   const isVisible = useContext(PreviewVisibilityContext);
   const loader = useResourceLoader();
-  const gameView = useViewStatus();
+  const view = useViewStatus();
   // A visible preview subscribes to nothing: its canvas would re-render on every count change
   // of a load, and rebuild its whole tree, for a `frameloop` that stays 'always'.
   const subscribe = useCallback(
@@ -47,19 +47,19 @@ export function usePreviewFrameloop(): 'always' | 'never' {
         loader?.subscribePending(onChange),
         textureWork.subscribe(onChange),
         fontWork.subscribe(onChange),
-        gameView?.subscribe(onChange),
+        view?.subscribe(onChange),
       ];
       return () => unsubscribes.forEach((unsubscribe) => unsubscribe?.());
     },
-    [isVisible, loader, gameView]
+    [isVisible, loader, view]
   );
   const isLoading = useSyncExternalStore(
     subscribe,
-    () => !isVisible && (hasPendingWork(pendingSceneWork(loader)) || isGameViewWaiting(gameView))
+    () => !isVisible && (hasPendingWork(pendingSceneWork(loader)) || isViewWaiting(view))
   );
   return isVisible || isLoading ? 'always' : 'never';
 }
 
-function isGameViewWaiting(gameView: ViewStatus | null): boolean {
-  return gameView !== null && (gameView.isPending() || gameView.isCapturePending());
+function isViewWaiting(view: ViewStatus | null): boolean {
+  return view !== null && (view.isPending() || view.isCapturePending());
 }

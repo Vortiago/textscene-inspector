@@ -35,25 +35,12 @@ async function changedFromFresh(page, mode, writes, switched) {
 /** Hides the 2D stage's rulers, axes and zoom buttons, which a capture leaves out, and the page shows. */
 const STAGE_CHROME_HIDDEN = '#viewport div:not(:has(canvas)) { visibility: hidden !important; }';
 
-/** The settled view's PNG beside a shot of its canvas, as the page shows it. */
-async function capturedAndShown(page) {
-  const captured = await page.evaluate(async () => {
-    const { view } = window.switchView;
-    await view.settled;
-    const bytes = new Uint8Array(await (await view.captureImage()).arrayBuffer());
-    let binary = '';
-    for (const byte of bytes) binary += String.fromCharCode(byte);
-    return btoa(binary);
-  });
+/** The pixels in which the view's capture differs from what the page shows of it, or the two sizes. */
+async function captureDelta(page) {
+  const captured = Buffer.from(await page.evaluate(() => window.switchView.capture()), 'base64');
   const chrome = await page.addStyleTag({ content: STAGE_CHROME_HIDDEN });
   const shown = await page.locator('#viewport canvas').screenshot();
   await chrome.evaluate((style) => style.remove());
-  return { captured: Buffer.from(captured, 'base64'), shown };
-}
-
-/** The pixels in which the view's capture differs from what the page shows of it, or the two sizes. */
-async function captureDelta(page) {
-  const { captured, shown } = await capturedAndShown(page);
   const delta = compareImages(shown, captured);
   return delta.sizeMismatch ?? { changedPixels: delta.changedPixels, maxChannelDelta: delta.maxChannelDelta };
 }
