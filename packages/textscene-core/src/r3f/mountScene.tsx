@@ -32,7 +32,7 @@ export interface View {
 const DEFAULT_OPTIONS: Required<ViewOptions> = { mode: 'in-game', visible: true, camera: null };
 
 export function mountScene(element: HTMLElement, scene: Scene, options: ViewOptions = {}): View {
-  let current = checked(scene, withGiven(DEFAULT_OPTIONS, options));
+  let current = withGiven(DEFAULT_OPTIONS, checked(scene, options));
   const status = createGameViewStatus();
   // Aborts with the reason the view will never settle: a failed mount, or the dispose.
   const ending = new AbortController();
@@ -70,7 +70,7 @@ export function mountScene(element: HTMLElement, scene: Scene, options: ViewOpti
     update(next) {
       if (isDisposed) throw new Error('expected a mounted view to update, got a disposed one');
       const previousMode = current.mode;
-      current = checked(scene, withGiven(current, next));
+      current = withGiven(current, checked(scene, next));
       if (previousMode === 'in-game' && current.mode !== 'in-game') {
         inGame.abort(new Error(`expected the in-game mode, got ${current.mode}`));
         inGame = new AbortController();
@@ -99,10 +99,10 @@ function withGiven(options: Required<ViewOptions>, given: ViewOptions): Required
   };
 }
 
-// Before the render, so the caller gets the throw and not the view's error handler.
-function checked(scene: Scene, options: Required<ViewOptions>): Required<ViewOptions> {
-  if (options.camera !== null) assertCameraPath(scene, options.camera);
-  return options;
+// Before the render, so the caller gets the throw, and only for a camera the caller gives now.
+function checked(scene: Scene, given: ViewOptions): ViewOptions {
+  if (typeof given.camera === 'string') assertCameraPath(scene, given.camera);
+  return given;
 }
 
 // A page holds few live WebGL contexts, and R3F releases its own a timer after the unmount.

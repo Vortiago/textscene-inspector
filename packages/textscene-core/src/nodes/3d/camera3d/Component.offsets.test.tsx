@@ -39,4 +39,11 @@ describe('<Camera3D> h_offset and v_offset (camera_3d.cpp:253-258)', () => {
 
     expect(await cameraWorldPosition(node)).toEqual([1, 1, 0]);
   });
+
+  it('move along the mirrored right axis of a mirrored camera', async () => {
+    const mirrored = { ...identityTransform3D(), basis_x: { x: -1, y: 0, z: 0 } };
+    const node = makeCameraNode({ transform: mirrored, h_offset: 1, v_offset: 1 });
+
+    expect(await cameraWorldPosition(node)).toEqual([-1, 1, 0]);
+  });
 });

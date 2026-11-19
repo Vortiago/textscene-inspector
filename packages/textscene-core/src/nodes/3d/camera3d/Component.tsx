@@ -16,7 +16,11 @@ import {
   type CameraLens,
 } from '../../../r3f/viewportRender/projectionFit';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import { transformFromNode3DProperties, type Vec3Tuple } from '../../../r3f/nodeTransform';
+import {
+  transformFromNode3DProperties,
+  type NodeTransform,
+  type Vec3Tuple,
+} from '../../../r3f/nodeTransform';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { Camera3DProjectionType } from '../../../godot/scene/camera3d';
 import { CameraGizmo } from './Gizmo';
@@ -40,8 +44,8 @@ export function Camera3D({ node, children }: NodeComponentProps) {
   );
 
   const offsetPosition = useMemo(
-    () => withLensOffset(position, rotation, properties.h_offset ?? 0, properties.v_offset ?? 0),
-    [position, rotation, properties.h_offset, properties.v_offset]
+    () => withLensOffset({ position, rotation, scale }, properties.h_offset ?? 0, properties.v_offset ?? 0),
+    [position, rotation, scale, properties.h_offset, properties.v_offset]
   );
 
   const safeNear = Math.max(0.001, properties.near);
@@ -88,10 +92,16 @@ export function Camera3D({ node, children }: NodeComponentProps) {
   );
 }
 
-/** In metres along the unit right and up axes: Godot orthonormalises first (camera_3d.cpp:254). */
-function withLensOffset(position: Vec3Tuple, rotation: Vec3Tuple, h: number, v: number): Vec3Tuple {
+/** Metres along the unit axes, mirrored with the basis: Godot orthonormalises first (camera_3d.cpp:254). */
+function withLensOffset(
+  { position, rotation, scale }: Pick<NodeTransform, 'position' | 'rotation' | 'scale'>,
+  h: number,
+  v: number
+): Vec3Tuple {
   if (h === 0 && v === 0) return position;
-  const shift = new THREE.Vector3(h, v, 0).applyEuler(new THREE.Euler(...rotation));
+  const shift = new THREE.Vector3(h * Math.sign(scale[0]), v * Math.sign(scale[1]), 0).applyEuler(
+    new THREE.Euler(...rotation)
+  );
   return [position[0] + shift.x, position[1] + shift.y, position[2] + shift.z];
 }
 

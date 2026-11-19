@@ -54,6 +54,7 @@ describe('the camera option of a mounted view', () => {
   it('mounts through a path that names no node yet, since a load may bring the camera in', async () => {
     const view = await act(async () => sceneView({ mode: '3D', camera: 'Crane/Lens' }));
 
+    expect(() => view.update({ camera: 'Crane/Lens' })).not.toThrow();
     view.dispose();
   });
 });

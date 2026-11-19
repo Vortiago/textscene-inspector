@@ -30,6 +30,7 @@ export function ViewCamera({ camera }: { camera: string | null }): null {
   const node = useNodeAt(useOptionalHierarchy()?.scene, camera);
   const actions = useOptionalViewportActions();
   const previewCamera = actions?.previewCamera;
+  const endCameraPreview = actions?.endCameraPreview;
   const resetCamera = actions?.resetCamera;
   useEffect(() => {
     if (camera === null) {
@@ -38,7 +39,9 @@ export function ViewCamera({ camera }: { camera: string | null }): null {
     }
     const problem = notACamera(camera, node);
     if (problem) logger.error(problem.message);
-    else if (node) previewCamera?.(livePathOf(node.path));
-  }, [camera, node, previewCamera, resetCamera]);
+    // A path with no Camera3D yet ends the old preview, so the view never draws a camera it no longer names.
+    if (node && !problem) previewCamera?.(livePathOf(node.path));
+    else endCameraPreview?.();
+  }, [camera, node, previewCamera, endCameraPreview, resetCamera]);
   return null;
 }

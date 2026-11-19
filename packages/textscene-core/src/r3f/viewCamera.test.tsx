@@ -88,6 +88,16 @@ describe('the camera option of the 3D view', () => {
     expect(state().camera.userData).toMatchObject({ tscnPath: 'Main/Side' });
   });
 
+  it('ends the preview for a new path that names no node yet', async () => {
+    const { state, update } = await mountedWith(null);
+    const editor = state().camera;
+    await update('Side');
+
+    await update('Crane/Lens');
+
+    expect(state().camera).toBe(editor);
+  });
+
   it('draws through a Camera3D once the load of its sub-scene brings it in', async () => {
     const { state } = await mountedWith('Crane/Lens', INSTANCING_SCENE);
 
