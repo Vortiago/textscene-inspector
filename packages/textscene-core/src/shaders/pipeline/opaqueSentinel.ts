@@ -14,6 +14,10 @@ import { NO_RAYCAST } from './noRaycast.js';
 const FIRST_OPAQUE_RENDER_ORDER = Number.MIN_SAFE_INTEGER;
 const LAST_OPAQUE_RENDER_ORDER = Number.MAX_SAFE_INTEGER;
 
+/** Whether `renderOrder` is a sentinel's, which no other rule of the opaque order may pass. */
+export const isOpaqueSentinelOrder = (renderOrder: number): boolean =>
+  renderOrder === FIRST_OPAQUE_RENDER_ORDER || renderOrder === LAST_OPAQUE_RENDER_ORDER;
+
 type Reach = (renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera) => void;
 
 /**

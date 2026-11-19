@@ -115,9 +115,9 @@ function projectDrawsPrepass(
   return renderer !== 'gl_compatibility' || !vendorDisablesDepthPrepass(glRendererOf(webgl), disabledVendors);
 }
 
-/** `used_opaque_stencil`: a prepass stencil surface turns it on (`render_forward_clustered.cpp:1166`). */
-const usesOpaqueStencil = (prepassSurfaces: readonly Surface[]): boolean =>
-  prepassSurfaces.some(({ material }) => material.stencilWrite);
+/** `used_opaque_stencil`: an opaque or prepass stencil turns it on (`render_forward_clustered.cpp:1166`). */
+const forcesPrepass = (material: THREE.Material, drawOf: PrepassDrawOf): boolean =>
+  material.stencilWrite && material.visible && (!material.transparent || drawOf(material) !== null);
 
 /** Written only by `glRendererOf`. An entry goes with its renderer. */
 // eslint-disable-next-line no-restricted-syntax -- perObject is outside the shader module, which imports only its own files (ADR-0072).
@@ -180,9 +180,9 @@ export function createDepthPrepass({
   const first = createFirstOpaqueSentinel('DepthPrepass', (webgl, scene, camera) => {
     if (colourDepthFunc === null) return;
     draws.clear();
-    const surfaces = visibleSurfaces(scene, camera, (material) => drawOf(material) !== null);
     const isDrawn = projectDrawsPrepass(renderer, webgl, { isEnabled, disabledVendors });
-    if (!isDrawn && !usesOpaqueStencil(surfaces)) return;
+    if (!isDrawn && !visibleSurfaces(scene, camera, (m) => forcesPrepass(m, drawOf)).length) return;
+    const surfaces = visibleSurfaces(scene, camera, (material) => drawOf(material) !== null);
     timed(webgl, () => {
       for (const surface of surfaces) drawPrepass(webgl, scene, camera, surface, drawOf(surface.material)!);
     });

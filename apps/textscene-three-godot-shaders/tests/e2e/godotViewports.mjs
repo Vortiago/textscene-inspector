@@ -88,7 +88,7 @@ export function godotRuns(scenes) {
     const { clock, renderingMethod, depthPrepass } = scene;
     const key =
       clock || renderingMethod || depthPrepass === false
-        ? JSON.stringify([clock, renderingMethod, depthPrepass])
+        ? JSON.stringify([clock, renderingMethod, depthPrepass === false])
         : '';
     if (!runs.has(key)) runs.set(key, { scenes: [], options: runOptions(scene) });
     runs.get(key).scenes.push(scene);

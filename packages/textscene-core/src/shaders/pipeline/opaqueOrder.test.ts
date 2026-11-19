@@ -82,6 +82,17 @@ describe('Godot’s opaque order', () => {
     expect(sortedOpaqueList(scene, godotOpaqueOrder())).toEqual([first.mesh, stencil, last.mesh]);
   });
 
+  it('keeps the last sentinel last against a stencil surface in a Group of the top order', () => {
+    const last = createLastOpaqueSentinel('Last', () => {});
+    const stencil = surface({ usesStencil: true });
+    const gizmo = new THREE.Group().add(stencil);
+    gizmo.renderOrder = Number.MAX_SAFE_INTEGER;
+    expect(sortedOpaqueList(new THREE.Scene().add(last, gizmo), godotOpaqueOrder())).toEqual([
+      stencil,
+      last.mesh,
+    ]);
+  });
+
   it('sorts as three does when no surface tests the stencil', () => {
     const shared = new THREE.MeshBasicMaterial();
     const scene = new THREE.Scene().add(

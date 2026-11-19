@@ -332,6 +332,19 @@ describe('createDepthPrepass', () => {
     expect(draws.map((draw) => draw.material)).toEqual([stencil]);
   });
 
+  it('an opaque stencil surface the prepass skips still turns it on for the others', () => {
+    const plain = new THREE.MeshBasicMaterial();
+    const stencil = new THREE.MeshBasicMaterial({ stencilWrite: true });
+    setPrepassDraw(stencil, null);
+    const { prepass, draws, reach } = prepassScene(
+      { ...FORWARD_PLUS, isEnabled: false },
+      meshOf(plain),
+      meshOf(stencil)
+    );
+    reach(prepass.first);
+    expect(draws.map((draw) => draw.material)).toEqual([plain]);
+  });
+
   it('an alpha-pass stencil surface leaves the prepass off', () => {
     const stencil = new THREE.MeshBasicMaterial({ stencilWrite: true, transparent: true });
     const plain = new THREE.MeshBasicMaterial();
