@@ -279,7 +279,8 @@ view.update({ visible: true });
 ```
 
 A change of mode replaces the canvas and loses the WebGL context of the old one. A `settled`
-promise read before a switch out of In-game rejects. `update` throws once the view is disposed.
+promise read before a switch out of In-game rejects. `update` throws once the view is disposed. A
+view that failed to mount stays failed: dispose it and mount again.
 `visible` is `true` by default. While it is `false`, the view draws only the frames a load, a settle or a capture needs: a write to a
 hidden In-game view draws until the view settles again.
 `<TscnCanvas visible={false} />` does the same in React.
