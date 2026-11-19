@@ -2,10 +2,7 @@ import { mountScene, openScene, type NodeHandle, type Scene, type View } from '@
 import { projectOf } from './mountChecks';
 import { WINDOW_320_PROJECT } from './switchView';
 
-/**
- * A red cube in the middle of the 3D view, and a red panel over the whole 2D view. No Camera3D, as
- * its gizmo lies over the cube in the editor's view.
- */
+// No Camera3D: its gizmo lies over the cube in the editor's view, and a click picks the gizmo.
 const PICK_SCENE = `[gd_scene format=3]
 
 [sub_resource type="StandardMaterial3D" id="Material_1"]

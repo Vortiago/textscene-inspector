@@ -100,7 +100,7 @@ declare global {
   }
 }
 
-/** `?checks=mount`, `?checks=held`, `?checks=switch` and `?checks=pick` run checks that mount views of their own. */
+/** Each `?checks=` value runs checks that mount views of their own. */
 if (query.get('checks') === 'mount') {
   void runMountChecks().then((results) => (window.mountChecks = results));
 } else if (query.get('checks') === 'held') {

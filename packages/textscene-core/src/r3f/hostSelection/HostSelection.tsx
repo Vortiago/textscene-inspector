@@ -1,7 +1,3 @@
-/**
- * The host's side of the view's selection: `selected` sets the node the view outlines, and
- * `onSelect` hears the node a click in the 3D editor view picks.
- */
 import { createContext, useContext, useLayoutEffect, useMemo, type ReactNode } from 'react';
 import type { NodeHandle } from '../../scene/nodeHandle.js';
 import { absolutePathOf, livePathOf } from '../../scene/nodePathWalk.js';

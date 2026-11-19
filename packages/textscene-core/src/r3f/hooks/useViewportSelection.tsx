@@ -1,8 +1,3 @@
-/**
- * The canvas mesh picker: one set of delegated pointer handlers, for the single root group in
- * `NodeDispatcher`, that drive `<SelectionContext>` and tell the host (`HostSelection`). A pointer-up
- * selects only when travel stayed within `dragThresholdPx`, so a navigation drag does not select.
- */
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { ThreeEvent } from '@react-three/fiber';
 import { useSelection } from '../contexts/SelectionContext.js';
@@ -27,7 +22,7 @@ export interface DelegatedPointerHandlers {
   onPointerUp: (e: ThreeEvent<PointerEvent>) => void;
   onPointerMove: (e: ThreeEvent<PointerEvent>) => void;
   onPointerOut: (e: ThreeEvent<PointerEvent>) => void;
-  /** A click on nothing, which clears the selection in the 3D workspace (`node_3d_editor_plugin.cpp:998-1003`). */
+  /** A click on nothing, which clears the selection in 3D (`node_3d_editor_plugin.cpp:998-1003`). */
   onPointerMissed?: () => void;
 }
 
@@ -43,7 +38,7 @@ export function useViewportSelection(options: UseViewportSelectionOptions = {}):
   const { setSelectedNodePath, hoverStore, expandedNodePaths, setExpandedNodePaths, objectPathMap } =
     useSelection();
   const host = useHostPick();
-  // The 2D workspace picks no node yet (#1819), so the host hears of a click in the 3D one only.
+  // The 2D workspace picks no node yet, so the host hears of a click in the 3D one only.
   const isHostTold = useCanvasWorkspace() === '3d';
 
   const downPosRef = useRef<{ x: number; y: number } | null>(null);
