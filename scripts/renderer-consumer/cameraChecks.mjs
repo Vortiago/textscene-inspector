@@ -36,8 +36,8 @@ export async function runCameraChecks(page, url) {
   const diagnostics = attachDiagnostics(page);
   await page.goto(url);
   await page.waitForFunction(() => window.cameraView);
-  const shots = { 'Rig/Front': await stillShot(page) };
-  shots.Above = await shotThrough(page, 'Above');
+  const shots = {};
+  for (const camera of CAMERAS) shots[camera] = await shotThrough(page, camera);
   const editor = await shotThrough(page, null);
   const refused = await refusedUpdate(page);
   await page.evaluate(() => window.mountCamera({ mode: '3D' }));

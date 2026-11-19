@@ -6,31 +6,22 @@ import type { Scene } from '../scene/openScene.js';
 import { isCamera3DType } from './cameraNodeTypes.js';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useOptionalViewportActions } from './contexts/ViewportActionsContext.js';
+import { subscribeToSceneTree } from './currentCamera.js';
 
 /** Throws for a node of another type at `path`. No node there yet passes, since a load may bring it in. */
 export function assertCameraPath(scene: Scene, path: string): void {
-  const node = scene.getNodeOrNull(path);
-  if (node && !isCamera3DType(node.type)) throw notACamera(path, node);
+  const problem = notACamera(path, scene.getNodeOrNull(path));
+  if (problem) throw problem;
 }
 
-function notACamera(path: string, node: NodeHandle): Error {
+function notACamera(path: string, node: NodeHandle | null): Error | null {
+  if (!node || isCamera3DType(node.type)) return null;
   return new Error(`expected a Camera3D at "${path}", got a ${node.type}`);
 }
 
 /** The node at `path` from the scene's root, read again after each load or write that changes the tree. */
 function useNodeAt(scene: Scene | undefined, path: string | null): NodeHandle | null {
-  const subscribe = useCallback(
-    (listener: () => void) => {
-      if (!scene) return () => {};
-      const stopViews = scene.subscribe(listener);
-      const stopTree = scene.observe(null, listener);
-      return () => {
-        stopViews();
-        stopTree();
-      };
-    },
-    [scene]
-  );
+  const subscribe = useCallback((listener: () => void) => subscribeToSceneTree(scene, listener), [scene]);
   return useSyncExternalStore(subscribe, () => (scene && path !== null ? scene.getNodeOrNull(path) : null));
 }
 
@@ -41,8 +32,12 @@ export function ViewCamera({ camera }: { camera: string | null }): null {
   const previewCamera = actions?.previewCamera;
   const resetCamera = actions?.resetCamera;
   useEffect(() => {
-    if (camera === null) resetCamera?.();
-    else if (node && !isCamera3DType(node.type)) logger.error(notACamera(camera, node).message);
+    if (camera === null) {
+      resetCamera?.();
+      return;
+    }
+    const problem = notACamera(camera, node);
+    if (problem) logger.error(problem.message);
     else if (node) previewCamera?.(livePathOf(node.path));
   }, [camera, node, previewCamera, resetCamera]);
   return null;

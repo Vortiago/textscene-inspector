@@ -48,7 +48,7 @@ declare global {
     /** The view the runner moves between cameras, mounted in the 3D mode through `Rig/Front`. */
     cameraView?: View;
     /** Disposes the view in the element, and mounts a new view of a new scene with `options`. */
-    mountCamera?: (options: ViewOptions) => Promise<void>;
+    mountCamera?: (options: ViewOptions) => void;
     /** Disposes the view in the element, and mounts the game's view of a new scene through `camera`. */
     mountGame?: (camera: string) => Promise<void>;
   }
@@ -57,7 +57,7 @@ declare global {
 /** Mounts the moved view in `element`, and gives the runner the views it compares. */
 export function exposeCameraChecks(element: HTMLElement): void {
   window.cameraView = mountScene(element, openCameraScene(), { mode: '3D', camera: 'Rig/Front' });
-  const remount = async (options: ViewOptions, scene = openCameraScene()) => {
+  const remount = (options: ViewOptions, scene = openCameraScene()) => {
     window.cameraView?.dispose();
     window.cameraView = mountScene(element, scene, options);
   };
@@ -65,7 +65,7 @@ export function exposeCameraChecks(element: HTMLElement): void {
   window.mountGame = async (camera) => {
     const scene = openCameraScene();
     await scene.getNode(camera).call('make_current');
-    await remount({ mode: 'in-game' }, scene);
+    remount({ mode: 'in-game' }, scene);
     await window.cameraView?.settled;
   };
 }
