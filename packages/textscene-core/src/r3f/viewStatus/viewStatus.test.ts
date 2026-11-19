@@ -27,6 +27,18 @@ function drawFrame(status: ReturnType<typeof createViewStatus>, revision = 1) {
 }
 
 describe('the settled signal of a view', () => {
+  it('resolves a wait from before a view was replaced once the next view settles', async () => {
+    const status = createViewStatus();
+    const scene = sceneAt(() => 1);
+    const detachFirst = status.attach(scene)!;
+    const settled = status.whenSettled();
+    detachFirst();
+    status.attach(scene);
+    expect(status.settled()).toBeNull();
+    drawFrame(status);
+    await expect(settled).resolves.toEqual(FACTS);
+  });
+
   it('is pending with no view attached, though no view waits on it', () => {
     const status = createViewStatus();
     expect(status.settled()).toBeNull();
