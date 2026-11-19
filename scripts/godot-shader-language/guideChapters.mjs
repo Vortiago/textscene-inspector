@@ -903,6 +903,18 @@ const SPATIAL_CHAPTER = {
       tsl: "`gl_FragDepth` as 1 minus `DEPTH`, since GL's depth is not reversed",
     },
     {
+      heading: '`FOG` and `fog_disabled`',
+      rows: (row) => row.id === 'spatial.fragment.FOG' || row.id === 'spatial render_mode fog_disabled',
+      what: "`FOG` is the fog's colour and amount, which starts at `(0, 0, 0, 1)` (`scene_forward_clustered.glsl:1240`). A shader that writes `FOG` replaces the environment's fog with it. The template premultiplies the colour by the amount and keeps 1 minus the amount (`scene_forward_clustered.glsl:1524-1525`), packs both into half floats, and gives out `colour × (1 − FOG.a) + FOG.rgb × FOG.a` (`scene_forward_clustered.glsl:2987-2989`). So a write of `FOG.rgb` alone covers the surface with that colour. A premultiplied alpha scales the colour after the fog (`scene_forward_clustered.glsl:2991-2993`). `fog_disabled` leaves out the fog and the shader's `FOG` (`scene_forward_clustered.glsl:1486, 2987`). Godot's gl_compatibility starts `FOG` at `(0, 0, 0, 0)` and mixes the colour in without the premultiply (`drivers/gles3/shaders/scene.glsl:2029, 2553`). The package draws a gl_compatibility project with Forward+'s colour output (#2035).",
+      tsl: "the template's fog code with `CUSTOM_FOG_USED` or `FOG_DISABLED` defined",
+    },
+    {
+      heading: '`RADIANCE` and `IRRADIANCE`',
+      rows: (row) => row.id === 'spatial.fragment.RADIANCE' || row.id === 'spatial.fragment.IRRADIANCE',
+      what: "`RADIANCE` and `IRRADIANCE` are colours a shader writes, which start at `(0, 0, 0, 0)` (`scene_forward_clustered.glsl:1241-1246`). The lit template mixes the sky's reflection towards `RADIANCE.rgb` by `RADIANCE.a`, and the ambient light towards `IRRADIANCE.rgb` by `IRRADIANCE.a` (`scene_forward_clustered.glsl:1735-1737, 1760-1762`). An unshaded surface reads neither, so on it a write changes nothing. The lit template is slice T15.",
+      tsl: "the template's `custom_radiance` and `custom_irradiance`",
+    },
+    {
       heading: 'The fragment and the view in `fragment()`',
       rows: (row) =>
         ['VERTEX', 'LIGHT_VERTEX', 'FRAGCOORD', 'FRONT_FACING', 'VIEW', 'SCREEN_UV']

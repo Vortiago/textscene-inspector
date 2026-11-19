@@ -651,6 +651,45 @@ const COMPATIBILITY_DEPTH_SCENES = [
   })(),
 ];
 
+/** The quad's colour, which the fog scenes cover. */
+const FOGGED_ALBEDO = 'ALBEDO = vec3(0.2, 0.5, UV.y);';
+
+/** A fog scene: the quad in front of the orange quad, so a write that leaks onto another surface shows. */
+const fogScene = (name, modes, fog, rows = ['spatial.fragment.FOG']) =>
+  modeScene(
+    name,
+    modes,
+    fragmentOf(FOGGED_ALBEDO, fog),
+    {
+      object: { position: [-0.1, 0.1, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+      others: [{ ...ORANGE_IN_FRONT, object: { ...ORANGE_IN_FRONT.object, position: [0.25, -0.2, -0.3] } }],
+    },
+    ['spatial.fragment.UV', ...rows]
+  );
+
+/** A shader's own FOG, RADIANCE and IRRADIANCE on an unshaded surface, against Godot. */
+const FOG_SCENES = [
+  // The fog's amount runs from 0 at the left edge to 1 at the right.
+  fogScene('spatial-fog', [], 'FOG = vec4(0.9, 0.2, 0.1, UV.x);'),
+  // FOG starts at (0, 0, 0, 1), so a write of its colour alone covers the whole quad.
+  fogScene('spatial-fog-colour', [], 'FOG.rgb = vec3(0.1, 0.6, 0.3) * UV.y;'),
+  fogScene('spatial-fog-disabled', ['fog_disabled'], 'FOG = vec4(0.9, 0.2, 0.1, 1.0);'),
+  // The fog mixes in before the premultiplied alpha scales the colour.
+  alphaScene(
+    'spatial-fog-premul-alpha',
+    ['blend_premul_alpha'],
+    ['FOG = vec4(0.9, 0.2, 0.1, UV.y);'],
+    ['spatial.fragment.FOG']
+  ),
+  // An unshaded surface reads neither, so the quad shows its albedo alone.
+  fogScene(
+    'spatial-radiance-irradiance',
+    [],
+    'RADIANCE = vec4(1.0, 0.0, 0.0, 1.0);\n\tIRRADIANCE = vec4(0.0, 1.0, 0.0, 1.0);',
+    ['spatial.fragment.RADIANCE', 'spatial.fragment.IRRADIANCE']
+  ),
+];
+
 /** A shader that moves the sphere in `vertex()` under `modes`, and shows its normal. */
 const vertexSpaceScene = (name, modes, vertex, rows) => ({
   name,
@@ -835,6 +874,7 @@ export const MESH_SCENES = [
   ...ALPHA_SCENES,
   ...DEPTH_SCENES,
   ...COMPATIBILITY_DEPTH_SCENES,
+  ...FOG_SCENES,
 ];
 
 /** Scenes whose program the GPU refuses: each must reach the material as a fault with this log. */

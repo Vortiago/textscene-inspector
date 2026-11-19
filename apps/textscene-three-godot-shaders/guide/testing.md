@@ -67,20 +67,21 @@ The instruction count says how much of the language is transpiled, not how many 
 | docs | 37 | 37 | spatial, canvas_item, sky |
 | scenes | 2 | 2 | spatial, sky |
 
-**37 of 176 real shaders transpile.** Godot rejects the other 192. Each shader ends in one of three states: transpiled, refused as Godot refuses with the same message and line, or not transpiled yet, where the transpiler names the open row and its owner. Any other outcome fails the test. A shader never moves back from transpiled or from refused as Godot refuses, so the shaders not transpiled yet only grow fewer.
+**38 of 176 real shaders transpile.** Godot rejects the other 192. Each shader ends in one of three states: transpiled, refused as Godot refuses with the same message and line, or not transpiled yet, where the transpiler names the open row and its owner. Any other outcome fails the test. A shader never moves back from transpiled or from refused as Godot refuses, so the shaders not transpiled yet only grow fewer.
 
-The printed tree of each shader the transpiler accepts is a checked-in file under `tests/corpus/trees/`, so a review shows how a change moves a real shader's tree. It holds 37 files. `vitest -u` writes a moved tree, and a tree file whose shader the transpiler no longer accepts fails the test. The generated GLSL gets no file: three.js writes that text, and each upgrade of three.js would change every file.
+The printed tree of each shader the transpiler accepts is a checked-in file under `tests/corpus/trees/`, so a review shows how a change moves a real shader's tree. It holds 38 files. `vitest -u` writes a moved tree, and a tree file whose shader the transpiler no longer accepts fails the test. The generated GLSL gets no file: three.js writes that text, and each upgrade of three.js would change every file.
 
 | State | Shaders |
 | --- | --- |
 | refused as Godot refuses | 192 |
 | not transpiled yet (#1453) | 80 |
-| transpiled | 37 |
+| transpiled | 38 |
 | not transpiled yet (#686) | 24 |
 | not transpiled yet (#1524) | 17 |
 | not transpiled yet (#1726) | 10 |
-| not transpiled yet (#1831) | 5 |
+| not transpiled yet (#1831) | 3 |
 | not transpiled yet (#1783) | 2 |
+| not transpiled yet (#1610) | 1 |
 | not transpiled yet (#1792) | 1 |
 
 The mismatches below are known, each with its owner. The list only shrinks, as for the random programs.
@@ -89,7 +90,7 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | --- | --- | --- |
 
 
-<details><summary>The 139 shaders not transpiled yet, with their owners</summary>
+<details><summary>The 138 shaders not transpiled yet, with their owners</summary>
 
 | Shader | Owner |
 | --- | --- |
@@ -219,8 +220,7 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `demos/3d/antialiasing/anti_aliasing.tscn#1` | #1453 |
 | `demos/3d/volumetric_fog/volumetric_fog.tscn#0` | #1783 |
 | `demos/xr/openxr_hand_tracking_demo/shaders/highlight_shader.tres#0` | #1453 |
-| `docs/tutorials/shaders/advanced_postprocessing.rst#0` | #1831 |
-| `docs/tutorials/shaders/advanced_postprocessing.rst#7` | #1831 |
+| `docs/tutorials/shaders/advanced_postprocessing.rst#7` | #1610 |
 | `docs/tutorials/shaders/custom_postprocessing.rst#0` | #1524 |
 | `docs/tutorials/shaders/custom_postprocessing.rst#1` | #1524 |
 | `docs/tutorials/shaders/custom_postprocessing.rst#2` | #1524 |
