@@ -66,7 +66,7 @@ window/stretch/mode="canvas_items"
 viewport/transparent_background=true
 `;
 
-function projectOf(project: string): ResourceProvider {
+export function projectOf(project: string): ResourceProvider {
   return { loadResource: async (path) => (path === 'res://project.godot' ? project : null) };
 }
 

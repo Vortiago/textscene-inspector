@@ -279,7 +279,7 @@ view.update({ visible: true });
 ```
 
 A change of mode replaces the canvas and loses the WebGL context of the old one. `visible` is
-`true` by default. While it is `false`, the view draws no frame and runs no frame step.
+`true` by default. While it is `false`, the view draws only the frames a load or a capture needs.
 `<TscnCanvas visible={false} />` does the same in React.
 
 ### Save a PNG from headless Chromium
@@ -376,7 +376,7 @@ The package exports these names.
 - `Variant` and `SceneValue` (types): what `variant` gives, and what `get` and `set` take.
 - `TscnCanvas`: the view. Its props are `scene` (a `Scene`, optional inside
   `<TscnSceneProvider>`), `mode` (`'in-game'`, `'3D'` or `'2D'`, default `'3D'`), `visible` (`false`
-  draws no frame) and `className`.
+  stops the frames) and `className`.
 - `TscnSceneProvider`: mounts what the view reads. Give it `scene` (a `Scene`), or `source` (the
   text of a `.tscn` scene), `provider` (a `ResourceProvider`) and `rootScenePath` (the `res://` path
   the scene opens under, optional). It takes `children`. A new `provider` starts a new resource

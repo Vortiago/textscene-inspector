@@ -130,7 +130,7 @@ export interface TscnCanvasProps {
   scene?: Scene;
   /** `3D` by default. A change replaces the stage, so one canvas is live. */
   mode?: TscnCanvasMode;
-  /** `false` draws no frame and runs no frame step. Without it, the view follows its host, or shows. */
+  /** `false` draws only the frames a load or a capture needs. Without it, the view follows its host. */
   visible?: boolean;
   /** The class of the element the view fills. */
   className?: string;

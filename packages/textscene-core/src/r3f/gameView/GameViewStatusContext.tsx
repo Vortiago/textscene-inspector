@@ -36,7 +36,7 @@ export function useGameViewSettled(): GameViewSettled | null {
 }
 
 /** A capture reads the full window, so the view draws its target at full size until then. */
-export function useHoldsFullWindow(): boolean {
+export function useIsCapturePending(): boolean {
   return useStatusValue((status) => status.isCapturePending(), false);
 }
 

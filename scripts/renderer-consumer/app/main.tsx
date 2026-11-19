@@ -1,13 +1,7 @@
 import { createRoot } from 'react-dom/client';
-import {
-  TscnCanvas,
-  TscnSceneProvider,
-  openScene,
-  variant,
-  type ResourceProvider,
-} from '@textscene/renderer';
-import { runMountChecks, type MountCheckResults } from './mountChecks';
-import { mountSwitchView } from './switchView';
+import { TscnCanvas, TscnSceneProvider, openScene, variant } from '@textscene/renderer';
+import { projectOf, runMountChecks, type MountCheckResults } from './mountChecks';
+import { WINDOW_320_PROJECT, mountSwitchView } from './switchView';
 
 const FIXTURE_SCENE = `[gd_scene format=3]
 
@@ -54,16 +48,7 @@ offset_bottom = 210.0
 color = Color(1, 0, 0, 1)
 `;
 
-/** The game window matches the element, so the In-game mode draws no bars around it. */
-const PROJECT = `[display]
-
-window/size/viewport_width=320
-window/size/viewport_height=240
-`;
-
-const projectOnly: ResourceProvider = {
-  loadResource: async (path) => (path === 'res://project.godot' ? PROJECT : null),
-};
+const projectOnly = projectOf(WINDOW_320_PROJECT);
 
 const gameScene = openScene({ source: FIXTURE_SCENE, provider: projectOnly });
 const query = new URLSearchParams(location.search);

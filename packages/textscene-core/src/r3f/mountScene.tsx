@@ -10,7 +10,7 @@ import { createGameViewStatus, type GameViewSettled } from './gameView/gameViewS
 export interface ViewOptions {
   /** `in-game` by default. */
   mode?: TscnCanvasMode;
-  /** `false` draws no frame and runs no frame step. `captureImage` still answers. `true` by default. */
+  /** `false` draws only the frames a load or a capture needs. `true` by default. */
   visible?: boolean;
 }
 
@@ -74,8 +74,7 @@ export function mountScene(element: HTMLElement, scene: Scene, options: ViewOpti
 
 // A key set to `undefined` keeps its value, as if `given` left it out.
 function withGiven(options: Required<ViewOptions>, given: ViewOptions): Required<ViewOptions> {
-  const values = Object.entries(given).filter(([, value]) => value !== undefined);
-  return { ...options, ...Object.fromEntries(values) };
+  return { mode: given.mode ?? options.mode, visible: given.visible ?? options.visible };
 }
 
 // A page holds few live WebGL contexts, and R3F releases its own a timer after the unmount.

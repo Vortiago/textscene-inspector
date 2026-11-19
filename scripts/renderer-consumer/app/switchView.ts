@@ -1,4 +1,5 @@
-import { mountScene, openScene, variant, type ResourceProvider, type View } from '@textscene/renderer';
+import { mountScene, openScene, variant, type View } from '@textscene/renderer';
+import { projectOf } from './mountChecks';
 
 /** A cube that the In-game and 3D modes draw, and a red bar left of it that the 2D mode draws. */
 const SWITCH_SCENE = `[gd_scene format=3]
@@ -28,15 +29,12 @@ offset_bottom = 232.0
 color = Color(1, 0, 0, 1)
 `;
 
-const PROJECT = `[display]
+/** The game window matches the element, so the In-game mode draws no bars around it. */
+export const WINDOW_320_PROJECT = `[display]
 
 window/size/viewport_width=320
 window/size/viewport_height=240
 `;
-
-const provider: ResourceProvider = {
-  loadResource: async (path) => (path === 'res://project.godot' ? PROJECT : null),
-};
 
 export interface SwitchView {
   view: View;
@@ -52,7 +50,7 @@ declare global {
 }
 
 export function mountSwitchView(element: HTMLElement): SwitchView {
-  const scene = openScene({ source: SWITCH_SCENE, provider });
+  const scene = openScene({ source: SWITCH_SCENE, provider: projectOf(WINDOW_320_PROJECT) });
   return {
     view: mountScene(element, scene),
     shrinkCube: () => scene.getNode('Cube').set('scale', variant('Vector3(0.5, 0.5, 0.5)')),

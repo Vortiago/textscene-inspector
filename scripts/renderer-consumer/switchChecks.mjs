@@ -1,6 +1,6 @@
 import { attachDiagnostics, loggedErrors } from '../visual/previewServer.mjs';
 import { pollInk } from './pollInk.mjs';
-import { INK_FLOOR, INK_FLOOR_2D, SHRUNK_INK_DROP } from './switchFailures.mjs';
+import { CUBE_INK_FLOOR, BAR_INK_FLOOR, SHRUNK_INK_DROP } from './switchFailures.mjs';
 
 /* global document, window */
 // These exist only in the browser that runs the `page.evaluate` calls.
@@ -42,7 +42,7 @@ function captureWhileHidden(page) {
 
 /** The ink before a write to a hidden view, while it stays hidden, and once it shows again. */
 async function writeWhileHidden(page) {
-  const before = await pollInk(page, (drawn) => drawn >= INK_FLOOR);
+  const before = await pollInk(page, (drawn) => drawn >= CUBE_INK_FLOOR);
   await page.evaluate(() => {
     window.switchView.view.update({ visible: false });
     return window.switchView.shrinkCube();
@@ -59,11 +59,11 @@ export async function runSwitchChecks(page, url) {
   await page.goto(url);
   await page.waitForFunction(() => window.switchView);
   await page.evaluate(() => window.switchView.view.settled);
-  const inGameInk = await pollInk(page, (drawn) => drawn >= INK_FLOOR);
+  const inGameInk = await pollInk(page, (drawn) => drawn >= CUBE_INK_FLOOR);
   const hiddenCapture = await captureWhileHidden(page);
-  const editor3D = await switchTo(page, '3D', INK_FLOOR);
+  const editor3D = await switchTo(page, '3D', CUBE_INK_FLOOR);
   const hiddenWrite = await writeWhileHidden(page);
-  const editor2D = await switchTo(page, '2D', INK_FLOOR_2D);
+  const editor2D = await switchTo(page, '2D', BAR_INK_FLOOR);
   await page.evaluate(() => window.switchView.view.dispose());
   return {
     results: { inGameInk, hiddenCapture, modes: { '3D': editor3D, '2D': editor2D }, hiddenWrite },
