@@ -2469,9 +2469,101 @@ void fragment() {
 | --- | --- |
 | <img src="showcase/spatial-cull-front-compatibility-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-cull-front-compatibility-three.png" width="256" alt="Transpilation"> |
 
+## Showcase `spatial-fog`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+void fragment() {
+	ALBEDO = vec3(0.2, 0.5, UV.y);
+	FOG = vec4(0.9, 0.2, 0.1, UV.x);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-fog-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-fog-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-fog-colour`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+void fragment() {
+	ALBEDO = vec3(0.2, 0.5, UV.y);
+	FOG.rgb = vec3(0.1, 0.6, 0.3) * UV.y;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-fog-colour-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-fog-colour-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-fog-disabled`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, fog_disabled;
+
+void fragment() {
+	ALBEDO = vec3(0.2, 0.5, UV.y);
+	FOG = vec4(0.9, 0.2, 0.1, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-fog-disabled-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-fog-disabled-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-fog-premul-alpha`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, blend_premul_alpha;
+
+void fragment() {
+	ALBEDO = vec3(UV * 0.4, 0.3);
+	ALPHA = UV.x;
+	FOG = vec4(0.9, 0.2, 0.1, UV.y);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-fog-premul-alpha-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-fog-premul-alpha-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-radiance-irradiance`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+void fragment() {
+	ALBEDO = vec3(0.2, 0.5, UV.y);
+	RADIANCE = vec4(1.0, 0.0, 0.0, 1.0);
+	IRRADIANCE = vec4(0.0, 1.0, 0.0, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-radiance-irradiance-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-radiance-irradiance-three.png" width="256" alt="Transpilation"> |
+
 ## Render mode `unshaded`
 
-`unshaded` defines `MODE_UNSHADED`, so the template writes `ALBEDO` and `ALPHA` to the frame with no light, fog or ambient light (`scene_forward_clustered.glsl:2978-2981`).
+`unshaded` defines `MODE_UNSHADED`, so the template writes `ALBEDO` and `ALPHA` to the frame with no light or ambient light (`scene_forward_clustered.glsl:2978-2981`). The fog still mixes in after it (`scene_forward_clustered.glsl:2987-2989`).
 
 The transpiler emits `the defines of the template variant`. Rows: `spatial render_mode unshaded`. Godot source: `servers/rendering/shader_types.cpp:239`.
 
@@ -2627,6 +2719,24 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 `DEPTH` is the fragment's depth, which starts at `FRAGCOORD.z`: Godot's depth, 1 at the near plane and 0 at the far plane (`scene_shader_forward_clustered.cpp:770`). The depth prepass draws a shared surface with Godot's default material, which writes the rasterised depth, and the opaque colour pass tests EQUAL against it. So an opaque shared shader shows only where `DEPTH` equals the rasterised depth. A shader with its own depth draw writes its own `DEPTH` in the prepass. The section on the depth prepass names the shared surfaces. On gl_compatibility every shader has its own depth draw.
 
 The transpiler emits `gl_FragDepth` as 1 minus `DEPTH`, since GL's depth is not reversed. Rows: `spatial.fragment.DEPTH`. Godot source: `servers/rendering/shader_types.cpp:169`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `FOG` and `fog_disabled`
+
+`FOG` is the fog's colour and amount, which starts at `(0, 0, 0, 1)` (`scene_forward_clustered.glsl:1240`). A shader that writes `FOG` replaces the environment's fog with it. The template premultiplies the colour by the amount and keeps 1 minus the amount (`scene_forward_clustered.glsl:1524-1525`), packs both into half floats, and gives out `colour × (1 − FOG.a) + FOG.rgb × FOG.a` (`scene_forward_clustered.glsl:2987-2989`). So a write of `FOG.rgb` alone covers the surface with that colour. A premultiplied alpha scales the colour after the fog (`scene_forward_clustered.glsl:2991-2993`). `fog_disabled` leaves out the fog and the shader's `FOG` (`scene_forward_clustered.glsl:1486, 2987`). Godot's Mobile and gl_compatibility start `FOG` at `(0, 0, 0, 0)` and mix the colour in without the premultiply (`scene_forward_mobile.glsl:1158, 2273`, `drivers/gles3/shaders/scene.glsl:2029, 2553`). The package draws a Mobile or gl_compatibility project with Forward+'s colour output (#2035).
+
+The transpiler emits the template's fog code with `CUSTOM_FOG_USED` or `FOG_DISABLED` defined. Rows: `spatial.fragment.FOG`, `spatial render_mode fog_disabled`. Godot source: `servers/rendering/shader_types.cpp:191`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `RADIANCE` and `IRRADIANCE`
+
+`RADIANCE` and `IRRADIANCE` are colours a shader writes, which start at `(0, 0, 0, 0)` (`scene_forward_clustered.glsl:1241-1246`). The lit template mixes the sky's reflection towards `RADIANCE.rgb` by `RADIANCE.a`, and the ambient light towards `IRRADIANCE.rgb` by `IRRADIANCE.a` (`scene_forward_clustered.glsl:1735-1737, 1760-1762`). An unshaded surface reads neither, so on it a write changes nothing. The lit template is #1453.
+
+The transpiler emits the template's `custom_radiance` and `custom_irradiance`. Rows: `spatial.fragment.RADIANCE`, `spatial.fragment.IRRADIANCE`. Godot source: `servers/rendering/shader_types.cpp:192`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 

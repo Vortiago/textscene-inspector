@@ -766,7 +766,7 @@ const SPATIAL_CHAPTER = {
     {
       heading: 'Render mode `unshaded`',
       rows: (row) => row.id === 'spatial render_mode unshaded',
-      what: '`unshaded` defines `MODE_UNSHADED`, so the template writes `ALBEDO` and `ALPHA` to the frame with no light, fog or ambient light (`scene_forward_clustered.glsl:2978-2981`).',
+      what: '`unshaded` defines `MODE_UNSHADED`, so the template writes `ALBEDO` and `ALPHA` to the frame with no light or ambient light (`scene_forward_clustered.glsl:2978-2981`). The fog still mixes in after it (`scene_forward_clustered.glsl:2987-2989`).',
       tsl: 'the defines of the template variant',
     },
     {
@@ -901,6 +901,18 @@ const SPATIAL_CHAPTER = {
       rows: (row) => row.id === 'spatial.fragment.DEPTH',
       what: "`DEPTH` is the fragment's depth, which starts at `FRAGCOORD.z`: Godot's depth, 1 at the near plane and 0 at the far plane (`scene_shader_forward_clustered.cpp:770`). The depth prepass draws a shared surface with Godot's default material, which writes the rasterised depth, and the opaque colour pass tests EQUAL against it. So an opaque shared shader shows only where `DEPTH` equals the rasterised depth. A shader with its own depth draw writes its own `DEPTH` in the prepass. The section on the depth prepass names the shared surfaces. On gl_compatibility every shader has its own depth draw.",
       tsl: "`gl_FragDepth` as 1 minus `DEPTH`, since GL's depth is not reversed",
+    },
+    {
+      heading: '`FOG` and `fog_disabled`',
+      rows: (row) => ['spatial.fragment.FOG', 'spatial render_mode fog_disabled'].includes(row.id),
+      what: "`FOG` is the fog's colour and amount, which starts at `(0, 0, 0, 1)` (`scene_forward_clustered.glsl:1240`). A shader that writes `FOG` replaces the environment's fog with it. The template premultiplies the colour by the amount and keeps 1 minus the amount (`scene_forward_clustered.glsl:1524-1525`), packs both into half floats, and gives out `colour × (1 − FOG.a) + FOG.rgb × FOG.a` (`scene_forward_clustered.glsl:2987-2989`). So a write of `FOG.rgb` alone covers the surface with that colour. A premultiplied alpha scales the colour after the fog (`scene_forward_clustered.glsl:2991-2993`). `fog_disabled` leaves out the fog and the shader's `FOG` (`scene_forward_clustered.glsl:1486, 2987`). Godot's Mobile and gl_compatibility start `FOG` at `(0, 0, 0, 0)` and mix the colour in without the premultiply (`scene_forward_mobile.glsl:1158, 2273`, `drivers/gles3/shaders/scene.glsl:2029, 2553`). The package draws a Mobile or gl_compatibility project with Forward+'s colour output (#2035).",
+      tsl: "the template's fog code with `CUSTOM_FOG_USED` or `FOG_DISABLED` defined",
+    },
+    {
+      heading: '`RADIANCE` and `IRRADIANCE`',
+      rows: (row) => ['spatial.fragment.RADIANCE', 'spatial.fragment.IRRADIANCE'].includes(row.id),
+      what: "`RADIANCE` and `IRRADIANCE` are colours a shader writes, which start at `(0, 0, 0, 0)` (`scene_forward_clustered.glsl:1241-1246`). The lit template mixes the sky's reflection towards `RADIANCE.rgb` by `RADIANCE.a`, and the ambient light towards `IRRADIANCE.rgb` by `IRRADIANCE.a` (`scene_forward_clustered.glsl:1735-1737, 1760-1762`). An unshaded surface reads neither, so on it a write changes nothing. The lit template is #1453.",
+      tsl: "the template's `custom_radiance` and `custom_irradiance`",
     },
     {
       heading: 'The fragment and the view in `fragment()`',
