@@ -8,6 +8,11 @@ import { isDrawingPreview } from './EditorControlsHandle.js';
 import { useViewportMode } from './contexts/ViewportModeContext.js';
 import { frameSceneBounds, type OrbitLike } from './frameSceneBounds.js';
 
+/** An orthographic zoom moves no pose. */
+function zoomOf(camera: THREE.Camera): number {
+  return (camera as THREE.PerspectiveCamera | THREE.OrthographicCamera).zoom ?? 1;
+}
+
 /**
  * Frames the scene on load when `frameOnOpen` is on, with no camera preview. It is
  * off by default, since Godot's editor opens at a fixed orbit and leaves framing
@@ -20,31 +25,44 @@ export function CameraFit() {
   const get = useThree((s) => s.get);
   const rootKey = hierarchy?.sceneGraph?.rootScene ?? '';
   const hasScene = !!hierarchy?.sceneGraph;
+  const scene = hierarchy?.scene;
 
   const status = useViewStatus();
 
   useEffect(() => {
     if (!frameOnOpen || !hasScene) return undefined;
 
-    // The settle-fit stands down when the camera has left this position, so
-    // the user's own orbit wins.
-    let lastSet: THREE.Vector3 | null = null;
+    // A settle-fit stands down once the camera has left this pose, so the user's own orbit, pan or zoom wins.
+    let lastSet: { pose: THREE.Matrix4; zoom: number } | null = null;
     const fit = () => {
       const state = get();
       // A preview draws through the authored Camera3D, which framing would move.
       if (isDrawingPreview(state)) return;
       frameSceneBounds(state.scene, state.camera, state.controls as OrbitLike | null);
-      lastSet = state.camera.position.clone();
+      state.camera.updateMatrixWorld();
+      lastSet = { pose: state.camera.matrixWorld.clone(), zoom: zoomOf(state.camera) };
+    };
+    const hasCameraMoved = () => {
+      const { camera } = get();
+      camera.updateMatrixWorld();
+      return (
+        lastSet !== null && (!camera.matrixWorld.equals(lastSet.pose) || zoomOf(camera) !== lastSet.zoom)
+      );
     };
 
     // The visual harness clicks for a `-selected` capture only after the last timer.
     const timers = [150, 500, 1100].map((delay) => setTimeout(fit, delay));
 
-    // Fits on each settle of the view, not once: the scene can settle before an instanced `.glb` loads.
+    // The opened text fits on each settle, as one can precede an instanced `.glb` load. A write never does.
+    let openedRevision: number | null = null;
     let wasSettled = false;
     const fitOnSettle = () => {
       const isSettled = status?.settled() != null;
-      if (isSettled && !wasSettled && !(lastSet && !get().camera.position.equals(lastSet))) fit();
+      if (isSettled && !wasSettled) {
+        const revision = scene?.revision() ?? 0;
+        openedRevision ??= revision;
+        if (revision === openedRevision && !hasCameraMoved()) fit();
+      }
       wasSettled = isSettled;
     };
     const unsubscribe = status?.subscribe(fitOnSettle);
@@ -53,7 +71,7 @@ export function CameraFit() {
       timers.forEach(clearTimeout);
       unsubscribe?.();
     };
-  }, [rootKey, hasScene, frameOnOpen, get, status]);
+  }, [rootKey, hasScene, frameOnOpen, get, status, scene]);
 
   return null;
 }

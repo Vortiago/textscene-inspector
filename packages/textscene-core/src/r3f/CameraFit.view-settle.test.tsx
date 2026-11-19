@@ -7,6 +7,7 @@ import { ViewportModeProvider } from './contexts/ViewportModeContext';
 import { ViewStatusProvider } from './viewStatus/ViewStatusContext';
 import { createViewStatus, type DrawnFrame, type ViewStatus } from './viewStatus/viewStatus';
 import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
+import type { Scene } from '../scene/openScene';
 
 vi.mock('./frameSceneBounds.js', () => ({
   frameSceneBounds: vi.fn(),
@@ -28,10 +29,10 @@ function CameraProbe({ onCamera }: { onCamera: (camera: THREE.Camera) => void })
 
 const FACTS = { scriptedNodeCount: 0, hasCurrentCamera: false };
 
-/** A frame of revision 1, with one resource still loading or none. */
-function frameDrawn(status: ViewStatus, resources: number): void {
+/** A frame of `revision`, with one resource still loading or none. */
+function frameDrawn(status: ViewStatus, resources: number, revision = 1): void {
   const frame: DrawnFrame = {
-    revision: 1,
+    revision,
     isFullSize: true,
     work: { resources, textures: 0, fonts: 0 },
     facts: FACTS,
@@ -42,11 +43,19 @@ function frameDrawn(status: ViewStatus, resources: number): void {
 /** A view that settled once, then drew a frame with a `.glb` load pending, with every fit timer run out. */
 async function mountWithLateLoad() {
   const status = createViewStatus();
-  status.attach({ revision: () => 1, subscribe: () => () => {} });
+  let revision = 1;
+  const scene = { revision: () => revision, subscribe: () => () => {} };
+  status.attach(scene);
   let camera: THREE.Camera | null = null;
   await ReactThreeTestRenderer.create(
     <ViewStatusProvider status={status}>
-      <HierarchyProvider value={{ sceneGraph: createSceneGraphFromTscnScene({ nodes: [] }), panelId: 'p' }}>
+      <HierarchyProvider
+        value={{
+          sceneGraph: createSceneGraphFromTscnScene({ nodes: [] }),
+          scene: scene as unknown as Scene,
+          panelId: 'p',
+        }}
+      >
         <ViewportModeProvider initialFrameOnOpen={true}>
           <CameraFit />
           <CameraProbe onCamera={(c) => (camera = c)} />
@@ -59,7 +68,13 @@ async function mountWithLateLoad() {
   vi.advanceTimersByTime(PAST_LAST_TIMER_MS);
   frameSceneBoundsMock.mockClear();
   if (!camera) throw new Error('expected the probe to report the render camera, got none');
-  return { settle: () => frameDrawn(status, 0), camera: camera as THREE.Camera };
+  // A frame from before the write is pending, and the frame that draws it settles.
+  const settleWrite = () => {
+    revision++;
+    frameDrawn(status, 0, revision - 1);
+    frameDrawn(status, 0, revision);
+  };
+  return { settle: () => frameDrawn(status, 0), settleWrite, camera: camera as THREE.Camera };
 }
 
 describe('CameraFit after the view settles', () => {
@@ -85,6 +100,34 @@ describe('CameraFit after the view settles', () => {
     camera.position.x += 1;
 
     settle();
+
+    expect(frameSceneBoundsMock).not.toHaveBeenCalled();
+  });
+
+  it('leaves a camera the user has turned in place since the last fit', async () => {
+    const { settle, camera } = await mountWithLateLoad();
+    camera.rotateY(0.1);
+
+    settle();
+
+    expect(frameSceneBoundsMock).not.toHaveBeenCalled();
+  });
+
+  it('leaves a camera the user has zoomed since the last fit', async () => {
+    const { settle, camera } = await mountWithLateLoad();
+    (camera as THREE.PerspectiveCamera).zoom = 2;
+
+    settle();
+
+    expect(frameSceneBoundsMock).not.toHaveBeenCalled();
+  });
+
+  it('does not frame again when a property write settles the view', async () => {
+    const { settle, settleWrite } = await mountWithLateLoad();
+    settle();
+    frameSceneBoundsMock.mockClear();
+
+    settleWrite();
 
     expect(frameSceneBoundsMock).not.toHaveBeenCalled();
   });
