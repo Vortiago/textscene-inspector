@@ -5,7 +5,7 @@ import { CubeArrayReadNode, type CubeArrayLevel } from './cubeArray.js';
 import type { InstructionRow } from './instructionTable.generated.js';
 import { gathered } from './textureGather.js';
 import { levelCountOf, levelOfDetail } from './textureQueries.js';
-import { cubeArraySize, SizeNode } from './textureSize.js';
+import { arrayLayerSize, cubeArraySize, isArrayLayerRead, SizeNode } from './textureSize.js';
 import { TextureBuiltNode } from './textureBuiltNode.js';
 import { roundedLayer } from './textureLayer.js';
 import { swizzles } from './compositeParts.js';
@@ -84,10 +84,11 @@ const CALLS: Readonly<Record<string, TextureCall>> = {
 /** The calls that read no texel, over the texture and the operand after it. */
 const QUERIES: Readonly<Record<string, (texture: TextureNode, operand: Node, row: InstructionRow) => Node>> =
   {
-    textureSize: (texture, level, row) =>
-      textureKindOf(row.args![0]!) === 'cubes'
-        ? cubeArraySize(texture, level)
-        : (new SizeNode(texture, level, row.returns!) as unknown as Node),
+    textureSize: (texture, level, row) => {
+      if (textureKindOf(row.args![0]!) === 'cubes') return cubeArraySize(texture, level);
+      if (isArrayLayerRead(texture, row.returns!)) return arrayLayerSize(texture, level);
+      return new SizeNode(texture, level, row.returns!) as unknown as Node;
+    },
     textureQueryLevels: (texture) => levelCountOf(texture) as unknown as Node,
     textureQueryLod: (texture, coordinate, row) => levelOfDetail(row.args![0]!, texture, coordinate),
   };

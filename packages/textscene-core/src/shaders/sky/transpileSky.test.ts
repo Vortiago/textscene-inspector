@@ -48,6 +48,39 @@ describe('transpileSky', () => {
     expect(fragmentOf(sky)).toMatch(/textureLod\([^;]*2\.625/);
   });
 
+  it('reads the size of a RADIANCE level as the ivec2 of one layer, as Godot reads a sampler2D', () => {
+    const sky = transpileSky(
+      READS_RADIANCE.replace(/COLOR = .*;/, 'ivec2 s = textureSize(RADIANCE, 0); COLOR = vec3(float(s.x));')
+    );
+    expect(fragmentOf(sky)).toMatch(/textureSize\( \w+, 0 \)\.xy/);
+  });
+
+  it.each(['textureQueryLod(RADIANCE, EYEDIR).xyy', 'textureGather(RADIANCE, EYEDIR).rgb'])(
+    'reads %s through the octmap coordinate',
+    (read) => {
+      const sky = transpileSky(READS_RADIANCE.replace('texture(RADIANCE, EYEDIR).rgb', read));
+      expect(fragmentOf(sky)).toMatch(/vec3_to_oct_with_border/);
+    }
+  );
+
+  it('reads the level count of RADIANCE', () => {
+    const source = READS_RADIANCE.replace(
+      'texture(RADIANCE, EYEDIR).rgb',
+      'vec3(float(textureQueryLevels(RADIANCE)))'
+    );
+    expect(() => fragmentOf(transpileSky(source))).not.toThrow();
+  });
+
+  it('refuses textureGrad on RADIANCE, whose cube gradients Godot passes to a 2D read', () => {
+    const error = errorOf(
+      READS_RADIANCE.replace(
+        'texture(RADIANCE, EYEDIR)',
+        'textureGrad(RADIANCE, EYEDIR, vec3(0.0), vec3(0.0))'
+      )
+    );
+    expect(error.message).toMatch(/textureGrad\(sampler2D, vec2, vec3, vec3\)/);
+  });
+
   it('reads a black RADIANCE in the octmap pass, as Godot binds there', () => {
     const sky = transpileSky(READS_RADIANCE, { pass: 'octmap' });
     expect(sky.textures.get('radiance')!.value).toBe(sky.unsetRadianceTexture);

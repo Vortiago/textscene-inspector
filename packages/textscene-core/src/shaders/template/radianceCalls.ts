@@ -16,11 +16,16 @@ export interface RadianceRead {
   readonly sampler: string;
 }
 
-/** Whether `expression` is a call of a texture function on the `RADIANCE` built-in. */
+/** Whether `expression` is a texture call on the sky's `samplerCube` `RADIANCE`, not the spatial `vec4`. */
 export function isRadianceCall(expression: Expression): expression is CallNode {
   if (!isCall(expression) || expression.row.id === 'OP_CALL') return false;
   const sampler = expression.operands[0];
-  return sampler?.kind === 'variable' && sampler.builtIn !== undefined && sampler.name === RADIANCE;
+  return (
+    sampler?.kind === 'variable' &&
+    sampler.builtIn !== undefined &&
+    sampler.name === RADIANCE &&
+    sampler.type === 'samplerCube'
+  );
 }
 
 /** The call as Godot's compiler writes it, its bias read as the level (`shader_compiler.cpp:1319-1371`). */

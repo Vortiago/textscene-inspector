@@ -25,7 +25,7 @@ export class ShaderSkyBackground extends SkyBackdrop {
   /** `sky_rotation` as Godot's basis, written only by `paint`. */
   private readonly skyOrientation = new THREE.Matrix3();
   private readonly passes: SkyResolutionPasses;
-  /** The border of the radiance octmap, written only by `readRadiance`; 1 reads as no border. */
+  /** The border of the radiance octmap, written only by `readRadiance`. 1 reads as no border. */
   private radianceBorder = 1;
 
   constructor(

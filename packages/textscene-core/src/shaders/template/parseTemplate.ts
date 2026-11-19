@@ -560,7 +560,15 @@ class TemplateParser implements TemplateScope {
         members: (type) => this.members(type),
         functionsNamed: (name) => this.functionsNamed(name),
       };
-      return new GlslExpressionParser(this.textTokens(text, call.position, macros), scope).expression();
+      const tokens = this.textTokens(text, call.position, macros);
+      const expression = new GlslExpressionParser(tokens, scope).expression();
+      if (!tokens.isAtEnd()) tokens.fail('expected the end of the text of the RADIANCE read');
+      if (expression.type !== call.type)
+        tokens.fail(
+          `the RADIANCE read gives ${expression.type} in the template, not ${call.type}`,
+          call.position
+        );
+      return expression;
     });
   }
 
