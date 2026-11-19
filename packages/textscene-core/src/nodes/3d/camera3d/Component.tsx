@@ -93,8 +93,10 @@ function useGodotCameraTransform(cameraRef: RefObject<FiberCamera | null>, hOffs
     if (!camera) return undefined;
     const base = Object.getPrototypeOf(camera) as THREE.Camera;
     const adjust = () => {
-      adjustCameraTransform(camera.matrixWorld, hOffset, vOffset);
-      camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
+      // Only on a change: an inverse recomputed for an unchanged matrix moves a probe golden by 1/255.
+      if (adjustCameraTransform(camera.matrixWorld, hOffset, vOffset)) {
+        camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
+      }
     };
     camera.updateMatrixWorld = (force) => {
       camera.matrixWorldNeedsUpdate = true;
