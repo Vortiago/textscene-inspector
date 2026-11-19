@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import { TscnCanvas, TscnSceneProvider, openScene, variant } from '@textscene/renderer';
 import { runHeldResourceChecks, type HeldResourceCheckResults } from './heldResourceChecks';
+import { runMissingFileChecks, type MissingFileCheckResults } from './missingFileChecks';
 import { projectOf, runMountChecks, type MountCheckResults } from './mountChecks';
 import { WINDOW_320_PROJECT, exposeSwitchChecks } from './switchView';
 import { exposeCameraChecks } from './cameraView';
@@ -100,16 +101,20 @@ declare global {
     heldResourceChecks?: HeldResourceCheckResults;
     /** Written once the checks of the texture worker and a changed file end. */
     loadChecks?: LoadCheckResults;
+    /** Written once the checks of the files a scene asked for and did not get end. */
+    missingFileChecks?: MissingFileCheckResults;
   }
 }
 
-/** `?checks=mount`, `held`, `load`, `switch` and `camera` run checks that mount views of their own. */
+/** Each `?checks=` value runs checks that mount views of their own. */
 if (query.get('checks') === 'mount') {
   void runMountChecks().then((results) => (window.mountChecks = results));
 } else if (query.get('checks') === 'held') {
   void runHeldResourceChecks().then((results) => (window.heldResourceChecks = results));
 } else if (query.get('checks') === 'load') {
   void runLoadChecks().then((results) => (window.loadChecks = results));
+} else if (query.get('checks') === 'missing') {
+  void runMissingFileChecks().then((results) => (window.missingFileChecks = results));
 } else if (query.get('checks') === 'switch') {
   exposeSwitchChecks(screenshotElement());
 } else if (query.get('checks') === 'camera') {

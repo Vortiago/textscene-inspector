@@ -5,7 +5,7 @@
  * glyph draws nothing until its bitmap lands, and each landing tells the subscribers to repaint.
  */
 import { recentlyRead } from '../../../../../utils/recentlyRead';
-import { createExternalStore, type ExternalStore } from '../../../../hooks/createExternalStore';
+import { createExternalStore, type ExternalStore } from '../../../../../utils/externalStore';
 import type { ColourBitmap } from '../colour/colourBitmap';
 import {
   freeTypeTrueTypeSize,
