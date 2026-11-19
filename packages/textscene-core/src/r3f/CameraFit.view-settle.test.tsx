@@ -1,17 +1,11 @@
-/**
- * CameraFit's loader-driven fit: each time the loader's pending count returns to zero, it frames
- * again, unless the user has moved the camera. A count can touch zero before a later consumer, such
- * as an instanced `.glb`, starts its load, so a fit that fires once would frame an empty scene.
- * `frameSceneBounds` is mocked, so the calls count whatever the scene holds.
- */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useThree } from '@react-three/fiber';
 import type * as THREE from 'three';
 import { HierarchyProvider } from './contexts/HierarchyContext';
 import { ViewportModeProvider } from './contexts/ViewportModeContext';
-import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext';
-import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
+import { ViewStatusProvider } from './viewStatus/ViewStatusContext';
+import { createViewStatus, type DrawnFrame, type ViewStatus } from './viewStatus/viewStatus';
 import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
 
 vi.mock('./frameSceneBounds.js', () => ({
@@ -23,7 +17,7 @@ import { CameraFit } from './CameraFit';
 
 const frameSceneBoundsMock = frameSceneBounds as ReturnType<typeof vi.fn>;
 
-/** Longer than CameraFit's last load-time timer (1100 ms), so only the loader can fit after it. */
+/** Longer than CameraFit's last load-time timer (1100 ms), so only a settle can fit after it. */
 const PAST_LAST_TIMER_MS = 2000;
 
 /** Hands the test the render camera, as the user's orbit would reach it. */
@@ -32,33 +26,43 @@ function CameraProbe({ onCamera }: { onCamera: (camera: THREE.Camera) => void })
   return null;
 }
 
-/**
- * Mounts CameraFit over a fake loader whose count has already touched zero once (the scene's own
- * resources) and then gone pending again (a `.glb` whose load starts later), and runs every
- * load-time timer out. Returns the release of that second load and the render camera.
- */
+const FACTS = { scriptedNodeCount: 0, hasCurrentCamera: false };
+
+/** A frame of revision 1, with one resource still loading or none. */
+function frameDrawn(status: ViewStatus, resources: number): void {
+  const frame: DrawnFrame = {
+    revision: 1,
+    isFullSize: true,
+    work: { resources, textures: 0, fonts: 0 },
+    facts: FACTS,
+  };
+  status.frameDrawn(frame);
+}
+
+/** A view that settled once, then drew a frame with a `.glb` load pending, with every fit timer run out. */
 async function mountWithLateLoad() {
-  const fake = createFakeResourceLoader();
+  const status = createViewStatus();
+  status.attach({ revision: () => 1, subscribe: () => () => {} });
   let camera: THREE.Camera | null = null;
   await ReactThreeTestRenderer.create(
-    <ResourceLoaderProvider loader={fake.loader}>
+    <ViewStatusProvider status={status}>
       <HierarchyProvider value={{ sceneGraph: createSceneGraphFromTscnScene({ nodes: [] }), panelId: 'p' }}>
         <ViewportModeProvider initialFrameOnOpen={true}>
           <CameraFit />
           <CameraProbe onCamera={(c) => (camera = c)} />
         </ViewportModeProvider>
       </HierarchyProvider>
-    </ResourceLoaderProvider>
+    </ViewStatusProvider>
   );
-  fake.loader.beginPending()();
-  const releaseLateLoad = fake.loader.beginPending();
+  frameDrawn(status, 0);
+  frameDrawn(status, 1);
   vi.advanceTimersByTime(PAST_LAST_TIMER_MS);
   frameSceneBoundsMock.mockClear();
   if (!camera) throw new Error('expected the probe to report the render camera, got none');
-  return { releaseLateLoad, camera: camera as THREE.Camera };
+  return { settle: () => frameDrawn(status, 0), camera: camera as THREE.Camera };
 }
 
-describe('CameraFit after the loader settles', () => {
+describe('CameraFit after the view settles', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     frameSceneBoundsMock.mockClear();
@@ -69,18 +73,18 @@ describe('CameraFit after the loader settles', () => {
   });
 
   it('frames a load that finishes after an earlier settle and after every timer', async () => {
-    const { releaseLateLoad } = await mountWithLateLoad();
+    const { settle } = await mountWithLateLoad();
 
-    releaseLateLoad();
+    settle();
 
     expect(frameSceneBoundsMock).toHaveBeenCalledTimes(1);
   });
 
   it('leaves a camera the user has moved since the last fit', async () => {
-    const { releaseLateLoad, camera } = await mountWithLateLoad();
+    const { settle, camera } = await mountWithLateLoad();
     camera.position.x += 1;
 
-    releaseLateLoad();
+    settle();
 
     expect(frameSceneBoundsMock).not.toHaveBeenCalled();
   });
