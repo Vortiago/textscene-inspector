@@ -44,6 +44,8 @@ export const MATERIAL_SCENES = [
   { name: 'material-spatial-shader-fog', file: 'unit-spatial-shader-fog.tscn' },
   // The environment's depth fog and height fog on unshaded spatial shaders: three boxes and a floor.
   { name: 'material-spatial-shader-environment-fog', file: 'unit-spatial-shader-environment-fog.tscn' },
+  // Stencil modes on unshaded spatial shaders: an x-ray box behind a wall, a sphere cut out of a veil.
+  { name: 'material-spatial-shader-stencil', file: 'unit-spatial-shader-stencil.tscn' },
   { name: 'surface-material-override', file: 'unit-surface-material-override.tscn' },
   // Multi-property guard, one row each: basic PBR, emission and normal,
   // advanced PBR, transparency and glass.

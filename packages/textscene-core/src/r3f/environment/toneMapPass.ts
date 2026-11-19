@@ -98,5 +98,6 @@ function useWorldBuffer(
 function worldBufferOf(name: string): THREE.WebGLRenderTarget {
   const buffer = createPassTarget(`${name}::world`, { type: SCENE_BUFFER_TYPE });
   buffer.depthBuffer = true;
+  buffer.stencilBuffer = true;
   return buffer;
 }

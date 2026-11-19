@@ -10,6 +10,7 @@ export const RGBA8 = 0x8058;
 export const SRGB8_ALPHA8 = 0x8c43;
 export const RGBA16F = 0x881a;
 export const DEPTH_COMPONENT24 = 0x81a6;
+export const DEPTH24_STENCIL8 = 0x88f0;
 
 export interface FakeContextOptions {
   /** The sample counts listed per format. A format with no entry lists none. */
@@ -32,6 +33,7 @@ export function fakeWebGL2Context({
     SRGB8_ALPHA8,
     RGBA16F,
     DEPTH_COMPONENT24,
+    DEPTH24_STENCIL8,
     getContextAttributes: () => ({}),
     isContextLost: () => lost.current,
     getInternalformatParameter: (_target: number, format: number) => {

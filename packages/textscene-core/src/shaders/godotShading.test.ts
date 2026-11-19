@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type * as THREE from 'three';
 import { installGodotShading } from './godotShading';
 import { disposeSky } from './sky/transpileSky';
+import { installGodotOpaqueOrder } from './pipeline/opaqueOrder';
 
 /** WebGL 2's `MAX_VERTEX_OUTPUT_COMPONENTS` and `MAX_FRAGMENT_INPUT_COMPONENTS`. */
 const VERTEX_OUTPUTS = 0x9122;
@@ -17,8 +18,21 @@ function rendererWithSlots(varyingSlots: number) {
     getParameter,
   };
   const setNodesHandler = vi.fn();
-  const renderer = { setNodesHandler, debug: {}, getContext: () => context };
-  return { renderer: renderer as unknown as THREE.WebGLRenderer, getParameter, setNodesHandler };
+  const setOpaqueSort = vi.fn();
+  const renderer = { setNodesHandler, setOpaqueSort, debug: {}, getContext: () => context };
+  return {
+    renderer: renderer as unknown as THREE.WebGLRenderer,
+    getParameter,
+    setNodesHandler,
+    setOpaqueSort,
+  };
+}
+
+/** The opaque sort `installGodotOpaqueOrder` sets. */
+function godotOpaqueSort(): unknown {
+  const setOpaqueSort = vi.fn();
+  installGodotOpaqueOrder({ setOpaqueSort } as unknown as THREE.WebGLRenderer);
+  return setOpaqueSort.mock.calls[0]![0];
 }
 
 /** Seventeen slots, the most Forward+ gives past the 15 its template takes. It is unshaded. */
@@ -30,6 +44,12 @@ describe('installGodotShading', () => {
     const { renderer, setNodesHandler } = rendererWithSlots(16);
     installGodotShading(renderer);
     expect(setNodesHandler).toHaveBeenCalledOnce();
+  });
+
+  it('sorts the opaque draws in Godot’s order, which draws a stencil surface last', () => {
+    const { renderer, setOpaqueSort } = rendererWithSlots(16);
+    installGodotShading(renderer);
+    expect(setOpaqueSort).toHaveBeenCalledWith(godotOpaqueSort());
   });
 
   it("refuses varyings past the GL context's slots on a compatibility project", () => {

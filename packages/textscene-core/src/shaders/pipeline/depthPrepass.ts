@@ -88,6 +88,8 @@ export function drawWithOwnDepth(material: THREE.Material, draw: () => void): vo
 export interface DepthPrepassOptions {
   /** The project's `rendering/renderer/rendering_method`, `forward_plus` when left out. */
   readonly renderingMethod?: RenderingMethod;
+  /** `rendering/driver/depth_prepass/enable`, true when left out. */
+  readonly isEnabled?: boolean;
   /** `rendering/driver/depth_prepass/disable_for_vendors`, Godot's default when left out. */
   readonly disabledVendors?: string;
   /** The prepass draw of a material whose maker set none, `ownProgramDraw` when left out. */
@@ -97,16 +99,25 @@ export interface DepthPrepassOptions {
 }
 
 /** The opaque colour pass's depth test after `renderer`'s prepass, or null where it draws none. */
-function colourDepthFuncAfter(
+function colourDepthFuncAfter(renderer: Renderer): THREE.DepthModes | null {
+  if (renderer === 'mobile') return null;
+  // GEQUAL with no depth write (`rasterizer_scene_gles3.cpp:3161-3168`), turned round for GL's depth.
+  return renderer === 'forward_plus' ? THREE.EqualDepth : THREE.LessEqualDepth;
+}
+
+/** The project's choice: gl_compatibility also reads the GPU's vendor (`config.cpp:194-207`). */
+function projectDrawsPrepass(
   renderer: Renderer,
   webgl: THREE.WebGLRenderer,
-  disabledVendors: string
-): THREE.DepthModes | null {
-  if (renderer === 'forward_plus') return THREE.EqualDepth;
-  if (renderer === 'mobile' || vendorDisablesDepthPrepass(glRendererOf(webgl), disabledVendors)) return null;
-  // GEQUAL with no depth write (`rasterizer_scene_gles3.cpp:3161-3168`), turned round for GL's depth.
-  return THREE.LessEqualDepth;
+  { isEnabled, disabledVendors }: Required<Pick<DepthPrepassOptions, 'isEnabled' | 'disabledVendors'>>
+): boolean {
+  if (!isEnabled) return false;
+  return renderer !== 'gl_compatibility' || !vendorDisablesDepthPrepass(glRendererOf(webgl), disabledVendors);
 }
+
+/** `used_opaque_stencil`, which turns the prepass on (`render_forward_clustered.cpp:1166, 2080`). */
+const usesOpaqueStencil = (surfaces: readonly Surface[]): boolean =>
+  surfaces.some(({ material }) => material.stencilWrite && !material.transparent);
 
 /** Written only by `glRendererOf`. An entry goes with its renderer. */
 // eslint-disable-next-line no-restricted-syntax -- perObject is outside the shader module, which imports only its own files (ADR-0072).
@@ -151,6 +162,7 @@ export const colourDepthOf = (material: THREE.Material): ColourDepth =>
 /** A prepass to add to a scene, both sentinels together. */
 export function createDepthPrepass({
   renderingMethod = 'forward_plus',
+  isEnabled = true,
   disabledVendors = DEPTH_PREPASS_DISABLED_VENDORS,
   unset = ownProgramDraw,
   timed = (_renderer, draw) => draw(),
@@ -161,7 +173,7 @@ export function createDepthPrepass({
   // Written by the first sentinel, and emptied at the start of each prepass.
   const draws = new Map<THREE.Material, PrepassDraw | null>();
   const first = createFirstOpaqueSentinel('DepthPrepass', (webgl, scene, camera) => {
-    const colourDepthFunc = colourDepthFuncAfter(renderer, webgl, disabledVendors);
+    const colourDepthFunc = colourDepthFuncAfter(renderer);
     if (colourDepthFunc === null) return;
     timed(webgl, () => {
       draws.clear();
@@ -171,6 +183,8 @@ export function createDepthPrepass({
         return draws.get(material)!;
       };
       const surfaces = visibleSurfaces(scene, camera, (material) => drawOf(material) !== null);
+      const isDrawn = projectDrawsPrepass(renderer, webgl, { isEnabled, disabledVendors });
+      if (!isDrawn && !usesOpaqueStencil(surfaces)) return;
       for (const surface of surfaces) drawPrepass(webgl, scene, camera, surface, drawOf(surface.material)!);
       for (const { material } of surfaces)
         if (!material.transparent) testAgainstPrepass(material, colourDepthFunc, changed);

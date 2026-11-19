@@ -47,6 +47,7 @@ export function spatialSurfaceOf(
     disposeSpatial(spatial);
     return { refusal: `[material] ${unDrawnMessage({ failure }, 'spatial', '3D surface')}` };
   }
+  for (const error of spatial.printedErrors) warnOnce(shader, error, `[material] ${error}`);
   spatial.material.onTranslatorFault = (fault) =>
     warnOnce(
       shader,

@@ -160,7 +160,7 @@ A material's `next_pass` draws one extra surface beside its own. Godot adds ever
 
 At equal `render_priority`, the two engines can disagree, and the measured case shows it. Godot's opaque sort packs the priority above the shader and material ids (`render_forward_clustered.h:517-526`). The chain's links then sort inside that bucket, and the material RID order decides. This previewer keeps the chain order instead, so its link covers its base: the order the `while` walk guarantees.
 
-- **Unimplemented** A stencil-reading link's own draw: the chain continues past it (`material.cpp:916-968`), and the stencil buffer itself stays unrendered.
+- **Unimplemented** A stencil-reading link's own draw: the chain continues past it (`material.cpp:916-968`). The 3D world buffer has a stencil buffer, which only a translated spatial shader's `stencil_mode` tests so far.
 - **Approximated** A transparent link or overlay draws at three's per-object order, so it sorts apart from every unrelated transparent draw, whatever their depths. Godot keeps one sort on the material's `render_priority` and the depth (`render_forward_clustered.h:713-717`), and the previewer reads no material's `render_priority`.
 - **Approximated** A GLB chain sibling never joins the range fade. `fadedMeshMaterials` tracks the clone's own slots, so a fading surface's link stays opaque while its surface fades.
 - **Unimplemented** `grow` offsets the colour pass's vertices only. The alpha-depth prepass and the shadow depth draw the un-offset position, where Godot's depth variant runs the same vertex body. `surfaceDepthMaterial` clones the depth base without the grow injection. The billboard offset records its depth injection at `materialBag.ts:235-236`.

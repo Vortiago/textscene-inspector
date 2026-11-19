@@ -21,7 +21,7 @@ import { withProject } from '../testing/ProjectFixture';
 import { withStubbedGl } from '../testing/stubbedGl';
 import { CaptureRenderer } from '../testing/CaptureRenderer';
 import { InWorld } from '../testing/InWorld';
-import { DEPTH_COMPONENT24, fakeWebGL2Context, rendererOver, RGBA16F } from '../testing/fakeWebGL2Context';
+import { DEPTH24_STENCIL8, fakeWebGL2Context, rendererOver, RGBA16F } from '../testing/fakeWebGL2Context';
 import { mipmapBiasUniform } from '../testing/mipmapBiasUniform';
 import { renderUnderWay, type WorldRender } from '../viewportRender/worldRender';
 
@@ -144,6 +144,13 @@ describe('<Compositor> on the root canvas', () => {
     expect(draws[0]?.autoClear).toBe(true);
   });
 
+  it('gives the world buffer a stencil buffer, which the clear of its render sets to 0', async () => {
+    const { nextFrame } = await mount();
+    const draws = await nextFrame();
+
+    expect(draws[0]?.bound).toMatchObject({ depthBuffer: true, stencilBuffer: true });
+  });
+
   // A blended draw anywhere, even off-screen, must not move the rest of the frame by a level.
   it('draws a scene with a blended surface through the same buffer', async () => {
     const blended = new THREE.Mesh(
@@ -158,7 +165,7 @@ describe('<Compositor> on the root canvas', () => {
   it('multisamples the world buffer at the msaa_3d samples', async () => {
     const { nextFrame } = await mount({
       Wrapper: withProject('[rendering]\nanti_aliasing/quality/msaa_3d=2\n'),
-      context: fakeWebGL2Context({ counts: { [RGBA16F]: [4], [DEPTH_COMPONENT24]: [4] } }),
+      context: fakeWebGL2Context({ counts: { [RGBA16F]: [4], [DEPTH24_STENCIL8]: [4] } }),
     });
 
     await waitFor(async () => expect((await nextFrame())[0]?.bound?.samples).toBe(4));

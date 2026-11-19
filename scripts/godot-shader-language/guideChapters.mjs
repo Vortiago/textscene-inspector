@@ -897,6 +897,12 @@ const SPATIAL_CHAPTER = {
       tsl: "`createDepthPrepass`, whose first object draws the prepass with the surface's vertex stage or its own program and no colour",
     },
     {
+      heading: 'Stencil modes of `spatial`',
+      rows: (row) => row.id.startsWith('spatial stencil_mode '),
+      what: "A `spatial` shader with a stencil reference tests the stencil in its colour pass, never in the depth prepass or a shadow pass (`scene_shader_forward_clustered.cpp:362`). With no reference the stencil modes do nothing (`:208`). The test compares the reference with the stored value by the compare mode, `compare_always` when the shader names none. `read` compares the whole stored value. Without `read` the compare sees 0 on both sides, so `compare_equal` passes everywhere and `compare_less` nowhere. `write` stores the reference where the depth test passes, and `write_depth_fail` where it fails. A value that fails the stencil test stays (`:375-401`). Godot puts a stencil read in the alpha pass. A shader that reads the stencil in the opaque pass still draws, and Godot prints an error that the package's `stencilQueueError` gives (`render_forward_clustered.cpp:4099-4108`). An opaque surface with a stencil reference turns on the depth prepass on Forward+ and gl_compatibility, also where the project turns it off, so it writes only where it is the nearest opaque surface (`render_forward_clustered.cpp:1166, 2080`, `rasterizer_scene_gles3.cpp:2602`). Mobile draws such a surface after the other opaque surfaces instead (`render_forward_mobile.h:347-356`). The target needs a stencil buffer, which three's `WebGLRenderTarget` has with `stencilBuffer: true`. Without one every stencil test passes.",
+      tsl: "the material's `stencilWrite`, `stencilFunc`, `stencilRef`, masks and stencil operations",
+    },
+    {
       heading: '`DEPTH`',
       rows: (row) => row.id === 'spatial.fragment.DEPTH',
       what: "`DEPTH` is the fragment's depth, which starts at `FRAGCOORD.z`: Godot's depth, 1 at the near plane and 0 at the far plane (`scene_shader_forward_clustered.cpp:770`). The depth prepass draws a shared surface with Godot's default material, which writes the rasterised depth, and the opaque colour pass tests EQUAL against it. So an opaque shared shader shows only where `DEPTH` equals the rasterised depth. A shader with its own depth draw writes its own `DEPTH` in the prepass. The section on the depth prepass names the shared surfaces. On gl_compatibility every shader has its own depth draw.",

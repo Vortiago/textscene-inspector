@@ -16,7 +16,7 @@ const PREPASS_BASE = new THREE.MeshDepthMaterial({ colorWrite: false });
 
 /** The project renderer's prepass of a scene, timed as the frame profile's "Depth prepass" step. */
 export function createSceneDepthPrepass(
-  options: Pick<DepthPrepassOptions, 'renderingMethod' | 'disabledVendors'> = {}
+  options: Pick<DepthPrepassOptions, 'renderingMethod' | 'isEnabled' | 'disabledVendors'> = {}
 ): DepthPrepass {
   return createDepthPrepass({ ...options, unset: previewerDraw, timed });
 }

@@ -137,7 +137,10 @@ function drawMesh(spec) {
     mesh.renderOrder = material.transparent ? 0 : order;
     return mesh;
   });
-  const prepass = createDepthPrepass({ renderingMethod: spec.renderingMethod ?? 'forward_plus' });
+  const prepass = createDepthPrepass({
+    renderingMethod: spec.renderingMethod ?? 'forward_plus',
+    isEnabled: spec.depthPrepass ?? true,
+  });
   const scene = new THREE.Scene();
   scene.add(
     spec.parent ? placed(new THREE.Group(), spec.parent).add(...meshes) : new THREE.Group().add(...meshes),

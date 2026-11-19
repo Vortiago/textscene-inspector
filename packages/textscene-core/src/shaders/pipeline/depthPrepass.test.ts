@@ -292,6 +292,46 @@ describe('createDepthPrepass', () => {
     expect(draws).toEqual([]);
   });
 
+  it('draws nothing where the project turns the prepass off', () => {
+    const material = new THREE.MeshBasicMaterial();
+    const { prepass, draws, reach } = prepassScene({ ...FORWARD_PLUS, isEnabled: false }, meshOf(material));
+    reach(prepass.first);
+    expect(draws).toEqual([]);
+    expect(material).toMatchObject({ depthFunc: THREE.LessEqualDepth, depthWrite: true });
+  });
+
+  it.each([
+    ['Forward+ with the prepass turned off', 'Test GPU', { ...FORWARD_PLUS, isEnabled: false }],
+    ['gl_compatibility with the prepass turned off', 'Test GPU', { ...COMPATIBILITY, isEnabled: false }],
+    ['gl_compatibility on a GPU of a disabled vendor', 'Apple M2', COMPATIBILITY],
+  ] as const)('an opaque stencil surface turns the prepass on, on %s', (_case, gpu, options) => {
+    const plain = new THREE.MeshBasicMaterial();
+    const stencil = new THREE.MeshBasicMaterial({ stencilWrite: true });
+    const { prepass, draws, reach } = prepassSceneOn(gpu, options, meshOf(plain), meshOf(stencil));
+    reach(prepass.first);
+    expect(draws.map((draw) => draw.material)).toEqual([plain, stencil]);
+    expect(plain.depthWrite).toBe(false);
+  });
+
+  it('an alpha-pass stencil surface leaves the prepass off', () => {
+    const stencil = new THREE.MeshBasicMaterial({ stencilWrite: true, transparent: true });
+    const plain = new THREE.MeshBasicMaterial();
+    const { prepass, draws, reach } = prepassScene(
+      { ...FORWARD_PLUS, isEnabled: false },
+      meshOf(stencil),
+      meshOf(plain)
+    );
+    reach(prepass.first);
+    expect(draws).toEqual([]);
+  });
+
+  it('an opaque stencil surface leaves Mobile with no prepass', () => {
+    const stencil = new THREE.MeshBasicMaterial({ stencilWrite: true });
+    const { prepass, draws, reach } = prepassScene({ renderingMethod: 'mobile' }, meshOf(stencil));
+    reach(prepass.first);
+    expect(draws).toEqual([]);
+  });
+
   it('sorts its first sentinel before every opaque draw and its last after', () => {
     const { first, last } = createDepthPrepass();
     expect([first.renderOrder, last.renderOrder]).toEqual([Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER]);

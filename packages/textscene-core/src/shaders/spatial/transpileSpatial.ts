@@ -32,6 +32,7 @@ import { instanceWords } from './instanceData.js';
 import { coveredOnOneSample } from '../pipeline/singleSampleCoverage.js';
 import {
   applySpatialPipeline,
+  stencilQueueError,
   spatialPipeline,
   drawsAlphaToCoverage,
   type SpatialPipeline,
@@ -71,6 +72,8 @@ export interface TranspiledSpatial {
   readonly buffers: ReadonlyMap<string, RowTexture>;
   /** Each uniform of the material by name, which takes `set_shader_parameter`'s value. */
   readonly parameters: ReadonlyMap<string, TranspiledUniform>;
+  /** The errors Godot prints for a surface of this material, which still draws. */
+  readonly printedErrors: readonly string[];
 }
 
 export interface SpatialOptions extends ShaderOptions {
@@ -119,6 +122,7 @@ export function transpileParsedSpatial(
     textures: resources.textures,
     buffers: resources.buffers.byName,
     parameters,
+    printedErrors: [stencilQueueError(pipeline, options.file ?? '') ?? []].flat(),
   };
 }
 
