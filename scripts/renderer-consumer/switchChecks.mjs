@@ -1,7 +1,3 @@
-/**
- * Drives one mounted view through `update`: In-game, then 3D, then 2D, and a hidden 3D view that
- * draws a write only once it shows again.
- */
 import { attachDiagnostics, loggedErrors } from '../visual/previewServer.mjs';
 import { pollInk } from './pollInk.mjs';
 import { INK_FLOOR, INK_FLOOR_2D, SHRUNK_INK_DROP } from './switchFailures.mjs';

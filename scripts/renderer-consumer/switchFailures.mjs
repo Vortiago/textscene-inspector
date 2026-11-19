@@ -1,5 +1,3 @@
-/** The checks of the view that `update` switches, read from what `switchChecks.mjs` measured. */
-
 /** The cube draws about 6,000 pixels In-game. A blank canvas scores 0. */
 export const INK_FLOOR = 2000;
 /** The bar draws about 10,700 pixels at the stage's fit zoom, and the stage with no content about 1,000. */

@@ -4,7 +4,7 @@ import { inkStats } from '../vscode/pixels.mjs';
 export const RENDER_TIMEOUT_MS = 90_000;
 const POLL_INTERVAL_MS = 500;
 
-/** The ink of `#viewport` once `isDone` holds for it, or at the timeout. It polls, since software GL is slow. */
+/** The ink of `#viewport` once `isDone` holds, or at the timeout: software GL is slow. */
 export async function pollInk(page, isDone) {
   const viewport = page.locator('#viewport');
   const deadline = Date.now() + RENDER_TIMEOUT_MS;

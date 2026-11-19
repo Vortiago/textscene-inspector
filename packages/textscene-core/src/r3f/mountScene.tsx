@@ -10,7 +10,7 @@ import { createGameViewStatus, type GameViewSettled } from './gameView/gameViewS
 export interface ViewOptions {
   /** `in-game` by default. */
   mode?: TscnCanvasMode;
-  /** `false` draws no frame and runs no frame step, though `captureImage` still answers. `true` by default. */
+  /** `false` draws no frame and runs no frame step. `captureImage` still answers. `true` by default. */
   visible?: boolean;
 }
 

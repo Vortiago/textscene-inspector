@@ -1,13 +1,10 @@
-/**
- * `update` changes a mounted view. A happy-dom render creates no WebGL context, so the test reads
- * the stage and the `frameloop` each `<Canvas>` receives.
- */
 import { act } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mountScene } from './mountScene';
 import { openScene } from '../scene/openScene';
 import type { ResourceProvider } from '../resources/ResourceProvider';
 
+// A happy-dom render creates no WebGL context, so the stub shows each stage and its frameloop.
 vi.mock('@react-three/fiber', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@react-three/fiber')>()),
   // The editor's stage hands its canvas the editor camera. The game's stage hands it none.
