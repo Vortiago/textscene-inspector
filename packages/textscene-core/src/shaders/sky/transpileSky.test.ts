@@ -6,6 +6,12 @@ import { ShadingLanguageError } from '../language/shadingLanguageError.js';
 import { bindRadiance, disposeSky, transpileSky, type SkyDraw } from './transpileSky.js';
 import { DEFAULT_SKY } from './defaultSky.testkit';
 
+const READS_RADIANCE = 'shader_type sky;\nvoid sky() { COLOR = texture(RADIANCE, EYEDIR).rgb; }';
+
+function fragmentOf(draw: SkyDraw): string {
+  return generatedFragmentShader((draw.mesh.material as NodeMaterial).fragmentNode!);
+}
+
 function errorOf(source: string): ShadingLanguageError {
   try {
     transpileSky(source, { file: 'user.gdshader' });
@@ -30,33 +36,25 @@ describe('transpileSky', () => {
     const source =
       'shader_type sky;\nrender_mode use_half_res_pass;\nvoid sky() {\n' +
       '\tALPHA = AT_HALF_RES_PASS ? 0.375 : 1.0;\n\tCOLOR = vec3(0.5);\n}\n';
-    const fragment = (transpileSky(source).half!.mesh.material as NodeMaterial).fragmentNode!;
-    expect(generatedFragmentShader(fragment)).toMatch(/0\.375/);
+    expect(fragmentOf(transpileSky(source).half!)).toMatch(/0\.375/);
   });
 
   it("reads RADIANCE through its octmap coordinate, as Godot's compiler writes the call", () => {
-    const sky = transpileSky('shader_type sky;\nvoid sky() { COLOR = texture(RADIANCE, EYEDIR).rgb; }');
-    const fragment = generatedFragmentShader((sky.mesh.material as NodeMaterial).fragmentNode!);
-    expect(fragment).toMatch(/vec3_to_oct_with_border/);
+    expect(fragmentOf(transpileSky(READS_RADIANCE))).toMatch(/vec3_to_oct_with_border/);
   });
 
   it('reads the bias of a RADIANCE texture call as its level', () => {
-    const sky = transpileSky(
-      'shader_type sky;\nvoid sky() { COLOR = texture(RADIANCE, EYEDIR, 2.625).rgb; }'
-    );
-    const fragment = generatedFragmentShader((sky.mesh.material as NodeMaterial).fragmentNode!);
-    expect(fragment).toMatch(/textureLod\([^;]*2\.625/);
+    const sky = transpileSky(READS_RADIANCE.replace('EYEDIR)', 'EYEDIR, 2.625)'));
+    expect(fragmentOf(sky)).toMatch(/textureLod\([^;]*2\.625/);
   });
 
   it('reads a black RADIANCE in the octmap pass, as Godot binds there', () => {
-    const sky = transpileSky('shader_type sky;\nvoid sky() { COLOR = texture(RADIANCE, EYEDIR).rgb; }', {
-      pass: 'octmap',
-    });
+    const sky = transpileSky(READS_RADIANCE, { pass: 'octmap' });
     expect(sky.textures.get('radiance')!.value).toBe(sky.unsetRadianceTexture);
   });
 
   it('reads the radiance bound to a sky behind the scene', () => {
-    const sky = transpileSky('shader_type sky;\nvoid sky() { COLOR = texture(RADIANCE, EYEDIR).rgb; }');
+    const sky = transpileSky(READS_RADIANCE);
     const radiance = new THREE.DataArrayTexture(new Uint8Array(4), 1, 1, 1);
     bindRadiance(sky, radiance);
     expect(sky.textures.get('radiance')!.value).toBe(radiance);

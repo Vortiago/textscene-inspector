@@ -61,7 +61,7 @@ export interface TranspiledSky extends SkyDraw {
   /** Godot's default for a pass colour with no pass, which this sky owns and `disposeSky` frees. */
   readonly unsetPassTexture: THREE.Texture;
   /** Godot's black `radiance` until the sky has one, and always in the octmap (`sky.cpp:533`). */
-  readonly unsetRadianceTexture: THREE.Texture;
+  readonly unsetRadianceTexture: THREE.DataArrayTexture;
 }
 
 export interface SkyOptions extends ShaderOptions {
@@ -94,8 +94,9 @@ export function transpileParsedSky(
   const { parameters, parameterValues } = full;
   // Each pass reads the full pass's parameters, so one `set_shader_parameter` reaches all three.
   const shader = { parameters: [...parameters.values()], source: shaderSource(parsed, file) };
+  const unsetRadianceTexture = defaultTexture('layers', 'black') as THREE.DataArrayTexture;
   const draw = (resolution: SkyResolution, linked = program(resolution)) =>
-    skyDraw(linked, parameterValues, shader, isFilterInput(pass, resolution));
+    skyDraw(linked, parameterValues, shader, unsetRadianceTexture, isFilterInput(pass, resolution));
   const modes = new Set(parsed.tree.renderModes.map((mode) => mode.name));
   const sky: TranspiledSky = {
     ...draw('full', full),
@@ -103,21 +104,17 @@ export function transpileParsedSky(
     ...(modes.has('use_half_res_pass') && { half: draw('half') }),
     ...(modes.has('use_quarter_res_pass') && { quarter: draw('quarter') }),
     unsetPassTexture: unsetPassTexture(pass),
-    unsetRadianceTexture: defaultTexture('flat', 'black'),
+    unsetRadianceTexture,
   };
   bindUnsetPassTexture(sky);
-  bindRadiance(sky, sky.unsetRadianceTexture);
   return sky;
 }
 
-/** Binds `radiance` to each pass of a sky behind the scene, as Godot binds the sky's own (`sky.cpp:533`). */
-export function bindRadiance(sky: TranspiledSky, radiance: THREE.Texture): void {
+/** Binds the layer array `radiance` to each pass of a sky behind the scene (`sky.cpp:533`). */
+export function bindRadiance(sky: TranspiledSky, radiance: THREE.DataArrayTexture): void {
   for (const draw of skyDraws(sky)) {
     const node = draw.textures.get('radiance');
-    if (!node || node.value === radiance) continue;
-    node.value = radiance;
-    // A layer array and a flat texture compile to different samplers.
-    draw.mesh.material.needsUpdate = true;
+    if (node) node.value = radiance;
   }
 }
 
@@ -144,9 +141,10 @@ function skyDraw(
   { linked, resources }: LinkedProgram,
   parameterValues: LinkedProgram['parameterValues'],
   shader: MaterialShader,
+  radiance: THREE.DataArrayTexture,
   isRowsUp: boolean
 ): SkyDraw {
-  resources.textures.set('radiance', radianceTextureNode());
+  resources.textures.set('radiance', radianceTextureNode(radiance));
   const uvInterp = varyingProperty('vec2', 'uv_interp') as unknown as Node;
   const vertex = emitTemplateStage(
     linked('vertex'),

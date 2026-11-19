@@ -39,8 +39,7 @@ function radianceOf(source, lights) {
   displayRenderer.setRenderTarget(target, 0);
   displayRenderer.render(scene, camera);
   displayRenderer.setRenderTarget(null);
-  octmap.mesh.geometry.dispose();
-  octmap.mesh.material.dispose();
+  disposeDraw(octmap);
   return target;
 }
 
@@ -84,11 +83,13 @@ function drawSky(spec) {
   });
   passes.dispose();
   radiance?.dispose();
-  for (const draw of [sky, sky.half, sky.quarter]) {
-    draw?.mesh.geometry.dispose();
-    draw?.mesh.material.dispose();
-  }
+  for (const draw of [sky, sky.half, sky.quarter]) if (draw) disposeDraw(draw);
   return { pixels: Array.from(opaque(pixels)) };
+}
+
+function disposeDraw(draw) {
+  draw.mesh.geometry.dispose();
+  draw.mesh.material.dispose();
 }
 
 /** Godot's viewport with no transparent background reads opaque, and the sky writes alpha 0. */

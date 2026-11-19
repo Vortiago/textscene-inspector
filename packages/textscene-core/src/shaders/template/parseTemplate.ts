@@ -16,7 +16,7 @@ import type {
   VariableNode,
 } from '../language/shaderTree.js';
 import { arraySizeOf, withExpressionsMapped } from '../language/treeWalk.js';
-import { isRadianceCall, radianceCall, withOperandsPlaced } from './radianceCalls.js';
+import { isRadianceCall, radianceCall } from './radianceCalls.js';
 import { STAGE_VARIABLES } from './glslBuiltIns.js';
 import {
   arrayOf,
@@ -560,11 +560,7 @@ class TemplateParser implements TemplateScope {
         members: (type) => this.members(type),
         functionsNamed: (name) => this.functionsNamed(name),
       };
-      const expression = new GlslExpressionParser(
-        this.textTokens(text, call.position, macros),
-        scope
-      ).expression();
-      return withOperandsPlaced(expression, operands);
+      return new GlslExpressionParser(this.textTokens(text, call.position, macros), scope).expression();
     });
   }
 
@@ -574,7 +570,6 @@ class TemplateParser implements TemplateScope {
     return new TemplateCursor(preprocess([line], macros).tokens.map((token) => ({ ...token, position })));
   }
 
-  /** Godot's linked text goes through one preprocessor, so the text reads the macros at the slot. */
   private builtInText(variable: VariableNode, macros: SlotMacros): Expression {
     const text = this.material!.renames[variable.name];
     if (text === undefined)

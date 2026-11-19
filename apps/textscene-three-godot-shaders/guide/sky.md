@@ -945,7 +945,7 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 
 ## `RADIANCE`
 
-A texture call on `RADIANCE` reads the sky's own radiance octmap, as Godot's compiler writes it (`shader_compiler.cpp:1319-1371`): the direction goes through `vec3_to_oct_with_border`, and `texture` becomes `textureLod` at level 0, or at the bias when the call gives one. Behind the scene it reads layer 0 of the sky's last radiance. In the octmap pass it reads black (`sky.cpp:533`). A consumer of the package binds the radiance with `bindRadiance`, a flat texture or a layer array, whose layer 0 it reads.
+A texture call on `RADIANCE` reads the sky's own radiance octmap, as Godot's compiler writes it (`shader_compiler.cpp:1319-1371`): the direction goes through `vec3_to_oct_with_border`, and `texture` becomes `textureLod` at level 0, or at the bias when the call gives one. Behind the scene it reads layer 0 of the sky's last radiance. In the octmap pass it reads black (`sky.cpp:533`). A consumer of the package binds the radiance, a layer array, with `bindRadiance`, and the read takes its layer 0.
 
 The transpiler emits a `textureLod` of the template's `radiance` texture. Rows: `sky.global.RADIANCE`. Godot source: `servers/rendering/shader_types.cpp:461`.
 

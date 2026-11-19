@@ -43,14 +43,11 @@ export function radianceCall(call: CallNode, read: RadianceRead, parse: ParseWit
   }
   args.push(...rest.map(placeholder));
   if (isSimple && rest.length === 0) args.push('0.0');
-  return parse(`${name}(${args.join(', ')})`, operands);
+  return withOperandsPlaced(parse(`${name}(${args.join(', ')})`, operands), operands);
 }
 
 /** `expression` with each variable named in `operands` replaced by its expression. */
-export function withOperandsPlaced(
-  expression: Expression,
-  operands: ReadonlyMap<string, Expression>
-): Expression {
+function withOperandsPlaced(expression: Expression, operands: ReadonlyMap<string, Expression>): Expression {
   const placed = (part: Expression): Expression => {
     if (part.kind === 'variable' && operands.has(part.name)) return operands.get(part.name)!;
     return withSubExpressions(part, placed);
