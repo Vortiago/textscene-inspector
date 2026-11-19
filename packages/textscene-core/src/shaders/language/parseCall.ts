@@ -172,7 +172,7 @@ function argumentRefusal(argument: Argument, arg: Expression): string | undefine
     : undefined;
 }
 
-/** Godot keeps `RADIANCE` out of a user function, whose read it cannot rewrite (`shader_language.cpp:6486`). */
+/** Godot keeps `RADIANCE` out of the shader's own functions (`shader_language.cpp:6486`). */
 function radianceRefusal(arg: Expression): string | undefined {
   if (arg.kind !== 'variable' || arg.builtIn === undefined || arg.name !== 'RADIANCE') return undefined;
   return (
