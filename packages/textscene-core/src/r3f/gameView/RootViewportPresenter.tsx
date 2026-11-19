@@ -1,6 +1,6 @@
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import * as THREE from 'three';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import { CanvasItemTextureFilter } from '../../godot/scene/canvasItem.js';
 import type { ViewSampler } from '../../resources/textures/textureView.js';
 import { canvasItemFilterState } from '../canvasItemTextureSampler.js';
@@ -8,6 +8,8 @@ import { useViewportTexture } from '../contexts/ViewportTextureContext.js';
 import { ROOT_VIEWPORT_PATH } from '../contexts/EnclosingViewportContext.js';
 import { useTextureView } from '../useTextureView.js';
 import { presentRootTarget } from './presentRootTarget.js';
+import { readWindowPixels } from './windowImage.js';
+import type { RgbaImage } from '../../utils/encodePng.js';
 import { magnifiesTarget, type RootWindow } from './rootWindow.js';
 
 /** A priority of its own takes the frame from R3F's own render, after every viewport pass. */
@@ -21,17 +23,26 @@ export function RootViewportPresenter({
   projectWindow,
   drawnWindow,
   isTransparent,
+  onPresent,
 }: {
   projectWindow: RootWindow;
   drawnWindow: RootWindow;
   isTransparent: boolean;
+  /** Runs after each present, with the read of the whole window at its own size. */
+  onPresent: (readWindow: () => RgbaImage) => void;
 }) {
   const entry = useViewportTexture(ROOT_VIEWPORT_PATH);
   useEffect(() => entry?.plain.retain(), [entry]);
   const target = entry?.plain.texture ?? null;
   const texture = useTextureView(target, useBlitSampler(target, magnifiesTarget(projectWindow, drawnWindow)));
-  useFrame(({ gl }) => {
+  const gl = useThree((state) => state.gl);
+  const readWindow = useCallback(
+    () => readWindowPixels(gl, texture, projectWindow, isTransparent),
+    [gl, texture, projectWindow, isTransparent]
+  );
+  useFrame(() => {
     presentRootTarget(gl, texture, projectWindow, isTransparent);
+    onPresent(readWindow);
   }, PRESENT_PRIORITY);
   return null;
 }

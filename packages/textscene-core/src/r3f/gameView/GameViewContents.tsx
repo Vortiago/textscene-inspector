@@ -13,6 +13,7 @@ import { rootViewportNode } from './rootViewportNode.js';
 import { RootViewportPresenter } from './RootViewportPresenter.js';
 import { useDrawnRootWindow, useProjectRootWindow } from './useDrawnRootWindow.js';
 import { RunningGameScope } from '../contexts/EditorHintContext.js';
+import { useGameViewReport } from './useGameViewReport.js';
 
 /** The root viewport and its presenter, as the game view's `<Canvas>` holds them. */
 export function GameViewContents() {
@@ -37,6 +38,7 @@ function RootViewport() {
   const rasterRoots = useMemo(() => [root], [root]);
   const { transparent_bg: isTransparent } = root.properties as SubViewportProperties;
   const description = useMemo(() => gameViewportDescription(settings), [settings]);
+  const report = useGameViewReport(drawnWindow, projectWindow);
   return (
     <>
       {nodes && rootScene && (
@@ -60,6 +62,7 @@ function RootViewport() {
         projectWindow={projectWindow}
         drawnWindow={drawnWindow}
         isTransparent={isTransparent}
+        onPresent={report}
       />
     </>
   );

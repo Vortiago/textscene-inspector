@@ -7,6 +7,8 @@ import { createContext, useCallback, useContext, useSyncExternalStore, type Reac
 import { useResourceLoader } from '../../resources/useResource.js';
 import { textureWork } from '../../resources/textures/textureWork.js';
 import { fontWork } from '../controls/native/text/settledChannel.js';
+import { hasPendingWork, pendingSceneWork } from '../sceneWork.js';
+import { useGameViewStatus } from '../gameView/GameViewStatusContext.js';
 
 const NO_UNSUBSCRIBE = () => {};
 
@@ -26,14 +28,11 @@ export function PreviewVisibilityProvider({
   return <PreviewVisibilityContext.Provider value={isVisible}>{children}</PreviewVisibilityContext.Provider>;
 }
 
-/**
- * R3F's `frameloop` for a top-level canvas. A hidden preview renders no frame, except while its
- * scene still loads: the tiled texture upload advances once per frame, so a loop that stopped first
- * would leave a scene hidden from the start never ready to capture.
- */
+/** A hidden preview draws while its scene loads: a texture upload and an In-game settle advance per frame. */
 export function usePreviewFrameloop(): 'always' | 'never' {
   const isVisible = useContext(PreviewVisibilityContext);
   const loader = useResourceLoader();
+  const gameView = useGameViewStatus();
   // A visible preview subscribes to nothing: its canvas would re-render on every count change
   // of a load, and rebuild its whole tree, for a `frameloop` that stays 'always'.
   const subscribe = useCallback(
@@ -43,14 +42,15 @@ export function usePreviewFrameloop(): 'always' | 'never' {
         loader?.subscribePending(onChange),
         textureWork.subscribe(onChange),
         fontWork.subscribe(onChange),
+        gameView?.subscribe(onChange),
       ];
       return () => unsubscribes.forEach((unsubscribe) => unsubscribe?.());
     },
-    [isVisible, loader]
+    [isVisible, loader, gameView]
   );
   const isLoading = useSyncExternalStore(
     subscribe,
-    () => !isVisible && (loader?.pendingResourceCount ?? 0) + textureWork.pending() + fontWork.pending() > 0
+    () => !isVisible && (hasPendingWork(pendingSceneWork(loader)) || gameView?.isPending() === true)
   );
   return isVisible || isLoading ? 'always' : 'never';
 }

@@ -4,11 +4,12 @@
  * never suspends, and a failed path shows as a **Missing resource** row. A texture or material keeps its identity across calls, and an Object3D is
  * cloned per consumer, since THREE.Object3D allows one parent.
  */
-import { useContext, useEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
 import type { ResourceEventBus } from './ResourceEventBus';
 import { cloneWithMaterials, disposeClonedMaterials } from './processing/glbProcessing';
 import { ResourceLoaderContext } from './ResourceLoaderContext';
+import type { ResourceLoader } from './ResourceLoader';
 import { useMissingReport } from '../r3f/contexts/MissingResourcesContext';
 import { resourceSliceRegistry, type ResourceBusType } from './sliceRegistration';
 
@@ -195,12 +196,25 @@ function useResourceLoad<T>(path: string, type: ResourceBusType): ResourceResult
     };
   }, [loader, path, type]);
 
-  // The loader counts pending consumers, so a caller knows when loading has finished without a
-  // timer. Keyed on `path` too: a path swap re-enters `pending`.
-  useEffect(() => {
-    if (!loader || !path || result.status !== 'pending') return undefined;
-    return loader.beginPending();
-  }, [loader, path, result.status]);
+  useLoaderPending(loader, path && result.status === 'pending' ? path : null);
 
   return result;
+}
+
+// Counted from the commit that shows it pending, released after the effects of the content that ends it.
+function useLoaderPending(loader: ResourceLoader | null, pendingPath: string | null): void {
+  const [releases] = useState<Array<() => void>>(() => []);
+  useLayoutEffect(() => {
+    if (!loader || !pendingPath) return undefined;
+    const release = loader.beginPending();
+    return () => {
+      releases.push(release);
+    };
+  }, [loader, pendingPath, releases]);
+  useEffect(() => releaseAll(releases));
+  useEffect(() => () => releaseAll(releases), [releases]);
+}
+
+function releaseAll(releases: Array<() => void>): void {
+  while (releases.length) releases.pop()?.();
 }

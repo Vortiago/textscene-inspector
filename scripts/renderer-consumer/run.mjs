@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { cpSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { preview } from 'vite';
@@ -7,12 +7,18 @@ import { launchSwiftShaderBrowser } from '../showcase/browser.mjs';
 import { installedVersion, packTarball, run } from '../packTarball.mjs';
 import { REPO_ROOT, attachDiagnostics, loggedErrors, previewPort } from '../visual/previewServer.mjs';
 import { inkStats } from '../vscode/pixels.mjs';
+import { compareImages, formatDelta } from '../visual/imageDelta.mjs';
+import { writeBaselineFile } from '../visual/run/baselines.mjs';
 import { consumerManifest } from './consumerManifest.mjs';
+import { mountFailures } from './mountFailures.mjs';
 
-/* global document, getComputedStyle */
+/* global document, getComputedStyle, window */
 // These exist only in the browser that runs the `page.evaluate` calls.
 
 const APP_DIR = join(import.meta.dirname, 'app');
+/** The PNG `captureImage` gives for the consumer scene. `--update` writes it again. */
+const BASELINE_PATH = join(import.meta.dirname, 'baselines', 'consumer-scene.png');
+const isUpdatingBaseline = process.argv.includes('--update');
 
 /** The drawn pixels that prove a view drew the cube: a blank canvas scores 0. */
 const INK_FLOOR = 2000;
@@ -22,6 +28,8 @@ const INK_FLOOR_2D = 10_000;
 const WRITTEN_INK_FLOOR = INK_FLOOR / 4;
 /** Software GL draws the first frame slowly. */
 const RENDER_TIMEOUT_MS = 90_000;
+/** The mount checks draw eight views one after another, and capture three of them at 1152 x 648. */
+const MOUNT_CHECKS_TIMEOUT_MS = 4 * RENDER_TIMEOUT_MS;
 const POLL_INTERVAL_MS = 500;
 
 const versionsOf = (names, base) =>
@@ -89,7 +97,8 @@ async function renderInBrowser(directory) {
       const page = await browser.newPage();
       drawn[view] = await renderView(page, `http://localhost:${port}/${query}`, inkFloor);
     }
-    return drawn;
+    const mounted = await runMountChecks(await browser.newPage(), `http://localhost:${port}/?checks=mount`);
+    return { drawn, mounted };
   } finally {
     await browser.close();
     await server.close();
@@ -107,6 +116,30 @@ async function renderView(page, url, inkFloor) {
     return false;
   });
   return { ink, hasCanvasStyles, errors: loggedErrors(diagnostics) };
+}
+
+/** The results of the page's `mountScene` checks, and what the page threw on the way. */
+async function runMountChecks(page, url) {
+  const diagnostics = attachDiagnostics(page);
+  await page.goto(url);
+  const handle = await page.waitForFunction(() => window.mountChecks, null, {
+    timeout: MOUNT_CHECKS_TIMEOUT_MS,
+  });
+  return { results: await handle.jsonValue(), errors: loggedErrors(diagnostics) };
+}
+
+/** The consumer scene's PNG matches its baseline, or `--update` writes the baseline from it. */
+function baselineFailures(png) {
+  if (isUpdatingBaseline) {
+    const { status, detail } = writeBaselineFile(BASELINE_PATH, png);
+    console.log(`[renderer-consumer] baseline ${status}: ${detail}`);
+    return status === 'refused' ? [`captureImage: ${detail}`] : [];
+  }
+  if (!existsSync(BASELINE_PATH))
+    return [`expected a baseline at ${BASELINE_PATH}, got none: run with --update`];
+  const delta = compareImages(readFileSync(BASELINE_PATH), png);
+  if (!delta.sizeMismatch && delta.changedPixels === 0) return [];
+  return [`captureImage: expected the baseline, got ${formatDelta(delta)}`];
 }
 
 async function pollInk(page, inkFloor) {
@@ -151,12 +184,15 @@ function callFailures(drawn) {
   return [`In-game after a call: expected over ${whole * CALLED_INK_SHARE} drawn pixels, got ${called}`];
 }
 
-/** One line per failed check of every view. */
-function failures(drawn) {
+/** One line per failed check of every view and of `mountScene`. */
+function failures({ drawn, mounted }) {
   return [
     ...Object.entries(drawn).flatMap(([view, result]) => failuresOf(view, result)),
     ...writeFailures(drawn),
     ...callFailures(drawn),
+    ...mountFailures(mounted.results),
+    ...mounted.errors.map((message) => `mountScene: page error: ${message}`),
+    ...baselineFailures(Buffer.from(mounted.results.smallElementPng, 'base64')),
   ];
 }
 

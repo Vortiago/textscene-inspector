@@ -29,6 +29,7 @@ import { PreviewVisibilityProvider } from '../../contexts/PreviewVisibilityConte
 import { composeProviders } from '../../composeProviders.js';
 import { FrameStatsProvider } from '../../frameProfile/FrameStatsContext.js';
 import { SoftwareRenderingProvider } from '../../softwareRendering/SoftwareRenderingContext.js';
+import { GameViewStatusProvider } from '../../gameView/GameViewStatusContext.js';
 
 interface PreviewShellProviderOptions {
   hierarchyValue: HierarchyContextValue;
@@ -67,6 +68,8 @@ export function previewShellProviders({
         {children}
       </ViewportActionsProvider>
     ),
+    // The In-game view reports here, and a host's `useGameViewSettled` beside the view reads it.
+    (children) => <GameViewStatusProvider>{children}</GameViewStatusProvider>,
     (children) => (
       <MissingResourcesProvider onMissingPathsChange={onMissingPathsChange}>
         <LiveFilesHost />

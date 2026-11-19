@@ -60,6 +60,11 @@ export function pixelsMatchBaseline(baselineBuffer, actualBuffer) {
  * whose new PNG bytes would bury the images that moved.
  */
 export function writeBaseline(scene, buffer) {
+  return writeBaselineFile(baselineFile(scene), buffer);
+}
+
+/** `writeBaseline` for a baseline outside the golden tree, such as the renderer consumer's. */
+export function writeBaselineFile(file, buffer) {
   if (isUniformImage(buffer)) {
     return {
       status: 'refused',
@@ -68,7 +73,6 @@ export function writeBaseline(scene, buffer) {
         'baseline (a lost WebGL context or an unrendered scene, never a real golden)',
     };
   }
-  const file = baselineFile(scene);
   const existing = existsSync(file) ? readFileSync(file) : null;
   if (pixelsMatchBaseline(existing, buffer)) {
     return { status: 'unchanged', detail: 'pixels identical — not rewritten' };

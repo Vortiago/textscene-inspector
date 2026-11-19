@@ -592,6 +592,10 @@ _Avoid_: "2D mode" alone.
 The mode of the one view that draws the root viewport as the game starts it: the scene's own cameras, the game's lighting, no **editor hint** and no input. The root viewport draws through the pass a **sub-viewport** draws through, with the game's **viewport description**. Scripts do not run. It shows the **root window**, fitted to the pane at one scale.
 _Avoid_: "game view" for a component of its own: one view draws every mode. "Play mode", "runtime view".
 
+**Standalone view** (`mountScene`, `r3f/mountScene.tsx`):
+The one view mounted in a page element by `mountScene`, with a React root of its own, for a page with no React code. It draws a **scene** from `openScene` in a mode, `in-game` by default. It answers `settled` once a frame shows the scene whole, and `captureImage()` gives a PNG of the **root window** at the window's size. `dispose()` loses its WebGL context and leaves the scene open.
+_Avoid_: "headless view": a browser draws it. "Embed" for the React `<TscnCanvas>`.
+
 **Root window** (`rootWindow`, `r3f/gameView/rootWindow.ts`, ADR-0087):
 The window the project opens: its size from `display/window/size/*`, and how `display/window/stretch/*` maps the root viewport into it, with the black bars around it. The pane is not the root window: a pane resize changes only the fit.
 _Avoid_: "game window" for the pane, "screen".
