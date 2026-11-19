@@ -1,16 +1,34 @@
-import { useEffect } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useEffect, useRef } from 'react';
+import { addAfterEffect, useFrame, useThree } from '@react-three/fiber';
 import { drawCanvasFrame } from '../drawCanvasFrame.js';
 import { readCanvasPixels } from './canvasImage.js';
 import { useViewReport } from './useViewReport.js';
 import { useViewStatus } from './ViewStatusContext.js';
 
-/** Priority 0, so the frame's render, R3F's own or a pass that owns it, follows the report. */
 export function EditorViewReport() {
-  const report = useViewReport();
-  useFrame(() => report(true));
+  useReportAfterRender();
   useCanvasCapture();
   return null;
+}
+
+/** An after effect, so a frame is reported once its render, R3F's own or a pass that owns it, has drawn. */
+function useReportAfterRender(): void {
+  const report = useViewReport();
+  const latestReport = useRef(report);
+  latestReport.current = report;
+  const hasDrawn = useRef(false);
+  useFrame(() => {
+    hasDrawn.current = true;
+  });
+  useEffect(
+    () =>
+      addAfterEffect(() => {
+        if (!hasDrawn.current) return;
+        hasDrawn.current = false;
+        latestReport.current(true);
+      }),
+    []
+  );
 }
 
 /** A capture draws its own frame, so it answers while the loop is stopped too. */

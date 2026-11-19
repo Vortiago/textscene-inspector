@@ -1,8 +1,9 @@
 /** Frames the 3D scene on load when the viewport asks for it. */
 import { useThree } from '@react-three/fiber';
-import { useEffect } from 'react';
+import { useContext, useEffect } from 'react';
 import type * as THREE from 'three';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
+import { ResourceLoaderContext } from '../resources/ResourceLoaderContext.js';
 import { useViewStatus } from './viewStatus/ViewStatusContext.js';
 import { isDrawingPreview } from './EditorControlsHandle.js';
 import { useViewportMode } from './contexts/ViewportModeContext.js';
@@ -25,9 +26,9 @@ export function CameraFit() {
   const get = useThree((s) => s.get);
   const rootKey = hierarchy?.sceneGraph?.rootScene ?? '';
   const hasScene = !!hierarchy?.sceneGraph;
-  const scene = hierarchy?.scene;
 
   const status = useViewStatus();
+  const loader = useContext(ResourceLoaderContext);
 
   useEffect(() => {
     if (!frameOnOpen || !hasScene) return undefined;
@@ -53,16 +54,17 @@ export function CameraFit() {
     // The visual harness clicks for a `-selected` capture only after the last timer.
     const timers = [150, 500, 1100].map((delay) => setTimeout(fit, delay));
 
-    // The opened text fits on each settle, as one can precede an instanced `.glb` load. A write never does.
-    let openedRevision: number | null = null;
+    // Each settle that ends a load fits, as one can precede an instanced `.glb` load. A write never does.
+    let hasLoadedSinceSettle = (loader?.pendingResourceCount ?? 0) > 0;
+    const stopWatchingLoads = loader?.subscribePending(() => {
+      if (loader.pendingResourceCount > 0) hasLoadedSinceSettle = true;
+    });
     let wasSettled = false;
     const fitOnSettle = () => {
       const isSettled = status?.settled() != null;
-      if (isSettled && !wasSettled) {
-        const revision = scene?.revision() ?? 0;
-        openedRevision ??= revision;
-        // After the frame: a fit inside it leaves `environment-ssao` settled on another picture.
-        if (revision === openedRevision && !hasCameraMoved()) queueMicrotask(fit);
+      if (isSettled && !wasSettled && hasLoadedSinceSettle) {
+        hasLoadedSinceSettle = false;
+        if (!hasCameraMoved()) fit();
       }
       wasSettled = isSettled;
     };
@@ -70,9 +72,10 @@ export function CameraFit() {
 
     return () => {
       timers.forEach(clearTimeout);
+      stopWatchingLoads?.();
       unsubscribe?.();
     };
-  }, [rootKey, hasScene, frameOnOpen, get, status, scene]);
+  }, [rootKey, hasScene, frameOnOpen, get, status, loader]);
 
   return null;
 }

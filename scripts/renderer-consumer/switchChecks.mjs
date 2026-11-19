@@ -2,8 +2,9 @@ import { attachDiagnostics, loggedErrors } from '../visual/previewServer.mjs';
 import { compareImages } from '../visual/imageDelta.mjs';
 import { RENDER_TIMEOUT_MS, pollInk } from './pollInk.mjs';
 import { CUBE_INK_FLOOR, BAR_INK_FLOOR } from './switchFailures.mjs';
+import { inkStats } from '../vscode/pixels.mjs';
 
-/* global document, window */
+/* global document, requestAnimationFrame, window */
 // These exist only in the browser that runs the `page.evaluate` calls.
 
 /** Software GL draws a frame in well under this, so two shots this far apart that match show a still view. */
@@ -83,8 +84,12 @@ async function writeWhileHidden(page) {
     await view.settled;
   });
   const hidden = await pollInk(page, () => true);
-  await page.evaluate(() => window.switchView.view.update({ visible: true }));
-  const shown = await pollInk(page, () => true);
+  // Two animation frames, so the shown view has drawn before the still shot reads it.
+  await page.evaluate(() => {
+    window.switchView.view.update({ visible: true });
+    return new Promise((drawn) => requestAnimationFrame(() => requestAnimationFrame(drawn)));
+  });
+  const shown = inkStats(await stillShot(page)).inkPixels;
   return { before, hidden, shown };
 }
 
