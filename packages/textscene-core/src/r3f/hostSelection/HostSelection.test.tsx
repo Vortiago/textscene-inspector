@@ -50,8 +50,11 @@ function registeredAt({ result }: Setup, path: string): THREE.Object3D {
   return object;
 }
 
-function click({ result }: Setup, object: THREE.Object3D) {
-  const event = { clientX: 10, clientY: 10, object, stopPropagation: () => {} };
+const LEFT = 0;
+const RIGHT = 2;
+
+function click({ result }: Setup, object: THREE.Object3D, button = LEFT) {
+  const event = { button, clientX: 10, clientY: 10, object, stopPropagation: () => {} };
   act(() => {
     result.current.picker.handlers.onPointerDown(event as never);
     result.current.picker.handlers.onPointerUp(event as never);
@@ -71,6 +74,26 @@ describe('the host’s click picking', () => {
     const view = setup(scene, { onSelect });
 
     click(view, registeredAt(view, 'Root/Cube'));
+
+    expect(onSelect).toHaveBeenCalledExactlyOnceWith(scene.getNode('Cube'));
+  });
+
+  it('picks nothing on a press and release of the right button, which looks around', () => {
+    const onSelect = vi.fn();
+    const view = setup(openTestScene(), { onSelect });
+
+    click(view, registeredAt(view, 'Root/Cube'), RIGHT);
+
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(view.result.current.selection.selectedNodePath).toBeNull();
+  });
+
+  it('gives the host the nearest node of a path the scene lacks, such as a mesh inside a GLB', () => {
+    const scene = openTestScene();
+    const onSelect = vi.fn();
+    const view = setup(scene, { onSelect });
+
+    click(view, registeredAt(view, 'Root/Cube/Armature/Body'));
 
     expect(onSelect).toHaveBeenCalledExactlyOnceWith(scene.getNode('Cube'));
   });
@@ -136,6 +159,14 @@ describe('the host’s click picking', () => {
     const view = setup(scene, { selected: scene.getNode('Cube') });
 
     expect(view.result.current.selection.selectedNodePath).toBe('Root/Cube');
+  });
+
+  it('outlines nothing for the root window, which the canvas does not draw', () => {
+    const scene = openTestScene();
+
+    const view = setup(scene, { selected: scene.getNode('/root') });
+
+    expect(view.result.current.selection.selectedNodePath).toBeNull();
   });
 
   it('keeps nothing selected through a click when the host passes null', () => {

@@ -1,14 +1,16 @@
 import { createContext, useContext, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import type { NodeHandle } from '../../scene/nodeHandle.js';
-import { absolutePathOf, livePathOf } from '../../scene/nodePathWalk.js';
+import { absolutePathOf, livePathOf, ROOT_WINDOW_PREFIX } from '../../scene/nodePathWalk.js';
+import type { Scene } from '../../scene/openScene.js';
+import { parentPathOf } from '../../utils/nodePath.js';
 import { useOptionalHierarchy } from '../contexts/HierarchyContext.js';
 import { useOptionalSelection } from '../contexts/SelectionContext.js';
 
 export interface HostSelectionProps {
   /** The node the view outlines, or null for none. Given, a click leaves it to the host. */
   selected?: NodeHandle | null;
-  /** The node a click in the 3D mode picks, or null for a click on nothing. */
-  onSelect?: (node: NodeHandle | null) => void;
+  /** The node a click in the 3D mode picks, or null for a click on nothing. Null hears no click. */
+  onSelect?: ((node: NodeHandle | null) => void) | null;
   children?: ReactNode;
 }
 
@@ -30,7 +32,8 @@ export function HostSelection({ selected, onSelect, children }: HostSelectionPro
   // A view with no scene above it has no selection, and draws the empty scene.
   const setSelectedNodePath = useOptionalSelection()?.setSelectedNodePath;
   const ownsSelection = selected !== undefined;
-  const selectedPath = selected ? livePathOf(selected.path) : null;
+  // The root window is no node of the canvas, so its handle outlines nothing.
+  const selectedPath = selected?.path.startsWith(ROOT_WINDOW_PREFIX) ? livePathOf(selected.path) : null;
 
   useLayoutEffect(() => {
     if (ownsSelection) setSelectedNodePath?.(selectedPath);
@@ -45,13 +48,22 @@ export function HostSelection({ selected, onSelect, children }: HostSelectionPro
   const pick = useMemo<HostPick>(
     () => ({
       picked(path) {
-        onSelectRef.current?.(path === null ? null : (scene?.getNodeOrNull(absolutePathOf(path)) ?? null));
+        onSelectRef.current?.(path === null || !scene ? null : nearestHandle(scene, path));
       },
       ownsSelection,
     }),
     [ownsSelection, scene]
   );
   return <HostPickContext.Provider value={pick}>{children}</HostPickContext.Provider>;
+}
+
+// A path the Live scene tree lacks, such as a node inside an imported GLB, reaches the host as its owner.
+function nearestHandle(scene: Scene, path: string): NodeHandle | null {
+  for (let at: string | null = path; at; at = parentPathOf(at)) {
+    const handle = scene.getNodeOrNull(absolutePathOf(at));
+    if (handle) return handle;
+  }
+  return null;
 }
 
 export function useHostPick(): HostPick {

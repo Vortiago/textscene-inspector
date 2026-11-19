@@ -334,8 +334,10 @@ view.update({ selected: scene.getNode('Player') });
 view.update({ selected: null });
 ```
 
-A click on nothing gives `null` and clears the outline, as in the Godot editor's 3D view. A drag
-that moves the camera picks nothing.
+The view picks a node as the Godot editor's 3D view does. A click on a mesh of an instanced scene
+picks the instance, or the mesh's own node when the instance is editable. A click on nothing gives
+`null` and clears the outline. Only the left button picks, and a drag that moves the camera picks
+nothing. `onSelect: null` stops the calls.
 
 With no `selected`, a click also outlines the node it picks. Once the page gives `selected`, the
 page owns the outline: a click calls `onSelect` and leaves the outline as it is, as a controlled

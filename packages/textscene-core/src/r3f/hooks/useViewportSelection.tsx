@@ -79,7 +79,8 @@ export function useViewportSelection(options: UseViewportSelectionOptions = {}):
   const handlers = useMemo<DelegatedPointerHandlers>(
     () => ({
       onPointerDown(e) {
-        downPosRef.current = { x: e.clientX, y: e.clientY };
+        // Only the left button selects (`node_3d_editor_plugin.cpp:1978`): the others orbit and look.
+        downPosRef.current = e.button === 0 ? { x: e.clientX, y: e.clientY } : null;
       },
       onPointerUp(e) {
         const down = downPosRef.current;

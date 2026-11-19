@@ -19,8 +19,8 @@ export interface ViewOptions {
   camera?: string | null;
   /** The node the view outlines, or null for none. Given, a click leaves the outline to the host. */
   selected?: NodeHandle | null;
-  /** The node a click in the 3D mode picks, or null for a click on nothing. In-game takes no click. */
-  onSelect?: (node: NodeHandle | null) => void;
+  /** The node a click in the 3D mode picks, or null for a click on nothing. `null` stops the calls. */
+  onSelect?: ((node: NodeHandle | null) => void) | null;
 }
 
 /** The options a view holds: `mode`, `visible` and `camera` always, the selection keys once given. */
@@ -101,7 +101,7 @@ function withGiven(options: MountedOptions, given: ViewOptions): MountedOptions 
     visible: given.visible ?? options.visible,
     camera: given.camera === undefined ? options.camera : given.camera,
     selected: given.selected === undefined ? options.selected : given.selected,
-    onSelect: given.onSelect ?? options.onSelect,
+    onSelect: given.onSelect === undefined ? options.onSelect : given.onSelect,
   };
 }
 

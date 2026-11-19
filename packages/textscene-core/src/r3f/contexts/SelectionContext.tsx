@@ -53,6 +53,8 @@ export interface SelectionContextValue {
    */
   objectPathMap: WeakMap<THREE.Object3D, string>;
   registerNodeObject: (path: string, object: THREE.Object3D) => void;
+  /** Into `nodeObjectMap` only: a click on the object picks the nearest node registered for picking. */
+  registerUnpickableNodeObject: (path: string, object: THREE.Object3D) => void;
   unregisterNodeObject: (path: string) => void;
 }
 
@@ -128,6 +130,12 @@ export function SelectionProvider({ children }: SelectionProviderProps) {
     objectPathMapRef.current.set(object, path);
   }, []);
 
+  const registerUnpickableNodeObject = useCallback((path: string, object: THREE.Object3D) => {
+    const previous = nodeObjectMapRef.current.get(path);
+    if (previous) objectPathMapRef.current.delete(previous);
+    nodeObjectMapRef.current.set(path, object);
+  }, []);
+
   const unregisterNodeObject = useCallback((path: string) => {
     const object = nodeObjectMapRef.current.get(path);
     if (object) objectPathMapRef.current.delete(object);
@@ -160,6 +168,7 @@ export function SelectionProvider({ children }: SelectionProviderProps) {
       nodeObjectMap: nodeObjectMapRef.current,
       objectPathMap: objectPathMapRef.current,
       registerNodeObject,
+      registerUnpickableNodeObject,
       unregisterNodeObject,
     }),
     [
@@ -174,6 +183,7 @@ export function SelectionProvider({ children }: SelectionProviderProps) {
       clearHidden,
       clearAll,
       registerNodeObject,
+      registerUnpickableNodeObject,
       unregisterNodeObject,
     ]
   );
