@@ -47,11 +47,16 @@ describe('useSceneDepthPrepass', () => {
     expect(disposed()).toEqual([true, true]);
   });
 
-  it('mounts no sentinel when rendering/driver/depth_prepass/enable is false', () => {
-    projectSettingsMock.settings = { 'rendering/driver/depth_prepass/enable': 'false' };
+  it('mounts new sentinels when rendering/driver/depth_prepass/enable turns false', () => {
     const scene = new THREE.Scene();
-    renderHook(() => useSceneDepthPrepass(scene));
-    expect(sentinelsIn(scene)).toEqual([]);
+    const { rerender } = renderHook(() => useSceneDepthPrepass(scene));
+    const before = sentinelsIn(scene);
+
+    projectSettingsMock.settings = { 'rendering/driver/depth_prepass/enable': 'false' };
+    rerender();
+
+    expect(sentinelsIn(scene)).toHaveLength(2);
+    expect(sentinelsIn(scene)).not.toContain(before[0]);
   });
 
   it('mounts new sentinels when the rendering method changes', () => {

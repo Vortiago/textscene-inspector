@@ -2469,6 +2469,244 @@ void fragment() {
 | --- | --- |
 | <img src="showcase/spatial-cull-front-compatibility-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-cull-front-compatibility-three.png" width="256" alt="Transpilation"> |
 
+## Showcase `spatial-stencil-compare-always`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, depth_test_disabled;
+stencil_mode read, compare_always, 1;
+void fragment() {
+	ALBEDO = vec3(0.0, 0.0, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-stencil-compare-always-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-stencil-compare-always-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-stencil-compare-less`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, depth_test_disabled;
+stencil_mode read, compare_less, 1;
+void fragment() {
+	ALBEDO = vec3(0.0, 0.0, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-stencil-compare-less-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-stencil-compare-less-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-stencil-compare-equal`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, depth_test_disabled;
+stencil_mode read, compare_equal, 1;
+void fragment() {
+	ALBEDO = vec3(0.0, 0.0, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-stencil-compare-equal-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-stencil-compare-equal-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-stencil-compare-less-or-equal`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, depth_test_disabled;
+stencil_mode read, compare_less_or_equal, 1;
+void fragment() {
+	ALBEDO = vec3(0.0, 0.0, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-stencil-compare-less-or-equal-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-stencil-compare-less-or-equal-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-stencil-compare-greater`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, depth_test_disabled;
+stencil_mode read, compare_greater, 1;
+void fragment() {
+	ALBEDO = vec3(0.0, 0.0, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-stencil-compare-greater-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-stencil-compare-greater-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-stencil-compare-not-equal`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, depth_test_disabled;
+stencil_mode read, compare_not_equal, 1;
+void fragment() {
+	ALBEDO = vec3(0.0, 0.0, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-stencil-compare-not-equal-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-stencil-compare-not-equal-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-stencil-compare-greater-or-equal`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, depth_test_disabled;
+stencil_mode read, compare_greater_or_equal, 1;
+void fragment() {
+	ALBEDO = vec3(0.0, 0.0, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-stencil-compare-greater-or-equal-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-stencil-compare-greater-or-equal-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-stencil-compare-without-read`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, depth_test_disabled;
+stencil_mode compare_equal, 1;
+void fragment() {
+	ALBEDO = vec3(0.0, 0.0, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-stencil-compare-without-read-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-stencil-compare-without-read-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-stencil-reference-255`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, depth_test_disabled;
+stencil_mode read, compare_less, 254;
+void fragment() {
+	ALBEDO = vec3(0.0, 0.0, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-stencil-reference-255-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-stencil-reference-255-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-stencil-write-covered`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, depth_test_disabled;
+stencil_mode read, compare_equal, 1;
+void fragment() {
+	ALBEDO = vec3(0.0, 0.0, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-stencil-write-covered-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-stencil-write-covered-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-stencil-write-depth-fail`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, depth_test_disabled;
+stencil_mode read, compare_equal, 1;
+void fragment() {
+	ALBEDO = vec3(0.0, 0.0, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-stencil-write-depth-fail-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-stencil-write-depth-fail-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-stencil-write-prepass-off`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, depth_test_disabled;
+stencil_mode read, compare_equal, 1;
+void fragment() {
+	ALBEDO = vec3(0.0, 0.0, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-stencil-write-prepass-off-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-stencil-write-prepass-off-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-stencil-write-compatibility`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, depth_test_disabled;
+stencil_mode read, compare_equal, 1;
+void fragment() {
+	ALBEDO = vec3(0.0, 0.0, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-stencil-write-compatibility-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-stencil-write-compatibility-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-stencil-write-mobile`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, depth_test_disabled;
+stencil_mode read, compare_equal, 1;
+void fragment() {
+	ALBEDO = vec3(0.0, 0.0, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-stencil-write-mobile-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-stencil-write-mobile-three.png" width="256" alt="Transpilation"> |
+
 ## Showcase `spatial-fog`
 
 Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
@@ -2761,6 +2999,15 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 Godot's Forward+ draws a depth prepass before the opaque colour pass, which then tests EQUAL and writes no depth (`render_forward_clustered.cpp:2081-2112`, `scene_shader_forward_clustered.cpp:448-453`). The prepass draws each opaque surface, and each alpha surface with `depth_prepass_alpha` or alpha antialiasing (`scene_shader_forward_clustered.h:288-293`). A surface is shared unless it writes `VERTEX`, `POSITION`, `MODELVIEW_MATRIX`, `PROJECTION_MATRIX` or `Z_CLIP_SCALE`, or uses `discard`, an alpha cut, alpha antialiasing, point size or a stencil reference. Render modes `depth_prepass_alpha`, `particle_trails`, `world_vertex_coords`, `wireframe` and a cull mode other than `cull_back` also give a surface its own depth draw (`scene_shader_forward_clustered.h:295-298`). The prepass draws a shared surface with Godot's default material, and any other surface with its own program. In the prepass `opaque_prepass_threshold` is 0.99, so `depth_prepass_alpha` writes depth only where `ALPHA` reaches 0.99 (`scene_forward_clustered.glsl:1427-1431`). On gl_compatibility the prepass draws every surface with its own program, cut at 0.99, and the colour pass tests the prepass depth with LEQUAL (`rasterizer_scene_gles3.cpp:2635, 3124-3143, 3536-3540`). It takes an alpha surface only with `depth_prepass_alpha`, and draws nothing on a GPU of a vendor in `rendering/driver/depth_prepass/disable_for_vendors` (`config.cpp:194-207`). Mobile draws no depth prepass.
 
 The transpiler emits `createDepthPrepass`, whose first object draws the prepass with the surface's vertex stage or its own program and no colour. Rows: `spatial render_mode depth_prepass_alpha`. Godot source: `servers/rendering/shader_types.cpp:235`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## Stencil modes of `spatial`
+
+A `spatial` shader with a stencil reference tests the stencil in its colour pass, never in the depth prepass or a shadow pass (`scene_shader_forward_clustered.cpp:362`). With no reference the stencil modes do nothing (`:208`). The test compares the reference with the stored value by the compare mode, `compare_always` when the shader names none. `read` compares the whole stored value. Without `read` the compare sees 0 on both sides, so `compare_equal` passes everywhere and `compare_less` nowhere. `write` stores the reference where the depth test passes, and `write_depth_fail` where it fails. A value that fails the stencil test stays (`:375-401`). Godot puts a stencil read in the alpha pass. A shader that reads the stencil in the opaque pass still draws, and Godot prints an error that `TranspiledSpatial.printedErrors` holds (`render_forward_clustered.cpp:4099-4108`). An opaque surface with a stencil reference turns on the depth prepass on Forward+ and gl_compatibility, also where the project turns it off, so it writes only where it is the nearest opaque surface (`render_forward_clustered.cpp:1166, 2080`, `rasterizer_scene_gles3.cpp:2602`). Mobile draws such a surface after the other opaque surfaces instead (`render_forward_mobile.h:347-356`). The target needs a stencil buffer, which three's `WebGLRenderTarget` has with `stencilBuffer: true`. Without one every stencil test passes.
+
+The transpiler emits the material's `stencilWrite`, `stencilFunc`, `stencilRef`, masks and stencil operations. Rows: `spatial stencil_mode read`, `spatial stencil_mode write`, `spatial stencil_mode write_depth_fail`, `spatial stencil_mode compare_always`, `spatial stencil_mode compare_less`, `spatial stencil_mode compare_equal`, `spatial stencil_mode compare_less_or_equal`, `spatial stencil_mode compare_greater`, `spatial stencil_mode compare_not_equal`, `spatial stencil_mode compare_greater_or_equal`. Godot source: `servers/rendering/shader_types.cpp:256`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 

@@ -10,6 +10,12 @@ import type { PassMembership } from '../../godot/rendering/shadowPass.js';
 import { BlendMode } from '../../godot/rendering/materials/blendMode.js';
 import { CullMode } from '../../godot/rendering/materials/cullMode.js';
 import { DepthDrawMode } from '../../godot/rendering/materials/depthDrawMode.js';
+import {
+  STENCIL_COMPARE_WORDS,
+  STENCIL_FLAG_WORDS,
+  StencilCompare,
+  StencilFlag,
+} from '../../godot/rendering/materials/stencil.js';
 import type { ShaderNode, UniformHint } from '../language/shaderTree.js';
 import { writtenNames } from '../language/assignment.js';
 import { everyStatement, variablesRead } from '../language/treeWalk.js';
@@ -25,6 +31,7 @@ import {
   type MaterialBlendState,
 } from '../pipeline/blendState.js';
 import { CULL_SIDES } from '../pipeline/cullSide.js';
+import { applyGodotStencil, type StencilTest } from '../pipeline/stencilState.js';
 
 /** `depth_test_disabled` is a material flag beside the DEFAULT and INVERTED depth test. */
 type DepthTest = 'enabled' | 'disabled' | 'inverted';
@@ -51,6 +58,8 @@ export interface SpatialPipeline {
   readonly writesDepth: boolean;
   /** Each flag that is set of those that keep a surface off the shared depth material. */
   readonly depthFlags: ReadonlySet<DepthFlag>;
+  /** Null without a reference, as Godot's `stencil_enabled` (`scene_shader_forward_clustered.cpp:208`). */
+  readonly stencil: StencilTest | null;
 }
 
 const DEPTH_TESTS: Readonly<Record<string, DepthTest>> = {
@@ -113,11 +122,29 @@ const WRITE_FLAGS: Readonly<Record<string, DepthFlag>> = {
   Z_CLIP_SCALE: 'uses_z_clip_scale',
 };
 
-/** The pipeline state of `tree`. Godot's parser refuses two modes of one group, so each group has one. */
+const STENCIL_FLAGS = byWord(STENCIL_FLAG_WORDS);
+const STENCIL_COMPARES = byWord(STENCIL_COMPARE_WORDS);
+
+/** The value of the last mode of `table`'s group, or `fallback`. Godot refuses two modes of one group. */
+const pickMode = <T>(modes: readonly string[], table: Readonly<Record<string, T>>, fallback: T): T =>
+  modes.reduce((picked, mode) => table[mode] ?? picked, fallback);
+
+/** `stencil_mode_values` (`scene_shader_forward_clustered.cpp:154-166`). */
+function stencilTest(tree: ShaderNode): StencilTest | null {
+  const reference = tree.stencilReference;
+  if (reference === undefined) return null;
+  const stencilModes = tree.stencilModes.map((mode) => mode.name);
+  return {
+    flags: stencilModes.reduce((flags, mode) => flags | (STENCIL_FLAGS[mode] ?? 0), 0),
+    compare: pickMode(stencilModes, STENCIL_COMPARES, StencilCompare.ALWAYS),
+    reference,
+  };
+}
+
+/** The pipeline state of `tree`. */
 export function spatialPipeline(tree: ShaderNode): SpatialPipeline {
   const modes = tree.renderModes.map((mode) => mode.name);
-  const pick = <T>(table: Readonly<Record<string, T>>, fallback: T) =>
-    modes.reduce((picked, mode) => table[mode] ?? picked, fallback);
+  const pick = <T>(table: Readonly<Record<string, T>>, fallback: T) => pickMode(modes, table, fallback);
   const names = variablesRead(
     tree,
     (variable) => variable.builtIn !== undefined || variable.isUniform === true
@@ -137,11 +164,17 @@ export function spatialPipeline(tree: ShaderNode): SpatialPipeline {
     readsScreen: tree.uniforms.some((uniform) => SCREEN_HINTS.has(uniform.hint) && names.has(uniform.name)),
   };
   const usesPointSize = reads('POINT_SIZE', 'POINT_COORD');
-  return { ...pipeline, depthFlags: depthFlags(tree, modes, { ...pipeline, usesPointSize }) };
+  const stencil = stencilTest(tree);
+  return {
+    ...pipeline,
+    depthFlags: depthFlags(tree, modes, { ...pipeline, usesPointSize, usesStencil: stencil !== null }),
+    stencil,
+  };
 }
 
 type FlagSources = Pick<SpatialPipeline, 'cullMode' | 'usesAlphaClip' | 'usesAlphaAntialiasing'> & {
   readonly usesPointSize: boolean;
+  readonly usesStencil: boolean;
 };
 
 function depthFlags(
@@ -156,8 +189,7 @@ function depthFlags(
     uses_alpha_antialiasing: sources.usesAlphaAntialiasing,
     cull_not_back: sources.cullMode !== CullMode.BACK,
     uses_point_size: sources.usesPointSize,
-    // `stencil_referencei != -1` (`scene_shader_forward_clustered.cpp:208`).
-    stencil_enabled: tree.stencilReference !== undefined,
+    stencil_enabled: sources.usesStencil,
   };
   return new Set<DepthFlag>([
     ...modes.flatMap((mode) => MODE_FLAGS[mode] ?? []),
@@ -205,6 +237,15 @@ export function applySpatialPipeline(material: THREE.Material, pipeline: Spatial
   material.side = CULL_SIDES[pipeline.cullMode];
   // three draws a transparent DoubleSide material back faces first, in a second draw; Godot draws once.
   material.forceSinglePass = true;
+  if (pipeline.stencil) applyGodotStencil(material, pipeline.stencil);
+}
+
+/** Godot's error for a stencil read outside the alpha pass (`render_forward_clustered.cpp:4099`). */
+export function stencilQueueError(pipeline: SpatialPipeline, path: string): string | undefined {
+  const { stencil } = pipeline;
+  if (!stencil || !(stencil.flags & StencilFlag.READ) || usesAlphaPass(pipeline)) return undefined;
+  const shown = path === '' ? '' : `(${path})`;
+  return `Attempting to use a shader ${shown} that reads stencil but is not in the alpha queue. Ensure the material uses alpha blending or has depth_draw disabled or depth_test disabled.`;
 }
 
 function alphaPassBlendState(pipeline: SpatialPipeline): MaterialBlendState {

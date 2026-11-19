@@ -11,7 +11,11 @@ import { DepthTest } from '../../godot/rendering/materials/depthTest.js';
 import { DiffuseMode } from '../../godot/rendering/materials/diffuseMode.js';
 import { ShadingMode } from '../../godot/rendering/materials/shadingMode.js';
 import { SpecularMode } from '../../godot/rendering/materials/specularMode.js';
-import { StencilCompare, StencilFlag, StencilMode } from '../../godot/rendering/materials/stencil.js';
+import {
+  STENCIL_COMPARE_WORDS,
+  STENCIL_FLAG_WORDS,
+  StencilMode,
+} from '../../godot/rendering/materials/stencil.js';
 import { Transparency } from '../../godot/rendering/materials/transparency.js';
 import { GODOT_VERSION } from '../language/instructionTable.generated.js';
 import { MaterialFeature, MaterialFlag } from '../../godot/rendering/materials/materialFeatures.js';
@@ -54,15 +58,6 @@ const SPECULAR_MODES: Readonly<Record<EnumValue<typeof SpecularMode>, string>> =
 const DEPTH_TESTS: Readonly<Record<EnumValue<typeof DepthTest>, string>> = {
   [DepthTest.DEFAULT]: '',
   [DepthTest.INVERTED]: ', depth_test_inverted',
-};
-const STENCIL_COMPARES: Readonly<Record<EnumValue<typeof StencilCompare>, string>> = {
-  [StencilCompare.ALWAYS]: 'compare_always',
-  [StencilCompare.LESS]: 'compare_less',
-  [StencilCompare.EQUAL]: 'compare_equal',
-  [StencilCompare.LESS_OR_EQUAL]: 'compare_less_or_equal',
-  [StencilCompare.GREATER]: 'compare_greater',
-  [StencilCompare.NOT_EQUAL]: 'compare_not_equal',
-  [StencilCompare.GREATER_OR_EQUAL]: 'compare_greater_or_equal',
 };
 
 /** A mode after the first, or nothing for a value Godot's switch has no case for. */
@@ -108,10 +103,8 @@ export function renderModes(key: MaterialKey): string {
 function stencilMode(key: MaterialKey): string {
   const flags = key.stencilFlags;
   if (key.stencilMode === StencilMode.DISABLED || flags === 0) return '';
-  const operations = [
-    flags & StencilFlag.READ && 'read',
-    flags & StencilFlag.WRITE && 'write',
-    flags & StencilFlag.WRITE_DEPTH_FAIL && 'write_depth_fail',
-  ].filter(Boolean);
-  return `stencil_mode ${operations.join(', ')}${listed(STENCIL_COMPARES[key.stencilCompare])}, ${key.stencilReference};\n`;
+  const operations = Object.entries(STENCIL_FLAG_WORDS)
+    .filter(([bit]) => flags & Number(bit))
+    .map(([, word]) => word);
+  return `stencil_mode ${operations.join(', ')}${listed(STENCIL_COMPARE_WORDS[key.stencilCompare])}, ${key.stencilReference};\n`;
 }

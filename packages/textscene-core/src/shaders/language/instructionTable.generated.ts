@@ -1882,16 +1882,16 @@ spatial render_mode alpha_to_coverage_and_one	render mode	servers/rendering/shad
 spatial render_mode debug_shadow_splits	render mode	servers/rendering/shader_types.cpp:253	#1453	forward_clustered/scene_forward_clustered.glsl					
 spatial render_mode fog_disabled	render mode	servers/rendering/shader_types.cpp:254	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
 spatial render_mode specular_occlusion_disabled	render mode	servers/rendering/shader_types.cpp:255	#1453	forward_clustered/scene_forward_clustered.glsl					
-spatial stencil_mode read	stencil mode	servers/rendering/shader_types.cpp:256	#1831	forward_clustered/scene_forward_clustered.glsl					
-spatial stencil_mode write	stencil mode	servers/rendering/shader_types.cpp:257	#1831	forward_clustered/scene_forward_clustered.glsl					
-spatial stencil_mode write_depth_fail	stencil mode	servers/rendering/shader_types.cpp:258	#1831	forward_clustered/scene_forward_clustered.glsl					
-spatial stencil_mode compare_always	stencil mode	servers/rendering/shader_types.cpp:259	#1831	forward_clustered/scene_forward_clustered.glsl					
-spatial stencil_mode compare_less	stencil mode	servers/rendering/shader_types.cpp:259	#1831	forward_clustered/scene_forward_clustered.glsl					
-spatial stencil_mode compare_equal	stencil mode	servers/rendering/shader_types.cpp:259	#1831	forward_clustered/scene_forward_clustered.glsl					
-spatial stencil_mode compare_less_or_equal	stencil mode	servers/rendering/shader_types.cpp:259	#1831	forward_clustered/scene_forward_clustered.glsl					
-spatial stencil_mode compare_greater	stencil mode	servers/rendering/shader_types.cpp:259	#1831	forward_clustered/scene_forward_clustered.glsl					
-spatial stencil_mode compare_not_equal	stencil mode	servers/rendering/shader_types.cpp:259	#1831	forward_clustered/scene_forward_clustered.glsl					
-spatial stencil_mode compare_greater_or_equal	stencil mode	servers/rendering/shader_types.cpp:259	#1831	forward_clustered/scene_forward_clustered.glsl					
+spatial stencil_mode read	stencil mode	servers/rendering/shader_types.cpp:256	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
+spatial stencil_mode write	stencil mode	servers/rendering/shader_types.cpp:257	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
+spatial stencil_mode write_depth_fail	stencil mode	servers/rendering/shader_types.cpp:258	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
+spatial stencil_mode compare_always	stencil mode	servers/rendering/shader_types.cpp:259	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
+spatial stencil_mode compare_less	stencil mode	servers/rendering/shader_types.cpp:259	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
+spatial stencil_mode compare_equal	stencil mode	servers/rendering/shader_types.cpp:259	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
+spatial stencil_mode compare_less_or_equal	stencil mode	servers/rendering/shader_types.cpp:259	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
+spatial stencil_mode compare_greater	stencil mode	servers/rendering/shader_types.cpp:259	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
+spatial stencil_mode compare_not_equal	stencil mode	servers/rendering/shader_types.cpp:259	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
+spatial stencil_mode compare_greater_or_equal	stencil mode	servers/rendering/shader_types.cpp:259	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
 canvas_item render_mode skip_vertex_transform	render mode	servers/rendering/shader_types.cpp:354	#686	canvas.glsl					
 canvas_item render_mode blend_mix	render mode	servers/rendering/shader_types.cpp:355	#686	canvas.glsl					
 canvas_item render_mode blend_add	render mode	servers/rendering/shader_types.cpp:355	#686	canvas.glsl					

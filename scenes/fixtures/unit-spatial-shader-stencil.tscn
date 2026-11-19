@@ -1,0 +1,112 @@
+[gd_scene format=3 uid="uid://unit_spatial_shader_stencil"]
+
+; Stencil modes on unshaded spatial shaders: a box half behind a wall writes 1 where the wall hides it,
+; and an x-ray copy draws only there. A sphere writes 2, and a plane in front draws everywhere else.
+; No other golden gives a translated surface a stencil_mode.
+
+[sub_resource type="Shader" id="Shader_wall"]
+code = "shader_type spatial;
+render_mode unshaded;
+
+void fragment() {
+	ALBEDO = vec3(0.35, 0.35, 0.4);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_wall"]
+shader = SubResource("Shader_wall")
+
+[sub_resource type="Shader" id="Shader_hidden"]
+code = "shader_type spatial;
+render_mode unshaded;
+stencil_mode write_depth_fail, 1;
+
+void fragment() {
+	ALBEDO = vec3(0.9, 0.3, 0.1);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_hidden"]
+shader = SubResource("Shader_hidden")
+
+[sub_resource type="Shader" id="Shader_xray"]
+code = "shader_type spatial;
+render_mode unshaded, depth_test_disabled;
+stencil_mode read, compare_equal, 1;
+
+void fragment() {
+	ALBEDO = vec3(0.1, 0.8, 0.9);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_xray"]
+shader = SubResource("Shader_xray")
+
+[sub_resource type="Shader" id="Shader_sphere"]
+code = "shader_type spatial;
+render_mode unshaded;
+stencil_mode write, 2;
+
+void fragment() {
+	ALBEDO = vec3(0.2, 0.5, UV.y);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_sphere"]
+shader = SubResource("Shader_sphere")
+
+[sub_resource type="Shader" id="Shader_veil"]
+code = "shader_type spatial;
+render_mode unshaded;
+stencil_mode read, compare_not_equal, 2;
+
+void fragment() {
+	ALBEDO = vec3(0.9, 0.8, 0.2);
+	ALPHA = 0.5;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_veil"]
+shader = SubResource("Shader_veil")
+
+[sub_resource type="BoxMesh" id="BoxMesh_box"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall"]
+size = Vector3(2, 3, 0.2)
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_veil"]
+size = Vector2(3, 3)
+orientation = 2
+
+[node name="Root" type="Node3D"]
+
+[node name="Wall" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 0, 1)
+mesh = SubResource("BoxMesh_wall")
+material_override = SubResource("ShaderMaterial_wall")
+
+[node name="Hidden" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.866, 0, 0.5, 0, 1, 0, -0.5, 0, 0.866, -0.6, 0, 0)
+mesh = SubResource("BoxMesh_box")
+material_override = SubResource("ShaderMaterial_hidden")
+
+[node name="XRay" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.866, 0, 0.5, 0, 1, 0, -0.5, 0, 0.866, -0.6, 0, 0)
+mesh = SubResource("BoxMesh_box")
+material_override = SubResource("ShaderMaterial_xray")
+
+[node name="Sphere" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.4, 0, -0.5)
+mesh = SubResource("SphereMesh_1")
+material_override = SubResource("ShaderMaterial_sphere")
+
+[node name="Veil" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.4, 0, 0.8)
+mesh = SubResource("PlaneMesh_veil")
+material_override = SubResource("ShaderMaterial_veil")
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 5)
+fov = 60.0

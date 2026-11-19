@@ -743,6 +743,98 @@ void fragment() {
   rows: modeRows(modes, ['spatial.fragment.NORMAL', ...rows]),
 });
 
+/** An unshaded shader with `modes`, the stencil modes `stencil` and a fragment that shows `colour`. */
+const stencilShader = (stencil, colour, modes = []) => `${unshadedHead(modes)}stencil_mode ${stencil};
+void fragment() {
+	ALBEDO = ${colour};
+}
+`;
+
+/** A quad behind the reader, at `x`, whose shader has the stencil modes `stencil`. */
+const stencilWriter = (x, stencil, colour, scale = 0.5) => ({
+  object: { position: [x, 0, 0], rotation: [0, 0, 0], scale: [scale, scale, scale] },
+  source: stencilShader(stencil, colour),
+});
+
+/** Colours of 0 or 1, which every renderer's colour output draws alike. */
+const WRITER_COLOUR = 'vec3(0.0, 1.0, 0.0)';
+const READER_COLOUR = 'vec3(0.0, 0.0, 1.0)';
+
+/** The rows of a stencil scene: unshaded, `ALBEDO`, the reader's depth test, and each stencil mode. */
+const stencilRows = (modes) => [
+  ...modeRows(['depth_test_disabled']),
+  ...modes.map((mode) => `spatial stencil_mode ${mode}`),
+];
+
+/** A quad in front with no depth test, so in the alpha pass after the writers, where `stencil` passes. */
+const stencilScene = (name, stencil, writers, modes) => ({
+  name,
+  ...SIZE,
+  source: stencilShader(stencil, READER_COLOUR, ['depth_test_disabled']),
+  camera: BACK,
+  mesh: QUAD,
+  object: { position: [0, 0, 0.3], rotation: [0, 0, 0], scale: [1.4, 1.4, 1.4] },
+  others: writers,
+  rows: stencilRows(modes),
+});
+
+/** Two writers, 1 at the left and 2 at the right, so the stored value is 0, 1 or 2 by place. */
+const TWO_WRITERS = [
+  stencilWriter(-0.3, 'write, 1', 'vec3(1.0, 1.0, 0.0)'),
+  stencilWriter(0.3, 'write, 2', WRITER_COLOUR),
+];
+
+/** A reader of reference 1 under each compare: each passes on its own share of 0, 1 and 2. */
+const compareScene = (compare) =>
+  stencilScene(`spatial-stencil-${compare.replaceAll('_', '-')}`, `read, ${compare}, 1`, TWO_WRITERS, [
+    'read',
+    'write',
+    compare,
+  ]);
+
+/** A writer that a red quad covers at its lower right, drawn first among the opaque quads. */
+const coveredWriter = (stencil) => [
+  stencilWriter(0, stencil, WRITER_COLOUR, 0.9),
+  { ...ORANGE_IN_FRONT, source: RED },
+];
+
+/** The prepass a stencil turns on lets the writer store only where it is (or, depth fail, is not) nearest. */
+const coveredScene = (name, stencil, mode, options = {}) => ({
+  ...stencilScene(name, 'read, compare_equal, 1', coveredWriter(stencil), ['read', mode, 'compare_equal']),
+  ...options,
+});
+
+/** Each stencil mode of a spatial shader, against Godot. */
+const STENCIL_SCENES = [
+  ...[
+    'compare_always',
+    'compare_less',
+    'compare_equal',
+    'compare_less_or_equal',
+    'compare_greater',
+    'compare_not_equal',
+    'compare_greater_or_equal',
+  ].map(compareScene),
+  // Without `read` the compare mask is 0, so EQUAL passes everywhere.
+  stencilScene('spatial-stencil-compare-without-read', 'compare_equal, 1', TWO_WRITERS, [
+    'write',
+    'compare_equal',
+  ]),
+  stencilScene(
+    'spatial-stencil-reference-255',
+    'read, compare_less, 254',
+    [stencilWriter(-0.3, 'write, 255', WRITER_COLOUR), stencilWriter(0.3, 'write, 254', WRITER_COLOUR)],
+    ['read', 'write', 'compare_less']
+  ),
+  coveredScene('spatial-stencil-write-covered', 'write, 1', 'write'),
+  coveredScene('spatial-stencil-write-depth-fail', 'write_depth_fail, 1', 'write_depth_fail'),
+  coveredScene('spatial-stencil-write-prepass-off', 'write, 1', 'write', { depthPrepass: false }),
+  coveredScene('spatial-stencil-write-compatibility', 'write, 1', 'write', {
+    renderingMethod: 'gl_compatibility',
+  }),
+  coveredScene('spatial-stencil-write-mobile', 'write, 1', 'write', { renderingMethod: 'mobile' }),
+];
+
 /** Each render mode the pipeline or a template define reads, against Godot. */
 const RENDER_MODE_SCENES = [
   cullScene('spatial-cull-back', ['cull_back']),
@@ -908,6 +1000,7 @@ export const MESH_SCENES = [
   ...ALPHA_SCENES,
   ...DEPTH_SCENES,
   ...COMPATIBILITY_DEPTH_SCENES,
+  ...STENCIL_SCENES,
   ...FOG_SCENES,
   ...ENVIRONMENT_FOG_SCENES,
 ];

@@ -85,16 +85,20 @@ export function parseViewportOutput(stdout, linePrefix) {
 export function godotRuns(scenes) {
   const runs = new Map();
   for (const scene of scenes) {
+    const { clock, renderingMethod, depthPrepass } = scene;
     const key =
-      scene.clock || scene.renderingMethod ? JSON.stringify([scene.clock, scene.renderingMethod]) : '';
+      clock || renderingMethod || depthPrepass === false
+        ? JSON.stringify([clock, renderingMethod, depthPrepass === false])
+        : '';
     if (!runs.has(key)) runs.set(key, { scenes: [], options: runOptions(scene) });
     runs.get(key).scenes.push(scene);
   }
   return [...runs.entries()].sort(([a], [b]) => (a === '' ? -1 : b === '' ? 1 : 0)).map(([, run]) => run);
 }
 
-function runOptions({ clock, renderingMethod }) {
-  const rendering = renderingMethod ? `renderer/rendering_method="${renderingMethod}"\n` : '';
+function runOptions({ clock, renderingMethod, depthPrepass }) {
+  const method = renderingMethod ? `renderer/rendering_method="${renderingMethod}"\n` : '';
+  const rendering = `${method}${depthPrepass === false ? 'driver/depth_prepass/enable=false\n' : ''}`;
   if (!clock) return { arguments: [], settings: rendering && `[rendering]\n${rendering}` };
   // `--fixed-fps` steps `TIME` by 1/fps, with no jitter fix to shorten a step (`rasterizer_gles3.cpp:101`).
   return {

@@ -7,7 +7,7 @@ export function framePixels(
   camera,
   { width, height, colorSpace = THREE.NoColorSpace, samples = 0 }
 ) {
-  const target = new THREE.WebGLRenderTarget(width, height, { samples });
+  const target = new THREE.WebGLRenderTarget(width, height, { samples, stencilBuffer: true });
   target.texture.colorSpace = colorSpace;
   renderer.setRenderTarget(target);
   renderer.render(scene, camera);
