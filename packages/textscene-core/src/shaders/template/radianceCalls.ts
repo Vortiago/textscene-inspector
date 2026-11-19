@@ -7,6 +7,9 @@ const RADIANCE = 'RADIANCE';
 /** The texture functions that take no coordinate, so their arguments stay as written (`:1189`). */
 const NO_COORDINATE = new Set(['textureSize', 'textureQueryLevels']);
 
+/** The energy the background's layer was baked at, which the previewer keeps out of the layer's texels. */
+export const RADIANCE_ENERGY = 'radiance_energy';
+
 /** Parses `text` in the template, with each placeholder name of `operands` read as that expression. */
 export type ParseWithOperands = (text: string, operands: ReadonlyMap<string, Expression>) => Expression;
 
@@ -48,7 +51,19 @@ export function radianceCall(call: CallNode, read: RadianceRead, parse: ParseWit
   }
   args.push(...rest.map(placeholder));
   if (isSimple && rest.length === 0) args.push('0.0');
-  return withOperandsPlaced(parse(`${name}(${args.join(', ')})`, operands), operands);
+  const textureRead = `${name}(${args.join(', ')})`;
+  // A colour read scales. A size, a level count or a `textureQueryLod` level stays as it is.
+  const text = call.type === 'vec4' ? bakeEnergyRead(textureRead, placeholder(energyOf(call))) : textureRead;
+  return withOperandsPlaced(parse(text, operands), operands);
+}
+
+/** Godot's layer holds its bake brightness (`sky.glsl:277`). The previewer's holds 1, so the read scales. */
+function bakeEnergyRead(read: string, energy: string): string {
+  return `(${read} * vec4(vec3(${energy}), 1.0))`;
+}
+
+function energyOf(call: CallNode): Expression {
+  return { kind: 'variable', type: 'float', name: RADIANCE_ENERGY, position: call.position };
 }
 
 /** `expression` with each variable named in `operands` replaced by its expression. */

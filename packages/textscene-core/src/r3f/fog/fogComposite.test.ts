@@ -9,8 +9,8 @@ import { installFogComposite } from './fogComposite';
 import { GODOT_FOG_PARS_CHUNK } from './fogChunks';
 import { fogUniforms } from './fogUniforms';
 import { GODOT_SKY_VIEW_RAY } from '../sky/skyProjection';
-import { shownSky, SKY_RADIANCE_UNIFORMS, skyRotation } from '../sky/skyRadiance';
-import { skyLayersSlot } from '../sky/skyRadiance.testkit';
+import { SKY_RADIANCE_UNIFORMS, skyRotation } from '../sky/skyRadiance';
+import { shownSky, skyLayersSlot } from '../sky/skyRadiance.testkit';
 import { warningsOf } from '../testing/logWarnings';
 import { functionBody } from '../testing/glslSource';
 import { restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
@@ -100,13 +100,13 @@ describe('installFogComposite', () => {
     }
   });
 
-  it("reads the aerial perspective from the sky's radiance layers at the sky's energy", () => {
+  it("reads the aerial perspective from the sky's radiance layers, at the energy each layer holds", () => {
     installFogComposite();
 
     const pars = THREE.ShaderChunk[GODOT_FOG_PARS_CHUNK as keyof typeof THREE.ShaderChunk];
     expect(pars).toContain('uniform highp sampler2DArray godotSkyLayers;');
     const aerial = functionBody(pars, 'fogAerialRadiance');
-    expect(aerial).toContain('return godotSkyBlend( skyView, mipLevel * 7.0 ) * GODOT_SKY_ENERGY;');
+    expect(aerial).toContain('return godotSkyBlend( skyView, mipLevel * 7.0 );');
   });
 
   it('gives no uniform to a shader without fog (edge case)', () => {

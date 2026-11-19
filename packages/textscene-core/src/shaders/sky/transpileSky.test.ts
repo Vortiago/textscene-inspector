@@ -8,6 +8,9 @@ import { DEFAULT_SKY } from './defaultSky.testkit';
 
 const READS_RADIANCE = 'shader_type sky;\nvoid sky() { COLOR = texture(RADIANCE, EYEDIR).rgb; }';
 
+/** The colour of a read times the uniform that holds its layer's bake energy. */
+const BAKE_ENERGY_SCALE = /\* vec4\( vec3\( nodeUniform\d+ \), 1\.0 \)/;
+
 function fragmentOf(draw: SkyDraw): string {
   return generatedFragmentShader((draw.mesh.material as NodeMaterial).fragmentNode!);
 }
@@ -41,6 +44,15 @@ describe('transpileSky', () => {
 
   it("reads RADIANCE through its octmap coordinate, as Godot's compiler writes the call", () => {
     expect(fragmentOf(transpileSky(READS_RADIANCE))).toMatch(/vec3_to_oct_with_border/);
+  });
+
+  it("scales a RADIANCE colour by its layer's bake energy, which Godot stores in the layer", () => {
+    expect(fragmentOf(transpileSky(READS_RADIANCE))).toMatch(BAKE_ENERGY_SCALE);
+  });
+
+  it('reads the size of a RADIANCE level with no bake energy', () => {
+    const source = READS_RADIANCE.replace(/COLOR = .*;/, 'COLOR = vec3(float(textureSize(RADIANCE, 0).x));');
+    expect(fragmentOf(transpileSky(source))).not.toMatch(BAKE_ENERGY_SCALE);
   });
 
   it('reads the bias of a RADIANCE texture call as its level', () => {

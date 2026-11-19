@@ -8,6 +8,7 @@ import { SkyBackdrop } from './skyBackground.js';
 import { writeFramebufferHeight } from '../shadowFilter/framebufferRows.js';
 import { canvasShaderTime } from '../shaderTime/canvasShaderTime.js';
 import { renderTargetSize } from '../renderTargetSize.js';
+import { skyEnergies } from './skyRadiance.js';
 
 /** Scratch for one conversion, overwritten by each. */
 const rotationMatrix = new THREE.Matrix4();
@@ -27,6 +28,8 @@ export class ShaderSkyBackground extends SkyBackdrop {
   private readonly passes: SkyResolutionPasses;
   /** The border of the radiance octmap, written only by `readRadiance`. 1 reads as no border. */
   private radianceBorder = 1;
+  /** What `RADIANCE` reads, written only by `readRadiance`, bound in each render as its array swaps. */
+  private radiance: SkyLayers | null = null;
 
   constructor(
     private readonly sky: TranspiledSky,
@@ -44,7 +47,7 @@ export class ShaderSkyBackground extends SkyBackdrop {
 
   /** Reads the sky's own radiance `layers` as `RADIANCE` behind the scene (`sky.cpp:533`). */
   readRadiance(layers: SkyLayers): void {
-    bindRadiance(this.sky, layers.target.texture);
+    this.radiance = layers;
     this.radianceBorder = layers.layout.borderSize;
   }
 
@@ -55,6 +58,7 @@ export class ShaderSkyBackground extends SkyBackdrop {
 
   /** The bindings of the camera of each render, as one scene can render through several cameras. */
   override onBeforeRender(renderer: THREE.WebGLRenderer, _scene: THREE.Scene, camera: THREE.Camera): void {
+    if (this.radiance) bindRadiance(this.sky, this.radiance.target.texture);
     writeSkyBindings(this.sky, {
       camera,
       skyOrientation: this.skyOrientation,
@@ -63,6 +67,7 @@ export class ShaderSkyBackground extends SkyBackdrop {
       fog: this.fog(),
       lights: this.lights,
       borderSize: this.radianceBorder,
+      radianceEnergy: skyEnergies[0],
     });
     // Godot draws the quarter and half passes before the scene, at the size of its buffers (`sky.cpp:1427`).
     if (this.passes.isEmpty) return;

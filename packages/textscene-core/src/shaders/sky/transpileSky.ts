@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { int, screenCoordinate, screenSize, varyingProperty, vec4, vertexIndex } from 'three/tsl';
+import { int, screenCoordinate, screenSize, uniform, varyingProperty, vec4, vertexIndex } from 'three/tsl';
 import type { Node, TextureNode, UniformNode } from 'three/webgpu';
 import {
   parsedShader,
@@ -8,6 +8,7 @@ import {
   type ShaderOptions,
 } from '../language/parseShader.js';
 import { emitTemplateStage } from '../template/emitTemplate.js';
+import { RADIANCE_ENERGY } from '../template/radianceCalls.js';
 import { linkedProgram, type LinkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
 import { TreeMemo } from '../template/treeMemo.js';
 import { defaultTexture } from '../uniforms/defaultTextures.js';
@@ -145,6 +146,7 @@ function skyDraw(
   isRowsUp: boolean
 ): SkyDraw {
   resources.textures.set('radiance', radianceTextureNode(radiance));
+  const radianceEnergy = uniform(1);
   const uvInterp = varyingProperty('vec2', 'uv_interp') as unknown as Node;
   const vertex = emitTemplateStage(
     linked('vertex'),
@@ -158,13 +160,18 @@ function skyDraw(
   );
   const fragment = emitTemplateStage(
     linked('fragment'),
-    new Map([...parameterValues, ['uv_interp', uvInterp], ['gl_FragCoord', fragCoord(isRowsUp)]]),
+    new Map([
+      ...parameterValues,
+      ['uv_interp', uvInterp],
+      ['gl_FragCoord', fragCoord(isRowsUp)],
+      [RADIANCE_ENERGY, radianceEnergy as unknown as Node],
+    ]),
     { name: 'frag_color', type: 'vec4' },
     resources
   );
   return {
     mesh: skyMesh(glClipPosition(vertex.result, isRowsUp), fragment.result, shader),
-    uniforms: resources.uniforms.byName,
+    uniforms: new Map([...resources.uniforms.byName, [RADIANCE_ENERGY, radianceEnergy]]),
     textures: resources.textures,
   };
 }

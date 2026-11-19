@@ -342,7 +342,7 @@ describe('buildSkyEnvironment lights after the build', () => {
     env.setLights!([SUN]);
 
     const drawn = cubeLightEnergiesDrawnBy(renderer, () =>
-      env.radianceInPlace!.bakeFirstLayerAgain(new THREE.Vector3())
+      env.radianceInPlace!.bakeFirstLayerAgain(new THREE.Vector3(), 1)
     );
 
     expect(drawn).toEqual([3, 3, 3, 3, 3, 3]);

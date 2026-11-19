@@ -37,7 +37,8 @@ import { GODOT_SAMPLING, type ProjectSampling } from '../../shaders/uniforms/sam
  */
 interface OctmapArray<Layout extends SkyOctmapLayout> {
   readonly layout: Layout;
-  readonly target: THREE.WebGLArrayRenderTarget;
+  /** Written only by `swapSkyLayerTargets`, so each reader reads it at its read. */
+  target: THREE.WebGLArrayRenderTarget;
 }
 
 /**
@@ -102,6 +103,11 @@ function releasePasses(gl: THREE.WebGLRenderer, filter: LayerFilter): void {
 export function createSkyLayers(bake: SkyBake, sampling?: ProjectSampling): SkyLayers {
   const layout = skyLayersLayout(bake);
   return createOctmapArray(layout, layout.layerSizes.length, sampling);
+}
+
+/** Swaps the arrays of two sky layers of one layout, so `a` holds what `b` held and `b` what `a` held. */
+export function swapSkyLayerTargets(a: SkyLayers, b: SkyLayers): void {
+  [a.target, b.target] = [b.target, a.target];
 }
 
 /** Bakes `layers` with targets it keeps from bake to bake, a layer at a time for an incremental sky. */

@@ -13,10 +13,10 @@ import { SkyLayer } from './SkyLayer';
 import { ownEnvironmentChanges, ShownEnvironment, useOwnEnvironment } from '../environment/sceneEnvironment';
 import { skyLightUserData } from './skyLight';
 import { observeSceneCamera } from '../sceneRenderCamera';
-import { SHOWN_ENERGY, shownSky, skyRotation } from './skyRadiance';
-import { REFLECTION_SLOT, skyLayersSlot } from './skyRadiance.testkit';
+import { skyEnergies, skyRotation } from './skyRadiance';
+import { REFLECTION_SLOT, shownSky, skyLayersSlot } from './skyRadiance.testkit';
 import { boundHandle, recordTextures, RendererProbe, withRenderTargets } from '../../testing/recordingWebGL';
-import { skyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
+import { MAX_ROUGHNESS_LOD, skyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
 import { installFogComposite } from '../fog/fogComposite';
 import { backgroundCube } from '../shaderPatch/backgroundPrograms';
 import { fireSceneRender, fireSceneRenderEnd } from '../testing/fireSceneRender';
@@ -89,6 +89,12 @@ function Scene({ lights }: { lights: number }) {
 }
 
 const lastBake = () => bakes[bakes.length - 1];
+
+/** The energy at which a surface in `scene`'s render reads the ambient, from the last radiance layer. */
+const ambientRead = (scene: THREE.Scene) => scene.environmentIntensity * skyEnergies[MAX_ROUGHNESS_LOD]!;
+
+/** The energy each layer of the shown radiance holds. */
+const layerEnergies = () => Array.from(skyEnergies);
 
 type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
@@ -335,7 +341,7 @@ describe('SkyLayer', () => {
 
     // A quarter turn about Y takes the sky's +X to the world's -Z.
     const skyForward = new THREE.Vector3(0, 0, -1).applyMatrix3(new THREE.Matrix3().fromArray(skyRotation));
-    expect([shownSky[SHOWN_ENERGY], Math.round(skyForward.x)]).toEqual([1.5, 1]);
+    expect([Math.max(...layerEnergies()), Math.round(skyForward.x)]).toEqual([1.5, 1]);
   });
 
   it('leaves the renders after its scene reading a black radiance', async () => {
@@ -347,7 +353,7 @@ describe('SkyLayer', () => {
 
     fireSceneRenderEnd(scene, new THREE.PerspectiveCamera());
 
-    expect(shownSky[SHOWN_ENERGY]).toBe(0);
+    expect(Math.max(...layerEnergies())).toBe(0);
   });
 
   it('shows a new share of the ambient without a new bake', async () => {
@@ -564,13 +570,14 @@ describe('SkyLayer under an exposure', () => {
     built.next = skyEnvironment();
     const { scene } = await mount(sky({ energyMultiplier: 2 }));
     fireSceneRender(scene, new THREE.PerspectiveCamera());
-    expect(scene.environmentIntensity).toBeCloseTo(4, 10);
+    expect(ambientRead(scene)).toBeCloseTo(4, 10);
   });
 
   it('reads the ambient and the reflection at the exposure squared', async () => {
     built.next = skyEnvironment();
     const { scene } = await mount(exposed(2, sky({ energyMultiplier: ENERGY })));
-    expect(scene.environmentIntensity).toBeCloseTo(ENERGY * ENERGY * 4, 10);
+    fireSceneRender(scene, new THREE.PerspectiveCamera());
+    expect(ambientRead(scene)).toBeCloseTo(ENERGY * ENERGY * 4, 10);
   });
 
   it('draws the background at the exposure', async () => {
@@ -628,11 +635,11 @@ describe('SkyLayer under an exposure', () => {
       built.next = skyEnvironment();
       const { scene } = await mount(exposed(2, sky({ energyMultiplier: ENERGY })));
       fireSceneRender(scene, camera);
-      const inside = drawnAt(scene, 3, () => scene.environmentIntensity);
+      const inside = drawnAt(scene, 3, () => ambientRead(scene));
       fireSceneRender(scene, camera);
 
       expect(inside).toBeCloseTo(ENERGY * ENERGY * 2 * 3, 10);
-      expect(scene.environmentIntensity).toBeCloseTo(ENERGY * ENERGY * 4, 10);
+      expect(ambientRead(scene)).toBeCloseTo(ENERGY * ENERGY * 4, 10);
     });
 
     it('draws the background at that exposure, and its own in its next render', async () => {
@@ -649,10 +656,7 @@ describe('SkyLayer under an exposure', () => {
       built.next = skyEnvironment();
       const { scene } = await mount(exposed(2, sky({ energyMultiplier: ENERGY })));
       fireSceneRender(scene, camera);
-      const inside = drawnAt(scene, null, () => [
-        scene.environmentIntensity,
-        drawnBackgroundIntensity(scene),
-      ]);
+      const inside = drawnAt(scene, null, () => [ambientRead(scene), drawnBackgroundIntensity(scene)]);
       expect(inside).toEqual([ENERGY * ENERGY * 2, ENERGY]);
     });
 
@@ -695,7 +699,7 @@ describe('SkyLayer under an exposure', () => {
     built.next = skyEnvironment();
     const { scene } = await mount(exposed(0, sky({ energyMultiplier: ENERGY })));
     fireSceneRender(scene, new THREE.PerspectiveCamera());
-    expect([scene.environmentIntensity, drawnBackgroundIntensity(scene)]).toEqual([0, 0]);
+    expect([ambientRead(scene), drawnBackgroundIntensity(scene)]).toEqual([0, 0]);
   });
 
   it('reads a sky in a world with no CameraAttributes as before', async () => {
@@ -704,7 +708,7 @@ describe('SkyLayer under an exposure', () => {
       <WorldExposureScope>{sky({ energyMultiplier: ENERGY })}</WorldExposureScope>
     );
     fireSceneRender(scene, new THREE.PerspectiveCamera());
-    expect([scene.environmentIntensity, drawnBackgroundIntensity(scene)]).toEqual([ENERGY * ENERGY, ENERGY]);
+    expect([ambientRead(scene), drawnBackgroundIntensity(scene)]).toEqual([ENERGY * ENERGY, ENERGY]);
   });
 
   /**
@@ -736,20 +740,20 @@ describe('SkyLayer under an exposure', () => {
       for (let render = 0; render < 10; render += 1) fireSceneRender(mounted.scene, view);
       return mounted;
     }
-    /** The ambient energy a capture at the world's exposure of 1 reads, of a ONCE probe unless named. */
-    const capturedAmbient = (scene: THREE.Scene, { isInterior = false, updatesAlways = false } = {}) =>
+    /** The ambient energy a ONCE capture at the world's exposure of 1 reads. */
+    const capturedAmbient = (scene: THREE.Scene, { isInterior = false } = {}) =>
       drawAtExposure(scene, 1, () => {
-        drawAsProbeCapture({ isInterior, hasShadows: true, updatesAlways }, () =>
+        drawAsProbeCapture({ isInterior, hasShadows: true, isRealTime: false }, () =>
           fireSceneRender(scene, new THREE.PerspectiveCamera())
         );
-        return scene.environmentIntensity;
+        return ambientRead(scene);
       });
     /** The ambient energy the view reads in the frame after `scene` notes one ALWAYS probe. */
     function viewAmbientOverRealTimeProbe(scene: THREE.Scene) {
       noteRealTimeProbes(scene, 1);
       onTestFinished(() => noteRealTimeProbes(scene, 0));
       fireSceneRender(scene, view);
-      return scene.environmentIntensity;
+      return ambientRead(scene);
     }
 
     it("reads the view's bake in a ONCE capture at another exposure", async () => {
@@ -758,36 +762,87 @@ describe('SkyLayer under an exposure', () => {
       expect(capturedAmbient(scene)).toBeCloseTo(ENERGY * 4 * ENERGY, 10);
     });
 
-    it('bakes no radiance for a capture at another exposure', async () => {
+    it('builds no bake for a capture at another exposure', async () => {
       const { scene, advanceFrames } = await viewedAtFour();
       const bakeCount = bakes.length;
       capturedAmbient(scene);
       await advanceFrames(1);
       fireSceneRender(scene, view);
 
-      expect([bakes.length - bakeCount, scene.environmentIntensity]).toEqual([
-        1,
+      expect([bakes.length - bakeCount, ambientRead(scene)]).toEqual([
+        0,
         expect.closeTo(ENERGY * 4 * ENERGY * 4, 10),
       ]);
     });
 
-    it("reads, in a view over an ALWAYS probe, the bake its capture's renders made at the world's exposure", async () => {
-      const { scene } = await viewedAtFour();
+    /** The layer energies each of `frames` views over an ALWAYS probe reads, in units of the sky's energy. */
+    function layersOverRealTimeProbe(scene: THREE.Scene, frames: number) {
+      return Array.from({ length: frames }, () => {
+        viewAmbientOverRealTimeProbe(scene);
+        return layerEnergies().map((energy) => energy / ENERGY);
+      });
+    }
 
-      expect(viewAmbientOverRealTimeProbe(scene)).toBeCloseTo(ENERGY * ENERGY * 4, 10);
+    it('holds the layers of an 8 frame cycle over an ALWAYS probe, as Godot does', async () => {
+      const { scene } = await viewedAtFour();
+      const frames = layersOverRealTimeProbe(scene, 16);
+      const world = Array<number>(8).fill(1);
+
+      expect(frames.slice(0, 8)).toEqual([
+        [1, 1, 1, 1, 1, 1, 1, 4],
+        ...Array<number[]>(5).fill(world),
+        [4, 1, 1, 1, 1, 1, 1, 1],
+        Array<number>(8).fill(4),
+      ]);
+      expect(frames.slice(8)).toEqual(frames.slice(0, 8));
     });
 
-    it("reads the bake at the world's exposure in an ALWAYS capture", async () => {
+    it('draws 2 of every 8 frames over an ALWAYS probe unlike the other 6, so 3 frames change, as in Godot', async () => {
+      const { scene } = await viewedAtFour();
+      // The ambient reads the last layer, and the shiny ball, at roughness 0.2, reads layers 1 and 2.
+      const drawnReads = layersOverRealTimeProbe(scene, 9).map((layers) => `${layers[1]} ${layers[7]}`);
+      const changed = drawnReads
+        .slice(1)
+        .flatMap((reads, frame) => (reads === drawnReads[frame] ? [] : [frame + 1]));
+
+      expect([changed, new Set(drawnReads).size]).toEqual([[1, 7, 8], 3]);
+    });
+
+    it("reads, in a view over an ALWAYS probe, the layers its capture's faces baked at the world's exposure", async () => {
       const { scene } = await viewedAtFour();
       viewAmbientOverRealTimeProbe(scene);
 
-      expect(capturedAmbient(scene)).toBeCloseTo(ENERGY * ENERGY, 10);
+      // Six faces bake layer 0 and filter layers 1 to 5, and the view filters layer 6: layer 7 waits.
+      expect(layerEnergies()).toEqual([...Array<number>(7).fill(ENERGY), ENERGY * 4]);
+    });
+
+    it('bakes layer 0 at the world exposure in the first face of an ALWAYS capture, before the face draws', async () => {
+      const { scene } = await viewedAtFour();
+      noteRealTimeProbes(scene, 1);
+      onTestFinished(() => noteRealTimeProbes(scene, 0));
+      const faceLayers = drawAtExposure(scene, 1, () => {
+        drawAsProbeCapture({ isInterior: false, hasShadows: true, isRealTime: true }, () =>
+          fireSceneRender(scene, new THREE.PerspectiveCamera())
+        );
+        return layerEnergies();
+      });
+
+      expect(faceLayers).toEqual([ENERGY, ...Array<number>(7).fill(ENERGY * 4)]);
     });
 
     it('bakes the sky it finds dirty in a face of an ALWAYS capture, which Godot draws as a render', async () => {
       const { scene } = await viewedAtFour();
+      noteRealTimeProbes(scene, 1);
+      onTestFinished(() => noteRealTimeProbes(scene, 0));
+      // An Incremental sky's first face bakes layer 0 only: the sharpest reflection reads it.
+      const sharpRead = drawAtExposure(scene, 1, () => {
+        drawAsProbeCapture({ isInterior: false, hasShadows: true, isRealTime: true }, () =>
+          fireSceneRender(scene, new THREE.PerspectiveCamera())
+        );
+        return scene.environmentIntensity * skyEnergies[0]!;
+      });
 
-      expect(capturedAmbient(scene, { updatesAlways: true })).toBeCloseTo(ENERGY * ENERGY, 10);
+      expect(sharpRead).toBeCloseTo(ENERGY * ENERGY, 10);
     });
 
     it("reads the view's own bake again once the ALWAYS probe leaves", async () => {
@@ -796,7 +851,7 @@ describe('SkyLayer under an exposure', () => {
       noteRealTimeProbes(scene, 0);
       for (let render = 0; render < 10; render += 1) fireSceneRender(scene, view);
 
-      expect(scene.environmentIntensity).toBeCloseTo(ENERGY * 4 * ENERGY * 4, 10);
+      expect(ambientRead(scene)).toBeCloseTo(ENERGY * 4 * ENERGY * 4, 10);
     });
 
     it('shows no sky to an interior capture, which draws without the environment', async () => {
@@ -821,7 +876,7 @@ describe('SkyLayer under an exposure', () => {
     const ambientDrawnAt = (scene: THREE.Scene, exposure: number) =>
       drawAtExposure(scene, exposure, () => {
         fireSceneRender(scene, camera);
-        return scene.environmentIntensity;
+        return ambientRead(scene);
       });
     const skyLight = (
       <directionalLight userData={skyLightUserData({ drawsInSky: true, energy: 2, size: 0 })} />
@@ -841,7 +896,7 @@ describe('SkyLayer under an exposure', () => {
       ambientDrawnAt(scene, 4);
       fireSceneRender(scene, camera);
 
-      expect(scene.environmentIntensity).toBeCloseTo(ENERGY * ENERGY * 4 * 2, 10);
+      expect(ambientRead(scene)).toBeCloseTo(ENERGY * ENERGY * 4 * 2, 10);
     });
 
     it('keeps the bake of the first render for a sky that reads lights but has none (edge case)', async () => {
@@ -868,10 +923,11 @@ describe('SkyLayer under an exposure', () => {
       expect(ambientDrawnAt(scene, 3)).toBeCloseTo(ENERGY * ENERGY * 4 * 3, 10);
     });
 
-    it('bakes a quality sky that reads lights again at the exposure of each render', async () => {
-      built.next = skyEnvironment();
+    it('bakes a quality sky that reads lights again in place at the exposure of each render', async () => {
+      const recorded = recordedEnvironment();
+      built.next = recorded.build;
       const qualitySky: Sky = { ...proceduralSky, processMode: 'quality' };
-      const { scene, advanceFrames } = await mount(
+      const { scene } = await mount(
         exposed(
           2,
           <>
@@ -881,11 +937,14 @@ describe('SkyLayer under an exposure', () => {
         )
       );
       ambientDrawnAt(scene, 4);
-      ambientDrawnAt(scene, 3);
-      await advanceFrames(1);
+      recorded.steps.length = 0;
 
-      expect(bakes.map((bake) => bake.lights[0]?.energy)).toContain(6);
       expect(ambientDrawnAt(scene, 3)).toBeCloseTo(ENERGY * ENERGY * 3 * 3, 10);
+      expect([bakes.length, recorded.lightEnergies.at(-1), recorded.steps.at(-1)]).toEqual([
+        1,
+        6,
+        'every layer',
+      ]);
     });
 
     it('keeps the first bake of a quality sky that reads no lights', async () => {
@@ -915,9 +974,10 @@ describe('SkyLayer under an exposure', () => {
       expect(ambientDrawnAt(scene, 3)).toBeCloseTo(ENERGY * ENERGY * 3 * 3, 10);
     });
 
-    it("draws the background of a sky that reads lights from a bake at each render's exposure", async () => {
-      built.next = skyEnvironment();
-      const { scene, advanceFrames } = await mount(
+    it("draws one background with the lights at each render's exposure, as Godot draws it live", async () => {
+      const recorded = recordedEnvironment();
+      built.next = recorded.build;
+      const { scene } = await mount(
         exposed(
           2,
           <>
@@ -933,11 +993,11 @@ describe('SkyLayer under an exposure', () => {
           fireSceneRenderEnd(scene, camera);
           return drawn;
         });
-      backgroundDrawnAt(4);
-      backgroundDrawnAt(3);
-      await advanceFrames(1);
+      const atFour = backgroundDrawnAt(4);
+      const energyAtFour = recorded.lightEnergies.at(-1);
+      const atThree = backgroundDrawnAt(3);
 
-      expect(backgroundDrawnAt(3)).not.toBe(backgroundDrawnAt(4));
+      expect([atThree === atFour, energyAtFour, recorded.lightEnergies.at(-1)]).toEqual([true, 8, 6]);
     });
 
     it('takes the exposure of its first render again for a new sky material', async () => {
@@ -955,9 +1015,9 @@ describe('SkyLayer under an exposure', () => {
       expect(ambientDrawnAt(scene, 5)).toBeCloseTo(ENERGY * ENERGY * 3 * 5, 10);
     });
 
-    it('counts a bake that lands a frame late as a change of the world Environment, which a probe captures again', async () => {
-      built.next = skyEnvironment();
-      const { scene, advanceFrames } = await mount(
+    it('notes no change of the world Environment for a bake at another exposure alone, so no probe captures again', async () => {
+      built.next = recordedEnvironment().build;
+      const { scene } = await mount(
         exposed(
           2,
           <>
@@ -967,11 +1027,14 @@ describe('SkyLayer under an exposure', () => {
           </>
         )
       );
+      for (let render = 0; render < 10; render += 1) fireSceneRender(scene, camera);
       const changes = ownEnvironmentChanges(scene);
-      drawAtExposure(scene, 3, () => fireSceneRender(scene, camera));
-      await advanceFrames(1);
+      for (let frame = 0; frame < 4; frame += 1) {
+        drawAtExposure(scene, 3, () => fireSceneRender(scene, camera));
+        fireSceneRender(scene, camera);
+      }
 
-      expect(ownEnvironmentChanges(scene)).toBeGreaterThan(changes);
+      expect(ownEnvironmentChanges(scene)).toBe(changes);
     });
   });
 
@@ -1017,20 +1080,26 @@ describe('SkyLayer under an exposure', () => {
       expect(bakes).toHaveLength(1);
     });
 
-    it('frees a bake that no render read in a frame after the one that baked it, as Godot keeps one radiance', async () => {
+    it('builds one bake for a sky that reads lights at two exposures, as Godot keeps one radiance', async () => {
       const dispose = vi.fn();
       built.next = skyEnvironment(dispose);
       const camera = new THREE.PerspectiveCamera();
-      const { scene, advanceFrames } = await mount(exposed(2, sky({ sky: proceduralSky })));
-      fireSceneRender(scene, camera);
-      drawAtExposure(scene, 3, () => fireSceneRender(scene, camera));
-      await advanceFrames(1);
-      for (const _frame of [1, 2]) {
+      const { scene, advanceFrames } = await mount(
+        exposed(
+          2,
+          <>
+            {sky({ sky: proceduralSky })}
+            <directionalLight userData={skyLightUserData({ drawsInSky: true, energy: 2, size: 0 })} />
+          </>
+        )
+      );
+      for (const _frame of [1, 2, 3]) {
         fireSceneRender(scene, camera);
+        drawAtExposure(scene, 3, () => fireSceneRender(scene, camera));
         await advanceFrames(1);
       }
 
-      expect(dispose).toHaveBeenCalledOnce();
+      expect([bakes.length, dispose.mock.calls.length]).toEqual([1, 0]);
     });
 
     it('bakes a sky that holds no exposure once for every exposure', async () => {
@@ -1094,6 +1163,12 @@ describe('SkyLayer under a change of its lights', () => {
     expect(steps).toEqual(['every layer']);
   });
 
+  it('names the texels of a Quality bake by its lights, their exposure and its energy', async () => {
+    const { bakeKeys } = await stepsAfterSunMoves({ ...proceduralSky, processMode: 'quality' }, 1);
+
+    expect(bakeKeys.at(-1)).toMatch(/@1\|1$/);
+  });
+
   it('builds no new bake for the change', async () => {
     await stepsAfterSunMoves(proceduralSky, 3);
 
@@ -1137,21 +1212,31 @@ describe('SkyLayer under a change of its lights', () => {
     expect(ownEnvironmentChanges(scene)).toBeGreaterThan(changes);
   });
 
-  // The probe faces of an ALWAYS probe and the view dirty the sky at two exposures in each frame.
-  it('draws nothing in place for renders that change the exposure alone', async () => {
+  // The exposure scales the light energies, so a render at another exposure dirties the sky (`sky.cpp:1086`).
+  it('bakes layer 0 in place at the exposure of a render that changes the exposure alone', async () => {
     const recorded = recordedEnvironment();
     built.next = recorded.build;
     const { scene } = await mount(exposed(2, <LitSky sky={proceduralSky} sun={[1, 2, 3]} />));
     for (let render = 0; render < 10; render += 1) fireSceneRender(scene, camera);
     recorded.steps.length = 0;
 
-    for (let frame = 0; frame < 20; frame += 1) {
-      drawAtExposure(scene, 4, () => fireSceneRender(scene, camera));
-      fireSceneRender(scene, camera);
-      fireSceneRender(scene, camera);
-    }
+    drawAtExposure(scene, 4, () => fireSceneRender(scene, camera));
 
-    expect(recorded.steps).toEqual([]);
+    expect([recorded.steps, recorded.lightEnergies.at(-1), recorded.bakeEnergies.at(-1)]).toEqual([
+      ['layer 0'],
+      4,
+      4,
+    ]);
+  });
+
+  it("bakes again in its first render at that render's energy, when the build held another exposure", async () => {
+    const recorded = recordedEnvironment();
+    built.next = recorded.build;
+    const { scene } = await mount(exposed(2, <LitSky sky={proceduralSky} sun={[1, 2, 3]} />));
+
+    drawAtExposure(scene, 4, () => fireSceneRender(scene, camera));
+
+    expect([recorded.steps, recorded.bakeEnergies]).toEqual([['every layer'], [4]]);
   });
 
   it('steps nothing for a sky that reads no lights (edge case)', async () => {
@@ -1166,19 +1251,30 @@ function recordedEnvironment() {
   const steps: string[] = [];
   const lightCounts: number[] = [];
   const lightDirections: THREE.Vector3[] = [];
+  /** The energy of the first light each time the lights are shown. */
+  const lightEnergies: number[] = [];
+  /** The energy each bake in place is read at. */
+  const bakeEnergies: number[] = [];
+  /** The texel key each full bake in place names. */
+  const bakeKeys: (string | undefined)[] = [];
   const build = (gl: THREE.WebGLRenderer): SkyEnvironment => ({
     ...skyEnvironment()(gl),
     setLights: (lights) => {
       lightCounts.push(lights.length);
       if (lights[0]) lightDirections.push(lights[0].direction.clone());
+      if (lights[0]) lightEnergies.push(lights[0].energy);
     },
     radianceInPlace: {
-      bakeAgain: () => steps.push('every layer'),
-      bakeFirstLayerAgain: () => steps.push('layer 0'),
+      bakeAgain: (_position, energy, key) => {
+        steps.push('every layer');
+        bakeEnergies.push(energy);
+        bakeKeys.push(key);
+      },
+      bakeFirstLayerAgain: (_position, energy) => steps.push('layer 0') && bakeEnergies.push(energy),
       filterLayer: (layer) => steps.push(`filter ${layer}`),
     },
   });
-  return { build, steps, lightCounts, lightDirections };
+  return { build, steps, lightCounts, lightDirections, lightEnergies, bakeEnergies, bakeKeys };
 }
 
 /** Names the Environment of these tests the world's own, as a probe captures with. */

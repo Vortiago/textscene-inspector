@@ -110,7 +110,7 @@ describe('<EnvironmentLayer> colour background under an exposure', () => {
       const clearColor = new THREE.Color(0x123456);
       drawAtExposure(scene, 3, () => {
         scene.background = clearColor;
-        drawAsProbeCapture({ isInterior: true, hasShadows: false, updatesAlways: false }, () =>
+        drawAsProbeCapture({ isInterior: true, hasShadows: false, isRealTime: false }, () =>
           fireSceneRender(scene, new THREE.PerspectiveCamera())
         );
       });

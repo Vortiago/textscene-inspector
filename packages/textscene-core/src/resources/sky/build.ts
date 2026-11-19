@@ -56,10 +56,10 @@ export interface SkyEnvironment {
 
 /** Bakes the layers again into the array the readers sample, as for a dirty sky (`sky.cpp:1273`). */
 export interface RadianceInPlace {
-  /** Bakes every layer, as a real-time or a quality sky does. */
-  bakeAgain(position: Readonly<Vector3>): void;
-  /** Bakes layer 0 alone, as an incremental sky does: `filterLayer` then filters the others. */
-  bakeFirstLayerAgain(position: Readonly<Vector3>): void;
+  /** Bakes every layer at `energy`. A `key` names the texels, and the bake before keeps its layers. */
+  bakeAgain(position: Readonly<Vector3>, energy: number, key?: string): void;
+  /** Bakes layer 0 alone to be read at `energy`, as an incremental sky does. `filterLayer` does the rest. */
+  bakeFirstLayerAgain(position: Readonly<Vector3>, energy: number): void;
   /** Filters `layer` from the last bake of layer 0. */
   filterLayer(layer: number): void;
 }
@@ -140,13 +140,8 @@ function buildBuiltInSkyEnvironment(
     // Ahead of the bake, so a three whose background program moved frees no layers it baked.
     background = asBackground ? new SkyBackground(skyGlsl(material), uniforms) : null;
     const bake = cappedBake(sky);
-    const octmapSky = new CubeSkyOctmap(
-      material,
-      uniforms,
-      bake.radianceSize,
-      radianceDebanding(material, energy)
-    );
-    radiance = new OctmapRadiance(gl, bake, octmapSky, sampling);
+    const octmapSky = new CubeSkyOctmap(material, uniforms, bake.radianceSize);
+    radiance = new OctmapRadiance(gl, bake, octmapSky, energy, sampling);
   } catch (error) {
     warn('[Sky] could not render the sky environment', error);
     background?.dispose();
@@ -183,12 +178,10 @@ class CubeSkyOctmap implements OctmapSky {
   // At the origin, so each face samples the directions Godot's `EYEDIR` covers.
   private readonly camera: THREE.CubeCamera;
 
-  /** `debanding` scales the radiance's debanding noise, 0 for none. */
   constructor(
-    material: BuiltInSkyProperties,
+    private readonly material: BuiltInSkyProperties,
     uniforms: SkyUniforms,
-    radianceSize: number,
-    private readonly debanding: number
+    radianceSize: number
   ) {
     this.cube = new THREE.WebGLCubeRenderTarget(radianceSize, { type: THREE.HalfFloatType });
     this.camera = new THREE.CubeCamera(0.1, 10, this.cube);
@@ -203,9 +196,15 @@ class CubeSkyOctmap implements OctmapSky {
     this.scene.add(new THREE.Mesh(this.geometry, this.shader));
   }
 
-  draw(gl: THREE.WebGLRenderer, octmap: THREE.WebGLRenderTarget, layout: SkyOctmapLayout): void {
+  draw(
+    gl: THREE.WebGLRenderer,
+    octmap: THREE.WebGLRenderTarget,
+    layout: SkyOctmapLayout,
+    _position: Readonly<Vector3>,
+    energy: number
+  ): void {
     this.camera.update(gl, this.scene);
-    cubeRadiance(gl, this.cube.texture, this.debanding)(octmap, layout);
+    cubeRadiance(gl, this.cube.texture, radianceDebanding(this.material, energy))(octmap, layout);
   }
 
   dispose(): void {

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { skyDraws, type TranspiledSky } from './transpileSky.js';
 import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
+import { RADIANCE_ENERGY } from '../template/radianceCalls.js';
 import type { Vector3 } from '../../godot/math/vector.js';
 
 /** A directional light as Godot hands it to the sky (`sky.cpp:1070-1098`). */
@@ -44,6 +45,8 @@ export interface SkyScene {
   readonly lights: readonly SkyLight[];
   /** The octmap's border size, 1 minus twice its padding in UV, for the octmap pass alone. */
   readonly borderSize?: number;
+  /** The energy the bound radiance's layer 0 was baked at, which `RADIANCE` reads. None reads as 1. */
+  readonly radianceEnergy?: number;
 }
 
 /** The four lights of a sky's light buffer, `MAX_DIRECTIONAL_LIGHT_DATA_STRUCTS`. */
@@ -63,6 +66,7 @@ export const SKY_BINDINGS: readonly Binding<SkyScene>[] = [
   },
   { uniform: 'params.time', godot: 'sky.cpp:232', value: (scene) => scene.time },
   { uniform: 'params.border_size', godot: 'sky.cpp:233-234', value: borderSizeOf },
+  { uniform: RADIANCE_ENERGY, godot: 'sky.glsl:277', value: ({ radianceEnergy = 1 }) => radianceEnergy },
   // 1 / the luminance multiplier, 1 on the clustered renderer (`render_forward_clustered.cpp:1978`).
   { uniform: 'params.luminance_multiplier', godot: 'sky.cpp:235', value: () => 1 },
   {

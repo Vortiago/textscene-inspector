@@ -31,5 +31,5 @@ export function bakeSkyLayers(
     draw: (renderer, octmap, layout) => cubeRadiance(renderer, radiance, debanding)(octmap, layout),
     dispose: () => {},
   };
-  return new OctmapRadiance(gl, bake, cubeSky, sampling).releaseLayers();
+  return new OctmapRadiance(gl, bake, cubeSky, 1, sampling).releaseLayers();
 }

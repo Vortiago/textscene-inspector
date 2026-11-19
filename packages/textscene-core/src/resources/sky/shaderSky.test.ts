@@ -181,7 +181,7 @@ describe('buildSkyEnvironment of a shader sky', () => {
     installNodesHandler(renderer, 'linear');
     const environment = shaderSkyEnvironment(renderer, decodeSky({}, shaderMaterial(TIME_SKY)))!;
     const copy = vi.spyOn(renderer, 'copyTextureToTexture');
-    environment.radianceInPlace!.bakeAgain(new THREE.Vector3(0, 1, 0));
+    environment.radianceInPlace!.bakeAgain(new THREE.Vector3(0, 1, 0), 1);
     expect(copy.mock.calls.map(([, into]) => into)).toContain(environment.layers.target.texture);
     environment.dispose();
   });
@@ -200,7 +200,7 @@ describe('buildSkyEnvironment of a shader sky', () => {
     environment.setLights!([sun]);
     writes.mockClear();
 
-    environment.radianceInPlace!.bakeFirstLayerAgain(new THREE.Vector3());
+    environment.radianceInPlace!.bakeFirstLayerAgain(new THREE.Vector3(), 1);
 
     expect(writes.mock.calls.map(([, scene]) => scene.lights[0]?.energy)).toContain(2);
     environment.dispose();

@@ -16,21 +16,34 @@ import { visibleInTree } from '../visibleInTree';
 import { useFrame, useThree } from '@react-three/fiber';
 import type { AuthoredSky, Sky, SkyProperties } from '../../resources/sky/types';
 import type { SkyLight } from '../../resources/sky/build';
-import { NO_SKY_LIGHTS, noteSkyLights, skyLightEnergy, skyLightSize } from './skyLight';
+import {
+  lightDataKey,
+  NO_SKY_LIGHT_DATA,
+  noteSkyLights,
+  type SkyLightData,
+  skyLightDataAt,
+  skyLightEnergy,
+  skyLightSize,
+} from './skyLight';
 import { skyEuler } from './skyRotation';
 import { hideShownSky } from './skyRadiance';
-import { holdSkyBakes, radianceUpdateOf, type SkyBakes, type SkyLightsRead, skyUpdatePlan } from './skyBakes';
+import { holdSkyBake, radianceUpdateOf, type SkyLightsRead, skyUpdatePlan } from './skyBake';
 import { materialReadsLights } from '../../resources/sky/readsLights';
 import {
   noteSkyFrame,
   restartSkyClock,
   stepSkyRadiance,
   type SkyFrameReads,
+  type SkyRadianceUpdate,
   type SkyRender,
 } from '../../godot/rendering/environment/skyRadianceUpdate';
 import { canvasShaderTime } from '../shaderTime/canvasShaderTime';
 import { renderUnderWay } from '../viewportRender/worldRender';
-import { takeRealTimeCaptureRenders } from '../reflectionProbe/realTimeCaptures';
+import {
+  noteRealTimeSkyState,
+  takeRealTimeCaptureRender,
+  takeRealTimeCaptureRenders,
+} from '../reflectionProbe/realTimeCaptures';
 import { ENVIRONMENT_SWITCH } from './environmentSwitch';
 import { observeSceneRenderEnd } from '../sceneRenderCamera';
 import { useExposureFactor } from '../environment/worldExposure';
@@ -133,11 +146,9 @@ export function SkyLayer({
   const { settings } = useProjectSettings();
   const sampling = useMemo(() => projectSampling(settings), [settings]);
 
-  // Written only by the effect below, while it holds bakes.
-  const bakeWantedRef = useRef<(() => boolean) | null>(null);
-  useFrame(({ invalidate }) => {
-    if (bakeWantedRef.current?.()) invalidate();
-  });
+  // Written only by the effect below, while it holds a bake.
+  const followPanoramaRef = useRef<(() => void) | null>(null);
+  useFrame(() => followPanoramaRef.current?.());
 
   useEffect(() => {
     // A bake before the first frame reads the lights would bake again unseen, at the cost of a whole bake.
@@ -161,41 +172,35 @@ export function SkyLayer({
       energyMultiplier,
       rotation: skyRotation,
     };
-    const { bakes, release } = holdSkyBakes(gl, input, contextRestores);
+    const { bake, release } = holdSkyBake(gl, input, contextRestores);
     const update = radianceUpdateOf(sky);
     const plan = skyUpdatePlan(sky, fogScattersSun);
     const readsLights = materialReadsLights(sky.material) || fogScattersSun;
-    const first = bakes.bakeNow(update.baked?.exposure ?? exposure);
-    if (!first) {
+    const lightDataAt = (read: SkyLightsRead, drawn: number): SkyLightData =>
+      readsLights ? skyLightDataAt(read.lights, read.key, drawn) : NO_SKY_LIGHT_DATA;
+    const firstExposure = update.baked?.exposure ?? exposure;
+    const radiance = bake.bakeNow(firstExposure, lightDataKey(lightDataAt(lights, firstExposure)));
+    let notedLights = lightDataAt(lights, firstExposure).lights;
+    if (!radiance) {
       release();
       return undefined;
     }
-    let radiance = first;
-    bakeWantedRef.current = bakeWantedOf(bakes, () => noteEnvironmentChange(scene, environment));
+    followPanoramaRef.current = () => bake.followPanorama();
 
-    // A render draws the background live at its own exposure. A surface reads the radiance at the
-    // brightness that baked it, times its own exposure and its `background_energy_multiplier`
-    // (`render_forward_clustered.cpp:2045`, `render_scene_data_rd.cpp:169`,
-    // `scene_forward_clustered.glsl:1732`, `:1756`). A fog reads it without the multiplier (`:1121`).
+    // A surface reads each layer at its bake's energy times its own (`scene_forward_clustered.glsl:1756`).
     const renderAt = (drawn: number): SkyRender => ({
       exposure: drawn,
       brightness: energyMultiplier * drawn,
     });
-    const showAt = (baked: SkyRender, render: SkyRender) => {
-      radiance = bakes.at(baked.exposure) ?? radiance;
-      scene.environmentIntensity = baked.brightness * render.brightness;
-    };
     const frameReads = frameReadsOf(sky.material);
     const isFrameRead = frameReads.time || frameReads.position;
     const shaderTime = canvasShaderTime(gl);
     let seenJumps = shaderTime.jumps;
     const stepRadiance = (render: SkyRender, camera?: THREE.Camera) => {
       const read = lightsRead.current!;
-      bakes.followLights(read);
-      // The exposure scales the light data, and so dirties the sky, unless every energy is 0.
-      const isExposed = readsLights && read.lights.some((light) => light.energy !== 0);
-      const lightData = readsLights ? read.key : NO_SKY_LIGHTS;
-      const isLightDirtied = noteSkyLights(gl, lightData, isExposed ? render.exposure : 1);
+      bake.followLights(read);
+      const lightData = lightDataAt(read, render.exposure);
+      const isLightDirtied = noteSkyLights(gl, lightData.lights, lightData.exposure);
       if (shaderTime.jumps !== seenJumps) {
         seenJumps = shaderTime.jumps;
         restartSkyClock(update);
@@ -205,30 +210,31 @@ export function SkyLayer({
         isFrameRead &&
         noteSkyFrame(update, frameReads, shaderTime.time, camera.getWorldPosition(cameraOrigin));
       const step = stepSkyRadiance(update, plan, render, isLightDirtied || isFrameDirtied);
-      if (!update.baked) return;
-      const isDrawn = bakes.stepInPlaceAt(update.baked.exposure, step, update.previousPosition, isFrameRead);
-      // A probe captures again on a change of the Environment, as a new bake of the lights notes one.
-      if (isDrawn && !isFrameRead) noteEnvironmentChange(scene, environment);
+      const position = update.previousPosition;
+      const draw = { position, isDrawnEachBake: isFrameRead, lightData: lightDataKey(lightData) };
+      const isDrawn = bake.step(render, step, draw);
+      noteRealTimeSkyState(scene, radianceStateOf(update, radiance.drawn.energies));
+      // New lights note a change of the Environment, which probes capture again. An exposure alone does not.
+      if (!isDrawn || isFrameRead || lightData.lights === notedLights) return;
+      notedLights = lightData.lights;
+      noteEnvironmentChange(scene, environment);
     };
-    // Views and ALWAYS faces step the radiance as Godot renders do (`render_forward_clustered.cpp:2049`).
+    // The first view of a frame replays the ALWAYS faces ours skipped, at the world's exposure.
     const showForRender = (drawn: number, camera: THREE.Camera) => {
       const render = renderAt(drawn);
       const capture = renderUnderWay()?.probeCapture;
       if (capture?.isInterior) return;
+      if (capture?.isRealTime && takeRealTimeCaptureRender(scene)) stepRadiance(render);
       if (!capture) {
-        const world = renderAt(worldExposureOfScene(scene) ?? 1);
         const captureRenders = takeRealTimeCaptureRenders(scene);
+        const world = renderAt(worldExposureOfScene(scene) ?? 1);
         for (let replayed = 0; replayed < captureRenders; replayed += 1) stepRadiance(world);
-      } else if (capture.updatesAlways) takeRealTimeCaptureRenders(scene);
-      if (!capture || capture.updatesAlways) stepRadiance(render, camera);
-      const baked = update.baked ?? render;
-      showAt(baked, render);
-      // Only a background reads the bake at the drawn exposure: for a sky that paints none, the
-      // read would bake that exposure to no use.
-      if (asBackground) {
-        (bakes.at(render.exposure) ?? radiance).background?.drawIn(scene, render.brightness, skyRotation);
+        stepRadiance(render, camera);
       }
-      radiance.radiance.show(contributionRef.current, reflectsRef.current, baked.brightness);
+      scene.environmentIntensity = render.brightness;
+      bake.showLightsAt(render.exposure);
+      radiance.background?.drawIn(scene, render.brightness, skyRotation);
+      radiance.radiance.show(contributionRef.current, reflectsRef.current, radiance.drawn.energies);
     };
     const stopRegistering = registerEnvironmentPart(scene, environment, () => {
       const previousEnvironment = scene.environment;
@@ -239,7 +245,7 @@ export function SkyLayer({
       );
       const stopHidingRadiance = observeSceneRenderEnd(scene, hideShownSky);
       const stopShowingBackground = asBackground ? showSkyBackground(scene) : undefined;
-      showAt(update.baked ?? renderAt(exposure), renderAt(exposure));
+      scene.environmentIntensity = renderAt(exposure).brightness;
       const stopDebanding = asBackground && isDebanded(sky.material) ? debandSky(gl, scene) : undefined;
       return () => {
         stopShowingRadiance();
@@ -253,7 +259,7 @@ export function SkyLayer({
 
     return () => {
       stopRegistering();
-      bakeWantedRef.current = null;
+      followPanoramaRef.current = null;
       release();
     };
   }, [
@@ -281,24 +287,6 @@ export function SkyLayer({
   ]);
 
   return <>{textureSlots}</>;
-}
-
-/**
- * Bakes each exposure a render of `bakes` asked for, after it redraws the backgrounds for a new draw
- * of a live panorama, and answers whether a frame should draw. A bake that lands, whichever layer
- * baked it, runs `noteBake`: a reflection probe captured the bake it replaces, and captures again
- * only for a change of its Environment (`sceneProbes.ts`).
- */
-function bakeWantedOf(bakes: SkyBakes, noteBake: () => void): () => boolean {
-  let seenCount = bakes.bakeCount;
-  return () => {
-    bakes.followPanorama();
-    const isBaked = bakes.bakeWanted();
-    if (bakes.bakeCount === seenCount) return isBaked;
-    seenCount = bakes.bakeCount;
-    noteBake();
-    return true;
-  };
 }
 
 /**
@@ -395,4 +383,9 @@ function directionalLights(scene: THREE.Scene): SkyLight[] {
 function shaderTexturesOf(material: SkyProperties | null): ShaderTextures | null {
   if (material?.kind !== 'shader') return null;
   return { references: material.textures, samplers: material.usage.samplers };
+}
+
+/** What the next render's step starts from: the layer energies and Godot's update state (`sky.cpp:1263`). */
+function radianceStateOf(update: SkyRadianceUpdate, energies: readonly number[]): string {
+  return `${energies.join()}|${update.processingLayer}|${update.isDirty}|${update.baked?.exposure}`;
 }

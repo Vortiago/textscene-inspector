@@ -255,7 +255,7 @@ float skyLayer( float density ) {
 }
 
 // .glsl:430-445: the isotropic sample reads the sky straight up in its own space, the anisotropic
-// one along the view. The radiance holds the sky's energy, which the layers leave to the reader.
+// one along the view, each at the energy its layer was baked at.
 vec3 ambientAt( vec3 view, float density ) {
 	vec3 isotropic = vec3( 0.0 );
 	vec3 anisotropic = vec3( 0.0 );
@@ -264,7 +264,7 @@ vec3 ambientAt( vec3 view, float density ) {
 		isotropic = godotSkyReadAlong( vec3( 0.0, 1.0, 0.0 ), layer, 0.0 );
 		if ( phaseG != 0.0 ) anisotropic = godotSkyReadAlong( viewToSky * normalize( view ) * sign( phaseG ), layer, 0.0 );
 	}
-	vec3 sky = mix( isotropic, anisotropic, abs( phaseG ) ) * GODOT_SKY_ENERGY;
+	vec3 sky = mix( isotropic, anisotropic, abs( phaseG ) );
 	return mix( ambientColor, sky, skyContribution ) * ambientInject;
 }
 
