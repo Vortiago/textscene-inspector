@@ -107,28 +107,27 @@ describe('ProjectSettingsProvider', () => {
     await waitFor(() => expect(screen.getByTestId('scale').textContent).toBe('1'));
   });
 
-  it('re-reads on a scene swap, since res://project.godot is the same path in every corpus', async () => {
-    const provider = fakeProvider({ [PROJECT_FILE_PATH]: DEMO_PROJECT });
-    const bus = new FileEventBus(provider);
-    const loader = new ResourceLoader(bus);
-    loader.setProvider(provider);
-
-    const tree = (sceneKey: string) => (
+  it('reads the project again under a new loader, as a corpus crossing brings', async () => {
+    const loaderOver = (provider: ReturnType<typeof fakeProvider>) => {
+      const loader = new ResourceLoader(new FileEventBus(provider));
+      loader.setProvider(provider);
+      return loader;
+    };
+    const tree = (loader: ResourceLoader) => (
       <ResourceLoaderProvider loader={loader}>
-        <ProjectSettingsProvider sceneKey={sceneKey}>
+        <ProjectSettingsProvider sceneKey="res://main.tscn">
           <Probe />
         </ProjectSettingsProvider>
       </ResourceLoaderProvider>
     );
-
-    const { rerender } = render(tree('res://a.tscn'));
+    const outgoing = fakeProvider({ [PROJECT_FILE_PATH]: DEMO_PROJECT });
+    const { rerender } = render(tree(loaderOver(outgoing)));
     await waitFor(() => expect(screen.getByTestId('scale').textContent).toBe('2'));
 
-    // A corpus switch drops the byte layer first, so the re-read cannot serve
-    // the outgoing project's file.
-    loader.clearCaches();
-    rerender(tree('res://b.tscn'));
-    await waitFor(() => expect(provider.calls.filter((p) => p === PROJECT_FILE_PATH).length).toBe(2));
+    const incoming = fakeProvider({});
+    rerender(tree(loaderOver(incoming)));
+    await waitFor(() => expect(screen.getByTestId('scale').textContent).toBe('1'));
+    expect(incoming.calls).toContain(PROJECT_FILE_PATH);
   });
 
   describe('when res://project.godot changes on disk', () => {

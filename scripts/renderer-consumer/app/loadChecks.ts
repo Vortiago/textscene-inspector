@@ -1,5 +1,6 @@
 import { mountScene, openScene, type ResourceProvider } from '@textscene/renderer';
 import { base64Of, capturePng, elementOf } from './capture';
+import { projectOf } from './mountChecks';
 import { WINDOW_320_PROJECT } from './switchView';
 
 /** A quad that fills the camera, unshaded, so its pixels are the texture's. */
@@ -67,10 +68,10 @@ async function swatchPng(colour: string): Promise<ArrayBuffer> {
 class SwatchProvider implements ResourceProvider {
   private swatch: ArrayBuffer | null = null;
   private readonly watchers = new Set<(path: string) => void>();
+  private readonly project = projectOf(WINDOW_320_PROJECT);
 
   async loadResource(path: string): Promise<string | ArrayBuffer | null> {
-    if (path === 'res://project.godot') return WINDOW_320_PROJECT;
-    return path === SWATCH_PATH ? this.swatch : null;
+    return path === SWATCH_PATH ? this.swatch : this.project.loadResource(path);
   }
 
   watch(listener: (path: string) => void): () => void {
@@ -144,14 +145,9 @@ async function freshBluePng(): Promise<string> {
   const provider = new SwatchProvider();
   provider.paint(await swatchPng('#0000ff'));
   const scene = openScene({ source: SWATCH_SCENE, provider });
-  const element = elementOf(320, 240);
-  const view = mountScene(element, scene, { mode: 'in-game' });
   try {
-    await view.settled;
-    return await base64Of(await view.captureImage());
+    return await base64Of(await capturePng(scene, 320, 240, { mode: 'in-game' }));
   } finally {
-    view.dispose();
-    element.remove();
     scene.dispose();
   }
 }

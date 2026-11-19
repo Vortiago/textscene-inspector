@@ -87,43 +87,29 @@ async function switchViaPalette(file: string) {
 let setResourceRoot: ReturnType<typeof vi.spyOn>;
 let newLoader: ReturnType<typeof vi.spyOn>;
 
-/**
- * Whether the outgoing demo was on screen at the first re-point: each node rendered then
- * fetches under the incoming root. First only, so a harmless later repeat cannot hide it.
- * `value` stays `undefined` until it fires, so `toBeNull()` also fails a missing re-point.
- */
-function firstDemoSighting() {
-  let value: HTMLElement | null | undefined;
+/** Whether the outgoing demo was on screen at each call. With no call, both read `undefined`. */
+function demoSightings() {
+  const sightings: (HTMLElement | null)[] = [];
   return {
     record: () => {
-      if (value === undefined) value = screen.queryByText('DemoRoot');
+      sightings.push(screen.queryByText('DemoRoot'));
     },
-    get value() {
-      return value;
+    get first() {
+      return sightings[0];
+    },
+    get latest() {
+      return sightings.at(-1);
     },
   };
 }
 
-/** Whether the outgoing demo was on screen when the latest loader was built: the incoming scene's. */
-function lastDemoSighting() {
-  let value: HTMLElement | null | undefined;
-  return {
-    record: () => {
-      value = screen.queryByText('DemoRoot');
-    },
-    get value() {
-      return value;
-    },
-  };
-}
-
-/** At the latest new loader, and at the provider re-point, which an upload makes in its own handler. */
-let atNewLoader: ReturnType<typeof lastDemoSighting>;
-let atRootSwitch: ReturnType<typeof firstDemoSighting>;
+/** At each new loader, and at each provider re-point, which an upload makes in its own handler. */
+let atNewLoader: ReturnType<typeof demoSightings>;
+let atRootSwitch: ReturnType<typeof demoSightings>;
 
 function resetFingerprints() {
-  atNewLoader = lastDemoSighting();
-  atRootSwitch = firstDemoSighting();
+  atNewLoader = demoSightings();
+  atRootSwitch = demoSightings();
 }
 
 beforeEach(() => {
@@ -182,7 +168,7 @@ describe('corpus boundary — the root never moves under a mounted scene', () =>
     expect(setResourceRoot).toHaveBeenCalledWith('');
     expect(newLoader).toHaveBeenCalled();
     // …and it landed with the demo already gone from the tree.
-    expect(atNewLoader.value).toBeNull();
+    expect(atNewLoader.latest).toBeNull();
   });
 
   it('crosses into the base corpus on upload with the demo already gone', async () => {
@@ -207,9 +193,9 @@ describe('corpus boundary — the root never moves under a mounted scene', () =>
 
     // An upload lives in the base ('') corpus, so the demo went before the new loader, as on a switch.
     expect(newLoader).toHaveBeenCalled();
-    expect(atNewLoader.value).toBeNull();
+    expect(atNewLoader.latest).toBeNull();
     expect(setResourceRoot).toHaveBeenCalledWith('');
-    expect(atRootSwitch.value).toBeNull();
+    expect(atRootSwitch.first).toBeNull();
   });
 
   it('refetches when the user re-picks a fixture whose load failed', async () => {
@@ -260,6 +246,6 @@ describe('corpus boundary — the root never moves under a mounted scene', () =>
     await waitForScene('OtherBaseRoot');
 
     // The same res:// namespace on both sides, so no re-routing.
-    expect(setResourceRoot.mock.calls.flat().filter((root: unknown) => root !== '')).toEqual([]);
+    expect(setResourceRoot).not.toHaveBeenCalledWith(expect.not.stringMatching(/^$/));
   });
 });

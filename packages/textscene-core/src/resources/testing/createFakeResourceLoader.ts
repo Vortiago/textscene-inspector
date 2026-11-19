@@ -15,7 +15,6 @@ import type { ResourceLoader } from '../ResourceLoader';
 // The claim table `useResource` reads (`clonesPerConsumer`), registered here as
 // the real loader registers it: a type-only import of the loader loads nothing.
 import '../sliceRegistrations.js';
-import { runClearCachesSequence } from '../clearCachesSequence';
 import { runProvideFileSequence } from '../provideFileSequence';
 import { createClearCache } from '../resourceProcessorClear';
 import type { ArrayMeshResource } from '../processors/createArrayMeshProcessor';
@@ -38,8 +37,6 @@ export interface FakeProcessor<T> {
   isCached(path: string): boolean;
   isLoading(path: string): boolean;
   clearCache(path?: string): void;
-  cachedPaths(): string[];
-  inflightPaths(): string[];
   getCacheSize(): number;
   pin(path: string): void;
   unpin(path: string): void;
@@ -118,12 +115,6 @@ function makeFakeProcessor<T>(eventBus: ResourceEventBus, type: ResourceType): F
       return false;
     },
     clearCache,
-    cachedPaths(): string[] {
-      return [...cache.keys()];
-    },
-    inflightPaths(): string[] {
-      return [];
-    },
     getCacheSize(): number {
       return cache.size;
     },
@@ -220,15 +211,6 @@ export function createFakeResourceLoader({ loadFace }: { loadFace?: FaceLoader }
       for (const proc of byTypeMap.values()) proc.clearCache();
       eventBus.clear();
       metadata.clear();
-    },
-    // The real clearCaches sequence through its single owner: order is the
-    // contract, so the fake runs the same sequence, not a copy.
-    clearCaches(): void {
-      runClearCachesSequence({
-        processors: byTypeMap,
-        eventBus,
-        metadata,
-      });
     },
     // The pending-resource count the real loader tracks for `CameraFit`. Mirrored,
     // not stubbed: every mounted `useResource` registers here, so a dropped count

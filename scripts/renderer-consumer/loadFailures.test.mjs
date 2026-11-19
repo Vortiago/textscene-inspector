@@ -44,7 +44,7 @@ describe('loadFailures', () => {
   it('fails a swatch that kept its old colour', () => {
     expect(loadFailures({ ...PASSING, repaintedPng: RED })).toEqual([
       'load: a watched swatch: expected the repainted frame to change, got the red frame',
-      expect.stringContaining('load: a watched swatch: expected the frame of a fresh blue view, got'),
+      expect.stringContaining('load: a watched swatch: expected the frame of a fresh blue view:'),
     ]);
   });
 

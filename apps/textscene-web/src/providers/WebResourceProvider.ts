@@ -96,7 +96,7 @@ export class WebResourceProvider implements ResourceProvider {
         removed = true;
       }
     }
-    this.changed(path);
+    if (removed) this.changed(path);
     return removed;
   }
 

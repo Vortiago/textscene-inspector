@@ -1,5 +1,7 @@
 import { mountScene, type openScene, type ResourceProvider } from '@textscene/renderer';
 
+type ViewOptions = Parameters<typeof mountScene>[2];
+
 /** A project with no files, for a scene that names none. */
 export const NO_FILES: ResourceProvider = { loadResource: async () => null };
 
@@ -22,10 +24,11 @@ export async function base64Of(blob: Blob): Promise<string> {
 export async function capturePng(
   scene: ReturnType<typeof openScene>,
   width: number,
-  height: number
+  height: number,
+  options?: ViewOptions
 ): Promise<Blob> {
   const element = elementOf(width, height);
-  const view = mountScene(element, scene);
+  const view = mountScene(element, scene, options);
   try {
     await view.settled;
     return await view.captureImage();

@@ -1,12 +1,4 @@
-import { compareImages, formatDelta, isSameImage } from '../visual/imageDelta.mjs';
-
-const pngOf = (base64) => Buffer.from(base64, 'base64');
-
-function sameImageFailures(name, expected, actual) {
-  const delta = compareImages(pngOf(expected), pngOf(actual));
-  if (isSameImage(delta)) return [];
-  return [`${name}: ${formatDelta(delta)}`];
-}
+import { sameImageFailures } from './imageFailures.mjs';
 
 /** @param {import('./app/heldResourceChecks').HeldResourceCheckResults} results */
 export function heldResourceFailures(results) {
