@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { skyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
 import type { SkyLayers } from '../../resources/sky/skyLayers';
-import { hideShownSky, SHOWN_LAYER_ENERGIES, SkyRadiance, shownSky, skyRotation } from './skyRadiance';
+import { hideShownSky, SkyRadiance, shownSky, skyEnergies, skyRotation } from './skyRadiance';
 import { REFLECTION_SLOT, skyLayersSlot } from './skyRadiance.testkit';
 import { boundHandle, testRenderer } from '../../testing/recordingWebGL';
 
@@ -22,9 +22,6 @@ function radianceOf(
 ): SkyRadiance {
   return new SkyRadiance(renderer, bakedLayers(renderer, radianceSize), rotation);
 }
-
-/** The energy each layer of the shown sky is read at. */
-const layerEnergies = () => shownSky.subarray(SHOWN_LAYER_ENERGIES);
 
 /** The array handle every reader samples on `renderer`. */
 const sampledArray = (renderer: THREE.WebGLRenderer) => boundHandle(renderer, skyLayersSlot);
@@ -113,7 +110,7 @@ describe('SkyRadiance', () => {
 
     radianceOf(renderer).show(1, true, [4, 1, 2, 1, 1, 1, 1, 3]);
 
-    expect(Array.from(layerEnergies())).toEqual([4, 1, 2, 1, 1, 1, 1, 3]);
+    expect(Array.from(skyEnergies)).toEqual([4, 1, 2, 1, 1, 1, 1, 3]);
   });
 
   it('shows the last energy for each layer past the last, which a read of it reads (edge case)', async () => {
@@ -121,7 +118,7 @@ describe('SkyRadiance', () => {
 
     radianceOf(renderer).show(1, true, [4, 2]);
 
-    expect(Array.from(layerEnergies())).toEqual([4, 2, 2, 2, 2, 2, 2, 2]);
+    expect(Array.from(skyEnergies)).toEqual([4, 2, 2, 2, 2, 2, 2, 2]);
   });
 
   it('shows 0 for a sky no surface reflects, and 1 for one they do', async () => {
@@ -153,6 +150,6 @@ describe('hideShownSky', () => {
 
     hideShownSky();
 
-    expect([Math.max(...layerEnergies()), Array.from(skyRotation)]).toEqual([0, [1, 0, 0, 0, 1, 0, 0, 0, 1]]);
+    expect([Math.max(...skyEnergies), Array.from(skyRotation)]).toEqual([0, [1, 0, 0, 0, 1, 0, 0, 0, 1]]);
   });
 });

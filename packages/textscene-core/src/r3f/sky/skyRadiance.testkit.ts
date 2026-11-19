@@ -6,5 +6,5 @@ import { SKY_RADIANCE_UNIFORMS, skyRadianceUniforms } from './skyRadiance';
 export const skyLayersSlot = skyRadianceUniforms()[SKY_RADIANCE_UNIFORMS.layers]!
   .value as THREE.DataArrayTexture;
 
-/** Where `SkyRadiance.show` writes whether surfaces reflect the sky: the `w` of the first `vec4`. */
-export const REFLECTION_SLOT = 3;
+/** Where `SkyRadiance.show` writes whether surfaces reflect the sky: the `y` of the second `vec4`. */
+export const REFLECTION_SLOT = 5;

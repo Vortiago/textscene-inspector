@@ -4,24 +4,26 @@ import type { SkyLayers } from '../../resources/sky/skyLayers.js';
 import { OCTMAP_GLSL } from '../../resources/sky/skyLayerShaders.js';
 import { installedOr } from '../shaderPatch/litUniform.js';
 import { worldToSky } from './skyRotation.js';
-import { SKY_ROUGHNESS_LAYERS_DEFAULT } from '../../godot/rendering/environment/skyReflection.js';
+import {
+  MAX_ROUGHNESS_LOD,
+  SKY_ROUGHNESS_LAYERS_DEFAULT,
+} from '../../godot/rendering/environment/skyReflection.js';
 
 export const SKY_RADIANCE_UNIFORMS = {
   /** The layer array every reader samples. */
   layers: 'godotSkyLayers',
-  /** The `vec4` array of the shown sky's share of the ambient, its layout and its layers' energies. */
+  /** The two-element `vec4` array of the shown sky's share of the ambient and its layout. */
   shown: 'godotShownSky',
+  /** The energy each layer of the shown sky holds, which every read of the layer multiplies by. */
+  energies: 'godotSkyEnergies',
   /** World to sky space, the inverse of `sky_rotation`'s basis. */
   rotation: 'godotSkyRotation',
 } as const;
 
-const { layers: LAYERS, shown: SHOWN, rotation: ROTATION } = SKY_RADIANCE_UNIFORMS;
+const { layers: LAYERS, shown: SHOWN, energies: ENERGIES, rotation: ROTATION } = SKY_RADIANCE_UNIFORMS;
 
 /** Where `shownSky` holds 1 when a surface reflects the sky and 0 when it reflects nothing. */
-const SHOWN_REFLECTION = 3;
-
-/** Where `shownSky` holds the energy of layer 0, the other layers' following in order. */
-export const SHOWN_LAYER_ENERGIES = 4;
+const SHOWN_REFLECTION = 5;
 
 /**
  * The array a reader samples the layers through. three never uploads it, as its version stays 0
@@ -31,11 +33,14 @@ export const SHOWN_LAYER_ENERGIES = 4;
 const skyLayersSlot = installedSlot(LAYERS, THREE.DataArrayTexture);
 
 /** The shown sky's values, one buffer each material reads by reference (three r187 `UniformsUtils.js:43`). */
-export const shownSky = installedOr(SHOWN, Float32Array, () => {
-  const shown = new Float32Array(SHOWN_LAYER_ENERGIES + SKY_ROUGHNESS_LAYERS_DEFAULT);
-  shown.set([1, 1, 1]);
-  return shown;
-});
+export const shownSky = installedOr(SHOWN, Float32Array, () => Float32Array.of(1, 1, 1, 0, 0, 0, 0, 0));
+
+/** The energy each layer of the shown sky holds, read as `shownSky` is. 0 while no sky shows. */
+export const skyEnergies = installedOr(
+  ENERGIES,
+  Float32Array,
+  () => new Float32Array(SKY_ROUGHNESS_LAYERS_DEFAULT)
+);
 
 const IDENTITY_BASIS = Float32Array.of(1, 0, 0, 0, 1, 0, 0, 0, 1);
 
@@ -50,12 +55,13 @@ export const SKY_RADIANCE_GLSL = /* glsl */ `
 #ifndef GODOT_SKY_RADIANCE
 #define GODOT_SKY_RADIANCE
 uniform highp sampler2DArray ${LAYERS};
-uniform vec4 ${SHOWN}[ ${(SHOWN_LAYER_ENERGIES + SKY_ROUGHNESS_LAYERS_DEFAULT) / 4} ];
+uniform vec4 ${SHOWN}[ 2 ];
+uniform float ${ENERGIES}[ ${SKY_ROUGHNESS_LAYERS_DEFAULT} ];
 uniform mat3 ${ROTATION};
 #define GODOT_SKY_CONTRIBUTION ${SHOWN}[ 0 ].x
 #define GODOT_SKY_BORDER_SIZE ${SHOWN}[ 0 ].y
 #define GODOT_SKY_DERIVATIVE_SCALE ${SHOWN}[ 0 ].z
-#define GODOT_SKY_REFLECTION ${SHOWN}[ 0 ].w
+#define GODOT_SKY_REFLECTION ${SHOWN}[ 1 ].y
 ${OCTMAP_GLSL}
 // The mip whose texels span the octmap distance the direction moves across a pixel (oct_inc.glsl:43-51).
 // The array's last level caps it, as Godot's texture does.
@@ -69,8 +75,8 @@ float godotSkyLod( const in vec3 direction ) {
 // Radiance layer \`layer\` at the octmap texel \`uv\`, at mip \`lod\`, at the energy that layer was baked at, as
 // Godot bakes it into each layer. A layer past the last reads the last.
 vec3 godotSkyRead( const in vec2 uv, const in float layer, const in float lod ) {
-	int index = ${SHOWN_LAYER_ENERGIES} + min( int( layer + 0.5 ), ${SKY_ROUGHNESS_LAYERS_DEFAULT - 1} );
-	return textureLod( ${LAYERS}, vec3( uv, layer ), lod ).rgb * ${SHOWN}[ index / 4 ][ index % 4 ];
+	float energy = ${ENERGIES}[ min( int( layer + 0.5 ), ${MAX_ROUGHNESS_LOD} ) ];
+	return textureLod( ${LAYERS}, vec3( uv, layer ), lod ).rgb * energy;
 }
 
 // Radiance layer \`layer\` along the sky-space \`direction\`, at mip \`lod\`.
@@ -95,6 +101,7 @@ export function skyRadianceUniforms(): Record<string, THREE.IUniform> {
   return {
     [LAYERS]: { value: skyLayersSlot },
     [SHOWN]: { value: shownSky },
+    [ENERGIES]: { value: skyEnergies },
     [ROTATION]: { value: skyRotation },
   };
 }
@@ -124,8 +131,8 @@ export class SkyRadiance {
     // One over `vec3_to_oct_lod`'s `pixel_size_sqr` (`oct_inc.glsl:46`), so a fragment multiplies.
     shownSky[2] = 1 / (4 * pixelSize * pixelSize);
     shownSky[SHOWN_REFLECTION] = reflects ? 1 : 0;
-    shownSky.set(energies, SHOWN_LAYER_ENERGIES);
-    shownSky.fill(energies.at(-1)!, SHOWN_LAYER_ENERGIES + energies.length);
+    skyEnergies.set(energies);
+    skyEnergies.fill(energies.at(-1)!, energies.length);
     skyRotation.set(this.toSky);
     showInSlot(this.renderer, skyLayersSlot, this.layers.target.texture);
   }
@@ -141,7 +148,7 @@ export class SkyRadiance {
  * own space, as Godot binds a black texture when the environment has no sky (`fog.cpp:980`).
  */
 export function hideShownSky(): void {
-  shownSky.fill(0, SHOWN_LAYER_ENERGIES);
+  skyEnergies.fill(0);
   skyRotation.set(IDENTITY_BASIS);
 }
 

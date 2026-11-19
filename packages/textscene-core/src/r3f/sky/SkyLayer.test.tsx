@@ -13,7 +13,7 @@ import { SkyLayer } from './SkyLayer';
 import { ownEnvironmentChanges, ShownEnvironment, useOwnEnvironment } from '../environment/sceneEnvironment';
 import { skyLightUserData } from './skyLight';
 import { observeSceneCamera } from '../sceneRenderCamera';
-import { SHOWN_LAYER_ENERGIES, shownSky, skyRotation } from './skyRadiance';
+import { shownSky, skyEnergies, skyRotation } from './skyRadiance';
 import { REFLECTION_SLOT, skyLayersSlot } from './skyRadiance.testkit';
 import { boundHandle, recordTextures, RendererProbe, withRenderTargets } from '../../testing/recordingWebGL';
 import { MAX_ROUGHNESS_LOD, skyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
@@ -91,11 +91,10 @@ function Scene({ lights }: { lights: number }) {
 const lastBake = () => bakes[bakes.length - 1];
 
 /** The energy at which a surface in `scene`'s render reads the ambient, from the last radiance layer. */
-const ambientRead = (scene: THREE.Scene) =>
-  scene.environmentIntensity * shownSky[SHOWN_LAYER_ENERGIES + MAX_ROUGHNESS_LOD]!;
+const ambientRead = (scene: THREE.Scene) => scene.environmentIntensity * skyEnergies[MAX_ROUGHNESS_LOD]!;
 
 /** The energy each layer of the shown radiance holds. */
-const layerEnergies = () => Array.from(shownSky.subarray(SHOWN_LAYER_ENERGIES));
+const layerEnergies = () => Array.from(skyEnergies);
 
 type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
@@ -1183,6 +1182,16 @@ describe('SkyLayer under a change of its lights', () => {
     ]);
   });
 
+  it("bakes again in its first render at that render's energy, when the build held another exposure", async () => {
+    const recorded = recordedEnvironment();
+    built.next = recorded.build;
+    const { scene } = await mount(exposed(2, <LitSky sky={proceduralSky} sun={[1, 2, 3]} />));
+
+    drawAtExposure(scene, 4, () => fireSceneRender(scene, camera));
+
+    expect([recorded.steps, recorded.bakeEnergies]).toEqual([['every layer'], [4]]);
+  });
+
   it('steps nothing for a sky that reads no lights (edge case)', async () => {
     const { steps } = await stepsAfterSunMoves(panoramaSky, 3);
 
@@ -1206,10 +1215,9 @@ function recordedEnvironment() {
       if (lights[0]) lightDirections.push(lights[0].direction.clone());
       if (lights[0]) lightEnergies.push(lights[0].energy);
     },
-    setBakeEnergy: (energy) => bakeEnergies.push(energy),
     radianceInPlace: {
-      bakeAgain: () => steps.push('every layer'),
-      bakeFirstLayerAgain: () => steps.push('layer 0'),
+      bakeAgain: (_position, energy) => steps.push('every layer') && bakeEnergies.push(energy),
+      bakeFirstLayerAgain: (_position, energy) => steps.push('layer 0') && bakeEnergies.push(energy),
       filterLayer: (layer) => steps.push(`filter ${layer}`),
     },
   });

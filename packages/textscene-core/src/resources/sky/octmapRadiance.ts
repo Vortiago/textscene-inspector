@@ -9,12 +9,13 @@ import type { SkyBake } from './types';
 
 /** A sky drawn into Godot's octmap for each bake of its radiance (`sky.cpp:1322`). */
 export interface OctmapSky {
-  /** Draws the sky over `octmap`, laid out as `layout`, with `POSITION` at `position`. */
+  /** Draws the sky over `octmap`, laid out as `layout`, with `POSITION` at `position`, read at `energy`. */
   draw(
     gl: THREE.WebGLRenderer,
     octmap: THREE.WebGLRenderTarget,
     layout: SkyOctmapLayout,
-    position: Readonly<Vector3>
+    position: Readonly<Vector3>,
+    energy: number
   ): void;
   /** Keeps what the next draw reads of the radiance just baked into `layers`, absent when it reads none. */
   keepRadiance?(gl: THREE.WebGLRenderer, layers: SkyLayers): void;
@@ -26,11 +27,12 @@ export class OctmapRadiance implements RadianceInPlace {
   readonly layers: SkyLayers;
   private readonly baker: SkyLayerBaker;
 
-  /** Bakes the first radiance with `POSITION` at the origin. Disposes `octmapSky` if that fails. */
+  /** Bakes the first radiance at `energy`, `POSITION` at the origin. Disposes `octmapSky` if that fails. */
   constructor(
     private readonly gl: THREE.WebGLRenderer,
     bake: SkyBake,
     private readonly octmapSky: OctmapSky,
+    energy: number,
     sampling?: ProjectSampling
   ) {
     let layers: SkyLayers | undefined;
@@ -44,20 +46,20 @@ export class OctmapRadiance implements RadianceInPlace {
     }
     this.layers = layers;
     try {
-      this.bakeAgain(VECTOR3_ZERO);
+      this.bakeAgain(VECTOR3_ZERO, energy);
     } catch (error) {
       this.dispose();
       throw error;
     }
   }
 
-  bakeAgain(position: Readonly<Vector3>): void {
-    this.baker.bakeEveryLayer(this.drawnAt(position));
+  bakeAgain(position: Readonly<Vector3>, energy: number): void {
+    this.baker.bakeEveryLayer(this.drawnAt(position, energy));
     this.octmapSky.keepRadiance?.(this.gl, this.layers);
   }
 
-  bakeFirstLayerAgain(position: Readonly<Vector3>): void {
-    this.baker.bakeFirstLayer(this.drawnAt(position));
+  bakeFirstLayerAgain(position: Readonly<Vector3>, energy: number): void {
+    this.baker.bakeFirstLayer(this.drawnAt(position, energy));
     this.octmapSky.keepRadiance?.(this.gl, this.layers);
   }
 
@@ -76,9 +78,9 @@ export class OctmapRadiance implements RadianceInPlace {
     disposeSkyLayers(this.releaseLayers());
   }
 
-  private drawnAt(position: Readonly<Vector3>) {
+  private drawnAt(position: Readonly<Vector3>, energy: number) {
     return (octmap: THREE.WebGLRenderTarget, layout: SkyOctmapLayout) =>
-      this.octmapSky.draw(this.gl, octmap, layout, position);
+      this.octmapSky.draw(this.gl, octmap, layout, position, energy);
   }
 }
 
@@ -88,14 +90,13 @@ interface SkyEnvironmentParts {
   disposeBackground: () => void;
   redrawBackground?: () => void;
   setLights: (lights: readonly SkyLight[]) => void;
-  setBakeEnergy?: (energy: number) => void;
 }
 
 /** The environment of `radiance`. A sky no render dirties after its build keeps only its layers. */
 export function octmapSkyEnvironment(
   radiance: OctmapRadiance,
   isDirtiable: boolean,
-  { background, disposeBackground, redrawBackground, setLights, setBakeEnergy }: SkyEnvironmentParts
+  { background, disposeBackground, redrawBackground, setLights }: SkyEnvironmentParts
 ): SkyEnvironment {
   if (!isDirtiable) {
     const layers = radiance.releaseLayers();
@@ -115,7 +116,6 @@ export function octmapSkyEnvironment(
     redrawBackground,
     radianceInPlace: radiance,
     setLights,
-    setBakeEnergy,
     dispose,
   };
 }

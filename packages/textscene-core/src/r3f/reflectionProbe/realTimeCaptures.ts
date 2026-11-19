@@ -12,10 +12,9 @@ const pendingRenders = new WeakMap<THREE.Scene, number>();
 
 /** Takes one of `scene`'s capture renders for an ALWAYS face that draws: false when none is left. */
 export function takeRealTimeCaptureRender(scene: THREE.Scene): boolean {
-  const renders = pendingRenders.get(scene) ?? 0;
-  if (renders === 0) return false;
-  pendingRenders.set(scene, renders - 1);
-  return true;
+  const renders = takeRealTimeCaptureRenders(scene);
+  if (renders > 1) pendingRenders.set(scene, renders - 1);
+  return renders > 0;
 }
 
 /** Notes that `scene` draws `count` probes that update ALWAYS in this frame. */

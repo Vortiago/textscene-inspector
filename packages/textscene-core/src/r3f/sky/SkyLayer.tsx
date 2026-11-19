@@ -16,10 +16,18 @@ import { visibleInTree } from '../visibleInTree';
 import { useFrame, useThree } from '@react-three/fiber';
 import type { AuthoredSky, Sky, SkyProperties } from '../../resources/sky/types';
 import type { SkyLight } from '../../resources/sky/build';
-import { NO_SKY_LIGHTS, noteSkyLights, skyLightEnergy, skyLightSize } from './skyLight';
+import {
+  lightDataKey,
+  NO_SKY_LIGHT_DATA,
+  noteSkyLights,
+  type SkyLightData,
+  skyLightDataAt,
+  skyLightEnergy,
+  skyLightSize,
+} from './skyLight';
 import { skyEuler } from './skyRotation';
 import { hideShownSky } from './skyRadiance';
-import { holdSkyBakes, radianceUpdateOf, type SkyLightsRead, skyUpdatePlan } from './skyBakes';
+import { holdSkyBake, radianceUpdateOf, type SkyLightsRead, skyUpdatePlan } from './skyBake';
 import { materialReadsLights } from '../../resources/sky/readsLights';
 import {
   noteSkyFrame,
@@ -159,24 +167,19 @@ export function SkyLayer({
       energyMultiplier,
       rotation: skyRotation,
     };
-    const { bakes, release } = holdSkyBakes(gl, input, contextRestores);
+    const { bake, release } = holdSkyBake(gl, input, contextRestores);
     const update = radianceUpdateOf(sky);
     const plan = skyUpdatePlan(sky, fogScattersSun);
     const readsLights = materialReadsLights(sky.material) || fogScattersSun;
-    // The light data the sky reads in a render: the exposure scales it, unless every energy is 0.
-    const lightDataAt = (read: SkyLightsRead, exposure: number) => {
-      if (!readsLights) return { lights: NO_SKY_LIGHTS, exposure: 1 };
-      const isExposed = read.lights.some((light) => light.energy !== 0);
-      return { lights: read.key, exposure: isExposed ? exposure : 1 };
-    };
-    const keyOf = (data: { lights: string; exposure: number }) => `${data.lights}@${data.exposure}`;
+    const lightDataAt = (read: SkyLightsRead, drawn: number): SkyLightData =>
+      readsLights ? skyLightDataAt(read.lights, read.key, drawn) : NO_SKY_LIGHT_DATA;
     const firstExposure = update.baked?.exposure ?? exposure;
-    const radiance = bakes.bakeNow(firstExposure, keyOf(lightDataAt(lights, firstExposure)));
+    const radiance = bake.bakeNow(firstExposure, lightDataKey(lightDataAt(lights, firstExposure)));
     if (!radiance) {
       release();
       return undefined;
     }
-    followPanoramaRef.current = () => bakes.followPanorama();
+    followPanoramaRef.current = () => bake.followPanorama();
 
     // A surface reads each layer at its bake's energy times its own (`scene_forward_clustered.glsl:1756`).
     const renderAt = (drawn: number): SkyRender => ({
@@ -189,7 +192,7 @@ export function SkyLayer({
     let seenJumps = shaderTime.jumps;
     const stepRadiance = (render: SkyRender, camera?: THREE.Camera) => {
       const read = lightsRead.current!;
-      bakes.followLights(read);
+      bake.followLights(read);
       const lightData = lightDataAt(read, render.exposure);
       const isLightDirtied = noteSkyLights(gl, lightData.lights, lightData.exposure);
       if (shaderTime.jumps !== seenJumps) {
@@ -202,8 +205,8 @@ export function SkyLayer({
         noteSkyFrame(update, frameReads, shaderTime.time, camera.getWorldPosition(cameraOrigin));
       const step = stepSkyRadiance(update, plan, render, isLightDirtied || isFrameDirtied);
       const position = update.previousPosition;
-      const draw = { position, isDrawnEachBake: isFrameRead };
-      const isDrawn = bakes.step(render, step, keyOf(lightData), draw);
+      const draw = { position, isDrawnEachBake: isFrameRead, lightData: lightDataKey(lightData) };
+      const isDrawn = bake.step(render, step, draw);
       // A probe captures again on a change of the Environment, as a new bake of the lights notes one.
       if (isDrawn && !isFrameRead) noteEnvironmentChange(scene, environment);
     };
@@ -220,7 +223,7 @@ export function SkyLayer({
         stepRadiance(render, camera);
       }
       scene.environmentIntensity = render.brightness;
-      bakes.showLightsAt(render.exposure);
+      bake.showLightsAt(render.exposure);
       radiance.background?.drawIn(scene, render.brightness, skyRotation);
       radiance.radiance.show(contributionRef.current, reflectsRef.current, radiance.drawn.energies);
     };
