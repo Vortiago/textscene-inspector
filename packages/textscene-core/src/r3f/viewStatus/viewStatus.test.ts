@@ -204,7 +204,7 @@ describe('the capture of a view', () => {
       throw new Error('context lost');
     });
     expect(status.isCapturePending()).toBe(false);
-    await expect(image).rejects.toThrow("expected the window's pixels, got Error: context lost");
+    await expect(image).rejects.toThrow("expected the view's pixels, got Error: context lost");
   });
 
   it('rejects a capture the view leaves before it reads', async () => {

@@ -5,7 +5,7 @@ import { readCanvasPixels } from './canvasImage.js';
 import { useViewReport } from './useViewReport.js';
 import { useViewStatus } from './ViewStatusContext.js';
 
-/** Priority 0, so R3F keeps its own render, which follows the report in the same frame. */
+/** Priority 0, so the frame's render, R3F's own or a pass that owns it, follows the report. */
 export function EditorViewReport() {
   const report = useViewReport();
   useFrame(() => report(true));

@@ -147,7 +147,7 @@ export function createViewStatus(): ViewStatus {
     try {
       done?.resolve(read());
     } catch (error) {
-      done?.reject(new Error(`expected the window's pixels, got ${String(error)}`));
+      done?.reject(new Error(`expected the view's pixels, got ${String(error)}`));
     }
     notify();
   }
