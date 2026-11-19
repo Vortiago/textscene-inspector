@@ -273,14 +273,15 @@ const view = mountScene(document.getElementById('game')!, scene);
 // The editor's 3D view of the same scene. Every write to the scene stays.
 view.update({ mode: '3D' });
 
-// A hidden panel draws no frame. A load and a capture still draw the frames they need.
+// A hidden panel draws no frame. A load, a settle and a capture still draw the frames they need.
 view.update({ visible: false });
 view.update({ visible: true });
 ```
 
 A change of mode replaces the canvas and loses the WebGL context of the old one. A `settled`
 promise read before a switch out of In-game rejects. `update` throws once the view is disposed.
-`visible` is `true` by default. While it is `false`, the view draws only the frames a load or a capture needs.
+`visible` is `true` by default. While it is `false`, the view draws only the frames a load, a settle or a capture needs: a write to a
+hidden In-game view draws until the view settles again.
 `<TscnCanvas visible={false} />` does the same in React.
 
 ### Save a PNG from headless Chromium

@@ -1,3 +1,4 @@
+import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import * as logger from '../logger.js';
 import type { Scene } from '../scene/openScene.js';
@@ -10,7 +11,7 @@ import { createGameViewStatus, type GameViewSettled } from './gameView/gameViewS
 export interface ViewOptions {
   /** `in-game` by default. */
   mode?: TscnCanvasMode;
-  /** `false` draws only the frames a load or a capture needs. `true` by default. */
+  /** `false` draws only the frames a load, a settle or a capture needs. `true` by default. */
   visible?: boolean;
 }
 
@@ -71,7 +72,10 @@ export function mountScene(element: HTMLElement, scene: Scene, options: ViewOpti
         inGame.abort(new Error(`expected the in-game mode, got ${current.mode}`));
         inGame = new AbortController();
       }
-      render();
+      const canvases = [...element.querySelectorAll('canvas')];
+      // Synchronous, so the replaced stage has left the element before its contexts are lost.
+      flushSync(render);
+      canvases.filter((canvas) => !canvas.isConnected).forEach(loseContext);
     },
     dispose() {
       isDisposed = true;

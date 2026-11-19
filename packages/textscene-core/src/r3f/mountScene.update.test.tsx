@@ -9,11 +9,9 @@ vi.mock('@react-three/fiber', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@react-three/fiber')>()),
   // The editor's stage hands its canvas the editor camera. The game's stage hands it none.
   Canvas: vi.fn((props: { camera?: unknown; frameloop?: string }) => (
-    <div
-      data-testid="canvas"
-      data-stage={props.camera ? 'editor' : 'game'}
-      data-frameloop={props.frameloop}
-    />
+    <div data-testid="canvas" data-stage={props.camera ? 'editor' : 'game'} data-frameloop={props.frameloop}>
+      <canvas />
+    </div>
   )),
 }));
 
@@ -98,6 +96,19 @@ describe('View.update', () => {
     expect(() => view.update({ mode: '3D' })).toThrow(
       'expected a mounted view to update, got a disposed one'
     );
+  });
+
+  it('loses the context of the canvas a switch replaces, before update returns', async () => {
+    const loseContext = vi.fn();
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+      getExtension: () => ({ loseContext }),
+    } as unknown as WebGL2RenderingContext);
+    const view = await mountedIn(element(), { mode: '3D' });
+
+    view.update({ mode: '2D' });
+
+    expect(loseContext).toHaveBeenCalledTimes(1);
+    view.dispose();
   });
 
   it('draws no frame while visible is false', async () => {
