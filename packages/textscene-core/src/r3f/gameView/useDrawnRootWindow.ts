@@ -3,6 +3,7 @@ import { useProjectSettings } from '../contexts/ProjectSettingsContext.js';
 import { useDrawingBufferSize } from '../useDrawingBufferSize.js';
 import { fittedTargetSize, rootWindow, shrinkRootWindow, type RootWindow } from './rootWindow.js';
 import { paneScale } from './windowFit.js';
+import { useHoldsFullWindow } from './GameViewStatusContext.js';
 
 /** The root window as the project opens it. */
 export function useProjectRootWindow(): RootWindow {
@@ -10,10 +11,11 @@ export function useProjectRootWindow(): RootWindow {
   return useMemo(() => rootWindow(settings), [settings]);
 }
 
-/** A smaller pane renders the target at the fitted size, rebuilt only as its pixels change. */
+/** A smaller pane renders the target at the fitted size. A capture holds the full size until it reads. */
 export function useDrawnRootWindow(projectWindow: RootWindow): RootWindow {
   const pane = useDrawingBufferSize();
-  const scale = paneScale({ x: pane.width, y: pane.height }, projectWindow.size);
+  const holdsFullWindow = useHoldsFullWindow();
+  const scale = holdsFullWindow ? 1 : paneScale({ x: pane.width, y: pane.height }, projectWindow.size);
   const { x, y } = fittedTargetSize(projectWindow, scale);
   return useMemo(() => shrinkRootWindow(projectWindow, { x, y }), [projectWindow, x, y]);
 }

@@ -160,6 +160,113 @@ The limits of this release:
   the value under the pass.
 - Scripts do not run, no signal reaches your code, and no input reaches the scene.
 
+### Know when the scene is whole
+
+The In-game mode is settled when a frame shows the scene whole: every file, texture and font of the
+scene has loaded, and the frames after the last load draw the same picture. A write or a camera call
+from your code, or a new text, makes it pending again until a frame shows the change.
+
+`useGameViewSettled()` answers `null` while the view is pending, and then
+`{ scriptedNodeCount, hasCurrentCamera }`: the count of nodes that hold a script, which do not run,
+and whether the root viewport has a current Camera3D or Camera2D. Call it in a component below the
+same `<TscnSceneProvider>` as the In-game view:
+
+```tsx
+import { TscnCanvas, TscnSceneProvider, useGameViewSettled } from '@textscene/renderer';
+
+function Status() {
+  const settled = useGameViewSettled();
+  if (!settled) return <p>Loading…</p>;
+  return <p>{settled.scriptedNodeCount} nodes hold a script, and scripts do not run.</p>;
+}
+
+export function GameView() {
+  return (
+    <TscnSceneProvider scene={scene}>
+      <div style={{ width: 640, height: 360 }}>
+        <TscnCanvas mode="in-game" />
+      </div>
+      <Status />
+    </TscnSceneProvider>
+  );
+}
+```
+
+### Mount the view with no React code
+
+`mountScene(element, scene, { mode })` mounts the view in a page element, for a page with no React
+code of its own. React stays a peer dependency. `mode` is the mode of `TscnCanvas`, and here it is
+`'in-game'` by default. The page changes the scene through the same `scene`, as a React app does.
+
+```ts
+import { mountScene, openScene } from '@textscene/renderer';
+
+const scene = openScene({ source, provider });
+const view = mountScene(document.getElementById('game')!, scene);
+
+const { scriptedNodeCount } = await view.settled;
+const png = await view.captureImage();
+view.dispose();
+```
+
+`mountScene` returns three members:
+
+- `settled`: a promise of the settled value. Each read gives a new promise, which waits again
+  after the scene changes. It rejects in a mode other than In-game.
+- `captureImage()`: a PNG `Blob` of the game window, at the window's size, whatever the size of the
+  element: 1152 x 648 for a project that sets no size. It has the black bars of the window. Where the
+  project has a transparent background, the clear colour has alpha 0 and the bars stay opaque, as
+  in Godot. It rejects before the view is settled, and the
+  message names the pending work. It rejects in a mode other than In-game, since the 2D and 3D
+  modes have no window.
+- `dispose()`: unmounts the view and loses its WebGL context, since a browser keeps few contexts
+  alive. The scene stays open, so another view can mount it.
+
+### Save a PNG from headless Chromium
+
+A browser draws the view: the renderer needs WebGL 2, and Node has no WebGL 2. Build a page that
+mounts the scene, then drive the page with [Playwright](https://playwright.dev):
+
+```ts
+// page.ts, built into the page at http://localhost:5173/
+import { mountScene, openScene } from '@textscene/renderer';
+
+declare global {
+  interface Window {
+    capturePng(): Promise<string>;
+  }
+}
+
+window.capturePng = async () => {
+  const scene = openScene({ source, provider });
+  const view = mountScene(document.getElementById('game')!, scene);
+  await view.settled;
+  const png = new Uint8Array(await (await view.captureImage()).arrayBuffer());
+  view.dispose();
+  let binary = '';
+  for (const byte of png) binary += String.fromCharCode(byte);
+  return btoa(binary);
+};
+```
+
+```ts
+// capture.mjs, run with Node
+import { writeFileSync } from 'node:fs';
+import { chromium } from 'playwright';
+
+// A machine with no GPU draws WebGL only through SwiftShader, which Chromium enables on request.
+const browser = await chromium.launch({
+  args: ['--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--use-gl=angle'],
+});
+const page = await browser.newPage();
+await page.goto('http://localhost:5173/');
+const base64 = await page.evaluate(() => window.capturePng());
+writeFileSync('scene.png', Buffer.from(base64, 'base64'));
+await browser.close();
+```
+
+SwiftShader draws in software, so a large scene can take seconds for its first frames.
+
 ### The 3D mode
 
 With no `mode`, or `mode="3D"`, the view draws the scene as the Godot editor's 3D view does: an
@@ -216,6 +323,10 @@ The package exports these names.
   `ArrayBuffer`, or `null` when the file is missing.
 - `useSelection`: the selected node path and the functions that change it. Call it in a component
   inside `<TscnSceneProvider>`.
+- `useGameViewSettled()`: the settled value of the In-game view below the same
+  `<TscnSceneProvider>`, or `null` while it is pending. See "Know when the scene is whole".
+- `mountScene(element, scene, { mode? })`: mounts the view with no React code of the page's own,
+  and returns `settled`, `captureImage` and `dispose`. See "Mount the view with no React code".
 
 ## Styles and workers
 

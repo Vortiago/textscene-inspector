@@ -7,6 +7,8 @@ import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { textureWork } from '../../resources/textures/textureWork';
 import { PreviewVisibilityProvider, usePreviewFrameloop } from './PreviewVisibilityContext';
+import { GameViewStatusProvider } from '../gameView/GameViewStatusContext';
+import { createGameViewStatus } from '../gameView/gameViewStatus';
 
 /** Renders the hook under a host whose visibility `setVisible` changes. */
 function renderUnderHost(initiallyVisible: boolean) {
@@ -53,6 +55,31 @@ describe('usePreviewFrameloop', () => {
     expect(result.current).toBe('always');
 
     await act(async () => endWork());
+
+    expect(result.current).toBe('never');
+  });
+
+  it('keeps the loop on while a hidden In-game view has yet to settle, and stops it once it has', async () => {
+    const status = createGameViewStatus();
+    status.attach({ state: () => [], subscribe: () => () => {} });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <GameViewStatusProvider status={status}>
+        <PreviewVisibilityProvider isVisible={false}>{children}</PreviewVisibilityProvider>
+      </GameViewStatusProvider>
+    );
+    const { result } = renderHook(() => usePreviewFrameloop(), { wrapper });
+    expect(result.current).toBe('always');
+
+    const frame = {
+      shown: [],
+      window: null,
+      isFullWindow: true,
+      work: { resources: 0, textures: 0, fonts: 0 },
+    };
+    const facts = { scriptedNodeCount: 0, hasCurrentCamera: false };
+    await act(async () => {
+      for (let drawn = 0; drawn < 10 && status.isPending(); drawn++) status.frameDrawn({ ...frame, facts });
+    });
 
     expect(result.current).toBe('never');
   });

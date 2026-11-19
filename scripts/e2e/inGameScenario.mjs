@@ -1,5 +1,11 @@
 import { inkStats } from '../vscode/pixels.mjs';
-import { findCanvas, readViewportMode, settleCanvas } from '../visual/previewServer.mjs';
+import {
+  findCanvas,
+  readViewportMode,
+  sceneStillLoading,
+  settleCanvas,
+  targetShooter,
+} from '../visual/previewServer.mjs';
 import { checkDiagnostics } from './diagnostics.mjs';
 import { checkInk, checkSizedCanvas, checkStage, INK_FLOOR_2D } from './canvasChecks.mjs';
 import { openFixture } from './openFixture.mjs';
@@ -21,6 +27,7 @@ export async function runInGameScenario(browser, baseUrl) {
 
   const { canvas, reason } = await findCanvas(page);
   if (reason) throw new Error(`[in-game] ${IN_GAME_FIXTURE}: ${reason}`);
+  const loaded = await shotOnceLoaded(page, canvas);
   const settled = await settleCanvas(page, canvas);
   const dims = await canvas.evaluate((el) => ({ width: el.width, height: el.height }));
 
@@ -31,8 +38,15 @@ export async function runInGameScenario(browser, baseUrl) {
     stageAfter,
     dims,
     ink: settled.buffer ? inkStats(settled.buffer) : null,
+    isWholeOnceLoaded: Boolean(loaded && settled.buffer && loaded.equals(settled.buffer)),
     diagnostics,
   };
+}
+
+/** The frame the moment "Loading scene…" leaves, which waits for the In-game view to settle. */
+async function shotOnceLoaded(page, canvas) {
+  if (await sceneStillLoading(page)) return null;
+  return targetShooter(canvas).shoot();
 }
 
 /** Records the scenario's claims on `gate`. */
@@ -45,5 +59,9 @@ export function checkInGame(gate, result) {
   );
   checkSizedCanvas(gate, '[in-game]', result.dims);
   checkInk(gate, '[in-game]', result.ink, INK_FLOOR_2D);
+  gate.check(
+    result.isWholeOnceLoaded,
+    '[in-game] the frame when "Loading scene…" left differs from the settled frame, so the view had not settled'
+  );
   checkDiagnostics(gate, '[in-game]', result.diagnostics);
 }

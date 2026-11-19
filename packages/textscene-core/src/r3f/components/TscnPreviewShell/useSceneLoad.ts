@@ -1,13 +1,9 @@
-/**
- * How far the current scene has loaded. It is complete when a frame now would show it whole: the
- * shell has a scene, the canvas has rendered it, and no resource, texture or scene font it uses is
- * still on its way.
- */
 import { useSyncExternalStore } from 'react';
 import { useSceneAssetsSettled } from '../../useSceneAssetsSettled.js';
 import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
 import { useOptionalHierarchy } from '../../contexts/HierarchyContext.js';
 import { subscribeToNothing } from '../../../utils/subscribeToNothing.js';
+import { useGameViewPending } from '../../gameView/GameViewStatusContext.js';
 
 const NO_SCENE = () => null;
 
@@ -25,10 +21,11 @@ export function useSceneLoad(): SceneLoad {
     control?.screenshotScene ?? NO_SCENE
   );
   const { isSettled: areAssetsSettled, pendingTextures } = useSceneAssetsSettled();
+  const isGameViewPending = useGameViewPending();
   const hasScene = currentScene !== null;
   return {
     hasScene,
-    isComplete: hasScene && renderedScene === currentScene && areAssetsSettled,
+    isComplete: hasScene && renderedScene === currentScene && areAssetsSettled && !isGameViewPending,
     pendingTextures,
   };
 }

@@ -70,3 +70,13 @@ the selection and the passes stay one set. The switch between stages lives in th
   other modes. Performance stays live.
 - A selection made in the scene tree stays selected in In-game. The view draws no box for it.
 
+## Amendment: the In-game view says when it is settled, and captures its window
+
+The In-game view reports into a status slot that `TscnSceneProvider` and the shell provide
+(`gameView/gameViewStatus.ts`). It is settled once a frame drew the scene's current parse, writes and
+current cameras with no resource, texture or font pending, and `SETTLE_FRAMES` frames in a row drew
+so: a draw that reads a target an earlier draw wrote shows a change a frame later. A host reads the
+slot through `useGameViewSettled()` or the `settled` of `mountScene`. A capture holds the root target
+at the full window size, draws the window with its bars into a target of the window's size, and reads
+that target back, so the PNG has the window's size whatever the pane's. The status belongs to a view,
+not to the scene.
