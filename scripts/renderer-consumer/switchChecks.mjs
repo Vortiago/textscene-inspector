@@ -1,30 +1,15 @@
 import { attachDiagnostics, loggedErrors } from '../visual/previewServer.mjs';
 import { compareImages } from '../visual/imageDelta.mjs';
-import { RENDER_TIMEOUT_MS, pollInk } from './pollInk.mjs';
+import { pollInk } from './pollInk.mjs';
+import { stillShot } from './stillShot.mjs';
 import { CUBE_INK_FLOOR, BAR_INK_FLOOR } from './switchFailures.mjs';
 import { inkStats } from '../vscode/pixels.mjs';
 
 /* global document, requestAnimationFrame, window */
 // These exist only in the browser that runs the `page.evaluate` calls.
 
-/** Software GL draws a frame in well under this, so two shots this far apart that match show a still view. */
-const STILL_INTERVAL_MS = 1000;
-
 const NO_WRITES = { isCubeShrunk: false, isBarGreen: false };
 const BOTH_WRITES = { isCubeShrunk: true, isBarGreen: true };
-
-/** A shot of `#viewport` once two shots in a row match, so the view has drawn what it will draw. */
-async function stillShot(page) {
-  const viewport = page.locator('#viewport');
-  const deadline = Date.now() + RENDER_TIMEOUT_MS;
-  let shot = await viewport.screenshot();
-  for (;;) {
-    await page.waitForTimeout(STILL_INTERVAL_MS);
-    const next = await viewport.screenshot();
-    if (next.equals(shot) || Date.now() > deadline) return next;
-    shot = next;
-  }
-}
 
 /** The pixels in which a fresh view in `mode`, with `writes`, differs from `switched`. */
 async function changedFromFresh(page, mode, writes, switched) {
