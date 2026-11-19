@@ -163,6 +163,18 @@ describe('<Compositor> on the root canvas', () => {
     expect(draws[0]?.bound).toMatchObject({ depthBuffer: true, stencilBuffer: true });
   });
 
+  it('adds the stencil buffer when a stencil material appears later, and drops it when it leaves', async () => {
+    const { nextFrame } = await mount();
+    const before = (await nextFrame())[0]?.bound?.stencilBuffer;
+    const material = new THREE.MeshBasicMaterial();
+    applyGodotStencil(material, { flags: StencilFlag.WRITE, compare: StencilCompare.ALWAYS, reference: 1 });
+    const during = (await nextFrame())[0]?.bound?.stencilBuffer;
+    material.dispose();
+    const after = (await nextFrame())[0]?.bound?.stencilBuffer;
+
+    expect([before, during, after]).toEqual([false, true, false]);
+  });
+
   // A blended draw anywhere, even off-screen, must not move the rest of the frame by a level.
   it('draws a scene with a blended surface through the same buffer', async () => {
     const blended = new THREE.Mesh(
