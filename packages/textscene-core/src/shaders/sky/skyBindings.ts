@@ -48,6 +48,8 @@ export interface SkyScene {
   readonly time: number;
   /** The environment's background energy, `p_brightness_multiplier`. */
   readonly brightness: number;
+  /** `p_luminance_multiplier`, which also scales the debanding noise. None reads as 1, as on Forward+. */
+  readonly luminance?: number;
   /** The environment's fog, or nothing when it is off. */
   readonly fog?: SkyFog;
   /** The environment's volumetric fog, or nothing when it is off. */
@@ -79,7 +81,7 @@ export const SKY_BINDINGS: readonly Binding<SkyScene>[] = [
   { uniform: 'params.border_size', godot: 'sky.cpp:233-234', value: borderSizeOf },
   { uniform: RADIANCE_ENERGY, godot: 'sky.glsl:277', value: ({ radianceEnergy = 1 }) => radianceEnergy },
   // 1 / the luminance multiplier, 1 on the clustered renderer (`render_forward_clustered.cpp:1978`).
-  { uniform: 'params.luminance_multiplier', godot: 'sky.cpp:235', value: () => 1 },
+  { uniform: 'params.luminance_multiplier', godot: 'sky.cpp:235', value: ({ luminance = 1 }) => luminance },
   {
     uniform: 'params.brightness_multiplier',
     godot: 'render_forward_clustered.cpp:2045',

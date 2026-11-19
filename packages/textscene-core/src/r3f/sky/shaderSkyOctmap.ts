@@ -27,18 +27,22 @@ export class ShaderSkyOctmap implements OctmapSky {
     this.passes = new SkyResolutionPasses(sky, colorsRead);
   }
 
-  /** Draws the sky over `target` at the renderer's `TIME`, with `POSITION` at the camera's `position`. */
+  /** Draws a layer that a read times `energy` makes Godot's, debanding noise included (`sky.glsl:314`). */
   draw(
     gl: THREE.WebGLRenderer,
     target: THREE.WebGLRenderTarget,
     { borderSize }: SkyOctmapLayout,
-    position: Readonly<Vector3>
+    position: Readonly<Vector3>,
+    energy: number
   ): void {
+    // An energy of 0 reads as black whatever the layer holds.
+    const brightness = energy > 0 ? energy : 1;
     writeSkyBindings(this.sky, {
       camera: octmapCamera,
       position,
       time: canvasShaderTime(gl).time,
-      brightness: 1,
+      brightness,
+      luminance: 1 / brightness,
       lights: this.lights,
       borderSize,
     });
