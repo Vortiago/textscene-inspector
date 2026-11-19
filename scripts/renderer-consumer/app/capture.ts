@@ -26,9 +26,11 @@ export async function capturePng(
 ): Promise<Blob> {
   const element = elementOf(width, height);
   const view = mountScene(element, scene);
-  await view.settled;
-  const png = await view.captureImage();
-  view.dispose();
-  element.remove();
-  return png;
+  try {
+    await view.settled;
+    return await view.captureImage();
+  } finally {
+    view.dispose();
+    element.remove();
+  }
 }
