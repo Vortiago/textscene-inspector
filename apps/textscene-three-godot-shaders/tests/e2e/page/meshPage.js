@@ -139,7 +139,7 @@ function drawMesh(spec) {
   });
   const prepass = createDepthPrepass({
     renderingMethod: spec.renderingMethod ?? 'forward_plus',
-    isEnabled: spec.depthPrepass ?? true,
+    isEnabled: spec.depthPrepass,
   });
   const scene = new THREE.Scene();
   scene.add(

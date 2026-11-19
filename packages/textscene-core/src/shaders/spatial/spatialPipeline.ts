@@ -10,7 +10,12 @@ import type { PassMembership } from '../../godot/rendering/shadowPass.js';
 import { BlendMode } from '../../godot/rendering/materials/blendMode.js';
 import { CullMode } from '../../godot/rendering/materials/cullMode.js';
 import { DepthDrawMode } from '../../godot/rendering/materials/depthDrawMode.js';
-import { StencilCompare, StencilFlag } from '../../godot/rendering/materials/stencil.js';
+import {
+  STENCIL_COMPARE_WORDS,
+  STENCIL_FLAG_WORDS,
+  StencilCompare,
+  StencilFlag,
+} from '../../godot/rendering/materials/stencil.js';
 import type { ShaderNode, UniformHint } from '../language/shaderTree.js';
 import { writtenNames } from '../language/assignment.js';
 import { everyStatement, variablesRead } from '../language/treeWalk.js';
@@ -117,42 +122,29 @@ const WRITE_FLAGS: Readonly<Record<string, DepthFlag>> = {
   Z_CLIP_SCALE: 'uses_z_clip_scale',
 };
 
-const STENCIL_FLAGS: Readonly<Record<string, number>> = {
-  read: StencilFlag.READ,
-  write: StencilFlag.WRITE,
-  write_depth_fail: StencilFlag.WRITE_DEPTH_FAIL,
-};
+const STENCIL_FLAGS = byWord(STENCIL_FLAG_WORDS);
+const STENCIL_COMPARES = byWord(STENCIL_COMPARE_WORDS);
 
-const STENCIL_COMPARES: Readonly<Record<string, EnumValue<typeof StencilCompare>>> = {
-  compare_always: StencilCompare.ALWAYS,
-  compare_less: StencilCompare.LESS,
-  compare_equal: StencilCompare.EQUAL,
-  compare_less_or_equal: StencilCompare.LESS_OR_EQUAL,
-  compare_greater: StencilCompare.GREATER,
-  compare_not_equal: StencilCompare.NOT_EQUAL,
-  compare_greater_or_equal: StencilCompare.GREATER_OR_EQUAL,
-};
+/** The value of the first mode of `table`'s group, or `fallback`. Godot refuses two modes of one group. */
+const pickMode = <T>(modes: readonly string[], table: Readonly<Record<string, T>>, fallback: T): T =>
+  modes.reduce((picked, mode) => table[mode] ?? picked, fallback);
 
 /** `stencil_mode_values` (`scene_shader_forward_clustered.cpp:154-166`). */
 function stencilTest(tree: ShaderNode): StencilTest | null {
   const reference = tree.stencilReference;
   if (reference === undefined) return null;
-  const modes = tree.stencilModes.map((mode) => mode.name);
+  const stencilModes = tree.stencilModes.map((mode) => mode.name);
   return {
-    flags: modes.reduce((flags, mode) => flags | (STENCIL_FLAGS[mode] ?? 0), 0),
-    compare: modes.reduce<EnumValue<typeof StencilCompare>>(
-      (compare, mode) => STENCIL_COMPARES[mode] ?? compare,
-      StencilCompare.ALWAYS
-    ),
+    flags: stencilModes.reduce((flags, mode) => flags | (STENCIL_FLAGS[mode] ?? 0), 0),
+    compare: pickMode(stencilModes, STENCIL_COMPARES, StencilCompare.ALWAYS),
     reference,
   };
 }
 
-/** The pipeline state of `tree`. Godot's parser refuses two modes of one group, so each group has one. */
+/** The pipeline state of `tree`. */
 export function spatialPipeline(tree: ShaderNode): SpatialPipeline {
   const modes = tree.renderModes.map((mode) => mode.name);
-  const pick = <T>(table: Readonly<Record<string, T>>, fallback: T) =>
-    modes.reduce((picked, mode) => table[mode] ?? picked, fallback);
+  const pick = <T>(table: Readonly<Record<string, T>>, fallback: T) => pickMode(modes, table, fallback);
   const names = variablesRead(
     tree,
     (variable) => variable.builtIn !== undefined || variable.isUniform === true
@@ -172,15 +164,17 @@ export function spatialPipeline(tree: ShaderNode): SpatialPipeline {
     readsScreen: tree.uniforms.some((uniform) => SCREEN_HINTS.has(uniform.hint) && names.has(uniform.name)),
   };
   const usesPointSize = reads('POINT_SIZE', 'POINT_COORD');
+  const stencil = stencilTest(tree);
   return {
     ...pipeline,
-    depthFlags: depthFlags(tree, modes, { ...pipeline, usesPointSize }),
-    stencil: stencilTest(tree),
+    depthFlags: depthFlags(tree, modes, { ...pipeline, usesPointSize, usesStencil: stencil !== null }),
+    stencil,
   };
 }
 
 type FlagSources = Pick<SpatialPipeline, 'cullMode' | 'usesAlphaClip' | 'usesAlphaAntialiasing'> & {
   readonly usesPointSize: boolean;
+  readonly usesStencil: boolean;
 };
 
 function depthFlags(
@@ -195,7 +189,7 @@ function depthFlags(
     uses_alpha_antialiasing: sources.usesAlphaAntialiasing,
     cull_not_back: sources.cullMode !== CullMode.BACK,
     uses_point_size: sources.usesPointSize,
-    stencil_enabled: tree.stencilReference !== undefined,
+    stencil_enabled: sources.usesStencil,
   };
   return new Set<DepthFlag>([
     ...modes.flatMap((mode) => MODE_FLAGS[mode] ?? []),

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { EnumValue } from '../../godot/classdb/enumNames.js';
-import { StencilCompare, StencilFlag } from '../../godot/rendering/materials/stencil.js';
+import { StencilCompare, StencilFlag, WRITE_FLAGS } from '../../godot/rendering/materials/stencil.js';
 
 /** A surface's stencil test: the flags of `StencilFlag`, the compare and the reference, 0 to 255. */
 export interface StencilTest {
@@ -42,7 +42,7 @@ export function godotStencilState({ flags, compare, reference }: StencilTest): S
     stencilRef: reference,
     stencilFunc: STENCIL_FUNCS[compare],
     stencilFuncMask: flags & StencilFlag.READ ? WHOLE_VALUE : 0,
-    stencilWriteMask: flags & (StencilFlag.WRITE | StencilFlag.WRITE_DEPTH_FAIL) ? WHOLE_VALUE : 0,
+    stencilWriteMask: flags & WRITE_FLAGS ? WHOLE_VALUE : 0,
     stencilFail: THREE.KeepStencilOp,
     stencilZFail: writes(StencilFlag.WRITE_DEPTH_FAIL),
     stencilZPass: writes(StencilFlag.WRITE),

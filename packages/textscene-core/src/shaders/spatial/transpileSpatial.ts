@@ -114,6 +114,7 @@ export function transpileParsedSpatial(
     uniforms: resources.uniforms.byName,
   };
   setPrepassDraw(material, spatialPrepassDraw(material, pipeline, renderer, program));
+  const queueError = stencilQueueError(pipeline, options.file ?? '');
   resources.buffers.byName.get('instances')?.writeEachDraw(instanceWordsOf);
   return {
     material,
@@ -122,7 +123,7 @@ export function transpileParsedSpatial(
     textures: resources.textures,
     buffers: resources.buffers.byName,
     parameters,
-    printedErrors: [stencilQueueError(pipeline, options.file ?? '') ?? []].flat(),
+    printedErrors: queueError === undefined ? [] : [queueError],
   };
 }
 

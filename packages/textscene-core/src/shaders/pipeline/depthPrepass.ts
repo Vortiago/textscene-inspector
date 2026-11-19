@@ -168,12 +168,12 @@ export function createDepthPrepass({
   timed = (_renderer, draw) => draw(),
 }: DepthPrepassOptions = {}): DepthPrepass {
   const renderer = rendererOf(renderingMethod);
+  const colourDepthFunc = colourDepthFuncAfter(renderer);
   // Written by the first sentinel and emptied by the last, inside one render.
   const changed: THREE.Material[] = [];
   // Written by the first sentinel, and emptied at the start of each prepass.
   const draws = new Map<THREE.Material, PrepassDraw | null>();
   const first = createFirstOpaqueSentinel('DepthPrepass', (webgl, scene, camera) => {
-    const colourDepthFunc = colourDepthFuncAfter(renderer);
     if (colourDepthFunc === null) return;
     timed(webgl, () => {
       draws.clear();

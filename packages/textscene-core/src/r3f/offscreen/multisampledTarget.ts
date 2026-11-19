@@ -74,7 +74,8 @@ function sharedSampleCounts(
   const key = `${colour} ${depth}`;
   const cached = perStorage.get(key);
   if (cached) return cached;
-  const formatOf = (storage: string) => (context as unknown as Record<string, GLenum>)[storage]!;
+  const formatOf = (storage: ColourStorage | DepthStorage) =>
+    (context as unknown as Record<string, GLenum>)[storage]!;
   const depthCounts = renderbufferSampleCounts(context, formatOf(depth));
   const shared = renderbufferSampleCounts(context, formatOf(colour)).filter((count) =>
     depthCounts.includes(count)

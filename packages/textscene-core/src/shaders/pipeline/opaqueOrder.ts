@@ -7,7 +7,8 @@ const testsStencil = (item: RenderItem): boolean => item.material.stencilWrite;
 /** three's `painterSortStable` with Mobile's stencil rule after groups (`render_forward_mobile.h:347`). */
 function godotOpaqueOrder(a: RenderItem, b: RenderItem): number {
   if (a.groupOrder !== b.groupOrder) return a.groupOrder - b.groupOrder;
-  if (testsStencil(a) !== testsStencil(b)) return Number(testsStencil(a)) - Number(testsStencil(b));
+  const byStencil = Number(testsStencil(a)) - Number(testsStencil(b));
+  if (byStencil !== 0) return byStencil;
   if (a.renderOrder !== b.renderOrder) return a.renderOrder - b.renderOrder;
   if (a.material.id !== b.material.id) return a.material.id - b.material.id;
   if (a.materialVariant !== b.materialVariant) return a.materialVariant - b.materialVariant;
@@ -15,7 +16,7 @@ function godotOpaqueOrder(a: RenderItem, b: RenderItem): number {
   return a.id - b.id;
 }
 
-/** Replaces any opaque sort. Forward+ and gl_compatibility draw alike after their stencil prepass. */
+/** Replaces any opaque sort. After a prepass, an opaque stencil surface only writes, so order is moot. */
 export function installGodotOpaqueOrder(renderer: THREE.WebGLRenderer): void {
   renderer.setOpaqueSort(godotOpaqueOrder);
 }
