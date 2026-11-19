@@ -53,6 +53,15 @@ describe('transpileSky', () => {
     expect(sky.textures.get('radiance')!.value).toBe(sky.unsetRadianceTexture);
   });
 
+  it("refuses RADIANCE passed to the shader's own function, as Godot does", () => {
+    const error = errorOf(
+      'shader_type sky;\nvec4 f(samplerCube s, vec3 d) { return texture(s, d); }\n' +
+        'void sky() { COLOR = f(RADIANCE, EYEDIR).rgb; }\n'
+    );
+    expect(error.message).toMatch(/Unable to pass RADIANCE texture sampler/);
+    expect(error.position).toMatchObject({ line: 3 });
+  });
+
   it('reads the radiance bound to a sky behind the scene', () => {
     const sky = transpileSky(READS_RADIANCE);
     const radiance = new THREE.DataArrayTexture(new Uint8Array(4), 1, 1, 1);
