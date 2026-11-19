@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { positionalLightBounds } from '../../godot/rendering/lights/positionalShadow.js';
 import type { PositionalShadowRequest } from '../../godot/rendering/lights/positionalShadowAtlas.js';
 import { isViewingCamera, type ViewingCamera } from '../directionalShadow/fitDirectionalShadowBox.js';
-import { cameraFrustum } from '../cameraFrustum.js';
+import { cameraFrustum } from '../../shaders/pipeline/cameraFrustum';
 import { declaredLights, type DeclaredLight, type SceneLight } from '../directionalShadow/lightLists.js';
 import { readPositionalShadowDeclaration, type PositionalShadowDeclaration } from './declaration.js';
 import { adoptAtlasShadow } from './adoptAtlasShadow.js';

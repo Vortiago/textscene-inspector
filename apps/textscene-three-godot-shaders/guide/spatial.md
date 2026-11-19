@@ -2286,6 +2286,24 @@ void fragment() {
 | --- | --- |
 | <img src="showcase/spatial-alpha-antialiasing-edge-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-alpha-antialiasing-edge-three.png" width="256" alt="Transpilation"> |
 
+## Showcase `spatial-depth-prepass-alpha`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, depth_prepass_alpha;
+
+void fragment() {
+	ALBEDO = vec3(0.1, UV.x * 0.5, 0.6);
+	ALPHA = min(UV.y * 1.5, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-depth-prepass-alpha-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-depth-prepass-alpha-three.png" width="256" alt="Transpilation"> |
+
 ## Showcase `spatial-alpha-to-coverage`
 
 Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
@@ -2375,6 +2393,81 @@ void fragment() {
 | Godot | Transpilation on three.js |
 | --- | --- |
 | <img src="showcase/spatial-alpha-to-coverage-and-one-msaa-4x-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-alpha-to-coverage-and-one-msaa-4x-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-depth`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+void fragment() {
+	ALBEDO = vec3(0.2, 0.5, UV.y);
+	DEPTH = UV.x;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-depth-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-depth-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-depth-own-prepass`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+void vertex() {
+	VERTEX = VERTEX;
+}
+
+void fragment() {
+	ALBEDO = vec3(0.2, 0.5, UV.y);
+	DEPTH = UV.x;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-depth-own-prepass-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-depth-own-prepass-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-depth-compatibility`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+void fragment() {
+	ALBEDO = vec3(0.0, 1.0, 1.0);
+	DEPTH = UV.x;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-depth-compatibility-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-depth-compatibility-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-cull-front-compatibility`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, cull_front;
+
+void fragment() {
+	ALBEDO = vec3(0.0, 1.0, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-cull-front-compatibility-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-cull-front-compatibility-three.png" width="256" alt="Transpilation"> |
 
 ## Render mode `unshaded`
 
@@ -2516,6 +2609,24 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 `ALPHA_SCISSOR_THRESHOLD` discards a fragment whose alpha is below it. `ALPHA_HASH_SCALE` discards a fragment whose alpha is below a hash of its position in the object, at that scale. Either sets the alpha of the rest to 1 (`scene_forward_clustered.glsl:1383-1416`). `ALPHA_ANTIALIASING_EDGE` keeps the alpha instead and ramps it across one pixel at the edge, past the scissor threshold, with `ALPHA_TEXTURE_COORDINATE` for the mip level (`scene_forward_aa_inc.glsl:45-56`).
 
 The transpiler emits the template's alpha cut and `compute_alpha_antialiasing_edge`. Rows: `spatial.fragment.ALPHA_SCISSOR_THRESHOLD`, `spatial.fragment.ALPHA_HASH_SCALE`, `spatial.fragment.ALPHA_ANTIALIASING_EDGE`, `spatial.fragment.ALPHA_TEXTURE_COORDINATE`. Godot source: `servers/rendering/shader_types.cpp:197`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## The depth prepass and `depth_prepass_alpha`
+
+Godot's Forward+ draws a depth prepass before the opaque colour pass, which then tests EQUAL and writes no depth (`render_forward_clustered.cpp:2081-2112`, `scene_shader_forward_clustered.cpp:448-453`). The prepass draws each opaque surface, and each alpha surface with `depth_prepass_alpha` or alpha antialiasing (`scene_shader_forward_clustered.h:288-293`). A surface is shared unless it writes `VERTEX`, `POSITION`, `MODELVIEW_MATRIX`, `PROJECTION_MATRIX` or `Z_CLIP_SCALE`, or uses `discard`, an alpha cut, alpha antialiasing, point size or a stencil reference. Render modes `depth_prepass_alpha`, `particle_trails`, `world_vertex_coords`, `wireframe` and a cull mode other than `cull_back` also give a surface its own depth draw (`scene_shader_forward_clustered.h:295-298`). The prepass draws a shared surface with Godot's default material, and any other surface with its own program. In the prepass `opaque_prepass_threshold` is 0.99, so `depth_prepass_alpha` writes depth only where `ALPHA` reaches 0.99 (`scene_forward_clustered.glsl:1427-1431`). On gl_compatibility the prepass draws every surface with its own program, cut at 0.99, and the colour pass tests the prepass depth with LEQUAL (`rasterizer_scene_gles3.cpp:2635, 3124-3143, 3536-3540`). It takes an alpha surface only with `depth_prepass_alpha`, and draws nothing on a GPU of a vendor in `rendering/driver/depth_prepass/disable_for_vendors` (`config.cpp:194-207`). Mobile draws no depth prepass.
+
+The transpiler emits `createDepthPrepass`, whose first object draws the prepass with the surface's vertex stage or its own program and no colour. Rows: `spatial render_mode depth_prepass_alpha`. Godot source: `servers/rendering/shader_types.cpp:235`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `DEPTH`
+
+`DEPTH` is the fragment's depth, which starts at `FRAGCOORD.z`: Godot's depth, 1 at the near plane and 0 at the far plane (`scene_shader_forward_clustered.cpp:770`). The depth prepass draws a shared surface with Godot's default material, which writes the rasterised depth, and the opaque colour pass tests EQUAL against it. So an opaque shared shader shows only where `DEPTH` equals the rasterised depth. A shader with its own depth draw writes its own `DEPTH` in the prepass. The section on the depth prepass names the shared surfaces. On gl_compatibility every shader has its own depth draw.
+
+The transpiler emits `gl_FragDepth` as 1 minus `DEPTH`, since GL's depth is not reversed. Rows: `spatial.fragment.DEPTH`. Godot source: `servers/rendering/shader_types.cpp:169`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 

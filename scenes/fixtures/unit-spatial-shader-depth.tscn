@@ -1,0 +1,103 @@
+[gd_scene format=3 uid="uid://unit_spatial_shader_depth"]
+
+; Unshaded spatial shaders that write DEPTH, and a depth_prepass_alpha fade, each crossing an opaque orange quad.
+; Only DEPTH and the depth prepass move: no other golden spatial shader names DEPTH or depth_prepass_alpha.
+
+[sub_resource type="Shader" id="Shader_orange"]
+code = "shader_type spatial;
+render_mode unshaded;
+
+void fragment() {
+	ALBEDO = vec3(0.9, 0.3, 0.1);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_orange"]
+shader = SubResource("Shader_orange")
+
+[sub_resource type="Shader" id="Shader_shared"]
+code = "shader_type spatial;
+render_mode unshaded;
+
+void fragment() {
+	ALBEDO = vec3(UV * 0.4, 0.3);
+	DEPTH = UV.x;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_shared"]
+shader = SubResource("Shader_shared")
+
+[sub_resource type="Shader" id="Shader_own"]
+code = "shader_type spatial;
+render_mode unshaded;
+
+void vertex() {
+	VERTEX = VERTEX;
+}
+
+void fragment() {
+	ALBEDO = vec3(UV * 0.4, 0.3);
+	DEPTH = UV.x;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_own"]
+shader = SubResource("Shader_own")
+
+[sub_resource type="Shader" id="Shader_prepass_alpha"]
+code = "shader_type spatial;
+render_mode unshaded, depth_prepass_alpha;
+
+void fragment() {
+	ALBEDO = vec3(UV * 0.4, 0.3);
+	ALPHA = min(UV.y * 1.5, 1.0);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_prepass_alpha"]
+shader = SubResource("Shader_prepass_alpha")
+
+[sub_resource type="QuadMesh" id="QuadMesh_1"]
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.1, 0.12, 0.16, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4.2)
+
+[node name="Orange_shared" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, -1.75, -0.15, 0)
+mesh = SubResource("QuadMesh_1")
+material_override = SubResource("ShaderMaterial_orange")
+
+[node name="Tile_shared" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.1, 0.15, 0.3)
+mesh = SubResource("QuadMesh_1")
+material_override = SubResource("ShaderMaterial_shared")
+
+[node name="Orange_own" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 0.35, -0.15, 0)
+mesh = SubResource("QuadMesh_1")
+material_override = SubResource("ShaderMaterial_orange")
+
+[node name="Tile_own" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, 0.3)
+mesh = SubResource("QuadMesh_1")
+material_override = SubResource("ShaderMaterial_own")
+
+[node name="Orange_prepass_alpha" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 2.45, -0.15, 0)
+mesh = SubResource("QuadMesh_1")
+material_override = SubResource("ShaderMaterial_orange")
+
+[node name="Tile_prepass_alpha" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.1, 0.15, 0.3)
+mesh = SubResource("QuadMesh_1")
+material_override = SubResource("ShaderMaterial_prepass_alpha")

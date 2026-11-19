@@ -19,7 +19,7 @@ import type { FogDensityAtlas } from './fogDensityAtlas.js';
 import type { FogVolumeObject } from './fogVolumeObject.js';
 import { RowBuffer } from '../rowTexture/packedRows.js';
 import { writeVec4 } from '../writeVec4.js';
-import { cameraFrustum } from '../cameraFrustum.js';
+import { cameraFrustum } from '../../shaders/pipeline/cameraFrustum';
 
 /**
  * Where each value sits in a volume's row, in texels of four floats. `TO_LOCAL` starts three rows

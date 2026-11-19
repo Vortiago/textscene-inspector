@@ -565,11 +565,90 @@ const ALPHA_SCENES = [
       'spatial.fragment.ALPHA_TEXTURE_COORDINATE',
     ]
   ),
+  // The prepass writes depth where ALPHA reaches 0.99, so there the near quad cuts the far one.
+  crossingScene(
+    'spatial-depth-prepass-alpha',
+    ['depth_prepass_alpha'],
+    ['ALPHA = min(UV.y * 1.5, 1.0);'],
+    ['spatial.fragment.ALPHA']
+  ),
   coverageScene('spatial-alpha-to-coverage', ['alpha_to_coverage']),
   coverageScene('spatial-alpha-to-coverage-and-one', ['alpha_to_coverage_and_one']),
   coverageScene('spatial-alpha-to-coverage-blend-add', ['blend_add', 'alpha_to_coverage']),
   multisampledCoverageScene('spatial-alpha-to-coverage-msaa-4x', ['alpha_to_coverage']),
   multisampledCoverageScene('spatial-alpha-to-coverage-and-one-msaa-4x', ['alpha_to_coverage_and_one']),
+];
+
+/** A quad whose DEPTH runs from far at the left edge to near at the right, so the orange quad cuts it. */
+const DEPTH_FRAGMENT = fragmentOf('ALBEDO = vec3(0.2, 0.5, UV.y);', 'DEPTH = UV.x;');
+
+/** The quad's DEPTH: the shared prepass material writes the rasterised depth, so the EQUAL test drops it. */
+const DEPTH_SCENES = [
+  modeScene(
+    'spatial-depth',
+    [],
+    DEPTH_FRAGMENT,
+    {
+      object: { position: [-0.1, 0.1, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+      others: [ORANGE_IN_FRONT],
+    },
+    ['spatial.fragment.UV', 'spatial.fragment.DEPTH']
+  ),
+  // Writing VERTEX keeps the shader off the shared prepass material, so its own DEPTH draws.
+  {
+    ...modeScene(
+      'spatial-depth-own-prepass',
+      [],
+      DEPTH_FRAGMENT,
+      {
+        object: { position: [-0.1, 0.1, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+        others: [ORANGE_IN_FRONT],
+      },
+      ['spatial.fragment.UV', 'spatial.fragment.DEPTH', 'spatial.vertex.VERTEX']
+    ),
+    source: `${unshadedHead([])}
+void vertex() {
+	VERTEX = VERTEX;
+}
+
+void fragment() {
+	${DEPTH_FRAGMENT}
+}
+`,
+  },
+];
+
+const RED = showing('vec3(1.0, 0.0, 0.0)');
+
+/** Each surface's own depth draw on gl_compatibility, in colours of 0 or 1, where both outputs agree. */
+const COMPATIBILITY_DEPTH_SCENES = [
+  {
+    ...modeScene(
+      'spatial-depth-compatibility',
+      [],
+      fragmentOf('ALBEDO = vec3(0.0, 1.0, 1.0);', 'DEPTH = UV.x;'),
+      {
+        object: { position: [-0.1, 0.1, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+        others: [{ ...ORANGE_IN_FRONT, source: RED }],
+      },
+      ['spatial.fragment.DEPTH']
+    ),
+    renderingMethod: 'gl_compatibility',
+  },
+  // The quad facing the camera draws no prepass depth, so the red quad behind it shows.
+  (() => {
+    const scene = cullScene(
+      'spatial-cull-front-compatibility',
+      ['cull_front'],
+      'ALBEDO = vec3(0.0, 1.0, 1.0);'
+    );
+    const behindFacing = { position: [-0.45, 0, -0.4], rotation: [0, 0, 0], scale: [0.6, 0.6, 0.6] };
+    return {
+      ...scene,
+      others: [...scene.others, { object: behindFacing, source: RED }],
+      renderingMethod: 'gl_compatibility',
+    };
+  })(),
 ];
 
 /** A shader that moves the sphere in `vertex()` under `modes`, and shows its normal. */
@@ -754,6 +833,8 @@ export const MESH_SCENES = [
   ...GLOBAL_SCENES,
   ...RENDER_MODE_SCENES,
   ...ALPHA_SCENES,
+  ...DEPTH_SCENES,
+  ...COMPATIBILITY_DEPTH_SCENES,
 ];
 
 /** Scenes whose program the GPU refuses: each must reach the material as a fault with this log. */

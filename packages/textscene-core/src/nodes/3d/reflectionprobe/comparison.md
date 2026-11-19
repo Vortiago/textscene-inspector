@@ -15,7 +15,8 @@ camera the view renders through (`renderer_scene_cull.cpp:3692`).
 Each render shows the capture at its own exposure over the capture's (`light_storage.cpp:1810-1814`).
 Over a sky, a ONCE probe reflects the bake of the view, as Godot captures it while that bake holds.
 An ALWAYS probe draws its faces at the world's exposure before the view in each frame. Those
-renders bake the sky for the view too (`renderer_scene_cull.cpp:3755-3762`).
+renders bake the sky for the view too (`renderer_scene_cull.cpp:3755-3762`). A Quality sky bakes
+again in the view's render at the view's exposure, so every frame is the same, as in Godot.
 A frame captures every ALWAYS probe and one ONCE probe, in reverse tree order (`renderer_scene_cull.cpp:531`, `:3739-3763`).
 Each capture draws six faces and filters its layers. Under a sky whose layers change in each frame, two ALWAYS probes capture in each frame, as in Godot. In software WebGL that took the median frame from 67 to 350 ms.
 A capture draws its positional shadows in the scene's own probe atlas, size 1024 with quadrants

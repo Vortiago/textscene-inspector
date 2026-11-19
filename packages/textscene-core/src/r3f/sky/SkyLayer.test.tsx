@@ -740,8 +740,8 @@ describe('SkyLayer under an exposure', () => {
       for (let render = 0; render < 10; render += 1) fireSceneRender(mounted.scene, view);
       return mounted;
     }
-    /** The ambient energy a capture at the world's exposure of 1 reads. */
-    const capturedAmbient = (scene: THREE.Scene, isInterior = false) =>
+    /** The ambient energy a ONCE capture at the world's exposure of 1 reads. */
+    const capturedAmbient = (scene: THREE.Scene, { isInterior = false } = {}) =>
       drawAtExposure(scene, 1, () => {
         drawAsProbeCapture({ isInterior, hasShadows: true, isRealTime: false }, () =>
           fireSceneRender(scene, new THREE.PerspectiveCamera())
@@ -830,6 +830,21 @@ describe('SkyLayer under an exposure', () => {
       expect(faceLayers).toEqual([ENERGY, ...Array<number>(7).fill(ENERGY * 4)]);
     });
 
+    it('bakes the sky it finds dirty in a face of an ALWAYS capture, which Godot draws as a render', async () => {
+      const { scene } = await viewedAtFour();
+      noteRealTimeProbes(scene, 1);
+      onTestFinished(() => noteRealTimeProbes(scene, 0));
+      // An Incremental sky's first face bakes layer 0 only: the sharpest reflection reads it.
+      const sharpRead = drawAtExposure(scene, 1, () => {
+        drawAsProbeCapture({ isInterior: false, hasShadows: true, isRealTime: true }, () =>
+          fireSceneRender(scene, new THREE.PerspectiveCamera())
+        );
+        return scene.environmentIntensity * skyEnergies[0]!;
+      });
+
+      expect(sharpRead).toBeCloseTo(ENERGY * ENERGY, 10);
+    });
+
     it("reads the view's own bake again once the ALWAYS probe leaves", async () => {
       const { scene } = await viewedAtFour();
       viewAmbientOverRealTimeProbe(scene);
@@ -842,7 +857,7 @@ describe('SkyLayer under an exposure', () => {
     it('shows no sky to an interior capture, which draws without the environment', async () => {
       const { scene } = await viewedAtFour();
       const restore = stageCapture(scene, { cullMask: 0xfffff, interior: true }, CLEAR_COLOR);
-      capturedAmbient(scene, true);
+      capturedAmbient(scene, { isInterior: true });
       const shown = [scene.environmentIntensity, scene.background];
       restore();
 

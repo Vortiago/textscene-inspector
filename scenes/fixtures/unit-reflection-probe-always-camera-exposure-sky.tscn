@@ -1,7 +1,8 @@
 ; One variable: the probe of `reflection-probe-camera-exposure-sky` updates ALWAYS. Godot draws its
-; six faces at the world's exposure before the view in each frame, and each bakes the sky it finds
-; dirty, so the ground outside the probe reads the sky with the sun at the world's exposure
-; (`renderer_scene_cull.cpp:3755-3762`, `sky.cpp:1105-1143`).
+; six faces at the world's exposure before the view in each frame, and each dirties the sky. The sky
+; bakes in Quality mode, so the view's render bakes it again at the view's exposure and every frame is
+; the same (`renderer_scene_cull.cpp:3755-3762`, `sky.cpp:1105-1143, 1263-1264`). An Incremental sky
+; would flash in 2 of every 8 frames.
 
 [gd_scene format=3]
 
@@ -15,6 +16,7 @@ exposure_multiplier = 4.0
 
 [sub_resource type="Sky" id="Sky_1"]
 sky_material = SubResource("SkyMat_1")
+process_mode = 1
 
 [sub_resource type="Environment" id="Environment_1"]
 background_mode = 2

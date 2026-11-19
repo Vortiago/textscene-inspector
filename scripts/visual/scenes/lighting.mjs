@@ -177,7 +177,7 @@ export const LIGHTING_SCENES = [
     camera: 'Root/Camera3D',
   },
   // The same exposures over a procedural sky with a sun: a ONCE probe reflects the sky the view's
-  // exposure baked, and an ALWAYS probe bakes it at the world's exposure for the view too.
+  // exposure baked. The next scene's ALWAYS probe faces bake its Quality sky at the world's exposure.
   {
     name: 'reflection-probe-camera-exposure-sky',
     file: 'unit-reflection-probe-camera-exposure-sky.tscn',
