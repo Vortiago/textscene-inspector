@@ -17,7 +17,7 @@ const picksOf = (page) => page.evaluate(() => [...window.pickView.picks]);
 const twoFrames = (page) =>
   page.evaluate(() => new Promise((drawn) => requestAnimationFrame(() => requestAnimationFrame(drawn))));
 
-/** The picks `onSelect` heard of a click at `at` of the element, `centre` or `corner`, and the outline after it. */
+/** The picks `onSelect` heard of a click at `centre` or `corner`, and the outline after it. */
 async function clickAt(page, box, at) {
   const heard = (await picksOf(page)).length;
   const [x, y] = at === 'centre' ? [box.width / 2, box.height / 2] : [8, 8];
