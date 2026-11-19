@@ -58,9 +58,11 @@ function click({ result }: Setup, object: THREE.Object3D) {
   });
 }
 
-function clickOnNothing({ result }: Setup) {
-  act(() => result.current.picker.handlers.onPointerMissed?.());
+function missOf({ result }: Setup, type: 'click' | 'contextmenu' | 'pointerup') {
+  act(() => result.current.picker.handlers.onPointerMissed?.(new MouseEvent(type)));
 }
+
+const clickOnNothing = (view: Setup) => missOf(view, 'click');
 
 describe('the host’s click picking', () => {
   it('calls onSelect with the handle of the node a click picks', () => {
@@ -89,6 +91,24 @@ describe('the host’s click picking', () => {
     clickOnNothing(view);
 
     expect(view.result.current.selection.selectedNodePath).toBeNull();
+  });
+
+  it('keeps the selection through a right click on nothing', () => {
+    const view = setup(openTestScene(), {});
+    click(view, registeredAt(view, 'Root/Cube'));
+
+    missOf(view, 'contextmenu');
+
+    expect(view.result.current.selection.selectedNodePath).toBe('Root/Cube');
+  });
+
+  it('hears no pick when a drag that starts on nothing ends on a node', () => {
+    const onSelect = vi.fn();
+    const view = setup(openTestScene(), { onSelect });
+
+    missOf(view, 'pointerup');
+
+    expect(onSelect).not.toHaveBeenCalled();
   });
 
   it('outlines the picked node when the host passes no selected', () => {

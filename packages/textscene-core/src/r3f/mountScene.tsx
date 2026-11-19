@@ -20,7 +20,7 @@ export interface ViewOptions {
   onSelect?: (node: NodeHandle | null) => void;
 }
 
-/** The keys a view reads with no default: left out, the host does not own the selection or hear a click. */
+/** The options a view holds: `mode` and `visible` always, the selection keys once the host gives them. */
 type MountedOptions = ViewOptions & Required<Pick<ViewOptions, 'mode' | 'visible'>>;
 
 export interface View {

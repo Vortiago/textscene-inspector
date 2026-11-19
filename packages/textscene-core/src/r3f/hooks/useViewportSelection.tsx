@@ -22,8 +22,8 @@ export interface DelegatedPointerHandlers {
   onPointerUp: (e: ThreeEvent<PointerEvent>) => void;
   onPointerMove: (e: ThreeEvent<PointerEvent>) => void;
   onPointerOut: (e: ThreeEvent<PointerEvent>) => void;
-  /** A click on nothing, which clears the selection in 3D (`node_3d_editor_plugin.cpp:998-1003`). */
-  onPointerMissed?: () => void;
+  /** A miss, which on a click clears the selection in 3D (`node_3d_editor_plugin.cpp:998-1003`). */
+  onPointerMissed?: (e: MouseEvent) => void;
 }
 
 export interface UseViewportSelectionResult {
@@ -105,7 +105,12 @@ export function useViewportSelection(options: UseViewportSelectionOptions = {}):
       onPointerOut() {
         hoverStore.set(null);
       },
-      onPointerMissed: takesMiss ? () => pick(null) : undefined,
+      // R3F also reports a miss for a right click, and for the release of a drag that starts on nothing.
+      onPointerMissed: takesMiss
+        ? (e) => {
+            if (e.type === 'click') pick(null);
+          }
+        : undefined,
     }),
     [dragThresholdPx, pick, hoverStore, objectPathMap, takesMiss]
   );
