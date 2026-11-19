@@ -179,12 +179,15 @@ class SkyBake {
     const { drawn, radianceInPlace } = baked;
     const isFirstStep = !drawn.isStepped;
     drawn.isStepped = true;
-    if (isFirstStep) drawn.energies.fill(render.brightness);
-    else stepEnergies(drawn.energies, step, render.brightness);
+    // A first step that bakes nothing keeps the build's energies, as Godot keeps the bake of a clean sky.
+    if (!isFirstStep) stepEnergies(drawn.energies, step, render.brightness);
+    else if (step.kind === 'bake') drawn.energies.fill(render.brightness);
     if (!radianceInPlace) return false;
     this.showLightsAt(render.exposure);
-    if (isFirstStep) return redrawBuild(radianceInPlace, drawn, draw, render.brightness);
-    return drawStep(radianceInPlace, drawn, step, draw, render.brightness);
+    if (!isFirstStep) return drawStep(radianceInPlace, drawn, step, draw, render.brightness);
+    const isRedrawn = redrawBuild(radianceInPlace, drawn, draw, render.brightness);
+    if (isRedrawn) drawn.energies.fill(render.brightness);
+    return isRedrawn;
   }
 
   dispose(): void {
@@ -216,7 +219,7 @@ function bakeSky(
 }
 
 /** What a render asks of the radiance layers. */
-export interface LayersDraw {
+interface LayersDraw {
   /** `POSITION` of the draw. */
   position: Vector3;
   /** Whether each bake draws again, as for a sky that reads `TIME` or `POSITION`. */

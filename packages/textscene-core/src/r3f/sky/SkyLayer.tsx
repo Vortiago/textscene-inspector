@@ -175,6 +175,7 @@ export function SkyLayer({
       readsLights ? skyLightDataAt(read.lights, read.key, drawn) : NO_SKY_LIGHT_DATA;
     const firstExposure = update.baked?.exposure ?? exposure;
     const radiance = bake.bakeNow(firstExposure, lightDataKey(lightDataAt(lights, firstExposure)));
+    let notedLights = lightDataAt(lights, firstExposure).lights;
     if (!radiance) {
       release();
       return undefined;
@@ -207,8 +208,10 @@ export function SkyLayer({
       const position = update.previousPosition;
       const draw = { position, isDrawnEachBake: isFrameRead, lightData: lightDataKey(lightData) };
       const isDrawn = bake.step(render, step, draw);
-      // A probe captures again on a change of the Environment, as a new bake of the lights notes one.
-      if (isDrawn && !isFrameRead) noteEnvironmentChange(scene, environment);
+      // New lights note a change of the Environment, which probes capture again. An exposure alone does not.
+      if (!isDrawn || isFrameRead || lightData.lights === notedLights) return;
+      notedLights = lightData.lights;
+      noteEnvironmentChange(scene, environment);
     };
     // The first view of a frame replays the ALWAYS faces ours skipped, at the world's exposure.
     const showForRender = (drawn: number, camera: THREE.Camera) => {

@@ -127,7 +127,11 @@ export class SceneProbes {
       .filter(visibleInTree)
       .sort((a, b) => compareTreeOrder(a.treeOrder, b.treeOrder))
       .slice(0, REFLECTION_ATLAS_COUNT);
-    noteRealTimeProbes(this.scene, probes.filter(isRealTimeProbe).length);
+    // An interior capture draws with no environment, so no sky (`render_forward_clustered.cpp:1819`).
+    noteRealTimeProbes(
+      this.scene,
+      probes.filter((object) => isRealTimeProbe(object) && !object.probe.interior).length
+    );
     const atlas = this.atlasFor(probes);
     if (this.settledFrames < COMMIT_FRAMES_AFTER_SETTLE) return false;
     this.markCapturesStale(clearColor);

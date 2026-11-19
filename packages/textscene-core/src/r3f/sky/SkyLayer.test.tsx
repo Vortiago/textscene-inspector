@@ -977,7 +977,7 @@ describe('SkyLayer under an exposure', () => {
       expect(ambientDrawnAt(scene, 5)).toBeCloseTo(ENERGY * ENERGY * 3 * 5, 10);
     });
 
-    it('notes a change of the world Environment when a render at another exposure bakes, which a probe captures again', async () => {
+    it('notes no change of the world Environment for a bake at another exposure alone, so no probe captures again', async () => {
       built.next = recordedEnvironment().build;
       const { scene } = await mount(
         exposed(
@@ -991,9 +991,12 @@ describe('SkyLayer under an exposure', () => {
       );
       for (let render = 0; render < 10; render += 1) fireSceneRender(scene, camera);
       const changes = ownEnvironmentChanges(scene);
-      drawAtExposure(scene, 3, () => fireSceneRender(scene, camera));
+      for (let frame = 0; frame < 4; frame += 1) {
+        drawAtExposure(scene, 3, () => fireSceneRender(scene, camera));
+        fireSceneRender(scene, camera);
+      }
 
-      expect(ownEnvironmentChanges(scene)).toBeGreaterThan(changes);
+      expect(ownEnvironmentChanges(scene)).toBe(changes);
     });
   });
 

@@ -10,6 +10,7 @@ import { renderUnderWay } from '../viewportRender/worldRender';
 import { mipmapBiasUniform } from '../testing/mipmapBiasUniform';
 import type { ViewportShadowAtlas } from '../positionalShadow/viewportShadowAtlas';
 import { ReflectionProbeObject } from './reflectionProbeObject';
+import { takeRealTimeCaptureRenders } from './realTimeCaptures';
 import { SceneProbes } from './sceneProbes';
 import { rootViewportDescription } from '../viewportRender/viewportDescription';
 import { shownProbes } from './probeSlots';
@@ -220,6 +221,22 @@ describe('SceneProbes.update', () => {
     settle();
 
     expect(facesDrawn()).toBe(0);
+  });
+});
+
+describe('SceneProbes ALWAYS renders', () => {
+  it("counts the six faces of each ALWAYS probe for the sky's radiance update", async () => {
+    const { scene, facesDrawn } = await sceneWith(probeObject({ update_mode: '1' }));
+    facesDrawn();
+
+    expect(takeRealTimeCaptureRenders(scene)).toBe(6);
+  });
+
+  it('counts no interior ALWAYS probe, which draws no sky (render_forward_clustered.cpp:1819)', async () => {
+    const { scene, facesDrawn } = await sceneWith(probeObject({ update_mode: '1', interior: 'true' }));
+    facesDrawn();
+
+    expect(takeRealTimeCaptureRenders(scene)).toBe(0);
   });
 });
 
