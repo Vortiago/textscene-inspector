@@ -17,7 +17,7 @@ const NO_UNSUBSCRIBE = () => {};
 const PreviewVisibilityContext = createContext(true);
 PreviewVisibilityContext.displayName = 'PreviewVisibilityContext';
 
-/** One provider either way, so a change between a value and none keeps the canvas below it mounted. */
+/** One provider either way, so a change to or from no value keeps the canvas below mounted. */
 export function PreviewVisibilityProvider({
   isVisible,
   children,

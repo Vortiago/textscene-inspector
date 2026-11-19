@@ -19,7 +19,7 @@ export interface View {
   readonly settled: Promise<GameViewSettled>;
   /** At the window's size whatever the element's. Rejects before `settled`, and outside In-game. */
   captureImage(): Promise<Blob>;
-  /** Changes only the keys `options` gives a value. A `settled` read before a switch out of In-game rejects. */
+  /** Changes only the keys given a value. A `settled` read before a switch out of In-game rejects. */
   update(options: ViewOptions): void;
   /** The scene stays open for another view. */
   dispose(): void;
