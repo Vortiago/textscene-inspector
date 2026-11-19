@@ -2,6 +2,7 @@ import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import * as logger from '../logger.js';
 import type { Scene } from '../scene/openScene.js';
+import type { NodeHandle } from '../scene/nodeHandle.js';
 import { encodePng } from '../utils/encodePng.js';
 import { TscnCanvas, type TscnCanvasMode } from './TscnCanvas.js';
 import { TscnSceneProvider } from './TscnSceneProvider.js';
@@ -13,7 +14,15 @@ export interface ViewOptions {
   mode?: TscnCanvasMode;
   /** `false` draws only the frames a load, a settle or a capture needs. `true` by default. */
   visible?: boolean;
+  /** The node the view outlines, or null for none. Given, a click leaves the outline to the host. */
+  selected?: NodeHandle | null;
+  /** The node a click in the 3D mode picks, or null for a click on nothing. In-game takes no click. */
+  onSelect?: (node: NodeHandle | null) => void;
 }
+
+/** The keys a view reads with no default: left out, the host does not own the selection or hear a click. */
+type MountedOptions = Required<Pick<ViewOptions, 'mode' | 'visible'>> &
+  Pick<ViewOptions, 'selected' | 'onSelect'>;
 
 export interface View {
   /** A new read waits again after the scene changes. Rejects once the view fails to mount or is disposed. */
@@ -26,7 +35,7 @@ export interface View {
   dispose(): void;
 }
 
-const DEFAULT_OPTIONS: Required<ViewOptions> = { mode: 'in-game', visible: true };
+const DEFAULT_OPTIONS: MountedOptions = { mode: 'in-game', visible: true };
 
 export function mountScene(element: HTMLElement, scene: Scene, options: ViewOptions = {}): View {
   let current = withGiven(DEFAULT_OPTIONS, options);
@@ -44,7 +53,7 @@ export function mountScene(element: HTMLElement, scene: Scene, options: ViewOpti
     root.render(
       <TscnSceneProvider scene={scene}>
         <ViewStatusProvider status={status}>
-          <TscnCanvas mode={current.mode} visible={current.visible} />
+          <TscnCanvas {...current} />
         </ViewStatusProvider>
       </TscnSceneProvider>
     );
@@ -77,9 +86,14 @@ export function mountScene(element: HTMLElement, scene: Scene, options: ViewOpti
   };
 }
 
-// A key set to `undefined` keeps its value, as if `given` left it out.
-function withGiven(options: Required<ViewOptions>, given: ViewOptions): Required<ViewOptions> {
-  return { mode: given.mode ?? options.mode, visible: given.visible ?? options.visible };
+// A key set to `undefined` keeps its value, as if `given` left it out. `selected: null` is a value.
+function withGiven(options: MountedOptions, given: ViewOptions): MountedOptions {
+  return {
+    mode: given.mode ?? options.mode,
+    visible: given.visible ?? options.visible,
+    selected: given.selected === undefined ? options.selected : given.selected,
+    onSelect: given.onSelect ?? options.onSelect,
+  };
 }
 
 // A page holds few live WebGL contexts, and R3F releases its own a timer after the unmount.

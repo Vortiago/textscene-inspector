@@ -1,11 +1,13 @@
 /**
  * The canvas mesh picker: one set of delegated pointer handlers, for the single root group in
- * `NodeDispatcher`, that drive `<SelectionContext>`. A pointer-up selects only when travel stayed
- * within `dragThresholdPx`, so a navigation drag does not select.
+ * `NodeDispatcher`, that drive `<SelectionContext>` and tell the host (`HostSelection`). A pointer-up
+ * selects only when travel stayed within `dragThresholdPx`, so a navigation drag does not select.
  */
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { ThreeEvent } from '@react-three/fiber';
 import { useSelection } from '../contexts/SelectionContext.js';
+import { useCanvasWorkspace } from '../contexts/CanvasWorkspaceContext.js';
+import { useHostPick } from '../hostSelection/HostSelection.js';
 import { resolvePathFromObject } from './resolvePathFromObject.js';
 import { getAncestorPaths } from '../../utils/nodePath.js';
 
@@ -25,6 +27,8 @@ export interface DelegatedPointerHandlers {
   onPointerUp: (e: ThreeEvent<PointerEvent>) => void;
   onPointerMove: (e: ThreeEvent<PointerEvent>) => void;
   onPointerOut: (e: ThreeEvent<PointerEvent>) => void;
+  /** A click on nothing, which clears the selection in the 3D workspace (`node_3d_editor_plugin.cpp:998-1003`). */
+  onPointerMissed?: () => void;
 }
 
 export interface UseViewportSelectionResult {
@@ -38,6 +42,9 @@ export function useViewportSelection(options: UseViewportSelectionOptions = {}):
   const { dragThresholdPx = DEFAULT_DRAG_THRESHOLD_PX, autoExpandAncestors = true } = options;
   const { setSelectedNodePath, hoverStore, expandedNodePaths, setExpandedNodePaths, objectPathMap } =
     useSelection();
+  const host = useHostPick();
+  // The 2D workspace picks no node yet (#1819), so the host hears of a click in the 3D one only.
+  const isHostTold = useCanvasWorkspace() === '3d';
 
   const downPosRef = useRef<{ x: number; y: number } | null>(null);
   const expandedRef = useRef<ReadonlySet<string>>(expandedNodePaths);
@@ -64,6 +71,16 @@ export function useViewportSelection(options: UseViewportSelectionOptions = {}):
     [setSelectedNodePath, autoExpandAncestors, setExpandedNodePaths]
   );
 
+  const pick = useCallback(
+    (nodePath: string | null) => {
+      if (isHostTold) host?.picked(nodePath);
+      if (host?.ownsSelection) return;
+      if (nodePath === null) setSelectedNodePath(null);
+      else select(nodePath);
+    },
+    [host, isHostTold, select, setSelectedNodePath]
+  );
+
   const handlers = useMemo<DelegatedPointerHandlers>(
     () => ({
       onPointerDown(e) {
@@ -79,7 +96,7 @@ export function useViewportSelection(options: UseViewportSelectionOptions = {}):
         const path = resolvePathFromObject(e.object, objectPathMap);
         if (!path) return;
         e.stopPropagation();
-        select(path);
+        pick(path);
       },
       // Over and out fire once for the whole root, so move carries the per-mesh `e.object`. R3F
       // calls it per intersected mesh, nearest first, until `stopPropagation()`: without the stop
@@ -93,8 +110,9 @@ export function useViewportSelection(options: UseViewportSelectionOptions = {}):
       onPointerOut() {
         hoverStore.set(null);
       },
+      onPointerMissed: isHostTold ? () => pick(null) : undefined,
     }),
-    [dragThresholdPx, select, hoverStore, objectPathMap]
+    [dragThresholdPx, pick, hoverStore, objectPathMap, isHostTold]
   );
 
   return useMemo<UseViewportSelectionResult>(() => ({ handlers }), [handlers]);

@@ -29,6 +29,7 @@ import { DEFAULT_ROOT_SCENE_PATH, type Scene } from '../scene/openScene.js';
 import type { ViewportMode } from './contexts/ViewportModeContext.js';
 import { rootClassName } from './stageClassName.js';
 import { EditorViewReport } from './viewStatus/EditorViewReport.js';
+import { HostSelection, type HostSelectionProps } from './hostSelection/HostSelection.js';
 
 // Lazy, so the glyph engine and the parse of the prompt load only for an empty canvas.
 const EmptyScenePrompt = lazy(() => import('./emptyScenePrompt.js'));
@@ -120,7 +121,7 @@ const Canvas2DStage = lazy(() =>
 /** `in-game` draws the game's start with no script run, `3D` and `2D` the editor's views. */
 export type TscnCanvasMode = ViewportMode;
 
-export interface TscnCanvasProps {
+export interface TscnCanvasProps extends Omit<HostSelectionProps, 'children'> {
   /** The scene `openScene` gave. Without it, the view reads the `<TscnSceneProvider>` above it. */
   scene?: Scene;
   /** `3D` by default. A change replaces the stage, so one canvas is live. */
@@ -131,9 +132,11 @@ export interface TscnCanvasProps {
   className?: string;
 }
 
-export function TscnCanvas({ scene, mode = '3D', visible, className }: TscnCanvasProps) {
+export function TscnCanvas({ scene, mode = '3D', visible, selected, onSelect, className }: TscnCanvasProps) {
   const stage = (
-    <PreviewVisibilityProvider isVisible={visible}>{stageOf(mode, className)}</PreviewVisibilityProvider>
+    <HostSelection selected={selected} onSelect={onSelect}>
+      <PreviewVisibilityProvider isVisible={visible}>{stageOf(mode, className)}</PreviewVisibilityProvider>
+    </HostSelection>
   );
   return scene ? <TscnSceneProvider scene={scene}>{stage}</TscnSceneProvider> : stage;
 }

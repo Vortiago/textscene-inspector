@@ -4,6 +4,16 @@ import { parentPathOf } from '../utils/nodePath.js';
 /** The root window's absolute path, which holds the scene's root node as its child. */
 export const ROOT_WINDOW_PATH = '/root';
 const ROOT_WINDOW_NAME = 'root';
+export const ROOT_WINDOW_PREFIX = `${ROOT_WINDOW_PATH}/`;
+
+/** The path in the Live scene tree, which starts at the scene's root node, of a node's absolute path. */
+export function livePathOf(path: string): string {
+  return path.slice(ROOT_WINDOW_PREFIX.length);
+}
+
+export function absolutePathOf(livePath: string): string {
+  return `${ROOT_WINDOW_PREFIX}${livePath}`;
+}
 
 /** What the walk reads of the tree, every node named by its absolute path. */
 export interface WalkedTree {

@@ -3,6 +3,7 @@ import { TscnCanvas, TscnSceneProvider, openScene, variant } from '@textscene/re
 import { runHeldResourceChecks, type HeldResourceCheckResults } from './heldResourceChecks';
 import { projectOf, runMountChecks, type MountCheckResults } from './mountChecks';
 import { WINDOW_320_PROJECT, exposeSwitchChecks } from './switchView';
+import { exposePickView } from './pickView';
 
 const FIXTURE_SCENE = `[gd_scene format=3]
 
@@ -81,6 +82,15 @@ function View() {
   );
 }
 
+/** `#viewport`, the element the runner's screenshots read. */
+function viewportElement(): HTMLElement {
+  const viewport = document.createElement('div');
+  viewport.id = 'viewport';
+  viewport.style.cssText = 'width: 320px; height: 240px';
+  document.getElementById('root')!.append(viewport);
+  return viewport;
+}
+
 declare global {
   interface Window {
     /** Written once the checks of `mountScene` end, for the runner to read. */
@@ -90,18 +100,15 @@ declare global {
   }
 }
 
-/** `?checks=mount`, `?checks=held` and `?checks=switch` run checks that mount views of their own. */
+/** `?checks=mount`, `?checks=held`, `?checks=switch` and `?checks=pick` run checks that mount views of their own. */
 if (query.get('checks') === 'mount') {
   void runMountChecks().then((results) => (window.mountChecks = results));
 } else if (query.get('checks') === 'held') {
   void runHeldResourceChecks().then((results) => (window.heldResourceChecks = results));
 } else if (query.get('checks') === 'switch') {
-  // `#viewport` is the element the runner's screenshots read.
-  const viewport = document.createElement('div');
-  viewport.id = 'viewport';
-  viewport.style.cssText = 'width: 320px; height: 240px';
-  document.getElementById('root')!.append(viewport);
-  exposeSwitchChecks(viewport);
+  exposeSwitchChecks(viewportElement());
+} else if (query.get('checks') === 'pick') {
+  exposePickView(viewportElement());
 } else {
   void Promise.all([written, called]).then(() =>
     createRoot(document.getElementById('root')!).render(

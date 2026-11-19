@@ -51,6 +51,7 @@ export async function run3DScenario(browser, baseUrl) {
   await selectOutlinerNode(page, SELECT_B);
   await page.waitForTimeout(SELECT_SETTLE_MS);
   const afterB = await readViewProbe(page);
+  const selectedAfterMiss = await clickOnNothing(page, canvas);
 
   await context.close();
 
@@ -64,8 +65,19 @@ export async function run3DScenario(browser, baseUrl) {
     afterB,
     paths,
     inspectorA,
+    selectedAfterMiss,
     diagnostics,
   };
+}
+
+/** The selected rows after a click on the sky left of the box, which clears the selection in Godot. */
+async function clickOnNothing(page, canvas) {
+  const { height } = await canvas.boundingBox();
+  await canvas.click({ position: { x: 10, y: height / 2 } });
+  await page.waitForTimeout(SELECT_SETTLE_MS);
+  return page.$$eval('[role="treeitem"][aria-selected="true"]', (rows) =>
+    rows.map((row) => row.parentElement?.getAttribute('data-node-path'))
+  );
 }
 
 export async function run2DScenario(browser, baseUrl) {
@@ -109,6 +121,10 @@ export function check3D(gate, threeD) {
   );
 
   checkCameraStill(gate, threeD);
+  gate.check(
+    threeD.selectedAfterMiss?.length === 0,
+    `[select] a click on nothing leaves [${threeD.selectedAfterMiss?.join(', ')}] selected, expected none`
+  );
 }
 
 function checkCameraStill(gate, { before, afterA, afterB }) {
