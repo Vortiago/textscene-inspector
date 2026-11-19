@@ -3,6 +3,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import type * as THREE from 'three';
 import * as shaderPatches from '../shaderPatch/installShaderPatches';
+import * as textureCopies from '../../shaders/uniforms/textureCopies';
+import { heldLiveTargetCopy } from '../liveTargets';
 import { installGodotOpaqueOrder } from '../../shaders/pipeline/opaqueOrder';
 import { prepareCanvasRenderer } from './prepareCanvasRenderer';
 
@@ -20,6 +22,12 @@ describe('prepareCanvasRenderer', () => {
     const install = vi.spyOn(shaderPatches, 'installShaderPatches');
     prepareCanvasRenderer({ gl: renderer() });
     expect(install).toHaveBeenCalled();
+  });
+
+  it('gives a transpiled sampler a live copy of a render target', () => {
+    const install = vi.spyOn(textureCopies, 'installTargetCopies');
+    prepareCanvasRenderer({ gl: renderer() });
+    expect(install).toHaveBeenCalledWith(heldLiveTargetCopy);
   });
 
   it('sorts the opaque draws in Godot’s order, which draws a stencil surface last', () => {

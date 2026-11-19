@@ -1,4 +1,6 @@
+import { readFileSync } from 'node:fs';
 import { FRAMES_BEFORE_READ } from '../../../../scripts/godot-probes/godotRun.mjs';
+import { SKY_MATERIALS_FILE } from '../../../../scripts/godot-probes/skyMaterials.mjs';
 
 /** Godot's default sky shader (`sky.cpp:807`). */
 export const DEFAULT_SKY = `shader_type sky;
@@ -378,6 +380,86 @@ const PASS_SIZE_SCENES = [
   { name: 'sky-passes-under-4-px', width: 3, height: 9 },
 ].map((scene) => ({ ...PASS_SCENES.find(({ name }) => name === 'sky-quarter-res'), ...scene }));
 
+/** Godot's recorded texts of its sky materials, one for each value of the flags that pick a text. */
+const { texts: SKY_MATERIAL_TEXTS } = JSON.parse(readFileSync(SKY_MATERIALS_FILE, 'utf8'));
+
+/** The shader Godot generates for `material`, which has no texture: the guide shows it. */
+function generatedText(material) {
+  const flagOf = (name) => material.properties[name] !== 'false';
+  const text = SKY_MATERIAL_TEXTS.find(
+    (entry) =>
+      entry.class === material.class &&
+      Object.entries(entry.properties).every(([name, value]) => value === null || value === flagOf(name))
+  );
+  if (!text) throw new Error(`expected Godot's text of ${JSON.stringify(material)}, found none`);
+  return text.code;
+}
+
+/** A camera tilted up at a sun low ahead, with the horizon and the ground in the lower third. */
+const AT_SUN = { fov: 90, rotation: [10, 0, 0] };
+
+/** The sun ahead, low in the sky, of a size that both materials draw as a disk. */
+const LOW_SUN = { rotation: [-10, 180, 0], color: [1, 0.9, 0.7], energy: 1.5, size: 2 };
+
+/** Each of Godot's sky materials through the shader its generator writes, at defaults and other values. */
+const SKY_MATERIAL_SCENES = [
+  { name: 'sky-procedural-default', material: { class: 'ProceduralSkyMaterial', properties: {} } },
+  {
+    name: 'sky-procedural-values',
+    material: {
+      class: 'ProceduralSkyMaterial',
+      properties: {
+        sky_top_color: 'Color(0.1, 0.3, 0.8, 1)',
+        sky_horizon_color: 'Color(0.9, 0.6, 0.4, 1)',
+        sky_curve: '0.4',
+        sky_energy_multiplier: '1.5',
+        ground_bottom_color: 'Color(0.05, 0.2, 0.05, 1)',
+        ground_horizon_color: 'Color(0.5, 0.4, 0.3, 1)',
+        ground_curve: '0.1',
+        ground_energy_multiplier: '0.5',
+        sun_angle_max: '10.0',
+        sun_curve: '0.05',
+        energy_multiplier: '0.8',
+        use_debanding: 'false',
+      },
+    },
+  },
+  {
+    name: 'sky-procedural-energy-0',
+    material: { class: 'ProceduralSkyMaterial', properties: { energy_multiplier: '0.0' } },
+  },
+  { name: 'sky-physical-default', material: { class: 'PhysicalSkyMaterial', properties: {} } },
+  {
+    name: 'sky-physical-values',
+    material: {
+      class: 'PhysicalSkyMaterial',
+      properties: {
+        rayleigh_coefficient: '4.0',
+        rayleigh_color: 'Color(0.2, 0.5, 0.9, 1)',
+        mie_coefficient: '0.02',
+        mie_eccentricity: '-0.3',
+        mie_color: 'Color(0.9, 0.7, 0.5, 1)',
+        turbidity: '3.0',
+        sun_disk_scale: '5.0',
+        ground_color: 'Color(0.3, 0.2, 0.1, 1)',
+        energy_multiplier: '1.3',
+        use_debanding: 'false',
+      },
+    },
+  },
+  {
+    name: 'sky-panorama-unset',
+    material: { class: 'PanoramaSkyMaterial', properties: { energy_multiplier: '2.0' } },
+  },
+].map((scene) => ({
+  ...SIZE,
+  camera: AT_SUN,
+  lights: [LOW_SUN],
+  source: generatedText(scene.material),
+  rows: [],
+  ...scene,
+}));
+
 export const SKY_SCENES = [
   { name: 'sky-default', ...SIZE, source: DEFAULT_SKY, camera: AHEAD, lights: [], rows: DEFAULT_SKY_ROWS },
   {
@@ -413,4 +495,5 @@ export const SKY_SCENES = [
   ...LIGHT_SCENES,
   ...PASS_SCENES,
   ...PASS_SIZE_SCENES,
+  ...SKY_MATERIAL_SCENES,
 ];

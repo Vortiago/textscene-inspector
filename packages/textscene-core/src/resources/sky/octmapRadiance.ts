@@ -130,7 +130,6 @@ export class OctmapRadiance implements RadianceInPlace {
 interface SkyEnvironmentParts {
   background: SkyBackdrop | null;
   disposeBackground: () => void;
-  redrawBackground?: () => void;
   setLights: (lights: readonly SkyLight[]) => void;
 }
 
@@ -138,7 +137,7 @@ interface SkyEnvironmentParts {
 export function octmapSkyEnvironment(
   radiance: OctmapRadiance,
   isDirtiable: boolean,
-  { background, disposeBackground, redrawBackground, setLights }: SkyEnvironmentParts
+  { background, disposeBackground, setLights }: SkyEnvironmentParts
 ): SkyEnvironment {
   if (!isDirtiable) {
     const layers = radiance.releaseLayers();
@@ -146,7 +145,7 @@ export function octmapSkyEnvironment(
       disposeBackground();
       disposeSkyLayers(layers);
     };
-    return { background, layers, redrawBackground, dispose };
+    return { background, layers, dispose };
   }
   const dispose = () => {
     disposeBackground();
@@ -155,7 +154,6 @@ export function octmapSkyEnvironment(
   return {
     background,
     layers: radiance.layers,
-    redrawBackground,
     radianceInPlace: radiance,
     setLights,
     dispose,

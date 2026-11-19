@@ -39,8 +39,6 @@ export interface EnvironmentLayerProps {
   settings: EnvironmentSettings;
   /** The resolved sky, or null when there is none to render. */
   sky: AuthoredSky | null;
-  /** The texture a PanoramaSkyMaterial samples, resolved by the node that holds the Environment. */
-  panorama: THREE.Texture | null;
   /** The node that holds the Environment, whose details show its sky shader's errors. */
   holderPath?: string | null;
 }
@@ -66,7 +64,7 @@ export function DrawnEnvironmentLayer(props: EnvironmentLayerProps) {
   );
 }
 
-function EnvironmentParts({ settings, sky, panorama, holderPath }: EnvironmentLayerProps) {
+function EnvironmentParts({ settings, sky, holderPath }: EnvironmentLayerProps) {
   // Godot draws the sky as the background under BG_SKY and takes ambient from
   // it whenever the source resolves to a cubemap. Surfaces reflect it by their own source. The three
   // are independent: a sky can light the scene without being shown (AMBIENT_SOURCE_SKY over a
@@ -96,7 +94,6 @@ function EnvironmentParts({ settings, sky, panorama, holderPath }: EnvironmentLa
             rotation={settings.skyRotation}
             contribution={skyAmbient ? skyAmbient.contribution : 0}
             reflects={reflectsSky}
-            panorama={panorama}
             fogScattersSun={(settings.fog?.sunScatter ?? 0) > FOG_SUN_SCATTER_MIN}
           />
         </AtHolder>

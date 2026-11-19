@@ -7,6 +7,7 @@
  * the world draws with; their own tests draw it.
  */
 import { describe, expect, it, vi } from 'vitest';
+import { useMemo } from 'react';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type * as THREE from 'three';
 
@@ -20,17 +21,37 @@ import { WorldEnvironmentScope } from '../../../r3f/environment/WorldEnvironment
 import { usePassToneMap } from '../../../r3f/environment/passToneMap';
 import type { EnvironmentLayerProps } from '../../../r3f/environment/EnvironmentLayer';
 import { texture2DPlaceholder } from '../../../resources/textures/texture2DPlaceholder';
+import { topDownTexture } from '../../../resources/textures/topDownTexture';
+import { readShaderSky } from '../../../resources/sky/shaderSky';
+import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
+import { useShaderTextures } from '../../../r3f/shaderTextures/shaderTextures';
 
 import '../../../r3f/nodes/index';
 
 vi.mock('../../../r3f/environment/EnvironmentLayer', () => ({
-  EnvironmentLayer: ({ panorama }: EnvironmentLayerProps) => (
-    <group name="EnvironmentLayer" userData={{ panorama }} />
-  ),
-  DrawnEnvironmentLayer: ({ panorama }: EnvironmentLayerProps) => (
-    <group name="DrawnEnvironmentLayer" userData={{ panorama }} />
+  EnvironmentLayer: (props: EnvironmentLayerProps) => <PanoramaProbe name="EnvironmentLayer" {...props} />,
+  DrawnEnvironmentLayer: (props: EnvironmentLayerProps) => (
+    <PanoramaProbe name="DrawnEnvironmentLayer" {...props} />
   ),
 }));
+
+/** Loads the sky's texture parameters as the sky layer does, and shows the one the panorama sky samples. */
+function PanoramaProbe({ name, sky, holderPath }: EnvironmentLayerProps & { name: string }) {
+  const shader = useMemo(
+    () =>
+      sky && {
+        references: sky.material.textures,
+        samplers: readShaderSky(sky.material, { decoders: {} }).usage.samplers,
+      },
+    [sky]
+  );
+  const [textures, slots] = useShaderTextures(shader);
+  return (
+    <group name={name} userData={{ panorama: textures.source_panorama }}>
+      {holderPath && <NodePathProvider path={holderPath}>{slots}</NodePathProvider>}
+    </group>
+  );
+}
 vi.mock('../../../r3f/environment/Compositor', () => ({
   Compositor: function Compositor() {
     const { glowMap } = usePassToneMap();
@@ -147,7 +168,7 @@ describe('WorldEnvironment: a panorama ViewportTexture', () => {
     ['the PanoramaSkyMaterial', { ...EVERY_HOLDER, material: false }],
   ])('samples the placeholder when %s is not local to scene', async (_holder, holders) => {
     const renderer = await renderScene(panoramaScene(holders));
-    expect(drawnPanorama(renderer)).toBe(texture2DPlaceholder());
+    expect(drawnPanorama(renderer)).toBe(topDownTexture(texture2DPlaceholder()));
   });
 });
 
@@ -213,7 +234,7 @@ environment = ExtResource("1_env")
 
   it('samples the placeholder when the file does not mark the Environment local to scene', async () => {
     const renderer = await renderScene(tresScene(), { 'res://environment.tres': environmentFile(false) });
-    expect(drawnPanorama(renderer)).toBe(texture2DPlaceholder());
+    expect(drawnPanorama(renderer)).toBe(topDownTexture(texture2DPlaceholder()));
   });
 });
 
@@ -237,6 +258,6 @@ environment = SubResource("Env_1")
 
   it('samples the placeholder when the Environment is not local to scene', async () => {
     const renderer = await renderScene(cameraScene(false));
-    expect(drawnPanorama(renderer, 'DrawnEnvironmentLayer')).toBe(texture2DPlaceholder());
+    expect(drawnPanorama(renderer, 'DrawnEnvironmentLayer')).toBe(topDownTexture(texture2DPlaceholder()));
   });
 });

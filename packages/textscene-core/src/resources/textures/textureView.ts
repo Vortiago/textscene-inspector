@@ -10,7 +10,6 @@ import { applyUvWindow, type UvWindow } from '../../r3f/uvWindow';
 import { isLiveTarget, liveTargetCopies, liveTargetCopy } from '../../r3f/liveTargets';
 import { windowCell, type WindowCell } from '../../r3f/windowCell';
 import { imageSize } from '../formats/image/imagePixels';
-import { isHeld } from '../../r3f/useDisposeOnRelease';
 import {
   applyTextureFilterState,
   hasMipChain,
@@ -112,7 +111,6 @@ export function pinNoColorSpace(texture: THREE.Texture): THREE.Texture {
  * carries every divergence. `useResource` shares one cached texture per path, while Godot keeps this
  * state per material and slot, so a write to the source would let the last consumer win for all.
  * A live target diverges by its sampler alone, and a reader that diverges reads its own copy.
- * `releaseView` frees a clone or a copy, and leaves a source to its loader or its pass.
  */
 export function textureView(source: THREE.Texture, sampler: ViewSampler): THREE.Texture {
   if (source.isRenderTargetTexture) {
@@ -139,15 +137,6 @@ export function ownedTextureView(source: THREE.Texture, sampler: ViewSampler): T
  */
 export function viewToRelease(texture: THREE.Texture | null | undefined): THREE.Texture | null {
   return texture && ownedViews.has(texture) ? texture : null;
-}
-
-/**
- * Frees the texture of a view: a clone or a copy is disposed, a shared source is left to its owner.
- * A copy another reader still holds stays, and its last holder frees it.
- */
-export function releaseView(texture: THREE.Texture | null | undefined): void {
-  const view = viewToRelease(texture);
-  if (view && !isHeld(view)) view.dispose();
 }
 
 function diverges(source: THREE.Texture, sampler: ViewSampler): boolean {

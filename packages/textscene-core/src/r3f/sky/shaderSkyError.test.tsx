@@ -3,14 +3,13 @@ import { render, screen } from '@testing-library/react';
 import { NodePathProvider } from '../contexts/NodePathContext';
 import { ShaderErrorsProvider, useShaderErrors } from '../contexts/ShaderErrorsContext';
 import * as transpiler from '../../resources/sky/shaderSky';
-import type { SkyProperties } from '../../resources/sky/types';
+import type { ShaderSkyProperties } from '../../resources/sky/types';
 import type { SkyTranspiler } from './skyTranspiler';
 import type { ProjectShaderOptions } from '../../shaders/rendererShaderOptions';
 import { useShaderSkyErrorReport } from './shaderSkyError';
 
-function shaderSky(code: string): SkyProperties {
+function shaderSky(code: string): ShaderSkyProperties {
   return {
-    kind: 'shader',
     code,
     file: 'res://sky.gdshader',
     parameters: {},
@@ -29,7 +28,7 @@ function shaderSky(code: string): SkyProperties {
 const UNCOMPILED = shaderSky('shader_type sky;\nvoid sky() { COLOR = 1.0; }\n');
 
 interface SkyProps {
-  material: SkyProperties;
+  material: ShaderSkyProperties;
   transpiler: SkyTranspiler | null;
   options: ProjectShaderOptions | null;
 }
@@ -44,7 +43,7 @@ function Errors() {
 }
 
 function renderSky(
-  material: SkyProperties,
+  material: ShaderSkyProperties,
   {
     loaded = transpiler,
     options = { decoders: {} },

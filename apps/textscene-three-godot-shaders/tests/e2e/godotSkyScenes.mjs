@@ -3,7 +3,7 @@ import { parseViewportOutput, viewportProjectFiles, viewportScript } from './god
 const LINE_PREFIX = 'SKY ';
 const FILES = { dataFile: 'skies.json', shaderPrefix: 'sky' };
 
-/** A WorldEnvironment of the scene's sky and its suns in each viewport. */
+/** A WorldEnvironment of the scene's sky shader or sky material class, and its suns, in each viewport. */
 export const SKY_MAIN_SCRIPT = viewportScript({
   dataFile: FILES.dataFile,
   linePrefix: LINE_PREFIX,
@@ -11,11 +11,19 @@ export const SKY_MAIN_SCRIPT = viewportScript({
 func color(values: Array) -> Color:
 	return Color(values[0], values[1], values[2])
 
+func sky_material(scene: Dictionary) -> Material:
+	if not scene.has("material"):
+		var shader_material := ShaderMaterial.new()
+		shader_material.shader = load(scene.shader)
+		return shader_material
+	var material: Material = ClassDB.instantiate(scene.material["class"])
+	for name in scene.material.properties:
+		material.set(name, str_to_var(scene.material.properties[name]))
+	return material
+
 func environment(scene: Dictionary) -> Environment:
-	var material := ShaderMaterial.new()
-	material.shader = load(scene.shader)
 	var sky := Sky.new()
-	sky.sky_material = material
+	sky.sky_material = sky_material(scene)
 	var env := Environment.new()
 	env.background_mode = Environment.BG_SKY
 	env.sky = sky
@@ -45,6 +53,7 @@ export const skyProjectFiles = (scenes) =>
   viewportProjectFiles(FILES, scenes, (scene) => ({
     lights: scene.lights,
     ...(scene.fog ? { fog: scene.fog } : {}),
+    ...(scene.material ? { material: scene.material } : {}),
   }));
 
 export const parseSkyOutput = (stdout) => parseViewportOutput(stdout, LINE_PREFIX);

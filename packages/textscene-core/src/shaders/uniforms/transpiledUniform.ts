@@ -20,6 +20,8 @@ export interface TranspiledUniform {
   readonly isDrawable: boolean;
   /** The material's value. Nothing, null or NIL erases it (`material.cpp:450`). */
   set(value: ParameterValue | undefined): void;
+  /** Frees what the binding made for its values. Only the sole owner of the shader calls it. */
+  dispose?(): void;
 }
 
 /** What every uniform of a shader takes from the material and the project. */

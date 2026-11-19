@@ -10,8 +10,11 @@ import type { TscnNode } from '../../parser/types';
 import { createEnvironmentSettings } from '../../resources/environment/build';
 import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
 import { lerpColor } from '../../godot/math/math';
-import { decodeSky, decodeSkyMaterial } from '../../resources/sky/decode';
-import type { ProceduralSkyProperties, Sky } from '../../resources/sky/types';
+import { decodeSky } from '../../resources/sky/decode';
+import { skyMaterialText } from '../../resources/sky/skyMaterialText';
+import { variantToText } from '../../godot/variant/variantWriter';
+import { variant } from '../../godot/variant/value/variant';
+import type { AuthoredSky } from '../../resources/sky/types';
 import { decodeEnvironment } from '../../resources/environment/decode';
 import type { Rgba } from '../../godot/math/math';
 import { degToRad } from '../../godot/math/math.js';
@@ -116,7 +119,7 @@ export function previewEnvironment(): EnvironmentAndSky {
 let builtPreviewEnvironment: EnvironmentAndSky | undefined;
 
 interface EnvironmentAndSky extends ResolvedEnvironment {
-  sky: Sky;
+  sky: AuthoredSky;
 }
 
 function buildPreviewEnvironment(): EnvironmentAndSky {
@@ -133,22 +136,24 @@ function buildPreviewEnvironment(): EnvironmentAndSky {
   );
 
   const horizon = previewHorizonColor();
-  const material = decodeSkyMaterial('ProceduralSkyMaterial', {}) as ProceduralSkyProperties;
+  const material = skyMaterialText(
+    'ProceduralSkyMaterial',
+    {
+      sky_top_color: colorText(PREVIEW_SKY_TOP),
+      sky_horizon_color: colorText(horizon),
+      ground_bottom_color: colorText(PREVIEW_GROUND_BOTTOM),
+      ground_horizon_color: colorText(horizon),
+    },
+    {}
+  );
+  if (!material) throw new Error("expected Godot's ProceduralSkyMaterial generator, found none");
 
   return {
     settings,
-    panorama: null,
     glowMap: null,
     // The editor's Sky keeps every default but its material (`node_3d_editor_plugin.cpp:10394`).
-    sky: decodeSky(
-      {},
-      {
-        ...material,
-        sky_top_color: PREVIEW_SKY_TOP,
-        sky_horizon_color: horizon,
-        ground_bottom_color: PREVIEW_GROUND_BOTTOM,
-        ground_horizon_color: horizon,
-      }
-    ),
+    sky: decodeSky({}, material),
   };
 }
+
+const colorText = (color: Rgba): string => variantToText(variant('COLOR', color));

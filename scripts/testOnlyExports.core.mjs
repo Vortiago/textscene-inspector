@@ -45,6 +45,8 @@ export const KEPT_TEST_ONLY_EXPORTS = [
   // The switch of the TSL port ships before its one reader, the pick of a lit surface's material,
   // which the next slice of the port adds.
   'r3f/litSurface/litSurfaceForm.ts#litSurfaceForm',
+  // The layer tests bake a known cube through the real bake, and a sky draws its own radiance.
+  'resources/sky/skyLayers.ts#cubeRadiance',
   // The builds and the cache are module state, so each test starts from the one reset that aborts
   // the builds in flight and clears the cache.
   'resources/textures/proceduralBuilds.ts#resetProceduralTextures',

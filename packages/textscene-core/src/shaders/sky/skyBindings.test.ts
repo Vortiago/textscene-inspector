@@ -13,6 +13,14 @@ const SUN = {
   size: 0.1,
 };
 
+const VOLUME = {
+  volume: new THREE.Data3DTexture(),
+  inverseLength: 0.02,
+  inverseDetailSpread: 0.5,
+  skyAffect: 0.75,
+  isLegacyBlending: true,
+};
+
 function boundSky(scene: Partial<SkyScene>, pass: 'background' | 'octmap' = 'background') {
   const sky = transpileSky(DEFAULT_SKY, { pass });
   writeSkyBindings(sky, {
@@ -72,6 +80,30 @@ describe('writeSkyBindings', () => {
     expect(boundSky({ fog })('sky_scene_data.fog_light_color').value).toEqual(new THREE.Vector3(1, 0.5, 2));
   });
 
+  it('writes the volumetric fog as off when the scene has none', () => {
+    expect(boundSky({})('sky_scene_data.volumetric_fog_enabled').value).toBe(false);
+  });
+
+  it("writes the volumetric fog's lookup, sky affect and blending", () => {
+    const uniform = boundSky({ volumetricFog: VOLUME });
+    const names = ['enabled', 'inv_length', 'detail_spread', 'sky_affect'];
+    const written = names.map((name) => uniform(`sky_scene_data.volumetric_fog_${name}`).value);
+    expect([...written, uniform('sky_scene_data.fog_use_legacy_blending').value]).toEqual([
+      true,
+      0.02,
+      0.5,
+      0.75,
+      true,
+    ]);
+  });
+
+  it("binds the volumetric fog's volume, which the background reads at the far end", () => {
+    const sky = transpileSky(DEFAULT_SKY);
+    const scene = { camera: new THREE.PerspectiveCamera(), time: 0, brightness: 1, lights: [] };
+    writeSkyBindings(sky, { ...scene, volumetricFog: VOLUME });
+    expect(sky.textures.get('volumetric_fog_texture')!.value).toBe(VOLUME.volume);
+  });
+
   it("writes a light's direction and energy into its slot", () => {
     const slots = boundSky({ lights: [SUN] })('directional_lights.data.direction_energy').array!;
     expect(slots[0]).toEqual(new THREE.Vector4(0, 0, 1, 2));
@@ -86,11 +118,11 @@ describe('writeSkyBindings', () => {
     ]);
   });
 
-  it("writes the camera's projection terms Godot unprojects with, after Godot's flip of y", () => {
+  it("writes the camera's projection terms, so the sky's ray is the camera's own under a view offset", () => {
     const camera = new THREE.PerspectiveCamera(90, 2, 1, 10);
     camera.setViewOffset(4, 2, 1, 0.5, 4, 2);
     const projection = boundSky({ camera })('params.projection').value as THREE.Vector4;
     // The view offset moves the frustum to x from -1 to 3 and y from -1.5 to 0.5 at the near plane.
-    expect(projection.toArray()).toEqual([0.5, 0.5, 0.5, -1].map((value) => expect.closeTo(value, 6)));
+    expect(projection.toArray()).toEqual([0.5, 0.5, -0.5, -1].map((value) => expect.closeTo(value, 6)));
   });
 });

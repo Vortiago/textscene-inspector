@@ -23,6 +23,19 @@ export type SkyFog = Pick<
   'lightColor' | 'lightEnergy' | 'sunScatter' | 'skyAffect' | 'aerialPerspective' | 'density'
 >;
 
+/** The environment's volumetric fog as the background reads it (`sky.cpp:1148-1165`, `:1227-1228`). */
+export interface SkyVolumetricFog {
+  /** Rows bottom first, as a GL pass writes them (`sky.glsl:150-158`). */
+  readonly volume: THREE.Texture;
+  /** 1 over the fog's length, or 1 for a fog of no length. */
+  readonly inverseLength: number;
+  /** 1 over the detail spread, or 1 for a spread of 0. */
+  readonly inverseDetailSpread: number;
+  readonly skyAffect: number;
+  /** `rendering/environment/fog/use_legacy_blending`. */
+  readonly isLegacyBlending: boolean;
+}
+
 /** What the sky background pass reads from a frame. */
 export interface SkyScene {
   /** The camera of the render: the sky reads its projection and its world matrix. */
@@ -35,8 +48,12 @@ export interface SkyScene {
   readonly time: number;
   /** The environment's background energy, `p_brightness_multiplier`. */
   readonly brightness: number;
+  /** `p_luminance_multiplier`, which also scales the debanding noise. None reads as 1, as on Forward+. */
+  readonly luminance?: number;
   /** The environment's fog, or nothing when it is off. */
   readonly fog?: SkyFog;
+  /** The environment's volumetric fog, or nothing when it is off. */
+  readonly volumetricFog?: SkyVolumetricFog;
   /** At most the four lights the sky reads (`sky.cpp:707`). */
   readonly lights: readonly SkyLight[];
   /** The octmap's border size, 1 minus twice its padding in UV, for the octmap pass alone. */
@@ -64,7 +81,7 @@ export const SKY_BINDINGS: readonly Binding<SkyScene>[] = [
   { uniform: 'params.border_size', godot: 'sky.cpp:233-234', value: borderSizeOf },
   { uniform: RADIANCE_ENERGY, godot: 'sky.glsl:277', value: ({ radianceEnergy = 1 }) => radianceEnergy },
   // 1 / the luminance multiplier, 1 on the clustered renderer (`render_forward_clustered.cpp:1978`).
-  { uniform: 'params.luminance_multiplier', godot: 'sky.cpp:235', value: () => 1 },
+  { uniform: 'params.luminance_multiplier', godot: 'sky.cpp:235', value: ({ luminance = 1 }) => luminance },
   {
     uniform: 'params.brightness_multiplier',
     godot: 'render_forward_clustered.cpp:2045',
@@ -93,6 +110,31 @@ export const SKY_BINDINGS: readonly Binding<SkyScene>[] = [
     value: (scene) => scene.fog?.skyAffect ?? 0,
   },
   {
+    uniform: 'sky_scene_data.volumetric_fog_enabled',
+    godot: 'sky.cpp:1148-1151',
+    value: (scene) => scene.volumetricFog !== undefined,
+  },
+  {
+    uniform: 'sky_scene_data.volumetric_fog_inv_length',
+    godot: 'sky.cpp:1153-1158',
+    value: (scene) => scene.volumetricFog?.inverseLength ?? 0,
+  },
+  {
+    uniform: 'sky_scene_data.volumetric_fog_detail_spread',
+    godot: 'sky.cpp:1160-1165',
+    value: (scene) => scene.volumetricFog?.inverseDetailSpread ?? 0,
+  },
+  {
+    uniform: 'sky_scene_data.volumetric_fog_sky_affect',
+    godot: 'sky.cpp:1227',
+    value: (scene) => scene.volumetricFog?.skyAffect ?? 0,
+  },
+  {
+    uniform: 'sky_scene_data.fog_use_legacy_blending',
+    godot: 'sky.cpp:1228',
+    value: (scene) => scene.volumetricFog?.isLegacyBlending ?? false,
+  },
+  {
     uniform: 'sky_scene_data.directional_light_count',
     godot: 'sky.cpp:1098',
     value: (scene) => Math.min(scene.lights.length, SKY_LIGHTS),
@@ -119,9 +161,13 @@ export const SKY_BINDINGS: readonly Binding<SkyScene>[] = [
   },
 ];
 
-/** Writes each uniform the binding table names, from `scene`, in each pass of `sky`. */
+/** Writes each uniform the binding table names, and the fog's volume, from `scene`, in each pass of `sky`. */
 export function writeSkyBindings(sky: TranspiledSky, scene: SkyScene): void {
-  for (const draw of skyDraws(sky)) writeBindings(SKY_BINDINGS, draw.uniforms, scene);
+  for (const draw of skyDraws(sky)) {
+    writeBindings(SKY_BINDINGS, draw.uniforms, scene);
+    const volume = draw.textures.get('volumetric_fog_texture');
+    if (volume && scene.volumetricFog) volume.value = scene.volumetricFog.volume;
+  }
 }
 
 /** The sky's basis: the inverse sky rotation, then the camera's (`sky.cpp:1501-1507`). */
@@ -132,10 +178,11 @@ function orientationOf(scene: SkyScene): THREE.Matrix3 {
   return sky.multiply(camera);
 }
 
-/** `columns[2][0]`, `[0][0]`, `[2][1]` and `[1][1]` of Godot's projection, which flips y (`sky.cpp:1174`). */
+/** `columns[2][0]`, `[0][0]`, `[2][1]` and `[1][1]`, with `[1][1]` negated as the y-down uv needs. */
 function projectionOf(scene: SkyScene): THREE.Vector4 {
   const columns = scene.camera.projectionMatrix.elements;
-  return new THREE.Vector4(columns[8], columns[0], -columns[9]!, -columns[5]!);
+  // A frustum offset keeps its sign: Godot negates `[2][1]` for its own flip (`sky.cpp:1178-1181`).
+  return new THREE.Vector4(columns[8], columns[0], columns[9], -columns[5]!);
 }
 
 /** The padding in UV, then 1 minus twice it, as `_render_sky` writes them from the padding. */

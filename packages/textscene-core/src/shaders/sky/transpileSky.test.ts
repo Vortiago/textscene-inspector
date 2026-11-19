@@ -114,6 +114,12 @@ describe('transpileSky', () => {
     expect(sky.textures.get('radiance')!.value).toBe(radiance);
   });
 
+  it("reads the fog volume's rows bottom first, as a GL pass writes them, at Godot's screen UV", () => {
+    expect(fragmentOf(transpileSky(DEFAULT_SKY))).toMatch(
+      /texture\( nodeUniform\d+, vec3\( (\w+)\.x, \( 1\.0 - \1\.y \), \1\.z \) \)/
+    );
+  });
+
   it('writes no depth', () => {
     expect(transpileSky(DEFAULT_SKY).mesh.material.depthWrite).toBe(false);
   });
@@ -212,6 +218,24 @@ describe('transpileSky', () => {
     texture.addEventListener('dispose', () => (isDisposed = true));
     disposeSky(sky);
     expect(isDisposed).toBe(true);
+  });
+
+  it("frees the copy a sampler made of the material's texture with the sky", () => {
+    const sky = transpileSky(
+      'shader_type sky;\nuniform sampler2D v;\nvoid sky() { COLOR = texture(v, SKY_COORDS).rgb; }'
+    );
+    const binding = sky.parameters.get('v')!;
+    binding.set(new THREE.DataTexture(new Uint8Array(4), 1, 1));
+    const copy = (binding as unknown as { value: TextureNode }).value.value as THREE.Texture;
+    let isDisposed = false;
+    copy.addEventListener('dispose', () => (isDisposed = true));
+    disposeSky(sky);
+    expect(isDisposed).toBe(true);
+  });
+
+  it('reads one empty fog volume in every sky, which no sky frees', () => {
+    const volumeOf = (sky: SkyDraw) => sky.textures.get('volumetric_fog_texture')!.value;
+    expect(volumeOf(transpileSky(DEFAULT_SKY))).toBe(volumeOf(transpileSky(DEFAULT_SKY)));
   });
 
   it("holds the material's uniforms in one buffer, as Godot's material block, so 20 fit WebGL's 12", () => {

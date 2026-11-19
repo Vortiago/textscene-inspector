@@ -12,8 +12,8 @@ import { TranslatorFault } from '../../shaders/fault/translatorFault';
 import type { BoundNodeMaterial } from '../../shaders/uniforms/boundMaterial';
 import { ShaderSkyBackground } from '../../r3f/sky/shaderSkyBackground';
 import { buildShaderSkyEnvironment, readShaderSky, shaderSkyRefusal } from './shaderSky';
-import { buildSkyEnvironment } from './build';
 import { decodeSky } from './decode';
+import { skyMaterialText } from './skyMaterialText';
 import type { ShaderSkyProperties, Sky } from './types';
 
 const SKY_FILE = 'res://tinted_sky.gdshader';
@@ -25,21 +25,17 @@ const SUN_SKY = 'shader_type sky;\nvoid sky() {\n\tCOLOR = vec3(LIGHT0_ENERGY);\
 const TINTED_SKY = 'shader_type sky;\nuniform float tint = 0.5;\nvoid sky() {\n\tCOLOR = vec3(tint);\n}\n';
 
 function shaderMaterial(code: string): ShaderSkyProperties {
-  return readShaderSky(
-    { kind: 'shader', code, file: SKY_FILE, parameters: {}, textures: {} },
-    { decoders: {} }
-  );
+  return readShaderSky({ code, file: SKY_FILE, parameters: {}, textures: {} }, { decoders: {} });
 }
 
-/** The environment of `sky` with the transpiler, as the previewer builds it once the transpiler loads. */
-function shaderSkyEnvironment(renderer: THREE.WebGLRenderer, sky: Sky) {
-  return buildSkyEnvironment(renderer, {
-    sky,
-    lights: [],
-    asBackground: true,
-    energy: 1,
-    buildShaderSky: buildShaderSkyEnvironment,
-  });
+/** The environment of `sky` as the background, as the previewer builds it once the transpiler loads. */
+function shaderSkyEnvironment(renderer: THREE.WebGLRenderer, sky: Sky, asBackground = true) {
+  return buildShaderSkyEnvironment(renderer, { sky, lights: [], asBackground, energy: 1 });
+}
+
+/** A Sky of `properties` over `type`, a material whose shader Godot generates, at its defaults. */
+function builtInSky(type: string, properties: Record<string, string> = {}): Sky {
+  return decodeSky(properties, readShaderSky(skyMaterialText(type, {}, {})!, { decoders: {} }));
 }
 
 /** Godot's default sky, which it draws for a shader it does not compile (`sky.cpp:807-814`). */
@@ -59,7 +55,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('buildSkyEnvironment of a shader the previewer fails to translate', () => {
+describe('buildShaderSkyEnvironment of a shader the previewer fails to translate', () => {
   it("draws Godot's default sky", async () => {
     vi.spyOn(logger, 'warn').mockImplementation(() => {});
     const defectiveSky = TINTED_SKY.replace('0.5', '0.75');
@@ -72,7 +68,7 @@ describe('buildSkyEnvironment of a shader the previewer fails to translate', () 
   });
 });
 
-describe('buildSkyEnvironment of a shader Godot does not compile', () => {
+describe('buildShaderSkyEnvironment of a shader Godot does not compile', () => {
   it("draws Godot's default sky", async () => {
     vi.spyOn(logger, 'warn').mockImplementation(() => {});
     expect(await backgroundFragmentOf('shader_type sky;\nvoid sky() { COLOR = 1.0; }\n')).toBe(
@@ -127,7 +123,7 @@ describe('shaderSkyRefusal', () => {
   });
 });
 
-describe('buildSkyEnvironment of a shader sky', () => {
+describe('buildShaderSkyEnvironment of a shader sky', () => {
   it('draws the background with the transpiled shader', async () => {
     const { renderer } = await testRenderer();
     installNodesHandler(renderer, 'linear');
@@ -214,12 +210,45 @@ describe('buildSkyEnvironment of a shader sky', () => {
     expect([environment.radianceInPlace, environment.setLights]).toEqual([undefined, undefined]);
     environment.dispose();
   });
+});
 
-  it('throws without the transpiler, which a shader sky needs (error case)', async () => {
+describe('buildShaderSkyEnvironment of a sky material whose shader Godot generates', () => {
+  it("bakes the sky's layers without reading a pixel back", async () => {
     const { renderer } = await testRenderer();
-    const sky: Sky = decodeSky({}, shaderMaterial(TINTED_SKY));
-    expect(() => buildSkyEnvironment(renderer, { sky, lights: [], asBackground: true, energy: 1 })).toThrow(
-      'expected the sky transpiler for a shader sky, got none'
-    );
+    installNodesHandler(renderer, 'linear');
+    const readBack = vi.spyOn(renderer.getContext(), 'readPixels');
+    const environment = shaderSkyEnvironment(renderer, builtInSky('ProceduralSkyMaterial'));
+
+    expect(environment).not.toBeNull();
+    expect(readBack).not.toHaveBeenCalled();
+    environment?.dispose();
+  });
+
+  it('bakes the layers of a radiance above 256 at 256, 640 texels wide (edge case)', async () => {
+    const { renderer } = await testRenderer();
+    installNodesHandler(renderer, 'linear');
+    const sky = builtInSky('ProceduralSkyMaterial', { radiance_size: '5' });
+    const environment = shaderSkyEnvironment(renderer, sky, false)!;
+
+    expect(environment.layers.target.width).toBe(640);
+    environment.dispose();
+  });
+
+  it('builds no background for a sky that is not the background', async () => {
+    const { renderer } = await testRenderer();
+    installNodesHandler(renderer, 'linear');
+    const environment = shaderSkyEnvironment(renderer, builtInSky('PhysicalSkyMaterial'), false)!;
+
+    expect(environment.background).toBeNull();
+    environment.dispose();
+  });
+
+  it('keeps nothing to bake again for a PanoramaSkyMaterial, whose shader reads no light (edge case)', async () => {
+    const { renderer } = await testRenderer();
+    installNodesHandler(renderer, 'linear');
+    const environment = shaderSkyEnvironment(renderer, builtInSky('PanoramaSkyMaterial'))!;
+
+    expect([environment.radianceInPlace, environment.setLights]).toEqual([undefined, undefined]);
+    environment.dispose();
   });
 });

@@ -26,11 +26,17 @@ export {
 } from './sky/transpileSky.js';
 export { SkyResolutionPasses } from './sky/skyResolutionPasses.js';
 export {
+  skyMaterialShader,
+  type SkyMaterialProperties,
+  type SkyMaterialShader,
+} from './sky/materials/skyMaterialShader.js';
+export {
   SKY_BINDINGS,
   writeSkyBindings,
   type SkyFog,
   type SkyLight,
   type SkyScene,
+  type SkyVolumetricFog,
 } from './sky/skyBindings.js';
 export { transpileSpatial, type SpatialOptions, type TranspiledSpatial } from './spatial/transpileSpatial.js';
 export { withGodotAttributes } from './spatial/meshAttributes.js';

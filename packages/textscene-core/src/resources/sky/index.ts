@@ -16,9 +16,4 @@ registerResourceSlice({
   busType: 'resource',
 });
 
-export type {
-  PanoramaSkyProperties,
-  PhysicalSkyProperties,
-  ProceduralSkyProperties,
-  SkyProperties,
-} from './types';
+export type { ShaderSkyProperties } from './types';

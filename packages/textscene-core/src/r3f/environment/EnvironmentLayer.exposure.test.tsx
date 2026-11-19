@@ -33,7 +33,7 @@ function layer(properties: Record<string, string>, multiplier: number | null) {
     <ViewportModeProvider>
       <WorldExposureScope>
         {multiplier !== null && <Exposure multiplier={multiplier} />}
-        <EnvironmentLayer settings={environmentSettingsOf(properties)} sky={null} panorama={null} />
+        <EnvironmentLayer settings={environmentSettingsOf(properties)} sky={null} />
       </WorldExposureScope>
     </ViewportModeProvider>
   );

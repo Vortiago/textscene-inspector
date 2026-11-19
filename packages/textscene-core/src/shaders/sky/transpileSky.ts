@@ -15,6 +15,7 @@ import { defaultTexture } from '../uniforms/defaultTextures.js';
 import { BoundNodeMaterial, type MaterialShader } from '../uniforms/boundMaterial.js';
 import { SKY_RENDER_ORDER } from './skyRenderOrder.js';
 import { radianceTextureNode } from './radianceTextureNode.js';
+import { fogVolumeTextureNode } from './fogVolumeTextureNode.js';
 import { GODOT_SAMPLING, type ProjectSampling } from '../uniforms/samplerState.js';
 import type { TranspiledUniform } from '../uniforms/transpiledUniform.js';
 
@@ -146,6 +147,7 @@ function skyDraw(
   isRowsUp: boolean
 ): SkyDraw {
   resources.textures.set('radiance', radianceTextureNode(radiance));
+  resources.textures.set('volumetric_fog_texture', fogVolumeTextureNode());
   const radianceEnergy = uniform(1);
   const uvInterp = varyingProperty('vec2', 'uv_interp') as unknown as Node;
   const vertex = emitTemplateStage(
@@ -197,6 +199,7 @@ function fragCoord(isRowsUp: boolean): Node {
 /** Frees the triangle and the material of each pass of `sky`, and its texture for a pass with none. */
 export function disposeSky(sky: TranspiledSky): void {
   for (const draw of skyDraws(sky)) disposeSkyDraw(draw);
+  for (const parameter of sky.parameters.values()) parameter.dispose?.();
   sky.unsetPassTexture.dispose();
   sky.unsetRadianceTexture.dispose();
 }
