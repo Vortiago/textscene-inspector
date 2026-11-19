@@ -1272,4 +1272,17 @@ describe('<SkyLayer> over a live texture', () => {
     await mounted.advanceFrames(1);
     expect(bakes).toHaveLength(1);
   });
+
+  it('bakes again at once, with no frame without a sky, when another texture arrives after the draw', async () => {
+    built.next = skyEnvironment();
+    const panorama = publishedCanvasTarget(8, 4);
+    loaded.textures = { source_panorama: panorama };
+    noteLiveTargetDrawn(panorama);
+    const mounted = await mount(<ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} />);
+    await mounted.advanceFrames(1);
+    built.next = skyEnvironment();
+    loaded.textures = { source_panorama: panorama, other: new THREE.DataTexture(new Uint8Array(4), 1, 1) };
+    await mounted.update(<ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} />);
+    expect(bakes).toHaveLength(2);
+  });
 });

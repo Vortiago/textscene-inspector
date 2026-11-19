@@ -87,6 +87,10 @@ export class SamplerBinding implements TranspiledUniform {
     this.isDrawable = isDrawableWith(chosen);
   }
 
+  dispose(): void {
+    this.copies.release([]);
+  }
+
   private textureOf(chosen: Texture | DefaultTexture): Texture {
     if (typeof chosen !== 'string') return this.copies.copyOf(chosen);
     const made = this.defaultTextures.get(chosen) ?? defaultTexture(this.kind, chosen);

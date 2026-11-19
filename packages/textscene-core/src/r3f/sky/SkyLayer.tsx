@@ -265,16 +265,18 @@ export function SkyLayer({
   return <>{textureSlots}</>;
 }
 
+const NO_TEXTURES_DRAWN: ReadonlySet<THREE.Texture> = new Set();
+
 /** A bake samples a live target once, so it waits for the target's first draw. */
 function useAreLiveTexturesDrawn(textures: Readonly<Record<string, SamplerValue>>): boolean {
   const liveTextures = Object.values(textures)
     .flat()
     .filter((texture): texture is THREE.Texture => !!texture && isLiveTarget(texture));
-  const [drawnTextures, setDrawnTextures] = useState<Readonly<Record<string, SamplerValue>> | null>(null);
-  const isDrawn = liveTextures.length === 0 || drawnTextures === textures;
+  const [drawnTextures, setDrawnTextures] = useState<ReadonlySet<THREE.Texture>>(NO_TEXTURES_DRAWN);
+  const isDrawn = liveTextures.every((texture) => drawnTextures.has(texture));
   useFrame(() => {
     if (!isDrawn && liveTextures.every((texture) => liveTargetDrawCount(texture) > 0))
-      setDrawnTextures(textures);
+      setDrawnTextures(new Set([...drawnTextures, ...liveTextures]));
   });
   return isDrawn;
 }

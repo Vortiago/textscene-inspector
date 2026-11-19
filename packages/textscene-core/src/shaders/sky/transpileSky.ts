@@ -199,6 +199,7 @@ function fragCoord(isRowsUp: boolean): Node {
 /** Frees the triangle and the material of each pass of `sky`, and its texture for a pass with none. */
 export function disposeSky(sky: TranspiledSky): void {
   for (const draw of skyDraws(sky)) disposeSkyDraw(draw);
+  for (const parameter of sky.parameters.values()) parameter.dispose?.();
   sky.unsetPassTexture.dispose();
   sky.unsetRadianceTexture.dispose();
 }

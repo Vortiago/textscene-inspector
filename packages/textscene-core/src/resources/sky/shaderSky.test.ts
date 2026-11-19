@@ -55,7 +55,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('buildSkyEnvironment of a shader the previewer fails to translate', () => {
+describe('buildShaderSkyEnvironment of a shader the previewer fails to translate', () => {
   it("draws Godot's default sky", async () => {
     vi.spyOn(logger, 'warn').mockImplementation(() => {});
     const defectiveSky = TINTED_SKY.replace('0.5', '0.75');
@@ -68,7 +68,7 @@ describe('buildSkyEnvironment of a shader the previewer fails to translate', () 
   });
 });
 
-describe('buildSkyEnvironment of a shader Godot does not compile', () => {
+describe('buildShaderSkyEnvironment of a shader Godot does not compile', () => {
   it("draws Godot's default sky", async () => {
     vi.spyOn(logger, 'warn').mockImplementation(() => {});
     expect(await backgroundFragmentOf('shader_type sky;\nvoid sky() { COLOR = 1.0; }\n')).toBe(
@@ -123,7 +123,7 @@ describe('shaderSkyRefusal', () => {
   });
 });
 
-describe('buildSkyEnvironment of a shader sky', () => {
+describe('buildShaderSkyEnvironment of a shader sky', () => {
   it('draws the background with the transpiled shader', async () => {
     const { renderer } = await testRenderer();
     installNodesHandler(renderer, 'linear');

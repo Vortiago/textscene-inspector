@@ -8,7 +8,7 @@ import { storedColor, storedReal } from '../../../godot/math/real.js';
 export interface SkyMaterialProperties {
   /** Each property the file sets, as a Variant. A property it leaves out keeps the constructor's value. */
   readonly properties: Readonly<Record<string, Variant>>;
-  /** The texture properties that hold a valid texture, which picks the shader variant. */
+  /** The properties that hold a resource reference. A texture property among them picks the variant. */
   readonly textures: ReadonlySet<string>;
 }
 

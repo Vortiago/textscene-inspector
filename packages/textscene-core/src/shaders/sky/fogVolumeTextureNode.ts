@@ -11,7 +11,10 @@ class FogVolumeTextureNode extends Texture3DNode {
   }
 }
 
+/** The volume a sky reads until the caller binds one, shared by every sky and never freed. */
+const NO_VOLUME = new THREE.Data3DTexture(new Uint8Array(4), 1, 1, 1);
+
 /** The template's `volumetric_fog_texture`, which the caller binds to a volume a GL pass wrote. */
 export function fogVolumeTextureNode(): TextureNode {
-  return new FogVolumeTextureNode(new THREE.Data3DTexture(new Uint8Array(4), 1, 1, 1));
+  return new FogVolumeTextureNode(NO_VOLUME);
 }
