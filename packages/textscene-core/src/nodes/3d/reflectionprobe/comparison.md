@@ -88,4 +88,4 @@ The lenient parser reads every property above. A malformed value keeps Godot's d
 
 ## Known limitations
 
-- **Approximated** A probe that updates ALWAYS captures only when the content or the energy of a sky layer changes, where Godot captures it in each frame.
+- **Approximated** Godot captures a probe that updates ALWAYS in each frame. The previewer captures it again when the probe moves, when content loads, or when the Environment or a sky layer changes. A node or a light that changes after the load does not make it capture again.
