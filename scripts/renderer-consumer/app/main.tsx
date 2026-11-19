@@ -7,6 +7,7 @@ import {
   type ResourceProvider,
 } from '@textscene/renderer';
 import { runMountChecks, type MountCheckResults } from './mountChecks';
+import { mountSwitchView } from './switchView';
 
 const FIXTURE_SCENE = `[gd_scene format=3]
 
@@ -104,6 +105,13 @@ declare global {
 /** `?checks=mount` runs the checks of `mountScene`, which mount views of their own. */
 if (query.get('checks') === 'mount') {
   void runMountChecks().then((results) => (window.mountChecks = results));
+} else if (query.get('checks') === 'switch') {
+  // `#viewport` is the element the runner's screenshots read.
+  const viewport = document.createElement('div');
+  viewport.id = 'viewport';
+  viewport.style.cssText = 'width: 320px; height: 240px';
+  document.getElementById('root')!.append(viewport);
+  window.switchView = mountSwitchView(viewport);
 } else {
   void Promise.all([written, called]).then(() =>
     createRoot(document.getElementById('root')!).render(

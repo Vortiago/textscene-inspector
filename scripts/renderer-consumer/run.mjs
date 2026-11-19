@@ -6,11 +6,13 @@ import { preview } from 'vite';
 import { launchSwiftShaderBrowser } from '../showcase/browser.mjs';
 import { installedVersion, packTarball, run } from '../packTarball.mjs';
 import { REPO_ROOT, attachDiagnostics, loggedErrors, previewPort } from '../visual/previewServer.mjs';
-import { inkStats } from '../vscode/pixels.mjs';
 import { compareImages, formatDelta } from '../visual/imageDelta.mjs';
 import { writeBaselineFile } from '../visual/run/baselines.mjs';
 import { consumerManifest } from './consumerManifest.mjs';
 import { mountFailures } from './mountFailures.mjs';
+import { RENDER_TIMEOUT_MS, pollInk } from './pollInk.mjs';
+import { runSwitchChecks } from './switchChecks.mjs';
+import { switchFailures } from './switchFailures.mjs';
 
 /* global document, getComputedStyle, window */
 // These exist only in the browser that runs the `page.evaluate` calls.
@@ -26,11 +28,8 @@ const INK_FLOOR = 2000;
 const INK_FLOOR_2D = 10_000;
 /** A cube at half scale draws about a quarter of the pixels, so its view proves less. */
 const WRITTEN_INK_FLOOR = INK_FLOOR / 4;
-/** Software GL draws the first frame slowly. */
-const RENDER_TIMEOUT_MS = 90_000;
 /** The mount checks draw eight views one after another, and capture three of them at 1152 x 648. */
 const MOUNT_CHECKS_TIMEOUT_MS = 4 * RENDER_TIMEOUT_MS;
-const POLL_INTERVAL_MS = 500;
 
 const versionsOf = (names, base) =>
   Object.fromEntries(names.map((name) => [name, installedVersion(name, base)]));
@@ -98,7 +97,11 @@ async function renderInBrowser(directory) {
       drawn[view] = await renderView(page, `http://localhost:${port}/${query}`, inkFloor);
     }
     const mounted = await runMountChecks(await browser.newPage(), `http://localhost:${port}/?checks=mount`);
-    return { drawn, mounted };
+    const switched = await runSwitchChecks(
+      await browser.newPage(),
+      `http://localhost:${port}/?checks=switch`
+    );
+    return { drawn, mounted, switched };
   } finally {
     await browser.close();
     await server.close();
@@ -108,7 +111,7 @@ async function renderInBrowser(directory) {
 async function renderView(page, url, inkFloor) {
   const diagnostics = attachDiagnostics(page);
   await page.goto(url);
-  const ink = await pollInk(page, inkFloor);
+  const ink = await pollInk(page, (drawn) => drawn >= inkFloor);
   const hasCanvasStyles = await page.evaluate(() => {
     for (let node = document.querySelector('canvas'); node; node = node.parentElement) {
       if (getComputedStyle(node).touchAction === 'none') return true;
@@ -140,17 +143,6 @@ function baselineFailures(png) {
   const delta = compareImages(readFileSync(BASELINE_PATH), png);
   if (!delta.sizeMismatch && delta.changedPixels === 0) return [];
   return [`captureImage: expected the baseline, got ${formatDelta(delta)}`];
-}
-
-async function pollInk(page, inkFloor) {
-  const viewport = page.locator('#viewport');
-  const deadline = Date.now() + RENDER_TIMEOUT_MS;
-  let ink = inkStats(await viewport.screenshot()).inkPixels;
-  while (ink < inkFloor && Date.now() < deadline) {
-    await page.waitForTimeout(POLL_INTERVAL_MS);
-    ink = inkStats(await viewport.screenshot()).inkPixels;
-  }
-  return ink;
 }
 
 /** One line per failed check of a view, or none when it rendered the fixture. */
@@ -185,7 +177,7 @@ function callFailures(drawn) {
 }
 
 /** One line per failed check of every view and of `mountScene`. */
-function failures({ drawn, mounted }) {
+function failures({ drawn, mounted, switched }) {
   return [
     ...Object.entries(drawn).flatMap(([view, result]) => failuresOf(view, result)),
     ...writeFailures(drawn),
@@ -193,6 +185,7 @@ function failures({ drawn, mounted }) {
     ...mountFailures(mounted.results),
     ...mounted.errors.map((message) => `mountScene: page error: ${message}`),
     ...baselineFailures(Buffer.from(mounted.results.smallElementPng, 'base64')),
+    ...switchFailures(switched),
   ];
 }
 

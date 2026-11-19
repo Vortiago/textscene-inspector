@@ -1,0 +1,118 @@
+/**
+ * `update` changes a mounted view. A happy-dom render creates no WebGL context, so the test reads
+ * the stage and the `frameloop` each `<Canvas>` receives.
+ */
+import { act } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { mountScene } from './mountScene';
+import { openScene } from '../scene/openScene';
+import type { ResourceProvider } from '../resources/ResourceProvider';
+
+vi.mock('@react-three/fiber', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@react-three/fiber')>()),
+  // The editor's stage hands its canvas the editor camera. The game's stage hands it none.
+  Canvas: vi.fn((props: { camera?: unknown; frameloop?: string }) => (
+    <div
+      data-testid="canvas"
+      data-stage={props.camera ? 'editor' : 'game'}
+      data-frameloop={props.frameloop}
+    />
+  )),
+}));
+
+vi.mock('./components/Canvas2DStage/Canvas2DStage', () => ({
+  Canvas2DStage: () => <div data-testid="canvas" data-stage="2D" />,
+}));
+
+const NO_FILES: ResourceProvider = { loadResource: async () => null };
+const SCENE =
+  '[gd_scene format=3]\n\n[node name="Main" type="Node3D"]\n\n[node name="Box" type="Node3D" parent="."]\n';
+
+function element(): HTMLElement {
+  const host = document.createElement('div');
+  document.body.append(host);
+  return host;
+}
+
+const canvasesOf = (host: HTMLElement) => [...host.querySelectorAll<HTMLElement>('[data-testid="canvas"]')];
+
+async function mountedIn(host: HTMLElement, options?: Parameters<typeof mountScene>[2]) {
+  const view = await act(async () =>
+    mountScene(host, openScene({ source: SCENE, provider: NO_FILES }), options)
+  );
+  return view;
+}
+
+afterEach(() => {
+  document.body.replaceChildren();
+  vi.restoreAllMocks();
+});
+
+describe('View.update', () => {
+  it.each([
+    ['in-game', '3D', 'editor'],
+    ['3D', '2D', '2D'],
+    ['2D', 'in-game', 'game'],
+  ] as const)('switches a view mounted in %s to %s, and leaves one stage', async (from, to, stage) => {
+    const host = element();
+    const view = await mountedIn(host, { mode: from });
+
+    await act(async () => view.update({ mode: to }));
+
+    await vi.waitFor(() => expect(canvasesOf(host).map((canvas) => canvas.dataset.stage)).toEqual([stage]));
+    view.dispose();
+  });
+
+  it('keeps the scene’s writes across a switch', async () => {
+    const scene = openScene({ source: SCENE, provider: NO_FILES });
+    const view = await act(async () => mountScene(element(), scene, { mode: '3D' }));
+    await scene.getNode('Box').set('visible', false);
+
+    await act(async () => view.update({ mode: '2D' }));
+
+    expect(await scene.getNode('Box').get('visible')).toBe(false);
+    view.dispose();
+  });
+
+  it('answers settled for the mode it switched to', async () => {
+    const view = await mountedIn(element());
+
+    await act(async () => view.update({ mode: '2D' }));
+
+    await expect(view.settled).rejects.toThrow('expected the in-game mode, got 2D');
+    await expect(view.captureImage()).rejects.toThrow('expected the in-game mode, got 2D');
+    view.dispose();
+  });
+
+  it('draws no frame while visible is false', async () => {
+    const host = element();
+    const view = await mountedIn(host, { mode: '3D', visible: false });
+
+    expect(canvasesOf(host)[0]!.dataset.frameloop).toBe('never');
+    view.dispose();
+  });
+
+  it('draws again once visible turns true', async () => {
+    const host = element();
+    const view = await mountedIn(host, { mode: '3D', visible: false });
+
+    await act(async () => view.update({ visible: true }));
+
+    expect(canvasesOf(host)[0]!.dataset.frameloop).toBe('always');
+    view.dispose();
+  });
+
+  it('changes only the keys it is given', async () => {
+    const host = element();
+    const view = await mountedIn(host, { mode: '3D', visible: false });
+
+    await act(async () => view.update({ mode: 'in-game' }));
+
+    await vi.waitFor(() =>
+      expect(canvasesOf(host).map(({ dataset }) => [dataset.stage, dataset.frameloop])).toEqual([
+        ['game', 'never'],
+      ])
+    );
+    view.dispose();
+  });
+});

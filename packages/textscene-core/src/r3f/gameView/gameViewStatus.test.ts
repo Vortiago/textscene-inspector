@@ -185,13 +185,13 @@ describe('the capture of the In-game view', () => {
     const status = attachedStatus();
     drawFrame(status);
     const image = status.captureImage();
-    expect(status.holdsFullWindow()).toBe(true);
+    expect(status.isCapturePending()).toBe(true);
     status.frameDrawn({ ...frameOf(1), isFullWindow: false });
     expect(status.isCaptureDue()).toBe(false);
     drawFrame(status);
     expect(status.isCaptureDue()).toBe(true);
     status.capture(() => PIXELS);
-    expect(status.holdsFullWindow()).toBe(false);
+    expect(status.isCapturePending()).toBe(false);
     await expect(image).resolves.toBe(PIXELS);
   });
 
@@ -208,7 +208,7 @@ describe('the capture of the In-game view', () => {
     status.capture(() => {
       throw new Error('context lost');
     });
-    expect(status.holdsFullWindow()).toBe(false);
+    expect(status.isCapturePending()).toBe(false);
     await expect(image).rejects.toThrow("expected the window's pixels, got Error: context lost");
   });
 
