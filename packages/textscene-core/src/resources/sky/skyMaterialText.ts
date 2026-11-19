@@ -4,11 +4,7 @@ import { variantToText } from '../../godot/variant/variantWriter';
 import { skyMaterialShader } from '../../shaders/sky/materials/skyMaterialShader';
 import type { ShaderSkyText } from './types';
 
-/**
- * A ProceduralSkyMaterial, a PanoramaSkyMaterial or a PhysicalSkyMaterial as the shader its
- * generator writes, which draws as a ShaderMaterial would. Null for any other class.
- * `textures` holds each texture property the file sets, resolved in the material's own file.
- */
+/** Null for a class with no generator. `textures` resolve in the material's own file. */
 export function skyMaterialText(
   type: string,
   properties: Readonly<Record<string, string>>,

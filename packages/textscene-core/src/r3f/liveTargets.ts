@@ -210,10 +210,7 @@ export function liveTargetCopy(source: THREE.Texture, layout?: AtlasTextureLayou
   return addCopy(source, width, height, placement, viewSharing(width, height, placement));
 }
 
-/**
- * A held copy of `source`, given its sampler by `configure` and filled now, for a transpiled sampler
- * that binds it, or null for a texture no pass redraws. Its pass refills it after each render until `release`.
- */
+/** Null for a texture no pass redraws. `configure` runs before the first fill, as three sets it once. */
 export function heldLiveTargetCopy(
   source: THREE.Texture,
   configure: (copy: THREE.Texture) => void

@@ -9,12 +9,7 @@ import type { SkyBackdrop } from '../../r3f/sky/skyBackground';
 
 export type { SkyLight } from '../../shaders/sky/skyBindings';
 
-/**
- * Godot's sky ambient is the sky's own radiance: it lights surfaces and is what
- * they reflect (`Environment.reflection_source` defaults to the background), and
- * the fogs read it too. Godot's octmap pass draws the sky shader into its layers,
- * and the background draws it at each pixel.
- */
+/** The ambient, the reflections and the fogs read the sky's own radiance (`reflection_source`). */
 export interface SkyEnvironment {
   /** The sky at each pixel behind the scene, or null for a sky that does not paint the background. */
   background: SkyBackdrop | null;

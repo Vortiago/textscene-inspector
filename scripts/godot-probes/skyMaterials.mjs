@@ -1,9 +1,4 @@
 #!/usr/bin/env node
-/**
- * Records what Godot's three sky materials write: the shader text of each variant, and the value of
- * each uniform their setters upload for several property sets. The sky generator tests read it.
- */
-
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { REPO_ROOT } from '../repoRoot.mjs';

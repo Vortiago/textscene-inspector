@@ -265,10 +265,7 @@ export function SkyLayer({
   return <>{textureSlots}</>;
 }
 
-/**
- * Whether each live target among `textures` holds a picture a bake may sample: false until its pass
- * first draws it, read each frame until then, and true for any other texture.
- */
+/** A bake samples a live target once, so it waits for the target's first draw. */
 function useAreLiveTexturesDrawn(textures: Readonly<Record<string, SamplerValue>>): boolean {
   const undrawn = Object.values(textures)
     .flat()

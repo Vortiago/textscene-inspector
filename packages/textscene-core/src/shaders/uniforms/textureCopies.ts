@@ -32,10 +32,7 @@ export interface TargetCopy {
   readonly release: () => void;
 }
 
-/**
- * Copies a render target's texture, or gives null for a target no pass redraws. It calls `configure`
- * before the first fill: three sets a render target's sampler once, as it sets the target up.
- */
+/** Null for a target no pass redraws. `configure` runs before the first fill, as three sets it once. */
 export type TargetCopier = (source: Texture, configure: (copy: Texture) => void) => TargetCopy | null;
 
 /** Written only by `installTargetCopies`, by the host that redraws render targets. */

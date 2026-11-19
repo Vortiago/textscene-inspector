@@ -78,11 +78,7 @@ vec2 vec3ToOctWithBorder(vec3 n, float borderSize) {
 #endif
 `;
 
-/**
- * Godot's radiance octmap, read from the sky's cube: each texel takes the radiance in its direction,
- * padding included, as Godot draws the sky into it. Godot's texel and WebGL's share their
- * `gl_FragCoord`, as both count the octmap's rows from its first.
- */
+/** Godot's and WebGL's octmap texels share `gl_FragCoord`, as both count rows from the first. */
 export const RADIANCE_OCTMAP_FRAGMENT_SHADER = /* glsl */ `
 uniform samplerCube radiance;
 uniform float size;

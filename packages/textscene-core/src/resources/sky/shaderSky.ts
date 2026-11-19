@@ -30,10 +30,7 @@ export function readShaderSky(material: ShaderSkyText, options: ProjectShaderOpt
   return { ...material, usage: skyUsage('parsed' in compile ? compile.parsed.tree : null) };
 }
 
-/**
- * Null when the sky cannot render: a headless test renderer, a lost context, or a driver that refuses
- * the float render target. The caller then leaves the background and environment alone.
- */
+/** Null for a headless renderer, a lost context or a refused float target: the caller draws no sky. */
 export function buildShaderSkyEnvironment(
   gl: THREE.WebGLRenderer,
   {

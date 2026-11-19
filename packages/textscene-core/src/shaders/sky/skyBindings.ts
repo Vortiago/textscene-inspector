@@ -25,7 +25,7 @@ export type SkyFog = Pick<
 
 /** The environment's volumetric fog as the background reads it (`sky.cpp:1148-1165`, `:1227-1228`). */
 export interface SkyVolumetricFog {
-  /** The fog's froxel volume, rows bottom first, which the background reads at its far end (`sky.glsl:150-158`). */
+  /** Rows bottom first, as a GL pass writes them (`sky.glsl:150-158`). */
   readonly volume: THREE.Texture;
   /** 1 over the fog's length, or 1 for a fog of no length. */
   readonly inverseLength: number;
