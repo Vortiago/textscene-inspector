@@ -10,9 +10,17 @@ import {
   GradientTexture2DRepeat,
 } from '../../../godot/scene/gradientTexture.js';
 
-/** The stop colours a Gradient with this `colors` value decodes to. */
+const BLACK = { r: 0, g: 0, b: 0, a: 1 };
+const WHITE = { r: 1, g: 1, b: 1, a: 1 };
+const DEFAULT_STOPS = [
+  { offset: 0, color: BLACK },
+  { offset: 1, color: WHITE },
+];
+
+/** The stop colours a Gradient with this `colors` value decodes to, at offsets that keep their order. */
 function colorsOf(colors: string) {
-  return gradientOf({ colors }).stops.map((stop) => stop.color);
+  const offsets = 'PackedFloat32Array(0, 0.25, 0.5, 0.75, 1)';
+  return gradientOf({ offsets, colors }).stops.map((stop) => stop.color);
 }
 
 describe('the colors a Gradient reads', () => {
@@ -60,7 +68,7 @@ describe('the Gradient body the Gradient kind decodes', () => {
     ]);
   });
 
-  it('defaults interpolation_mode to linear and spreads colours evenly when offsets are absent', () => {
+  it('defaults interpolation_mode to linear and keeps the default offsets 0 and 1 for two colours', () => {
     const gradient = gradientOf({
       colors: 'PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)',
     });
@@ -89,17 +97,41 @@ describe('the Gradient body the Gradient kind decodes', () => {
     expect(gradient.stops[0]!.color).toEqual({ r: 0, g: 0, b: 1, a: 1 });
   });
 
-  it('is empty (not throwing) for malformed arrays', () => {
+  it('keeps the default points for malformed arrays, as for absent ones', () => {
     const gradient = gradientOf({ colors: 'PackedColorArray(oops', offsets: 'garbage' });
-    expect(gradient.stops).toEqual([]);
+    expect(gradient.stops).toEqual(DEFAULT_STOPS);
   });
 
-  it('decodes an empty body to a stopless linear gradient (edge case)', () => {
+  it('decodes an empty body to black at 0 and white at 1 (gradient.cpp:35-42)', () => {
     expect(gradientOf({})).toEqual({
-      stops: [],
+      stops: DEFAULT_STOPS,
       interpolationMode: GradientInterpolationMode.LINEAR,
       interpolationColorSpace: GradientColorSpace.SRGB,
     });
+  });
+
+  it('keeps the default colours where only offsets are written', () => {
+    expect(gradientOf({ offsets: 'PackedFloat32Array(0.25, 0.75)' }).stops).toEqual([
+      { offset: 0.25, color: BLACK },
+      { offset: 0.75, color: WHITE },
+    ]);
+  });
+
+  it('gives an offset past the two defaults a black point, as resize makes one', () => {
+    expect(gradientOf({ offsets: 'PackedFloat32Array(0, 0.5, 1)' }).stops.map((s) => s.color)).toEqual([
+      BLACK,
+      WHITE,
+      BLACK,
+    ]);
+  });
+
+  it('puts a colour past the two default points at offset 0, as resize makes one', () => {
+    const gradient = gradientOf({ colors: 'PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1)' });
+    expect(gradient.stops).toEqual([
+      { offset: 0, color: { r: 1, g: 0, b: 0, a: 1 } },
+      { offset: 0, color: { r: 0, g: 0, b: 1, a: 1 } },
+      { offset: 1, color: { r: 0, g: 1, b: 0, a: 1 } },
+    ]);
   });
 });
 

@@ -111,6 +111,12 @@ const visible = await scene.getNode('Enemy').get('visible');
 - **Resources.** `await scene.load('res://icon.png')` gives a value that a property of a resource
   type takes, so you can swap a texture, a mesh, a material or a theme. A missing file draws as a
   missing resource.
+- **Resources the scene file holds.** Name a `[sub_resource]` by its path, as Godot's `load` does:
+  `scene.load('res://main.tscn::SphereMesh_1')` or `variant('Resource("res://main.tscn::SphereMesh_1")')`,
+  with the path the scene opens under. `SubResource("…")` has a meaning only inside a file: Godot
+  reads `variant('SubResource("SphereMesh_1")')` as the file `res://SphereMesh_1`.
+- **The class of a resource.** A resource of a class the property does not take writes `null`, and
+  `set` answers `false`, as in Godot.
 - **Redraw.** The writes of one task draw one frame. A write before any view mounts shows on the
   first frame. `scene.observe(path, listener)` tells you when that node is written.
 
@@ -143,7 +149,8 @@ const current = await scene.getNode('/root').call('get_camera_3d');
 root window), `isCurrent`, and `canBeCurrent`, which is false for a Camera2D that is not enabled. A
 camera list in your page reads it, and `scene.subscribe` tells you when a call or a load moves it.
 
-The In-game mode draws through the current camera. The 3D mode keeps its orbit camera.
+The In-game mode draws through the current camera. The 3D mode keeps its editor camera, until the
+`camera` option looks it through a Camera3D: see "Look through a camera in the 3D mode".
 
 The limits of this release:
 
@@ -162,17 +169,18 @@ The limits of this release:
 
 ### Know when the scene is whole
 
-The In-game mode is settled when a frame shows the scene whole: the frame drew the latest change to
-the scene, and no file, texture or font of the scene was still loading. A write or a camera call
-from your code, or a new text, makes it pending again until a frame shows the change.
+A view is settled when a frame shows the scene whole: the frame drew the latest change to the scene,
+and no file, texture or font of the scene was still loading. This holds in every mode. A write or a
+camera call from your code, or a new text, makes it pending again until a frame shows the change.
 
-One In-game view reports to each `<TscnSceneProvider>`. A second In-game view under the same provider
-draws, but it reports nothing and logs an error. Give each In-game view its own provider.
+One view reports to each `<TscnSceneProvider>`. A second view under the same provider draws, but it
+reports nothing and logs an error. Give each view its own provider.
 
 `useGameViewSettled()` answers `null` while the view is pending, and then
-`{ scriptedNodeCount, hasCurrentCamera }`: the count of nodes that hold a script, which do not run,
-and whether the root viewport has a current Camera3D or Camera2D. Call it in a component below the
-same `<TscnSceneProvider>` as the In-game view:
+`{ scriptedNodeCount, hasCurrentCamera, missingFiles }`: the count of nodes that hold a script, which
+do not run, whether the root viewport has a current Camera3D or Camera2D, and the files the frame
+asked for and did not get. The first two are facts of the game's start, so the 3D and 2D modes give
+the same value. Call it in a component below the same `<TscnSceneProvider>` as the view:
 
 ```tsx
 import { TscnCanvas, TscnSceneProvider, useGameViewSettled } from '@textscene/renderer';
@@ -195,11 +203,21 @@ export function GameView() {
 }
 ```
 
+### Know which files are missing
+
+`scene.missingFiles()` gives the `res://` paths that the views of the scene asked for and did not get:
+a `null` from `loadResource`, or a file that fails to load. A path leaves the set when no view asks
+for it any more, or when it loads. `scene.subscribe` tells you when the set changes. The scene asks
+for a file only when a view draws a node that reads it, so a scene with no view has no missing files.
+
+Godot's editor lists the same files when it opens a scene: each file a property reads that fails to
+load. A file that the scene declares and no property reads is in neither list.
+
 ### Mount the view with no React code
 
-`mountScene(element, scene, { mode })` mounts the view in a page element, for a page with no React
-code of its own. React stays a peer dependency. `mode` is the mode of `TscnCanvas`, and here it is
-`'in-game'` by default. The page changes the scene through the same `scene`, as a React app does.
+`mountScene(element, scene, { mode, visible, camera })` mounts the view in a page element, for a page with
+no React code of its own. React stays a peer dependency. `mode` is the mode of `TscnCanvas`, and
+here it is `'in-game'` by default. The page changes the scene through the same `scene`, as a React app does.
 
 A whole page, with a button that saves the window as a PNG file:
 
@@ -209,6 +227,7 @@ A whole page, with a button that saves the window as a PNG file:
   <body>
     <div id="game" style="width: 640px; height: 360px"></div>
     <p id="status">Loading…</p>
+    <p id="missing"></p>
     <button id="save" disabled>Save PNG</button>
     <script type="module" src="./main.ts"></script>
   </body>
@@ -237,6 +256,12 @@ document.getElementById('status')!.textContent = hasCurrentCamera
   ? `Settled. ${scriptedNodeCount} nodes hold a script, and scripts do not run.`
   : 'Settled, with no current camera.';
 
+// The list follows the scene: a write that stops reading a file takes it off.
+const showMissing = () =>
+  (document.getElementById('missing')!.textContent = [...scene.missingFiles()].join(', '));
+showMissing();
+scene.subscribe(showMissing);
+
 const save = document.getElementById('save') as HTMLButtonElement;
 save.disabled = false;
 save.onclick = async () => {
@@ -248,18 +273,94 @@ save.onclick = async () => {
 };
 ```
 
-`mountScene` returns three members:
+`mountScene` returns a `View` with four members:
 
-- `settled`: a promise of the settled value. Each read gives a new promise, which waits again
-  after the scene changes. It rejects in a mode other than In-game, and once the view is disposed.
-- `captureImage()`: a PNG `Blob` of the game window, at the window's size, whatever the size of the
-  element: 1152 x 648 for a project that sets no size. It has the black bars of the window. Where the
-  project has a transparent background, the clear colour has alpha 0 and the bars stay opaque, as
-  in Godot. It rejects before the view is settled, and the
-  message names the pending work. It rejects in a mode other than In-game, since the 2D and 3D
-  modes have no window.
+- `settled`: a promise of the settled value, in every mode. Each read gives a new promise, which
+  waits again after the scene changes. It rejects once the view is disposed.
+- `captureImage()`: a PNG `Blob` of what the view draws. It rejects before the view is settled, and
+  the message names the pending work.
+  - In-game, it is the game window at the window's size, whatever the size of the element: 1152 x
+    648 for a project that sets no size. It has the black bars of the window. Where the project has
+    a transparent background, the clear colour has alpha 0 and the bars stay opaque, as in Godot.
+  - In the 3D and 2D modes, it is the canvas at its own size: the element's size times the device
+    pixel ratio. The 2D mode's rulers, axes and zoom buttons are not part of it.
+- `update(options)`: changes the mounted view. It takes the options of `mountScene` and changes
+  only the keys it gives a value. See "Change a mounted view".
 - `dispose()`: unmounts the view and loses its WebGL context, since a browser keeps few contexts
   alive. The scene stays open, so another view can mount it.
+
+### Change a mounted view
+
+`update` switches the mode, and stops or starts the frames, of a view that is mounted:
+
+```ts
+const view = mountScene(document.getElementById('game')!, scene);
+
+// The editor's 3D view of the same scene. Every write to the scene stays.
+view.update({ mode: '3D' });
+
+// A hidden panel draws no frame. A load, a settle and a capture still draw the frames they need.
+view.update({ visible: false });
+view.update({ visible: true });
+```
+
+A change of mode replaces the canvas and loses the WebGL context of the old one. A `settled`
+promise read before a switch resolves once the new mode settles. `update` throws once the view is disposed. A
+view that failed to mount stays failed: dispose it and mount again.
+`visible` is `true` by default. While it is `false`, the view draws only the frames a load, a settle or a capture needs: a write to a
+hidden view draws until the view settles again.
+`<TscnCanvas visible={false} />` does the same in React.
+
+### Look through a camera in the 3D mode
+
+`camera` looks the 3D mode through a Camera3D of the scene, as the Preview check box of a Camera3D
+does in the Godot editor. The view draws what the game draws through that camera: its projection,
+`fov` or `size`, `near` and `far`, `keep_aspect` and the offsets. `null`, the default, gives the
+editor camera, at the pose it had before the look, as in Godot:
+
+```ts
+const view = mountScene(element, scene, { mode: '3D', camera: 'Rig/TopCamera' });
+
+view.update({ camera: 'Player/Camera3D' });
+view.update({ camera: null });
+```
+
+The path is from the scene's root, as `scene.getNode` takes it. A node there that is not a
+Camera3D throws, with the type found. A path that names no node yet does not throw, since a
+sub-scene can still be loading: the view draws through the camera once the load brings it in,
+and through the editor camera until then. If the path still names no Camera3D once the loads end,
+`settled` rejects with the path in the message. A camera that leaves the scene ends the look, as in Godot, also when a node comes back at the path:
+set `camera` to `null` and then to the path to look again. The option does not make the camera
+current, and the In-game mode keeps the current camera: use `call('make_current')` for that.
+`<TscnCanvas camera="Rig/TopCamera" />` does the same in React.
+
+### Learn which node a click picked
+
+`onSelect` hears the node a click picks in the 3D mode, and `selected` sets the node the view
+outlines:
+
+```ts
+const view = mountScene(document.getElementById('game')!, scene, {
+  mode: '3D',
+  onSelect(node) {
+    console.log(node ? node.path : 'a click on nothing');
+  },
+});
+
+view.update({ selected: scene.getNode('Player') });
+view.update({ selected: null });
+```
+
+The view picks a node as the Godot editor's 3D view does. A click on a mesh of an instanced scene
+picks the instance, or the mesh's own node when the instance is editable. A click on nothing gives
+`null` and clears the outline. Only the left button picks, and a drag that moves the camera picks
+nothing. `onSelect: null` stops the calls.
+
+With no `selected`, a click also outlines the node it picks. Once the page gives `selected`, the
+page owns the outline: a click calls `onSelect` and leaves the outline as it is, as a controlled
+input does. `onSelect` hears no click in the In-game mode, which takes no pointer, or in the 2D
+mode, which picks no node yet. `<TscnCanvas selected={node} onSelect={setNode} />` does the same
+in React.
 
 ### Save a PNG from headless Chromium
 
@@ -346,15 +447,18 @@ The package exports these names.
   `Scene`. It parses the text once, the first time a view reads it.
 - `Scene` (a type): an open scene. `setSource(text)` replaces its text, and every view of it draws
   the new text. `revision()` gives a number that changes with each change a view draws: a new text,
-  a write or a load that changes the tree. `getNode`, `getNodeOrNull`, `load` and `observe` are in "Change the scene from your
-  code". `dispose()` closes it.
+  a write or a load that changes the tree. `missingFiles()` gives the files its views asked for and
+  did not get, see "Know which files are missing". `getNode`, `getNodeOrNull`, `load` and `observe`
+  are in "Change the scene from your code". `dispose()` closes it.
 - `NodeHandle` (a type): a node of a scene, which `getNode` gives. Its `call` is in "Set the
   camera".
 - `variant(text)`: a value of any Godot type, as a `.tscn` file spells it. It throws for a text
   Godot cannot read.
 - `Variant` and `SceneValue` (types): what `variant` gives, and what `get` and `set` take.
 - `TscnCanvas`: the view. Its props are `scene` (a `Scene`, optional inside
-  `<TscnSceneProvider>`), `mode` (`'in-game'`, `'3D'` or `'2D'`, default `'3D'`) and `className`.
+  `<TscnSceneProvider>`), `mode` (`'in-game'`, `'3D'` or `'2D'`, default `'3D'`), `visible` (`false`
+  stops the frames), `camera` (the Camera3D the 3D mode looks through), `selected`, `onSelect` and
+  `className`.
 - `TscnSceneProvider`: mounts what the view reads. Give it `scene` (a `Scene`), or `source` (the
   text of a `.tscn` scene), `provider` (a `ResourceProvider`) and `rootScenePath` (the `res://` path
   the scene opens under, optional). It takes `children`. A new `provider` starts a new resource
@@ -363,10 +467,14 @@ The package exports these names.
   `ArrayBuffer`, or `null` when the file is missing.
 - `useSelection`: the selected node path and the functions that change it. Call it in a component
   inside `<TscnSceneProvider>`.
-- `useGameViewSettled()`: the settled value of the In-game view below the same
+- `useGameViewSettled()`: the settled value of the view below the same
   `<TscnSceneProvider>`, or `null` while it is pending. See "Know when the scene is whole".
-- `mountScene(element, scene, { mode? })`: mounts the view with no React code of the page's own,
-  and returns `settled`, `captureImage` and `dispose`. See "Mount the view with no React code".
+- `mountScene(element, scene, options?)`: mounts the view with no React code of the page's own,
+  and returns a `View`: `settled`, `captureImage`, `update` and `dispose`. See "Mount the view with
+  no React code".
+- `View` and `ViewOptions` (types): what `mountScene` returns, and the options of `mountScene` and
+  `update`: `mode` (default `'in-game'`), `visible` (default `true`), `camera` (default `null`),
+  `selected` and `onSelect`. See "Learn which node a click picked".
 
 ## Styles and workers
 

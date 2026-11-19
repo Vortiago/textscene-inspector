@@ -13,7 +13,10 @@ import { rootViewportNode } from './rootViewportNode.js';
 import { RootViewportPresenter } from './RootViewportPresenter.js';
 import { useDrawnRootWindow, useProjectRootWindow } from './useDrawnRootWindow.js';
 import { RunningGameScope } from '../contexts/EditorHintContext.js';
-import { useGameViewReport } from './useGameViewReport.js';
+import { useViewReport } from '../viewStatus/useViewReport.js';
+import { useViewStatus } from '../viewStatus/ViewStatusContext.js';
+import type { RgbaImage } from '../../utils/encodePng.js';
+import type { RootWindow } from './rootWindow.js';
 
 /** The root viewport and its presenter, as the game view's `<Canvas>` holds them. */
 export function GameViewContents() {
@@ -66,4 +69,14 @@ function RootViewport() {
       />
     </>
   );
+}
+
+/** A capture reads the whole window, so only a frame that drew it at the project's size answers one. */
+function useGameViewReport(drawnWindow: RootWindow, projectWindow: RootWindow) {
+  const status = useViewStatus();
+  const report = useViewReport();
+  return (readWindow: () => RgbaImage) => {
+    report(drawnWindow === projectWindow);
+    if (status?.isCaptureDue()) status.capture(readWindow);
+  };
 }

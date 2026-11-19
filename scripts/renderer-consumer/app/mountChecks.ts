@@ -1,4 +1,6 @@
-import { mountScene, openScene, type ResourceProvider } from '@textscene/renderer';
+import { mountScene, openScene, type ResourceProvider, type View } from '@textscene/renderer';
+import { base64Of, capturePng, elementOf, NO_FILES } from './capture';
+import { unitCubeGlb } from './unitCubeGlb';
 
 /** A Camera3D, one light, one mesh and a Control over the world, in a window of the default size. */
 const CONSUMER_SCENE = `[gd_scene format=3]
@@ -66,11 +68,48 @@ window/stretch/mode="canvas_items"
 viewport/transparent_background=true
 `;
 
-function projectOf(project: string): ResourceProvider {
-  return { loadResource: async (path) => (path === 'res://project.godot' ? project : null) };
+/** A root that instances a `.glb` cube, so the 3D view settles only once that file arrives. */
+const INSTANCING_SCENE = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://cube.glb" id="1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Cube" parent="." instance=ExtResource("1")]
+`;
+
+/** Past the 3D view's last open-time timer, as a slow host's file arrives. */
+const LATE_FILE_DELAY_MS = 1500;
+/** Long enough for any fit or draw that follows the settle. */
+const LATER_CAPTURE_DELAY_MS = 1000;
+
+function lateFileProvider(): ResourceProvider {
+  return {
+    loadResource: (path) =>
+      new Promise((loaded) =>
+        setTimeout(() => loaded(path === 'res://cube.glb' ? unitCubeGlb() : null), LATE_FILE_DELAY_MS)
+      ),
+  };
 }
 
-const NO_FILES: ResourceProvider = { loadResource: async () => null };
+/** A 3D capture taken as `settled` resolves, and one taken later, of a scene whose file arrives late. */
+async function settledPictureChecks() {
+  const scene = openScene({ source: INSTANCING_SCENE, provider: lateFileProvider() });
+  const view = mountScene(elementOf(320, 240), scene, { mode: '3D' });
+  try {
+    await view.settled;
+    const atSettledPng = await base64Of(await view.captureImage());
+    await new Promise((later) => setTimeout(later, LATER_CAPTURE_DELAY_MS));
+    const laterPng = await base64Of(await view.captureImage());
+    return { atSettledPng, laterPng };
+  } finally {
+    view.dispose();
+  }
+}
+
+export function projectOf(project: string): ResourceProvider {
+  return { loadResource: async (path) => (path === 'res://project.godot' ? project : null) };
+}
 
 export interface MountCheckResults {
   earlyCaptureError: string;
@@ -78,42 +117,25 @@ export interface MountCheckResults {
   smallElementPng: string;
   largeElementPng: string;
   noProjectSize: { width: number; height: number };
-  editorModeCaptureError: string;
-  editorModeSettledError: string;
+  editorSettledValue: unknown;
+  editorCaptureSize: { width: number; height: number };
+  atSettledPng: string;
+  laterPng: string;
   canvasesAfterDispose: number;
   isContextLostAfterDispose: boolean;
   transparentPng: string;
 }
 
-function elementOf(width: number, height: number): HTMLElement {
-  const element = document.createElement('div');
-  element.style.width = `${width}px`;
-  element.style.height = `${height}px`;
-  document.body.append(element);
-  return element;
-}
+type Settled = Awaited<View['settled']>;
+
+/** A `Set` reaches the runner as `{}`, so the missing files go as an array. */
+const plainSettled = ({ missingFiles, ...facts }: Settled) => ({ ...facts, missingFiles: [...missingFiles] });
 
 const errorOf = (promise: Promise<unknown>): Promise<string> =>
   promise.then(
     () => 'resolved',
     (error: Error) => error.message
   );
-
-async function base64Of(blob: Blob): Promise<string> {
-  const bytes = new Uint8Array(await blob.arrayBuffer());
-  let binary = '';
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary);
-}
-
-/** The README recipe: open, mount, wait for `settled`, capture, dispose. */
-async function capturePng(scene: ReturnType<typeof openScene>, width: number, height: number): Promise<Blob> {
-  const view = mountScene(elementOf(width, height), scene);
-  await view.settled;
-  const png = await view.captureImage();
-  view.dispose();
-  return png;
-}
 
 async function sizeOf(png: Blob): Promise<{ width: number; height: number }> {
   const bitmap = await createImageBitmap(png);
@@ -142,7 +164,7 @@ export async function runMountChecks(): Promise<MountCheckResults> {
 
   const early = mountScene(elementOf(320, 240), consumer);
   const earlyCaptureError = await errorOf(early.captureImage());
-  const settledValue = await early.settled;
+  const settledValue = plainSettled(await early.settled);
   early.dispose();
 
   const smallElementPng = await base64Of(await capturePng(consumer, 320, 240));
@@ -152,10 +174,11 @@ export async function runMountChecks(): Promise<MountCheckResults> {
   const noProjectSize = await sizeOf(await capturePng(noProject, 320, 240));
 
   const editor = mountScene(elementOf(320, 240), consumer, { mode: '3D' });
-  const editorModeCaptureError = await errorOf(editor.captureImage());
-  const editorModeSettledError = await errorOf(editor.settled);
+  const editorSettledValue = plainSettled(await editor.settled);
+  const editorCaptureSize = await sizeOf(await editor.captureImage());
   editor.dispose();
 
+  const settledPicture = await settledPictureChecks();
   const disposed = await disposeChecks(consumer);
 
   const transparent = openScene({ source: TRANSPARENT_SCENE, provider: projectOf(TRANSPARENT_PROJECT) });
@@ -167,8 +190,9 @@ export async function runMountChecks(): Promise<MountCheckResults> {
     smallElementPng,
     largeElementPng,
     noProjectSize,
-    editorModeCaptureError,
-    editorModeSettledError,
+    editorSettledValue,
+    editorCaptureSize,
+    ...settledPicture,
     ...disposed,
     transparentPng,
   };

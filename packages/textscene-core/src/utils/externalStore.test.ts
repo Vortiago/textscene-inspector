@@ -1,6 +1,6 @@
 /** `createExternalStore`: a change re-renders only the consumer that reads the value. */
 import { describe, expect, it, vi } from 'vitest';
-import { createExternalStore } from './createExternalStore';
+import { createExternalStore } from './externalStore';
 
 describe('createExternalStore', () => {
   it('get() returns the initial value', () => {

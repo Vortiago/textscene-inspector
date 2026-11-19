@@ -1,5 +1,5 @@
 import { Canvas } from '@react-three/fiber';
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, type ReactNode } from 'react';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useSeatedRoots } from './useLiveSceneTree.js';
 import { useViewportMode } from './contexts/ViewportModeContext.js';
@@ -15,7 +15,7 @@ import { EditorControlsBridge } from './EditorControlsBridge.js';
 import { GodotEditorControls } from './GodotEditorControls.js';
 import { WorldEnvironmentScope } from './environment/WorldEnvironmentScope.js';
 import { editorCameraPosition, editorCameraProjection } from './godotEditorCamera.js';
-import { usePreviewFrameloop } from './contexts/PreviewVisibilityContext.js';
+import { PreviewVisibilityProvider, usePreviewFrameloop } from './contexts/PreviewVisibilityContext.js';
 import { ControlRasterLayer } from '../nodes/viewport/subviewport/ControlRasterLayer.js';
 import { SceneShadowFitter } from './SceneShadowFitter.js';
 import { SceneDepthPrepass } from './depthPrepass/SceneDepthPrepass.js';
@@ -28,6 +28,10 @@ import { TscnSceneProvider } from './TscnSceneProvider.js';
 import { DEFAULT_ROOT_SCENE_PATH, type Scene } from '../scene/openScene.js';
 import type { ViewportMode } from './contexts/ViewportModeContext.js';
 import { rootClassName } from './stageClassName.js';
+import { ViewportActionsProvider, useOptionalViewportActions } from './contexts/ViewportActionsContext.js';
+import { ViewCamera } from './viewCamera.js';
+import { EditorViewReport } from './viewStatus/EditorViewReport.js';
+import { HostSelection, type HostSelectionProps } from './hostSelection/HostSelection.js';
 
 // Lazy, so the glyph engine and the parse of the prompt load only for an empty canvas.
 const EmptyScenePrompt = lazy(() => import('./emptyScenePrompt.js'));
@@ -81,13 +85,7 @@ function useRootScene() {
   return { rootScene, nodes: useSeatedRoots() ?? null };
 }
 
-/**
- * The ground-plane grid shared by the empty-scene indicator and the content grid.
- * It carries the `tscnEmptyState` tag `frameSceneBounds` skips on itself:
- * `traverse()` visits every descendant whatever the tag of an ancestor, and the
- * 10-unit grid would otherwise frame a mesh-free scene, such as a lone Path3D.
- * It is editor chrome too, so a SubViewport pass draws none of it.
- */
+/** The 10-unit grid frames no mesh-free scene, such as a lone Path3D, and a SubViewport draws none of it. */
 function GroundGrid() {
   return <gridHelper args={[10, 10, 0x444444, 0x222222]} userData={GROUND_GRID_USER_DATA} />;
 }
@@ -125,24 +123,49 @@ const Canvas2DStage = lazy(() =>
 /** `in-game` draws the game's start with no script run, `3D` and `2D` the editor's views. */
 export type TscnCanvasMode = ViewportMode;
 
-export interface TscnCanvasProps {
+export interface TscnCanvasProps extends Omit<HostSelectionProps, 'children'> {
   /** The scene `openScene` gave. Without it, the view reads the `<TscnSceneProvider>` above it. */
   scene?: Scene;
   /** `3D` by default. A change replaces the stage, so one canvas is live. */
   mode?: TscnCanvasMode;
+  /** `false` draws only the frames a load, a settle or a capture needs. Without it, the host decides. */
+  visible?: boolean;
+  /** As `mountScene`'s `camera`. Without it, the host decides. */
+  camera?: string | null;
   /** The class of the element the view fills. */
   className?: string;
 }
 
-export function TscnCanvas({ scene, mode = '3D', className }: TscnCanvasProps) {
-  const stage = stageOf(mode, className);
+export function TscnCanvas({
+  scene,
+  mode = '3D',
+  visible,
+  camera,
+  selected,
+  onSelect,
+  className,
+}: TscnCanvasProps) {
+  const stage = (
+    // The In-game mode takes no pointer, and the 2D mode picks no node yet.
+    <HostSelection selected={selected} onSelect={mode === '3D' ? onSelect : undefined}>
+      <PreviewVisibilityProvider isVisible={visible}>
+        <ViewportActionsScope>{stageOf({ mode, camera, className })}</ViewportActionsScope>
+      </PreviewVisibilityProvider>
+    </HostSelection>
+  );
   return scene ? <TscnSceneProvider scene={scene}>{stage}</TscnSceneProvider> : stage;
 }
 
-function stageOf(mode: TscnCanvasMode, className: string | undefined) {
+/** A host's own provider wins, so its panels and the `camera` prop move the same preview. */
+function ViewportActionsScope({ children }: { children: ReactNode }) {
+  if (useOptionalViewportActions()) return children;
+  return <ViewportActionsProvider>{children}</ViewportActionsProvider>;
+}
+
+function stageOf({ mode, camera, className }: Pick<TscnCanvasProps, 'mode' | 'camera' | 'className'>) {
   if (mode === 'in-game') return <GameStage className={className} />;
   if (mode === '2D') return <Editor2DStage className={className} />;
-  return <EditorCanvas className={className} />;
+  return <EditorCanvas className={className} camera={camera} />;
 }
 
 // The game and 2D stages load on demand, so a host that never shows one keeps it out of its first chunk.
@@ -173,7 +196,7 @@ function Editor2DStage({ className }: { className?: string }) {
   );
 }
 
-function EditorCanvas({ className }: { className?: string }) {
+function EditorCanvas({ className, camera }: Pick<TscnCanvasProps, 'camera' | 'className'>) {
   const frameloop = usePreviewFrameloop();
   return (
     <div className={rootClassName(className)}>
@@ -188,11 +211,13 @@ function EditorCanvas({ className }: { className?: string }) {
         <SceneCamerasProvider>
           <TscnSceneContents />
           <ActiveCameraSwitcher />
+          {camera !== undefined && <ViewCamera camera={camera} />}
         </SceneCamerasProvider>
         <CameraFit />
         <FrameSelectedShortcut />
         <GodotEditorControls />
         <EditorControlsBridge />
+        <EditorViewReport />
       </Canvas>
     </div>
   );

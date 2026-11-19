@@ -800,7 +800,7 @@ Godot's flight navigation of the 3D viewport: the mouse turns the **Editor camer
 _Avoid_: "fly mode", "first-person camera", "WASD mode".
 
 **Camera preview**:
-The state in which the 3D viewport draws through a scene Camera3D, as Godot's **Preview** checkbox does. Navigation is off, and the **Editor camera** keeps its pose until the preview ends.
+The state in which the 3D viewport draws through a scene Camera3D, as Godot's **Preview** checkbox does. Navigation is off, and the **Editor camera** keeps its pose until the preview ends. A host starts it with the view's `camera` option, and `camera: null` ends it with the **Editor camera** at the pose it had before, as in Godot.
 _Avoid_: "use this camera", and "current camera", which is Godot's `current` property.
 
 **Preview sun**:
@@ -1134,6 +1134,7 @@ _Avoid_: "broken dependency", "missing dependency" for a file that exists and fa
 **Missing resource**:
 A `res://` reference or **Sub-resource path** whose load failed. Its consumer may draw a magenta placeholder, and the missing-resources panel shows one row per address. A **Sub-resource path** into a file that loads but declares no such `[sub_resource]` is one too, since Godot's load of it fails.
 A text file that parses but has a **Load outcome** that fails is one too. Its row names the chain and takes an upload of the file that failed first.
+The scene holds the missing resources its views report (`missingResourcesOf` in `scene/missingFiles.ts`). The panel lists their addresses, and `scene.missingFiles()` gives their files.
 _Avoid_: "broken scene", "load error".
 
 ### Animation

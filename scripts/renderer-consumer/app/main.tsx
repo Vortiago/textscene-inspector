@@ -1,12 +1,11 @@
 import { createRoot } from 'react-dom/client';
-import {
-  TscnCanvas,
-  TscnSceneProvider,
-  openScene,
-  variant,
-  type ResourceProvider,
-} from '@textscene/renderer';
-import { runMountChecks, type MountCheckResults } from './mountChecks';
+import { TscnCanvas, TscnSceneProvider, openScene, variant } from '@textscene/renderer';
+import { runHeldResourceChecks, type HeldResourceCheckResults } from './heldResourceChecks';
+import { runMissingFileChecks, type MissingFileCheckResults } from './missingFileChecks';
+import { projectOf, runMountChecks, type MountCheckResults } from './mountChecks';
+import { WINDOW_320_PROJECT, exposeSwitchChecks } from './switchView';
+import { exposeCameraChecks } from './cameraView';
+import { exposePickView } from './pickView';
 
 const FIXTURE_SCENE = `[gd_scene format=3]
 
@@ -53,16 +52,7 @@ offset_bottom = 210.0
 color = Color(1, 0, 0, 1)
 `;
 
-/** The game window matches the element, so the In-game mode draws no bars around it. */
-const PROJECT = `[display]
-
-window/size/viewport_width=320
-window/size/viewport_height=240
-`;
-
-const projectOnly: ResourceProvider = {
-  loadResource: async (path) => (path === 'res://project.godot' ? PROJECT : null),
-};
+const projectOnly = projectOf(WINDOW_320_PROJECT);
 
 const gameScene = openScene({ source: FIXTURE_SCENE, provider: projectOnly });
 const query = new URLSearchParams(location.search);
@@ -94,16 +84,39 @@ function View() {
   );
 }
 
+/** `#viewport`, the element the runner's screenshots read. */
+function screenshotElement(): HTMLElement {
+  const viewport = document.createElement('div');
+  viewport.id = 'viewport';
+  viewport.style.cssText = 'width: 320px; height: 240px';
+  document.getElementById('root')!.append(viewport);
+  return viewport;
+}
+
 declare global {
   interface Window {
     /** Written once the checks of `mountScene` end, for the runner to read. */
     mountChecks?: MountCheckResults;
+    /** Written once the checks of a resource the scene file holds end. */
+    heldResourceChecks?: HeldResourceCheckResults;
+    /** Written once the checks of the files a scene asked for and did not get end. */
+    missingFileChecks?: MissingFileCheckResults;
   }
 }
 
-/** `?checks=mount` runs the checks of `mountScene`, which mount views of their own. */
+/** Each `?checks=` value runs checks that mount views of their own. */
 if (query.get('checks') === 'mount') {
   void runMountChecks().then((results) => (window.mountChecks = results));
+} else if (query.get('checks') === 'held') {
+  void runHeldResourceChecks().then((results) => (window.heldResourceChecks = results));
+} else if (query.get('checks') === 'missing') {
+  void runMissingFileChecks().then((results) => (window.missingFileChecks = results));
+} else if (query.get('checks') === 'switch') {
+  exposeSwitchChecks(screenshotElement());
+} else if (query.get('checks') === 'camera') {
+  exposeCameraChecks(screenshotElement());
+} else if (query.get('checks') === 'pick') {
+  exposePickView(screenshotElement());
 } else {
   void Promise.all([written, called]).then(() =>
     createRoot(document.getElementById('root')!).render(

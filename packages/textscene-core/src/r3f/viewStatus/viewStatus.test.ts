@@ -1,39 +1,48 @@
 import { describe, expect, it } from 'vitest';
-import {
-  createGameViewStatus,
-  type DrawnFrame,
-  type GameViewSettled,
-  type LiveScene,
-} from './gameViewStatus';
+import { createViewStatus, type DrawnFrame, type ViewSettled, type LiveScene } from './viewStatus';
 import type { PendingSceneWork } from '../sceneWork';
 
 const NO_PENDING_WORK: PendingSceneWork = { resources: 0, textures: 0, fonts: 0 };
 
-const FACTS: GameViewSettled = { scriptedNodeCount: 2, hasCurrentCamera: true };
+const NO_FILES: ReadonlySet<string> = new Set();
+
+const FACTS: ViewSettled = { scriptedNodeCount: 2, hasCurrentCamera: true, missingFiles: NO_FILES };
 
 function frameOf(revision: number, work: PendingSceneWork = NO_PENDING_WORK): DrawnFrame {
-  return { revision, isFullWindow: true, work, facts: FACTS };
+  return { revision, isFullSize: true, work, facts: FACTS };
 }
 
 /** A scene at `revision()` that never tells of a change. */
 function sceneAt(revision: () => number): LiveScene {
-  return { revision, subscribe: () => () => {} };
+  return { revision, missingFiles: () => NO_FILES, subscribe: () => () => {} };
 }
 
 /** A status with a view attached whose scene is now at `live()`. */
 function attachedStatus(live: () => number = () => 1) {
-  const status = createGameViewStatus();
+  const status = createViewStatus();
   status.attach(sceneAt(live));
   return status;
 }
 
-function drawFrame(status: ReturnType<typeof createGameViewStatus>, revision = 1) {
+function drawFrame(status: ReturnType<typeof createViewStatus>, revision = 1) {
   status.frameDrawn(frameOf(revision));
 }
 
-describe('the settled signal of the In-game view', () => {
+describe('the settled signal of a view', () => {
+  it('resolves a wait from before a view was replaced once the next view settles', async () => {
+    const status = createViewStatus();
+    const scene = sceneAt(() => 1);
+    const detachFirst = status.attach(scene)!;
+    const settled = status.whenSettled();
+    detachFirst();
+    status.attach(scene);
+    expect(status.settled()).toBeNull();
+    drawFrame(status);
+    await expect(settled).resolves.toEqual(FACTS);
+  });
+
   it('is pending with no view attached, though no view waits on it', () => {
-    const status = createGameViewStatus();
+    const status = createViewStatus();
     expect(status.settled()).toBeNull();
     expect(status.isPending()).toBe(false);
   });
@@ -73,10 +82,25 @@ describe('the settled signal of the In-game view', () => {
     expect(status.settled()).toBeNull();
   });
 
+  it('is pending once the missing files change after the drawn frame, until a frame draws them', () => {
+    let missing = NO_FILES;
+    const status = createViewStatus();
+    status.attach({ revision: () => 1, missingFiles: () => missing, subscribe: () => () => {} });
+    drawFrame(status);
+    missing = new Set(['res://icon.png']);
+    expect(status.settled()).toBeNull();
+    status.frameDrawn({ ...frameOf(1), facts: { ...FACTS, missingFiles: missing } });
+    expect(status.settled()?.missingFiles).toBe(missing);
+  });
+
   it('tells its subscribers when the scene changes, so a host hears the pending state', () => {
     let tell = () => {};
-    const status = createGameViewStatus();
-    status.attach({ revision: () => 1, subscribe: (listener) => ((tell = listener), () => {}) });
+    const status = createViewStatus();
+    status.attach({
+      revision: () => 1,
+      missingFiles: () => NO_FILES,
+      subscribe: (listener) => ((tell = listener), () => {}),
+    });
     let notices = 0;
     status.subscribe(() => notices++);
     tell();
@@ -86,10 +110,14 @@ describe('the settled signal of the In-game view', () => {
   it('tells its subscribers when it settles again on the same facts after a change', () => {
     let tell = () => {};
     let live = 1;
-    const status = createGameViewStatus();
-    status.attach({ revision: () => live, subscribe: (listener) => ((tell = listener), () => {}) });
+    const status = createViewStatus();
+    status.attach({
+      revision: () => live,
+      missingFiles: () => NO_FILES,
+      subscribe: (listener) => ((tell = listener), () => {}),
+    });
     drawFrame(status);
-    const heard: (GameViewSettled | null)[] = [];
+    const heard: (ViewSettled | null)[] = [];
     status.subscribe(() => heard.push(status.settled()));
     const changed = 2;
     live = changed;
@@ -119,7 +147,7 @@ describe('the settled signal of the In-game view', () => {
   });
 
   it('refuses a second view while one is attached, and takes one after it leaves', () => {
-    const status = createGameViewStatus();
+    const status = createViewStatus();
     const detach = status.attach(sceneAt(() => 1));
     expect(status.attach(sceneAt(() => 1))).toBeNull();
     detach!();
@@ -127,7 +155,7 @@ describe('the settled signal of the In-game view', () => {
   });
 
   it('tells its subscribers when it settles and when a view leaves', () => {
-    const status = createGameViewStatus();
+    const status = createViewStatus();
     const detach = status.attach(sceneAt(() => 1));
     let notices = 0;
     status.subscribe(() => notices++);
@@ -154,12 +182,12 @@ describe('the settled signal of the In-game view', () => {
   });
 });
 
-describe('the capture of the In-game view', () => {
+describe('the capture of a view', () => {
   const PIXELS = { width: 2, height: 1, data: new Uint8Array(8) };
 
   it('rejects with no view attached', async () => {
-    await expect(createGameViewStatus().captureImage()).rejects.toThrow(
-      'expected a settled view, got no In-game view mounted'
+    await expect(createViewStatus().captureImage()).rejects.toThrow(
+      'expected a settled view, got no view mounted'
     );
   });
 
@@ -185,13 +213,13 @@ describe('the capture of the In-game view', () => {
     const status = attachedStatus();
     drawFrame(status);
     const image = status.captureImage();
-    expect(status.holdsFullWindow()).toBe(true);
-    status.frameDrawn({ ...frameOf(1), isFullWindow: false });
+    expect(status.isCapturePending()).toBe(true);
+    status.frameDrawn({ ...frameOf(1), isFullSize: false });
     expect(status.isCaptureDue()).toBe(false);
     drawFrame(status);
     expect(status.isCaptureDue()).toBe(true);
     status.capture(() => PIXELS);
-    expect(status.holdsFullWindow()).toBe(false);
+    expect(status.isCapturePending()).toBe(false);
     await expect(image).resolves.toBe(PIXELS);
   });
 
@@ -208,16 +236,16 @@ describe('the capture of the In-game view', () => {
     status.capture(() => {
       throw new Error('context lost');
     });
-    expect(status.holdsFullWindow()).toBe(false);
-    await expect(image).rejects.toThrow("expected the window's pixels, got Error: context lost");
+    expect(status.isCapturePending()).toBe(false);
+    await expect(image).rejects.toThrow("expected the view's pixels, got Error: context lost");
   });
 
   it('rejects a capture the view leaves before it reads', async () => {
-    const status = createGameViewStatus();
+    const status = createViewStatus();
     const detach = status.attach(sceneAt(() => 1));
     drawFrame(status);
     const image = status.captureImage();
     detach!();
-    await expect(image).rejects.toThrow('expected the In-game view to stay mounted until its capture');
+    await expect(image).rejects.toThrow('expected the view to stay mounted until its capture');
   });
 });
