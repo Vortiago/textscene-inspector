@@ -82,7 +82,7 @@ async function mountFreshView(element: HTMLElement, mode: ViewOptions['mode'], w
   return mountScene(element, scene, { mode });
 }
 
-/** Mounts the switched view in `element`, and gives the runner `mountFresh` for the views it compares with. */
+/** Mounts the switched view in `element`, and gives the runner `mountFresh` for the views it compares. */
 export function exposeSwitchChecks(element: HTMLElement): void {
   window.switchView = mountSwitchView(element);
   window.mountFresh = async (mode, writes) => {
