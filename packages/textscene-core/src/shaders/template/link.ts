@@ -25,6 +25,8 @@ export interface CompiledMaterial {
   readonly custom: readonly string[];
   /** The GLSL text of each built-in. */
   readonly renames: Readonly<Record<string, string>>;
+  /** The sampler of each built-in texture. */
+  readonly customSamplers: Readonly<Record<string, string>>;
 }
 
 /** The material's tree as Godot's compiler hands it to `ShaderRD`. */
@@ -45,6 +47,7 @@ export function compileMaterial(shader: ShaderNode, table: ModeTable): CompiledM
     varyings: varyingGlobals(shader.varyings),
     custom: [...renderModeDefines(shader, table), ...usageDefines(shader, table)],
     renames: table.renames,
+    customSamplers: table.custom_samplers,
   };
 }
 

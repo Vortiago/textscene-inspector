@@ -13,6 +13,7 @@ import { TreeMemo } from '../template/treeMemo.js';
 import { defaultTexture } from '../uniforms/defaultTextures.js';
 import { BoundNodeMaterial, type MaterialShader } from '../uniforms/boundMaterial.js';
 import { SKY_RENDER_ORDER } from './skyRenderOrder.js';
+import { radianceTextureNode } from './radianceTextureNode.js';
 import { GODOT_SAMPLING, type ProjectSampling } from '../uniforms/samplerState.js';
 import type { TranspiledUniform } from '../uniforms/transpiledUniform.js';
 
@@ -59,6 +60,8 @@ export interface TranspiledSky extends SkyDraw {
   readonly quarter?: SkyDraw;
   /** Godot's default for a pass colour with no pass, which this sky owns and `disposeSky` frees. */
   readonly unsetPassTexture: THREE.Texture;
+  /** Godot's black `radiance` until the sky has one, and always in the octmap (`sky.cpp:533`). */
+  readonly unsetRadianceTexture: THREE.Texture;
 }
 
 export interface SkyOptions extends ShaderOptions {
@@ -100,9 +103,22 @@ export function transpileParsedSky(
     ...(modes.has('use_half_res_pass') && { half: draw('half') }),
     ...(modes.has('use_quarter_res_pass') && { quarter: draw('quarter') }),
     unsetPassTexture: unsetPassTexture(pass),
+    unsetRadianceTexture: defaultTexture('flat', 'black'),
   };
   bindUnsetPassTexture(sky);
+  bindRadiance(sky, sky.unsetRadianceTexture);
   return sky;
+}
+
+/** Binds `radiance` to each pass of a sky behind the scene, as Godot binds the sky's own (`sky.cpp:533`). */
+export function bindRadiance(sky: TranspiledSky, radiance: THREE.Texture): void {
+  for (const draw of skyDraws(sky)) {
+    const node = draw.textures.get('radiance');
+    if (!node || node.value === radiance) continue;
+    node.value = radiance;
+    // A layer array and a flat texture compile to different samplers.
+    draw.mesh.material.needsUpdate = true;
+  }
 }
 
 /** A pass colour with no target: white behind the scene, black for its own size in the octmap. */
@@ -130,6 +146,7 @@ function skyDraw(
   shader: MaterialShader,
   isRowsUp: boolean
 ): SkyDraw {
+  resources.textures.set('radiance', radianceTextureNode());
   const uvInterp = varyingProperty('vec2', 'uv_interp') as unknown as Node;
   const vertex = emitTemplateStage(
     linked('vertex'),
@@ -176,6 +193,7 @@ function fragCoord(isRowsUp: boolean): Node {
 export function disposeSky(sky: TranspiledSky): void {
   for (const draw of skyDraws(sky)) disposeSkyDraw(draw);
   sky.unsetPassTexture.dispose();
+  sky.unsetRadianceTexture.dispose();
 }
 
 /** The full pass of `sky`, then each of its half and quarter passes. */

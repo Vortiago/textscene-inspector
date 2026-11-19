@@ -3,7 +3,7 @@ import type { NodeMaterial, TextureNode } from 'three/webgpu';
 import { describe, expect, it } from 'vitest';
 import { generatedFragmentShader } from '../generatedShader.testkit';
 import { ShadingLanguageError } from '../language/shadingLanguageError.js';
-import { disposeSky, transpileSky, type SkyDraw } from './transpileSky.js';
+import { bindRadiance, disposeSky, transpileSky, type SkyDraw } from './transpileSky.js';
 import { DEFAULT_SKY } from './defaultSky.testkit';
 
 function errorOf(source: string): ShadingLanguageError {
@@ -32,6 +32,34 @@ describe('transpileSky', () => {
       '\tALPHA = AT_HALF_RES_PASS ? 0.375 : 1.0;\n\tCOLOR = vec3(0.5);\n}\n';
     const fragment = (transpileSky(source).half!.mesh.material as NodeMaterial).fragmentNode!;
     expect(generatedFragmentShader(fragment)).toMatch(/0\.375/);
+  });
+
+  it("reads RADIANCE through its octmap coordinate, as Godot's compiler writes the call", () => {
+    const sky = transpileSky('shader_type sky;\nvoid sky() { COLOR = texture(RADIANCE, EYEDIR).rgb; }');
+    const fragment = generatedFragmentShader((sky.mesh.material as NodeMaterial).fragmentNode!);
+    expect(fragment).toMatch(/vec3_to_oct_with_border/);
+  });
+
+  it('reads the bias of a RADIANCE texture call as its level', () => {
+    const sky = transpileSky(
+      'shader_type sky;\nvoid sky() { COLOR = texture(RADIANCE, EYEDIR, 2.625).rgb; }'
+    );
+    const fragment = generatedFragmentShader((sky.mesh.material as NodeMaterial).fragmentNode!);
+    expect(fragment).toMatch(/textureLod\([^;]*2\.625/);
+  });
+
+  it('reads a black RADIANCE in the octmap pass, as Godot binds there', () => {
+    const sky = transpileSky('shader_type sky;\nvoid sky() { COLOR = texture(RADIANCE, EYEDIR).rgb; }', {
+      pass: 'octmap',
+    });
+    expect(sky.textures.get('radiance')!.value).toBe(sky.unsetRadianceTexture);
+  });
+
+  it('reads the radiance bound to a sky behind the scene', () => {
+    const sky = transpileSky('shader_type sky;\nvoid sky() { COLOR = texture(RADIANCE, EYEDIR).rgb; }');
+    const radiance = new THREE.DataArrayTexture(new Uint8Array(4), 1, 1, 1);
+    bindRadiance(sky, radiance);
+    expect(sky.textures.get('radiance')!.value).toBe(radiance);
   });
 
   it('writes no depth', () => {

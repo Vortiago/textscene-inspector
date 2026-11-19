@@ -52,6 +52,7 @@ export function buildShaderSkyEnvironment(
     background = asBackground ? new ShaderSkyBackground(transpiled('background'), lights) : null;
     octmapSky = new ShaderSkyOctmap(transpiled('octmap'), lights, material.usage.passColors);
     radiance = new OctmapRadiance(gl, cappedBake(sky), octmapSky, sampling);
+    background?.readRadiance(radiance.layers);
   } catch (error) {
     warn('[Sky] could not render the sky environment', error);
     background?.dispose();

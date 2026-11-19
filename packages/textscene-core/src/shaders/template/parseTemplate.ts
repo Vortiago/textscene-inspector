@@ -2,6 +2,7 @@ import type { SourcePosition } from '../language/shadingLanguageError.js';
 import type {
   Argument,
   BlockNode,
+  CallNode,
   ControlFlowNode,
   DeclarationNode,
   Expression,
@@ -15,6 +16,7 @@ import type {
   VariableNode,
 } from '../language/shaderTree.js';
 import { arraySizeOf, withExpressionsMapped } from '../language/treeWalk.js';
+import { isRadianceCall, radianceCall, withOperandsPlaced } from './radianceCalls.js';
 import { STAGE_VARIABLES } from './glslBuiltIns.js';
 import {
   arrayOf,
@@ -538,9 +540,38 @@ class TemplateParser implements TemplateScope {
   }
 
   private linkedBlock(block: BlockNode, macros: SlotMacros): BlockNode {
-    return withExpressionsMapped(block, (expression) =>
+    const radianceRead = withExpressionsMapped(block, (expression) =>
+      isRadianceCall(expression) ? this.radianceText(expression, macros) : expression
+    );
+    return withExpressionsMapped(radianceRead, (expression) =>
       expression.kind === 'variable' && expression.builtIn ? this.builtInText(expression, macros) : expression
     );
+  }
+
+  private radianceText(call: CallNode, macros: SlotMacros): Expression {
+    const material = this.material!;
+    const read = { texture: material.renames['RADIANCE']!, sampler: material.customSamplers['RADIANCE']! };
+    return radianceCall(call, read, (text, operands) => {
+      const scope: TemplateScope = {
+        variable: (name) => {
+          const operand = operands.get(name);
+          return operand ? { type: operand.type, isReadOnly: true } : this.variable(name);
+        },
+        members: (type) => this.members(type),
+        functionsNamed: (name) => this.functionsNamed(name),
+      };
+      const expression = new GlslExpressionParser(
+        this.textTokens(text, call.position, macros),
+        scope
+      ).expression();
+      return withOperandsPlaced(expression, operands);
+    });
+  }
+
+  /** `text` as tokens at `position`, through the one preprocessor that reads the macros at the slot. */
+  private textTokens(text: string, position: SourcePosition, macros: SlotMacros): TemplateCursor {
+    const line = { text, file: position.file, line: position.line };
+    return new TemplateCursor(preprocess([line], macros).tokens.map((token) => ({ ...token, position })));
   }
 
   /** Godot's linked text goes through one preprocessor, so the text reads the macros at the slot. */
@@ -548,10 +579,7 @@ class TemplateParser implements TemplateScope {
     const text = this.material!.renames[variable.name];
     if (text === undefined)
       this.tokens.fail(`'${variable.name}' has no GLSL text in the mode table`, variable.position);
-    const line = { text, file: variable.position.file, line: variable.position.line };
-    const tokens = new TemplateCursor(
-      preprocess([line], macros).tokens.map((token) => ({ ...token, position: variable.position }))
-    );
+    const tokens = this.textTokens(text, variable.position, macros);
     const expression = new GlslExpressionParser(tokens, this).expression();
     if (!tokens.isAtEnd()) tokens.fail(`expected the end of the text of '${variable.name}'`);
     if (expression.type !== variable.type)

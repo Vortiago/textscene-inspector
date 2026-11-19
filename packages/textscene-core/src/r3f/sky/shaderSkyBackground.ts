@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { writeSkyBindings, type SkyFog, type SkyLight } from '../../shaders/sky/skyBindings.js';
 import { fogUniforms } from '../fog/fogUniforms.js';
-import { disposeSky, type TranspiledSky } from '../../shaders/sky/transpileSky.js';
+import { bindRadiance, disposeSky, type TranspiledSky } from '../../shaders/sky/transpileSky.js';
+import type { SkyLayers } from '../../resources/sky/skyLayers.js';
 import { SkyResolutionPasses } from '../../shaders/sky/skyResolutionPasses.js';
 import { SkyBackdrop } from './skyBackground.js';
 import { writeFramebufferHeight } from '../shadowFilter/framebufferRows.js';
@@ -24,6 +25,8 @@ export class ShaderSkyBackground extends SkyBackdrop {
   /** `sky_rotation` as Godot's basis, written only by `paint`. */
   private readonly skyOrientation = new THREE.Matrix3();
   private readonly passes: SkyResolutionPasses;
+  /** The border of the radiance octmap, written only by `readRadiance`; 1 reads as no border. */
+  private radianceBorder = 1;
 
   constructor(
     private readonly sky: TranspiledSky,
@@ -37,6 +40,12 @@ export class ShaderSkyBackground extends SkyBackdrop {
   /** The lights of the renders from now on. */
   setLights(lights: readonly SkyLight[]): void {
     this.lights = lights;
+  }
+
+  /** Reads the sky's own radiance `layers` as `RADIANCE` behind the scene (`sky.cpp:533`). */
+  readRadiance(layers: SkyLayers): void {
+    bindRadiance(this.sky, layers.target.texture);
+    this.radianceBorder = layers.layout.borderSize;
   }
 
   protected paint(intensity: number, rotation: THREE.Euler): void {
@@ -53,6 +62,7 @@ export class ShaderSkyBackground extends SkyBackdrop {
       brightness: this.brightness,
       fog: this.fog(),
       lights: this.lights,
+      borderSize: this.radianceBorder,
     });
     // Godot draws the quarter and half passes before the scene, at the size of its buffers (`sky.cpp:1427`).
     if (this.passes.isEmpty) return;

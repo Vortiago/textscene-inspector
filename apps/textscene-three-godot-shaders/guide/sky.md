@@ -762,6 +762,26 @@ void sky() {
 | --- | --- |
 | <img src="showcase/sky-alpha-background-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-alpha-background-three.png" width="256" alt="Transpilation"> |
 
+## Showcase `sky-radiance`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	if (AT_CUBEMAP_PASS) {
+		COLOR = 0.5 + 0.5 * EYEDIR;
+	} else {
+		COLOR = texture(RADIANCE, EYEDIR).rgb;
+	}
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-radiance-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-radiance-three.png" width="256" alt="Transpilation"> |
+
 ## Showcase `sky-cubemap-pass`
 
 Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
@@ -919,6 +939,15 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 `ALPHA` starts at 1.0 and goes to the alpha of the pass's colour (`sky.glsl:235`, `:274`). Godot draws the sky with no blending. The half and quarter passes keep it in RGBA16F, outside 0 to 1 too, and a later pass reads it as `HALF_RES_COLOR.a` or `QUARTER_RES_COLOR.a`. Behind the scene the pass writes alpha 0 (`sky.glsl:309-311`).
 
 The transpiler emits the template's local `alpha`. Rows: `sky.sky.ALPHA`. Godot source: `servers/rendering/shader_types.cpp:487`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `RADIANCE`
+
+A texture call on `RADIANCE` reads the sky's own radiance octmap, as Godot's compiler writes it (`shader_compiler.cpp:1319-1371`): the direction goes through `vec3_to_oct_with_border`, and `texture` becomes `textureLod` at level 0, or at the bias when the call gives one. Behind the scene it reads layer 0 of the sky's last radiance. In the octmap pass it reads black (`sky.cpp:533`). A consumer of the package binds the radiance with `bindRadiance`, a flat texture or a layer array, whose layer 0 it reads.
+
+The transpiler emits a `textureLod` of the template's `radiance` texture. Rows: `sky.global.RADIANCE`. Godot source: `servers/rendering/shader_types.cpp:461`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
