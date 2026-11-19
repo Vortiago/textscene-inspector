@@ -1,3 +1,4 @@
+import { compareImages, formatDelta } from '../visual/imageDelta.mjs';
 import { PNG } from 'pngjs';
 
 /** Godot's window with no project size (`project_settings.cpp:1732`). */
@@ -32,6 +33,35 @@ function sizeOfPng(base64) {
   return { width, height };
 }
 
+/** The cube covers the 320 x 240 capture's centre, and the ground its bottom left corner. */
+const CUBE_PIXEL = { x: 160, y: 120 };
+const GROUND_PIXEL = { x: 10, y: 230 };
+/** The summed RGB distance of the lit cube from the ground, which the ground has as 0 against itself. */
+const CUBE_CONTRAST = 60;
+
+function contrastOf(png) {
+  const [cube, ground] = [rgbaAt(png, CUBE_PIXEL), rgbaAt(png, GROUND_PIXEL)];
+  return cube.slice(0, 3).reduce((sum, channel, i) => sum + Math.abs(channel - ground[i]), 0);
+}
+
+/** A 3D capture as `settled` resolves draws the late file, and equals a later one: the picture is final. */
+function settledPictureFailures({ atSettledPng, laterPng }) {
+  const atSettled = Buffer.from(atSettledPng, 'base64');
+  const contrast = contrastOf(PNG.sync.read(atSettled));
+  const drawn =
+    contrast > CUBE_CONTRAST
+      ? []
+      : [
+          `captureImage in 3D as settled resolves: expected the late cube at the centre, got a contrast of ${contrast}`,
+        ];
+  if (atSettledPng === laterPng) return drawn;
+  const delta = compareImages(atSettled, Buffer.from(laterPng, 'base64'));
+  return [
+    ...drawn,
+    `captureImage in 3D as settled resolves: expected the later capture, got ${formatDelta(delta)}`,
+  ];
+}
+
 /** @param {import('./app/mountChecks').MountCheckResults} results */
 export function mountFailures(results) {
   return [
@@ -52,6 +82,7 @@ export function mountFailures(results) {
       results.editorSettledValue
     ),
     ...equalityFailure('captureImage size in 3D', { width: 320, height: 240 }, results.editorCaptureSize),
+    ...settledPictureFailures(results),
     ...equalityFailure('canvases after dispose', 0, results.canvasesAfterDispose),
     ...equalityFailure('context lost after dispose', true, results.isContextLostAfterDispose),
     ...transparentFailures(results.transparentPng),
