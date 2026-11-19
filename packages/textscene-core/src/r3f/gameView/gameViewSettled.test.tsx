@@ -7,6 +7,7 @@ import { useGameViewSettled } from '../viewStatus/ViewStatusContext';
 import type { ViewSettled } from '../viewStatus/viewStatus';
 import { TscnSceneProvider } from '../TscnSceneProvider';
 import { openScene } from '../../scene/openScene';
+import { variant } from '../../scene/variant';
 import type { ResourceProvider } from '../../resources/ResourceProvider';
 import { settleLoads } from '../testing/settleLoads';
 import * as logger from '../../logger';
@@ -65,14 +66,18 @@ const NONE: ReadonlySet<string> = new Set();
 
 /** Written by the view's host each render: what `useGameViewSettled` answers now. */
 let seen: ViewSettled | null = null;
+/** Written by the view's host each render: every answer it rendered, in order. */
+let answers: (ViewSettled | null)[] = [];
 
 function Host() {
   seen = useGameViewSettled();
+  answers.push(seen);
   return null;
 }
 
 async function mountGame(source: string, provider = files, views = 1) {
   seen = null;
+  answers = [];
   const scene = openScene({ source, provider });
   const renderer = await ReactThreeTestRenderer.create(
     <TscnSceneProvider scene={scene}>
@@ -84,6 +89,14 @@ async function mountGame(source: string, provider = files, views = 1) {
   );
   await settleLoads();
   return Object.assign(renderer, { opened: scene });
+}
+
+/** Draws `count` frames with a task between each, so a report a timer delays lands between frames. */
+async function drawFramesApart(renderer: Awaited<ReturnType<typeof mountGame>>, count: number) {
+  for (let frame = 0; frame < count; frame++) {
+    await drawFrames(renderer, 1);
+    await new Promise((nextTask) => setTimeout(nextTask, 10));
+  }
 }
 
 async function drawFrames(renderer: Awaited<ReturnType<typeof mountGame>>, count: number) {
@@ -132,6 +145,17 @@ describe('the settled value of the In-game view', () => {
     const renderer = await mountGame(SPRITE);
     await drawFrames(renderer, FRAMES_TO_SETTLE);
     expect(seen?.missingFiles).toEqual(new Set(['res://icon.png']));
+  });
+
+  it('answers no missing file on every settle after a write that stops reading it', async () => {
+    const renderer = await mountGame(SPRITE);
+    await drawFrames(renderer, FRAMES_TO_SETTLE);
+    answers = [];
+    await act(async () => void (await renderer.opened.getNode('.').set('texture', variant('null'))));
+    await drawFramesApart(renderer, FRAMES_TO_SETTLE);
+    expect(answers.filter((answer) => answer !== null).map((answer) => [...answer.missingFiles])).toEqual([
+      [],
+    ]);
   });
 
   it('refuses a second In-game view under one provider, and keeps the first one settled', async () => {
