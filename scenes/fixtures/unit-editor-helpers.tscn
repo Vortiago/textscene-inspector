@@ -1,7 +1,7 @@
 [gd_scene load_steps=4 format=3 uid="uid://uniteditorhelpers"]
 
 ; One node for each helper the Display menu turns on and off, with no light and no environment of
-; its own, so the preview sun and sky draw.
+; its own, so the preview sun and sky draw. The Marker3D cross is a gizmo drawn with nothing selected.
 
 [sub_resource type="BoxMesh" id="BoxMesh_1"]
 
@@ -31,5 +31,6 @@ text = "Label"
 [node name="Navigation" type="NavigationRegion3D" parent="."]
 navigation_mesh = SubResource("NavigationMesh_1")
 
-[node name="Lamp" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 1, 0)
+[node name="Marker" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0.5, 1)
+gizmo_extents = 1.0

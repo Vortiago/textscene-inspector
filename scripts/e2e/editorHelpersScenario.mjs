@@ -1,5 +1,6 @@
 import { diffMask } from '../vscode/pixels.mjs';
 import { PERFORMANCE_TESTIDS } from '../visual/preview/appContract.mjs';
+import { paintedOutChromeCss } from '../visual/preview/captureContext.mjs';
 import { checkDiagnostics } from './diagnostics.mjs';
 import { openFixture, shootCanvas } from './openFixture.mjs';
 
@@ -12,10 +13,18 @@ const DRAWN_TOGGLES = {
   [FOG_FIXTURE]: ['Fog'],
 };
 
-// The smallest change, the gizmos, covers about 800 pixels at this size.
+// The smallest change, the Marker3D cross of the gizmos, covers about 1,000 pixels at this size.
 export const HELPER_PIXELS = 300;
 
-const shoot = (page) => shootCanvas(page, 'Editor helpers');
+/** The canvas with the chrome over it hidden, since the Display button's count changes with each flip. */
+async function shoot(page) {
+  const chrome = await page.addStyleTag({ content: paintedOutChromeCss({ canvas2D: false }) });
+  try {
+    return await shootCanvas(page, 'Editor helpers');
+  } finally {
+    await chrome.evaluate((style) => style.remove());
+  }
+}
 
 async function flip(page, label) {
   await toggleMenu(page);
