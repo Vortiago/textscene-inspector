@@ -12,6 +12,8 @@ import { consumerManifest } from './consumerManifest.mjs';
 import { heldResourceFailures } from './heldResourceFailures.mjs';
 import { missingFileFailures } from './missingFileFailures.mjs';
 import { mountFailures } from './mountFailures.mjs';
+import { runPickChecks } from './pickChecks.mjs';
+import { pickFailures } from './pickFailures.mjs';
 import { RENDER_TIMEOUT_MS, pollInk } from './pollInk.mjs';
 import { runSwitchChecks } from './switchChecks.mjs';
 import { switchFailures } from './switchFailures.mjs';
@@ -125,7 +127,8 @@ async function renderInBrowser(directory) {
       `http://localhost:${port}/?checks=switch`
     );
     const cameras = await runCameraChecks(await browser.newPage(), `http://localhost:${port}/?checks=camera`);
-    return { drawn, mounted, held, missing, switched, cameras };
+    const picked = await runPickChecks(await browser.newPage(), `http://localhost:${port}/?checks=pick`);
+    return { drawn, mounted, held, missing, switched, cameras, picked };
   } finally {
     await browser.close();
     await server.close();
@@ -199,7 +202,7 @@ function callFailures(drawn) {
 }
 
 /** One line per failed check of every view and of `mountScene`. */
-function failures({ drawn, mounted, held, missing, switched, cameras }) {
+function failures({ drawn, mounted, held, missing, switched, cameras, picked }) {
   return [
     ...Object.entries(drawn).flatMap(([view, result]) => failuresOf(view, result)),
     ...writeFailures(drawn),
@@ -213,6 +216,7 @@ function failures({ drawn, mounted, held, missing, switched, cameras }) {
     ...missing.errors.map((message) => `missing files: page error: ${message}`),
     ...switchFailures(switched),
     ...cameraFailures(cameras),
+    ...pickFailures(picked),
   ];
 }
 
@@ -227,6 +231,11 @@ try {
     .map(([mode, delta]) => `${mode} ${delta.changedPixels ?? 'size mismatch'}`)
     .join(', ');
   console.log(`[renderer-consumer] captureImage against the view, changed pixels: ${captureDeltas}`);
+  const { onCube, onNothing, hostSelected, onNothingHostOwned } = results.picked.results;
+  console.log(
+    `[renderer-consumer] outline pixels: after a click on the cube ${onCube.outline}, on nothing ` +
+      `${onNothing.outline}, the host's cube ${hostSelected}, then a click on nothing ${onNothingHostOwned.outline}`
+  );
   const found = failures(results);
   for (const failure of found) console.error(`[renderer-consumer] ${failure}`);
   console.log(

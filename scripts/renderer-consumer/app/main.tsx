@@ -5,6 +5,7 @@ import { runMissingFileChecks, type MissingFileCheckResults } from './missingFil
 import { projectOf, runMountChecks, type MountCheckResults } from './mountChecks';
 import { WINDOW_320_PROJECT, exposeSwitchChecks } from './switchView';
 import { exposeCameraChecks } from './cameraView';
+import { exposePickView } from './pickView';
 
 const FIXTURE_SCENE = `[gd_scene format=3]
 
@@ -114,6 +115,8 @@ if (query.get('checks') === 'mount') {
   exposeSwitchChecks(screenshotElement());
 } else if (query.get('checks') === 'camera') {
   exposeCameraChecks(screenshotElement());
+} else if (query.get('checks') === 'pick') {
+  exposePickView(screenshotElement());
 } else {
   void Promise.all([written, called]).then(() =>
     createRoot(document.getElementById('root')!).render(
