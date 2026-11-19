@@ -137,7 +137,8 @@ export function useMissingFiles(files: ReadonlyMap<string, CachedFile<object>>):
   const failed = useStableList([...files].filter(([, file]) => file === null).map(([path]) => path));
   const reported = useRef<ReadonlySet<string>>(NO_PATHS);
 
-  useEffect(() => {
+  // In the commit, so no frame draws between the failure and its report.
+  useLayoutEffect(() => {
     failed.forEach(report);
     return () => failed.forEach(clear);
   }, [failed, report, clear]);

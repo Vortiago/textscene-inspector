@@ -3,7 +3,7 @@
  * to the top bar. An external store, so a change re-renders only the status.
  */
 
-import type { ExternalStore } from '../hooks/createExternalStore.js';
+import type { ExternalStore } from '../../utils/externalStore.js';
 import { createStoreContext } from '../hooks/createStoreContext.js';
 
 /** False until a canvas reports a software renderer. */

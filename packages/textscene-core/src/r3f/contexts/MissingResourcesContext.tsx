@@ -10,6 +10,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -63,7 +64,11 @@ export function MissingResourcesProvider({ children, onMissingPathsChange }: Mis
   const scene = useOptionalHierarchy()?.scene;
   // With no scene above, as in a test of one reader, the provider keeps a record of its own.
   const missingReports = useMemo(() => (scene ? missingResourcesOf(scene) : new CountedReports()), [scene]);
-  const missingPaths = useSyncExternalStore(missingReports.subscribe, missingReports.keys);
+  const missingPaths = useSyncExternalStore(
+    missingReports.subscribe,
+    missingReports.keys,
+    missingReports.keys
+  );
   const { report, clear, clearAll } = missingReports;
   const [uploadedPaths, setUploadedPaths] = useState<ReadonlySet<string>>(() => new Set<string>());
 
@@ -125,7 +130,8 @@ export function useMissingReport(address: string, status: ResourceStatus): void 
   const { report, clear, markUploaded } = useMissingResources();
   const reportedAddressRef = useRef<string | null>(null);
 
-  useEffect(() => {
+  // In the commit, so no frame draws between the status and its report.
+  useLayoutEffect(() => {
     if (status === 'unavailable') {
       report(address);
       reportedAddressRef.current = address;

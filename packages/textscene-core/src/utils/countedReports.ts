@@ -1,20 +1,22 @@
-/** A set of keys that several reporters can hold at once: a key stays while any of its reports is open. */
+import { createExternalStore } from './externalStore.js';
+
+/**
+ * A set of keys that several reporters can hold at once: a key stays while any of its reports is open.
+ *
+ * @canonical A set of keys that several reporters hold
+ *   Each report needs its own `clear`. `keys` gives a new set on each change, so a reader compares identities.
+ */
 export class CountedReports {
-  private readonly listeners = new Set<() => void>();
   /** Open reports per key, written only by `report`, `clear` and `clearAll`. */
   private readonly reportCounts = new Map<string, number>();
-  /** A new set on each change, so a reader compares identities. Written only by `publish`. */
-  private current: ReadonlySet<string> = new Set();
+  private readonly published = createExternalStore<ReadonlySet<string>>(new Set());
 
-  keys = (): ReadonlySet<string> => this.current;
+  keys = (): ReadonlySet<string> => this.published.get();
 
   /** Calls `listener` at once on each change. Returns the removal. */
-  subscribe = (listener: () => void): (() => void) => {
-    this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
-  };
+  subscribe = (listener: () => void): (() => void) => this.published.subscribe(listener);
 
-  /** Opens one report of `key`. Each call needs its own `clear`. An empty key reports nothing. */
+  /** Opens one report of `key`. An empty key reports nothing. */
   report = (key: string): void => {
     if (!key) return;
     const count = (this.reportCounts.get(key) ?? 0) + 1;
@@ -36,7 +38,6 @@ export class CountedReports {
   };
 
   private publish(): void {
-    this.current = new Set(this.reportCounts.keys());
-    for (const listener of [...this.listeners]) listener();
+    this.published.set(new Set(this.reportCounts.keys()));
   }
 }

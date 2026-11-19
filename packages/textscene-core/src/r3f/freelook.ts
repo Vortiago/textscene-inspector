@@ -4,7 +4,7 @@
  * It is on while the right button is held, or from the toggle until the pointer lock ends.
  */
 import { freelookDirectionOf } from './editorKeyBindings.js';
-import { createExternalStore } from './hooks/createExternalStore.js';
+import { createExternalStore } from '../utils/externalStore.js';
 import {
   FREELOOK_BASE_SPEED,
   freelookMoveCursor,

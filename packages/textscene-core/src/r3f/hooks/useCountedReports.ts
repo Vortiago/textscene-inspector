@@ -6,6 +6,6 @@ export function useCountedReports(): Pick<CountedReports, 'report' | 'clear'> & 
   reported: ReadonlySet<string>;
 } {
   const [reports] = useState(() => new CountedReports());
-  const reported = useSyncExternalStore(reports.subscribe, reports.keys);
+  const reported = useSyncExternalStore(reports.subscribe, reports.keys, reports.keys);
   return { reported, report: reports.report, clear: reports.clear };
 }
