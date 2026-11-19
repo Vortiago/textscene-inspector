@@ -1,8 +1,3 @@
-/**
- * Which objects reach the bounds union of `frameSceneBounds`, and from which direction it frames.
- * `traverse()` recurses into every descendant, so only a `tscnEmptyState` tag on the visited object
- * excludes it, not a tag on a wrapping group.
- */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { frameSceneBounds } from './frameSceneBounds';
@@ -262,6 +257,25 @@ describe('frameSceneBounds: an extra draw of a frame-excluded draw', () => {
         run.userData = { tscnFrameExcluded: true };
         run.add(new THREE.Mesh(new THREE.PlaneGeometry(20, 20)));
         scene.add(run);
+      }
+      const camera = makeCamera();
+      frameSceneBounds(scene, camera, null);
+      return camera.position.toArray();
+    };
+    expect(framed(true)).toEqual(framed(false));
+  });
+});
+
+describe('frameSceneBounds: a mesh inside the empty-scene indicator', () => {
+  it('frames the scene without a mesh under a `tscnEmptyState` group', () => {
+    const framed = (withPrompt: boolean) => {
+      const scene = new THREE.Scene();
+      scene.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
+      if (withPrompt) {
+        const indicator = new THREE.Group();
+        indicator.userData = { tscnEmptyState: true };
+        indicator.add(new THREE.Mesh(new THREE.PlaneGeometry(20, 20)));
+        scene.add(indicator);
       }
       const camera = makeCamera();
       frameSceneBounds(scene, camera, null);

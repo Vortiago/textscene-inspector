@@ -6,8 +6,9 @@ import { HierarchyProvider } from './contexts/HierarchyContext';
 import { ViewportModeProvider } from './contexts/ViewportModeContext';
 import { ViewStatusProvider } from './viewStatus/ViewStatusContext';
 import { createViewStatus, type DrawnFrame, type ViewStatus } from './viewStatus/viewStatus';
+import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext';
+import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
-import type { Scene } from '../scene/openScene';
 
 vi.mock('./frameSceneBounds.js', () => ({
   frameSceneBounds: vi.fn(),
@@ -30,7 +31,7 @@ function CameraProbe({ onCamera }: { onCamera: (camera: THREE.Camera) => void })
 const FACTS = { scriptedNodeCount: 0, hasCurrentCamera: false };
 
 /** A frame of `revision`, with one resource still loading or none. */
-function frameDrawn(status: ViewStatus, resources: number, revision = 1): void {
+function frameDrawn(status: ViewStatus, resources: number, revision: number): void {
   const frame: DrawnFrame = {
     revision,
     isFullSize: true,
@@ -40,50 +41,42 @@ function frameDrawn(status: ViewStatus, resources: number, revision = 1): void {
   status.frameDrawn(frame);
 }
 
-/** A settle fits after the frame that reported it, in a microtask. */
-const settledFit = () => Promise.resolve();
-
 /** A view that settled once, then drew a frame with a `.glb` load pending, with every fit timer run out. */
 async function mountWithLateLoad() {
   const status = createViewStatus();
+  const fake = createFakeResourceLoader();
   let revision = 1;
-  const scene = { revision: () => revision, subscribe: () => () => {} };
-  status.attach(scene);
+  status.attach({ revision: () => revision, subscribe: () => () => {} });
   let camera: THREE.Camera | null = null;
   await ReactThreeTestRenderer.create(
     <ViewStatusProvider status={status}>
-      <HierarchyProvider
-        value={{
-          sceneGraph: createSceneGraphFromTscnScene({ nodes: [] }),
-          scene: scene as unknown as Scene,
-          panelId: 'p',
-        }}
-      >
-        <ViewportModeProvider initialFrameOnOpen={true}>
-          <CameraFit />
-          <CameraProbe onCamera={(c) => (camera = c)} />
-        </ViewportModeProvider>
-      </HierarchyProvider>
+      <ResourceLoaderProvider loader={fake.loader}>
+        <HierarchyProvider value={{ sceneGraph: createSceneGraphFromTscnScene({ nodes: [] }), panelId: 'p' }}>
+          <ViewportModeProvider initialFrameOnOpen={true}>
+            <CameraFit />
+            <CameraProbe onCamera={(c) => (camera = c)} />
+          </ViewportModeProvider>
+        </HierarchyProvider>
+      </ResourceLoaderProvider>
     </ViewStatusProvider>
   );
-  frameDrawn(status, 0);
-  await settledFit();
-  frameDrawn(status, 1);
+  frameDrawn(status, 0, revision);
+  const releaseLateLoad = fake.loader.beginPending();
+  frameDrawn(status, 1, revision);
   vi.advanceTimersByTime(PAST_LAST_TIMER_MS);
   frameSceneBoundsMock.mockClear();
   if (!camera) throw new Error('expected the probe to report the render camera, got none');
+  const settleLoad = () => {
+    releaseLateLoad();
+    frameDrawn(status, 0, revision);
+  };
   // A frame from before the write is pending, and the frame that draws it settles.
-  const settleWrite = async () => {
+  const settleWrite = () => {
     revision++;
     frameDrawn(status, 0, revision - 1);
     frameDrawn(status, 0, revision);
-    await settledFit();
   };
-  const settle = async () => {
-    frameDrawn(status, 0);
-    await settledFit();
-  };
-  return { settle, settleWrite, camera: camera as THREE.Camera };
+  return { settleLoad, settleWrite, camera: camera as THREE.Camera };
 }
 
 describe('CameraFit after the view settles', () => {
@@ -97,46 +90,46 @@ describe('CameraFit after the view settles', () => {
   });
 
   it('frames a load that finishes after an earlier settle and after every timer', async () => {
-    const { settle } = await mountWithLateLoad();
+    const { settleLoad } = await mountWithLateLoad();
 
-    await settle();
+    settleLoad();
 
     expect(frameSceneBoundsMock).toHaveBeenCalledTimes(1);
   });
 
   it('leaves a camera the user has moved since the last fit', async () => {
-    const { settle, camera } = await mountWithLateLoad();
+    const { settleLoad, camera } = await mountWithLateLoad();
     camera.position.x += 1;
 
-    await settle();
+    settleLoad();
 
     expect(frameSceneBoundsMock).not.toHaveBeenCalled();
   });
 
   it('leaves a camera the user has turned in place since the last fit', async () => {
-    const { settle, camera } = await mountWithLateLoad();
+    const { settleLoad, camera } = await mountWithLateLoad();
     camera.rotateY(0.1);
 
-    await settle();
+    settleLoad();
 
     expect(frameSceneBoundsMock).not.toHaveBeenCalled();
   });
 
   it('leaves a camera the user has zoomed since the last fit', async () => {
-    const { settle, camera } = await mountWithLateLoad();
+    const { settleLoad, camera } = await mountWithLateLoad();
     (camera as THREE.PerspectiveCamera).zoom = 2;
 
-    await settle();
+    settleLoad();
 
     expect(frameSceneBoundsMock).not.toHaveBeenCalled();
   });
 
-  it('does not frame again when a property write settles the view', async () => {
-    const { settle, settleWrite } = await mountWithLateLoad();
-    await settle();
+  it('does not frame again when a property write that loads nothing settles the view', async () => {
+    const { settleLoad, settleWrite } = await mountWithLateLoad();
+    settleLoad();
     frameSceneBoundsMock.mockClear();
 
-    await settleWrite();
+    settleWrite();
 
     expect(frameSceneBoundsMock).not.toHaveBeenCalled();
   });

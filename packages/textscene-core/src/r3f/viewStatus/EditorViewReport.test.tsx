@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, type RootState } from '@react-three/fiber';
 import { act } from 'react';
 import type * as THREE from 'three';
 import { TscnSceneContents } from '../TscnCanvas';
@@ -9,6 +9,7 @@ import { openScene } from '../../scene/openScene';
 import type { ResourceProvider } from '../../resources/ResourceProvider';
 import { settleLoads } from '../testing/settleLoads';
 import { CaptureRenderer } from '../testing/CaptureRenderer';
+import { r3fStateProbe } from '../testing/R3FStateProbe';
 import { EditorViewReport } from './EditorViewReport';
 import { ViewStatusProvider } from './ViewStatusContext';
 import { createViewStatus, type ViewStatus } from './viewStatus';
@@ -43,10 +44,11 @@ const files: ResourceProvider = {
 
 /** Counts the frames the canvas runs. */
 function frameCounter() {
-  const frames = { count: 0 };
+  const frames: { count: number; onFrame?: () => void } = { count: 0 };
   function Counter(): null {
     useFrame(() => {
       frames.count++;
+      frames.onFrame?.();
     });
     return null;
   }
@@ -58,27 +60,32 @@ async function mountEditor(source: string) {
   const scene = openScene({ source, provider: files });
   const gl: { current: THREE.WebGLRenderer | null } = { current: null };
   const { frames, Counter } = frameCounter();
+  const { Probe, state } = r3fStateProbe();
   const renderer = await ReactThreeTestRenderer.create(
     <TscnSceneProvider scene={scene}>
       <ViewStatusProvider status={status}>
         <CaptureRenderer captured={gl} />
         <Counter />
+        <Probe />
         <TscnSceneContents />
         <EditorViewReport />
       </ViewStatusProvider>
     </TscnSceneProvider>
   );
   await settleLoads();
-  return { renderer, scene, status, gl: gl.current!, frames };
+  const settle = () => drawFrames(state, FRAMES_TO_SETTLE);
+  const drawFrame = () => drawFrames(state, 1);
+  return { renderer, scene, status, gl: gl.current!, frames, settle, drawFrame };
 }
 
-async function settle(renderer: Awaited<ReturnType<typeof mountEditor>>['renderer']) {
-  await renderer.advanceFrames(FRAMES_TO_SETTLE, 1 / 60);
+/** Whole frames, the render and its after effects included, which `advanceFrames` does not run. */
+async function drawFrames(state: () => RootState, count: number) {
+  for (let i = 0; i < count; i++) await act(async () => state().advance(state().clock.elapsedTime + 1 / 60));
 }
 
 async function settledStatus(source: string): Promise<ViewStatus> {
   const mounted = await mountEditor(source);
-  await settle(mounted.renderer);
+  await mounted.settle();
   return mounted.status;
 }
 
@@ -100,27 +107,40 @@ describe('the settled signal of an editor view', () => {
   });
 
   it('is pending after the text of the scene changes, until a frame draws the new text', async () => {
-    const { renderer, scene, status } = await mountEditor(NO_CAMERA);
-    await settle(renderer);
+    const { scene, status, settle } = await mountEditor(NO_CAMERA);
+    await settle();
     await act(async () => scene.setSource(SCRIPTED_WITH_CAMERA));
     await settleLoads();
     expect(status.settled()).toBeNull();
-    await settle(renderer);
+    await settle();
     expect(status.settled()).toEqual({ scriptedNodeCount: 1, hasCurrentCamera: true });
   });
 
   it('stops reporting once the view unmounts, so the status waits for the next view', async () => {
-    const { renderer, status } = await mountEditor(NO_CAMERA);
-    await settle(renderer);
+    const { renderer, status, settle } = await mountEditor(NO_CAMERA);
+    await settle();
     await renderer.unmount();
     expect(status.settled()).toBeNull();
+  });
+
+  it('reports a frame once its render has drawn it', async () => {
+    const { status, gl, frames, drawFrame } = await mountEditor(NO_CAMERA);
+    const calls: string[] = [];
+    frames.onFrame = () => calls.push('frame');
+    vi.spyOn(gl, 'render').mockImplementation(() => void calls.push('render'));
+    vi.spyOn(status, 'frameDrawn').mockImplementation(() => void calls.push('report'));
+
+    await drawFrame();
+
+    const frameToReport = calls.slice(calls.indexOf('frame'), calls.indexOf('report'));
+    expect(frameToReport).toContain('render');
   });
 });
 
 describe('the capture of an editor view', () => {
   it('draws one frame and reads the canvas at the size of its drawing buffer', async () => {
-    const { renderer, status, gl, frames } = await mountEditor(NO_CAMERA);
-    await settle(renderer);
+    const { status, gl, frames, settle } = await mountEditor(NO_CAMERA);
+    await settle();
     const { drawingBufferWidth: width, drawingBufferHeight: height } = gl.getContext();
     const framesBefore = frames.count;
 

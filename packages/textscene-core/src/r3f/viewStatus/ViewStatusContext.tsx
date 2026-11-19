@@ -29,7 +29,7 @@ export function useGameViewSettled(): ViewSettled | null {
   return useStatusValue((status) => status.settled(), null);
 }
 
-/** A capture reads the full window, so the view draws its target at full size until then. */
+/** An In-game capture reads the full window, so that view draws its target at full size until then. */
 export function useIsCapturePending(): boolean {
   return useStatusValue((status) => status.isCapturePending(), false);
 }

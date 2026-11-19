@@ -55,6 +55,7 @@ export function mountScene(element: HTMLElement, scene: Scene, options: ViewOpti
   const ended = () => Promise.reject(ending.signal.reason as Error);
   return {
     get settled() {
+      if (ending.signal.aborted) return ended();
       return status.whenSettled(ending.signal).then((settled) => {
         if (current.mode === '3D' && current.camera !== null) assertLoadedCamera(scene, current.camera);
         return settled;
