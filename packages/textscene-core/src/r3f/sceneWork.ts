@@ -8,12 +8,15 @@ export interface PendingSceneWork {
   fonts: number;
 }
 
-export function pendingSceneWork(loader: ResourceLoader | null): PendingSceneWork {
-  return {
-    resources: loader?.pendingResourceCount ?? 0,
-    textures: textureWork.pending(),
-    fonts: fontWork.pending(),
-  };
+/** Fills `into` when given, so a per-frame caller allocates nothing. */
+export function pendingSceneWork(
+  loader: ResourceLoader | null,
+  into: PendingSceneWork = { resources: 0, textures: 0, fonts: 0 }
+): PendingSceneWork {
+  into.resources = loader?.pendingResourceCount ?? 0;
+  into.textures = textureWork.pending();
+  into.fonts = fontWork.pending();
+  return into;
 }
 
 export function totalPendingWork({ resources, textures, fonts }: PendingSceneWork): number {

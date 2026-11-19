@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useOptionalHierarchy } from '../contexts/HierarchyContext.js';
 import { useResourceLoader } from '../../resources/useResource.js';
 import type { Scene } from '../../scene/openScene.js';
@@ -8,7 +8,7 @@ import type { RgbaImage } from '../../utils/encodePng.js';
 import { pendingSceneWork } from '../sceneWork.js';
 import { useGameStartFacts } from './gameStartFacts.js';
 import { useGameViewStatus } from './GameViewStatusContext.js';
-import type { GameViewSettled } from './gameViewStatus.js';
+import type { DrawnFrame, GameViewSettled } from './gameViewStatus.js';
 import type { RootWindow } from './rootWindow.js';
 
 /** The revision the views last heard of, so a frame names what its components rendered. */
@@ -63,14 +63,20 @@ export function useGameViewReport(
   );
   const revision = useNoticedRevision(scene);
   const isAttached = useAttachedView(scene);
+  // One record per view, filled in place each frame: the status reads only the last one.
+  const [frame] = useState<DrawnFrame>(() => ({
+    revision: 0,
+    isFullWindow: false,
+    work: { resources: 0, textures: 0, fonts: 0 },
+    facts,
+  }));
   return (readWindow) => {
     if (!status || !isAttached.current) return;
-    status.frameDrawn({
-      revision,
-      isFullWindow: drawnWindow === projectWindow,
-      work: pendingSceneWork(loader),
-      facts,
-    });
+    frame.revision = revision;
+    frame.isFullWindow = drawnWindow === projectWindow;
+    pendingSceneWork(loader, frame.work);
+    frame.facts = facts;
+    status.frameDrawn(frame);
     if (status.isCaptureDue()) status.capture(readWindow);
   };
 }

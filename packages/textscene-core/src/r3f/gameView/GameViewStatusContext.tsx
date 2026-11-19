@@ -13,7 +13,7 @@ export function GameViewStatusProvider({
   status?: GameViewStatus;
   children: ReactNode;
 }) {
-  const [own] = useState(createGameViewStatus);
+  const [own] = useState(() => (status ? null : createGameViewStatus()));
   return <GameViewStatusContext.Provider value={status ?? own}>{children}</GameViewStatusContext.Provider>;
 }
 

@@ -28,7 +28,7 @@ export interface GameViewStatus {
   /** An attached view that has not settled: no view at all waits on nothing. */
   isPending(): boolean;
   subscribe(listener: () => void): () => void;
-  /** Stays pending while no view is attached, and rejects once `signal` aborts. */
+  /** Stays pending while no view is attached, and rejects with the reason of `signal` once it aborts. */
   whenSettled(signal?: AbortSignal): Promise<GameViewSettled>;
   /** Rejects before the view settles, and names the pending work. */
   captureImage(): Promise<RgbaImage>;
@@ -36,6 +36,7 @@ export interface GameViewStatus {
   holdsFullWindow(): boolean;
   /** Null while another view is attached: one status serves one In-game view. */
   attach(scene: LiveScene): (() => void) | null;
+  /** Keeps `frame` as the last frame: a view may fill the same record again for its next frame. */
   frameDrawn(frame: DrawnFrame): void;
   isCaptureDue(): boolean;
   /** Resolves the capture with `read`, or rejects it with what `read` throws. */
@@ -84,8 +85,7 @@ export function createGameViewStatus(): GameViewStatus {
   function whenSettled(signal?: AbortSignal): Promise<GameViewSettled> {
     const now = settled();
     if (now) return Promise.resolve(now);
-    const abandoned = () => new Error('expected the In-game view to settle before its dispose');
-    if (signal?.aborted) return Promise.reject(abandoned());
+    if (signal?.aborted) return Promise.reject(signal.reason);
     return new Promise((resolve, reject) => {
       const stopListening = announcements.subscribe(() => {
         const value = settled();
@@ -95,7 +95,7 @@ export function createGameViewStatus(): GameViewStatus {
       });
       const abandon = () => {
         stop();
-        reject(abandoned());
+        reject(signal!.reason);
       };
       function stop(): void {
         stopListening();

@@ -149,8 +149,8 @@ describe('the settled signal of the In-game view', () => {
     const status = attachedStatus();
     const disposal = new AbortController();
     const settled = status.whenSettled(disposal.signal);
-    disposal.abort();
-    await expect(settled).rejects.toThrow('expected the In-game view to settle before its dispose');
+    disposal.abort(new Error('disposed'));
+    await expect(settled).rejects.toThrow('disposed');
   });
 });
 
