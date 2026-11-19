@@ -19,7 +19,7 @@ interface MountOptions {
 function layer(properties: Record<string, string>, { showFog = true }: MountOptions) {
   return (
     <ViewportModeProvider initialShowFog={showFog}>
-      <EnvironmentLayer settings={environmentSettingsOf(properties)} sky={null} panorama={null} />
+      <EnvironmentLayer settings={environmentSettingsOf(properties)} sky={null} />
     </ViewportModeProvider>
   );
 }
@@ -96,7 +96,6 @@ describe('<EnvironmentLayer> sky shader errors', () => {
   const UNCOMPILED: AuthoredSky = decodeSky(
     {},
     {
-      kind: 'shader',
       code: 'shader_type sky;\nvoid sky() { COLOR = 1.0; }\n',
       file: 'res://sky.gdshader',
       parameters: {},
@@ -115,7 +114,6 @@ describe('<EnvironmentLayer> sky shader errors', () => {
         <EnvironmentLayer
           settings={environmentSettingsOf({ background_mode: '2' })}
           sky={UNCOMPILED}
-          panorama={null}
           holderPath={holderPath}
         />
         <Errors />

@@ -55,7 +55,7 @@ export type ReflectionAtlas = OctmapArray<SkyOctmapLayout>;
 
 /** Made once per renderer, as each bake would otherwise compile them again. */
 const radianceOctmapPassFor = perObject<THREE.WebGLRenderer, THREE.ShaderMaterial>(() =>
-  skyPass(RADIANCE_OCTMAP_FRAGMENT_SHADER, ['radiance', 'size', 'borderSize', 'debanding'])
+  skyPass(RADIANCE_OCTMAP_FRAGMENT_SHADER, ['radiance', 'size', 'borderSize'])
 );
 const downsamplePassFor = perObject<THREE.WebGLRenderer, THREE.ShaderMaterial>(() =>
   skyPass(DOWNSAMPLE_FRAGMENT_SHADER, ['source', 'size', 'borderSize'])
@@ -253,7 +253,7 @@ export function bakeAtlasLayers(
     throw new Error(`expected an atlas layer from 0 to ${target.depth - 1}, got ${index}`);
   const chain = new RadianceChain(gl, layout, radianceFilter);
   try {
-    chain.draw(cubeRadiance(gl, radiance, 0));
+    chain.draw(cubeRadiance(gl, radiance));
     drawOffscreen(gl, () => {
       gl.initRenderTarget(target);
       gl.copyTextureToTexture(chain.octmap.texture, target.texture, null, new THREE.Vector3(0, 0, index));
@@ -268,15 +268,11 @@ export function bakeAtlasLayers(
 /** Draws a bake's radiance over `octmap`, laid out as `layout`. */
 export type DrawRadiance = (octmap: THREE.WebGLRenderTarget, layout: SkyOctmapLayout) => void;
 
-/** The cube `radiance`, as wide as the radiance size, drawn into Godot's octmap with `debanding` noise. */
-export function cubeRadiance(
-  gl: THREE.WebGLRenderer,
-  radiance: THREE.CubeTexture,
-  debanding: number
-): DrawRadiance {
+/** The cube `radiance`, as wide as the radiance size, drawn into Godot's octmap. */
+export function cubeRadiance(gl: THREE.WebGLRenderer, radiance: THREE.CubeTexture): DrawRadiance {
   return (target, layout) => {
     const pass = radianceOctmapPassFor(gl);
-    setUniforms(pass, { radiance, size: layout.size, borderSize: layout.borderSize, debanding });
+    setUniforms(pass, { radiance, size: layout.size, borderSize: layout.borderSize });
     drawFullScreen(gl, pass, target);
   };
 }

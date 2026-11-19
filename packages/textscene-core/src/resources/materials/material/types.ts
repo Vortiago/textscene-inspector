@@ -1,5 +1,5 @@
 import type { ScopedReference } from '../../reading';
-import type { AuthoredSkyProperties } from '../../sky/types';
+import type { ShaderSkyText } from '../../sky/types';
 import type { ShaderText } from '../shadermaterial/types';
 import type { StandardMaterial3DData, TextureSlot } from '../standardmaterial3d/types';
 
@@ -12,13 +12,11 @@ export interface StandardMaterial {
   readonly nextPass: ScopedReference | null;
 }
 
-/** A ProceduralSkyMaterial, a PanoramaSkyMaterial or a PhysicalSkyMaterial: a Sky draws it. */
+/** A sky material, or a ShaderMaterial of `shader_type sky`, as the shader a Sky draws. */
 export interface SkyMaterial {
   readonly form: 'sky';
   readonly type: string;
-  readonly properties: AuthoredSkyProperties;
-  /** A PanoramaSkyMaterial's `panorama`, resolved in the material's own file. Null for none or for any other sky. */
-  readonly panorama: ScopedReference | null;
+  readonly properties: ShaderSkyText;
 }
 
 /** A ShaderMaterial whose shader is `shader_type spatial`, which the node lit surface draws. */

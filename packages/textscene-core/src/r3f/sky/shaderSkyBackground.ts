@@ -1,5 +1,10 @@
 import * as THREE from 'three';
-import { writeSkyBindings, type SkyFog, type SkyLight } from '../../shaders/sky/skyBindings.js';
+import {
+  writeSkyBindings,
+  type SkyFog,
+  type SkyLight,
+  type SkyVolumetricFog,
+} from '../../shaders/sky/skyBindings.js';
 import { fogUniforms } from '../fog/fogUniforms.js';
 import { bindRadiance, disposeSky, type TranspiledSky } from '../../shaders/sky/transpileSky.js';
 import type { SkyLayers } from '../../resources/sky/skyLayers.js';
@@ -65,6 +70,7 @@ export class ShaderSkyBackground extends SkyBackdrop {
       time: canvasShaderTime(renderer).time,
       brightness: this.brightness,
       fog: this.fog(),
+      volumetricFog: volumetricFog(),
       lights: this.lights,
       borderSize: this.radianceBorder,
       radianceEnergy: skyEnergies[0],
@@ -96,4 +102,17 @@ export class ShaderSkyBackground extends SkyBackdrop {
       density: depthShape[0]!,
     };
   }
+}
+
+/** The volumetric fog of the render now drawing, which its pass wrote, or none while it draws none. */
+function volumetricFog(): SkyVolumetricFog | undefined {
+  const [inverseLength, inverseDetailSpread, skyAffect, legacyBlending] = fogUniforms.volumeLookup;
+  if (!inverseLength) return undefined;
+  return {
+    volume: fogUniforms.volume,
+    inverseLength,
+    inverseDetailSpread: inverseDetailSpread!,
+    skyAffect: skyAffect!,
+    isLegacyBlending: legacyBlending === 1,
+  };
 }

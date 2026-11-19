@@ -14,7 +14,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { visibleInTree } from '../visibleInTree';
 import { useFrame, useThree } from '@react-three/fiber';
-import type { AuthoredSky, Sky, SkyProperties } from '../../resources/sky/types';
+import type { AuthoredSky, ShaderSkyProperties } from '../../resources/sky/types';
 import type { SkyLight } from '../../resources/sky/build';
 import {
   lightDataKey,
@@ -28,12 +28,10 @@ import {
 import { skyEuler } from './skyRotation';
 import { hideShownSky } from './skyRadiance';
 import { holdSkyBake, radianceUpdateOf, type SkyLightsRead, skyUpdatePlan } from './skyBake';
-import { materialReadsLights } from '../../resources/sky/readsLights';
 import {
   noteSkyFrame,
   restartSkyClock,
   stepSkyRadiance,
-  type SkyFrameReads,
   type SkyRadianceUpdate,
   type SkyRender,
 } from '../../godot/rendering/environment/skyRadianceUpdate';
@@ -53,7 +51,6 @@ import {
   registerEnvironmentPart,
   useEnvironmentKey,
 } from '../environment/sceneEnvironment';
-import { debandSky } from './skyDebanding';
 import { showSkyBackground } from './skyBackground';
 import { useShaderTextures, type ShaderTextures } from '../shaderTextures/shaderTextures';
 import { useProjectShaderOptions } from '../projectShaderOptions';
@@ -64,8 +61,8 @@ import { useShaderErrorReport } from '../contexts/ShaderErrorsContext';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext';
 import { projectSampling } from '../../parser/projectSettingsParser';
 import { isLiveTarget, liveTargetDrawCount } from '../liveTargets';
-import { isDebanded } from '../../resources/sky/debanding';
 import type { Vector3 } from '../../godot/math/vector';
+import type { SamplerValue } from '../../shaders/uniforms/samplerUniform';
 
 interface SkyLayerProps {
   sky: AuthoredSky;
@@ -89,8 +86,6 @@ interface SkyLayerProps {
   asBackground?: boolean;
   /** `sky_rotation`, which turns the background and the light the sky gives. */
   rotation: Vector3;
-  /** The texture a PanoramaSkyMaterial samples, null for any other sky. */
-  panorama: THREE.Texture | null;
   /** Whether the fog scatters the sun, which reads the lights for any sky (`sky.cpp:1053`). */
   fogScattersSun?: boolean;
 }
@@ -101,13 +96,6 @@ const LIGHT_SLOTS = 4;
 /** Scratch for one render's camera origin. */
 const cameraOrigin = new THREE.Vector3();
 
-const NO_FRAME_READS: SkyFrameReads = { time: false, position: false };
-
-/** What `material` reads that changes from render to render: a built-in sky reads neither. */
-function frameReadsOf(material: Sky['material']): SkyFrameReads {
-  return material.kind === 'shader' ? material.usage : NO_FRAME_READS;
-}
-
 export function SkyLayer({
   sky: authoredSky,
   energyMultiplier = 1,
@@ -115,7 +103,6 @@ export function SkyLayer({
   reflects = true,
   asBackground = true,
   rotation,
-  panorama,
   fogScattersSun = false,
 }: SkyLayerProps) {
   const gl = useThree((state) => state.gl);
@@ -132,42 +119,36 @@ export function SkyLayer({
   const reflectsRef = useRef(reflects);
   reflectsRef.current = reflects;
 
-  const isPanoramaDrawn = useIsPanoramaDrawn(panorama);
-  const shaderCode = authoredSky.material.kind === 'shader' ? authoredSky.material.code : null;
-  const shaderOptions = useProjectShaderOptions(shaderCode);
-  const { transpiler, isReady: isTranslatorReady, loadFailure } = useSkyTranslator(gl, shaderCode !== null);
+  const shaderOptions = useProjectShaderOptions(authoredSky.material.code);
+  const { transpiler, isReady: isTranslatorReady, loadFailure } = useSkyTranslator(gl);
   useShaderErrorReport(loadFailure);
   const sky = useReadSky(authoredSky, transpiler, shaderOptions);
   const skyMaterial = sky?.material ?? null;
   const [textures, textureSlots] = useShaderTextures(
     useMemo(() => shaderTexturesOf(skyMaterial), [skyMaterial])
   );
+  const areTexturesDrawn = useAreLiveTexturesDrawn(textures);
   useShaderSkyErrorReport(sky?.material ?? null, transpiler, shaderOptions);
   const { settings } = useProjectSettings();
   const sampling = useMemo(() => projectSampling(settings), [settings]);
 
-  // Written only by the effect below, while it holds a bake.
-  const followPanoramaRef = useRef<(() => void) | null>(null);
-  useFrame(() => followPanoramaRef.current?.());
-
   useEffect(() => {
     // A bake before the first frame reads the lights would bake again unseen, at the cost of a whole bake.
     if (!areLightsRead || !lightsRead.current) return undefined;
-    // A bake samples the panorama once, so it waits for the pass to draw a live target.
-    if (!isPanoramaDrawn) return undefined;
-    // A shader sky waits for the transpiler, the nodes handler, and its parse options with their decoders.
-    if (!sky || !shaderOptions || !isTranslatorReady) return undefined;
+    // A bake samples each texture once, so it waits for the pass to draw a live target.
+    if (!areTexturesDrawn) return undefined;
+    // A sky waits for the transpiler, the nodes handler, and its parse options with their decoders.
+    if (!sky || !shaderOptions || !transpiler || !isTranslatorReady) return undefined;
 
     const lights = lightsRead.current;
     const skyRotation = skyEuler({ x: rotationX, y: rotationY, z: rotationZ });
     const input = {
       sky,
       lights,
-      panorama,
       textures,
       shaderOptions,
       sampling,
-      buildShaderSky: transpiler?.buildShaderSkyEnvironment,
+      buildEnvironment: transpiler.buildShaderSkyEnvironment,
       asBackground,
       energyMultiplier,
       rotation: skyRotation,
@@ -175,7 +156,7 @@ export function SkyLayer({
     const { bake, release } = holdSkyBake(gl, input, contextRestores);
     const update = radianceUpdateOf(sky);
     const plan = skyUpdatePlan(sky, fogScattersSun);
-    const readsLights = materialReadsLights(sky.material) || fogScattersSun;
+    const readsLights = sky.material.usage.light || fogScattersSun;
     const lightDataAt = (read: SkyLightsRead, drawn: number): SkyLightData =>
       readsLights ? skyLightDataAt(read.lights, read.key, drawn) : NO_SKY_LIGHT_DATA;
     const firstExposure = update.baked?.exposure ?? exposure;
@@ -185,14 +166,13 @@ export function SkyLayer({
       release();
       return undefined;
     }
-    followPanoramaRef.current = () => bake.followPanorama();
 
     // A surface reads each layer at its bake's energy times its own (`scene_forward_clustered.glsl:1756`).
     const renderAt = (drawn: number): SkyRender => ({
       exposure: drawn,
       brightness: energyMultiplier * drawn,
     });
-    const frameReads = frameReadsOf(sky.material);
+    const frameReads = sky.material.usage;
     const isFrameRead = frameReads.time || frameReads.position;
     const shaderTime = canvasShaderTime(gl);
     let seenJumps = shaderTime.jumps;
@@ -246,12 +226,10 @@ export function SkyLayer({
       const stopHidingRadiance = observeSceneRenderEnd(scene, hideShownSky);
       const stopShowingBackground = asBackground ? showSkyBackground(scene) : undefined;
       scene.environmentIntensity = renderAt(exposure).brightness;
-      const stopDebanding = asBackground && isDebanded(sky.material) ? debandSky(gl, scene) : undefined;
       return () => {
         stopShowingRadiance();
         stopHidingRadiance();
         stopShowingBackground?.();
-        stopDebanding?.();
         scene.environment = previousEnvironment;
         scene.environmentIntensity = previousIntensity;
       };
@@ -259,7 +237,6 @@ export function SkyLayer({
 
     return () => {
       stopRegistering();
-      followPanoramaRef.current = null;
       release();
     };
   }, [
@@ -270,13 +247,12 @@ export function SkyLayer({
     fogScattersSun,
     energyMultiplier,
     exposure,
-    panorama,
     textures,
     shaderOptions,
     sampling,
     transpiler,
     isTranslatorReady,
-    isPanoramaDrawn,
+    areTexturesDrawn,
     asBackground,
     areLightsRead,
     lightsRead,
@@ -290,15 +266,17 @@ export function SkyLayer({
 }
 
 /**
- * Whether `panorama` holds a picture a bake may sample: false for a live target until its pass first
- * draws it, read each frame until then, and true for any other texture or none.
+ * Whether each live target among `textures` holds a picture a bake may sample: false until its pass
+ * first draws it, read each frame until then, and true for any other texture.
  */
-function useIsPanoramaDrawn(panorama: THREE.Texture | null): boolean {
-  const isLive = !!panorama && isLiveTarget(panorama);
-  const [drawnPanorama, setDrawnPanorama] = useState<THREE.Texture | null>(null);
-  const isDrawn = !isLive || drawnPanorama === panorama;
+function useAreLiveTexturesDrawn(textures: Readonly<Record<string, SamplerValue>>): boolean {
+  const undrawn = Object.values(textures)
+    .flat()
+    .filter((texture): texture is THREE.Texture => !!texture && isLiveTarget(texture));
+  const [drawnTextures, setDrawnTextures] = useState<Readonly<Record<string, SamplerValue>> | null>(null);
+  const isDrawn = undrawn.length === 0 || drawnTextures === textures;
   useFrame(() => {
-    if (!isDrawn && panorama && liveTargetDrawCount(panorama) > 0) setDrawnPanorama(panorama);
+    if (!isDrawn && undrawn.every((texture) => liveTargetDrawCount(texture) > 0)) setDrawnTextures(textures);
   });
   return isDrawn;
 }
@@ -379,9 +357,9 @@ function directionalLights(scene: THREE.Scene): SkyLight[] {
   return lights;
 }
 
-/** The texture parameters of a shader sky, or null for a built-in sky. */
-function shaderTexturesOf(material: SkyProperties | null): ShaderTextures | null {
-  if (material?.kind !== 'shader') return null;
+/** The texture parameters of the sky's shader, or null while the transpiler reads it. */
+function shaderTexturesOf(material: ShaderSkyProperties | null): ShaderTextures | null {
+  if (!material) return null;
   return { references: material.textures, samplers: material.usage.samplers };
 }
 

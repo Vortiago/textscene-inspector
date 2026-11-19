@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import {
   bindRadiance,
+  skyMaterialShader,
   SkyResolutionPasses,
+  textToVariant,
   transpileSky,
   writeSkyBindings,
 } from '@textscene/three-godot-shaders';
@@ -43,11 +45,24 @@ function radianceOf(source, lights) {
   return target;
 }
 
+/** The sky of a scene's shader, or of its sky material class through the shader Godot generates for it. */
+function sceneSky({ source, material }) {
+  if (!material) return transpileSky(source);
+  const properties = Object.fromEntries(
+    Object.entries(material.properties).map(([name, text]) => [name, textToVariant(text)])
+  );
+  const shader = skyMaterialShader(material.class, { properties, textures: new Set() });
+  if (!shader) throw new Error(`expected a sky material class, got ${material.class}`);
+  const sky = transpileSky(shader.code);
+  for (const [name, value] of Object.entries(shader.parameters)) sky.parameters.get(name)?.set(value);
+  return sky;
+}
+
 /** The pixels of `scene`'s sky, or `{ error }` when the transpilation refuses it. */
 function drawSky(spec) {
   let sky;
   try {
-    sky = transpileSky(spec.source);
+    sky = sceneSky(spec);
   } catch (error) {
     return { error: String(error.message ?? error) };
   }

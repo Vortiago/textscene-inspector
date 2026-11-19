@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DataTexture, type Texture } from 'three';
-import { followSource, TextureCopies } from './textureCopies.js';
+import { DataTexture, WebGLRenderTarget, type Texture } from 'three';
+import { followSource, installTargetCopies, TextureCopies } from './textureCopies.js';
 
 const imageTexture = () => new DataTexture(new Uint8Array(16), 2, 2);
 
@@ -53,6 +53,20 @@ describe('TextureCopies', () => {
     const copyDisposals = disposals(new TextureCopies(nearest).copyOf(source));
     source.dispose();
     expect(copyDisposals.value).toBe(1);
+  });
+
+  it('binds the host copy of a render target and releases it once no node binds it', () => {
+    const host = imageTexture();
+    let releases = 0;
+    installTargetCopies((_source, configure) => {
+      configure(host);
+      return { copy: host, release: () => releases++ };
+    });
+    const copies = new TextureCopies(nearest);
+    const copy = copies.copyOf(new WebGLRenderTarget(2, 2).texture);
+    copies.release([]);
+    installTargetCopies(() => null);
+    expect([copy === host, copy.flipY, releases]).toEqual([true, false, 1]);
   });
 });
 

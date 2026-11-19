@@ -5,22 +5,26 @@
 import { describe, expect, it } from 'vitest';
 import { loadedValue } from '../reading/reading.testkit';
 import type { ScopedReference } from '../reading';
-import { SKY, type DecodedSky } from './kind';
+import { textToVariant } from '../../godot/variant/reader/variantReader';
+import { SKY } from './kind';
 
 const MATERIAL = '[sub_resource type="ProceduralSkyMaterial" id="m"]\nsky_curve = 0.3';
 const SKY_BODY = 'process_mode = 3\nsky_material = SubResource("m")';
 
-const summary = ({ sky, panorama }: DecodedSky) => ({ sky, panorama });
-
 describe('SKY of a Sky over a ProceduralSkyMaterial', () => {
-  const inScene = summary(
-    loadedValue(SKY, 'SubResource("s")', `${MATERIAL}\n\n[sub_resource type="Sky" id="s"]\n${SKY_BODY}\n`)
+  const inScene = loadedValue(
+    SKY,
+    'SubResource("s")',
+    `${MATERIAL}\n\n[sub_resource type="Sky" id="s"]\n${SKY_BODY}\n`
   );
 
-  it('reads the material and the bake of a Sky in the scene', () => {
-    expect(inScene).toMatchObject({
-      sky: { processMode: 'real-time', material: { kind: 'procedural', sky_curve: 0.3 } },
-    });
+  it('reads the bake of a Sky in the scene', () => {
+    expect(inScene).toMatchObject({ processMode: 'real-time', material: { file: 'ProceduralSkyMaterial' } });
+  });
+
+  it("hands on the material's values as its generated shader reads them", () => {
+    // `inv_sky_curve` is 0.6 over `sky_curve` (`sky_material.cpp:61`).
+    expect(textToVariant(inScene.material.parameters.inv_sky_curve!).value).toBeCloseTo(2, 6);
   });
 
   it('decodes the same value from a .tres of its own', () => {
@@ -29,15 +33,13 @@ describe('SKY of a Sky over a ProceduralSkyMaterial', () => {
     };
     const scene = '[ext_resource type="Sky" path="res://sky.tres" id="1_s"]';
 
-    expect(summary(loadedValue(SKY, 'ExtResource("1_s")', scene, files))).toEqual(inScene);
+    expect(loadedValue(SKY, 'ExtResource("1_s")', scene, files)).toEqual(inScene);
   });
 
   it('decodes the same value from a sub-resource of another .tres', () => {
     const holder = `[gd_resource type="Resource" format=3]\n\n${MATERIAL}\n\n[sub_resource type="Sky" id="s"]\n${SKY_BODY}\n\n[resource]\n`;
 
-    expect(summary(loadedValue(SKY, 'res://holder.tres::s', '', { 'res://holder.tres': holder }))).toEqual(
-      inScene
-    );
+    expect(loadedValue(SKY, 'res://holder.tres::s', '', { 'res://holder.tres': holder })).toEqual(inScene);
   });
 });
 
@@ -51,8 +53,7 @@ describe('SKY of a Sky over a ShaderMaterial', () => {
     ].join('\n\n');
 
   it("reads the shader's code and the material's parameters", () => {
-    expect(loadedValue(SKY, 'SubResource("s")', scene()).sky.material).toEqual({
-      kind: 'shader',
+    expect(loadedValue(SKY, 'SubResource("s")', scene()).material).toEqual({
       code: SKY_SHADER,
       file: 'SubResource("code")',
       parameters: { tint: '0.25' },
@@ -66,8 +67,8 @@ describe('SKY of a Sky over a ShaderMaterial', () => {
       'shader_parameter/tint = 0.25\nshader_parameter/stars = ExtResource("1_stars")'
     );
     const tables = '[ext_resource type="Texture2D" path="res://stars.png" id="1_stars"]';
-    const material = loadedValue(SKY, 'SubResource("s")', `${tables}\n\n${withTexture}`).sky.material;
-    const stars = material.kind === 'shader' ? material.textures.stars : undefined;
+    const material = loadedValue(SKY, 'SubResource("s")', `${tables}\n\n${withTexture}`).material;
+    const stars = material.textures.stars;
     expect(stars && !Array.isArray(stars) && (stars as ScopedReference).ref).toBe('ExtResource("1_stars")');
   });
 
@@ -80,8 +81,8 @@ describe('SKY of a Sky over a ShaderMaterial', () => {
       '[ext_resource type="Texture2D" path="res://a.png" id="1_a"]',
       '[ext_resource type="Texture2D" path="res://b.png" id="2_b"]',
     ].join('\n');
-    const material = loadedValue(SKY, 'SubResource("s")', `${tables}\n\n${withArray}`).sky.material;
-    const layers = material.kind === 'shader' ? material.textures.layers : undefined;
+    const material = loadedValue(SKY, 'SubResource("s")', `${tables}\n\n${withArray}`).material;
+    const layers = material.textures.layers;
     expect(Array.isArray(layers) && layers.map((element) => element?.ref ?? null)).toEqual([
       'ExtResource("1_a")',
       null,
@@ -94,8 +95,8 @@ describe('SKY of a Sky over a ShaderMaterial', () => {
       'shader_parameter/tint = 0.25',
       'shader_parameter/tint = [0.25, null]'
     );
-    const material = loadedValue(SKY, 'SubResource("s")', withValues).sky.material;
-    expect(material.kind === 'shader' && material.parameters.tint).toBe('[0.25, null]');
+    const material = loadedValue(SKY, 'SubResource("s")', withValues).material;
+    expect(material.parameters.tint).toBe('[0.25, null]');
   });
 
   it("decodes the same value from a .gdshader file, with the file's path", () => {
@@ -105,8 +106,8 @@ describe('SKY of a Sky over a ShaderMaterial', () => {
       '[sub_resource type="ShaderMaterial" id="m"]\nshader = ExtResource("1_code")\nshader_parameter/tint = 0.25',
       `[sub_resource type="Sky" id="s"]\n${SKY_BODY}\n`,
     ].join('\n\n');
-    expect(loadedValue(SKY, 'SubResource("s")', fromFile, files).sky.material).toEqual({
-      ...loadedValue(SKY, 'SubResource("s")', scene()).sky.material,
+    expect(loadedValue(SKY, 'SubResource("s")', fromFile, files).material).toEqual({
+      ...loadedValue(SKY, 'SubResource("s")', scene()).material,
       file: 'res://sky.gdshader',
     });
   });

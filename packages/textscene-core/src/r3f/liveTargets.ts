@@ -11,7 +11,8 @@ import { copySampling } from '../resources/textures/copySampling';
 import { imageSize, readRenderTargetPixels, type ImagePixels } from '../resources/formats/image/imagePixels';
 import { perObject } from '../utils/perObject';
 import { drawOffscreen } from './offscreen/draw';
-import { isHeld } from './useDisposeOnRelease';
+import type { TargetCopy } from '../shaders/uniforms/textureCopies';
+import { holdUntilReleased, isHeld } from './useDisposeOnRelease';
 import { holdsSrgbBytes, markSrgbBytes } from './srgbByteTextures';
 import { copyTexels, wholeTexels, type TexelPlacement } from './texelCopy';
 
@@ -207,6 +208,23 @@ function fillCopies(
 export function liveTargetCopy(source: THREE.Texture, layout?: AtlasTextureLayout): THREE.Texture {
   const { width, height, placement } = copyRegion(source, layout);
   return addCopy(source, width, height, placement, viewSharing(width, height, placement));
+}
+
+/**
+ * A held copy of `source`, given its sampler by `configure` and filled now, for a transpiled sampler
+ * that binds it, or null for a texture no pass redraws. Its pass refills it after each render until `release`.
+ */
+export function heldLiveTargetCopy(
+  source: THREE.Texture,
+  configure: (copy: THREE.Texture) => void
+): TargetCopy | null {
+  if (!isLiveTarget(source)) return null;
+  const copy = liveTargetCopy(source);
+  configure(copy);
+  const release = holdUntilReleased(copy);
+  const { renderer } = liveTargetOf(source);
+  if (renderer) fillLiveCopy(source, copy, renderer);
+  return { copy, release };
 }
 
 /** The copies `liveTargetCopy` made of the same region of `source`, not freed, in the order they were made. */

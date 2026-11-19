@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as skySlice from './index';
-import { decodeSkyMaterial } from './decode';
+import { skyMaterialText } from './skyMaterialText';
 import { resourceSliceRegistry } from '../sliceRegistration';
 
 // Importing the entry point registers the claims. The assertions read the registry
@@ -39,11 +39,11 @@ describe('sky slice registration', () => {
 
   it('keeps the build out of the entry point', () => {
     // `index.ts` stays THREE-free, so routing never pulls in the cubemap render.
-    expect('buildSkyEnvironment' in skySlice).toBe(false);
+    expect('buildShaderSkyEnvironment' in skySlice).toBe(false);
   });
 
-  it('decodes every material type name it claims — no claim without a decoder', () => {
-    // A type name claimed but not decoded loads and then renders nothing.
+  it('generates the shader of every material type name it claims — no claim without a generator', () => {
+    // A type name claimed but not generated loads and then renders nothing.
     const claimed = resourceSliceRegistry
       .all()
       .filter((registration) => registration.slice === 'sky')
@@ -52,7 +52,7 @@ describe('sky slice registration', () => {
 
     expect(claimed.length).toBe(3);
     for (const typeName of claimed) {
-      expect(decodeSkyMaterial(typeName, {}), typeName).not.toBeNull();
+      expect(skyMaterialText(typeName, {}, {}), typeName).not.toBeNull();
     }
   });
 });

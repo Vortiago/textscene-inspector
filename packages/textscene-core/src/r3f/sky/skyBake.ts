@@ -1,14 +1,9 @@
 import type * as THREE from 'three';
-import {
-  buildSkyEnvironment,
-  type RadianceInPlace,
-  type SkyEnvironmentInput,
-  type SkyLight,
-} from '../../resources/sky/build';
+import type { RadianceInPlace, SkyEnvironmentInput, SkyLight } from '../../resources/sky/build';
+import type { buildShaderSkyEnvironment } from '../../resources/sky/shaderSky';
 import type { Sky } from '../../resources/sky/types';
 import type { SamplerValue } from '../../shaders/uniforms/samplerUniform';
 import { roughnessLayersOf } from '../../resources/sky/skyLayers';
-import { isDebanded } from '../../resources/sky/debanding';
 import {
   newSkyRadianceUpdate,
   type SkyRadianceStep,
@@ -21,14 +16,11 @@ import { perObject } from '../../utils/perObject';
 import { holdUntilReleased } from '../useDisposeOnRelease';
 import { SkyRadiance } from './skyRadiance';
 import type { SkyBackdrop } from './skyBackground';
-import { isLiveTarget, liveTargetDrawCount } from '../liveTargets';
 
 /** A baked sky: its background and the radiance its readers sample. */
 interface BakedSky {
   background: SkyBackdrop | null;
   radiance: SkyRadiance;
-  /** Draws the background again from a live panorama, absent for any other. */
-  redrawBackground?: () => void;
   /** The bake of the radiance layers in place, absent for a sky no render dirties after its build. */
   radianceInPlace?: RadianceInPlace;
   /** Shows the lights at a render's exposure to its background and its next bake in place. */
@@ -60,7 +52,9 @@ export interface SkyLightsRead {
 /** What a bake of the sky takes beside the exposure. */
 interface SkyBakeInput extends Omit<SkyEnvironmentInput, 'energy' | 'lights'> {
   lights: SkyLightsRead;
-  /** `background_energy_multiplier`, which the exposure scales into the debanding noise. */
+  /** The transpiler's build, imported on demand to keep it off the first paint. */
+  buildEnvironment: typeof buildShaderSkyEnvironment;
+  /** `background_energy_multiplier`, which the build bakes the layers at, times the exposure. */
   energyMultiplier: number;
   rotation: THREE.Euler;
 }
@@ -91,26 +85,15 @@ export function holdSkyBake(
   return { bake, release: holdUntilReleased(bake) };
 }
 
-/** The input a bake reads besides the sky and the lights. Only a debanded sky reads the energy multiplier. */
-function inputKey({
-  sky,
-  panorama,
-  textures = {},
-  sampling,
-  asBackground,
-  energyMultiplier,
-  rotation,
-}: SkyBakeInput): string {
-  const debandedEnergy = isDebanded(sky.material) ? energyMultiplier : '';
+/** The input a bake reads besides the sky and the lights. */
+function inputKey({ textures = {}, sampling, asBackground, rotation }: SkyBakeInput): string {
   return [
-    panorama?.uuid ?? '',
     Object.entries(textures)
       .map(([name, texture]) => `${name}=${samplerKey(texture)}`)
       .sort(),
     sampling?.anisotropicFilteringLevel ?? '',
     sampling?.useNearestMipmapFilter ?? '',
     asBackground,
-    debandedEnergy,
     rotation.x,
     rotation.y,
     rotation.z,
@@ -125,18 +108,14 @@ class SkyBake {
   private lights: SkyLightsRead;
   /** The exposure the bake's lights show now, null once `followLights` takes new lights. */
   private shownExposure: number | null;
-  /** The live panorama draw the background shows, written only by `followPanorama`, null for none. */
-  private backgroundDraws: number | null;
 
   constructor(
     private readonly gl: THREE.WebGLRenderer,
     private readonly input: SkyBakeInput,
     private readonly onDispose: () => void
   ) {
-    const { lights, panorama } = input;
-    this.lights = lights;
+    this.lights = input.lights;
     this.shownExposure = null;
-    this.backgroundDraws = panorama && isLiveTarget(panorama) ? liveTargetDrawCount(panorama) : null;
   }
 
   /** Bakes the sky at `exposure` now, outside any render, unless it holds its bake. */
@@ -146,16 +125,6 @@ class SkyBake {
       this.shownExposure = exposure;
     }
     return this.baked;
-  }
-
-  /** Draws the background again for each new draw of a live panorama, as Godot does (`sky.cpp:1463`). */
-  followPanorama(): void {
-    const { panorama } = this.input;
-    if (this.backgroundDraws === null || !panorama) return;
-    const draws = liveTargetDrawCount(panorama);
-    if (draws === this.backgroundDraws) return;
-    this.backgroundDraws = draws;
-    this.baked?.redrawBackground?.();
   }
 
   /** Takes `lights` for the renders to come. A repeat changes nothing. */
@@ -201,16 +170,16 @@ function free(baked: BakedSky | null): void {
   baked?.dispose();
 }
 
-/** The sky baked at `exposure`, which scales the energy of each light and the debanding noise. */
+/** The sky baked at `exposure`, which scales the energy of each light and of the layers. */
 function bakeSky(
   gl: THREE.WebGLRenderer,
   input: SkyBakeInput,
   exposure: number,
   lightData: string
 ): BakedSky | null {
-  const { energyMultiplier, rotation, lights, ...sky } = input;
+  const { energyMultiplier, rotation, lights, buildEnvironment, ...sky } = input;
   const energy = energyMultiplier * exposure;
-  const built = buildSkyEnvironment(gl, { ...sky, lights: exposed(lights.lights, exposure), energy });
+  const built = buildEnvironment(gl, { ...sky, lights: exposed(lights.lights, exposure), energy });
   if (!built) return null;
   const { layers, ...baked } = built;
   const energies = new Array<number>(roughnessLayersOf(sky.sky.radianceFilter)).fill(energy);

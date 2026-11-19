@@ -12,20 +12,15 @@ afterEach(() => {
 });
 
 describe('useSkyTranslator', () => {
-  it('loads the transpiler and the nodes handler for a sky that needs them', async () => {
-    const { result } = renderHook(() => useSkyTranslator(gl, true));
+  it('loads the transpiler and the nodes handler', async () => {
+    const { result } = renderHook(() => useSkyTranslator(gl));
     await waitFor(() => expect(result.current.isReady).toBe(true));
     await waitFor(() => expect(result.current.transpiler?.readShaderSky).toBe(transpiler.readShaderSky));
   });
 
   it('names the failure when a part does not load, as the sky then draws nothing (error case)', () => {
     vi.spyOn(nodesHandler, 'useNodesHandler').mockReturnValue('failed');
-    const { result } = renderHook(() => useSkyTranslator(gl, true));
+    const { result } = renderHook(() => useSkyTranslator(gl));
     expect(result.current.loadFailure).toMatch(/^The previewer could not load its sky shader translator/);
-  });
-
-  it('gives no transpiler and is ready at once for a sky that needs none (edge case)', () => {
-    const { result } = renderHook(() => useSkyTranslator(gl, false));
-    expect(result.current).toEqual({ transpiler: null, isReady: true, loadFailure: null });
   });
 });

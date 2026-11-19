@@ -16,7 +16,10 @@ import type { Material } from './types';
  */
 function summary(material: Material): unknown {
   if (material.form === 'declined' || material.form === 'spatial-shader') return material;
-  if (material.form === 'sky') return { type: material.type, panorama: material.panorama?.ref };
+  if (material.form === 'sky') {
+    const panorama = material.properties.textures.source_panorama;
+    return { type: material.type, panorama: panorama && 'ref' in panorama ? panorama.ref : undefined };
+  }
   const textures = Object.entries(material.textures).map(([slot, reference]) => [slot, reference.ref]);
   return { albedo: material.data.albedo, textures, nextPass: material.nextPass?.ref };
 }

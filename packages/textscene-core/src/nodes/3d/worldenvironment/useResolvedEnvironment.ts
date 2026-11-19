@@ -14,7 +14,7 @@ import { SKY } from '../../../resources/sky/kind';
 import { useProjectClearColorSrgb } from '../../../r3f/useProjectClearColor';
 import type { EnvironmentResolution } from '../../../r3f/environment/WorldEnvironmentScope';
 import { NO_RESOLUTION, PENDING_RESOLUTION } from '../../../r3f/environment/worldGroup';
-import { useGlowMap, usePanorama } from './environmentTextures';
+import { useGlowMap } from './environmentTextures';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 
 /**
@@ -31,7 +31,7 @@ export function useEnvironmentOf(reference: ScopedReference | null): Environment
   const read = useReferencedResource(reference, ENVIRONMENT);
   const environment = read.value;
   const skyRead = useReferencedResource(environment?.sky ?? null, SKY);
-  const sky = skyRead.value?.sky ?? null;
+  const sky = skyRead.value ?? null;
 
   const clearColor = useProjectClearColorSrgb();
   // Apart from the sky, so a sky `.tres` that loads later keeps `settings`, and with it the
@@ -42,13 +42,12 @@ export function useEnvironmentOf(reference: ScopedReference | null): Environment
     [properties, clearColor]
   );
 
-  const panorama = usePanorama(skyRead.value?.panorama ?? null);
   const glowMap = useGlowMap(settings, environment?.glowMap ?? null);
   const holderPath = useNodePath();
 
   return useMemo((): EnvironmentResolution => {
     if (read.status === 'pending') return PENDING_RESOLUTION;
     if (!settings) return NO_RESOLUTION;
-    return { status: 'resolved', environment: { settings, sky, panorama, glowMap, holderPath } };
-  }, [read.status, settings, sky, panorama, glowMap, holderPath]);
+    return { status: 'resolved', environment: { settings, sky, glowMap, holderPath } };
+  }, [read.status, settings, sky, glowMap, holderPath]);
 }

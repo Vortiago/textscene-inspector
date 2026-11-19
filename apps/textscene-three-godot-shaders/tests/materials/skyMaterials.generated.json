@@ -1,0 +1,263 @@
+{
+ "godot": "4.6.3-stable (official)",
+ "texts": [
+  {
+   "class": "ProceduralSkyMaterial",
+   "properties": {
+    "sky_cover": null,
+    "use_debanding": true
+   },
+   "code": "\n// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's ProceduralSkyMaterial.\n\nshader_type sky;\nrender_mode use_debanding;\n\nuniform vec4 sky_top_color : source_color = vec4(0.385, 0.454, 0.55, 1.0);\nuniform vec4 sky_horizon_color : source_color = vec4(0.646, 0.656, 0.67, 1.0);\nuniform float inv_sky_curve : hint_range(1, 100) = 4.0;\nuniform vec4 ground_bottom_color : source_color = vec4(0.2, 0.169, 0.133, 1.0);\nuniform vec4 ground_horizon_color : source_color = vec4(0.646, 0.656, 0.67, 1.0);\nuniform float inv_ground_curve : hint_range(1, 100) = 30.0;\nuniform float sun_angle_max = 0.877;\nuniform float inv_sun_curve : hint_range(1, 100) = 22.78;\nuniform float exposure : hint_range(0, 128) = 1.0;\n\nuniform sampler2D sky_cover : filter_linear, source_color, hint_default_black;\nuniform vec4 sky_cover_modulate : source_color = vec4(1.0, 1.0, 1.0, 1.0);\n\nvoid sky() {\n\tfloat v_angle = clamp(EYEDIR.y, -1.0, 1.0);\n\tvec3 sky = mix(sky_top_color.rgb, sky_horizon_color.rgb, clamp(pow(1.0 - v_angle, inv_sky_curve), 0.0, 1.0));\n\n\tif (LIGHT0_ENABLED) {\n\t\tfloat sun_angle = dot(LIGHT0_DIRECTION, EYEDIR);\n\t\tfloat sun_size = cos(LIGHT0_SIZE);\n\t\tif (sun_angle > sun_size) {\n\t\t\tsky = LIGHT0_COLOR * LIGHT0_ENERGY;\n\t\t} else if (sun_angle > sun_angle_max) {\n\t\t\tfloat c2 = (sun_size - sun_angle) / (sun_size - sun_angle_max);\n\t\t\tsky = mix(sky, LIGHT0_COLOR * LIGHT0_ENERGY, clamp(pow(1.0 - c2, inv_sun_curve), 0.0, 1.0));\n\t\t}\n\t}\n\n\tif (LIGHT1_ENABLED) {\n\t\tfloat sun_angle = dot(LIGHT1_DIRECTION, EYEDIR);\n\t\tfloat sun_size = cos(LIGHT1_SIZE);\n\t\tif (sun_angle > sun_size) {\n\t\t\tsky = LIGHT1_COLOR * LIGHT1_ENERGY;\n\t\t} else if (sun_angle > sun_angle_max) {\n\t\t\tfloat c2 = (sun_size - sun_angle) / (sun_size - sun_angle_max);\n\t\t\tsky = mix(sky, LIGHT1_COLOR * LIGHT1_ENERGY, clamp(pow(1.0 - c2, inv_sun_curve), 0.0, 1.0));\n\t\t}\n\t}\n\n\tif (LIGHT2_ENABLED) {\n\t\tfloat sun_angle = dot(LIGHT2_DIRECTION, EYEDIR);\n\t\tfloat sun_size = cos(LIGHT2_SIZE);\n\t\tif (sun_angle > sun_size) {\n\t\t\tsky = LIGHT2_COLOR * LIGHT2_ENERGY;\n\t\t} else if (sun_angle > sun_angle_max) {\n\t\t\tfloat c2 = (sun_size - sun_angle) / (sun_size - sun_angle_max);\n\t\t\tsky = mix(sky, LIGHT2_COLOR * LIGHT2_ENERGY, clamp(pow(1.0 - c2, inv_sun_curve), 0.0, 1.0));\n\t\t}\n\t}\n\n\tif (LIGHT3_ENABLED) {\n\t\tfloat sun_angle = dot(LIGHT3_DIRECTION, EYEDIR);\n\t\tfloat sun_size = cos(LIGHT3_SIZE);\n\t\tif (sun_angle > sun_size) {\n\t\t\tsky = LIGHT3_COLOR * LIGHT3_ENERGY;\n\t\t} else if (sun_angle > sun_angle_max) {\n\t\t\tfloat c2 = (sun_size - sun_angle) / (sun_size - sun_angle_max);\n\t\t\tsky = mix(sky, LIGHT3_COLOR * LIGHT3_ENERGY, clamp(pow(1.0 - c2, inv_sun_curve), 0.0, 1.0));\n\t\t}\n\t}\n\n\t\n\t\n\tvec3 ground = mix(ground_bottom_color.rgb, ground_horizon_color.rgb, clamp(pow(1.0 + v_angle, inv_ground_curve), 0.0, 1.0));\n\n\tCOLOR = mix(ground, sky, step(0.0, EYEDIR.y)) * exposure;\n}\n"
+  },
+  {
+   "class": "PhysicalSkyMaterial",
+   "properties": {
+    "night_sky": null,
+    "use_debanding": true
+   },
+   "code": "\n// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's PhysicalSkyMaterial.\n\nshader_type sky;\nrender_mode use_debanding;\n\nuniform float rayleigh : hint_range(0, 64) = 2.0;\nuniform vec4 rayleigh_color : source_color = vec4(0.3, 0.405, 0.6, 1.0);\nuniform float mie : hint_range(0, 1) = 0.005;\nuniform float mie_eccentricity : hint_range(-1, 1) = 0.8;\nuniform vec4 mie_color : source_color = vec4(0.69, 0.729, 0.812, 1.0);\n\nuniform float turbidity : hint_range(0, 1000) = 10.0;\nuniform float sun_disk_scale : hint_range(0, 360) = 1.0;\nuniform vec4 ground_color : source_color = vec4(0.1, 0.07, 0.034, 1.0);\nuniform float exposure : hint_range(0, 128) = 1.0;\n\nuniform sampler2D night_sky : filter_linear, source_color, hint_default_black;\n\nconst vec3 UP = vec3( 0.0, 1.0, 0.0 );\n\n// Optical length at zenith for molecules.\nconst float rayleigh_zenith_size = 8.4e3;\nconst float mie_zenith_size = 1.25e3;\n\nfloat henyey_greenstein(float cos_theta, float g) {\n\tconst float k = 0.0795774715459;\n\treturn k * (1.0 - g * g) / (pow(1.0 + g * g - 2.0 * g * cos_theta, 1.5));\n}\n\nvoid sky() {\n\tif (LIGHT0_ENABLED) {\n\t\tfloat zenith_angle = clamp( dot(UP, normalize(LIGHT0_DIRECTION)), -1.0, 1.0 );\n\t\tfloat sun_energy = max(0.0, 0.757 * zenith_angle) * LIGHT0_ENERGY;\n\t\tfloat sun_fade = 1.0 - clamp(1.0 - exp(LIGHT0_DIRECTION.y), 0.0, 1.0);\n\n\t\t// Rayleigh coefficients.\n\t\tfloat rayleigh_coefficient = rayleigh - ( 1.0 * ( 1.0 - sun_fade ) );\n\t\tvec3 rayleigh_beta = rayleigh_coefficient * rayleigh_color.rgb * 0.0001;\n\t\t// mie coefficients from Preetham\n\t\tvec3 mie_beta = turbidity * mie * mie_color.rgb * 0.000434;\n\n\t\t// Optical length.\n\t\tfloat zenith = max(0.0, dot(UP, EYEDIR));\n\t\tfloat optical_mass = 1.0 / (zenith + 0.15 * pow(3.885 + 54.5 * zenith, -1.253));\n\t\tfloat rayleigh_scatter = rayleigh_zenith_size * optical_mass;\n\t\tfloat mie_scatter = mie_zenith_size * optical_mass;\n\n\t\t// Light extinction based on thickness of atmosphere.\n\t\tvec3 extinction = exp(-(rayleigh_beta * rayleigh_scatter + mie_beta * mie_scatter));\n\n\t\t// In scattering.\n\t\tfloat cos_theta = dot(EYEDIR, normalize(LIGHT0_DIRECTION));\n\n\t\tfloat rayleigh_phase = (3.0 / (16.0 * PI)) * (1.0 + pow(cos_theta * 0.5 + 0.5, 2.0));\n\t\tvec3 betaRTheta = rayleigh_beta * rayleigh_phase;\n\n\t\tfloat mie_phase = henyey_greenstein(cos_theta, mie_eccentricity);\n\t\tvec3 betaMTheta = mie_beta * mie_phase;\n\n\t\tvec3 Lin = pow(sun_energy * ((betaRTheta + betaMTheta) / (rayleigh_beta + mie_beta)) * (1.0 - extinction), vec3(1.5));\n\t\t// Hack from https://github.com/mrdoob/three.js/blob/master/examples/jsm/objects/Sky.js\n\t\tLin *= mix(vec3(1.0), pow(sun_energy * ((betaRTheta + betaMTheta) / (rayleigh_beta + mie_beta)) * extinction, vec3(0.5)), clamp(pow(1.0 - zenith_angle, 5.0), 0.0, 1.0));\n\n\t\t// Hack in the ground color.\n\t\tLin  *= mix(ground_color.rgb, vec3(1.0), smoothstep(-0.1, 0.1, dot(UP, EYEDIR)));\n\n\t\t// Solar disk and out-scattering.\n\t\tfloat sunAngularDiameterCos = cos(LIGHT0_SIZE * sun_disk_scale);\n\t\tfloat sunAngularDiameterCos2 = cos(LIGHT0_SIZE * sun_disk_scale * 0.5);\n\t\tfloat sundisk = smoothstep(sunAngularDiameterCos, sunAngularDiameterCos2, cos_theta);\n\t\tvec3 L0 = (sun_energy * extinction) * sundisk * LIGHT0_COLOR;\n\t\t\n\n\t\tvec3 color = Lin + L0;\n\t\tCOLOR = pow(color, vec3(1.0 / (1.2 + (1.2 * sun_fade))));\n\t\tCOLOR *= exposure;\n\t} else {\n\t\t// There is no sun, so display night_sky and nothing else.\n\t\t\n\t\tCOLOR *= exposure;\n\t}\n}\n"
+  },
+  {
+   "class": "ProceduralSkyMaterial",
+   "properties": {
+    "sky_cover": "texture",
+    "use_debanding": true
+   },
+   "code": "\n// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's ProceduralSkyMaterial.\n\nshader_type sky;\nrender_mode use_debanding;\n\nuniform vec4 sky_top_color : source_color = vec4(0.385, 0.454, 0.55, 1.0);\nuniform vec4 sky_horizon_color : source_color = vec4(0.646, 0.656, 0.67, 1.0);\nuniform float inv_sky_curve : hint_range(1, 100) = 4.0;\nuniform vec4 ground_bottom_color : source_color = vec4(0.2, 0.169, 0.133, 1.0);\nuniform vec4 ground_horizon_color : source_color = vec4(0.646, 0.656, 0.67, 1.0);\nuniform float inv_ground_curve : hint_range(1, 100) = 30.0;\nuniform float sun_angle_max = 0.877;\nuniform float inv_sun_curve : hint_range(1, 100) = 22.78;\nuniform float exposure : hint_range(0, 128) = 1.0;\n\nuniform sampler2D sky_cover : filter_linear, source_color, hint_default_black;\nuniform vec4 sky_cover_modulate : source_color = vec4(1.0, 1.0, 1.0, 1.0);\n\nvoid sky() {\n\tfloat v_angle = clamp(EYEDIR.y, -1.0, 1.0);\n\tvec3 sky = mix(sky_top_color.rgb, sky_horizon_color.rgb, clamp(pow(1.0 - v_angle, inv_sky_curve), 0.0, 1.0));\n\n\tif (LIGHT0_ENABLED) {\n\t\tfloat sun_angle = dot(LIGHT0_DIRECTION, EYEDIR);\n\t\tfloat sun_size = cos(LIGHT0_SIZE);\n\t\tif (sun_angle > sun_size) {\n\t\t\tsky = LIGHT0_COLOR * LIGHT0_ENERGY;\n\t\t} else if (sun_angle > sun_angle_max) {\n\t\t\tfloat c2 = (sun_size - sun_angle) / (sun_size - sun_angle_max);\n\t\t\tsky = mix(sky, LIGHT0_COLOR * LIGHT0_ENERGY, clamp(pow(1.0 - c2, inv_sun_curve), 0.0, 1.0));\n\t\t}\n\t}\n\n\tif (LIGHT1_ENABLED) {\n\t\tfloat sun_angle = dot(LIGHT1_DIRECTION, EYEDIR);\n\t\tfloat sun_size = cos(LIGHT1_SIZE);\n\t\tif (sun_angle > sun_size) {\n\t\t\tsky = LIGHT1_COLOR * LIGHT1_ENERGY;\n\t\t} else if (sun_angle > sun_angle_max) {\n\t\t\tfloat c2 = (sun_size - sun_angle) / (sun_size - sun_angle_max);\n\t\t\tsky = mix(sky, LIGHT1_COLOR * LIGHT1_ENERGY, clamp(pow(1.0 - c2, inv_sun_curve), 0.0, 1.0));\n\t\t}\n\t}\n\n\tif (LIGHT2_ENABLED) {\n\t\tfloat sun_angle = dot(LIGHT2_DIRECTION, EYEDIR);\n\t\tfloat sun_size = cos(LIGHT2_SIZE);\n\t\tif (sun_angle > sun_size) {\n\t\t\tsky = LIGHT2_COLOR * LIGHT2_ENERGY;\n\t\t} else if (sun_angle > sun_angle_max) {\n\t\t\tfloat c2 = (sun_size - sun_angle) / (sun_size - sun_angle_max);\n\t\t\tsky = mix(sky, LIGHT2_COLOR * LIGHT2_ENERGY, clamp(pow(1.0 - c2, inv_sun_curve), 0.0, 1.0));\n\t\t}\n\t}\n\n\tif (LIGHT3_ENABLED) {\n\t\tfloat sun_angle = dot(LIGHT3_DIRECTION, EYEDIR);\n\t\tfloat sun_size = cos(LIGHT3_SIZE);\n\t\tif (sun_angle > sun_size) {\n\t\t\tsky = LIGHT3_COLOR * LIGHT3_ENERGY;\n\t\t} else if (sun_angle > sun_angle_max) {\n\t\t\tfloat c2 = (sun_size - sun_angle) / (sun_size - sun_angle_max);\n\t\t\tsky = mix(sky, LIGHT3_COLOR * LIGHT3_ENERGY, clamp(pow(1.0 - c2, inv_sun_curve), 0.0, 1.0));\n\t\t}\n\t}\n\n\tvec4 sky_cover_texture = texture(sky_cover, SKY_COORDS);\n\tsky += (sky_cover_texture.rgb * sky_cover_modulate.rgb) * sky_cover_texture.a * sky_cover_modulate.a;\n\tvec3 ground = mix(ground_bottom_color.rgb, ground_horizon_color.rgb, clamp(pow(1.0 + v_angle, inv_ground_curve), 0.0, 1.0));\n\n\tCOLOR = mix(ground, sky, step(0.0, EYEDIR.y)) * exposure;\n}\n"
+  },
+  {
+   "class": "PhysicalSkyMaterial",
+   "properties": {
+    "night_sky": "texture",
+    "use_debanding": true
+   },
+   "code": "\n// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's PhysicalSkyMaterial.\n\nshader_type sky;\nrender_mode use_debanding;\n\nuniform float rayleigh : hint_range(0, 64) = 2.0;\nuniform vec4 rayleigh_color : source_color = vec4(0.3, 0.405, 0.6, 1.0);\nuniform float mie : hint_range(0, 1) = 0.005;\nuniform float mie_eccentricity : hint_range(-1, 1) = 0.8;\nuniform vec4 mie_color : source_color = vec4(0.69, 0.729, 0.812, 1.0);\n\nuniform float turbidity : hint_range(0, 1000) = 10.0;\nuniform float sun_disk_scale : hint_range(0, 360) = 1.0;\nuniform vec4 ground_color : source_color = vec4(0.1, 0.07, 0.034, 1.0);\nuniform float exposure : hint_range(0, 128) = 1.0;\n\nuniform sampler2D night_sky : filter_linear, source_color, hint_default_black;\n\nconst vec3 UP = vec3( 0.0, 1.0, 0.0 );\n\n// Optical length at zenith for molecules.\nconst float rayleigh_zenith_size = 8.4e3;\nconst float mie_zenith_size = 1.25e3;\n\nfloat henyey_greenstein(float cos_theta, float g) {\n\tconst float k = 0.0795774715459;\n\treturn k * (1.0 - g * g) / (pow(1.0 + g * g - 2.0 * g * cos_theta, 1.5));\n}\n\nvoid sky() {\n\tif (LIGHT0_ENABLED) {\n\t\tfloat zenith_angle = clamp( dot(UP, normalize(LIGHT0_DIRECTION)), -1.0, 1.0 );\n\t\tfloat sun_energy = max(0.0, 0.757 * zenith_angle) * LIGHT0_ENERGY;\n\t\tfloat sun_fade = 1.0 - clamp(1.0 - exp(LIGHT0_DIRECTION.y), 0.0, 1.0);\n\n\t\t// Rayleigh coefficients.\n\t\tfloat rayleigh_coefficient = rayleigh - ( 1.0 * ( 1.0 - sun_fade ) );\n\t\tvec3 rayleigh_beta = rayleigh_coefficient * rayleigh_color.rgb * 0.0001;\n\t\t// mie coefficients from Preetham\n\t\tvec3 mie_beta = turbidity * mie * mie_color.rgb * 0.000434;\n\n\t\t// Optical length.\n\t\tfloat zenith = max(0.0, dot(UP, EYEDIR));\n\t\tfloat optical_mass = 1.0 / (zenith + 0.15 * pow(3.885 + 54.5 * zenith, -1.253));\n\t\tfloat rayleigh_scatter = rayleigh_zenith_size * optical_mass;\n\t\tfloat mie_scatter = mie_zenith_size * optical_mass;\n\n\t\t// Light extinction based on thickness of atmosphere.\n\t\tvec3 extinction = exp(-(rayleigh_beta * rayleigh_scatter + mie_beta * mie_scatter));\n\n\t\t// In scattering.\n\t\tfloat cos_theta = dot(EYEDIR, normalize(LIGHT0_DIRECTION));\n\n\t\tfloat rayleigh_phase = (3.0 / (16.0 * PI)) * (1.0 + pow(cos_theta * 0.5 + 0.5, 2.0));\n\t\tvec3 betaRTheta = rayleigh_beta * rayleigh_phase;\n\n\t\tfloat mie_phase = henyey_greenstein(cos_theta, mie_eccentricity);\n\t\tvec3 betaMTheta = mie_beta * mie_phase;\n\n\t\tvec3 Lin = pow(sun_energy * ((betaRTheta + betaMTheta) / (rayleigh_beta + mie_beta)) * (1.0 - extinction), vec3(1.5));\n\t\t// Hack from https://github.com/mrdoob/three.js/blob/master/examples/jsm/objects/Sky.js\n\t\tLin *= mix(vec3(1.0), pow(sun_energy * ((betaRTheta + betaMTheta) / (rayleigh_beta + mie_beta)) * extinction, vec3(0.5)), clamp(pow(1.0 - zenith_angle, 5.0), 0.0, 1.0));\n\n\t\t// Hack in the ground color.\n\t\tLin  *= mix(ground_color.rgb, vec3(1.0), smoothstep(-0.1, 0.1, dot(UP, EYEDIR)));\n\n\t\t// Solar disk and out-scattering.\n\t\tfloat sunAngularDiameterCos = cos(LIGHT0_SIZE * sun_disk_scale);\n\t\tfloat sunAngularDiameterCos2 = cos(LIGHT0_SIZE * sun_disk_scale * 0.5);\n\t\tfloat sundisk = smoothstep(sunAngularDiameterCos, sunAngularDiameterCos2, cos_theta);\n\t\tvec3 L0 = (sun_energy * extinction) * sundisk * LIGHT0_COLOR;\n\t\tL0 += texture(night_sky, SKY_COORDS).xyz * extinction;\n\n\t\tvec3 color = Lin + L0;\n\t\tCOLOR = pow(color, vec3(1.0 / (1.2 + (1.2 * sun_fade))));\n\t\tCOLOR *= exposure;\n\t} else {\n\t\t// There is no sun, so display night_sky and nothing else.\n\t\tCOLOR = texture(night_sky, SKY_COORDS).xyz;\n\t\tCOLOR *= exposure;\n\t}\n}\n"
+  },
+  {
+   "class": "ProceduralSkyMaterial",
+   "properties": {
+    "sky_cover": null,
+    "use_debanding": false
+   },
+   "code": "\n// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's ProceduralSkyMaterial.\n\nshader_type sky;\n\n\nuniform vec4 sky_top_color : source_color = vec4(0.385, 0.454, 0.55, 1.0);\nuniform vec4 sky_horizon_color : source_color = vec4(0.646, 0.656, 0.67, 1.0);\nuniform float inv_sky_curve : hint_range(1, 100) = 4.0;\nuniform vec4 ground_bottom_color : source_color = vec4(0.2, 0.169, 0.133, 1.0);\nuniform vec4 ground_horizon_color : source_color = vec4(0.646, 0.656, 0.67, 1.0);\nuniform float inv_ground_curve : hint_range(1, 100) = 30.0;\nuniform float sun_angle_max = 0.877;\nuniform float inv_sun_curve : hint_range(1, 100) = 22.78;\nuniform float exposure : hint_range(0, 128) = 1.0;\n\nuniform sampler2D sky_cover : filter_linear, source_color, hint_default_black;\nuniform vec4 sky_cover_modulate : source_color = vec4(1.0, 1.0, 1.0, 1.0);\n\nvoid sky() {\n\tfloat v_angle = clamp(EYEDIR.y, -1.0, 1.0);\n\tvec3 sky = mix(sky_top_color.rgb, sky_horizon_color.rgb, clamp(pow(1.0 - v_angle, inv_sky_curve), 0.0, 1.0));\n\n\tif (LIGHT0_ENABLED) {\n\t\tfloat sun_angle = dot(LIGHT0_DIRECTION, EYEDIR);\n\t\tfloat sun_size = cos(LIGHT0_SIZE);\n\t\tif (sun_angle > sun_size) {\n\t\t\tsky = LIGHT0_COLOR * LIGHT0_ENERGY;\n\t\t} else if (sun_angle > sun_angle_max) {\n\t\t\tfloat c2 = (sun_size - sun_angle) / (sun_size - sun_angle_max);\n\t\t\tsky = mix(sky, LIGHT0_COLOR * LIGHT0_ENERGY, clamp(pow(1.0 - c2, inv_sun_curve), 0.0, 1.0));\n\t\t}\n\t}\n\n\tif (LIGHT1_ENABLED) {\n\t\tfloat sun_angle = dot(LIGHT1_DIRECTION, EYEDIR);\n\t\tfloat sun_size = cos(LIGHT1_SIZE);\n\t\tif (sun_angle > sun_size) {\n\t\t\tsky = LIGHT1_COLOR * LIGHT1_ENERGY;\n\t\t} else if (sun_angle > sun_angle_max) {\n\t\t\tfloat c2 = (sun_size - sun_angle) / (sun_size - sun_angle_max);\n\t\t\tsky = mix(sky, LIGHT1_COLOR * LIGHT1_ENERGY, clamp(pow(1.0 - c2, inv_sun_curve), 0.0, 1.0));\n\t\t}\n\t}\n\n\tif (LIGHT2_ENABLED) {\n\t\tfloat sun_angle = dot(LIGHT2_DIRECTION, EYEDIR);\n\t\tfloat sun_size = cos(LIGHT2_SIZE);\n\t\tif (sun_angle > sun_size) {\n\t\t\tsky = LIGHT2_COLOR * LIGHT2_ENERGY;\n\t\t} else if (sun_angle > sun_angle_max) {\n\t\t\tfloat c2 = (sun_size - sun_angle) / (sun_size - sun_angle_max);\n\t\t\tsky = mix(sky, LIGHT2_COLOR * LIGHT2_ENERGY, clamp(pow(1.0 - c2, inv_sun_curve), 0.0, 1.0));\n\t\t}\n\t}\n\n\tif (LIGHT3_ENABLED) {\n\t\tfloat sun_angle = dot(LIGHT3_DIRECTION, EYEDIR);\n\t\tfloat sun_size = cos(LIGHT3_SIZE);\n\t\tif (sun_angle > sun_size) {\n\t\t\tsky = LIGHT3_COLOR * LIGHT3_ENERGY;\n\t\t} else if (sun_angle > sun_angle_max) {\n\t\t\tfloat c2 = (sun_size - sun_angle) / (sun_size - sun_angle_max);\n\t\t\tsky = mix(sky, LIGHT3_COLOR * LIGHT3_ENERGY, clamp(pow(1.0 - c2, inv_sun_curve), 0.0, 1.0));\n\t\t}\n\t}\n\n\t\n\t\n\tvec3 ground = mix(ground_bottom_color.rgb, ground_horizon_color.rgb, clamp(pow(1.0 + v_angle, inv_ground_curve), 0.0, 1.0));\n\n\tCOLOR = mix(ground, sky, step(0.0, EYEDIR.y)) * exposure;\n}\n"
+  },
+  {
+   "class": "PhysicalSkyMaterial",
+   "properties": {
+    "night_sky": null,
+    "use_debanding": false
+   },
+   "code": "\n// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's PhysicalSkyMaterial.\n\nshader_type sky;\n\n\nuniform float rayleigh : hint_range(0, 64) = 2.0;\nuniform vec4 rayleigh_color : source_color = vec4(0.3, 0.405, 0.6, 1.0);\nuniform float mie : hint_range(0, 1) = 0.005;\nuniform float mie_eccentricity : hint_range(-1, 1) = 0.8;\nuniform vec4 mie_color : source_color = vec4(0.69, 0.729, 0.812, 1.0);\n\nuniform float turbidity : hint_range(0, 1000) = 10.0;\nuniform float sun_disk_scale : hint_range(0, 360) = 1.0;\nuniform vec4 ground_color : source_color = vec4(0.1, 0.07, 0.034, 1.0);\nuniform float exposure : hint_range(0, 128) = 1.0;\n\nuniform sampler2D night_sky : filter_linear, source_color, hint_default_black;\n\nconst vec3 UP = vec3( 0.0, 1.0, 0.0 );\n\n// Optical length at zenith for molecules.\nconst float rayleigh_zenith_size = 8.4e3;\nconst float mie_zenith_size = 1.25e3;\n\nfloat henyey_greenstein(float cos_theta, float g) {\n\tconst float k = 0.0795774715459;\n\treturn k * (1.0 - g * g) / (pow(1.0 + g * g - 2.0 * g * cos_theta, 1.5));\n}\n\nvoid sky() {\n\tif (LIGHT0_ENABLED) {\n\t\tfloat zenith_angle = clamp( dot(UP, normalize(LIGHT0_DIRECTION)), -1.0, 1.0 );\n\t\tfloat sun_energy = max(0.0, 0.757 * zenith_angle) * LIGHT0_ENERGY;\n\t\tfloat sun_fade = 1.0 - clamp(1.0 - exp(LIGHT0_DIRECTION.y), 0.0, 1.0);\n\n\t\t// Rayleigh coefficients.\n\t\tfloat rayleigh_coefficient = rayleigh - ( 1.0 * ( 1.0 - sun_fade ) );\n\t\tvec3 rayleigh_beta = rayleigh_coefficient * rayleigh_color.rgb * 0.0001;\n\t\t// mie coefficients from Preetham\n\t\tvec3 mie_beta = turbidity * mie * mie_color.rgb * 0.000434;\n\n\t\t// Optical length.\n\t\tfloat zenith = max(0.0, dot(UP, EYEDIR));\n\t\tfloat optical_mass = 1.0 / (zenith + 0.15 * pow(3.885 + 54.5 * zenith, -1.253));\n\t\tfloat rayleigh_scatter = rayleigh_zenith_size * optical_mass;\n\t\tfloat mie_scatter = mie_zenith_size * optical_mass;\n\n\t\t// Light extinction based on thickness of atmosphere.\n\t\tvec3 extinction = exp(-(rayleigh_beta * rayleigh_scatter + mie_beta * mie_scatter));\n\n\t\t// In scattering.\n\t\tfloat cos_theta = dot(EYEDIR, normalize(LIGHT0_DIRECTION));\n\n\t\tfloat rayleigh_phase = (3.0 / (16.0 * PI)) * (1.0 + pow(cos_theta * 0.5 + 0.5, 2.0));\n\t\tvec3 betaRTheta = rayleigh_beta * rayleigh_phase;\n\n\t\tfloat mie_phase = henyey_greenstein(cos_theta, mie_eccentricity);\n\t\tvec3 betaMTheta = mie_beta * mie_phase;\n\n\t\tvec3 Lin = pow(sun_energy * ((betaRTheta + betaMTheta) / (rayleigh_beta + mie_beta)) * (1.0 - extinction), vec3(1.5));\n\t\t// Hack from https://github.com/mrdoob/three.js/blob/master/examples/jsm/objects/Sky.js\n\t\tLin *= mix(vec3(1.0), pow(sun_energy * ((betaRTheta + betaMTheta) / (rayleigh_beta + mie_beta)) * extinction, vec3(0.5)), clamp(pow(1.0 - zenith_angle, 5.0), 0.0, 1.0));\n\n\t\t// Hack in the ground color.\n\t\tLin  *= mix(ground_color.rgb, vec3(1.0), smoothstep(-0.1, 0.1, dot(UP, EYEDIR)));\n\n\t\t// Solar disk and out-scattering.\n\t\tfloat sunAngularDiameterCos = cos(LIGHT0_SIZE * sun_disk_scale);\n\t\tfloat sunAngularDiameterCos2 = cos(LIGHT0_SIZE * sun_disk_scale * 0.5);\n\t\tfloat sundisk = smoothstep(sunAngularDiameterCos, sunAngularDiameterCos2, cos_theta);\n\t\tvec3 L0 = (sun_energy * extinction) * sundisk * LIGHT0_COLOR;\n\t\t\n\n\t\tvec3 color = Lin + L0;\n\t\tCOLOR = pow(color, vec3(1.0 / (1.2 + (1.2 * sun_fade))));\n\t\tCOLOR *= exposure;\n\t} else {\n\t\t// There is no sun, so display night_sky and nothing else.\n\t\t\n\t\tCOLOR *= exposure;\n\t}\n}\n"
+  },
+  {
+   "class": "ProceduralSkyMaterial",
+   "properties": {
+    "sky_cover": "texture",
+    "use_debanding": false
+   },
+   "code": "\n// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's ProceduralSkyMaterial.\n\nshader_type sky;\n\n\nuniform vec4 sky_top_color : source_color = vec4(0.385, 0.454, 0.55, 1.0);\nuniform vec4 sky_horizon_color : source_color = vec4(0.646, 0.656, 0.67, 1.0);\nuniform float inv_sky_curve : hint_range(1, 100) = 4.0;\nuniform vec4 ground_bottom_color : source_color = vec4(0.2, 0.169, 0.133, 1.0);\nuniform vec4 ground_horizon_color : source_color = vec4(0.646, 0.656, 0.67, 1.0);\nuniform float inv_ground_curve : hint_range(1, 100) = 30.0;\nuniform float sun_angle_max = 0.877;\nuniform float inv_sun_curve : hint_range(1, 100) = 22.78;\nuniform float exposure : hint_range(0, 128) = 1.0;\n\nuniform sampler2D sky_cover : filter_linear, source_color, hint_default_black;\nuniform vec4 sky_cover_modulate : source_color = vec4(1.0, 1.0, 1.0, 1.0);\n\nvoid sky() {\n\tfloat v_angle = clamp(EYEDIR.y, -1.0, 1.0);\n\tvec3 sky = mix(sky_top_color.rgb, sky_horizon_color.rgb, clamp(pow(1.0 - v_angle, inv_sky_curve), 0.0, 1.0));\n\n\tif (LIGHT0_ENABLED) {\n\t\tfloat sun_angle = dot(LIGHT0_DIRECTION, EYEDIR);\n\t\tfloat sun_size = cos(LIGHT0_SIZE);\n\t\tif (sun_angle > sun_size) {\n\t\t\tsky = LIGHT0_COLOR * LIGHT0_ENERGY;\n\t\t} else if (sun_angle > sun_angle_max) {\n\t\t\tfloat c2 = (sun_size - sun_angle) / (sun_size - sun_angle_max);\n\t\t\tsky = mix(sky, LIGHT0_COLOR * LIGHT0_ENERGY, clamp(pow(1.0 - c2, inv_sun_curve), 0.0, 1.0));\n\t\t}\n\t}\n\n\tif (LIGHT1_ENABLED) {\n\t\tfloat sun_angle = dot(LIGHT1_DIRECTION, EYEDIR);\n\t\tfloat sun_size = cos(LIGHT1_SIZE);\n\t\tif (sun_angle > sun_size) {\n\t\t\tsky = LIGHT1_COLOR * LIGHT1_ENERGY;\n\t\t} else if (sun_angle > sun_angle_max) {\n\t\t\tfloat c2 = (sun_size - sun_angle) / (sun_size - sun_angle_max);\n\t\t\tsky = mix(sky, LIGHT1_COLOR * LIGHT1_ENERGY, clamp(pow(1.0 - c2, inv_sun_curve), 0.0, 1.0));\n\t\t}\n\t}\n\n\tif (LIGHT2_ENABLED) {\n\t\tfloat sun_angle = dot(LIGHT2_DIRECTION, EYEDIR);\n\t\tfloat sun_size = cos(LIGHT2_SIZE);\n\t\tif (sun_angle > sun_size) {\n\t\t\tsky = LIGHT2_COLOR * LIGHT2_ENERGY;\n\t\t} else if (sun_angle > sun_angle_max) {\n\t\t\tfloat c2 = (sun_size - sun_angle) / (sun_size - sun_angle_max);\n\t\t\tsky = mix(sky, LIGHT2_COLOR * LIGHT2_ENERGY, clamp(pow(1.0 - c2, inv_sun_curve), 0.0, 1.0));\n\t\t}\n\t}\n\n\tif (LIGHT3_ENABLED) {\n\t\tfloat sun_angle = dot(LIGHT3_DIRECTION, EYEDIR);\n\t\tfloat sun_size = cos(LIGHT3_SIZE);\n\t\tif (sun_angle > sun_size) {\n\t\t\tsky = LIGHT3_COLOR * LIGHT3_ENERGY;\n\t\t} else if (sun_angle > sun_angle_max) {\n\t\t\tfloat c2 = (sun_size - sun_angle) / (sun_size - sun_angle_max);\n\t\t\tsky = mix(sky, LIGHT3_COLOR * LIGHT3_ENERGY, clamp(pow(1.0 - c2, inv_sun_curve), 0.0, 1.0));\n\t\t}\n\t}\n\n\tvec4 sky_cover_texture = texture(sky_cover, SKY_COORDS);\n\tsky += (sky_cover_texture.rgb * sky_cover_modulate.rgb) * sky_cover_texture.a * sky_cover_modulate.a;\n\tvec3 ground = mix(ground_bottom_color.rgb, ground_horizon_color.rgb, clamp(pow(1.0 + v_angle, inv_ground_curve), 0.0, 1.0));\n\n\tCOLOR = mix(ground, sky, step(0.0, EYEDIR.y)) * exposure;\n}\n"
+  },
+  {
+   "class": "PhysicalSkyMaterial",
+   "properties": {
+    "night_sky": "texture",
+    "use_debanding": false
+   },
+   "code": "\n// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's PhysicalSkyMaterial.\n\nshader_type sky;\n\n\nuniform float rayleigh : hint_range(0, 64) = 2.0;\nuniform vec4 rayleigh_color : source_color = vec4(0.3, 0.405, 0.6, 1.0);\nuniform float mie : hint_range(0, 1) = 0.005;\nuniform float mie_eccentricity : hint_range(-1, 1) = 0.8;\nuniform vec4 mie_color : source_color = vec4(0.69, 0.729, 0.812, 1.0);\n\nuniform float turbidity : hint_range(0, 1000) = 10.0;\nuniform float sun_disk_scale : hint_range(0, 360) = 1.0;\nuniform vec4 ground_color : source_color = vec4(0.1, 0.07, 0.034, 1.0);\nuniform float exposure : hint_range(0, 128) = 1.0;\n\nuniform sampler2D night_sky : filter_linear, source_color, hint_default_black;\n\nconst vec3 UP = vec3( 0.0, 1.0, 0.0 );\n\n// Optical length at zenith for molecules.\nconst float rayleigh_zenith_size = 8.4e3;\nconst float mie_zenith_size = 1.25e3;\n\nfloat henyey_greenstein(float cos_theta, float g) {\n\tconst float k = 0.0795774715459;\n\treturn k * (1.0 - g * g) / (pow(1.0 + g * g - 2.0 * g * cos_theta, 1.5));\n}\n\nvoid sky() {\n\tif (LIGHT0_ENABLED) {\n\t\tfloat zenith_angle = clamp( dot(UP, normalize(LIGHT0_DIRECTION)), -1.0, 1.0 );\n\t\tfloat sun_energy = max(0.0, 0.757 * zenith_angle) * LIGHT0_ENERGY;\n\t\tfloat sun_fade = 1.0 - clamp(1.0 - exp(LIGHT0_DIRECTION.y), 0.0, 1.0);\n\n\t\t// Rayleigh coefficients.\n\t\tfloat rayleigh_coefficient = rayleigh - ( 1.0 * ( 1.0 - sun_fade ) );\n\t\tvec3 rayleigh_beta = rayleigh_coefficient * rayleigh_color.rgb * 0.0001;\n\t\t// mie coefficients from Preetham\n\t\tvec3 mie_beta = turbidity * mie * mie_color.rgb * 0.000434;\n\n\t\t// Optical length.\n\t\tfloat zenith = max(0.0, dot(UP, EYEDIR));\n\t\tfloat optical_mass = 1.0 / (zenith + 0.15 * pow(3.885 + 54.5 * zenith, -1.253));\n\t\tfloat rayleigh_scatter = rayleigh_zenith_size * optical_mass;\n\t\tfloat mie_scatter = mie_zenith_size * optical_mass;\n\n\t\t// Light extinction based on thickness of atmosphere.\n\t\tvec3 extinction = exp(-(rayleigh_beta * rayleigh_scatter + mie_beta * mie_scatter));\n\n\t\t// In scattering.\n\t\tfloat cos_theta = dot(EYEDIR, normalize(LIGHT0_DIRECTION));\n\n\t\tfloat rayleigh_phase = (3.0 / (16.0 * PI)) * (1.0 + pow(cos_theta * 0.5 + 0.5, 2.0));\n\t\tvec3 betaRTheta = rayleigh_beta * rayleigh_phase;\n\n\t\tfloat mie_phase = henyey_greenstein(cos_theta, mie_eccentricity);\n\t\tvec3 betaMTheta = mie_beta * mie_phase;\n\n\t\tvec3 Lin = pow(sun_energy * ((betaRTheta + betaMTheta) / (rayleigh_beta + mie_beta)) * (1.0 - extinction), vec3(1.5));\n\t\t// Hack from https://github.com/mrdoob/three.js/blob/master/examples/jsm/objects/Sky.js\n\t\tLin *= mix(vec3(1.0), pow(sun_energy * ((betaRTheta + betaMTheta) / (rayleigh_beta + mie_beta)) * extinction, vec3(0.5)), clamp(pow(1.0 - zenith_angle, 5.0), 0.0, 1.0));\n\n\t\t// Hack in the ground color.\n\t\tLin  *= mix(ground_color.rgb, vec3(1.0), smoothstep(-0.1, 0.1, dot(UP, EYEDIR)));\n\n\t\t// Solar disk and out-scattering.\n\t\tfloat sunAngularDiameterCos = cos(LIGHT0_SIZE * sun_disk_scale);\n\t\tfloat sunAngularDiameterCos2 = cos(LIGHT0_SIZE * sun_disk_scale * 0.5);\n\t\tfloat sundisk = smoothstep(sunAngularDiameterCos, sunAngularDiameterCos2, cos_theta);\n\t\tvec3 L0 = (sun_energy * extinction) * sundisk * LIGHT0_COLOR;\n\t\tL0 += texture(night_sky, SKY_COORDS).xyz * extinction;\n\n\t\tvec3 color = Lin + L0;\n\t\tCOLOR = pow(color, vec3(1.0 / (1.2 + (1.2 * sun_fade))));\n\t\tCOLOR *= exposure;\n\t} else {\n\t\t// There is no sun, so display night_sky and nothing else.\n\t\tCOLOR = texture(night_sky, SKY_COORDS).xyz;\n\t\tCOLOR *= exposure;\n\t}\n}\n"
+  },
+  {
+   "class": "PanoramaSkyMaterial",
+   "properties": {
+    "filter": true
+   },
+   "code": "\n// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's PanoramaSkyMaterial.\n\nshader_type sky;\n\nuniform sampler2D source_panorama : filter_linear, source_color, hint_default_black;\nuniform float exposure : hint_range(0, 128) = 1.0;\n\nvoid sky() {\n\tCOLOR = texture(source_panorama, SKY_COORDS).rgb * exposure;\n}\n"
+  },
+  {
+   "class": "PanoramaSkyMaterial",
+   "properties": {
+    "filter": false
+   },
+   "code": "\n// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's PanoramaSkyMaterial.\n\nshader_type sky;\n\nuniform sampler2D source_panorama : filter_nearest, source_color, hint_default_black;\nuniform float exposure : hint_range(0, 128) = 1.0;\n\nvoid sky() {\n\tCOLOR = texture(source_panorama, SKY_COORDS).rgb * exposure;\n}\n"
+  }
+ ],
+ "parameters": [
+  {
+   "class": "ProceduralSkyMaterial",
+   "properties": {},
+   "values": {
+    "exposure": "1.0",
+    "ground_bottom_color": "Color(0.2, 0.169, 0.133, 1)",
+    "ground_horizon_color": "Color(0.6463, 0.6558, 0.6708, 1)",
+    "inv_ground_curve": "30.000000670552268",
+    "inv_sky_curve": "3.999999841054287",
+    "inv_sun_curve": "22.782017",
+    "sky_cover_modulate": "Color(1, 1, 1, 1)",
+    "sky_horizon_color": "Color(0.6463, 0.6558, 0.6708, 1)",
+    "sky_top_color": "Color(0.385, 0.454, 0.55, 1)",
+    "sun_angle_max": "0.8660254"
+   }
+  },
+  {
+   "class": "ProceduralSkyMaterial",
+   "properties": {
+    "energy_multiplier": 3,
+    "ground_bottom_color": "Color(0.05, 0.3, 0.1, 1)",
+    "ground_curve": 0.3,
+    "ground_energy_multiplier": 0.25,
+    "ground_horizon_color": "Color(0.9, 0.9, 0.7, 1)",
+    "sky_cover_modulate": "Color(0.2, 0.4, 0.6, 0.5)",
+    "sky_curve": 0.5,
+    "sky_energy_multiplier": 2.5,
+    "sky_horizon_color": "Color(0.8, 0.5, 0.2, 1)",
+    "sky_top_color": "Color(0.1, 0.3, 0.9, 1)",
+    "sun_angle_max": 90,
+    "sun_curve": 0.6
+   },
+   "values": {
+    "exposure": "3.0",
+    "ground_bottom_color": "Color(0.0125, 0.075, 0.025, 0.25)",
+    "ground_horizon_color": "Color(0.225, 0.225, 0.175, 0.25)",
+    "inv_ground_curve": "1.9999999205271435",
+    "inv_sky_curve": "1.2",
+    "inv_sun_curve": "3.2712085",
+    "sky_cover_modulate": "Color(0.2, 0.4, 0.6, 1.25)",
+    "sky_horizon_color": "Color(2, 1.25, 0.5, 2.5)",
+    "sky_top_color": "Color(0.25, 0.75, 2.25, 2.5)",
+    "sun_angle_max": "-4.371139e-08"
+   }
+  },
+  {
+   "class": "ProceduralSkyMaterial",
+   "properties": {
+    "energy_multiplier": 0,
+    "ground_curve": -0.5,
+    "ground_energy_multiplier": 70,
+    "sky_curve": 0,
+    "sky_energy_multiplier": 0,
+    "sun_angle_max": 0,
+    "sun_curve": 0
+   },
+   "values": {
+    "exposure": "0.0",
+    "ground_bottom_color": "Color(14, 11.83, 9.31, 70)",
+    "ground_horizon_color": "Color(45.241, 45.906, 46.955997, 70)",
+    "inv_ground_curve": "-1.2",
+    "inv_sky_curve": "inf",
+    "inv_sun_curve": "inf",
+    "sky_cover_modulate": "Color(1, 1, 1, 0)",
+    "sky_horizon_color": "Color(0, 0, 0, 0)",
+    "sky_top_color": "Color(0, 0, 0, 0)",
+    "sun_angle_max": "1.0"
+   }
+  },
+  {
+   "class": "ProceduralSkyMaterial",
+   "properties": {
+    "energy_multiplier": 200,
+    "ground_curve": 1,
+    "sky_curve": 4,
+    "sun_angle_max": 360,
+    "sun_curve": 2.5
+   },
+   "values": {
+    "exposure": "200.0",
+    "ground_bottom_color": "Color(0.2, 0.169, 0.133, 1)",
+    "ground_horizon_color": "Color(0.6463, 0.6558, 0.6708, 1)",
+    "inv_ground_curve": "0.6",
+    "inv_sky_curve": "0.15",
+    "inv_sun_curve": "0.4436127",
+    "sky_cover_modulate": "Color(1, 1, 1, 1)",
+    "sky_horizon_color": "Color(0.6463, 0.6558, 0.6708, 1)",
+    "sky_top_color": "Color(0.385, 0.454, 0.55, 1)",
+    "sun_angle_max": "1.0"
+   }
+  },
+  {
+   "class": "PanoramaSkyMaterial",
+   "properties": {},
+   "values": {
+    "exposure": "1.0"
+   }
+  },
+  {
+   "class": "PanoramaSkyMaterial",
+   "properties": {
+    "energy_multiplier": 0
+   },
+   "values": {
+    "exposure": "0.0"
+   }
+  },
+  {
+   "class": "PanoramaSkyMaterial",
+   "properties": {
+    "energy_multiplier": 7.5
+   },
+   "values": {
+    "exposure": "7.5"
+   }
+  },
+  {
+   "class": "PhysicalSkyMaterial",
+   "properties": {},
+   "values": {
+    "exposure": "1.0",
+    "ground_color": "Color(0.1, 0.07, 0.034, 1)",
+    "mie": "0.005",
+    "mie_color": "Color(0.69, 0.729, 0.812, 1)",
+    "mie_eccentricity": "0.8",
+    "rayleigh": "2.0",
+    "rayleigh_color": "Color(0.3, 0.405, 0.6, 1)",
+    "sun_disk_scale": "1.0",
+    "turbidity": "10.0"
+   }
+  },
+  {
+   "class": "PhysicalSkyMaterial",
+   "properties": {
+    "energy_multiplier": 2,
+    "ground_color": "Color(0.4, 0.4, 0.8, 1)",
+    "mie_coefficient": 0.05,
+    "mie_color": "Color(0.1, 0.8, 0.3, 1)",
+    "mie_eccentricity": -0.4,
+    "rayleigh_coefficient": 6,
+    "rayleigh_color": "Color(0.9, 0.2, 0.1, 1)",
+    "sun_disk_scale": 12,
+    "turbidity": 100
+   },
+   "values": {
+    "exposure": "2.0",
+    "ground_color": "Color(0.4, 0.4, 0.8, 1)",
+    "mie": "0.05",
+    "mie_color": "Color(0.1, 0.8, 0.3, 1)",
+    "mie_eccentricity": "-0.4",
+    "rayleigh": "6.0",
+    "rayleigh_color": "Color(0.9, 0.2, 0.1, 1)",
+    "sun_disk_scale": "12.0",
+    "turbidity": "100.0"
+   }
+  },
+  {
+   "class": "PhysicalSkyMaterial",
+   "properties": {
+    "energy_multiplier": 0,
+    "mie_coefficient": 0,
+    "mie_eccentricity": 0,
+    "rayleigh_coefficient": 0,
+    "sun_disk_scale": 0,
+    "turbidity": 0
+   },
+   "values": {
+    "exposure": "0.0",
+    "ground_color": "Color(0.1, 0.07, 0.034, 1)",
+    "mie": "0.0",
+    "mie_color": "Color(0.69, 0.729, 0.812, 1)",
+    "mie_eccentricity": "0.0",
+    "rayleigh": "0.0",
+    "rayleigh_color": "Color(0.3, 0.405, 0.6, 1)",
+    "sun_disk_scale": "0.0",
+    "turbidity": "0.0"
+   }
+  }
+ ]
+}

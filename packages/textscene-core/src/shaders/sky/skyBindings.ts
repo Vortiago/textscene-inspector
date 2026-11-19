@@ -27,6 +27,19 @@ export interface SkyFog {
   readonly density: number;
 }
 
+/** The environment's volumetric fog as the background reads it (`sky.cpp:1148-1165`, `:1227-1228`). */
+export interface SkyVolumetricFog {
+  /** The fog's froxel volume, rows bottom first, which the background reads at its far end (`sky.glsl:150-158`). */
+  readonly volume: THREE.Texture;
+  /** 1 over the fog's length, or 1 for a fog of no length. */
+  readonly inverseLength: number;
+  /** 1 over the detail spread, or 1 for a spread of 0. */
+  readonly inverseDetailSpread: number;
+  readonly skyAffect: number;
+  /** `rendering/environment/fog/use_legacy_blending`. */
+  readonly isLegacyBlending: boolean;
+}
+
 /** What the sky background pass reads from a frame. */
 export interface SkyScene {
   /** The camera of the render: the sky reads its projection and its world matrix. */
@@ -41,6 +54,8 @@ export interface SkyScene {
   readonly brightness: number;
   /** The environment's fog, or nothing when it is off. */
   readonly fog?: SkyFog;
+  /** The environment's volumetric fog, or nothing when it is off. */
+  readonly volumetricFog?: SkyVolumetricFog;
   /** At most the four lights the sky reads (`sky.cpp:707`). */
   readonly lights: readonly SkyLight[];
   /** The octmap's border size, 1 minus twice its padding in UV, for the octmap pass alone. */
@@ -93,6 +108,31 @@ export const SKY_BINDINGS: readonly Binding<SkyScene>[] = [
     value: (scene) => scene.fog?.skyAffect ?? 0,
   },
   {
+    uniform: 'sky_scene_data.volumetric_fog_enabled',
+    godot: 'sky.cpp:1148-1151',
+    value: (scene) => scene.volumetricFog !== undefined,
+  },
+  {
+    uniform: 'sky_scene_data.volumetric_fog_inv_length',
+    godot: 'sky.cpp:1153-1158',
+    value: (scene) => scene.volumetricFog?.inverseLength ?? 0,
+  },
+  {
+    uniform: 'sky_scene_data.volumetric_fog_detail_spread',
+    godot: 'sky.cpp:1160-1165',
+    value: (scene) => scene.volumetricFog?.inverseDetailSpread ?? 0,
+  },
+  {
+    uniform: 'sky_scene_data.volumetric_fog_sky_affect',
+    godot: 'sky.cpp:1227',
+    value: (scene) => scene.volumetricFog?.skyAffect ?? 0,
+  },
+  {
+    uniform: 'sky_scene_data.fog_use_legacy_blending',
+    godot: 'sky.cpp:1228',
+    value: (scene) => scene.volumetricFog?.isLegacyBlending ?? false,
+  },
+  {
     uniform: 'sky_scene_data.directional_light_count',
     godot: 'sky.cpp:1098',
     value: (scene) => Math.min(scene.lights.length, SKY_LIGHTS),
@@ -119,9 +159,13 @@ export const SKY_BINDINGS: readonly Binding<SkyScene>[] = [
   },
 ];
 
-/** Writes each uniform the binding table names, from `scene`, in each pass of `sky`. */
+/** Writes each uniform the binding table names, and the fog's volume, from `scene`, in each pass of `sky`. */
 export function writeSkyBindings(sky: TranspiledSky, scene: SkyScene): void {
-  for (const draw of skyDraws(sky)) writeBindings(SKY_BINDINGS, draw.uniforms, scene);
+  for (const draw of skyDraws(sky)) {
+    writeBindings(SKY_BINDINGS, draw.uniforms, scene);
+    const volume = draw.textures.get('volumetric_fog_texture');
+    if (volume && scene.volumetricFog) volume.value = scene.volumetricFog.volume;
+  }
 }
 
 /** The sky's basis: the inverse sky rotation, then the camera's (`sky.cpp:1501-1507`). */

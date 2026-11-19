@@ -22,8 +22,6 @@ import { installDirectionalShadowAtlas } from '../directionalShadow/shadowAtlasC
 import { installGodotSplitShadow } from '../directionalShadow/splitShadowChunk.js';
 import { installGodotPositionalShadow } from '../positionalShadow/positionalShadowChunk.js';
 import { installFogComposite } from '../fog/fogComposite.js';
-import { installSkyProjection } from '../sky/skyProjection.js';
-import { installSkyDebanding } from '../sky/skyDebanding.js';
 import { installEmissionExposure } from '../exposure/emissionExposure.js';
 import { installGodotScreenSpaceReflection } from '../screenSpaceReflection/ssrSceneChunk.js';
 import { installGodotScreenSpaceAmbientOcclusion } from '../screenSpaceAmbientOcclusion/ssaoSceneChunk.js';
@@ -57,8 +55,6 @@ const SHADER_PATCH_INSTALLS: readonly (() => unknown)[] = [
   installGodotPositionalShadow,
   installCanvasSrgbMultiply,
   installFogComposite,
-  installSkyProjection,
-  installSkyDebanding,
   installEmissionExposure,
 ];
 

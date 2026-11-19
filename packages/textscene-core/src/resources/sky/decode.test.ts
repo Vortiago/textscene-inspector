@@ -1,144 +1,10 @@
-/**
- * Sky resource decode: `Sky` and the three sky materials. Every default is the
- * value Godot's constructor installs (`scene/resources/3d/sky_material.cpp`).
- * Values stay in Godot space: `sky_curve` is the authored 0.15, and `build.ts`
- * converts it on upload.
- */
 import { describe, expect, it } from 'vitest';
-import {
-  decodeSky,
-  decodeSkyMaterial,
-  decodeSkyProcessing,
-  skyUpdateMode,
-  withAutomaticBake,
-} from './decode';
+import { decodeSky, decodeSkyProcessing, skyUpdateMode, withAutomaticBake } from './decode';
+import { skyMaterialText } from './skyMaterialText';
+import { readShaderSky } from './shaderSky';
 import { warningsOf } from '../../r3f/testing/logWarnings';
 import type { Sky, SkyBake } from './types';
 import type { SkyUsage } from '../../shaders/sky/skyUsage';
-
-describe('decodeSkyMaterial — ProceduralSkyMaterial', () => {
-  it('applies Godot’s constructor defaults for a bare material', () => {
-    const sky = decodeSkyMaterial('ProceduralSkyMaterial', {});
-    expect(sky).toEqual({
-      kind: 'procedural',
-      sky_top_color: { r: 0.385, g: 0.454, b: 0.55, a: 1 },
-      sky_horizon_color: { r: 0.6463, g: 0.6558, b: 0.6708, a: 1 },
-      sky_curve: 0.15,
-      sky_energy_multiplier: 1,
-      ground_bottom_color: { r: 0.2, g: 0.169, b: 0.133, a: 1 },
-      ground_horizon_color: { r: 0.6463, g: 0.6558, b: 0.6708, a: 1 },
-      ground_curve: 0.02,
-      ground_energy_multiplier: 1,
-      sun_angle_max: 30,
-      sun_curve: 0.15,
-      energy_multiplier: 1,
-      use_debanding: true,
-    });
-  });
-
-  it('reads authored colours and scalars', () => {
-    const sky = decodeSkyMaterial('ProceduralSkyMaterial', {
-      sky_top_color: 'Color(0.1, 0.2, 0.3, 1)',
-      ground_bottom_color: 'Color(0.4, 0.5, 0.6, 1)',
-      sky_curve: '0.5',
-      energy_multiplier: '2.5',
-    });
-    expect(sky).toMatchObject({
-      sky_top_color: { r: 0.1, g: 0.2, b: 0.3, a: 1 },
-      ground_bottom_color: { r: 0.4, g: 0.5, b: 0.6, a: 1 },
-      sky_curve: 0.5,
-      energy_multiplier: 2.5,
-    });
-  });
-
-  it('keeps the untouched properties at their defaults when one is authored', () => {
-    const sky = decodeSkyMaterial('ProceduralSkyMaterial', { sky_curve: '0.5' });
-    expect(sky).toMatchObject({ ground_curve: 0.02, sun_angle_max: 30 });
-  });
-
-  it('falls back to the default for a malformed scalar rather than NaN', () => {
-    const sky = decodeSkyMaterial('ProceduralSkyMaterial', { sky_curve: 'not-a-number' });
-    expect(sky).toMatchObject({ sky_curve: 0.15 });
-  });
-
-  it('reads an authored use_debanding', () => {
-    const sky = decodeSkyMaterial('ProceduralSkyMaterial', { use_debanding: 'false' });
-    expect(sky).toMatchObject({ use_debanding: false });
-  });
-
-  it('keeps the debanding default and warns for a malformed use_debanding (error case)', () => {
-    let sky: unknown;
-    const warnings = warningsOf(() => {
-      sky = decodeSkyMaterial('ProceduralSkyMaterial', { use_debanding: 'maybe' });
-    });
-    expect(sky).toMatchObject({ use_debanding: true });
-    expect(warnings.join('\n')).toContain('use_debanding');
-  });
-});
-
-describe('decodeSkyMaterial — PanoramaSkyMaterial', () => {
-  it('carries the panorama reference and Godot’s energy default', () => {
-    const sky = decodeSkyMaterial('PanoramaSkyMaterial', {
-      panorama: 'ExtResource("1_sky")',
-    });
-    expect(sky).toEqual({
-      kind: 'panorama',
-      panorama: 'ExtResource("1_sky")',
-      filter: true,
-      energy_multiplier: 1,
-    });
-  });
-
-  it('parses with no panorama at all — an unset texture is a black sky, not an error', () => {
-    expect(decodeSkyMaterial('PanoramaSkyMaterial', {})).toEqual({
-      kind: 'panorama',
-      panorama: undefined,
-      filter: true,
-      energy_multiplier: 1,
-    });
-  });
-
-  it('decodes `filter = false` as nearest sampling (`sky_material.cpp:498-505`)', () => {
-    expect(decodeSkyMaterial('PanoramaSkyMaterial', { filter: 'false' })).toMatchObject({ filter: false });
-  });
-});
-
-describe('decodeSkyMaterial — PhysicalSkyMaterial', () => {
-  it('applies Godot’s constructor defaults', () => {
-    expect(decodeSkyMaterial('PhysicalSkyMaterial', {})).toEqual({
-      kind: 'physical',
-      rayleigh_coefficient: 2,
-      rayleigh_color: { r: 0.3, g: 0.405, b: 0.6, a: 1 },
-      mie_coefficient: 0.005,
-      mie_eccentricity: 0.8,
-      mie_color: { r: 0.69, g: 0.729, b: 0.812, a: 1 },
-      turbidity: 10,
-      sun_disk_scale: 1,
-      ground_color: { r: 0.1, g: 0.07, b: 0.034, a: 1 },
-      energy_multiplier: 1,
-      use_debanding: true,
-    });
-  });
-
-  it('reads an authored use_debanding', () => {
-    expect(decodeSkyMaterial('PhysicalSkyMaterial', { use_debanding: 'false' })).toMatchObject({
-      use_debanding: false,
-    });
-  });
-
-  it('reads authored atmosphere scalars', () => {
-    expect(
-      decodeSkyMaterial('PhysicalSkyMaterial', { turbidity: '2.5', mie_eccentricity: '-0.5' })
-    ).toMatchObject({ turbidity: 2.5, mie_eccentricity: -0.5 });
-  });
-});
-
-describe('decodeSkyMaterial — unsupported', () => {
-  it('returns null for a sky material type we do not implement', () => {
-    // Godot ships three. Null means "render no sky", never a mis-parsed one.
-    expect(decodeSkyMaterial('SomeAddonSkyMaterial', {})).toBeNull();
-  });
-});
 
 describe('decodeSkyProcessing — how a Sky bakes its radiance', () => {
   it('applies Godot’s defaults, Automatic at 256, for a bare Sky', () => {
@@ -165,7 +31,7 @@ describe('decodeSkyProcessing — how a Sky bakes its radiance', () => {
 });
 
 describe('decodeSky — the filter that bakes a Sky’s layers', () => {
-  const material = decodeSkyMaterial('ProceduralSkyMaterial', {})!;
+  const material = skyMaterialText('ProceduralSkyMaterial', {}, {})!;
 
   it('carries the material it draws', () => {
     expect(decodeSky({}, material).material).toBe(material);
@@ -185,7 +51,7 @@ describe('decodeSky — the filter that bakes a Sky’s layers', () => {
 });
 
 describe('decodeSky — the size a Sky’s radiance bakes at', () => {
-  const material = decodeSkyMaterial('ProceduralSkyMaterial', {})!;
+  const material = skyMaterialText('ProceduralSkyMaterial', {}, {})!;
 
   it('bakes at 256 by default', () => {
     expect(decodeSky({}, material).radianceSize).toBe(256);
@@ -223,7 +89,6 @@ describe('skyUpdateMode — the mode Godot picks for an Automatic sky', () => {
   };
   const shaderSky = (usage: Partial<SkyUsage>, data: Record<string, string> = {}): Sky =>
     decodeSky(data, {
-      kind: 'shader',
       code: '',
       file: 'res://sky.gdshader',
       parameters: {},
@@ -260,7 +125,10 @@ describe('skyUpdateMode — the mode Godot picks for an Automatic sky', () => {
   });
 
   it('runs every built-in material incrementally, since each holds uniforms', () => {
-    const panorama = decodeSky({}, decodeSkyMaterial('PanoramaSkyMaterial', {})!);
+    const panorama = decodeSky(
+      {},
+      readShaderSky(skyMaterialText('PanoramaSkyMaterial', {}, {})!, { decoders: {} })
+    );
     expect(skyUpdateMode(panorama, false)).toBe('incremental');
   });
 
@@ -272,7 +140,6 @@ describe('skyUpdateMode — the mode Godot picks for an Automatic sky', () => {
 describe('withAutomaticBake — the filter of an Automatic shader sky', () => {
   const shaderSky = (time: boolean, data: Record<string, string> = {}): Sky =>
     decodeSky(data, {
-      kind: 'shader',
       code: '',
       file: 'res://sky.gdshader',
       parameters: {},

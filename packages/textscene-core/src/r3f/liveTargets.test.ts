@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import {
   fillLiveCopy,
   hasHeldCopies,
+  heldLiveTargetCopy,
   liveTargetCopy,
   liveTargetCrop,
   liveTargetDrawCount,
@@ -360,5 +361,43 @@ describe('a target that readers sample', () => {
     expect(hasHeldCopies(target.texture)).toBe(false);
     withdrawals.push(holdUntilReleased(second));
     expect(hasHeldCopies(target.texture)).toBe(true);
+  });
+});
+
+describe('heldLiveTargetCopy', () => {
+  const NO_SAMPLER = () => {};
+
+  it('gives null for a render target no pass redraws', () => {
+    const target = createCanvasTarget(32, 16, 'SubViewport', canvasColorSpaceOf(false));
+    expect(heldLiveTargetCopy(target.texture, NO_SAMPLER)).toBeNull();
+  });
+
+  it('fills the copy now from the renderer that publishes the target', () => {
+    const target = createCanvasTarget(32, 16, 'SubViewport', canvasColorSpaceOf(false));
+    const { gl, drawnInto } = recordingRenderer();
+    withdrawals.push(publishLiveTargets([target.texture], gl, false));
+    const { copy, release } = heldLiveTargetCopy(target.texture, NO_SAMPLER)!;
+    withdrawals.push(release);
+    expect(drawnInto.map((drawn) => drawn?.texture)).toEqual([copy]);
+  });
+
+  // three sets a render target's sampler once, as the first fill sets the target up.
+  it('gives the copy its sampler before the first fill', () => {
+    const target = createCanvasTarget(32, 16, 'SubViewport', canvasColorSpaceOf(false));
+    const { gl, drawnInto } = recordingRenderer();
+    withdrawals.push(publishLiveTargets([target.texture], gl, false));
+    let fillsBeforeSampler = -1;
+    const { release } = heldLiveTargetCopy(target.texture, () => (fillsBeforeSampler = drawnInto.length))!;
+    withdrawals.push(release);
+    expect(fillsBeforeSampler).toBe(0);
+  });
+
+  it('is refilled after each render of the target until it is released', async () => {
+    const target = liveCanvasTarget();
+    const { copy, release } = heldLiveTargetCopy(target.texture, NO_SAMPLER)!;
+    expect(copiesFilledFrom(target.texture)).toEqual([copy]);
+    release();
+    await Promise.resolve();
+    expect(copiesFilledFrom(target.texture)).toEqual([]);
   });
 });

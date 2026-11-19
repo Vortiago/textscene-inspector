@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { decompress as zstd } from 'fzstd';
 import * as transpiler from '../../resources/sky/shaderSky';
-import { decodeSky, decodeSkyMaterial } from '../../resources/sky/decode';
+import { decodeSky } from '../../resources/sky/decode';
+import { skyMaterialText } from '../../resources/sky/skyMaterialText';
 import type { AuthoredSky } from '../../resources/sky/types';
 import { useReadSky } from './readSky';
 
@@ -14,14 +15,14 @@ const ZSTD =
 const CODE = `shader_type sky;\n#if PackedByteArray(${ZSTD}).decompress(29, 2).get_string_from_ascii() == "hello hello hello hello world"\nuniform samplerCube faces;\n#endif\nvoid sky() {}\n`;
 
 function shaderSky(code: string): AuthoredSky {
-  return decodeSky({}, { kind: 'shader', code, file: 'res://sky.gdshader', parameters: {}, textures: {} });
+  return decodeSky({}, { code, file: 'res://sky.gdshader', parameters: {}, textures: {} });
 }
 
 describe('useReadSky', () => {
   it('reads the samplers behind a decompressing `#if` with the decoders', () => {
     const { result } = renderHook(() => useReadSky(shaderSky(CODE), transpiler, { decoders: { zstd } }));
     const material = result.current?.material;
-    expect(material?.kind === 'shader' && material.usage.samplers).toEqual({
+    expect(material?.usage.samplers).toEqual({
       faces: { kind: 'cube', isColor: false },
     });
   });
@@ -43,9 +44,10 @@ describe('useReadSky', () => {
     ).toBeNull();
   });
 
-  it('keeps a built-in sky, which needs no transpiler (edge case)', () => {
-    const sky = decodeSky({}, decodeSkyMaterial('ProceduralSkyMaterial', {})!);
-    expect(renderHook(() => useReadSky(sky, null, null)).result.current).toBe(sky);
+  it('reads a built-in sky through the transpiler, as the shader Godot generates for it', () => {
+    const sky = decodeSky({}, skyMaterialText('ProceduralSkyMaterial', {}, {})!);
+    const read = renderHook(() => useReadSky(sky, transpiler, { decoders: {} })).result.current;
+    expect(read?.material.usage.light).toBe(true);
   });
 
   it('bakes an Automatic sky whose shader reads TIME with the fast filter, as Godot runs it in real time', () => {

@@ -1,23 +1,12 @@
-/**
- * Sky slice decode (ADR-0031). Every default is the value Godot's constructor
- * installs (`scene/resources/3d/sky_material.cpp`): a sky usually omits most
- * properties, so a wrong default looks like a wrong shader.
- */
-
-import type { AuthoredSkyProperties, BuiltInSkyProperties, Sky, SkyBake, SkyProcessing } from './types';
+import type { ShaderSkyText, Sky, SkyBake, SkyProcessing } from './types';
 import {
   automaticSkyMode,
   type SkyProcessMode,
   type SkyUpdateMode,
 } from '../../godot/rendering/environment/skyRadianceUpdate';
-import { materialReadsLights } from './readsLights';
 import { REAL_TIME_RADIANCE_SIZE } from '../../godot/rendering/environment/skyReflection';
 import { SKY_RADIANCE_SIZES, SKY_RADIANCE_SIZE_DEFAULT } from '../../godot/scene/sky';
-import { boolOr, floatOr, parseOptionalInt } from '../../parser/valueParsers';
-import { colorOr } from '../../utils/colorParser';
-import type { Rgba } from '../../godot/math/math';
-
-const rgb = (r: number, g: number, b: number): Rgba => ({ r, g, b, a: 1 });
+import { parseOptionalInt } from '../../parser/valueParsers';
 
 /** `Sky::ProcessMode` by its value (`scene/resources/sky.h:51-56`). */
 const PROCESS_MODES: readonly SkyProcessMode[] = ['automatic', 'quality', 'incremental', 'real-time'];
@@ -44,7 +33,7 @@ function entryOr<T>(table: readonly T[], value: string | undefined, fallback: T)
  * The `Sky` whose properties are `data`, drawing `material`. An invalid value reads as
  * `decodeSkyProcessing` reads it.
  */
-export function decodeSky<Material extends AuthoredSkyProperties>(
+export function decodeSky<Material extends ShaderSkyText>(
   data: Record<string, string>,
   material: Material
 ): Sky<Material> {
@@ -62,14 +51,7 @@ const REAL_TIME_BAKE: SkyBake = { radianceFilter: 'fast', radianceSize: REAL_TIM
 /** The mode Godot runs `sky` in: Automatic resolves from the material and the scene's fog. */
 export function skyUpdateMode(sky: Sky, fogScattersSun: boolean): SkyUpdateMode {
   if (sky.processMode !== 'automatic') return sky.processMode;
-  const { material } = sky;
-  const usage = material.kind === 'shader' ? material.usage : builtInUsage(material);
-  return automaticSkyMode({ ...usage, radianceSize: sky.radianceSize, fogScattersSun });
-}
-
-/** Every built-in sky material holds uniforms and reads neither `TIME` nor `POSITION`. */
-function builtInUsage(material: BuiltInSkyProperties) {
-  return { light: materialReadsLights(material), time: false, position: false, hasBufferUniforms: true };
+  return automaticSkyMode({ ...sky.material.usage, radianceSize: sky.radianceSize, fogScattersSun });
 }
 
 /** `sky` with the fast filter when Automatic runs it real-time, which the scene's fog never decides. */
@@ -77,51 +59,4 @@ export function withAutomaticBake(sky: Sky): Sky {
   return sky.processMode === 'automatic' && skyUpdateMode(sky, false) === 'real-time'
     ? { ...sky, ...REAL_TIME_BAKE }
     : sky;
-}
-
-export function decodeSkyMaterial(type: string, data: Record<string, string>): BuiltInSkyProperties | null {
-  switch (type) {
-    case 'ProceduralSkyMaterial':
-      return {
-        kind: 'procedural',
-        sky_top_color: colorOr(data.sky_top_color, rgb(0.385, 0.454, 0.55)),
-        sky_horizon_color: colorOr(data.sky_horizon_color, rgb(0.6463, 0.6558, 0.6708)),
-        sky_curve: floatOr(data.sky_curve, 0.15, 'sky_curve'),
-        sky_energy_multiplier: floatOr(data.sky_energy_multiplier, 1, 'sky_energy_multiplier'),
-        ground_bottom_color: colorOr(data.ground_bottom_color, rgb(0.2, 0.169, 0.133)),
-        ground_horizon_color: colorOr(data.ground_horizon_color, rgb(0.6463, 0.6558, 0.6708)),
-        ground_curve: floatOr(data.ground_curve, 0.02, 'ground_curve'),
-        ground_energy_multiplier: floatOr(data.ground_energy_multiplier, 1, 'ground_energy_multiplier'),
-        sun_angle_max: floatOr(data.sun_angle_max, 30, 'sun_angle_max'),
-        sun_curve: floatOr(data.sun_curve, 0.15, 'sun_curve'),
-        energy_multiplier: floatOr(data.energy_multiplier, 1, 'energy_multiplier'),
-        use_debanding: boolOr(data.use_debanding, true, 'use_debanding'),
-      };
-
-    case 'PanoramaSkyMaterial':
-      return {
-        kind: 'panorama',
-        panorama: data.panorama,
-        filter: boolOr(data.filter, true, 'filter'),
-        energy_multiplier: floatOr(data.energy_multiplier, 1, 'energy_multiplier'),
-      };
-
-    case 'PhysicalSkyMaterial':
-      return {
-        kind: 'physical',
-        rayleigh_coefficient: floatOr(data.rayleigh_coefficient, 2, 'rayleigh_coefficient'),
-        rayleigh_color: colorOr(data.rayleigh_color, rgb(0.3, 0.405, 0.6)),
-        mie_coefficient: floatOr(data.mie_coefficient, 0.005, 'mie_coefficient'),
-        mie_eccentricity: floatOr(data.mie_eccentricity, 0.8, 'mie_eccentricity'),
-        mie_color: colorOr(data.mie_color, rgb(0.69, 0.729, 0.812)),
-        turbidity: floatOr(data.turbidity, 10, 'turbidity'),
-        sun_disk_scale: floatOr(data.sun_disk_scale, 1, 'sun_disk_scale'),
-        ground_color: colorOr(data.ground_color, rgb(0.1, 0.07, 0.034)),
-        energy_multiplier: floatOr(data.energy_multiplier, 1, 'energy_multiplier'),
-        use_debanding: boolOr(data.use_debanding, true, 'use_debanding'),
-      };
-
-    default:
-      return null;
-  }
 }

@@ -1,7 +1,14 @@
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
-import { optionalReference, type Follow, type HeldResource, type ResourceKind } from '../../reading';
+import {
+  optionalReference,
+  type Follow,
+  type HeldResource,
+  type ResourceKind,
+  type ScopedReference,
+} from '../../reading';
 import { ShaderMode, shaderModeOf } from '../../../godot/rendering/shaderLanguage';
-import { decodeSkyMaterial } from '../../sky/decode';
+import { resourceRef } from '../../../godot/variant/resourceRef';
+import { skyMaterialText } from '../../sky/skyMaterialText';
 import { decodeShaderText } from '../shadermaterial/decode';
 import { decodeStandardMaterial3D } from '../standardmaterial3d/decode';
 import type { TextureSlot } from '../standardmaterial3d/types';
@@ -35,16 +42,16 @@ function shaderMaterial(properties: Readonly<Record<string, string>>, follow: Fo
   const shader = decodeShaderText(properties, follow);
   if (!shader) return { form: 'declined', type: 'ShaderMaterial' };
   const mode = shaderModeOf(shader.code);
-  if (mode === ShaderMode.SKY)
-    return { form: 'sky', type: 'ShaderMaterial', properties: { kind: 'shader', ...shader }, panorama: null };
+  if (mode === ShaderMode.SKY) return { form: 'sky', type: 'ShaderMaterial', properties: shader };
   if (mode === ShaderMode.SPATIAL) return { form: 'spatial-shader', shader };
   return { form: 'declined', type: 'ShaderMaterial' };
 }
 
-/** The sky material of a class the previewer builds a sky from, or null for any other class. */
+/** The sky material of a class whose shader Godot generates, or null for any other class. */
 function skyMaterial({ type, properties }: HeldResource, follow: Follow): SkyMaterial | null {
-  const decoded = decodeSkyMaterial(type, properties);
-  if (!decoded) return null;
-  const panorama = decoded.kind === 'panorama' ? optionalReference(follow, decoded.panorama) : null;
-  return { form: 'sky', type, properties: decoded, panorama };
+  const textures: Record<string, ScopedReference> = {};
+  for (const [name, value] of Object.entries(properties))
+    if (resourceRef(value)) textures[name] = follow.reference(value);
+  const shader = skyMaterialText(type, properties, textures);
+  return shader && { form: 'sky', type, properties: shader };
 }

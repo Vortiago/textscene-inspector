@@ -30,10 +30,12 @@ export function readShaderSky(material: ShaderSkyText, options: ProjectShaderOpt
   return { ...material, usage: skyUsage('parsed' in compile ? compile.parsed.tree : null) };
 }
 
-/** Null when the sky cannot render, as `buildSkyEnvironment` answers. */
+/**
+ * Null when the sky cannot render: a headless test renderer, a lost context, or a driver that refuses
+ * the float render target. The caller then leaves the background and environment alone.
+ */
 export function buildShaderSkyEnvironment(
   gl: THREE.WebGLRenderer,
-  material: ShaderSkyProperties,
   {
     sky,
     lights,
@@ -44,6 +46,7 @@ export function buildShaderSkyEnvironment(
     sampling = GODOT_SAMPLING,
   }: SkyEnvironmentInput
 ): SkyEnvironment | null {
+  const { material } = sky;
   const transpiled = (pass: SkyPass) =>
     transpiledShaderSky(material, { textures, shaderOptions, sampling }, pass);
   let background: ShaderSkyBackground | null = null;

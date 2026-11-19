@@ -114,6 +114,12 @@ describe('transpileSky', () => {
     expect(sky.textures.get('radiance')!.value).toBe(radiance);
   });
 
+  it("reads the fog volume's rows bottom first, as a GL pass writes them, at Godot's screen UV", () => {
+    expect(fragmentOf(transpileSky(DEFAULT_SKY))).toMatch(
+      /texture\( nodeUniform\d+, vec3\( (\w+)\.x, \( 1\.0 - \1\.y \), \1\.z \) \)/
+    );
+  });
+
   it('writes no depth', () => {
     expect(transpileSky(DEFAULT_SKY).mesh.material.depthWrite).toBe(false);
   });
