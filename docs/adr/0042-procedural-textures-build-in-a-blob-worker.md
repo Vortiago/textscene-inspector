@@ -40,6 +40,8 @@ from a `blob:` URL.** The webview CSP gains `worker-src blob:` and nothing else.
   and so does the in-thread fallback, which runs when the worker fails to start, as
   under a page policy with no `worker-src blob:`. The fallback is the synchronous build that existed before, so
   it gives the same bytes.
+- **Confirmed in Chromium only.** The worker path and the fallback under a blocked `blob:`
+  worker are confirmed in Chromium. WebKit and Firefox were not run.
 
 **A large texture uploads in bands, at the site that draws it.** A built texture still
 reaches the GPU in one `texImage2D`, which took 34–435 ms for 4096² RGBA in headless
