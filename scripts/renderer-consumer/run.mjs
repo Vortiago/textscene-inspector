@@ -16,6 +16,8 @@ import { pickFailures } from './pickFailures.mjs';
 import { RENDER_TIMEOUT_MS, pollInk } from './pollInk.mjs';
 import { runSwitchChecks } from './switchChecks.mjs';
 import { switchFailures } from './switchFailures.mjs';
+import { runCameraChecks } from './cameraChecks.mjs';
+import { cameraFailures } from './cameraFailures.mjs';
 
 /* global document, getComputedStyle, window */
 // These exist only in the browser that runs the `page.evaluate` calls.
@@ -117,8 +119,9 @@ async function renderInBrowser(directory) {
       await browser.newPage(),
       `http://localhost:${port}/?checks=switch`
     );
+    const cameras = await runCameraChecks(await browser.newPage(), `http://localhost:${port}/?checks=camera`);
     const picked = await runPickChecks(await browser.newPage(), `http://localhost:${port}/?checks=pick`);
-    return { drawn, mounted, held, switched, picked };
+    return { drawn, mounted, held, switched, cameras, picked };
   } finally {
     await browser.close();
     await server.close();
@@ -192,7 +195,7 @@ function callFailures(drawn) {
 }
 
 /** One line per failed check of every view and of `mountScene`. */
-function failures({ drawn, mounted, held, switched, picked }) {
+function failures({ drawn, mounted, held, switched, cameras, picked }) {
   return [
     ...Object.entries(drawn).flatMap(([view, result]) => failuresOf(view, result)),
     ...writeFailures(drawn),
@@ -203,6 +206,7 @@ function failures({ drawn, mounted, held, switched, picked }) {
     ...heldResourceFailures(held.results),
     ...held.errors.map((message) => `held resource: page error: ${message}`),
     ...switchFailures(switched),
+    ...cameraFailures(cameras),
     ...pickFailures(picked),
   ];
 }

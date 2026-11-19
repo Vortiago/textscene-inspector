@@ -1,4 +1,5 @@
-import { act } from '@testing-library/react';
+import { act, render } from '@testing-library/react';
+import { useLayoutEffect } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mountScene } from './mountScene';
 import { openScene } from '../scene/openScene';
@@ -139,6 +140,23 @@ describe('View.update', () => {
         ['game', 'never'],
       ])
     );
+    view.dispose();
+  });
+
+  it('loses the replaced canvas of a switch a host calls inside its own React commit', async () => {
+    const host = element();
+    const view = await mountedIn(host, { mode: '3D' });
+    const replaced = host.querySelector('canvas')!;
+    const getContext = vi.spyOn(replaced, 'getContext');
+    const Switcher = () => {
+      useLayoutEffect(() => view.update({ mode: 'in-game' }), []);
+      return null;
+    };
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await act(async () => void render(<Switcher />));
+
+    await vi.waitFor(() => expect(getContext).toHaveBeenCalledWith('webgl2'));
     view.dispose();
   });
 });

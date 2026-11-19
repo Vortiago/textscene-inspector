@@ -5,7 +5,8 @@
  */
 
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
-import type { ReactNode } from 'react';
+import * as THREE from 'three';
+import type { ReactNode, RefObject } from 'react';
 import type { Camera as FiberCamera } from '@react-three/fiber';
 import type { Camera3DProperties } from './types';
 import {
@@ -19,6 +20,7 @@ import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { Camera3DProjectionType } from '../../../godot/scene/camera3d';
 import { CameraGizmo } from './Gizmo';
+import { adjustCameraTransform } from './godotCameraTransform';
 import { usePublishCamera } from '../../../r3f/environment/worldExposure';
 import { useResolvedCameraAttributes } from '../../../r3f/environment/useResolvedCameraAttributes';
 import { useRegisterSceneCamera } from '../../../r3f/sceneCameras';
@@ -37,21 +39,6 @@ export function Camera3D({ node, children }: NodeComponentProps) {
     () => transformFromNode3DProperties(properties),
     [properties]
   );
-
-  // `h_offset` / `v_offset` shift the camera along its local right / up vectors after the base
-  // transform: the unnormalised basis_x / basis_y columns mixed into the world-space position.
-  const offsetPosition = useMemo<[number, number, number]>(() => {
-    const t = properties.transform;
-    if (!t) return position;
-    const h = properties.h_offset ?? 0;
-    const v = properties.v_offset ?? 0;
-    if (h === 0 && v === 0) return position;
-    return [
-      position[0] + t.basis_x.x * h + t.basis_y.x * v,
-      position[1] + t.basis_x.y * h + t.basis_y.y * v,
-      position[2] + t.basis_x.z * h + t.basis_y.z * v,
-    ];
-  }, [position, properties.transform, properties.h_offset, properties.v_offset]);
 
   const safeNear = Math.max(0.001, properties.near);
   const safeFar = Math.max(safeNear + 0.1, properties.far);
@@ -83,7 +70,9 @@ export function Camera3D({ node, children }: NodeComponentProps) {
         element={CameraElement}
         name={node.name}
         tscnPath={tscnPath}
-        position={offsetPosition}
+        position={position}
+        hOffset={properties.h_offset ?? 0}
+        vOffset={properties.v_offset ?? 0}
         rotation={rotation}
         scale={scale}
         lens={lens}
@@ -97,6 +86,35 @@ export function Camera3D({ node, children }: NodeComponentProps) {
   );
 }
 
+/** The world matrix draws through Godot's camera transform, while the node's children keep the node's. */
+function useGodotCameraTransform(cameraRef: RefObject<FiberCamera | null>, hOffset: number, vOffset: number) {
+  useLayoutEffect(() => {
+    const camera = cameraRef.current;
+    if (!camera) return undefined;
+    const base = Object.getPrototypeOf(camera) as THREE.Camera;
+    const adjust = () => {
+      // Only on a change: an inverse recomputed for an unchanged matrix moves a probe golden by 1/255.
+      if (adjustCameraTransform(camera.matrixWorld, hOffset, vOffset)) {
+        camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
+      }
+    };
+    camera.updateMatrixWorld = (force) => {
+      camera.matrixWorldNeedsUpdate = true;
+      base.updateMatrixWorld.call(camera, force);
+      adjust();
+    };
+    camera.updateWorldMatrix = (updateParents, updateChildren) => {
+      base.updateWorldMatrix.call(camera, updateParents, updateChildren);
+      adjust();
+    };
+    camera.updateMatrixWorld(true);
+    return () => {
+      Reflect.deleteProperty(camera, 'updateMatrixWorld');
+      Reflect.deleteProperty(camera, 'updateWorldMatrix');
+    };
+  }, [cameraRef, hOffset, vOffset]);
+}
+
 interface SceneCameraProps {
   element: 'perspectiveCamera' | 'orthographicCamera';
   name: string;
@@ -104,6 +122,8 @@ interface SceneCameraProps {
   position: [number, number, number];
   rotation: [number, number, number];
   scale: [number, number, number];
+  hOffset: number;
+  vOffset: number;
   lens: CameraLens;
   near: number;
   far: number;
@@ -117,6 +137,8 @@ function SceneCamera({
   position,
   rotation,
   scale,
+  hOffset,
+  vOffset,
   lens,
   near,
   far,
@@ -124,6 +146,7 @@ function SceneCamera({
 }: SceneCameraProps) {
   const cameraRef = useRef<FiberCamera>(null);
   useRegisterSceneCamera(tscnPath, cameraRef);
+  useGodotCameraTransform(cameraRef, hOffset, vOffset);
   useEffect(() => {
     if (cameraRef.current) {
       // Tag the camera with its TSCN path so a SubViewport pass can find it.

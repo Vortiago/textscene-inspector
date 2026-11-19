@@ -3,6 +3,7 @@ import { TscnCanvas, TscnSceneProvider, openScene, variant } from '@textscene/re
 import { runHeldResourceChecks, type HeldResourceCheckResults } from './heldResourceChecks';
 import { projectOf, runMountChecks, type MountCheckResults } from './mountChecks';
 import { WINDOW_320_PROJECT, exposeSwitchChecks } from './switchView';
+import { exposeCameraChecks } from './cameraView';
 import { exposePickView } from './pickView';
 
 const FIXTURE_SCENE = `[gd_scene format=3]
@@ -83,7 +84,7 @@ function View() {
 }
 
 /** `#viewport`, the element the runner's screenshots read. */
-function viewportElement(): HTMLElement {
+function screenshotElement(): HTMLElement {
   const viewport = document.createElement('div');
   viewport.id = 'viewport';
   viewport.style.cssText = 'width: 320px; height: 240px';
@@ -106,9 +107,11 @@ if (query.get('checks') === 'mount') {
 } else if (query.get('checks') === 'held') {
   void runHeldResourceChecks().then((results) => (window.heldResourceChecks = results));
 } else if (query.get('checks') === 'switch') {
-  exposeSwitchChecks(viewportElement());
+  exposeSwitchChecks(screenshotElement());
+} else if (query.get('checks') === 'camera') {
+  exposeCameraChecks(screenshotElement());
 } else if (query.get('checks') === 'pick') {
-  exposePickView(viewportElement());
+  exposePickView(screenshotElement());
 } else {
   void Promise.all([written, called]).then(() =>
     createRoot(document.getElementById('root')!).render(
