@@ -4,7 +4,7 @@ import type { Node } from 'three/webgpu';
 /** The TSL literal of each type a specialisation constant can have (GLSL 4.60 §4.11). */
 const LITERALS: Record<string, (value: number | boolean) => unknown> = { bool, float, int, uint } as never;
 
-/** A specialisation constant, folded as a literal: as a uniform, SwiftShader compiles for minutes. */
+/** A specialisation constant, folded as a literal: as a uniform, SwiftShader takes minutes (ADR-0088). */
 export class Specialisation {
   /** Each material that reads the constant, told when a binding writes a new value. */
   readonly readers = new Set<() => void>();
