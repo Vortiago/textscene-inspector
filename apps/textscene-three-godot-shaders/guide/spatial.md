@@ -2563,7 +2563,7 @@ void fragment() {
 
 ## Render mode `unshaded`
 
-`unshaded` defines `MODE_UNSHADED`, so the template writes `ALBEDO` and `ALPHA` to the frame with no light, fog or ambient light (`scene_forward_clustered.glsl:2978-2981`).
+`unshaded` defines `MODE_UNSHADED`, so the template writes `ALBEDO` and `ALPHA` to the frame with no light or ambient light (`scene_forward_clustered.glsl:2978-2981`). The fog still mixes in after it (`scene_forward_clustered.glsl:2987-2989`).
 
 The transpiler emits `the defines of the template variant`. Rows: `spatial render_mode unshaded`. Godot source: `servers/rendering/shader_types.cpp:239`.
 
@@ -2725,7 +2725,7 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 
 ## `FOG` and `fog_disabled`
 
-`FOG` is the fog's colour and amount, which starts at `(0, 0, 0, 1)` (`scene_forward_clustered.glsl:1240`). A shader that writes `FOG` replaces the environment's fog with it. The template premultiplies the colour by the amount and keeps 1 minus the amount (`scene_forward_clustered.glsl:1524-1525`), packs both into half floats, and gives out `colour × (1 − FOG.a) + FOG.rgb × FOG.a` (`scene_forward_clustered.glsl:2987-2989`). So a write of `FOG.rgb` alone covers the surface with that colour. A premultiplied alpha scales the colour after the fog (`scene_forward_clustered.glsl:2991-2993`). `fog_disabled` leaves out the fog and the shader's `FOG` (`scene_forward_clustered.glsl:1486, 2987`). Godot's gl_compatibility starts `FOG` at `(0, 0, 0, 0)` and mixes the colour in without the premultiply (`drivers/gles3/shaders/scene.glsl:2029, 2553`). The package draws a gl_compatibility project with Forward+'s colour output (#2035).
+`FOG` is the fog's colour and amount, which starts at `(0, 0, 0, 1)` (`scene_forward_clustered.glsl:1240`). A shader that writes `FOG` replaces the environment's fog with it. The template premultiplies the colour by the amount and keeps 1 minus the amount (`scene_forward_clustered.glsl:1524-1525`), packs both into half floats, and gives out `colour × (1 − FOG.a) + FOG.rgb × FOG.a` (`scene_forward_clustered.glsl:2987-2989`). So a write of `FOG.rgb` alone covers the surface with that colour. A premultiplied alpha scales the colour after the fog (`scene_forward_clustered.glsl:2991-2993`). `fog_disabled` leaves out the fog and the shader's `FOG` (`scene_forward_clustered.glsl:1486, 2987`). Godot's Mobile and gl_compatibility start `FOG` at `(0, 0, 0, 0)` and mix the colour in without the premultiply (`scene_forward_mobile.glsl:1158, 2273`, `drivers/gles3/shaders/scene.glsl:2029, 2553`). The package draws a Mobile or gl_compatibility project with Forward+'s colour output (#2035).
 
 The transpiler emits the template's fog code with `CUSTOM_FOG_USED` or `FOG_DISABLED` defined. Rows: `spatial.fragment.FOG`, `spatial render_mode fog_disabled`. Godot source: `servers/rendering/shader_types.cpp:191`.
 
