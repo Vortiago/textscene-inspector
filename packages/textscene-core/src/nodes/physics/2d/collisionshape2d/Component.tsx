@@ -1,10 +1,3 @@
-/**
- * <CollisionShape2D>: a transform-only Node2D whose collision-shape resource draws as a gizmo in
- * the node's debug colour, grey when disabled, with an arrow when one-way (`collision_shape_2d.cpp:85-129`).
- * Like CollisionShape3D (ADR-0005/ADR-0006) the gizmo shows only while
- * `show.collisions` is on (off by default), like Godot's "Visible Collision Shapes".
- */
-
 import { useMemo } from 'react';
 import type { CollisionShape2DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';

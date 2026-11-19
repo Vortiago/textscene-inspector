@@ -9,9 +9,9 @@ export interface ViewShow {
   labels: boolean;
   /** Visible Navigation (`debugger_editor_plugin.cpp:77`). */
   navigation: boolean;
-  /** The preview sunlight button (`node_3d_editor_plugin.cpp:9905`, ADR-0025). The scene's own light still wins. */
+  /** The preview sunlight button (`node_3d_editor_plugin.cpp:9905`). A scene's own light wins (ADR-0025). */
   previewSun: boolean;
-  /** The preview environment button (`node_3d_editor_plugin.cpp:9916`). The scene's own environment still wins. */
+  /** The preview environment button (`node_3d_editor_plugin.cpp:9916`). A scene's own environment wins. */
   previewEnvironment: boolean;
   /** The Environment's depth and volumetric fog. Off skips its passes. */
   fog: boolean;
@@ -19,10 +19,7 @@ export interface ViewShow {
   performance: boolean;
 }
 
-/**
- * Godot opens with the grid on (`node_3d_editor_plugin.cpp:6268`). Off here, or it lands in every golden.
- * Collisions are off as Godot's debug toggle is, and the rest are on as Godot draws them.
- */
+/** The grid is off, unlike Godot's (`node_3d_editor_plugin.cpp:6268`), or it lands in every golden. */
 export const DEFAULT_SHOW: ViewShow = {
   grid: false,
   gizmos: true,

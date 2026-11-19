@@ -95,10 +95,7 @@ function GroundGrid() {
 /** One object, as R3F assigns a new `userData` object on each render. */
 const GROUND_GRID_USER_DATA = { tscnEmptyState: true, ...editorHelperUserData() };
 
-/**
- * The opt-in grid for a non-empty scene, off by default (see `DEFAULT_SHOW`).
- * A child component, so a toolbar toggle re-renders this and not the node tree.
- */
+/** A child component, so a change of `show` re-renders this and not the node tree. */
 function ContentGroundGrid() {
   const { grid } = useViewShow();
   return grid ? <GroundGrid /> : null;

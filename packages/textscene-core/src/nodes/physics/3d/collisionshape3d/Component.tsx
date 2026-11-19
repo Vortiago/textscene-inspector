@@ -1,9 +1,3 @@
-/**
- * <CollisionShape3D>: a transform-only node whose collision-shape resource draws as a wireframe
- * gizmo (ADR-0005 / ADR-0006). The gizmo shows only while `show.collisions`
- * is on (off by default), like Godot's "Visible Collision Shapes".
- */
-
 import { useMemo } from 'react';
 import type { CollisionShape3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';

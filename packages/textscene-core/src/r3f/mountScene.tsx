@@ -29,7 +29,7 @@ export interface View {
   readonly settled: Promise<ViewSettled>;
   /** In-game at the window's size, 3D and 2D at the canvas's size. Rejects before `settled`. */
   captureImage(): Promise<Blob>;
-  /** Changes only the keys given a value, each key of `show` too. A `settled` read from before a switch waits for the new mode. */
+  /** Changes only the keys given a value, in `show` too. A `settled` from before a switch waits for it. */
   update(options: ViewOptions): void;
   /** The scene stays open for another view. */
   dispose(): void;
