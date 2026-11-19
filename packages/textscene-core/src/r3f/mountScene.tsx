@@ -21,8 +21,7 @@ export interface ViewOptions {
 }
 
 /** The keys a view reads with no default: left out, the host does not own the selection or hear a click. */
-type MountedOptions = Required<Pick<ViewOptions, 'mode' | 'visible'>> &
-  Pick<ViewOptions, 'selected' | 'onSelect'>;
+type MountedOptions = ViewOptions & Required<Pick<ViewOptions, 'mode' | 'visible'>>;
 
 export interface View {
   /** A new read waits again after the scene changes. Rejects once the view fails to mount or is disposed. */

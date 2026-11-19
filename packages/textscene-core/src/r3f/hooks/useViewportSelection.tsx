@@ -38,8 +38,8 @@ export function useViewportSelection(options: UseViewportSelectionOptions = {}):
   const { setSelectedNodePath, hoverStore, expandedNodePaths, setExpandedNodePaths, objectPathMap } =
     useSelection();
   const host = useHostPick();
-  // The 2D workspace picks no node yet, so the host hears of a click in the 3D one only.
-  const isHostTold = useCanvasWorkspace() === '3d';
+  // The 2D workspace picks no node yet, so a click on a sprite there would read as a click on nothing.
+  const takesMiss = useCanvasWorkspace() === '3d';
 
   const downPosRef = useRef<{ x: number; y: number } | null>(null);
   const expandedRef = useRef<ReadonlySet<string>>(expandedNodePaths);
@@ -68,12 +68,12 @@ export function useViewportSelection(options: UseViewportSelectionOptions = {}):
 
   const pick = useCallback(
     (nodePath: string | null) => {
-      if (isHostTold) host?.picked(nodePath);
-      if (host?.ownsSelection) return;
+      host.picked(nodePath);
+      if (host.ownsSelection) return;
       if (nodePath === null) setSelectedNodePath(null);
       else select(nodePath);
     },
-    [host, isHostTold, select, setSelectedNodePath]
+    [host, select, setSelectedNodePath]
   );
 
   const handlers = useMemo<DelegatedPointerHandlers>(
@@ -105,9 +105,9 @@ export function useViewportSelection(options: UseViewportSelectionOptions = {}):
       onPointerOut() {
         hoverStore.set(null);
       },
-      onPointerMissed: isHostTold ? () => pick(null) : undefined,
+      onPointerMissed: takesMiss ? () => pick(null) : undefined,
     }),
-    [dragThresholdPx, pick, hoverStore, objectPathMap, isHostTold]
+    [dragThresholdPx, pick, hoverStore, objectPathMap, takesMiss]
   );
 
   return useMemo<UseViewportSelectionResult>(() => ({ handlers }), [handlers]);

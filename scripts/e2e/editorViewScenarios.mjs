@@ -5,6 +5,7 @@ import {
   checkNodePaths,
   expandAllTreeRows,
   readOutlinerPaths,
+  readSelectedPaths,
   SELECT_SETTLE_MS,
   selectOutlinerNode,
 } from './outliner.mjs';
@@ -75,9 +76,7 @@ async function clickOnNothing(page, canvas) {
   const { height } = await canvas.boundingBox();
   await canvas.click({ position: { x: 10, y: height / 2 } });
   await page.waitForTimeout(SELECT_SETTLE_MS);
-  return page.$$eval('[role="treeitem"][aria-selected="true"]', (rows) =>
-    rows.map((row) => row.parentElement?.getAttribute('data-node-path'))
-  );
+  return readSelectedPaths(page);
 }
 
 export async function run2DScenario(browser, baseUrl) {

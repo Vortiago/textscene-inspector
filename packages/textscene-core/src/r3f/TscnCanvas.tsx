@@ -134,7 +134,8 @@ export interface TscnCanvasProps extends Omit<HostSelectionProps, 'children'> {
 
 export function TscnCanvas({ scene, mode = '3D', visible, selected, onSelect, className }: TscnCanvasProps) {
   const stage = (
-    <HostSelection selected={selected} onSelect={onSelect}>
+    // The In-game mode takes no pointer, and the 2D mode picks no node yet.
+    <HostSelection selected={selected} onSelect={mode === '3D' ? onSelect : undefined}>
       <PreviewVisibilityProvider isVisible={visible}>{stageOf(mode, className)}</PreviewVisibilityProvider>
     </HostSelection>
   );

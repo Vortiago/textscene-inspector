@@ -1,4 +1,4 @@
-import { createContext, useContext, useLayoutEffect, useMemo, type ReactNode } from 'react';
+import { createContext, useContext, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import type { NodeHandle } from '../../scene/nodeHandle.js';
 import { absolutePathOf, livePathOf } from '../../scene/nodePathWalk.js';
 import { useOptionalHierarchy } from '../contexts/HierarchyContext.js';
@@ -12,7 +12,7 @@ export interface HostSelectionProps {
   children?: ReactNode;
 }
 
-/** What the picker tells the host of a click. Null outside a `HostSelection`. */
+/** What the picker tells the host of a click. */
 export interface HostPick {
   /** The selection path a click picked, or null for a click on nothing. */
   picked(path: string | null): void;
@@ -20,7 +20,9 @@ export interface HostPick {
   ownsSelection: boolean;
 }
 
-const HostPickContext = createContext<HostPick | null>(null);
+/** Outside a `HostSelection`, no host hears a click and the view owns its selection. */
+const NO_HOST: HostPick = { picked: () => {}, ownsSelection: false };
+const HostPickContext = createContext<HostPick>(NO_HOST);
 HostPickContext.displayName = 'HostPickContext';
 
 export function HostSelection({ selected, onSelect, children }: HostSelectionProps) {
@@ -34,18 +36,24 @@ export function HostSelection({ selected, onSelect, children }: HostSelectionPro
     if (ownsSelection) setSelectedNodePath?.(selectedPath);
   }, [ownsSelection, selectedPath, setSelectedNodePath]);
 
+  // A ref, so a host's new `onSelect` each render leaves the picker's handlers and the node tree alone.
+  const onSelectRef = useRef(onSelect);
+  useLayoutEffect(() => {
+    onSelectRef.current = onSelect;
+  }, [onSelect]);
+
   const pick = useMemo<HostPick>(
     () => ({
       picked(path) {
-        onSelect?.(path === null ? null : (scene?.getNodeOrNull(absolutePathOf(path)) ?? null));
+        onSelectRef.current?.(path === null ? null : (scene?.getNodeOrNull(absolutePathOf(path)) ?? null));
       },
       ownsSelection,
     }),
-    [onSelect, ownsSelection, scene]
+    [ownsSelection, scene]
   );
   return <HostPickContext.Provider value={pick}>{children}</HostPickContext.Provider>;
 }
 
-export function useHostPick(): HostPick | null {
+export function useHostPick(): HostPick {
   return useContext(HostPickContext);
 }

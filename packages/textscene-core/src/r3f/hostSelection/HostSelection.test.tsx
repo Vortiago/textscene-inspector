@@ -126,14 +126,13 @@ describe('the host’s click picking', () => {
     expect(view.result.current.selection.selectedNodePath).toBeNull();
   });
 
-  it('calls no onSelect for a click in the 2D workspace, which picks no node yet', () => {
-    const onSelect = vi.fn();
-    const view = setup(openTestScene(), { onSelect }, '2d');
-
+  it('keeps the selection through a click in the 2D workspace, which picks no node yet', () => {
+    const view = setup(openTestScene(), {}, '2d');
     click(view, registeredAt(view, 'Root/Cube'));
+
     clickOnNothing(view);
 
-    expect(onSelect).not.toHaveBeenCalled();
+    expect(view.result.current.selection.selectedNodePath).toBe('Root/Cube');
   });
 });
 
