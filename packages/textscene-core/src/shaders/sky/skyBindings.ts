@@ -178,10 +178,11 @@ function orientationOf(scene: SkyScene): THREE.Matrix3 {
   return sky.multiply(camera);
 }
 
-/** `columns[2][0]`, `[0][0]`, `[2][1]` and `[1][1]` of Godot's projection, which flips y (`sky.cpp:1174`). */
+/** `columns[2][0]`, `[0][0]`, `[2][1]` and `[1][1]`, with `[1][1]` negated as the y-down uv needs. */
 function projectionOf(scene: SkyScene): THREE.Vector4 {
   const columns = scene.camera.projectionMatrix.elements;
-  return new THREE.Vector4(columns[8], columns[0], -columns[9]!, -columns[5]!);
+  // A frustum offset keeps its sign: Godot negates `[2][1]` for its own flip (`sky.cpp:1178-1181`).
+  return new THREE.Vector4(columns[8], columns[0], columns[9], -columns[5]!);
 }
 
 /** The padding in UV, then 1 minus twice it, as `_render_sky` writes them from the padding. */
