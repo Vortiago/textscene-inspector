@@ -80,6 +80,8 @@ export const LIGHTING_SCENES = [
   { name: 'volumetric-fog-color-background', file: 'unit-volumetric-fog-color-background.tscn' },
   // Volumetric fog lit by the sky's radiance layers. The header states why no other golden shows it.
   { name: 'volumetric-fog-sky-ambient', file: 'unit-volumetric-fog-sky-ambient.tscn', camera: 'Root/Camera' },
+  // A sky shader fogged by the volumetric fog. The header states why no other golden shows it.
+  { name: 'volumetric-fog-sky-shader', file: 'unit-volumetric-fog-sky-shader.tscn', camera: 'Root/Camera' },
   // A box FogVolume in the volumetric fog. The header states why no other golden shows it.
   { name: 'fog-volume', file: 'unit-fog-volume.tscn' },
   // A FogVolume whose density texture is an imported 3D texture. The header states why no other
