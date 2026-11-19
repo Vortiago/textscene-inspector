@@ -19,3 +19,15 @@ export function cubeArraySize(texture: TextureNode, level: Node): Node {
     TSL.div(size.z as never, TSL.int(FACES_PER_CUBE)) as never
   ) as unknown as Node;
 }
+
+/** GLSL's size of one layer of a layer array: the `.xy` of its `ivec3`, as Godot's `sampler2D` reads. */
+export function arrayLayerSize(texture: TextureNode, level: Node): Node {
+  return swizzles(new SizeNode(texture, level, 'ivec3') as unknown as Node).xy as unknown as Node;
+}
+
+/** Whether `texture` is a layer array that a 2D call reads, which three declares as a `sampler2DArray`. */
+export function isArrayLayerRead(texture: TextureNode, returns: string): boolean {
+  return (
+    returns === 'ivec2' && (texture.value as { isDataArrayTexture?: boolean }).isDataArrayTexture === true
+  );
+}

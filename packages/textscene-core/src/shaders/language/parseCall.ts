@@ -55,7 +55,8 @@ export function resolvedCall(
   for (const [index, argument] of fitting.arguments.entries()) {
     const refusal =
       scope.varyingRefusal(operands[index]!, argument.qualifier) ??
-      argumentRefusal(argument, operands[index]!);
+      argumentRefusal(argument, operands[index]!) ??
+      radianceRefusal(operands[index]!);
     if (refusal !== undefined) fail(refusal);
   }
   return {
@@ -169,6 +170,15 @@ function argumentRefusal(argument: Argument, arg: Expression): string | undefine
   return isConstantPlace(arg)
     ? `A constant value cannot be passed for the '${argument.qualifier}' parameter.`
     : undefined;
+}
+
+/** Godot keeps `RADIANCE` out of the shader's own functions (`shader_language.cpp:6486`). */
+function radianceRefusal(arg: Expression): string | undefined {
+  if (arg.kind !== 'variable' || arg.builtIn === undefined || arg.name !== 'RADIANCE') return undefined;
+  return (
+    'Unable to pass RADIANCE texture sampler as a parameter to a custom function. Consider sampling it ' +
+    'in the main function and then passing the vector result to the custom function.'
+  );
 }
 
 /** Whether `arg` is no place a call can write, as Godot reads the node: a value or a constant's part. */

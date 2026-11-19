@@ -15,6 +15,7 @@ export {
   SCENE_BINDINGS,
   TranslatorFault,
   SKY_BINDINGS,
+  bindRadiance,
   SkyResolutionPasses,
   transpileShadingLanguage,
   transpileSky,

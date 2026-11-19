@@ -737,6 +737,12 @@ const SKY_CHAPTER = {
       tsl: "the template's local `alpha`",
     },
     {
+      heading: '`RADIANCE`',
+      rows: (row) => row.id === 'sky.global.RADIANCE',
+      what: "A texture call on `RADIANCE` reads the sky's own radiance octmap, as Godot's compiler writes it (`shader_compiler.cpp:1319-1371`): the direction goes through `vec3_to_oct_with_border`, and `texture` becomes `textureLod` at level 0, or at the bias when the call gives one. Behind the scene it reads layer 0 of the sky's last radiance. In the octmap pass it reads black (`sky.cpp:533`). A consumer of the package binds the radiance, a layer array, with `bindRadiance`, and the read takes its layer 0.",
+      tsl: "a `textureLod` of the template's `radiance` texture",
+    },
+    {
       heading: '`AT_CUBEMAP_PASS`',
       rows: (row) => row.id === 'sky.global.AT_CUBEMAP_PASS',
       what: '`AT_CUBEMAP_PASS` is true while Godot draws the sky into the radiance octmap that reflections read, and false behind the scene (`sky.glsl:119-123`). `transpileSky` with the `octmap` pass gives that variant.',

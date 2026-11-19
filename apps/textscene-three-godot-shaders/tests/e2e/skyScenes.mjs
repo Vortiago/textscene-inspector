@@ -351,6 +351,21 @@ const PASS_SCENES = [
     rows: ['sky.sky.EYEDIR'],
   },
   {
+    name: 'sky-radiance',
+    source: builtInSky(
+      [
+        '\tif (AT_CUBEMAP_PASS) {',
+        '\t\tCOLOR = 0.5 + 0.5 * EYEDIR;',
+        '\t} else {',
+        '\t\tCOLOR = texture(RADIANCE, EYEDIR).rgb;',
+        '\t}',
+      ].join('\n')
+    ),
+    // Smooth, not striped: lavapipe softens a hard octmap edge in Godot's upper sky at an explicit level.
+    readsRadiance: true,
+    rows: ['sky.global.RADIANCE', 'sky.global.AT_CUBEMAP_PASS'],
+  },
+  {
     name: 'sky-cubemap-pass',
     source: builtInSky('\tCOLOR = AT_CUBEMAP_PASS ? vec3(1.0, 0.0, 0.0) : vec3(0.1, 0.7, 0.3);'),
     rows: ['sky.global.AT_CUBEMAP_PASS'],
