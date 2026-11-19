@@ -1,6 +1,11 @@
 import * as THREE from 'three';
 import { glslFn } from 'three/tsl';
-import { transpileSpatial, withGodotAttributes, writeSpatialBindings } from '@textscene/three-godot-shaders';
+import {
+  createDepthPrepass,
+  transpileSpatial,
+  withGodotAttributes,
+  writeSpatialBindings,
+} from '@textscene/three-godot-shaders';
 import { framePixels } from './framePixels.js';
 import { displayRenderer, euler, godotCamera, linear, shaderTime } from './godotView.js';
 
@@ -51,7 +56,8 @@ function placed(node, { position, rotation, scale }) {
 /** The transpiled shader of each source, one for each source, so objects of one source share it. */
 function transpiledBySource(spec) {
   const sources = new Set([spec.source, ...(spec.others ?? []).map(({ source }) => source ?? spec.source)]);
-  return new Map([...sources].map((source) => [source, transpileSpatial(source)]));
+  const options = { renderingMethod: spec.renderingMethod ?? 'forward_plus' };
+  return new Map([...sources].map((source) => [source, transpileSpatial(source, options)]));
 }
 
 /** The pixels of the meshes, `{ error }` for a refused text, or `{ faults }` for a refused program. */
@@ -82,9 +88,12 @@ function drawMesh(spec) {
     mesh.renderOrder = material.transparent ? 0 : order;
     return mesh;
   });
+  const prepass = createDepthPrepass({ renderingMethod: spec.renderingMethod ?? 'forward_plus' });
   const scene = new THREE.Scene();
   scene.add(
-    spec.parent ? placed(new THREE.Group(), spec.parent).add(...meshes) : new THREE.Group().add(...meshes)
+    spec.parent ? placed(new THREE.Group(), spec.parent).add(...meshes) : new THREE.Group().add(...meshes),
+    prepass.first,
+    prepass.last
   );
   displayRenderer.setClearColor(GODOT_CLEAR_COLOR, 1);
   const faults = [];
@@ -99,6 +108,7 @@ function drawMesh(spec) {
     samples: spec.msaa ?? 0,
   });
   for (const spatial of transpiled.values()) spatial.material.dispose();
+  prepass.dispose();
   geometry.dispose();
   if (faults.length > 0) return { faults: faults.map(({ name, message, log }) => ({ name, message, log })) };
   return { pixels: Array.from(pixels) };

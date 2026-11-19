@@ -13,7 +13,7 @@ import {
   createFirstOpaqueSentinel,
   createLastOpaqueSentinel,
   type OpaqueSentinel,
-} from '../opaqueSentinel.js';
+} from '../../shaders/pipeline/opaqueSentinel';
 import { renderUnderWay } from '../viewportRender/worldRender.js';
 import { WorldReflection, type ReflectionSettings } from '../screenSpaceReflection/worldReflection.js';
 import { hideReflection, showReflection } from '../screenSpaceReflection/ssrUniforms.js';

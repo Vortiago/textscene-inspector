@@ -160,6 +160,8 @@ describe('spatialPipeline', () => {
       usesAlphaClip: false,
       usesAlphaAntialiasing: false,
       readsScreen: false,
+      writesDepth: false,
+      depthFlags: new Set(),
     });
   });
 
@@ -180,6 +182,7 @@ describe('spatialPipeline', () => {
     ['ALPHA_HASH_SCALE = 0.5;', 'usesAlphaClip'],
     ['ALPHA_ANTIALIASING_EDGE = 0.5;', 'usesAlphaAntialiasing'],
     ['ALPHA_TEXTURE_COORDINATE = UV;', 'usesAlphaAntialiasing'],
+    ['DEPTH = 0.5;', 'writesDepth'],
   ])('`%s` sets %s, as Godot’s usage flag', (fragment, flag) => {
     expect(fragmentPipeline(fragment)).toMatchObject({ [flag]: true });
   });
@@ -196,6 +199,59 @@ describe('spatialPipeline', () => {
   it('a screen texture uniform no function reads leaves readsScreen false', () => {
     const uniform = 'uniform sampler2D screen : hint_screen_texture;\n';
     expect(fragmentPipeline('ALBEDO = vec3(1.0);', uniform).readsScreen).toBe(false);
+  });
+
+  describe('depthFlags', () => {
+    const flagsOf = (body: string, head = '') => [
+      ...spatialPipeline(parsedShader(`shader_type spatial;\n${head}${body}`).tree).depthFlags,
+    ];
+
+    it('sets none for a fragment that writes DEPTH', () => {
+      expect(flagsOf('void fragment() {\n\tDEPTH = 0.5;\n}\n')).toEqual([]);
+    });
+
+    it.each([
+      ['particle_trails', 'uses_particle_trails'],
+      ['depth_prepass_alpha', 'uses_depth_prepass_alpha'],
+      ['world_vertex_coords', 'uses_world_coordinates'],
+      ['wireframe', 'wireframe'],
+      ['cull_front', 'cull_not_back'],
+      ['cull_disabled', 'cull_not_back'],
+    ])('render_mode %s sets %s', (mode, flag) => {
+      expect(flagsOf('', `render_mode ${mode};\n`)).toEqual([flag]);
+    });
+
+    it.each([
+      ['VERTEX = VERTEX;', 'uses_vertex'],
+      ['POSITION = vec4(0.0);', 'uses_position'],
+      ['MODELVIEW_MATRIX = mat4(1.0);', 'writes_modelview_or_projection'],
+      ['PROJECTION_MATRIX = mat4(1.0);', 'writes_modelview_or_projection'],
+      ['Z_CLIP_SCALE = 1.0;', 'uses_z_clip_scale'],
+      ['POINT_SIZE = 2.0;', 'uses_point_size'],
+    ])('a vertex() that runs `%s` sets %s', (statement, flag) => {
+      expect(flagsOf(`void vertex() {\n\t${statement}\n}\n`)).toEqual([flag]);
+    });
+
+    it('a vertex() that only reads VERTEX sets none', () => {
+      expect(flagsOf('void vertex() {\n\tCOLOR = vec4(VERTEX, 1.0);\n}\n')).toEqual([]);
+    });
+
+    it('a function that writes VERTEX through an `out` argument sets uses_vertex', () => {
+      const body = 'void lift(out vec3 v) { v = vec3(1.0); }\nvoid vertex() {\n\tlift(VERTEX);\n}\n';
+      expect(flagsOf(body)).toEqual(['uses_vertex']);
+    });
+
+    it.each([
+      ['discard;', 'uses_discard'],
+      ['ALPHA_SCISSOR_THRESHOLD = 0.5;', 'uses_alpha_clip'],
+      ['ALPHA_ANTIALIASING_EDGE = 0.5;', 'uses_alpha_antialiasing'],
+    ])('a fragment that runs `%s` sets %s', (statement, flag) => {
+      expect(flagsOf(`void fragment() {\n\t${statement}\n}\n`)).toEqual([flag]);
+    });
+
+    it('a stencil reference sets stencil_enabled', () => {
+      expect(flagsOf('', 'stencil_mode read, compare_equal, 1;\n')).toEqual(['stencil_enabled']);
+    });
   });
 
   it('never sees two modes of one group, which the parser refuses as Godot does', () => {

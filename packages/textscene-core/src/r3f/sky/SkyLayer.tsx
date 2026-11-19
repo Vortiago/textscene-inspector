@@ -210,19 +210,17 @@ export function SkyLayer({
       // A probe captures again on a change of the Environment, as a new bake of the lights notes one.
       if (isDrawn && !isFrameRead) noteEnvironmentChange(scene, environment);
     };
-    // Each view runs its render through the radiance update, the first of a frame after the faces
-    // Godot draws for the ALWAYS probes at the world's exposure. A capture reads that bake and steps
-    // nothing, as ours captures again only on change. An interior capture draws no sky.
+    // Views and ALWAYS faces step the radiance as Godot renders do (`render_forward_clustered.cpp:2049`).
     const showForRender = (drawn: number, camera: THREE.Camera) => {
       const render = renderAt(drawn);
       const capture = renderUnderWay()?.probeCapture;
       if (capture?.isInterior) return;
       if (!capture) {
-        const captureRenders = takeRealTimeCaptureRenders(scene);
         const world = renderAt(worldExposureOfScene(scene) ?? 1);
+        const captureRenders = takeRealTimeCaptureRenders(scene);
         for (let replayed = 0; replayed < captureRenders; replayed += 1) stepRadiance(world);
-        stepRadiance(render, camera);
-      }
+      } else if (capture.updatesAlways) takeRealTimeCaptureRenders(scene);
+      if (!capture || capture.updatesAlways) stepRadiance(render, camera);
       const baked = update.baked ?? render;
       showAt(baked, render);
       // Only a background reads the bake at the drawn exposure: for a sky that paints none, the

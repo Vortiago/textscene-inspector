@@ -8,7 +8,7 @@
 import { createContext, useCallback, useContext } from 'react';
 import type * as THREE from 'three';
 import { drawAtNodePose, type PosedLeaf } from './extraDrawPose';
-import { NO_RAYCAST } from './noRaycast';
+import { NO_RAYCAST } from '../../shaders/pipeline/noRaycast';
 import { nextPassRenderOrder, orderByPass } from './passOrder';
 
 /** What a leaf's extra draws take from the surface draw they cover. */

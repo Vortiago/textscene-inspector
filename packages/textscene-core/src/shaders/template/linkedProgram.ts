@@ -24,8 +24,8 @@ export interface ProgramTemplate {
 
 /** A user's shader linked into its template, before either stage is emitted. */
 export interface LinkedProgram {
-  /** The template stage with the material's code linked in, linked once for each source and stage. */
-  readonly linked: (stage: StageName) => TemplateStageNode;
+  /** The template stage with the material's code linked in, under `defines` or the template's own. */
+  readonly linked: (stage: StageName, defines?: string) => TemplateStageNode;
   /** The uniforms, textures, buffers and varyings that both stages share. */
   readonly resources: ProgramResources;
   /** Each uniform of the material by name, which takes `set_shader_parameter`'s value. */
@@ -51,7 +51,7 @@ export function linkedProgram(
     );
   checkTranspiled(tree);
   let material: CompiledMaterial | undefined;
-  const linked = (stage: StageName): TemplateStageNode =>
+  const linked = (stage: StageName, defines = program.defines): TemplateStageNode =>
     program.memo.tree(
       {
         source: code,
@@ -59,13 +59,13 @@ export function linkedProgram(
         shaderType: program.shaderType,
         template: program.template,
         stage,
-        defines: program.defines,
+        defines,
         godotVersion: GODOT_VERSION,
         transpilerVersion: TRANSPILER_VERSION,
       },
       () => {
         material ??= compileMaterial(withGlslTypes(tree), MODE_TABLES[program.shaderType]!);
-        return linkTemplateStage(program.template, stage, program.defines, material);
+        return linkTemplateStage(program.template, stage, defines, material);
       }
     );
   // A source colour is converted to linear: `sky.cpp:193`, `scene_shader_forward_clustered.cpp:595`.

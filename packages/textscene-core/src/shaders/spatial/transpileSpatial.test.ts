@@ -32,6 +32,7 @@ function program(source = DEFAULT_UNSHADED) {
   return generatedProgram({
     vertexNode: material.vertexNode!,
     fragmentNode: material.fragmentNode!,
+    contextNode: material.contextNode,
   } as never);
 }
 
@@ -53,6 +54,19 @@ describe('transpileSpatial', () => {
     const { uniforms } = transpileSpatial(DEFAULT_UNSHADED);
     expect(uniforms.has('scene_data_block.data.projection_matrix')).toBe(true);
     expect(uniforms.has('draw_call.instance_index')).toBe(true);
+  });
+
+  it('writes DEPTH into GL’s depth, which is 1 minus Godot’s reversed depth', () => {
+    const source = 'shader_type spatial;\nrender_mode unshaded;\nvoid fragment() {\n\tDEPTH = 0.25;\n}\n';
+    expect(program(source).fragment).toMatch(/gl_FragDepth = \( 1\.0 - nodeVar\d+ \);/);
+  });
+
+  it('keeps gl_Position invariant, as the template declares, so the prepass depth matches', () => {
+    expect(program().vertex).toContain('invariant gl_Position;');
+  });
+
+  it('writes no depth for a shader that does not name DEPTH', () => {
+    expect(program().fragment).not.toContain('gl_FragDepth');
   });
 
   it('gives the instance buffer a row texture by its instance name', () => {
