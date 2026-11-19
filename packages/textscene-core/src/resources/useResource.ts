@@ -4,7 +4,7 @@
  * never suspends, and a failed path shows as a **Missing resource** row. A texture or material keeps its identity across calls, and an Object3D is
  * cloned per consumer, since THREE.Object3D allows one parent.
  */
-import { useContext, useEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
 import type { ResourceEventBus } from './ResourceEventBus';
 import { cloneWithMaterials, disposeClonedMaterials } from './processing/glbProcessing';
@@ -195,9 +195,8 @@ function useResourceLoad<T>(path: string, type: ResourceBusType): ResourceResult
     };
   }, [loader, path, type]);
 
-  // The loader counts pending consumers, so a caller knows when loading has finished without a
-  // timer. Keyed on `path` too: a path swap re-enters `pending`.
-  useEffect(() => {
+  // A layout effect: the loader counts a pending path from its commit, before any frame draws it.
+  useLayoutEffect(() => {
     if (!loader || !path || result.status !== 'pending') return undefined;
     return loader.beginPending();
   }, [loader, path, result.status]);

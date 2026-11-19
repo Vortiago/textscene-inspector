@@ -61,7 +61,7 @@ describe('usePreviewFrameloop', () => {
 
   it('keeps the loop on while a hidden In-game view has yet to settle, and stops it once it has', async () => {
     const status = createGameViewStatus();
-    status.attach({ state: () => [], subscribe: () => () => {} });
+    status.attach({ revision: () => 0, subscribe: () => () => {} });
     const wrapper = ({ children }: { children: ReactNode }) => (
       <GameViewStatusProvider status={status}>
         <PreviewVisibilityProvider isVisible={false}>{children}</PreviewVisibilityProvider>
@@ -71,14 +71,13 @@ describe('usePreviewFrameloop', () => {
     expect(result.current).toBe('always');
 
     const frame = {
-      shown: [],
-      window: null,
+      revision: 0,
       isFullWindow: true,
       work: { resources: 0, textures: 0, fonts: 0 },
     };
     const facts = { scriptedNodeCount: 0, hasCurrentCamera: false };
     await act(async () => {
-      for (let drawn = 0; drawn < 10 && status.isPending(); drawn++) status.frameDrawn({ ...frame, facts });
+      status.frameDrawn({ ...frame, facts });
     });
 
     expect(result.current).toBe('never');

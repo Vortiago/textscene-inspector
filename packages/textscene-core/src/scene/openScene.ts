@@ -35,8 +35,10 @@ export interface Scene {
   written(): SceneGraph | null;
   /** Replaces the text and frees every node, as a scene change does in Godot. The writes are dropped. */
   setSource(source: string): void;
-  /** Calls `listener` after each new parse, and once after the writes of one task. Returns the removal. */
+  /** Calls `listener` after a new parse, and a frame after writes or a tree change. Returns the removal. */
   subscribe(listener: () => void): () => void;
+  /** Changes at once with each change a view draws: a new text, a write, or a load that changes the tree. */
+  revision(): number;
   /** Lets go of every listener. A view of a disposed scene draws its last parse. */
   dispose(): void;
   /** `get_node` from the scene's root node: throws `Node not found` where `path` names no node. */
@@ -109,6 +111,7 @@ export function openScene({
       listeners.textChanged();
     },
     subscribe: (listener) => listeners.subscribe(listener),
+    revision: () => listeners.revision(),
     dispose() {
       listeners.clear();
       sceneRuntime?.dispose();

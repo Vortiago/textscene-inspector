@@ -7,33 +7,28 @@ import {
 } from './gameViewStatus';
 import type { PendingSceneWork } from '../sceneWork';
 
-// The count measured on the In-game goldens, which this suite pins.
-const SETTLE_FRAMES = 3;
 const NO_PENDING_WORK: PendingSceneWork = { resources: 0, textures: 0, fonts: 0 };
 
 const FACTS: GameViewSettled = { scriptedNodeCount: 2, hasCurrentCamera: true };
-const GRAPH = { name: 'graph' };
-const WINDOW = { name: 'window' };
-const FULL_WINDOW = { name: 'full window' };
 
-function frameOf(shown: readonly unknown[], work: PendingSceneWork = NO_PENDING_WORK): DrawnFrame {
-  return { shown, window: WINDOW, isFullWindow: true, work, facts: FACTS };
+function frameOf(revision: number, work: PendingSceneWork = NO_PENDING_WORK): DrawnFrame {
+  return { revision, isFullWindow: true, work, facts: FACTS };
 }
 
-/** A scene that shows `state()` and never tells of a change. */
-function sceneShowing(state: () => readonly unknown[]): LiveScene {
-  return { state, subscribe: () => () => {} };
+/** A scene at `revision()` that never tells of a change. */
+function sceneAt(revision: () => number): LiveScene {
+  return { revision, subscribe: () => () => {} };
 }
 
-/** A status with a view attached whose scene now shows `live()`. */
-function attachedStatus(live: () => readonly unknown[] = () => [GRAPH]) {
+/** A status with a view attached whose scene is now at `live()`. */
+function attachedStatus(live: () => number = () => 1) {
   const status = createGameViewStatus();
-  status.attach(sceneShowing(live));
+  status.attach(sceneAt(live));
   return status;
 }
 
-function drawQuietFrames(status: ReturnType<typeof createGameViewStatus>, count: number, shown = [GRAPH]) {
-  for (let frame = 0; frame < count; frame++) status.frameDrawn(frameOf(shown));
+function drawFrame(status: ReturnType<typeof createGameViewStatus>, revision = 1) {
+  status.frameDrawn(frameOf(revision));
 }
 
 describe('the settled signal of the In-game view', () => {
@@ -46,15 +41,14 @@ describe('the settled signal of the In-game view', () => {
   it('holds an attached view pending until it settles', () => {
     const status = attachedStatus();
     expect(status.isPending()).toBe(true);
-    drawQuietFrames(status, SETTLE_FRAMES);
+    drawFrame(status);
     expect(status.isPending()).toBe(false);
   });
 
-  it('is pending until the named count of frames draw with no pending work', () => {
+  it('settles on the first frame that draws the current revision with no pending work', () => {
     const status = attachedStatus();
-    drawQuietFrames(status, SETTLE_FRAMES - 1);
     expect(status.settled()).toBeNull();
-    drawQuietFrames(status, 1);
+    drawFrame(status);
     expect(status.settled()).toEqual(FACTS);
   });
 
@@ -62,28 +56,27 @@ describe('the settled signal of the In-game view', () => {
     ['a resource', { resources: 1, textures: 0, fonts: 0 }],
     ['a texture', { resources: 0, textures: 1, fonts: 0 }],
     ['a font', { resources: 0, textures: 0, fonts: 1 }],
-  ])('starts the count again while %s is on its way', (_, work) => {
+  ])('is pending on a frame drawn while %s is on its way', (_, work) => {
     const status = attachedStatus();
-    drawQuietFrames(status, SETTLE_FRAMES - 1);
-    status.frameDrawn(frameOf([GRAPH], work));
-    drawQuietFrames(status, SETTLE_FRAMES - 1);
+    drawFrame(status);
+    status.frameDrawn(frameOf(1, work));
     expect(status.settled()).toBeNull();
-    drawQuietFrames(status, 1);
+    drawFrame(status);
     expect(status.settled()).toEqual(FACTS);
   });
 
   it('is pending again once the scene shows a change that no frame has drawn', () => {
-    let live: readonly unknown[] = [GRAPH];
+    let live = 1;
     const status = attachedStatus(() => live);
-    drawQuietFrames(status, SETTLE_FRAMES);
-    live = [{ name: 'written graph' }];
+    drawFrame(status);
+    live = 2;
     expect(status.settled()).toBeNull();
   });
 
   it('tells its subscribers when the scene changes, so a host hears the pending state', () => {
     let tell = () => {};
     const status = createGameViewStatus();
-    status.attach({ state: () => [GRAPH], subscribe: (listener) => ((tell = listener), () => {}) });
+    status.attach({ revision: () => 1, subscribe: (listener) => ((tell = listener), () => {}) });
     let notices = 0;
     status.subscribe(() => notices++);
     tell();
@@ -92,47 +85,55 @@ describe('the settled signal of the In-game view', () => {
 
   it('tells its subscribers when it settles again on the same facts after a change', () => {
     let tell = () => {};
-    let live: readonly unknown[] = [GRAPH];
+    let live = 1;
     const status = createGameViewStatus();
-    status.attach({ state: () => live, subscribe: (listener) => ((tell = listener), () => {}) });
-    drawQuietFrames(status, SETTLE_FRAMES);
+    status.attach({ revision: () => live, subscribe: (listener) => ((tell = listener), () => {}) });
+    drawFrame(status);
     const heard: (GameViewSettled | null)[] = [];
     status.subscribe(() => heard.push(status.settled()));
-    const changed = [{ name: 'camera call' }];
+    const changed = 2;
     live = changed;
     tell();
-    drawQuietFrames(status, SETTLE_FRAMES, changed);
+    drawFrame(status, changed);
     expect(heard).toEqual([null, FACTS]);
   });
 
-  it('settles on a change after its own count of frames', () => {
-    const changed = [{ name: 'new text' }];
-    let live: readonly unknown[] = [GRAPH];
+  it('stays pending on frames that draw an older revision, and settles on one that draws the change', () => {
+    let live = 1;
     const status = attachedStatus(() => live);
-    drawQuietFrames(status, SETTLE_FRAMES);
-    live = changed;
-    drawQuietFrames(status, SETTLE_FRAMES - 1, changed);
+    drawFrame(status);
+    live = 2;
+    drawFrame(status, 1);
     expect(status.settled()).toBeNull();
-    drawQuietFrames(status, 1, changed);
+    drawFrame(status, 2);
     expect(status.settled()).toEqual(FACTS);
   });
 
   it('keeps one settled object while the facts hold, so a hook renders once', () => {
     const status = attachedStatus();
-    drawQuietFrames(status, SETTLE_FRAMES);
+    drawFrame(status);
     const first = status.settled();
-    drawQuietFrames(status, 3);
+    drawFrame(status);
+    drawFrame(status);
     expect(status.settled()).toBe(first);
+  });
+
+  it('refuses a second view while one is attached, and takes one after it leaves', () => {
+    const status = createGameViewStatus();
+    const detach = status.attach(sceneAt(() => 1));
+    expect(status.attach(sceneAt(() => 1))).toBeNull();
+    detach!();
+    expect(status.attach(sceneAt(() => 1))).not.toBeNull();
   });
 
   it('tells its subscribers when it settles and when a view leaves', () => {
     const status = createGameViewStatus();
-    const detach = status.attach(sceneShowing(() => [GRAPH]));
+    const detach = status.attach(sceneAt(() => 1));
     let notices = 0;
     status.subscribe(() => notices++);
-    drawQuietFrames(status, SETTLE_FRAMES + 2);
+    drawFrame(status);
     expect(notices).toBe(1);
-    detach();
+    detach!();
     expect(status.settled()).toBeNull();
     expect(notices).toBe(2);
   });
@@ -140,7 +141,7 @@ describe('the settled signal of the In-game view', () => {
   it('resolves a wait on the frame that settles the view', async () => {
     const status = attachedStatus();
     const settled = status.whenSettled();
-    drawQuietFrames(status, SETTLE_FRAMES);
+    drawFrame(status);
     await expect(settled).resolves.toEqual(FACTS);
   });
 
@@ -164,30 +165,30 @@ describe('the capture of the In-game view', () => {
 
   it('rejects before the view settles, and names the pending work', async () => {
     const status = attachedStatus();
-    status.frameDrawn(frameOf([GRAPH], { resources: 2, textures: 1, fonts: 0 }));
+    status.frameDrawn(frameOf(1, { resources: 2, textures: 1, fonts: 0 }));
     await expect(status.captureImage()).rejects.toThrow(
       'expected a settled view, got 2 resources and 1 texture still loading'
     );
   });
 
-  it('rejects while frames still converge after the last load', async () => {
-    const status = attachedStatus();
-    drawQuietFrames(status, 1);
+  it('rejects while a change to the scene waits for its frame', async () => {
+    let live = 1;
+    const status = attachedStatus(() => live);
+    drawFrame(status);
+    live = 2;
     await expect(status.captureImage()).rejects.toThrow(
-      `expected a settled view, got 1 of ${SETTLE_FRAMES} quiet frames drawn`
+      'expected a settled view, got a change to the scene that no frame has drawn'
     );
   });
 
   it('holds the window at full size, and reads it once the full window has settled', async () => {
     const status = attachedStatus();
-    drawQuietFrames(status, SETTLE_FRAMES);
+    drawFrame(status);
     const image = status.captureImage();
     expect(status.holdsFullWindow()).toBe(true);
-    status.frameDrawn({ ...frameOf([GRAPH]), isFullWindow: false });
+    status.frameDrawn({ ...frameOf(1), isFullWindow: false });
     expect(status.isCaptureDue()).toBe(false);
-    for (let frame = 0; frame < SETTLE_FRAMES; frame++) {
-      status.frameDrawn({ ...frameOf([GRAPH]), window: FULL_WINDOW });
-    }
+    drawFrame(status);
     expect(status.isCaptureDue()).toBe(true);
     status.capture(() => PIXELS);
     expect(status.holdsFullWindow()).toBe(false);
@@ -196,13 +197,13 @@ describe('the capture of the In-game view', () => {
 
   it('gives a second capture asked before the read the same image', () => {
     const status = attachedStatus();
-    drawQuietFrames(status, SETTLE_FRAMES);
+    drawFrame(status);
     expect(status.captureImage()).toBe(status.captureImage());
   });
 
   it('rejects a capture whose read throws, and lets the view draw at its own size again', async () => {
     const status = attachedStatus();
-    drawQuietFrames(status, SETTLE_FRAMES);
+    drawFrame(status);
     const image = status.captureImage();
     status.capture(() => {
       throw new Error('context lost');
@@ -213,10 +214,10 @@ describe('the capture of the In-game view', () => {
 
   it('rejects a capture the view leaves before it reads', async () => {
     const status = createGameViewStatus();
-    const detach = status.attach(sceneShowing(() => [GRAPH]));
-    drawQuietFrames(status, SETTLE_FRAMES);
+    const detach = status.attach(sceneAt(() => 1));
+    drawFrame(status);
     const image = status.captureImage();
-    detach();
+    detach!();
     await expect(image).rejects.toThrow('expected the In-game view to stay mounted until its capture');
   });
 });

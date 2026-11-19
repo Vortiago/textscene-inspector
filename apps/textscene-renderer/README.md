@@ -162,9 +162,12 @@ The limits of this release:
 
 ### Know when the scene is whole
 
-The In-game mode is settled when a frame shows the scene whole: every file, texture and font of the
-scene has loaded, and the frames after the last load draw the same picture. A write or a camera call
+The In-game mode is settled when a frame shows the scene whole: the frame drew the latest change to
+the scene, and no file, texture or font of the scene was still loading. A write or a camera call
 from your code, or a new text, makes it pending again until a frame shows the change.
+
+One In-game view reports to each `<TscnSceneProvider>`. A second In-game view under the same provider
+draws, but it reports nothing and logs an error. Give each In-game view its own provider.
 
 `useGameViewSettled()` answers `null` while the view is pending, and then
 `{ scriptedNodeCount, hasCurrentCamera }`: the count of nodes that hold a script, which do not run,
@@ -198,21 +201,57 @@ export function GameView() {
 code of its own. React stays a peer dependency. `mode` is the mode of `TscnCanvas`, and here it is
 `'in-game'` by default. The page changes the scene through the same `scene`, as a React app does.
 
+A whole page, with a button that saves the window as a PNG file:
+
+```html
+<!doctype html>
+<html>
+  <body>
+    <div id="game" style="width: 640px; height: 360px"></div>
+    <p id="status">Loading…</p>
+    <button id="save" disabled>Save PNG</button>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
+```
+
 ```ts
+// main.ts
 import { mountScene, openScene } from '@textscene/renderer';
 
-const scene = openScene({ source, provider });
+// Every res:// path of the scene loads from the folder of the project on this site.
+const provider = {
+  async loadResource(path: string) {
+    const response = await fetch(`/project/${path.slice('res://'.length)}`);
+    if (!response.ok) return null;
+    return /\.(tscn|tres|godot|gd|gdshader)$/.test(path) ? response.text() : response.arrayBuffer();
+  },
+};
+
+const source = await (await fetch('/project/main.tscn')).text();
+const scene = openScene({ source, provider, rootScenePath: 'res://main.tscn' });
 const view = mountScene(document.getElementById('game')!, scene);
 
-const { scriptedNodeCount } = await view.settled;
-const png = await view.captureImage();
-view.dispose();
+const { scriptedNodeCount, hasCurrentCamera } = await view.settled;
+document.getElementById('status')!.textContent = hasCurrentCamera
+  ? `Settled. ${scriptedNodeCount} nodes hold a script, and scripts do not run.`
+  : 'Settled, with no current camera.';
+
+const save = document.getElementById('save') as HTMLButtonElement;
+save.disabled = false;
+save.onclick = async () => {
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(await view.captureImage());
+  link.download = 'scene.png';
+  link.click();
+  URL.revokeObjectURL(link.href);
+};
 ```
 
 `mountScene` returns three members:
 
 - `settled`: a promise of the settled value. Each read gives a new promise, which waits again
-  after the scene changes. It rejects in a mode other than In-game.
+  after the scene changes. It rejects in a mode other than In-game, and once the view is disposed.
 - `captureImage()`: a PNG `Blob` of the game window, at the window's size, whatever the size of the
   element: 1152 x 648 for a project that sets no size. It has the black bars of the window. Where the
   project has a transparent background, the clear colour has alpha 0 and the bars stay opaque, as
@@ -306,7 +345,8 @@ The package exports these names.
 - `openScene({ source, provider, rootScenePath? })`: opens the text of a scene and returns a
   `Scene`. It parses the text once, the first time a view reads it.
 - `Scene` (a type): an open scene. `setSource(text)` replaces its text, and every view of it draws
-  the new text. `getNode`, `getNodeOrNull`, `load` and `observe` are in "Change the scene from your
+  the new text. `revision()` gives a number that changes with each change a view draws: a new text,
+  a write or a load that changes the tree. `getNode`, `getNodeOrNull`, `load` and `observe` are in "Change the scene from your
   code". `dispose()` closes it.
 - `NodeHandle` (a type): a node of a scene, which `getNode` gives. Its `call` is in "Set the
   camera".

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { act } from 'react';
 import { GameViewContents } from './GameViewContents';
@@ -8,11 +8,12 @@ import { TscnSceneProvider } from '../TscnSceneProvider';
 import { openScene } from '../../scene/openScene';
 import type { ResourceProvider } from '../../resources/ResourceProvider';
 import { settleLoads } from '../testing/settleLoads';
+import * as logger from '../../logger';
 import '../nodes';
 
 const SCRIPT = 'extends Node\n';
 
-/** Well past the quiet frames the view waits for, so a view that can settle has settled. */
+/** Enough frames for work that a frame advances, such as a texture upload, to finish. */
 const FRAMES_TO_SETTLE = 10;
 
 const TWO_SCRIPTS_AND_A_CAMERA = `[gd_scene format=3]
@@ -59,12 +60,14 @@ function Host() {
   return null;
 }
 
-async function mountGame(source: string, provider = files) {
+async function mountGame(source: string, provider = files, views = 1) {
   seen = null;
   const scene = openScene({ source, provider });
   const renderer = await ReactThreeTestRenderer.create(
     <TscnSceneProvider scene={scene}>
-      <GameViewContents />
+      {Array.from({ length: views }, (_, view) => (
+        <GameViewContents key={view} />
+      ))}
       <Host />
     </TscnSceneProvider>
   );
@@ -112,5 +115,16 @@ describe('the settled value of the In-game view', () => {
     await settleLoads();
     await drawFrames(renderer, FRAMES_TO_SETTLE);
     expect(seen).toEqual({ scriptedNodeCount: 0, hasCurrentCamera: false });
+  });
+
+  it('refuses a second In-game view under one provider, and keeps the first one settled', async () => {
+    const error = vi.spyOn(logger, 'error').mockImplementation(() => {});
+    const renderer = await mountGame(TWO_SCRIPTS_AND_A_CAMERA, files, 2);
+    await drawFrames(renderer, FRAMES_TO_SETTLE);
+    expect(error).toHaveBeenCalledWith(
+      '[GameView] expected one In-game view under a TscnSceneProvider, got a second'
+    );
+    expect(seen).toEqual({ scriptedNodeCount: 2, hasCurrentCamera: true });
+    error.mockRestore();
   });
 });

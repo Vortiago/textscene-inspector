@@ -1,0 +1,14 @@
+[gd_scene format=3]
+
+; The variable is the bars around a window with a transparent background: Godot clears them opaque
+; black (`rasterizer_gles3.cpp:422`), while the window's own clear stays transparent. No other golden's
+; project sets a transparent background, so no other golden shows it.
+
+[node name="Main" type="Node2D"]
+
+[node name="Square" type="ColorRect" parent="."]
+offset_left = 110.0
+offset_top = 70.0
+offset_right = 210.0
+offset_bottom = 170.0
+color = Color(1, 0, 0, 1)

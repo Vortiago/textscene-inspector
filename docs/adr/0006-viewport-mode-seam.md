@@ -73,9 +73,10 @@ the selection and the passes stay one set. The switch between stages lives in th
 ## Amendment: the In-game view says when it is settled, and captures its window
 
 The In-game view reports into a status slot that `TscnSceneProvider` and the shell provide
-(`gameView/gameViewStatus.ts`). It is settled once a frame drew the scene's current parse, writes and
-current cameras with no resource, texture or font pending, and `SETTLE_FRAMES` frames in a row drew
-so: a draw that reads a target an earlier draw wrote shows a change a frame later. A host reads the
+(`gameView/gameViewStatus.ts`). It is settled once a frame drew the scene's current `revision()` with
+no resource, texture or font pending. One frame is enough: nested viewports draw before their parent in
+the frame (`nestedViewportPaths.ts`), and the loader counts a pending file from the commit that asks
+for it. One status serves one In-game view, and it refuses a second one. A host reads the
 slot through `useGameViewSettled()` or the `settled` of `mountScene`. A capture holds the root target
 at the full window size, draws the window with its bars into a target of the window's size, and reads
 that target back, so the PNG has the window's size whatever the pane's. The status belongs to a view,

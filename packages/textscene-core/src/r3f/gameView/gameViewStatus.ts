@@ -1,4 +1,3 @@
-import { sameElements } from '../../utils/sameElements.js';
 import { createExternalStore } from '../hooks/createExternalStore.js';
 import type { RgbaImage } from '../../utils/encodePng.js';
 import { describePendingWork, hasPendingWork, type PendingSceneWork } from '../sceneWork.js';
@@ -11,15 +10,13 @@ export interface GameViewSettled {
 }
 
 export interface LiveScene {
-  /** What a frame now would show, compared item by item with what a frame drew. */
-  state(): readonly unknown[];
+  /** Changes with each change a frame draws, so a frame that drew the same revision shows the scene. */
+  revision(): number;
   subscribe(listener: () => void): () => void;
 }
 
 export interface DrawnFrame {
-  shown: readonly unknown[];
-  /** A new window starts the count again, since its passes draw again. */
-  window: unknown;
+  revision: number;
   isFullWindow: boolean;
   work: PendingSceneWork;
   facts: GameViewSettled;
@@ -37,15 +34,13 @@ export interface GameViewStatus {
   captureImage(): Promise<RgbaImage>;
   /** A capture reads the full window, so the view draws its target at full size until then. */
   holdsFullWindow(): boolean;
-  attach(scene: LiveScene): () => void;
+  /** Null while another view is attached: one status serves one In-game view. */
+  attach(scene: LiveScene): (() => void) | null;
   frameDrawn(frame: DrawnFrame): void;
   isCaptureDue(): boolean;
   /** Resolves the capture with `read`, or rejects it with what `read` throws. */
   capture(read: () => RgbaImage): void;
 }
-
-// A draw that reads a target an earlier draw wrote shows the change a frame later.
-const SETTLE_FRAMES = 3;
 
 interface PendingCapture {
   image: Promise<RgbaImage>;
@@ -58,16 +53,14 @@ export function createGameViewStatus(): GameViewStatus {
   const announcements = createExternalStore(0);
   let live: LiveScene | null = null;
   let lastFrame: DrawnFrame | null = null;
-  let quietFrames = 0;
   // What subscribers last heard, so a view that settles again on the same facts still tells them.
   let announced: GameViewSettled | null = null;
   let capture: PendingCapture | null = null;
 
-  const showsDrawnState = () =>
-    live !== null && lastFrame !== null && sameElements(live.state(), lastFrame.shown);
-  const isQuiet = () => lastFrame !== null && quietFrames >= SETTLE_FRAMES;
-
-  const settled = (): GameViewSettled | null => (isQuiet() && showsDrawnState() ? lastFrame!.facts : null);
+  const showsDrawnState = () => live !== null && lastFrame !== null && live.revision() === lastFrame.revision;
+  // Nested viewports draw before their parent in one frame, so one frame shows a revision whole.
+  const settled = (): GameViewSettled | null =>
+    showsDrawnState() && !hasPendingWork(lastFrame!.work) ? lastFrame!.facts : null;
 
   const notify = () => announcements.set(announcements.get() + 1);
 
@@ -81,17 +74,11 @@ export function createGameViewStatus(): GameViewStatus {
     if (now !== announced) announce(now);
   }
 
-  function drawsAnotherState(frame: DrawnFrame): boolean {
-    if (!lastFrame) return true;
-    return !sameElements(frame.shown, lastFrame.shown) || frame.window !== lastFrame.window;
-  }
-
   function pendingReason(): string {
     if (!live) return 'no In-game view mounted';
     if (!lastFrame) return 'no frame drawn';
     if (hasPendingWork(lastFrame.work)) return `${describePendingWork(lastFrame.work)} still loading`;
-    if (!showsDrawnState()) return 'a change to the scene that no frame has drawn';
-    return `${quietFrames} of ${SETTLE_FRAMES} quiet frames drawn`;
+    return 'a change to the scene that no frame has drawn';
   }
 
   function whenSettled(signal?: AbortSignal): Promise<GameViewSettled> {
@@ -132,7 +119,8 @@ export function createGameViewStatus(): GameViewStatus {
     return image;
   }
 
-  function attach(scene: LiveScene): () => void {
+  function attach(scene: LiveScene): (() => void) | null {
+    if (live) return null;
     live = scene;
     announce();
     // A change no frame has drawn makes `settled` pending at once, so a host hears it.
@@ -142,7 +130,6 @@ export function createGameViewStatus(): GameViewStatus {
       if (live !== scene) return;
       live = null;
       lastFrame = null;
-      quietFrames = 0;
       const left = capture;
       capture = null;
       left?.reject(new Error('expected the In-game view to stay mounted until its capture'));
@@ -151,8 +138,6 @@ export function createGameViewStatus(): GameViewStatus {
   }
 
   function frameDrawn(frame: DrawnFrame): void {
-    if (hasPendingWork(frame.work)) quietFrames = 0;
-    else quietFrames = drawsAnotherState(frame) ? 1 : quietFrames + 1;
     lastFrame = frame;
     publish();
   }
