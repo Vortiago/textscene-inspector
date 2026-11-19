@@ -1,0 +1,37 @@
+[gd_scene format=3]
+
+; One variable: a Gradient that omits `offsets`, `colors` or both. Godot starts every Gradient with
+; black at 0 and white at 1 (`gradient.cpp:35-42`), and each setter resizes the points to its own
+; length (`gradient.cpp:146-164`). Every other gradient golden writes both lines, so none shows the
+; default points.
+
+[sub_resource type="Gradient" id="Gradient_none"]
+
+[sub_resource type="Gradient" id="Gradient_offsets"]
+offsets = PackedFloat32Array(0.25, 0.75)
+
+[sub_resource type="Gradient" id="Gradient_colors"]
+colors = PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_none"]
+gradient = SubResource("Gradient_none")
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_offsets"]
+gradient = SubResource("Gradient_offsets")
+
+[node name="Root" type="Node2D"]
+
+[node name="None" type="Sprite2D" parent="."]
+position = Vector2(250, 200)
+scale = Vector2(3, 3)
+texture = SubResource("GradientTexture2D_none")
+
+[node name="OffsetsOnly" type="Sprite2D" parent="."]
+position = Vector2(576, 200)
+scale = Vector2(3, 3)
+texture = SubResource("GradientTexture2D_offsets")
+
+[node name="ColorsOnly" type="Line2D" parent="."]
+points = PackedVector2Array(150, 480, 1000, 480)
+width = 100.0
+gradient = SubResource("Gradient_colors")
