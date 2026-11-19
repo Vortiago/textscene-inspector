@@ -2734,7 +2734,7 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 
 ## `RADIANCE` and `IRRADIANCE`
 
-`RADIANCE` and `IRRADIANCE` are colours a shader writes, which start at `(0, 0, 0, 0)` (`scene_forward_clustered.glsl:1241-1246`). The lit template mixes the sky's reflection towards `RADIANCE.rgb` by `RADIANCE.a`, and the ambient light towards `IRRADIANCE.rgb` by `IRRADIANCE.a` (`scene_forward_clustered.glsl:1735-1737, 1760-1762`). An unshaded surface reads neither, so on it a write changes nothing. The lit template is slice T15.
+`RADIANCE` and `IRRADIANCE` are colours a shader writes, which start at `(0, 0, 0, 0)` (`scene_forward_clustered.glsl:1241-1246`). The lit template mixes the sky's reflection towards `RADIANCE.rgb` by `RADIANCE.a`, and the ambient light towards `IRRADIANCE.rgb` by `IRRADIANCE.a` (`scene_forward_clustered.glsl:1735-1737, 1760-1762`). An unshaded surface reads neither, so on it a write changes nothing. The lit template is #1453.
 
 The transpiler emits the template's `custom_radiance` and `custom_irradiance`. Rows: `spatial.fragment.RADIANCE`, `spatial.fragment.IRRADIANCE`. Godot source: `servers/rendering/shader_types.cpp:192`.
 

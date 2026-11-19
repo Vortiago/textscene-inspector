@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://unit_spatial_shader_fog"]
 
 ; Unshaded spatial shaders that write FOG, FOG.rgb alone, FOG under fog_disabled, and RADIANCE with IRRADIANCE, each over an orange quad.
-; Only the shader's FOG moves: no other golden spatial shader names FOG, RADIANCE, IRRADIANCE or fog_disabled, and the environment has no fog.
+; It moves the shader's FOG, FOG.rgb alone, fog_disabled, and RADIANCE with IRRADIANCE, one tile each. No other golden spatial shader names FOG, RADIANCE, IRRADIANCE or fog_disabled, and the environment has no fog.
 
 [sub_resource type="Shader" id="Shader_orange"]
 code = "shader_type spatial;
