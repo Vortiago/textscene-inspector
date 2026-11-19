@@ -18,6 +18,7 @@ export {
   SKY_BINDINGS,
   bindRadiance,
   SkyResolutionPasses,
+  specialiseSpatial,
   transpileShadingLanguage,
   transpileSky,
   transpileSpatial,

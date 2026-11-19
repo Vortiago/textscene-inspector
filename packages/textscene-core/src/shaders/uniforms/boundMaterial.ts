@@ -38,6 +38,9 @@ export class BoundNodeMaterial extends NodeMaterial {
   /** Takes each program the GPU refuses for this material. Null logs the fault to the console. */
   onTranslatorFault: ((fault: TranslatorFault) => void) | null = null;
 
+  /** Runs before three keys a program, so the first program folds the specialisation values of its draw. */
+  onBeforeProgram: (() => void) | null = null;
+
   /** Written only by `stageWith`: emits the stages again, as three keeps a function's first build. */
   private stage: (() => void) | null = null;
 
@@ -81,6 +84,7 @@ export class BoundNodeMaterial extends NodeMaterial {
 
   /** three keeps one program for each key, so a draw with other specialisation values gets its own. */
   override customProgramCacheKey(): string {
+    this.onBeforeProgram?.();
     const values = [...this.specialisations].map((constant) => constant.value);
     return `${super.customProgramCacheKey()}|${values.join(',')}`;
   }

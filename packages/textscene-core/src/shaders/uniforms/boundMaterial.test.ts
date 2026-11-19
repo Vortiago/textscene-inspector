@@ -27,6 +27,14 @@ describe('the specialisation constants of a BoundNodeMaterial', () => {
     expect(material.customProgramCacheKey()).not.toBe(before);
   });
 
+  it('key the first program on the values its draw writes before three keys it', () => {
+    const { constant, material } = specialised();
+    material.onBeforeProgram = () => {
+      constant.value = 64;
+    };
+    expect(material.customProgramCacheKey()).toMatch(/\|64$/);
+  });
+
   it('ask for the program of a new value', () => {
     const { constant, material } = specialised();
     const version = material.version;

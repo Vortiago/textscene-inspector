@@ -130,20 +130,24 @@ export function writeSpatialBindings(spatial: TranspiledSpatial, scene: SpatialS
   const frame = { ...scene, projection, inverseProjection: projection.clone().invert() };
   writeBindings(SCENE_BINDINGS, spatial.uniforms, frame);
   writeBindings(FOG_BINDINGS, spatial.uniforms, frame);
-  writeBindings(FOG_SPECIALISATIONS, spatial.specialisations, frame);
+}
+
+/** Writes the specialisation constants of `spatial` that `fog` sets, which pick the colour pass's program. */
+export function specialiseSpatial(spatial: TranspiledSpatial, fog: EnvironmentFog | undefined): void {
+  writeBindings(FOG_SPECIALISATIONS, spatial.specialisations, { fog });
 }
 
 /** The uniform every vertex stage of the scene template reads, so its object update runs before each draw. */
 const DRAW_HOOK = `${DATA}.projection_matrix`;
 
-/** Runs `draw` before each draw of the material, with the camera and the object of that draw. */
+/** Runs `draw` before each draw of the material or its depth materials, with that draw's camera. */
 export function beforeEachDraw(
   spatial: TranspiledSpatial,
-  draw: (camera: THREE.Camera, object: THREE.Object3D) => void
+  draw: (camera: THREE.Camera, object: THREE.Object3D, material: THREE.Material) => void
 ): void {
   const hook = spatial.uniforms.get(DRAW_HOOK);
   if (!hook) throw new Error(`expected the scene template to read ${DRAW_HOOK}, found no such uniform`);
-  hook.onObjectUpdate(({ camera, object }: NodeFrame) => draw(camera!, object!));
+  hook.onObjectUpdate(({ camera, object, material }: NodeFrame) => draw(camera!, object!, material!));
 }
 
 /** The camera's projection with y flipped and depth reversed into 0 to 1. */

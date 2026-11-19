@@ -4,6 +4,7 @@ import { compileSpatial } from '../../shaders/spatial/compileSpatial.js';
 import { withGodotAttributes } from '../../shaders/spatial/meshAttributes.js';
 import {
   beforeEachDraw,
+  specialiseSpatial,
   writeSpatialBindings,
   type SpatialScene,
 } from '../../shaders/spatial/spatialBindings.js';
@@ -33,10 +34,14 @@ export function spatialSurfaceOf(
   if (!('spatial' in compile))
     return { refusal: `[material] ${unDrawnMessage(compile, 'spatial', '3D surface')}` };
   const { spatial } = compile;
+  const specialise = () => specialiseSpatial(spatial, renderedEnvironmentFog());
+  spatial.material.onBeforeProgram = specialise;
   try {
-    beforeEachDraw(spatial, (camera, object) => {
+    beforeEachDraw(spatial, (camera, object, material) => {
       if (object instanceof THREE.Mesh) withGodotSurface(object.geometry);
       writeSpatialBindings(spatial, sceneOf(gl, camera));
+      // A shadow or depth draw runs before the frame's fog, and folds none: only the colour draw picks it.
+      if (material === spatial.material) specialise();
     });
   } catch (failure) {
     disposeSpatial(spatial);

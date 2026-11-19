@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { glslFn } from 'three/tsl';
 import {
   createDepthPrepass,
+  specialiseSpatial,
   transpileSpatial,
   withGodotAttributes,
   writeSpatialBindings,
@@ -31,12 +32,18 @@ const FOG_DEFAULTS = {
   fog_depth_end: 100,
 };
 
+/** The density `set_fog_mode` sets as `mode` turns into `next` (`environment.cpp:778-783`). */
+const fogModeDensity = (mode, next) => (mode !== next && next === 0 ? 0.01 : 1);
+
 /** The environment's fog from a scene's Godot `fog_*` properties, or nothing when it has none. */
 function environmentFog(properties) {
   if (!properties) return undefined;
-  // `set_fog_mode` sets DEPTH mode's density to 1 (`scene/resources/environment.cpp:778-784`).
-  const density = properties.fog_mode === 1 ? 1 : FOG_DEFAULTS.fog_density;
-  const fog = { ...FOG_DEFAULTS, fog_density: density, ...properties };
+  const fog = { ...FOG_DEFAULTS };
+  // In the order `fogged_world` sets them: a density before `fog_mode` gives way to its reset.
+  for (const [property, value] of Object.entries(properties)) {
+    if (property === 'fog_mode') fog.fog_density = fogModeDensity(fog.fog_mode, value);
+    fog[property] = value;
+  }
   return {
     lightColor: linear(fog.fog_light_color),
     lightEnergy: fog.fog_light_energy,
@@ -109,7 +116,7 @@ function drawMesh(spec) {
   const { width, height } = spec;
   const camera = godotCamera(spec);
   const fog = environmentFog(spec.fog);
-  for (const spatial of transpiled.values())
+  for (const spatial of transpiled.values()) {
     writeSpatialBindings(spatial, {
       camera,
       width,
@@ -118,6 +125,8 @@ function drawMesh(spec) {
       clearColor: GODOT_CLEAR_COLOR,
       fog,
     });
+    specialiseSpatial(spatial, fog);
+  }
   const geometry = geometryOf(spec.mesh);
   const objects = [{ object: spec.object, source: spec.source }, ...(spec.others ?? [])];
   const meshes = objects.map(({ object, source = spec.source }, order) => {

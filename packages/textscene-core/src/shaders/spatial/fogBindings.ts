@@ -61,7 +61,7 @@ export const FOG_BINDINGS: readonly Binding<SpatialFrame>[] = [
 ];
 
 /** The depth fog's specialisation constant, one program for each mode. */
-export const FOG_SPECIALISATIONS: readonly Binding<SpatialFrame>[] = [
+export const FOG_SPECIALISATIONS: readonly Binding<Pick<SpatialFrame, 'fog'>>[] = [
   {
     uniform: 'pso_sc_packed_0',
     godot: 'render_forward_clustered.cpp:2084',

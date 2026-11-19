@@ -32,6 +32,7 @@ const PUBLIC_VALUE_EXPORTS = [
   'createDepthPrepass',
   'glVaryingSlots',
   'installGodotShading',
+  'specialiseSpatial',
   'textToVariant',
   'transpileShadingLanguage',
   'transpileSky',

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { NodeFrame, UniformNode } from 'three/webgpu';
 import { describe, expect, it } from 'vitest';
 import type { EnvironmentFog } from '../pipeline/environmentFog.js';
-import { beforeEachDraw, writeSpatialBindings } from './spatialBindings.js';
+import { beforeEachDraw, specialiseSpatial, writeSpatialBindings } from './spatialBindings.js';
 import { transpileSpatial } from './transpileSpatial.js';
 
 const UNSHADED = 'shader_type spatial;\nrender_mode unshaded;\nvoid fragment() {\n\tALBEDO = vec3(0.6);\n}\n';
@@ -13,6 +13,7 @@ function written(fog?: EnvironmentFog) {
   camera.position.set(0, 1, 3);
   const clearColor = new THREE.Color(0.1, 0.2, 0.3);
   writeSpatialBindings(spatial, { camera, width: 128, height: 64, time: 2.5, clearColor, fog });
+  specialiseSpatial(spatial, fog);
   const value = (name: string) =>
     (spatial.uniforms.get(`scene_data_block.data.${name}`) as UniformNode<unknown>).value;
   const specialisation = (name: string) => spatial.specialisations.get(name)!.value;
@@ -77,15 +78,7 @@ describe('the fog bindings', () => {
   it('emits the stages again for the program of a depth fog', () => {
     const spatial = transpileSpatial(UNSHADED);
     const before = spatial.material.fragmentNode;
-    const camera = new THREE.PerspectiveCamera();
-    writeSpatialBindings(spatial, {
-      camera,
-      width: 8,
-      height: 8,
-      time: 0,
-      clearColor: new THREE.Color(),
-      fog: DEPTH_FOG,
-    });
+    specialiseSpatial(spatial, DEPTH_FOG);
     expect(spatial.material.fragmentNode).not.toBe(before);
   });
 
@@ -108,8 +101,10 @@ describe('beforeEachDraw', () => {
   function eachDraw() {
     const spatial = transpileSpatial(UNSHADED);
     const drawnObjects: THREE.Object3D[] = [];
-    beforeEachDraw(spatial, (camera, object) => {
+    const drawnMaterials: THREE.Material[] = [];
+    beforeEachDraw(spatial, (camera, object, material) => {
       drawnObjects.push(object);
+      drawnMaterials.push(material);
       writeSpatialBindings(spatial, {
         camera: camera as THREE.PerspectiveCamera,
         width: 32,
@@ -120,10 +115,14 @@ describe('beforeEachDraw', () => {
     });
     const uniform = (name: string) => spatial.uniforms.get(`scene_data_block.data.${name}`)!;
     return {
-      draw: (camera: THREE.Camera, object: THREE.Object3D = new THREE.Mesh()) =>
-        uniform('projection_matrix').update({ camera, object } as NodeFrame),
+      draw: (
+        camera: THREE.Camera,
+        object: THREE.Object3D = new THREE.Mesh(),
+        material: THREE.Material = spatial.material
+      ) => uniform('projection_matrix').update({ camera, object, material } as unknown as NodeFrame),
       value: (name: string) => (uniform(name) as UniformNode<unknown>).value,
       drawnObjects,
+      drawnMaterials,
     };
   }
 
@@ -146,6 +145,13 @@ describe('beforeEachDraw', () => {
     const mesh = new THREE.Mesh();
     draw(new THREE.PerspectiveCamera(), mesh);
     expect(drawnObjects).toEqual([mesh]);
+  });
+
+  it('hands on the material the draw renders with, so a depth draw is told apart', () => {
+    const { draw, drawnMaterials } = eachDraw();
+    const depth = new THREE.MeshDepthMaterial();
+    draw(new THREE.PerspectiveCamera(), new THREE.Mesh(), depth);
+    expect(drawnMaterials).toEqual([depth]);
   });
 });
 
