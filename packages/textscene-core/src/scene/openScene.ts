@@ -2,6 +2,7 @@ import type { SceneGraph } from '../core/SceneGraph.js';
 import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
 import type { TscnExternalResource } from '../parser/types.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
+import { parseSubResourcePath } from '../resources/subResourcePath.js';
 import { loadedResourceType } from './loadedResourceType.js';
 import type { NodeHandle } from './nodeHandle.js';
 import { parseTscnContent, type ParseResult } from './parseScene.js';
@@ -86,9 +87,11 @@ export function openScene({
     const current = graph();
     return current ? runtime().tree(current) : null;
   };
-  /** The class `load` gives: a sub-resource's heading names it, else the file does. */
+  /** The class `load` gives: a sub-resource's heading names it, and no file is asked for one. */
   const resourceClass = async (path: string): Promise<string | null> =>
-    properties.subResourceClass(path) ?? (await loadedResourceType(provider, path));
+    parseSubResourcePath(path).subResourceId === undefined
+      ? loadedResourceType(provider, path)
+      : properties.subResourceClass(path);
   const nodes = new SceneNodes({ graph, tree, resourceClass }, properties, (path) => listeners.written(path));
   const listeners = new SceneListeners((path) => nodes.getNodeOrNull(path)?.path ?? null);
 

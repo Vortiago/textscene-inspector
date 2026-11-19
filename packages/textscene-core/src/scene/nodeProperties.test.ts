@@ -214,6 +214,24 @@ describe('a resource the scene file holds, named by its path as Godot loads it',
     expect(await scene.getNode('Mesh').set('mesh', variant('Resource("res://icon.png")'))).toBe(false);
     expect(drawnText(scene, 'Main/Mesh', 'mesh')).toBe('null');
   });
+
+  it('keeps the last of two writes the host did not await, though the first reads a class', async () => {
+    const scene = sceneOfHeld();
+    const mesh = scene.getNode('Mesh');
+    await Promise.all([mesh.set('mesh', variant(sphere)), mesh.set('mesh', variant('null'))]);
+    expect(drawnText(scene, 'Main/Mesh', 'mesh')).toBe('null');
+  });
+
+  it('asks the host for no file to read the class of a sub-resource', async () => {
+    const asked: string[] = [];
+    const scene = openScene({
+      source: HELD,
+      provider: { loadResource: async (path) => (asked.push(path), null) },
+      rootScenePath: 'res://main.tscn',
+    });
+    await scene.load('res://main.tscn::Undeclared_9');
+    expect(asked).toEqual([]);
+  });
 });
 
 describe('the refusals', () => {

@@ -1,5 +1,5 @@
-import { openScene, variant, type ResourceProvider } from '@textscene/renderer';
-import { base64Of, capturePng } from './capture';
+import { openScene, variant } from '@textscene/renderer';
+import { base64Of, capturePng, NO_FILES } from './capture';
 
 const ROOT_SCENE_PATH = 'res://main.tscn';
 
@@ -34,17 +34,17 @@ ${cubeMesh === null ? '' : `mesh = ${cubeMesh}`}
 `;
 }
 
-const NO_FILES: ResourceProvider = { loadResource: async () => null };
+const captureBase64 = async (scene: ReturnType<typeof openScene>) =>
+  base64Of(await capturePng(scene, 320, 240));
 
-const capture = async (scene: ReturnType<typeof openScene>) => base64Of(await capturePng(scene, 320, 240));
-
-const open = (source: string) => openScene({ source, provider: NO_FILES, rootScenePath: ROOT_SCENE_PATH });
+const openHeld = (source: string) =>
+  openScene({ source, provider: NO_FILES, rootScenePath: ROOT_SCENE_PATH });
 
 /** The cube after the host writes `text` to its mesh, which starts as the box. */
 async function captureCubeWrite(text: string): Promise<string> {
-  const scene = open(sceneWithCube('SubResource("BoxMesh_1")'));
+  const scene = openHeld(sceneWithCube('SubResource("BoxMesh_1")'));
   await scene.getNode('Cube').set('mesh', variant(text));
-  return capture(scene);
+  return captureBase64(scene);
 }
 
 export interface HeldResourceCheckResults {
@@ -59,8 +59,8 @@ export interface HeldResourceCheckResults {
 /** One view at a time, as the mount checks draw them. */
 export async function runHeldResourceChecks(): Promise<HeldResourceCheckResults> {
   const writtenSpherePng = await captureCubeWrite(`Resource("${ROOT_SCENE_PATH}::SphereMesh_1")`);
-  const authoredSpherePng = await capture(open(sceneWithCube('SubResource("SphereMesh_1")')));
+  const authoredSpherePng = await captureBase64(openHeld(sceneWithCube('SubResource("SphereMesh_1")')));
   const writtenMaterialPng = await captureCubeWrite(`Resource("${ROOT_SCENE_PATH}::Material_1")`);
-  const authoredNoMeshPng = await capture(open(sceneWithCube(null)));
+  const authoredNoMeshPng = await captureBase64(openHeld(sceneWithCube(null)));
   return { writtenSpherePng, authoredSpherePng, writtenMaterialPng, authoredNoMeshPng };
 }

@@ -1,5 +1,5 @@
 import { mountScene, openScene, type ResourceProvider } from '@textscene/renderer';
-import { base64Of, capturePng, elementOf } from './capture';
+import { base64Of, capturePng, elementOf, NO_FILES } from './capture';
 
 /** A Camera3D, one light, one mesh and a Control over the world, in a window of the default size. */
 const CONSUMER_SCENE = `[gd_scene format=3]
@@ -70,8 +70,6 @@ viewport/transparent_background=true
 function projectOf(project: string): ResourceProvider {
   return { loadResource: async (path) => (path === 'res://project.godot' ? project : null) };
 }
-
-const NO_FILES: ResourceProvider = { loadResource: async () => null };
 
 export interface MountCheckResults {
   earlyCaptureError: string;

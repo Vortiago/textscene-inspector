@@ -1,4 +1,7 @@
-import { mountScene, type openScene } from '@textscene/renderer';
+import { mountScene, type openScene, type ResourceProvider } from '@textscene/renderer';
+
+/** A project with no files, for a scene that names none. */
+export const NO_FILES: ResourceProvider = { loadResource: async () => null };
 
 export function elementOf(width: number, height: number): HTMLElement {
   const element = document.createElement('div');
@@ -21,9 +24,11 @@ export async function capturePng(
   width: number,
   height: number
 ): Promise<Blob> {
-  const view = mountScene(elementOf(width, height), scene);
+  const element = elementOf(width, height);
+  const view = mountScene(element, scene);
   await view.settled;
   const png = await view.captureImage();
   view.dispose();
+  element.remove();
   return png;
 }

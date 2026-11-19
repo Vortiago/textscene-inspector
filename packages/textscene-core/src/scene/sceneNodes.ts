@@ -52,6 +52,8 @@ export class SceneNodes implements HandleHost {
   private readonly handles = new Map<string, NodeHandle>();
   /** Written only by `clear`: moves with each new text, so a write that waited on the load lands nowhere. */
   private generation = 0;
+  /** Written only by `inWriteOrder`: the class read of the latest `set`, which the next one waits on. */
+  private latestClassRead: Promise<unknown> = Promise.resolve();
   readonly cameras: ViewportCameras;
 
   constructor(
@@ -142,8 +144,7 @@ export class SceneNodes implements HandleHost {
   /** `Object::set`: a setter this release ports as a method runs it. */
   async set(path: string, property: string, written: SceneValue): Promise<boolean> {
     const generation = this.generation;
-    // A boolean, a number and a string name no resource, so they skip the wait of a class read.
-    const value = typeof written === 'object' ? await this.withResourceClass(written) : written;
+    const value = await this.inWriteOrder(this.withResourceClass(written));
     this.assertSameText(generation, path);
     const accessor = findPortedAccessor(this.typeOfNode(path), 'setter', property);
     if (!accessor) return this.setStored(path, property, value);
@@ -155,6 +156,14 @@ export class SceneNodes implements HandleHost {
       sceneValueOf(cast.value),
     ]);
     return cast.isValid;
+  }
+
+  /** A class read waits on the host's files, so each `set` waits on the one before: the last write wins. */
+  private inWriteOrder(classRead: Promise<SceneValue>): Promise<SceneValue> {
+    const ordered = this.latestClassRead.then(() => classRead);
+    // The caller's `set` rejects with the error. The next write still runs.
+    this.latestClassRead = ordered.catch(() => undefined);
+    return ordered;
   }
 
   /** `str_to_var` loads the resource a text names, so a setter's `Ref<T>` check reads its class. */
