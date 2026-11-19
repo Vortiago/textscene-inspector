@@ -2,8 +2,8 @@ import {
   useViewportMode,
   FRAME_ON_OPEN_STORAGE_KEY,
   SHOW_STORAGE_KEYS,
+  isPersistedShowKey,
   VIEWPORT_MODE_STORAGE_KEY,
-  type PersistedShowKey,
   type ViewportMode,
 } from '../../contexts/ViewportModeContext.js';
 import { RUNNING_GAME_SHOW, type ViewShow } from '../../viewShow/viewShow.js';
@@ -156,7 +156,7 @@ export function ViewportToolbar() {
   const handleFrameOnOpenChange = persisting(setFrameOnOpen, FRAME_ON_OPEN_STORAGE_KEY);
   const handleShowChange = (key: keyof ViewShow, on: boolean) => {
     setShow({ [key]: on });
-    if (key in SHOW_STORAGE_KEYS) writePersisted(SHOW_STORAGE_KEYS[key as PersistedShowKey], on);
+    if (isPersistedShowKey(key)) writePersisted(SHOW_STORAGE_KEYS[key], on);
   };
 
   const displayToggles = buildDisplayToggles({

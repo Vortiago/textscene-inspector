@@ -25,6 +25,10 @@ export const SHOW_STORAGE_KEYS = {
 
 export type PersistedShowKey = keyof typeof SHOW_STORAGE_KEYS;
 
+export function isPersistedShowKey(key: string): key is PersistedShowKey {
+  return key in SHOW_STORAGE_KEYS;
+}
+
 /** The viewport preferences a session persists, read once to seed the provider. */
 export interface PersistedViewport {
   mode: ViewportMode;
