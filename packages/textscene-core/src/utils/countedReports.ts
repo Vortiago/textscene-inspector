@@ -6,9 +6,7 @@ export class CountedReports {
   /** A new set on each change, so a reader compares identities. Written only by `publish`. */
   private current: ReadonlySet<string> = new Set();
 
-  keys(): ReadonlySet<string> {
-    return this.current;
-  }
+  keys = (): ReadonlySet<string> => this.current;
 
   /** Calls `listener` at once on each change. Returns the removal. */
   subscribe = (listener: () => void): (() => void) => {

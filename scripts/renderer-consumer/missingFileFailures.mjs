@@ -1,9 +1,6 @@
-const MISSING_PATH = 'res://missing.png';
+import { equalityFailure } from './mountFailures.mjs';
 
-function equalityFailure(name, expected, actual) {
-  const [want, got] = [JSON.stringify(expected), JSON.stringify(actual)];
-  return want === got ? [] : [`${name}: expected ${want}, got ${got}`];
-}
+const MISSING_PATH = 'res://missing.png';
 
 /** @param {import('./app/missingFileChecks').MissingFileCheckResults} results */
 export function missingFileFailures({ atSettled, ofScene, heard, afterWrite }) {

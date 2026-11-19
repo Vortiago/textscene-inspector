@@ -71,7 +71,7 @@ export function previewShellProviders({
     // The view in any mode reports here, and a host's `useGameViewSettled` beside the view reads it.
     (children) => <ViewStatusProvider>{children}</ViewStatusProvider>,
     (children) => (
-      <MissingResourcesProvider scene={hierarchyValue.scene} onMissingPathsChange={onMissingPathsChange}>
+      <MissingResourcesProvider onMissingPathsChange={onMissingPathsChange}>
         <LiveFilesHost />
         {children}
       </MissingResourcesProvider>

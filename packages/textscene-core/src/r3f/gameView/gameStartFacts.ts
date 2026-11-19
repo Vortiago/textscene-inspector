@@ -10,13 +10,10 @@ import { LOAD_OUTCOMES } from '../../resources/fileKinds.js';
 import { nodeReference, type ResourceSnapshot } from '../../resources/reading/index.js';
 import { SCRIPT_FILE } from '../../resources/script/kind.js';
 import type { SceneScope, TscnNode } from '../../parser/types.js';
+import type { ViewSettled } from '../viewStatus/viewStatus.js';
 
-/** What the In-game view cannot show of the game's first frame. */
-export interface GameStartFacts {
-  /** Godot readies each script before the first frame (`node.cpp:273`), and this view runs none. */
-  scriptedNodeCount: number;
-  /** A current Camera3D or Camera2D in the root viewport. */
-  hasCurrentCamera: boolean;
+/** What the In-game view cannot show of the game's first frame: the start facts of `settled`, and one. */
+export interface GameStartFacts extends Omit<ViewSettled, 'missingFiles'> {
   /** 3D content in the root window, and no current Camera3D to draw it (`renderer_viewport.cpp:362`). */
   lacksCamera3D: boolean;
 }

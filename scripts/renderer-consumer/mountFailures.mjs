@@ -19,7 +19,7 @@ function rgbaAt(png, { x, y }) {
   return [...png.data.subarray(at, at + 4)];
 }
 
-function equalityFailure(name, expected, actual) {
+export function equalityFailure(name, expected, actual) {
   const [want, got] = [JSON.stringify(expected), JSON.stringify(actual)];
   return want === got ? [] : [`${name}: expected ${want}, got ${got}`];
 }

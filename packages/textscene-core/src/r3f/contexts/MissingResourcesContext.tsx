@@ -18,7 +18,7 @@ import {
 } from 'react';
 import { resourceFilePath } from '../../resources/subResourcePath.js';
 import { missingResourcesOf } from '../../scene/missingFiles.js';
-import type { Scene } from '../../scene/openScene.js';
+import { useOptionalHierarchy } from './HierarchyContext.js';
 import { CountedReports } from '../../utils/countedReports.js';
 import { withKey, withoutKey } from '../../utils/keySet.js';
 import type { ResourceStatus } from '../../resources/useResource.js';
@@ -51,8 +51,6 @@ MissingResourcesContext.displayName = 'MissingResourcesContext';
 
 export interface MissingResourcesProviderProps {
   children: ReactNode;
-  /** The scene whose missing files the reports write. Without it, the provider keeps a record of its own. */
-  scene?: Scene;
   /**
    * Fired after mount and after every change of the missing set, never on a
    * new callback identity, so a host may pass an inline arrow. It serves code
@@ -61,14 +59,11 @@ export interface MissingResourcesProviderProps {
   onMissingPathsChange?: (paths: ReadonlySet<string>) => void;
 }
 
-export function MissingResourcesProvider({
-  children,
-  scene,
-  onMissingPathsChange,
-}: MissingResourcesProviderProps) {
-  // An effect on the whole context object loops, so a consumer takes the actions by name.
+export function MissingResourcesProvider({ children, onMissingPathsChange }: MissingResourcesProviderProps) {
+  const scene = useOptionalHierarchy()?.scene;
+  // With no scene above, as in a test of one reader, the provider keeps a record of its own.
   const files = useMemo(() => (scene ? missingResourcesOf(scene) : new CountedReports()), [scene]);
-  const missingPaths = useSyncExternalStore(files.subscribe, () => files.keys());
+  const missingPaths = useSyncExternalStore(files.subscribe, files.keys);
   const { report, clear, clearAll } = files;
   const [uploadedPaths, setUploadedPaths] = useState<ReadonlySet<string>>(() => new Set<string>());
 
