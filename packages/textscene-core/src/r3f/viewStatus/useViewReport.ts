@@ -9,6 +9,8 @@ import { useGameStartFacts } from '../gameView/gameStartFacts.js';
 import { useViewStatus } from './ViewStatusContext.js';
 import type { DrawnFrame, ViewSettled } from './viewStatus.js';
 
+const NO_FILES: ReadonlySet<string> = new Set();
+
 /** The revision the views last heard of, so a frame names what its components rendered. */
 function useNoticedRevision(scene: Scene | undefined): number {
   const store = useMemo(() => {
@@ -53,10 +55,14 @@ export function useViewReport(): (isFullSize: boolean) => void {
   const scene = useOptionalHierarchy()?.scene;
   const loader = useResourceLoader();
   const { scriptedNodeCount, hasCurrentCamera } = useGameStartFacts();
-  const facts: ViewSettled = useMemo(
-    () => ({ scriptedNodeCount, hasCurrentCamera }),
-    [scriptedNodeCount, hasCurrentCamera]
-  );
+  const settledFacts = useMemo(() => {
+    let last: ViewSettled | null = null;
+    // Read as the frame draws, since a reader reports a failed file in an effect after its render.
+    return (missingFiles: ReadonlySet<string>): ViewSettled => {
+      if (last?.missingFiles !== missingFiles) last = { scriptedNodeCount, hasCurrentCamera, missingFiles };
+      return last;
+    };
+  }, [scriptedNodeCount, hasCurrentCamera]);
   const revision = useNoticedRevision(scene);
   const isAttached = useAttachedView(scene);
   // One record per view, filled in place each frame: the status reads only the last one.
@@ -64,14 +70,14 @@ export function useViewReport(): (isFullSize: boolean) => void {
     revision: 0,
     isFullSize: false,
     work: { resources: 0, textures: 0, fonts: 0 },
-    facts,
+    facts: settledFacts(NO_FILES),
   }));
   return (isFullSize) => {
     if (!status || !isAttached.current) return;
     frame.revision = revision;
     frame.isFullSize = isFullSize;
     pendingSceneWork(loader, frame.work);
-    frame.facts = facts;
+    frame.facts = settledFacts(scene?.missingFiles() ?? NO_FILES);
     status.frameDrawn(frame);
   };
 }
