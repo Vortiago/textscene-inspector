@@ -4,7 +4,8 @@
  */
 
 import { createContext, useContext, useState, type ReactNode } from 'react';
-import { createExternalStore, useExternalStoreValue, type ExternalStore } from './createExternalStore.js';
+import { createExternalStore, type ExternalStore } from '../../utils/externalStore.js';
+import { useExternalStoreValue } from './createExternalStore.js';
 
 export interface StoreContext<T> {
   /** Holds a store of its own, so two previews never share a value. */

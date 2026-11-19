@@ -26,6 +26,8 @@ function renderUnderHost(initiallyVisible: boolean) {
   };
 }
 
+const NO_FILES: ReadonlySet<string> = new Set();
+
 describe('usePreviewFrameloop', () => {
   it('runs the loop with no host signal, so every other embedder renders as before', () => {
     const { result } = renderHook(() => usePreviewFrameloop());
@@ -61,7 +63,7 @@ describe('usePreviewFrameloop', () => {
 
   it('keeps the loop on while a hidden In-game view has yet to settle, and stops it once it has', async () => {
     const status = createViewStatus();
-    status.attach({ revision: () => 0, subscribe: () => () => {} });
+    status.attach({ revision: () => 0, missingFiles: () => NO_FILES, subscribe: () => () => {} });
     const wrapper = ({ children }: { children: ReactNode }) => (
       <ViewStatusProvider status={status}>
         <PreviewVisibilityProvider isVisible={false}>{children}</PreviewVisibilityProvider>
@@ -75,7 +77,7 @@ describe('usePreviewFrameloop', () => {
       isFullSize: true,
       work: { resources: 0, textures: 0, fonts: 0 },
     };
-    const facts = { scriptedNodeCount: 0, hasCurrentCamera: false };
+    const facts = { scriptedNodeCount: 0, hasCurrentCamera: false, missingFiles: NO_FILES };
     await act(async () => {
       status.frameDrawn({ ...frame, facts });
     });
@@ -85,12 +87,12 @@ describe('usePreviewFrameloop', () => {
 
   it('keeps the loop on while a hidden In-game view owes a capture, and stops it once it answers', async () => {
     const status = createViewStatus();
-    status.attach({ revision: () => 0, subscribe: () => () => {} });
+    status.attach({ revision: () => 0, missingFiles: () => NO_FILES, subscribe: () => () => {} });
     status.frameDrawn({
       revision: 0,
       isFullSize: true,
       work: { resources: 0, textures: 0, fonts: 0 },
-      facts: { scriptedNodeCount: 0, hasCurrentCamera: false },
+      facts: { scriptedNodeCount: 0, hasCurrentCamera: false, missingFiles: NO_FILES },
     });
     const wrapper = ({ children }: { children: ReactNode }) => (
       <ViewStatusProvider status={status}>

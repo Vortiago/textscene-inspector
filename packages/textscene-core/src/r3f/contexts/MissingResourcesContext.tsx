@@ -10,13 +10,17 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from 'react';
 import { resourceFilePath } from '../../resources/subResourcePath.js';
-import { useCountedReports } from '../hooks/useCountedReports.js';
+import { missingResourcesOf } from '../../scene/missingFiles.js';
+import { useOptionalHierarchy } from './HierarchyContext.js';
+import { CountedReports } from '../../utils/countedReports.js';
 import { withKey, withoutKey } from '../../utils/keySet.js';
 import type { ResourceStatus } from '../../resources/useResource.js';
 
@@ -57,9 +61,15 @@ export interface MissingResourcesProviderProps {
 }
 
 export function MissingResourcesProvider({ children, onMissingPathsChange }: MissingResourcesProviderProps) {
-  // Several slots can consume one path, so it stays missing while any of them reports it. An effect
-  // on the whole context object loops, so a consumer takes the actions by name.
-  const { reported: missingPaths, report, clear, clearAll } = useCountedReports();
+  const scene = useOptionalHierarchy()?.scene;
+  // With no scene above, as in a test of one reader, the provider keeps a record of its own.
+  const missingReports = useMemo(() => (scene ? missingResourcesOf(scene) : new CountedReports()), [scene]);
+  const missingPaths = useSyncExternalStore(
+    missingReports.subscribe,
+    missingReports.keys,
+    missingReports.keys
+  );
+  const { report, clear, clearAll } = missingReports;
   const [uploadedPaths, setUploadedPaths] = useState<ReadonlySet<string>>(() => new Set<string>());
 
   const markUploaded = useCallback(
@@ -120,7 +130,8 @@ export function useMissingReport(address: string, status: ResourceStatus): void 
   const { report, clear, markUploaded } = useMissingResources();
   const reportedAddressRef = useRef<string | null>(null);
 
-  useEffect(() => {
+  // In the commit, so no frame draws between the status and its report.
+  useLayoutEffect(() => {
     if (status === 'unavailable') {
       report(address);
       reportedAddressRef.current = address;

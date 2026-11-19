@@ -25,12 +25,8 @@ import { useTreeOrder, type TreeOrder } from './TreeOrderContext.js';
 import { useSceneAssetsSettled } from '../useSceneAssetsSettled.js';
 import { beginStep, endStep } from '../frameProfile/frameProfile.js';
 import { updateTextureAtlases, useTextureAtlasFrame } from '../textureAtlas/updateTextureAtlases.js';
-import {
-  createExternalStore,
-  useExternalStoreSelection,
-  useExternalStoreValue,
-  type ExternalStore,
-} from '../hooks/createExternalStore.js';
+import { createExternalStore, type ExternalStore } from '../../utils/externalStore.js';
+import { useExternalStoreSelection, useExternalStoreValue } from '../hooks/createExternalStore.js';
 
 export interface ViewportPass {
   /** ids (dispatcher-absolute node paths) of the viewports nested one level down, in tree order. */

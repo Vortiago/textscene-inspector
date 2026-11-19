@@ -1,4 +1,4 @@
-import { createExternalStore } from '../hooks/createExternalStore.js';
+import { createExternalStore } from '../../utils/externalStore.js';
 import type { RgbaImage } from '../../utils/encodePng.js';
 import { describePendingWork, hasPendingWork, type PendingSceneWork } from '../sceneWork.js';
 
@@ -7,11 +7,15 @@ export interface ViewSettled {
   scriptedNodeCount: number;
   /** A current Camera3D or Camera2D in the root viewport. */
   hasCurrentCamera: boolean;
+  /** The `res://` paths the frame asked for and did not get: `scene.missingFiles()` as it drew. */
+  missingFiles: ReadonlySet<string>;
 }
 
 export interface LiveScene {
   /** Changes with each change a frame draws, so a frame that drew the same revision shows the scene. */
   revision(): number;
+  /** A frame that drew another set shows the scene's missing files no longer. */
+  missingFiles(): ReadonlySet<string>;
   subscribe(listener: () => void): () => void;
 }
 
@@ -57,7 +61,11 @@ export function createViewStatus(): ViewStatus {
   let announced: ViewSettled | null = null;
   let capture: PendingCapture | null = null;
 
-  const showsDrawnState = () => live !== null && lastFrame !== null && live.revision() === lastFrame.revision;
+  const showsDrawnState = () =>
+    live !== null &&
+    lastFrame !== null &&
+    live.revision() === lastFrame.revision &&
+    live.missingFiles() === lastFrame.facts.missingFiles;
   // Nested viewports draw before their parent in one frame, so one frame shows a revision whole.
   const settled = (): ViewSettled | null =>
     showsDrawnState() && !hasPendingWork(lastFrame!.work) ? lastFrame!.facts : null;
