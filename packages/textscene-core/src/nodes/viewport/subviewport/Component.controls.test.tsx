@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { NodeDispatcher } from '../../../r3f/NodeDispatcher';
 import { useSelection } from '../../../r3f/contexts/SelectionContext';
 import { CanvasWorldScope } from '../../../r3f/environment/WorldEnvironmentScope';
-import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
+import { ViewShowProvider } from '../../../r3f/viewShow/ViewShowContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../../../parser/TscnParser';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
@@ -221,14 +221,14 @@ describe('a SubViewport with 3D content and a 2D item', () => {
         scene={parsed}
         source={SCENE_3D_WITH_SHARED_CONTAINER}
       >
-        <ViewportModeProvider initialShowPreviewEnvironment={false}>
+        <ViewShowProvider show={{ previewEnvironment: false }}>
           <ViewportPassStack captured={captured}>
             <SelectionProbe out={registered} />
             <CanvasWorldScope>
               <NodeDispatcher nodes={parsed.nodes} />
             </CanvasWorldScope>
           </ViewportPassStack>
-        </ViewportModeProvider>
+        </ViewShowProvider>
       </SceneStack>
     );
     await settleLoads();

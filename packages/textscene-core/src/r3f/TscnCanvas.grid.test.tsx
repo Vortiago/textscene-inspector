@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { TscnSceneContents } from './TscnCanvas';
 import { HierarchyProvider } from './contexts/HierarchyContext';
 import { SelectionProvider } from './contexts/SelectionContext';
-import { ViewportModeProvider } from './contexts/ViewportModeContext';
+import { ViewShowProvider } from './viewShow/ViewShowContext';
 import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
 import type { TscnNode } from '../parser/types';
 import type { MeshInstance3DProperties } from '../nodes/3d/meshinstance3d/types';
@@ -47,9 +47,9 @@ describe('<TscnSceneContents> ground-plane grid toggle (#224)', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
         <SelectionProvider>
-          <ViewportModeProvider>
+          <ViewShowProvider>
             <TscnSceneContents />
-          </ViewportModeProvider>
+          </ViewShowProvider>
         </SelectionProvider>
       </HierarchyProvider>
     );
@@ -61,9 +61,9 @@ describe('<TscnSceneContents> ground-plane grid toggle (#224)', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
         <SelectionProvider>
-          <ViewportModeProvider initialShowGrid>
+          <ViewShowProvider show={{ grid: true }}>
             <TscnSceneContents />
-          </ViewportModeProvider>
+          </ViewShowProvider>
         </SelectionProvider>
       </HierarchyProvider>
     );
@@ -72,9 +72,9 @@ describe('<TscnSceneContents> ground-plane grid toggle (#224)', () => {
 
   it('does not double up with the empty-scene indicator grid when both would apply', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ViewportModeProvider initialShowGrid>
+      <ViewShowProvider show={{ grid: true }}>
         <TscnSceneContents />
-      </ViewportModeProvider>
+      </ViewShowProvider>
     );
     // Empty scene already shows its own grid regardless of the toggle;
     // the toggle must not add a second overlapping grid.
@@ -89,9 +89,9 @@ describe('<TscnSceneContents> ground-plane grid toggle (#224)', () => {
     const contentGridRenderer = await ReactThreeTestRenderer.create(
       <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
         <SelectionProvider>
-          <ViewportModeProvider initialShowGrid>
+          <ViewShowProvider show={{ grid: true }}>
             <TscnSceneContents />
-          </ViewportModeProvider>
+          </ViewShowProvider>
         </SelectionProvider>
       </HierarchyProvider>
     );

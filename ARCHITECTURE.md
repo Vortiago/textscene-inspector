@@ -171,7 +171,8 @@ The strict parser also returns `SourceLines`, which puts each diagnostic on its 
 - **Scene tree.** `TscnCanvas` mounts the R3F `<Canvas>`. Each node gets its own `<group>`.
 - **Parent space.** A node follows its parent's transform only where Godot does
   (`godot/scene/parentSpace.ts`). Any other node attaches to the world root (`ParentSpaceScope`).
-- **3D and 2D.** `ViewportModeContext` picks `TscnCanvas` or `Canvas2DStage` (ADR-0006).
+- **Modes and helpers.** The `mode` of `TscnCanvas` picks the 3D canvas, `Canvas2DStage` or the game view, and its
+  `show` the editor helpers they draw (ADR-0006).
 - **Canvas renderer.** Both canvases take one set of `<Canvas>` props and mount one
   `CanvasRendererScope`, which installs the shadow pass and runs the per-frame services
   (`r3f/canvasRenderer/`).

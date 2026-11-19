@@ -12,7 +12,7 @@ import { TscnParser } from '../parser/TscnParser';
 import { NodeDispatcher } from './NodeDispatcher';
 import { SceneResourcesProvider } from './SceneResourcesContext';
 import { SelectionProvider } from './contexts/SelectionContext';
-import { ViewportModeProvider } from './contexts/ViewportModeContext';
+import { ViewShowProvider } from './viewShow/ViewShowContext';
 
 // Pull in all self-registering node components
 import './nodes/index';
@@ -39,14 +39,14 @@ async function renderScene(content: string) {
   const scene = parser.parse(content);
   const renderer = await ReactThreeTestRenderer.create(
     <SelectionProvider>
-      <ViewportModeProvider initialShowGizmos={false}>
+      <ViewShowProvider show={{ gizmos: false }}>
         <SceneResourcesProvider
           internalResources={scene.internalResources}
           externalResources={scene.externalResources}
         >
           <NodeDispatcher nodes={scene.nodes} />
         </SceneResourcesProvider>
-      </ViewportModeProvider>
+      </ViewShowProvider>
     </SelectionProvider>
   );
   return renderer;

@@ -6,7 +6,7 @@
 
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../r3f/components/CanvasItemGroup';
-import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
+import { useViewShow } from '../../../r3f/viewShow/ViewShowContext';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useNodeReference, useNodeResource } from '../../../resources/reading';
 import { SHAPE_2D } from '../../../resources/shapes/shape2d';
@@ -16,7 +16,7 @@ import { DEFAULT_COLLISION_DEBUG_COLOR } from '../../physics/shared/debugColor';
 import type { TouchScreenButtonProperties } from './types';
 
 export function ShapeOverlay({ props }: { props: TouchScreenButtonProperties }) {
-  const { showCollisions } = useViewportMode();
+  const { collisions: showCollisions } = useViewShow();
   const shape = useNodeResource(props.shape, SHAPE_2D);
   const scope = useSceneResources();
   const { texture } = useTexture2D(useNodeReference(props.texture_normal, scope));

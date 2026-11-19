@@ -9,6 +9,7 @@ import { TscnSceneProvider } from './TscnSceneProvider.js';
 import { assertCameraPath, assertLoadedCamera } from './viewCamera.js';
 import { ViewStatusProvider } from './viewStatus/ViewStatusContext.js';
 import { createViewStatus, type ViewSettled } from './viewStatus/viewStatus.js';
+import { assertShow, DEFAULT_SHOW, withShown, type ViewShow } from './viewShow/viewShow.js';
 
 export interface ViewOptions {
   /** `in-game` by default. */
@@ -21,23 +22,26 @@ export interface ViewOptions {
   selected?: NodeHandle | null;
   /** The node a click in the 3D mode picks, or null for a click on nothing. `null` stops the calls. */
   onSelect?: ((node: NodeHandle | null) => void) | null;
+  /** The editor helpers the 3D and 2D modes draw. In-game draws none but `performance`. */
+  show?: Partial<ViewShow>;
 }
 
-/** The options a view holds: `mode`, `visible` and `camera` always, the selection keys once given. */
-type MountedOptions = ViewOptions & Required<Pick<ViewOptions, 'mode' | 'visible' | 'camera'>>;
+/** The options a view holds: `mode`, `visible`, `camera` and `show` always, the selection keys once given. */
+type MountedOptions = Omit<ViewOptions, 'show'> &
+  Required<Pick<ViewOptions, 'mode' | 'visible' | 'camera'>> & { show: ViewShow };
 
 export interface View {
   /** Waits again after a scene change. Rejects for a failed mount, a dispose or a path to no Camera3D. */
   readonly settled: Promise<ViewSettled>;
   /** In-game at the window's size, 3D and 2D at the canvas's size. Rejects before `settled`. */
   captureImage(): Promise<Blob>;
-  /** Changes only the keys given a value. A `settled` read from before a switch waits for the new mode. */
+  /** Changes only the keys given a value, in `show` too. A `settled` from before a switch waits for it. */
   update(options: ViewOptions): void;
   /** The scene stays open for another view. */
   dispose(): void;
 }
 
-const DEFAULT_OPTIONS: MountedOptions = { mode: 'in-game', visible: true, camera: null };
+const DEFAULT_OPTIONS: MountedOptions = { mode: 'in-game', visible: true, camera: null, show: DEFAULT_SHOW };
 
 export function mountScene(element: HTMLElement, scene: Scene, options: ViewOptions = {}): View {
   let current = withGiven(DEFAULT_OPTIONS, checked(scene, options));
@@ -102,12 +106,14 @@ function withGiven(options: MountedOptions, given: ViewOptions): MountedOptions 
     camera: given.camera === undefined ? options.camera : given.camera,
     selected: given.selected === undefined ? options.selected : given.selected,
     onSelect: given.onSelect === undefined ? options.onSelect : given.onSelect,
+    show: withShown(options.show, given.show),
   };
 }
 
-// Before the render, so the caller gets the throw, and only for a camera the caller gives now.
+// Before the render, so the caller gets the throw, and only for a camera or a show the caller gives now.
 function checked(scene: Scene, given: ViewOptions): ViewOptions {
   if (typeof given.camera === 'string') assertCameraPath(scene, given.camera);
+  if (given.show) assertShow(given.show);
   return given;
 }
 

@@ -1,14 +1,12 @@
 import {
   useViewportMode,
-  RUNNING_GAME_TOGGLES,
   FRAME_ON_OPEN_STORAGE_KEY,
-  SHOW_FOG_STORAGE_KEY,
-  SHOW_GIZMOS_STORAGE_KEY,
-  SHOW_GRID_STORAGE_KEY,
-  SHOW_PERFORMANCE_STORAGE_KEY,
+  SHOW_STORAGE_KEYS,
+  isPersistedShowKey,
   VIEWPORT_MODE_STORAGE_KEY,
   type ViewportMode,
 } from '../../contexts/ViewportModeContext.js';
+import { RUNNING_GAME_SHOW, type ViewShow } from '../../viewShow/viewShow.js';
 import {
   useIsFreelookAvailable,
   useIsFreelookToggled,
@@ -40,119 +38,74 @@ function freelookTitle(isPreviewing: boolean, isAvailable: boolean): string {
   return isAvailable ? FREELOOK_TITLE : FREELOOK_ORTHOGRAPHIC_TITLE;
 }
 
-/** Everything `buildDisplayToggles` needs, so a test needs no DOM. */
+/** Everything `buildDisplayToggles` needs. */
 interface DisplayToggleState {
   mode: ViewportMode;
-  showGizmos: boolean;
-  setShowGizmos: (show: boolean) => void;
-  showCollisions: boolean;
-  setShowCollisions: (show: boolean) => void;
-  showLabels: boolean;
-  setShowLabels: (show: boolean) => void;
-  showNavigation: boolean;
-  setShowNavigation: (show: boolean) => void;
-  showGrid: boolean;
-  setShowGrid: (show: boolean) => void;
-  showPreviewSun: boolean;
-  setShowPreviewSun: (show: boolean) => void;
-  showPreviewEnvironment: boolean;
-  setShowPreviewEnvironment: (show: boolean) => void;
+  show: ViewShow;
+  setShowKey: (key: keyof ViewShow, on: boolean) => void;
   frameOnOpen: boolean;
   setFrameOnOpen: (frame: boolean) => void;
-  showFog: boolean;
-  setShowFog: (show: boolean) => void;
-  showPerformance: boolean;
-  setShowPerformance: (show: boolean) => void;
   sceneHasSun: boolean;
   sceneHasEnvironment: boolean;
 }
 
 const NO_EFFECT_IN_GAME_TITLE = 'No effect in the In-game view, which draws as the game does';
 
-/** A Display toggle the running game overrides, disabled In-game. It keeps the user's value. */
-function editorOnlyToggle(mode: ViewportMode, toggle: DisplayToggle): DisplayToggle {
-  return mode === 'in-game' ? { ...toggle, title: NO_EFFECT_IN_GAME_TITLE, disabled: true } : toggle;
-}
-
-/**
- * The overlays the Display menu offers, and their state. At module scope, so
- * the 3D-only ones are one readable list.
- */
+/** The overlays the Display menu offers, and their state, in the menu's order. */
 function buildDisplayToggles(state: DisplayToggleState): readonly DisplayToggle[] {
-  // The key is the setting the toggle shows: only a setting the running game overrides compiles.
-  const editorOnly = (_setting: keyof typeof RUNNING_GAME_TOGGLES, toggle: DisplayToggle) =>
-    editorOnlyToggle(state.mode, toggle);
+  const { show } = state;
+  // A toggle the running game overrides is disabled In-game. It keeps the user's value.
+  const editorOnly = (toggle: DisplayToggle): DisplayToggle =>
+    state.mode === 'in-game' ? { ...toggle, title: NO_EFFECT_IN_GAME_TITLE, disabled: true } : toggle;
+  const ofShow = (key: keyof ViewShow, label: string, title: string): DisplayToggle => {
+    const toggle = {
+      label,
+      title,
+      checked: show[key],
+      onChange: (on: boolean) => state.setShowKey(key, on),
+    };
+    return key in RUNNING_GAME_SHOW ? editorOnly(toggle) : toggle;
+  };
+  // A preview the scene supplies its own of is disabled and unchecked, as Godot's button (ADR-0025).
+  const ofPreview = (
+    key: 'previewSun' | 'previewEnvironment',
+    label: string,
+    isYielded: boolean,
+    titles: { yielded: string; shown: string }
+  ): DisplayToggle => {
+    const toggle = ofShow(key, label, isYielded ? titles.yielded : titles.shown);
+    return isYielded ? { ...toggle, checked: false, disabled: true } : toggle;
+  };
   return [
-    editorOnly('showGizmos', {
-      label: 'Gizmos',
-      title: "Show the editor gizmos, faint on a node that is not selected, as Godot's View Gizmos does",
-      checked: state.showGizmos,
-      onChange: state.setShowGizmos,
-    }),
-    editorOnly('showCollisions', {
-      label: 'Collisions',
-      title: 'Show CollisionShape3D wireframes',
-      checked: state.showCollisions,
-      onChange: state.setShowCollisions,
-    }),
-    editorOnly('showLabels', {
-      label: 'Labels',
-      title: 'Show Label3D text in the viewport',
-      checked: state.showLabels,
-      onChange: state.setShowLabels,
-    }),
-    editorOnly('showNavigation', {
-      label: 'Navigation',
-      title: 'Show NavigationRegion overlays',
-      checked: state.showNavigation,
-      onChange: state.setShowNavigation,
-    }),
-    {
-      label: 'Performance',
-      title: 'Show the frame rate and the time each render step takes',
-      checked: state.showPerformance,
-      onChange: state.setShowPerformance,
-    },
+    ofShow(
+      'gizmos',
+      'Gizmos',
+      "Show the editor gizmos, faint on a node that is not selected, as Godot's View Gizmos does"
+    ),
+    ofShow('collisions', 'Collisions', 'Show CollisionShape3D wireframes'),
+    ofShow('labels', 'Labels', 'Show Label3D text in the viewport'),
+    ofShow('navigation', 'Navigation', 'Show NavigationRegion overlays'),
+    ofShow('performance', 'Performance', 'Show the frame rate and the time each render step takes'),
     // The grid, the framing, the fog and the preview lighting mean nothing over the 2D Control overlay.
     ...(state.mode === '2D'
       ? []
       : [
-          editorOnly('frameOnOpen', {
+          editorOnly({
             label: 'Frame on open',
             title:
               'Frame the whole scene when it loads. Off matches Godot, which opens at a fixed orbit — press F to frame.',
             checked: state.frameOnOpen,
             onChange: state.setFrameOnOpen,
           }),
-          editorOnly('showGrid', {
-            label: 'Grid',
-            title: 'Show a ground-plane reference grid',
-            checked: state.showGrid,
-            onChange: state.setShowGrid,
+          ofShow('grid', 'Grid', 'Show a ground-plane reference grid'),
+          ofShow('fog', 'Fog', "Draw the Environment's depth and volumetric fog. Off skips the fog passes."),
+          ofPreview('previewSun', 'Preview Sun', state.sceneHasSun, {
+            yielded: 'Scene contains DirectionalLight3D. Preview disabled.',
+            shown: "Godot's editor preview sun, for a scene with no light of its own",
           }),
-          editorOnly('showFog', {
-            label: 'Fog',
-            title: "Draw the Environment's depth and volumetric fog. Off skips the fog passes.",
-            checked: state.showFog,
-            onChange: state.setShowFog,
-          }),
-          editorOnly('showPreviewSun', {
-            label: 'Preview Sun',
-            title: state.sceneHasSun
-              ? 'Scene contains DirectionalLight3D. Preview disabled.'
-              : "Godot's editor preview sun, for a scene with no light of its own",
-            checked: state.showPreviewSun && !state.sceneHasSun,
-            disabled: state.sceneHasSun,
-            onChange: state.setShowPreviewSun,
-          }),
-          editorOnly('showPreviewEnvironment', {
-            label: 'Preview Sky',
-            title: state.sceneHasEnvironment
-              ? 'Scene contains WorldEnvironment. Preview disabled.'
-              : "Godot's editor preview sky, for a scene with no environment of its own",
-            checked: state.showPreviewEnvironment && !state.sceneHasEnvironment,
-            disabled: state.sceneHasEnvironment,
-            onChange: state.setShowPreviewEnvironment,
+          ofPreview('previewEnvironment', 'Preview Sky', state.sceneHasEnvironment, {
+            yielded: 'Scene contains WorldEnvironment. Preview disabled.',
+            shown: "Godot's editor preview sky, for a scene with no environment of its own",
           }),
         ]),
   ];
@@ -177,30 +130,7 @@ function downloadDataUrl(dataUrl: string, filename: string): void {
 }
 
 export function ViewportToolbar() {
-  const {
-    mode,
-    setMode,
-    showGizmos,
-    setShowGizmos,
-    showCollisions,
-    setShowCollisions,
-    showLabels,
-    setShowLabels,
-    showNavigation,
-    setShowNavigation,
-    showGrid,
-    setShowGrid,
-    showPreviewSun,
-    setShowPreviewSun,
-    showPreviewEnvironment,
-    setShowPreviewEnvironment,
-    frameOnOpen,
-    setFrameOnOpen,
-    showFog,
-    setShowFog,
-    showPerformance,
-    setShowPerformance,
-  } = useViewportMode();
+  const { mode, setMode, show, setShow, frameOnOpen, setFrameOnOpen } = useViewportMode();
   const camera = useOptionalViewportActions();
   const isFreelookToggled = useIsFreelookToggled();
   const isFreelookAvailable = useIsFreelookAvailable() ?? false;
@@ -223,34 +153,18 @@ export function ViewportToolbar() {
   // Only the user's click persists: a programmatic writer, such as
   // WorkspaceAutoSelect, must not overwrite the stored preference.
   const handleModeClick = persisting(setMode, VIEWPORT_MODE_STORAGE_KEY);
-  const handleGizmosChange = persisting(setShowGizmos, SHOW_GIZMOS_STORAGE_KEY);
-  const handleGridChange = persisting(setShowGrid, SHOW_GRID_STORAGE_KEY);
   const handleFrameOnOpenChange = persisting(setFrameOnOpen, FRAME_ON_OPEN_STORAGE_KEY);
-  const handleFogChange = persisting(setShowFog, SHOW_FOG_STORAGE_KEY);
-  const handlePerformanceChange = persisting(setShowPerformance, SHOW_PERFORMANCE_STORAGE_KEY);
+  const handleShowChange = (key: keyof ViewShow, on: boolean) => {
+    setShow({ [key]: on });
+    if (isPersistedShowKey(key)) writePersisted(SHOW_STORAGE_KEYS[key], on);
+  };
 
   const displayToggles = buildDisplayToggles({
     mode,
-    showGizmos,
-    setShowGizmos: handleGizmosChange,
-    showCollisions,
-    setShowCollisions,
-    showLabels,
-    setShowLabels,
-    showNavigation,
-    setShowNavigation,
-    showGrid,
-    setShowGrid: handleGridChange,
-    showPreviewSun,
-    setShowPreviewSun,
-    showPreviewEnvironment,
-    setShowPreviewEnvironment,
+    show,
+    setShowKey: handleShowChange,
     frameOnOpen,
     setFrameOnOpen: handleFrameOnOpenChange,
-    showFog,
-    setShowFog: handleFogChange,
-    showPerformance,
-    setShowPerformance: handlePerformanceChange,
     sceneHasSun,
     sceneHasEnvironment,
   });

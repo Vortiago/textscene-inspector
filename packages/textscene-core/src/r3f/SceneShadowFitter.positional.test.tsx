@@ -18,7 +18,7 @@ import { TscnSceneContents } from './TscnCanvas';
 import { EDITOR_CAMERA_FOV, editorCameraPosition } from './godotEditorCamera';
 import { HierarchyProvider } from './contexts/HierarchyContext';
 import { SelectionProvider } from './contexts/SelectionContext';
-import { ViewportModeProvider } from './contexts/ViewportModeContext';
+import { ViewShowProvider } from './viewShow/ViewShowContext';
 import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
 import { TscnParser } from '../parser/TscnParser';
 import { waitFor } from '@testing-library/react';
@@ -33,9 +33,9 @@ async function renderScene(sceneText: string): Promise<Renderer> {
   return ReactThreeTestRenderer.create(
     <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
       <SelectionProvider>
-        <ViewportModeProvider initialShowPreviewSun={false} initialShowPreviewEnvironment={false}>
+        <ViewShowProvider show={{ previewSun: false, previewEnvironment: false }}>
           <TscnSceneContents />
-        </ViewportModeProvider>
+        </ViewShowProvider>
       </SelectionProvider>
     </HierarchyProvider>
   );

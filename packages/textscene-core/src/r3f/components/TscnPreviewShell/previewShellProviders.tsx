@@ -29,7 +29,6 @@ import { ProjectSettingsProvider } from '../../contexts/ProjectSettingsContext.j
 import { AnimationTransportProvider } from '../../contexts/AnimationTransportContext.js';
 import { PreviewVisibilityProvider } from '../../contexts/PreviewVisibilityContext.js';
 import { composeProviders } from '../../composeProviders.js';
-import { FrameStatsProvider } from '../../frameProfile/FrameStatsContext.js';
 import { SoftwareRenderingProvider } from '../../softwareRendering/SoftwareRenderingContext.js';
 import { ViewStatusProvider } from '../../viewStatus/ViewStatusContext.js';
 
@@ -41,7 +40,7 @@ interface PreviewShellProviderOptions {
   onMissingPathsChange?: (paths: ReadonlySet<string>) => void;
   /** The host's forced viewport mode, if it named one. */
   initialViewportMode?: ViewportMode;
-  /** The mode, gizmos, grid, framing, fog and performance overlay persisted last session. */
+  /** The mode, the helpers and the framing persisted last session. */
   initialViewport?: PersistedViewport;
   /** Whether the host shows the preview. Both canvases stop rendering while it is `false`. */
   isVisible?: boolean;
@@ -88,17 +87,12 @@ export function previewShellProviders({
       // A host-forced `initialViewportMode` wins over the persisted mode.
       <ViewportModeProvider
         initialMode={initialViewportMode ?? initialViewport.mode}
-        initialShowGizmos={initialViewport.showGizmos}
-        initialShowGrid={initialViewport.showGrid}
+        initialShow={initialViewport.show}
         initialFrameOnOpen={initialViewport.frameOnOpen}
-        initialShowFog={initialViewport.showFog}
-        initialShowPerformance={initialViewport.showPerformance}
       >
         {children}
       </ViewportModeProvider>
     ),
-    // The frame profile in the canvas publishes here, and the overlay beside the canvas reads it.
-    (children) => <FrameStatsProvider>{children}</FrameStatsProvider>,
     // Each canvas's probe publishes here, and the top bar reads it.
     (children) => <SoftwareRenderingProvider>{children}</SoftwareRenderingProvider>,
     (children) => <AnimationTransportProvider>{children}</AnimationTransportProvider>,

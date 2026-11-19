@@ -2,9 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import {
-  SHOW_GIZMOS_STORAGE_KEY,
+  SHOW_STORAGE_KEYS,
   ViewportModeProvider,
-  useShowGizmos,
   useViewportMode,
   type ViewportModeProviderProps,
 } from './ViewportModeContext';
@@ -19,79 +18,30 @@ describe('ViewportModeContext', () => {
   it('defaults to 3D with collisions hidden when no provider is mounted', () => {
     const { result } = renderHook(() => useViewportMode());
     expect(result.current.mode).toBe('3D');
-    expect(result.current.showCollisions).toBe(false);
+    expect(result.current.show.collisions).toBe(false);
   });
 
-  it('defaults showGrid to false (#224 — must not invalidate visual baselines)', () => {
-    const { result } = renderHook(() => useViewportMode(), { wrapper: wrapper() });
-    expect(result.current.showGrid).toBe(false);
-  });
-
-  it('defaults showPerformance to false, so no frame is profiled unasked', () => {
-    const { result } = renderHook(() => useViewportMode(), { wrapper: wrapper() });
-    expect(result.current.showPerformance).toBe(false);
-  });
-
-  it('toggles showPerformance', () => {
-    const { result } = renderHook(() => useViewportMode(), { wrapper: wrapper() });
-    act(() => result.current.setShowPerformance(true));
-    expect(result.current.showPerformance).toBe(true);
-  });
-
-  it('toggles showGrid', () => {
-    const { result } = renderHook(() => useViewportMode(), { wrapper: wrapper() });
-    act(() => result.current.setShowGrid(true));
-    expect(result.current.showGrid).toBe(true);
-  });
-
-  it('honors initial values from the provider', () => {
+  it('honours the initial mode and helpers', () => {
     const { result } = renderHook(() => useViewportMode(), {
-      wrapper: wrapper({ initialMode: '2D', initialShowCollisions: true }),
+      wrapper: wrapper({ initialMode: '2D', initialShow: { collisions: true } }),
     });
     expect(result.current.mode).toBe('2D');
-    expect(result.current.showCollisions).toBe(true);
+    expect(result.current.show.collisions).toBe(true);
   });
 
-  it('toggles showCollisions', () => {
-    const { result } = renderHook(() => useViewportMode(), { wrapper: wrapper() });
-    expect(result.current.showCollisions).toBe(false);
-    act(() => result.current.setShowCollisions(true));
-    expect(result.current.showCollisions).toBe(true);
-  });
-
-  it('shows the fog by default, as Godot draws it', () => {
-    const { result } = renderHook(() => useViewportMode(), { wrapper: wrapper() });
-    expect(result.current.showFog).toBe(true);
-  });
-
-  it('hides and shows the fog', () => {
-    const { result } = renderHook(() => useViewportMode(), { wrapper: wrapper({ initialShowFog: false }) });
-    expect(result.current.showFog).toBe(false);
-    act(() => result.current.setShowFog(true));
-    expect(result.current.showFog).toBe(true);
-  });
-
-  it('shows the gizmos by default, as the Godot editor does (View Gizmos)', () => {
-    const { result } = renderHook(() => useViewportMode(), { wrapper: wrapper() });
-    expect(result.current.showGizmos).toBe(true);
-  });
-
-  it('shows the gizmos with no provider mounted', () => {
-    const { result } = renderHook(() => useViewportMode());
-    expect(result.current.showGizmos).toBe(true);
-  });
-
-  it('hides and shows the gizmos', () => {
+  it('gives a helper the initial show leaves out its default', () => {
     const { result } = renderHook(() => useViewportMode(), {
-      wrapper: wrapper({ initialShowGizmos: false }),
+      wrapper: wrapper({ initialShow: { collisions: true } }),
     });
-    expect(result.current.showGizmos).toBe(false);
-    act(() => result.current.setShowGizmos(true));
-    expect(result.current.showGizmos).toBe(true);
+    expect(result.current.show.gizmos).toBe(true);
   });
 
-  it('persists the gizmos under tsi.showGizmos', () => {
-    expect(SHOW_GIZMOS_STORAGE_KEY).toBe('tsi.showGizmos');
+  it('changes only the helpers setShow is given', () => {
+    const { result } = renderHook(() => useViewportMode(), {
+      wrapper: wrapper({ initialShow: { fog: false } }),
+    });
+    act(() => result.current.setShow({ grid: true }));
+    expect(result.current.show).toMatchObject({ grid: true, fog: false });
   });
 
   it('switches mode', () => {
@@ -100,25 +50,12 @@ describe('ViewportModeContext', () => {
     expect(result.current.mode).toBe('2D');
   });
 
-  it('re-renders a reader of useShowGizmos for the Gizmos toggle and for no other preference', () => {
-    let gizmoReads = 0;
-    function GizmoReader() {
-      useShowGizmos();
-      gizmoReads += 1;
-      return null;
-    }
-    const { result } = renderHook(() => useViewportMode(), {
-      wrapper: ({ children }: { children: ReactNode }) => (
-        <ViewportModeProvider>
-          <GizmoReader />
-          {children}
-        </ViewportModeProvider>
-      ),
+  it('persists the helpers under the keys of earlier sessions', () => {
+    expect(SHOW_STORAGE_KEYS).toEqual({
+      gizmos: 'tsi.showGizmos',
+      grid: 'tsi.showGrid',
+      fog: 'tsi.showFog',
+      performance: 'tsi.showPerformance',
     });
-    const afterMount = gizmoReads;
-    act(() => result.current.setShowGrid(true));
-    expect(gizmoReads).toBe(afterMount);
-    act(() => result.current.setShowGizmos(false));
-    expect(gizmoReads).toBe(afterMount + 1);
   });
 });

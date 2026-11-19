@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { ViewportModeProvider } from '../contexts/ViewportModeContext';
+import { ViewShowProvider } from '../viewShow/ViewShowContext';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
@@ -246,9 +246,9 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     const node: TscnNode = { rawProperties: {}, name: 'L', type: 'Label3D', children: [], properties: props };
 
     const renderer = await ReactThreeTestRenderer.create(
-      <ViewportModeProvider initialShowLabels>
+      <ViewShowProvider show={{ labels: true }}>
         <Label3D node={node} />
-      </ViewportModeProvider>
+      </ViewShowProvider>
     );
     const groupInstance = renderer.scene.findByProps({ name: 'L' }).instance as THREE.Group;
 
@@ -287,9 +287,9 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     const node: TscnNode = { rawProperties: {}, name: 'L', type: 'Label3D', children: [], properties: props };
 
     const renderer = await ReactThreeTestRenderer.create(
-      <ViewportModeProvider initialShowLabels>
+      <ViewShowProvider show={{ labels: true }}>
         <Label3D node={node} />
-      </ViewportModeProvider>
+      </ViewShowProvider>
     );
     const groupInstance = renderer.scene.findByProps({ name: 'L' }).instance as THREE.Group;
     const qBefore = groupInstance.quaternion.clone();
