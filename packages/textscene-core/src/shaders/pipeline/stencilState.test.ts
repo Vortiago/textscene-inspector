@@ -1,7 +1,31 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { StencilCompare, StencilFlag } from '../../godot/rendering/materials/stencil.js';
-import { godotStencilState } from './stencilState.js';
+import {
+  applyGodotStencil,
+  isAnyStencilMaterialLive,
+  type StencilState,
+  type StencilTest,
+} from './stencilState.js';
+
+const STENCIL_KEYS = [
+  'stencilWrite',
+  'stencilRef',
+  'stencilFunc',
+  'stencilFuncMask',
+  'stencilWriteMask',
+  'stencilFail',
+  'stencilZFail',
+  'stencilZPass',
+] as const;
+
+/** The stencil state `applyGodotStencil` gives a material for `test`. */
+function godotStencilState(test: StencilTest): StencilState {
+  const material = new THREE.MeshBasicMaterial();
+  applyGodotStencil(material, test);
+  material.dispose();
+  return Object.fromEntries(STENCIL_KEYS.map((key) => [key, material[key]])) as StencilState;
+}
 
 describe('Godot’s stencil state as three’s', () => {
   it('turns the test on and keeps the value on every outcome with no flag', () => {
@@ -60,5 +84,25 @@ describe('Godot’s stencil state as three’s', () => {
     [StencilCompare.GREATER_OR_EQUAL, THREE.GreaterEqualStencilFunc],
   ])('compare %i tests the reference with GL’s function %i', (compare, func) => {
     expect(godotStencilState({ flags: StencilFlag.READ, compare, reference: 1 }).stencilFunc).toBe(func);
+  });
+});
+
+describe('the live stencil materials', () => {
+  const test = { flags: StencilFlag.WRITE, compare: StencilCompare.ALWAYS, reference: 1 };
+
+  it('counts a material from its stencil state until it is disposed', () => {
+    const material = new THREE.MeshBasicMaterial();
+    applyGodotStencil(material, test);
+    expect([material.stencilWrite, isAnyStencilMaterialLive()]).toEqual([true, true]);
+    material.dispose();
+    expect(isAnyStencilMaterialLive()).toBe(false);
+  });
+
+  it('counts a material once however often its state is applied', () => {
+    const material = new THREE.MeshBasicMaterial();
+    applyGodotStencil(material, test);
+    applyGodotStencil(material, test);
+    material.dispose();
+    expect(isAnyStencilMaterialLive()).toBe(false);
   });
 });

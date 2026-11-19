@@ -6,6 +6,7 @@ import { NO_ENVIRONMENT_TONE_MAPPING } from '../../godot/rendering/environment/t
 import { useMultisampledTarget } from '../offscreen/multisampledTarget';
 import { drawOffscreen } from '../offscreen/draw';
 import { createPassTarget } from './passTarget';
+import { isAnyStencilMaterialLive } from '../../shaders/pipeline/stencilState';
 import { useGodotToneMapper } from './useGodotToneMapper';
 import { usePassToneMap } from './passToneMap';
 
@@ -73,6 +74,7 @@ export function useToneMapPass(options: ToneMapPassOptions): ToneMapPass {
       worldBuffer,
       drawWorld: (scene, camera) =>
         drawOffscreen(gl, () => {
+          matchStencilToMaterials(worldBuffer);
           gl.autoClear = true;
           gl.setRenderTarget(worldBuffer);
           gl.render(scene, camera);
@@ -95,9 +97,18 @@ function useWorldBuffer(
   return worldBuffer;
 }
 
+/** Built with a stencil buffer, so its MSAA samples are those of Godot's depth format, which has one. */
 function worldBufferOf(name: string): THREE.WebGLRenderTarget {
   const buffer = createPassTarget(`${name}::world`, { type: SCENE_BUFFER_TYPE });
   buffer.depthBuffer = true;
   buffer.stencilBuffer = true;
   return buffer;
+}
+
+/** three reads `stencilBuffer` only when it sets a target up, so a change frees it for the next render. */
+function matchStencilToMaterials(buffer: THREE.WebGLRenderTarget): void {
+  const needsStencil = isAnyStencilMaterialLive();
+  if (buffer.stencilBuffer === needsStencil) return;
+  buffer.stencilBuffer = needsStencil;
+  buffer.dispose();
 }

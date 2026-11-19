@@ -31,7 +31,7 @@ import {
   type MaterialBlendState,
 } from '../pipeline/blendState.js';
 import { CULL_SIDES } from '../pipeline/cullSide.js';
-import { godotStencilState, type StencilTest } from '../pipeline/stencilState.js';
+import { applyGodotStencil, type StencilTest } from '../pipeline/stencilState.js';
 
 /** `depth_test_disabled` is a material flag beside the DEFAULT and INVERTED depth test. */
 type DepthTest = 'enabled' | 'disabled' | 'inverted';
@@ -237,7 +237,7 @@ export function applySpatialPipeline(material: THREE.Material, pipeline: Spatial
   material.side = CULL_SIDES[pipeline.cullMode];
   // three draws a transparent DoubleSide material back faces first, in a second draw; Godot draws once.
   material.forceSinglePass = true;
-  if (pipeline.stencil) Object.assign(material, godotStencilState(pipeline.stencil));
+  if (pipeline.stencil) applyGodotStencil(material, pipeline.stencil);
 }
 
 /** Godot's error for a stencil read outside the alpha pass (`render_forward_clustered.cpp:4099`). */

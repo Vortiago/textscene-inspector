@@ -6,7 +6,6 @@ import { alphaToCoverageBlendState, godotBlendState } from '../pipeline/blendSta
 import { CullMode } from '../../godot/rendering/materials/cullMode.js';
 import { DepthDrawMode } from '../../godot/rendering/materials/depthDrawMode.js';
 import { StencilCompare, StencilFlag } from '../../godot/rendering/materials/stencil.js';
-import { godotStencilState } from '../pipeline/stencilState.js';
 import { parsedShader } from '../language/parseShader.js';
 import { drawsAlphaToCoverage, spatialPipeline, stencilQueueError } from './spatialPipeline.js';
 import { transpileSpatial } from './transpileSpatial.js';
@@ -304,9 +303,13 @@ describe('a spatial shader’s stencil modes', () => {
     const { material } = transpileSpatial(
       'shader_type spatial;\nrender_mode unshaded, depth_test_disabled;\nstencil_mode read, compare_not_equal, 2;\n'
     );
-    expect(material).toMatchObject(
-      godotStencilState({ flags: StencilFlag.READ, compare: StencilCompare.NOT_EQUAL, reference: 2 })
-    );
+    expect(material).toMatchObject({
+      stencilWrite: true,
+      stencilRef: 2,
+      stencilFunc: THREE.NotEqualStencilFunc,
+      stencilFuncMask: 255,
+      stencilWriteMask: 0,
+    });
   });
 
   it('draws with no stencil test when the shader names no reference', () => {

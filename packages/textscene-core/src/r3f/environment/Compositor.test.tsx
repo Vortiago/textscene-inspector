@@ -11,6 +11,8 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useThree } from '@react-three/fiber';
 import { waitFor } from '@testing-library/react';
 import { Compositor } from './Compositor';
+import { applyGodotStencil } from '../../shaders/pipeline/stencilState';
+import { StencilCompare, StencilFlag } from '../../godot/rendering/materials/stencil';
 import { PassToneMapProvider } from './passToneMap';
 import { usePublishCameraAttributes } from './worldExposure';
 import { environmentSettingsOf } from '../../resources/environment/testing/environmentSettings';
@@ -144,9 +146,19 @@ describe('<Compositor> on the root canvas', () => {
     expect(draws[0]?.autoClear).toBe(true);
   });
 
-  it('gives the world buffer a stencil buffer, which the clear of its render sets to 0', async () => {
+  it('gives the world buffer no stencil buffer while no material tests the stencil', async () => {
     const { nextFrame } = await mount();
     const draws = await nextFrame();
+
+    expect(draws[0]?.bound).toMatchObject({ depthBuffer: true, stencilBuffer: false });
+  });
+
+  it('gives the world buffer a stencil buffer while a material tests the stencil', async () => {
+    const material = new THREE.MeshBasicMaterial();
+    applyGodotStencil(material, { flags: StencilFlag.WRITE, compare: StencilCompare.ALWAYS, reference: 1 });
+    const { nextFrame } = await mount();
+    const draws = await nextFrame();
+    material.dispose();
 
     expect(draws[0]?.bound).toMatchObject({ depthBuffer: true, stencilBuffer: true });
   });

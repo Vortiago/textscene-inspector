@@ -35,7 +35,7 @@ const STENCIL_FUNCS: Readonly<Record<EnumValue<typeof StencilCompare>, THREE.Ste
 const WHOLE_VALUE = 255;
 
 /** A mask of 0 compares 0 and writes nothing (`scene_shader_forward_clustered.cpp:362`). */
-export function godotStencilState({ flags, compare, reference }: StencilTest): StencilState {
+function godotStencilState({ flags, compare, reference }: StencilTest): StencilState {
   const writes = (flag: number) => (flags & flag ? THREE.ReplaceStencilOp : THREE.KeepStencilOp);
   return {
     stencilWrite: true,
@@ -48,3 +48,21 @@ export function godotStencilState({ flags, compare, reference }: StencilTest): S
     stencilZPass: writes(StencilFlag.WRITE),
   };
 }
+
+/** Written only by `applyGodotStencil`. A material leaves it when it is disposed. */
+const liveStencilMaterials = new Set<THREE.Material>();
+
+/** Gives `material` Godot's stencil state, and counts it live until it is disposed. */
+export function applyGodotStencil(material: THREE.Material, test: StencilTest): void {
+  Object.assign(material, godotStencilState(test));
+  if (liveStencilMaterials.has(material)) return;
+  liveStencilMaterials.add(material);
+  const leave = () => {
+    liveStencilMaterials.delete(material);
+    material.removeEventListener('dispose', leave);
+  };
+  material.addEventListener('dispose', leave);
+}
+
+/** A stencil attachment costs a 3D world about 13 % of its frame on software GL, so it waits for a user. */
+export const isAnyStencilMaterialLive = (): boolean => liveStencilMaterials.size > 0;
