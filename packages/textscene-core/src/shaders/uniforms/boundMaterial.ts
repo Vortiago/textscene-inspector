@@ -1,11 +1,14 @@
 import { NodeMaterial } from 'three/webgpu';
 import type { ShaderSource, TranslatorFault } from '../fault/translatorFault.js';
+import type { Specialisation } from '../template/specialisation.js';
 import type { TranspiledUniform } from './transpiledUniform.js';
 
 /** The shader a transpiled material draws: its uniforms and the Godot text it comes from. */
 export interface MaterialShader {
   readonly parameters: readonly TranspiledUniform[];
   readonly source: ShaderSource;
+  /** The specialisation constants its programs fold, one program for each set of values. */
+  readonly specialisations?: ReadonlyMap<string, Specialisation>;
 }
 
 const NO_SHADER: MaterialShader = { parameters: [], source: { text: '', file: '' } };
@@ -35,6 +38,17 @@ export class BoundNodeMaterial extends NodeMaterial {
   /** Takes each program the GPU refuses for this material. Null logs the fault to the console. */
   onTranslatorFault: ((fault: TranslatorFault) => void) | null = null;
 
+  /** Runs before three keys a program, so the first program folds the specialisation values of its draw. */
+  onBeforeProgram: (() => void) | null = null;
+
+  /** Written only by `stageWith`: emits the stages again, as three keeps a function's first build. */
+  private stage: (() => void) | null = null;
+
+  private readonly respecialise = () => {
+    this.stage?.();
+    this.needsUpdate = true;
+  };
+
   constructor(private shader: MaterialShader = NO_SHADER) {
     super();
     liveMaterials.add(this.ref);
@@ -51,14 +65,33 @@ export class BoundNodeMaterial extends NodeMaterial {
     return this.shader.source;
   }
 
+  /** Emits the material's stages with `stage` now, and again at each new specialisation value. */
+  stageWith(stage: () => void): void {
+    this.stage = stage;
+    stage();
+    for (const constant of this.specialisations) constant.readers.add(this.respecialise);
+  }
+
+  private get specialisations(): Iterable<Specialisation> {
+    return this.shader.specialisations?.values() ?? [];
+  }
+
   /** Hands `fault` to `onTranslatorFault`, or logs it. */
   reportFault(fault: TranslatorFault): void {
     if (this.onTranslatorFault) this.onTranslatorFault(fault);
     else console.error(fault);
   }
 
+  /** three keeps one program for each key, so a draw with other specialisation values gets its own. */
+  override customProgramCacheKey(): string {
+    this.onBeforeProgram?.();
+    const values = [...this.specialisations].map((constant) => constant.value);
+    return `${super.customProgramCacheKey()}|${values.join(',')}`;
+  }
+
   override dispose(): void {
     liveMaterials.delete(this.ref);
+    for (const constant of this.specialisations) constant.readers.delete(this.respecialise);
     super.dispose();
   }
 

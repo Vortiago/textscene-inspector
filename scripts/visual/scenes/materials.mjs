@@ -42,6 +42,8 @@ export const MATERIAL_SCENES = [
   { name: 'material-spatial-shader-depth', file: 'unit-spatial-shader-depth.tscn' },
   // Spatial shaders that write FOG, FOG.rgb alone, FOG under fog_disabled, RADIANCE and IRRADIANCE, over orange quads.
   { name: 'material-spatial-shader-fog', file: 'unit-spatial-shader-fog.tscn' },
+  // The environment's depth fog and height fog on unshaded spatial shaders: three boxes and a floor.
+  { name: 'material-spatial-shader-environment-fog', file: 'unit-spatial-shader-environment-fog.tscn' },
   { name: 'surface-material-override', file: 'unit-surface-material-override.tscn' },
   // Multi-property guard, one row each: basic PBR, emission and normal,
   // advanced PBR, transparency and glass.

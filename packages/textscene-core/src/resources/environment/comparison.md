@@ -96,7 +96,7 @@ A `glow_map` scales the glow per screen position, as Godot's tonemap pass does. 
 
 <!-- compare: image=unit-depth-fog status=done fixture=unit-depth-fog.tscn -->
 
-`fog_enabled` in exponential mode over a colour background. The fog thickens with distance over the three boxes and hides the background, as in Godot. Godot's depth mode and its curve, the height fog, `fog_sun_scatter` and `fog_aerial_perspective` follow Godot's shader too. The aerial perspective reads the sky's radiance layers, the ones the surfaces read. `fog_sky_affect` sets how far the fog covers the background.
+`fog_enabled` in exponential mode over a colour background. The fog thickens with distance over the three boxes and hides the background, as in Godot. Godot's depth mode and its curve, the height fog, `fog_sun_scatter` and `fog_aerial_perspective` follow Godot's shader too. The aerial perspective reads the sky's radiance layers, the ones the surfaces read. `fog_sky_affect` sets how far the fog covers the background. A surface that a translated spatial shader draws gets the same depth fog and height fog, as `unit-spatial-shader-environment-fog.tscn` shows.
 
 ## Volumetric fog
 
@@ -235,4 +235,4 @@ The lenient parser never rejects. Every scalar goes through the shared `floatOr`
 
 - **Resource gap** `adjustment_color_correction` is not applied, so a colour-correction texture leaves the frame unchanged.
 - **Renderer gap** A refracting surface draws an opaque outline behind it unlike Godot: three's transmission reads its own copy of the opaque pass.
-- **Renderer gap** The depth fog leaves a surface that a translated spatial shader draws unfogged, unlike Godot: the scene template gets no fog values.
+- **Renderer gap** On a translated spatial shader's surface, the depth fog draws no aerial perspective and no sun scatter, unlike Godot.

@@ -18,6 +18,7 @@ export {
   SKY_BINDINGS,
   bindRadiance,
   SkyResolutionPasses,
+  specialiseSpatial,
   transpileShadingLanguage,
   transpileSky,
   transpileSpatial,
@@ -28,6 +29,7 @@ export {
 export type {
   DepthPrepass,
   DepthPrepassOptions,
+  EnvironmentFog,
   GodotShading,
   GodotShadingOptions,
   NodeOutput,

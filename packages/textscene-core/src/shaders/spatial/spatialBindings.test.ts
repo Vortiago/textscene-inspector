@@ -1,21 +1,40 @@
 import * as THREE from 'three';
 import type { NodeFrame, UniformNode } from 'three/webgpu';
 import { describe, expect, it } from 'vitest';
-import { beforeEachDraw, writeSpatialBindings } from './spatialBindings.js';
+import type { EnvironmentFog } from '../pipeline/environmentFog.js';
+import { beforeEachDraw, specialiseSpatial, writeSpatialBindings } from './spatialBindings.js';
 import { transpileSpatial } from './transpileSpatial.js';
 
 const UNSHADED = 'shader_type spatial;\nrender_mode unshaded;\nvoid fragment() {\n\tALBEDO = vec3(0.6);\n}\n';
 
-function written() {
+function written(fog?: EnvironmentFog) {
   const spatial = transpileSpatial(UNSHADED);
   const camera = new THREE.PerspectiveCamera(75, 2, 0.05, 4000);
   camera.position.set(0, 1, 3);
   const clearColor = new THREE.Color(0.1, 0.2, 0.3);
-  writeSpatialBindings(spatial, { camera, width: 128, height: 64, time: 2.5, clearColor });
+  writeSpatialBindings(spatial, { camera, width: 128, height: 64, time: 2.5, clearColor, fog });
+  specialiseSpatial(spatial, fog);
   const value = (name: string) =>
     (spatial.uniforms.get(`scene_data_block.data.${name}`) as UniformNode<unknown>).value;
-  return { spatial, camera, value };
+  const specialisation = (name: string) => spatial.specialisations.get(name)!.value;
+  return { spatial, camera, value, specialisation };
 }
+
+/** A depth fog with no depth end, so it ends at the far plane. */
+const DEPTH_FOG: EnvironmentFog = {
+  lightColor: new THREE.Color(0.5, 0.25, 1),
+  lightEnergy: 2,
+  mode: 1,
+  density: 0.4,
+  height: -1,
+  heightDensity: 0.5,
+  depthCurve: 1.5,
+  depthBegin: 10,
+  depthEnd: 0,
+  sunScatter: 0,
+  skyAffect: 1,
+  aerialPerspective: 0.5,
+};
 
 describe('writeSpatialBindings', () => {
   it("writes Godot's projection: y flipped, and depth from 1 at the near plane to 0 at the far one", () => {
@@ -43,13 +62,49 @@ describe('writeSpatialBindings', () => {
   });
 });
 
+describe('the fog bindings', () => {
+  it('leaves the fog flag and the depth fog off with no fog', () => {
+    const { value, specialisation } = written();
+    expect((value('flags') as number) & (1 << 4)).toBe(0);
+    expect(specialisation('pso_sc_packed_0')).toBe(0);
+  });
+
+  it('turns on the fog flag and the depth fog bit for a depth fog', () => {
+    const { value, specialisation } = written(DEPTH_FOG);
+    expect((value('flags') as number) & (1 << 4)).toBe(1 << 4);
+    expect(specialisation('pso_sc_packed_0')).toBe(1 << 6);
+  });
+
+  it('emits the stages again for the program of a depth fog', () => {
+    const spatial = transpileSpatial(UNSHADED);
+    const before = spatial.material.fragmentNode;
+    specialiseSpatial(spatial, DEPTH_FOG);
+    expect(spatial.material.fragmentNode).not.toBe(before);
+  });
+
+  it('ends a depth fog with no end at the far plane', () => {
+    const { value } = written(DEPTH_FOG);
+    expect([value('fog_depth_begin'), value('fog_depth_end')]).toEqual([10, 4000]);
+  });
+
+  it('writes the light colour times its energy', () => {
+    expect((written(DEPTH_FOG).value('fog_light_color') as THREE.Vector3).toArray()).toEqual([1, 0.5, 2]);
+  });
+
+  it('writes no aerial perspective, since the scene template binds no sky radiance', () => {
+    expect(written(DEPTH_FOG).value('fog_aerial_perspective')).toBe(0);
+  });
+});
+
 describe('beforeEachDraw', () => {
   /** A spatial shader whose scene the object update of three's node handler writes before each draw. */
   function eachDraw() {
     const spatial = transpileSpatial(UNSHADED);
     const drawnObjects: THREE.Object3D[] = [];
-    beforeEachDraw(spatial, (camera, object) => {
+    const drawnMaterials: THREE.Material[] = [];
+    beforeEachDraw(spatial, (camera, object, material) => {
       drawnObjects.push(object);
+      drawnMaterials.push(material);
       writeSpatialBindings(spatial, {
         camera: camera as THREE.PerspectiveCamera,
         width: 32,
@@ -60,10 +115,14 @@ describe('beforeEachDraw', () => {
     });
     const uniform = (name: string) => spatial.uniforms.get(`scene_data_block.data.${name}`)!;
     return {
-      draw: (camera: THREE.Camera, object: THREE.Object3D = new THREE.Mesh()) =>
-        uniform('projection_matrix').update({ camera, object } as NodeFrame),
+      draw: (
+        camera: THREE.Camera,
+        object: THREE.Object3D = new THREE.Mesh(),
+        material: THREE.Material = spatial.material
+      ) => uniform('projection_matrix').update({ camera, object, material } as unknown as NodeFrame),
       value: (name: string) => (uniform(name) as UniformNode<unknown>).value,
       drawnObjects,
+      drawnMaterials,
     };
   }
 
@@ -86,6 +145,13 @@ describe('beforeEachDraw', () => {
     const mesh = new THREE.Mesh();
     draw(new THREE.PerspectiveCamera(), mesh);
     expect(drawnObjects).toEqual([mesh]);
+  });
+
+  it('hands on the material the draw renders with, so a depth draw is told apart', () => {
+    const { draw, drawnMaterials } = eachDraw();
+    const depth = new THREE.MeshDepthMaterial();
+    draw(new THREE.PerspectiveCamera(), new THREE.Mesh(), depth);
+    expect(drawnMaterials).toEqual([depth]);
   });
 });
 
