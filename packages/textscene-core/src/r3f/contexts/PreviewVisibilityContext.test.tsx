@@ -72,7 +72,7 @@ describe('usePreviewFrameloop', () => {
 
     const frame = {
       revision: 0,
-      isFullWindow: true,
+      isFullSize: true,
       work: { resources: 0, textures: 0, fonts: 0 },
     };
     const facts = { scriptedNodeCount: 0, hasCurrentCamera: false };
@@ -88,7 +88,7 @@ describe('usePreviewFrameloop', () => {
     status.attach({ revision: () => 0, subscribe: () => () => {} });
     status.frameDrawn({
       revision: 0,
-      isFullWindow: true,
+      isFullSize: true,
       work: { resources: 0, textures: 0, fonts: 0 },
       facts: { scriptedNodeCount: 0, hasCurrentCamera: false },
     });
