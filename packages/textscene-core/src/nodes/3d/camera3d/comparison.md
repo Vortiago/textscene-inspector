@@ -73,5 +73,5 @@ The radiance of a sky that two such viewports draw is baked once, at the exposur
 ## Known limitations
 
 - **Not drawn** A CameraAttributesPhysical sets no `fov`, `near` or `far`, and no depth of field draws.
-- **Approximated** An orthogonal camera lights a surface with one view direction, where Godot reads the direction to each point, so specular and Fresnel differ across a wide surface.
+- **Approximated** An orthogonal camera lights a surface with one view direction, not the direction to each point, so specular and Fresnel differ.
 - **Editor only** The frustum gizmo and the icon appear only in Godot's editor, and here they draw for every camera when the Gizmos toggle is on.
