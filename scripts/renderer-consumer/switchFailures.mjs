@@ -28,6 +28,15 @@ function hiddenWriteFailures({ before, hidden, shown }) {
   ];
 }
 
+function freshMountFailures(changedFromFreshMount) {
+  return Object.entries(changedFromFreshMount)
+    .filter(([, changed]) => changed !== 0)
+    .map(
+      ([mode, changed]) =>
+        `${mode} after a switch: expected the frame of a fresh mount, got ${changed} changed pixels`
+    );
+}
+
 /** One line per failed check of the switched view, or none. */
 export function switchFailures({ results, errors }) {
   return [
@@ -39,6 +48,13 @@ export function switchFailures({ results, errors }) {
       : [`captureImage while hidden: expected a PNG, got ${results.hiddenCapture}`]),
     ...modeFailures('3D', results.modes['3D'], CUBE_INK_FLOOR),
     ...modeFailures('2D', results.modes['2D'], BAR_INK_FLOOR),
+    ...modeFailures('In-game again', results.modes['in-game'], CUBE_INK_FLOOR),
+    ...freshMountFailures(results.changedFromFreshMount),
+    ...(results.changedFromFirstInGame > 0
+      ? []
+      : [
+          'a write before a switch: expected the In-game frame after the switches to differ from the first, got the same',
+        ]),
     ...hiddenWriteFailures(results.hiddenWrite),
     ...errors.map((message) => `page error: ${message}`),
   ].map((failure) => `update: ${failure}`);

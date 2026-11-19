@@ -1,7 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import { TscnCanvas, TscnSceneProvider, openScene, variant } from '@textscene/renderer';
 import { projectOf, runMountChecks, type MountCheckResults } from './mountChecks';
-import { WINDOW_320_PROJECT, mountSwitchView } from './switchView';
+import { WINDOW_320_PROJECT, exposeSwitchChecks } from './switchView';
 
 const FIXTURE_SCENE = `[gd_scene format=3]
 
@@ -96,7 +96,7 @@ if (query.get('checks') === 'mount') {
   viewport.id = 'viewport';
   viewport.style.cssText = 'width: 320px; height: 240px';
   document.getElementById('root')!.append(viewport);
-  window.switchView = mountSwitchView(viewport);
+  exposeSwitchChecks(viewport);
 } else {
   void Promise.all([written, called]).then(() =>
     createRoot(document.getElementById('root')!).render(

@@ -6,8 +6,10 @@ const SWITCHED = { ink: 25_000, canvases: 1, isReplacedContextLost: true };
 const PASSING = {
   inGameInk: 9000,
   hiddenCapture: 1400,
-  modes: { '3D': SWITCHED, '2D': { ...SWITCHED, ink: 18_000 } },
+  modes: { '3D': SWITCHED, '2D': { ...SWITCHED, ink: 18_000 }, 'in-game': SWITCHED },
   hiddenWrite: { before: 25_000, hidden: 25_000, shown: 23_000 },
+  changedFromFreshMount: { '3D': 0, '2D': 0, 'in-game': 0 },
+  changedFromFirstInGame: 3000,
 };
 
 const failuresOf = (results) => switchFailures({ results: { ...PASSING, ...results }, errors: [] });
@@ -45,6 +47,18 @@ describe('switchFailures', () => {
   it('fails a capture that a hidden view rejected, and names the rejection', () => {
     expect(failuresOf({ hiddenCapture: 'expected a settled view, got no frame drawn' })).toEqual([
       'update: captureImage while hidden: expected a PNG, got expected a settled view, got no frame drawn',
+    ]);
+  });
+
+  it('fails a switched view whose frame differs from a fresh mount in that mode', () => {
+    expect(failuresOf({ changedFromFreshMount: { '3D': 0, '2D': 412, 'in-game': 0 } })).toEqual([
+      'update: 2D after a switch: expected the frame of a fresh mount, got 412 changed pixels',
+    ]);
+  });
+
+  it('fails a switch that dropped a write made before it', () => {
+    expect(failuresOf({ changedFromFirstInGame: 0 })).toEqual([
+      'update: a write before a switch: expected the In-game frame after the switches to differ from the first, got the same',
     ]);
   });
 });
