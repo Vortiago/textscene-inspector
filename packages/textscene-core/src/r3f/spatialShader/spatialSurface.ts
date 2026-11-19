@@ -14,6 +14,7 @@ import { perObject } from '../../utils/perObject.js';
 import { warnOnce } from '../../utils/warnOnce.js';
 import { canvasShaderTime } from '../shaderTime/canvasShaderTime.js';
 import { renderTargetSize } from '../renderTargetSize.js';
+import { renderedEnvironmentFog } from '../fog/renderedFog.js';
 
 export { setMaterialParameters } from '../../shaders/uniforms/materialParameters.js';
 
@@ -144,5 +145,6 @@ function sceneOf(gl: THREE.WebGLRenderer, camera: THREE.Camera): SpatialScene {
     height,
     time: canvasShaderTime(gl).time,
     clearColor: gl.getClearColor(clearColor),
+    fog: renderedEnvironmentFog(),
   };
 }

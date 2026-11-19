@@ -36,6 +36,7 @@ export { transpileSpatial, type SpatialOptions, type TranspiledSpatial } from '.
 export { withGodotAttributes } from './spatial/meshAttributes.js';
 export { createDepthPrepass, type DepthPrepass, type DepthPrepassOptions } from './pipeline/depthPrepass.js';
 export { SCENE_BINDINGS, writeSpatialBindings, type SpatialScene } from './spatial/spatialBindings.js';
+export type { EnvironmentFog } from './pipeline/environmentFog.js';
 export {
   DEFAULT_TIME_ROLLOVER_SECONDS,
   PlaybackShaderTime,

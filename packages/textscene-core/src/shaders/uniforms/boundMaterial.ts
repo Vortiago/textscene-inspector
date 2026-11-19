@@ -1,11 +1,14 @@
 import { NodeMaterial } from 'three/webgpu';
 import type { ShaderSource, TranslatorFault } from '../fault/translatorFault.js';
+import type { Specialisation } from '../template/specialisation.js';
 import type { TranspiledUniform } from './transpiledUniform.js';
 
 /** The shader a transpiled material draws: its uniforms and the Godot text it comes from. */
 export interface MaterialShader {
   readonly parameters: readonly TranspiledUniform[];
   readonly source: ShaderSource;
+  /** The specialisation constants its programs fold, one program for each set of values. */
+  readonly specialisations?: readonly Specialisation[];
 }
 
 const NO_SHADER: MaterialShader = { parameters: [], source: { text: '', file: '' } };
@@ -35,9 +38,14 @@ export class BoundNodeMaterial extends NodeMaterial {
   /** Takes each program the GPU refuses for this material. Null logs the fault to the console. */
   onTranslatorFault: ((fault: TranslatorFault) => void) | null = null;
 
+  private readonly respecialise = () => {
+    this.needsUpdate = true;
+  };
+
   constructor(private shader: MaterialShader = NO_SHADER) {
     super();
     liveMaterials.add(this.ref);
+    for (const constant of shader.specialisations ?? []) constant.readers.add(this.respecialise);
     // three reads `visible` before it draws (`WebGLRenderer.js:1969`), so the gate holds for each mesh.
     Object.defineProperty(this, 'visible', {
       get: () => this.isShown && this.shader.parameters.every((parameter) => parameter.isDrawable),
@@ -57,8 +65,15 @@ export class BoundNodeMaterial extends NodeMaterial {
     else console.error(fault);
   }
 
+  /** three keeps one program for each key, so a draw with other specialisation values gets its own. */
+  override customProgramCacheKey(): string {
+    const values = (this.shader.specialisations ?? []).map((constant) => constant.value);
+    return `${super.customProgramCacheKey()}|${values.join(',')}`;
+  }
+
   override dispose(): void {
     liveMaterials.delete(this.ref);
+    for (const constant of this.shader.specialisations ?? []) constant.readers.delete(this.respecialise);
     super.dispose();
   }
 

@@ -4,8 +4,10 @@ import { depthCorrection } from '../../godot/math/projection.js';
 import { transposed3x4 } from './instanceData.js';
 import type { TranspiledSpatial } from './transpileSpatial.js';
 import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
+import type { EnvironmentFog } from '../pipeline/environmentFog.js';
+import { FOG_BINDINGS, USE_FOG } from './fogBindings.js';
 
-/** What the colour pass reads from a frame with no environment, no light and no camera attributes. */
+/** What the colour pass reads from a frame with no light and no camera attributes. */
 export interface SpatialScene {
   readonly camera: THREE.PerspectiveCamera | THREE.OrthographicCamera;
   /** The size of the viewport in pixels. */
@@ -15,6 +17,8 @@ export interface SpatialScene {
   readonly time: number;
   /** The viewport's clear colour, linear: with no environment it is the ambient light. */
   readonly clearColor: THREE.Color;
+  /** The environment's fog, or nothing when it is off. */
+  readonly fog?: EnvironmentFog;
 }
 
 /** A scene with its Godot projection and the inverse, which four bindings read. */
@@ -91,7 +95,11 @@ export const SCENE_BINDINGS: readonly Binding<SpatialFrame>[] = [
     value: (scene) => new THREE.Vector2(1 / scene.width, 1 / scene.height),
   },
   { uniform: `${DATA}.time`, godot: 'render_scene_data_rd.cpp:149', value: (scene) => scene.time },
-  { uniform: `${DATA}.flags`, godot: 'render_scene_data_rd.cpp:228', value: () => USE_AMBIENT_LIGHT },
+  {
+    uniform: `${DATA}.flags`,
+    godot: 'render_scene_data_rd.cpp:208, 228',
+    value: ({ fog }) => USE_AMBIENT_LIGHT | (fog ? USE_FOG : 0),
+  },
   {
     uniform: `${DATA}.ambient_light_color_energy`,
     godot: 'render_scene_data_rd.cpp:229-233',
@@ -121,6 +129,7 @@ export function writeSpatialBindings(spatial: TranspiledSpatial, scene: SpatialS
   const projection = projectionOf(scene);
   const frame = { ...scene, projection, inverseProjection: projection.clone().invert() };
   writeBindings(SCENE_BINDINGS, spatial.uniforms, frame);
+  writeBindings(FOG_BINDINGS, spatial.uniforms, frame);
 }
 
 /** The uniform every vertex stage of the scene template reads, so its object update runs before each draw. */

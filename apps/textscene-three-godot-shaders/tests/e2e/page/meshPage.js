@@ -15,6 +15,42 @@ const BROKEN_FRAGMENT = glslFn('vec4 brokenFragment() { return undeclared_in_gls
 /** `rendering/environment/defaults/default_clear_color`. */
 const GODOT_CLEAR_COLOR = linear([0.3, 0.3, 0.3]);
 
+/** Godot's defaults of the Environment's fog properties (`scene/resources/environment.h:181-197`). */
+const FOG_DEFAULTS = {
+  fog_mode: 0,
+  fog_light_color: [0.518, 0.553, 0.608],
+  fog_light_energy: 1,
+  fog_sun_scatter: 0,
+  fog_density: 0.01,
+  fog_height: 0,
+  fog_height_density: 0,
+  fog_aerial_perspective: 0,
+  fog_sky_affect: 1,
+  fog_depth_curve: 1,
+  fog_depth_begin: 10,
+  fog_depth_end: 100,
+};
+
+/** The environment's fog from a scene's Godot `fog_*` properties, or nothing when it has none. */
+function environmentFog(properties) {
+  if (!properties) return undefined;
+  const fog = { ...FOG_DEFAULTS, ...properties };
+  return {
+    lightColor: linear(fog.fog_light_color),
+    lightEnergy: fog.fog_light_energy,
+    mode: fog.fog_mode,
+    density: fog.fog_density,
+    height: fog.fog_height,
+    heightDensity: fog.fog_height_density,
+    depthCurve: fog.fog_depth_curve,
+    depthBegin: fog.fog_depth_begin,
+    depthEnd: fog.fog_depth_end,
+    sunScatter: fog.fog_sun_scatter,
+    skyAffect: fog.fog_sky_affect,
+    aerialPerspective: fog.fog_aerial_perspective,
+  };
+}
+
 /** Each corner of each triangle in three's order: three's front face winds the other way. */
 const counterClockwiseCorner = (corner) => corner - (corner % 3) + [0, 2, 1][corner % 3];
 
@@ -70,6 +106,7 @@ function drawMesh(spec) {
   }
   const { width, height } = spec;
   const camera = godotCamera(spec);
+  const fog = environmentFog(spec.fog);
   for (const spatial of transpiled.values())
     writeSpatialBindings(spatial, {
       camera,
@@ -77,6 +114,7 @@ function drawMesh(spec) {
       height,
       time: shaderTime(spec.clock),
       clearColor: GODOT_CLEAR_COLOR,
+      fog,
     });
   const geometry = geometryOf(spec.mesh);
   const objects = [{ object: spec.object, source: spec.source }, ...(spec.others ?? [])];

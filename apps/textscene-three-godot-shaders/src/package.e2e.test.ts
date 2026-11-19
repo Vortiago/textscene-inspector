@@ -43,6 +43,7 @@ const PUBLIC_VALUE_EXPORTS = [
 const PUBLIC_TYPE_EXPORTS = [
   'DepthPrepass',
   'DepthPrepassOptions',
+  'EnvironmentFog',
   'GodotShading',
   'GodotShadingOptions',
   'NodeOutput',

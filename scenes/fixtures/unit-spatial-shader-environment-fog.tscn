@@ -1,0 +1,78 @@
+[gd_scene format=3 uid="uid://unit_spatial_shader_environment_fog"]
+
+; The environment's DEPTH fog with a height fog on unshaded spatial shaders: three boxes at 8, 20 and
+; 40 m pin the depth curve, and a floor that falls below fog_height pins the height fog.
+; No other golden fogs a translated surface with the environment's fog.
+
+[sub_resource type="Shader" id="Shader_box"]
+code = "shader_type spatial;
+render_mode unshaded;
+
+void fragment() {
+	ALBEDO = vec3(0.9, 0.3, 0.1);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_box"]
+shader = SubResource("Shader_box")
+
+[sub_resource type="Shader" id="Shader_floor"]
+code = "shader_type spatial;
+render_mode unshaded;
+
+void fragment() {
+	ALBEDO = vec3(0.2, 0.5, UV.y);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_floor"]
+shader = SubResource("Shader_floor")
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.05, 0.05, 0.15, 1)
+fog_enabled = true
+fog_mode = 1
+fog_light_color = Color(0.6, 0.65, 0.75, 1)
+fog_light_energy = 1.2
+fog_density = 0.9
+fog_depth_begin = 2.0
+fog_depth_end = 40.0
+fog_depth_curve = 1.3
+fog_height = -0.5
+fog_height_density = 0.3
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+size = Vector3(2, 2, 2)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_1"]
+size = Vector2(40, 80)
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Floor" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.995, -0.0998, 0, 0.0998, 0.995, 0, -1.5, -20)
+mesh = SubResource("PlaneMesh_1")
+material_override = SubResource("ShaderMaterial_floor")
+
+[node name="BoxNear" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, 0)
+mesh = SubResource("BoxMesh_1")
+material_override = SubResource("ShaderMaterial_box")
+
+[node name="BoxMid" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -12)
+mesh = SubResource("BoxMesh_1")
+material_override = SubResource("ShaderMaterial_box")
+
+[node name="BoxFar" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, -32)
+mesh = SubResource("BoxMesh_1")
+material_override = SubResource("ShaderMaterial_box")
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 8)
+fov = 75.0

@@ -4,12 +4,16 @@ import type { Node, UniformNode } from 'three/webgpu';
 import type { ArrayValue, StructOf, StructValue, Value } from '../language/emitValue.js';
 import type { StructMember } from '../language/shaderTree.js';
 import { glslShapeOf } from './glslTypes.js';
+import { Specialisation } from './specialisation.js';
 import type { InterfaceBlockNode } from './templateTree.js';
 
 /** The stages of one program share them, so a block both stages declare is one set. */
 export class TemplateUniforms {
-  /** Written only by `array` and `uniformOf`, at a member's first block. */
+  /** Written only by `array`, `uniformOf` and `specialisation`, at a name's first declaration. */
   readonly byName = new Map<string, UniformNode<unknown>>();
+
+  /** Written only by `specialisation`: the program's specialisation constants, which its materials key on. */
+  readonly specialisations: Specialisation[] = [];
 
   /** The value of a uniform block's instance: a struct of its members' uniforms. */
   block(block: InterfaceBlockNode, structOf: StructOf): StructValue {
@@ -70,6 +74,17 @@ export class TemplateUniforms {
       count,
       element: (index) => (isBool ? element(index).notEqual(uint(0)) : element(index)) as unknown as Node,
     };
+  }
+
+  /** The literal of the specialisation constant `name`, at its declared value until a binding writes it. */
+  specialisation(name: string, type: string, declared: number | boolean): Node {
+    let constant = this.byName.get(name) as unknown as Specialisation | undefined;
+    if (!constant) {
+      constant = new Specialisation(type, declared);
+      this.byName.set(name, constant as unknown as UniformNode<unknown>);
+      this.specialisations.push(constant);
+    }
+    return constant.literal();
   }
 
   private uniformOf(name: string, type: string): Node {

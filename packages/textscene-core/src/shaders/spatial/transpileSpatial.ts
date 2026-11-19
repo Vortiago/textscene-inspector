@@ -42,7 +42,7 @@ import { TreeMemo } from '../template/treeMemo.js';
 import { setPrepassDraw } from '../pipeline/depthPrepass.js';
 import { spatialPrepassDraw } from './spatialPrepass.js';
 import { rendererOf } from '../preprocessor/renderingMethod.js';
-import { BoundNodeMaterial, type MaterialShader } from '../uniforms/boundMaterial.js';
+import { BoundNodeMaterial } from '../uniforms/boundMaterial.js';
 import type { ProjectSampling } from '../uniforms/samplerState.js';
 import type { TranspiledUniform } from '../uniforms/transpiledUniform.js';
 
@@ -93,10 +93,16 @@ export function transpileParsedSpatial(
   );
   const pipeline = spatialPipeline(parsed.tree);
   const emitStages = stageEmitter(linked, resources, parameterValues, pipeline);
-  const colourStages = emitStages(SCENE.defines);
-  const colour = alphaCovered(colourStages.fragment(), pipeline);
-  const shader = { parameters: [...parameters.values()], source: shaderSource(parsed, options.file ?? '') };
-  const material = sceneMaterial(colourStages, colour, shader);
+  const shader = {
+    parameters: [...parameters.values()],
+    source: shaderSource(parsed, options.file ?? ''),
+    specialisations: resources.uniforms.specialisations,
+  };
+  const material = new BoundNodeMaterial(shader);
+  const stageColour = () => setColourStages(material, emitStages(SCENE.defines), pipeline);
+  stageColour();
+  // three keeps a function's first build (`NodeBuilder.js:2759`), so a new value emits the stages anew.
+  for (const constant of shader.specialisations) constant.readers.add(stageColour);
   applySpatialPipeline(material, pipeline);
   const renderer = rendererOf(options.renderingMethod ?? 'forward_plus');
   const program = {
@@ -231,9 +237,12 @@ function alphaCovered(colour: Node, pipeline: SpatialPipeline): Node {
   return drawsAlphaToCoverage(pipeline) ? coveredOnOneSample(colour, pipeline.alphaAntialiasing) : colour;
 }
 
-function sceneMaterial(stages: EmittedStages, colour: Node, shader: MaterialShader): BoundNodeMaterial {
-  const material = new BoundNodeMaterial(shader);
+/** The colour variant's stages as `material` draws them. */
+function setColourStages(
+  material: BoundNodeMaterial,
+  stages: EmittedStages,
+  pipeline: SpatialPipeline
+): void {
   setPosition(material, stages);
-  material.fragmentNode = colour;
-  return material;
+  material.fragmentNode = alphaCovered(stages.fragment(), pipeline);
 }

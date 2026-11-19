@@ -696,6 +696,34 @@ const FOG_SCENES = [
   ),
 ];
 
+/** A floor over the whole view, which hides the app's background, so the fog's distance and height vary. */
+const FOG_FLOOR = { position: [0, -0.6, -1], rotation: [-40, 0, 0], scale: [30, 30, 1] };
+
+/** The default shader's quad as a floor under the environment's `fog`, a set of Godot's properties. */
+const environmentFogScene = (name, fog) => ({
+  ...modeScene(name, [], QUAD_ALBEDO, { object: FOG_FLOOR }, ['spatial.fragment.UV']),
+  fog,
+});
+
+/** The environment's fog on a translated surface, in each fog mode, against Godot. */
+const ENVIRONMENT_FOG_SCENES = [
+  environmentFogScene('spatial-environment-fog', { fog_density: 0.3, fog_light_color: [0.8, 0.3, 0.2] }),
+  environmentFogScene('spatial-environment-fog-depth', {
+    fog_mode: 1,
+    fog_density: 0.9,
+    fog_depth_begin: 1,
+    fog_depth_end: 6,
+    fog_depth_curve: 1.5,
+  }),
+  environmentFogScene('spatial-environment-fog-height', {
+    fog_density: 0.05,
+    fog_height: -0.8,
+    fog_height_density: 2,
+    fog_light_color: [0.3, 0.4, 0.9],
+    fog_light_energy: 1.5,
+  }),
+];
+
 /** A shader that moves the sphere in `vertex()` under `modes`, and shows its normal. */
 const vertexSpaceScene = (name, modes, vertex, rows) => ({
   name,
@@ -881,6 +909,7 @@ export const MESH_SCENES = [
   ...DEPTH_SCENES,
   ...COMPATIBILITY_DEPTH_SCENES,
   ...FOG_SCENES,
+  ...ENVIRONMENT_FOG_SCENES,
 ];
 
 /** Scenes whose program the GPU refuses: each must reach the material as a fault with this log. */

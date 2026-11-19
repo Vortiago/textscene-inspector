@@ -67,7 +67,8 @@ function builtAtFirstDraw(build: () => THREE.Material): PrepassDraw {
 
 /** Godot's default material in the depth variant: the surface's vertex stage, and back faces culled. */
 function defaultDepthMaterial(material: BoundNodeMaterial, program: PrepassProgram): BoundNodeMaterial {
-  const depth = depthMaterial(material, program.shader, program.depthStages());
+  const depth = depthMaterial(material, program.shader);
+  stagedOnEachValue(program, () => setPosition(depth, program.depthStages()));
   depth.fragmentNode = vec4(0) as unknown as Node;
   depth.side = THREE.FrontSide;
   return depth;
@@ -75,9 +76,12 @@ function defaultDepthMaterial(material: BoundNodeMaterial, program: PrepassProgr
 
 /** The surface's depth variant: alpha cut at the threshold (`scene_forward_clustered.glsl:1426`). */
 function ownDepthMaterial(material: BoundNodeMaterial, program: PrepassProgram): BoundNodeMaterial {
-  const stages = program.depthStages();
-  const depth = depthMaterial(material, program.shader, stages);
-  depth.fragmentNode = stages.fragment();
+  const depth = depthMaterial(material, program.shader);
+  stagedOnEachValue(program, () => {
+    const stages = program.depthStages();
+    setPosition(depth, stages);
+    depth.fragmentNode = stages.fragment();
+  });
   depth.side = material.side;
   // Only the depth variant reads it.
   const threshold = program.uniforms.get(THRESHOLD) as UniformNode<number> | undefined;
@@ -85,14 +89,15 @@ function ownDepthMaterial(material: BoundNodeMaterial, program: PrepassProgram):
   return depth;
 }
 
+/** Runs `stage` now and at each new specialisation value, which needs its stages emitted anew. */
+function stagedOnEachValue(program: PrepassProgram, stage: () => void): void {
+  stage();
+  for (const constant of program.shader.specialisations ?? []) constant.readers.add(stage);
+}
+
 /** A material that writes depth and no colour, with `material`'s depth test, gone with it. */
-function depthMaterial(
-  material: BoundNodeMaterial,
-  shader: MaterialShader,
-  stages: EmittedStages
-): BoundNodeMaterial {
+function depthMaterial(material: BoundNodeMaterial, shader: MaterialShader): BoundNodeMaterial {
   const depth = new BoundNodeMaterial(shader);
-  setPosition(depth, stages);
   Object.assign(depth, {
     colorWrite: false,
     depthWrite: true,

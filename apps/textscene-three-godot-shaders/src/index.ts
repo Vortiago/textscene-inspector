@@ -28,6 +28,7 @@ export {
 export type {
   DepthPrepass,
   DepthPrepassOptions,
+  EnvironmentFog,
   GodotShading,
   GodotShadingOptions,
   NodeOutput,

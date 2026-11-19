@@ -84,6 +84,16 @@ export function emitTemplateStage(
     else if (declaration.kind === 'interface block' && declaration.qualifiers.words.includes('buffer')) {
       const name = declaration.instanceName!;
       globals.set(name, resources.buffers.block(declared.buffers.get(name)!, structLookup(declared.structs)));
+    } else if (declaration.kind === 'global' && isSpecialisationConstant(declaration)) {
+      for (const declarator of declaration.declarators)
+        globals.set(
+          declarator.name,
+          resources.uniforms.specialisation(
+            declarator.name,
+            declaration.type,
+            (constantGlobal(declaration, declarator) as unknown as { value: number | boolean }).value
+          )
+        );
     } else if (declaration.kind === 'global') {
       uniformGlobals(declaration, globals, textures);
       stageVaryings(stage.stage, declaration, result, resources.varyings, globals, written);
@@ -242,6 +252,11 @@ function uniformGlobals(
     }
   }
 }
+
+/** Godot's pipeline sets each draw's specialisation constants, so a binding writes them. */
+const isSpecialisationConstant = (global: GlobalNode) =>
+  global.qualifiers.words.includes('const') &&
+  global.qualifiers.layout.some(({ name }) => name === 'constant_id');
 
 /** The value glslang folds a `const` global to, or a refusal that names it. */
 function constantGlobal(global: GlobalNode, declarator: GlobalNode['declarators'][number]): Node {

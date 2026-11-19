@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { EnvironmentFog } from '../pipeline/environmentFog.js';
 import { skyDraws, type TranspiledSky } from './transpileSky.js';
 import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
 import { RADIANCE_ENERGY } from '../template/radianceCalls.js';
@@ -17,15 +18,10 @@ export interface SkyLight {
 }
 
 /** The environment's fog as the sky reads it (`sky.cpp:1216-1228`). */
-export interface SkyFog {
-  /** The fog light colour, linear. */
-  readonly lightColor: THREE.Color;
-  readonly lightEnergy: number;
-  readonly sunScatter: number;
-  readonly skyAffect: number;
-  readonly aerialPerspective: number;
-  readonly density: number;
-}
+export type SkyFog = Pick<
+  EnvironmentFog,
+  'lightColor' | 'lightEnergy' | 'sunScatter' | 'skyAffect' | 'aerialPerspective' | 'density'
+>;
 
 /** What the sky background pass reads from a frame. */
 export interface SkyScene {
