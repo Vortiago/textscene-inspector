@@ -611,6 +611,9 @@ importers:
       '@typescript/native':
         specifier: 'catalog:'
         version: typescript@7.0.2
+      esbuild:
+        specifier: 'catalog:'
+        version: 0.28.2
       jsdom:
         specifier: 'catalog:'
         version: 31.0.0

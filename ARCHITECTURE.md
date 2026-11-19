@@ -266,8 +266,10 @@ the selected node (ADR-0012). Playback starts stopped.
   `project.godot`, or from the own directory of a loose scene inside the workspace.
 - **Web.** The Source pane renders only a buffer the lenient parser accepts, and lints every
   buffer (ADR-0020).
-- **Job workers.** Each host starts one script built from `@textscene/core/worker`. VS Code
-  starts it from a `blob:` URL (`apps/textscene-vscode/src/bundler/textureWorkerPlugin.mjs`).
+- **Job workers.** The loader of each opened scene starts one worker from a `blob:` URL of a
+  script that every build embeds (`packages/textscene-core/src/workers/bundler/`, ADR-0042).
+- **Changed files.** A host's `ResourceProvider.watch` names a file that changed, and every
+  scene over the provider loads it again (`resources/createResourcePipeline.ts`).
 
 ## Enforced boundaries
 

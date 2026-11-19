@@ -1,8 +1,3 @@
-/**
- * The corpus boundary is crossed with the viewport empty: nothing re-points resource
- * resolution while a scene from the outgoing corpus is rendered. `useCorpusRoot` describes
- * the leak a breach causes.
- */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
@@ -90,7 +85,7 @@ async function switchViaPalette(file: string) {
 }
 
 let setResourceRoot: ReturnType<typeof vi.spyOn>;
-let clearCaches: ReturnType<typeof vi.spyOn>;
+let newLoader: ReturnType<typeof vi.spyOn>;
 
 /**
  * Whether the outgoing demo was on screen at the first re-point: each node rendered then
@@ -109,13 +104,25 @@ function firstDemoSighting() {
   };
 }
 
-/** At the cache clear, and at the provider re-point (the upload path re-points
- *  synchronously in its own handler, where React defers the clear past the swap). */
-let atClear: ReturnType<typeof firstDemoSighting>;
+/** Whether the outgoing demo was on screen when the latest loader was built: the incoming scene's. */
+function lastDemoSighting() {
+  let value: HTMLElement | null | undefined;
+  return {
+    record: () => {
+      value = screen.queryByText('DemoRoot');
+    },
+    get value() {
+      return value;
+    },
+  };
+}
+
+/** At the latest new loader, and at the provider re-point, which an upload makes in its own handler. */
+let atNewLoader: ReturnType<typeof lastDemoSighting>;
 let atRootSwitch: ReturnType<typeof firstDemoSighting>;
 
 function resetFingerprints() {
-  atClear = firstDemoSighting();
+  atNewLoader = lastDemoSighting();
   atRootSwitch = firstDemoSighting();
 }
 
@@ -129,12 +136,14 @@ beforeEach(() => {
     atRootSwitch.record();
     realSetRoot.call(this, root);
   });
-  const realClear = ResourceLoader.prototype.clearCaches;
-  clearCaches = vi.spyOn(ResourceLoader.prototype, 'clearCaches').mockImplementation(function (
-    this: ResourceLoader
+  // Each new pipeline hands its loader the provider once, so this counts new loaders.
+  const realSetProvider = ResourceLoader.prototype.setProvider;
+  newLoader = vi.spyOn(ResourceLoader.prototype, 'setProvider').mockImplementation(function (
+    this: ResourceLoader,
+    provider
   ) {
-    atClear.record();
-    realClear.call(this);
+    atNewLoader.record();
+    realSetProvider.call(this, provider);
   });
 });
 
@@ -150,7 +159,7 @@ describe('corpus boundary — the root never moves under a mounted scene', () =>
     await waitForScene('DemoRoot');
 
     setResourceRoot.mockClear();
-    clearCaches.mockClear();
+    newLoader.mockClear();
     resetFingerprints();
 
     await switchViaPalette(BASE.file);
@@ -159,7 +168,6 @@ describe('corpus boundary — the root never moves under a mounted scene', () =>
     // outside the teardown's flushSync, so a re-point now would make them re-request their
     // res:// paths under the base corpus. The root waits for the swap.
     expect(setResourceRoot).not.toHaveBeenCalled();
-    expect(clearCaches).not.toHaveBeenCalled();
     // And nothing of the demo is left rendering while the base fixture loads.
     await waitFor(() => {
       expect(screen.queryByText('DemoRoot')).toBeNull();
@@ -172,9 +180,9 @@ describe('corpus boundary — the root never moves under a mounted scene', () =>
     await waitForScene('BaseRoot');
 
     expect(setResourceRoot).toHaveBeenCalledWith('');
-    expect(clearCaches).toHaveBeenCalledTimes(1);
+    expect(newLoader).toHaveBeenCalled();
     // …and it landed with the demo already gone from the tree.
-    expect(atClear.value).toBeNull();
+    expect(atNewLoader.value).toBeNull();
   });
 
   it('crosses into the base corpus on upload with the demo already gone', async () => {
@@ -183,7 +191,7 @@ describe('corpus boundary — the root never moves under a mounted scene', () =>
     render(<R3FApp />);
     await waitForScene('DemoRoot');
 
-    clearCaches.mockClear();
+    newLoader.mockClear();
     setResourceRoot.mockClear();
     resetFingerprints();
 
@@ -197,10 +205,9 @@ describe('corpus boundary — the root never moves under a mounted scene', () =>
     });
     await waitForScene('UploadedRoot');
 
-    // An upload lives in the base ('') corpus, so this drop crossed a boundary, and the demo
-    // was torn down before the clear, as on a fixture switch.
-    expect(clearCaches).toHaveBeenCalledTimes(1);
-    expect(atClear.value).toBeNull();
+    // An upload lives in the base ('') corpus, so the demo went before the new loader, as on a switch.
+    expect(newLoader).toHaveBeenCalled();
+    expect(atNewLoader.value).toBeNull();
     expect(setResourceRoot).toHaveBeenCalledWith('');
     expect(atRootSwitch.value).toBeNull();
   });
@@ -238,7 +245,7 @@ describe('corpus boundary — the root never moves under a mounted scene', () =>
     await waitForScene('BaseRoot');
 
     setResourceRoot.mockClear();
-    clearCaches.mockClear();
+    newLoader.mockClear();
 
     await switchViaPalette(BASE_OTHER.file);
 
@@ -252,9 +259,7 @@ describe('corpus boundary — the root never moves under a mounted scene', () =>
     });
     await waitForScene('OtherBaseRoot');
 
-    // The same res:// namespace on both sides, so no re-routing and no cache clear, whose
-    // invalidation burst leaks across corpora.
-    expect(setResourceRoot).not.toHaveBeenCalled();
-    expect(clearCaches).not.toHaveBeenCalled();
+    // The same res:// namespace on both sides, so no re-routing.
+    expect(setResourceRoot.mock.calls.flat().filter((root: unknown) => root !== '')).toEqual([]);
   });
 });

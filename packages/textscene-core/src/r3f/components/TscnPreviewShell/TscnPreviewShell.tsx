@@ -45,6 +45,7 @@ import { DetailTabs, type DetailTab } from './DetailTabs.js';
 import { SceneTreePane } from './SceneTreePane.js';
 import { previewShellProviders } from './previewShellProviders.js';
 import { DEFAULT_ROOT_SCENE_PATH } from '../../../scene/openScene.js';
+import { resourcePipelineOf } from '../../sceneResourcePipeline.js';
 import { CaptureStateReporter } from './CaptureStateReporter.js';
 import type { TscnPreviewShellProps } from './previewShellProps.js';
 import styles from './TscnPreviewShell.module.css';
@@ -66,6 +67,7 @@ export function TscnPreviewShell({
   panelId,
   content,
   rootScenePath = DEFAULT_ROOT_SCENE_PATH,
+  provider,
   onNodeReveal,
   onOpenSubScene,
   toolbar,
@@ -79,7 +81,7 @@ export function TscnPreviewShell({
   onCopyNodePath,
   onSceneOpen,
 }: TscnPreviewShellProps) {
-  const scene = useOpenedScene(content, rootScenePath);
+  const scene = useOpenedScene(content, rootScenePath, provider);
   const { parsed, sceneGraph } = useSceneGraphs(scene);
   const { sceneGraph: parsedGraph, error } = parsed;
   // A block body: an arrow body would hand the host's return value to React as the cleanup.
@@ -123,6 +125,7 @@ export function TscnPreviewShell({
 
   const withProviders = previewShellProviders({
     hierarchyValue,
+    loader: resourcePipelineOf(scene).loader,
     initialPreviewedCameraPath,
     onMissingPathsChange,
     initialViewportMode,

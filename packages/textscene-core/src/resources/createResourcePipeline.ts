@@ -12,6 +12,8 @@ export interface ResourcePipeline<P extends ResourceProvider = ResourceProvider>
   /** The host provider, returned with its concrete type preserved. */
   provider: P;
   loader: ResourceLoader;
+  /** Stops listening to the provider's `watch` and stops the job worker. A later job starts a new worker. */
+  dispose(): void;
 }
 
 export function createResourcePipeline<P extends ResourceProvider>(
@@ -21,5 +23,13 @@ export function createResourcePipeline<P extends ResourceProvider>(
   const bus = new FileEventBus(provider);
   const loader = new ResourceLoader(bus, options);
   loader.setProvider(provider);
-  return { provider, loader };
+  const unwatch = provider.watch?.((path) => loader.provideFile(path));
+  return {
+    provider,
+    loader,
+    dispose() {
+      unwatch?.();
+      loader.jobRunner.dispose();
+    },
+  };
 }

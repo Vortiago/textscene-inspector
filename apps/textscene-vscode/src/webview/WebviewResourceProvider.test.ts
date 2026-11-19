@@ -64,6 +64,27 @@ describe('WebviewResourceProvider', () => {
     });
   });
 
+  describe('Changed files', () => {
+    it("tells each watcher the path of the host's resourceChanged message", () => {
+      const listener = vi.fn();
+      provider.watch(listener);
+
+      simulateExtensionMessage({ type: 'resourceChanged', path: 'res://textures/wood.png' });
+
+      expect(listener).toHaveBeenCalledWith('res://textures/wood.png');
+    });
+
+    it('tells a removed watcher nothing', () => {
+      const listener = vi.fn();
+      const unwatch = provider.watch(listener);
+
+      unwatch();
+      simulateExtensionMessage({ type: 'resourceChanged', path: 'res://textures/wood.png' });
+
+      expect(listener).not.toHaveBeenCalled();
+    });
+  });
+
   describe('Directory listing', () => {
     it('asks the host for the folder and resolves with its entries', async () => {
       const listing = provider.listDirectory('res://sub');

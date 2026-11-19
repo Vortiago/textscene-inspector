@@ -57,6 +57,15 @@ export interface Scene {
   cameras(): ReadonlyMap<string, CameraState>;
 }
 
+/** Written by {@link onSceneDispose}. Each scene's entry runs and goes at its `dispose`. */
+// eslint-disable-next-line no-restricted-syntax -- what a layer above the scene holds for it, which the scene cannot import
+const disposals = new WeakMap<Scene, (() => void)[]>();
+
+/** Runs `release` when `scene` is disposed, for what a layer above holds for it, such as its loader. */
+export function onSceneDispose(scene: Scene, release: () => void): void {
+  disposals.set(scene, [...(disposals.get(scene) ?? []), release]);
+}
+
 /** `written` of one parse, writes and resources: the graph is built again only when one of them moves. */
 interface WrittenGraph {
   readonly parse: ParseResult;
@@ -119,6 +128,8 @@ export function openScene({
     subscribe: (listener) => listeners.subscribe(listener),
     revision: () => listeners.revision(),
     dispose() {
+      for (const release of disposals.get(scene) ?? []) release();
+      disposals.delete(scene);
       listeners.clear();
       sceneRuntime?.dispose();
       sceneRuntime = null;

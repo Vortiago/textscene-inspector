@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../../index';
+import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';

@@ -1,8 +1,3 @@
-/**
- * The web app's R3F entry point. It mounts `<TscnPreviewShell>` inside
- * `<ResourceLoaderProvider>`, so node components load resources with `useResource()`.
- * The shell's `<MissingResourcesPanel>` takes one upload per missing path.
- */
 import {
   useCallback,
   useMemo,
@@ -14,12 +9,11 @@ import {
 } from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
-import { resourceFilePath, ResourceLoaderProvider, TscnPreviewShell } from '@textscene/core';
+import { resourceFilePath, TscnPreviewShell } from '@textscene/core';
 import { exposeScene } from './sceneConsole';
 import { fixtures } from './fixturesAll';
 import { corpusRootFor, resToFixtureFile, fixtureFileToRes } from './corpusRoot';
-import { useCorpusRoot } from './useCorpusRoot';
-import { createWebPipeline } from './webPipeline';
+import { WebResourceProvider } from './providers/WebResourceProvider';
 import { SourceGutter } from './SourceGutter';
 import { FileProblems } from './FileProblems';
 import { useSceneSource } from './useSceneSource';
@@ -70,15 +64,11 @@ export function R3FApp() {
   const initialPreviewedCameraPath = useCameraDeepLink();
   const isPageVisible = useDocumentVisibility();
 
-  // One provider, bus, loader and job worker for the app's lifetime, so an uploaded
-  // texture survives a fixture switch.
-  const pipeline = useMemo(() => createWebPipeline({ hasFixturesMirror: HAS_FIXTURES_MIRROR }), []);
-  const { provider, loader } = pipeline;
+  // One provider for the app's lifetime, so an uploaded texture survives a fixture switch.
+  const provider = useMemo(() => new WebResourceProvider({ hasFixturesMirror: HAS_FIXTURES_MIRROR }), []);
 
-  // Each vendored demo project keeps its own res:// namespace. The root switches at the
-  // scene swap, never while a scene is on screen: the outgoing scene would re-request its
-  // res:// paths from the incoming corpus (useCorpusRoot).
-  const applyCorpusRoot = useCorpusRoot(pipeline);
+  // A scene on screen when the root moves loads the other corpus's files, so it moves at the swap.
+  const applyCorpusRoot = (root: string) => provider.setResourceRoot(root);
 
   // `onBeforeSwap` is read from a ref, so a plain function serves, not a useCallback.
   const {
@@ -102,18 +92,12 @@ export function R3FApp() {
   // while the previous scene and its res:// namespace are still live.
   const resourceRoot = useMemo(() => corpusRootFor(renderedFixtureFile, fixtures), [renderedFixtureFile]);
 
-  /**
-   * Cross a corpus boundary with the viewport empty (`useCorpusRoot` says why). Every
-   * scene replacement that may change corpus goes through here.
-   */
+  /** Every scene replacement that may cross a corpus goes through here, to cross with the viewport empty. */
   const tearDownIfCrossingCorpus = (nextRoot: string) => {
     if (nextRoot === resourceRoot) return;
-    // Commits the unmount before the root moves: a scene mounted when the caches clear
-    // leaks. Both callers are event handlers, where flushSync is legal.
+    // Both callers are event handlers, where flushSync is legal.
     flushSync(() => clearRender());
-    // Not the root too: r3f's own reconciler schedules its unmount outside this flushSync,
-    // and still-subscribed consumers answer a cache clear by refetching under the new
-    // root. The root moves at the swap, a network round trip later.
+    // Not the root too: r3f unmounts outside this flushSync, so the root moves at the swap.
   };
 
   // Edits are ephemeral (ADR-0020), but one misclick on a switch (fixture palette, ⤢
@@ -186,7 +170,6 @@ export function R3FApp() {
 
   function handleResourceUpload(path: string, file: File) {
     provider.addUploadedFile(path, file);
-    loader.provideFile(path);
     bumpUploadRevision();
   }
 
@@ -213,10 +196,8 @@ export function R3FApp() {
   }
 
   function handleResourceRemove(path: string) {
-    // provideFile() announces the path, so its consumers load it again, flip back to
-    // `missing`, and the panel row reappears. Without it `useResource` keeps its `loaded` value.
+    // The provider's watchers hear the path, so its consumers flip back to `missing`.
     provider.removeUploadedFile(path);
-    loader.provideFile(path);
     bumpUploadRevision();
   }
 
@@ -236,124 +217,119 @@ export function R3FApp() {
     editedSinceLoad();
 
   return (
-    <ResourceLoaderProvider loader={loader}>
-      <div
-        data-testid="app-root"
-        className={styles.appRoot}
-        onDragEnter={handleDragEnter}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
-        {dragActive && (
-          <div data-testid="drop-zone-hint" className={styles.dropZoneHint}>
-            Drop a .tscn file (and its resources) to open it
-          </div>
-        )}
-        {sourcePane.visible && (
-          <>
-            {/* flex-shrink:0 (in .sourcePane) keeps the pane at its set/dragged
-                width; the shell wrapper below takes flex:1 to fill the rest. */}
-            <div
-              data-testid="source-pane"
-              className={styles.sourcePane}
-              style={{ '--source-pane-width': `${sourcePane.width}px` } as CSSProperties}
-            >
-              <div className={styles.sourcePaneHeader}>
-                <span className={styles.sourcePaneTitle}>Source</span>
-                {fileDiagnostics && <FileProblems group={fileDiagnostics} />}
-                <button
-                  type="button"
-                  className={styles.downloadButton}
-                  data-testid="download-tscn-button"
-                  onClick={handleDownloadTscn}
-                  disabled={buffer.trim().length === 0}
-                  title="Download the current buffer as a .tscn file"
-                >
-                  ⭳ Download .tscn
-                </button>
-              </div>
-              <div className={styles.sourceBody}>
-                <SourceGutter lineCount={lineCount} byLine={diagnosticsByLine} scrollTop={gutterScrollTop} />
-                <textarea
-                  className={styles.sourceTextarea}
-                  value={buffer}
-                  onChange={handleBufferChange}
-                  onScroll={(e) => setGutterScrollTop(e.currentTarget.scrollTop)}
-                  wrap="off"
-                  aria-label="Scene source"
-                  placeholder="Paste or type your .tscn here…"
-                  style={{ fontFamily: 'monospace' }}
-                />
-              </div>
-            </div>
-            <div
-              className={styles.sourceSplitter}
-              data-testid="source-pane-splitter"
-              role="separator"
-              aria-orientation="vertical"
-              aria-label="Resize source pane"
-              onMouseDown={onSplitterMouseDown}
-            />
-          </>
-        )}
-        <div style={{ flex: 1, minWidth: 0, height: '100%', position: 'relative' }}>
-          <TscnPreviewShell
-            panelId={`web-${fixtureFile || uploadedTscnName || 'empty'}`}
-            content={forwardedContent}
-            rootScenePath={
-              // Relative to `resourceRoot`, so it names the rendered fixture. An upload is
-              // named by its file name.
-              renderedFixtureFile
-                ? fixtureFileToRes(renderedFixtureFile, resourceRoot)
-                : `res://${uploadedTscnName || 'empty.tscn'}`
-            }
-            onResourceUpload={handleResourceUpload}
-            onResourceRemove={handleResourceRemove}
-            onMissingPathsChange={handleMissingPathsChange}
-            onCopyNodePath={copyToClipboard}
-            onSceneOpen={exposeScene}
-            // Opening a sub-scene loads it from the mirror, so without one the ⤢ button goes.
-            onOpenSubScene={HAS_FIXTURES_MIRROR ? handleOpenSubScene : undefined}
-            initialPreviewedCameraPath={initialPreviewedCameraPath}
-            isVisible={isPageVisible}
-            toolbar={
-              <Toolbar
-                fixtureFile={fixtureFile}
-                uploadedTscnName={uploadedTscnName}
-                loadError={effectiveLoadError}
-                onFixtureChange={handleFixtureChange}
-                onFilesSelected={handleFilesUpload}
-                paneVisible={sourcePane.visible}
-                onTogglePane={toggleSourcePane}
-                problemBadge={problemBadge}
-              />
-            }
-          />
-          {isFetchingFixture ? (
-            <div
-              data-testid={FIXTURE_LOADING_TESTID}
-              role="status"
-              aria-live="polite"
-              className={styles.fixtureLoading}
-            >
-              Loading scene…
-            </div>
-          ) : (
-            showUnrenderableNotice && (
-              <div
-                data-testid="unrenderable-buffer-notice"
-                role="alert"
-                className={styles.unrenderableNotice}
-              >
-                <strong>Nothing has rendered yet.</strong> The pasted/typed content doesn't parse as a valid
-                .tscn scene — fix the errors marked in the Source pane's gutter to see a preview.
-              </div>
-            )
-          )}
+    <div
+      data-testid="app-root"
+      className={styles.appRoot}
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {dragActive && (
+        <div data-testid="drop-zone-hint" className={styles.dropZoneHint}>
+          Drop a .tscn file (and its resources) to open it
         </div>
+      )}
+      {sourcePane.visible && (
+        <>
+          {/* .sourcePane keeps its dragged width (flex-shrink 0), and the shell below takes the rest. */}
+          <div
+            data-testid="source-pane"
+            className={styles.sourcePane}
+            style={{ '--source-pane-width': `${sourcePane.width}px` } as CSSProperties}
+          >
+            <div className={styles.sourcePaneHeader}>
+              <span className={styles.sourcePaneTitle}>Source</span>
+              {fileDiagnostics && <FileProblems group={fileDiagnostics} />}
+              <button
+                type="button"
+                className={styles.downloadButton}
+                data-testid="download-tscn-button"
+                onClick={handleDownloadTscn}
+                disabled={buffer.trim().length === 0}
+                title="Download the current buffer as a .tscn file"
+              >
+                ⭳ Download .tscn
+              </button>
+            </div>
+            <div className={styles.sourceBody}>
+              <SourceGutter lineCount={lineCount} byLine={diagnosticsByLine} scrollTop={gutterScrollTop} />
+              <textarea
+                className={styles.sourceTextarea}
+                value={buffer}
+                onChange={handleBufferChange}
+                onScroll={(e) => setGutterScrollTop(e.currentTarget.scrollTop)}
+                wrap="off"
+                aria-label="Scene source"
+                placeholder="Paste or type your .tscn here…"
+                style={{ fontFamily: 'monospace' }}
+              />
+            </div>
+          </div>
+          <div
+            className={styles.sourceSplitter}
+            data-testid="source-pane-splitter"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize source pane"
+            onMouseDown={onSplitterMouseDown}
+          />
+        </>
+      )}
+      <div style={{ flex: 1, minWidth: 0, height: '100%', position: 'relative' }}>
+        <TscnPreviewShell
+          // Two corpora may name one res:// path, so a crossing opens a scene of its own.
+          key={resourceRoot}
+          panelId={`web-${fixtureFile || uploadedTscnName || 'empty'}`}
+          content={forwardedContent}
+          provider={provider}
+          rootScenePath={
+            // Relative to `resourceRoot`, so it names the rendered fixture. An upload is named by its file.
+            renderedFixtureFile
+              ? fixtureFileToRes(renderedFixtureFile, resourceRoot)
+              : `res://${uploadedTscnName || 'empty.tscn'}`
+          }
+          onResourceUpload={handleResourceUpload}
+          onResourceRemove={handleResourceRemove}
+          onMissingPathsChange={handleMissingPathsChange}
+          onCopyNodePath={copyToClipboard}
+          onSceneOpen={exposeScene}
+          // Opening a sub-scene loads it from the mirror, so without one the ⤢ button goes.
+          onOpenSubScene={HAS_FIXTURES_MIRROR ? handleOpenSubScene : undefined}
+          initialPreviewedCameraPath={initialPreviewedCameraPath}
+          isVisible={isPageVisible}
+          toolbar={
+            <Toolbar
+              fixtureFile={fixtureFile}
+              uploadedTscnName={uploadedTscnName}
+              loadError={effectiveLoadError}
+              onFixtureChange={handleFixtureChange}
+              onFilesSelected={handleFilesUpload}
+              paneVisible={sourcePane.visible}
+              onTogglePane={toggleSourcePane}
+              problemBadge={problemBadge}
+            />
+          }
+        />
+        {isFetchingFixture ? (
+          <div
+            data-testid={FIXTURE_LOADING_TESTID}
+            role="status"
+            aria-live="polite"
+            className={styles.fixtureLoading}
+          >
+            Loading scene…
+          </div>
+        ) : (
+          showUnrenderableNotice && (
+            <div data-testid="unrenderable-buffer-notice" role="alert" className={styles.unrenderableNotice}>
+              <strong>Nothing has rendered yet.</strong> The pasted/typed content doesn't parse as a valid
+              .tscn scene — fix the errors marked in the Source pane's gutter to see a preview.
+            </div>
+          )
+        )}
       </div>
-    </ResourceLoaderProvider>
+    </div>
   );
 }
 

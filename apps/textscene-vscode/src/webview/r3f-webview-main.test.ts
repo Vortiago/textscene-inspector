@@ -7,12 +7,13 @@
 // @vitest-environment happy-dom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createElement, useEffect, type ReactNode } from 'react';
+import { createElement, useEffect } from 'react';
 import type { HostToWebviewMessage, WebviewToHostMessage } from '../protocol';
-import type { PreviewCaptureState, TscnNode } from '@textscene/core';
+import type { PreviewCaptureState, ResourceProvider, TscnNode } from '@textscene/core';
 
 interface CapturedShellProps {
   panelId?: string;
+  provider?: ResourceProvider;
   content?: string;
   initialViewportMode?: '2D' | '3D' | undefined;
   onNodeReveal?: (path: string, node: TscnNode) => void;
@@ -32,9 +33,6 @@ interface CapturedLogAdapter {
 const captured: {
   shellProps?: CapturedShellProps;
   logAdapter?: CapturedLogAdapter;
-  provideFile?: ReturnType<typeof vi.fn>;
-  pipelineProvider?: unknown;
-  pipelineOptions?: { createWorker?: unknown };
   /** The state the fake shell reports from its mount effect, as the real bridge does. */
   mountCaptureState?: PreviewCaptureState;
 } = {};
@@ -42,14 +40,7 @@ const captured: {
 // A synthetic mock, no `importActual`: the real `<TscnPreviewShell>` pulls in
 // three.js/r3f, which happy-dom cannot run without a WebGL context.
 vi.mock('@textscene/core', () => ({
-  createResourcePipeline: vi.fn((provider: unknown, options?: { createWorker?: unknown }) => {
-    captured.pipelineProvider = provider;
-    captured.pipelineOptions = options;
-    captured.provideFile = vi.fn();
-    return { loader: { provideFile: captured.provideFile } };
-  }),
   PENDING_CAPTURE: { status: 'pending' },
-  ResourceLoaderProvider: ({ children }: { children: ReactNode }) => children,
   TscnPreviewShell: function FakeShell(props: CapturedShellProps) {
     captured.shellProps = props;
     const { onCaptureStateChange } = props;
@@ -174,12 +165,6 @@ describe('mountR3FWebview', () => {
     expect(captured.shellProps?.content).toBe('');
     expect(captured.shellProps?.panelId).toMatch(/^vscode-/);
   });
-
-  it('gives the resource pipeline a job worker factory, so textures build off the main thread', async () => {
-    await mountFresh();
-
-    expect(typeof captured.pipelineOptions?.createWorker).toBe('function');
-  });
 });
 
 describe('loadTscn handling', () => {
@@ -206,12 +191,14 @@ describe('loadTscn handling', () => {
 });
 
 describe('resourceChanged handling', () => {
-  it('forwards the changed res:// path to the resource loader for re-fetch', async () => {
+  it("hands the shell a provider whose watchers hear the host's changed res:// path", async () => {
     await mountFresh();
+    const listener = vi.fn();
+    captured.shellProps?.provider?.watch?.(listener);
 
     dispatch({ type: 'resourceChanged', path: 'res://textures/wood.png' });
 
-    expect(captured.provideFile).toHaveBeenCalledWith('res://textures/wood.png');
+    expect(listener).toHaveBeenCalledWith('res://textures/wood.png');
   });
 });
 

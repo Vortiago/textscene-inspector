@@ -1,6 +1,5 @@
 import { useId, useMemo, type ReactNode } from 'react';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
-import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext.js';
 import { openScene, type Scene } from '../scene/openScene.js';
 import { resourcePipelineOf } from './sceneResourcePipeline.js';
 import { useSceneGraphs, useSceneText } from './hooks/useOpenedScene.js';
@@ -51,22 +50,18 @@ function SceneProviders({ scene, children }: OpenedSceneProps) {
   const { parsed, sceneGraph } = useSceneGraphs(scene);
   if (parsed.error) throw new Error(`expected the text of a .tscn scene, got: ${parsed.error}`);
   const hierarchyValue = useMemo(() => ({ sceneGraph, panelId, scene }), [sceneGraph, panelId, scene]);
-  const { loader } = resourcePipelineOf(scene);
   const withProviders = previewShellProviders({
     hierarchyValue,
+    loader: resourcePipelineOf(scene).loader,
     panelId,
     rootScenePath: scene.rootScenePath,
   });
 
   // A new parse clears the selection, or the highlight draws a removed node. A write keeps every node.
-  return (
-    <ResourceLoaderProvider loader={loader}>
-      {withProviders(
-        <>
-          <SceneChangeResetter sceneGraph={parsed.sceneGraph} />
-          {children}
-        </>
-      )}
-    </ResourceLoaderProvider>
+  return withProviders(
+    <>
+      <SceneChangeResetter sceneGraph={parsed.sceneGraph} />
+      {children}
+    </>
   );
 }

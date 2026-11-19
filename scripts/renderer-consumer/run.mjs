@@ -10,6 +10,7 @@ import { compareImages, formatDelta, isSameImage } from '../visual/imageDelta.mj
 import { writeBaselineFile } from '../visual/run/baselines.mjs';
 import { consumerManifest } from './consumerManifest.mjs';
 import { heldResourceFailures } from './heldResourceFailures.mjs';
+import { loadFailures } from './loadFailures.mjs';
 import { mountFailures } from './mountFailures.mjs';
 import { RENDER_TIMEOUT_MS, pollInk } from './pollInk.mjs';
 import { runSwitchChecks } from './switchChecks.mjs';
@@ -35,6 +36,8 @@ const WRITTEN_INK_FLOOR = INK_FLOOR / 4;
 const MOUNT_CHECKS_TIMEOUT_MS = 4 * RENDER_TIMEOUT_MS;
 /** The checks of a resource the scene file holds draw four views, each a short 320 x 240 window. */
 const HELD_CHECKS_TIMEOUT_MS = 2 * RENDER_TIMEOUT_MS;
+/** The load checks draw five views, two of them a 512 x 512 noise built on each thread. */
+const LOAD_CHECKS_TIMEOUT_MS = 3 * RENDER_TIMEOUT_MS;
 
 const versionsOf = (names, base) =>
   Object.fromEntries(names.map((name) => [name, installedVersion(name, base)]));
@@ -118,7 +121,13 @@ async function renderInBrowser(directory) {
       `http://localhost:${port}/?checks=switch`
     );
     const cameras = await runCameraChecks(await browser.newPage(), `http://localhost:${port}/?checks=camera`);
-    return { drawn, mounted, held, switched, cameras };
+    const loaded = await runPageChecks(
+      await browser.newPage(),
+      `http://localhost:${port}/?checks=load`,
+      'loadChecks',
+      LOAD_CHECKS_TIMEOUT_MS
+    );
+    return { drawn, mounted, held, loaded, switched, cameras };
   } finally {
     await browser.close();
     await server.close();
@@ -192,7 +201,7 @@ function callFailures(drawn) {
 }
 
 /** One line per failed check of every view and of `mountScene`. */
-function failures({ drawn, mounted, held, switched, cameras }) {
+function failures({ drawn, mounted, held, loaded, switched, cameras }) {
   return [
     ...Object.entries(drawn).flatMap(([view, result]) => failuresOf(view, result)),
     ...writeFailures(drawn),
@@ -202,6 +211,8 @@ function failures({ drawn, mounted, held, switched, cameras }) {
     ...baselineFailures(Buffer.from(mounted.results.smallElementPng, 'base64')),
     ...heldResourceFailures(held.results),
     ...held.errors.map((message) => `held resource: page error: ${message}`),
+    ...loadFailures(loaded.results),
+    ...loaded.errors.map((message) => `load: page error: ${message}`),
     ...switchFailures(switched),
     ...cameraFailures(cameras),
   ];

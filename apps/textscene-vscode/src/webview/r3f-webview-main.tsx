@@ -6,9 +6,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
-  createResourcePipeline,
   PENDING_CAPTURE,
-  ResourceLoaderProvider,
   TscnPreviewShell,
   setLogAdapter,
   type LogAdapter,
@@ -17,7 +15,6 @@ import {
 import type { TscnNode } from '@textscene/core';
 import { isHostToWebviewMessage, type WebviewToHostMessage } from '../protocol';
 import { WebviewResourceProvider } from './WebviewResourceProvider';
-import { textureWorkerFactory } from './createTextureWorker';
 import { readInitialConfig, resolveInitialViewportMode } from './initialConfig';
 import { setChunkFailureReporter } from './chunkImport';
 
@@ -83,16 +80,8 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
     [vscode]
   );
 
-  // The host answers the provider's `loadResource` posts with the file bytes.
-  // FileEventBus and ResourceLoader sit between it and `useResource`. Procedural
-  // textures build in the blob-URL job worker (ADR-0042).
-  const loader = useMemo(
-    () =>
-      createResourcePipeline(new WebviewResourceProvider(vscode), {
-        createWorker: textureWorkerFactory(),
-      }).loader,
-    [vscode]
-  );
+  // The host's `resourceChanged` reaches the provider's watchers, so a changed file draws with no remount.
+  const provider = useMemo(() => new WebviewResourceProvider(vscode), [vscode]);
 
   useEffect(() => {
     function onMessage(event: MessageEvent) {
@@ -106,10 +95,6 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
           handleCaptureStateChange(PENDING_CAPTURE);
         }
         setContent(message.content);
-      } else if (message.type === 'resourceChanged') {
-        // A dependency (texture, .tres, sub-scene, sidecar, project.godot) changed on
-        // disk. Its consumers load it again, with no remount.
-        loader.provideFile(message.path);
       } else if (message.type === 'capturePreview') {
         if (captureStateRef.current.status === 'pending') heldRequestsRef.current.push(message.requestId);
         else vscode.postMessage(captureAnswer(message.requestId, captureStateRef.current));
@@ -133,7 +118,7 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
       isListeningRef.current = false;
       window.removeEventListener('message', onMessage);
     };
-  }, [vscode, loader, handleCaptureStateChange]);
+  }, [vscode, handleCaptureStateChange]);
 
   const panelId = useMemo(() => `vscode-${Math.random().toString(36).slice(2, 10)}`, []);
 
@@ -151,17 +136,16 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
   };
 
   return (
-    <ResourceLoaderProvider loader={loader}>
-      <TscnPreviewShell
-        panelId={panelId}
-        content={content}
-        onNodeReveal={handleNodeReveal}
-        onCopyNodePath={handleCopyNodePath}
-        initialViewportMode={INITIAL_VIEWPORT_MODE}
-        onCaptureStateChange={handleCaptureStateChange}
-        isVisible={isVisible}
-      />
-    </ResourceLoaderProvider>
+    <TscnPreviewShell
+      panelId={panelId}
+      content={content}
+      provider={provider}
+      onNodeReveal={handleNodeReveal}
+      onCopyNodePath={handleCopyNodePath}
+      initialViewportMode={INITIAL_VIEWPORT_MODE}
+      onCaptureStateChange={handleCaptureStateChange}
+      isVisible={isVisible}
+    />
   );
 }
 

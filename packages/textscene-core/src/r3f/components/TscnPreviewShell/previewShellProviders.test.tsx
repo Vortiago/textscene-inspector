@@ -8,6 +8,7 @@ import { act, render } from '@testing-library/react';
 import { useEffect } from 'react';
 
 import { previewShellProviders } from './previewShellProviders';
+import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import {
   useRegisterViewportRect,
   useViewportRect,
@@ -17,6 +18,7 @@ import {
 function withShellProviders() {
   return previewShellProviders({
     hierarchyValue: { sceneGraph: null, panelId: 'p' },
+    loader: createFakeResourceLoader().loader,
     initialPreviewedCameraPath: undefined,
     onMissingPathsChange: undefined,
     initialViewportMode: undefined,

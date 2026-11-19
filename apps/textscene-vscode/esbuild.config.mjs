@@ -10,7 +10,7 @@ import { globSync } from 'glob';
 import { resolve } from 'node:path';
 import { mergedFileInputs, writeBundledNotices } from '../../scripts/third-party-notices.mjs';
 import { chunkImportPlugin } from './src/bundler/chunkImportPlugin.mjs';
-import { textureWorkerPlugin } from './src/bundler/textureWorkerPlugin.mjs';
+import { textureWorkerPlugin } from '../../packages/textscene-core/src/workers/bundler/esbuildPlugin.mjs';
 
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');

@@ -1,15 +1,11 @@
-/**
- * The esbuild plugin that ships the webview's job worker as one script string.
- * The webview starts it from a blob URL, and the CSP (`worker-src blob:`, no
- * `connect-src`) lets that script fetch nothing, so it must import nothing.
- */
+// @vitest-environment node
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import vm from 'node:vm';
 import * as esbuild from 'esbuild';
 import { describe, expect, it } from 'vitest';
-import { installWorkerJobs, type WorkerJobScope } from '@textscene/core/worker';
-import { TEXTURE_WORKER_MODULE, textureWorkerPlugin } from './textureWorkerPlugin.mjs';
+import { installWorkerJobs, type WorkerJobScope } from '../workerEntry';
+import { TEXTURE_WORKER_MODULE, textureWorkerPlugin } from './esbuildPlugin.mjs';
 
 /** A seamless ridged field, as core's decoders give it: the job input is plain data. */
 const NOISE_JOB_INPUT = {
@@ -76,17 +72,17 @@ function answer(install: (scope: WorkerJobScope) => void): Reply {
 
 const sha256 = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
 
-const APP_ROOT = path.resolve(import.meta.dirname, '../..');
+const PACKAGE_ROOT = path.resolve(import.meta.dirname, '../../..');
 
-/** The worker source exactly as the webview bundle embeds it, and the worker bundle's metafile. */
+/** The worker source exactly as a bundle embeds it, and the worker bundle's metafile. */
 async function buildWorker(): Promise<{ source: string; metafile: esbuild.Metafile }> {
   let metafile: esbuild.Metafile = { inputs: {}, outputs: {} };
   const result = await esbuild.build({
     stdin: {
       contents: `import source from '${TEXTURE_WORKER_MODULE}'; globalThis.__source = source;`,
-      resolveDir: APP_ROOT,
+      resolveDir: PACKAGE_ROOT,
     },
-    absWorkingDir: APP_ROOT,
+    absWorkingDir: PACKAGE_ROOT,
     bundle: true,
     write: false,
     format: 'iife',
@@ -132,6 +128,6 @@ describe('textureWorkerPlugin', () => {
 
   it('hands over the metafile of the worker bundle, which lists the worker entry', async () => {
     const { metafile } = await buildWorker();
-    expect(Object.keys(metafile.inputs)).toContain('src/webview/textureWorker.ts');
+    expect(Object.keys(metafile.inputs)).toContain('src/workers/workerScript.ts');
   }, 60_000);
 });

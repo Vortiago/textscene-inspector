@@ -187,6 +187,37 @@ describe('WebResourceProvider', () => {
     });
   });
 
+  describe('watch', () => {
+    it('tells each watcher the path of an uploaded file', () => {
+      const listener = vi.fn();
+      provider.watch(listener);
+
+      provider.addUploadedFile('res://icon.png', new File(['x'], 'icon.png'));
+
+      expect(listener).toHaveBeenCalledWith('res://icon.png');
+    });
+
+    it('tells each watcher the path of a removed upload', () => {
+      provider.addUploadedFile('res://icon.png', new File(['x'], 'icon.png'));
+      const listener = vi.fn();
+      provider.watch(listener);
+
+      provider.removeUploadedFile('res://icon.png');
+
+      expect(listener).toHaveBeenCalledWith('res://icon.png');
+    });
+
+    it('tells a removed watcher nothing', () => {
+      const listener = vi.fn();
+      const unwatch = provider.watch(listener);
+
+      unwatch();
+      provider.addUploadedFile('res://icon.png', new File(['x'], 'icon.png'));
+
+      expect(listener).not.toHaveBeenCalled();
+    });
+  });
+
   describe('addUploadedFile', () => {
     // State change: File added and loadable
     it('should add file so it can be loaded by path', async () => {

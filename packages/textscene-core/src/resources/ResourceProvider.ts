@@ -27,4 +27,6 @@ export interface ResourceProvider {
   listFiles?(extension: string): Promise<readonly string[] | null>;
   /** `folder` has no trailing slash. Null: no such folder. Rejects when the host cannot list now. */
   listDirectory?(folder: string): Promise<readonly DirectoryEntry[] | null>;
+  /** Calls `listener` with the path of a file that changed, appeared or went away. Returns the removal. */
+  watch?(listener: (path: string) => void): () => void;
 }
