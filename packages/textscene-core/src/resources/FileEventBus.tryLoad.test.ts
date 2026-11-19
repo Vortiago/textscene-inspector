@@ -52,10 +52,10 @@ describe('FileEventBus.tryLoad', () => {
     expect(loads).toHaveLength(1);
   });
 
-  it('re-reads after the cache is cleared, so a corpus switch cannot serve stale bytes', async () => {
+  it('re-reads after its path is cleared, so a changed file cannot serve stale bytes', async () => {
     const { bus, loads } = busServing({ 'res://a.gltf.import': 'x' });
     await bus.tryLoad('res://a.gltf.import');
-    bus.clearCache();
+    bus.clearCache('res://a.gltf.import');
     await bus.tryLoad('res://a.gltf.import');
     expect(loads).toHaveLength(2);
   });

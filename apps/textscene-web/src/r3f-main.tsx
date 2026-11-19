@@ -9,7 +9,7 @@ import {
 } from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
-import { resourceFilePath, TscnPreviewShell } from '@textscene/core';
+import { resourceFilePath, TscnPreviewShell, type ResourceProvider } from '@textscene/core';
 import { exposeScene } from './sceneConsole';
 import { fixtures } from './fixturesAll';
 import { corpusRootFor, resToFixtureFile, fixtureFileToRes } from './corpusRoot';
@@ -91,6 +91,9 @@ export function R3FApp() {
   // The corpus root of the scene on screen. During a fetch the selection has moved on
   // while the previous scene and its res:// namespace are still live.
   const resourceRoot = useMemo(() => corpusRootFor(renderedFixtureFile, fixtures), [renderedFixtureFile]);
+  // Two corpora may name one res:// path, so each gets a provider object and so a loader of its own.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- a new root is what asks for a new object
+  const corpusFiles = useMemo(() => filesOf(provider), [provider, resourceRoot]);
 
   /** Every scene replacement that may cross a corpus goes through here, to cross with the viewport empty. */
   const tearDownIfCrossingCorpus = (nextRoot: string) => {
@@ -278,11 +281,9 @@ export function R3FApp() {
       )}
       <div style={{ flex: 1, minWidth: 0, height: '100%', position: 'relative' }}>
         <TscnPreviewShell
-          // Two corpora may name one res:// path, so a crossing opens a scene of its own.
-          key={resourceRoot}
           panelId={`web-${fixtureFile || uploadedTscnName || 'empty'}`}
           content={forwardedContent}
-          provider={provider}
+          provider={corpusFiles}
           rootScenePath={
             // Relative to `resourceRoot`, so it names the rendered fixture. An upload is named by its file.
             renderedFixtureFile
@@ -338,4 +339,14 @@ export function mountR3F(container: HTMLElement): void {
 
   const root = createRoot(container);
   root.render(<R3FApp />);
+}
+
+/** A provider object for one corpus, over the app's provider, which reads the active corpus root. */
+function filesOf(provider: WebResourceProvider): ResourceProvider {
+  return {
+    loadResource: (path, type, maxBytes) => provider.loadResource(path, type, maxBytes),
+    stamp: (path) => provider.stamp(path),
+    listDirectory: (folder) => provider.listDirectory(folder),
+    watch: (listener) => provider.watch(listener),
+  };
 }

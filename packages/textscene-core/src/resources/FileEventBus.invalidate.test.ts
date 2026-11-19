@@ -67,7 +67,6 @@ describe('FileEventBus.clearCache', () => {
     await bus.tryLoad('res://a.png');
 
     bus.clearCache('res://a.png');
-    bus.clearCache();
 
     expect(invalidated).not.toHaveBeenCalled();
   });

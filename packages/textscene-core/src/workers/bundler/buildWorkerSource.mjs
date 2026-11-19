@@ -20,7 +20,8 @@ export async function buildWorkerSource({ workingDir, minify }) {
     // One classic script: a blob worker has no base URL to resolve a chunk against.
     format: 'iife',
     platform: 'browser',
-    target: 'es2020',
+    // es2022, not lower: a lowered class field is a defineProperty, and the noise built 2.6 times slower.
+    target: 'es2022',
     minify,
     metafile: true,
     // Core's TS source, the code its dist compiles, so the worker builds without a dist.

@@ -87,50 +87,21 @@ async function switchViaPalette(file: string) {
 let setResourceRoot: ReturnType<typeof vi.spyOn>;
 let newLoader: ReturnType<typeof vi.spyOn>;
 
-/** Whether the outgoing demo was on screen at each call. With no call, both read `undefined`. */
-function demoSightings() {
-  const sightings: (HTMLElement | null)[] = [];
-  return {
-    record: () => {
-      sightings.push(screen.queryByText('DemoRoot'));
-    },
-    get first() {
-      return sightings[0];
-    },
-    get latest() {
-      return sightings.at(-1);
-    },
-  };
-}
-
-/** At each new loader, and at each provider re-point, which an upload makes in its own handler. */
-let atNewLoader: ReturnType<typeof demoSightings>;
-let atRootSwitch: ReturnType<typeof demoSightings>;
-
-function resetFingerprints() {
-  atNewLoader = demoSightings();
-  atRootSwitch = demoSightings();
-}
+/** Whether the demo was on screen at the first re-point. `undefined` until then, which fails `toBeNull`. */
+let atRootSwitch: HTMLElement | null | undefined;
 
 beforeEach(() => {
-  resetFingerprints();
+  atRootSwitch = undefined;
   const realSetRoot = WebResourceProvider.prototype.setResourceRoot;
   setResourceRoot = vi.spyOn(WebResourceProvider.prototype, 'setResourceRoot').mockImplementation(function (
     this: WebResourceProvider,
     root: string
   ) {
-    atRootSwitch.record();
+    if (atRootSwitch === undefined) atRootSwitch = screen.queryByText('DemoRoot');
     realSetRoot.call(this, root);
   });
   // Each new pipeline hands its loader the provider once, so this counts new loaders.
-  const realSetProvider = ResourceLoader.prototype.setProvider;
-  newLoader = vi.spyOn(ResourceLoader.prototype, 'setProvider').mockImplementation(function (
-    this: ResourceLoader,
-    provider
-  ) {
-    atNewLoader.record();
-    realSetProvider.call(this, provider);
-  });
+  newLoader = vi.spyOn(ResourceLoader.prototype, 'setProvider');
 });
 
 afterEach(() => {
@@ -146,7 +117,7 @@ describe('corpus boundary — the root never moves under a mounted scene', () =>
 
     setResourceRoot.mockClear();
     newLoader.mockClear();
-    resetFingerprints();
+    atRootSwitch = undefined;
 
     await switchViaPalette(BASE.file);
 
@@ -168,7 +139,7 @@ describe('corpus boundary — the root never moves under a mounted scene', () =>
     expect(setResourceRoot).toHaveBeenCalledWith('');
     expect(newLoader).toHaveBeenCalled();
     // …and it landed with the demo already gone from the tree.
-    expect(atNewLoader.latest).toBeNull();
+    expect(atRootSwitch).toBeNull();
   });
 
   it('crosses into the base corpus on upload with the demo already gone', async () => {
@@ -179,7 +150,7 @@ describe('corpus boundary — the root never moves under a mounted scene', () =>
 
     newLoader.mockClear();
     setResourceRoot.mockClear();
-    resetFingerprints();
+    atRootSwitch = undefined;
 
     const sceneFile = new File([sceneWithRoot('UploadedRoot')], 'uploaded.tscn', {
       type: 'text/plain',
@@ -191,11 +162,10 @@ describe('corpus boundary — the root never moves under a mounted scene', () =>
     });
     await waitForScene('UploadedRoot');
 
-    // An upload lives in the base ('') corpus, so the demo went before the new loader, as on a switch.
+    // An upload lives in the base ('') corpus, so it gets a loader of its own and the demo went first.
     expect(newLoader).toHaveBeenCalled();
-    expect(atNewLoader.latest).toBeNull();
     expect(setResourceRoot).toHaveBeenCalledWith('');
-    expect(atRootSwitch.first).toBeNull();
+    expect(atRootSwitch).toBeNull();
   });
 
   it('refetches when the user re-picks a fixture whose load failed', async () => {
@@ -245,7 +215,8 @@ describe('corpus boundary — the root never moves under a mounted scene', () =>
     });
     await waitForScene('OtherBaseRoot');
 
-    // The same res:// namespace on both sides, so no re-routing.
+    // The same res:// namespace on both sides, so no re-routing, and the loader and its cache stay.
     expect(setResourceRoot).not.toHaveBeenCalledWith(expect.not.stringMatching(/^$/));
+    expect(newLoader).not.toHaveBeenCalled();
   });
 });

@@ -29,14 +29,17 @@ export function createResourcePipeline<P extends ResourceProvider>(
     provider,
     loader,
     hold() {
-      if (holders++ === 0) unwatch = provider.watch?.((path) => loader.provideFile(path));
+      if (holders++ === 0) {
+        unwatch = provider.watch?.((path) => loader.provideFile(path));
+        loader.jobRunner.retain();
+      }
       let isHeld = true;
       return () => {
         if (!isHeld) return;
         isHeld = false;
         if (--holders > 0) return;
         unwatch?.();
-        loader.jobRunner.dispose();
+        loader.jobRunner.release();
       };
     },
   };
