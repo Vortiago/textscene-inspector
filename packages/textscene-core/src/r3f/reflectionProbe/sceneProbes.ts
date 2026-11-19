@@ -36,7 +36,7 @@ import { ViewportShadowAtlas } from '../positionalShadow/viewportShadowAtlas.js'
 import { ProbeRows, type DrawnProbe } from './probeRows.js';
 import { atlasSlot, NO_RENDER_EXPOSURE, shownProbes } from './probeSlots.js';
 import { isReflectionProbe, type ReflectionProbeObject } from './reflectionProbeObject.js';
-import { noteRealTimeProbes, realTimeSkyChanges } from './realTimeCaptures.js';
+import { noteRealTimeProbes, realTimeSkyState } from './realTimeCaptures.js';
 import { sameElements } from '../../utils/sameElements.js';
 import { followSceneExposure, worldExposureOfScene } from '../exposure/sceneExposure.js';
 import { drawAsWorld, ownEnvironmentChanges } from '../environment/sceneEnvironment.js';
@@ -56,6 +56,14 @@ function layersToCapture(
   return stale.filter((layer) => layer === firstOther || isRealTimeProbe(probes[layer]!));
 }
 
+/** What every capture of one frame shares. */
+interface CaptureFrame {
+  readonly clearColor: THREE.Color;
+  readonly viewport: ViewportDescription;
+  /** `realTimeSkyState` as the frame's captures start. */
+  readonly skyState: string;
+}
+
 /** What a probe's capture shows: changed, it captures again. */
 interface Capture {
   layer: number;
@@ -63,8 +71,8 @@ interface Capture {
   generation: number;
   probe: ReflectionProbeObject['probe'];
   matrixWorld: THREE.Matrix4;
-  /** `realTimeSkyChanges` when the capture drew, which an ALWAYS capture compares. */
-  skyChanges: number;
+  /** The sky state the capture's faces started from, which an ALWAYS capture compares. */
+  skyState: string;
 }
 
 export class SceneProbes {
@@ -151,7 +159,10 @@ export class SceneProbes {
     const drawn = layersToCapture(probes, (probe, layer) => !this.isCaptured(probe, layer));
     if (drawn.length > 0) {
       beginStep(this.renderer, 'Reflection probes');
-      for (const layer of drawn) this.capture(probes[layer]!, layer, atlas, clearColor, viewport);
+      // Each capture of the frame keeps the sky state its faces start from, before any face steps it.
+      const skyState = realTimeSkyState(this.scene);
+      for (const layer of drawn)
+        this.capture(probes[layer]!, layer, atlas, { clearColor, viewport, skyState });
       endStep(this.renderer, 'Reflection probes');
     }
     const captured = probes.filter((probe) => this.captures.has(probe));
@@ -214,7 +225,7 @@ export class SceneProbes {
       capture.generation === this.generation &&
       capture.probe === object.probe &&
       capture.matrixWorld.equals(object.matrixWorld) &&
-      (!isRealTimeProbe(object) || capture.skyChanges === realTimeSkyChanges(this.scene))
+      (!isRealTimeProbe(object) || capture.skyState === realTimeSkyState(this.scene))
     );
   }
 
@@ -223,8 +234,7 @@ export class SceneProbes {
     object: ReflectionProbeObject,
     layer: number,
     atlas: ReflectionAtlas,
-    clearColor: THREE.Color,
-    viewport: ViewportDescription
+    { clearColor, viewport, skyState }: CaptureFrame
   ): void {
     const { probe } = object;
     const capture = {
@@ -259,13 +269,12 @@ export class SceneProbes {
     const radianceFilter = isRealTimeProbe(object) ? 'fast' : 'importance-sample';
     bakeAtlasLayers(this.renderer, this.cube.texture, atlas, layer, radianceFilter);
     const { generation } = this;
-    const skyChanges = realTimeSkyChanges(this.scene);
     this.captures.set(object, {
       layer,
       generation,
       probe,
       matrixWorld: object.matrixWorld.clone(),
-      skyChanges,
+      skyState,
     });
     const worldExposure = worldExposureOfScene(this.scene);
     if (worldExposure !== null) this.bakedExposures.set(object, worldExposure);

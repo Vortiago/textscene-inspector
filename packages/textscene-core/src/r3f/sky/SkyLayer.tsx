@@ -34,12 +34,13 @@ import {
   restartSkyClock,
   stepSkyRadiance,
   type SkyFrameReads,
+  type SkyRadianceUpdate,
   type SkyRender,
 } from '../../godot/rendering/environment/skyRadianceUpdate';
 import { canvasShaderTime } from '../shaderTime/canvasShaderTime';
 import { renderUnderWay } from '../viewportRender/worldRender';
 import {
-  noteRealTimeSkyChange,
+  noteRealTimeSkyState,
   takeRealTimeCaptureRender,
   takeRealTimeCaptureRenders,
 } from '../reflectionProbe/realTimeCaptures';
@@ -211,9 +212,8 @@ export function SkyLayer({
       const step = stepSkyRadiance(update, plan, render, isLightDirtied || isFrameDirtied);
       const position = update.previousPosition;
       const draw = { position, isDrawnEachBake: isFrameRead, lightData: lightDataKey(lightData) };
-      const energiesBefore = radiance.drawn.energies.join();
       const isDrawn = bake.step(render, step, draw);
-      if (isDrawn && radiance.drawn.energies.join() !== energiesBefore) noteRealTimeSkyChange(scene);
+      noteRealTimeSkyState(scene, radianceStateOf(update, radiance.drawn.energies));
       // New lights note a change of the Environment, which probes capture again. An exposure alone does not.
       if (!isDrawn || isFrameRead || lightData.lights === notedLights) return;
       notedLights = lightData.lights;
@@ -383,4 +383,9 @@ function directionalLights(scene: THREE.Scene): SkyLight[] {
 function shaderTexturesOf(material: SkyProperties | null): ShaderTextures | null {
   if (material?.kind !== 'shader') return null;
   return { references: material.textures, samplers: material.usage.samplers };
+}
+
+/** What the next render's step starts from: the layer energies and Godot's update state (`sky.cpp:1263`). */
+function radianceStateOf(update: SkyRadianceUpdate, energies: readonly number[]): string {
+  return `${energies.join()}|${update.processingLayer}|${update.isDirty}|${update.baked?.exposure}`;
 }

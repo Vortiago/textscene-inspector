@@ -10,7 +10,7 @@ import { renderUnderWay } from '../viewportRender/worldRender';
 import { mipmapBiasUniform } from '../testing/mipmapBiasUniform';
 import type { ViewportShadowAtlas } from '../positionalShadow/viewportShadowAtlas';
 import { ReflectionProbeObject } from './reflectionProbeObject';
-import { noteRealTimeSkyChange, takeRealTimeCaptureRenders } from './realTimeCaptures';
+import { noteRealTimeSkyState, takeRealTimeCaptureRenders } from './realTimeCaptures';
 import { SceneProbes } from './sceneProbes';
 import { rootViewportDescription } from '../viewportRender/viewportDescription';
 import { shownProbes } from './probeSlots';
@@ -240,20 +240,30 @@ describe('SceneProbes ALWAYS renders', () => {
     expect([facesDrawn(), facesDrawn()]).toEqual([3 * 6, 6]);
   });
 
-  it("captures an ALWAYS probe again once its sky's layer energies change", async () => {
+  it('keeps an ALWAYS capture while the sky state its faces start from stays', async () => {
+    const { scene, facesDrawn, settle } = await sceneWith(probeObject({ update_mode: '1' }));
+    noteRealTimeSkyState(scene, 'baked');
+    settle();
+    facesDrawn();
+    noteRealTimeSkyState(scene, 'baked');
+
+    expect(facesDrawn()).toBe(0);
+  });
+
+  it('captures an ALWAYS probe again once the sky state its faces start from changes', async () => {
     const { scene, facesDrawn, settle } = await sceneWith(probeObject({ update_mode: '1' }));
     settle();
     facesDrawn();
-    noteRealTimeSkyChange(scene);
+    noteRealTimeSkyState(scene, 'x');
 
     expect(facesDrawn()).toBe(6);
   });
 
-  it("keeps a ONCE capture when its sky's layer energies change", async () => {
+  it('keeps a ONCE capture when the sky state changes', async () => {
     const { scene, facesDrawn, settle } = await sceneWith(probeObject());
     settle();
     facesDrawn();
-    noteRealTimeSkyChange(scene);
+    noteRealTimeSkyState(scene, 'x');
 
     expect(facesDrawn()).toBe(0);
   });

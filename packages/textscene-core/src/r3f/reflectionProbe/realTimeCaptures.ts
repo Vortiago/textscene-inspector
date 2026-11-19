@@ -35,16 +35,16 @@ export function takeRealTimeCaptureRenders(scene: THREE.Scene): number {
   return renders;
 }
 
-/** Written only by `noteRealTimeSkyChange`, and kept for the scene's life. */
-// eslint-disable-next-line no-restricted-syntax -- a scene that is collected drops its count
-const skyChanges = new WeakMap<THREE.Scene, number>();
+/** Written only by `noteRealTimeSkyState`, and kept for the scene's life. */
+// eslint-disable-next-line no-restricted-syntax -- a scene that is collected drops its state
+const skyStates = new WeakMap<THREE.Scene, string>();
 
-/** Notes that a step changed a layer energy of `scene`'s sky, so an ALWAYS capture shows an old sky. */
-export function noteRealTimeSkyChange(scene: THREE.Scene): void {
-  skyChanges.set(scene, realTimeSkyChanges(scene) + 1);
+/** Notes the state of `scene`'s sky radiance after a step, which the next frame's ALWAYS faces start from. */
+export function noteRealTimeSkyState(scene: THREE.Scene, state: string): void {
+  skyStates.set(scene, state);
 }
 
-/** How many times a step changed a layer energy of `scene`'s sky. */
-export function realTimeSkyChanges(scene: THREE.Scene): number {
-  return skyChanges.get(scene) ?? 0;
+/** The state of `scene`'s sky radiance after its last step: equal states give equal ALWAYS captures. */
+export function realTimeSkyState(scene: THREE.Scene): string {
+  return skyStates.get(scene) ?? '';
 }
