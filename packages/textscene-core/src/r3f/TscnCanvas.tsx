@@ -1,6 +1,7 @@
 import { Canvas } from '@react-three/fiber';
 import {
   lazy,
+  useCallback,
   Suspense,
   useImperativeHandle,
   useLayoutEffect,
@@ -168,7 +169,7 @@ export function TscnCanvas({
         <ViewShowProvider show={show}>
           <FrameStatsProvider>
             <ViewportActionsScope>{stageOf({ mode, camera, className })}</ViewportActionsScope>
-            {ref && <ViewRef viewRef={ref} lookedThrough={mode === '3D' ? (camera ?? null) : null} />}
+            {ref && <ViewRef viewRef={ref} mode={mode} camera={camera} />}
           </FrameStatsProvider>
         </ViewShowProvider>
       </PreviewVisibilityProvider>
@@ -178,10 +179,11 @@ export function TscnCanvas({
 }
 
 /** Hands the ref the answers of the view below the same scene. They end when the view unmounts. */
-function ViewRef({ viewRef, lookedThrough }: { viewRef: Ref<ViewAnswers>; lookedThrough: string | null }) {
+function ViewRef({ viewRef, mode, camera }: { viewRef: Ref<ViewAnswers> } & ViewRefLook) {
   const scene = useOptionalHierarchy()?.scene;
   const status = useViewStatus();
-  const ending = useRef(new AbortController());
+  const ending = useRef<AbortController | null>(null);
+  const lookedThrough = useLookedThrough({ mode, camera });
   // A layout effect before the handle, so each mount's controller exists when the handle is built.
   useLayoutEffect(() => {
     const controller = new AbortController();
@@ -190,9 +192,23 @@ function ViewRef({ viewRef, lookedThrough }: { viewRef: Ref<ViewAnswers>; looked
   }, []);
   useImperativeHandle(viewRef, () => {
     if (!scene || !status) throw new Error('expected a TscnCanvas with a scene, got none');
-    return viewAnswers({ scene, status, ending: ending.current.signal, lookedThrough: () => lookedThrough });
+    if (!ending.current) throw new Error('expected the view to mount before its ref, got no mount');
+    return viewAnswers({ scene, status, ending: ending.current.signal, lookedThrough });
   }, [scene, status, lookedThrough]);
   return null;
+}
+
+type ViewRefLook = Required<Pick<TscnCanvasProps, 'mode'>> & Pick<TscnCanvasProps, 'camera'>;
+
+/** An undefined `camera` keeps the look, as `update` does, so `settled` still checks that Camera3D. */
+function useLookedThrough({ mode, camera }: ViewRefLook): () => string | null {
+  const keptCamera = useRef<string | null>(null);
+  const isLooking3D = useRef(false);
+  useLayoutEffect(() => {
+    if (camera !== undefined) keptCamera.current = camera;
+    isLooking3D.current = mode === '3D';
+  }, [mode, camera]);
+  return useCallback(() => (isLooking3D.current ? keptCamera.current : null), []);
 }
 
 /** A host's own provider wins, so its panels and the `camera` prop move the same preview. */

@@ -1,7 +1,7 @@
 import { useId, useMemo, type ReactNode } from 'react';
 import type { Scene } from '../scene/openScene.js';
 import { useSceneLoader } from './sceneResourcePipeline.js';
-import { useSceneGraphs } from './hooks/openedScene.js';
+import { useSceneGraphs } from './hooks/useSceneGraphs.js';
 import './sceneLiveTree.js';
 import { SceneChangeResetter } from './components/TscnPreviewShell/SceneChangeResetter.js';
 import { previewShellProviders } from './components/TscnPreviewShell/previewShellProviders.js';

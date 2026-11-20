@@ -17,7 +17,7 @@ import {
 } from '../../contexts/ViewportModeContext.js';
 import { readPersisted, usePersistedState } from '../../hooks/usePersistedState.js';
 import { DEFAULT_SHOW } from '../../viewShow/viewShow.js';
-import { useSceneGraphs } from '../../hooks/openedScene.js';
+import { useSceneGraphs } from '../../hooks/useSceneGraphs.js';
 import { ViewportToolbar } from '../ViewportToolbar/ViewportToolbar.js';
 import { Splitter } from '../Splitter/Splitter.js';
 import { ViewportArea } from './ViewportArea.js';
