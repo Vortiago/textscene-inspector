@@ -5,6 +5,7 @@ import type { SceneScope, TscnNode, TscnExternalResource } from '../../../parser
 import { joinPath } from '../../../utils/nodePath.js';
 import { rendersOwnVisual } from '../../nodeSupport.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
+import { useSelectPath } from '../TscnPreviewShell/previewSelection.js';
 import { scopeOf, type LiveNode } from '../../../resources/liveNode.js';
 import { useLiveStep } from './useLiveStep.js';
 import styles from './SceneTreeViewer.module.css';
@@ -138,8 +139,8 @@ function TreeNodeImpl({
     />
   );
 
-  const { selectedNodePath, expandedNodePaths, setSelectedNodePath, hoverStore, toggleExpandedNodePath } =
-    useSelection();
+  const { selectedNodePath, expandedNodePaths, hoverStore, toggleExpandedNodePath } = useSelection();
+  const selectPath = useSelectPath();
 
   const isExpanded = expandedNodePaths.has(nodePath);
   const isSelected = selectedNodePath === nodePath;
@@ -163,7 +164,7 @@ function TreeNodeImpl({
   }
 
   function handleSelect() {
-    setSelectedNodePath(nodePath);
+    selectPath(nodePath);
   }
 
   function handleDoubleClick() {

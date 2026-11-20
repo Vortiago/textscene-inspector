@@ -3,6 +3,7 @@ import type { TscnNode } from '../../../parser/types.js';
 import type { ViewportMode } from '../../contexts/ViewportModeContext.js';
 import type { PreviewCaptureState } from './previewCaptureState.js';
 import type { Scene } from '../../../scene/openScene.js';
+import type { NodeHandle } from '../../../scene/nodeHandle.js';
 
 export interface TscnPreviewShellProps {
   /** A stable panel identifier for logs and context coordination. */
@@ -46,6 +47,10 @@ export interface TscnPreviewShellProps {
    * callback, and a capture still returns the picture. Without it the preview shows.
    */
   isVisible?: boolean;
+  /** The host's selection, as the view's `selected`. Without it the shell keeps its own. */
+  selected?: NodeHandle | null;
+  /** Fired with the node the tree, the view or Escape selects, or null for none. */
+  onSelect?: (node: NodeHandle | null) => void;
   /** Fired with the node path the Inspector copies, for the host to put on the clipboard. Without it the row has no copy button. */
   onCopyNodePath?: (nodePath: string) => void;
 }

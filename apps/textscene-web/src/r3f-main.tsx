@@ -13,6 +13,7 @@ import { useSceneSource } from './useSceneSource';
 import { useScene } from './useScene';
 import { useFixtureSelection } from './useFixtureSelection';
 import { useCameraDeepLink } from './useCameraDeepLink';
+import { useNodeSelection } from './useNodeSelection';
 import { useDocumentVisibility } from './useDocumentVisibility';
 import { DEFAULT_FIXTURE, NO_FIXTURE } from './sceneSelection';
 import { useSourcePane } from './sourcePane';
@@ -98,9 +99,10 @@ export function R3FApp() {
       ? fixtureFileToRes(renderedFixtureFile, resourceRoot)
       : `res://${uploadedTscnName || 'empty.tscn'}`
   );
+  const [selected, select] = useNodeSelection(scene);
   useEffect(() => {
-    if (scene) exposeScene(scene);
-  }, [scene]);
+    if (scene) exposeScene(scene, select);
+  }, [scene, select]);
 
   /** Every scene replacement that may cross a corpus goes through here, to cross with the viewport empty. */
   const tearDownIfCrossingCorpus = (nextRoot: string) => {
@@ -284,6 +286,8 @@ export function R3FApp() {
             onResourceUpload={handleResourceUpload}
             onResourceRemove={handleResourceRemove}
             onCopyNodePath={copyToClipboard}
+            selected={selected}
+            onSelect={select}
             // Opening a sub-scene loads it from the mirror, so without one the ⤢ button goes.
             onOpenSubScene={HAS_FIXTURES_MIRROR ? handleOpenSubScene : undefined}
             initialPreviewedCameraPath={initialPreviewedCameraPath}

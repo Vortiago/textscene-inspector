@@ -58,7 +58,7 @@ export function HostSelection({ selected, onSelect, children }: HostSelectionPro
 }
 
 // A path the Live scene tree lacks, such as a node inside an imported GLB, reaches the host as its owner.
-function nearestHandle(scene: Scene, path: string): NodeHandle | null {
+export function nearestHandle(scene: Scene, path: string): NodeHandle | null {
   for (let at: string | null = path; at; at = parentPathOf(at)) {
     const handle = scene.getNodeOrNull(absolutePathOf(at));
     if (handle) return handle;

@@ -15,7 +15,7 @@ import {
   settleCanvas,
 } from '../previewServer.mjs';
 import { pausePlayer, seekPlayer } from './seekAnimation.mjs';
-import { applySceneWrites } from '../sceneWrites.mjs';
+import { applySceneWrites, selectThroughConsole } from '../sceneWrites.mjs';
 
 /**
  * `reason` with the requests the page lost, so a scene that never loads names the chunk or file
@@ -89,6 +89,16 @@ export async function captureScene(pageState, baseUrl, scene) {
     // `.click()` hovers the row first and leaves its hover highlight on, so the pointer moves off
     // the tree and only the selection renders.
     await page.mouse.move(0, 0);
+  }
+
+  // A node the Scene dock does not list, such as one inside a plain instance, has no row to click.
+  if (scene.consoleSelect) {
+    await page.waitForTimeout(FIT_QUIESCENCE_MS);
+    try {
+      await selectThroughConsole(page, scene.consoleSelect);
+    } catch (error) {
+      return { buffer: null, reason: withFailedRequests(`console select: ${error.message}`, diagnostics) };
+    }
   }
 
   // The pose at `animationTime` on the selected AnimationPlayer's first clip, which Godot's

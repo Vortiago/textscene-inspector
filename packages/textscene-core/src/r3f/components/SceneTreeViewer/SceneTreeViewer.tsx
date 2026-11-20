@@ -7,6 +7,7 @@ import type { TscnNode, TscnExternalResource } from '../../../parser/types.js';
 import { getAncestorPaths } from '../../../utils/nodePath.js';
 import { useHierarchy } from '../../contexts/HierarchyContext.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
+import { useSelectPath } from '../TscnPreviewShell/previewSelection.js';
 import { useSeatedRoots, useSharedLiveTree } from '../../useLiveSceneTree.js';
 import { walkLiveTree } from '../../liveSceneTree.js';
 import { dockLists } from '../../dockListing.js';
@@ -39,9 +40,9 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
     setExpandedNodePaths,
     hiddenNodePaths,
     toggleHidden,
-    setSelectedNodePath,
     toggleExpandedNodePath,
   } = useSelection();
+  const selectPath = useSelectPath();
   const liveTree = useSharedLiveTree();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -120,7 +121,7 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
         if (!row) return;
         row.focus();
         const path = nodePathFor(row);
-        if (path) setSelectedNodePath(path);
+        if (path) selectPath(path);
       };
 
       switch (e.key) {
@@ -171,7 +172,7 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
           break;
       }
     },
-    [setSelectedNodePath, toggleExpandedNodePath]
+    [selectPath, toggleExpandedNodePath]
   );
 
   // The selected row is the tab stop only while it renders, that is while it

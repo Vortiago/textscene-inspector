@@ -12,6 +12,7 @@ import type { ViewAnswers } from '../../viewStatus/viewAnswers.js';
 import { FreelookSpeedReadout } from '../FreelookSpeedReadout/FreelookSpeedReadout.js';
 import { GameStartNotes } from './GameStartNotes.js';
 import { usePreviewCamera, viewCameraOf } from './previewCamera.js';
+import { usePreviewSelection } from './previewSelection.js';
 import { ViewportControlsHelp } from '../ViewportControlsHelp/ViewportControlsHelp.js';
 import styles from './TscnPreviewShell.module.css';
 
@@ -22,10 +23,18 @@ const IS_2D_CONTENT = (node: TscnNode): boolean => isClaimedByCanvasItemEditor(n
 export function ViewportArea({ viewRef }: { viewRef: Ref<ViewAnswers> }) {
   const { mode, show } = useViewportMode();
   const camera = viewCameraOf(usePreviewCamera()?.camera ?? null);
+  const selection = usePreviewSelection();
   // The view reads the shell's providers: a `scene` prop would mount a second selection and pass.
   return (
     <>
-      <TscnCanvas mode={mode} show={show} camera={camera} ref={viewRef} />
+      <TscnCanvas
+        mode={mode}
+        show={show}
+        camera={camera}
+        selected={selection?.selected ?? null}
+        onSelect={selection?.select}
+        ref={viewRef}
+      />
       <ViewportChrome mode={mode} />
     </>
   );
