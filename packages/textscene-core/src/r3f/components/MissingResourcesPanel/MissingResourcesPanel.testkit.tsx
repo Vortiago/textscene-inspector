@@ -1,11 +1,11 @@
 import { render, screen } from '@testing-library/react';
-import { vi } from 'vitest';
+import { vi, type Mock } from 'vitest';
 import '../../sceneLiveTree';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext';
-import { openScene } from '../../../scene/openScene';
+import { openScene, type Scene } from '../../../scene/openScene';
 import type { ResourceProvider } from '../../../resources/ResourceProvider';
-import { MissingResourcesPanel } from './MissingResourcesPanel';
+import { MissingResourcesPanel, type MissingResourcesPanelProps } from './MissingResourcesPanel';
 
 export const MAIN = 'res://main.tscn';
 
@@ -23,11 +23,18 @@ export function sceneReading(paths: readonly string[]): string {
   return ['[gd_scene format=3]', ...exts, '[node name="Main" type="Node2D"]', ...sprites].join('\n\n') + '\n';
 }
 
+interface MountedPanel {
+  scene: Scene;
+  panel: HTMLElement;
+  onUpload: Mock<MissingResourcesPanelProps['onUpload']>;
+  onRemove: Mock<MissingResourcesPanelProps['onRemove']>;
+}
+
 /** The panel over a scene of `source`, once its first row shows. */
-export async function mountPanel(source: string, provider: ResourceProvider) {
+export async function mountPanel(source: string, provider: ResourceProvider): Promise<MountedPanel> {
   const scene = openScene({ source, provider, rootScenePath: MAIN });
-  const onUpload = vi.fn();
-  const onRemove = vi.fn();
+  const onUpload = vi.fn<MissingResourcesPanelProps['onUpload']>();
+  const onRemove = vi.fn<MissingResourcesPanelProps['onRemove']>();
   render(
     <HierarchyProvider value={{ sceneGraph: null, panelId: 'p', scene }}>
       <MissingResourcesProvider>
