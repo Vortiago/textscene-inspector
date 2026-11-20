@@ -25,6 +25,8 @@ const ATLAS = `[gd_resource type="StandardMaterial3D" format=3]
 albedo_texture = ExtResource("1")
 `;
 
+const ATLAS_DECLARING_NOTHING = '[gd_resource type="StandardMaterial3D" format=3]\n\n[resource]\n';
+
 describe('<MissingResourcesPanel>', () => {
   it('shows one row for each missing file of the scene, by path', async () => {
     const { panel } = await mountPanel(sceneReading(['res://b.png', 'res://a.png']), filesOf({}));
@@ -57,6 +59,20 @@ describe('<MissingResourcesPanel>', () => {
       return found!;
     });
     expect(addresses.textContent).toBe('Asked inside it: res://atlas.tres::Material_1');
+  });
+
+  it('names each sub-resource address the file does not declare, as Godot gives each a row', async () => {
+    const source = WITH_ATLAS.replace('path="res://atlas.tres"', 'path="res://atlas.tres::A"').replace(
+      'material_override = ExtResource("1")',
+      'material_override = ExtResource("1")\nmaterial_overlay = Resource("res://atlas.tres::B")'
+    );
+    const { panel } = await mountPanel(source, filesOf({ 'res://atlas.tres': ATLAS_DECLARING_NOTHING }));
+    const undeclared = await waitFor(() => {
+      const found = panel.querySelector('[data-testid="undeclared-addresses"]');
+      expect(found).not.toBeNull();
+      return found!;
+    });
+    expect(undeclared.textContent).toBe('Not declared inside it: res://atlas.tres::A, res://atlas.tres::B');
   });
 
   it('turns a missing row uploaded once its file loads, and forwards a Remove to the host', async () => {
@@ -93,6 +109,22 @@ describe('<MissingResourcesPanel>', () => {
     await screen.findByRole('button', { name: 'Remove uploaded file for res://gone.png' });
     await waitFor(() => expect(scene.files().every((file) => file.state === 'loaded')).toBe(true));
     expect(screen.queryByRole('button', { name: 'Remove uploaded file for res://atlas.tres' })).toBeNull();
+  });
+
+  it('keeps the panel on the page while an uploaded file loads again', async () => {
+    const files: Record<string, ArrayBuffer> = {};
+    const { scene, panel } = await mountPanel(sceneReading([ICON]), filesOf(files));
+    await waitFor(() => expect(missingRows(panel)).toEqual([ICON]));
+    let wasHidden = false;
+    const observer = new MutationObserver(() => {
+      wasHidden ||= screen.queryByTestId('missing-resources-panel') === null;
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    files[ICON] = PNG;
+    act(() => resourcePipelineOf(scene).loader.provideFile(ICON));
+    await screen.findByRole('button', { name: `Remove uploaded file for ${ICON}` });
+    observer.disconnect();
+    expect(wasHidden).toBe(false);
   });
 
   it('shows no uploaded row for a file that loads on its first request', async () => {

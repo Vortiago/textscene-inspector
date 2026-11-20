@@ -7,6 +7,8 @@ export type SceneFileState = 'loading' | 'loaded' | 'missing';
 export interface SceneFileFailure {
   readonly chain: readonly string[];
   readonly cause: LoadFailureCause;
+  /** Each **Sub-resource path** the file does not declare, a dialog row each. Empty where the file fails. */
+  readonly addresses: readonly string[];
 }
 
 /** One row of Godot's Load Errors dialog (dependency_editor.cpp:802-826). */

@@ -36,6 +36,7 @@ function passingRun() {
         resources: [{ state: 'missing', path: TEXTURE_PATH }],
         badge: '⚠ 1 missing',
       }),
+      panelLeftWhileLoading: false,
       filled: uploadedScene({ resources: [{ state: 'uploaded', path: TEXTURE_PATH }] }),
       diagnostics: { ...CLEAN_LOAD, consoleWarnings: [MISSING_TEXTURE_WARNING] },
     },
@@ -51,6 +52,14 @@ function failuresOf(run) {
 describe('checkUploadScenarios', () => {
   it('records nothing for three healthy arms', () => {
     expect(failuresOf(passingRun())).toEqual([]);
+  });
+
+  it('records a Resources panel that leaves the page while the dropped texture loads', () => {
+    const run = passingRun();
+    run.repeatedDrop.panelLeftWhileLoading = true;
+    expect(failuresOf(run)).toEqual([
+      '[repeated drop, texture] the Resources panel left the page while the dropped texture loaded',
+    ]);
   });
 
   it('records a badge that counts other files than the Resources tab lists missing', () => {

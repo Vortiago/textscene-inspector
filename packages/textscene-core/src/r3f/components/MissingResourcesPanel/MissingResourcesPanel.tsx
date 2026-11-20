@@ -109,6 +109,11 @@ function MissingRow({ file: { path, addresses, reason }, onUpload }: MissingRowP
           Asked inside it: {addresses.join(', ')}
         </div>
       )}
+      {reason !== null && reason.addresses.length > 0 && (
+        <div className={styles.chain} data-testid="undeclared-addresses">
+          Not declared inside it: {reason.addresses.join(', ')}
+        </div>
+      )}
       {failsThroughAnother && (
         <div className={styles.chain} data-testid="load-failure-chain">
           Fails to load: {failureChainText(reason.chain, reason.cause)}

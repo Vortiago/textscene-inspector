@@ -7,7 +7,7 @@ const MISSING_FILE = {
   type: 'Texture2D',
   state: 'missing',
   owners: ['res://main.tscn'],
-  reason: { chain: [MISSING_PATH], cause: 'missing' },
+  reason: { chain: [MISSING_PATH], cause: 'missing', addresses: [] },
   addresses: [],
 };
 

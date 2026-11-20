@@ -36,6 +36,13 @@ const TRIM_ASKING_GONE = `[gd_resource type="Resource" format=3]
 material = Resource("res://wood.tres::gone")
 `;
 
+const NODE_READS_A_LITERAL_READS_B = `[gd_scene format=3]
+[ext_resource type="Material" path="res://wood.tres::A" id="1"]
+[node name="Root" type="Node2D"]
+first = ExtResource("1")
+second = Resource("res://wood.tres::B")
+`;
+
 function mount(files: Record<string, string>, source = MAIN) {
   const scene = openScene({
     source,
@@ -78,5 +85,11 @@ describe('<SceneLoadBanner>', () => {
 
     await waitFor(() => expect(scene.files().every((file) => file.state === 'missing')).toBe(true));
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('fails the scene on a Resource() literal of a second address the file lacks', async () => {
+    mount({ 'res://wood.tres': WOOD }, NODE_READS_A_LITERAL_READS_B);
+
+    expect((await screen.findByRole('alert')).textContent).toContain('res://wood.tres::B');
   });
 });

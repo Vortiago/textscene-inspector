@@ -28,17 +28,14 @@ export function SceneLoadBanner() {
   );
 }
 
+/** The chain of the first read that fails the scene: a whole file's, or the undeclared address it names. */
 function firstFailure(reads: readonly string[], files: readonly SceneFile[]): SceneFileFailure | null {
   const reasons = new Map(files.map((file) => [file.path, file.reason]));
   for (const read of reads) {
     const reason = reasons.get(resourceFilePath(read));
-    if (reason && failsRead(reason, read)) return reason;
+    if (!reason) continue;
+    if (reason.addresses.length === 0) return reason;
+    if (reason.addresses.includes(read)) return { ...reason, chain: [read] };
   }
   return null;
-}
-
-/** A failed load fails each read of the file, and an undeclared address only the read that names it. */
-function failsRead({ chain }: SceneFileFailure, read: string): boolean {
-  const failedFirst = chain[0]!;
-  return failedFirst === resourceFilePath(failedFirst) || failedFirst === read;
 }

@@ -123,15 +123,16 @@ export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void
     const found = outcome(path);
     if (found === undefined || isReading) return { state: 'loading', reason: null };
     // Null: the host could not read a file that exists, which `loadOutcome` counts as no failure.
-    if (found?.isFailed) return { state: 'missing', reason: { chain: found.chain, cause: found.cause } };
+    if (found?.isFailed)
+      return { state: 'missing', reason: { chain: found.chain, cause: found.cause, addresses: [] } };
     if (addresses.length === 0) return { state: 'loaded', reason: null };
     const text = textFile(path);
     if (text === undefined) return { state: 'loading', reason: null };
-    const undeclared = addresses.find(
+    const undeclared = addresses.filter(
       (address) => !text?.subResourceIds.has(parseSubResourcePath(address).subResourceId ?? '')
     );
-    return undeclared
-      ? { state: 'missing', reason: { chain: [undeclared], cause: 'missing' } }
+    return undeclared.length > 0
+      ? { state: 'missing', reason: { chain: [undeclared[0]!], cause: 'missing', addresses: undeclared } }
       : { state: 'loaded', reason: null };
   }
 

@@ -66,7 +66,7 @@ describe('the files of a scene', () => {
         type: 'Texture2D',
         state: 'missing',
         owners: [MAIN],
-        reason: { chain: ['res://icon.png'], cause: 'missing' },
+        reason: { chain: ['res://icon.png'], cause: 'missing', addresses: [] },
         addresses: [],
       },
     ]);
@@ -126,13 +126,13 @@ describe('the files of a scene', () => {
         path: 'res://wood.png',
         state: 'missing',
         owners: ['res://wood.tres'],
-        reason: { chain: ['res://wood.png'], cause: 'missing' },
+        reason: { chain: ['res://wood.png'], cause: 'missing', addresses: [] },
       },
       {
         path: 'res://wood.tres',
         state: 'missing',
         owners: [MAIN],
-        reason: { chain: ['res://wood.tres', 'res://wood.png'], cause: 'missing' },
+        reason: { chain: ['res://wood.tres', 'res://wood.png'], cause: 'missing', addresses: [] },
       },
     ]);
   });
@@ -203,10 +203,30 @@ material_override = ExtResource("1")
         type: 'Material',
         state: 'missing',
         owners: [MAIN],
-        reason: { chain: ['res://wood.tres::Absent'], cause: 'missing' },
+        reason: {
+          chain: ['res://wood.tres::Absent'],
+          cause: 'missing',
+          addresses: ['res://wood.tres::Absent'],
+        },
         addresses: ['res://wood.tres::Absent'],
       },
     ]);
+  });
+
+  it('names every sub-resource address the file does not declare', async () => {
+    const source = `[gd_scene format=3]
+
+[ext_resource type="Material" path="res://wood.tres::A" id="1"]
+[ext_resource type="Material" path="res://wood.tres::B" id="2"]
+
+[node name="Main" type="MeshInstance3D"]
+material_override = ExtResource("1")
+material_overlay = ExtResource("2")
+`;
+    const wood = '[gd_resource type="StandardMaterial3D" format=3]\n\n[resource]\n';
+    const scene = openScene({ source, provider: filesOf({ 'res://wood.tres': wood }), rootScenePath: MAIN });
+    const [file] = await whenFilesLoaded(scene);
+    expect(file?.reason?.addresses).toEqual(['res://wood.tres::A', 'res://wood.tres::B']);
   });
 
   it('names the project settings the engine reads, and a project font they name that the provider does not hold', async () => {
@@ -219,7 +239,7 @@ material_override = ExtResource("1")
         type: 'Font',
         state: 'missing',
         owners: ['res://project.godot'],
-        reason: { chain: ['res://fonts/body.ttf'], cause: 'missing' },
+        reason: { chain: ['res://fonts/body.ttf'], cause: 'missing', addresses: [] },
         addresses: [],
       },
       {
@@ -242,6 +262,23 @@ material_override = ExtResource("1")
 `;
     const scene = openScene({ source, provider: filesOf({}), rootScenePath: MAIN });
     expect(await whenFilesLoaded(scene)).toEqual([]);
+  });
+
+  it('names the file an orphaned node reads, as Godot re-roots the node (packed_scene.cpp:208-215)', async () => {
+    const source = `[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://icon.png" id="1"]
+
+[node name="Main" type="Node2D"]
+
+[node name="Lost" type="Sprite2D" parent="Gone"]
+texture = ExtResource("1")
+`;
+    const scene = openScene({ source, provider: filesOf({}), rootScenePath: MAIN });
+    const files = await whenFilesLoaded(scene);
+    expect(files.map(({ path, state }) => ({ path, state }))).toEqual([
+      { path: 'res://icon.png', state: 'missing' },
+    ]);
   });
 
   it('follows an instanced scene to the files its nodes read', async () => {

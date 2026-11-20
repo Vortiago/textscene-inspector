@@ -1,13 +1,4 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
+import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { SceneFile } from '../../scene/sceneFiles.js';
 import { useOptionalHierarchy } from './HierarchyContext.js';
 import { useSceneFiles } from '../hooks/useSceneFiles.js';
@@ -32,8 +23,8 @@ MissingResourcesContext.displayName = 'MissingResourcesContext';
 
 export function MissingResourcesProvider({ children }: { children: ReactNode }) {
   const files = useSceneFiles(useOptionalHierarchy()?.scene);
-  const missingFiles = useMemo(() => files.filter((file) => file.state === 'missing'), [files]);
-  const [uploadedPaths, removeUploaded] = useUploadedPaths(files);
+  const missingFiles = useMissingRows(files);
+  const [uploadedPaths, removeUploaded] = useUploadedPaths(files, missingFiles);
   const value = useMemo<MissingResourcesContextValue>(
     () => ({ missingFiles, uploadedPaths, removeUploaded }),
     [missingFiles, uploadedPaths, removeUploaded]
@@ -46,28 +37,46 @@ export function useMissingResources(): MissingResourcesContextValue {
   return useContext(MissingResourcesContext);
 }
 
-/** Each file that failed first and then loaded, kept across scenes until removed, and the removal. */
-function useUploadedPaths(files: readonly SceneFile[]): [ReadonlySet<string>, (path: string) => void] {
-  const [uploadedPaths, setUploadedPaths] = useState<ReadonlySet<string>>(() => new Set<string>());
-  const seenMissing = useRef<ReadonlySet<string>>(new Set());
-  useEffect(() => {
-    const arrived = files.filter((file) => file.state === 'loaded' && seenMissing.current.has(file.path));
-    // A file loads again after a change, so one seen missing stays seen while it loads.
-    const stillMissing = files.filter(
-      (file) => failsItself(file) || (file.state === 'loading' && seenMissing.current.has(file.path))
-    );
-    seenMissing.current = new Set(stillMissing.map((file) => file.path));
-    if (arrived.length === 0) return;
-    setUploadedPaths((prev) => arrived.reduce((next, { path }) => withKey(next, path), prev));
+/** The missing files, each kept as it last failed while it loads again, so no row blinks out on a reload. */
+function useMissingRows(files: readonly SceneFile[]): readonly SceneFile[] {
+  const lastMissing = useRef<ReadonlyMap<string, SceneFile>>(new Map());
+  return useMemo(() => {
+    const rows = files.flatMap((file) => {
+      if (file.state === 'missing') return [file];
+      const last = file.state === 'loading' ? lastMissing.current.get(file.path) : undefined;
+      return last ? [last] : [];
+    });
+    lastMissing.current = new Map(rows.map((row) => [row.path, row]));
+    return rows;
   }, [files]);
-  const removeUploaded = useCallback(
-    (path: string) => setUploadedPaths((prev) => withoutKey(prev, path)),
-    []
-  );
+}
+
+/** Each file that failed first and then loaded, kept across scenes until removed, and the removal. */
+function useUploadedPaths(
+  files: readonly SceneFile[],
+  missingFiles: readonly SceneFile[]
+): [ReadonlySet<string>, (path: string) => void] {
+  // In the render, not an effect: the missing row and its uploaded row change in one commit.
+  const uploaded = useRef<ReadonlySet<string>>(new Set());
+  const seenFailingItself = useRef<ReadonlySet<string>>(new Set());
+  const [removals, setRemovals] = useState(0);
+  const uploadedPaths = useMemo(() => {
+    const arrived = files.filter(
+      (file) => file.state === 'loaded' && seenFailingItself.current.has(file.path)
+    );
+    seenFailingItself.current = new Set(missingFiles.filter(failsItself).map((file) => file.path));
+    uploaded.current = arrived.reduce((next, { path }) => withKey(next, path), uploaded.current);
+    return uploaded.current;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `removals` is the trigger, not an input.
+  }, [files, missingFiles, removals]);
+  const removeUploaded = useCallback((path: string) => {
+    uploaded.current = withoutKey(uploaded.current, path);
+    setRemovals((count) => count + 1);
+  }, []);
   return [uploadedPaths, removeUploaded];
 }
 
 /** The file an upload replaces: a file that fails through another loads once that one arrives. */
-function failsItself({ path, state, reason }: SceneFile): boolean {
-  return state === 'missing' && reason?.chain.at(-1) === path;
+function failsItself({ path, reason }: SceneFile): boolean {
+  return reason?.chain.at(-1) === path;
 }

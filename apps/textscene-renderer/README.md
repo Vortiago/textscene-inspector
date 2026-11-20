@@ -240,9 +240,11 @@ Each read of `settled` gives a new promise, which rejects once the view unmounts
 - `path`, and `type`: the type the `[ext_resource]` heading gives, or null.
 - `state`: `loading`, `loaded` or `missing`. `missing` is a file the game would fail to load.
 - `owners`: the files that read it. The project settings name `res://project.godot` as owner.
-- `reason`: for a missing file, `{ chain, cause }`. `chain` holds the file, each text file
-  through which it fails, and the file that failed first. `cause` is `missing`, `unparsed` or
-  `unimported`. Null for a file that is not missing.
+- `reason`: for a missing file, `{ chain, cause, addresses }`. `chain` holds the file, each text
+  file through which it fails, and the file that failed first. `cause` is `missing`, `unparsed`
+  or `unimported`. `addresses` holds each sub-resource address the file does not declare, where
+  the file loads but these addresses fail. Godot's dialog gives each of them a row. Null for a
+  file that is not missing.
 - `addresses`: each sub-resource address inside the file that the scene reads, such as
   `res://wood.tres::Material_1`.
 
