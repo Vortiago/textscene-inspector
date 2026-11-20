@@ -17,12 +17,7 @@ export interface UseSceneSourceOptions {
   fixtureFile: string;
   /** Non-null when the user has loaded a .tscn from disk, so the fetch effect is skipped. */
   uploadedTscnName: string | null;
-  /**
-   * Called synchronously with the arriving fixture's path just before it renders. Only then
-   * may the host re-point resource resolution (`useCorpusRoot`): the outgoing scene is gone
-   * and the incoming one has not rendered. Read from a ref, so an unstable callback never
-   * re-triggers the fetch.
-   */
+  /** Called with the arriving fixture just before it renders: the one time the corpus root may move. */
   onBeforeSwap?: (fixtureFile: string) => void;
 }
 

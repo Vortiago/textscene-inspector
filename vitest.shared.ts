@@ -1,6 +1,7 @@
 import { availableParallelism, totalmem, freemem } from 'node:os';
 import { getHeapStatistics } from 'node:v8';
 import { defineConfig } from 'vitest/config';
+import { fileURLToPath } from 'node:url';
 
 /**
  * Tests resolve `@textscene/core` to its TypeScript source through the `@textscene/source` export
@@ -16,6 +17,12 @@ const SOURCE_CONDITION = '@textscene/source';
 export const sourceResolve = {
   resolve: {
     conditions: [SOURCE_CONDITION, 'module', 'browser', 'development|production'],
+    // No worker bundler runs under vitest (packages/textscene-core/src/workers/bundler/).
+    alias: {
+      'virtual:texture-worker-source': fileURLToPath(
+        new URL('./packages/textscene-core/src/workers/textureWorkerSource.stub.ts', import.meta.url)
+      ),
+    },
   },
   ssr: {
     resolve: {

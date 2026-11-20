@@ -9,7 +9,7 @@ import type { TscnExternalResource, TscnNode } from '../../../../parser/types';
 import { parseGridMap } from '../parser';
 import { GridMap } from '../Component';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../../../index';
+import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { loaderServing } from '../../../../resources/testing/servingResourceLoader';
 import { instanceAs } from '../../testing/reactThreeTestInstance';
 import { isInstancedMesh } from '../../../../r3f/testing/threeNarrow';

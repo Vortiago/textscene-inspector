@@ -5,6 +5,7 @@ import { runMissingFileChecks, type MissingFileCheckResults } from './missingFil
 import { projectOf, runMountChecks, type MountCheckResults } from './mountChecks';
 import { WINDOW_320_PROJECT, exposeSwitchChecks } from './switchView';
 import { exposeCameraChecks } from './cameraView';
+import { runLoadChecks, type LoadCheckResults } from './loadChecks';
 import { exposePickView } from './pickView';
 
 const FIXTURE_SCENE = `[gd_scene format=3]
@@ -99,6 +100,8 @@ declare global {
     mountChecks?: MountCheckResults;
     /** Written once the checks of a resource the scene file holds end. */
     heldResourceChecks?: HeldResourceCheckResults;
+    /** Written once the checks of the texture worker and a changed file end. */
+    loadChecks?: LoadCheckResults;
     /** Written once the checks of the files a scene asked for and did not get end. */
     missingFileChecks?: MissingFileCheckResults;
   }
@@ -109,6 +112,8 @@ if (query.get('checks') === 'mount') {
   void runMountChecks().then((results) => (window.mountChecks = results));
 } else if (query.get('checks') === 'held') {
   void runHeldResourceChecks().then((results) => (window.heldResourceChecks = results));
+} else if (query.get('checks') === 'load') {
+  void runLoadChecks().then((results) => (window.loadChecks = results));
 } else if (query.get('checks') === 'missing') {
   void runMissingFileChecks().then((results) => (window.missingFileChecks = results));
 } else if (query.get('checks') === 'switch') {

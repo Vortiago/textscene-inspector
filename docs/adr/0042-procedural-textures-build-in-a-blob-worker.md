@@ -24,20 +24,24 @@ script from the extension's resource origin is cross-origin to the webview docum
 
 ## Decision
 
-**A procedural texture builds in a Web Worker that each host starts from a `blob:` URL.**
-The webview CSP gains `worker-src blob:` and nothing else.
+**A procedural texture builds in a Web Worker that the loader of each opened scene starts
+from a `blob:` URL.** The webview CSP gains `worker-src blob:` and nothing else.
 
-- **The worker fetches nothing.** Each host bundles the worker as one self-contained
-  script string and creates the blob from it. The job input arrives in a message, and the
+- **The worker fetches nothing.** Every build that ships core bundles the worker as one
+  self-contained script string (`workers/bundler/`: an esbuild plugin for the webview and
+  `@textscene/renderer`, a Vite plugin for the web previewer), and core creates the blob
+  from it. A package user passes nothing and fetches nothing from another host. The job input arrives in a message, and the
   pixels return as a transferred buffer. So `connect-src`, `font-src` and `child-src`
   stay at `'none'`.
 - **A blob worker runs only code the page itself creates.** Only the nonce'd entry and
   the extension's own chunks run in the page (`script-src`), so the directive admits no
   code that the page could not already run.
 - **One job, three runners.** The job is a pure function in core. The worker runs it,
-  and so does the in-thread fallback, which runs when a host gives no worker or the
-  worker fails to start. The fallback is the synchronous build that existed before, so
+  and so does the in-thread fallback, which runs when the worker fails to start, as
+  under a page policy with no `worker-src blob:`. The fallback is the synchronous build that existed before, so
   it gives the same bytes.
+- **Confirmed in Chromium only.** The worker path and the fallback under a blocked `blob:`
+  worker are confirmed in Chromium. WebKit and Firefox were not run.
 
 **A large texture uploads in bands, at the site that draws it.** A built texture still
 reaches the GPU in one `texImage2D`, which took 34–435 ms for 4096² RGBA in headless

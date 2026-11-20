@@ -5,6 +5,7 @@ import type { TscnNode } from '../../../parser/types.js';
 import type { ViewportMode } from '../../contexts/ViewportModeContext.js';
 import type { PreviewCaptureState } from './previewCaptureState.js';
 import type { Scene } from '../../../scene/openScene.js';
+import type { ResourceProvider } from '../../../resources/ResourceProvider.js';
 
 export interface TscnPreviewShellProps {
   /** A stable panel identifier for logs and context coordination. */
@@ -13,6 +14,8 @@ export interface TscnPreviewShellProps {
   content: string;
   /** The scene path of the SceneGraph root. The synthetic default suits inline content. */
   rootScenePath?: string;
+  /** How the scene's `res://` files load, or no file. A new object opens a new scene and loader. */
+  provider?: ResourceProvider;
   /** Fired when a row is double-clicked, so the host can jump to the source. */
   onNodeReveal?: (path: string, node: TscnNode) => void;
   onOpenSubScene?: (scenePath: string) => void;

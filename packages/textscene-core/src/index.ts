@@ -27,11 +27,7 @@ export {
   variant,
 } from './r3f/index';
 
-export { ResourceLoaderProvider } from './resources/ResourceLoaderContext';
 export { ResourceLoader } from './resources/ResourceLoader';
-export { createResourcePipeline } from './resources/createResourcePipeline';
-export type { ResourcePipeline } from './resources/createResourcePipeline';
-export type { CreateJobWorker, JobWorker } from './workers/WorkerJobRunner';
 // A host that reads reported resource identities (a drop matcher keying on
 // basename, say) needs the file half, which core cannot normalise on its behalf.
 export { resourceFilePath } from './resources/subResourcePath';

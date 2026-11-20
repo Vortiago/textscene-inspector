@@ -493,7 +493,8 @@ The package exports these names.
   the scene opens under, optional). It takes `children`. A new `provider` starts a new resource
   loader.
 - `ResourceProvider` (a type): `loadResource(path, type?)` returns the file as a string or an
-  `ArrayBuffer`, or `null` when the file is missing.
+  `ArrayBuffer`, or `null` when the file is missing. The optional `watch(listener)` is in "Load a
+  file again when it changes".
 - `useSelection`: the selected node path and the functions that change it. Call it in a component
   inside `<TscnSceneProvider>`.
 - `useGameViewSettled()`: the settled value of the view below the same
@@ -510,8 +511,31 @@ The package exports these names.
 The bundle adds one `<style>` element to the page when it loads. Your app needs no CSS-module
 support and no stylesheet import. A page with a strict `style-src` policy must allow that element.
 
-The renderer builds procedural textures, such as `NoiseTexture2D`, on the main thread. It starts no
-worker.
+The renderer builds procedural textures, such as `NoiseTexture2D`, in a Web Worker that it starts
+from a `blob:` URL. The worker script is inside the bundle, so nothing loads from another host. A
+page with a `worker-src` policy must allow `blob:`. When the worker cannot start, the renderer builds
+the same pixels on the main thread.
+
+## Load a file again when it changes
+
+Give the provider a `watch` method. The renderer calls it once for each scene that a view shows, and
+calls the function it returns when the last view of that scene goes. Call the listener with the
+`res://` path of a file that changed, appeared or went away, and every view of the scene draws the
+new file, with no new mount.
+
+```ts
+const listeners = new Set<(path: string) => void>();
+const provider: ResourceProvider = {
+  loadResource: (path) => readProjectFile(path), // the page's own read of a project file
+  watch(listener) {
+    listeners.add(listener);
+    return () => listeners.delete(listener);
+  },
+};
+
+// When your file watcher sees res://textures/wood.png change:
+for (const listener of listeners) listener('res://textures/wood.png');
+```
 
 ## Licence
 

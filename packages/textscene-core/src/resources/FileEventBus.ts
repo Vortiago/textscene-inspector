@@ -195,24 +195,12 @@ export class FileEventBus {
     }
   }
 
-  /**
-   * Clear the byte cache and drop the flight tokens, so a follow-up request fetches fresh.
-   * @param path - Specific file to clear, or all files if omitted
-   */
-  clearCache(path?: string): void {
-    // `!== undefined`, not truthiness: `''` is a real key (a sub-resource address
-    // with an empty file half), and reading it as "no path" clears every fetch.
-    if (path !== undefined) {
-      this.cache.delete(path);
-      this.inflight.delete(path);
-      this.optionalInflight.delete(path);
-      logger.info(`[FileEventBus] Cleared cache: ${path}`);
-    } else {
-      this.cache.clear();
-      this.inflight.clear();
-      this.optionalInflight.clear();
-      logger.info(`[FileEventBus] Cleared all cache`);
-    }
+  /** Drops the file's bytes and its flight tokens, so a follow-up request fetches fresh. */
+  clearCache(path: string): void {
+    this.cache.delete(path);
+    this.inflight.delete(path);
+    this.optionalInflight.delete(path);
+    logger.info(`[FileEventBus] Cleared cache: ${path}`);
   }
 
   isCached(path: string): boolean {

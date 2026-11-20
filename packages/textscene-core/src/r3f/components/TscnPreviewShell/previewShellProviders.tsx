@@ -5,6 +5,8 @@
 
 import type { ReactNode } from 'react';
 import { HierarchyProvider, type HierarchyContextValue } from '../../contexts/HierarchyContext.js';
+import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext.js';
+import type { ResourceLoader } from '../../../resources/ResourceLoader.js';
 import { SelectionProvider } from '../../contexts/SelectionContext.js';
 import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext.js';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext.js';
@@ -32,6 +34,8 @@ import { ViewStatusProvider } from '../../viewStatus/ViewStatusContext.js';
 
 interface PreviewShellProviderOptions {
   hierarchyValue: HierarchyContextValue;
+  /** The loader of the shell's scene, which every panel and view reads its files through. */
+  loader: ResourceLoader;
   initialPreviewedCameraPath?: string | null;
   onMissingPathsChange?: (paths: ReadonlySet<string>) => void;
   /** The host's forced viewport mode, if it named one. */
@@ -50,6 +54,7 @@ interface PreviewShellProviderOptions {
  */
 export function previewShellProviders({
   hierarchyValue,
+  loader,
   initialPreviewedCameraPath,
   onMissingPathsChange,
   initialViewportMode,
@@ -59,6 +64,7 @@ export function previewShellProviders({
   rootScenePath,
 }: PreviewShellProviderOptions): (children: ReactNode) => ReactNode {
   return composeProviders(
+    (children) => <ResourceLoaderProvider loader={loader}>{children}</ResourceLoaderProvider>,
     (children) => <HierarchyProvider value={hierarchyValue}>{children}</HierarchyProvider>,
     (children) => <SelectionProvider>{children}</SelectionProvider>,
     (children) => <PreviewVisibilityProvider isVisible={isVisible}>{children}</PreviewVisibilityProvider>,

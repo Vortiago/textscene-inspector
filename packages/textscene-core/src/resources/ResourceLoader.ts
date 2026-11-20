@@ -28,7 +28,6 @@ import { importSidecarPath } from '../godot/project/resourceFormats';
 import { parseImportFile } from '../parser/importParser';
 import { UnparsedTextError } from '../parser/unparsedTextError';
 import { foldersAbove, type DirectoryListing } from './directoryListing';
-import { runClearCachesSequence } from './clearCachesSequence';
 import { runProvideFileSequence } from './provideFileSequence';
 import type { FontResource } from './fonts/font/types';
 import type { GltfExtensionRules } from './formats/glb/types';
@@ -402,23 +401,6 @@ export class ResourceLoader {
     }
     this.eventBus.clear();
     logger.info('[ResourceLoader] Cleared all caches');
-  }
-
-  /**
-   * Drop every cached resource, file byte and metadata entry, but keep subscribers,
-   * for a switch to a corpus whose res:// paths would alias the old one's cache.
-   * The host repoints the provider first and calls this only after the old scene is
-   * torn down: announced consumers refetch at once under the current provider.
-   */
-  clearCaches(): void {
-    this.dependencies.clear();
-    runClearCachesSequence({
-      processors: this.processors,
-      eventBus: this.eventBus,
-      metadata: this.metadata,
-      clearFileBus: () => this._fileEventBus?.clearCache(),
-      log: () => logger.info('[ResourceLoader] Cleared caches (subscribers kept)'),
-    });
   }
 
   /**

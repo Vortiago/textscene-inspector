@@ -41,10 +41,7 @@ export function createClearCache(ctx: ClearContext): (path?: string) => void {
       clearPath(ctx, path);
       logger.info(`[${resourceType}Processor] Cleared cache for: ${path}`);
     } else {
-      // Silent: the loader announces dropped paths (ResourceLoader.clearCaches
-      // emits `invalidated` after every layer resets), since emitting here lets
-      // a re-entrant re-request see a half-cleared composition. Dropping the
-      // flight tokens invalidates cleared-era completions.
+      // Silent: only the loader's `clear` runs it, which drops all subscribers. Dropped tokens void loads.
       cache.clear();
       inflight.clear();
       logger.info(`[${resourceType}Processor] Cleared all cache`);

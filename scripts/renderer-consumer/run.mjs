@@ -10,6 +10,7 @@ import { compareImages, formatDelta, isSameImage } from '../visual/imageDelta.mj
 import { writeBaselineFile } from '../visual/run/baselines.mjs';
 import { consumerManifest } from './consumerManifest.mjs';
 import { heldResourceFailures } from './heldResourceFailures.mjs';
+import { loadFailures } from './loadFailures.mjs';
 import { missingFileFailures } from './missingFileFailures.mjs';
 import { mountFailures } from './mountFailures.mjs';
 import { runPickChecks } from './pickChecks.mjs';
@@ -38,6 +39,8 @@ const WRITTEN_INK_FLOOR = INK_FLOOR / 4;
 const MOUNT_CHECKS_TIMEOUT_MS = 4 * RENDER_TIMEOUT_MS;
 /** The checks of a resource the scene file holds draw four views, each a short 320 x 240 window. */
 const HELD_CHECKS_TIMEOUT_MS = 2 * RENDER_TIMEOUT_MS;
+/** The load checks draw four views, one of them a 512 x 512 noise, and poll one for a repaint. */
+const LOAD_CHECKS_TIMEOUT_MS = 3 * RENDER_TIMEOUT_MS;
 
 const versionsOf = (names, base) =>
   Object.fromEntries(names.map((name) => [name, installedVersion(name, base)]));
@@ -101,37 +104,50 @@ async function renderInBrowser(directory) {
   try {
     const drawn = {};
     for (const [view, { query, inkFloor }] of Object.entries(VIEWS)) {
-      const page = await browser.newPage();
-      drawn[view] = await renderView(page, `http://localhost:${port}/${query}`, inkFloor);
+      drawn[view] = await inPage(browser, (page) =>
+        renderView(page, `http://localhost:${port}/${query}`, inkFloor)
+      );
     }
-    const mounted = await runPageChecks(
-      await browser.newPage(),
-      `http://localhost:${port}/?checks=mount`,
-      'mountChecks',
-      MOUNT_CHECKS_TIMEOUT_MS
+    const mounted = await inPage(browser, (page) =>
+      runPageChecks(page, `http://localhost:${port}/?checks=mount`, 'mountChecks', MOUNT_CHECKS_TIMEOUT_MS)
     );
-    const held = await runPageChecks(
-      await browser.newPage(),
-      `http://localhost:${port}/?checks=held`,
-      'heldResourceChecks',
-      HELD_CHECKS_TIMEOUT_MS
+    const held = await inPage(browser, (page) =>
+      runPageChecks(
+        page,
+        `http://localhost:${port}/?checks=held`,
+        'heldResourceChecks',
+        HELD_CHECKS_TIMEOUT_MS
+      )
     );
-    const missing = await runPageChecks(
-      await browser.newPage(),
-      `http://localhost:${port}/?checks=missing`,
-      'missingFileChecks',
-      RENDER_TIMEOUT_MS
+    const missing = await inPage(browser, (page) =>
+      runPageChecks(page, `http://localhost:${port}/?checks=missing`, 'missingFileChecks', RENDER_TIMEOUT_MS)
     );
-    const switched = await runSwitchChecks(
-      await browser.newPage(),
-      `http://localhost:${port}/?checks=switch`
+    const switched = await inPage(browser, (page) =>
+      runSwitchChecks(page, `http://localhost:${port}/?checks=switch`)
     );
-    const cameras = await runCameraChecks(await browser.newPage(), `http://localhost:${port}/?checks=camera`);
-    const picked = await runPickChecks(await browser.newPage(), `http://localhost:${port}/?checks=pick`);
-    return { drawn, mounted, held, missing, switched, cameras, picked };
+    const cameras = await inPage(browser, (page) =>
+      runCameraChecks(page, `http://localhost:${port}/?checks=camera`)
+    );
+    const loaded = await inPage(browser, (page) =>
+      runPageChecks(page, `http://localhost:${port}/?checks=load`, 'loadChecks', LOAD_CHECKS_TIMEOUT_MS)
+    );
+    const picked = await inPage(browser, (page) =>
+      runPickChecks(page, `http://localhost:${port}/?checks=pick`)
+    );
+    return { drawn, mounted, held, missing, loaded, switched, cameras, picked };
   } finally {
     await browser.close();
     await server.close();
+  }
+}
+
+// Closed after each check: an open page keeps drawing in software GL and slows every check after it.
+async function inPage(browser, check) {
+  const page = await browser.newPage();
+  try {
+    return await check(page);
+  } finally {
+    await page.close();
   }
 }
 
@@ -202,7 +218,7 @@ function callFailures(drawn) {
 }
 
 /** One line per failed check of every view and of `mountScene`. */
-function failures({ drawn, mounted, held, missing, switched, cameras, picked }) {
+function failures({ drawn, mounted, held, missing, loaded, switched, cameras, picked }) {
   return [
     ...Object.entries(drawn).flatMap(([view, result]) => failuresOf(view, result)),
     ...writeFailures(drawn),
@@ -214,6 +230,8 @@ function failures({ drawn, mounted, held, missing, switched, cameras, picked }) 
     ...held.errors.map((message) => `held resource: page error: ${message}`),
     ...missingFileFailures(missing.results),
     ...missing.errors.map((message) => `missing files: page error: ${message}`),
+    ...loadFailures(loaded.results),
+    ...loaded.errors.map((message) => `load: page error: ${message}`),
     ...switchFailures(switched),
     ...cameraFailures(cameras),
     ...pickFailures(picked),

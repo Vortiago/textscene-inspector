@@ -1,15 +1,19 @@
-/**
- * The esbuild plugin that ships the webview's job worker as one script string.
- * The webview starts it from a blob URL, and the CSP (`worker-src blob:`, no
- * `connect-src`) lets that script fetch nothing, so it must import nothing.
- */
+// @vitest-environment node
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import vm from 'node:vm';
 import * as esbuild from 'esbuild';
 import { describe, expect, it } from 'vitest';
-import { installWorkerJobs, type WorkerJobScope } from '@textscene/core/worker';
-import { TEXTURE_WORKER_MODULE, textureWorkerPlugin } from './textureWorkerPlugin.mjs';
+import { fastNoiseLiteOf } from '../../resources/noise/fastnoiselite/fastNoiseLite.testkit';
+import { decodeNoiseTexture2D } from '../../resources/textures/noisetexture2d/decode';
+import {
+  NOISE_PIXEL_CASES,
+  PINNED_LEVEL_HASHES,
+  levelHashes,
+} from '../../resources/textures/noisetexture2d/pixelCases.testkit';
+import { installWorkerJobs, type WorkerJobScope } from '../workerEntry';
+import { buildWorkerSource } from './buildWorkerSource.mjs';
+import { TEXTURE_WORKER_MODULE, textureWorkerPlugin } from './esbuildPlugin.mjs';
 
 /** A seamless ridged field, as core's decoders give it: the job input is plain data. */
 const NOISE_JOB_INPUT = {
@@ -58,7 +62,7 @@ interface Reply {
 }
 
 /** Sends one noise job to a worker scope and returns its reply. */
-function answer(install: (scope: WorkerJobScope) => void): Reply {
+function answer(install: (scope: WorkerJobScope) => void, input: unknown = NOISE_JOB_INPUT): Reply {
   let reply: Reply | undefined;
   let onMessage: ((event: { data: unknown }) => void) | undefined;
   install({
@@ -69,24 +73,28 @@ function answer(install: (scope: WorkerJobScope) => void): Reply {
       reply = data as Reply;
     },
   });
-  onMessage?.({ data: { id: 1, job: 'noise-texture-2d', input: NOISE_JOB_INPUT } });
+  onMessage?.({ data: { id: 1, job: 'noise-texture-2d', input } });
   if (!reply) throw new Error('expected the worker to answer the job, it did not');
   return reply;
 }
 
 const sha256 = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
 
-const APP_ROOT = path.resolve(import.meta.dirname, '../..');
+/** Installs `source`, a worker script, on `self` in a context of its own. */
+const runScript = (source: string) => (self: WorkerJobScope) =>
+  vm.runInNewContext(source, { self, Math, Float32Array, Uint8Array, Int32Array, Error, RangeError });
 
-/** The worker source exactly as the webview bundle embeds it, and the worker bundle's metafile. */
+const PACKAGE_ROOT = path.resolve(import.meta.dirname, '../../..');
+
+/** The worker source exactly as a bundle embeds it, and the worker bundle's metafile. */
 async function buildWorker(): Promise<{ source: string; metafile: esbuild.Metafile }> {
   let metafile: esbuild.Metafile = { inputs: {}, outputs: {} };
   const result = await esbuild.build({
     stdin: {
       contents: `import source from '${TEXTURE_WORKER_MODULE}'; globalThis.__source = source;`,
-      resolveDir: APP_ROOT,
+      resolveDir: PACKAGE_ROOT,
     },
-    absWorkingDir: APP_ROOT,
+    absWorkingDir: PACKAGE_ROOT,
     bundle: true,
     write: false,
     format: 'iife',
@@ -117,9 +125,7 @@ describe('textureWorkerPlugin', () => {
 
   it("embeds a worker that answers a noise job with the bytes core's own job gives", async () => {
     const { source } = await buildWorker();
-    const embedded = answer((self) =>
-      vm.runInNewContext(source, { self, Math, Float32Array, Uint8Array, Int32Array, Error, RangeError })
-    );
+    const embedded = answer(runScript(source));
     const inProcess = answer(installWorkerJobs);
 
     expect(embedded.ok).toBe(true);
@@ -132,6 +138,39 @@ describe('textureWorkerPlugin', () => {
 
   it('hands over the metafile of the worker bundle, which lists the worker entry', async () => {
     const { metafile } = await buildWorker();
-    expect(Object.keys(metafile.inputs)).toContain('src/webview/textureWorker.ts');
+    expect(Object.keys(metafile.inputs)).toContain('src/workers/workerScript.ts');
   }, 60_000);
+});
+
+describe('the shipped worker script', () => {
+  it('answers every pinned NoiseTexture2D case with the bytes Godot gives', async () => {
+    const { text } = await buildWorkerSource({ workingDir: PACKAGE_ROOT, minify: true });
+    for (const { name, tex, noise, colorRamp } of NOISE_PIXEL_CASES) {
+      const reply = answer(runScript(text), { tex, noise, colorRamp });
+      expect({ name, hashes: levelHashes(reply.output.levels) }).toEqual({
+        name,
+        hashes: PINNED_LEVEL_HASHES[name],
+      });
+    }
+  }, 60_000);
+
+  it.each([
+    { seed: '1', width: '64', height: '48' },
+    { seed: '42', width: '128', height: '1' },
+    { seed: '9001', width: '17', height: '96' },
+  ])(
+    'answers seed $seed at $width x $height with the bytes of the in-thread job',
+    async ({ seed, ...size }) => {
+      const { text } = await buildWorkerSource({ workingDir: PACKAGE_ROOT, minify: true });
+      const input = {
+        tex: decodeNoiseTexture2D({ ...size, seamless: 'true' }),
+        noise: fastNoiseLiteOf({ seed, frequency: '0.05', fractal_type: '1' }),
+        colorRamp: null,
+      };
+      expect(levelHashes(answer(runScript(text), input).output.levels)).toEqual(
+        levelHashes(answer(installWorkerJobs, input).output.levels)
+      );
+    },
+    60_000
+  );
 });

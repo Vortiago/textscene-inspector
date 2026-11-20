@@ -7,17 +7,17 @@ import { adoptLoader } from '../sceneResourcePipeline.js';
 /** The files of a shell with no loader above it, which draws its scene with no file. */
 const NO_FILES: ResourceProvider = { loadResource: async () => null };
 
-/** The scene of the shell's text, over the host's loader. A new text keeps the scene and its loads. */
-export function useOpenedScene(source: string, rootScenePath: string): Scene {
-  const loader = useResourceLoader();
+/** A new text keeps the scene and its loads. A loader above it is a test's, which then serves the scene. */
+export function useOpenedScene(source: string, rootScenePath: string, provider?: ResourceProvider): Scene {
+  const testLoader = useResourceLoader();
   // `source` is left out: a new text replaces the parse of the same scene, below.
   const scene = useMemo(() => {
-    const provider = loader?.fileEventBus?.getProvider() ?? NO_FILES;
-    const opened = openScene({ source, provider, rootScenePath });
-    if (loader) adoptLoader(opened, loader);
+    const files = provider ?? testLoader?.fileEventBus?.getProvider() ?? NO_FILES;
+    const opened = openScene({ source, provider: files, rootScenePath });
+    if (testLoader) adoptLoader(opened, testLoader);
     return opened;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loader, rootScenePath]);
+  }, [testLoader, provider, rootScenePath]);
   useSceneText(scene, source);
   return scene;
 }
