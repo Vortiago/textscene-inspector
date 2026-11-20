@@ -2,6 +2,7 @@
 
 - Status: Accepted.
 - Related: ADR-0042 (the procedural-texture worker, which the script starts from a `blob:` URL).
+- Amends: ADR-0055 (the webview bundle ceiling).
 
 ## Context
 
@@ -25,7 +26,9 @@ ended at its 30 s load deadline (#2075).
 `dist/webview/webview.js`. A preview closed during its load then holds at most two places.
 
 `pnpm check:bundle-size` fails when the build writes a script beside `webview.js`, and when the
-script is over its gzipped ceiling (`scripts/check-bundle-size/webviewBudget.mjs`).
+script is over its gzipped ceiling (`scripts/check-bundle-size/webviewBudget.mjs`). The ceiling
+is 1,785,000 B. It replaces ADR-0055's 1,150,000 B, which held only the canvas-paint closure of the
+split build.
 
 ## Consequences
 

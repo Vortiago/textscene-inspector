@@ -178,8 +178,8 @@ The script is in the prototype commit.
 
 ## Bundle size
 
-`scripts/check-bundle-size.mjs` measures the webview script, gzipped. The ceiling is
-1,000,000 B.
+The spike measured the webview's initial chunk, gzipped, with `scripts/check-bundle-size.mjs`,
+under a ceiling of 1,000,000 B. The webview now builds as one script (ADR-0090).
 
 | State | Size | Change |
 | --- | --- | --- |

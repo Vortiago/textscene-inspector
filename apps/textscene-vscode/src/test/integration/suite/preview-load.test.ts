@@ -1,15 +1,13 @@
-import * as assert from 'assert';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { hostReturnsImageParts } from '../../../tools/imageResultSupport';
-import { NOT_LOADED_ERROR } from '../../../previewCaptureQueue';
 import { godotProjectDir, removeGodotProject, writeGodotProject } from '../helpers/godotProjectHelpers';
 import { EXTENSION_ID } from '../../smokeProject/sceneEditor';
 import {
+  assertWebviewLoaded,
   CAPTURE_TEST_TIMEOUT_MS,
   skipBecause,
   skipWhenEditorLacksLmTools,
-  textOf,
 } from '../../languageFeatures/agentToolAnswersSuite.testkit';
 import { invokeSceneTool } from '../../invokeSceneTool';
 
@@ -69,11 +67,6 @@ suite('Preview load', () => {
     this.timeout(CLOSED_LOADS * 5_000 + CAPTURE_TEST_TIMEOUT_MS);
     for (const name of closedScenes) await openAndCloseDuringLoad(name);
 
-    const answer = textOf(await invokeSceneTool('textscene_capture', scenePath('opened.tscn')));
-
-    assert.ok(
-      !answer?.includes(NOT_LOADED_ERROR),
-      `expected the preview to load, found ${JSON.stringify(answer)}`
-    );
+    assertWebviewLoaded(await invokeSceneTool('textscene_capture', scenePath('opened.tscn')));
   });
 });

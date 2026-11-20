@@ -94,7 +94,7 @@ export function launchedWithoutGpu(): boolean {
  * Fails with the preview tabs' state when the capture ended because the webview never
  * loaded. A failed CI run keeps the VS Code logs in its artifact.
  */
-function assertWebviewLoaded(result: vscode.LanguageModelToolResult): void {
+export function assertWebviewLoaded(result: vscode.LanguageModelToolResult): void {
   const text = textOf(result);
   if (!text.includes(NOT_LOADED_ERROR)) return;
   throw new Error(`${text}\nPreview tabs: ${JSON.stringify(previewTabStates())}`);

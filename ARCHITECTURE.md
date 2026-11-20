@@ -294,7 +294,7 @@ A test or a script fails when one of these rules breaks.
 | The worker's import closure holds no React, three.js or `.tsx` | `workers/workerClosure.test.ts` |
 | Every texture view a component draws goes through the tiled upload | `r3f/tiledUpload/textureViewGuard.test.ts` |
 | The VS Code host bundles hold no React or three.js | `scripts/check-bundle-size/hostBundles.mjs` |
-| The webview's initial bundle stays under its budget | `scripts/check-bundle-size/webviewBudget.mjs` |
+| The webview builds as one script, under its budget | `scripts/check-bundle-size/webviewBudget.mjs` |
 
 ## Bundle size
 
