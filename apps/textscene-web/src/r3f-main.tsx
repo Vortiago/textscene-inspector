@@ -105,7 +105,9 @@ export function R3FApp() {
       ? fixtureFileToRes(renderedFixtureFile, resourceRoot)
       : `res://${uploadedTscnName || 'empty.tscn'}`
   );
-  useEffect(() => exposeScene(scene), [scene]);
+  useEffect(() => {
+    if (scene) exposeScene(scene);
+  }, [scene]);
 
   /** Every scene replacement that may cross a corpus goes through here, to cross with the viewport empty. */
   const tearDownIfCrossingCorpus = (nextRoot: string) => {
@@ -292,30 +294,32 @@ export function R3FApp() {
         </>
       )}
       <div style={{ flex: 1, minWidth: 0, height: '100%', position: 'relative' }}>
-        <TscnPreviewShell
-          panelId={`web-${fixtureFile || uploadedTscnName || 'empty'}`}
-          scene={scene}
-          onResourceUpload={handleResourceUpload}
-          onResourceRemove={handleResourceRemove}
-          onMissingPathsChange={handleMissingPathsChange}
-          onCopyNodePath={copyToClipboard}
-          // Opening a sub-scene loads it from the mirror, so without one the ⤢ button goes.
-          onOpenSubScene={HAS_FIXTURES_MIRROR ? handleOpenSubScene : undefined}
-          initialPreviewedCameraPath={initialPreviewedCameraPath}
-          isVisible={isPageVisible}
-          toolbar={
-            <Toolbar
-              fixtureFile={fixtureFile}
-              uploadedTscnName={uploadedTscnName}
-              loadError={effectiveLoadError}
-              onFixtureChange={handleFixtureChange}
-              onFilesSelected={handleFilesUpload}
-              paneVisible={sourcePane.visible}
-              onTogglePane={toggleSourcePane}
-              problemBadge={problemBadge}
-            />
-          }
-        />
+        {scene && (
+          <TscnPreviewShell
+            panelId={`web-${fixtureFile || uploadedTscnName || 'empty'}`}
+            scene={scene}
+            onResourceUpload={handleResourceUpload}
+            onResourceRemove={handleResourceRemove}
+            onMissingPathsChange={handleMissingPathsChange}
+            onCopyNodePath={copyToClipboard}
+            // Opening a sub-scene loads it from the mirror, so without one the ⤢ button goes.
+            onOpenSubScene={HAS_FIXTURES_MIRROR ? handleOpenSubScene : undefined}
+            initialPreviewedCameraPath={initialPreviewedCameraPath}
+            isVisible={isPageVisible}
+            toolbar={
+              <Toolbar
+                fixtureFile={fixtureFile}
+                uploadedTscnName={uploadedTscnName}
+                loadError={effectiveLoadError}
+                onFixtureChange={handleFixtureChange}
+                onFilesSelected={handleFilesUpload}
+                paneVisible={sourcePane.visible}
+                onTogglePane={toggleSourcePane}
+                problemBadge={problemBadge}
+              />
+            }
+          />
+        )}
         {isFetchingFixture ? (
           <div
             data-testid={FIXTURE_LOADING_TESTID}
