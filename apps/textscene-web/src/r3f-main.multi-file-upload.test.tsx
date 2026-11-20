@@ -18,7 +18,7 @@ const missingFile = (path: string) => ({
   type: 'Texture2D',
   state: 'missing' as const,
   owners: ['res://main.tscn'],
-  reason: { chain: [path], cause: 'missing' as const },
+  reason: { chain: [path], cause: 'missing' as const, addresses: [] },
   addresses: [],
 });
 
