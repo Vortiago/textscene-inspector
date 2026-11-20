@@ -1,5 +1,5 @@
 import { gzipSync } from 'node:zlib';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { ENTRY, WEBVIEW_DIR, formatKb } from './paths.mjs';
 
@@ -8,18 +8,9 @@ const MEASURED_GZ = 1_777_206;
 // Catches an accidental import that pulls a whole library into the webview, not deliberate growth.
 const BUDGET_GZ = 1_900_000;
 
-/** Every relative file the script `content` imports, each one more request a closed load holds (ADR-0090). */
-export function findImportedFiles(content) {
-  const imported = new Set();
-  const patterns = [
-    /(?:import|export)[^'";]*?from\s*["'](\.{1,2}\/[^'"]+)["']/g,
-    /(?:^|[;\s])import\s*["'](\.{1,2}\/[^'"]+)["']/g,
-    /import\(\s*["'](\.{1,2}\/[^'"]+)["']\s*\)/g,
-  ];
-  for (const pattern of patterns) {
-    for (const match of content.matchAll(pattern)) imported.add(match[1]);
-  }
-  return [...imported];
+/** The scripts of `files` beside the entry, each one more request a closed load holds (ADR-0090). */
+export function findExtraScripts(files) {
+  return files.filter((file) => file.endsWith('.js') && file !== ENTRY);
 }
 
 /**
@@ -36,14 +27,15 @@ export function checkWebviewBudget(enforce) {
     return 'missing-entry';
   }
 
-  const script = readFileSync(entryPath);
-  const imported = findImportedFiles(script.toString('utf8'));
-  if (imported.length > 0) {
-    console.error(`[bundle-size] FAIL: ${ENTRY} imports ${imported.length} other file(s) of the build:`);
-    for (const file of imported) console.error(`  ${file}`);
+  const extra = findExtraScripts(readdirSync(WEBVIEW_DIR, { recursive: true }));
+  if (extra.length > 0) {
+    console.error(`[bundle-size] FAIL: the build writes ${extra.length} script(s) beside ${ENTRY}:`);
+    for (const file of extra) console.error(`  ${file}`);
     console.error('[bundle-size] the webview must load as one script file (ADR-0090).');
     return 'split-entry';
   }
+
+  const script = readFileSync(entryPath);
 
   const totalGz = gzipSync(script).length;
   const sinceMeasured = totalGz - MEASURED_GZ;

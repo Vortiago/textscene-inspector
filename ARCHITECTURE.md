@@ -304,7 +304,7 @@ and CSS side effects, and grows the host bundle about four times. The `languageF
 carries the generated ClassDB property tables, which the webview never loads.
 
 The webview builds as one ESM script and one stylesheet (`apps/textscene-vscode/esbuild.config.mjs`,
-ADR-0090). `pnpm check:bundle-size` prints the script's size, and fails when the script imports
-another file of the build or passes its gzipped ceiling. The DFG and LTC tables
+ADR-0090). `pnpm check:bundle-size` prints the script's size, and fails when the build writes
+another script or the script passes its gzipped ceiling. The DFG and LTC tables
 are stored as residuals of a linear prediction (`tableResiduals.ts`), which gzip packs about three
 times tighter than base64.

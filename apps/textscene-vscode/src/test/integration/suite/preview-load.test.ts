@@ -8,6 +8,7 @@ import { EXTENSION_ID } from '../../smokeProject/sceneEditor';
 import {
   CAPTURE_TEST_TIMEOUT_MS,
   skipBecause,
+  skipWhenEditorLacksLmTools,
   textOf,
 } from '../../languageFeatures/agentToolAnswersSuite.testkit';
 import { invokeSceneTool } from '../../invokeSceneTool';
@@ -47,6 +48,7 @@ suite('Preview load', () => {
   const closedScenes = Array.from({ length: CLOSED_LOADS }, (_, i) => `closed-${i}.tscn`);
 
   suiteSetup(async function () {
+    skipWhenEditorLacksLmTools(this);
     if (!hostReturnsImageParts()) {
       skipBecause(this, 'this VS Code cannot return an image part, so the capture tool does not register');
     }

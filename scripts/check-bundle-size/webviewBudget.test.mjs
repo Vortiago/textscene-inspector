@@ -1,21 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { findImportedFiles } from './webviewBudget.mjs';
+import { findExtraScripts } from './webviewBudget.mjs';
 
-describe('findImportedFiles', () => {
-  it('names a file the script imports statically', () => {
-    const script = 'import{a as b}from"./chunks/chunk-A.js";import"./chunks/chunk-B.js";';
-    expect(findImportedFiles(script)).toEqual(['./chunks/chunk-A.js', './chunks/chunk-B.js']);
+describe('findExtraScripts', () => {
+  it('passes a build of the entry, its stylesheet and their source maps', () => {
+    expect(findExtraScripts(['webview.js', 'webview.css', 'webview.js.map', 'webview.css.map'])).toEqual([]);
   });
 
-  it('names a file the script re-exports', () => {
-    expect(findImportedFiles('export*from"./chunks/chunk-C.js";')).toEqual(['./chunks/chunk-C.js']);
+  it('names each chunk a split build writes', () => {
+    expect(findExtraScripts(['webview.js', 'chunks', 'chunks/chunk-A.js', 'chunks/panel-B.js'])).toEqual([
+      'chunks/chunk-A.js',
+      'chunks/panel-B.js',
+    ]);
   });
 
-  it('names a file the script loads through import()', () => {
-    expect(findImportedFiles('const p=()=>import("./chunks/panel-D.js");')).toEqual(['./chunks/panel-D.js']);
-  });
-
-  it('passes a script that imports only a URL it builds at run time', () => {
-    expect(findImportedFiles('import(scriptUri);const w=new Worker(URL.createObjectURL(blob));')).toEqual([]);
+  it('names a script written beside the entry', () => {
+    expect(findExtraScripts(['webview.js', 'worker.js'])).toEqual(['worker.js']);
   });
 });

@@ -24,7 +24,7 @@ ended at its 30 s load deadline (#2075).
 `apps/textscene-vscode` sets `splitting: false`, so a dynamic `import()` in core is bundled into
 `dist/webview/webview.js`. A preview closed during its load then holds at most two places.
 
-`pnpm check:bundle-size` fails when `webview.js` imports another file of the build, and when the
+`pnpm check:bundle-size` fails when the build writes a script beside `webview.js`, and when the
 script is over its gzipped ceiling (`scripts/check-bundle-size/webviewBudget.mjs`).
 
 ## Consequences
