@@ -126,11 +126,6 @@ export interface MountCheckResults {
   transparentPng: string;
 }
 
-type Settled = Awaited<View['settled']>;
-
-/** A `Set` reaches the runner as `{}`, so the missing files go as an array. */
-const plainSettled = ({ missingFiles, ...facts }: Settled) => ({ ...facts, missingFiles: [...missingFiles] });
-
 const errorOf = (promise: Promise<unknown>): Promise<string> =>
   promise.then(
     () => 'resolved',
@@ -164,7 +159,7 @@ export async function runMountChecks(): Promise<MountCheckResults> {
 
   const early = mountScene(elementOf(320, 240), consumer);
   const earlyCaptureError = await errorOf(early.captureImage());
-  const settledValue = plainSettled(await early.settled);
+  const settledValue = await early.settled;
   early.dispose();
 
   const smallElementPng = await base64Of(await capturePng(consumer, 320, 240));
@@ -174,7 +169,7 @@ export async function runMountChecks(): Promise<MountCheckResults> {
   const noProjectSize = await sizeOf(await capturePng(noProject, 320, 240));
 
   const editor = mountScene(elementOf(320, 240), consumer, { mode: '3D' });
-  const editorSettledValue = plainSettled(await editor.settled);
+  const editorSettledValue = await editor.settled;
   const editorCaptureSize = await sizeOf(await editor.captureImage());
   editor.dispose();
 

@@ -10,7 +10,7 @@ import {
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { TscnPreviewShell } from '@textscene/core';
-import type { ResourceProvider } from '@textscene/renderer';
+import type { ResourceProvider, Scene } from '@textscene/renderer';
 import { exposeScene } from './sceneConsole';
 import { fixtures } from './fixturesAll';
 import { corpusRootFor, resToFixtureFile, fixtureFileToRes } from './corpusRoot';
@@ -38,7 +38,11 @@ import styles from './r3f-main.module.css';
 /** The site mirrors exactly the scenes it lists, so an empty catalog means no mirror. */
 const HAS_FIXTURES_MIRROR = fixtures.length > 0;
 
-const NO_MISSING_FILES: ReadonlySet<string> = new Set();
+/** The paths of the scene's missing files, which a dropped file can fulfil. */
+function missingFilesOf(scene: Scene | null): ReadonlySet<string> {
+  const files = scene?.files() ?? [];
+  return new Set(files.filter((file) => file.state === 'missing').map((file) => file.path));
+}
 
 /**
  * A browser refuses the write outside a secure context or without permission: that is logged, not
@@ -185,7 +189,7 @@ export function R3FApp() {
 
   const handleFilesUpload = createFileIngest({
     resourceRoot,
-    missingFiles: () => scene?.missingFiles() ?? NO_MISSING_FILES,
+    missingFiles: () => missingFilesOf(scene),
     confirmDiscardEdits,
     tearDownIfCrossingCorpus,
     onTscnUpload: handleTscnUpload,

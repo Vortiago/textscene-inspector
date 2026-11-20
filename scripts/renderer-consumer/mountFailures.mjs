@@ -1,8 +1,8 @@
 import { compareImages, formatDelta } from '../visual/imageDelta.mjs';
 import { PNG } from 'pngjs';
 
-/** A scene with no script and a current camera, which asks for no file it lacks. */
-const SETTLED = { scriptedNodeCount: 0, hasCurrentCamera: true, missingFiles: [] };
+/** A scene with no script and a current camera. */
+const SETTLED = { scriptedNodeCount: 0, hasCurrentCamera: true };
 
 /** Godot's window with no project size (`project_settings.cpp:1732`). */
 const DEFAULT_WINDOW = { width: 1152, height: 648 };

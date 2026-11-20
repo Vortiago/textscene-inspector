@@ -7,7 +7,6 @@ import type { TscnExternalResource, TscnScene } from '../../parser/types.js';
 import { useResource, useResourceLoader, type ResourceResult } from '../../resources/useResource.js';
 import { registerInstanceResource } from '../../resources/registerInstanceResource.js';
 import { useFirstLoadFailure } from '../../resources/loadFailure/useFirstLoadFailure.js';
-import { useMissingReport } from '../contexts/MissingResourcesContext.js';
 
 /**
  * A null `loadPath` registers and loads nothing, and the result stays `pending`.
@@ -29,8 +28,6 @@ export function useInstancedScene(
   // `useResource` requests nothing for '', so the hook count stays stable.
   const scene = useResource<TscnScene>(loadPath ?? '', 'scene');
   const failure = useFirstLoadFailure(useMemo(() => (loadPath ? [loadPath] : []), [loadPath]));
-  // 'pending', not 'loaded': a scene that loads again is no upload of this path.
-  useMissingReport(loadPath ?? '', failure ? 'unavailable' : 'pending');
   return failure ? failedScene(failure.chain) : scene;
 }
 

@@ -49,39 +49,56 @@ function failingReads(
   return [...paths].filter((path) => path.startsWith('res://'));
 }
 
-/** A file a text file names, with the type its `[ext_resource]` heading gives, or null for a `Resource("…")` literal. */
+/** A file a text file reads, with the type its `[ext_resource]` heading gives, or null for a `Resource("…")` literal. */
 export interface FileRead {
   readonly path: string;
   readonly type: string | null;
 }
 
-/** Every file a `.tscn` names: Godot loads each `[ext_resource]` as it reads the heading (resource_format_text.cpp:519). */
+/**
+ * Every file a value of a `.tscn` reads, an `instance=` included. Godot reports a file a heading
+ * names and no value reads in no list, since only a read waits on its load (resource_format_text.cpp:147-157).
+ */
 export function sceneReads(file: string, scene: SceneSections): FileRead[] {
   const sections = scene.internalResources.map((section) => section.data);
-  return namedFiles(file, scene.externalResources, [...sections, ...nodeValues(scene.nodes)]);
+  return readFiles(file, scene.externalResources, [
+    ...sections,
+    ...nodeValues(scene.nodes),
+    ...instancesOf(scene.nodes),
+  ]);
 }
 
-/** Every file a `.tres` names. */
+/** Every file a value of a `.tres` reads. */
 export function resourceReads(file: string, parsed: ParsedResource): FileRead[] {
   const sections = [...parsed.subResources.map((section) => section.data), parsed.properties];
-  return namedFiles(file, parsed.extResources, sections);
+  return readFiles(file, parsed.extResources, sections);
 }
 
-function namedFiles(
+function readFiles(
   file: string,
   externalResources: readonly TscnExternalResource[],
   values: readonly Values[]
 ): FileRead[] {
   const reads = new Map<string, string | null>();
-  for (const ext of externalResources) {
-    const path = extResourcePathIn(file, ext.path);
-    if (!reads.has(path)) reads.set(path, ext.type);
-  }
-  for (const path of values.flatMap(Object.values).flatMap(pathResourcePathsIn)) {
-    const simplified = simplifyResPath(path);
-    if (!reads.has(simplified)) reads.set(simplified, null);
+  for (const value of values.flatMap(Object.values)) {
+    for (const id of extResourceIdsIn(value)) {
+      const ext = findExtResource(externalResources, id);
+      const path = ext && extResourcePathIn(file, ext.path);
+      if (path && !reads.has(path)) reads.set(path, ext.type);
+    }
+    for (const path of pathResourcePathsIn(value)) {
+      const simplified = simplifyResPath(path);
+      if (!reads.has(simplified)) reads.set(simplified, null);
+    }
   }
   return [...reads].filter(([path]) => path.startsWith('res://')).map(([path, type]) => ({ path, type }));
+}
+
+function instancesOf(nodes: readonly RawNode[]): Values[] {
+  return nodes.flatMap((node) => [
+    ...(node.instance ? [{ instance: node.instance }] : []),
+    ...instancesOf(node.children),
+  ]);
 }
 
 /** A `path=` relative to the file that writes it (resource_format_text.cpp:508-510). */

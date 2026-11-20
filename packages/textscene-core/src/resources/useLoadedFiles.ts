@@ -9,7 +9,6 @@ import type { ParsedResource } from '../parser/parsedResource';
 import type { ResourceProcessor } from './createResourceProcessor';
 import { PARSED_RESOURCES, type FileKind } from './fileKinds';
 import type { ResourceType } from './ResourceEventBus';
-import { useMissingResources } from '../r3f/contexts/MissingResourcesContext';
 import type { LoadedFile } from './scopedResource';
 import { useCacheVersion } from './useCacheVersion';
 import { usePendingWhile } from './usePendingWhile';
@@ -83,7 +82,6 @@ export function useCachedFiles<T extends object>(
     [cache, paths, version]
   );
   const files = useStableEntries(read);
-  useMissingFiles(files);
 
   const loadedFile = useMemo((): CachedFileReader<T> => (path) => files.get(path), [files]);
   const isLoading = useMemo(() => loader !== null && hasUnsettledFile(files), [loader, files]);
@@ -125,32 +123,6 @@ function useRequestedFiles<T extends object>(
     }
     return () => paths.forEach((path) => cache.unpin(path));
   }, [cache, paths]);
-}
-
-/**
- * Reports each failed file as a **Missing resource** while it stays failed. A file this hook
- * reported that loads later was uploaded, so its row stays, marked uploaded, as `useMissingReport`
- * keeps it for one file.
- */
-export function useMissingFiles(files: ReadonlyMap<string, CachedFile<object>>): void {
-  const { report, clear, markUploaded } = useMissingResources();
-  const failed = useStableList([...files].filter(([, file]) => file === null).map(([path]) => path));
-  const reported = useRef<ReadonlySet<string>>(NO_PATHS);
-
-  // In the commit, so no frame draws between the failure and its report.
-  useLayoutEffect(() => {
-    failed.forEach(report);
-    return () => failed.forEach(clear);
-  }, [failed, report, clear]);
-
-  useEffect(() => {
-    const uploaded = [...reported.current].filter((path) => files.get(path));
-    uploaded.forEach(markUploaded);
-    // A path that left the list is forgotten, so its next load counts as a first load.
-    reported.current = new Set(
-      [...reported.current, ...failed].filter((path) => files.has(path) && !uploaded.includes(path))
-    );
-  }, [files, failed, markUploaded]);
 }
 
 /** `list` under one identity while its entries stay the same. A path holds no newline. */

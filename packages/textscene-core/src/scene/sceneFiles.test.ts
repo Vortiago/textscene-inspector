@@ -205,6 +205,38 @@ material_override = ExtResource("1")
     ]);
   });
 
+  it('leaves out a file the scene declares and no value reads, as Godot reports none', async () => {
+    const source = `[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://unused.png" id="1"]
+
+[node name="Main" type="Sprite2D"]
+`;
+    const scene = openScene({ source, provider: filesOf({}), rootScenePath: MAIN });
+    expect(await whenFilesLoaded(scene)).toEqual([]);
+  });
+
+  it('follows an instanced scene to the files its nodes read', async () => {
+    const source = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://enemy.tscn" id="1"]
+
+[node name="Main" type="Node2D"]
+
+[node name="Enemy" parent="." instance=ExtResource("1")]
+`;
+    const scene = openScene({
+      source,
+      provider: filesOf({ 'res://enemy.tscn': SPRITE }),
+      rootScenePath: MAIN,
+    });
+    const files = await whenFilesLoaded(scene);
+    expect(files.map(({ path, state, owners }) => ({ path, state, owners }))).toEqual([
+      { path: 'res://enemy.tscn', state: 'loaded', owners: [MAIN] },
+      { path: 'res://icon.png', state: 'missing', owners: ['res://enemy.tscn'] },
+    ]);
+  });
+
   it('gives the same array while nothing changes', async () => {
     const scene = openScene({ source: SPRITE, provider: filesOf({}), rootScenePath: MAIN });
     const files = await whenFilesLoaded(scene);

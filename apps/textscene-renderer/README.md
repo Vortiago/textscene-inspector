@@ -198,10 +198,10 @@ no file, texture or font of the scene was still loading, and in the 3D mode the 
 the Camera3D that `camera` names. This holds in every mode. A write or a
 camera call from your code, or a new text, makes it pending again until a frame shows the change.
 
-`view.settled` resolves to `{ scriptedNodeCount, hasCurrentCamera, missingFiles }`: the count of
-nodes that hold a script, which do not run, whether the root viewport has a current Camera3D or
-Camera2D, and the files the frame asked for and did not get. The first two are facts of the game's
-start, so the 3D and 2D modes give the same value.
+`view.settled` resolves to `{ scriptedNodeCount, hasCurrentCamera }`: the count of nodes that hold
+a script, which do not run, and whether the root viewport has a current Camera3D or Camera2D. Both
+are facts of the game's start, so the 3D and 2D modes give the same value. Which files load is a
+fact of the scene, not of the view: see "Know which files are missing".
 
 `mountScene` returns the view. In React, the `ref` of `<TscnCanvas>` gives its `settled` and
 `captureImage`:
@@ -235,13 +235,25 @@ Each read of `settled` gives a new promise, which rejects once the view unmounts
 
 ### Know which files are missing
 
-`scene.missingFiles()` gives the `res://` paths that the views of the scene asked for and did not get:
-a `null` from `loadResource`, or a file that fails to load. A path leaves the set when no view asks
-for it any more, or when it loads. `scene.subscribe` tells you when the set changes. The scene asks
-for a file only when a view draws a node that reads it, so a scene with no view has no missing files.
+`scene.files()` gives one entry for each `res://` file the scene loads, sorted by path:
 
-Godot's editor lists the same files when it opens a scene: each file a property reads that fails to
-load. A file that the scene declares and no property reads is in neither list.
+- `path`, and `type`: the type the `[ext_resource]` heading gives, or null.
+- `state`: `loading`, `loaded` or `missing`. `missing` is a file the game would fail to load.
+- `owners`: the files that read it. The project settings name `res://project.godot` as owner.
+- `reason`: for a missing file, `{ chain, cause }`. `chain` holds the file, each text file
+  through which it fails, and the file that failed first. `cause` is `missing`, `unparsed` or
+  `unimported`. Null for a file that is not missing.
+- `addresses`: each sub-resource address inside the file that the scene reads, such as
+  `res://wood.tres::Material_1`.
+
+The list follows each file the scene's values read, as Godot's Load Errors dialog does: a
+sub-scene and a `.tres` add the files that they read. A file that a heading declares and no value
+reads is not in the list, as it is in no Godot list. The engine reads `res://project.godot`, which
+is in the list when the project has one, with the environment, theme and font that it names.
+
+The list does not wait for a view. A write from your code does not change it, since the file still
+reads what it read. A new text does. `scene.subscribe` tells you when the list changes, and
+`files()` gives the same array while nothing changes.
 
 ### Mount the view with no React code
 
@@ -286,9 +298,12 @@ document.getElementById('status')!.textContent = hasCurrentCamera
   ? `Settled. ${scriptedNodeCount} nodes hold a script, and scripts do not run.`
   : 'Settled, with no current camera.';
 
-// The list follows the scene: a write that stops reading a file takes it off.
 const showMissing = () =>
-  (document.getElementById('missing')!.textContent = [...scene.missingFiles()].join(', '));
+  (document.getElementById('missing')!.textContent = scene
+    .files()
+    .filter((file) => file.state === 'missing')
+    .map((file) => file.path)
+    .join(', '));
 showMissing();
 scene.subscribe(showMissing);
 
@@ -495,14 +510,17 @@ The package exports these names.
   `Scene`. It parses the text once, the first time a view reads it.
 - `Scene` (a type): an open scene. `setSource(text)` replaces its text, and every view of it draws
   the new text. `revision()` gives a number that changes with each change a view draws: a new text,
-  a write or a load that changes the tree. `missingFiles()` gives the files its views asked for and
-  did not get, see "Know which files are missing". `getNode`, `getNodeOrNull`, `load` and `observe`
+  a write or a load that changes the tree. `files()` gives the files it loads and the state of
+  each, see "Know which files are missing". `getNode`, `getNodeOrNull`, `load` and `observe`
   are in "Change the scene from your code". `dispose()` closes it.
 - `NodeHandle` (a type): a node of a scene, which `getNode` gives. Its `call` is in "Set the
   camera".
 - `variant(text)`: a value of any Godot type, as a `.tscn` file spells it. It throws for a text
   Godot cannot read.
 - `Variant` and `SceneValue` (types): what `variant` gives, and what `get` and `set` take.
+- `SceneFile`, `SceneFileState` and `SceneFileFailure` (types): an entry of `scene.files()`, its
+  `state` and its `reason`.
+- `CameraState` (a type): an entry of `scene.cameras()`.
 - `TscnCanvas`: the view in React. Its props are `scene` (a `Scene`), the options of `mountScene`
   (`mode`, default `'3D'`, `visible`, `camera`, `selected`, `onSelect` and `show`), and `className`.
   `scene` is required. Its `ref` gives the view's `settled` and `captureImage`. Its unmount ends
