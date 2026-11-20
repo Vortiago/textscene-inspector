@@ -7,8 +7,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
-// Under happy-dom nothing mounts inside the Canvas, so no view reports a missing file. A test
-// injects missing files through this override, on the scene's `missingFiles` that the drop reads.
+// No view mounts under happy-dom, so a test injects missing files through the scene's missingFiles.
 const missingPathsOverride = vi.hoisted(() => ({
   current: null as ReadonlySet<string> | null,
 }));

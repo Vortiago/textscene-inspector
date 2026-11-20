@@ -1,11 +1,4 @@
-import {
-  useEffect,
-  useMemo,
-  useReducer,
-  useState,
-  type ChangeEvent,
-  type CSSProperties,
-} from 'react';
+import { useEffect, useMemo, useReducer, useState, type ChangeEvent, type CSSProperties } from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { TscnPreviewShell } from '@textscene/core';
@@ -131,7 +124,6 @@ export function R3FApp() {
     reportUploadError,
     clearUploadError,
   } = useUploadError(loadError);
-
 
   // Counts uploads and removals, so the Source pane lints the unchanged buffer again: a
   // cross-file rule may read the file that changed.

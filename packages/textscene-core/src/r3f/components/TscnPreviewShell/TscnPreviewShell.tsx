@@ -132,7 +132,7 @@ export function TscnPreviewShell({
   return withProviders(
     <PreviewCameraProvider scene={scene} initialCamera={initialPreviewedCameraPath}>
       {/* A host-forced mode turns auto-select off, or the root's claim overrides it. */}
-      {initialViewportMode === undefined && <WorkspaceAutoSelect />}
+      {initialViewportMode === undefined && <WorkspaceAutoSelect scene={scene} />}
       <SceneChangeResetter sceneGraph={parsedGraph} />
       <AnimationTabWatcher onVisibleChange={setAnimationTabVisible} />
       <CaptureStateReporter
@@ -151,7 +151,7 @@ export function TscnPreviewShell({
           <SceneLoadStatus settle={settle} hasScene={hasScene} viewportError={viewportError} />
           <TextureWorkStatus />
           <SoftwareRenderingStatus />
-          <SceneStats />
+          <SceneStats scene={scene} />
           <HelpLink />
         </header>
         {error && (
@@ -196,6 +196,7 @@ export function TscnPreviewShell({
                 <SheetHandle value={sheetShare} setValue={setSheetShare} />
                 <NarrowPaneSwitcher pane={narrowPane} setPane={setNarrowPane} onCollapse={collapseDock} />
                 <SceneTreePane
+                  scene={scene}
                   sceneGraph={sceneGraph}
                   error={error}
                   treeShare={treeShare}

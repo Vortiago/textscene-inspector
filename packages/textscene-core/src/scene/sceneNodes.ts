@@ -109,8 +109,12 @@ export class SceneNodes implements HandleHost {
     return this.nodeAt(path, tree)?.type ?? null;
   }
 
+  /** As `find`, a child whose scene has not loaded is no node yet. */
   childPaths(path: string): readonly string[] {
-    return (this.childNames(path) ?? []).map((name) => `${path}/${name}`);
+    const tree = this.source.tree();
+    return (this.childNames(path) ?? [])
+      .map((name) => `${path}/${name}`)
+      .filter((child) => this.typeOf(child, tree) !== null);
   }
 
   handleAt(path: string): NodeHandle {

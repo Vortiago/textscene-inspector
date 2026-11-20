@@ -108,7 +108,9 @@ async function expectCapture(state: PreviewCaptureState | undefined, view: StubV
   await expect(image).resolves.toBe(view.image);
 }
 
+/** After the scene's own tree work, which a handle read starts and which moves its revision. */
 async function settleLatestView(): Promise<void> {
+  await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
   await act(async () => latestView().settle());
 }
 
@@ -150,6 +152,7 @@ describe('<TextShell> capture state', () => {
     arrangeViews();
     const { states } = renderShell();
 
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
     await act(async () => latestView().fail(new Error('Node not found: "Rig/Gone"')));
 
     expect(latest(states)).toEqual({ status: 'unavailable', reason: 'Node not found: "Rig/Gone"' });

@@ -25,6 +25,3 @@ export {
 } from './r3f/index';
 
 export { ResourceLoader } from './resources/ResourceLoader';
-// A host that reads reported resource identities (a drop matcher keying on
-// basename, say) needs the file half, which core cannot normalise on its behalf.
-export { resourceFilePath } from './resources/subResourcePath';
