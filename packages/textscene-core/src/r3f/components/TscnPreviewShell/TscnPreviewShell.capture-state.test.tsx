@@ -3,7 +3,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ViewAnswers } from '../../viewStatus/viewAnswers';
-import type { ViewSettled } from '../../viewStatus/viewStatus';
+import type { DrawnFrame, ViewSettled, ViewStatus } from '../../viewStatus/viewStatus';
+import { useViewStatus } from '../../viewStatus/ViewStatusContext';
+import type { PendingSceneWork } from '../../sceneWork';
 import type { PreviewCaptureState } from './previewCaptureState';
 import { textureWork } from '../../../resources/textures/textureWork';
 import { SCENE_LOAD_STATUS_TESTID, TEXTURE_WORK_STATUS_TESTID } from './statusTestIds';
@@ -28,6 +30,29 @@ function arrangeViews(error: Error | null = null): void {
   renderError = error;
 }
 
+/** The status the shell hands its view. Written by each stub view as it renders. */
+let shellStatus: ViewStatus | null = null;
+
+const NO_WORK: PendingSceneWork = { resources: 0, textures: 0, fonts: 0 };
+
+/** Draws one frame of a view that waits on `work`, as a canvas reports a file it still loads. */
+function drawFrame(work: Partial<PendingSceneWork>): void {
+  if (!shellStatus) throw new Error('expected the shell to hand its view a status, got none');
+  const frame: DrawnFrame = {
+    revision: 0,
+    isFullSize: true,
+    awaitedCamera: null,
+    work: { ...NO_WORK, ...work },
+    facts: SETTLED,
+  };
+  shellStatus.attach({
+    revision: () => 0,
+    missingFiles: () => SETTLED.missingFiles,
+    subscribe: () => () => {},
+  });
+  shellStatus.frameDrawn(frame);
+}
+
 function latestView(): StubView {
   const view = views[views.length - 1];
   if (!view) throw new Error('expected a mounted view, got none');
@@ -42,6 +67,7 @@ vi.mock('../../TscnCanvas', () => ({
 
 function StubCanvas({ mode = '3D', ref }: { mode?: string; ref?: Ref<ViewAnswers> }) {
   useImperativeHandle(ref, () => stubAnswers(mode), [mode]);
+  shellStatus = useViewStatus();
   if (renderError) throw renderError;
   return <div data-testid="canvas-stub" />;
 }
@@ -172,6 +198,23 @@ describe('<TextShell> capture state', () => {
     await expectCapture(state, latestView());
   });
 
+  it.each([
+    ['a resource', 'resources'],
+    ['a texture', 'textures'],
+    ['a font', 'fonts'],
+  ] as const)('reports pending while the settled view loads %s, and ready once it lands', async (_, kind) => {
+    arrangeViews();
+    const { states } = renderShell();
+    await settleLatestView();
+
+    act(() => drawFrame({ [kind]: 1 }));
+    expect(latest(states)).toEqual({ status: 'pending' });
+    act(() => drawFrame(NO_WORK));
+    await settleLatestView();
+
+    await expectCapture(latest(states), latestView());
+  });
+
   it('reports pending as the shell unmounts', async () => {
     arrangeViews();
     const { states, unmount } = renderShell();
@@ -226,6 +269,19 @@ describe('<TextShell> scene load status', () => {
     await act(async () => showScene(OTHER_SCENE_3D));
 
     expect(sceneLoadStatus()).not.toBeNull();
+  });
+
+  it('shows "Loading scene…" again while the settled view loads a font, and leaves once it lands', async () => {
+    arrangeViews();
+    renderShell();
+    await settleLatestView();
+
+    act(() => drawFrame({ fonts: 1 }));
+    expect(sceneLoadStatus()?.textContent).toBe('Loading scene…');
+    act(() => drawFrame(NO_WORK));
+    await settleLatestView();
+
+    expect(sceneLoadStatus()).toBeNull();
   });
 
   it('gives way to the texture work status, so one status shows at a time (edge case)', async () => {

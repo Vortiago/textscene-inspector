@@ -4,7 +4,7 @@
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { SHOW_STORAGE_KEYS, ViewportModeProvider } from '../../contexts/ViewportModeContext';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext';
@@ -205,6 +205,48 @@ describe('ViewportToolbar — Screenshot', () => {
     const anchor = clickSpy.mock.contexts[0] as HTMLAnchorElement;
     expect(anchor.getAttribute('href')).toBe('blob:shot');
     expect(anchor.download).toMatch(/\.png$/);
+    vi.restoreAllMocks();
+  });
+
+  it('keeps the image URL until the browser has read it, so the download is not cut off', async () => {
+    vi.useFakeTimers();
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:shot');
+    const revokeSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    renderWithChrome({ mode: '3D', sceneGraph: {}, view: settledView() });
+
+    fireEvent.click(screen.getByTestId('screenshot-button'));
+    await vi.waitFor(() => expect(clickSpy).toHaveBeenCalledTimes(1));
+    expect(revokeSpy).not.toHaveBeenCalled();
+    vi.runAllTimers();
+
+    expect(revokeSpy).toHaveBeenCalledWith('blob:shot');
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('disables Screenshot while a capture waits, so a second click starts no second capture', async () => {
+    let settle: () => void = () => {};
+    const captureImage = vi.fn(() => Promise.resolve(IMAGE));
+    const view: ViewAnswers = {
+      settled: new Promise((resolve) => {
+        settle = () => resolve({ scriptedNodeCount: 0, hasCurrentCamera: false, missingFiles: new Set() });
+      }),
+      captureImage,
+    };
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:shot');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    renderWithChrome({ mode: '3D', sceneGraph: {}, view });
+    const button = screen.getByTestId('screenshot-button') as HTMLButtonElement;
+
+    fireEvent.click(button);
+    fireEvent.click(button);
+    expect(button.disabled).toBe(true);
+    await act(async () => settle());
+
+    expect(captureImage).toHaveBeenCalledTimes(1);
+    expect(button.disabled).toBe(false);
     vi.restoreAllMocks();
   });
 });

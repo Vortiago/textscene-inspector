@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   useViewportMode,
   FRAME_ON_OPEN_STORAGE_KEY,
@@ -123,6 +124,9 @@ function persisting<T>(set: (value: T) => void, key: string): (value: T) => void
   };
 }
 
+// As FileSaver.js: a browser may read the URL after `click` returns, and a revoke cuts the download.
+const REVOKE_AFTER_MS = 40_000;
+
 /** Downloads a file through a throwaway anchor element. */
 function download(file: Blob, filename: string): void {
   const url = URL.createObjectURL(file);
@@ -132,7 +136,7 @@ function download(file: Blob, filename: string): void {
   document.body.appendChild(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), REVOKE_AFTER_MS);
 }
 
 export interface ViewportToolbarProps {
@@ -156,13 +160,17 @@ export function ViewportToolbar({ view }: ViewportToolbarProps) {
   const sceneHasSun = yielding.some((entry) => entry.node.type === PREVIEW_SUN_YIELD_TYPE);
   const sceneHasEnvironment = yielding.some((entry) => entry.node.type === PREVIEW_ENVIRONMENT_YIELD_TYPE);
 
+  const [isCapturing, setIsCapturing] = useState(false);
   function handleScreenshot() {
     if (!view) return;
-    captureWhenSettled(view).then(
-      (image) => download(image, `tscn-preview-${Date.now()}.png`),
-      // The view left or never settles: the top bar shows why, so the click saves nothing.
-      (error: unknown) => logger.warn('[ViewportToolbar] screenshot not taken', error)
-    );
+    setIsCapturing(true);
+    captureWhenSettled(view)
+      .then(
+        (image) => download(image, `tscn-preview-${Date.now()}.png`),
+        // The view left or never settles: the top bar shows why, so the click saves nothing.
+        (error: unknown) => logger.warn('[ViewportToolbar] screenshot not taken', error)
+      )
+      .finally(() => setIsCapturing(false));
   }
 
   // Only the user's click persists: a programmatic writer, such as
@@ -221,7 +229,7 @@ export function ViewportToolbar({ view }: ViewportToolbarProps) {
           type="button"
           className={styles.resetButton}
           onClick={handleScreenshot}
-          disabled={!sceneLoaded}
+          disabled={!sceneLoaded || isCapturing}
           data-testid="screenshot-button"
           title="Save the current view as a PNG"
         >

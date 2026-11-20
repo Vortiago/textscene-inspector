@@ -48,6 +48,7 @@ import { PreviewCameraProvider } from './previewCamera.js';
 import { PreviewSelectionProvider } from './previewSelection.js';
 import { useViewSettle } from './viewSettle.js';
 import type { ViewAnswers } from '../../viewStatus/viewAnswers.js';
+import { createViewStatus } from '../../viewStatus/viewStatus.js';
 import type { TscnPreviewShellProps } from './previewShellProps.js';
 import styles from './TscnPreviewShell.module.css';
 
@@ -86,7 +87,8 @@ export function TscnPreviewShell({
   const hierarchyValue = useMemo(() => ({ sceneGraph, panelId, scene }), [sceneGraph, panelId, scene]);
   const [viewportError, setViewportError] = useState<Error | null>(null);
   const [view, setView] = useState<ViewAnswers | null>(null);
-  const settle = useViewSettle(scene, view);
+  const [viewStatus] = useState(createViewStatus);
+  const settle = useViewSettle(scene, view, viewStatus);
   const hasScene = parsedGraph !== null;
 
   // `treeShare` is the tree's fraction of the dock height (0..1). The dock
@@ -130,6 +132,7 @@ export function TscnPreviewShell({
     isVisible,
     panelId,
     rootScenePath: scene.rootScenePath,
+    viewStatus,
   });
 
   return withProviders(

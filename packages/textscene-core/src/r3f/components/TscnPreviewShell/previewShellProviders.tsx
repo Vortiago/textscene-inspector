@@ -31,6 +31,7 @@ import { PreviewVisibilityProvider } from '../../contexts/PreviewVisibilityConte
 import { composeProviders } from '../../composeProviders.js';
 import { SoftwareRenderingProvider } from '../../softwareRendering/SoftwareRenderingContext.js';
 import { ViewStatusProvider } from '../../viewStatus/ViewStatusContext.js';
+import type { ViewStatus } from '../../viewStatus/viewStatus.js';
 
 interface PreviewShellProviderOptions {
   hierarchyValue: HierarchyContextValue;
@@ -44,6 +45,8 @@ interface PreviewShellProviderOptions {
   isVisible?: boolean;
   panelId: string;
   rootScenePath: string;
+  /** The status the view reports to. Without one, the provider makes its own. */
+  viewStatus?: ViewStatus;
 }
 
 /**
@@ -58,6 +61,7 @@ export function previewShellProviders({
   isVisible,
   panelId,
   rootScenePath,
+  viewStatus,
 }: PreviewShellProviderOptions): (children: ReactNode) => ReactNode {
   return composeProviders(
     (children) => <ResourceLoaderProvider loader={loader}>{children}</ResourceLoaderProvider>,
@@ -66,7 +70,7 @@ export function previewShellProviders({
     (children) => <PreviewVisibilityProvider isVisible={isVisible}>{children}</PreviewVisibilityProvider>,
     (children) => <ViewportActionsProvider>{children}</ViewportActionsProvider>,
     // The view in any mode reports here, and the shell's load status reads it.
-    (children) => <ViewStatusProvider>{children}</ViewStatusProvider>,
+    (children) => <ViewStatusProvider status={viewStatus}>{children}</ViewStatusProvider>,
     (children) => (
       <MissingResourcesProvider>
         <LiveFilesHost />
