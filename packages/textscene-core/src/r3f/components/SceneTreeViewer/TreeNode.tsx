@@ -5,7 +5,7 @@ import type { SceneScope, TscnNode, TscnExternalResource } from '../../../parser
 import { joinPath } from '../../../utils/nodePath.js';
 import { rendersOwnVisual } from '../../nodeSupport.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
-import { scopeOf } from '../../../resources/liveNode.js';
+import { scopeOf, type LiveNode } from '../../../resources/liveNode.js';
 import { useLiveStep } from './useLiveStep.js';
 import styles from './SceneTreeViewer.module.css';
 
@@ -65,6 +65,8 @@ interface TreeNodeProps {
    * so a match inside a sub-scene keeps its ancestor rows visible.
    */
   matches: (path: string) => boolean;
+  /** Whether Godot's Scene dock lists the node at this path (`dockListing.ts`). */
+  isListed: (path: string) => boolean;
   /**
    * The host scene's externalResources, which resolve `ExtResource("id")` to
    * the PackedScene's `res://` path with no re-read of HierarchyContext.
@@ -92,6 +94,7 @@ function TreeNodeImpl({
   onNodeReveal,
   onOpenSubScene,
   matches,
+  isListed,
   externalResources,
   instancedScenePaths,
   isDefaultFocusable = false,
@@ -107,7 +110,10 @@ function TreeNodeImpl({
   // same decision the viewport and inspector make, for the row header. The hook keeps the step
   // stable across selection and hover, so the row reuses one merge.
   const { node: effective, groups: liveGroups, instancePath } = useLiveStep(node, scope);
-  const groups = useMemo(() => ownedGroups(liveGroups), [liveGroups]);
+  const groups = useMemo(
+    () => listedGroups(liveGroups, (child) => isListed(joinPath(nodePath, child.name))),
+    [liveGroups, isListed, nodePath]
+  );
   const instanceScenePath = onOpenSubScene ? instancePath : null;
 
   const hasChildren = groups.some((g) => g.children.length > 0);
@@ -126,6 +132,7 @@ function TreeNodeImpl({
       onNodeReveal={onNodeReveal}
       onOpenSubScene={onOpenSubScene}
       matches={matches}
+      isListed={isListed}
       externalResources={childScope.externalResources}
       instancedScenePaths={childScope.instancedScenePaths}
     />
@@ -272,11 +279,12 @@ function TreeNodeImpl({
 
 export const TreeNode = memo(TreeNodeImpl);
 
-/**
- * `groups` without the children Godot adds with no owner, such as a layer's scene tile instances
- * (`tile_map_layer.cpp:1646`), which the Scene dock does not list.
- */
-function ownedGroups(groups: readonly LiveChildGroup[]): readonly LiveChildGroup[] {
-  if (!groups.some((group) => group.children.some((child) => child.isUnowned))) return groups;
-  return groups.map((group) => ({ ...group, children: group.children.filter((child) => !child.isUnowned) }));
+/** `groups` with the children the Scene dock lists, none without an owner (`tile_map_layer.cpp:1646`). */
+function listedGroups(
+  groups: readonly LiveChildGroup[],
+  lists: (child: LiveNode) => boolean
+): readonly LiveChildGroup[] {
+  const isShown = (child: LiveNode) => !child.isUnowned && lists(child);
+  if (groups.every((group) => group.children.every(isShown))) return groups;
+  return groups.map((group) => ({ ...group, children: group.children.filter(isShown) }));
 }

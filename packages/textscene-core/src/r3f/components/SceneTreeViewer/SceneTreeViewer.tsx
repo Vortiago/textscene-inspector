@@ -9,6 +9,7 @@ import { useHierarchy } from '../../contexts/HierarchyContext.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
 import { useSeatedRoots, useSharedLiveTree } from '../../useLiveSceneTree.js';
 import { walkLiveTree } from '../../liveSceneTree.js';
+import { dockLists } from '../../dockListing.js';
 import { TreeNode } from './TreeNode.js';
 import styles from './SceneTreeViewer.module.css';
 
@@ -22,6 +23,7 @@ function nodePathFor(row: HTMLElement): string | null {
 }
 
 const NO_NODES: readonly TscnNode[] = [];
+const NO_PATHS: readonly string[] = [];
 
 export interface SceneTreeViewerProps {
   /** Fired when a row is double-clicked, so the host can jump to the source. */
@@ -53,6 +55,12 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
     return sceneGraph.scenes.get(sceneGraph.rootScene)?.externalResources ?? [];
   }, [sceneGraph]);
 
+  const editablePaths = sceneGraph?.scenes.get(sceneGraph.rootScene)?.editableInstances ?? NO_PATHS;
+  const isListed = useCallback(
+    (path: string): boolean => !liveTree || dockLists(path, liveTree.roots, liveTree.ctx, editablePaths),
+    [liveTree, editablePaths]
+  );
+
   const term = searchTerm.trim().toLowerCase();
 
   // Search and expand walk the live tree, so a node inside an instance is
@@ -63,6 +71,7 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
     if (!liveTree) return new Set<string>();
     const found = new Set<string>();
     walkLiveTree(liveTree.roots, liveTree.ctx, ({ node, path }) => {
+      if (!isListed(path)) return;
       if (node.name.toLowerCase().includes(term) || node.type.toLowerCase().includes(term)) {
         found.add(path);
         for (let slash = path.lastIndexOf('/'); slash > 0; slash = path.lastIndexOf('/', slash - 1)) {
@@ -71,7 +80,7 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
       }
     });
     return found;
-  }, [term, liveTree]);
+  }, [term, liveTree, isListed]);
 
   const matches = useCallback(
     (path: string): boolean => matchingPaths === null || matchingPaths.has(path),
@@ -81,9 +90,11 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
   const handleExpandAll = useCallback(() => {
     if (!liveTree) return;
     const all = new Set<string>();
-    walkLiveTree(liveTree.roots, liveTree.ctx, ({ path }) => all.add(path));
+    walkLiveTree(liveTree.roots, liveTree.ctx, ({ path }) => {
+      if (isListed(path)) all.add(path);
+    });
     setExpandedNodePaths(all);
-  }, [liveTree, setExpandedNodePaths]);
+  }, [liveTree, isListed, setExpandedNodePaths]);
 
   const handleCollapseAll = useCallback(() => {
     setExpandedNodePaths(new Set());
@@ -229,6 +240,7 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
               onNodeReveal={onNodeReveal}
               onOpenSubScene={onOpenSubScene}
               matches={matches}
+              isListed={isListed}
               externalResources={externalResources}
               isDefaultFocusable={index === 0 && !selectedRowRendered}
             />

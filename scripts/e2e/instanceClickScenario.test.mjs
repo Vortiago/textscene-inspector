@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { PNG } from 'pngjs';
 import { CLEAN_LOAD, fakeGate } from './gate.testkit.mjs';
-import { checkInstanceClick, LOCKED_PICK, OPEN_PICK, redBoxCentres } from './instanceClickScenario.mjs';
+import {
+  checkInstanceClick,
+  LISTED_ROWS,
+  LOCKED_PICK,
+  OPEN_PICK,
+  redBoxCentres,
+} from './instanceClickScenario.mjs';
 
 /** A 10x4 PNG, black but for the red pixels at `points`. */
 function pngWithRedAt(points) {
@@ -34,7 +40,7 @@ const CENTRES = { left: { x: 1, y: 1 }, right: { x: 8, y: 2 } };
 
 function failuresOf(run) {
   const gate = fakeGate();
-  checkInstanceClick(gate, { centres: CENTRES, diagnostics: CLEAN_LOAD, ...run });
+  checkInstanceClick(gate, { centres: CENTRES, rows: LISTED_ROWS, diagnostics: CLEAN_LOAD, ...run });
   return gate.failures;
 }
 
@@ -52,6 +58,15 @@ describe('checkInstanceClick', () => {
   it('fails a click on an editable instance that selects the instance', () => {
     expect(failuresOf({ onLocked: [LOCKED_PICK], onOpen: ['Root/Open'] })).toEqual([
       "[instance click] a click on the editable instance's mesh selects [Root/Open], expected [Root/Open/Mesh]",
+    ]);
+  });
+
+  it('fails a tree that lists the inside of the locked instance', () => {
+    const rows = ['Root', 'Root/Locked', 'Root/Locked/Mesh', 'Root/Open', 'Root/Open/Mesh'];
+
+    expect(failuresOf({ onLocked: [LOCKED_PICK], onOpen: [OPEN_PICK], rows })).toEqual([
+      '[instance click] the scene tree lists [Root, Root/Locked, Root/Locked/Mesh, Root/Open, Root/Open/Mesh], ' +
+        'expected [Root, Root/Locked, Root/Open, Root/Open/Mesh] (missing: [], extra: [Root/Locked/Mesh])',
     ]);
   });
 
