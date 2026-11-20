@@ -30,6 +30,8 @@ const in2dMode = (scenes) => scenes.map((scene) => ({ mode: '2d', ...scene }));
  *   or the In-game window
  * @property {number} [settleTimeout] each screenshot's limit in ms where one frame outlasts
  *   Playwright's default, which `pnpm recapture` takes for the sheet image too
+ * @property {string} [consoleSelect] the absolute path of a node to select through the scene console, for a node
+ *   the tree does not list
  * @property {number} [animationTime] the seconds to seek the AnimationPlayer `select` names to
  * @property {'nodes'} [litSurface] capture a branch only the node lit surface draws, with the switch on
  * @property {({ path: string, property: string, text: string } | { path: string, method: string, args: string[] })[]} [hostCalls]
@@ -46,6 +48,7 @@ export const SCENE_OPTIONS = [
   'navigation',
   'gizmos',
   'select',
+  'consoleSelect',
   'camera',
   'canvas',
   'settleTimeout',

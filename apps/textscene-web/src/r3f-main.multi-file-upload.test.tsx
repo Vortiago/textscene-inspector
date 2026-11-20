@@ -7,28 +7,49 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
-// Under happy-dom nothing mounts inside the Canvas, so no `useResource()` reports a missing
-// path. A test injects missing rows through this override, on the production prop
-// `onMissingPathsChange` that `handleFilesUpload` reads.
+// The stub scene reads no file, so a test injects missing files through the scene's files.
 const missingPathsOverride = vi.hoisted(() => ({
   current: null as ReadonlySet<string> | null,
 }));
 
-vi.mock('@textscene/core', async () => {
-  const real = await vi.importActual<typeof import('@textscene/core')>('@textscene/core');
-  const React = await vi.importActual<typeof import('react')>('react');
+/** A missing file the scene's root reads, as `scene.files()` gives it. */
+const missingFile = (path: string) => ({
+  path,
+  type: 'Texture2D',
+  state: 'missing' as const,
+  owners: ['res://main.tscn'],
+  reason: { chain: [path], cause: 'missing' as const, addresses: [] },
+  addresses: [],
+});
+
+vi.mock('@textscene/renderer', async () => {
+  const real = await vi.importActual<typeof import('@textscene/renderer')>('@textscene/renderer');
   return {
     ...real,
-    TscnPreviewShell: (props: Parameters<typeof real.TscnPreviewShell>[0]) =>
-      // At the provider's own observer seam, so no parent effect races the provider's report.
-      React.createElement(real.TscnPreviewShell, {
-        ...props,
-        onMissingPathsChange: (paths: ReadonlySet<string>) =>
-          props.onMissingPathsChange?.(missingPathsOverride.current ?? paths),
-      }),
+    openScene: (options: Parameters<typeof real.openScene>[0]) => {
+      const scene = real.openScene(options);
+      const files = scene.files;
+      // One array per override, as `files()` gives the same array while nothing changes.
+      let given: { override: ReadonlySet<string>; files: ReturnType<typeof files> } | null = null;
+      scene.files = () => {
+        const override = missingPathsOverride.current;
+        if (!override) return files();
+        if (given?.override !== override) given = { override, files: [...override].map(missingFile) };
+        return given.files;
+      };
+      return scene;
+    },
+  };
+});
+
+vi.mock('@textscene/core', async () => {
+  const real = await vi.importActual<typeof import('@textscene/core')>('@textscene/core');
+  return {
+    ...real,
     useMissingResources: () => {
       const value = real.useMissingResources();
-      return missingPathsOverride.current ? { ...value, missingPaths: missingPathsOverride.current } : value;
+      const override = missingPathsOverride.current;
+      return override ? { ...value, missingFiles: [...override].map(missingFile) } : value;
     },
   };
 });

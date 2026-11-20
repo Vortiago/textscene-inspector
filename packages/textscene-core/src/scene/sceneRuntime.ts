@@ -1,6 +1,7 @@
 import type { SceneGraph } from '../core/SceneGraph.js';
 import type { ResourceReference } from '../godot/variant/variantValue.js';
 import type { Scene } from './openScene.js';
+import type { SceneFile } from './sceneFiles.js';
 
 /** A node of the Live scene tree as the scene reads it: its own instance overrides and writes laid on. */
 export interface SceneTreeNode {
@@ -38,6 +39,10 @@ export interface SceneRuntime {
   tree(graph: SceneGraph): SceneTree;
   /** Calls `listener` when a load changes the tree. Returns the removal. */
   subscribe(listener: () => void): () => void;
+  /** The files the root scene and the project settings name. The same array while none moves. */
+  files(graph: SceneGraph | null): readonly SceneFile[];
+  /** Calls `listener` when a load answers for one of those files. Returns the removal. */
+  subscribeFiles(listener: () => void): () => void;
   dispose(): void;
 }
 

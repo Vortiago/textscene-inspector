@@ -45,10 +45,7 @@ export type ResourceChangedMessage = {
   path: string;
 };
 
-/**
- * Ask the webview to capture the viewport as a PNG data URL, for a save or a tool. The host
- * posts it only after `previewCaptureReady`, so the webview has a screenshot handler.
- */
+/** A PNG data URL request, which the host posts only after `previewCaptureReady`. */
 export type CapturePreviewMessage = {
   type: 'capturePreview';
   requestId: string;
@@ -105,15 +102,6 @@ export type WebviewLoadFailedMessage = {
   error: string;
 };
 
-/**
- * A code-split chunk failed at its URL and at a fresh one, as when a chunk it imports came
- * cut short. Only a new document fetches that chunk again.
- */
-export type ChunkLoadFailedMessage = {
-  type: 'chunkLoadFailed';
-  error: string;
-};
-
 /** Double-click in the scene tree: jump the editor to the node line. */
 export type JumpToNodeMessage = {
   type: 'jumpToNode';
@@ -164,22 +152,19 @@ export type PreviewCapturedMessage = {
   dataUrl: string;
 };
 
-/** A `capturePreview` that crossed a change of capture state on the wire, with that state's reason. */
+/** A `capturePreview` that crossed a capture-state change on the wire or failed, with the reason. */
 export type PreviewCaptureErrorMessage = {
   type: 'previewCaptureError';
   requestId: string;
   error: string;
 };
 
-/**
- * The canvas has a screenshot handler, so a `capturePreview` gets an image. The webview
- * posts each capture state after `webviewReady`, and again on every change.
- */
+/** The webview posts each capture state after `webviewReady`, and again on every change. */
 export type PreviewCaptureReadyMessage = {
   type: 'previewCaptureReady';
 };
 
-/** The canvas has no screenshot handler yet, such as while it creates its renderer. */
+/** The view has not settled on the current scene yet, such as while it mounts or loads a file. */
 export type PreviewCapturePendingMessage = {
   type: 'previewCapturePending';
 };
@@ -199,7 +184,6 @@ export type CapturePongMessage = {
 export type WebviewToHostMessage =
   | WebviewReadyMessage
   | WebviewLoadFailedMessage
-  | ChunkLoadFailedMessage
   | JumpToNodeMessage
   | CopyNodePathMessage
   | LoadResourceMessage

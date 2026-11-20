@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useFrame, type RootState } from '@react-three/fiber';
 import { act } from 'react';
@@ -13,6 +13,7 @@ import { r3fStateProbe } from '../testing/R3FStateProbe';
 import { EditorViewReport } from './EditorViewReport';
 import { ViewStatusProvider } from './ViewStatusContext';
 import { createViewStatus, type ViewStatus } from './viewStatus';
+import { fontWork } from '../controls/native/text/settledChannel';
 import '../nodes';
 
 /** Enough frames for work that a frame advances, such as a texture upload, to finish. */
@@ -96,7 +97,6 @@ describe('the settled signal of an editor view', () => {
     expect((await settledStatus(SCRIPTED_WITH_CAMERA)).settled()).toEqual({
       scriptedNodeCount: 1,
       hasCurrentCamera: true,
-      missingFiles: new Set(),
     });
   });
 
@@ -104,7 +104,6 @@ describe('the settled signal of an editor view', () => {
     expect((await settledStatus(NO_CAMERA)).settled()).toEqual({
       scriptedNodeCount: 0,
       hasCurrentCamera: false,
-      missingFiles: new Set(),
     });
   });
 
@@ -118,8 +117,33 @@ describe('the settled signal of an editor view', () => {
     expect(status.settled()).toEqual({
       scriptedNodeCount: 1,
       hasCurrentCamera: true,
-      missingFiles: new Set(),
     });
+  });
+
+  it('is pending once a file starts to load, before any frame draws', async () => {
+    const { status, settle } = await mountEditor(NO_CAMERA);
+    await settle();
+
+    const endFontWork = fontWork.begin();
+    onTestFinished(endFontWork);
+    await act(async () => {});
+
+    expect(status.isPending()).toBe(true);
+  });
+
+  it('settles only on a frame drawn after the load ends', async () => {
+    const { status, settle } = await mountEditor(NO_CAMERA);
+    await settle();
+    const endFontWork = fontWork.begin();
+    onTestFinished(endFontWork);
+    await act(async () => {});
+
+    endFontWork();
+    await act(async () => {});
+    expect(status.isPending()).toBe(true);
+    await settle();
+
+    expect(status.isPending()).toBe(false);
   });
 
   it('stops reporting once the view unmounts, so the status waits for the next view', async () => {

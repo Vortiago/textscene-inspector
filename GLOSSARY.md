@@ -270,7 +270,7 @@ One consistent view of what the loader holds. Each read on it answers `loaded`, 
 _Avoid_: reading the loader's cache directly in a reader.
 
 **Snapshot host** (`describeSnapshotHost`, `resources/reading/snapshotHost.testkit.ts`):
-Code that owns snapshots for a reader: it requests and pins each file the reader's reads touched, runs the reader again when one of them loads, fails or reloads, and reports a failed file once as a **Missing resource**. The hook host is the one behind `useNodeResource`, and `useSnapshotHost` runs any reader on it. The Control solve reads its fonts through `useSnapshotHost`. The live files (`r3f/liveFiles.ts`) are the host of the live scene tree, its passes and `useLiveFilesRead`: one snapshot for each loader that all of them share.
+Code that owns snapshots for a reader: it requests and pins each file the reader's reads touched, runs the reader again when one of them loads, fails or reloads. The hook host is the one behind `useNodeResource`, and `useSnapshotHost` runs any reader on it. The Control solve reads its fonts through `useSnapshotHost`. The live files (`r3f/liveFiles.ts`) are the host of the live scene tree, its passes and `useLiveFilesRead`: one snapshot for each loader that all of them share.
 _Avoid_: a reader that requests, pins or reports a file itself.
 
 **UID reference**:
@@ -1136,10 +1136,14 @@ Whether Godot's loader loads a file. A text file fails when a `[sub_resource]` o
 _Avoid_: "broken dependency", "missing dependency" for a file that exists and fails through another.
 
 **Missing resource**:
-A `res://` reference or **Sub-resource path** whose load failed. Its consumer may draw a magenta placeholder, and the missing-resources panel shows one row per address. A **Sub-resource path** into a file that loads but declares no such `[sub_resource]` is one too, since Godot's load of it fails.
+A `res://` reference or **Sub-resource path** whose load failed. Its consumer may draw a magenta placeholder. A **Sub-resource path** into a file that loads but declares no such `[sub_resource]` is one too, since Godot's load of it fails.
 A text file that parses but has a **Load outcome** that fails is one too. Its row names the chain and takes an upload of the file that failed first.
-The scene holds the missing resources its views report (`missingResourcesOf` in `scene/missingFiles.ts`). The panel lists their addresses, and `scene.missingFiles()` gives their files.
+A missing resource is a **Scene file** in the state `missing`. The missing-resources panel shows one row per such file, with the addresses asked inside it.
 _Avoid_: "broken scene", "load error".
+
+**Scene file** (`scene/sceneFiles.ts`, `resources/sceneFiles/`):
+One `res://` file a scene loads, as a row of Godot's Load Errors dialog: its path, type, state (`loading`, `loaded` or `missing`), the files that name it, the reason it fails and the **Sub-resource path**s asked inside it. `scene.files()` gives them by path. The loader's parses and **Load outcome**s fill them, so no view needs to draw.
+The walk starts at the values of the scene after the host's writes, and follows each text file to the files its values read. A file that a heading declares and no value reads is in no list, as in Godot. `res://project.godot` and the files its settings name for every scene are rows too.
 
 ### Animation
 

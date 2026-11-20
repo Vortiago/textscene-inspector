@@ -6,6 +6,8 @@ import { R3FApp } from './r3f-main';
 const LEVEL = `[gd_scene load_steps=1 format=3]
 
 [node name="Level" type="Node3D"]
+
+[node name="Box" type="Node3D" parent="."]
 `;
 
 beforeEach(() => {
@@ -41,5 +43,15 @@ describe('<R3FApp> scene console', () => {
     act(() => window.textscene!.scene.setSource(LEVEL.replace('"Level"', '"Arena"')));
 
     await waitFor(() => expect(screen.queryByText('Arena')).toBeTruthy());
+  });
+
+  it('selects the node the console hands it, and the tree marks its row', async () => {
+    render(<R3FApp />);
+    await waitFor(() => expect(screen.queryByText('Level')).toBeTruthy());
+
+    act(() => window.textscene!.select(window.textscene!.scene.getNode('/root/Level/Box')));
+
+    const row = document.querySelector('[data-node-path="Level/Box"] > [role="treeitem"]');
+    expect(row?.getAttribute('aria-selected')).toBe('true');
   });
 });

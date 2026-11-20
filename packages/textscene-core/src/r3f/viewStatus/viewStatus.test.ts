@@ -4,9 +4,7 @@ import type { PendingSceneWork } from '../sceneWork';
 
 const NO_PENDING_WORK: PendingSceneWork = { resources: 0, textures: 0, fonts: 0 };
 
-const NO_FILES: ReadonlySet<string> = new Set();
-
-const FACTS: ViewSettled = { scriptedNodeCount: 2, hasCurrentCamera: true, missingFiles: NO_FILES };
+const FACTS: ViewSettled = { scriptedNodeCount: 2, hasCurrentCamera: true };
 
 function frameOf(revision: number, work: PendingSceneWork = NO_PENDING_WORK): DrawnFrame {
   return { revision, isFullSize: true, awaitedCamera: null, work, facts: FACTS };
@@ -14,7 +12,7 @@ function frameOf(revision: number, work: PendingSceneWork = NO_PENDING_WORK): Dr
 
 /** A scene at `revision()` that never tells of a change. */
 function sceneAt(revision: () => number): LiveScene {
-  return { revision, missingFiles: () => NO_FILES, subscribe: () => () => {} };
+  return { revision, subscribe: () => () => {} };
 }
 
 /** A status with a view attached whose scene is now at `live()`. */
@@ -82,23 +80,11 @@ describe('the settled signal of a view', () => {
     expect(status.settled()).toBeNull();
   });
 
-  it('is pending once the missing files change after the drawn frame, until a frame draws them', () => {
-    let missing = NO_FILES;
-    const status = createViewStatus();
-    status.attach({ revision: () => 1, missingFiles: () => missing, subscribe: () => () => {} });
-    drawFrame(status);
-    missing = new Set(['res://icon.png']);
-    expect(status.settled()).toBeNull();
-    status.frameDrawn({ ...frameOf(1), facts: { ...FACTS, missingFiles: missing } });
-    expect(status.settled()?.missingFiles).toBe(missing);
-  });
-
   it('tells its subscribers when the scene changes, so a host hears the pending state', () => {
     let tell = () => {};
     const status = createViewStatus();
     status.attach({
       revision: () => 1,
-      missingFiles: () => NO_FILES,
       subscribe: (listener) => ((tell = listener), () => {}),
     });
     let notices = 0;
@@ -113,7 +99,6 @@ describe('the settled signal of a view', () => {
     const status = createViewStatus();
     status.attach({
       revision: () => live,
-      missingFiles: () => NO_FILES,
       subscribe: (listener) => ((tell = listener), () => {}),
     });
     drawFrame(status);
@@ -209,17 +194,39 @@ describe('the capture of a view', () => {
     );
   });
 
-  it('holds the window at full size, and reads it once the full window has settled', async () => {
+  it("reads through the view's reader, a microtask after the capture is asked", async () => {
     const status = attachedStatus();
+    status.readWith(() => PIXELS);
     drawFrame(status);
     const image = status.captureImage();
     expect(status.isCapturePending()).toBe(true);
-    status.frameDrawn({ ...frameOf(1), isFullSize: false });
-    expect(status.isCaptureDue()).toBe(false);
-    drawFrame(status);
-    expect(status.isCaptureDue()).toBe(true);
-    status.capture(() => PIXELS);
+    await expect(image).resolves.toBe(PIXELS);
     expect(status.isCapturePending()).toBe(false);
+  });
+
+  it('holds the window at full size, and reads it on the first full-size frame', async () => {
+    const status = attachedStatus();
+    let reads = 0;
+    status.readWith(() => {
+      reads += 1;
+      return PIXELS;
+    });
+    status.frameDrawn({ ...frameOf(1), isFullSize: false });
+    const image = status.captureImage();
+    await Promise.resolve();
+    expect(reads).toBe(0);
+    drawFrame(status);
+    await expect(image).resolves.toBe(PIXELS);
+    expect(reads).toBe(1);
+  });
+
+  it('waits for a reader, and reads once a view gives one', async () => {
+    const status = attachedStatus();
+    drawFrame(status);
+    const image = status.captureImage();
+    await Promise.resolve();
+    expect(status.isCapturePending()).toBe(true);
+    status.readWith(() => PIXELS);
     await expect(image).resolves.toBe(PIXELS);
   });
 
@@ -232,12 +239,12 @@ describe('the capture of a view', () => {
   it('rejects a capture whose read throws, and lets the view draw at its own size again', async () => {
     const status = attachedStatus();
     drawFrame(status);
-    const image = status.captureImage();
-    status.capture(() => {
+    status.readWith(() => {
       throw new Error('context lost');
     });
-    expect(status.isCapturePending()).toBe(false);
+    const image = status.captureImage();
     await expect(image).rejects.toThrow("expected the view's pixels, got Error: context lost");
+    expect(status.isCapturePending()).toBe(false);
   });
 
   it('rejects a capture the view leaves before it reads', async () => {
@@ -247,5 +254,28 @@ describe('the capture of a view', () => {
     const image = status.captureImage();
     detach!();
     await expect(image).rejects.toThrow('expected the view to stay mounted until its capture');
+  });
+});
+
+describe('the pending rounds of a view', () => {
+  it('counts a load that starts and ends between two reads', () => {
+    const status = attachedStatus();
+    status.frameDrawn(frameOf(1));
+    const before = status.pendingRounds();
+
+    status.frameDrawn(frameOf(1, { ...NO_PENDING_WORK, resources: 1 }));
+    status.frameDrawn(frameOf(1));
+
+    expect(status.pendingRounds()).toBe(before + 1);
+  });
+
+  it('counts no round for a settled frame that follows a settled frame', () => {
+    const status = attachedStatus();
+    status.frameDrawn(frameOf(1));
+    const before = status.pendingRounds();
+
+    status.frameDrawn(frameOf(1));
+
+    expect(status.pendingRounds()).toBe(before);
   });
 });

@@ -1,7 +1,3 @@
-/**
- * A GLBSceneRoot row shows the loaded GLB's THREE.Object3D hierarchy as
- * expandable child rows, and is not flagged "Not implemented".
- */
 import { describe, expect, it } from 'vitest';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
@@ -15,7 +11,7 @@ import { createFakeResourceLoader } from '../../../resources/testing/createFakeR
 import { seedGlbInstance } from '../../../resources/testing/seedGlbInstance';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
-import { INSTANTIABLE_SCENE } from '../../../parser/sceneDefaults.testkit';
+import { TscnParser } from '../../../parser/TscnParser';
 import '../../../nodes/node/index';
 
 function named<T extends THREE.Object3D>(o: T, name: string): T {
@@ -64,6 +60,8 @@ function glbGraph() {
 
 const RIG_PATH = 'res://rig.glb';
 
+const parse = (text: string) => new TscnParser().parse(`[gd_scene format=3]\n\n${text}`);
+
 function expandRow(name: string) {
   const row = screen.getByText(name).closest('[data-node-path]') as HTMLElement;
   act(() => fireEvent.click(within(row).getAllByRole('button', { name: /expand/i })[0]!));
@@ -82,31 +80,17 @@ describe('<SceneTreeViewer> WI-C — GLB internal hierarchy', () => {
     expect(screen.queryByText(/not implemented/i)).toBeNull();
   });
 
-  it('lists a typed node the instancing scene adds inside the GLB under the GLB row it addresses', () => {
+  it('lists a typed node the inheriting scene adds inside the GLB under the GLB row it addresses', () => {
     const fake = createFakeResourceLoader();
     seedGlbInstance(fake, RIG_PATH, fakeGlb());
-    const marker = {
-      rawProperties: {},
-      name: 'Marker',
-      type: 'Marker3D',
-      children: [],
-      properties: {} as Record<string, unknown>,
-      instanceSubPath: 'Armature',
-    };
-    const graph = createSceneGraphFromTscnScene({
-      nodes: [
-        {
-          rawProperties: {},
-          name: 'Rig',
-          type: 'Node',
-          instance: 'ExtResource("rig")',
-          children: [marker],
-          properties: {} as Record<string, unknown>,
-        },
-      ],
-      externalResources: [{ id: 'rig', path: RIG_PATH, type: 'PackedScene' }],
-      internalResources: [],
-    });
+    const graph = createSceneGraphFromTscnScene(
+      parse(`[ext_resource type="PackedScene" path="${RIG_PATH}" id="rig"]
+
+[node name="Rig" instance=ExtResource("rig")]
+
+[node name="Marker" type="Marker3D" parent="Armature"]
+`)
+    );
 
     const { container } = render(<SceneTreeViewer />, { wrapper: wrap(fake.loader, graph) });
     for (const name of ['Rig', 'Armature']) expandRow(name);
@@ -119,35 +103,19 @@ describe('<SceneTreeViewer> WI-C — GLB internal hierarchy', () => {
   it('lists the GLB a sub-scene’s root instances below the node that instances the sub-scene', () => {
     const fake = createFakeResourceLoader();
     seedGlbInstance(fake, RIG_PATH, fakeGlb());
-    fake.scenes.seed('res://wrapper.tscn', {
-      ...INSTANTIABLE_SCENE,
-      nodes: [
-        {
-          rawProperties: {},
-          name: 'WrapperRoot',
-          type: 'Node',
-          instance: 'ExtResource("rig")',
-          children: [],
-          properties: {} as Record<string, unknown>,
-        },
-      ],
-      externalResources: [{ id: 'rig', path: RIG_PATH, type: 'PackedScene' }],
-      internalResources: [],
-    });
-    const graph = createSceneGraphFromTscnScene({
-      nodes: [
-        {
-          rawProperties: {},
-          name: 'Body',
-          type: 'Node',
-          instance: 'ExtResource("wrapper")',
-          children: [],
-          properties: {} as Record<string, unknown>,
-        },
-      ],
-      externalResources: [{ id: 'wrapper', path: 'res://wrapper.tscn', type: 'PackedScene' }],
-      internalResources: [],
-    });
+    fake.scenes.seed(
+      'res://wrapper.tscn',
+      parse(`[ext_resource type="PackedScene" path="${RIG_PATH}" id="rig"]
+
+[node name="WrapperRoot" instance=ExtResource("rig")]
+`)
+    );
+    const graph = createSceneGraphFromTscnScene(
+      parse(`[ext_resource type="PackedScene" path="res://wrapper.tscn" id="wrapper"]
+
+[node name="Body" instance=ExtResource("wrapper")]
+`)
+    );
 
     const { container } = render(<SceneTreeViewer />, { wrapper: wrap(fake.loader, graph) });
     expandRow('Body');

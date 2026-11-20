@@ -63,7 +63,7 @@ export class SceneListeners {
   }
 
   /** The views hear it in a frame, with the other changes of the frame. The revision stays. */
-  missingFilesChanged(): void {
+  filesChanged(): void {
     this.askViewNotice();
   }
 

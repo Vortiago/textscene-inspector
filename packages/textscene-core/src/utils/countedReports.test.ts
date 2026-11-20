@@ -25,16 +25,6 @@ describe('CountedReports', () => {
     expect(reports.keys().size).toBe(0);
   });
 
-  it('drops a key and every open report of it at once with clearAll', () => {
-    const reports = new CountedReports();
-    reports.report('a');
-    reports.report('a');
-    reports.clearAll('a');
-    reports.report('a');
-    reports.clear('a');
-    expect(reports.keys().size).toBe(0);
-  });
-
   it('ignores a clear with no open report', () => {
     const reports = new CountedReports();
     reports.clear('a');

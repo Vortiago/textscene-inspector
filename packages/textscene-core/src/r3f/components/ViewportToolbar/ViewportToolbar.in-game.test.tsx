@@ -26,7 +26,7 @@ describe('ViewportToolbar in the In-game view', () => {
   it('disables each toggle that has no effect on the game', () => {
     render(
       <ViewportModeProvider initialMode="in-game">
-        <ViewportToolbar />
+        <ViewportToolbar view={null} />
       </ViewportModeProvider>
     );
     openDisplayMenu();
@@ -37,7 +37,7 @@ describe('ViewportToolbar in the In-game view', () => {
   it('keeps the Performance toggle live, since the overlay times the game view too', () => {
     render(
       <ViewportModeProvider initialMode="in-game">
-        <ViewportToolbar />
+        <ViewportToolbar view={null} />
       </ViewportModeProvider>
     );
     openDisplayMenu();
@@ -47,7 +47,7 @@ describe('ViewportToolbar in the In-game view', () => {
   it('keeps the value of a disabled toggle for the 3D view', () => {
     render(
       <ViewportModeProvider initialMode="3D">
-        <ViewportToolbar />
+        <ViewportToolbar view={null} />
       </ViewportModeProvider>
     );
     openDisplayMenu();

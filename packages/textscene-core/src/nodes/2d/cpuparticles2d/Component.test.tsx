@@ -25,7 +25,6 @@ import { CANVAS_SRGB_DEFINES } from '../../../r3f/canvasSrgbMultiply';
 import { CanvasWorkspaceProvider } from '../../../r3f/contexts/CanvasWorkspaceContext';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
-import { MissingResourcesProvider } from '../../../r3f/contexts/MissingResourcesContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { TscnNode, TscnInternalResource } from '../../../parser/types';
 import { subResource } from '../../../testing/subResource';
@@ -66,7 +65,6 @@ async function render(
     texture?: THREE.Texture;
     internalResources?: TscnInternalResource[];
     space?: CanvasColorSpace;
-    onMissingPathsChange?: (paths: ReadonlySet<string>) => void;
     fake?: ReturnType<typeof createFakeResourceLoader>;
   } = {}
 ) {
@@ -85,23 +83,21 @@ async function render(
   }
 
   return ReactThreeTestRenderer.create(
-    <MissingResourcesProvider onMissingPathsChange={options.onMissingPathsChange}>
-      <CanvasWorkspaceProvider workspace="2d">
-        <ResourceLoaderProvider loader={fake.loader}>
-          <SceneResourcesProvider
-            internalResources={options.internalResources ?? []}
-            externalResources={[
-              { id: '1', type: 'Texture2D', path: TEX },
-              { id: '2', type: 'Texture2D', path: NORMAL_MAP },
-            ]}
-          >
-            <CanvasColorSpaceProvider value={options.space ?? canvasColorSpaceOf(false)}>
-              <CPUParticles2D node={rootNode} />
-            </CanvasColorSpaceProvider>
-          </SceneResourcesProvider>
-        </ResourceLoaderProvider>
-      </CanvasWorkspaceProvider>
-    </MissingResourcesProvider>
+    <CanvasWorkspaceProvider workspace="2d">
+      <ResourceLoaderProvider loader={fake.loader}>
+        <SceneResourcesProvider
+          internalResources={options.internalResources ?? []}
+          externalResources={[
+            { id: '1', type: 'Texture2D', path: TEX },
+            { id: '2', type: 'Texture2D', path: NORMAL_MAP },
+          ]}
+        >
+          <CanvasColorSpaceProvider value={options.space ?? canvasColorSpaceOf(false)}>
+            <CPUParticles2D node={rootNode} />
+          </CanvasColorSpaceProvider>
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    </CanvasWorkspaceProvider>
   );
 }
 
@@ -197,15 +193,6 @@ describe('<CPUParticles2D>', () => {
   it('renders NO mesh when `emitting = false` (error path for the six dormant emitters)', async () => {
     const renderer = await render(node({ emitting: 'false' }));
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
-  });
-
-  it('lists a texture that failed in the Resources panel when it is not emitting', async () => {
-    let missing: readonly string[] = [];
-    await render(node({ emitting: 'false' }), {
-      seedTexture: false,
-      onMissingPathsChange: (paths) => (missing = [...paths]),
-    });
-    expect(missing).toEqual([TEX]);
   });
 
   describe('with a normal-mapped CanvasTexture', () => {

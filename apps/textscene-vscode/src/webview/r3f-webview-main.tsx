@@ -3,7 +3,7 @@
  * and posts `jumpToNode` when the user double-clicks a scene-tree node. Each panel
  * has its own webview and `<TscnPreviewShell>`, so panels share no state.
  */
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { StrictMode, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   PENDING_CAPTURE,
@@ -13,11 +13,10 @@ import {
   type PreviewCaptureState,
 } from '@textscene/core';
 import type { TscnNode } from '@textscene/core';
-import { openScene } from '@textscene/renderer';
+import { openScene, type Scene } from '@textscene/renderer';
 import { isHostToWebviewMessage, type WebviewToHostMessage } from '../protocol';
 import { WebviewResourceProvider } from './WebviewResourceProvider';
 import { readInitialConfig, resolveInitialViewportMode } from './initialConfig';
-import { setChunkFailureReporter } from './chunkImport';
 
 // Read once at module load: `webviewHtml.ts` embeds `window.__TEXTSCENE_CONFIG__`
 // in a script tag before this module's entry, so the global is set by now.
@@ -55,7 +54,7 @@ class WebviewLogAdapter implements LogAdapter {
   }
 }
 
-function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
+function R3FWebviewApp({ vscode, scene }: { vscode: VsCodeApi; scene: Scene }) {
   const [content, setContent] = useState<string>('');
   /** Written by the host's `previewVisibility`. Undefined until it posts one, and the shell then shows the preview. */
   const [isVisible, setIsVisible] = useState<boolean>();
@@ -75,14 +74,12 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
       if (isListeningRef.current) vscode.postMessage(captureStateMessage(state));
       if (state.status === 'pending') return;
       for (const requestId of heldRequestsRef.current.splice(0)) {
-        vscode.postMessage(captureAnswer(requestId, state));
+        answerCapture(vscode, requestId, state);
       }
     },
     [vscode]
   );
 
-  // The panel's one scene: it ends with the webview's document, so nothing disposes it.
-  const [scene] = useState(() => openScene({ source: '', provider: new WebviewResourceProvider(vscode) }));
   useLayoutEffect(() => scene.setSource(content), [scene, content]);
 
   useEffect(() => {
@@ -99,7 +96,7 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
         setContent(message.content);
       } else if (message.type === 'capturePreview') {
         if (captureStateRef.current.status === 'pending') heldRequestsRef.current.push(message.requestId);
-        else vscode.postMessage(captureAnswer(message.requestId, captureStateRef.current));
+        else answerCapture(vscode, message.requestId, captureStateRef.current);
       } else if (message.type === 'previewVisibility') {
         setIsVisible(message.isVisible);
       } else if (message.type === 'capturePing') {
@@ -122,7 +119,7 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
     };
   }, [vscode, handleCaptureStateChange]);
 
-  const panelId = useMemo(() => `vscode-${Math.random().toString(36).slice(2, 10)}`, []);
+  const [panelId] = useState(() => `vscode-${Math.random().toString(36).slice(2, 10)}`);
 
   const handleNodeReveal = (path: string, node: TscnNode) => {
     vscode.postMessage({
@@ -160,12 +157,35 @@ function captureStateMessage(state: PreviewCaptureState): WebviewToHostMessage {
  * The host posts a request only in the `ready` state, so a request in another state
  * crossed a change on the wire. The webview then names the state it is in.
  */
-function captureAnswer(requestId: string, state: PreviewCaptureState): WebviewToHostMessage {
-  const dataUrl = state.status === 'ready' ? state.capture() : null;
-  if (dataUrl !== null) return { type: 'previewCaptured', requestId, dataUrl };
+function answerCapture(vscode: VsCodeApi, requestId: string, state: PreviewCaptureState): void {
+  if (state.status === 'ready') {
+    void capturedMessage(requestId, state.capture).then((message) => vscode.postMessage(message));
+    return;
+  }
   const error =
     state.status === 'unavailable' ? state.reason : 'The preview canvas closed before the capture.';
-  return { type: 'previewCaptureError', requestId, error };
+  vscode.postMessage({ type: 'previewCaptureError', requestId, error } satisfies WebviewToHostMessage);
+}
+
+async function capturedMessage(
+  requestId: string,
+  capture: () => Promise<Blob>
+): Promise<WebviewToHostMessage> {
+  try {
+    return { type: 'previewCaptured', requestId, dataUrl: await dataUrlOf(await capture()) };
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return { type: 'previewCaptureError', requestId, error: `The capture failed: ${reason}` };
+  }
+}
+
+function dataUrlOf(image: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error ?? new Error('expected the image to read, got no reason'));
+    reader.readAsDataURL(image);
+  });
 }
 
 export function mountR3FWebview(): void {
@@ -175,9 +195,6 @@ export function mountR3FWebview(): void {
   }
   const vscode: VsCodeApi = acquireVsCodeApi();
   setLogAdapter(new WebviewLogAdapter(vscode));
-  setChunkFailureReporter((error) =>
-    vscode.postMessage({ type: 'chunkLoadFailed', error } satisfies WebviewToHostMessage)
-  );
 
   // Make the host fill the viewport so the canvas + sidebar layout
   // works inside the webview's full-bleed body.
@@ -185,5 +202,11 @@ export function mountR3FWebview(): void {
   root.style.height = '100vh';
   root.style.display = 'block';
 
-  createRoot(root).render(<R3FWebviewApp vscode={vscode} />);
+  // Not in a render, which StrictMode runs twice. It lives as long as the webview, so nothing disposes it.
+  const scene = openScene({ source: '', provider: new WebviewResourceProvider(vscode) });
+  createRoot(root).render(
+    <StrictMode>
+      <R3FWebviewApp vscode={vscode} scene={scene} />
+    </StrictMode>
+  );
 }

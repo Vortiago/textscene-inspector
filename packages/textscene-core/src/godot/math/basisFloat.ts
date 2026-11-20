@@ -1,9 +1,3 @@
-/**
- * Godot `Basis` methods in `real_t` float, kept apart from `basis.ts` so esbuild chunks them
- * separately. The lazily loaded particle simulations read them, and the cast gizmos read them
- * through the initial closure, which the bundle-size budget holds.
- */
-
 import { storedReal as f } from './real.js';
 import { UNIT_EPSILON } from './math.js';
 import { basisCopy, IDENTITY_BASIS, type BasisComponents, type MutableBasis } from './basis.js';

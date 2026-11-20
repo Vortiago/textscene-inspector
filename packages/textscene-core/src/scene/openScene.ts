@@ -4,9 +4,9 @@ import type { TscnExternalResource } from '../parser/types.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { parseSubResourcePath } from '../resources/subResourcePath.js';
 import { loadedResourceType } from './loadedResourceType.js';
-import { filesOf, missingResourcesOf } from './missingFiles.js';
 import type { NodeHandle } from './nodeHandle.js';
 import { parseTscnContent, type ParseResult } from './parseScene.js';
+import type { SceneFile } from './sceneFiles.js';
 import { SceneListeners } from './sceneListeners.js';
 import { SceneNodes } from './sceneNodes.js';
 import type { CameraState } from './viewportCameras.js';
@@ -18,6 +18,8 @@ import { writtenSceneGraph } from './writtenScene.js';
 
 /** The path a scene opens under when the host names none. */
 export const DEFAULT_ROOT_SCENE_PATH = 'res://__inline__.tscn';
+
+const NO_FILES: readonly SceneFile[] = [];
 
 export interface OpenSceneOptions {
   /** The text of the `.tscn` scene. */
@@ -41,8 +43,8 @@ export interface Scene {
   subscribe(listener: () => void): () => void;
   /** Changes at once with each change a view draws: a new text, a write, or a load that changes the tree. */
   revision(): number;
-  /** The `res://` paths a view asked for and did not get. A view tells `subscribe` when they change. */
-  missingFiles(): ReadonlySet<string>;
+  /** Each file the scene and the project name, by path, none after `dispose`. `subscribe` tells a change. */
+  files(): readonly SceneFile[];
   /** Lets go of every listener. A view of a disposed scene draws its last parse. */
   dispose(): void;
   /** `get_node` from the scene's root node: throws `Node not found` where `path` names no node. */
@@ -78,8 +80,8 @@ export function openScene({
   let written: WrittenGraph | null = null;
   /** Written only by `runtime`: made at the first lookup, so a scene no host asks of loads no tree. */
   let sceneRuntime: SceneRuntime | null = null;
-  /** Written once, after `scene` exists: its views' missing-file reports reach `listeners`. */
-  let stopMissingFiles: () => void = () => {};
+  /** Written only by `dispose`: a read of the files after it would build a runtime that nothing disposes. */
+  let isDisposed = false;
 
   const parse = (): ParseResult => (parsed ??= parseTscnContent(currentSource, rootScenePath));
   const graph = (): SceneGraph | null => parse().sceneGraph;
@@ -123,9 +125,9 @@ export function openScene({
     },
     subscribe: (listener) => listeners.subscribe(listener),
     revision: () => listeners.revision(),
-    missingFiles: () => filesOf(missingResourcesOf(scene).keys()),
+    files: () => (isDisposed ? NO_FILES : runtime().files(scene.written())),
     dispose() {
-      stopMissingFiles();
+      isDisposed = true;
       listeners.clear();
       sceneRuntime?.dispose();
       sceneRuntime = null;
@@ -146,11 +148,10 @@ export function openScene({
     if (!sceneRuntime) {
       sceneRuntime = createSceneRuntime(scene);
       sceneRuntime.subscribe(() => listeners.treeChanged());
+      sceneRuntime.subscribeFiles(() => listeners.filesChanged());
     }
     return sceneRuntime;
   }
-
-  stopMissingFiles = missingResourcesOf(scene).subscribe(() => listeners.missingFilesChanged());
 
   return scene;
 }

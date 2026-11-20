@@ -7,7 +7,7 @@ import { createExternalStore } from './externalStore.js';
  *   Each report needs its own `clear`. `keys` gives a new set on each change, so a reader compares identities.
  */
 export class CountedReports {
-  /** Open reports per key, written only by `report`, `clear` and `clearAll`. */
+  /** Open reports per key, written only by `report` and `clear`. */
   private readonly reportCounts = new Map<string, number>();
   private readonly published = createExternalStore<ReadonlySet<string>>(new Set());
 
@@ -28,13 +28,12 @@ export class CountedReports {
   clear = (key: string): void => {
     const count = this.reportCounts.get(key);
     if (count === undefined) return;
-    if (count === 1) this.clearAll(key);
-    else this.reportCounts.set(key, count - 1);
-  };
-
-  /** Withdraws every report of `key` at once. */
-  clearAll = (key: string): void => {
-    if (this.reportCounts.delete(key)) this.publish();
+    if (count > 1) {
+      this.reportCounts.set(key, count - 1);
+      return;
+    }
+    this.reportCounts.delete(key);
+    this.publish();
   };
 
   private publish(): void {

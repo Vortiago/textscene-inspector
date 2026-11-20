@@ -26,7 +26,7 @@ import {
   type LiveTreeContext,
 } from './liveSceneTree.js';
 
-interface ClaimOwner {
+export interface ClaimOwner {
   /** Live path of the node this owner's root renders at. */
   readonly path: string;
   /** The authored roots of the file this owner is the root of. */

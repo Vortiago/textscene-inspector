@@ -23,7 +23,7 @@ const LAYER = new Set([
   'resources/rehomeOverride.ts',
   'resources/authoredSpelling.ts',
   'resources/registerInstanceResource.ts',
-  'resources/loadFailure/failingReads.ts',
+  'resources/loadFailure/fileReads.ts',
 ]);
 
 /**

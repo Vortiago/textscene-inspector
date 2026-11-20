@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   useViewportMode,
   FRAME_ON_OPEN_STORAGE_KEY,
@@ -21,6 +22,10 @@ import {
   YIELDS_A_PREVIEW,
 } from '../../preview/godotPreviewLighting.js';
 import { DisplayMenu, type DisplayToggle } from './DisplayMenu.js';
+import type { ViewAnswers } from '../../viewStatus/viewAnswers.js';
+import { captureWhenSettled } from '../TscnPreviewShell/viewSettle.js';
+import { usePreviewCamera } from '../TscnPreviewShell/previewCamera.js';
+import * as logger from '../../../logger.js';
 import styles from './ViewportToolbar.module.css';
 
 const MODES: ViewportMode[] = ['3D', '2D', 'in-game'];
@@ -119,22 +124,33 @@ function persisting<T>(set: (value: T) => void, key: string): (value: T) => void
   };
 }
 
-/** Downloads a data URL through a throwaway anchor element. */
-function downloadDataUrl(dataUrl: string, filename: string): void {
+// As FileSaver.js: a browser may read the URL after `click` returns, and a revoke cuts the download.
+const REVOKE_AFTER_MS = 40_000;
+
+/** Downloads a file through a throwaway anchor element. */
+function download(file: Blob, filename: string): void {
+  const url = URL.createObjectURL(file);
   const link = document.createElement('a');
-  link.href = dataUrl;
+  link.href = url;
   link.download = filename;
   document.body.appendChild(link);
   link.click();
   link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), REVOKE_AFTER_MS);
 }
 
-export function ViewportToolbar() {
+export interface ViewportToolbarProps {
+  /** The mounted view, or null while none is: Screenshot saves its image. */
+  view: ViewAnswers | null;
+}
+
+export function ViewportToolbar({ view }: ViewportToolbarProps) {
   const { mode, setMode, show, setShow, frameOnOpen, setFrameOnOpen } = useViewportMode();
   const camera = useOptionalViewportActions();
   const isFreelookToggled = useIsFreelookToggled();
   const isFreelookAvailable = useIsFreelookAvailable() ?? false;
-  const isPreviewing = camera != null && camera.previewedCameraPath !== null;
+  const preview = usePreviewCamera();
+  const isPreviewing = (preview?.camera ?? null) !== null;
   const hierarchy = useOptionalHierarchy();
   const sceneLoaded = Boolean(hierarchy?.sceneGraph);
 
@@ -144,10 +160,17 @@ export function ViewportToolbar() {
   const sceneHasSun = yielding.some((entry) => entry.node.type === PREVIEW_SUN_YIELD_TYPE);
   const sceneHasEnvironment = yielding.some((entry) => entry.node.type === PREVIEW_ENVIRONMENT_YIELD_TYPE);
 
+  const [isCapturing, setIsCapturing] = useState(false);
   function handleScreenshot() {
-    const dataUrl = camera?.takeScreenshot();
-    if (!dataUrl) return;
-    downloadDataUrl(dataUrl, `tscn-preview-${Date.now()}.png`);
+    if (!view) return;
+    setIsCapturing(true);
+    captureWhenSettled(view)
+      .then(
+        (image) => download(image, `tscn-preview-${Date.now()}.png`),
+        // The view left, or names no Camera3D: the top bar shows why, so the click saves nothing.
+        (error: unknown) => logger.warn('[ViewportToolbar] screenshot not taken', error)
+      )
+      .finally(() => setIsCapturing(false));
   }
 
   // Only the user's click persists: a programmatic writer, such as
@@ -176,7 +199,10 @@ export function ViewportToolbar() {
         <button
           type="button"
           className={styles.resetButton}
-          onClick={camera.resetCamera}
+          onClick={() => {
+            preview?.endPreview();
+            camera.resetCamera();
+          }}
           disabled={!sceneLoaded}
           data-testid="reset-camera-button"
           title="End any camera preview and return the editor camera to the default view"
@@ -198,12 +224,12 @@ export function ViewportToolbar() {
           Freelook
         </button>
       )}
-      {camera && (
+      {view && (
         <button
           type="button"
           className={styles.resetButton}
           onClick={handleScreenshot}
-          disabled={!sceneLoaded}
+          disabled={!sceneLoaded || isCapturing}
           data-testid="screenshot-button"
           title="Save the current view as a PNG"
         >
