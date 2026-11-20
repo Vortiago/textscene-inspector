@@ -3,7 +3,7 @@
  * and posts `jumpToNode` when the user double-clicks a scene-tree node. Each panel
  * has its own webview and `<TscnPreviewShell>`, so panels share no state.
  */
-import { StrictMode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { StrictMode, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   PENDING_CAPTURE,
@@ -120,7 +120,7 @@ function R3FWebviewApp({ vscode, scene }: { vscode: VsCodeApi; scene: Scene }) {
     };
   }, [vscode, handleCaptureStateChange]);
 
-  const panelId = useMemo(() => `vscode-${Math.random().toString(36).slice(2, 10)}`, []);
+  const [panelId] = useState(() => `vscode-${Math.random().toString(36).slice(2, 10)}`);
 
   const handleNodeReveal = (path: string, node: TscnNode) => {
     vscode.postMessage({
