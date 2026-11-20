@@ -18,9 +18,27 @@ const ATLAS = `[gd_resource type="AtlasTexture" format=3]
 atlas = ExtResource("1")
 `;
 
-function mount(files: Record<string, string>) {
+const SECTION_READS_WOOD_NODE_READS_TRIM = `[gd_scene format=3]
+[ext_resource type="Material" path="res://wood.tres" id="1"]
+[ext_resource type="Resource" path="res://trim.tres" id="2"]
+[sub_resource type="Resource" id="a"]
+inner = ExtResource("1")
+[node name="Root" type="Node2D"]
+extra = ExtResource("2")
+`;
+
+const WOOD = `[gd_resource type="StandardMaterial3D" format=3]
+[resource]
+`;
+
+const TRIM_ASKING_GONE = `[gd_resource type="Resource" format=3]
+[resource]
+material = Resource("res://wood.tres::gone")
+`;
+
+function mount(files: Record<string, string>, source = MAIN) {
   const scene = openScene({
-    source: MAIN,
+    source,
     provider: { loadResource: async (path) => files[path] ?? null },
     rootScenePath: 'res://main.tscn',
   });
@@ -49,6 +67,16 @@ describe('<SceneLoadBanner>', () => {
     const scene = mount({ 'res://atlas.tres': ATLAS, 'res://gone.png': 'bytes' });
 
     await waitFor(() => expect(scene.files().every((file) => file.state === 'loaded')).toBe(true));
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('shows nothing when only a file a node reads asks for an address the section file lacks', async () => {
+    const scene = mount(
+      { 'res://wood.tres': WOOD, 'res://trim.tres': TRIM_ASKING_GONE },
+      SECTION_READS_WOOD_NODE_READS_TRIM
+    );
+
+    await waitFor(() => expect(scene.files().every((file) => file.state === 'missing')).toBe(true));
     expect(screen.queryByRole('alert')).toBeNull();
   });
 });

@@ -259,4 +259,20 @@ material_override = ExtResource("1")
     const files = await whenFilesLoaded(scene);
     expect(scene.files()).toBe(files);
   });
+
+  it('gives no file, and loads none, once the scene is disposed', async () => {
+    const asked: string[] = [];
+    const provider: ResourceProvider = {
+      loadResource: async (path) => {
+        asked.push(path);
+        return null;
+      },
+    };
+    const scene = openScene({ source: SPRITE, provider, rootScenePath: MAIN });
+    scene.dispose();
+
+    expect(scene.files()).toEqual([]);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(asked).toEqual([]);
+  });
 });

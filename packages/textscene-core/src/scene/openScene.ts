@@ -19,6 +19,8 @@ import { writtenSceneGraph } from './writtenScene.js';
 /** The path a scene opens under when the host names none. */
 export const DEFAULT_ROOT_SCENE_PATH = 'res://__inline__.tscn';
 
+const NO_FILES: readonly SceneFile[] = [];
+
 export interface OpenSceneOptions {
   /** The text of the `.tscn` scene. */
   source: string;
@@ -41,7 +43,7 @@ export interface Scene {
   subscribe(listener: () => void): () => void;
   /** Changes at once with each change a view draws: a new text, a write, or a load that changes the tree. */
   revision(): number;
-  /** Each file the scene and the project settings name, by path. `subscribe` tells a change. */
+  /** Each file the scene and the project name, by path, none after `dispose`. `subscribe` tells a change. */
   files(): readonly SceneFile[];
   /** Lets go of every listener. A view of a disposed scene draws its last parse. */
   dispose(): void;
@@ -78,6 +80,8 @@ export function openScene({
   let written: WrittenGraph | null = null;
   /** Written only by `runtime`: made at the first lookup, so a scene no host asks of loads no tree. */
   let sceneRuntime: SceneRuntime | null = null;
+  /** Written only by `dispose`: a read of the files after it would build a runtime that nothing disposes. */
+  let isDisposed = false;
 
   const parse = (): ParseResult => (parsed ??= parseTscnContent(currentSource, rootScenePath));
   const graph = (): SceneGraph | null => parse().sceneGraph;
@@ -121,8 +125,9 @@ export function openScene({
     },
     subscribe: (listener) => listeners.subscribe(listener),
     revision: () => listeners.revision(),
-    files: () => runtime().files(scene.written()),
+    files: () => (isDisposed ? NO_FILES : runtime().files(scene.written())),
     dispose() {
+      isDisposed = true;
       listeners.clear();
       sceneRuntime?.dispose();
       sceneRuntime = null;

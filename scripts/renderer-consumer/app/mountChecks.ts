@@ -1,4 +1,4 @@
-import { mountScene, openScene, type ResourceProvider, type View } from '@textscene/renderer';
+import { mountScene, openScene, type ResourceProvider } from '@textscene/renderer';
 import { base64Of, capturePng, elementOf, NO_FILES } from './capture';
 import { unitCubeGlb } from './unitCubeGlb';
 

@@ -34,12 +34,7 @@ const NO_PATHS: ReadonlySet<string> = new Set();
 const NO_BUS_TYPES: readonly ResourceType[] = [];
 
 /**
- * The files a plan names, as the resource loader's cache holds them: a hook cannot run once per
- * file, and a plan may name any number, in any order, with repeats. The plan reads the cache itself,
- * so a file it names only once another has loaded joins the list as that one arrives. Each file is
- * requested and pinned while the caller is mounted, and a file that fails shows as a **Missing
- * resource**. Only a load of a file the plan named re-runs the plan. A caller keeps `plan` stable
- * while its inputs hold.
+ * Requests and pins each file `plan` names while mounted. A caller keeps `plan` stable while its inputs hold.
  *
  * @canonical A plan of many resource files to load
  */

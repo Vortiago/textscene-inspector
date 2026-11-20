@@ -32,7 +32,13 @@ function firstFailure(reads: readonly string[], files: readonly SceneFile[]): Sc
   const reasons = new Map(files.map((file) => [file.path, file.reason]));
   for (const read of reads) {
     const reason = reasons.get(resourceFilePath(read));
-    if (reason) return reason;
+    if (reason && failsRead(reason, read)) return reason;
   }
   return null;
+}
+
+/** A failed load fails each read of the file, and an undeclared address only the read that names it. */
+function failsRead({ chain }: SceneFileFailure, read: string): boolean {
+  const failedFirst = chain[0]!;
+  return failedFirst === resourceFilePath(failedFirst) || failedFirst === read;
 }
