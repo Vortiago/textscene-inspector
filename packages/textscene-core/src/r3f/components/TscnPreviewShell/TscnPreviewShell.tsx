@@ -71,7 +71,6 @@ export function TscnPreviewShell({
   toolbar,
   onResourceUpload,
   onResourceRemove,
-  onMissingPathsChange,
   initialViewportMode,
   initialPreviewedCameraPath,
   onCaptureStateChange,
@@ -123,7 +122,6 @@ export function TscnPreviewShell({
   const withProviders = previewShellProviders({
     hierarchyValue,
     loader: useSceneLoader(scene),
-    onMissingPathsChange,
     initialViewportMode,
     initialViewport,
     isVisible,

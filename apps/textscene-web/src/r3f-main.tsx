@@ -1,16 +1,14 @@
 import {
-  useCallback,
   useEffect,
   useMemo,
   useReducer,
-  useRef,
   useState,
   type ChangeEvent,
   type CSSProperties,
 } from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
-import { resourceFilePath, TscnPreviewShell } from '@textscene/core';
+import { TscnPreviewShell } from '@textscene/core';
 import type { ResourceProvider } from '@textscene/renderer';
 import { exposeScene } from './sceneConsole';
 import { fixtures } from './fixturesAll';
@@ -37,6 +35,8 @@ import styles from './r3f-main.module.css';
 
 /** The site mirrors exactly the scenes it lists, so an empty catalog means no mirror. */
 const HAS_FIXTURES_MIRROR = fixtures.length > 0;
+
+const NO_MISSING_FILES: ReadonlySet<string> = new Set();
 
 /**
  * A browser refuses the write outside a secure context or without permission: that is logged, not
@@ -132,15 +132,6 @@ export function R3FApp() {
     clearUploadError,
   } = useUploadError(loadError);
 
-  // Latest missing-paths set, fed by the shell's onMissingPathsChange. A ref,
-  // not state, so handleFilesUpload (outside MissingResourcesProvider) reads
-  // the current set without re-rendering R3FApp on each missing-path change.
-  const missingPathsRef = useRef<ReadonlySet<string>>(new Set());
-  const handleMissingPathsChange = useCallback((paths: ReadonlySet<string>) => {
-    // The matcher keys on basename, and the basename of a resource inside a `.tres` carries
-    // its `::id`, which no dropped file matches. Map it to the owning file the user can drop.
-    missingPathsRef.current = new Set([...paths].map(resourceFilePath));
-  }, []);
 
   // Counts uploads and removals, so the Source pane lints the unchanged buffer again: a
   // cross-file rule may read the file that changed.
@@ -192,7 +183,7 @@ export function R3FApp() {
 
   const handleFilesUpload = createFileIngest({
     resourceRoot,
-    missingPathsRef,
+    missingFiles: () => scene?.missingFiles() ?? NO_MISSING_FILES,
     confirmDiscardEdits,
     tearDownIfCrossingCorpus,
     onTscnUpload: handleTscnUpload,
@@ -300,7 +291,6 @@ export function R3FApp() {
             scene={scene}
             onResourceUpload={handleResourceUpload}
             onResourceRemove={handleResourceRemove}
-            onMissingPathsChange={handleMissingPathsChange}
             onCopyNodePath={copyToClipboard}
             // Opening a sub-scene loads it from the mirror, so without one the ⤢ button goes.
             onOpenSubScene={HAS_FIXTURES_MIRROR ? handleOpenSubScene : undefined}

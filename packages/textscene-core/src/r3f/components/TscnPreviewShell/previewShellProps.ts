@@ -25,11 +25,6 @@ export interface TscnPreviewShellProps {
    */
   onResourceRemove?: (path: string) => void;
   /**
-   * Fired after mount and after every change of the missing-resources set, for
-   * host code outside the shell, such as a page-level drop handler.
-   */
-  onMissingPathsChange?: (paths: ReadonlySet<string>) => void;
-  /**
    * The host's viewport mode, from VS Code's `textscene.defaultViewportMode`.
    * Without it `WorkspaceAutoSelect` (ADR-0006) picks the mode. With it the mode
    * seeds the viewport and turns auto-select off, or a typed root overrides it.

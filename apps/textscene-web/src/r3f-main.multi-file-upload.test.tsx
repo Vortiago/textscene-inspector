@@ -7,25 +7,29 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
-// Under happy-dom nothing mounts inside the Canvas, so no `useResource()` reports a missing
-// path. A test injects missing rows through this override, on the production prop
-// `onMissingPathsChange` that `handleFilesUpload` reads.
+// Under happy-dom nothing mounts inside the Canvas, so no view reports a missing file. A test
+// injects missing files through this override, on the scene's `missingFiles` that the drop reads.
 const missingPathsOverride = vi.hoisted(() => ({
   current: null as ReadonlySet<string> | null,
 }));
 
-vi.mock('@textscene/core', async () => {
-  const real = await vi.importActual<typeof import('@textscene/core')>('@textscene/core');
-  const React = await vi.importActual<typeof import('react')>('react');
+vi.mock('@textscene/renderer', async () => {
+  const real = await vi.importActual<typeof import('@textscene/renderer')>('@textscene/renderer');
   return {
     ...real,
-    TscnPreviewShell: (props: Parameters<typeof real.TscnPreviewShell>[0]) =>
-      // At the provider's own observer seam, so no parent effect races the provider's report.
-      React.createElement(real.TscnPreviewShell, {
-        ...props,
-        onMissingPathsChange: (paths: ReadonlySet<string>) =>
-          props.onMissingPathsChange?.(missingPathsOverride.current ?? paths),
-      }),
+    openScene: (options: Parameters<typeof real.openScene>[0]) => {
+      const scene = real.openScene(options);
+      const missingFiles = scene.missingFiles;
+      scene.missingFiles = () => missingPathsOverride.current ?? missingFiles();
+      return scene;
+    },
+  };
+});
+
+vi.mock('@textscene/core', async () => {
+  const real = await vi.importActual<typeof import('@textscene/core')>('@textscene/core');
+  return {
+    ...real,
     useMissingResources: () => {
       const value = real.useMissingResources();
       return missingPathsOverride.current ? { ...value, missingPaths: missingPathsOverride.current } : value;

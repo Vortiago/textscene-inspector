@@ -36,7 +36,6 @@ interface PreviewShellProviderOptions {
   hierarchyValue: HierarchyContextValue;
   /** The loader of the shell's scene, which every panel and view reads its files through. */
   loader: ResourceLoader;
-  onMissingPathsChange?: (paths: ReadonlySet<string>) => void;
   /** The host's forced viewport mode, if it named one. */
   initialViewportMode?: ViewportMode;
   /** The mode, the helpers and the framing persisted last session. */
@@ -54,7 +53,6 @@ interface PreviewShellProviderOptions {
 export function previewShellProviders({
   hierarchyValue,
   loader,
-  onMissingPathsChange,
   initialViewportMode,
   initialViewport = DEFAULT_VIEWPORT,
   isVisible,
@@ -70,7 +68,7 @@ export function previewShellProviders({
     // The view in any mode reports here, and the shell's load status reads it.
     (children) => <ViewStatusProvider>{children}</ViewStatusProvider>,
     (children) => (
-      <MissingResourcesProvider onMissingPathsChange={onMissingPathsChange}>
+      <MissingResourcesProvider>
         <LiveFilesHost />
         {children}
       </MissingResourcesProvider>
