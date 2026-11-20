@@ -62,10 +62,13 @@ describe('countDrawnSurfaces', () => {
   });
 
   it('counts at most the instances three draws of an instanced geometry (edge case)', () => {
-    const geometry = Object.assign(new THREE.InstancedBufferGeometry().copy(new THREE.BoxGeometry()), {
-      instanceCount: 10,
-      _maxInstanceCount: 2,
-    });
+    const geometry = Object.assign(
+      new THREE.InstancedBufferGeometry().setIndex(new THREE.BoxGeometry().index),
+      {
+        instanceCount: 10,
+        _maxInstanceCount: 2,
+      }
+    );
     expect(counted(listOf(new THREE.Mesh(geometry))).primitives).toBe(24);
   });
 
