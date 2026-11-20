@@ -46,7 +46,8 @@ const captured: {
   /** The state the fake shell reports from its mount effect, as the real bridge does. */
   mountCaptureState?: PreviewCaptureState;
   shellMountEffects: number;
-} = { scenes: [], shellMountEffects: 0 };
+  shellMountCleanups: number;
+} = { scenes: [], shellMountEffects: 0, shellMountCleanups: 0 };
 
 /** The text of the scene the app opened last, as the shell would draw it. */
 const sceneText = () => captured.scenes.at(-1)?.text;
@@ -60,6 +61,9 @@ vi.mock('@textscene/core', () => ({
     const { onCaptureStateChange } = props;
     useEffect(() => {
       captured.shellMountEffects += 1;
+      return () => {
+        captured.shellMountCleanups += 1;
+      };
     }, []);
     useEffect(() => {
       if (captured.mountCaptureState) onCaptureStateChange?.(captured.mountCaptureState);
@@ -122,7 +126,11 @@ function postedMessages(vscodeApi: MockVsCodeApi): WebviewToHostMessage[] {
 /** What the host keeps: each `webviewReady` resets its copy, as a remount sends one. */
 function postedSinceLastReady(vscodeApi: MockVsCodeApi): WebviewToHostMessage[] {
   const messages = postedMessages(vscodeApi);
-  return messages.slice(messages.map((m) => m.type).lastIndexOf('webviewReady'));
+  const lastReady = messages.map((m) => m.type).lastIndexOf('webviewReady');
+  if (lastReady === -1) {
+    throw new Error(`expected a webviewReady among ${messages.length} posted messages, got none`);
+  }
+  return messages.slice(lastReady);
 }
 
 /** Mount a fresh copy of the module (config globals are read at module-load time). */
@@ -135,6 +143,7 @@ async function mountFresh(
   captured.scenes = [];
   captured.logAdapter = undefined;
   captured.shellMountEffects = 0;
+  captured.shellMountCleanups = 0;
   messageListeners = [];
 
   if (config) {
@@ -200,6 +209,7 @@ describe('mountR3FWebview', () => {
     await mountFresh();
 
     expect(captured.shellMountEffects).toBe(2);
+    expect(captured.shellMountCleanups).toBe(1);
   });
 
   it('posts each webviewReady handshake with its message listener installed once', async () => {

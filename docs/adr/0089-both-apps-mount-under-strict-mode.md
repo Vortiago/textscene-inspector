@@ -23,5 +23,6 @@ does not undo then shows twice: a second listener, a second scene, a second WebG
 - The VS Code integration suite builds the webview without `--production`, so it runs React's
   development build and exercises StrictMode. The web E2E gate and the visual gate serve a
   production build, where StrictMode does nothing.
-- A host can receive `webviewReady` twice on mount in a development build. The host replays the
-  scene text on each one, so the second one changes nothing.
+- A host can receive `webviewReady` twice on mount in a development build. On each one the host
+  replays the scene text and the visibility, and resets its copy of the capture state. The webview
+  posts its capture state after each one, so the second one changes nothing.

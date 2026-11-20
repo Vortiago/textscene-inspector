@@ -169,7 +169,7 @@ describe('corpus boundary — the root never moves under a mounted scene', () =>
   });
 
   it('refetches when the user re-picks a fixture whose load failed', async () => {
-    // By state, not by call count: StrictMode fetches twice on mount.
+    // Re-picking is the only retry. The fetch fails by state, as StrictMode fetches twice on mount.
     let isSceneServed = false;
     let sceneFetches = 0;
     globalThis.fetch = vi.fn().mockImplementation(async (url: unknown) => {
