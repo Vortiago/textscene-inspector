@@ -1,4 +1,5 @@
 import { useCallback, useSyncExternalStore } from 'react';
+import { subscribeToSceneTree } from '../../currentCamera.js';
 import type { NodeHandle } from '../../../scene/nodeHandle.js';
 import type { Scene } from '../../../scene/openScene.js';
 import { ROOT_WINDOW_PATH } from '../../../scene/nodePathWalk.js';
@@ -35,7 +36,7 @@ function useAuthoredNodeCount(scene: Scene): number | null {
 }
 
 function useCamera3DCount(scene: Scene): number {
-  const observeTree = useCallback((listener: () => void) => scene.observe(null, listener), [scene]);
+  const observeTree = useCallback((listener: () => void) => subscribeToSceneTree(scene, listener), [scene]);
   return useSyncExternalStore(observeTree, () => camera3DCountUnder(scene.getNodeOrNull(ROOT_WINDOW_PATH)));
 }
 

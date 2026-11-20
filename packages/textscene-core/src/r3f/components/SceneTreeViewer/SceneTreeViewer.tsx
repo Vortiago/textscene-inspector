@@ -9,8 +9,8 @@ import { useHierarchy } from '../../contexts/HierarchyContext.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
 import { useSelectPath } from '../TscnPreviewShell/previewSelection.js';
 import { useSeatedRoots, useSharedLiveTree } from '../../useLiveSceneTree.js';
-import { walkLiveTree } from '../../liveSceneTree.js';
-import { dockLists } from '../../dockListing.js';
+import { walkLiveTree, type LiveTreeEntry } from '../../liveSceneTree.js';
+import { dockListsChild } from '../../dockListing.js';
 import { TreeNode } from './TreeNode.js';
 import styles from './SceneTreeViewer.module.css';
 
@@ -57,10 +57,24 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
   }, [sceneGraph]);
 
   const editablePaths = sceneGraph?.scenes.get(sceneGraph.rootScene)?.editableInstances ?? NO_PATHS;
-  const isListed = useCallback(
-    (path: string): boolean => !liveTree || dockLists(path, liveTree.roots, liveTree.ctx, editablePaths),
+  const isListedChild = useCallback(
+    (path: string): boolean => !liveTree || dockListsChild(path, liveTree.roots, liveTree.ctx, editablePaths),
     [liveTree, editablePaths]
   );
+  // The dock stops at an unlisted node, so a pre-order walk checks a node only below a listed parent.
+  const listedEntries = useMemo<readonly LiveTreeEntry[]>(() => {
+    if (!liveTree) return [];
+    const listed = new Set<string>();
+    const entries: LiveTreeEntry[] = [];
+    walkLiveTree(liveTree.roots, liveTree.ctx, (entry) => {
+      const parent = entry.path.slice(0, Math.max(entry.path.lastIndexOf('/'), 0));
+      const isListed = parent === '' || (listed.has(parent) && isListedChild(entry.path));
+      if (!isListed) return;
+      listed.add(entry.path);
+      entries.push(entry);
+    });
+    return entries;
+  }, [liveTree, isListedChild]);
 
   const term = searchTerm.trim().toLowerCase();
 
@@ -69,19 +83,16 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
   // means no search. It recomputes on each load tick, which gives a new live tree.
   const matchingPaths = useMemo<ReadonlySet<string> | null>(() => {
     if (!term) return null;
-    if (!liveTree) return new Set<string>();
     const found = new Set<string>();
-    walkLiveTree(liveTree.roots, liveTree.ctx, ({ node, path }) => {
-      if (!isListed(path)) return;
-      if (node.name.toLowerCase().includes(term) || node.type.toLowerCase().includes(term)) {
-        found.add(path);
-        for (let slash = path.lastIndexOf('/'); slash > 0; slash = path.lastIndexOf('/', slash - 1)) {
-          found.add(path.slice(0, slash));
-        }
+    for (const { node, path } of listedEntries) {
+      if (!node.name.toLowerCase().includes(term) && !node.type.toLowerCase().includes(term)) continue;
+      found.add(path);
+      for (let slash = path.lastIndexOf('/'); slash > 0; slash = path.lastIndexOf('/', slash - 1)) {
+        found.add(path.slice(0, slash));
       }
-    });
+    }
     return found;
-  }, [term, liveTree, isListed]);
+  }, [term, listedEntries]);
 
   const matches = useCallback(
     (path: string): boolean => matchingPaths === null || matchingPaths.has(path),
@@ -89,13 +100,8 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
   );
 
   const handleExpandAll = useCallback(() => {
-    if (!liveTree) return;
-    const all = new Set<string>();
-    walkLiveTree(liveTree.roots, liveTree.ctx, ({ path }) => {
-      if (isListed(path)) all.add(path);
-    });
-    setExpandedNodePaths(all);
-  }, [liveTree, isListed, setExpandedNodePaths]);
+    setExpandedNodePaths(new Set(listedEntries.map((entry) => entry.path)));
+  }, [listedEntries, setExpandedNodePaths]);
 
   const handleCollapseAll = useCallback(() => {
     setExpandedNodePaths(new Set());
@@ -241,7 +247,7 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
               onNodeReveal={onNodeReveal}
               onOpenSubScene={onOpenSubScene}
               matches={matches}
-              isListed={isListed}
+              isListedChild={isListedChild}
               externalResources={externalResources}
               isDefaultFocusable={index === 0 && !selectedRowRendered}
             />

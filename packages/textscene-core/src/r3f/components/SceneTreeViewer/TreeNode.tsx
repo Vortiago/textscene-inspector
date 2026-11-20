@@ -67,7 +67,7 @@ interface TreeNodeProps {
    */
   matches: (path: string) => boolean;
   /** Whether Godot's Scene dock lists the node at this path (`dockListing.ts`). */
-  isListed: (path: string) => boolean;
+  isListedChild: (path: string) => boolean;
   /**
    * The host scene's externalResources, which resolve `ExtResource("id")` to
    * the PackedScene's `res://` path with no re-read of HierarchyContext.
@@ -95,7 +95,7 @@ function TreeNodeImpl({
   onNodeReveal,
   onOpenSubScene,
   matches,
-  isListed,
+  isListedChild,
   externalResources,
   instancedScenePaths,
   isDefaultFocusable = false,
@@ -112,8 +112,8 @@ function TreeNodeImpl({
   // stable across selection and hover, so the row reuses one merge.
   const { node: effective, groups: liveGroups, instancePath } = useLiveStep(node, scope);
   const groups = useMemo(
-    () => listedGroups(liveGroups, (child) => isListed(joinPath(nodePath, child.name))),
-    [liveGroups, isListed, nodePath]
+    () => listedGroups(liveGroups, (child) => isListedChild(joinPath(nodePath, child.name))),
+    [liveGroups, isListedChild, nodePath]
   );
   const instanceScenePath = onOpenSubScene ? instancePath : null;
 
@@ -133,7 +133,7 @@ function TreeNodeImpl({
       onNodeReveal={onNodeReveal}
       onOpenSubScene={onOpenSubScene}
       matches={matches}
-      isListed={isListed}
+      isListedChild={isListedChild}
       externalResources={childScope.externalResources}
       instancedScenePaths={childScope.instancedScenePaths}
     />
@@ -285,7 +285,11 @@ function listedGroups(
   groups: readonly LiveChildGroup[],
   lists: (child: LiveNode) => boolean
 ): readonly LiveChildGroup[] {
-  const isShown = (child: LiveNode) => !child.isUnowned && lists(child);
-  if (groups.every((group) => group.children.every(isShown))) return groups;
-  return groups.map((group) => ({ ...group, children: group.children.filter(isShown) }));
+  let isAnyHidden = false;
+  const shown = groups.map((group) => {
+    const children = group.children.filter((child) => !child.isUnowned && lists(child));
+    isAnyHidden ||= children.length < group.children.length;
+    return { ...group, children };
+  });
+  return isAnyHidden ? shown : groups;
 }

@@ -12,7 +12,7 @@ import type { ReactNode } from 'react';
 import type { NodeHandle } from '../../../scene/nodeHandle.js';
 import { livePathOf, ROOT_WINDOW_PREFIX } from '../../../scene/nodePathWalk.js';
 import type { Scene } from '../../../scene/openScene.js';
-import { getAncestorPaths } from '../../../utils/nodePath.js';
+import { withAncestorsExpanded } from '../../../utils/nodePath.js';
 import { useOptionalSelection } from '../../contexts/SelectionContext.js';
 import { nearestHandle } from '../../hostSelection/HostSelection.js';
 
@@ -88,8 +88,8 @@ function useShowInPanel(selected: NodeHandle | null): void {
     if (!current) return;
     current.setSelectedNodePath(path);
     if (path === null) return;
-    const missing = getAncestorPaths(path).filter((ancestor) => !current.expandedNodePaths.has(ancestor));
-    if (missing.length > 0) current.setExpandedNodePaths(new Set([...current.expandedNodePaths, ...missing]));
+    const expanded = withAncestorsExpanded(current.expandedNodePaths, path);
+    if (expanded !== current.expandedNodePaths) current.setExpandedNodePaths(expanded);
   }, [path]);
 }
 

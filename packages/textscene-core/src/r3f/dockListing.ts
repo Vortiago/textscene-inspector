@@ -3,20 +3,14 @@ import { pathBetween } from '../utils/nodePath.js';
 import type { LiveTreeContext } from './liveSceneTree.js';
 import { claimOwnerOf, type ClaimOwner } from './uniqueNameOwner.js';
 
-/** Whether Godot's Scene dock lists the node at live `path` (`scene_tree_editor.cpp:283-290`). */
-export function dockLists(
+/** Whether the Scene dock lists `path` below a listed parent (`scene_tree_editor.cpp:283-290`). */
+export function dockListsChild(
   path: string,
   roots: readonly TscnNode[],
   ctx: LiveTreeContext,
   rootEditablePaths: readonly string[]
 ): boolean {
-  const segments = path.split('/');
-  // The dock stops at an unlisted node, so each node on the way down is listed too.
-  for (let depth = 2; depth <= segments.length; depth++) {
-    const owner = claimOwnerOf(segments.slice(0, depth).join('/'), roots, ctx);
-    if (!isListedOwner(owner, rootEditablePaths)) return false;
-  }
-  return true;
+  return isListedOwner(claimOwnerOf(path, roots, ctx), rootEditablePaths);
 }
 
 function isListedOwner(owner: ClaimOwner, rootEditablePaths: readonly string[]): boolean {
