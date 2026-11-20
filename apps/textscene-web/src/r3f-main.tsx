@@ -1,4 +1,5 @@
 import {
+  StrictMode,
   useCallback,
   useEffect,
   useMemo,
@@ -67,8 +68,8 @@ export function R3FApp() {
   const initialPreviewedCameraPath = useCameraDeepLink();
   const isPageVisible = useDocumentVisibility();
 
-  // One provider for the app's lifetime, so an uploaded texture survives a fixture switch.
-  const provider = useMemo(() => new WebResourceProvider({ hasFixturesMirror: HAS_FIXTURES_MIRROR }), []);
+  // In state, not a memo React may drop, so an uploaded texture survives for the app's lifetime.
+  const [provider] = useState(() => new WebResourceProvider({ hasFixturesMirror: HAS_FIXTURES_MIRROR }));
 
   // A scene on screen when the root moves loads the other corpus's files, so it moves at the swap.
   const applyCorpusRoot = (root: string) => provider.setResourceRoot(root);
@@ -345,8 +346,11 @@ export function R3FApp() {
 export function mountR3F(container: HTMLElement): void {
   container.innerHTML = '';
 
-  const root = createRoot(container);
-  root.render(<R3FApp />);
+  createRoot(container).render(
+    <StrictMode>
+      <R3FApp />
+    </StrictMode>
+  );
 }
 
 /** A provider object for one corpus, over the app's provider, which reads the active corpus root. */
