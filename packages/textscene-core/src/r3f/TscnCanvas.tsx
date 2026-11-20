@@ -135,7 +135,7 @@ const Canvas2DStage = lazy(() =>
 export type TscnCanvasMode = ViewportMode;
 
 export interface TscnCanvasProps extends Omit<HostSelectionProps, 'children'> {
-  /** The scene `openScene` gave. Without it, the view reads the `<TscnSceneProvider>` above it. */
+  /** The scene `openScene` gave. The entry requires it. Without it, the shell's view reads its provider. */
   scene?: Scene;
   /** `3D` by default. A change replaces the stage, so one canvas is live. */
   mode?: TscnCanvasMode;
