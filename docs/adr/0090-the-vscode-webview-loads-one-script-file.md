@@ -40,4 +40,6 @@ split build.
 - A cut-off copy of the script still fails its import, and the panel loads a new document once
   (`webviewLoadFailed`). No chunk can fail after the page runs.
 - About 16 previews closed during their load within 30 s still fill the 32 places. Only VS Code can
-  free a closed preview's places sooner.
+  free a closed preview's places sooner (#2077).
+- No check gates the web previewer's first-paint bundle size, and no check keeps modules loaded
+  only on demand out of a first paint (#2078).
