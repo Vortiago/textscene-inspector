@@ -9,7 +9,6 @@ import cssModulesPlugin from 'esbuild-css-modules-plugin';
 import { globSync } from 'glob';
 import { resolve } from 'node:path';
 import { mergedFileInputs, writeBundledNotices } from '../../scripts/third-party-notices.mjs';
-import { chunkImportPlugin } from './src/bundler/chunkImportPlugin.mjs';
 import { textureWorkerPlugin } from '../../packages/textscene-core/src/workers/bundler/esbuildPlugin.mjs';
 import { WORKSPACE_RENDERER_ALIAS } from '../../scripts/workspaceRenderer.mjs';
 
@@ -20,8 +19,7 @@ const skipTests = process.argv.includes('--skip-tests');
 /** The job worker's metafile, written by the worker plugin each time the webview build loads the worker. */
 let workerMetafile = { inputs: {} };
 
-// esbuild never deletes old outputs. Content-hashed chunks pile up in dist/webview
-// and get packaged into the VSIX.
+// esbuild never deletes old outputs, and a stale file in dist/webview would be packaged into the VSIX.
 await rm('dist/webview', { recursive: true, force: true });
 // A deleted `*.test.ts` leaves a `.test.js` here that suite/index.ts still globs.
 // Nothing else emits into dist/test (tsconfig.test.json is noEmit).
@@ -63,23 +61,20 @@ const extensionWebOptions = {
 };
 
 /**
- * This build only produces `dist/webview/`. The initial-load budget gate lives in
- * `scripts/check-bundle-size/webviewBudget.mjs`, run by the root `check:bundle-size`
- * script. ARCHITECTURE.md, "Bundle size", says what keeps the closure small.
+ * One script and its stylesheet in `dist/webview/` (ADR-0090), which `check:bundle-size` gates.
  *
  * @type {esbuild.BuildOptions}
  */
 const webviewOptions = {
   entryPoints: ['src/webview/webview.ts'],
   bundle: true,
-  // ESM, not iife: only ESM code-splits, so the panels load on demand as chunks/<panel>-<hash>.js.
   outdir: 'dist/webview',
   entryNames: '[name]',
-  chunkNames: 'chunks/[name]-[hash]',
   external: ['vscode'],
   alias: WORKSPACE_RENDERER_ALIAS,
   format: 'esm',
-  splitting: true,
+  // One file, not chunks: a preview closed during its load holds each open request for 30 s (ADR-0090).
+  splitting: false,
   platform: 'browser',
   target: 'es2020',
   sourcemap: !production,
@@ -102,7 +97,6 @@ const webviewOptions = {
         workerMetafile = metafile;
       },
     }),
-    chunkImportPlugin(),
   ],
   loader: {
     '.css': 'css',
@@ -192,11 +186,10 @@ if (watch) {
   }
 
   const [extensionResult, extensionWebResult, webviewResult] = await Promise.all(builds);
-  // Persist the metafiles for the host-bundle guard and the webview's lazy-only check.
+  // Persist the metafiles for the host-bundle guard.
   await Promise.all([
     writeFile('dist/extension.meta.json', JSON.stringify(extensionResult.metafile)),
     writeFile('dist/extension.web.meta.json', JSON.stringify(extensionWebResult.metafile)),
-    writeFile('dist/webview.meta.json', JSON.stringify(webviewResult.metafile)),
   ]);
   // `vsce package` runs this production build, and ships the notices beside package.json.
   if (production) {

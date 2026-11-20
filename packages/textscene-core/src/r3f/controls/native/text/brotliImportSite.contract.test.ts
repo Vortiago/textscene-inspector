@@ -1,9 +1,3 @@
-/**
- * `brotli` is imported from exactly one file, and only dynamically: a static import puts the decoder
- * and its dictionary on the webview's initial-paint path for every scene, and the bundle budget has
- * enough headroom to miss it.
- */
-
 import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
@@ -34,6 +28,7 @@ const IMPORTING_FILES = walk(SRC)
   .map((file) => relative(SRC, file).split(sep).join('/'))
   .sort();
 
+// A static import puts the decoder and its dictionary on the web previewer's initial-paint path.
 describe('brotli import site', () => {
   it('is imported by only the allowlisted files', () => {
     const offenders = IMPORTING_FILES.filter((file) => !ALLOWED.has(file));

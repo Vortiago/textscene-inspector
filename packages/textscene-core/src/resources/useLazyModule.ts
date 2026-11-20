@@ -1,13 +1,8 @@
-/**
- * A code chunk a component loads on demand, off the webview's initial-paint path: one import shared
- * by every caller, read through effect and state. Not Suspense: `<Canvas>` mounts its own reconciler
- * root, so a suspended node would blank its siblings while it waited.
- */
-
 import { useEffect, useState } from 'react';
 import { usePendingWhile } from './usePendingWhile';
 import type { LazyImport } from './memoisedImport';
 
+// Not Suspense: `<Canvas>` mounts its own reconciler root, so a suspended node would blank its siblings.
 /**
  * The module `load` gives, or null before it lands. The caller counts as one pending load until
  * then, so a capture waits for the chunk. A module that fails to load reads null for good, and the
