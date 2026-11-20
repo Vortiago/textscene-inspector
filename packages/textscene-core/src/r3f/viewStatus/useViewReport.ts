@@ -82,7 +82,7 @@ export function useViewReport(): (isFullSize: boolean, awaitedCamera?: string | 
   };
 }
 
-/** A load can start or end while no frame draws, so the status hears of it at once. Only a drawn frame settles. */
+/** A load can start or end while no frame draws, so the status hears of it at once. A frame settles. */
 function useReportStartedWork(
   store: ViewStatusStore | null,
   isAttached: { readonly current: boolean },
@@ -94,9 +94,8 @@ function useReportStartedWork(
     const onWorkChange = () => {
       if (!isAttached.current) return;
       const work = pendingSceneWork(loader);
-      store.workChanged(work);
-      // The status reads the last frame in place, so the record changes only to report work.
-      if (!hasPendingWork(work)) return;
+      // The status reads the last frame in place, so the record changes only to report started work.
+      if (!hasPendingWork(work)) return store.workChanged(work);
       frame.work = work;
       store.frameDrawn(frame);
     };

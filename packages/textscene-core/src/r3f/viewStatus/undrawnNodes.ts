@@ -11,6 +11,12 @@ export interface UndrawnNode {
   isEmptyShape: boolean;
 }
 
+/** The entry of the node at the live path `livePath`, or null. */
+export function undrawnNodeAt(undrawn: readonly UndrawnNode[], livePath: string): UndrawnNode | null {
+  const path = absolutePathOf(livePath);
+  return undrawn.find((node) => node.path === path) ?? null;
+}
+
 /** Why a node is undrawn: a mesh of a type the view does not draw, or an empty CSG shape. */
 export type UndrawnReason = { meshType: string } | 'empty-shape';
 

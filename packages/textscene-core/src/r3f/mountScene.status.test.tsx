@@ -4,8 +4,7 @@ import { mountScene, type ViewOptions } from './mountScene';
 import { openScene } from '../scene/openScene';
 import type { ResourceProvider } from '../resources/ResourceProvider';
 
-// A happy-dom render creates no WebGL context. The stub stands in for a view that draws in software,
-// and holds a mesh it does not draw, typed by its stage.
+// No WebGL here: the stub draws in software and holds an undrawn mesh typed by its stage.
 vi.mock('@react-three/fiber', async (importOriginal) => {
   const { useViewStatusStore } = await import('./viewStatus/ViewStatusContext');
   const { useEffect } = await import('react');

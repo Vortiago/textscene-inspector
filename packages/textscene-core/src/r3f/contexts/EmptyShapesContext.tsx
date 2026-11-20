@@ -1,7 +1,3 @@
-/**
- * Godot warns on a CSG shape whose brush is empty and on each shape below it (`csg_shape.cpp:977-988`).
- * A shape reports through `useReportEmptyShape` to the view's status.
- */
 import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
 import { parentPathOf } from '../../utils/nodePath.js';
 import { useViewStatusStore } from '../viewStatus/ViewStatusContext.js';
@@ -16,11 +12,7 @@ interface ParentShape {
 const ParentShapeContext = createContext<ParentShape | null>(null);
 ParentShapeContext.displayName = 'ParentShapeContext';
 
-/**
- * Reports the enclosing node while its shape is empty, and returns whether it is. A shape is empty
- * when its own brush is, or when its direct CSG parent's shape is: `CSGBox3D > Node3D > CSGSphere3D`
- * is two roots, so only the parent's own path counts.
- */
+/** Reports the node while its own brush or its direct CSG parent's shape is empty (csg_shape.cpp:977-988). */
 export function useReportEmptyShape(hasOwnEmptyBrush: boolean): boolean {
   const path = useNodePath();
   const parent = useContext(ParentShapeContext);

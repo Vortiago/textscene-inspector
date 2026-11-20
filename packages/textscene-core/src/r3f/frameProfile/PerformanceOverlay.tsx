@@ -5,11 +5,14 @@ import { subscribeToNothing } from '../../utils/subscribeToNothing.js';
 import { PerformancePanel } from './PerformancePanel.js';
 
 export function PerformanceOverlay() {
-  const { performance } = useViewShow();
+  return useViewShow().performance ? <MeasuredPanel /> : null;
+}
+
+function MeasuredPanel() {
   const store = useViewStatusStore();
   const stats = useSyncExternalStore(
     store?.subscribe ?? subscribeToNothing,
     () => store?.status().frame ?? null
   );
-  return performance ? <PerformancePanel stats={stats} /> : null;
+  return <PerformancePanel stats={stats} />;
 }

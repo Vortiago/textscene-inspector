@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useViewStatusStore } from './ViewStatusContext.js';
 import { useNodePath } from '../contexts/NodePathContext.js';
 
-/** Reports the enclosing node's mesh of `type` to the view's status while no slice draws it. Null reports nothing. */
+/** Reports the enclosing node's mesh of `type` while no slice draws it. Null reports nothing. */
 export function useUndrawnMeshReport(type: string | null): void {
   const store = useViewStatusStore();
   const path = useNodePath();

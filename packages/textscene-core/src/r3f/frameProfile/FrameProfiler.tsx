@@ -1,8 +1,3 @@
-/**
- * Runs a frame profile on its canvas's renderer while the Performance toggle is on, and publishes
- * each window to the view's status. While the toggle is off it mounts nothing, so no frame is timed.
- */
-
 import { useEffect } from 'react';
 import { addAfterEffect, addEffect, useFrame, useThree } from '@react-three/fiber';
 import { useViewShow } from '../viewShow/ViewShowContext.js';

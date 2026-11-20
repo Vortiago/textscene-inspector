@@ -1,6 +1,5 @@
 import { createContext, useCallback, useContext, useState } from 'react';
-import type { UndrawnNode } from '../../viewStatus/undrawnNodes.js';
-import { absolutePathOf } from '../../../scene/nodePathWalk.js';
+import { undrawnNodeAt, type UndrawnNode } from '../../viewStatus/undrawnNodes.js';
 import type { ViewStatus } from '../../viewStatus/viewStatus.js';
 
 /** The status the shell's view last reported, and how many times it has turned pending. */
@@ -33,6 +32,5 @@ export const PreviewViewStatusProvider = PreviewViewStatusContext.Provider;
 /** What the shell's view holds of the node at the live path `livePath` and does not draw, or null. */
 export function useUndrawnNode(livePath: string): UndrawnNode | null {
   const status = useContext(PreviewViewStatusContext);
-  const path = absolutePathOf(livePath);
-  return status?.undrawn.find((node) => node.path === path) ?? null;
+  return status ? undrawnNodeAt(status.undrawn, livePath) : null;
 }

@@ -1,8 +1,3 @@
-/**
- * The top-bar status that the view still builds or uploads textures. It exists
- * only while the count is above zero, so "gone" means detached from the DOM,
- * which is what a capture harness waits for.
- */
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';

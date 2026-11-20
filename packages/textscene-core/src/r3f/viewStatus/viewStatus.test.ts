@@ -258,29 +258,6 @@ describe('the capture of a view', () => {
   });
 });
 
-describe('the pending rounds of a view', () => {
-  it('counts a load that starts and ends between two reads', () => {
-    const status = attachedStatus();
-    status.frameDrawn(frameOf(1));
-    const before = status.pendingRounds();
-
-    status.frameDrawn(frameOf(1, { ...NO_PENDING_WORK, resources: 1 }));
-    status.frameDrawn(frameOf(1));
-
-    expect(status.pendingRounds()).toBe(before + 1);
-  });
-
-  it('counts no round for a settled frame that follows a settled frame', () => {
-    const status = attachedStatus();
-    status.frameDrawn(frameOf(1));
-    const before = status.pendingRounds();
-
-    status.frameDrawn(frameOf(1));
-
-    expect(status.pendingRounds()).toBe(before);
-  });
-});
-
 describe('the status a view reports', () => {
   it('gives the settled facts once the view settles, and null while it is pending', () => {
     const status = attachedStatus();

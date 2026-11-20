@@ -15,7 +15,7 @@ export interface ViewSettled {
 export interface ViewStatus {
   /** The settled value, or null while the view is pending. */
   settled: ViewSettled | null;
-  /** The textures and fonts the view still builds. */
+  /** The textures and fonts still building on the page: two views of one page count each other's. */
   pending: { textures: number; fonts: number };
   /** The last window of frame numbers, or null while `show.performance` is off or measures its first. */
   frame: FrameStats | null;
@@ -24,6 +24,15 @@ export interface ViewStatus {
   /** The browser draws the view's WebGL in software, so every frame is slow. */
   isSoftwareRendering: boolean;
 }
+
+/** What a host has heard before a view reports: nothing settled, pending, measured, undrawn or found. */
+export const EMPTY_VIEW_STATUS: ViewStatus = {
+  settled: null,
+  pending: { textures: 0, fonts: 0 },
+  frame: null,
+  undrawn: [],
+  isSoftwareRendering: false,
+};
 
 export interface LiveScene {
   /** Changes with each change a frame draws, so a frame that drew the same revision shows the scene. */
@@ -55,8 +64,6 @@ export interface ViewStatusStore {
   settled(): ViewSettled | null;
   /** An attached view that has not settled: no view at all waits on nothing. */
   isPending(): boolean;
-  /** How many times the view has turned pending, so a reader that renders later misses no round. */
-  pendingRounds(): number;
   subscribe(listener: () => void): () => void;
   /** Stays pending while no view is attached, and rejects with the reason of `signal` once it aborts. */
   whenSettled(signal?: AbortSignal): Promise<ViewSettled>;
@@ -84,16 +91,26 @@ export function createViewStatusStore(): ViewStatusStore {
   let lastFrame: DrawnFrame | null = null;
   // What subscribers last heard, so a view that settles again on the same facts still tells them.
   let announced: ViewSettled | null = null;
-  let rounds = 0;
   let capture: PendingCapture | null = null;
   let reader: (() => RgbaImage) | null = null;
   let isReadQueued = false;
   const pending = { textures: 0, fonts: 0 };
   let frame: FrameStats | null = null;
   let isSoftwareRendering = false;
-  const undrawn = createUndrawnNodes();
-  undrawn.subscribe(() => notify());
+  // Written only by `status`, and cleared by each change it shows.
   let shown: ViewStatus | null = null;
+  const undrawn = createUndrawnNodes();
+  // Many nodes report as a scene mounts, so their reports reach the subscribers once per task.
+  let isUndrawnNoticeQueued = false;
+  undrawn.subscribe(() => {
+    shown = null;
+    if (isUndrawnNoticeQueued) return;
+    isUndrawnNoticeQueued = true;
+    queueMicrotask(() => {
+      isUndrawnNoticeQueued = false;
+      notify();
+    });
+  });
 
   const showsDrawnState = () => live !== null && lastFrame !== null && live.revision() === lastFrame.revision;
   // Nested viewports draw before their parent in one frame, so one frame shows a revision whole.
@@ -102,10 +119,12 @@ export function createViewStatusStore(): ViewStatusStore {
       ? lastFrame!.facts
       : null;
 
-  const notify = () => announcements.set(announcements.get() + 1);
+  const notify = () => {
+    shown = null;
+    announcements.set(announcements.get() + 1);
+  };
 
   function announce(now = settled()): void {
-    if (now === null && announced !== null) rounds++;
     announced = now;
     notify();
   }
@@ -116,20 +135,14 @@ export function createViewStatusStore(): ViewStatusStore {
   }
 
   function status(): ViewStatus {
-    const now = settled();
-    const nodes = undrawn.nodes();
-    const isCurrent =
-      shown !== null &&
-      shown.settled === now &&
-      shown.pending.textures === pending.textures &&
-      shown.pending.fonts === pending.fonts &&
-      shown.frame === frame &&
-      shown.undrawn === nodes &&
-      shown.isSoftwareRendering === isSoftwareRendering;
-    if (!isCurrent) {
-      shown = { settled: now, pending: { ...pending }, frame, undrawn: nodes, isSoftwareRendering };
-    }
-    return shown!;
+    shown ??= {
+      settled: settled(),
+      pending: { ...pending },
+      frame,
+      undrawn: undrawn.nodes(),
+      isSoftwareRendering,
+    };
+    return shown;
   }
 
   function workChanged(work: PendingSceneWork): void {
@@ -252,12 +265,12 @@ export function createViewStatusStore(): ViewStatusStore {
       notify();
     },
     frameMeasured(stats) {
+      if (stats === frame) return;
       frame = stats;
       notify();
     },
     settled,
     isPending: () => live !== null && settled() === null,
-    pendingRounds: () => rounds,
     subscribe: announcements.subscribe,
     whenSettled,
     captureImage,

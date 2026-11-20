@@ -1,5 +1,3 @@
-/** Reads whether its canvas's renderer draws in software and reports it to the view's status. */
-
 import { useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
 import { useViewStatusStore } from '../viewStatus/ViewStatusContext.js';

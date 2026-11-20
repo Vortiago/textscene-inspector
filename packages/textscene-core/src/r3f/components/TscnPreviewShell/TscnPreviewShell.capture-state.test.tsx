@@ -95,7 +95,7 @@ function StubCanvas({ mode = '3D', onStatusChange, ref }: StubProps) {
   );
 }
 
-/** A read of `settled` answers once the view's status settles, as a real view's does, or rejects once failed. */
+/** A read of `settled` answers once the status settles, as a real view's does, or rejects once failed. */
 function stubAnswers(mode: string, store: ViewStatusStore): ViewAnswers {
   const waits: { resolve: (settled: ViewSettled) => void; reject: (error: Error) => void }[] = [];
   let failure: Error | null = null;

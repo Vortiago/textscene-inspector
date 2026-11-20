@@ -1,15 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useViewStatusStore } from './ViewStatusContext.js';
-import type { ViewStatus } from './viewStatus.js';
-
-/** The status a host has heard before the first call: nothing settled, pending, undrawn or found. */
-const UNREPORTED: ViewStatus = {
-  settled: null,
-  pending: { textures: 0, fonts: 0 },
-  frame: null,
-  undrawn: [],
-  isSoftwareRendering: false,
-};
+import { EMPTY_VIEW_STATUS, type ViewStatus } from './viewStatus.js';
 
 /** Calls `onStatusChange` on each change, so a host hears a load that starts and ends in one task. */
 export function StatusChangeReporter({ onStatusChange }: { onStatusChange: (status: ViewStatus) => void }) {
@@ -18,7 +9,7 @@ export function StatusChangeReporter({ onStatusChange }: { onStatusChange: (stat
   latest.current = onStatusChange;
   useEffect(() => {
     if (!store) return undefined;
-    let heard = UNREPORTED;
+    let heard = EMPTY_VIEW_STATUS;
     const check = () => {
       const now = store.status();
       if (!changesBeyondFrame(heard, now)) return;
