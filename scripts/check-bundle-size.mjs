@@ -22,7 +22,7 @@ function main() {
 
   // A missing webview build measured nothing, so it fails only --enforce callers, who expect one.
   if (webview === 'missing-entry') process.exit(!hostOk || enforce ? 1 : 0);
-  if (['unresolved-imports', 'eager-lazy-only'].includes(webview)) process.exit(1);
+  if (webview === 'split-entry') process.exit(1);
   if (!hostOk || (webview === 'over-budget' && enforce)) process.exit(1);
 }
 

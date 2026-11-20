@@ -376,6 +376,12 @@ jobs:
       - if: runner.os == 'Linux'
         run: pnpm test:vscode:csp
 
+      # The window's user data is under the system temporary directory, which is not /tmp on macOS or Windows.
+      - if: failure()
+        run: >-
+          node -e "const fs = require('fs'); const logs = require('path').join(require('os').tmpdir(),
+          'vscode-test-data', 'logs'); if (fs.existsSync(logs)) fs.cpSync(logs, 'apps/textscene-vscode/out/vscode-logs',
+          { recursive: true });"
       - if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -383,7 +389,6 @@ jobs:
           path: |
             apps/textscene-vscode/.test-workspace/
             apps/textscene-vscode/out/
-            /tmp/vscode-test-data/logs/
             scripts/vscode/output/csp-gate/
 
   vsix:

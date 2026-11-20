@@ -1,9 +1,3 @@
-/**
- * The one place `three-bvh-csg` is imported, and lazily: a static import puts the CSG core and
- * `three-mesh-bvh` on the webview's initial-paint path for every scene. `csgImportSite.contract.test.ts`
- * holds the import to this file.
- */
-
 import type * as THREE from 'three';
 import { memoisedImport } from '../../resources/memoisedImport';
 
@@ -19,6 +13,7 @@ export interface CsgModule {
   INTERSECTION: number;
 }
 
+// The one import of `three-bvh-csg`, lazy to stay off the first paint (csgImportSite.contract.test.ts).
 /** Load the CSG library once, shared by every caller. A failed import stays failed. */
 export const loadCsgModule = memoisedImport(() =>
   import('three-bvh-csg').then((m) => m as unknown as CsgModule)
