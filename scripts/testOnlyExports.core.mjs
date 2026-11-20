@@ -37,6 +37,8 @@ export const KEPT_TEST_ONLY_EXPORTS = [
   // The switch of the TSL port ships before its one reader, the pick of a lit surface's material,
   // which the next slice of the port adds.
   'r3f/litSurface/litSurfaceForm.ts#litSurfaceForm',
+  // The step tests start a step at the root scene's scope, which the live tree builds once inside.
+  'r3f/liveSceneTree.ts#rootScope',
   // A host's scene loads through the loader of its provider. Only a test hands a scene a loader it built.
   'r3f/sceneResourcePipeline.ts#adoptLoader',
   // The builds and the cache are module state, so each test starts from the one reset that aborts

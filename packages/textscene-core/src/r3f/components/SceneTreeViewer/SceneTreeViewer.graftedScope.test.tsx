@@ -27,7 +27,8 @@ describe('<SceneTreeViewer> — a node grafted into an instanced sub-scene', () 
     const fake = createFakeResourceLoader();
     const requested = recordSceneRequests(fake);
     fake.scenes.seed(SUB_PATH, subScene);
-    const sceneGraph = createSceneGraphFromTscnScene(hostScene);
+    // The dock lists Slot, and so the graft, only below an editable Sub.
+    const sceneGraph = createSceneGraphFromTscnScene({ ...hostScene, editableInstances: ['Sub'] });
 
     render(
       <HierarchyProvider value={{ sceneGraph, panelId: 'p' }}>

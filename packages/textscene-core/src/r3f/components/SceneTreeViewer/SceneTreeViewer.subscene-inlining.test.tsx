@@ -21,6 +21,9 @@ import type { TscnNode, TscnScene, TscnExternalResource } from '../../../parser/
 import { INSTANTIABLE_SCENE } from '../../../parser/sceneDefaults.testkit';
 // The Instance root merge parses a sub-scene root with the Node parser when its type has none.
 import '../../../nodes/node/index';
+import { TscnParser } from '../../../parser/TscnParser';
+
+const parse = (text: string): TscnScene => new TscnParser().parse(`[gd_scene format=3]\n\n${text}`);
 
 function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): TscnNode {
   return { rawProperties: {}, name, type, children: [], properties: {}, ...extras };
@@ -48,29 +51,21 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
   it("renders a sub-scene's root nodes as inline children of the instance row when the loader has it cached", () => {
     const fake = createFakeResourceLoader();
 
-    // Sub-scene's content: a Node3D named "Frame" containing a MeshInstance3D.
-    const subScene: TscnScene = {
-      ...INSTANTIABLE_SCENE,
-      nodes: [
-        makeNode('Frame', 'Node3D', {
-          children: [makeNode('FrameMesh', 'MeshInstance3D')],
-        }),
-      ],
-      externalResources: [],
-      internalResources: [],
-    };
-    fake.scenes.seed('res://photo_frame.tscn', subScene);
+    fake.scenes.seed(
+      'res://photo_frame.tscn',
+      parse(`[node name="Frame" type="Node3D"]
 
-    // Root scene's content: a single instancing node that points at the sub-scene.
-    const graph = createSceneGraphFromTscnScene({
-      nodes: [
-        makeNode('PhotoFrame1', 'Node3D', {
-          instance: 'ExtResource("frame_1")',
-        }),
-      ],
-      externalResources: [makeExtResource('frame_1', 'res://photo_frame.tscn')],
-      internalResources: [],
-    });
+[node name="FrameMesh" type="MeshInstance3D" parent="."]
+`)
+    );
+
+    // The root instances the sub-scene, so the scene inherits it and owns its nodes.
+    const graph = createSceneGraphFromTscnScene(
+      parse(`[ext_resource type="PackedScene" path="res://photo_frame.tscn" id="frame_1"]
+
+[node name="PhotoFrame1" instance=ExtResource("frame_1")]
+`)
+    );
 
     render(<SceneTreeViewer />, { wrapper: wrap(fake.loader, graph) });
 
@@ -90,32 +85,33 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
     // The inner instance uses an ExtResource id that only the sub-scene declares,
     // so it resolves against the sub-scene's resource table.
     const fake = createFakeResourceLoader();
-    const subB: TscnScene = {
-      ...INSTANTIABLE_SCENE,
-      nodes: [makeNode('BRoot', 'Node3D', { children: [makeNode('Leaf', 'MeshInstance3D')] })],
-      externalResources: [],
-      internalResources: [],
-    };
-    const subA: TscnScene = {
-      ...INSTANTIABLE_SCENE,
-      nodes: [
-        makeNode('ARoot', 'Node3D', {
-          children: [makeNode('Inner', 'Node3D', { instance: 'ExtResource("9_subB")' })],
-        }),
-      ],
-      // subA's own resource table is the only place "9_subB" is defined.
-      externalResources: [makeExtResource('9_subB', 'res://subB.tscn')],
-      internalResources: [],
-    };
-    fake.scenes.seed('res://subA.tscn', subA);
-    fake.scenes.seed('res://subB.tscn', subB);
+    fake.scenes.seed(
+      'res://subB.tscn',
+      parse(`[node name="BRoot" type="Node3D"]
 
-    // The outer scene knows only subA ("1_subA"), not "9_subB".
-    const graph = createSceneGraphFromTscnScene({
-      nodes: [makeNode('A', 'Node3D', { instance: 'ExtResource("1_subA")' })],
-      externalResources: [makeExtResource('1_subA', 'res://subA.tscn')],
-      internalResources: [],
-    });
+[node name="Leaf" type="MeshInstance3D" parent="."]
+`)
+    );
+    // subA's own resource table is the only place "9_subB" is defined.
+    fake.scenes.seed(
+      'res://subA.tscn',
+      parse(`[ext_resource type="PackedScene" path="res://subB.tscn" id="9_subB"]
+
+[node name="ARoot" type="Node3D"]
+
+[node name="Inner" parent="." instance=ExtResource("9_subB")]
+`)
+    );
+
+    // The outer scene knows only subA ("1_subA"), not "9_subB". Inner is editable, so its nodes list.
+    const graph = createSceneGraphFromTscnScene(
+      parse(`[ext_resource type="PackedScene" path="res://subA.tscn" id="1_subA"]
+
+[node name="A" instance=ExtResource("1_subA")]
+
+[editable path="Inner"]
+`)
+    );
 
     render(<SceneTreeViewer />, { wrapper: wrap(fake.loader, graph) });
 
@@ -173,26 +169,18 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
   it('inline children of an instance node coexist with sub-scene children', () => {
     const fake = createFakeResourceLoader();
 
-    const subScene: TscnScene = {
-      ...INSTANTIABLE_SCENE,
-      nodes: [makeNode('SubRoot', 'Node3D')],
-      externalResources: [],
-      internalResources: [],
-    };
-    fake.scenes.seed('res://sub.tscn', subScene);
+    fake.scenes.seed('res://sub.tscn', parse(`[node name="SubRoot" type="Node3D"]\n`));
 
     // The instance node has both inline children and an `instance` ref. The
     // tree shows both groups.
-    const graph = createSceneGraphFromTscnScene({
-      nodes: [
-        makeNode('Inst', 'Node3D', {
-          instance: 'ExtResource("sub_1")',
-          children: [makeNode('Override', 'MeshInstance3D')],
-        }),
-      ],
-      externalResources: [makeExtResource('sub_1', 'res://sub.tscn')],
-      internalResources: [],
-    });
+    const graph = createSceneGraphFromTscnScene(
+      parse(`[ext_resource type="PackedScene" path="res://sub.tscn" id="sub_1"]
+
+[node name="Inst" instance=ExtResource("sub_1")]
+
+[node name="Override" type="MeshInstance3D" parent="."]
+`)
+    );
 
     render(<SceneTreeViewer />, { wrapper: wrap(fake.loader, graph) });
 
@@ -253,23 +241,22 @@ describe('<SceneTreeViewer> Instance root merge (ADR-0013)', () => {
     const fake = createFakeResourceLoader();
 
     // The sub-scene root is an Area3D, a type other than the instance node's.
-    const subScene: TscnScene = {
-      ...INSTANTIABLE_SCENE,
-      nodes: [
-        makeNode('Coin', 'Area3D', {
-          children: [makeNode('Circle', 'MeshInstance3D'), makeNode('Animation', 'AnimationPlayer')],
-        }),
-      ],
-      externalResources: [],
-      internalResources: [],
-    };
-    fake.scenes.seed('res://coin/coin.tscn', subScene);
+    fake.scenes.seed(
+      'res://coin/coin.tscn',
+      parse(`[node name="Coin" type="Area3D"]
 
-    const graph = createSceneGraphFromTscnScene({
-      nodes: [makeNode('Coin1', 'Node3D', { instance: 'ExtResource("coin")' })],
-      externalResources: [makeExtResource('coin', 'res://coin/coin.tscn')],
-      internalResources: [],
-    });
+[node name="Circle" type="MeshInstance3D" parent="."]
+
+[node name="Animation" type="AnimationPlayer" parent="."]
+`)
+    );
+
+    const graph = createSceneGraphFromTscnScene(
+      parse(`[ext_resource type="PackedScene" path="res://coin/coin.tscn" id="coin"]
+
+[node name="Coin1" instance=ExtResource("coin")]
+`)
+    );
 
     const { container } = render(<SceneTreeViewer />, { wrapper: wrap(fake.loader, graph) });
 
@@ -331,21 +318,30 @@ describe('<SceneTreeViewer> Instance root merge (ADR-0013)', () => {
 
   it('search reaches a node inside an instanced sub-scene, keeping the instance row visible', () => {
     const fake = createFakeResourceLoader();
-    fake.scenes.seed('res://frame.tscn', {
-      ...INSTANTIABLE_SCENE,
-      nodes: [makeNode('FrameRoot', 'Node3D', { children: [makeNode('SpecialMesh', 'MeshInstance3D')] })],
-      externalResources: [],
-      internalResources: [],
-    });
-    const graph = createSceneGraphFromTscnScene({
-      nodes: [makeNode('Frame', 'Node3D', { instance: 'ExtResource("f")' }), makeNode('Other', 'Node3D')],
-      externalResources: [makeExtResource('f', 'res://frame.tscn')],
-      internalResources: [],
-    });
+    fake.scenes.seed(
+      'res://frame.tscn',
+      parse(`[node name="FrameRoot" type="Node3D"]
+
+[node name="SpecialMesh" type="MeshInstance3D" parent="."]
+`)
+    );
+    const graph = createSceneGraphFromTscnScene(
+      parse(`[ext_resource type="PackedScene" path="res://frame.tscn" id="f"]
+
+[node name="Main" type="Node3D"]
+
+[node name="Frame" parent="." instance=ExtResource("f")]
+
+[node name="Other" type="Node3D" parent="."]
+
+[editable path="Frame"]
+`)
+    );
 
     render(<SceneTreeViewer />, { wrapper: wrap(fake.loader, graph) });
 
     // Expand the instance so its sub-scene rows render.
+    expandRow('Main');
     expandRow('Frame');
     expect(screen.getByText('SpecialMesh')).toBeTruthy();
 

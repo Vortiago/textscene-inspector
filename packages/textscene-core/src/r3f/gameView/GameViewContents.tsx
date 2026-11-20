@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useOptionalHierarchy } from '../contexts/HierarchyContext.js';
 import { useSeatedRoots } from '../useLiveSceneTree.js';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext.js';
@@ -75,8 +75,17 @@ function RootViewport() {
 function useGameViewReport(drawnWindow: RootWindow, projectWindow: RootWindow) {
   const status = useViewStatus();
   const report = useViewReport();
-  return (readWindow: () => RgbaImage) => {
+  const readWindow = useRef<(() => RgbaImage) | null>(null);
+  useEffect(
+    () =>
+      status?.readWith(() => {
+        if (!readWindow.current) throw new Error('expected a presented window, got none');
+        return readWindow.current();
+      }),
+    [status]
+  );
+  return (read: () => RgbaImage) => {
+    readWindow.current = read;
     report(drawnWindow === projectWindow);
-    if (status?.isCaptureDue()) status.capture(readWindow);
   };
 }

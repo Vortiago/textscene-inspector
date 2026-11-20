@@ -74,7 +74,7 @@ function R3FWebviewApp({ vscode, scene }: { vscode: VsCodeApi; scene: Scene }) {
       if (isListeningRef.current) vscode.postMessage(captureStateMessage(state));
       if (state.status === 'pending') return;
       for (const requestId of heldRequestsRef.current.splice(0)) {
-        vscode.postMessage(captureAnswer(requestId, state));
+        answerCapture(vscode, requestId, state);
       }
     },
     [vscode]
@@ -96,7 +96,7 @@ function R3FWebviewApp({ vscode, scene }: { vscode: VsCodeApi; scene: Scene }) {
         setContent(message.content);
       } else if (message.type === 'capturePreview') {
         if (captureStateRef.current.status === 'pending') heldRequestsRef.current.push(message.requestId);
-        else vscode.postMessage(captureAnswer(message.requestId, captureStateRef.current));
+        else answerCapture(vscode, message.requestId, captureStateRef.current);
       } else if (message.type === 'previewVisibility') {
         setIsVisible(message.isVisible);
       } else if (message.type === 'capturePing') {
@@ -157,12 +157,35 @@ function captureStateMessage(state: PreviewCaptureState): WebviewToHostMessage {
  * The host posts a request only in the `ready` state, so a request in another state
  * crossed a change on the wire. The webview then names the state it is in.
  */
-function captureAnswer(requestId: string, state: PreviewCaptureState): WebviewToHostMessage {
-  const dataUrl = state.status === 'ready' ? state.capture() : null;
-  if (dataUrl !== null) return { type: 'previewCaptured', requestId, dataUrl };
+function answerCapture(vscode: VsCodeApi, requestId: string, state: PreviewCaptureState): void {
+  if (state.status === 'ready') {
+    void capturedMessage(requestId, state.capture).then((message) => vscode.postMessage(message));
+    return;
+  }
   const error =
     state.status === 'unavailable' ? state.reason : 'The preview canvas closed before the capture.';
-  return { type: 'previewCaptureError', requestId, error };
+  vscode.postMessage({ type: 'previewCaptureError', requestId, error } satisfies WebviewToHostMessage);
+}
+
+async function capturedMessage(
+  requestId: string,
+  capture: () => Promise<Blob>
+): Promise<WebviewToHostMessage> {
+  try {
+    return { type: 'previewCaptured', requestId, dataUrl: await dataUrlOf(await capture()) };
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return { type: 'previewCaptureError', requestId, error: `The capture failed: ${reason}` };
+  }
+}
+
+function dataUrlOf(image: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error ?? new Error('expected the image to read, got no reason'));
+    reader.readAsDataURL(image);
+  });
 }
 
 export function mountR3FWebview(): void {

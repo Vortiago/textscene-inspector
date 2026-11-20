@@ -52,6 +52,16 @@ export function getAncestorPaths(nodePath: string): string[] {
 }
 
 /**
+ * `expanded` with every ancestor of `nodePath` added: the same set when none is missing.
+ *
+ * @canonical Expand the ancestors of a selected tree row
+ */
+export function withAncestorsExpanded(expanded: ReadonlySet<string>, nodePath: string): ReadonlySet<string> {
+  const missing = getAncestorPaths(nodePath).filter((ancestor) => !expanded.has(ancestor));
+  return missing.length === 0 ? expanded : new Set([...expanded, ...missing]);
+}
+
+/**
  * The key the scene root occupies in a path-to-node map. Paths here are measured from the root,
  * so its own name is not one of their segments and it sits at the empty path. `walkFromRoot`
  * in `godot/string/nodePath.ts` spells the root the same way and cannot import this.

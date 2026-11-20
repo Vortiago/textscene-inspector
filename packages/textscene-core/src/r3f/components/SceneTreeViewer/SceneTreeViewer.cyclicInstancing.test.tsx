@@ -12,29 +12,23 @@ import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
-import type { TscnNode, TscnScene } from '../../../parser/types';
-import { INSTANTIABLE_SCENE } from '../../../parser/sceneDefaults.testkit';
-// The Instance root merge parses a sub-scene root with the Node parser when its type has none.
-import '../../../nodes/node/index';
+import { TscnParser } from '../../../parser/TscnParser';
 
-function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): TscnNode {
-  return { rawProperties: {}, name, type, children: [], properties: {}, ...extras };
-}
+/** `res://a.tscn`: a root with two children that each instance `res://a.tscn`, both editable. */
+const SELF_SCENE = new TscnParser().parse(`[gd_scene format=3]
 
-/** `res://a.tscn`: a root with two children that each instance `res://a.tscn`. */
-const SELF_SCENE: TscnScene = {
-  ...INSTANTIABLE_SCENE,
-  nodes: [
-    makeNode('Root', 'Node3D', {
-      children: [
-        makeNode('A', 'Node3D', { instance: 'ExtResource("1")' }),
-        makeNode('B', 'Node3D', { instance: 'ExtResource("1")' }),
-      ],
-    }),
-  ],
-  externalResources: [{ id: '1', path: 'res://a.tscn', type: 'PackedScene' }],
-  internalResources: [],
-};
+[ext_resource type="PackedScene" path="res://a.tscn" id="1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="A" parent="." instance=ExtResource("1")]
+
+[node name="B" parent="." instance=ExtResource("1")]
+
+[editable path="A"]
+
+[editable path="B"]
+`);
 
 function renderSelfInstancing() {
   const fake = createFakeResourceLoader();

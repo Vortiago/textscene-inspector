@@ -8,7 +8,7 @@ import { nodeRegistry } from '../../../core/NodeRegistry.js';
 import { rendersOwnVisual } from '../../nodeSupport.js';
 import { isCamera3DType } from '../../cameraNodeTypes.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
-import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
+import { usePreviewCamera } from '../TscnPreviewShell/previewCamera.js';
 import { useLiveNode } from '../../useLiveSceneTree.js';
 import { useLivePatchedNode } from '../../liveNodePatches.js';
 import { useUndrawnMeshTypes } from '../../contexts/UndrawnMeshesContext.js';
@@ -27,7 +27,7 @@ interface NodeDetailsPanelProps {
 
 export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
   const { selectedNodePath } = useSelection();
-  const viewportActions = useOptionalViewportActions();
+  const preview = usePreviewCamera();
 
   // The merged node and its originating instance ref. It re-derives when a
   // lazily loaded sub-scene lands.
@@ -53,7 +53,7 @@ export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
     ? authoredSections(registration.propertyFormatter(node.properties), node.scope)
     : [];
 
-  const isPreviewed = viewportActions?.previewedCameraPath === path;
+  const isPreviewed = preview?.camera === path;
 
   return (
     <div className={styles.root}>
@@ -107,7 +107,7 @@ export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
         )}
       </div>
 
-      {isCamera3DType(node.type) && viewportActions !== null && (
+      {isCamera3DType(node.type) && preview !== null && (
         <div className={styles.section}>
           <h4 className={styles.sectionTitle}>Camera</h4>
           {/* Godot's "Preview" checkbox for the selected Camera3D (`node_3d_editor_plugin.cpp:6303-6304`). */}
@@ -116,9 +116,7 @@ export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
               type="checkbox"
               checked={isPreviewed}
               onChange={(event) =>
-                event.target.checked
-                  ? viewportActions.previewCamera(path)
-                  : viewportActions.endCameraPreview()
+                event.target.checked ? preview.previewCamera(path) : preview.endPreview()
               }
             />
             Preview

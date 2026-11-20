@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { CamerasPanel } from './CamerasPanel';
+import { TestPreviewCamera } from './previewCamera.testkit';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext';
 import { useViewportActions } from '../../testing/ViewportActionsProbe';
@@ -49,11 +50,13 @@ function renderPanel(scene = SCENE, previewedCameraPath?: string) {
   const sceneGraph = createSceneGraphFromTscnScene(parsed, 'res://test.tscn');
   return render(
     <HierarchyProvider value={{ sceneGraph, panelId: 'cams-test' }}>
-      <ViewportActionsProvider initialPreviewedCameraPath={previewedCameraPath}>
-        <ViewportModeProvider>
-          <Probe />
-          <CamerasPanel />
-        </ViewportModeProvider>
+      <ViewportActionsProvider>
+        <TestPreviewCamera initialCamera={previewedCameraPath}>
+          <ViewportModeProvider>
+            <Probe />
+            <CamerasPanel />
+          </ViewportModeProvider>
+        </TestPreviewCamera>
       </ViewportActionsProvider>
     </HierarchyProvider>
   );
@@ -325,10 +328,12 @@ describe('<CamerasPanel> with a Camera3D subclass', () => {
     render(
       <HierarchyProvider value={{ sceneGraph, panelId: 'cams-xr' }}>
         <ViewportActionsProvider>
-          <ViewportModeProvider>
-            <Probe />
-            <CamerasPanel />
-          </ViewportModeProvider>
+          <TestPreviewCamera>
+            <ViewportModeProvider>
+              <Probe />
+              <CamerasPanel />
+            </ViewportModeProvider>
+          </TestPreviewCamera>
         </ViewportActionsProvider>
       </HierarchyProvider>
     );

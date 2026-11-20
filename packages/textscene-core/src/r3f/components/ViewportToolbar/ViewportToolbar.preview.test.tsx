@@ -20,7 +20,7 @@ function renderWithScene(body: string) {
   const result = render(
     <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
       <ViewportModeProvider>
-        <ViewportToolbar />
+        <ViewportToolbar view={null} />
       </ViewportModeProvider>
     </HierarchyProvider>
   );
@@ -74,7 +74,7 @@ describe('preview lighting toggles', () => {
   it('hides both in 2D — there is no 3D lighting to preview', () => {
     render(
       <ViewportModeProvider initialMode="2D">
-        <ViewportToolbar />
+        <ViewportToolbar view={null} />
       </ViewportModeProvider>
     );
     // Open, since a closed popover lacks them either way.

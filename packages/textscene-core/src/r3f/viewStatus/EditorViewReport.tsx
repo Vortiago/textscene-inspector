@@ -37,24 +37,13 @@ function useReportAfterRender(): void {
 function useCanvasCapture(): void {
   const status = useViewStatus();
   const getState = useThree((state) => state.get);
-  useEffect(() => {
-    if (!status) return undefined;
-    let isMounted = true;
-    const captureIfDue = () => {
-      if (!isMounted || !status.isCaptureDue()) return;
-      status.capture(() => {
+  useEffect(
+    () =>
+      status?.readWith(() => {
         const state = getState();
         drawCanvasFrame(state);
         return readCanvasPixels(state.gl);
-      });
-    };
-    // A microtask, so a capture that a frame's report makes due draws after that frame, not inside it.
-    const stopListening = status.subscribe(() => {
-      if (status.isCapturePending()) queueMicrotask(captureIfDue);
-    });
-    return () => {
-      isMounted = false;
-      stopListening();
-    };
-  }, [status, getState]);
+      }),
+    [status, getState]
+  );
 }
