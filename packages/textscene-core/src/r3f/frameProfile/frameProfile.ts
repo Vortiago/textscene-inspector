@@ -64,7 +64,9 @@ export function startFrameProfile(
   publish: Publish,
   now: () => number = () => performance.now()
 ): FrameProfile {
-  return start(renderer, () => new Profile(renderer, publish, now, true));
+  const profile = start(renderer, () => new Profile(renderer, publish, now));
+  profile.startTimings();
+  return profile;
 }
 
 /** Starts a profile as `startFrameProfile` does, without the timings, so it makes no GPU query. */
@@ -73,7 +75,7 @@ export function startFrameCount(
   publish: Publish,
   now: () => number = () => performance.now()
 ): FrameProfile {
-  return start(renderer, () => new Profile(renderer, publish, now, false));
+  return start(renderer, () => new Profile(renderer, publish, now));
 }
 
 /** Stops the running profile first, so the new one reads the renderer as its owner left it. */
@@ -109,6 +111,9 @@ export interface FrameProfile {
   beginFrame(timestamp: number): void;
   /** Closes the frame, with every step still open in it. */
   endFrame(): void;
+  /** Adds the GPU and step timings to each window from now, without restarting the count. */
+  startTimings(): void;
+  stopTimings(): void;
   stop(): void;
 }
 
@@ -127,16 +132,16 @@ class Profile implements FrameProfile {
   private current: StepKey = 'Other';
   private segmentStart = 0;
   private segmentDrawCalls = 0;
-  private readonly gpu: GpuTimer | null;
+  /** Written only by `startTimings` and `stopTimings`. */
+  private gpu: GpuTimer | null = null;
+  private isTimed = false;
   private readonly wasAutoReset: boolean;
 
   constructor(
     private readonly renderer: THREE.WebGLRenderer,
     private readonly publish: Publish,
-    private readonly now: () => number,
-    private readonly isTimed: boolean
+    private readonly now: () => number
   ) {
-    this.gpu = isTimed ? GpuTimer.create(renderer.getContext() as WebGL2RenderingContext) : null;
     // three zeroes the count at each render's start (r187 `WebGLRenderer.js:1744`), so a frame of several
     // renders keeps only its last one's. The profile zeroes it per frame instead.
     this.wasAutoReset = renderer.info.autoReset;
@@ -211,9 +216,21 @@ class Profile implements FrameProfile {
     return this.openSteps.at(-1) ?? null;
   }
 
+  startTimings(): void {
+    if (this.isTimed) return;
+    this.isTimed = true;
+    this.gpu = GpuTimer.create(this.renderer.getContext() as WebGL2RenderingContext);
+  }
+
+  stopTimings(): void {
+    this.isTimed = false;
+    this.gpu?.dispose();
+    this.gpu = null;
+  }
+
   stop(): void {
     this.isFrameOpen = false;
-    this.gpu?.dispose();
+    this.stopTimings();
     // A replaced profile's second stop leaves the renderer to the profile that replaced it.
     if (profiles.get(this.renderer) !== this) return;
     this.renderer.info.autoReset = this.wasAutoReset;

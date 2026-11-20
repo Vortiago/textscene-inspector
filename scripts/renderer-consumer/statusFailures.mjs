@@ -5,7 +5,7 @@ const UNDRAWN = [{ path: '/root/Root/Sign', meshTypes: ['FutureMesh'], isEmptySh
 /** Godot 4.6.3's editor monitor on the counted scene, from `Viewport.get_render_info` in Compatibility. */
 const GODOT_PLAIN = { objects: 3, primitives: 4248, hasTimings: false };
 
-/** Godot counts 6 shadow draws to the view's 16, so the check asks only that shadow draws count. */
+/** Godot draws fewer shadow casters per split than the view does, so the check asks only that they count. */
 function shadowFailures(plain, shadowed) {
   if (!plain || !shadowed)
     return [
@@ -30,6 +30,7 @@ export function statusFailures({
   fps,
   plain,
   shadowed,
+  oneSplit,
 }) {
   return [
     ...equalityFailure('status().settled once settled', settled, statusSettled),
@@ -46,5 +47,6 @@ export function statusFailures({
     ...(fps !== null && fps > 0 ? [] : [`status().frame: expected an FPS over 0, got ${fps}`]),
     ...equalityFailure('status().frame of the counted scene', GODOT_PLAIN, plain),
     ...shadowFailures(plain, shadowed),
+    ...shadowFailures(plain, oneSplit),
   ].map((failure) => `status: ${failure}`);
 }

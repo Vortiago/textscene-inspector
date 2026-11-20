@@ -35,7 +35,10 @@ mesh = SubResource("Future_1")
 `;
 
 /** Godot 4.6.3's scratch scene for its editor monitor: three surfaces in view, one behind the camera. */
-function countedScene(isShadowed: boolean): string {
+/** No shadow, Godot's default four splits, or its one split (`directional_shadow_mode = 0`). */
+type CountedShadow = 'none' | 'four-splits' | 'one-split';
+
+function countedScene(shadow: CountedShadow): string {
   return `[gd_scene format=3]
 
 [sub_resource type="BoxMesh" id="Box_1"]
@@ -66,7 +69,7 @@ mesh = SubResource("Box_1")
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.7, 0.7, 0, -0.7, 0.7, 0, 3, 0)
-shadow_enabled = ${isShadowed}
+shadow_enabled = ${shadow !== 'none'}${shadow === 'one-split' ? '\ndirectional_shadow_mode = 0' : ''}
 
 [node name="Camera3D" type="Camera3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 6)
@@ -98,6 +101,7 @@ export interface StatusCheckResults {
   /** The frame numbers of the counted scene in the game view, without shadows and with them. */
   plain: CountedFrame | null;
   shadowed: CountedFrame | null;
+  oneSplit: CountedFrame | null;
 }
 
 /** Polls for a window other than `previous`, as a host reads them: `onStatusChange` never calls for them. */
@@ -117,8 +121,8 @@ function measuredFrame(
 }
 
 /** The second window after the counted scene settles, so every frame of it draws the settled scene. */
-async function countedFrame(isShadowed: boolean): Promise<CountedFrame | null> {
-  const scene = openScene({ source: countedScene(isShadowed), provider: NO_FILES });
+async function countedFrame(shadow: CountedShadow): Promise<CountedFrame | null> {
+  const scene = openScene({ source: countedScene(shadow), provider: NO_FILES });
   const view = mountScene(elementOf(320, 240), scene, { mode: 'in-game' });
   try {
     await view.settled;
@@ -135,7 +139,7 @@ async function countedFrame(isShadowed: boolean): Promise<CountedFrame | null> {
   }
 }
 
-async function viewChecks(): Promise<Omit<StatusCheckResults, 'plain' | 'shadowed'>> {
+async function viewChecks(): Promise<Omit<StatusCheckResults, 'plain' | 'shadowed' | 'oneSplit'>> {
   const scene = openScene({ source: STATUS_SCENE, provider: NO_FILES });
   const heard: ViewStatus[] = [];
   const view = mountScene(elementOf(320, 240), scene, {
@@ -162,5 +166,10 @@ async function viewChecks(): Promise<Omit<StatusCheckResults, 'plain' | 'shadowe
 }
 
 export async function runStatusChecks(): Promise<StatusCheckResults> {
-  return { ...(await viewChecks()), plain: await countedFrame(false), shadowed: await countedFrame(true) };
+  return {
+    ...(await viewChecks()),
+    plain: await countedFrame('none'),
+    shadowed: await countedFrame('four-splits'),
+    oneSplit: await countedFrame('one-split'),
+  };
 }

@@ -1,3 +1,4 @@
+import { checkViewStatus, runViewStatusScenario, VIEW_STATUS_FIXTURE } from './viewStatusScenario.mjs';
 import { inkStats } from '../vscode/pixels.mjs';
 import { shardOf } from '../shards/shards.mjs';
 import { longTasksAfterFirstReply, longTasksDuringTextureWork } from './textureWorkProbe.mjs';
@@ -91,6 +92,13 @@ export const SCENARIOS = [
     run: runInstanceClickScenario,
     check: checkInstanceClick,
     measure: measureInstanceClick,
+  },
+  {
+    name: 'view status',
+    title: `view status notes: ${VIEW_STATUS_FIXTURE}`,
+    seconds: 8,
+    run: runViewStatusScenario,
+    check: checkViewStatus,
   },
   {
     name: '2D',

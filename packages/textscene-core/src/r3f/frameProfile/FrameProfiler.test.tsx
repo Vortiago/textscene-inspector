@@ -57,24 +57,62 @@ describe('FrameProfiler', () => {
   });
 });
 
-/** The window a canvas's profile publishes over a second of frames 20 ms apart. */
-async function publishedWindow(showPerformance: boolean): Promise<FrameStats | null> {
+/** A canvas under a toggle set to `showPerformance`, whose frames a test draws by the second. */
+async function profiledView(showPerformance: boolean) {
   const store = createViewStatusStore();
   const { Probe, state } = r3fStateProbe();
-  const root = await ReactThreeTestRenderer.create(
-    <ViewShowProvider show={{ performance: showPerformance }}>
+  const canvas = (performance: boolean) => (
+    <ViewShowProvider show={{ performance }}>
       <ViewStatusProvider store={store}>
         <FrameProfiler />
         <Probe />
       </ViewStatusProvider>
     </ViewShowProvider>
   );
-  // `advance` runs R3F's global effects, which mark the profile's frames.
-  for (let frame = 0; frame < FRAMES_IN_A_SECOND; frame++) state().advance(frame * FRAME_INTERVAL_MS);
-  const window = store.status().frame;
-  await root.unmount();
+  const root = await ReactThreeTestRenderer.create(canvas(showPerformance));
+  let drawn = 0;
+  return {
+    store,
+    /** Draws a second of frames 20 ms apart. `advance` runs R3F's global effects, which mark them. */
+    drawSecond() {
+      for (let frame = 0; frame < FRAMES_IN_A_SECOND; frame++) state().advance(drawn++ * FRAME_INTERVAL_MS);
+    },
+    switchPerformance: (performance: boolean) => root.update(canvas(performance)),
+    unmount: () => root.unmount(),
+  };
+}
+
+/** The window a canvas's profile publishes over a second of frames. */
+async function publishedWindow(showPerformance: boolean): Promise<FrameStats | null> {
+  const view = await profiledView(showPerformance);
+  view.drawSecond();
+  const window = view.store.status().frame;
+  await view.unmount();
   return window;
 }
+
+describe('a switch of show.performance', () => {
+  it('keeps the last window of frame numbers, so status().frame never goes null', async () => {
+    const view = await profiledView(false);
+    view.drawSecond();
+    const counted = view.store.status().frame;
+    await view.switchPerformance(true);
+    expect(view.store.status().frame).toBe(counted);
+    await view.unmount();
+  });
+
+  it('adds the timings from the next window, and drops them once switched off', async () => {
+    const view = await profiledView(false);
+    view.drawSecond();
+    await view.switchPerformance(true);
+    view.drawSecond();
+    expect(view.store.status().frame).toHaveProperty('timings');
+    await view.switchPerformance(false);
+    view.drawSecond();
+    expect(view.store.status().frame).not.toHaveProperty('timings');
+    await view.unmount();
+  });
+});
 
 describe('SubscriberStep', () => {
   /** The innermost step a subscriber at `priority` sees, in a frame of a profile on the canvas. */

@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { addAfterEffect, addEffect, useFrame, useThree } from '@react-three/fiber';
 import { useViewShow } from '../viewShow/ViewShowContext.js';
-import { beginStep, endStep, startFrameCount, startFrameProfile } from './frameProfile.js';
+import { beginStep, endStep, startFrameCount, type FrameProfile } from './frameProfile.js';
 import { useViewStatusStore } from '../viewStatus/ViewStatusContext.js';
 import { timeSceneDraws } from './sceneDrawStep.js';
 import type { RenderStep } from './frameStats.js';
@@ -13,10 +13,12 @@ export function FrameProfiler(): null {
   const scene = useThree((state) => state.scene);
   const get = useThree((state) => state.get);
   const store = useViewStatusStore();
+  const [profile, setProfile] = useState<FrameProfile | null>(null);
 
   useEffect(() => {
     if (!store) return undefined;
-    const profile = (isTimed ? startFrameProfile : startFrameCount)(gl, store.frameMeasured);
+    const profile = startFrameCount(gl, store.frameMeasured);
+    setProfile(profile);
     // Global effects bracket every root's subscribers and renders in R3F's loop.
     const stopBeginning = addEffect((timestamp) => profile.beginFrame(timestamp));
     const stopEnding = addAfterEffect(() => profile.endFrame());
@@ -26,9 +28,17 @@ export function FrameProfiler(): null {
       stopBeginning();
       stopEnding();
       profile.stop();
+      setProfile(null);
       store.frameMeasured(null);
     };
-  }, [gl, scene, get, store, isTimed]);
+  }, [gl, scene, get, store]);
+
+  // The count keeps running, so a switch of `show.performance` leaves `status().frame` in place.
+  useEffect(() => {
+    if (!profile || !isTimed) return undefined;
+    profile.startTimings();
+    return () => profile.stopTimings();
+  }, [profile, isTimed]);
 
   return null;
 }

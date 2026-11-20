@@ -13,6 +13,7 @@ const PASSING = {
   fps: 30,
   plain: { objects: 3, primitives: 4248, hasTimings: false },
   shadowed: { objects: 19, primitives: 4248, hasTimings: false },
+  oneSplit: { objects: 7, primitives: 4248, hasTimings: false },
 };
 
 describe('statusFailures', () => {
