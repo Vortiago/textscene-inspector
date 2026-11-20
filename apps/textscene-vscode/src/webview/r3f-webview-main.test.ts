@@ -45,7 +45,8 @@ const captured: {
   logAdapter?: CapturedLogAdapter;
   /** The state the fake shell reports from its mount effect, as the real bridge does. */
   mountCaptureState?: PreviewCaptureState;
-} = { scenes: [] };
+  shellMountEffects: number;
+} = { scenes: [], shellMountEffects: 0 };
 
 /** The text of the scene the app opened last, as the shell would draw it. */
 const sceneText = () => captured.scenes.at(-1)?.text;
@@ -57,6 +58,9 @@ vi.mock('@textscene/core', () => ({
   TscnPreviewShell: function FakeShell(props: CapturedShellProps) {
     captured.shellProps = props;
     const { onCaptureStateChange } = props;
+    useEffect(() => {
+      captured.shellMountEffects += 1;
+    }, []);
     useEffect(() => {
       if (captured.mountCaptureState) onCaptureStateChange?.(captured.mountCaptureState);
     }, [onCaptureStateChange]);
@@ -115,12 +119,22 @@ function postedMessages(vscodeApi: MockVsCodeApi): WebviewToHostMessage[] {
   return vscodeApi.postMessage.mock.calls.map((call) => call[0] as WebviewToHostMessage);
 }
 
+/** What the host keeps: each `webviewReady` resets its copy, as a remount sends one. */
+function postedSinceLastReady(vscodeApi: MockVsCodeApi): WebviewToHostMessage[] {
+  const messages = postedMessages(vscodeApi);
+  return messages.slice(messages.map((m) => m.type).lastIndexOf('webviewReady'));
+}
+
 /** Mount a fresh copy of the module (config globals are read at module-load time). */
-async function mountFresh(config?: Record<string, unknown>): Promise<{ vscodeApi: MockVsCodeApi }> {
+async function mountFresh(
+  config?: Record<string, unknown>,
+  postMessage = vi.fn()
+): Promise<{ vscodeApi: MockVsCodeApi }> {
   vi.resetModules();
   captured.shellProps = undefined;
   captured.scenes = [];
   captured.logAdapter = undefined;
+  captured.shellMountEffects = 0;
   messageListeners = [];
 
   if (config) {
@@ -131,11 +145,7 @@ async function mountFresh(config?: Record<string, unknown>): Promise<{ vscodeApi
 
   document.body.innerHTML = '<div id="r3f-root"></div>';
 
-  const vscodeApi: MockVsCodeApi = {
-    postMessage: vi.fn(),
-    getState: vi.fn(),
-    setState: vi.fn(),
-  };
+  const vscodeApi: MockVsCodeApi = { postMessage, getState: vi.fn(), setState: vi.fn() };
   (globalThis as { acquireVsCodeApi?: () => MockVsCodeApi }).acquireVsCodeApi = () => vscodeApi;
 
   const mod = await import('./r3f-webview-main');
@@ -159,7 +169,9 @@ beforeEach(() => {
       messageListeners.push(listener as (event: MessageEvent) => void);
     }
   });
-  vi.spyOn(window, 'removeEventListener').mockImplementation(() => {});
+  vi.spyOn(window, 'removeEventListener').mockImplementation((type, listener) => {
+    if (type === 'message') messageListeners = messageListeners.filter((l) => l !== listener);
+  });
 });
 
 afterEach(() => {
@@ -184,11 +196,22 @@ describe('mountR3FWebview', () => {
     expect(() => mod.mountR3FWebview()).toThrow(/r3f-root/);
   });
 
-  it('posts the webviewReady handshake once the message listener is installed', async () => {
-    const { vscodeApi } = await mountFresh();
+  it('mounts under StrictMode, which runs a mount effect, its cleanup and the effect again', async () => {
+    await mountFresh();
 
-    const readyMessages = postedMessages(vscodeApi).filter((m) => m.type === 'webviewReady');
-    expect(readyMessages).toHaveLength(1);
+    expect(captured.shellMountEffects).toBe(2);
+  });
+
+  it('posts each webviewReady handshake with its message listener installed once', async () => {
+    const listenersAtReady: number[] = [];
+    const postMessage = vi.fn((message: WebviewToHostMessage) => {
+      if (message.type === 'webviewReady') listenersAtReady.push(messageListeners.length);
+    });
+    const { vscodeApi } = await mountFresh(undefined, postMessage);
+
+    // The provider listens too, so the count after mount is the one each handshake must see.
+    expect(postedMessages(vscodeApi).some((m) => m.type === 'webviewReady')).toBe(true);
+    expect(listenersAtReady.every((count) => count === messageListeners.length)).toBe(true);
   });
 
   it('hands <TscnPreviewShell> the scene it opened, empty, and a stable vscode- panelId', async () => {
@@ -319,13 +342,15 @@ describe('capture state reporting', () => {
     const types = postedMessages(vscodeApi).map((m) => m.type);
 
     expect(types.indexOf('webviewReady')).toBeLessThan(types.indexOf('previewCaptureReady'));
-    expect(postedMessages(vscodeApi).filter(isCaptureState)).toEqual([{ type: 'previewCaptureReady' }]);
+    expect(postedSinceLastReady(vscodeApi).filter(isCaptureState)).toEqual([{ type: 'previewCaptureReady' }]);
   });
 
   it('posts pending after webviewReady while the shell has reported no other state', async () => {
     const { vscodeApi } = await mountFresh();
 
-    expect(postedMessages(vscodeApi).filter(isCaptureState)).toEqual([{ type: 'previewCapturePending' }]);
+    expect(postedSinceLastReady(vscodeApi).filter(isCaptureState)).toEqual([
+      { type: 'previewCapturePending' },
+    ]);
   });
 
   it('posts each later state with its reason', async () => {

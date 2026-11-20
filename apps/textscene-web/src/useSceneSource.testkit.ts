@@ -53,6 +53,25 @@ export function mockFetchFail() {
   } as unknown as Response) as unknown as typeof fetch;
 }
 
+/** Not Found until `recover()`, by state, not by call count: StrictMode fetches twice on mount. */
+export function mockRecoveringServer(text: string) {
+  let isUp = false;
+  const fetch = vi
+    .fn()
+    .mockImplementation(async () =>
+      isUp
+        ? ({ ok: true, text: () => Promise.resolve(text) } as unknown as Response)
+        : ({ ok: false, statusText: 'Not Found' } as Response)
+    );
+  return {
+    fetch: fetch as unknown as typeof globalThis.fetch,
+    recover: () => {
+      isUp = true;
+    },
+    fetchCount: () => fetch.mock.calls.length,
+  };
+}
+
 /** Let real time pass so a debounce timer fires. */
 export async function settle(ms: number) {
   await act(async () => {

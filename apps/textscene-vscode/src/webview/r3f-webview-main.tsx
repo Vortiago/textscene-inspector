@@ -3,7 +3,7 @@
  * and posts `jumpToNode` when the user double-clicks a scene-tree node. Each panel
  * has its own webview and `<TscnPreviewShell>`, so panels share no state.
  */
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { StrictMode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   PENDING_CAPTURE,
@@ -13,7 +13,7 @@ import {
   type PreviewCaptureState,
 } from '@textscene/core';
 import type { TscnNode } from '@textscene/core';
-import { openScene } from '@textscene/renderer';
+import { openScene, type Scene } from '@textscene/renderer';
 import { isHostToWebviewMessage, type WebviewToHostMessage } from '../protocol';
 import { WebviewResourceProvider } from './WebviewResourceProvider';
 import { readInitialConfig, resolveInitialViewportMode } from './initialConfig';
@@ -55,7 +55,7 @@ class WebviewLogAdapter implements LogAdapter {
   }
 }
 
-function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
+function R3FWebviewApp({ vscode, scene }: { vscode: VsCodeApi; scene: Scene }) {
   const [content, setContent] = useState<string>('');
   /** Written by the host's `previewVisibility`. Undefined until it posts one, and the shell then shows the preview. */
   const [isVisible, setIsVisible] = useState<boolean>();
@@ -81,8 +81,6 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
     [vscode]
   );
 
-  // The panel's one scene: it ends with the webview's document, so nothing disposes it.
-  const [scene] = useState(() => openScene({ source: '', provider: new WebviewResourceProvider(vscode) }));
   useLayoutEffect(() => scene.setSource(content), [scene, content]);
 
   useEffect(() => {
@@ -185,5 +183,11 @@ export function mountR3FWebview(): void {
   root.style.height = '100vh';
   root.style.display = 'block';
 
-  createRoot(root).render(<R3FWebviewApp vscode={vscode} />);
+  // Not in a render, which StrictMode runs twice. It lives as long as the webview, so nothing disposes it.
+  const scene = openScene({ source: '', provider: new WebviewResourceProvider(vscode) });
+  createRoot(root).render(
+    <StrictMode>
+      <R3FWebviewApp vscode={vscode} scene={scene} />
+    </StrictMode>
+  );
 }

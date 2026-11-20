@@ -1,4 +1,5 @@
 import {
+  StrictMode,
   useCallback,
   useEffect,
   useMemo,
@@ -345,8 +346,11 @@ export function R3FApp() {
 export function mountR3F(container: HTMLElement): void {
   container.innerHTML = '';
 
-  const root = createRoot(container);
-  root.render(<R3FApp />);
+  createRoot(container).render(
+    <StrictMode>
+      <R3FApp />
+    </StrictMode>
+  );
 }
 
 /** A provider object for one corpus, over the app's provider, which reads the active corpus root. */

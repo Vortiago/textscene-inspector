@@ -169,14 +169,14 @@ describe('corpus boundary — the root never moves under a mounted scene', () =>
   });
 
   it('refetches when the user re-picks a fixture whose load failed', async () => {
-    // The scene fetch fails once, then succeeds. Picking the same entry again is the only
-    // retry, and a corpus crossing leaves nothing on screen to fall back to.
-    let attempt = 0;
+    // By state, not by call count: StrictMode fetches twice on mount.
+    let isSceneServed = false;
+    let sceneFetches = 0;
     globalThis.fetch = vi.fn().mockImplementation(async (url: unknown) => {
       const path = String(url).replace(/^.*\/fixtures\//, '');
       if (path !== BASE.file) return { ok: false, status: 404 } as Response;
-      attempt += 1;
-      if (attempt === 1) return { ok: false, statusText: 'Not Found' } as Response;
+      sceneFetches += 1;
+      if (!isSceneServed) return { ok: false, statusText: 'Not Found' } as Response;
       return {
         ok: true,
         text: () => Promise.resolve(sceneWithRoot('BaseRoot')),
@@ -188,10 +188,12 @@ describe('corpus boundary — the root never moves under a mounted scene', () =>
     await screen.findByRole('alert');
     expect(screen.queryByText('BaseRoot')).toBeNull();
 
+    isSceneServed = true;
+    const fetchesBeforeRepick = sceneFetches;
     await switchViaPalette(BASE.file);
 
     await waitForScene('BaseRoot');
-    expect(attempt).toBe(2);
+    expect(sceneFetches - fetchesBeforeRepick).toBe(1);
   });
 
   it('leaves resolution untouched across a same-corpus switch, holding the old render', async () => {
