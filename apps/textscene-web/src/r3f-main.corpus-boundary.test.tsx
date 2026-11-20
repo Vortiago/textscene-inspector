@@ -7,6 +7,7 @@ import { WebResourceProvider } from './providers/WebResourceProvider';
 import { fixtures } from './fixturesAll';
 import { buildFixtureTree, type SceneLeaf } from './fixtureTreeModel';
 import { flattenLeaves } from './fixtureTreeModel.testkit';
+import { mockRecoveringServer } from './useSceneSource.testkit';
 
 /** A vendored demo fixture, whose corpus root differs from the base ('') one. */
 const DEMO = fixtures.find((f) => f.root) as (typeof fixtures)[number];
@@ -169,31 +170,23 @@ describe('corpus boundary — the root never moves under a mounted scene', () =>
   });
 
   it('refetches when the user re-picks a fixture whose load failed', async () => {
-    // Re-picking is the only retry. The fetch fails by state, as StrictMode fetches twice on mount.
-    let isSceneServed = false;
-    let sceneFetches = 0;
-    globalThis.fetch = vi.fn().mockImplementation(async (url: unknown) => {
-      const path = String(url).replace(/^.*\/fixtures\//, '');
-      if (path !== BASE.file) return { ok: false, status: 404 } as Response;
-      sceneFetches += 1;
-      if (!isSceneServed) return { ok: false, statusText: 'Not Found' } as Response;
-      return {
-        ok: true,
-        text: () => Promise.resolve(sceneWithRoot('BaseRoot')),
-      } as unknown as Response;
-    }) as unknown as typeof fetch;
+    // Re-picking is the only retry.
+    const server = mockRecoveringServer(sceneWithRoot('BaseRoot'), (url) =>
+      url.endsWith(`/fixtures/${BASE.file}`)
+    );
+    globalThis.fetch = server.fetch;
 
     resetPersistence(`/?fixture=${BASE.file}`);
     render(<R3FApp />);
     await screen.findByRole('alert');
     expect(screen.queryByText('BaseRoot')).toBeNull();
 
-    isSceneServed = true;
-    const fetchesBeforeRepick = sceneFetches;
+    server.recover();
+    const fetchesBeforeRepick = server.fetchCount();
     await switchViaPalette(BASE.file);
 
     await waitForScene('BaseRoot');
-    expect(sceneFetches - fetchesBeforeRepick).toBe(1);
+    expect(server.fetchCount() - fetchesBeforeRepick).toBe(1);
   });
 
   it('leaves resolution untouched across a same-corpus switch, holding the old render', async () => {

@@ -219,9 +219,9 @@ describe('mountR3FWebview', () => {
     });
     const { vscodeApi } = await mountFresh(undefined, postMessage);
 
-    // The provider listens too, so the count after mount is the one each handshake must see.
-    expect(postedMessages(vscodeApi).some((m) => m.type === 'webviewReady')).toBe(true);
-    expect(listenersAtReady.every((count) => count === messageListeners.length)).toBe(true);
+    // One handshake per StrictMode mount. The provider listens too, so each sees the count after mount.
+    expect(postedMessages(vscodeApi).filter((m) => m.type === 'webviewReady')).toHaveLength(2);
+    expect(listenersAtReady).toEqual([messageListeners.length, messageListeners.length]);
   });
 
   it('hands <TscnPreviewShell> the scene it opened, empty, and a stable vscode- panelId', async () => {
