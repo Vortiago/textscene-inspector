@@ -177,7 +177,8 @@ async function capturedMessage(
   try {
     return { type: 'previewCaptured', requestId, dataUrl: await dataUrlOf(await capture()) };
   } catch (error) {
-    return { type: 'previewCaptureError', requestId, error: `The capture failed: ${String(error)}` };
+    const reason = error instanceof Error ? error.message : String(error);
+    return { type: 'previewCaptureError', requestId, error: `The capture failed: ${reason}` };
   }
 }
 

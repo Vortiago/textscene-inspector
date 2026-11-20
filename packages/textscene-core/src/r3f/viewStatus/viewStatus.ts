@@ -157,11 +157,11 @@ export function createViewStatus(): ViewStatus {
     notify();
   }
 
-  function readWith(read: () => RgbaImage): () => void {
-    reader = read;
+  function readWith(pixels: () => RgbaImage): () => void {
+    reader = pixels;
     queueRead();
     return () => {
-      if (reader === read) reader = null;
+      if (reader === pixels) reader = null;
     };
   }
 

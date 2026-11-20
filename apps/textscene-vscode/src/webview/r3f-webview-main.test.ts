@@ -383,7 +383,7 @@ describe('capture state reporting', () => {
       {
         type: 'previewCaptureError',
         requestId: 'c6',
-        error: 'The capture failed: Error: expected the view to stay mounted until its capture',
+        error: 'The capture failed: expected the view to stay mounted until its capture',
       },
     ]);
   });

@@ -167,7 +167,7 @@ export function ViewportToolbar({ view }: ViewportToolbarProps) {
     captureWhenSettled(view)
       .then(
         (image) => download(image, `tscn-preview-${Date.now()}.png`),
-        // The view left or never settles: the top bar shows why, so the click saves nothing.
+        // The view left, or names no Camera3D: the top bar shows why, so the click saves nothing.
         (error: unknown) => logger.warn('[ViewportToolbar] screenshot not taken', error)
       )
       .finally(() => setIsCapturing(false));
