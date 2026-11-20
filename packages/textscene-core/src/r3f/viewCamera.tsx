@@ -1,4 +1,15 @@
-import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react';
+import { useThree } from '@react-three/fiber';
+import type { Camera } from 'three';
 import * as logger from '../logger.js';
 import type { NodeHandle } from '../scene/nodeHandle.js';
 import { livePathOf } from '../scene/nodePathWalk.js';
@@ -58,14 +69,51 @@ export function ViewCamera({ camera }: { camera: string | null }): null {
   const actions = useOptionalViewportActions();
   const previewCamera = actions?.previewCamera;
   const endCameraPreview = actions?.endCameraPreview;
+  const lookThrough = useContext(LookThroughContext);
   useEffect(() => {
+    if (lookThrough) lookThrough.current = NO_LOOK;
     if (camera === null) return endCameraPreview?.();
     const problem = notACamera(camera, node);
     if (problem) logger.error(problem.message);
     const hasLeft = noteLeave(watched.current, camera, node);
+    if (!livePath || hasLeft) return endCameraPreview?.();
+    // A named camera holds the view pending until a frame draws through it, mounted or not yet.
+    if (lookThrough) lookThrough.current = { path: camera, camera: mounted };
     // Any other case ends the old preview, so the view never draws a camera it no longer names.
-    if (livePath && mounted && !hasLeft) previewCamera?.(livePath);
+    if (mounted) previewCamera?.(livePath);
     else endCameraPreview?.();
-  }, [camera, node, livePath, mounted, previewCamera, endCameraPreview]);
+  }, [camera, node, livePath, mounted, previewCamera, endCameraPreview, lookThrough]);
+  useEffect(
+    () => () => {
+      if (lookThrough) lookThrough.current = NO_LOOK;
+    },
+    [lookThrough]
+  );
   return null;
+}
+
+/** The Camera3D the view must draw through before it settles, by path, with its object once mounted. */
+interface LookThrough {
+  path: string | null;
+  camera: Camera | null;
+}
+
+/** Written only by `ViewCamera`'s effects. Back to no path when it unmounts or ends its preview. */
+const LookThroughContext = createContext<{ current: LookThrough } | null>(null);
+
+export function LookThroughProvider({ children }: { children: ReactNode }) {
+  const [lookThrough] = useState(() => ({ current: NO_LOOK }));
+  return <LookThroughContext.Provider value={lookThrough}>{children}</LookThroughContext.Provider>;
+}
+
+const NO_LOOK: LookThrough = { path: null, camera: null };
+
+/** The path of the camera the next frame must draw through and does not, or null. */
+export function useAwaitedCamera(): () => string | null {
+  const lookThrough = useContext(LookThroughContext);
+  const get = useThree((state) => state.get);
+  return useCallback(() => {
+    const { path, camera } = lookThrough?.current ?? NO_LOOK;
+    return path !== null && get().camera !== camera ? path : null;
+  }, [lookThrough, get]);
 }

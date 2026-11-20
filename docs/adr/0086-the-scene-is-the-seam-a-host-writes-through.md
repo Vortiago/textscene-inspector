@@ -72,3 +72,12 @@ needs no new reader.
 - **A second route through `useLiveDrawnNode`.** Rejected: it serves only Node3D and Node2D.
 - **Rebuild the parse with the writes in the text.** Rejected. A write would parse the whole file
   again, and an override of a node inside an instance has no heading in the file to edit.
+
+## Amendment: the apps use the package entry
+
+The VS Code webview and the web previewer open their scene with `openScene` and import every name
+of the renderer from `@textscene/renderer`, as an npm user does. They resolve it to its source in the
+workspace (`scripts/workspaceRenderer.mjs`), so the view and the shell share one copy of core's
+modules. A `no-restricted-imports` guard in `eslint.config.js` refuses a renderer name from core in
+those apps. The shell takes the host's scene and leaves it open. Its panels still read the renderer's
+private contexts, and #2054 owns that move.

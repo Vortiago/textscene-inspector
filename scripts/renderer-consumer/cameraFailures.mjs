@@ -13,6 +13,7 @@ export const MISSING_MESSAGE = `expected a Camera3D at "${MISSING_PATH}", got no
 export function cameraFailures({ results, errors }) {
   const { overFromGameView, gizmoPixels, changedBetweenCameras, changedFromFreshEditor, refused, missing } =
     results;
+  const { settle } = results;
   return [
     ...Object.entries(overFromGameView)
       .filter(([, over]) => over > 0)
@@ -38,6 +39,25 @@ export function cameraFailures({ results, errors }) {
     ...(missing === MISSING_MESSAGE
       ? []
       : [`a path to no node: expected settled to reject with "${MISSING_MESSAGE}", got ${missing}`]),
+    ...Object.entries(settle.overFromShot)
+      .filter(([, over]) => over !== 0)
+      .map(
+        ([view, over]) =>
+          `a fresh ${view} through Rig/Front: expected its capture at settled to show that camera, got ${over} pixels past residue`
+      ),
+    ...(typeof settle.settleMs.editor === 'number'
+      ? []
+      : [`camera null: expected settled to resolve, got "${settle.settleMs.editor}"`]),
+    ...(settle.missing === MISSING_MESSAGE
+      ? []
+      : [
+          `a TscnCanvas ref to no node: expected settled to reject with "${MISSING_MESSAGE}", got ${settle.missing}`,
+        ]),
+    ...(settle.keptMissing === MISSING_MESSAGE
+      ? []
+      : [
+          `a TscnCanvas ref with camera left out: expected settled to reject with "${MISSING_MESSAGE}", got ${settle.keptMissing}`,
+        ]),
     ...errors.map((message) => `page error: ${message}`),
   ].map((failure) => `camera: ${failure}`);
 }

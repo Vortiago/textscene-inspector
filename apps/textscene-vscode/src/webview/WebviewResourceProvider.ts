@@ -1,4 +1,4 @@
-import type { ResourceProvider } from '@textscene/core';
+import type { ResourceProvider } from '@textscene/renderer';
 import type { DirectoryEntry } from '@textscene/core/resources/projectListing';
 import { isHostToWebviewMessage, type WebviewToHostMessage } from '../protocol';
 import { decodeResourceResponse } from '../wireCodec';

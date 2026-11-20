@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
-import { TscnPreviewShell } from './TscnPreviewShell';
+import { TextShell } from './TscnPreviewShell.testkit';
 import { EditableProvider } from '../../../resources/testing/hotReloadHarness';
 
 const HUD_PATH = 'res://hud.tscn';
@@ -21,12 +21,12 @@ const PLAIN_HUD = `[gd_scene format=3]\n\n[node name="Hud" type="Node3D"]\n`;
 const SCENE = `[gd_scene format=3]\n\n[ext_resource type="PackedScene" path="${HUD_PATH}" id="h"]\n\n[node name="Root" type="Node3D"]\n\n[node name="Hud" parent="." instance=ExtResource("h")]\n`;
 const HINT = { name: /switch to 2D/i };
 
-describe('<TscnPreviewShell provider>', () => {
+describe('<TextShell provider>', () => {
   it("loads the scene's files through the provider", async () => {
     const provider = new EditableProvider();
     provider.write(HUD_PATH, HUD);
 
-    render(<TscnPreviewShell panelId="provider-a" content={SCENE} provider={provider} />);
+    render(<TextShell panelId="provider-a" content={SCENE} provider={provider} />);
 
     expect(await screen.findByRole('button', HINT)).toBeTruthy();
   });
@@ -34,7 +34,7 @@ describe('<TscnPreviewShell provider>', () => {
   it('loads a file again when the provider says it changed, with no remount', async () => {
     const provider = new EditableProvider();
     provider.write(HUD_PATH, PLAIN_HUD);
-    render(<TscnPreviewShell panelId="provider-b" content={SCENE} provider={provider} />);
+    render(<TextShell panelId="provider-b" content={SCENE} provider={provider} />);
     const canvas = await screen.findByTestId('canvas-stub');
     expect(screen.queryByRole('button', HINT)).toBeNull();
 

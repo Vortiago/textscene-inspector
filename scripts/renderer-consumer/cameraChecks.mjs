@@ -51,6 +51,24 @@ function missingCameraRejection(page) {
   }, MISSING_PATH);
 }
 
+/** Fresh views through `Rig/Front`, each captured as it settles and measured against `frontShot`. */
+async function settleResults(page, frontShot) {
+  const { mounted, canvas, editorSettleMs, missing, keptMissing } = await page.evaluate(
+    (camera) => window.cameraSettleChecks(camera),
+    MISSING_PATH
+  );
+  const overFrom = ({ png }) => {
+    const delta = compareImages(frontShot, Buffer.from(png, 'base64'), { overDelta: RESIDUE_MAX_DELTA });
+    return delta.sizeMismatch ? JSON.stringify(delta.sizeMismatch) : delta.over.pixels;
+  };
+  return {
+    overFromShot: { mountScene: overFrom(mounted), TscnCanvas: overFrom(canvas) },
+    settleMs: { mountScene: mounted.settleMs, TscnCanvas: canvas.settleMs, editor: editorSettleMs },
+    missing,
+    keptMissing,
+  };
+}
+
 export async function runCameraChecks(page, url) {
   const diagnostics = attachDiagnostics(page);
   await page.goto(url);
@@ -73,6 +91,7 @@ export async function runCameraChecks(page, url) {
     overFromGameView[camera] = await overFromGame(page, camera, withoutGizmos[camera]);
   const missing = await missingCameraRejection(page);
   await page.evaluate(() => window.cameraView.dispose());
+  const settle = await settleResults(page, shots['Rig/Front']);
   return {
     results: {
       overFromGameView,
@@ -81,6 +100,7 @@ export async function runCameraChecks(page, url) {
       changedFromFreshEditor,
       refused,
       missing,
+      settle,
     },
     errors: loggedErrors(diagnostics),
   };

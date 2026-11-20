@@ -434,6 +434,9 @@ importers:
       '@textscene/core':
         specifier: workspace:*
         version: link:../../packages/textscene-core
+      '@textscene/renderer':
+        specifier: workspace:*
+        version: link:../textscene-renderer
       react:
         specifier: 'catalog:'
         version: 19.3.1
@@ -504,6 +507,9 @@ importers:
       '@textscene/core':
         specifier: workspace:*
         version: link:../../packages/textscene-core
+      '@textscene/renderer':
+        specifier: workspace:*
+        version: link:../textscene-renderer
       react:
         specifier: 'catalog:'
         version: 19.3.1

@@ -2,12 +2,14 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { isPublicSiteBuild } from './scripts/siteEdition.mjs';
 import { textureWorkerSource } from '../../packages/textscene-core/src/workers/bundler/vitePlugin.mjs';
+import { WORKSPACE_RENDERER_ALIAS } from '../../scripts/workspaceRenderer.mjs';
 
 const isPublicSite = isPublicSiteBuild();
 
 export default defineConfig({
   // The job worker, as one script string the page starts from a blob URL (ADR-0042).
   plugins: [react(), textureWorkerSource()],
+  resolve: { alias: WORKSPACE_RENDERER_ALIAS },
   // Relative asset URLs: GitHub Pages serves the public edition under /<repo>/, not at
   // the root. The dev edition keeps `/`, as its `/fixtures/` fetches are root-absolute too.
   base: isPublicSite ? './' : '/',

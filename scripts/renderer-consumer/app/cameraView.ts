@@ -1,6 +1,7 @@
 import { mountScene, openScene, type View, type ViewOptions } from '@textscene/renderer';
 import { projectOf } from './mountChecks';
 import { WINDOW_320_PROJECT } from './switchView';
+import { exposeCameraSettleChecks } from './cameraSettleView';
 
 /** Two cameras that are not current. The scene's own light and environment keep the preview sun out. */
 const CAMERA_SCENE = `[gd_scene format=3]
@@ -68,4 +69,5 @@ export function exposeCameraChecks(element: HTMLElement): void {
     remount({ mode: 'in-game' }, scene);
     await window.cameraView?.settled;
   };
+  exposeCameraSettleChecks(element, openCameraScene);
 }

@@ -4,6 +4,7 @@ import { drawCanvasFrame } from '../drawCanvasFrame.js';
 import { readCanvasPixels } from './canvasImage.js';
 import { useViewReport } from './useViewReport.js';
 import { useViewStatus } from './ViewStatusContext.js';
+import { useAwaitedCamera } from '../viewCamera.js';
 
 export function EditorViewReport() {
   useReportAfterRender();
@@ -14,8 +15,9 @@ export function EditorViewReport() {
 /** An after effect, so a frame is reported once its render, R3F's own or a pass that owns it, has drawn. */
 function useReportAfterRender(): void {
   const report = useViewReport();
-  const latestReport = useRef(report);
-  latestReport.current = report;
+  const awaitedCamera = useAwaitedCamera();
+  const latestReport = useRef(() => report(true, awaitedCamera()));
+  latestReport.current = () => report(true, awaitedCamera());
   const hasDrawn = useRef(false);
   useFrame(() => {
     hasDrawn.current = true;
@@ -25,7 +27,7 @@ function useReportAfterRender(): void {
       addAfterEffect(() => {
         if (!hasDrawn.current) return;
         hasDrawn.current = false;
-        latestReport.current(true);
+        latestReport.current();
       }),
     []
   );

@@ -9,7 +9,7 @@ const NO_FILES: ReadonlySet<string> = new Set();
 const FACTS: ViewSettled = { scriptedNodeCount: 2, hasCurrentCamera: true, missingFiles: NO_FILES };
 
 function frameOf(revision: number, work: PendingSceneWork = NO_PENDING_WORK): DrawnFrame {
-  return { revision, isFullSize: true, work, facts: FACTS };
+  return { revision, isFullSize: true, awaitedCamera: null, work, facts: FACTS };
 }
 
 /** A scene at `revision()` that never tells of a change. */

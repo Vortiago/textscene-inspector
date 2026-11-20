@@ -15,7 +15,7 @@ import { ViewShowProvider } from '../viewShow/ViewShowContext';
 import { SceneResourcesProvider, type SceneResourcesProviderProps } from '../SceneResourcesContext';
 import { SelectSeeder } from './SelectSeeder';
 import { HierarchyProvider, useOptionalHierarchy } from '../contexts/HierarchyContext';
-import { useOpenedScene } from '../hooks/useOpenedScene';
+import { useOpenedScene } from './useOpenedScene';
 import { DEFAULT_ROOT_SCENE_PATH } from '../../scene/openScene';
 
 export interface SceneStackProps {

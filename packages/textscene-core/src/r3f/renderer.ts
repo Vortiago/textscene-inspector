@@ -7,13 +7,16 @@
 // Every node-type component registers itself on first import.
 import './nodes/index.js';
 
+import type { Scene } from '../scene/openScene.js';
+import { TscnCanvas as TscnCanvasInCore, type TscnCanvasProps } from './TscnCanvas.js';
+
 export { openScene, type Scene } from '../scene/openScene.js';
 export type { NodeHandle } from '../scene/nodeHandle.js';
 export type { CameraState } from '../scene/viewportCameras.js';
 export { variant, type SceneValue, type Variant } from '../scene/variant.js';
-export { TscnCanvas } from './TscnCanvas.js';
-export { TscnSceneProvider } from './TscnSceneProvider.js';
 export { mountScene, type View, type ViewOptions } from './mountScene.js';
-export { useGameViewSettled } from './viewStatus/ViewStatusContext.js';
 export type { ResourceProvider } from '../resources/ResourceProvider.js';
-export { useSelection } from './contexts/SelectionContext.js';
+
+/** The entry gives no scene provider, so its canvas requires `scene`. */
+export const TscnCanvas: (props: TscnCanvasProps & { scene: Scene }) => ReturnType<typeof TscnCanvasInCore> =
+  TscnCanvasInCore;

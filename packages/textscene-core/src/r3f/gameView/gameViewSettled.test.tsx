@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { act } from 'react';
+import { act, useSyncExternalStore } from 'react';
 import { GameViewContents } from './GameViewContents';
-import { useGameViewSettled } from '../viewStatus/ViewStatusContext';
+import { useViewStatus } from '../viewStatus/ViewStatusContext';
 import type { ViewSettled } from '../viewStatus/viewStatus';
 import { TscnSceneProvider } from '../TscnSceneProvider';
 import { openScene } from '../../scene/openScene';
@@ -64,13 +64,14 @@ const files: ResourceProvider = {
 
 const NONE: ReadonlySet<string> = new Set();
 
-/** Written by the view's host each render: what `useGameViewSettled` answers now. */
+/** Written by the view's host each render: the settled value of the view's status now. */
 let seen: ViewSettled | null = null;
 /** Written by the view's host each render: every answer it rendered, in order. */
 let answers: (ViewSettled | null)[] = [];
 
 function Host() {
-  seen = useGameViewSettled();
+  const status = useViewStatus()!;
+  seen = useSyncExternalStore(status.subscribe, status.settled);
   answers.push(seen);
   return null;
 }

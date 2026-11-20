@@ -1,9 +1,10 @@
 # @textscene/renderer
 
-`@textscene/renderer` draws a Godot `.tscn` scene in a React app. It is the renderer of the
-[TextScene Inspector](https://github.com/Vortiago/textscene-inspector): a react-three-fiber canvas,
-bundled into one ES module. React and three.js are peer dependencies, so your app keeps one copy of
-each.
+`@textscene/renderer` draws a Godot `.tscn` scene in the browser. You open the scene, change its
+nodes from your code, and mount a view of it, with React or with no React code of your own. It is
+the renderer of the [TextScene Inspector](https://github.com/Vortiago/textscene-inspector), whose
+VS Code extension and web previewer use this same surface. The package is one ES module. React and
+three.js are peer dependencies, so your app keeps one copy of each.
 
 The package is not a 1:1 copy of Godot. Each node type has a comparison sheet that lists what the
 renderer supports and where it differs from Godot 4.6. The
@@ -170,38 +171,44 @@ The limits of this release:
 ### Know when the scene is whole
 
 A view is settled when a frame shows the scene whole: the frame drew the latest change to the scene,
-and no file, texture or font of the scene was still loading. This holds in every mode. A write or a
+no file, texture or font of the scene was still loading, and in the 3D mode the frame drew through
+the Camera3D that `camera` names. This holds in every mode. A write or a
 camera call from your code, or a new text, makes it pending again until a frame shows the change.
 
-One view reports to each `<TscnSceneProvider>`. A second view under the same provider draws, but it
-reports nothing and logs an error. Give each view its own provider.
+`view.settled` resolves to `{ scriptedNodeCount, hasCurrentCamera, missingFiles }`: the count of
+nodes that hold a script, which do not run, whether the root viewport has a current Camera3D or
+Camera2D, and the files the frame asked for and did not get. The first two are facts of the game's
+start, so the 3D and 2D modes give the same value.
 
-`useGameViewSettled()` answers `null` while the view is pending, and then
-`{ scriptedNodeCount, hasCurrentCamera, missingFiles }`: the count of nodes that hold a script, which
-do not run, whether the root viewport has a current Camera3D or Camera2D, and the files the frame
-asked for and did not get. The first two are facts of the game's start, so the 3D and 2D modes give
-the same value. Call it in a component below the same `<TscnSceneProvider>` as the view:
+`mountScene` returns the view. In React, the `ref` of `<TscnCanvas>` gives its `settled` and
+`captureImage`:
 
 ```tsx
-import { TscnCanvas, TscnSceneProvider, useGameViewSettled } from '@textscene/renderer';
-
-function Status() {
-  const settled = useGameViewSettled();
-  if (!settled) return <p>Loading…</p>;
-  return <p>{settled.scriptedNodeCount} nodes hold a script, and scripts do not run.</p>;
-}
+import { useEffect, useRef, useState } from 'react';
+import { TscnCanvas, type View } from '@textscene/renderer';
 
 export function GameView() {
+  const view = useRef<Pick<View, 'settled' | 'captureImage'>>(null);
+  const [status, setStatus] = useState('Loading…');
+  useEffect(() => {
+    view.current?.settled.then(
+      ({ scriptedNodeCount }) =>
+        setStatus(`${scriptedNodeCount} nodes hold a script, and scripts do not run.`),
+      () => {} // The view unmounted before it settled.
+    );
+  }, []);
   return (
-    <TscnSceneProvider scene={scene}>
+    <>
       <div style={{ width: 640, height: 360 }}>
-        <TscnCanvas mode="in-game" />
+        <TscnCanvas ref={view} scene={scene} mode="in-game" />
       </div>
-      <Status />
-    </TscnSceneProvider>
+      <p>{status}</p>
+    </>
   );
 }
 ```
+
+Each read of `settled` gives a new promise, which rejects once the view unmounts.
 
 ### Know which files are missing
 
@@ -332,7 +339,8 @@ and through the editor camera until then. If the path still names no Camera3D on
 `settled` rejects with the path in the message. A camera that leaves the scene ends the look, as in Godot, also when a node comes back at the path:
 set `camera` to `null` and then to the path to look again. The option does not make the camera
 current, and the In-game mode keeps the current camera: use `call('make_current')` for that.
-`<TscnCanvas camera="Rig/TopCamera" />` does the same in React.
+`<TscnCanvas camera="Rig/TopCamera" />` does the same in React. As with `update`, a prop left out,
+or `undefined`, keeps what the view looks through now, and `null` gives the editor camera.
 
 ### Learn which node a click picked
 
@@ -373,17 +381,17 @@ const view = mountScene(element, scene, { mode: '3D', show: { gizmos: false } })
 view.update({ show: { grid: true, collisions: true } });
 ```
 
-| Key | Default | What it draws | Godot |
-|---|---|---|---|
-| `grid` | `false` | A ground-plane grid in 3D | View Grid, on by default in Godot |
-| `gizmos` | `true` | The editor gizmos and node icons. Collision shapes follow `collisions` alone. | View Gizmos |
-| `collisions` | `false` | The CollisionShape3D, CollisionShape2D and TouchScreenButton shapes | Debug > Visible Collision Shapes |
-| `labels` | `true` | The Label3D text | none, Godot always draws it |
-| `navigation` | `true` | The NavigationRegion3D and NavigationRegion2D meshes | Debug > Visible Navigation |
-| `previewSun` | `true` | The editor preview sun, while the scene has no DirectionalLight3D | The preview sunlight button |
-| `previewEnvironment` | `true` | The editor preview sky, while the scene has no WorldEnvironment | The preview environment button |
-| `fog` | `true` | The Environment's depth and volumetric fog | none, Godot always draws it |
-| `performance` | `false` | A panel over the view with the frame rate and the time of each render step | View Frame Time |
+| Key                  | Default | What it draws                                                                 | Godot                             |
+| -------------------- | ------- | ----------------------------------------------------------------------------- | --------------------------------- |
+| `grid`               | `false` | A ground-plane grid in 3D                                                     | View Grid, on by default in Godot |
+| `gizmos`             | `true`  | The editor gizmos and node icons. Collision shapes follow `collisions` alone. | View Gizmos                       |
+| `collisions`         | `false` | The CollisionShape3D, CollisionShape2D and TouchScreenButton shapes           | Debug > Visible Collision Shapes  |
+| `labels`             | `true`  | The Label3D text                                                              | none, Godot always draws it       |
+| `navigation`         | `true`  | The NavigationRegion3D and NavigationRegion2D meshes                          | Debug > Visible Navigation        |
+| `previewSun`         | `true`  | The editor preview sun, while the scene has no DirectionalLight3D             | The preview sunlight button       |
+| `previewEnvironment` | `true`  | The editor preview sky, while the scene has no WorldEnvironment               | The preview environment button    |
+| `fog`                | `true`  | The Environment's depth and volumetric fog                                    | none, Godot always draws it       |
+| `performance`        | `false` | A panel over the view with the frame rate and the time of each render step    | View Frame Time                   |
 
 The In-game mode draws as the game does: no helper, every Label3D and the fog, whatever `show`
 holds. Only `performance` works there too. `<TscnCanvas show={{ grid: true }} />` does the same in
@@ -442,20 +450,8 @@ With no `mode`, or `mode="3D"`, the view draws the scene as the Godot editor's 3
 orbit camera, the preview sun and sky, and the gizmos. It draws 3D content. A scene of 2D nodes,
 such as `Control` or `Node2D`, draws nothing in it: use the 2D mode.
 
-`<TscnSceneProvider>` opens the scene from its text for a view and for `useSelection`:
-
 ```tsx
-import { TscnCanvas, TscnSceneProvider } from '@textscene/renderer';
-
-export function SceneView({ source }: { source: string }) {
-  return (
-    <TscnSceneProvider source={source} provider={provider}>
-      <div style={{ width: 640, height: 480 }}>
-        <TscnCanvas />
-      </div>
-    </TscnSceneProvider>
-  );
-}
+<TscnCanvas scene={scene} mode="3D" />
 ```
 
 ### The 2D mode
@@ -484,27 +480,24 @@ The package exports these names.
 - `variant(text)`: a value of any Godot type, as a `.tscn` file spells it. It throws for a text
   Godot cannot read.
 - `Variant` and `SceneValue` (types): what `variant` gives, and what `get` and `set` take.
-- `TscnCanvas`: the view. Its props are `scene` (a `Scene`, optional inside
-  `<TscnSceneProvider>`), `mode` (`'in-game'`, `'3D'` or `'2D'`, default `'3D'`), `visible` (`false`
-  stops the frames), `camera` (the Camera3D the 3D mode looks through), `selected`, `onSelect` and
-  `className`.
-- `TscnSceneProvider`: mounts what the view reads. Give it `scene` (a `Scene`), or `source` (the
-  text of a `.tscn` scene), `provider` (a `ResourceProvider`) and `rootScenePath` (the `res://` path
-  the scene opens under, optional). It takes `children`. A new `provider` starts a new resource
-  loader.
+- `TscnCanvas`: the view in React. Its props are `scene` (a `Scene`), the options of `mountScene`
+  (`mode`, default `'3D'`, `visible`, `camera`, `selected`, `onSelect` and `show`), and `className`.
+  `scene` is required. Its `ref` gives the view's `settled` and `captureImage`. Its unmount ends
+  the view.
 - `ResourceProvider` (a type): `loadResource(path, type?)` returns the file as a string or an
   `ArrayBuffer`, or `null` when the file is missing. The optional `watch(listener)` is in "Load a
   file again when it changes".
-- `useSelection`: the selected node path and the functions that change it. Call it in a component
-  inside `<TscnSceneProvider>`.
-- `useGameViewSettled()`: the settled value of the view below the same
-  `<TscnSceneProvider>`, or `null` while it is pending. See "Know when the scene is whole".
 - `mountScene(element, scene, options?)`: mounts the view with no React code of the page's own,
   and returns a `View`: `settled`, `captureImage`, `update` and `dispose`. See "Mount the view with
   no React code".
 - `View` and `ViewOptions` (types): what `mountScene` returns, and the options of `mountScene` and
   `update`: `mode` (default `'in-game'`), `visible` (default `true`), `camera` (default `null`),
-  `selected` and `onSelect`. See "Learn which node a click picked".
+  `selected`, `onSelect` and `show`. See "Learn which node a click picked" and "Turn the editor
+  helpers on and off".
+
+Version 0.6.0 exported `TscnSceneProvider`, `useSelection` and `useGameViewSettled`, and later
+versions do not. Pass `scene` to `TscnCanvas`, use `selected` and `onSelect`, and read `settled`
+from the canvas's `ref`.
 
 ## Styles and workers
 

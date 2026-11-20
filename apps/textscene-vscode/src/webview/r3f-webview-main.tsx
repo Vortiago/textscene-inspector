@@ -3,7 +3,7 @@
  * and posts `jumpToNode` when the user double-clicks a scene-tree node. Each panel
  * has its own webview and `<TscnPreviewShell>`, so panels share no state.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   PENDING_CAPTURE,
@@ -13,6 +13,7 @@ import {
   type PreviewCaptureState,
 } from '@textscene/core';
 import type { TscnNode } from '@textscene/core';
+import { openScene } from '@textscene/renderer';
 import { isHostToWebviewMessage, type WebviewToHostMessage } from '../protocol';
 import { WebviewResourceProvider } from './WebviewResourceProvider';
 import { readInitialConfig, resolveInitialViewportMode } from './initialConfig';
@@ -80,8 +81,9 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
     [vscode]
   );
 
-  // The host's `resourceChanged` reaches the provider's watchers, so a changed file draws with no remount.
-  const provider = useMemo(() => new WebviewResourceProvider(vscode), [vscode]);
+  // The panel's one scene: it ends with the webview's document, so nothing disposes it.
+  const [scene] = useState(() => openScene({ source: '', provider: new WebviewResourceProvider(vscode) }));
+  useLayoutEffect(() => scene.setSource(content), [scene, content]);
 
   useEffect(() => {
     function onMessage(event: MessageEvent) {
@@ -138,8 +140,7 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
   return (
     <TscnPreviewShell
       panelId={panelId}
-      content={content}
-      provider={provider}
+      scene={scene}
       onNodeReveal={handleNodeReveal}
       onCopyNodePath={handleCopyNodePath}
       initialViewportMode={INITIAL_VIEWPORT_MODE}

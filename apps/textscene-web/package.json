@@ -38,6 +38,7 @@
   },
   "dependencies": {
     "@textscene/core": "workspace:*",
+    "@textscene/renderer": "workspace:*",
     "react": "catalog:",
     "react-dom": "catalog:"
   },

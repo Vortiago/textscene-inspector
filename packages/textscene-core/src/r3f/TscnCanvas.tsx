@@ -1,5 +1,14 @@
 import { Canvas } from '@react-three/fiber';
-import { lazy, Suspense, type ReactNode } from 'react';
+import {
+  lazy,
+  useCallback,
+  Suspense,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+  type ReactNode,
+  type Ref,
+} from 'react';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useSeatedRoots } from './useLiveSceneTree.js';
 import { useViewShow } from './viewShow/ViewShowContext.js';
@@ -32,9 +41,11 @@ import { FrameStatsProvider } from './frameProfile/FrameStatsContext.js';
 import { ViewShowProvider } from './viewShow/ViewShowContext.js';
 import type { ViewShow } from './viewShow/viewShow.js';
 import { ViewportActionsProvider, useOptionalViewportActions } from './contexts/ViewportActionsContext.js';
-import { ViewCamera } from './viewCamera.js';
+import { LookThroughProvider, ViewCamera } from './viewCamera.js';
 import { EditorViewReport } from './viewStatus/EditorViewReport.js';
 import { HostSelection, type HostSelectionProps } from './hostSelection/HostSelection.js';
+import { useViewStatus } from './viewStatus/ViewStatusContext.js';
+import { viewAnswers, type ViewAnswers } from './viewStatus/viewAnswers.js';
 
 // Lazy, so the glyph engine and the parse of the prompt load only for an empty canvas.
 const EmptyScenePrompt = lazy(() => import('./emptyScenePrompt.js'));
@@ -124,7 +135,7 @@ const Canvas2DStage = lazy(() =>
 export type TscnCanvasMode = ViewportMode;
 
 export interface TscnCanvasProps extends Omit<HostSelectionProps, 'children'> {
-  /** The scene `openScene` gave. Without it, the view reads the `<TscnSceneProvider>` above it. */
+  /** The scene `openScene` gave. The entry requires it. Without it, the shell's view reads its provider. */
   scene?: Scene;
   /** `3D` by default. A change replaces the stage, so one canvas is live. */
   mode?: TscnCanvasMode;
@@ -136,6 +147,8 @@ export interface TscnCanvasProps extends Omit<HostSelectionProps, 'children'> {
   show?: Partial<ViewShow>;
   /** The class of the element the view fills. */
   className?: string;
+  /** The view's `settled` and `captureImage`, as `mountScene` gives them. Props change the view. */
+  ref?: Ref<ViewAnswers>;
 }
 
 export function TscnCanvas({
@@ -147,6 +160,7 @@ export function TscnCanvas({
   onSelect,
   show,
   className,
+  ref,
 }: TscnCanvasProps) {
   const stage = (
     // The In-game mode takes no pointer, and the 2D mode picks no node yet.
@@ -155,12 +169,46 @@ export function TscnCanvas({
         <ViewShowProvider show={show}>
           <FrameStatsProvider>
             <ViewportActionsScope>{stageOf({ mode, camera, className })}</ViewportActionsScope>
+            {ref && <ViewRef viewRef={ref} mode={mode} camera={camera} />}
           </FrameStatsProvider>
         </ViewShowProvider>
       </PreviewVisibilityProvider>
     </HostSelection>
   );
   return scene ? <TscnSceneProvider scene={scene}>{stage}</TscnSceneProvider> : stage;
+}
+
+/** Hands the ref the answers of the view below the same scene. They end when the view unmounts. */
+function ViewRef({ viewRef, mode, camera }: { viewRef: Ref<ViewAnswers> } & ViewRefLook) {
+  const scene = useOptionalHierarchy()?.scene;
+  const status = useViewStatus();
+  const ending = useRef<AbortController | null>(null);
+  const lookedThrough = useLookedThrough({ mode, camera });
+  // A layout effect before the handle, so each mount's controller exists when the handle is built.
+  useLayoutEffect(() => {
+    const controller = new AbortController();
+    ending.current = controller;
+    return () => controller.abort(new Error('expected the view to settle before its unmount'));
+  }, []);
+  useImperativeHandle(viewRef, () => {
+    if (!scene || !status) throw new Error('expected a TscnCanvas with a scene, got none');
+    if (!ending.current) throw new Error('expected the view to mount before its ref, got no mount');
+    return viewAnswers({ scene, status, ending: ending.current.signal, lookedThrough });
+  }, [scene, status, lookedThrough]);
+  return null;
+}
+
+type ViewRefLook = Required<Pick<TscnCanvasProps, 'mode'>> & Pick<TscnCanvasProps, 'camera'>;
+
+/** An undefined `camera` keeps the look, as `update` does, so `settled` still checks that Camera3D. */
+function useLookedThrough({ mode, camera }: ViewRefLook): () => string | null {
+  const keptCamera = useRef<string | null>(null);
+  const isLooking3D = useRef(false);
+  useLayoutEffect(() => {
+    if (camera !== undefined) keptCamera.current = camera;
+    isLooking3D.current = mode === '3D';
+  }, [mode, camera]);
+  return useCallback(() => (isLooking3D.current ? keptCamera.current : null), []);
 }
 
 /** A host's own provider wins, so its panels and the `camera` prop move the same preview. */
@@ -215,16 +263,18 @@ function EditorCanvas({ className, camera }: Pick<TscnCanvasProps, 'camera' | 'c
         gl={CANVAS_RENDERER_GL}
         frameloop={frameloop}
       >
-        <SceneCamerasProvider>
-          <TscnSceneContents />
-          <ActiveCameraSwitcher />
-          {camera !== undefined && <ViewCamera camera={camera} />}
-        </SceneCamerasProvider>
-        <CameraFit />
-        <FrameSelectedShortcut />
-        <GodotEditorControls />
-        <EditorControlsBridge />
-        <EditorViewReport />
+        <LookThroughProvider>
+          <SceneCamerasProvider>
+            <TscnSceneContents />
+            <ActiveCameraSwitcher />
+            {camera !== undefined && <ViewCamera camera={camera} />}
+          </SceneCamerasProvider>
+          <CameraFit />
+          <FrameSelectedShortcut />
+          <GodotEditorControls />
+          <EditorControlsBridge />
+          <EditorViewReport />
+        </LookThroughProvider>
       </Canvas>
     </StageRoot>
   );

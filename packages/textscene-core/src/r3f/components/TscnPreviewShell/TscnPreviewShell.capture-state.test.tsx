@@ -87,7 +87,7 @@ function StubStage() {
   return <div data-testid="stage-2d-stub" />;
 }
 
-import { TscnPreviewShell } from './TscnPreviewShell';
+import { TextShell } from './TscnPreviewShell.testkit';
 
 const SCENE_3D = `[gd_scene format=3]
 
@@ -111,7 +111,7 @@ function renderShell(content = SCENE_3D): RenderedShell {
   // A host wraps the shell in its resource loader, as the extension's webview does.
   const shellWith = (content: string) => (
     <ResourceLoaderProvider loader={loader}>
-      <TscnPreviewShell
+      <TextShell
         panelId="capture"
         content={content}
         initialViewportMode="3D"
@@ -127,7 +127,7 @@ function latest(states: PreviewCaptureState[]): PreviewCaptureState | undefined 
   return states[states.length - 1];
 }
 
-describe('<TscnPreviewShell> capture state', () => {
+describe('<TextShell> capture state', () => {
   it('reports pending while the canvas has no screenshot handler', () => {
     arrangeCanvas({ registersHandler: false });
 
@@ -242,7 +242,7 @@ describe('<TscnPreviewShell> capture state', () => {
   });
 });
 
-describe('<TscnPreviewShell> scene load status', () => {
+describe('<TextShell> scene load status', () => {
   const sceneLoadStatus = () => screen.queryByTestId(SCENE_LOAD_STATUS_TESTID);
 
   it('shows "Loading scene…" in the top bar while a resource is on its way, and leaves once it lands', async () => {

@@ -22,6 +22,8 @@ export interface LiveScene {
 export interface DrawnFrame {
   revision: number;
   isFullSize: boolean;
+  /** The Camera3D the view names and this frame did not draw through, or null. */
+  awaitedCamera: string | null;
   work: PendingSceneWork;
   facts: ViewSettled;
 }
@@ -68,7 +70,9 @@ export function createViewStatus(): ViewStatus {
     live.missingFiles() === lastFrame.facts.missingFiles;
   // Nested viewports draw before their parent in one frame, so one frame shows a revision whole.
   const settled = (): ViewSettled | null =>
-    showsDrawnState() && !hasPendingWork(lastFrame!.work) ? lastFrame!.facts : null;
+    showsDrawnState() && !hasPendingWork(lastFrame!.work) && lastFrame!.awaitedCamera === null
+      ? lastFrame!.facts
+      : null;
 
   const notify = () => announcements.set(announcements.get() + 1);
 
@@ -86,6 +90,8 @@ export function createViewStatus(): ViewStatus {
     if (!live) return 'no view mounted';
     if (!lastFrame) return 'no frame drawn';
     if (hasPendingWork(lastFrame.work)) return `${describePendingWork(lastFrame.work)} still loading`;
+    if (lastFrame.awaitedCamera !== null)
+      return `the view does not draw through "${lastFrame.awaitedCamera}" yet`;
     return 'a change to the scene that no frame has drawn';
   }
 

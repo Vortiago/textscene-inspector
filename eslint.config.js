@@ -47,6 +47,36 @@ const CORE_DIRECTORIES_OUTSIDE_SHADERS = [
   'workers',
 ];
 
+/** An app that mounts the view imports these from `@textscene/renderer`, as an npm user does. */
+export const RENDERER_ENTRY_NAMES = [
+  'CameraState',
+  'NodeHandle',
+  'ResourceProvider',
+  'Scene',
+  'SceneValue',
+  'TscnCanvas',
+  'Variant',
+  'View',
+  'ViewOptions',
+  'mountScene',
+  'openScene',
+  'variant',
+];
+const RENDERER_ENTRY_MESSAGE =
+  'Import the renderer from `@textscene/renderer`, the entry an npm user imports.';
+const RENDERER_PAST_ENTRY = [
+  {
+    group: ['@textscene/core/renderer', '@textscene/core/resources/ResourceProvider'],
+    message: RENDERER_ENTRY_MESSAGE,
+  },
+];
+const RENDERER_NAMES_FROM_CORE = [
+  { name: '@textscene/core', importNames: RENDERER_ENTRY_NAMES, message: RENDERER_ENTRY_MESSAGE },
+];
+const DISK_PROJECT_PATTERNS = [
+  { group: ['@textscene/core/resources/diskProject'], message: NODE_ONLY_MESSAGE },
+];
+
 /** One `no-restricted-imports` setting: a later block's setting replaces an earlier one, so each block lists every group it needs. */
 function restrictedImports(patterns, paths = []) {
   return ['error', { paths, patterns }];
@@ -348,9 +378,18 @@ export default [
   {
     files: ['apps/textscene-vscode/src/**/*.{ts,tsx}', 'apps/textscene-web/src/**/*.{ts,tsx}'],
     rules: {
-      'no-restricted-imports': restrictedImports([
-        { group: ['@textscene/core/resources/diskProject'], message: NODE_ONLY_MESSAGE },
-      ]),
+      'no-restricted-imports': restrictedImports(DISK_PROJECT_PATTERNS),
+    },
+  },
+
+  // The apps that mount the view reach the renderer only through its package entry.
+  {
+    files: ['apps/textscene-vscode/src/webview/**/*.{ts,tsx}', 'apps/textscene-web/src/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': restrictedImports(
+        [...DISK_PROJECT_PATTERNS, ...RENDERER_PAST_ENTRY],
+        RENDERER_NAMES_FROM_CORE
+      ),
     },
   },
 

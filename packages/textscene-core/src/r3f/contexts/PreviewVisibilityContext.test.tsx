@@ -75,6 +75,7 @@ describe('usePreviewFrameloop', () => {
     const frame = {
       revision: 0,
       isFullSize: true,
+      awaitedCamera: null,
       work: { resources: 0, textures: 0, fonts: 0 },
     };
     const facts = { scriptedNodeCount: 0, hasCurrentCamera: false, missingFiles: NO_FILES };
@@ -91,6 +92,7 @@ describe('usePreviewFrameloop', () => {
     status.frameDrawn({
       revision: 0,
       isFullSize: true,
+      awaitedCamera: null,
       work: { resources: 0, textures: 0, fonts: 0 },
       facts: { scriptedNodeCount: 0, hasCurrentCamera: false, missingFiles: NO_FILES },
     });

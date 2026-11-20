@@ -1,5 +1,5 @@
 import { createRoot } from 'react-dom/client';
-import { TscnCanvas, TscnSceneProvider, openScene, variant } from '@textscene/renderer';
+import { TscnCanvas, openScene, variant } from '@textscene/renderer';
 import { runHeldResourceChecks, type HeldResourceCheckResults } from './heldResourceChecks';
 import { runMissingFileChecks, type MissingFileCheckResults } from './missingFileChecks';
 import { projectOf, runMountChecks, type MountCheckResults } from './mountChecks';
@@ -69,6 +69,7 @@ const called =
   query.get('call') === 'close' ? gameScene.getNode('Close').call('make_current') : Promise.resolve(null);
 
 const menuScene = openScene({ source: FIXTURE_2D_SCENE, provider: projectOnly });
+const editorScene = openScene({ source: FIXTURE_SCENE, provider: projectOnly });
 
 /** `?mode=in-game` draws the game's start, `?mode=2D` the editor's 2D view. The page holds one view. */
 function View() {
@@ -78,11 +79,7 @@ function View() {
   if (query.get('mode') === '2D') {
     return <TscnCanvas scene={menuScene} mode="2D" />;
   }
-  return (
-    <TscnSceneProvider source={FIXTURE_SCENE} provider={projectOnly}>
-      <TscnCanvas />
-    </TscnSceneProvider>
-  );
+  return <TscnCanvas scene={editorScene} />;
 }
 
 /** `#viewport`, the element the runner's screenshots read. */
