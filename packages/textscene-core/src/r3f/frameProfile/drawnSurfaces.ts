@@ -56,6 +56,8 @@ function primitivesOf(object: THREE.Object3D, vertices: number): number {
 
 function instancesOf(object: THREE.Object3D, geometry: THREE.BufferGeometry): number {
   if ((object as THREE.InstancedMesh).isInstancedMesh) return (object as THREE.InstancedMesh).count;
-  const instanced = geometry as THREE.InstancedBufferGeometry;
-  return instanced.isInstancedBufferGeometry ? instanced.instanceCount : 1;
+  const instanced = geometry as THREE.InstancedBufferGeometry & { _maxInstanceCount?: number };
+  if (!instanced.isInstancedBufferGeometry) return 1;
+  // three draws at most `_maxInstanceCount` instances (r187 `WebGLRenderer.js` `renderBufferDirect`).
+  return Math.min(instanced.instanceCount, instanced._maxInstanceCount ?? Infinity);
 }

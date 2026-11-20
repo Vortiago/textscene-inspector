@@ -266,6 +266,15 @@ describe('the status a view reports', () => {
     expect(status.status().settled).toEqual(FACTS);
   });
 
+  it('is pending at once when the scene changes after a read, before any notice (edge case)', () => {
+    let live = 1;
+    const status = attachedStatus(() => live);
+    drawFrame(status);
+    status.status();
+    live = 2;
+    expect(status.status().settled).toBeNull();
+  });
+
   it('counts the textures and fonts still building, also while no frame draws', () => {
     const status = attachedStatus();
     drawFrame(status);

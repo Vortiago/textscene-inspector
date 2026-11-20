@@ -135,8 +135,11 @@ export function createViewStatusStore(): ViewStatusStore {
   }
 
   function status(): ViewStatus {
+    const now = settled();
+    // A scene edit makes `settled` pending before any notice clears the snapshot, so it is read fresh.
+    if (shown?.settled !== now) shown = null;
     shown ??= {
-      settled: settled(),
+      settled: now,
       pending: { ...pending },
       frame,
       undrawn: undrawn.nodes(),

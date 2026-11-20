@@ -4,6 +4,8 @@ import { useViewShow } from '../viewShow/ViewShowContext.js';
 import { beginStep, endStep, startFrameCount, type FrameProfile } from './frameProfile.js';
 import { useViewStatusStore } from '../viewStatus/ViewStatusContext.js';
 import { timeSceneDraws } from './sceneDrawStep.js';
+import { VIEW_DRAW_COUNTER } from './viewDraw.js';
+import { useCanvasWorkspace } from '../contexts/CanvasWorkspaceContext.js';
 import type { RenderStep } from './frameStats.js';
 
 /** Mounted once in each top-level `<Canvas>`. Only `show.performance` times the steps: a GPU query each. */
@@ -13,6 +15,8 @@ export function FrameProfiler(): null {
   const scene = useThree((state) => state.scene);
   const get = useThree((state) => state.get);
   const store = useViewStatusStore();
+  // Godot's monitor counts the 3D scene render only, so a 2D view counts no object.
+  const counter = useCanvasWorkspace() === '3d' ? VIEW_DRAW_COUNTER : null;
   const [profile, setProfile] = useState<FrameProfile | null>(null);
 
   useEffect(() => {
@@ -22,7 +26,7 @@ export function FrameProfiler(): null {
     // Global effects bracket every root's subscribers and renders in R3F's loop.
     const stopBeginning = addEffect((timestamp) => profile.beginFrame(timestamp));
     const stopEnding = addAfterEffect(() => profile.endFrame());
-    const stopDrawing = timeSceneDraws(gl, scene, () => get().camera);
+    const stopDrawing = timeSceneDraws(gl, scene, () => get().camera, counter);
     return () => {
       stopDrawing();
       stopBeginning();
@@ -31,7 +35,7 @@ export function FrameProfiler(): null {
       setProfile(null);
       store.frameMeasured(null);
     };
-  }, [gl, scene, get, store]);
+  }, [gl, scene, get, store, counter]);
 
   // The count keeps running, so a switch of `show.performance` leaves `status().frame` in place.
   useEffect(() => {

@@ -1,7 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import type { Scene } from '../../../scene/openScene.js';
 import type { ViewAnswers } from '../../viewStatus/viewAnswers.js';
-import type { HeardStatus } from './previewViewStatus.js';
 
 /** Whether the view has settled on the scene's current revision, or why it never will. */
 export type ViewSettle =
@@ -23,10 +22,9 @@ interface Answer {
 export function useViewSettle(
   scene: Scene,
   view: ViewAnswers | null,
-  { status, round }: HeardStatus
+  { isPending, round }: { isPending: boolean; round: number }
 ): ViewSettle {
   const revision = useSyncExternalStore(scene.subscribe, scene.revision);
-  const isPending = !status?.settled;
   const [answer, setAnswer] = useState<Answer | null>(null);
   useEffect(() => {
     if (!view || isPending) return undefined;

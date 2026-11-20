@@ -1,8 +1,3 @@
-/**
- * The frame profile's latest window as a small table: the frame totals, then each step's own time
- * and draw calls per frame, without the steps nested in it.
- */
-
 import type { FrameStats, FrameTimings } from './frameStats.js';
 import { PERFORMANCE_TESTIDS } from './performanceTestIds.js';
 import styles from './PerformancePanel.module.css';

@@ -10,6 +10,7 @@ import { nodeRegistry } from '../../../core/NodeRegistry';
 import type { TscnNode } from '../../../parser/types';
 import { PreviewViewStatusProvider } from '../TscnPreviewShell/previewViewStatus';
 import type { UndrawnNode } from '../../viewStatus/undrawnNodes';
+import { createExternalStore } from '../../../utils/externalStore';
 
 function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): TscnNode {
   return { rawProperties: {}, name, type, children: [], properties: {}, ...extras };
@@ -45,7 +46,8 @@ function ViewReporting({ undrawn, children }: { undrawn: UndrawnNode[]; children
     undrawn,
     isSoftwareRendering: false,
   };
-  return <PreviewViewStatusProvider value={status}>{children}</PreviewViewStatusProvider>;
+  const heard = createExternalStore({ status, round: 0 });
+  return <PreviewViewStatusProvider value={heard}>{children}</PreviewViewStatusProvider>;
 }
 
 afterEach(() => {

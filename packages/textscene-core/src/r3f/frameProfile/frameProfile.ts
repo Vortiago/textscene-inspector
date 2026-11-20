@@ -47,6 +47,13 @@ export function openViewDraw(renderer: THREE.WebGLRenderer): void {
   profiles.get(renderer)?.openViewDraw();
 }
 
+/** Runs `draw`, a shadow pass, whose draw calls count as objects while the view's own draw is open. */
+export function countShadowDraws(renderer: THREE.WebGLRenderer, draw: () => void): void {
+  const drawCallsAtStart = renderer.info.render.calls;
+  draw();
+  profiles.get(renderer)?.countShadowDraws(renderer.info.render.calls - drawCallsAtStart);
+}
+
 /** Closes the view's draw, with the objects and primitives of the surfaces it drew. */
 export function closeViewDraw(renderer: THREE.WebGLRenderer, objects: number, primitives: number): void {
   profiles.get(renderer)?.closeViewDraw(objects, primitives);
@@ -113,9 +120,8 @@ class Profile implements FrameProfile {
   private lastTimestamp: number | null = null;
   private isFrameOpen = false;
   private frameStart = 0;
-  /** The open steps, innermost last, and the draw count each opened at. */
+  /** The open steps, innermost last. */
   private readonly openSteps: RenderStep[] = [];
-  private readonly openStepDrawCalls: number[] = [];
   private isViewDrawOpen = false;
   /** The step whose own time runs now, and the clock reading and draw count it started at. */
   private current: StepKey = 'Other';
@@ -161,7 +167,6 @@ class Profile implements FrameProfile {
     this.endSegment();
     this.gpu?.endFrame();
     this.openSteps.length = 0;
-    this.openStepDrawCalls.length = 0;
     this.isViewDrawOpen = false;
     this.isFrameOpen = false;
     this.sums.frames += 1;
@@ -172,22 +177,19 @@ class Profile implements FrameProfile {
 
   beginStep(step: RenderStep): void {
     if (!this.isFrameOpen) return;
-    add(this.sums.stepRuns, step, 1);
+    if (this.isTimed) add(this.sums.stepRuns, step, 1);
     this.openSteps.push(step);
-    this.openStepDrawCalls.push(this.renderer.info.render.calls);
     this.switchTo(step);
   }
 
   endStep(step: RenderStep): void {
     if (this.openSteps.at(-1) !== step) return;
     this.openSteps.pop();
-    const drawCallsAtStart = this.openStepDrawCalls.pop()!;
-    const outer = this.openSteps.at(-1) ?? 'Other';
-    // Godot counts each shadow pass element of the viewport as an object (rasterizer_scene_gles3.cpp:3109).
-    if (step === 'Shadows' && this.isViewDrawOpen) {
-      this.sums.objects += this.renderer.info.render.calls - drawCallsAtStart;
-    }
-    this.switchTo(outer);
+    this.switchTo(this.openSteps.at(-1) ?? 'Other');
+  }
+
+  countShadowDraws(drawCalls: number): void {
+    if (this.isViewDrawOpen) this.sums.objects += drawCalls;
   }
 
   openViewDraw(): void {
@@ -208,6 +210,8 @@ class Profile implements FrameProfile {
   startTimings(): void {
     if (this.isTimed) return;
     this.isTimed = true;
+    this.segmentStart = this.now();
+    this.segmentDrawCalls = this.renderer.info.render.calls;
     this.gpu = GpuTimer.create(this.renderer.getContext() as WebGL2RenderingContext);
   }
 
@@ -234,7 +238,9 @@ class Profile implements FrameProfile {
     this.gpu?.switchTo(next);
   }
 
+  // Untimed, the steps only nest: `innermostStep` still reads them, and no sum grows.
   private endSegment(): void {
+    if (!this.isTimed) return;
     const time = this.now();
     add(this.sums.stepCpuMs, this.current, time - this.segmentStart);
     this.segmentStart = time;

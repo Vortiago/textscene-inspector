@@ -61,6 +61,14 @@ describe('countDrawnSurfaces', () => {
     expect(counted(listOf(mesh))).toEqual({ objects: 1, primitives: 36 });
   });
 
+  it('counts at most the instances three draws of an instanced geometry (edge case)', () => {
+    const geometry = Object.assign(new THREE.InstancedBufferGeometry().copy(new THREE.BoxGeometry()), {
+      instanceCount: 10,
+      _maxInstanceCount: 2,
+    });
+    expect(counted(listOf(new THREE.Mesh(geometry))).primitives).toBe(24);
+  });
+
   it.each<[string, THREE.Object3D, number]>([
     ['line segments', new THREE.LineSegments(points(4)), 2],
     ['a line strip', new THREE.Line(points(4)), 3],

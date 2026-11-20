@@ -1,8 +1,3 @@
-/**
- * The top-bar status while the browser draws WebGL in software. Every scene then runs at a few
- * frames a second, so the viewer names the cause where the user looks first.
- */
-
 import { StatusChip } from './StatusChip.js';
 
 const SOFTWARE_RENDERING_STATUS_TESTID = 'software-rendering-status';

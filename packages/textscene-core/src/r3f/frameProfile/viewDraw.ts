@@ -13,6 +13,14 @@ export function endViewDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scene): 
   closeViewDraw(renderer, drawn.objects, drawn.primitives);
 }
 
+/** What a canvas draw that Godot's monitor counts calls at its start and end. A 2D view counts none. */
+export interface ViewDrawCounter {
+  open(renderer: THREE.WebGLRenderer): void;
+  close(renderer: THREE.WebGLRenderer, scene: THREE.Scene): void;
+}
+
+export const VIEW_DRAW_COUNTER: ViewDrawCounter = { open: openViewDraw, close: endViewDraw };
+
 /** Runs `draw`, the view's draw of `scene` that Godot's monitor counts, such as the root viewport's. */
 export function countViewDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scene, draw: () => void): void {
   openViewDraw(renderer);
