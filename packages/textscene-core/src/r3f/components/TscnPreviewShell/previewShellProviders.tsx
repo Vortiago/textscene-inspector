@@ -5,6 +5,8 @@
 
 import type { ReactNode } from 'react';
 import { HierarchyProvider, type HierarchyContextValue } from '../../contexts/HierarchyContext.js';
+import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext.js';
+import type { ResourceLoader } from '../../../resources/ResourceLoader.js';
 import { SelectionProvider } from '../../contexts/SelectionContext.js';
 import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext.js';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext.js';
@@ -27,17 +29,18 @@ import { ProjectSettingsProvider } from '../../contexts/ProjectSettingsContext.j
 import { AnimationTransportProvider } from '../../contexts/AnimationTransportContext.js';
 import { PreviewVisibilityProvider } from '../../contexts/PreviewVisibilityContext.js';
 import { composeProviders } from '../../composeProviders.js';
-import { FrameStatsProvider } from '../../frameProfile/FrameStatsContext.js';
 import { SoftwareRenderingProvider } from '../../softwareRendering/SoftwareRenderingContext.js';
-import { GameViewStatusProvider } from '../../gameView/GameViewStatusContext.js';
+import { ViewStatusProvider } from '../../viewStatus/ViewStatusContext.js';
 
 interface PreviewShellProviderOptions {
   hierarchyValue: HierarchyContextValue;
+  /** The loader of the shell's scene, which every panel and view reads its files through. */
+  loader: ResourceLoader;
   initialPreviewedCameraPath?: string | null;
   onMissingPathsChange?: (paths: ReadonlySet<string>) => void;
   /** The host's forced viewport mode, if it named one. */
   initialViewportMode?: ViewportMode;
-  /** The mode, gizmos, grid, framing, fog and performance overlay persisted last session. */
+  /** The mode, the helpers and the framing persisted last session. */
   initialViewport?: PersistedViewport;
   /** Whether the host shows the preview. Both canvases stop rendering while it is `false`. */
   isVisible?: boolean;
@@ -51,6 +54,7 @@ interface PreviewShellProviderOptions {
  */
 export function previewShellProviders({
   hierarchyValue,
+  loader,
   initialPreviewedCameraPath,
   onMissingPathsChange,
   initialViewportMode,
@@ -60,6 +64,7 @@ export function previewShellProviders({
   rootScenePath,
 }: PreviewShellProviderOptions): (children: ReactNode) => ReactNode {
   return composeProviders(
+    (children) => <ResourceLoaderProvider loader={loader}>{children}</ResourceLoaderProvider>,
     (children) => <HierarchyProvider value={hierarchyValue}>{children}</HierarchyProvider>,
     (children) => <SelectionProvider>{children}</SelectionProvider>,
     (children) => <PreviewVisibilityProvider isVisible={isVisible}>{children}</PreviewVisibilityProvider>,
@@ -68,8 +73,8 @@ export function previewShellProviders({
         {children}
       </ViewportActionsProvider>
     ),
-    // The In-game view reports here, and a host's `useGameViewSettled` beside the view reads it.
-    (children) => <GameViewStatusProvider>{children}</GameViewStatusProvider>,
+    // The view in any mode reports here, and the shell's load status reads it.
+    (children) => <ViewStatusProvider>{children}</ViewStatusProvider>,
     (children) => (
       <MissingResourcesProvider onMissingPathsChange={onMissingPathsChange}>
         <LiveFilesHost />
@@ -82,17 +87,12 @@ export function previewShellProviders({
       // A host-forced `initialViewportMode` wins over the persisted mode.
       <ViewportModeProvider
         initialMode={initialViewportMode ?? initialViewport.mode}
-        initialShowGizmos={initialViewport.showGizmos}
-        initialShowGrid={initialViewport.showGrid}
+        initialShow={initialViewport.show}
         initialFrameOnOpen={initialViewport.frameOnOpen}
-        initialShowFog={initialViewport.showFog}
-        initialShowPerformance={initialViewport.showPerformance}
       >
         {children}
       </ViewportModeProvider>
     ),
-    // The frame profile in the canvas publishes here, and the overlay beside the canvas reads it.
-    (children) => <FrameStatsProvider>{children}</FrameStatsProvider>,
     // Each canvas's probe publishes here, and the top bar reads it.
     (children) => <SoftwareRenderingProvider>{children}</SoftwareRenderingProvider>,
     (children) => <AnimationTransportProvider>{children}</AnimationTransportProvider>,

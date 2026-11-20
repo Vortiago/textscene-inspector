@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { TscnParser } from '../../../parser/TscnParser';
 import { NodeDispatcher } from '../../../r3f/NodeDispatcher';
 import { CanvasWorldScope } from '../../../r3f/environment/WorldEnvironmentScope';
-import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
+import { ViewShowProvider } from '../../../r3f/viewShow/ViewShowContext';
 import { withProject } from '../../../r3f/testing/ProjectFixture';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
 import { settleLoads } from '../../../r3f/testing/settleLoads';
@@ -186,7 +186,7 @@ export async function framesOf(
           <ViewportRectProvider>
             <CaptureRectPublisher captured={rectPublisher} />
             <SceneStack workspace="2d" loader={fake.loader} scene={parsed} source={source}>
-              <ViewportModeProvider initialShowPreviewEnvironment={false}>
+              <ViewShowProvider show={{ previewEnvironment: false }}>
                 <ViewportPassStack captured={captured}>
                   <CanvasWorldScope>
                     <NodeDispatcher nodes={parsed.nodes} />
@@ -197,7 +197,7 @@ export async function framesOf(
                     />
                   </CanvasWorldScope>
                 </ViewportPassStack>
-              </ViewportModeProvider>
+              </ViewShowProvider>
             </SceneStack>
           </ViewportRectProvider>
         </AnimatedValueProvider>

@@ -5,7 +5,7 @@
 
 import { useEffect } from 'react';
 import { addAfterEffect, addEffect, useFrame, useThree } from '@react-three/fiber';
-import { useViewportMode } from '../contexts/ViewportModeContext.js';
+import { useViewShow } from '../viewShow/ViewShowContext.js';
 import { beginStep, endStep, startFrameProfile } from './frameProfile.js';
 import { useFrameStatsStore } from './FrameStatsContext.js';
 import { timeSceneDraws } from './sceneDrawStep.js';
@@ -13,7 +13,7 @@ import type { RenderStep } from './frameStats.js';
 
 /** Mounted once in each top-level `<Canvas>`. */
 export function FrameProfiler() {
-  return useViewportMode().showPerformance ? <RunningFrameProfile /> : null;
+  return useViewShow().performance ? <RunningFrameProfile /> : null;
 }
 
 function RunningFrameProfile(): null {
@@ -46,7 +46,7 @@ function RunningFrameProfile(): null {
  * beside a subscriber with a positive priority: a positive marker turns off R3F's own render.
  */
 export function SubscriberStep({ step, priority }: { step: RenderStep; priority: number }) {
-  return useViewportMode().showPerformance ? <SubscriberStepMarkers step={step} priority={priority} /> : null;
+  return useViewShow().performance ? <SubscriberStepMarkers step={step} priority={priority} /> : null;
 }
 
 function SubscriberStepMarkers({ step, priority }: { step: RenderStep; priority: number }): null {

@@ -7,7 +7,7 @@ vi.mock('../Canvas2DStage/Canvas2DStage', () => ({
   ),
 }));
 
-import { TscnPreviewShell } from './TscnPreviewShell';
+import { TextShell } from './TscnPreviewShell.testkit';
 
 const NODE2D_ROOT = `[gd_scene load_steps=1 format=3]
 
@@ -23,7 +23,7 @@ const EDITED_NODE2D_ROOT = `[gd_scene load_steps=1 format=3]
 
 function shellAt(rootScenePath: string, content: string) {
   return (
-    <TscnPreviewShell
+    <TextShell
       panelId="scene-path"
       content={content}
       rootScenePath={rootScenePath}
@@ -34,7 +34,7 @@ function shellAt(rootScenePath: string, content: string) {
 
 const stageScenePath = () => screen.getByTestId('stage-2d-stub').getAttribute('data-scene-path');
 
-describe('<TscnPreviewShell> scene path to the 2D stage', () => {
+describe('<TextShell> scene path to the 2D stage', () => {
   it('hands the stage the path the host opened the scene under', async () => {
     render(shellAt('res://level.tscn', NODE2D_ROOT));
     await screen.findAllByText('Root');

@@ -4,9 +4,15 @@ import { useContext, useEffect } from 'react';
 import type * as THREE from 'three';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { ResourceLoaderContext } from '../resources/ResourceLoaderContext.js';
+import { useViewStatus } from './viewStatus/ViewStatusContext.js';
 import { isDrawingPreview } from './EditorControlsHandle.js';
 import { useViewportMode } from './contexts/ViewportModeContext.js';
 import { frameSceneBounds, type OrbitLike } from './frameSceneBounds.js';
+
+/** An orthographic zoom moves no pose. */
+function zoomOf(camera: THREE.Camera): number {
+  return (camera as THREE.PerspectiveCamera | THREE.OrthographicCamera).zoom ?? 1;
+}
 
 /**
  * Frames the scene on load when `frameOnOpen` is on, with no camera preview. It is
@@ -21,40 +27,56 @@ export function CameraFit() {
   const rootKey = hierarchy?.sceneGraph?.rootScene ?? '';
   const hasScene = !!hierarchy?.sceneGraph;
 
+  const status = useViewStatus();
   const loader = useContext(ResourceLoaderContext);
 
   useEffect(() => {
     if (!frameOnOpen || !hasScene) return undefined;
 
-    // The settle-fit stands down when the camera has left this position, so
-    // the user's own orbit wins.
-    let lastSet: THREE.Vector3 | null = null;
+    // A settle-fit stands down once the camera has left this pose, so the user's own orbit, pan or zoom wins.
+    let lastSet: { pose: THREE.Matrix4; zoom: number } | null = null;
     const fit = () => {
       const state = get();
       // A preview draws through the authored Camera3D, which framing would move.
       if (isDrawingPreview(state)) return;
       frameSceneBounds(state.scene, state.camera, state.controls as OrbitLike | null);
-      lastSet = state.camera.position.clone();
+      state.camera.updateMatrixWorld();
+      lastSet = { pose: state.camera.matrixWorld.clone(), zoom: zoomOf(state.camera) };
+    };
+    const hasCameraMoved = () => {
+      const { camera } = get();
+      camera.updateMatrixWorld();
+      return (
+        lastSet !== null && (!camera.matrixWorld.equals(lastSet.pose) || zoomOf(camera) !== lastSet.zoom)
+      );
     };
 
     // The visual harness clicks for a `-selected` capture only after the last timer.
     const timers = [150, 500, 1100].map((delay) => setTimeout(fit, delay));
 
-    // The timers guess when async content has arrived. The loader knows, so a
-    // fit each time nothing is pending frames large external meshes whole. Each
-    // time, not once: the count touches zero before an instanced `.glb` starts
-    // its load. The release runs in the commit that mounts the loaded mesh.
-    const unsubscribe = loader?.subscribePending(() => {
-      if (loader.pendingResourceCount > 0) return;
-      if (lastSet && !get().camera.position.equals(lastSet)) return;
-      fit();
+    // Each settle that ends a load fits, as one can precede an instanced `.glb` load. A write never does.
+    let hasLoadedSinceSettle = (loader?.pendingResourceCount ?? 0) > 0;
+    const stopWatchingLoads = loader?.subscribePending(() => {
+      if (loader.pendingResourceCount > 0) hasLoadedSinceSettle = true;
     });
+    let wasSettled = false;
+    const fitOnSettle = () => {
+      const isSettled = status?.settled() != null;
+      if (isSettled && !wasSettled && hasLoadedSinceSettle) {
+        hasLoadedSinceSettle = false;
+        if (!hasCameraMoved()) fit();
+      }
+      wasSettled = isSettled;
+    };
+    // The status fires between frames: a fit inside one moves the camera between its passes.
+    const unsubscribe = status?.subscribe(fitOnSettle);
 
     return () => {
       timers.forEach(clearTimeout);
+      stopWatchingLoads?.();
       unsubscribe?.();
     };
-  }, [rootKey, hasScene, frameOnOpen, get, loader]);
+  }, [rootKey, hasScene, frameOnOpen, get, status, loader]);
 
   return null;
 }

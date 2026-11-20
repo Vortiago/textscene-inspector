@@ -1,0 +1,22 @@
+[gd_scene load_steps=3 format=3 uid="uid://uniteditorhelpersfog"]
+
+; A box in dense depth fog, which the Fog toggle of the Display menu turns off.
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.1, 0.1, 0.2, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.6, 0.6, 0.6, 1)
+fog_enabled = true
+fog_light_color = Color(0.9, 0.9, 0.9, 1)
+fog_density = 0.2
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Box" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_1")

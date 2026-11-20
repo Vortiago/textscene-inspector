@@ -45,7 +45,7 @@ previewer mounts the same view when the toolbar selects In-game. The package exp
 component.
 
 - The view clears the **editor hint** for its subtree (`RunningGameScope`). Every editor-only drawer
-  reads that one intent: the toggles of `ViewportModeContext` read as the game draws, whatever the
+  reads that one intent: the view's `show` reads as the game draws, whatever the
   toolbar holds, and the dispatcher binds no pointer handler, so a click selects nothing.
 - Auto-select never picks In-game and never leaves it. In-game hides the gizmos and the navigation
   that a user needs to edit a new scene, so a user picks it by hand. The choice persists as the
@@ -66,18 +66,38 @@ the selection and the passes stay one set. The switch between stages lives in th
   content and no current Camera3D, since Godot then draws no 3D (`renderer_viewport.cpp:362`).
   Both read `gameStartFacts`, one function over the live tree and the scene's current camera.
 - The toolbar disables each Display toggle that the running game overrides
-  (`RUNNING_GAME_TOGGLES`, the list the editor hint reads) in In-game, and keeps its value for the
+  (`RUNNING_GAME_SHOW`, the list the editor hint reads) in In-game, and keeps its value for the
   other modes. Performance stays live.
 - A selection made in the scene tree stays selected in In-game. The view draws no box for it.
 
-## Amendment: the In-game view says when it is settled, and captures its window
+## Amendment: a view says when it is settled, and captures what it draws
 
-The In-game view reports into a status slot that `TscnSceneProvider` and the shell provide
-(`gameView/gameViewStatus.ts`). It is settled once a frame drew the scene's current `revision()` with
+A view in any mode reports into a status slot that `TscnSceneProvider` and the shell provide
+(`viewStatus/viewStatus.ts`). It is settled once a frame drew the scene's current `revision()` with
 no resource, texture or font pending. One frame is enough: nested viewports draw before their parent in
 the frame (`nestedViewportPaths.ts`), and the loader counts a pending file from the commit that asks
-for it. One status serves one In-game view, and it refuses a second one. A host reads the
-slot through `useGameViewSettled()` or the `settled` of `mountScene`. A capture holds the root target
+for it. One status serves one view, and it refuses a second one. A host reads the
+slot through the `settled` of `mountScene` or of a `TscnCanvas` ref. The settled value holds facts of
+the game's start, so it is the same in every mode. An In-game capture holds the root target
 at the full window size, draws the window with its bars into a target of the window's size, and reads
-that target back, so the PNG has the window's size whatever the pane's. The status belongs to a view,
-not to the scene.
+that target back, so the PNG has the window's size whatever the pane's. A 3D or 2D capture draws one
+frame of its canvas and reads the canvas in the same task, at the canvas's size, since those modes have
+no window. The status belongs to a view, not to the scene.
+
+## Amendment: the helpers a view draws are one `show` option
+
+The view reads its editor helpers from one option, `show` (`viewShow/viewShow.ts`): `grid`,
+`gizmos`, `collisions`, `labels`, `navigation`, `previewSun`, `previewEnvironment`, `fog` and
+`performance`. `mountScene`, `view.update` and `<TscnCanvas>` take it, and the view provides it to
+every drawer through `ViewShowContext`. No drawer reads `ViewportModeContext`.
+
+- `ViewportModeContext` is the toolbar's state in the shell: the mode, the `show` the toolbar
+  writes, and Frame on open. `ViewportArea` hands `mode` and `show` to the view, as a host does.
+- The names follow Godot's toggle where Godot has one: View Grid, View Gizmos and View Frame Time
+  (`node_3d_editor_plugin.cpp:6255-6259`), Visible Collision Shapes and Visible Navigation
+  (`debugger_editor_plugin.cpp:71,77`), and the preview sunlight and environment buttons
+  (`node_3d_editor_plugin.cpp:9905,9916`). Godot has no toggle for labels or fog.
+- `performance` draws its panel inside the view, over the canvas, so a host gets the panel with
+  the key. The frame profile and the panel share one store per view.
+- Frame on open is not a key of `show`: it changes where the editor camera starts, not what the
+  view draws, and Godot has no such option. It stays the shell's, read by `CameraFit`.

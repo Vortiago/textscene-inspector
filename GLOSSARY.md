@@ -601,8 +601,12 @@ The window the project opens: its size from `display/window/size/*`, and how `di
 _Avoid_: "game window" for the pane, "screen".
 
 **Editor hint** (`EditorHintContext`, `RunningGameScope`):
-Godot's `Engine::is_editor_hint()`: true in the editor's views, false where the game runs. It is the one intent every editor-only drawer reads. The toggles of `ViewportModeContext` read as the game draws where it is false, and a node with `editor_only` draws only where it is true.
+Godot's `Engine::is_editor_hint()`: true in the editor's views, false where the game runs. It is the one intent every editor-only drawer reads. The view's **show** reads as the game draws where it is false, and a node with `editor_only` draws only where it is true.
 _Avoid_: "game flag", a per-node "in game" prop.
+
+**Show** (`ViewShow` in `r3f/viewShow/viewShow.ts`, ADR-0006):
+The editor helpers a view draws over the scene, one boolean each: `grid`, `gizmos`, `collisions`, `labels`, `navigation`, `previewSun`, `previewEnvironment`, `fog` and `performance`. A host gives it as the `show` option, and the toolbar writes it in the shell.
+_Avoid_: "toggles" or "display flags" for the option, a separate option for each helper.
 
 **Scene** (`Scene` from `openScene` in `scene/openScene.ts`, ADR-0086):
 An open `.tscn` text with its resource provider: one parse, made the first time a view reads it, one resource loader, and the **host writes**. It is the seam of the renderer: a host's code finds a node with `getNode` and reads and writes its properties through a **node handle**, and every view draws the parse with the writes laid on. It holds no React and no three.js.
@@ -728,11 +732,11 @@ A `[sub_resource]` that carries collision geometry (`BoxShape3D`, `ConvexPolygon
 _Avoid_: "collision mesh".
 
 **Collision gizmo**:
-An optional wireframe of a CollisionShape3D's collision-shape resource in the 3D viewport, off by default and driven by `showCollisions`.
+An optional wireframe of a CollisionShape3D's collision-shape resource in the 3D viewport, off by default and driven by `show.collisions`.
 _Avoid_: "debug shape".
 
 **Shape drawing** (`resources/shapes/shape2d/drawing.ts`):
-The commands that a Shape2D class's `draw()` puts on the canvas item, in draw order: fills, one pixel lines and strokes. Each colour is a role against the colour the CollisionShape2D draws the shape in, so the drawing holds no colour. The 2D collision gizmo draws it while `showCollisions` is on.
+The commands that a Shape2D class's `draw()` puts on the canvas item, in draw order: fills, one pixel lines and strokes. Each colour is a role against the colour the CollisionShape2D draws the shape in, so the drawing holds no colour. The 2D collision gizmo draws it while `show.collisions` is on.
 _Avoid_: "outline", because a polygon shape draws a fill as well.
 
 **Node icon** (`r3f/nodeIcon/`):
@@ -800,7 +804,7 @@ Godot's flight navigation of the 3D viewport: the mouse turns the **Editor camer
 _Avoid_: "fly mode", "first-person camera", "WASD mode".
 
 **Camera preview**:
-The state in which the 3D viewport draws through a scene Camera3D, as Godot's **Preview** checkbox does. Navigation is off, and the **Editor camera** keeps its pose until the preview ends.
+The state in which the 3D viewport draws through a scene Camera3D, as Godot's **Preview** checkbox does. Navigation is off, and the **Editor camera** keeps its pose until the preview ends. A host starts it with the view's `camera` option, and `camera: null` ends it with the **Editor camera** at the pose it had before, as in Godot.
 _Avoid_: "use this camera", and "current camera", which is Godot's `current` property.
 
 **Preview sun**:
@@ -1134,6 +1138,7 @@ _Avoid_: "broken dependency", "missing dependency" for a file that exists and fa
 **Missing resource**:
 A `res://` reference or **Sub-resource path** whose load failed. Its consumer may draw a magenta placeholder, and the missing-resources panel shows one row per address. A **Sub-resource path** into a file that loads but declares no such `[sub_resource]` is one too, since Godot's load of it fails.
 A text file that parses but has a **Load outcome** that fails is one too. Its row names the chain and takes an upload of the file that failed first.
+The scene holds the missing resources its views report (`missingResourcesOf` in `scene/missingFiles.ts`). The panel lists their addresses, and `scene.missingFiles()` gives their files.
 _Avoid_: "broken scene", "load error".
 
 ### Animation

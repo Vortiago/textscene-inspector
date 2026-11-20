@@ -20,16 +20,8 @@ const distDir = join(packageDir, 'dist');
 const bundlePath = join(distDir, 'index.js');
 const bundleKey = 'dist/index.js';
 
-/** One view draws both modes, so no second view component is public, and core's internals stay out. */
-const PUBLIC_VALUE_EXPORTS = [
-  'TscnCanvas',
-  'TscnSceneProvider',
-  'mountScene',
-  'openScene',
-  'useGameViewSettled',
-  'useSelection',
-  'variant',
-];
+/** One view draws every mode, its props are the options of `mountScene`, and core's internals stay out. */
+const PUBLIC_VALUE_EXPORTS = ['TscnCanvas', 'mountScene', 'openScene', 'variant'];
 const PUBLIC_TYPE_EXPORTS = [
   'CameraState',
   'NodeHandle',
@@ -37,6 +29,8 @@ const PUBLIC_TYPE_EXPORTS = [
   'Scene',
   'SceneValue',
   'Variant',
+  'View',
+  'ViewOptions',
 ];
 
 /** The consumer installs each, so it has one React and one three.js. `mountScene` imports react-dom. */

@@ -14,7 +14,7 @@ vi.mock('../../TscnCanvas', () => ({
   TscnSceneContents: () => null,
 }));
 
-import { TscnPreviewShell } from './TscnPreviewShell';
+import { TextShell } from './TscnPreviewShell.testkit';
 
 const NODE3D_ROOT = `[gd_scene load_steps=1 format=3]
 
@@ -37,9 +37,9 @@ function modeButton(shell: HTMLElement, label: '2D' | '3D' | 'In-game'): HTMLBut
   return button as HTMLButtonElement;
 }
 
-describe('<TscnPreviewShell> initialViewportMode', () => {
+describe('<TextShell> initialViewportMode', () => {
   it('without the prop, auto-select still claims 2D for a Node2D root (unchanged default behavior)', async () => {
-    render(<TscnPreviewShell panelId="default-behavior" content={NODE2D_ROOT} />);
+    render(<TextShell panelId="default-behavior" content={NODE2D_ROOT} />);
     const shell = shellEl('default-behavior');
     await screen.findAllByText('Root');
 
@@ -47,7 +47,7 @@ describe('<TscnPreviewShell> initialViewportMode', () => {
   });
 
   it('forces 2D and suppresses auto-select for a Node3D root that would otherwise claim 3D', async () => {
-    render(<TscnPreviewShell panelId="forced-2d" content={NODE3D_ROOT} initialViewportMode="2D" />);
+    render(<TextShell panelId="forced-2d" content={NODE3D_ROOT} initialViewportMode="2D" />);
     const shell = shellEl('forced-2d');
     await screen.findAllByText('Root');
 
@@ -57,7 +57,7 @@ describe('<TscnPreviewShell> initialViewportMode', () => {
   });
 
   it('forces 3D and suppresses auto-select for a Node2D root that would otherwise claim 2D', async () => {
-    render(<TscnPreviewShell panelId="forced-3d" content={NODE2D_ROOT} initialViewportMode="3D" />);
+    render(<TextShell panelId="forced-3d" content={NODE2D_ROOT} initialViewportMode="3D" />);
     const shell = shellEl('forced-3d');
     await screen.findAllByText('Root');
 
@@ -66,7 +66,7 @@ describe('<TscnPreviewShell> initialViewportMode', () => {
   });
 
   it('still lets the user manually toggle away from a forced initial mode', async () => {
-    render(<TscnPreviewShell panelId="forced-then-toggle" content={NODE3D_ROOT} initialViewportMode="2D" />);
+    render(<TextShell panelId="forced-then-toggle" content={NODE3D_ROOT} initialViewportMode="2D" />);
     const shell = shellEl('forced-then-toggle');
     await screen.findAllByText('Root');
     expect(modeButton(shell, '2D').getAttribute('aria-pressed')).toBe('true');
@@ -80,7 +80,7 @@ describe('<TscnPreviewShell> initialViewportMode', () => {
   });
 
   it('forces the In-game mode, which draws the canvas in game', async () => {
-    render(<TscnPreviewShell panelId="forced-in-game" content={NODE2D_ROOT} initialViewportMode="in-game" />);
+    render(<TextShell panelId="forced-in-game" content={NODE2D_ROOT} initialViewportMode="in-game" />);
     const shell = shellEl('forced-in-game');
     await screen.findAllByText('Root');
 

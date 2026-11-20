@@ -2,7 +2,9 @@ import type { SceneGraph } from '../core/SceneGraph.js';
 import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
 import type { TscnExternalResource } from '../parser/types.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
+import { parseSubResourcePath } from '../resources/subResourcePath.js';
 import { loadedResourceType } from './loadedResourceType.js';
+import { filesOf, missingResourcesOf } from './missingFiles.js';
 import type { NodeHandle } from './nodeHandle.js';
 import { parseTscnContent, type ParseResult } from './parseScene.js';
 import { SceneListeners } from './sceneListeners.js';
@@ -39,6 +41,8 @@ export interface Scene {
   subscribe(listener: () => void): () => void;
   /** Changes at once with each change a view draws: a new text, a write, or a load that changes the tree. */
   revision(): number;
+  /** The `res://` paths a view asked for and did not get. A view tells `subscribe` when they change. */
+  missingFiles(): ReadonlySet<string>;
   /** Lets go of every listener. A view of a disposed scene draws its last parse. */
   dispose(): void;
   /** `get_node` from the scene's root node: throws `Node not found` where `path` names no node. */
@@ -74,6 +78,8 @@ export function openScene({
   let written: WrittenGraph | null = null;
   /** Written only by `runtime`: made at the first lookup, so a scene no host asks of loads no tree. */
   let sceneRuntime: SceneRuntime | null = null;
+  /** Written once, after `scene` exists: its views' missing-file reports reach `listeners`. */
+  let stopMissingFiles: () => void = () => {};
 
   const parse = (): ParseResult => (parsed ??= parseTscnContent(currentSource, rootScenePath));
   const graph = (): SceneGraph | null => parse().sceneGraph;
@@ -86,7 +92,12 @@ export function openScene({
     const current = graph();
     return current ? runtime().tree(current) : null;
   };
-  const nodes = new SceneNodes({ graph, tree }, properties, (path) => listeners.written(path));
+  /** The class `load` gives: a sub-resource's heading names it, and no file is asked for one. */
+  const resourceClass = async (path: string): Promise<string | null> =>
+    parseSubResourcePath(path).subResourceId === undefined
+      ? loadedResourceType(provider, path)
+      : properties.subResourceClass(path);
+  const nodes = new SceneNodes({ graph, tree, resourceClass }, properties, (path) => listeners.written(path));
   const listeners = new SceneListeners((path) => nodes.getNodeOrNull(path)?.path ?? null);
 
   const scene: Scene = {
@@ -112,7 +123,9 @@ export function openScene({
     },
     subscribe: (listener) => listeners.subscribe(listener),
     revision: () => listeners.revision(),
+    missingFiles: () => filesOf(missingResourcesOf(scene).keys()),
     dispose() {
+      stopMissingFiles();
       listeners.clear();
       sceneRuntime?.dispose();
       sceneRuntime = null;
@@ -120,7 +133,7 @@ export function openScene({
     getNode: (path) => nodes.getNode(path),
     getNodeOrNull: (path) => nodes.getNodeOrNull(path),
     async load(path) {
-      const className = (await loadedResourceType(provider, path)) ?? undefined;
+      const className = (await resourceClass(path)) ?? undefined;
       return variantOf({ type: T.OBJECT, resource: { path }, ...(className ? { className } : {}) });
     },
     observe: (path, listener) => listeners.observe(path, listener),
@@ -136,6 +149,8 @@ export function openScene({
     }
     return sceneRuntime;
   }
+
+  stopMissingFiles = missingResourcesOf(scene).subscribe(() => listeners.missingFilesChanged());
 
   return scene;
 }

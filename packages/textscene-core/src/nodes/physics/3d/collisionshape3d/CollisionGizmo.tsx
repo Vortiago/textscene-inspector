@@ -1,8 +1,3 @@
-/**
- * Wireframe gizmo for a collision-shape resource, drawn in the node's `debug_color` like
- * Godot's editor collision overlay. CollisionShape3D mounts it only when `showCollisions` is on.
- */
-
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { Shape3DResource } from '../../../../resources/shapes/shape3d';

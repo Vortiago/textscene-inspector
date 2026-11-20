@@ -7,13 +7,23 @@
 // @vitest-environment happy-dom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createElement, useEffect, type ReactNode } from 'react';
+import { createElement, useEffect } from 'react';
 import type { HostToWebviewMessage, WebviewToHostMessage } from '../protocol';
 import type { PreviewCaptureState, TscnNode } from '@textscene/core';
+import type { ResourceProvider } from '@textscene/renderer';
+
+/** What the app does with a scene: it sets the text, and disposes it when the panel goes. */
+interface FakeScene {
+  text: string;
+  readonly provider: ResourceProvider;
+  isDisposed: boolean;
+  setSource(text: string): void;
+  dispose(): void;
+}
 
 interface CapturedShellProps {
   panelId?: string;
-  content?: string;
+  scene?: FakeScene;
   initialViewportMode?: '2D' | '3D' | undefined;
   onNodeReveal?: (path: string, node: TscnNode) => void;
   onCaptureStateChange?: (state: PreviewCaptureState) => void;
@@ -28,39 +38,51 @@ interface CapturedLogAdapter {
   error: (message: string, ...args: unknown[]) => void;
 }
 
-/** Mutable capture box the `@textscene/core` mock writes into on every render/call. */
+/** Written by the `@textscene/core` and `@textscene/renderer` mocks on every render and call. */
 const captured: {
   shellProps?: CapturedShellProps;
+  scenes: FakeScene[];
   logAdapter?: CapturedLogAdapter;
-  provideFile?: ReturnType<typeof vi.fn>;
-  pipelineProvider?: unknown;
-  pipelineOptions?: { createWorker?: unknown };
   /** The state the fake shell reports from its mount effect, as the real bridge does. */
   mountCaptureState?: PreviewCaptureState;
-} = {};
+} = { scenes: [] };
+
+/** The text of the scene the app opened last, as the shell would draw it. */
+const sceneText = () => captured.scenes.at(-1)?.text;
 
 // A synthetic mock, no `importActual`: the real `<TscnPreviewShell>` pulls in
 // three.js/r3f, which happy-dom cannot run without a WebGL context.
 vi.mock('@textscene/core', () => ({
-  createResourcePipeline: vi.fn((provider: unknown, options?: { createWorker?: unknown }) => {
-    captured.pipelineProvider = provider;
-    captured.pipelineOptions = options;
-    captured.provideFile = vi.fn();
-    return { loader: { provideFile: captured.provideFile } };
-  }),
   PENDING_CAPTURE: { status: 'pending' },
-  ResourceLoaderProvider: ({ children }: { children: ReactNode }) => children,
   TscnPreviewShell: function FakeShell(props: CapturedShellProps) {
     captured.shellProps = props;
     const { onCaptureStateChange } = props;
     useEffect(() => {
       if (captured.mountCaptureState) onCaptureStateChange?.(captured.mountCaptureState);
     }, [onCaptureStateChange]);
-    return createElement('div', { 'data-testid': 'fake-shell' }, props.content);
+    return createElement('div', { 'data-testid': 'fake-shell' });
   },
   setLogAdapter: vi.fn((adapter: CapturedLogAdapter) => {
     captured.logAdapter = adapter;
   }),
+}));
+
+vi.mock('@textscene/renderer', () => ({
+  openScene: ({ source, provider }: { source: string; provider: ResourceProvider }): FakeScene => {
+    const scene: FakeScene = {
+      text: source,
+      provider,
+      isDisposed: false,
+      setSource(text) {
+        scene.text = text;
+      },
+      dispose() {
+        scene.isDisposed = true;
+      },
+    };
+    captured.scenes.push(scene);
+    return scene;
+  },
 }));
 
 let messageListeners: Array<(event: MessageEvent) => void>;
@@ -97,6 +119,7 @@ function postedMessages(vscodeApi: MockVsCodeApi): WebviewToHostMessage[] {
 async function mountFresh(config?: Record<string, unknown>): Promise<{ vscodeApi: MockVsCodeApi }> {
   vi.resetModules();
   captured.shellProps = undefined;
+  captured.scenes = [];
   captured.logAdapter = undefined;
   messageListeners = [];
 
@@ -168,50 +191,47 @@ describe('mountR3FWebview', () => {
     expect(readyMessages).toHaveLength(1);
   });
 
-  it('renders <TscnPreviewShell> with an empty initial content and a stable vscode- panelId', async () => {
+  it('hands <TscnPreviewShell> the scene it opened, empty, and a stable vscode- panelId', async () => {
     await mountFresh();
 
-    expect(captured.shellProps?.content).toBe('');
+    expect(captured.shellProps?.scene).toBe(captured.scenes[0]);
+    expect(sceneText()).toBe('');
     expect(captured.shellProps?.panelId).toMatch(/^vscode-/);
-  });
-
-  it('gives the resource pipeline a job worker factory, so textures build off the main thread', async () => {
-    await mountFresh();
-
-    expect(typeof captured.pipelineOptions?.createWorker).toBe('function');
   });
 });
 
 describe('loadTscn handling', () => {
-  it('applies the full scene text to the shell content prop', async () => {
+  it('sets the full scene text on the scene it opened', async () => {
     await mountFresh();
     const expected = '[gd_scene format=3]\n[node name="Root" type="Node3D"]';
 
     dispatch({ type: 'loadTscn', content: expected });
-    await waitFor(() => captured.shellProps?.content === expected);
+    await waitFor(() => sceneText() === expected);
 
-    expect(captured.shellProps?.content).toBe(expected);
+    expect(captured.scenes).toHaveLength(1);
   });
 
   it('replaces previously-loaded content on a subsequent loadTscn (hot-reload)', async () => {
     await mountFresh();
 
     dispatch({ type: 'loadTscn', content: 'first content' });
-    await waitFor(() => captured.shellProps?.content === 'first content');
+    await waitFor(() => sceneText() === 'first content');
     dispatch({ type: 'loadTscn', content: 'second content' });
-    await waitFor(() => captured.shellProps?.content === 'second content');
+    await waitFor(() => sceneText() === 'second content');
 
-    expect(captured.shellProps?.content).toBe('second content');
+    expect(captured.scenes).toHaveLength(1);
   });
 });
 
 describe('resourceChanged handling', () => {
-  it('forwards the changed res:// path to the resource loader for re-fetch', async () => {
+  it("hands the shell a provider whose watchers hear the host's changed res:// path", async () => {
     await mountFresh();
+    const listener = vi.fn();
+    captured.shellProps?.scene?.provider.watch?.(listener);
 
     dispatch({ type: 'resourceChanged', path: 'res://textures/wood.png' });
 
-    expect(captured.provideFile).toHaveBeenCalledWith('res://textures/wood.png');
+    expect(listener).toHaveBeenCalledWith('res://textures/wood.png');
   });
 });
 

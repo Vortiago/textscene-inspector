@@ -127,6 +127,7 @@ export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
       onPointerUp={pointerHandlers?.onPointerUp}
       onPointerMove={pointerHandlers?.onPointerMove}
       onPointerOut={pointerHandlers?.onPointerOut}
+      onPointerMissed={pointerHandlers?.onPointerMissed}
     >
       {/* A CanvasModulate tints the canvas, not its subtree, so it has its own
           context: each item multiplies it into its own pixels once, and an

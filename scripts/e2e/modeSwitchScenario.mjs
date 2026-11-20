@@ -1,9 +1,7 @@
-import { PNG } from 'pngjs';
-import { diffMask } from '../vscode/pixels.mjs';
+import { diffMask, pixelsWhere } from '../vscode/pixels.mjs';
 import { CANVAS_2D_TESTIDS } from '../visual/preview/appContract.mjs';
-import { findCanvas, settleCanvas } from '../visual/previewServer.mjs';
 import { checkDiagnostics } from './diagnostics.mjs';
-import { openFixture } from './openFixture.mjs';
+import { openFixture, shootCanvas } from './openFixture.mjs';
 import { expandAllTreeRows, selectOutlinerNode, SELECT_SETTLE_MS } from './outliner.mjs';
 
 export const SWITCH_FIXTURE = 'in-game/unit-mode-switch.tscn';
@@ -20,24 +18,13 @@ export const PANEL_PIXELS = 20_000;
 
 /** The pure red pixels of a shot: the fixture's ColorRect, which only a view that draws 2D shows. */
 export function redPixels(buffer) {
-  const { data } = PNG.sync.read(buffer);
-  let red = 0;
-  for (let i = 0; i < data.length; i += 4) {
-    if (data[i] > 230 && data[i + 1] < 30 && data[i + 2] < 30) red++;
-  }
-  return red;
+  return pixelsWhere(buffer, (r, g, b) => r > 230 && g < 30 && b < 30);
 }
 
 const viewButton = (page, view) =>
   page.getByRole('group', { name: 'Viewport dimension' }).getByText(view, { exact: true });
 
-async function shoot(page) {
-  const { canvas, reason } = await findCanvas(page);
-  if (reason) throw new Error(`[Mode switch] ${reason}`);
-  const { buffer, reason: settleReason } = await settleCanvas(page, canvas);
-  if (!buffer) throw new Error(`[Mode switch] the canvas never settled: ${settleReason}`);
-  return buffer;
-}
+const shoot = (page) => shootCanvas(page, 'Mode switch');
 
 /** What the viewport holds in the mode the toolbar shows pressed. */
 async function readView(page, view) {

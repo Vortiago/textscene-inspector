@@ -7,7 +7,7 @@ import type { TscnNode } from '../../parser/types';
 import { NodeDispatcher } from '../NodeDispatcher';
 import { SelectionProvider, useSelection } from '../contexts/SelectionContext';
 import { CanvasWorkspaceProvider } from '../contexts/CanvasWorkspaceContext';
-import { ViewportModeProvider } from '../contexts/ViewportModeContext';
+import { ViewShowProvider } from '../viewShow/ViewShowContext';
 import { RunningGameScope } from '../contexts/EditorHintContext';
 import { nodeComponentRegistry } from '../NodeComponentRegistry';
 import { descendsFromClass } from '../../godot/classdb/classBaseTypes.js';
@@ -48,35 +48,39 @@ function Selects({ path }: { path: string }) {
 /** The game, under a toolbar with every editor overlay and preview on, with the subject selected. */
 function inGame(tree: ReactNode) {
   return (
-    <ViewportModeProvider
-      initialShowCollisions
-      initialShowNavigation
-      initialShowGizmos
-      initialShowGrid
-      initialShowPreviewSun
-      initialShowPreviewEnvironment
+    <ViewShowProvider
+      show={{
+        collisions: true,
+        navigation: true,
+        gizmos: true,
+        grid: true,
+        previewSun: true,
+        previewEnvironment: true,
+      }}
     >
       <RunningGameScope>
         <Selects path={SUBJECT} />
         {tree}
       </RunningGameScope>
-    </ViewportModeProvider>
+    </ViewShowProvider>
   );
 }
 
 /** The editor with every editor overlay and preview off and nothing selected. */
 function inBareEditor(tree: ReactNode) {
   return (
-    <ViewportModeProvider
-      initialShowCollisions={false}
-      initialShowNavigation={false}
-      initialShowGizmos={false}
-      initialShowGrid={false}
-      initialShowPreviewSun={false}
-      initialShowPreviewEnvironment={false}
+    <ViewShowProvider
+      show={{
+        collisions: false,
+        navigation: false,
+        gizmos: false,
+        grid: false,
+        previewSun: false,
+        previewEnvironment: false,
+      }}
     >
       {tree}
-    </ViewportModeProvider>
+    </ViewShowProvider>
   );
 }
 

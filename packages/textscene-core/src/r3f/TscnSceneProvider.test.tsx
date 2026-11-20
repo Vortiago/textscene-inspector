@@ -1,8 +1,3 @@
-/**
- * `<TscnSceneProvider>` gives `<TscnCanvas>` what the preview shell's providers give it, from the
- * text of a scene and a `ResourceProvider`, with none of the previewer's UI around it.
- */
-
 import { useContext } from 'react';
 import * as THREE from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -68,7 +63,7 @@ describe('<TscnSceneProvider>', () => {
 
   it('lets the canvas contents draw the scene it was given', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <TscnSceneProvider source={BOX_SCENE} provider={emptyProvider()}>
+      <TscnSceneProvider scene={openScene({ source: BOX_SCENE, provider: emptyProvider() })}>
         <TscnSceneContents />
       </TscnSceneProvider>
     );
@@ -80,7 +75,7 @@ describe('<TscnSceneProvider>', () => {
     const provider = emptyProvider();
 
     await ReactThreeTestRenderer.create(
-      <TscnSceneProvider source={BOX_SCENE} provider={provider}>
+      <TscnSceneProvider scene={openScene({ source: BOX_SCENE, provider: provider })}>
         <TscnSceneContents />
       </TscnSceneProvider>
     );
@@ -90,7 +85,7 @@ describe('<TscnSceneProvider>', () => {
 
   it('builds a procedural texture in the main thread, since it starts no worker', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <TscnSceneProvider source={NOISE_SCENE} provider={emptyProvider()}>
+      <TscnSceneProvider scene={openScene({ source: NOISE_SCENE, provider: emptyProvider() })}>
         <TscnSceneContents />
       </TscnSceneProvider>
     );
@@ -108,7 +103,7 @@ describe('<TscnSceneProvider>', () => {
     const loaders = new Set<unknown>();
     const LoaderProbe = loaderProbe(loaders);
     const tree = (
-      <TscnSceneProvider source={BOX_SCENE} provider={provider}>
+      <TscnSceneProvider scene={openScene({ source: BOX_SCENE, provider: provider })}>
         <LoaderProbe />
       </TscnSceneProvider>
     );
@@ -124,7 +119,7 @@ describe('<TscnSceneProvider>', () => {
     const loaders = new Set<unknown>();
     const LoaderProbe = loaderProbe(loaders);
     const withProvider = (provider: ResourceProvider) => (
-      <TscnSceneProvider source={BOX_SCENE} provider={provider}>
+      <TscnSceneProvider scene={openScene({ source: BOX_SCENE, provider: provider })}>
         <LoaderProbe />
       </TscnSceneProvider>
     );
@@ -143,7 +138,7 @@ describe('<TscnSceneProvider>', () => {
     }
 
     render(
-      <TscnSceneProvider source={BOX_SCENE} provider={emptyProvider()}>
+      <TscnSceneProvider scene={openScene({ source: BOX_SCENE, provider: emptyProvider() })}>
         <SelectionProbe />
       </TscnSceneProvider>
     );
@@ -152,12 +147,14 @@ describe('<TscnSceneProvider>', () => {
     expect(selection.selectedNodePath).toBe('Cube');
   });
 
-  it('names the problem when the text holds no scene, since a blank canvas says nothing', () => {
+  it('names the problem when the text of the scene holds no scene, since a blank canvas says nothing', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
 
     expect(() =>
       render(
-        <TscnSceneProvider source="[this is { not valid tscn at all" provider={emptyProvider()}>
+        <TscnSceneProvider
+          scene={openScene({ source: '[this is { not valid tscn at all', provider: emptyProvider() })}
+        >
           {null}
         </TscnSceneProvider>
       )
@@ -167,7 +164,7 @@ describe('<TscnSceneProvider>', () => {
   it('draws nothing for empty text, as the previewer does for an empty file', () => {
     expect(() =>
       render(
-        <TscnSceneProvider source="" provider={emptyProvider()}>
+        <TscnSceneProvider scene={openScene({ source: '', provider: emptyProvider() })}>
           {null}
         </TscnSceneProvider>
       )
@@ -180,16 +177,14 @@ describe('<TscnSceneProvider>', () => {
       selection = useSelection();
       return null;
     }
-    const provider = emptyProvider();
-    const withScene = (source: string) => (
-      <TscnSceneProvider source={source} provider={provider}>
+    const scene = openScene({ source: BOX_SCENE, provider: emptyProvider() });
+    render(
+      <TscnSceneProvider scene={scene}>
         <SelectionProbe />
       </TscnSceneProvider>
     );
-
-    const { rerender } = render(withScene(BOX_SCENE));
     act(() => selection.setSelectedNodePath('Cube'));
-    rerender(withScene(NOISE_SCENE));
+    act(() => scene.setSource(NOISE_SCENE));
 
     expect(selection.selectedNodePath).toBeNull();
   });
@@ -253,19 +248,6 @@ describe('<TscnSceneProvider>', () => {
 
       expect([...seen.graphs].at(-1)).toBe(scene.parse().sceneGraph);
       expect(seen.loaders.size).toBe(1);
-    });
-
-    it('mounts the contexts a text and a provider mount, with that text parsed', () => {
-      const seen = { graphs: new Set<unknown>(), loaders: new Set<unknown>() };
-      const ContextProbe = contextProbe(seen);
-      render(
-        <TscnSceneProvider source={BOX_SCENE} provider={emptyProvider()}>
-          <ContextProbe />
-        </TscnSceneProvider>
-      );
-      const [graph] = [...seen.graphs] as [ReturnType<typeof useHierarchy>['sceneGraph']];
-
-      expect(graph).toEqual(openScene({ source: BOX_SCENE, provider: emptyProvider() }).parse().sceneGraph);
     });
   });
 });

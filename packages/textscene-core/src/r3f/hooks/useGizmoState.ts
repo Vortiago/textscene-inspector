@@ -7,7 +7,7 @@
  */
 
 import { useNodePath } from '../contexts/NodePathContext';
-import { useShowGizmos } from '../contexts/ViewportModeContext';
+import { useShowGizmos } from '../viewShow/ViewShowContext';
 import type { GizmoVariant } from '../gizmo/gizmoVariant';
 import { useIsSelected } from './useIsSelected';
 

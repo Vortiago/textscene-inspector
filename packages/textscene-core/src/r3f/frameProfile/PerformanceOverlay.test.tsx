@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
-import { ViewportModeProvider } from '../contexts/ViewportModeContext';
+import { ViewShowProvider } from '../viewShow/ViewShowContext';
 import { FrameStatsProvider, useFrameStatsStore } from './FrameStatsContext';
 import { PerformanceOverlay } from './PerformanceOverlay';
 import type { FrameStats } from './frameStats';
@@ -23,12 +23,12 @@ function renderOverlay(showPerformance: boolean) {
     return null;
   }
   render(
-    <ViewportModeProvider initialShowPerformance={showPerformance}>
+    <ViewShowProvider show={{ performance: showPerformance }}>
       <FrameStatsProvider>
         <StoreProbe />
         <PerformanceOverlay />
       </FrameStatsProvider>
-    </ViewportModeProvider>
+    </ViewShowProvider>
   );
   return store!;
 }

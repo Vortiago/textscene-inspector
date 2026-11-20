@@ -23,12 +23,14 @@ function mockPointerEvent(
   y: number,
   object: THREE.Object3D | null = null
 ): {
+  button: number;
   clientX: number;
   clientY: number;
   object: THREE.Object3D | null;
   stopPropagation: () => void;
 } {
   return {
+    button: 0,
     clientX: x,
     clientY: y,
     object,
@@ -45,12 +47,14 @@ function mockPointerEventWithSpy(
   y: number,
   object: THREE.Object3D | null = null
 ): {
+  button: number;
   clientX: number;
   clientY: number;
   object: THREE.Object3D | null;
   stopPropagation: ReturnType<typeof vi.fn>;
 } {
   return {
+    button: 0,
     clientX: x,
     clientY: y,
     object,

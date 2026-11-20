@@ -12,15 +12,15 @@ vi.mock('../../TscnCanvas', () => ({
   TscnSceneContents: () => null,
 }));
 
-import { TscnPreviewShell } from './TscnPreviewShell';
+import { TextShell } from './TscnPreviewShell.testkit';
 import { textureWork } from '../../../resources/textures/textureWork';
 import { TEXTURE_WORK_STATUS_TESTID } from './statusTestIds';
 
 const SCENE = `[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n`;
 
-describe('<TscnPreviewShell> texture work status', () => {
+describe('<TextShell> texture work status', () => {
   it('shows the status in the top bar while texture work is pending', async () => {
-    render(<TscnPreviewShell panelId="texture-work" content={SCENE} />);
+    render(<TextShell panelId="texture-work" content={SCENE} />);
     let end: () => void = () => {};
     await act(async () => {
       end = textureWork.begin();

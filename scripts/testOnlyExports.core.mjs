@@ -37,9 +37,13 @@ export const KEPT_TEST_ONLY_EXPORTS = [
   // The switch of the TSL port ships before its one reader, the pick of a lit surface's material,
   // which the next slice of the port adds.
   'r3f/litSurface/litSurfaceForm.ts#litSurfaceForm',
+  // A host's scene loads through the loader of its provider. Only a test hands a scene a loader it built.
+  'r3f/sceneResourcePipeline.ts#adoptLoader',
   // The builds and the cache are module state, so each test starts from the one reset that aborts
   // the builds in flight and clears the cache.
   'resources/textures/proceduralBuilds.ts#resetProceduralTextures',
+  // Vitest resolves `virtual:texture-worker-source` here (`vitest.shared.ts`), which no import names.
+  'workers/textureWorkerSource.stub.ts#default',
 ];
 
 /** The `file#name` of every value export of core that only tests import, the kept ones included. */

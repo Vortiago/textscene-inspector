@@ -5,7 +5,8 @@
  * is empty.
  */
 import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
-import { useCountedReports, type CountedReports } from '../hooks/useCountedReports.js';
+import { useCountedReports } from '../hooks/useCountedReports.js';
+import type { CountedReports } from '../../utils/countedReports.js';
 
 type CountedReportsActions = Pick<CountedReports, 'report' | 'clear'>;
 

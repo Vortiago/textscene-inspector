@@ -171,7 +171,8 @@ The strict parser also returns `SourceLines`, which puts each diagnostic on its 
 - **Scene tree.** `TscnCanvas` mounts the R3F `<Canvas>`. Each node gets its own `<group>`.
 - **Parent space.** A node follows its parent's transform only where Godot does
   (`godot/scene/parentSpace.ts`). Any other node attaches to the world root (`ParentSpaceScope`).
-- **3D and 2D.** `ViewportModeContext` picks `TscnCanvas` or `Canvas2DStage` (ADR-0006).
+- **Modes and helpers.** The `mode` of `TscnCanvas` picks the 3D canvas, `Canvas2DStage` or the game view, and its
+  `show` the editor helpers they draw (ADR-0006).
 - **Canvas renderer.** Both canvases take one set of `<Canvas>` props and mount one
   `CanvasRendererScope`, which installs the shadow pass and runs the per-frame services
   (`r3f/canvasRenderer/`).
@@ -266,8 +267,10 @@ the selected node (ADR-0012). Playback starts stopped.
   `project.godot`, or from the own directory of a loose scene inside the workspace.
 - **Web.** The Source pane renders only a buffer the lenient parser accepts, and lints every
   buffer (ADR-0020).
-- **Job workers.** Each host starts one script built from `@textscene/core/worker`. VS Code
-  starts it from a `blob:` URL (`apps/textscene-vscode/src/bundler/textureWorkerPlugin.mjs`).
+- **Job workers.** The loader of each opened scene starts one worker from a `blob:` URL of a
+  script that every build embeds (`packages/textscene-core/src/workers/bundler/`, ADR-0042).
+- **Changed files.** A host's `ResourceProvider.watch` names a file that changed, and every
+  scene a mounted view shows loads it again (`resources/createResourcePipeline.ts`).
 
 ## Enforced boundaries
 

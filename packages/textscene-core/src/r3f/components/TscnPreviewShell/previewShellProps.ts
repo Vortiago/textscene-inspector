@@ -1,5 +1,3 @@
-/** The props of `<TscnPreviewShell>`, the package's one entry point for a preview panel. */
-
 import type { ReactNode } from 'react';
 import type { TscnNode } from '../../../parser/types.js';
 import type { ViewportMode } from '../../contexts/ViewportModeContext.js';
@@ -9,10 +7,8 @@ import type { Scene } from '../../../scene/openScene.js';
 export interface TscnPreviewShellProps {
   /** A stable panel identifier for logs and context coordination. */
   panelId: string;
-  /** Raw TSCN content, re-parsed through `useMemo` on each change. */
-  content: string;
-  /** The scene path of the SceneGraph root. The synthetic default suits inline content. */
-  rootScenePath?: string;
+  /** The scene `openScene` gave. The host owns it: it sets the text and disposes it. */
+  scene: Scene;
   /** Fired when a row is double-clicked, so the host can jump to the source. */
   onNodeReveal?: (path: string, node: TscnNode) => void;
   onOpenSubScene?: (scenePath: string) => void;
@@ -55,8 +51,6 @@ export interface TscnPreviewShellProps {
    * callback, and a capture still returns the picture. Without it the preview shows.
    */
   isVisible?: boolean;
-  /** Fired with each scene the shell opens, so the host's code reads and writes its nodes. */
-  onSceneOpen?: (scene: Scene) => void;
   /** Fired with the node path the Inspector copies, for the host to put on the clipboard. Without it the row has no copy button. */
   onCopyNodePath?: (nodePath: string) => void;
 }

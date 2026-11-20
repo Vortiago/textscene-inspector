@@ -1,7 +1,7 @@
 /** The browser ResourceProvider: uploaded files in memory, then the fixtures mirror. */
 
 import { isBinaryResourceType, info } from '@textscene/core';
-import type { ResourceProvider } from '@textscene/core';
+import type { ResourceProvider } from '@textscene/renderer';
 import type { DirectoryEntry } from '@textscene/core/resources/projectListing';
 import { fixtureUrlForRes } from '../corpusRoot';
 import { FIXTURE_LISTING_URL, mirrorEntries, mirrorFolderOf, type FixtureListing } from '../fixtureListing';
@@ -28,6 +28,7 @@ export class WebResourceProvider implements ResourceProvider {
    */
   private uploadedFiles: Map<string, { file: File; serial: number }> = new Map();
   private uploadCount = 0;
+  private readonly watchers = new Set<(path: string) => void>();
   /**
    * Public-fixtures subtree the active scene's res:// namespace maps onto: '' for
    * the fixtures root (unit fixtures, examples, the flattened isometric corpus),
@@ -67,6 +68,17 @@ export class WebResourceProvider implements ResourceProvider {
    */
   addUploadedFile(path: string, file: File): void {
     this.uploadedFiles.set(this.uploadKey(path), { file, serial: ++this.uploadCount });
+    this.changed(path);
+  }
+
+  watch(listener: (path: string) => void): () => void {
+    this.watchers.add(listener);
+    return () => this.watchers.delete(listener);
+  }
+
+  /** A file arrived or went, so its consumers load it again: a removed one flips back to missing. */
+  private changed(path: string): void {
+    for (const listener of this.watchers) listener(path);
   }
 
   /**
@@ -84,6 +96,7 @@ export class WebResourceProvider implements ResourceProvider {
         removed = true;
       }
     }
+    if (removed) this.changed(path);
     return removed;
   }
 

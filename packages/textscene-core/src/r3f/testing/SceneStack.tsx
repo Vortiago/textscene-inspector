@@ -11,11 +11,11 @@ import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { CanvasWorkspaceProvider, type CanvasWorkspace } from '../contexts/CanvasWorkspaceContext';
 import { EditedRootProvider } from '../contexts/InstanceOwnersContext';
 import { SelectionProvider } from '../contexts/SelectionContext';
-import { ViewportModeProvider } from '../contexts/ViewportModeContext';
+import { ViewShowProvider } from '../viewShow/ViewShowContext';
 import { SceneResourcesProvider, type SceneResourcesProviderProps } from '../SceneResourcesContext';
 import { SelectSeeder } from './SelectSeeder';
 import { HierarchyProvider, useOptionalHierarchy } from '../contexts/HierarchyContext';
-import { useOpenedScene } from '../hooks/useOpenedScene';
+import { useOpenedScene } from './useOpenedScene';
 import { DEFAULT_ROOT_SCENE_PATH } from '../../scene/openScene';
 
 export interface SceneStackProps {
@@ -78,7 +78,7 @@ export function SceneStack({
     showGizmos === undefined ? (
       stack
     ) : (
-      <ViewportModeProvider initialShowGizmos={showGizmos}>{stack}</ViewportModeProvider>
+      <ViewShowProvider show={{ gizmos: showGizmos }}>{stack}</ViewShowProvider>
     );
   if (workspace === undefined) return toggled;
   return <CanvasWorkspaceProvider workspace={workspace}>{toggled}</CanvasWorkspaceProvider>;

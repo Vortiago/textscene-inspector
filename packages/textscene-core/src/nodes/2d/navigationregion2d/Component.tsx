@@ -8,7 +8,7 @@ import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node2D } from '../../base/node2d/Component';
 import { useNodeResource } from '../../../resources/reading';
-import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
+import { useViewShow } from '../../../r3f/viewShow/ViewShowContext';
 import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { NAVIGATION_POLYGON } from '../../../resources/navigation/navigationpolygon';
@@ -30,7 +30,7 @@ const NAV_FACES_MATERIAL = materialProgramInputs({
 
 export function NavigationRegion2D({ node, children }: NodeComponentProps) {
   const properties = node.properties as NavigationRegion2DProperties;
-  const { showNavigation } = useViewportMode();
+  const { navigation: showNavigation } = useViewShow();
 
   const { value: polygon } = useNodeResource(properties.navigationPolygon, NAVIGATION_POLYGON);
 

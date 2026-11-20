@@ -6,11 +6,20 @@ import { preview } from 'vite';
 import { launchSwiftShaderBrowser } from '../showcase/browser.mjs';
 import { installedVersion, packTarball, run } from '../packTarball.mjs';
 import { REPO_ROOT, attachDiagnostics, loggedErrors, previewPort } from '../visual/previewServer.mjs';
-import { inkStats } from '../vscode/pixels.mjs';
-import { compareImages, formatDelta } from '../visual/imageDelta.mjs';
+import { compareImages, formatDelta, isSameImage } from '../visual/imageDelta.mjs';
 import { writeBaselineFile } from '../visual/run/baselines.mjs';
 import { consumerManifest } from './consumerManifest.mjs';
+import { heldResourceFailures } from './heldResourceFailures.mjs';
+import { loadFailures } from './loadFailures.mjs';
+import { missingFileFailures } from './missingFileFailures.mjs';
 import { mountFailures } from './mountFailures.mjs';
+import { runPickChecks } from './pickChecks.mjs';
+import { pickFailures } from './pickFailures.mjs';
+import { RENDER_TIMEOUT_MS, pollInk } from './pollInk.mjs';
+import { runSwitchChecks } from './switchChecks.mjs';
+import { switchFailures } from './switchFailures.mjs';
+import { runCameraChecks } from './cameraChecks.mjs';
+import { cameraFailures } from './cameraFailures.mjs';
 
 /* global document, getComputedStyle, window */
 // These exist only in the browser that runs the `page.evaluate` calls.
@@ -26,11 +35,12 @@ const INK_FLOOR = 2000;
 const INK_FLOOR_2D = 10_000;
 /** A cube at half scale draws about a quarter of the pixels, so its view proves less. */
 const WRITTEN_INK_FLOOR = INK_FLOOR / 4;
-/** Software GL draws the first frame slowly. */
-const RENDER_TIMEOUT_MS = 90_000;
 /** The mount checks draw eight views one after another, and capture three of them at 1152 x 648. */
 const MOUNT_CHECKS_TIMEOUT_MS = 4 * RENDER_TIMEOUT_MS;
-const POLL_INTERVAL_MS = 500;
+/** The checks of a resource the scene file holds draw four views, each a short 320 x 240 window. */
+const HELD_CHECKS_TIMEOUT_MS = 2 * RENDER_TIMEOUT_MS;
+/** The load checks draw four views, one of them a 512 x 512 noise, and poll one for a repaint. */
+const LOAD_CHECKS_TIMEOUT_MS = 3 * RENDER_TIMEOUT_MS;
 
 const versionsOf = (names, base) =>
   Object.fromEntries(names.map((name) => [name, installedVersion(name, base)]));
@@ -94,21 +104,57 @@ async function renderInBrowser(directory) {
   try {
     const drawn = {};
     for (const [view, { query, inkFloor }] of Object.entries(VIEWS)) {
-      const page = await browser.newPage();
-      drawn[view] = await renderView(page, `http://localhost:${port}/${query}`, inkFloor);
+      drawn[view] = await inPage(browser, (page) =>
+        renderView(page, `http://localhost:${port}/${query}`, inkFloor)
+      );
     }
-    const mounted = await runMountChecks(await browser.newPage(), `http://localhost:${port}/?checks=mount`);
-    return { drawn, mounted };
+    const mounted = await inPage(browser, (page) =>
+      runPageChecks(page, `http://localhost:${port}/?checks=mount`, 'mountChecks', MOUNT_CHECKS_TIMEOUT_MS)
+    );
+    const held = await inPage(browser, (page) =>
+      runPageChecks(
+        page,
+        `http://localhost:${port}/?checks=held`,
+        'heldResourceChecks',
+        HELD_CHECKS_TIMEOUT_MS
+      )
+    );
+    const missing = await inPage(browser, (page) =>
+      runPageChecks(page, `http://localhost:${port}/?checks=missing`, 'missingFileChecks', RENDER_TIMEOUT_MS)
+    );
+    const switched = await inPage(browser, (page) =>
+      runSwitchChecks(page, `http://localhost:${port}/?checks=switch`)
+    );
+    const cameras = await inPage(browser, (page) =>
+      runCameraChecks(page, `http://localhost:${port}/?checks=camera`)
+    );
+    const loaded = await inPage(browser, (page) =>
+      runPageChecks(page, `http://localhost:${port}/?checks=load`, 'loadChecks', LOAD_CHECKS_TIMEOUT_MS)
+    );
+    const picked = await inPage(browser, (page) =>
+      runPickChecks(page, `http://localhost:${port}/?checks=pick`)
+    );
+    return { drawn, mounted, held, missing, loaded, switched, cameras, picked };
   } finally {
     await browser.close();
     await server.close();
   }
 }
 
+// Closed after each check: an open page keeps drawing in software GL and slows every check after it.
+async function inPage(browser, check) {
+  const page = await browser.newPage();
+  try {
+    return await check(page);
+  } finally {
+    await page.close();
+  }
+}
+
 async function renderView(page, url, inkFloor) {
   const diagnostics = attachDiagnostics(page);
   await page.goto(url);
-  const ink = await pollInk(page, inkFloor);
+  const ink = await pollInk(page, (drawn) => drawn >= inkFloor);
   const hasCanvasStyles = await page.evaluate(() => {
     for (let node = document.querySelector('canvas'); node; node = node.parentElement) {
       if (getComputedStyle(node).touchAction === 'none') return true;
@@ -118,13 +164,11 @@ async function renderView(page, url, inkFloor) {
   return { ink, hasCanvasStyles, errors: loggedErrors(diagnostics) };
 }
 
-/** The results of the page's `mountScene` checks, and what the page threw on the way. */
-async function runMountChecks(page, url) {
+/** The results the page writes to `window[key]`, and what the page threw on the way. */
+async function runPageChecks(page, url, key, timeout) {
   const diagnostics = attachDiagnostics(page);
   await page.goto(url);
-  const handle = await page.waitForFunction(() => window.mountChecks, null, {
-    timeout: MOUNT_CHECKS_TIMEOUT_MS,
-  });
+  const handle = await page.waitForFunction((name) => window[name], key, { timeout });
   return { results: await handle.jsonValue(), errors: loggedErrors(diagnostics) };
 }
 
@@ -138,19 +182,8 @@ function baselineFailures(png) {
   if (!existsSync(BASELINE_PATH))
     return [`expected a baseline at ${BASELINE_PATH}, got none: run with --update`];
   const delta = compareImages(readFileSync(BASELINE_PATH), png);
-  if (!delta.sizeMismatch && delta.changedPixels === 0) return [];
+  if (isSameImage(delta)) return [];
   return [`captureImage: expected the baseline, got ${formatDelta(delta)}`];
-}
-
-async function pollInk(page, inkFloor) {
-  const viewport = page.locator('#viewport');
-  const deadline = Date.now() + RENDER_TIMEOUT_MS;
-  let ink = inkStats(await viewport.screenshot()).inkPixels;
-  while (ink < inkFloor && Date.now() < deadline) {
-    await page.waitForTimeout(POLL_INTERVAL_MS);
-    ink = inkStats(await viewport.screenshot()).inkPixels;
-  }
-  return ink;
 }
 
 /** One line per failed check of a view, or none when it rendered the fixture. */
@@ -185,7 +218,7 @@ function callFailures(drawn) {
 }
 
 /** One line per failed check of every view and of `mountScene`. */
-function failures({ drawn, mounted }) {
+function failures({ drawn, mounted, held, missing, loaded, switched, cameras, picked }) {
   return [
     ...Object.entries(drawn).flatMap(([view, result]) => failuresOf(view, result)),
     ...writeFailures(drawn),
@@ -193,6 +226,15 @@ function failures({ drawn, mounted }) {
     ...mountFailures(mounted.results),
     ...mounted.errors.map((message) => `mountScene: page error: ${message}`),
     ...baselineFailures(Buffer.from(mounted.results.smallElementPng, 'base64')),
+    ...heldResourceFailures(held.results),
+    ...held.errors.map((message) => `held resource: page error: ${message}`),
+    ...missingFileFailures(missing.results),
+    ...missing.errors.map((message) => `missing files: page error: ${message}`),
+    ...loadFailures(loaded.results),
+    ...loaded.errors.map((message) => `load: page error: ${message}`),
+    ...switchFailures(switched),
+    ...cameraFailures(cameras),
+    ...pickFailures(picked),
   ];
 }
 
@@ -202,7 +244,25 @@ try {
   const app = join(work, 'app');
   writeConsumer(app, tarballs);
   buildConsumer(app);
-  const found = failures(await renderInBrowser(app));
+  const results = await renderInBrowser(app);
+  const captureDeltas = Object.entries(results.switched.results.capturedVsShown)
+    .map(([mode, delta]) => `${mode} ${delta.changedPixels ?? 'size mismatch'}`)
+    .join(', ');
+  console.log(`[renderer-consumer] captureImage against the view, changed pixels: ${captureDeltas}`);
+  const { onCube, onNothing, hostSelected, onNothingHostOwned } = results.picked.results;
+  console.log(
+    `[renderer-consumer] outline pixels: after a click on the cube ${onCube.outline}, on nothing ` +
+      `${onNothing.outline}, the host's cube ${hostSelected}, then a click on nothing ${onNothingHostOwned.outline}`
+  );
+  const { gizmoPixels, overFromGameView, settle } = results.cameras.results;
+  console.log(
+    `[renderer-consumer] milliseconds from a fresh mount to settled: ${JSON.stringify(settle.settleMs)}`
+  );
+  console.log(
+    `[renderer-consumer] through each camera, pixels the gizmos change: ${JSON.stringify(gizmoPixels)}, ` +
+      `with no gizmo, past residue from the game's view: ${JSON.stringify(overFromGameView)}`
+  );
+  const found = failures(results);
   for (const failure of found) console.error(`[renderer-consumer] ${failure}`);
   console.log(
     `[renderer-consumer] ${found.length === 0 ? 'the fixture scene rendered in every view' : 'failed'}`

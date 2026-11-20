@@ -9,20 +9,18 @@ import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import {
   DEFAULT_VIEWPORT,
   FRAME_ON_OPEN_STORAGE_KEY,
-  SHOW_FOG_STORAGE_KEY,
-  SHOW_GIZMOS_STORAGE_KEY,
-  SHOW_GRID_STORAGE_KEY,
-  SHOW_PERFORMANCE_STORAGE_KEY,
+  SHOW_STORAGE_KEYS,
   VIEWPORT_MODE_STORAGE_KEY,
+  type PersistedShowKey,
   type PersistedViewport,
   type ViewportMode,
 } from '../../contexts/ViewportModeContext.js';
 import { readPersisted, usePersistedState } from '../../hooks/usePersistedState.js';
-import { useOpenedScene, useSceneGraphs } from '../../hooks/useOpenedScene.js';
+import { DEFAULT_SHOW } from '../../viewShow/viewShow.js';
+import { useSceneGraphs } from '../../hooks/useSceneGraphs.js';
 import { ViewportToolbar } from '../ViewportToolbar/ViewportToolbar.js';
 import { Splitter } from '../Splitter/Splitter.js';
 import { ViewportArea } from './ViewportArea.js';
-import { PerformanceOverlay } from '../../frameProfile/PerformanceOverlay.js';
 import { PreviewErrorBoundary } from './PreviewErrorBoundary.js';
 import { EscapeDeselect } from './EscapeDeselect.js';
 import { SceneChangeResetter } from './SceneChangeResetter.js';
@@ -44,7 +42,7 @@ import { AnimationTabWatcher } from './AnimationTabWatcher.js';
 import { DetailTabs, type DetailTab } from './DetailTabs.js';
 import { SceneTreePane } from './SceneTreePane.js';
 import { previewShellProviders } from './previewShellProviders.js';
-import { DEFAULT_ROOT_SCENE_PATH } from '../../../scene/openScene.js';
+import { useSceneLoader } from '../../sceneResourcePipeline.js';
 import { CaptureStateReporter } from './CaptureStateReporter.js';
 import type { TscnPreviewShellProps } from './previewShellProps.js';
 import styles from './TscnPreviewShell.module.css';
@@ -64,8 +62,7 @@ function isViewportMode(value: unknown): value is ViewportMode {
 
 export function TscnPreviewShell({
   panelId,
-  content,
-  rootScenePath = DEFAULT_ROOT_SCENE_PATH,
+  scene,
   onNodeReveal,
   onOpenSubScene,
   toolbar,
@@ -77,15 +74,9 @@ export function TscnPreviewShell({
   onCaptureStateChange,
   isVisible,
   onCopyNodePath,
-  onSceneOpen,
 }: TscnPreviewShellProps) {
-  const scene = useOpenedScene(content, rootScenePath);
   const { parsed, sceneGraph } = useSceneGraphs(scene);
   const { sceneGraph: parsedGraph, error } = parsed;
-  // A block body: an arrow body would hand the host's return value to React as the cleanup.
-  useEffect(() => {
-    onSceneOpen?.(scene);
-  }, [scene, onSceneOpen]);
 
   const hierarchyValue = useMemo(() => ({ sceneGraph, panelId, scene }), [sceneGraph, panelId, scene]);
   const [viewportError, setViewportError] = useState<Error | null>(null);
@@ -114,22 +105,25 @@ export function TscnPreviewShell({
   // persists.
   const [initialViewport] = useState<PersistedViewport>(() => ({
     mode: readPersisted<ViewportMode>(VIEWPORT_MODE_STORAGE_KEY, DEFAULT_VIEWPORT.mode, isViewportMode),
-    showGizmos: readPersisted(SHOW_GIZMOS_STORAGE_KEY, DEFAULT_VIEWPORT.showGizmos, isBoolean),
-    showGrid: readPersisted(SHOW_GRID_STORAGE_KEY, DEFAULT_VIEWPORT.showGrid, isBoolean),
+    show: Object.fromEntries(
+      Object.entries(SHOW_STORAGE_KEYS).map(([key, storageKey]) => [
+        key,
+        readPersisted(storageKey, DEFAULT_SHOW[key as PersistedShowKey], isBoolean),
+      ])
+    ),
     frameOnOpen: readPersisted(FRAME_ON_OPEN_STORAGE_KEY, DEFAULT_VIEWPORT.frameOnOpen, isBoolean),
-    showFog: readPersisted(SHOW_FOG_STORAGE_KEY, DEFAULT_VIEWPORT.showFog, isBoolean),
-    showPerformance: readPersisted(SHOW_PERFORMANCE_STORAGE_KEY, DEFAULT_VIEWPORT.showPerformance, isBoolean),
   }));
 
   const withProviders = previewShellProviders({
     hierarchyValue,
+    loader: useSceneLoader(scene),
     initialPreviewedCameraPath,
     onMissingPathsChange,
     initialViewportMode,
     initialViewport,
     isVisible,
     panelId,
-    rootScenePath,
+    rootScenePath: scene.rootScenePath,
   });
 
   return withProviders(
@@ -163,7 +157,6 @@ export function TscnPreviewShell({
             <div className={styles.viewportToolbarOverlay} data-testid="viewport-toolbar-overlay">
               <ViewportToolbar />
             </div>
-            <PerformanceOverlay />
             <PreviewErrorBoundary sceneGraph={sceneGraph} onViewportErrorChange={setViewportError}>
               <ViewportArea />
             </PreviewErrorBoundary>
