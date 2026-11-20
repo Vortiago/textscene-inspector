@@ -20,6 +20,6 @@ export function missingFileFailures({ beforeView, settledKeys, heard, afterWrite
     ...(heard.some((paths) => paths.includes(MISSING_PATH))
       ? []
       : [`subscribe: expected a notice that sees ${MISSING_PATH}, got ${JSON.stringify(heard)}`]),
-    ...equalityFailure('scene.files() after texture = null', [MISSING_PATH], afterWrite),
+    ...equalityFailure('scene.files() after texture = null', [], afterWrite),
   ].map((failure) => `missing files: ${failure}`);
 }

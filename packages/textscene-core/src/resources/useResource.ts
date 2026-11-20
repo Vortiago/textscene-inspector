@@ -1,9 +1,3 @@
-/**
- * useResource(path, type) loads an external resource for an R3F node component as a status
- * machine: pending, then loaded or unavailable, and a late arrival turns unavailable loaded. It
- * never suspends. A texture or material keeps its identity across calls, and an Object3D is
- * cloned per consumer, since THREE.Object3D allows one parent.
- */
 import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
 import type { ResourceEventBus } from './ResourceEventBus';

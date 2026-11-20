@@ -1,7 +1,3 @@
-/**
- * The files a scene loads, walked as Godot's loader walks them: each file a text file names,
- * and the files those name in turn. The loader's parses and load outcomes answer each step.
- */
 import { isGodotTextResourcePath } from '../../godot/project/resourceFormats.js';
 import type { SceneFile } from '../../scene/sceneFiles.js';
 import { resourceReads, sceneReads, type FileRead } from '../loadFailure/fileReads.js';
@@ -11,7 +7,7 @@ import type { ResourceType } from '../ResourceEventBus.js';
 import { fileExtension } from '../fileExtension.js';
 import { parseSubResourcePath, resourceFilePath } from '../subResourcePath.js';
 
-/** The files one file names, where the walk starts. A null owner is the engine, which reads the project settings. */
+/** A null owner is the engine, which reads the project settings. */
 export interface WalkStart {
   readonly owner: string | null;
   readonly reads: readonly FileRead[];
@@ -20,7 +16,7 @@ export interface WalkStart {
 }
 
 export interface SceneFileWalk {
-  /** The files `starts` reach, by path. The same array while no file moves. Pass the same starts while none moves. */
+  /** The same array while no file moves. The caller passes the same starts while none moves. */
   files(starts: readonly WalkStart[]): readonly SceneFile[];
   /** Calls `listener` when a load answers for a file of the last walk. Returns the removal. */
   subscribe(listener: () => void): () => void;
@@ -43,9 +39,11 @@ interface Entry {
 const WATCHED: ResourceType[] = ['scene', 'resource', 'loadoutcome'];
 
 export function createSceneFileWalk(loader: ResourceLoader): SceneFileWalk {
-  /** Written only by `textFile` and the change listener: a text file's reads, or null where it does not parse. */
+  /** Written only by `textFile` and the change listener. Null where the file does not parse. */
   const textFiles = new Map<string, TextFile | null>();
-  /** Written only by `outcome` and `unpinOutcomesOutside`: the outcomes the walk holds in the loader's cache. */
+  /** Written only by `textFile`: held in the loader's cache until the walk keeps their reads. */
+  const pinnedParses = new Set<string>();
+  /** Written only by `outcome` and `unpinOutcomesOutside`: held in the loader's cache. */
   const pinnedOutcomes = new Set<string>();
   const listeners = new Set<() => void>();
   /** Written only by `files`: the starts of the last walk, which a load answer makes stale. */
@@ -57,11 +55,14 @@ export function createSceneFileWalk(loader: ResourceLoader): SceneFileWalk {
     if (textFiles.has(file)) return textFiles.get(file);
     const processor = fileExtension(file) === '.tscn' ? loader.scenes : loader.resources;
     if (processor.getCached(file) === undefined) {
-      processor.pin(file);
-      processor.request(file);
+      if (!pinnedParses.has(file)) {
+        pinnedParses.add(file);
+        processor.pin(file);
+        processor.request(file);
+      }
       return undefined;
     }
-    processor.unpin(file);
+    if (pinnedParses.delete(file)) processor.unpin(file);
     const parsed = parsedTextFile(file);
     textFiles.set(file, parsed);
     return parsed;

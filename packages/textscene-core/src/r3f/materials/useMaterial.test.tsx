@@ -7,13 +7,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import * as logger from '../../logger';
-import { parseTresFile, type ParsedResource } from '../../parser/parsedResource';
+import { parseTresFile } from '../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 import { nodeReference, type ScopedReference } from '../../resources/reading';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
-import { useMissingResources } from '../contexts/MissingResourcesContext';
-import { missingResourcesWrapper } from '../../resources/testing/missingResourcesWrapper';
 import { fileMaterial } from './materialReference';
 import { inlineSource } from './surfaceMaterial.testkit';
 import { readyMaterial, useMaterial } from './useMaterial';
@@ -54,28 +52,6 @@ function renderMaterial(source: ScopedReference | undefined, seeded: Record<stri
     <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>
   );
   return { fake, ...renderHook(() => useMaterial(source), { wrapper }) };
-}
-
-function MaterialReader({ path }: { path: string }) {
-  useMaterial(fileMaterial(path));
-  return null;
-}
-
-/** The missing-resources rows while one `useMaterial` reads each of `paths` from `TRES_PATH`. */
-function missingRows(seeded: ParsedResource | null, paths: string[]): string[] {
-  const fake = createFakeResourceLoader();
-  fake.resources.seed(TRES_PATH, seeded);
-  const Providers = missingResourcesWrapper(fake.loader);
-  const wrapper = ({ children }: { children: ReactNode }) => (
-    <Providers>
-      {paths.map((path) => (
-        <MaterialReader key={path} path={path} />
-      ))}
-      {children}
-    </Providers>
-  );
-  const { result } = renderHook(() => useMissingResources().missingPaths, { wrapper });
-  return [...result.current];
 }
 
 afterEach(() => {
@@ -141,62 +117,6 @@ describe('useMaterial', () => {
     act(() => fake.resources._fail(TRES_PATH, 'not found'));
 
     expect(result.current).toEqual({ status: 'absent' });
-  });
-
-  it('reports the file of a failed sub-resource address once, as its file', () => {
-    const rows = missingRows(null, [`${TRES_PATH}::Inner_a`, `${TRES_PATH}::Inner_b`]);
-
-    expect(rows).toEqual([TRES_PATH]);
-  });
-
-  it('reports a sub-resource the loaded file does not declare as a missing row', () => {
-    const rows = missingRows(parseTresFile(PAINT_TRES), [`${TRES_PATH}::Missing`]);
-
-    expect(rows).toEqual([`${TRES_PATH}::Missing`]);
-  });
-
-  it('marks an undeclared sub-resource uploaded once a new file declares it', () => {
-    const fake = createFakeResourceLoader();
-    fake.resources.seed(TRES_PATH, parseTresFile(PAINT_TRES));
-    const { result } = renderHook(
-      () => {
-        useMaterial(fileMaterial(`${TRES_PATH}::Late_mat`));
-        return useMissingResources();
-      },
-      { wrapper: missingResourcesWrapper(fake.loader) }
-    );
-
-    const declaring = PAINT_TRES.replace('id="Inner_mat"', 'id="Late_mat"');
-    act(() => {
-      fake.resources.clearCache(TRES_PATH);
-      fake.resources._resolve(TRES_PATH, parseTresFile(declaring));
-    });
-
-    expect(result.current.missingPaths.size).toBe(0);
-    expect([...result.current.uploadedPaths]).toEqual([TRES_PATH]);
-  });
-
-  it('reports the address once a failed file loads without the sub-resource', () => {
-    const fake = createFakeResourceLoader();
-    fake.resources.seed(TRES_PATH, null);
-    const { result } = renderHook(
-      () => {
-        useMaterial(fileMaterial(`${TRES_PATH}::Late_mat`));
-        return useMissingResources().missingPaths;
-      },
-      { wrapper: missingResourcesWrapper(fake.loader) }
-    );
-
-    act(() => {
-      fake.resources.clearCache(TRES_PATH);
-      fake.resources._resolve(TRES_PATH, parseTresFile(PAINT_TRES));
-    });
-
-    expect([...result.current]).toEqual([`${TRES_PATH}::Late_mat`]);
-  });
-
-  it('reports no row for a file that loads', () => {
-    expect(missingRows(parseTresFile(PAINT_TRES), [`${TRES_PATH}::Inner_mat`])).toEqual([]);
   });
 
   it('answers absent for a sub-resource the file does not declare', () => {

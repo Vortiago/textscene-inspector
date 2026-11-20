@@ -1,7 +1,3 @@
-/**
- * Lists every missing file of the scene and every file the user uploaded, one row per file,
- * uploaded rows first. The host supplies `onUpload` and `onRemove`.
- */
 import type { ChangeEvent } from 'react';
 import { useMissingResources } from '../../contexts/MissingResourcesContext.js';
 import type { SceneFile } from '../../../scene/sceneFiles.js';

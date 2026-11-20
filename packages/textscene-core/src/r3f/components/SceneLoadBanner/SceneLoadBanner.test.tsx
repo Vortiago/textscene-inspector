@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
-import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
-import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
+import { render, screen, waitFor } from '@testing-library/react';
+import '../../sceneLiveTree';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
-import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
-import { TscnParser } from '../../../parser/TscnParser';
+import { openScene } from '../../../scene/openScene';
 import { SceneLoadBanner } from './SceneLoadBanner';
 
 const MAIN = `[gd_scene format=3]
@@ -14,32 +12,31 @@ atlas = ExtResource("1")
 [node name="Root" type="Node2D"]
 `;
 
-function mount() {
-  const fake = createFakeResourceLoader();
-  const graph = createSceneGraphFromTscnScene(new TscnParser().parse(MAIN), 'res://main.tscn');
+const ATLAS = `[gd_resource type="AtlasTexture" format=3]
+[ext_resource type="Texture2D" path="res://gone.png" id="1"]
+[resource]
+atlas = ExtResource("1")
+`;
+
+function mount(files: Record<string, string>) {
+  const scene = openScene({
+    source: MAIN,
+    provider: { loadResource: async (path) => files[path] ?? null },
+    rootScenePath: 'res://main.tscn',
+  });
   render(
-    <ResourceLoaderProvider loader={fake.loader}>
-      <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
-        <SceneLoadBanner />
-      </HierarchyProvider>
-    </ResourceLoaderProvider>
+    <HierarchyProvider value={{ sceneGraph: scene.parse().sceneGraph, panelId: 'p', scene }}>
+      <SceneLoadBanner />
+    </HierarchyProvider>
   );
-  return fake;
+  return scene;
 }
 
 describe('<SceneLoadBanner>', () => {
-  it('says the game would fail to load the scene, with Godot line and the chain', () => {
-    const fake = mount();
+  it('says the game would fail to load the scene, with Godot line and the chain', async () => {
+    mount({ 'res://atlas.tres': ATLAS });
 
-    act(() =>
-      fake.loadOutcomes._resolve('res://atlas.tres', {
-        isFailed: true,
-        chain: ['res://atlas.tres', 'res://gone.png'],
-        cause: 'missing',
-      })
-    );
-
-    expect(screen.getByRole('alert').textContent).toBe(
+    expect((await screen.findByRole('alert')).textContent).toBe(
       [
         'The game would fail to load this scene',
         'res://main.tscn - Parse Error: [ext_resource] referenced non-existent resource at: res://atlas.tres.',
@@ -48,11 +45,10 @@ describe('<SceneLoadBanner>', () => {
     );
   });
 
-  it('shows nothing while each file the scene reads loads', () => {
-    const fake = mount();
+  it('shows nothing once each file the scene reads loads', async () => {
+    const scene = mount({ 'res://atlas.tres': ATLAS, 'res://gone.png': 'bytes' });
 
-    act(() => fake.loadOutcomes._resolve('res://atlas.tres', { isFailed: false }));
-
+    await waitFor(() => expect(scene.files().every((file) => file.state === 'loaded')).toBe(true));
     expect(screen.queryByRole('alert')).toBeNull();
   });
 });

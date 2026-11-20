@@ -41,7 +41,7 @@ export interface Scene {
   subscribe(listener: () => void): () => void;
   /** Changes at once with each change a view draws: a new text, a write, or a load that changes the tree. */
   revision(): number;
-  /** Each file the scene and the project settings name, by path, as the loads answer. `subscribe` tells a change. */
+  /** Each file the scene and the project settings name, by path. `subscribe` tells a change. */
   files(): readonly SceneFile[];
   /** Lets go of every listener. A view of a disposed scene draws its last parse. */
   dispose(): void;
@@ -121,7 +121,7 @@ export function openScene({
     },
     subscribe: (listener) => listeners.subscribe(listener),
     revision: () => listeners.revision(),
-    files: () => runtime().files(graph()),
+    files: () => runtime().files(scene.written()),
     dispose() {
       listeners.clear();
       sceneRuntime?.dispose();

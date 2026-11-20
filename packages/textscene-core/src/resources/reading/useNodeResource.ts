@@ -1,9 +1,3 @@
-/**
- * The hook host: a component reads resources on one snapshot of the loader, renders again only
- * when a file one of its reads touched loads, fails or reloads, and leaves the request and the pin
- * to this host. A read never suspends and never throws.
- */
-
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
 import { useByValue } from '../../r3f/hooks/useByValue';
 import { useSceneResources, type SceneResources } from '../../r3f/SceneResourcesContext';
@@ -61,8 +55,6 @@ export function useSnapshotRead<R>(readAll: (read: NodeRead) => R): R {
 }
 
 /**
- * `read` on the loader's current snapshot, run again when a file it touched loads, fails or
- * reloads. The host requests and pins each file the read touched.
  * The caller keeps `read` stable while its inputs hold: a new `read` starts a new snapshot.
  *
  * @canonical Code with no hooks that reads resources, run by a component

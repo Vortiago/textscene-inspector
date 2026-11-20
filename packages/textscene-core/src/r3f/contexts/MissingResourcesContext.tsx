@@ -1,7 +1,3 @@
-/**
- * The previewer's resource file rows: the scene's missing files, and the files the user
- * uploaded. A file the scene gave as missing that loads later was uploaded.
- */
 import {
   createContext,
   useCallback,
@@ -50,20 +46,19 @@ export function useMissingResources(): MissingResourcesContextValue {
   return useContext(MissingResourcesContext);
 }
 
-/** Each file that turned from `missing` to `loaded` while the scene names it, and the removal of one. */
+/** Each file that turned from `missing` to `loaded`, kept across scenes until removed, and the removal. */
 function useUploadedPaths(files: readonly SceneFile[]): [ReadonlySet<string>, (path: string) => void] {
   const [uploadedPaths, setUploadedPaths] = useState<ReadonlySet<string>>(() => new Set<string>());
   const seenMissing = useRef<ReadonlySet<string>>(new Set());
   useEffect(() => {
-    const named = new Set(files.map((file) => file.path));
     const arrived = files.filter((file) => file.state === 'loaded' && seenMissing.current.has(file.path));
-    seenMissing.current = new Set(files.filter((file) => file.state === 'missing').map((file) => file.path));
-    setUploadedPaths((prev) => {
-      let next = prev;
-      for (const path of prev) if (!named.has(path)) next = withoutKey(next, path);
-      for (const { path } of arrived) next = withKey(next, path);
-      return next;
-    });
+    // A file loads again after a change, so one seen missing stays seen while it loads.
+    const stillMissing = files.filter(
+      ({ path, state }) => state === 'missing' || (state === 'loading' && seenMissing.current.has(path))
+    );
+    seenMissing.current = new Set(stillMissing.map((file) => file.path));
+    if (arrived.length === 0) return;
+    setUploadedPaths((prev) => arrived.reduce((next, { path }) => withKey(next, path), prev));
   }, [files]);
   const removeUploaded = useCallback(
     (path: string) => setUploadedPaths((prev) => withoutKey(prev, path)),

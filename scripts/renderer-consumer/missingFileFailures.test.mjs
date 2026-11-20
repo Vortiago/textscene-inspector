@@ -15,7 +15,7 @@ const PASSING = {
   beforeView: [MISSING_FILE],
   settledKeys: ['scriptedNodeCount', 'hasCurrentCamera'],
   heard: [[], [MISSING_PATH]],
-  afterWrite: [MISSING_PATH],
+  afterWrite: [],
 };
 
 describe('missingFileFailures', () => {
@@ -42,9 +42,9 @@ describe('missingFileFailures', () => {
     ]);
   });
 
-  it('names a file that leaves the list after a write, which the scene text still reads', () => {
-    expect(missingFileFailures({ ...PASSING, afterWrite: [] })).toEqual([
-      'missing files: scene.files() after texture = null: expected ["res://missing.png"], got []',
+  it('names a file that stays after the write that stops reading it', () => {
+    expect(missingFileFailures({ ...PASSING, afterWrite: [MISSING_PATH] })).toEqual([
+      'missing files: scene.files() after texture = null: expected [], got ["res://missing.png"]',
     ]);
   });
 });

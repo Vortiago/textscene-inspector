@@ -49,16 +49,13 @@ function failingReads(
   return [...paths].filter((path) => path.startsWith('res://'));
 }
 
-/** A file a text file reads, with the type its `[ext_resource]` heading gives, or null for a `Resource("…")` literal. */
+/** The type is the `[ext_resource]` heading's, or null for a `Resource("…")` literal. */
 export interface FileRead {
   readonly path: string;
   readonly type: string | null;
 }
 
-/**
- * Every file a value of a `.tscn` reads, an `instance=` included. Godot reports a file a heading
- * names and no value reads in no list, since only a read waits on its load (resource_format_text.cpp:147-157).
- */
+/** Values only, as only a read reports a failed load (resource_format_text.cpp:147-157). */
 export function sceneReads(file: string, scene: SceneSections): FileRead[] {
   const sections = scene.internalResources.map((section) => section.data);
   return readFiles(file, scene.externalResources, [

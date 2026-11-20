@@ -39,7 +39,7 @@ export interface SceneRuntime {
   tree(graph: SceneGraph): SceneTree;
   /** Calls `listener` when a load changes the tree. Returns the removal. */
   subscribe(listener: () => void): () => void;
-  /** The files the graph's root scene and the project settings name, by path. The same array while none moves. */
+  /** The files the root scene and the project settings name. The same array while none moves. */
   files(graph: SceneGraph | null): readonly SceneFile[];
   /** Calls `listener` when a load answers for one of those files. Returns the removal. */
   subscribeFiles(listener: () => void): () => void;

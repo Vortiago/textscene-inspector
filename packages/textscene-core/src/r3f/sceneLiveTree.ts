@@ -105,7 +105,7 @@ function sceneTreeOf(tree: LiveTree, loader: ResourceLoader, rootScenePath: stri
 const NO_CAMERAS: readonly TreeCamera[] = [];
 const NO_TREE: SceneTree = { node: () => null, uniquePaths: () => new Map(), cameras: () => NO_CAMERAS };
 
-/** The files the project settings name for every scene: Godot loads them as the game starts (theme_db.cpp:52-53). */
+/** Godot loads these files as the game starts, for every scene (theme_db.cpp:52-53). */
 function projectReads(settings: ProjectSettings | null): FileRead[] {
   const named: [string | null, string][] = [
     [projectDefaultEnvironmentPath(settings), 'Environment'],

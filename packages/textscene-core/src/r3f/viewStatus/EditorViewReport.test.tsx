@@ -97,7 +97,6 @@ describe('the settled signal of an editor view', () => {
     expect((await settledStatus(SCRIPTED_WITH_CAMERA)).settled()).toEqual({
       scriptedNodeCount: 1,
       hasCurrentCamera: true,
-      missingFiles: new Set(),
     });
   });
 
@@ -105,7 +104,6 @@ describe('the settled signal of an editor view', () => {
     expect((await settledStatus(NO_CAMERA)).settled()).toEqual({
       scriptedNodeCount: 0,
       hasCurrentCamera: false,
-      missingFiles: new Set(),
     });
   });
 
@@ -119,7 +117,6 @@ describe('the settled signal of an editor view', () => {
     expect(status.settled()).toEqual({
       scriptedNodeCount: 1,
       hasCurrentCamera: true,
-      missingFiles: new Set(),
     });
   });
 

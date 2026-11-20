@@ -169,7 +169,7 @@ describe('ViewportToolbar — Reset Camera', () => {
 describe('ViewportToolbar — Screenshot', () => {
   const IMAGE = new Blob(['png'], { type: 'image/png' });
   const settledView = (): ViewAnswers => ({
-    settled: Promise.resolve({ scriptedNodeCount: 0, hasCurrentCamera: false, missingFiles: new Set() }),
+    settled: Promise.resolve({ scriptedNodeCount: 0, hasCurrentCamera: false }),
     captureImage: () => Promise.resolve(IMAGE),
   });
 
@@ -230,7 +230,7 @@ describe('ViewportToolbar — Screenshot', () => {
     const captureImage = vi.fn(() => Promise.resolve(IMAGE));
     const view: ViewAnswers = {
       settled: new Promise((resolve) => {
-        settle = () => resolve({ scriptedNodeCount: 0, hasCurrentCamera: false, missingFiles: new Set() });
+        settle = () => resolve({ scriptedNodeCount: 0, hasCurrentCamera: false });
       }),
       captureImage,
     };

@@ -9,7 +9,7 @@ export interface SceneFileFailure {
   readonly cause: LoadFailureCause;
 }
 
-/** One `res://` file the scene loads, as Godot's Load Errors dialog names it (dependency_editor.cpp:802-826). */
+/** One row of Godot's Load Errors dialog (dependency_editor.cpp:802-826). */
 export interface SceneFile {
   readonly path: string;
   /** The type the first file that names it gives, or null where none gives one. */

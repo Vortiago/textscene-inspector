@@ -145,11 +145,20 @@ material_override = ExtResource("1")
     expect(icon?.state).toBe('loaded');
   });
 
-  it('keeps a file the scene text names after a write stops a node reading it', async () => {
+  it('drops a file when a write stops the one node that reads it', async () => {
     const scene = openScene({ source: SPRITE, provider: filesOf({}), rootScenePath: MAIN });
     await whenFilesLoaded(scene);
     await scene.getNode('.').set('texture', variant('null'));
-    expect((await whenFilesLoaded(scene)).map((file) => file.path)).toEqual(['res://icon.png']);
+    expect(await whenFilesLoaded(scene)).toEqual([]);
+  });
+
+  it('names a file a write reads through scene.load', async () => {
+    const scene = openScene({ source: SPRITE, provider: filesOf({}), rootScenePath: MAIN });
+    await scene.getNode('.').set('texture', await scene.load('res://gone.png'));
+    const files = await whenFilesLoaded(scene);
+    expect(files.map(({ path, state, owners }) => ({ path, state, owners }))).toEqual([
+      { path: 'res://gone.png', state: 'missing', owners: [MAIN] },
+    ]);
   });
 
   it('drops a file when a new text stops naming it', async () => {

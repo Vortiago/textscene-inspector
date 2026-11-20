@@ -11,6 +11,7 @@ vi.mock('../../TscnCanvas', () => ({
 }));
 
 import { TextShell } from './TscnPreviewShell.testkit';
+import type { ResourceProvider } from '../../../resources/ResourceProvider';
 
 const TWO_SCRIPTS = `[gd_scene format=3]
 
@@ -71,8 +72,16 @@ script = ExtResource("1_player")
 [node name="Camera" type="Camera3D" parent="."]
 `;
 
+/** The script files the scenes name. A host that lists no folder answers a file by reading it. */
+const SCRIPTS: ResourceProvider = {
+  loadResource: async (path) =>
+    path === 'res://player.gd' || path === 'res://hud.gd' ? 'extends Node\n' : null,
+};
+
 async function openIn(mode: ViewportMode, content: string) {
-  render(<TextShell panelId={`notes-${mode}`} content={content} initialViewportMode={mode} />);
+  render(
+    <TextShell panelId={`notes-${mode}`} content={content} initialViewportMode={mode} provider={SCRIPTS} />
+  );
   await screen.findAllByText('Main');
 }
 

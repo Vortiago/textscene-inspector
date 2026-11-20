@@ -251,9 +251,10 @@ sub-scene and a `.tres` add the files that they read. A file that a heading decl
 reads is not in the list, as it is in no Godot list. The engine reads `res://project.godot`, which
 is in the list when the project has one, with the environment, theme and font that it names.
 
-The list does not wait for a view. A write from your code does not change it, since the file still
-reads what it read. A new text does. `scene.subscribe` tells you when the list changes, and
-`files()` gives the same array while nothing changes.
+The list does not wait for a view. It follows the scene with your writes: a write that stops the
+last value that reads a file takes the file off, and a file that `scene.load` gives joins the list.
+`scene.subscribe` tells you when the list changes, and `files()` gives the same array while nothing
+changes.
 
 ### Mount the view with no React code
 
@@ -298,6 +299,7 @@ document.getElementById('status')!.textContent = hasCurrentCamera
   ? `Settled. ${scriptedNodeCount} nodes hold a script, and scripts do not run.`
   : 'Settled, with no current camera.';
 
+// The list follows the scene: a write that stops reading a file takes it off.
 const showMissing = () =>
   (document.getElementById('missing')!.textContent = scene
     .files()

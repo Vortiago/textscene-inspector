@@ -4,9 +4,7 @@ import type { PendingSceneWork } from '../sceneWork';
 
 const NO_PENDING_WORK: PendingSceneWork = { resources: 0, textures: 0, fonts: 0 };
 
-const NO_FILES: ReadonlySet<string> = new Set();
-
-const FACTS: ViewSettled = { scriptedNodeCount: 2, hasCurrentCamera: true, missingFiles: NO_FILES };
+const FACTS: ViewSettled = { scriptedNodeCount: 2, hasCurrentCamera: true };
 
 function frameOf(revision: number, work: PendingSceneWork = NO_PENDING_WORK): DrawnFrame {
   return { revision, isFullSize: true, awaitedCamera: null, work, facts: FACTS };
@@ -14,7 +12,7 @@ function frameOf(revision: number, work: PendingSceneWork = NO_PENDING_WORK): Dr
 
 /** A scene at `revision()` that never tells of a change. */
 function sceneAt(revision: () => number): LiveScene {
-  return { revision, missingFiles: () => NO_FILES, subscribe: () => () => {} };
+  return { revision, subscribe: () => () => {} };
 }
 
 /** A status with a view attached whose scene is now at `live()`. */
@@ -82,23 +80,11 @@ describe('the settled signal of a view', () => {
     expect(status.settled()).toBeNull();
   });
 
-  it('is pending once the missing files change after the drawn frame, until a frame draws them', () => {
-    let missing = NO_FILES;
-    const status = createViewStatus();
-    status.attach({ revision: () => 1, missingFiles: () => missing, subscribe: () => () => {} });
-    drawFrame(status);
-    missing = new Set(['res://icon.png']);
-    expect(status.settled()).toBeNull();
-    status.frameDrawn({ ...frameOf(1), facts: { ...FACTS, missingFiles: missing } });
-    expect(status.settled()?.missingFiles).toBe(missing);
-  });
-
   it('tells its subscribers when the scene changes, so a host hears the pending state', () => {
     let tell = () => {};
     const status = createViewStatus();
     status.attach({
       revision: () => 1,
-      missingFiles: () => NO_FILES,
       subscribe: (listener) => ((tell = listener), () => {}),
     });
     let notices = 0;
@@ -113,7 +99,6 @@ describe('the settled signal of a view', () => {
     const status = createViewStatus();
     status.attach({
       revision: () => live,
-      missingFiles: () => NO_FILES,
       subscribe: (listener) => ((tell = listener), () => {}),
     });
     drawFrame(status);

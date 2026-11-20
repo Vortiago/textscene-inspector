@@ -13,7 +13,7 @@ import type { SceneScope, TscnNode } from '../../parser/types.js';
 import type { ViewSettled } from '../viewStatus/viewStatus.js';
 
 /** What the In-game view cannot show of the game's first frame: the facts of `settled`, and one more. */
-export interface GameStartFacts extends Omit<ViewSettled, 'missingFiles'> {
+export interface GameStartFacts extends ViewSettled {
   /** 3D content in the root window, and no current Camera3D to draw it (`renderer_viewport.cpp:362`). */
   lacksCamera3D: boolean;
 }

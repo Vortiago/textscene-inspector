@@ -1,238 +1,92 @@
-/**
- * The missing-files panel is hidden with no missing and no uploaded paths.
- * It shows one row with a file input per missing path, and an upload turns
- * that row into an uploaded row with a Remove button.
- */
-import { useEffect } from 'react';
-import { describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen } from '@testing-library/react';
-import { MissingResourcesProvider, useMissingResources } from '../../contexts/MissingResourcesContext';
-import { MissingResourcesPanel } from './MissingResourcesPanel';
+import { describe, expect, it } from 'vitest';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { resourcePipelineOf } from '../../sceneResourcePipeline';
+import { filesOf, mountPanel, sceneReading } from './MissingResourcesPanel.testkit';
 
-function ReportMissingOnMount({ path }: { path: string }) {
-  const { report } = useMissingResources();
-  useEffect(() => {
-    report(path);
-  }, [report, path]);
-  return null;
-}
+const ICON = 'res://icon.png';
+const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47]).buffer;
 
-function MarkUploadedOnMount({ path }: { path: string }) {
-  const { markUploaded } = useMissingResources();
-  useEffect(() => {
-    markUploaded(path);
-  }, [markUploaded, path]);
-  return null;
-}
+const missingRows = (panel: HTMLElement) =>
+  [...panel.querySelectorAll('[data-state="missing"]')].map((row) => row.getAttribute('data-path'));
+
+const WITH_ATLAS = `[gd_scene format=3]
+
+[ext_resource type="Material" path="res://atlas.tres" id="1"]
+
+[node name="Main" type="MeshInstance3D"]
+material_override = ExtResource("1")
+`;
+
+const ATLAS = `[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://gone.png" id="1"]
+
+[resource]
+albedo_texture = ExtResource("1")
+`;
 
 describe('<MissingResourcesPanel>', () => {
-  it('renders nothing when no paths are missing and none uploaded', () => {
-    const { container } = render(
-      <MissingResourcesProvider>
-        <MissingResourcesPanel onUpload={vi.fn()} onRemove={vi.fn()} />
-      </MissingResourcesProvider>
-    );
-    expect(container.querySelector('[data-testid="missing-resources-panel"]')).toBeNull();
+  it('shows one row for each missing file of the scene, by path', async () => {
+    const { panel } = await mountPanel(sceneReading(['res://b.png', 'res://a.png']), filesOf({}));
+    await waitFor(() => expect(missingRows(panel)).toEqual(['res://a.png', 'res://b.png']));
   });
 
-  it('shows one row per missing path reported via context', async () => {
-    render(
-      <MissingResourcesProvider>
-        <ReportMissingOnMount path="res://textures/foo.png" />
-        <ReportMissingOnMount path="res://textures/bar.png" />
-        <MissingResourcesPanel onUpload={vi.fn()} onRemove={vi.fn()} />
-      </MissingResourcesProvider>
-    );
-
-    const panel = await screen.findByTestId('missing-resources-panel');
-    expect(panel).toBeTruthy();
-
-    const missingRows = panel.querySelectorAll('[data-state="missing"]');
-    expect(missingRows).toHaveLength(2);
-
-    const paths = Array.from(missingRows).map((r) => r.getAttribute('data-path'));
-    expect(paths).toEqual(expect.arrayContaining(['res://textures/foo.png', 'res://textures/bar.png']));
-  });
-
-  it('upload row file-input change fires onUpload with (path, file)', async () => {
-    const onUpload = vi.fn();
-    render(
-      <MissingResourcesProvider>
-        <ReportMissingOnMount path="res://textures/foo.png" />
-        <MissingResourcesPanel onUpload={onUpload} onRemove={vi.fn()} />
-      </MissingResourcesProvider>
-    );
-
-    const panel = await screen.findByTestId('missing-resources-panel');
-    const input = panel.querySelector('[data-state="missing"] input[type="file"]') as HTMLInputElement;
-    expect(input).toBeTruthy();
-
-    const file = new File(['stub bytes'], 'foo.png', { type: 'image/png' });
-    await act(async () => {
-      fireEvent.change(input, { target: { files: [file] } });
+  it('names the chain to the file that failed first, and hands the host that file', async () => {
+    const { panel, onUpload } = await mountPanel(WITH_ATLAS, filesOf({ 'res://atlas.tres': ATLAS }));
+    const row = await waitFor(() => {
+      const atlas = panel.querySelector('[data-path="res://atlas.tres"]');
+      expect(atlas?.querySelector('[data-testid="load-failure-chain"]')).not.toBeNull();
+      return atlas!;
     });
-
-    expect(onUpload).toHaveBeenCalledTimes(1);
-    expect(onUpload).toHaveBeenCalledWith('res://textures/foo.png', file);
+    expect(row.querySelector('[data-testid="load-failure-chain"]')?.textContent).toBe(
+      'Fails to load: res://atlas.tres → res://gone.png (missing)'
+    );
+    const file = new File(['bytes'], 'gone.png', { type: 'image/png' });
+    await act(async () => {
+      fireEvent.change(row.querySelector('input[type="file"]')!, { target: { files: [file] } });
+    });
+    expect(onUpload).toHaveBeenCalledWith('res://gone.png', file);
   });
 
-  it('renders uploaded rows with Remove button, fires onRemove(path)', async () => {
-    const onRemove = vi.fn();
-    render(
-      <MissingResourcesProvider>
-        <MarkUploadedOnMount path="res://textures/shared.png" />
-        <MissingResourcesPanel onUpload={vi.fn()} onRemove={onRemove} />
-      </MissingResourcesProvider>
-    );
-
-    const panel = await screen.findByTestId('missing-resources-panel');
-    const uploadedRow = panel.querySelector('[data-state="uploaded"]');
-    expect(uploadedRow).toBeTruthy();
-    expect(uploadedRow?.getAttribute('data-path')).toBe('res://textures/shared.png');
-
-    const removeBtn = uploadedRow!.querySelector('button') as HTMLButtonElement;
-    expect(removeBtn).toBeTruthy();
-    await act(async () => {
-      fireEvent.click(removeBtn);
+  it('names the sub-resource addresses the scene reads inside a missing file', async () => {
+    const source = WITH_ATLAS.replace('path="res://atlas.tres"', 'path="res://atlas.tres::Material_1"');
+    const { panel } = await mountPanel(source, filesOf({}));
+    const addresses = await waitFor(() => {
+      const found = panel.querySelector('[data-testid="missing-file-addresses"]');
+      expect(found).not.toBeNull();
+      return found!;
     });
-    expect(onRemove).toHaveBeenCalledWith('res://textures/shared.png');
+    expect(addresses.textContent).toBe('Asked inside it: res://atlas.tres::Material_1');
   });
 
-  it('hands the host the OWNING FILE when a row names a resource inside a .tres', async () => {
-    // A row can carry a `file::id` **Sub-resource path**, but a host keys its
-    // provider by file. The address would store the bytes under a key that
-    // nothing reads.
-    const onUpload = vi.fn();
-    render(
-      <MissingResourcesProvider>
-        <ReportMissingOnMount path="res://meshes/wheel.tres::ORMMaterial3D_x" />
-        <MissingResourcesPanel onUpload={onUpload} onRemove={vi.fn()} />
-      </MissingResourcesProvider>
-    );
-
-    const panel = await screen.findByTestId('missing-resources-panel');
-    const input = panel.querySelector('input[type="file"]') as HTMLInputElement;
-    const file = new File(['bytes'], 'wheel.tres', { type: 'text/plain' });
-    await act(async () => {
-      fireEvent.change(input, { target: { files: [file] } });
-    });
-
-    expect(onUpload).toHaveBeenCalledWith('res://meshes/wheel.tres', file);
-  });
-
-  it('shows one uploaded row per FILE and removes under that same key', async () => {
-    // An upload against an address row records the owning file. Upload and
-    // removal must agree on that key, or the removal misses the stored bytes.
-    const onRemove = vi.fn();
-    render(
-      <MissingResourcesProvider>
-        <MarkUploadedOnMount path="res://meshes/wheel.tres::ORMMaterial3D_x" />
-        <MissingResourcesPanel onUpload={vi.fn()} onRemove={onRemove} />
-      </MissingResourcesProvider>
-    );
-
-    const panel = await screen.findByTestId('missing-resources-panel');
-    const uploadedRows = panel.querySelectorAll('[data-state="uploaded"]');
-    expect(uploadedRows).toHaveLength(1);
-    expect(uploadedRows[0]!.getAttribute('data-path')).toBe('res://meshes/wheel.tres');
-
-    await act(async () => {
-      fireEvent.click(uploadedRows[0]!.querySelector('button') as HTMLButtonElement);
-    });
-
-    expect(onRemove).toHaveBeenCalledWith('res://meshes/wheel.tres');
+  it('turns a missing row uploaded once its file loads, and forwards a Remove to the host', async () => {
+    const files: Record<string, ArrayBuffer> = {};
+    const { scene, panel, onRemove } = await mountPanel(sceneReading([ICON]), filesOf(files));
+    await waitFor(() => expect(missingRows(panel)).toEqual([ICON]));
+    files[ICON] = PNG;
+    act(() => resourcePipelineOf(scene).loader.provideFile(ICON));
+    const remove = await screen.findByRole('button', { name: `Remove uploaded file for ${ICON}` });
+    expect(missingRows(screen.getByTestId('missing-resources-panel'))).toEqual([]);
+    fireEvent.click(remove);
+    expect(onRemove).toHaveBeenCalledWith(ICON);
     expect(screen.queryByTestId('missing-resources-panel')).toBeNull();
   });
 
-  it('uploading a missing path moves it from missing to uploaded set', async () => {
-    function MissingThenUpload({ path }: { path: string }) {
-      const { report, markUploaded } = useMissingResources();
-      useEffect(() => {
-        report(path);
-      }, [report, path]);
-      return (
-        <button data-testid="trigger-upload" onClick={() => markUploaded(path)}>
-          upload
-        </button>
-      );
-    }
-
-    render(
-      <MissingResourcesProvider>
-        <MissingThenUpload path="res://textures/a.png" />
-        <MissingResourcesPanel onUpload={vi.fn()} onRemove={vi.fn()} />
-      </MissingResourcesProvider>
-    );
-
-    const panel = await screen.findByTestId('missing-resources-panel');
-    expect(panel.querySelectorAll('[data-state="missing"]')).toHaveLength(1);
-
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('trigger-upload'));
-    });
-
-    expect(panel.querySelectorAll('[data-state="missing"]')).toHaveLength(0);
-    expect(panel.querySelectorAll('[data-state="uploaded"]')).toHaveLength(1);
+  it('keeps an uploaded row after a new text stops naming its file, so the host can still remove it', async () => {
+    const files: Record<string, ArrayBuffer> = {};
+    const { scene, panel } = await mountPanel(sceneReading([ICON]), filesOf(files));
+    await waitFor(() => expect(missingRows(panel)).toEqual([ICON]));
+    files[ICON] = PNG;
+    act(() => resourcePipelineOf(scene).loader.provideFile(ICON));
+    await screen.findByRole('button', { name: `Remove uploaded file for ${ICON}` });
+    act(() => scene.setSource(sceneReading([])));
+    await waitFor(() => expect(scene.files().some((file) => file.path === ICON)).toBe(false));
+    expect(screen.getByRole('button', { name: `Remove uploaded file for ${ICON}` })).not.toBeNull();
   });
 
-  it('renders both uploaded and missing rows simultaneously, uploaded first', async () => {
-    // One path uploaded while another is still missing: both rows show.
-    render(
-      <MissingResourcesProvider>
-        <ReportMissingOnMount path="res://textures/different.png" />
-        <MarkUploadedOnMount path="res://textures/shared.png" />
-        <MissingResourcesPanel onUpload={vi.fn()} onRemove={vi.fn()} />
-      </MissingResourcesProvider>
-    );
-
-    const panel = await screen.findByTestId('missing-resources-panel');
-    const rows = Array.from(panel.querySelectorAll('[data-state]')) as HTMLElement[];
-    expect(rows).toHaveLength(2);
-
-    // Uploaded rows come first.
-    expect(rows[0]?.getAttribute('data-state')).toBe('uploaded');
-    expect(rows[0]?.getAttribute('data-path')).toBe('res://textures/shared.png');
-    expect(rows[1]?.getAttribute('data-state')).toBe('missing');
-    expect(rows[1]?.getAttribute('data-path')).toBe('res://textures/different.png');
-  });
-
-  it('Remove on an uploaded row clears it from the panel even when the host onRemove is a no-op', async () => {
-    // The row vanishes at once, before the host fires its slower re-resolve event.
-    const onRemove = vi.fn();
-    render(
-      <MissingResourcesProvider>
-        <MarkUploadedOnMount path="res://textures/shared.png" />
-        <MissingResourcesPanel onUpload={vi.fn()} onRemove={onRemove} />
-      </MissingResourcesProvider>
-    );
-
-    const panel = await screen.findByTestId('missing-resources-panel');
-    expect(panel.querySelectorAll('[data-state="uploaded"]')).toHaveLength(1);
-
-    const removeBtn = panel.querySelector('[data-state="uploaded"] button') as HTMLButtonElement;
-    await act(async () => {
-      fireEvent.click(removeBtn);
-    });
-
-    expect(onRemove).toHaveBeenCalledWith('res://textures/shared.png');
-    // With no rows the panel root unmounts.
-    expect(screen.queryByTestId('missing-resources-panel')).toBeNull();
-  });
-
-  it('uploaded row exposes the full path via `title` for hover discoverability', async () => {
-    const longPath = 'res://textures/deeply/nested/subfolder/test_texture.png';
-    render(
-      <MissingResourcesProvider>
-        <MarkUploadedOnMount path={longPath} />
-        <MissingResourcesPanel onUpload={vi.fn()} onRemove={vi.fn()} />
-      </MissingResourcesProvider>
-    );
-
-    const panel = await screen.findByTestId('missing-resources-panel');
-    const pathEl = panel.querySelector('[data-state="uploaded"] [title]') as HTMLElement;
-    expect(pathEl).toBeTruthy();
-    expect(pathEl.getAttribute('title')).toBe(longPath);
-    // The text is the full path. happy-dom cannot observe the CSS ellipsis.
-    expect(pathEl.textContent).toBe(longPath);
+  it('shows no uploaded row for a file that loads on its first request', async () => {
+    const { scene } = await mountPanel(sceneReading([ICON, 'res://gone.png']), filesOf({ [ICON]: PNG }));
+    await waitFor(() => expect(scene.files().every((file) => file.state !== 'loading')).toBe(true));
+    expect(screen.queryByRole('button', { name: /Remove uploaded file/ })).toBeNull();
   });
 });

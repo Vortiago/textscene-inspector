@@ -9,7 +9,7 @@ import styles from './SceneLoadBanner.module.css';
 
 const NO_SCENE: ParsedScene = { path: '', nodes: [], internalResources: [], externalResources: [] };
 
-/** Shows the first file whose failure fails the scene, as Godot refuses it (resource_format_text.cpp:647-650). */
+/** The first file whose failure fails the scene (resource_format_text.cpp:647-650). */
 export function SceneLoadBanner() {
   const hierarchy = useOptionalHierarchy();
   const sceneGraph = hierarchy?.sceneGraph;

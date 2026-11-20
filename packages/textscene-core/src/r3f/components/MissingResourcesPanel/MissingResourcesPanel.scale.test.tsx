@@ -3,47 +3,28 @@
  * and the details panel out of the sidebar. happy-dom runs no layout, so
  * the tests check that every row renders and that the CSS rule caps the height.
  */
-import { useEffect } from 'react';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { MissingResourcesProvider, useMissingResources } from '../../contexts/MissingResourcesContext';
-import { MissingResourcesPanel } from './MissingResourcesPanel';
+import { describe, expect, it } from 'vitest';
+import { waitFor } from '@testing-library/react';
+import { filesOf, mountPanel, sceneReading } from './MissingResourcesPanel.testkit';
 import { escapeRegExp } from '@textscene/dev-kit';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const panelCss = readFileSync(join(__dirname, 'MissingResourcesPanel.module.css'), 'utf-8');
 
-function ReportMissingOnMount({ path }: { path: string }) {
-  const { report } = useMissingResources();
-  useEffect(() => {
-    report(path);
-  }, [report, path]);
-  return null;
-}
-
 describe('<MissingResourcesPanel> scale behavior (WI-UX-13)', () => {
-  it('renders all 12 reported paths without truncating any row', async () => {
+  it('renders all 12 missing files without truncating any row', async () => {
     const paths = Array.from(
       { length: 12 },
       (_, i) => `res://textures/missing-${String(i).padStart(2, '0')}.png`
     );
 
-    render(
-      <MissingResourcesProvider>
-        {paths.map((p) => (
-          <ReportMissingOnMount key={p} path={p} />
-        ))}
-        <MissingResourcesPanel onUpload={vi.fn()} onRemove={vi.fn()} />
-      </MissingResourcesProvider>
-    );
-
-    const panel = await screen.findByTestId('missing-resources-panel');
-    const missingRows = panel.querySelectorAll('[data-state="missing"]');
+    const { panel } = await mountPanel(sceneReading(paths), filesOf({}));
     // The cap scrolls the rows. It drops none.
-    expect(missingRows).toHaveLength(12);
+    await waitFor(() => expect(panel.querySelectorAll('[data-state="missing"]')).toHaveLength(12));
+    const missingRows = panel.querySelectorAll('[data-state="missing"]');
 
     const paths_rendered = Array.from(missingRows).map((r) => r.getAttribute('data-path'));
     expect(paths_rendered).toEqual(expect.arrayContaining(paths));
