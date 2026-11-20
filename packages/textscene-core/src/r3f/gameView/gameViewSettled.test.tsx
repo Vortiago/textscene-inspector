@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { act, useSyncExternalStore } from 'react';
 import { GameViewContents } from './GameViewContents';
-import { useViewStatus } from '../viewStatus/ViewStatusContext';
+import { ViewStatusProvider, useViewStatusStore } from '../viewStatus/ViewStatusContext';
 import type { ViewSettled } from '../viewStatus/viewStatus';
 import { TscnSceneProvider } from '../TscnSceneProvider';
 import { openScene } from '../../scene/openScene';
@@ -65,7 +65,7 @@ const files: ResourceProvider = {
 let seen: ViewSettled | null = null;
 
 function Host() {
-  const status = useViewStatus()!;
+  const status = useViewStatusStore()!;
   seen = useSyncExternalStore(status.subscribe, status.settled);
   return null;
 }
@@ -75,10 +75,12 @@ async function mountGame(source: string, provider = files, views = 1) {
   const scene = openScene({ source, provider });
   const renderer = await ReactThreeTestRenderer.create(
     <TscnSceneProvider scene={scene}>
-      {Array.from({ length: views }, (_, view) => (
-        <GameViewContents key={view} />
-      ))}
-      <Host />
+      <ViewStatusProvider>
+        {Array.from({ length: views }, (_, view) => (
+          <GameViewContents key={view} />
+        ))}
+        <Host />
+      </ViewStatusProvider>
     </TscnSceneProvider>
   );
   await settleLoads();
@@ -129,11 +131,11 @@ describe('the settled value of the In-game view', () => {
     expect(seen).toEqual({ scriptedNodeCount: 0, hasCurrentCamera: false });
   });
 
-  it('refuses a second In-game view under one provider, and keeps the first one settled', async () => {
+  it('refuses a second In-game view on one view status, and keeps the first one settled', async () => {
     const error = vi.spyOn(logger, 'error').mockImplementation(() => {});
     const renderer = await mountGame(TWO_SCRIPTS_AND_A_CAMERA, files, 2);
     await drawFrames(renderer, FRAMES_TO_SETTLE);
-    expect(error).toHaveBeenCalledWith('[View] expected one view under a TscnSceneProvider, got a second');
+    expect(error).toHaveBeenCalledWith('[View] expected one view per view status, got a second');
     expect(seen).toEqual({ scriptedNodeCount: 2, hasCurrentCamera: true });
     error.mockRestore();
   });

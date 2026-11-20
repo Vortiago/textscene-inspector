@@ -34,6 +34,7 @@ const PUBLIC_TYPE_EXPORTS = [
   'Variant',
   'View',
   'ViewOptions',
+  'ViewStatus',
 ];
 
 /** The consumer installs each, so it has one React and one three.js. `mountScene` imports react-dom. */

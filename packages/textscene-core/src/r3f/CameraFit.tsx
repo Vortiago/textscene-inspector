@@ -4,7 +4,7 @@ import { useContext, useEffect } from 'react';
 import type * as THREE from 'three';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { ResourceLoaderContext } from '../resources/ResourceLoaderContext.js';
-import { useViewStatus } from './viewStatus/ViewStatusContext.js';
+import { useViewStatusStore } from './viewStatus/ViewStatusContext.js';
 import { isDrawingPreview } from './EditorControlsHandle.js';
 import { useViewportMode } from './contexts/ViewportModeContext.js';
 import { frameSceneBounds, type OrbitLike } from './frameSceneBounds.js';
@@ -27,7 +27,7 @@ export function CameraFit() {
   const rootKey = hierarchy?.sceneGraph?.rootScene ?? '';
   const hasScene = !!hierarchy?.sceneGraph;
 
-  const status = useViewStatus();
+  const status = useViewStatusStore();
   const loader = useContext(ResourceLoaderContext);
 
   useEffect(() => {

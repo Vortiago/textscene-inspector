@@ -3,7 +3,7 @@ import { addAfterEffect, useFrame, useThree } from '@react-three/fiber';
 import { drawCanvasFrame } from '../drawCanvasFrame.js';
 import { readCanvasPixels } from './canvasImage.js';
 import { useViewReport } from './useViewReport.js';
-import { useViewStatus } from './ViewStatusContext.js';
+import { useViewStatusStore } from './ViewStatusContext.js';
 import { useAwaitedCamera } from '../viewCamera.js';
 
 export function EditorViewReport() {
@@ -35,15 +35,15 @@ function useReportAfterRender(): void {
 
 /** A capture draws its own frame, so it answers while the loop is stopped too. */
 function useCanvasCapture(): void {
-  const status = useViewStatus();
+  const store = useViewStatusStore();
   const getState = useThree((state) => state.get);
   useEffect(
     () =>
-      status?.readWith(() => {
+      store?.readWith(() => {
         const state = getState();
         drawCanvasFrame(state);
         return readCanvasPixels(state.gl);
       }),
-    [status, getState]
+    [store, getState]
   );
 }

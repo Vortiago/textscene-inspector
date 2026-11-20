@@ -9,6 +9,8 @@ import { SHOW_STORAGE_KEYS, ViewportModeProvider } from '../../contexts/Viewport
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext';
 import type { ViewAnswers } from '../../viewStatus/viewAnswers';
+
+type ToolbarView = Pick<ViewAnswers, 'settled' | 'captureImage'>;
 import { ViewportToolbar } from './ViewportToolbar';
 import { openDisplayMenu } from './DisplayMenu.testkit';
 
@@ -135,7 +137,7 @@ describe('ViewportToolbar', () => {
 function renderWithChrome({
   mode = '3D' as '2D' | '3D',
   sceneGraph = {} as unknown,
-  view = null as ViewAnswers | null,
+  view = null as ToolbarView | null,
 } = {}) {
   return render(
     <HierarchyProvider value={{ sceneGraph: sceneGraph as never, panelId: 'p' }}>
@@ -168,7 +170,7 @@ describe('ViewportToolbar — Reset Camera', () => {
 
 describe('ViewportToolbar — Screenshot', () => {
   const IMAGE = new Blob(['png'], { type: 'image/png' });
-  const settledView = (): ViewAnswers => ({
+  const settledView = (): ToolbarView => ({
     settled: Promise.resolve({ scriptedNodeCount: 0, hasCurrentCamera: false }),
     captureImage: () => Promise.resolve(IMAGE),
   });
@@ -228,7 +230,7 @@ describe('ViewportToolbar — Screenshot', () => {
   it('disables Screenshot while a capture waits, so a second click starts no second capture', async () => {
     let settle: () => void = () => {};
     const captureImage = vi.fn(() => Promise.resolve(IMAGE));
-    const view: ViewAnswers = {
+    const view: ToolbarView = {
       settled: new Promise((resolve) => {
         settle = () => resolve({ scriptedNodeCount: 0, hasCurrentCamera: false });
       }),

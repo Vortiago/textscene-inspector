@@ -596,6 +596,13 @@ _Avoid_: "game view" for a component of its own: one view draws every mode. "Pla
 The one view mounted in a page element by `mountScene`, with a React root of its own, for a page with no React code. It draws a **scene** from `openScene` in a mode, `in-game` by default. It answers `settled` once a frame shows the scene whole, and `captureImage()` gives a PNG of the **root window** at the window's size. `dispose()` loses its WebGL context and leaves the scene open.
 _Avoid_: "headless view": a browser draws it. "Embed" for the React `<TscnCanvas>`.
 
+**View status** (`ViewStatus` in `r3f/viewStatus/viewStatus.ts`, `view.status()`, `onStatusChange`):
+What one view reports of itself now: its settled value or null, the textures and fonts it still builds, its last window of frame numbers while `show.performance` is on, each **Undrawn node**, and whether the browser draws its WebGL in software. Each view keeps its own: the view's store is inside the `TscnCanvas`, unless the host gives one, as `mountScene` does. `onStatusChange` tells of each change but the frame numbers. The previewer reads its view only through it.
+_Avoid_: "scene status": the files a scene loads are **Scene file**s, a fact of the scene and not of the view.
+
+**Undrawn node** (`UndrawnNode` in `r3f/viewStatus/undrawnNodes.ts`):
+A node the view holds and does not draw: a mesh of a type no slice draws, or a CSG shape whose brush is empty, which Godot warns of (`csg_shape.cpp:982`). The node's details name each reason. The path is absolute, as a node handle gives it.
+
 **Root window** (`rootWindow`, `r3f/gameView/rootWindow.ts`, ADR-0087):
 The window the project opens: its size from `display/window/size/*`, and how `display/window/stretch/*` maps the root viewport into it, with the black bars around it. The pane is not the root window: a pane resize changes only the fit.
 _Avoid_: "game window" for the pane, "screen".

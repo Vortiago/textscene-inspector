@@ -61,6 +61,7 @@ export const RENDERER_ENTRY_NAMES = [
   'Variant',
   'View',
   'ViewOptions',
+  'ViewStatus',
   'mountScene',
   'openScene',
   'variant',

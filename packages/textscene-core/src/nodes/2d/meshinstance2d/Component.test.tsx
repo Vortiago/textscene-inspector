@@ -13,7 +13,8 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { heading, parsedNode } from '../../../parser/testing/parserKit';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
-import { UndrawnMeshesProvider, useUndrawnMeshTypes } from '../../../r3f/contexts/UndrawnMeshesContext';
+import { useUndrawnMeshTypes } from '../../../r3f/testing/undrawnStatus';
+import { ViewStatusProvider } from '../../../r3f/viewStatus/ViewStatusContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
@@ -60,14 +61,14 @@ async function render(raw: Record<string, string>, resources: TscnInternalResour
         internalResources={resources}
         externalResources={[{ id: '1', type: 'Texture2D', path: TEXTURE_PATH }]}
       >
-        <UndrawnMeshesProvider>
+        <ViewStatusProvider>
           <NodePathProvider path="Root/M">
             <MeshInstance2D node={meshNode(raw)}>
               <group name="Child" />
             </MeshInstance2D>
           </NodePathProvider>
           <UndrawnTypes />
-        </UndrawnMeshesProvider>
+        </ViewStatusProvider>
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
@@ -222,11 +223,11 @@ describe('MeshInstance2D with a CanvasTexture', () => {
       { mesh: 'SubResource("Quad")', texture: CANVAS_TEXTURE_REF }
     );
     return renderLitItem(
-      <UndrawnMeshesProvider>
+      <ViewStatusProvider>
         <NodePathProvider path="Root/M">
           <MeshInstance2D node={mesh} />
         </NodePathProvider>
-      </UndrawnMeshesProvider>,
+      </ViewStatusProvider>,
       [QUAD, wrapper]
     );
   });

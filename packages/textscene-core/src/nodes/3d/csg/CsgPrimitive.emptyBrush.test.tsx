@@ -8,7 +8,8 @@ import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnParser } from '../../../parser/TscnParser';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { EmptyShapesProvider, useIsEmptyShape } from '../../../r3f/contexts/EmptyShapesContext';
+import { useIsEmptyShape } from '../../../r3f/testing/undrawnStatus';
+import { ViewStatusProvider } from '../../../r3f/viewStatus/ViewStatusContext';
 import './csgbox3d/index.r3f';
 import './csgcombiner3d/index.r3f';
 import './csgmesh3d/index.r3f';
@@ -107,14 +108,14 @@ async function emptyShapes(source: string, paths: string[]): Promise<Record<stri
   const scene = new TscnParser().parse(source);
   const root = scene.nodes[0]!;
   await ReactThreeTestRenderer.create(
-    <EmptyShapesProvider>
+    <ViewStatusProvider>
       <SceneResourcesProvider internalResources={scene.internalResources}>
         <NodeTree node={root} path={root.name} />
       </SceneResourcesProvider>
       {paths.map((path) => (
         <Probe key={path} path={path} />
       ))}
-    </EmptyShapesProvider>
+    </ViewStatusProvider>
   );
   return seen;
 }

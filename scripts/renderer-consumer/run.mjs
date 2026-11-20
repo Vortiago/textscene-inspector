@@ -12,6 +12,7 @@ import { consumerManifest } from './consumerManifest.mjs';
 import { heldResourceFailures } from './heldResourceFailures.mjs';
 import { loadFailures } from './loadFailures.mjs';
 import { missingFileFailures } from './missingFileFailures.mjs';
+import { statusFailures } from './statusFailures.mjs';
 import { mountFailures } from './mountFailures.mjs';
 import { runPickChecks } from './pickChecks.mjs';
 import { pickFailures } from './pickFailures.mjs';
@@ -41,6 +42,8 @@ const MOUNT_CHECKS_TIMEOUT_MS = 4 * RENDER_TIMEOUT_MS;
 const HELD_CHECKS_TIMEOUT_MS = 2 * RENDER_TIMEOUT_MS;
 /** The load checks draw four views, one of them a 512 x 512 noise, and poll one for a repaint. */
 const LOAD_CHECKS_TIMEOUT_MS = 3 * RENDER_TIMEOUT_MS;
+/** A settle, a measured frame window, an idle wait and a settle after a write. */
+const STATUS_CHECKS_TIMEOUT_MS = 3 * RENDER_TIMEOUT_MS;
 
 const versionsOf = (names, base) =>
   Object.fromEntries(names.map((name) => [name, installedVersion(name, base)]));
@@ -122,6 +125,9 @@ async function renderInBrowser(directory) {
     const missing = await inPage(browser, (page) =>
       runPageChecks(page, `http://localhost:${port}/?checks=missing`, 'missingFileChecks', RENDER_TIMEOUT_MS)
     );
+    const status = await inPage(browser, (page) =>
+      runPageChecks(page, `http://localhost:${port}/?checks=status`, 'statusChecks', STATUS_CHECKS_TIMEOUT_MS)
+    );
     const switched = await inPage(browser, (page) =>
       runSwitchChecks(page, `http://localhost:${port}/?checks=switch`)
     );
@@ -134,7 +140,7 @@ async function renderInBrowser(directory) {
     const picked = await inPage(browser, (page) =>
       runPickChecks(page, `http://localhost:${port}/?checks=pick`)
     );
-    return { drawn, mounted, held, missing, loaded, switched, cameras, picked };
+    return { drawn, mounted, held, missing, status, loaded, switched, cameras, picked };
   } finally {
     await browser.close();
     await server.close();
@@ -218,7 +224,7 @@ function callFailures(drawn) {
 }
 
 /** One line per failed check of every view and of `mountScene`. */
-function failures({ drawn, mounted, held, missing, loaded, switched, cameras, picked }) {
+function failures({ drawn, mounted, held, missing, status, loaded, switched, cameras, picked }) {
   return [
     ...Object.entries(drawn).flatMap(([view, result]) => failuresOf(view, result)),
     ...writeFailures(drawn),
@@ -230,6 +236,8 @@ function failures({ drawn, mounted, held, missing, loaded, switched, cameras, pi
     ...held.errors.map((message) => `held resource: page error: ${message}`),
     ...missingFileFailures(missing.results),
     ...missing.errors.map((message) => `missing files: page error: ${message}`),
+    ...statusFailures(status.results),
+    ...status.errors.map((message) => `status: page error: ${message}`),
     ...loadFailures(loaded.results),
     ...loaded.errors.map((message) => `load: page error: ${message}`),
     ...switchFailures(switched),

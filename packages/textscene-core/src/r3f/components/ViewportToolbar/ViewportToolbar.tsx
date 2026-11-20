@@ -141,7 +141,7 @@ function download(file: Blob, filename: string): void {
 
 export interface ViewportToolbarProps {
   /** The mounted view, or null while none is: Screenshot saves its image. */
-  view: ViewAnswers | null;
+  view: Pick<ViewAnswers, 'captureImage' | 'settled'> | null;
 }
 
 export function ViewportToolbar({ view }: ViewportToolbarProps) {

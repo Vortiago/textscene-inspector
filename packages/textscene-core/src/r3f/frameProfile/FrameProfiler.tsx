@@ -1,13 +1,13 @@
 /**
  * Runs a frame profile on its canvas's renderer while the Performance toggle is on, and publishes
- * each window to the overlay. While the toggle is off it mounts nothing, so no frame is timed.
+ * each window to the view's status. While the toggle is off it mounts nothing, so no frame is timed.
  */
 
 import { useEffect } from 'react';
 import { addAfterEffect, addEffect, useFrame, useThree } from '@react-three/fiber';
 import { useViewShow } from '../viewShow/ViewShowContext.js';
 import { beginStep, endStep, startFrameProfile } from './frameProfile.js';
-import { useFrameStatsStore } from './FrameStatsContext.js';
+import { useViewStatusStore } from '../viewStatus/ViewStatusContext.js';
 import { timeSceneDraws } from './sceneDrawStep.js';
 import type { RenderStep } from './frameStats.js';
 
@@ -20,10 +20,11 @@ function RunningFrameProfile(): null {
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);
   const get = useThree((state) => state.get);
-  const store = useFrameStatsStore();
+  const store = useViewStatusStore();
 
   useEffect(() => {
-    const profile = startFrameProfile(gl, store.set);
+    if (!store) return undefined;
+    const profile = startFrameProfile(gl, store.frameMeasured);
     // Global effects bracket every root's subscribers and renders in R3F's loop.
     const stopBeginning = addEffect((timestamp) => profile.beginFrame(timestamp));
     const stopEnding = addAfterEffect(() => profile.endFrame());
@@ -33,7 +34,7 @@ function RunningFrameProfile(): null {
       stopBeginning();
       stopEnding();
       profile.stop();
-      store.set(null);
+      store.frameMeasured(null);
     };
   }, [gl, scene, get, store]);
 

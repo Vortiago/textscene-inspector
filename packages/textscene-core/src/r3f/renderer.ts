@@ -16,6 +16,7 @@ export type { CameraState } from '../scene/viewportCameras.js';
 export type { SceneFile, SceneFileFailure, SceneFileState } from '../scene/sceneFiles.js';
 export { variant, type SceneValue, type Variant } from '../scene/variant.js';
 export { mountScene, type View, type ViewOptions } from './mountScene.js';
+export type { ViewStatus } from './viewStatus/viewStatus.js';
 export type { ResourceProvider } from '../resources/ResourceProvider.js';
 
 /** The entry gives no scene provider, so its canvas requires `scene`. */

@@ -9,8 +9,8 @@ import type { ResourceLoader } from '../../resources/ResourceLoader.js';
 import { textureWork } from '../../resources/textures/textureWork.js';
 import { fontWork } from '../controls/native/text/settledChannel.js';
 import { useGameStartFacts } from '../gameView/gameStartFacts.js';
-import { useViewStatus } from './ViewStatusContext.js';
-import type { DrawnFrame, ViewSettled, ViewStatus } from './viewStatus.js';
+import { useViewStatusStore } from './ViewStatusContext.js';
+import type { DrawnFrame, ViewSettled, ViewStatusStore } from './viewStatus.js';
 
 /** The revision the views last heard of, so a frame names what its components rendered. */
 function useNoticedRevision(scene: Scene | undefined): number {
@@ -30,15 +30,15 @@ function useNoticedRevision(scene: Scene | undefined): number {
   return useSyncExternalStore(store.subscribe, store.read);
 }
 
-/** Attaches the view to the status, or logs why a second view under one provider reports nothing. */
+/** Attaches the view to the status, or logs why a second view on one status reports nothing. */
 function useAttachedView(scene: Scene | undefined): { readonly current: boolean } {
-  const status = useViewStatus();
+  const store = useViewStatusStore();
   const isAttached = useRef(false);
   useEffect(() => {
-    if (!status || !scene) return undefined;
-    const detach = status.attach(scene);
+    if (!store || !scene) return undefined;
+    const detach = store.attach(scene);
     if (!detach) {
-      logger.error('[View] expected one view under a TscnSceneProvider, got a second');
+      logger.error('[View] expected one view per view status, got a second');
       return undefined;
     }
     isAttached.current = true;
@@ -46,13 +46,13 @@ function useAttachedView(scene: Scene | undefined): { readonly current: boolean 
       isAttached.current = false;
       detach();
     };
-  }, [status, scene]);
+  }, [store, scene]);
   return isAttached;
 }
 
 /** Reports each frame the view draws. `isFullSize`: the frame drew at the size a capture reads. */
 export function useViewReport(): (isFullSize: boolean, awaitedCamera?: string | null) => void {
-  const status = useViewStatus();
+  const store = useViewStatusStore();
   const scene = useOptionalHierarchy()?.scene;
   const loader = useResourceLoader();
   const { scriptedNodeCount, hasCurrentCamera } = useGameStartFacts();
@@ -70,34 +70,35 @@ export function useViewReport(): (isFullSize: boolean, awaitedCamera?: string | 
     work: { resources: 0, textures: 0, fonts: 0 },
     facts,
   }));
-  useReportStartedWork(status, isAttached, loader, frame);
+  useReportStartedWork(store, isAttached, loader, frame);
   return (isFullSize, awaitedCamera = null) => {
-    if (!status || !isAttached.current) return;
+    if (!store || !isAttached.current) return;
     frame.revision = revision;
     frame.isFullSize = isFullSize;
     frame.awaitedCamera = awaitedCamera;
     pendingSceneWork(loader, frame.work);
     frame.facts = facts;
-    status.frameDrawn(frame);
+    store.frameDrawn(frame);
   };
 }
 
-/** A load can start while no frame draws, so the status hears of it at once. Only a drawn frame settles. */
+/** A load can start or end while no frame draws, so the status hears of it at once. Only a drawn frame settles. */
 function useReportStartedWork(
-  status: ViewStatus | null,
+  store: ViewStatusStore | null,
   isAttached: { readonly current: boolean },
   loader: ResourceLoader | null,
   frame: DrawnFrame
 ): void {
   useEffect(() => {
-    if (!status) return undefined;
+    if (!store) return undefined;
     const onWorkChange = () => {
       if (!isAttached.current) return;
-      // The status reads the last frame in place, so the record changes only to report work.
       const work = pendingSceneWork(loader);
+      store.workChanged(work);
+      // The status reads the last frame in place, so the record changes only to report work.
       if (!hasPendingWork(work)) return;
       frame.work = work;
-      status.frameDrawn(frame);
+      store.frameDrawn(frame);
     };
     const stops = [
       loader?.subscribePending(onWorkChange),
@@ -105,5 +106,5 @@ function useReportStartedWork(
       fontWork.subscribe(onWorkChange),
     ];
     return () => stops.forEach((stop) => stop?.());
-  }, [status, isAttached, loader, frame]);
+  }, [store, isAttached, loader, frame]);
 }

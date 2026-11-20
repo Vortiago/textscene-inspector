@@ -1,0 +1,70 @@
+import { CountedReports } from '../../utils/countedReports.js';
+import { absolutePathOf } from '../../scene/nodePathWalk.js';
+
+/** What the view holds of one node and does not draw. */
+export interface UndrawnNode {
+  /** The absolute node path, as a node handle's `path` gives it: `/root/Main/Sign`. */
+  path: string;
+  /** The mesh types the node holds that the view does not draw, in name order. */
+  meshTypes: readonly string[];
+  /** `CSGShape3D::get_configuration_warnings` (csg_shape.cpp:982): the shape's brush is empty. */
+  isEmptyShape: boolean;
+}
+
+/** Why a node is undrawn: a mesh of a type the view does not draw, or an empty CSG shape. */
+export type UndrawnReason = { meshType: string } | 'empty-shape';
+
+// A newline never occurs in a node path, so it splits the path from the mesh type, empty for a shape.
+function keyOf(path: string, reason: UndrawnReason): string {
+  return `${path}\n${reason === 'empty-shape' ? '' : reason.meshType}`;
+}
+
+/** The undrawn nodes several reporters hold at once: a node stays while any report of it is open. */
+export function createUndrawnNodes() {
+  const reports = new CountedReports();
+  let keys: ReadonlySet<string> | null = null;
+  let nodes: readonly UndrawnNode[] = [];
+
+  return {
+    /** Opens one report of the node at the live path `path`. Returns its end, which runs once. */
+    report(path: string, reason: UndrawnReason): () => void {
+      const key = keyOf(path, reason);
+      reports.report(key);
+      let isEnded = false;
+      return () => {
+        if (isEnded) return;
+        isEnded = true;
+        reports.clear(key);
+      };
+    },
+    /** One array while the reports hold, so a reader compares identities. */
+    nodes(): readonly UndrawnNode[] {
+      if (keys !== reports.keys()) {
+        keys = reports.keys();
+        nodes = nodesOf(keys);
+      }
+      return nodes;
+    },
+    subscribe: reports.subscribe,
+  };
+}
+
+function nodesOf(keys: ReadonlySet<string>): UndrawnNode[] {
+  const byPath = new Map<string, { meshTypes: string[]; isEmptyShape: boolean }>();
+  for (const key of keys) {
+    const split = key.indexOf('\n');
+    const path = key.slice(0, split);
+    const meshType = key.slice(split + 1);
+    const node = byPath.get(path) ?? { meshTypes: [], isEmptyShape: false };
+    if (meshType) node.meshTypes.push(meshType);
+    else node.isEmptyShape = true;
+    byPath.set(path, node);
+  }
+  return [...byPath]
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([path, { meshTypes, isEmptyShape }]) => ({
+      path: absolutePathOf(path),
+      meshTypes: meshTypes.sort(),
+      isEmptyShape,
+    }));
+}

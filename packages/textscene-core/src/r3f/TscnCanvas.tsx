@@ -37,15 +37,16 @@ import { TscnSceneProvider } from './TscnSceneProvider.js';
 import { DEFAULT_ROOT_SCENE_PATH, type Scene } from '../scene/openScene.js';
 import type { ViewportMode } from './contexts/ViewportModeContext.js';
 import { StageRoot } from './StageRoot.js';
-import { FrameStatsProvider } from './frameProfile/FrameStatsContext.js';
 import { ViewShowProvider } from './viewShow/ViewShowContext.js';
 import type { ViewShow } from './viewShow/viewShow.js';
 import { ViewportActionsProvider, useOptionalViewportActions } from './contexts/ViewportActionsContext.js';
 import { LookThroughProvider, ViewCamera } from './viewCamera.js';
 import { EditorViewReport } from './viewStatus/EditorViewReport.js';
 import { HostSelection, type HostSelectionProps } from './hostSelection/HostSelection.js';
-import { useViewStatus } from './viewStatus/ViewStatusContext.js';
+import { useViewStatusStore, ViewStatusScope } from './viewStatus/ViewStatusContext.js';
 import { viewAnswers, type ViewAnswers } from './viewStatus/viewAnswers.js';
+import { StatusChangeReporter } from './viewStatus/StatusChangeReporter.js';
+import type { ViewStatus } from './viewStatus/viewStatus.js';
 
 // Lazy, so the glyph engine and the parse of the prompt load only for an empty canvas.
 const EmptyScenePrompt = lazy(() => import('./emptyScenePrompt.js'));
@@ -147,7 +148,9 @@ export interface TscnCanvasProps extends Omit<HostSelectionProps, 'children'> {
   show?: Partial<ViewShow>;
   /** The class of the element the view fills. */
   className?: string;
-  /** The view's `settled` and `captureImage`, as `mountScene` gives them. Props change the view. */
+  /** As `mountScene`'s `onStatusChange`. */
+  onStatusChange?: ((status: ViewStatus) => void) | null;
+  /** The view's `settled`, `captureImage` and `status`, as `mountScene` gives them. Props change the view. */
   ref?: Ref<ViewAnswers>;
 }
 
@@ -160,6 +163,7 @@ export function TscnCanvas({
   onSelect,
   show,
   className,
+  onStatusChange,
   ref,
 }: TscnCanvasProps) {
   const stage = (
@@ -167,10 +171,11 @@ export function TscnCanvas({
     <HostSelection selected={selected} onSelect={mode === '3D' ? onSelect : undefined}>
       <PreviewVisibilityProvider isVisible={visible}>
         <ViewShowProvider show={show}>
-          <FrameStatsProvider>
+          <ViewStatusScope>
             <ViewportActionsScope>{stageOf({ mode, camera, className })}</ViewportActionsScope>
             {ref && <ViewRef viewRef={ref} mode={mode} camera={camera} />}
-          </FrameStatsProvider>
+            {onStatusChange && <StatusChangeReporter onStatusChange={onStatusChange} />}
+          </ViewStatusScope>
         </ViewShowProvider>
       </PreviewVisibilityProvider>
     </HostSelection>
@@ -181,7 +186,7 @@ export function TscnCanvas({
 /** Hands the ref the answers of the view below the same scene. They end when the view unmounts. */
 function ViewRef({ viewRef, mode, camera }: { viewRef: Ref<ViewAnswers> } & ViewRefLook) {
   const scene = useOptionalHierarchy()?.scene;
-  const status = useViewStatus();
+  const store = useViewStatusStore();
   const ending = useRef<AbortController | null>(null);
   const lookedThrough = useLookedThrough({ mode, camera });
   // A layout effect before the handle, so each mount's controller exists when the handle is built.
@@ -191,10 +196,10 @@ function ViewRef({ viewRef, mode, camera }: { viewRef: Ref<ViewAnswers> } & View
     return () => controller.abort(new Error('expected the view to settle before its unmount'));
   }, []);
   useImperativeHandle(viewRef, () => {
-    if (!scene || !status) throw new Error('expected a TscnCanvas with a scene, got none');
+    if (!scene || !store) throw new Error('expected a TscnCanvas with a scene, got none');
     if (!ending.current) throw new Error('expected the view to mount before its ref, got no mount');
-    return viewAnswers({ scene, status, ending: ending.current.signal, lookedThrough });
-  }, [scene, status, lookedThrough]);
+    return viewAnswers({ scene, store, ending: ending.current.signal, lookedThrough });
+  }, [scene, store, lookedThrough]);
   return null;
 }
 

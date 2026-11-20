@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { createViewStatus, type DrawnFrame, type ViewSettled, type LiveScene } from './viewStatus';
+import { createViewStatusStore, type DrawnFrame, type ViewSettled, type LiveScene } from './viewStatus';
 import type { PendingSceneWork } from '../sceneWork';
+import type { FrameStats } from '../frameProfile/frameStats';
 
 const NO_PENDING_WORK: PendingSceneWork = { resources: 0, textures: 0, fonts: 0 };
 
@@ -17,18 +18,18 @@ function sceneAt(revision: () => number): LiveScene {
 
 /** A status with a view attached whose scene is now at `live()`. */
 function attachedStatus(live: () => number = () => 1) {
-  const status = createViewStatus();
+  const status = createViewStatusStore();
   status.attach(sceneAt(live));
   return status;
 }
 
-function drawFrame(status: ReturnType<typeof createViewStatus>, revision = 1) {
+function drawFrame(status: ReturnType<typeof createViewStatusStore>, revision = 1) {
   status.frameDrawn(frameOf(revision));
 }
 
 describe('the settled signal of a view', () => {
   it('resolves a wait from before a view was replaced once the next view settles', async () => {
-    const status = createViewStatus();
+    const status = createViewStatusStore();
     const scene = sceneAt(() => 1);
     const detachFirst = status.attach(scene)!;
     const settled = status.whenSettled();
@@ -40,7 +41,7 @@ describe('the settled signal of a view', () => {
   });
 
   it('is pending with no view attached, though no view waits on it', () => {
-    const status = createViewStatus();
+    const status = createViewStatusStore();
     expect(status.settled()).toBeNull();
     expect(status.isPending()).toBe(false);
   });
@@ -82,7 +83,7 @@ describe('the settled signal of a view', () => {
 
   it('tells its subscribers when the scene changes, so a host hears the pending state', () => {
     let tell = () => {};
-    const status = createViewStatus();
+    const status = createViewStatusStore();
     status.attach({
       revision: () => 1,
       subscribe: (listener) => ((tell = listener), () => {}),
@@ -96,7 +97,7 @@ describe('the settled signal of a view', () => {
   it('tells its subscribers when it settles again on the same facts after a change', () => {
     let tell = () => {};
     let live = 1;
-    const status = createViewStatus();
+    const status = createViewStatusStore();
     status.attach({
       revision: () => live,
       subscribe: (listener) => ((tell = listener), () => {}),
@@ -132,7 +133,7 @@ describe('the settled signal of a view', () => {
   });
 
   it('refuses a second view while one is attached, and takes one after it leaves', () => {
-    const status = createViewStatus();
+    const status = createViewStatusStore();
     const detach = status.attach(sceneAt(() => 1));
     expect(status.attach(sceneAt(() => 1))).toBeNull();
     detach!();
@@ -140,7 +141,7 @@ describe('the settled signal of a view', () => {
   });
 
   it('tells its subscribers when it settles and when a view leaves', () => {
-    const status = createViewStatus();
+    const status = createViewStatusStore();
     const detach = status.attach(sceneAt(() => 1));
     let notices = 0;
     status.subscribe(() => notices++);
@@ -171,7 +172,7 @@ describe('the capture of a view', () => {
   const PIXELS = { width: 2, height: 1, data: new Uint8Array(8) };
 
   it('rejects with no view attached', async () => {
-    await expect(createViewStatus().captureImage()).rejects.toThrow(
+    await expect(createViewStatusStore().captureImage()).rejects.toThrow(
       'expected a settled view, got no view mounted'
     );
   });
@@ -248,7 +249,7 @@ describe('the capture of a view', () => {
   });
 
   it('rejects a capture the view leaves before it reads', async () => {
-    const status = createViewStatus();
+    const status = createViewStatusStore();
     const detach = status.attach(sceneAt(() => 1));
     drawFrame(status);
     const image = status.captureImage();
@@ -277,5 +278,66 @@ describe('the pending rounds of a view', () => {
     status.frameDrawn(frameOf(1));
 
     expect(status.pendingRounds()).toBe(before);
+  });
+});
+
+describe('the status a view reports', () => {
+  it('gives the settled facts once the view settles, and null while it is pending', () => {
+    const status = attachedStatus();
+    expect(status.status().settled).toBeNull();
+    drawFrame(status);
+    expect(status.status().settled).toEqual(FACTS);
+  });
+
+  it('counts the textures and fonts still building, also while no frame draws', () => {
+    const status = attachedStatus();
+    drawFrame(status);
+    status.workChanged({ resources: 4, textures: 2, fonts: 1 });
+    expect(status.status().pending).toEqual({ textures: 2, fonts: 1 });
+  });
+
+  it('keeps one status object while nothing changes, so a reader renders once', () => {
+    const status = attachedStatus();
+    drawFrame(status);
+    const first = status.status();
+    drawFrame(status);
+    expect(status.status()).toBe(first);
+  });
+
+  it('names each node the view holds and does not draw, with its mesh types in name order', () => {
+    const status = attachedStatus();
+    status.reportUndrawn('Main/Cube', { meshType: 'TextMesh' });
+    status.reportUndrawn('Main/Cube', { meshType: 'TorusMesh' });
+    status.reportUndrawn('Main/Box', 'empty-shape');
+    expect(status.status().undrawn).toEqual([
+      { path: '/root/Main/Box', meshTypes: [], isEmptyShape: true },
+      { path: '/root/Main/Cube', meshTypes: ['TextMesh', 'TorusMesh'], isEmptyShape: false },
+    ]);
+  });
+
+  it('drops a node once every report of it ends', () => {
+    const status = attachedStatus();
+    const endFirst = status.reportUndrawn('Main/Cube', { meshType: 'TextMesh' });
+    const endSecond = status.reportUndrawn('Main/Cube', { meshType: 'TextMesh' });
+    endFirst();
+    expect(status.status().undrawn).toHaveLength(1);
+    endSecond();
+    expect(status.status().undrawn).toEqual([]);
+  });
+
+  it('reports software rendering once the view finds it', () => {
+    const status = attachedStatus();
+    expect(status.status().isSoftwareRendering).toBe(false);
+    status.softwareRenderingFound();
+    expect(status.status().isSoftwareRendering).toBe(true);
+  });
+
+  it('gives the last window of frame numbers, and null once the profile stops', () => {
+    const status = attachedStatus();
+    const stats = { fps: 60, frameMs: 16.7 } as FrameStats;
+    status.frameMeasured(stats);
+    expect(status.status().frame).toBe(stats);
+    status.frameMeasured(null);
+    expect(status.status().frame).toBeNull();
   });
 });

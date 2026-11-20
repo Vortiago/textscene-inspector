@@ -15,7 +15,7 @@ vi.mock('@react-three/fiber', async (importOriginal) => ({
 const NO_FILES: ResourceProvider = { loadResource: async () => null };
 const SCENE = '[gd_scene format=3]\n\n[node name="Main" type="Node3D"]\n';
 
-type ViewAnswers = Pick<View, 'settled' | 'captureImage'>;
+type ViewAnswers = Pick<View, 'settled' | 'captureImage' | 'status'>;
 
 describe('<TscnCanvas> ref', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -24,6 +24,12 @@ describe('<TscnCanvas> ref', () => {
     const view = createRef<ViewAnswers>();
     render(<TscnCanvas ref={view} scene={openScene({ source: SCENE, provider: NO_FILES })} />);
     await expect(view.current!.captureImage()).rejects.toThrow(/^expected a settled view, got /);
+  });
+
+  it('gives the status of the view, pending before its first frame', () => {
+    const view = createRef<ViewAnswers>();
+    render(<TscnCanvas ref={view} scene={openScene({ source: SCENE, provider: NO_FILES })} />);
+    expect(view.current!.status()).toMatchObject({ settled: null, undrawn: [], frame: null });
   });
 
   it('rejects a pending settled once the view unmounts', async () => {

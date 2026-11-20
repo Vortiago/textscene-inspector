@@ -14,7 +14,7 @@ import { RootViewportPresenter } from './RootViewportPresenter.js';
 import { useDrawnRootWindow, useProjectRootWindow } from './useDrawnRootWindow.js';
 import { RunningGameScope } from '../contexts/EditorHintContext.js';
 import { useViewReport } from '../viewStatus/useViewReport.js';
-import { useViewStatus } from '../viewStatus/ViewStatusContext.js';
+import { useViewStatusStore } from '../viewStatus/ViewStatusContext.js';
 import type { RgbaImage } from '../../utils/encodePng.js';
 import type { RootWindow } from './rootWindow.js';
 
@@ -73,7 +73,7 @@ function RootViewport() {
 
 /** A capture reads the whole window, so only a frame that drew it at the project's size answers one. */
 function useGameViewReport(drawnWindow: RootWindow, projectWindow: RootWindow) {
-  const status = useViewStatus();
+  const status = useViewStatusStore();
   const report = useViewReport();
   const readWindow = useRef<(() => RgbaImage) | null>(null);
   useEffect(

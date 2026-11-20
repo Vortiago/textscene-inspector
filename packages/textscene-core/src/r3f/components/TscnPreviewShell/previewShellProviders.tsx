@@ -11,8 +11,6 @@ import { SelectionProvider } from '../../contexts/SelectionContext.js';
 import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext.js';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext.js';
 import { LiveFilesHost } from '../../LiveFilesHost.js';
-import { UndrawnMeshesProvider } from '../../contexts/UndrawnMeshesContext.js';
-import { EmptyShapesProvider } from '../../contexts/EmptyShapesContext.js';
 import {
   DEFAULT_VIEWPORT,
   ViewportModeProvider,
@@ -29,9 +27,6 @@ import { ProjectSettingsProvider } from '../../contexts/ProjectSettingsContext.j
 import { AnimationTransportProvider } from '../../contexts/AnimationTransportContext.js';
 import { PreviewVisibilityProvider } from '../../contexts/PreviewVisibilityContext.js';
 import { composeProviders } from '../../composeProviders.js';
-import { SoftwareRenderingProvider } from '../../softwareRendering/SoftwareRenderingContext.js';
-import { ViewStatusProvider } from '../../viewStatus/ViewStatusContext.js';
-import type { ViewStatus } from '../../viewStatus/viewStatus.js';
 
 interface PreviewShellProviderOptions {
   hierarchyValue: HierarchyContextValue;
@@ -45,8 +40,6 @@ interface PreviewShellProviderOptions {
   isVisible?: boolean;
   panelId: string;
   rootScenePath: string;
-  /** The status the view reports to. Without one, the provider makes its own. */
-  viewStatus?: ViewStatus;
 }
 
 /**
@@ -61,7 +54,6 @@ export function previewShellProviders({
   isVisible,
   panelId,
   rootScenePath,
-  viewStatus,
 }: PreviewShellProviderOptions): (children: ReactNode) => ReactNode {
   return composeProviders(
     (children) => <ResourceLoaderProvider loader={loader}>{children}</ResourceLoaderProvider>,
@@ -69,16 +61,12 @@ export function previewShellProviders({
     (children) => <SelectionProvider>{children}</SelectionProvider>,
     (children) => <PreviewVisibilityProvider isVisible={isVisible}>{children}</PreviewVisibilityProvider>,
     (children) => <ViewportActionsProvider>{children}</ViewportActionsProvider>,
-    // The view in any mode reports here, and the shell's load status reads it.
-    (children) => <ViewStatusProvider status={viewStatus}>{children}</ViewStatusProvider>,
     (children) => (
       <MissingResourcesProvider>
         <LiveFilesHost />
         {children}
       </MissingResourcesProvider>
     ),
-    (children) => <UndrawnMeshesProvider>{children}</UndrawnMeshesProvider>,
-    (children) => <EmptyShapesProvider>{children}</EmptyShapesProvider>,
     (children) => (
       // A host-forced `initialViewportMode` wins over the persisted mode.
       <ViewportModeProvider
@@ -89,8 +77,6 @@ export function previewShellProviders({
         {children}
       </ViewportModeProvider>
     ),
-    // Each canvas's probe publishes here, and the top bar reads it.
-    (children) => <SoftwareRenderingProvider>{children}</SoftwareRenderingProvider>,
     (children) => <AnimationTransportProvider>{children}</AnimationTransportProvider>,
     (children) => <AnimationDriverProvider>{children}</AnimationDriverProvider>,
     // A `<SubViewport>` publishes its target here and a `ViewportTexture` resolves

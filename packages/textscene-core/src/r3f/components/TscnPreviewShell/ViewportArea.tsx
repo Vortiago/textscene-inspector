@@ -9,6 +9,7 @@ import type { TscnNode } from '../../../parser/types.js';
 import type { Ref } from 'react';
 import { TscnCanvas } from '../../TscnCanvas.js';
 import type { ViewAnswers } from '../../viewStatus/viewAnswers.js';
+import type { ViewStatus } from '../../viewStatus/viewStatus.js';
 import { FreelookSpeedReadout } from '../FreelookSpeedReadout/FreelookSpeedReadout.js';
 import { GameStartNotes } from './GameStartNotes.js';
 import { usePreviewCamera, viewCameraOf } from './previewCamera.js';
@@ -19,8 +20,13 @@ import styles from './TscnPreviewShell.module.css';
 // Module-level, so the memo of `useLiveSceneNodes` does not recompute each render.
 const IS_2D_CONTENT = (node: TscnNode): boolean => isClaimedByCanvasItemEditor(node.type);
 
-/** `viewRef` hears each view's answers as it mounts, and null as it leaves. */
-export function ViewportArea({ viewRef }: { viewRef: Ref<ViewAnswers> }) {
+interface ViewportAreaProps {
+  /** Hears each view's answers as it mounts, and null as it leaves. */
+  viewRef: Ref<ViewAnswers>;
+  onStatusChange: (status: ViewStatus) => void;
+}
+
+export function ViewportArea({ viewRef, onStatusChange }: ViewportAreaProps) {
   const { mode, show } = useViewportMode();
   const camera = viewCameraOf(usePreviewCamera()?.camera ?? null);
   const selection = usePreviewSelection();
@@ -33,6 +39,7 @@ export function ViewportArea({ viewRef }: { viewRef: Ref<ViewAnswers> }) {
         camera={camera}
         selected={selection?.selected ?? null}
         onSelect={selection?.select}
+        onStatusChange={onStatusChange}
         ref={viewRef}
       />
       <ViewportChrome mode={mode} />
