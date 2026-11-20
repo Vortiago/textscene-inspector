@@ -44,6 +44,7 @@ import { SceneTreePane } from './SceneTreePane.js';
 import { previewShellProviders } from './previewShellProviders.js';
 import { useSceneLoader } from '../../sceneResourcePipeline.js';
 import { CaptureStateReporter } from './CaptureStateReporter.js';
+import { PreviewCameraProvider } from './previewCamera.js';
 import { useViewSettle } from './viewSettle.js';
 import type { ViewAnswers } from '../../viewStatus/viewAnswers.js';
 import type { TscnPreviewShellProps } from './previewShellProps.js';
@@ -122,7 +123,6 @@ export function TscnPreviewShell({
   const withProviders = previewShellProviders({
     hierarchyValue,
     loader: useSceneLoader(scene),
-    initialPreviewedCameraPath,
     onMissingPathsChange,
     initialViewportMode,
     initialViewport,
@@ -132,7 +132,7 @@ export function TscnPreviewShell({
   });
 
   return withProviders(
-    <>
+    <PreviewCameraProvider scene={scene} initialCamera={initialPreviewedCameraPath}>
       {/* A host-forced mode turns auto-select off, or the root's claim overrides it. */}
       {initialViewportMode === undefined && <WorkspaceAutoSelect />}
       <SceneChangeResetter sceneGraph={parsedGraph} />
@@ -222,6 +222,6 @@ export function TscnPreviewShell({
           )}
         </div>
       </div>
-    </>
+    </PreviewCameraProvider>
   );
 }

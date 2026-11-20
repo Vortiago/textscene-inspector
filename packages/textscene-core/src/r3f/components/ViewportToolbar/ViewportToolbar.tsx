@@ -23,6 +23,7 @@ import {
 import { DisplayMenu, type DisplayToggle } from './DisplayMenu.js';
 import type { ViewAnswers } from '../../viewStatus/viewAnswers.js';
 import { captureWhenSettled } from '../TscnPreviewShell/viewSettle.js';
+import { usePreviewCamera } from '../TscnPreviewShell/previewCamera.js';
 import * as logger from '../../../logger.js';
 import styles from './ViewportToolbar.module.css';
 
@@ -144,7 +145,8 @@ export function ViewportToolbar({ view }: ViewportToolbarProps) {
   const camera = useOptionalViewportActions();
   const isFreelookToggled = useIsFreelookToggled();
   const isFreelookAvailable = useIsFreelookAvailable() ?? false;
-  const isPreviewing = camera != null && camera.previewedCameraPath !== null;
+  const preview = usePreviewCamera();
+  const isPreviewing = (preview?.camera ?? null) !== null;
   const hierarchy = useOptionalHierarchy();
   const sceneLoaded = Boolean(hierarchy?.sceneGraph);
 
@@ -189,7 +191,10 @@ export function ViewportToolbar({ view }: ViewportToolbarProps) {
         <button
           type="button"
           className={styles.resetButton}
-          onClick={camera.resetCamera}
+          onClick={() => {
+            preview?.endPreview();
+            camera.resetCamera();
+          }}
           disabled={!sceneLoaded}
           data-testid="reset-camera-button"
           title="End any camera preview and return the editor camera to the default view"

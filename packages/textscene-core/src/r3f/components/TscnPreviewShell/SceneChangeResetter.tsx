@@ -7,11 +7,11 @@
 import { useEffect, useRef } from 'react';
 import type { SceneGraph } from '../../../core/SceneGraph.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
-import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
+import { usePreviewCamera } from './previewCamera.js';
 
 export function SceneChangeResetter({ sceneGraph }: { sceneGraph: SceneGraph | null }) {
   const { clearAll } = useSelection();
-  const endCameraPreview = useOptionalViewportActions()?.endCameraPreview;
+  const endCameraPreview = usePreviewCamera()?.endPreview;
   const prevSceneGraphRef = useRef<SceneGraph | null>(sceneGraph);
 
   useEffect(() => {

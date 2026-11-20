@@ -14,6 +14,7 @@ import { isCamera2DType, isCamera3DType } from '../../cameraNodeTypes.js';
 import { isViewportBoundary } from '../../viewportRender/viewportBoundary.js';
 import type { LiveTreeEntry } from '../../liveSceneTree.js';
 import { GameCameraRows } from './GameCameraRows.js';
+import { usePreviewCamera } from './previewCamera.js';
 import styles from './TscnPreviewShell.module.css';
 
 /** Module level, so it stays stable and the memo of `useLiveSceneNodes` holds. */
@@ -52,13 +53,14 @@ interface EditorCameraRowsProps {
 /** The editor's own cameras: Godot's 3D camera preview, which leaves the game's current camera alone. */
 function EditorCameraRows({ cameras3d, cameras2d }: EditorCameraRowsProps) {
   const cam = useOptionalViewportActions();
+  const preview = usePreviewCamera();
   const { mode, setMode } = useViewportMode();
   const liveTree = useSharedLiveTree();
   const loader = useResourceLoader();
   const { viewportSize } = useProjectSettings();
 
   function preview3D(path: string) {
-    cam?.previewCamera(path);
+    preview?.previewCamera(path);
     setMode('3D');
   }
 
@@ -79,12 +81,12 @@ function EditorCameraRows({ cameras3d, cameras2d }: EditorCameraRowsProps) {
   }
 
   function showEditorCamera() {
-    cam?.endCameraPreview();
+    preview?.endPreview();
     setMode('3D');
   }
 
   // Only the 3D view draws through a previewed camera, so the 2D view marks none.
-  const activePath = mode === '3D' ? (cam?.previewedCameraPath ?? null) : null;
+  const activePath = mode === '3D' ? (preview?.camera ?? null) : null;
   // A path that names no listed camera previews nothing, so the editor camera draws.
   const isEditorActive = mode === '3D' && !cameras3d.some((c) => c.path === activePath);
   return (

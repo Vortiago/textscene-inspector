@@ -19,7 +19,6 @@ function withShellProviders() {
   return previewShellProviders({
     hierarchyValue: { sceneGraph: null, panelId: 'p' },
     loader: createFakeResourceLoader().loader,
-    initialPreviewedCameraPath: undefined,
     onMissingPathsChange: undefined,
     initialViewportMode: undefined,
     initialViewport: {
