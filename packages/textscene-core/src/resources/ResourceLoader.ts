@@ -22,7 +22,7 @@ import { createThemeProcessor } from './processors/createThemeProcessor';
 import { createDirectoryProcessor } from './processors/createDirectoryProcessor';
 import { createLoadOutcomeProcessor } from './processors/createLoadOutcomeProcessor';
 import type { LoadFacts, LoadOutcome } from './loadFailure/loadOutcome';
-import { resourceFailingReads, sceneFailingReads } from './loadFailure/failingReads';
+import { resourceFailingReads, sceneFailingReads } from './loadFailure/fileReads';
 import { existsInListing, folderOf, listsImportSidecar } from './loadFailure/fileExists';
 import { importSidecarPath } from '../godot/project/resourceFormats';
 import { parseImportFile } from '../parser/importParser';
@@ -199,7 +199,8 @@ export class ResourceLoader {
       exists: async (file) => {
         // The file itself, so its creation or removal clears the outcome.
         this.dependencies.record(dependent, file);
-        return existsInListing(file, await this.currentListing(dependent, folderOf(file)));
+        const listing = await this.currentListing(dependent, folderOf(file));
+        return listing === null ? this.isReadable(file) : existsInListing(file, listing);
       },
       isImportFailed: async (file) => {
         if (!listsImportSidecar(file, await this.currentListing(dependent, folderOf(file)))) return false;
@@ -209,6 +210,11 @@ export class ResourceLoader {
         return typeof text === 'string' && parseImportFile(text)?.isValid === false;
       },
     };
+  }
+
+  /** For a host that cannot list: one byte read, since a host stops a binary read there. */
+  private async isReadable(file: string): Promise<boolean> {
+    return (await this.provider?.loadResource(file, undefined, 1)) != null;
   }
 
   /** The listing of `folder`, the one a refresh still loads rather than the one it replaces. */

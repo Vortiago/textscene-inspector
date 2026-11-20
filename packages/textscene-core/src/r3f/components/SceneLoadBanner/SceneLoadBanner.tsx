@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useOptionalHierarchy } from '../../contexts/HierarchyContext.js';
-import { sceneFailingReads } from '../../../resources/loadFailure/failingReads.js';
+import { sceneFailingReads } from '../../../resources/loadFailure/fileReads.js';
 import { useFirstLoadFailure } from '../../../resources/loadFailure/useFirstLoadFailure.js';
 import { failureChainText, godotFailureLine } from '../../../resources/loadFailure/failureText.js';
 import type { ParsedScene } from '../../../core/SceneGraph.js';

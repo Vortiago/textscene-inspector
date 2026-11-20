@@ -49,6 +49,41 @@ function failingReads(
   return [...paths].filter((path) => path.startsWith('res://'));
 }
 
+/** A file a text file names, with the type its `[ext_resource]` heading gives, or null for a `Resource("…")` literal. */
+export interface FileRead {
+  readonly path: string;
+  readonly type: string | null;
+}
+
+/** Every file a `.tscn` names: Godot loads each `[ext_resource]` as it reads the heading (resource_format_text.cpp:519). */
+export function sceneReads(file: string, scene: SceneSections): FileRead[] {
+  const sections = scene.internalResources.map((section) => section.data);
+  return namedFiles(file, scene.externalResources, [...sections, ...nodeValues(scene.nodes)]);
+}
+
+/** Every file a `.tres` names. */
+export function resourceReads(file: string, parsed: ParsedResource): FileRead[] {
+  const sections = [...parsed.subResources.map((section) => section.data), parsed.properties];
+  return namedFiles(file, parsed.extResources, sections);
+}
+
+function namedFiles(
+  file: string,
+  externalResources: readonly TscnExternalResource[],
+  values: readonly Values[]
+): FileRead[] {
+  const reads = new Map<string, string | null>();
+  for (const ext of externalResources) {
+    const path = extResourcePathIn(file, ext.path);
+    if (!reads.has(path)) reads.set(path, ext.type);
+  }
+  for (const path of values.flatMap(Object.values).flatMap(pathResourcePathsIn)) {
+    const simplified = simplifyResPath(path);
+    if (!reads.has(simplified)) reads.set(simplified, null);
+  }
+  return [...reads].filter(([path]) => path.startsWith('res://')).map(([path, type]) => ({ path, type }));
+}
+
 /** A `path=` relative to the file that writes it (resource_format_text.cpp:508-510). */
 export function extResourcePathIn(file: string, path: string): string {
   if (path.includes('://') || isAbsolutePath(path)) return simplifyResPath(path);

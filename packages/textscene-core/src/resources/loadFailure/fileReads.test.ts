@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseTresFile } from '../../parser/parsedResource';
 import { TscnParser } from '../../parser/TscnParser';
-import { resourceFailingReads, sceneFailingReads } from './failingReads';
+import { resourceFailingReads, sceneFailingReads } from './fileReads';
 
 const scene = (text: string) => new TscnParser().parse(text);
 const MAIN = 'res://levels/main.tscn';

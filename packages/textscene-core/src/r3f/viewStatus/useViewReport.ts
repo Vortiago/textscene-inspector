@@ -12,8 +12,6 @@ import { useGameStartFacts } from '../gameView/gameStartFacts.js';
 import { useViewStatus } from './ViewStatusContext.js';
 import type { DrawnFrame, ViewSettled, ViewStatus } from './viewStatus.js';
 
-const NO_FILES: ReadonlySet<string> = new Set();
-
 /** The revision the views last heard of, so a frame names what its components rendered. */
 function useNoticedRevision(scene: Scene | undefined): number {
   const store = useMemo(() => {
@@ -58,14 +56,10 @@ export function useViewReport(): (isFullSize: boolean, awaitedCamera?: string | 
   const scene = useOptionalHierarchy()?.scene;
   const loader = useResourceLoader();
   const { scriptedNodeCount, hasCurrentCamera } = useGameStartFacts();
-  const settledFacts = useMemo(() => {
-    let last: ViewSettled | null = null;
-    // Read as the frame draws, since a reader reports a failed file in an effect after its render.
-    return (missingFiles: ReadonlySet<string>): ViewSettled => {
-      if (last?.missingFiles !== missingFiles) last = { scriptedNodeCount, hasCurrentCamera, missingFiles };
-      return last;
-    };
-  }, [scriptedNodeCount, hasCurrentCamera]);
+  const facts = useMemo<ViewSettled>(
+    () => ({ scriptedNodeCount, hasCurrentCamera }),
+    [scriptedNodeCount, hasCurrentCamera]
+  );
   const revision = useNoticedRevision(scene);
   const isAttached = useAttachedView(scene);
   // One record per view, filled in place each frame: the status reads only the last one.
@@ -74,7 +68,7 @@ export function useViewReport(): (isFullSize: boolean, awaitedCamera?: string | 
     isFullSize: false,
     awaitedCamera: null,
     work: { resources: 0, textures: 0, fonts: 0 },
-    facts: settledFacts(NO_FILES),
+    facts,
   }));
   useReportStartedWork(status, isAttached, loader, frame);
   return (isFullSize, awaitedCamera = null) => {
@@ -83,7 +77,7 @@ export function useViewReport(): (isFullSize: boolean, awaitedCamera?: string | 
     frame.isFullSize = isFullSize;
     frame.awaitedCamera = awaitedCamera;
     pendingSceneWork(loader, frame.work);
-    frame.facts = settledFacts(scene?.missingFiles() ?? NO_FILES);
+    frame.facts = facts;
     status.frameDrawn(frame);
   };
 }
