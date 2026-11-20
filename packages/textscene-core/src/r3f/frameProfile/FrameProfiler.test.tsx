@@ -7,9 +7,9 @@ import { RendererProbe } from '../../testing/recordingWebGL';
 import { ViewStatusProvider } from '../viewStatus/ViewStatusContext';
 import { createViewStatusStore } from '../viewStatus/viewStatus';
 import { FrameProfiler, SubscriberStep } from './FrameProfiler';
-import { innermostStep, startFrameProfile } from './frameProfile';
+import { innermostStep } from './frameProfile';
 import type { FrameStats } from './frameStats';
-import { FRAME_INTERVAL_MS } from './frameProfile.testkit';
+import { FRAME_INTERVAL_MS, startFrameProfile } from './frameProfile.testkit';
 import { r3fStateProbe } from '../testing/R3FStateProbe';
 
 const FRAMES_IN_A_SECOND = 50;

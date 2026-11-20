@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
-import { beginStep, endStep, innermostStep, startFrameProfile } from './frameProfile';
+import { beginStep, endStep, innermostStep } from './frameProfile';
 import type { FrameStats } from './frameStats';
 import {
   cpuOnlyRenderer,
@@ -11,6 +11,7 @@ import {
   profiledWindow,
   stepCpuMs,
   timingsOf,
+  startFrameProfile,
 } from './frameProfile.testkit';
 
 /**

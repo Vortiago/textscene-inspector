@@ -1,8 +1,19 @@
 /** Drives a frame profile through one published window, for a test of a step's call site. */
 
 import type * as THREE from 'three';
-import { startFrameProfile } from './frameProfile';
+import { startFrameCount, type FrameProfile } from './frameProfile';
 import type { FrameStats, FrameTimings, StepKey } from './frameStats';
+
+/** A profile with the timings on from its first frame, as `show.performance` starts them. */
+export function startFrameProfile(
+  renderer: THREE.WebGLRenderer,
+  publish: (stats: FrameStats) => void,
+  now?: () => number
+): FrameProfile {
+  const profile = startFrameCount(renderer, publish, now);
+  profile.startTimings();
+  return profile;
+}
 
 /** A frame interval that publishes the first window, of 25 intervals, on the 26th frame. */
 export const FRAME_INTERVAL_MS = 20;

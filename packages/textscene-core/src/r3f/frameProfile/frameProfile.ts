@@ -59,17 +59,6 @@ type Publish = (stats: FrameStats) => void;
  * marks each frame with `beginFrame` and `endFrame`, and owns `stop`. A second start on the same
  * renderer replaces the first.
  */
-export function startFrameProfile(
-  renderer: THREE.WebGLRenderer,
-  publish: Publish,
-  now: () => number = () => performance.now()
-): FrameProfile {
-  const profile = start(renderer, () => new Profile(renderer, publish, now));
-  profile.startTimings();
-  return profile;
-}
-
-/** Starts a profile as `startFrameProfile` does, without the timings, so it makes no GPU query. */
 export function startFrameCount(
   renderer: THREE.WebGLRenderer,
   publish: Publish,
