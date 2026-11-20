@@ -119,22 +119,25 @@ export function createSceneFileWalk(loader: ResourceLoader): SceneFileWalk {
     return entries;
   }
 
-  function sceneFileOf(path: string, { type, isReading, owners, addresses }: Entry): SceneFile {
+  function sceneFileOf(path: string, entry: Entry): SceneFile {
+    const { state, reason } = stateOf(path, entry);
+    return { path, type: entry.type, state, owners: entry.owners, reason, addresses: entry.addresses };
+  }
+
+  function stateOf(path: string, { isReading, addresses }: Entry): Pick<SceneFile, 'state' | 'reason'> {
     const found = outcome(path);
-    const base = { path, type, owners, addresses };
-    if (found === undefined || isReading) return { ...base, state: 'loading', reason: null };
-    if (found === null) return { ...base, state: 'missing', reason: { chain: [path], cause: 'missing' } };
-    if (found.isFailed)
-      return { ...base, state: 'missing', reason: { chain: found.chain, cause: found.cause } };
-    if (addresses.length === 0) return { ...base, state: 'loaded', reason: null };
+    if (found === undefined || isReading) return { state: 'loading', reason: null };
+    if (found === null) return { state: 'missing', reason: { chain: [path], cause: 'missing' } };
+    if (found.isFailed) return { state: 'missing', reason: { chain: found.chain, cause: found.cause } };
+    if (addresses.length === 0) return { state: 'loaded', reason: null };
     const text = textFile(path);
-    if (text === undefined) return { ...base, state: 'loading', reason: null };
+    if (text === undefined) return { state: 'loading', reason: null };
     const undeclared = addresses.find(
       (address) => !text?.subResourceIds.has(parseSubResourcePath(address).subResourceId ?? '')
     );
     return undeclared
-      ? { ...base, state: 'missing', reason: { chain: [undeclared], cause: 'missing' } }
-      : { ...base, state: 'loaded', reason: null };
+      ? { state: 'missing', reason: { chain: [undeclared], cause: 'missing' } }
+      : { state: 'loaded', reason: null };
   }
 
   function unpinOutcomesOutside(files: ReadonlyMap<string, Entry>): void {
