@@ -597,7 +597,7 @@ The one view mounted in a page element by `mountScene`, with a React root of its
 _Avoid_: "headless view": a browser draws it. "Embed" for the React `<TscnCanvas>`.
 
 **View status** (`ViewStatus` in `r3f/viewStatus/viewStatus.ts`, `view.status()`, `onStatusChange`):
-What one view reports of itself now: its settled value or null, the textures and fonts it still builds, its last window of frame numbers while `show.performance` is on, each **Undrawn node**, and whether the browser draws its WebGL in software. Each view keeps its own: the view's store is inside the `TscnCanvas`, unless the host gives one, as `mountScene` does. `onStatusChange` tells of each change but the frame numbers. The previewer reads its view only through it.
+What one view reports of itself now: its settled value or null, the textures and fonts still building on the page, its last window of frame numbers, with the objects and primitives of Godot's editor monitor and, while `show.performance` is on, the timings, each **Undrawn node**, and whether the browser draws its WebGL in software. Each view keeps its own: the view's store is inside the `TscnCanvas`, unless the host gives one, as `mountScene` does. `onStatusChange` tells of each change but the frame numbers. The previewer reads its view only through it.
 _Avoid_: "scene status": the files a scene loads are **Scene file**s, a fact of the scene and not of the view.
 
 **Undrawn node** (`UndrawnNode` in `r3f/viewStatus/undrawnNodes.ts`):

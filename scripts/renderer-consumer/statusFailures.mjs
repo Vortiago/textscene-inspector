@@ -2,6 +2,21 @@ import { equalityFailure } from './mountFailures.mjs';
 
 const UNDRAWN = [{ path: '/root/Root/Sign', meshTypes: ['FutureMesh'], isEmptyShape: false }];
 
+/** Godot 4.6.3's editor monitor on the counted scene, from `Viewport.get_render_info` in Compatibility. */
+const GODOT_PLAIN = { objects: 3, primitives: 4248, hasTimings: false };
+
+/** Godot counts 6 shadow draws to the view's 16, so the check asks only that shadow draws count. */
+function shadowFailures(plain, shadowed) {
+  if (!plain || !shadowed)
+    return [`status().frame of the counted scene: expected two windows, got ${plain} and ${shadowed}`];
+  return [
+    ...equalityFailure('primitives of the counted scene with shadows', plain.primitives, shadowed.primitives),
+    ...(shadowed.objects > plain.objects
+      ? []
+      : [`objects with shadows: expected more than the ${plain.objects} without, got ${shadowed.objects}`]),
+  ];
+}
+
 /** @param {import('./app/statusChecks').StatusCheckResults} results */
 export function statusFailures({
   statusSettled,
@@ -11,6 +26,8 @@ export function statusFailures({
   settledAfterWrite,
   idleCalls,
   fps,
+  plain,
+  shadowed,
 }) {
   return [
     ...equalityFailure('status().settled once settled', settled, statusSettled),
@@ -24,8 +41,8 @@ export function statusFailures({
           `onStatusChange after a write: expected pending, then settled, got ${JSON.stringify(settledAfterWrite)}`,
         ]),
     ...equalityFailure('onStatusChange calls of an idle view that measures its frames', 0, idleCalls),
-    ...(fps !== null && fps > 0
-      ? []
-      : [`status().frame with show.performance: expected an FPS over 0, got ${fps}`]),
+    ...(fps !== null && fps > 0 ? [] : [`status().frame: expected an FPS over 0, got ${fps}`]),
+    ...equalityFailure('status().frame of the counted scene', GODOT_PLAIN, plain),
+    ...shadowFailures(plain, shadowed),
   ].map((failure) => `status: ${failure}`);
 }

@@ -9,6 +9,7 @@ import { GpuTimer } from './gpuTimer.js';
 import {
   RENDER_STEPS,
   type FrameStats,
+  type FrameTimings,
   type RenderStep,
   type StepKey,
   type StepStats,
@@ -41,6 +42,18 @@ export function innermostStep(renderer: THREE.WebGLRenderer): RenderStep | null 
   return profiles.get(renderer)?.innermostStep() ?? null;
 }
 
+/** Opens the view's own draw of its scene, whose shadow pass draws count as objects, in the open frame. */
+export function openViewDraw(renderer: THREE.WebGLRenderer): void {
+  profiles.get(renderer)?.openViewDraw();
+}
+
+/** Closes the view's draw, with the objects and primitives of the surfaces it drew. */
+export function closeViewDraw(renderer: THREE.WebGLRenderer, objects: number, primitives: number): void {
+  profiles.get(renderer)?.closeViewDraw(objects, primitives);
+}
+
+type Publish = (stats: FrameStats) => void;
+
 /**
  * Starts a profile on `renderer` that calls `publish` once a window of frames has passed. The caller
  * marks each frame with `beginFrame` and `endFrame`, and owns `stop`. A second start on the same
@@ -48,11 +61,25 @@ export function innermostStep(renderer: THREE.WebGLRenderer): RenderStep | null 
  */
 export function startFrameProfile(
   renderer: THREE.WebGLRenderer,
-  publish: (stats: FrameStats) => void,
+  publish: Publish,
   now: () => number = () => performance.now()
 ): FrameProfile {
+  return start(renderer, () => new Profile(renderer, publish, now, true));
+}
+
+/** Starts a profile as `startFrameProfile` does, without the timings, so it makes no GPU query. */
+export function startFrameCount(
+  renderer: THREE.WebGLRenderer,
+  publish: Publish,
+  now: () => number = () => performance.now()
+): FrameProfile {
+  return start(renderer, () => new Profile(renderer, publish, now, false));
+}
+
+/** Stops the running profile first, so the new one reads the renderer as its owner left it. */
+function start(renderer: THREE.WebGLRenderer, create: () => Profile): Profile {
   profiles.get(renderer)?.stop();
-  const profile = new Profile(renderer, publish, now);
+  const profile = create();
   profiles.set(renderer, profile);
   return profile;
 }
@@ -64,6 +91,8 @@ class WindowSums {
   intervalMs = 0;
   cpuMs = 0;
   drawCalls = 0;
+  objects = 0;
+  primitives = 0;
   readonly stepCpuMs = new Map<StepKey, number>();
   readonly stepRuns = new Map<StepKey, number>();
   readonly stepDrawCalls = new Map<StepKey, number>();
@@ -90,8 +119,10 @@ class Profile implements FrameProfile {
   private lastTimestamp: number | null = null;
   private isFrameOpen = false;
   private frameStart = 0;
-  /** The open steps, innermost last. */
+  /** The open steps, innermost last, and the draw count each opened at. */
   private readonly openSteps: RenderStep[] = [];
+  private readonly openStepDrawCalls: number[] = [];
+  private isViewDrawOpen = false;
   /** The step whose own time runs now, and the clock reading and draw count it started at. */
   private current: StepKey = 'Other';
   private segmentStart = 0;
@@ -101,10 +132,11 @@ class Profile implements FrameProfile {
 
   constructor(
     private readonly renderer: THREE.WebGLRenderer,
-    private readonly publish: (stats: FrameStats) => void,
-    private readonly now: () => number
+    private readonly publish: Publish,
+    private readonly now: () => number,
+    private readonly isTimed: boolean
   ) {
-    this.gpu = GpuTimer.create(renderer.getContext() as WebGL2RenderingContext);
+    this.gpu = isTimed ? GpuTimer.create(renderer.getContext() as WebGL2RenderingContext) : null;
     // three zeroes the count at each render's start (r187 `WebGLRenderer.js:1744`), so a frame of several
     // renders keeps only its last one's. The profile zeroes it per frame instead.
     this.wasAutoReset = renderer.info.autoReset;
@@ -135,6 +167,8 @@ class Profile implements FrameProfile {
     this.endSegment();
     this.gpu?.endFrame();
     this.openSteps.length = 0;
+    this.openStepDrawCalls.length = 0;
+    this.isViewDrawOpen = false;
     this.isFrameOpen = false;
     this.sums.frames += 1;
     this.sums.cpuMs += this.now() - this.frameStart;
@@ -146,13 +180,31 @@ class Profile implements FrameProfile {
     if (!this.isFrameOpen) return;
     add(this.sums.stepRuns, step, 1);
     this.openSteps.push(step);
+    this.openStepDrawCalls.push(this.renderer.info.render.calls);
     this.switchTo(step);
   }
 
   endStep(step: RenderStep): void {
     if (this.openSteps.at(-1) !== step) return;
     this.openSteps.pop();
-    this.switchTo(this.openSteps.at(-1) ?? 'Other');
+    const drawCallsAtStart = this.openStepDrawCalls.pop()!;
+    const outer = this.openSteps.at(-1) ?? 'Other';
+    // Godot counts each shadow pass element of the viewport as an object (rasterizer_scene_gles3.cpp:3109).
+    if (step === 'Shadows' && this.isViewDrawOpen) {
+      this.sums.objects += this.renderer.info.render.calls - drawCallsAtStart;
+    }
+    this.switchTo(outer);
+  }
+
+  openViewDraw(): void {
+    this.isViewDrawOpen = this.isFrameOpen;
+  }
+
+  closeViewDraw(objects: number, primitives: number): void {
+    if (!this.isViewDrawOpen) return;
+    this.isViewDrawOpen = false;
+    this.sums.objects += objects;
+    this.sums.primitives += primitives;
   }
 
   innermostStep(): RenderStep | null {
@@ -191,10 +243,24 @@ class Profile implements FrameProfile {
   };
 
   private publishWindow(): void {
-    const { frames, intervals, intervalMs, cpuMs, drawCalls, gpuFrames, gpuNs } = this.sums;
-    const { stepCpuMs, stepRuns, stepDrawCalls, stepGpuNs } = this.sums;
-    const gpuMsPerFrame = (ns: number) => (gpuFrames > 0 ? ns / NS_PER_MS / gpuFrames : null);
+    const { frames, intervals, intervalMs, cpuMs, drawCalls, objects, primitives } = this.sums;
     const frameMs = intervalMs / intervals;
+    this.publish({
+      fps: 1000 / frameMs,
+      frameMs,
+      cpuMs: cpuMs / frames,
+      drawCallsPerFrame: drawCalls / frames,
+      objectsPerFrame: objects / frames,
+      primitivesPerFrame: primitives / frames,
+      ...(this.isTimed && { timings: this.windowTimings() }),
+    });
+    this.sums = new WindowSums();
+    this.windowStart = this.lastTimestamp;
+  }
+
+  private windowTimings(): FrameTimings {
+    const { frames, gpuFrames, gpuNs, stepCpuMs, stepRuns, stepDrawCalls, stepGpuNs } = this.sums;
+    const gpuMsPerFrame = (ns: number) => (gpuFrames > 0 ? ns / NS_PER_MS / gpuFrames : null);
     const steps: StepStats[] = [];
     for (const step of STEP_KEYS) {
       const runs = step === 'Other' ? frames : (stepRuns.get(step) ?? 0);
@@ -209,17 +275,7 @@ class Profile implements FrameProfile {
         drawCallsPerFrame: (stepDrawCalls.get(step) ?? 0) / frames,
       });
     }
-    this.publish({
-      fps: 1000 / frameMs,
-      frameMs,
-      cpuMs: cpuMs / frames,
-      gpuMs: gpuMsPerFrame(gpuNs),
-      drawCallsPerFrame: drawCalls / frames,
-      hasGpuTimer: this.gpu !== null,
-      steps,
-    });
-    this.sums = new WindowSums();
-    this.windowStart = this.lastTimestamp;
+    return { gpuMs: gpuMsPerFrame(gpuNs), hasGpuTimer: this.gpu !== null, steps };
   }
 }
 

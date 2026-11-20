@@ -17,7 +17,7 @@ export interface ViewStatus {
   settled: ViewSettled | null;
   /** The textures and fonts still building on the page: two views of one page count each other's. */
   pending: { textures: number; fonts: number };
-  /** The last window of frame numbers, or null while `show.performance` is off or measures its first. */
+  /** The last window of frame numbers, or null before the first: its `timings` need `show.performance`. */
   frame: FrameStats | null;
   /** Each node the view holds and does not draw, in path order. */
   undrawn: readonly UndrawnNode[];

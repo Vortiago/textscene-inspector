@@ -2,7 +2,7 @@
 
 import type * as THREE from 'three';
 import { startFrameProfile } from './frameProfile';
-import type { FrameStats, StepKey } from './frameStats';
+import type { FrameStats, FrameTimings, StepKey } from './frameStats';
 
 /** A frame interval that publishes the first window, of 25 intervals, on the 26th frame. */
 export const FRAME_INTERVAL_MS = 20;
@@ -14,17 +14,15 @@ export function manualClock(): { now: () => number; advance: (ms: number) => voi
   return { now: () => time, advance: (ms) => (time += ms) };
 }
 
-/**
- * The members of a renderer a profile reads: a context with no timer query, and a draw-call counter
- * a test moves by adding to `info.render.calls`. A fake renderer spreads them beside its own.
- */
+/** What a profile reads of a renderer: no timer query, `info.render.calls` a test moves, a list it fills. */
 export function profiledRendererMembers() {
   const info = {
     autoReset: true,
     render: { calls: 0 },
     reset: () => (info.render.calls = 0),
   };
-  return { getContext: () => ({ getExtension: () => null }), info };
+  const list = { opaque: [], transmissive: [], transparent: [] } as unknown as THREE.WebGLRenderList;
+  return { getContext: () => ({ getExtension: () => null }), info, renderLists: { get: () => list } };
 }
 
 /** A renderer with only the members a profile reads. */
@@ -53,7 +51,13 @@ export function profiledWindow(
   return window;
 }
 
+/** The timings of a timed profile's window. */
+export function timingsOf(stats: FrameStats | null | undefined): FrameTimings {
+  if (!stats?.timings) throw new Error('expected the timings of a timed profile, got none');
+  return stats.timings;
+}
+
 /** Each step of `stats` that ran, with its CPU time per frame. */
 export function stepCpuMs(stats: FrameStats): [StepKey, number][] {
-  return stats.steps.map((s) => [s.step, s.cpuMs]);
+  return timingsOf(stats).steps.map((s) => [s.step, s.cpuMs]);
 }

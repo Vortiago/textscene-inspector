@@ -238,11 +238,15 @@ Each read of `settled` gives a new promise, which rejects once the view unmounts
 `view.status()` gives what the view reports of itself now, as one object:
 
 - `settled`: the settled value, or `null` while the view is pending.
-- `pending`: `{ textures, fonts }`, the textures and fonts the view still builds. The files that
-  still load are in `scene.files()`.
-- `frame`: the last window of frame numbers while `show.performance` is on, or `null`. It holds
-  `fps`, `frameMs`, `cpuMs`, `gpuMs`, `drawCallsPerFrame` and the time of each render step. The
-  performance panel shows the same numbers.
+- `pending`: `{ textures, fonts }`, the textures and fonts still building on the page. Two views
+  on one page count each other's. The files that still load are in `scene.files()`.
+- `frame`: the last window of frame numbers, or `null` before the first window. A window lands
+  twice a second and holds `fps`, `frameMs`, `cpuMs`, `drawCallsPerFrame`, `objectsPerFrame` and
+  `primitivesPerFrame`. The objects and primitives are those of Godot's editor monitor: each
+  surface the view draws is one object, and so is each draw of its shadow passes. While
+  `show.performance` is on, `timings` holds the GPU time and the time of each render step too.
+  A GPU time costs a timer query per step, so without `show.performance` there is no `timings`.
+  The performance panel shows the same numbers.
 - `undrawn`: each node the view holds and does not draw, sorted by path. An entry has the node's
   absolute `path`, as a node handle gives it, its `meshTypes` that no part of the view draws, and
   `isEmptyShape` for a CSG shape whose brush is empty. Godot warns of an empty shape too.
@@ -462,7 +466,7 @@ view.update({ show: { grid: true, collisions: true } });
 | `previewSun`         | `true`  | The editor preview sun, while the scene has no DirectionalLight3D             | The preview sunlight button       |
 | `previewEnvironment` | `true`  | The editor preview sky, while the scene has no WorldEnvironment               | The preview environment button    |
 | `fog`                | `true`  | The Environment's depth and volumetric fog                                    | none, Godot always draws it       |
-| `performance`        | `false` | A panel over the view with the frame rate and the time of each render step    | View Frame Time                   |
+| `performance`        | `false` | A panel over the view with the frame numbers and the time of each render step  | View Frame Time                   |
 
 The In-game mode draws as the game does: no helper, every Label3D and the fog, whatever `show`
 holds. Only `performance` works there too. `<TscnCanvas show={{ grid: true }} />` does the same in

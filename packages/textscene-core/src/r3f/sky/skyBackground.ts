@@ -10,6 +10,7 @@ import { editedShader } from '../shaderPatch/chunkPatch.js';
 import { backgroundCube } from '../shaderPatch/backgroundPrograms.js';
 import { observeSceneRenderEnd } from '../sceneRenderCamera.js';
 import { worldToSky } from './skyRotation.js';
+import { ENGINE_DRAW_FLAG } from '../frameProfile/drawnSurfaces.js';
 
 /**
  * The texel three's cube background reads from a cube that is not a PMREM, which the sky replaces.
@@ -60,7 +61,7 @@ export class SkyBackground extends THREE.Mesh<THREE.BoxGeometry, THREE.ShaderMat
     this.matrixWorldAutoUpdate = false;
     this.layers.enableAll();
     this.raycast = () => {};
-    this.userData = { tscnFrameExcluded: true };
+    this.userData = { tscnFrameExcluded: true, [ENGINE_DRAW_FLAG]: true };
     this.visible = false;
   }
 

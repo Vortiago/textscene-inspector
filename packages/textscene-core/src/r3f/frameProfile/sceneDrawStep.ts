@@ -2,7 +2,8 @@
 
 import type * as THREE from 'three';
 import { observeSceneCamera, observeSceneRenderEnd } from '../sceneRenderCamera.js';
-import { beginStep, endStep, innermostStep } from './frameProfile.js';
+import { beginStep, endStep, innermostStep, openViewDraw } from './frameProfile.js';
+import { endViewDraw } from './viewDraw.js';
 import { WRAPS_CANVAS_DRAW } from './frameStats.js';
 
 /**
@@ -22,10 +23,14 @@ export function timeSceneDraws(
     const outer = innermostStep(renderer);
     const isCanvasDraw = camera === canvasCamera() && (outer === null || WRAPS_CANVAS_DRAW.has(outer));
     opened.push(isCanvasDraw);
-    if (isCanvasDraw) beginStep(renderer, 'Scene draw');
+    if (!isCanvasDraw) return;
+    beginStep(renderer, 'Scene draw');
+    openViewDraw(renderer);
   });
   const stopFinishing = observeSceneRenderEnd(scene, () => {
-    if (opened.pop()) endStep(renderer, 'Scene draw');
+    if (!opened.pop()) return;
+    endViewDraw(renderer, scene);
+    endStep(renderer, 'Scene draw');
   });
   return () => {
     stopObserving();

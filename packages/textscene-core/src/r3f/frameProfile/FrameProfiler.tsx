@@ -1,17 +1,14 @@
 import { useEffect } from 'react';
 import { addAfterEffect, addEffect, useFrame, useThree } from '@react-three/fiber';
 import { useViewShow } from '../viewShow/ViewShowContext.js';
-import { beginStep, endStep, startFrameProfile } from './frameProfile.js';
+import { beginStep, endStep, startFrameCount, startFrameProfile } from './frameProfile.js';
 import { useViewStatusStore } from '../viewStatus/ViewStatusContext.js';
 import { timeSceneDraws } from './sceneDrawStep.js';
 import type { RenderStep } from './frameStats.js';
 
-/** Mounted once in each top-level `<Canvas>`. */
-export function FrameProfiler() {
-  return useViewShow().performance ? <RunningFrameProfile /> : null;
-}
-
-function RunningFrameProfile(): null {
+/** Mounted once in each top-level `<Canvas>`. Only `show.performance` times the steps: a GPU query each. */
+export function FrameProfiler(): null {
+  const isTimed = useViewShow().performance;
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);
   const get = useThree((state) => state.get);
@@ -19,7 +16,7 @@ function RunningFrameProfile(): null {
 
   useEffect(() => {
     if (!store) return undefined;
-    const profile = startFrameProfile(gl, store.frameMeasured);
+    const profile = (isTimed ? startFrameProfile : startFrameCount)(gl, store.frameMeasured);
     // Global effects bracket every root's subscribers and renders in R3F's loop.
     const stopBeginning = addEffect((timestamp) => profile.beginFrame(timestamp));
     const stopEnding = addAfterEffect(() => profile.endFrame());
@@ -31,7 +28,7 @@ function RunningFrameProfile(): null {
       profile.stop();
       store.frameMeasured(null);
     };
-  }, [gl, scene, get, store]);
+  }, [gl, scene, get, store, isTimed]);
 
   return null;
 }

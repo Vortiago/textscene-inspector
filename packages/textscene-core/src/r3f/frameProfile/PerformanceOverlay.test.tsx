@@ -10,10 +10,9 @@ const STATS: FrameStats = {
   fps: 50,
   frameMs: 20,
   cpuMs: 4,
-  gpuMs: null,
   drawCallsPerFrame: 0,
-  hasGpuTimer: false,
-  steps: [{ step: 'Other', cpuMs: 4, gpuMs: null, runsPerFrame: 1, drawCallsPerFrame: 0 }],
+  objectsPerFrame: 0,
+  primitivesPerFrame: 0,
 };
 
 /** The overlay under a toggle set to `showPerformance`, and the store its profile publishes into. */

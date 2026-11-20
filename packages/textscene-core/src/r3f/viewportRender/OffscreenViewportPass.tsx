@@ -72,6 +72,8 @@ import { BackgroundMode } from '../../godot/scene/environment';
 import { canvasBackdropBound, drawOverBackground, isBehindWorld, isOverWorld } from './canvasBackdrop';
 import { useBackdropTarget } from './useBackdropTarget';
 import { canvasLayerRanks } from '../canvasPaintOrder';
+import { countViewDraw } from '../frameProfile/viewDraw';
+import { ROOT_VIEWPORT_PATH } from '../contexts/EnclosingViewportContext';
 
 const CanvasOverWorld = lazy(() =>
   import('./CanvasOverWorld.js').then((m) => ({ default: m.CanvasOverWorld }))
@@ -294,11 +296,14 @@ export function OffscreenViewportPass({
               frame.draw(gl, passScene, camera, clear.clears, viewportTransfer('none', transparentBg));
               return;
             }
+            // The root viewport's world draw is the one Godot's monitor counts.
+            const render = () =>
+              path === ROOT_VIEWPORT_PATH
+                ? countViewDraw(gl, passScene, () => gl.render(passScene, camera))
+                : gl.render(passScene, camera);
             drawWorld(worldRender, () =>
               drawWith(passScene, toneMap!.environment, exposure, () =>
-                backdrop
-                  ? drawOverBackground(passScene, backdrop.texture, () => gl.render(passScene, camera))
-                  : gl.render(passScene, camera)
+                backdrop ? drawOverBackground(passScene, backdrop.texture, render) : render()
               )
             );
           } finally {
@@ -330,6 +335,7 @@ export function OffscreenViewportPass({
     canvasLayers,
     renderState,
     clearMode,
+    path,
   ]);
 
   // The camera is framed before the canvas runs its steps: the light pass reads it.

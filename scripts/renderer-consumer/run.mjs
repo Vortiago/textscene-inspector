@@ -270,6 +270,11 @@ try {
     `[renderer-consumer] through each camera, pixels the gizmos change: ${JSON.stringify(gizmoPixels)}, ` +
       `with no gizmo, past residue from the game's view: ${JSON.stringify(overFromGameView)}`
   );
+  const { plain, shadowed } = results.status.results;
+  console.log(
+    `[renderer-consumer] objects and primitives per frame of the counted scene: ${JSON.stringify(plain)}, ` +
+      `with shadows ${JSON.stringify(shadowed)}, Godot 3 and 4248, with shadows 9 and 4248`
+  );
   const found = failures(results);
   for (const failure of found) console.error(`[renderer-consumer] ${failure}`);
   console.log(

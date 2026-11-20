@@ -11,6 +11,8 @@ const PASSING = {
   settledAfterWrite: [null, SETTLED],
   idleCalls: 0,
   fps: 30,
+  plain: { objects: 3, primitives: 4248, hasTimings: false },
+  shadowed: { objects: 19, primitives: 4248, hasTimings: false },
 };
 
 describe('statusFailures', () => {
@@ -48,7 +50,23 @@ describe('statusFailures', () => {
 
   it('names a view that measured no frame', () => {
     expect(statusFailures({ ...PASSING, fps: null })).toEqual([
-      'status: status().frame with show.performance: expected an FPS over 0, got null',
+      'status: status().frame: expected an FPS over 0, got null',
+    ]);
+  });
+
+  it("names a counted scene whose numbers differ from Godot's monitor", () => {
+    expect(statusFailures({ ...PASSING, plain: { ...PASSING.plain, objects: 4 } })[0]).toMatch(
+      /^status: status\(\)\.frame of the counted scene: expected/
+    );
+  });
+
+  it('names timings in a window of a view without show.performance', () => {
+    expect(statusFailures({ ...PASSING, plain: { ...PASSING.plain, hasTimings: true } })).toHaveLength(1);
+  });
+
+  it('names shadow draws that the objects leave out', () => {
+    expect(statusFailures({ ...PASSING, shadowed: { ...PASSING.shadowed, objects: 3 } })).toEqual([
+      'status: objects with shadows: expected more than the 3 without, got 3',
     ]);
   });
 });

@@ -9,15 +9,18 @@ import { createViewStatusStore } from '../viewStatus/viewStatus';
 import { FrameProfiler, SubscriberStep } from './FrameProfiler';
 import { innermostStep, startFrameProfile } from './frameProfile';
 import type { FrameStats } from './frameStats';
+import { FRAME_INTERVAL_MS } from './frameProfile.testkit';
+import { r3fStateProbe } from '../testing/R3FStateProbe';
+
+const FRAMES_IN_A_SECOND = 50;
 
 const STATS: FrameStats = {
   fps: 50,
   frameMs: 20,
   cpuMs: 4,
-  gpuMs: null,
   drawCallsPerFrame: 0,
-  hasGpuTimer: false,
-  steps: [],
+  objectsPerFrame: 0,
+  primitivesPerFrame: 0,
 };
 
 /** A canvas with `<FrameProfiler>` under a toggle set to `showPerformance`, seeded with a window. */
@@ -41,12 +44,37 @@ describe('FrameProfiler', () => {
     expect(store.status().frame).toBeNull();
   });
 
-  it('runs no profile while the toggle is off, so it leaves the store alone (edge case)', async () => {
-    const { store, unmount } = await profiledCanvas(false);
-    await unmount();
-    expect(store.status().frame).toBe(STATS);
+  it('publishes the frame numbers without timings while the toggle is off', async () => {
+    const window = await publishedWindow(false);
+    expect(window?.fps).toBe(50);
+    expect(window).not.toHaveProperty('timings');
+  });
+
+  it('publishes the timings of each step while the toggle is on', async () => {
+    expect((await publishedWindow(true))?.timings?.steps).toContainEqual(
+      expect.objectContaining({ step: 'Other', runsPerFrame: 1 })
+    );
   });
 });
+
+/** The window a canvas's profile publishes over a second of frames 20 ms apart. */
+async function publishedWindow(showPerformance: boolean): Promise<FrameStats | null> {
+  const store = createViewStatusStore();
+  const { Probe, state } = r3fStateProbe();
+  const root = await ReactThreeTestRenderer.create(
+    <ViewShowProvider show={{ performance: showPerformance }}>
+      <ViewStatusProvider store={store}>
+        <FrameProfiler />
+        <Probe />
+      </ViewStatusProvider>
+    </ViewShowProvider>
+  );
+  // `advance` runs R3F's global effects, which mark the profile's frames.
+  for (let frame = 0; frame < FRAMES_IN_A_SECOND; frame++) state().advance(frame * FRAME_INTERVAL_MS);
+  const window = store.status().frame;
+  await root.unmount();
+  return window;
+}
 
 describe('SubscriberStep', () => {
   /** The innermost step a subscriber at `priority` sees, in a frame of a profile on the canvas. */

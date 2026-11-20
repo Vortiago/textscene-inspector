@@ -3,7 +3,7 @@
  * and draw calls per frame, without the steps nested in it.
  */
 
-import type { FrameStats } from './frameStats.js';
+import type { FrameStats, FrameTimings } from './frameStats.js';
 import { PERFORMANCE_TESTIDS } from './performanceTestIds.js';
 import styles from './PerformancePanel.module.css';
 
@@ -23,7 +23,7 @@ function formatGpuMs(ms: number | null): string {
   return ms === null ? PENDING : formatMs(ms);
 }
 
-function gpuTotalText({ hasGpuTimer, gpuMs }: FrameStats): string {
+function gpuTotalText({ hasGpuTimer, gpuMs }: FrameTimings): string {
   if (!hasGpuTimer) return 'GPU n/a';
   return gpuMs === null ? `GPU ${PENDING}` : `GPU ${formatMs(gpuMs)} ms`;
 }
@@ -44,35 +44,43 @@ function WindowStats({ stats }: { stats: FrameStats }) {
         <strong data-testid="performance-fps">{Math.round(stats.fps)} FPS</strong>
         <span data-testid={PERFORMANCE_TESTIDS.frameMs}>{formatMs(stats.frameMs)} ms</span>
         <span data-testid="performance-cpu">CPU {formatMs(stats.cpuMs)} ms</span>
-        <span data-testid="performance-gpu">{gpuTotalText(stats)}</span>
+        {stats.timings && <span data-testid="performance-gpu">{gpuTotalText(stats.timings)}</span>}
         <span data-testid={PERFORMANCE_TESTIDS.drawCalls}>{formatCount(stats.drawCallsPerFrame)} draws</span>
+        <span data-testid="performance-objects">{formatCount(stats.objectsPerFrame)} objects</span>
+        <span data-testid="performance-primitives">{formatCount(stats.primitivesPerFrame)} primitives</span>
       </div>
-      <table className={styles.steps}>
-        <thead>
-          <tr>
-            <th scope="col">Step</th>
-            <th scope="col">CPU ms</th>
-            <th scope="col">GPU ms</th>
-            <th scope="col" title="Draw calls per frame">
-              Draws
-            </th>
-            <th scope="col" title="Runs per frame">
-              ×
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {stats.steps.map(({ step, cpuMs, gpuMs, drawCallsPerFrame, runsPerFrame }) => (
-            <tr key={step}>
-              <th scope="row">{step}</th>
-              <td>{formatMs(cpuMs)}</td>
-              <td>{formatGpuMs(gpuMs)}</td>
-              <td>{formatCount(drawCallsPerFrame)}</td>
-              <td>{formatCount(runsPerFrame)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {stats.timings && <StepTable steps={stats.timings.steps} />}
     </>
+  );
+}
+
+function StepTable({ steps }: { steps: FrameTimings['steps'] }) {
+  return (
+    <table className={styles.steps}>
+      <thead>
+        <tr>
+          <th scope="col">Step</th>
+          <th scope="col">CPU ms</th>
+          <th scope="col">GPU ms</th>
+          <th scope="col" title="Draw calls per frame">
+            Draws
+          </th>
+          <th scope="col" title="Runs per frame">
+            ×
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {steps.map(({ step, cpuMs, gpuMs, drawCallsPerFrame, runsPerFrame }) => (
+          <tr key={step}>
+            <th scope="row">{step}</th>
+            <td>{formatMs(cpuMs)}</td>
+            <td>{formatGpuMs(gpuMs)}</td>
+            <td>{formatCount(drawCallsPerFrame)}</td>
+            <td>{formatCount(runsPerFrame)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
