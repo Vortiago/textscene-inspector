@@ -33,6 +33,8 @@ export interface ViewStatus {
   settled(): ViewSettled | null;
   /** An attached view that has not settled: no view at all waits on nothing. */
   isPending(): boolean;
+  /** How many times the view has turned pending, so a reader that renders later misses no round. */
+  pendingRounds(): number;
   subscribe(listener: () => void): () => void;
   /** Stays pending while no view is attached, and rejects with the reason of `signal` once it aborts. */
   whenSettled(signal?: AbortSignal): Promise<ViewSettled>;
@@ -60,6 +62,7 @@ export function createViewStatus(): ViewStatus {
   let lastFrame: DrawnFrame | null = null;
   // What subscribers last heard, so a view that settles again on the same facts still tells them.
   let announced: ViewSettled | null = null;
+  let rounds = 0;
   let capture: PendingCapture | null = null;
   let reader: (() => RgbaImage) | null = null;
   let isReadQueued = false;
@@ -78,6 +81,7 @@ export function createViewStatus(): ViewStatus {
   const notify = () => announcements.set(announcements.get() + 1);
 
   function announce(now = settled()): void {
+    if (now === null && announced !== null) rounds++;
     announced = now;
     notify();
   }
@@ -192,6 +196,7 @@ export function createViewStatus(): ViewStatus {
   return {
     settled,
     isPending: () => live !== null && settled() === null,
+    pendingRounds: () => rounds,
     subscribe: announcements.subscribe,
     whenSettled,
     captureImage,

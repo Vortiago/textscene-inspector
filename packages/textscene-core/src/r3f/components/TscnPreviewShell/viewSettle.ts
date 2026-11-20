@@ -46,10 +46,7 @@ export function useViewSettle(scene: Scene, view: ViewAnswers | null, status: Vi
 /** Whether the view is pending now, and how many times it has turned pending. */
 function usePendingRound(status: ViewStatus): { isPending: boolean; round: number } {
   const isPending = useSyncExternalStore(status.subscribe, status.isPending);
-  const [round, setRound] = useState(0);
-  useEffect(() => {
-    if (isPending) setRound((last) => last + 1);
-  }, [isPending]);
+  const round = useSyncExternalStore(status.subscribe, status.pendingRounds);
   return { isPending, round };
 }
 

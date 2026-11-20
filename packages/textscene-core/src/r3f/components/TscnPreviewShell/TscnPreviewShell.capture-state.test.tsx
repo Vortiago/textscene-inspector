@@ -215,6 +215,23 @@ describe('<TextShell> capture state', () => {
     await expectCapture(latest(states), latestView());
   });
 
+  it('reports pending again for a load that starts and ends before the shell renders', async () => {
+    arrangeViews();
+    const { states } = renderShell();
+    act(() => drawFrame(NO_WORK));
+    await settleLatestView();
+    const readyCount = states.length;
+
+    act(() => {
+      drawFrame({ resources: 1 });
+      drawFrame(NO_WORK);
+    });
+
+    expect(states.slice(readyCount)).toEqual([{ status: 'pending' }]);
+    await settleLatestView();
+    await expectCapture(latest(states), latestView());
+  });
+
   it('reports pending as the shell unmounts', async () => {
     arrangeViews();
     const { states, unmount } = renderShell();
