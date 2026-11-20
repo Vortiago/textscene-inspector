@@ -7,10 +7,20 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
-// No view mounts under happy-dom, so a test injects missing files through the scene's missingFiles.
+// The stub scene reads no file, so a test injects missing files through the scene's files.
 const missingPathsOverride = vi.hoisted(() => ({
   current: null as ReadonlySet<string> | null,
 }));
+
+/** A missing file the scene's root reads, as `scene.files()` gives it. */
+const missingFile = (path: string) => ({
+  path,
+  type: 'Texture2D',
+  state: 'missing' as const,
+  owners: ['res://main.tscn'],
+  reason: { chain: [path], cause: 'missing' as const, addresses: [] },
+  addresses: [],
+});
 
 vi.mock('@textscene/renderer', async () => {
   const real = await vi.importActual<typeof import('@textscene/renderer')>('@textscene/renderer');
@@ -18,8 +28,15 @@ vi.mock('@textscene/renderer', async () => {
     ...real,
     openScene: (options: Parameters<typeof real.openScene>[0]) => {
       const scene = real.openScene(options);
-      const missingFiles = scene.missingFiles;
-      scene.missingFiles = () => missingPathsOverride.current ?? missingFiles();
+      const files = scene.files;
+      // One array per override, as `files()` gives the same array while nothing changes.
+      let given: { override: ReadonlySet<string>; files: ReturnType<typeof files> } | null = null;
+      scene.files = () => {
+        const override = missingPathsOverride.current;
+        if (!override) return files();
+        if (given?.override !== override) given = { override, files: [...override].map(missingFile) };
+        return given.files;
+      };
       return scene;
     },
   };
@@ -31,7 +48,8 @@ vi.mock('@textscene/core', async () => {
     ...real,
     useMissingResources: () => {
       const value = real.useMissingResources();
-      return missingPathsOverride.current ? { ...value, missingPaths: missingPathsOverride.current } : value;
+      const override = missingPathsOverride.current;
+      return override ? { ...value, missingFiles: [...override].map(missingFile) } : value;
     },
   };
 });

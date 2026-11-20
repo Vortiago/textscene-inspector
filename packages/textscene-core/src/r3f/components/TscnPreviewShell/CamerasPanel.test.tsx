@@ -217,6 +217,8 @@ describe('<CamerasPanel> with cameras inside instanced sub-scenes', () => {
       isCached: (p: string) => p in cache,
       isLoading: () => false,
       request: () => {},
+      pin: () => {},
+      unpin: () => {},
       clearCache: () => {},
       getCacheSize: () => Object.keys(cache).length,
     });
@@ -224,6 +226,7 @@ describe('<CamerasPanel> with cameras inside instanced sub-scenes', () => {
       eventBus: new ResourceEventBus(),
       scenes: proc<TscnScene>(scenes),
       glbMeshes: proc<never>({}),
+      resources: proc<never>({}),
       loadOutcomes: proc<never>({}),
       register: () => {},
     } as unknown as ResourceLoader;

@@ -1,16 +1,9 @@
-/**
- * useResource(path, type) loads an external resource for an R3F node component as a status
- * machine: pending, then loaded or unavailable, and a late arrival turns unavailable loaded. It
- * never suspends, and a failed path shows as a **Missing resource** row. A texture or material keeps its identity across calls, and an Object3D is
- * cloned per consumer, since THREE.Object3D allows one parent.
- */
 import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
 import type { ResourceEventBus } from './ResourceEventBus';
 import { cloneWithMaterials, disposeClonedMaterials } from './processing/glbProcessing';
 import { ResourceLoaderContext } from './ResourceLoaderContext';
 import type { ResourceLoader } from './ResourceLoader';
-import { useMissingReport } from '../r3f/contexts/MissingResourcesContext';
 import { resourceSliceRegistry, type ResourceBusType } from './sliceRegistration';
 
 /**
@@ -35,13 +28,6 @@ export function useResourceLoader() {
 }
 
 export function useResource<T>(path: string, type: ResourceBusType): ResourceResult<T> {
-  const result = useResourceLoad<T>(path, type);
-  useMissingReport(path, result.status);
-  return result;
-}
-
-/** The load `useResource` reports on. */
-function useResourceLoad<T>(path: string, type: ResourceBusType): ResourceResult<T> {
   const loader = useResourceLoader();
   // The request a result belongs to: the render that swaps the path or the bus still holds the
   // old request's result, whose value may be a disposed clone, so that render answers pending.

@@ -4,7 +4,7 @@ import type { ParsedResource } from '../parser/parsedResource';
 import type { FontFileResource } from './fonts/font/types';
 import type { LoadedFile, LoadedFont } from './scopedResource';
 import { createFakeResourceLoader } from './testing/createFakeResourceLoader';
-import { missingResourcesWrapper } from './testing/missingResourcesWrapper';
+import { loaderWrapper } from './testing/loaderWrapper';
 import { useLoadedFilesAndFonts } from './useLoadedFilesAndFonts';
 
 const MESH_FILE = 'res://mesh.tres';
@@ -33,7 +33,7 @@ function renderBoth(readsFonts: boolean) {
   const requestFont = vi.fn();
   fake.fonts.setRequestImpl(requestFont);
   const { result } = renderHook(() => useLoadedFilesAndFonts(filesPlan, fontsPlan, readsFonts), {
-    wrapper: missingResourcesWrapper(fake.loader),
+    wrapper: loaderWrapper(fake.loader),
   });
   return { fake, result, requestFont };
 }

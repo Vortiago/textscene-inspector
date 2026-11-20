@@ -6,9 +6,9 @@ export function folderOf(path: string): string {
   return foldersAbove(path)[0] ?? 'res://';
 }
 
-/** A null listing finds every file. An import exists through its sidecar (resource_importer.cpp:45). */
-export function existsInListing(path: string, listing: DirectoryListing | null): boolean {
-  return listing === null || listsName(listing, fileName(path)) || listsImportSidecar(path, listing);
+/** An import exists through its sidecar (resource_importer.cpp:45). */
+export function existsInListing(path: string, listing: DirectoryListing): boolean {
+  return listsName(listing, fileName(path)) || listsImportSidecar(path, listing);
 }
 
 export function listsImportSidecar(path: string, listing: DirectoryListing | null): boolean {

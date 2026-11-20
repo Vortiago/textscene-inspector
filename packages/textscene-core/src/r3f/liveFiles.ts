@@ -25,12 +25,9 @@ export interface LiveFiles {
    * snapshot {@link releaseReads} starts. Pins while heard.
    */
   subscribe(onStale: () => void): () => void;
-  /**
-   * A reader stopped or replaced its reads. A microtask starts a new snapshot, so the files it no
-   * longer reads leave the report and the pins, and every reader reads again on it.
-   */
+  /** A microtask starts a new snapshot, so a file no reader reads leaves the pending work and the pins. */
   releaseReads(): void;
-  /** Each file the current snapshot read, with its answer, for the **Missing resource** report. */
+  /** Each file the current snapshot read, with its answer, for the pending work. */
   files(): ReadonlyMap<string, CachedFile<object>>;
   /** `onChange` hears each change of {@link files}, and each load or failure of a read file. */
   subscribeFiles(onChange: () => void): () => void;

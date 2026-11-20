@@ -10,7 +10,7 @@ import type { PreviewCaptureState } from './previewCaptureState';
 import { textureWork } from '../../../resources/textures/textureWork';
 import { SCENE_LOAD_STATUS_TESTID, TEXTURE_WORK_STATUS_TESTID } from './statusTestIds';
 
-const SETTLED: ViewSettled = { scriptedNodeCount: 0, hasCurrentCamera: false, missingFiles: new Set() };
+const SETTLED: ViewSettled = { scriptedNodeCount: 0, hasCurrentCamera: false };
 
 /** One mounted view, as a test drives it: its `settled` resolves only when the test says so. */
 interface StubView {
@@ -47,7 +47,6 @@ function drawFrame(work: Partial<PendingSceneWork>): void {
   };
   shellStatus.attach({
     revision: () => 0,
-    missingFiles: () => SETTLED.missingFiles,
     subscribe: () => () => {},
   });
   shellStatus.frameDrawn(frame);

@@ -28,8 +28,7 @@ function CameraProbe({ onCamera }: { onCamera: (camera: THREE.Camera) => void })
   return null;
 }
 
-const NO_FILES: ReadonlySet<string> = new Set();
-const FACTS = { scriptedNodeCount: 0, hasCurrentCamera: false, missingFiles: NO_FILES };
+const FACTS = { scriptedNodeCount: 0, hasCurrentCamera: false };
 
 /** A frame of `revision`, with one resource still loading or none. */
 function frameDrawn(status: ViewStatus, resources: number, revision: number): void {
@@ -48,7 +47,7 @@ async function mountWithLateLoad() {
   const status = createViewStatus();
   const fake = createFakeResourceLoader();
   let revision = 1;
-  status.attach({ revision: () => revision, missingFiles: () => NO_FILES, subscribe: () => () => {} });
+  status.attach({ revision: () => revision, subscribe: () => () => {} });
   let camera: THREE.Camera | null = null;
   await ReactThreeTestRenderer.create(
     <ViewStatusProvider status={status}>

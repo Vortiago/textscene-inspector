@@ -1,10 +1,13 @@
-import { mountScene, openScene, variant } from '@textscene/renderer';
+import { mountScene, openScene, variant, type Scene, type SceneFile } from '@textscene/renderer';
 import { elementOf, NO_FILES } from './capture';
 
 const MISSING_PATH = 'res://missing.png';
 
 /** The notice of a change comes in a frame after the change, which can be after `settled` resolves. */
 const NOTICE_WAIT_MS = 1000;
+
+/** A file still loading after this long is a failure to report, not a run to hang. */
+const LOAD_WAIT_MS = 10_000;
 
 /** A sprite whose texture no file answers, so the scene asks for a file and does not get it. */
 const MISSING_TEXTURE_SCENE = `[gd_scene format=3]
@@ -19,36 +22,55 @@ texture = ExtResource("1")
 `;
 
 export interface MissingFileCheckResults {
-  /** `missingFiles` of the first `settled`. */
-  atSettled: string[];
-  /** `scene.missingFiles()` after that `settled`. */
-  ofScene: string[];
-  /** `scene.missingFiles()` at each `subscribe` notice, in order. */
+  /** `scene.files()` once none is loading, before any view mounts. */
+  beforeView: readonly SceneFile[];
+  /** The keys of the first `settled` value. */
+  settledKeys: string[];
+  /** The missing paths of `scene.files()` at each `subscribe` notice, in order. */
   heard: string[][];
-  /** `missingFiles` of the `settled` after the host writes `texture = null`. */
+  /** The missing paths of `scene.files()` after the host writes `texture = null`. */
   afterWrite: string[];
 }
 
-export async function runMissingFileChecks(): Promise<MissingFileCheckResults> {
-  const scene = openScene({ source: MISSING_TEXTURE_SCENE, provider: NO_FILES });
-  const heard: string[][] = [];
-  let heardNone = () => {};
-  const stopHearing = scene.subscribe(() => {
-    heard.push([...scene.missingFiles()]);
-    if (scene.missingFiles().size === 0) heardNone();
+const missingPathsOf = (scene: Scene) =>
+  scene
+    .files()
+    .filter((file) => file.state === 'missing')
+    .map((file) => file.path);
+
+/** `scene.files()` once no entry is loading, or as they stand after `LOAD_WAIT_MS`. */
+function loadedFiles(scene: Scene): Promise<readonly SceneFile[]> {
+  return new Promise((resolve) => {
+    const settle = () => {
+      clearTimeout(timer);
+      stop();
+      resolve(scene.files());
+    };
+    const check = () => {
+      if (!scene.files().some((file) => file.state === 'loading')) settle();
+    };
+    const timer = setTimeout(settle, LOAD_WAIT_MS);
+    const stop = scene.subscribe(check);
+    check();
   });
+}
+
+export async function runMissingFileChecks(): Promise<MissingFileCheckResults> {
+  const scene = openScene({
+    source: MISSING_TEXTURE_SCENE,
+    provider: NO_FILES,
+    rootScenePath: 'res://main.tscn',
+  });
+  const heard: string[][] = [];
+  const stopHearing = scene.subscribe(() => heard.push(missingPathsOf(scene)));
+  const beforeView = await loadedFiles(scene);
   const view = mountScene(elementOf(320, 240), scene);
   try {
-    const atSettled = [...(await view.settled).missingFiles];
-    const ofScene = [...scene.missingFiles()];
-    const noticeOfNone = new Promise<void>((resolve) => {
-      heardNone = resolve;
-      setTimeout(resolve, NOTICE_WAIT_MS);
-    });
+    const settledKeys = Object.keys(await view.settled);
     await scene.getNode('Sprite').set('texture', variant('null'));
-    const afterWrite = [...(await view.settled).missingFiles];
-    await noticeOfNone;
-    return { atSettled, ofScene, heard, afterWrite };
+    await view.settled;
+    await new Promise((resolve) => setTimeout(resolve, NOTICE_WAIT_MS));
+    return { beforeView, settledKeys, heard, afterWrite: missingPathsOf(scene) };
   } finally {
     view.dispose();
     stopHearing();

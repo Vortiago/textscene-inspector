@@ -19,11 +19,11 @@ const TRANSPARENT_PNG = pngOf(640, 240, (x, y) => {
 
 const PASSING = {
   earlyCaptureError: 'expected a settled view, got no frame drawn',
-  settledValue: { scriptedNodeCount: 0, hasCurrentCamera: true, missingFiles: [] },
+  settledValue: { scriptedNodeCount: 0, hasCurrentCamera: true },
   smallElementPng: WINDOW_PNG,
   largeElementPng: WINDOW_PNG,
   noProjectSize: { width: 1152, height: 648 },
-  editorSettledValue: { scriptedNodeCount: 0, hasCurrentCamera: true, missingFiles: [] },
+  editorSettledValue: { scriptedNodeCount: 0, hasCurrentCamera: true },
   editorCaptureSize: { width: 320, height: 240 },
   atSettledPng: EDITOR_PNG,
   laterPng: EDITOR_PNG,

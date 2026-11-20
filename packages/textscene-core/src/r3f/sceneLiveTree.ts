@@ -1,11 +1,20 @@
 import type { SceneGraph } from '../core/SceneGraph.js';
 import { isGltfPath } from '../godot/import/gltf.js';
 import type { ResourceReference } from '../godot/variant/variantValue.js';
-import { projectTreeSettings, type ProjectTreeSettings } from '../parser/projectSettingsParser.js';
+import {
+  projectDefaultEnvironmentPath,
+  projectFontPath,
+  projectThemePath,
+  projectTreeSettings,
+  type ProjectSettings,
+  type ProjectTreeSettings,
+} from '../parser/projectSettingsParser.js';
 import type { SceneScope } from '../parser/types.js';
 import { PROJECT_FILE_PATH } from '../godot/project/project.js';
 import { readProjectSettings } from '../resources/projectSettingsFile.js';
 import { registerInstanceResource } from '../resources/registerInstanceResource.js';
+import { sceneReads, type FileRead } from '../resources/loadFailure/fileReads.js';
+import { createSceneFileWalk, type WalkStart } from '../resources/sceneFiles/sceneFileWalk.js';
 import type { ResourceLoader } from '../resources/ResourceLoader.js';
 import type { Scene } from '../scene/openScene.js';
 import {
@@ -96,6 +105,31 @@ function sceneTreeOf(tree: LiveTree, loader: ResourceLoader, rootScenePath: stri
 const NO_CAMERAS: readonly TreeCamera[] = [];
 const NO_TREE: SceneTree = { node: () => null, uniquePaths: () => new Map(), cameras: () => NO_CAMERAS };
 
+/** Godot loads these files as the game starts, for every scene (theme_db.cpp:52-53). */
+function projectReads(settings: ProjectSettings | null): FileRead[] {
+  const named: [string | null, string][] = [
+    [projectDefaultEnvironmentPath(settings), 'Environment'],
+    [projectThemePath(settings), 'Theme'],
+    [projectFontPath(settings), 'Font'],
+  ];
+  return named.flatMap(([path, type]) => (path?.startsWith('res://') ? [{ path, type }] : []));
+}
+
+/** Undefined while the engine reads the project settings, null where the project has none. */
+type ProjectRead = ProjectSettings | null | undefined;
+
+function walkStarts(graph: SceneGraph | null, settings: ProjectRead): WalkStart[] {
+  const root = graph?.scenes.get(graph.rootScene);
+  const scene = root ? [{ owner: root.path, reads: sceneReads(root.path, root) }] : [];
+  if (settings === null) return scene;
+  const engine = {
+    owner: null,
+    reads: [{ path: PROJECT_FILE_PATH, type: 'ProjectSettings' }],
+    isReading: settings === undefined,
+  };
+  return [...scene, engine, { owner: PROJECT_FILE_PATH, reads: projectReads(settings ?? null) }];
+}
+
 /** The Live scene tree of `scene`, over the loader every view of it shares. */
 function sceneRuntimeOf(scene: Scene): SceneRuntime {
   const { loader } = resourcePipelineOf(scene);
@@ -103,11 +137,22 @@ function sceneRuntimeOf(scene: Scene): SceneRuntime {
   const notify = () => {
     for (const listener of [...listeners]) listener();
   };
+  const fileListeners = new Set<() => void>();
+  const notifyFiles = () => {
+    for (const listener of [...fileListeners]) listener();
+  };
+  const fileWalk = createSceneFileWalk(loader, notifyFiles);
+  let settings: ProjectRead;
+  /** Written only by `files`. A write moves the graph on each drag frame, so equal reads keep the starts. */
+  let starts: { graph: SceneGraph | null; settings: ProjectRead; key: string; starts: WalkStart[] } | null =
+    null;
   let project: ProjectTreeSettings = projectTreeSettings(null);
   const readProject = async () => {
     const bus = loader.fileEventBus;
-    project = projectTreeSettings(bus ? await readProjectSettings(bus) : null);
+    settings = bus ? await readProjectSettings(bus) : null;
+    project = projectTreeSettings(settings ?? null);
     notify();
+    notifyFiles();
   };
   const onInvalidated = (path: string) => {
     if (path === PROJECT_FILE_PATH) void readProject();
@@ -126,7 +171,21 @@ function sceneRuntimeOf(scene: Scene): SceneRuntime {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
+    files(graph) {
+      if (starts?.graph !== graph || starts.settings !== settings) {
+        const next = walkStarts(graph, settings);
+        const key = JSON.stringify(next);
+        starts = { graph, settings, key, starts: key === starts?.key ? starts.starts : next };
+      }
+      return fileWalk.files(starts.starts);
+    },
+    subscribeFiles(listener) {
+      fileListeners.add(listener);
+      return () => fileListeners.delete(listener);
+    },
     dispose() {
+      fileWalk.dispose();
+      fileListeners.clear();
       listeners.clear();
       stopTicks();
       loader.fileEventBus?.off('invalidated', onInvalidated);

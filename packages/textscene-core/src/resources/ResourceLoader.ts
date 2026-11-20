@@ -22,7 +22,7 @@ import { createThemeProcessor } from './processors/createThemeProcessor';
 import { createDirectoryProcessor } from './processors/createDirectoryProcessor';
 import { createLoadOutcomeProcessor } from './processors/createLoadOutcomeProcessor';
 import type { LoadFacts, LoadOutcome } from './loadFailure/loadOutcome';
-import { resourceFailingReads, sceneFailingReads } from './loadFailure/failingReads';
+import { resourceFailingReads, sceneFailingReads } from './loadFailure/fileReads';
 import { existsInListing, folderOf, listsImportSidecar } from './loadFailure/fileExists';
 import { importSidecarPath } from '../godot/project/resourceFormats';
 import { parseImportFile } from '../parser/importParser';
@@ -65,6 +65,8 @@ export class ResourceLoader {
    * `holdParse` and `settleHold`. Cleared by `clear`, which drops the settle listener.
    */
   private readonly parseHolds = new Map<string, Set<string>>();
+  /** Written only by `isReadable`. Cleared by `provideFile` and `clear`. */
+  private readonly readableProbes = new Map<string, Promise<boolean>>();
   /** The bus types whose builds read a section. Written only by `sectionLoaderFor`. */
   private readonly sectionBusTypes: ResourceType[] = [];
   /** The one settle listener for every hold, subscribed by the first hold after a `clear`. */
@@ -199,7 +201,8 @@ export class ResourceLoader {
       exists: async (file) => {
         // The file itself, so its creation or removal clears the outcome.
         this.dependencies.record(dependent, file);
-        return existsInListing(file, await this.currentListing(dependent, folderOf(file)));
+        const listing = await this.currentListing(dependent, folderOf(file));
+        return listing === null ? this.isPresent(file) : existsInListing(file, listing);
       },
       isImportFailed: async (file) => {
         if (!listsImportSidecar(file, await this.currentListing(dependent, folderOf(file)))) return false;
@@ -209,6 +212,27 @@ export class ResourceLoader {
         return typeof text === 'string' && parseImportFile(text)?.isValid === false;
       },
     };
+  }
+
+  /** For a host that cannot list: the file or its import sidecar, as `existsInListing` counts it. */
+  private async isPresent(file: string): Promise<boolean> {
+    return (await this.isReadable(file)) || this.isReadable(importSidecarPath(file));
+  }
+
+  /** One byte read, since a host stops a binary read there. */
+  private isReadable(file: string): Promise<boolean> {
+    let probe = this.readableProbes.get(file);
+    if (!probe) {
+      probe = Promise.resolve(this.provider?.loadResource(file, undefined, 1)).then(
+        (data) => data != null,
+        (error: unknown) => {
+          this.readableProbes.delete(file);
+          throw error;
+        }
+      );
+      this.readableProbes.set(file, probe);
+    }
+    return probe;
   }
 
   /** The listing of `folder`, the one a refresh still loads rather than the one it replaces. */
@@ -395,6 +419,7 @@ export class ResourceLoader {
     this.metadata.clear();
     this.dependencies.clear();
     this.parseHolds.clear();
+    this.readableProbes.clear();
     this.unsubscribeHolds = null;
     for (const proc of this.processors.values()) {
       proc.clearCache();
@@ -410,6 +435,7 @@ export class ResourceLoader {
    */
   provideFile(path: string): void {
     logger.info(`[ResourceLoader] provideFile: ${path}`);
+    this.readableProbes.delete(path);
     // A refresh keeps a dialog's old listing, and runs first so an outcome waits for the new one.
     for (const folder of foldersAbove(path)) {
       if (this.directories.isCached(folder) || this.directories.isLoading(folder))

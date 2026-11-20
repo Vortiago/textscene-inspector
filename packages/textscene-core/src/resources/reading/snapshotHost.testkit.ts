@@ -1,10 +1,3 @@
-/**
- * The conformance suite of a snapshot host: code that owns snapshots for a reader, requests and
- * pins the files its reads touched, runs it again when one of them changes, and reports a failed
- * file once, and an address that a loaded file does not declare. The hook host passes it, and so must each later host (the Control solve, the live
- * scene tree).
- */
-
 import { describe, expect, it } from 'vitest';
 import { ResourceLoader } from '../ResourceLoader';
 import { busServing } from '../testing/servingFileBus';
@@ -21,8 +14,6 @@ export interface SnapshotHostHarness {
   run(ref: string, scene: SceneResources, kind: ResourceKind<Named>): void;
   /** Every answer the reader gave, in the order the host ran it. */
   runs(): readonly Read<Named>[];
-  /** The paths the host reports as a **Missing resource** now. */
-  reported(): readonly string[];
   /** Lets the loads and runs the host started finish. */
   settle(): Promise<void>;
 }
@@ -85,7 +76,7 @@ export function describeSnapshotHost(
       expect(host.runs()).toHaveLength(1);
     });
 
-    it('answers missing-file for a failed file, and reports one Missing resource', async () => {
+    it('answers missing-file for a failed file', async () => {
       const { loader } = servedLoader({});
       const host = makeHost(loader);
 
@@ -93,10 +84,9 @@ export function describeSnapshotHost(
       await host.settle();
 
       expect(host.runs().at(-1)).toMatchObject({ status: 'unavailable', reason: 'missing-file' });
-      expect(host.reported()).toEqual([A_FILE]);
     });
 
-    it('answers unknown-id for an address the loaded file does not declare, and reports the address', async () => {
+    it('answers unknown-id for an address the loaded file does not declare', async () => {
       const { loader } = servedLoader({ [A_FILE]: resourceFile('') });
       const host = makeHost(loader);
       const address = `${A_FILE}::gone`;
@@ -106,19 +96,6 @@ export function describeSnapshotHost(
       await host.settle();
 
       expect(host.runs().at(-1)).toMatchObject({ status: 'unavailable', reason: 'unknown-id' });
-      expect(host.reported()).toEqual([address]);
-    });
-
-    it('reports no Missing resource for a failed file the reader stopped reading', async () => {
-      const { loader } = servedLoader({});
-      const host = makeHost(loader);
-      host.run('ExtResource("1_a")', sceneTables(EXT_A), namedKind().kind);
-      await host.settle();
-
-      host.run('SubResource("r")', sceneTables('[sub_resource type="Resource" id="r"]'), namedKind().kind);
-      await host.settle();
-
-      expect(host.reported()).toEqual([]);
     });
 
     it('requests the second file of a nested reference once the first arrives', async () => {

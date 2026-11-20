@@ -27,8 +27,4 @@ describe('existsInListing', () => {
   it('misses a file whose folder does not exist', () => {
     expect(existsInListing('res://art/icon.png', { kind: 'missing' })).toBe(false);
   });
-
-  it('finds every file where the host cannot list', () => {
-    expect(existsInListing('res://art/icon.png', null)).toBe(true);
-  });
 });

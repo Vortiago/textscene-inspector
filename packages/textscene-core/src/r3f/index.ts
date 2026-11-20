@@ -1,10 +1,7 @@
 // Every node-type component registers itself on first import.
 import './nodes/index.js';
 
-export {
-  useMissingResources,
-  type MissingResourcesContextValue,
-} from './contexts/MissingResourcesContext.js';
+export { useMissingResources } from './contexts/MissingResourcesContext.js';
 export { TscnPreviewShell } from './components/TscnPreviewShell/TscnPreviewShell.js';
 export {
   PENDING_CAPTURE,

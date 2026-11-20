@@ -14,7 +14,6 @@ export { isBinaryResourceType } from './resources/resourceProviderUtils';
 
 export {
   useMissingResources,
-  type MissingResourcesContextValue,
   TscnPreviewShell,
   PENDING_CAPTURE,
   type PreviewCaptureState,

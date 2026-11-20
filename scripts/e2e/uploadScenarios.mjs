@@ -138,6 +138,26 @@ async function waitForUploadedRow(page, path) {
   });
 }
 
+/** Records in the page whether the Resources panel ever leaves it, until `panelLeft` reads the answer. */
+async function watchPanel(page) {
+  await page.evaluate((selector) => {
+    const watch = { left: false };
+    const observer = new globalThis.MutationObserver(() => {
+      watch.left ||= globalThis.document.querySelector(selector) === null;
+    });
+    observer.observe(globalThis.document.body, { childList: true, subtree: true });
+    globalThis.__resourcesPanelWatch = { watch, observer };
+  }, RESOURCES_PANEL);
+}
+
+async function panelLeft(page) {
+  return page.evaluate(() => {
+    const { watch, observer } = globalThis.__resourcesPanelWatch;
+    observer.disconnect();
+    return watch.left;
+  });
+}
+
 /** The uploaded scene as the app shows it, once the canvas has settled on it. */
 async function readUploadedScene(page, canvas) {
   const label = page.getByTestId('uploaded-tscn-label');
@@ -174,9 +194,12 @@ function runRepeatedDrop(browser, baseUrl, startFixture) {
   return withStartFixture(browser, baseUrl, startFixture, 'repeated drop', async (page, canvas) => {
     await dropFiles(page, [SCENE_FILE]);
     const sceneOnly = await readUploadedScene(page, canvas);
+    await page.getByRole('tab', { name: 'Resources' }).click();
+    await watchPanel(page);
     await dropFiles(page, [TEXTURE_FILE]);
     await waitForUploadedRow(page, TEXTURE_PATH);
-    return { sceneOnly, filled: await readUploadedScene(page, canvas) };
+    const panelLeftWhileLoading = await panelLeft(page);
+    return { sceneOnly, panelLeftWhileLoading, filled: await readUploadedScene(page, canvas) };
   });
 }
 
@@ -244,7 +267,7 @@ function checkDropUpload(gate, drop, fileInput) {
   checkDiagnostics(gate, label, drop.diagnostics);
 }
 
-function checkRepeatedDrop(gate, { sceneOnly, filled, diagnostics }, fileInput) {
+function checkRepeatedDrop(gate, { sceneOnly, panelLeftWhileLoading, filled, diagnostics }, fileInput) {
   const sceneOnlyLabel = '[repeated drop, scene only]';
   checkUploadedScene(gate, sceneOnlyLabel, sceneOnly, [{ state: 'missing', path: TEXTURE_PATH }]);
   gate.check(
@@ -252,6 +275,10 @@ function checkRepeatedDrop(gate, { sceneOnly, filled, diagnostics }, fileInput) 
     `${sceneOnlyLabel} draws the textured frame without the texture, so the texture came from elsewhere`
   );
   const filledLabel = '[repeated drop, texture]';
+  gate.check(
+    panelLeftWhileLoading === false,
+    `${filledLabel} the Resources panel left the page while the dropped texture loaded`
+  );
   checkUploadedScene(gate, filledLabel, filled, [{ state: 'uploaded', path: TEXTURE_PATH }]);
   checkSameFrame(gate, filledLabel, filled, fileInput);
   checkDiagnostics(gate, '[repeated drop]', diagnostics, { expectedWarnings: [MISSING_TEXTURE_WARNING] });
