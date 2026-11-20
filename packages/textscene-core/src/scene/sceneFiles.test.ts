@@ -246,6 +246,14 @@ material_override = ExtResource("1")
     ]);
   });
 
+  it('gives the same array after a write that reads no other file', async () => {
+    const scene = openScene({ source: SPRITE, provider: filesOf({}), rootScenePath: MAIN });
+    const files = await whenFilesLoaded(scene);
+    await scene.getNode('.').set('flip_h', variant('true'));
+    expect(scene.written()).not.toBe(scene.parse().sceneGraph);
+    expect(scene.files()).toBe(files);
+  });
+
   it('gives the same array while nothing changes', async () => {
     const scene = openScene({ source: SPRITE, provider: filesOf({}), rootScenePath: MAIN });
     const files = await whenFilesLoaded(scene);

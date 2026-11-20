@@ -65,6 +65,8 @@ export class ResourceLoader {
    * `holdParse` and `settleHold`. Cleared by `clear`, which drops the settle listener.
    */
   private readonly parseHolds = new Map<string, Set<string>>();
+  /** Written only by `isReadable`. Cleared by `provideFile` and `clear`. */
+  private readonly readableProbes = new Map<string, Promise<boolean>>();
   /** The bus types whose builds read a section. Written only by `sectionLoaderFor`. */
   private readonly sectionBusTypes: ResourceType[] = [];
   /** The one settle listener for every hold, subscribed by the first hold after a `clear`. */
@@ -213,8 +215,19 @@ export class ResourceLoader {
   }
 
   /** For a host that cannot list: one byte read, since a host stops a binary read there. */
-  private async isReadable(file: string): Promise<boolean> {
-    return (await this.provider?.loadResource(file, undefined, 1)) != null;
+  private isReadable(file: string): Promise<boolean> {
+    let probe = this.readableProbes.get(file);
+    if (!probe) {
+      probe = Promise.resolve(this.provider?.loadResource(file, undefined, 1)).then(
+        (data) => data != null,
+        (error: unknown) => {
+          this.readableProbes.delete(file);
+          throw error;
+        }
+      );
+      this.readableProbes.set(file, probe);
+    }
+    return probe;
   }
 
   /** The listing of `folder`, the one a refresh still loads rather than the one it replaces. */
@@ -401,6 +414,7 @@ export class ResourceLoader {
     this.metadata.clear();
     this.dependencies.clear();
     this.parseHolds.clear();
+    this.readableProbes.clear();
     this.unsubscribeHolds = null;
     for (const proc of this.processors.values()) {
       proc.clearCache();
@@ -416,6 +430,7 @@ export class ResourceLoader {
    */
   provideFile(path: string): void {
     logger.info(`[ResourceLoader] provideFile: ${path}`);
+    this.readableProbes.delete(path);
     // A refresh keeps a dialog's old listing, and runs first so an outcome waits for the new one.
     for (const folder of foldersAbove(path)) {
       if (this.directories.isCached(folder) || this.directories.isLoading(folder))

@@ -16,6 +16,12 @@ type SceneSections = Pick<TscnScene, 'externalResources' | 'internalResources'> 
   readonly nodes: readonly RawNode[];
 };
 
+/** The type is the `[ext_resource]` heading's, or null for a `Resource("…")` literal. */
+export interface FileRead {
+  readonly path: string;
+  readonly type: string | null;
+}
+
 /** A `.tscn`: its `[sub_resource]` sections, and the `Resource()` literals of its `[node]` sections. */
 export function sceneFailingReads(file: string, scene: SceneSections): string[] {
   const sections = scene.internalResources.map((section) => section.data);
@@ -24,8 +30,7 @@ export function sceneFailingReads(file: string, scene: SceneSections): string[] 
 
 /** A `.tres`: its `[sub_resource]` sections and its `[resource]` section. */
 export function resourceFailingReads(file: string, parsed: ParsedResource): string[] {
-  const sections = [...parsed.subResources.map((section) => section.data), parsed.properties];
-  return failingReads(file, parsed.extResources, sections, []);
+  return failingReads(file, parsed.extResources, resourceSections(parsed), []);
 }
 
 // A section read fails the file and a [node] read does not (resource_format_text.cpp:647-650, :288-290).
@@ -35,59 +40,48 @@ function failingReads(
   sections: readonly Values[],
   nodes: readonly Values[]
 ): string[] {
-  const paths = new Set<string>();
-  for (const value of sections.flatMap(Object.values)) {
-    for (const id of extResourceIdsIn(value)) {
-      const ext = findExtResource(externalResources, id);
-      if (ext) paths.add(extResourcePathIn(file, ext.path));
-    }
-  }
-  for (const value of [...sections, ...nodes].flatMap(Object.values)) {
-    for (const path of pathResourcePathsIn(value)) paths.add(simplifyResPath(path));
-  }
-  // A path the previewer cannot place is never claimed missing.
-  return [...paths].filter((path) => path.startsWith('res://'));
-}
-
-/** The type is the `[ext_resource]` heading's, or null for a `Resource("…")` literal. */
-export interface FileRead {
-  readonly path: string;
-  readonly type: string | null;
+  return readFiles(file, externalResources, sections, [...sections, ...nodes]).map((read) => read.path);
 }
 
 /** Values only, as only a read reports a failed load (resource_format_text.cpp:147-157). */
 export function sceneReads(file: string, scene: SceneSections): FileRead[] {
   const sections = scene.internalResources.map((section) => section.data);
-  return readFiles(file, scene.externalResources, [
-    ...sections,
-    ...nodeValues(scene.nodes),
-    ...instancesOf(scene.nodes),
-  ]);
+  const values = [...sections, ...nodeValues(scene.nodes), ...instancesOf(scene.nodes)];
+  return readFiles(file, scene.externalResources, values, values);
 }
 
 /** Every file a value of a `.tres` reads. */
 export function resourceReads(file: string, parsed: ParsedResource): FileRead[] {
-  const sections = [...parsed.subResources.map((section) => section.data), parsed.properties];
-  return readFiles(file, parsed.extResources, sections);
+  const sections = resourceSections(parsed);
+  return readFiles(file, parsed.extResources, sections, sections);
 }
 
+function resourceSections(parsed: ParsedResource): Values[] {
+  return [...parsed.subResources.map((section) => section.data), parsed.properties];
+}
+
+/** The `ExtResource` ids of `extValues` and the `Resource("…")` literals of `pathValues`, first type kept. */
 function readFiles(
   file: string,
   externalResources: readonly TscnExternalResource[],
-  values: readonly Values[]
+  extValues: readonly Values[],
+  pathValues: readonly Values[]
 ): FileRead[] {
   const reads = new Map<string, string | null>();
-  for (const value of values.flatMap(Object.values)) {
+  for (const value of extValues.flatMap(Object.values)) {
     for (const id of extResourceIdsIn(value)) {
       const ext = findExtResource(externalResources, id);
       const path = ext && extResourcePathIn(file, ext.path);
       if (path && !reads.has(path)) reads.set(path, ext.type);
     }
+  }
+  for (const value of pathValues.flatMap(Object.values)) {
     for (const path of pathResourcePathsIn(value)) {
       const simplified = simplifyResPath(path);
       if (!reads.has(simplified)) reads.set(simplified, null);
     }
   }
+  // A path the previewer cannot place is never claimed missing.
   return [...reads].filter(([path]) => path.startsWith('res://')).map(([path, type]) => ({ path, type }));
 }
 

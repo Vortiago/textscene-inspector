@@ -2,11 +2,11 @@
  * Registers the PackedScene ExtResource an instance ref names, then loads the
  * scene. The viewport's instanced node and the outliner's sub-scene rows share it.
  */
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import type { TscnExternalResource, TscnScene } from '../../parser/types.js';
 import { useResource, useResourceLoader, type ResourceResult } from '../../resources/useResource.js';
 import { registerInstanceResource } from '../../resources/registerInstanceResource.js';
-import { useFirstLoadFailure } from '../../resources/loadFailure/useFirstLoadFailure.js';
+import { useLoadFailure } from '../../resources/loadFailure/useLoadFailure.js';
 
 /**
  * A null `loadPath` registers and loads nothing, and the result stays `pending`.
@@ -27,7 +27,7 @@ export function useInstancedScene(
 
   // `useResource` requests nothing for '', so the hook count stays stable.
   const scene = useResource<TscnScene>(loadPath ?? '', 'scene');
-  const failure = useFirstLoadFailure(useMemo(() => (loadPath ? [loadPath] : []), [loadPath]));
+  const failure = useLoadFailure(loadPath);
   return failure ? failedScene(failure.chain) : scene;
 }
 

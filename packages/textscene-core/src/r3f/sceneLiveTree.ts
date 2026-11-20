@@ -137,15 +137,15 @@ function sceneRuntimeOf(scene: Scene): SceneRuntime {
   const notify = () => {
     for (const listener of [...listeners]) listener();
   };
-  const fileWalk = createSceneFileWalk(loader);
   const fileListeners = new Set<() => void>();
   const notifyFiles = () => {
     for (const listener of [...fileListeners]) listener();
   };
-  fileWalk.subscribe(notifyFiles);
+  const fileWalk = createSceneFileWalk(loader, notifyFiles);
   let settings: ProjectRead;
-  /** Written only by `files`: the walk's starts for one parse and one read of the project settings. */
-  let starts: { graph: SceneGraph | null; settings: ProjectRead; starts: WalkStart[] } | null = null;
+  /** Written only by `files`. A write moves the graph on each drag frame, so equal reads keep the starts. */
+  let starts: { graph: SceneGraph | null; settings: ProjectRead; key: string; starts: WalkStart[] } | null =
+    null;
   let project: ProjectTreeSettings = projectTreeSettings(null);
   const readProject = async () => {
     const bus = loader.fileEventBus;
@@ -172,8 +172,11 @@ function sceneRuntimeOf(scene: Scene): SceneRuntime {
       return () => listeners.delete(listener);
     },
     files(graph) {
-      if (starts?.graph !== graph || starts.settings !== settings)
-        starts = { graph, settings, starts: walkStarts(graph, settings) };
+      if (starts?.graph !== graph || starts.settings !== settings) {
+        const next = walkStarts(graph, settings);
+        const key = JSON.stringify(next);
+        starts = { graph, settings, key, starts: key === starts?.key ? starts.starts : next };
+      }
       return fileWalk.files(starts.starts);
     },
     subscribeFiles(listener) {
