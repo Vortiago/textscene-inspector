@@ -110,7 +110,7 @@ describe('usePreviewFrameloop', () => {
     });
     expect(result.current).toBe('always');
 
-    await act(async () => status.capture(() => ({ width: 1, height: 1, data: new Uint8ClampedArray(4) })));
+    await act(async () => status.readWith(() => ({ width: 1, height: 1, data: new Uint8ClampedArray(4) })));
     await image;
     expect(result.current).toBe('never');
   });

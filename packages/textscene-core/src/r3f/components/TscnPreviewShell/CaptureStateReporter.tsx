@@ -1,41 +1,26 @@
-/**
- * Reports to the host whether the viewport can capture a PNG now, through the camera
- * control the toolbar's Screenshot button uses. The host saves the image or answers an
- * agent tool with it. `ready` arrives only once the canvas has rendered the current
- * scene and the scene's resources and textures have landed, so a capture shows it whole.
- */
-
-import { useEffect, useMemo, useSyncExternalStore } from 'react';
-import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
+import { useEffect, useMemo } from 'react';
 import { PENDING_CAPTURE, previewCaptureStateOf, type PreviewCaptureState } from './previewCaptureState.js';
-import { useSceneLoad } from './useSceneLoad.js';
-import { subscribeToNothing } from '../../../utils/subscribeToNothing.js';
+import type { ViewAnswers } from '../../viewStatus/viewAnswers.js';
+import type { ViewSettle } from './viewSettle.js';
 
-const NO_HANDLER = () => false;
+interface CaptureStateReporterProps {
+  onCaptureStateChange?: (state: PreviewCaptureState) => void;
+  view: ViewAnswers | null;
+  settle: ViewSettle;
+  hasScene: boolean;
+  viewportError: Error | null;
+}
 
 export function CaptureStateReporter({
   onCaptureStateChange,
+  view,
+  settle,
+  hasScene,
   viewportError,
-}: {
-  onCaptureStateChange?: (state: PreviewCaptureState) => void;
-  viewportError: Error | null;
-}) {
-  const control = useOptionalViewportActions();
-  const hasHandler = useSyncExternalStore(
-    control?.subscribeScreenshotHandler ?? subscribeToNothing,
-    control?.hasScreenshotHandler ?? NO_HANDLER
-  );
-  const takeScreenshot = control?.takeScreenshot;
-  const isSceneComplete = useSceneLoad().isComplete;
-
+}: CaptureStateReporterProps) {
   const state = useMemo(
-    () =>
-      previewCaptureStateOf({
-        capture: hasHandler && takeScreenshot ? takeScreenshot : null,
-        isSceneComplete,
-        viewportError,
-      }),
-    [hasHandler, takeScreenshot, isSceneComplete, viewportError]
+    () => previewCaptureStateOf({ view, settle, hasScene, viewportError }),
+    [view, settle, hasScene, viewportError]
   );
 
   useEffect(() => {

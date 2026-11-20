@@ -28,7 +28,7 @@ function renderToolbar({
     <ViewportModeProvider initialMode={mode}>
       <ViewportActionsProvider initialPreviewedCameraPath={previewedCameraPath}>
         {control && <RegisteredFreelook control={control} />}
-        <ViewportToolbar />
+        <ViewportToolbar view={null} />
       </ViewportActionsProvider>
     </ViewportModeProvider>
   );

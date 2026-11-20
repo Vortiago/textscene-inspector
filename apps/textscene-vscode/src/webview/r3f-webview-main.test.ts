@@ -306,7 +306,15 @@ describe('preview visibility', () => {
 });
 
 describe('capture state reporting', () => {
-  const READY: PreviewCaptureState = { status: 'ready', capture: () => 'data:image/png;base64,AA==' };
+  const IMAGE = new Blob([new Uint8Array([0])], { type: 'image/png' });
+  const READY: PreviewCaptureState = { status: 'ready', capture: () => Promise.resolve(IMAGE) };
+  const captures = (vscodeApi: Parameters<typeof postedMessages>[0]) =>
+    postedMessages(vscodeApi).filter((m) => m.type === 'previewCaptured');
+  /** The answer posts once the image has read as a data URL, a task later. */
+  const answeredCaptures = async (vscodeApi: Parameters<typeof postedMessages>[0]) => {
+    await waitFor(() => captures(vscodeApi).length > 0);
+    return captures(vscodeApi);
+  };
   const isCaptureState = (m: WebviewToHostMessage) =>
     m.type === 'previewCaptureReady' ||
     m.type === 'previewCapturePending' ||
@@ -345,7 +353,7 @@ describe('capture state reporting', () => {
 
     dispatch({ type: 'capturePreview', requestId: 'c1' });
 
-    expect(postedMessages(vscodeApi).filter((m) => m.type === 'previewCaptured')).toEqual([
+    expect(await answeredCaptures(vscodeApi)).toEqual([
       { type: 'previewCaptured', requestId: 'c1', dataUrl: 'data:image/png;base64,AA==' },
     ]);
   });
@@ -361,6 +369,25 @@ describe('capture state reporting', () => {
     ]);
   });
 
+  it('answers a capturePreview whose capture fails with the reason', async () => {
+    captured.mountCaptureState = {
+      status: 'ready',
+      capture: () => Promise.reject(new Error('expected the view to stay mounted until its capture')),
+    };
+    const { vscodeApi } = await mountFresh();
+
+    dispatch({ type: 'capturePreview', requestId: 'c6' });
+    await waitFor(() => postedMessages(vscodeApi).some((m) => m.type === 'previewCaptureError'));
+
+    expect(postedMessages(vscodeApi).filter((m) => m.type === 'previewCaptureError')).toEqual([
+      {
+        type: 'previewCaptureError',
+        requestId: 'c6',
+        error: 'The capture failed: Error: expected the view to stay mounted until its capture',
+      },
+    ]);
+  });
+
   it('holds a capturePreview that arrives while pending, and answers it once the shell is ready', async () => {
     const { vscodeApi } = await mountFresh();
 
@@ -368,7 +395,7 @@ describe('capture state reporting', () => {
     expect(postedMessages(vscodeApi).filter((m) => m.type === 'previewCaptured')).toEqual([]);
     captured.shellProps?.onCaptureStateChange?.(READY);
 
-    expect(postedMessages(vscodeApi).filter((m) => m.type === 'previewCaptured')).toEqual([
+    expect(await answeredCaptures(vscodeApi)).toEqual([
       { type: 'previewCaptured', requestId: 'c3', dataUrl: 'data:image/png;base64,AA==' },
     ]);
   });
@@ -403,7 +430,7 @@ describe('capture state reporting', () => {
     dispatch({ type: 'loadTscn', content: 'the scene' });
     dispatch({ type: 'capturePreview', requestId: 'c5' });
 
-    expect(postedMessages(vscodeApi).filter((m) => m.type === 'previewCaptured')).toEqual([
+    expect(await answeredCaptures(vscodeApi)).toEqual([
       { type: 'previewCaptured', requestId: 'c5', dataUrl: 'data:image/png;base64,AA==' },
     ]);
   });

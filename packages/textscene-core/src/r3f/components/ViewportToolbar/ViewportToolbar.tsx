@@ -21,6 +21,9 @@ import {
   YIELDS_A_PREVIEW,
 } from '../../preview/godotPreviewLighting.js';
 import { DisplayMenu, type DisplayToggle } from './DisplayMenu.js';
+import type { ViewAnswers } from '../../viewStatus/viewAnswers.js';
+import { captureWhenSettled } from '../TscnPreviewShell/viewSettle.js';
+import * as logger from '../../../logger.js';
 import styles from './ViewportToolbar.module.css';
 
 const MODES: ViewportMode[] = ['3D', '2D', 'in-game'];
@@ -119,17 +122,24 @@ function persisting<T>(set: (value: T) => void, key: string): (value: T) => void
   };
 }
 
-/** Downloads a data URL through a throwaway anchor element. */
-function downloadDataUrl(dataUrl: string, filename: string): void {
+/** Downloads a file through a throwaway anchor element. */
+function download(file: Blob, filename: string): void {
+  const url = URL.createObjectURL(file);
   const link = document.createElement('a');
-  link.href = dataUrl;
+  link.href = url;
   link.download = filename;
   document.body.appendChild(link);
   link.click();
   link.remove();
+  URL.revokeObjectURL(url);
 }
 
-export function ViewportToolbar() {
+export interface ViewportToolbarProps {
+  /** The mounted view, or null while none is: Screenshot saves its image. */
+  view: ViewAnswers | null;
+}
+
+export function ViewportToolbar({ view }: ViewportToolbarProps) {
   const { mode, setMode, show, setShow, frameOnOpen, setFrameOnOpen } = useViewportMode();
   const camera = useOptionalViewportActions();
   const isFreelookToggled = useIsFreelookToggled();
@@ -145,9 +155,12 @@ export function ViewportToolbar() {
   const sceneHasEnvironment = yielding.some((entry) => entry.node.type === PREVIEW_ENVIRONMENT_YIELD_TYPE);
 
   function handleScreenshot() {
-    const dataUrl = camera?.takeScreenshot();
-    if (!dataUrl) return;
-    downloadDataUrl(dataUrl, `tscn-preview-${Date.now()}.png`);
+    if (!view) return;
+    captureWhenSettled(view).then(
+      (image) => download(image, `tscn-preview-${Date.now()}.png`),
+      // The view left or never settles: the top bar shows why, so the click saves nothing.
+      (error: unknown) => logger.warn('[ViewportToolbar] screenshot not taken', error)
+    );
   }
 
   // Only the user's click persists: a programmatic writer, such as
@@ -198,7 +211,7 @@ export function ViewportToolbar() {
           Freelook
         </button>
       )}
-      {camera && (
+      {view && (
         <button
           type="button"
           className={styles.resetButton}

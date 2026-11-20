@@ -1,39 +1,37 @@
-/**
- * Whether the viewport can capture a PNG now, as the shell reports it to its host. A host
- * holds a capture request while the state is `pending` and answers `unavailable` with its
- * reason, so it never polls the canvas or guesses how long the canvas takes to mount.
- */
+import type { ViewAnswers } from '../../viewStatus/viewAnswers.js';
+import { captureWhenSettled, type ViewSettle } from './viewSettle.js';
 
+/** A host holds a request while `pending`, so it never polls the view. */
 export type PreviewCaptureState =
-  /** The canvas has no renderer yet, has yet to render the current scene, or the scene still loads. */
+  /** No scene yet, or the view has not settled on the current one. */
   | { readonly status: 'pending' }
-  /** `capture` renders a frame and returns it as a PNG data URL. */
-  | { readonly status: 'ready'; readonly capture: () => string | null }
-  /** No canvas can capture until the reason changes, so a host answers at once. */
+  /** `capture` waits for the view to settle again, then gives its PNG. */
+  | { readonly status: 'ready'; readonly capture: () => Promise<Blob> }
+  /** No view can capture until the reason changes, so a host answers at once. */
   | { readonly status: 'unavailable'; readonly reason: string };
 
 export const PENDING_CAPTURE: PreviewCaptureState = { status: 'pending' };
 
 interface CaptureInputs {
-  /** The registered screenshot handler, or null before the canvas registers one. */
-  readonly capture: (() => string | null) | null;
-  /** Whether a frame now shows the current scene whole, every resource and texture it uses landed. */
-  readonly isSceneComplete: boolean;
+  /** The mounted view, or null while none is. */
+  readonly view: ViewAnswers | null;
+  readonly settle: ViewSettle;
+  /** Whether the host has sent a scene: an empty view is never captured. */
+  readonly hasScene: boolean;
   /** The error the viewport's boundary caught, or null while the viewport renders. */
   readonly viewportError: Error | null;
 }
 
-/**
- * The state the shell reports. A registered handler wins, since it exists only once the active view's renderer does,
- * but it waits until the scene is complete.
- */
 export function previewCaptureStateOf({
-  capture,
-  isSceneComplete,
+  view,
+  settle,
+  hasScene,
   viewportError,
 }: CaptureInputs): PreviewCaptureState {
-  if (capture) return isSceneComplete ? { status: 'ready', capture } : PENDING_CAPTURE;
   if (viewportError)
     return { status: 'unavailable', reason: `The viewport crashed: ${viewportError.message}` };
-  return PENDING_CAPTURE;
+  if (!view || !hasScene) return PENDING_CAPTURE;
+  if (settle.status === 'failed') return { status: 'unavailable', reason: settle.reason };
+  if (settle.status === 'pending') return PENDING_CAPTURE;
+  return { status: 'ready', capture: () => captureWhenSettled(view) };
 }

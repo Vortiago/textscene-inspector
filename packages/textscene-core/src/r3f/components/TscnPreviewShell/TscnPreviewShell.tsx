@@ -44,6 +44,8 @@ import { SceneTreePane } from './SceneTreePane.js';
 import { previewShellProviders } from './previewShellProviders.js';
 import { useSceneLoader } from '../../sceneResourcePipeline.js';
 import { CaptureStateReporter } from './CaptureStateReporter.js';
+import { useViewSettle } from './viewSettle.js';
+import type { ViewAnswers } from '../../viewStatus/viewAnswers.js';
 import type { TscnPreviewShellProps } from './previewShellProps.js';
 import styles from './TscnPreviewShell.module.css';
 
@@ -80,6 +82,9 @@ export function TscnPreviewShell({
 
   const hierarchyValue = useMemo(() => ({ sceneGraph, panelId, scene }), [sceneGraph, panelId, scene]);
   const [viewportError, setViewportError] = useState<Error | null>(null);
+  const [view, setView] = useState<ViewAnswers | null>(null);
+  const settle = useViewSettle(scene, view);
+  const hasScene = parsedGraph !== null;
 
   // `treeShare` is the tree's fraction of the dock height (0..1). The dock
   // layout persists across sessions, a VS Code webview being a browser too.
@@ -132,14 +137,20 @@ export function TscnPreviewShell({
       {initialViewportMode === undefined && <WorkspaceAutoSelect />}
       <SceneChangeResetter sceneGraph={parsedGraph} />
       <AnimationTabWatcher onVisibleChange={setAnimationTabVisible} />
-      <CaptureStateReporter onCaptureStateChange={onCaptureStateChange} viewportError={viewportError} />
+      <CaptureStateReporter
+        onCaptureStateChange={onCaptureStateChange}
+        view={view}
+        settle={settle}
+        hasScene={hasScene}
+        viewportError={viewportError}
+      />
       <EscapeDeselect />
       <div className={styles.shell} data-panel-id={panelId}>
         <header className={styles.topBar}>
           <span className={styles.brand}>TextScene Inspector</span>
           {toolbar && <div className={styles.topToolbar}>{toolbar}</div>}
           <div className={styles.topSpacer} />
-          <SceneLoadStatus viewportError={viewportError} />
+          <SceneLoadStatus settle={settle} hasScene={hasScene} viewportError={viewportError} />
           <TextureWorkStatus />
           <SoftwareRenderingStatus />
           <SceneStats />
@@ -155,10 +166,10 @@ export function TscnPreviewShell({
           <main className={styles.center} aria-label="Viewport">
             {/* Over the viewport, not the header: .viewportToolbarOverlay says why. */}
             <div className={styles.viewportToolbarOverlay} data-testid="viewport-toolbar-overlay">
-              <ViewportToolbar />
+              <ViewportToolbar view={view} />
             </div>
             <PreviewErrorBoundary sceneGraph={sceneGraph} onViewportErrorChange={setViewportError}>
-              <ViewportArea />
+              <ViewportArea viewRef={setView} />
             </PreviewErrorBoundary>
           </main>
 

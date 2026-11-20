@@ -209,17 +209,39 @@ describe('the capture of a view', () => {
     );
   });
 
-  it('holds the window at full size, and reads it once the full window has settled', async () => {
+  it("reads through the view's reader, a microtask after the capture is asked", async () => {
     const status = attachedStatus();
+    status.readWith(() => PIXELS);
     drawFrame(status);
     const image = status.captureImage();
     expect(status.isCapturePending()).toBe(true);
-    status.frameDrawn({ ...frameOf(1), isFullSize: false });
-    expect(status.isCaptureDue()).toBe(false);
-    drawFrame(status);
-    expect(status.isCaptureDue()).toBe(true);
-    status.capture(() => PIXELS);
+    await expect(image).resolves.toBe(PIXELS);
     expect(status.isCapturePending()).toBe(false);
+  });
+
+  it('holds the window at full size, and reads it on the first full-size frame', async () => {
+    const status = attachedStatus();
+    let reads = 0;
+    status.readWith(() => {
+      reads += 1;
+      return PIXELS;
+    });
+    status.frameDrawn({ ...frameOf(1), isFullSize: false });
+    const image = status.captureImage();
+    await Promise.resolve();
+    expect(reads).toBe(0);
+    drawFrame(status);
+    await expect(image).resolves.toBe(PIXELS);
+    expect(reads).toBe(1);
+  });
+
+  it('waits for a reader, and reads once a view gives one', async () => {
+    const status = attachedStatus();
+    drawFrame(status);
+    const image = status.captureImage();
+    await Promise.resolve();
+    expect(status.isCapturePending()).toBe(true);
+    status.readWith(() => PIXELS);
     await expect(image).resolves.toBe(PIXELS);
   });
 
@@ -232,12 +254,12 @@ describe('the capture of a view', () => {
   it('rejects a capture whose read throws, and lets the view draw at its own size again', async () => {
     const status = attachedStatus();
     drawFrame(status);
-    const image = status.captureImage();
-    status.capture(() => {
+    status.readWith(() => {
       throw new Error('context lost');
     });
-    expect(status.isCapturePending()).toBe(false);
+    const image = status.captureImage();
     await expect(image).rejects.toThrow("expected the view's pixels, got Error: context lost");
+    expect(status.isCapturePending()).toBe(false);
   });
 
   it('rejects a capture the view leaves before it reads', async () => {

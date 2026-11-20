@@ -6,7 +6,9 @@ import { isClaimedByCanvasItemEditor } from '../../nodeWorkspaceVisibility.js';
 import { useLiveSceneNodes } from '../../useLiveSceneTree.js';
 import { keepsChildrenInViewport } from '../../viewportRender/viewportBoundary.js';
 import type { TscnNode } from '../../../parser/types.js';
+import type { Ref } from 'react';
 import { TscnCanvas } from '../../TscnCanvas.js';
+import type { ViewAnswers } from '../../viewStatus/viewAnswers.js';
 import { FreelookSpeedReadout } from '../FreelookSpeedReadout/FreelookSpeedReadout.js';
 import { GameStartNotes } from './GameStartNotes.js';
 import { ViewportControlsHelp } from '../ViewportControlsHelp/ViewportControlsHelp.js';
@@ -15,12 +17,13 @@ import styles from './TscnPreviewShell.module.css';
 // Module-level, so the memo of `useLiveSceneNodes` does not recompute each render.
 const IS_2D_CONTENT = (node: TscnNode): boolean => isClaimedByCanvasItemEditor(node.type);
 
-export function ViewportArea() {
+/** `viewRef` hears each view's answers as it mounts, and null as it leaves. */
+export function ViewportArea({ viewRef }: { viewRef: Ref<ViewAnswers> }) {
   const { mode, show } = useViewportMode();
   // The view reads the shell's providers: a `scene` prop would mount a second selection and pass.
   return (
     <>
-      <TscnCanvas mode={mode} show={show} />
+      <TscnCanvas mode={mode} show={show} ref={viewRef} />
       <ViewportChrome mode={mode} />
     </>
   );

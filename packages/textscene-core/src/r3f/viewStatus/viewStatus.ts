@@ -43,9 +43,8 @@ export interface ViewStatus {
   attach(scene: LiveScene): (() => void) | null;
   /** Keeps `frame` as the last frame: a view may fill the same record again for its next frame. */
   frameDrawn(frame: DrawnFrame): void;
-  isCaptureDue(): boolean;
-  /** Resolves the capture with `read`, or rejects it with what `read` throws. */
-  capture(read: () => RgbaImage): void;
+  /** A capture reads through it a microtask after a settled full-size frame. Returns the removal. */
+  readWith(read: () => RgbaImage): () => void;
 }
 
 interface PendingCapture {
@@ -62,6 +61,8 @@ export function createViewStatus(): ViewStatus {
   // What subscribers last heard, so a view that settles again on the same facts still tells them.
   let announced: ViewSettled | null = null;
   let capture: PendingCapture | null = null;
+  let reader: (() => RgbaImage) | null = null;
+  let isReadQueued = false;
 
   const showsDrawnState = () =>
     live !== null &&
@@ -129,7 +130,39 @@ export function createViewStatus(): ViewStatus {
     });
     capture = { image, resolve, reject };
     notify();
+    queueRead();
     return image;
+  }
+
+  const isCaptureDue = () => capture !== null && lastFrame?.isFullSize === true && settled() !== null;
+
+  // A microtask, so a frame that makes a capture due finishes before the read draws its own.
+  function queueRead(): void {
+    if (isReadQueued || !reader || !isCaptureDue()) return;
+    isReadQueued = true;
+    queueMicrotask(() => {
+      isReadQueued = false;
+      if (reader && isCaptureDue()) read(reader);
+    });
+  }
+
+  function read(pixels: () => RgbaImage): void {
+    const done = capture;
+    capture = null;
+    try {
+      done?.resolve(pixels());
+    } catch (error) {
+      done?.reject(new Error(`expected the view's pixels, got ${String(error)}`));
+    }
+    notify();
+  }
+
+  function readWith(read: () => RgbaImage): () => void {
+    reader = read;
+    queueRead();
+    return () => {
+      if (reader === read) reader = null;
+    };
   }
 
   function attach(scene: LiveScene): (() => void) | null {
@@ -153,17 +186,7 @@ export function createViewStatus(): ViewStatus {
   function frameDrawn(frame: DrawnFrame): void {
     lastFrame = frame;
     publish();
-  }
-
-  function captureWith(read: () => RgbaImage): void {
-    const done = capture;
-    capture = null;
-    try {
-      done?.resolve(read());
-    } catch (error) {
-      done?.reject(new Error(`expected the view's pixels, got ${String(error)}`));
-    }
-    notify();
+    queueRead();
   }
 
   return {
@@ -175,7 +198,6 @@ export function createViewStatus(): ViewStatus {
     isCapturePending: () => capture !== null,
     attach,
     frameDrawn,
-    isCaptureDue: () => capture !== null && lastFrame?.isFullSize === true && settled() !== null,
-    capture: captureWith,
+    readWith,
   };
 }
