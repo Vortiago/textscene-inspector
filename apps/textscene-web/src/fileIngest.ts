@@ -10,8 +10,8 @@ import { pickRootMostTscn, matchResourceFiles, extResourcePaths, type MatchResul
 export interface FileIngestDeps {
   /** The corpus root of the scene on screen. */
   resourceRoot: string;
-  /** Latest missing-paths set, as last reported by the shell. */
-  missingPathsRef: { current: ReadonlySet<string> };
+  /** The files the scene asked for and did not get, as the scene says now. */
+  missingFiles: () => ReadonlySet<string>;
   confirmDiscardEdits: () => boolean;
   tearDownIfCrossingCorpus: (nextRoot: string) => void;
   onTscnUpload: (file: File, text: string) => void;
@@ -30,7 +30,7 @@ export interface FileIngestDeps {
 export function createFileIngest(deps: FileIngestDeps): (files: readonly File[]) => Promise<void> {
   const {
     resourceRoot,
-    missingPathsRef,
+    missingFiles,
     confirmDiscardEdits,
     tearDownIfCrossingCorpus,
     onTscnUpload,
@@ -64,7 +64,7 @@ export function createFileIngest(deps: FileIngestDeps): (files: readonly File[])
       return;
     }
 
-    const missingPaths = missingPathsRef.current;
+    const missingPaths = missingFiles();
     const tscnFiles = files.filter((f) => f.name.toLowerCase().endsWith('.tscn'));
 
     // A batch with a .tscn replaces the active scene (and the pane buffer);

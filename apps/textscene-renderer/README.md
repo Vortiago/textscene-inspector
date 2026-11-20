@@ -53,6 +53,29 @@ export function GameView() {
 
 `<TscnCanvas>` fills its parent, so give the parent a size.
 
+### Open the scene in a component
+
+A component that opens its own scene disposes it when it unmounts, so the scene stops loading its
+files.
+
+```tsx
+import { useEffect, useState } from 'react';
+import { TscnCanvas, openScene, type Scene } from '@textscene/renderer';
+
+export function SceneView({ source }: { source: string }) {
+  const [scene, setScene] = useState<Scene | null>(null);
+  useEffect(() => {
+    const opened = openScene({ source, provider });
+    setScene(opened);
+    return () => opened.dispose();
+  }, [source]);
+  return scene && <TscnCanvas scene={scene} mode="in-game" />;
+}
+```
+
+A new `source` opens a new scene here. To keep one scene and change its text, see "Change the scene
+from your code".
+
 ### The In-game mode
 
 The In-game mode draws the root viewport of the scene as the game starts it:

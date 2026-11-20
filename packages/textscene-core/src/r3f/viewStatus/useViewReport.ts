@@ -4,10 +4,13 @@ import { useResourceLoader } from '../../resources/useResource.js';
 import type { Scene } from '../../scene/openScene.js';
 import * as logger from '../../logger.js';
 import { subscribeToNothing } from '../../utils/subscribeToNothing.js';
-import { pendingSceneWork } from '../sceneWork.js';
+import { hasPendingWork, pendingSceneWork } from '../sceneWork.js';
+import type { ResourceLoader } from '../../resources/ResourceLoader.js';
+import { textureWork } from '../../resources/textures/textureWork.js';
+import { fontWork } from '../controls/native/text/settledChannel.js';
 import { useGameStartFacts } from '../gameView/gameStartFacts.js';
 import { useViewStatus } from './ViewStatusContext.js';
-import type { DrawnFrame, ViewSettled } from './viewStatus.js';
+import type { DrawnFrame, ViewSettled, ViewStatus } from './viewStatus.js';
 
 const NO_FILES: ReadonlySet<string> = new Set();
 
@@ -73,6 +76,7 @@ export function useViewReport(): (isFullSize: boolean, awaitedCamera?: string | 
     work: { resources: 0, textures: 0, fonts: 0 },
     facts: settledFacts(NO_FILES),
   }));
+  useReportStartedWork(status, isAttached, loader, frame);
   return (isFullSize, awaitedCamera = null) => {
     if (!status || !isAttached.current) return;
     frame.revision = revision;
@@ -82,4 +86,30 @@ export function useViewReport(): (isFullSize: boolean, awaitedCamera?: string | 
     frame.facts = settledFacts(scene?.missingFiles() ?? NO_FILES);
     status.frameDrawn(frame);
   };
+}
+
+/** A load can start while no frame draws, so the status hears of it at once. Only a drawn frame settles. */
+function useReportStartedWork(
+  status: ViewStatus | null,
+  isAttached: { readonly current: boolean },
+  loader: ResourceLoader | null,
+  frame: DrawnFrame
+): void {
+  useEffect(() => {
+    if (!status) return undefined;
+    const onWorkChange = () => {
+      if (!isAttached.current) return;
+      // The status reads the last frame in place, so the record changes only to report work.
+      const work = pendingSceneWork(loader);
+      if (!hasPendingWork(work)) return;
+      frame.work = work;
+      status.frameDrawn(frame);
+    };
+    const stops = [
+      loader?.subscribePending(onWorkChange),
+      textureWork.subscribe(onWorkChange),
+      fontWork.subscribe(onWorkChange),
+    ];
+    return () => stops.forEach((stop) => stop?.());
+  }, [status, isAttached, loader, frame]);
 }

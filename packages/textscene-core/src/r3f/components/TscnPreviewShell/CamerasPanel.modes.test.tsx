@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { CamerasPanel } from './CamerasPanel';
+import { PreviewCameraProvider, usePreviewCamera } from './previewCamera';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext';
 import { ViewportModeProvider, useViewportMode, type ViewportMode } from '../../contexts/ViewportModeContext';
-import { useViewportActions } from '../../testing/ViewportActionsProbe';
 import { openScene, type Scene } from '../../../scene/openScene';
 import type { ResourceProvider } from '../../../resources/ResourceProvider';
 import '../../sceneLiveTree.js';
@@ -29,9 +29,9 @@ enabled = false
 
 function Probe() {
   const { mode, setMode } = useViewportMode();
-  const { previewedCameraPath } = useViewportActions();
+  const camera = usePreviewCamera()?.camera;
   return (
-    <div data-testid="probe" data-mode={mode} data-preview={previewedCameraPath ?? ''}>
+    <div data-testid="probe" data-mode={mode} data-preview={camera ?? ''}>
       <button type="button" onClick={() => setMode('2D')}>
         2D
       </button>
@@ -44,10 +44,12 @@ function renderPanel(mode: ViewportMode, source = SCENE): Scene {
   render(
     <HierarchyProvider value={{ sceneGraph: scene.written(), panelId: 'cams-in-game', scene }}>
       <ViewportActionsProvider>
-        <ViewportModeProvider initialMode={mode}>
-          <Probe />
-          <CamerasPanel />
-        </ViewportModeProvider>
+        <PreviewCameraProvider scene={scene}>
+          <ViewportModeProvider initialMode={mode}>
+            <Probe />
+            <CamerasPanel />
+          </ViewportModeProvider>
+        </PreviewCameraProvider>
       </ViewportActionsProvider>
     </HierarchyProvider>
   );

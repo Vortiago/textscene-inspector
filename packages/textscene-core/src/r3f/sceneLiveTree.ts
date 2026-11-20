@@ -29,9 +29,12 @@ function awaitedInstancePath({ step }: LiveLink): string | null {
   return isDrawnIn ? null : step.instancePath;
 }
 
+// Only a scene never asked for: a request for a held one emits its answer again, which re-asks a reader.
 function requestInstance(loader: ResourceLoader, { raw, step }: LiveLink, path: string): void {
+  const type = isGltfPath(path) ? 'glb' : 'scene';
+  if (loader.getCached(type, path) !== undefined) return;
   if (raw.instance) registerInstanceResource(loader, raw.instance, step.scope.externalResources);
-  loader.request(isGltfPath(path) ? 'glb' : 'scene', path);
+  loader.request(type, path);
 }
 
 /** The resource an id of a node's own texts names, in the scene file the node's scope reads. */

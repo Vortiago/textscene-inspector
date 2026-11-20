@@ -8,6 +8,7 @@ export function createSceneGraphFromTscnScene(
     nodes: TscnNode[];
     externalResources?: readonly ExtResource[];
     internalResources?: readonly SubResource[];
+    editableInstances?: readonly string[];
   },
   scenePath: string = 'res://test.tscn'
 ): SceneGraph {
@@ -16,5 +17,6 @@ export function createSceneGraphFromTscnScene(
     nodes: tscnScene.nodes,
     internalResources: tscnScene.internalResources || [],
     externalResources: tscnScene.externalResources || [],
+    ...(tscnScene.editableInstances ? { editableInstances: tscnScene.editableInstances } : {}),
   });
 }

@@ -26,7 +26,3 @@ function useStatusFlag(read: (status: ViewStatus) => boolean): boolean {
 export function useIsCapturePending(): boolean {
   return useStatusFlag((status) => status.isCapturePending());
 }
-
-export function useViewPending(): boolean {
-  return useStatusFlag((status) => status.isPending());
-}

@@ -1,6 +1,12 @@
 import { PNG } from 'pngjs';
 import { settleCanvas } from '../visual/previewServer.mjs';
-import { expandAllTreeRows, readSelectedPaths, SELECT_SETTLE_MS } from './outliner.mjs';
+import {
+  checkNodePaths,
+  expandAllTreeRows,
+  readOutlinerPaths,
+  readSelectedPaths,
+  SELECT_SETTLE_MS,
+} from './outliner.mjs';
 import { openFixture } from './openFixture.mjs';
 import { checkDiagnostics } from './diagnostics.mjs';
 
@@ -8,6 +14,8 @@ export const INSTANCE_CLICK_FIXTURE = 'unit-instanced-click.tscn';
 // A hit walks up to a node the edited scene or an editable instance owns (node_3d_editor_plugin.cpp:807-815).
 export const LOCKED_PICK = 'Root/Locked';
 export const OPEN_PICK = 'Root/Open/Mesh';
+// Godot 4.6.3's Scene dock lists the editable instance's mesh only (scene_tree_editor.cpp:283-290).
+export const LISTED_ROWS = ['Root', 'Root/Locked', 'Root/Open', 'Root/Open/Mesh'];
 
 const isRed = (r, g, b) => r > 200 && g < 60 && b < 60;
 
@@ -49,15 +57,17 @@ export async function runInstanceClickScenario(browser, baseUrl) {
   });
   await settleCanvas(page, canvas);
   await expandAllTreeRows(page);
+  const rows = await readOutlinerPaths(page);
   const centres = redBoxCentres(await canvas.screenshot());
   const onLocked = centres ? await selectedAfterClickAt(page, canvas, centres.left) : null;
   const onOpen = centres ? await selectedAfterClickAt(page, canvas, centres.right) : null;
   await context.close();
-  return { centres, onLocked, onOpen, diagnostics };
+  return { centres, rows, onLocked, onOpen, diagnostics };
 }
 
-export function checkInstanceClick(gate, { centres, onLocked, onOpen, diagnostics }) {
+export function checkInstanceClick(gate, { centres, rows, onLocked, onOpen, diagnostics }) {
   checkDiagnostics(gate, '[instance click]', diagnostics);
+  checkNodePaths(gate, '[instance click] the scene tree', LISTED_ROWS, rows);
   gate.check(!!centres, '[instance click] the view draws no red box, so no click was made');
   if (!centres) return;
   gate.check(

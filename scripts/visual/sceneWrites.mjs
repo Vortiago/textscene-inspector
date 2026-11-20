@@ -34,3 +34,12 @@ export async function applySceneWrites(page, hostCalls = []) {
     { calls: hostCalls, waitMs: NODE_WAIT_MS }
   );
 }
+
+/** Selects the node at absolute `path` through the scene console, as a host's `selected` does. */
+export async function selectThroughConsole(page, path) {
+  await page.waitForFunction(() => window.textscene !== undefined);
+  await page.waitForFunction((nodePath) => window.textscene.scene.getNodeOrNull(nodePath) !== null, path, {
+    timeout: NODE_WAIT_MS,
+  });
+  await page.evaluate((nodePath) => window.textscene.select(window.textscene.scene.getNode(nodePath)), path);
+}

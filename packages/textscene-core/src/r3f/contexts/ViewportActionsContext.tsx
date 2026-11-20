@@ -1,10 +1,3 @@
-/**
- * What a panel's toolbar and panels do to its viewport: look through a camera, frame the 2D
- * stage, reset the view, toggle freelook and take a screenshot. `previewedCameraPath === null`
- * means the canvas draws through the editor camera. A node path makes it look through that Camera3D.
- */
-
-import type { SceneGraph } from '../../core/SceneGraph.js';
 import type { FreelookControl, FreelookState } from '../freelook.js';
 import {
   createContext,
@@ -29,6 +22,7 @@ interface Frame2DRequest {
 }
 
 export interface ViewportActionsContextValue {
+  /** Null while the canvas draws through the editor camera. */
   previewedCameraPath: string | null;
   previewCamera: (path: string) => void;
   endCameraPreview: () => void;
@@ -58,25 +52,6 @@ export interface ViewportActionsContextValue {
   freelookState: () => FreelookState | null;
   /** Calls `listener` on each new freelook state, and when a canvas registers or leaves. */
   subscribeFreelook: (listener: () => void) => () => void;
-  /** The active view, 3D or 2D, as a PNG data URL, or `null` before a canvas registers a handler. */
-  takeScreenshot: () => string | null;
-  /**
-   * The active canvas's `ScreenshotBridge` registers its capture here, with the scene graph it has
-   * rendered, so a host can tell a frame of the current scene from one of the scene before.
-   */
-  registerScreenshotHandler: (handler: () => string | null, renderedScene?: SceneGraph | null) => () => void;
-  /** Whether a canvas has registered a screenshot handler now. */
-  hasScreenshotHandler: () => boolean;
-  /** The scene graph the registered handler has rendered, or null with no handler or none given. */
-  screenshotScene: () => SceneGraph | null;
-  /** Calls `listener` each time a handler registers or leaves. Returns the unsubscribe. */
-  subscribeScreenshotHandler: (listener: () => void) => () => void;
-}
-
-/** What a canvas registers for a screenshot: the capture, and the scene graph it has rendered. */
-interface ScreenshotSource {
-  readonly capture: () => string | null;
-  readonly renderedScene: SceneGraph | null;
 }
 
 const ViewportActionsContext = createContext<ViewportActionsContextValue | null>(null);
@@ -171,25 +146,6 @@ export function ViewportActionsProvider({
     resetHandlerRef.current?.();
   }, [endCameraPreview, freelookRef, resetHandlerRef]);
 
-  const {
-    ref: screenshotSourceRef,
-    register: registerScreenshotSource,
-    subscribe: subscribeScreenshotHandler,
-  } = useHandlerSlot<ScreenshotSource>();
-  const registerScreenshotHandler = useCallback(
-    (capture: () => string | null, renderedScene: SceneGraph | null = null) =>
-      registerScreenshotSource({ capture, renderedScene }),
-    [registerScreenshotSource]
-  );
-  const takeScreenshot = useCallback(() => {
-    return screenshotSourceRef.current?.capture() ?? null;
-  }, [screenshotSourceRef]);
-  const hasScreenshotHandler = useCallback(() => screenshotSourceRef.current !== null, [screenshotSourceRef]);
-  const screenshotScene = useCallback(
-    () => screenshotSourceRef.current?.renderedScene ?? null,
-    [screenshotSourceRef]
-  );
-
   const toggleFreelook = useCallback(() => freelookRef.current?.toggle(), [freelookRef]);
   const freelookState = useCallback(() => freelookRef.current?.getState() ?? null, [freelookRef]);
   const subscribeFreelook = useCallback(
@@ -223,11 +179,6 @@ export function ViewportActionsProvider({
       toggleFreelook,
       freelookState,
       subscribeFreelook,
-      takeScreenshot,
-      registerScreenshotHandler,
-      hasScreenshotHandler,
-      screenshotScene,
-      subscribeScreenshotHandler,
     }),
     [
       previewedCameraPath,
@@ -242,11 +193,6 @@ export function ViewportActionsProvider({
       toggleFreelook,
       freelookState,
       subscribeFreelook,
-      takeScreenshot,
-      registerScreenshotHandler,
-      hasScreenshotHandler,
-      screenshotScene,
-      subscribeScreenshotHandler,
     ]
   );
 

@@ -33,6 +33,8 @@ export interface ViewStatus {
   settled(): ViewSettled | null;
   /** An attached view that has not settled: no view at all waits on nothing. */
   isPending(): boolean;
+  /** How many times the view has turned pending, so a reader that renders later misses no round. */
+  pendingRounds(): number;
   subscribe(listener: () => void): () => void;
   /** Stays pending while no view is attached, and rejects with the reason of `signal` once it aborts. */
   whenSettled(signal?: AbortSignal): Promise<ViewSettled>;
@@ -43,9 +45,8 @@ export interface ViewStatus {
   attach(scene: LiveScene): (() => void) | null;
   /** Keeps `frame` as the last frame: a view may fill the same record again for its next frame. */
   frameDrawn(frame: DrawnFrame): void;
-  isCaptureDue(): boolean;
-  /** Resolves the capture with `read`, or rejects it with what `read` throws. */
-  capture(read: () => RgbaImage): void;
+  /** A capture reads through it a microtask after a settled full-size frame. Returns the removal. */
+  readWith(read: () => RgbaImage): () => void;
 }
 
 interface PendingCapture {
@@ -61,7 +62,10 @@ export function createViewStatus(): ViewStatus {
   let lastFrame: DrawnFrame | null = null;
   // What subscribers last heard, so a view that settles again on the same facts still tells them.
   let announced: ViewSettled | null = null;
+  let rounds = 0;
   let capture: PendingCapture | null = null;
+  let reader: (() => RgbaImage) | null = null;
+  let isReadQueued = false;
 
   const showsDrawnState = () =>
     live !== null &&
@@ -77,6 +81,7 @@ export function createViewStatus(): ViewStatus {
   const notify = () => announcements.set(announcements.get() + 1);
 
   function announce(now = settled()): void {
+    if (now === null && announced !== null) rounds++;
     announced = now;
     notify();
   }
@@ -129,7 +134,39 @@ export function createViewStatus(): ViewStatus {
     });
     capture = { image, resolve, reject };
     notify();
+    queueRead();
     return image;
+  }
+
+  const isCaptureDue = () => capture !== null && lastFrame?.isFullSize === true && settled() !== null;
+
+  // A microtask, so a frame that makes a capture due finishes before the read draws its own.
+  function queueRead(): void {
+    if (isReadQueued || !reader || !isCaptureDue()) return;
+    isReadQueued = true;
+    queueMicrotask(() => {
+      isReadQueued = false;
+      if (reader && isCaptureDue()) read(reader);
+    });
+  }
+
+  function read(pixels: () => RgbaImage): void {
+    const done = capture;
+    capture = null;
+    try {
+      done?.resolve(pixels());
+    } catch (error) {
+      done?.reject(new Error(`expected the view's pixels, got ${String(error)}`));
+    }
+    notify();
+  }
+
+  function readWith(pixels: () => RgbaImage): () => void {
+    reader = pixels;
+    queueRead();
+    return () => {
+      if (reader === pixels) reader = null;
+    };
   }
 
   function attach(scene: LiveScene): (() => void) | null {
@@ -153,29 +190,19 @@ export function createViewStatus(): ViewStatus {
   function frameDrawn(frame: DrawnFrame): void {
     lastFrame = frame;
     publish();
-  }
-
-  function captureWith(read: () => RgbaImage): void {
-    const done = capture;
-    capture = null;
-    try {
-      done?.resolve(read());
-    } catch (error) {
-      done?.reject(new Error(`expected the view's pixels, got ${String(error)}`));
-    }
-    notify();
+    queueRead();
   }
 
   return {
     settled,
     isPending: () => live !== null && settled() === null,
+    pendingRounds: () => rounds,
     subscribe: announcements.subscribe,
     whenSettled,
     captureImage,
     isCapturePending: () => capture !== null,
     attach,
     frameDrawn,
-    isCaptureDue: () => capture !== null && lastFrame?.isFullSize === true && settled() !== null,
-    capture: captureWith,
+    readWith,
   };
 }

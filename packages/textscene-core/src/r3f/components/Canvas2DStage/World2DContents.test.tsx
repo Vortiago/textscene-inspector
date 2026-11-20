@@ -3,8 +3,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { waitFor } from '@testing-library/react';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SelectionProvider } from '../../contexts/SelectionContext';
-import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext';
-import { viewportActionsProbe } from '../../testing/ViewportActionsProbe';
 
 // The real ControlCanvasLayer renders null here, so a visible stand-in makes
 // its mount observable.
@@ -115,22 +113,6 @@ describe('World2DContents tiled uploads', () => {
 
     expect(tick).toHaveBeenCalledTimes(2);
     tick.mockRestore();
-  });
-});
-
-describe('World2DContents screenshot', () => {
-  it('registers the 2D view for the toolbar Screenshot and the host capture', async () => {
-    const { Probe, actions } = viewportActionsProbe();
-    await ReactThreeTestRenderer.create(
-      <ViewportActionsProvider>
-        <SelectionProvider>
-          <Probe />
-          <World2DContents {...baseProps} />
-        </SelectionProvider>
-      </ViewportActionsProvider>
-    );
-
-    expect(actions().hasScreenshotHandler()).toBe(true);
   });
 });
 

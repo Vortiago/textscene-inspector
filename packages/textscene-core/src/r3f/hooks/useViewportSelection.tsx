@@ -4,7 +4,7 @@ import { useSelection } from '../contexts/SelectionContext.js';
 import { useCanvasWorkspace } from '../contexts/CanvasWorkspaceContext.js';
 import { useHostPick } from '../hostSelection/HostSelection.js';
 import { resolvePathFromObject } from './resolvePathFromObject.js';
-import { getAncestorPaths } from '../../utils/nodePath.js';
+import { withAncestorsExpanded } from '../../utils/nodePath.js';
 
 export interface UseViewportSelectionOptions {
   /** Pixels of pointer travel before a click is treated as a drag. Defaults to 5. */
@@ -51,17 +51,9 @@ export function useViewportSelection(options: UseViewportSelectionOptions = {}):
   const select = useCallback(
     (nodePath: string) => {
       setSelectedNodePath(nodePath);
-      if (autoExpandAncestors) {
-        const ancestors = getAncestorPaths(nodePath);
-        if (ancestors.length === 0) return;
-        const current = expandedRef.current;
-        const missing = ancestors.filter((a) => !current.has(a));
-        if (missing.length > 0) {
-          const next = new Set(current);
-          for (const a of missing) next.add(a);
-          setExpandedNodePaths(next);
-        }
-      }
+      if (!autoExpandAncestors) return;
+      const expanded = withAncestorsExpanded(expandedRef.current, nodePath);
+      if (expanded !== expandedRef.current) setExpandedNodePaths(expanded);
     },
     [setSelectedNodePath, autoExpandAncestors, setExpandedNodePaths]
   );
