@@ -2,7 +2,7 @@ import { useId, useMemo, type ReactNode } from 'react';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { openScene, type Scene } from '../scene/openScene.js';
 import { useSceneLoader } from './sceneResourcePipeline.js';
-import { useSceneGraphs, useSceneText } from './hooks/useOpenedScene.js';
+import { useSceneGraphs, useSceneText } from './hooks/openedScene.js';
 import './sceneLiveTree.js';
 import { SceneChangeResetter } from './components/TscnPreviewShell/SceneChangeResetter.js';
 import { previewShellProviders } from './components/TscnPreviewShell/previewShellProviders.js';

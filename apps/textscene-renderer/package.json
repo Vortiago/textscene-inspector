@@ -1,7 +1,7 @@
 {
   "name": "@textscene/renderer",
   "version": "0.0.0",
-  "description": "A react-three-fiber renderer for Godot .tscn scenes. React and three.js are peer dependencies.",
+  "description": "Draws Godot .tscn scenes in the browser: open a scene, change its nodes from your code, and mount a view of it. React and three.js are peer dependencies.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

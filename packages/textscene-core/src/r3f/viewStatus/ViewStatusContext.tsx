@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { subscribeToNothing } from '../../utils/subscribeToNothing.js';
-import { createViewStatus, type ViewSettled, type ViewStatus } from './viewStatus.js';
+import { createViewStatus, type ViewStatus } from './viewStatus.js';
 
 const ViewStatusContext = createContext<ViewStatus | null>(null);
 ViewStatusContext.displayName = 'ViewStatusContext';
@@ -22,11 +22,6 @@ function useStatusValue<T>(read: (status: ViewStatus) => T, absent: T): T {
   return useSyncExternalStore(status?.subscribe ?? subscribeToNothing, () =>
     status ? read(status) : absent
   );
-}
-
-/** The view below the same `TscnSceneProvider`, in any mode: null while pending, and with no view. */
-export function useGameViewSettled(): ViewSettled | null {
-  return useStatusValue((status) => status.settled(), null);
 }
 
 /** An In-game capture reads the full window, so that view draws its target at full size until then. */

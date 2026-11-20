@@ -10,7 +10,6 @@ export type { TscnNode } from './parser/types';
 export { setLogAdapter, info, warn } from './logger';
 export type { LogAdapter } from './logger';
 
-export type { ResourceProvider } from './resources/ResourceProvider';
 export { isBinaryResourceType } from './resources/resourceProviderUtils';
 
 export {
@@ -23,8 +22,6 @@ export {
   isCompactLayout,
   parseTscnContent,
   usePersistedState,
-  type Scene,
-  variant,
 } from './r3f/index';
 
 export { ResourceLoader } from './resources/ResourceLoader';

@@ -1,5 +1,5 @@
 import { Canvas } from '@react-three/fiber';
-import { lazy, Suspense, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useImperativeHandle, useRef, type ReactNode, type Ref } from 'react';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useSeatedRoots } from './useLiveSceneTree.js';
 import { useViewShow } from './viewShow/ViewShowContext.js';
@@ -35,6 +35,8 @@ import { ViewportActionsProvider, useOptionalViewportActions } from './contexts/
 import { ViewCamera } from './viewCamera.js';
 import { EditorViewReport } from './viewStatus/EditorViewReport.js';
 import { HostSelection, type HostSelectionProps } from './hostSelection/HostSelection.js';
+import { useViewStatus } from './viewStatus/ViewStatusContext.js';
+import { viewAnswers, type ViewAnswers } from './viewStatus/viewAnswers.js';
 
 // Lazy, so the glyph engine and the parse of the prompt load only for an empty canvas.
 const EmptyScenePrompt = lazy(() => import('./emptyScenePrompt.js'));
@@ -136,6 +138,8 @@ export interface TscnCanvasProps extends Omit<HostSelectionProps, 'children'> {
   show?: Partial<ViewShow>;
   /** The class of the element the view fills. */
   className?: string;
+  /** The view's `settled` and `captureImage`, as `mountScene` gives them. Props change the view. */
+  ref?: Ref<ViewAnswers>;
 }
 
 export function TscnCanvas({
@@ -147,6 +151,7 @@ export function TscnCanvas({
   onSelect,
   show,
   className,
+  ref,
 }: TscnCanvasProps) {
   const stage = (
     // The In-game mode takes no pointer, and the 2D mode picks no node yet.
@@ -155,12 +160,39 @@ export function TscnCanvas({
         <ViewShowProvider show={show}>
           <FrameStatsProvider>
             <ViewportActionsScope>{stageOf({ mode, camera, className })}</ViewportActionsScope>
+            {ref && <ViewRef viewRef={ref} lookedThrough={mode === '3D' ? (camera ?? null) : null} />}
           </FrameStatsProvider>
         </ViewShowProvider>
       </PreviewVisibilityProvider>
     </HostSelection>
   );
   return scene ? <TscnSceneProvider scene={scene}>{stage}</TscnSceneProvider> : stage;
+}
+
+/** Hands the ref the answers of the view below the same scene. They end when the view unmounts. */
+function ViewRef({ viewRef, lookedThrough }: { viewRef: Ref<ViewAnswers>; lookedThrough: string | null }) {
+  const scene = useOptionalHierarchy()?.scene;
+  const status = useViewStatus();
+  const ending = useRef(new AbortController());
+  useEffect(() => {
+    // A controller per mount, so a remount under React's strict mode answers again.
+    const controller = new AbortController();
+    ending.current = controller;
+    return () => controller.abort(new Error('expected the view to settle before its unmount'));
+  }, []);
+  useImperativeHandle(viewRef, () => {
+    if (!scene || !status) throw new Error('expected a TscnCanvas with a scene, got none');
+    // Read at each call, since the mount's controller is set after the handle.
+    const answers = () =>
+      viewAnswers({ scene, status, ending: ending.current.signal, lookedThrough: () => lookedThrough });
+    return {
+      get settled() {
+        return answers().settled;
+      },
+      captureImage: () => answers().captureImage(),
+    };
+  }, [scene, status, lookedThrough]);
+  return null;
 }
 
 /** A host's own provider wins, so its panels and the `camera` prop move the same preview. */

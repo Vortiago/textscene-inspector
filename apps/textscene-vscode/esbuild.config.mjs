@@ -11,6 +11,7 @@ import { resolve } from 'node:path';
 import { mergedFileInputs, writeBundledNotices } from '../../scripts/third-party-notices.mjs';
 import { chunkImportPlugin } from './src/bundler/chunkImportPlugin.mjs';
 import { textureWorkerPlugin } from '../../packages/textscene-core/src/workers/bundler/esbuildPlugin.mjs';
+import { WORKSPACE_RENDERER_ALIAS } from '../../scripts/workspaceRenderer.mjs';
 
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
@@ -76,6 +77,7 @@ const webviewOptions = {
   entryNames: '[name]',
   chunkNames: 'chunks/[name]-[hash]',
   external: ['vscode'],
+  alias: WORKSPACE_RENDERER_ALIAS,
   format: 'esm',
   splitting: true,
   platform: 'browser',

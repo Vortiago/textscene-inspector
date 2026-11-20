@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useEffect,
   useMemo,
   useReducer,
   useRef,
@@ -9,7 +10,8 @@ import {
 } from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
-import { resourceFilePath, TscnPreviewShell, type ResourceProvider } from '@textscene/core';
+import { resourceFilePath, TscnPreviewShell } from '@textscene/core';
+import type { ResourceProvider } from '@textscene/renderer';
 import { exposeScene } from './sceneConsole';
 import { fixtures } from './fixturesAll';
 import { corpusRootFor, resToFixtureFile, fixtureFileToRes } from './corpusRoot';
@@ -17,6 +19,7 @@ import { WebResourceProvider } from './providers/WebResourceProvider';
 import { SourceGutter } from './SourceGutter';
 import { FileProblems } from './FileProblems';
 import { useSceneSource } from './useSceneSource';
+import { useScene } from './useScene';
 import { useFixtureSelection } from './useFixtureSelection';
 import { useCameraDeepLink } from './useCameraDeepLink';
 import { useDocumentVisibility } from './useDocumentVisibility';
@@ -94,6 +97,15 @@ export function R3FApp() {
   // Two corpora may name one res:// path, so each gets a provider object and so a loader of its own.
   // eslint-disable-next-line react-hooks/exhaustive-deps -- a new root is what asks for a new object
   const corpusFiles = useMemo(() => filesOf(provider), [provider, resourceRoot]);
+  const scene = useScene(
+    forwardedContent,
+    corpusFiles,
+    // Relative to `resourceRoot`, so it names the rendered fixture. An upload is named by its file.
+    renderedFixtureFile
+      ? fixtureFileToRes(renderedFixtureFile, resourceRoot)
+      : `res://${uploadedTscnName || 'empty.tscn'}`
+  );
+  useEffect(() => exposeScene(scene), [scene]);
 
   /** Every scene replacement that may cross a corpus goes through here, to cross with the viewport empty. */
   const tearDownIfCrossingCorpus = (nextRoot: string) => {
@@ -282,19 +294,11 @@ export function R3FApp() {
       <div style={{ flex: 1, minWidth: 0, height: '100%', position: 'relative' }}>
         <TscnPreviewShell
           panelId={`web-${fixtureFile || uploadedTscnName || 'empty'}`}
-          content={forwardedContent}
-          provider={corpusFiles}
-          rootScenePath={
-            // Relative to `resourceRoot`, so it names the rendered fixture. An upload is named by its file.
-            renderedFixtureFile
-              ? fixtureFileToRes(renderedFixtureFile, resourceRoot)
-              : `res://${uploadedTscnName || 'empty.tscn'}`
-          }
+          scene={scene}
           onResourceUpload={handleResourceUpload}
           onResourceRemove={handleResourceRemove}
           onMissingPathsChange={handleMissingPathsChange}
           onCopyNodePath={copyToClipboard}
-          onSceneOpen={exposeScene}
           // Opening a sub-scene loads it from the mirror, so without one the ⤢ button goes.
           onOpenSubScene={HAS_FIXTURES_MIRROR ? handleOpenSubScene : undefined}
           initialPreviewedCameraPath={initialPreviewedCameraPath}

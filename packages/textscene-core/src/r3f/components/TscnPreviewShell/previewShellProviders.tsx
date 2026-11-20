@@ -73,7 +73,7 @@ export function previewShellProviders({
         {children}
       </ViewportActionsProvider>
     ),
-    // The view in any mode reports here, and a host's `useGameViewSettled` beside the view reads it.
+    // The view in any mode reports here, and the shell's load status reads it.
     (children) => <ViewStatusProvider>{children}</ViewStatusProvider>,
     (children) => (
       <MissingResourcesProvider onMissingPathsChange={onMissingPathsChange}>

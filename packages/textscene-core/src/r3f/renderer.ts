@@ -12,8 +12,5 @@ export type { NodeHandle } from '../scene/nodeHandle.js';
 export type { CameraState } from '../scene/viewportCameras.js';
 export { variant, type SceneValue, type Variant } from '../scene/variant.js';
 export { TscnCanvas } from './TscnCanvas.js';
-export { TscnSceneProvider } from './TscnSceneProvider.js';
 export { mountScene, type View, type ViewOptions } from './mountScene.js';
-export { useGameViewSettled } from './viewStatus/ViewStatusContext.js';
 export type { ResourceProvider } from '../resources/ResourceProvider.js';
-export { useSelection } from './contexts/SelectionContext.js';

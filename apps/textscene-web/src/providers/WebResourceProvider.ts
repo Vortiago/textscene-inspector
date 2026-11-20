@@ -1,7 +1,7 @@
 /** The browser ResourceProvider: uploaded files in memory, then the fixtures mirror. */
 
 import { isBinaryResourceType, info } from '@textscene/core';
-import type { ResourceProvider } from '@textscene/core';
+import type { ResourceProvider } from '@textscene/renderer';
 import type { DirectoryEntry } from '@textscene/core/resources/projectListing';
 import { fixtureUrlForRes } from '../corpusRoot';
 import { FIXTURE_LISTING_URL, mirrorEntries, mirrorFolderOf, type FixtureListing } from '../fixtureListing';

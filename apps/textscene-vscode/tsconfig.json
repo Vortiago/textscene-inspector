@@ -2,12 +2,11 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": "./src",
-    // Node globals (fs, process, __dirname) used by extension-host and
-    // integration-helper sources. Previously @types/node rode in via a
-    // transitive `/// <reference types="node" />` in glob@11's path-scurry;
-    // glob@13 dropped it, so declare the dependency explicitly (mirrors
-    // tsconfig.test.json).
+    // Wide enough for the renderer's workspace source: nothing here emits, as a bundler builds the app.
+    "rootDir": "../..",
+    // The renderer's source in the workspace, as `scripts/workspaceRenderer.mjs` aliases it for the bundler.
+    "paths": { "@textscene/renderer": ["../textscene-renderer/src/index.ts"] },
+    // Node globals (fs, process, __dirname) for the extension host and the integration helpers.
     "types": ["node"]
   },
   "include": ["src/**/*"],

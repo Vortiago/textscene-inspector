@@ -10,7 +10,7 @@ vi.mock('../../TscnCanvas', () => ({
   TscnSceneContents: () => null,
 }));
 
-import { TscnPreviewShell } from './TscnPreviewShell';
+import { TextShell } from './TscnPreviewShell.testkit';
 
 const TWO_SCRIPTS = `[gd_scene format=3]
 
@@ -72,13 +72,13 @@ script = ExtResource("1_player")
 `;
 
 async function openIn(mode: ViewportMode, content: string) {
-  render(<TscnPreviewShell panelId={`notes-${mode}`} content={content} initialViewportMode={mode} />);
+  render(<TextShell panelId={`notes-${mode}`} content={content} initialViewportMode={mode} />);
   await screen.findAllByText('Main');
 }
 
 const notes = () => screen.queryAllByTestId('game-start-note').map((note) => note.textContent);
 
-describe('<TscnPreviewShell> In-game notes', () => {
+describe('<TextShell> In-game notes', () => {
   it('says that scripts do not run, with the count of nodes that hold one', async () => {
     await openIn('in-game', TWO_SCRIPTS);
     expect(notes()).toEqual(['Scripts do not run: 2 nodes hold a script.']);
@@ -113,7 +113,7 @@ describe('<TscnPreviewShell> In-game notes', () => {
     const fake = createFakeResourceLoader();
     render(
       <ResourceLoaderProvider loader={fake.loader}>
-        <TscnPreviewShell panelId="notes-missing" content={MISSING_SCRIPT} initialViewportMode="in-game" />
+        <TextShell panelId="notes-missing" content={MISSING_SCRIPT} initialViewportMode="in-game" />
       </ResourceLoaderProvider>
     );
     await screen.findAllByText('Main');

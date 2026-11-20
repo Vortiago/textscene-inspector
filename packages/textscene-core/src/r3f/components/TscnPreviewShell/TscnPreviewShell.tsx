@@ -17,7 +17,7 @@ import {
 } from '../../contexts/ViewportModeContext.js';
 import { readPersisted, usePersistedState } from '../../hooks/usePersistedState.js';
 import { DEFAULT_SHOW } from '../../viewShow/viewShow.js';
-import { useOpenedScene, useSceneGraphs } from '../../hooks/useOpenedScene.js';
+import { useSceneGraphs } from '../../hooks/openedScene.js';
 import { ViewportToolbar } from '../ViewportToolbar/ViewportToolbar.js';
 import { Splitter } from '../Splitter/Splitter.js';
 import { ViewportArea } from './ViewportArea.js';
@@ -42,7 +42,6 @@ import { AnimationTabWatcher } from './AnimationTabWatcher.js';
 import { DetailTabs, type DetailTab } from './DetailTabs.js';
 import { SceneTreePane } from './SceneTreePane.js';
 import { previewShellProviders } from './previewShellProviders.js';
-import { DEFAULT_ROOT_SCENE_PATH } from '../../../scene/openScene.js';
 import { useSceneLoader } from '../../sceneResourcePipeline.js';
 import { CaptureStateReporter } from './CaptureStateReporter.js';
 import type { TscnPreviewShellProps } from './previewShellProps.js';
@@ -63,9 +62,7 @@ function isViewportMode(value: unknown): value is ViewportMode {
 
 export function TscnPreviewShell({
   panelId,
-  content,
-  rootScenePath = DEFAULT_ROOT_SCENE_PATH,
-  provider,
+  scene,
   onNodeReveal,
   onOpenSubScene,
   toolbar,
@@ -77,15 +74,9 @@ export function TscnPreviewShell({
   onCaptureStateChange,
   isVisible,
   onCopyNodePath,
-  onSceneOpen,
 }: TscnPreviewShellProps) {
-  const scene = useOpenedScene(content, rootScenePath, provider);
   const { parsed, sceneGraph } = useSceneGraphs(scene);
   const { sceneGraph: parsedGraph, error } = parsed;
-  // A block body: an arrow body would hand the host's return value to React as the cleanup.
-  useEffect(() => {
-    onSceneOpen?.(scene);
-  }, [scene, onSceneOpen]);
 
   const hierarchyValue = useMemo(() => ({ sceneGraph, panelId, scene }), [sceneGraph, panelId, scene]);
   const [viewportError, setViewportError] = useState<Error | null>(null);
@@ -132,7 +123,7 @@ export function TscnPreviewShell({
     initialViewport,
     isVisible,
     panelId,
-    rootScenePath,
+    rootScenePath: scene.rootScenePath,
   });
 
   return withProviders(

@@ -1,4 +1,4 @@
-import { variant, type Scene } from '@textscene/core';
+import { variant, type Scene } from '@textscene/renderer';
 
 /** What the browser console and a capture script reach: the open scene and the Variant reader. */
 export interface SceneConsole {

@@ -15,7 +15,7 @@ vi.mock('./ViewportArea', () => ({
   },
 }));
 
-import { TscnPreviewShell } from './TscnPreviewShell';
+import { TextShell } from './TscnPreviewShell.testkit';
 
 const MINIMAL_TSCN = `[gd_scene load_steps=1 format=3]
 
@@ -27,10 +27,10 @@ const OTHER_TSCN = `[gd_scene load_steps=1 format=3]
 [node name="Other" type="Node3D"]
 `;
 
-describe('<TscnPreviewShell> PreviewErrorBoundary (#216)', () => {
+describe('<TextShell> PreviewErrorBoundary (#216)', () => {
   it('renders the viewport normally when nothing throws', () => {
     shouldCrash.current = false;
-    render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} />);
+    render(<TextShell panelId="p1" content={MINIMAL_TSCN} />);
     expect(screen.getByTestId('viewport-stub')).toBeTruthy();
   });
 
@@ -38,7 +38,7 @@ describe('<TscnPreviewShell> PreviewErrorBoundary (#216)', () => {
     shouldCrash.current = true;
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} />);
+    render(<TextShell panelId="p1" content={MINIMAL_TSCN} />);
 
     // The viewport crashed, but the panel-id root and the top bar survive.
     expect(globalThis.document.querySelector('[data-panel-id="p1"]')).toBeTruthy();
@@ -53,12 +53,12 @@ describe('<TscnPreviewShell> PreviewErrorBoundary (#216)', () => {
     shouldCrash.current = true;
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    const { rerender } = render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} />);
+    const { rerender } = render(<TextShell panelId="p1" content={MINIMAL_TSCN} />);
     expect(screen.getByRole('alert')).toBeTruthy();
 
     // The user fixes the file: the viewport stops crashing and sceneGraph changes.
     shouldCrash.current = false;
-    rerender(<TscnPreviewShell panelId="p1" content={OTHER_TSCN} />);
+    rerender(<TextShell panelId="p1" content={OTHER_TSCN} />);
 
     expect(screen.getByTestId('viewport-stub')).toBeTruthy();
     expect(screen.queryByRole('alert')).toBeNull();
@@ -70,11 +70,11 @@ describe('<TscnPreviewShell> PreviewErrorBoundary (#216)', () => {
     shouldCrash.current = true;
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    const { rerender } = render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} />);
+    const { rerender } = render(<TextShell panelId="p1" content={MINIMAL_TSCN} />);
     expect(screen.getByRole('alert')).toBeTruthy();
 
     // Only an unrelated prop changes, so the boundary stays on the fallback.
-    rerender(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} toolbar={<span>hi</span>} />);
+    rerender(<TextShell panelId="p1" content={MINIMAL_TSCN} toolbar={<span>hi</span>} />);
     expect(screen.getByRole('alert')).toBeTruthy();
 
     consoleSpy.mockRestore();

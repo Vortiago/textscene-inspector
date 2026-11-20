@@ -77,7 +77,7 @@ A view in any mode reports into a status slot that `TscnSceneProvider` and the s
 no resource, texture or font pending. One frame is enough: nested viewports draw before their parent in
 the frame (`nestedViewportPaths.ts`), and the loader counts a pending file from the commit that asks
 for it. One status serves one view, and it refuses a second one. A host reads the
-slot through `useGameViewSettled()` or the `settled` of `mountScene`. The settled value holds facts of
+slot through the `settled` of `mountScene` or of a `TscnCanvas` ref. The settled value holds facts of
 the game's start, so it is the same in every mode. An In-game capture holds the root target
 at the full window size, draws the window with its bars into a target of the window's size, and reads
 that target back, so the PNG has the window's size whatever the pane's. A 3D or 2D capture draws one

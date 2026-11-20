@@ -3,12 +3,12 @@ import { createRoot } from 'react-dom/client';
 import * as logger from '../logger.js';
 import type { Scene } from '../scene/openScene.js';
 import type { NodeHandle } from '../scene/nodeHandle.js';
-import { encodePng } from '../utils/encodePng.js';
 import { TscnCanvas, type TscnCanvasMode } from './TscnCanvas.js';
 import { TscnSceneProvider } from './TscnSceneProvider.js';
-import { assertCameraPath, assertLoadedCamera } from './viewCamera.js';
+import { assertCameraPath } from './viewCamera.js';
 import { ViewStatusProvider } from './viewStatus/ViewStatusContext.js';
-import { createViewStatus, type ViewSettled } from './viewStatus/viewStatus.js';
+import { createViewStatus } from './viewStatus/viewStatus.js';
+import { viewAnswers, type ViewAnswers } from './viewStatus/viewAnswers.js';
 import { assertShow, DEFAULT_SHOW, withShown, type ViewShow } from './viewShow/viewShow.js';
 
 export interface ViewOptions {
@@ -30,11 +30,8 @@ export interface ViewOptions {
 type MountedOptions = Omit<ViewOptions, 'show'> &
   Required<Pick<ViewOptions, 'mode' | 'visible' | 'camera'>> & { show: ViewShow };
 
-export interface View {
-  /** Waits again after a scene change. Rejects for a failed mount, a dispose or a path to no Camera3D. */
-  readonly settled: Promise<ViewSettled>;
-  /** In-game at the window's size, 3D and 2D at the canvas's size. Rejects before `settled`. */
-  captureImage(): Promise<Blob>;
+/** `settled` rejects for a failed mount and after a dispose. */
+export interface View extends ViewAnswers {
   /** Changes only the keys given a value, in `show` too. A `settled` from before a switch waits for it. */
   update(options: ViewOptions): void;
   /** The scene stays open for another view. */
@@ -64,19 +61,17 @@ export function mountScene(element: HTMLElement, scene: Scene, options: ViewOpti
       </TscnSceneProvider>
     );
   render();
-  const ended = () => Promise.reject(ending.signal.reason as Error);
+  const answers = viewAnswers({
+    scene,
+    status,
+    ending: ending.signal,
+    lookedThrough: () => (current.mode === '3D' ? current.camera : null),
+  });
   return {
     get settled() {
-      if (ending.signal.aborted) return ended();
-      return status.whenSettled(ending.signal).then((settled) => {
-        if (current.mode === '3D' && current.camera !== null) assertLoadedCamera(scene, current.camera);
-        return settled;
-      });
+      return answers.settled;
     },
-    captureImage() {
-      if (ending.signal.aborted) return ended();
-      return status.captureImage().then(encodePng);
-    },
+    captureImage: answers.captureImage,
     update(next) {
       if (isDisposed) throw new Error('expected a mounted view to update, got a disposed one');
       current = withGiven(current, checked(scene, next));

@@ -6,8 +6,13 @@ import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as renderer from './renderer';
 import { TscnSceneContents } from './TscnCanvas';
+import { TscnSceneProvider } from './TscnSceneProvider';
 
 describe('the renderer entry', () => {
+  it('exports the four values of the surface', () => {
+    expect(Object.keys(renderer).sort()).toEqual(['TscnCanvas', 'mountScene', 'openScene', 'variant']);
+  });
+
   it('registers the node components, so a scene it is given draws', async () => {
     const source = `[gd_scene format=3]
 
@@ -20,9 +25,9 @@ mesh = SubResource("BoxMesh_1")
 `;
 
     const drawn = await ReactThreeTestRenderer.create(
-      <renderer.TscnSceneProvider source={source} provider={{ loadResource: async () => null }}>
+      <TscnSceneProvider scene={renderer.openScene({ source, provider: { loadResource: async () => null } })}>
         <TscnSceneContents />
-      </renderer.TscnSceneProvider>
+      </TscnSceneProvider>
     );
 
     expect(drawn.scene.findAllByType('Mesh')).toHaveLength(1);
