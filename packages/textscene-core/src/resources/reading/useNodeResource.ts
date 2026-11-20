@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
 import { useByValue } from '../../r3f/hooks/useByValue';
 import { useSceneResources, type SceneResources } from '../../r3f/SceneResourcesContext';
-import { hasUnsettledFile, useStableEntries } from '../useLoadedFiles';
+import { hasUnsettledFile } from '../useLoadedFiles';
 import { usePendingWhile } from '../usePendingWhile';
 import { useResourceLoader } from '../useResource';
 import { loaderSnapshots, NO_LOADER } from './loaderSnapshots';
@@ -69,9 +69,8 @@ export function useSnapshotHost<R>(read: (snapshot: ResourceSnapshot) => R): R {
   useMemo(() => source.restart(), [source, read]);
   const snapshot = useSyncExternalStore(source.subscribe, source.current, source.current);
   const result = useMemo(() => read(snapshot), [snapshot, read]);
-  const files = useStableEntries(new Map(source.files()));
   // After every commit: a read may have touched a file the last request did not see.
   useEffect(() => source.request());
-  usePendingWhile(loader !== null && hasUnsettledFile(files));
+  usePendingWhile(loader !== null && hasUnsettledFile(source.files()));
   return result;
 }

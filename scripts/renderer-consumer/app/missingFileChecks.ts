@@ -6,6 +6,9 @@ const MISSING_PATH = 'res://missing.png';
 /** The notice of a change comes in a frame after the change, which can be after `settled` resolves. */
 const NOTICE_WAIT_MS = 1000;
 
+/** A file still loading after this long is a failure to report, not a run to hang. */
+const LOAD_WAIT_MS = 10_000;
+
 /** A sprite whose texture no file answers, so the scene asks for a file and does not get it. */
 const MISSING_TEXTURE_SCENE = `[gd_scene format=3]
 
@@ -35,14 +38,18 @@ const missingPathsOf = (scene: Scene) =>
     .filter((file) => file.state === 'missing')
     .map((file) => file.path);
 
-/** `scene.files()` once no entry is loading. */
+/** `scene.files()` once no entry is loading, or as they stand after `LOAD_WAIT_MS`. */
 function loadedFiles(scene: Scene): Promise<readonly SceneFile[]> {
   return new Promise((resolve) => {
-    const check = () => {
-      if (scene.files().some((file) => file.state === 'loading')) return;
+    const settle = () => {
+      clearTimeout(timer);
       stop();
       resolve(scene.files());
     };
+    const check = () => {
+      if (!scene.files().some((file) => file.state === 'loading')) settle();
+    };
+    const timer = setTimeout(settle, LOAD_WAIT_MS);
     const stop = scene.subscribe(check);
     check();
   });

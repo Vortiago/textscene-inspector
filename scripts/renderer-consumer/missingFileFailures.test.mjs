@@ -14,7 +14,7 @@ const MISSING_FILE = {
 const PASSING = {
   beforeView: [MISSING_FILE],
   settledKeys: ['scriptedNodeCount', 'hasCurrentCamera'],
-  heard: [[], [MISSING_PATH]],
+  heard: [[], [MISSING_PATH], []],
   afterWrite: [],
 };
 
@@ -39,6 +39,12 @@ describe('missingFileFailures', () => {
   it('names a subscribe that never heard the missing file', () => {
     expect(missingFileFailures({ ...PASSING, heard: [[]] })).toEqual([
       'missing files: subscribe: expected a notice that sees res://missing.png, got [[]]',
+    ]);
+  });
+
+  it('names a last subscribe notice that still sees the file after the write', () => {
+    expect(missingFileFailures({ ...PASSING, heard: [[], [MISSING_PATH]] })).toEqual([
+      'missing files: the last subscribe notice: expected [], got ["res://missing.png"]',
     ]);
   });
 

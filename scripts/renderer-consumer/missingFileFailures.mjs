@@ -21,5 +21,6 @@ export function missingFileFailures({ beforeView, settledKeys, heard, afterWrite
       ? []
       : [`subscribe: expected a notice that sees ${MISSING_PATH}, got ${JSON.stringify(heard)}`]),
     ...equalityFailure('scene.files() after texture = null', [], afterWrite),
+    ...equalityFailure('the last subscribe notice', [], heard.at(-1) ?? null),
   ].map((failure) => `missing files: ${failure}`);
 }

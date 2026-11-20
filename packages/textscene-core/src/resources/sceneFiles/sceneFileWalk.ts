@@ -74,11 +74,11 @@ export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void
 
   function outcome(file: string): LoadOutcome | null | undefined {
     const cached = loader.loadOutcomes.getCached(file);
-    if (cached === undefined && !pinnedOutcomes.has(file)) {
+    if (!pinnedOutcomes.has(file)) {
       pinnedOutcomes.add(file);
       loader.loadOutcomes.pin(file);
-      loader.loadOutcomes.request(file);
     }
+    if (cached === undefined && !loader.loadOutcomes.isLoading(file)) loader.loadOutcomes.request(file);
     return cached;
   }
 
@@ -122,8 +122,8 @@ export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void
   function stateOf(path: string, { isReading, addresses }: Entry): Pick<SceneFile, 'state' | 'reason'> {
     const found = outcome(path);
     if (found === undefined || isReading) return { state: 'loading', reason: null };
-    if (found === null) return { state: 'missing', reason: { chain: [path], cause: 'missing' } };
-    if (found.isFailed) return { state: 'missing', reason: { chain: found.chain, cause: found.cause } };
+    // Null: the host could not read a file that exists, which `loadOutcome` counts as no failure.
+    if (found?.isFailed) return { state: 'missing', reason: { chain: found.chain, cause: found.cause } };
     if (addresses.length === 0) return { state: 'loaded', reason: null };
     const text = textFile(path);
     if (text === undefined) return { state: 'loading', reason: null };

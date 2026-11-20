@@ -46,7 +46,7 @@ export function useMissingResources(): MissingResourcesContextValue {
   return useContext(MissingResourcesContext);
 }
 
-/** Each file that turned from `missing` to `loaded`, kept across scenes until removed, and the removal. */
+/** Each file that failed first and then loaded, kept across scenes until removed, and the removal. */
 function useUploadedPaths(files: readonly SceneFile[]): [ReadonlySet<string>, (path: string) => void] {
   const [uploadedPaths, setUploadedPaths] = useState<ReadonlySet<string>>(() => new Set<string>());
   const seenMissing = useRef<ReadonlySet<string>>(new Set());
@@ -54,7 +54,7 @@ function useUploadedPaths(files: readonly SceneFile[]): [ReadonlySet<string>, (p
     const arrived = files.filter((file) => file.state === 'loaded' && seenMissing.current.has(file.path));
     // A file loads again after a change, so one seen missing stays seen while it loads.
     const stillMissing = files.filter(
-      ({ path, state }) => state === 'missing' || (state === 'loading' && seenMissing.current.has(path))
+      (file) => failsItself(file) || (file.state === 'loading' && seenMissing.current.has(file.path))
     );
     seenMissing.current = new Set(stillMissing.map((file) => file.path));
     if (arrived.length === 0) return;
@@ -65,4 +65,9 @@ function useUploadedPaths(files: readonly SceneFile[]): [ReadonlySet<string>, (p
     []
   );
   return [uploadedPaths, removeUploaded];
+}
+
+/** The file an upload replaces: a file that fails through another loads once that one arrives. */
+function failsItself({ path, state, reason }: SceneFile): boolean {
+  return state === 'missing' && reason?.chain.at(-1) === path;
 }

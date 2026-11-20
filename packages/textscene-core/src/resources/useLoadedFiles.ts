@@ -94,7 +94,7 @@ export function hasUnsettledFile(files: ReadonlyMap<string, CachedFile<object>>)
  * `files` under the identity of the last map with the same entries. `version` moves on every
  * resource load in the project, and a new map would rebuild the root's plan and its subtree.
  */
-export function useStableEntries<T extends object>(
+function useStableEntries<T extends object>(
   files: ReadonlyMap<string, CachedFile<T>>
 ): ReadonlyMap<string, CachedFile<T>> {
   const last = useRef(files);

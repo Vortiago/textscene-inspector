@@ -202,7 +202,7 @@ export class ResourceLoader {
         // The file itself, so its creation or removal clears the outcome.
         this.dependencies.record(dependent, file);
         const listing = await this.currentListing(dependent, folderOf(file));
-        return listing === null ? this.isReadable(file) : existsInListing(file, listing);
+        return listing === null ? this.isPresent(file) : existsInListing(file, listing);
       },
       isImportFailed: async (file) => {
         if (!listsImportSidecar(file, await this.currentListing(dependent, folderOf(file)))) return false;
@@ -214,7 +214,12 @@ export class ResourceLoader {
     };
   }
 
-  /** For a host that cannot list: one byte read, since a host stops a binary read there. */
+  /** For a host that cannot list: the file or its import sidecar, as `existsInListing` counts it. */
+  private async isPresent(file: string): Promise<boolean> {
+    return (await this.isReadable(file)) || this.isReadable(importSidecarPath(file));
+  }
+
+  /** One byte read, since a host stops a binary read there. */
   private isReadable(file: string): Promise<boolean> {
     let probe = this.readableProbes.get(file);
     if (!probe) {

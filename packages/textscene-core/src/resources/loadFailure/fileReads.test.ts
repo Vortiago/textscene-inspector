@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseTresFile } from '../../parser/parsedResource';
 import { TscnParser } from '../../parser/TscnParser';
-import { resourceFailingReads, sceneFailingReads } from './fileReads';
+import { resourceFailingReads, resourceReads, sceneFailingReads, sceneReads } from './fileReads';
 
 const scene = (text: string) => new TscnParser().parse(text);
 const MAIN = 'res://levels/main.tscn';
@@ -114,5 +114,80 @@ textures = [ExtResource("1")]
     );
 
     expect(reads).toEqual(['res://gone.png']);
+  });
+});
+
+describe('sceneReads', () => {
+  it('lists each file a value reads, a [node] value and an instance included, with its heading type', () => {
+    const reads = sceneReads(
+      MAIN,
+      scene(`[gd_scene format=3]
+[ext_resource type="Texture2D" path="res://icon.png" id="1"]
+[ext_resource type="PackedScene" path="res://enemy.tscn" id="2"]
+[node name="Root" type="Sprite2D"]
+texture = ExtResource("1")
+[node name="Enemy" parent="." instance=ExtResource("2")]
+`)
+    );
+
+    expect(reads).toEqual([
+      { path: 'res://icon.png', type: 'Texture2D' },
+      { path: 'res://enemy.tscn', type: 'PackedScene' },
+    ]);
+  });
+
+  it('gives a Resource() literal no type', () => {
+    const reads = sceneReads(
+      MAIN,
+      scene(`[gd_scene format=3]
+[node name="Root" type="Sprite2D"]
+texture = Resource("res://icon.png")
+`)
+    );
+
+    expect(reads).toEqual([{ path: 'res://icon.png', type: null }]);
+  });
+
+  it('leaves out a declared file nothing reads, and a path outside res://', () => {
+    const reads = sceneReads(
+      MAIN,
+      scene(`[gd_scene format=3]
+[ext_resource type="Texture2D" path="res://unused.png" id="1"]
+[ext_resource type="Texture2D" path="user://save.png" id="2"]
+[node name="Root" type="Sprite2D"]
+texture = ExtResource("2")
+`)
+    );
+
+    expect(reads).toEqual([]);
+  });
+});
+
+describe('resourceReads', () => {
+  it('lists the files the [resource] and [sub_resource] sections of a .tres read', () => {
+    const reads = resourceReads(
+      MAIN_TRES,
+      parseTresFile(`[gd_resource type="StandardMaterial3D" format=3]
+[ext_resource type="Texture2D" path="albedo.png" id="1"]
+[sub_resource type="AtlasTexture" id="a"]
+atlas = Resource("res://atlas.png")
+[resource]
+albedo_texture = ExtResource("1")
+`)
+    );
+
+    expect(reads).toEqual([
+      { path: 'res://levels/albedo.png', type: 'Texture2D' },
+      { path: 'res://atlas.png', type: null },
+    ]);
+  });
+
+  it('lists nothing for a .tres that reads no file', () => {
+    const reads = resourceReads(
+      MAIN_TRES,
+      parseTresFile('[gd_resource type="Curve" format=3]\n[resource]\n')
+    );
+
+    expect(reads).toEqual([]);
   });
 });

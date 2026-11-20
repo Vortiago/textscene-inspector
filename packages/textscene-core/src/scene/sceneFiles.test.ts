@@ -98,6 +98,25 @@ describe('the files of a scene', () => {
     expect(await whenFilesLoaded(scene)).toEqual([]);
   });
 
+  it('names no file missing where the host fails to read a file that exists', async () => {
+    const provider: ResourceProvider = {
+      loadResource: async (path) => {
+        if (path === 'res://wood.tres') throw new Error('the host timed out');
+        return null;
+      },
+    };
+    const scene = openScene({ source: WITH_MATERIAL, provider, rootScenePath: MAIN });
+    const files = await whenFilesLoaded(scene);
+    expect(files.find((file) => file.path === 'res://wood.tres')?.state).toBe('loaded');
+  });
+
+  it('counts an import through its sidecar on a host that lists no folder', async () => {
+    const provider = filesOf({ 'res://icon.png.import': '[remap]\n' });
+    const scene = openScene({ source: SPRITE, provider, rootScenePath: MAIN });
+    const [icon] = await whenFilesLoaded(scene);
+    expect(icon).toMatchObject({ path: 'res://icon.png', state: 'loaded' });
+  });
+
   it('follows a resource file to the files it reads, and names the chain through which it fails', async () => {
     const provider = filesOf({ 'res://wood.tres': WOOD });
     const scene = openScene({ source: WITH_MATERIAL, provider, rootScenePath: MAIN });

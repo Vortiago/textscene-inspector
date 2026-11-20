@@ -84,6 +84,17 @@ describe('<MissingResourcesPanel>', () => {
     expect(screen.getByRole('button', { name: `Remove uploaded file for ${ICON}` })).not.toBeNull();
   });
 
+  it('marks uploaded only the file that failed first, not the file that failed through it', async () => {
+    const files: Record<string, string | ArrayBuffer> = { 'res://atlas.tres': ATLAS };
+    const { scene } = await mountPanel(WITH_ATLAS, filesOf(files));
+    await waitFor(() => expect(scene.files().map((file) => file.state)).toEqual(['missing', 'missing']));
+    files['res://gone.png'] = PNG;
+    act(() => resourcePipelineOf(scene).loader.provideFile('res://gone.png'));
+    await screen.findByRole('button', { name: 'Remove uploaded file for res://gone.png' });
+    await waitFor(() => expect(scene.files().every((file) => file.state === 'loaded')).toBe(true));
+    expect(screen.queryByRole('button', { name: 'Remove uploaded file for res://atlas.tres' })).toBeNull();
+  });
+
   it('shows no uploaded row for a file that loads on its first request', async () => {
     const { scene } = await mountPanel(sceneReading([ICON, 'res://gone.png']), filesOf({ [ICON]: PNG }));
     await waitFor(() => expect(scene.files().every((file) => file.state !== 'loading')).toBe(true));
