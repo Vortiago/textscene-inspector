@@ -6,7 +6,7 @@ import { isClaimedByCanvasItemEditor } from '../../nodeWorkspaceVisibility.js';
 import { useLiveSceneNodes } from '../../useLiveSceneTree.js';
 import { keepsChildrenInViewport } from '../../viewportRender/viewportBoundary.js';
 import type { TscnNode } from '../../../parser/types.js';
-import type { Ref } from 'react';
+import { memo, type Ref } from 'react';
 import { TscnCanvas } from '../../TscnCanvas.js';
 import type { ViewAnswers } from '../../viewStatus/viewAnswers.js';
 import type { ViewStatus } from '../../viewStatus/viewStatus.js';
@@ -26,7 +26,8 @@ interface ViewportAreaProps {
   onStatusChange: (status: ViewStatus) => void;
 }
 
-export function ViewportArea({ viewRef, onStatusChange }: ViewportAreaProps) {
+// A memo: the shell re-renders on each status its view reports, and the canvas would rebuild its tree.
+export const ViewportArea = memo(function ViewportArea({ viewRef, onStatusChange }: ViewportAreaProps) {
   const { mode, show } = useViewportMode();
   const camera = viewCameraOf(usePreviewCamera()?.camera ?? null);
   const selection = usePreviewSelection();
@@ -45,7 +46,7 @@ export function ViewportArea({ viewRef, onStatusChange }: ViewportAreaProps) {
       <ViewportChrome mode={mode} />
     </>
   );
-}
+});
 
 function ViewportChrome({ mode }: { mode: ViewportMode }) {
   if (mode === 'in-game') return <GameStartNotes />;

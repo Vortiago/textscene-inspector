@@ -23,12 +23,12 @@ export function useViewStatusStore(): ViewStatusStore | null {
 }
 
 /** `read` of the status, or false with no provider. */
-function useStatusFlag(read: (status: ViewStatusStore) => boolean): boolean {
-  const status = useViewStatusStore();
-  return useSyncExternalStore(status?.subscribe ?? subscribeToNothing, () => (status ? read(status) : false));
+function useStatusFlag(read: (store: ViewStatusStore) => boolean): boolean {
+  const store = useViewStatusStore();
+  return useSyncExternalStore(store?.subscribe ?? subscribeToNothing, () => (store ? read(store) : false));
 }
 
 /** An In-game capture reads the full window, so that view draws its target at full size until then. */
 export function useIsCapturePending(): boolean {
-  return useStatusFlag((status) => status.isCapturePending());
+  return useStatusFlag((store) => store.isCapturePending());
 }

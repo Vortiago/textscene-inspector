@@ -8,7 +8,9 @@ const GODOT_PLAIN = { objects: 3, primitives: 4248, hasTimings: false };
 /** Godot counts 6 shadow draws to the view's 16, so the check asks only that shadow draws count. */
 function shadowFailures(plain, shadowed) {
   if (!plain || !shadowed)
-    return [`status().frame of the counted scene: expected two windows, got ${plain} and ${shadowed}`];
+    return [
+      `status().frame of the counted scene: expected two windows, got ${JSON.stringify(plain)} and ${JSON.stringify(shadowed)}`,
+    ];
   return [
     ...equalityFailure('primitives of the counted scene with shadows', plain.primitives, shadowed.primitives),
     ...(shadowed.objects > plain.objects

@@ -73,16 +73,16 @@ function RootViewport() {
 
 /** A capture reads the whole window, so only a frame that drew it at the project's size answers one. */
 function useGameViewReport(drawnWindow: RootWindow, projectWindow: RootWindow) {
-  const status = useViewStatusStore();
+  const store = useViewStatusStore();
   const report = useViewReport();
   const readWindow = useRef<(() => RgbaImage) | null>(null);
   useEffect(
     () =>
-      status?.readWith(() => {
+      store?.readWith(() => {
         if (!readWindow.current) throw new Error('expected a presented window, got none');
         return readWindow.current();
       }),
-    [status]
+    [store]
   );
   return (read: () => RgbaImage) => {
     readWindow.current = read;

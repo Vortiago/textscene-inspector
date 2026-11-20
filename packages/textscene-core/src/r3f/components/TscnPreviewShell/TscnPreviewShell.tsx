@@ -89,7 +89,8 @@ export function TscnPreviewShell({
   const [view, setView] = useState<ViewAnswers | null>(null);
   const heard = useHeardStatus();
   const settle = useViewSettle(scene, view, heard);
-  const pendingTextures = heard.status?.pending.textures ?? 0;
+  // A crashed view reports no more, so its last count would hold the chip up for good.
+  const pendingTextures = viewportError ? 0 : (heard.status?.pending.textures ?? 0);
   const hasScene = parsedGraph !== null;
 
   // `treeShare` is the tree's fraction of the dock height (0..1). The dock

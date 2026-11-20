@@ -466,7 +466,7 @@ view.update({ show: { grid: true, collisions: true } });
 | `previewSun`         | `true`  | The editor preview sun, while the scene has no DirectionalLight3D             | The preview sunlight button       |
 | `previewEnvironment` | `true`  | The editor preview sky, while the scene has no WorldEnvironment               | The preview environment button    |
 | `fog`                | `true`  | The Environment's depth and volumetric fog                                    | none, Godot always draws it       |
-| `performance`        | `false` | A panel over the view with the frame numbers and the time of each render step  | View Frame Time                   |
+| `performance`        | `false` | A panel over the view with the frame numbers and the time of each render step | View Frame Time                   |
 
 The In-game mode draws as the game does: no helper, every Label3D and the fog, whatever `show`
 holds. Only `performance` works there too. `<TscnCanvas show={{ grid: true }} />` does the same in

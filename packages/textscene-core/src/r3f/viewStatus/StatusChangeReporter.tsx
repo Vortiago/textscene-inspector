@@ -14,13 +14,24 @@ export function StatusChangeReporter({ onStatusChange }: { onStatusChange: (stat
       const now = store.status();
       if (!changesBeyondFrame(heard, now)) return;
       heard = now;
-      latest.current(now);
+      tell(latest.current, now);
     };
     const stopListening = store.subscribe(check);
     check();
     return stopListening;
   }, [store]);
   return null;
+}
+
+// The store calls this inside a frame or an effect, so a host's throw surfaces in a microtask of its own.
+function tell(onStatusChange: (status: ViewStatus) => void, status: ViewStatus): void {
+  try {
+    onStatusChange(status);
+  } catch (error) {
+    queueMicrotask(() => {
+      throw error;
+    });
+  }
 }
 
 // The frame numbers change twice a second, so a host polls `status()` for them.
