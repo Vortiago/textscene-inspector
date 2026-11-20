@@ -1,5 +1,13 @@
 import { Canvas } from '@react-three/fiber';
-import { lazy, Suspense, useEffect, useImperativeHandle, useRef, type ReactNode, type Ref } from 'react';
+import {
+  lazy,
+  Suspense,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+  type ReactNode,
+  type Ref,
+} from 'react';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useSeatedRoots } from './useLiveSceneTree.js';
 import { useViewShow } from './viewShow/ViewShowContext.js';
@@ -174,23 +182,15 @@ function ViewRef({ viewRef, lookedThrough }: { viewRef: Ref<ViewAnswers>; looked
   const scene = useOptionalHierarchy()?.scene;
   const status = useViewStatus();
   const ending = useRef(new AbortController());
-  useEffect(() => {
-    // A controller per mount, so a remount under React's strict mode answers again.
+  // A layout effect before the handle, so each mount's controller exists when the handle is built.
+  useLayoutEffect(() => {
     const controller = new AbortController();
     ending.current = controller;
     return () => controller.abort(new Error('expected the view to settle before its unmount'));
   }, []);
   useImperativeHandle(viewRef, () => {
     if (!scene || !status) throw new Error('expected a TscnCanvas with a scene, got none');
-    // Read at each call, since the mount's controller is set after the handle.
-    const answers = () =>
-      viewAnswers({ scene, status, ending: ending.current.signal, lookedThrough: () => lookedThrough });
-    return {
-      get settled() {
-        return answers().settled;
-      },
-      captureImage: () => answers().captureImage(),
-    };
+    return viewAnswers({ scene, status, ending: ending.current.signal, lookedThrough: () => lookedThrough });
   }, [scene, status, lookedThrough]);
   return null;
 }

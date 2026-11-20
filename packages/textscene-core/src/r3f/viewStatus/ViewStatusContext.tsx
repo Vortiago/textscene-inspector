@@ -16,19 +16,17 @@ export function useViewStatus(): ViewStatus | null {
   return useContext(ViewStatusContext);
 }
 
-/** `read` of the status, or `absent` with no provider. */
-function useStatusValue<T>(read: (status: ViewStatus) => T, absent: T): T {
+/** `read` of the status, or false with no provider. */
+function useStatusFlag(read: (status: ViewStatus) => boolean): boolean {
   const status = useViewStatus();
-  return useSyncExternalStore(status?.subscribe ?? subscribeToNothing, () =>
-    status ? read(status) : absent
-  );
+  return useSyncExternalStore(status?.subscribe ?? subscribeToNothing, () => (status ? read(status) : false));
 }
 
 /** An In-game capture reads the full window, so that view draws its target at full size until then. */
 export function useIsCapturePending(): boolean {
-  return useStatusValue((status) => status.isCapturePending(), false);
+  return useStatusFlag((status) => status.isCapturePending());
 }
 
 export function useViewPending(): boolean {
-  return useStatusValue((status) => status.isPending(), false);
+  return useStatusFlag((status) => status.isPending());
 }

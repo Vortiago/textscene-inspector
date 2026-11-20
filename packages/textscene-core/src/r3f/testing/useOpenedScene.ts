@@ -1,9 +1,8 @@
-import { useMemo } from 'react';
+import { useLayoutEffect, useMemo } from 'react';
 import { openScene, type Scene } from '../../scene/openScene.js';
 import type { ResourceProvider } from '../../resources/ResourceProvider.js';
 import { useResourceLoader } from '../../resources/useResource.js';
 import { adoptLoader } from '../sceneResourcePipeline.js';
-import { useSceneText } from '../hooks/openedScene.js';
 
 /** The files of a scene with no loader above it, which draws with no file. */
 const NO_FILES: ResourceProvider = { loadResource: async () => null };
@@ -19,6 +18,7 @@ export function useOpenedScene(source: string, rootScenePath: string, provider?:
     return opened;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [testLoader, provider, rootScenePath]);
-  useSceneText(scene, source);
+  useLayoutEffect(() => scene.setSource(source), [scene, source]);
+  useLayoutEffect(() => () => scene.dispose(), [scene]);
   return scene;
 }

@@ -12,7 +12,7 @@ export interface ViewAnswers {
 }
 
 /** The view's state that `settled` checks once the loads end. */
-export interface AnsweringView {
+interface AnsweringView {
   scene: Scene;
   status: ViewStatus;
   /** Aborts with the reason the view will never settle. */
