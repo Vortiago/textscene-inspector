@@ -6,7 +6,7 @@ import { countDrawnSurfaces, type DrawnSurfaces } from './drawnSurfaces.js';
 const drawn: DrawnSurfaces = { objects: 0, primitives: 0 };
 
 /** Closes the view's draw of `scene`. It is never nested in another render, so its list is at depth 0. */
-export function endViewDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scene): void {
+function endViewDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scene): void {
   drawn.objects = 0;
   drawn.primitives = 0;
   countDrawnSurfaces(renderer.renderLists.get(scene, 0), drawn);
