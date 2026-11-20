@@ -41,5 +41,8 @@ split build.
   (`webviewLoadFailed`). No chunk can fail after the page runs.
 - About 16 previews closed during their load within 30 s still fill the 32 places. Only VS Code can
   free a closed preview's places sooner (#2077).
+- `check:bundle-size` is the guard, not an integration test. A test that fails on the split build
+  needs about 10 previews closed during their load, and these hold places that the suites around
+  it need for 30 s.
 - No check gates the web previewer's first-paint bundle size, and no check keeps modules loaded
   only on demand out of a first paint (#2078).
