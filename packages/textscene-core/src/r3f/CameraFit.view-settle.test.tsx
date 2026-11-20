@@ -36,6 +36,7 @@ function frameDrawn(status: ViewStatus, resources: number, revision: number): vo
   const frame: DrawnFrame = {
     revision,
     isFullSize: true,
+    awaitedCamera: null,
     work: { resources, textures: 0, fonts: 0 },
     facts: FACTS,
   };

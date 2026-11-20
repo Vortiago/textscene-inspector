@@ -171,7 +171,8 @@ The limits of this release:
 ### Know when the scene is whole
 
 A view is settled when a frame shows the scene whole: the frame drew the latest change to the scene,
-and no file, texture or font of the scene was still loading. This holds in every mode. A write or a
+no file, texture or font of the scene was still loading, and in the 3D mode the frame drew through
+the Camera3D that `camera` names. This holds in every mode. A write or a
 camera call from your code, or a new text, makes it pending again until a frame shows the change.
 
 `view.settled` resolves to `{ scriptedNodeCount, hasCurrentCamera, missingFiles }`: the count of
@@ -481,7 +482,8 @@ The package exports these names.
 - `Variant` and `SceneValue` (types): what `variant` gives, and what `get` and `set` take.
 - `TscnCanvas`: the view in React. Its props are `scene` (a `Scene`), the options of `mountScene`
   (`mode`, default `'3D'`, `visible`, `camera`, `selected`, `onSelect` and `show`), and `className`.
-  Its `ref` gives the view's `settled` and `captureImage`. Its unmount ends the view.
+  `scene` is required. Its `ref` gives the view's `settled` and `captureImage`. Its unmount ends
+  the view.
 - `ResourceProvider` (a type): `loadResource(path, type?)` returns the file as a string or an
   `ArrayBuffer`, or `null` when the file is missing. The optional `watch(listener)` is in "Load a
   file again when it changes".
@@ -492,6 +494,10 @@ The package exports these names.
   `update`: `mode` (default `'in-game'`), `visible` (default `true`), `camera` (default `null`),
   `selected`, `onSelect` and `show`. See "Learn which node a click picked" and "Turn the editor
   helpers on and off".
+
+Version 0.6.0 exported `TscnSceneProvider`, `useSelection` and `useGameViewSettled`, and later
+versions do not. Pass `scene` to `TscnCanvas`, use `selected` and `onSelect`, and read `settled`
+from the canvas's `ref`.
 
 ## Styles and workers
 

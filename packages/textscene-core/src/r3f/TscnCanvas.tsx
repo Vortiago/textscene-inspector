@@ -41,7 +41,7 @@ import { FrameStatsProvider } from './frameProfile/FrameStatsContext.js';
 import { ViewShowProvider } from './viewShow/ViewShowContext.js';
 import type { ViewShow } from './viewShow/viewShow.js';
 import { ViewportActionsProvider, useOptionalViewportActions } from './contexts/ViewportActionsContext.js';
-import { ViewCamera } from './viewCamera.js';
+import { LookThroughProvider, ViewCamera } from './viewCamera.js';
 import { EditorViewReport } from './viewStatus/EditorViewReport.js';
 import { HostSelection, type HostSelectionProps } from './hostSelection/HostSelection.js';
 import { useViewStatus } from './viewStatus/ViewStatusContext.js';
@@ -263,16 +263,18 @@ function EditorCanvas({ className, camera }: Pick<TscnCanvasProps, 'camera' | 'c
         gl={CANVAS_RENDERER_GL}
         frameloop={frameloop}
       >
-        <SceneCamerasProvider>
-          <TscnSceneContents />
-          <ActiveCameraSwitcher />
-          {camera !== undefined && <ViewCamera camera={camera} />}
-        </SceneCamerasProvider>
-        <CameraFit />
-        <FrameSelectedShortcut />
-        <GodotEditorControls />
-        <EditorControlsBridge />
-        <EditorViewReport />
+        <LookThroughProvider>
+          <SceneCamerasProvider>
+            <TscnSceneContents />
+            <ActiveCameraSwitcher />
+            {camera !== undefined && <ViewCamera camera={camera} />}
+          </SceneCamerasProvider>
+          <CameraFit />
+          <FrameSelectedShortcut />
+          <GodotEditorControls />
+          <EditorControlsBridge />
+          <EditorViewReport />
+        </LookThroughProvider>
       </Canvas>
     </StageRoot>
   );

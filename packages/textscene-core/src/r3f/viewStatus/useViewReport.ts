@@ -50,7 +50,7 @@ function useAttachedView(scene: Scene | undefined): { readonly current: boolean 
 }
 
 /** Reports each frame the view draws. `isFullSize`: the frame drew at the size a capture reads. */
-export function useViewReport(): (isFullSize: boolean) => void {
+export function useViewReport(): (isFullSize: boolean, awaitedCamera?: string | null) => void {
   const status = useViewStatus();
   const scene = useOptionalHierarchy()?.scene;
   const loader = useResourceLoader();
@@ -69,13 +69,15 @@ export function useViewReport(): (isFullSize: boolean) => void {
   const [frame] = useState<DrawnFrame>(() => ({
     revision: 0,
     isFullSize: false,
+    awaitedCamera: null,
     work: { resources: 0, textures: 0, fonts: 0 },
     facts: settledFacts(NO_FILES),
   }));
-  return (isFullSize) => {
+  return (isFullSize, awaitedCamera = null) => {
     if (!status || !isAttached.current) return;
     frame.revision = revision;
     frame.isFullSize = isFullSize;
+    frame.awaitedCamera = awaitedCamera;
     pendingSceneWork(loader, frame.work);
     frame.facts = settledFacts(scene?.missingFiles() ?? NO_FILES);
     status.frameDrawn(frame);
