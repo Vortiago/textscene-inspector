@@ -88,6 +88,14 @@ describe("a host's visible = false", () => {
     expect(drawnBounds(renderer).max.x).toBeCloseTo(0.5, 5);
   });
 
+  it('hides a root Control', async () => {
+    const scene = openScene({ source: CONTAINER_SCENE, provider: { loadResource: async () => null } });
+
+    await scene.getNode('/root/Column').set('visible', false);
+
+    expect(groupNamed(await drawControls(scene), 'VBoxContainer:Column').visible).toBe(false);
+  });
+
   it('takes a Container child out of its slot', async () => {
     const scene = openScene({ source: CONTAINER_SCENE, provider: { loadResource: async () => null } });
     const firstSlot = groupNamed(await drawControls(scene), 'ColorRect:First').position.clone();

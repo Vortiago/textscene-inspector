@@ -116,6 +116,23 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
     expect(result.current.tree[0]?.node.properties).toMatchObject({ text: 'HUD LAYER' });
   });
 
+  it("keeps the sub-scene root's visible = false on an instance at the scene root", () => {
+    const loader = createFakeResourceLoader();
+    loader.scenes.seed(
+      LAYER_PATH,
+      scene([parsedNode({ name: 'LayerLabel', type: 'Label' }, { visible: 'false' })])
+    );
+
+    const nodes = [instanceOf('Hud', '1_layer')];
+    const externalResources = [{ id: '1_layer', path: LAYER_PATH, type: 'PackedScene' }];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, externalResources, []), {
+      wrapper: wrapperFor(loader.loader),
+    });
+
+    expect(result.current.tree[0]?.node.properties).toMatchObject({ visible: false });
+  });
+
   it('keeps a non-Control ancestor (Node3D) transparent, surfacing the instanced Control beneath it', () => {
     const loader = createFakeResourceLoader();
     loader.scenes.seed(LAYER_PATH, scene([parsedLabel('LayerLabel', 'HUD LAYER')]));
