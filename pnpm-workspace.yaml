@@ -101,5 +101,5 @@ catalog:
   # of the repo root only, never shipped: fontkit reads hhea/OS-2/hmtx from
   # the vendored TTF/OTF (it does not decompress woff2 itself), and wawoff2
   # decompresses the vendored woff2 to the TTF fontkit needs.
-  fontkit: ^2.0.4
+  fontkit: ^3.0.0
   wawoff2: ^2.0.1
