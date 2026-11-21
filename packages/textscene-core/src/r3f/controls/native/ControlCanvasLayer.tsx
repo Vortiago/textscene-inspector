@@ -31,8 +31,7 @@ export function ControlCanvasLayer({ nodes }: ControlCanvasLayerProps) {
   const { themeScale } = useProjectSettings();
   const theme = nativeTheme(themeScale);
   const viewport = useGameViewportRect();
-  // A Control outside any `CanvasLayer` shares Godot's default canvas with the
-  // world, so this scans the root list `NodeDispatcher` scans.
+  // A Control outside any `CanvasLayer` shares the world's default canvas, so this scans the dispatcher's roots.
   const canvasModulate = useCanvasModulateColor(nodes);
   // The ranks `NodeDispatcher` derives: this walk is its sibling, so it cannot
   // inherit them, and a different layer set would order Controls against the
