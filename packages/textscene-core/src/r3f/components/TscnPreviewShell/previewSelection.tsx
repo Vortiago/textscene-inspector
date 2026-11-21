@@ -87,18 +87,19 @@ function useDropOnLeave(scene: Scene, selected: NodeHandle | null, select: (node
   }, [scene, selected, select]);
 }
 
-// A row removed under the pointer gets no mouseleave.
+// A row removed under the pointer gets no mouseleave, and a new scene removes every row.
 function useDropHoverOnLeave(scene: Scene, hovered: ExternalStore<NodeHandle | null>): void {
-  useEffect(
-    () =>
-      scene.observe(null, () => {
-        if (hovered.get()?.isInsideTree() === false) hovered.set(null);
-      }),
-    [scene, hovered]
-  );
+  useEffect(() => {
+    const stopObserving = scene.observe(null, () => {
+      if (hovered.get()?.isInsideTree() === false) hovered.set(null);
+    });
+    return () => {
+      stopObserving();
+      hovered.set(null);
+    };
+  }, [scene, hovered]);
 }
 
-/** The live path of a node of the canvas, null for none and for the root window. */
 /** The panel shows the selected row with its ancestors expanded. */
 function useShowInPanel(selected: NodeHandle | null): void {
   const panel = useOptionalSelection();

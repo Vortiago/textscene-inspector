@@ -4,14 +4,16 @@
  * needs `useThree`, unlike the mode-agnostic `<EscapeDeselect>` outside it.
  */
 import { useThree } from '@react-three/fiber';
-import { useOptionalSelection, useSelectedNodePath } from './contexts/SelectionContext.js';
+import { useOptionalSelection } from './contexts/SelectionContext.js';
+import { useSelectedPath } from './components/TscnPreviewShell/previewSelection.js';
 import { isDrawingPreview } from './EditorControlsHandle.js';
 import { useGlobalShortcut } from './hooks/useGlobalShortcut.js';
 import { resolveFrameTarget } from './resolveFrameTarget.js';
 import { frameSceneBounds, type OrbitLike } from './frameSceneBounds.js';
 
 export function FrameSelectedShortcut() {
-  const selectedNodePath = useSelectedNodePath();
+  // The selected node, not the outlined one: a hovered row outlines its node but selects nothing.
+  const selectedNodePath = useSelectedPath();
   const nodeObjectMap = useOptionalSelection()?.nodeObjectMap ?? null;
   const get = useThree((s) => s.get);
 

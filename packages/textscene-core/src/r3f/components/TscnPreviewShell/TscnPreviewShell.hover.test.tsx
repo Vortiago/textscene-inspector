@@ -76,6 +76,18 @@ describe('<TscnPreviewShell> a hovered tree row', () => {
 
     expect(screen.getByRole('heading', { level: 3 }).textContent).toBe('Box');
   });
+
+  it('hands the view no node once a new scene replaces the hovered row', async () => {
+    const scene = openScene({ source: SCENE, provider: { loadResource: async () => null } });
+    const { rerender } = render(<TscnPreviewShell panelId="hover" scene={scene} initialViewportMode="3D" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Expand all' }));
+    act(() => fireEvent.mouseEnter(row('Main/Lamp')));
+    const next = openScene({ source: SCENE, provider: { loadResource: async () => null } });
+
+    rerender(<TscnPreviewShell panelId="hover" scene={next} initialViewportMode="3D" />);
+
+    expect(view.selected).toBeNull();
+  });
 });
 
 describe('<TscnPreviewShell> the node the animation transport drives', () => {

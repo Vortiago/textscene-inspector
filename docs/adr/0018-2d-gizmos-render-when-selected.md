@@ -35,7 +35,8 @@ fought. A field with many markers or paths otherwise fills the viewport.
 ## Decision
 
 The 2D and 3D transform/path nodes render editor gizmos, each **gated on selection**: visible only while
-its owning node is the `SelectionContext.selectedNodePath`.
+its owning node is the node the view outlines (`useIsSelectedPath`): the hovered tree row, else the
+selected node.
 
 - **Marker2D**: a "+" cross sized by `gizmo_extents`. **Marker3D**: a 3-axis cross sized by
   `gizmo_extents`. Both colour each axis, with the negative arm darker (ADR-0056).
