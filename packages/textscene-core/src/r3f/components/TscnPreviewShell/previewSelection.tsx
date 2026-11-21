@@ -15,7 +15,11 @@ import type { Scene } from '../../../scene/openScene.js';
 import { createExternalStore, type ExternalStore } from '../../../utils/externalStore.js';
 import { withAncestorsExpanded } from '../../../utils/nodePath.js';
 import { useAnimationTransport } from '../../contexts/AnimationTransportContext.js';
-import { useOptionalSelection, useSelectedNodePathStore } from '../../contexts/SelectionContext.js';
+import {
+  UNWRITTEN_PATH_STORE,
+  useOptionalSelection,
+  useSelectedNodePathStore,
+} from '../../contexts/SelectionContext.js';
 import { useExternalStoreValue } from '../../hooks/createExternalStore.js';
 import { nearestHandle } from '../../hostSelection/HostSelection.js';
 
@@ -155,9 +159,8 @@ export function useSelectedPath(): string | null {
   const preview = usePreviewSelection();
   const panelStore = useSelectedNodePathStore();
   // Inside a shell that store holds what the view outlines, a hovered row too, so it reads none.
-  const panelPath = useExternalStoreValue(preview ? NO_PANEL_PATH : panelStore);
+  const panelPath = useExternalStoreValue(preview ? UNWRITTEN_PATH_STORE : panelStore);
   return preview ? liveNodePathOf(preview.selected?.path) : panelPath;
 }
 
 const NO_HOVER = createExternalStore<NodeHandle | null>(null);
-const NO_PANEL_PATH = createExternalStore<string | null>(null);

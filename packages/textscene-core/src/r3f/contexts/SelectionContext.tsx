@@ -175,12 +175,12 @@ export function useOptionalSelection(): SelectionContextValue | null {
   return useContext(SelectionContext);
 }
 
-/** The store with no `<SelectionProvider>`, which nothing writes. */
-const NO_PROVIDER_SELECTED_STORE = createExternalStore<string | null>(null);
+/** A path store that nothing writes: the store with no `<SelectionProvider>`. */
+export const UNWRITTEN_PATH_STORE = createExternalStore<string | null>(null);
 
 /** The store of the path the view outlines, which a reader subscribes to only where it needs it. */
 export function useSelectedNodePathStore(): ExternalStore<string | null> {
-  return useContext(SelectedNodePathStoreContext) ?? NO_PROVIDER_SELECTED_STORE;
+  return useContext(SelectedNodePathStoreContext) ?? UNWRITTEN_PATH_STORE;
 }
 
 /** The path the view outlines, null with none or with no provider. */

@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState, type ChangeEvent, type KeyboardEvent } from 'react';
+import * as logger from '../../../logger.js';
 import type { TscnNode, TscnExternalResource } from '../../../parser/types.js';
 import { getAncestorPaths } from '../../../utils/nodePath.js';
 import { useHierarchy } from '../../contexts/HierarchyContext.js';
@@ -37,7 +38,15 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
   // The eye calls `set_visible` on the node (scene_tree_editor.cpp:241-247).
   const setVisible = useCallback(
     (path: string, visible: boolean) => {
-      void scene?.getNodeOrNull(absolutePathOf(path))?.set('visible', visible);
+      const node = scene?.getNodeOrNull(absolutePathOf(path));
+      if (!node) {
+        logger.warn(`[SceneTreeViewer] the eye found no node at ${path}`);
+        return;
+      }
+      node.set('visible', visible).then(
+        (isWritten) => isWritten || logger.warn(`[SceneTreeViewer] ${path} refused visible`),
+        (error: unknown) => logger.warn(`[SceneTreeViewer] the eye did not write ${path}`, error)
+      );
     },
     [scene]
   );

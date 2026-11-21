@@ -19,14 +19,32 @@ visible = false
 [node name="Plain" type="Node" parent="."]
 `;
 
+const LAYERED_SCENE = `[gd_scene format=3]
+
+[node name="Main" type="Node2D"]
+
+[node name="Layer" type="CanvasLayer" parent="."]
+visible = false
+
+[node name="Direct" type="Sprite2D" parent="Layer"]
+
+[node name="Holder" type="Node" parent="Layer"]
+
+[node name="Below" type="Sprite2D" parent="Layer/Holder"]
+`;
+
+function isDimmed(path: string): boolean {
+  return eyeOf(path)!.className.includes('underHidden');
+}
+
 function eyeOf(path: string): HTMLButtonElement | null {
   return document.querySelector<HTMLButtonElement>(
     `[data-node-path="${path}"] > [role="treeitem"] button[aria-label$=" node"]`
   );
 }
 
-async function renderShell(): Promise<Scene> {
-  const scene = openScene({ source: SCENE, provider: { loadResource: async () => null } });
+async function renderShell(source = SCENE): Promise<Scene> {
+  const scene = openScene({ source, provider: { loadResource: async () => null } });
   render(<TscnPreviewShell panelId="eye" scene={scene} initialViewportMode="3D" />);
   fireEvent.click(await screen.findByRole('button', { name: 'Expand all' }));
   return scene;
@@ -88,5 +106,17 @@ describe('<TscnPreviewShell> the eye of a tree row', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Expand all' }));
 
     expect(eyeOf('Main/Box')?.getAttribute('aria-label')).toBe('Hide node');
+  });
+
+  it('dims the eye of a direct child of a hidden CanvasLayer (canvas_item.cpp:326-328)', async () => {
+    await renderShell(LAYERED_SCENE);
+
+    expect(isDimmed('Main/Layer/Direct')).toBe(true);
+  });
+
+  it('leaves the eye of a CanvasItem below a plain Node under a hidden CanvasLayer (canvas_item.cpp:330-346)', async () => {
+    await renderShell(LAYERED_SCENE);
+
+    expect(isDimmed('Main/Layer/Holder/Below')).toBe(false);
   });
 });
