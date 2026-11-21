@@ -8,7 +8,8 @@ import { offscreenRendererState } from '../../../nodes/viewport/subviewport/offs
 import { createCanvasFrame } from './canvasFrame';
 import { registerCanvasGroup } from '../../canvasGroup/canvasGroupPass';
 import { canvasColorSpaceOf } from '../../canvasColorSpace';
-import { innermostStep, startFrameProfile } from '../../frameProfile/frameProfile';
+import { innermostStep } from '../../frameProfile/frameProfile';
+import { startFrameProfile } from '../../frameProfile/frameProfile.testkit';
 import { profiledRendererMembers } from '../../frameProfile/frameProfile.testkit';
 import type { RenderStep } from '../../frameProfile/frameStats';
 

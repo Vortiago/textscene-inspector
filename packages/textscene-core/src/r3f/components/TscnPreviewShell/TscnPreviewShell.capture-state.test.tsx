@@ -1,18 +1,25 @@
-import { useImperativeHandle, type Ref } from 'react';
+import { useEffect, useImperativeHandle, type Ref } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ViewAnswers } from '../../viewStatus/viewAnswers';
-import type { DrawnFrame, ViewSettled, ViewStatus } from '../../viewStatus/viewStatus';
-import { useViewStatus } from '../../viewStatus/ViewStatusContext';
+import type {
+  DrawnFrame,
+  LiveScene,
+  ViewSettled,
+  ViewStatus,
+  ViewStatusStore,
+} from '../../viewStatus/viewStatus';
+import { useOptionalHierarchy } from '../../contexts/HierarchyContext';
+import { ViewStatusProvider, useViewStatusStore } from '../../viewStatus/ViewStatusContext';
+import { StatusChangeReporter } from '../../viewStatus/StatusChangeReporter';
 import type { PendingSceneWork } from '../../sceneWork';
 import type { PreviewCaptureState } from './previewCaptureState';
-import { textureWork } from '../../../resources/textures/textureWork';
 import { SCENE_LOAD_STATUS_TESTID, TEXTURE_WORK_STATUS_TESTID } from './statusTestIds';
 
 const SETTLED: ViewSettled = { scriptedNodeCount: 0, hasCurrentCamera: false };
 
-/** One mounted view, as a test drives it: its `settled` resolves only when the test says so. */
+/** One mounted view, as a test drives it: it settles only when the test says so. */
 interface StubView {
   readonly mode: string;
   readonly image: Blob;
@@ -30,26 +37,23 @@ function arrangeViews(error: Error | null = null): void {
   renderError = error;
 }
 
-/** The status the shell hands its view. Written by each stub view as it renders. */
-let shellStatus: ViewStatus | null = null;
+/** The status store of the stub view, and the scene it shows. Written by the stub as it renders. */
+let viewStore: ViewStatusStore | null = null;
+let viewScene: LiveScene | null = null;
 
 const NO_WORK: PendingSceneWork = { resources: 0, textures: 0, fonts: 0 };
 
 /** Draws one frame of a view that waits on `work`, as a canvas reports a file it still loads. */
 function drawFrame(work: Partial<PendingSceneWork>): void {
-  if (!shellStatus) throw new Error('expected the shell to hand its view a status, got none');
+  if (!viewStore || !viewScene) throw new Error('expected a mounted view with a status, got none');
   const frame: DrawnFrame = {
-    revision: 0,
+    revision: viewScene.revision(),
     isFullSize: true,
     awaitedCamera: null,
     work: { ...NO_WORK, ...work },
     facts: SETTLED,
   };
-  shellStatus.attach({
-    revision: () => 0,
-    subscribe: () => () => {},
-  });
-  shellStatus.frameDrawn(frame);
+  viewStore.frameDrawn(frame);
 }
 
 function latestView(): StubView {
@@ -60,32 +64,64 @@ function latestView(): StubView {
 
 // happy-dom has no WebGL, so the view is a stub whose ref answers as the test drives it.
 vi.mock('../../TscnCanvas', () => ({
-  TscnCanvas: (props: { mode?: string; ref?: Ref<ViewAnswers> }) => <StubCanvas {...props} />,
+  TscnCanvas: (props: StubProps) => (
+    <ViewStatusProvider>
+      <StubCanvas {...props} />
+    </ViewStatusProvider>
+  ),
   TscnSceneContents: () => null,
 }));
 
-function StubCanvas({ mode = '3D', ref }: { mode?: string; ref?: Ref<ViewAnswers> }) {
-  useImperativeHandle(ref, () => stubAnswers(mode), [mode]);
-  shellStatus = useViewStatus();
-  if (renderError) throw renderError;
-  return <div data-testid="canvas-stub" />;
+interface StubProps {
+  mode?: string;
+  onStatusChange?: (status: ViewStatus) => void;
+  ref?: Ref<ViewAnswers>;
 }
 
-/** Each read of `settled` waits anew, as a real view's does, until the test settles or fails the view. */
-function stubAnswers(mode: string): ViewAnswers {
+function StubCanvas({ mode = '3D', onStatusChange, ref }: StubProps) {
+  const store = useViewStatusStore()!;
+  const scene = useOptionalHierarchy()!.scene!;
+  viewStore = store;
+  viewScene = scene;
+  // A switch replaces the stage, which leaves the status and attaches again.
+  useEffect(() => store.attach(scene) ?? undefined, [store, scene, mode]);
+  useImperativeHandle(ref, () => stubAnswers(mode, store), [mode, store]);
+  if (renderError) throw renderError;
+  return (
+    <>
+      <div data-testid="canvas-stub" />
+      {onStatusChange && <StatusChangeReporter onStatusChange={onStatusChange} />}
+    </>
+  );
+}
+
+/** A read of `settled` answers once the status settles, as a real view's does, or rejects once failed. */
+function stubAnswers(mode: string, store: ViewStatusStore): ViewAnswers {
   const waits: { resolve: (settled: ViewSettled) => void; reject: (error: Error) => void }[] = [];
+  let failure: Error | null = null;
   const view: StubView = {
     mode,
     image: new Blob([mode]),
-    settle: () => waits.splice(0).forEach((wait) => wait.resolve(SETTLED)),
-    fail: (error) => waits.splice(0).forEach((wait) => wait.reject(error)),
+    settle: () => {
+      drawFrame(NO_WORK);
+      waits.splice(0).forEach((wait) => wait.resolve(SETTLED));
+    },
+    fail: (error) => {
+      failure = error;
+      drawFrame(NO_WORK);
+      waits.splice(0).forEach((wait) => wait.reject(error));
+    },
   };
   views.push(view);
   return {
     get settled() {
+      if (failure) return Promise.reject(failure);
+      const settled = store.settled();
+      if (settled) return Promise.resolve(settled);
       return new Promise<ViewSettled>((resolve, reject) => waits.push({ resolve, reject }));
     },
     captureImage: () => Promise.resolve(view.image),
+    status: store.status,
   };
 }
 
@@ -302,14 +338,10 @@ describe('<TextShell> scene load status', () => {
 
   it('gives way to the texture work status, so one status shows at a time (edge case)', async () => {
     arrangeViews();
-    const endTextureWork = textureWork.begin();
-    try {
-      renderShell();
-      expect(sceneLoadStatus()).toBeNull();
-      expect(screen.queryByTestId(TEXTURE_WORK_STATUS_TESTID)).not.toBeNull();
-    } finally {
-      await act(async () => endTextureWork());
-    }
+    renderShell();
+    act(() => drawFrame({ textures: 1 }));
+    expect(sceneLoadStatus()).toBeNull();
+    expect(screen.queryByTestId(TEXTURE_WORK_STATUS_TESTID)).not.toBeNull();
   });
 
   it('is absent when the viewport crashed, which loads nothing (error case)', () => {

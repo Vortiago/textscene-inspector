@@ -12,7 +12,7 @@ import { EditorControlsBridge } from './EditorControlsBridge';
 import { LookThroughProvider, ViewCamera } from './viewCamera';
 import { EditorViewReport } from './viewStatus/EditorViewReport';
 import { ViewStatusProvider } from './viewStatus/ViewStatusContext';
-import { createViewStatus } from './viewStatus/viewStatus';
+import { createViewStatusStore } from './viewStatus/viewStatus';
 import { r3fStateProbe } from './testing/R3FStateProbe';
 import { settleLoads } from './testing/settleLoads';
 import { openScene } from '../scene/openScene';
@@ -32,12 +32,12 @@ const FRAMES_TO_SETTLE = 10;
 
 /** The editor's 3D canvas through `camera`, with or without the switcher that moves the view onto it. */
 async function mountedThrough(camera: string | null, { isSwitching = true } = {}) {
-  const status = createViewStatus();
+  const status = createViewStatusStore();
   const scene = openScene({ source: SCENE, provider: { loadResource: async () => null } });
   const { Probe, state } = r3fStateProbe();
   await ReactThreeTestRenderer.create(
     <TscnSceneProvider scene={scene}>
-      <ViewStatusProvider status={status}>
+      <ViewStatusProvider store={status}>
         <ViewportActionsProvider>
           <LookThroughProvider>
             <SceneCamerasProvider>

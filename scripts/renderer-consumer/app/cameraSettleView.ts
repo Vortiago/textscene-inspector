@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { mountScene, TscnCanvas, type Scene, type View, type ViewOptions } from '@textscene/renderer';
 import { base64Of } from './capture';
 
-type CanvasAnswers = Pick<View, 'settled' | 'captureImage'>;
+type CanvasAnswers = Pick<View, 'settled' | 'captureImage' | 'status'>;
 
 /** A capture taken as `settled` resolves, and the milliseconds from the mount to that. */
 export interface SettledCapture {

@@ -8,9 +8,9 @@ import { TestPreviewCamera } from '../TscnPreviewShell/previewCamera.testkit';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import { nodeRegistry } from '../../../core/NodeRegistry';
 import type { TscnNode } from '../../../parser/types';
-import { NodePathProvider } from '../../contexts/NodePathContext';
-import { UndrawnMeshesProvider, useUndrawnMeshReport } from '../../contexts/UndrawnMeshesContext';
-import { EmptyShapesProvider, useReportEmptyShape } from '../../contexts/EmptyShapesContext';
+import { PreviewViewStatusProvider } from '../TscnPreviewShell/previewViewStatus';
+import type { UndrawnNode } from '../../viewStatus/undrawnNodes';
+import { createExternalStore } from '../../../utils/externalStore';
 
 function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): TscnNode {
   return { rawProperties: {}, name, type, children: [], properties: {}, ...extras };
@@ -37,16 +37,17 @@ function Selector({ path }: { path: string | null }) {
 
 const FAKE_TYPE = '___PanelTestType___';
 
-/** A node's reader of a mesh type no slice builds. */
-function FutureMeshHolder() {
-  useUndrawnMeshReport('FutureMesh');
-  return null;
-}
-
-/** A CSG shape whose brush is empty. */
-function EmptyShapeHolder() {
-  useReportEmptyShape(true);
-  return null;
+/** The shell's view reporting `undrawn` and nothing else. */
+function ViewReporting({ undrawn, children }: { undrawn: UndrawnNode[]; children: ReactNode }) {
+  const status = {
+    settled: null,
+    pending: { textures: 0, fonts: 0 },
+    frame: null,
+    undrawn,
+    isSoftwareRendering: false,
+  };
+  const heard = createExternalStore({ status, round: 0 });
+  return <PreviewViewStatusProvider value={heard}>{children}</PreviewViewStatusProvider>;
 }
 
 afterEach(() => {
@@ -119,13 +120,10 @@ describe('<NodeDetailsPanel>', () => {
     const graph = createSceneGraphFromTscnScene({ nodes: [makeNode('Sign', FAKE_TYPE)] });
 
     render(
-      <UndrawnMeshesProvider>
+      <ViewReporting undrawn={[{ path: '/root/Sign', meshTypes: ['FutureMesh'], isEmptyShape: false }]}>
         <NodeDetailsPanel />
         <Selector path="Sign" />
-        <NodePathProvider path="Sign">
-          <FutureMeshHolder />
-        </NodePathProvider>
-      </UndrawnMeshesProvider>,
+      </ViewReporting>,
       { wrapper: panelWrap(graph) }
     );
     await act(async () => {
@@ -140,13 +138,10 @@ describe('<NodeDetailsPanel>', () => {
     const graph = createSceneGraphFromTscnScene({ nodes: [makeNode('Wall', FAKE_TYPE)] });
 
     render(
-      <EmptyShapesProvider>
+      <ViewReporting undrawn={[{ path: '/root/Wall', meshTypes: [], isEmptyShape: true }]}>
         <NodeDetailsPanel />
         <Selector path="Wall" />
-        <NodePathProvider path="Wall">
-          <EmptyShapeHolder />
-        </NodePathProvider>
-      </EmptyShapesProvider>,
+      </ViewReporting>,
       { wrapper: panelWrap(graph) }
     );
     await act(async () => {
@@ -162,10 +157,10 @@ describe('<NodeDetailsPanel>', () => {
     const graph = createSceneGraphFromTscnScene({ nodes: [makeNode('Wall', FAKE_TYPE)] });
 
     render(
-      <EmptyShapesProvider>
+      <ViewReporting undrawn={[{ path: '/root/Wall', meshTypes: ['FutureMesh'], isEmptyShape: false }]}>
         <NodeDetailsPanel />
         <Selector path="Wall" />
-      </EmptyShapesProvider>,
+      </ViewReporting>,
       { wrapper: panelWrap(graph) }
     );
     await act(async () => {

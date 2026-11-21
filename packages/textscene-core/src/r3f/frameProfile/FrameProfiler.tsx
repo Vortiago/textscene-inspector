@@ -1,41 +1,48 @@
-/**
- * Runs a frame profile on its canvas's renderer while the Performance toggle is on, and publishes
- * each window to the overlay. While the toggle is off it mounts nothing, so no frame is timed.
- */
-
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { addAfterEffect, addEffect, useFrame, useThree } from '@react-three/fiber';
 import { useViewShow } from '../viewShow/ViewShowContext.js';
-import { beginStep, endStep, startFrameProfile } from './frameProfile.js';
-import { useFrameStatsStore } from './FrameStatsContext.js';
+import { beginStep, endStep, startFrameCount, type FrameProfile } from './frameProfile.js';
+import { useViewStatusStore } from '../viewStatus/ViewStatusContext.js';
 import { timeSceneDraws } from './sceneDrawStep.js';
+import { VIEW_DRAW_COUNTER } from './viewDraw.js';
+import { useCanvasWorkspace } from '../contexts/CanvasWorkspaceContext.js';
 import type { RenderStep } from './frameStats.js';
 
-/** Mounted once in each top-level `<Canvas>`. */
-export function FrameProfiler() {
-  return useViewShow().performance ? <RunningFrameProfile /> : null;
-}
-
-function RunningFrameProfile(): null {
+/** Mounted once in each top-level `<Canvas>`. Only `show.performance` times the steps: a GPU query each. */
+export function FrameProfiler(): null {
+  const isTimed = useViewShow().performance;
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);
   const get = useThree((state) => state.get);
-  const store = useFrameStatsStore();
+  const store = useViewStatusStore();
+  // Godot's monitor counts the 3D scene render only, so a 2D view counts no object.
+  const counter = useCanvasWorkspace() === '3d' ? VIEW_DRAW_COUNTER : null;
+  const [profile, setProfile] = useState<FrameProfile | null>(null);
 
   useEffect(() => {
-    const profile = startFrameProfile(gl, store.set);
+    if (!store) return undefined;
+    const profile = startFrameCount(gl, store.frameMeasured);
+    setProfile(profile);
     // Global effects bracket every root's subscribers and renders in R3F's loop.
     const stopBeginning = addEffect((timestamp) => profile.beginFrame(timestamp));
     const stopEnding = addAfterEffect(() => profile.endFrame());
-    const stopDrawing = timeSceneDraws(gl, scene, () => get().camera);
+    const stopDrawing = timeSceneDraws(gl, scene, () => get().camera, counter);
     return () => {
       stopDrawing();
       stopBeginning();
       stopEnding();
       profile.stop();
-      store.set(null);
+      setProfile(null);
+      store.frameMeasured(null);
     };
-  }, [gl, scene, get, store]);
+  }, [gl, scene, get, store, counter]);
+
+  // The count keeps running, so a switch of `show.performance` leaves `status().frame` in place.
+  useEffect(() => {
+    if (!profile || !isTimed) return undefined;
+    profile.startTimings();
+    return () => profile.stopTimings();
+  }, [profile, isTimed]);
 
   return null;
 }

@@ -12,7 +12,8 @@ import {
 } from '../../resources/testing/createFakeResourceLoader';
 import { useResourceResolution } from '../../resources/useSubOrExtResource';
 import { NodePathProvider } from '../contexts/NodePathContext';
-import { UndrawnMeshesProvider, useUndrawnMeshTypes } from '../contexts/UndrawnMeshesContext';
+import { useUndrawnMeshTypes } from '../testing/undrawnStatus';
+import { ViewStatusProvider } from '../viewStatus/ViewStatusContext';
 import { fixtureFontBytes } from '../controls/native/text/sfntOutlines.testkit';
 import { wallQuadSurfaces } from '../../resources/testing/arrayMeshSurfaces';
 import { geometryPrimitive } from '../../resources/meshes/godotSurface';
@@ -103,9 +104,9 @@ describe('arrayMeshPath over a mesh reference', () => {
 function renderUnderNode<T>(nodePath: string, hook: () => T) {
   return renderHook(hook, {
     wrapper: ({ children }: { children: ReactNode }) => (
-      <UndrawnMeshesProvider>
+      <ViewStatusProvider>
         <NodePathProvider path={nodePath}>{children}</NodePathProvider>
-      </UndrawnMeshesProvider>
+      </ViewStatusProvider>
     ),
   });
 }
@@ -157,9 +158,9 @@ describe('useMeshContent for a TextMesh', () => {
         wrapper: ({ children }: { children: ReactNode }) => (
           <MissingResourcesProvider>
             <ResourceLoaderProvider loader={fake.loader}>
-              <UndrawnMeshesProvider>
+              <ViewStatusProvider>
                 <NodePathProvider path="Root/Sign">{children}</NodePathProvider>
-              </UndrawnMeshesProvider>
+              </ViewStatusProvider>
             </ResourceLoaderProvider>
           </MissingResourcesProvider>
         ),

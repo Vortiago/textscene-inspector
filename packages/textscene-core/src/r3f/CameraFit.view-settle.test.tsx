@@ -5,7 +5,7 @@ import type * as THREE from 'three';
 import { HierarchyProvider } from './contexts/HierarchyContext';
 import { ViewportModeProvider } from './contexts/ViewportModeContext';
 import { ViewStatusProvider } from './viewStatus/ViewStatusContext';
-import { createViewStatus, type DrawnFrame, type ViewStatus } from './viewStatus/viewStatus';
+import { createViewStatusStore, type DrawnFrame, type ViewStatusStore } from './viewStatus/viewStatus';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
@@ -31,7 +31,7 @@ function CameraProbe({ onCamera }: { onCamera: (camera: THREE.Camera) => void })
 const FACTS = { scriptedNodeCount: 0, hasCurrentCamera: false };
 
 /** A frame of `revision`, with one resource still loading or none. */
-function frameDrawn(status: ViewStatus, resources: number, revision: number): void {
+function frameDrawn(status: ViewStatusStore, resources: number, revision: number): void {
   const frame: DrawnFrame = {
     revision,
     isFullSize: true,
@@ -44,13 +44,13 @@ function frameDrawn(status: ViewStatus, resources: number, revision: number): vo
 
 /** A view that settled once, then drew a frame with a `.glb` load pending, with every fit timer run out. */
 async function mountWithLateLoad() {
-  const status = createViewStatus();
+  const status = createViewStatusStore();
   const fake = createFakeResourceLoader();
   let revision = 1;
   status.attach({ revision: () => revision, subscribe: () => () => {} });
   let camera: THREE.Camera | null = null;
   await ReactThreeTestRenderer.create(
-    <ViewStatusProvider status={status}>
+    <ViewStatusProvider store={status}>
       <ResourceLoaderProvider loader={fake.loader}>
         <HierarchyProvider value={{ sceneGraph: createSceneGraphFromTscnScene({ nodes: [] }), panelId: 'p' }}>
           <ViewportModeProvider initialFrameOnOpen={true}>

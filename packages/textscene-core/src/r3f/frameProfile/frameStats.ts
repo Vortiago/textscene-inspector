@@ -43,10 +43,19 @@ export interface FrameStats {
   frameMs: number;
   /** The mean CPU time from the frame's start to the end of its last render. */
   cpuMs: number;
-  /** The mean GPU time of the frame's commands, or null while no GPU result has arrived. */
-  gpuMs: number | null;
   /** The mean draw calls of the frame, over every render in it. */
   drawCallsPerFrame: number;
+  /** The mean objects of Godot's editor monitor: the canvas draw's surfaces, and its shadow passes' draws. */
+  objectsPerFrame: number;
+  /** The mean primitives of Godot's editor monitor: those of the surfaces the canvas draw draws. */
+  primitivesPerFrame: number;
+  /** The GPU and per-step times, present only while `show.performance` is on: they cost a query per step. */
+  timings?: FrameTimings;
+}
+
+export interface FrameTimings {
+  /** The mean GPU time of the frame's commands, or null while no GPU result has arrived. */
+  gpuMs: number | null;
   /** False when the context offers no timer query, so every GPU time stays null. */
   hasGpuTimer: boolean;
   /**

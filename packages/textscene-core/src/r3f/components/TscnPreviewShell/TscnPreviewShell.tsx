@@ -28,7 +28,7 @@ import { WorkspaceAutoSelect } from './WorkspaceAutoSelect.js';
 import { SceneStats } from './SceneStats.js';
 import { SceneLoadStatus } from './SceneLoadStatus.js';
 import { TextureWorkStatus } from './TextureWorkStatus.js';
-import { SoftwareRenderingStatus } from '../../softwareRendering/SoftwareRenderingStatus.js';
+import { SoftwareRenderingStatus } from './SoftwareRenderingStatus.js';
 import {
   CollapsedDock,
   isNarrowPane,
@@ -47,8 +47,15 @@ import { CaptureStateReporter } from './CaptureStateReporter.js';
 import { PreviewCameraProvider } from './previewCamera.js';
 import { PreviewSelectionProvider } from './previewSelection.js';
 import { useViewSettle } from './viewSettle.js';
+import {
+  PreviewViewStatusProvider,
+  useHeardSelection,
+  useHeardSettle,
+  useHeardStatus,
+  type HeardStatusStore,
+} from './previewViewStatus.js';
+import type { ViewSettle } from './viewSettle.js';
 import type { ViewAnswers } from '../../viewStatus/viewAnswers.js';
-import { createViewStatus } from '../../viewStatus/viewStatus.js';
 import type { TscnPreviewShellProps } from './previewShellProps.js';
 import styles from './TscnPreviewShell.module.css';
 
@@ -87,8 +94,12 @@ export function TscnPreviewShell({
   const hierarchyValue = useMemo(() => ({ sceneGraph, panelId, scene }), [sceneGraph, panelId, scene]);
   const [viewportError, setViewportError] = useState<Error | null>(null);
   const [view, setView] = useState<ViewAnswers | null>(null);
-  const [viewStatus] = useState(createViewStatus);
-  const settle = useViewSettle(scene, view, viewStatus);
+  const heard = useHeardStatus();
+  const settle = useViewSettle(scene, view, useHeardSettle(heard));
+  // A crashed view reports no more, so its last status would hold the chips and notes up for good.
+  useEffect(() => {
+    if (viewportError) heard.forget();
+  }, [heard, viewportError]);
   const hasScene = parsedGraph !== null;
 
   // `treeShare` is the tree's fraction of the dock height (0..1). The dock
@@ -132,7 +143,6 @@ export function TscnPreviewShell({
     isVisible,
     panelId,
     rootScenePath: scene.rootScenePath,
-    viewStatus,
   });
 
   return withProviders(
@@ -155,9 +165,7 @@ export function TscnPreviewShell({
             <span className={styles.brand}>TextScene Inspector</span>
             {toolbar && <div className={styles.topToolbar}>{toolbar}</div>}
             <div className={styles.topSpacer} />
-            <SceneLoadStatus settle={settle} hasScene={hasScene} viewportError={viewportError} />
-            <TextureWorkStatus />
-            <SoftwareRenderingStatus />
+            <StatusChips heard={heard} settle={settle} hasScene={hasScene} viewportError={viewportError} />
             <SceneStats scene={scene} />
             <HelpLink />
           </header>
@@ -174,7 +182,7 @@ export function TscnPreviewShell({
                 <ViewportToolbar view={view} />
               </div>
               <PreviewErrorBoundary sceneGraph={sceneGraph} onViewportErrorChange={setViewportError}>
-                <ViewportArea viewRef={setView} />
+                <ViewportArea viewRef={setView} onStatusChange={heard.onStatusChange} />
               </PreviewErrorBoundary>
             </main>
 
@@ -214,15 +222,17 @@ export function TscnPreviewShell({
 
                   <MasterDetailHandle value={treeShare} setValue={setTreeShare} />
 
-                  <DetailTabs
-                    activeTab={activeTab}
-                    setActiveTab={setActiveTab}
-                    animationTabVisible={animationTabVisible}
-                    treeShare={treeShare}
-                    onResourceUpload={onResourceUpload}
-                    onResourceRemove={onResourceRemove}
-                    onCopyNodePath={onCopyNodePath}
-                  />
+                  <PreviewViewStatusProvider value={heard}>
+                    <DetailTabs
+                      activeTab={activeTab}
+                      setActiveTab={setActiveTab}
+                      animationTabVisible={animationTabVisible}
+                      treeShare={treeShare}
+                      onResourceUpload={onResourceUpload}
+                      onResourceRemove={onResourceRemove}
+                      onCopyNodePath={onCopyNodePath}
+                    />
+                  </PreviewViewStatusProvider>
                 </section>
               </>
             )}
@@ -230,5 +240,33 @@ export function TscnPreviewShell({
         </div>
       </PreviewSelectionProvider>
     </PreviewCameraProvider>
+  );
+}
+
+/** Its own component, so a change of the heard counts renders the chips alone. */
+function StatusChips({
+  heard,
+  settle,
+  hasScene,
+  viewportError,
+}: {
+  heard: HeardStatusStore;
+  settle: ViewSettle;
+  hasScene: boolean;
+  viewportError: Error | null;
+}) {
+  const pendingTextures = useHeardSelection(heard, (status) => status?.pending.textures ?? 0);
+  const isSoftwareRendering = useHeardSelection(heard, (status) => status?.isSoftwareRendering ?? false);
+  return (
+    <>
+      <SceneLoadStatus
+        settle={settle}
+        hasScene={hasScene}
+        viewportError={viewportError}
+        pendingTextures={pendingTextures}
+      />
+      <TextureWorkStatus pendingTextures={pendingTextures} />
+      <SoftwareRenderingStatus isSoftwareRendering={isSoftwareRendering} />
+    </>
   );
 }

@@ -1,6 +1,8 @@
 import { createExternalStore } from '../../utils/externalStore.js';
 import type { RgbaImage } from '../../utils/encodePng.js';
 import { describePendingWork, hasPendingWork, type PendingSceneWork } from '../sceneWork.js';
+import type { FrameStats } from '../frameProfile/frameStats.js';
+import { createUndrawnNodes, type UndrawnNode, type UndrawnReason } from './undrawnNodes.js';
 
 export interface ViewSettled {
   /** Godot readies each script before the first frame (`node.cpp:273`), and this view runs none. */
@@ -8,6 +10,29 @@ export interface ViewSettled {
   /** A current Camera3D or Camera2D in the root viewport. */
   hasCurrentCamera: boolean;
 }
+
+/** What a view reports of itself now: `view.status()` and the `TscnCanvas` ref give it. */
+export interface ViewStatus {
+  /** The settled value, or null while the view is pending. */
+  settled: ViewSettled | null;
+  /** The textures and fonts still building on the page: two views of one page count each other's. */
+  pending: { textures: number; fonts: number };
+  /** The last window of frame numbers, or null before the first: its `timings` need `show.performance`. */
+  frame: FrameStats | null;
+  /** Each node the view holds and does not draw, in path order. */
+  undrawn: readonly UndrawnNode[];
+  /** The browser draws the view's WebGL in software, so every frame is slow. */
+  isSoftwareRendering: boolean;
+}
+
+/** What a host has heard before a view reports: nothing settled, pending, measured, undrawn or found. */
+export const EMPTY_VIEW_STATUS: ViewStatus = {
+  settled: null,
+  pending: { textures: 0, fonts: 0 },
+  frame: null,
+  undrawn: [],
+  isSoftwareRendering: false,
+};
 
 export interface LiveScene {
   /** Changes with each change a frame draws, so a frame that drew the same revision shows the scene. */
@@ -24,13 +49,21 @@ export interface DrawnFrame {
   facts: ViewSettled;
 }
 
-export interface ViewStatus {
+export interface ViewStatusStore {
+  /** One object while nothing in it changes, so a reader compares identities. */
+  status(): ViewStatus;
+  /** A load can start while no frame draws, so the counts change between frames too. */
+  workChanged(work: PendingSceneWork): void;
+  /** Opens one report of an undrawn node. Returns its end. */
+  reportUndrawn(path: string, reason: UndrawnReason): () => void;
+  /** A view never draws in hardware again once the browser falls back to software. */
+  softwareRenderingFound(): void;
+  /** Null once the profile stops. */
+  frameMeasured(stats: FrameStats | null): void;
   /** Null while pending, and with no view attached. The drawn frame's own facts, so a hook renders once. */
   settled(): ViewSettled | null;
   /** An attached view that has not settled: no view at all waits on nothing. */
   isPending(): boolean;
-  /** How many times the view has turned pending, so a reader that renders later misses no round. */
-  pendingRounds(): number;
   subscribe(listener: () => void): () => void;
   /** Stays pending while no view is attached, and rejects with the reason of `signal` once it aborts. */
   whenSettled(signal?: AbortSignal): Promise<ViewSettled>;
@@ -51,17 +84,33 @@ interface PendingCapture {
   reject(error: Error): void;
 }
 
-export function createViewStatus(): ViewStatus {
+export function createViewStatusStore(): ViewStatusStore {
   // A count of announcements, so the store notifies on each one.
   const announcements = createExternalStore(0);
   let live: LiveScene | null = null;
   let lastFrame: DrawnFrame | null = null;
   // What subscribers last heard, so a view that settles again on the same facts still tells them.
   let announced: ViewSettled | null = null;
-  let rounds = 0;
   let capture: PendingCapture | null = null;
   let reader: (() => RgbaImage) | null = null;
   let isReadQueued = false;
+  const pending = { textures: 0, fonts: 0 };
+  let frame: FrameStats | null = null;
+  let isSoftwareRendering = false;
+  // Written only by `status`, and cleared by each change it shows.
+  let shown: ViewStatus | null = null;
+  const undrawn = createUndrawnNodes();
+  // Many nodes report as a scene mounts, so their reports reach the subscribers once per task.
+  let isUndrawnNoticeQueued = false;
+  undrawn.subscribe(() => {
+    shown = null;
+    if (isUndrawnNoticeQueued) return;
+    isUndrawnNoticeQueued = true;
+    queueMicrotask(() => {
+      isUndrawnNoticeQueued = false;
+      notify();
+    });
+  });
 
   const showsDrawnState = () => live !== null && lastFrame !== null && live.revision() === lastFrame.revision;
   // Nested viewports draw before their parent in one frame, so one frame shows a revision whole.
@@ -70,10 +119,12 @@ export function createViewStatus(): ViewStatus {
       ? lastFrame!.facts
       : null;
 
-  const notify = () => announcements.set(announcements.get() + 1);
+  const notify = () => {
+    shown = null;
+    announcements.set(announcements.get() + 1);
+  };
 
   function announce(now = settled()): void {
-    if (now === null && announced !== null) rounds++;
     announced = now;
     notify();
   }
@@ -81,6 +132,27 @@ export function createViewStatus(): ViewStatus {
   function publish(): void {
     const now = settled();
     if (now !== announced) announce(now);
+  }
+
+  function status(): ViewStatus {
+    const now = settled();
+    // A scene edit makes `settled` pending before any notice clears the snapshot, so it is read fresh.
+    if (shown?.settled !== now) shown = null;
+    shown ??= {
+      settled: now,
+      pending: { ...pending },
+      frame,
+      undrawn: undrawn.nodes(),
+      isSoftwareRendering,
+    };
+    return shown;
+  }
+
+  function workChanged(work: PendingSceneWork): void {
+    if (work.textures === pending.textures && work.fonts === pending.fonts) return;
+    pending.textures = work.textures;
+    pending.fonts = work.fonts;
+    notify();
   }
 
   function pendingReason(): string {
@@ -179,16 +251,29 @@ export function createViewStatus(): ViewStatus {
     };
   }
 
-  function frameDrawn(frame: DrawnFrame): void {
-    lastFrame = frame;
+  function frameDrawn(drawn: DrawnFrame): void {
+    lastFrame = drawn;
+    workChanged(drawn.work);
     publish();
     queueRead();
   }
 
   return {
+    status,
+    workChanged,
+    reportUndrawn: undrawn.report,
+    softwareRenderingFound() {
+      if (isSoftwareRendering) return;
+      isSoftwareRendering = true;
+      notify();
+    },
+    frameMeasured(stats) {
+      if (stats === frame) return;
+      frame = stats;
+      notify();
+    },
     settled,
     isPending: () => live !== null && settled() === null,
-    pendingRounds: () => rounds,
     subscribe: announcements.subscribe,
     whenSettled,
     captureImage,

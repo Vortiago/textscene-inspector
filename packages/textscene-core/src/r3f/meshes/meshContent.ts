@@ -28,7 +28,7 @@ import type { ScopedReference } from '../../resources/reading';
 import { heldMaterial } from '../materials/materialReference';
 import { NO_RESOURCES } from '../SceneResourcesContext';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
-import { useUndrawnMeshReport } from '../contexts/UndrawnMeshesContext';
+import { useUndrawnMeshReport } from '../viewStatus/useUndrawnMeshReport';
 import { primitiveMeshGeometry } from './primitiveMeshGeometry';
 import { isLocalToScene } from '../../resources/textures/viewporttexture/localToScene.js';
 

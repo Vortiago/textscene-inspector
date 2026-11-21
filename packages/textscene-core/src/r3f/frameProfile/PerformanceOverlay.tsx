@@ -1,9 +1,18 @@
+import { useSyncExternalStore } from 'react';
 import { useViewShow } from '../viewShow/ViewShowContext.js';
-import { useFrameStats } from './FrameStatsContext.js';
+import { useViewStatusStore } from '../viewStatus/ViewStatusContext.js';
+import { subscribeToNothing } from '../../utils/subscribeToNothing.js';
 import { PerformancePanel } from './PerformancePanel.js';
 
 export function PerformanceOverlay() {
-  const { performance } = useViewShow();
-  const stats = useFrameStats();
-  return performance ? <PerformancePanel stats={stats} /> : null;
+  return useViewShow().performance ? <MeasuredPanel /> : null;
+}
+
+function MeasuredPanel() {
+  const store = useViewStatusStore();
+  const stats = useSyncExternalStore(
+    store?.subscribe ?? subscribeToNothing,
+    () => store?.status().frame ?? null
+  );
+  return <PerformancePanel stats={stats} />;
 }

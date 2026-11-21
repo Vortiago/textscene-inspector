@@ -203,15 +203,15 @@ a script, which do not run, and whether the root viewport has a current Camera3D
 are facts of the game's start, so the 3D and 2D modes give the same value. Which files load is a
 fact of the scene, not of the view: see "Know which files are missing".
 
-`mountScene` returns the view. In React, the `ref` of `<TscnCanvas>` gives its `settled` and
-`captureImage`:
+`mountScene` returns the view. In React, the `ref` of `<TscnCanvas>` gives its `settled`,
+`captureImage` and `status`:
 
 ```tsx
 import { useEffect, useRef, useState } from 'react';
 import { TscnCanvas, type View } from '@textscene/renderer';
 
 export function GameView() {
-  const view = useRef<Pick<View, 'settled' | 'captureImage'>>(null);
+  const view = useRef<Pick<View, 'settled' | 'captureImage' | 'status'>>(null);
   const [status, setStatus] = useState('Loading…');
   useEffect(() => {
     view.current?.settled.then(
@@ -232,6 +232,38 @@ export function GameView() {
 ```
 
 Each read of `settled` gives a new promise, which rejects once the view unmounts.
+
+### Read the view's status
+
+`view.status()` gives what the view reports of itself now, as one object:
+
+- `settled`: the settled value, or `null` while the view is pending.
+- `pending`: `{ textures, fonts }`, the textures and fonts still building on the page. Two views
+  on one page count each other's. The files that still load are in `scene.files()`.
+- `frame`: the last window of frame numbers, or `null` before the first window. A window lands
+  twice a second and holds `fps`, `frameMs`, `cpuMs`, `drawCallsPerFrame`, `objectsPerFrame` and
+  `primitivesPerFrame`. The objects and primitives are those of Godot's editor monitor: each
+  surface the view draws is one object, and so is each draw of its shadow passes. While
+  `show.performance` is on, `timings` holds the GPU time and the time of each render step too.
+  A GPU time costs a timer query per step, so without `show.performance` there is no `timings`.
+  The performance panel shows the same numbers.
+- `undrawn`: each node the view holds and does not draw, sorted by path. An entry has the node's
+  absolute `path`, as a node handle gives it, its `meshTypes` that no part of the view draws, and
+  `isEmptyShape` for a CSG shape whose brush is empty. Godot warns of an empty shape too.
+- `isSoftwareRendering`: the browser draws the view's WebGL on the CPU, so every frame is slow.
+
+`status()` gives the same object while nothing in it changes. The option `onStatusChange` calls
+your function with the new status on each change, but not for the frame numbers, which change
+twice a second. Read `status()` for them. A host hears a settled view turn pending again, for
+example after a write or a file that changed:
+
+```ts
+const view = mountScene(element, scene, {
+  onStatusChange: (status) => {
+    badge.textContent = status.settled ? 'Ready' : 'Loading…';
+  },
+});
+```
 
 ### Know which files are missing
 
@@ -322,10 +354,11 @@ save.onclick = async () => {
 };
 ```
 
-`mountScene` returns a `View` with four members:
+`mountScene` returns a `View` with five members:
 
 - `settled`: a promise of the settled value, in every mode. Each read gives a new promise, which
   waits again after the scene changes. It rejects once the view is disposed.
+- `status()`: what the view reports of itself now. See "Read the view's status".
 - `captureImage()`: a PNG `Blob` of what the view draws. It rejects before the view is settled, and
   the message names the pending work.
   - In-game, it is the game window at the window's size, whatever the size of the element: 1152 x
@@ -433,7 +466,7 @@ view.update({ show: { grid: true, collisions: true } });
 | `previewSun`         | `true`  | The editor preview sun, while the scene has no DirectionalLight3D             | The preview sunlight button       |
 | `previewEnvironment` | `true`  | The editor preview sky, while the scene has no WorldEnvironment               | The preview environment button    |
 | `fog`                | `true`  | The Environment's depth and volumetric fog                                    | none, Godot always draws it       |
-| `performance`        | `false` | A panel over the view with the frame rate and the time of each render step    | View Frame Time                   |
+| `performance`        | `false` | A panel over the view with the frame numbers and the time of each render step | View Frame Time                   |
 
 The In-game mode draws as the game does: no helper, every Label3D and the fog, whatever `show`
 holds. Only `performance` works there too. `<TscnCanvas show={{ grid: true }} />` does the same in
@@ -525,20 +558,21 @@ The package exports these names.
 - `SceneFile`, `SceneFileState` and `SceneFileFailure` (types): an entry of `scene.files()`, its
   `state` and its `reason`.
 - `CameraState` (a type): an entry of `scene.cameras()`.
+- `ViewStatus` (a type): what `status()` gives. See "Read the view's status".
 - `TscnCanvas`: the view in React. Its props are `scene` (a `Scene`), the options of `mountScene`
-  (`mode`, default `'3D'`, `visible`, `camera`, `selected`, `onSelect` and `show`), and `className`.
-  `scene` is required. Its `ref` gives the view's `settled` and `captureImage`. Its unmount ends
-  the view.
+  (`mode`, default `'3D'`, `visible`, `camera`, `selected`, `onSelect`, `show` and
+  `onStatusChange`), and `className`. `scene` is required. Its `ref` gives the view's `settled`,
+  `captureImage` and `status`. Its unmount ends the view.
 - `ResourceProvider` (a type): `loadResource(path, type?)` returns the file as a string or an
   `ArrayBuffer`, or `null` when the file is missing. The optional `watch(listener)` is in "Load a
   file again when it changes".
 - `mountScene(element, scene, options?)`: mounts the view with no React code of the page's own,
-  and returns a `View`: `settled`, `captureImage`, `update` and `dispose`. See "Mount the view with
-  no React code".
+  and returns a `View`: `settled`, `captureImage`, `status`, `update` and `dispose`. See "Mount the
+  view with no React code".
 - `View` and `ViewOptions` (types): what `mountScene` returns, and the options of `mountScene` and
   `update`: `mode` (default `'in-game'`), `visible` (default `true`), `camera` (default `null`),
-  `selected`, `onSelect` and `show`. See "Learn which node a click picked" and "Turn the editor
-  helpers on and off".
+  `selected`, `onSelect`, `show` and `onStatusChange`. See "Learn which node a click picked", "Turn
+  the editor helpers on and off" and "Read the view's status".
 
 Version 0.6.0 exported `TscnSceneProvider`, `useSelection` and `useGameViewSettled`, and later
 versions do not. Pass `scene` to `TscnCanvas`, use `selected` and `onSelect`, and read `settled`

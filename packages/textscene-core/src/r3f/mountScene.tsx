@@ -7,8 +7,9 @@ import { TscnCanvas, type TscnCanvasMode } from './TscnCanvas.js';
 import { TscnSceneProvider } from './TscnSceneProvider.js';
 import { assertCameraPath } from './viewCamera.js';
 import { ViewStatusProvider } from './viewStatus/ViewStatusContext.js';
-import { createViewStatus } from './viewStatus/viewStatus.js';
+import { createViewStatusStore } from './viewStatus/viewStatus.js';
 import { viewAnswers, type ViewAnswers } from './viewStatus/viewAnswers.js';
+import type { ViewStatus } from './viewStatus/viewStatus.js';
 import { assertShow, DEFAULT_SHOW, withShown, type ViewShow } from './viewShow/viewShow.js';
 
 export interface ViewOptions {
@@ -24,9 +25,11 @@ export interface ViewOptions {
   onSelect?: ((node: NodeHandle | null) => void) | null;
   /** The editor helpers the 3D and 2D modes draw. In-game draws none but `performance`. */
   show?: Partial<ViewShow>;
+  /** Called on each change of `status()` but for its frame numbers. `null` stops the calls. */
+  onStatusChange?: ((status: ViewStatus) => void) | null;
 }
 
-/** The options a view holds: `mode`, `visible`, `camera` and `show` always, the selection keys once given. */
+/** The options a view holds: `mode`, `visible`, `camera` and `show` always, the callbacks once given. */
 type MountedOptions = Omit<ViewOptions, 'show'> &
   Required<Pick<ViewOptions, 'mode' | 'visible' | 'camera'>> & { show: ViewShow };
 
@@ -42,7 +45,7 @@ const DEFAULT_OPTIONS: MountedOptions = { mode: 'in-game', visible: true, camera
 
 export function mountScene(element: HTMLElement, scene: Scene, options: ViewOptions = {}): View {
   let current = withGiven(DEFAULT_OPTIONS, checked(scene, options));
-  const status = createViewStatus();
+  const store = createViewStatusStore();
   // Aborts with the reason the view will never settle: a failed mount, or the dispose.
   const ending = new AbortController();
   let isDisposed = false;
@@ -55,7 +58,7 @@ export function mountScene(element: HTMLElement, scene: Scene, options: ViewOpti
   const render = () =>
     root.render(
       <TscnSceneProvider scene={scene}>
-        <ViewStatusProvider status={status}>
+        <ViewStatusProvider store={store}>
           <TscnCanvas {...current} />
         </ViewStatusProvider>
       </TscnSceneProvider>
@@ -63,7 +66,7 @@ export function mountScene(element: HTMLElement, scene: Scene, options: ViewOpti
   render();
   const answers = viewAnswers({
     scene,
-    status,
+    store,
     ending: ending.signal,
     lookedThrough: () => (current.mode === '3D' ? current.camera : null),
   });
@@ -72,6 +75,7 @@ export function mountScene(element: HTMLElement, scene: Scene, options: ViewOpti
       return answers.settled;
     },
     captureImage: answers.captureImage,
+    status: answers.status,
     update(next) {
       if (isDisposed) throw new Error('expected a mounted view to update, got a disposed one');
       current = withGiven(current, checked(scene, next));
@@ -101,6 +105,7 @@ function withGiven(options: MountedOptions, given: ViewOptions): MountedOptions 
     camera: given.camera === undefined ? options.camera : given.camera,
     selected: given.selected === undefined ? options.selected : given.selected,
     onSelect: given.onSelect === undefined ? options.onSelect : given.onSelect,
+    onStatusChange: given.onStatusChange === undefined ? options.onStatusChange : given.onStatusChange,
     show: withShown(options.show, given.show),
   };
 }

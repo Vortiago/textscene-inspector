@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
-import { beginStep, endStep, innermostStep, startFrameProfile } from './frameProfile';
+import { beginStep, endStep, innermostStep } from './frameProfile';
 import type { FrameStats } from './frameStats';
 import {
   cpuOnlyRenderer,
@@ -10,6 +10,8 @@ import {
   manualClock,
   profiledWindow,
   stepCpuMs,
+  timingsOf,
+  startFrameProfile,
 } from './frameProfile.testkit';
 
 /**
@@ -132,7 +134,10 @@ describe('startFrameProfile', () => {
         endStep(renderer, 'Shadows');
       }
     });
-    expect(stats.steps.find((s) => s.step === 'Shadows')).toMatchObject({ cpuMs: 3, runsPerFrame: 3 });
+    expect(timingsOf(stats).steps.find((s) => s.step === 'Shadows')).toMatchObject({
+      cpuMs: 3,
+      runsPerFrame: 3,
+    });
   });
 
   it("counts each step's own draw calls per frame, and the frame's", () => {
@@ -146,7 +151,7 @@ describe('startFrameProfile', () => {
       endStep(renderer, 'Shadows');
       endStep(renderer, 'Scene draw');
     });
-    expect(stats.steps.map((s) => [s.step, s.drawCallsPerFrame])).toEqual([
+    expect(timingsOf(stats).steps.map((s) => [s.step, s.drawCallsPerFrame])).toEqual([
       ['Scene draw', 5],
       ['Shadows', 3],
       ['Other', 1],
@@ -177,7 +182,7 @@ describe('startFrameProfile', () => {
 
   it('reports no GPU time when the context offers no timer query', () => {
     const { window } = cpuOnly();
-    expect(window(() => {})).toMatchObject({ hasGpuTimer: false, gpuMs: null });
+    expect(timingsOf(window(() => {}))).toMatchObject({ hasGpuTimer: false, gpuMs: null });
   });
 
   it('records nothing once stopped (error case)', () => {
@@ -204,7 +209,7 @@ describe('startFrameProfile', () => {
       beginStep(renderer, 'Fog');
       clock.advance(1);
     });
-    expect(stats.steps.find((s) => s.step === 'Fog')!.cpuMs).toBe(1);
+    expect(timingsOf(stats).steps.find((s) => s.step === 'Fog')!.cpuMs).toBe(1);
   });
 });
 
@@ -236,7 +241,7 @@ describe('endStep', () => {
       clock.advance(2);
       endStep(renderer, 'Scene draw');
     });
-    expect(stats.steps.find((s) => s.step === 'Scene draw')!.cpuMs).toBe(2);
+    expect(timingsOf(stats).steps.find((s) => s.step === 'Scene draw')!.cpuMs).toBe(2);
   });
 });
 
@@ -285,8 +290,8 @@ describe('startFrameProfile on a context with a GPU timer', () => {
         gpu.resolve();
       }
     );
-    expect(stats.gpuMs).toBe(7);
-    expect(stats.steps.map((s) => [s.step, s.gpuMs])).toEqual([
+    expect(timingsOf(stats).gpuMs).toBe(7);
+    expect(timingsOf(stats).steps.map((s) => [s.step, s.gpuMs])).toEqual([
       ['Shadows', 4],
       ['Fog', 2],
       ['Other', 1],
@@ -310,7 +315,7 @@ describe('startFrameProfile on a context with a GPU timer', () => {
       () => 0,
       () => gpuFrame(gpu)
     );
-    expect(stats).toMatchObject({ hasGpuTimer: true, gpuMs: null });
+    expect(timingsOf(stats)).toMatchObject({ hasGpuTimer: true, gpuMs: null });
   });
 
   it('drops the results of a frame the GPU timer marks disjoint (error case)', () => {
@@ -324,7 +329,7 @@ describe('startFrameProfile on a context with a GPU timer', () => {
         gpu.resolve();
       }
     );
-    expect(stats.gpuMs).toBeNull();
+    expect(timingsOf(stats).gpuMs).toBeNull();
   });
 
   it('deletes every query it made once stopped', () => {
@@ -363,7 +368,7 @@ describe('startFrameProfile on a context with a GPU timer', () => {
     profile.stop();
 
     expect(gpu.state.staleBegins).toBe(0);
-    expect(published.at(-1)!.gpuMs).toBe(7);
+    expect(timingsOf(published.at(-1)).gpuMs).toBe(7);
   });
 
   it("lists a step whose GPU result arrives in a window it did not run in, so the rows sum to the frame's GPU time", () => {
@@ -392,7 +397,7 @@ describe('startFrameProfile on a context with a GPU timer', () => {
     profile.stop();
 
     const [, second] = published;
-    expect(second!.steps.map((s) => [s.step, s.gpuMs, s.runsPerFrame])).toEqual([
+    expect(timingsOf(second).steps.map((s) => [s.step, s.gpuMs, s.runsPerFrame])).toEqual([
       ['Reflection probes', 5, 0],
       ['Other', 1, 1],
     ]);

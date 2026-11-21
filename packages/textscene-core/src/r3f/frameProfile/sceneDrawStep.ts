@@ -3,6 +3,7 @@
 import type * as THREE from 'three';
 import { observeSceneCamera, observeSceneRenderEnd } from '../sceneRenderCamera.js';
 import { beginStep, endStep, innermostStep } from './frameProfile.js';
+import type { ViewDrawCounter } from './viewDraw.js';
 import { WRAPS_CANVAS_DRAW } from './frameStats.js';
 
 /**
@@ -14,7 +15,8 @@ import { WRAPS_CANVAS_DRAW } from './frameStats.js';
 export function timeSceneDraws(
   renderer: THREE.WebGLRenderer,
   scene: THREE.Scene,
-  canvasCamera: () => THREE.Camera
+  canvasCamera: () => THREE.Camera,
+  counter: ViewDrawCounter | null
 ): () => void {
   /** Whether each render in progress, innermost last, opened the step. */
   const opened: boolean[] = [];
@@ -22,10 +24,14 @@ export function timeSceneDraws(
     const outer = innermostStep(renderer);
     const isCanvasDraw = camera === canvasCamera() && (outer === null || WRAPS_CANVAS_DRAW.has(outer));
     opened.push(isCanvasDraw);
-    if (isCanvasDraw) beginStep(renderer, 'Scene draw');
+    if (!isCanvasDraw) return;
+    beginStep(renderer, 'Scene draw');
+    counter?.open(renderer);
   });
   const stopFinishing = observeSceneRenderEnd(scene, () => {
-    if (opened.pop()) endStep(renderer, 'Scene draw');
+    if (!opened.pop()) return;
+    counter?.close(renderer, scene);
+    endStep(renderer, 'Scene draw');
   });
   return () => {
     stopObserving();

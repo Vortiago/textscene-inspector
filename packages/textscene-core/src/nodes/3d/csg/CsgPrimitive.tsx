@@ -11,7 +11,7 @@ import type { TscnNode } from '../../../parser/types';
 import { node3dGroupSpread, transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { SurfacedMeshDrawer } from '../../../r3f/surfacedMeshDrawer/SurfacedMeshDrawer';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
-import { useUndrawnMeshReport } from '../../../r3f/contexts/UndrawnMeshesContext';
+import { useUndrawnMeshReport } from '../../../r3f/viewStatus/useUndrawnMeshReport';
 import { EmptyShapeBranch, useReportEmptyShape } from '../../../r3f/contexts/EmptyShapesContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { CsgSubtreeProvider, useCsgSubtree } from '../../../r3f/contexts/CsgSubtreeContext';

@@ -12,7 +12,7 @@ import { CaptureRenderer } from '../testing/CaptureRenderer';
 import { r3fStateProbe } from '../testing/R3FStateProbe';
 import { EditorViewReport } from './EditorViewReport';
 import { ViewStatusProvider } from './ViewStatusContext';
-import { createViewStatus, type ViewStatus } from './viewStatus';
+import { createViewStatusStore, type ViewStatusStore } from './viewStatus';
 import { fontWork } from '../controls/native/text/settledChannel';
 import '../nodes';
 
@@ -57,14 +57,14 @@ function frameCounter() {
 }
 
 async function mountEditor(source: string) {
-  const status = createViewStatus();
+  const status = createViewStatusStore();
   const scene = openScene({ source, provider: files });
   const gl: { current: THREE.WebGLRenderer | null } = { current: null };
   const { frames, Counter } = frameCounter();
   const { Probe, state } = r3fStateProbe();
   const renderer = await ReactThreeTestRenderer.create(
     <TscnSceneProvider scene={scene}>
-      <ViewStatusProvider status={status}>
+      <ViewStatusProvider store={status}>
         <CaptureRenderer captured={gl} />
         <Counter />
         <Probe />
@@ -84,7 +84,7 @@ async function drawFrames(state: () => RootState, count: number) {
   for (let i = 0; i < count; i++) await act(async () => state().advance(state().clock.elapsedTime + 1 / 60));
 }
 
-async function settledStatus(source: string): Promise<ViewStatus> {
+async function settledStatus(source: string): Promise<ViewStatusStore> {
   const mounted = await mountEditor(source);
   await mounted.settle();
   return mounted.status;

@@ -11,8 +11,7 @@ import { useSelection } from '../../contexts/SelectionContext.js';
 import { usePreviewCamera } from '../TscnPreviewShell/previewCamera.js';
 import { useLiveNode } from '../../useLiveSceneTree.js';
 import { useLivePatchedNode } from '../../liveNodePatches.js';
-import { useUndrawnMeshTypes } from '../../contexts/UndrawnMeshesContext.js';
-import { useIsEmptyShape } from '../../contexts/EmptyShapesContext.js';
+import { useUndrawnNode } from '../TscnPreviewShell/previewViewStatus.js';
 import { spelledLiveNodePath } from '../../../utils/nodePath.js';
 import { PropertySection } from './PropertySection.js';
 import type { PropertySection as PropertySectionData } from '../../../core/NodeRegistry.js';
@@ -72,8 +71,7 @@ export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
         </WarningSection>
       )}
 
-      <UndrawnMeshNotice nodePath={path} />
-      <EmptyShapeNotice nodePath={path} />
+      <UndrawnNotices nodePath={path} />
 
       <div className={styles.section}>
         <div className={styles.row}>
@@ -152,9 +150,20 @@ function WarningSection({ title, children }: { title: string; children: ReactNod
   );
 }
 
+/** What the view reports it holds of the node and does not draw. */
+function UndrawnNotices({ nodePath }: { nodePath: string }) {
+  const undrawn = useUndrawnNode(nodePath);
+  if (!undrawn) return null;
+  return (
+    <>
+      <UndrawnMeshNotice types={undrawn.meshTypes} />
+      {undrawn.isEmptyShape && <EmptyShapeNotice />}
+    </>
+  );
+}
+
 /** Names each mesh type the node holds that the previewer does not draw. */
-function UndrawnMeshNotice({ nodePath }: { nodePath: string }) {
-  const types = useUndrawnMeshTypes(nodePath);
+function UndrawnMeshNotice({ types }: { types: readonly string[] }) {
   if (types.length === 0) return null;
   const meshes = types.length === 1 ? `${types[0]} mesh is` : `${types.join(', ')} meshes are`;
   return (
@@ -176,8 +185,7 @@ const EMPTY_SHAPE_WARNING = [
 ];
 
 /** Godot's warning for a CSG shape whose brush is empty, such as an open one. */
-function EmptyShapeNotice({ nodePath }: { nodePath: string }) {
-  if (!useIsEmptyShape(nodePath)) return null;
+function EmptyShapeNotice() {
   return (
     <WarningSection title="Empty Shape">
       {EMPTY_SHAPE_WARNING.map((line) => (

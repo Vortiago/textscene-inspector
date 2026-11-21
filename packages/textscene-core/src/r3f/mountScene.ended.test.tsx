@@ -8,8 +8,8 @@ vi.mock('./viewStatus/viewStatus', async (importOriginal) => {
   return {
     ...original,
     // A status that still holds a settled frame, as before React has unmounted an ended view.
-    createViewStatus: () => ({
-      ...original.createViewStatus(),
+    createViewStatusStore: () => ({
+      ...original.createViewStatusStore(),
       whenSettled: () => Promise.resolve({ scriptedNodeCount: 0, hasCurrentCamera: false }),
     }),
   };

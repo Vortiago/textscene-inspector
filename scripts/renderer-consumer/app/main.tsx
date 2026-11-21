@@ -2,6 +2,7 @@ import { createRoot } from 'react-dom/client';
 import { TscnCanvas, openScene, variant } from '@textscene/renderer';
 import { runHeldResourceChecks, type HeldResourceCheckResults } from './heldResourceChecks';
 import { runMissingFileChecks, type MissingFileCheckResults } from './missingFileChecks';
+import { runStatusChecks, type StatusCheckResults } from './statusChecks';
 import { projectOf, runMountChecks, type MountCheckResults } from './mountChecks';
 import { WINDOW_320_PROJECT, exposeSwitchChecks } from './switchView';
 import { exposeCameraChecks } from './cameraView';
@@ -101,6 +102,8 @@ declare global {
     loadChecks?: LoadCheckResults;
     /** Written once the checks of the files a scene asked for and did not get end. */
     missingFileChecks?: MissingFileCheckResults;
+    /** Written once the checks of `view.status()` and `onStatusChange` end. */
+    statusChecks?: StatusCheckResults;
   }
 }
 
@@ -113,6 +116,8 @@ if (query.get('checks') === 'mount') {
   void runLoadChecks().then((results) => (window.loadChecks = results));
 } else if (query.get('checks') === 'missing') {
   void runMissingFileChecks().then((results) => (window.missingFileChecks = results));
+} else if (query.get('checks') === 'status') {
+  void runStatusChecks().then((results) => (window.statusChecks = results));
 } else if (query.get('checks') === 'switch') {
   exposeSwitchChecks(screenshotElement());
 } else if (query.get('checks') === 'camera') {

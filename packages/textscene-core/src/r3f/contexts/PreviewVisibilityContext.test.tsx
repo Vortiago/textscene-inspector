@@ -8,7 +8,7 @@ import { act, renderHook } from '@testing-library/react';
 import { textureWork } from '../../resources/textures/textureWork';
 import { PreviewVisibilityProvider, usePreviewFrameloop } from './PreviewVisibilityContext';
 import { ViewStatusProvider } from '../viewStatus/ViewStatusContext';
-import { createViewStatus } from '../viewStatus/viewStatus';
+import { createViewStatusStore } from '../viewStatus/viewStatus';
 
 /** Renders the hook under a host whose visibility `setVisible` changes. */
 function renderUnderHost(initiallyVisible: boolean) {
@@ -60,10 +60,10 @@ describe('usePreviewFrameloop', () => {
   });
 
   it('keeps the loop on while a hidden In-game view has yet to settle, and stops it once it has', async () => {
-    const status = createViewStatus();
+    const status = createViewStatusStore();
     status.attach({ revision: () => 0, subscribe: () => () => {} });
     const wrapper = ({ children }: { children: ReactNode }) => (
-      <ViewStatusProvider status={status}>
+      <ViewStatusProvider store={status}>
         <PreviewVisibilityProvider isVisible={false}>{children}</PreviewVisibilityProvider>
       </ViewStatusProvider>
     );
@@ -85,7 +85,7 @@ describe('usePreviewFrameloop', () => {
   });
 
   it('keeps the loop on while a hidden In-game view owes a capture, and stops it once it answers', async () => {
-    const status = createViewStatus();
+    const status = createViewStatusStore();
     status.attach({ revision: () => 0, subscribe: () => () => {} });
     status.frameDrawn({
       revision: 0,
@@ -95,7 +95,7 @@ describe('usePreviewFrameloop', () => {
       facts: { scriptedNodeCount: 0, hasCurrentCamera: false },
     });
     const wrapper = ({ children }: { children: ReactNode }) => (
-      <ViewStatusProvider status={status}>
+      <ViewStatusProvider store={status}>
         <PreviewVisibilityProvider isVisible={false}>{children}</PreviewVisibilityProvider>
       </ViewStatusProvider>
     );

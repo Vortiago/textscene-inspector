@@ -4,7 +4,7 @@ import { useContext, useEffect } from 'react';
 import type * as THREE from 'three';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { ResourceLoaderContext } from '../resources/ResourceLoaderContext.js';
-import { useViewStatus } from './viewStatus/ViewStatusContext.js';
+import { useViewStatusStore } from './viewStatus/ViewStatusContext.js';
 import { isDrawingPreview } from './EditorControlsHandle.js';
 import { useViewportMode } from './contexts/ViewportModeContext.js';
 import { frameSceneBounds, type OrbitLike } from './frameSceneBounds.js';
@@ -27,7 +27,7 @@ export function CameraFit() {
   const rootKey = hierarchy?.sceneGraph?.rootScene ?? '';
   const hasScene = !!hierarchy?.sceneGraph;
 
-  const status = useViewStatus();
+  const store = useViewStatusStore();
   const loader = useContext(ResourceLoaderContext);
 
   useEffect(() => {
@@ -61,22 +61,22 @@ export function CameraFit() {
     });
     let wasSettled = false;
     const fitOnSettle = () => {
-      const isSettled = status?.settled() != null;
+      const isSettled = store?.settled() != null;
       if (isSettled && !wasSettled && hasLoadedSinceSettle) {
         hasLoadedSinceSettle = false;
         if (!hasCameraMoved()) fit();
       }
       wasSettled = isSettled;
     };
-    // The status fires between frames: a fit inside one moves the camera between its passes.
-    const unsubscribe = status?.subscribe(fitOnSettle);
+    // The store fires between frames: a fit inside one moves the camera between its passes.
+    const unsubscribe = store?.subscribe(fitOnSettle);
 
     return () => {
       timers.forEach(clearTimeout);
       stopWatchingLoads?.();
       unsubscribe?.();
     };
-  }, [rootKey, hasScene, frameOnOpen, get, status, loader]);
+  }, [rootKey, hasScene, frameOnOpen, get, store, loader]);
 
   return null;
 }
