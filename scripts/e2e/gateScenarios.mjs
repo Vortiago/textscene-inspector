@@ -1,3 +1,9 @@
+import {
+  checkEyeAndHover,
+  EYE_AND_HOVER_FIXTURE,
+  measureEyeAndHover,
+  runEyeAndHoverScenario,
+} from './eyeAndHoverScenario.mjs';
 import { checkViewStatus, runViewStatusScenario, VIEW_STATUS_FIXTURE } from './viewStatusScenario.mjs';
 import { inkStats } from '../vscode/pixels.mjs';
 import { shardOf } from '../shards/shards.mjs';
@@ -92,6 +98,14 @@ export const SCENARIOS = [
     run: runInstanceClickScenario,
     check: checkInstanceClick,
     measure: measureInstanceClick,
+  },
+  {
+    name: 'eye and hover',
+    title: `tree eye and row hover: ${EYE_AND_HOVER_FIXTURE}`,
+    seconds: 6,
+    run: runEyeAndHoverScenario,
+    check: checkEyeAndHover,
+    measure: measureEyeAndHover,
   },
   {
     name: 'view status',

@@ -16,7 +16,6 @@ import {
   useAnimationTransport,
   type AnimationTransport,
 } from '../../../r3f/contexts/AnimationTransportContext';
-import { useOptionalSelection, type SelectionContextValue } from '../../../r3f/contexts/SelectionContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
@@ -50,10 +49,8 @@ const INTERNAL: TscnInternalResource[] = [
 const spriteHeading = { type: 'node', attributes: { type: 'Sprite2D', name: 'Sprite2D' } };
 
 let transport: AnimationTransport;
-let selection: SelectionContextValue | null;
 function Capture() {
   transport = useAnimationTransport();
-  selection = useOptionalSelection();
   return null;
 }
 
@@ -106,8 +103,7 @@ function spriteFrameOffsetX(r: Awaited<ReturnType<typeof mount>>): number {
 }
 
 const settle = () => ReactThreeTestRenderer.act(async () => {});
-const select = (path: string | null) =>
-  ReactThreeTestRenderer.act(async () => selection?.setSelectedNodePath(path));
+const select = (path: string | null) => ReactThreeTestRenderer.act(async () => transport.setActivePath(path));
 
 describe('AnimationPlayer drives Sprite2D:frame (ADR-0016)', () => {
   it('shows the authored frame while the player is not driving', async () => {

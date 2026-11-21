@@ -41,7 +41,7 @@ function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
 }
 
 function hiddenLeaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
-  return { ...leaf(name, props), hidden: true };
+  return leaf(name, { ...props, visible: false });
 }
 
 /** A Control the walker promoted past a Node2D: a grandchild, so no slot of its own. */

@@ -1,7 +1,7 @@
 import { diffMask } from '../vscode/pixels.mjs';
 import { checkDiagnostics } from './diagnostics.mjs';
 import { openFixture, shootCanvas } from './openFixture.mjs';
-import { expandAllTreeRows, selectOutlinerNode, SELECT_SETTLE_MS } from './outliner.mjs';
+import { expandAllTreeRows, selectOutlinerNode, SELECT_SETTLE_MS, treeRow } from './outliner.mjs';
 
 /* global document */
 // `document` exists only in the browser that runs the `page.evaluate` callback.
@@ -96,8 +96,7 @@ async function runToggles(browser, baseUrl) {
   return { before, inGame, backIn3D, diagnostics };
 }
 
-const isRowSelected = (page, path) =>
-  page.locator(`[data-node-path="${path}"] > [role="treeitem"]`).first().getAttribute('aria-selected');
+const isRowSelected = (page, path) => treeRow(page, path).getAttribute('aria-selected');
 
 /** How many pixels clearing the selection changes in `view`: a box in 3D, none In-game. */
 async function selectionPixels(page, view) {

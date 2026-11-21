@@ -14,11 +14,7 @@ import {
   useAnimationTransport,
   type AnimationTransport,
 } from '../../../r3f/contexts/AnimationTransportContext';
-import {
-  SelectionProvider,
-  useOptionalSelection,
-  type SelectionContextValue,
-} from '../../../r3f/contexts/SelectionContext';
+import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import { RegisteredNode } from '../../../r3f/testing/RegisteredNode';
 import {
@@ -73,17 +69,15 @@ afterEach(async () => {
 });
 
 let transport: AnimationTransport;
-let selection: SelectionContextValue | null;
 let driver: AnimationDriverEntry | null;
 function Capture() {
   transport = useAnimationTransport();
-  selection = useOptionalSelection();
   driver = useAnimationDriver(AP_PATH);
   return null;
 }
 
 async function setSelection(path: string | null) {
-  await ReactThreeTestRenderer.act(async () => selection?.setSelectedNodePath(path));
+  await ReactThreeTestRenderer.act(async () => transport.setActivePath(path));
 }
 
 /**

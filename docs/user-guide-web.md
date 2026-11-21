@@ -43,7 +43,7 @@ The **3D/2D** switch over the viewport changes the view. A scene with only Contr
 
 The right dock holds the scene tree above three tabs.
 
-- **Scene tree:** click a node to select it. Search, expand and collapse, and hide nodes with the eye icon.
+- **Scene tree:** click a node to select it, or point at a row to outline its node in the view. Search, expand and collapse, and hide nodes with the eye icon. The eye sets the node's `visible` until the file changes. A GLB model's parts have no eye.
   A **Not Implemented** chip marks a type that the previewer parses but does not draw.
 - **Inspector:** the type, path and properties of the selected node.
 - **Resources:** the files the scene needs, and which are missing.

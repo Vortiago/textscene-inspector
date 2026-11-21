@@ -13,7 +13,7 @@ import type { ViewStatus } from '../../viewStatus/viewStatus.js';
 import { FreelookSpeedReadout } from '../FreelookSpeedReadout/FreelookSpeedReadout.js';
 import { GameStartNotes } from './GameStartNotes.js';
 import { usePreviewCamera, viewCameraOf } from './previewCamera.js';
-import { usePreviewSelection } from './previewSelection.js';
+import { useOutlinedNode, usePreviewSelection } from './previewSelection.js';
 import { ViewportControlsHelp } from '../ViewportControlsHelp/ViewportControlsHelp.js';
 import styles from './TscnPreviewShell.module.css';
 
@@ -31,6 +31,7 @@ export const ViewportArea = memo(function ViewportArea({ viewRef, onStatusChange
   const { mode, show } = useViewportMode();
   const camera = viewCameraOf(usePreviewCamera()?.camera ?? null);
   const selection = usePreviewSelection();
+  const outlined = useOutlinedNode();
   // The view reads the shell's providers: a `scene` prop would mount a second selection and pass.
   return (
     <>
@@ -38,7 +39,7 @@ export const ViewportArea = memo(function ViewportArea({ viewRef, onStatusChange
         mode={mode}
         show={show}
         camera={camera}
-        selected={selection?.selected ?? null}
+        selected={outlined}
         onSelect={selection?.select}
         onStatusChange={onStatusChange}
         ref={viewRef}

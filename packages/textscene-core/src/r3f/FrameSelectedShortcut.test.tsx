@@ -13,6 +13,12 @@ import { ViewportActionsProvider } from './contexts/ViewportActionsContext';
 import { GodotEditorControls } from './GodotEditorControls';
 import { FrameSelectedShortcut } from './FrameSelectedShortcut';
 import { SelectSeeder } from './testing/SelectSeeder';
+import { openScene } from '../scene/openScene';
+import './sceneLiveTree.js';
+import {
+  PreviewSelectionProvider,
+  usePreviewSelection,
+} from './components/TscnPreviewShell/previewSelection';
 
 let camera: THREE.Camera;
 function CameraCapture() {
@@ -59,6 +65,47 @@ describe('<FrameSelectedShortcut> (#224)', () => {
 
     // Framing "Far" alone centres the camera near x=80, not the x=40
     // midpoint framing BOTH meshes together would produce.
+    expect(camera.position.x).toBeGreaterThan(60);
+  });
+
+  it('frames the selected node, not the hovered row the view outlines', async () => {
+    const scene = openScene({
+      source: `[gd_scene format=3]
+
+[node name="Main" type="Node3D"]
+
+[node name="Near" type="Node3D" parent="."]
+
+[node name="Far" type="Node3D" parent="."]
+`,
+      provider: { loadResource: async () => null },
+    });
+    function SelectFarHoverNear() {
+      const preview = usePreviewSelection();
+      useEffect(() => {
+        preview?.selectPath('Main/Far');
+        preview?.hoverPath('Main/Near');
+      }, [preview]);
+      return null;
+    }
+    const renderer = await ReactThreeTestRenderer.create(
+      <SelectionProvider>
+        <PreviewSelectionProvider scene={scene}>
+          <CameraCapture />
+          <RegisteredMesh path="Main/Near" position={[0, 0, 0]} />
+          <RegisteredMesh path="Main/Far" position={[80, 0, 0]} />
+          <SelectFarHoverNear />
+          {/* The view outlines the hovered row, as HostSelection writes it. */}
+          <SelectSeeder path="Main/Near" />
+          <FrameSelectedShortcut />
+        </PreviewSelectionProvider>
+      </SelectionProvider>
+    );
+
+    await renderer.advanceFrames(1, 0);
+    fireF();
+    await renderer.advanceFrames(1, 0);
+
     expect(camera.position.x).toBeGreaterThan(60);
   });
 

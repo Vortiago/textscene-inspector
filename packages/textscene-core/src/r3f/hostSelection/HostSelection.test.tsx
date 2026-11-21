@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import * as THREE from 'three';
 import { HostSelection, type HostSelectionProps } from './HostSelection';
 import { useViewportSelection } from '../hooks/useViewportSelection';
-import { useSelection } from '../contexts/SelectionContext';
+import { useSelectedNodePath, useSelection } from '../contexts/SelectionContext';
 import { CanvasWorkspaceProvider, type CanvasWorkspace } from '../contexts/CanvasWorkspaceContext';
 import { TscnSceneProvider } from '../TscnSceneProvider';
 import { TscnSceneContents } from '../TscnCanvas';
@@ -39,7 +39,10 @@ function setup(scene: Scene, host: HostSelectionProps, workspace: CanvasWorkspac
       </HostSelection>
     </TscnSceneProvider>
   );
-  return renderHook(() => ({ picker: useViewportSelection(), selection: useSelection() }), { wrapper });
+  return renderHook(
+    () => ({ picker: useViewportSelection(), selection: useSelection(), selected: useSelectedNodePath() }),
+    { wrapper }
+  );
 }
 
 type Setup = ReturnType<typeof setup>;
@@ -85,7 +88,7 @@ describe('the host’s click picking', () => {
     click(view, registeredAt(view, 'Root/Cube'), RIGHT);
 
     expect(onSelect).not.toHaveBeenCalled();
-    expect(view.result.current.selection.selectedNodePath).toBeNull();
+    expect(view.result.current.selected).toBeNull();
   });
 
   it('gives the host the nearest node of a path the scene lacks, such as a mesh inside a GLB', () => {
@@ -113,7 +116,7 @@ describe('the host’s click picking', () => {
 
     clickOnNothing(view);
 
-    expect(view.result.current.selection.selectedNodePath).toBeNull();
+    expect(view.result.current.selected).toBeNull();
   });
 
   it('keeps the selection through a right click on nothing', () => {
@@ -122,7 +125,7 @@ describe('the host’s click picking', () => {
 
     missOf(view, 'contextmenu');
 
-    expect(view.result.current.selection.selectedNodePath).toBe('Root/Cube');
+    expect(view.result.current.selected).toBe('Root/Cube');
   });
 
   it('hears no pick when a drag that starts on nothing ends on a node', () => {
@@ -139,7 +142,7 @@ describe('the host’s click picking', () => {
 
     click(view, registeredAt(view, 'Root/Cube'));
 
-    expect(view.result.current.selection.selectedNodePath).toBe('Root/Cube');
+    expect(view.result.current.selected).toBe('Root/Cube');
   });
 
   it('keeps the host’s selected node through a click on another', () => {
@@ -150,7 +153,7 @@ describe('the host’s click picking', () => {
     click(view, registeredAt(view, 'Root/Cube'));
 
     expect(onSelect).toHaveBeenCalledExactlyOnceWith(scene.getNode('Cube'));
-    expect(view.result.current.selection.selectedNodePath).toBe('Root/Other');
+    expect(view.result.current.selected).toBe('Root/Other');
   });
 
   it('selects the node the host passes', () => {
@@ -158,7 +161,7 @@ describe('the host’s click picking', () => {
 
     const view = setup(scene, { selected: scene.getNode('Cube') });
 
-    expect(view.result.current.selection.selectedNodePath).toBe('Root/Cube');
+    expect(view.result.current.selected).toBe('Root/Cube');
   });
 
   it('outlines nothing for the root window, which the canvas does not draw', () => {
@@ -166,7 +169,7 @@ describe('the host’s click picking', () => {
 
     const view = setup(scene, { selected: scene.getNode('/root') });
 
-    expect(view.result.current.selection.selectedNodePath).toBeNull();
+    expect(view.result.current.selected).toBeNull();
   });
 
   it('keeps nothing selected through a click when the host passes null', () => {
@@ -174,7 +177,7 @@ describe('the host’s click picking', () => {
 
     click(view, registeredAt(view, 'Root/Cube'));
 
-    expect(view.result.current.selection.selectedNodePath).toBeNull();
+    expect(view.result.current.selected).toBeNull();
   });
 
   it('keeps the selection through a click in the 2D workspace, which picks no node yet', () => {
@@ -183,7 +186,7 @@ describe('the host’s click picking', () => {
 
     clickOnNothing(view);
 
-    expect(view.result.current.selection.selectedNodePath).toBe('Root/Cube');
+    expect(view.result.current.selected).toBe('Root/Cube');
   });
 });
 

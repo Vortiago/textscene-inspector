@@ -19,7 +19,6 @@ import {
   useAnimationTransport,
   type AnimationTransport,
 } from '../../contexts/AnimationTransportContext';
-import { useOptionalSelection, type SelectionContextValue } from '../../contexts/SelectionContext';
 import { AnimationDriverProvider } from '../../contexts/AnimationDriverContext';
 
 // Register node-type components (Node3D / GLBSceneRoot / …).
@@ -57,10 +56,8 @@ function makeHostNode(): TscnNode {
 }
 
 let transport: AnimationTransport;
-let selection: SelectionContextValue | null;
 function Capture() {
   transport = useAnimationTransport();
-  selection = useOptionalSelection();
   return null;
 }
 
@@ -86,11 +83,11 @@ describe('GLB driver — selection path through the real dispatcher', () => {
 
     // Selecting the GLB root row does not drive the tab: as in Godot, the clips live on the
     // AnimationPlayer child.
-    await ReactThreeTestRenderer.act(async () => selection?.setSelectedNodePath('Player'));
+    await ReactThreeTestRenderer.act(async () => transport.setActivePath('Player'));
     expect(transport.hasPlayer).toBe(false);
 
     // Select the synthesised AnimationPlayer row at its dispatcher-composed path.
-    await ReactThreeTestRenderer.act(async () => selection?.setSelectedNodePath('Player/AnimationPlayer'));
+    await ReactThreeTestRenderer.act(async () => transport.setActivePath('Player/AnimationPlayer'));
 
     expect(transport.hasPlayer).toBe(true);
     // The tree measures the scrubber from the clip of the driver it found, 1 s long.
@@ -137,7 +134,7 @@ describe('AnimationTree — the GLB animation driver through the real dispatcher
         </AnimationTransportProvider>
       </SceneStack>
     );
-    await ReactThreeTestRenderer.act(async () => selection?.setSelectedNodePath('Root/Tree'));
+    await ReactThreeTestRenderer.act(async () => transport.setActivePath('Root/Tree'));
 
     // The tree measures the scrubber from the clip of the driver it found, 1 s long.
     expect(transport.duration).toBe(1);

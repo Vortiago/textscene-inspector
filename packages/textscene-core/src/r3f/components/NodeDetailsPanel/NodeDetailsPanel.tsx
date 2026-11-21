@@ -7,8 +7,8 @@ import type { ReactNode } from 'react';
 import { nodeRegistry } from '../../../core/NodeRegistry.js';
 import { rendersOwnVisual } from '../../nodeSupport.js';
 import { isCamera3DType } from '../../cameraNodeTypes.js';
-import { useSelection } from '../../contexts/SelectionContext.js';
 import { usePreviewCamera } from '../TscnPreviewShell/previewCamera.js';
+import { useSelectedPath } from '../TscnPreviewShell/previewSelection.js';
 import { useLiveNode } from '../../useLiveSceneTree.js';
 import { useLivePatchedNode } from '../../liveNodePatches.js';
 import { useUndrawnNode } from '../TscnPreviewShell/previewViewStatus.js';
@@ -25,7 +25,7 @@ interface NodeDetailsPanelProps {
 }
 
 export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
-  const { selectedNodePath } = useSelection();
+  const selectedNodePath = useSelectedPath();
   const preview = usePreviewCamera();
 
   // The merged node and its originating instance ref. It re-derives when a

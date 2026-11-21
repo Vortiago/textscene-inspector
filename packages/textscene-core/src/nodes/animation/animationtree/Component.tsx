@@ -11,9 +11,12 @@ import { AnimationMixer, type AnimationAction } from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { node3dGroupSpread, transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { useAnimationTransport, type PlayState } from '../../../r3f/contexts/AnimationTransportContext';
+import {
+  useAnimationTransport,
+  useIsActivePath,
+  type PlayState,
+} from '../../../r3f/contexts/AnimationTransportContext';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
-import { useIsSelected } from '../../../r3f/hooks/useIsSelected';
 import { useWriteMixerPose } from '../../../r3f/animation/useWriteMixerPose';
 import { useAnimationDriver, type BoundClips } from '../../../r3f/contexts/AnimationDriverContext';
 import { useRebindKey } from '../../../r3f/animation/useRebindKey';
@@ -32,7 +35,7 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
   const { internalResources } = useSceneResources();
   const transport = useAnimationTransport();
   const nodePath = useNodePath();
-  const isSelected = useIsSelected();
+  const isDriven = useIsActivePath(nodePath);
 
   const transform = useMemo(() => transformFromNode3DProperties(properties), [properties]);
 
@@ -54,7 +57,7 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
 
   // Honour `active` (Godot only processes an active tree) and selection-driven
   // transport (ADR-0012): drive only while this is the selected, active node.
-  const isActive = properties.active && isSelected;
+  const isActive = properties.active && isDriven;
 
   // The Animation tab and scrubber show the dominant clip while selected.
   const dominant = useMemo(() => dominantClip(program), [program]);

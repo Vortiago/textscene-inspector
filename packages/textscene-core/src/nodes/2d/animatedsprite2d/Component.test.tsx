@@ -18,7 +18,6 @@ import {
   useAnimationTransport,
   type AnimationTransport,
 } from '../../../r3f/contexts/AnimationTransportContext';
-import { useOptionalSelection, type SelectionContextValue } from '../../../r3f/contexts/SelectionContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
 import type { TscnNode } from '../../../parser/types';
@@ -144,10 +143,8 @@ describe('AnimatedSprite2D playback (transport-driven)', () => {
   const SPRITE_PATH = 'Root/A';
 
   let transport: AnimationTransport;
-  let selection: SelectionContextValue | null;
   function Capture() {
     transport = useAnimationTransport();
-    selection = useOptionalSelection();
     return null;
   }
 
@@ -197,7 +194,7 @@ describe('AnimatedSprite2D playback (transport-driven)', () => {
   }
   const settle = () => ReactThreeTestRenderer.act(async () => {});
   const select = (path: string | null) =>
-    ReactThreeTestRenderer.act(async () => selection?.setSelectedNodePath(path));
+    ReactThreeTestRenderer.act(async () => transport.setActivePath(path));
 
   it('registers its clips with the transport only while selected', async () => {
     const r = await mount('0');

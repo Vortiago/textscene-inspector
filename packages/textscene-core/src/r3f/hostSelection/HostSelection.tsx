@@ -1,6 +1,6 @@
 import { createContext, useContext, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import type { NodeHandle } from '../../scene/nodeHandle.js';
-import { absolutePathOf, livePathOf, ROOT_WINDOW_PREFIX } from '../../scene/nodePathWalk.js';
+import { absolutePathOf, liveNodePathOf } from '../../scene/nodePathWalk.js';
 import type { Scene } from '../../scene/openScene.js';
 import { parentPathOf } from '../../utils/nodePath.js';
 import { useOptionalHierarchy } from '../contexts/HierarchyContext.js';
@@ -32,8 +32,7 @@ export function HostSelection({ selected, onSelect, children }: HostSelectionPro
   // A view with no scene above it has no selection, and draws the empty scene.
   const setSelectedNodePath = useOptionalSelection()?.setSelectedNodePath;
   const ownsSelection = selected !== undefined;
-  // The root window is no node of the canvas, so its handle outlines nothing.
-  const selectedPath = selected?.path.startsWith(ROOT_WINDOW_PREFIX) ? livePathOf(selected.path) : null;
+  const selectedPath = liveNodePathOf(selected?.path);
 
   useLayoutEffect(() => {
     if (ownsSelection) setSelectedNodePath?.(selectedPath);

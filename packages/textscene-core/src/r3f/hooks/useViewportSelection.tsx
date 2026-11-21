@@ -20,8 +20,6 @@ export interface UseViewportSelectionOptions {
 export interface DelegatedPointerHandlers {
   onPointerDown: (e: ThreeEvent<PointerEvent>) => void;
   onPointerUp: (e: ThreeEvent<PointerEvent>) => void;
-  onPointerMove: (e: ThreeEvent<PointerEvent>) => void;
-  onPointerOut: (e: ThreeEvent<PointerEvent>) => void;
   /** A miss, which on a click clears the selection in 3D (`node_3d_editor_plugin.cpp:998-1003`). */
   onPointerMissed?: (e: MouseEvent) => void;
 }
@@ -35,8 +33,7 @@ const DEFAULT_DRAG_THRESHOLD_PX = 5;
 
 export function useViewportSelection(options: UseViewportSelectionOptions = {}): UseViewportSelectionResult {
   const { dragThresholdPx = DEFAULT_DRAG_THRESHOLD_PX, autoExpandAncestors = true } = options;
-  const { setSelectedNodePath, hoverStore, expandedNodePaths, setExpandedNodePaths, objectPathMap } =
-    useSelection();
+  const { setSelectedNodePath, expandedNodePaths, setExpandedNodePaths, objectPathMap } = useSelection();
   const host = useHostPick();
   // The 2D workspace picks no node yet, so a click on a sprite there would read as a click on nothing.
   const takesMiss = useCanvasWorkspace() === '3d';
@@ -86,18 +83,6 @@ export function useViewportSelection(options: UseViewportSelectionOptions = {}):
         e.stopPropagation();
         pick(path);
       },
-      // Over and out fire once for the whole root, so move carries the per-mesh `e.object`. R3F
-      // calls it per intersected mesh, nearest first, until `stopPropagation()`: without the stop
-      // the farthest mesh wins. Stopping only on a resolved path lets an unregistered nearest hit,
-      // such as the grid, fall through to a registered mesh behind it.
-      onPointerMove(e) {
-        const path = resolvePathFromObject(e.object, objectPathMap);
-        hoverStore.set(path);
-        if (path) e.stopPropagation();
-      },
-      onPointerOut() {
-        hoverStore.set(null);
-      },
       // R3F also reports a miss for a right click, and for the release of a drag that starts on nothing.
       onPointerMissed: takesMiss
         ? (e) => {
@@ -105,7 +90,7 @@ export function useViewportSelection(options: UseViewportSelectionOptions = {}):
           }
         : undefined,
     }),
-    [dragThresholdPx, pick, hoverStore, objectPathMap, takesMiss]
+    [dragThresholdPx, pick, objectPathMap, takesMiss]
   );
 
   return useMemo<UseViewportSelectionResult>(() => ({ handlers }), [handlers]);

@@ -11,7 +11,7 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../parser/TscnParser';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
-import { useSelection } from './contexts/SelectionContext';
+import { useSelectedNodePath } from './contexts/SelectionContext';
 import { isNodeIcon } from './editorHelpers';
 import { NodeDispatcher } from './NodeDispatcher';
 import { InWorld } from './testing/InWorld';
@@ -40,7 +40,7 @@ async function renderScene(options: { showGizmos?: boolean } = {}) {
   const probe: Probe = { camera: null, selectedPath: null };
   function Observer() {
     probe.camera = useThree((state) => state.camera);
-    probe.selectedPath = useSelection().selectedNodePath;
+    probe.selectedPath = useSelectedNodePath();
     return null;
   }
   const scene = new TscnParser().parse(SCENE);

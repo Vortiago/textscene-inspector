@@ -78,16 +78,12 @@ afterEach(async () => {
 
 const act = (change: () => void) => ReactThreeTestRenderer.act(async () => change());
 
-/** Mounts the player selected, with `autoplay` as the clip the transport starts on, and plays it. */
+/** Mounts the player active, with `autoplay` as the clip the transport starts on, and plays it. */
 async function play(autoplay: string): Promise<Renderer> {
   fadedAlpha = null;
   shownFrame = null;
   const renderer = await ReactThreeTestRenderer.create(
-    <SceneStack
-      loader={createFakeResourceLoader().loader}
-      scene={{ internalResources: INTERNAL }}
-      selectedPath={AP_PATH}
-    >
+    <SceneStack loader={createFakeResourceLoader().loader} scene={{ internalResources: INTERNAL }}>
       <AnimatedValueProvider>
         <AnimationTransportProvider>
           <Probe />
@@ -107,6 +103,7 @@ async function play(autoplay: string): Promise<Renderer> {
     </SceneStack>
   );
   mounted.push(renderer);
+  await act(() => transport.setActivePath(AP_PATH));
   await act(() => transport.play());
   return renderer;
 }

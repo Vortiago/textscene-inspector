@@ -266,11 +266,8 @@ function ControlItemGroup({
   const pieceSlots = usePieceSlots(solveNode, solvedEntry, live, sort.runs, state.keyAt);
   const layerKey = state.keyAt(paint.layer);
   const layerSlot = useMemo(() => wholeKeySlot(layerKey), [layerKey]);
-  // `is_visible_in_tree()` is `visible && parent_visible_in_tree` (`canvas_item.cpp:62-64`).
-  // Both halves come from the solve, which read `hiddenNodePaths`: a skipped
-  // Node2D mounts no group, and a hoisted `top_level` or chain-broken Control is a
-  // sibling of the ancestor whose flag still reaches it.
-  const isVisible = !solveNode.hidden && props.visible !== false && solveNode.parentVisibleInTree;
+  // canvas_item.cpp:62-64. The solve gives the parent half, as a hoisted Control mounts beside its ancestor.
+  const isVisible = props.visible !== false && solveNode.parentVisibleInTree;
 
   // Always present, since the solve walks this tree. The fallback guards a
   // mismatched pair.

@@ -11,6 +11,11 @@ export function livePathOf(path: string): string {
   return path.slice(ROOT_WINDOW_PREFIX.length);
 }
 
+/** Null for no path and for the root window, which no canvas node stands for. */
+export function liveNodePathOf(path: string | undefined): string | null {
+  return path?.startsWith(ROOT_WINDOW_PREFIX) ? livePathOf(path) : null;
+}
+
 export function absolutePathOf(livePath: string): string {
   return `${ROOT_WINDOW_PREFIX}${livePath}`;
 }

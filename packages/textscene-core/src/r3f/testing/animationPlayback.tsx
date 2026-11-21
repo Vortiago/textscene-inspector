@@ -113,7 +113,10 @@ export async function play(): Promise<void> {
 
 /** Selects the node at `path`, or none. */
 export async function select(path: string | null): Promise<void> {
-  await ReactThreeTestRenderer.act(async () => selection?.setSelectedNodePath(path));
+  await ReactThreeTestRenderer.act(async () => {
+    selection?.setSelectedNodePath(path);
+    transport.setActivePath(path);
+  });
 }
 
 export async function stop(): Promise<void> {

@@ -48,7 +48,6 @@ import { useResourceLoader } from '../resources/useResource.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { useInstancedScene } from './hooks/useInstancedScene.js';
 import { SceneResourcesProvider, useSceneResources } from './SceneResourcesContext.js';
-import { useSelection } from './contexts/SelectionContext.js';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder.js';
 import { GuardedNodeComponent } from './components/GuardedNodeComponent.js';
 import { NodeEditorIcon } from './nodeIcon/NodeEditorIcon.js';
@@ -102,7 +101,7 @@ function hidesSubtree(node: TscnNode, animatedVisible: boolean | null): boolean 
 
 export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
   const { handlers } = useViewportSelection();
-  // The running game picks no node: a click selects nothing and a hover marks nothing.
+  // The running game picks no node.
   const pointerHandlers = useIsEditorHint() ? handlers : undefined;
 
   // Fetch the CSG library early, so a boolean result reaches the opening frame
@@ -119,14 +118,10 @@ export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
   const rootFrames = useRootPaintFrames(nodes);
 
   return (
-    // paint-order-safe: the delegated pointer root, above every canvas item.
-    // One root raycasts a mesh once per pointer move. A handler per node raycasts
-    // it once per ancestor, since R3F makes each handler its own raycast root.
+    // paint-order-safe: one pointer root, as R3F raycasts once per handler (one per node would cost depth).
     <group
       onPointerDown={pointerHandlers?.onPointerDown}
       onPointerUp={pointerHandlers?.onPointerUp}
-      onPointerMove={pointerHandlers?.onPointerMove}
-      onPointerOut={pointerHandlers?.onPointerOut}
       onPointerMissed={pointerHandlers?.onPointerMissed}
     >
       {/* A CanvasModulate tints the canvas, not its subtree, so it has its own
@@ -264,7 +259,6 @@ function PlainNode({
     () => childEnterOrders(inlineBase, node.children),
     [inlineBase, node.children]
   );
-  const { hiddenNodePaths } = useSelection();
   const workspace = useCanvasWorkspace();
   // Before the early returns, for rules-of-hooks. A node of the shared live tree reads its paint by
   // path, and its children read theirs, so only a node drawn outside that tree hands down runs.
@@ -272,7 +266,7 @@ function PlainNode({
   const childFrames = useChildPaintFrames(node, path, paint);
   // A pushed `visible` takes the place of the authored one, as a GLB node's does.
   const animatedVisible = useAnimatedValueAt(path, 'visible', (value) => value[0] !== 0);
-  const isHidden = hiddenNodePaths.has(path) || hidesSubtree(node, animatedVisible);
+  const isHidden = hidesSubtree(node, animatedVisible);
   // A CanvasLayer is a canvas of its own, which `<CanvasLayerScope>` draws (`canvas_layer.cpp:261-267`).
   const startsCanvas = isCanvasLayerType(node.type);
 

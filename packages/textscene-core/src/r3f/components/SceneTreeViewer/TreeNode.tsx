@@ -5,7 +5,11 @@ import type { SceneScope, TscnNode, TscnExternalResource } from '../../../parser
 import { joinPath } from '../../../utils/nodePath.js';
 import { rendersOwnVisual } from '../../nodeSupport.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
-import { useSelectPath } from '../TscnPreviewShell/previewSelection.js';
+import { useHoverPath, useSelectPath, useSelectedPath } from '../TscnPreviewShell/previewSelection.js';
+import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
+import { spaceFamilyOf } from '../../../godot/scene/parentSpace.js';
+import { isCanvasLayerType } from '../../canvasItemClass.js';
+import { isShownCanvasNode } from '../../canvasScopes.js';
 import { scopeOf, type LiveNode } from '../../../resources/liveNode.js';
 import { useLiveStep } from './useLiveStep.js';
 import styles from './SceneTreeViewer.module.css';
@@ -49,12 +53,47 @@ function hasTransform(node: TscnNode): boolean {
   return 'transform' in node.properties && node.properties.transform !== undefined;
 }
 
+/** The classes that have the eye (scene_tree_editor.cpp:608). */
+type VisibilityChain = 'Node3D' | 'CanvasItem' | 'CanvasLayer' | 'Window';
+
+function visibilityChainOf(type: string): VisibilityChain | null {
+  const family = spaceFamilyOf(type);
+  if (family) return family;
+  if (isCanvasLayerType(type)) return 'CanvasLayer';
+  return descendsFromClass(type, 'Window') ? 'Window' : null;
+}
+
+/** What a row hands its children of `visible`. */
+export interface ParentVisibility {
+  chain: VisibilityChain | null;
+  /** The row's own `visible` and that of every node it inherits from. */
+  isVisibleInTree: boolean;
+  /** Whether the nearest Viewport above is shown: false only for a hidden Window. */
+  isViewportShown: boolean;
+}
+
+export const ROOT_VISIBILITY: ParentVisibility = {
+  chain: null,
+  isVisibleInTree: true,
+  isViewportShown: true,
+};
+
+/** Whether the nodes a row inherits `visible` from are visible (node_3d.cpp:1132, canvas_item.cpp:309). */
+function isParentVisibleOf(chain: VisibilityChain | null, parent: ParentVisibility): boolean {
+  if (chain === 'Node3D') return parent.chain !== 'Node3D' || parent.isVisibleInTree;
+  if (chain !== 'CanvasItem') return true;
+  if (parent.chain === 'CanvasItem' || parent.chain === 'CanvasLayer') return parent.isVisibleInTree;
+  return parent.isViewportShown;
+}
+
 interface TreeNodeProps {
   node: TscnNode;
   parentPath: string;
   depth: number;
-  hiddenNodePaths: ReadonlySet<string>;
-  onToggleVisibility: (path: string) => void;
+  /** The parent row's visibility, which dims this row's eye (scene_tree_editor.cpp:743-748). */
+  parentVisibility: ParentVisibility;
+  /** Writes `visible` to the node at `path`. */
+  onToggleVisibility: (path: string, visible: boolean) => void;
   onNodeReveal?: (path: string, node: TscnNode) => void;
   /**
    * Opens an instanced sub-scene as its own previewed scene, like Godot's
@@ -90,7 +129,7 @@ function TreeNodeImpl({
   node,
   parentPath,
   depth,
-  hiddenNodePaths,
+  parentVisibility,
   onToggleVisibility,
   onNodeReveal,
   onOpenSubScene,
@@ -128,7 +167,7 @@ function TreeNodeImpl({
       node={child}
       parentPath={nodePath}
       depth={depth + 1}
-      hiddenNodePaths={hiddenNodePaths}
+      parentVisibility={ownVisibility}
       onToggleVisibility={onToggleVisibility}
       onNodeReveal={onNodeReveal}
       onOpenSubScene={onOpenSubScene}
@@ -139,12 +178,23 @@ function TreeNodeImpl({
     />
   );
 
-  const { selectedNodePath, expandedNodePaths, hoverStore, toggleExpandedNodePath } = useSelection();
+  const { expandedNodePaths, toggleExpandedNodePath } = useSelection();
   const selectPath = useSelectPath();
+  const hoverPath = useHoverPath();
 
   const isExpanded = expandedNodePaths.has(nodePath);
-  const isSelected = selectedNodePath === nodePath;
-  const isHidden = hiddenNodePaths.has(nodePath);
+  const isSelected = useSelectedPath() === nodePath;
+  // The eye shows the node's own `visible`, and only on a class that has it (scene_tree_editor.cpp:608-613).
+  const chain = useMemo(() => visibilityChainOf(effective.type), [effective.type]);
+  const hasEye = chain !== null;
+  const isHidden = hasEye && !isShownCanvasNode(effective);
+  const isParentVisible = isParentVisibleOf(chain, parentVisibility);
+  const isViewport = useMemo(() => descendsFromClass(effective.type, 'Viewport'), [effective.type]);
+  const isViewportShown = isViewport ? !isHidden : parentVisibility.isViewportShown;
+  const ownVisibility = useMemo<ParentVisibility>(
+    () => ({ chain, isVisibleInTree: !isHidden && isParentVisible, isViewportShown }),
+    [chain, isHidden, isParentVisible, isViewportShown]
+  );
 
   // A parser registration is no evidence of a render: only a type with no
   // component at all is a gap.
@@ -172,16 +222,16 @@ function TreeNodeImpl({
   }
 
   function handleMouseEnter() {
-    hoverStore.set(nodePath);
+    hoverPath(nodePath);
   }
 
   function handleMouseLeave() {
-    hoverStore.set(null);
+    hoverPath(null);
   }
 
   function handleToggleVisibility(e: MouseEvent) {
     e.stopPropagation();
-    onToggleVisibility(nodePath);
+    onToggleVisibility(nodePath, isHidden);
   }
 
   return (
@@ -253,15 +303,19 @@ function TreeNodeImpl({
             </button>
           )}
 
-          <button
-            type="button"
-            className={styles.visibilityIcon}
-            onClick={handleToggleVisibility}
-            title={isHidden ? 'Click to show' : 'Click to hide'}
-            aria-label={isHidden ? 'Show node' : 'Hide node'}
-          >
-            {isHidden ? '🙈' : '👁️'}
-          </button>
+          {hasEye && (
+            <button
+              type="button"
+              className={
+                isParentVisible ? styles.visibilityIcon : `${styles.visibilityIcon} ${styles.underHidden}`
+              }
+              onClick={handleToggleVisibility}
+              title={isHidden ? 'Click to show' : 'Click to hide'}
+              aria-label={isHidden ? 'Show node' : 'Hide node'}
+            >
+              {isHidden ? '🙈' : '👁️'}
+            </button>
+          )}
         </span>
       </div>
 

@@ -1,7 +1,3 @@
-/**
- * The tree-row eye button: `SelectionContext.hiddenNodePaths` sets `visible` on
- * the dispatcher's wrapper `<group>`, or the object stays rendered.
- */
 import { describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -14,13 +10,16 @@ import {
   useAnimatedValueRegistry,
   type AnimatedValueRegistry,
 } from './contexts/AnimatedValueContext';
-import { HiddenSeeder } from './testing/HiddenSeeder';
 import { visibleInTree } from './visibleInTree';
 
 import './nodes/index';
 
 function makeNode(name: string, type: string, children: TscnNode[] = []): TscnNode {
   return { rawProperties: {}, name, type, children, properties: {} };
+}
+
+function hidden(node: TscnNode): TscnNode {
+  return { ...node, properties: { ...node.properties, visible: false } };
 }
 
 interface WrapperInstance {
@@ -45,12 +44,11 @@ function findWrappingGroup(
 }
 
 describe('<NodeDispatcher> visibility wire-up (WI-UX-1)', () => {
-  it('sets visible=false on the wrapping group when its path is hidden', async () => {
-    const nodes: TscnNode[] = [makeNode('Alpha', 'Node3D'), makeNode('Beta', 'Node3D')];
+  it('sets visible=false on the wrapping group of a hidden node', async () => {
+    const nodes: TscnNode[] = [hidden(makeNode('Alpha', 'Node3D')), makeNode('Beta', 'Node3D')];
 
     const renderer = await ReactThreeTestRenderer.create(
       <SelectionProvider>
-        <HiddenSeeder paths={['Alpha']} />
         <NodeDispatcher nodes={nodes} />
       </SelectionProvider>
     );
@@ -65,11 +63,10 @@ describe('<NodeDispatcher> visibility wire-up (WI-UX-1)', () => {
   });
 
   it('hides descendant geometry when an ancestor is hidden (THREE short-circuits)', async () => {
-    const nodes: TscnNode[] = [makeNode('Parent', 'Node3D', [makeNode('Child', 'Node3D')])];
+    const nodes: TscnNode[] = [hidden(makeNode('Parent', 'Node3D', [makeNode('Child', 'Node3D')]))];
 
     const renderer = await ReactThreeTestRenderer.create(
       <SelectionProvider>
-        <HiddenSeeder paths={['Parent']} />
         <NodeDispatcher nodes={nodes} />
       </SelectionProvider>
     );
@@ -85,7 +82,7 @@ describe('<NodeDispatcher> visibility wire-up (WI-UX-1)', () => {
     expect(childWrapper!.visible).toBe(true);
   });
 
-  it('leaves all wrappers visible by default when no paths are hidden', async () => {
+  it('leaves all wrappers visible by default', async () => {
     const nodes: TscnNode[] = [makeNode('Solo', 'Node3D')];
 
     const renderer = await ReactThreeTestRenderer.create(
