@@ -7,6 +7,9 @@ import { rendersOwnVisual } from '../../nodeSupport.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
 import { useHoverPath, useSelectPath, useSelectedPath } from '../TscnPreviewShell/previewSelection.js';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
+import { spaceFamilyOf } from '../../../godot/scene/parentSpace.js';
+import { isCanvasLayerType } from '../../canvasItemClass.js';
+import { isShownCanvasNode } from '../../canvasScopes.js';
 import { scopeOf, type LiveNode } from '../../../resources/liveNode.js';
 import { useLiveStep } from './useLiveStep.js';
 import styles from './SceneTreeViewer.module.css';
@@ -54,11 +57,10 @@ function hasTransform(node: TscnNode): boolean {
 type VisibilityChain = 'Node3D' | 'CanvasItem' | 'CanvasLayer' | 'Window';
 
 function visibilityChainOf(type: string): VisibilityChain | null {
-  if (descendsFromClass(type, 'Node3D')) return 'Node3D';
-  if (descendsFromClass(type, 'CanvasItem')) return 'CanvasItem';
-  if (descendsFromClass(type, 'CanvasLayer')) return 'CanvasLayer';
-  if (descendsFromClass(type, 'Window')) return 'Window';
-  return null;
+  const family = spaceFamilyOf(type);
+  if (family) return family;
+  if (isCanvasLayerType(type)) return 'CanvasLayer';
+  return descendsFromClass(type, 'Window') ? 'Window' : null;
 }
 
 /** What a row hands its children of `visible`. */
@@ -183,11 +185,11 @@ function TreeNodeImpl({
   const isExpanded = expandedNodePaths.has(nodePath);
   const isSelected = useSelectedPath() === nodePath;
   // The eye shows the node's own `visible`, and only on a class that has it (scene_tree_editor.cpp:608-613).
-  const chain = visibilityChainOf(effective.type);
+  const chain = useMemo(() => visibilityChainOf(effective.type), [effective.type]);
   const hasEye = chain !== null;
-  const isHidden = hasEye && (effective.properties as { visible?: boolean }).visible === false;
+  const isHidden = hasEye && !isShownCanvasNode(effective);
   const isParentVisible = isParentVisibleOf(chain, parentVisibility);
-  const isViewport = descendsFromClass(effective.type, 'Viewport');
+  const isViewport = useMemo(() => descendsFromClass(effective.type, 'Viewport'), [effective.type]);
   const isViewportShown = isViewport ? !isHidden : parentVisibility.isViewportShown;
   const ownVisibility = useMemo<ParentVisibility>(
     () => ({ chain, isVisibleInTree: !isHidden && isParentVisible, isViewportShown }),

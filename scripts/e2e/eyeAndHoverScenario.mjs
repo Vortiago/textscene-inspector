@@ -1,6 +1,6 @@
-import { PNG } from 'pngjs';
+import { pixelsWhere } from '../vscode/pixels.mjs';
 import { settleCanvas } from '../visual/previewServer.mjs';
-import { expandAllTreeRows, readSelectedPaths, SELECT_SETTLE_MS } from './outliner.mjs';
+import { expandAllTreeRows, readSelectedPaths, SELECT_SETTLE_MS, treeRow } from './outliner.mjs';
 import { openFixture } from './openFixture.mjs';
 import { checkDiagnostics } from './diagnostics.mjs';
 import { INSTANCE_CLICK_FIXTURE, redBoxCentres } from './instanceClickScenario.mjs';
@@ -13,16 +13,7 @@ export const HOVERED_ROW = 'Root/Open';
 const isOutline = (r, g, b) => g > 200 && r < 60 && b < 60;
 
 /** The count of outline pixels in a canvas screenshot. */
-export function outlinePixels(buffer) {
-  const { data } = PNG.sync.read(buffer);
-  let count = 0;
-  for (let i = 0; i < data.length; i += 4) {
-    if (isOutline(data[i], data[i + 1], data[i + 2])) count++;
-  }
-  return count;
-}
-
-const rowOf = (page, path) => page.locator(`[data-node-path="${path}"] > [role="treeitem"]`).first();
+export const outlinePixels = (buffer) => pixelsWhere(buffer, isOutline);
 
 async function outlineAfter(page, canvas, act) {
   await act();
@@ -33,14 +24,14 @@ async function outlineAfter(page, canvas, act) {
 async function hoverRows(page, canvas) {
   // expandAllTreeRows leaves the pointer on a row.
   const before = await outlineAfter(page, canvas, () => page.mouse.move(0, 0));
-  const hovered = await outlineAfter(page, canvas, () => rowOf(page, HOVERED_ROW).hover());
+  const hovered = await outlineAfter(page, canvas, () => treeRow(page, HOVERED_ROW).hover());
   const selectedWhileHovered = await readSelectedPaths(page);
   const left = await outlineAfter(page, canvas, () => page.mouse.move(0, 0));
   return { before, hovered, left, selectedWhileHovered };
 }
 
 async function clickEye(page, canvas) {
-  const eye = rowOf(page, HIDDEN_ROW).locator('button[aria-label$=" node"]');
+  const eye = treeRow(page, HIDDEN_ROW).locator('button[aria-label$=" node"]');
   const labelBefore = await eye.getAttribute('aria-label');
   await eye.click();
   await page.waitForTimeout(SELECT_SETTLE_MS);

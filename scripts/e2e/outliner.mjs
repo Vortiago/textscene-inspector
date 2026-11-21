@@ -33,9 +33,14 @@ export async function readSelectedPaths(page) {
  */
 export const SELECT_SETTLE_MS = 400;
 
+/** The row of the node at `nodePath`, by its exact path. */
+export function treeRow(page, nodePath) {
+  return page.locator(`[data-node-path="${nodePath}"] > [role="treeitem"]`).first();
+}
+
 /** Clicks a row by its exact node path, as a user selects in the tree. */
 export async function selectOutlinerNode(page, nodePath) {
-  const row = page.locator(`[data-node-path="${nodePath}"] > [role="treeitem"]`).first();
+  const row = treeRow(page, nodePath);
   await row.waitFor({ state: 'visible', timeout: 10000 });
   await row.click();
 }

@@ -5,7 +5,7 @@ import {
   Suspense,
   useImperativeHandle,
   useLayoutEffect,
-  useMemo,
+  memo,
   useRef,
   type ReactNode,
   type Ref,
@@ -165,20 +165,16 @@ export function TscnCanvas({
   onStatusChange,
   ref,
 }: TscnCanvasProps) {
-  // A memo: the previewer gives a new `selected` per hovered row, which renders the selection alone.
-  const view = useMemo(
-    () => (
-      <PreviewVisibilityProvider isVisible={visible}>
-        <ViewShowProvider show={show}>
-          <ViewStatusScope>
-            <ViewportActionsScope>{stageOf({ mode, camera, className })}</ViewportActionsScope>
-            {ref && <ViewRef viewRef={ref} mode={mode} camera={camera} />}
-            {onStatusChange && <StatusChangeReporter onStatusChange={onStatusChange} />}
-          </ViewStatusScope>
-        </ViewShowProvider>
-      </PreviewVisibilityProvider>
-    ),
-    [visible, show, mode, camera, className, ref, onStatusChange]
+  const view = (
+    <View
+      visible={visible}
+      show={show}
+      mode={mode}
+      camera={camera}
+      className={className}
+      viewRef={ref}
+      onStatusChange={onStatusChange}
+    />
   );
   const stage = (
     // The In-game mode takes no pointer, and the 2D mode picks no node yet.
@@ -188,6 +184,36 @@ export function TscnCanvas({
   );
   return scene ? <TscnSceneProvider scene={scene}>{stage}</TscnSceneProvider> : stage;
 }
+
+type ViewProps = Pick<
+  TscnCanvasProps,
+  'visible' | 'show' | 'mode' | 'camera' | 'className' | 'onStatusChange'
+> & {
+  viewRef?: Ref<ViewAnswers>;
+};
+
+// A memo: the previewer gives a new `selected` per hovered row, which renders the selection alone.
+const View = memo(function View({
+  visible,
+  show,
+  mode = '3D',
+  camera,
+  className,
+  viewRef,
+  onStatusChange,
+}: ViewProps) {
+  return (
+    <PreviewVisibilityProvider isVisible={visible}>
+      <ViewShowProvider show={show}>
+        <ViewStatusScope>
+          <ViewportActionsScope>{stageOf({ mode, camera, className })}</ViewportActionsScope>
+          {viewRef && <ViewRef viewRef={viewRef} mode={mode} camera={camera} />}
+          {onStatusChange && <StatusChangeReporter onStatusChange={onStatusChange} />}
+        </ViewStatusScope>
+      </ViewShowProvider>
+    </PreviewVisibilityProvider>
+  );
+});
 
 /** Hands the ref the answers of the view below the same scene. They end when the view unmounts. */
 function ViewRef({ viewRef, mode, camera }: { viewRef: Ref<ViewAnswers> } & ViewRefLook) {

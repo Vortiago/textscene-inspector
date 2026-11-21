@@ -35,7 +35,7 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
   const { internalResources } = useSceneResources();
   const transport = useAnimationTransport();
   const nodePath = useNodePath();
-  const isSelected = useIsActivePath(nodePath);
+  const isDriven = useIsActivePath(nodePath);
 
   const transform = useMemo(() => transformFromNode3DProperties(properties), [properties]);
 
@@ -57,7 +57,7 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
 
   // Honour `active` (Godot only processes an active tree) and selection-driven
   // transport (ADR-0012): drive only while this is the selected, active node.
-  const isActive = properties.active && isSelected;
+  const isActive = properties.active && isDriven;
 
   // The Animation tab and scrubber show the dominant clip while selected.
   const dominant = useMemo(() => dominantClip(program), [program]);

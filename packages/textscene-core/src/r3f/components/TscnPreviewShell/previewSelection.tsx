@@ -10,7 +10,7 @@ import {
 } from 'react';
 import type { ReactNode } from 'react';
 import type { NodeHandle } from '../../../scene/nodeHandle.js';
-import { livePathOf, ROOT_WINDOW_PREFIX } from '../../../scene/nodePathWalk.js';
+import { liveNodePathOf } from '../../../scene/nodePathWalk.js';
 import type { Scene } from '../../../scene/openScene.js';
 import { createExternalStore, type ExternalStore } from '../../../utils/externalStore.js';
 import { withAncestorsExpanded } from '../../../utils/nodePath.js';
@@ -99,14 +99,10 @@ function useDropHoverOnLeave(scene: Scene, hovered: ExternalStore<NodeHandle | n
 }
 
 /** The live path of a node of the canvas, null for none and for the root window. */
-function livePathOfNode(node: NodeHandle | null): string | null {
-  return node?.path.startsWith(ROOT_WINDOW_PREFIX) ? livePathOf(node.path) : null;
-}
-
 /** The panel shows the selected row with its ancestors expanded. */
 function useShowInPanel(selected: NodeHandle | null): void {
   const panel = useOptionalSelection();
-  const path = livePathOfNode(selected);
+  const path = liveNodePathOf(selected?.path);
   // A ref, so only a new selection expands rows: a collapse by hand holds.
   const panelRef = useRef(panel);
   useLayoutEffect(() => {
@@ -123,7 +119,7 @@ function useShowInPanel(selected: NodeHandle | null): void {
 /** The animation tab and the transport follow the selection, not the hover (ADR-0012). */
 function useDriveAnimation(selected: NodeHandle | null): void {
   const { setActivePath } = useAnimationTransport();
-  const path = livePathOfNode(selected);
+  const path = liveNodePathOf(selected?.path);
   useEffect(() => setActivePath(path), [path, setActivePath]);
 }
 
@@ -159,7 +155,7 @@ export function useSelectedPath(): string | null {
   const panelStore = useSelectedNodePathStore();
   // Inside a shell that store holds what the view outlines, a hovered row too, so it reads none.
   const panelPath = useExternalStoreValue(preview ? NO_PANEL_PATH : panelStore);
-  return preview ? livePathOfNode(preview.selected) : panelPath;
+  return preview ? liveNodePathOf(preview.selected?.path) : panelPath;
 }
 
 const NO_HOVER = createExternalStore<NodeHandle | null>(null);

@@ -307,7 +307,7 @@
   }
 }
 
-/* Godot draws the eye at 0.6 alpha while an ancestor hides the node (scene_tree_editor.cpp:743-748). */
+/* 0.6 of the eye's own 0.7, as Godot dims the eye under a hidden parent (scene_tree_editor.cpp:743-748). */
 .underHidden {
   opacity: 0.42;
 }

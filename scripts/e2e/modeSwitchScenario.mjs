@@ -2,7 +2,7 @@ import { diffMask, pixelsWhere } from '../vscode/pixels.mjs';
 import { CANVAS_2D_TESTIDS } from '../visual/preview/appContract.mjs';
 import { checkDiagnostics } from './diagnostics.mjs';
 import { openFixture, shootCanvas } from './openFixture.mjs';
-import { expandAllTreeRows, selectOutlinerNode, SELECT_SETTLE_MS } from './outliner.mjs';
+import { expandAllTreeRows, selectOutlinerNode, SELECT_SETTLE_MS, treeRow } from './outliner.mjs';
 
 export const SWITCH_FIXTURE = 'in-game/unit-mode-switch.tscn';
 const SELECTED_NODE = 'Main/Box';
@@ -40,11 +40,7 @@ async function readView(page, view) {
     isPressed: (await viewButton(page, view).getAttribute('aria-pressed')) === 'true',
     canvases: await page.locator('main[aria-label="Viewport"] canvas').count(),
     has2DStage: (await page.getByTestId(CANVAS_2D_TESTIDS.stage).count()) > 0,
-    isSelected:
-      (await page
-        .locator(`[data-node-path="${SELECTED_NODE}"] > [role="treeitem"]`)
-        .first()
-        .getAttribute('aria-selected')) === 'true',
+    isSelected: (await treeRow(page, SELECTED_NODE).getAttribute('aria-selected')) === 'true',
     shot,
   };
 }
