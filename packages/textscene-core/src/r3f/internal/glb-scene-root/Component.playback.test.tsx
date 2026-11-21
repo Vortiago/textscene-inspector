@@ -17,11 +17,7 @@ import {
   useAnimationTransport,
   type AnimationTransport,
 } from '../../contexts/AnimationTransportContext';
-import {
-  SelectionProvider,
-  useOptionalSelection,
-  type SelectionContextValue,
-} from '../../contexts/SelectionContext';
+import { SelectionProvider } from '../../contexts/SelectionContext';
 import { NodePathProvider } from '../../contexts/NodePathContext';
 import { AnimationLoopMode } from '../../../godot/scene/animation';
 import { setImportedLoopMode } from '../../../resources/formats/glb/importedLoopMode';
@@ -77,15 +73,13 @@ afterEach(async () => {
 });
 
 let transport: AnimationTransport;
-let selection: SelectionContextValue | null;
 function Capture() {
   transport = useAnimationTransport();
-  selection = useOptionalSelection();
   return null;
 }
 
 async function setSelection(path: string | null) {
-  await ReactThreeTestRenderer.act(async () => selection?.setSelectedNodePath(path));
+  await ReactThreeTestRenderer.act(async () => transport.setActivePath(path));
 }
 
 async function mountScene({

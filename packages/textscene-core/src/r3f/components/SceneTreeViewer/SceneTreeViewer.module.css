@@ -307,6 +307,11 @@
   }
 }
 
+/* Godot draws the eye at 0.6 alpha while an ancestor hides the node (scene_tree_editor.cpp:743-748). */
+.underHidden {
+  opacity: 0.42;
+}
+
 .hidden {
   & .nodeName {
     color: var(--tsi-fg-faint);

@@ -23,11 +23,7 @@ interface ControlCanvasLayerProps {
   nodes: readonly TscnNode[];
 }
 
-/**
- * Forces the roots visible: a UI root often authors `visible = false` for a script
- * to toggle. A shallow copy leaves the SceneGraph untouched, and child visibility
- * and `hiddenNodePaths` still apply in `ControlCanvasWalker`.
- */
+/** Forces the roots visible, as a UI root often authors `visible = false` for a script to show. */
 function showRoots(nodes: readonly TscnNode[]): readonly TscnNode[] {
   return nodes.map((n) =>
     (n.properties as { visible?: boolean } | undefined)?.visible === false

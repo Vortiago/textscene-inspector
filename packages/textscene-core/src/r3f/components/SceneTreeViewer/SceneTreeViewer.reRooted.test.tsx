@@ -7,7 +7,7 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { SceneTreeViewer } from './SceneTreeViewer';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
-import { SelectionProvider, useSelection } from '../../contexts/SelectionContext';
+import { SelectionProvider, useSelectedNodePath } from '../../contexts/SelectionContext';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import { TscnParser } from '../../../parser/TscnParser';
 import { fixturesDir } from '../../../parser/testing/parserKit';
@@ -38,7 +38,7 @@ describe('<SceneTreeViewer> over edge-missing-parent.tscn', () => {
   it('selects a re-rooted node by its renamed path', async () => {
     let selected: string | null = null;
     function Observer() {
-      selected = useSelection().selectedNodePath;
+      selected = useSelectedNodePath();
       return null;
     }
     render(

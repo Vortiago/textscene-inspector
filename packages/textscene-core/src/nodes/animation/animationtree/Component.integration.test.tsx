@@ -20,7 +20,6 @@ import {
   useAnimationTransport,
   type AnimationTransport,
 } from '../../../r3f/contexts/AnimationTransportContext';
-import { useOptionalSelection, type SelectionContextValue } from '../../../r3f/contexts/SelectionContext';
 import { AnimationDriverProvider } from '../../../r3f/contexts/AnimationDriverContext';
 
 import '../../../r3f/nodes/index';
@@ -40,15 +39,13 @@ function findByType(scene: TscnScene, type: string): TscnNode {
 const AT_PATH = 'Scene/AnimationTree';
 
 let transport: AnimationTransport;
-let selection: SelectionContextValue | null;
 function Capture() {
   transport = useAnimationTransport();
-  selection = useOptionalSelection();
   return null;
 }
 
 async function setSelection(path: string | null) {
-  await ReactThreeTestRenderer.act(async () => selection?.setSelectedNodePath(path));
+  await ReactThreeTestRenderer.act(async () => transport.setActivePath(path));
 }
 
 /** Mounts the parsed scene through the dispatcher, as production does. */

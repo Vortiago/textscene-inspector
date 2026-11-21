@@ -14,12 +14,10 @@ import type { SpotLight3DProperties } from '../spotlight3d/types';
 import type { AudioStreamPlayer3DProperties } from '../../../audio/audiostreamplayer3d/types';
 
 import { NodeDispatcher } from '../../../../r3f/NodeDispatcher';
-import { TscnSceneContents } from '../../../../r3f/TscnCanvas';
 import { HierarchyProvider } from '../../../../r3f/contexts/HierarchyContext';
 import { SelectionProvider } from '../../../../r3f/contexts/SelectionContext';
 import { ViewShowProvider } from '../../../../r3f/viewShow/ViewShowContext';
 import { createSceneGraphFromTscnScene } from '../../../../core/SceneGraph.testkit';
-import { HoverSeeder } from '../../../../r3f/testing/HoverSeeder';
 import { SelectSeeder } from '../../../../r3f/testing/SelectSeeder';
 
 import '../../../../r3f/nodes/index';
@@ -241,25 +239,6 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
     // The lights themselves still mount. `findAllByType`, because the raw scene
     // traversal in `findHelpersOfType` does not cross r3f-managed groups here.
     expect(renderer.scene.findAllByType('SpotLight')).toHaveLength(18);
-  });
-
-  it('hover does NOT trigger a gizmo (the orange BoxHelper from WI-UX-10 is the hover affordance)', async () => {
-    const graph = createSceneGraphFromTscnScene({
-      nodes: [spotNode('Torch')],
-    });
-
-    const renderer = await ReactThreeTestRenderer.create(
-      <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
-        <SelectionProvider>
-          <HoverSeeder path="Torch" />
-          <TscnSceneContents />
-        </SelectionProvider>
-      </HierarchyProvider>
-    );
-
-    const scene = renderer.scene.instance as unknown as THREE.Scene;
-    // No selection, only hover ⇒ no SpotLightHelper.
-    expect(findHelpersOfType(scene, THREE.SpotLightHelper)).toHaveLength(0);
   });
 
   it("DirectionalLightHelper sits at the light's own world position, not squared through its parent group", async () => {

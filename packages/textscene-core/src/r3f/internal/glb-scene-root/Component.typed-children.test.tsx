@@ -222,16 +222,6 @@ describe('GLBSceneRoot — a typed node addressed into the GLB', () => {
     );
   });
 
-  it('hides the GLB object its eye toggle names, at the path the tree shows it', async () => {
-    const renderer = await render([]);
-
-    expect(glbObject(renderer, 'Torso').visible).toBe(true);
-    await ReactThreeTestRenderer.act(async () => selection.toggleHidden('Rig/Skeleton/Torso'));
-
-    expect(glbObject(renderer, 'Torso').visible).toBe(false);
-    expect(glbObject(renderer, 'Skeleton').visible).toBe(true);
-  });
-
   it('registers each GLB object once, at the instancing node’s path and its own', async () => {
     await render([]);
 

@@ -13,7 +13,6 @@ function child(properties: Record<string, unknown>, extra: Partial<SolveNode> = 
     node: { name: 'Child', type: 'Label', children: [], properties },
     children: [],
     skippedTransform: null,
-    hidden: false,
     ...extra,
   } as unknown as SolveNode;
 }
@@ -25,10 +24,6 @@ describe('isSortableControl', () => {
 
   it('skips an invisible child rather than laying out an empty slot', () => {
     expect(isSortableControl(child({ visible: false }))).toBe(false);
-  });
-
-  it('skips a child the eye toggle hid', () => {
-    expect(isSortableControl(child({}, { hidden: true }))).toBe(false);
   });
 
   it('skips a promoted child, which the container’s own cast never reaches', () => {

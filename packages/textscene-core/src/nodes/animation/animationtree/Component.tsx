@@ -11,9 +11,12 @@ import { AnimationMixer, type AnimationAction } from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { node3dGroupSpread, transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { useAnimationTransport, type PlayState } from '../../../r3f/contexts/AnimationTransportContext';
+import {
+  useAnimationTransport,
+  useIsActivePath,
+  type PlayState,
+} from '../../../r3f/contexts/AnimationTransportContext';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
-import { useIsSelected } from '../../../r3f/hooks/useIsSelected';
 import { useWriteMixerPose } from '../../../r3f/animation/useWriteMixerPose';
 import { useAnimationDriver, type BoundClips } from '../../../r3f/contexts/AnimationDriverContext';
 import { useRebindKey } from '../../../r3f/animation/useRebindKey';
@@ -32,7 +35,7 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
   const { internalResources } = useSceneResources();
   const transport = useAnimationTransport();
   const nodePath = useNodePath();
-  const isSelected = useIsSelected();
+  const isSelected = useIsActivePath(nodePath);
 
   const transform = useMemo(() => transformFromNode3DProperties(properties), [properties]);
 

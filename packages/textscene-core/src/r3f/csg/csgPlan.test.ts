@@ -136,27 +136,19 @@ describe('buildCsgPlan', () => {
       expect(solids(plan).map((c) => c.path)).toEqual(['Comb/Shown']);
     });
 
-    it('treats the scene-tree eye toggle exactly like visible = false', () => {
-      // Godot's _get_brush() skips invisible children, so hiding one really does
-      // change the boolean result rather than just hiding a mesh.
-      const root = node('CSGBox3D', 'Root', {}, [node('CSGSphere3D', 'Cut', { operation: 2 })]);
-      const plan = buildCsgPlan(root, 'Root', { ...OPTS, hiddenPaths: new Set(['Root/Cut']) })!;
+    it('drops a hidden child from the result, not only its mesh', () => {
+      // Godot's _get_brush() skips invisible children, so hiding one changes the boolean result.
+      const root = node('CSGBox3D', 'Root', {}, [
+        node('CSGSphere3D', 'Cut', { operation: 2, visible: false }),
+      ]);
+      const plan = buildCsgPlan(root, 'Root', OPTS)!;
       expect(solids(plan).map((c) => c.path)).toEqual(['Root']);
       expect([...plan.invisiblePaths]).toEqual(['Root/Cut']);
     });
 
-    it('carries the eye toggle down the subtree, as the local flag does', () => {
-      // _get_brush() tests child->is_visible(), the local flag: the recursion never reaches the
-      // descendants, so their node_aabb goes unwritten too.
-      const tree = () => [
-        node('CSGBox3D', 'Kept'),
-        node('CSGBox3D', 'Off', {}, [node('CSGSphere3D', 'Under')]),
-      ];
-      const eye = buildCsgPlan(node('CSGCombiner3D', 'Comb', {}, tree()), 'Comb', {
-        ...OPTS,
-        hiddenPaths: new Set(['Comb/Off']),
-      })!;
-      const flag = buildCsgPlan(
+    it('marks the subtree of a hidden child invisible, as the recursion never reaches it', () => {
+      // _get_brush() tests child->is_visible(), the local flag, so the descendants' node_aabb goes unwritten.
+      const plan = buildCsgPlan(
         node('CSGCombiner3D', 'Comb', {}, [
           node('CSGBox3D', 'Kept'),
           node('CSGBox3D', 'Off', { visible: false }, [node('CSGSphere3D', 'Under')]),
@@ -165,9 +157,8 @@ describe('buildCsgPlan', () => {
         OPTS
       )!;
 
-      expect([...eye.invisiblePaths]).toEqual(['Comb/Off', 'Comb/Off/Under']);
-      expect([...eye.invisiblePaths]).toEqual([...flag.invisiblePaths]);
-      expect(solids(eye).map((c) => c.path)).toEqual(solids(flag).map((c) => c.path));
+      expect([...plan.invisiblePaths]).toEqual(['Comb/Off', 'Comb/Off/Under']);
+      expect(solids(plan).map((c) => c.path)).toEqual(['Comb/Kept']);
     });
 
     it('reports the skipped subtree, so each node can bound to a point', () => {
@@ -248,10 +239,10 @@ describe('buildCsgPlan', () => {
       expect(at(1)).not.toBe(at(2));
     });
 
-    it('changes when a hidden path changes, since that changes the result', () => {
-      const root = () => node('CSGBox3D', 'R', {}, [node('CSGSphere3D', 'A')]);
-      const shown = buildCsgPlan(root(), 'R', OPTS)!.cacheKey;
-      const hidden = buildCsgPlan(root(), 'R', { ...OPTS, hiddenPaths: new Set(['R/A']) })!.cacheKey;
+    it('changes when a child is hidden, since that changes the result', () => {
+      const root = (visible: boolean) => node('CSGBox3D', 'R', {}, [node('CSGSphere3D', 'A', { visible })]);
+      const shown = buildCsgPlan(root(true), 'R', OPTS)!.cacheKey;
+      const hidden = buildCsgPlan(root(false), 'R', OPTS)!.cacheKey;
       expect(shown).not.toBe(hidden);
     });
   });

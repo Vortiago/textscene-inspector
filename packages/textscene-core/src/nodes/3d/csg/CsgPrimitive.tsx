@@ -13,7 +13,6 @@ import { SurfacedMeshDrawer } from '../../../r3f/surfacedMeshDrawer/SurfacedMesh
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useUndrawnMeshReport } from '../../../r3f/viewStatus/useUndrawnMeshReport';
 import { EmptyShapeBranch, useReportEmptyShape } from '../../../r3f/contexts/EmptyShapesContext';
-import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { CsgSubtreeProvider, useCsgSubtree } from '../../../r3f/contexts/CsgSubtreeContext';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { buildCsgPlan } from '../../../r3f/csg/csgPlan';
@@ -71,9 +70,6 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
     ? { context: subtree.context, isLoading: false, isLoadingFonts: false }
     : ownSetup;
   const { context: ctx, isLoadingFonts } = setup;
-  // Optional: a CSG node renders outside the shell in tests and in the
-  // subtree-conformance probe, where nothing can be hidden anyway.
-  const hiddenNodePaths = useOptionalSelection()?.hiddenNodePaths ?? NO_PATHS;
 
   // `_get_brush()` skips an invisible child (csg_shape.cpp:469) before writing its node_aabb, so
   // Godot has only a point at its origin. A root builds whatever its visibility, so it keeps its
@@ -134,7 +130,6 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   const plan = useMemo(() => {
     if (absorbed || skipped || path === null) return null;
     return buildCsgPlan(node, path, {
-      hiddenPaths: hiddenNodePaths,
       patches,
       lookup: (type) => {
         const shape = nodeComponentRegistry.getCsgShape(type);
@@ -145,7 +140,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
         };
       },
     });
-  }, [absorbed, skipped, node, path, hiddenNodePaths, patches, ctx]);
+  }, [absorbed, skipped, node, path, patches, ctx]);
 
   // A node with no plan of its own passes the enclosing root's value straight through:
   // what its descendants are is that root's answer, not its own. Mounted by every branch

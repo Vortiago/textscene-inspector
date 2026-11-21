@@ -11,11 +11,14 @@ import type { AnimationClip, Object3D } from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { node3dGroupSpread, transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { useAnimationTransport, type PlayState } from '../../../r3f/contexts/AnimationTransportContext';
+import {
+  useAnimationTransport,
+  useIsActivePath,
+  type PlayState,
+} from '../../../r3f/contexts/AnimationTransportContext';
 import type { BoundClips } from '../../../r3f/contexts/AnimationDriverContext';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
-import { useIsSelected } from '../../../r3f/hooks/useIsSelected';
 import { usePlaybackLoop } from '../../../r3f/animation/usePlaybackLoop';
 import { applyLoopOverride, loopSettingsFor } from '../../../r3f/animation/loopOverride';
 import { useAnimationDriverMount } from '../../../r3f/animation/useAnimationDriverMount';
@@ -57,7 +60,7 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
   // Selection-driven (ADR-0012): this player owns the transport only while it
   // is the node selected in the tree.
   const nodePath = useNodePath();
-  const isSelected = useIsSelected();
+  const isSelected = useIsActivePath(nodePath);
 
   // AnimationMixer.active gates everything: `seek_internal` returns on `!active`
   // (animation_player.cpp:664), refusing this transport's scrub as well as the process callback

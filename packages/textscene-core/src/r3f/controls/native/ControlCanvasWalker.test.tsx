@@ -229,20 +229,6 @@ describe('<ControlCanvasWalker>', () => {
     expect(namedGroup(renderer.scene, 'TestType:Shown')!.visible).toBe(true);
   });
 
-  it('skips a node the tree marks hidden', async () => {
-    // The eye toggle arrives as `SolveNode.hidden`, so the solve sees the same
-    // value. `buildSolveTree.test.tsx` covers the stamping.
-    const child = { ...solveNode('Root/Box', 'TestType', { anchorsPreset: 15 }), hidden: true };
-    const root = solveNode('Root', 'TestType', { anchorsPreset: 15 }, [child]);
-
-    const renderer = await ReactThreeTestRenderer.create(
-      <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
-    );
-
-    expect(namedGroup(renderer.scene, 'TestType:Root')!.visible).toBe(true);
-    expect(namedGroup(renderer.scene, 'TestType:Box')!.visible).toBe(false);
-  });
-
   it('draws a fallback outline sized to the solved rect for a type with no Native painter', async () => {
     const root = solveNode('Root', 'UnregisteredType', {
       anchorLeft: 0,

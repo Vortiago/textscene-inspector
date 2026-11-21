@@ -5,6 +5,7 @@ import {
   Suspense,
   useImperativeHandle,
   useLayoutEffect,
+  useMemo,
   useRef,
   type ReactNode,
   type Ref,
@@ -16,7 +17,6 @@ import { SceneResourcesProvider } from './SceneResourcesContext.js';
 import { EditedRootProvider } from './contexts/InstanceOwnersContext.js';
 import { NodeDispatcher } from './NodeDispatcher.js';
 import { SelectionHighlight } from './components/SelectionHighlight.js';
-import { HoverHighlight } from './components/HoverHighlight.js';
 import { PendingSuspense } from '../resources/PendingSuspense.js';
 import { editorHelperUserData } from './editorHelpers.js';
 import { FrameSelectedShortcut } from './FrameSelectedShortcut.js';
@@ -87,7 +87,6 @@ export function TscnSceneContents() {
         <SceneShadowFitter />
         <SceneDepthPrepass />
         <SelectionHighlight />
-        <HoverHighlight />
       </WorldEnvironmentScope>
     </CanvasRendererScope>
   );
@@ -166,9 +165,9 @@ export function TscnCanvas({
   onStatusChange,
   ref,
 }: TscnCanvasProps) {
-  const stage = (
-    // The In-game mode takes no pointer, and the 2D mode picks no node yet.
-    <HostSelection selected={selected} onSelect={mode === '3D' ? onSelect : undefined}>
+  // A memo: the previewer gives a new `selected` per hovered row, which renders the selection alone.
+  const view = useMemo(
+    () => (
       <PreviewVisibilityProvider isVisible={visible}>
         <ViewShowProvider show={show}>
           <ViewStatusScope>
@@ -178,6 +177,13 @@ export function TscnCanvas({
           </ViewStatusScope>
         </ViewShowProvider>
       </PreviewVisibilityProvider>
+    ),
+    [visible, show, mode, camera, className, ref, onStatusChange]
+  );
+  const stage = (
+    // The In-game mode takes no pointer, and the 2D mode picks no node yet.
+    <HostSelection selected={selected} onSelect={mode === '3D' ? onSelect : undefined}>
+      {view}
     </HostSelection>
   );
   return scene ? <TscnSceneProvider scene={scene}>{stage}</TscnSceneProvider> : stage;

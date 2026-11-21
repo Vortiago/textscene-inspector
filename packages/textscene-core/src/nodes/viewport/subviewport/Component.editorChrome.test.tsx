@@ -26,7 +26,6 @@ import { HierarchyProvider } from '../../../r3f/contexts/HierarchyContext';
 import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
 import { ViewShowProvider } from '../../../r3f/viewShow/ViewShowContext';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
-import { HoverSeeder } from '../../../r3f/testing/HoverSeeder';
 import { SelectSeeder } from '../../../r3f/testing/SelectSeeder';
 
 import '../../../r3f/nodes/index';
@@ -143,7 +142,6 @@ async function visibleEditorOnlyPerRender(): Promise<number[]> {
       <ViewShowProvider show={{ gizmos: true, grid: true }}>
         <SelectionProvider>
           <SelectSeeder path="Light" />
-          <HoverSeeder path="Box" />
           <ViewportTextureProvider>
             <ViewportPassProvider>
               <TscnSceneContents />

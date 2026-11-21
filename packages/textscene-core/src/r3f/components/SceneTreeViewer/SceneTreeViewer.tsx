@@ -1,17 +1,14 @@
-/**
- * The interactive scene-tree panel. It reads `sceneGraph` from
- * `<HierarchyContext>` and the selection from `<SelectionContext>`.
- */
 import { useCallback, useMemo, useState, type ChangeEvent, type KeyboardEvent } from 'react';
 import type { TscnNode, TscnExternalResource } from '../../../parser/types.js';
 import { getAncestorPaths } from '../../../utils/nodePath.js';
 import { useHierarchy } from '../../contexts/HierarchyContext.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
-import { useSelectPath } from '../TscnPreviewShell/previewSelection.js';
+import { useSelectPath, useSelectedPath } from '../TscnPreviewShell/previewSelection.js';
+import { absolutePathOf } from '../../../scene/nodePathWalk.js';
 import { useSeatedRoots, useSharedLiveTree } from '../../useLiveSceneTree.js';
 import { walkLiveTree, type LiveTreeEntry } from '../../liveSceneTree.js';
 import { dockListsChild } from '../../dockListing.js';
-import { TreeNode } from './TreeNode.js';
+import { ROOT_VISIBILITY, TreeNode } from './TreeNode.js';
 import styles from './SceneTreeViewer.module.css';
 
 /**
@@ -33,16 +30,17 @@ export interface SceneTreeViewerProps {
 }
 
 export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewerProps) {
-  const { sceneGraph } = useHierarchy();
-  const {
-    selectedNodePath,
-    expandedNodePaths,
-    setExpandedNodePaths,
-    hiddenNodePaths,
-    toggleHidden,
-    toggleExpandedNodePath,
-  } = useSelection();
+  const { sceneGraph, scene } = useHierarchy();
+  const { expandedNodePaths, setExpandedNodePaths, toggleExpandedNodePath } = useSelection();
+  const selectedNodePath = useSelectedPath();
   const selectPath = useSelectPath();
+  // The eye calls `set_visible` on the node (scene_tree_editor.cpp:241-247).
+  const setVisible = useCallback(
+    (path: string, visible: boolean) => {
+      void scene?.getNodeOrNull(absolutePathOf(path))?.set('visible', visible);
+    },
+    [scene]
+  );
   const liveTree = useSharedLiveTree();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -242,8 +240,8 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
               node={node}
               parentPath=""
               depth={0}
-              hiddenNodePaths={hiddenNodePaths}
-              onToggleVisibility={toggleHidden}
+              parentVisibility={ROOT_VISIBILITY}
+              onToggleVisibility={setVisible}
               onNodeReveal={onNodeReveal}
               onOpenSubScene={onOpenSubScene}
               matches={matches}
