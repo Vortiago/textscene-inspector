@@ -201,8 +201,8 @@ tab, which no page can prevent. In VS Code the webview forwards the chord to the
 Ctrl+W closes the preview and Ctrl+Shift+W closes the window. Down stays on Q, Godot's key.
 
 **The toolbar has a Freelook button**, for a user who does not know the shortcut. It reaches the
-canvas through `ViewportActionsContext`, as Reset Camera does, so `@textscene/renderer`, which
-ships no toolbar, gains no export: its canvas has the `Shift+F` toggle alone.
+canvas through the view's editor camera (`camera.set('freelook', …)`), so `@textscene/renderer`,
+which ships no toolbar, gains no export: its canvas has the `Shift+F` toggle alone.
 
 ### Considered options
 

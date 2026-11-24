@@ -547,7 +547,7 @@ _Avoid_: "canvas mesh item", "sprite material".
 One geometry a canvas mesh body draws, with the one array colour its draw carries (Polygon2D `color`, Line2D `default_color`) and what its `color` attribute holds: the authored sRGB numbers or colours decoded and times an instance colour.
 _Avoid_: "part", "tint shape".
 
-**Canvas frame** (`Canvas2DStage/canvasFrame.ts`):
+**Canvas frame** (`r3f/world2D/canvasFrame.ts`):
 The render target a 2D canvas draws into, the root's or a SubViewport's. It is y-down like Godot's, and it copies to the target bound before it with its rows reversed. It has one sample, or the `msaa_2d` count (ADR-0057). It stores sRGB numbers, or linear half floats in a linear canvas colour space, which the root's copy to the drawing buffer converts to sRGB. Under `render_target_clear_mode` NEVER it takes the bytes of the target first and draws over them.
 _Avoid_: "MSAA frame".
 

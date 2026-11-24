@@ -36,7 +36,7 @@ interface ViewProviderOptions {
   rootScenePath: string;
 }
 
-/** The view's providers, which the shell mounts too, in order. ADR-0002 keeps them separate contexts. */
+/** The view's providers, in order, as a function so the caller's tree gains no wrapper (ADR-0002). */
 export function viewProviders({
   hierarchyValue,
   loader,

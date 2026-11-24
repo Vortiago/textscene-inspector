@@ -156,8 +156,7 @@ describe('ActiveCameraSwitcher camera preview', () => {
     expect(actions().previewedCameraPath).toBeNull();
   });
 
-  // SceneChangeResetter ends the preview after a scene switch. Until it does, a camera of the new
-  // scene at the previewed path is not the previewed camera.
+  // Until the shell's PreviewSceneReset ends it, a new scene's camera at the path is not the previewed one.
   it('does not follow the previewed path onto a camera of another scene', async () => {
     const { renderer, state, actions, rerender } = await mountWithEditorCamera();
     await act(async () => actions().previewCamera('Camera3D'));

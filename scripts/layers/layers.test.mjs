@@ -53,6 +53,19 @@ describe('the layer rule', () => {
     expect(await refusedIn("import { a } from './editorView';", VIEW)).toBe(1);
   });
 
+  it('refuses an entry file imported by its folder', async () => {
+    const code = ["import { a } from '../r3f';", "import { b } from '..';"].join('\n');
+    expect(await refusedIn(code, `${CORE_SOURCE}godot/sample.ts`)).toBe(2);
+  });
+
+  it('refuses an upward import when ESLint runs from the package folder', async () => {
+    const fromPackage = new ESLint({ cwd: `${root}/packages/textscene-core` });
+    const [result] = await fromPackage.lintText("import { a } from './editorView/freelook.js';", {
+      filePath: `${root}/${VIEW}`,
+    });
+    expect(result.messages.filter((message) => message.ruleId === 'layers/import-down')).toHaveLength(1);
+  });
+
   it('accepts an import from the same layer and from the layers below', async () => {
     const code = [
       "import { a } from './freelook.js';",

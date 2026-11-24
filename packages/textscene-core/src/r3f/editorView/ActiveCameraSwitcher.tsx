@@ -57,9 +57,7 @@ export function ActiveCameraSwitcher() {
     // On every re-render, outside the activation gate, so a resize refits it.
     fitToCanvas(target, size);
 
-    // Swap on a pick, on the one-shot deep-link seed, and onto a previewed camera that a
-    // projection change remounted in the same scene. A scene switch re-runs this with a stale
-    // path that may name a camera in the new scene, before SceneChangeResetter clears it.
+    // A pick, the deep-link seed or a same-scene remount swaps. A new scene keeps a stale path until reset.
     const isRemount = isPreviewing && previewedSceneRef.current === sceneKey;
     const shouldActivate = pathChanged || !seedConsumedRef.current || isRemount;
     seedConsumedRef.current = true;

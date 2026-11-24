@@ -1,4 +1,5 @@
 import { dirname, relative, resolve } from 'node:path';
+import { REPO_ROOT } from '../repoRoot.mjs';
 
 export const CORE_SOURCE = 'packages/textscene-core/src/';
 
@@ -35,16 +36,22 @@ const FILES = new Map(
   )
 );
 
-/** The index of the layer that holds `corePath`, a path from core's `src/`. */
+/** The layer of `corePath`, a path from core's `src/`, as a file or as a folder's index. */
 function layerIndexOf(corePath) {
   const path = withoutExtension(corePath);
-  const asFolder = `${path}/`;
-  return FILES.get(path) ?? FOLDERS.find(({ folder }) => asFolder.startsWith(folder))?.index ?? 0;
+  const asFolder = path === '' ? '' : `${path}/`;
+  return (
+    FILES.get(path) ??
+    FILES.get(`${asFolder}index`) ??
+    FOLDERS.find(({ folder }) => asFolder.startsWith(folder))?.index ??
+    0
+  );
 }
 
-/** The path from core's `src/` of `file`, or null for a file outside core. */
-function corePathOf(file, cwd) {
-  const fromRoot = relative(cwd, file).replaceAll('\\', '/');
+/** Null outside core. From the repo root, not ESLint's cwd, which a package-folder run moves. */
+function corePathOf(file) {
+  const fromRoot = relative(REPO_ROOT, file).replaceAll('\\', '/');
+  if (`${fromRoot}/` === CORE_SOURCE) return '';
   return fromRoot.startsWith(CORE_SOURCE) ? fromRoot.slice(CORE_SOURCE.length) : null;
 }
 
@@ -59,13 +66,13 @@ const importDown = {
     schema: [],
   },
   create(context) {
-    const importer = corePathOf(context.filename, context.cwd);
+    const importer = corePathOf(context.filename);
     if (importer === null) return {};
     const from = layerIndexOf(importer);
     const check = (source) => {
       if (source?.type !== 'Literal' || typeof source.value !== 'string') return;
       if (!source.value.startsWith('.')) return;
-      const target = corePathOf(resolve(dirname(context.filename), source.value), context.cwd);
+      const target = corePathOf(resolve(dirname(context.filename), source.value));
       if (target === null) return;
       const to = layerIndexOf(target);
       if (to <= from) return;
