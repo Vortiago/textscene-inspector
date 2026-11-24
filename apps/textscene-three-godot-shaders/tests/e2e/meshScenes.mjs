@@ -196,6 +196,9 @@ const TURNED_ROTATION = [20, 35, -10];
 /** The sphere moved, turned and scaled apart, so each lane of the object's matrices shows. */
 const SPHERE_MOVED = { position: [0.3, -0.2, -0.5], rotation: TURNED_ROTATION, scale: [1.1, 0.8, 1] };
 
+/** The lines of a fragment function's body, one statement each. */
+const fragmentOf = (...lines) => lines.join('\n\t');
+
 /** An unshaded shader on the moved sphere: `vertex()` and `fragment()` as given, with its rows. */
 const stageScene = (name, { declaration = '', vertex = '', fragment }, rows, mesh = SPHERE) => ({
   name,
@@ -391,50 +394,40 @@ const FRAGMENT_SCENES = [
 
 // Unshaded draws albedo and alpha only (`scene_forward_clustered.glsl:2980`): no write shows.
 const LIT_OUTPUTS = [
-  ['spatial-fragment-normal-map', 'NORMAL_MAP', 'NORMAL_MAP', 'vec3(0.1, 0.9, 0.4)'],
-  ['spatial-fragment-normal-map-depth', 'NORMAL_MAP_DEPTH', 'vec3(NORMAL_MAP_DEPTH * 0.5)', '0.2'],
-  ['spatial-fragment-bent-normal-map', 'BENT_NORMAL_MAP', 'BENT_NORMAL_MAP', 'vec3(0.8, 0.2, 0.6)'],
-  ['spatial-fragment-specular', 'SPECULAR', 'vec3(SPECULAR)', '0.9'],
-  ['spatial-fragment-rim', 'RIM', 'vec3(RIM)', '0.7'],
-  ['spatial-fragment-rim-tint', 'RIM_TINT', 'vec3(RIM_TINT)', '0.6'],
-  ['spatial-fragment-clearcoat', 'CLEARCOAT', 'vec3(CLEARCOAT)', '0.8'],
-  ['spatial-fragment-clearcoat-roughness', 'CLEARCOAT_ROUGHNESS', 'vec3(CLEARCOAT_ROUGHNESS)', '0.4'],
-  ['spatial-fragment-anisotropy', 'ANISOTROPY', 'vec3(ANISOTROPY)', '0.9'],
-  ['spatial-fragment-anisotropy-flow', 'ANISOTROPY_FLOW', 'vec3(ANISOTROPY_FLOW, 0.5)', 'vec2(0.2, 0.7)'],
-  ['spatial-fragment-sss-strength', 'SSS_STRENGTH', 'vec3(SSS_STRENGTH)', '0.8'],
+  ['NORMAL_MAP', 'vec3(0.1, 0.9, 0.4)', 'NORMAL_MAP'],
+  ['NORMAL_MAP_DEPTH', '0.2', 'vec3(NORMAL_MAP_DEPTH * 0.5)'],
+  ['BENT_NORMAL_MAP', 'vec3(0.8, 0.2, 0.6)', 'BENT_NORMAL_MAP'],
+  ['SPECULAR', '0.9'],
+  ['RIM', '0.7'],
+  ['RIM_TINT', '0.6'],
+  ['CLEARCOAT', '0.8'],
+  ['CLEARCOAT_ROUGHNESS', '0.4'],
+  ['ANISOTROPY', '0.9'],
+  ['ANISOTROPY_FLOW', 'vec2(0.2, 0.7)', 'vec3(ANISOTROPY_FLOW, 0.5)'],
+  ['SSS_STRENGTH', '0.8'],
   [
-    'spatial-fragment-sss-transmittance-color',
     'SSS_TRANSMITTANCE_COLOR',
-    'SSS_TRANSMITTANCE_COLOR.rgb + SSS_TRANSMITTANCE_COLOR.a * 0.3',
     'vec4(0.9, 0.2, 0.5, 0.4)',
+    'SSS_TRANSMITTANCE_COLOR.rgb + SSS_TRANSMITTANCE_COLOR.a * 0.3',
   ],
-  [
-    'spatial-fragment-sss-transmittance-depth',
-    'SSS_TRANSMITTANCE_DEPTH',
-    'vec3(SSS_TRANSMITTANCE_DEPTH)',
-    '0.7',
-  ],
-  [
-    'spatial-fragment-sss-transmittance-boost',
-    'SSS_TRANSMITTANCE_BOOST',
-    'vec3(SSS_TRANSMITTANCE_BOOST)',
-    '0.6',
-  ],
-  ['spatial-fragment-backlight', 'BACKLIGHT', 'BACKLIGHT', 'vec3(0.9, 0.5, 0.1)'],
-  ['spatial-fragment-ao', 'AO', 'vec3(AO * 0.5)', '0.1'],
-  ['spatial-fragment-ao-light-affect', 'AO_LIGHT_AFFECT', 'vec3(AO_LIGHT_AFFECT)', '0.9'],
-  ['spatial-fragment-emission', 'EMISSION', 'EMISSION', 'vec3(1.0, 0.0, 1.0)'],
+  ['SSS_TRANSMITTANCE_DEPTH', '0.7'],
+  ['SSS_TRANSMITTANCE_BOOST', '0.6'],
+  ['BACKLIGHT', 'vec3(0.9, 0.5, 0.1)', 'BACKLIGHT'],
+  ['AO', '0.1', 'vec3(AO * 0.5)'],
+  ['AO_LIGHT_AFFECT', '0.9'],
+  ['EMISSION', 'vec3(1.0, 0.0, 1.0)', 'EMISSION'],
 ];
 
-const LIT_OUTPUT_SCENES = LIT_OUTPUTS.map(([name, builtIn, shown, written]) =>
+/** A scene that shows an output's default on one half and the value written on the other. */
+const LIT_OUTPUT_SCENES = LIT_OUTPUTS.map(([builtIn, written, shown = `vec3(${builtIn})`]) =>
   stageScene(
-    name,
+    `spatial-fragment-${builtIn.toLowerCase().replaceAll('_', '-')}`,
     {
-      fragment: [
+      fragment: fragmentOf(
         `vec3 before = ${shown};`,
         `${builtIn} = ${written};`,
-        `ALBEDO = vec3(UV, 0.3) * 0.4 + mix(before, ${shown}, step(0.5, UV.x)) * 0.6;`,
-      ].join('\n\t'),
+        `ALBEDO = vec3(UV, 0.3) * 0.4 + mix(before, ${shown}, step(0.5, UV.x)) * 0.6;`
+      ),
     },
     [`spatial.fragment.${builtIn}`]
   )
@@ -536,9 +529,6 @@ const depthTestScene = (name, modes) =>
     },
     ['spatial.fragment.UV']
   );
-
-/** The lines of a fragment function's body, one statement each. */
-const fragmentOf = (...lines) => lines.join('\n\t');
 
 /** Two crossing quads: the alpha pass draws the far one first, so its depth write cuts the near one. */
 const crossingScene = (name, modes, extra = [], rows = []) =>

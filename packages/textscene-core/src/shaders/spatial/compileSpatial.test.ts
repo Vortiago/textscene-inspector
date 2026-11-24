@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { instruction } from '../language/instructions.js';
 import { compileSpatial } from './compileSpatial.js';
 
 describe('compileSpatial', () => {
@@ -14,7 +15,8 @@ describe('compileSpatial', () => {
 
   it('refuses a lit shader with the owner of the light loop, as its draw needs it', () => {
     const compile = compileSpatial('shader_type spatial;\nvoid fragment() { ALBEDO = vec3(1.0); }\n', {});
-    expect(compile).toMatchObject({ refusal: { owner: '#1453', message: expect.stringContaining('lit') } });
+    const litOwner = instruction('spatial.light.DIFFUSE_LIGHT')?.owner;
+    expect(compile).toMatchObject({ refusal: { owner: litOwner, message: expect.stringContaining('lit') } });
   });
 
   it("gives Godot's refusal of a lit text before its own", () => {
