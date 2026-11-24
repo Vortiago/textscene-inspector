@@ -116,11 +116,11 @@ and prints exact pixels. It is a tool, not a gate.
 ## Vertical slices
 
 A node type lives in `packages/textscene-core/src/nodes/<category>/<type>/`: `parser.ts`,
-`linterParser.ts`, `linter.ts`, `propertyFormatter.ts` (optional), `Component.tsx`,
+`linterParser.ts`, `linter.ts`, `Component.tsx`,
 `types.ts`, `comparison.md` (format in `scripts/compare-docs/SHEET-STANDARD.md`) and
 co-located `*.test.ts(x)`. It has three entry points:
 
-- `index.ts`: parser and formatter, wired into `src/parser/TscnParser.ts`.
+- `index.ts`: the parser, wired into `src/parser/TscnParser.ts`.
 - `index.linter.ts`: validators and rules, wired into `src/linter/index.ts`. It never
   imports `Component.tsx`.
 - `index.r3f.ts`: the only importer of `./Component`, wired into `src/r3f/nodes/index.ts`.

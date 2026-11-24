@@ -53,7 +53,7 @@ material property, or a recent node (`git log`). Broad monorepo orientation live
 
 - `Component.tsx`: the R3F component. Gizmos and helpers live inside it. There is no gizmo
   registry.
-- `index.ts`: `nodeRegistry.register({ typeName, parser, propertyFormatter? })`.
+- `index.ts`: `nodeRegistry.register({ typeName, parser })`.
 - `index.r3f.ts`: `nodeComponentRegistry.register({ typeName, Component })`.
 - **The three barrels.** The folder registers nothing unless imported. `parser/TscnParser.ts`
   imports `<slice>/index.js`. `r3f/nodes/index.ts` imports `index.r3f`. `linter/index.ts` imports
@@ -63,8 +63,9 @@ material property, or a recent node (`git log`). Broad monorepo orientation live
   rules: `linter.ts` registers with `ruleRegistry`, plus `linter.test.ts`. Not scaffolded.
   Gotcha: the generated `index.linter.ts` imports only `./linterParser.js`. Adding a `linter.ts`
   also needs `import './linter.js'`, or the rule never registers.
-- `propertyFormatter.ts` (optional): inspector display for non-obvious props. Wire through
-  `index.ts`.
+- Inspector formatter (optional): inspector display for non-obvious props, in the Previewer layer at
+  `r3f/components/NodeDetailsPanel/formatters/<category>/<type>/propertyFormatter.ts`. Add it to
+  `formatters/index.ts`.
 - Scene-tree badge (optional polish): `TYPE_BADGE_CLASS` and `TYPE_SHORTHAND` in
   `r3f/components/SceneTreeViewer/TreeNode.tsx` (there is a default).
 

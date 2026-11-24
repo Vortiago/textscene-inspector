@@ -4,16 +4,13 @@
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
 import { parseAnimationTree } from './parser';
-import { formatAnimationTreeProperties } from './propertyFormatter';
 
 const animationTreeRegistration: NodeTypeRegistration = {
   typeName: 'AnimationTree',
   parser: parseAnimationTree,
-  propertyFormatter: formatAnimationTreeProperties,
 };
 
 nodeRegistry.register(animationTreeRegistration);
 
 export * from './parser';
-export * from './propertyFormatter';
 export * from './types';

@@ -8,16 +8,13 @@
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
 import { parseRemoteTransform3D } from './parser';
-import { formatRemoteTransform3DProperties } from './propertyFormatter';
 
 const remoteTransform3DRegistration: NodeTypeRegistration = {
   typeName: 'RemoteTransform3D',
   parser: parseRemoteTransform3D,
-  propertyFormatter: formatRemoteTransform3DProperties,
 };
 
 nodeRegistry.register(remoteTransform3DRegistration);
 
 export * from './parser';
-export * from './propertyFormatter';
 export * from './types';

@@ -4,7 +4,6 @@
  * the outliner and the viewport.
  */
 import type { ReactNode } from 'react';
-import { nodeRegistry } from '../../../core/NodeRegistry.js';
 import { rendersOwnVisual } from '../../nodeSupport.js';
 import { isCamera3DType } from '../../cameraNodeTypes.js';
 import { usePreviewCamera } from '../TscnPreviewShell/previewCamera.js';
@@ -13,6 +12,7 @@ import { useLiveNode } from '../../useLiveSceneTree.js';
 import { useLivePatchedNode } from '../../liveNodePatches.js';
 import { useUndrawnNode } from '../TscnPreviewShell/previewViewStatus.js';
 import { spelledLiveNodePath } from '../../../utils/nodePath.js';
+import { formatterOf } from './formatters/index.js';
 import { PropertySection } from './PropertySection.js';
 import type { PropertySection as PropertySectionData } from '../../../core/NodeRegistry.js';
 import { authoredSpelling, holdsRenamedCopy } from '../../../resources/authoredSpelling.js';
@@ -44,13 +44,11 @@ export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
 
   const { instanceRef } = entry;
   const path = selectedNodePath;
-  const registration = nodeRegistry.getRegistration(node.type);
-  // A parser registration does not mean the node renders.
+  const formatter = formatterOf(node.type);
+  // A class with sections of its own need not draw.
   const isNotRendered = rendersOwnVisual(node.type) === 'not-implemented';
 
-  const sections = registration?.propertyFormatter
-    ? authoredSections(registration.propertyFormatter(node.properties), node.scope)
-    : [];
+  const sections = formatter ? authoredSections(formatter(node.properties), node.scope) : [];
 
   const isPreviewed = preview?.camera === path;
 

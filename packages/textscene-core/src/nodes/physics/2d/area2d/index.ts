@@ -7,16 +7,13 @@
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseArea2D } from './parser';
-import { formatArea2DProperties } from './propertyFormatter';
 
 const area2DRegistration: NodeTypeRegistration = {
   typeName: 'Area2D',
   parser: parseArea2D,
-  propertyFormatter: formatArea2DProperties,
 };
 
 nodeRegistry.register(area2DRegistration);
 
 export * from './parser';
-export * from './propertyFormatter';
 export * from './types';

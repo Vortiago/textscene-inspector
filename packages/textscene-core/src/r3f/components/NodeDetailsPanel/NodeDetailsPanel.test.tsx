@@ -7,13 +7,18 @@ import { SelectionProvider, useSelection } from '../../contexts/SelectionContext
 import { TestPreviewCamera } from '../TscnPreviewShell/previewCamera.testkit';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import { nodeRegistry } from '../../../core/NodeRegistry';
+import '../../../parser/TscnParser';
 import type { TscnNode } from '../../../parser/types';
 import { PreviewViewStatusProvider } from '../TscnPreviewShell/previewViewStatus';
 import type { UndrawnNode } from '../../viewStatus/undrawnNodes';
 import { createExternalStore } from '../../../utils/externalStore';
 
+/** A node with the properties its parser reads of an empty section, as the scene's parse gives them. */
 function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): TscnNode {
-  return { rawProperties: {}, name, type, children: [], properties: {}, ...extras };
+  const properties = nodeRegistry
+    .getRegistration(type)
+    ?.parser({ type: 'node', attributes: { name, type } }, {});
+  return { rawProperties: {}, name, type, children: [], properties: properties ?? {}, ...extras };
 }
 
 function panelWrap(graph = createSceneGraphFromTscnScene({ nodes: [] })) {
@@ -181,20 +186,9 @@ describe('<NodeDetailsPanel>', () => {
     expect(screen.queryByText('The CSGShape3D has an empty shape.')).toBeNull();
   });
 
-  it('renders propertyFormatter sections from the registry', async () => {
-    nodeRegistry.register({
-      typeName: FAKE_TYPE,
-      parser: () => ({}),
-      propertyFormatter: () => [
-        {
-          title: 'Stub Section',
-          items: [{ label: 'Stub Label', value: 'stub-value' }],
-        },
-      ],
-    });
-
+  it('renders the sections of the formatter of the selected class', async () => {
     const graph = createSceneGraphFromTscnScene({
-      nodes: [makeNode('N', FAKE_TYPE)],
+      nodes: [makeNode('N', 'Timer', { properties: { wait_time: 2.5 } })],
     });
 
     render(
@@ -209,10 +203,9 @@ describe('<NodeDetailsPanel>', () => {
       screen.getByTestId('select-node').click();
     });
 
-    expect(screen.getByText('Stub Section')).toBeTruthy();
-    expect(screen.getByText('Stub Label:')).toBeTruthy();
+    expect(screen.getByText('Wait Time (s):')).toBeTruthy();
     // Formatters emit display strings, so the value is a plain text node.
-    expect(screen.getByText('stub-value')).toBeTruthy();
+    expect(screen.getByText('2.50')).toBeTruthy();
   });
 
   it('renders external scene instance row when node.instance is set', async () => {

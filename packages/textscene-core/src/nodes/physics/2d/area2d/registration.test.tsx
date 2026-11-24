@@ -32,7 +32,6 @@ describe('Area2D parser registration', () => {
     const registration = nodeRegistry.getRegistration('Area2D');
     expect(registration).not.toBeNull();
     expect(registration!.parser).toBe(parseArea2D);
-    expect(registration!.propertyFormatter).toBeDefined();
   });
 
   it('matches only [node] headings of its own type', () => {

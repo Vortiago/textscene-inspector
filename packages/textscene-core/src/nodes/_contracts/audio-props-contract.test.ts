@@ -1,10 +1,11 @@
 /**
  * AudioStreamPlayer and AudioStreamPlayer2D contract: their parsers keep the audio properties the
- * linter validates, both slices have a propertyFormatter, and the plain player has the `bus` and
+ * linter validates, both slices have an inspector formatter, and the plain player has the `bus` and
  * `playing` validators its 2D/3D siblings have. It uses only stable public surfaces (TscnParser,
  * nodeRegistry, Linter), so it survives refactors.
  */
 
+import { formatterOf } from '../../r3f/components/NodeDetailsPanel/formatters/index';
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -14,7 +15,6 @@ import { resolve } from 'node:path';
 import { TscnParser } from '../../parser/TscnParser';
 import type { TscnNode } from '../../parser/types';
 import { fixturesDir, flatten, repoRoot } from '../../parser/testing/parserKit';
-import { nodeRegistry } from '../../core/NodeRegistry';
 import { Linter } from '../../linter/Linter';
 import { errorsOf } from '../../linter/testing/tierLists';
 import '../../linter/index'; // side-effect: registers every node's linter validators
@@ -125,14 +125,14 @@ describe('#147 AudioStreamPlayer / AudioStreamPlayer2D audio properties — beha
     ).toBeGreaterThan(0);
   });
 
-  // Criterion 1: both slices surface their audio data in the Inspector through a propertyFormatter.
-  it('registers a propertyFormatter that surfaces the audio properties for both players', () => {
-    const reg = nodeRegistry.getRegistration('AudioStreamPlayer');
-    const reg2 = nodeRegistry.getRegistration('AudioStreamPlayer2D');
-    expect(reg?.propertyFormatter, 'AudioStreamPlayer must register a propertyFormatter').toBeDefined();
-    expect(reg2?.propertyFormatter, 'AudioStreamPlayer2D must register a propertyFormatter').toBeDefined();
+  // Criterion 1: both slices surface their audio data in the Inspector through a formatter.
+  it('has an inspector formatter that surfaces the audio properties for both players', () => {
+    const format = formatterOf('AudioStreamPlayer');
+    const format2 = formatterOf('AudioStreamPlayer2D');
+    expect(format, 'AudioStreamPlayer must have a formatter').toBeDefined();
+    expect(format2, 'AudioStreamPlayer2D must have a formatter').toBeDefined();
     const props = firstOfType(PLAIN_WITNESS, 'AudioStreamPlayer').properties;
-    const sections = reg!.propertyFormatter!(props);
+    const sections = format!(props);
     expect(sections.length, 'the formatter should emit at least one inspector section').toBeGreaterThan(0);
     expect(
       /volume|bus|autoplay|stream/.test(JSON.stringify(sections).toLowerCase()),
@@ -142,7 +142,7 @@ describe('#147 AudioStreamPlayer / AudioStreamPlayer2D audio properties — beha
     // The 2D formatter's OUTPUT (not just its presence) must surface the audio
     // surface and render the 2D-specific spatial semantics correctly.
     const props2 = firstOfType(TWO_D_WITNESS, 'AudioStreamPlayer2D').properties;
-    const sections2 = reg2!.propertyFormatter!(props2);
+    const sections2 = format2!(props2);
     const json2 = JSON.stringify(sections2).toLowerCase();
     expect(sections2.length, 'the 2D formatter should emit at least one inspector section').toBeGreaterThan(
       0
