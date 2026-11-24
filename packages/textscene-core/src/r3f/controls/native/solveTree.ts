@@ -105,12 +105,6 @@ export interface SolveNode {
    */
   textureSlots: Readonly<Record<string, Vector2 | null>>;
   /**
-   * The scene-tree eye toggle for this path (`SelectionContext.hiddenNodePaths`).
-   * It stands in for clearing `visible`, which reaches the solve: a hidden child
-   * leaves no container slot, where hiding only at paint time leaves a hole.
-   */
-  hidden: boolean;
-  /**
    * This node's own `theme_override_fonts/*` in its scope. A key means authored
    * (`Control::get_theme_font` does not check validity), `null` when the ref failed.
    * Required, so a test literal that omits it fails to compile; production always

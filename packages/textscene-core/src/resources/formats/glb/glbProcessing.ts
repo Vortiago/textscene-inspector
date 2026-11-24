@@ -1,11 +1,5 @@
-/**
- * The GLB slice's glTF/GLB parser (ADR-0031) and the per-consumer clone. GLTFLoader is a
- * large addon, so it loads lazily on the first GLB request, in a chunk outside the webview's
- * initial-paint closure. SkeletonUtils is about 3 KB gzipped, so it loads statically and
- * `cloneWithMaterials` works on any mesh, built or not.
- */
-
 import * as THREE from 'three';
+// Static, unlike GLTFLoader: SkeletonUtils is about 3 KB gzipped, so `cloneWithMaterials` works on any mesh.
 import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js';
 import { applyShadowCasting, shadowCastingEffects } from '../../../r3f/shadowCasting';
 import { ShadowCastingSetting } from '../../../godot/rendering/rendering';
@@ -37,7 +31,7 @@ type GLTFLoaderClass = (typeof import('three/addons/loaders/GLTFLoader.js'))['GL
 /** Written only by `loadGLTFLoader`. Cleared when the chunk load fails, so the next request retries. */
 let loaderPromise: Promise<GLTFLoaderClass> | null = null;
 
-/** Loads GLTFLoader once, caching the promise. */
+/** Loads GLTFLoader once, caching the promise. Lazy: a large addon, kept off the initial-paint path. */
 function loadGLTFLoader(): Promise<GLTFLoaderClass> {
   loaderPromise ??= import('three/addons/loaders/GLTFLoader.js')
     .then((loaderModule) => loaderModule.GLTFLoader)

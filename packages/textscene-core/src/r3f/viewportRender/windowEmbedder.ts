@@ -6,6 +6,7 @@
 import type { TscnNode } from '../../parser/types.js';
 import type { LiveLink, LiveStep, LiveTree } from '../liveSceneTree.js';
 import { parentPathOf } from '../../utils/nodePath.js';
+import { ROOT_VIEWPORT_PATH } from '../contexts/EnclosingViewportContext.js';
 import {
   embeddingProperties,
   isEmbeddedWindow,
@@ -29,16 +30,19 @@ export function embedsSubwindows(tree: LiveTree, viewport: EmbeddingNode | null)
   return (isResetOnEntry ? force_native : gui_embed_subwindows) === true;
 }
 
-/**
- * `Window::get_embedder` (`window.cpp:1400-1415`): the path of the nearest viewport above `path`
- * that embeds subwindows, or null where the climb ends at the root window.
- */
+/** `Window::get_embedder` (`window.cpp:1400-1415`). Null where no node stands for the root window. */
 export function windowEmbedderPathAt(tree: LiveTree, path: string): string | null {
-  for (let above = parentPathOf(path); above !== null; above = parentPathOf(above)) {
+  for (let above = pathAbove(path); above !== null; above = pathAbove(above)) {
     const aboveNode = tree.at(above)?.step.node;
     if (aboveNode && isViewportBoundary(aboveNode.type) && embedsSubwindows(tree, aboveNode)) return above;
   }
   return null;
+}
+
+/** The path one step up, ending at the In-game root viewport's empty path. */
+function pathAbove(path: string): string | null {
+  if (path === ROOT_VIEWPORT_PATH) return null;
+  return parentPathOf(path) ?? ROOT_VIEWPORT_PATH;
 }
 
 /**

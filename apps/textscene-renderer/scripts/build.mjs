@@ -9,12 +9,17 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { build } from 'esbuild';
 import { packageLayout, writeBesideBundle } from '../../../scripts/packageBuild.mjs';
+import { mergedFileInputs } from '../../../scripts/third-party-notices.mjs';
+import { textureWorkerPlugin } from '../../../packages/textscene-core/src/workers/bundler/esbuildPlugin.mjs';
 import { injectStyles } from './injectStyles.mjs';
 
 const layout = packageLayout(import.meta.url);
 
 const manifest = JSON.parse(readFileSync(resolve(layout.packageDir, 'package.json'), 'utf8'));
 const external = [...Object.keys(manifest.peerDependencies), ...Object.keys(manifest.dependencies)];
+
+/** The job worker's metafile, which the bundle's own metafile does not list. */
+let workerMetafile = { inputs: {} };
 
 const { metafile, outputFiles } = await build({
   absWorkingDir: layout.packageDir,
@@ -28,6 +33,15 @@ const { metafile, outputFiles } = await build({
   legalComments: 'inline',
   metafile: true,
   external,
+  // The job worker, as one script string the bundle starts from a blob URL (ADR-0042).
+  plugins: [
+    textureWorkerPlugin({
+      minify: true,
+      onMetafile: (worker) => {
+        workerMetafile = worker;
+      },
+    }),
+  ],
 });
 
 // esbuild emits the CSS Modules of the bundle as one stylesheet. The bundle adds it to the page
@@ -39,4 +53,5 @@ writeFileSync(
   resolve(layout.outDir, 'index.js'),
   injectStyles(output('.js').text, output('.css')?.text ?? '')
 );
-writeBesideBundle(layout, metafile);
+// The notices name the worker's third-party code too, which only its own metafile lists.
+writeBesideBundle(layout, { ...metafile, inputs: mergedFileInputs([metafile, workerMetafile]).inputs });

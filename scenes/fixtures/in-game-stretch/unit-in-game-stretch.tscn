@@ -1,0 +1,33 @@
+[gd_scene format=3]
+
+; The variable is the window's stretch: `canvas_items` with the default `keep` aspect fits the
+; 320 x 180 base into a 240 x 240 window (`window.cpp:1232-1352`). The target is 240 x 135 with black
+; bars above and below, and the half-transparent full-rect ColorRect lays out in the 320 x 180 base.
+; No other golden's project sets a window override or a stretch mode, so no other golden shows it.
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+
+[sub_resource type="StandardMaterial3D" id="Material_box"]
+shading_mode = 0
+albedo_color = Color(0.9, 0.2, 0.2, 1)
+
+[node name="Main" type="Node3D"]
+
+[node name="Box" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("Material_box")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+current = true
+
+[node name="Tint" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.2, 0.4, 0.9, 0.5)
+
+[node name="Corner" type="ColorRect" parent="Tint"]
+offset_right = 80.0
+offset_bottom = 45.0
+color = Color(0.2, 0.8, 0.3, 1)

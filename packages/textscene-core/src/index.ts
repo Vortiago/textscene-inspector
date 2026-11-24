@@ -10,12 +10,10 @@ export type { TscnNode } from './parser/types';
 export { setLogAdapter, info, warn } from './logger';
 export type { LogAdapter } from './logger';
 
-export type { ResourceProvider } from './resources/ResourceProvider';
 export { isBinaryResourceType } from './resources/resourceProviderUtils';
 
 export {
   useMissingResources,
-  type MissingResourcesContextValue,
   TscnPreviewShell,
   PENDING_CAPTURE,
   type PreviewCaptureState,
@@ -23,15 +21,6 @@ export {
   isCompactLayout,
   parseTscnContent,
   usePersistedState,
-  type Scene,
-  variant,
 } from './r3f/index';
 
-export { ResourceLoaderProvider } from './resources/ResourceLoaderContext';
 export { ResourceLoader } from './resources/ResourceLoader';
-export { createResourcePipeline } from './resources/createResourcePipeline';
-export type { ResourcePipeline } from './resources/createResourcePipeline';
-export type { CreateJobWorker, JobWorker } from './workers/WorkerJobRunner';
-// A host that reads reported resource identities (a drop matcher keying on
-// basename, say) needs the file half, which core cannot normalise on its behalf.
-export { resourceFilePath } from './resources/subResourcePath';

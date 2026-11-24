@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, within, act } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { SceneTreeViewer } from './SceneTreeViewer';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
-import { SelectionProvider, useSelection } from '../../contexts/SelectionContext';
+import { SelectionProvider, useSelection, useSelectedNodePath } from '../../contexts/SelectionContext';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import type { TscnNode } from '../../../parser/types';
 
@@ -55,7 +55,7 @@ describe('<SceneTreeViewer>', () => {
 
     let observed: string | null = 'sentinel';
     function Observer() {
-      observed = useSelection().selectedNodePath;
+      observed = useSelectedNodePath();
       return null;
     }
 
@@ -163,19 +163,5 @@ describe('<SceneTreeViewer>', () => {
     expect(within(row).getByText('Not Implemented').getAttribute('title')).toBe(
       'TotallyUnknownType is not yet supported by the renderer'
     );
-  });
-
-  it('visibility toggle button is rendered with eye/hidden semantics', async () => {
-    const graph = createSceneGraphFromTscnScene({
-      nodes: [makeNode('Root', 'Node3D')],
-    });
-    render(<SceneTreeViewer />, { wrapper: withPanel(graph) });
-
-    const toggle = screen.getByRole('button', { name: /hide node/i });
-    expect(toggle).toBeTruthy();
-    await act(async () => {
-      await userEvent.click(toggle);
-    });
-    expect(screen.getByRole('button', { name: /show node/i })).toBeTruthy();
   });
 });

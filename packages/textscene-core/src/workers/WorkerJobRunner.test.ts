@@ -175,6 +175,31 @@ describe('WorkerJobRunner cancellation', () => {
   });
 });
 
+describe('WorkerJobRunner after release', () => {
+  it('stops the worker that a job after the release starts, once that job ends', async () => {
+    const { runner, workers } = runnerWithFakes();
+    runner.release();
+    const result = runner.run('noise-texture-2d', firstCase);
+    await settle();
+    workers[0]?.respond();
+    await result;
+
+    expect(workers[0]?.terminated).toBe(true);
+  });
+
+  it('keeps the worker between jobs again after retain', async () => {
+    const { runner, workers } = runnerWithFakes();
+    runner.release();
+    runner.retain();
+    const result = runner.run('noise-texture-2d', firstCase);
+    await settle();
+    workers[0]?.respond();
+    await result;
+
+    expect(workers[0]?.terminated).toBe(false);
+  });
+});
+
 describe('WorkerJobRunner in-thread fallback', () => {
   it('runs in-thread when the host gives no worker, with no warning', async () => {
     const runner = new WorkerJobRunner();

@@ -2,9 +2,11 @@ import type { SceneGraph } from '../core/SceneGraph.js';
 import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
 import type { TscnExternalResource } from '../parser/types.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
+import { parseSubResourcePath } from '../resources/subResourcePath.js';
 import { loadedResourceType } from './loadedResourceType.js';
 import type { NodeHandle } from './nodeHandle.js';
 import { parseTscnContent, type ParseResult } from './parseScene.js';
+import type { SceneFile } from './sceneFiles.js';
 import { SceneListeners } from './sceneListeners.js';
 import { SceneNodes } from './sceneNodes.js';
 import type { CameraState } from './viewportCameras.js';
@@ -16,6 +18,8 @@ import { writtenSceneGraph } from './writtenScene.js';
 
 /** The path a scene opens under when the host names none. */
 export const DEFAULT_ROOT_SCENE_PATH = 'res://__inline__.tscn';
+
+const NO_FILES: readonly SceneFile[] = [];
 
 export interface OpenSceneOptions {
   /** The text of the `.tscn` scene. */
@@ -35,8 +39,12 @@ export interface Scene {
   written(): SceneGraph | null;
   /** Replaces the text and frees every node, as a scene change does in Godot. The writes are dropped. */
   setSource(source: string): void;
-  /** Calls `listener` after each new parse, and once after the writes of one task. Returns the removal. */
+  /** Calls `listener` after a new parse, and a frame after writes or a tree change. Returns the removal. */
   subscribe(listener: () => void): () => void;
+  /** Changes at once with each change a view draws: a new text, a write, or a load that changes the tree. */
+  revision(): number;
+  /** Each file the scene and the project name, by path, none after `dispose`. `subscribe` tells a change. */
+  files(): readonly SceneFile[];
   /** Lets go of every listener. A view of a disposed scene draws its last parse. */
   dispose(): void;
   /** `get_node` from the scene's root node: throws `Node not found` where `path` names no node. */
@@ -72,19 +80,31 @@ export function openScene({
   let written: WrittenGraph | null = null;
   /** Written only by `runtime`: made at the first lookup, so a scene no host asks of loads no tree. */
   let sceneRuntime: SceneRuntime | null = null;
+  /** Written only by `dispose`: a read of the files after it would build a runtime that nothing disposes. */
+  let isDisposed = false;
 
   const parse = (): ParseResult => (parsed ??= parseTscnContent(currentSource, rootScenePath));
   const graph = (): SceneGraph | null => parse().sceneGraph;
   const properties = new SceneProperties(
     rootScenePath,
     () => graph()?.scenes.get(rootScenePath),
-    (livePath) => tree()?.node(livePath) ?? null
+    (livePath) => tree()?.node(livePath) ?? null,
+    (livePath) => writtenTree()?.node(livePath) ?? null
   );
   const tree = (): SceneTree | null => {
     const current = graph();
     return current ? runtime().tree(current) : null;
   };
-  const nodes = new SceneNodes({ graph, tree }, properties, (path) => listeners.written(path));
+  const writtenTree = (): SceneTree | null => {
+    const current = scene.written();
+    return current ? runtime().tree(current) : null;
+  };
+  /** The class `load` gives: a sub-resource's heading names it, and no file is asked for one. */
+  const resourceClass = async (path: string): Promise<string | null> =>
+    parseSubResourcePath(path).subResourceId === undefined
+      ? loadedResourceType(provider, path)
+      : properties.subResourceClass(path);
+  const nodes = new SceneNodes({ graph, tree, resourceClass }, properties, (path) => listeners.written(path));
   const listeners = new SceneListeners((path) => nodes.getNodeOrNull(path)?.path ?? null);
 
   const scene: Scene = {
@@ -109,7 +129,10 @@ export function openScene({
       listeners.textChanged();
     },
     subscribe: (listener) => listeners.subscribe(listener),
+    revision: () => listeners.revision(),
+    files: () => (isDisposed ? NO_FILES : runtime().files(scene.written())),
     dispose() {
+      isDisposed = true;
       listeners.clear();
       sceneRuntime?.dispose();
       sceneRuntime = null;
@@ -117,7 +140,7 @@ export function openScene({
     getNode: (path) => nodes.getNode(path),
     getNodeOrNull: (path) => nodes.getNodeOrNull(path),
     async load(path) {
-      const className = (await loadedResourceType(provider, path)) ?? undefined;
+      const className = (await resourceClass(path)) ?? undefined;
       return variantOf({ type: T.OBJECT, resource: { path }, ...(className ? { className } : {}) });
     },
     observe: (path, listener) => listeners.observe(path, listener),
@@ -130,6 +153,7 @@ export function openScene({
     if (!sceneRuntime) {
       sceneRuntime = createSceneRuntime(scene);
       sceneRuntime.subscribe(() => listeners.treeChanged());
+      sceneRuntime.subscribeFiles(() => listeners.filesChanged());
     }
     return sceneRuntime;
   }

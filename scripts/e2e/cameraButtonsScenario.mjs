@@ -1,8 +1,7 @@
 import { diffMask } from '../vscode/pixels.mjs';
-import { findCanvas, settleCanvas } from '../visual/previewServer.mjs';
 import { checkDiagnostics } from './diagnostics.mjs';
 import { clickCameraRow } from './cameraPreviewScenario.mjs';
-import { openFixture } from './openFixture.mjs';
+import { openFixture, shootCanvas } from './openFixture.mjs';
 
 /* global window */
 // `window` exists only in the browser that runs the `page.evaluate` callback.
@@ -171,13 +170,7 @@ function readRows(page, selector) {
     .evaluateAll((rows) => rows.map((row) => row.querySelector('span')?.textContent ?? ''));
 }
 
-async function shoot(page) {
-  const { canvas, reason } = await findCanvas(page);
-  if (reason) throw new Error(`[camera buttons] ${reason}`);
-  const { buffer, reason: settleReason } = await settleCanvas(page, canvas);
-  if (!buffer) throw new Error(`[camera buttons] the canvas never settled: ${settleReason}`);
-  return buffer;
-}
+const shoot = (page) => shootCanvas(page, 'camera buttons');
 
 /** Resolves on a frame requested now, so after each frame the steps before it requested. */
 function nextFrame(page) {

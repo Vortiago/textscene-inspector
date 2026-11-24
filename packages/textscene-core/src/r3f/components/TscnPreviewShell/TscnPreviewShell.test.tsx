@@ -8,7 +8,7 @@ vi.mock('../../TscnCanvas', () => ({
   TscnSceneContents: () => null,
 }));
 
-import { TscnPreviewShell } from './TscnPreviewShell';
+import { TextShell } from './TscnPreviewShell.testkit';
 
 const MINIMAL_TSCN = `[gd_scene load_steps=1 format=3]
 
@@ -19,9 +19,9 @@ const MINIMAL_TSCN = `[gd_scene load_steps=1 format=3]
 
 const INVALID_TSCN = '[this is { not valid';
 
-describe('<TscnPreviewShell>', () => {
+describe('<TextShell>', () => {
   it('renders the canvas, the tree, and the details panel', async () => {
-    render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} />);
+    render(<TextShell panelId="p1" content={MINIMAL_TSCN} />);
     expect(screen.getByTestId('canvas-stub')).toBeTruthy();
     // The lazy panels resolve in a microtask after the first render, so findBy*
     // awaits them and getBy* would race.
@@ -31,22 +31,18 @@ describe('<TscnPreviewShell>', () => {
 
   it('renders the toolbar slot when provided', () => {
     render(
-      <TscnPreviewShell
-        panelId="p1"
-        content={MINIMAL_TSCN}
-        toolbar={<div data-testid="my-toolbar">tools</div>}
-      />
+      <TextShell panelId="p1" content={MINIMAL_TSCN} toolbar={<div data-testid="my-toolbar">tools</div>} />
     );
     expect(screen.getByTestId('my-toolbar')).toBeTruthy();
   });
 
   it('exposes panelId on the shell root for host coordination', () => {
-    const { container } = render(<TscnPreviewShell panelId="panel-x" content="" />);
+    const { container } = render(<TextShell panelId="panel-x" content="" />);
     expect(container.querySelector('[data-panel-id="panel-x"]')).toBeTruthy();
   });
 
   it('renders a passive loading state when content is empty', () => {
-    render(<TscnPreviewShell panelId="p1" content="" />);
+    render(<TextShell panelId="p1" content="" />);
     expect(screen.getByText(/Loading scene/i)).toBeTruthy();
     // Empty content is no error, so no alert banner shows.
     expect(screen.queryByRole('alert')).toBeNull();
@@ -55,7 +51,7 @@ describe('<TscnPreviewShell>', () => {
   it('still renders without crashing on invalid TSCN content', () => {
     // The lenient parser mostly returns an empty scene for an invalid body. The
     // shell must not crash either way.
-    expect(() => render(<TscnPreviewShell panelId="p1" content={INVALID_TSCN} />)).not.toThrow();
+    expect(() => render(<TextShell panelId="p1" content={INVALID_TSCN} />)).not.toThrow();
     // Either an error banner or an empty tree passes.
     const banner = screen.queryByRole('alert');
     const emptyMsg = screen.queryByText(/No nodes to display|Loading scene/i);
@@ -65,7 +61,7 @@ describe('<TscnPreviewShell>', () => {
   it('surfaces a parse-error banner when the lenient parser extracts no nodes from non-empty content (WI-R3F-7 / WEB-10)', () => {
     // The parser returns zero root nodes here. Non-empty content with no nodes
     // shows a banner, unlike empty content.
-    render(<TscnPreviewShell panelId="p1" content={INVALID_TSCN} />);
+    render(<TextShell panelId="p1" content={INVALID_TSCN} />);
     const banner = screen.queryByRole('alert');
     expect(banner).toBeTruthy();
     expect(banner!.textContent).toMatch(/Parse error|Parser could not extract/i);
@@ -74,8 +70,8 @@ describe('<TscnPreviewShell>', () => {
   it('isolates selection state between two shells in the same document', async () => {
     render(
       <>
-        <TscnPreviewShell panelId="shell-a" content={MINIMAL_TSCN} />
-        <TscnPreviewShell panelId="shell-b" content={MINIMAL_TSCN} />
+        <TextShell panelId="shell-a" content={MINIMAL_TSCN} />
+        <TextShell panelId="shell-b" content={MINIMAL_TSCN} />
       </>
     );
 
@@ -107,7 +103,7 @@ describe('<TscnPreviewShell>', () => {
 
   it('fires onNodeReveal with the slash-joined path on double click', async () => {
     const onNodeReveal = vi.fn();
-    render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} onNodeReveal={onNodeReveal} />);
+    render(<TextShell panelId="p1" content={MINIMAL_TSCN} onNodeReveal={onNodeReveal} />);
 
     // findByText awaits the loaded SceneTreeViewer.
     const rootRow = await screen.findByText('Root');
@@ -118,7 +114,7 @@ describe('<TscnPreviewShell>', () => {
   it('WI-R3F-18: shows Suspense fallback for tree + details panel before they resolve', async () => {
     // The first render shows each lazy panel's fallback. The panel follows once
     // its import resolves.
-    render(<TscnPreviewShell panelId="lazy-fallback" content={MINIMAL_TSCN} />);
+    render(<TextShell panelId="lazy-fallback" content={MINIMAL_TSCN} />);
     // The fallbacks live in elements with `aria-busy="true"`.
     const fallbacks = globalThis.document.querySelectorAll('[aria-busy="true"]');
     // A test DOM may resolve the import at once and show no fallback. The
@@ -132,7 +128,7 @@ describe('<TscnPreviewShell>', () => {
   it('WI-R3F-18: canvas paints immediately even while the lazy panels are still loading', () => {
     // The canvas is not lazy, so the viewport paints before the lazy sidebar.
     // The bundle-size guard relies on this.
-    render(<TscnPreviewShell panelId="canvas-first" content={MINIMAL_TSCN} />);
+    render(<TextShell panelId="canvas-first" content={MINIMAL_TSCN} />);
     expect(screen.getByTestId('canvas-stub')).toBeTruthy();
   });
 
@@ -141,10 +137,10 @@ describe('<TscnPreviewShell>', () => {
     // re-parses but keeps the <TscnCanvas> fiber, so the canvas stays the same
     // DOM node and the camera state survives.
     const updated = MINIMAL_TSCN.replace('Root', 'Root_changed');
-    const { rerender } = render(<TscnPreviewShell panelId="hot-reload" content={MINIMAL_TSCN} />);
+    const { rerender } = render(<TextShell panelId="hot-reload" content={MINIMAL_TSCN} />);
     const stubBefore = screen.getByTestId('canvas-stub');
 
-    rerender(<TscnPreviewShell panelId="hot-reload" content={updated} />);
+    rerender(<TextShell panelId="hot-reload" content={updated} />);
     const stubAfter = screen.getByTestId('canvas-stub');
 
     // The same DOM node means React reused the fiber.

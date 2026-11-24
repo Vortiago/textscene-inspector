@@ -10,6 +10,7 @@ import { CANVAS_RENDERER_GL, CANVAS_RENDERER_PROPS } from '../../canvasRenderer/
 import { usePreviewFrameloop } from '../../contexts/PreviewVisibilityContext.js';
 import { World2DContents, type World2DCanvasProps } from './World2DContents.js';
 import { World2DCamera } from './world2DCamera.js';
+import { EditorViewReport } from '../../viewStatus/EditorViewReport.js';
 
 export function World2DCanvas(props: World2DCanvasProps) {
   // One instance for the canvas's life: R3F replaces its camera when the prop changes.
@@ -26,6 +27,7 @@ export function World2DCanvas(props: World2DCanvasProps) {
       style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
     >
       <World2DContents {...props} />
+      <EditorViewReport />
     </Canvas>
   );
 }

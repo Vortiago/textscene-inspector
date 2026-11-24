@@ -7,7 +7,7 @@ import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { CanvasWorkspaceProvider, useCanvasWorkspace } from '../contexts/CanvasWorkspaceContext';
 import { EditedRootProvider } from '../contexts/InstanceOwnersContext';
-import { SelectionProvider, useSelection } from '../contexts/SelectionContext';
+import { SelectionProvider, useSelectedNodePath } from '../contexts/SelectionContext';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { SceneStack } from './SceneStack';
 
@@ -47,7 +47,7 @@ function WorkspaceProbe() {
 }
 
 function SelectionProbe() {
-  return <span data-testid="selected">{useSelection().selectedNodePath ?? 'none'}</span>;
+  return <span data-testid="selected">{useSelectedNodePath() ?? 'none'}</span>;
 }
 
 describe('SceneStack', () => {

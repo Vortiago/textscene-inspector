@@ -4,8 +4,10 @@ import { varToStr } from '../godot/variant/varToStr.js';
 import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
 import type { ResourceReference, VariantValue } from '../godot/variant/variantValue.js';
 import * as logger from '../logger.js';
+import { findSubResource } from '../resources/SubResourceResolver.js';
+import { parseSubResourcePath, subResourcePath } from '../resources/subResourcePath.js';
 import type { DerivedProperties, NodeReader, NodeReads } from './derived/derivedProperty.js';
-import type { SceneTreeNode } from './sceneRuntime.js';
+import type { ContainerVisibility, SceneTreeNode } from './sceneRuntime.js';
 import { WriteStore, type SceneWrites } from './sceneWrites.js';
 import { sceneValueOf, valueOfSceneValue, type SceneValue } from './variant.js';
 
@@ -18,9 +20,6 @@ export function loadPropertyAccess(): Promise<PropertyAccess> {
 
 /** The id prefix of a file `scene.load` gave, which no Godot-written id starts with. */
 const LOADED_ID_PREFIX = 'textscene_load_';
-
-/** The separator of a sub-resource's path, `res://main.tscn::Material_1`. */
-const SUB_RESOURCE_SEPARATOR = '::';
 
 /** The host's reads and writes of the properties of the scene's nodes, by live path. */
 export class SceneProperties {
@@ -37,7 +36,9 @@ export class SceneProperties {
   constructor(
     private readonly rootScenePath: string,
     private readonly rootScene: () => ParsedScene | undefined,
-    private readonly treeNode: (livePath: string) => SceneTreeNode | null
+    private readonly treeNode: (livePath: string) => SceneTreeNode | null,
+    /** The node in the tree of the written scene, where a container's sort reads the writes. */
+    private readonly writtenTreeNode: (livePath: string) => SceneTreeNode | null
   ) {}
 
   writes(): SceneWrites {
@@ -61,7 +62,7 @@ export class SceneProperties {
     const outcome = access.resolveGet(node, property, derived, this.readsAt(access, livePath, node));
     if (outcome.kind === 'unknown') return this.unknownProperty(node, property, null);
     if (outcome.kind === 'unported') throw unportedProperty(property, outcome.declaredBy);
-    return sceneValueOf(outcome.value);
+    return sceneValueOf(this.sortedValue(livePath, property) ?? outcome.value);
   }
 
   /** Whether Godot reports the write valid. A write it drops leaves the writes as they were. */
@@ -78,6 +79,9 @@ export class SceneProperties {
     if (outcome.kind === 'unknown') return this.unknownProperty(node, property, false);
     if (outcome.kind === 'unported') throw unportedProperty(property, outcome.declaredBy);
     if (outcome.kind === 'dropped') return false;
+    const held = this.containerHold(livePath, property);
+    const ownVisible = outcome.writes.find(([stored]) => stored === 'visible')?.[1];
+    if (held && ownVisible?.type === T.BOOL) return this.writeContainer(held, ownVisible.value);
     // A setter that refuses the value writes nothing, so the writes and their views stay as they were.
     if (outcome.writes.length === 0) return outcome.isValid;
     const texts = outcome.writes.map(([stored, written]) => [stored, this.textOf(written)] as const);
@@ -85,6 +89,31 @@ export class SceneProperties {
     // A derived setter keeps its own cache: only a write of the stored property itself resets it.
     if (outcome.writes.some(([stored]) => stored === property)) derived?.storedWritten?.(property);
     return outcome.isValid;
+  }
+
+  /** The value a container's sort resolves, over the stored one: a page's `visible`, a `current_tab`. */
+  private sortedValue(livePath: string, property: string): VariantValue | undefined {
+    const node = this.writtenTreeNode(livePath);
+    const held = property === 'visible' ? node?.containerVisibility : null;
+    return held ? { type: T.BOOL, value: held.visible } : node?.sortedProperty(property);
+  }
+
+  /** The container's hold on the node's `visible`, which its sort writes over the node's own. */
+  private containerHold(livePath: string, property: string): ContainerVisibility | null {
+    return property === 'visible' ? (this.writtenTreeNode(livePath)?.containerVisibility ?? null) : null;
+  }
+
+  /** The child's write queues the sort, which writes the child's value back (`container.cpp:33-36`). */
+  private writeContainer(held: ContainerVisibility, visible: boolean): boolean {
+    const writes = held.writesFor(visible);
+    if (writes.length > 0) {
+      this.store.write(
+        'host',
+        held.containerPath,
+        writes.map(([stored, value]) => [stored, this.textOf(value)] as const)
+      );
+    }
+    return true;
   }
 
   private derivedAt(access: PropertyAccess, livePath: string, node: SceneTreeNode): DerivedProperties | null {
@@ -143,9 +172,17 @@ export class SceneProperties {
     return answer;
   }
 
+  /** The class of the root scene's sub-resource that `path` names, or null for any other path. */
+  subResourceClass(path: string): string | null {
+    const { filePath, subResourceId } = parseSubResourcePath(path);
+    if (subResourceId === undefined || filePath !== this.rootScenePath) return null;
+    const scene = this.rootScene();
+    return (scene && findSubResource(scene.internalResources, subResourceId)?.type) ?? null;
+  }
+
   /** The resource an id of the host's writes names: a file `scene.load` gave, else one of the root scene. */
   private rootResourceOf(kind: 'ExtResource' | 'SubResource', id: string): ResourceReference | null {
-    if (kind === 'SubResource') return { path: `${this.rootScenePath}${SUB_RESOURCE_SEPARATOR}${id}` };
+    if (kind === 'SubResource') return { path: subResourcePath(this.rootScenePath, id) };
     const ext =
       [...this.loaded.values()].find((loaded) => loaded.id === id) ??
       this.rootScene()?.externalResources.find((resource) => resource.id === id);
@@ -159,9 +196,9 @@ export class SceneProperties {
 
   /** A resource as an id of the root scene, which the parser of the written heading reads. */
   private resourceText({ path }: ResourceReference, className: string | undefined): string {
-    const [file, subId] = path.split(SUB_RESOURCE_SEPARATOR);
-    if (subId !== undefined) {
-      if (file === this.rootScenePath) return `SubResource("${subId}")`;
+    const { filePath, subResourceId } = parseSubResourcePath(path);
+    if (subResourceId !== undefined) {
+      if (filePath === this.rootScenePath) return `SubResource("${subResourceId}")`;
       throw new Error(
         `expected a resource of ${this.rootScenePath} or a file, got ${path}: a write of another scene's sub-resource is not in this release`
       );

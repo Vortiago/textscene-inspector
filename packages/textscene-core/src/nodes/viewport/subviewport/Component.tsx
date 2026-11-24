@@ -5,7 +5,7 @@
  * so Node3D descendants draw in the parent's view and CanvasItem descendants do not.
  */
 
-import { lazy, useMemo, type ReactNode } from 'react';
+import { lazy, useEffect, useMemo, type ReactNode } from 'react';
 import {
   OffscreenViewportPass,
   OwnCanvasWorldScope,
@@ -32,7 +32,9 @@ import { YSortProvider } from '../../../r3f/contexts/YSortContext';
 import { PendingSuspense } from '../../../resources/PendingSuspense';
 import type { SubViewportProperties } from './types';
 import type { Vector2 } from '../../../godot/math/vector';
-import { viewportPassSizes } from './targetSize';
+import { viewportPassSizes, warnOfCappedTarget } from './targetSize';
+import { useEmbedderStretchAt } from './useEmbedderStretch';
+import { isEmbeddedWindow } from '../../../r3f/viewportRender/viewportBoundary';
 import { useStableVector2 } from '../../../r3f/hooks/useStableVector2';
 import { useInCanvasOverWorld } from '../../../r3f/viewportRender/canvasOverWorldScope';
 import { ViewportCanvasScope } from '../../../r3f/viewportCanvasScope';
@@ -114,9 +116,12 @@ export function ViewportMount({
   const rendersInline = rasterizes ? kind === '3d' && !ownWorld3D && workspace === '3d' : true;
   // On either path the subtree's canvas items are in this viewport's World2D, never the parent's.
   // So are its CanvasModulate and its lights: the parent canvas's tint stops at this viewport.
-  const sizes = viewportPassSizes(node, useViewportRect(path));
+  const stretchOfEmbedder = useEmbedderStretchAt(isEmbeddedWindow(node.type) ? path : null);
+  const sizes = viewportPassSizes(node, useViewportRect(path), stretchOfEmbedder);
   // Stable while the numbers are, so the pass and the light host do not follow a new object.
   const size = useStableVector2(sizes.target);
+  const renderSize = useStableVector2(sizes.render);
+  useEffect(() => warnOfCappedTarget(path, { render: renderSize, target: size }), [path, renderSize, size]);
   // Godot lays Controls out by the visible rect (`viewport.cpp:1202-1216`). Only the target is capped.
   const layoutSize = useStableVector2(sizes.layout);
   const viewSize = useStableVector2(sizes.view);
@@ -171,6 +176,7 @@ export function ViewportMount({
             node={node}
             path={path}
             size={size}
+            renderSize={renderSize}
             layoutSize={layoutSize}
             viewSize={viewSize}
             kind={kind}

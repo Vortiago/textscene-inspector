@@ -1,5 +1,6 @@
+import { useMemo } from 'react';
 import { ROOT_VIEWPORT_PATH } from '../contexts/EnclosingViewportContext.js';
-import { useCurrentCamera3D } from '../currentCamera.js';
+import { useCurrentCamera2D, useCurrentCamera3D } from '../currentCamera.js';
 import { liveTreeOf } from '../liveSceneTree.js';
 import { isClaimedByNode3DEditor } from '../nodeWorkspaceVisibility.js';
 import { useLiveSceneNodes, useLiveTreeSelection, type SharedLiveTree } from '../useLiveSceneTree.js';
@@ -9,11 +10,10 @@ import { LOAD_OUTCOMES } from '../../resources/fileKinds.js';
 import { nodeReference, type ResourceSnapshot } from '../../resources/reading/index.js';
 import { SCRIPT_FILE } from '../../resources/script/kind.js';
 import type { SceneScope, TscnNode } from '../../parser/types.js';
+import type { ViewSettled } from '../viewStatus/viewStatus.js';
 
-/** What the In-game view cannot show of the game's first frame. */
-export interface GameStartFacts {
-  /** Nodes whose script Godot readies before the first frame (`node.cpp:273`). This view runs none. */
-  scriptedNodes: number;
+/** What the In-game view cannot show of the game's first frame: the facts of `settled`, and one more. */
+export interface GameStartFacts extends ViewSettled {
   /** 3D content in the root window, and no current Camera3D to draw it (`renderer_viewport.cpp:362`). */
   lacksCamera3D: boolean;
 }
@@ -42,8 +42,16 @@ function scriptedNodesOf({ roots, ctx }: SharedLiveTree, snapshot: ResourceSnaps
 
 /** A script inside a SubViewport runs too, and 3D content there draws through that viewport's camera. */
 export function useGameStartFacts(): GameStartFacts {
-  const scriptedNodes = useLiveTreeSelection(scriptedNodesOf, Object.is) ?? 0;
+  const scriptedNodeCount = useLiveTreeSelection(scriptedNodesOf, Object.is) ?? 0;
   const rootWindow3D = useLiveSceneNodes(is3DContent, keepsChildrenInViewport).length;
   const currentCamera3D = useCurrentCamera3D(ROOT_VIEWPORT_PATH);
-  return { scriptedNodes, lacksCamera3D: rootWindow3D > 0 && currentCamera3D === null };
+  const currentCamera2D = useCurrentCamera2D(ROOT_VIEWPORT_PATH);
+  return useMemo(
+    () => ({
+      scriptedNodeCount,
+      hasCurrentCamera: currentCamera3D !== null || currentCamera2D !== null,
+      lacksCamera3D: rootWindow3D > 0 && currentCamera3D === null,
+    }),
+    [scriptedNodeCount, currentCamera3D, currentCamera2D, rootWindow3D]
+  );
 }

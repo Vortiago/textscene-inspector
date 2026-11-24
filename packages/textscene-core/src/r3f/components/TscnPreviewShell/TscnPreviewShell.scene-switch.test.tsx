@@ -11,7 +11,7 @@ vi.mock('../../TscnCanvas', () => ({
   TscnSceneContents: () => null,
 }));
 
-import { TscnPreviewShell } from './TscnPreviewShell';
+import { TextShell } from './TscnPreviewShell.testkit';
 
 const FIXTURE_A = `[gd_scene load_steps=1 format=3]
 
@@ -25,9 +25,9 @@ const FIXTURE_B = `[gd_scene load_steps=1 format=3]
 [node name="BetaRoot" type="Node3D"]
 `;
 
-describe('<TscnPreviewShell> scene-switch (WI-UX-5)', () => {
+describe('<TextShell> scene-switch (WI-UX-5)', () => {
   it('clears the selected row when content changes (non-null → non-null sceneGraph transition)', async () => {
-    const { container, rerender } = render(<TscnPreviewShell panelId="p1" content={FIXTURE_A} />);
+    const { container, rerender } = render(<TextShell panelId="p1" content={FIXTURE_A} />);
 
     // Wait for lazy SceneTreeViewer to resolve before querying DOM.
     await screen.findByText('AlphaRoot');
@@ -42,7 +42,7 @@ describe('<TscnPreviewShell> scene-switch (WI-UX-5)', () => {
     const selectedAfterClick = container.querySelector('[data-node-path="AlphaRoot"] [aria-selected="true"]');
     expect(selectedAfterClick).toBeTruthy();
 
-    rerender(<TscnPreviewShell panelId="p1" content={FIXTURE_B} />);
+    rerender(<TextShell panelId="p1" content={FIXTURE_B} />);
 
     // No tree row is selected. The scope is [data-node-path] rows, since the
     // active detail tab (ADR-0007) carries aria-selected too.
@@ -53,7 +53,7 @@ describe('<TscnPreviewShell> scene-switch (WI-UX-5)', () => {
   it('does NOT fire clearAll on the initial null → first-scene mount transition', async () => {
     // A mount-time clearAll would erase a selection made right after mount, so a
     // selection on the first scene must stick.
-    const { container } = render(<TscnPreviewShell panelId="p1" content={FIXTURE_A} />);
+    const { container } = render(<TextShell panelId="p1" content={FIXTURE_A} />);
 
     // Wait for lazy SceneTreeViewer to resolve before querying DOM.
     await screen.findByText('AlphaRoot');
@@ -62,7 +62,7 @@ describe('<TscnPreviewShell> scene-switch (WI-UX-5)', () => {
   });
 
   it('clears expanded + hidden + selection together when scene swaps', async () => {
-    const { container, rerender } = render(<TscnPreviewShell panelId="p1" content={FIXTURE_A} />);
+    const { container, rerender } = render(<TextShell panelId="p1" content={FIXTURE_A} />);
 
     // Wait for lazy SceneTreeViewer to resolve before querying DOM.
     await screen.findByText('AlphaRoot');
@@ -79,7 +79,7 @@ describe('<TscnPreviewShell> scene-switch (WI-UX-5)', () => {
       await userEvent.click(alphaRow);
     });
 
-    rerender(<TscnPreviewShell panelId="p1" content={FIXTURE_B} />);
+    rerender(<TextShell panelId="p1" content={FIXTURE_B} />);
 
     // No tree row is selected or expanded. BetaRoot has no children, so its
     // aria-expanded is absent, and the query asks for "true". The scope skips

@@ -4,14 +4,13 @@ import type { ReactNode } from 'react';
 import { NodeDetailsPanel } from './NodeDetailsPanel';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { SelectionProvider, useSelection } from '../../contexts/SelectionContext';
-import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext';
+import { TestPreviewCamera } from '../TscnPreviewShell/previewCamera.testkit';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import { nodeRegistry } from '../../../core/NodeRegistry';
 import type { TscnNode } from '../../../parser/types';
-import { NodePathProvider } from '../../contexts/NodePathContext';
-import { UndrawnMeshesProvider, useUndrawnMeshReport } from '../../contexts/UndrawnMeshesContext';
-import { EmptyShapesProvider, useReportEmptyShape } from '../../contexts/EmptyShapesContext';
-import { ShaderErrorsProvider, useShaderErrorReport } from '../../contexts/ShaderErrorsContext';
+import { PreviewViewStatusProvider } from '../TscnPreviewShell/previewViewStatus';
+import type { UndrawnNode } from '../../viewStatus/undrawnNodes';
+import { createExternalStore } from '../../../utils/externalStore';
 
 function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): TscnNode {
   return { rawProperties: {}, name, type, children: [], properties: {}, ...extras };
@@ -38,26 +37,21 @@ function Selector({ path }: { path: string | null }) {
 
 const FAKE_TYPE = '___PanelTestType___';
 
-/** A node's reader of a mesh type no slice builds. */
-function FutureMeshHolder() {
-  useUndrawnMeshReport('FutureMesh');
-  return null;
-}
-
-/** A CSG shape whose brush is empty. */
-function EmptyShapeHolder() {
-  useReportEmptyShape(true);
-  return null;
+/** The shell's view reporting `undrawn` and nothing else. */
+function ViewReporting({ undrawn, children }: { undrawn: UndrawnNode[]; children: ReactNode }) {
+  const status = {
+    settled: null,
+    pending: { textures: 0, fonts: 0 },
+    frame: null,
+    undrawn,
+    isSoftwareRendering: false,
+  };
+  const heard = createExternalStore({ status, round: 0 });
+  return <PreviewViewStatusProvider value={heard}>{children}</PreviewViewStatusProvider>;
 }
 
 const SHADER_ERROR =
   'Godot does not compile the sky shader, and draws its default sky: 3:14: Unknown identifier.';
-
-/** A node whose shader does not compile. */
-function ShaderErrorHolder() {
-  useShaderErrorReport(SHADER_ERROR);
-  return null;
-}
 
 afterEach(() => {
   // Remove the registrations the tests added, so none leaks.
@@ -129,13 +123,12 @@ describe('<NodeDetailsPanel>', () => {
     const graph = createSceneGraphFromTscnScene({ nodes: [makeNode('Sign', FAKE_TYPE)] });
 
     render(
-      <UndrawnMeshesProvider>
+      <ViewReporting
+        undrawn={[{ path: '/root/Sign', meshTypes: ['FutureMesh'], isEmptyShape: false, shaderErrors: [] }]}
+      >
         <NodeDetailsPanel />
         <Selector path="Sign" />
-        <NodePathProvider path="Sign">
-          <FutureMeshHolder />
-        </NodePathProvider>
-      </UndrawnMeshesProvider>,
+      </ViewReporting>,
       { wrapper: panelWrap(graph) }
     );
     await act(async () => {
@@ -150,13 +143,10 @@ describe('<NodeDetailsPanel>', () => {
     const graph = createSceneGraphFromTscnScene({ nodes: [makeNode('Wall', FAKE_TYPE)] });
 
     render(
-      <EmptyShapesProvider>
+      <ViewReporting undrawn={[{ path: '/root/Wall', meshTypes: [], isEmptyShape: true, shaderErrors: [] }]}>
         <NodeDetailsPanel />
         <Selector path="Wall" />
-        <NodePathProvider path="Wall">
-          <EmptyShapeHolder />
-        </NodePathProvider>
-      </EmptyShapesProvider>,
+      </ViewReporting>,
       { wrapper: panelWrap(graph) }
     );
     await act(async () => {
@@ -172,10 +162,12 @@ describe('<NodeDetailsPanel>', () => {
     const graph = createSceneGraphFromTscnScene({ nodes: [makeNode('Wall', FAKE_TYPE)] });
 
     render(
-      <EmptyShapesProvider>
+      <ViewReporting
+        undrawn={[{ path: '/root/Wall', meshTypes: ['FutureMesh'], isEmptyShape: false, shaderErrors: [] }]}
+      >
         <NodeDetailsPanel />
         <Selector path="Wall" />
-      </EmptyShapesProvider>,
+      </ViewReporting>,
       { wrapper: panelWrap(graph) }
     );
     await act(async () => {
@@ -190,13 +182,14 @@ describe('<NodeDetailsPanel>', () => {
     const graph = createSceneGraphFromTscnScene({ nodes: [makeNode('Environment', FAKE_TYPE)] });
 
     render(
-      <ShaderErrorsProvider>
+      <ViewReporting
+        undrawn={[
+          { path: '/root/Environment', meshTypes: [], isEmptyShape: false, shaderErrors: [SHADER_ERROR] },
+        ]}
+      >
         <NodeDetailsPanel />
         <Selector path="Environment" />
-        <NodePathProvider path="Environment">
-          <ShaderErrorHolder />
-        </NodePathProvider>
-      </ShaderErrorsProvider>,
+      </ViewReporting>,
       { wrapper: panelWrap(graph) }
     );
     await act(async () => {
@@ -273,7 +266,7 @@ describe('<NodeDetailsPanel> camera actions', () => {
       return (
         <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
           <SelectionProvider>
-            <ViewportActionsProvider>{children}</ViewportActionsProvider>
+            <TestPreviewCamera>{children}</TestPreviewCamera>
           </SelectionProvider>
         </HierarchyProvider>
       );

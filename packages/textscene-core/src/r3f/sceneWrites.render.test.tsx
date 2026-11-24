@@ -6,7 +6,6 @@ import type { ResourceProvider } from '../resources/ResourceProvider';
 import { TscnSceneProvider } from './TscnSceneProvider';
 import { TscnSceneContents } from './TscnCanvas';
 import { useHierarchy } from './contexts/HierarchyContext';
-import { useMissingResources } from './contexts/MissingResourcesContext';
 import { useLiveNode } from './useLiveSceneTree';
 import { openScene, type Scene } from '../scene/openScene';
 import { variant } from '../scene/variant';
@@ -231,31 +230,10 @@ describe('a resource from scene.load', () => {
     await act(async () => {
       await scene.getNode('Icon').set('texture', await scene.load('res://yellow.png'));
     });
-    // `scene.load` reads only the `.import` sidecar, so a read of the file itself is the node's.
-    const requested = () => loadResource.mock.calls.map(([path]) => path);
+    // `scene.load` reads the `.import` sidecar, `scene.files()` reads one byte: a whole read is the node's.
+    const requested = () =>
+      loadResource.mock.calls.filter(([, , maxBytes]) => maxBytes === undefined).map(([path]) => path);
     await vi.waitFor(() => expect(requested()).toContain('res://yellow.png'));
-  });
-
-  it('reports a file that does not load as a Missing resource', async () => {
-    const scene = openScene({ source: SPRITE_SCENE, provider, rootScenePath: 'res://main.tscn' });
-    const missing: ReadonlySet<string>[] = [];
-    function MissingProbe() {
-      missing.push(useMissingResources().missingPaths);
-      return null;
-    }
-    const renderer = await ReactThreeTestRenderer.create(
-      <TscnSceneProvider scene={scene}>
-        <TscnSceneContents />
-        <MissingProbe />
-      </TscnSceneProvider>
-    );
-    await act(async () => {
-      await scene.getNode('Icon').set('texture', await scene.load('res://gone.png'));
-    });
-    await vi.waitFor(async () => {
-      await renderer.advanceFrames(1, 16);
-      expect(missing.at(-1)?.has('res://gone.png')).toBe(true);
-    });
   });
 });
 

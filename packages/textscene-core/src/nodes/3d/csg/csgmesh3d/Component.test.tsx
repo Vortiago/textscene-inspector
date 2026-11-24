@@ -17,7 +17,8 @@ import { drawnMeshes, findMesh } from '../../testing/reactThreeTestInstance';
 import './index.r3f';
 import { registeredComponent } from '../../../../r3f/testing/registeredComponent';
 import { NodePathProvider } from '../../../../r3f/contexts/NodePathContext';
-import { UndrawnMeshesProvider, useUndrawnMeshTypes } from '../../../../r3f/contexts/UndrawnMeshesContext';
+import { useUndrawnMeshTypes } from '../../../../r3f/testing/undrawnStatus';
+import { ViewStatusProvider } from '../../../../r3f/viewStatus/ViewStatusContext';
 
 // happy-dom loads no font file, so each loads as the stand-in face.
 vi.mock(
@@ -155,21 +156,21 @@ describe('<CSGMesh3D>', () => {
 });
 
 /** The mesh types the node's details name for a CSGMesh3D whose `mesh` is `resource`. */
-async function undrawnTypesFor(resource: TscnInternalResource): Promise<string[]> {
-  let types: string[] = [];
+async function undrawnTypesFor(resource: TscnInternalResource): Promise<readonly string[]> {
+  let types: readonly string[] = [];
   function Types() {
     types = useUndrawnMeshTypes('Mesh');
     return null;
   }
   await ReactThreeTestRenderer.create(
-    <UndrawnMeshesProvider>
+    <ViewStatusProvider>
       <SceneResourcesProvider internalResources={[resource]}>
         <NodePathProvider path="Mesh">
           <CSGMesh3D node={makeNode({ mesh: `SubResource("${resource.id}")` })} />
         </NodePathProvider>
       </SceneResourcesProvider>
       <Types />
-    </UndrawnMeshesProvider>
+    </ViewStatusProvider>
   );
   return types;
 }
@@ -196,13 +197,13 @@ describe('<CSGMesh3D> TextMesh', () => {
 
   async function renderText() {
     const fake = createFakeResourceLoader();
-    let types: string[] = [];
+    let types: readonly string[] = [];
     function Types() {
       types = useUndrawnMeshTypes('Mesh');
       return null;
     }
     const renderer = await ReactThreeTestRenderer.create(
-      <UndrawnMeshesProvider>
+      <ViewStatusProvider>
         <ResourceLoaderProvider loader={fake.loader}>
           <SceneResourcesProvider internalResources={[TEXT]} externalResources={[FONT]}>
             <NodePathProvider path="Mesh">
@@ -211,7 +212,7 @@ describe('<CSGMesh3D> TextMesh', () => {
           </SceneResourcesProvider>
         </ResourceLoaderProvider>
         <Types />
-      </UndrawnMeshesProvider>
+      </ViewStatusProvider>
     );
     return { fake, renderer, undrawnTypes: () => types };
   }

@@ -1,11 +1,6 @@
-/**
- * The scene's play, pause and scrub state, shared by the AnimationPlayer
- * component and the Animation tab. It starts stopped, so a loaded scene shows
- * its authored pose (ADR-0011). It tracks one registered player.
- */
-
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
 
+// The transport starts stopped, so a loaded scene shows its authored pose (ADR-0011).
 export type PlayState = 'stopped' | 'playing' | 'paused';
 
 /**
@@ -24,6 +19,9 @@ export interface PlayerRegistration {
 }
 
 export interface AnimationTransport {
+  /** The live path of the node the transport drives: the previewer's selected node. Null drives none. */
+  activePath: string | null;
+  setActivePath(path: string | null): void;
   clips: string[];
   selectedClip: string | null;
   /** The player's `autoplay` clip, which the selector marks. */
@@ -73,6 +71,8 @@ function defaultClip(reg: PlayerRegistration): string | null {
 }
 
 const NO_OP: AnimationTransport = {
+  activePath: null,
+  setActivePath: () => {},
   clips: [],
   selectedClip: null,
   autoplayClip: null,
@@ -101,7 +101,14 @@ export function useAnimationTransport(): AnimationTransport {
   return useContext(AnimationTransportContext);
 }
 
+/** Whether the transport drives the node at `path`. */
+export function useIsActivePath(path: string | null): boolean {
+  const { activePath } = useAnimationTransport();
+  return path !== null && activePath === path;
+}
+
 export function AnimationTransportProvider({ children }: { children: ReactNode }) {
+  const [activePath, setActivePath] = useState<string | null>(null);
   const [registration, setRegistration] = useState<PlayerRegistration | null>(null);
   const [selectedClip, setSelectedClip] = useState<string | null>(null);
   const [playState, setPlayState] = useState<PlayState>('stopped');
@@ -188,6 +195,8 @@ export function AnimationTransportProvider({ children }: { children: ReactNode }
 
   const value = useMemo<AnimationTransport>(
     () => ({
+      activePath,
+      setActivePath,
       clips,
       selectedClip,
       autoplayClip,
@@ -209,6 +218,7 @@ export function AnimationTransportProvider({ children }: { children: ReactNode }
       reportTime,
     }),
     [
+      activePath,
       clips,
       selectedClip,
       autoplayClip,

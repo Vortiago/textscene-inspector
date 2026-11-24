@@ -1,9 +1,3 @@
-/**
- * The drawings of a 2D collision shape as a gizmo: the fills, strokes and one pixel lines Godot's
- * `Shape2D::draw` puts on the node's canvas item. Component.tsx and ShapeOverlay.tsx mount it only
- * when `showCollisions` is on.
- */
-
 import { useMemo } from 'react';
 import type { Rgba } from '../../../../godot/math/math';
 import type { ShapeDrawing } from '../../../../resources/shapes/shape2d/drawing';

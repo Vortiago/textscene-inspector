@@ -1,7 +1,3 @@
-/**
- * GLBSceneRoot registers each GLB object under its tree path, so the SceneTreeViewer can select
- * and hide it, and applies the hidden-paths set per object. Registrations clear on unmount.
- */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
@@ -58,7 +54,7 @@ async function mount(loader: ResourceLoader) {
   return renderer;
 }
 
-describe('GLBSceneRoot — WI-D select + hide', () => {
+describe('GLBSceneRoot — WI-D select', () => {
   it('registers each internal object under its tree path', async () => {
     const fake = createFakeResourceLoader();
     fake.glbMeshes.seed('res://x.glb', makeFakeGlb());
@@ -67,19 +63,6 @@ describe('GLBSceneRoot — WI-D select + hide', () => {
     expect(captured.nodeObjectMap.get('Glb/body')).toBeDefined();
     expect(captured.nodeObjectMap.get('Glb/Armature')).toBeDefined();
     expect(captured.nodeObjectMap.get('Glb/Armature/hand')).toBeDefined();
-  });
-
-  it('hides only the toggled internal node', async () => {
-    const fake = createFakeResourceLoader();
-    fake.glbMeshes.seed('res://x.glb', makeFakeGlb());
-    await mount(fake.loader);
-
-    await ReactThreeTestRenderer.act(async () => {
-      captured.toggleHidden('Glb/Armature/hand');
-    });
-
-    expect(captured.nodeObjectMap.get('Glb/Armature/hand')!.visible).toBe(false);
-    expect(captured.nodeObjectMap.get('Glb/body')!.visible).toBe(true);
   });
 
   it('unregisters internal objects on unmount', async () => {

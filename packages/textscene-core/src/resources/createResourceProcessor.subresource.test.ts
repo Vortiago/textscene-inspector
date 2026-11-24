@@ -116,7 +116,8 @@ describe('createResourceProcessor with a sub-resource path', () => {
     processor.request('res://wheel.tres::StandardMaterial3D_shvqh');
     await flush();
 
-    expect(processor.cachedPaths()).toEqual(['res://wheel.tres::StandardMaterial3D_shvqh']);
+    expect(processor.isCached('res://wheel.tres::StandardMaterial3D_shvqh')).toBe(true);
+    expect(processor.getCacheSize()).toBe(1);
   });
 
   it('refuses an address when the processor has not opted in', async () => {

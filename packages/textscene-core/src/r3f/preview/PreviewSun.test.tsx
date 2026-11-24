@@ -11,7 +11,7 @@ import { readDirectionalShadowDeclaration } from '../directionalShadow/declarati
 import { directionalShadowBias } from '../../nodes/3d/lights/shared/shadowBias';
 import { HierarchyProvider } from '../contexts/HierarchyContext';
 import { SelectionProvider } from '../contexts/SelectionContext';
-import { ViewportModeProvider } from '../contexts/ViewportModeContext';
+import { ViewShowProvider } from '../viewShow/ViewShowContext';
 import { createSceneGraphFromTscnScene } from '../../core/SceneGraph.testkit';
 import { TscnParser } from '../../parser/TscnParser';
 import { SOFT_LOW_QUALITY_RADIUS } from '../../godot/rendering/lights/softShadowScale';
@@ -35,9 +35,9 @@ async function render(sceneText: string, { sun = true, environment = true }: Ren
     <ResourceLoaderProvider loader={fake.loader}>
       <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
         <SelectionProvider>
-          <ViewportModeProvider initialShowPreviewSun={sun} initialShowPreviewEnvironment={environment}>
+          <ViewShowProvider show={{ previewSun: sun, previewEnvironment: environment }}>
             <TscnSceneContents />
-          </ViewportModeProvider>
+          </ViewShowProvider>
         </SelectionProvider>
       </HierarchyProvider>
     </ResourceLoaderProvider>

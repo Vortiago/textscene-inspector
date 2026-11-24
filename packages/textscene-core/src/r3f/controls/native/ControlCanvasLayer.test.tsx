@@ -111,22 +111,12 @@ describe('<ControlCanvasLayer>', () => {
     projectSettingsMock.viewportSize = { width: 1152, height: 648 };
   });
 
-  it('forces a visible=false ROOT visible, the same "show what you opened" rule as <ControlOverlay>', async () => {
+  it('draws a visible=false root hidden, as Godot does (canvas_item.cpp:76-93)', async () => {
     projectSettingsMock.viewportSize = { width: 1152, height: 648 };
     const root = node('Root', 'Control', { anchorsPreset: 15, visible: false });
     const renderer = await ReactThreeTestRenderer.create(<ControlCanvasLayer nodes={[root]} />);
 
-    expect(namedGroup(renderer.scene, 'Control:Root')!.visible).toBe(true);
-  });
-
-  it('still respects a hidden CHILD (only the root is forced visible)', async () => {
-    const child = node('Child', 'Control', { anchorsPreset: 15, visible: false });
-    const root = node('Root', 'Control', { anchorsPreset: 15, visible: false });
-    root.children = [child];
-    const renderer = await ReactThreeTestRenderer.create(<ControlCanvasLayer nodes={[root]} />);
-
-    expect(namedGroup(renderer.scene, 'Control:Root')!.visible).toBe(true);
-    expect(namedGroup(renderer.scene, 'Control:Child')!.visible).toBe(false);
+    expect(namedGroup(renderer.scene, 'Control:Root')!.visible).toBe(false);
   });
 
   it('reads externalResources/internalResources from the ambient SceneResourcesProvider (ADR-0009)', async () => {

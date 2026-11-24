@@ -5,7 +5,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { Canvas } from '@react-three/fiber';
-import { TscnPreviewShell } from './TscnPreviewShell';
+import { TextShell } from './TscnPreviewShell.testkit';
 
 vi.mock('@react-three/fiber', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@react-three/fiber')>()),
@@ -21,7 +21,7 @@ const NODE_ROOT = (type: 'Node2D' | 'Node3D') => `[gd_scene load_steps=1 format=
 async function frameloopOf(type: 'Node2D' | 'Node3D', isVisible?: boolean) {
   vi.mocked(Canvas).mockClear();
   render(
-    <TscnPreviewShell
+    <TextShell
       panelId={`visibility-${type}-${String(isVisible)}`}
       content={NODE_ROOT(type)}
       initialViewportMode={type === 'Node2D' ? '2D' : '3D'}
@@ -34,7 +34,7 @@ async function frameloopOf(type: 'Node2D' | 'Node3D', isVisible?: boolean) {
   return vi.mocked(Canvas).mock.calls.at(-1)![0].frameloop;
 }
 
-describe('<TscnPreviewShell> isVisible', () => {
+describe('<TextShell> isVisible', () => {
   it('stops the 3D canvas while the host hides the preview', async () => {
     expect(await frameloopOf('Node3D', false)).toBe('never');
   });

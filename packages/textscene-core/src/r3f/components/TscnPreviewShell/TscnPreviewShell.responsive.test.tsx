@@ -15,7 +15,7 @@ vi.mock('../../TscnCanvas', () => ({
 }));
 
 import { extractMediaBlock, mediaQueries, stripMediaBlocks } from '../../testing/cssSource';
-import { TscnPreviewShell } from './TscnPreviewShell';
+import { TextShell } from './TscnPreviewShell.testkit';
 import { COMPACT_LAYOUT_QUERY } from './narrowLayout';
 import styles from './TscnPreviewShell.module.css';
 
@@ -56,7 +56,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe('<TscnPreviewShell> narrow layout: the stylesheet', () => {
+describe('<TextShell> narrow layout: the stylesheet', () => {
   it('keys every width-bounded @media block on the compact and the narrow query', () => {
     const widthQueries = mediaQueries(CSS_SOURCE).filter((q) => q.includes('width'));
     expect(widthQueries.sort()).toEqual([COMPACT_LAYOUT_QUERY, NARROW_LAYOUT_QUERY].sort());
@@ -147,9 +147,9 @@ describe('<TscnPreviewShell> narrow layout: the stylesheet', () => {
   });
 });
 
-describe('<TscnPreviewShell> narrow layout: the markup', () => {
+describe('<TextShell> narrow layout: the markup', () => {
   it('hands the resizer width and the sheet share to the stylesheet as custom properties', () => {
-    const { container } = render(<TscnPreviewShell panelId="p-basis" content={MINIMAL_TSCN} />);
+    const { container } = render(<TextShell panelId="p-basis" content={MINIMAL_TSCN} />);
     const dock = dockElement(container);
     expect(dock.style.getPropertyValue('--tsi-dock-basis')).toBe('320px');
     expect(dock.style.getPropertyValue('--tsi-sheet-basis')).toBe('45%');
@@ -157,7 +157,7 @@ describe('<TscnPreviewShell> narrow layout: the markup', () => {
   });
 
   it('sets the panes’ share as a custom property, never as an inline flex-grow', () => {
-    const { container } = render(<TscnPreviewShell panelId="p-grow" content={MINIMAL_TSCN} />);
+    const { container } = render(<TextShell panelId="p-grow" content={MINIMAL_TSCN} />);
     const dock = dockElement(container);
     const panes = Array.from(dock.children).filter((el) =>
       (el as HTMLElement).style.getPropertyValue('--tsi-pane-grow')
@@ -167,7 +167,7 @@ describe('<TscnPreviewShell> narrow layout: the markup', () => {
   });
 
   it('marks the desktop-only controls wide-only, so the narrow block hides them', () => {
-    render(<TscnPreviewShell panelId="p-wide" content={MINIMAL_TSCN} />);
+    render(<TextShell panelId="p-wide" content={MINIMAL_TSCN} />);
     const splitter = screen.getByRole('separator', { name: 'Resize the side panel' });
     expect(splitter.className.split(' ')).toContain(styles.wideOnly);
     const treeCollapse = screen.getByLabelText('Collapse the side panel');
@@ -175,13 +175,13 @@ describe('<TscnPreviewShell> narrow layout: the markup', () => {
   });
 
   it('shows the tree half first', () => {
-    const { container } = render(<TscnPreviewShell panelId="p-first" content={MINIMAL_TSCN} />);
+    const { container } = render(<TextShell panelId="p-first" content={MINIMAL_TSCN} />);
     expect(dockElement(container).dataset.narrowPane).toBe('tree');
     expect(screen.getByRole('tab', { name: 'Scene' }).getAttribute('aria-selected')).toBe('true');
   });
 
   it('switches to the details half on a tap of Details', () => {
-    const { container } = render(<TscnPreviewShell panelId="p-switch" content={MINIMAL_TSCN} />);
+    const { container } = render(<TextShell panelId="p-switch" content={MINIMAL_TSCN} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Details' }));
     expect(dockElement(container).dataset.narrowPane).toBe('details');
     expect(screen.getByRole('tab', { name: 'Details' }).getAttribute('aria-selected')).toBe('true');
@@ -190,30 +190,30 @@ describe('<TscnPreviewShell> narrow layout: the markup', () => {
 
   it('remembers the chosen half across a remount', () => {
     vi.useFakeTimers();
-    const first = render(<TscnPreviewShell panelId="p-remember" content={MINIMAL_TSCN} />);
+    const first = render(<TextShell panelId="p-remember" content={MINIMAL_TSCN} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Details' }));
     act(() => {
       vi.runAllTimers();
     });
     first.unmount();
-    const { container } = render(<TscnPreviewShell panelId="p-remember" content={MINIMAL_TSCN} />);
+    const { container } = render(<TextShell panelId="p-remember" content={MINIMAL_TSCN} />);
     expect(dockElement(container).dataset.narrowPane).toBe('details');
   });
 
   it('falls back to the default sheet share for a stored one out of range', () => {
     localStorage.setItem('tsi.sheetShare', JSON.stringify(5));
-    const { container } = render(<TscnPreviewShell panelId="p-share" content={MINIMAL_TSCN} />);
+    const { container } = render(<TextShell panelId="p-share" content={MINIMAL_TSCN} />);
     expect(dockElement(container).style.getPropertyValue('--tsi-sheet-basis')).toBe('45%');
   });
 
   it('falls back to the tree half for a corrupt stored value', () => {
     localStorage.setItem('tsi.narrowPane', JSON.stringify('inspector'));
-    const { container } = render(<TscnPreviewShell panelId="p-corrupt" content={MINIMAL_TSCN} />);
+    const { container } = render(<TextShell panelId="p-corrupt" content={MINIMAL_TSCN} />);
     expect(dockElement(container).dataset.narrowPane).toBe('tree');
   });
 
   it('collapses the sheet from the switcher', () => {
-    render(<TscnPreviewShell panelId="p-collapse" content={MINIMAL_TSCN} />);
+    render(<TextShell panelId="p-collapse" content={MINIMAL_TSCN} />);
     fireEvent.click(screen.getByLabelText('Collapse the scene panel'));
     expect(screen.getByLabelText('Show the side panel')).toBeTruthy();
     expect(screen.queryByRole('tab', { name: 'Scene' })).toBeNull();

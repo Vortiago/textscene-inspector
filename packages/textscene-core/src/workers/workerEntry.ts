@@ -1,8 +1,3 @@
-/**
- * The worker side of the job protocol. A host's worker script calls
- * {@link installWorkerJobs} on its global scope, and nothing else.
- */
-
 import { isWorkerJobName, WORKER_JOBS, type WorkerJob } from './jobs';
 import { readJobRequest, toJobError, type WorkerJobReply } from './protocol';
 

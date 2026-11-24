@@ -194,54 +194,19 @@ describe('FileEventBus', () => {
       expect(eventBus.isCached('res://test.tscn')).toBe(false);
     });
 
-    it('clears all cache when no path specified', async () => {
-      vi.mocked(mockProvider.loadResource).mockResolvedValue('content');
-
-      eventBus.request('res://file1.tscn');
-      eventBus.request('res://file2.tscn');
-
-      await vi.waitFor(() => {
-        expect(eventBus.getCacheSize()).toBe(2);
-      });
-
-      eventBus.clearCache();
-
-      expect(eventBus.getCacheSize()).toBe(0);
-    });
-
-    it('a fetch resolving after a full clear neither repopulates the cache nor emits', async () => {
+    it('a fetch resolving after its path is cleared neither repopulates the cache nor emits', async () => {
       const loaded = vi.fn();
       eventBus.on('loaded', loaded);
       let release!: (data: string) => void;
       vi.mocked(mockProvider.loadResource).mockReturnValue(new Promise((r) => (release = r)));
 
-      eventBus.request('res://tex.png'); // cleared-era flight departs
-      eventBus.clearCache(); // full clear (corpus switch) mid-flight
-      release('old-corpus bytes');
+      eventBus.request('res://tex.png');
+      eventBus.clearCache('res://tex.png');
+      release('old bytes');
       await new Promise((r) => setTimeout(r, 10));
 
       expect(loaded).not.toHaveBeenCalled();
       expect(eventBus.isCached('res://tex.png')).toBe(false);
-    });
-
-    it('a post-clear request starts a fresh fetch instead of deduping into a cleared-era flight', async () => {
-      const loaded = vi.fn();
-      eventBus.on('loaded', loaded);
-      let releaseStale!: (data: string) => void;
-      vi.mocked(mockProvider.loadResource)
-        .mockReturnValueOnce(new Promise((r) => (releaseStale = r)))
-        .mockResolvedValueOnce('fresh bytes');
-
-      eventBus.request('res://tex.png'); // stale flight
-      eventBus.clearCache();
-      eventBus.request('res://tex.png'); // must not dedupe into the stale flight
-      releaseStale('old-corpus bytes');
-
-      await vi.waitFor(() => {
-        expect(loaded).toHaveBeenCalledTimes(1);
-      });
-      expect(loaded).toHaveBeenCalledWith('res://tex.png', 'fresh bytes');
-      expect(mockProvider.loadResource).toHaveBeenCalledTimes(2);
     });
 
     it('a per-path clear invalidates the in-flight fetch — a re-request starts fresh instead of joining the doomed flight', async () => {
@@ -265,15 +230,15 @@ describe('FileEventBus', () => {
       expect(eventBus.getCacheSize()).toBe(1);
     });
 
-    it('a stale failure after a full clear is dropped silently', async () => {
+    it('a stale failure after its path is cleared is dropped silently', async () => {
       const failed = vi.fn();
       eventBus.on('failed', failed);
       let rejectStale!: (err: Error) => void;
       vi.mocked(mockProvider.loadResource).mockReturnValue(new Promise((_r, rj) => (rejectStale = rj)));
 
       eventBus.request('res://tex.png');
-      eventBus.clearCache();
-      rejectStale(new Error('old-corpus 404'));
+      eventBus.clearCache('res://tex.png');
+      rejectStale(new Error('404'));
       await new Promise((r) => setTimeout(r, 10));
 
       expect(failed).not.toHaveBeenCalled();

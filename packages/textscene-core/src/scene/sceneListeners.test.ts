@@ -30,6 +30,28 @@ describe('SceneListeners in a browser', () => {
     expect(view).toHaveBeenCalledTimes(1);
   });
 
+  it('tells the views once in the frame after a load changes the tree', async () => {
+    const { listeners, drawFrame } = await listenersInBrowser();
+    const view = vi.fn();
+    listeners.subscribe(view);
+    listeners.treeChanged();
+    expect(view).not.toHaveBeenCalled();
+    drawFrame();
+    expect(view).toHaveBeenCalledTimes(1);
+  });
+
+  it('counts a new revision for each write, new text and tree change, at once', async () => {
+    const { listeners } = await listenersInBrowser();
+    const revisions = [listeners.revision()];
+    listeners.written('/root/Main/A');
+    revisions.push(listeners.revision());
+    listeners.textChanged();
+    revisions.push(listeners.revision());
+    listeners.treeChanged();
+    revisions.push(listeners.revision());
+    expect(new Set(revisions).size).toBe(4);
+  });
+
   it('tells an observer of a written node at the end of the task, before the frame', async () => {
     const { listeners } = await listenersInBrowser();
     const observer = vi.fn();

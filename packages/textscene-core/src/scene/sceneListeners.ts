@@ -14,11 +14,18 @@ export class SceneListeners {
   private readonly observers = new Set<Observer>();
   /** Written only by `written` and `flushWrites`: the absolute paths written since the last notice. */
   private writtenPaths = new Set<string>();
-  /** Written only by `written`, `tellViews` and `textChanged`: whether a frame tells the views. */
+  /** Written only by `askViewNotice`, `tellViews` and `textChanged`: whether a frame tells the views. */
   private isViewNoticePending = false;
+  /** Written only by `written`, `textChanged` and `treeChanged`: one more for each change a view draws. */
+  private changes = 0;
 
   /** `resolve` gives the absolute path a host's path names now, or null where it names no node. */
   constructor(private readonly resolve: (path: string) => string | null) {}
+
+  /** A number that changes at once with every change, before any listener hears it. */
+  revision(): number {
+    return this.changes;
+  }
 
   subscribe(listener: () => void): () => void {
     this.views.add(listener);
@@ -33,24 +40,31 @@ export class SceneListeners {
 
   /** A write to the node at absolute path `path`, told with the task's other writes. */
   written(path: string): void {
+    this.changes++;
     if (this.writtenPaths.size === 0) queueMicrotask(() => this.flushWrites());
     this.writtenPaths.add(path);
-    if (this.isViewNoticePending) return;
-    this.isViewNoticePending = true;
-    nextFrame(() => this.tellViews());
+    this.askViewNotice();
   }
 
   /** A new text: every node is new, so every view and every observer hears it now. */
   textChanged(): void {
+    this.changes++;
     this.writtenPaths = new Set();
     this.isViewNoticePending = false;
     for (const listener of [...this.views]) listener();
     for (const { listener } of [...this.observers]) listener();
   }
 
-  /** A load that changed the tree's shape. */
+  /** A load that changed the tree's shape: the observers of the shape hear it now, the views in a frame. */
   treeChanged(): void {
+    this.changes++;
     for (const { path, listener } of [...this.observers]) if (path === null) listener();
+    this.askViewNotice();
+  }
+
+  /** The views hear it in a frame, with the other changes of the frame. The revision stays. */
+  filesChanged(): void {
+    this.askViewNotice();
   }
 
   clear(): void {
@@ -67,6 +81,12 @@ export class SceneListeners {
       const resolved = path === null ? null : this.resolve(path);
       if (resolved !== null && paths.has(resolved)) listener();
     }
+  }
+
+  private askViewNotice(): void {
+    if (this.isViewNoticePending) return;
+    this.isViewNoticePending = true;
+    nextFrame(() => this.tellViews());
   }
 
   private tellViews(): void {

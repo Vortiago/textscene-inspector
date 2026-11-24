@@ -10,7 +10,7 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ReferenceRectProperties } from './types';
 import { SelectionProvider } from '../../../../r3f/contexts/SelectionContext';
-import { ViewportModeProvider } from '../../../../r3f/contexts/ViewportModeContext';
+import { ViewShowProvider } from '../../../../r3f/viewShow/ViewShowContext';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { ReferenceRect } from './Component';
@@ -55,49 +55,49 @@ describe('<ReferenceRect> (isolated painter contract)', () => {
     ['a different node is selected', 'Other'],
   ])('draws when editor_only is true (the default) and %s', async (_label, selectedPath) => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ViewportModeProvider>
+      <ViewShowProvider>
         <SelectionProvider>
           {selectedPath !== null && <SelectSeeder path={selectedPath} />}
           <ReferenceRect {...painterEnv()} solveNode={refRectNode({})} rect={RECT} renderOrder={0} />
         </SelectionProvider>
-      </ViewportModeProvider>
+      </ViewShowProvider>
     );
     expect(renderer.scene.findAllByType('Mesh').length).toBeGreaterThan(0);
   });
 
   it('draws nothing when editor_only is true and the Gizmos toggle is off, selected', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ViewportModeProvider initialShowGizmos={false}>
+      <ViewShowProvider show={{ gizmos: false }}>
         <SelectionProvider>
           <SelectSeeder path="MyRect" />
           <ReferenceRect {...painterEnv()} solveNode={refRectNode({})} rect={RECT} renderOrder={0} />
         </SelectionProvider>
-      </ViewportModeProvider>
+      </ViewShowProvider>
     );
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 
   it('draws nothing in the running game when editor_only is true, with the Gizmos toggle on', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ViewportModeProvider initialShowGizmos>
+      <ViewShowProvider show={{ gizmos: true }}>
         <RunningGameScope>
           <ReferenceRect {...painterEnv()} solveNode={refRectNode({})} rect={RECT} renderOrder={0} />
         </RunningGameScope>
-      </ViewportModeProvider>
+      </ViewShowProvider>
     );
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 
   it('draws when editor_only is false and the Gizmos toggle is off, as the running game does', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ViewportModeProvider initialShowGizmos={false}>
+      <ViewShowProvider show={{ gizmos: false }}>
         <ReferenceRect
           {...painterEnv()}
           solveNode={refRectNode({ editorOnly: false })}
           rect={RECT}
           renderOrder={0}
         />
-      </ViewportModeProvider>
+      </ViewShowProvider>
     );
     expect(renderer.scene.findAllByType('Mesh').length).toBeGreaterThan(0);
   });

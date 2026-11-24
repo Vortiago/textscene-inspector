@@ -1,8 +1,3 @@
-/**
- * A panel's selection state: the selected path, the expanded and hidden sets,
- * and the path to Object3D map. Each shell owns its own. Paths are slash-joined
- * node names without a leading `./` (R3F-contracts.md).
- */
 import {
   createContext,
   useCallback,
@@ -17,21 +12,13 @@ import type * as THREE from 'three';
 import { createExternalStore, type ExternalStore } from '../../utils/externalStore.js';
 import { useExternalStoreValue } from '../hooks/createExternalStore.js';
 
+// Paths are slash-joined node names without a leading `./` (R3F-contracts.md).
 export interface SelectionContextValue {
-  selectedNodePath: string | null;
   expandedNodePaths: ReadonlySet<string>;
-  hiddenNodePaths: ReadonlySet<string>;
-  /**
-   * Hover changes on every pointer move, and a context re-renders every
-   * consumer, so hover lives in this ref-based store. `.set()` re-renders
-   * nothing, and only `useHoveredNodePath()` subscribes. The reference is stable.
-   */
-  hoverStore: ExternalStore<string | null>;
+  /** Sets the path the view outlines. `useSelectedNodePath` and `useIsSelectedPath` read it. */
   setSelectedNodePath: (path: string | null) => void;
   toggleExpandedNodePath: (path: string) => void;
   setExpandedNodePaths: (paths: ReadonlySet<string>) => void;
-  toggleHidden: (path: string) => void;
-  clearHidden: () => void;
   /**
    * Resets all selection-derived state and the `nodeObjectMap`, so no state of
    * the previous scene leaks into the next one.
@@ -50,17 +37,15 @@ export interface SelectionContextValue {
    */
   objectPathMap: WeakMap<THREE.Object3D, string>;
   registerNodeObject: (path: string, object: THREE.Object3D) => void;
+  /** Into `nodeObjectMap` only: a click on the object picks the nearest node registered for picking. */
+  registerUnpickableNodeObject: (path: string, object: THREE.Object3D) => void;
   unregisterNodeObject: (path: string) => void;
 }
 
 const SelectionContext = createContext<SelectionContextValue | null>(null);
 SelectionContext.displayName = 'SelectionContext';
 
-/**
- * The selected path, in a store like the hover store. A node that asks only whether it is selected
- * re-renders when its answer flips, not on each selection, expand or hide. `SelectionProvider` owns
- * it, and its `selectedNodePath` reads from it.
- */
+/** The outlined path, a store: it changes per hovered row, and a context change re-renders every consumer. */
 const SelectedNodePathStoreContext = createContext<ExternalStore<string | null> | null>(null);
 SelectedNodePathStoreContext.displayName = 'SelectedNodePathStoreContext';
 
@@ -69,15 +54,12 @@ export interface SelectionProviderProps {
 }
 
 export function SelectionProvider({ children }: SelectionProviderProps) {
-  // Never-set state, so each factory runs once per provider.
-  const [hoverStore] = useState(() => createExternalStore<string | null>(null));
+  // Never-set state, so the factory runs once per provider.
   const [selectedStore] = useState(() => createExternalStore<string | null>(null));
-  const selectedNodePath = useExternalStoreValue(selectedStore);
   const setSelectedNodePath = selectedStore.set;
   const [expandedNodePaths, setExpandedNodePathsState] = useState<ReadonlySet<string>>(
     () => new Set<string>()
   );
-  const [hiddenNodePaths, setHiddenNodePathsState] = useState<ReadonlySet<string>>(() => new Set<string>());
 
   const toggleExpandedNodePath = useCallback((path: string) => {
     setExpandedNodePathsState((prev) => {
@@ -95,22 +77,6 @@ export function SelectionProvider({ children }: SelectionProviderProps) {
     setExpandedNodePathsState(new Set(paths));
   }, []);
 
-  const toggleHidden = useCallback((path: string) => {
-    setHiddenNodePathsState((prev) => {
-      const next = new Set(prev);
-      if (next.has(path)) {
-        next.delete(path);
-      } else {
-        next.add(path);
-      }
-      return next;
-    });
-  }, []);
-
-  const clearHidden = useCallback(() => {
-    setHiddenNodePathsState(new Set());
-  }, []);
-
   const nodeObjectMapRef = useRef<Map<string, THREE.Object3D>>(new Map<string, THREE.Object3D>());
   const objectPathMapRef = useRef<WeakMap<THREE.Object3D, string>>(new WeakMap<THREE.Object3D, string>());
 
@@ -125,6 +91,12 @@ export function SelectionProvider({ children }: SelectionProviderProps) {
     objectPathMapRef.current.set(object, path);
   }, []);
 
+  const registerUnpickableNodeObject = useCallback((path: string, object: THREE.Object3D) => {
+    const previous = nodeObjectMapRef.current.get(path);
+    if (previous) objectPathMapRef.current.delete(previous);
+    nodeObjectMapRef.current.set(path, object);
+  }, []);
+
   const unregisterNodeObject = useCallback((path: string) => {
     const object = nodeObjectMapRef.current.get(path);
     if (object) objectPathMapRef.current.delete(object);
@@ -133,44 +105,34 @@ export function SelectionProvider({ children }: SelectionProviderProps) {
 
   const clearAll = useCallback(() => {
     selectedStore.set(null);
-    hoverStore.set(null);
     setExpandedNodePathsState(new Set());
-    setHiddenNodePathsState(new Set());
     nodeObjectMapRef.current.clear();
     // Not objectPathMapRef: a WeakMap keyed by the Object3D itself, so the old
     // scene's entries become unreachable and are collected. A path key could
     // match the new scene, an object key cannot.
-  }, [hoverStore, selectedStore]);
+  }, [selectedStore]);
 
   const value = useMemo<SelectionContextValue>(
     () => ({
-      selectedNodePath,
-      hoverStore,
       expandedNodePaths,
-      hiddenNodePaths,
       setSelectedNodePath,
       toggleExpandedNodePath,
       setExpandedNodePaths,
-      toggleHidden,
-      clearHidden,
       clearAll,
       nodeObjectMap: nodeObjectMapRef.current,
       objectPathMap: objectPathMapRef.current,
       registerNodeObject,
+      registerUnpickableNodeObject,
       unregisterNodeObject,
     }),
     [
-      selectedNodePath,
-      hoverStore,
       expandedNodePaths,
-      hiddenNodePaths,
       setSelectedNodePath,
       toggleExpandedNodePath,
       setExpandedNodePaths,
-      toggleHidden,
-      clearHidden,
       clearAll,
       registerNodeObject,
+      registerUnpickableNodeObject,
       unregisterNodeObject,
     ]
   );
@@ -200,7 +162,7 @@ export function useSelection(): SelectionContextValue {
  * answer flips, so a selection change re-renders the old and the new node alone.
  */
 export function useIsSelectedPath(path: string | null): boolean {
-  const store = useContext(SelectedNodePathStoreContext) ?? NO_PROVIDER_SELECTED_STORE;
+  const store = useSelectedNodePathStore();
   const isSelected = useCallback(() => path !== null && store.get() === path, [store, path]);
   return useSyncExternalStore(store.subscribe, isSelected, isSelected);
 }
@@ -213,18 +175,15 @@ export function useOptionalSelection(): SelectionContextValue | null {
   return useContext(SelectionContext);
 }
 
-/**
- * The store with no `<SelectionProvider>`. It is safe to share, since a real
- * shell always has its own `hoverStore` and never writes here.
- */
-const NO_PROVIDER_HOVER_STORE = createExternalStore<string | null>(null);
-const NO_PROVIDER_SELECTED_STORE = createExternalStore<string | null>(null);
+/** A path store that nothing writes: the store with no `<SelectionProvider>`. */
+export const UNWRITTEN_PATH_STORE = createExternalStore<string | null>(null);
 
-/**
- * The hovered node path. Only this component subscribes to hover changes, and
- * no selection, expand or hide change re-renders it.
- */
-export function useHoveredNodePath(): string | null {
-  const selection = useOptionalSelection();
-  return useExternalStoreValue(selection?.hoverStore ?? NO_PROVIDER_HOVER_STORE);
+/** The store of the path the view outlines, which a reader subscribes to only where it needs it. */
+export function useSelectedNodePathStore(): ExternalStore<string | null> {
+  return useContext(SelectedNodePathStoreContext) ?? UNWRITTEN_PATH_STORE;
+}
+
+/** The path the view outlines, null with none or with no provider. */
+export function useSelectedNodePath(): string | null {
+  return useExternalStoreValue(useSelectedNodePathStore());
 }

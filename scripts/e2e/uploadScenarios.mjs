@@ -61,6 +61,7 @@ const MISSING_TEXTURE_WARNING = new RegExp(
 const APP_ROOT = '[data-testid="app-root"]';
 const DROP_HINT = 'drop-zone-hint';
 const RESOURCES_PANEL = '[data-testid="missing-resources-panel"]';
+const MISSING_BADGE = 'missing-resources-badge';
 // One small PNG from memory loads in milliseconds. The ceiling only bounds a texture that never loads.
 const UPLOADED_ROW_WAIT_MS = 20000;
 
@@ -118,6 +119,12 @@ async function readResourceRows(page) {
   );
 }
 
+/** The toolbar's count of missing files, or null while it shows none. */
+async function readMissingBadge(page) {
+  const badge = page.getByTestId(MISSING_BADGE);
+  return (await badge.isVisible()) ? badge.textContent() : null;
+}
+
 /**
  * Waits until the Resources tab marks `path` uploaded, which it does once the texture has loaded.
  * The placeholder frame is stable, so without this wait the settle can accept it. A row that never
@@ -128,6 +135,26 @@ async function waitForUploadedRow(page, path) {
   const row = page.locator(`${RESOURCES_PANEL} [data-state="uploaded"][data-path="${path}"]`);
   await row.waitFor({ timeout: UPLOADED_ROW_WAIT_MS }).catch((error) => {
     if (error?.name !== 'TimeoutError') throw error;
+  });
+}
+
+/** Records in the page whether the Resources panel ever leaves it, until `panelLeft` reads the answer. */
+async function watchPanel(page) {
+  await page.evaluate((selector) => {
+    const watch = { left: false };
+    const observer = new globalThis.MutationObserver(() => {
+      watch.left ||= globalThis.document.querySelector(selector) === null;
+    });
+    observer.observe(globalThis.document.body, { childList: true, subtree: true });
+    globalThis.__resourcesPanelWatch = { watch, observer };
+  }, RESOURCES_PANEL);
+}
+
+async function panelLeft(page) {
+  return page.evaluate(() => {
+    const { watch, observer } = globalThis.__resourcesPanelWatch;
+    observer.disconnect();
+    return watch.left;
   });
 }
 
@@ -144,6 +171,7 @@ async function readUploadedScene(page, canvas) {
     ink: settled.buffer ? inkStats(settled.buffer) : null,
     paths: await readOutlinerPaths(page),
     resources: await readResourceRows(page),
+    badge: await readMissingBadge(page),
   };
 }
 
@@ -166,9 +194,12 @@ function runRepeatedDrop(browser, baseUrl, startFixture) {
   return withStartFixture(browser, baseUrl, startFixture, 'repeated drop', async (page, canvas) => {
     await dropFiles(page, [SCENE_FILE]);
     const sceneOnly = await readUploadedScene(page, canvas);
+    await page.getByRole('tab', { name: 'Resources' }).click();
+    await watchPanel(page);
     await dropFiles(page, [TEXTURE_FILE]);
     await waitForUploadedRow(page, TEXTURE_PATH);
-    return { sceneOnly, filled: await readUploadedScene(page, canvas) };
+    const panelLeftWhileLoading = await panelLeft(page);
+    return { sceneOnly, panelLeftWhileLoading, filled: await readUploadedScene(page, canvas) };
   });
 }
 
@@ -185,10 +216,13 @@ function formatRows(rows) {
   return `[${rows.map(({ state, path }) => `${state} ${path}`).join(', ')}]`;
 }
 
-/**
- * Checks one read of the uploaded scene: the toolbar names it, the 2D workspace drew it, the
- * outliner lists its nodes and the Resources tab holds `expectedRows`.
- */
+/** The badge text for the missing rows of `rows`, which the badge counts as the Resources tab lists them. */
+function expectedBadge(rows) {
+  const missing = rows.filter(({ state }) => state === 'missing').length;
+  return missing === 0 ? null : `⚠ ${missing} missing`;
+}
+
+/** Checks one read of the uploaded scene: its name, stage, ink, outliner, Resources rows and badge. */
 function checkUploadedScene(gate, label, scene, expectedRows) {
   gate.check(
     scene.label === UPLOADED_SCENE_NAME,
@@ -201,6 +235,8 @@ function checkUploadedScene(gate, label, scene, expectedRows) {
     formatRows(scene.resources) === formatRows(expectedRows),
     `${label} the Resources tab lists ${formatRows(scene.resources)}, expected ${formatRows(expectedRows)}`
   );
+  const badge = expectedBadge(expectedRows);
+  gate.check(scene.badge === badge, `${label} the toolbar badge reads "${scene.badge}", expected "${badge}"`);
 }
 
 /** Whether two settled frames are byte-equal, or `null` when either never settled. */
@@ -231,7 +267,7 @@ function checkDropUpload(gate, drop, fileInput) {
   checkDiagnostics(gate, label, drop.diagnostics);
 }
 
-function checkRepeatedDrop(gate, { sceneOnly, filled, diagnostics }, fileInput) {
+function checkRepeatedDrop(gate, { sceneOnly, panelLeftWhileLoading, filled, diagnostics }, fileInput) {
   const sceneOnlyLabel = '[repeated drop, scene only]';
   checkUploadedScene(gate, sceneOnlyLabel, sceneOnly, [{ state: 'missing', path: TEXTURE_PATH }]);
   gate.check(
@@ -239,6 +275,10 @@ function checkRepeatedDrop(gate, { sceneOnly, filled, diagnostics }, fileInput) 
     `${sceneOnlyLabel} draws the textured frame without the texture, so the texture came from elsewhere`
   );
   const filledLabel = '[repeated drop, texture]';
+  gate.check(
+    panelLeftWhileLoading === false,
+    `${filledLabel} the Resources panel left the page while the dropped texture loaded`
+  );
   checkUploadedScene(gate, filledLabel, filled, [{ state: 'uploaded', path: TEXTURE_PATH }]);
   checkSameFrame(gate, filledLabel, filled, fileInput);
   checkDiagnostics(gate, '[repeated drop]', diagnostics, { expectedWarnings: [MISSING_TEXTURE_WARNING] });

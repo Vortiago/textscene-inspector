@@ -24,7 +24,7 @@ The workspaces follow the Godot editor (the `handles()` rules of CanvasItemEdito
 
 - **The 3D workspace renders Node3D content only.** The workspace-aware `NodeDispatcher` (`CanvasWorkspaceContext`, default `'3d'`) draws no CanvasItem. Below a CanvasItem it still draws each Node3D, clear of the CanvasItem's transform and visibility, as Godot's world does (`node_3d.cpp:150`). The 2D workspace does the same for a CanvasItem below a Node3D (`canvas_item.cpp:246-267`). `UndrawnNodeChildren` walks the undrawn node. `drawsInWorkspace` classifies from the `canvasItem`/`container` flags of the slice registrations plus `is2DUIType`. The front-on framing stays for flat 3D scenes.
 - **The 2D workspace composites the whole CanvasItem world.** `Canvas2DStage` layers, in the order of Godot's 2D editor, the project-viewport frame and a transparent **orthographic** `World2DCanvas` (sprites, tilemaps and Node2D trees). The world camera follows the stage pan/zoom through `world2DCameraPose`. "Never composite" is retired.
-- **The workspace selects itself from the type of the scene root** (`WorkspaceAutoSelect` plus `workspaceForRoot`). A CanvasItem root selects 2D, a Node3D root selects 3D, and a plain `Node` root keeps the current workspace (in Godot no plugin claims it). A manual toggle holds until the next scene switch. This replaces the "no automatic switch" choice: a uniform 3D default surprised users on every 2D scene.
+- **The workspace selects itself from the type of the scene root** (`WorkspaceAutoSelect` plus `workspaceForRootType`). A CanvasItem root selects 2D, a Node3D root selects 3D, and a plain `Node` root keeps the current workspace (in Godot no plugin claims it). A manual toggle holds until the next scene switch. This replaces the "no automatic switch" choice: a uniform 3D default surprised users on every 2D scene.
 - The hint predicate is the live-tree `useLiveSceneNodes` over `isClaimedByCanvasItemEditor`: UI **or** 2D world nodes, instanced sub-scenes included. It shows the `Has 2D content — switch to 2D` hint only in the 3D workspace and only for mixed scenes. Godot has no such affordance. It is a previewer convenience.
 
 Out of scope: viewport picking inside the 2D world canvas (#1819). The drag-to-pan of the stage owns pointer input, with `pointer-events: none` on the world layer.
@@ -45,7 +45,7 @@ previewer mounts the same view when the toolbar selects In-game. The package exp
 component.
 
 - The view clears the **editor hint** for its subtree (`RunningGameScope`). Every editor-only drawer
-  reads that one intent: the toggles of `ViewportModeContext` read as the game draws, whatever the
+  reads that one intent: the view's `show` reads as the game draws, whatever the
   toolbar holds, and the dispatcher binds no pointer handler, so a click selects nothing.
 - Auto-select never picks In-game and never leaves it. In-game hides the gizmos and the navigation
   that a user needs to edit a new scene, so a user picks it by hand. The choice persists as the
@@ -66,7 +66,38 @@ the selection and the passes stay one set. The switch between stages lives in th
   content and no current Camera3D, since Godot then draws no 3D (`renderer_viewport.cpp:362`).
   Both read `gameStartFacts`, one function over the live tree and the scene's current camera.
 - The toolbar disables each Display toggle that the running game overrides
-  (`RUNNING_GAME_TOGGLES`, the list the editor hint reads) in In-game, and keeps its value for the
+  (`RUNNING_GAME_SHOW`, the list the editor hint reads) in In-game, and keeps its value for the
   other modes. Performance stays live.
 - A selection made in the scene tree stays selected in In-game. The view draws no box for it.
 
+## Amendment: a view says when it is settled, and captures what it draws
+
+A view in any mode reports into a status slot that `TscnSceneProvider` and the shell provide
+(`viewStatus/viewStatus.ts`). It is settled once a frame drew the scene's current `revision()` with
+no resource, texture or font pending. One frame is enough: nested viewports draw before their parent in
+the frame (`nestedViewportPaths.ts`), and the loader counts a pending file from the commit that asks
+for it. One status serves one view, and it refuses a second one. A host reads the
+slot through the `settled` of `mountScene` or of a `TscnCanvas` ref. The settled value holds facts of
+the game's start, so it is the same in every mode. An In-game capture holds the root target
+at the full window size, draws the window with its bars into a target of the window's size, and reads
+that target back, so the PNG has the window's size whatever the pane's. A 3D or 2D capture draws one
+frame of its canvas and reads the canvas in the same task, at the canvas's size, since those modes have
+no window. The status belongs to a view, not to the scene.
+
+## Amendment: the helpers a view draws are one `show` option
+
+The view reads its editor helpers from one option, `show` (`viewShow/viewShow.ts`): `grid`,
+`gizmos`, `collisions`, `labels`, `navigation`, `previewSun`, `previewEnvironment`, `fog` and
+`performance`. `mountScene`, `view.update` and `<TscnCanvas>` take it, and the view provides it to
+every drawer through `ViewShowContext`. No drawer reads `ViewportModeContext`.
+
+- `ViewportModeContext` is the toolbar's state in the shell: the mode, the `show` the toolbar
+  writes, and Frame on open. `ViewportArea` hands `mode` and `show` to the view, as a host does.
+- The names follow Godot's toggle where Godot has one: View Grid, View Gizmos and View Frame Time
+  (`node_3d_editor_plugin.cpp:6255-6259`), Visible Collision Shapes and Visible Navigation
+  (`debugger_editor_plugin.cpp:71,77`), and the preview sunlight and environment buttons
+  (`node_3d_editor_plugin.cpp:9905,9916`). Godot has no toggle for labels or fog.
+- `performance` draws its panel inside the view, over the canvas, so a host gets the panel with
+  the key. The frame profile and the panel share one store per view.
+- Frame on open is not a key of `show`: it changes where the editor camera starts, not what the
+  view draws, and Godot has no such option. It stays the shell's, read by `CameraFit`.

@@ -10,7 +10,7 @@ import type { TscnNode } from '../../../parser/types';
 import { parseGridMap } from './parser';
 import { GridMap } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../../index';
+import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { instanceAs } from '../testing/reactThreeTestInstance';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';

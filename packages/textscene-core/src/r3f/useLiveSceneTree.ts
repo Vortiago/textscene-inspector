@@ -23,6 +23,8 @@ import type { SceneGraph } from '../core/SceneGraph.js';
 import type { ResourceLoader } from '../resources/ResourceLoader.js';
 import type { ResourceType } from '../resources/ResourceEventBus.js';
 import { perObject } from '../utils/perObject.js';
+import { nodeRegistry } from '../core/NodeRegistry.js';
+import { NOTHING_WRITTEN, writtenChildVisibility } from './canvasItemPass/writtenVisibility.js';
 import { sameElements } from '../utils/sameElements.js';
 import { subscribeToNothing } from '../utils/subscribeToNothing.js';
 import { NOTHING_CACHED, type CacheSource } from './cacheSources.js';
@@ -488,6 +490,27 @@ export function useLiveStepOf(node: LiveNode, scope: SceneScope): LiveStep {
     [project, watched, node, scope]
   );
   return useReadAtLoadTick(watched, readAt, Object.is);
+}
+
+/** The `visible` the node of `step` writes on its sortable children, by child as its group holds it. */
+export function useWrittenChildVisibility(step: LiveStep): ReadonlyMap<TscnNode, boolean> {
+  const loader = useResourceLoader();
+  const project = useProjectTreeSettings();
+  const isWriter = nodeRegistry.childVisibility(step.node.type) !== undefined;
+  const watched = isWriter ? loader : null;
+  const readAt = useCallback(
+    (version: number) =>
+      isWriter ? writtenChildVisibility(loaderTreesOf(project)(watched, version), step) : NOTHING_WRITTEN,
+    [project, isWriter, watched, step]
+  );
+  return useReadAtLoadTick(watched, readAt, sameWrittenVisibility);
+}
+
+function sameWrittenVisibility(
+  a: ReadonlyMap<TscnNode, boolean>,
+  b: ReadonlyMap<TscnNode, boolean>
+): boolean {
+  return a.size === b.size && [...a].every(([child, visible]) => b.get(child) === visible);
 }
 
 /** The live nodes matching `predicate`. Pass a stable `predicate` (module-level or memoised), or the memo recomputes every render. */

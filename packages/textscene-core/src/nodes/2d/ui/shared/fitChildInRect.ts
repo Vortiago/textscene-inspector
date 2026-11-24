@@ -60,16 +60,12 @@ export function fitChildInRect(
   return { x, y, w, h };
 }
 
-/**
- * Whether a container counts this child: `Container::as_sortable_control` skips an invisible
- * child's slot. Its default `VISIBLE` mode tests `!c->is_visible()` (`container.cpp:148-150`), so
- * `SolveNode.parentVisibleInTree` stays out, and `hidden` (the editor eye toggle) acts as a cleared `visible`.
- */
+/** Whether a container gives this child a slot: its own `visible` only (container.cpp:148-150). */
 export function isSortableControl(node: SolveNode): boolean {
   // A promoted child is a grandchild that `get_child(i)` never yields. A `top_level` one fails
   // `if (!c || c->is_set_as_top_level())` ahead of every visibility mode (`container.cpp:144-146`),
   // so even the `IGNORE` mode that keeps a hidden TabContainer page drops it.
   if (isPromotedControl(node)) return false;
   if (isTopLevelItem(node.node)) return false;
-  return !node.hidden && (node.node.properties as ControlProperties).visible !== false;
+  return (node.node.properties as ControlProperties).visible !== false;
 }

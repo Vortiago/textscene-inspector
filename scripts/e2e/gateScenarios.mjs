@@ -1,3 +1,10 @@
+import {
+  checkEyeAndHover,
+  EYE_AND_HOVER_FIXTURE,
+  measureEyeAndHover,
+  runEyeAndHoverScenario,
+} from './eyeAndHoverScenario.mjs';
+import { checkViewStatus, runViewStatusScenario, VIEW_STATUS_FIXTURE } from './viewStatusScenario.mjs';
 import { inkStats } from '../vscode/pixels.mjs';
 import { shardOf } from '../shards/shards.mjs';
 import { longTasksAfterFirstReply, longTasksDuringTextureWork } from './textureWorkProbe.mjs';
@@ -21,9 +28,15 @@ import {
   runCameraPreviewScenario,
 } from './cameraPreviewScenario.mjs';
 import { checkInGame, IN_GAME_FIXTURE, runInGameScenario } from './inGameScenario.mjs';
+import { checkInGameStretch, runInGameStretchScenario, STRETCH_FIXTURE } from './inGameStretchScenario.mjs';
 import { checkCameraButtons, runCameraButtonsScenario } from './cameraButtonsScenario.mjs';
 import { checkInGameToolbar, runInGameToolbarScenario } from './inGameToolbarScenario.mjs';
 import { checkModeSwitch, runModeSwitchScenario } from './modeSwitchScenario.mjs';
+import {
+  checkEditorHelpers,
+  measureEditorHelpers,
+  runEditorHelpersScenario,
+} from './editorHelpersScenario.mjs';
 import {
   check2D,
   check3D,
@@ -36,6 +49,12 @@ import {
   run3DScenario,
   SELECT_A,
 } from './editorViewScenarios.mjs';
+import {
+  checkInstanceClick,
+  INSTANCE_CLICK_FIXTURE,
+  measureInstanceClick,
+  runInstanceClickScenario,
+} from './instanceClickScenario.mjs';
 
 // The 4096x4096 noise field, drawn at 1/8 scale, fills a 512x512 square: most of it is ink.
 const INK_FLOOR_LARGE_TEXTURE = 20000;
@@ -71,6 +90,29 @@ export const SCENARIOS = [
     run: run3DScenario,
     check: check3D,
     measure: measure3D,
+  },
+  {
+    name: 'instance click',
+    title: `instance click: ${INSTANCE_CLICK_FIXTURE}`,
+    seconds: 5,
+    run: runInstanceClickScenario,
+    check: checkInstanceClick,
+    measure: measureInstanceClick,
+  },
+  {
+    name: 'eye and hover',
+    title: `tree eye and row hover: ${EYE_AND_HOVER_FIXTURE}`,
+    seconds: 6,
+    run: runEyeAndHoverScenario,
+    check: checkEyeAndHover,
+    measure: measureEyeAndHover,
+  },
+  {
+    name: 'view status',
+    title: `view status notes: ${VIEW_STATUS_FIXTURE}`,
+    seconds: 8,
+    run: runViewStatusScenario,
+    check: checkViewStatus,
   },
   {
     name: '2D',
@@ -138,6 +180,14 @@ export const SCENARIOS = [
       `in-game  opened-in=${openedIn} pressed=${isPressed} canvas=${dims.width}x${dims.height} ink=${ink?.inkPixels}`,
   },
   {
+    name: 'In-game stretch',
+    title: `In-game window stretch: ${STRETCH_FIXTURE}`,
+    seconds: 4,
+    run: runInGameStretchScenario,
+    check: checkInGameStretch,
+    measure: ({ pixels }) => `in-game stretch  ${JSON.stringify(pixels)}`,
+  },
+  {
     name: 'camera buttons',
     title: 'camera buttons: each Cameras row in the 3D, 2D and In-game views',
     seconds: 269,
@@ -162,6 +212,14 @@ export const SCENARIOS = [
     check: checkModeSwitch,
     measure: ({ inGamePixels, back3DPixels }) =>
       `mode switch  In-game against 3D=${inGamePixels}px 3D after the round trip=${back3DPixels}px`,
+  },
+  {
+    name: 'editor helpers',
+    title: 'editor helpers: each Display toggle on and off in the 3D view',
+    seconds: 155,
+    run: runEditorHelpersScenario,
+    check: checkEditorHelpers,
+    measure: measureEditorHelpers,
   },
 ];
 

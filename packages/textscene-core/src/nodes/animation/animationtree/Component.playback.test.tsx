@@ -18,11 +18,7 @@ import {
   useAnimationTransport,
   type AnimationTransport,
 } from '../../../r3f/contexts/AnimationTransportContext';
-import {
-  SelectionProvider,
-  useOptionalSelection,
-  type SelectionContextValue,
-} from '../../../r3f/contexts/SelectionContext';
+import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import { AnimationDriverProvider, useRegisterDriver } from '../../../r3f/contexts/AnimationDriverContext';
 import { subtreeObjects } from '../../../r3f/animation/poseSnapshot';
@@ -137,10 +133,8 @@ function makeTreeNode(overrides: Partial<AnimationTreeProperties> = {}): TscnNod
 }
 
 let transport: AnimationTransport;
-let selection: SelectionContextValue | null;
 function Capture() {
   transport = useAnimationTransport();
-  selection = useOptionalSelection();
   return null;
 }
 
@@ -164,7 +158,7 @@ function RegisterDriver({ object, clips }: { object: THREE.Object3D; clips: THRE
 }
 
 async function setSelection(path: string | null) {
-  await ReactThreeTestRenderer.act(async () => selection?.setSelectedNodePath(path));
+  await ReactThreeTestRenderer.act(async () => transport.setActivePath(path));
 }
 
 async function mountTree(

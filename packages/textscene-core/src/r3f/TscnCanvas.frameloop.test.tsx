@@ -31,4 +31,14 @@ describe('TscnCanvas frameloop', () => {
   it('renders every frame while the host shows the preview', () => {
     expect(frameloopWhen(true)).toBe('always');
   });
+
+  it('renders no frame while its visible prop is false, whatever the host shows', () => {
+    vi.mocked(Canvas).mockClear();
+    render(
+      <PreviewVisibilityProvider isVisible>
+        <TscnCanvas visible={false} />
+      </PreviewVisibilityProvider>
+    );
+    expect(vi.mocked(Canvas).mock.calls.at(-1)![0].frameloop).toBe('never');
+  });
 });

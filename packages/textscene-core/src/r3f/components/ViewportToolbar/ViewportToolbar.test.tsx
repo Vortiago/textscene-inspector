@@ -3,24 +3,21 @@
  * so a click round-trips through context to the button's pressed state.
  */
 
-import { useEffect } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
-import {
-  SHOW_GIZMOS_STORAGE_KEY,
-  SHOW_PERFORMANCE_STORAGE_KEY,
-  ViewportModeProvider,
-} from '../../contexts/ViewportModeContext';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { SHOW_STORAGE_KEYS, ViewportModeProvider } from '../../contexts/ViewportModeContext';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext';
-import { useViewportActions } from '../../testing/ViewportActionsProbe';
+import type { ViewAnswers } from '../../viewStatus/viewAnswers';
+
+type ToolbarView = Pick<ViewAnswers, 'settled' | 'captureImage'>;
 import { ViewportToolbar } from './ViewportToolbar';
 import { openDisplayMenu } from './DisplayMenu.testkit';
 
 function renderToolbar(initialMode?: '2D' | '3D', initialShowCollisions?: boolean) {
   return render(
-    <ViewportModeProvider initialMode={initialMode} initialShowCollisions={initialShowCollisions}>
-      <ViewportToolbar />
+    <ViewportModeProvider initialMode={initialMode} initialShow={{ collisions: initialShowCollisions }}>
+      <ViewportToolbar view={null} />
     </ViewportModeProvider>
   );
 }
@@ -88,7 +85,7 @@ describe('ViewportToolbar', () => {
     expect(checkbox.checked).toBe(true);
     fireEvent.click(checkbox);
     expect(checkbox.checked).toBe(false);
-    expect(window.localStorage.getItem(SHOW_GIZMOS_STORAGE_KEY)).toBe('false');
+    expect(window.localStorage.getItem(SHOW_STORAGE_KEYS.gizmos)).toBe('false');
   });
 
   it('offers the gizmos checkbox in 2D mode, whose helpers the toggle hides too', () => {
@@ -119,7 +116,7 @@ describe('ViewportToolbar', () => {
     expect(checkbox.checked).toBe(false);
     fireEvent.click(checkbox);
     expect(checkbox.checked).toBe(true);
-    expect(window.localStorage.getItem(SHOW_PERFORMANCE_STORAGE_KEY)).toBe('true');
+    expect(window.localStorage.getItem(SHOW_STORAGE_KEYS.performance)).toBe('true');
   });
 
   it('offers the performance checkbox in 2D mode, whose canvas renders frames too', () => {
@@ -137,12 +134,16 @@ describe('ViewportToolbar', () => {
 });
 
 /** Mounts with the camera and hierarchy contexts that Reset Camera needs. */
-function renderWithChrome({ mode = '3D' as '2D' | '3D', sceneGraph = {} as unknown } = {}) {
+function renderWithChrome({
+  mode = '3D' as '2D' | '3D',
+  sceneGraph = {} as unknown,
+  view = null as ToolbarView | null,
+} = {}) {
   return render(
     <HierarchyProvider value={{ sceneGraph: sceneGraph as never, panelId: 'p' }}>
       <ViewportActionsProvider>
         <ViewportModeProvider initialMode={mode}>
-          <ViewportToolbar />
+          <ViewportToolbar view={view} />
         </ViewportModeProvider>
       </ViewportActionsProvider>
     </HierarchyProvider>
@@ -167,65 +168,87 @@ describe('ViewportToolbar — Reset Camera', () => {
   });
 });
 
-describe('ViewportToolbar — Screenshot (#224)', () => {
+describe('ViewportToolbar — Screenshot', () => {
+  const IMAGE = new Blob(['png'], { type: 'image/png' });
+  const settledView = (): ToolbarView => ({
+    settled: Promise.resolve({ scriptedNodeCount: 0, hasCurrentCamera: false }),
+    captureImage: () => Promise.resolve(IMAGE),
+  });
+
   it.each(['3D', '2D'] as const)(
     'shows an enabled Screenshot button in %s when a scene is loaded',
     (mode) => {
-      renderWithChrome({ mode, sceneGraph: {} });
+      renderWithChrome({ mode, sceneGraph: {}, view: settledView() });
       const btn = screen.getByTestId('screenshot-button') as HTMLButtonElement;
       expect(btn.disabled).toBe(false);
     }
   );
 
   it('disables Screenshot when no scene is loaded', () => {
-    renderWithChrome({ mode: '3D', sceneGraph: null });
+    renderWithChrome({ mode: '3D', sceneGraph: null, view: settledView() });
     expect((screen.getByTestId('screenshot-button') as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it('clicking Screenshot pulls a frame from the registered handler and triggers a download', () => {
-    const DATA_URL = 'data:image/png;base64,AAAA';
-
-    function ScreenshotHandlerRegistrar() {
-      const { registerScreenshotHandler } = useViewportActions();
-      useEffect(() => registerScreenshotHandler(() => DATA_URL), [registerScreenshotHandler]);
-      return null;
-    }
-
-    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
-
-    // Mount first, since render() itself calls document.body.appendChild. The
-    // wrap afterwards still calls through to the original.
-    render(
-      <HierarchyProvider value={{ sceneGraph: {} as never, panelId: 'p' }}>
-        <ViewportActionsProvider>
-          <ScreenshotHandlerRegistrar />
-          <ViewportModeProvider initialMode="3D">
-            <ViewportToolbar />
-          </ViewportModeProvider>
-        </ViewportActionsProvider>
-      </HierarchyProvider>
-    );
-
-    let capturedAnchor: HTMLAnchorElement | null = null;
-    const originalAppendChild = globalThis.document.body.appendChild.bind(globalThis.document.body);
-    const appendSpy = vi.spyOn(globalThis.document.body, 'appendChild').mockImplementation((node) => {
-      if (node instanceof HTMLAnchorElement) capturedAnchor = node;
-      return originalAppendChild(node);
-    });
-
-    fireEvent.click(screen.getByTestId('screenshot-button'));
-
-    expect(clickSpy).toHaveBeenCalledTimes(1);
-    expect(capturedAnchor).not.toBeNull();
-    expect((capturedAnchor as unknown as HTMLAnchorElement).getAttribute('href')).toBe(DATA_URL);
-    expect((capturedAnchor as unknown as HTMLAnchorElement).download).toMatch(/\.png$/);
-
-    clickSpy.mockRestore();
-    appendSpy.mockRestore();
+  it('hides Screenshot while no view is mounted', () => {
+    renderWithChrome({ mode: '3D', sceneGraph: {}, view: null });
+    expect(screen.queryByTestId('screenshot-button')).toBeNull();
   });
 
-  it('does nothing (no throw) when the handler returns null (no canvas mounted)', () => {
-    renderWithChrome({ mode: '3D', sceneGraph: {} });
-    expect(() => fireEvent.click(screen.getByTestId('screenshot-button'))).not.toThrow();
+  it("downloads the view's image as a PNG", async () => {
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    const createSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:shot');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    renderWithChrome({ mode: '3D', sceneGraph: {}, view: settledView() });
+
+    fireEvent.click(screen.getByTestId('screenshot-button'));
+    await vi.waitFor(() => expect(clickSpy).toHaveBeenCalledTimes(1));
+
+    expect(createSpy).toHaveBeenCalledWith(IMAGE);
+    const anchor = clickSpy.mock.contexts[0] as HTMLAnchorElement;
+    expect(anchor.getAttribute('href')).toBe('blob:shot');
+    expect(anchor.download).toMatch(/\.png$/);
+    vi.restoreAllMocks();
+  });
+
+  it('keeps the image URL until the browser has read it, so the download is not cut off', async () => {
+    vi.useFakeTimers();
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:shot');
+    const revokeSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    renderWithChrome({ mode: '3D', sceneGraph: {}, view: settledView() });
+
+    fireEvent.click(screen.getByTestId('screenshot-button'));
+    await vi.waitFor(() => expect(clickSpy).toHaveBeenCalledTimes(1));
+    expect(revokeSpy).not.toHaveBeenCalled();
+    vi.runAllTimers();
+
+    expect(revokeSpy).toHaveBeenCalledWith('blob:shot');
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('disables Screenshot while a capture waits, so a second click starts no second capture', async () => {
+    let settle: () => void = () => {};
+    const captureImage = vi.fn(() => Promise.resolve(IMAGE));
+    const view: ToolbarView = {
+      settled: new Promise((resolve) => {
+        settle = () => resolve({ scriptedNodeCount: 0, hasCurrentCamera: false });
+      }),
+      captureImage,
+    };
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:shot');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    renderWithChrome({ mode: '3D', sceneGraph: {}, view });
+    const button = screen.getByTestId('screenshot-button') as HTMLButtonElement;
+
+    fireEvent.click(button);
+    fireEvent.click(button);
+    expect(button.disabled).toBe(true);
+    await act(async () => settle());
+
+    expect(captureImage).toHaveBeenCalledTimes(1);
+    expect(button.disabled).toBe(false);
+    vi.restoreAllMocks();
   });
 });
