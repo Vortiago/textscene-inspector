@@ -17,6 +17,10 @@ export type GodotPrimitive = 'triangles' | 'lines' | 'points';
 /** The corners of each primitive that a `flat` value is read across, and the list's name in a fault. */
 const LISTS = { triangles: { corners: 3, name: 'triangle' }, lines: { corners: 2, name: 'line' } } as const;
 
+/** The bone indices and weights the vertex stage reads, where they differ from those three skins with. */
+export const VERTEX_STAGE_BONES_ATTRIBUTE = 'godotBoneIndices';
+export const VERTEX_STAGE_WEIGHTS_ATTRIBUTE = 'godotBoneWeights';
+
 /** The attribute that holds each vertex's index in its own surface, which `gl_VertexIndex` reads. */
 export const VERTEX_ID_ATTRIBUTE = 'vertex_id_attrib';
 
@@ -54,9 +58,10 @@ export function withGodotAttributes(
     const values = geometry.getAttribute(`custom${custom}`);
     if (values) geometry.setAttribute(`custom${custom}_attrib`, values);
   }
-  const bones = geometry.getAttribute('skinIndex');
+  const bones = geometry.getAttribute(VERTEX_STAGE_BONES_ATTRIBUTE) ?? geometry.getAttribute('skinIndex');
   if (bones) geometry.setAttribute('bone_attrib', boneIndices(bones));
-  const weights = geometry.getAttribute('skinWeight');
+  const weights =
+    geometry.getAttribute(VERTEX_STAGE_WEIGHTS_ATTRIBUTE) ?? geometry.getAttribute('skinWeight');
   if (weights) geometry.setAttribute('weight_attrib', weights);
   for (const [name, value] of Object.entries(MISSING_ARRAY_VALUES))
     if (!geometry.getAttribute(name)) geometry.setAttribute(name, constantAttribute(value));

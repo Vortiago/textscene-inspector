@@ -1,0 +1,212 @@
+[gd_scene format=4]
+
+; BONE_INDICES and BONE_WEIGHTS of 4-weight and 8-weight surfaces, plain and compressed, and of a surface
+; with no skin, each read by an unshaded spatial shader. No other golden reads a mesh's bones in a shader.
+
+[sub_resource type="Shader" id="Shader_oweq8"]
+code = "shader_type spatial;
+render_mode unshaded, cull_disabled;
+varying vec4 c;
+void vertex() { c = vec4(BONE_INDICES) / 11.0; }
+void fragment() { ALBEDO = c.rgb * 0.8 + vec3(c.a) * 0.2; }
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_2qvib"]
+render_priority = 0
+shader = SubResource("Shader_oweq8")
+
+[sub_resource type="Shader" id="Shader_cu26f"]
+code = "shader_type spatial;
+render_mode unshaded, cull_disabled;
+varying vec4 c;
+void vertex() { c = BONE_WEIGHTS; }
+void fragment() { ALBEDO = c.rgb + vec3(c.a) * 0.5; }
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_x4ksa"]
+render_priority = 0
+shader = SubResource("Shader_cu26f")
+
+[sub_resource type="Shader" id="Shader_pwnhh"]
+code = "shader_type spatial;
+render_mode unshaded, cull_disabled;
+varying vec4 c;
+void vertex() { c = vec4(BONE_INDICES) / 11.0; }
+void fragment() { ALBEDO = c.rgb * 0.8 + vec3(c.a) * 0.2; }
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_qgt60"]
+render_priority = 0
+shader = SubResource("Shader_pwnhh")
+
+[sub_resource type="Shader" id="Shader_8gi87"]
+code = "shader_type spatial;
+render_mode unshaded, cull_disabled;
+varying vec4 c;
+void vertex() { c = BONE_WEIGHTS; }
+void fragment() { ALBEDO = c.rgb + vec3(c.a) * 0.5; }
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_qpjqa"]
+render_priority = 0
+shader = SubResource("Shader_8gi87")
+
+[sub_resource type="Shader" id="Shader_b8hd3"]
+code = "shader_type spatial;
+render_mode unshaded, cull_disabled;
+varying vec4 c;
+void vertex() { c = vec4(BONE_INDICES) / 11.0; }
+void fragment() { ALBEDO = c.rgb * 0.8 + vec3(c.a) * 0.2; }
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_wc0u6"]
+render_priority = 0
+shader = SubResource("Shader_b8hd3")
+
+[sub_resource type="Shader" id="Shader_gr45y"]
+code = "shader_type spatial;
+render_mode unshaded, cull_disabled;
+varying vec4 c;
+void vertex() { c = BONE_WEIGHTS; }
+void fragment() { ALBEDO = c.rgb + vec3(c.a) * 0.5; }
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_aroqd"]
+render_priority = 0
+shader = SubResource("Shader_gr45y")
+
+[sub_resource type="Shader" id="Shader_f4ojo"]
+code = "shader_type spatial;
+render_mode unshaded, cull_disabled;
+varying vec4 c;
+void vertex() { c = vec4(BONE_INDICES) / 11.0; }
+void fragment() { ALBEDO = c.rgb * 0.8 + vec3(c.a) * 0.2; }
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_pyxvp"]
+render_priority = 0
+shader = SubResource("Shader_f4ojo")
+
+[sub_resource type="Shader" id="Shader_lvcv7"]
+code = "shader_type spatial;
+render_mode unshaded, cull_disabled;
+varying vec4 c;
+void vertex() { c = BONE_WEIGHTS; }
+void fragment() { ALBEDO = c.rgb + vec3(c.a) * 0.5; }
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_15lqs"]
+render_priority = 0
+shader = SubResource("Shader_lvcv7")
+
+[sub_resource type="Shader" id="Shader_xti77"]
+code = "shader_type spatial;
+render_mode unshaded, cull_disabled;
+varying vec4 c;
+void vertex() { c = vec4(BONE_INDICES) / 11.0; }
+void fragment() { ALBEDO = c.rgb * 0.8 + vec3(c.a) * 0.2; }
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ix2hq"]
+render_priority = 0
+shader = SubResource("Shader_xti77")
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_dirju"]
+_surfaces = [{
+"aabb": AABB(-1.15, -0.5, 0, 0.39999998, 1, 1e-05),
+"bone_aabbs": [AABB(-1.15, -0.5, 0, 0.39999998, 1, 1e-05), AABB(-0.75, 0.5, 0, 1e-05, 1e-05, 1e-05), AABB(-1.15, -0.5, 0, 0.40001, 1.001358e-05, 1e-05), AABB(-1.15, -0.5, 0, 0.40001, 1, 1e-05), AABB(-1.15, -0.5, 0, 1.001358e-05, 1, 1e-05), AABB(-1.15, -0.5, 0, 0.39999998, 1, 1e-05), AABB(-0.75, 0.5, 0, 1.001358e-05, 1.001358e-05, 1e-05), AABB(-0.75, -0.5, 0, 1e-05, 1e-05, 1e-05), AABB(-1.15, -0.5, 0, 0.40001, 1, 1e-05), AABB(-1.15, -0.5, 0, 1.001358e-05, 1, 1e-05), AABB(-1.15, -0.5, 0, 0.39999998, 1, 1e-05)],
+"format": 34359741447,
+"material": SubResource("ShaderMaterial_2qvib"),
+"primitive": 3,
+"skin_data": PackedByteArray("AAAFAAoABADgenA99Si4HgMACAACAAcAvWN+Qt4x5ScGAAAABQAKANJZXkPkNeksCQADAAgAAgDgenA99Si4HgEABgAAAAUAvWN+Qt4x5ScEAAkAAwAIANJZXkPkNeks"),
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 6,
+"vertex_data": PackedByteArray("MzOTvwAAAL8AAAAAAABAvwAAAL8AAAAAAABAvwAAAD8AAAAAMzOTvwAAAL8AAAAAAABAvwAAAD8AAAAAMzOTvwAAAD8AAAAA/3//f/9/AID/f/9//38AgP9//3//fwCA/3//f/9/AID/f/9//38AgP9//3//fwCA")
+}, {
+"aabb": AABB(-0.7, -0.5, 0, 0.39999998, 1, 1e-05),
+"bone_aabbs": [AABB(-0.7, -0.5, 0, 0.39999998, 1, 1e-05), AABB(-0.3, 0.5, 0, 1e-05, 1e-05, 1e-05), AABB(-0.7, -0.5, 0, 0.40001, 1.001358e-05, 1e-05), AABB(-0.7, -0.5, 0, 0.40001, 1, 1e-05), AABB(-0.7, -0.5, 0, 1.001358e-05, 1, 1e-05), AABB(-0.7, -0.5, 0, 0.39999998, 1, 1e-05), AABB(-0.3, 0.5, 0, 1.001358e-05, 1.001358e-05, 1e-05), AABB(-0.3, -0.5, 0, 1e-05, 1e-05, 1e-05), AABB(-0.7, -0.5, 0, 0.40001, 1, 1e-05), AABB(-0.7, -0.5, 0, 1.001358e-05, 1, 1e-05), AABB(-0.7, -0.5, 0, 0.39999998, 1, 1e-05)],
+"format": 34359741447,
+"material": SubResource("ShaderMaterial_x4ksa"),
+"primitive": 3,
+"skin_data": PackedByteArray("AAAFAAoABADgenA99Si4HgMACAACAAcAvWN+Qt4x5ScGAAAABQAKANJZXkPkNeksCQADAAgAAgDgenA99Si4HgEABgAAAAUAvWN+Qt4x5ScEAAkAAwAIANJZXkPkNeks"),
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 6,
+"vertex_data": PackedByteArray("MzMzvwAAAL8AAAAAmpmZvgAAAL8AAAAAmpmZvgAAAD8AAAAAMzMzvwAAAL8AAAAAmpmZvgAAAD8AAAAAMzMzvwAAAD8AAAAA/3//f/9/AID/f/9//38AgP9//3//fwCA/3//f/9/AID/f/9//38AgP9//3//fwCA")
+}, {
+"aabb": AABB(-0.25, -0.5, 0, 0.4, 1, 1e-05),
+"bone_aabbs": [AABB(-0.25, -0.5, 0, 0.4, 1, 1e-05), AABB(0.15, 0.5, 0, 1e-05, 1e-05, 1e-05), AABB(-0.25, -0.5, 0, 0.40001, 1.001358e-05, 1e-05), AABB(-0.25, -0.5, 0, 0.40001, 1, 1e-05), AABB(-0.25, -0.5, 0, 9.998679e-06, 1, 1e-05), AABB(-0.25, -0.5, 0, 0.4, 1, 1e-05), AABB(0.15, 0.5, 0, 9.998679e-06, 1.001358e-05, 1e-05), AABB(0.15, -0.5, 0, 1e-05, 1e-05, 1e-05), AABB(-0.25, -0.5, 0, 0.40001, 1, 1e-05), AABB(-0.25, -0.5, 0, 9.998679e-06, 1, 1e-05), AABB(-0.25, -0.5, 0, 0.4, 1, 1e-05)],
+"format": 34896612359,
+"material": SubResource("ShaderMaterial_qgt60"),
+"primitive": 3,
+"skin_data": PackedByteArray("AAAFAAoABADgenA99Si4HgMACAACAAcAvWN+Qt4x5ScGAAAABQAKANJZXkPkNeksCQADAAgAAgDgenA99Si4HgEABgAAAAUAvWN+Qt4x5ScEAAkAAwAIANJZXkPkNeks"),
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 6,
+"vertex_data": PackedByteArray("AAAAAAAA/7///wAAAAD/v/////8AAP+/AAAAAAAA/7//////AAD/vwAA//8AAP+//3//f/9//3//f/9//3//f/9//3//f/9/")
+}, {
+"aabb": AABB(0.2, -0.5, 0, 0.40000004, 1, 1e-05),
+"bone_aabbs": [AABB(0.2, -0.5, 0, 0.40000004, 1, 1e-05), AABB(0.6, 0.5, 0, 1e-05, 1e-05, 1e-05), AABB(0.2, -0.5, 0, 0.40001005, 1.001358e-05, 1e-05), AABB(0.2, -0.5, 0, 0.40001005, 1, 1e-05), AABB(0.2, -0.5, 0, 9.998679e-06, 1, 1e-05), AABB(0.2, -0.5, 0, 0.40000004, 1, 1e-05), AABB(0.6, 0.5, 0, 1.001358e-05, 1.001358e-05, 1e-05), AABB(0.6, -0.5, 0, 1e-05, 1e-05, 1e-05), AABB(0.2, -0.5, 0, 0.40001005, 1, 1e-05), AABB(0.2, -0.5, 0, 9.998679e-06, 1, 1e-05), AABB(0.2, -0.5, 0, 0.40000004, 1, 1e-05)],
+"format": 34896612359,
+"material": SubResource("ShaderMaterial_qpjqa"),
+"primitive": 3,
+"skin_data": PackedByteArray("AAAFAAoABADgenA99Si4HgMACAACAAcAvWN+Qt4x5ScGAAAABQAKANJZXkPkNeksCQADAAgAAgDgenA99Si4HgEABgAAAAUAvWN+Qt4x5ScEAAkAAwAIANJZXkPkNeks"),
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 6,
+"vertex_data": PackedByteArray("AAAAAAAA/7///wAAAAD/v/////8AAP+/AAAAAAAA/7//////AAD/vwAA//8AAP+//3//f/9//3//f/9//3//f/9//3//f/9/")
+}, {
+"aabb": AABB(0.65, -0.5, 0, 0.39999998, 1, 1e-05),
+"bone_aabbs": [AABB(0.65, -0.5, 0, 0.39999998, 1, 1e-05), AABB(0.65, -0.5, 0, 0.40001, 1, 1e-05), AABB(0.65, -0.5, 0, 0.39999998, 1, 1e-05), AABB(0.65, -0.5, 0, 0.39999998, 1, 1e-05), AABB(0.65, -0.5, 0, 0.39999998, 1, 1e-05), AABB(0.65, -0.5, 0, 0.39999998, 1, 1e-05), AABB(0.65, -0.5, 0, 0.40001, 1, 1e-05), AABB(0.65, -0.5, 0, 0.40001, 1, 1e-05), AABB(0.65, -0.5, 0, 0.39999998, 1, 1e-05), AABB(0.65, -0.5, 0, 0.39999998, 1, 1e-05), AABB(0.65, -0.5, 0, 0.39999998, 1, 1e-05)],
+"format": 34493959175,
+"material": SubResource("ShaderMaterial_wc0u6"),
+"primitive": 3,
+"skin_data": PackedByteArray("AAAFAAoABAAJAAMACAACADBeGC9lH4wX1hKyD3QNxgsDAAgAAgAHAAEABgAAAAUA+0WnLv0i/htTF/4TfhGNDwYAAAAFAAoABAAJAAMACAC3O8ks1CPbHZcZZBbnE+oRCQADAAgAAgAHAAEABgAAADBeGC9lH4wX1hKyD3QNxgsBAAYAAAAFAAoABAAJAAMA+0WnLv0i/htTF/4TfhGNDwQACQADAAgAAgAHAAEABgC3O8ks1CPbHZcZZBbnE+oR"),
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 6,
+"vertex_data": PackedByteArray("ZmYmPwAAAL8AAAAAZmaGPwAAAL8AAAAAZmaGPwAAAD8AAAAAZmYmPwAAAL8AAAAAZmaGPwAAAD8AAAAAZmYmPwAAAD8AAAAA/3//f/9/AID/f/9//38AgP9//3//fwCA/3//f/9/AID/f/9//38AgP9//3//fwCA")
+}, {
+"aabb": AABB(1.1, -0.5, 0, 0.39999998, 1, 1e-05),
+"bone_aabbs": [AABB(1.1, -0.5, 0, 0.39999998, 1, 1e-05), AABB(1.1, -0.5, 0, 0.40001, 1, 1e-05), AABB(1.1, -0.5, 0, 0.39999998, 1, 1e-05), AABB(1.1, -0.5, 0, 0.39999998, 1, 1e-05), AABB(1.1, -0.5, 0, 0.39999998, 1, 1e-05), AABB(1.1, -0.5, 0, 0.39999998, 1, 1e-05), AABB(1.1, -0.5, 0, 0.40001, 1, 1e-05), AABB(1.1, -0.5, 0, 0.40001, 1, 1e-05), AABB(1.1, -0.5, 0, 0.39999998, 1, 1e-05), AABB(1.1, -0.5, 0, 0.39999998, 1, 1e-05), AABB(1.1, -0.5, 0, 0.39999998, 1, 1e-05)],
+"format": 34493959175,
+"material": SubResource("ShaderMaterial_aroqd"),
+"primitive": 3,
+"skin_data": PackedByteArray("AAAFAAoABAAJAAMACAACADBeGC9lH4wX1hKyD3QNxgsDAAgAAgAHAAEABgAAAAUA+0WnLv0i/htTF/4TfhGNDwYAAAAFAAoABAAJAAMACAC3O8ks1CPbHZcZZBbnE+oRCQADAAgAAgAHAAEABgAAADBeGC9lH4wX1hKyD3QNxgsBAAYAAAAFAAoABAAJAAMA+0WnLv0i/htTF/4TfhGNDwQACQADAAgAAgAHAAEABgC3O8ks1CPbHZcZZBbnE+oR"),
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 6,
+"vertex_data": PackedByteArray("zcyMPwAAAL8AAAAAAADAPwAAAL8AAAAAAADAPwAAAD8AAAAAzcyMPwAAAL8AAAAAAADAPwAAAD8AAAAAzcyMPwAAAD8AAAAA/3//f/9/AID/f/9//38AgP9//3//fwCA/3//f/9/AID/f/9//38AgP9//3//fwCA")
+}, {
+"aabb": AABB(1.55, -0.5, 0, 0.4000001, 1, 1e-05),
+"bone_aabbs": [AABB(1.55, -0.5, 0, 0.4000001, 1, 1e-05), AABB(1.55, -0.5, 0, 0.4000101, 1, 1e-05), AABB(1.55, -0.5, 0, 0.4000001, 1, 1e-05), AABB(1.55, -0.5, 0, 0.4000001, 1, 1e-05), AABB(1.55, -0.5, 0, 0.4000001, 1, 1e-05), AABB(1.55, -0.5, 0, 0.4000001, 1, 1e-05), AABB(1.55, -0.5, 0, 0.4000101, 1, 1e-05), AABB(1.55, -0.5, 0, 0.4000101, 1, 1e-05), AABB(1.55, -0.5, 0, 0.4000001, 1, 1e-05), AABB(1.55, -0.5, 0, 0.4000001, 1, 1e-05), AABB(1.55, -0.5, 0, 0.4000001, 1, 1e-05)],
+"format": 35030830087,
+"material": SubResource("ShaderMaterial_pyxvp"),
+"primitive": 3,
+"skin_data": PackedByteArray("AAAFAAoABAAJAAMACAACADBeGC9lH4wX1hKyD3QNxgsDAAgAAgAHAAEABgAAAAUA+0WnLv0i/htTF/4TfhGNDwYAAAAFAAoABAAJAAMACAC3O8ks1CPbHZcZZBbnE+oRCQADAAgAAgAHAAEABgAAADBeGC9lH4wX1hKyD3QNxgsBAAYAAAAFAAoABAAJAAMA+0WnLv0i/htTF/4TfhGNDwQACQADAAgAAgAHAAEABgC3O8ks1CPbHZcZZBbnE+oR"),
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 6,
+"vertex_data": PackedByteArray("AAAAAAAA/7///wAAAAD/v/////8AAP+/AAAAAAAA/7//////AAD/vwAA//8AAP+//3//f/9//3//f/9//3//f/9//3//f/9/")
+}, {
+"aabb": AABB(2, -0.5, 0, 0.4000001, 1, 1e-05),
+"bone_aabbs": [AABB(2, -0.5, 0, 0.4000001, 1, 1e-05), AABB(2, -0.5, 0, 0.4000101, 1, 1e-05), AABB(2, -0.5, 0, 0.4000001, 1, 1e-05), AABB(2, -0.5, 0, 0.4000001, 1, 1e-05), AABB(2, -0.5, 0, 0.4000001, 1, 1e-05), AABB(2, -0.5, 0, 0.4000001, 1, 1e-05), AABB(2, -0.5, 0, 0.4000101, 1, 1e-05), AABB(2, -0.5, 0, 0.4000101, 1, 1e-05), AABB(2, -0.5, 0, 0.4000001, 1, 1e-05), AABB(2, -0.5, 0, 0.4000001, 1, 1e-05), AABB(2, -0.5, 0, 0.4000001, 1, 1e-05)],
+"format": 35030830087,
+"material": SubResource("ShaderMaterial_15lqs"),
+"primitive": 3,
+"skin_data": PackedByteArray("AAAFAAoABAAJAAMACAACADBeGC9lH4wX1hKyD3QNxgsDAAgAAgAHAAEABgAAAAUA+0WnLv0i/htTF/4TfhGNDwYAAAAFAAoABAAJAAMACAC3O8ks1CPbHZcZZBbnE+oRCQADAAgAAgAHAAEABgAAADBeGC9lH4wX1hKyD3QNxgsBAAYAAAAFAAoABAAJAAMA+0WnLv0i/htTF/4TfhGNDwQACQADAAgAAgAHAAEABgC3O8ks1CPbHZcZZBbnE+oR"),
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 6,
+"vertex_data": PackedByteArray("AAAAAAAA/7///wAAAAD/v/////8AAP+/AAAAAAAA/7//////AAD/vwAA//8AAP+//3//f/9//3//f/9//3//f/9//3//f/9/")
+}, {
+"aabb": AABB(2.45, -0.5, 0, 0.39999986, 1, 1e-05),
+"format": 34359738375,
+"material": SubResource("ShaderMaterial_ix2hq"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 6,
+"vertex_data": PackedByteArray("zcwcQAAAAL8AAAAAZmY2QAAAAL8AAAAAZmY2QAAAAD8AAAAAzcwcQAAAAL8AAAAAZmY2QAAAAD8AAAAAzcwcQAAAAD8AAAAA/3//f/9/AID/f/9//38AgP9//3//fwCA/3//f/9/AID/f/9//38AgP9//3//fwCA")
+}]
+
+[node name="Root" type="Node3D" unique_id=305827267]
+
+[node name="Mesh" type="MeshInstance3D" parent="." unique_id=659872241]
+mesh = SubResource("ArrayMesh_dirju")
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=1726716803]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.9, 0, 3.2)
+current = true

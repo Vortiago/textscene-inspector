@@ -1,5 +1,9 @@
 import * as THREE from 'three';
-import { withGodotAttributes } from '../../shaders/spatial/meshAttributes.js';
+import {
+  VERTEX_STAGE_BONES_ATTRIBUTE,
+  VERTEX_STAGE_WEIGHTS_ATTRIBUTE,
+  withGodotAttributes,
+} from '../../shaders/spatial/meshAttributes.js';
 import { geometryPrimitive } from '../../resources/meshes/godotSurface.js';
 import { perObject } from '../../utils/perObject.js';
 
@@ -28,6 +32,8 @@ const SOURCE_ATTRIBUTES = [
   'custom3',
   'skinIndex',
   'skinWeight',
+  VERTEX_STAGE_BONES_ATTRIBUTE,
+  VERTEX_STAGE_WEIGHTS_ATTRIBUTE,
 ];
 
 /** Each geometry's index, source attributes and versions after its last write, by `withGodotSurface`. */

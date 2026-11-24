@@ -7,7 +7,11 @@
 import * as THREE from 'three';
 import { bottomUpV } from '../../godot/math/uv.js';
 import { UV2_ATTRIBUTE } from './uv2.js';
-import { withSurfaceStarts } from '../../shaders/spatial/meshAttributes.js';
+import {
+  VERTEX_STAGE_BONES_ATTRIBUTE,
+  VERTEX_STAGE_WEIGHTS_ATTRIBUTE,
+  withSurfaceStarts,
+} from '../../shaders/spatial/meshAttributes.js';
 
 /** A surface's `ARRAY_BONES` and `ARRAY_WEIGHTS`: four bones and four weights for every vertex. */
 export interface SurfaceBones {
@@ -31,6 +35,10 @@ export interface GodotSurface {
   uv2s?: Float32Array;
   /** The bones that skin each vertex, or undefined for a surface with no ARRAY_BONES. */
   bones?: SurfaceBones;
+  /** What the vertex stage reads as BONE_INDICES and BONE_WEIGHTS, when it differs from `bones`. */
+  vertexStageBones?: SurfaceBones;
+  /** CUSTOM0 to CUSTOM3 as the vertex stage reads them, four lanes per vertex, each undefined when absent. */
+  customs?: readonly (Float32Array | undefined)[];
   /** Three per triangle, or one per drawn point. */
   indices: ArrayLike<number>;
   /**
@@ -126,6 +134,11 @@ export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.
     ? { indices: new Uint16Array(totalVertices * 4), weights: new Float32Array(totalVertices * 4) }
     : undefined;
   const indices = indexArray(totalIndices, totalVertices);
+  const customs = customArrays(surfaces, totalVertices);
+  // Not skinIndex: a surface with no bones beside one with them reads zeros (`mesh_storage.cpp:135-157`).
+  const vertexStageBones = surfaces.some((s) => s.bones)
+    ? { indices: new Uint16Array(totalVertices * 4), weights: new Float32Array(totalVertices * 4) }
+    : undefined;
 
   let vertexBase = 0;
   let indexBase = 0;
@@ -156,6 +169,15 @@ export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.
       skin.indices.set(surface.bones.indices, vertexBase * 4);
       skin.weights.set(surface.bones.weights, vertexBase * 4);
     }
+    const stageBones = surface.vertexStageBones ?? surface.bones;
+    if (vertexStageBones && stageBones) {
+      vertexStageBones.indices.set(stageBones.indices, vertexBase * 4);
+      vertexStageBones.weights.set(stageBones.weights, vertexBase * 4);
+    }
+    customs.forEach((values, custom) => {
+      const surfaceValues = surface.customs?.[custom];
+      if (values && surfaceValues) values.set(surfaceValues, vertexBase * 4);
+    });
     // Re-base each surface's indices into the merged vertex array. A triangle's winding reverses:
     // Godot fronts triangles clockwise and three.js counter-clockwise, so without the swap every
     // face is back-culled. A point or a segment has no winding.
@@ -188,9 +210,32 @@ export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.
     geometry.setAttribute('skinIndex', new THREE.BufferAttribute(skin.indices, 4));
     geometry.setAttribute('skinWeight', new THREE.BufferAttribute(skin.weights, 4));
   }
+  if (vertexStageBones) {
+    geometry.setAttribute(
+      VERTEX_STAGE_BONES_ATTRIBUTE,
+      new THREE.BufferAttribute(vertexStageBones.indices, 4)
+    );
+    geometry.setAttribute(
+      VERTEX_STAGE_WEIGHTS_ATTRIBUTE,
+      new THREE.BufferAttribute(vertexStageBones.weights, 4)
+    );
+  }
+  customs.forEach((values, custom) => {
+    if (values) geometry.setAttribute(`custom${custom}`, new THREE.BufferAttribute(values, 4));
+  });
   if (isListed) geometry.userData[DRAWN_PRIMITIVE] = primitive;
   if (isSkinned) geometry.userData[SURFACE_BONE_COUNTS] = surfaces.map((s) => boneCountOf(s.bones));
   return withSurfaceStarts(geometry, vertexStarts);
+}
+
+/** Each custom array any surface has, zeros where a surface lacks it (`mesh_storage.cpp:120-131`). */
+function customArrays(
+  surfaces: readonly GodotSurface[],
+  totalVertices: number
+): (Float32Array | undefined)[] {
+  return [0, 1, 2, 3].map((custom) =>
+    surfaces.some((s) => s.customs?.[custom]) ? new Float32Array(totalVertices * 4) : undefined
+  );
 }
 
 function boneCountOf(bones: SurfaceBones | undefined): number {

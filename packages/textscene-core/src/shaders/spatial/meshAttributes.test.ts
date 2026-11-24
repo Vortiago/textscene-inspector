@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   emulatedPointGeometry,
   VERTEX_ID_ATTRIBUTE,
+  VERTEX_STAGE_BONES_ATTRIBUTE,
+  VERTEX_STAGE_WEIGHTS_ATTRIBUTE,
   withGodotAttributes,
   withSurfaceStarts,
 } from './meshAttributes.js';
@@ -150,6 +152,22 @@ describe('withGodotAttributes', () => {
     const bones = withGodotAttributes(geometry).getAttribute('bone_attrib') as THREE.BufferAttribute;
     expect([bones.array.constructor, bones.gpuType]).toEqual([Uint16Array, THREE.IntType]);
     expect([...bones.array.slice(4, 8)]).toEqual([5, 6, 7, 8]);
+  });
+
+  it('reads the vertex stage bones and weights over the skin ones where a geometry has both', () => {
+    const geometry = triangle();
+    geometry.setAttribute('skinIndex', new THREE.Float32BufferAttribute(new Array(12).fill(1), 4));
+    geometry.setAttribute(
+      VERTEX_STAGE_BONES_ATTRIBUTE,
+      new THREE.Uint16BufferAttribute(new Array(12).fill(9), 4)
+    );
+    const weights = new THREE.Float32BufferAttribute(new Array(12).fill(0.5), 4);
+    geometry.setAttribute(VERTEX_STAGE_WEIGHTS_ATTRIBUTE, weights);
+
+    const written = withGodotAttributes(geometry);
+
+    expect((written.getAttribute('bone_attrib') as THREE.BufferAttribute).array[0]).toBe(9);
+    expect(written.getAttribute('weight_attrib')).toBe(weights);
   });
 
   it("gives an array the geometry lacks Godot's default value, white for the colour", () => {
