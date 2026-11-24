@@ -13,7 +13,7 @@ const LIVE_NODE_READ =
 
 /** A way to lay the patches over a node, or to read the passes that make them. */
 const PATCH_OVERLAY =
-  /\b(patchedNode|useLivePatchedNode|useLiveDrawnNode|useLiveDrawnChain|useLivePatchesBelow|liveNodePatches|liveDrawnPatches|liveScenePassResults)\b/;
+  /\b(patchedNode|useLivePatchedNode|useLiveDrawnNode|useLiveDrawnChain|useLivePatchesBelow|liveNodePatches|liveDrawnPatches|liveScenePassResults|livePlacements)\b/;
 
 /**
  * The files in `files`, path to text, that read a live node and neither overlay the patches nor
