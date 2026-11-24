@@ -100,14 +100,14 @@ describe('<TextShell>', () => {
     expect(selectedInB).toBe(0);
   });
 
-  it('fires onNodeReveal with the slash-joined path on double click', async () => {
+  it('fires onNodeReveal with the live path and the name on double click', async () => {
     const onNodeReveal = vi.fn();
     render(<TextShell panelId="p1" content={MINIMAL_TSCN} onNodeReveal={onNodeReveal} />);
 
     // findByText awaits the loaded SceneTreeViewer.
     const rootRow = await screen.findByText('Root');
     await userEvent.dblClick(rootRow);
-    expect(onNodeReveal).toHaveBeenCalledWith('Root', expect.objectContaining({ name: 'Root' }));
+    expect(onNodeReveal).toHaveBeenCalledWith('Root', 'Root');
   });
 
   it('WI-R3F-18: shows Suspense fallback for tree + details panel before they resolve', async () => {

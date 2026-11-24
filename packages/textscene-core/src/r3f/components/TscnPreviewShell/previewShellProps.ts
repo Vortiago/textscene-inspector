@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import type { TscnNode } from '../../../parser/types.js';
 import type { ViewportMode } from '../../viewportMode.js';
 import type { PreviewCaptureState } from './previewCaptureState.js';
 import type { Scene } from '../../../scene/openScene.js';
@@ -10,8 +9,8 @@ export interface TscnPreviewShellProps {
   panelId: string;
   /** The scene `openScene` gave. The host owns it: it sets the text and disposes it. */
   scene: Scene;
-  /** Fired when a row is double-clicked, so the host can jump to the source. */
-  onNodeReveal?: (path: string, node: TscnNode) => void;
+  /** Fired when a row is double-clicked, with its live path and name, so the host can jump to the source. */
+  onNodeReveal?: (path: string, name: string) => void;
   onOpenSubScene?: (scenePath: string) => void;
   /** Content for the top bar, such as a fixture dropdown. */
   toolbar?: ReactNode;

@@ -2,7 +2,6 @@
 
 import { lazy, Suspense, type CSSProperties, type ReactNode } from 'react';
 import type { SceneGraph } from '../../../core/SceneGraph.js';
-import type { TscnNode } from '../../../parser/types.js';
 import { SceneNodeCount } from './SceneStats.js';
 import type { Scene } from '../../../scene/openScene.js';
 import styles from './TscnPreviewShell.module.css';
@@ -30,7 +29,7 @@ export function SceneTreePane({
   /** The master's fraction of the dock height (0..1). */
   treeShare: number;
   onCollapse: () => void;
-  onNodeReveal?: (path: string, node: TscnNode) => void;
+  onNodeReveal?: (path: string, name: string) => void;
   onOpenSubScene?: (scenePath: string) => void;
 }) {
   // On an error, `<SceneTreeViewer>` with a null sceneGraph shows "Loading

@@ -12,7 +12,6 @@ import {
   type LogAdapter,
   type PreviewCaptureState,
 } from '@textscene/core';
-import type { TscnNode } from '@textscene/core';
 import { openScene, type Scene } from '@textscene/renderer';
 import { isHostToWebviewMessage, type WebviewToHostMessage } from '../protocol';
 import { WebviewResourceProvider } from './WebviewResourceProvider';
@@ -121,13 +120,8 @@ function R3FWebviewApp({ vscode, scene }: { vscode: VsCodeApi; scene: Scene }) {
 
   const [panelId] = useState(() => `vscode-${Math.random().toString(36).slice(2, 10)}`);
 
-  const handleNodeReveal = (path: string, node: TscnNode) => {
-    vscode.postMessage({
-      type: 'jumpToNode',
-      // The name the heading wrote: a re-rooted node's `name` is Godot's rename, which no heading spells.
-      nodeName: node.authoredName ?? node.name,
-      path,
-    } satisfies WebviewToHostMessage);
+  const handleNodeReveal = (path: string, nodeName: string) => {
+    vscode.postMessage({ type: 'jumpToNode', nodeName, path } satisfies WebviewToHostMessage);
   };
 
   const handleCopyNodePath = (nodePath: string) => {

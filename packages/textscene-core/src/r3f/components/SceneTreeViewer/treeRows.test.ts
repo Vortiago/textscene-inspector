@@ -4,6 +4,8 @@ import { openScene, type Scene } from '../../../scene/openScene';
 import type { ResourceProvider } from '../../../resources/ResourceProvider';
 import { treeRowsOf, type TreeRow } from './treeRows';
 
+const rowsOf = (scene: Scene) => treeRowsOf(scene.getNode('.'));
+
 const SUB = `[gd_scene format=3]
 
 [node name="Sub" type="Node3D"]
@@ -53,7 +55,6 @@ const provider: ResourceProvider = { loadResource: async (path) => FILES[path] ?
 
 async function loaded(source: string, deepest: string): Promise<Scene> {
   const scene = openScene({ source, provider, rootScenePath: 'res://main.tscn' });
-  await vi.waitFor(async () => expect((await treeRowsOf(scene))?.children.length).toBeGreaterThan(0));
   await vi.waitFor(() => expect(scene.getNodeOrNull(deepest)).not.toBeNull());
   return scene;
 }
@@ -66,7 +67,7 @@ const rowAt = (row: TreeRow, path: string): TreeRow | undefined =>
 describe('treeRowsOf', () => {
   it("lists an editable instance's children and hides a plain instance's", async () => {
     const scene = await loaded(MAIN, 'Editable/Inner');
-    const root = (await treeRowsOf(scene))!;
+    const root = await rowsOf(scene);
     expect(names(root)).toEqual({
       Main: [
         { Plain: [] },
@@ -81,12 +82,12 @@ describe('treeRowsOf', () => {
 
   it('lists the base nodes of an inherited scene under its edited root', async () => {
     const scene = await loaded(INHERITING, 'BaseChild');
-    expect(names((await treeRowsOf(scene))!)).toEqual({ Base: [{ BaseChild: [] }, { Added: [] }] });
+    expect(names(await rowsOf(scene))).toEqual({ Base: [{ BaseChild: [] }, { Added: [] }] });
   });
 
   it('gives each row its live path, its class and the scene file of an instance below the root', async () => {
     const scene = await loaded(MAIN, 'Editable/Inner');
-    const root = (await treeRowsOf(scene))!;
+    const root = await rowsOf(scene);
     expect(root).toMatchObject({ path: 'Main', type: 'Node3D', sceneFilePath: '' });
     expect(rowAt(root, 'Main/Plain')).toMatchObject({ type: 'Node3D', sceneFilePath: 'res://sub.tscn' });
     expect(rowAt(root, 'Main/Editable/Inner')).toMatchObject({ sceneFilePath: '' });
@@ -100,11 +101,6 @@ describe('treeRowsOf', () => {
     ['Main/Timer', null, false],
   ])('reads %s as the eye chain %s, a Viewport %s', async (path, chain, isViewport) => {
     const scene = await loaded(MAIN, 'Editable/Inner');
-    expect(rowAt((await treeRowsOf(scene))!, path)).toMatchObject({ chain, isViewport });
-  });
-
-  it('is null before the host has sent a scene', async () => {
-    const scene = openScene({ source: '', provider });
-    expect(await treeRowsOf(scene)).toBeNull();
+    expect(rowAt(await rowsOf(scene), path)).toMatchObject({ chain, isViewport });
   });
 });
