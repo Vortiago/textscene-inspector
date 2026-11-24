@@ -11,7 +11,7 @@ import type { CanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
 import type { TscnNode } from '../parser/types.js';
 
 /** A type Godot's CanvasItemEditor would claim: 2D world content or Control and CanvasLayer UI. */
-export function isClaimedByCanvasItemEditor(type: string): boolean {
+function isClaimedByCanvasItemEditor(type: string): boolean {
   return is2DUIType(type) || nodeComponentRegistry.isCanvasItem(type);
 }
 
