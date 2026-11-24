@@ -69,6 +69,8 @@
   --tsi-space-2: 0.5rem;
   --tsi-space-3: 0.75rem;
   --tsi-space-4: 1rem;
+  /* The bottom-centre band: the 2D zoom HUD or the 3D hint. The controls pill yields it. */
+  --tsi-bottom-centre-width: 13rem;
 
   /* Typography */
   --tsi-font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -443,6 +445,11 @@
   left: 50%;
   transform: translateX(-50%);
   z-index: 2;
+  box-sizing: border-box;
+  max-width: var(--tsi-bottom-centre-width);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   appearance: none;
   border: 1px solid var(--tsi-accent);
   background: var(--tsi-accent-soft);

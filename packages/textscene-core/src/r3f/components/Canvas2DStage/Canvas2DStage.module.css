@@ -73,8 +73,11 @@
   bottom: var(--tsi-space-3);
   left: 50%;
   transform: translateX(-50%);
+  box-sizing: border-box;
+  width: var(--tsi-bottom-centre-width);
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--tsi-space-1);
   background: var(--tsi-bg-elevated);
   border: 1px solid var(--tsi-border);

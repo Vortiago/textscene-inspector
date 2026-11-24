@@ -6,6 +6,7 @@ import {
 } from './eyeAndHoverScenario.mjs';
 import { checkViewStatus, runViewStatusScenario, VIEW_STATUS_FIXTURE } from './viewStatusScenario.mjs';
 import { checkViewKeys, measureViewKeys, runViewKeysScenario } from './viewKeysScenario.mjs';
+import { checkZoomButtons, measureZoomButtons, runZoomButtonsScenario } from './zoomButtonsScenario.mjs';
 import { inkStats } from '../vscode/pixels.mjs';
 import { shardOf } from '../shards/shards.mjs';
 import { longTasksAfterFirstReply, longTasksDuringTextureWork } from './textureWorkProbe.mjs';
@@ -115,6 +116,14 @@ export const SCENARIOS = [
     run: runViewKeysScenario,
     check: checkViewKeys,
     measure: measureViewKeys,
+  },
+  {
+    name: 'zoom buttons',
+    title: `zoom buttons: clicks on the 2D zoom HUD reach both ends of the range`,
+    seconds: 8,
+    run: runZoomButtonsScenario,
+    check: checkZoomButtons,
+    measure: measureZoomButtons,
   },
   {
     name: 'view status',
