@@ -2982,6 +2982,72 @@ void fragment() {
 | --- | --- |
 | <img src="showcase/spatial-point-size-by-uv-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-point-size-by-uv-three.png" width="256" alt="Transpilation"> |
 
+## Showcase `spatial-point-size-half`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+
+void vertex() {
+	POINT_SIZE = 0.5;
+}
+
+void fragment() {
+	ALBEDO = vec3(UV, 0.3);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-point-size-half-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-point-size-half-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-point-size-zero`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+
+void vertex() {
+	POINT_SIZE = 0.0;
+}
+
+void fragment() {
+	ALBEDO = vec3(UV, 0.3);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-point-size-zero-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-point-size-zero-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-point-size-negative`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+
+void vertex() {
+	POINT_SIZE = -3.0;
+}
+
+void fragment() {
+	ALBEDO = vec3(UV, 0.3);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-point-size-negative-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-point-size-negative-three.png" width="256" alt="Transpilation"> |
+
 ## Showcase `spatial-point-size-past-edge`
 
 Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
@@ -3113,6 +3179,50 @@ void fragment() {
 | Godot | Transpilation on three.js |
 | --- | --- |
 | <img src="showcase/spatial-point-size-alpha-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-point-size-alpha-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-point-size-indexed-add`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, blend_add;
+
+
+void vertex() {
+	POINT_SIZE = 6.0;
+}
+
+void fragment() {
+	ALBEDO = vec3(UV, 0.3) * 0.5;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-point-size-indexed-add-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-point-size-indexed-add-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-lines-surface`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+
+void vertex() {
+	
+}
+
+void fragment() {
+	ALBEDO = vec3(UV, 0.3);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-lines-surface-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-lines-surface-three.png" width="256" alt="Transpilation"> |
 
 ## Showcase `spatial-points-surface`
 
