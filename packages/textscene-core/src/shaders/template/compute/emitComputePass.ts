@@ -1,16 +1,16 @@
 import * as THREE from 'three';
-import { positionGeometry, screenCoordinate, screenSize, uint, uvec3, vec4 } from 'three/tsl';
+import { int, positionGeometry, screenCoordinate, screenSize, uint, uvec3, vec4 } from 'three/tsl';
 import type { Node, TextureNode, UniformNode } from 'three/webgpu';
 import { BoundNodeMaterial } from '../../uniforms/boundMaterial.js';
 import { emitTemplateStage, programResources } from '../emitTemplate.js';
-import { COMPUTE_COLOR, type ComputePass } from './computePasses.js';
+import { COMPUTE_COLOR, COMPUTE_ENTRY, type ComputePass } from './computePasses.js';
 
 /** A compute pass as one draw: a triangle over its target, its uniforms and its textures by name. */
 export interface ComputeDraw {
   readonly mesh: THREE.Mesh<THREE.BufferGeometry, THREE.Material>;
   /** The template's uniforms by `instance.member`: `params.size`. */
   readonly uniforms: ReadonlyMap<string, UniformNode<unknown>>;
-  /** The template's textures by name: `source_octmap`. */
+  /** The template's textures by name: `source_octmap`, `compute_shared_samples`. */
   readonly textures: ReadonlyMap<string, TextureNode>;
 }
 
@@ -19,20 +19,32 @@ export function emitComputePass(pass: ComputePass): ComputeDraw {
   const resources = programResources();
   const stage = emitTemplateStage(
     pass.stage,
-    new Map([['gl_GlobalInvocationID', invocationId() as unknown as Node]]),
+    invocationIds(pass.groupSize),
     { name: COMPUTE_COLOR, type: 'vec4' },
     resources
   );
   return { mesh: passMesh(stage.result), uniforms: resources.uniforms.byName, textures: resources.textures };
 }
 
-/** The texel's column and row, rows counted from the first a target holds, as Godot's image counts them. */
-function invocationId() {
-  const row = screenSize.y.sub(screenCoordinate.y);
-  return uvec3(uint(screenCoordinate.x), uint(row), uint(0));
+/** The ids of the texel's invocation, rows counted from a target's first, as Godot's image counts them. */
+function invocationIds([x, y, z]: readonly [number, number, number]): Map<string, Node> {
+  const column = uint(screenCoordinate.x);
+  const row = uint(screenSize.y.sub(screenCoordinate.y));
+  const global = uvec3(column, row, uint(0));
+  const size = uvec3(uint(x), uint(y), uint(z));
+  const local = global.mod(size);
+  const index = local.x.add(local.y.mul(uint(x))).add(local.z.mul(uint(x * y)));
+  return new Map([
+    ['gl_GlobalInvocationID', global as unknown as Node],
+    ['gl_LocalInvocationID', local as unknown as Node],
+    ['gl_WorkGroupID', global.div(size) as unknown as Node],
+    ['gl_LocalInvocationIndex', index as unknown as Node],
+    ['gl_WorkGroupSize', size as unknown as Node],
+    [COMPUTE_ENTRY, int(column) as unknown as Node],
+  ]);
 }
 
-/** The triangle that covers the target, placed from the vertex index alone. */
+/** The triangle that covers the target. */
 function passMesh(colour: Node): THREE.Mesh<THREE.BufferGeometry, THREE.Material> {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(FULL_SCREEN_TRIANGLE, 3));

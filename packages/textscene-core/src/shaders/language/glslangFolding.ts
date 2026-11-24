@@ -1,15 +1,22 @@
 import { arraySizeOf, isCall } from './treeWalk.js';
 import { binaryLane, convertedLane, unaryLane } from './glslangArithmetic.js';
 import { foldedCall, type Lanes } from './glslangCalls.js';
-import { godotConstantDouble } from './godotNumber.js';
 import type { CallNode, Expression, OperatorNode, Scalar } from './shaderTree.js';
 import { swizzleLanes } from './swizzle.js';
 import { filledLanes, shapeOf, type ScalarKind, type TypeShape, type ValueType } from './types.js';
 
 export type { Lanes };
 
+/** The double glslang reads for a float constant of the tree: Godot's text of it, or a template's literal. */
+export type FloatRead = (value: number) => number;
+
+/** A template's literal reaches glslang as Godot's source writes it, every digit kept. */
+export const asWritten: FloatRead = (value) => value;
+
 /** glslang folds in double precision and rounds once: `58.656 + 74.377` is 0x43050873, not ...72. */
 export class GlslangFolding {
+  constructor(private readonly readFloat: FloatRead) {}
+
   /** Filled by `lanesOf` as it walks a function's tree, which never changes, and by `bindConstant`. */
   private readonly lanes = new WeakMap<Expression, Lanes | null>();
 
@@ -31,7 +38,7 @@ export class GlslangFolding {
     switch (expression.kind) {
       case 'constant':
         return shapeOf(expression.type)!.scalar === 'float'
-          ? expression.values.map((value) => godotConstantDouble(value as number))
+          ? expression.values.map((value) => this.readFloat(value as number))
           : expression.values;
       case 'array length':
         return [arraySizeOf(expression.array)];

@@ -2,7 +2,8 @@ import { writtenNames } from './assignment.js';
 import { bindConstantReads } from './constantReads.js';
 import { refuseFoldedIndexOutOfRange } from './foldedIndex.js';
 import { refuseOutArgumentsThatAreNoPlace } from './outArgumentPlace.js';
-import { GlslangFolding } from './glslangFolding.js';
+import { asWritten, GlslangFolding } from './glslangFolding.js';
+import { godotConstantDouble } from './godotNumber.js';
 import { glslBlock } from './godotText.js';
 import { lowerFunction } from './lowering/lower.js';
 import type { FunctionNode } from './shaderTree.js';
@@ -15,12 +16,16 @@ export interface EmittedTree {
 }
 
 export function emittedTree(definition: FunctionNode): EmittedTree {
-  return emittedGlslTree({ ...definition, body: glslBlock(definition.body) });
+  const glsl = { ...definition, body: glslBlock(definition.body) };
+  return loweredTree(glsl, new GlslangFolding(godotConstantDouble));
 }
 
-/** The emitted tree of a function GLSL reads as it is: a template's, or one of Godot's text. */
+/** The emitted tree of a template's function, which GLSL reads as it is. */
 export function emittedGlslTree(glsl: FunctionNode): EmittedTree {
-  const folding = new GlslangFolding();
+  return loweredTree(glsl, new GlslangFolding(asWritten));
+}
+
+function loweredTree(glsl: FunctionNode, folding: GlslangFolding): EmittedTree {
   bindConstantReads(glsl.body, folding);
   refuseFoldedIndexOutOfRange(glsl.body, folding);
   refuseOutArgumentsThatAreNoPlace(glsl.body);

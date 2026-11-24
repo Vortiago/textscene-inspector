@@ -4,7 +4,7 @@ import { cubeTexture, Fn, int, texture, texture3D } from 'three/tsl';
 import type { Node, TextureNode } from 'three/webgpu';
 import { type BodyEmitter, CalledFunctions } from '../language/emitCall.js';
 import { constantNode } from '../language/emitConstant.js';
-import { GlslangFolding } from '../language/glslangFolding.js';
+import { asWritten, GlslangFolding } from '../language/glslangFolding.js';
 import type { EmitContext } from '../language/emitExpression.js';
 import { EmitScope } from '../language/emitScope.js';
 import { StatementEmitter } from '../language/emitStatement.js';
@@ -267,7 +267,7 @@ function constantGlobal(global: GlobalNode, declarator: GlobalNode['declarators'
 }
 
 /** Folds the const globals. A tree never changes, so every stage shares one. */
-const FOLDING = new GlslangFolding();
+const FOLDING = new GlslangFolding(asWritten);
 
 /** Every texture and combined sampler type, so a type the emitter has no node for fails by its name. */
 const isTextureType = (type: string) => /^[iu]?(texture|sampler)[A-Z0-9]/.test(type);
