@@ -63,12 +63,18 @@ export class BlockArrays {
 /** The lanes of each element of `array`, an element no binding wrote as zeros. */
 function arrayLanes({ type, array }: PackedArray): Lanes {
   const lanes = shapeOf(type)!.lanes;
-  return array.flatMap((value) => valueLanes(value, lanes));
+  return array.flatMap((value) => fitted(valueLanes(value, lanes), lanes));
+}
+
+/** Exactly `lanes` lanes, zero past the value's own: a short element would shift every element after it. */
+function fitted(values: Lanes, lanes: number): Lanes {
+  if (values.length === lanes) return values;
+  return Array.from({ length: lanes }, (_, lane) => values[lane] ?? 0);
 }
 
 /** A three.js value's lanes: a number, a bool, a vector, a colour, or a matrix's columns in order. */
 function valueLanes(value: unknown, lanes: number): Lanes {
-  if (value === undefined) return new Array<number>(lanes).fill(0);
+  if (value === undefined) return [];
   if (typeof value === 'number') return [value];
   if (typeof value === 'boolean') return [value ? 1 : 0];
   if (Array.isArray(value)) return value as number[];

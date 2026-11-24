@@ -85,8 +85,7 @@ export class RowStore {
       const followsOwnDraw = frame.renderId === (writtenFor ?? Number.NaN) + 1;
       writtenFor = frame.renderId;
       this.write(region, wordsOf(frame.object!));
-      if (followsOwnDraw)
-        uploadBetweenDraws(frame.renderer as unknown as THREE.WebGLRenderer, this.texture, region);
+      if (followsOwnDraw) uploadBetweenDraws(frame.renderer as unknown as THREE.WebGLRenderer, this.texture);
     });
   }
 
@@ -126,11 +125,7 @@ const UNPACK_PLAIN = [
 ] as const;
 
 /** three uploads textures only after a draw of another material (`WebGLRenderer.js:2760`): this uploads. */
-function uploadBetweenDraws(
-  renderer: THREE.WebGLRenderer,
-  texture: THREE.DataTexture,
-  region: RowRegion
-): void {
+function uploadBetweenDraws(renderer: THREE.WebGLRenderer, texture: THREE.DataTexture): void {
   const properties = renderer.properties.get(texture) as {
     __webglTexture?: WebGLTexture;
     __version?: number;
@@ -138,23 +133,12 @@ function uploadBetweenDraws(
   // Not uploaded by this renderer yet: three allocates and uploads it as it binds it for this draw.
   if (!properties.__webglTexture || properties.__version === undefined) return;
   const gl = renderer.getContext() as WebGL2RenderingContext;
-  const { data } = texture.image as { data: Uint32Array };
-  const start = region.firstRow.value * ROW_WORDS;
-  const rows = data.subarray(start, start + region.rows * ROW_WORDS);
+  const { data, width, height } = texture.image as { data: Uint32Array; width: number; height: number };
   const bound = gl.getParameter(gl.TEXTURE_BINDING_2D) as WebGLTexture | null;
   gl.bindTexture(gl.TEXTURE_2D, properties.__webglTexture);
   for (const [name, value] of UNPACK_PLAIN) renderer.state.pixelStorei(gl[name], value);
-  gl.texSubImage2D(
-    gl.TEXTURE_2D,
-    0,
-    0,
-    region.firstRow.value,
-    ROW_TEXELS,
-    region.rows,
-    gl.RGBA_INTEGER,
-    gl.UNSIGNED_INT,
-    rows
-  );
+  // Every row, not the drawn region's: the version this marks covers the writes of every region.
+  gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, gl.RGBA_INTEGER, gl.UNSIGNED_INT, data);
   gl.bindTexture(gl.TEXTURE_2D, bound);
   properties.__version = texture.version;
 }

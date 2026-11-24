@@ -139,7 +139,7 @@ export function writeSpatialBindings(spatial: TranspiledSpatial, scene: SpatialS
 /** Writes the specialisation constants of `spatial`, which pick the colour pass's program. */
 export function specialiseSpatial(spatial: TranspiledSpatial, fog: EnvironmentFog | undefined): void {
   writeBindings(FOG_SPECIALISATIONS, spatial.specialisations, { fog });
-  writeBindings(EFFECT_SPECIALISATIONS, spatial.specialisations, { fog });
+  writeBindings(EFFECT_SPECIALISATIONS, spatial.specialisations, undefined);
 }
 
 /** The uniform every vertex stage of the scene template reads, so its object update runs before each draw. */

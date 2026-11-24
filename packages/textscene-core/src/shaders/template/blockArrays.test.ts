@@ -46,6 +46,15 @@ describe('BlockArrays', () => {
     expect([...uploadedWords(arrays).slice(12, 15)]).toEqual([1, 2, 3].map(floatBits));
   });
 
+  it('pads an element of fewer lanes than its type, so the next element keeps its slot', () => {
+    const arrays = new BlockArrays('lights');
+    const { written } = arrays.add('lights.color_size', 'vec4', 2);
+    arrays.seal();
+    written.array.splice(0, 2, new THREE.Color(1, 1, 1), new THREE.Vector4(5, 6, 7, 8));
+    const words = uploadedWords(arrays);
+    expect([words[3], ...words.slice(4, 8)]).toEqual([0, ...[5, 6, 7, 8].map(floatBits)]);
+  });
+
   it('uploads zeros for an element no binding wrote', () => {
     const arrays = new BlockArrays('lights');
     arrays.add('lights.energy', 'vec4', 2);

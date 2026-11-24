@@ -3,7 +3,7 @@ import type { Binding } from '../uniforms/bindingTable.js';
 const DATA = 'implementation_data_block.data';
 
 /** Members a frame holds: a transpiled material binds no SSAO, SSIL, SSR or volumetric fog texture yet. */
-export const EFFECT_SPECIALISATIONS: readonly Binding<unknown>[] = [
+export const EFFECT_SPECIALISATIONS: readonly Binding<undefined>[] = [
   { uniform: `${DATA}.ss_effects_flags`, godot: 'render_forward_clustered.cpp:749-769', value: () => 0 },
   {
     uniform: `${DATA}.volumetric_fog_enabled`,
