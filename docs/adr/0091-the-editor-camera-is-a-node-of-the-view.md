@@ -30,7 +30,9 @@ mode has one for the life of the view. `mountScene`'s view and the `TscnCanvas` 
 - The 2D camera reads and writes `position`, the canvas point at the view's centre, and `zoom`.
   Its zoom is one value on both axes, as the 2D editor's is (`canvas_item_editor_plugin.h:228`).
   It calls `reset()`, `focus(path?)` (Shift+F) and `center(path?)` (F)
-  (`canvas_item_editor_plugin.cpp:5213-5225`).
+  (`canvas_item_editor_plugin.cpp:5213-5225`), and `frame_camera_view(path)`, which frames what a
+  Camera2D shows. F frames a Camera2D's origin, since it has no edit rect (`canvas_item.h:258-259`),
+  and `get_screen_center_position` answers (0, 0) for a camera that is not current (measured in 4.6.3).
 - `view.status().freelook` is the one read of freelook, so a button follows the Shift+F toggle
   through `onStatusChange`. The node has no change signal, so it takes only the write.
 - The view keeps each mode's pose while that mode's stage is unmounted, and gives it back to the

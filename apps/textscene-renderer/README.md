@@ -447,8 +447,11 @@ await view.editorCamera?.call('reset');
 - **2D.** `position` is the canvas point at the centre of the view, and `zoom` its magnification,
   a `Vector2` with the same value on both axes, as the 2D editor has one zoom. `call('focus',
   path)` frames the node as Shift+F does, and `call('center', path)` centres it as F does. With no
-  path, both go to the origin, as Godot does with nothing selected. `call('reset')` returns the view
-  to the one the scene opened at.
+  path, both go to the origin, as Godot does with nothing selected. `call('frame_camera_view',
+  path)` shows what the Camera2D at that path shows on the project's screen: its centre after the
+  anchor, the limits and the offset, at its zoom. Godot answers that centre only for the current
+  camera, so this call frames any Camera2D. `call('reset')` returns the view to the one the scene
+  opened at.
 
 To keep a pose per scene, as Godot does in its editor settings, read `transform` and `projection`,
 or `position` and `zoom`, and write them back when the scene opens again.

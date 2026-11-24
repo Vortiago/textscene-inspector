@@ -3,7 +3,13 @@ import type { Rect2 } from '../../../godot/math/rect2.js';
 import { useSelectedNodePathStore } from '../../contexts/SelectionContext.js';
 import { useSharedLiveTree } from '../../useLiveSceneTree.js';
 import { useResourceLoader } from '../../../resources/useResource.js';
-import { livePlacements, node2dWorldTransform } from '../../node2dWorldTransform.js';
+import { livePlacements, node2dWorldPosition, node2dWorldTransform } from '../../node2dWorldTransform.js';
+import { resolveLiveEntry } from '../../liveSceneTree.js';
+import { isCamera2DType } from '../../cameraNodeTypes.js';
+import { camera2DView } from '../../viewportRender/camera2DView.js';
+import type { Camera2DProperties } from '../../../nodes/2d/camera2d/types.js';
+import { useProjectSettings } from '../../contexts/ProjectSettingsContext.js';
+import type { CameraView2D } from '../editorCamera/editorCamera2D.js';
 import { isViewKeyEvent } from '../viewFocus.js';
 import { isFocusSelectionKey, isFrameSelectionKey } from '../editorKeyBindings.js';
 import { useEditRects } from '../../editRect/editRects.js';
@@ -17,7 +23,12 @@ export interface Stage2D {
   stage: HTMLElement | null;
   /** The 2D editor camera reads it to place a node. */
   rectOf: RefObject<(livePath: string) => Rect2 | null>;
+  /** The 2D editor camera reads it to frame what a Camera2D shows. */
+  cameraViewOf: RefObject<(livePath: string) => CameraView2D | null>;
 }
+
+/** A camera whose chain this cannot place frames at the origin, as the Cameras panel always has. */
+const ORIGIN = { x: 0, y: 0 };
 
 const Stage2DContext = createContext<Stage2D | null>(null);
 Stage2DContext.displayName = 'Stage2DContext';
@@ -34,6 +45,7 @@ export function FocusSelection2D() {
   const loader = useResourceLoader();
   const liveTree = useSharedLiveTree();
   const camera = useEditorCameras()?.slot('Camera2D').node ?? null;
+  const { viewportSize } = useProjectSettings();
 
   useLayoutEffect(() => {
     if (!stage2D) return;
@@ -43,7 +55,17 @@ export function FocusSelection2D() {
       const global = node2dWorldTransform(roots, ctx, path, livePlacements(liveTree, loader));
       return global && selectionRect(global, rects?.get(path) ?? null);
     };
-  }, [stage2D, liveTree, loader, rects]);
+    stage2D.cameraViewOf.current = (path) => {
+      if (!liveTree) return null;
+      const { roots, ctx } = liveTree;
+      const camera = resolveLiveEntry(path, roots, ctx)?.node;
+      if (!camera || !isCamera2DType(camera.type)) return null;
+      const position = node2dWorldPosition(roots, ctx, path, livePlacements(liveTree, loader)) ?? ORIGIN;
+      const screen = { x: viewportSize.width, y: viewportSize.height };
+      const { center, zoom } = camera2DView(camera.properties as Camera2DProperties, position, screen);
+      return { centre: center, zoom };
+    };
+  }, [stage2D, liveTree, loader, rects, viewportSize]);
 
   useEffect(() => {
     if (!stage2D?.stage || !camera) return undefined;

@@ -52,7 +52,7 @@ describe('<TextShell> the camera it hands its view', () => {
     render(<TextShell panelId="cam-row" content={SCENE} initialViewportMode="3D" />);
     fireEvent.click(await screen.findByRole('tab', { name: /Cameras/ }));
 
-    fireEvent.click(screen.getByRole('button', { name: /^Eye/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Eye/ }));
 
     expect(viewCamera()).toBe('/root/Main/Eye');
   });
