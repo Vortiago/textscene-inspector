@@ -6,7 +6,7 @@ import { useViewReport } from './useViewReport.js';
 import { useViewStatusStore } from './ViewStatusContext.js';
 import { useAwaitedCamera } from '../viewCamera.js';
 
-export function EditorViewReport() {
+export function CanvasViewReport() {
   useReportAfterRender();
   useCanvasCapture();
   return null;

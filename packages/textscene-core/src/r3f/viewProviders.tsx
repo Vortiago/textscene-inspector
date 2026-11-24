@@ -22,7 +22,7 @@ import { AnimationTransportProvider } from './contexts/AnimationTransportContext
 import { PreviewVisibilityProvider } from './contexts/PreviewVisibilityContext.js';
 import { composeProviders } from './composeProviders.js';
 
-interface PreviewShellProviderOptions {
+interface ViewProviderOptions {
   hierarchyValue: HierarchyContextValue;
   /** The loader of the shell's scene, which every panel and view reads its files through. */
   loader: ResourceLoader;
@@ -45,7 +45,7 @@ export function viewProviders({
   isVisible,
   panelId,
   rootScenePath,
-}: PreviewShellProviderOptions): (children: ReactNode) => ReactNode {
+}: ViewProviderOptions): (children: ReactNode) => ReactNode {
   return composeProviders(
     (children) => <ResourceLoaderProvider loader={loader}>{children}</ResourceLoaderProvider>,
     (children) => <HierarchyProvider value={hierarchyValue}>{children}</HierarchyProvider>,

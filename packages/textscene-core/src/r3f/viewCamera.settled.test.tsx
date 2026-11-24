@@ -10,7 +10,7 @@ import { ViewportActionsProvider } from './contexts/ViewportActionsContext';
 import { GodotEditorControls } from './editorView/GodotEditorControls';
 import { EditorControlsBridge } from './editorView/EditorControlsBridge';
 import { LookThroughProvider, ViewCamera } from './viewCamera';
-import { EditorViewReport } from './viewStatus/EditorViewReport';
+import { CanvasViewReport } from './viewStatus/CanvasViewReport';
 import { ViewStatusProvider } from './viewStatus/ViewStatusContext';
 import { createViewStatusStore } from './viewStatus/viewStatus';
 import { r3fStateProbe } from './testing/R3FStateProbe';
@@ -27,7 +27,7 @@ const SCENE = `[gd_scene format=3]
 [node name="Top" type="Camera3D" parent="Rig"]
 `;
 
-/** Enough frames for the preview to reach the camera, as `EditorViewReport.test` counts them. */
+/** Enough frames for the preview to reach the camera, as `CanvasViewReport.test` counts them. */
 const FRAMES_TO_SETTLE = 10;
 
 /** The editor's 3D canvas through `camera`, with or without the switcher that moves the view onto it. */
@@ -47,7 +47,7 @@ async function mountedThrough(camera: string | null, { isSwitching = true } = {}
             </SceneCamerasProvider>
             <GodotEditorControls />
             <EditorControlsBridge />
-            <EditorViewReport />
+            <CanvasViewReport />
             <Probe />
           </LookThroughProvider>
         </ViewportActionsProvider>

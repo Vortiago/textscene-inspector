@@ -7,10 +7,11 @@ import { DEFAULT_ROOT_SCENE_PATH } from '../../scene/openScene.js';
 import { StageRoot } from '../StageRoot.js';
 import { SceneCamerasProvider } from '../sceneCameras.js';
 import { LookThroughProvider, ViewCamera } from '../viewCamera.js';
-import { EditorViewReport } from '../viewStatus/EditorViewReport.js';
+import { CanvasViewReport } from '../viewStatus/CanvasViewReport.js';
 import { TscnSceneContents, useRootScene } from '../SceneContents.js';
 import { ActiveCameraSwitcher } from './ActiveCameraSwitcher.js';
 import { EditorControlsBridge } from './EditorControlsBridge.js';
+import { EditorGround } from './EditorGround.js';
 import { FocusShortcuts } from './FocusShortcuts.js';
 import { FreelookProvider } from './FreelookContext.js';
 import { FreelookSpeedReadout } from './FreelookSpeedReadout/FreelookSpeedReadout.js';
@@ -56,14 +57,16 @@ export function EditorCanvas({ className, camera }: { className?: string; camera
         >
           <LookThroughProvider>
             <SceneCamerasProvider>
-              <TscnSceneContents />
+              <TscnSceneContents>
+                <EditorGround />
+              </TscnSceneContents>
               <ActiveCameraSwitcher />
               {camera !== undefined && <ViewCamera camera={camera} />}
             </SceneCamerasProvider>
             <FocusShortcuts />
             <GodotEditorControls />
             <EditorControlsBridge />
-            <EditorViewReport />
+            <CanvasViewReport />
           </LookThroughProvider>
         </Canvas>
         <FreelookSpeedReadout />

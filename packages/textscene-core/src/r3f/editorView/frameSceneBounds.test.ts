@@ -5,7 +5,7 @@ import { nodeIconUserData } from '../editorHelpers';
 import { boxlessUserData } from '../bounds';
 import { editorCameraDirection } from './godotEditorCamera';
 
-/** Mirrors `GroundGrid()` in TscnCanvas.tsx: a large, framing-exempt grid. */
+/** Mirrors `GroundGrid()` in EditorGround.tsx: a large, framing-exempt grid. */
 function taggedGrid(): THREE.GridHelper {
   const grid = new THREE.GridHelper(10, 10);
   grid.userData = { tscnEmptyState: true };
@@ -300,5 +300,33 @@ describe('frameSceneBounds in a view taller than it is wide', () => {
 
   it('keeps the distance of a square view in a wide view', () => {
     expect(distanceToUnitBox(2)).toBeCloseTo(distanceToUnitBox(1), 5);
+  });
+});
+
+describe('frameSceneBounds — near plane', () => {
+  function sceneWithBox(size: number): THREE.Scene {
+    const scene = new THREE.Scene();
+    scene.add(new THREE.Mesh(new THREE.BoxGeometry(size, size, size)));
+    return scene;
+  }
+
+  function camera(): THREE.PerspectiveCamera {
+    return new THREE.PerspectiveCamera(50, 1280 / 800, 0.1, 1000);
+  }
+
+  it('keeps the near plane below the framing distance for a microscopic scene', () => {
+    // A scene 0.001 across frames near 0.0012 away, so a near floor of 0.01 would cut it away.
+    const cam = camera();
+    frameSceneBounds(sceneWithBox(0.001), cam, null);
+    const distance = cam.position.length(); // bounds centred on the origin
+    expect(cam.near).toBeGreaterThan(0);
+    expect(cam.near).toBeLessThan(distance);
+  });
+
+  it('retains the 0.01 near floor for a normal-sized scene (no regression)', () => {
+    const cam = camera();
+    frameSceneBounds(sceneWithBox(0.5), cam, null);
+    expect(cam.near).toBeCloseTo(0.01, 6);
+    expect(cam.near).toBeLessThan(cam.position.length());
   });
 });

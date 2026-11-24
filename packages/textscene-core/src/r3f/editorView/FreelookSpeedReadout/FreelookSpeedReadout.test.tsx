@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import { FreelookProvider } from '../FreelookContext';
 import { Freelook } from '../freelook';
-import { RegisteredFreelook } from '../FreelookContext.testkit';
+import { grantedFreelook, RegisteredFreelook } from '../FreelookContext.testkit';
 import { FreelookSpeedReadout } from './FreelookSpeedReadout';
 
 /** `ZOOM_FREELOOK_INDICATOR_DELAY_S` (`node_3d_editor_plugin.cpp:121`), in milliseconds. */
@@ -19,9 +19,7 @@ function renderReadout(): Freelook {
   const freelook = new Freelook();
   render(
     <FreelookProvider>
-      <RegisteredFreelook
-        control={{ toggle: () => {}, getState: freelook.getState, subscribe: freelook.subscribe }}
-      />
+      <RegisteredFreelook control={grantedFreelook(freelook)} />
       <FreelookSpeedReadout />
     </FreelookProvider>
   );

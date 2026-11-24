@@ -10,7 +10,7 @@ import type { ResourceProvider } from '../../resources/ResourceProvider';
 import { settleLoads } from '../testing/settleLoads';
 import { CaptureRenderer } from '../testing/CaptureRenderer';
 import { r3fStateProbe } from '../testing/R3FStateProbe';
-import { EditorViewReport } from './EditorViewReport';
+import { CanvasViewReport } from './CanvasViewReport';
 import { ViewStatusProvider } from './ViewStatusContext';
 import { createViewStatusStore, type ViewStatusStore } from './viewStatus';
 import { fontWork } from '../controls/native/text/settledChannel';
@@ -69,7 +69,7 @@ async function mountEditor(source: string) {
         <Counter />
         <Probe />
         <TscnSceneContents />
-        <EditorViewReport />
+        <CanvasViewReport />
       </ViewStatusProvider>
     </TscnSceneProvider>
   );

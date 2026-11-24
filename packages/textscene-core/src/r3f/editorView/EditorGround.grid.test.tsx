@@ -5,16 +5,17 @@
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
-import { TscnSceneContents } from './SceneContents';
-import { HierarchyProvider } from './contexts/HierarchyContext';
-import { SelectionProvider } from './contexts/SelectionContext';
-import { ViewShowProvider } from './viewShow/ViewShowContext';
-import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
-import type { TscnNode } from '../parser/types';
-import type { MeshInstance3DProperties } from '../nodes/3d/meshinstance3d/types';
+import { TscnSceneContents } from '../SceneContents';
+import { EditorGround } from './EditorGround';
+import { HierarchyProvider } from '../contexts/HierarchyContext';
+import { SelectionProvider } from '../contexts/SelectionContext';
+import { ViewShowProvider } from '../viewShow/ViewShowContext';
+import { createSceneGraphFromTscnScene } from '../../core/SceneGraph.testkit';
+import type { TscnNode } from '../../parser/types';
+import type { MeshInstance3DProperties } from '../../nodes/3d/meshinstance3d/types';
 
-import './nodes/index';
-import { GEOMETRY_INSTANCE_DEFAULTS } from '../nodes/3d/geometryinstance3d/types';
+import '../nodes/index';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../../nodes/3d/geometryinstance3d/types';
 
 function makeMeshInstance(name: string): TscnNode {
   const props: MeshInstance3DProperties = {
@@ -29,13 +30,15 @@ function countGrids(renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.c
   return renderer.scene.findAllByType('GridHelper').length;
 }
 
-describe('<TscnSceneContents> ground-plane grid toggle (#224)', () => {
+describe('<EditorGround> ground-plane grid toggle (#224)', () => {
   it('defaults to OFF for a non-empty scene (no ViewportModeProvider)', async () => {
     const graph = createSceneGraphFromTscnScene({ nodes: [makeMeshInstance('Cube')] });
     const renderer = await ReactThreeTestRenderer.create(
       <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
         <SelectionProvider>
-          <TscnSceneContents />
+          <TscnSceneContents>
+            <EditorGround />
+          </TscnSceneContents>
         </SelectionProvider>
       </HierarchyProvider>
     );
@@ -48,7 +51,9 @@ describe('<TscnSceneContents> ground-plane grid toggle (#224)', () => {
       <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
         <SelectionProvider>
           <ViewShowProvider>
-            <TscnSceneContents />
+            <TscnSceneContents>
+              <EditorGround />
+            </TscnSceneContents>
           </ViewShowProvider>
         </SelectionProvider>
       </HierarchyProvider>
@@ -62,7 +67,9 @@ describe('<TscnSceneContents> ground-plane grid toggle (#224)', () => {
       <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
         <SelectionProvider>
           <ViewShowProvider show={{ grid: true }}>
-            <TscnSceneContents />
+            <TscnSceneContents>
+              <EditorGround />
+            </TscnSceneContents>
           </ViewShowProvider>
         </SelectionProvider>
       </HierarchyProvider>
@@ -73,7 +80,9 @@ describe('<TscnSceneContents> ground-plane grid toggle (#224)', () => {
   it('does not double up with the empty-scene indicator grid when both would apply', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <ViewShowProvider show={{ grid: true }}>
-        <TscnSceneContents />
+        <TscnSceneContents>
+          <EditorGround />
+        </TscnSceneContents>
       </ViewShowProvider>
     );
     // Empty scene already shows its own grid regardless of the toggle;
@@ -90,7 +99,9 @@ describe('<TscnSceneContents> ground-plane grid toggle (#224)', () => {
       <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
         <SelectionProvider>
           <ViewShowProvider show={{ grid: true }}>
-            <TscnSceneContents />
+            <TscnSceneContents>
+              <EditorGround />
+            </TscnSceneContents>
           </ViewShowProvider>
         </SelectionProvider>
       </HierarchyProvider>
@@ -98,7 +109,11 @@ describe('<TscnSceneContents> ground-plane grid toggle (#224)', () => {
     const contentGrid = contentGridRenderer.scene.findByType('GridHelper');
     expect((contentGrid.instance as unknown as THREE.Object3D).userData.tscnEmptyState).toBe(true);
 
-    const emptyStateRenderer = await ReactThreeTestRenderer.create(<TscnSceneContents />);
+    const emptyStateRenderer = await ReactThreeTestRenderer.create(
+      <TscnSceneContents>
+        <EditorGround />
+      </TscnSceneContents>
+    );
     const emptyStateGrid = emptyStateRenderer.scene.findByType('GridHelper');
     expect((emptyStateGrid.instance as unknown as THREE.Object3D).userData.tscnEmptyState).toBe(true);
   });

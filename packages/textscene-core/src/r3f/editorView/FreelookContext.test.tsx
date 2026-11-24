@@ -1,17 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { act, render } from '@testing-library/react';
 import { FreelookProvider, useFreelookState } from './FreelookContext';
-import { RegisteredFreelook } from './FreelookContext.testkit';
-import { Freelook, type FreelookControl } from './freelook';
-
-/** A canvas's freelook whose toggle the browser always grants. */
-function grantedFreelook(freelook = new Freelook()): FreelookControl {
-  return {
-    toggle: () => freelook.setToggled(!freelook.isToggled),
-    getState: freelook.getState,
-    subscribe: freelook.subscribe,
-  };
-}
+import { grantedFreelook, RegisteredFreelook } from './FreelookContext.testkit';
 
 /** A probe of the state the speed readout reads, and the state it last read. */
 function freelookProbe() {

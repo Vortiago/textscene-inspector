@@ -26,15 +26,20 @@ export const LAYERS = [
 
 const withoutExtension = (path) => path.replace(/\.(?:[cm]?js|jsx|tsx?)$/, '');
 
+const FOLDERS = LAYERS.flatMap((layer, index) =>
+  layer.paths.filter((path) => path.endsWith('/')).map((folder) => ({ folder, index }))
+);
+const FILES = new Map(
+  LAYERS.flatMap((layer, index) =>
+    layer.paths.filter((path) => !path.endsWith('/')).map((file) => [withoutExtension(file), index])
+  )
+);
+
 /** The index of the layer that holds `corePath`, a path from core's `src/`. */
 function layerIndexOf(corePath) {
   const path = withoutExtension(corePath);
-  const index = LAYERS.findIndex((layer) =>
-    layer.paths.some((entry) =>
-      entry.endsWith('/') ? `${path}/`.startsWith(entry) : path === withoutExtension(entry)
-    )
-  );
-  return Math.max(index, 0);
+  const asFolder = `${path}/`;
+  return FILES.get(path) ?? FOLDERS.find(({ folder }) => asFolder.startsWith(folder))?.index ?? 0;
 }
 
 /** The path from core's `src/` of `file`, or null for a file outside core. */
@@ -71,10 +76,8 @@ const importDown = {
       });
     };
     return {
-      ImportDeclaration: (node) => check(node.source),
-      ExportNamedDeclaration: (node) => check(node.source),
-      ExportAllDeclaration: (node) => check(node.source),
-      ImportExpression: (node) => check(node.source),
+      'ImportDeclaration, ExportNamedDeclaration, ExportAllDeclaration, ImportExpression': (node) =>
+        check(node.source),
     };
   },
 };

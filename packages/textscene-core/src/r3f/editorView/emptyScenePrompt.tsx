@@ -1,11 +1,11 @@
 import type { RefObject } from 'react';
 import type * as THREE from 'three';
-import type { TscnNode } from '../parser/types';
-import { parseLabel3D } from '../nodes/3d/label3d/parser';
-import type { Label3DProperties } from '../nodes/3d/label3d/types';
-import LabelGlyphs from '../nodes/3d/label3d/LabelGlyphs';
-import { withGeometryInstance } from './visibilityRange/geometryInstance';
-import type { NodeComponentProps } from './NodeComponentRegistry';
+import type { TscnNode } from '../../parser/types';
+import { parseLabel3D } from '../../nodes/3d/label3d/parser';
+import type { Label3DProperties } from '../../nodes/3d/label3d/types';
+import LabelGlyphs from '../../nodes/3d/label3d/LabelGlyphs';
+import { withGeometryInstance } from '../visibilityRange/geometryInstance';
+import type { NodeComponentProps } from '../NodeComponentRegistry';
 
 // Parsed, not written out: the parser holds Label3D's defaults for every property not named here.
 const PROMPT_NODE: TscnNode = {

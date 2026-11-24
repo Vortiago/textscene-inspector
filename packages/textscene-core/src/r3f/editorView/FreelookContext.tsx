@@ -1,12 +1,5 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useRef,
-  useSyncExternalStore,
-  type ReactNode,
-} from 'react';
+import { createContext, useContext, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { createExternalStore } from '../../utils/externalStore.js';
 import type { FreelookControl, FreelookState } from './freelook.js';
 
 interface FreelookSlot {
@@ -23,39 +16,32 @@ FreelookContext.displayName = 'FreelookContext';
 
 /** Hands the 3D canvas's freelook to the speed readout. A newer canvas may take the slot first. */
 export function FreelookProvider({ children }: { children: ReactNode }) {
-  const slot = useRef<FreelookControl | null>(null);
-  const listeners = useRef(new Set<() => void>());
-  const notify = useCallback(() => {
-    for (const listener of listeners.current) listener();
-  }, []);
-  const register = useCallback(
-    (control: FreelookControl) => {
-      slot.current = control;
-      notify();
-      return () => {
-        if (slot.current !== control) return;
-        slot.current = null;
-        notify();
-      };
-    },
-    [notify]
+  const [slot] = useState(() => createExternalStore<FreelookControl | null>(null));
+  const value = useMemo<FreelookSlot>(
+    () => ({
+      register: (control) => {
+        slot.set(control);
+        return () => {
+          if (slot.get() === control) slot.set(null);
+        };
+      },
+      state: () => slot.get()?.getState() ?? null,
+      subscribe: (listener) => {
+        // The control in the slot changes with the canvas, so the state subscription follows it.
+        let unsubscribeState = slot.get()?.subscribe(listener);
+        const unsubscribeSlot = slot.subscribe(() => {
+          unsubscribeState?.();
+          unsubscribeState = slot.get()?.subscribe(listener);
+          listener();
+        });
+        return () => {
+          unsubscribeSlot();
+          unsubscribeState?.();
+        };
+      },
+    }),
+    [slot]
   );
-  const state = useCallback(() => slot.current?.getState() ?? null, []);
-  const subscribe = useCallback((listener: () => void) => {
-    // The control in the slot changes with the canvas, so the state subscription follows it.
-    let unsubscribeState = slot.current?.subscribe(listener);
-    const onSlotChange = () => {
-      unsubscribeState?.();
-      unsubscribeState = slot.current?.subscribe(listener);
-      listener();
-    };
-    listeners.current.add(onSlotChange);
-    return () => {
-      listeners.current.delete(onSlotChange);
-      unsubscribeState?.();
-    };
-  }, []);
-  const value = useMemo(() => ({ register, state, subscribe }), [register, state, subscribe]);
   return <FreelookContext.Provider value={value}>{children}</FreelookContext.Provider>;
 }
 
