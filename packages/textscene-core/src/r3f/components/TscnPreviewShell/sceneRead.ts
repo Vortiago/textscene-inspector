@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { useSceneTreeSubscription } from '../../currentCamera.js';
 import type { NodeHandle } from '../../../scene/nodeHandle.js';
 import type { ParseResult } from '../../../scene/parseScene.js';
@@ -31,14 +31,30 @@ export function useSceneAnswer<T>(scene: Scene | undefined, read: SceneRead<T>):
   const observeTree = useSceneTreeSubscription(scene);
   const parse = useSyncExternalStore(observeTree, () => scene?.parse() ?? null);
   const shape = useSyncExternalStore(observeTree, () => (scene ? shapeOf(sceneRootOf(scene)) : ''));
-  const [landed, setLanded] = useState<{ scene: Scene | undefined; answer: SceneAnswer<T> } | null>(null);
-  useEffect(() => {
-    let isLatest = true;
+  const start = useCallback((): LandingRead<SceneAnswer<T>> => {
     const root = scene ? sceneRootOf(scene) : null;
-    const reading = root && scene ? sharedRead(scene, read, root, parse, shape) : Promise.resolve(null);
-    reading
+    const value = root && scene ? sharedRead(scene, read, root, parse, shape) : Promise.resolve(null);
+    return { root, answer: value.then((landed) => ({ parse, value: landed })) };
+  }, [scene, read, parse, shape]);
+  return useLandedRead(scene, start);
+}
+
+/** An async read over the nodes below `root`, which a new text frees. */
+export interface LandingRead<T> {
+  readonly root: NodeHandle | null;
+  readonly answer: Promise<T>;
+}
+
+/** The last answer that landed for this scene, read again on each new `start`. Null until one lands. */
+export function useLandedRead<T>(scene: Scene | undefined, start: (() => LandingRead<T>) | null): T | null {
+  const [landed, setLanded] = useState<{ scene: Scene | undefined; answer: T } | null>(null);
+  useEffect(() => {
+    if (!start) return undefined;
+    let isLatest = true;
+    const { root, answer } = start();
+    answer
       .then((value) => {
-        if (isLatest) setLanded({ scene, answer: { parse, value } });
+        if (isLatest) setLanded({ scene, answer: value });
       })
       .catch((error: unknown) => {
         // A new text frees the nodes during the read, and the read runs again over the new ones.
@@ -47,7 +63,7 @@ export function useSceneAnswer<T>(scene: Scene | undefined, read: SceneRead<T>):
     return () => {
       isLatest = false;
     };
-  }, [scene, read, parse, shape]);
+  }, [scene, start]);
   return landed && landed.scene === scene ? landed.answer : null;
 }
 

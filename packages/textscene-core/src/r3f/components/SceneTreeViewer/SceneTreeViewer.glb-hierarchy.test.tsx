@@ -1,7 +1,7 @@
 import { join } from 'node:path';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { fileBytes } from '../../../resources/testing/fileBytes';
-import { expandAllRows, renderSceneTree, rowAt, type TreeFiles } from './sceneTree.testkit';
+import { expandAllRows, renderSceneTree, rowAt, rowPaths, type TreeFiles } from './sceneTree.testkit';
 
 /** Rig, its mesh Torso, and Arm below Torso. */
 const RIG_GLB = fileBytes(
@@ -17,17 +17,9 @@ const WRAPPER = `[gd_scene format=3]
 
 const FILES: TreeFiles = { 'res://rig.glb': RIG_GLB, 'res://wrapper.tscn': WRAPPER };
 
-/** Renders the tree once the node at `lastLoaded` is in the scene, with every row expanded. */
 async function renderTree(source: string, lastLoaded: string, rootScenePath?: string) {
   const { scene } = await renderSceneTree(source, { files: FILES, rootScenePath });
-  await vi.waitFor(() => expect(scene.getNodeOrNull(lastLoaded)).not.toBeNull());
-  await expandAllRows(scene);
-}
-
-function rowPaths(): string[] {
-  return Array.from(document.querySelectorAll('[data-node-path]')).map((row) =>
-    row.getAttribute('data-node-path')!
-  );
+  await expandAllRows(scene, lastLoaded);
 }
 
 describe('<SceneTreeViewer> glTF rows', () => {

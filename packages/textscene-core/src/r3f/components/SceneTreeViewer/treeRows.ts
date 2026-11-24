@@ -1,4 +1,5 @@
 import type { NodeHandle } from '../../../scene/nodeHandle.js';
+import { isNodeHandle } from '../../../scene/nodeMethods.js';
 import { livePathOf } from '../../../scene/nodePathWalk.js';
 
 /** The classes that have the eye (scene_tree_editor.cpp:608). */
@@ -22,15 +23,26 @@ const CHAINS: readonly VisibilityChain[] = ['Node3D', 'CanvasItem', 'CanvasLayer
 
 /** The dock's rows from the scene's root node. */
 export function treeRowsOf(root: NodeHandle): Promise<TreeRow> {
-  return rowOf(root, root);
+  return rowOf({ root, editableOwners: new Map() }, root);
 }
 
-async function rowOf(root: NodeHandle, node: NodeHandle): Promise<TreeRow> {
+/** Every row below and including `row`, in the dock's pre-order. */
+export function rowsOf(row: TreeRow | null): TreeRow[] {
+  return row ? [row, ...row.children.flatMap(rowsOf)] : [];
+}
+
+/** One walk: the scene root, and `is_editable_instance` of each owner it asked, as siblings share one. */
+interface RowWalk {
+  readonly root: NodeHandle;
+  readonly editableOwners: Map<NodeHandle, Promise<boolean>>;
+}
+
+async function rowOf(walk: RowWalk, node: NodeHandle): Promise<TreeRow> {
   const [chain, isViewport, sceneFilePath, children] = await Promise.all([
     chainOf(node),
     node.call('is_class', 'Viewport'),
-    node === root ? '' : node.get('scene_file_path'),
-    listedChildrenOf(root, node),
+    node === walk.root ? '' : node.get('scene_file_path'),
+    listedChildrenOf(walk, node),
   ]);
   return {
     node,
@@ -40,7 +52,7 @@ async function rowOf(root: NodeHandle, node: NodeHandle): Promise<TreeRow> {
     chain,
     isViewport: isViewport === true,
     sceneFilePath: typeof sceneFilePath === 'string' ? sceneFilePath : '',
-    children: await Promise.all(children.map((child) => rowOf(root, child))),
+    children: await Promise.all(children.map((child) => rowOf(walk, child))),
   };
 }
 
@@ -49,16 +61,21 @@ async function chainOf(node: NodeHandle): Promise<VisibilityChain | null> {
   return CHAINS[answers.indexOf(true)] ?? null;
 }
 
-async function listedChildrenOf(root: NodeHandle, node: NodeHandle): Promise<readonly NodeHandle[]> {
+async function listedChildrenOf(walk: RowWalk, node: NodeHandle): Promise<readonly NodeHandle[]> {
   const children = node.getChildren();
-  const listed = await Promise.all(children.map((child) => isListed(root, child)));
+  const listed = await Promise.all(children.map((child) => isListed(walk, child)));
   return children.filter((_, index) => listed[index]);
 }
 
 // scene_tree_editor.cpp:283-290: an owned node of the scene, or a node of an editable instance.
-async function isListed(root: NodeHandle, node: NodeHandle): Promise<boolean> {
+async function isListed(walk: RowWalk, node: NodeHandle): Promise<boolean> {
   const owner = await node.call('get_owner');
-  if (owner === root) return true;
-  if (!owner || typeof owner !== 'object' || !('getChildren' in owner)) return false;
-  return (await root.call('is_editable_instance', owner)) === true;
+  if (owner === walk.root) return true;
+  if (!isNodeHandle(owner)) return false;
+  let editable = walk.editableOwners.get(owner);
+  if (!editable) {
+    editable = walk.root.call('is_editable_instance', owner).then((answer) => answer === true);
+    walk.editableOwners.set(owner, editable);
+  }
+  return editable;
 }

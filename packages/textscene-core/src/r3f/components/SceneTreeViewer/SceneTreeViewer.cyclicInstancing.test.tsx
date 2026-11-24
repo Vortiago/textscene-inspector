@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { fireEvent, screen } from '@testing-library/react';
-import { expandAllRows, renderSceneTree, rowAt } from './sceneTree.testkit';
+import { expandAllRows, renderSceneTree, rowAt, rowPaths } from './sceneTree.testkit';
 
 /** `res://a.tscn`: a root with two children that each instance `res://a.tscn`, both editable. */
 const SELF_SCENE = `[gd_scene format=3]
@@ -24,12 +24,6 @@ async function renderSelfInstancing() {
     rootScenePath: 'res://a.tscn',
   });
   await expandAllRows(scene);
-}
-
-function rowPaths(): string[] {
-  return Array.from(document.querySelectorAll('[data-node-path]')).map((row) =>
-    row.getAttribute('data-node-path')!
-  );
 }
 
 // Godot 4.6.3 refuses both ext_resources and lists Root alone (measured). Each instance here stays a leaf.

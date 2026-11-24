@@ -6,8 +6,7 @@ const scene = (body: string) => `[gd_scene format=3]\n\n${body}`;
 
 async function renderTree(source: string, files: TreeFiles = {}, lastLoaded?: string) {
   const rendered = await renderSceneTree(scene(source), { files });
-  if (lastLoaded) await vi.waitFor(() => expect(rendered.scene.getNodeOrNull(lastLoaded)).not.toBeNull());
-  await expandAllRows(rendered.scene);
+  await expandAllRows(rendered.scene, lastLoaded);
 }
 
 const COIN_FILES: TreeFiles = {

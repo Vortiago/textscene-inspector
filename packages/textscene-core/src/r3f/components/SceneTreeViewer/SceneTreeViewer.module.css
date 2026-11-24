@@ -260,12 +260,6 @@
   min-width: 0;
 }
 
-.transformIcon {
-  color: var(--tsi-value-mono);
-  font-size: var(--tsi-font-xs);
-  flex-shrink: 0;
-}
-
 .instanceIcon {
   font-size: 0.75rem;
   flex-shrink: 0;

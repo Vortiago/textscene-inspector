@@ -45,7 +45,7 @@ export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
   const { instanceRef } = entry;
   const path = selectedNodePath;
   const registration = nodeRegistry.getRegistration(node.type);
-  // See TreeNode: a parser registration does not mean the node renders.
+  // A parser registration does not mean the node renders.
   const isNotRendered = rendersOwnVisual(node.type) === 'not-implemented';
 
   const sections = registration?.propertyFormatter

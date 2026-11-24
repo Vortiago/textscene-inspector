@@ -43,8 +43,8 @@ export interface PortedMethod {
   run(target: MethodTarget, args: readonly CallArgument[], name: string): CallResult | Promise<CallResult>;
 }
 
-function isNodeHandle(value: CallArgument): value is NodeHandle {
-  return typeof value === 'object' && 'getChildren' in value;
+export function isNodeHandle(value: unknown): value is NodeHandle {
+  return typeof value === 'object' && value !== null && 'getChildren' in value;
 }
 
 function cannotConvert(name: string, from: string, to: string): Error {
