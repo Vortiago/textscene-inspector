@@ -1,19 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import type { ThreeEvent } from '@react-three/fiber';
 import { useSelection } from '../contexts/SelectionContext.js';
 import { useCanvasWorkspace } from '../contexts/CanvasWorkspaceContext.js';
 import { useHostPick } from '../hostSelection/HostSelection.js';
 import { resolvePathFromObject } from './resolvePathFromObject.js';
-import { withAncestorsExpanded } from '../../utils/nodePath.js';
 
 export interface UseViewportSelectionOptions {
   /** Pixels of pointer travel before a click is treated as a drag. Defaults to 5. */
   dragThresholdPx?: number;
-  /**
-   * If true, auto-expand the selected node's ancestors in the tree.
-   * Defaults to true so canvas-driven selection reveals the row.
-   */
-  autoExpandAncestors?: boolean;
 }
 
 /** The pointer handlers for the viewport's single delegated root group. */
@@ -32,37 +26,19 @@ export interface UseViewportSelectionResult {
 const DEFAULT_DRAG_THRESHOLD_PX = 5;
 
 export function useViewportSelection(options: UseViewportSelectionOptions = {}): UseViewportSelectionResult {
-  const { dragThresholdPx = DEFAULT_DRAG_THRESHOLD_PX, autoExpandAncestors = true } = options;
-  const { setSelectedNodePath, expandedNodePaths, setExpandedNodePaths, objectPathMap } = useSelection();
+  const { dragThresholdPx = DEFAULT_DRAG_THRESHOLD_PX } = options;
+  const { setSelectedNodePath, objectPathMap } = useSelection();
   const host = useHostPick();
   // The 2D workspace picks no node yet, so a click on a sprite there would read as a click on nothing.
   const takesMiss = useCanvasWorkspace() === '3d';
 
   const downPosRef = useRef<{ x: number; y: number } | null>(null);
-  const expandedRef = useRef<ReadonlySet<string>>(expandedNodePaths);
-
-  useEffect(() => {
-    expandedRef.current = expandedNodePaths;
-  }, [expandedNodePaths]);
-
-  const select = useCallback(
-    (nodePath: string) => {
-      setSelectedNodePath(nodePath);
-      if (!autoExpandAncestors) return;
-      const expanded = withAncestorsExpanded(expandedRef.current, nodePath);
-      if (expanded !== expandedRef.current) setExpandedNodePaths(expanded);
-    },
-    [setSelectedNodePath, autoExpandAncestors, setExpandedNodePaths]
-  );
-
   const pick = useCallback(
     (nodePath: string | null) => {
       host.picked(nodePath);
-      if (host.ownsSelection) return;
-      if (nodePath === null) setSelectedNodePath(null);
-      else select(nodePath);
+      if (!host.ownsSelection) setSelectedNodePath(nodePath);
     },
-    [host, select, setSelectedNodePath]
+    [host, setSelectedNodePath]
   );
 
   const handlers = useMemo<DelegatedPointerHandlers>(

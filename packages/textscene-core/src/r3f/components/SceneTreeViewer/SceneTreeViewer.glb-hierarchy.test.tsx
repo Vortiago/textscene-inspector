@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { SceneTreeViewer } from './SceneTreeViewer';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { SelectionProvider } from '../../contexts/SelectionContext';
+import { ExpandedRowsProvider } from './expandedRows';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
@@ -33,9 +34,11 @@ function wrap(loader: ResourceLoader, graph: ReturnType<typeof createSceneGraphF
     return (
       <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
         <SelectionProvider>
-          <ResourceLoaderProvider loader={loader}>
-            <MissingResourcesProvider>{children}</MissingResourcesProvider>
-          </ResourceLoaderProvider>
+          <ExpandedRowsProvider>
+            <ResourceLoaderProvider loader={loader}>
+              <MissingResourcesProvider>{children}</MissingResourcesProvider>
+            </ResourceLoaderProvider>
+          </ExpandedRowsProvider>
         </SelectionProvider>
       </HierarchyProvider>
     );

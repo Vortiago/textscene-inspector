@@ -9,6 +9,7 @@ import type { ReactNode } from 'react';
 import { SceneTreeViewer } from './SceneTreeViewer';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { SelectionProvider, useSelectedNodePath } from '../../contexts/SelectionContext';
+import { ExpandedRowsProvider } from './expandedRows';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import type { TscnNode } from '../../../parser/types';
 
@@ -20,7 +21,9 @@ function withPanel(graph: ReturnType<typeof createSceneGraphFromTscnScene>) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
       <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
-        <SelectionProvider>{children}</SelectionProvider>
+        <SelectionProvider>
+          <ExpandedRowsProvider>{children}</ExpandedRowsProvider>
+        </SelectionProvider>
       </HierarchyProvider>
     );
   };

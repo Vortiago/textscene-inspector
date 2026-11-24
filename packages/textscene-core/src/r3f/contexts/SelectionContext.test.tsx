@@ -14,12 +14,11 @@ function wrap({ children }: { children: ReactNode }) {
 }
 
 describe('SelectionContext', () => {
-  it('starts with no selection and no expanded paths', () => {
+  it('starts with no selection', () => {
     const { result } = renderHook(() => ({ selection: useSelection(), selected: useSelectedNodePath() }), {
       wrapper: wrap,
     });
     expect(result.current.selected).toBeNull();
-    expect(result.current.selection.expandedNodePaths.size).toBe(0);
   });
 
   it('updates the selected path when setSelectedNodePath is called', () => {
@@ -28,22 +27,6 @@ describe('SelectionContext', () => {
     });
     act(() => result.current.selection.setSelectedNodePath('Root/Child'));
     expect(result.current.selected).toBe('Root/Child');
-  });
-
-  it('toggles expandedNodePaths', () => {
-    const { result } = renderHook(() => useSelection(), { wrapper: wrap });
-    act(() => result.current.toggleExpandedNodePath('Root'));
-    expect(result.current.expandedNodePaths.has('Root')).toBe(true);
-    act(() => result.current.toggleExpandedNodePath('Root'));
-    expect(result.current.expandedNodePaths.has('Root')).toBe(false);
-  });
-
-  it('setExpandedNodePaths replaces the whole set', () => {
-    const { result } = renderHook(() => useSelection(), { wrapper: wrap });
-    act(() => result.current.setExpandedNodePaths(new Set(['A', 'A/B', 'A/B/C'])));
-    expect(result.current.expandedNodePaths.size).toBe(3);
-    act(() => result.current.setExpandedNodePaths(new Set()));
-    expect(result.current.expandedNodePaths.size).toBe(0);
   });
 
   it('throws when used outside a SelectionProvider', () => {

@@ -3,7 +3,7 @@ import * as logger from '../../../logger.js';
 import type { TscnNode, TscnExternalResource } from '../../../parser/types.js';
 import { getAncestorPaths } from '../../../utils/nodePath.js';
 import { useHierarchy } from '../../contexts/HierarchyContext.js';
-import { useSelection } from '../../contexts/SelectionContext.js';
+import { useExpandedRows } from './expandedRows.js';
 import { useSelectPath, useSelectedPath } from '../TscnPreviewShell/previewSelection.js';
 import { absolutePathOf } from '../../../scene/nodePathWalk.js';
 import { useSeatedRoots, useSharedLiveTree } from '../../useLiveSceneTree.js';
@@ -32,7 +32,11 @@ export interface SceneTreeViewerProps {
 
 export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewerProps) {
   const { sceneGraph, scene } = useHierarchy();
-  const { expandedNodePaths, setExpandedNodePaths, toggleExpandedNodePath } = useSelection();
+  const {
+    paths: expandedNodePaths,
+    set: setExpandedNodePaths,
+    toggle: toggleExpandedNodePath,
+  } = useExpandedRows();
   const selectedNodePath = useSelectedPath();
   const selectPath = useSelectPath();
   // The eye calls `set_visible` on the node (scene_tree_editor.cpp:241-247).

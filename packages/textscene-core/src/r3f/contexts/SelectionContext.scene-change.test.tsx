@@ -13,18 +13,16 @@ function useSelectionAndPath() {
 }
 
 describe('SelectionContext.clearAll (WI-UX-5)', () => {
-  it('resets selected and expanded and empties the ref-map in one call', () => {
+  it('clears the outlined path and empties the ref-map in one call', () => {
     const { result } = renderHook(useSelectionAndPath, { wrapper: wrap });
     const fakeObject = new THREE.Object3D();
 
     act(() => {
       result.current.selection.setSelectedNodePath('Root/Mesh');
-      result.current.selection.toggleExpandedNodePath('Root');
       result.current.selection.registerNodeObject('Root/Mesh', fakeObject);
     });
 
     expect(result.current.selectedNodePath).toBe('Root/Mesh');
-    expect(result.current.selection.expandedNodePaths.has('Root')).toBe(true);
     expect(result.current.selection.nodeObjectMap.has('Root/Mesh')).toBe(true);
 
     act(() => {
@@ -32,11 +30,10 @@ describe('SelectionContext.clearAll (WI-UX-5)', () => {
     });
 
     expect(result.current.selectedNodePath).toBeNull();
-    expect(result.current.selection.expandedNodePaths.size).toBe(0);
     expect(result.current.selection.nodeObjectMap.size).toBe(0);
   });
 
-  it('is idempotent — calling clearAll on an already-empty state does not throw', () => {
+  it('clears an already empty state without a throw', () => {
     const { result } = renderHook(useSelectionAndPath, { wrapper: wrap });
 
     act(() => {
@@ -45,7 +42,6 @@ describe('SelectionContext.clearAll (WI-UX-5)', () => {
     });
 
     expect(result.current.selectedNodePath).toBeNull();
-    expect(result.current.selection.expandedNodePaths.size).toBe(0);
     expect(result.current.selection.nodeObjectMap.size).toBe(0);
   });
 });

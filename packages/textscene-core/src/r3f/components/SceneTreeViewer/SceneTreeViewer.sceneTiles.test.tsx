@@ -9,6 +9,7 @@ import type { ReactNode } from 'react';
 import { SceneTreeViewer } from './SceneTreeViewer';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { SelectionProvider } from '../../contexts/SelectionContext';
+import { ExpandedRowsProvider } from './expandedRows';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
@@ -69,9 +70,11 @@ async function renderPanel(level: string) {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <HierarchyProvider value={{ sceneGraph, panelId: 'p' }}>
       <SelectionProvider>
-        <ResourceLoaderProvider loader={fake.loader}>
-          <MissingResourcesProvider>{children}</MissingResourcesProvider>
-        </ResourceLoaderProvider>
+        <ExpandedRowsProvider>
+          <ResourceLoaderProvider loader={fake.loader}>
+            <MissingResourcesProvider>{children}</MissingResourcesProvider>
+          </ResourceLoaderProvider>
+        </ExpandedRowsProvider>
       </SelectionProvider>
     </HierarchyProvider>
   );

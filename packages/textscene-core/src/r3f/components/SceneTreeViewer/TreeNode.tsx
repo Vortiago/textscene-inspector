@@ -4,7 +4,7 @@ import type { LiveChildGroup } from '../../liveSceneTree.js';
 import type { SceneScope, TscnNode, TscnExternalResource } from '../../../parser/types.js';
 import { joinPath } from '../../../utils/nodePath.js';
 import { rendersOwnVisual } from '../../nodeSupport.js';
-import { useSelection } from '../../contexts/SelectionContext.js';
+import { useExpandedRows } from './expandedRows.js';
 import { useHoverPath, useSelectPath, useSelectedPath } from '../TscnPreviewShell/previewSelection.js';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { spaceFamilyOf } from '../../../godot/scene/parentSpace.js';
@@ -185,7 +185,7 @@ function TreeNodeImpl({
     />
   );
 
-  const { expandedNodePaths, toggleExpandedNodePath } = useSelection();
+  const { paths: expandedNodePaths, toggle: toggleExpandedNodePath } = useExpandedRows();
   const selectPath = useSelectPath();
   const hoverPath = useHoverPath();
 
