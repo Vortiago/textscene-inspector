@@ -16,3 +16,7 @@ export function useUndrawnMeshTypes(livePath: string): readonly string[] {
 export function useIsEmptyShape(livePath: string): boolean {
   return useUndrawnNode(livePath)?.isEmptyShape ?? false;
 }
+
+export function useShaderErrors(livePath: string): readonly string[] {
+  return useUndrawnNode(livePath)?.shaderErrors ?? [];
+}

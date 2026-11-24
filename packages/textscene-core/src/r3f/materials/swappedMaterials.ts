@@ -27,7 +27,7 @@ export const FadedSurfacesContext = createContext<FadedSurfaces | null>(null);
 FadedSurfacesContext.displayName = 'FadedSurfacesContext';
 
 /** What a material attaches to: a mesh, whose `material` holds one per draw group when it has several. */
-interface MaterialHost {
+export interface MaterialHost {
   material: THREE.Material | THREE.Material[];
 }
 
@@ -37,7 +37,7 @@ export type MaterialAttach = (host: MaterialHost, material: THREE.Material) => (
 const ATTACH_PATTERN = /^material(?:-(\d+))?$/;
 
 /** The draw group an R3F `attach` key names: null for the mesh's one material. */
-function drawGroupOf(attach: string | undefined): number | null {
+export function drawGroupOf(attach: string | undefined): number | null {
   const match = ATTACH_PATTERN.exec(attach ?? 'material');
   if (!match) throw new Error(`expected a material attach key such as material-1, got ${attach}`);
   return match[1] === undefined ? null : Number(match[1]);
@@ -113,13 +113,24 @@ class SwappedMaterials implements FadedSurface {
     const drawn = forcesAlphaPass(this.fade) && alphaPass ? alphaPass : unfaded;
     if (drawn === alphaPass) alphaPass.opacity = unfadedOpacity.ownerValue * alpha;
     else unfadedOpacity.scaleBy(alpha);
-    if (this.drawGroup === null) {
-      host.material = drawn;
-      return;
-    }
-    if (!Array.isArray(host.material)) host.material = [];
-    host.material[this.drawGroup] = drawn;
+    placeMaterial(host, this.drawGroup, drawn);
   }
+}
+
+/** The material `host` draws `drawGroup` with now, if any. */
+export function materialAt(host: MaterialHost, drawGroup: number | null): THREE.Material | undefined {
+  if (drawGroup === null) return Array.isArray(host.material) ? undefined : host.material;
+  return Array.isArray(host.material) ? host.material[drawGroup] : undefined;
+}
+
+/** Puts `material` on `host` at `drawGroup`, or as its one material for null. */
+export function placeMaterial(host: MaterialHost, drawGroup: number | null, material: THREE.Material): void {
+  if (drawGroup === null) {
+    host.material = material;
+    return;
+  }
+  if (!Array.isArray(host.material)) host.material = [];
+  host.material[drawGroup] = material;
 }
 
 /**

@@ -29,16 +29,19 @@ An emissive sphere at `emission_energy = 2.0` glows cyan in both, and the previe
 - **Approximated** `emission_intensity` is ignored. `emission_energy_multiplier` alone drives the strength.
 
 ## Emission texture
+
 <!-- compare: image=unit-material-emission-add status=done fixture=unit-material-emission-add.tscn -->
 
 ADD emission with both a dark red colour and a texture. Godot emits `(emission + texture) * energy` (`material.cpp:1788`). The previewer adds the texel to the colour too, so the blue texel reads magenta and the green one amber.
 
 ## ViewportTexture in another slot
+
 <!-- compare: image=unit-sub-viewport-texture-emission status=done fixture=unit-sub-viewport-texture-emission.tscn -->
 
 A SubViewport's target in the emission slot, over a black albedo. A material binds every slot by RID, so the target glows as it draws through the albedo in `unit-sub-viewport-texture`. A target in a pass cycle draws the missing-texture material from any slot.
 
 ## ViewportTexture sampler state
+
 <!-- compare: image=unit-sub-viewport-texture-sampler status=done fixture=unit-sub-viewport-texture-sampler.tscn -->
 
 A SubViewport's 8x8 target on three unshaded quads. The material's sampler applies to the target as it does to any texture (`material.cpp:760`). `texture_repeat` wraps at the edge, `uv1_scale` tiles the target, and `texture_filter = 0` keeps its texels as blocks. Both engines draw the same three quads.
@@ -157,10 +160,16 @@ A material's `next_pass` draws one extra surface beside its own. Godot adds ever
 
 At equal `render_priority`, the two engines can disagree, and the measured case shows it. Godot's opaque sort packs the priority above the shader and material ids (`render_forward_clustered.h:517-526`). The chain's links then sort inside that bucket, and the material RID order decides. This previewer keeps the chain order instead, so its link covers its base: the order the `while` walk guarantees.
 
-- **Unimplemented** A stencil-reading link's own draw: the chain continues past it (`material.cpp:916-968`), and the stencil buffer itself stays unrendered.
+- **Unimplemented** A stencil-reading link's own draw: the chain continues past it (`material.cpp:916-968`). The 3D world buffer has a stencil buffer, which only a translated spatial shader's `stencil_mode` tests so far.
 - **Approximated** A transparent link or overlay draws at three's per-object order, so it sorts apart from every unrelated transparent draw, whatever their depths. Godot keeps one sort on the material's `render_priority` and the depth (`render_forward_clustered.h:713-717`), and the previewer reads no material's `render_priority`.
 - **Approximated** A GLB chain sibling never joins the range fade. `fadedMeshMaterials` tracks the clone's own slots, so a fading surface's link stays opaque while its surface fades.
 - **Unimplemented** `grow` offsets the colour pass's vertices only. The alpha-depth prepass and the shadow depth draw the un-offset position, where Godot's depth variant runs the same vertex body. `surfaceDepthMaterial` clones the depth base without the grow injection. The billboard offset records its depth injection at `materialBag.ts:235-236`.
+
+## Blend mode
+
+<!-- compare: image=material-blend-mul status=done fixture=unit-material-blend-mul.tscn -->
+
+`blend_mode = 3` (multiply) draws the surface colour times the colour behind it, with Godot's attachment: source factor `DST_COLOR`, destination factor `ZERO` (`material_storage.cpp:651-716`). An unshaded and a lit quad each cover an orange quad. Both engines draw the same darkened orange.
 
 ## Linting
 
@@ -176,7 +185,9 @@ The lenient parser never rejects. Each field falls back to Godot's default throu
 
 ## Known limitations
 
-- **Approximated** Under msaa_3d Disabled, alpha to coverage cuts the edge at alpha 0.5, where Godot's driver picks its own one-sample mask.
+- **Approximated** Under msaa_3d Disabled, alpha to coverage cuts at alpha 0.5, where lavapipe draws a 2 by 2 dither and another driver can differ.
+- **Approximated** Under msaa_3d, the previewer covers other samples than Godot does for an alpha between 0 and 1 (#2027).
+- **Approximated** Under msaa_3d 2X, the browser places the two samples elsewhere than Godot's Vulkan driver, so edges differ, where 4X matches.
 - **Approximated** Under msaa_3d, `ALPHA_TO_COVERAGE_AND_TO_ONE` stores the ramped alpha where Godot stores 1, so a transparent background shows the edge fainter.
 - **Approximated** `ALPHA_HASH` keeps about Godot's share of pixels but not the same pixels, as the ported hash's `fract(1e4 * sin())` rounds differently on each GPU (`scene_forward_aa_inc.glsl:3-39`).
 - **Shader missing** `proximity_fade_*` and `distance_fade_*` decide the pass but are not rendered, so the surface stays at full opacity.

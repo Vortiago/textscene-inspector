@@ -6,7 +6,7 @@ import { enumNamesByValue } from '../../classdb/enumNames.js';
  * `BaseMaterial3D::DepthTest` (`scene/resources/material.h:243-247`), as the integers a `.tscn`
  * stores for `depth_test`. The default is DEFAULT (`material.h:604`).
  */
-const DepthTest = {
+export const DepthTest = {
   DEFAULT: 0,
   INVERTED: 1,
 } as const;

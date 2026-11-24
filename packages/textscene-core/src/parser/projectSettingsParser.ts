@@ -11,6 +11,9 @@ import {
   splitTopLevel,
 } from '../godot/string/string.js';
 import { boolSlotValue } from '../godot/variant/variantBool.js';
+import { DEPTH_PREPASS_DISABLED_VENDORS } from '../godot/rendering/depthPrepassVendors.js';
+import type { ProjectSampling } from '../shaders/uniforms/samplerState.js';
+import type { RenderingMethod } from '../shaders/preprocessor/renderingMethod.js';
 import { dataDirectoryPath, extensionListPath } from '../godot/project/project.js';
 import { standardizeLocale } from '../godot/text/standardizeLocale.js';
 import { isLocaleRightToLeft } from '../godot/text/textServer.js';
@@ -24,6 +27,7 @@ import type { ContentScale } from '../nodes/windows/window/contentScale.js';
 import { colorOr } from '../utils/colorParser.js';
 import { perObject } from '../utils/perObject.js';
 import { enumOr, parseOptionalFloat, parseOptionalInt } from './valueParsers.js';
+import { DEFAULT_TIME_ROLLOVER_SECONDS } from '../shaders/time/shaderClock.js';
 import { DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE, primitiveMeshTexelSize } from '../godot/scene/primitiveMesh.js';
 import {
   VOLUMETRIC_FOG_DEFAULTS,
@@ -274,6 +278,14 @@ export function projectPrimitiveMeshTexelSize(settings: ProjectSettings | null):
   return primitiveMeshTexelSize(setting ?? DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE);
 }
 
+/** `rendering/limits/time/time_rollover_secs`, which wraps `TIME` (`renderer_compositor_rd.cpp:113`). */
+export function projectTimeRolloverSeconds(settings: ProjectSettings | null): number {
+  return (
+    parseOptionalFloat(settings?.['rendering/limits/time/time_rollover_secs']) ??
+    DEFAULT_TIME_ROLLOVER_SECONDS
+  );
+}
+
 /**
  * `rendering/lightmapping/lightmap_gi/use_bicubic_filter`, which every lightmap read takes
  * (`renderer_scene_render_rd.cpp:1732`), or Godot's default for an absent or malformed value.
@@ -419,6 +431,20 @@ export function projectAnisotropicFilteringLevel(settings: ProjectSettings | nul
   );
 }
 
+/** The `default_filters` settings every material sampler reads (`material_storage.cpp:2455-2470`). */
+export function projectSampling(settings: ProjectSettings | null): ProjectSampling {
+  return {
+    anisotropicFilteringLevel: projectAnisotropicFilteringLevel(settings),
+    useNearestMipmapFilter:
+      boolSlotValue(settings?.['rendering/textures/default_filters/use_nearest_mipmap_filter']) === true,
+  };
+}
+
+/** `rendering/renderer/rendering_method` as written, Forward+ with no key. No feature override is read. */
+export function projectRenderingMethod(settings: ProjectSettings | null): RenderingMethod {
+  return settings?.['rendering/renderer/rendering_method'] ?? 'forward_plus';
+}
+
 /** `RS::DECAL_FILTER_LINEAR_MIPMAPS`, Godot's default `rendering/textures/decals/filter` (`rendering_server.cpp:3804`). */
 const DEFAULT_DECAL_FILTER = 3;
 
@@ -481,6 +507,11 @@ export function projectEmbedsSubwindows(settings: ProjectSettings | null): boole
  */
 export function projectDrawsDepthPrepass(settings: ProjectSettings | null): boolean {
   return boolSlotValue(settings?.['rendering/driver/depth_prepass/enable']) ?? true;
+}
+
+/** `rendering/driver/depth_prepass/disable_for_vendors`, which only gl_compatibility reads. */
+export function projectDepthPrepassDisabledVendors(settings: ProjectSettings | null): string {
+  return settings?.['rendering/driver/depth_prepass/disable_for_vendors'] ?? DEPTH_PREPASS_DISABLED_VENDORS;
 }
 
 /**

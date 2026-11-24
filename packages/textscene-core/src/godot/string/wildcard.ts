@@ -1,32 +1,43 @@
 /**
- * `String::matchn`: a wildcard match without case (`core/string/ustring.cpp:3524-3551`). `*` takes any run,
- * `?` takes one character that is not a dot, and an empty text or pattern matches nothing.
- *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { simpleUpper } from './simpleUpper';
+import { findUpper } from './caseMapping.js';
+import { codesOf } from './ustring/codes.js';
+import { unfolded, type Fold } from './ustring/search.js';
 
-const upper = (character: string): number => simpleUpper(character.codePointAt(0)!);
+const STAR = 0x2a;
+const QUESTION_MARK = 0x3f;
+const DOT = 0x2e;
 
-function matchesFrom(pattern: string[], at: number, text: string[], from: number): boolean {
-  if (at === pattern.length) return from === text.length;
-  const wildcard = pattern[at]!;
-  if (wildcard === '*') {
-    return (
-      matchesFrom(pattern, at + 1, text, from) ||
-      (from < text.length && matchesFrom(pattern, at, text, from + 1))
-    );
+/** `?` takes one code that is not a dot, any other code only itself. */
+const isOneMatch = (wildcard: number, code: number, fold: Fold) =>
+  wildcard === QUESTION_MARK ? code !== DOT : fold(code) === fold(wildcard);
+
+/** `_wildcard_match` (ustring.cpp:3524) as a loop, since a long text overflows a recursive one in V8. */
+function isMatch(pattern: readonly number[], text: readonly number[], fold: Fold): boolean {
+  let [at, from] = [0, 0];
+  let [star, starFrom] = [-1, 0];
+  while (from < text.length) {
+    if (pattern[at] === STAR) [star, starFrom, at] = [at, from, at + 1];
+    else if (at < pattern.length && isOneMatch(pattern[at]!, text[from]!, fold))
+      [at, from] = [at + 1, from + 1];
+    else if (star === -1) return false;
+    else [at, from, starFrom] = [star + 1, starFrom + 1, starFrom + 1];
   }
-  if (from === text.length) return false;
-  if (wildcard === '?') return text[from] !== '.' && matchesFrom(pattern, at + 1, text, from + 1);
-  return upper(text[from]!) === upper(wildcard) && matchesFrom(pattern, at + 1, text, from + 1);
+  while (pattern[at] === STAR) at++;
+  return at === pattern.length;
 }
 
-export function wildcardMatchNoCase(text: string, wildcard: string): boolean {
-  if (text === '' || wildcard === '') return false;
-  return matchesFrom([...wildcard], 0, [...text], 0);
-}
+const matches = (text: string, wildcard: string, fold: Fold) =>
+  text !== '' && wildcard !== '' && isMatch(codesOf(wildcard), codesOf(text), fold);
+
+/** `String::match`: an empty text or pattern matches nothing. */
+export const wildcardMatch = (text: string, wildcard: string): boolean => matches(text, wildcard, unfolded);
+
+/** `String::matchn`: `match` on the upper case of each code. */
+export const wildcardMatchNoCase = (text: string, wildcard: string): boolean =>
+  matches(text, wildcard, findUpper);

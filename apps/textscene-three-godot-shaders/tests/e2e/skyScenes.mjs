@@ -1,0 +1,499 @@
+import { readFileSync } from 'node:fs';
+import { FRAMES_BEFORE_READ } from '../../../../scripts/godot-probes/godotRun.mjs';
+import { SKY_MATERIALS_FILE } from '../../../../scripts/godot-probes/skyMaterials.mjs';
+
+/** Godot's default sky shader (`sky.cpp:807`). */
+export const DEFAULT_SKY = `shader_type sky;
+
+void sky() {
+	COLOR = vec3(0.0);
+}
+`;
+
+/** The rows of Godot's default sky shader. */
+const DEFAULT_SKY_ROWS = ['shader_type', 'shader_type sky', 'NODE_TYPE_SHADER', 'sky.sky.COLOR'];
+
+const SIZE = { width: 64, height: 64, chapter: 'sky.md' };
+
+/** A camera that looks along -Z, as both engines' cameras do, with Godot's default vertical field of view. */
+const AHEAD = { fov: 75, rotation: [0, 0, 0] };
+
+const SUN = { rotation: [-20, 10, 0], color: [1, 0.9, 0.7], energy: 1.5, size: 0.5 };
+
+/** A fog of Godot's default values but its colour, which the scenes below change one field at a time. */
+const FOG = { color: [0.8, 0.5, 0.3], energy: 1, sunScatter: 0, skyAffect: 1, aerialPerspective: 0 };
+
+/** One scene per non-default value: a light turned 180 degrees about Y puts its sun in view. */
+const VALUE_SCENES = [
+  { name: 'sky-fog-energy-0', fog: { ...FOG, energy: 0 } },
+  { name: 'sky-fog-energy-3', fog: { ...FOG, energy: 3 } },
+  { name: 'sky-fog-affect-0', fog: { ...FOG, skyAffect: 0 } },
+  { name: 'sky-fog-affect-half', fog: { ...FOG, skyAffect: 0.5, aerialPerspective: 0.5 } },
+  {
+    name: 'sky-sun-coloured',
+    camera: { fov: 75, rotation: [10, 0, 0] },
+    fog: { ...FOG, sunScatter: 1 },
+    lights: [{ rotation: [-10, 180, 0], color: [1, 0.2, 0.1], energy: 2.5, size: 4 }],
+  },
+  {
+    name: 'sky-sun-below',
+    camera: { fov: 75, rotation: [-40, 0, 0] },
+    fog: { ...FOG, sunScatter: 1 },
+    lights: [{ rotation: [30, 180, 0], color: [1, 1, 1], energy: 1, size: 8 }],
+  },
+  {
+    name: 'sky-sun-energy-0',
+    fog: { ...FOG, sunScatter: 1 },
+    lights: [{ rotation: [-5, 180, 0], color: [1, 1, 1], energy: 0, size: 8 }],
+  },
+  {
+    name: 'sky-camera-wide',
+    camera: { fov: 120, rotation: [45, -30, 0] },
+    fog: { ...FOG, sunScatter: 0.5, aerialPerspective: 0.5 },
+    lights: [
+      { rotation: [-50, -20, 0], color: [0.3, 1, 0.4], energy: 1.5, size: 3 },
+      { rotation: [-20, 160, 0], color: [1, 0.8, 0.2], energy: 0.6, size: 1 },
+    ],
+  },
+].map((scene) => ({
+  ...SIZE,
+  source: DEFAULT_SKY,
+  camera: AHEAD,
+  lights: [],
+  rows: DEFAULT_SKY_ROWS,
+  ...scene,
+}));
+
+/** A sky that shows `TIME` in red and green, a step of 1/8 s apart in green. */
+const TIME_SKY = `shader_type sky;
+
+void sky() {
+	COLOR = vec3(TIME * 0.5, fract(TIME * 4.0), 0.25);
+}
+`;
+
+/** The showcase's animated sky, which the slice's video records frame by frame beside Godot. */
+const TIME_CYCLE_SKY = `shader_type sky;
+
+void sky() {
+	vec3 phase = vec3(0.0, 2.0, 4.0);
+	COLOR = 0.5 + 0.5 * cos(TIME * vec3(1.0, 1.3, 1.7) * 2.0 + phase);
+	COLOR *= 0.75 + 0.25 * step(0.5, fract(TIME));
+}
+`;
+
+/** `TIME` after the frames a run draws before it reads: at 0, at a fraction, and past the rollover. */
+const TIME_SCENES = [
+  { name: 'sky-time-zero', clock: { fixedFps: 8, rolloverSeconds: 0.125 } },
+  { name: 'sky-time-fraction', clock: { fixedFps: 3, rolloverSeconds: 3600 } },
+  { name: 'sky-time-rolled-over', clock: { fixedFps: 3, rolloverSeconds: 1.2 } },
+  { name: 'sky-time-cycle', source: TIME_CYCLE_SKY, clock: { fixedFps: 3, rolloverSeconds: 3600 } },
+].map((scene) => ({
+  ...SIZE,
+  source: TIME_SKY,
+  camera: AHEAD,
+  lights: [],
+  rows: ['sky.global.TIME'],
+  ...scene,
+  clock: { ...scene.clock, frames: FRAMES_BEFORE_READ },
+}));
+
+/** A sky whose three channels each wrap at another rate, so no `TIME` up to 8 s saturates it. */
+const SEEK_SKY = `shader_type sky;
+
+void sky() {
+	COLOR = vec3(fract(TIME * 0.37), fract(TIME * 4.0), TIME / 8.0);
+}
+`;
+
+/** The previewer's `TIME` after a seek to the time Godot's frames reach, also past a rollover. */
+const SEEK_SCENES = [
+  { name: 'sky-time-seek-half', clock: { fixedFps: 8, rolloverSeconds: 3600 } },
+  { name: 'sky-time-seek-third', clock: { fixedFps: 3, rolloverSeconds: 3600 } },
+  { name: 'sky-time-seek-four', clock: { fixedFps: 1, rolloverSeconds: 3600 } },
+  { name: 'sky-time-seek-rolled-over', clock: { fixedFps: 1, rolloverSeconds: 1.5 } },
+  { name: 'sky-time-seek-third-rolled-over', clock: { fixedFps: 3, rolloverSeconds: 1.2 } },
+].map((scene) => ({
+  ...SIZE,
+  source: SEEK_SKY,
+  camera: AHEAD,
+  lights: [],
+  rows: ['sky.global.TIME'],
+  ...scene,
+  clock: { ...scene.clock, frames: FRAMES_BEFORE_READ, fromSeek: true },
+}));
+
+/** A sky of one stage built-in, drawn with `body` as its `sky()` function. */
+const builtInSky = (body, renderModes = '') =>
+  `shader_type sky;\n${renderModes ? `render_mode ${renderModes};\n` : ''}\nvoid sky() {\n${body}\n}\n`;
+
+/** A camera turned and lifted off the origin, so that each built-in that reads it moves. */
+const TURNED = { fov: 75, rotation: [20, -35, 0], position: [1.3, 2.1, -0.7] };
+
+/** Twenty value uniforms of mixed types in Godot's one block: more than WebGL's 12 blocks a stage. */
+const TWENTY_UNIFORMS_SKY = `shader_type sky;
+
+uniform float f0 = 0.05;
+uniform vec3 v0 = vec3(0.1, 0.2, 0.3);
+uniform float f1 = 0.15;
+uniform mat3 m0 = mat3(vec3(0.9, 0.1, 0.0), vec3(0.2, 0.7, 0.1), vec3(0.0, 0.3, 0.8));
+uniform vec2 w0 = vec2(0.25, -0.5);
+uniform float f2 = 0.35;
+uniform int i0 = -3;
+uniform uint u0 = 3000000000u;
+uniform bool b0 = true;
+uniform vec4 c0 : source_color = vec4(0.8, 0.4, 0.1, 1.0);
+uniform vec3 c1 : source_color = vec3(0.1, 0.5, 0.9);
+uniform float a0[3];
+uniform vec3 a1[2];
+uniform mat2 m1 = mat2(vec2(1.0, 0.5), vec2(-0.25, 1.0));
+uniform ivec2 i1 = ivec2(2, -1);
+uniform bvec3 b1 = bvec3(false, true, false);
+uniform float f3 = 0.45;
+uniform mat4 m2 = mat4(vec4(1.0, 0.0, 0.0, 0.1), vec4(0.0, 1.0, 0.2, 0.0), vec4(0.3, 0.0, 1.0, 0.0), vec4(0.0, 0.0, 0.0, 1.0));
+uniform uvec2 u1 = uvec2(1u, 2u);
+uniform float f4 = 0.55;
+
+void sky() {
+\tvec3 d = m0 * (EYEDIR * 0.5 + 0.5) + v0 * f0;
+\td.xy = m1 * d.xy + w0 * f1 + float(i0 + i1.x - i1.y) * 0.01;
+\td += (m2 * vec4(d, 1.0)).xyz * f2 + c0.rgb * f3 + c1 * f4;
+\td += vec3(a0[0], a0[1], a0[2]) + a1[0] * (b0 ? 1.0 : -1.0) + (b1.y ? a1[1] : vec3(0.0));
+\td *= float(u0 / 1000000000u + u1.x + u1.y) * 0.1;
+\tCOLOR = fract(d);
+}
+`;
+
+/** One scene per built-in of the sky stage, each read into the colour, against Godot's image. */
+const BUILT_IN_SCENES = [
+  { name: 'sky-eyedir', source: builtInSky('\tCOLOR = EYEDIR * 0.5 + 0.5;'), rows: ['sky.sky.EYEDIR'] },
+  {
+    name: 'sky-coords',
+    source: builtInSky('\tCOLOR = vec3(SKY_COORDS, 0.25);'),
+    rows: ['sky.sky.SKY_COORDS'],
+  },
+  {
+    name: 'sky-screen-uv',
+    source: builtInSky('\tCOLOR = vec3(SCREEN_UV, 0.25);'),
+    rows: ['sky.sky.SCREEN_UV'],
+  },
+  {
+    name: 'sky-fragcoord',
+    source: builtInSky('\tCOLOR = vec3(fract(FRAGCOORD.xy / 16.0), FRAGCOORD.z);'),
+    rows: ['sky.sky.FRAGCOORD'],
+  },
+  {
+    name: 'sky-position',
+    source: builtInSky('\tCOLOR = fract(POSITION * 0.37);'),
+    rows: ['sky.global.POSITION'],
+  },
+  {
+    name: 'sky-constants',
+    source: builtInSky('\tCOLOR = vec3(PI / 4.0, TAU / 8.0, E / 3.0) * (0.5 + 0.5 * EYEDIR.y);'),
+    rows: ['sky.constants.PI', 'sky.constants.TAU', 'sky.constants.E', 'sky.sky.EYEDIR'],
+  },
+  {
+    name: 'sky-fog-write',
+    source: builtInSky(
+      '\tCOLOR = vec3(0.1, 0.2, 0.8);\n\tFOG = vec4(1.0, 0.3, 0.1, 0.6 * max(EYEDIR.y, 0.0));'
+    ),
+    fog: FOG,
+    rows: ['sky.sky.FOG', 'sky.sky.EYEDIR'],
+  },
+  {
+    name: 'sky-disable-fog',
+    source: builtInSky('\tCOLOR = vec3(0.1, 0.2, 0.8);', 'disable_fog'),
+    fog: FOG,
+    rows: ['sky render_mode disable_fog'],
+  },
+  {
+    name: 'sky-debanding',
+    source: builtInSky('\tCOLOR = vec3(0.002);', 'use_debanding'),
+    rows: ['sky render_mode use_debanding'],
+  },
+].map((scene) => ({ ...SIZE, camera: TURNED, lights: [], ...scene }));
+
+/** Four suns of distinct colour, energy, size and direction, one for each slot a sky reads. */
+const FOUR_SUNS = [
+  { rotation: [-20, 150, 0], color: [1, 0.6, 0.3], energy: 1.5, size: 2 },
+  { rotation: [-45, -160, 0], color: [0.3, 1, 0.5], energy: 0.7, size: 5 },
+  { rotation: [-10, 120, 0], color: [0.4, 0.5, 1], energy: 2.5, size: 1 },
+  { rotation: [-70, 200, 0], color: [1, 0.2, 0.8], energy: 0.4, size: 9 },
+];
+
+/** Every light built-in of slot `n`, each in its own term of the colour. */
+const lightSky = (n) =>
+  builtInSky(
+    [
+      `\tfloat facing = max(dot(EYEDIR, LIGHT${n}_DIRECTION), 0.0);`,
+      `\tCOLOR = LIGHT${n}_COLOR * LIGHT${n}_ENERGY * 0.4 * facing + vec3(LIGHT${n}_SIZE * 0.25);`,
+      `\tCOLOR *= LIGHT${n}_ENABLED ? 1.0 : 0.25;`,
+    ].join('\n')
+  );
+
+const lightRows = (n) =>
+  ['ENABLED', 'DIRECTION', 'ENERGY', 'COLOR', 'SIZE'].map((name) => `sky.global.LIGHT${n}_${name}`);
+
+/** A camera that looks back along +Z, where the suns of `FOUR_SUNS` shine from. */
+const BACK = { fov: 90, rotation: [15, 180, 0] };
+
+/** One scene per light slot, then a slot past the lights and a fifth light the sky does not read. */
+const LIGHT_SCENES = [
+  ...[0, 1, 2, 3].map((n) => ({
+    name: `sky-light-${n}`,
+    source: lightSky(n),
+    lights: FOUR_SUNS,
+    rows: lightRows(n),
+  })),
+  // Godot leaves a slot past the last light as it was, so only its `ENABLED` is known (`sky.cpp:1107-1111`).
+  {
+    name: 'sky-light-unset',
+    source: builtInSky('\tCOLOR = LIGHT1_ENABLED ? vec3(0.1, 0.8, 0.2) : vec3(0.8, 0.1, 0.1);'),
+    lights: FOUR_SUNS.slice(0, 1),
+    rows: ['sky.global.LIGHT1_ENABLED'],
+  },
+  {
+    name: 'sky-light-fifth',
+    source: lightSky(3),
+    lights: [...FOUR_SUNS, { rotation: [-30, 170, 0], color: [1, 1, 1], energy: 8, size: 3 }],
+    rows: lightRows(3),
+  },
+].map((scene) => ({ ...SIZE, camera: BACK, ...scene }));
+
+/** Godot's resolution passes, each read by the next: the quarter, the half, then the full pass. */
+const PASS_SCENES = [
+  {
+    name: 'sky-half-res',
+    source: builtInSky(
+      [
+        '\tif (AT_HALF_RES_PASS) {',
+        '\t\tCOLOR = EYEDIR * 0.5 + 0.5;',
+        '\t} else {',
+        '\t\tCOLOR = HALF_RES_COLOR.rgb * vec3(1.0, 0.8, 0.6) + vec3(0.0, 0.0, 0.2);',
+        '\t}',
+      ].join('\n'),
+      'use_half_res_pass'
+    ),
+    rows: ['sky.global.AT_HALF_RES_PASS', 'sky.sky.HALF_RES_COLOR', 'sky render_mode use_half_res_pass'],
+  },
+  {
+    name: 'sky-quarter-res',
+    source: builtInSky(
+      [
+        '\tif (AT_QUARTER_RES_PASS) {',
+        '\t\tCOLOR = vec3(fract(FRAGCOORD.xy / 4.0), SCREEN_UV.x);',
+        '\t} else if (AT_HALF_RES_PASS) {',
+        '\t\tCOLOR = mix(QUARTER_RES_COLOR.rgb, EYEDIR * 0.5 + 0.5, 0.5);',
+        '\t} else {',
+        '\t\tCOLOR = HALF_RES_COLOR.rgb;',
+        '\t}',
+      ].join('\n'),
+      'use_half_res_pass, use_quarter_res_pass'
+    ),
+    rows: [
+      'sky.global.AT_QUARTER_RES_PASS',
+      'sky.sky.QUARTER_RES_COLOR',
+      'sky render_mode use_quarter_res_pass',
+      'sky.sky.FRAGCOORD',
+    ],
+  },
+  {
+    name: 'sky-quarter-res-alone',
+    source: builtInSky(
+      '\tCOLOR = AT_QUARTER_RES_PASS ? EYEDIR * 0.5 + 0.5 : QUARTER_RES_COLOR.rgb * HALF_RES_COLOR.rgb;',
+      'use_quarter_res_pass'
+    ),
+    rows: ['sky.global.AT_QUARTER_RES_PASS', 'sky.sky.QUARTER_RES_COLOR', 'sky.sky.HALF_RES_COLOR'],
+  },
+  {
+    name: 'sky-half-res-unset',
+    source: builtInSky('\tCOLOR = HALF_RES_COLOR.rgb * QUARTER_RES_COLOR.rgb * vec3(0.9, 0.6, 0.3);'),
+    rows: ['sky.sky.HALF_RES_COLOR', 'sky.sky.QUARTER_RES_COLOR'],
+  },
+  {
+    name: 'sky-alpha-half-res',
+    source: builtInSky(
+      [
+        '\tif (AT_HALF_RES_PASS) {',
+        '\t\tCOLOR = EYEDIR * 0.5 + 0.5;',
+        '\t\tALPHA = SCREEN_UV.x;',
+        '\t} else {',
+        '\t\tCOLOR = mix(vec3(0.1, 0.2, 0.8), HALF_RES_COLOR.rgb, HALF_RES_COLOR.a);',
+        '\t}',
+      ].join('\n'),
+      'use_half_res_pass'
+    ),
+    rows: ['sky.sky.ALPHA', 'sky.sky.HALF_RES_COLOR'],
+  },
+  // An alpha outside 0 to 1 survives, as Godot's passes hold RGBA16F (`sky.cpp:921`).
+  {
+    name: 'sky-alpha-quarter-res',
+    source: builtInSky(
+      [
+        '\tif (AT_QUARTER_RES_PASS) {',
+        '\t\tCOLOR = vec3(0.9, 0.5, 0.1);',
+        '\t\tALPHA = SCREEN_UV.y * 2.0 - 0.5;',
+        '\t} else if (AT_HALF_RES_PASS) {',
+        '\t\tCOLOR = EYEDIR * 0.5 + 0.5;',
+        '\t\tALPHA = QUARTER_RES_COLOR.a * 0.5 + 0.25;',
+        '\t} else {',
+        '\t\tCOLOR = mix(QUARTER_RES_COLOR.rgb, HALF_RES_COLOR.rgb, HALF_RES_COLOR.a);',
+        '\t}',
+      ].join('\n'),
+      'use_half_res_pass, use_quarter_res_pass'
+    ),
+    rows: ['sky.sky.ALPHA', 'sky.sky.QUARTER_RES_COLOR', 'sky.sky.HALF_RES_COLOR'],
+  },
+  {
+    name: 'sky-alpha-background',
+    source: builtInSky(
+      ['\tCOLOR = vec3(0.2, 0.6, 0.4) * (0.5 + 0.5 * EYEDIR.y);', '\tALPHA = 0.25;'].join('\n')
+    ),
+    // Behind the scene Godot writes alpha 0 (`sky.glsl:309-311`), so this shows only that no blend applies.
+    rows: ['sky.sky.EYEDIR'],
+  },
+  {
+    name: 'sky-radiance',
+    source: builtInSky(
+      [
+        '\tif (AT_CUBEMAP_PASS) {',
+        '\t\tCOLOR = 0.5 + 0.5 * EYEDIR;',
+        '\t} else {',
+        '\t\tCOLOR = texture(RADIANCE, EYEDIR).rgb;',
+        '\t}',
+      ].join('\n')
+    ),
+    // Smooth, not striped: lavapipe softens a hard octmap edge in Godot's upper sky at an explicit level.
+    readsRadiance: true,
+    rows: ['sky.global.RADIANCE', 'sky.global.AT_CUBEMAP_PASS'],
+  },
+  {
+    name: 'sky-cubemap-pass',
+    source: builtInSky('\tCOLOR = AT_CUBEMAP_PASS ? vec3(1.0, 0.0, 0.0) : vec3(0.1, 0.7, 0.3);'),
+    rows: ['sky.global.AT_CUBEMAP_PASS'],
+  },
+].map((scene) => ({ ...SIZE, camera: TURNED, lights: [], ...scene }));
+
+/** The quarter and half passes at an odd size, and under Godot's 4 px floor (`sky.cpp:996-997`). */
+const PASS_SIZE_SCENES = [
+  { name: 'sky-passes-odd-size', width: 37, height: 23 },
+  { name: 'sky-passes-under-4-px', width: 3, height: 9 },
+].map((scene) => ({ ...PASS_SCENES.find(({ name }) => name === 'sky-quarter-res'), ...scene }));
+
+/** Godot's recorded texts of its sky materials, one for each value of the flags that pick a text. */
+const { texts: SKY_MATERIAL_TEXTS } = JSON.parse(readFileSync(SKY_MATERIALS_FILE, 'utf8'));
+
+/** The shader Godot generates for `material`, which has no texture: the guide shows it. */
+function generatedText(material) {
+  const flagOf = (name) => material.properties[name] !== 'false';
+  const text = SKY_MATERIAL_TEXTS.find(
+    (entry) =>
+      entry.class === material.class &&
+      Object.entries(entry.properties).every(([name, value]) => value === null || value === flagOf(name))
+  );
+  if (!text) throw new Error(`expected Godot's text of ${JSON.stringify(material)}, found none`);
+  return text.code;
+}
+
+/** A camera tilted up at a sun low ahead, with the horizon and the ground in the lower third. */
+const AT_SUN = { fov: 90, rotation: [10, 0, 0] };
+
+/** The sun ahead, low in the sky, of a size that both materials draw as a disk. */
+const LOW_SUN = { rotation: [-10, 180, 0], color: [1, 0.9, 0.7], energy: 1.5, size: 2 };
+
+/** Each of Godot's sky materials through the shader its generator writes, at defaults and other values. */
+const SKY_MATERIAL_SCENES = [
+  { name: 'sky-procedural-default', material: { class: 'ProceduralSkyMaterial', properties: {} } },
+  {
+    name: 'sky-procedural-values',
+    material: {
+      class: 'ProceduralSkyMaterial',
+      properties: {
+        sky_top_color: 'Color(0.1, 0.3, 0.8, 1)',
+        sky_horizon_color: 'Color(0.9, 0.6, 0.4, 1)',
+        sky_curve: '0.4',
+        sky_energy_multiplier: '1.5',
+        ground_bottom_color: 'Color(0.05, 0.2, 0.05, 1)',
+        ground_horizon_color: 'Color(0.5, 0.4, 0.3, 1)',
+        ground_curve: '0.1',
+        ground_energy_multiplier: '0.5',
+        sun_angle_max: '10.0',
+        sun_curve: '0.05',
+        energy_multiplier: '0.8',
+        use_debanding: 'false',
+      },
+    },
+  },
+  {
+    name: 'sky-procedural-energy-0',
+    material: { class: 'ProceduralSkyMaterial', properties: { energy_multiplier: '0.0' } },
+  },
+  { name: 'sky-physical-default', material: { class: 'PhysicalSkyMaterial', properties: {} } },
+  {
+    name: 'sky-physical-values',
+    material: {
+      class: 'PhysicalSkyMaterial',
+      properties: {
+        rayleigh_coefficient: '4.0',
+        rayleigh_color: 'Color(0.2, 0.5, 0.9, 1)',
+        mie_coefficient: '0.02',
+        mie_eccentricity: '-0.3',
+        mie_color: 'Color(0.9, 0.7, 0.5, 1)',
+        turbidity: '3.0',
+        sun_disk_scale: '5.0',
+        ground_color: 'Color(0.3, 0.2, 0.1, 1)',
+        energy_multiplier: '1.3',
+        use_debanding: 'false',
+      },
+    },
+  },
+  {
+    name: 'sky-panorama-unset',
+    material: { class: 'PanoramaSkyMaterial', properties: { energy_multiplier: '2.0' } },
+  },
+].map((scene) => ({
+  ...SIZE,
+  camera: AT_SUN,
+  lights: [LOW_SUN],
+  source: generatedText(scene.material),
+  rows: [],
+  ...scene,
+}));
+
+export const SKY_SCENES = [
+  { name: 'sky-default', ...SIZE, source: DEFAULT_SKY, camera: AHEAD, lights: [], rows: DEFAULT_SKY_ROWS },
+  {
+    name: 'sky-fog',
+    ...SIZE,
+    source: DEFAULT_SKY,
+    camera: AHEAD,
+    fog: { color: [0.5, 0.6, 0.7], energy: 1, sunScatter: 0, skyAffect: 0.75, aerialPerspective: 0.25 },
+    lights: [],
+    rows: DEFAULT_SKY_ROWS,
+  },
+  {
+    name: 'sky-fog-sun',
+    ...SIZE,
+    source: DEFAULT_SKY,
+    camera: { fov: 75, rotation: [-15, 20, 0] },
+    fog: { color: [0.3, 0.35, 0.4], energy: 1.2, sunScatter: 0.6, skyAffect: 1, aerialPerspective: 0 },
+    lights: [SUN, { rotation: [-60, -120, 0], color: [0.4, 0.6, 1], energy: 0.8, size: 2 }],
+    rows: DEFAULT_SKY_ROWS,
+  },
+  ...VALUE_SCENES,
+  ...TIME_SCENES,
+  ...SEEK_SCENES,
+  ...BUILT_IN_SCENES,
+  {
+    name: 'sky-twenty-uniforms',
+    ...SIZE,
+    source: TWENTY_UNIFORMS_SKY,
+    camera: TURNED,
+    lights: [],
+    rows: ['uniform'],
+  },
+  ...LIGHT_SCENES,
+  ...PASS_SCENES,
+  ...PASS_SIZE_SCENES,
+  ...SKY_MATERIAL_SCENES,
+];

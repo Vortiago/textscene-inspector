@@ -1,11 +1,6 @@
-/**
- * What a Material resource decodes to, from any origin: a StandardMaterial3D the previewer
- * builds on a surface, a sky material it builds as a sky, or another Material class it declines
- * and draws as Godot's default surface (ADR-0041).
- */
-
 import type { ScopedReference } from '../../reading';
-import type { SkyProperties } from '../../sky/types';
+import type { ShaderSkyText } from '../../sky/types';
+import type { ShaderText } from '../shadermaterial/types';
 import type { StandardMaterial3DData, TextureSlot } from '../standardmaterial3d/types';
 
 export interface StandardMaterial {
@@ -17,19 +12,23 @@ export interface StandardMaterial {
   readonly nextPass: ScopedReference | null;
 }
 
-/** A ProceduralSkyMaterial, a PanoramaSkyMaterial or a PhysicalSkyMaterial: a Sky draws it. */
+/** A sky material, or a ShaderMaterial of `shader_type sky`, as the shader a Sky draws. */
 export interface SkyMaterial {
   readonly form: 'sky';
   readonly type: string;
-  readonly properties: SkyProperties;
-  /** A PanoramaSkyMaterial's `panorama`, resolved in the material's own file. Null for none or for any other sky. */
-  readonly panorama: ScopedReference | null;
+  readonly properties: ShaderSkyText;
 }
 
-/** A Material class this previewer does not build, such as a ShaderMaterial or an ORMMaterial3D. */
+/** A ShaderMaterial whose shader is `shader_type spatial`, which the node lit surface draws. */
+export interface SpatialShaderMaterial {
+  readonly form: 'spatial-shader';
+  readonly shader: ShaderText;
+}
+
+/** A Material class the previewer does not build, such as an ORMMaterial3D or a canvas_item shader. */
 export interface DeclinedMaterial {
   readonly form: 'declined';
   readonly type: string;
 }
 
-export type Material = StandardMaterial | SkyMaterial | DeclinedMaterial;
+export type Material = StandardMaterial | SkyMaterial | SpatialShaderMaterial | DeclinedMaterial;

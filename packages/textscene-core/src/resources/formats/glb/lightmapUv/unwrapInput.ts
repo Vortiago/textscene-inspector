@@ -9,7 +9,7 @@ import { storedReal as f } from '../../../../godot/math/real';
 import type * as THREE from 'three';
 import { unwrapSpace } from '../../../../godot/import/importerBasis';
 import { UNWRAP_SHORTEST_EDGE_SQUARED } from '../../../../godot/import/sceneImport';
-import { md5Hex } from './md5';
+import { md5Hex } from '../../../../godot/crypto/md5';
 
 /** Where the importer has put the mesh by the time it unwraps. */
 export interface UnwrapPlacement {

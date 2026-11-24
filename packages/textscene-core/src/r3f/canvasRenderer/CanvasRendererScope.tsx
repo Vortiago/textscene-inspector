@@ -6,6 +6,7 @@ import { FrameProfiler } from '../frameProfile/FrameProfiler.js';
 import { SoftwareRenderingProbe } from '../softwareRendering/SoftwareRenderingProbe.js';
 import { TiledUploadDriver } from '../tiledUpload/TiledUploadDriver.js';
 import { ViewportPassOrchestrator } from '../contexts/ViewportPassRegistryContext.js';
+import { ShaderTimeFrame } from '../shaderTime/canvasShaderTime.js';
 
 // In the contents, as the test renderer mounts no `<Canvas>`.
 export function CanvasRendererScope({ children }: { children: ReactNode }) {
@@ -14,6 +15,7 @@ export function CanvasRendererScope({ children }: { children: ReactNode }) {
   return (
     <>
       <SharedTextureRelease />
+      <ShaderTimeFrame />
       <FrameProfiler />
       <SoftwareRenderingProbe />
       <TiledUploadDriver>

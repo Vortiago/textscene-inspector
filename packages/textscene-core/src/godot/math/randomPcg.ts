@@ -33,16 +33,14 @@
  * `thirdparty/misc/`. See THIRD-PARTY-NOTICES.md.
  */
 
+import { CMP_EPSILON, TAU } from './math.js';
+
 const PCG_MULTIPLIER = 6364136223846793005n;
 /** `PCG_DEFAULT_INC_64`, the stream selector `RandomPCG` never changes. */
 const PCG_DEFAULT_INC_64 = 1442695040888963407n;
 const UINT64_MASK = 0xffffffffffffffffn;
 
-/**
- * Godot's `RandomPCG` over the vendored minimal PCG32 (XSH-RR, 64-bit state, 32-bit output),
- * exposing only `seed`, `rand` and `randf`. The particle emitters re-seed it per particle at birth
- * (`cpu_particles_2d.cpp:922`, `cpu_particles_3d.cpp:832`).
- */
+/** Godot's `RandomPCG` (random_pcg.h) over the vendored minimal PCG32. */
 export class GodotRandomPCG {
   private state = 0n;
   /** `pcg.inc`, fixed by `pcg32_srandom_r` to `(DEFAULT_INC << 1) | 1`. */
@@ -81,6 +79,45 @@ export class GodotRandomPCG {
     // `std::ldexp((float)significand, -32 - CLZ32(proto))`. The float32 cast is
     // observable: the significand carries 32 bits and a float keeps 24.
     return Math.fround(significand) * 2 ** (-32 - Math.clz32(protoExponent));
+  }
+
+  /** `RandomPCG::randd()`: the exponent from leading zeros, then the high and low significand words. */
+  randd(): number {
+    const protoExponent = this.step();
+    if (protoExponent === 0) return 0;
+    const high = BigInt(this.step());
+    const significand = (high << 32n) | BigInt(this.step()) | 0x8000000000000001n;
+    return Number(significand) * 2 ** (-64 - Math.clz32(protoExponent));
+  }
+
+  /** `pcg32_boundedrand_r`: a draw below `bound`, drawing again under the threshold that keeps it uniform. */
+  boundedRand(bound: number): number {
+    const threshold = (2 ** 32 - bound) % bound;
+    for (;;) {
+      const draw = this.step();
+      if (draw >= threshold) return draw % bound;
+    }
+  }
+
+  /** `RandomPCG::random(double, double)` (random_pcg.cpp:68). */
+  randomDouble(from: number, to: number): number {
+    return this.randd() * (to - from) + from;
+  }
+
+  /** `RandomPCG::random(int, int)` (random_pcg.cpp:76): inclusive of both ends, in either order. */
+  randomInt(from: number, to: number): number {
+    if (from === to) return from;
+    const min = Math.min(from, to);
+    const difference = (Math.max(from, to) - min) >>> 0;
+    if (difference === 0xffffffff) return (this.step() + min) | 0;
+    return (this.boundedRand(difference + 1) + min) | 0;
+  }
+
+  /** `RandomPCG::randfn(double, double)`: Box-Muller over two `randd` draws, the first kept off zero. */
+  randfn(mean: number, deviation: number): number {
+    let first = this.randd();
+    if (first < CMP_EPSILON) first += CMP_EPSILON;
+    return mean + deviation * (Math.cos(TAU * this.randd()) * Math.sqrt(-2 * Math.log(first)));
   }
 
   /** `pcg32_random_r`: advance the state, return the XSH-RR output word. */

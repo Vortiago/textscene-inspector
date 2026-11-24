@@ -27,12 +27,28 @@ ended at its 30 s load deadline (#2075).
 
 `pnpm check:bundle-size` fails when the build writes a script beside `webview.js`, and when the
 script is over its gzipped ceiling (`scripts/check-bundle-size/webviewBudget.mjs`). The ceiling
-is 1,785,000 B. It replaces ADR-0055's 1,150,000 B, which held only the canvas-paint closure of the
-split build.
+is 2,253,000 B, about 8 KB over the measured 2,244,188 B. It replaces ADR-0055's 1,150,000 B, which
+held only the canvas-paint closure of the split build.
+
+The shader translator adds about 464,000 B to the script. The groups below gzip alone, so they are shares
+of that growth, not exact bytes:
+
+| Group | Gzipped alone | What it is |
+| --- | --- | --- |
+| Godot's GLSL template text, all 91 files | 192,531 B | The shader source the translator links into |
+| `godot/variant`, `string`, `expression`, `math` | 148,200 B | Godot's Expression and Variant, for `#if` |
+| `shaders/language` | 99,821 B | The Godot shading language parser |
+| `shaders/template` | 47,515 B | Template parse, link and emit |
+| The spatial and sky translators | 52,960 B | `shaders/uniforms`, `spatial`, `sky` and the rest |
+| `godot/classdb`, `io`, `crypto` and so on | 19,546 B | Decompression and hashes for `#if` file reads |
+| The draw side of the translated shaders | 13,865 B | `r3f/sky`, `r3f/spatialShader` and the rest |
+
+The run time reads 16 of the 91 template files now. The script ships all 91, which later slices of
+the translator read, at about 140,000 B over the 16 alone.
 
 ## Consequences
 
-- The whole script loads on each preview open: about 1.78 MB gzipped, where the canvas-paint
+- The whole script loads on each preview open: about 2.24 MB gzipped, where the canvas-paint
   closure of the split build was about 1.07 MB. A local load of the two builds took the same time,
   about 0.5 s.
 - A dynamic `import()` in core stays lazy in its evaluation, and the web previewer and the

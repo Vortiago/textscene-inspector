@@ -55,7 +55,7 @@ vec3 fogAerialRadiance( vec3 view, vec3 worldView ) {
 	float near = ${U.depthSky}.z;
 	float far = ${U.depthSky}.w;
 	float mipLevel = mix( ${glslFloat(AERIAL_PERSPECTIVE_MIP_LEVEL_MIN)}, 1.0, 1.0 - ( abs( view.z ) - near ) / ( far - near ) );
-	return godotSkyBlend( skyView, mipLevel * ${glslFloat(MAX_ROUGHNESS_LOD)} ) * GODOT_SKY_ENERGY;
+	return godotSkyBlend( skyView, mipLevel * ${glslFloat(MAX_ROUGHNESS_LOD)} );
 }
 
 // How much of sun i's glow a view along direction sees.

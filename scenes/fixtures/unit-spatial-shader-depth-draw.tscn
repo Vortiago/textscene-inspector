@@ -1,0 +1,52 @@
+[gd_scene format=3 uid="uid://unit_spatial_shader_depth_draw"]
+
+; An unshaded spatial shader with depth_draw_never and cull_disabled through an opaque orange quad that crosses it.
+; Only the depth draw moves: every other golden spatial shader writes depth as depth_draw_opaque does.
+
+[sub_resource type="Shader" id="Shader_orange"]
+code = "shader_type spatial;
+render_mode unshaded;
+
+void fragment() {
+	ALBEDO = vec3(0.9, 0.3, 0.1);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_orange"]
+shader = SubResource("Shader_orange")
+
+[sub_resource type="Shader" id="Shader_draw_never"]
+code = "shader_type spatial;
+render_mode unshaded, depth_draw_never, cull_disabled;
+
+void fragment() {
+	ALBEDO = vec3(0.1, UV.x * 0.5, 0.6);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_draw_never"]
+shader = SubResource("Shader_draw_never")
+
+[sub_resource type="QuadMesh" id="QuadMesh_1"]
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.1, 0.12, 0.16, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4.2)
+
+[node name="Tile_draw_never" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.707, 0, 0.707, 0, 1, 0, -0.707, 0, 0.707, -0.05, 0.05, 0)
+mesh = SubResource("QuadMesh_1")
+material_override = SubResource("ShaderMaterial_draw_never")
+
+[node name="Orange_draw_never" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.707, 0, -0.707, 0, 1, 0, 0.707, 0, 0.707, 0.1, 0.05, -0.2)
+mesh = SubResource("QuadMesh_1")
+material_override = SubResource("ShaderMaterial_orange")

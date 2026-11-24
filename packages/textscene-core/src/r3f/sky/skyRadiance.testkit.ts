@@ -8,3 +8,6 @@ export const skyLayersSlot = skyRadianceUniforms()[SKY_RADIANCE_UNIFORMS.layers]
 
 /** Where `SkyRadiance.show` writes whether surfaces reflect the sky: the `y` of the second `vec4`. */
 export const REFLECTION_SLOT = 5;
+
+/** The shown sky's values, as every reader receives them through `skyRadianceUniforms`. */
+export const shownSky = skyRadianceUniforms()[SKY_RADIANCE_UNIFORMS.shown]!.value as Float32Array;

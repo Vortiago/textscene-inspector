@@ -80,6 +80,8 @@ export const LIGHTING_SCENES = [
   { name: 'volumetric-fog-color-background', file: 'unit-volumetric-fog-color-background.tscn' },
   // Volumetric fog lit by the sky's radiance layers. The header states why no other golden shows it.
   { name: 'volumetric-fog-sky-ambient', file: 'unit-volumetric-fog-sky-ambient.tscn', camera: 'Root/Camera' },
+  // A sky shader fogged by the volumetric fog. The header states why no other golden shows it.
+  { name: 'volumetric-fog-sky-shader', file: 'unit-volumetric-fog-sky-shader.tscn', camera: 'Root/Camera' },
   // A box FogVolume in the volumetric fog. The header states why no other golden shows it.
   { name: 'fog-volume', file: 'unit-fog-volume.tscn' },
   // A FogVolume whose density texture is an imported 3D texture. The header states why no other
@@ -177,7 +179,7 @@ export const LIGHTING_SCENES = [
     camera: 'Root/Camera3D',
   },
   // The same exposures over a procedural sky with a sun: a ONCE probe reflects the sky the view's
-  // exposure baked, and an ALWAYS probe bakes it at the world's exposure for the view too.
+  // exposure baked. The next scene's ALWAYS probe faces bake its Quality sky at the world's exposure.
   {
     name: 'reflection-probe-camera-exposure-sky',
     file: 'unit-reflection-probe-camera-exposure-sky.tscn',
@@ -250,4 +252,25 @@ export const LIGHTING_SCENES = [
   // collapse it: AgX and flat ambient still apply, the background falls back to
   // mid-blue, and the metallic sphere, with no sky to reflect, reads near-black.
   { name: 'shader-sky-env', file: 'unit-shader-sky-env.tscn' },
+  { name: 'shader-sky-parameters', file: 'unit-shader-sky-parameters.tscn' },
+  { name: 'shader-sky-fog', file: 'unit-shader-sky-fog.tscn' },
+  { name: 'shader-sky-cubemap', file: 'unit-shader-sky-cubemap.tscn' },
+  { name: 'shader-sky-light', file: 'unit-shader-sky-light.tscn' },
+  { name: 'shader-sky-half-res', file: 'unit-shader-sky-half-res.tscn' },
+  // The balls reflect the sky baked again at 0.75 s, within 1/255 of Godot 4.6.3 at frame 75.
+  {
+    name: 'shader-sky-time',
+    file: 'unit-shader-sky-time.tscn',
+    camera: 'Root/Camera3D',
+    select: 'Root/Clock',
+    animationTime: 0.75,
+  },
+  // The balls reflect the sun the clip turned at 0.3 s, baked again in place at the 1.0 s seek.
+  {
+    name: 'sky-light-step',
+    file: 'unit-sky-light-step.tscn',
+    camera: 'Root/Camera3D',
+    select: 'Root/Clock',
+    animationTime: 1.0,
+  },
 ];

@@ -10,9 +10,10 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { acosClamped, isEqualApprox, isZeroApprox, lerpAngle, sign } from './math.js';
+import { isZeroApprox, lerpAngle, sign } from './math.js';
 import { atan2Real } from './realAtan2.js';
 import { storedReal as f } from './real.js';
+import { acosf, cosf, isEqualApproxf, sinf } from './realMath.js';
 import { normalizedVector2, vector2Length, vector2Lerp, type Vector2 } from './vector.js';
 
 /**
@@ -46,10 +47,9 @@ export const TRANSFORM2D_IDENTITY: Transform2DColumns = Object.freeze({
 });
 
 /**
- * `Transform2D(rot, scale, skew, pos)` (`transform_2d.cpp:107-113`), as `Node2D::_update_transform`
- * builds it (`node_2d.cpp:135-137`), in `real_t` float. `c` is `0 - v`, not the engine's `-v`: they
- * differ only in a zero's sign, which no reader here tells apart, and an unrotated transform equals
- * the identity.
+ * `Transform2D(rot, scale, skew, pos)` (`transform_2d.cpp:107-113`) in `real_t` float (`node_2d.cpp:135`).
+ *
+ * @canonical A Transform2D from its rotation, scale, skew and origin in float32
  */
 export function transform2DFromParts(
   rotation: number,
@@ -61,10 +61,10 @@ export function transform2DFromParts(
   const sx = f(scale.x);
   const sy = f(scale.y);
   return {
-    a: f(f(Math.cos(f(rotation))) * sx),
-    b: f(f(Math.sin(f(rotation))) * sx),
-    c: 0 - f(f(Math.sin(skewed)) * sy),
-    d: f(f(Math.cos(skewed)) * sy),
+    a: f(cosf(rotation) * sx),
+    b: f(sinf(rotation) * sx),
+    c: f(-sinf(skewed) * sy),
+    d: f(cosf(skewed) * sy),
     tx: f(position.x),
     ty: f(position.y),
   };
@@ -183,6 +183,20 @@ export function affineInverseTransform2DInto(
 ): MutableTransform2D {
   const det = transform2DDeterminant(t);
   if (det === 0 || !Number.isFinite(det)) return assignTransform2D(out, 1, 0, 0, 1, 0, 0);
+  return writeAffineInverse(out, t, det);
+}
+
+/**
+ * `Transform2D::affine_inverse` (`transform_2d.cpp:48-66`): `MATH_CHECKS` keeps a singular `t` as it is.
+ *
+ * @canonical A Transform2D inverse in float32 with the engine's singular answer
+ */
+export function transform2DAffineInverse(t: Transform2DColumns): Transform2DColumns {
+  const det = transform2DDeterminant(t);
+  return det === 0 ? t : writeAffineInverse(mutableTransform2D(), t, det);
+}
+
+function writeAffineInverse(out: MutableTransform2D, t: Transform2DColumns, det: number): MutableTransform2D {
   const idet = f(1 / det);
   const a = f(t.d * idet);
   const b = f(t.b * -idet);
@@ -252,15 +266,16 @@ export function transform2DGetRotation(t: Transform2DColumns): number {
 const HALF_PI_FLOAT = f(f(Math.PI) * 0.5);
 
 /**
- * `Transform2D::get_skew` (`transform_2d.cpp:72-75`) in `real_t` float: the angle of the y axis
- * from perpendicular to the x axis, mirrored with the sign of the determinant.
+ * `Transform2D::get_skew` (`transform_2d.cpp:72-75`) in `real_t` float.
+ *
+ * @canonical The skew of a Transform2D in float32
  */
 export function transform2DGetSkew(t: Transform2DColumns): number {
   const detSign = sign(transform2DDeterminant(t));
   const x = normalizedVector2({ x: t.a, y: t.b });
   const y = normalizedVector2({ x: t.c, y: t.d });
   const cosine = f(f(x.x * f(detSign * y.x)) + f(x.y * f(detSign * y.y)));
-  return f(f(acosClamped(cosine)) - HALF_PI_FLOAT);
+  return f(acosf(cosine) - HALF_PI_FLOAT);
 }
 
 /** `Transform2D::set_skew` (`transform_2d.cpp:77-80`) in float: the y axis turns, keeping its length. */
@@ -295,11 +310,15 @@ export function transform2DDecompose(t: Transform2DColumns): {
   };
 }
 
-/** `Transform2D(rot, pos)` (`transform_2d.cpp:97-105`): a rotation at an origin, with unit scale. */
-function rotationAt(rotation: number, t: Transform2DColumns): Transform2DColumns {
-  const cos = f(Math.cos(rotation));
-  const sin = f(Math.sin(rotation));
-  return { a: cos, b: sin, c: 0 - sin, d: cos, tx: t.tx, ty: t.ty };
+/**
+ * `Transform2D(rot, pos)` (`transform_2d.cpp:97-105`) in `real_t` float.
+ *
+ * @canonical A Transform2D from a rotation and an origin in float32
+ */
+export function transform2DFromRotation(rotation: number, origin: Vector2): Transform2DColumns {
+  const cos = cosf(rotation);
+  const sin = sinf(rotation);
+  return { a: cos, b: sin, c: -sin, d: cos, tx: origin.x, ty: origin.y };
 }
 
 /**
@@ -309,7 +328,10 @@ function rotationAt(rotation: number, t: Transform2DColumns): Transform2DColumns
  * @canonical A Transform2D turned to a rotation in float32
  */
 export function transform2DSetRotation(t: Transform2DColumns, rotation: number): Transform2DColumns {
-  return transform2DSetScale(rotationAt(f(rotation), t), transform2DGetScale(t));
+  return transform2DSetScale(
+    transform2DFromRotation(f(rotation), transform2DOrigin(t)),
+    transform2DGetScale(t)
+  );
 }
 
 /**
@@ -317,8 +339,8 @@ export function transform2DSetRotation(t: Transform2DColumns, rotation: number):
  * origin of `t` whose x axis points at `target`, with unit scale.
  */
 export function transform2DLookingAt(t: Transform2DColumns, target: Vector2): Transform2DColumns {
-  const facing = rotationAt(transform2DGetRotation(t), t);
-  const local = transform2DXform(affineInverseTransform2D(t), target);
+  const facing = transform2DFromRotation(transform2DGetRotation(t), transform2DOrigin(t));
+  const local = transform2DXform(transform2DAffineInverse(t), target);
   const scale = transform2DGetScale(t);
   const turn = atan2Real(f(local.y * scale.y), f(local.x * scale.x));
   return transform2DSetRotation(facing, f(transform2DGetRotation(facing) + turn));
@@ -341,14 +363,11 @@ export function transform2DInterpolateWith(
   );
 }
 
-/**
- * `Transform2D::is_conformal()` (`transform_2d.cpp:167-179`): the axes are equal-length and
- * perpendicular, allowing a single shared reflection.
- */
+/** `Transform2D::is_conformal()` (`transform_2d.cpp:167-179`) in `real_t` float. */
 export function transform2DIsConformal(t: Transform2DColumns): boolean {
   const { a, b, c, d } = t;
-  const nonFlipped = isEqualApprox(a, d) && isEqualApprox(b, -c);
-  const flipped = isEqualApprox(a, -d) && isEqualApprox(b, c);
+  const nonFlipped = isEqualApproxf(a, d) && isEqualApproxf(b, -c);
+  const flipped = isEqualApproxf(a, -d) && isEqualApproxf(b, c);
   return nonFlipped || flipped;
 }
 

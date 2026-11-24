@@ -16,7 +16,7 @@ import {
 import { resolveRelativePath } from '../../godot/string/nodePath';
 import type { LightmapUser } from '../../resources/lightmapgidata/types';
 import { perObject } from '../../utils/perObject';
-import { cameraFrustum } from '../cameraFrustum';
+import { cameraFrustum } from '../../shaders/pipeline/cameraFrustum';
 import { compareReadyOrder, type TreeOrder } from '../contexts/TreeOrderContext';
 import { observeSceneCamera } from '../sceneRenderCamera';
 import { copyAabb } from '../visibilityRange/placements';

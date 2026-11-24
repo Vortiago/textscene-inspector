@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { BackgroundMode } from '../../godot/scene/environment';
 import { previewEnvironment, previewSunDirection, previewYield } from './godotPreviewLighting';
-import type { ProceduralSkyProperties } from '../../resources/sky/types';
+import { textToVariant } from '../../godot/variant/reader/variantReader';
 import { radToDeg } from '../../godot/math/math.js';
 
 /**
@@ -108,11 +108,14 @@ describe('previewEnvironment', () => {
     expect(previewEnvironment().settings.toneMapping.mode).toBe(2);
   });
 
+  it('draws a ProceduralSkyMaterial', () => {
+    expect(previewEnvironment().sky.material.file).toBe('ProceduralSkyMaterial');
+  });
+
   it('carries Godot’s authored sky and ground colours', () => {
-    const sky = previewEnvironment().sky.material as ProceduralSkyProperties;
-    expect(sky.kind).toBe('procedural');
-    expect(sky.sky_top_color).toMatchObject({ r: 0.385, g: 0.454, b: 0.55 });
-    expect(sky.ground_bottom_color).toMatchObject({ r: 0.2, g: 0.169, b: 0.133 });
+    // Godot scales each colour by its energy in single precision (`sky_material.cpp:41`).
+    expect(previewColor('sky_top_color')).toMatchObject(float32Color(0.385, 0.454, 0.55));
+    expect(previewColor('ground_bottom_color')).toMatchObject(float32Color(0.2, 0.169, 0.133));
   });
 
   it('derives the horizon colour by Godot’s luminance push, not by a plain blend', () => {
@@ -120,17 +123,30 @@ describe('previewEnvironment', () => {
     //   hz     = sky.lerp(ground, 0.5)              -> (0.2925, 0.3115, 0.3415)
     //   hz_lum = hz.get_luminance() * 3.333         -> 1.0320
     //   hz     = hz.lerp(Color(lum, lum, lum), 0.5) -> (0.6623, 0.6718, 0.6868)
-    const sky = previewEnvironment().sky.material as ProceduralSkyProperties;
-    expect(sky.sky_horizon_color.r).toBeCloseTo(0.6623, 3);
-    expect(sky.sky_horizon_color.g).toBeCloseTo(0.6718, 3);
-    expect(sky.sky_horizon_color.b).toBeCloseTo(0.6868, 3);
+    const horizon = previewColor('sky_horizon_color');
+    expect(horizon.r).toBeCloseTo(0.6623, 3);
+    expect(horizon.g).toBeCloseTo(0.6718, 3);
+    expect(horizon.b).toBeCloseTo(0.6868, 3);
   });
 
   it('uses one horizon colour for both the sky and the ground half', () => {
-    const sky = previewEnvironment().sky.material as ProceduralSkyProperties;
-    expect(sky.ground_horizon_color).toEqual(sky.sky_horizon_color);
+    expect(previewColor('ground_horizon_color')).toEqual(previewColor('sky_horizon_color'));
   });
 });
+
+const float32Color = (r: number, g: number, b: number) => ({
+  r: Math.fround(r),
+  g: Math.fround(g),
+  b: Math.fround(b),
+});
+
+/** The colour the preview sky's shader reads for `uniform`, at the sky's energy of 1. */
+function previewColor(uniform: string): { r: number; g: number; b: number } {
+  const text = previewEnvironment().sky.material.parameters[uniform];
+  const color = text === undefined ? undefined : textToVariant(text);
+  if (color?.type !== 'COLOR') throw new Error(`expected a colour for ${uniform}, got ${text}`);
+  return color.value;
+}
 
 describe('preview environment — tone mapping', () => {
   it('picks FILMIC, so neither AgX property reaches its curve (invariant)', () => {

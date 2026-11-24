@@ -7,8 +7,10 @@ import { describe, expect, it } from 'vitest';
 import {
   CLASS_BASE_TYPES,
   MAX_BASE_CHAIN_HOPS,
+  canInstantiate,
   classBaseChain,
   descendsFromClass,
+  classExists,
   classInheritanceChain,
   findInClassChain,
 } from './classBaseTypes.js';
@@ -117,7 +119,37 @@ describe('classBaseChain', () => {
   });
 });
 
+describe('classExists', () => {
+  it('knows a class outside the node and resource hierarchies, and an editor class', () => {
+    expect(['WeakRef', 'Object', 'EditorInterface'].map(classExists)).toEqual([true, true, true]);
+  });
+
+  it('reads no key off Object.prototype (edge case)', () => {
+    expect(['constructor', 'Nope'].map(classExists)).toEqual([false, false]);
+  });
+});
+
+describe('canInstantiate', () => {
+  it('answers as a game run: an instantiable class only, never an editor class', () => {
+    expect(['Node', 'CanvasItem', 'Nope', 'EditorDock'].map(canInstantiate)).toEqual([
+      true,
+      false,
+      false,
+      false,
+    ]);
+  });
+});
+
 describe('classInheritanceChain', () => {
+  it('walks a node class newer than the 4.6.3 capture through the node tables', () => {
+    expect(classInheritanceChain('AreaLight3D').slice(0, 3)).toEqual([
+      'AreaLight3D',
+      'Light3D',
+      'VisualInstance3D',
+    ]);
+    expect(classInheritanceChain('AreaLight3D').at(-1)).toBe('Object');
+  });
+
   it('leads with the class, then its ancestry nearest first through Object', () => {
     expect(classInheritanceChain('Button')).toEqual([
       'Button',
@@ -140,6 +172,10 @@ describe('classInheritanceChain', () => {
     ]);
   });
 
+  it('walks a class outside the node and resource hierarchies', () => {
+    expect(classInheritanceChain('WeakRef')).toEqual(['WeakRef', 'RefCounted', 'Object']);
+  });
+
   it('continues past a table terminal and past RefCounted to Object', () => {
     expect(classInheritanceChain('Node')).toEqual(['Node', 'Object']);
     expect(classInheritanceChain('Resource')).toEqual(['Resource', 'RefCounted', 'Object']);
@@ -147,7 +183,7 @@ describe('classInheritanceChain', () => {
     expect(classInheritanceChain('Object')).toEqual(['Object']);
   });
 
-  it('is only the name for a class neither hierarchy knows (edge case)', () => {
+  it('is only the name for a class ClassDB does not know (edge case)', () => {
     expect(classInheritanceChain('constructor')).toEqual(['constructor']);
     expect(classInheritanceChain('__proto__')).toEqual(['__proto__']);
   });

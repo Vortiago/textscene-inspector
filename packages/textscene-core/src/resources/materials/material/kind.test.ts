@@ -15,8 +15,11 @@ import type { Material } from './types';
  * and the value they resolve to is read by the texture kind.
  */
 function summary(material: Material): unknown {
-  if (material.form === 'declined') return material;
-  if (material.form === 'sky') return { type: material.type, panorama: material.panorama?.ref };
+  if (material.form === 'declined' || material.form === 'spatial-shader') return material;
+  if (material.form === 'sky') {
+    const panorama = material.properties.textures.source_panorama;
+    return { type: material.type, panorama: panorama && 'ref' in panorama ? panorama.ref : undefined };
+  }
   const textures = Object.entries(material.textures).map(([slot, reference]) => [slot, reference.ref]);
   return { albedo: material.data.albedo, textures, nextPass: material.nextPass?.ref };
 }
@@ -64,7 +67,7 @@ describe('MATERIAL of a StandardMaterial3D', () => {
       'SubResource("m")',
       `[sub_resource type="StandardMaterial3D" id="m"]\n${body}\n`
     );
-    if (material.form !== 'standard') throw new Error(`expected a StandardMaterial3D, got ${material.type}`);
+    if (material.form !== 'standard') throw new Error(`expected the standard form, got ${material.form}`);
     return material;
   };
 
@@ -82,6 +85,34 @@ describe('MATERIAL of a StandardMaterial3D', () => {
     const material = materialAt('resource_local_to_scene = true\nalbedo_texture = SubResource("map")');
 
     expect(material.textures.albedo_texture?.isHeldLocally).toBe(true);
+  });
+});
+
+describe('MATERIAL of a ShaderMaterial', () => {
+  const materialOf = (shaderType: string) =>
+    loadedValue(
+      MATERIAL,
+      'SubResource("m")',
+      [
+        `[sub_resource type="Shader" id="code"]\ncode = "shader_type ${shaderType};\nuniform float tint;\n"`,
+        '[sub_resource type="ShaderMaterial" id="m"]\nshader = SubResource("code")\nshader_parameter/tint = 0.25',
+      ].join('\n\n')
+    );
+
+  it("hands on a spatial shader's text and the material's parameters", () => {
+    expect(materialOf('spatial')).toEqual({
+      form: 'spatial-shader',
+      shader: {
+        code: 'shader_type spatial;\nuniform float tint;\n',
+        file: 'SubResource("code")',
+        parameters: { tint: '0.25' },
+        textures: {},
+      },
+    });
+  });
+
+  it('declines a canvas item shader, which no 3D surface draws', () => {
+    expect(materialOf('canvas_item')).toEqual({ form: 'declined', type: 'ShaderMaterial' });
   });
 });
 

@@ -100,6 +100,20 @@ cast_shadow = 1
         cast_shadow: '1',
       });
     });
+
+    // Godot sets each property in file order, so the last one wins (`resource_format_text.cpp:304`, `:694`).
+    it('keeps the last value of a property written twice', () => {
+      const content = `
+[node name="Sun" type="DirectionalLight3D"]
+light_energy = 1.5
+light_energy = 2.5
+`;
+      const creator = vi.fn<NodeCreator<RawNode>>(simpleCreator);
+
+      parser.parse(content, creator);
+
+      expect(creator).toHaveBeenCalledWith(expect.any(Object), { light_energy: '2.5' });
+    });
   });
 
   describe('resource parsing', () => {

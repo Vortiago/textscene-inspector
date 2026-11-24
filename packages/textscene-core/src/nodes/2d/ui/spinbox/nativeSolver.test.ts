@@ -14,7 +14,6 @@ import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls
 import type { SpinBoxProperties } from './types';
 import {
   spinBoxLayout,
-  formatGodotNumber,
   spinBoxUpButtonState,
   spinBoxDownButtonState,
   spinBoxIconColor,
@@ -122,21 +121,6 @@ describe('spinBoxLayout', () => {
 
   it('leaves the field rect empty and pinned to the right edge when the rect is narrower than the buttons block under RTL (error path)', () => {
     expect(spinBoxLayout({ x: 10, y: 30 }, 16, true).fieldRect).toEqual({ x: 10, y: 0, w: 0, h: 30 });
-  });
-});
-
-describe('formatGodotNumber', () => {
-  it('trims trailing zeroes but keeps exactly one digit after the point (happy path)', () => {
-    expect(formatGodotNumber(5.5, 1)).toBe('5.5');
-    expect(formatGodotNumber(5, 2)).toBe('5.0');
-  });
-
-  it('prints no point at all at 0 decimals (error path)', () => {
-    expect(formatGodotNumber(5, 0)).toBe('5');
-  });
-
-  it('handles a negative value (edge case)', () => {
-    expect(formatGodotNumber(-2.5, 1)).toBe('-2.5');
   });
 });
 

@@ -36,6 +36,8 @@ export const RESOURCE_BASES_OUT = join(here, '../resource-bases.json');
  */
 export const RESOURCE_GETTERS_OUT = join(here, '../resource-getters.json');
 
+/** Every ClassDB class: its immediate base, whether it can be instantiated, and whether it is editor API. */
+export const CLASSES_OUT = join(here, '../classdb-classes.json');
 /** Each stored Node property's default, the overrides of instantiable classes, and the derived properties. */
 export const NODE_DEFAULTS_OUT = join(here, '../node-defaults.json');
 

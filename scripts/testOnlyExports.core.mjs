@@ -18,6 +18,14 @@ const OUTSIDE_CORE = ['apps', 'packages/textscene-dev-kit', 'scripts'].map((dir)
 export const KEPT_TEST_ONLY_EXPORTS = [
   // No runtime code lists the hand rows, and a test builds the check of each one.
   'godot/classdb/propertyDescriptor.ts#handRowKeys',
+  // The preprocessor refuses any NotPortable, and the refusal tests name the class each case throws.
+  'godot/expression/execute.ts#UnportedExpression',
+  // The Expression coverage test names the constructor registration each case reaches.
+  'godot/variant/construct/construct.ts#constructorFor',
+  // The preprocessor refuses any NotPortable, and the refusal tests name the class each case throws.
+  'godot/variant/objects/makeObject.ts#UnsupportedObject',
+  // The test pins that a name only the object prototype has is no C++ parameter.
+  'godot/variant/utility/utilityArguments.ts#isCppParameter',
   // A registered hand row is module state nothing clears, so a test passes its own descriptor.
   'linter/descriptorValidator.ts#descriptorValidator',
   // `@react-three/test-renderer` cannot wrap a real `<Canvas>`, so a scene test mounts its contents.
@@ -41,9 +49,24 @@ export const KEPT_TEST_ONLY_EXPORTS = [
   'r3f/liveSceneTree.ts#rootScope',
   // A host's scene loads through the loader of its provider. Only a test hands a scene a loader it built.
   'r3f/sceneResourcePipeline.ts#adoptLoader',
+  // The layer tests bake a known cube through the real bake, and a sky draws its own radiance.
+  'resources/sky/skyLayers.ts#cubeRadiance',
   // The builds and the cache are module state, so each test starts from the one reset that aborts
   // the builds in flight and clears the cache.
   'resources/textures/proceduralBuilds.ts#resetProceduralTextures',
+  // The preprocessed-text check reads the text before any parse, also for a text the parser refuses.
+  'shaders/language/parseShader.ts#shaderCode',
+  // The round trip test prints each parsed tree back to text, which no transpilation needs.
+  'shaders/language/printer.ts#printShader',
+  // The tree check proves each parsed tree has Godot's node types and positions, in tests only.
+  'shaders/language/treeCheck.ts#treeFault',
+  // The BaseMaterial3D generator ships before its reader, the lit scene template.
+  'shaders/material/baseMaterialShader.ts#baseMaterialShader',
+  'shaders/material/baseMaterialShader.ts#shaderTextOf',
+  'shaders/material/materialParameters.ts#materialParameters',
+  'shaders/material/stencilEffect.ts#stencilPassOf',
+  // The template check prints each parsed template stage back to text, which no draw needs.
+  'shaders/template/printTemplate.ts#printTemplateStage',
   // Vitest resolves `virtual:texture-worker-source` here (`vitest.shared.ts`), which no import names.
   'workers/textureWorkerSource.stub.ts#default',
 ];

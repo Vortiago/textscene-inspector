@@ -11,7 +11,8 @@ import { copySampling } from '../resources/textures/copySampling';
 import { imageSize, readRenderTargetPixels, type ImagePixels } from '../resources/formats/image/imagePixels';
 import { perObject } from '../utils/perObject';
 import { drawOffscreen } from './offscreen/draw';
-import { isHeld } from './useDisposeOnRelease';
+import type { TargetCopy } from '../shaders/uniforms/textureCopies';
+import { holdUntilReleased, isHeld } from './useDisposeOnRelease';
 import { holdsSrgbBytes, markSrgbBytes } from './srgbByteTextures';
 import { copyTexels, wholeTexels, type TexelPlacement } from './texelCopy';
 
@@ -178,11 +179,8 @@ export function refillLiveCopies(texture: THREE.Texture, gl: THREE.WebGLRenderer
   fillCopies(texture, gl, (copy) => isHeld(copy.texture));
 }
 
-/**
- * Fills `copy` of `source` now, for a reader that samples it before the target's next render, as a
- * sky bake does. A texture that is no copy of `source` needs no fill.
- */
-export function fillLiveCopy(source: THREE.Texture, copy: THREE.Texture, gl: THREE.WebGLRenderer): void {
+/** Fills `copy` of `source` now, for a reader that samples it before the target's next render. */
+function fillLiveCopy(source: THREE.Texture, copy: THREE.Texture, gl: THREE.WebGLRenderer): void {
   const live = [...liveTargetOf(source).copies].find((candidate) => candidate.texture === copy);
   if (live) drawOffscreen(gl, () => live.fill(gl));
 }
@@ -207,6 +205,20 @@ function fillCopies(
 export function liveTargetCopy(source: THREE.Texture, layout?: AtlasTextureLayout): THREE.Texture {
   const { width, height, placement } = copyRegion(source, layout);
   return addCopy(source, width, height, placement, viewSharing(width, height, placement));
+}
+
+/** Null for a texture no pass redraws. `configure` runs before the first fill, as three sets it once. */
+export function heldLiveTargetCopy(
+  source: THREE.Texture,
+  configure: (copy: THREE.Texture) => void
+): TargetCopy | null {
+  if (!isLiveTarget(source)) return null;
+  const copy = liveTargetCopy(source);
+  configure(copy);
+  const release = holdUntilReleased(copy);
+  const { renderer } = liveTargetOf(source);
+  if (renderer) fillLiveCopy(source, copy, renderer);
+  return { copy, release };
 }
 
 /** The copies `liveTargetCopy` made of the same region of `source`, not freed, in the order they were made. */

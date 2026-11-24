@@ -158,6 +158,7 @@ function UndrawnNotices({ nodePath }: { nodePath: string }) {
     <>
       <UndrawnMeshNotice types={undrawn.meshTypes} />
       {undrawn.isEmptyShape && <EmptyShapeNotice />}
+      <ShaderErrorNotice errors={undrawn.shaderErrors} />
     </>
   );
 }
@@ -191,6 +192,20 @@ function EmptyShapeNotice() {
       {EMPTY_SHAPE_WARNING.map((line) => (
         <p key={line} className={styles.warningText}>
           {line}
+        </p>
+      ))}
+    </WarningSection>
+  );
+}
+
+/** The error text of each shader of the node that the previewer does not draw. */
+function ShaderErrorNotice({ errors }: { errors: readonly string[] }) {
+  if (errors.length === 0) return null;
+  return (
+    <WarningSection title="Shader Error">
+      {errors.map((error) => (
+        <p key={error} className={styles.warningText}>
+          {error}
         </p>
       ))}
     </WarningSection>

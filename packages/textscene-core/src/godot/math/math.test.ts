@@ -6,7 +6,10 @@
  */
 import { describe, it, expect } from 'vitest';
 import {
+  cMax,
+  cMin,
   cubicInterpolatef,
+  isUnitWithinEpsilon,
   degToRad,
   degToRadf,
   multiplyColor,
@@ -18,6 +21,7 @@ import {
   lerpf,
   remapf,
   CMP_EPSILON,
+  bezierDerivativef,
   bezierInterpolatef,
   isZeroApprox,
   isEqualApprox,
@@ -338,5 +342,59 @@ describe('lerpAngle', () => {
 
   it('crosses the half turn where that is shorter', () => {
     expect(lerpAngle(3, -3, 0.5)).toBeCloseTo(Math.PI, 6);
+  });
+});
+
+describe('isUnitWithinEpsilon', () => {
+  it('takes a value within UNIT_EPSILON of 1', () => {
+    expect(isUnitWithinEpsilon(1.0009)).toBe(true);
+    expect(isUnitWithinEpsilon(0.9991)).toBe(true);
+  });
+
+  it('refuses a value UNIT_EPSILON or more away from 1', () => {
+    expect(isUnitWithinEpsilon(1.0011)).toBe(false);
+    expect(isUnitWithinEpsilon(4)).toBe(false);
+  });
+
+  it('compares the float difference with the float UNIT_EPSILON (edge case)', () => {
+    expect(isUnitWithinEpsilon(1 + Math.fround(0.001))).toBe(false);
+    expect(isUnitWithinEpsilon(1)).toBe(true);
+  });
+});
+
+describe('cMin', () => {
+  it('gives the smaller operand', () => {
+    expect(cMin(1, 2)).toBe(1);
+  });
+
+  it('gives the second operand where either is NaN, as Godot MIN does', () => {
+    expect([cMin(NaN, 1), cMin(1, NaN)]).toEqual([1, NaN]);
+  });
+});
+
+describe('cMax', () => {
+  it('gives the larger operand', () => {
+    expect(cMax(1, 2)).toBe(2);
+  });
+
+  it('gives the second operand where either is NaN, as Godot MAX does', () => {
+    expect([cMax(NaN, 1), cMax(1, NaN)]).toEqual([1, NaN]);
+  });
+});
+
+describe('bezierDerivativef', () => {
+  it('gives three times the first handle offset at t = 0 and the last at t = 1', () => {
+    expect(bezierDerivativef(1, 5, -3, 7, 0)).toBe(12);
+    expect(bezierDerivativef(1, 5, -3, 7, 1)).toBe(30);
+  });
+
+  it('is the span length on a straight span with handles at the thirds', () => {
+    expect(bezierDerivativef(0, 10, 20, 30, 0.4)).toBe(30);
+  });
+
+  it('rounds the result to single precision', () => {
+    const single = bezierDerivativef(0, 0.1, 0.2, 1, 0.3);
+
+    expect(single).toBe(Math.fround(single));
   });
 });

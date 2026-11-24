@@ -1,7 +1,9 @@
 /** Godot's text spellings of a number, each from `VariantWriter::write` (`variant_parser.cpp:1985-2030`). */
 
 import { describe, expect, it } from 'vitest';
-import { componentLiteral, floatLiteral } from './variantWriter';
+import { typedArray } from './construct/typedContainer';
+import { variant } from './value/variant';
+import { componentLiteral, floatLiteral, variantToText } from './variantWriter';
 
 describe('componentLiteral', () => {
   it('writes zero without its sign', () => {
@@ -56,5 +58,31 @@ describe('floatLiteral', () => {
 
   it('appends nothing to a spelling with a point, an exponent or no digits', () => {
     expect([0.5, Math.fround(1e-7), Infinity].map(floatLiteral)).toEqual(['0.5', '1e-07', 'inf']);
+  });
+});
+
+describe('variantToText', () => {
+  const int = (value: bigint) => variant('INT', value);
+
+  // Printed by Godot 4.6.3: `var_to_str(-INF)` and the others.
+  it('writes negative infinity as inf_neg, the compatible spelling', () => {
+    expect(variantToText(variant('FLOAT', -Infinity))).toBe('inf_neg');
+  });
+
+  it('names the element type of a typed array', () => {
+    expect(variantToText(typedArray([int(1n)], { type: 2, className: '' }))).toBe('Array[int]([1])');
+  });
+
+  it('sorts the keys of a dictionary by type, and a String with a StringName by code point', () => {
+    const entries = [variant('STRING', 'b'), int(2n), variant('NIL', null), variant('STRING_NAME', 'a')].map(
+      (key) => ({ key, value: int(0n) })
+    );
+    expect(variantToText(variant('DICTIONARY', entries))).toBe('{\nnull: 0,\n2: 0,\n&"a": 0,\n"b": 0\n}');
+  });
+
+  it('writes an array nested past MAX_RECURSION as empty', () => {
+    let nested = variant('ARRAY', [int(1n)]);
+    for (let depth = 0; depth < 101; depth++) nested = variant('ARRAY', [nested]);
+    expect(variantToText(nested)).toContain('[[]]');
   });
 });

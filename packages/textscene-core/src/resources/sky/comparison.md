@@ -6,45 +6,72 @@ renders_as: Godot's radiance layers as an octmap array + background
 
 # Sky
 
-A `Sky` resource's `sky_material` is the source of the background and of the image-based ambient and reflection. Each of Godot's three material types renders here as a background and two light sources. The background runs the sky shader at each pixel on the ray the pixel casts, as Godot's does, so no texture softens its edges. Godot's radiance layers, an octmap array with a mip chain per layer, give every reflection, the ambient light and the sky light in both fogs. Each read picks its mip from the screen derivatives of its direction, as Godot does. A small, strongly curved mirror reads a coarser mip than a large one. The radiance renders at the sky's `radiance_size`, so a small size blurs a mirror as in Godot. A size above 256 renders at 256, as Godot draws rough metal at 512 and at 256 alike.
+A `Sky` resource's `sky_material` gives the background, the image-based ambient light and the reflections. A ShaderMaterial of `shader_type sky` and each of Godot's three sky material types render here as a background and two light sources. A sky material draws through the sky shader that Godot writes for it from its properties (`sky_material.cpp:296`, `:486`, `:728`). It has the same text and the same uniform values, and takes the path of a ShaderMaterial sky. The background runs the sky shader at each pixel on the ray the pixel casts, as Godot's does, so no texture softens its edges. Godot's radiance layers, an octmap array with a mip chain per layer, give every reflection, the ambient light and the sky light in both fogs. Each read picks its mip from the screen derivatives of its direction, as Godot does. A small, strongly curved mirror reads a coarser mip than a large one. The radiance renders at the sky's `radiance_size`, so a small size blurs a mirror as in Godot. A size above 256 renders at 256, as Godot draws rough metal at 512 and at 256 alike.
 
-Viewports that draw one Sky share one radiance, as in Godot (`sky.h:251`). A render that finds the sky changed bakes it at its own exposure, and the children of a viewport render first (`renderer_viewport.cpp:91-127`). A sky that reads the lights changes at each new exposure, so two viewports of one world read the bake of the first. An incremental sky bakes again only after it filters every layer (`sky.cpp:1263-1369`). The faces an ALWAYS ReflectionProbe draws before the view in each frame are renders at the world's exposure too. Each viewport draws the background at its own exposure.
+Viewports that draw one Sky share one radiance, as in Godot (`sky.h:251`). A render that finds the sky changed bakes it at its own exposure, and the children of a viewport render first (`renderer_viewport.cpp:91-127`). A sky that reads the lights changes at each new exposure, so two viewports of one world read the bake of the first. An incremental sky bakes again only after it filters every layer (`sky.cpp:1263-1369`). A change of the lights a sky reads bakes it again in place, for every sky material (`sky.cpp:1105-1143`). Real-Time and Quality bake every layer in the next frame. Incremental bakes layer 0, then one more layer in each frame. The faces an ALWAYS ReflectionProbe draws before the view in each frame are renders at the world's exposure too. A Quality sky under such a probe bakes again in the view's render, at the view's exposure. Each viewport draws the background at its own exposure. Two exposures can bake a Quality or Real-Time sky in turn. The sky then keeps the layers of the bake before, and filters no layer it already holds.
 
-The Environment's `background_energy_multiplier` scales the background once, and the ambient and the reflection twice. The radiance bakes it in, and each surface reads the radiance at it again (`render_scene_data_rd.cpp:169`, `scene_forward_clustered.glsl:1732`, `:1756`). A fog reads the radiance as baked.
+The Environment's `background_energy_multiplier` scales the background once, and the ambient and the reflection twice. The radiance bakes it in, and each surface reads the radiance at it again (`render_scene_data_rd.cpp:169`, `scene_forward_clustered.glsl:1732`, `:1756`). A fog reads the radiance as baked. Each layer holds the energy of the render that baked or filtered it last. Over an ALWAYS probe, layer 0 holds the world's exposure while the last layer, which the ambient reads, still holds the view's.
 
 ## ProceduralSkyMaterial
+
 <!-- compare: image=unit-sky-procedural status=done fixture=unit-sky-procedural.tscn -->
 
 A gradient sky from top, horizon and ground colours. The warm-top, green-horizon gradient and the sphere and floor it lights match Godot. Godot multiplies each sRGB colour by its energy multiplier before the linear conversion, and so does the previewer. The sky carries Godot's debanding noise, and `use_debanding = false` turns it off.
 
 ## PanoramaSkyMaterial
+
 <!-- compare: image=unit-sky-panorama status=done fixture=unit-sky-panorama.tscn -->
 
 An equirectangular image wrapped onto the sky. The coloured calibration bands and the black grid confirm the U/V orientation matches Godot. The previewer maps each direction to the image with Godot's approximations of `acos` and `atan2` (`sky.glsl:179-201`). These place the texels near the horizon 6% closer together than the exact functions, so the black horizon band has Godot's width.
 
-A panorama that is a ViewportTexture counts its path from the local scene of the node that holds the Environment: a WorldEnvironment or a Camera3D. Godot sets it up only when the Environment, the Sky and the PanoramaSkyMaterial are all local to scene. Otherwise the sky samples the magenta and black placeholder, as in Godot. A set-up panorama samples the live target. The background follows each draw of the target. The radiance keeps the first draw, as in Godot, where a draw of the target leaves the sky clean.
+A panorama that is a ViewportTexture counts its path from the local scene of the node that holds the Environment: a WorldEnvironment or a Camera3D. Godot sets it up only when the Environment, the Sky and the PanoramaSkyMaterial are all local to scene. Otherwise the sky samples the magenta and black placeholder, as in Godot. A set-up panorama samples a copy of the live target with the panorama's sampler. The background follows each draw of the target. The radiance keeps the first draw, as in Godot, where a draw of the target leaves the sky clean.
 
 ## PanoramaSkyMaterial without filtering
+
 <!-- compare: image=unit-sky-panorama-nearest status=done fixture=unit-sky-panorama-nearest.tscn -->
 
 With `filter = false` the panorama samples the nearest texel, and each texel draws as a block with hard edges. With `filter = true`, the default, it samples linearly. Neither reads mipmaps, as Godot's `filter_linear` and `filter_nearest` read none (`sky_material.cpp:498-505`).
 
 ## PhysicalSkyMaterial
+
 <!-- compare: image=unit-sky-physical status=done fixture=unit-sky-physical.tscn -->
 
 An atmospheric-scattering sky. The grey-blue gradient, the horizon band, and the sphere and ground it lights match Godot's. It carries the same debanding noise as the procedural sky.
 
+## ShaderMaterial
+
+<!-- compare: image=unit-shader-sky-parameters status=limitation fixture=unit-shader-sky-parameters.tscn -->
+
+A user's sky shader reads a GradientTexture2D through a `source_color` sampler and a float the material sets. The transpiled sky template draws the background at each pixel. Its octmap pass draws straight into the radiance the metal sphere reflects, as Godot's does. Both match Godot. The sky's samplers read Godot's default samplers: 4x anisotropy whatever the project's level, and the project's nearest mipmap filter. A `samplerCube` reads a Cubemap saved with its faces or an image imported as a cubemap, in Godot's face order. The environment's depth fog, its sun scatter, its aerial perspective and its volumetric fog reach the sky as in Godot. `TIME` follows the playback controls. The background and the half and quarter passes read the sky's own radiance through `RADIANCE`. A colour read holds the energy layer 0 was baked at, as Godot stores that brightness in the layer. A bias names the mip level of the read, as in Godot's compiler. The octmap pass reads black there, as in Godot. Godot binds its radiance array to a flat texture slot. So with its default texture array reflections, a `RADIANCE` read at level 0 in the upper sky depends on the graphics driver. The previewer draws the defined result, the one Godot draws with texture array reflections off. A shader Godot does not compile draws Godot's black default sky, and the node details show Godot's error. In Automatic process mode, a sky that reads `TIME` or `POSITION` at radiance size 256 bakes with the fast filter, as Real-Time does. A sky that reads `TIME` or `POSITION` bakes its radiance again when `TIME` moves forward or the camera moves, by Godot's rules. An Incremental sky bakes one layer in each frame. A stop or a seek of the playback controls bakes it again too, as a new start of Godot's clock.
+
+A texture array or cubemap array parameter is not loaded, so its sampler reads its default. A cubemap imported with `mipmaps/limit` keeps every mip level.
+
+## Sky shader lights
+
+<!-- compare: image=unit-shader-sky-light status=done fixture=unit-shader-sky-light.tscn -->
+
+The sky shader adds a glow toward the sun it reads through `LIGHT0_DIRECTION`, `LIGHT0_COLOR` and `LIGHT0_ENERGY`. The glow in the background and in the metal sphere's reflection matches Godot's. A sky shader reads `LIGHT0_*` to `LIGHT3_*` from the first four DirectionalLight3D nodes whose `sky_mode` is not Light Only, as Godot does. A slot past the last light defines only its `ENABLED`, as Godot leaves the rest of it from an earlier frame.
+
+## Half and quarter resolution passes
+
+<!-- compare: image=unit-shader-sky-half-res status=done fixture=unit-shader-sky-half-res.tscn -->
+
+The sky draws its gradient in the half resolution pass. The full pass reads it through `HALF_RES_COLOR`. The background and the metal sphere's reflection match Godot's. With `use_half_res_pass` or `use_quarter_res_pass`, the sky draws at a half or a quarter of the size first, the quarter pass before the half pass. A shader that reads `HALF_RES_COLOR` or `QUARTER_RES_COLOR` without its render mode reads white in the background. In the radiance bake, Godot draws those passes into the smaller mips of the radiance. The previewer draws them into octmaps of their own at the same sizes. In the radiance bake, a read without its pass gets mip 1 or 2 of the last radiance, as in Godot. A pass can write `ALPHA`, and a later pass reads it as `HALF_RES_COLOR.a` or `QUARTER_RES_COLOR.a`. The value can be outside 0 to 1, as Godot's passes keep RGBA16F.
+
 ## Sun disc size
+
 <!-- compare: image=unit-sky-sun-angular-distance status=done fixture=unit-sky-sun-angular-distance.tscn -->
 
 A DirectionalLight3D's `light_angular_distance` sets the size of its sun disc in the sky, as Godot passes it to the sky shader in radians. This 3 degree sun draws a solid disc with a glow around it, as in Godot. A light with no angular distance draws a point sun.
 
 ## Radiance size 32
+
 <!-- compare: image=unit-sky-radiance-size-32 status=done fixture=unit-sky-radiance-size-32.tscn -->
 
 A sky with `radiance_size = 0` bakes from a radiance 32 texels wide, the smallest Godot allows. The mirror sphere reflects a coarse sky, and the rough sphere reads layers filtered from a 32-wide octmap and its short downsample chain. Both spheres and the ground they light match Godot's.
 
 ## Real-Time process mode
+
 <!-- compare: image=unit-sky-realtime status=done fixture=unit-sky-realtime.tscn -->
 
 A sky with `process_mode = 3` bakes its layers with Godot's fast filter, at a radiance size of 256 whatever `radiance_size` says. Its ambient reads layer 6, its roughest. The metallic sphere's reflection, the default sphere and the ground it lights match Godot's.
@@ -70,4 +97,4 @@ The lenient parser never rejects. An unreadable Sky property falls back to Godot
 
 ## Known limitations
 
-- **Resource gap** A `ShaderMaterial` sky or a `CompressedCubemap` panorama is not resolved, so the background falls back to a mid-blue solid and metals reflect near-black.
+- **Approximated** Godot flashes an Incremental sky under an ALWAYS ReflectionProbe at another camera exposure in 2 of 8 frames, and the previewer does not.

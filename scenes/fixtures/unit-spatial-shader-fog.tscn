@@ -1,0 +1,123 @@
+[gd_scene format=3 uid="uid://unit_spatial_shader_fog"]
+
+; Unshaded spatial shaders that write FOG, FOG.rgb alone, FOG under fog_disabled, and RADIANCE with IRRADIANCE, each over an orange quad.
+; It moves the shader's FOG, FOG.rgb alone, fog_disabled, and RADIANCE with IRRADIANCE, one tile each. No other golden spatial shader names FOG, RADIANCE, IRRADIANCE or fog_disabled, and the environment has no fog.
+
+[sub_resource type="Shader" id="Shader_orange"]
+code = "shader_type spatial;
+render_mode unshaded;
+
+void fragment() {
+	ALBEDO = vec3(0.9, 0.3, 0.1);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_orange"]
+shader = SubResource("Shader_orange")
+
+[sub_resource type="Shader" id="Shader_fog"]
+code = "shader_type spatial;
+render_mode unshaded;
+
+void fragment() {
+	ALBEDO = vec3(0.2, 0.5, UV.y);
+	FOG = vec4(0.9, 0.2, 0.1, UV.x);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_fog"]
+shader = SubResource("Shader_fog")
+
+[sub_resource type="Shader" id="Shader_colour"]
+code = "shader_type spatial;
+render_mode unshaded;
+
+void fragment() {
+	ALBEDO = vec3(0.2, 0.5, UV.y);
+	FOG.rgb = vec3(0.1, 0.6, 0.3) * UV.y;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_colour"]
+shader = SubResource("Shader_colour")
+
+[sub_resource type="Shader" id="Shader_disabled"]
+code = "shader_type spatial;
+render_mode unshaded, fog_disabled;
+
+void fragment() {
+	ALBEDO = vec3(0.2, 0.5, UV.y);
+	FOG = vec4(0.9, 0.2, 0.1, 1.0);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_disabled"]
+shader = SubResource("Shader_disabled")
+
+[sub_resource type="Shader" id="Shader_radiance"]
+code = "shader_type spatial;
+render_mode unshaded;
+
+void fragment() {
+	ALBEDO = vec3(0.2, 0.5, UV.y);
+	RADIANCE = vec4(1.0, 0.0, 0.0, 1.0);
+	IRRADIANCE = vec4(0.0, 1.0, 0.0, 1.0);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_radiance"]
+shader = SubResource("Shader_radiance")
+
+[sub_resource type="QuadMesh" id="QuadMesh_1"]
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.1, 0.12, 0.16, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4.2)
+
+[node name="Orange_fog" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, -2.05, -0.35, -0.3)
+mesh = SubResource("QuadMesh_1")
+material_override = SubResource("ShaderMaterial_orange")
+
+[node name="Tile_fog" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.2, 0, 0, 0, 1.2, 0, 0, 0, 1.2, -2.4, 0.15, 0)
+mesh = SubResource("QuadMesh_1")
+material_override = SubResource("ShaderMaterial_fog")
+
+[node name="Orange_colour" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, -0.45, -0.35, -0.3)
+mesh = SubResource("QuadMesh_1")
+material_override = SubResource("ShaderMaterial_orange")
+
+[node name="Tile_colour" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.2, 0, 0, 0, 1.2, 0, 0, 0, 1.2, -0.8, 0.15, 0)
+mesh = SubResource("QuadMesh_1")
+material_override = SubResource("ShaderMaterial_colour")
+
+[node name="Orange_disabled" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 1.15, -0.35, -0.3)
+mesh = SubResource("QuadMesh_1")
+material_override = SubResource("ShaderMaterial_orange")
+
+[node name="Tile_disabled" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.2, 0, 0, 0, 1.2, 0, 0, 0, 1.2, 0.8, 0.15, 0)
+mesh = SubResource("QuadMesh_1")
+material_override = SubResource("ShaderMaterial_disabled")
+
+[node name="Orange_radiance" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 2.75, -0.35, -0.3)
+mesh = SubResource("QuadMesh_1")
+material_override = SubResource("ShaderMaterial_orange")
+
+[node name="Tile_radiance" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.2, 0, 0, 0, 1.2, 0, 0, 0, 1.2, 2.4, 0.15, 0)
+mesh = SubResource("QuadMesh_1")
+material_override = SubResource("ShaderMaterial_radiance")

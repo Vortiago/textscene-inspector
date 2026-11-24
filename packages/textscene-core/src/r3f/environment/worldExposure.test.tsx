@@ -56,7 +56,7 @@ function environment(name: string): EnvironmentResolution {
   const settings = { name } as unknown as EnvironmentLayerProps['settings'];
   return {
     status: 'resolved',
-    environment: { settings, sky: null, panorama: null, glowMap: null },
+    environment: { settings, sky: null, glowMap: null },
   };
 }
 

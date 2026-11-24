@@ -51,7 +51,7 @@ describe('parseParallaxBackground', () => {
     const result = parseParallaxBackground(heading('ParallaxBackground', { name: 'Bad' }), {
       transform: 'Transform2D(not, valid)',
     });
-    expect(result.canvasTransform).toEqual(TRANSFORM2D_IDENTITY);
+    expect(result.canvasTransform).toEqual({ ...TRANSFORM2D_IDENTITY, c: -0 });
   });
 
   it('handles missing optional attributes (edge case)', () => {

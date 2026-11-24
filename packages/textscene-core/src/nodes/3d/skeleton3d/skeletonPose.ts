@@ -18,6 +18,7 @@ import {
   normalizedQuaternion,
   QUATERNION_IDENTITY,
   quaternionInverse,
+  quaternionIsNormalized,
   quaternionMultiply,
   quaternionSlerp,
   type Quaternion,
@@ -123,18 +124,21 @@ function summedOffsets(init: Vector3, values: readonly Vector3[]): Vector3 {
   return values.reduce((sum, value) => vector3Add(sum, vector3Sub(value, init)), init);
 }
 
-/** `interpolate_via_rest(rotation, value, 1, init)` for each track in turn (`animation.cpp:5700-5707`). */
+/** `interpolate_via_rest(rotation, value, 1, init)` for each track in turn. */
 function composedTurns(init: Quaternion, initInverse: Quaternion, values: readonly Quaternion[]): Quaternion {
-  return values.reduce(
-    (rotation, value) =>
-      normalizedQuaternion(
-        quaternionMultiply(
-          rotation,
-          quaternionSlerp(QUATERNION_IDENTITY, quaternionMultiply(initInverse, value), 1)
-        )
-      ),
-    init
-  );
+  return values.reduce((rotation, value) => interpolatedViaRest(rotation, value, init, initInverse), init);
+}
+
+/** `Animation::interpolate_via_rest` (animation.cpp:5700) at weight 1, with the MATH_CHECKS of the editor. */
+function interpolatedViaRest(
+  from: Quaternion,
+  to: Quaternion,
+  rest: Quaternion,
+  restInverse: Quaternion
+): Quaternion {
+  if (![from, to, rest].every(quaternionIsNormalized)) return QUATERNION_IDENTITY;
+  const turn = quaternionSlerp(QUATERNION_IDENTITY, quaternionMultiply(restInverse, to), 1);
+  return normalizedQuaternion(quaternionMultiply(from, turn));
 }
 
 /**

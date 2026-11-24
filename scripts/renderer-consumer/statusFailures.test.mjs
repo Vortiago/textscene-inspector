@@ -6,7 +6,7 @@ const SETTLED = { scriptedNodeCount: 0, hasCurrentCamera: false };
 const PASSING = {
   statusSettled: SETTLED,
   settled: SETTLED,
-  undrawn: [{ path: '/root/Root/Sign', meshTypes: ['FutureMesh'], isEmptyShape: false }],
+  undrawn: [{ path: '/root/Root/Sign', meshTypes: ['FutureMesh'], isEmptyShape: false, shaderErrors: [] }],
   heardTextureBuild: true,
   settledAfterWrite: [null, SETTLED],
   idleCalls: 0,

@@ -50,6 +50,9 @@ function ViewReporting({ undrawn, children }: { undrawn: UndrawnNode[]; children
   return <PreviewViewStatusProvider value={heard}>{children}</PreviewViewStatusProvider>;
 }
 
+const SHADER_ERROR =
+  'Godot does not compile the sky shader, and draws its default sky: 3:14: Unknown identifier.';
+
 afterEach(() => {
   // Remove the registrations the tests added, so none leaks.
   nodeRegistry.unregister(FAKE_TYPE);
@@ -120,7 +123,9 @@ describe('<NodeDetailsPanel>', () => {
     const graph = createSceneGraphFromTscnScene({ nodes: [makeNode('Sign', FAKE_TYPE)] });
 
     render(
-      <ViewReporting undrawn={[{ path: '/root/Sign', meshTypes: ['FutureMesh'], isEmptyShape: false }]}>
+      <ViewReporting
+        undrawn={[{ path: '/root/Sign', meshTypes: ['FutureMesh'], isEmptyShape: false, shaderErrors: [] }]}
+      >
         <NodeDetailsPanel />
         <Selector path="Sign" />
       </ViewReporting>,
@@ -138,7 +143,7 @@ describe('<NodeDetailsPanel>', () => {
     const graph = createSceneGraphFromTscnScene({ nodes: [makeNode('Wall', FAKE_TYPE)] });
 
     render(
-      <ViewReporting undrawn={[{ path: '/root/Wall', meshTypes: [], isEmptyShape: true }]}>
+      <ViewReporting undrawn={[{ path: '/root/Wall', meshTypes: [], isEmptyShape: true, shaderErrors: [] }]}>
         <NodeDetailsPanel />
         <Selector path="Wall" />
       </ViewReporting>,
@@ -157,7 +162,9 @@ describe('<NodeDetailsPanel>', () => {
     const graph = createSceneGraphFromTscnScene({ nodes: [makeNode('Wall', FAKE_TYPE)] });
 
     render(
-      <ViewReporting undrawn={[{ path: '/root/Wall', meshTypes: ['FutureMesh'], isEmptyShape: false }]}>
+      <ViewReporting
+        undrawn={[{ path: '/root/Wall', meshTypes: ['FutureMesh'], isEmptyShape: false, shaderErrors: [] }]}
+      >
         <NodeDetailsPanel />
         <Selector path="Wall" />
       </ViewReporting>,
@@ -168,6 +175,28 @@ describe('<NodeDetailsPanel>', () => {
     });
 
     expect(screen.queryByText('The CSGShape3D has an empty shape.')).toBeNull();
+  });
+
+  it("shows a shader's error text", async () => {
+    nodeRegistry.register({ typeName: FAKE_TYPE, parser: () => ({}) });
+    const graph = createSceneGraphFromTscnScene({ nodes: [makeNode('Environment', FAKE_TYPE)] });
+
+    render(
+      <ViewReporting
+        undrawn={[
+          { path: '/root/Environment', meshTypes: [], isEmptyShape: false, shaderErrors: [SHADER_ERROR] },
+        ]}
+      >
+        <NodeDetailsPanel />
+        <Selector path="Environment" />
+      </ViewReporting>,
+      { wrapper: panelWrap(graph) }
+    );
+    await act(async () => {
+      screen.getByTestId('select-node').click();
+    });
+
+    expect(screen.getByText(SHADER_ERROR)).toBeTruthy();
   });
 
   it('renders propertyFormatter sections from the registry', async () => {

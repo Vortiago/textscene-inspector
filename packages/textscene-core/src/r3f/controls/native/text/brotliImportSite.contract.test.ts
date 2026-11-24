@@ -4,21 +4,23 @@ import { join, relative, resolve, sep } from 'node:path';
 
 const SRC = resolve(import.meta.dirname, '../../../..');
 const SOURCE_EXT = /\.(ts|tsx)$/;
+/** A test file reaches no bundle, so it may import the package. */
+const TEST_FILE = /\.test\.tsx?$/;
 const SKIP_DIRS = new Set(['node_modules', 'dist']);
 
 /** Any form that pulls the package into a module graph; prose that names it does not match. */
 const IMPORTS_LIBRARY = /(?:from\s*|import\s*\(\s*|require\s*\(\s*)['"]brotli(?:\/[^'"]*)?['"]/;
 
+/** The one file that imports brotli, dynamically, so the decoder stays off the webview's first chunk. */
 const SITE = 'r3f/controls/native/text/brotliDecoder.ts';
-/** This file matches its own pattern, because the pattern is written down in it. */
-const ALLOWED = new Set([SITE, 'r3f/controls/native/text/brotliImportSite.contract.test.ts']);
+const ALLOWED = new Set([SITE]);
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
     if (SKIP_DIRS.has(entry)) continue;
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) walk(full, out);
-    else if (SOURCE_EXT.test(entry)) out.push(full);
+    else if (SOURCE_EXT.test(entry) && !TEST_FILE.test(entry)) out.push(full);
   }
   return out;
 }

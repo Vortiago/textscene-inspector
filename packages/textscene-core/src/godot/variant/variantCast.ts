@@ -10,7 +10,7 @@ import {
   type PackedNumberType,
   type VariantValue,
 } from './variantValue.js';
-import { stringToFloat } from '../string/string.js';
+import { stringToFloat } from '../string/strtod.js';
 import { colorFromString } from '../math/color.js';
 import { basisFromQuaternion, basisGetQuaternion, type BasisComponents } from '../math/basis.js';
 import { stringify } from './variantStringify.js';

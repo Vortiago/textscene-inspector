@@ -96,7 +96,7 @@ describe('bundledNotices', () => {
     text: 'Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur',
   };
   const fastlzFile = {
-    path: 'packages/textscene-core/src/resources/formats/binaryresource/fastlz.ts',
+    path: 'packages/textscene-core/src/godot/io/compression/fastlz.ts',
     text: 'Copyright (C) 2005-2020 Ariya Hidayat',
   };
   const plainFile = { path: 'packages/textscene-core/src/parser/utils.ts', text: 'export {};' };

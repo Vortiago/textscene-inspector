@@ -1,0 +1,69 @@
+[gd_scene format=3 uid="uid://unit_spatial_shader_uniforms"]
+
+; The one variable: a spatial shader's own code and parameters. Uniforms of six types, two left at their
+; defaults, a vertex() that moves the vertices of a subdivided plane, and a varying from vertex() to
+; fragment(). The texture repeats and filters linearly. unit-spatial-shader-unshaded draws no parameter,
+; no vertex() and no varying, so it does not move when these do.
+
+[sub_resource type="Gradient" id="Gradient_1"]
+offsets = PackedFloat32Array(0, 0.5, 1)
+colors = PackedColorArray(0.95, 0.85, 0.2, 1, 0.1, 0.5, 0.9, 1, 0.9, 0.2, 0.3, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_1"]
+gradient = SubResource("Gradient_1")
+width = 16
+height = 16
+fill_to = Vector2(1, 1)
+
+[sub_resource type="Shader" id="Shader_1"]
+code = "shader_type spatial;
+render_mode unshaded;
+
+uniform float amplitude = 0.1;
+uniform vec3 offset = vec3(0.0);
+uniform vec4 tint : source_color = vec4(1.0);
+uniform int bands = 3;
+uniform vec2 scale = vec2(2.0, 3.0);
+uniform sampler2D stripes : source_color, filter_linear, repeat_enable;
+
+varying float height;
+
+void vertex() {
+	height = sin(VERTEX.x * float(bands) * 2.0) * cos(VERTEX.z * 3.0);
+	VERTEX.y += height * amplitude;
+	VERTEX += offset;
+}
+
+void fragment() {
+	vec3 stripe = texture(stripes, UV * scale).rgb;
+	ALBEDO = mix(stripe * tint.rgb, vec3(height * 0.5 + 0.5), 0.3);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_1"]
+shader = SubResource("Shader_1")
+shader_parameter/amplitude = 0.35
+shader_parameter/offset = Vector3(0, 0.2, 0)
+shader_parameter/tint = Color(1, 0.8, 0.7, 1)
+shader_parameter/stripes = SubResource("GradientTexture2D_1")
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_1"]
+size = Vector2(3, 3)
+subdivide_width = 48
+subdivide_depth = 48
+material = SubResource("ShaderMaterial_1")
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.1, 0.12, 0.16, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.7660444, 0.6427876, 0, -0.6427876, 0.7660444, 0, 2.6, 3.2)
+
+[node name="Plane" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_1")

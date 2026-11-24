@@ -19,7 +19,7 @@ export interface ViewStatus {
   pending: { textures: number; fonts: number };
   /** The last window of frame numbers, or null before the first: its `timings` need `show.performance`. */
   frame: FrameStats | null;
-  /** Each node the view holds and does not draw, in path order. */
+  /** Each node the view holds and does not draw as authored, in path order. */
   undrawn: readonly UndrawnNode[];
   /** The browser draws the view's WebGL in software, so every frame is slow. */
   isSoftwareRendering: boolean;

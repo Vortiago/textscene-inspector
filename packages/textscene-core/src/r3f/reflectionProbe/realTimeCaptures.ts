@@ -1,12 +1,6 @@
-/**
- * The renders Godot draws in each frame for the ALWAYS probes of a scene, before its views: the six
- * faces of each capture (`renderer_scene_cull.cpp:3755-3762`, `:3700-3716`). Ours captures such a
- * probe again only once its content changes, so a sky's radiance update replays the renders it skips.
- */
-
 import type * as THREE from 'three';
 
-/** The faces of one capture. */
+/** The faces Godot draws for each ALWAYS probe before a frame's views (`renderer_scene_cull.cpp:3755`). */
 const CAPTURE_FACES = 6;
 
 /**
@@ -15,6 +9,13 @@ const CAPTURE_FACES = 6;
  */
 // eslint-disable-next-line no-restricted-syntax -- the taking view deletes the scene's entry
 const pendingRenders = new WeakMap<THREE.Scene, number>();
+
+/** Takes one of `scene`'s capture renders for an ALWAYS face that draws: false when none is left. */
+export function takeRealTimeCaptureRender(scene: THREE.Scene): boolean {
+  const renders = takeRealTimeCaptureRenders(scene);
+  if (renders > 1) pendingRenders.set(scene, renders - 1);
+  return renders > 0;
+}
 
 /** Notes that `scene` draws `count` probes that update ALWAYS in this frame. */
 export function noteRealTimeProbes(scene: THREE.Scene, count: number): void {
@@ -32,4 +33,18 @@ export function takeRealTimeCaptureRenders(scene: THREE.Scene): number {
   const renders = pendingRenders.get(scene) ?? 0;
   pendingRenders.delete(scene);
   return renders;
+}
+
+/** Written only by `noteRealTimeSkyState`, and kept for the scene's life. */
+// eslint-disable-next-line no-restricted-syntax -- a scene that is collected drops its state
+const skyStates = new WeakMap<THREE.Scene, string>();
+
+/** Notes the state of `scene`'s sky radiance after a step, which the next frame's ALWAYS faces start from. */
+export function noteRealTimeSkyState(scene: THREE.Scene, state: string): void {
+  skyStates.set(scene, state);
+}
+
+/** The state of `scene`'s sky radiance after its last step: equal states give equal ALWAYS captures. */
+export function realTimeSkyState(scene: THREE.Scene): string {
+  return skyStates.get(scene) ?? '';
 }

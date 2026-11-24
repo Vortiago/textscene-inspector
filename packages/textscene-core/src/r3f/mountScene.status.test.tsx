@@ -43,7 +43,7 @@ describe('the status of a mounted view', () => {
       settled: null,
       pending: { textures: 0, fonts: 0 },
       frame: null,
-      undrawn: [{ path: '/root/Main', meshTypes: ['EditorMesh'], isEmptyShape: false }],
+      undrawn: [{ path: '/root/Main', meshTypes: ['EditorMesh'], isEmptyShape: false, shaderErrors: [] }],
       isSoftwareRendering: true,
     });
     view.dispose();
@@ -65,7 +65,7 @@ describe('the status of a mounted view', () => {
     await vi.waitFor(() =>
       expect(second).toHaveBeenLastCalledWith(
         expect.objectContaining({
-          undrawn: [{ path: '/root/Main', meshTypes: ['GameMesh'], isEmptyShape: false }],
+          undrawn: [{ path: '/root/Main', meshTypes: ['GameMesh'], isEmptyShape: false, shaderErrors: [] }],
         })
       )
     );

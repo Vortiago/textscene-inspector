@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { parseNode2D, decomposeTransform2D } from './parser';
+import { transform2DDecompose } from '../../../godot/math/transform2d.js';
+import { parseNode2D, parseNodeTransform2D } from './parser';
 import { heading } from '../../../parser/testing/parserKit';
 
 describe('parseNode2D', () => {
@@ -133,7 +134,12 @@ describe('parseNode2D', () => {
   });
 });
 
-describe('decomposeTransform2D', () => {
+describe('parseNodeTransform2D, decomposed', () => {
+  const decomposeTransform2D = (text: string) => {
+    const columns = parseNodeTransform2D(text);
+    return columns && transform2DDecompose(columns);
+  };
+
   it('extracts a 90° rotation from the x-axis', () => {
     // rotation +90°: x_axis=(0,1), y_axis=(-1,0).
     const d = decomposeTransform2D('Transform2D(0, 1, -1, 0, 0, 0)')!;

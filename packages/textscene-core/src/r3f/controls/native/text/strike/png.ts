@@ -6,8 +6,8 @@
  * Portions ported from FreeType (FreeType License).
  * Copyright (c) 1996-2024 David Turner, Robert Wilhelm and Werner Lemberg.
  */
+import { crc32 } from '../../../../../godot/io/compression/checksums';
 import { bytesView } from '../../../../../utils/bytesView';
-import { crc32 } from '../../../../../utils/crc32';
 import type { EnumValue } from '../../../../../godot/classdb/enumNames';
 
 /** A decoded image: blue, green, red and alpha of each pixel, row by row from the top, the colour premultiplied. */

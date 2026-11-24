@@ -74,7 +74,7 @@ describe('usePreviewFrameloop', () => {
       revision: 0,
       isFullSize: true,
       awaitedCamera: null,
-      work: { resources: 0, textures: 0, fonts: 0 },
+      work: { resources: 0, textures: 0, fonts: 0, modules: 0 },
     };
     const facts = { scriptedNodeCount: 0, hasCurrentCamera: false };
     await act(async () => {
@@ -91,7 +91,7 @@ describe('usePreviewFrameloop', () => {
       revision: 0,
       isFullSize: true,
       awaitedCamera: null,
-      work: { resources: 0, textures: 0, fonts: 0 },
+      work: { resources: 0, textures: 0, fonts: 0, modules: 0 },
       facts: { scriptedNodeCount: 0, hasCurrentCamera: false },
     });
     const wrapper = ({ children }: { children: ReactNode }) => (

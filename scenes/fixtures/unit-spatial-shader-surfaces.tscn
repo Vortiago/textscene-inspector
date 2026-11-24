@@ -1,0 +1,70 @@
+[gd_scene format=3 uid="uid://unit_spatial_shader_surfaces"]
+
+[ext_resource type="ArrayMesh" path="res://unit-arraymesh-surface-override-quads.tres" id="1_quads"]
+
+; Two unshaded spatial shaders on the two surfaces of one ArrayMesh through surface_material_override,
+; and a third on a box through material_override.
+
+[sub_resource type="Shader" id="Shader_uv"]
+code = "shader_type spatial;
+render_mode unshaded;
+
+void fragment() {
+	ALBEDO = vec3(UV, 0.2);
+}
+"
+
+[sub_resource type="Shader" id="Shader_rings"]
+code = "shader_type spatial;
+render_mode unshaded;
+
+uniform vec3 colour : source_color = vec3(0.9, 0.4, 0.1);
+
+void fragment() {
+	float ring = step(0.5, fract(length(UV - 0.5) * 6.0));
+	ALBEDO = mix(colour, vec3(0.1, 0.2, 0.6), ring);
+}
+"
+
+[sub_resource type="Shader" id="Shader_normal"]
+code = "shader_type spatial;
+render_mode unshaded;
+
+void fragment() {
+	ALBEDO = NORMAL * 0.5 + 0.5;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_uv"]
+shader = SubResource("Shader_uv")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_rings"]
+shader = SubResource("Shader_rings")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_normal"]
+shader = SubResource("Shader_normal")
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.1, 0.12, 0.16, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4)
+
+[node name="Quads" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+mesh = ExtResource("1_quads")
+surface_material_override/0 = SubResource("ShaderMaterial_uv")
+surface_material_override/1 = SubResource("ShaderMaterial_rings")
+
+[node name="Box" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.5, 0, 0, 0, 0.433, 0.25, 0, -0.25, 0.433, 0, -1.2, 0)
+material_override = SubResource("ShaderMaterial_normal")
+mesh = SubResource("BoxMesh_1")

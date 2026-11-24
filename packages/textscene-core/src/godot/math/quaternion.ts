@@ -1,8 +1,9 @@
 /** Godot's `Quaternion` (`core/math/quaternion.h`) as plain components, and the operations a pose edit reads. */
 
 // Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
-import { CMP_EPSILON } from './math.js';
+import { CMP_EPSILON, isUnitWithinEpsilon } from './math.js';
 import { storedReal as f } from './real.js';
+import { acosf, cosf, sinf } from './realMath.js';
 import type { Vector3 } from './vector.js';
 
 export interface Quaternion {
@@ -23,8 +24,8 @@ export function quaternionFromAxisAngle(axis: Vector3, angle: number): Quaternio
   const length = f(Math.sqrt(f(f(f(axis.x * axis.x) + f(axis.y * axis.y)) + f(axis.z * axis.z))));
   if (length === 0) return { x: 0, y: 0, z: 0, w: 0 };
   const halfAngle = f(angle * 0.5);
-  const s = f(f(Math.sin(halfAngle)) / length);
-  return { x: f(axis.x * s), y: f(axis.y * s), z: f(axis.z * s), w: f(Math.cos(halfAngle)) };
+  const s = f(sinf(halfAngle) / length);
+  return { x: f(axis.x * s), y: f(axis.y * s), z: f(axis.z * s), w: cosf(halfAngle) };
 }
 
 /**
@@ -37,11 +38,12 @@ export function quaternionFromAxisAngle(axis: Vector3, angle: number): Quaternio
 export function quaternionMultiply(left: Quaternion, right: Quaternion): Quaternion {
   const { x: lx, y: ly, z: lz, w: lw } = left;
   const { x: rx, y: ry, z: rz, w: rw } = right;
+  // `operator*=` (quaternion.h:237) sums each component left to right.
   return {
-    x: f(f(f(lw * rx) + f(lx * rw)) + f(f(ly * rz) - f(lz * ry))),
-    y: f(f(f(lw * ry) + f(ly * rw)) + f(f(lz * rx) - f(lx * rz))),
-    z: f(f(f(lw * rz) + f(lz * rw)) + f(f(lx * ry) - f(ly * rx))),
-    w: f(f(f(lw * rw) - f(lx * rx)) - f(f(ly * ry) + f(lz * rz))),
+    x: f(f(f(f(lw * rx) + f(lx * rw)) + f(ly * rz)) - f(lz * ry)),
+    y: f(f(f(f(lw * ry) + f(ly * rw)) + f(lz * rx)) - f(lx * rz)),
+    z: f(f(f(f(lw * rz) + f(lz * rw)) + f(lx * ry)) - f(ly * rx)),
+    w: f(f(f(f(lw * rw) - f(lx * rx)) - f(ly * ry)) - f(lz * rz)),
   };
 }
 
@@ -50,27 +52,38 @@ export function quaternionInverse({ x, y, z, w }: Quaternion): Quaternion {
   return { x: f(-x), y: f(-y), z: f(-z), w };
 }
 
-/** `Quaternion::normalized` (`quaternion.h:88-90`): the four components over the length. */
-export function normalizedQuaternion({ x, y, z, w }: Quaternion): Quaternion {
-  const length = f(Math.sqrt(f(f(f(x * x) + f(y * y)) + f(f(z * z) + f(w * w)))));
-  return { x: f(x / length), y: f(y / length), z: f(z / length), w: f(w / length) };
+/** `Quaternion::normalized` (quaternion.cpp:69): each component times `1 / length`, as `operator/` does. */
+export function normalizedQuaternion(q: Quaternion): Quaternion {
+  const { x, y, z, w } = q;
+  const inverseLength = f(1 / f(Math.sqrt(quaternionDot(q, q))));
+  return {
+    x: f(x * inverseLength),
+    y: f(y * inverseLength),
+    z: f(z * inverseLength),
+    w: f(w * inverseLength),
+  };
 }
 
-/**
- * `Quaternion::slerp` (`quaternion.cpp:101-140`): along the shorter arc, by `weight`. Two
- * quaternions within `CMP_EPSILON` of coinciding interpolate linearly.
- */
+/** `Quaternion::is_normalized` (quaternion.cpp:73): the squared length within float `UNIT_EPSILON` of 1. */
+export function quaternionIsNormalized(q: Quaternion): boolean {
+  const lengthSquared = quaternionDot(q, q);
+  return isUnitWithinEpsilon(lengthSquared);
+}
+
+/** `Quaternion::slerp` (quaternion.cpp:101): MATH_CHECKS, on in the editor, gives `Quaternion()` off unit. */
 export function quaternionSlerp(from: Quaternion, to: Quaternion, weight: number): Quaternion {
+  if (!quaternionIsNormalized(from) || !quaternionIsNormalized(to)) return QUATERNION_IDENTITY;
   let cosine = quaternionDot(from, to);
   const sign = cosine < 0 ? -1 : 1;
   cosine = Math.abs(cosine);
   let fromScale = f(1 - weight);
   let toScale = weight;
   if (f(1 - cosine) > CMP_EPSILON) {
-    const omega = f(Math.acos(cosine));
-    const sine = f(Math.sin(omega));
+    const omega = acosf(cosine);
+    const sine = sinf(omega);
+    // `(1.0 - p_weight) * omega` is a double, and `p_weight * omega` a float that `sinf` takes.
     fromScale = f(Math.sin((1 - weight) * omega) / sine);
-    toScale = f(Math.sin(weight * omega) / sine);
+    toScale = f(sinf(f(weight * omega)) / sine);
   }
   return {
     x: f(f(fromScale * from.x) + f(toScale * sign * to.x)),
@@ -82,5 +95,5 @@ export function quaternionSlerp(from: Quaternion, to: Quaternion, weight: number
 
 /** `Quaternion::dot` (`quaternion.h`). */
 export function quaternionDot(a: Quaternion, b: Quaternion): number {
-  return f(f(f(a.x * b.x) + f(a.y * b.y)) + f(f(a.z * b.z) + f(a.w * b.w)));
+  return f(f(f(f(a.x * b.x) + f(a.y * b.y)) + f(a.z * b.z)) + f(a.w * b.w));
 }

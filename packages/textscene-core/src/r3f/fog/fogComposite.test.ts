@@ -1,26 +1,21 @@
-/**
- * The fog chunks draw Godot's fog ahead of the tone curve, the cube background fogs the sky, and
- * every fog program reads one shared set of fog uniforms. The tests read the installed three, so a
- * release that rewrites a replaced line fails here, not in a golden.
- */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { installFogComposite } from './fogComposite';
 import { GODOT_FOG_PARS_CHUNK } from './fogChunks';
 import { fogUniforms } from './fogUniforms';
 import { GODOT_SKY_VIEW_RAY } from '../sky/skyProjection';
-import { shownSky, SKY_RADIANCE_UNIFORMS, skyRotation } from '../sky/skyRadiance';
-import { skyLayersSlot } from '../sky/skyRadiance.testkit';
+import { SKY_RADIANCE_UNIFORMS, skyRotation } from '../sky/skyRadiance';
+import { shownSky, skyLayersSlot } from '../sky/skyRadiance.testkit';
 import { warningsOf } from '../testing/logWarnings';
 import { functionBody } from '../testing/glslSource';
 import { restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
 
 const threeChunks = { ...THREE.ShaderChunk };
-const backgroundCube = THREE.ShaderLib.backgroundCube!;
 const backgroundPlane = THREE.ShaderLib.background!;
 
 restoreShaderGlobalsAfterEach();
 
+// The tests read the installed three, so a release that rewrites a replaced line fails here, not in a golden.
 describe('installFogComposite', () => {
   it('draws the fog ahead of the tone curve, in place of three’s', () => {
     installFogComposite();
@@ -49,16 +44,6 @@ describe('installFogComposite', () => {
     expect(pars).toContain('vec4 volumetricFogAtDepth( float viewDepth )');
   });
 
-  it('fogs the cube background before its tone curve', () => {
-    installFogComposite();
-
-    const shader = backgroundCube.fragmentShader;
-    expect(shader.startsWith(`#include <${GODOT_FOG_PARS_CHUNK}>`)).toBe(true);
-    expect(shader.indexOf('godotSkyFog( gl_FragColor.rgb, vWorldDirection )')).toBeLessThan(
-      shader.indexOf('<tonemapping_fragment>')
-    );
-  });
-
   it('fogs the flat background, a colour background, before its tone curve', () => {
     installFogComposite();
 
@@ -80,7 +65,7 @@ describe('installFogComposite', () => {
   it('gives every fog material and the background the same uniform values', () => {
     installFogComposite();
 
-    const fogShaders = [THREE.ShaderLib.standard!, THREE.ShaderLib.basic, backgroundCube, backgroundPlane];
+    const fogShaders = [THREE.ShaderLib.standard!, THREE.ShaderLib.basic, backgroundPlane];
     for (const shader of fogShaders) {
       const uniforms = THREE.UniformsUtils.clone(shader.uniforms);
       expect(uniforms.volumetricFogVolume!.value).toBe(fogUniforms.volume);
@@ -91,7 +76,7 @@ describe('installFogComposite', () => {
   it("gives every fog material and the background the shown sky's radiance, which the surfaces read", () => {
     installFogComposite();
 
-    const fogShaders = [THREE.ShaderLib.standard!, THREE.ShaderLib.basic, backgroundCube, backgroundPlane];
+    const fogShaders = [THREE.ShaderLib.standard!, THREE.ShaderLib.basic, backgroundPlane];
     for (const shader of fogShaders) {
       const uniforms = THREE.UniformsUtils.clone(shader.uniforms);
       expect(uniforms[SKY_RADIANCE_UNIFORMS.layers]!.value).toBe(skyLayersSlot);
@@ -100,19 +85,32 @@ describe('installFogComposite', () => {
     }
   });
 
-  it("reads the aerial perspective from the sky's radiance layers at the sky's energy", () => {
+  it("reads the aerial perspective from the sky's radiance layers, at the energy each layer holds", () => {
     installFogComposite();
 
     const pars = THREE.ShaderChunk[GODOT_FOG_PARS_CHUNK as keyof typeof THREE.ShaderChunk];
     expect(pars).toContain('uniform highp sampler2DArray godotSkyLayers;');
     const aerial = functionBody(pars, 'fogAerialRadiance');
-    expect(aerial).toContain('return godotSkyBlend( skyView, mipLevel * 7.0 ) * GODOT_SKY_ENERGY;');
+    expect(aerial).toContain('return godotSkyBlend( skyView, mipLevel * 7.0 );');
   });
 
   it('gives no uniform to a shader without fog (edge case)', () => {
     installFogComposite();
 
     expect(THREE.ShaderLib.depth.uniforms).not.toHaveProperty('depthFogShape');
+  });
+
+  it("leaves three's cube background as three ships it, since a sky draws through the sky translator", () => {
+    const cube = {
+      ...THREE.ShaderLib.backgroundCube!,
+      uniforms: { ...THREE.ShaderLib.backgroundCube!.uniforms },
+    };
+
+    installFogComposite();
+
+    expect(THREE.ShaderChunk.backgroundCube_frag).toBe(threeChunks.backgroundCube_frag);
+    expect(THREE.ShaderLib.backgroundCube!.fragmentShader).toBe(cube.fragmentShader);
+    expect(THREE.ShaderLib.backgroundCube!.uniforms).toEqual(cube.uniforms);
   });
 
   it('changes nothing on a second call (edge case)', () => {

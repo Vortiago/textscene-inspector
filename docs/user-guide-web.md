@@ -78,6 +78,21 @@ Click **Show Source** in the toolbar to open the Source pane. The scene renders 
 
 If the file cannot be parsed, a red banner shows the error. The app keeps working.
 
+## Sky shaders
+
+A WorldEnvironment whose Sky has a ShaderMaterial draws the shader as Godot does. The shader draws the background, and the previewer bakes it into the sky's radiance for the ambient light and the reflections. The previewer loads its shader translator only for a scene with a sky shader.
+
+- If Godot does not compile the shader, the previewer draws Godot's default black sky. The Inspector of the WorldEnvironment shows Godot's error and its line under **Shader Error**.
+- If the previewer does not translate a part of the shader yet, it also draws the default sky. The message under **Shader Error** names the part.
+- An `#if` can call `decompress` in Zstandard or Brotli mode. The previewer loads its decoders only for a shader that names `decompress`.
+- The shader reads the scene's suns through `LIGHT0_*` to `LIGHT3_*`, and draws its half and quarter resolution passes when it sets `use_half_res_pass` or `use_quarter_res_pass`.
+- A pass can write `ALPHA`, and a later pass reads it as `HALF_RES_COLOR.a` or `QUARTER_RES_COLOR.a`, as in Godot. A sky can lay clouds over itself this way. `ALPHA` does not make the background see-through.
+- The background and the half and quarter resolution passes read the sky's own radiance through `RADIANCE`, as in Godot. A bias picks the mip level. In the radiance bake `RADIANCE` reads black, so a shader draws the bake's colour under `AT_CUBEMAP_PASS`.
+- A sky that reads `TIME` or `POSITION` bakes its radiance again when `TIME` moves forward or the camera moves, as Godot does. A stop or a seek bakes it again too. After `TIME` wraps, the radiance waits until `TIME` passes its last value again, as in Godot. The reflections and the ambient light then follow the background. The sky's process mode sets how: Real-Time and Quality bake every layer at once, and Incremental bakes one layer in each frame.
+- A sky that reads the suns bakes its radiance again when a sun moves or changes, as Godot does. This holds for a ProceduralSkyMaterial and a PhysicalSkyMaterial too. The process mode sets how, as for `TIME`. Under Incremental, rough reflections follow a moving sun a few frames late, as in Godot.
+
+`TIME` follows the **Timeline** while it shows an AnimationPlayer. Play advances `TIME`, pause holds it, a seek sets it to the playhead, and stop sets it to 0. With no AnimationPlayer, `TIME` advances every frame, as in a running game. `TIME` wraps at the project setting `rendering/limits/time/time_rollover_secs`, 3600 seconds by default. Drop `project.godot` with the scene to use another value.
+
 ## On a phone
 
 The page fits a phone screen. The layout also applies to a narrow VS Code preview tab.

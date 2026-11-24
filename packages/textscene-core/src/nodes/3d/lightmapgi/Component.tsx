@@ -8,6 +8,7 @@
 import { useThree } from '@react-three/fiber';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import type * as THREE from 'three';
+import { withEntry } from '../../../utils/withEntry';
 import { LIGHTMAP_SH_LAYERS_PER_SLICE, ShadowmaskMode } from '../../../godot/scene/lightmapGi';
 import { projectUsesLightmapBicubicFilter } from '../../../parser/projectSettingsParser';
 import { atlasWithShadowmask, combinedAtlas } from '../../../resources/lightmapgidata/build';
@@ -158,21 +159,9 @@ function AtlasTextureLoad({
 function useLoadedTextures() {
   const [loaded, setLoaded] = useState<ReadonlyMap<string, THREE.DataArrayTexture>>(new Map());
   const report = useCallback((path: string, texture: THREE.DataArrayTexture | undefined) => {
-    setLoaded((current) => withTexture(current, path, texture));
+    setLoaded((current) => withEntry(current, path, texture));
   }, []);
   return { loaded, report };
-}
-
-function withTexture(
-  loaded: ReadonlyMap<string, THREE.DataArrayTexture>,
-  path: string,
-  texture: THREE.DataArrayTexture | undefined
-): ReadonlyMap<string, THREE.DataArrayTexture> {
-  if (loaded.get(path) === texture) return loaded;
-  const next = new Map(loaded);
-  if (texture) next.set(path, texture);
-  else next.delete(path);
-  return next;
 }
 
 /** The atlas of the textures at `paths`, null until every one has loaded. */

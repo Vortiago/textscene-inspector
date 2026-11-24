@@ -1,57 +1,16 @@
-/**
- * Sky resource types: how a Godot `Sky` bakes its radiance, and the three materials it can carry.
- * Names and units mirror Godot (`sun_angle_max` in degrees, `sky_curve` as authored). The
- * shader-uniform conversions happen on upload, in `build.ts`.
- */
-
+import type { ShaderText } from '../materials/shadermaterial/types';
+import type { SkyUsage } from '../../shaders/sky/skyUsage';
 import type { REAL_TIME_RADIANCE_SIZE } from '../../godot/rendering/environment/skyReflection';
 import type { SkyProcessMode } from '../../godot/rendering/environment/skyRadianceUpdate';
-import type { Rgba } from '../../godot/math/math';
 
-export interface ProceduralSkyProperties {
-  kind: 'procedural';
-  sky_top_color: Rgba;
-  sky_horizon_color: Rgba;
-  sky_curve: number;
-  sky_energy_multiplier: number;
-  ground_bottom_color: Rgba;
-  ground_horizon_color: Rgba;
-  ground_curve: number;
-  ground_energy_multiplier: number;
-  /** Degrees. Godot uploads its cosine. */
-  sun_angle_max: number;
-  sun_curve: number;
-  /** The sky's overall exposure. */
-  energy_multiplier: number;
-  /** Whether Godot adds its debanding noise to the drawn sky. */
-  use_debanding: boolean;
+/** A sky shader: a ShaderMaterial's of `shader_type sky`, or the one a sky material generates. */
+export type ShaderSkyText = ShaderText;
+
+/** A sky shader with what the transpiler, which the previewer loads on demand, reads of it. */
+export interface ShaderSkyProperties extends ShaderSkyText {
+  /** The built-ins the shader reads that decide when Godot draws or bakes it again. */
+  usage: SkyUsage;
 }
-
-export interface PanoramaSkyProperties {
-  kind: 'panorama';
-  /** An equirectangular Texture2D reference, or undefined for an unset sky. */
-  panorama: string | undefined;
-  /** Whether the panorama samples with linear filtering, else nearest (`sky_material.cpp:498-505`). */
-  filter: boolean;
-  energy_multiplier: number;
-}
-
-export interface PhysicalSkyProperties {
-  kind: 'physical';
-  rayleigh_coefficient: number;
-  rayleigh_color: Rgba;
-  mie_coefficient: number;
-  mie_eccentricity: number;
-  mie_color: Rgba;
-  turbidity: number;
-  sun_disk_scale: number;
-  ground_color: Rgba;
-  energy_multiplier: number;
-  /** Whether Godot adds its debanding noise to the drawn sky. */
-  use_debanding: boolean;
-}
-
-export type SkyProperties = ProceduralSkyProperties | PanoramaSkyProperties | PhysicalSkyProperties;
 
 /** The `Sky` resource's own properties, which decide how Godot bakes its radiance layers. */
 export interface SkyProcessing {
@@ -70,4 +29,10 @@ export type SkyBake =
   | { radianceFilter: 'importance-sample'; radianceSize: number };
 
 /** A Godot `Sky` as the renderer draws it: its material, and how its radiance layers bake. */
-export type Sky = { material: SkyProperties; processMode: SkyProcessMode } & SkyBake;
+export type Sky<Material extends ShaderSkyText = ShaderSkyProperties> = {
+  material: Material;
+  processMode: SkyProcessMode;
+} & SkyBake;
+
+/** A Sky as the file writes it, whose shader the transpiler has not read. */
+export type AuthoredSky = Sky<ShaderSkyText>;

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { usePendingWhile } from './usePendingWhile';
-import type { LazyImport } from './memoisedImport';
+import type { LazyImport, LazyState } from './memoisedImport';
 
 // Not Suspense: `<Canvas>` mounts its own reconciler root, so a suspended node would blank its siblings.
 /**
@@ -12,8 +12,14 @@ import type { LazyImport } from './memoisedImport';
  * @canonical A component's lazily loaded module
  */
 export function useLazyModule<T>(load: LazyImport<T>): T | null {
+  const state = useLazyModuleState(load, true);
+  return typeof state === 'object' && state !== null ? state.module : null;
+}
+
+/** How far `load` has got, pending while it loads, or null with no import for a caller that needs none. */
+export function useLazyModuleState<T>(load: LazyImport<T>, isNeeded: boolean): LazyState<T> | null {
   const [state, setState] = useState(load.state);
-  const isLoading = state === 'loading';
+  const isLoading = isNeeded && state === 'loading';
   useEffect(() => {
     if (!isLoading) return undefined;
     let cancelled = false;
@@ -30,5 +36,5 @@ export function useLazyModule<T>(load: LazyImport<T>): T | null {
     };
   }, [load, isLoading]);
   usePendingWhile(isLoading);
-  return typeof state === 'object' ? state.module : null;
+  return isNeeded ? state : null;
 }

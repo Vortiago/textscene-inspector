@@ -2,7 +2,6 @@
 import { describe, it, expect } from 'vitest';
 import {
   formatReal,
-  shortestReal,
   storedColor,
   storedReal,
   storedTransform2D,
@@ -45,17 +44,17 @@ describe('formatReal', () => {
   });
 });
 
-describe('shortestReal', () => {
+describe('formatReal digits', () => {
   it('gives the fewest digits that read back as the stored float32', () => {
-    expect(shortestReal(Math.fround(0.99))).toBe(0.99);
+    expect(formatReal(Math.fround(0.99))).toBe('0.99');
   });
 
   it('rounds a value no float32 holds to nine digits, as none reads back (error case)', () => {
-    expect(shortestReal(1 / 3)).toBe(0.333333333);
+    expect(formatReal(1 / 3)).toBe('0.333333333');
   });
 
   it('reads a denormal from one digit up, as it holds fewer bits (edge case)', () => {
-    expect(shortestReal(Math.fround(1e-45))).toBe(1e-45);
+    expect(formatReal(Math.fround(1e-45))).toBe('1e-45');
   });
 });
 

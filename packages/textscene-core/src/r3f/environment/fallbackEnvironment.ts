@@ -28,5 +28,5 @@ export function useFallbackEnvironment(path: string | null): EnvironmentResoluti
 function clearColorEnvironment(clearColor: Rgba): EnvironmentResolution {
   const settings = createEnvironmentSettings(decodeEnvironment({}), clearColor);
   settings.background.ignoresExposure = true;
-  return { status: 'resolved', environment: { settings, sky: null, panorama: null, glowMap: null } };
+  return { status: 'resolved', environment: { settings, sky: null, glowMap: null } };
 }

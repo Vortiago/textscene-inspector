@@ -7,27 +7,25 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { createPortal } from '@react-three/fiber';
 import type { SkyEnvironment, SkyEnvironmentInput } from '../../resources/sky/build';
-import type { Sky } from '../../resources/sky/types';
-import { decodeSkyMaterial } from '../../resources/sky/decode';
+import type { AuthoredSky } from '../../resources/sky/types';
+import { decodeSky } from '../../resources/sky/decode';
+import { skyMaterialText } from '../../resources/sky/skyMaterialText';
+import type { SamplerValue } from '../../shaders/uniforms/samplerUniform';
 import { SkyLayer } from './SkyLayer';
 import { ownEnvironmentChanges, ShownEnvironment, useOwnEnvironment } from '../environment/sceneEnvironment';
 import { skyLightUserData } from './skyLight';
 import { observeSceneCamera } from '../sceneRenderCamera';
-import { SHOWN_ENERGY, shownSky, skyRotation } from './skyRadiance';
-import { REFLECTION_SLOT, skyLayersSlot } from './skyRadiance.testkit';
+import { skyEnergies, skyRotation } from './skyRadiance';
+import { REFLECTION_SLOT, shownSky, skyLayersSlot } from './skyRadiance.testkit';
 import { boundHandle, recordTextures, RendererProbe, withRenderTargets } from '../../testing/recordingWebGL';
-import { skyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
-import { installFogComposite } from '../fog/fogComposite';
-import { backgroundCube } from '../shaderPatch/backgroundPrograms';
+import { MAX_ROUGHNESS_LOD, skyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
 import { fireSceneRender, fireSceneRenderEnd } from '../testing/fireSceneRender';
-import { restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
-import { installSkyDebanding } from './skyDebanding';
 import { WorldExposureScope, usePublishCameraAttributes } from '../environment/worldExposure';
 import { drawAtExposure, useSceneExposure } from '../exposure/sceneExposure';
 import { drawAsProbeCapture } from '../testing/worldRenders';
 import { stageCapture } from '../reflectionProbe/captureStage';
 import { noteRealTimeProbes } from '../reflectionProbe/realTimeCaptures';
-import { SkyBackground } from './skyBackground';
+import { SkyBackdrop } from './skyBackground';
 import { noteLiveTargetDrawn } from '../liveTargets';
 import { publishedCanvasTarget } from '../liveTargets.testkit';
 
@@ -35,13 +33,28 @@ const bakes = vi.hoisted((): SkyEnvironmentInput[] => []);
 /** What the next bake returns on its renderer: null, as a headless renderer gives, unless a test sets it. */
 const built = vi.hoisted(() => ({ next: null as ((gl: THREE.WebGLRenderer) => SkyEnvironment) | null }));
 
-vi.mock('../../resources/sky/build', () => ({
-  buildSkyEnvironment: (gl: THREE.WebGLRenderer, input: SkyEnvironmentInput) => {
+vi.mock('../../resources/sky/shaderSky', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../resources/sky/shaderSky')>()),
+  buildShaderSkyEnvironment: (gl: THREE.WebGLRenderer, input: SkyEnvironmentInput) => {
     bakes.push(input);
     const environment = built.next?.(gl) ?? null;
     // As the build does: a sky that paints no background gets none.
     return environment && !input.asBackground ? { ...environment, background: null } : environment;
   },
+}));
+
+// The translator loaded from the first render on, so a test's first frame can bake.
+vi.mock('./skyTranspiler', async () => {
+  const transpiler = await import('../../resources/sky/shaderSky');
+  return { useSkyTranslator: () => ({ transpiler, isReady: true, loadFailure: null }) };
+});
+
+/** The texture parameters the sky's shader samples, loaded: none unless a test sets them. */
+const NO_TEXTURES: Readonly<Record<string, SamplerValue>> = {};
+const loaded = vi.hoisted(() => ({ textures: {} as Readonly<Record<string, SamplerValue>> }));
+
+vi.mock('../shaderTextures/shaderTextures', () => ({
+  useShaderTextures: () => [loaded.textures, null],
 }));
 
 const NO_ROTATION = { x: 0, y: 0, z: 0 };
@@ -64,23 +77,18 @@ function ShownSkyLayer(props: React.ComponentProps<typeof SkyLayer>) {
  * A panorama sky and a procedural one, new for each test: a sky's radiance update lives as long as
  * the sky (`radianceUpdateOf`).
  */
-let panoramaSky: Sky;
-let proceduralSky: Sky;
+let panoramaSky: AuthoredSky;
+let proceduralSky: AuthoredSky;
 
 beforeEach(() => {
-  panoramaSky = {
-    material: { kind: 'panorama', panorama: undefined, filter: true, energy_multiplier: 1 },
-    processMode: 'automatic',
-    radianceFilter: 'importance-sample',
-    radianceSize: 256,
-  };
-  proceduralSky = { ...panoramaSky, material: decodeSkyMaterial('ProceduralSkyMaterial', {})! };
+  panoramaSky = decodeSky({}, skyMaterialText('PanoramaSkyMaterial', {}, {})!);
+  proceduralSky = decodeSky({}, skyMaterialText('ProceduralSkyMaterial', {}, {})!);
 });
 
 function Scene({ lights }: { lights: number }) {
   return (
     <>
-      <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} panorama={null} />
+      <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} />
       {Array.from({ length: lights }, (_, i) => (
         <directionalLight key={i} position={[i + 1, 2, 3]} />
       ))}
@@ -89,6 +97,12 @@ function Scene({ lights }: { lights: number }) {
 }
 
 const lastBake = () => bakes[bakes.length - 1];
+
+/** The energy at which a surface in `scene`'s render reads the ambient, from the last radiance layer. */
+const ambientRead = (scene: THREE.Scene) => scene.environmentIntensity * skyEnergies[MAX_ROUGHNESS_LOD]!;
+
+/** The energy each layer of the shown radiance holds. */
+const layerEnergies = () => Array.from(skyEnergies);
 
 type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
@@ -99,7 +113,23 @@ const advance = (renderer: Renderer, frames: number) =>
 afterEach(() => {
   bakes.length = 0;
   built.next = null;
+  loaded.textures = NO_TEXTURES;
 });
+
+/** A sky background that keeps the intensity and the rotation of the render that draws it. */
+class RecordingBackdrop extends SkyBackdrop {
+  intensity: number | null = null;
+  readonly paintedRotation = new THREE.Euler();
+
+  constructor() {
+    super(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial());
+  }
+
+  protected override paint(intensity: number, rotation: THREE.Euler): void {
+    this.intensity = intensity;
+    this.paintedRotation.copy(rotation);
+  }
+}
 
 /** An environment as a bake on `gl` leaves it, its layer array set up, freed by `dispose`. */
 function skyEnvironment(dispose: () => void = () => {}): (gl: THREE.WebGLRenderer) => SkyEnvironment {
@@ -108,7 +138,7 @@ function skyEnvironment(dispose: () => void = () => {}): (gl: THREE.WebGLRendere
     gl.initRenderTarget(target);
     const layers = { layout: skyOctmapLayout(32, 8), target };
     return {
-      background: new SkyBackground('vec3 godotSky(vec3 eyedir) { return eyedir; }', {}),
+      background: new RecordingBackdrop(),
       layers,
       dispose,
     };
@@ -116,15 +146,15 @@ function skyEnvironment(dispose: () => void = () => {}): (gl: THREE.WebGLRendere
 }
 
 /** The sky background a render of `scene` drew, read before the render ends. */
-function drawnBackground(scene: THREE.Scene): SkyBackground | undefined {
+function drawnBackground(scene: THREE.Scene): RecordingBackdrop | undefined {
   return scene.children.find(
-    (child): child is SkyBackground => child instanceof SkyBackground && child.visible
+    (child): child is RecordingBackdrop => child instanceof RecordingBackdrop && child.visible
   );
 }
 
 /** The brightness of the sky background a render of `scene` drew, or null for none. */
 function drawnBackgroundIntensity(scene: THREE.Scene): number | null {
-  return (drawnBackground(scene)?.material.uniforms.backgroundIntensity!.value as number | undefined) ?? null;
+  return drawnBackground(scene)?.intensity ?? null;
 }
 
 interface Mounted {
@@ -171,10 +201,10 @@ function sampledInRender(gl: THREE.WebGLRenderer, scene: THREE.Scene): unknown {
 function TwoSkies({ subScene }: { subScene: THREE.Scene }) {
   return (
     <>
-      <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} panorama={null} />
+      <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} />
       {createPortal(
         // Another Sky resource: scenes that draw one Sky share its bakes, as Godot shares its radiance.
-        <ShownSkyLayer sky={{ ...panoramaSky }} rotation={NO_ROTATION} panorama={null} />,
+        <ShownSkyLayer sky={{ ...panoramaSky }} rotation={NO_ROTATION} />,
         subScene
       )}
     </>
@@ -192,24 +222,25 @@ describe('SkyLayer', () => {
     expect(lastBake()?.lights).toHaveLength(1);
   });
 
-  it('bakes again when a light unmounts after the bake', async () => {
+  it('moves the lights into its bake when a light unmounts after the bake, with no new bake', async () => {
     // The editor preview sun does this when the scene's own sun arrives. A stale bake keeps its
     // disc, and every glossy surface reflects it.
-    const renderer = await ReactThreeTestRenderer.create(<Scene lights={2} />);
-    await advance(renderer, 1);
-    expect(lastBake()?.lights).toHaveLength(2);
+    const recorded = recordedEnvironment();
+    built.next = recorded.build;
+    const { scene, update, advanceFrames } = await mount(<Scene lights={2} />);
 
-    await renderer.update(<Scene lights={1} />);
-    await advance(renderer, 1);
+    await update(<Scene lights={1} />);
+    await advanceFrames(1);
+    fireSceneRender(scene, new THREE.PerspectiveCamera());
 
-    expect(lastBake()?.lights).toHaveLength(1);
+    expect([bakes.length, recorded.lightCounts.at(-1)]).toEqual([1, 1]);
   });
 
   it.each([true, false])(
     'bakes the background only when the sky paints it (asBackground %s)',
     async (asBackground) => {
       const renderer = await ReactThreeTestRenderer.create(
-        <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} panorama={null} asBackground={asBackground} />
+        <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} asBackground={asBackground} />
       );
       await advance(renderer, 1);
 
@@ -227,7 +258,7 @@ describe('SkyLayer', () => {
   it('leaves out a light that declares it draws nothing in the sky', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <>
-        <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} panorama={null} />
+        <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} />
         <directionalLight position={[1, 2, 3]} />
         <directionalLight
           position={[3, 2, 1]}
@@ -243,7 +274,7 @@ describe('SkyLayer', () => {
   it('draws a light at its declared energy, though it lights no surface (edge case)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <>
-        <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} panorama={null} />
+        <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} />
         <directionalLight
           intensity={0}
           userData={skyLightUserData({ drawsInSky: true, energy: 2, size: 0 })}
@@ -258,7 +289,7 @@ describe('SkyLayer', () => {
   it('draws a light’s sun disc at its declared size', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <>
-        <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} panorama={null} />
+        <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} />
         <directionalLight userData={skyLightUserData({ drawsInSky: true, energy: 1, size: 0.25 })} />
       </>
     );
@@ -270,7 +301,7 @@ describe('SkyLayer', () => {
   it('draws a light that declares nothing at its intensity over the scale (error case)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <>
-        <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} panorama={null} />
+        <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} />
         <directionalLight intensity={Math.PI * 3} />
       </>
     );
@@ -300,7 +331,7 @@ describe('SkyLayer', () => {
   it('shows its share of the ambient with its layers', async () => {
     built.next = skyEnvironment();
     const { scene, gl } = await mount(
-      <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} panorama={null} contribution={0.25} />
+      <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} contribution={0.25} />
     );
 
     sampledInRender(gl, scene);
@@ -311,7 +342,7 @@ describe('SkyLayer', () => {
   it('shows whether surfaces reflect it, apart from its ambient', async () => {
     built.next = skyEnvironment();
     const { scene, gl } = await mount(
-      <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} panorama={null} reflects={false} />
+      <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} reflects={false} />
     );
 
     sampledInRender(gl, scene);
@@ -325,7 +356,7 @@ describe('SkyLayer', () => {
       <ShownSkyLayer
         sky={panoramaSky}
         rotation={{ x: 0, y: Math.PI / 2, z: 0 }}
-        panorama={null}
+
         energyMultiplier={1.5}
       />
     );
@@ -334,31 +365,27 @@ describe('SkyLayer', () => {
 
     // A quarter turn about Y takes the sky's +X to the world's -Z.
     const skyForward = new THREE.Vector3(0, 0, -1).applyMatrix3(new THREE.Matrix3().fromArray(skyRotation));
-    expect([shownSky[SHOWN_ENERGY], Math.round(skyForward.x)]).toEqual([1.5, 1]);
+    expect([Math.max(...layerEnergies()), Math.round(skyForward.x)]).toEqual([1.5, 1]);
   });
 
   it('leaves the renders after its scene reading a black radiance', async () => {
     built.next = skyEnvironment();
-    const { scene, gl } = await mount(
-      <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} panorama={null} />
-    );
+    const { scene, gl } = await mount(<ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} />);
     sampledInRender(gl, scene);
 
     fireSceneRenderEnd(scene, new THREE.PerspectiveCamera());
 
-    expect(shownSky[SHOWN_ENERGY]).toBe(0);
+    expect(Math.max(...layerEnergies())).toBe(0);
   });
 
   it('shows a new share of the ambient without a new bake', async () => {
     built.next = skyEnvironment();
     const { scene, gl, update } = await mount(
-      <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} panorama={null} contribution={0.25} />
+      <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} contribution={0.25} />
     );
     const bakeCount = bakes.length;
 
-    await update(
-      <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} panorama={null} contribution={0.5} />
-    );
+    await update(<ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} contribution={0.5} />);
     sampledInRender(gl, scene);
 
     expect([bakes.length, shownSky[0]]).toEqual([bakeCount, 0.5]);
@@ -378,13 +405,11 @@ describe('SkyLayer', () => {
 
   it('shows one scene environment across bakes, so three resolves no program again', async () => {
     built.next = skyEnvironment();
-    const { scene, update } = await mount(
-      <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} panorama={null} />
-    );
+    const { scene, update } = await mount(<ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} />);
     const firstBake = scene.environment;
 
     built.next = skyEnvironment();
-    await update(<ShownSkyLayer sky={panoramaSky} rotation={{ x: 0, y: 1, z: 0 }} panorama={null} />);
+    await update(<ShownSkyLayer sky={panoramaSky} rotation={{ x: 0, y: 1, z: 0 }} />);
 
     expect(scene.environment).toBe(firstBake);
   });
@@ -437,14 +462,14 @@ describe('SkyLayer background', () => {
   const camera = new THREE.PerspectiveCamera();
 
   it('draws its sky behind the scene in each render, in place of a background of the scene', async () => {
-    const { scene } = await mount(<ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} panorama={null} />);
+    const { scene } = await mount(<ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} />);
     fireSceneRender(scene, camera);
     expect(scene.background).toBeNull();
-    expect(drawnBackground(scene)).toBeInstanceOf(SkyBackground);
+    expect(drawnBackground(scene)).toBeInstanceOf(RecordingBackdrop);
   });
 
   it('hides the sky once the render ends, so no pass outside a render draws it', async () => {
-    const { scene } = await mount(<ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} panorama={null} />);
+    const { scene } = await mount(<ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} />);
     fireSceneRender(scene, camera);
     fireSceneRenderEnd(scene, camera);
     expect(drawnBackground(scene)).toBeUndefined();
@@ -452,79 +477,24 @@ describe('SkyLayer background', () => {
 
   it('turns the sky by its rotation, as three turns a cube background', async () => {
     const { scene } = await mount(
-      <ShownSkyLayer sky={panoramaSky} rotation={{ x: 0, y: Math.PI / 2, z: 0 }} panorama={null} />
+      <ShownSkyLayer sky={panoramaSky} rotation={{ x: 0, y: Math.PI / 2, z: 0 }} />
     );
     fireSceneRender(scene, camera);
-    const rotation = drawnBackground(scene)!.material.uniforms.backgroundRotation!.value as THREE.Matrix3;
-    const turned = new THREE.Vector3(1, 0, 0).applyMatrix3(rotation);
-    expect([turned.x, turned.y, turned.z].map((value) => Math.round(value))).toEqual([0, 0, 1]);
+    expect(drawnBackground(scene)!.paintedRotation.y).toBeCloseTo(Math.PI / 2);
   });
 
   it('draws no sky in a render that shows a background of its own, as an interior capture does', async () => {
-    const { scene } = await mount(<ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} panorama={null} />);
+    const { scene } = await mount(<ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} />);
     scene.background = new THREE.Color(0.3, 0.3, 0.3);
     fireSceneRender(scene, camera);
     expect(drawnBackground(scene)).toBeUndefined();
   });
 
   it('takes its sky out of the scene when it unmounts', async () => {
-    const { scene, update } = await mount(
-      <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} panorama={null} />
-    );
+    const { scene, update } = await mount(<ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} />);
     fireSceneRender(scene, camera);
     await update(null);
-    expect(scene.children.some((child) => child instanceof SkyBackground)).toBe(false);
-  });
-});
-
-describe('SkyLayer debanding', () => {
-  restoreShaderGlobalsAfterEach();
-
-  beforeEach(() => {
-    installFogComposite();
-    installSkyDebanding();
-    built.next = skyEnvironment();
-  });
-
-  /** The debanding noise's strength in a render of `scene`, which a debanded sky turns to 1. */
-  function debandingInRender(scene: THREE.Scene): number {
-    const camera = new THREE.Camera();
-    fireSceneRender(scene, camera);
-    const strength = (backgroundCube().uniforms.godotSkyDebanding!.value as Float32Array)[0]!;
-    fireSceneRenderEnd(scene, camera);
-    return strength;
-  }
-
-  it('adds the noise to the background of a sky that debands', async () => {
-    const { scene } = await mount(
-      <ShownSkyLayer sky={proceduralSky} rotation={NO_ROTATION} panorama={null} />
-    );
-
-    expect(debandingInRender(scene)).toBe(1);
-  });
-
-  it('adds none to a panorama sky, which never debands', async () => {
-    const { scene } = await mount(<ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} panorama={null} />);
-
-    expect(debandingInRender(scene)).toBe(0);
-  });
-
-  it('adds none when the sky paints no background (edge case)', async () => {
-    const { scene } = await mount(
-      <ShownSkyLayer sky={proceduralSky} rotation={NO_ROTATION} panorama={null} asBackground={false} />
-    );
-
-    expect(debandingInRender(scene)).toBe(0);
-  });
-
-  it('adds none once the sky unmounts (error case)', async () => {
-    const { scene, update } = await mount(
-      <ShownSkyLayer sky={proceduralSky} rotation={NO_ROTATION} panorama={null} />
-    );
-
-    await update(<directionalLight />);
-
-    expect(debandingInRender(scene)).toBe(0);
+    expect(scene.children.some((child) => child instanceof RecordingBackdrop)).toBe(false);
   });
 });
 
@@ -556,20 +526,21 @@ describe('SkyLayer under an exposure', () => {
   /** The sky's `background_energy_multiplier`, which a surface reads twice and the background once. */
   const ENERGY = 1.5;
   const sky = (props: Partial<React.ComponentProps<typeof SkyLayer>> = {}) => (
-    <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} panorama={null} {...props} />
+    <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} {...props} />
   );
 
   it('reads the ambient and the reflection at the sky energy squared, baked in and read again', async () => {
     built.next = skyEnvironment();
     const { scene } = await mount(sky({ energyMultiplier: 2 }));
     fireSceneRender(scene, new THREE.PerspectiveCamera());
-    expect(scene.environmentIntensity).toBeCloseTo(4, 10);
+    expect(ambientRead(scene)).toBeCloseTo(4, 10);
   });
 
   it('reads the ambient and the reflection at the exposure squared', async () => {
     built.next = skyEnvironment();
     const { scene } = await mount(exposed(2, sky({ energyMultiplier: ENERGY })));
-    expect(scene.environmentIntensity).toBeCloseTo(ENERGY * ENERGY * 4, 10);
+    fireSceneRender(scene, new THREE.PerspectiveCamera());
+    expect(ambientRead(scene)).toBeCloseTo(ENERGY * ENERGY * 4, 10);
   });
 
   it('draws the background at the exposure', async () => {
@@ -627,11 +598,11 @@ describe('SkyLayer under an exposure', () => {
       built.next = skyEnvironment();
       const { scene } = await mount(exposed(2, sky({ energyMultiplier: ENERGY })));
       fireSceneRender(scene, camera);
-      const inside = drawnAt(scene, 3, () => scene.environmentIntensity);
+      const inside = drawnAt(scene, 3, () => ambientRead(scene));
       fireSceneRender(scene, camera);
 
       expect(inside).toBeCloseTo(ENERGY * ENERGY * 2 * 3, 10);
-      expect(scene.environmentIntensity).toBeCloseTo(ENERGY * ENERGY * 4, 10);
+      expect(ambientRead(scene)).toBeCloseTo(ENERGY * ENERGY * 4, 10);
     });
 
     it('draws the background at that exposure, and its own in its next render', async () => {
@@ -648,10 +619,7 @@ describe('SkyLayer under an exposure', () => {
       built.next = skyEnvironment();
       const { scene } = await mount(exposed(2, sky({ energyMultiplier: ENERGY })));
       fireSceneRender(scene, camera);
-      const inside = drawnAt(scene, null, () => [
-        scene.environmentIntensity,
-        drawnBackgroundIntensity(scene),
-      ]);
+      const inside = drawnAt(scene, null, () => [ambientRead(scene), drawnBackgroundIntensity(scene)]);
       expect(inside).toEqual([ENERGY * ENERGY * 2, ENERGY]);
     });
 
@@ -694,7 +662,7 @@ describe('SkyLayer under an exposure', () => {
     built.next = skyEnvironment();
     const { scene } = await mount(exposed(0, sky({ energyMultiplier: ENERGY })));
     fireSceneRender(scene, new THREE.PerspectiveCamera());
-    expect([scene.environmentIntensity, drawnBackgroundIntensity(scene)]).toEqual([0, 0]);
+    expect([ambientRead(scene), drawnBackgroundIntensity(scene)]).toEqual([0, 0]);
   });
 
   it('reads a sky in a world with no CameraAttributes as before', async () => {
@@ -703,7 +671,7 @@ describe('SkyLayer under an exposure', () => {
       <WorldExposureScope>{sky({ energyMultiplier: ENERGY })}</WorldExposureScope>
     );
     fireSceneRender(scene, new THREE.PerspectiveCamera());
-    expect([scene.environmentIntensity, drawnBackgroundIntensity(scene)]).toEqual([ENERGY * ENERGY, ENERGY]);
+    expect([ambientRead(scene), drawnBackgroundIntensity(scene)]).toEqual([ENERGY * ENERGY, ENERGY]);
   });
 
   /**
@@ -735,20 +703,20 @@ describe('SkyLayer under an exposure', () => {
       for (let render = 0; render < 10; render += 1) fireSceneRender(mounted.scene, view);
       return mounted;
     }
-    /** The ambient energy a capture at the world's exposure of 1 reads. */
-    const capturedAmbient = (scene: THREE.Scene, isInterior = false) =>
+    /** The ambient energy a ONCE capture at the world's exposure of 1 reads. */
+    const capturedAmbient = (scene: THREE.Scene, { isInterior = false } = {}) =>
       drawAtExposure(scene, 1, () => {
-        drawAsProbeCapture({ isInterior, hasShadows: true }, () =>
+        drawAsProbeCapture({ isInterior, hasShadows: true, isRealTime: false }, () =>
           fireSceneRender(scene, new THREE.PerspectiveCamera())
         );
-        return scene.environmentIntensity;
+        return ambientRead(scene);
       });
     /** The ambient energy the view reads in the frame after `scene` notes one ALWAYS probe. */
     function viewAmbientOverRealTimeProbe(scene: THREE.Scene) {
       noteRealTimeProbes(scene, 1);
       onTestFinished(() => noteRealTimeProbes(scene, 0));
       fireSceneRender(scene, view);
-      return scene.environmentIntensity;
+      return ambientRead(scene);
     }
 
     it("reads the view's bake in a ONCE capture at another exposure", async () => {
@@ -757,30 +725,87 @@ describe('SkyLayer under an exposure', () => {
       expect(capturedAmbient(scene)).toBeCloseTo(ENERGY * 4 * ENERGY, 10);
     });
 
-    it('bakes no radiance for a capture at another exposure', async () => {
+    it('builds no bake for a capture at another exposure', async () => {
       const { scene, advanceFrames } = await viewedAtFour();
       const bakeCount = bakes.length;
       capturedAmbient(scene);
       await advanceFrames(1);
       fireSceneRender(scene, view);
 
-      expect([bakes.length - bakeCount, scene.environmentIntensity]).toEqual([
-        1,
+      expect([bakes.length - bakeCount, ambientRead(scene)]).toEqual([
+        0,
         expect.closeTo(ENERGY * 4 * ENERGY * 4, 10),
       ]);
     });
 
-    it("reads, in a view over an ALWAYS probe, the bake its capture's renders made at the world's exposure", async () => {
-      const { scene } = await viewedAtFour();
+    /** The layer energies each of `frames` views over an ALWAYS probe reads, in units of the sky's energy. */
+    function layersOverRealTimeProbe(scene: THREE.Scene, frames: number) {
+      return Array.from({ length: frames }, () => {
+        viewAmbientOverRealTimeProbe(scene);
+        return layerEnergies().map((energy) => energy / ENERGY);
+      });
+    }
 
-      expect(viewAmbientOverRealTimeProbe(scene)).toBeCloseTo(ENERGY * ENERGY * 4, 10);
+    it('holds the layers of an 8 frame cycle over an ALWAYS probe, as Godot does', async () => {
+      const { scene } = await viewedAtFour();
+      const frames = layersOverRealTimeProbe(scene, 16);
+      const world = Array<number>(8).fill(1);
+
+      expect(frames.slice(0, 8)).toEqual([
+        [1, 1, 1, 1, 1, 1, 1, 4],
+        ...Array<number[]>(5).fill(world),
+        [4, 1, 1, 1, 1, 1, 1, 1],
+        Array<number>(8).fill(4),
+      ]);
+      expect(frames.slice(8)).toEqual(frames.slice(0, 8));
     });
 
-    it("reads the bake at the world's exposure in an ALWAYS capture", async () => {
+    it('draws 2 of every 8 frames over an ALWAYS probe unlike the other 6, so 3 frames change, as in Godot', async () => {
+      const { scene } = await viewedAtFour();
+      // The ambient reads the last layer, and the shiny ball, at roughness 0.2, reads layers 1 and 2.
+      const drawnReads = layersOverRealTimeProbe(scene, 9).map((layers) => `${layers[1]} ${layers[7]}`);
+      const changed = drawnReads
+        .slice(1)
+        .flatMap((reads, frame) => (reads === drawnReads[frame] ? [] : [frame + 1]));
+
+      expect([changed, new Set(drawnReads).size]).toEqual([[1, 7, 8], 3]);
+    });
+
+    it("reads, in a view over an ALWAYS probe, the layers its capture's faces baked at the world's exposure", async () => {
       const { scene } = await viewedAtFour();
       viewAmbientOverRealTimeProbe(scene);
 
-      expect(capturedAmbient(scene)).toBeCloseTo(ENERGY * ENERGY, 10);
+      // Six faces bake layer 0 and filter layers 1 to 5, and the view filters layer 6: layer 7 waits.
+      expect(layerEnergies()).toEqual([...Array<number>(7).fill(ENERGY), ENERGY * 4]);
+    });
+
+    it('bakes layer 0 at the world exposure in the first face of an ALWAYS capture, before the face draws', async () => {
+      const { scene } = await viewedAtFour();
+      noteRealTimeProbes(scene, 1);
+      onTestFinished(() => noteRealTimeProbes(scene, 0));
+      const faceLayers = drawAtExposure(scene, 1, () => {
+        drawAsProbeCapture({ isInterior: false, hasShadows: true, isRealTime: true }, () =>
+          fireSceneRender(scene, new THREE.PerspectiveCamera())
+        );
+        return layerEnergies();
+      });
+
+      expect(faceLayers).toEqual([ENERGY, ...Array<number>(7).fill(ENERGY * 4)]);
+    });
+
+    it('bakes the sky it finds dirty in a face of an ALWAYS capture, which Godot draws as a render', async () => {
+      const { scene } = await viewedAtFour();
+      noteRealTimeProbes(scene, 1);
+      onTestFinished(() => noteRealTimeProbes(scene, 0));
+      // An Incremental sky's first face bakes layer 0 only: the sharpest reflection reads it.
+      const sharpRead = drawAtExposure(scene, 1, () => {
+        drawAsProbeCapture({ isInterior: false, hasShadows: true, isRealTime: true }, () =>
+          fireSceneRender(scene, new THREE.PerspectiveCamera())
+        );
+        return scene.environmentIntensity * skyEnergies[0]!;
+      });
+
+      expect(sharpRead).toBeCloseTo(ENERGY * ENERGY, 10);
     });
 
     it("reads the view's own bake again once the ALWAYS probe leaves", async () => {
@@ -789,13 +814,13 @@ describe('SkyLayer under an exposure', () => {
       noteRealTimeProbes(scene, 0);
       for (let render = 0; render < 10; render += 1) fireSceneRender(scene, view);
 
-      expect(scene.environmentIntensity).toBeCloseTo(ENERGY * 4 * ENERGY * 4, 10);
+      expect(ambientRead(scene)).toBeCloseTo(ENERGY * 4 * ENERGY * 4, 10);
     });
 
     it('shows no sky to an interior capture, which draws without the environment', async () => {
       const { scene } = await viewedAtFour();
       const restore = stageCapture(scene, { cullMask: 0xfffff, interior: true }, CLEAR_COLOR);
-      capturedAmbient(scene, true);
+      capturedAmbient(scene, { isInterior: true });
       const shown = [scene.environmentIntensity, scene.background];
       restore();
 
@@ -814,7 +839,7 @@ describe('SkyLayer under an exposure', () => {
     const ambientDrawnAt = (scene: THREE.Scene, exposure: number) =>
       drawAtExposure(scene, exposure, () => {
         fireSceneRender(scene, camera);
-        return scene.environmentIntensity;
+        return ambientRead(scene);
       });
     const skyLight = (
       <directionalLight userData={skyLightUserData({ drawsInSky: true, energy: 2, size: 0 })} />
@@ -834,7 +859,7 @@ describe('SkyLayer under an exposure', () => {
       ambientDrawnAt(scene, 4);
       fireSceneRender(scene, camera);
 
-      expect(scene.environmentIntensity).toBeCloseTo(ENERGY * ENERGY * 4 * 2, 10);
+      expect(ambientRead(scene)).toBeCloseTo(ENERGY * ENERGY * 4 * 2, 10);
     });
 
     it('keeps the bake of the first render for a sky that reads lights but has none (edge case)', async () => {
@@ -861,10 +886,11 @@ describe('SkyLayer under an exposure', () => {
       expect(ambientDrawnAt(scene, 3)).toBeCloseTo(ENERGY * ENERGY * 4 * 3, 10);
     });
 
-    it('bakes a quality sky that reads lights again at the exposure of each render', async () => {
-      built.next = skyEnvironment();
-      const qualitySky: Sky = { ...proceduralSky, processMode: 'quality' };
-      const { scene, advanceFrames } = await mount(
+    it('bakes a quality sky that reads lights again in place at the exposure of each render', async () => {
+      const recorded = recordedEnvironment();
+      built.next = recorded.build;
+      const qualitySky: AuthoredSky = { ...proceduralSky, processMode: 'quality' };
+      const { scene } = await mount(
         exposed(
           2,
           <>
@@ -874,11 +900,14 @@ describe('SkyLayer under an exposure', () => {
         )
       );
       ambientDrawnAt(scene, 4);
-      ambientDrawnAt(scene, 3);
-      await advanceFrames(1);
+      recorded.steps.length = 0;
 
-      expect(bakes.map((bake) => bake.lights[0]?.energy)).toContain(6);
       expect(ambientDrawnAt(scene, 3)).toBeCloseTo(ENERGY * ENERGY * 3 * 3, 10);
+      expect([bakes.length, recorded.lightEnergies.at(-1), recorded.steps.at(-1)]).toEqual([
+        1,
+        6,
+        'every layer',
+      ]);
     });
 
     it('keeps the first bake of a quality sky that reads no lights', async () => {
@@ -893,7 +922,7 @@ describe('SkyLayer under an exposure', () => {
 
     it('bakes a quality panorama again at each exposure while the fog scatters the sun', async () => {
       built.next = skyEnvironment();
-      const qualitySky: Sky = { ...panoramaSky, processMode: 'quality' };
+      const qualitySky: AuthoredSky = { ...panoramaSky, processMode: 'quality' };
       const { scene } = await mount(
         exposed(
           2,
@@ -908,9 +937,10 @@ describe('SkyLayer under an exposure', () => {
       expect(ambientDrawnAt(scene, 3)).toBeCloseTo(ENERGY * ENERGY * 3 * 3, 10);
     });
 
-    it("draws the background of a sky that reads lights from a bake at each render's exposure", async () => {
-      built.next = skyEnvironment();
-      const { scene, advanceFrames } = await mount(
+    it("draws one background with the lights at each render's exposure, as Godot draws it live", async () => {
+      const recorded = recordedEnvironment();
+      built.next = recorded.build;
+      const { scene } = await mount(
         exposed(
           2,
           <>
@@ -926,11 +956,11 @@ describe('SkyLayer under an exposure', () => {
           fireSceneRenderEnd(scene, camera);
           return drawn;
         });
-      backgroundDrawnAt(4);
-      backgroundDrawnAt(3);
-      await advanceFrames(1);
+      const atFour = backgroundDrawnAt(4);
+      const energyAtFour = recorded.lightEnergies.at(-1);
+      const atThree = backgroundDrawnAt(3);
 
-      expect(backgroundDrawnAt(3)).not.toBe(backgroundDrawnAt(4));
+      expect([atThree === atFour, energyAtFour, recorded.lightEnergies.at(-1)]).toEqual([true, 8, 6]);
     });
 
     it('takes the exposure of its first render again for a new sky material', async () => {
@@ -948,9 +978,9 @@ describe('SkyLayer under an exposure', () => {
       expect(ambientDrawnAt(scene, 5)).toBeCloseTo(ENERGY * ENERGY * 3 * 5, 10);
     });
 
-    it('counts a bake that lands a frame late as a change of the world Environment, which a probe captures again', async () => {
-      built.next = skyEnvironment();
-      const { scene, advanceFrames } = await mount(
+    it('notes no change of the world Environment for a bake at another exposure alone, so no probe captures again', async () => {
+      built.next = recordedEnvironment().build;
+      const { scene } = await mount(
         exposed(
           2,
           <>
@@ -960,11 +990,14 @@ describe('SkyLayer under an exposure', () => {
           </>
         )
       );
+      for (let render = 0; render < 10; render += 1) fireSceneRender(scene, camera);
       const changes = ownEnvironmentChanges(scene);
-      drawAtExposure(scene, 3, () => fireSceneRender(scene, camera));
-      await advanceFrames(1);
+      for (let frame = 0; frame < 4; frame += 1) {
+        drawAtExposure(scene, 3, () => fireSceneRender(scene, camera));
+        fireSceneRender(scene, camera);
+      }
 
-      expect(ownEnvironmentChanges(scene)).toBeGreaterThan(changes);
+      expect(ownEnvironmentChanges(scene)).toBe(changes);
     });
   });
 
@@ -1010,20 +1043,26 @@ describe('SkyLayer under an exposure', () => {
       expect(bakes).toHaveLength(1);
     });
 
-    it('frees a bake that no render read in a frame after the one that baked it, as Godot keeps one radiance', async () => {
+    it('builds one bake for a sky that reads lights at two exposures, as Godot keeps one radiance', async () => {
       const dispose = vi.fn();
       built.next = skyEnvironment(dispose);
       const camera = new THREE.PerspectiveCamera();
-      const { scene, advanceFrames } = await mount(exposed(2, sky({ sky: proceduralSky })));
-      fireSceneRender(scene, camera);
-      drawAtExposure(scene, 3, () => fireSceneRender(scene, camera));
-      await advanceFrames(1);
-      for (const _frame of [1, 2]) {
+      const { scene, advanceFrames } = await mount(
+        exposed(
+          2,
+          <>
+            {sky({ sky: proceduralSky })}
+            <directionalLight userData={skyLightUserData({ drawsInSky: true, energy: 2, size: 0 })} />
+          </>
+        )
+      );
+      for (const _frame of [1, 2, 3]) {
         fireSceneRender(scene, camera);
+        drawAtExposure(scene, 3, () => fireSceneRender(scene, camera));
         await advanceFrames(1);
       }
 
-      expect(dispose).toHaveBeenCalledOnce();
+      expect([bakes.length, dispose.mock.calls.length]).toEqual([1, 0]);
     });
 
     it('bakes a sky that holds no exposure once for every exposure', async () => {
@@ -1048,60 +1087,202 @@ describe('SkyLayer under an exposure', () => {
   });
 });
 
+// A light change dirties a sky that reads lights (`sky.cpp:1105-1143`), and steps as `sky.cpp:1265-1369`.
+describe('SkyLayer under a change of its lights', () => {
+  const camera = new THREE.PerspectiveCamera();
+  function LitSky({ sky, sun }: { sky: AuthoredSky; sun: [number, number, number] }) {
+    return (
+      <>
+        <ShownSkyLayer sky={sky} rotation={NO_ROTATION} />
+        <directionalLight
+          position={sun}
+          userData={skyLightUserData({ drawsInSky: true, energy: 1, size: 0 })}
+        />
+      </>
+    );
+  }
+  /** `sky` under a sun that moves once its layers settle, and the steps of the renders that follow. */
+  async function stepsAfterSunMoves(sky: AuthoredSky, renders: number) {
+    const recorded = recordedEnvironment();
+    built.next = recorded.build;
+    const { scene, update, advanceFrames } = await mount(<LitSky sky={sky} sun={[1, 2, 3]} />);
+    for (let render = 0; render < 10; render += 1) fireSceneRender(scene, camera);
+    recorded.steps.length = 0;
+    await update(<LitSky sky={sky} sun={[3, 2, 1]} />);
+    await advanceFrames(1);
+    for (let render = 0; render < renders; render += 1) fireSceneRender(scene, camera);
+    return recorded;
+  }
+
+  it('bakes layer 0 of an Incremental sky, then filters one more layer in each render', async () => {
+    const { steps } = await stepsAfterSunMoves(proceduralSky, 3);
+
+    expect(steps).toEqual(['layer 0', 'filter 1', 'filter 2']);
+  });
+
+  it('bakes every layer of a Quality sky in the render after the change', async () => {
+    const { steps } = await stepsAfterSunMoves({ ...proceduralSky, processMode: 'quality' }, 3);
+
+    expect(steps).toEqual(['every layer']);
+  });
+
+  it('names the texels of a Quality bake by its lights, their exposure and its energy', async () => {
+    const { bakeKeys } = await stepsAfterSunMoves({ ...proceduralSky, processMode: 'quality' }, 1);
+
+    expect(bakeKeys.at(-1)).toMatch(/@1\|1$/);
+  });
+
+  it('builds no new bake for the change', async () => {
+    await stepsAfterSunMoves(proceduralSky, 3);
+
+    expect(bakes).toHaveLength(1);
+  });
+
+  it('shows the moved sun to the bake before the render that bakes it', async () => {
+    const { lightDirections } = await stepsAfterSunMoves(proceduralSky, 1);
+
+    expect(lightDirections.at(-1)?.toArray()).toEqual(new THREE.Vector3(3, 2, 1).normalize().toArray());
+  });
+
+  it('bakes again in its first render a radiance whose sun moved after its build', async () => {
+    const recorded = recordedEnvironment();
+    built.next = recorded.build;
+    const { scene, update, advanceFrames } = await mount(<LitSky sky={proceduralSky} sun={[1, 2, 3]} />);
+    await update(<LitSky sky={proceduralSky} sun={[3, 2, 1]} />);
+    await advanceFrames(1);
+
+    fireSceneRender(scene, camera);
+
+    expect(recorded.steps).toEqual(['every layer']);
+  });
+
+  it('notes a change of its Environment for the probes when the moved sun bakes', async () => {
+    built.next = recordedEnvironment().build;
+    const ownLitSky = (sun: [number, number, number]) => (
+      <>
+        <OwnEnvironment />
+        <LitSky sky={proceduralSky} sun={sun} />
+      </>
+    );
+    const { scene, update, advanceFrames } = await mount(ownLitSky([1, 2, 3]));
+    for (let render = 0; render < 10; render += 1) fireSceneRender(scene, camera);
+    const changes = ownEnvironmentChanges(scene);
+    await update(ownLitSky([3, 2, 1]));
+    await advanceFrames(1);
+
+    fireSceneRender(scene, camera);
+
+    expect(ownEnvironmentChanges(scene)).toBeGreaterThan(changes);
+  });
+
+  // The exposure scales the light energies, so a render at another exposure dirties the sky (`sky.cpp:1086`).
+  it('bakes layer 0 in place at the exposure of a render that changes the exposure alone', async () => {
+    const recorded = recordedEnvironment();
+    built.next = recorded.build;
+    const { scene } = await mount(exposed(2, <LitSky sky={proceduralSky} sun={[1, 2, 3]} />));
+    for (let render = 0; render < 10; render += 1) fireSceneRender(scene, camera);
+    recorded.steps.length = 0;
+
+    drawAtExposure(scene, 4, () => fireSceneRender(scene, camera));
+
+    expect([recorded.steps, recorded.lightEnergies.at(-1), recorded.bakeEnergies.at(-1)]).toEqual([
+      ['layer 0'],
+      4,
+      4,
+    ]);
+  });
+
+  it("bakes again in its first render at that render's energy, when the build held another exposure", async () => {
+    const recorded = recordedEnvironment();
+    built.next = recorded.build;
+    const { scene } = await mount(exposed(2, <LitSky sky={proceduralSky} sun={[1, 2, 3]} />));
+
+    drawAtExposure(scene, 4, () => fireSceneRender(scene, camera));
+
+    expect([recorded.steps, recorded.bakeEnergies]).toEqual([['every layer'], [4]]);
+  });
+
+  it('steps nothing for a sky that reads no lights (edge case)', async () => {
+    const { steps } = await stepsAfterSunMoves(panoramaSky, 3);
+
+    expect(steps).toEqual([]);
+  });
+});
+
+/** An environment that records each step of its bake in place and each light list it is shown. */
+function recordedEnvironment() {
+  const steps: string[] = [];
+  const lightCounts: number[] = [];
+  const lightDirections: THREE.Vector3[] = [];
+  /** The energy of the first light each time the lights are shown. */
+  const lightEnergies: number[] = [];
+  /** The energy each bake in place is read at. */
+  const bakeEnergies: number[] = [];
+  /** The texel key each full bake in place names. */
+  const bakeKeys: (string | undefined)[] = [];
+  const build = (gl: THREE.WebGLRenderer): SkyEnvironment => ({
+    ...skyEnvironment()(gl),
+    setLights: (lights) => {
+      lightCounts.push(lights.length);
+      if (lights[0]) lightDirections.push(lights[0].direction.clone());
+      if (lights[0]) lightEnergies.push(lights[0].energy);
+    },
+    radianceInPlace: {
+      bakeAgain: (_position, energy, key) => {
+        steps.push('every layer');
+        bakeEnergies.push(energy);
+        bakeKeys.push(key);
+      },
+      bakeFirstLayerAgain: (_position, energy) => steps.push('layer 0') && bakeEnergies.push(energy),
+      filterLayer: (layer) => steps.push(`filter ${layer}`),
+    },
+  });
+  return { build, steps, lightCounts, lightDirections, lightEnergies, bakeEnergies, bakeKeys };
+}
+
 /** Names the Environment of these tests the world's own, as a probe captures with. */
 function OwnEnvironment() {
   useOwnEnvironment(ENVIRONMENT);
   return null;
 }
 
-describe('<SkyLayer> over a live panorama', () => {
+describe('<SkyLayer> over a live texture', () => {
   it('bakes nothing until the pass has drawn the target', async () => {
-    await mount(
-      <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} panorama={publishedCanvasTarget(8, 4)} />
-    );
+    loaded.textures = { source_panorama: publishedCanvasTarget(8, 4) };
+    await mount(<ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} />);
     expect(bakes).toHaveLength(0);
   });
 
   it('bakes once the pass draws the target', async () => {
     const panorama = publishedCanvasTarget(8, 4);
-    const mounted = await mount(
-      <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} panorama={panorama} />
-    );
+    loaded.textures = { source_panorama: panorama };
+    const mounted = await mount(<ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} />);
     noteLiveTargetDrawn(panorama);
     await mounted.advanceFrames(1);
-    expect(bakes.map((bake) => bake.panorama)).toEqual([panorama]);
+    expect(bakes.map((bake) => bake.textures?.source_panorama)).toEqual([panorama]);
   });
 
-  it('draws the background again on each later draw of the target, without a new bake', async () => {
-    const redrawBackground = vi.fn();
-    const environment = skyEnvironment();
-    built.next = (gl) => ({ ...environment(gl), redrawBackground });
+  it('bakes no more on later draws of the target, as the background samples the target itself', async () => {
+    built.next = skyEnvironment();
     const panorama = publishedCanvasTarget(8, 4);
+    loaded.textures = { source_panorama: panorama };
     noteLiveTargetDrawn(panorama);
-    const mounted = await mount(
-      <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} panorama={panorama} />
-    );
-    await mounted.advanceFrames(1);
+    const mounted = await mount(<ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} />);
     noteLiveTargetDrawn(panorama);
     await mounted.advanceFrames(1);
-    expect([bakes.length, redrawBackground.mock.calls.length]).toEqual([1, 1]);
+    expect(bakes).toHaveLength(1);
   });
 
-  it('draws a shared background once for each draw of the target, however many layers share it', async () => {
-    const redrawBackground = vi.fn();
-    const environment = skyEnvironment();
-    built.next = (gl) => ({ ...environment(gl), redrawBackground });
+  it('bakes again at once, with no frame without a sky, when another texture arrives after the draw', async () => {
+    built.next = skyEnvironment();
     const panorama = publishedCanvasTarget(8, 4);
+    loaded.textures = { source_panorama: panorama };
     noteLiveTargetDrawn(panorama);
-    const mounted = await mount(
-      <ShownEnvironment environment={ENVIRONMENT}>
-        <SkyLayer sky={panoramaSky} rotation={NO_ROTATION} panorama={panorama} />
-        <SkyLayer sky={panoramaSky} rotation={NO_ROTATION} panorama={panorama} />
-      </ShownEnvironment>
-    );
+    const mounted = await mount(<ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} />);
     await mounted.advanceFrames(1);
-    noteLiveTargetDrawn(panorama);
-    await mounted.advanceFrames(1);
-    expect(redrawBackground).toHaveBeenCalledTimes(1);
+    built.next = skyEnvironment();
+    loaded.textures = { source_panorama: panorama, other: new THREE.DataTexture(new Uint8Array(4), 1, 1) };
+    await mounted.update(<ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} />);
+    expect(bakes).toHaveLength(2);
   });
 });

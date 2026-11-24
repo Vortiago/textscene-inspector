@@ -57,7 +57,28 @@ export function skyLightSize(light: THREE.DirectionalLight): number {
 }
 
 /** The light data of a render whose sky reads no lights: Godot gives it a count of 0. */
-export const NO_SKY_LIGHTS = '';
+const NO_SKY_LIGHTS = '';
+
+/** The light data a render's sky reads: its lights' key at the exposure that scales their energies. */
+export interface SkyLightData {
+  readonly lights: string;
+  readonly exposure: number;
+}
+
+/** The light data a sky reads at `exposure`, which scales no energy when every one is 0. */
+export function skyLightDataAt(
+  lights: readonly { energy: number }[],
+  key: string,
+  exposure: number
+): SkyLightData {
+  return { lights: key, exposure: lights.some((light) => light.energy !== 0) ? exposure : 1 };
+}
+
+/** The light data of a sky that reads no lights, at any exposure. */
+export const NO_SKY_LIGHT_DATA: SkyLightData = { lights: NO_SKY_LIGHTS, exposure: 1 };
+
+/** The key that tells one light data from another, as a radiance's layer 0 records it. */
+export const lightDataKey = ({ lights, exposure }: SkyLightData) => `${lights}@${exposure}`;
 
 /**
  * The sky light data of the last render with a sky on each renderer, which Godot keeps for every sky

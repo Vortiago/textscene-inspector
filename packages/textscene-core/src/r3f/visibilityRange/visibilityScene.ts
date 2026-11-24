@@ -14,7 +14,7 @@ import { NO_VISIBILITY_RANGE, type VisibilityRange } from '../../godot/rendering
 import { observeSceneCull } from '../sceneRenderCamera';
 import { sceneSplitsHold } from '../directionalShadow/fitSceneDirectionalShadows';
 import { compareTreeOrder, type TreeOrder } from '../contexts/TreeOrderContext';
-import { cameraFrustum } from '../cameraFrustum';
+import { cameraFrustum } from '../../shaders/pipeline/cameraFrustum';
 
 /** Where an instance's node sits in the scene tree, and which node it names as visibility parent. */
 export interface NodePlace {

@@ -60,4 +60,4 @@ Only the deployed dev edition includes the games:
 
 `build:deploy` sets `VITE_INCLUDE_GAMES=1`. Two files read it and must agree: `apps/textscene-web/scripts/copy-fixtures.js` and `apps/textscene-web/src/fixturesAll.ts`.
 
-The Cloudflare Pages dashboard holds the dev edition's build command, `pnpm build:deploy`. There is no `wrangler.toml`. The public edition deploys to GitHub Pages through `.github/workflows/pages.yml`.
+The Cloudflare Pages dashboard holds the dev edition's build command, `pnpm build:deploy`. That build has no Godot source, so its install downloads Godot's template files from GitHub and checks each against `scripts/godot-templates/templateChecksums.generated.json`. There is no `wrangler.toml`. The public edition deploys to GitHub Pages through `.github/workflows/pages.yml`.

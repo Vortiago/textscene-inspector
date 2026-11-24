@@ -10,6 +10,7 @@ import { renderUnderWay } from '../viewportRender/worldRender';
 import { mipmapBiasUniform } from '../testing/mipmapBiasUniform';
 import type { ViewportShadowAtlas } from '../positionalShadow/viewportShadowAtlas';
 import { ReflectionProbeObject } from './reflectionProbeObject';
+import { noteRealTimeSkyState, takeRealTimeCaptureRenders } from './realTimeCaptures';
 import { SceneProbes } from './sceneProbes';
 import { rootViewportDescription } from '../viewportRender/viewportDescription';
 import { shownProbes } from './probeSlots';
@@ -138,18 +139,18 @@ describe('SceneProbes.update', () => {
     expect([facesDrawn(), facesDrawn()]).toEqual([6, 0]);
   });
 
-  it('captures one probe a frame, as Godot captures one at a time', async () => {
+  it('captures one ONCE probe a frame, as Godot captures one at a time', async () => {
     const { facesDrawn, settle } = await sceneWith(probeObject(), probeObject());
     settle();
 
     expect([facesDrawn(), facesDrawn(), facesDrawn()]).toEqual([6, 6, 0]);
   });
 
-  it('captures the probes in tree order, whatever order they mount in', async () => {
+  it('captures the probes in reverse tree order, whatever order they mount in (renderer_scene_cull.cpp:531)', async () => {
     const second = probeObject({}, [1]);
     const first = probeObject({}, [0]);
-    first.position.x = 1;
-    const { renderer, facesDrawn, settle } = await sceneWith(second, first);
+    second.position.x = 1;
+    const { renderer, facesDrawn, settle } = await sceneWith(first, second);
     settle();
     const renders = vi.spyOn(renderer, 'render');
     facesDrawn();
@@ -223,6 +224,58 @@ describe('SceneProbes.update', () => {
   });
 });
 
+describe('SceneProbes ALWAYS renders', () => {
+  it("counts the six faces of each ALWAYS probe for the sky's radiance update", async () => {
+    const { scene, facesDrawn } = await sceneWith(probeObject({ update_mode: '1' }));
+    facesDrawn();
+
+    expect(takeRealTimeCaptureRenders(scene)).toBe(6);
+  });
+
+  it('captures every ALWAYS probe in a frame and one ONCE probe (renderer_scene_cull.cpp:3739-3763)', async () => {
+    const always = () => probeObject({ update_mode: '1' });
+    const { facesDrawn, settle } = await sceneWith(always(), probeObject(), always(), probeObject());
+    settle();
+
+    expect([facesDrawn(), facesDrawn()]).toEqual([3 * 6, 6]);
+  });
+
+  it('keeps an ALWAYS capture while the sky state its faces start from stays', async () => {
+    const { scene, facesDrawn, settle } = await sceneWith(probeObject({ update_mode: '1' }));
+    noteRealTimeSkyState(scene, 'baked');
+    settle();
+    facesDrawn();
+    noteRealTimeSkyState(scene, 'baked');
+
+    expect(facesDrawn()).toBe(0);
+  });
+
+  it('captures an ALWAYS probe again once the sky state its faces start from changes', async () => {
+    const { scene, facesDrawn, settle } = await sceneWith(probeObject({ update_mode: '1' }));
+    settle();
+    facesDrawn();
+    noteRealTimeSkyState(scene, 'x');
+
+    expect(facesDrawn()).toBe(6);
+  });
+
+  it('keeps a ONCE capture when the sky state changes', async () => {
+    const { scene, facesDrawn, settle } = await sceneWith(probeObject());
+    settle();
+    facesDrawn();
+    noteRealTimeSkyState(scene, 'x');
+
+    expect(facesDrawn()).toBe(0);
+  });
+
+  it('counts no interior ALWAYS probe, which draws no sky (render_forward_clustered.cpp:1819)', async () => {
+    const { scene, facesDrawn } = await sceneWith(probeObject({ update_mode: '1', interior: 'true' }));
+    facesDrawn();
+
+    expect(takeRealTimeCaptureRenders(scene)).toBe(0);
+  });
+});
+
 describe('SceneProbes rendering', () => {
   it("shows the captured probes, the atlas's border and its last layer to a render of the scene", async () => {
     const { scene, facesDrawn, settle } = await sceneWith(probeObject({ update_mode: '1' }));
@@ -288,7 +341,7 @@ describe('SceneProbes rendering', () => {
     const { scene, facesDrawn, settle } = await sceneWith(probeObject());
     settle();
     facesDrawn();
-    drawAsProbeCapture({ isInterior: false, hasShadows: true }, () =>
+    drawAsProbeCapture({ isInterior: false, hasShadows: true, isRealTime: false }, () =>
       fireSceneRender(scene, new THREE.PerspectiveCamera())
     );
 
@@ -343,7 +396,7 @@ describe('SceneProbes rendering', () => {
     const camera = new THREE.PerspectiveCamera();
     let during: number | null = null;
 
-    drawAsProbeCapture({ isInterior: false, hasShadows: false }, () => {
+    drawAsProbeCapture({ isInterior: false, hasShadows: false, isRealTime: false }, () => {
       fireSceneRender(scene, camera);
       during = light.shadow.intensity;
       fireSceneRenderEnd(scene, camera);

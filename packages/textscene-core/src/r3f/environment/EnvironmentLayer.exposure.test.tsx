@@ -33,7 +33,7 @@ function layer(properties: Record<string, string>, multiplier: number | null) {
     <ViewShowProvider>
       <WorldExposureScope>
         {multiplier !== null && <Exposure multiplier={multiplier} />}
-        <EnvironmentLayer settings={environmentSettingsOf(properties)} sky={null} panorama={null} />
+        <EnvironmentLayer settings={environmentSettingsOf(properties)} sky={null} />
       </WorldExposureScope>
     </ViewShowProvider>
   );
@@ -110,7 +110,7 @@ describe('<EnvironmentLayer> colour background under an exposure', () => {
       const clearColor = new THREE.Color(0x123456);
       drawAtExposure(scene, 3, () => {
         scene.background = clearColor;
-        drawAsProbeCapture({ isInterior: true, hasShadows: false }, () =>
+        drawAsProbeCapture({ isInterior: true, hasShadows: false, isRealTime: false }, () =>
           fireSceneRender(scene, new THREE.PerspectiveCamera())
         );
       });

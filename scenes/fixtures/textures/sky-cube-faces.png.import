@@ -1,0 +1,26 @@
+[remap]
+
+importer="cubemap_texture"
+type="CompressedCubemap"
+path="res://.godot/imported/sky-cube-faces.png-ccube.ccube"
+metadata={
+"vram_texture": false
+}
+
+[deps]
+
+source_file="res://textures/sky-cube-faces.png"
+dest_files=["res://.godot/imported/sky-cube-faces.png-ccube.ccube"]
+
+[params]
+
+compress/mode=0
+compress/high_quality=false
+compress/lossy_quality=0.7
+compress/uastc_level=0
+compress/rdo_quality_loss=0.0
+compress/hdr_compression=1
+compress/channel_pack=0
+mipmaps/generate=false
+mipmaps/limit=-1
+slices/arrangement=1

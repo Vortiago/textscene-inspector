@@ -5,7 +5,8 @@
  */
 
 import { htmlColor, namedColor } from '../../../../godot/math/color.js';
-import { stringToFloat, stringToInt } from '../../../../godot/string/string';
+import { stringToInt } from '../../../../godot/string/string';
+import { stringToFloat } from '../../../../godot/string/strtod';
 import type { Rgba } from '../../../../godot/math/math';
 
 /** One currently-open BBCode tag. `value` is the `[name=value]` payload, if the tag carries one. */

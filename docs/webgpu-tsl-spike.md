@@ -359,7 +359,7 @@ so it carries no risk in the webview. Before any move to `WebGPURenderer`, the
 `drive-vscode-extension` skill should request an adapter in the real webview on each operating
 system.
 
-### 7. Should the shader translator emit TSL?
+### 7. Should the shader transpiler emit TSL?
 
 Yes, for a shader that the lit surface must light. A node material takes the shader's outputs as
 nodes, for example `colorNode` and `roughnessNode`, and Godot's lighting model then lights them
@@ -407,7 +407,7 @@ step 5, or when group 3 lands first and the port follows.
 - WebGPU on lavapipe, and so a WebGPU comparison with Godot.
 - A picture of a real canvas on `WebGPURenderer`.
 - The sampler and binding counts of the generated WGSL.
-- `glslFn` as a target for the translator.
+- `glslFn` as a target for the transpiler.
 - The bundle size after the patches go.
 - The handler installed with no node material, over the goldens.
 - The cause of each pixel that differs by 1/255, and of the 18 untraced goldens.
@@ -426,5 +426,5 @@ The owner decided these on 2026-11-11. ADR-0055 records the first.
 | The prototype | It stays on the branch `spike/tsl-lit-surface` |
 
 On 2026-11-13 the owner widened the port from the lit surface to all of Godot's shaders, with the
-passes in the package and a translator of Godot's shading language first. ADR-0055, ADR-0072 and
+passes in the package and a transpiler of Godot's shading language first. ADR-0055, ADR-0072 and
 ADR-0075 record it.

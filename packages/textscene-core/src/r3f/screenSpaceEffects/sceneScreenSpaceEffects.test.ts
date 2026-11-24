@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { OpaqueSentinel } from '../opaqueSentinel';
+import type { OpaqueSentinel } from '../../shaders/pipeline/opaqueSentinel';
 import {
   SSAO_ENVIRONMENT_DEFAULTS,
   SSAO_PROJECT_DEFAULTS,

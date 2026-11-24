@@ -9,7 +9,22 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { Rgba } from './math.js';
+import { hexDigitValue } from '../string/charUtils.js';
+import { cMax, cMin, type Rgba } from './math.js';
+
+const f = Math.fround;
+const SRGB_KNEE = f(0.04045);
+const LINEAR_SLOPE = f(1 / f(12.92));
+const LINEAR_KNEE = f(0.0031308);
+const SRGB_EXPONENT = f(1 / f(2.4));
+
+/** A channel of `Color::srgb_to_linear` (`color.h:192`): the shifted channel is a double until powf. */
+export const srgbToLinear = (c: number): number =>
+  c < SRGB_KNEE ? f(c * LINEAR_SLOPE) : f(Math.pow(f((c + 0.055) * (1 / 1.055)), f(2.4)));
+
+/** A channel of `Color::linear_to_srgb` (`color.h:199`). */
+export const linearToSrgb = (c: number): number =>
+  c < LINEAR_KNEE ? f(f(12.92) * c) : f(1.055 * f(Math.pow(c, SRGB_EXPONENT)) - 0.055);
 
 /**
  * `named_colors[]` (`color_names.inc:49-196`): normalised name to `0xRRGGBBAA`. Keys drop the
@@ -197,28 +212,6 @@ export function namedColor(name: string): Rgba | undefined {
   };
 }
 
-/** A hex digit of `Color::html`, 0 to 15. */
-function hexDigit(text: string, at: number): number {
-  return Number.parseInt(text[at]!, 16);
-}
-
-/** Two hex digits of `Color::html`, 0 to 255. */
-function hexByte(text: string, at: number): number {
-  return hexDigit(text, at) * 16 + hexDigit(text, at + 1);
-}
-
-/** `Color::html` (`color.cpp:331-368`), undefined where `Color::html_is_valid` (`:372-390`) fails. */
-export function htmlColor(text: string): Rgba | undefined {
-  if (!HTML_COLOR_RE.test(text)) return undefined;
-  const body = text.startsWith('#') ? text.slice(1) : text;
-  if (body.length <= 4) {
-    const alpha = body.length === 4 ? hexDigit(body, 3) / 15 : 1;
-    return { r: hexDigit(body, 0) / 15, g: hexDigit(body, 1) / 15, b: hexDigit(body, 2) / 15, a: alpha };
-  }
-  const alpha = body.length === 8 ? hexByte(body, 6) / 255 : 1;
-  return { r: hexByte(body, 0) / 255, g: hexByte(body, 2) / 255, b: hexByte(body, 4) / 255, a: alpha };
-}
-
 /** `Color()`: opaque black, what Godot answers for a colour it cannot read. */
 export const DEFAULT_COLOR: Rgba = Object.freeze({ r: 0, g: 0, b: 0, a: 1 });
 
@@ -233,6 +226,15 @@ interface ColorChannels {
   g: number;
   b: number;
 }
+
+const float32 = Math.fround;
+
+// `Color` holds float channels, so a double channel from a caller rounds first.
+const floatChannels = ({ r, g, b }: ColorChannels): ColorChannels => ({
+  r: float32(r),
+  g: float32(g),
+  b: float32(b),
+});
 
 /**
  * `Color::darkened` (`core/math/color.h:119-125`): each colour channel shrinks by `amount`.
@@ -261,24 +263,38 @@ export function inverted<C extends ColorChannels>(color: C): C {
   return { ...color, r: 1 - color.r, g: 1 - color.g, b: 1 - color.b };
 }
 
-/**
- * `Color::get_h` (`core/math/color.cpp:136-163`): the hue as a fraction of the circle, 0 for a grey.
- *
- * @canonical A colour's hue, saturation and conversion from HSV
- */
-export function colorHue({ r, g, b }: ColorChannels): number {
-  const max = Math.max(r, g, b);
-  const delta = max - Math.min(r, g, b);
+/** `Color::get_h` (`core/math/color.cpp:136-163`) in the precision `round` gives, 0 for a grey. */
+function hueIn({ r, g, b }: ColorChannels, round: (value: number) => number): number {
+  const max = cMax(cMax(r, g), b);
+  const delta = round(max - cMin(cMin(r, g), b));
   if (delta === 0) return 0;
 
   let hue: number;
-  if (r === max) hue = (g - b) / delta;
-  else if (g === max) hue = 2 + (b - r) / delta;
-  else hue = 4 + (r - g) / delta;
+  if (r === max) hue = round(round(g - b) / delta);
+  else if (g === max) hue = round(2 + round(round(b - r) / delta));
+  else hue = round(4 + round(round(r - g) / delta));
 
-  hue /= 6;
-  return hue < 0 ? hue + 1 : hue;
+  hue = round(hue / 6);
+  return hue < 0 ? round(hue + 1) : hue;
 }
+
+/** `Color::get_s` (`core/math/color.cpp:165-174`) in the precision `round` gives, 0 for black. */
+function saturationIn({ r, g, b }: ColorChannels, round: (value: number) => number): number {
+  const max = cMax(cMax(r, g), b);
+  return max !== 0 ? round(round(max - cMin(cMin(r, g), b)) / max) : 0;
+}
+
+const inDouble = (value: number) => value;
+
+/**
+ * The hue as a fraction of the circle, in double as the renderer's colours are.
+ *
+ * @canonical A colour's hue, saturation and conversion from HSV
+ */
+export const colorHue = (color: ColorChannels): number => hueIn(color, inDouble);
+
+/** The hue as a float `Color` reads it, as `Color.h` gives it to a script. */
+export const colorHuef = (color: ColorChannels): number => hueIn(floatChannels(color), float32);
 
 /**
  * `Color::get_v` (`core/math/color.cpp:176-180`): the brightest channel.
@@ -286,18 +302,18 @@ export function colorHue({ r, g, b }: ColorChannels): number {
  * @canonical A colour's hue, saturation and conversion from HSV
  */
 export function colorValue({ r, g, b }: ColorChannels): number {
-  return Math.max(r, g, b);
+  return cMax(cMax(r, g), b);
 }
 
 /**
- * `Color::get_s` (`core/math/color.cpp:165-174`): 0 for black, where the brightest channel is 0.
+ * The span of the channels over the brightest, in double as the renderer's colours are.
  *
  * @canonical A colour's hue, saturation and conversion from HSV
  */
-export function colorSaturation({ r, g, b }: ColorChannels): number {
-  const max = Math.max(r, g, b);
-  return max !== 0 ? (max - Math.min(r, g, b)) / max : 0;
-}
+export const colorSaturation = (color: ColorChannels): number => saturationIn(color, inDouble);
+
+/** The saturation as a float `Color` reads it, as `Color.s` gives it to a script. */
+export const colorSaturationf = (color: ColorChannels): number => saturationIn(floatChannels(color), float32);
 
 /**
  * `Color::from_hsv` (`core/math/color.cpp:458-461`, delegating to `set_hsv`, `:182-227`). The alpha
@@ -326,5 +342,48 @@ export function hsvToRgb(h: number, s: number, v: number): Rgba {
       return { r: t, g: p, b: v, a: 1 };
     default:
       return { r: v, g: p, b: q, a: 1 };
+  }
+}
+
+/** `Color::html`'s hex byte (2 digits), 0-255. */
+function hexByte(hex: string, i: number): number {
+  return hexDigitValue(hex[i]!)! * 16 + hexDigitValue(hex[i + 1]!)!;
+}
+
+/**
+ * `Color::html` (color.cpp:331, 372), or `undefined` for a text that is not a hex colour.
+ *
+ * @canonical A hex colour text as a colour
+ */
+export function htmlColor(value: string): Rgba | undefined {
+  const body = value.startsWith('#') ? value.slice(1) : value;
+  if (!/^[0-9a-fA-F]+$/.test(body)) return undefined;
+
+  switch (body.length) {
+    case 3:
+      return {
+        r: hexDigitValue(body[0]!)! / 15,
+        g: hexDigitValue(body[1]!)! / 15,
+        b: hexDigitValue(body[2]!)! / 15,
+        a: 1,
+      };
+    case 4:
+      return {
+        r: hexDigitValue(body[0]!)! / 15,
+        g: hexDigitValue(body[1]!)! / 15,
+        b: hexDigitValue(body[2]!)! / 15,
+        a: hexDigitValue(body[3]!)! / 15,
+      };
+    case 6:
+      return { r: hexByte(body, 0) / 255, g: hexByte(body, 2) / 255, b: hexByte(body, 4) / 255, a: 1 };
+    case 8:
+      return {
+        r: hexByte(body, 0) / 255,
+        g: hexByte(body, 2) / 255,
+        b: hexByte(body, 4) / 255,
+        a: hexByte(body, 6) / 255,
+      };
+    default:
+      return undefined;
   }
 }

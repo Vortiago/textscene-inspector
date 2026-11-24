@@ -10,6 +10,7 @@ import { readFileSync } from 'node:fs';
 import {
   deriveBaseTypes,
   deriveResourceTypeExclusions,
+  CLASS_LIST_OUT,
   EXCLUSIONS_OUT,
   OUT,
   PROPERTIES_OUT,
@@ -17,6 +18,7 @@ import {
   setterlessProperties,
   RESOURCE_OUT,
   renderFromCatalog,
+  renderFromClassList,
   renderFromExclusionCaptures,
   renderFromNodeDefaultCaptures,
   renderFromVariantPropertyCaptures,
@@ -176,6 +178,10 @@ describe('deriveBaseTypes', () => {
 
   it('the committed variantProperties.generated.ts matches the captures', () => {
     expect(readFileSync(VARIANT_PROPERTIES_OUT, 'utf8')).toBe(renderFromVariantPropertyCaptures());
+  });
+
+  it('the committed classList.generated.ts matches the captures', () => {
+    expect(readFileSync(CLASS_LIST_OUT, 'utf8')).toBe(renderFromClassList());
   });
 
   it('renders one row per captured property, so no class is dropped', () => {

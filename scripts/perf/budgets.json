@@ -1,13 +1,13 @@
 {
   "depth-fog": {
-    "drawCalls": 13,
+    "drawCalls": 16,
     "steps": {
       "Scene draw": {
         "drawCalls": 4,
         "runs": 1
       },
       "Depth prepass": {
-        "drawCalls": 0,
+        "drawCalls": 3,
         "runs": 1
       },
       "Shadows": {
@@ -29,14 +29,14 @@
     }
   },
   "fog-volume": {
-    "drawCalls": 13,
+    "drawCalls": 16,
     "steps": {
       "Scene draw": {
         "drawCalls": 4,
         "runs": 1
       },
       "Depth prepass": {
-        "drawCalls": 0,
+        "drawCalls": 3,
         "runs": 1
       },
       "Shadows": {
@@ -58,14 +58,14 @@
     }
   },
   "glow": {
-    "drawCalls": 15,
+    "drawCalls": 16,
     "steps": {
       "Scene draw": {
         "drawCalls": 2,
         "runs": 1
       },
       "Depth prepass": {
-        "drawCalls": 0,
+        "drawCalls": 1,
         "runs": 1
       },
       "Shadows": {
@@ -146,14 +146,14 @@
     }
   },
   "demo-3d-platformer": {
-    "drawCalls": 308,
+    "drawCalls": 414,
     "steps": {
       "Scene draw": {
         "drawCalls": 194,
         "runs": 1
       },
       "Depth prepass": {
-        "drawCalls": 0,
+        "drawCalls": 106,
         "runs": 1
       },
       "Shadows": {
@@ -175,14 +175,14 @@
     }
   },
   "demo-3d-platformer-write-each-frame": {
-    "drawCalls": 306,
+    "drawCalls": 412,
     "steps": {
       "Scene draw": {
         "drawCalls": 194,
         "runs": 1
       },
       "Depth prepass": {
-        "drawCalls": 0,
+        "drawCalls": 106,
         "runs": 1
       },
       "Shadows": {
@@ -225,14 +225,14 @@
     }
   },
   "in-game-camera3d": {
-    "drawCalls": 5,
+    "drawCalls": 6,
     "steps": {
       "SubViewports": {
         "drawCalls": 4,
         "runs": 1
       },
       "Depth prepass": {
-        "drawCalls": 0,
+        "drawCalls": 1,
         "runs": 1
       },
       "Other": {
@@ -242,14 +242,14 @@
     }
   },
   "in-game-hud-over-world": {
-    "drawCalls": 8,
+    "drawCalls": 9,
     "steps": {
       "SubViewports": {
         "drawCalls": 6,
         "runs": 1
       },
       "Depth prepass": {
-        "drawCalls": 0,
+        "drawCalls": 1,
         "runs": 1
       },
       "Canvas copy": {

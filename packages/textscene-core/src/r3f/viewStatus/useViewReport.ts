@@ -4,10 +4,8 @@ import { useResourceLoader } from '../../resources/useResource.js';
 import type { Scene } from '../../scene/openScene.js';
 import * as logger from '../../logger.js';
 import { subscribeToNothing } from '../../utils/subscribeToNothing.js';
-import { hasPendingWork, pendingSceneWork } from '../sceneWork.js';
+import { hasPendingWork, pendingSceneWork, subscribeSceneWork } from '../sceneWork.js';
 import type { ResourceLoader } from '../../resources/ResourceLoader.js';
-import { textureWork } from '../../resources/textures/textureWork.js';
-import { fontWork } from '../controls/native/text/settledChannel.js';
 import { useGameStartFacts } from '../gameView/gameStartFacts.js';
 import { useViewStatusStore } from './ViewStatusContext.js';
 import type { DrawnFrame, ViewSettled, ViewStatusStore } from './viewStatus.js';
@@ -67,7 +65,7 @@ export function useViewReport(): (isFullSize: boolean, awaitedCamera?: string | 
     revision: 0,
     isFullSize: false,
     awaitedCamera: null,
-    work: { resources: 0, textures: 0, fonts: 0 },
+    work: { resources: 0, textures: 0, fonts: 0, modules: 0 },
     facts,
   }));
   useReportStartedWork(store, isAttached, loader, frame);
@@ -99,11 +97,6 @@ function useReportStartedWork(
       frame.work = work;
       store.frameDrawn(frame);
     };
-    const stops = [
-      loader?.subscribePending(onWorkChange),
-      textureWork.subscribe(onWorkChange),
-      fontWork.subscribe(onWorkChange),
-    ];
-    return () => stops.forEach((stop) => stop?.());
+    return subscribeSceneWork(loader, onWorkChange);
   }, [store, isAttached, loader, frame]);
 }

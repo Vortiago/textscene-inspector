@@ -1,10 +1,4 @@
-/**
- * Godot's per-pixel hash as GLSL: `quick_hash` in `scene_forward_lights_inc.glsl:278-281`, which
- * `interleaved_gradient_noise` in `sky.glsl:143-147` repeats. The soft shadow turn and the sky's
- * debanding noise both concatenate this one text. The guard lets one program hold it twice.
- */
-
-/** The hash of `pixel`, Godot's `gl_FragCoord.xy`, in [0, 1). */
+/** `quick_hash` of a pixel in [0, 1) (`scene_forward_lights_inc.glsl:278-281`), guarded to allow two. */
 export const GODOT_QUICK_HASH_GLSL = /* glsl */ `
 #ifndef GODOT_QUICK_HASH
 #define GODOT_QUICK_HASH

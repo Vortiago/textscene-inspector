@@ -1,0 +1,29 @@
+import { writtenNames } from './assignment.js';
+import { bindConstantReads } from './constantReads.js';
+import { refuseFoldedIndexOutOfRange } from './foldedIndex.js';
+import { refuseOutArgumentsThatAreNoPlace } from './outArgumentPlace.js';
+import { GlslangFolding } from './glslangFolding.js';
+import { glslBlock } from './godotText.js';
+import { lowerFunction } from './lowering/lower.js';
+import type { FunctionNode } from './shaderTree.js';
+
+/** The folding knows its nodes by identity, so the lowerings move a node and never copy it. */
+export interface EmittedTree {
+  readonly lowered: FunctionNode;
+  readonly folding: GlslangFolding;
+  readonly written: ReadonlySet<string>;
+}
+
+export function emittedTree(definition: FunctionNode): EmittedTree {
+  return emittedGlslTree({ ...definition, body: glslBlock(definition.body) });
+}
+
+/** The emitted tree of a function GLSL reads as it is: a template's, or one of Godot's text. */
+export function emittedGlslTree(glsl: FunctionNode): EmittedTree {
+  const folding = new GlslangFolding();
+  bindConstantReads(glsl.body, folding);
+  refuseFoldedIndexOutOfRange(glsl.body, folding);
+  refuseOutArgumentsThatAreNoPlace(glsl.body);
+  const lowered = lowerFunction(glsl);
+  return { lowered, folding, written: writtenNames(lowered.body) };
+}

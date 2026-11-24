@@ -352,7 +352,7 @@ async function renderArrival(testCase: ParityCase, arrival: Arrival): Promise<TH
   const renderer = await ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
       <mesh>
-        <SurfaceMaterialSlot source={sources[arrival]} />
+        <SurfaceMaterialSlot source={sources[arrival]} drawnOn="mesh" />
       </mesh>
     </ResourceLoaderProvider>
   );

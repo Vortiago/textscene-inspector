@@ -82,7 +82,7 @@ describe('useResolvedEnvironment — references held in an external .tres', () =
       { 'res://town/sky_day.tres': SKY_MATERIAL_TRES }
     );
     expect(resolved?.sky).not.toBeNull();
-    expect(resolved?.sky?.material.kind).toBe('procedural');
+    expect(resolved?.sky?.material.file).toBe('ProceduralSkyMaterial');
   });
 
   it('follows a Sky held in an ExtResource, and its material in that file', async () => {
@@ -103,7 +103,7 @@ describe('useResolvedEnvironment — references held in an external .tres', () =
         },
       }
     );
-    expect(resolved?.sky?.material.kind).toBe('procedural');
+    expect(resolved?.sky?.material.file).toBe('ProceduralSkyMaterial');
   });
 
   it('reads a .tres SubResource from that file, never the scene id it shares', async () => {
@@ -181,8 +181,8 @@ describe('useResolvedEnvironment — references held in an external .tres', () =
         },
       }
     );
-    expect(resolved?.sky?.material.kind).toBe('panorama');
-    expect(resolved?.panorama).toBeInstanceOf(THREE.Texture);
+    expect(resolved?.sky?.material.file).toBe('PanoramaSkyMaterial');
+    expect(resolved?.sky?.material.textures.source_panorama).toBeDefined();
   });
 
   it('still resolves the inline SubResource chain every other corpus scene uses', async () => {
@@ -196,7 +196,7 @@ describe('useResolvedEnvironment — references held in an external .tres', () =
       [],
       {}
     );
-    expect(resolved?.sky?.material.kind).toBe('procedural');
+    expect(resolved?.sky?.material.file).toBe('ProceduralSkyMaterial');
   });
 
   it('bakes a Real-Time Sky with the fast filter', async () => {

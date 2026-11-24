@@ -15,6 +15,8 @@ const srcDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 /** The modules that hold a texture three frees another way, each with that way. */
 const FREED_OTHERWISE: Record<string, string> = {
+  'shaders/sky/fogVolumeTextureNode.ts':
+    'One empty 1x1x1 volume, shared by every sky that reads no fog, lives as long as the page.',
   'r3f/fog/fogUniforms.ts':
     "Each pass draws its texture as its own render target's, and three frees it with the target.",
   'r3f/decal/decalSlots.ts':

@@ -71,3 +71,10 @@ export function referenceKey(reference: ScopedReference): string {
   if (parsed?.type === 'SubResource') return subResourcePath(origin, parsed.id);
   return resolveExtResourcePath(ref, reference.resources.externalResources) ?? `${origin}?${ref ?? ''}`;
 }
+
+/** The address an error names: a path, `path::id` in another file, or the reference for the scene's own. */
+export function referenceAddress(reference: ScopedReference): string {
+  const isScenesOwn =
+    reference.origin === undefined && parseResourceReference(reference.ref ?? '')?.type === 'SubResource';
+  return isScenesOwn ? reference.ref! : referenceKey(reference);
+}

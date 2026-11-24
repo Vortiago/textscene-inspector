@@ -1,15 +1,14 @@
 /** The one `onCreated` of every canvas: what its renderer needs before its first frame. */
 
 import type { RootState } from '@react-three/fiber';
-import { installNodesHandler } from '../../shaders/index.js';
+import { installTargetCopies } from '../../shaders/uniforms/textureCopies.js';
+import { heldLiveTargetCopy } from '../liveTargets.js';
 import { installShaderPatches } from '../shaderPatch/installShaderPatches.js';
+import { installGodotOpaqueOrder } from '../../shaders/pipeline/opaqueOrder.js';
 
-/**
- * Installs the shader patches, then the nodes handler, which draws nothing until a node material
- * exists. The handler writes linear, because the compositor tone maps and encodes once (ADR-0061).
- * The 2D canvas gets both too, since a SubViewport there can hold a 3D scene.
- */
-export function prepareCanvasRenderer({ gl }: RootState): void {
+/** Installs the shader patches, the live target copies and Godot's opaque order. */
+export function prepareCanvasRenderer({ gl }: Pick<RootState, 'gl'>): void {
   installShaderPatches();
-  installNodesHandler(gl, 'linear');
+  installTargetCopies(heldLiveTargetCopy);
+  installGodotOpaqueOrder(gl);
 }

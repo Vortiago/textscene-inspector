@@ -9,6 +9,7 @@ import { PositionalShadowAtlas } from '../godot/rendering/lights/positionalShado
 import { ContentScaleAspect, ContentScaleMode, ContentScaleStretch } from '../godot/scene/window';
 import {
   projectPrimitiveMeshTexelSize,
+  projectTimeRolloverSeconds,
   projectShadowAtlasSize,
   DEFAULT_THEME_SCALE,
   DEFAULT_VIEWPORT_HEIGHT,
@@ -30,6 +31,8 @@ import {
   projectUsesLightmapBicubicFilter,
   projectMsaaModes,
   projectAnisotropicFilteringLevel,
+  projectRenderingMethod,
+  projectSampling,
   projectDecalFilter,
   projectDefaultFontGeneratesMipmaps,
   projectDefaultFontHinting,
@@ -771,6 +774,46 @@ describe('projectCanvasTextureDefaults', () => {
   });
 });
 
+describe('projectSampling', () => {
+  it('reads the nearest mipmap filter and the anisotropic level', () => {
+    const settings = parseProjectSettings(
+      '[rendering]\n\ntextures/default_filters/use_nearest_mipmap_filter=true\ntextures/default_filters/anisotropic_filtering_level=3\n'
+    );
+    expect(projectSampling(settings)).toEqual({ anisotropicFilteringLevel: 3, useNearestMipmapFilter: true });
+  });
+
+  it("takes Godot's defaults with no project", () => {
+    expect(projectSampling(null)).toEqual({ anisotropicFilteringLevel: 2, useNearestMipmapFilter: false });
+  });
+});
+
+describe('projectRenderingMethod', () => {
+  it('reads each of the three methods from a project.godot line', () => {
+    const methods = ['forward_plus', 'mobile', 'gl_compatibility'].map((method) =>
+      projectRenderingMethod(parseProjectSettings(`[rendering]\n\nrenderer/rendering_method="${method}"\n`))
+    );
+    expect(methods).toEqual(['forward_plus', 'mobile', 'gl_compatibility']);
+  });
+
+  it('takes Forward+ with no project', () => {
+    expect(projectRenderingMethod(null)).toBe('forward_plus');
+  });
+
+  it('keeps a method as written, as Godot reports a name of no renderer and an empty one unchanged', () => {
+    const methods = ['vulkan', '', 'Forward_Plus'].map((method) =>
+      projectRenderingMethod({ 'rendering/renderer/rendering_method': method })
+    );
+    expect(methods).toEqual(['vulkan', '', 'Forward_Plus']);
+  });
+
+  it('reads no feature override, as a mobile one never applies on a desktop', () => {
+    const settings = parseProjectSettings(
+      '[rendering]\n\nrenderer/rendering_method="forward_plus"\nrenderer/rendering_method.mobile="gl_compatibility"\n'
+    );
+    expect(projectRenderingMethod(settings)).toBe('forward_plus');
+  });
+});
+
 describe('projectAnisotropicFilteringLevel', () => {
   const KEY = 'rendering/textures/default_filters/anisotropic_filtering_level';
 
@@ -942,6 +985,19 @@ describe('projectPositionalShadowAtlas', () => {
 
   it('keeps the default for a subdivision outside 0 to 6, which the setter refuses (viewport.cpp:1412-1413)', () => {
     expect(projectPositionalShadowAtlas({ [quadrantKey(0)]: '7' }).quadrantShadows[0]).toBe(4);
+  });
+});
+
+describe('projectTimeRolloverSeconds', () => {
+  const KEY = 'rendering/limits/time/time_rollover_secs';
+
+  it('reads the rollover the project sets', () => {
+    expect(projectTimeRolloverSeconds({ [KEY]: '10.0' })).toBe(10);
+  });
+
+  it("is Godot's 3600 with no project or a malformed value", () => {
+    expect(projectTimeRolloverSeconds(null)).toBe(3600);
+    expect(projectTimeRolloverSeconds({ [KEY]: 'soon' })).toBe(3600);
   });
 });
 

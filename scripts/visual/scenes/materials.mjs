@@ -22,6 +22,30 @@ export const MATERIAL_SCENES = [
   // projects it. A sample at the tile's UV shifts the stripes with each tile.
   { name: 'material-world-triplanar-floor', file: 'unit-material-world-triplanar-floor.tscn' },
   { name: 'material-override', file: 'unit-material-override.tscn' },
+  // StandardMaterial3D's blend_mode MUL over an opaque quad and the background, unshaded and lit.
+  { name: 'material-blend-mul', file: 'unit-material-blend-mul.tscn' },
+  // A user's unshaded spatial shader on three meshes, two of them sharing one ShaderMaterial.
+  { name: 'material-spatial-shader-unshaded', file: 'unit-spatial-shader-unshaded.tscn' },
+  // A spatial shader's parameters of six types, a vertex() that moves the vertices, and a varying.
+  { name: 'material-spatial-shader-uniforms', file: 'unit-spatial-shader-uniforms.tscn' },
+  // Spatial shaders with cull_back, cull_front and cull_disabled, on quads that face the camera and away.
+  { name: 'material-spatial-shader-cull', file: 'unit-spatial-shader-cull.tscn' },
+  // Spatial shaders with blend_add, blend_sub, blend_mul and blend_premul_alpha over an orange quad.
+  { name: 'material-spatial-shader-blend-modes', file: 'unit-spatial-shader-blend-modes.tscn' },
+  // Spatial shaders with depth_test_disabled and depth_test_inverted behind an orange quad.
+  { name: 'material-spatial-shader-depth-test', file: 'unit-spatial-shader-depth-test.tscn' },
+  // A depth_draw_never spatial shader through an orange quad that crosses it.
+  { name: 'material-spatial-shader-depth-draw', file: 'unit-spatial-shader-depth-draw.tscn' },
+  // Spatial shaders that write ALPHA: a fade, a scissor cut, a hash cut and alpha to coverage, over orange quads.
+  { name: 'material-spatial-shader-alpha', file: 'unit-spatial-shader-alpha.tscn' },
+  // Spatial shaders that write DEPTH, shared and own, and a depth_prepass_alpha fade, across orange quads.
+  { name: 'material-spatial-shader-depth', file: 'unit-spatial-shader-depth.tscn' },
+  // Spatial shaders that write FOG, FOG.rgb alone, FOG under fog_disabled, RADIANCE and IRRADIANCE, over orange quads.
+  { name: 'material-spatial-shader-fog', file: 'unit-spatial-shader-fog.tscn' },
+  // The environment's depth fog and height fog on unshaded spatial shaders: three boxes and a floor.
+  { name: 'material-spatial-shader-environment-fog', file: 'unit-spatial-shader-environment-fog.tscn' },
+  // Stencil modes on unshaded spatial shaders: an x-ray box behind a wall, a sphere cut out of a veil.
+  { name: 'material-spatial-shader-stencil', file: 'unit-spatial-shader-stencil.tscn' },
   { name: 'surface-material-override', file: 'unit-surface-material-override.tscn' },
   // Multi-property guard, one row each: basic PBR, emission and normal,
   // advanced PBR, transparency and glass.

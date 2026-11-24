@@ -1,11 +1,16 @@
 /** The background, the fog and the screen-space effects one Environment draws into its world's scene. */
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { EnvironmentLayer } from './EnvironmentLayer';
 import { environmentSettingsOf } from '../../resources/environment/testing/environmentSettings';
 import { ViewShowProvider } from '../viewShow/ViewShowContext';
 import { SCREEN_SPACE_STATE, screenSpaceState } from '../screenSpaceEffects/screenSpaceState';
+import { ViewStatusProvider } from '../viewStatus/ViewStatusContext';
+import { createViewStatusStore } from '../viewStatus/viewStatus';
+import { decodeSky } from '../../resources/sky/decode';
+import type { AuthoredSky } from '../../resources/sky/types';
+import * as logger from '../../logger';
 
 /** `showFog` is the viewport's Fog toggle. */
 interface MountOptions {
@@ -15,7 +20,7 @@ interface MountOptions {
 function layer(properties: Record<string, string>, { showFog = true }: MountOptions) {
   return (
     <ViewShowProvider show={{ fog: showFog }}>
-      <EnvironmentLayer settings={environmentSettingsOf(properties)} sky={null} panorama={null} />
+      <EnvironmentLayer settings={environmentSettingsOf(properties)} sky={null} />
     </ViewShowProvider>
   );
 }
@@ -81,5 +86,43 @@ describe('<EnvironmentLayer> screen-space effects', () => {
     const { scene, unmount } = await mountLayer({ ssao_enabled: 'true' });
     await unmount();
     expect(scene.getObjectByName(EFFECTS)).toBeUndefined();
+  });
+});
+
+describe('<EnvironmentLayer> sky shader errors', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const UNCOMPILED: AuthoredSky = decodeSky(
+    {},
+    {
+      code: 'shader_type sky;\nvoid sky() { COLOR = 1.0; }\n',
+      file: 'res://sky.gdshader',
+      parameters: {},
+      textures: {},
+    }
+  );
+
+  /** The shader errors the view's status holds for the node at `holderPath`. */
+  async function errorsAt(holderPath: string) {
+    const store = createViewStatusStore();
+    await ReactThreeTestRenderer.create(
+      <ViewStatusProvider store={store}>
+        <EnvironmentLayer
+          settings={environmentSettingsOf({ background_mode: '2' })}
+          sky={UNCOMPILED}
+          holderPath={holderPath}
+        />
+      </ViewStatusProvider>
+    );
+    return () =>
+      store.status().undrawn.find((node) => node.path === `/root/${holderPath}`)?.shaderErrors ?? [];
+  }
+
+  it("shows Godot's error in the details of the node that holds the Environment", async () => {
+    vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    const errors = await errorsAt('World/Environment');
+    await vi.waitFor(() => expect(errors()[0]).toMatch(/^Godot does not compile the sky shader/));
   });
 });

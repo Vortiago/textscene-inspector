@@ -19,6 +19,7 @@ import {
 } from '../packages/textscene-core/src/godot/import/fontImport.ts';
 import { TEXTURE_IMPORTER } from '../packages/textscene-core/src/godot/import/textureImport.ts';
 import {
+  CUBEMAP_IMPORTER,
   TEXTURE_2D_ARRAY_IMPORTER,
   TEXTURE_3D_IMPORTER,
 } from '../packages/textscene-core/src/godot/import/layeredTextureImport.ts';
@@ -48,18 +49,13 @@ const HONOURED = new Set([
   'force_autohinter',
 ]);
 
-/**
- * The layered importer's parameters, for its `3d_texture` and `2d_array_texture` modes alone: a
- * `texture` importer's mipmaps change how a 2D texture samples. The slice grid is how the
- * previewer cuts the source image into layers. The storage is inert: the previewer reads the
- * source image. A fog density texture is sampled in a compute shader, so at mipmap 0
- * (`fog_material.cpp:161`), and a lightmap at mipmap 0 too (`scene_forward_clustered.glsl:1856,1873`).
- */
-const LAYERED_TEXTURE_IMPORTERS = new Set([TEXTURE_3D_IMPORTER, TEXTURE_2D_ARRAY_IMPORTER]);
+/** The layered modes read the slice grid, a cubemap's arrangement and its mipmaps. The storage is inert. */
+const LAYERED_TEXTURE_IMPORTERS = new Set([TEXTURE_3D_IMPORTER, TEXTURE_2D_ARRAY_IMPORTER, CUBEMAP_IMPORTER]);
 
 const LAYERED_TEXTURE_PARAMS = new Set([
   'slices/horizontal',
   'slices/vertical',
+  'slices/arrangement',
   'compress/mode',
   'compress/high_quality',
   'compress/lossy_quality',

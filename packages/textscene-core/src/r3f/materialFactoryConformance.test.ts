@@ -145,6 +145,8 @@ export function offTagMounts(source: string): OffTagMount[] {
  * that stops matching fails the staleness check below.
  */
 const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
+  'packages/textscene-core/src/r3f/spatialShader/SpatialShaderSlot.tsx':
+    "the translated material of a user's spatial shader: memoised on the shader text and the project options, disposed on replacement, with its parameters written to its uniforms",
   'packages/textscene-core/src/nodes/2d/camera2d/Component.tsx':
     'spreads the shared Node2D transform bag onto a `<group>`, which has no material slot',
   'packages/textscene-core/src/r3f/canvasGroup/CompositeGroupRect.tsx':
@@ -200,8 +202,14 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the depth prepass base, cloned per surface and never drawn itself, and never mutated',
   'packages/textscene-core/src/r3f/canvasGroup/compositeMaterial.ts':
     'one material per group buffer, its shaders fixed at construction; a render moves only its colour uniform',
-  'packages/textscene-core/src/r3f/opaqueSentinel.ts':
+  'packages/textscene-core/src/shaders/pipeline/opaqueSentinel.ts':
     "an opaque-list sentinel's material, which writes nothing and is never mutated",
+  'packages/textscene-core/src/shaders/sky/transpileSky.ts':
+    'the shader package draws a sky for a plain three.js app with no React: one material per transpiled sky, its nodes fixed at construction, and the caller moves only uniforms',
+  'packages/textscene-core/src/shaders/spatial/transpileSpatial.ts':
+    'the shader package draws a mesh for a plain three.js app with no React: one material per transpiled spatial shader, its nodes fixed at construction, and the caller moves only uniforms and row textures',
+  'packages/textscene-core/src/shaders/spatial/spatialPrepass.ts':
+    "the depth prepass draw of a transpiled spatial shader, built once at its first draw from the surface's nodes and disposed with it; the caller moves only uniforms",
   'packages/textscene-core/src/r3f/controls/native/text/canvasTextPainter.ts':
     'one material per built text run, replaced and disposed together with its geometry; its single `defines` write happens before the material has ever been rendered',
   'packages/textscene-core/src/r3f/materials/useOneSurfaceStartingMaterial.ts':
@@ -216,10 +224,6 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'one material per light per parameter set, memoised on every input including the shadow `defines` and disposed on replacement',
   'packages/textscene-core/src/r3f/lighting2d/lightQuad.ts':
     'one material per light per parameter set, memoised on every input including the shadow `defines` and disposed on replacement',
-  'packages/textscene-core/src/r3f/sky/skyBackground.ts':
-    'one material per sky bake, its shaders fixed at construction; a render moves only its brightness and rotation uniforms, and it is disposed with the bake',
-  'packages/textscene-core/src/resources/sky/build.ts':
-    'built once per sky, consumed by a single cube render, disposed with the environment',
   'packages/textscene-core/src/resources/materials/standardmaterial3d/build.ts':
     'the imperative half of the resource pipeline: every texture is already resolved before it is called, so the material is constructed complete',
 };
@@ -298,10 +302,10 @@ const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
 const CONSTRUCTED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
   'packages/textscene-core/src/r3f/gameView/presentRootTarget.ts':
     'the present quad: built once per renderer and drawn outside React, so the material never passes through it',
-  'packages/textscene-core/src/r3f/opaqueSentinel.ts':
+  'packages/textscene-core/src/shaders/pipeline/opaqueSentinel.ts':
     'an opaque-list sentinel: its material writes nothing and is never mutated, and its owner removes it with its scene',
-  'packages/textscene-core/src/resources/sky/build.ts':
-    'the sky cube: built once, consumed by a single cube render, disposed with the environment',
+  'packages/textscene-core/src/shaders/sky/transpileSky.ts':
+    'the sky triangle of the shader package, which a plain three.js app with no React adds to its scene; the caller owns and disposes it',
   'packages/textscene-core/src/r3f/surfacedMeshDrawer/ClonedExtraDraws.tsx':
     'the next_pass chain sibling: the effect builds the draw beside a long-lived clone of the loader’s mesh and removes it when the link unmounts, so the material never passes through React',
 };

@@ -27,6 +27,11 @@
       "types": "./dist/godot/index.d.ts",
       "import": "./dist/godot/index.js"
     },
+    "./godot/variantReader": {
+      "@textscene/source": "./src/godot/variant/reader/variantReader.ts",
+      "types": "./dist/godot/variant/reader/variantReader.d.ts",
+      "import": "./dist/godot/variant/reader/variantReader.js"
+    },
     "./shaders": {
       "@textscene/source": "./src/shaders/index.ts",
       "types": "./dist/shaders/index.d.ts",

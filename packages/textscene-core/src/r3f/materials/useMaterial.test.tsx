@@ -51,7 +51,7 @@ function renderMaterial(source: ScopedReference | undefined, seeded: Record<stri
   const wrapper = ({ children }: { children: ReactNode }) => (
     <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>
   );
-  return { fake, ...renderHook(() => useMaterial(source), { wrapper }) };
+  return { fake, ...renderHook(() => useMaterial(source, 'next pass'), { wrapper }) };
 }
 
 afterEach(() => {
@@ -75,7 +75,7 @@ describe('useMaterial', () => {
     );
     const scope = { internalResources: SCENE_INTERNAL, externalResources: SCENE_EXTERNAL };
     const { result, rerender } = renderHook(
-      () => useMaterial(nodeReference('SubResource("Mat_body")', scope)),
+      () => useMaterial(nodeReference('SubResource("Mat_body")', scope), 'next pass'),
       {
         wrapper,
       }

@@ -9,11 +9,13 @@ renders_as: THREE scene.environment / background / tone mapping / fog
 The resource a `WorldEnvironment` holds: background and sky, ambient light, tone mapping, glow, colour adjustments, depth fog, volumetric fog and screen-space reflections. The editor injects a preview Environment on a scene that declares none (ADR-0025). Each section drives one feature from its own fixture.
 
 ## Background sky
+
 <!-- compare: image=unit-sky-procedural status=done fixture=unit-sky-procedural.tscn -->
 
 A `ProceduralSkyMaterial` under `background_mode = BG_SKY`. The gradient, and the sphere and floor it lights, match Godot. `sky_rotation` turns the drawn sky, the light it gives and the sky colour the fog reads, as Godot turns them.
 
 ## Background canvas
+
 <!-- compare: image=unit-sub-viewport-3d-canvas-background status=done fixture=unit-sub-viewport-3d-canvas-background.tscn -->
 
 `background_mode = BG_CANVAS` in a SubViewport. The canvas layers up to `background_canvas_max_layer` draw first. The 3D render draws over them, so they show beside the quad and under it. A layer above the max layer draws over the quad.
@@ -23,6 +25,7 @@ The 3D render draws first when every layer is above the max layer. It draws last
 The root viewport keeps its 2D and 3D content in separate workspaces (ADR-0006). Its Canvas mode shows the 3D clear colour, as Godot's editor viewport does.
 
 ## Background keep
+
 <!-- compare: image=unit-sub-viewport-3d-keep-background status=done fixture=unit-sub-viewport-3d-keep-background.tscn -->
 
 `background_mode = BG_KEEP` in a SubViewport. The 3D render loads the colour its buffer holds and clears none (`render_forward_clustered.cpp:2020-2030`). Where it draws nothing, the buffer is black and not the clear colour. The canvas layers draw over it.
@@ -30,6 +33,7 @@ The root viewport keeps its 2D and 3D content in separate workspaces (ADR-0006).
 Moving content leaves ghost trails, as the Environment class documentation says of BG_KEEP.
 
 ## Tone mapping
+
 <!-- compare: image=unit-tonemap-agx-shadow status=done fixture=unit-tonemap-agx-shadow.tscn -->
 
 `tonemap_mode = AGX`. The lit grass and the crushed shadow match Godot.
@@ -37,16 +41,19 @@ Moving content leaves ghost trails, as the Environment class documentation says 
 A viewport's `use_debanding`, which the root takes from `rendering/anti_aliasing/quality/use_debanding`, adds Godot's screen-space dither to the sRGB value the tone-map pass writes (`tonemap.glsl:950-957`). The pattern matches Godot's pixel for pixel.
 
 ## Tone mapping exposure
+
 <!-- compare: image=unit-environment-linear-exposure status=done fixture=unit-environment-linear-exposure.tscn -->
 
 `tonemap_exposure = 1.6` under LINEAR, with no glow and no adjustment. The three boxes and the colour background are 1.6 times their colours, and the brightest box clips at white, as in Godot. The exposure multiplies the colour before every tone mapper, LINEAR included, in the main view and in a shared-world SubViewport alike.
 
 ## Scene buffer
+
 <!-- compare: image=unit-scene-buffer-half-float status=done fixture=unit-scene-buffer-half-float.tscn -->
 
 Every 3D frame draws into a half-float buffer, which the tone-map pass reads, as Godot's does (`renderer_scene_render_rd.cpp:1128`, `render_forward_clustered.cpp:2514`). The buffer rounds each linear value to half precision first. Each unshaded quad sits close above a level's half step, and both engines write the level below it.
 
 ## Ambient light + sky reflection
+
 <!-- compare: image=unit-stage-ambient-ibl status=limitation fixture=unit-stage-ambient-ibl.tscn -->
 
 `AMBIENT_SOURCE_COLOR` with `ambient_light_sky_contribution = 0`. The grass is lit by the flat ambient alone, while the metallic sphere still reflects the gold sky at full strength.
@@ -54,21 +61,25 @@ Every 3D frame draws into a half-float buffer, which the tone-map pass reads, as
 - **Approximated** The `SHADOWS_ONLY` box's shadow projects a visibly different shape than Godot's.
 
 ## Reflected light source
+
 <!-- compare: image=unit-environment-reflected-source-disabled status=done fixture=unit-environment-reflected-source-disabled.tscn -->
 
 `reflected_light_source` DISABLED over a sky background. The metal ball reflects nothing and is black but for the sun's highlight, while the ground still takes its ambient colour, as in Godot. A surface reflects the sky for the background source over a sky background, or for the sky source whatever the background (`render_scene_data_rd.cpp:196-200`). The ambient source has no part in it.
 
 ## Reflected light source, sky over a colour background
+
 <!-- compare: image=unit-environment-reflected-source-sky status=done fixture=unit-environment-reflected-source-sky.tscn -->
 
 The sky source over a colour background. The ball reflects the sky that the flat background hides.
 
 ## Reflected light source, with a probe
+
 <!-- compare: image=unit-environment-reflected-source-disabled-probe status=done fixture=unit-environment-reflected-source-disabled-probe.tscn -->
 
 A ONCE ReflectionProbe over the disabled source. The probe's reflection blends over no reflection, so the ball's bottom matches Godot.
 
 ## Glow (bloom)
+
 <!-- compare: image=unit-material-emissive status=done fixture=unit-material-emissive.tscn -->
 
 The preview environment enables glow, which blooms the emissive sphere. Both engines draw the same tight halo and leave the ground untouched. The bright pass, the seven-level pyramid and all five blend modes are ported from Godot's shaders. Each level blurs with Godot's five-weight gaussian. The composite reads each level with the bicubic filter, or with a bilinear fetch when the project sets `rendering/environment/glow/upscale_mode` to Linear. A frame too small to halve to the seventh level builds fewer levels, as Godot does. The glow runs whenever the environment enables it, so a lit specular highlight blooms as well, as in Godot.
@@ -76,16 +87,19 @@ The preview environment enables glow, which blooms the emissive sphere. Both eng
 A `glow_map` scales the glow per screen position, as Godot's tonemap pass does. A ViewportTexture `glow_map` samples its live target only under an Environment local to scene. Otherwise it samples the magenta and black placeholder, as in Godot.
 
 ## Adjustments
+
 <!-- compare: image=unit-environment-adjustments status=done fixture=unit-environment-adjustments.tscn -->
 
 `adjustment_enabled` with brightness 1.3, contrast 1.25 and saturation 0.5 over an unshaded box and a colour background. The whole frame, background included, is brighter, harder and greyer, as in Godot. The adjustments act after the tone curve and the glow under every tone mapper.
 
 ## Depth fog
+
 <!-- compare: image=unit-depth-fog status=done fixture=unit-depth-fog.tscn -->
 
-`fog_enabled` in exponential mode over a colour background. The fog thickens with distance over the three boxes and hides the background, as in Godot. Godot's depth mode and its curve, the height fog, `fog_sun_scatter` and `fog_aerial_perspective` follow Godot's shader too. The aerial perspective reads the sky's radiance layers, the ones the surfaces read. `fog_sky_affect` sets how far the fog covers the background.
+`fog_enabled` in exponential mode over a colour background. The fog thickens with distance over the three boxes and hides the background, as in Godot. Godot's depth mode and its curve, the height fog, `fog_sun_scatter` and `fog_aerial_perspective` follow Godot's shader too. The aerial perspective reads the sky's radiance layers, the ones the surfaces read. `fog_sky_affect` sets how far the fog covers the background. A surface that a translated spatial shader draws gets the same depth fog and height fog, as `unit-spatial-shader-environment-fog.tscn` shows.
 
 ## Volumetric fog
+
 <!-- compare: image=unit-world-environment-basic status=limitation fixture=unit-world-environment-basic.tscn -->
 
 `volumetric_fog_enabled` over a colour background, lit by one OmniLight3D. The fog thickens with distance over the three boxes and the background, and brightens around the light, as in Godot. A moving camera blends each frame into the last, as Godot's temporal reprojection does. A still camera adds one of Godot's 16 jitters a render and shows their mean so far. After all 16, it is the mean Godot converges to. `volumetric_fog_ambient_inject` lights the fog with the sky's radiance layers, as Godot does. Under either fog, Godot converts a colour background to linear twice, so the background is darker than with no fog, and the previewer matches it.
@@ -93,16 +107,19 @@ A `glow_map` scales the glow per screen position, as Godot's tonemap pass does. 
 - **Not drawn** `volumetric_fog_gi_inject` adds no light, because the previewer draws no VoxelGI or SDFGI.
 
 ## Volumetric fog shadow
+
 <!-- compare: image=unit-volumetric-fog-shadow status=done fixture=unit-volumetric-fog-shadow.tscn -->
 
 A thin box under a DirectionalLight3D tilted 60° with `shadow_enabled`, in volumetric fog of density 0.1 over a colour background. The fog under the box stays dark where the box blocks the light, and the shadow's edge in the fog matches Godot. An OmniLight3D or a SpotLight3D that casts shadows darkens the fog behind its casters in the same way. A SpotLight3D's `shadow_bias` pushes each fog cell away from the light, as in Godot, so a large bias darkens its whole cone. The fog around a shadowed SpotLight3D's origin shows no dark blocks. The cells behind the light's plane stay unlit, as Godot's clamped shadow read leaves them.
 
 ## SSR
+
 <!-- compare: image=unit-environment-ssr status=done fixture=unit-environment-ssr.tscn -->
 
 `ssr_enabled` over a smooth metal floor and a red box, under a colour background. The floor reflects the box only through the screen-space trace, so with SSR off it stays black, as in Godot. The trace is Godot's: the depth pyramid, the march with its step count, fades and depth tolerance, and the reprojection of the last frame. The roughness filter blurs a rough surface's reflection and fades it out from roughness 0.6 to 0.7. The project's `screen_space_reflection/half_size` and a multisampled viewport trace as Godot does. A viewport with a transparent background and a ReflectionProbe's capture trace none, as in Godot. A project that turns `rendering/driver/depth_prepass/enable` off traces none, as in Godot. A smooth transparent surface, drawn in the alpha pass, shows no reflection of its own, as in Godot. A refracting surface shows the reflection behind it. The trace reads the last frame, as Godot's does, so the previewer draws a second frame after each change.
 
 ## SSAO
+
 <!-- compare: image=unit-environment-ssao status=done fixture=unit-environment-ssao.tscn -->
 
 `ssao_enabled` in a corner of two walls and a floor, with a cube in it. A flat white ambient light alone lights the scene. Every shade is the screen-space occlusion: the seams and the ground around the cube darken. With SSAO off every face is one grey, as in Godot. The passes are Godot's port of Intel's ASSAO. They draw the deinterleaved linear depth and its mips, the gather, the edge-aware blur and the interleave back to the frame. Every `ssao_*` property and every `rendering/environment/ssao/*` project setting take effect, Ultra's adaptive gather and importance map included. The occlusion darkens every lit material's ambient light, with or without an AO texture. It darkens the direct light by `ssao_light_affect`, as far as `ssao_ao_channel_affect` lets it. A ReflectionProbe's capture and the alpha pass read none, as in Godot. A project that turns `rendering/driver/depth_prepass/enable` off draws no occlusion. Godot then folds in its black default, so the ambient light goes out in both.
@@ -218,3 +235,4 @@ The lenient parser never rejects. Every scalar goes through the shared `floatOr`
 
 - **Resource gap** `adjustment_color_correction` is not applied, so a colour-correction texture leaves the frame unchanged.
 - **Renderer gap** A refracting surface draws an opaque outline behind it unlike Godot: three's transmission reads its own copy of the opaque pass.
+- **Renderer gap** On a translated spatial shader's surface, the depth fog draws no aerial perspective and no sun scatter, unlike Godot.

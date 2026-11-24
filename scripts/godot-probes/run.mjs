@@ -1,0 +1,144 @@
+#!/usr/bin/env node
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
+import { CORPUS } from '../../apps/textscene-three-godot-shaders/tests/corpus/corpus.mjs';
+import { HEAD_CASES } from '../../apps/textscene-three-godot-shaders/tests/heads/headCases.mjs';
+import { OPERATOR_CASES } from '../../apps/textscene-three-godot-shaders/tests/operators/operatorCases.mjs';
+import { PROBES } from '../../apps/textscene-three-godot-shaders/tests/probes/probes.mjs';
+import {
+  ANSWERS_FILE,
+  LIVE_DIR,
+  livePath,
+  MATERIAL_TEXTS_FILE,
+} from '../../apps/textscene-three-godot-shaders/tests/godotAnswers.mjs';
+import {
+  KNOWN_DIFFERENCE_CASES,
+  recordedRandomProbes,
+} from '../../apps/textscene-three-godot-shaders/tests/random/knownDifferences.mjs';
+import { RANDOM_PROGRAMS } from '../../apps/textscene-three-godot-shaders/tests/random/randomSet.mjs';
+import { checkGenerated, writeGenerated } from '../generatedFile.mjs';
+import { expressionRecord } from '../godot-variant/godotExpressions.mjs';
+import { sourceServer } from '../sourceServer.mjs';
+import { runProbesInGodot } from './godotProject.mjs';
+import { eachAtOnce, requireGodotVersion } from './godotRun.mjs';
+import { renderAnswersFile } from './answerDigest.mjs';
+import { materialRecord } from './materialTexts.mjs';
+import { isDrawn, probeRecord } from './record.mjs';
+import { loadPrinter, printedProbes, printedRejection, printedTextFaults } from './printedText.mjs';
+import { frontEndRejections, godotRejection } from './rejection.mjs';
+import { godotVerdicts, verdictRecord } from './shaderVerdicts.mjs';
+
+const EXPRESSION_SET = '/apps/textscene-three-godot-shaders/tests/expressions/expressionSet.mjs';
+
+/** The Expression cases. Vite loads them, since their set imports the port's TypeScript sources. */
+async function loadExpressions() {
+  const server = await sourceServer();
+  try {
+    return (await server.ssrLoadModule(EXPRESSION_SET)).EXPRESSIONS;
+  } finally {
+    await server.close();
+  }
+}
+
+/** The record of Godot's verdict on each case of each set, `{ id, text }`, from one Godot run. */
+async function verdictRecords(...sets) {
+  const cases = sets.flat();
+  const { godot, verdicts } = await godotVerdicts(cases.map((each) => each.text));
+  requireGodotVersion(godot);
+  let next = 0;
+  return sets.map((set) => {
+    const ofSet = verdicts.slice(next, (next += set.length));
+    return verdictRecord(
+      godot,
+      set.map((each) => each.id),
+      ofSet
+    );
+  });
+}
+
+/** A probe that ends Godot runs alone from the start, since it would end every probe's run. */
+async function rejections(probes, { pixels }) {
+  const rejected = probes.filter((probe) => probe.endsGodot || !isDrawn(probe, pixels.get(probe.name)));
+  const frontEnd = await frontEndRejections(rejected.filter((probe) => !probe.endsGodot));
+  const alone = rejected.filter((probe) => !frontEnd.has(probe.name));
+  const reasons = await eachAtOnce(alone, (probe) =>
+    probe.original ? printedRejection(probe) : endingRejection(probe)
+  );
+  return new Map([...frontEnd, ...alone.map((probe, index) => [probe.name, reasons[index]])]);
+}
+
+/** Godot's reason for `probe`, which must be a crash exactly when the probe says it ends Godot. */
+async function endingRejection(probe) {
+  const rejection = await godotRejection(probe).catch((error) => {
+    throw new Error(`probe ${probe.name}: ${error.message}`);
+  });
+  if ((rejection.stage === 'Godot') !== Boolean(probe.endsGodot))
+    throw new Error(
+      `expected ${probe.name} ${probe.endsGodot ? 'to end' : 'not to end'} Godot, got: ${rejection.message}`
+    );
+  return rejection;
+}
+
+async function main() {
+  const randomProbes = recordedRandomProbes(RANDOM_PROGRAMS);
+  const expressions = await loadExpressions();
+  const printer = await loadPrinter();
+  const lowered = printedProbes([...PROBES, ...randomProbes], printer.lower, 'lowered');
+  const printed = [...printedProbes([...PROBES, ...randomProbes], printer.print), ...lowered];
+  const probes = [...PROBES, ...randomProbes, ...printed];
+  const output = await runProbesInGodot(probes.filter((probe) => !probe.endsGodot));
+  const reasons = await rejections(probes, output);
+  const [operatorRecord, corpusRecord, headRecord] = await verdictRecords(
+    OPERATOR_CASES.map(({ id, godotText }) => ({ id, text: godotText })),
+    CORPUS,
+    HEAD_CASES
+  );
+  const materials = await sweptMaterials();
+  const records = {
+    probes: probeRecord(output, PROBES, reasons),
+    random: probeRecord(output, randomProbes, reasons),
+    operators: operatorRecord,
+    corpus: corpusRecord,
+    expressions: await expressionRecord(expressions),
+    heads: headRecord,
+    ...(materials && { materials: materials.record }),
+  };
+  writeLiveAnswers(records);
+  if (materials) writeFileSync(MATERIAL_TEXTS_FILE, `${JSON.stringify(materials.texts)}\n`);
+  const answersFile = renderAnswersFile(records, materials ? undefined : committedAnswers());
+  const materialCount = materials ? Object.keys(materials.record.cases).length : 'the committed';
+  const summary = `${PROBES.length} probes, ${RANDOM_PROGRAMS.length} random programs, ${KNOWN_DIFFERENCE_CASES.length} known-difference cases, ${OPERATOR_CASES.length} operator cases, ${CORPUS.length} corpus shaders, ${HEAD_CASES.length} head cases, ${expressions.length} expressions, ${printed.length - lowered.length} printed texts as parsed and ${lowered.length} as lowered, ${materialCount} materials`;
+  const options = { tool: 'godot-probes', summary };
+  const outputs = [[ANSWERS_FILE, answersFile]];
+  if (process.argv.includes('--check')) checkGenerated(outputs, { ...options, command: 'pnpm godot:probes' });
+  else writeGenerated(outputs, options);
+  failOnPrintedText(printedTextFaults(printed, output, reasons));
+}
+
+/** The sweep's record and texts, or nothing when CI finds no input of it changed (materialScope.mjs). */
+async function sweptMaterials() {
+  if (process.env.MATERIAL_SWEEP !== 'false') return materialRecord();
+  rmSync(livePath('materials'), { force: true });
+  rmSync(MATERIAL_TEXTS_FILE, { force: true });
+  return undefined;
+}
+
+const committedAnswers = () => JSON.parse(readFileSync(ANSWERS_FILE, 'utf8'));
+
+/** Writes each family's record of this run to the ignored live directory. */
+function writeLiveAnswers(records) {
+  mkdirSync(LIVE_DIR, { recursive: true });
+  for (const [family, record] of Object.entries(records))
+    writeFileSync(livePath(family), `${JSON.stringify(record, null, 1)}\n`);
+}
+
+/** Fails the run on each probe whose printed or lowered text Godot answers otherwise than the original. */
+function failOnPrintedText(faults) {
+  for (const fault of faults) console.error(`[godot-probes] ${fault}`);
+  if (faults.length > 0) process.exitCode = 1;
+}
+
+// `pathToFileURL`, not a `file://` template: on Windows `process.argv[1]` is a `C:\...` path.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  await main();
+}

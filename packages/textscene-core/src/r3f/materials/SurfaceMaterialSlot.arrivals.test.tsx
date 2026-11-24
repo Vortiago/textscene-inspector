@@ -82,7 +82,7 @@ async function renderSlot(source: ScopedReference) {
         <uploads.wrapper>
           <mesh>
             <boxGeometry />
-            <SurfaceMaterialSlot source={source} />
+            <SurfaceMaterialSlot source={source} drawnOn="mesh" />
           </mesh>
         </uploads.wrapper>
       </SceneResourcesProvider>
