@@ -157,6 +157,14 @@ describe('<EditorControlsBridge>', () => {
     expect(status().freelook).toEqual({ isToggled: false, isAvailable: true });
   });
 
+  it('refuses to start freelook in the orthogonal projection, which has none', async () => {
+    const { camera, element } = await mountBridgedControls();
+    await camera.set('projection', 1);
+
+    expect(await camera.set('freelook', true)).toBe(false);
+    expect(holdsPointerLock(element)).toBe(false);
+  });
+
   it('leaves the read of freelook to the view status', async () => {
     const { camera } = await mountBridgedControls();
 

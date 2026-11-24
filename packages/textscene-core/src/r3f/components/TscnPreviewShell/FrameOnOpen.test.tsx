@@ -30,7 +30,7 @@ function fakeCamera() {
     pose = FRAMED;
     return null;
   });
-  cameras.slot('Camera3D').bind({
+  const unbind = cameras.slot('Camera3D').bind({
     get: (property) => (property === 'transform' ? pose : null),
     set: () => false,
     call: focus,
@@ -41,6 +41,7 @@ function fakeCamera() {
   return {
     view: { editorCamera: cameras.of('3D') },
     focus,
+    unbind,
     moveByUser: () => (pose = variant('Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 9)')),
   };
 }
@@ -163,6 +164,15 @@ describe('FrameOnOpen', () => {
     await runTimers();
 
     expect(focus).toHaveBeenCalledWith('focus', []);
+  });
+
+  it('starts no fit while no 3D stage is mounted, so none lands on a later one', async () => {
+    const { focus, runTimers, unbind } = await mount();
+    unbind();
+
+    await runTimers();
+
+    expect(focus).not.toHaveBeenCalled();
   });
 
   it('frames a load that finishes after an earlier settle and after every timer', async () => {

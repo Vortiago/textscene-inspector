@@ -39,7 +39,10 @@ export function FrameOnOpen({ view, heard }: FrameOnOpenProps) {
     if (!camera) return undefined;
     // A settle-fit stands down once the camera has left this pose, so the user's own orbit, pan or zoom wins.
     let framedPose: SceneValue | null = null;
+    let isCancelled = false;
     const fit = async () => {
+      // A call waits for a stage, so a fit while none is bound would land on a later one.
+      if (isCancelled || !camera.isInsideTree()) return;
       await camera.call('focus');
       // A focus through a previewed Camera3D frames nothing, so the next return to the 3D mode frames.
       if (!isPreviewing.current) framedRoot.current = rootKey;
@@ -76,6 +79,7 @@ export function FrameOnOpen({ view, heard }: FrameOnOpenProps) {
     const stopHearing = heard.subscribe(fitOnSettle);
 
     return () => {
+      isCancelled = true;
       timers.forEach(clearTimeout);
       stopWatchingLoads?.();
       stopHearing();

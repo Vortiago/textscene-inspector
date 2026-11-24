@@ -44,6 +44,10 @@ node. Frame on open frames each scene once, so a return to the 3D mode keeps the
 
 - A host of the package gets the previewer's camera controls with no new view method.
 - The 2D camera is our own node: Godot's 2D editor has none.
+- A `position` write on the 3D camera keeps it looking at its orbit point, as the editor cursor
+  does, so the basis turns. `Node3D.position` keeps the basis. A `transform` write sets both.
+- `isInsideTree()` is true while the mode's stage is mounted: Godot's editor camera is a child of
+  its viewport, inside the editor's tree but outside the edited scene.
 - Godot saves the editor camera's pose per scene in the editor's own settings, not in the scene
   file (`node_3d_editor_plugin.cpp:4823`, `editor_node.cpp:4816`). The view keeps no pose past its
   own life. A host keeps one with the node's `transform` and `projection`, or `position` and

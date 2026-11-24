@@ -109,6 +109,8 @@ function setProperty(canvas: Camera3DCanvas, property: string, value: SceneValue
     }
     case 'freelook': {
       if (typeof value !== 'boolean') return false;
+      // No freelook in orthogonal view or a preview (node_3d_editor_plugin.cpp:2741-2742, :1826-1829).
+      if (value && (!canvas.freelook.getState().isAvailable || canvas.isPreviewing())) return false;
       if (canvas.freelook.getState().isToggled !== value) canvas.freelook.toggle();
       return true;
     }

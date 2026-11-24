@@ -40,6 +40,20 @@ describe('<TscnCanvas> ref', () => {
     expect(view.current!.editorCamera).toBeNull();
   });
 
+  it('hands a holder a new view on a mode switch, whose camera is the new mode’s', () => {
+    const held: (CanvasView | null)[] = [];
+    const hold = (view: CanvasView | null) => void held.push(view);
+    const scene = openScene({ source: SCENE, provider: NO_FILES });
+    const { rerender } = render(<TscnCanvas ref={hold} scene={scene} mode="2D" />);
+
+    const before = held.at(-1);
+    rerender(<TscnCanvas ref={hold} scene={scene} mode="3D" />);
+
+    // Identity alone: a matcher that walks the view would read `settled` and leave it pending.
+    expect(held.at(-1) === before).toBe(false);
+    expect(held.at(-1)?.editorCamera?.type).toBe('Camera3D');
+  });
+
   it('ends the editor camera once the view unmounts', async () => {
     const view = createRef<CanvasView>();
     const { unmount } = render(

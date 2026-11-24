@@ -226,10 +226,6 @@ function ViewRef({ viewRef, mode, camera }: { viewRef: Ref<CanvasView> } & ViewR
   const scene = useOptionalHierarchy()?.scene;
   const store = useViewStatusStore();
   const cameras = useEditorCameras();
-  const currentMode = useRef(mode);
-  useLayoutEffect(() => {
-    currentMode.current = mode;
-  }, [mode]);
   const ending = useRef<AbortController | null>(null);
   const lookedThrough = useLookedThrough({ mode, camera });
   // A layout effect before the handle, so each mount's controller exists when the handle is built.
@@ -242,9 +238,10 @@ function ViewRef({ viewRef, mode, camera }: { viewRef: Ref<CanvasView> } & ViewR
     if (!scene || !store) throw new Error('expected a TscnCanvas with a scene, got none');
     if (!cameras) throw new Error('expected a TscnCanvas with editor cameras, got none');
     if (!ending.current) throw new Error('expected the view to mount before its ref, got no mount');
-    const mode = () => currentMode.current;
-    return viewAnswers({ scene, store, ending: ending.current.signal, lookedThrough, cameras, mode });
-  }, [scene, store, cameras, lookedThrough]);
+    // A new handle per mode, so a holder renders again with the camera the mode draws through.
+    const drawn = () => mode;
+    return viewAnswers({ scene, store, ending: ending.current.signal, lookedThrough, cameras, mode: drawn });
+  }, [scene, store, cameras, lookedThrough, mode]);
   return null;
 }
 
