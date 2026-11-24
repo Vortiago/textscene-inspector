@@ -24,13 +24,13 @@ import { composeProviders } from './composeProviders.js';
 
 interface ViewProviderOptions {
   hierarchyValue: HierarchyContextValue;
-  /** The loader of the shell's scene, which every panel and view reads its files through. */
+  /** The loader of the view's scene, which the view and every part of the host read files through. */
   loader: ResourceLoader;
   /** The host's forced viewport mode, if it named one. */
   initialViewportMode?: ViewportMode;
   /** The mode, the helpers and the framing persisted last session. */
   initialViewport?: PersistedViewport;
-  /** Whether the host shows the preview. Both canvases stop rendering while it is `false`. */
+  /** Whether the host shows the view. Both canvases stop rendering while it is `false`. */
   isVisible?: boolean;
   panelId: string;
   rootScenePath: string;

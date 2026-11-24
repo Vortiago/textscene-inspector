@@ -24,7 +24,7 @@ lowest first:
 | Scene and View | The parse, the scene, the loader, and the code that draws a frame | Every path not below |
 | Editor view | The editor camera and its navigation, Godot's view keys, the 3D and 2D editor stages | `r3f/editorView/` |
 | Renderer entry | `TscnCanvas`, `mountScene` and the entry `@textscene/renderer` bundles | `r3f/TscnCanvas.tsx`, `r3f/mountScene.tsx`, `r3f/renderer.ts` |
-| Previewer | The shell and its panels | The shell and panel folders in `r3f/components/` |
+| Previewer | The shell and its panels | Each subfolder of `r3f/components/` |
 | Core entry | The entries of `@textscene/core` | `index.ts`, `r3f/index.ts` |
 
 The ESLint rule `layers/import-down` (`scripts/layers/layers.mjs`) holds the table. It checks

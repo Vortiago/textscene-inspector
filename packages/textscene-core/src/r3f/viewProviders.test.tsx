@@ -1,8 +1,3 @@
-/**
- * The preview panel's provider stack carries a stretching container's forced rect to the
- * sub-viewport it sizes. Without `ViewportRectProvider` in the stack, every consumer reads the
- * empty default and a stretching container keeps the authored size.
- */
 import { describe, expect, it } from 'vitest';
 import { act, render } from '@testing-library/react';
 import { useEffect } from 'react';
@@ -15,7 +10,7 @@ import {
   type RegisterViewportRect,
 } from './contexts/ViewportRectContext';
 
-function withShellProviders() {
+function withViewProviders() {
   return viewProviders({
     hierarchyValue: { sceneGraph: null, panelId: 'p' },
     loader: createFakeResourceLoader().loader,
@@ -42,10 +37,10 @@ function Reader({ path }: { path: string }) {
 }
 
 describe('viewProviders', () => {
-  it('carries a published viewport rect to a consumer at the same path', () => {
+  it("carries a stretching container's published rect to the sub-viewport at the same path", () => {
     let register!: RegisterViewportRect;
     const { getByTestId } = render(
-      withShellProviders()(
+      withViewProviders()(
         <>
           <Publisher onReady={(fn) => (register = fn)} />
           <Reader path="Booth/View" />

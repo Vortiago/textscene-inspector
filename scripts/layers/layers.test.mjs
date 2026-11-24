@@ -19,7 +19,7 @@ async function refusedIn(code, path) {
 
 describe('the layer rule', () => {
   it.each(LAYERS.flatMap((layer) => layer.paths))('names %s, which exists', (path) => {
-    expect(existsSync(`${root}/${CORE_SOURCE}${path}`)).toBe(true);
+    expect(existsSync(`${root}/${CORE_SOURCE}${path.replace(/\*\/$/, '')}`)).toBe(true);
   });
 
   it('refuses the editor view in a view module', async () => {
@@ -47,6 +47,25 @@ describe('the layer rule', () => {
       "const stage = import('./editorView/freelook.js');",
     ].join('\n');
     expect(await refusedIn(code, VIEW)).toBe(3);
+  });
+
+  it('refuses an upward type import and an upward import-equals', async () => {
+    const code = [
+      "type A = import('./editorView/freelook.js').A;",
+      "import freelook = require('./editorView/freelook.js');",
+    ].join('\n');
+    expect(await refusedIn(code, VIEW)).toBe(2);
+  });
+
+  it('puts a new folder of components in the previewer', async () => {
+    const code = "import { a } from './components/Splitter/Splitter.js';";
+    expect(await refusedIn(code, VIEW)).toBe(1);
+  });
+
+  it('keeps a file beside the components folders in the first layer', async () => {
+    const code = "import { a } from '../SelectionHighlight.js';";
+    expect(await refusedIn(code, EDITOR_VIEW.replace('editorView', 'components/Splitter'))).toBe(0);
+    expect(await refusedIn("import { a } from './components/SelectionHighlight.js';", VIEW)).toBe(0);
   });
 
   it('refuses a layer folder imported by its index', async () => {
