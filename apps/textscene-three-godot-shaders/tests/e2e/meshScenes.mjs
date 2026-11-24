@@ -196,6 +196,9 @@ const TURNED_ROTATION = [20, 35, -10];
 /** The sphere moved, turned and scaled apart, so each lane of the object's matrices shows. */
 const SPHERE_MOVED = { position: [0.3, -0.2, -0.5], rotation: TURNED_ROTATION, scale: [1.1, 0.8, 1] };
 
+/** The lines of a fragment function's body, one statement each. */
+const fragmentOf = (...lines) => lines.join('\n\t');
+
 /** An unshaded shader on the moved sphere: `vertex()` and `fragment()` as given, with its rows. */
 const stageScene = (name, { declaration = '', vertex = '', fragment }, rows, mesh = SPHERE) => ({
   name,
@@ -389,6 +392,50 @@ const FRAGMENT_SCENES = [
   ]),
 ];
 
+/** Unshaded draws only albedo and alpha (`scene_forward_clustered.glsl:2980`): a probe reads a write back. */
+const LIT_OUTPUTS = [
+  ['NORMAL_MAP', 'vec3(0.1, 0.9, 0.4)', 'NORMAL_MAP'],
+  ['NORMAL_MAP_DEPTH', '0.2', 'vec3(NORMAL_MAP_DEPTH * 0.5)'],
+  ['BENT_NORMAL_MAP', 'vec3(0.8, 0.2, 0.6)', 'BENT_NORMAL_MAP'],
+  ['SPECULAR', '0.9'],
+  ['RIM', '0.7'],
+  ['RIM_TINT', '0.6'],
+  ['CLEARCOAT', '0.8'],
+  ['CLEARCOAT_ROUGHNESS', '0.4'],
+  ['ANISOTROPY', '0.9'],
+  ['ANISOTROPY_FLOW', 'vec2(0.2, 0.7)', 'vec3(ANISOTROPY_FLOW, 0.5)'],
+  ['SSS_STRENGTH', '0.8'],
+  [
+    'SSS_TRANSMITTANCE_COLOR',
+    'vec4(0.9, 0.2, 0.5, 0.4)',
+    'SSS_TRANSMITTANCE_COLOR.rgb + SSS_TRANSMITTANCE_COLOR.a * 0.3',
+  ],
+  ['SSS_TRANSMITTANCE_DEPTH', '0.7'],
+  ['SSS_TRANSMITTANCE_BOOST', '0.6'],
+  ['BACKLIGHT', 'vec3(0.9, 0.5, 0.1)', 'BACKLIGHT'],
+  ['AO', '0.1', 'vec3(AO * 0.5)'],
+  ['AO_LIGHT_AFFECT', '0.9'],
+  ['EMISSION', 'vec3(1.0, 0.0, 1.0)', 'EMISSION'],
+];
+
+/** The fragment outputs only the lit template reads, which the guide lists in one section. */
+export const LIT_OUTPUT_BUILT_INS = LIT_OUTPUTS.map(([builtIn]) => builtIn);
+
+/** A scene that shows an output's default on one half and the value written on the other. */
+const LIT_OUTPUT_SCENES = LIT_OUTPUTS.map(([builtIn, written, shown = `vec3(${builtIn})`]) =>
+  stageScene(
+    `spatial-fragment-${builtIn.toLowerCase().replaceAll('_', '-')}`,
+    {
+      fragment: fragmentOf(
+        `vec3 before = ${shown};`,
+        `${builtIn} = ${written};`,
+        `ALBEDO = vec3(UV, 0.3) * 0.4 + mix(before, ${shown}, step(0.5, UV.x)) * 0.6;`
+      ),
+    },
+    [`spatial.fragment.${builtIn}`]
+  )
+);
+
 /** The global built-ins and the constants, which every stage reads. */
 const GLOBAL_SCENES = [
   stageScene(
@@ -486,9 +533,6 @@ const depthTestScene = (name, modes) =>
     },
     ['spatial.fragment.UV']
   );
-
-/** The lines of a fragment function's body, one statement each. */
-const fragmentOf = (...lines) => lines.join('\n\t');
 
 /** Two crossing quads: the alpha pass draws the far one first, so its depth write cuts the near one. */
 const crossingScene = (name, modes, extra = [], rows = []) =>
@@ -1121,6 +1165,7 @@ export const MESH_SCENES = [
   ...STAGE_VALUE_SCENES,
   ...VERTEX_SCENES,
   ...FRAGMENT_SCENES,
+  ...LIT_OUTPUT_SCENES,
   ...GLOBAL_SCENES,
   ...RENDER_MODE_SCENES,
   ...ALPHA_SCENES,

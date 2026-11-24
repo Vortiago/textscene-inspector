@@ -67,19 +67,18 @@ The instruction count says how much of the language is transpiled, not how many 
 | docs | 37 | 37 | spatial, canvas_item, sky |
 | scenes | 2 | 2 | spatial, sky |
 
-**38 of 176 real shaders transpile.** Godot rejects the other 192. Each shader ends in one of three states: transpiled, refused as Godot refuses with the same message and line, or not transpiled yet, where the transpiler names the open row and its owner. Any other outcome fails the test. A shader never moves back from transpiled or from refused as Godot refuses, so the shaders not transpiled yet only grow fewer.
+**41 of 176 real shaders transpile.** Godot rejects the other 192. Each shader ends in one of three states: transpiled, refused as Godot refuses with the same message and line, or not transpiled yet, where the transpiler names the open row and its owner. Any other outcome fails the test. A shader never moves back from transpiled or from refused as Godot refuses, so the shaders not transpiled yet only grow fewer.
 
-The printed tree of each shader the transpiler accepts is a checked-in file under `tests/corpus/trees/`, so a review shows how a change moves a real shader's tree. It holds 38 files. `vitest -u` writes a moved tree, and a tree file whose shader the transpiler no longer accepts fails the test. The generated GLSL gets no file: three.js writes that text, and each upgrade of three.js would change every file.
+The printed tree of each shader the transpiler accepts is a checked-in file under `tests/corpus/trees/`, so a review shows how a change moves a real shader's tree. It holds 41 files. `vitest -u` writes a moved tree, and a tree file whose shader the transpiler no longer accepts fails the test. The generated GLSL gets no file: three.js writes that text, and each upgrade of three.js would change every file.
 
 | State | Shaders |
 | --- | --- |
 | refused as Godot refuses | 192 |
 | not transpiled yet (#1453) | 80 |
-| transpiled | 38 |
+| transpiled | 41 |
 | not transpiled yet (#686) | 24 |
 | not transpiled yet (#1524) | 17 |
 | not transpiled yet (#1726) | 10 |
-| not transpiled yet (#1831) | 3 |
 | not transpiled yet (#1783) | 2 |
 | not transpiled yet (#1610) | 1 |
 | not transpiled yet (#1792) | 1 |
@@ -90,7 +89,7 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | --- | --- | --- |
 
 
-<details><summary>The 138 shaders not transpiled yet, with their owners</summary>
+<details><summary>The 135 shaders not transpiled yet, with their owners</summary>
 
 | Shader | Owner |
 | --- | --- |
@@ -204,7 +203,6 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `demos/2d/sprite_shaders/shaders/outline.gdshader` | #686 |
 | `demos/2d/sprite_shaders/shaders/silouette.gdshader` | #686 |
 | `demos/3d/procedural_materials/shaders/plasma.gdshader` | #686 |
-| `demos/3d/sprites/shaders/paper_emission.gdshader` | #1831 |
 | `demos/3d/variable_rate_shading/vrs_texture.gdshader` | #686 |
 | `demos/compute/texture/water_plane/water_shader.gdshader` | #1453 |
 | `demos/misc/hdr_output/color_sweep/color_sweep.gdshader` | #686 |
@@ -212,7 +210,6 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `demos/viewport/dynamic_split_screen/split_screen.gdshader` | #686 |
 | `demos/xr/openxr_composition_layers/cursor.gdshader` | #686 |
 | `demos/xr/openxr_passthrough/holepunch.gdshader` | #1453 |
-| `demos/xr/openxr_spectator_view/shaders/color.gdshader` | #1831 |
 | `demos/xr/openxr_spectator_view/shaders/eye_output.gdshader` | #686 |
 | `demos/xr/openxr_spectator_view/shaders/textured.gdshader` | #1453 |
 | `demos/2d/platformer/level/props/wind_sway.tres#0` | #686 |
@@ -231,7 +228,6 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `docs/tutorials/shaders/shader_reference/shading_language.rst#44` | #1792 |
 | `docs/tutorials/shaders/shaders_style_guide.rst#0` | #1524 |
 | `docs/tutorials/shaders/using_viewport_as_texture.rst#0` | #686 |
-| `docs/tutorials/shaders/your_first_shader/your_first_3d_shader.rst#10` | #1831 |
 
 </details>
 

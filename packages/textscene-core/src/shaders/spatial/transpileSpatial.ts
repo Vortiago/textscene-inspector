@@ -17,6 +17,7 @@ import {
   vec4,
 } from 'three/tsl';
 import type { Node, TextureNode } from 'three/webgpu';
+import { ShadingLanguageError } from '../language/shadingLanguageError.js';
 import {
   parsedShader,
   shaderSource,
@@ -94,9 +95,21 @@ export interface SpatialOptions extends ShaderOptions {
   readonly sampling?: ProjectSampling;
 }
 
-/** The material of `source`, a shader of `shader_type spatial`, preprocessed with `options`. */
+/** The material of `source`, an unshaded shader of `shader_type spatial`, preprocessed with `options`. */
 export function transpileSpatial(source: string, options: SpatialOptions = {}): TranspiledSpatial {
-  return transpileParsedSpatial(parsedShader(source, options), options);
+  const parsed = parsedShader(source, options);
+  refuseLit(parsed, options.file ?? '');
+  return transpileParsedSpatial(parsed, options);
+}
+
+/** The owner of the light loop, which a lit shader's draw needs. */
+const LIGHT_LOOP_OWNER = '#1453';
+
+function refuseLit(parsed: ParsedShader, file: string): void {
+  if (parsed.tree.renderModes.some((mode) => mode.name === 'unshaded')) return;
+  const reason =
+    'the shader is lit, as it has no `render_mode unshaded`, and the light loop is not ported yet';
+  throw new ShadingLanguageError(reason, { file, line: 1, column: 1 }, LIGHT_LOOP_OWNER);
 }
 
 /** The material of `parsed`, a parse of a `shader_type spatial` text with `options`. */

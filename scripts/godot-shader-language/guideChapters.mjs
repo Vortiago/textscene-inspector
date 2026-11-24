@@ -1,4 +1,8 @@
 import { isFunctionRow } from '../../packages/textscene-core/src/shaders/language/instructionFamily.ts';
+import { LIT_OUTPUT_BUILT_INS } from '../../apps/textscene-three-godot-shaders/tests/e2e/meshScenes.mjs';
+
+/** The rows whose ids `ids` lists. */
+const rowsWithIds = (ids) => (row) => ids.includes(row.id);
 
 /** The rows of the operator `op`, `OP_ADD(int,int)` and the rest. */
 const operatorRows = (op) => (row) => row.id.startsWith(`${op}(`);
@@ -927,6 +931,12 @@ const SPATIAL_CHAPTER = {
       tsl: "the template's `custom_radiance` and `custom_irradiance`",
     },
     {
+      heading: 'Outputs only the light reads, in `fragment()`',
+      rows: rowsWithIds(LIT_OUTPUT_BUILT_INS.map((name) => `spatial.fragment.${name}`)),
+      what: "Each of these outputs starts at Godot's default: `SPECULAR` 0.5, `AO` 1, `NORMAL_MAP` and `BENT_NORMAL_MAP` `(0.5, 0.5, 0.5)`, `NORMAL_MAP_DEPTH` 1, `ANISOTROPY_FLOW` `(1, 0)`, `SSS_TRANSMITTANCE_COLOR` `(0, 0, 0, 1)` and the others 0 (`scene_forward_clustered.glsl:1225-1297`). A shader reads the value it wrote. The unshaded template draws `ALBEDO` and `ALPHA` only (`scene_forward_clustered.glsl:2980`), so on an unshaded surface a write changes nothing that draws. `NORMAL_MAP`, `BENT_NORMAL_MAP` and `ANISOTROPY` still run the template's normal and tangent code after `fragment()`, which reads `TANGENT` and `BINORMAL`. The lit template, which reads each of them, is #1453.",
+      tsl: "the template's locals, and its normal map and anisotropy code",
+    },
+    {
       heading: 'The fragment and the view in `fragment()`',
       rows: (row) =>
         ['VERTEX', 'LIGHT_VERTEX', 'FRAGCOORD', 'FRONT_FACING', 'VIEW', 'SCREEN_UV']
@@ -989,8 +999,6 @@ const HEAD_CHAPTER = {
   ],
 };
 
-const directiveRows = (ids) => (row) => ids.includes(row.id);
-
 const PREPROCESSOR_CHAPTER = {
   file: 'preprocessor.md',
   title: 'Preprocessor and includes',
@@ -1013,35 +1021,35 @@ transpileShadingLanguage(code, { decoders: { zstd, brotli } });
   sections: [
     {
       heading: 'Macros',
-      rows: directiveRows(['#define', '#undef']),
+      rows: rowsWithIds(['#define', '#undef']),
       what: "`#define` makes a macro, with or without arguments, and `#undef` removes one. At the end of each line, each macro in name order replaces its first use, pass after pass, until a pass replaces none. So a macro inside a macro expands, and Godot refuses a line that uses one macro 50 times, as the 51st pass ends the expansion with an error. A body stands between two spaces, `##` joins the words either side, and a `\\` at a line's end continues the body. A macro made after a line of an include still expands in that line, because the including file expands the include's text again. Godot refuses a second `#define` of one name and `#undef` of `CURRENT_RENDERER` and the other built-in defines.",
       tsl: 'none: the preprocessor writes shading language text',
       probes: (probe) => /^(define|undef)-/.test(probe.name),
     },
     {
       heading: 'Conditions',
-      rows: directiveRows(['#ifdef', '#ifndef', '#else', '#endif']),
+      rows: rowsWithIds(['#ifdef', '#ifndef', '#else', '#endif']),
       what: '`#ifdef` and `#ifndef` take their branch when a macro is or is not defined, and `#else` takes the other. A skipped branch is not read, so it can hold any text. Godot refuses text after a name, a second `#else`, an `#endif` with no condition and a condition with no `#endif`.',
       tsl: 'none: the preprocessor writes the taken branch',
       probes: (probe) => probe.name.startsWith('condition-'),
     },
     {
       heading: '`#if`, `#elif` and `defined`',
-      rows: directiveRows(['#if', '#elif', 'defined']),
+      rows: rowsWithIds(['#if', '#elif', 'defined']),
       what: '`#if` and `#elif` take their branch when the condition is true, and an `#elif` only when no branch before it was taken. Godot first replaces each `defined NAME` and `defined(NAME)` with `true` or `false`, then expands the macros, then runs the text with its Expression class, which the transpiler ports (`godot/expression/`). So a condition can use every Variant operator and constructor, such as `Vector2(1, 2) * 2 == Vector2(2, 4)`. A value is true when it is not its type\'s zero: `0.0`, `""` and `[]` are false. Godot evaluates an `#elif` after a taken branch too, so its errors still show. A failed operation still leaves a value: `1 / 0` leaves the text `Division by zero error`, so `#if 1 / 0` is true, and only a failure that leaves Nil, such as `"a" + 1`, is refused with `Condition evaluation error.`. Godot keeps the end of the last `defined` operand for a bare name at the end of the text, so `defined(A) || defined B` becomes `true || falsefined B`, which Godot refuses with `Condition evaluation error.`. A condition can call the utility functions too, such as `abs`, `lerp`, `max` and `type_convert`, which the transpiler ports from `variant_utility.cpp` (`godot/variant/utility/`). A refused argument still leaves the value the function returns: `floor("x")` leaves a text, so `#if floor("x")` is true. A random draw is Godot\'s only after a `seed` earlier in the same shader, because the editor seeds its generator from the clock: `#if str(seed(5))` then `#if randi() == 3066015881` is true, and a draw before any seed is refused with its row and #1828. `hash` gives Godot\'s `Variant::hash` of every type, so `#if hash("abc") == 193485963` is true. `var_to_str` writes Godot\'s text of every type, typed arrays and dictionaries included, such as `Array[int]([1])`. `str_to_var` reads Godot\'s text of every type, so `#if str_to_var("Vector2(1, 2)").x == 1` is true. An `Object(...)` of a class Godot can make and a `Resource(...)` of a file that `readInclude` finds make a Godot object. The transpiler stops on these with a message that it does not support them yet, and #1953. A class Godot can make is one a game run can make: the editor\'s own classes, such as `EditorDock`, give null. The transpiler cannot read the project\'s uid cache, so a `Resource(...)` of a uid with no file found by its path stops with #1815, even where Godot knows no such uid and gives null. An `Object(...)` of a class Godot cannot make, a `Resource(...)` of a file that `readInclude` does not find, and a parse fault give null, as in Godot. `var_to_bytes` and `bytes_to_var`, with their `_with_objects` forms, write and read Godot\'s bytes of every type, NaN sign bits included. `bytes_to_var` stops the same way on an object id other than 0 and on an object of a class Godot can make, after it reads the properties. It refuses a Signal whose object id is not 0, as `instance_from_id` does. A NodePath holds its names and subnames, as Godot does, so a name read from bytes that holds `/` makes a NodePath other than the one of that text. A condition can read a member or an index, as Godot\'s `Variant::get` does: `Vector2(1, 2).y`, `Color(1, 0, 0).ok_hsl_s`, `"abc"[-1]` and `{"a": 1}["a"]`. A method name read as a member gives Godot\'s bound Callable, such as `Vector2::length`. `weakref` of null or of an object makes a WeakRef object and stops the same way. `weakref` of another type fails Godot\'s argument check. A condition can call a method of the math types (the vectors, Rect2, Rect2i, Color, Plane, AABB, Quaternion, Basis, Transform2D, Transform3D and Projection), as Godot\'s `Variant::callp` does, such as `Vector3(1, 2, 3).cross(Vector3(0, 1, 0))`, in float as Godot\'s `real_t` is. It can call a method of String, StringName and NodePath too, such as `"a,b".split(",").size() == 2` and `"1e3".is_valid_float()`, with Godot\'s own case tables, number spelling and text encodings. A missing argument takes its default. A wrong count of arguments leaves null, so the condition is refused with `Condition evaluation error.`. An argument of a wrong type fails Godot\'s check, but the method still runs on the cast value and leaves it: `Vector2(1, 2).dot("a")` leaves `0.0`. These String calls are refused with their row and #1828, and the shader is not transpiled: `to_multibyte_char_buffer`, because Godot converts with the iconv of the machine it runs on, for an empty encoding name and for a named one; `humanize_size`, because Godot translates its unit into the language of the editor or the game; and a call that makes a String JavaScript cannot hold, which is a code past U+10FFFF, a high surrogate followed by a low one, or a text longer than V8\'s longest string. The message names the condition and the reason, such as `\'#if "a".to_multibyte_char_buffer("UTF-16").size() > 0: to_multibyte_char_buffer, which converts with the iconv of the machine Godot runs on\' is not transpiled yet (#1828)`. A condition can call a method of Array, Dictionary and the ten packed arrays too, such as `[3, 1, 2].max() == 3` and `PackedByteArray([0, 60]).decode_half(0) == 1.0`. A method Callable keeps its base, as Godot\'s shared array does, so `[1, 1, 1].map(PackedByteArray([1, 1]).erase)` gives `[true, true, false]`. `push_back` and `append` of a packed array give `false` on success, as Godot gives its error code as a bool. A sort and a binary search compare as Godot\'s `operator<` does, part by part for a vector or a Color. A typed array refuses a value of another type, as Godot does. A condition can call a method of Callable, Signal and RID too. `bind`, `bindv` and `unbind` wrap a Callable as Godot does, so `[3].has.unbind(2).call(3, 4, 5)` is true, and two binds of one Callable are equal when they bind as many values. A Callable keeps the hash its base had when it was made. A Signal and a Callable have no Object here, so `connect` gives `3` and `rpc` is a call error, as in Godot without an Object. These calls are refused with their row and #1828, and the shader is not transpiled: `pick_random` and `shuffle` before a `seed`, because the editor seeds its generator from the clock; `get_string_from_multibyte_char` of a non-empty array, because Godot converts with the iconv of the machine it runs on; `get_string_from_utf16` of a high surrogate before a unit that is not a surrogate, because Godot then reads memory it never wrote; and `compress`, because the transpiler only decompresses. `decompress` and `decompress_dynamic` read FastLZ with a port of Godot\'s FastLZ, Deflate and GZIP through fflate with the header and checksum checks of zlib, Zstandard and Brotli through the decoders the app lends in `ShaderOptions.decoders`. So `PackedByteArray([5, 104, 101, 108, 108, 111, 32, 224, 9, 5, 4, 119, 111, 114, 108, 100]).decompress(29, 0).get_string_from_ascii()` is `"hello hello hello hello world"`. A stream that fails a check gives an empty array, as in Godot. Zstandard or Brotli with no decoder lent is refused with a message that names the package to install. These are refused with their row and #1828: a buffer too large for this transpiler to allocate in Zstandard or Brotli mode, because whether Godot can allocate it depends on the machine; a FastLZ buffer under 16 bytes that FastLZ fills less of, and a FastLZ stream that reads past its end, because Godot then reads memory it never wrote; `decompress_dynamic` of a Deflate or GZIP stream with bytes after its end, where Godot never returns, unless its output fills its last 16384-byte chunk exactly or a full chunk passes the maximum; and `decompress_dynamic` of a Brotli stream that ends early, where Godot never returns. `rid_allocate_id`, and `instance_from_id` of an id other than 0, answer from the running editor and are refused. A condition that ends Godot with SIGFPE, such as `(-9223372036854775807 - 1) / -1`, is refused.',
       tsl: 'none: the preprocessor writes the taken branch',
       probes: (probe) => /^(if|elif)-/.test(probe.name),
     },
     {
       heading: '`#error` and `#pragma`',
-      rows: directiveRows(['#error', '#pragma', '#pragma disable_preprocessor']),
+      rows: rowsWithIds(['#error', '#pragma', '#pragma disable_preprocessor']),
       what: '`#error` refuses the shader, unless it stands in a skipped branch. `#pragma disable_preprocessor` stops the preprocessor: the rest of the text goes to the compiler as it is, so a later `#` line is refused and a macro is not expanded. Godot knows no other pragma.',
       tsl: 'none',
       probes: (probe) => /^(error|pragma)-/.test(probe.name),
     },
     {
       heading: '`#include`',
-      rows: directiveRows(['#include']),
+      rows: rowsWithIds(['#include']),
       what: "`#include \"path\"` puts the preprocessed text of a `.gdshaderinc` file in place, between the markers `@@>path` and `@@<path`, which the tokenizer reads to name the include's file and lines in an error. A relative path is relative to the shader's folder. The defines of an include stay for the text after it. A file is included once. Godot refuses a missing file, a cycle and a chain deeper than 25. It finds a cycle by the hash of a file's text, so two files of the same text count as one. An include in a skipped branch is not read.",
       tsl: 'none: the preprocessor writes the included text',
       probes: (probe) => probe.name.startsWith('include-'),
