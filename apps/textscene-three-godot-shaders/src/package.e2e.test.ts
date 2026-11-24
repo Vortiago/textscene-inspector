@@ -47,6 +47,7 @@ const PUBLIC_VALUE_EXPORTS = [
 const PUBLIC_TYPE_EXPORTS = [
   'DepthPrepass',
   'DepthPrepassOptions',
+  'DirectionalLight',
   'EnvironmentFog',
   'GodotPrimitive',
   'GodotShading',
@@ -56,6 +57,7 @@ const PUBLIC_TYPE_EXPORTS = [
   'PointDraw',
   'RendererShaderOptions',
   'RenderingMethod',
+  'RoughnessLimiter',
   'ShaderInclude',
   'ShaderOptions',
   'ShaderSource',

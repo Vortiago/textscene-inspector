@@ -41,7 +41,6 @@ export {
 export { transpileSpatial, type SpatialOptions, type TranspiledSpatial } from './spatial/transpileSpatial.js';
 export type { PointDraw } from './spatial/spatialPipeline.js';
 export type { DirectionalLight } from './spatial/directionalLights.js';
-export type { RoughnessLimiter } from '../godot/rendering/roughnessLimiter.js';
 export {
   emulatedPointGeometry,
   withGodotAttributes,

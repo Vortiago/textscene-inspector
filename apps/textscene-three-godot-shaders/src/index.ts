@@ -42,7 +42,6 @@ export type {
   PointDraw,
   RendererShaderOptions,
   RenderingMethod,
-  RoughnessLimiter,
   ShaderInclude,
   ShaderSource,
   ShaderOptions,
@@ -68,4 +67,6 @@ export type {
 } from '@textscene/core/shaders';
 // A parameter takes a Godot Variant, which an app reads from the text of a resource file.
 export type { Variant } from '@textscene/core/godot';
+// A scene's roughness limiter is the project's setting of that name.
+export type { RoughnessLimiter } from '@textscene/core/godot';
 export { textToVariant } from '@textscene/core/godot/variantReader';
