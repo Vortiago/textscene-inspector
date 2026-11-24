@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { SceneStats } from './SceneStats';
 import { openScene } from '../../../scene/openScene';
 import type { ResourceProvider } from '../../../resources/ResourceProvider';
@@ -41,7 +41,7 @@ describe('<SceneStats>', () => {
   });
 
   // The chip counts by Godot's class tree: an XRCamera3D is a Camera3D.
-  it('counts a Camera3D subclass (XRCamera3D)', () => {
+  it('counts a Camera3D subclass (XRCamera3D)', async () => {
     const scene = openScene({
       source: `[gd_scene format=3]
 
@@ -56,12 +56,45 @@ describe('<SceneStats>', () => {
 
     render(<SceneStats scene={scene} />);
 
-    expect(screen.getByText('2 cameras')).toBeTruthy();
+    expect(await screen.findByText('2 cameras')).toBeTruthy();
   });
 
   it('shows nothing before the host has sent a scene', () => {
     render(<SceneStats scene={openScene({ source: '', provider: FILES })} />);
 
     expect(screen.queryByTestId('scene-info-nodes')).toBeNull();
+  });
+
+  // Godot 4.6.3 gives Main the owner of Plain, Inst and Added, and Inst the owner of Inner and Deep.
+  it('counts the nodes the scene owns, a node added inside an editable instance among them', async () => {
+    const scene = openScene({
+      source: `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://sub.tscn" id="1"]
+
+[node name="Main" type="Node3D"]
+
+[node name="Plain" type="Node3D" parent="."]
+
+[node name="Inst" parent="Plain" instance=ExtResource("1")]
+
+[node name="Added" type="Node3D" parent="Plain/Inst/Inner"]
+
+[editable path="Plain/Inst"]
+`,
+      provider: {
+        loadResource: async (path) =>
+          path === 'res://sub.tscn'
+            ? '[gd_scene format=3]\n\n[node name="SubRoot" type="Node3D"]\n\n' +
+              '[node name="Inner" type="Node3D" parent="."]\n\n[node name="Deep" type="Node3D" parent="Inner"]\n'
+            : null,
+      },
+      rootScenePath: 'res://main.tscn',
+    });
+    scene.getNodeOrNull('Plain/Inst');
+
+    render(<SceneStats scene={scene} />);
+
+    await waitFor(() => expect(screen.getByTestId('scene-info-nodes').textContent).toBe('4 nodes'));
   });
 });

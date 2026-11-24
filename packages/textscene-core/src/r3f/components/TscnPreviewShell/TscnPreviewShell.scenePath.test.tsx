@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 
 vi.mock('../../editorView/Canvas2DStage/Canvas2DStage', () => ({
   Canvas2DStage: ({ scenePath }: { scenePath: string }) => (
@@ -48,7 +48,7 @@ describe('<TextShell> scene path to the 2D stage', () => {
 
     rerender(shellAt('res://level.tscn', EDITED_NODE2D_ROOT));
 
-    expect(screen.getByTestId('scene-info-nodes').textContent).toBe('2 nodes');
+    await waitFor(() => expect(screen.getByTestId('scene-info-nodes').textContent).toBe('2 nodes'));
     expect(stageScenePath()).toBe('res://level.tscn');
   });
 
