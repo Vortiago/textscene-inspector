@@ -7,7 +7,6 @@ vi.mock('../../TscnCanvas', () => ({
   TscnCanvas: ({ mode }: { mode?: string }) => (
     <div data-testid={mode === '2D' ? 'stage-2d-stub' : 'canvas-stub'} />
   ),
-  TscnSceneContents: () => null,
 }));
 
 import { TextShell } from './TscnPreviewShell.testkit';

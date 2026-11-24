@@ -12,7 +12,7 @@ import { CanvasColorSpaceProvider, type CanvasColorSpace } from '../canvasColorS
 import type { Rgba } from '../../godot/math/math.js';
 import { CanvasLighting2DContext, INERT_CANVAS_LIGHTING } from './lightPassContext.js';
 import { NoShadowCasters } from './ShadowCasterStage.js';
-import { CanvasFrameStepsContext } from '../components/Canvas2DStage/canvasFrameSequence.js';
+import { CanvasFrameStepsContext } from '../world2D/canvasFrameSequence.js';
 
 interface World2DLightingBoundaryProps {
   /** The tint of the viewport's own world, white where it holds no visible CanvasModulate. */

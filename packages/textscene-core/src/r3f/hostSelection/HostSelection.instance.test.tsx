@@ -5,7 +5,7 @@ import { HostSelection } from './HostSelection';
 import { useViewportSelection, type UseViewportSelectionResult } from '../hooks/useViewportSelection';
 import { useSelection, type SelectionContextValue } from '../contexts/SelectionContext';
 import { TscnSceneProvider } from '../TscnSceneProvider';
-import { TscnSceneContents } from '../TscnCanvas';
+import { TscnSceneContents } from '../SceneContents';
 import { openScene } from '../../scene/openScene';
 import type { NodeHandle } from '../../scene/nodeHandle';
 import type { ResourceProvider } from '../../resources/ResourceProvider';

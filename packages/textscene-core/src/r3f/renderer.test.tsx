@@ -5,7 +5,7 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as renderer from './renderer';
-import { TscnSceneContents } from './TscnCanvas';
+import { TscnSceneContents } from './SceneContents';
 import { TscnSceneProvider } from './TscnSceneProvider';
 
 describe('the renderer entry', () => {

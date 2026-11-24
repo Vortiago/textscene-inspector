@@ -2,11 +2,7 @@
 export const SOURCE_PANE_STORAGE_KEY = 'tscn-web-source-pane';
 /** `FRAME_ON_OPEN_STORAGE_KEY` in r3f/contexts/ViewportModeContext.tsx. */
 export const FRAME_ON_OPEN_STORAGE_KEY = 'tsi.frameOnOpen';
-/**
- * `FIT_ON_OPEN_2D_STORAGE_KEY` in r3f/components/Canvas2DStage/viewport2d.ts, exported so a test
- * pins it: a key that stops matching lets the stage fit the scene again, and the capture no longer
- * matches the Godot frame.
- */
+/** `FIT_ON_OPEN_2D_STORAGE_KEY` in r3f/world2D/viewport2d.ts. A test pins it: a stale key refits. */
 export const FIT_ON_OPEN_2D_STORAGE_KEY = 'tsi.fitOnOpen2D';
 /**
  * `VIEWPORT_MODE_STORAGE_KEY` in r3f/contexts/ViewportModeContext.tsx: the workspace preference,

@@ -69,7 +69,6 @@ vi.mock('../../TscnCanvas', () => ({
       <StubCanvas {...props} />
     </ViewStatusProvider>
   ),
-  TscnSceneContents: () => null,
 }));
 
 interface StubProps {

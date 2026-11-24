@@ -1,4 +1,4 @@
-import { createEditorCameras } from '../editorCamera/editorCameras';
+import { createEditorCameras } from '../editorView/editorCamera/editorCameras';
 import { EMPTY_VIEW_STATUS } from '../viewStatus/viewStatus';
 import { renderHook } from '@testing-library/react';
 import { useHeardStatus } from '../components/TscnPreviewShell/previewViewStatus';

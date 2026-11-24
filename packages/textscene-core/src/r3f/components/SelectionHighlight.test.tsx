@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../parser/types';
-import { TscnSceneContents } from '../TscnCanvas';
+import { TscnSceneContents } from '../SceneContents';
 import { HierarchyProvider } from '../contexts/HierarchyContext';
 import { SelectionProvider } from '../contexts/SelectionContext';
 import { createSceneGraphFromTscnScene } from '../../core/SceneGraph.testkit';

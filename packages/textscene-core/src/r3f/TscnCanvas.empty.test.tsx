@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import { TRIANGLE_OUTLINES } from './controls/native/testing/triangleOutlines';
-import { TscnSceneContents } from './TscnCanvas';
+import { TscnSceneContents } from './SceneContents';
 
 // One triangle for each glyph of the bundled font, so no test decodes the font.
 vi.mock('./controls/native/text/sceneFontOutlines', async (importOriginal) => ({

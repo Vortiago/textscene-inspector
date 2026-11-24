@@ -9,7 +9,6 @@ vi.mock('../../TscnCanvas', () => ({
   TscnCanvas: ({ show }: { show?: { performance?: boolean } }) => (
     <div data-testid="canvas-stub" data-performance={String(show?.performance)} />
   ),
-  TscnSceneContents: () => null,
 }));
 
 import { TextShell } from './TscnPreviewShell.testkit';

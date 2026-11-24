@@ -12,7 +12,7 @@ import type { Camera2DTag } from '../../../r3f/viewportRender/camera2DView';
 import { Camera2DAnchorMode } from '../../../godot/scene/camera2d';
 import { CurrentCameras } from '../../../r3f/testing/CurrentCameras';
 import { fireSceneRender } from '../../../r3f/testing/fireSceneRender';
-import { World2DCamera } from '../../../r3f/components/Canvas2DStage/world2DCamera';
+import { World2DCamera } from '../../../r3f/world2D/world2DCamera';
 import { drawAsCanvasPass } from '../../../r3f/testing/worldRenders';
 import { heading } from '../../../parser/testing/parserKit';
 import { Parallax2D } from './Component';

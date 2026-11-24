@@ -3,7 +3,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useFrame, type RootState } from '@react-three/fiber';
 import { act } from 'react';
 import type * as THREE from 'three';
-import { TscnSceneContents } from '../TscnCanvas';
+import { TscnSceneContents } from '../SceneContents';
 import { TscnSceneProvider } from '../TscnSceneProvider';
 import { openScene } from '../../scene/openScene';
 import type { ResourceProvider } from '../../resources/ResourceProvider';

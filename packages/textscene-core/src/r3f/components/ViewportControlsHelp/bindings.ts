@@ -3,8 +3,8 @@
  * with a `trigger` is held to its resolver by `bindings.test.ts`. This panel is
  * the only list of the bindings: the docs point to it and repeat none.
  */
-import type { FreelookDirection } from '../../editorKeyBindings.js';
-import type { NavMode, NavModifiers, Projection } from '../../godotEditorCursor.js';
+import type { FreelookDirection } from '../../editorView/editorKeyBindings.js';
+import type { NavMode, NavModifiers, Projection } from '../../editorView/godotEditorCursor.js';
 
 /**
  * What a row's input resolves to: a navigation mode, or the direction a flight key

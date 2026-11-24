@@ -15,7 +15,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
-import { useShadowSampler } from '../components/Canvas2DStage/canvasFrameSequence';
+import { useShadowSampler } from '../world2D/canvasFrameSequence';
 import {
   createShadowCasterRegistry,
   NoShadowCasterRegistry,

@@ -9,7 +9,7 @@ import {
   CanvasFrameStepsContext,
   createCanvasFrameSteps,
   runCanvasFrame,
-} from '../components/Canvas2DStage/canvasFrameSequence';
+} from '../world2D/canvasFrameSequence';
 
 const DRAWS_NOTHING = () => {};
 

@@ -560,7 +560,7 @@ The canvas group of a `clip_children` owner. The pass copies the canvas drawn so
 _Avoid_: "clip mask", "stencil".
 
 **Frame AABB** (`r3f/components/FrameAabb.tsx`):
-The `get_aabb()` of a GeometryInstance3D, in node space, that the camera frames the scene on (`r3f/frameSceneBounds.ts`). An empty one still frames, as the point at the node origin that `AABB()` is. The selection and hover boxes do not read it.
+The `get_aabb()` of a GeometryInstance3D, in node space, that the camera frames the scene on (`r3f/editorView/frameSceneBounds.ts`). An empty one still frames, as the point at the node origin that `AABB()` is. The selection and hover boxes do not read it.
 _Avoid_: "bounds proxy".
 
 **Rendering quadrant** (`resources/tileset/renderingQuadrants.ts`):
@@ -798,15 +798,23 @@ A node with no geometry of its own that moves, deforms or animates other nodes, 
 A drive the previewer does not run registers **Pending** and is `unimplemented`, never `linter-only` (ADR-0045).
 _Avoid_: "controller" (collides with `XRController3D`). "inert".
 
-**Editor cursor** (`r3f/godotEditorCursor.ts`):
+**Layer** (`scripts/layers/layers.mjs`, ADR-0092):
+One of the parts of core that import only downward: the Scene and View, the **Editor view**, the renderer entry, the previewer and the core entry. The ESLint rule `layers/import-down` holds the table.
+_Avoid_: "tier", which names a diagnostic's severity.
+
+**Editor view** (`r3f/editorView/`, ADR-0092):
+The **Layer** of the editor's 3D and 2D modes over the code that draws the scene: the **Editor camera**, its navigation, Godot's view keys and the two stages. The In-game mode mounts none of it.
+_Avoid_: "editor mode" for the code, which names the `3D` and `2D` values of the mode.
+
+**Editor cursor** (`r3f/editorView/godotEditorCursor.ts`):
 Godot's `Cursor`, an orbit focus point plus the pitch, yaw and radius of the eye, from which every 3D gesture rebuilds the camera.
 _Avoid_: "camera state". "orbit target" for the whole cursor.
 
-**Editor camera** (`r3f/editorCamera/`, `r3f/EditorControlsHandle.ts`):
+**Editor camera** (`r3f/editorView/editorCamera/`, `r3f/editorView/EditorControlsHandle.ts`):
 The view's own camera node in an editor mode: a Camera3D in 3D, which the **Editor cursor** drives, and a Camera2D in 2D. It is never in the scene, so no gesture moves an authored camera. A host reaches it as `view.editorCamera` (ADR-0091).
 _Avoid_: "default camera", "orbit camera".
 
-**Freelook** (`r3f/freelook.ts`):
+**Freelook** (`r3f/editorView/freelook.ts`):
 Godot's flight navigation of the 3D viewport: the mouse turns the **Editor camera** in place and keys move it, at a speed the wheel changes. It is on while the right button is held, or from the Shift+F toggle until the pointer lock ends.
 _Avoid_: "fly mode", "first-person camera", "WASD mode".
 

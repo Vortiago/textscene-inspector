@@ -5,7 +5,6 @@ import userEvent from '@testing-library/user-event';
 // <TscnCanvas> needs a WebGL context, which happy-dom lacks, so a placeholder stands in.
 vi.mock('../../TscnCanvas', () => ({
   TscnCanvas: () => <div data-testid="canvas-stub" />,
-  TscnSceneContents: () => null,
 }));
 
 import { TextShell } from './TscnPreviewShell.testkit';

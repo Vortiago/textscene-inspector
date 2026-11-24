@@ -1,0 +1,125 @@
+import * as THREE from 'three';
+import { EDITOR_CAMERA_FOV, editorCameraDirection } from './godotEditorCamera.js';
+import { computeWorldBoundingBox, frameBoxOf } from '../bounds.js';
+import { isDrawable } from '../drawable.js';
+import { isUnderEditorHelper } from '../editorHelpers.js';
+import { degToRad } from '../../godot/math/math.js';
+
+/**
+ * How much room to leave around the framed bounds. The Godot reference harness copies it to frame
+ * the same picture (`--frame`), and `godot-ref/run.test.mjs` pins the copy.
+ */
+const FRAME_MARGIN = 1.6;
+
+/** Largest side of a box: 0 for a point, which a bounds proxy can be. */
+function maxExtent(box: THREE.Box3): number {
+  const size = box.getSize(new THREE.Vector3());
+  return Math.max(size.x, size.y, size.z);
+}
+
+/** Skips a tagged subtree whole: a frame-excluded draw holds its `material_overlay` and `next_pass` draws. */
+function forEachFramed(root: THREE.Object3D, visit: (object: THREE.Object3D) => void): void {
+  if (root.userData?.tscnEmptyState || root.userData?.tscnFrameExcluded) return;
+  visit(root);
+  for (const child of root.children) forEachFramed(child, visit);
+}
+
+/** Minimal shape we touch on the viewport controls instance for framing. */
+export interface OrbitLike {
+  target?: THREE.Vector3;
+  update?: () => void;
+}
+
+/**
+ * Frames the camera on the union of every rendered mesh, back along the editor direction until the
+ * largest dimension fits the vertical FOV, and re-points the controls at the centre. A no-op for an
+ * empty scene or non-finite bounds.
+ */
+export function frameSceneBounds(
+  scene: THREE.Object3D,
+  camera: THREE.Camera,
+  controls: OrbitLike | null
+): void {
+  // Prefer real geometry (meshes); fall back to gizmo lines/points so
+  // light- or camera-only scenes (no mesh to frame) still get framed instead
+  // of leaving the default camera pointed at an empty void.
+  const meshBox = new THREE.Box3();
+  const nodeBoxScratch = new THREE.Box3();
+  const gizmoBox = new THREE.Box3();
+  let hasMesh = false;
+  let hasGizmo = false;
+  // A Label3D frames by its zero-size `FramePoint` alone, as Godot's reference camera does, never by glyphs.
+  forEachFramed(scene, (obj) => {
+    // A node whose `get_aabb` Godot frames on, drawn or not, an empty one as the point it is.
+    const nodeBox = frameBoxOf(obj, nodeBoxScratch);
+    if (nodeBox) {
+      meshBox.union(nodeBox);
+      hasMesh = true;
+      return;
+    }
+    // CSG contributor bounds proxies are INCLUDED: Godot counts a contributor's own
+    // unevaluated brush too (modules/csg/csg_shape.cpp:470,507, reached recursively), so a
+    // subtracted solid enlarges its bounds on both sides. A node with no solid frames as a
+    // `FramePoint` above.
+    if (!isDrawable(obj)) return;
+    const objBox = computeWorldBoundingBox(obj, new THREE.Box3());
+    if (objBox.isEmpty() || !Number.isFinite(objBox.min.x)) return;
+    // A gizmo fill is a mesh, but editor chrome does not frame as meshes do: Godot's gizmo draws
+    // no frame, so a chrome mesh joins the gizmo box of the scene's own gizmos (ADR-0056).
+    if (isUnderEditorHelper(obj) || (obj as THREE.Line).isLine) {
+      gizmoBox.union(objBox);
+      hasGizmo = true;
+    } else {
+      meshBox.union(objBox);
+      hasMesh = true;
+    }
+  });
+  // A point union is reachable, since every mesh can be a bounds proxy for a node Godot never
+  // sized. It is not a mesh to frame from, so it must not win over the gizmo box.
+  const box = hasMesh && maxExtent(meshBox) > 0 ? meshBox : hasGizmo ? gizmoBox : hasMesh ? meshBox : null;
+  if (!box) return;
+
+  const center = box.getCenter(new THREE.Vector3());
+  const maxDim = maxExtent(box);
+  if (!Number.isFinite(maxDim)) return;
+  if (maxDim <= 0) {
+    // Nothing to derive a distance from, so keep the one we have and re-point, which is
+    // what Node3DEditorViewport::focus_selection does with the orbit cursor.
+    if (controls?.target) {
+      camera.position.add(center.clone().sub(controls.target));
+      controls.target.copy(center);
+      controls.update?.();
+    }
+    camera.lookAt(center);
+    return;
+  }
+
+  // The only orthographic camera here is the editor camera's Numpad-5 projection, sized from the same
+  // 70-degree field of view; three's 50-degree default would zoom it out by half again.
+  const persp = camera as THREE.PerspectiveCamera;
+  const distance = (maxDim / 2 / fitTangent(persp) || maxDim) * FRAME_MARGIN;
+
+  // Godot's editor viewing angle, so a scene presents the face it does in the editor, a coplanar
+  // scene included: Godot's reference camera frames it obliquely, never head-on.
+  const dir = editorCameraDirection();
+  camera.position.copy(center.clone().add(dir.multiplyScalar(distance)));
+  if (persp.isPerspectiveCamera) {
+    // The 0.01 near floor must never exceed `distance`, or a microscopic scene (a Decal at size
+    // 0.001) sits inside the near plane and renders black.
+    persp.near = Math.min(Math.max(0.01, distance / 200), distance / 10);
+    persp.far = distance * 200;
+    persp.updateProjectionMatrix();
+  }
+  camera.lookAt(center);
+  if (controls?.target) {
+    controls.target.copy(center);
+    controls.update?.();
+  }
+}
+
+/** The tangent of the narrower half angle, so a view taller than it is wide still holds the box. */
+function fitTangent(camera: THREE.PerspectiveCamera): number {
+  const verticalTangent = Math.tan(degToRad(camera.isPerspectiveCamera ? camera.fov : EDITOR_CAMERA_FOV) / 2);
+  const aspect = camera.isPerspectiveCamera ? camera.aspect : 1;
+  return verticalTangent * Math.min(1, aspect);
+}

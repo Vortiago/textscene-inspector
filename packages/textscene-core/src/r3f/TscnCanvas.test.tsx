@@ -3,8 +3,8 @@ import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { TscnSceneContents } from './TscnCanvas';
-import { frameSceneBounds } from './frameSceneBounds';
+import { TscnSceneContents } from './SceneContents';
+import { frameSceneBounds } from './editorView/frameSceneBounds';
 import { TiledUploadQueue } from './tiledUpload/TiledUploadQueue';
 
 describe('the canvas container CSS', () => {

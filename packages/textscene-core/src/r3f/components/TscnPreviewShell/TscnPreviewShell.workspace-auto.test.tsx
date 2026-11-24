@@ -5,7 +5,6 @@ const TESTID_OF_MODE: Record<string, string> = { '2D': 'canvas-2d', '3D': 'canva
 
 vi.mock('../../TscnCanvas', () => ({
   TscnCanvas: ({ mode = '3D' }: { mode?: string }) => <div data-testid={TESTID_OF_MODE[mode]} />,
-  TscnSceneContents: () => null,
 }));
 
 import { TextShell } from './TscnPreviewShell.testkit';

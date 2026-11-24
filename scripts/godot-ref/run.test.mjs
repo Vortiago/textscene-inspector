@@ -85,7 +85,7 @@ function bootstrap(overrides = {}) {
 describe('editor-camera constants mirror the previewer', () => {
   it('matches godotEditorCamera.ts', async () => {
     const { editorCameraDirection, editorCameraPosition, EDITOR_CAMERA_FOV } =
-      await import('../../packages/textscene-core/src/r3f/godotEditorCamera.ts');
+      await import('../../packages/textscene-core/src/r3f/editorView/godotEditorCamera.ts');
     const core = editorCameraDirection();
     expect(EDITOR_CAMERA_DIRECTION[0]).toBeCloseTo(core.x, 6);
     expect(EDITOR_CAMERA_DIRECTION[1]).toBeCloseTo(core.y, 6);
@@ -99,7 +99,8 @@ describe('editor-camera constants mirror the previewer', () => {
 
   it('matches frameSceneBounds.ts’s framing margin', async () => {
     const THREE = await import('three');
-    const { frameSceneBounds } = await import('../../packages/textscene-core/src/r3f/frameSceneBounds.ts');
+    const { frameSceneBounds } =
+      await import('../../packages/textscene-core/src/r3f/editorView/frameSceneBounds.ts');
     const scene = new THREE.Scene();
     scene.add(new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2)));
     const camera = new THREE.PerspectiveCamera(EDITOR_FOV);
@@ -119,7 +120,7 @@ describe('editor-camera constants mirror the previewer', () => {
     const { DEFAULT_VIEWPORT_WIDTH, DEFAULT_VIEWPORT_HEIGHT } =
       await import('../../packages/textscene-core/src/parser/projectSettingsParser.ts');
     const { FIT_ON_OPEN_2D_STORAGE_KEY: coreKey } =
-      await import('../../packages/textscene-core/src/r3f/components/Canvas2DStage/viewport2d.ts');
+      await import('../../packages/textscene-core/src/r3f/world2D/viewport2d.ts');
     expect(CANVAS_2D_CAPTURE.width).toBe(DEFAULT_VIEWPORT_WIDTH);
     expect(CANVAS_2D_CAPTURE.height).toBe(DEFAULT_VIEWPORT_HEIGHT);
     expect(FIT_ON_OPEN_2D_STORAGE_KEY).toBe(coreKey);

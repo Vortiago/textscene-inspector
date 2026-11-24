@@ -252,7 +252,7 @@ flowchart TD
 ## The preview shell
 
 `TscnPreviewShell` is the Split Dock that the web previewer and the VS Code extension use (ADR-0007). Each shell creates its own
-React contexts (`previewShellProviders.tsx`), so two previews share no state.
+React contexts (`r3f/viewProviders.tsx`), so two previews share no state.
 
 Animation drivers move other nodes' properties (ADR-0011). One transport plays the driver of
 the selected node (ADR-0012). Playback starts stopped.

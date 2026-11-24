@@ -9,7 +9,7 @@ import { useLayoutEffect, useRef, type ReactNode } from 'react';
 import { CamerasPanel } from './CamerasPanel';
 import { TestPreviewCamera } from './previewCamera.testkit';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
-import { createEditorCameras } from '../../editorCamera/editorCameras';
+import { createEditorCameras } from '../../editorView/editorCamera/editorCameras';
 import { PreviewViewProvider } from './previewView';
 import type { SceneValue } from '../../../scene/variant';
 import { ViewportModeProvider, useViewportMode } from '../../contexts/ViewportModeContext';

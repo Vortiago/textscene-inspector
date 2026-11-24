@@ -11,8 +11,12 @@ import { createViewStatusStore } from './viewStatus/viewStatus.js';
 import { viewAnswers, type ViewAnswers } from './viewStatus/viewAnswers.js';
 import type { ViewStatus } from './viewStatus/viewStatus.js';
 import { assertShow, DEFAULT_SHOW, withShown, type ViewShow } from './viewShow/viewShow.js';
-import { createEditorCameras, type EditorViewAnswers } from './editorCamera/editorCameras.js';
-import { EditorCamerasProvider } from './editorCamera/EditorCamerasContext.js';
+import {
+  createEditorCameras,
+  withEditorCamera,
+  type EditorViewAnswers,
+} from './editorView/editorCamera/editorCameras.js';
+import { EditorCamerasProvider } from './editorView/editorCamera/EditorCamerasContext.js';
 
 export interface ViewOptions {
   /** `in-game` by default. */
@@ -69,14 +73,16 @@ export function mountScene(element: HTMLElement, scene: Scene, options: ViewOpti
       </TscnSceneProvider>
     );
   render();
-  const answers = viewAnswers({
-    scene,
-    store,
-    ending: ending.signal,
-    lookedThrough: () => (current.mode === '3D' ? current.camera : null),
+  const answers = withEditorCamera(
+    viewAnswers({
+      scene,
+      store,
+      ending: ending.signal,
+      lookedThrough: () => (current.mode === '3D' ? current.camera : null),
+    }),
     cameras,
-    mode: () => current.mode,
-  });
+    () => current.mode
+  );
   const lifecycle: Pick<View, 'update' | 'dispose'> = {
     update(next) {
       if (isDisposed) throw new Error('expected a mounted view to update, got a disposed one');

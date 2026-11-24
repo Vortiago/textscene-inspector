@@ -3,8 +3,8 @@ import type { Scene } from '../scene/openScene.js';
 import { useSceneLoader } from './sceneResourcePipeline.js';
 import { useSceneGraphs } from './hooks/useSceneGraphs.js';
 import './sceneLiveTree.js';
-import { SceneChangeResetter } from './components/TscnPreviewShell/SceneChangeResetter.js';
-import { previewShellProviders } from './components/TscnPreviewShell/previewShellProviders.js';
+import { SceneChangeResetter } from './SceneChangeResetter.js';
+import { viewProviders } from './viewProviders.js';
 
 interface TscnSceneProviderProps {
   /** Every view of the scene shares its parse and its resource loader. */
@@ -17,7 +17,7 @@ export function TscnSceneProvider({ scene, children }: TscnSceneProviderProps) {
   const { parsed, sceneGraph } = useSceneGraphs(scene);
   if (parsed.error) throw new Error(`expected the text of a .tscn scene, got: ${parsed.error}`);
   const hierarchyValue = useMemo(() => ({ sceneGraph, panelId, scene }), [sceneGraph, panelId, scene]);
-  const withProviders = previewShellProviders({
+  const withProviders = viewProviders({
     hierarchyValue,
     loader: useSceneLoader(scene),
     panelId,

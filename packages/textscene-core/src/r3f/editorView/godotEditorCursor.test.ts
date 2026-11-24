@@ -1,0 +1,431 @@
+/**
+ * Navigation maths against Godot's editor: the cursor round-trips the opening pose, the pole clamp
+ * holds, pan moves eye and focus together, zoom never crosses the focus point, freelook pivots on
+ * the eye, and each numpad snap looks down the axis `_menu_option` picks.
+ */
+import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
+import { EDITOR_CAMERA_FOV, editorCameraPosition } from './godotEditorCamera';
+import {
+  OPPOSITE_VIEW,
+  cursorCameraPosition,
+  cursorFromCamera,
+  cursorQuaternion,
+  dollyCursor,
+  freelookCursor,
+  freelookMoveCursor,
+  orbitCursor,
+  orthographicHeight,
+  panCursor,
+  resolveNavMode,
+  resolveWheelMode,
+  scaleCursorDistance,
+  scaleFreelookSpeed,
+  viewSnapCursor,
+  wheelZoomScale,
+  type EditorCursor,
+  type GodotViewAngle,
+} from './godotEditorCursor';
+import { clampWheelNotches } from './pointerGesture';
+import { degToRad } from '../../godot/math/math.js';
+
+/** `editors/3d/navigation_feel/orbit_sensitivity` (`editor_settings.cpp:948`). */
+const ORBIT_DEGREES_PER_PIXEL = 0.25;
+
+/** `_nav_orbit`'s pitch clamp (`node_3d_editor_plugin.cpp:2946`). */
+const X_ROT_LIMIT = 1.57;
+
+/** `editors/3d/freelook/freelook_base_speed` (`editor_settings.cpp:961`). */
+const FREELOOK_BASE_SPEED = 5.0;
+
+/** `_update_freelook`'s speed modifier (`node_3d_editor_plugin.cpp:3123`). */
+const FREELOOK_SPRINT_MULTIPLIER = 3.0;
+
+/** `_update_freelook`'s slow modifier (`node_3d_editor_plugin.cpp:3126`). */
+const FREELOOK_SLOW_MULTIPLIER = 0.333333;
+
+/** `ZOOM_FREELOOK_MIN` and `ZOOM_FREELOOK_MULTIPLIER` (`node_3d_editor_plugin.cpp:119-120`). */
+const ZOOM_DISTANCE_MIN = 0.01;
+const WHEEL_ZOOM_MULTIPLIER = 1.08;
+
+const ORIGIN = new THREE.Vector3();
+const WIDE_RANGE = { near: 0.001, far: 100000 };
+
+/** The pose Godot's editor opens every scene at. */
+function editorCursor(): EditorCursor {
+  return cursorFromCamera(new THREE.Vector3(...editorCameraPosition()), ORIGIN);
+}
+
+function cursorAt(xRot: number, yRot: number, distance = 4, target = ORIGIN): EditorCursor {
+  return { target: target.clone(), xRot, yRot, distance };
+}
+
+/** The unit vector from the focus point towards the eye. */
+function cursorDirection(cursor: EditorCursor): THREE.Vector3 {
+  return cursorCameraPosition({ ...cursor, target: ORIGIN, distance: 1 });
+}
+
+describe('cursorFromCamera / cursorCameraPosition', () => {
+  it('recovers Godot’s opening cursor from the camera the canvas opens with', () => {
+    const cursor = editorCursor();
+    const [x, y, z] = editorCameraPosition();
+    const distance = Math.hypot(x, y, z);
+    // `x_rot` is the eye's elevation, and `y_rot` its azimuth off +Z, negated.
+    expect(cursor.xRot).toBeCloseTo(Math.asin(y / distance), 6);
+    expect(cursor.yRot).toBeCloseTo(-Math.atan2(x, z), 6);
+    expect(cursor.distance).toBeCloseTo(distance, 6);
+  });
+
+  it('round-trips an arbitrary pose back to the same eye position', () => {
+    const position = new THREE.Vector3(-3, 7, 2);
+    const target = new THREE.Vector3(1, -1, 4);
+    const back = cursorCameraPosition(cursorFromCamera(position, target));
+    expect(back.distanceTo(position)).toBeLessThan(1e-9);
+  });
+
+  it('reports no rotation for an eye sitting on the focus point', () => {
+    const cursor = cursorFromCamera(new THREE.Vector3(2, 2, 2), new THREE.Vector3(2, 2, 2));
+    expect(cursor.distance).toBe(0);
+    expect(cursor.xRot).toBe(0);
+    expect(cursor.yRot).toBe(0);
+  });
+
+  it('builds the same direction from the quaternion as from the rotations', () => {
+    const cursor = cursorAt(0.4, -1.2);
+    const fromQuaternion = new THREE.Vector3(0, 0, 1).applyQuaternion(cursorQuaternion(cursor));
+    expect(fromQuaternion.distanceTo(cursorDirection(cursor))).toBeLessThan(1e-9);
+  });
+});
+
+describe('orbitCursor', () => {
+  it('accumulates yaw and pitch at Godot’s orbit sensitivity', () => {
+    const perPixel = degToRad(ORBIT_DEGREES_PER_PIXEL);
+    const orbited = orbitCursor(orbitCursor(cursorAt(0, 0), 10, 4), 10, 4);
+    expect(orbited.yRot).toBeCloseTo(20 * perPixel, 9);
+    expect(orbited.xRot).toBeCloseTo(8 * perPixel, 9);
+  });
+
+  it('leaves the focus point and radius alone', () => {
+    const cursor = cursorAt(0.2, 0.3, 9, new THREE.Vector3(1, 2, 3));
+    const orbited = orbitCursor(cursor, 40, -25);
+    expect(orbited.distance).toBe(9);
+    expect(orbited.target.equals(cursor.target)).toBe(true);
+  });
+
+  it('clamps at the poles instead of flipping the view upside down', () => {
+    const up = orbitCursor(cursorAt(0, 0), 0, 100000);
+    const down = orbitCursor(cursorAt(0, 0), 0, -100000);
+    expect(up.xRot).toBeCloseTo(X_ROT_LIMIT, 9);
+    expect(down.xRot).toBeCloseTo(-X_ROT_LIMIT, 9);
+    // Still above the focus point, and still the right way up.
+    expect(cursorDirection(up).y).toBeGreaterThan(0.99);
+    const cameraUp = new THREE.Vector3(0, 1, 0).applyQuaternion(cursorQuaternion(up));
+    expect(cameraUp.y).toBeGreaterThan(0);
+  });
+});
+
+describe('panCursor', () => {
+  it('moves the eye and the focus point by the same vector', () => {
+    const cursor = editorCursor();
+    const panned = panCursor(cursor, 30, -12);
+    const targetDelta = panned.target.clone().sub(cursor.target);
+    const eyeDelta = cursorCameraPosition(panned).sub(cursorCameraPosition(cursor));
+    expect(eyeDelta.distanceTo(targetDelta)).toBeLessThan(1e-9);
+    expect(targetDelta.length()).toBeGreaterThan(0);
+  });
+
+  it('slides in the view plane, never along the view direction', () => {
+    const cursor = editorCursor();
+    const delta = panCursor(cursor, 30, -12).target.clone().sub(cursor.target);
+    expect(delta.dot(cursorDirection(cursor))).toBeCloseTo(0, 9);
+  });
+
+  it('scales with the orbit radius so far-out pans cover more ground', () => {
+    const near = panCursor(cursorAt(0, 0, 1), 100, 0).target.length();
+    const far = panCursor(cursorAt(0, 0, 10), 100, 0).target.length();
+    expect(far).toBeCloseTo(near * 10, 9);
+  });
+
+  it('does nothing for a zero drag', () => {
+    const cursor = editorCursor();
+    expect(panCursor(cursor, 0, 0).target.equals(cursor.target)).toBe(true);
+  });
+});
+
+describe('dollyCursor / scaleCursorDistance', () => {
+  it('pushes out on a downward drag and pulls in on an upward one', () => {
+    const cursor = cursorAt(0, 0, 4);
+    expect(dollyCursor(cursor, 40, WIDE_RANGE).distance).toBeGreaterThan(4);
+    expect(dollyCursor(cursor, -40, WIDE_RANGE).distance).toBeLessThan(4);
+  });
+
+  it('never reaches or crosses the focus point, however hard it is dragged', () => {
+    let cursor = cursorAt(0, 0, 4);
+    for (let i = 0; i < 200; i++) cursor = dollyCursor(cursor, -60, WIDE_RANGE);
+    expect(cursor.distance).toBeGreaterThan(0);
+    expect(cursorDirection(cursor).dot(cursorDirection(cursorAt(0, 0, 4)))).toBeCloseTo(1, 9);
+  });
+
+  it('is exactly invertible, so a drag that returns restores the radius', () => {
+    const cursor = cursorAt(0, 0, 4);
+    const there = dollyCursor(cursor, 25, WIDE_RANGE);
+    expect(dollyCursor(there, -25, WIDE_RANGE).distance).toBeCloseTo(4, 9);
+  });
+
+  it('clamps to the range Godot derives from the clip planes', () => {
+    const range = { near: 0.5, far: 400 };
+    expect(scaleCursorDistance(cursorAt(0, 0, 4), 0.0001, range).distance).toBeCloseTo(2, 9);
+    expect(scaleCursorDistance(cursorAt(0, 0, 4), 10000, range).distance).toBeCloseTo(100, 9);
+  });
+
+  it('falls back to the middle of an inverted range', () => {
+    const range = { near: 900, far: 1000 };
+    const distance = scaleCursorDistance(cursorAt(0, 0, 4), 1, range).distance;
+    expect(distance).toBeCloseTo((Math.max(3600, ZOOM_DISTANCE_MIN) + 250) / 2, 9);
+  });
+
+  it('leaves the cursor untouched for a zero drag', () => {
+    const cursor = cursorAt(0, 0, 4);
+    expect(dollyCursor(cursor, 0, WIDE_RANGE)).toBe(cursor);
+  });
+});
+
+describe('wheelZoomScale', () => {
+  it('zooms in on a wheel-up and out on a wheel-down', () => {
+    expect(wheelZoomScale({ deltaY: -100 })).toBeCloseTo(1 / 1.08, 9);
+    expect(wheelZoomScale({ deltaY: 100 })).toBeCloseTo(1.08, 9);
+  });
+
+  it('normalises line- and page-mode deltas to the same notch', () => {
+    // A browser reporting lines sends three per notch, as Firefox does. Reading a line as a ~16px
+    // text line would make this 0.48 of a notch and zoom Firefox at about half Chrome's rate.
+    expect(wheelZoomScale({ deltaY: 3, deltaMode: 1 })).toBeCloseTo(1.08, 9);
+    expect(wheelZoomScale({ deltaY: 1, deltaMode: 2 })).toBeCloseTo(1.08, 9);
+  });
+
+  it('treats a trackpad’s small deltas as a fraction of a notch', () => {
+    const scale = wheelZoomScale({ deltaY: 10 });
+    expect(scale).toBeGreaterThan(1);
+    expect(scale).toBeLessThan(1.08);
+  });
+
+  it('composes: a trackpad’s stream of small events zooms exactly as far as one big one', () => {
+    // A linear factor makes sixteen tiny events overshoot one equivalent event, which is the
+    // mismatch between a mouse and a trackpad.
+    const streamed = Array.from({ length: 16 }, () => wheelZoomScale({ deltaY: 10 })).reduce(
+      (a, b) => a * b,
+      1
+    );
+    expect(streamed).toBeCloseTo(wheelZoomScale({ deltaY: 160 }), 9);
+  });
+
+  it('is symmetric: scrolling back undoes the zoom exactly', () => {
+    expect(wheelZoomScale({ deltaY: 37 }) * wheelZoomScale({ deltaY: -37 })).toBeCloseTo(1, 12);
+  });
+
+  it('caps a single event so a kinetic fling cannot teleport the eye', () => {
+    const capped = WHEEL_ZOOM_MULTIPLIER ** clampWheelNotches(Number.POSITIVE_INFINITY);
+    expect(wheelZoomScale({ deltaY: 100_000 })).toBeCloseTo(capped, 9);
+    expect(wheelZoomScale({ deltaY: -100_000 })).toBeCloseTo(1 / capped, 9);
+  });
+
+  it('is a no-op for a zero delta', () => {
+    expect(wheelZoomScale({ deltaY: 0 })).toBe(1);
+  });
+});
+
+describe('resolveWheelMode', () => {
+  it('zooms unmodified — the mouse wheel’s own Godot binding owns that slot', () => {
+    expect(resolveWheelMode({})).toBe('zoom');
+  });
+
+  it('pans on shift, Godot’s pan-gesture modifier', () => {
+    expect(resolveWheelMode({ shiftKey: true })).toBe('pan');
+  });
+
+  it('zooms on ctrl, which is both Godot’s zoom modifier and a trackpad pinch', () => {
+    expect(resolveWheelMode({ ctrlKey: true })).toBe('zoom');
+    // A pinch reports ctrl. Shift held at the same time must not turn it into a pan, or a
+    // shift-pinch would fly the view off instead of zooming.
+    expect(resolveWheelMode({ ctrlKey: true, shiftKey: true })).toBe('zoom');
+  });
+});
+
+describe('freelookCursor', () => {
+  it('turns the view without moving the eye', () => {
+    const cursor = editorCursor();
+    const looked = freelookCursor(cursor, 45, 20);
+    expect(cursorCameraPosition(looked).distanceTo(cursorCameraPosition(cursor))).toBeLessThan(1e-9);
+    expect(cursorDirection(looked).distanceTo(cursorDirection(cursor))).toBeGreaterThan(0.01);
+  });
+
+  it('drags the focus point around in front of the eye', () => {
+    const cursor = editorCursor();
+    const looked = freelookCursor(cursor, 45, 0);
+    expect(looked.target.distanceTo(cursor.target)).toBeGreaterThan(0);
+    expect(looked.distance).toBeCloseTo(cursor.distance, 9);
+  });
+
+  it('clamps the pitch at the poles like orbiting does', () => {
+    expect(freelookCursor(cursorAt(0, 0), 0, 100000).xRot).toBeCloseTo(X_ROT_LIMIT, 9);
+  });
+});
+
+describe('scaleFreelookSpeed', () => {
+  // Godot's editor camera: `default_z_near` 0.05 and `default_z_far` 4000.
+  const EDITOR_RANGE = { near: 0.05, far: 4000 };
+
+  it('multiplies the speed, as one wheel notch does', () => {
+    expect(scaleFreelookSpeed(5, WHEEL_ZOOM_MULTIPLIER, EDITOR_RANGE)).toBeCloseTo(5.4, 9);
+    expect(scaleFreelookSpeed(5, 1 / WHEEL_ZOOM_MULTIPLIER, EDITOR_RANGE)).toBeCloseTo(4.62963, 5);
+  });
+
+  it('holds the speed between four near planes and a quarter of the far plane', () => {
+    expect(scaleFreelookSpeed(5, 1e-6, EDITOR_RANGE)).toBeCloseTo(0.2, 9);
+    expect(scaleFreelookSpeed(5, 1e6, EDITOR_RANGE)).toBeCloseTo(1000, 9);
+  });
+
+  it('never drops below Godot’s floor or rises above its ceiling', () => {
+    expect(scaleFreelookSpeed(5, 1e-9, { near: 0.0001, far: 1e9 })).toBe(ZOOM_DISTANCE_MIN);
+    expect(scaleFreelookSpeed(5, 1e9, { near: 0.0001, far: 1e9 })).toBe(10000);
+  });
+
+  it('takes the middle of an inverted range', () => {
+    expect(scaleFreelookSpeed(5, 2, { near: 10, far: 20 })).toBe(22.5);
+  });
+});
+
+describe('freelookMoveCursor', () => {
+  const HELD = { forward: true } as const;
+
+  it('flies along the view direction at Godot’s base speed', () => {
+    const cursor = cursorAt(0, 0, 4);
+    const moved = freelookMoveCursor(cursor, HELD, FREELOOK_BASE_SPEED, 0.5);
+    const delta = moved.target.clone().sub(cursor.target);
+    expect(delta.length()).toBeCloseTo(FREELOOK_BASE_SPEED * 0.5, 9);
+    // Forward is -Z at zero rotation.
+    expect(delta.z).toBeCloseTo(-FREELOOK_BASE_SPEED * 0.5, 9);
+  });
+
+  it('carries the eye with the focus point, leaving the view direction alone', () => {
+    const cursor = editorCursor();
+    const moved = freelookMoveCursor(cursor, HELD, FREELOOK_BASE_SPEED, 0.25);
+    const eyeDelta = cursorCameraPosition(moved).sub(cursorCameraPosition(cursor));
+    expect(eyeDelta.distanceTo(moved.target.clone().sub(cursor.target))).toBeLessThan(1e-9);
+    expect(cursorDirection(moved).distanceTo(cursorDirection(cursor))).toBeLessThan(1e-9);
+  });
+
+  it('sprints on Shift', () => {
+    const sprinting = freelookMoveCursor(cursorAt(0, 0), { forward: true, sprint: true }, 2, 0.5);
+    expect(sprinting.target.length()).toBeCloseTo(2 * 0.5 * FREELOOK_SPRINT_MULTIPLIER, 9);
+  });
+
+  it('slows to a third on Alt, and both modifiers multiply', () => {
+    const slow = freelookMoveCursor(cursorAt(0, 0), { forward: true, slow: true }, 2, 0.5);
+    expect(slow.target.length()).toBeCloseTo(2 * 0.5 * FREELOOK_SLOW_MULTIPLIER, 9);
+    const both = freelookMoveCursor(cursorAt(0, 0), { forward: true, sprint: true, slow: true }, 2, 0.5);
+    expect(both.target.length()).toBeCloseTo(
+      2 * 0.5 * FREELOOK_SPRINT_MULTIPLIER * FREELOOK_SLOW_MULTIPLIER,
+      9
+    );
+  });
+
+  it('moves at the speed it is given', () => {
+    const moved = freelookMoveCursor(cursorAt(0, 0), HELD, 12.5, 0.2);
+    expect(moved.target.length()).toBeCloseTo(2.5, 9);
+  });
+
+  it('moves up and down along the camera’s own up axis', () => {
+    const cursor = cursorAt(0, 0);
+    expect(freelookMoveCursor(cursor, { up: true }, FREELOOK_BASE_SPEED, 0.2).target.y).toBeGreaterThan(0);
+    expect(freelookMoveCursor(cursor, { down: true }, FREELOOK_BASE_SPEED, 0.2).target.y).toBeLessThan(0);
+  });
+
+  it('returns the same cursor when nothing is held', () => {
+    const cursor = cursorAt(0, 0);
+    expect(freelookMoveCursor(cursor, {}, FREELOOK_BASE_SPEED, 0.2)).toBe(cursor);
+    expect(freelookMoveCursor(cursor, { sprint: true }, FREELOOK_BASE_SPEED, 0.2)).toBe(cursor);
+  });
+});
+
+describe('viewSnapCursor', () => {
+  const EXPECTED: Record<GodotViewAngle, [number, number, number]> = {
+    front: [0, 0, 1],
+    rear: [0, 0, -1],
+    left: [-1, 0, 0],
+    right: [1, 0, 0],
+    top: [0, 1, 0],
+    bottom: [0, -1, 0],
+  };
+
+  for (const [view, expected] of Object.entries(EXPECTED) as [GodotViewAngle, [number, number, number]][]) {
+    it(`looks at the scene from the ${view}`, () => {
+      const snapped = viewSnapCursor(editorCursor(), view);
+      const direction = cursorDirection(snapped);
+      expect(direction.distanceTo(new THREE.Vector3(...expected))).toBeLessThan(1e-9);
+    });
+  }
+
+  it('keeps the focus point and the radius, so the same content stays framed', () => {
+    const cursor = cursorAt(0.3, 1.1, 12, new THREE.Vector3(4, 5, 6));
+    const snapped = viewSnapCursor(cursor, 'top');
+    expect(snapped.distance).toBe(12);
+    expect(snapped.target.equals(cursor.target)).toBe(true);
+  });
+
+  it('pairs every view with the face across from it', () => {
+    for (const [view, opposite] of Object.entries(OPPOSITE_VIEW) as [GodotViewAngle, GodotViewAngle][]) {
+      const a = cursorDirection(viewSnapCursor(cursorAt(0, 0), view));
+      const b = cursorDirection(viewSnapCursor(cursorAt(0, 0), opposite));
+      expect(a.dot(b)).toBeCloseTo(-1, 9);
+    }
+  });
+});
+
+describe('orthographicHeight', () => {
+  it('matches what the perspective camera sees at the focus point', () => {
+    const distance = 4;
+    const expected = 2 * distance * Math.tan(degToRad(EDITOR_CAMERA_FOV / 2));
+    expect(orthographicHeight(distance, EDITOR_CAMERA_FOV)).toBeCloseTo(expected, 9);
+  });
+
+  it('scales with the zoom radius, which is what makes zoom visible in ortho', () => {
+    expect(orthographicHeight(8, EDITOR_CAMERA_FOV)).toBeCloseTo(
+      2 * orthographicHeight(4, EDITOR_CAMERA_FOV),
+      9
+    );
+  });
+
+  it('collapses to nothing at zero distance', () => {
+    expect(orthographicHeight(0, EDITOR_CAMERA_FOV)).toBe(0);
+  });
+});
+
+describe('resolveNavMode', () => {
+  it('maps the middle button to orbit, shift to pan and ctrl to zoom', () => {
+    expect(resolveNavMode(1, {}, 'perspective')).toBe('orbit');
+    expect(resolveNavMode(1, { shiftKey: true }, 'perspective')).toBe('pan');
+    expect(resolveNavMode(1, { ctrlKey: true }, 'perspective')).toBe('zoom');
+  });
+
+  it('maps the right button to freelook whatever is held', () => {
+    expect(resolveNavMode(2, {}, 'perspective')).toBe('freelook');
+    expect(resolveNavMode(2, { shiftKey: true }, 'perspective')).toBe('freelook');
+  });
+
+  it('pans on the right button in orthographic view, where Godot has no freelook', () => {
+    expect(resolveNavMode(2, {}, 'orthographic')).toBe('pan');
+    expect(resolveNavMode(1, {}, 'orthographic')).toBe('orbit');
+  });
+
+  it('emulates the middle button on alt+left', () => {
+    expect(resolveNavMode(0, { altKey: true }, 'perspective')).toBe('orbit');
+    expect(resolveNavMode(0, { altKey: true, shiftKey: true }, 'perspective')).toBe('pan');
+  });
+
+  it('leaves plain left-drag to viewport selection', () => {
+    expect(resolveNavMode(0, {}, 'perspective')).toBeNull();
+    expect(resolveNavMode(0, { shiftKey: true }, 'perspective')).toBeNull();
+    expect(resolveNavMode(3, { altKey: true }, 'perspective')).toBeNull();
+  });
+});

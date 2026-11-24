@@ -14,14 +14,14 @@ vi.mock('@react-three/fiber', async (importOriginal) => ({
 }));
 
 // Canvas2DStage.test.tsx covers the stage. This records what the view hands it.
-vi.mock('./components/Canvas2DStage/Canvas2DStage', () => ({
+vi.mock('./editorView/Canvas2DStage/Canvas2DStage', () => ({
   Canvas2DStage: ({ nodes, scenePath }: { nodes: readonly { name: string }[]; scenePath: string }) => (
     <div data-testid="stage-2d" data-roots={nodes.map((node) => node.name).join(',')} data-path={scenePath} />
   ),
 }));
 
 // FreelookSpeedReadout.test.tsx covers the readout. This records where the view draws it.
-vi.mock('./components/FreelookSpeedReadout/FreelookSpeedReadout', () => ({
+vi.mock('./editorView/FreelookSpeedReadout/FreelookSpeedReadout', () => ({
   FreelookSpeedReadout: () => <div data-testid="speed-readout" />,
 }));
 

@@ -9,7 +9,6 @@ vi.mock('../../TscnCanvas', () => ({
     view.selected = props.selected;
     return <canvas data-testid="view" tabIndex={-1} />;
   },
-  TscnSceneContents: () => null,
 }));
 
 import { openScene } from '../../../scene/openScene';

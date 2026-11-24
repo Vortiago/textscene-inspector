@@ -4,7 +4,7 @@ import { act, render } from '@testing-library/react';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { ResourceProvider } from '../resources/ResourceProvider';
 import { TscnSceneProvider } from './TscnSceneProvider';
-import { TscnSceneContents } from './TscnCanvas';
+import { TscnSceneContents } from './SceneContents';
 import { useHierarchy } from './contexts/HierarchyContext';
 import { useLiveNode } from './useLiveSceneTree';
 import { openScene, type Scene } from '../scene/openScene';

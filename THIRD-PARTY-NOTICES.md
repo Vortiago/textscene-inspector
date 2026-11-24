@@ -306,7 +306,7 @@ Beyond the transcriptions above, property defaults, enum values, default colours
 editor constants are read from Godot source throughout the codebase and cited per file at
 the point of use, for example `nodes/physics/shared/debugColor.ts`,
 `resources/sky/decode.ts`, `resources/textures/gradienttexture2d/parser.ts`,
-`resources/tileset/tilePlacement.ts` and `r3f/godotEditorCamera.ts`.
+`resources/tileset/tilePlacement.ts` and `r3f/editorView/godotEditorCamera.ts`.
 
 ### Vendored theme icons
 
@@ -387,7 +387,7 @@ Licensed under the same Godot Engine MIT licence below.
 
 ### Vendored viewport icon
 
-`packages/textscene-core/src/r3f/components/FreelookSpeedReadout/viewportSpeedIcon.ts` embeds an unmodified copy of `editor/icons/ViewportSpeed.svg`, the icon Godot 4.6.3's 3D editor draws under its freelook speed bar, base64-encoded the same way. It is a Godot Engine file under the same MIT licence below.
+`packages/textscene-core/src/r3f/editorView/FreelookSpeedReadout/viewportSpeedIcon.ts` embeds an unmodified copy of `editor/icons/ViewportSpeed.svg`, the icon Godot 4.6.3's 3D editor draws under its freelook speed bar, base64-encoded the same way. It is a Godot Engine file under the same MIT licence below.
 
 ### Vendored node icons
 

@@ -8,7 +8,6 @@ import userEvent from '@testing-library/user-event';
 
 vi.mock('../../TscnCanvas', () => ({
   TscnCanvas: () => <div data-testid="canvas-stub" />,
-  TscnSceneContents: () => null,
 }));
 
 import { TextShell } from './TscnPreviewShell.testkit';

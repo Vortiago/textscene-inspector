@@ -13,7 +13,7 @@ import type { LiveTreeEntry } from '../../liveSceneTree.js';
 import { GameCameraRows } from './GameCameraRows.js';
 import { usePreviewCamera } from './previewCamera.js';
 import { usePreviewView } from './previewView.js';
-import { warnOfCameraFailure } from '../../editorCamera/editorCameras.js';
+import { warnOfCameraFailure } from '../../editorView/editorCamera/editorCameras.js';
 import { variantOf } from '../../../scene/variant.js';
 import { VARIANT_TYPE as T } from '../../../godot/variant/variantType.js';
 import styles from './TscnPreviewShell.module.css';
