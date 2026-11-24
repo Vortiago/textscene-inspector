@@ -1,8 +1,3 @@
-/**
- * "F" frames the selected node through resolveFrameTarget and frameSceneBounds, or the
- * whole scene without a selection, and isTypingTarget keeps "f" in a text field.
- * frameSceneBounds' maths is pinned in TscnCanvas.test.tsx. This proves the wiring.
- */
 import { useEffect, useState } from 'react';
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -11,18 +6,17 @@ import * as THREE from 'three';
 import { SelectionProvider, useSelection } from './contexts/SelectionContext';
 import { ViewportActionsProvider } from './contexts/ViewportActionsContext';
 import { GodotEditorControls } from './GodotEditorControls';
-import { FrameSelectedShortcut } from './FrameSelectedShortcut';
+import { EditorControlsHandle } from './EditorControlsHandle';
+import { FocusShortcuts } from './FocusShortcuts';
 import { SelectSeeder } from './testing/SelectSeeder';
-import { openScene } from '../scene/openScene';
-import './sceneLiveTree.js';
-import {
-  PreviewSelectionProvider,
-  usePreviewSelection,
-} from './components/TscnPreviewShell/previewSelection';
 
 let camera: THREE.Camera;
+let view: HTMLCanvasElement;
+let controls: unknown;
 function CameraCapture() {
   camera = useThree((s) => s.camera);
+  view = useThree((s) => s.gl.domElement);
+  controls = useThree((s) => s.controls);
   return null;
 }
 
@@ -43,11 +37,14 @@ function RegisteredMesh({ path, position }: { path: string; position: [number, n
   return <primitive object={mesh} />;
 }
 
-function fireF() {
-  globalThis.window.dispatchEvent(new KeyboardEvent('keydown', { key: 'f', bubbles: true }));
+/** A key pressed while the view holds focus. */
+function press(key: string) {
+  view.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
 }
 
-describe('<FrameSelectedShortcut> (#224)', () => {
+const fireF = () => press('f');
+
+describe('<FocusShortcuts> F', () => {
   it('frames the SELECTED node, not the whole scene', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <SelectionProvider>
@@ -55,7 +52,7 @@ describe('<FrameSelectedShortcut> (#224)', () => {
         <RegisteredMesh path="Near" position={[0, 0, 0]} />
         <RegisteredMesh path="Far" position={[80, 0, 0]} />
         <SelectSeeder path="Far" />
-        <FrameSelectedShortcut />
+        <FocusShortcuts />
       </SelectionProvider>
     );
 
@@ -68,45 +65,22 @@ describe('<FrameSelectedShortcut> (#224)', () => {
     expect(camera.position.x).toBeGreaterThan(60);
   });
 
-  it('frames the selected node, not the hovered row the view outlines', async () => {
-    const scene = openScene({
-      source: `[gd_scene format=3]
-
-[node name="Main" type="Node3D"]
-
-[node name="Near" type="Node3D" parent="."]
-
-[node name="Far" type="Node3D" parent="."]
-`,
-      provider: { loadResource: async () => null },
-    });
-    function SelectFarHoverNear() {
-      const preview = usePreviewSelection();
-      useEffect(() => {
-        preview?.selectPath('Main/Far');
-        preview?.hoverPath('Main/Near');
-      }, [preview]);
-      return null;
-    }
+  it('hears no F that reaches the page outside the view', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <SelectionProvider>
-        <PreviewSelectionProvider scene={scene}>
-          <CameraCapture />
-          <RegisteredMesh path="Main/Near" position={[0, 0, 0]} />
-          <RegisteredMesh path="Main/Far" position={[80, 0, 0]} />
-          <SelectFarHoverNear />
-          {/* The view outlines the hovered row, as HostSelection writes it. */}
-          <SelectSeeder path="Main/Near" />
-          <FrameSelectedShortcut />
-        </PreviewSelectionProvider>
+        <CameraCapture />
+        <RegisteredMesh path="Far" position={[80, 0, 0]} />
+        <SelectSeeder path="Far" />
+        <FocusShortcuts />
       </SelectionProvider>
     );
-
     await renderer.advanceFrames(1, 0);
-    fireF();
+    const before = camera.position.clone();
+
+    globalThis.document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'f', bubbles: true }));
     await renderer.advanceFrames(1, 0);
 
-    expect(camera.position.x).toBeGreaterThan(60);
+    expect(camera.position.equals(before)).toBe(true);
   });
 
   it('frames the WHOLE scene when nothing is selected', async () => {
@@ -116,7 +90,7 @@ describe('<FrameSelectedShortcut> (#224)', () => {
         <RegisteredMesh path="Near" position={[0, 0, 0]} />
         <RegisteredMesh path="Far" position={[80, 0, 0]} />
         <SelectSeeder path={null} />
-        <FrameSelectedShortcut />
+        <FocusShortcuts />
       </SelectionProvider>
     );
 
@@ -140,7 +114,7 @@ describe('<FrameSelectedShortcut> (#224)', () => {
         <CameraCapture />
         <RegisteredMesh path="Near" position={[0, 0, 0]} />
         <SelectSeeder path="Near" />
-        <FrameSelectedShortcut />
+        <FocusShortcuts />
       </SelectionProvider>
     );
     await renderer.advanceFrames(1, 0);
@@ -169,7 +143,7 @@ describe('<FrameSelectedShortcut> (#224)', () => {
         <RegisteredMesh path="Far" position={[80, 0, 0]} />
         <SelectSeeder path="Far" />
         <PreviewAuthoredCamera />
-        <FrameSelectedShortcut />
+        <FocusShortcuts />
       </SelectionProvider>
     );
     await renderer.advanceFrames(1, 0);
@@ -189,7 +163,7 @@ describe('<FrameSelectedShortcut> (#224)', () => {
           <GodotEditorControls />
           <RegisteredMesh path="Far" position={[80, 0, 0]} />
           <SelectSeeder path="Far" />
-          <FrameSelectedShortcut />
+          <FocusShortcuts />
         </ViewportActionsProvider>
       </SelectionProvider>
     );
@@ -208,15 +182,63 @@ describe('<FrameSelectedShortcut> (#224)', () => {
         <CameraCapture />
         <RegisteredMesh path="Near" position={[0, 0, 0]} />
         <SelectSeeder path="Near" />
-        <FrameSelectedShortcut />
+        <FocusShortcuts />
       </SelectionProvider>
     );
     await renderer.advanceFrames(1, 0);
     const before = camera.position.clone();
 
-    globalThis.window.dispatchEvent(new KeyboardEvent('keydown', { key: 'g', bubbles: true }));
+    press('g');
     await renderer.advanceFrames(1, 0);
 
     expect(camera.position.equals(before)).toBe(true);
+  });
+});
+
+describe('<FocusShortcuts> O', () => {
+  const authored = new THREE.PerspectiveCamera(75, 1, 0.1, 100);
+  function PreviewAuthoredCamera() {
+    const set = useThree((s) => s.set);
+    useEffect(() => set({ camera: authored }), [set]);
+    return null;
+  }
+
+  async function mountOrbit({ isPreviewing = false } = {}) {
+    const renderer = await ReactThreeTestRenderer.create(
+      <SelectionProvider>
+        <CameraCapture />
+        <GodotEditorControls />
+        {isPreviewing && <PreviewAuthoredCamera />}
+        <FocusShortcuts />
+      </SelectionProvider>
+    );
+    await renderer.advanceFrames(1, 0);
+    if (!(controls instanceof EditorControlsHandle))
+      throw new Error('expected the editor controls, got none');
+    controls.applyCursor({ ...controls.cursor(), target: new THREE.Vector3(5, 2, -3) });
+    return { renderer, handle: controls };
+  }
+
+  it('puts the focus point at the origin and keeps the angles and the distance', async () => {
+    const { renderer, handle } = await mountOrbit();
+    const before = handle.cursor();
+
+    press('o');
+    await renderer.advanceFrames(1, 0);
+
+    const after = handle.cursor();
+    expect(after.target.toArray()).toEqual([0, 0, 0]);
+    expect(after.distance).toBeCloseTo(before.distance, 6);
+    expect(after.xRot).toBeCloseTo(before.xRot, 6);
+    expect(after.yRot).toBeCloseTo(before.yRot, 6);
+  });
+
+  it('does nothing while a Camera3D is previewed', async () => {
+    const { renderer, handle } = await mountOrbit({ isPreviewing: true });
+
+    press('o');
+    await renderer.advanceFrames(1, 0);
+
+    expect(handle.cursor().target.toArray()).toEqual([5, 2, -3]);
   });
 });

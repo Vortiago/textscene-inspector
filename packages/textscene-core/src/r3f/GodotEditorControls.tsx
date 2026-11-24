@@ -12,9 +12,9 @@ import { useEffect, useMemo } from 'react';
 import { EditorControlsHandle } from './EditorControlsHandle.js';
 import { useEditorNavigation } from './useEditorNavigation.js';
 import { useFreelook } from './useFreelook.js';
+import { useFocusOnPointerEnter } from './viewFocus.js';
 
-// No damping: Godot's `orbit_inertia` and `freelook_inertia` default to 0, and a camera that
-// stops dead settles at once for the capture harnesses. F belongs to `<FrameSelectedShortcut>`.
+// No damping: Godot's `orbit_inertia` and `freelook_inertia` default to 0, so a capture settles at once.
 export function GodotEditorControls() {
   const gl = useThree((s) => s.gl);
   const size = useThree((s) => s.size);
@@ -49,6 +49,7 @@ export function GodotEditorControls() {
   // Touch has no Godot equivalent, so it follows the 3D-viewer convention: one finger
   // orbits, a one-finger tap selects (by distance travelled), two fingers pan and pinch
   // zooms. Alt+left is Godot's "Emulate 3 Button Mouse", always on, for trackpads.
+  useFocusOnPointerEnter(gl.domElement);
   useEditorNavigation(gl, handle, invalidate, get);
   useFreelook(gl, handle, invalidate, get);
 

@@ -12,11 +12,14 @@ import { GodotEditorControls } from './GodotEditorControls';
 type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 /** Written only by `mountEditorControls`, cleared by `unmountEditorControls`. */
-const mounted = new Set<Renderer>();
+const mounted = new Map<Renderer, HTMLCanvasElement>();
 
 /** For `afterEach`: every canvas a test mounted unmounts, so no window listener leaks. */
 export async function unmountEditorControls(): Promise<void> {
-  for (const renderer of mounted) await act(async () => renderer.unmount());
+  for (const [renderer, element] of mounted) {
+    await act(async () => renderer.unmount());
+    element.remove();
+  }
   mounted.clear();
 }
 
@@ -28,8 +31,10 @@ export async function mountEditorControls() {
       <GodotEditorControls />
     </>
   );
-  mounted.add(renderer);
   const state = get();
+  // On the page, as a browser's canvas is, so a key sent to it bubbles to `window`.
+  document.body.appendChild(state.gl.domElement);
+  mounted.set(renderer, state.gl.domElement);
   const controls = state.controls;
   if (!(controls instanceof EditorControlsHandle)) {
     throw new Error('controls were not published to the R3F store');
@@ -54,15 +59,27 @@ export function drag(
   element.dispatchEvent(new PointerEvent('pointerup', { ...common, button }));
 }
 
-/** A keydown from the page's body, as a key pressed with no field focused. Returns the event. */
+/** The canvas a key goes to: the one mounted last, as the view the pointer entered holds focus. */
+function focusedView(): EventTarget {
+  return [...mounted.values()].at(-1) ?? document.body;
+}
+
+/** A keydown in the focused view. Returns the event. */
 export function keyDown(code: string, init: KeyboardEventInit = {}): KeyboardEvent {
+  const event = new KeyboardEvent('keydown', { code, bubbles: true, cancelable: true, ...init });
+  focusedView().dispatchEvent(event);
+  return event;
+}
+
+/** A keydown from the page's body, as a key pressed while no view holds focus. Returns the event. */
+export function keyDownOnPage(code: string, init: KeyboardEventInit = {}): KeyboardEvent {
   const event = new KeyboardEvent('keydown', { code, bubbles: true, cancelable: true, ...init });
   document.body.dispatchEvent(event);
   return event;
 }
 
 export function keyUp(code: string, init: KeyboardEventInit = {}): void {
-  document.body.dispatchEvent(new KeyboardEvent('keyup', { code, bubbles: true, cancelable: true, ...init }));
+  focusedView().dispatchEvent(new KeyboardEvent('keyup', { code, bubbles: true, cancelable: true, ...init }));
 }
 
 export async function pressKey(code: string, init: KeyboardEventInit = {}): Promise<void> {

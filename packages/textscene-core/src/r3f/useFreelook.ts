@@ -10,6 +10,7 @@ import { isFreelookToggleKey } from './editorKeyBindings.js';
 import type { Freelook, FreelookControl } from './freelook.js';
 import { freelookCursor } from './godotEditorCursor.js';
 import { isTypingTarget } from './hooks/isTypingTarget.js';
+import { isViewKeyEvent } from './viewFocus.js';
 import { exitPointerLock, holdsPointerLock, requestPointerLock } from './pointerLock.js';
 
 /** A lone Alt keyup opens the menu bar on Windows and Linux, which would take the keyboard mid-flight. */
@@ -32,7 +33,6 @@ function toggleFreelook(handle: EditorControlsHandle, get: RootState['get']): vo
   }
   if (!handle.canFreelook(state.camera)) return;
   // Focus leaves the control that started the toggle: Space would press a focused button.
-  element.tabIndex = -1;
   element.focus({ preventScroll: true });
   requestPointerLock(element);
 }
@@ -53,6 +53,7 @@ function handleKeyDown(event: KeyboardEvent, handle: EditorControlsHandle, get: 
   // so no other shortcut of the page hears a key.
   if (freelook.isActive) event.stopImmediatePropagation();
   if (isFreelookToggleKey(event)) {
+    if (!isViewKeyEvent(event, get().gl.domElement)) return;
     event.preventDefault();
     if (!event.repeat) toggleFreelook(handle, get);
     return;

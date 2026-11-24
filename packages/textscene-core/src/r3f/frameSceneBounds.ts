@@ -1,7 +1,3 @@
-/**
- * Camera-framing math shared by the auto-fit (`CameraFit`) and the F-to-frame shortcut. A leaf
- * module, since `TscnCanvas` mounts `FrameSelectedShortcut`, which must not import back from it.
- */
 import * as THREE from 'three';
 import { EDITOR_CAMERA_FOV, editorCameraDirection } from './godotEditorCamera.js';
 import { computeWorldBoundingBox, frameBoxOf } from './bounds.js';

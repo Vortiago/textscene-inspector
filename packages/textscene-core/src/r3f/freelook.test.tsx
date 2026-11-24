@@ -4,10 +4,12 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
+import { act } from '@react-three/test-renderer';
 import { degToRad } from '../godot/math/math';
 import {
   drag,
   keyDown,
+  keyDownOnPage,
   keyUp,
   mountEditorControls,
   pressKey,
@@ -323,6 +325,16 @@ describe('toggled freelook', () => {
     input.dispatchEvent(
       new KeyboardEvent('keydown', { code: 'KeyF', key: 'F', shiftKey: true, bubbles: true })
     );
+
+    expect(holdsPointerLock(element)).toBe(false);
+  });
+
+  it('does not start from a Shift+F that reaches the page outside the view', async () => {
+    const { element } = await mountFreelook();
+
+    await act(async () => {
+      keyDownOnPage('KeyF', { key: 'F', shiftKey: true });
+    });
 
     expect(holdsPointerLock(element)).toBe(false);
   });
