@@ -100,6 +100,13 @@ describe('the readers of a live node and the live node patches', () => {
     expect(readersWithoutPatches(files, new Map())).toEqual([]);
   });
 
+  it('accepts a reader that places the nodes through the solved patches', () => {
+    const files = new Map([
+      ['r3f/Gizmo.tsx', `${READS_LIVE_NODE}const placed = livePlacements(tree, loader);\n`],
+    ]);
+    expect(readersWithoutPatches(files, new Map())).toEqual([]);
+  });
+
   it('accepts a reader with a stated reason', () => {
     const files = new Map([['r3f/Gizmo.tsx', READS_LIVE_NODE]]);
 

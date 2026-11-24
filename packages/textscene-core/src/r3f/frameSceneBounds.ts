@@ -1,7 +1,3 @@
-/**
- * Camera-framing math shared by the auto-fit (`CameraFit`) and the F-to-frame shortcut. A leaf
- * module, since `TscnCanvas` mounts `FrameSelectedShortcut`, which must not import back from it.
- */
 import * as THREE from 'three';
 import { EDITOR_CAMERA_FOV, editorCameraDirection } from './godotEditorCamera.js';
 import { computeWorldBoundingBox, frameBoxOf } from './bounds.js';
@@ -101,8 +97,7 @@ export function frameSceneBounds(
   // The only orthographic camera here is the editor camera's Numpad-5 projection, sized from the same
   // 70-degree field of view; three's 50-degree default would zoom it out by half again.
   const persp = camera as THREE.PerspectiveCamera;
-  const fov = degToRad(persp.isPerspectiveCamera ? persp.fov : EDITOR_CAMERA_FOV);
-  const distance = (maxDim / 2 / Math.tan(fov / 2) || maxDim) * FRAME_MARGIN;
+  const distance = (maxDim / 2 / fitTangent(persp) || maxDim) * FRAME_MARGIN;
 
   // Godot's editor viewing angle, so a scene presents the face it does in the editor, a coplanar
   // scene included: Godot's reference camera frames it obliquely, never head-on.
@@ -120,4 +115,11 @@ export function frameSceneBounds(
     controls.target.copy(center);
     controls.update?.();
   }
+}
+
+/** The tangent of the narrower half angle, so a view taller than it is wide still holds the box. */
+function fitTangent(camera: THREE.PerspectiveCamera): number {
+  const verticalTangent = Math.tan(degToRad(camera.isPerspectiveCamera ? camera.fov : EDITOR_CAMERA_FOV) / 2);
+  const aspect = camera.isPerspectiveCamera ? camera.aspect : 1;
+  return verticalTangent * Math.min(1, aspect);
 }

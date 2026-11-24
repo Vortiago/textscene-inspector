@@ -3,6 +3,7 @@
  * NodeRegistry. Re-registering a typeName overwrites without a warning, for HMR.
  */
 
+import type { Rect2 } from '../godot/math/rect2';
 import type React from 'react';
 import type { TscnNode } from '../parser/types';
 import { createTypeRegistry } from '../core/createTypeRegistry';
@@ -78,6 +79,8 @@ export interface NodeComponentRegistration {
    * its pose. The type also registers a `live` scene pass, because the edit reads other nodes.
    */
   poseModifier?: PoseModifierReader;
+  /** `_edit_get_rect` of a 2D type that draws nothing, off its properties. Null is `_edit_use_rect` false. */
+  editRect?: (raw: Readonly<Record<string, string>>) => Rect2 | null;
 }
 
 export interface YSortGroupDescription {
@@ -182,6 +185,10 @@ class NodeComponentRegistryImpl {
   /** The pose modifier reader of a type, or undefined when it is not a SkeletonModifier3D. */
   poseModifierOf(typeName: string): PoseModifierReader | undefined {
     return this.registry.get(typeName)?.poseModifier;
+  }
+
+  editRectOf(typeName: string): NodeComponentRegistration['editRect'] {
+    return this.registry.get(typeName)?.editRect;
   }
 
   getYSortGroup(typeName: string): YSortGroupRegistration | undefined {

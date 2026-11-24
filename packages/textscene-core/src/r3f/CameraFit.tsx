@@ -14,12 +14,7 @@ function zoomOf(camera: THREE.Camera): number {
   return (camera as THREE.PerspectiveCamera | THREE.OrthographicCamera).zoom ?? 1;
 }
 
-/**
- * Frames the scene on load when `frameOnOpen` is on, with no camera preview. It is
- * off by default, since Godot's editor opens at a fixed orbit and leaves framing
- * to F. A short settle window catches async content without fighting the orbit.
- * A selection never moves the camera: FrameSelectedShortcut re-frames on request.
- */
+// Off by default: Godot's editor opens at a fixed orbit, framed only on F (node_3d_editor_plugin.h:420-426).
 export function CameraFit() {
   const hierarchy = useOptionalHierarchy();
   const { frameOnOpen } = useViewportMode();

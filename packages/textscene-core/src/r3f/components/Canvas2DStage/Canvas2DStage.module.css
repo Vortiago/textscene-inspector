@@ -19,7 +19,8 @@
   top: 0;
   left: 0;
   transform-origin: 0 0;
-  box-shadow: 0 0 0 1px rgba(102, 102, 255, 0.4);
+  /* One screen pixel at every zoom, as Godot's viewport rect is. */
+  box-shadow: 0 0 0 calc(1px / var(--tsi-stage-zoom, 1)) rgba(102, 102, 255, 0.4);
   pointer-events: none;
 }
 
@@ -53,10 +54,14 @@
   transform-origin: 0 0;
 }
 
+/* Undoes the frame's scale, so the label keeps its size at every zoom. */
 .canvasDim {
   position: absolute;
-  top: -22px;
+  bottom: 100%;
   left: 0;
+  transform-origin: 0 100%;
+  padding-bottom: 6px;
+  transform: scale(calc(1 / var(--tsi-stage-zoom, 1)));
   font-family: var(--tsi-font-mono);
   font-size: var(--tsi-font-xs);
   color: var(--tsi-fg-faint);
@@ -68,8 +73,11 @@
   bottom: var(--tsi-space-3);
   left: 50%;
   transform: translateX(-50%);
+  box-sizing: border-box;
+  width: var(--tsi-bottom-centre-width);
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--tsi-space-1);
   background: var(--tsi-bg-elevated);
   border: 1px solid var(--tsi-border);

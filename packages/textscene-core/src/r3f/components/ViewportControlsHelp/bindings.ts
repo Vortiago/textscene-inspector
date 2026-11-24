@@ -173,7 +173,8 @@ const CONTROLS_3D: ControlsHelp = {
     {
       device: 'Keyboard',
       bindings: [
-        { input: 'F', action: 'Frame the selection — also lets you zoom closer in' },
+        { input: 'F', action: 'Frame the selection, which also lets you zoom closer in' },
+        { input: 'O', action: 'Orbit around the origin' },
         {
           input: 'Numpad 1 / 3 / 7',
           action: 'Front / right / top view; Ctrl for the opposite',
@@ -245,6 +246,13 @@ const CONTROLS_2D: ControlsHelp = {
           input: '− / + / Fit',
           action: 'Zoom out, in, or fit the viewport rectangle',
         },
+      ],
+    },
+    {
+      device: 'Keyboard',
+      bindings: [
+        { input: 'F', action: 'Centre the selection' },
+        { input: 'Shift + F', action: 'Frame the selection' },
       ],
     },
     {

@@ -10,6 +10,8 @@ import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { useNodeReference } from '../../../resources/reading';
 import type { ViewSampler } from '../../../resources/textures/textureView';
+import { usePublishEditRect } from '../../../r3f/editRect/editRects';
+import { pointLight2DEditRect } from './editRect';
 import { useTextureView } from '../../../r3f/useTextureView';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import type { PointLight2DProperties } from './types';
@@ -34,6 +36,7 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
   const slot = useTexture2D(useNodeReference(props.texture, scope), 'plain');
   // A light that draws no quad makes no view: it would clone and upload a light texture nothing draws.
   const cookie = useTextureView(isEnabled && !slot.missing ? slot.texture : null, COOKIE_SAMPLER);
+  usePublishEditRect(pointLight2DEditRect(slot.size, props.texture_scale, props.offset));
 
   // A disabled light still draws its children: `enabled` switches the light alone. With no light
   // texture, also one whose file fails to load, the light adds nothing and draws nothing, as Godot's

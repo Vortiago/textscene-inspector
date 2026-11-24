@@ -9,10 +9,15 @@ import { CanvasMeshItem } from '../../../r3f/components/CanvasMeshItem';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useMeshInstanceContent } from '../../3d/meshinstance3d/Component';
 import type { MeshInstance2DProperties } from './types';
+import { useMeshAabb } from '../../3d/meshinstance3d/meshAabb';
+import { usePublishEditRect } from '../../../r3f/editRect/editRects';
+import { meshInstance2DEditRect } from './editRect';
 
 export function MeshInstance2D({ node, children }: NodeComponentProps) {
   const props = node.properties as MeshInstance2DProperties;
-  const content = useMeshInstanceContent(props.mesh, useSceneResources());
+  const resources = useSceneResources();
+  const content = useMeshInstanceContent(props.mesh, resources);
+  usePublishEditRect(meshInstance2DEditRect(useMeshAabb(props.mesh, resources)));
 
   return (
     <CanvasMeshItem node={node} props={props} mesh={content.kind === 'surfaced' ? content.mesh : null}>

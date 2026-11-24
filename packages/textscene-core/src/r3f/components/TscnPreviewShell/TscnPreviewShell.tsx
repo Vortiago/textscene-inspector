@@ -5,7 +5,7 @@
  * A narrow panel turns the dock into a bottom sheet that shows one half at a time
  * (ADR-0048).
  */
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import {
   DEFAULT_VIEWPORT,
   FRAME_ON_OPEN_STORAGE_KEY,
@@ -45,7 +45,7 @@ import { previewShellProviders } from './previewShellProviders.js';
 import { useSceneLoader } from '../../sceneResourcePipeline.js';
 import { CaptureStateReporter } from './CaptureStateReporter.js';
 import { PreviewCameraProvider } from './previewCamera.js';
-import { PreviewSelectionProvider } from './previewSelection.js';
+import { HoverReleasesViewFocus, PreviewSelectionProvider } from './previewSelection.js';
 import { useViewSettle } from './viewSettle.js';
 import {
   PreviewViewStatusProvider,
@@ -94,6 +94,7 @@ export function TscnPreviewShell({
   const hierarchyValue = useMemo(() => ({ sceneGraph, panelId, scene }), [sceneGraph, panelId, scene]);
   const [viewportError, setViewportError] = useState<Error | null>(null);
   const [view, setView] = useState<ViewAnswers | null>(null);
+  const viewArea = useRef<HTMLElement>(null);
   const heard = useHeardStatus();
   const settle = useViewSettle(scene, view, useHeardSettle(heard));
   // A crashed view reports no more, so its last status would hold the chips and notes up for good.
@@ -148,6 +149,7 @@ export function TscnPreviewShell({
   return withProviders(
     <PreviewCameraProvider scene={scene} initialCamera={initialPreviewedCameraPath}>
       <PreviewSelectionProvider scene={scene} selected={selected} onSelect={onSelect}>
+        <HoverReleasesViewFocus viewArea={viewArea} />
         {/* A host-forced mode turns auto-select off, or the root's claim overrides it. */}
         {initialViewportMode === undefined && <WorkspaceAutoSelect scene={scene} />}
         <SceneChangeResetter sceneGraph={parsedGraph} />
@@ -176,7 +178,7 @@ export function TscnPreviewShell({
           )}
           <div className={styles.columns}>
             {/* The view takes all width left of the dock, in every mode. */}
-            <main className={styles.center} aria-label="Viewport">
+            <main className={styles.center} aria-label="Viewport" ref={viewArea}>
               {/* Over the viewport, not the header: .viewportToolbarOverlay says why. */}
               <div className={styles.viewportToolbarOverlay} data-testid="viewport-toolbar-overlay">
                 <ViewportToolbar view={view} />

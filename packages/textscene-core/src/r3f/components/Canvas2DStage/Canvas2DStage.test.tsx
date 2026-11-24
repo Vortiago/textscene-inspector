@@ -5,6 +5,7 @@
  * which has its own suites; this one only covers the stage chrome around it.
  */
 import { useState } from 'react';
+import { sizeEveryElement } from '../../testing/sizeEveryElement';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, type RenderResult } from '@testing-library/react';
 
@@ -62,19 +63,6 @@ import { FIT_ON_OPEN_2D_STORAGE_KEY } from './viewport2d';
 import type { TscnNode } from '../../../parser/types';
 
 /** happy-dom reports a zero-sized rect, and `fit()` returns early on one. */
-function sizeEveryElement(width: number, height: number) {
-  return vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
-    width,
-    height,
-    left: 0,
-    top: 0,
-    right: width,
-    bottom: height,
-    x: 0,
-    y: 0,
-  } as DOMRect);
-}
-
 afterEach(() => {
   vi.restoreAllMocks();
   // Read once at mount, so a leaked value silently changes the next test's
@@ -169,15 +157,35 @@ describe('<Canvas2DStage>', () => {
     expect(zoomLabel()).toBe('100%');
   });
 
-  it('clamps HUD zoom to the 400% max and 10% min', () => {
+  it('starts no drag from a press on the HUD, so its pointer stays with the button', () => {
+    renderStage();
+    const capture = vi.spyOn(HTMLElement.prototype, 'setPointerCapture');
+
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Zoom in' }), { button: 0, pointerId: 1 });
+
+    expect(capture).not.toHaveBeenCalled();
+  });
+
+  it("clamps HUD zoom to Godot's 12800% max", () => {
     renderStage();
     const zoomIn = screen.getByRole('button', { name: 'Zoom in' });
-    for (let i = 0; i < 20; i++) fireEvent.click(zoomIn);
-    expect(zoomLabel()).toBe('400%');
+    for (let i = 0; i < 40; i++) fireEvent.click(zoomIn);
+    expect(zoomLabel()).toBe('12800%');
+  });
 
+  it("clamps HUD zoom to Godot's 1/128 min, in hundredths of a percent", () => {
+    renderStage();
     const zoomOut = screen.getByRole('button', { name: 'Zoom out' });
     for (let i = 0; i < 40; i++) fireEvent.click(zoomOut);
-    expect(zoomLabel()).toBe('10%');
+    expect(zoomLabel()).toBe('0.78%');
+  });
+
+  it('shows tenths of a percent between 10% and 1000%', () => {
+    renderStage();
+    const zoomOut = screen.getByRole('button', { name: 'Zoom out' });
+    for (let i = 0; i < 3; i++) fireEvent.click(zoomOut);
+    // 1 / 1.2^3 = 0.5787...
+    expect(zoomLabel()).toBe('57.9%');
   });
 
   it('wheel-up zooms in, wheel-down zooms back out (native non-passive listener)', () => {
@@ -436,7 +444,7 @@ describe('<Canvas2DStage>', () => {
     sizeEveryElement(800, 600);
     const { frame } = renderStage();
     // zoom = min((800−56)/1152, (600−56)/648) = 0.6458…, centred in the stage.
-    expect(zoomLabel()).toBe('65%');
+    expect(zoomLabel()).toBe('64.6%');
     expect(frame.style.transform).toMatch(/scale\(0\.645/);
   });
 

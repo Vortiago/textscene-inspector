@@ -220,9 +220,11 @@ the control, with the speed on screen.
 ### Consequences
 
 - `TscnCanvas` takes every key while freelook is on, through one capture-phase listener on
-  `window`. `Shift+F` starts the toggle on any page that embeds `@textscene/renderer`.
-- `useGlobalShortcut` reads Shift with a letter as a chord of its own, so `Shift+F` does not also
-  frame the selection, which is F's job.
+  `window`. `Shift+F` starts the toggle only from the focused editor view, which takes focus as
+  Godot's viewport does (`FOCUS_ALL`, `node_3d_editor_plugin.cpp:6151`): on pointer enter, a click
+  or Tab. A page that embeds `@textscene/renderer` hears no view key while its own control has focus.
+- F, O and `Shift+F` match the physical key (`KeyF`, `KeyO`), with Shift a chord of its own, so
+  `Shift+F` does not also frame the selection, which is F's job.
 - Leaving freelook on Escape does not also clear the selection, in any event order. Chromium 153
   ends the lock and sends the page no keydown, measured with a `window` listener in each phase.
   For a browser that sends the keydown after `pointerlockchange`, freelook keeps an Escape that

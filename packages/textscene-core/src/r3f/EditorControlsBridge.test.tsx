@@ -9,7 +9,7 @@ import { HierarchyProvider } from './contexts/HierarchyContext';
 import { ViewportActionsProvider } from './contexts/ViewportActionsContext';
 import { EditorControlsBridge } from './EditorControlsBridge';
 import { GodotEditorControls } from './GodotEditorControls';
-import { pressKey } from './GodotEditorControls.testkit';
+import { pressKeyOn } from './GodotEditorControls.testkit';
 import { editorCameraPosition } from './godotEditorCamera';
 import { holdsPointerLock } from './pointerLock';
 import { installFakePointerLock } from './testing/fakePointerLock';
@@ -63,9 +63,9 @@ describe('<EditorControlsBridge>', () => {
   });
 
   it('tells the shell that orthographic view has no freelook', async () => {
-    const { actions } = await mountBridgedControls();
+    const { actions, element } = await mountBridgedControls();
 
-    await pressKey('Numpad5');
+    await pressKeyOn(element, 'Numpad5');
 
     expect(actions().freelookState()?.isAvailable).toBe(false);
   });

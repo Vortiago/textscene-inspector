@@ -284,3 +284,21 @@ describe('frameSceneBounds: a mesh inside the empty-scene indicator', () => {
     expect(framed(true)).toEqual(framed(false));
   });
 });
+
+describe('frameSceneBounds in a view taller than it is wide', () => {
+  function distanceToUnitBox(aspect: number): number {
+    const scene = new THREE.Scene();
+    scene.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
+    const camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 1000);
+    frameSceneBounds(scene, camera, null);
+    return camera.position.length();
+  }
+
+  it('moves back by the aspect, so the box fits the width', () => {
+    expect(distanceToUnitBox(0.5)).toBeCloseTo(distanceToUnitBox(1) * 2, 5);
+  });
+
+  it('keeps the distance of a square view in a wide view', () => {
+    expect(distanceToUnitBox(2)).toBeCloseTo(distanceToUnitBox(1), 5);
+  });
+});
