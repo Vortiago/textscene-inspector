@@ -28,7 +28,7 @@ const LAYER_LEAF_NAMES = [
  */
 export type LayerLeaf = (typeof LAYER_LEAF_NAMES)[number];
 
-const LAYER_LEAVES: ReadonlySet<string> = new Set(LAYER_LEAF_NAMES);
+export const LAYER_LEAVES: ReadonlySet<string> = new Set(LAYER_LEAF_NAMES);
 
 /**
  * How far the gap fill goes. Godot's limit is memory: one `layer_2000000000/…`
@@ -36,7 +36,7 @@ const LAYER_LEAVES: ReadonlySet<string> = new Set(LAYER_LEAF_NAMES);
  * nothing, so past the ceiling only the written layers are kept, in order, and
  * the draw order of the written layers is the same.
  */
-const LAYER_FILL_CEILING = 64;
+export const LAYER_FILL_CEILING = 64;
 
 /**
  * Every layer the loaded TileMap has, in index order, with the leaves the file

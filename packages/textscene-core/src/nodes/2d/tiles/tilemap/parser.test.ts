@@ -47,9 +47,7 @@ describe('parseTileMap', () => {
     expect(result.layers[1]).toMatchObject({ name: 'Walls' });
   });
 
-  // `TileMap::_set` grows the vector until the written index exists
-  // (tile_map.cpp:701-710), so the layers below the highest one written load at
-  // TileMapLayer's defaults, named `vformat("Layer%d", index)`.
+  // `_set` builds each layer up to the written index, named after it and suffixed (tile_map.cpp:701-710).
   it('fills the layers below the highest index written, at their defaults', () => {
     const result = parseTileMap(heading('TileMap', { name: 'Map', parent: '.' }), {
       format: '2',
@@ -57,7 +55,7 @@ describe('parseTileMap', () => {
     });
 
     expect(result.layers).toHaveLength(3);
-    expect(result.layers.map((layer) => layer.name)).toEqual(['Layer0', 'Layer1', 'Layer2']);
+    expect(result.layers.map((layer) => layer.name)).toEqual(['Layer0', 'Layer2', 'Layer3']);
     expect(result.layers[0]).toMatchObject({ enabled: true, zIndex: 0, cells: [] });
     expect(result.layers[1]).toMatchObject({ enabled: true, zIndex: 0, cells: [] });
     expect(result.layers[2]!.cells).toEqual([
@@ -74,7 +72,7 @@ describe('parseTileMap', () => {
       'layer_3/y_sort_origin': '4',
     });
 
-    expect(result.layers.map((layer) => layer.name)).toEqual(['Layer0', 'Layer1', 'Layer2', 'Layer3']);
+    expect(result.layers.map((layer) => layer.name)).toEqual(['Layer0', 'Layer3', 'Layer4', 'Layer5']);
   });
 
   it('grows the vector for no other leaf', () => {
@@ -164,7 +162,7 @@ describe('parseTileMap', () => {
       'layer_0/name': '"Ground"',
       'layer_2/name': '"Sky"',
     });
-    expect(result.layers.map((l) => l.name)).toEqual(['Ground', 'Layer1', 'Sky']);
+    expect(result.layers.map((l) => l.name)).toEqual(['Ground', 'Layer2', 'Sky']);
   });
 
   it('reads each layer y_sort_enabled and y_sort_origin', () => {
