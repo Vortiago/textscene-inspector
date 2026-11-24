@@ -153,10 +153,10 @@ describe('transpileShadingLanguage', () => {
 
   it("refuses a built-in at the row of its type's template", () => {
     expect(() =>
-      transpileShadingLanguage('shader_type spatial;\nvoid fragment() {\n\tEMISSION = vec3(1.0);\n}')
+      transpileShadingLanguage('shader_type spatial;\nvoid light() {\n\tDIFFUSE_LIGHT = vec3(1.0);\n}')
     ).toThrow(
       expect.objectContaining({
-        message: expect.stringContaining("'spatial.fragment.EMISSION' is not transpiled yet (#1831)"),
+        message: expect.stringContaining("'spatial.light.DIFFUSE_LIGHT' is not transpiled yet (#1453)"),
         position: expect.objectContaining({ line: 3 }),
       })
     );

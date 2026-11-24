@@ -927,6 +927,34 @@ const SPATIAL_CHAPTER = {
       tsl: "the template's `custom_radiance` and `custom_irradiance`",
     },
     {
+      heading: 'Outputs only the light reads, in `fragment()`',
+      rows: (row) =>
+        [
+          'NORMAL_MAP',
+          'NORMAL_MAP_DEPTH',
+          'BENT_NORMAL_MAP',
+          'SPECULAR',
+          'RIM',
+          'RIM_TINT',
+          'CLEARCOAT',
+          'CLEARCOAT_ROUGHNESS',
+          'ANISOTROPY',
+          'ANISOTROPY_FLOW',
+          'SSS_STRENGTH',
+          'SSS_TRANSMITTANCE_COLOR',
+          'SSS_TRANSMITTANCE_DEPTH',
+          'SSS_TRANSMITTANCE_BOOST',
+          'BACKLIGHT',
+          'AO',
+          'AO_LIGHT_AFFECT',
+          'EMISSION',
+        ]
+          .map((name) => `spatial.fragment.${name}`)
+          .includes(row.id),
+      what: "Each of these outputs starts at Godot's default: `SPECULAR` 0.5, `AO` 1, `NORMAL_MAP` and `BENT_NORMAL_MAP` `(0.5, 0.5, 0.5)`, `NORMAL_MAP_DEPTH` 1, `ANISOTROPY_FLOW` `(1, 0)`, `SSS_TRANSMITTANCE_COLOR` `(0, 0, 0, 1)` and the others 0 (`scene_forward_clustered.glsl:1225-1297`). A shader reads the value it wrote. The unshaded template draws `ALBEDO` and `ALPHA` only (`scene_forward_clustered.glsl:2980`), so on an unshaded surface a write changes nothing that draws. `NORMAL_MAP`, `BENT_NORMAL_MAP` and `ANISOTROPY` still run the template's normal and tangent code after `fragment()`, which reads `TANGENT` and `BINORMAL`. The lit template, which reads each of them, is #1453.",
+      tsl: "the template's locals, and its normal map and anisotropy code",
+    },
+    {
       heading: 'The fragment and the view in `fragment()`',
       rows: (row) =>
         ['VERTEX', 'LIGHT_VERTEX', 'FRAGCOORD', 'FRONT_FACING', 'VIEW', 'SCREEN_UV']

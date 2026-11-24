@@ -1712,6 +1712,438 @@ void fragment() {
 | --- | --- |
 | <img src="showcase/spatial-fragment-projection-matrix-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-fragment-projection-matrix-three.png" width="256" alt="Transpilation"> |
 
+## Showcase `spatial-fragment-normal-map`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+
+void vertex() {
+	
+}
+
+void fragment() {
+	vec3 before = NORMAL_MAP;
+	NORMAL_MAP = vec3(0.1, 0.9, 0.4);
+	ALBEDO = vec3(UV, 0.3) * 0.4 + mix(before, NORMAL_MAP, step(0.5, UV.x)) * 0.6;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-fragment-normal-map-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-fragment-normal-map-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-fragment-normal-map-depth`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+
+void vertex() {
+	
+}
+
+void fragment() {
+	vec3 before = vec3(NORMAL_MAP_DEPTH * 0.5);
+	NORMAL_MAP_DEPTH = 0.2;
+	ALBEDO = vec3(UV, 0.3) * 0.4 + mix(before, vec3(NORMAL_MAP_DEPTH * 0.5), step(0.5, UV.x)) * 0.6;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-fragment-normal-map-depth-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-fragment-normal-map-depth-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-fragment-bent-normal-map`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+
+void vertex() {
+	
+}
+
+void fragment() {
+	vec3 before = BENT_NORMAL_MAP;
+	BENT_NORMAL_MAP = vec3(0.8, 0.2, 0.6);
+	ALBEDO = vec3(UV, 0.3) * 0.4 + mix(before, BENT_NORMAL_MAP, step(0.5, UV.x)) * 0.6;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-fragment-bent-normal-map-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-fragment-bent-normal-map-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-fragment-specular`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+
+void vertex() {
+	
+}
+
+void fragment() {
+	vec3 before = vec3(SPECULAR);
+	SPECULAR = 0.9;
+	ALBEDO = vec3(UV, 0.3) * 0.4 + mix(before, vec3(SPECULAR), step(0.5, UV.x)) * 0.6;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-fragment-specular-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-fragment-specular-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-fragment-rim`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+
+void vertex() {
+	
+}
+
+void fragment() {
+	vec3 before = vec3(RIM);
+	RIM = 0.7;
+	ALBEDO = vec3(UV, 0.3) * 0.4 + mix(before, vec3(RIM), step(0.5, UV.x)) * 0.6;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-fragment-rim-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-fragment-rim-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-fragment-rim-tint`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+
+void vertex() {
+	
+}
+
+void fragment() {
+	vec3 before = vec3(RIM_TINT);
+	RIM_TINT = 0.6;
+	ALBEDO = vec3(UV, 0.3) * 0.4 + mix(before, vec3(RIM_TINT), step(0.5, UV.x)) * 0.6;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-fragment-rim-tint-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-fragment-rim-tint-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-fragment-clearcoat`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+
+void vertex() {
+	
+}
+
+void fragment() {
+	vec3 before = vec3(CLEARCOAT);
+	CLEARCOAT = 0.8;
+	ALBEDO = vec3(UV, 0.3) * 0.4 + mix(before, vec3(CLEARCOAT), step(0.5, UV.x)) * 0.6;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-fragment-clearcoat-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-fragment-clearcoat-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-fragment-clearcoat-roughness`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+
+void vertex() {
+	
+}
+
+void fragment() {
+	vec3 before = vec3(CLEARCOAT_ROUGHNESS);
+	CLEARCOAT_ROUGHNESS = 0.4;
+	ALBEDO = vec3(UV, 0.3) * 0.4 + mix(before, vec3(CLEARCOAT_ROUGHNESS), step(0.5, UV.x)) * 0.6;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-fragment-clearcoat-roughness-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-fragment-clearcoat-roughness-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-fragment-anisotropy`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+
+void vertex() {
+	
+}
+
+void fragment() {
+	vec3 before = vec3(ANISOTROPY);
+	ANISOTROPY = 0.9;
+	ALBEDO = vec3(UV, 0.3) * 0.4 + mix(before, vec3(ANISOTROPY), step(0.5, UV.x)) * 0.6;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-fragment-anisotropy-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-fragment-anisotropy-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-fragment-anisotropy-flow`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+
+void vertex() {
+	
+}
+
+void fragment() {
+	vec3 before = vec3(ANISOTROPY_FLOW, 0.5);
+	ANISOTROPY_FLOW = vec2(0.2, 0.7);
+	ALBEDO = vec3(UV, 0.3) * 0.4 + mix(before, vec3(ANISOTROPY_FLOW, 0.5), step(0.5, UV.x)) * 0.6;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-fragment-anisotropy-flow-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-fragment-anisotropy-flow-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-fragment-sss-strength`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+
+void vertex() {
+	
+}
+
+void fragment() {
+	vec3 before = vec3(SSS_STRENGTH);
+	SSS_STRENGTH = 0.8;
+	ALBEDO = vec3(UV, 0.3) * 0.4 + mix(before, vec3(SSS_STRENGTH), step(0.5, UV.x)) * 0.6;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-fragment-sss-strength-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-fragment-sss-strength-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-fragment-sss-transmittance-color`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+
+void vertex() {
+	
+}
+
+void fragment() {
+	vec3 before = SSS_TRANSMITTANCE_COLOR.rgb + SSS_TRANSMITTANCE_COLOR.a * 0.3;
+	SSS_TRANSMITTANCE_COLOR = vec4(0.9, 0.2, 0.5, 0.4);
+	ALBEDO = vec3(UV, 0.3) * 0.4 + mix(before, SSS_TRANSMITTANCE_COLOR.rgb + SSS_TRANSMITTANCE_COLOR.a * 0.3, step(0.5, UV.x)) * 0.6;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-fragment-sss-transmittance-color-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-fragment-sss-transmittance-color-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-fragment-sss-transmittance-depth`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+
+void vertex() {
+	
+}
+
+void fragment() {
+	vec3 before = vec3(SSS_TRANSMITTANCE_DEPTH);
+	SSS_TRANSMITTANCE_DEPTH = 0.7;
+	ALBEDO = vec3(UV, 0.3) * 0.4 + mix(before, vec3(SSS_TRANSMITTANCE_DEPTH), step(0.5, UV.x)) * 0.6;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-fragment-sss-transmittance-depth-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-fragment-sss-transmittance-depth-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-fragment-sss-transmittance-boost`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+
+void vertex() {
+	
+}
+
+void fragment() {
+	vec3 before = vec3(SSS_TRANSMITTANCE_BOOST);
+	SSS_TRANSMITTANCE_BOOST = 0.6;
+	ALBEDO = vec3(UV, 0.3) * 0.4 + mix(before, vec3(SSS_TRANSMITTANCE_BOOST), step(0.5, UV.x)) * 0.6;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-fragment-sss-transmittance-boost-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-fragment-sss-transmittance-boost-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-fragment-backlight`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+
+void vertex() {
+	
+}
+
+void fragment() {
+	vec3 before = BACKLIGHT;
+	BACKLIGHT = vec3(0.9, 0.5, 0.1);
+	ALBEDO = vec3(UV, 0.3) * 0.4 + mix(before, BACKLIGHT, step(0.5, UV.x)) * 0.6;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-fragment-backlight-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-fragment-backlight-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-fragment-ao`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+
+void vertex() {
+	
+}
+
+void fragment() {
+	vec3 before = vec3(AO * 0.5);
+	AO = 0.1;
+	ALBEDO = vec3(UV, 0.3) * 0.4 + mix(before, vec3(AO * 0.5), step(0.5, UV.x)) * 0.6;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-fragment-ao-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-fragment-ao-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-fragment-ao-light-affect`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+
+void vertex() {
+	
+}
+
+void fragment() {
+	vec3 before = vec3(AO_LIGHT_AFFECT);
+	AO_LIGHT_AFFECT = 0.9;
+	ALBEDO = vec3(UV, 0.3) * 0.4 + mix(before, vec3(AO_LIGHT_AFFECT), step(0.5, UV.x)) * 0.6;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-fragment-ao-light-affect-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-fragment-ao-light-affect-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-fragment-emission`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+
+void vertex() {
+	
+}
+
+void fragment() {
+	vec3 before = EMISSION;
+	EMISSION = vec3(1.0, 0.0, 1.0);
+	ALBEDO = vec3(UV, 0.3) * 0.4 + mix(before, EMISSION, step(0.5, UV.x)) * 0.6;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-fragment-emission-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-fragment-emission-three.png" width="256" alt="Transpilation"> |
+
 ## Showcase `spatial-constants`
 
 Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
@@ -3440,6 +3872,15 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 `RADIANCE` and `IRRADIANCE` are colours a shader writes, which start at `(0, 0, 0, 0)` (`scene_forward_clustered.glsl:1241-1246`). The lit template mixes the sky's reflection towards `RADIANCE.rgb` by `RADIANCE.a`, and the ambient light towards `IRRADIANCE.rgb` by `IRRADIANCE.a` (`scene_forward_clustered.glsl:1735-1737, 1760-1762`). An unshaded surface reads neither, so on it a write changes nothing. The lit template is #1453.
 
 The transpiler emits the template's `custom_radiance` and `custom_irradiance`. Rows: `spatial.fragment.RADIANCE`, `spatial.fragment.IRRADIANCE`. Godot source: `servers/rendering/shader_types.cpp:192`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## Outputs only the light reads, in `fragment()`
+
+Each of these outputs starts at Godot's default: `SPECULAR` 0.5, `AO` 1, `NORMAL_MAP` and `BENT_NORMAL_MAP` `(0.5, 0.5, 0.5)`, `NORMAL_MAP_DEPTH` 1, `ANISOTROPY_FLOW` `(1, 0)`, `SSS_TRANSMITTANCE_COLOR` `(0, 0, 0, 1)` and the others 0 (`scene_forward_clustered.glsl:1225-1297`). A shader reads the value it wrote. The unshaded template draws `ALBEDO` and `ALPHA` only (`scene_forward_clustered.glsl:2980`), so on an unshaded surface a write changes nothing that draws. `NORMAL_MAP`, `BENT_NORMAL_MAP` and `ANISOTROPY` still run the template's normal and tangent code after `fragment()`, which reads `TANGENT` and `BINORMAL`. The lit template, which reads each of them, is #1453.
+
+The transpiler emits `the template's locals, and its normal map and anisotropy code`. Rows: `spatial.fragment.NORMAL_MAP`, `spatial.fragment.NORMAL_MAP_DEPTH`, `spatial.fragment.BENT_NORMAL_MAP`, `spatial.fragment.SPECULAR`, `spatial.fragment.RIM`, `spatial.fragment.RIM_TINT`, `spatial.fragment.CLEARCOAT`, `spatial.fragment.CLEARCOAT_ROUGHNESS`, `spatial.fragment.ANISOTROPY`, `spatial.fragment.ANISOTROPY_FLOW`, `spatial.fragment.SSS_STRENGTH`, `spatial.fragment.SSS_TRANSMITTANCE_COLOR`, `spatial.fragment.SSS_TRANSMITTANCE_DEPTH`, `spatial.fragment.SSS_TRANSMITTANCE_BOOST`, `spatial.fragment.BACKLIGHT`, `spatial.fragment.AO`, `spatial.fragment.AO_LIGHT_AFFECT`, `spatial.fragment.EMISSION`. Godot source: `servers/rendering/shader_types.cpp:143`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 

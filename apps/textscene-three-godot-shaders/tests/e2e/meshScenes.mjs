@@ -389,6 +389,60 @@ const FRAGMENT_SCENES = [
   ]),
 ];
 
+/**
+ * Each output only the lit template reads, as `[name, built-in, a vec3 of its value, a value to write]`.
+ * The unshaded variant draws albedo and alpha only (`scene_forward_clustered.glsl:2980`), so the albedo
+ * shows the default before the write and the value after it, and nothing else of the write.
+ */
+const LIT_OUTPUTS = [
+  ['spatial-fragment-normal-map', 'NORMAL_MAP', 'NORMAL_MAP', 'vec3(0.1, 0.9, 0.4)'],
+  ['spatial-fragment-normal-map-depth', 'NORMAL_MAP_DEPTH', 'vec3(NORMAL_MAP_DEPTH * 0.5)', '0.2'],
+  ['spatial-fragment-bent-normal-map', 'BENT_NORMAL_MAP', 'BENT_NORMAL_MAP', 'vec3(0.8, 0.2, 0.6)'],
+  ['spatial-fragment-specular', 'SPECULAR', 'vec3(SPECULAR)', '0.9'],
+  ['spatial-fragment-rim', 'RIM', 'vec3(RIM)', '0.7'],
+  ['spatial-fragment-rim-tint', 'RIM_TINT', 'vec3(RIM_TINT)', '0.6'],
+  ['spatial-fragment-clearcoat', 'CLEARCOAT', 'vec3(CLEARCOAT)', '0.8'],
+  ['spatial-fragment-clearcoat-roughness', 'CLEARCOAT_ROUGHNESS', 'vec3(CLEARCOAT_ROUGHNESS)', '0.4'],
+  ['spatial-fragment-anisotropy', 'ANISOTROPY', 'vec3(ANISOTROPY)', '0.9'],
+  ['spatial-fragment-anisotropy-flow', 'ANISOTROPY_FLOW', 'vec3(ANISOTROPY_FLOW, 0.5)', 'vec2(0.2, 0.7)'],
+  ['spatial-fragment-sss-strength', 'SSS_STRENGTH', 'vec3(SSS_STRENGTH)', '0.8'],
+  [
+    'spatial-fragment-sss-transmittance-color',
+    'SSS_TRANSMITTANCE_COLOR',
+    'SSS_TRANSMITTANCE_COLOR.rgb + SSS_TRANSMITTANCE_COLOR.a * 0.3',
+    'vec4(0.9, 0.2, 0.5, 0.4)',
+  ],
+  [
+    'spatial-fragment-sss-transmittance-depth',
+    'SSS_TRANSMITTANCE_DEPTH',
+    'vec3(SSS_TRANSMITTANCE_DEPTH)',
+    '0.7',
+  ],
+  [
+    'spatial-fragment-sss-transmittance-boost',
+    'SSS_TRANSMITTANCE_BOOST',
+    'vec3(SSS_TRANSMITTANCE_BOOST)',
+    '0.6',
+  ],
+  ['spatial-fragment-backlight', 'BACKLIGHT', 'BACKLIGHT', 'vec3(0.9, 0.5, 0.1)'],
+  ['spatial-fragment-ao', 'AO', 'vec3(AO * 0.5)', '0.1'],
+  ['spatial-fragment-ao-light-affect', 'AO_LIGHT_AFFECT', 'vec3(AO_LIGHT_AFFECT)', '0.9'],
+  ['spatial-fragment-emission', 'EMISSION', 'EMISSION', 'vec3(1.0, 0.0, 1.0)'],
+];
+
+const LIT_OUTPUT_SCENES = LIT_OUTPUTS.map(([name, builtIn, shown, written]) =>
+  stageScene(
+    name,
+    {
+      fragment: [
+        `vec3 before = ${shown};`,
+        `${builtIn} = ${written};`,
+        `ALBEDO = vec3(UV, 0.3) * 0.4 + mix(before, ${shown}, step(0.5, UV.x)) * 0.6;`,
+      ].join('\n\t'),
+    },
+    [`spatial.fragment.${builtIn}`]
+  )
+);
 /** The global built-ins and the constants, which every stage reads. */
 const GLOBAL_SCENES = [
   stageScene(
@@ -1121,6 +1175,7 @@ export const MESH_SCENES = [
   ...STAGE_VALUE_SCENES,
   ...VERTEX_SCENES,
   ...FRAGMENT_SCENES,
+  ...LIT_OUTPUT_SCENES,
   ...GLOBAL_SCENES,
   ...RENDER_MODE_SCENES,
   ...ALPHA_SCENES,

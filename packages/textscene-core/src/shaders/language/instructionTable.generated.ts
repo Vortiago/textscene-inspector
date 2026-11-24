@@ -1588,9 +1588,9 @@ spatial.fragment.NORMAL	built-in	servers/rendering/shader_types.cpp:139	#1831	fo
 spatial.fragment.TANGENT	built-in	servers/rendering/shader_types.cpp:140	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
 spatial.fragment.BINORMAL	built-in	servers/rendering/shader_types.cpp:141	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
 spatial.fragment.VIEW	built-in (read only)	servers/rendering/shader_types.cpp:142	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
-spatial.fragment.NORMAL_MAP	built-in	servers/rendering/shader_types.cpp:143	#1831	forward_clustered/scene_forward_clustered.glsl		vec3			
-spatial.fragment.NORMAL_MAP_DEPTH	built-in	servers/rendering/shader_types.cpp:144	#1831	forward_clustered/scene_forward_clustered.glsl		float			
-spatial.fragment.BENT_NORMAL_MAP	built-in	servers/rendering/shader_types.cpp:145	#1831	forward_clustered/scene_forward_clustered.glsl		vec3			
+spatial.fragment.NORMAL_MAP	built-in	servers/rendering/shader_types.cpp:143	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
+spatial.fragment.NORMAL_MAP_DEPTH	built-in	servers/rendering/shader_types.cpp:144	#1831	forward_clustered/scene_forward_clustered.glsl		float		native	native
+spatial.fragment.BENT_NORMAL_MAP	built-in	servers/rendering/shader_types.cpp:145	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
 spatial.fragment.UV	built-in (read only)	servers/rendering/shader_types.cpp:146	#1831	forward_clustered/scene_forward_clustered.glsl		vec2		native	native
 spatial.fragment.UV2	built-in (read only)	servers/rendering/shader_types.cpp:147	#1831	forward_clustered/scene_forward_clustered.glsl		vec2		native	native
 spatial.fragment.COLOR	built-in (read only)	servers/rendering/shader_types.cpp:148	#1831	forward_clustered/scene_forward_clustered.glsl		vec4		native	native
@@ -1598,22 +1598,22 @@ spatial.fragment.ALBEDO	built-in	servers/rendering/shader_types.cpp:149	#1831	fo
 spatial.fragment.PREMUL_ALPHA_FACTOR	built-in	servers/rendering/shader_types.cpp:150	#1831	forward_clustered/scene_forward_clustered.glsl		float		native	native
 spatial.fragment.ALPHA	built-in	servers/rendering/shader_types.cpp:151	#1831	forward_clustered/scene_forward_clustered.glsl		float		native	native
 spatial.fragment.METALLIC	built-in	servers/rendering/shader_types.cpp:152	#1831	forward_clustered/scene_forward_clustered.glsl		float		native	native
-spatial.fragment.SPECULAR	built-in	servers/rendering/shader_types.cpp:153	#1831	forward_clustered/scene_forward_clustered.glsl		float			
+spatial.fragment.SPECULAR	built-in	servers/rendering/shader_types.cpp:153	#1831	forward_clustered/scene_forward_clustered.glsl		float		native	native
 spatial.fragment.ROUGHNESS	built-in	servers/rendering/shader_types.cpp:154	#1831	forward_clustered/scene_forward_clustered.glsl		float		native	native
-spatial.fragment.RIM	built-in	servers/rendering/shader_types.cpp:155	#1831	forward_clustered/scene_forward_clustered.glsl		float			
-spatial.fragment.RIM_TINT	built-in	servers/rendering/shader_types.cpp:156	#1831	forward_clustered/scene_forward_clustered.glsl		float			
-spatial.fragment.CLEARCOAT	built-in	servers/rendering/shader_types.cpp:157	#1831	forward_clustered/scene_forward_clustered.glsl		float			
-spatial.fragment.CLEARCOAT_ROUGHNESS	built-in	servers/rendering/shader_types.cpp:158	#1831	forward_clustered/scene_forward_clustered.glsl		float			
-spatial.fragment.ANISOTROPY	built-in	servers/rendering/shader_types.cpp:159	#1831	forward_clustered/scene_forward_clustered.glsl		float			
-spatial.fragment.ANISOTROPY_FLOW	built-in	servers/rendering/shader_types.cpp:160	#1831	forward_clustered/scene_forward_clustered.glsl		vec2			
-spatial.fragment.SSS_STRENGTH	built-in	servers/rendering/shader_types.cpp:161	#1831	forward_clustered/scene_forward_clustered.glsl		float			
-spatial.fragment.SSS_TRANSMITTANCE_COLOR	built-in	servers/rendering/shader_types.cpp:162	#1831	forward_clustered/scene_forward_clustered.glsl		vec4			
-spatial.fragment.SSS_TRANSMITTANCE_DEPTH	built-in	servers/rendering/shader_types.cpp:163	#1831	forward_clustered/scene_forward_clustered.glsl		float			
-spatial.fragment.SSS_TRANSMITTANCE_BOOST	built-in	servers/rendering/shader_types.cpp:164	#1831	forward_clustered/scene_forward_clustered.glsl		float			
-spatial.fragment.BACKLIGHT	built-in	servers/rendering/shader_types.cpp:165	#1831	forward_clustered/scene_forward_clustered.glsl		vec3			
-spatial.fragment.AO	built-in	servers/rendering/shader_types.cpp:166	#1831	forward_clustered/scene_forward_clustered.glsl		float			
-spatial.fragment.AO_LIGHT_AFFECT	built-in	servers/rendering/shader_types.cpp:167	#1831	forward_clustered/scene_forward_clustered.glsl		float			
-spatial.fragment.EMISSION	built-in	servers/rendering/shader_types.cpp:168	#1831	forward_clustered/scene_forward_clustered.glsl		vec3			
+spatial.fragment.RIM	built-in	servers/rendering/shader_types.cpp:155	#1831	forward_clustered/scene_forward_clustered.glsl		float		native	native
+spatial.fragment.RIM_TINT	built-in	servers/rendering/shader_types.cpp:156	#1831	forward_clustered/scene_forward_clustered.glsl		float		native	native
+spatial.fragment.CLEARCOAT	built-in	servers/rendering/shader_types.cpp:157	#1831	forward_clustered/scene_forward_clustered.glsl		float		native	native
+spatial.fragment.CLEARCOAT_ROUGHNESS	built-in	servers/rendering/shader_types.cpp:158	#1831	forward_clustered/scene_forward_clustered.glsl		float		native	native
+spatial.fragment.ANISOTROPY	built-in	servers/rendering/shader_types.cpp:159	#1831	forward_clustered/scene_forward_clustered.glsl		float		native	native
+spatial.fragment.ANISOTROPY_FLOW	built-in	servers/rendering/shader_types.cpp:160	#1831	forward_clustered/scene_forward_clustered.glsl		vec2		native	native
+spatial.fragment.SSS_STRENGTH	built-in	servers/rendering/shader_types.cpp:161	#1831	forward_clustered/scene_forward_clustered.glsl		float		native	native
+spatial.fragment.SSS_TRANSMITTANCE_COLOR	built-in	servers/rendering/shader_types.cpp:162	#1831	forward_clustered/scene_forward_clustered.glsl		vec4		native	native
+spatial.fragment.SSS_TRANSMITTANCE_DEPTH	built-in	servers/rendering/shader_types.cpp:163	#1831	forward_clustered/scene_forward_clustered.glsl		float		native	native
+spatial.fragment.SSS_TRANSMITTANCE_BOOST	built-in	servers/rendering/shader_types.cpp:164	#1831	forward_clustered/scene_forward_clustered.glsl		float		native	native
+spatial.fragment.BACKLIGHT	built-in	servers/rendering/shader_types.cpp:165	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
+spatial.fragment.AO	built-in	servers/rendering/shader_types.cpp:166	#1831	forward_clustered/scene_forward_clustered.glsl		float		native	native
+spatial.fragment.AO_LIGHT_AFFECT	built-in	servers/rendering/shader_types.cpp:167	#1831	forward_clustered/scene_forward_clustered.glsl		float		native	native
+spatial.fragment.EMISSION	built-in	servers/rendering/shader_types.cpp:168	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
 spatial.fragment.DEPTH	built-in	servers/rendering/shader_types.cpp:169	#1831	forward_clustered/scene_forward_clustered.glsl		float		native	native
 spatial.fragment.SCREEN_UV	built-in (read only)	servers/rendering/shader_types.cpp:170	#1831	forward_clustered/scene_forward_clustered.glsl		vec2		native	native
 spatial.fragment.POINT_COORD	built-in (read only)	servers/rendering/shader_types.cpp:171	#2001	forward_clustered/scene_forward_clustered.glsl		vec2		native	native

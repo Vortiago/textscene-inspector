@@ -28,7 +28,7 @@ export function compileSpatial(code: string, options: SpatialOptions): SpatialCo
 const LIT_SURFACE: ShaderRefusal = {
   message:
     'the shader is lit, as it has no `render_mode unshaded`, and the light loop is not ported yet (T15)',
-  owner: '#1831',
+  owner: '#1453',
 };
 
 function isUnshaded(tree: ShaderNode): boolean {
