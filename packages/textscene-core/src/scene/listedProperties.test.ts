@@ -141,6 +141,40 @@ describe('get of a TileMap layer', () => {
   });
 });
 
+describe('get of a TileMap layer tile_data', () => {
+  /** A duplicate cell keeps its first place with its last value, as the layer's HashMap does. */
+  const TILES = `[gd_scene format=3]
+
+[node name="A" type="TileMap"]
+layer_0/tile_data = PackedInt32Array(0, 1, 0, 65536, 2, 3, 0, 5, 0, 1, 65535, 0)
+layer_2/tile_data = PackedInt32Array(0, 1, 0)
+
+[node name="Old" type="TileMap" parent="."]
+format = 1
+layer_0/tile_data = PackedInt32Array(0, 1, 0)
+`;
+
+  it('answers the cells of each layer in the format Godot saves, and no cells for a layer with none', async () => {
+    const scene = openScene({ source: TILES, provider: { loadResource: async () => null } });
+    const names = [0, 1, 2, 3].map((index) => `layer_${index}/tile_data`);
+
+    expect(await answersOf(scene, '.', names)).toEqual({
+      'layer_0/tile_data': 'PackedInt32Array(0, 5, 0, 65536, 2, 3, 1, 65535, 0)',
+      'layer_1/tile_data': 'PackedInt32Array()',
+      'layer_2/tile_data': 'PackedInt32Array(0, 1, 0)',
+      'layer_3/tile_data': null,
+    });
+  });
+
+  it('answers no cells for a Godot 3 format, which a build without the deprecated code drops', async () => {
+    const scene = openScene({ source: TILES, provider: { loadResource: async () => null } });
+
+    expect(await answersOf(scene, 'Old', ['layer_0/tile_data'])).toEqual({
+      'layer_0/tile_data': 'PackedInt32Array()',
+    });
+  });
+});
+
 describe('get of a TileMap layer name', () => {
   /** Godot 4.6.3 names a gap layer after the index the loop builds to, and suffixes a taken name. */
   const RENAMES = `[gd_scene format=3]
