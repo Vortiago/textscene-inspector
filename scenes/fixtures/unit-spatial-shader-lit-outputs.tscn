@@ -2,6 +2,7 @@
 
 ; The one variable: unshaded spatial shaders that write the outputs only the light reads. Each shader
 ; shows the default it reads before its writes. Godot draws albedo and alpha only, so no write shows.
+; No other golden writes these outputs, so only this one moves when the unshaded template reads them.
 
 [sub_resource type="Shader" id="Shader_emission"]
 code = "shader_type spatial;
