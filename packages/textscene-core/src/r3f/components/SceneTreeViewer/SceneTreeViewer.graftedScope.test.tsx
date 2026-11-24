@@ -7,6 +7,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { SceneTreeViewer } from './SceneTreeViewer';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { SelectionProvider } from '../../contexts/SelectionContext';
+import { ExpandedRowsProvider } from '../TscnPreviewShell/expandedRows';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import {
@@ -33,11 +34,13 @@ describe('<SceneTreeViewer> — a node grafted into an instanced sub-scene', () 
     render(
       <HierarchyProvider value={{ sceneGraph, panelId: 'p' }}>
         <SelectionProvider>
-          <ResourceLoaderProvider loader={fake.loader}>
-            <MissingResourcesProvider>
-              <SceneTreeViewer />
-            </MissingResourcesProvider>
-          </ResourceLoaderProvider>
+          <ExpandedRowsProvider>
+            <ResourceLoaderProvider loader={fake.loader}>
+              <MissingResourcesProvider>
+                <SceneTreeViewer />
+              </MissingResourcesProvider>
+            </ResourceLoaderProvider>
+          </ExpandedRowsProvider>
         </SelectionProvider>
       </HierarchyProvider>
     );

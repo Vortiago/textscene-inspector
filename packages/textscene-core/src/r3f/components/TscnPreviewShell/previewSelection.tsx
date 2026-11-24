@@ -1,20 +1,11 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import type { ReactNode, RefObject } from 'react';
 import type { NodeHandle } from '../../../scene/nodeHandle.js';
 import { liveNodePathOf } from '../../../scene/nodePathWalk.js';
 import type { Scene } from '../../../scene/openScene.js';
 import { createExternalStore, type ExternalStore } from '../../../utils/externalStore.js';
-import { withAncestorsExpanded } from '../../../utils/nodePath.js';
 import { useAnimationTransport } from '../../contexts/AnimationTransportContext.js';
+import { useExpandedRowActions } from './expandedRows.js';
 import {
   UNWRITTEN_PATH_STORE,
   useOptionalSelection,
@@ -106,19 +97,12 @@ function useDropHoverOnLeave(scene: Scene, hovered: ExternalStore<NodeHandle | n
 
 /** The panel shows the selected row with its ancestors expanded. */
 function useShowInPanel(selected: NodeHandle | null): void {
-  const panel = useOptionalSelection();
+  const { reveal } = useExpandedRowActions();
   const path = liveNodePathOf(selected?.path);
-  // A ref, so only a new selection expands rows: a collapse by hand holds.
-  const panelRef = useRef(panel);
+  // `reveal` is stable, so only a new selection expands rows: a collapse by hand holds.
   useLayoutEffect(() => {
-    panelRef.current = panel;
-  }, [panel]);
-  useLayoutEffect(() => {
-    const current = panelRef.current;
-    if (!current || path === null) return;
-    const expanded = withAncestorsExpanded(current.expandedNodePaths, path);
-    if (expanded !== current.expandedNodePaths) current.setExpandedNodePaths(expanded);
-  }, [path]);
+    if (path !== null) reveal(path);
+  }, [path, reveal]);
 }
 
 /** The animation tab and the transport follow the selection, not the hover (ADR-0012). */

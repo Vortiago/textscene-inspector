@@ -46,9 +46,11 @@ async function run3D(browser, baseUrl) {
   // The view holds focus. A hovered row takes it, so F frames nothing while the row is hovered.
   await treeRow(page, 'Root/Locked').hover();
   const whileHovered = await boxesAfterKey(page, canvas, 'f');
+  await pointAtCentre(page, canvas);
+  const afterHover = await boxesAfterKey(page, canvas, 'f');
   const width = (await canvas.boundingBox()).width;
   await context.close();
-  return { opened, fromPage, framed, framedMiddle, origin, whileHovered, width, diagnostics };
+  return { opened, fromPage, framed, framedMiddle, origin, whileHovered, afterHover, width, diagnostics };
 }
 
 const panOf = (frame) =>
@@ -117,6 +119,10 @@ export function checkViewKeys(gate, { threeD, twoD }) {
   gate.check(
     sameBoxes(threeD.origin, threeD.whileHovered),
     `[view keys] F framed a hovered row: ${JSON.stringify(threeD.origin)} to ${JSON.stringify(threeD.whileHovered)}`
+  );
+  gate.check(
+    sameBoxes(threeD.framed, threeD.afterHover),
+    `[view keys] F after the hover did not frame ${FOCUSED_3D} again: ${JSON.stringify(threeD.afterHover)}, expected ${JSON.stringify(threeD.framed)}`
   );
   const { before, centred, framed, stage } = twoD;
   const centre = centred && onStage(centred, RIGHT_ON_CANVAS);

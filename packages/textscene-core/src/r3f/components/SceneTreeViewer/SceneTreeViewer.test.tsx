@@ -4,7 +4,8 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { SceneTreeViewer } from './SceneTreeViewer';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
-import { SelectionProvider, useSelection, useSelectedNodePath } from '../../contexts/SelectionContext';
+import { SelectionProvider, useSelectedNodePath } from '../../contexts/SelectionContext';
+import { ExpandedRowsProvider, useExpandedPaths } from '../TscnPreviewShell/expandedRows';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import type { TscnNode } from '../../../parser/types';
 
@@ -16,7 +17,9 @@ function withPanel(graph = createSceneGraphFromTscnScene({ nodes: [] })) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
       <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
-        <SelectionProvider>{children}</SelectionProvider>
+        <SelectionProvider>
+          <ExpandedRowsProvider>{children}</ExpandedRowsProvider>
+        </SelectionProvider>
       </HierarchyProvider>
     );
   };
@@ -32,7 +35,9 @@ describe('<SceneTreeViewer>', () => {
     function NullPanel({ children }: { children: ReactNode }) {
       return (
         <HierarchyProvider value={{ sceneGraph: null, panelId: 'p' }}>
-          <SelectionProvider>{children}</SelectionProvider>
+          <SelectionProvider>
+            <ExpandedRowsProvider>{children}</ExpandedRowsProvider>
+          </SelectionProvider>
         </HierarchyProvider>
       );
     }
@@ -96,14 +101,14 @@ describe('<SceneTreeViewer>', () => {
     expect(onNodeReveal).toHaveBeenCalledWith('Root', expect.objectContaining({ name: 'Root' }));
   });
 
-  it('expand-all / collapse-all toolbar buttons drive SelectionContext.expandedNodePaths', async () => {
+  it('expand-all / collapse-all toolbar buttons drive the expanded rows', async () => {
     const graph = createSceneGraphFromTscnScene({
       nodes: [makeNode('A', 'Node3D', [makeNode('B', 'Node3D', [makeNode('C', 'MeshInstance3D')])])],
     });
 
     let captured: ReadonlySet<string> | null = null;
     function Observer() {
-      captured = useSelection().expandedNodePaths;
+      captured = useExpandedPaths();
       return null;
     }
 

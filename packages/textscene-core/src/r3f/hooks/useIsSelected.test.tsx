@@ -32,31 +32,6 @@ describe('useIsSelected', () => {
     expect(renderHook(() => useIsSelected()).result.current).toBe(false);
   });
 
-  it('does not re-render when the tree expands a node, which is no selection change', () => {
-    let renders = 0;
-    let toggleExpanded: (path: string) => void = () => {};
-    function Subject() {
-      renders++;
-      useIsSelected();
-      return null;
-    }
-    function Probe() {
-      toggleExpanded = useSelection().toggleExpandedNodePath;
-      return null;
-    }
-    render(
-      <SelectionProvider>
-        <NodePathProvider path="Root/Lamp">
-          <Subject />
-        </NodePathProvider>
-        <Probe />
-      </SelectionProvider>
-    );
-    const before = renders;
-    act(() => toggleExpanded('Root'));
-    expect(renders).toBe(before);
-  });
-
   it('re-renders the node that gains the selection and the one that loses it, and no other', () => {
     const renders: Record<string, number> = { A: 0, B: 0, C: 0 };
     let select: (path: string | null) => void = () => {};

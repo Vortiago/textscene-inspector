@@ -3,7 +3,6 @@ import {
   belowRoot,
   joinPath,
   getAncestorPaths,
-  withAncestorsExpanded,
   pathBetween,
   pathUnder,
   spelledLiveNodePath,
@@ -91,21 +90,5 @@ describe('nodePath utilities', () => {
     it('should handle three-level path', () => {
       expect(getAncestorPaths('A/B/C')).toEqual(['A', 'A/B']);
     });
-  });
-});
-
-describe('withAncestorsExpanded', () => {
-  it('adds every missing ancestor of the path', () => {
-    expect([...withAncestorsExpanded(new Set(['Main']), 'Main/Ship/Engine')]).toEqual(['Main', 'Main/Ship']);
-  });
-
-  it('gives the same set when every ancestor is expanded', () => {
-    const expanded = new Set(['Main', 'Main/Ship']);
-    expect(withAncestorsExpanded(expanded, 'Main/Ship/Engine')).toBe(expanded);
-  });
-
-  it('gives the same set for the root, which has no ancestor (edge case)', () => {
-    const expanded = new Set<string>();
-    expect(withAncestorsExpanded(expanded, 'Main')).toBe(expanded);
   });
 });

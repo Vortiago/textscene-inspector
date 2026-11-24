@@ -14,15 +14,9 @@ import { useExternalStoreValue } from '../hooks/createExternalStore.js';
 
 // Paths are slash-joined node names without a leading `./` (R3F-contracts.md).
 export interface SelectionContextValue {
-  expandedNodePaths: ReadonlySet<string>;
   /** Sets the path the view outlines. `useSelectedNodePath` and `useIsSelectedPath` read it. */
   setSelectedNodePath: (path: string | null) => void;
-  toggleExpandedNodePath: (path: string) => void;
-  setExpandedNodePaths: (paths: ReadonlySet<string>) => void;
-  /**
-   * Resets all selection-derived state and the `nodeObjectMap`, so no state of
-   * the previous scene leaks into the next one.
-   */
+  /** Clears the outlined path and `nodeObjectMap`, so nothing of the previous scene leaks into the next. */
   clearAll: () => void;
   /**
    * Each node path's wrapping THREE.Object3D, as `NodeDispatcher` mounts it.
@@ -57,26 +51,6 @@ export function SelectionProvider({ children }: SelectionProviderProps) {
   // Never-set state, so the factory runs once per provider.
   const [selectedStore] = useState(() => createExternalStore<string | null>(null));
   const setSelectedNodePath = selectedStore.set;
-  const [expandedNodePaths, setExpandedNodePathsState] = useState<ReadonlySet<string>>(
-    () => new Set<string>()
-  );
-
-  const toggleExpandedNodePath = useCallback((path: string) => {
-    setExpandedNodePathsState((prev) => {
-      const next = new Set(prev);
-      if (next.has(path)) {
-        next.delete(path);
-      } else {
-        next.add(path);
-      }
-      return next;
-    });
-  }, []);
-
-  const setExpandedNodePaths = useCallback((paths: ReadonlySet<string>) => {
-    setExpandedNodePathsState(new Set(paths));
-  }, []);
-
   const nodeObjectMapRef = useRef<Map<string, THREE.Object3D>>(new Map<string, THREE.Object3D>());
   const objectPathMapRef = useRef<WeakMap<THREE.Object3D, string>>(new WeakMap<THREE.Object3D, string>());
 
@@ -105,7 +79,6 @@ export function SelectionProvider({ children }: SelectionProviderProps) {
 
   const clearAll = useCallback(() => {
     selectedStore.set(null);
-    setExpandedNodePathsState(new Set());
     nodeObjectMapRef.current.clear();
     // Not objectPathMapRef: a WeakMap keyed by the Object3D itself, so the old
     // scene's entries become unreachable and are collected. A path key could
@@ -114,10 +87,7 @@ export function SelectionProvider({ children }: SelectionProviderProps) {
 
   const value = useMemo<SelectionContextValue>(
     () => ({
-      expandedNodePaths,
       setSelectedNodePath,
-      toggleExpandedNodePath,
-      setExpandedNodePaths,
       clearAll,
       nodeObjectMap: nodeObjectMapRef.current,
       objectPathMap: objectPathMapRef.current,
@@ -125,16 +95,7 @@ export function SelectionProvider({ children }: SelectionProviderProps) {
       registerUnpickableNodeObject,
       unregisterNodeObject,
     }),
-    [
-      expandedNodePaths,
-      setSelectedNodePath,
-      toggleExpandedNodePath,
-      setExpandedNodePaths,
-      clearAll,
-      registerNodeObject,
-      registerUnpickableNodeObject,
-      unregisterNodeObject,
-    ]
+    [setSelectedNodePath, clearAll, registerNodeObject, registerUnpickableNodeObject, unregisterNodeObject]
   );
 
   return (

@@ -66,14 +66,7 @@ describe('useViewportSelection (WI-213: event-delegated)', () => {
   });
 
   it('does NOT select when the pointer drags beyond the threshold (drag = no select)', () => {
-    const { result } = renderHook(
-      () => ({
-        vp: useViewportSelection({ dragThresholdPx: 5 }),
-        sel: useSelection(),
-        selected: useSelectedNodePath(),
-      }),
-      { wrapper: wrap }
-    );
+    const { result } = setup();
     const mesh = registerObjectAt(result.current.sel, 'Root/Mesh');
 
     act(() => {
@@ -108,41 +101,6 @@ describe('useViewportSelection (WI-213: event-delegated)', () => {
     });
 
     expect(result.current.selected).toBe('Root/MeshInstance3D');
-  });
-
-  it('auto-expands ancestor paths in SelectionContext when selecting', () => {
-    const { result } = setup();
-    const mesh = registerObjectAt(result.current.sel, 'A/B/C');
-
-    act(() => {
-      result.current.vp.handlers.onPointerDown(mockPointerEvent(50, 50, mesh) as never);
-      result.current.vp.handlers.onPointerUp(mockPointerEvent(50, 50, mesh) as never);
-    });
-
-    expect(result.current.sel.expandedNodePaths.has('A')).toBe(true);
-    expect(result.current.sel.expandedNodePaths.has('A/B')).toBe(true);
-    // The leaf itself is selected, not expanded: it is the destination, not an ancestor.
-    expect(result.current.sel.expandedNodePaths.has('A/B/C')).toBe(false);
-  });
-
-  it('respects autoExpandAncestors=false', () => {
-    const { result } = renderHook(
-      () => ({
-        vp: useViewportSelection({ autoExpandAncestors: false }),
-        sel: useSelection(),
-        selected: useSelectedNodePath(),
-      }),
-      { wrapper: wrap }
-    );
-    const mesh = registerObjectAt(result.current.sel, 'A/B/C');
-
-    act(() => {
-      result.current.vp.handlers.onPointerDown(mockPointerEvent(0, 0, mesh) as never);
-      result.current.vp.handlers.onPointerUp(mockPointerEvent(0, 0, mesh) as never);
-    });
-
-    expect(result.current.selected).toBe('A/B/C');
-    expect(result.current.sel.expandedNodePaths.size).toBe(0);
   });
 
   it('returns the SAME handlers object across renders (one delegated root, not one per node)', () => {
