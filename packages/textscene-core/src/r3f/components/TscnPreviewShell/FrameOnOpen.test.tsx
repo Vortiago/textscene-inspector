@@ -2,7 +2,8 @@ import { act, render, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ViewportModeProvider, useViewportMode } from '../ViewportMode/ViewportModeContext';
 import type { ViewportMode } from '../../viewportMode';
-import type { SceneFile } from '../../../scene/sceneFiles';
+import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
+import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { createEditorCameras } from '../../editorView/editorCamera/editorCameras';
 import { variant, type SceneValue } from '../../../scene/variant';
 import type { ViewStatus } from '../../viewStatus/viewStatus';
@@ -49,43 +50,10 @@ function fakeCamera({ isBound }: { isBound: boolean }) {
 
 const NO_SCENE_WATCH = { getNodeOrNull: () => null, observe: () => () => {} };
 
-const GLB: SceneFile = {
-  path: 'res://ship.glb',
-  type: 'PackedScene',
-  state: 'loading',
-  owners: ['res://main.tscn'],
-  reason: null,
-  addresses: [],
-};
-
-/** A scene whose files a test sets, telling its subscribers of each change. */
-function fakeScene() {
-  let files: readonly SceneFile[] = [];
-  const listeners = new Set<() => void>();
-  const setFiles = (next: readonly SceneFile[]) => {
-    files = next;
-    listeners.forEach((listener) => listener());
-  };
-  const scene = {
-    rootScenePath: 'res://main.tscn',
-    files: () => files,
-    subscribe: (listener: () => void) => {
-      listeners.add(listener);
-      return () => void listeners.delete(listener);
-    },
-  };
-  /** Starts a `.glb` load, and gives the call that ends it. */
-  const beginLoad = () => {
-    setFiles([GLB]);
-    return () => setFiles([{ ...GLB, state: 'loaded' }]);
-  };
-  return { scene, beginLoad };
-}
-
 async function mount({ frameOnOpen = true, mode = '3D' as ViewportMode, isStageBound = true } = {}) {
   const camera = fakeCamera({ isBound: isStageBound });
   const heard = renderHook(useHeardStatus).result.current;
-  const fake = fakeScene();
+  const fake = createFakeResourceLoader();
   let preview: PreviewCamera | null = null;
   let setMode: (mode: ViewportMode) => void = () => {};
   function PreviewProbe() {
@@ -95,30 +63,32 @@ async function mount({ frameOnOpen = true, mode = '3D' as ViewportMode, isStageB
   }
   await act(async () => {
     render(
-      <ViewportModeProvider initialFrameOnOpen={frameOnOpen} initialMode={mode}>
-        <PreviewCameraProvider scene={NO_SCENE_WATCH}>
-          <PreviewProbe />
-          <FrameOnOpen scene={fake.scene} hasScene view={camera.view} heard={heard} />
-        </PreviewCameraProvider>
-      </ViewportModeProvider>
+      <ResourceLoaderProvider loader={fake.loader}>
+        <ViewportModeProvider initialFrameOnOpen={frameOnOpen} initialMode={mode}>
+          <PreviewCameraProvider scene={NO_SCENE_WATCH}>
+            <PreviewProbe />
+            <FrameOnOpen rootScenePath="res://main.tscn" hasScene view={camera.view} heard={heard} />
+          </PreviewCameraProvider>
+        </ViewportModeProvider>
+      </ResourceLoaderProvider>
     );
   });
   const runTimers = () => act(async () => void vi.advanceTimersByTime(PAST_LAST_TIMER_MS));
   const switchTo = (next: ViewportMode) => act(async () => setMode(next));
-  return { ...camera, heard, beginLoad: fake.beginLoad, preview: () => preview!, runTimers, switchTo };
+  return { ...camera, heard, loader: fake.loader, preview: () => preview!, runTimers, switchTo };
 }
 
 /** A view that settled once, then started a `.glb` load, with every fit timer run out. */
 async function mountWithLateLoad() {
   const mounted = await mount();
   heardSettle(mounted.heard);
-  const endLateLoad = mounted.beginLoad();
+  const releaseLateLoad = mounted.loader.beginPending();
   mounted.heard.onStatusChange(EMPTY_VIEW_STATUS);
   await mounted.runTimers();
   mounted.focus.mockClear();
   const settleLoad = () =>
     act(async () => {
-      endLateLoad();
+      releaseLateLoad();
       heardSettle(mounted.heard);
     });
   return { ...mounted, settleLoad };

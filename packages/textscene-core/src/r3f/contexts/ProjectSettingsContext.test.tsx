@@ -11,6 +11,8 @@ import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import type { ResourceProvider } from '../../resources/ResourceProvider';
 import { PROJECT_FILE_PATH } from '../../godot/project/project.js';
 import { ProjectSettingsProvider, useProjectSettings } from './ProjectSettingsContext';
+import { HierarchyProvider } from './HierarchyContext';
+import { openScene } from '../../scene/openScene';
 
 function Probe() {
   const { themeScale, settings } = useProjectSettings();
@@ -128,6 +130,29 @@ describe('ProjectSettingsProvider', () => {
     rerender(tree(loaderOver(incoming)));
     await waitFor(() => expect(screen.getByTestId('scale').textContent).toBe('1'));
     expect(incoming.calls).toContain(PROJECT_FILE_PATH);
+  });
+
+  it('reads the project again for a new scene under the same loader, as a moved resource root brings', async () => {
+    const files: Record<string, string> = { [PROJECT_FILE_PATH]: DEMO_PROJECT };
+    const provider = fakeProvider(files);
+    const loader = new ResourceLoader(new FileEventBus(provider));
+    loader.setProvider(provider);
+    const tree = (scene: ReturnType<typeof openScene>) => (
+      <ResourceLoaderProvider loader={loader}>
+        <HierarchyProvider value={{ sceneGraph: null, panelId: 'p', scene }}>
+          <ProjectSettingsProvider>
+            <Probe />
+          </ProjectSettingsProvider>
+        </HierarchyProvider>
+      </ResourceLoaderProvider>
+    );
+    const { rerender } = render(tree(openScene({ source: '', provider })));
+    await waitFor(() => expect(screen.getByTestId('scale').textContent).toBe('2'));
+
+    delete files[PROJECT_FILE_PATH];
+    rerender(tree(openScene({ source: '', provider })));
+
+    await waitFor(() => expect(screen.getByTestId('scale').textContent).toBe('1'));
   });
 
   describe('when res://project.godot changes on disk', () => {

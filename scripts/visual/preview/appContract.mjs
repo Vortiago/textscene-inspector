@@ -1,11 +1,10 @@
 /** `tscn-web-source-pane` in apps/textscene-web/src/sourcePane.ts. */
 export const SOURCE_PANE_STORAGE_KEY = 'tscn-web-source-pane';
-/** `FRAME_ON_OPEN_STORAGE_KEY` in components/ViewportMode/ViewportModeContext.tsx. */
+/** `FRAME_ON_OPEN_STORAGE_KEY` in ViewportModeContext.tsx. */
 export const FRAME_ON_OPEN_STORAGE_KEY = 'tsi.frameOnOpen';
 /** `FIT_ON_OPEN_2D_STORAGE_KEY` in r3f/world2D/viewport2d.ts. A test pins it: a stale key refits. */
 export const FIT_ON_OPEN_2D_STORAGE_KEY = 'tsi.fitOnOpen2D';
-// A `Node`-rooted 2D scene (`game_splitscreen.tscn`) claims no workspace, so a 2D capture sets this one.
-/** `VIEWPORT_MODE_STORAGE_KEY` in components/ViewportMode/ViewportModeContext.tsx. */
+/** `VIEWPORT_MODE_STORAGE_KEY` in ViewportModeContext.tsx, set for a `Node`-rooted 2D scene, which claims none. */
 export const VIEWPORT_MODE_STORAGE_KEY = 'tsi.viewportMode';
 /** `SHOW_STORAGE_KEYS.gizmos` in ViewportModeContext.tsx, pinned by `previewServer.test.mjs`. */
 export const SHOW_GIZMOS_STORAGE_KEY = 'tsi.showGizmos';

@@ -20,6 +20,7 @@ import type { FontHinting } from '../../godot/text/textServerEnums.js';
 import { PROJECT_FILE_PATH } from '../../godot/project/project.js';
 import { useResourceLoader } from '../../resources/useResource.js';
 import { readProjectSettings } from '../../resources/projectSettingsFile.js';
+import { useOptionalHierarchy } from './HierarchyContext.js';
 
 export interface ProjectSettingsValue {
   /** Raw settings by full name, such as `gui/theme/default_theme_scale`, or null. */
@@ -52,9 +53,11 @@ export interface ProjectSettingsProviderProps {
   children: ReactNode;
 }
 
-/** Null settings when the file is absent or is not a `project.godot`. A new loader reads them again. */
+/** Null settings when the file is absent or is not a `project.godot`. */
 export function ProjectSettingsProvider({ children }: ProjectSettingsProviderProps) {
   const loader = useResourceLoader();
+  // A new scene reads the file again: a host may move one provider to another project (`setResourceRoot`).
+  const scene = useOptionalHierarchy()?.scene;
   const [settings, setSettings] = useState<ProjectSettings | null>(null);
   const [isSettled, setIsSettled] = useState(false);
 
@@ -94,7 +97,7 @@ export function ProjectSettingsProvider({ children }: ProjectSettingsProviderPro
       latestRead++;
       bus.off('invalidated', onInvalidated);
     };
-  }, [loader]);
+  }, [loader, scene]);
 
   const value = useMemo<ProjectSettingsValue>(
     () => ({

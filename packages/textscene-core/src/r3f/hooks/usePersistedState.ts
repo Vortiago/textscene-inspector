@@ -11,6 +11,7 @@ import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 
  */
 const WRITE_DEBOUNCE_MS = 200;
 
+/** @canonical A guard for a persisted boolean */
 export function isBoolean(value: unknown): value is boolean {
   return typeof value === 'boolean';
 }

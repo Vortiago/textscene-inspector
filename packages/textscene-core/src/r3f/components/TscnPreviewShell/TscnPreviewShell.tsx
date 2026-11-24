@@ -128,7 +128,12 @@ export function TscnPreviewShell({
           <PreviewViewStatusProvider value={heard}>
             <PreviewSelectionProvider scene={scene} selected={selected} onSelect={onSelect}>
               <HoverReleasesViewFocus viewArea={viewArea} />
-              <FrameOnOpen scene={scene} hasScene={hasScene} view={view} heard={heard} />
+              <FrameOnOpen
+                rootScenePath={scene.rootScenePath}
+                hasScene={hasScene}
+                view={view}
+                heard={heard}
+              />
               {/* A host-forced mode turns auto-select off, or the root's claim overrides it. */}
               {initialViewportMode === undefined && <WorkspaceAutoSelect scene={scene} />}
               <PreviewSceneReset sceneGraph={parsedGraph} />
