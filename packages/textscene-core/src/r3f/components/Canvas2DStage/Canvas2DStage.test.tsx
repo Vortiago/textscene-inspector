@@ -444,6 +444,33 @@ describe('<Canvas2DStage>', () => {
     expect(zoomLabel()).toBe('400%');
   });
 
+  it('goes back to the fitted view on reset', async () => {
+    sizeEveryElement(800, 600);
+    render(
+      <ViewCameras>
+        <Canvas2DStage nodes={[]} internalResources={[]} externalResources={[]} scenePath={SCENE_PATH} />
+      </ViewCameras>
+    );
+    const fitted = screen.getByTestId('canvas-2d-frame').style.transform;
+    await frameCamera();
+
+    await act(async () => void (await cameras.of('2D')!.call('reset')));
+
+    expect(screen.getByTestId('canvas-2d-frame').style.transform).toBe(fitted);
+  });
+
+  it('refuses a method the 2D editor camera lacks', async () => {
+    render(
+      <ViewCameras>
+        <Canvas2DStage nodes={[]} internalResources={[]} externalResources={[]} scenePath={SCENE_PATH} />
+      </ViewCameras>
+    );
+
+    await expect(cameras.of('2D')!.call('make_current')).rejects.toThrow(
+      'expected a method of the 2D editor camera (reset, focus, center), got make_current'
+    );
+  });
+
   it('refuses a zoom that differs along x and y, which the stage cannot draw', async () => {
     sizeEveryElement(800, 600);
     render(
@@ -711,6 +738,18 @@ describe('<Canvas2DStage> fit on open: load time', () => {
     projectViewportResolves(rerender, 'res://other.tscn');
 
     expect(frameTransform()).toBe(FITTED_LATE);
+  });
+
+  it('gives a remount of the same scene the view the last stage left', async () => {
+    sizeEveryElement(800, 600);
+    const { rerender } = render(stageAt(SCENE_PATH));
+    dragPan();
+    const panned = frameTransform();
+    rerender(withoutStage());
+
+    rerender(stageAt(SCENE_PATH));
+
+    expect(frameTransform()).toBe(panned);
   });
 
   it('applies a Camera2D framing written in the click that mounts the stage', async () => {

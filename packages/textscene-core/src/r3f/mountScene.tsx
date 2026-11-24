@@ -74,16 +74,10 @@ export function mountScene(element: HTMLElement, scene: Scene, options: ViewOpti
     store,
     ending: ending.signal,
     lookedThrough: () => (current.mode === '3D' ? current.camera : null),
+    cameras,
+    mode: () => current.mode,
   });
-  return {
-    get settled() {
-      return answers.settled;
-    },
-    captureImage: answers.captureImage,
-    status: answers.status,
-    get editorCamera() {
-      return cameras.of(current.mode);
-    },
+  const lifecycle: Pick<View, 'update' | 'dispose'> = {
     update(next) {
       if (isDisposed) throw new Error('expected a mounted view to update, got a disposed one');
       current = withGiven(current, checked(scene, next));
@@ -104,6 +98,7 @@ export function mountScene(element: HTMLElement, scene: Scene, options: ViewOpti
       canvases.forEach(loseContext);
     },
   };
+  return Object.assign(answers, lifecycle);
 }
 
 // A key set to `undefined` keeps its value, as if `given` left it out. `null` is a value.

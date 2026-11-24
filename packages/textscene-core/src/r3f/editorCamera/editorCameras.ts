@@ -9,6 +9,11 @@ export interface EditorCameraBacking {
   get(property: string): SceneValue | null;
   set(property: string, value: SceneValue): boolean;
   call(method: string, args: readonly SceneValue[]): CallResult;
+  /** The view keeps it while the stage is unmounted, and gives it to the next stage of the mode. */
+  pose(): unknown;
+  setPose(pose: unknown): void;
+  /** The scene the stage draws now: a pose returns to its own scene alone (editor_node.cpp:4816). */
+  scene(): string;
 }
 
 export type EditorCameraType = 'Camera3D' | 'Camera2D';
@@ -26,6 +31,7 @@ export interface EditorCameras {
   slot(type: EditorCameraType): EditorCameraSlot;
   /** Every read and write after this rejects with `reason`. */
   end(reason: Error): void;
+  hasEnded(): boolean;
 }
 
 export function createEditorCameras(): EditorCameras {
@@ -43,6 +49,7 @@ export function createEditorCameras(): EditorCameras {
       slots.Camera3D.end(reason);
       slots.Camera2D.end(reason);
     },
+    hasEnded: () => ended !== null,
   };
 }
 
@@ -51,6 +58,8 @@ function createSlot(
   ended: () => Error | null
 ): EditorCameraSlot & { end(reason: Error): void } {
   let bound: EditorCameraBacking | null = null;
+  // Godot's viewport keeps its camera through a switch to the 2D editor and back.
+  let kept: { scene: string; pose: unknown } | null = null;
   let waiters: { resolve(backing: EditorCameraBacking): void; reject(reason: Error): void }[] = [];
 
   function mounted(): Promise<EditorCameraBacking> {
@@ -81,12 +90,15 @@ function createSlot(
   return {
     node,
     bind(backing) {
+      if (kept?.scene === backing.scene()) backing.setPose(kept.pose);
       bound = backing;
       const woken = waiters;
       waiters = [];
       woken.forEach((waiter) => waiter.resolve(backing));
       return () => {
-        if (bound === backing) bound = null;
+        if (bound !== backing) return;
+        kept = { scene: backing.scene(), pose: backing.pose() };
+        bound = null;
       };
     },
     end(reason) {

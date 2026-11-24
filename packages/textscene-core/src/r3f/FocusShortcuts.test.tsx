@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useThree } from '@react-three/fiber';
@@ -8,6 +8,8 @@ import { ViewportActionsProvider } from './contexts/ViewportActionsContext';
 import { GodotEditorControls } from './GodotEditorControls';
 import { EditorControlsHandle } from './EditorControlsHandle';
 import { FocusShortcuts } from './FocusShortcuts';
+import { EditorControlsBridge } from './EditorControlsBridge';
+import { EditorCamerasScope } from './editorCamera/EditorCamerasContext';
 import { SelectSeeder } from './testing/SelectSeeder';
 
 let camera: THREE.Camera;
@@ -37,6 +39,19 @@ function RegisteredMesh({ path, position }: { path: string; position: [number, n
   return <primitive object={mesh} />;
 }
 
+/** The 3D view's editor camera node, which F frames through. */
+function EditorView({ children }: { children: ReactNode }) {
+  return (
+    <EditorCamerasScope>
+      <SelectionProvider>
+        <GodotEditorControls />
+        <EditorControlsBridge />
+        {children}
+      </SelectionProvider>
+    </EditorCamerasScope>
+  );
+}
+
 /** A key pressed while the view holds focus. */
 function press(key: string) {
   view.dispatchEvent(new KeyboardEvent('keydown', { code: `Key${key.toUpperCase()}`, key, bubbles: true }));
@@ -52,13 +67,13 @@ function PreviewCamera({ camera }: { camera: THREE.PerspectiveCamera }) {
 describe('<FocusShortcuts> F', () => {
   it('frames the SELECTED node, not the whole scene', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <SelectionProvider>
+      <EditorView>
         <CameraCapture />
         <RegisteredMesh path="Near" position={[0, 0, 0]} />
         <RegisteredMesh path="Far" position={[80, 0, 0]} />
         <SelectSeeder path="Far" />
         <FocusShortcuts />
-      </SelectionProvider>
+      </EditorView>
     );
 
     await renderer.advanceFrames(1, 0);
@@ -72,12 +87,12 @@ describe('<FocusShortcuts> F', () => {
 
   it('hears no F that reaches the page outside the view', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <SelectionProvider>
+      <EditorView>
         <CameraCapture />
         <RegisteredMesh path="Far" position={[80, 0, 0]} />
         <SelectSeeder path="Far" />
         <FocusShortcuts />
-      </SelectionProvider>
+      </EditorView>
     );
     await renderer.advanceFrames(1, 0);
     const before = camera.position.clone();
@@ -92,13 +107,13 @@ describe('<FocusShortcuts> F', () => {
 
   it('frames the WHOLE scene when nothing is selected', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <SelectionProvider>
+      <EditorView>
         <CameraCapture />
         <RegisteredMesh path="Near" position={[0, 0, 0]} />
         <RegisteredMesh path="Far" position={[80, 0, 0]} />
         <SelectSeeder path={null} />
         <FocusShortcuts />
-      </SelectionProvider>
+      </EditorView>
     );
 
     await renderer.advanceFrames(1, 0);
@@ -117,12 +132,12 @@ describe('<FocusShortcuts> F', () => {
     globalThis.document.body.appendChild(input);
 
     const renderer = await ReactThreeTestRenderer.create(
-      <SelectionProvider>
+      <EditorView>
         <CameraCapture />
         <RegisteredMesh path="Near" position={[0, 0, 0]} />
         <SelectSeeder path="Near" />
         <FocusShortcuts />
-      </SelectionProvider>
+      </EditorView>
     );
     await renderer.advanceFrames(1, 0);
     const before = camera.position.clone();
@@ -140,13 +155,12 @@ describe('<FocusShortcuts> F', () => {
     const authored = new THREE.PerspectiveCamera(75, 1, 0.1, 100);
     authored.position.set(3, 1, 2);
     const renderer = await ReactThreeTestRenderer.create(
-      <SelectionProvider>
-        <GodotEditorControls />
+      <EditorView>
         <RegisteredMesh path="Far" position={[80, 0, 0]} />
         <SelectSeeder path="Far" />
         <PreviewCamera camera={authored} />
         <FocusShortcuts />
-      </SelectionProvider>
+      </EditorView>
     );
     await renderer.advanceFrames(1, 0);
 
@@ -159,15 +173,14 @@ describe('<FocusShortcuts> F', () => {
   // A `?camera=` path whose Camera3D never mounts leaves the editor camera on screen.
   it('frames the editor camera while a previewed path names no mounted camera', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <SelectionProvider>
+      <EditorView>
         <ViewportActionsProvider initialPreviewedCameraPath="Root/Missing">
           <CameraCapture />
-          <GodotEditorControls />
           <RegisteredMesh path="Far" position={[80, 0, 0]} />
           <SelectSeeder path="Far" />
           <FocusShortcuts />
         </ViewportActionsProvider>
-      </SelectionProvider>
+      </EditorView>
     );
     await renderer.advanceFrames(1, 0);
     const before = camera.position.clone();
@@ -180,12 +193,12 @@ describe('<FocusShortcuts> F', () => {
 
   it('ignores keys other than "f"', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <SelectionProvider>
+      <EditorView>
         <CameraCapture />
         <RegisteredMesh path="Near" position={[0, 0, 0]} />
         <SelectSeeder path="Near" />
         <FocusShortcuts />
-      </SelectionProvider>
+      </EditorView>
     );
     await renderer.advanceFrames(1, 0);
     const before = camera.position.clone();
@@ -202,12 +215,11 @@ describe('<FocusShortcuts> O', () => {
 
   async function mountOrbit({ isPreviewing = false } = {}) {
     const renderer = await ReactThreeTestRenderer.create(
-      <SelectionProvider>
+      <EditorView>
         <CameraCapture />
-        <GodotEditorControls />
         {isPreviewing && <PreviewCamera camera={authored} />}
         <FocusShortcuts />
-      </SelectionProvider>
+      </EditorView>
     );
     await renderer.advanceFrames(1, 0);
     if (!(controls instanceof EditorControlsHandle))

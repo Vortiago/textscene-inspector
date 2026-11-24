@@ -1,7 +1,7 @@
 import { act, render, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
-import { ViewportModeProvider, type ViewportMode } from '../../contexts/ViewportModeContext';
+import { ViewportModeProvider, useViewportMode, type ViewportMode } from '../../contexts/ViewportModeContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
@@ -34,6 +34,9 @@ function fakeCamera() {
     get: (property) => (property === 'transform' ? pose : null),
     set: () => false,
     call: focus,
+    pose: () => null,
+    setPose: () => {},
+    scene: () => '',
   });
   return {
     view: { editorCamera: cameras.of('3D') },
@@ -49,8 +52,10 @@ async function mount({ frameOnOpen = true, mode = '3D' as ViewportMode } = {}) {
   const heard = renderHook(useHeardStatus).result.current;
   const fake = createFakeResourceLoader();
   let preview: PreviewCamera | null = null;
+  let setMode: (mode: ViewportMode) => void = () => {};
   function PreviewProbe() {
     preview = usePreviewCamera();
+    setMode = useViewportMode().setMode;
     return null;
   }
   await act(async () => {
@@ -68,7 +73,8 @@ async function mount({ frameOnOpen = true, mode = '3D' as ViewportMode } = {}) {
     );
   });
   const runTimers = () => act(async () => void vi.advanceTimersByTime(PAST_LAST_TIMER_MS));
-  return { ...camera, heard, loader: fake.loader, preview: () => preview!, runTimers };
+  const switchTo = (next: ViewportMode) => act(async () => setMode(next));
+  return { ...camera, heard, loader: fake.loader, preview: () => preview!, runTimers, switchTo };
 }
 
 /** A view that settled once, then started a `.glb` load, with every fit timer run out. */
@@ -135,6 +141,28 @@ describe('FrameOnOpen', () => {
     await runTimers();
 
     expect(focus).not.toHaveBeenCalled();
+  });
+
+  it('leaves the camera where it was on a switch to 2D and back', async () => {
+    const { focus, runTimers, switchTo } = await mount();
+    await runTimers();
+    focus.mockClear();
+
+    await switchTo('2D');
+    await switchTo('3D');
+    await runTimers();
+
+    expect(focus).not.toHaveBeenCalled();
+  });
+
+  it('frames a scene first seen after a switch from 2D', async () => {
+    const { focus, runTimers, switchTo } = await mount({ mode: '2D' });
+    await runTimers();
+
+    await switchTo('3D');
+    await runTimers();
+
+    expect(focus).toHaveBeenCalledWith('focus', []);
   });
 
   it('frames a load that finishes after an earlier settle and after every timer', async () => {

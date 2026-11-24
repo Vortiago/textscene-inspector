@@ -425,7 +425,8 @@ or `undefined`, keeps what the view looks through now, and `null` gives the edit
 and a `Camera2D` in the 2D mode, as a node handle. It is `null` in the In-game mode, which draws
 through the game's own camera. The view owns it: it is not in the scene, so `scene.getNode`,
 `getChildren` and `scene.cameras()` never give it. Each mode keeps one camera for the life of the
-view. A read or a write waits for its mode to draw, and rejects once the view ends.
+view. A read or a write waits for its mode to draw, and rejects once the view ends. A switch to
+another mode and back finds the camera of a scene where it was left, as in Godot.
 
 ```ts
 const view = mountScene(element, scene, { mode: '3D' });
@@ -435,19 +436,27 @@ await view.editorCamera?.set('fov', 50);
 await view.editorCamera?.call('reset');
 ```
 
-- **3D.** `get` gives `transform`, `position`, `fov`, `near`, `far`, `projection` (`0` perspective,
-  `1` orthogonal) and `freelook`. `set` takes `position`, `fov`, `projection` and `freelook`. A
-  new `position` moves the eye, and the camera keeps looking at its focus point. A `fov` outside
-  1 to 179 keeps the old one, as Godot does. `call('focus', path)` frames the node at an absolute
-  path, as F does, and `call('focus')` frames the whole scene. `call('reset')` returns the camera to
-  Godot's opening pose and ends freelook.
+- **3D.** `get` gives `transform`, `position`, `fov`, `near`, `far` and `projection` (`0`
+  perspective, `1` orthogonal, the two that Godot's editor viewport has). `set` takes `transform`,
+  `position`, `fov`, `projection` and `freelook`. A new `transform` puts the eye at its origin,
+  looking along its basis, and keeps the orbit distance. A new `position` moves the eye, and the
+  camera keeps looking at its focus point. A `fov` outside 1 to 179 keeps the old one, as Godot
+  does. `call('focus', path)` frames the node at an absolute path, as F does, and `call('focus')`
+  frames the whole scene. Both do nothing while the view looks through a scene camera.
+  `call('reset')` returns the camera to Godot's opening pose and ends freelook.
 - **2D.** `position` is the canvas point at the centre of the view, and `zoom` its magnification,
-  a `Vector2` with the same value on both axes.
+  a `Vector2` with the same value on both axes, as the 2D editor has one zoom. `call('focus',
+  path)` frames the node as Shift+F does, and `call('center', path)` centres it as F does. With no
+  path, both go to the origin, as Godot does with nothing selected. `call('reset')` returns the view
+  to the one the scene opened at.
+
+To keep a pose per scene, as Godot does in its editor settings, read `transform` and `projection`,
+or `position` and `zoom`, and write them back when the scene opens again.
 
 `view.status().freelook` gives `{ isToggled, isAvailable }` in the 3D mode and `null` in the
-others, and `onStatusChange` tells you when it changes, as on Shift+F or Escape. `isAvailable` is
-`false` in the orthogonal projection, which has no freelook. The `TscnCanvas` ref gives
-`editorCamera` too.
+others, and `onStatusChange` tells you when it changes, as on Shift+F or Escape. It is the one read
+of freelook: the camera node takes the write. `isAvailable` is `false` in the orthogonal
+projection, which has no freelook. The `TscnCanvas` ref gives `editorCamera` too.
 
 ### Learn which node a click picked
 

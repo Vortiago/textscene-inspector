@@ -1,13 +1,5 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  type ReactNode,
-  type RefObject,
-} from 'react';
-import { ZERO_RECT } from '../../../godot/math/rect2.js';
+import { createContext, useContext, useEffect, useLayoutEffect, type ReactNode, type RefObject } from 'react';
+import type { Rect2 } from '../../../godot/math/rect2.js';
 import { useSelectedNodePathStore } from '../../contexts/SelectionContext.js';
 import { useSharedLiveTree } from '../../useLiveSceneTree.js';
 import { useResourceLoader } from '../../../resources/useResource.js';
@@ -15,20 +7,15 @@ import { livePlacements, node2dWorldTransform } from '../../node2dWorldTransform
 import { isViewKeyEvent } from '../../viewFocus.js';
 import { isFocusSelectionKey, isFrameSelectionKey } from '../../editorKeyBindings.js';
 import { useEditRects } from '../../editRect/editRects.js';
-import {
-  centerSelection,
-  frameSelection,
-  selectionRect,
-  type StageView,
-} from '../../editRect/focusSelection2D.js';
+import { selectionRect } from '../../editRect/focusSelection2D.js';
+import { useEditorCameras } from '../../editorCamera/EditorCamerasContext.js';
+import { absolutePathOf } from '../../../scene/nodePathWalk.js';
 
 /** What the stage hands the keys inside its canvas, where the Live scene tree holds the solved Controls. */
 export interface Stage2D {
   stage: HTMLElement | null;
-  /** The view as of now, written ahead of the re-render. */
-  view: RefObject<StageView>;
-  moveView: (next: StageView) => void;
-  clampZoom: (zoom: number) => number;
+  /** The 2D editor camera reads it to place a node. */
+  rectOf: RefObject<(livePath: string) => Rect2 | null>;
 }
 
 const Stage2DContext = createContext<Stage2D | null>(null);
@@ -44,42 +31,35 @@ export function FocusSelection2D() {
   const rects = useEditRects();
   const selectedPath = useSelectedNodePathStore();
   const loader = useResourceLoader();
-  // A ref, not a dependency: the tree changes on every solve, and only a key press reads it.
-  const latestLiveTree = useSharedLiveTree();
-  const liveTree = useRef(latestLiveTree);
+  const liveTree = useSharedLiveTree();
+  const camera = useEditorCameras()?.slot('Camera2D').node ?? null;
+
   useLayoutEffect(() => {
-    liveTree.current = latestLiveTree;
-  }, [latestLiveTree]);
+    if (!stage2D) return;
+    stage2D.rectOf.current = (path) => {
+      if (!liveTree) return null;
+      const { roots, ctx } = liveTree;
+      const global = node2dWorldTransform(roots, ctx, path, livePlacements(liveTree, loader));
+      return global && selectionRect(global, rects?.get(path) ?? null);
+    };
+  }, [stage2D, liveTree, loader, rects]);
 
   useEffect(() => {
-    if (!stage2D?.stage) return undefined;
-    const { stage, view, moveView, clampZoom } = stage2D;
-    function selectedRect() {
-      const path = selectedPath.get();
-      if (!path || !liveTree.current) return null;
-      const { roots, ctx } = liveTree.current;
-      const global = node2dWorldTransform(roots, ctx, path, livePlacements(liveTree.current, loader));
-      return global && selectionRect(global, rects?.get(path) ?? null);
-    }
-
+    if (!stage2D?.stage || !camera) return undefined;
+    const { stage } = stage2D;
+    const node = camera;
     function onKeyDown(event: KeyboardEvent): void {
       if (!isViewKeyEvent(event, stage)) return;
       const isFrame = isFrameSelectionKey(event);
       if (!isFrame && !isFocusSelectionKey(event)) return;
       event.preventDefault();
-      // Godot centres on the origin with nothing selected: its merged rect stays empty (:5165-5167).
-      const target = selectedRect() ?? ZERO_RECT;
-      const size = stage.getBoundingClientRect();
-      moveView(
-        isFrame
-          ? frameSelection(view.current, target, size, clampZoom)
-          : centerSelection(view.current, target, size)
-      );
+      const path = selectedPath.get();
+      void node.call(isFrame ? 'focus' : 'center', ...(path ? [absolutePathOf(path)] : []));
     }
 
     stage.addEventListener('keydown', onKeyDown);
     return () => stage.removeEventListener('keydown', onKeyDown);
-  }, [stage2D, rects, selectedPath, loader]);
+  }, [stage2D, selectedPath, camera]);
 
   return null;
 }

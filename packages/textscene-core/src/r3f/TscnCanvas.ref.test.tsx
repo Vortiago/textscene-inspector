@@ -1,4 +1,4 @@
-import { createRef } from 'react';
+import { createRef, StrictMode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import { TscnCanvas } from './TscnCanvas';
@@ -48,6 +48,22 @@ describe('<TscnCanvas> ref', () => {
     const camera = view.current!.editorCamera!;
     unmount();
     await expect(camera.get('fov')).rejects.toThrow('expected a mounted view, got an unmounted one');
+  });
+
+  it('keeps the editor camera through the extra mount StrictMode makes', async () => {
+    const view = createRef<CanvasView>();
+    render(
+      <StrictMode>
+        <TscnCanvas ref={view} scene={openScene({ source: SCENE, provider: NO_FILES })} mode="3D" />
+      </StrictMode>
+    );
+    const read = view.current!.editorCamera!.get('fov').then(
+      () => 'read',
+      (error: Error) => error.message
+    );
+    expect(await Promise.race([read, new Promise((resolve) => setTimeout(resolve, 20, 'waiting'))])).toBe(
+      'waiting'
+    );
   });
 
   it('rejects a pending settled once the view unmounts', async () => {

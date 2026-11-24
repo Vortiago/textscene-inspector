@@ -1,17 +1,18 @@
-import type * as THREE from 'three';
-import type { EditorControlsHandle } from '../EditorControlsHandle.js';
+import type { EditorControlsHandle, EditorPose } from '../EditorControlsHandle.js';
 import type { FreelookControl } from '../freelook.js';
 import { frameSceneBounds } from '../frameSceneBounds.js';
-import { matrixToTransform3D } from '../nodeTreeTransforms.js';
+import { matrixToTransform3D, transform3DToMatrix } from '../nodeTreeTransforms.js';
 import { resolveFrameTarget } from '../resolveFrameTarget.js';
 import { liveNodePathOf } from '../../scene/nodePathWalk.js';
 import { variantOf, valueOfSceneValue, type SceneValue } from '../../scene/variant.js';
 import { VARIANT_TYPE as T } from '../../godot/variant/variantType.js';
-import { basisOfTransform3D } from '../../godot/math/transform3d.js';
+import { basisOfTransform3D, transform3DOf } from '../../godot/math/transform3d.js';
+import type { BasisComponents } from '../../godot/math/basis.js';
+import * as THREE from 'three';
 import type { EditorCameraBacking } from './editorCameras.js';
 import * as logger from '../../logger.js';
 
-/** `Camera3D::ProjectionType` (camera_3d.h:44-48). The editor camera has no frustum projection. */
+/** `Camera3D::ProjectionType` (camera_3d.h:44-48), the two of the editor (node_3d_editor_plugin.h:260). */
 const PROJECTION_PERSPECTIVE = 0;
 const PROJECTION_ORTHOGONAL = 1;
 
@@ -21,8 +22,12 @@ export interface Camera3DCanvas {
   freelook: FreelookControl;
   /** The drawn scene, which `focus` frames with no node given. */
   scene(): THREE.Object3D;
+  /** The root scene the canvas draws. */
+  rootScene(): string;
   /** By live path, the objects a node draws. */
   nodeObjects(): ReadonlyMap<string, THREE.Object3D> | null;
+  /** Godot has no F while it draws through an authored Camera3D (node_3d_editor_plugin.cpp:1826-1829). */
+  isPreviewing(): boolean;
   invalidate(): void;
 }
 
@@ -43,8 +48,6 @@ export function editorCamera3D(canvas: Camera3DCanvas): EditorCameraBacking {
           return handle.camera.far;
         case 'projection':
           return handle.isOrthographic ? PROJECTION_ORTHOGONAL : PROJECTION_PERSPECTIVE;
-        case 'freelook':
-          return canvas.freelook.getState().isToggled;
       }
       return null;
     },
@@ -59,12 +62,18 @@ export function editorCamera3D(canvas: Camera3DCanvas): EditorCameraBacking {
         if (canvas.freelook.getState().isToggled) canvas.freelook.toggle();
         handle.reset();
       } else if (method === 'focus') {
-        focus(canvas, args[0] ?? null);
+        if (!canvas.isPreviewing()) focus(canvas, args[0] ?? null);
       } else {
         throw new Error(`expected a method of the editor camera (reset, focus), got ${method}`);
       }
       canvas.invalidate();
       return null;
+    },
+    pose: () => handle.pose(),
+    scene: canvas.rootScene,
+    setPose(pose) {
+      handle.setPose(pose as EditorPose);
+      canvas.invalidate();
     },
   };
 }
@@ -72,6 +81,12 @@ export function editorCamera3D(canvas: Camera3DCanvas): EditorCameraBacking {
 function setProperty(canvas: Camera3DCanvas, property: string, value: SceneValue): boolean {
   const { handle } = canvas;
   switch (property) {
+    case 'transform': {
+      const pose = poseOf(value);
+      if (!pose) return false;
+      lookFrom(handle, pose);
+      return true;
+    }
     case 'position': {
       const at = vector3Of(value);
       if (!at) return false;
@@ -114,6 +129,25 @@ function transformOf(camera: THREE.Camera): SceneValue {
   const transform = matrixToTransform3D(camera.matrixWorld);
   const { x, y, z } = transform.origin;
   return variantOf({ type: T.TRANSFORM3D, value: [...basisOfTransform3D(transform), x, y, z] });
+}
+
+/** Keeps the orbit distance: the cursor orbits a point ahead of the camera (node_3d_editor_plugin.h:412). */
+function lookFrom(handle: EditorControlsHandle, pose: THREE.Matrix4): void {
+  const position = new THREE.Vector3();
+  const rotation = new THREE.Quaternion();
+  pose.decompose(position, rotation, new THREE.Vector3());
+  const ahead = new THREE.Vector3(0, 0, -handle.cursor().distance).applyQuaternion(rotation);
+  handle.target.copy(position).add(ahead);
+  handle.camera.position.copy(position);
+  handle.update();
+}
+
+function poseOf(value: SceneValue): THREE.Matrix4 | null {
+  const read = valueOfSceneValue(value);
+  if (read.type !== T.TRANSFORM3D) return null;
+  const n = read.value as readonly number[];
+  const basis = n.slice(0, 9) as unknown as BasisComponents;
+  return transform3DToMatrix(transform3DOf(basis, { x: n[9]!, y: n[10]!, z: n[11]! }));
 }
 
 function vector3Of(value: SceneValue): [number, number, number] | null {

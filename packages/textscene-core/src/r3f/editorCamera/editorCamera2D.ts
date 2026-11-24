@@ -1,5 +1,7 @@
-import type { StageView } from '../editRect/focusSelection2D.js';
+import { centerSelection, frameSelection, type StageView } from '../editRect/focusSelection2D.js';
+import { ZERO_RECT, type Rect2 } from '../../godot/math/rect2.js';
 import { VARIANT_TYPE as T } from '../../godot/variant/variantType.js';
+import { liveNodePathOf } from '../../scene/nodePathWalk.js';
 import { valueOfSceneValue, variantOf, type SceneValue } from '../../scene/variant.js';
 import type { EditorCameraBacking } from './editorCameras.js';
 
@@ -9,7 +11,14 @@ export interface Camera2DStage {
   /** The view as of now, ahead of the re-render. */
   view(): StageView;
   moveView(next: StageView): void;
+  /** Leaves the scene's load time open, so a late project size still fits the view. */
+  restoreView(view: StageView): void;
   clampZoom(zoom: number): number;
+  /** The selection rect of a node by its live path, or null while the stage cannot place it. */
+  rectOf(livePath: string): Rect2 | null;
+  /** The view the stage opens a scene at. */
+  reset(): void;
+  scenePath(): string;
 }
 
 /** `position` is the canvas point at the stage's centre, as a centred Camera2D's is (camera_2d.cpp:162). */
@@ -23,11 +32,20 @@ export function editorCamera2D(stage: Camera2DStage): EditorCameraBacking {
     const { width, height } = stage.size();
     return { zoom, pan: { x: width / 2 - point.x * zoom, y: height / 2 - point.y * zoom } };
   };
+  // Nothing selected centres on the origin (canvas_item_editor_plugin.cpp:5165-5167).
+  const rectOf = (node: SceneValue | undefined): Rect2 => {
+    if (node === undefined) return ZERO_RECT;
+    const livePath = typeof node === 'string' ? liveNodePathOf(node) : null;
+    if (livePath === null)
+      throw new Error(`expected the absolute path of a node to focus, got ${String(node)}`);
+    return stage.rectOf(livePath) ?? ZERO_RECT;
+  };
   return {
     get(property) {
       if (property === 'position') return vector2(centre());
-      if (property === 'zoom') return vector2({ x: stage.view().zoom, y: stage.view().zoom });
-      return null;
+      if (property !== 'zoom') return null;
+      const { zoom } = stage.view();
+      return vector2({ x: zoom, y: zoom });
     },
     set(property, value) {
       const given = vector2Of(value);
@@ -36,13 +54,25 @@ export function editorCamera2D(stage: Camera2DStage): EditorCameraBacking {
         stage.moveView(centredAt(given, stage.view().zoom));
         return true;
       }
-      // The stage draws one magnification for both axes.
+      // One zoom for both axes, as the 2D editor's (canvas_item_editor_plugin.h:228).
       if (property !== 'zoom' || given.x !== given.y || !(given.x > 0)) return false;
       stage.moveView(centredAt(centre(), stage.clampZoom(given.x)));
       return true;
     },
-    call(method) {
-      throw new Error(`expected a method of the 2D editor camera, got ${method}`);
+    call(method, args) {
+      if (method === 'reset') stage.reset();
+      else if (method === 'focus') {
+        stage.moveView(frameSelection(stage.view(), rectOf(args[0]), stage.size(), stage.clampZoom));
+      } else if (method === 'center') {
+        stage.moveView(centerSelection(stage.view(), rectOf(args[0]), stage.size()));
+      } else
+        throw new Error(`expected a method of the 2D editor camera (reset, focus, center), got ${method}`);
+      return null;
+    },
+    pose: () => stage.view(),
+    scene: stage.scenePath,
+    setPose(pose) {
+      stage.restoreView(pose as StageView);
     },
   };
 }

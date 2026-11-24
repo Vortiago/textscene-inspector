@@ -22,8 +22,12 @@ export function EditorCamerasScope({ children }: { children: ReactNode }) {
 }
 
 function OwnEditorCameras({ children }: { children: ReactNode }) {
-  const [cameras] = useState(createEditorCameras);
-  useEffect(() => () => cameras.end(new Error('expected a mounted view, got an unmounted one')), [cameras]);
+  const [cameras, setCameras] = useState(createEditorCameras);
+  useEffect(() => {
+    // StrictMode's extra mount follows an unmount that ended the first cameras.
+    if (cameras.hasEnded()) setCameras(createEditorCameras());
+    return () => cameras.end(new Error('expected a mounted view, got an unmounted one'));
+  }, [cameras]);
   return <EditorCamerasProvider cameras={cameras}>{children}</EditorCamerasProvider>;
 }
 

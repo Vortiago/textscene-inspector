@@ -1,9 +1,9 @@
 import { useThree } from '@react-three/fiber';
-import { useEffect, useMemo, useSyncExternalStore } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useOptionalSelection } from './contexts/SelectionContext.js';
 import { useOptionalViewportActions } from './contexts/ViewportActionsContext.js';
-import { EditorControlsHandle } from './EditorControlsHandle.js';
+import { EditorControlsHandle, isDrawingPreview } from './EditorControlsHandle.js';
 import { editorCamera3D } from './editorCamera/editorCamera3D.js';
 import { useEditorCameras } from './editorCamera/EditorCamerasContext.js';
 import { useViewStatusStore } from './viewStatus/ViewStatusContext.js';
@@ -29,7 +29,15 @@ function CameraNode({ controls, freelook }: { controls: EditorControlsHandle; fr
   const slot = useEditorCameras()?.slot('Camera3D');
   const get = useThree((s) => s.get);
   const invalidate = useThree((s) => s.invalidate);
-  const nodeObjectMap = useOptionalSelection()?.nodeObjectMap ?? null;
+  // Refs: both change with each scene build, and only a call or a remount reads them.
+  const latestNodeObjects = useOptionalSelection()?.nodeObjectMap ?? null;
+  const nodeObjects = useRef(latestNodeObjects);
+  const latestRootScene = useOptionalHierarchy()?.sceneGraph?.rootScene ?? '';
+  const rootScene = useRef(latestRootScene);
+  useLayoutEffect(() => {
+    nodeObjects.current = latestNodeObjects;
+    rootScene.current = latestRootScene;
+  }, [latestNodeObjects, latestRootScene]);
   useEffect(() => {
     if (!slot) return undefined;
     return slot.bind(
@@ -37,11 +45,13 @@ function CameraNode({ controls, freelook }: { controls: EditorControlsHandle; fr
         handle: controls,
         freelook,
         scene: () => get().scene,
-        nodeObjects: () => nodeObjectMap,
+        nodeObjects: () => nodeObjects.current,
+        rootScene: () => rootScene.current,
+        isPreviewing: () => isDrawingPreview(get()),
         invalidate,
       })
     );
-  }, [slot, controls, freelook, get, invalidate, nodeObjectMap]);
+  }, [slot, controls, freelook, get, invalidate]);
   return null;
 }
 

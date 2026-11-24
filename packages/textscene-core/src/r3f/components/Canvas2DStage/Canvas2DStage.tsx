@@ -7,6 +7,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -33,6 +34,7 @@ import { createEditRects, EditRectsProvider } from '../../editRect/editRects.js'
 import { useViewFocus } from '../../viewFocus.js';
 import { Stage2DProvider, type Stage2D } from './FocusSelection2D.js';
 import type { StageView } from '../../editRect/focusSelection2D.js';
+import type { Rect2 } from '../../../godot/math/rect2.js';
 import styles from './Canvas2DStage.module.css';
 
 /** editor_zoom_widget.h:44-45. */
@@ -161,6 +163,15 @@ export function Canvas2DStage({
     if (fitOnOpen && !userMovedViewRef.current) fit();
   }, [fit, fitOnOpen, scenePath]);
 
+  // Filled by the keys inside the canvas, where the Live scene tree places each node.
+  const rectOf = useRef<(livePath: string) => Rect2 | null>(() => null);
+  // Refs, so a later project size or scene keeps the camera node's backing.
+  const openView = useRef(() => {});
+  const openScenePath = useRef(scenePath);
+  useLayoutEffect(() => {
+    openView.current = () => (fitOnOpen ? fit() : applyView({ pan: { x: 0, y: 0 }, zoom: 1 }));
+    openScenePath.current = scenePath;
+  }, [fit, fitOnOpen, applyView, scenePath]);
   // Declared after the fit on open, so a write made before the mount lands on the fitted view.
   useEditorCamera2D(
     useMemo(
@@ -168,9 +179,13 @@ export function Canvas2DStage({
         size: () => stageRef.current?.getBoundingClientRect() ?? { width: 0, height: 0 },
         view: () => viewRef.current,
         moveView,
+        restoreView: applyView,
         clampZoom,
+        rectOf: (livePath) => rectOf.current(livePath),
+        reset: () => openView.current(),
+        scenePath: () => openScenePath.current,
       }),
-      [moveView]
+      [moveView, applyView]
     )
   );
 
@@ -328,10 +343,7 @@ export function Canvas2DStage({
     }
   };
 
-  const stage2D = useMemo<Stage2D>(
-    () => ({ stage: stageElement, view: viewRef, moveView, clampZoom }),
-    [stageElement, moveView]
-  );
+  const stage2D = useMemo<Stage2D>(() => ({ stage: stageElement, rectOf }), [stageElement]);
 
   function zoomAroundCentre(factor: number) {
     const el = stageRef.current;

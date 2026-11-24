@@ -142,7 +142,8 @@ export interface ViewportToolbarProps {
 
 export function ViewportToolbar({ view }: ViewportToolbarProps) {
   const { mode, setMode, show, setShow, frameOnOpen, setFrameOnOpen } = useViewportMode();
-  const camera = mode === '3D' ? (view?.editorCamera ?? null) : null;
+  // Both: the view's camera follows a mode switch one render after the toolbar does.
+  const camera = mode === '3D' && view?.editorCamera?.type === 'Camera3D' ? view.editorCamera : null;
   const freelook = useHeardFreelook();
   const preview = usePreviewCamera();
   const isPreviewing = (preview?.camera ?? null) !== null;

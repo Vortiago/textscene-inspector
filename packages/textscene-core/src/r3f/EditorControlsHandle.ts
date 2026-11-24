@@ -19,6 +19,15 @@ import {
   type ZoomRange,
 } from './godotEditorCursor.js';
 
+/** What Godot's viewport keeps of its camera while the editor runs (node_3d_editor_plugin.cpp:4823). */
+export interface EditorPose {
+  readonly cursor: EditorCursor;
+  readonly isOrthographic: boolean;
+  readonly fov: number;
+  readonly near: number;
+  readonly far: number;
+}
+
 /**
  * three's own duck-typing flag rather than `instanceof`: a host app (or a test
  * runner) that ends up with two copies of three in the module graph still gets
@@ -94,6 +103,19 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
     this.perspectiveCamera.fov = degrees;
     this.perspectiveCamera.updateProjectionMatrix();
     this.applyProjection(this.cursor());
+  }
+
+  pose(): EditorPose {
+    const { fov, near, far } = this.perspectiveCamera;
+    return { cursor: this.cursor(), isOrthographic: this.isOrthographic, fov, near, far };
+  }
+
+  setPose({ cursor, isOrthographic, fov, near, far }: EditorPose): void {
+    Object.assign(this.perspectiveCamera, { fov, near, far });
+    this.perspectiveCamera.updateProjectionMatrix();
+    if (this.isOrthographic !== isOrthographic) this.toggleProjection();
+    if (this.orthographicCamera) Object.assign(this.orthographicCamera, { near, far });
+    this.applyCursor(cursor);
   }
 
   /** The zoom range Godot derives from the camera's clip planes. */

@@ -45,7 +45,7 @@ export function clickCameraRow(page, name) {
 }
 
 /** An orbit, a pan and a wheel zoom over the middle of the canvas. */
-async function navigate(page, canvas) {
+export async function navigate(page, canvas) {
   const box = await canvas.boundingBox();
   const centre = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
   await page.mouse.move(centre.x, centre.y);

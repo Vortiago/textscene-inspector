@@ -31,6 +31,7 @@ import { Canvas2DStage } from './Canvas2DStage';
 import { TscnSceneProvider } from '../../TscnSceneProvider';
 import { SelectSeeder } from '../../testing/SelectSeeder';
 import { openScene } from '../../../scene/openScene';
+import { EditorCamerasScope } from '../../editorCamera/EditorCamerasContext';
 
 const SCENE = `[gd_scene format=3]
 
@@ -47,10 +48,12 @@ async function mountStage(selected: string | null) {
   sizeEveryElement(STAGE.width, STAGE.height);
   const scene = openScene({ source: SCENE, provider: { loadResource: async () => null } });
   render(
-    <TscnSceneProvider scene={scene}>
-      <SelectSeeder path={selected} />
-      <Canvas2DStage nodes={[]} internalResources={[]} externalResources={[]} scenePath="res://main.tscn" />
-    </TscnSceneProvider>
+    <EditorCamerasScope>
+      <TscnSceneProvider scene={scene}>
+        <SelectSeeder path={selected} />
+        <Canvas2DStage nodes={[]} internalResources={[]} externalResources={[]} scenePath="res://main.tscn" />
+      </TscnSceneProvider>
+    </EditorCamerasScope>
   );
   const stage = await screen.findByTestId('canvas-2d-stage');
   return stage;

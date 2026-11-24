@@ -15,6 +15,7 @@ import { EditorCamerasProvider } from './editorCamera/EditorCamerasContext';
 import { ViewStatusProvider } from './viewStatus/ViewStatusContext';
 import { createViewStatusStore } from './viewStatus/viewStatus';
 import { variant } from '../scene/variant';
+import type { EditorControlsHandle } from './EditorControlsHandle';
 
 type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
@@ -95,6 +96,31 @@ describe('<EditorControlsBridge>', () => {
   });
 
   it.each([
+    ['Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 3, 9)', [2, 3, 9], [0, 0, -1]],
+    ['Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 5, 0, 0)', [5, 0, 0], [-1, 0, 0]],
+    ['Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 7, 0)', [0, 7, 0], [0, 1, 0]],
+  ])('looks from the pose of %s', async (text, position, forward) => {
+    const { get, camera } = await mountBridgedControls();
+
+    expect(await camera.set('transform', variant(text))).toBe(true);
+
+    expect(get().camera.position.toArray()).toEqual(position);
+    const looking = get().camera.getWorldDirection(new THREE.Vector3()).toArray();
+    looking.forEach((component, axis) => expect(component).toBeCloseTo(forward[axis]!));
+  });
+
+  it('keeps the orbit distance on a write of transform', async () => {
+    const { camera, get } = await mountBridgedControls();
+    const handle = get().controls as EditorControlsHandle;
+    const distance = handle.cursor().distance;
+
+    await camera.set('transform', variant('Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 3, 9)'));
+
+    expect(handle.cursor().distance).toBeCloseTo(distance);
+    expect(handle.target.toArray().map((n) => Math.round(n * 1e6) / 1e6)).toEqual([2, 3, 9 - distance]);
+  });
+
+  it.each([
     [1, 1],
     [35, 35],
     [179, 179],
@@ -128,7 +154,13 @@ describe('<EditorControlsBridge>', () => {
 
     await act(async () => void (await camera.set('freelook', false)));
     expect(holdsPointerLock(element)).toBe(false);
-    expect(await camera.get('freelook')).toBe(false);
+    expect(status().freelook).toEqual({ isToggled: false, isAvailable: true });
+  });
+
+  it('leaves the read of freelook to the view status', async () => {
+    const { camera } = await mountBridgedControls();
+
+    expect(await camera.get('freelook')).toBeNull();
   });
 
   it('reports that orthographic view has no freelook', async () => {

@@ -23,21 +23,28 @@ mode has one for the life of the view. `mountScene`'s view and the `TscnCanvas` 
   and it never becomes current for the game.
 - The handle is the scene's `NodeHandle`: `get`, `set` and `call`. A read or a write waits for
   its mode's stage to mount, and rejects once the view ends.
-- The 3D camera reads `transform`, `position`, `fov`, `near`, `far`, `projection` and `freelook`,
-  and writes `position`, `fov`, `projection` and `freelook`. It calls `reset()` and
-  `focus(path?)`, which frames a node, or the whole scene with no path.
+- The 3D camera reads `transform`, `position`, `fov`, `near`, `far` and `projection`, and writes
+  `transform`, `position`, `fov`, `projection` and `freelook`. It calls `reset()` and
+  `focus(path?)`, which frames a node, or the whole scene with no path. Its projection is
+  perspective or orthogonal, the two of the editor viewport (`node_3d_editor_plugin.h:260`).
 - The 2D camera reads and writes `position`, the canvas point at the view's centre, and `zoom`.
-  Its zoom is one value on both axes.
-- `view.status().freelook` tells a host the 3D camera's freelook, so a button follows the Shift+F
-  toggle.
+  Its zoom is one value on both axes, as the 2D editor's is (`canvas_item_editor_plugin.h:228`).
+  It calls `reset()`, `focus(path?)` (Shift+F) and `center(path?)` (F)
+  (`canvas_item_editor_plugin.cpp:5213-5225`).
+- `view.status().freelook` is the one read of freelook, so a button follows the Shift+F toggle
+  through `onStatusChange`. The node has no change signal, so it takes only the write.
+- The view keeps each mode's pose while that mode's stage is unmounted, and gives it back to the
+  next stage of the same scene. Godot's viewport keeps its camera through a switch to the 2D
+  editor and back.
 
-The previewer's Reset Camera, Freelook, Camera2D rows and frame on open use only this node.
+The previewer's Reset Camera, Freelook, Camera2D rows, F keys and frame on open use only this
+node. Frame on open frames each scene once, so a return to the 3D mode keeps the pose.
 
 ## Consequences
 
 - A host of the package gets the previewer's camera controls with no new view method.
 - The 2D camera is our own node: Godot's 2D editor has none.
-- The 3D pose does not survive a switch to 2D and back: the 3D canvas mounts again at Godot's
-  opening pose. Godot keeps it.
-- Godot saves the editor camera's pose per scene (`node_3d_editor_plugin.cpp:4823`). The view does
-  not.
+- Godot saves the editor camera's pose per scene in the editor's own settings, not in the scene
+  file (`node_3d_editor_plugin.cpp:4823`, `editor_node.cpp:4816`). The view keeps no pose past its
+  own life. A host keeps one with the node's `transform` and `projection`, or `position` and
+  `zoom`, with no other surface.

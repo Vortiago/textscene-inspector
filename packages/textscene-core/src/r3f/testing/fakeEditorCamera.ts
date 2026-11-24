@@ -10,7 +10,7 @@ export function fakeEditorView() {
   const calls: string[] = [];
   const report = () => heard.onStatusChange({ ...EMPTY_VIEW_STATUS, freelook: { ...freelook } });
   cameras.slot('Camera3D').bind({
-    get: (property) => (property === 'freelook' ? freelook.isToggled : null),
+    get: () => null,
     set(property, value) {
       if (property !== 'freelook' || typeof value !== 'boolean') return false;
       freelook.isToggled = value;
@@ -21,6 +21,9 @@ export function fakeEditorView() {
       calls.push(method);
       return null;
     },
+    pose: () => null,
+    setPose: () => {},
+    scene: () => '',
   });
   report();
   return {

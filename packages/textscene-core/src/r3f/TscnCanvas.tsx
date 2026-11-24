@@ -241,17 +241,8 @@ function ViewRef({ viewRef, mode, camera }: { viewRef: Ref<CanvasView> } & ViewR
   useImperativeHandle(viewRef, () => {
     if (!scene || !store || !cameras) throw new Error('expected a TscnCanvas with a scene, got none');
     if (!ending.current) throw new Error('expected the view to mount before its ref, got no mount');
-    const answers = viewAnswers({ scene, store, ending: ending.current.signal, lookedThrough });
-    return {
-      get settled() {
-        return answers.settled;
-      },
-      captureImage: answers.captureImage,
-      status: answers.status,
-      get editorCamera() {
-        return cameras.of(currentMode.current);
-      },
-    };
+    const mode = () => currentMode.current;
+    return viewAnswers({ scene, store, ending: ending.current.signal, lookedThrough, cameras, mode });
   }, [scene, store, cameras, lookedThrough]);
   return null;
 }

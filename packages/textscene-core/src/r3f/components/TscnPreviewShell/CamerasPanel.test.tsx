@@ -58,6 +58,9 @@ function FakeView({ children }: { children: ReactNode }) {
         return true;
       },
       call: () => null,
+      pose: () => null,
+      setPose: () => {},
+      scene: () => '',
     });
     view.current = {
       get editorCamera() {
