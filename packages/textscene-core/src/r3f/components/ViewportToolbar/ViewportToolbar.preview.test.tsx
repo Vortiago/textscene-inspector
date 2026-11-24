@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { ViewportModeProvider } from '../../contexts/ViewportModeContext';
+import { ViewportModeProvider } from '../ViewportMode/ViewportModeContext';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import { TscnParser } from '../../../parser/TscnParser';

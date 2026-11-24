@@ -5,12 +5,6 @@ import type { ResourceLoader } from '../resources/ResourceLoader.js';
 import { SelectionProvider } from './contexts/SelectionContext.js';
 import { MissingResourcesProvider } from './contexts/MissingResourcesContext.js';
 import { LiveFilesHost } from './LiveFilesHost.js';
-import {
-  DEFAULT_VIEWPORT,
-  ViewportModeProvider,
-  type PersistedViewport,
-  type ViewportMode,
-} from './contexts/ViewportModeContext.js';
 import { AnimatedBonePosesProvider } from './contexts/AnimatedBonePosesContext.js';
 import { AnimatedValueProvider } from './contexts/AnimatedValueContext.js';
 import { AnimationDriverProvider } from './contexts/AnimationDriverContext.js';
@@ -26,25 +20,15 @@ interface ViewProviderOptions {
   hierarchyValue: HierarchyContextValue;
   /** The loader of the view's scene, which the view and every part of the host read files through. */
   loader: ResourceLoader;
-  /** The host's forced viewport mode, if it named one. */
-  initialViewportMode?: ViewportMode;
-  /** The mode, the helpers and the framing persisted last session. */
-  initialViewport?: PersistedViewport;
   /** Whether the host shows the view. Both canvases stop rendering while it is `false`. */
   isVisible?: boolean;
-  panelId: string;
-  rootScenePath: string;
 }
 
 /** The view's providers, in order, as a function so the caller's tree gains no wrapper (ADR-0002). */
 export function viewProviders({
   hierarchyValue,
   loader,
-  initialViewportMode,
-  initialViewport = DEFAULT_VIEWPORT,
   isVisible,
-  panelId,
-  rootScenePath,
 }: ViewProviderOptions): (children: ReactNode) => ReactNode {
   return composeProviders(
     (children) => <ResourceLoaderProvider loader={loader}>{children}</ResourceLoaderProvider>,
@@ -56,16 +40,6 @@ export function viewProviders({
         <LiveFilesHost />
         {children}
       </MissingResourcesProvider>
-    ),
-    (children) => (
-      // A host-forced `initialViewportMode` wins over the persisted mode.
-      <ViewportModeProvider
-        initialMode={initialViewportMode ?? initialViewport.mode}
-        initialShow={initialViewport.show}
-        initialFrameOnOpen={initialViewport.frameOnOpen}
-      >
-        {children}
-      </ViewportModeProvider>
     ),
     (children) => <AnimationTransportProvider>{children}</AnimationTransportProvider>,
     (children) => <AnimationDriverProvider>{children}</AnimationDriverProvider>,
@@ -84,10 +58,6 @@ export function viewProviders({
     (children) => <AnimatedBonePosesProvider>{children}</AnimatedBonePosesProvider>,
     // Outermost of the Control-facing providers, since both theme-scale consumers,
     // `<Canvas2DStage>` and `<ControlRasterHosts>`, sit under it.
-    // The key carries `panelId`: `rootScenePath` is relative to the **Corpus root**,
-    // so two projects can each hold a `res://main.tscn` and the path alone stays.
-    (children) => (
-      <ProjectSettingsProvider sceneKey={`${panelId} ${rootScenePath}`}>{children}</ProjectSettingsProvider>
-    )
+    (children) => <ProjectSettingsProvider>{children}</ProjectSettingsProvider>
   );
 }

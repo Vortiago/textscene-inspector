@@ -1,10 +1,9 @@
 import { act, render, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { HierarchyProvider } from '../../contexts/HierarchyContext';
-import { ViewportModeProvider, useViewportMode, type ViewportMode } from '../../contexts/ViewportModeContext';
+import { ViewportModeProvider, useViewportMode } from '../ViewportMode/ViewportModeContext';
+import type { ViewportMode } from '../../viewportMode';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import { createEditorCameras } from '../../editorView/editorCamera/editorCameras';
 import { variant, type SceneValue } from '../../../scene/variant';
 import type { ViewStatus } from '../../viewStatus/viewStatus';
@@ -23,33 +22,36 @@ const SETTLED: ViewStatus = {
 };
 
 /** A 3D editor camera whose pose a focus moves to `FRAMED`, and the user's moves to anything else. */
-function fakeCamera() {
+function fakeCamera({ isBound }: { isBound: boolean }) {
   const cameras = createEditorCameras();
   let pose: SceneValue = variant('Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4)');
   const focus = vi.fn(() => {
     pose = FRAMED;
     return null;
   });
-  const unbind = cameras.slot('Camera3D').bind({
-    get: (property) => (property === 'transform' ? pose : null),
-    set: () => false,
-    call: focus,
-    pose: () => null,
-    setPose: () => {},
-    scene: () => '',
-  });
+  const bind = () =>
+    cameras.slot('Camera3D').bind({
+      get: (property) => (property === 'transform' ? pose : null),
+      set: () => false,
+      call: focus,
+      pose: () => null,
+      setPose: () => {},
+      scene: () => '',
+    });
+  let unbind = isBound ? bind() : () => {};
   return {
     view: { editorCamera: cameras.of('3D') },
     focus,
-    unbind,
+    bindLate: () => (unbind = bind()),
+    unbind: () => unbind(),
     moveByUser: () => (pose = variant('Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 9)')),
   };
 }
 
 const NO_SCENE_WATCH = { getNodeOrNull: () => null, observe: () => () => {} };
 
-async function mount({ frameOnOpen = true, mode = '3D' as ViewportMode } = {}) {
-  const camera = fakeCamera();
+async function mount({ frameOnOpen = true, mode = '3D' as ViewportMode, isStageBound = true } = {}) {
+  const camera = fakeCamera({ isBound: isStageBound });
   const heard = renderHook(useHeardStatus).result.current;
   const fake = createFakeResourceLoader();
   let preview: PreviewCamera | null = null;
@@ -62,14 +64,12 @@ async function mount({ frameOnOpen = true, mode = '3D' as ViewportMode } = {}) {
   await act(async () => {
     render(
       <ResourceLoaderProvider loader={fake.loader}>
-        <HierarchyProvider value={{ sceneGraph: createSceneGraphFromTscnScene({ nodes: [] }), panelId: 'p' }}>
-          <ViewportModeProvider initialFrameOnOpen={frameOnOpen} initialMode={mode}>
-            <PreviewCameraProvider scene={NO_SCENE_WATCH}>
-              <PreviewProbe />
-              <FrameOnOpen view={camera.view} heard={heard} />
-            </PreviewCameraProvider>
-          </ViewportModeProvider>
-        </HierarchyProvider>
+        <ViewportModeProvider initialFrameOnOpen={frameOnOpen} initialMode={mode}>
+          <PreviewCameraProvider scene={NO_SCENE_WATCH}>
+            <PreviewProbe />
+            <FrameOnOpen rootScenePath="res://main.tscn" hasScene view={camera.view} heard={heard} />
+          </PreviewCameraProvider>
+        </ViewportModeProvider>
       </ResourceLoaderProvider>
     );
   });
@@ -173,6 +173,16 @@ describe('FrameOnOpen', () => {
     await runTimers();
 
     expect(focus).not.toHaveBeenCalled();
+  });
+
+  it('frames a scene whose 3D stage binds after every timer, as a hidden canvas does', async () => {
+    const { focus, runTimers, bindLate } = await mount({ isStageBound: false });
+    await runTimers();
+
+    await act(async () => void bindLate());
+    await runTimers();
+
+    expect(focus).toHaveBeenCalledWith('focus', []);
   });
 
   it('frames a load that finishes after an earlier settle and after every timer', async () => {

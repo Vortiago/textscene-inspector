@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { ViewportModeProvider, type ViewportMode } from '../../contexts/ViewportModeContext';
+import { ViewportModeProvider } from '../ViewportMode/ViewportModeContext';
+import type { ViewportMode } from '../../viewportMode';
 import { fakeEditorView } from '../../testing/fakeEditorCamera';
 import { PreviewViewStatusProvider } from '../TscnPreviewShell/previewViewStatus';
 import { ViewportToolbar } from './ViewportToolbar';

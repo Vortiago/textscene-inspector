@@ -3,7 +3,8 @@ import { createRoot } from 'react-dom/client';
 import * as logger from '../logger.js';
 import type { Scene } from '../scene/openScene.js';
 import type { NodeHandle } from '../scene/nodeHandle.js';
-import { TscnCanvas, type TscnCanvasMode } from './TscnCanvas.js';
+import { TscnCanvas } from './TscnCanvas.js';
+import type { ViewportMode } from './viewportMode.js';
 import { TscnSceneProvider } from './TscnSceneProvider.js';
 import { assertCameraPath } from './viewCamera.js';
 import { ViewStatusProvider } from './viewStatus/ViewStatusContext.js';
@@ -20,7 +21,7 @@ import { EditorCamerasProvider } from './editorView/editorCamera/EditorCamerasCo
 
 export interface ViewOptions {
   /** `in-game` by default. */
-  mode?: TscnCanvasMode;
+  mode?: ViewportMode;
   /** `false` draws only the frames a load, a settle or a capture needs. `true` by default. */
   visible?: boolean;
   /** The 3D mode's Camera3D, by path from the scene's root. `null`, the default, is the editor camera. */

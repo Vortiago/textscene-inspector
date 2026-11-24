@@ -6,17 +6,8 @@
  * (ADR-0048).
  */
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import {
-  DEFAULT_VIEWPORT,
-  FRAME_ON_OPEN_STORAGE_KEY,
-  SHOW_STORAGE_KEYS,
-  VIEWPORT_MODE_STORAGE_KEY,
-  type PersistedShowKey,
-  type PersistedViewport,
-  type ViewportMode,
-} from '../../contexts/ViewportModeContext.js';
-import { readPersisted, usePersistedState } from '../../hooks/usePersistedState.js';
-import { DEFAULT_SHOW } from '../../viewShow/viewShow.js';
+import { readPersistedViewport, ViewportModeProvider } from '../ViewportMode/ViewportModeContext.js';
+import { isBoolean, usePersistedState } from '../../hooks/usePersistedState.js';
 import { useSceneGraphs } from '../../hooks/useSceneGraphs.js';
 import { ViewportToolbar } from '../ViewportToolbar/ViewportToolbar.js';
 import { Splitter } from '../Splitter/Splitter.js';
@@ -66,12 +57,6 @@ export type { TscnPreviewShellProps } from './previewShellProps.js';
 // A persisted value of an unexpected shape falls back to the hook's default.
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
-}
-function isBoolean(value: unknown): value is boolean {
-  return typeof value === 'boolean';
-}
-function isViewportMode(value: unknown): value is ViewportMode {
-  return value === '2D' || value === '3D' || value === 'in-game';
 }
 
 export function TscnPreviewShell({
@@ -127,135 +112,130 @@ export function TscnPreviewShell({
   // Read once to seed the provider, which holds the live value. Only the
   // toolbar's click handlers write back, so a programmatic mode change never
   // persists.
-  const [initialViewport] = useState<PersistedViewport>(() => ({
-    mode: readPersisted<ViewportMode>(VIEWPORT_MODE_STORAGE_KEY, DEFAULT_VIEWPORT.mode, isViewportMode),
-    show: Object.fromEntries(
-      Object.entries(SHOW_STORAGE_KEYS).map(([key, storageKey]) => [
-        key,
-        readPersisted(storageKey, DEFAULT_SHOW[key as PersistedShowKey], isBoolean),
-      ])
-    ),
-    frameOnOpen: readPersisted(FRAME_ON_OPEN_STORAGE_KEY, DEFAULT_VIEWPORT.frameOnOpen, isBoolean),
-  }));
+  const [initialViewport] = useState(readPersistedViewport);
 
-  const withProviders = viewProviders({
-    hierarchyValue,
-    loader: useSceneLoader(scene),
-    initialViewportMode,
-    initialViewport,
-    isVisible,
-    panelId,
-    rootScenePath: scene.rootScenePath,
-  });
+  const withProviders = viewProviders({ hierarchyValue, loader: useSceneLoader(scene), isVisible });
 
   return withProviders(
-    <PreviewCameraProvider scene={scene} initialCamera={initialPreviewedCameraPath}>
-      <PreviewViewProvider value={view}>
-        <PreviewViewStatusProvider value={heard}>
-          <PreviewSelectionProvider scene={scene} selected={selected} onSelect={onSelect}>
-            <HoverReleasesViewFocus viewArea={viewArea} />
-            <FrameOnOpen view={view} heard={heard} />
-            {/* A host-forced mode turns auto-select off, or the root's claim overrides it. */}
-            {initialViewportMode === undefined && <WorkspaceAutoSelect scene={scene} />}
-            <PreviewSceneReset sceneGraph={parsedGraph} />
-            <AnimationTabWatcher onVisibleChange={setAnimationTabVisible} />
-            <CaptureStateReporter
-              onCaptureStateChange={onCaptureStateChange}
-              view={view}
-              settle={settle}
-              hasScene={hasScene}
-              viewportError={viewportError}
-            />
-            <EscapeDeselect />
-            <div className={styles.shell} data-panel-id={panelId}>
-              <header className={styles.topBar}>
-                <span className={styles.brand}>TextScene Inspector</span>
-                {toolbar && <div className={styles.topToolbar}>{toolbar}</div>}
-                <div className={styles.topSpacer} />
-                <StatusChips
-                  heard={heard}
-                  settle={settle}
-                  hasScene={hasScene}
-                  viewportError={viewportError}
-                />
-                <SceneStats scene={scene} />
-                <HelpLink />
-              </header>
-              {error && (
-                <div className={styles.errorBanner} role="alert">
-                  <strong>Parse error:</strong> {error}
-                </div>
-              )}
-              <div className={styles.columns}>
-                {/* The view takes all width left of the dock, in every mode. */}
-                <main className={styles.center} aria-label="Viewport" ref={viewArea}>
-                  {/* Over the viewport, not the header: .viewportToolbarOverlay says why. */}
-                  <div className={styles.viewportToolbarOverlay} data-testid="viewport-toolbar-overlay">
-                    <ViewportToolbar view={view} />
+    // A host-forced `initialViewportMode` wins over the persisted mode.
+    <ViewportModeProvider
+      initialMode={initialViewportMode ?? initialViewport.mode}
+      initialShow={initialViewport.show}
+      initialFrameOnOpen={initialViewport.frameOnOpen}
+    >
+      <PreviewCameraProvider scene={scene} initialCamera={initialPreviewedCameraPath}>
+        <PreviewViewProvider value={view}>
+          <PreviewViewStatusProvider value={heard}>
+            <PreviewSelectionProvider scene={scene} selected={selected} onSelect={onSelect}>
+              <HoverReleasesViewFocus viewArea={viewArea} />
+              <FrameOnOpen
+                rootScenePath={scene.rootScenePath}
+                hasScene={hasScene}
+                view={view}
+                heard={heard}
+              />
+              {/* A host-forced mode turns auto-select off, or the root's claim overrides it. */}
+              {initialViewportMode === undefined && <WorkspaceAutoSelect scene={scene} />}
+              <PreviewSceneReset sceneGraph={parsedGraph} />
+              <AnimationTabWatcher onVisibleChange={setAnimationTabVisible} />
+              <CaptureStateReporter
+                onCaptureStateChange={onCaptureStateChange}
+                view={view}
+                settle={settle}
+                hasScene={hasScene}
+                viewportError={viewportError}
+              />
+              <EscapeDeselect />
+              <div className={styles.shell} data-panel-id={panelId}>
+                <header className={styles.topBar}>
+                  <span className={styles.brand}>TextScene Inspector</span>
+                  {toolbar && <div className={styles.topToolbar}>{toolbar}</div>}
+                  <div className={styles.topSpacer} />
+                  <StatusChips
+                    heard={heard}
+                    settle={settle}
+                    hasScene={hasScene}
+                    viewportError={viewportError}
+                  />
+                  <SceneStats scene={scene} />
+                  <HelpLink />
+                </header>
+                {error && (
+                  <div className={styles.errorBanner} role="alert">
+                    <strong>Parse error:</strong> {error}
                   </div>
-                  <PreviewErrorBoundary sceneGraph={sceneGraph} onViewportErrorChange={setViewportError}>
-                    <ViewportArea viewRef={setView} onStatusChange={heard.onStatusChange} />
-                  </PreviewErrorBoundary>
-                </main>
-
-                {dockCollapsed ? (
-                  <CollapsedDock onExpand={() => setDockCollapsed(false)} />
-                ) : (
-                  <>
-                    <Splitter
-                      width={dockWidth}
-                      setWidth={setDockWidth}
-                      invert
-                      label="Resize the side panel"
-                      className={styles.wideOnly}
-                    />
-                    <section
-                      className={styles.dock}
-                      style={
-                        {
-                          '--tsi-dock-basis': `${dockWidth}px`,
-                          '--tsi-sheet-basis': `${sheetShare * 100}%`,
-                        } as CSSProperties
-                      }
-                      aria-label="Scene and Inspector"
-                      data-narrow-pane={narrowPane}
-                    >
-                      <SheetHandle value={sheetShare} setValue={setSheetShare} />
-                      <NarrowPaneSwitcher
-                        pane={narrowPane}
-                        setPane={setNarrowPane}
-                        onCollapse={collapseDock}
-                      />
-                      <SceneTreePane
-                        scene={scene}
-                        sceneGraph={sceneGraph}
-                        error={error}
-                        treeShare={treeShare}
-                        onCollapse={collapseDock}
-                        onNodeReveal={onNodeReveal}
-                        onOpenSubScene={onOpenSubScene}
-                      />
-
-                      <MasterDetailHandle value={treeShare} setValue={setTreeShare} />
-
-                      <DetailTabs
-                        activeTab={activeTab}
-                        setActiveTab={setActiveTab}
-                        animationTabVisible={animationTabVisible}
-                        treeShare={treeShare}
-                        onResourceUpload={onResourceUpload}
-                        onResourceRemove={onResourceRemove}
-                        onCopyNodePath={onCopyNodePath}
-                      />
-                    </section>
-                  </>
                 )}
+                <div className={styles.columns}>
+                  {/* The view takes all width left of the dock, in every mode. */}
+                  <main className={styles.center} aria-label="Viewport" ref={viewArea}>
+                    {/* Over the viewport, not the header: .viewportToolbarOverlay says why. */}
+                    <div className={styles.viewportToolbarOverlay} data-testid="viewport-toolbar-overlay">
+                      <ViewportToolbar view={view} />
+                    </div>
+                    <PreviewErrorBoundary sceneGraph={sceneGraph} onViewportErrorChange={setViewportError}>
+                      <ViewportArea viewRef={setView} onStatusChange={heard.onStatusChange} />
+                    </PreviewErrorBoundary>
+                  </main>
+
+                  {dockCollapsed ? (
+                    <CollapsedDock onExpand={() => setDockCollapsed(false)} />
+                  ) : (
+                    <>
+                      <Splitter
+                        width={dockWidth}
+                        setWidth={setDockWidth}
+                        invert
+                        label="Resize the side panel"
+                        className={styles.wideOnly}
+                      />
+                      <section
+                        className={styles.dock}
+                        style={
+                          {
+                            '--tsi-dock-basis': `${dockWidth}px`,
+                            '--tsi-sheet-basis': `${sheetShare * 100}%`,
+                          } as CSSProperties
+                        }
+                        aria-label="Scene and Inspector"
+                        data-narrow-pane={narrowPane}
+                      >
+                        <SheetHandle value={sheetShare} setValue={setSheetShare} />
+                        <NarrowPaneSwitcher
+                          pane={narrowPane}
+                          setPane={setNarrowPane}
+                          onCollapse={collapseDock}
+                        />
+                        <SceneTreePane
+                          scene={scene}
+                          sceneGraph={sceneGraph}
+                          error={error}
+                          treeShare={treeShare}
+                          onCollapse={collapseDock}
+                          onNodeReveal={onNodeReveal}
+                          onOpenSubScene={onOpenSubScene}
+                        />
+
+                        <MasterDetailHandle value={treeShare} setValue={setTreeShare} />
+
+                        <DetailTabs
+                          activeTab={activeTab}
+                          setActiveTab={setActiveTab}
+                          animationTabVisible={animationTabVisible}
+                          treeShare={treeShare}
+                          onResourceUpload={onResourceUpload}
+                          onResourceRemove={onResourceRemove}
+                          onCopyNodePath={onCopyNodePath}
+                        />
+                      </section>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          </PreviewSelectionProvider>
-        </PreviewViewStatusProvider>
-      </PreviewViewProvider>
-    </PreviewCameraProvider>
+            </PreviewSelectionProvider>
+          </PreviewViewStatusProvider>
+        </PreviewViewProvider>
+      </PreviewCameraProvider>
+    </ViewportModeProvider>
   );
 }
 

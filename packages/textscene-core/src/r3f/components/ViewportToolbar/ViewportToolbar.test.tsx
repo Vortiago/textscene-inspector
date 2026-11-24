@@ -5,7 +5,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { SHOW_STORAGE_KEYS, ViewportModeProvider } from '../../contexts/ViewportModeContext';
+import { SHOW_STORAGE_KEYS, ViewportModeProvider } from '../ViewportMode/ViewportModeContext';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import type { CanvasView } from '../../TscnCanvas';
 import { fakeEditorView } from '../../testing/fakeEditorCamera';

@@ -20,8 +20,6 @@ export function TscnSceneProvider({ scene, children }: TscnSceneProviderProps) {
   const withProviders = viewProviders({
     hierarchyValue,
     loader: useSceneLoader(scene),
-    panelId,
-    rootScenePath: scene.rootScenePath,
   });
 
   // A new parse clears the selection, or the highlight draws a removed node. A write keeps every node.
