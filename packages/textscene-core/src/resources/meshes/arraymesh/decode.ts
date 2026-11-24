@@ -1,7 +1,7 @@
 /**
  * Decodes an ArrayMesh's `_surfaces`, from a `.tres` or a binary file, into per-surface typed arrays:
  * the surface loop and its material resolution. Triangle, points and line surfaces decode, each flagged
- * as its primitive. Blend shapes, LODs and skins are ignored. The byte layout lives in
+ * as its primitive. Blend shapes and LODs are ignored. The byte layout lives in
  * `surfaceFormat.ts`, `surfaceVersion.ts`, `vertexBuffers.ts` and `surfaceFields.ts`.
  */
 
@@ -29,6 +29,8 @@ import {
 } from './surfaceFormat.js';
 import { currentVertexData } from './surfaceVersion.js';
 import type { ArrayMeshData, ArrayMeshSurface } from './types.js';
+import { decodeCustomArrays } from './customArrays.js';
+import { decodeSkin } from './skinData.js';
 import {
   decodeColors,
   decodeIndices,
@@ -195,6 +197,8 @@ function decodeSurfaces(
           `not the ${layout.attributeStride} B format ${format} implies — dropping its UVs`
       )
     );
+    const customs = decodeCustomArrays(attributeData, vertexCount, layout);
+    const skin = decodeSkin(readPackedBytes(block, 'skin_data'), vertexCount, layout);
     const indexData = readPackedBytes(block, 'index_data');
     const stored = indexCount === 0 ? drawOrderIndices(vertexCount) : decodeIndices(indexData, indexCount);
     if (!stored) {
@@ -217,6 +221,9 @@ function decodeSurfaces(
       uv2s,
       normals,
       tangents,
+      ...(customs.some(Boolean) && { customs }),
+      ...(skin && { bones: skin.bones }),
+      ...(skin?.vertexStageBones && { vertexStageBones: skin.vertexStageBones }),
       indices,
       ...(drawn.primitive && { primitive: drawn.primitive }),
       ...(primitive === PRIMITIVE_TRIANGLE_STRIP && { isTriangleStrip: true }),

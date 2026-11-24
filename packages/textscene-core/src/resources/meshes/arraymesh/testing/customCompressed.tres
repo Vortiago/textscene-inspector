@@ -1,0 +1,36 @@
+[gd_resource type="ArrayMesh" format=4]
+
+[resource]
+_surfaces = [{
+"aabb": AABB(-0.9, -0.5, 0, 0.39999998, 1, 1e-05),
+"attribute_data": PackedByteArray("M2aZ/wAAAABmZmY/AAAAADMzsz6PwjU/AP88yDNmmf/NzMw9zcxMP7geBT4zM7M+UrgePyjhPMgzZpn/zcxMPjMzMz+4HoU+MzOzPhSuBz9QwzzIM2aZ/5qZmT6amRk/FK7HPjMzsz6uR+E+eKU8yDNmmf/NzMw+AAAAP7geBT8zM7M+MzOzPqCHPMgzZpn/AAAAP83MzD5mZiY/MzOzPrgehT7IaTzI"),
+"format": 34360132255,
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 6,
+"vertex_data": PackedByteArray("ZmZmvwAAAL8AAAAAAAAAvwAAAL8AAAAAAAAAvwAAAD8AAAAAZmZmvwAAAL8AAAAAAAAAvwAAAD8AAAAAZmZmvwAAAD8AAAAA/3//f/9/AID/f/9//38AgP9//3//fwCA/3//f/9/AID/f/9//38AgP9//3//fwCA")
+}, {
+"aabb": AABB(-0.45, -0.5, 0, 0.39999998, 1, 1e-05),
+"attribute_data": PackedByteArray("M2aZ/wAAZebNzEw+MzOzPo/CNT8A/03IM2aZ/5kZzMzD9ag+MzOzPlK4Hj8o4U3IM2aZ/zMzMrMfhes+MzOzPhSuBz9Qw03IM2aZ/8xMmZk9Chc/MzOzPq5H4T54pU3IM2aZ/2Zm/3/sUTg/MzOzPjMzsz6gh03IM2aZ//9/ZmaamVk/MzOzPrgehT7IaU3I"),
+"format": 34897003167,
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 6,
+"vertex_data": PackedByteArray("AAAAAAAA/7///wAAAAD/v/////8AAP+/AAAAAAAA/7//////AAD/vwAA//8AAP+//3//f/9//3//f/9//3//f/9//3//f/9/")
+}, {
+"aabb": AABB(0, -0.5, 0, 0.4, 1, 1e-05),
+"attribute_data": PackedByteArray("M2aZ/wAAAABmZmY/zczMPjMzsz6PwjU/AP9eyDNmmf/NzMw9zcxMPxSuBz8zM7M+UrgePyjhXsgzZpn/zcxMPjMzMz/D9Sg/MzOzPhSuBz9Qw17IM2aZ/5qZmT6amRk/cT1KPzMzsz6uR+E+eKVeyDNmmf/NzMw+AAAAPx+Faz8zM7M+MzOzPqCHXsgzZpn/AAAAP83MzD7NzEw9MzOzPrgehT7IaV7I"),
+"format": 34360132255,
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 6,
+"vertex_data": PackedByteArray("AAAAAAAAAL8AAAAAzczMPgAAAL8AAAAAzczMPgAAAD8AAAAAAAAAAAAAAL8AAAAAzczMPgAAAD8AAAAAAAAAAAAAAD8AAAAA/3//f/9/AID/f/9//38AgP9//3//fwCA/3//f/9/AID/f/9//38AgP9//3//fwCA")
+}, {
+"aabb": AABB(0.45, -0.5, 0, 0.40000004, 1, 1e-05),
+"attribute_data": PackedByteArray("M2aZ/wAAZeaamRk/MzOzPo/CNT8A/2/IM2aZ/5kZzMxI4To/MzOzPlK4Hj8o4W/IM2aZ/zMzMrP2KFw/MzOzPhSuBz9Qw2/IM2aZ/8xMmZmkcH0/MzOzPq5H4T54pW/IM2aZ/2Zm/3+PwvU9MzOzPjMzsz6gh2/IM2aZ//9/ZmYAAIA+MzOzPrgehT7IaW/I"),
+"format": 34897003167,
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 6,
+"vertex_data": PackedByteArray("AAAAAAAA/7///wAAAAD/v/////8AAP+/AAAAAAAA/7//////AAD/vwAA//8AAP+//3//f/9//3//f/9//3//f/9//3//f/9/")
+}]
