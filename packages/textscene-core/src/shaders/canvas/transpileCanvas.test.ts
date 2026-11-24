@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { generatedMaterialProgram } from '../generatedShader.testkit.js';
 import { ShadingLanguageError } from '../language/shadingLanguageError.js';
@@ -46,6 +47,34 @@ describe('transpileCanvasItem', () => {
     specialiseCanvasDraw(draw, { useLighting: true });
 
     expect(packed.value).toBe(0b111);
+  });
+
+  it('reads the unlit samplers again once the draw is unlit again', () => {
+    const draw = transpileCanvasItem(DEFAULT_CANVAS_SHADER).draw('quad');
+    const unlit = samplersOf(generatedMaterialProgram(draw.material).fragment);
+    specialiseCanvasDraw(draw, { useLighting: true });
+
+    specialiseCanvasDraw(draw, { useLighting: false });
+
+    expect(samplersOf(generatedMaterialProgram(draw.material).fragment)).toBe(unlit);
+  });
+
+  it('refuses a draw whose template has no packed specialisation', () => {
+    const draw = { ...transpileCanvasItem(DEFAULT_CANVAS_SHADER).draw('quad'), specialisations: new Map() };
+
+    expect(() => specialiseCanvasDraw(draw, { useLighting: true })).toThrow(
+      'expected the specialisation constant pso_sc_packed_0 in the canvas template, found none'
+    );
+  });
+
+  it("blends as Godot's blend_mix and culls no face, as Godot's canvas pipeline does", () => {
+    const { material } = transpileCanvasItem(DEFAULT_CANVAS_SHADER).draw('quad');
+
+    expect([material.blending, material.transparent, material.side]).toEqual([
+      THREE.NormalBlending,
+      true,
+      THREE.DoubleSide,
+    ]);
   });
 
   it("draws with no depth test and no depth write, as Godot's canvas pipeline does", () => {

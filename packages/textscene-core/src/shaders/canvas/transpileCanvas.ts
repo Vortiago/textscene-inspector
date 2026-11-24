@@ -1,5 +1,8 @@
+import * as THREE from 'three';
 import { instanceIndex, int, varyingProperty, vertexIndex } from 'three/tsl';
 import type { Node, TextureNode } from 'three/webgpu';
+import { BlendMode } from '../../godot/rendering/materials/blendMode.js';
+import { godotBlendState } from '../pipeline/blendState.js';
 import { parsedShader, shaderSource, type ShaderOptions } from '../language/parseShader.js';
 import { emitTemplateStage, programResources } from '../template/emitTemplate.js';
 import { linkedProgram, type LinkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
@@ -84,13 +87,18 @@ export interface CanvasSpecialisation {
   readonly useLighting: boolean;
 }
 
+const PACKED_SPECIALISATION = 'pso_sc_packed_0';
+
 /** Bit 0 of `sc_packed_0`, beside `use_msdf` and `use_lcd` (`canvas_uniforms_inc.glsl:94`). */
 const USE_LIGHTING_BIT = 1;
 
 /** Folds `specialisation` into `draw`'s programs, which emit their stages again for a new value. */
 export function specialiseCanvasDraw(draw: CanvasDraw, { useLighting }: CanvasSpecialisation): void {
-  const packed = draw.specialisations.get('pso_sc_packed_0');
-  if (!packed) return;
+  const packed = draw.specialisations.get(PACKED_SPECIALISATION);
+  if (!packed)
+    throw new Error(
+      `expected the specialisation constant ${PACKED_SPECIALISATION} in the canvas template, found none`
+    );
   const otherBits = (packed.value as number) & ~USE_LIGHTING_BIT;
   packed.value = useLighting ? otherBits | USE_LIGHTING_BIT : otherBits;
 }
@@ -100,9 +108,13 @@ function canvasDraw(program: LinkedProgram, defines: string, shader: MaterialSha
   const resources = programResources();
   const specialisations = resources.uniforms.specialisations;
   const material = new BoundNodeMaterial({ ...shader, specialisations });
-  // The canvas pipeline's default depth state tests nothing (`renderer_canvas_render_rd.cpp:1535`).
-  material.depthTest = false;
-  material.depthWrite = false;
+  // Godot's canvas pipeline: blend_mix, no cull and no depth (`renderer_canvas_render_rd.cpp:1535, 1559`).
+  Object.assign(material, godotBlendState(BlendMode.MIX), {
+    transparent: true,
+    side: THREE.DoubleSide,
+    depthTest: false,
+    depthWrite: false,
+  });
   // Emitted anew at each specialisation: three caches function code by node (`NodeBuilder.js:2759`).
   material.stageWith(() => Object.assign(material, stages({ ...program, resources }, defines)));
   return {
