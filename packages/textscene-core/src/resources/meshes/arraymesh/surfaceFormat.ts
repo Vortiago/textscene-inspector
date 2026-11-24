@@ -1,5 +1,9 @@
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
-import type { ArrayCustomFormat } from '../../../godot/rendering/meshArrayFormat.js';
+import {
+  ARRAY_CUSTOM_COUNT,
+  CUSTOM_FORMAT_LANES,
+  type ArrayCustomFormat,
+} from '../../../godot/rendering/meshArrayFormat.js';
 
 /** Godot Mesh.ArrayFormat flags. */
 export const ARRAY_FORMAT_VERTEX = 1 << 0;
@@ -29,12 +33,6 @@ const ARRAY_FLAG_COMPRESS_ATTRIBUTES = 1 << 29;
 
 /** RGBA8 vertex colour in both layouts, which Godot writes before UV1 in the attribute record. */
 export const COLOR_BYTES = 4;
-
-/** Bytes of one vertex's element in each custom format, by format (`rendering_server.cpp:1102-1132`). */
-const CUSTOM_ELEMENT_BYTES: readonly number[] = [4, 4, 4, 8, 4, 8, 12, 16];
-
-/** `ARRAY_CUSTOM_COUNT` (`rendering_server.h:296`). */
-const CUSTOM_ARRAY_COUNT = 4;
 
 /** One custom array of a surface: its format and its byte offset in each attribute record. */
 export interface CustomArraySlot {
@@ -151,7 +149,7 @@ function customSlots(
 ): { customs: (CustomArraySlot | undefined)[]; attributeStride: number } {
   const customs: (CustomArraySlot | undefined)[] = [];
   let offset = firstOffset;
-  for (let custom = 0; custom < CUSTOM_ARRAY_COUNT; custom++) {
+  for (let custom = 0; custom < ARRAY_CUSTOM_COUNT; custom++) {
     if (!(format & (ARRAY_FORMAT_CUSTOM0 << custom))) {
       customs.push(undefined);
       continue;
@@ -159,7 +157,8 @@ function customSlots(
     const shift = ARRAY_FORMAT_CUSTOM_BASE + custom * ARRAY_FORMAT_CUSTOM_BITS;
     const customFormat = (format >>> shift) & ARRAY_FORMAT_CUSTOM_MASK;
     customs.push({ format: customFormat as EnumValue<typeof ArrayCustomFormat>, offset });
-    offset += CUSTOM_ELEMENT_BYTES[customFormat]!;
+    const { lanes, laneBytes } = CUSTOM_FORMAT_LANES[customFormat]!;
+    offset += lanes * laneBytes;
   }
   return { customs, attributeStride: offset };
 }

@@ -191,7 +191,7 @@ function decodeSurfaces(
       )
     );
     const customs = decodeCustomArrays(attributeData, vertexCount, layout);
-    const skin = decodeSkin(readPackedBytes(block, 'skin_data'), vertexCount, layout);
+    const skin = layout.skin && decodeSkin(readPackedBytes(block, 'skin_data'), vertexCount, layout.skin);
     const indexData = readPackedBytes(block, 'index_data');
     const stored = indexCount === 0 ? drawOrderIndices(vertexCount) : decodeIndices(indexData, indexCount);
     if (!stored) {

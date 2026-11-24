@@ -6,6 +6,7 @@
 
 import * as THREE from 'three';
 import { bottomUpV } from '../../godot/math/uv.js';
+import { ARRAY_CUSTOM_COUNT } from '../../godot/rendering/meshArrayFormat.js';
 import { UV2_ATTRIBUTE } from './uv2.js';
 import {
   VERTEX_STAGE_BONES_ATTRIBUTE,
@@ -135,10 +136,11 @@ export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.
     : undefined;
   const indices = indexArray(totalIndices, totalVertices);
   const customs = customArrays(surfaces, totalVertices);
-  // Not skinIndex: a surface with no bones beside one with them reads zeros (`mesh_storage.cpp:135-157`).
-  const vertexStageBones = surfaces.some((s) => s.bones)
-    ? { indices: new Uint16Array(totalVertices * 4), weights: new Float32Array(totalVertices * 4) }
-    : undefined;
+  // A surface with no bones beside one with them, which skins none, reads zeros (`mesh_storage.cpp:135-157`).
+  const vertexStageBones =
+    surfaces.some((s) => s.bones) && (!isSkinned || surfaces.some((s) => s.vertexStageBones))
+      ? { indices: new Uint16Array(totalVertices * 4), weights: new Float32Array(totalVertices * 4) }
+      : undefined;
 
   let vertexBase = 0;
   let indexBase = 0;
@@ -233,7 +235,7 @@ function customArrays(
   surfaces: readonly GodotSurface[],
   totalVertices: number
 ): (Float32Array | undefined)[] {
-  return [0, 1, 2, 3].map((custom) =>
+  return Array.from({ length: ARRAY_CUSTOM_COUNT }, (_, custom) =>
     surfaces.some((s) => s.customs?.[custom]) ? new Float32Array(totalVertices * 4) : undefined
   );
 }

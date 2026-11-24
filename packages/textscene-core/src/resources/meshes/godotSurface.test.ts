@@ -222,6 +222,17 @@ describe('godotSurfacesGeometry', () => {
     expect(geometry.getAttribute(VERTEX_STAGE_WEIGHTS_ATTRIBUTE).getX(0)).toBe(0.75);
   });
 
+  it('leaves the vertex stage to the skin attributes when every surface skins with its own bones', () => {
+    const skinned = triangle({
+      bones: { indices: new Uint16Array(12).fill(4), weights: new Float32Array(12).fill(0.5) },
+    });
+
+    const geometry = godotSurfacesGeometry([skinned, skinned]);
+
+    expect(geometry.getAttribute('skinIndex').getX(3)).toBe(4);
+    expect(geometry.getAttribute(VERTEX_STAGE_BONES_ATTRIBUTE)).toBeUndefined();
+  });
+
   it('writes each custom array a surface has, and zeros for a surface without it', () => {
     const custom = new Float32Array(12).fill(0.5);
 

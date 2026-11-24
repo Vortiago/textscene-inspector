@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { ARRAY_CUSTOM_COUNT } from '../../godot/rendering/meshArrayFormat.js';
 import { encodedNormalTangent } from '../../godot/rendering/meshNormalTangent.js';
 import { storedLanes } from '../storedLanes.js';
 
@@ -54,7 +55,7 @@ export function withGodotAttributes(
     const uv = geometry.getAttribute(three);
     if (uv) geometry.setAttribute(godot, uv);
   }
-  for (let custom = 0; custom < CUSTOM_ARRAYS; custom++) {
+  for (let custom = 0; custom < ARRAY_CUSTOM_COUNT; custom++) {
     const values = geometry.getAttribute(`custom${custom}`);
     if (values) geometry.setAttribute(`custom${custom}_attrib`, values);
   }
@@ -117,9 +118,6 @@ const MISSING_ARRAY_VALUES: Readonly<Record<string, Float32Array | Uint32Array>>
 function constantAttribute(value: Float32Array | Uint32Array): THREE.InstancedBufferAttribute {
   return new THREE.InstancedBufferAttribute(value, 4);
 }
-
-/** `Mesh::ARRAY_CUSTOM0` to `ARRAY_CUSTOM3`, which this reads from the attributes `custom0` to `custom3`. */
-const CUSTOM_ARRAYS = 4;
 
 /** The bone indices as Godot stores them, four 16-bit unsigned integers that GL reads as integers. */
 function boneIndices(bones: Attribute): THREE.BufferAttribute {

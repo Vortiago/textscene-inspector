@@ -9,3 +9,18 @@ export const ArrayCustomFormat = {
   RGB_FLOAT: 6,
   RGBA_FLOAT: 7,
 } as const;
+
+/** `RenderingServer::ARRAY_CUSTOM_COUNT` (`rendering_server.h:296`). */
+export const ARRAY_CUSTOM_COUNT = 4;
+
+/** The lanes of each custom format and the bytes of one lane (`rendering_server.cpp:1102-1132`). */
+export const CUSTOM_FORMAT_LANES: readonly { lanes: number; laneBytes: number }[] = [
+  { lanes: 4, laneBytes: 1 },
+  { lanes: 4, laneBytes: 1 },
+  { lanes: 2, laneBytes: 2 },
+  { lanes: 4, laneBytes: 2 },
+  { lanes: 1, laneBytes: 4 },
+  { lanes: 2, laneBytes: 4 },
+  { lanes: 3, laneBytes: 4 },
+  { lanes: 4, laneBytes: 4 },
+];
