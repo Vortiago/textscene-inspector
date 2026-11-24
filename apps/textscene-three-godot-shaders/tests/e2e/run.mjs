@@ -52,22 +52,36 @@ async function transpiledImages() {
 }
 
 /** A failure for each fault scene that does not reach its material as a translator fault with its log. */
-async function unreportedFaults() {
+async function unreportedFaults(page) {
+  const failures = [];
+  for (const { log, ...spec } of FAULT_SCENES) {
+    const drawn = await page.evaluate((value) => globalThis.drawMesh(value), spec);
+    const fault = drawn.faults?.[0];
+    if (fault?.name !== 'TranslatorFault' || !log.test(fault.log))
+      failures.push(
+        `${spec.name}: expected a translator fault with ${log}, got ${JSON.stringify(drawn.faults ?? drawn.error ?? 'pixels')}`
+      );
+    else console.log(`${spec.name}: translator fault, ${fault.log.split('\n')[0]}`);
+  }
+  return failures;
+}
+
+/** A failure for each variant of the canvas template whose program the GPU refuses, unlit or lit. */
+async function unlinkedCanvasVariants(page) {
+  const { linked, error } = await page.evaluate(() => globalThis.linkCanvasVariants());
+  if (error) return [`canvas template: expected the default canvas shader to transpile, got ${error}`];
+  const refused = linked.filter(({ faults }) => faults.length > 0);
+  console.log(`canvas template: ${linked.length - refused.length} of ${linked.length} variants link`);
+  return refused.map(
+    ({ variant, useLighting, faults }) => `canvas ${variant}, lit ${useLighting}: ${faults[0].log}`
+  );
+}
+
+/** The failures of the checks that read a refused program on one page. */
+async function refusalFailures() {
   return withConsumerPage(
     { pageDir: join(import.meta.dirname, 'page'), module: 'e2ePage.js', harness: 'shaderEndToEnd' },
-    async (page) => {
-      const failures = [];
-      for (const { log, ...spec } of FAULT_SCENES) {
-        const drawn = await page.evaluate((value) => globalThis.drawMesh(value), spec);
-        const fault = drawn.faults?.[0];
-        if (fault?.name !== 'TranslatorFault' || !log.test(fault.log))
-          failures.push(
-            `${spec.name}: expected a translator fault with ${log}, got ${JSON.stringify(drawn.faults ?? drawn.error ?? 'pixels')}`
-          );
-        else console.log(`${spec.name}: translator fault, ${fault.log.split('\n')[0]}`);
-      }
-      return failures;
-    }
+    async (page) => [...(await unreportedFaults(page)), ...(await unlinkedCanvasVariants(page))]
   );
 }
 
@@ -127,7 +141,7 @@ async function main() {
     }
     return result;
   });
-  failures.push(...(await unreportedFaults()));
+  failures.push(...(await refusalFailures()));
   const table = resultTable(results);
   console.log(table);
   writeJobSummary(`## Shader showcases against Godot\n\n${table}\n`);

@@ -4,17 +4,14 @@ import {
   bool,
   depth,
   float,
-  Fn,
   frontFacing,
   instanceIndex,
   int,
   pointUV,
-  screenCoordinate,
   select,
   uniform,
   varyingProperty,
   vec2,
-  vec4,
 } from 'three/tsl';
 import type { Node, TextureNode } from 'three/webgpu';
 import { ShadingLanguageError } from '../language/shadingLanguageError.js';
@@ -47,7 +44,7 @@ import {
   type PointDraw,
   type SpatialPipeline,
 } from './spatialPipeline.js';
-import type { TemplateStageNode } from '../template/templateTree.js';
+import { glClipPosition, vertexAttributes, vulkanFragCoord, type ClipStep } from '../template/vulkanStage.js';
 import { declaresInvariantPosition, setPosition, type EmittedStages } from './emittedStages.js';
 import { TreeMemo } from '../template/treeMemo.js';
 import type { Stacked, Vec2, Vec4 } from '../tslTypes.js';
@@ -173,6 +170,7 @@ function stageEmitter(
     const points = pipeline.pointDraw === 'emulated' ? devicePoints() : null;
     const vertexInputs = new Map([
       ...parameterValues,
+      // Each `in` global reads the attribute `withGodotAttributes` writes.
       ...vertexAttributes(vertexStage),
       // Godot's `gl_VertexIndex` counts in the surface, where a merged mesh's index counts across surfaces.
       ['gl_VertexIndex', int(attribute(VERTEX_ID_ATTRIBUTE, 'float')) as unknown as Node],
@@ -232,35 +230,10 @@ function instanceWordsOf(object: THREE.Object3D): Uint32Array {
   return instanceWords(object.matrixWorld);
 }
 
-/** Each `in` global of the vertex stage as the geometry attribute of its name (`withGodotAttributes`). */
-function vertexAttributes(stage: TemplateStageNode): [string, Node][] {
-  return stage.declarations.flatMap((declaration) =>
-    declaration.kind === 'global' && declaration.qualifiers.words.includes('in')
-      ? declaration.declarators.map(({ name }): [string, Node] => [
-          name,
-          attribute(name, declaration.type) as unknown as Node,
-        ])
-      : []
-  );
-}
-
-/** Moves a clip position, a variable, before it turns to GL's. */
-type ClipStep = (clip: Vec4) => void;
-
 /** `points` widening each point by the size the template wrote, in Godot's viewport. */
 function pointExpansion(points: DevicePoints, resources: ProgramResources): ClipStep {
   const viewportSize = resources.uniforms.uniformOf(VIEWPORT_SIZE, 'vec2');
   return (clip) => points.expand(clip, viewportSize);
-}
-
-/** Vulkan's y down and Godot's reversed depth (`render_scene_data_rd.cpp:83`) as GL's, built once. */
-function glClipPosition(position: Node, vulkanClip: Vec4, step: ClipStep | null): Node {
-  return Fn(() => {
-    const clip = (position as unknown as Vec4).toVar();
-    step?.(clip as unknown as Vec4);
-    vulkanClip.assign(clip);
-    return vec4(clip.x, clip.y.negate(), clip.w.sub(clip.z.mul(2)), clip.w);
-  })() as unknown as Node;
 }
 
 /** Godot reverses a mirrored cull (`render_forward_clustered.cpp:411`). three turns a mesh's winding. */
@@ -269,11 +242,6 @@ function godotFrontFacing(): Node {
     (object as THREE.Mesh).isMesh === true && object!.matrixWorld.determinantAffine() < 0 ? 1 : 0
   );
   return select(isMirrored.equal(1), frontFacing.not(), frontFacing) as unknown as Node;
-}
-
-/** Vulkan's `gl_FragCoord`: three's pixel position, which starts at the top row, Godot's depth and 1 / w. */
-function vulkanFragCoord(clip: Vec4): Node {
-  return vec4(screenCoordinate, clip.z.div(clip.w), clip.w.reciprocal()) as unknown as Node;
 }
 
 /** Vulkan's `gl_PointCoord`, read as GL's: both start at the top row. */

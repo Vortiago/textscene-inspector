@@ -5,7 +5,9 @@
  */
 
 export {
+  CANVAS_VARIANTS,
   createDepthPrepass,
+  DEFAULT_CANVAS_SHADER,
   DEFAULT_TIME_ROLLOVER_SECONDS,
   GODOT_VERSION,
   glVaryingSlots,
@@ -20,7 +22,9 @@ export {
   emulatedPointGeometry,
   SkyResolutionPasses,
   skyMaterialShader,
+  specialiseCanvasDraw,
   specialiseSpatial,
+  transpileCanvasItem,
   transpileShadingLanguage,
   transpileSky,
   transpileSpatial,
@@ -30,6 +34,10 @@ export {
   writeSpatialBindings,
 } from '@textscene/core/shaders';
 export type {
+  CanvasDraw,
+  CanvasItemOptions,
+  CanvasSpecialisation,
+  CanvasVariant,
   DepthPrepass,
   DepthPrepassOptions,
   EnvironmentFog,
@@ -54,6 +62,7 @@ export type {
   SkyVolumetricFog,
   SpatialOptions,
   SpatialScene,
+  TranspiledCanvasItem,
   TranspiledFunction,
   TranspiledShader,
   TranspiledSky,
