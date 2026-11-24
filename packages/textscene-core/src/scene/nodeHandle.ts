@@ -1,5 +1,5 @@
 import type { SceneValue } from './variant.js';
-import type { CallResult } from './nodeMethods.js';
+import type { CallArgument, CallResult } from './nodeMethods.js';
 
 /** A node of the open scene, as a script holds it: by identity, for the life of the text. */
 export interface NodeHandle {
@@ -21,7 +21,7 @@ export interface NodeHandle {
   /** `Object::set`: true where Godot reports the write valid. */
   set(property: string, value: SceneValue): Promise<boolean>;
   /** `Object::call` of a ported method, or of a property's setter or getter. Throws for another. */
-  call(method: string, ...args: SceneValue[]): Promise<CallResult>;
+  call(method: string, ...args: CallArgument[]): Promise<CallResult>;
 }
 
 /** What a handle reads of its scene, every node named by its absolute path. */
@@ -32,7 +32,7 @@ export interface HandleHost {
   handleAt(path: string): NodeHandle;
   get(path: string, property: string): Promise<SceneValue | null>;
   set(path: string, property: string, value: SceneValue): Promise<boolean>;
-  call(path: string, method: string, args: readonly SceneValue[]): Promise<CallResult>;
+  call(path: string, method: string, args: readonly CallArgument[]): Promise<CallResult>;
 }
 
 /** The scene's own message for a miss, as `Node::get_node` prints it (`node.cpp:1954-1960`). */
@@ -92,7 +92,7 @@ export class SceneNodeHandle implements NodeHandle {
     return this.host.set(this.path, property, value);
   }
 
-  async call(method: string, ...args: SceneValue[]): Promise<CallResult> {
+  async call(method: string, ...args: CallArgument[]): Promise<CallResult> {
     this.assertInsideTree();
     return this.host.call(this.path, method, args);
   }
