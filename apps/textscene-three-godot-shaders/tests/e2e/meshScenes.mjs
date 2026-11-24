@@ -993,7 +993,7 @@ const POINT_SCENES = [
       )
     )
   ),
-  // ANGLE rasterises these lines on 93 px other than Godot's Vulkan device does: the gate fails above.
+  // ANGLE's Bresenham line emulation puts 93 px apart from Godot's Vulkan lines: the gate fails above.
   {
     ...stageScene('spatial-lines-surface', { fragment: 'ALBEDO = vec3(UV, 0.3);' }, [], SPHERE_EDGES),
     primitive: 'lines',
