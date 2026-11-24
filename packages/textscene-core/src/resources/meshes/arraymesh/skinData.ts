@@ -34,12 +34,18 @@ export function decodeSkin(
   };
 }
 
+/** `count` bones and weights for each vertex, as `skin_data` stores them. */
+interface StoredBones {
+  indices: Uint16Array;
+  weights: Float32Array;
+}
+
 /** `count` bone indices at each record's start, then `count` weights. */
 function readBones(
   view: DataView,
   vertexCount: number,
   record: { count: number; stride: number }
-): SurfaceBones {
+): StoredBones {
   const { count, stride } = record;
   const indices = new Uint16Array(vertexCount * count);
   const weights = new Float32Array(vertexCount * count);
@@ -54,7 +60,7 @@ function readBones(
 }
 
 /** The four largest weights a vertex, the first of equals first, scaled to a sum of 1, for three. */
-function largestFour(stored: SurfaceBones, vertexCount: number, count: number): SurfaceBones {
+function largestFour(stored: StoredBones, vertexCount: number, count: number): SurfaceBones {
   const indices = new Uint16Array(vertexCount * SKINNED_BONES);
   const weights = new Float32Array(vertexCount * SKINNED_BONES);
   const isKept = new Uint8Array(count);

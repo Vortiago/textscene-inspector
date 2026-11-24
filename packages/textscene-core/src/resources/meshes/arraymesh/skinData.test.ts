@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { decodeArrayMeshTres } from '../../testing/decodeArrayMeshTres';
+import { decodeSkin } from './skinData';
 
 // Saved by Godot 4.6.3: pairs of 4, compressed 4, 8 and compressed 8 weights, then a surface with no skin.
 const surfaces = decodeArrayMeshTres(
@@ -68,5 +69,9 @@ describe('decodeSkin', () => {
 
   it('gives a surface with no skin_data no bones', () => {
     expect(surfaces[8]!.bones).toBeUndefined();
+  });
+
+  it('reads no bones from skin_data shorter than its vertices need (error case)', () => {
+    expect(decodeSkin(new Uint8Array(15), 1, { count: 4, stride: 16 })).toBeUndefined();
   });
 });

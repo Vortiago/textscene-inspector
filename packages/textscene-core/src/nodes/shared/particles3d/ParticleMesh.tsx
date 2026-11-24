@@ -14,6 +14,7 @@ import { useInstanceDraw } from '../../../r3f/visibilityRange/geometryInstance';
 import { useResourceResolution } from '../../../resources/useSubOrExtResource';
 import { particleInstances } from './particleInstances';
 import { skinTrailGeometry } from './skinTrails';
+import { VERTEX_STAGE_BONES_ATTRIBUTE } from '../../../shaders/spatial/meshAttributes';
 
 interface ParticleMeshProps {
   /** The raw `mesh` reference each particle draws, or undefined for none. */
@@ -48,7 +49,9 @@ export function ParticleMesh({ mesh, buffer, sections }: ParticleMeshProps) {
 function TrailPart({ part, buffer, sections }: { part: MeshPart; buffer: Float32Array; sections: number }) {
   const { override } = useInstanceDraw();
   const material = readyMaterial(useMaterial(override ?? part.materials[0], 'particle trail'));
-  const isSkinned = material?.data.usesParticleTrails === true && part.geometry.hasAttribute('skinIndex');
+  const hasBones =
+    part.geometry.hasAttribute('skinIndex') || part.geometry.hasAttribute(VERTEX_STAGE_BONES_ATTRIBUTE);
+  const isSkinned = material?.data.usesParticleTrails === true && hasBones;
   return isSkinned ? (
     <SkinnedTrails part={part} buffer={buffer} sections={sections} />
   ) : (

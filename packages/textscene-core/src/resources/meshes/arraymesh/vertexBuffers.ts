@@ -102,10 +102,7 @@ export function decodeUVs(
 ): UvSets {
   if ((layout.uvOffset < 0 && layout.uv2Offset < 0) || vertexCount === 0 || bytes.byteLength === 0) return {};
 
-  // Godot orders the record COLOR, UV1, UV2, CUSTOM0..3, so vertex colours put 4
-  // RGBA8 bytes ahead of UV1 and a wider record (an unmodelled CUSTOM channel)
-  // reads fine at its stride. A record too narrow or not dividing evenly puts
-  // the UVs somewhere else, so they go.
+  // A record too narrow, or one that does not divide evenly, puts the UVs somewhere else, so they go.
   const attributeStride = bytes.byteLength / vertexCount;
   if (!Number.isInteger(attributeStride) || attributeStride < layout.attributeStride) {
     onMismatch(attributeStride);

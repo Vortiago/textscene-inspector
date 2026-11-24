@@ -30,14 +30,17 @@ const LANE_READS: Readonly<
 export function decodeCustomArrays(
   bytes: Uint8Array,
   vertexCount: number,
-  layout: SurfaceLayout
+  layout: SurfaceLayout,
+  onMismatch: (actualStride: number) => void
 ): (Float32Array | undefined)[] {
-  const attributeStride = vertexCount > 0 ? bytes.byteLength / vertexCount : 0;
-  const isReadable = Number.isInteger(attributeStride) && attributeStride >= layout.attributeStride;
+  if (!layout.customs.some(Boolean) || vertexCount === 0) return layout.customs.map(() => undefined);
+  const attributeStride = bytes.byteLength / vertexCount;
+  if (!Number.isInteger(attributeStride) || attributeStride < layout.attributeStride) {
+    onMismatch(attributeStride);
+    return layout.customs.map(() => undefined);
+  }
   const view = bytesView(bytes);
-  return layout.customs.map((slot) =>
-    slot && isReadable && vertexCount > 0 ? customValues(view, vertexCount, attributeStride, slot) : undefined
-  );
+  return layout.customs.map((slot) => slot && customValues(view, vertexCount, attributeStride, slot));
 }
 
 function customValues(

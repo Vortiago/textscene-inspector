@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { decodeArrayMeshTres } from '../../testing/decodeArrayMeshTres';
+import { decodeCustomArrays } from './customArrays';
+import { surfaceLayout } from './surfaceFormat';
 
 // Saved by Godot 4.6.3: one surface per custom format, in slot `format / 2`, RGBA_FLOAT in the others.
 function savedMesh(file: string) {
@@ -51,10 +53,22 @@ describe('decodeCustomArrays', () => {
 
     expect(compressed!.customs![1]![0]).toBeCloseTo(0.2, 6);
     expect(plain!.customs![1]![0]).toBeCloseTo(0, 6);
-    expect(compressed!.customs![3]![1]).toBeCloseTo(255 / 255, 6);
+    expect(compressed!.customs![3]![1]).toBeCloseTo(1, 6);
   });
 
   it('gives a surface with no custom array none', () => {
     expect(savedMesh('skinFormats.tres').surfaces[0]!.customs).toBeUndefined();
+  });
+
+  it('reads no custom array from attribute_data narrower than its format, and reports the width (error case)', () => {
+    const rgbaFloatCustom0 = (1 << 0) | (1 << 6) | (7 << 13);
+    const widths: number[] = [];
+
+    const customs = decodeCustomArrays(new Uint8Array(8), 1, surfaceLayout(rgbaFloatCustom0), (width) =>
+      widths.push(width)
+    );
+
+    expect(customs).toEqual([undefined, undefined, undefined, undefined]);
+    expect(widths).toEqual([8]);
   });
 });

@@ -190,8 +190,19 @@ function decodeSurfaces(
           `not the ${layout.attributeStride} B format ${format} implies — dropping its UVs`
       )
     );
-    const customs = decodeCustomArrays(attributeData, vertexCount, layout);
-    const skin = layout.skin && decodeSkin(readPackedBytes(block, 'skin_data'), vertexCount, layout.skin);
+    const customs = decodeCustomArrays(attributeData, vertexCount, layout, (actualStride) =>
+      warn(
+        `[ArrayMesh] surface ${surfaceIndex}'s attribute_data is ${actualStride} B/vertex, ` +
+          `not the ${layout.attributeStride} B format ${format} implies — dropping its custom arrays`
+      )
+    );
+    const skinData = readPackedBytes(block, 'skin_data');
+    const skin = layout.skin && decodeSkin(skinData, vertexCount, layout.skin);
+    if (layout.skin && !skin && vertexCount > 0)
+      warn(
+        `[ArrayMesh] surface ${surfaceIndex}'s skin_data is ${skinData.byteLength} B, not the ` +
+          `${vertexCount * layout.skin.stride} B format ${format} implies — it draws unskinned`
+      );
     const indexData = readPackedBytes(block, 'index_data');
     const stored = indexCount === 0 ? drawOrderIndices(vertexCount) : decodeIndices(indexData, indexCount);
     if (!stored) {
