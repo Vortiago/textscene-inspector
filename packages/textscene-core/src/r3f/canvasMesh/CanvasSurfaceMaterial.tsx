@@ -5,10 +5,9 @@
  */
 
 import type * as THREE from 'three';
-import { useThree } from '@react-three/fiber';
 import { canvasMapProps } from '../canvas2DTextureDecode';
 import { instanceColorDefines, useCanvasColorSpace, type CanvasColorSpace } from '../canvasColorSpace';
-import { canvasPointSize } from '../materials/godotPoint';
+import { CANVAS_POINT_SIZE } from '../materials/godotPoint';
 import { materialProgramInputs, type ProgramInjection } from '../materialProgramInputs';
 import type { CanvasItemPixelMaterial } from '../components/LitCanvasItemPixels';
 import type { CanvasVertexColors } from './canvasSurface';
@@ -39,9 +38,7 @@ export function CanvasSurfaceMaterial({
   injections = NO_INJECTIONS,
 }: CanvasSurfaceMaterialProps) {
   const canvasSpace = useCanvasColorSpace();
-  const pixelRatio = useThree((state) => state.viewport.dpr);
   const mapProps = canvasMapProps(map, canvasSpace);
-  const point = drawsPoints ? canvasPointSize(pixelRatio) : undefined;
   // The define is a program input, so it keys the material: a late texture mounts a new one.
   const program = materialProgramInputs({
     props: {
@@ -52,8 +49,7 @@ export function CanvasSurfaceMaterial({
       transparent: true,
       depthWrite: false,
       defines: vertexColors ? vertexColorDefines(canvasSpace, vertexColors) : mapProps.defines,
-      injection: point?.injection,
-      userData: point?.userData,
+      injection: drawsPoints ? CANVAS_POINT_SIZE : undefined,
     },
     // The facing in `pixelMaterial` draws one pass whatever the winding, so a bent skin's
     // triangles and per-vertex alpha keep their index order.

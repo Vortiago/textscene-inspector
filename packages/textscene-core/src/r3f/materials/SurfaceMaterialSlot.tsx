@@ -6,7 +6,6 @@
  */
 
 import { useEffect, useMemo } from 'react';
-import { useThree } from '@react-three/fiber';
 import { MISSING_TEXTURE_MATERIAL } from '../../resources/materials/standardmaterial3d/materialBag';
 import { drawnBag, materialBagElement, StandardMaterialSlot } from './StandardMaterialSlot';
 import { pointDrawOf, type ListedSurface } from './godotPoint';
@@ -44,13 +43,12 @@ export function SurfaceMaterialSlot({
   drawnOn,
 }: SurfaceMaterialSlotProps) {
   const { scalars, bags, shader } = useShadedSurfaceMaterial(source);
-  const pixelRatio = useThree((state) => state.viewport.dpr);
   // Primitive and placement are strings: `listed` is a new object each render.
   const primitive = listed?.primitive;
   const placement = listed?.placement;
   const pointDraw = useMemo(
-    () => (primitive === 'points' && placement ? pointDrawOf(scalars, pixelRatio, placement) : undefined),
-    [primitive, placement, scalars, pixelRatio]
+    () => (primitive === 'points' && placement ? pointDrawOf(scalars, placement) : undefined),
+    [primitive, placement, scalars]
   );
   const particleDraw = useMemo(
     () => (particles ? { draw: particleDrawOf(scalars), program: particles } : undefined),

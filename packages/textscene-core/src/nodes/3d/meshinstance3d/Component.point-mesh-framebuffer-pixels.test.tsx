@@ -1,5 +1,3 @@
-/** A point's size is in Godot's viewport pixels, so a canvas of pixel ratio 2 draws it twice as wide. */
-
 import { describe, expect, it, vi } from 'vitest';
 import type * as THREE from 'three';
 import { subResource } from '../../../testing/subResource';
@@ -18,7 +16,7 @@ vi.mock('@react-three/fiber', async (importOriginal) => {
 });
 
 describe('MeshInstance3D with a PointMesh on a canvas of pixel ratio 2', () => {
-  it('records the pixel ratio beside point_size, for the colour pass to draw twice over', async () => {
+  it('draws point_size framebuffer pixels, not point_size times the ratio', async () => {
     const renderer = await renderMeshInstance({
       loader: loaderServing(),
       node: meshInstanceNode({
@@ -31,9 +29,8 @@ describe('MeshInstance3D with a PointMesh on a canvas of pixel ratio 2', () => {
       ],
     });
     const points = instanceAs<THREE.Points>(renderer.scene.findByType('Points'));
-    expect((points.material as THREE.Material).userData).toMatchObject({
-      godotPointSize: 20,
-      godotPointPixelRatio: 2,
-    });
+    const { userData } = points.material as THREE.Material;
+    expect(userData.godotPointSize).toBe(20);
+    expect(Object.keys(userData).filter((key) => /ratio/i.test(key))).toEqual([]);
   });
 });

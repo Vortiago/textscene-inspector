@@ -110,7 +110,7 @@ describe('a BILLBOARD_PARTICLES billboard', () => {
   it('declares the billboard after the instance matrix of instanced points', () => {
     const points = withPointDraw(
       { materialClass: 'basic', props: { userData: {} }, injection: billboardInjections(PARTICLES)!.colour },
-      { pixels: 4, pixelRatio: 1, samplesAlbedoAtPointCoord: false, placement: 'instances' }
+      { pixels: 4, samplesAlbedoAtPointCoord: false, placement: 'instances' }
     );
     const shader = compiled(points.injection!, 'basic').vertexShader;
     expect(shader.indexOf('mat4 godotBillboard()')).toBeGreaterThan(
