@@ -5,15 +5,16 @@
  */
 import { useThree } from '@react-three/fiber';
 import { useOptionalSelection } from './contexts/SelectionContext.js';
+import { useSelectedPath } from './components/TscnPreviewShell/previewSelection.js';
 import { isDrawingPreview } from './EditorControlsHandle.js';
 import { useGlobalShortcut } from './hooks/useGlobalShortcut.js';
 import { resolveFrameTarget } from './resolveFrameTarget.js';
 import { frameSceneBounds, type OrbitLike } from './frameSceneBounds.js';
 
 export function FrameSelectedShortcut() {
-  const selection = useOptionalSelection();
-  const selectedNodePath = selection?.selectedNodePath ?? null;
-  const nodeObjectMap = selection?.nodeObjectMap ?? null;
+  // The selected node, not the outlined one: a hovered row outlines its node but selects nothing.
+  const selectedNodePath = useSelectedPath();
+  const nodeObjectMap = useOptionalSelection()?.nodeObjectMap ?? null;
   const get = useThree((s) => s.get);
 
   useGlobalShortcut('f', () => {

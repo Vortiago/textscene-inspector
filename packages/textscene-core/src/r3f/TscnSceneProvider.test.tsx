@@ -8,7 +8,7 @@ import type { ResourceProvider } from '../resources/ResourceProvider';
 import { ResourceLoaderContext } from '../resources/ResourceLoaderContext';
 import { TscnSceneProvider } from './TscnSceneProvider';
 import { TscnSceneContents } from './TscnCanvas';
-import { useSelection } from './contexts/SelectionContext';
+import { useSelection, useSelectedNodePath } from './contexts/SelectionContext';
 import { useHierarchy } from './contexts/HierarchyContext';
 import { openScene } from '../scene/openScene';
 import { resourcePipelineOf } from './sceneResourcePipeline';
@@ -131,9 +131,9 @@ describe('<TscnSceneProvider>', () => {
   });
 
   it('shares the selection with a component beside the canvas', () => {
-    let selection!: ReturnType<typeof useSelection>;
+    let selection!: ReturnType<typeof useSelection> & { selectedNodePath: string | null };
     function SelectionProbe() {
-      selection = useSelection();
+      selection = { ...useSelection(), selectedNodePath: useSelectedNodePath() };
       return null;
     }
 
@@ -172,9 +172,9 @@ describe('<TscnSceneProvider>', () => {
   });
 
   it('clears the selection when the scene changes', () => {
-    let selection!: ReturnType<typeof useSelection>;
+    let selection!: ReturnType<typeof useSelection> & { selectedNodePath: string | null };
     function SelectionProbe() {
-      selection = useSelection();
+      selection = { ...useSelection(), selectedNodePath: useSelectedNodePath() };
       return null;
     }
     const scene = openScene({ source: BOX_SCENE, provider: emptyProvider() });

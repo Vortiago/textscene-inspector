@@ -12,7 +12,6 @@ import type { CanvasWorkspace } from './contexts/CanvasWorkspaceContext';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../parser/TscnParser';
 import { SceneStack } from './testing/SceneStack';
-import { HiddenSeeder } from './testing/HiddenSeeder';
 
 import './nodes/index';
 import { settleLoads } from './testing/settleLoads';
@@ -20,7 +19,6 @@ import { settleLoads } from './testing/settleLoads';
 interface RenderOptions {
   workspace?: CanvasWorkspace;
   subScenes?: Readonly<Record<string, string>>;
-  hiddenPaths?: readonly string[];
 }
 
 async function renderWorld(tscn: string, options: RenderOptions = {}): Promise<THREE.Object3D> {
@@ -31,7 +29,6 @@ async function renderWorld(tscn: string, options: RenderOptions = {}): Promise<T
   }
   const renderer = await ReactThreeTestRenderer.create(
     <SceneStack workspace={options.workspace ?? '3d'} loader={fake.loader} scene={parsed}>
-      <HiddenSeeder paths={options.hiddenPaths ?? []} />
       <WorldEnvironmentScope world="root">
         <NodeDispatcher nodes={parsed.nodes} />
       </WorldEnvironmentScope>
@@ -131,21 +128,6 @@ visible = false
 
 [node name="Child" type="Node3D" parent="Folder"]
 `);
-    expect(isRenderedVisible(named(root, 'Child'))).toBe(true);
-  });
-
-  it('draws although the eye toggle hides the Node3D above the plain Node', async () => {
-    const root = await renderWorld(
-      `[gd_scene format=3]
-
-[node name="Root" type="Node3D"]
-
-[node name="Folder" type="Node" parent="."]
-
-[node name="Child" type="Node3D" parent="Folder"]
-`,
-      { hiddenPaths: ['Root'] }
-    );
     expect(isRenderedVisible(named(root, 'Child'))).toBe(true);
   });
 

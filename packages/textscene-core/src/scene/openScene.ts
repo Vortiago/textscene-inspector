@@ -88,10 +88,15 @@ export function openScene({
   const properties = new SceneProperties(
     rootScenePath,
     () => graph()?.scenes.get(rootScenePath),
-    (livePath) => tree()?.node(livePath) ?? null
+    (livePath) => tree()?.node(livePath) ?? null,
+    (livePath) => writtenTree()?.node(livePath) ?? null
   );
   const tree = (): SceneTree | null => {
     const current = graph();
+    return current ? runtime().tree(current) : null;
+  };
+  const writtenTree = (): SceneTree | null => {
+    const current = scene.written();
     return current ? runtime().tree(current) : null;
   };
   /** The class `load` gives: a sub-resource's heading names it, and no file is asked for one. */

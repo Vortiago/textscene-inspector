@@ -56,8 +56,6 @@ interface CsgPlanShape {
 }
 
 interface BuildOptions {
-  /** Paths hidden with the scene-tree eye toggle, treated like `visible = false`. */
-  hiddenPaths?: ReadonlySet<string>;
   /** What the live scene passes bind into the nodes below the root, by live path. */
   patches?: NodePatches;
   /**
@@ -68,9 +66,8 @@ interface BuildOptions {
   lookup: (type: string) => CsgPlanShape | null;
 }
 
-function isVisible(node: TscnNode, path: string, hidden?: ReadonlySet<string>): boolean {
-  if ((node.properties as Node3DProperties).visible === false) return false;
-  return !hidden?.has(path);
+function isVisible(node: TscnNode): boolean {
+  return (node.properties as Node3DProperties).visible !== false;
 }
 
 /**
@@ -104,7 +101,7 @@ function isFinite4(m: THREE.Matrix4): boolean {
  * legitimately draws nothing" is a different answer from "this is not a CSG root".
  */
 export function buildCsgPlan(root: TscnNode, rootPath: string, options: BuildOptions): CsgPlan | null {
-  const { lookup, hiddenPaths } = options;
+  const { lookup } = options;
   if (lookup(root.type) === null) return null;
 
   const absorbedPaths = new Set<string>();
@@ -127,7 +124,7 @@ export function buildCsgPlan(root: TscnNode, rootPath: string, options: BuildOpt
   ): CsgContribution | null => {
     // A root builds whatever its visibility, since update_shape() is gated on is_root_shape()
     // alone (csg_shape.cpp:568-570), so only a child stops the walk.
-    if (!isRoot && !isVisible(node, path, hiddenPaths)) {
+    if (!isRoot && !isVisible(node)) {
       markInvisible(node, path);
       return null;
     }

@@ -22,11 +22,11 @@ Evaluate the booleans, with **`three-bvh-csg` directly**.
 one, and only the root draws. Contributions fold bottom-up in child order, and each
 applies its own `operation`. A `CSGCombiner3D` has no solid. Its subtree folds to one
 contribution, which combines into its parent. Invisible children are skipped, so the
-hidden-eye toggle changes the result. A root's own `operation` is inert.
+eye, which writes `visible`, changes the result. A root's own `operation` is inert.
 
 **The seam is `CsgPrimitive`, not `NodeDispatcher`.** Two constraints force it.
 `PlainNode` is the sole caller of `registerNodeObject`, so a dispatcher that skipped CSG
-children would strip tree-selection, highlighting and the hidden-eye toggle from all of
+children would strip tree-selection and highlighting from all of
 them. And `subtreeConformance.test.tsx` renders each registered type with a probe child
 and asserts it survives, which a root that swallows `children` fails. So contributors
 stay mounted and remove their own mesh from the inside, as `CsgSubtreeContext` tells

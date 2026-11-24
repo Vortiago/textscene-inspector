@@ -21,12 +21,16 @@ import {
   bindSceneRuntime,
   type SceneRuntime,
   type SceneTree,
+  type ContainerVisibility,
   type SceneTreeNode,
   type TreeCamera,
 } from '../scene/sceneRuntime.js';
 import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
 import { isCamera2DType, isCamera3DType } from './cameraNodeTypes.js';
 import { perObject } from '../utils/perObject.js';
+import type { ContainerWrite } from '../core/childVisibility.js';
+import { nodeRegistry } from '../core/NodeRegistry.js';
+import { sortableChildCount, writtenSlotOf } from './canvasItemPass/writtenVisibility.js';
 import { liveTreeOf, type LiveLink, type LiveTree } from './liveSceneTree.js';
 import { nodePathUniquePaths } from './nodePathUniqueNames.js';
 import { resourcePipelineOf } from './sceneResourcePipeline.js';
@@ -56,7 +60,12 @@ function resourceInScope(scope: SceneScope, rootScenePath: string) {
   };
 }
 
-function treeNodeOf(link: LiveLink, rootScenePath: string): SceneTreeNode {
+function treeNodeOf(
+  tree: LiveTree,
+  link: LiveLink,
+  parent: LiveLink | null,
+  rootScenePath: string
+): SceneTreeNode {
   const { node, groups, scope } = link.step;
   return {
     name: node.name,
@@ -64,8 +73,25 @@ function treeNodeOf(link: LiveLink, rootScenePath: string): SceneTreeNode {
     rawProperties: node.rawProperties,
     childNames: groups.flatMap((group) => group.children.map((child) => child.name)),
     resourceOf: resourceInScope(scope, rootScenePath),
+    containerVisibility: parent && containerVisibilityOf(tree, link, parent),
+    sortedProperty: (property) =>
+      nodeRegistry.sortedProperties(node.type)?.(node, sortableChildCount(tree, link.step))[property],
   };
 }
+
+function containerVisibilityOf(tree: LiveTree, link: LiveLink, parent: LiveLink): ContainerVisibility | null {
+  const slot = writtenSlotOf(tree, parent.step, link.raw);
+  if (!slot) return null;
+  const container = parent.step.node;
+  const write = nodeRegistry.childVisibilityWrite(container.type);
+  return {
+    visible: slot.visible,
+    containerPath: parent.path,
+    writesFor: (visible) => write?.(container, slot.index, slot.count, visible) ?? NO_CONTAINER_WRITES,
+  };
+}
+
+const NO_CONTAINER_WRITES: readonly ContainerWrite[] = [];
 
 /** Each camera of the loaded tree with its viewport, in the pre-order `NOTIFICATION_ENTER_TREE` takes. */
 const camerasOf = perObject((tree: LiveTree): readonly TreeCamera[] => {
@@ -85,8 +111,10 @@ function sceneTreeOf(tree: LiveTree, loader: ResourceLoader, rootScenePath: stri
   return {
     node(livePath) {
       const names = livePath.split('/');
+      let parent: LiveLink | null = null;
       let link: LiveLink | null = null;
       for (let depth = 1; depth <= names.length; depth++) {
+        parent = link;
         link = tree.at(names.slice(0, depth).join('/'));
         if (!link) return null;
         const awaited = awaitedInstancePath(link);
@@ -95,7 +123,7 @@ function sceneTreeOf(tree: LiveTree, loader: ResourceLoader, rootScenePath: stri
           return null;
         }
       }
-      return link && treeNodeOf(link, rootScenePath);
+      return link && treeNodeOf(tree, link, parent, rootScenePath);
     },
     uniquePaths: (livePath) => nodePathUniquePaths(livePath, tree.roots, tree.ctx),
     cameras: () => camerasOf(tree),

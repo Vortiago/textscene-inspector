@@ -18,8 +18,6 @@ import {
 import { countedTable } from '../../../resources/testing/countedTable';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 import { ProjectSettingsProvider } from '../../contexts/ProjectSettingsContext';
-import { SelectionProvider } from '../../contexts/SelectionContext';
-import { HiddenSeeder } from '../../testing/HiddenSeeder';
 import type { FontResource } from '../../../resources/fonts/font/types';
 import { peekSceneFontMetrics } from './text/sceneFontLoader';
 import { useBuildSolveTree, useBuildViewportTree } from './buildSolveTree';
@@ -118,6 +116,23 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
     expect(result.current.tree[0]?.node.properties).toMatchObject({ text: 'HUD LAYER' });
   });
 
+  it("keeps the sub-scene root's visible = false on an instance at the scene root", () => {
+    const loader = createFakeResourceLoader();
+    loader.scenes.seed(
+      LAYER_PATH,
+      scene([parsedNode({ name: 'LayerLabel', type: 'Label' }, { visible: 'false' })])
+    );
+
+    const nodes = [instanceOf('Hud', '1_layer')];
+    const externalResources = [{ id: '1_layer', path: LAYER_PATH, type: 'PackedScene' }];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, externalResources, []), {
+      wrapper: wrapperFor(loader.loader),
+    });
+
+    expect(result.current.tree[0]?.node.properties).toMatchObject({ visible: false });
+  });
+
   it('keeps a non-Control ancestor (Node3D) transparent, surfacing the instanced Control beneath it', () => {
     const loader = createFakeResourceLoader();
     loader.scenes.seed(LAYER_PATH, scene([parsedLabel('LayerLabel', 'HUD LAYER')]));
@@ -129,8 +144,7 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
       wrapper: wrapperFor(loader.loader),
     });
 
-    // 'Root' (Node3D) gets no SolveNode, so its instanced descendant is a forest
-    // root. The path stays 'Root/Hud', which hiddenNodePaths and selection address.
+    // A Node3D gets no SolveNode, so 'Root/Hud' is a forest root that keeps its path.
     expect(result.current.tree).toHaveLength(1);
     expect(result.current.tree[0]?.path).toBe('Root/Hud');
     expect(result.current.tree[0]?.node.type).toBe('Label');
@@ -1138,41 +1152,6 @@ describe('useBuildSolveTree — a Control whose CanvasItem chain is broken becom
     );
     expect(hoisted!.paint.own).toBeLessThan(solvedSecond!.paint.own);
   });
-
-  it('still carries the eye toggle of every ancestor it was hoisted past', () => {
-    // The toggle follows the outliner's subtree, and a hoisted node leaves its
-    // ancestor's group, so the flag travels on the node. The ancestor's own
-    // `visible = false` does not: `_handle_visibility_change` casts direct
-    // children only (canvas_item.cpp:92-111).
-    const scene = new TscnParser().parse(`[gd_scene format=3]
-
-[node name="Root" type="Control"]
-anchors_preset = 15
-
-[node name="Panel" type="Control" parent="."]
-
-[node name="Holder" type="Node" parent="Panel"]
-
-[node name="Promoted" type="ColorRect" parent="Panel/Holder"]
-`);
-    const loader = createFakeResourceLoader();
-    const { result } = renderHook(
-      () => useBuildSolveTree(scene.nodes, scene.externalResources, scene.internalResources),
-      {
-        wrapper: ({ children }) => (
-          <ResourceLoaderProvider loader={loader.loader}>
-            <SelectionProvider>
-              <HiddenSeeder paths={['Root/Panel']} />
-              {children}
-            </SelectionProvider>
-          </ResourceLoaderProvider>
-        ),
-      }
-    );
-    const hoisted = result.current.tree[1]!;
-    expect(hoisted.path).toBe('Root/Panel/Holder/Promoted');
-    expect(hoisted.hidden).toBe(true);
-  });
 });
 
 const FONT_A: FontResource = {
@@ -1886,16 +1865,12 @@ color = Color(0.95, 0.85, 0.1, 1)
   });
 });
 
-/**
- * The eye toggle (`SelectionContext.hiddenNodePaths`) stands in for clearing
- * `visible`, so it reaches the solve: `Container::_sort_children` leaves no slot
- * for a rejected child (`scene/gui/container.cpp::Container::_sort_children`). A
- * hidden group alone would paint a hole.
- */
-describe('useBuildSolveTree — hiddenNodePaths reaches the solve', () => {
+/** `Container::_sort_children` leaves no slot for a child with `visible = false` (container.cpp:144-150). */
+describe('useBuildSolveTree — a hidden child in a Container', () => {
   const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 
-  const COLUMN = `[gd_scene format=3]
+  function column(secondVisible: boolean): string {
+    return `[gd_scene format=3]
 
 [node name="Root" type="Control"]
 anchors_preset = 15
@@ -1911,88 +1886,33 @@ custom_minimum_size = Vector2(0, 40)
 
 [node name="Second" type="ColorRect" parent="Column"]
 custom_minimum_size = Vector2(0, 40)
+visible = ${secondVisible}
 
 [node name="Third" type="ColorRect" parent="Column"]
 custom_minimum_size = Vector2(0, 40)
 `;
+  }
 
-  function solveWithHidden(hidden: readonly string[]): ReadonlyMap<string, SolvedControl> {
-    const scene = new TscnParser().parse(COLUMN);
+  function solve(source: string): ReadonlyMap<string, SolvedControl> {
+    const scene = new TscnParser().parse(source);
     const loader = createFakeResourceLoader();
     const { result } = renderHook(
       () => useBuildSolveTree(scene.nodes, scene.externalResources, scene.internalResources),
       {
         wrapper: ({ children }) => (
-          <ResourceLoaderProvider loader={loader.loader}>
-            <SelectionProvider>
-              <HiddenSeeder paths={hidden} />
-              {children}
-            </SelectionProvider>
-          </ResourceLoaderProvider>
+          <ResourceLoaderProvider loader={loader.loader}>{children}</ResourceLoaderProvider>
         ),
       }
     );
     return solveControlTree(result.current.tree, VIEWPORT, createSolveContext(nativeTheme(1)));
   }
 
-  it('stamps `hidden` on the matching node and on nothing else', () => {
-    const scene = new TscnParser().parse(COLUMN);
-    const loader = createFakeResourceLoader();
-    const { result } = renderHook(
-      () => useBuildSolveTree(scene.nodes, scene.externalResources, scene.internalResources),
-      {
-        wrapper: ({ children }) => (
-          <ResourceLoaderProvider loader={loader.loader}>
-            <SelectionProvider>
-              <HiddenSeeder paths={['Root/Column/Second']} />
-              {children}
-            </SelectionProvider>
-          </ResourceLoaderProvider>
-        ),
-      }
-    );
-    const column = result.current.tree[0]!.children[0]!;
-    expect(column.children.map((c) => c.hidden)).toEqual([false, true, false]);
-  });
-
-  it('hides a promoted Control when the SKIPPED node the eye toggle names is its ancestor', () => {
-    // A Node2D leaves no SolveNode, and its Control descendants promote past it,
-    // so an own-path stamp would let them escape a whole-subtree toggle.
-    const scene = new TscnParser().parse(`[gd_scene format=3]
-
-[node name="Root" type="Control"]
-anchors_preset = 15
-
-[node name="Holder" type="Node2D" parent="."]
-
-[node name="Promoted" type="ColorRect" parent="Holder"]
-`);
-    const loader = createFakeResourceLoader();
-    const { result } = renderHook(
-      () => useBuildSolveTree(scene.nodes, scene.externalResources, scene.internalResources),
-      {
-        wrapper: ({ children }) => (
-          <ResourceLoaderProvider loader={loader.loader}>
-            <SelectionProvider>
-              <HiddenSeeder paths={['Root/Holder']} />
-              {children}
-            </SelectionProvider>
-          </ResourceLoaderProvider>
-        ),
-      }
-    );
-    const promoted = result.current.tree[0]!.children[0]!;
-    expect(promoted.path).toBe('Root/Holder/Promoted');
-    expect(promoted.hidden).toBe(true);
-  });
-
   it('closes the gap a hidden child leaves, rather than laying out an empty slot', () => {
     // `default_theme.cpp`'s BoxContainer `separation` is 4, so three 40 px rows
     // sit at 0 / 44 / 88.
-    const all = solveWithHidden([]);
-    expect(all.get('Root/Column/Third')?.rect.y).toBe(88);
+    expect(solve(column(true)).get('Root/Column/Third')?.rect.y).toBe(88);
 
-    const hidden = solveWithHidden(['Root/Column/Second']);
+    const hidden = solve(column(false));
     expect(hidden.get('Root/Column/Third')?.rect.y).toBe(44);
     expect(hidden.get('Root/Column/First')?.rect.y).toBe(0);
   });
@@ -2347,19 +2267,6 @@ describe('useBuildSolveTree — a container that writes its children’s `visibl
     const layer = result.current.tree[0]!.children[0]!;
     expect(layer.node.type).toBe('CanvasLayer');
     expect((layer.node.properties as { visible?: boolean }).visible).toBeUndefined();
-  });
-
-  it('never un-hides a child the outliner’s eye toggle cleared', () => {
-    const nodes = [foldable('FC', false, [label('Contents')])];
-    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []), {
-      wrapper: ({ children }: { children: ReactNode }) => (
-        <SelectionProvider>
-          <HiddenSeeder paths={['FC/Contents']} />
-          {children}
-        </SelectionProvider>
-      ),
-    });
-    expect(result.current.tree[0]!.children[0]!.hidden).toBe(true);
   });
 
   describe('TabContainer shows the current page and HIDES every other', () => {

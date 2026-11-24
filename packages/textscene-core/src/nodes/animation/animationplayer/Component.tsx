@@ -11,11 +11,14 @@ import type { AnimationClip, Object3D } from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { node3dGroupSpread, transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { useAnimationTransport, type PlayState } from '../../../r3f/contexts/AnimationTransportContext';
+import {
+  useAnimationTransport,
+  useIsActivePath,
+  type PlayState,
+} from '../../../r3f/contexts/AnimationTransportContext';
 import type { BoundClips } from '../../../r3f/contexts/AnimationDriverContext';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
-import { useIsSelected } from '../../../r3f/hooks/useIsSelected';
 import { usePlaybackLoop } from '../../../r3f/animation/usePlaybackLoop';
 import { applyLoopOverride, loopSettingsFor } from '../../../r3f/animation/loopOverride';
 import { useAnimationDriverMount } from '../../../r3f/animation/useAnimationDriverMount';
@@ -57,13 +60,13 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
   // Selection-driven (ADR-0012): this player owns the transport only while it
   // is the node selected in the tree.
   const nodePath = useNodePath();
-  const isSelected = useIsSelected();
+  const isDriven = useIsActivePath(nodePath);
 
   // AnimationMixer.active gates everything: `seek_internal` returns on `!active`
   // (animation_player.cpp:664), refusing this transport's scrub as well as the process callback
   // (animation_mixer.cpp:446-455). So an inactive player leaves every target at its authored value
   // and builds no mixer.
-  const isDriving = isSelected && properties.active;
+  const isDriving = isDriven && properties.active;
 
   const transport = useAnimationTransport();
 
@@ -173,7 +176,7 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
     nodePath,
     // Registration stays on selection: Godot lists an inactive player's animations, and an
     // AnimationTree reading them through `anim_player` is gated by its own active flag (ADR-0019).
-    isActive: isSelected,
+    isActive: isDriven,
     buildMixer: isDriving,
     autoplay: properties.autoplay || undefined,
     durations,

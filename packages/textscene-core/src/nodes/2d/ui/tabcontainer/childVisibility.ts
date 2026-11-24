@@ -3,7 +3,12 @@
  * declares it, so every walk reads it before any renderer chunk loads.
  */
 
-import type { ChildVisibilityFn } from '../../../../core/childVisibility';
+import type {
+  ChildVisibilityFn,
+  ChildVisibilityWriteFn,
+  SortedPropertiesFn,
+} from '../../../../core/childVisibility';
+import { VARIANT_TYPE as T } from '../../../../godot/variant/variantType';
 import { isTabUnselectable, resolveTabBarCurrentTab } from '../tabbar/currentTab';
 import type { TabContainerProperties } from './types';
 
@@ -15,11 +20,15 @@ import type { TabContainerProperties } from './types';
  */
 export function tabContainerCurrentTab(props: TabContainerProperties, tabCount: number): number {
   return resolveTabBarCurrentTab(props.currentTab, props.deselectEnabled, tabCount, (i) =>
-    isTabUnselectable({
-      disabled: props.tabOverrides?.[i]?.disabled === true,
-      hidden: props.tabOverrides?.[i]?.hidden === true,
-    })
+    isPageUnselectable(props, i)
   );
+}
+
+function isPageUnselectable(props: TabContainerProperties, index: number): boolean {
+  return isTabUnselectable({
+    disabled: props.tabOverrides?.[index]?.disabled === true,
+    hidden: props.tabOverrides?.[index]?.hidden === true,
+  });
 }
 
 /**
@@ -29,3 +38,46 @@ export function tabContainerCurrentTab(props: TabContainerProperties, tabCount: 
  */
 export const tabContainerChildVisibility: ChildVisibilityFn = (container, _child, index, count) =>
   index === tabContainerCurrentTab(container.properties as TabContainerProperties, count);
+
+/** `_on_tab_visibility_changed` (`tab_container.cpp:589-624`): a shown page becomes current. */
+export const tabContainerChildVisibilityWrite: ChildVisibilityWriteFn = (
+  container,
+  index,
+  count,
+  visible
+) => {
+  const props = container.properties as TabContainerProperties;
+  const current = tabContainerCurrentTab(props, count);
+  if (visible) return current === index ? [] : [currentTabWrite(index)];
+  if (current !== index) return [];
+  if (props.deselectEnabled === true) return [currentTabWrite(-1)];
+  // The only page cannot be deselected, so `p_child->show()` puts it back (`:605-607`).
+  if (count === 1) return [];
+  return [
+    currentTabWrite(
+      nextSelectablePage(props, current, count) ?? previousSelectablePage(props, current) ?? -1
+    ),
+  ];
+};
+
+const currentTabWrite = (tab: number) => ['current_tab', { type: T.INT, value: tab }] as const;
+
+/** `TabBar::get_next_available` (`tab_bar.cpp:855-866`), null for none. */
+function nextSelectablePage(props: TabContainerProperties, current: number, count: number): number | null {
+  for (let page = current + 1; page < count; page++) if (!isPageUnselectable(props, page)) return page;
+  return null;
+}
+
+/** `TabBar::get_previous_available` (`tab_bar.cpp:839-853`), null for none. */
+function previousSelectablePage(props: TabContainerProperties, current: number): number | null {
+  for (let page = current - 1; page >= 0; page--) if (!isPageUnselectable(props, page)) return page;
+  return null;
+}
+
+/** `get_current_tab` reads the bar, which resolves the page once the pages load (`tab_bar.cpp:763-767`). */
+export const tabContainerSortedProperties: SortedPropertiesFn = (container, count) => ({
+  current_tab: {
+    type: T.INT,
+    value: tabContainerCurrentTab(container.properties as TabContainerProperties, count),
+  },
+});
