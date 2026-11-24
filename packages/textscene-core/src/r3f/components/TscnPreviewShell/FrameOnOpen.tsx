@@ -58,7 +58,15 @@ export function FrameOnOpen({ scene, hasScene, view, heard }: FrameOnOpenProps) 
         .catch(warnOfCameraFailure);
     }
     const fitLogged = () => void fit().catch(warnOfCameraFailure);
-    const timers = isFramed ? [] : FIT_DELAYS_MS.map((delay) => setTimeout(fitLogged, delay));
+    // The delays count from the stage's bind, which a hidden or slow canvas makes after the view mounts.
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const startTimers = () => {
+      if (!isCancelled) timers.push(...FIT_DELAYS_MS.map((delay) => setTimeout(fitLogged, delay)));
+    };
+    if (!isFramed) {
+      if (camera.isInsideTree()) startTimers();
+      else camera.get('transform').then(startTimers, warnOfCameraFailure);
+    }
 
     // Each settle that ends a load fits, as one can precede an instanced `.glb` load. A write never does.
     const isLoading = () => scene.files().some((file) => file.state === 'loading');

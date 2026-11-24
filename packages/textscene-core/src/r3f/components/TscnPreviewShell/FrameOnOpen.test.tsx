@@ -21,25 +21,28 @@ const SETTLED: ViewStatus = {
 };
 
 /** A 3D editor camera whose pose a focus moves to `FRAMED`, and the user's moves to anything else. */
-function fakeCamera() {
+function fakeCamera({ isBound }: { isBound: boolean }) {
   const cameras = createEditorCameras();
   let pose: SceneValue = variant('Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4)');
   const focus = vi.fn(() => {
     pose = FRAMED;
     return null;
   });
-  const unbind = cameras.slot('Camera3D').bind({
-    get: (property) => (property === 'transform' ? pose : null),
-    set: () => false,
-    call: focus,
-    pose: () => null,
-    setPose: () => {},
-    scene: () => '',
-  });
+  const bind = () =>
+    cameras.slot('Camera3D').bind({
+      get: (property) => (property === 'transform' ? pose : null),
+      set: () => false,
+      call: focus,
+      pose: () => null,
+      setPose: () => {},
+      scene: () => '',
+    });
+  let unbind = isBound ? bind() : () => {};
   return {
     view: { editorCamera: cameras.of('3D') },
     focus,
-    unbind,
+    bindLate: () => (unbind = bind()),
+    unbind: () => unbind(),
     moveByUser: () => (pose = variant('Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 9)')),
   };
 }
@@ -79,8 +82,8 @@ function fakeScene() {
   return { scene, beginLoad };
 }
 
-async function mount({ frameOnOpen = true, mode = '3D' as ViewportMode } = {}) {
-  const camera = fakeCamera();
+async function mount({ frameOnOpen = true, mode = '3D' as ViewportMode, isStageBound = true } = {}) {
+  const camera = fakeCamera({ isBound: isStageBound });
   const heard = renderHook(useHeardStatus).result.current;
   const fake = fakeScene();
   let preview: PreviewCamera | null = null;
@@ -200,6 +203,16 @@ describe('FrameOnOpen', () => {
     await runTimers();
 
     expect(focus).not.toHaveBeenCalled();
+  });
+
+  it('frames a scene whose 3D stage binds after every timer, as a hidden canvas does', async () => {
+    const { focus, runTimers, bindLate } = await mount({ isStageBound: false });
+    await runTimers();
+
+    await act(async () => void bindLate());
+    await runTimers();
+
+    expect(focus).toHaveBeenCalledWith('focus', []);
   });
 
   it('frames a load that finishes after an earlier settle and after every timer', async () => {
