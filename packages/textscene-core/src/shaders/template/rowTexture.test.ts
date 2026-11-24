@@ -65,6 +65,15 @@ describe('RowTexture', () => {
     expect(text).not.toMatch(/ivec2\(\s*0,\s*0\s*\)/);
   });
 
+  it('reads an element of an array of arrays at the stride of its inner array', () => {
+    const rows = new RowTexture([{ name: 'coeffs', type: 'vec4[5][6]', arraySize: 7 }], 'std430', structOf);
+    type Nested = { element(i: number): Nested | Node };
+    const coeffs = (rows.value as StructValue).members.get('coeffs') as Nested;
+    const tap = ((coeffs.element(1) as Nested).element(2) as Nested).element(3) as Node;
+    // Each level is 5 parts of 6 vec4s, 30 texels: level 1, part 2, tap 3 is texel 30 + 12 + 3.
+    expect(generatedFragmentShader(shown(tap))).toMatch(/ivec2\(\s*45,\s*0\s*\)/);
+  });
+
   it('reads the four words of a column that stays in one texel with one fetch', () => {
     const { data } = instancesBlock();
     const transform = (data.element(intIndex) as StructValue).members.get('transform') as Node;

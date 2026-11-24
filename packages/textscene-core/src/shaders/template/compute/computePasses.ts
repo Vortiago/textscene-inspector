@@ -15,13 +15,12 @@ import {
   variable,
 } from '../../language/lowering/nodes.js';
 import { rewriteFunction } from '../../language/lowering/rewrite.js';
-import type { SourcePosition } from '../../language/shadingLanguageError.js';
 import type { BlockNode, CallNode, Expression, FunctionNode, Statement } from '../../language/shaderTree.js';
 import { everyStatement, isCall, withExpressionsMapped } from '../../language/treeWalk.js';
 import { constantScalar } from '../constantValue.js';
-import { constructorRow } from '../glslRows.js';
 import type { TemplateDeclaration, TemplateStageNode } from '../templateTree.js';
-import { glslCall, scalar } from './computeCalls.js';
+import { constructed, glslCall, imageOf, isStore, scalar } from './computeCalls.js';
+import { mostStoresPerInvocation, scatterMain } from './scatterPasses.js';
 import {
   beforeBarrier,
   dependsOnGroup,
@@ -40,10 +39,11 @@ export const COMPUTE_COLOR = 'compute_color';
 /** The entry of a shared array the fragment of its fill pass draws. */
 export const COMPUTE_ENTRY = 'compute_entry';
 
-/** What a pass draws into: a texel of an image a fragment, or an entry of a shared array a fragment. */
+/** A fragment per image texel or shared array entry, or a point per invocation's `ordinal`th store. */
 export type ComputeTarget =
   | { readonly kind: 'image'; readonly name: string }
-  | { readonly kind: 'shared'; readonly array: SharedArray };
+  | { readonly kind: 'shared'; readonly array: SharedArray }
+  | { readonly kind: 'scatter'; readonly images: readonly string[]; readonly ordinal: number };
 
 /** A render pass of a compute stage: the fragment at a texel of its target is the invocation storing it. */
 export interface ComputePass {
@@ -75,13 +75,24 @@ export function computePasses(stage: TemplateStageNode): ComputePass[] {
   const usedStage = withDeclarations(stage, sharedTextureGlobals(arrays, main.position));
   const stores = storesIn(used);
   if (stores.length === 0) throw new Error('expected an imageStore in the compute stage, found none');
-  for (const store of stores) refuseUnlessAtInvocation(store, used);
-  const images = [...new Set(stores.map(imageOf))].map((name): ComputePass => ({
+  const images = [...new Set(stores.map(imageOf))];
+  if (!stores.every((store) => isInvocationTexel(store.operands[1]!, used))) {
+    const scatters = Array.from(
+      { length: mostStoresPerInvocation(mainOf(stage)) },
+      (_, ordinal): ComputePass => ({
+        target: { kind: 'scatter', images, ordinal },
+        stage: withMain(usedStage, scatterMain(used, images, ordinal)),
+        groupSize,
+      })
+    );
+    return [...fills, ...scatters];
+  }
+  const direct = images.map((name): ComputePass => ({
     target: { kind: 'image', name },
     stage: withMain(usedStage, storingInto(used, name)),
     groupSize,
   }));
-  return [...fills, ...images];
+  return [...fills, ...direct];
 }
 
 function mainOf(stage: TemplateStageNode): FunctionNode {
@@ -135,26 +146,8 @@ function groupSizeOf(stage: TemplateStageNode): [number, number, number] {
   return [size('local_size_x'), size('local_size_y'), size('local_size_z')];
 }
 
-const isStore = (statement: Statement): statement is CallNode =>
-  statement.kind === 'operator' && isCall(statement) && statement.function === 'imageStore';
-
 function storesIn(main: FunctionNode): CallNode[] {
   return [...everyStatement(main.body)].filter(isStore);
-}
-
-function imageOf(store: CallNode): string {
-  const image = store.operands[0]!;
-  if (image.kind !== 'variable')
-    throw new Error(`expected an image variable to store into, got ${image.kind}`);
-  return image.name;
-}
-
-/** A pass's fragment is its invocation, so a store must write the texel of `gl_GlobalInvocationID.xy`. */
-function refuseUnlessAtInvocation(store: CallNode, main: FunctionNode): void {
-  if (isInvocationTexel(store.operands[1]!, main)) return;
-  throw new Error(
-    `expected an imageStore at ivec2(gl_GlobalInvocationID.xy), at line ${store.position.line}`
-  );
 }
 
 /** `ivec2(id)`, where `id` is a local set once to `gl_GlobalInvocationID.xy`. */
@@ -300,12 +293,4 @@ function asTexel(value: Expression): Expression {
   const lanes = { float: 1, vec2: 2, vec3: 3 }[value.type as 'float'];
   const zeros = Array.from({ length: 4 - lanes }, () => scalar('float', 0, value.position));
   return constructed('vec4', [value, ...zeros], value.position);
-}
-
-function constructed(type: string, operands: readonly Expression[], position: SourcePosition): Expression {
-  const row = constructorRow(
-    type,
-    operands.map((operand) => operand.type)
-  );
-  return { kind: 'operator', type, op: 'OP_CONSTRUCT', row, operands, position };
 }

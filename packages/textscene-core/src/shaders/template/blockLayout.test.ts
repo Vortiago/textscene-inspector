@@ -37,6 +37,21 @@ describe('blockLayout', () => {
     ]);
   });
 
+  it('places an array of arrays as its inner arrays one after another, rounded to 16 bytes in std140', () => {
+    const members = [
+      { name: 'a', type: 'vec2[3]', arraySize: 2 },
+      { name: 'b', type: 'float' },
+    ];
+    expect(offsetsOf(members, 'std430')).toEqual([
+      ['a', 0],
+      ['b', 48],
+    ]);
+    expect(offsetsOf(members, 'std140')).toEqual([
+      ['a', 0],
+      ['b', 96],
+    ]);
+  });
+
   it('gives a mat3x4 three columns of 16 bytes, as InstanceData holds its transform', () => {
     const members = [
       { name: 'transform', type: 'mat3x4' },

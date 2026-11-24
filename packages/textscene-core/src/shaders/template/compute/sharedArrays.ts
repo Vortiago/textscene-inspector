@@ -1,6 +1,5 @@
 import { variable } from '../../language/lowering/nodes.js';
 import { swizzled } from '../../language/swizzle.js';
-import { constructorRow } from '../glslRows.js';
 import { writtenTargets } from '../../language/assignment.js';
 import type { SourcePosition } from '../../language/shadingLanguageError.js';
 import type { BlockNode, Expression, Statement } from '../../language/shaderTree.js';
@@ -12,7 +11,7 @@ import {
   withSubExpressions,
 } from '../../language/treeWalk.js';
 import type { GlobalNode, TemplateStageNode } from '../templateTree.js';
-import { BARRIER_CALLS, glslCall, scalar } from './computeCalls.js';
+import { BARRIER_CALLS, constructed, glslCall, scalar } from './computeCalls.js';
 
 /** A `shared` array of a compute stage, which a pass of its own fills as a texture one texel an entry. */
 export interface SharedArray {
@@ -162,14 +161,6 @@ function texelOf(array: SharedArray, index: Expression, position: SourcePosition
   const member = swizzled(fetched, lanes);
   if (typeof member === 'string') throw new Error(member);
   return member;
-}
-
-function constructed(type: string, operands: readonly Expression[], position: SourcePosition): Expression {
-  const row = constructorRow(
-    type,
-    operands.map((operand) => operand.type)
-  );
-  return { kind: 'operator', type, op: 'OP_CONSTRUCT', row, operands, position };
 }
 
 /** Whether the value or position of `write`, or a branch it stands in, reads an id that differs by group. */

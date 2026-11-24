@@ -8,8 +8,14 @@ import type { ArrayValue, StructValue, Value } from '../language/emitValue.js';
 import type { StructMember, StructNode } from '../language/shaderTree.js';
 import { vectorType, type ScalarKind } from '../language/types.js';
 import { LANE_OF_BITS } from '../uniforms/uniformNodes.js';
-import { blockLayout, columnStride, type BlockPacking, type PlacedMember } from './blockLayout.js';
-import { glslShapeOf } from './glslTypes.js';
+import {
+  blockLayout,
+  columnStride,
+  elementStride,
+  type BlockPacking,
+  type PlacedMember,
+} from './blockLayout.js';
+import { elementOf, glslShapeOf } from './glslTypes.js';
 
 /** The texels of one row. WebGL 2 promises 2048 texels a side, so a row stays inside it. */
 const ROW_TEXELS = 1024;
@@ -128,6 +134,15 @@ export class RowTexture {
   private read(type: string, word: Index): Value {
     const struct = this.structOf(type);
     if (struct) return this.struct(struct.members, word);
+    const element = elementOf(type);
+    if (element.arraySize !== undefined) {
+      const strideWords = elementStride(element.type, this.packing, this.structOf) / 4;
+      return {
+        kind: 'array',
+        count: element.arraySize,
+        element: (index) => this.read(element.type, stepped(word, index, strideWords)),
+      } satisfies ArrayValue;
+    }
     const shape = glslShapeOf(type);
     if (!shape || shape.scalar === 'float16')
       throw new Error(`expected a 32-bit value type in a block, got ${type}`);

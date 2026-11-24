@@ -1,5 +1,5 @@
 import type { StructMember, StructNode } from '../language/shaderTree.js';
-import { glslShapeOf } from './glslTypes.js';
+import { elementOf, glslShapeOf } from './glslTypes.js';
 
 /** The two packings of a block (GLSL 4.50, section 7.6.2.2). */
 export type BlockPacking = 'std140' | 'std430';
@@ -62,6 +62,11 @@ function valuePlacement(type: string, packing: BlockPacking, structOf: StructOf)
     const layout = blockLayout(struct.members, packing, structOf);
     return { alignment: layout.alignment, stride: layout.size, size: layout.size };
   }
+  const element = elementOf(type);
+  if (element.arraySize !== undefined) {
+    const array = placement({ name: '', ...element }, packing, structOf);
+    return { alignment: array.alignment, stride: array.size, size: array.size };
+  }
   const shape = glslShapeOf(type);
   if (!shape) throw new Error(`expected a value type or a struct in a block, got ${type}`);
   const vector = vectorPlacement(shape.rows);
@@ -73,6 +78,11 @@ function valuePlacement(type: string, packing: BlockPacking, structOf: StructOf)
     structOf
   );
   return { alignment: column.alignment, stride: column.size, size: column.size };
+}
+
+/** The bytes between two elements of an array of `type`, which may be an array itself: `vec4[6]`. */
+export function elementStride(type: string, packing: BlockPacking, structOf: StructOf): number {
+  return placement({ name: '', type, arraySize: 1 }, packing, structOf).stride;
 }
 
 /** The bytes between two columns of a matrix of `rows` rows: rule 5 packs it as an array of its columns. */

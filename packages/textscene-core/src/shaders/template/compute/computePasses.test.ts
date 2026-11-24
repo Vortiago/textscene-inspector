@@ -51,12 +51,39 @@ describe('computePasses', () => {
     expect(mainText(computePasses(stage)[0]!.stage)).toMatch(/if \(!\(lowered_stored_1\)\) \{\s*discard;/);
   });
 
-  it('refuses a store at a texel other than the invocation', () => {
+  it('scatters a store at a texel other than the invocation, a pass for each store an invocation runs', () => {
     const stage = stageOf(
-      'uvec2 id = gl_GlobalInvocationID.xy;\nimageStore(first, ivec2(id) + ivec2(1, 0), vec4(1.0));'
+      'uvec2 id = gl_GlobalInvocationID.xy;\nimageStore(first, ivec2(id) * 2, vec4(1.0));\nimageStore(first, ivec2(id) * 2 + ivec2(1, 0), vec4(1.0));'
     );
+    expect(computePasses(stage).map((pass) => pass.target)).toEqual([
+      { kind: 'scatter', images: ['first'], ordinal: 0 },
+      { kind: 'scatter', images: ['first'], ordinal: 1 },
+    ]);
+  });
+
+  it('counts the stores of the one branch an invocation takes', () => {
+    const stage = stageOf(
+      'uint m = gl_GlobalInvocationID.x;\nswitch (m) {\ncase 0u: imageStore(first, ivec2(m, 0), vec4(1.0)); break;\ndefault: imageStore(second, ivec2(m, 1), vec4(2.0)); break;\n}'
+    );
+    expect(computePasses(stage).map((pass) => pass.target)).toEqual([
+      { kind: 'scatter', images: ['first', 'second'], ordinal: 0 },
+    ]);
+  });
+
+  it("keeps a scatter's store in compute_value and its place in the atlas in compute_place", () => {
+    const stage = stageOf(
+      'uvec2 id = gl_GlobalInvocationID.xy;\nimageStore(second, ivec2(id) * 2, vec4(1.0));'
+    );
+    const text = mainText(computePasses(stage)[0]!.stage);
+    expect(text).toContain('(compute_value = vec4(1.0));');
+    expect(text).toContain('compute_origin_0');
+    expect(text).toContain('lessThan(vec2((ivec2(id) * 2)), compute_size_0)');
+  });
+
+  it('refuses a scattering store in a loop, whose count per invocation it cannot bound', () => {
+    const stage = stageOf('for (int i = 0; i < 4; i++) {\nimageStore(first, ivec2(i, 0), vec4(1.0));\n}');
     expect(() => computePasses(stage)).toThrow(
-      'expected an imageStore at ivec2(gl_GlobalInvocationID.xy), at line 7'
+      'expected no imageStore in a loop of a scattering stage, at line 6'
     );
   });
 
@@ -91,6 +118,13 @@ describe('computePasses', () => {
     expect(text).toContain('uint gl_LocalInvocationIndex = lowered_invocation_1;');
     expect(text).toMatch(/if \(\(int\(sample_idx\) == compute_entry\)\)/);
     expect(text).not.toContain('imageStore');
+  });
+
+  it("scatters Godot's octmap filter into its six images, once a store of the 2 by 2 block of an array layer", () => {
+    const stores = (defines: string) =>
+      computePasses(computeStage('effects/octmap_filter.glsl', defines)).map((pass) => pass.target);
+    expect(stores('')).toHaveLength(1);
+    expect(stores('#define USE_TEXTURE_ARRAY\n')).toHaveLength(4);
   });
 
   it('refuses a shared array whose content differs by group', () => {

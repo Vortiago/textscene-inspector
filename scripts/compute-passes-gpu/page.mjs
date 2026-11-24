@@ -5,6 +5,8 @@ import { computeStage } from '../../packages/textscene-core/src/shaders/template
 import { emitComputePass } from '../../packages/textscene-core/src/shaders/template/compute/emitComputePass.ts';
 import { DOWNSAMPLE_FRAGMENT_SHADER } from '../../packages/textscene-core/src/resources/sky/skyLayerShaders.ts';
 import { importanceSampleFilter } from '../../packages/textscene-core/src/resources/sky/importanceSampleFilter.ts';
+import { FAST_FILTERS } from '../../packages/textscene-core/src/resources/sky/fastFilter.ts';
+import { FAST_FILTER_COEFFICIENTS } from '../../packages/textscene-core/src/godot/rendering/environment/skyFastFilterCoefficients.ts';
 import {
   layerSamples,
   SKY_ROUGHNESS_LAYERS_DEFAULT,
@@ -65,8 +67,9 @@ function handDownsample(source) {
 }
 
 /** Draws `pass` of a lowered stage into `target`, its uniforms and textures set from `values` by name. */
-function drawLowered(pass, target, values) {
-  const draw = emitComputePass(pass);
+const drawLowered = (pass, target, values) => drawInto(emitComputePass(pass), target, values);
+
+function drawInto(draw, target, values) {
   for (const [name, value] of Object.entries(values)) {
     const binding = draw.textures.get(name) ?? draw.uniforms.get(name);
     if (!binding) throw new Error(`expected a uniform or texture of the pass, got ${name}`);
@@ -149,6 +152,70 @@ function loweredRoughness(chain) {
 const cpuSamples = () =>
   layerSamples(LAYOUT, ROUGH_LAYER).flatMap(({ direction, lod }) => [...direction, lod]);
 
+/** `octmap_filter.glsl:53`: each image of the filter is a mip of a 320 octmap, without texture arrays. */
+const FILTER_SIZES = [320, 160, 80, 40, 20, 10];
+
+/** A mip the filter writes, which reads the chain at a level above its own. */
+const FILTER_MIP = 1;
+
+function handFilter(chain) {
+  const target = floatTarget(FILTER_SIZES[FILTER_MIP]);
+  const filter = FAST_FILTERS.low.intoMips;
+  const pass = filter.passFor(renderer);
+  setUniforms(pass, {
+    chain,
+    borderSize: BORDER_SIZE,
+    layerSize: FILTER_SIZES[FILTER_MIP],
+    ...filter.layerUniforms(FILTER_MIP + 1),
+  });
+  drawFullScreen(renderer, pass, target);
+  return readBack(target);
+}
+
+/** Godot's `vec4[7][5][6] coeffs` in std430: level 6 is never read, as the filter clamps at 5. */
+function coefficientWords() {
+  const parts = ['frameX', 'frameY', 'frameZ', 'lod', 'weight'];
+  const floats = new Float32Array(7 * 5 * 6 * 4);
+  FAST_FILTER_COEFFICIENTS.forEach((level, index) =>
+    floats.set(
+      parts.flatMap((part) => level[part].flat()),
+      index * 5 * 6 * 4
+    )
+  );
+  return new Uint32Array(floats.buffer);
+}
+
+/** The lowered filter's one scatter into an atlas of its six images, stacked from row 0. */
+function loweredFilter(chain) {
+  const [pass] = computePasses(computeStage('effects/octmap_filter.glsl', ''));
+  const origins = FILTER_SIZES.map((_, index) =>
+    FILTER_SIZES.slice(0, index).reduce((sum, size) => sum + size, 0)
+  );
+  const atlas = new THREE.WebGLRenderTarget(FILTER_SIZES[0], origins.at(-1) + FILTER_SIZES.at(-1), {
+    type: THREE.FloatType,
+    depthBuffer: false,
+  });
+  const padding = (1 - BORDER_SIZE) / 2;
+  const values = {
+    source_octmap: chain,
+    'params.border_size': new THREE.Vector2(padding, 1 - padding * 2),
+    compute_atlas_size: new THREE.Vector2(atlas.width, atlas.height),
+  };
+  FILTER_SIZES.forEach((size, index) => {
+    values[`compute_origin_${index}`] = new THREE.Vector2(0, origins[index]);
+    values[`compute_size_${index}`] = new THREE.Vector2(size, size);
+  });
+  const draw = emitComputePass(pass);
+  draw.buffers.get('data').write(coefficientWords());
+  const invocations = FILTER_SIZES.reduce((sum, size) => sum + size * size, 0);
+  draw.dispatch([invocations, 1, 1]);
+  drawInto(draw, atlas, values);
+  const size = FILTER_SIZES[FILTER_MIP];
+  const pixels = new Float32Array(size * size * 4);
+  renderer.readRenderTargetPixels(atlas, 0, origins[FILTER_MIP], size, size, pixels);
+  return Array.from(pixels);
+}
+
 window.computePassSamples = () => {
   const source = sourceOctmap();
   const chain = sourceOctmap(true);
@@ -157,5 +224,6 @@ window.computePassSamples = () => {
     downsampler: { hand: handDownsample(source), lowered: loweredDownsample(source) },
     roughnessSamples: { hand: cpuSamples(), lowered: aboveHorizon(rough.samples) },
     roughness: { hand: handRoughness(chain, rough.samples), lowered: rough.layer },
+    filter: { hand: handFilter(chain), lowered: loweredFilter(chain) },
   };
 };
