@@ -15,7 +15,6 @@ import {
   varyingProperty,
   vec2,
   vec4,
-  vertexIndex,
 } from 'three/tsl';
 import type { Node, TextureNode, UniformNode } from 'three/webgpu';
 import {
@@ -33,7 +32,7 @@ import {
 import { linkedProgram, type LinkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
 import type { RowTexture } from '../template/rowTexture.js';
 import { instanceWords } from './instanceData.js';
-import { POINT_VERTEX_ATTRIBUTE } from './meshAttributes.js';
+import { VERTEX_ID_ATTRIBUTE } from './meshAttributes.js';
 import { devicePoints, type DevicePoints } from './devicePoints.js';
 import { coveredOnOneSample } from '../pipeline/singleSampleCoverage.js';
 import {
@@ -139,12 +138,6 @@ export function transpileParsedSpatial(
   };
 }
 
-/** A point drawn as two triangles is an instance: the vertex its index names, of Godot's one instance. */
-function vertexIndexOf(pointDraw: SpatialPipeline['pointDraw']): Node {
-  if (pointDraw !== 'emulated') return int(vertexIndex) as unknown as Node;
-  return int(attribute(POINT_VERTEX_ATTRIBUTE, 'float')) as unknown as Node;
-}
-
 function instanceIndexOf(pointDraw: SpatialPipeline['pointDraw']): Node {
   return (pointDraw === 'emulated' ? int(0) : int(instanceIndex)) as unknown as Node;
 }
@@ -162,7 +155,8 @@ function stageEmitter(
     const vertexInputs = new Map([
       ...parameterValues,
       ...vertexAttributes(vertexStage),
-      ['gl_VertexIndex', vertexIndexOf(pipeline.pointDraw)],
+      // Godot's `gl_VertexIndex` counts in the surface, where a merged mesh's index counts across surfaces.
+      ['gl_VertexIndex', int(attribute(VERTEX_ID_ATTRIBUTE, 'float')) as unknown as Node],
       ['gl_InstanceIndex', instanceIndexOf(pipeline.pointDraw)],
     ]);
     const vulkanClip = varyingProperty('vec4', 'godot_clip_position') as unknown as Vec4;

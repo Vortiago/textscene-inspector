@@ -1,0 +1,103 @@
+[gd_scene format=3 uid="uid://unit_spatial_shader_vertex_id"]
+
+; VERTEX_ID, which Godot counts from 0 in each surface: three triangle surfaces, the first two of one
+; material and the third of its own, and two points surfaces at POINT_SIZE 6. No other golden gives
+; a translated mesh of several surfaces a shader that reads VERTEX_ID.
+
+[sub_resource type="Shader" id="Shader_tri"]
+code = "shader_type spatial;
+render_mode unshaded, cull_disabled;
+
+varying flat vec3 band;
+
+void vertex() {
+	band = vec3(float(VERTEX_ID) / 12.0, 0.5, 0.2);
+}
+
+void fragment() {
+	ALBEDO = band;
+}
+"
+
+[sub_resource type="Shader" id="Shader_pts"]
+code = "shader_type spatial;
+render_mode unshaded;
+
+varying flat vec3 band;
+
+void vertex() {
+	band = vec3(float(VERTEX_ID) / 6.0, 0.5, 0.2);
+	POINT_SIZE = 6.0;
+}
+
+void fragment() {
+	ALBEDO = band;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="Mat_shared"]
+shader = SubResource("Shader_tri")
+
+[sub_resource type="ShaderMaterial" id="Mat_own"]
+shader = SubResource("Shader_tri")
+
+[sub_resource type="ShaderMaterial" id="Mat_pts"]
+shader = SubResource("Shader_pts")
+
+[sub_resource type="ArrayMesh" id="Mesh_tri"]
+_surfaces = [{
+"aabb": AABB(-0.8, 0.05, 0, 0.5, 0.8, 1e-05),
+"format": 34359738369,
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 6,
+"vertex_data": PackedByteArray("zcxMv83MTD0AAAAAmpmZvs3MTD0AAAAAmpmZvpqZWT8AAAAAzcxMv83MTD0AAAAAmpmZvpqZWT8AAAAAzcxMv5qZWT8AAAAA")
+}, {
+"aabb": AABB(-0.25, 0.05, 0, 0.5, 0.8, 1e-05),
+"format": 34359738369,
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 6,
+"vertex_data": PackedByteArray("AACAvs3MTD0AAAAAAACAPs3MTD0AAAAAAACAPpqZWT8AAAAAAACAvs3MTD0AAAAAAACAPpqZWT8AAAAAAACAvpqZWT8AAAAA")
+}, {
+"aabb": AABB(0.3, 0.05, 0, 0.5, 0.8, 1e-05),
+"format": 34359738369,
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 6,
+"vertex_data": PackedByteArray("mpmZPs3MTD0AAAAAzcxMP83MTD0AAAAAzcxMP5qZWT8AAAAAmpmZPs3MTD0AAAAAzcxMP5qZWT8AAAAAmpmZPpqZWT8AAAAA")
+}]
+
+[sub_resource type="ArrayMesh" id="Mesh_pts"]
+_surfaces = [{
+"aabb": AABB(-0.75, -0.75, 0, 0.7, 0.6, 1e-05),
+"format": 34359738369,
+"primitive": 0,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 6,
+"vertex_data": PackedByteArray("AABAvwAAQL8AAAAA9igcv5qZGb4AAAAA16PwvgAAQL8AAAAAw/WovpqZGb4AAAAAXI9CvgAAQL8AAAAAzcxMvZqZGb4AAAAA")
+}, {
+"aabb": AABB(0.05, -0.75, 0, 0.7, 0.6, 1e-05),
+"format": 34359738369,
+"primitive": 0,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 6,
+"vertex_data": PackedByteArray("zcxMPQAAQL8AAAAAXI9CPpqZGb4AAAAAw/WoPgAAQL8AAAAA16PwPpqZGb4AAAAA9igcPwAAQL8AAAAAAABAP5qZGb4AAAAA")
+}]
+
+[node name="Root" type="Node3D"]
+
+[node name="Triangles" type="MeshInstance3D" parent="."]
+mesh = SubResource("Mesh_tri")
+surface_material_override/0 = SubResource("Mat_shared")
+surface_material_override/1 = SubResource("Mat_shared")
+surface_material_override/2 = SubResource("Mat_own")
+
+[node name="Points" type="MeshInstance3D" parent="."]
+mesh = SubResource("Mesh_pts")
+surface_material_override/0 = SubResource("Mat_pts")
+surface_material_override/1 = SubResource("Mat_pts")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2)
+current = true
