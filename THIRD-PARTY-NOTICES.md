@@ -680,7 +680,10 @@ The Arev Fonts licence has the same terms, with "Tavmjong Bah" and "Arev" in pla
 
 `packages/textscene-core/src/godot/rendering/environment/skyFastFilterCoefficients.ts` reproduces levels 0 to 5 of
 `low_quality_coeffs`, the tap table of the fast sky filter, because a Real-Time sky's reflections
-and ambient light ARE that table's output. Godot vendors it as `thirdparty/misc/cubemap_coeffs.h`.
+and ambient light ARE that table's output.
+`packages/textscene-core/src/godot/rendering/environment/skyFastFilterHighQualityCoefficients.ts` reproduces
+levels 0 to 5 of `high_quality_coeffs`, the table that `fast_filter_high_quality` selects.
+Godot vendors both tables as `thirdparty/misc/cubemap_coeffs.h`.
 It is by Activision Publishing and is licensed MIT, separately from Godot's own MIT licence above.
 `packages/textscene-core/src/resources/sky/skyLayerShaders.ts` ports Godot's `octmap_downsampler.glsl`
 and `octmap_filter.glsl`, which carry the same Activision notice.

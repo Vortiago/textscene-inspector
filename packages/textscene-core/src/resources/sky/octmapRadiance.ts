@@ -1,5 +1,5 @@
 import type * as THREE from 'three';
-import type { SkyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
+import type { FastFilterQuality, SkyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
 import { VECTOR3_ZERO, type Vector3 } from '../../godot/math/vector';
 import type { ProjectSampling } from '../../shaders/uniforms/samplerState';
 import {
@@ -44,13 +44,14 @@ export class OctmapRadiance implements RadianceInPlace {
     bake: SkyBake,
     private readonly octmapSky: OctmapSky,
     energy: number,
-    private readonly sampling?: ProjectSampling
+    private readonly sampling?: ProjectSampling,
+    fastFilterQuality?: FastFilterQuality
   ) {
     this.bake = bake;
     let layers: SkyLayers | undefined;
     try {
       layers = createSkyLayers(bake, sampling);
-      this.baker = new SkyLayerBaker(gl, layers, bake.radianceFilter);
+      this.baker = new SkyLayerBaker(gl, layers, bake.radianceFilter, fastFilterQuality);
     } catch (error) {
       if (layers) disposeSkyLayers(layers);
       octmapSky.dispose();

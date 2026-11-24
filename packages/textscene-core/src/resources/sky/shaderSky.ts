@@ -41,6 +41,7 @@ export function buildShaderSkyEnvironment(
     textures = {},
     shaderOptions = NO_OPTIONS,
     sampling = GODOT_SAMPLING,
+    fastFilterQuality,
   }: SkyEnvironmentInput
 ): SkyEnvironment | null {
   const { material } = sky;
@@ -52,7 +53,7 @@ export function buildShaderSkyEnvironment(
   try {
     background = asBackground ? new ShaderSkyBackground(transpiled('background'), lights) : null;
     octmapSky = new ShaderSkyOctmap(transpiled('octmap'), lights, material.usage.passColors);
-    radiance = new OctmapRadiance(gl, cappedBake(sky), octmapSky, energy, sampling);
+    radiance = new OctmapRadiance(gl, cappedBake(sky), octmapSky, energy, sampling, fastFilterQuality);
     background?.readRadiance(radiance.layers);
   } catch (error) {
     warn('[Sky] could not render the sky environment', error);

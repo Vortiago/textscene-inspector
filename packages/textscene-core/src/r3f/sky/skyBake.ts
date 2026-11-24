@@ -86,13 +86,20 @@ export function holdSkyBake(
 }
 
 /** The input a bake reads besides the sky and the lights. */
-function inputKey({ textures = {}, sampling, asBackground, rotation }: SkyBakeInput): string {
+function inputKey({
+  textures = {},
+  sampling,
+  fastFilterQuality,
+  asBackground,
+  rotation,
+}: SkyBakeInput): string {
   return [
     Object.entries(textures)
       .map(([name, texture]) => `${name}=${samplerKey(texture)}`)
       .sort(),
     sampling?.anisotropicFilteringLevel ?? '',
     sampling?.useNearestMipmapFilter ?? '',
+    fastFilterQuality ?? '',
     asBackground,
     rotation.x,
     rotation.y,

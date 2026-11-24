@@ -82,6 +82,12 @@ A sky with `process_mode = 3` bakes its layers with Godot's fast filter, at a ra
 
 A user's sky shader with `process_mode = 3` draws a small, bright sun disc. Godot's fast filter works out each layer at half its width and stores each result in a block of 2 by 2 texels. The rough ball reads the disc through that filter. Both balls match Godot's.
 
+## The high-quality fast filter
+
+<!-- compare: image=unit-shader-sky-realtime-high-quality status=done fixture=sky-fast-filter-high-quality/unit-shader-sky-realtime-high-quality.tscn -->
+
+The same sky in a project that turns on `rendering/reflections/sky_reflections/fast_filter_high_quality`. Godot's fast filter then takes 32 taps a frame, and works out each tap's weight and level from a polynomial of the tap's angles. The rough ball reads the disc through that filter. Both balls match Godot's.
+
 ## Linting
 
 <!-- lint:begin Sky -->

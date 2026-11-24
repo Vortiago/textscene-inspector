@@ -12,13 +12,15 @@ import { withMipLevels } from '../../r3f/mipLevels.js';
 import { drawOffscreen } from '../../r3f/offscreen/draw.js';
 import { perObject } from '../../utils/perObject.js';
 import {
+  DEFAULT_FAST_FILTER_QUALITY,
   REAL_TIME_ROUGHNESS_LAYERS,
   SKY_ROUGHNESS_LAYERS_DEFAULT,
   skyOctmapLayout,
+  type FastFilterQuality,
   type SkyOctmapLayout,
   type SkyRadianceLayout,
 } from '../../godot/rendering/environment/skyReflection.js';
-import { fastFilterIntoLayers, fastFilterIntoMips } from './fastFilter.js';
+import { FAST_FILTERS } from './fastFilter.js';
 import { importanceSampleFilter } from './importanceSampleFilter.js';
 import type { LayerFilter } from './layerFilter.js';
 import {
@@ -121,12 +123,13 @@ export class SkyLayerBaker {
   constructor(
     private readonly gl: THREE.WebGLRenderer,
     private readonly layers: SkyLayers,
-    radianceFilter: SkyBake['radianceFilter']
+    radianceFilter: SkyBake['radianceFilter'],
+    fastFilterQuality: FastFilterQuality = DEFAULT_FAST_FILTER_QUALITY
   ) {
     this.chain = new RadianceChain(
       gl,
       layers.layout,
-      layerFilter(fastFilterIntoLayers, radianceFilter, layers.layout)
+      layerFilter(FAST_FILTERS[fastFilterQuality].intoLayers, radianceFilter, layers.layout)
     );
   }
 
@@ -252,12 +255,17 @@ export function bakeAtlasLayers(
   radiance: THREE.CubeTexture,
   atlas: ReflectionAtlas,
   index: number,
-  radianceFilter: SkyBake['radianceFilter']
+  radianceFilter: SkyBake['radianceFilter'],
+  fastFilterQuality: FastFilterQuality = DEFAULT_FAST_FILTER_QUALITY
 ): void {
   const { layout, target } = atlas;
   if (index < 0 || index >= target.depth)
     throw new Error(`expected an atlas layer from 0 to ${target.depth - 1}, got ${index}`);
-  const chain = new RadianceChain(gl, layout, layerFilter(fastFilterIntoMips, radianceFilter, layout));
+  const chain = new RadianceChain(
+    gl,
+    layout,
+    layerFilter(FAST_FILTERS[fastFilterQuality].intoMips, radianceFilter, layout)
+  );
   try {
     chain.draw(cubeRadiance(gl, radiance));
     drawOffscreen(gl, () => {

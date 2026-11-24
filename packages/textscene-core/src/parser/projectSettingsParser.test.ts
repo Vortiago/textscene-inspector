@@ -41,6 +41,7 @@ import {
   projectVolumetricFogSettings,
   projectAmbientOcclusionSettings,
   projectTreeSettings,
+  projectFastFilterQuality,
 } from './projectSettingsParser';
 import { DEFAULT_PHYSICS_CLOCK } from '../godot/scene/physicsTicks';
 import { Hinting } from '../godot/text/textServerEnums';
@@ -325,6 +326,23 @@ describe('projectTracesHalfSizeReflections', () => {
 
   it('keeps the default for a malformed value (error path)', () => {
     expect(projectTracesHalfSizeReflections({ [KEY]: 'nope' })).toBe(true);
+  });
+});
+
+describe('projectFastFilterQuality', () => {
+  const KEY = 'rendering/reflections/sky_reflections/fast_filter_high_quality';
+
+  it('filters with the low-quality taps by default, as rendering_server.cpp:3732 registers it', () => {
+    expect(projectFastFilterQuality(null)).toBe('low');
+    expect(projectFastFilterQuality({})).toBe('low');
+  });
+
+  it('filters with the high-quality taps when the project turns the setting on', () => {
+    expect(projectFastFilterQuality({ [KEY]: 'true' })).toBe('high');
+  });
+
+  it('keeps the default for a malformed value (error path)', () => {
+    expect(projectFastFilterQuality({ [KEY]: 'nope' })).toBe('low');
   });
 });
 

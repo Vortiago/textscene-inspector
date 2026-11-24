@@ -8,7 +8,7 @@ import {
   SkyLayerBaker,
 } from './skyLayers';
 import { reflectionAtlasLayout } from '../../godot/rendering/environment/reflectionProbe';
-import { fastFilterIntoLayers, fastFilterIntoMips } from './fastFilter';
+import { FAST_FILTERS } from './fastFilter';
 import { testRenderer } from '../../testing/recordingWebGL';
 import type { SkyBake } from './types';
 import { bakeSkyLayers } from './skyLayers.testkit';
@@ -140,9 +140,18 @@ describe('bakeSkyLayers', () => {
 
   it('filters each of the layers 1 to 6 of a real-time sky with the fast filter into layers (edge case)', async () => {
     const { renderer } = await testRenderer();
-    const selected = vi.spyOn(fastFilterIntoLayers, 'layerUniforms');
+    const selected = vi.spyOn(FAST_FILTERS.low.intoLayers, 'layerUniforms');
 
     bakeSkyLayers(renderer, radianceCube(renderer), FAST);
+
+    expect(selected.mock.calls.map(([layer]) => layer)).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
+  it("filters a real-time sky with Godot's high-quality taps in a project that asks for them", async () => {
+    const { renderer } = await testRenderer();
+    const selected = vi.spyOn(FAST_FILTERS.high.intoLayers, 'layerUniforms');
+
+    bakeSkyLayers(renderer, radianceCube(renderer), FAST, undefined, 'high');
 
     expect(selected.mock.calls.map(([layer]) => layer)).toEqual([1, 2, 3, 4, 5, 6]);
   });
@@ -295,9 +304,19 @@ describe('bakeAtlasLayers', () => {
   it("filters an update-always probe's layers 1 to 6 with the fast filter into mips", async () => {
     const { renderer } = await testRenderer();
     const atlas = createReflectionAtlas(reflectionAtlasLayout(true), 1);
-    const selected = vi.spyOn(fastFilterIntoMips, 'layerUniforms');
+    const selected = vi.spyOn(FAST_FILTERS.low.intoMips, 'layerUniforms');
 
     bakeAtlasLayers(renderer, radianceCube(renderer), atlas, 0, 'fast');
+
+    expect(selected.mock.calls.map(([layer]) => layer)).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
+  it("filters an update-always probe with Godot's high-quality taps in a project that asks for them", async () => {
+    const { renderer } = await testRenderer();
+    const atlas = createReflectionAtlas(reflectionAtlasLayout(true), 1);
+    const selected = vi.spyOn(FAST_FILTERS.high.intoMips, 'layerUniforms');
+
+    bakeAtlasLayers(renderer, radianceCube(renderer), atlas, 0, 'fast', 'high');
 
     expect(selected.mock.calls.map(([layer]) => layer)).toEqual([1, 2, 3, 4, 5, 6]);
   });

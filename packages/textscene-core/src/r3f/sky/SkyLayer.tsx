@@ -59,7 +59,7 @@ import { useReadSky } from './readSky';
 import { useSkyTranslator } from './skyTranspiler';
 import { useShaderErrorReport } from '../contexts/ShaderErrorsContext';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext';
-import { projectSampling } from '../../parser/projectSettingsParser';
+import { projectFastFilterQuality, projectSampling } from '../../parser/projectSettingsParser';
 import { isLiveTarget, liveTargetDrawCount } from '../liveTargets';
 import type { Vector3 } from '../../godot/math/vector';
 import type { SamplerValue } from '../../shaders/uniforms/samplerUniform';
@@ -131,6 +131,7 @@ export function SkyLayer({
   useShaderSkyErrorReport(sky?.material ?? null, transpiler, shaderOptions);
   const { settings } = useProjectSettings();
   const sampling = useMemo(() => projectSampling(settings), [settings]);
+  const fastFilterQuality = projectFastFilterQuality(settings);
 
   useEffect(() => {
     // A bake before the first frame reads the lights would bake again unseen, at the cost of a whole bake.
@@ -148,6 +149,7 @@ export function SkyLayer({
       textures,
       shaderOptions,
       sampling,
+      fastFilterQuality,
       buildEnvironment: transpiler.buildShaderSkyEnvironment,
       asBackground,
       energyMultiplier,
@@ -250,6 +252,7 @@ export function SkyLayer({
     textures,
     shaderOptions,
     sampling,
+    fastFilterQuality,
     transpiler,
     isTranslatorReady,
     areTexturesDrawn,

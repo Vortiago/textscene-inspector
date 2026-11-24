@@ -19,6 +19,7 @@ import {
   createReflectionAtlas,
   type ReflectionAtlas,
 } from '../../resources/sky/skyLayers.js';
+import type { FastFilterQuality } from '../../godot/rendering/environment/skyReflection.js';
 import { COMMIT_FRAMES_AFTER_SETTLE } from '../../resources/ResourceLoaderContext.js';
 import { compareTreeOrder } from '../contexts/TreeOrderContext.js';
 import { drawOffscreen } from '../offscreen/draw.js';
@@ -56,10 +57,15 @@ function layersToCapture(
   return stale.filter((layer) => layer === firstOther || isRealTimeProbe(probes[layer]!));
 }
 
-/** What every capture of one frame shares. */
-interface CaptureFrame {
+/** What the project and the viewport set for a frame's captures. */
+export interface ProbeFrame {
   readonly clearColor: THREE.Color;
   readonly viewport: ViewportDescription;
+  readonly fastFilterQuality: FastFilterQuality;
+}
+
+/** What every capture of one frame shares. */
+interface CaptureFrame extends ProbeFrame {
   /** `realTimeSkyState` as the frame's captures start. */
   readonly skyState: string;
 }
@@ -104,12 +110,10 @@ export class SceneProbes {
   private settledFrames = 0;
   /** Whether content arrived since the probes last captured, so each captures again once it settles. */
   private hasNewContent = true;
-  /**
-   * What the captures saw of the environment, which a sky that bakes later changes: the change count
-   * of the world's own Environment and the clear colour. Written only by `markCapturesStale`.
-   */
+  /** The environment the captures saw, which a later sky bake changes. Written by `markCapturesStale`. */
   private seenOwnEnvironmentChanges = -1;
   private seenClearColor = -1;
+  private seenFastFilterQuality: FastFilterQuality | null = null;
   /**
    * The exposure each probe last captured at, written only by `capture`, and only while the world
    * holds attributes: a capture without exposure leaves it (`render_forward_clustered.cpp:1714-1716`). A
@@ -140,7 +144,7 @@ export class SceneProbes {
   }
 
   /** Captures the probes that need it once the scene settles, for `viewport`. Answers whether it drew. */
-  update(pendingResources: number, clearColor: THREE.Color, viewport: ViewportDescription): boolean {
+  update(pendingResources: number, frame: ProbeFrame): boolean {
     this.settledFrames = pendingResources > 0 ? 0 : this.settledFrames + 1;
     if (pendingResources > 0) this.hasNewContent = true;
     const probes = this.probes
@@ -155,14 +159,13 @@ export class SceneProbes {
     );
     const atlas = this.atlasFor(probes);
     if (this.settledFrames < COMMIT_FRAMES_AFTER_SETTLE) return false;
-    this.markCapturesStale(clearColor);
+    this.markCapturesStale(frame);
     const drawn = layersToCapture(probes, (probe, layer) => !this.isCaptured(probe, layer));
     if (drawn.length > 0) {
       beginStep(this.renderer, 'Reflection probes');
       // Each capture of the frame keeps the sky state its faces start from, before any face steps it.
       const skyState = realTimeSkyState(this.scene);
-      for (const layer of drawn)
-        this.capture(probes[layer]!, layer, atlas, { clearColor, viewport, skyState });
+      for (const layer of drawn) this.capture(probes[layer]!, layer, atlas, { ...frame, skyState });
       endStep(this.renderer, 'Reflection probes');
     }
     const captured = probes.filter((probe) => this.captures.has(probe));
@@ -205,13 +208,17 @@ export class SceneProbes {
    * captures saw changes. A stale capture still draws, so no probe vanishes until it captures again.
    * A change of exposure marks none: Godot rescales the capture instead.
    */
-  private markCapturesStale(clearColor: THREE.Color): void {
+  private markCapturesStale({ clearColor, fastFilterQuality }: ProbeFrame): void {
     const changes = ownEnvironmentChanges(this.scene);
     const clearHex = clearColor.getHex();
-    const hasNewEnvironment = changes !== this.seenOwnEnvironmentChanges || clearHex !== this.seenClearColor;
+    const hasNewEnvironment =
+      changes !== this.seenOwnEnvironmentChanges ||
+      clearHex !== this.seenClearColor ||
+      fastFilterQuality !== this.seenFastFilterQuality;
     if (!this.hasNewContent && !hasNewEnvironment) return;
     this.seenOwnEnvironmentChanges = changes;
     this.seenClearColor = clearHex;
+    this.seenFastFilterQuality = fastFilterQuality;
     this.hasNewContent = false;
     this.generation += 1;
   }
@@ -234,7 +241,7 @@ export class SceneProbes {
     object: ReflectionProbeObject,
     layer: number,
     atlas: ReflectionAtlas,
-    { clearColor, viewport, skyState }: CaptureFrame
+    { clearColor, viewport, fastFilterQuality, skyState }: CaptureFrame
   ): void {
     const { probe } = object;
     const capture = {
@@ -267,7 +274,7 @@ export class SceneProbes {
       }
     });
     const radianceFilter = isRealTimeProbe(object) ? 'fast' : 'importance-sample';
-    bakeAtlasLayers(this.renderer, this.cube.texture, atlas, layer, radianceFilter);
+    bakeAtlasLayers(this.renderer, this.cube.texture, atlas, layer, radianceFilter, fastFilterQuality);
     const { generation } = this;
     this.captures.set(object, {
       layer,

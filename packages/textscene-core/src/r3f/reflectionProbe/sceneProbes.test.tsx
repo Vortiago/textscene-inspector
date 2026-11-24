@@ -100,7 +100,11 @@ async function probesIn(scene: THREE.Scene, ...probes: ReflectionProbeObject[]) 
   /** The capture faces one `update` drew. */
   const facesDrawn = (pending = 0) => {
     const before = sceneRenders();
-    sceneProbes.update(pending, CLEAR, rootViewportDescription(null));
+    sceneProbes.update(pending, {
+      clearColor: CLEAR,
+      viewport: rootViewportDescription(null),
+      fastFilterQuality: 'low',
+    });
     return sceneRenders() - before;
   };
   const settle = () => {
@@ -383,7 +387,11 @@ describe('SceneProbes rendering', () => {
     });
     settle();
 
-    sceneProbes.update(0, CLEAR, { ...rootViewportDescription(null), mipmapBias: -0.5 });
+    sceneProbes.update(0, {
+      clearColor: CLEAR,
+      viewport: { ...rootViewportDescription(null), mipmapBias: -0.5 },
+      fastFilterQuality: 'low',
+    });
 
     expect([...biases]).toEqual([0]);
   });

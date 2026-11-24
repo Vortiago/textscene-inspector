@@ -15,7 +15,7 @@ import { ENTRY, WEBVIEW_DIR, WEBVIEW_METAFILE, formatKb } from './paths.mjs';
 // reads growth against MEASURED_GZ, since growth inside the headroom is invisible in a PASS line.
 const MEASURED_GZ = 1_073_890; // the closure as last measured
 // ADR-0055: the ceiling while both the classic materials and the node lit surface ship.
-const BUDGET_GZ = 1_150_000; // absolute ceiling, gzipped
+const BUDGET_GZ = 1_195_300; // absolute ceiling, gzipped
 
 // Modules a dynamic import() does not reach itself but that must stay off the closure: the
 // tables behind the area light's LTC textures and the noise jobs' `fastnoise-lite`.

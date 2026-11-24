@@ -259,6 +259,12 @@ export const LIGHTING_SCENES = [
   { name: 'shader-sky-half-res', file: 'unit-shader-sky-half-res.tscn' },
   // A sky shader in Real-Time mode: the rough ball reads a sharp sun disc through the fast filter.
   { name: 'shader-sky-realtime', file: 'unit-shader-sky-realtime.tscn', camera: 'Root/Camera3D' },
+  // The same sky with fast_filter_high_quality on, from a Fixture project's project.godot.
+  {
+    name: 'shader-sky-realtime-high-quality',
+    file: 'sky-fast-filter-high-quality/unit-shader-sky-realtime-high-quality.tscn',
+    camera: 'Root/Camera3D',
+  },
   // The balls reflect the sky baked again at 0.75 s, within 1/255 of Godot 4.6.3 at frame 75.
   {
     name: 'shader-sky-time',

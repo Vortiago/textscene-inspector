@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { FAST_FILTER_COEFFICIENTS } from '../../godot/rendering/environment/skyFastFilterCoefficients';
 import { FAST_FILTER_CHAIN_SIZES } from '../../godot/rendering/environment/skyReflection';
-import { fastFilterIntoLayers, fastFilterIntoMips } from './fastFilter';
+import { FAST_FILTERS } from './fastFilter';
+import * as THREE from 'three';
+import { FAST_FILTER_HIGH_QUALITY_COEFFICIENTS } from '../../godot/rendering/environment/skyFastFilterHighQualityCoefficients';
 import { testRenderer } from '../../testing/recordingWebGL';
+
+const { intoLayers: fastFilterIntoLayers, intoMips: fastFilterIntoMips } = FAST_FILTERS.low;
+const highQuality = FAST_FILTERS.high;
 
 const tapWeights = (layer: number) => fastFilterIntoLayers.layerUniforms(layer).weight as Float32Array;
 
-describe('fastFilterIntoLayers', () => {
+describe('the low-quality filter into layers', () => {
   it("reads Godot's 160-wide chain", () => {
     expect(fastFilterIntoLayers.chainSizes).toBe(FAST_FILTER_CHAIN_SIZES);
   });
@@ -45,7 +50,7 @@ describe('fastFilterIntoLayers', () => {
   });
 });
 
-describe('fastFilterIntoMips', () => {
+describe('the low-quality filter into mips', () => {
   it('compiles the path without arrays, which filters each texel of a mip with a lod offset', async () => {
     const { renderer } = await testRenderer();
 
@@ -64,5 +69,61 @@ describe('fastFilterIntoMips', () => {
 
   it("gives layer n the same taps as Godot's texture array path", () => {
     expect(fastFilterIntoMips.layerUniforms(4).weight).toBe(fastFilterIntoLayers.layerUniforms(4).weight);
+  });
+});
+
+describe('the high-quality filter', () => {
+  it("compiles Godot's polynomial taps into layers, on the texture array path", async () => {
+    const { renderer } = await testRenderer();
+    const shader = highQuality.intoLayers.passFor(renderer).fragmentShader;
+
+    expect(shader).toContain('#define USE_HIGH_QUALITY');
+    expect(shader).toContain('#define USE_TEXTURE_ARRAY');
+  });
+
+  it("compiles Godot's polynomial taps into mips, without arrays", async () => {
+    const { renderer } = await testRenderer();
+    const shader = highQuality.intoMips.passFor(renderer).fragmentShader;
+
+    expect(shader).toContain('#define USE_HIGH_QUALITY');
+    expect(shader).not.toContain('#define USE_TEXTURE_ARRAY');
+  });
+
+  it('draws with passes apart from the low-quality ones', async () => {
+    const { renderer } = await testRenderer();
+
+    expect(highQuality.intoLayers.passFor(renderer)).not.toBe(fastFilterIntoLayers.passFor(renderer));
+  });
+
+  it("reads Godot's 160-wide chain", () => {
+    expect(highQuality.intoLayers.chainSizes).toBe(FAST_FILTER_CHAIN_SIZES);
+  });
+
+  it("gives layer n Godot's level n - 1, which picks the table's rows", () => {
+    expect(highQuality.intoLayers.layerUniforms(5).mipLevel).toBe(4);
+  });
+
+  it('holds the table as a texture of 8 super-taps a frame, 3 frames a row', () => {
+    const table = highQuality.intoLayers.layerUniforms(1).coefficients as THREE.DataTexture;
+
+    expect([table.image.width, table.image.height]).toEqual([24, 90]);
+  });
+
+  it("writes the table's numbers in Godot's order", () => {
+    const table = highQuality.intoLayers.layerUniforms(1).coefficients as THREE.DataTexture;
+
+    expect(Array.from(table.image.data as Float32Array)).toEqual(
+      Array.from(Float32Array.from(FAST_FILTER_HIGH_QUALITY_COEFFICIENTS))
+    );
+  });
+
+  it('shares one table between every layer', () => {
+    expect(highQuality.intoMips.layerUniforms(2).coefficients).toBe(
+      highQuality.intoLayers.layerUniforms(6).coefficients
+    );
+  });
+
+  it('refuses layer 7, which a real-time sky lacks (error case)', () => {
+    expect(() => highQuality.intoMips.layerUniforms(7)).toThrow('expected a layer from 1 to 6, got 7');
   });
 });
