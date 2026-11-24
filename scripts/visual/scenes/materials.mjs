@@ -30,6 +30,8 @@ export const MATERIAL_SCENES = [
   { name: 'material-spatial-shader-uniforms', file: 'unit-spatial-shader-uniforms.tscn' },
   // Unshaded spatial shaders whose writes to the outputs only the light reads change nothing drawn.
   { name: 'material-spatial-shader-lit-outputs', file: 'unit-spatial-shader-lit-outputs.tscn' },
+  // Spatial shaders with render_mode wireframe, drawn as the edges left after cull_back and cull_disabled.
+  { name: 'material-spatial-shader-wireframe', file: 'unit-spatial-shader-wireframe.tscn' },
   // Spatial shaders with cull_back, cull_front and cull_disabled, on quads that face the camera and away.
   { name: 'material-spatial-shader-cull', file: 'unit-spatial-shader-cull.tscn' },
   // Spatial shaders with blend_add, blend_sub, blend_mul and blend_premul_alpha over an orange quad.
