@@ -64,14 +64,13 @@ const radianceMipPassFor = perObject<THREE.WebGLRenderer, THREE.ShaderMaterial>(
   skyPass(RADIANCE_MIP_FRAGMENT_SHADER, ['layers', 'mip'])
 );
 
-/** Godot's fast filter into a sky's layers, or its importance-sampling filter for `layout`. */
-function skyLayerFilter(radianceFilter: SkyBake['radianceFilter'], layout: SkyOctmapLayout): LayerFilter {
-  return radianceFilter === 'fast' ? fastFilterIntoLayers : importanceSampleFilter(layout);
-}
-
-/** Godot's fast filter into a probe's mips, or its importance-sampling filter for `layout`. */
-function atlasLayerFilter(radianceFilter: SkyBake['radianceFilter'], layout: SkyOctmapLayout): LayerFilter {
-  return radianceFilter === 'fast' ? fastFilterIntoMips : importanceSampleFilter(layout);
+/** `fast` for a real-time bake, or Godot's importance-sampling filter for `layout`. */
+function layerFilter(
+  fast: LayerFilter,
+  radianceFilter: SkyBake['radianceFilter'],
+  layout: SkyOctmapLayout
+): LayerFilter {
+  return radianceFilter === 'fast' ? fast : importanceSampleFilter(layout);
 }
 
 /** The roughness layers of a sky baked with `radianceFilter`: a real-time sky has seven (`sky.cpp:1547-1550`). */
@@ -124,7 +123,11 @@ export class SkyLayerBaker {
     private readonly layers: SkyLayers,
     radianceFilter: SkyBake['radianceFilter']
   ) {
-    this.chain = new RadianceChain(gl, layers.layout, skyLayerFilter(radianceFilter, layers.layout));
+    this.chain = new RadianceChain(
+      gl,
+      layers.layout,
+      layerFilter(fastFilterIntoLayers, radianceFilter, layers.layout)
+    );
   }
 
   /** Draws `drawRadiance` into layer 0, then filters each other layer from it. */
@@ -254,7 +257,7 @@ export function bakeAtlasLayers(
   const { layout, target } = atlas;
   if (index < 0 || index >= target.depth)
     throw new Error(`expected an atlas layer from 0 to ${target.depth - 1}, got ${index}`);
-  const chain = new RadianceChain(gl, layout, atlasLayerFilter(radianceFilter, layout));
+  const chain = new RadianceChain(gl, layout, layerFilter(fastFilterIntoMips, radianceFilter, layout));
   try {
     chain.draw(cubeRadiance(gl, radiance));
     drawOffscreen(gl, () => {

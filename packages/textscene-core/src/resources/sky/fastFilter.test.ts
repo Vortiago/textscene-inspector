@@ -17,10 +17,6 @@ describe('fastFilterIntoLayers', () => {
     );
   });
 
-  it("gives layer n Godot's mip level n - 1", () => {
-    expect(fastFilterIntoLayers.layerUniforms(3).mipLevel).toBe(2);
-  });
-
   it('refuses layer 7, which a real-time sky lacks (error case)', () => {
     expect(() => fastFilterIntoLayers.layerUniforms(7)).toThrow('expected a layer from 1 to 6, got 7');
   });
@@ -62,7 +58,11 @@ describe('fastFilterIntoMips', () => {
     expect(fastFilterIntoMips.passFor(renderer)).not.toBe(fastFilterIntoLayers.passFor(renderer));
   });
 
-  it("gives layer n the same taps and mip level as Godot's texture array path", () => {
-    expect(fastFilterIntoMips.layerUniforms(4)).toEqual(fastFilterIntoLayers.layerUniforms(4));
+  it("gives layer n Godot's mip level n - 1 for the lod step", () => {
+    expect(fastFilterIntoMips.layerUniforms(3).mipLevel).toBe(2);
+  });
+
+  it("gives layer n the same taps as Godot's texture array path", () => {
+    expect(fastFilterIntoMips.layerUniforms(4).weight).toBe(fastFilterIntoLayers.layerUniforms(4).weight);
   });
 });

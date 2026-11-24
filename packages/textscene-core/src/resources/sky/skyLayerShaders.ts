@@ -189,7 +189,9 @@ uniform vec4 frameY[SUPER_TAPS];
 uniform vec4 frameZ[SUPER_TAPS];
 uniform vec4 lod[SUPER_TAPS];
 uniform vec4 weight[SUPER_TAPS];
+#ifndef USE_TEXTURE_ARRAY
 uniform int mipLevel;
+#endif
 ${LAYER_FILTER_GLSL}
 vec3 sum = vec3(0.0);
 float total = 0.0;
