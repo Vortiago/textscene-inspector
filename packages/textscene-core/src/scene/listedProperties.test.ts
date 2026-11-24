@@ -1,0 +1,165 @@
+import { describe, expect, it } from 'vitest';
+import '../r3f/sceneLiveTree.js';
+import { openScene, type Scene } from './openScene';
+import type { SceneValue } from './variant';
+
+const SKELETON_AND_TILE_MAP = `[gd_scene format=3]
+
+[sub_resource type="TileSet" id="ts"]
+
+[node name="Main" type="Node3D"]
+
+[node name="Sk" type="Skeleton3D" parent="."]
+bones/0/name = "Hip"
+bones/0/parent = -1
+bones/0/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+bones/0/position = Vector3(0, 0.25, 0)
+bones/1/name = "Leg"
+bones/1/parent = 0
+bones/1/enabled = false
+bones/1/rotation = Quaternion(0, 0.7071068, 0, 0.7071068)
+bones/1/scale = Vector3(2, 2, 2)
+bones/3/name = "Skipped"
+
+[node name="TM" type="TileMap" parent="."]
+tile_set = SubResource("ts")
+layer_1/name = "Props"
+layer_1/z_index = 3
+`;
+
+function openSkeletonAndTileMap(): Scene {
+  return openScene({ source: SKELETON_AND_TILE_MAP, provider: { loadResource: async () => null } });
+}
+
+/** Each answer as `var_to_str` writes it, or null. */
+async function answersOf(scene: Scene, path: string, properties: readonly string[]) {
+  const node = scene.getNode(path);
+  const texts = async (property: string) => textOf(await node.get(property));
+  return Object.fromEntries(await Promise.all(properties.map(async (p) => [p, await texts(p)])));
+}
+
+function textOf(value: SceneValue | null): string | null {
+  if (value === null) return null;
+  return typeof value === 'object' ? value.text : JSON.stringify(value);
+}
+
+// Each value is what Godot 4.6.3 answers for the same scene (measured).
+describe('get of a Skeleton3D bone', () => {
+  it('answers each leaf a bone takes from the file, and the add_bone default of the others', async () => {
+    const answers = await answersOf(openSkeletonAndTileMap(), 'Sk', [
+      'bones/0/name',
+      'bones/0/parent',
+      'bones/0/rest',
+      'bones/0/enabled',
+      'bones/0/position',
+      'bones/0/rotation',
+      'bones/0/scale',
+      'bones/1/enabled',
+      'bones/1/rotation',
+      'bones/1/scale',
+      'bones/1/position',
+    ]);
+
+    expect(answers).toEqual({
+      'bones/0/name': '"Hip"',
+      'bones/0/parent': '-1',
+      'bones/0/rest': 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)',
+      'bones/0/enabled': 'true',
+      'bones/0/position': 'Vector3(0, 0.25, 0)',
+      'bones/0/rotation': 'Quaternion(0, 0, 0, 1)',
+      'bones/0/scale': 'Vector3(1, 1, 1)',
+      'bones/1/enabled': 'false',
+      'bones/1/rotation': 'Quaternion(0, 0.7071068, 0, 0.7071068)',
+      'bones/1/scale': 'Vector3(2, 2, 2)',
+      'bones/1/position': 'Vector3(0, 0, 0)',
+    });
+  });
+
+  it('answers null past the last bone, and for a leaf _get has no arm for', async () => {
+    const answers = await answersOf(openSkeletonAndTileMap(), 'Sk', [
+      'bones/1/name',
+      'bones/2/name',
+      'bones/3/name',
+      'bones/0/bogus',
+    ]);
+
+    expect(answers).toEqual({
+      'bones/1/name': '"Leg"',
+      'bones/2/name': null,
+      'bones/3/name': null,
+      'bones/0/bogus': null,
+    });
+  });
+
+  it('reads an index that is no number as bone 0, as to_int does', async () => {
+    expect(await answersOf(openSkeletonAndTileMap(), 'Sk', ['bones/x/name'])).toEqual({
+      'bones/x/name': '"Hip"',
+    });
+  });
+});
+
+describe('get of a TileMap layer', () => {
+  it('answers the default of each leaf of a layer the file sets nothing of', async () => {
+    const answers = await answersOf(openSkeletonAndTileMap(), 'TM', [
+      'layer_0/name',
+      'layer_0/enabled',
+      'layer_0/modulate',
+      'layer_0/y_sort_enabled',
+      'layer_0/y_sort_origin',
+      'layer_0/z_index',
+      'layer_0/navigation_enabled',
+    ]);
+
+    expect(answers).toEqual({
+      'layer_0/name': '"Layer0"',
+      'layer_0/enabled': 'true',
+      'layer_0/modulate': 'Color(1, 1, 1, 1)',
+      'layer_0/y_sort_enabled': 'false',
+      'layer_0/y_sort_origin': '0',
+      'layer_0/z_index': '0',
+      'layer_0/navigation_enabled': 'true',
+    });
+  });
+
+  it('answers the leaves the file sets, and null past the last layer', async () => {
+    const answers = await answersOf(openSkeletonAndTileMap(), 'TM', [
+      'layer_1/name',
+      'layer_1/z_index',
+      'layer_2/name',
+      'layer_0/bogus',
+    ]);
+
+    expect(answers).toEqual({
+      'layer_1/name': '"Props"',
+      'layer_1/z_index': '3',
+      'layer_2/name': null,
+      'layer_0/bogus': null,
+    });
+  });
+});
+
+describe('get of a TileMap layer name', () => {
+  /** Godot 4.6.3 names a gap layer after the index the loop builds to, and suffixes a taken name. */
+  const RENAMES = `[gd_scene format=3]
+
+[node name="TM" type="TileMap"]
+layer_1/name = "Layer0"
+layer_3/enabled = false
+layer_2/name = "Ground"
+layer_0/name = "Ground"
+layer_4/name = "a.b"
+`;
+
+  it('answers the node name each layer ends with after the file renames them in order', async () => {
+    const scene = openScene({ source: RENAMES, provider: { loadResource: async () => null } });
+    const names = ['layer_0/name', 'layer_1/name', 'layer_2/name', 'layer_3/name', 'layer_4/name'];
+
+    expect(await answersOf(scene, '.', names)).toEqual({
+      'layer_0/name': '"Ground2"',
+      'layer_1/name': '"Layer1"',
+      'layer_2/name': '"Ground"',
+      'layer_3/name': '"Layer4"',
+      'layer_4/name': '"a_b"',
+    });
+  });
+});

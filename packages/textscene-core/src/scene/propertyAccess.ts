@@ -10,6 +10,7 @@ import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
 import { NIL_VALUE, type VariantValue } from '../godot/variant/variantValue.js';
 import type { DerivedProperties, NodeReads, StoredValue, StoredWrite } from './derived/derivedProperty.js';
 import { derivedPropertiesOf } from './derived/derivedFamily.js';
+import { listedGet } from './listed/listedProperties.js';
 import type { SceneTreeNode } from './sceneRuntime.js';
 import type { PropertyTexts } from './sceneWrites.js';
 
@@ -128,6 +129,8 @@ export function castForSetter(
 /** What `get` reads of one property, or `unknown` for a name the class does not have. */
 export type GetOutcome =
   | { readonly kind: 'unknown' }
+  /** A name the class's own `_get` routes and refuses, such as a bone past the last: null, unwarned. */
+  | { readonly kind: 'refused' }
   | { readonly kind: 'unported'; readonly declaredBy: string }
   | { readonly kind: 'value'; readonly value: VariantValue };
 
@@ -139,7 +142,7 @@ export function resolveGet(
 ): GetOutcome {
   if (findClassProperty(node.type, property)) return { kind: 'value', value: reads.stored(property) };
   const derivedProperty = findDerivedProperty(node.type, property);
-  if (!derivedProperty) return { kind: 'unknown' };
+  if (!derivedProperty) return listedGet(node.type, property, node.rawProperties);
   const value = derived?.get(property, reads);
   return value ? { kind: 'value', value } : { kind: 'unported', declaredBy: derivedProperty.declaredBy };
 }

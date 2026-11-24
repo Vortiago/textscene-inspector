@@ -61,6 +61,7 @@ export class SceneProperties {
     const derived = this.derivedAt(access, livePath, node);
     const outcome = access.resolveGet(node, property, derived, this.readsAt(access, livePath, node));
     if (outcome.kind === 'unknown') return this.unknownProperty(node, property, null);
+    if (outcome.kind === 'refused') return null;
     if (outcome.kind === 'unported') throw unportedProperty(property, outcome.declaredBy);
     return sceneValueOf(this.sortedValue(livePath, property) ?? outcome.value);
   }
