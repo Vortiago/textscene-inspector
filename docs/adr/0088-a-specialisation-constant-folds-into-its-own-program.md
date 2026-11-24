@@ -21,7 +21,7 @@ WebGL has no specialisation constants. A uniform in place of the constant was me
 **A block member that holds one value for each frame folds the same way.** Godot reads such members at run time, so its driver keeps their samplers. WebGL 2 counts every sampler the program reads and guarantees 16, and the lit template reads 24.
 
 - `ProgramTemplate.specialisedMembers` names the members, from the rows of a binding table (`EFFECT_SPECIALISATIONS`). `TemplateUniforms` gives each one a `Specialisation`, not a uniform.
-- The emitter folds an `if` whose condition rests on literals, read through struct members and constructors: `if (bool(implementation_data.ss_effects_flags & 1u))`. It emits only the branch taken, so the program reads no sampler of the other.
+- The emitter folds an `if` whose condition rests on literals, read through struct members and constructors: `if (bool(implementation_data.ss_effects_flags & 1u))`. It emits only the branch taken, so the program reads no sampler of the other. A `?:` on such a condition emits only the operand taken.
 - A guard that rests on a call folds when the function's body is one `return` of literals, as `sc_use_forward_gi()`. ANGLE folds a literal condition, but not one behind a call.
 
 ## Consequences
