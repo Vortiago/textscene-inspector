@@ -12,7 +12,7 @@ import { subgroupVariables } from '../language/subgroupComposites.js';
 import { emittedGlslTree, type EmittedTree } from '../language/emittedTree.js';
 import { copyInto, declareVariables, type StructOf, type Value } from '../language/emitValue.js';
 import type { FunctionNode, StructNode } from '../language/shaderTree.js';
-import type { ValueType } from '../language/types.js';
+import { isTextureType, type ValueType } from '../language/types.js';
 import { withGlobalParameters } from './globalParameters.js';
 import { withSquareMatrices } from './squareMatrices.js';
 import { StageVaryings } from './stageVaryings.js';
@@ -268,9 +268,6 @@ function constantGlobal(global: GlobalNode, declarator: GlobalNode['declarators'
 
 /** Folds the const globals. A tree never changes, so every stage shares one. */
 const FOLDING = new GlslangFolding();
-
-/** Every texture type, so a type the emitter has no node for fails by its name. */
-const isTextureType = (type: string) => /^[iu]?texture[A-Z0-9]/.test(type);
 
 /** A texture's node, or an array of them by `name[index]`. Three binds only the nodes a stage reads. */
 function textureValue(

@@ -59,6 +59,22 @@ describe('emitTemplateStage', () => {
     expect(fragmentOf('const float HALF = 1.0 / 2.0;', 'color = vec4(HALF);')).toMatch(/vec4\(\s*0\.5\s*\)/);
   });
 
+  it("draws a uint switch's int labels as uint comparisons, as glslang converts them", () => {
+    const block = 'layout(set = 0, binding = 0, std140) uniform Params {\n\tuint mode;\n} params;';
+    const body =
+      'float v = 0.0;\nswitch (params.mode) {\ncase 0: { v = 1.0; } break;\ncase 1: v = 2.0;\n}\ncolor = vec4(v);';
+    expect(fragmentOf(block, body)).toMatch(/==\s*uint\(\s*1\s*\)|==\s*1u/);
+  });
+
+  it('reads a texture a function takes as an argument from the texture the call passes', () => {
+    const globals = [
+      'layout(set = 0, binding = 1) uniform texture2D shadow_atlas;',
+      'layout(set = 0, binding = 2) uniform sampler shadow_sampler;',
+      'vec4 sampled(texture2D atlas) { return texture(sampler2D(atlas, shadow_sampler), vec2(0.5)); }',
+    ].join('\n');
+    expect(fragmentOf(globals, 'color = sampled(shadow_atlas);')).toMatch(/texture\(\s*nodeUniform/);
+  });
+
   it('folds a specialisation constant to its declared value', () => {
     expect(fragmentOf(SPECIALISED, SPECIALISED_BODY)).toMatch(/vec4\(\s*3\.0\s*\)/);
   });

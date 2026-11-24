@@ -632,7 +632,7 @@ class TemplateParser implements TemplateScope {
         return this.switchStatement(position, attributes);
       case 'case':
       case 'default':
-        return this.label(position);
+        return this.tokens.fail(`expected '${this.tokens.peekText()}' within a 'switch' block`);
       case 'break':
       case 'continue':
       case 'discard':
@@ -763,22 +763,36 @@ class TemplateParser implements TemplateScope {
     return flow('FLOW_OP_DO', [condition], [body], position, attributes);
   }
 
-  /** `switch (v) { ... }`: its labels and statements in one block, as GLSL falls through. */
+  /** `switch (v) { ... }`: a block of its labels, each holding the statements up to the next label. */
   private switchStatement(position: SourcePosition, attributes: readonly string[]): ControlFlowNode {
     this.tokens.next();
     const value = this.condition();
     const blockPosition = this.tokens.expect('{').position;
-    const block = this.block(blockPosition);
+    const labels = this.within(() => {
+      const read: ControlFlowNode[] = [];
+      while (!this.tokens.accept('}')) read.push(this.label());
+      return read;
+    });
+    const block: BlockNode = { kind: 'block', statements: labels, position: blockPosition };
     return flow('FLOW_OP_SWITCH', [value], [block], position, attributes);
   }
 
-  /** `case n:` or `default:`, a statement of its own in the switch's block. */
-  private label(position: SourcePosition): ControlFlowNode {
+  /** `case n:` or `default:` and the statements after it, which fall through to the next label. */
+  private label(): ControlFlowNode {
+    const position = this.tokens.position();
     const word = this.tokens.next().text;
+    if (word !== 'case' && word !== 'default')
+      this.tokens.fail(`expected 'case' or 'default', found ${word}`);
     const expressions = word === 'case' ? [this.expressions.constantInteger()] : [];
-    this.tokens.expect(':');
-    const empty: BlockNode = { kind: 'block', statements: [], position };
-    return flow(word === 'case' ? 'FLOW_OP_CASE' : 'FLOW_OP_DEFAULT', expressions, [empty], position, []);
+    const bodyPosition = this.tokens.expect(':').position;
+    const statements: Statement[] = [];
+    while (!this.isLabelEnd()) statements.push(this.statement());
+    const body: BlockNode = { kind: 'block', statements, position: bodyPosition };
+    return flow(word === 'case' ? 'FLOW_OP_CASE' : 'FLOW_OP_DEFAULT', expressions, [body], position, []);
+  }
+
+  private isLabelEnd(): boolean {
+    return ['case', 'default', '}'].includes(this.tokens.peekText()) && this.tokens.peek()?.kind !== 'slot';
   }
 
   private simpleFlow(position: SourcePosition): ControlFlowNode {

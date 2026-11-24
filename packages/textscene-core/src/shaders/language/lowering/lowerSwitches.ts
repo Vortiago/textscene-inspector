@@ -33,8 +33,9 @@ function switchChain(statement: ControlFlowNode, names: FreshNames): Statement {
     declaration(value.name, value.type, valueNode, position),
     declaration(falls.name, 'bool', boolean(false, position), position),
   ];
+  // A label converts to the selector's type: an `int` label of a `uint` switch (GLSL 4.50 section 6.2).
   const isMatch = (label: ControlFlowNode) =>
-    operator('OP_EQUAL', [value, label.expressions[0]!], label.position);
+    operator('OP_EQUAL', [value, { ...label.expressions[0]!, type: value.type }], label.position);
   const cases = labels.filter((label) => label.flow === 'FLOW_OP_CASE');
   let noneMatches: Expression | undefined;
   if (labels.some((label) => label.flow === 'FLOW_OP_DEFAULT')) {

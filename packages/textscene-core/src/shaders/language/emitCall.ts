@@ -1,7 +1,7 @@
 import { Fn, int, property, struct } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import type { EmittedTree } from './emittedTree.js';
-import { isSamplerType } from './types.js';
+import { isSamplerType, isTextureType } from './types.js';
 import { isArrayType, wholeArrays } from './wholeArray.js';
 import {
   copyInto,
@@ -95,7 +95,7 @@ class GlslFunction {
   ) {
     const definition = tree.lowered;
     const typesOf = (argument: Argument) =>
-      isSamplerType(argument.type)
+      isTextureArgument(argument.type)
         ? samplerLeafTypes(samplers.get(argument.name)!)
         : leafTypes(argument.type, argument.arraySize ?? 0, structOf);
     this.parameters = definition.arguments.map((argument) => ({
@@ -142,7 +142,7 @@ class GlslFunction {
   } {
     const leaves = this.parameters.flatMap(({ argument }, index) => {
       if (argument.qualifier === 'out') return [];
-      if (isSamplerType(argument.type)) return samplerLeaves(args[index]!);
+      if (isTextureArgument(argument.type)) return samplerLeaves(args[index]!);
       return this.leavesOfValue(args[index]!, argument.type, argument.arraySize ?? 0);
     });
     const node = this.fn(...leaves);
@@ -191,7 +191,7 @@ class GlslFunction {
         continue;
       }
       const leaves = given[next++]!;
-      if (isSamplerType(argument.type)) {
+      if (isTextureArgument(argument.type)) {
         names.set(argument.name, samplerParameter(this.samplers.get(argument.name)!, leaves));
         continue;
       }
@@ -236,6 +236,9 @@ export function parameterValue(
     : given;
 }
 
+/** A sampler, or a template's texture that a call combines with a sampler: GLSL passes both as opaque. */
+const isTextureArgument = (type: string) => isSamplerType(type) || isTextureType(type);
+
 /** The value each sampler argument is given, by name. */
 function samplerArguments(
   parameters: readonly Argument[],
@@ -243,7 +246,7 @@ function samplerArguments(
 ): ReadonlyMap<string, Value> {
   return new Map(
     parameters.flatMap((argument, index) =>
-      isSamplerType(argument.type) ? [[argument.name, args[index]!] as const] : []
+      isTextureArgument(argument.type) ? [[argument.name, args[index]!] as const] : []
     )
   );
 }
