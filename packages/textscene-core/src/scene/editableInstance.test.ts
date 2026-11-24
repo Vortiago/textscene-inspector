@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import '../r3f/sceneLiveTree.js';
 import { openScene, type Scene } from './openScene';
 import type { ResourceProvider } from '../resources/ResourceProvider';
+import { variant } from './variant';
 
 const SUB = `[gd_scene format=3]
 
@@ -54,6 +55,11 @@ describe('is_editable_instance', () => {
     const scene = await loadedMain();
     const plain = scene.getNode('Plain');
     expect(await plain.call('is_editable_instance', scene.getNode('Editable'))).toBe(false);
+  });
+
+  it('is false for null, as Godot answers a null node', async () => {
+    const scene = await loadedMain();
+    expect(await scene.getNode('.').call('is_editable_instance', variant('null'))).toBe(false);
   });
 
   it('refuses an argument that is not a node, with the type it found', async () => {

@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { act, screen, fireEvent } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { useSelectedNodePath } from '../../contexts/SelectionContext';
+import { useSelectedNodePath, useSelection } from '../../contexts/SelectionContext';
 import { renderSceneTree } from './sceneTree.testkit';
 
 /** A scene of `names` below one root, as Node3D, nested where `nested` is true. */
@@ -158,6 +158,20 @@ describe('<SceneTreeViewer> keyboard operability (#224)', () => {
     fireEvent.keyDown(rowFor('Root'), { key: 'ArrowLeft' }); // collapse: Child unmounts
     expect(screen.queryByText('Child')).toBeNull();
     // The tree must still have exactly one tab stop: the first root row.
+    expect(rowFor('Root').tabIndex).toBe(0);
+  });
+
+  it('keeps the tab stop on the root row while the selected node has no row', async () => {
+    let select: (path: string) => void = () => undefined;
+    function Selector() {
+      select = useSelection().setSelectedNodePath;
+      return null;
+    }
+    await renderSceneTree(PARENT, { beside: <Selector /> });
+    fireEvent.click(screen.getByRole('button', { name: 'Expand all' }));
+
+    act(() => select('Root/Child/Unlisted'));
+
     expect(rowFor('Root').tabIndex).toBe(0);
   });
 

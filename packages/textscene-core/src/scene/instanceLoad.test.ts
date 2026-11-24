@@ -95,4 +95,33 @@ describe('a node handle lookup alone', () => {
 
     expect(texture.getNodeOrNull('Inst/Kid')).toBeNull();
   });
+
+  it('keeps an instance whose scene the provider has no file for, with the node the host adds below it', async () => {
+    const scene = openScene({
+      source: `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://gone.tscn" id="gone"]
+
+[node name="Main" type="Node3D"]
+
+[node name="Gone" parent="." instance=ExtResource("gone")]
+
+[node name="Kid" type="Node3D" parent="Gone"]
+`,
+      provider: { loadResource: async () => null },
+    });
+    await vi.waitFor(() => expect(scene.files().every((file) => file.state !== 'loading')).toBe(true));
+
+    expect(childPathsOf(scene, 'Gone')).toEqual(['/root/Main/Gone/Kid']);
+  });
+
+  it('keeps a node whose sub-scene root inherits a glTF the provider has no file for', async () => {
+    const scene = openScene({
+      source: MAIN,
+      provider: { loadResource: async (path) => (path === 'res://rig.glb' ? null : (FILES[path] ?? null)) },
+    });
+    await vi.waitFor(() => expect(childPathsOf(scene, 'Cube')).toEqual(['/root/Main/Cube/Cube']));
+
+    await vi.waitFor(() => expect(scene.getNodeOrNull('Body')).not.toBeNull());
+  });
 });

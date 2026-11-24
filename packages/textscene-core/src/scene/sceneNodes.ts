@@ -207,7 +207,7 @@ export class SceneNodes implements HandleHost {
         `${name}: not a method this release ports. It ports ${PORTED_METHOD_NAMES.join(', ')}, and the property setters and getters.`
       );
     }
-    return this.callPropertyMethod(path, name, reached, valueArguments(args, name));
+    return this.callPropertyMethod(path, name, reached, args);
   }
 
   /** A setter or a getter: an indexed one takes the index first (`class_db.cpp:1667-1673`). */
@@ -215,12 +215,13 @@ export class SceneNodes implements HandleHost {
     path: string,
     method: string,
     { role, properties }: PropertyMethod,
-    args: readonly SceneValue[]
+    called: readonly CallArgument[]
   ): Promise<CallResult> {
     const isIndexed = !properties.has(null);
     const argumentCount = Number(isIndexed) + (role === 'setter' ? 1 : 0);
     // The count is checked before the index, as a bound call checks it first (`method_bind.h`).
-    if (args.length !== argumentCount) throw argumentCountError(method, argumentCount, args.length);
+    if (called.length !== argumentCount) throw argumentCountError(method, argumentCount, called.length);
+    const args = valueArguments(called, method);
     const index = isIndexed ? intArgument(args[0]!, method) : null;
     const values = isIndexed ? args.slice(1) : args;
     const property = properties.get(index);

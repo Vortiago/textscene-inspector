@@ -43,6 +43,7 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
 
   const [searchTerm, setSearchTerm] = useState('');
   const listedRows = useMemo(() => rowsOf(root), [root]);
+  const listedPaths = useMemo(() => new Set(listedRows.map((row) => row.path)), [listedRows]);
 
   const term = searchTerm.trim().toLowerCase();
 
@@ -143,11 +144,10 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
     [selectPath, expandedRows]
   );
 
-  // The selected row is the tab stop only while it renders, that is while it
-  // survives the search and every ancestor is expanded. Otherwise the first
-  // root row is, or Tab would skip the tree.
+  // The selected row is the tab stop only while it renders. Otherwise the root row is, or Tab skips the tree.
   const selectedRowRendered =
     selectedNodePath !== null &&
+    listedPaths.has(selectedNodePath) &&
     matches(selectedNodePath) &&
     getAncestorPaths(selectedNodePath).every((p) => expandedPaths.has(p));
 
