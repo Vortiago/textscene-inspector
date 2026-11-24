@@ -257,10 +257,12 @@ export const LIGHTING_SCENES = [
   { name: 'shader-sky-cubemap', file: 'unit-shader-sky-cubemap.tscn' },
   { name: 'shader-sky-volume-mipmaps', file: 'unit-shader-sky-volume-mipmaps.tscn' },
   // The demo sky_volumetric_clouds in daylight, with its weather reads in uniform control flow.
+  // Half the default canvas: its 192-step march draws a full frame in 3 s locally, too slow for CI shots.
   {
     name: 'shader-sky-volumetric-clouds',
     file: 'sky-volumetric-clouds/unit-shader-sky-volumetric-clouds.tscn',
     camera: 'Root/Camera3D',
+    canvas: { width: 478, height: 378 },
   },
   { name: 'shader-sky-light', file: 'unit-shader-sky-light.tscn' },
   { name: 'shader-sky-half-res', file: 'unit-shader-sky-half-res.tscn' },

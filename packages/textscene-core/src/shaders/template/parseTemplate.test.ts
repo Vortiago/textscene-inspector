@@ -97,33 +97,81 @@ describe('parseTemplateStage', () => {
     expect(inFunction('uint u = 1u;\nuint c = bitCount(u);')).toContain('uint c = uint(bitCount(u));');
   });
 
-  it("gives each switch label the statements up to the next label, as the template's switches hold them", () => {
-    const parsedSwitch = parsed(
-      'void main() {\nint m = 0;\nswitch (m) {\ncase 0: { m = 1; } break;\ndefault: m = 2;\n}\n}'
-    );
-    const main = parsedSwitch.declarations.at(-1) as unknown as { body: { statements: unknown[] } };
-    const switchNode = main.body.statements.at(-1) as {
-      blocks: { statements: { blocks: { statements: unknown[] }[] }[] }[];
-    };
-    const labelSizes = switchNode.blocks[0]!.statements.map((label) => label.blocks[0]!.statements.length);
-    expect(labelSizes).toEqual([2, 1]);
-  });
-
-  it('prints each label before its statements', () => {
-    expect(inFunction('int m = 0;\nswitch (m) {\ncase 0: m = 1; break;\n}')).toMatch(
-      /case 0:\n\t*\(?m = 1\)?;\n\t*break;/
-    );
-  });
-
-  it('refuses a label outside a switch', () => {
-    expect(() => parsed('void main() {\ncase 0: ;\n}')).toThrow("expected 'case' within a 'switch' block");
-  });
-
   it('keeps the slot of a stage function where a material puts its code', () => {
     const [main] = parsed('void main() {\n#CODE : SKY\n}').declarations;
     expect(main?.kind === 'function' && main.body.statements).toEqual([
       { kind: 'slot', name: 'SKY', position: { file: 't.glsl', line: 2, column: 1 } },
     ]);
+  });
+
+  it('reads each switch label with its statements, an empty one falling into the next', () => {
+    const body = 'int a = 0;\nswitch (a) {\ncase 0: a = 1; break;\ncase 5:\ndefault: a = 2; break;\n}';
+    expect(inFunction(body)).toBe(
+      [
+        'void main() {',
+        '\tint a = 0;',
+        '\tswitch (a) {',
+        '\t\tcase 0:',
+        '\t\t\t(a = 1);',
+        '\t\t\tbreak;',
+        '\t\tcase 5:',
+        '\t\tdefault:',
+        '\t\t\t(a = 2);',
+        '\t\t\tbreak;',
+        '\t}',
+        '}',
+      ].join('\n')
+    );
+  });
+
+  it('converts a case label to the type of a uint switch', () => {
+    expect(inFunction('uint a = 0u;\nswitch (a) {\ncase 1: break;\n}')).toContain('case 1u:');
+  });
+
+  it('refuses a label outside a switch', () => {
+    expect(() => inFunction('case 0: return;')).toThrow(
+      "expected a statement, found a 'case' label outside a switch"
+    );
+  });
+
+  it('converts a negative case label to the uint a uint switch reads', () => {
+    expect(inFunction('uint a = 0u;\nswitch (a) {\ncase -1: break;\n}')).toContain('case 4294967295u:');
+  });
+
+  it("refuses a read of an earlier label's local, as each label has a scope of its own", () => {
+    expect(() =>
+      inFunction('int a = 0;\nswitch (a) {\ncase 0: float x = 1.0;\ncase 1: x = 2.0; break;\n}')
+    ).toThrow('undeclared identifier: x');
+  });
+
+  it('refuses a statement before the first label of a switch', () => {
+    expect(() => inFunction('int a = 0;\nswitch (a) {\na = 1;\n}')).toThrow(
+      "expected 'case' or 'default' in a switch, found 'a'"
+    );
+  });
+
+  it('refuses a last label with no statements, as glslang does', () => {
+    expect(() => inFunction('int a = 0;\nswitch (a) {\ncase 0: break;\ndefault:\n}')).toThrow(
+      "expected a statement after the last label 'default', found '}'"
+    );
+  });
+
+  it('refuses a switch of a float', () => {
+    expect(() => inFunction('float f = 0.0;\nswitch (f) {\ncase 1: break;\n}')).toThrow(
+      'expected an int or uint switch value, found float'
+    );
+  });
+
+  it('refuses a case value a switch names twice', () => {
+    expect(() => inFunction('int a = 0;\nswitch (a) {\ncase 1: break;\ncase 1: break;\n}')).toThrow(
+      "expected one 'case 1' in a switch, found a second"
+    );
+  });
+
+  it('refuses a second default', () => {
+    expect(() => inFunction('int a = 0;\nswitch (a) {\ndefault: break;\ndefault: break;\n}')).toThrow(
+      "expected one 'default' in a switch, found a second"
+    );
   });
 
   it('gives the same tree for the same text', () => {

@@ -31,6 +31,7 @@ function operatorValue(
 ): Scalar | undefined {
   const values = operands.map((operand) => constantScalar(operand, lookup));
   if (values.some((value) => value === undefined)) return undefined;
+  if (op === 'OP_SELECT_IF') return values[0] ? values[1] : values[2];
   const from = operands[0]?.type;
   if (!SCALAR_KINDS.has(type) || !from || !SCALAR_KINDS.has(from)) return undefined;
   const [a, b] = values as Scalar[];

@@ -3,6 +3,7 @@ import type {
   Argument,
   BlockNode,
   CallNode,
+  ConstantNode,
   ControlFlowNode,
   DeclarationNode,
   Expression,
@@ -62,6 +63,14 @@ export function parseTemplateStage(
   const declarations = new TemplateParser(stage, tokens, material).declarations();
   return { kind: 'template stage', stage, directives: preprocessed.directives, declarations };
 }
+
+const LABEL_WORDS = new Set(['case', 'default']);
+
+/** The selector types a `switch` takes (GLSL 4.60, 6.2). */
+const SWITCH_TYPES = new Set(['int', 'uint']);
+
+/** What ends a label's statements: the next label, or the end of the switch. */
+const LABEL_ENDS = new Set([...LABEL_WORDS, '}']);
 
 /** The qualifier words of GLSL 4.50 that stand before a type (section 4.3 to 4.10). */
 const QUALIFIER_WORDS = new Set([
@@ -509,11 +518,11 @@ class TemplateParser implements TemplateScope {
     }
   }
 
-  /** The statements after a `{`, up to its `}`, in a scope of their own. */
-  private block(position: SourcePosition): BlockNode {
+  /** The statements after a `{`, up to its `}`, in a scope of their own, each read by `read`. */
+  private block(position: SourcePosition, read: () => Statement = () => this.statement()): BlockNode {
     return this.within(() => {
       const statements: Statement[] = [];
-      while (!this.tokens.accept('}')) statements.push(this.statement());
+      while (!this.tokens.accept('}')) statements.push(read());
       return { kind: 'block', statements, position };
     });
   }
@@ -632,7 +641,9 @@ class TemplateParser implements TemplateScope {
         return this.switchStatement(position, attributes);
       case 'case':
       case 'default':
-        return this.tokens.fail(`expected '${this.tokens.peekText()}' within a 'switch' block`);
+        return this.tokens.fail(
+          `expected a statement, found a '${this.tokens.peekText()}' label outside a switch`
+        );
       case 'break':
       case 'continue':
       case 'discard':
@@ -763,36 +774,59 @@ class TemplateParser implements TemplateScope {
     return flow('FLOW_OP_DO', [condition], [body], position, attributes);
   }
 
-  /** `switch (v) { ... }`: a block of its labels, each holding the statements up to the next label. */
+  /** `switch (v) { ... }`: a block of its labels, the tree `parseBlock.ts` builds for Godot's own text. */
   private switchStatement(position: SourcePosition, attributes: readonly string[]): ControlFlowNode {
     this.tokens.next();
     const value = this.condition();
+    if (!SWITCH_TYPES.has(canonicalType(value.type)))
+      this.tokens.fail(`expected an int or uint switch value, found ${value.type}`, value.position);
     const blockPosition = this.tokens.expect('{').position;
-    const labels = this.within(() => {
-      const read: ControlFlowNode[] = [];
-      while (!this.tokens.accept('}')) read.push(this.label());
-      return read;
-    });
-    const block: BlockNode = { kind: 'block', statements: labels, position: blockPosition };
+    const block = this.block(blockPosition, () => this.label(value.type));
+    this.refuseRepeatedLabels(block);
     return flow('FLOW_OP_SWITCH', [value], [block], position, attributes);
   }
 
-  /** `case n:` or `default:` and the statements after it, which fall through to the next label. */
-  private label(): ControlFlowNode {
+  /** `case n:` or `default:` up to the next label, in a scope of its own as the lowering gives it a block. */
+  private label(selectorType: string): ControlFlowNode {
     const position = this.tokens.position();
-    const word = this.tokens.next().text;
-    if (word !== 'case' && word !== 'default')
-      this.tokens.fail(`expected 'case' or 'default', found ${word}`);
-    const expressions = word === 'case' ? [this.expressions.constantInteger()] : [];
-    const bodyPosition = this.tokens.expect(':').position;
-    const statements: Statement[] = [];
-    while (!this.isLabelEnd()) statements.push(this.statement());
-    const body: BlockNode = { kind: 'block', statements, position: bodyPosition };
-    return flow(word === 'case' ? 'FLOW_OP_CASE' : 'FLOW_OP_DEFAULT', expressions, [body], position, []);
+    const word = this.tokens.peekText();
+    if (!LABEL_WORDS.has(word)) this.tokens.fail(`expected 'case' or 'default' in a switch, found '${word}'`);
+    this.tokens.next();
+    const isCase = word === 'case';
+    const expressions = isCase ? [this.caseValue(selectorType)] : [];
+    this.tokens.expect(':');
+    const statements = this.within(() => {
+      const read: Statement[] = [];
+      while (!LABEL_ENDS.has(this.tokens.peekText())) read.push(this.statement());
+      return read;
+    });
+    if (statements.length === 0 && this.tokens.peekText() === '}')
+      this.tokens.fail(`expected a statement after the last label '${word}', found '}'`);
+    const body: BlockNode = { kind: 'block', statements, position };
+    return flow(isCase ? 'FLOW_OP_CASE' : 'FLOW_OP_DEFAULT', expressions, [body], position, []);
   }
 
-  private isLabelEnd(): boolean {
-    return ['case', 'default', '}'].includes(this.tokens.peekText()) && this.tokens.peek()?.kind !== 'slot';
+  /** A constant of the selector's type, as `case 0:` converts in a `uint` switch (GLSL 4.60, 6.2). */
+  private caseValue(selectorType: string): ConstantNode {
+    const written = this.expressions.constantInteger();
+    const value = constantScalar(this.expressions.converted(written, selectorType), this.constantLanes);
+    if (value === undefined)
+      this.tokens.fail('case label must be a constant integer expression', written.position);
+    return { kind: 'constant', type: selectorType, values: [value], position: written.position };
+  }
+
+  /** Each case value once, and one `default` at most (GLSL 4.60, 6.2). */
+  private refuseRepeatedLabels(labels: BlockNode): void {
+    const seen = new Set<string>();
+    for (const label of labels.statements as ControlFlowNode[]) {
+      const head =
+        label.flow === 'FLOW_OP_CASE'
+          ? `case ${String((label.expressions[0] as ConstantNode).values[0])}`
+          : 'default';
+      if (seen.has(head))
+        this.tokens.fail(`expected one '${head}' in a switch, found a second`, label.position);
+      seen.add(head);
+    }
   }
 
   private simpleFlow(position: SourcePosition): ControlFlowNode {
