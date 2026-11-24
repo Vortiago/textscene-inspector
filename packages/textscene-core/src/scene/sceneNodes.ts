@@ -274,7 +274,7 @@ export class SceneNodes implements HandleHost {
       },
       handleAt: (livePath) => this.handleAt(absolutePathOf(livePath)),
       sceneFilePath: () => this.treeNodeOf(path, generation)?.sceneFilePath ?? '',
-      ownerPath: () => this.treeNodeOf(path, generation)?.ownerPath ?? null,
+      ownerPath: () => this.treeNodeOf(path, generation)?.ownerPath() ?? null,
     };
   }
 

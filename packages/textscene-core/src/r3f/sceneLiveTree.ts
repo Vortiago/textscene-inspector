@@ -109,7 +109,7 @@ function treeNodeOf(
       nodeRegistry.sortedProperties(node.type)?.(node, sortableChildCount(tree, link.step))[property],
     placedProperty: (property) => placedPropertyOf(placed().get(link.path), property),
     sceneFilePath: ancestors.length === 0 ? rootScenePath : (link.step.instancePath ?? ''),
-    ownerPath: ownerOf(link, ancestors)?.path ?? null,
+    ownerPath: () => ownerOf(link, ancestors)?.path ?? null,
   };
 }
 

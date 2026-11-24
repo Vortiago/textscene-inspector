@@ -23,7 +23,7 @@ export interface SceneTreeNode {
   /** The scene the node instances, or the root scene's own path for the root node, else empty. */
   readonly sceneFilePath: string;
   /** The live path of the root of the scene that declares the node, null for the root node. */
-  readonly ownerPath: string | null;
+  ownerPath(): string | null;
 }
 
 /** A container's hold on one sortable child's `visible`, as its sort writes it. */

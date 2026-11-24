@@ -17,7 +17,7 @@ import type { Scene } from '../scene/openScene.js';
 import { isCamera3DType } from './cameraNodeTypes.js';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useOptionalViewportActions } from './contexts/ViewportActionsContext.js';
-import { subscribeToSceneTree } from './currentCamera.js';
+import { useSceneTreeSubscription } from './currentCamera.js';
 import { useSceneCamera } from './sceneCameras.js';
 
 /** Throws for a node of another type at `path`. No node there yet passes, since a load may bring it in. */
@@ -40,7 +40,7 @@ function notACamera(path: string, node: NodeHandle | null): Error | null {
 
 /** The node at `path` from the scene's root, read again after each load or write that changes the tree. */
 function useNodeAt(scene: Scene | undefined, path: string | null): NodeHandle | null {
-  const subscribe = useCallback((listener: () => void) => subscribeToSceneTree(scene, listener), [scene]);
+  const subscribe = useSceneTreeSubscription(scene);
   return useSyncExternalStore(subscribe, () => (scene && path !== null ? scene.getNodeOrNull(path) : null));
 }
 
