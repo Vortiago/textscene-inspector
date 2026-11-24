@@ -52,7 +52,7 @@ export interface ProjectSettingsProviderProps {
   children: ReactNode;
 }
 
-/** The project's settings, or null when the file is absent or is not a `project.godot`. A new loader reads them again. */
+/** Null settings when the file is absent or is not a `project.godot`. A new loader reads them again. */
 export function ProjectSettingsProvider({ children }: ProjectSettingsProviderProps) {
   const loader = useResourceLoader();
   const [settings, setSettings] = useState<ProjectSettings | null>(null);
