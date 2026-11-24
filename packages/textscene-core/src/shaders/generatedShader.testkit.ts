@@ -29,7 +29,7 @@ interface UnstartedBackend {
 const MIN_UNIFORM_BUFFERS = 12;
 
 /** The program three builds for `material`, with no GL context. */
-function builtProgram(material: NodeMaterial): ProgramBuilder {
+function builtProgram(material: THREE.Material): ProgramBuilder {
   const renderer = new WebGPURenderer({ forceWebGL: true, canvas: document.createElement('canvas') });
   const backend = renderer.backend as unknown as UnstartedBackend;
   backend.extensions = { has: () => false };
@@ -63,6 +63,11 @@ export function generatedProgram(nodes: { positionNode?: Node; fragmentNode?: No
 } {
   const material = new NodeMaterial();
   Object.assign(material, nodes);
+  return generatedMaterialProgram(material);
+}
+
+/** Both stages three generates for `material`, a transpiled material among them. */
+export function generatedMaterialProgram(material: THREE.Material): { vertex: string; fragment: string } {
   const builder = builtProgram(material);
   return { vertex: builder.vertexShader ?? '', fragment: builder.fragmentShader ?? '' };
 }
