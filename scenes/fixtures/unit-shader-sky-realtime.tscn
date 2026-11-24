@@ -1,0 +1,60 @@
+[gd_scene format=3]
+
+; One variable: a user's sky shader in Real-Time mode, with a sharp sun disc. Godot's fast filter
+; works out a sky layer at half its width and stores each result in a 2 by 2 block of texels, so the
+; rough ball shows the disc as Godot filters it. unit-sky-realtime draws a smooth sky only.
+
+[sub_resource type="Shader" id="Shader_sky"]
+code = "shader_type sky;\n\nvoid sky() {\n\tvec3 d = EYEDIR;\n\tfloat s = step(0.98, dot(d, normalize(vec3(0.3, 0.6, -0.7))));\n\tCOLOR = vec3(0.2, 0.3, 0.6) * (0.5 + 0.5 * d.y) + vec3(8.0) * s;\n}\n"
+
+[sub_resource type="ShaderMaterial" id="SkyMat_shader"]
+shader = SubResource("Shader_sky")
+
+[sub_resource type="Sky" id="Sky_shader"]
+sky_material = SubResource("SkyMat_shader")
+process_mode = 3
+
+[sub_resource type="Environment" id="Environment_stage"]
+background_mode = 2
+sky = SubResource("Sky_shader")
+ambient_light_source = 2
+ambient_light_color = Color(0.6, 0.6, 0.6, 1)
+ambient_light_sky_contribution = 0.0
+tonemap_mode = 4
+
+[sub_resource type="SphereMesh" id="SphereMesh_ball"]
+radius = 0.9
+height = 1.8
+radial_segments = 64
+rings = 32
+
+[sub_resource type="StandardMaterial3D" id="Mirror"]
+albedo_color = Color(0.9, 0.9, 0.9, 1)
+metallic = 1.0
+roughness = 0.0
+
+[sub_resource type="StandardMaterial3D" id="Rough"]
+albedo_color = Color(0.9, 0.9, 0.9, 1)
+metallic = 1.0
+roughness = 0.5
+
+[node name="Root" type="Node3D"]
+
+[node name="MirrorBall" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0.6, 0)
+mesh = SubResource("SphereMesh_ball")
+surface_material_override/0 = SubResource("Mirror")
+
+[node name="RoughBall" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0.6, 0)
+mesh = SubResource("SphereMesh_ball")
+surface_material_override/0 = SubResource("Rough")
+
+[node name="DarkSun" type="DirectionalLight3D" parent="."]
+light_energy = 0.0
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 4.2)
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_stage")
