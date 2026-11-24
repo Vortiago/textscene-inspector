@@ -160,10 +160,10 @@ describe('TscnPreviewPanel loadResource — error paths', () => {
   });
 
   it('posts resourceLoadError "No workspace folder found" when the resource has no owning workspace', async () => {
-    const { webview, triggerMessage } = await openReadyPreviewPanel(MINIMAL_TSCN);
     // `vi.clearAllMocks()` (test-setup's afterEach) clears calls but not a
     // `mockReturnValue`, so this pins its own and runs in any order.
     (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue(undefined);
+    const { webview, triggerMessage } = await openReadyPreviewPanel(MINIMAL_TSCN);
 
     triggerMessage({
       type: 'loadResource',

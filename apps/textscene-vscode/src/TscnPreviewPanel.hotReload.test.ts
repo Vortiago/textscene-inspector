@@ -126,8 +126,7 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
     expect(resourceChangedCalls(webview)).toHaveLength(0);
   });
 
-  it('caches project-root resolution across repeated loadResource calls on the same panel', async () => {
-    const { triggerMessage } = await openReadyPreviewPanel(MINIMAL_TSCN);
+  it("caches project-root resolution across the document's load and repeated loadResource calls", async () => {
     (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({
       uri: createMockUri('/workspace'),
     });
@@ -136,28 +135,17 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
     // Each read also stats the file it reads, so only the walk's stats of project.godot count.
     const projectFileStats = () =>
       stat.mock.calls.filter(([uri]) => (uri as vscode.Uri).fsPath.endsWith('project.godot')).length;
+    const { triggerMessage } = await openReadyPreviewPanel(MINIMAL_TSCN);
+    const callsAfterLoad = projectFileStats();
+    expect(callsAfterLoad).toBeGreaterThan(0);
 
-    triggerMessage({
-      type: 'loadResource',
-      path: 'res://a.png',
-      resourceType: 'Texture2D',
-      requestId: 'r1',
-    });
-    await new Promise<void>((r) => setTimeout(r, 10));
-    const callsAfterFirst = projectFileStats();
-    expect(callsAfterFirst).toBeGreaterThan(0);
+    for (const path of ['res://a.png', 'res://b.png']) {
+      triggerMessage({ type: 'loadResource', path, resourceType: 'Texture2D', requestId: path });
+      await new Promise<void>((r) => setTimeout(r, 10));
+    }
 
-    triggerMessage({
-      type: 'loadResource',
-      path: 'res://b.png',
-      resourceType: 'Texture2D',
-      requestId: 'r2',
-    });
-    await new Promise<void>((r) => setTimeout(r, 10));
-
-    // The second resource request reuses the panel's cached provider/project
-    // root instead of re-walking the filesystem for it.
-    expect(projectFileStats()).toBe(callsAfterFirst);
+    // Each resource request reuses the panel's cached provider and project root.
+    expect(projectFileStats()).toBe(callsAfterLoad);
   });
 
   it('clears the cached resource provider when update() receives a different document', async () => {
@@ -271,6 +259,8 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
     const { webview, panel } = await openPreviewPanel(MINIMAL_TSCN);
     // No webviewReady triggered.
     const getWorkspaceFolder = vscode.workspace.getWorkspaceFolder as Mock;
+    // The document's own load resolves its `res://` path, so only the change's lookups count.
+    getWorkspaceFolder.mockClear();
 
     await panel.handleDependencyChange(createMockUri('/workspace/textures/wood.png'));
 
