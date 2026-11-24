@@ -25,4 +25,11 @@ describe('emitComputePass', () => {
   it('discards a fragment whose invocation stores nothing', () => {
     expect(downsampler().shader).toContain('discard');
   });
+
+  it("reads a render target's rows in the order a pass stores them, without three's WebGL flip", () => {
+    const { draw } = downsampler();
+    const source = draw.textures.get('source_octmap') as unknown as { _flipYUniform: { value: boolean } };
+
+    expect(source._flipYUniform.value).toBe(false);
+  });
 });
