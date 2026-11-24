@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 
 const TESTID_OF_MODE: Record<string, string> = { '2D': 'canvas-2d', '3D': 'canvas-3d', 'in-game': 'in-game' };
 
@@ -23,6 +23,7 @@ function makeLoader(scenes: Record<string, TscnScene>): ResourceLoader {
 const SPRITE_SCENE = `[gd_scene format=3]\n\n[node name="World" type="Sprite2D"]\n`;
 const CONTROL_SCENE = `[gd_scene format=3]\n\n[node name="UI" type="Control"]\n`;
 const THREED_SCENE = `[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n`;
+const CANVAS_LAYER_SCENE = `[gd_scene format=3]\n\n[node name="HUD" type="CanvasLayer"]\n\n[node name="L" type="Label" parent="."]\n`;
 const PLAIN_NODE_SCENE = `[gd_scene format=3]\n\n[node name="Main" type="Node"]\n\n[node name="S" type="Sprite2D" parent="."]\n`;
 
 describe('<TextShell> workspace auto-select (Godot parity)', () => {
@@ -53,6 +54,16 @@ describe('<TextShell> workspace auto-select (Godot parity)', () => {
   it('keeps the current workspace for a plain-Node root (Godot: no plugin claims it)', async () => {
     render(<TextShell panelId="auto-d" content={PLAIN_NODE_SCENE} />);
     expect(await screen.findByTestId('canvas-3d')).toBeTruthy();
+  });
+
+  // A CanvasLayer is no CanvasItem, so no editor plugin claims it (canvas_item_editor_plugin.cpp:6089).
+  it('keeps the current workspace for a CanvasLayer root', async () => {
+    const { rerender } = render(<TextShell panelId="auto-layer" content={THREED_SCENE} />);
+    expect(await screen.findByTestId('canvas-3d')).toBeTruthy();
+
+    rerender(<TextShell panelId="auto-layer" content={CANVAS_LAYER_SCENE} />);
+    await act(async () => {});
+    expect(screen.getByTestId('canvas-3d')).toBeTruthy();
   });
 
   it('re-derives the workspace when the scene switches', async () => {
