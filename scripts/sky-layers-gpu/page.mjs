@@ -7,6 +7,9 @@ import { installNodesHandler } from '../../packages/textscene-core/src/shaders/n
 import { disposeSkyLayers } from '../../packages/textscene-core/src/resources/sky/octmapArrays.ts';
 import { bakeSkyLayers } from '../../packages/textscene-core/src/resources/sky/skyLayers.testkit.ts';
 import { REAL_TIME_RADIANCE_SIZE } from '../../packages/textscene-core/src/godot/rendering/environment/skyReflection.ts';
+import { reflectionAtlasLayout } from '../../packages/textscene-core/src/godot/rendering/environment/reflectionProbe.ts';
+import { createReflectionAtlas } from '../../packages/textscene-core/src/resources/sky/octmapArrays.ts';
+import { bakeAtlasLayers } from '../../packages/textscene-core/src/resources/sky/skyLayers.ts';
 
 /* global window, document */
 // `window` and `document` exist only in the browser that loads this page.
@@ -111,12 +114,12 @@ function texelAt(target, layer, mip, x, y) {
   return Array.from(pixel.slice(0, 3));
 }
 
-/** The +Y and -Y texels of each mip of each layer: +Y is the middle of the top edge inside the border. */
-function orientationOf({ layout, target }) {
+/** The +Y and -Y texels of each layer's mips `mipSizes` wide: +Y is the top edge's middle in the border. */
+function orientationOf({ layout, target }, mipSizes = [layout.size, ...layout.downsampledSizes]) {
   const pad = (1 - layout.borderSize) / 2;
   const texels = [];
   for (let layer = 0; layer < target.depth; layer += 1)
-    [layout.size, ...layout.downsampledSizes].forEach((size, mip) => {
+    mipSizes.forEach((size, mip) => {
       const inset = Math.floor(pad * size) + 1;
       const middle = size >> 1;
       const up = texelAt(target, layer, mip, middle, size - 1 - inset);
@@ -136,6 +139,18 @@ function bakeTwoColour(radianceFilter, radianceSize) {
   return texels;
 }
 
+/** The orientation of each mip of a probe's atlas layer, each a roughness layer `radianceFilter` bakes. */
+function bakeTwoColourProbe(radianceFilter) {
+  const radiance = radianceCube(twoColour);
+  // Only an update-always probe bakes with the fast filter, and its atlas has seven layers.
+  const atlas = createReflectionAtlas(reflectionAtlasLayout(radianceFilter === 'fast'), 1);
+  bakeAtlasLayers(renderer, radiance.texture, atlas, 0, radianceFilter);
+  const texels = orientationOf(atlas, atlas.layout.layerSizes);
+  atlas.target.dispose();
+  radiance.dispose();
+  return texels;
+}
+
 window.skyLayerSamples = () => ({
   uniformRadiance: UNIFORM_RADIANCE,
   uniformImportance: bake(() => UNIFORM_RADIANCE, 'importance-sample'),
@@ -144,4 +159,6 @@ window.skyLayerSamples = () => ({
   twoColours: TWO_COLOURS,
   twoColourImportance: bakeTwoColour('importance-sample', RADIANCE_SIZE),
   twoColourFast: bakeTwoColour('fast', REAL_TIME_RADIANCE_SIZE),
+  twoColourProbeImportance: bakeTwoColourProbe('importance-sample'),
+  twoColourProbeFast: bakeTwoColourProbe('fast'),
 });

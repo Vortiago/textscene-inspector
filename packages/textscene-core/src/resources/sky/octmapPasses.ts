@@ -277,21 +277,16 @@ export interface Atlas {
 /** Images in a row while they fit WebGL 2's least texture size, 2048, and then in the next row. */
 const ATLAS_SIDE = 2048;
 
-/** A renderer's atlas and the image sizes it was laid out for, written only by `atlasFor`. */
-const heldAtlasOf = perObject<THREE.WebGLRenderer, { sizes: string; atlas: Atlas | null }>(() => ({
-  sizes: '',
-  atlas: null,
-}));
+/** A renderer's atlases by the image sizes each was laid out for, written only by `atlasFor`. */
+const heldAtlasesOf = perObject<THREE.WebGLRenderer, Map<string, Atlas>>(() => new Map());
 
-/** The atlas images `sizes` wide fit in, side by side, laid out again when the sizes change. */
+/** The atlas images `sizes` wide fit in, one for each layout, as a sky and a probe bake in turn. */
 function atlasFor(gl: THREE.WebGLRenderer, sizes: readonly number[]): Atlas {
-  const held = heldAtlasOf(gl);
+  const held = heldAtlasesOf(gl);
   const key = sizes.join(',');
-  if (held.atlas && held.sizes === key) return held.atlas;
-  held.atlas?.target.dispose();
-  held.atlas = laidOut(sizes);
-  held.sizes = key;
-  return held.atlas;
+  let atlas = held.get(key);
+  if (!atlas) held.set(key, (atlas = laidOut(sizes)));
+  return atlas;
 }
 
 /** Images `sizes` wide side by side, in rows of at most `ATLAS_SIDE`. */

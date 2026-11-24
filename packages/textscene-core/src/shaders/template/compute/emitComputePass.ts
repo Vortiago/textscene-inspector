@@ -135,6 +135,7 @@ function pointsOf(place: Node, value: Node): THREE.Mesh<THREE.BufferGeometry, TH
 /** The ids of the texel's invocation, rows counted from a target's first, as Godot's image counts them. */
 function invocationIds(groupSize: readonly [number, number, number]): Map<string, Node> {
   const column = uint(screenCoordinate.x);
+  // Three flips the coordinate by this size (r187 `ScreenNode.js:160`), so this is the fragment's row.
   const row = uint(screenSize.y.sub(screenCoordinate.y));
   const ids = invocationIdsOf(uvec3(column, row, uint(0)) as unknown as Node, groupSize);
   ids.set(COMPUTE_ENTRY, int(column) as unknown as Node);

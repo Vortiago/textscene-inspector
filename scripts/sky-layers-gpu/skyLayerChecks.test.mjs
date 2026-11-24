@@ -84,6 +84,8 @@ describe('skyLayerFailures', () => {
     twoColours: { top: [1, 1, 1], bottom: [0, 0, 0] },
     twoColourImportance: [{ layer: 0, mip: 0, up: [1, 1, 1], down: [0, 0, 0] }],
     twoColourFast: [{ layer: 0, mip: 0, up: [1, 1, 1], down: [0, 0, 0] }],
+    twoColourProbeImportance: [{ layer: 0, mip: 1, up: [1, 1, 1], down: [0, 0, 0] }],
+    twoColourProbeFast: [{ layer: 0, mip: 1, up: [1, 1, 1], down: [0, 0, 0] }],
   };
 
   it('finds nothing in layers that pass every check', () => {
@@ -107,9 +109,11 @@ describe('skyLayerFailures', () => {
       uniformFast: off,
       twoColourImportance: flipped,
       twoColourFast: flipped,
+      twoColourProbeImportance: flipped,
+      twoColourProbeFast: flipped,
     };
 
-    expect(skyLayerFailures({ ...passing, ...failing })).toHaveLength(4);
+    expect(skyLayerFailures({ ...passing, ...failing })).toHaveLength(6);
   });
 });
 

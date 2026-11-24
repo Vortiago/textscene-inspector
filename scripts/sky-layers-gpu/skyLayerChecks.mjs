@@ -71,5 +71,11 @@ export function skyLayerFailures(samples) {
     negativeFailure('high-contrast sky, fast filter', samples.highContrastFast),
     orientationFailure('two-colour sky, importance filter', samples.twoColourImportance, samples.twoColours),
     orientationFailure('two-colour sky, fast filter', samples.twoColourFast, samples.twoColours),
+    orientationFailure(
+      'two-colour probe, importance filter',
+      samples.twoColourProbeImportance,
+      samples.twoColours
+    ),
+    orientationFailure('two-colour probe, fast filter', samples.twoColourProbeFast, samples.twoColours),
   ].filter((failure) => failure !== undefined);
 }
