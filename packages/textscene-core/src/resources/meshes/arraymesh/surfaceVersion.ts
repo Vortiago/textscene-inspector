@@ -10,7 +10,7 @@ import {
   ARRAY_FORMAT_NORMAL,
   ARRAY_FORMAT_TANGENT,
   ARRAY_FORMAT_VERTEX,
-} from './surfaceFormat.js';
+} from '../../../godot/rendering/meshArrayFormat.js';
 
 /** `rendering_server.h:348-354`: an 8-bit version field at bit 35, which holds 1 for version 2. */
 const FORMAT_VERSION_UNIT = 2 ** 35;

@@ -149,6 +149,7 @@ describe('withGodotAttributes', () => {
       'skinIndex',
       new THREE.Float32BufferAttribute([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], 4)
     );
+    geometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(new Array(12).fill(0.25), 4));
     const bones = withGodotAttributes(geometry).getAttribute('bone_attrib') as THREE.BufferAttribute;
     expect([bones.array.constructor, bones.gpuType]).toEqual([Uint16Array, THREE.IntType]);
     expect([...bones.array.slice(4, 8)]).toEqual([5, 6, 7, 8]);
@@ -167,6 +168,22 @@ describe('withGodotAttributes', () => {
     const written = withGodotAttributes(geometry);
 
     expect((written.getAttribute('bone_attrib') as THREE.BufferAttribute).array[0]).toBe(9);
+    expect(written.getAttribute('weight_attrib')).toBe(weights);
+  });
+
+  it('reads the skin bones and weights as a pair where the vertex stage pair is incomplete (edge case)', () => {
+    const geometry = triangle();
+    geometry.setAttribute('skinIndex', new THREE.Float32BufferAttribute(new Array(12).fill(1), 4));
+    const weights = new THREE.Float32BufferAttribute(new Array(12).fill(0.25), 4);
+    geometry.setAttribute('skinWeight', weights);
+    geometry.setAttribute(
+      VERTEX_STAGE_BONES_ATTRIBUTE,
+      new THREE.Uint16BufferAttribute(new Array(12).fill(9), 4)
+    );
+
+    const written = withGodotAttributes(geometry);
+
+    expect((written.getAttribute('bone_attrib') as THREE.BufferAttribute).array[0]).toBe(1);
     expect(written.getAttribute('weight_attrib')).toBe(weights);
   });
 

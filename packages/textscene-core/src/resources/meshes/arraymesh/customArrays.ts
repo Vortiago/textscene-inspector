@@ -1,8 +1,8 @@
 import { halfToFloat } from '../../../godot/math/halfFloat.js';
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 import { ArrayCustomFormat, CUSTOM_FORMAT_LANES } from '../../../godot/rendering/meshArrayFormat.js';
-import { bytesView } from '../../../utils/bytesView.js';
 import type { CustomArraySlot, SurfaceLayout } from './surfaceFormat.js';
+import type { AttributeRecords } from './vertexBuffers.js';
 
 /** A vertex format with fewer lanes than four reads 0 for a missing lane and 1 for a missing alpha. */
 const MISSING_LANES = [0, 0, 0, 1] as const;
@@ -26,27 +26,16 @@ const LANE_READS: Readonly<
   [ArrayCustomFormat.RGBA_FLOAT]: readFloat,
 };
 
-/** Four lanes for each vertex, each undefined when absent or when `attribute_data` is too narrow. */
+/** Four lanes for each vertex, each undefined when the surface has none or no readable records. */
 export function decodeCustomArrays(
-  bytes: Uint8Array,
-  vertexCount: number,
-  layout: SurfaceLayout,
-  onMismatch: (actualStride: number) => void
+  records: AttributeRecords | undefined,
+  layout: SurfaceLayout
 ): (Float32Array | undefined)[] {
-  if (!layout.customs.some(Boolean) || vertexCount === 0) return layout.customs.map(() => undefined);
-  const attributeStride = bytes.byteLength / vertexCount;
-  if (!Number.isInteger(attributeStride) || attributeStride < layout.attributeStride) {
-    onMismatch(attributeStride);
-    return layout.customs.map(() => undefined);
-  }
-  const view = bytesView(bytes);
-  return layout.customs.map((slot) => slot && customValues(view, vertexCount, attributeStride, slot));
+  return layout.customs.map((slot) => slot && records && customValues(records, slot));
 }
 
 function customValues(
-  view: DataView,
-  vertexCount: number,
-  attributeStride: number,
+  { view, vertexCount, attributeStride }: AttributeRecords,
   slot: CustomArraySlot
 ): Float32Array {
   const { lanes, laneBytes } = CUSTOM_FORMAT_LANES[slot.format]!;

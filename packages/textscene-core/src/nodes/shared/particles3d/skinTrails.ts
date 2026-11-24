@@ -10,6 +10,7 @@ import { PARTICLE_COLOR_OFFSET, PARTICLE_FLOATS } from './particleBuffer';
 import {
   VERTEX_STAGE_BONES_ATTRIBUTE,
   VERTEX_STAGE_WEIGHTS_ATTRIBUTE,
+  vertexStageBones,
 } from '../../../shaders/spatial/meshAttributes';
 
 /** A bone slot counts only when its weight is above this; the first always counts (`:276-290`). */
@@ -81,12 +82,11 @@ interface Skinned {
 }
 
 function skinOf(source: THREE.BufferGeometry): Skin {
-  // The trail shader reads `bone_attrib`, the vertex stage's bones, which skinIndex holds unless they differ.
-  const indices = (source.getAttribute(VERTEX_STAGE_BONES_ATTRIBUTE) ?? source.getAttribute('skinIndex')) as
-    THREE.BufferAttribute | undefined;
-  const weights = (source.getAttribute(VERTEX_STAGE_WEIGHTS_ATTRIBUTE) ??
-    source.getAttribute('skinWeight')) as THREE.BufferAttribute | undefined;
-  if (!indices || !weights) throw new Error('expected a surface with bones and weights, got none');
+  // The trail shader reads `bone_attrib` and `weight_attrib`.
+  const bones = vertexStageBones(source);
+  if (!bones) throw new Error('expected a surface with bones and weights, got none');
+  const indices = bones.indices as THREE.BufferAttribute;
+  const weights = bones.weights as THREE.BufferAttribute;
   return {
     positions: source.getAttribute('position') as THREE.BufferAttribute,
     normals: (source.getAttribute('normal') as THREE.BufferAttribute | undefined) ?? null,

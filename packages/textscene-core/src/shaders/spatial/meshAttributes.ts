@@ -59,14 +59,28 @@ export function withGodotAttributes(
     const values = geometry.getAttribute(`custom${custom}`);
     if (values) geometry.setAttribute(`custom${custom}_attrib`, values);
   }
-  const bones = geometry.getAttribute(VERTEX_STAGE_BONES_ATTRIBUTE) ?? geometry.getAttribute('skinIndex');
-  if (bones) geometry.setAttribute('bone_attrib', boneIndices(bones));
-  const weights =
-    geometry.getAttribute(VERTEX_STAGE_WEIGHTS_ATTRIBUTE) ?? geometry.getAttribute('skinWeight');
-  if (weights) geometry.setAttribute('weight_attrib', weights);
+  const bones = vertexStageBones(geometry);
+  if (bones) {
+    geometry.setAttribute('bone_attrib', boneIndices(bones.indices));
+    geometry.setAttribute('weight_attrib', bones.weights);
+  }
   for (const [name, value] of Object.entries(MISSING_ARRAY_VALUES))
     if (!geometry.getAttribute(name)) geometry.setAttribute(name, constantAttribute(value));
   return geometry;
+}
+
+/** The bones and weights the vertex stage reads, as one pair: Godot's own, else three's skin, else none. */
+export function vertexStageBones(
+  geometry: THREE.BufferGeometry
+): { indices: Attribute; weights: Attribute } | undefined {
+  for (const [indices, weights] of [
+    [VERTEX_STAGE_BONES_ATTRIBUTE, VERTEX_STAGE_WEIGHTS_ATTRIBUTE],
+    ['skinIndex', 'skinWeight'],
+  ]) {
+    const pair = { indices: geometry.getAttribute(indices!), weights: geometry.getAttribute(weights!) };
+    if (pair.indices && pair.weights) return pair;
+  }
+  return undefined;
 }
 
 /**

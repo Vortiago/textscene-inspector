@@ -1,35 +1,23 @@
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 import {
+  ARRAY_FLAG_COMPRESS_ATTRIBUTES,
+  ARRAY_FLAG_USE_2D_VERTICES,
+  ARRAY_FLAG_USE_8_BONE_WEIGHTS,
+  ARRAY_FORMAT_BONES,
+  ARRAY_FORMAT_COLOR,
+  ARRAY_FORMAT_CUSTOM0,
+  ARRAY_FORMAT_CUSTOM_BASE,
+  ARRAY_FORMAT_CUSTOM_BITS,
+  ARRAY_FORMAT_CUSTOM_MASK,
+  ARRAY_FORMAT_NORMAL,
+  ARRAY_FORMAT_TANGENT,
+  ARRAY_FORMAT_TEX_UV,
+  ARRAY_FORMAT_TEX_UV2,
+  ARRAY_FORMAT_WEIGHTS,
   ARRAY_CUSTOM_COUNT,
   CUSTOM_FORMAT_LANES,
   type ArrayCustomFormat,
 } from '../../../godot/rendering/meshArrayFormat.js';
-
-/** Godot Mesh.ArrayFormat flags. */
-export const ARRAY_FORMAT_VERTEX = 1 << 0;
-export const ARRAY_FORMAT_NORMAL = 1 << 1;
-export const ARRAY_FORMAT_TANGENT = 1 << 2;
-const ARRAY_FORMAT_COLOR = 1 << 3;
-const ARRAY_FORMAT_TEX_UV = 1 << 4;
-const ARRAY_FORMAT_TEX_UV2 = 1 << 5;
-/** `ARRAY_FORMAT_CUSTOM0`: CUSTOM1 to CUSTOM3 follow it (`rendering_server.h:319`). */
-const ARRAY_FORMAT_CUSTOM0 = 1 << 6;
-const ARRAY_FORMAT_BONES = 1 << 10;
-const ARRAY_FORMAT_WEIGHTS = 1 << 11;
-/** Each custom array's format is 3 bits from bit 13, CUSTOM0 first (`rendering_server.h:329-335`). */
-const ARRAY_FORMAT_CUSTOM_BASE = 13;
-const ARRAY_FORMAT_CUSTOM_BITS = 3;
-const ARRAY_FORMAT_CUSTOM_MASK = 0x7;
-/** Eight bones and weights for each vertex, not four (`rendering_server.h:341`). */
-const ARRAY_FLAG_USE_8_BONE_WEIGHTS = 1 << 27;
-/** Positions are 2×float32, not 3 (`rendering_server.h:339`). */
-export const ARRAY_FLAG_USE_2D_VERTICES = 1 << 25;
-/**
- * Attributes are quantised. `&` coerces to int32, so it reads only bits below 32, never
- * `ARRAY_FLAG_FORMAT_VERSION_2` (1 << 35): `surfaceVersion.ts` reads the version and upgrades an
- * older surface first.
- */
-const ARRAY_FLAG_COMPRESS_ATTRIBUTES = 1 << 29;
 
 /** RGBA8 vertex colour in both layouts, which Godot writes before UV1 in the attribute record. */
 export const COLOR_BYTES = 4;
