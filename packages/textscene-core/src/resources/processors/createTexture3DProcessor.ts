@@ -42,14 +42,21 @@ export function createTexture3DProcessor(
       if (!volume) throw new Error(`${path} is too small for ${slices.horizontal}x${slices.vertical} slices`);
       const { texels, width, height, depth } = volume;
       const texture = dataTexture3D(texels, width, height, depth, THREE.RGBAFormat);
-      if (hasMipmaps) texture.mipmaps = withMipmaps({ data: texels, width, height, depth });
+      if (hasMipmaps) holdMipmapsUntilRead(texture, { data: texels, width, height, depth });
       return texture;
     },
     dispose: (texture) => texture.dispose(),
   });
 }
 
-/** `base` and the levels the layered importer generates below it, as three reads `Texture.mipmaps`. */
-function withMipmaps(base: VolumeLevel): VolumeLevel[] {
-  return [base, ...volumeMipChain(base)];
+// Built on the first read: a volume only the fog reads never uploads, and a 128³ chain takes 0.3 s.
+function holdMipmapsUntilRead(texture: THREE.Data3DTexture, base: VolumeLevel): void {
+  let levels: VolumeLevel[] | undefined;
+  Object.defineProperty(texture, 'mipmaps', {
+    get: () => (levels ??= [base, ...volumeMipChain(base)]),
+    set: (assigned: VolumeLevel[]) => {
+      levels = assigned;
+    },
+    configurable: true,
+  });
 }

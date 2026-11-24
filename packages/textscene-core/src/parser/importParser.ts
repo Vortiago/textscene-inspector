@@ -213,7 +213,8 @@ function compressMode(value: string | undefined): TextureImportOptions['mode'] {
  */
 export function importTexture3D(parsed: ParsedImportFile | null): LayeredImport | null {
   const slices = layeredSlices(parsed, TEXTURE_3D_IMPORTER);
-  return slices && { slices, hasMipmaps: generatesMipmaps(parsed!) };
+  if (!slices || !parsed) return null;
+  return { slices, hasMipmaps: generatesMipmaps(parsed) };
 }
 
 /** The slices a texture array's sidecar names, as {@link importTexture3D} reads a 3D texture's. */

@@ -49,30 +49,27 @@ function halved(parent: VolumeLevel): VolumeLevel {
   const height = Math.max(1, parent.height >> 1);
   const depth = Math.max(1, parent.depth >> 1);
   const data = new Uint8Array(width * height * depth * RGBA_BYTES);
-  for (let z = 0; z < depth; z++) {
-    const tz = tapOf(z, parent.depth, depth);
-    for (let y = 0; y < height; y++) {
-      const ty = tapOf(y, parent.height, height);
-      for (let x = 0; x < width; x++) {
-        const tx = tapOf(x, parent.width, width);
-        const at = ((z * height + y) * width + x) * RGBA_BYTES;
-        for (let channel = 0; channel < RGBA_BYTES; channel++)
-          data[at + channel] = byteOf(trilinear(parent, tx, ty, tz, channel));
+  const xTaps = tapsOf(width, parent.width);
+  const yTaps = tapsOf(height, parent.height);
+  const zTaps = tapsOf(depth, parent.depth);
+  let at = 0;
+  for (const tz of zTaps)
+    for (const ty of yTaps)
+      for (const tx of xTaps) {
+        writeTrilinear(parent, tx, ty, tz, data, at);
+        at += RGBA_BYTES;
       }
-    }
-  }
   return { data, width, height, depth };
 }
 
-/** `get_pixel` of an RGBA8 texel's channel: its byte over 255 in float (`image.cpp:3444-3450`). */
-function channelAt(
-  { data, width, height }: VolumeLevel,
-  x: number,
-  y: number,
-  z: number,
-  channel: number
-): number {
-  return fround(data[((z * height + y) * width + x) * RGBA_BYTES + channel]! / 255);
+/** The tap of each index of a level `halfSide` long, halved from `side`. */
+function tapsOf(halfSide: number, side: number): Tap[] {
+  return Array.from({ length: halfSide }, (_, index) => tapOf(index, side, halfSide));
+}
+
+/** `get_pixel` of an RGBA8 channel byte: the byte over 255 in float (`image.cpp:3444-3450`). */
+function channelValue(byte: number): number {
+  return fround(byte / 255);
 }
 
 /** `Color::lerp` in float (`color.h:110-117`, `math_funcs.h:339-341`). */
@@ -80,14 +77,34 @@ function lerp(from: number, to: number, weight: number): number {
   return fround(from + fround(fround(to - from) * weight));
 }
 
-/** The eight neighbours blended along x, then y, then z, as the importer does (`:226-236`). */
-function trilinear(parent: VolumeLevel, tx: Tap, ty: Tap, tz: Tap, channel: number): number {
-  const at = (x: number, y: number, z: number) => channelAt(parent, x, y, z, channel);
-  const cx00 = lerp(at(tx.near, ty.near, tz.near), at(tx.far, ty.near, tz.near), tx.weight);
-  const cx01 = lerp(at(tx.near, ty.near, tz.far), at(tx.far, ty.near, tz.far), tx.weight);
-  const cx10 = lerp(at(tx.near, ty.far, tz.near), at(tx.far, ty.far, tz.near), tx.weight);
-  const cx11 = lerp(at(tx.near, ty.far, tz.far), at(tx.far, ty.far, tz.far), tx.weight);
-  return lerp(lerp(cx00, cx10, ty.weight), lerp(cx01, cx11, ty.weight), tz.weight);
+/** The byte offset of a level's texel. */
+function offsetOf({ width, height }: VolumeLevel, x: number, y: number, z: number): number {
+  return ((z * height + y) * width + x) * RGBA_BYTES;
+}
+
+/** A channel blended between the texels at byte offsets `near` and `far` by `weight`. */
+function blendedChannel(data: Uint8Array, near: number, far: number, weight: number): number {
+  return lerp(channelValue(data[near]!), channelValue(data[far]!), weight);
+}
+
+/** Writes the eight neighbours blended along x, then y, then z, as the importer does (`:226-236`). */
+function writeTrilinear(parent: VolumeLevel, tx: Tap, ty: Tap, tz: Tap, out: Uint8Array, at: number): void {
+  const { data } = parent;
+  const n00 = offsetOf(parent, tx.near, ty.near, tz.near);
+  const f00 = offsetOf(parent, tx.far, ty.near, tz.near);
+  const n01 = offsetOf(parent, tx.near, ty.near, tz.far);
+  const f01 = offsetOf(parent, tx.far, ty.near, tz.far);
+  const n10 = offsetOf(parent, tx.near, ty.far, tz.near);
+  const f10 = offsetOf(parent, tx.far, ty.far, tz.near);
+  const n11 = offsetOf(parent, tx.near, ty.far, tz.far);
+  const f11 = offsetOf(parent, tx.far, ty.far, tz.far);
+  for (let channel = 0; channel < RGBA_BYTES; channel++) {
+    const cx00 = blendedChannel(data, n00 + channel, f00 + channel, tx.weight);
+    const cx01 = blendedChannel(data, n01 + channel, f01 + channel, tx.weight);
+    const cx10 = blendedChannel(data, n10 + channel, f10 + channel, tx.weight);
+    const cx11 = blendedChannel(data, n11 + channel, f11 + channel, tx.weight);
+    out[at + channel] = byteOf(lerp(lerp(cx00, cx10, ty.weight), lerp(cx01, cx11, ty.weight), tz.weight));
+  }
 }
 
 /** `set_pixel` of an RGBA8 channel: the value times 255, clamped and truncated (`image.cpp:3576-3581`). */

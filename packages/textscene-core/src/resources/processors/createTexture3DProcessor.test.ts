@@ -11,13 +11,20 @@ import { ResourceEventBus } from '../ResourceEventBus';
 import { DependencyGraph } from '../dependencyGraph';
 import { decodeImagePixels } from '../formats/image/textureProcessing';
 import { createTexture3DProcessor } from './createTexture3DProcessor';
+import { volumeMipChain } from '../processing/volumeMipChain';
 
 vi.mock('../formats/image/textureProcessing', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../formats/image/textureProcessing')>();
   return { ...actual, decodeImagePixels: vi.fn() };
 });
 
+vi.mock('../processing/volumeMipChain', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../processing/volumeMipChain')>();
+  return { ...actual, volumeMipChain: vi.fn(actual.volumeMipChain) };
+});
+
 const decode = vi.mocked(decodeImagePixels);
+const buildChain = vi.mocked(volumeMipChain);
 
 const PNG_PATH = 'res://fog/density.png';
 const SIDECAR_PATH = `${PNG_PATH}.import`;
@@ -79,6 +86,14 @@ describe('createTexture3DProcessor', () => {
     const texture = await harness({ [PNG_PATH]: bytes(), [SIDECAR_PATH]: SIDECAR }).load();
     const [, level] = texture.mipmaps as { data: Uint8Array }[];
     expect(level!.data[0]).toBe(25);
+  });
+
+  it('builds no mipmaps until a reader asks for them', async () => {
+    buildChain.mockClear();
+
+    await harness({ [PNG_PATH]: bytes(), [SIDECAR_PATH]: SIDECAR }).load();
+
+    expect(buildChain).not.toHaveBeenCalled();
   });
 
   it('carries no mipmaps for a sidecar that turns them off', async () => {
