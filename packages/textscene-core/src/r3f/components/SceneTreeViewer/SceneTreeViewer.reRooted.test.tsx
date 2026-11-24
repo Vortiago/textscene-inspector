@@ -8,7 +8,7 @@ import type { ReactNode } from 'react';
 import { SceneTreeViewer } from './SceneTreeViewer';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { SelectionProvider, useSelectedNodePath } from '../../contexts/SelectionContext';
-import { ExpandedRowsProvider } from './expandedRows';
+import { ExpandedRowsProvider } from '../TscnPreviewShell/expandedRows';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import { TscnParser } from '../../../parser/TscnParser';
 import { fixturesDir } from '../../../parser/testing/parserKit';

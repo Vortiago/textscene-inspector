@@ -37,7 +37,7 @@ import { useSceneLoader } from '../../sceneResourcePipeline.js';
 import { CaptureStateReporter } from './CaptureStateReporter.js';
 import { PreviewCameraProvider } from './previewCamera.js';
 import { HoverReleasesViewFocus, PreviewSelectionProvider } from './previewSelection.js';
-import { ExpandedRowsProvider } from '../SceneTreeViewer/expandedRows.js';
+import { ExpandedRowsProvider } from './expandedRows.js';
 import { useViewSettle } from './viewSettle.js';
 import { FrameOnOpen } from './FrameOnOpen.js';
 import { PreviewViewProvider } from './previewView.js';

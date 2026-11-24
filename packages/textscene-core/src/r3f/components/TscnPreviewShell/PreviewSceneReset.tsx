@@ -3,7 +3,7 @@ import type { SceneGraph } from '../../../core/SceneGraph.js';
 import { SceneChangeResetter } from '../../SceneChangeResetter.js';
 import { usePreviewCamera } from './previewCamera.js';
 import { usePreviewSelection } from './previewSelection.js';
-import { useExpandedRowActions } from '../SceneTreeViewer/expandedRows.js';
+import { useExpandedRowActions } from './expandedRows.js';
 
 /** A new scene clears both selections, the expanded tree rows and the camera preview. */
 export function PreviewSceneReset({ sceneGraph }: { sceneGraph: SceneGraph | null }) {

@@ -7,7 +7,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { SceneTreeViewer } from './SceneTreeViewer';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { SelectionProvider } from '../../contexts/SelectionContext';
-import { ExpandedRowsProvider } from './expandedRows';
+import { ExpandedRowsProvider } from '../TscnPreviewShell/expandedRows';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import {

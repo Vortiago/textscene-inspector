@@ -66,14 +66,7 @@ describe('useViewportSelection (WI-213: event-delegated)', () => {
   });
 
   it('does NOT select when the pointer drags beyond the threshold (drag = no select)', () => {
-    const { result } = renderHook(
-      () => ({
-        vp: useViewportSelection({ dragThresholdPx: 5 }),
-        sel: useSelection(),
-        selected: useSelectedNodePath(),
-      }),
-      { wrapper: wrap }
-    );
+    const { result } = setup();
     const mesh = registerObjectAt(result.current.sel, 'Root/Mesh');
 
     act(() => {

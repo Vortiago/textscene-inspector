@@ -3,7 +3,7 @@ import * as logger from '../../../logger.js';
 import type { TscnNode, TscnExternalResource } from '../../../parser/types.js';
 import { getAncestorPaths } from '../../../utils/nodePath.js';
 import { useHierarchy } from '../../contexts/HierarchyContext.js';
-import { useExpandedPaths, useExpandedRowActions } from './expandedRows.js';
+import { useExpandedPaths, useExpandedRowActions } from '../TscnPreviewShell/expandedRows.js';
 import { useSelectPath, useSelectedPath } from '../TscnPreviewShell/previewSelection.js';
 import { absolutePathOf } from '../../../scene/nodePathWalk.js';
 import { useSeatedRoots, useSharedLiveTree } from '../../useLiveSceneTree.js';

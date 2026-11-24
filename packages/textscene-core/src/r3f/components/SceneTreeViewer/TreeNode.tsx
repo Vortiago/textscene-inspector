@@ -4,7 +4,7 @@ import type { LiveChildGroup } from '../../liveSceneTree.js';
 import type { SceneScope, TscnNode, TscnExternalResource } from '../../../parser/types.js';
 import { joinPath } from '../../../utils/nodePath.js';
 import { rendersOwnVisual } from '../../nodeSupport.js';
-import { useExpandedPaths, useExpandedRowActions } from './expandedRows.js';
+import { useExpandedRowActions, useIsExpandedRow } from '../TscnPreviewShell/expandedRows.js';
 import { useHoverPath, useSelectPath, useSelectedPath } from '../TscnPreviewShell/previewSelection.js';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { spaceFamilyOf } from '../../../godot/scene/parentSpace.js';
@@ -189,7 +189,7 @@ function TreeNodeImpl({
   const selectPath = useSelectPath();
   const hoverPath = useHoverPath();
 
-  const isExpanded = useExpandedPaths().has(nodePath);
+  const isExpanded = useIsExpandedRow(nodePath);
   const isSelected = useSelectedPath() === nodePath;
   // The eye shows the node's own `visible`, and only on a class that has it (scene_tree_editor.cpp:608-613).
   const chain = useMemo(() => visibilityChainOf(effective.type), [effective.type]);

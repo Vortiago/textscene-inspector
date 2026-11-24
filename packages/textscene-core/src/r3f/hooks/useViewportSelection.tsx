@@ -5,11 +5,6 @@ import { useCanvasWorkspace } from '../contexts/CanvasWorkspaceContext.js';
 import { useHostPick } from '../hostSelection/HostSelection.js';
 import { resolvePathFromObject } from './resolvePathFromObject.js';
 
-export interface UseViewportSelectionOptions {
-  /** Pixels of pointer travel before a click is treated as a drag. Defaults to 5. */
-  dragThresholdPx?: number;
-}
-
 /** The pointer handlers for the viewport's single delegated root group. */
 export interface DelegatedPointerHandlers {
   onPointerDown: (e: ThreeEvent<PointerEvent>) => void;
@@ -23,10 +18,10 @@ export interface UseViewportSelectionResult {
   handlers: DelegatedPointerHandlers;
 }
 
-const DEFAULT_DRAG_THRESHOLD_PX = 5;
+/** Pixels of pointer travel past which a click is a drag, which selects nothing. */
+const DRAG_THRESHOLD_PX = 5;
 
-export function useViewportSelection(options: UseViewportSelectionOptions = {}): UseViewportSelectionResult {
-  const { dragThresholdPx = DEFAULT_DRAG_THRESHOLD_PX } = options;
+export function useViewportSelection(): UseViewportSelectionResult {
   const { setSelectedNodePath, objectPathMap } = useSelection();
   const host = useHostPick();
   // The 2D workspace picks no node yet, so a click on a sprite there would read as a click on nothing.
@@ -53,7 +48,7 @@ export function useViewportSelection(options: UseViewportSelectionOptions = {}):
         if (!down) return;
         const dx = e.clientX - down.x;
         const dy = e.clientY - down.y;
-        if (Math.hypot(dx, dy) > dragThresholdPx) return;
+        if (Math.hypot(dx, dy) > DRAG_THRESHOLD_PX) return;
         const path = resolvePathFromObject(e.object, objectPathMap);
         if (!path) return;
         e.stopPropagation();
@@ -66,7 +61,7 @@ export function useViewportSelection(options: UseViewportSelectionOptions = {}):
           }
         : undefined,
     }),
-    [dragThresholdPx, pick, objectPathMap, takesMiss]
+    [pick, objectPathMap, takesMiss]
   );
 
   return useMemo<UseViewportSelectionResult>(() => ({ handlers }), [handlers]);

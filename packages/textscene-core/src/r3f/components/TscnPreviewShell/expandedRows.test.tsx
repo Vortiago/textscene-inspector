@@ -4,6 +4,7 @@ import {
   ExpandedRowsProvider,
   useExpandedPaths,
   useExpandedRowActions,
+  useIsExpandedRow,
   type ExpandedRowActions,
 } from './expandedRows';
 
@@ -60,6 +61,37 @@ describe('the expanded rows', () => {
     const before = renders;
     act(() => actions!.toggle('Root'));
     expect(renders).toBe(before);
+  });
+
+  it('renders only the row that a toggle opens', () => {
+    const renders: Record<string, number> = { A: 0, B: 0 };
+    let actions: ExpandedRowActions | null = null;
+    function Row({ path }: { path: string }) {
+      renders[path]!++;
+      useIsExpandedRow(path);
+      return null;
+    }
+    function Actions() {
+      actions = useExpandedRowActions();
+      return null;
+    }
+    render(
+      <ExpandedRowsProvider>
+        <Row path="A" />
+        <Row path="B" />
+        <Actions />
+      </ExpandedRowsProvider>
+    );
+    act(() => actions!.toggle('A'));
+    expect(renders).toEqual({ A: 2, B: 1 });
+  });
+
+  it('keeps its own copy of a set it is given', () => {
+    const { result } = renderRows();
+    const given = new Set(['A']);
+    act(() => result.current.set(given));
+    given.add('B');
+    expect(result.current.paths.has('B')).toBe(false);
   });
 
   it('throws outside a provider', () => {
