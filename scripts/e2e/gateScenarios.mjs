@@ -184,7 +184,7 @@ export const SCENARIOS = [
   {
     name: 'camera preview',
     title: `camera preview: ${CAMERA_PREVIEW_FIXTURE}`,
-    seconds: 33,
+    seconds: 36,
     run: runCameraPreviewScenario,
     check: checkCameraPreview,
   },

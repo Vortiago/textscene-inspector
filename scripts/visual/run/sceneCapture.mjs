@@ -80,10 +80,7 @@ export async function captureScene(pageState, baseUrl, scene) {
       const reason = `select target not found in tree: ${scene.select}`;
       return { buffer: null, reason: withFailedRequests(reason, diagnostics) };
     }
-    // After CameraFit's fit timers (150/500/1100 ms after mount) have all fired: a click before the
-    // last one lets it see the new gizmo and widen the frame, and host load picks the winner. The
-    // row renders from the state that starts those timers, so this wait from it spends them all.
-    // Selection never moves the camera (CameraFit in packages/textscene-core/src/r3f/TscnCanvas.tsx).
+    // A click before FrameOnOpen's last timer lets the fit widen for the new gizmo, so wait them out.
     await page.waitForTimeout(FIT_QUIESCENCE_MS);
     await row.click();
     // `.click()` hovers the row first and leaves its hover highlight on, so the pointer moves off

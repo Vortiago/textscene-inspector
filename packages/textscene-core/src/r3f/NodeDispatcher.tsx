@@ -104,9 +104,7 @@ export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
   // The running game picks no node.
   const pointerHandlers = useIsEditorHint() ? handlers : undefined;
 
-  // Fetch the CSG library early, so a boolean result reaches the opening frame
-  // sooner: CameraFit re-frames it only once the loader has settled.
-  // Evaluation lives in CsgPrimitive: skipping CSG children here strips their selection.
+  // Early, as FrameOnOpen frames a CSG result only after the loader settles. CsgPrimitive evaluates it.
   useEffect(() => {
     if (nodes.some(containsCsgShape)) prefetchCsgModule();
   }, [nodes]);

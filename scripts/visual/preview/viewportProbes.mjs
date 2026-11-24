@@ -36,10 +36,7 @@ async function checkDisplayToggle(page, label) {
   return null;
 }
 
-/**
- * Greater than CameraFit's last load-time fit timer (1100 ms after mount), with margin for
- * render-loop latency under host contention.
- */
+/** Past FrameOnOpen's last fit timer (1100 ms), with margin for a busy host's render loop. */
 export const FIT_QUIESCENCE_MS = 1500;
 
 /**

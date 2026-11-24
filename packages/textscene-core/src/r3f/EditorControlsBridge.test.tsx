@@ -1,20 +1,20 @@
-/**
- * `<EditorControlsBridge>` gives the shell outside the canvas the reset and the freelook of the
- * canvas's navigation handle.
- */
 import { afterEach, describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer, { act } from '@react-three/test-renderer';
+import * as THREE from 'three';
 import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
 import { HierarchyProvider } from './contexts/HierarchyContext';
-import { ViewportActionsProvider } from './contexts/ViewportActionsContext';
 import { EditorControlsBridge } from './EditorControlsBridge';
 import { GodotEditorControls } from './GodotEditorControls';
 import { pressKeyOn } from './GodotEditorControls.testkit';
-import { editorCameraPosition } from './godotEditorCamera';
+import { editorCameraPosition, editorCameraProjection } from './godotEditorCamera';
 import { holdsPointerLock } from './pointerLock';
 import { installFakePointerLock } from './testing/fakePointerLock';
 import { r3fStateProbe } from './testing/R3FStateProbe';
-import { viewportActionsProbe } from './testing/ViewportActionsProbe';
+import { createEditorCameras } from './editorCamera/editorCameras';
+import { EditorCamerasProvider } from './editorCamera/EditorCamerasContext';
+import { ViewStatusProvider } from './viewStatus/ViewStatusContext';
+import { createViewStatusStore } from './viewStatus/viewStatus';
+import { variant } from '../scene/variant';
 
 type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
@@ -28,20 +28,28 @@ afterEach(async () => {
 
 async function mountBridgedControls() {
   const canvas = r3fStateProbe();
-  const shell = viewportActionsProbe();
+  const cameras = createEditorCameras();
+  const store = createViewStatusStore();
   const sceneAt = (scenePath: string) => (
     <HierarchyProvider
       value={{ sceneGraph: createSceneGraphFromTscnScene({ nodes: [] }, scenePath), panelId: 'panel' }}
     >
-      <ViewportActionsProvider>
-        <canvas.Probe />
-        <shell.Probe />
-        <GodotEditorControls />
-        <EditorControlsBridge />
-      </ViewportActionsProvider>
+      <ViewStatusProvider store={store}>
+        <EditorCamerasProvider cameras={cameras}>
+          <canvas.Probe />
+          <mesh position={[10, 0, 0]}>
+            <boxGeometry args={[2, 2, 2]} />
+          </mesh>
+          <GodotEditorControls />
+          <EditorControlsBridge />
+        </EditorCamerasProvider>
+      </ViewStatusProvider>
     </HierarchyProvider>
   );
-  const renderer: Renderer = await ReactThreeTestRenderer.create(sceneAt('res://first.tscn'));
+  // The editor stage's camera, as `EditorCanvas` gives it.
+  const renderer: Renderer = await ReactThreeTestRenderer.create(sceneAt('res://first.tscn'), {
+    camera: { position: editorCameraPosition(), ...editorCameraProjection() },
+  });
   const openScene = (scenePath: string) => act(async () => renderer.update(sceneAt(scenePath)));
   const element = canvas.state().gl.domElement;
   const removeFakePointerLock = installFakePointerLock(element);
@@ -49,39 +57,118 @@ async function mountBridgedControls() {
     await act(async () => renderer.unmount());
     removeFakePointerLock();
   };
-  return { get: canvas.state, actions: shell.actions, element, openScene };
+  const camera = cameras.of('3D')!;
+  return { get: canvas.state, camera, status: store.status, element, openScene };
 }
 
 describe('<EditorControlsBridge>', () => {
-  it('starts the canvas’s freelook from the shell’s toggle', async () => {
-    const { actions, element } = await mountBridgedControls();
+  it('gives the editor camera’s Godot defaults: fov 70, near 0.05, far 4000, perspective', async () => {
+    const { camera } = await mountBridgedControls();
 
-    await act(async () => actions().toggleFreelook());
-
-    expect(holdsPointerLock(element)).toBe(true);
-    expect(actions().freelookState()?.isToggled).toBe(true);
+    expect(await camera.get('fov')).toBe(70);
+    expect(await camera.get('near')).toBe(0.05);
+    expect(await camera.get('far')).toBe(4000);
+    expect(await camera.get('projection')).toBe(0);
   });
 
-  it('tells the shell that orthographic view has no freelook', async () => {
-    const { actions, element } = await mountBridgedControls();
+  it('gives the pose as a Transform3D at the camera’s position', async () => {
+    const { get, camera } = await mountBridgedControls();
+    get().camera.position.set(1, 2, 3);
+    get().camera.quaternion.identity();
+
+    const transform = await camera.get('transform');
+
+    expect(transform).toMatchObject({
+      type: 'Transform3D',
+      text: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 2, 3)',
+    });
+  });
+
+  it('moves the eye on a write of position, and keeps it looking at its focus point', async () => {
+    const { get, camera } = await mountBridgedControls();
+
+    expect(await camera.set('position', variant('Vector3(0, 0, 5)'))).toBe(true);
+
+    expect(get().camera.position.toArray()).toEqual([0, 0, 5]);
+    const forward = get().camera.getWorldDirection(new THREE.Vector3());
+    expect(forward.z).toBeCloseTo(-1);
+  });
+
+  it.each([
+    [1, 1],
+    [35, 35],
+    [179, 179],
+    [0.5, 70],
+    [180, 70],
+    [-5, 70],
+  ])('takes a fov of %s only inside Godot’s 1 to 179 range, and gives %s', async (fov, given) => {
+    const { get, camera } = await mountBridgedControls();
+
+    expect(await camera.set('fov', fov)).toBe(true);
+
+    expect((get().camera as THREE.PerspectiveCamera).fov).toBe(given);
+  });
+
+  it('switches to the orthogonal projection, as Numpad 5 does', async () => {
+    const { get, camera } = await mountBridgedControls();
+
+    expect(await camera.set('projection', 1)).toBe(true);
+
+    expect(get().camera).toBeInstanceOf(THREE.OrthographicCamera);
+    expect(await camera.get('projection')).toBe(1);
+    expect(await camera.set('projection', 2)).toBe(false);
+  });
+
+  it('starts and ends freelook on a write of freelook', async () => {
+    const { camera, element, status } = await mountBridgedControls();
+
+    await act(async () => void (await camera.set('freelook', true)));
+    expect(holdsPointerLock(element)).toBe(true);
+    expect(status().freelook).toEqual({ isToggled: true, isAvailable: true });
+
+    await act(async () => void (await camera.set('freelook', false)));
+    expect(holdsPointerLock(element)).toBe(false);
+    expect(await camera.get('freelook')).toBe(false);
+  });
+
+  it('reports that orthographic view has no freelook', async () => {
+    const { element, status } = await mountBridgedControls();
 
     await pressKeyOn(element, 'Numpad5');
 
-    expect(actions().freelookState()?.isAvailable).toBe(false);
+    expect(status().freelook).toEqual({ isToggled: false, isAvailable: false });
   });
 
-  it('ends the toggle on the shell’s reset', async () => {
-    const { actions, element } = await mountBridgedControls();
-    await act(async () => actions().toggleFreelook());
+  it('returns the camera to its opening pose on reset, and ends freelook', async () => {
+    const { get, camera, element } = await mountBridgedControls();
+    await act(async () => void (await camera.set('freelook', true)));
+    get().camera.position.set(9, 9, 9);
 
-    await act(async () => actions().resetCamera());
+    await act(async () => void (await camera.call('reset')));
 
+    expect(get().camera.position.toArray()).toEqual(editorCameraPosition());
     expect(holdsPointerLock(element)).toBe(false);
   });
 
+  it('frames the whole scene on focus with no node', async () => {
+    const { get, camera } = await mountBridgedControls();
+
+    await act(async () => void (await camera.call('focus')));
+
+    expect(get().controls).toMatchObject({ target: new THREE.Vector3(10, 0, 0) });
+  });
+
+  it('refuses a method the editor camera lacks', async () => {
+    const { camera } = await mountBridgedControls();
+
+    await expect(camera.call('make_current')).rejects.toThrow(
+      'expected a method of the editor camera (reset, focus), got make_current'
+    );
+  });
+
   it('ends the toggle when another scene opens', async () => {
-    const { actions, element, openScene } = await mountBridgedControls();
-    await act(async () => actions().toggleFreelook());
+    const { camera, element, openScene } = await mountBridgedControls();
+    await act(async () => void (await camera.set('freelook', true)));
 
     await openScene('res://second.tscn');
 
@@ -89,28 +176,20 @@ describe('<EditorControlsBridge>', () => {
   });
 
   it('keeps the toggle through a reload of the same scene', async () => {
-    const { actions, element, openScene } = await mountBridgedControls();
-    await act(async () => actions().toggleFreelook());
+    const { camera, element, openScene } = await mountBridgedControls();
+    await act(async () => void (await camera.set('freelook', true)));
 
     await openScene('res://first.tscn');
 
     expect(holdsPointerLock(element)).toBe(true);
   });
 
-  it('gives the shell no freelook once the canvas unmounts', async () => {
-    const { actions } = await mountBridgedControls();
+  it('leaves the node and reports no freelook once the canvas unmounts', async () => {
+    const { camera, status } = await mountBridgedControls();
 
     await unmount?.();
 
-    expect(actions().freelookState()).toBeNull();
-  });
-
-  it('returns the camera to its opening pose on the shell’s reset', async () => {
-    const { get, actions } = await mountBridgedControls();
-    get().camera.position.set(9, 9, 9);
-
-    await act(async () => actions().resetCamera());
-
-    expect(get().camera.position.toArray()).toEqual(editorCameraPosition());
+    expect(camera.isInsideTree()).toBe(false);
+    expect(status().freelook).toBeNull();
   });
 });

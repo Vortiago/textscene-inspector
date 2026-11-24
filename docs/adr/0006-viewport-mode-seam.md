@@ -100,4 +100,5 @@ every drawer through `ViewShowContext`. No drawer reads `ViewportModeContext`.
 - `performance` draws its panel inside the view, over the canvas, so a host gets the panel with
   the key. The frame profile and the panel share one store per view.
 - Frame on open is not a key of `show`: it changes where the editor camera starts, not what the
-  view draws, and Godot has no such option. It stays the shell's, read by `CameraFit`.
+  view draws, and Godot has no such option. It stays the shell's: `FrameOnOpen` calls `focus` on
+  the view's `editorCamera` (ADR-0091).

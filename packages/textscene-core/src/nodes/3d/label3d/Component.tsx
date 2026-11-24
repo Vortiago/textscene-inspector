@@ -52,10 +52,7 @@ export function Label3D({ node, children }: NodeComponentProps) {
             <LabelGlyphs nodeRef={groupRef} posedRef={posedRef} properties={properties} />
           </PendingSuspense>
         </group>
-        {/* A point, not a text-sized box: Godot's `_place_camera` runs before Label3D shapes text,
-            when its `_scene_bounds()` holds the label's position alone. `frameSceneBounds.ts` unions
-            drawn geometry, and the lazy glyphs can land after `CameraFit`'s last retry. Rotation
-            cannot move a point. */}
+        {/* A point, not a box: Godot's `_place_camera` frames the label before it shapes text. */}
         <FramePoint />
       </group>
       {/* Descendants sit in a sibling group with the same transform: `billboard`

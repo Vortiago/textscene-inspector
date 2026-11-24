@@ -45,6 +45,7 @@ function ViewReporting({ undrawn, children }: { undrawn: UndrawnNode[]; children
     frame: null,
     undrawn,
     isSoftwareRendering: false,
+    freelook: null,
   };
   const heard = createExternalStore({ status, round: 0 });
   return <PreviewViewStatusProvider value={heard}>{children}</PreviewViewStatusProvider>;

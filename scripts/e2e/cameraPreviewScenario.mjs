@@ -76,6 +76,9 @@ export async function runCameraPreviewScenario(browser, baseUrl) {
   const editorAfterPreview = await switchView(page, () => clickCameraRow(page, EDITOR_CAMERA_ROW));
   const previewAgain = await switchView(page, () => clickCameraRow(page, PREVIEWED_CAMERA));
   const editorAfterReset = await switchView(page, () => page.getByTestId('reset-camera-button').click());
+  await navigate(page, canvas);
+  const editorAfterOrbitReset = await switchView(page, () => page.getByTestId('reset-camera-button').click());
+  const freelook = await pressFreelook(page);
 
   await context.close();
 
@@ -86,8 +89,30 @@ export async function runCameraPreviewScenario(browser, baseUrl) {
     editorAfterPreview,
     previewAgain,
     editorAfterReset,
+    editorAfterOrbitReset,
+    freelook,
     diagnostics,
   };
+}
+
+/** The Freelook button's pressed state after a click, and after Escape ends the pointer lock. */
+async function pressFreelook(page) {
+  const button = page.getByTestId('freelook-button');
+  await button.click();
+  const isPressedAfterClick = await waitForPressed(button, 'true');
+  await page.keyboard.press('Escape');
+  const isPressedAfterEscape = await waitForPressed(button, 'false').then((reached) => !reached);
+  return { isPressedAfterClick, isPressedAfterEscape };
+}
+
+function waitForPressed(button, pressed) {
+  return button
+    .and(button.page().locator(`[aria-pressed="${pressed}"]`))
+    .waitFor({ timeout: SWITCH_TIMEOUT_MS })
+    .then(
+      () => true,
+      () => false
+    );
 }
 
 /** Records the scenario's claims on `gate`. */
@@ -111,5 +136,8 @@ export function checkCameraPreview(gate, result) {
   sameView(result.editor, result.editorAfterPreview, 'ending the preview did not restore the editor camera');
   sameView(result.preview, result.previewAgain, 'a second preview showed another pose than the first');
   sameView(result.editor, result.editorAfterReset, 'Reset Camera left the preview on screen');
+  sameView(result.editor, result.editorAfterOrbitReset, 'Reset Camera left the orbit on screen');
+  gate.check(result.freelook?.isPressedAfterClick === true, `${label} a click on Freelook did not press it`);
+  gate.check(result.freelook?.isPressedAfterEscape === false, `${label} Escape left Freelook pressed`);
   checkDiagnostics(gate, label, result.diagnostics);
 }

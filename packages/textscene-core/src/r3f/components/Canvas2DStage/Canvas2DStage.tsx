@@ -14,7 +14,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../../../parser/types.js';
-import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
+import { useEditorCamera2D } from '../../editorCamera/useEditorCamera2D.js';
 import { readPersisted } from '../../hooks/usePersistedState.js';
 import {
   clampWheelNotches,
@@ -161,28 +161,18 @@ export function Canvas2DStage({
     if (fitOnOpen && !userMovedViewRef.current) fit();
   }, [fit, fitOnOpen, scenePath]);
 
-  // "View through" a Camera2D: a one-shot request that centres the camera's view
-  // point at its magnification. Pan and zoom stay free afterwards. The claim keeps a
-  // remount from replaying an old request, and still applies one made with the mount.
-  const viewportActions = useOptionalViewportActions();
-  const frame2D = viewportActions?.frame2D ?? null;
-  const claimFrame2D = viewportActions?.claimFrame2D;
-  useEffect(() => {
-    if (!frame2D || !claimFrame2D) return;
-    const el = stageRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    if (r.width <= 0 || r.height <= 0) return;
-    if (!claimFrame2D(frame2D.requestId)) return;
-    const zoom = clampZoom(frame2D.zoom);
-    moveView({
-      zoom,
-      pan: {
-        x: r.width / 2 - frame2D.center.x * zoom,
-        y: r.height / 2 - frame2D.center.y * zoom,
-      },
-    });
-  }, [frame2D, claimFrame2D, moveView]);
+  // Declared after the fit on open, so a write made before the mount lands on the fitted view.
+  useEditorCamera2D(
+    useMemo(
+      () => ({
+        size: () => stageRef.current?.getBoundingClientRect() ?? { width: 0, height: 0 },
+        view: () => viewRef.current,
+        moveView,
+        clampZoom,
+      }),
+      [moveView]
+    )
+  );
 
   // Wheel-to-zoom, anchored to the cursor. Added as a non-passive native
   // listener so preventDefault actually suppresses page scroll.

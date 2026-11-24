@@ -23,6 +23,14 @@ export interface ViewStatus {
   undrawn: readonly UndrawnNode[];
   /** The browser draws the view's WebGL in software, so every frame is slow. */
   isSoftwareRendering: boolean;
+  /** The 3D mode's freelook: on from the toggle, and whether the projection has one. Null in other modes. */
+  freelook: ViewFreelook | null;
+}
+
+export interface ViewFreelook {
+  isToggled: boolean;
+  /** False in orthographic view, where Godot has no freelook. */
+  isAvailable: boolean;
 }
 
 /** What a host has heard before a view reports: nothing settled, pending, measured, undrawn or found. */
@@ -32,6 +40,7 @@ export const EMPTY_VIEW_STATUS: ViewStatus = {
   frame: null,
   undrawn: [],
   isSoftwareRendering: false,
+  freelook: null,
 };
 
 export interface LiveScene {
@@ -60,6 +69,8 @@ export interface ViewStatusStore {
   softwareRenderingFound(): void;
   /** Null once the profile stops. */
   frameMeasured(stats: FrameStats | null): void;
+  /** Null once the 3D mode's canvas leaves. */
+  freelookChanged(freelook: ViewFreelook | null): void;
   /** Null while pending, and with no view attached. The drawn frame's own facts, so a hook renders once. */
   settled(): ViewSettled | null;
   /** An attached view that has not settled: no view at all waits on nothing. */
@@ -97,6 +108,7 @@ export function createViewStatusStore(): ViewStatusStore {
   const pending = { textures: 0, fonts: 0 };
   let frame: FrameStats | null = null;
   let isSoftwareRendering = false;
+  let freelook: ViewFreelook | null = null;
   // Written only by `status`, and cleared by each change it shows.
   let shown: ViewStatus | null = null;
   const undrawn = createUndrawnNodes();
@@ -144,6 +156,7 @@ export function createViewStatusStore(): ViewStatusStore {
       frame,
       undrawn: undrawn.nodes(),
       isSoftwareRendering,
+      freelook,
     };
     return shown;
   }
@@ -270,6 +283,11 @@ export function createViewStatusStore(): ViewStatusStore {
     frameMeasured(stats) {
       if (stats === frame) return;
       frame = stats;
+      notify();
+    },
+    freelookChanged(next) {
+      if (next?.isToggled === freelook?.isToggled && next?.isAvailable === freelook?.isAvailable) return;
+      freelook = next;
       notify();
     },
     settled,

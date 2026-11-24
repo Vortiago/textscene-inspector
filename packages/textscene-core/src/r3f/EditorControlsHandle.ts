@@ -89,6 +89,13 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
     return this.perspectiveCamera.fov;
   }
 
+  /** Sizes the orthographic frustum too, as `orthographicHeight` reads it. */
+  setFov(degrees: number): void {
+    this.perspectiveCamera.fov = degrees;
+    this.perspectiveCamera.updateProjectionMatrix();
+    this.applyProjection(this.cursor());
+  }
+
   /** The zoom range Godot derives from the camera's clip planes. */
   zoomRange(): ZoomRange {
     return { near: this.camera.near, far: this.camera.far };

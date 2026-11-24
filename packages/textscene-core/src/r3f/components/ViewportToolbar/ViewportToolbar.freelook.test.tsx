@@ -1,59 +1,54 @@
-/**
- * The Freelook button: it shows and drives the toggle of the 3D canvas's freelook through the
- * viewport actions, and says why it is off during a camera preview.
- */
 import { describe, expect, it } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { ViewportModeProvider, type ViewportMode } from '../../contexts/ViewportModeContext';
-import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext';
-import { Freelook, type FreelookControl } from '../../freelook';
-import { RegisteredFreelook } from '../../testing/ViewportActionsProbe';
+import { fakeEditorView } from '../../testing/fakeEditorCamera';
+import { PreviewViewStatusProvider } from '../TscnPreviewShell/previewViewStatus';
 import { ViewportToolbar } from './ViewportToolbar';
 import { TestPreviewCamera } from '../TscnPreviewShell/previewCamera.testkit';
 
-/** A canvas's freelook whose toggle the browser always grants. */
-function grantedFreelook(freelook = new Freelook()): FreelookControl {
-  return {
-    toggle: () => freelook.setToggled(!freelook.isToggled),
-    getState: freelook.getState,
-    subscribe: freelook.subscribe,
-  };
-}
-
 function renderToolbar({
   mode = '3D',
-  control = grantedFreelook(),
   previewedCameraPath = null,
-}: { mode?: ViewportMode; control?: FreelookControl | null; previewedCameraPath?: string | null } = {}) {
+  editor = fakeEditorView(),
+}: {
+  mode?: ViewportMode;
+  previewedCameraPath?: string | null;
+  editor?: ReturnType<typeof fakeEditorView>;
+} = {}) {
   render(
     <ViewportModeProvider initialMode={mode}>
-      <ViewportActionsProvider>
+      <PreviewViewStatusProvider value={editor.heard}>
         <TestPreviewCamera initialCamera={previewedCameraPath}>
-          {control && <RegisteredFreelook control={control} />}
-          <ViewportToolbar view={null} />
+          <ViewportToolbar
+            view={{
+              ...editor.view,
+              settled: new Promise(() => {}),
+              captureImage: () => new Promise(() => {}),
+            }}
+          />
         </TestPreviewCamera>
-      </ViewportActionsProvider>
+      </PreviewViewStatusProvider>
     </ViewportModeProvider>
   );
   return screen.queryByRole('button', { name: 'Freelook' });
 }
 
 describe('ViewportToolbar Freelook button', () => {
-  it('starts the toggle on a click, and shows it pressed', () => {
+  it('writes freelook on the editor camera on a click, and shows it pressed', async () => {
     const button = renderToolbar();
     expect(button?.getAttribute('aria-pressed')).toBe('false');
 
-    fireEvent.click(button!);
+    await act(async () => fireEvent.click(button!));
 
     expect(button?.getAttribute('aria-pressed')).toBe('true');
   });
 
-  it('follows a toggle that ends outside the toolbar, as on Escape', () => {
-    const control = grantedFreelook();
-    const button = renderToolbar({ control });
-    fireEvent.click(button!);
+  it('follows a toggle that ends outside the toolbar, as on Escape', async () => {
+    const editor = fakeEditorView();
+    const button = renderToolbar({ editor });
+    await act(async () => fireEvent.click(button!));
 
-    act(() => control.toggle());
+    act(() => editor.report({ isToggled: false }));
 
     expect(button?.getAttribute('aria-pressed')).toBe('false');
   });
@@ -66,10 +61,10 @@ describe('ViewportToolbar Freelook button', () => {
   });
 
   it('is disabled in orthographic view, and says why', () => {
-    const freelook = new Freelook();
-    const button = renderToolbar({ control: grantedFreelook(freelook) }) as HTMLButtonElement;
+    const editor = fakeEditorView();
+    const button = renderToolbar({ editor }) as HTMLButtonElement;
 
-    act(() => freelook.setAvailable(false));
+    act(() => editor.report({ isAvailable: false }));
 
     expect(button.disabled).toBe(true);
     expect(button.title).toContain('perspective view');
@@ -79,7 +74,10 @@ describe('ViewportToolbar Freelook button', () => {
     expect(renderToolbar({ mode: '2D' })).toBeNull();
   });
 
-  it('hides until a 3D canvas registers its freelook', () => {
-    expect(renderToolbar({ control: null })).toBeNull();
+  it('hides until the view reports a 3D canvas’s freelook', () => {
+    const editor = fakeEditorView();
+    editor.heard.forget();
+
+    expect(renderToolbar({ editor })).toBeNull();
   });
 });

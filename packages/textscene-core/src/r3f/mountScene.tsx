@@ -11,6 +11,8 @@ import { createViewStatusStore } from './viewStatus/viewStatus.js';
 import { viewAnswers, type ViewAnswers } from './viewStatus/viewAnswers.js';
 import type { ViewStatus } from './viewStatus/viewStatus.js';
 import { assertShow, DEFAULT_SHOW, withShown, type ViewShow } from './viewShow/viewShow.js';
+import { createEditorCameras, type EditorViewAnswers } from './editorCamera/editorCameras.js';
+import { EditorCamerasProvider } from './editorCamera/EditorCamerasContext.js';
 
 export interface ViewOptions {
   /** `in-game` by default. */
@@ -34,7 +36,7 @@ type MountedOptions = Omit<ViewOptions, 'show'> &
   Required<Pick<ViewOptions, 'mode' | 'visible' | 'camera'>> & { show: ViewShow };
 
 /** `settled` rejects for a failed mount and after a dispose. */
-export interface View extends ViewAnswers {
+export interface View extends ViewAnswers, EditorViewAnswers {
   /** Changes only the keys given a value, in `show` too. A `settled` from before a switch waits for it. */
   update(options: ViewOptions): void;
   /** The scene stays open for another view. */
@@ -46,6 +48,7 @@ const DEFAULT_OPTIONS: MountedOptions = { mode: 'in-game', visible: true, camera
 export function mountScene(element: HTMLElement, scene: Scene, options: ViewOptions = {}): View {
   let current = withGiven(DEFAULT_OPTIONS, checked(scene, options));
   const store = createViewStatusStore();
+  const cameras = createEditorCameras();
   // Aborts with the reason the view will never settle: a failed mount, or the dispose.
   const ending = new AbortController();
   let isDisposed = false;
@@ -59,7 +62,9 @@ export function mountScene(element: HTMLElement, scene: Scene, options: ViewOpti
     root.render(
       <TscnSceneProvider scene={scene}>
         <ViewStatusProvider store={store}>
-          <TscnCanvas {...current} />
+          <EditorCamerasProvider cameras={cameras}>
+            <TscnCanvas {...current} />
+          </EditorCamerasProvider>
         </ViewStatusProvider>
       </TscnSceneProvider>
     );
@@ -76,6 +81,9 @@ export function mountScene(element: HTMLElement, scene: Scene, options: ViewOpti
     },
     captureImage: answers.captureImage,
     status: answers.status,
+    get editorCamera() {
+      return cameras.of(current.mode);
+    },
     update(next) {
       if (isDisposed) throw new Error('expected a mounted view to update, got a disposed one');
       current = withGiven(current, checked(scene, next));
@@ -92,6 +100,7 @@ export function mountScene(element: HTMLElement, scene: Scene, options: ViewOpti
       const canvases = [...element.querySelectorAll('canvas')];
       root.unmount();
       ending.abort(new Error('expected the view to settle before its dispose'));
+      cameras.end(new Error('expected a mounted view, got a disposed one'));
       canvases.forEach(loseContext);
     },
   };

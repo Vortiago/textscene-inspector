@@ -251,6 +251,8 @@ Each read of `settled` gives a new promise, which rejects once the view unmounts
   absolute `path`, as a node handle gives it, its `meshTypes` that no part of the view draws, and
   `isEmptyShape` for a CSG shape whose brush is empty. Godot warns of an empty shape too.
 - `isSoftwareRendering`: the browser draws the view's WebGL on the CPU, so every frame is slow.
+- `freelook`: the 3D editor camera's freelook, `{ isToggled, isAvailable }`, or `null` outside the
+  3D mode. See "Move the editor camera".
 
 `status()` gives the same object while nothing in it changes. The option `onStatusChange` calls
 your function with the new status on each change, but not for the frame numbers, which change
@@ -417,6 +419,36 @@ current, and the In-game mode keeps the current camera: use `call('make_current'
 `<TscnCanvas camera="Rig/TopCamera" />` does the same in React. As with `update`, a prop left out,
 or `undefined`, keeps what the view looks through now, and `null` gives the editor camera.
 
+### Move the editor camera
+
+`view.editorCamera` is the editor camera of the mode the view is in: a `Camera3D` in the 3D mode
+and a `Camera2D` in the 2D mode, as a node handle. It is `null` in the In-game mode, which draws
+through the game's own camera. The view owns it: it is not in the scene, so `scene.getNode`,
+`getChildren` and `scene.cameras()` never give it. Each mode keeps one camera for the life of the
+view. A read or a write waits for its mode to draw, and rejects once the view ends.
+
+```ts
+const view = mountScene(element, scene, { mode: '3D' });
+
+await view.editorCamera?.call('focus', '/root/Main/Player');
+await view.editorCamera?.set('fov', 50);
+await view.editorCamera?.call('reset');
+```
+
+- **3D.** `get` gives `transform`, `position`, `fov`, `near`, `far`, `projection` (`0` perspective,
+  `1` orthogonal) and `freelook`. `set` takes `position`, `fov`, `projection` and `freelook`. A
+  new `position` moves the eye, and the camera keeps looking at its focus point. A `fov` outside
+  1 to 179 keeps the old one, as Godot does. `call('focus', path)` frames the node at an absolute
+  path, as F does, and `call('focus')` frames the whole scene. `call('reset')` returns the camera to
+  Godot's opening pose and ends freelook.
+- **2D.** `position` is the canvas point at the centre of the view, and `zoom` its magnification,
+  a `Vector2` with the same value on both axes.
+
+`view.status().freelook` gives `{ isToggled, isAvailable }` in the 3D mode and `null` in the
+others, and `onStatusChange` tells you when it changes, as on Shift+F or Escape. `isAvailable` is
+`false` in the orthogonal projection, which has no freelook. The `TscnCanvas` ref gives
+`editorCamera` too.
+
 ### Learn which node a click picked
 
 `onSelect` hears the node a click picks in the 3D mode, and `selected` sets the node the view
@@ -562,13 +594,13 @@ The package exports these names.
 - `TscnCanvas`: the view in React. Its props are `scene` (a `Scene`), the options of `mountScene`
   (`mode`, default `'3D'`, `visible`, `camera`, `selected`, `onSelect`, `show` and
   `onStatusChange`), and `className`. `scene` is required. Its `ref` gives the view's `settled`,
-  `captureImage` and `status`. Its unmount ends the view.
+  `captureImage`, `status` and `editorCamera`. Its unmount ends the view.
 - `ResourceProvider` (a type): `loadResource(path, type?)` returns the file as a string or an
   `ArrayBuffer`, or `null` when the file is missing. The optional `watch(listener)` is in "Load a
   file again when it changes".
 - `mountScene(element, scene, options?)`: mounts the view with no React code of the page's own,
-  and returns a `View`: `settled`, `captureImage`, `status`, `update` and `dispose`. See "Mount the
-  view with no React code".
+  and returns a `View`: `settled`, `captureImage`, `status`, `editorCamera`, `update` and
+  `dispose`. See "Mount the view with no React code" and "Move the editor camera".
 - `View` and `ViewOptions` (types): what `mountScene` returns, and the options of `mountScene` and
   `update`: `mode` (default `'in-game'`), `visible` (default `true`), `camera` (default `null`),
   `selected`, `onSelect`, `show` and `onStatusChange`. See "Learn which node a click picked", "Turn
