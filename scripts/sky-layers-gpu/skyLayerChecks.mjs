@@ -48,11 +48,34 @@ export function negativeFailure(name, ranges) {
   return undefined;
 }
 
-/** Every failure of the gate's three bakes. */
+/** The squared distance between two colours. */
+const squaredDistance = (a, b) => a.reduce((sum, channel, index) => sum + (channel - b[index]) ** 2, 0);
+
+/** Each mip of each layer keeps +Y nearer the sky's top colour and -Y nearer its bottom one. */
+export function orientationFailure(name, texels, { top, bottom }) {
+  for (const { layer, mip, up, down } of texels) {
+    const at = `${name}, layer ${layer} mip ${mip}`;
+    if (squaredDistance(up, top) >= squaredDistance(up, bottom))
+      return `${at}: expected +Y nearer ${top}, found ${up}`;
+    if (squaredDistance(down, bottom) >= squaredDistance(down, top))
+      return `${at}: expected -Y nearer ${bottom}, found ${down}`;
+  }
+  return undefined;
+}
+
+/** Every failure of the gate's bakes. */
 export function skyLayerFailures(samples) {
   return [
     uniformSkyFailure('uniform sky, importance filter', samples.uniformImportance, samples.uniformRadiance),
     uniformSkyFailure('uniform sky, fast filter', samples.uniformFast, samples.uniformRadiance),
     negativeFailure('high-contrast sky, fast filter', samples.highContrastFast),
+    orientationFailure('two-colour sky, importance filter', samples.twoColourImportance, samples.twoColours),
+    orientationFailure('two-colour sky, fast filter', samples.twoColourFast, samples.twoColours),
+    orientationFailure(
+      'two-colour probe, importance filter',
+      samples.twoColourProbeImportance,
+      samples.twoColours
+    ),
+    orientationFailure('two-colour probe, fast filter', samples.twoColourProbeFast, samples.twoColours),
   ].filter((failure) => failure !== undefined);
 }

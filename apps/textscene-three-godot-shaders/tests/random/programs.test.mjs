@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { GlslangFolding } from '../../../../packages/textscene-core/src/shaders/language/glslangFolding.ts';
+import { godotConstantDouble } from '../../../../packages/textscene-core/src/shaders/language/godotNumber.ts';
 import { treeFault } from '../../../../packages/textscene-core/src/shaders/language/treeCheck.ts';
 import {
   everyExpressionIn,
@@ -83,7 +84,7 @@ describe('the trees of the fixed-seed set', () => {
 
 /** Whether the program `source` calls a built-in on constants alone, which glslang folds. */
 function callsABuiltInOnConstants(source) {
-  const folding = new GlslangFolding();
+  const folding = new GlslangFolding(godotConstantDouble);
   return treeOf(source).functions.some((declared) =>
     [...everyExpressionIn(declared.body)].some(
       (expression) => isCall(expression) && expression.row.id !== 'OP_CALL' && folding.lanesOf(expression)

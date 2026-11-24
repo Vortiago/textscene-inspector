@@ -206,6 +206,8 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     "an opaque-list sentinel's material, which writes nothing and is never mutated",
   'packages/textscene-core/src/shaders/sky/transpileSky.ts':
     'the shader package draws a sky for a plain three.js app with no React: one material per transpiled sky, its nodes fixed at construction, and the caller moves only uniforms',
+  'packages/textscene-core/src/shaders/template/compute/emitComputePass.ts':
+    'one material per lowered compute pass of a renderer, its nodes fixed at construction and drawn offscreen outside React; a bake moves only uniforms and textures',
   'packages/textscene-core/src/shaders/spatial/transpileSpatial.ts':
     'the shader package draws a mesh for a plain three.js app with no React: one material per transpiled spatial shader, its nodes fixed at construction, and the caller moves only uniforms and row textures',
   'packages/textscene-core/src/shaders/spatial/spatialPrepass.ts':
@@ -306,6 +308,8 @@ const CONSTRUCTED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
     'an opaque-list sentinel: its material writes nothing and is never mutated, and its owner removes it with its scene',
   'packages/textscene-core/src/shaders/sky/transpileSky.ts':
     'the sky triangle of the shader package, which a plain three.js app with no React adds to its scene; the caller owns and disposes it',
+  'packages/textscene-core/src/shaders/template/compute/emitComputePass.ts':
+    'the triangle or points of a lowered compute pass, drawn offscreen by a bake and never added to a scene, so the material never passes through React',
   'packages/textscene-core/src/r3f/spatialShader/pointSurface.ts':
     'the points child of a spatial shader: the attach that R3F calls hands it the material React built, and the detach removes it',
   'packages/textscene-core/src/r3f/surfacedMeshDrawer/ClonedExtraDraws.tsx':

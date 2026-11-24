@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { cubeRadiance, type SkyLayers } from './skyLayers';
+import type { SkyLayers } from './octmapArrays';
+import { cubeRadiance } from './skyLayers';
 import { OctmapRadiance, type OctmapSky, type RadianceFilterSettings } from './octmapRadiance';
 import type { SkyBake } from './types';
 

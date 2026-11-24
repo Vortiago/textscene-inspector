@@ -49,8 +49,11 @@ export const KEPT_TEST_ONLY_EXPORTS = [
   'r3f/liveSceneTree.ts#rootScope',
   // A host's scene loads through the loader of its provider. Only a test hands a scene a loader it built.
   'r3f/sceneResourcePipeline.ts#adoptLoader',
-  // The layer tests bake a known cube through the real bake, and a sky draws its own radiance.
-  'resources/sky/skyLayers.ts#cubeRadiance',
+  // The octmap passes' push constants, coefficients, dispatch and atlas, checked against Godot without a GPU.
+  'resources/sky/octmapPasses.ts#coefficientWords',
+  'resources/sky/octmapPasses.ts#filterInvocations',
+  'resources/sky/octmapPasses.ts#laidOut',
+  'resources/sky/octmapPasses.ts#roughnessValues',
   // The builds and the cache are module state, so each test starts from the one reset that aborts
   // the builds in flight and clears the cache.
   'resources/textures/proceduralBuilds.ts#resetProceduralTextures',

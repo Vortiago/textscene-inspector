@@ -3,8 +3,13 @@
  * and reads every texel of every layer back, so the gate can judge what the shaders wrote.
  */
 import * as THREE from 'three';
-import { disposeSkyLayers } from '../../packages/textscene-core/src/resources/sky/skyLayers.ts';
+import { installNodesHandler } from '../../packages/textscene-core/src/shaders/nodesHandler.ts';
+import { disposeSkyLayers } from '../../packages/textscene-core/src/resources/sky/octmapArrays.ts';
 import { bakeSkyLayers } from '../../packages/textscene-core/src/resources/sky/skyLayers.testkit.ts';
+import { REAL_TIME_RADIANCE_SIZE } from '../../packages/textscene-core/src/godot/rendering/environment/skyReflection.ts';
+import { reflectionAtlasLayout } from '../../packages/textscene-core/src/godot/rendering/environment/reflectionProbe.ts';
+import { createReflectionAtlas } from '../../packages/textscene-core/src/resources/sky/octmapArrays.ts';
+import { bakeAtlasLayers } from '../../packages/textscene-core/src/resources/sky/skyLayers.ts';
 
 /* global window, document */
 // `window` and `document` exist only in the browser that loads this page.
@@ -21,10 +26,12 @@ const BRIGHT_RADIANCE = [8, 8, 8];
 
 THREE.ColorManagement.enabled = false;
 const renderer = new THREE.WebGLRenderer({ canvas: document.createElement('canvas') });
+// The bake draws Godot's compute stages as node materials, which write linear values here.
+installNodesHandler(renderer, 'linear');
 
 /** The radiance cube of a sky whose face `face` has `colourOf(face)`. */
-function radianceCube(colourOf) {
-  const cube = new THREE.WebGLCubeRenderTarget(RADIANCE_SIZE, { type: THREE.HalfFloatType });
+function radianceCube(colourOf, size = RADIANCE_SIZE) {
+  const cube = new THREE.WebGLCubeRenderTarget(size, { type: THREE.HalfFloatType });
   for (let face = 0; face < 6; face += 1) {
     renderer.setRenderTarget(cube, face);
     renderer.setClearColor(new THREE.Color(...colourOf(face)), 1);
@@ -92,9 +99,66 @@ function bake(colourOf, radianceFilter) {
 
 const highContrast = (face) => (face === BRIGHT_FACE ? BRIGHT_RADIANCE : [0, 0, 0]);
 
+/** A sky of one colour above, +Y, another below, -Y, and grey at the sides, which shows a flipped mip. */
+const TWO_COLOURS = { top: [1, 0.8, 0.3], bottom: [0.1, 0.4, 0.1] };
+const BOTTOM_FACE = 3;
+const twoColour = (face) =>
+  face === BRIGHT_FACE ? TWO_COLOURS.top : face === BOTTOM_FACE ? TWO_COLOURS.bottom : [0.5, 0.5, 0.5];
+
+/** The texel of `mip` of `layer` at `x`, `y`. */
+function texelAt(target, layer, mip, x, y) {
+  const gl = renderer.getContext();
+  const pixel = new Float32Array(4);
+  renderer.setRenderTarget(target, layer, mip);
+  gl.readPixels(x, y, 1, 1, gl.RGBA, gl.FLOAT, pixel);
+  return Array.from(pixel.slice(0, 3));
+}
+
+/** The +Y and -Y texels of each layer's mips `mipSizes` wide: +Y is the top edge's middle in the border. */
+function orientationOf({ layout, target }, mipSizes = [layout.size, ...layout.downsampledSizes]) {
+  const pad = (1 - layout.borderSize) / 2;
+  const texels = [];
+  for (let layer = 0; layer < target.depth; layer += 1)
+    mipSizes.forEach((size, mip) => {
+      const inset = Math.floor(pad * size) + 1;
+      const middle = size >> 1;
+      const up = texelAt(target, layer, mip, middle, size - 1 - inset);
+      texels.push({ layer, mip, up, down: texelAt(target, layer, mip, middle, inset) });
+    });
+  renderer.setRenderTarget(null);
+  return texels;
+}
+
+/** The orientation of the layers `radianceFilter` bakes from the two-colour sky, at `radianceSize`. */
+function bakeTwoColour(radianceFilter, radianceSize) {
+  const radiance = radianceCube(twoColour, radianceSize);
+  const layers = bakeSkyLayers(renderer, radiance.texture, { radianceFilter, radianceSize }, 0);
+  const texels = orientationOf(layers);
+  disposeSkyLayers(layers);
+  radiance.dispose();
+  return texels;
+}
+
+/** The orientation of each mip of a probe's atlas layer, each a roughness layer `radianceFilter` bakes. */
+function bakeTwoColourProbe(radianceFilter) {
+  const radiance = radianceCube(twoColour);
+  // Only an update-always probe bakes with the fast filter, and its atlas has seven layers.
+  const atlas = createReflectionAtlas(reflectionAtlasLayout(radianceFilter === 'fast'), 1);
+  bakeAtlasLayers(renderer, radiance.texture, atlas, 0, radianceFilter);
+  const texels = orientationOf(atlas, atlas.layout.layerSizes);
+  atlas.target.dispose();
+  radiance.dispose();
+  return texels;
+}
+
 window.skyLayerSamples = () => ({
   uniformRadiance: UNIFORM_RADIANCE,
   uniformImportance: bake(() => UNIFORM_RADIANCE, 'importance-sample'),
   uniformFast: bake(() => UNIFORM_RADIANCE, 'fast'),
   highContrastFast: bake(highContrast, 'fast'),
+  twoColours: TWO_COLOURS,
+  twoColourImportance: bakeTwoColour('importance-sample', RADIANCE_SIZE),
+  twoColourFast: bakeTwoColour('fast', REAL_TIME_RADIANCE_SIZE),
+  twoColourProbeImportance: bakeTwoColourProbe('importance-sample'),
+  twoColourProbeFast: bakeTwoColourProbe('fast'),
 });

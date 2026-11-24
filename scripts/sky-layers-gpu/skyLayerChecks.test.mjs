@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   halfFloatTolerance,
   negativeFailure,
+  orientationFailure,
   skyLayerFailures,
   uniformSkyFailure,
 } from './skyLayerChecks.mjs';
@@ -80,6 +81,11 @@ describe('skyLayerFailures', () => {
     uniformImportance: rangeOf(RADIANCE, RADIANCE),
     uniformFast: rangeOf(RADIANCE, RADIANCE),
     highContrastFast: rangeOf([0, 0, 0], [8, 8, 8]),
+    twoColours: { top: [1, 1, 1], bottom: [0, 0, 0] },
+    twoColourImportance: [{ layer: 0, mip: 0, up: [1, 1, 1], down: [0, 0, 0] }],
+    twoColourFast: [{ layer: 0, mip: 0, up: [1, 1, 1], down: [0, 0, 0] }],
+    twoColourProbeImportance: [{ layer: 0, mip: 1, up: [1, 1, 1], down: [0, 0, 0] }],
+    twoColourProbeFast: [{ layer: 0, mip: 1, up: [1, 1, 1], down: [0, 0, 0] }],
   };
 
   it('finds nothing in layers that pass every check', () => {
@@ -97,6 +103,34 @@ describe('skyLayerFailures', () => {
   it('lists every failing bake when all fail (edge case)', () => {
     const off = rangeOf([0, 0, 0], RADIANCE);
 
-    expect(skyLayerFailures({ ...passing, uniformImportance: off, uniformFast: off })).toHaveLength(2);
+    const flipped = [{ layer: 0, mip: 1, up: [0, 0, 0], down: [1, 1, 1] }];
+    const failing = {
+      uniformImportance: off,
+      uniformFast: off,
+      twoColourImportance: flipped,
+      twoColourFast: flipped,
+      twoColourProbeImportance: flipped,
+      twoColourProbeFast: flipped,
+    };
+
+    expect(skyLayerFailures({ ...passing, ...failing })).toHaveLength(6);
+  });
+});
+
+describe('orientationFailure', () => {
+  const colours = { top: [1, 0.8, 0.3], bottom: [0.1, 0.4, 0.1] };
+
+  it('passes a mip whose +Y and -Y lean to the top and the bottom colours', () => {
+    const texels = [{ layer: 7, mip: 0, up: [0.8, 0.7, 0.4], down: [0.3, 0.45, 0.3] }];
+
+    expect(orientationFailure('sky', texels, colours)).toBeUndefined();
+  });
+
+  it('names a mip drawn upside down (error case)', () => {
+    const texels = [{ layer: 2, mip: 1, up: [0.1, 0.4, 0.1], down: [1, 0.8, 0.3] }];
+
+    expect(orientationFailure('sky', texels, colours)).toBe(
+      'sky, layer 2 mip 1: expected +Y nearer 1,0.8,0.3, found 0.1,0.4,0.1'
+    );
   });
 });

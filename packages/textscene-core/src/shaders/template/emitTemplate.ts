@@ -4,7 +4,7 @@ import { cubeTexture, Fn, int, texture, texture3D } from 'three/tsl';
 import type { Node, TextureNode } from 'three/webgpu';
 import { type BodyEmitter, CalledFunctions } from '../language/emitCall.js';
 import { constantNode } from '../language/emitConstant.js';
-import { GlslangFolding } from '../language/glslangFolding.js';
+import { asWritten, GlslangFolding } from '../language/glslangFolding.js';
 import type { EmitContext } from '../language/emitExpression.js';
 import { EmitScope } from '../language/emitScope.js';
 import { StatementEmitter } from '../language/emitStatement.js';
@@ -12,7 +12,7 @@ import { subgroupVariables } from '../language/subgroupComposites.js';
 import { emittedGlslTree, type EmittedTree } from '../language/emittedTree.js';
 import { copyInto, declareVariables, type StructOf, type Value } from '../language/emitValue.js';
 import type { FunctionNode, StructNode } from '../language/shaderTree.js';
-import { isTextureType, type ValueType } from '../language/types.js';
+import { isSamplerType, isTextureType, type ValueType } from '../language/types.js';
 import { withGlobalParameters } from './globalParameters.js';
 import { withSquareMatrices } from './squareMatrices.js';
 import { StageVaryings } from './stageVaryings.js';
@@ -243,10 +243,10 @@ function uniformGlobals(
 ): void {
   const { words } = global.qualifiers;
   for (const declarator of global.declarators) {
-    if (words.includes('uniform') && isTextureType(global.type)) {
-      values.set(declarator.name, textureValue(global.type, declarator, textures));
-    } else if (words.includes('uniform') && global.type === 'sampler') {
+    if (words.includes('uniform') && global.type === 'sampler') {
       values.set(declarator.name, int(0) as unknown as Node);
+    } else if (words.includes('uniform') && (isTextureType(global.type) || isSamplerType(global.type))) {
+      values.set(declarator.name, textureValue(global.type, declarator, textures));
     } else if (words.includes('const')) {
       values.set(declarator.name, constantGlobal(global, declarator));
     }
@@ -267,7 +267,10 @@ function constantGlobal(global: GlobalNode, declarator: GlobalNode['declarators'
 }
 
 /** Folds the const globals. A tree never changes, so every stage shares one. */
-const FOLDING = new GlslangFolding();
+const FOLDING = new GlslangFolding(asWritten);
+
+/** The texture type a combined sampler reads: `texture2D` for `sampler2D`. */
+const textureTypeOf = (type: string) => type.replace(/^([iu]?)sampler/, '$1texture');
 
 /** A texture's node, or an array of them by `name[index]`. Three binds only the nodes a stage reads. */
 function textureValue(
@@ -295,12 +298,13 @@ function textureValue(
 }
 
 /** The caller binds a texture with the filter and the wrap that Godot's sampler names. */
-function textureNode(type: string, name: string): TextureNode {
+function textureNode(declared: string, name: string): TextureNode {
+  const type = textureTypeOf(declared);
   if (type === 'texture3D')
     return texture3D(new THREE.Data3DTexture(new Uint8Array(4), 1, 1, 1)) as TextureNode;
   if (type === 'texture2DArray')
     return texture(new THREE.DataArrayTexture(new Uint8Array(4), 1, 1, 1)) as TextureNode;
   if (type === 'textureCube') return cubeTexture(new THREE.CubeTexture()) as unknown as TextureNode;
   if (type === 'texture2D') return texture(new THREE.DataTexture(new Uint8Array(4), 1, 1)) as TextureNode;
-  throw new Error(`expected a texture type the emitter has a node for, got ${type} ${name}`);
+  throw new Error(`expected a texture type the emitter has a node for, got ${declared} ${name}`);
 }

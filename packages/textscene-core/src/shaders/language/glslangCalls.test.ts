@@ -4,7 +4,7 @@ import { godotConstantDouble } from './godotNumber.js';
 import { returnedValue } from './parsedTree.testkit.js';
 
 const folded = (body: string, returns = 'float') =>
-  new GlslangFolding().lanesOf(returnedValue(`${returns} f() { return ${body}; }`));
+  new GlslangFolding(godotConstantDouble).lanesOf(returnedValue(`${returns} f() { return ${body}; }`));
 
 /** The double glslang reads from the text Godot writes for the float literal `literal`. */
 const double = (literal: number) => godotConstantDouble(Math.fround(literal));
@@ -128,7 +128,7 @@ describe('glslang folds a call of the common functions', () => {
 
   it('leaves modf to the GPU', () => {
     const tree = returnedValue('float f() { float whole = 0.0; return modf(1.5, whole); }');
-    expect(new GlslangFolding().lanesOf(tree)).toBeUndefined();
+    expect(new GlslangFolding(godotConstantDouble).lanesOf(tree)).toBeUndefined();
   });
 });
 
@@ -215,7 +215,7 @@ describe('glslang folds calls of calls', () => {
 
   it('folds no call that reads an argument', () => {
     expect(
-      new GlslangFolding().lanesOf(returnedValue('float f(float a) { return sin(a); }'))
+      new GlslangFolding(godotConstantDouble).lanesOf(returnedValue('float f(float a) { return sin(a); }'))
     ).toBeUndefined();
   });
 });

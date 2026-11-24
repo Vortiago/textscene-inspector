@@ -3,7 +3,7 @@ import type { RadianceInPlace, SkyEnvironmentInput, SkyLight } from '../../resou
 import type { buildShaderSkyEnvironment } from '../../resources/sky/shaderSky';
 import type { Sky } from '../../resources/sky/types';
 import type { SamplerValue } from '../../shaders/uniforms/samplerUniform';
-import { roughnessLayersOf } from '../../resources/sky/skyLayers';
+import { roughnessLayersOf } from '../../resources/sky/octmapArrays';
 import {
   newSkyRadianceUpdate,
   type SkyRadianceStep,

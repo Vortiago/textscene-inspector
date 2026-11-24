@@ -3,7 +3,8 @@ import { writeSkyBindings, type SkyLight } from '../../shaders/sky/skyBindings.j
 import { disposeSky, type TranspiledSky } from '../../shaders/sky/transpileSky.js';
 import { SkyResolutionPasses, type SkyPassResolution } from '../../shaders/sky/skyResolutionPasses.js';
 import type { Vector3 } from '../../godot/math/vector.js';
-import { copyRadianceMip, type SkyLayers } from '../../resources/sky/skyLayers.js';
+import type { SkyLayers } from '../../resources/sky/octmapArrays.js';
+import { copyRadianceMip } from '../../resources/sky/skyLayers.js';
 import type { OctmapSky } from '../../resources/sky/octmapRadiance.js';
 import type { SkyOctmapLayout } from '../../godot/rendering/environment/skyReflection.js';
 import { canvasShaderTime } from '../shaderTime/canvasShaderTime.js';
