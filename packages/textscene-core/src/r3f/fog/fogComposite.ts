@@ -1,10 +1,3 @@
-/**
- * Installs Godot's fog into three's programs: every fog program blends the depth fog and the
- * volumetric fog in one step before the tone curve (`scene_forward_clustered.glsl:2988`), and the
- * cube and flat backgrounds fog the sky and the clear colour as Godot's sky shader does
- * (`sky.glsl:281-295`).
- */
-
 import * as THREE from 'three';
 import { installChunkEdits } from '../shaderPatch/chunkPatch.js';
 import { installMergedUniform, FOG_UNIFORMS_MERGE } from '../shaderPatch/litUniform.js';
@@ -12,7 +5,7 @@ import { GODOT_FOG_PARS, GODOT_FOG_PARS_CHUNK } from './fogChunks.js';
 import { fogUniformRecord } from './fogUniforms.js';
 import { skyRadianceUniforms } from '../sky/skyRadiance.js';
 import { GODOT_SKY_VIEW_RAY } from '../sky/skyProjection.js';
-import { backgroundCube, backgroundPlane } from '../shaderPatch/backgroundPrograms.js';
+import { backgroundPlane } from '../shaderPatch/backgroundPrograms.js';
 
 const VIEW_VARYING = 'vGodotFogView';
 
@@ -26,10 +19,7 @@ const GODOT_FOG_BLEND = /* glsl */ `
 #endif
 `;
 
-/**
- * three's fog, Godot's way: the vertex hands on its view-space position, and the fog applies ahead
- * of the tone curve. three fogs after the colour-space conversion, so its fog mixed sRGB numbers.
- */
+/** Fog ahead of the tone curve, not after three's colour-space step (scene_forward_clustered.glsl:2988). */
 function installGodotFog(): void {
   installChunkEdits({
     edits: [
@@ -64,27 +54,10 @@ const SKY_FOG = 'godotSkyFog';
 
 const GODOT_BACKGROUND_FOG = `\tgl_FragColor.rgb = ${SKY_FOG}( gl_FragColor.rgb, vWorldDirection );\n${THREE_BACKGROUND_TONE_CURVE}`;
 
-/**
- * three's cube background, fogged after its intensity, as Godot's sky is after its brightness. True
- * when the background holds the fog after the call.
- */
-function installCubeBackgroundFog(): boolean {
-  const isFogged = installChunkEdits({
-    edits: [
-      { chunk: 'backgroundCube_frag', three: THREE_BACKGROUND_TONE_CURVE, godot: GODOT_BACKGROUND_FOG },
-    ],
-    mark: SKY_FOG,
-    patch: 'cube background fog',
-    prepend: { backgroundCube_frag: `#include <${GODOT_FOG_PARS_CHUNK}>\n` },
-  });
-  if (isFogged) backgroundCube().fragmentShader = THREE.ShaderChunk.backgroundCube_frag;
-  return isFogged;
-}
-
 /** three's flat background vertex, which hands on the world direction of each pixel's view ray. */
 const THREE_PLANE_POSITION = 'gl_Position = vec4( position.xy, 1.0, 1.0 );';
 
-/** three's flat background, a colour background, fogged after its intensity as the cube is. */
+/** The colour background, fogged after its intensity as Godot's sky is (sky.glsl:281-295). */
 function installPlaneBackgroundFog(): void {
   const isFogged = installChunkEdits({
     edits: [
@@ -108,22 +81,13 @@ function installPlaneBackgroundFog(): void {
   backgroundPlane().fragmentShader = THREE.ShaderChunk.background_frag;
 }
 
-/**
- * Patches three's fog chunks and both backgrounds for every program compiled after the call, and
- * gives them the shared fog uniforms and the shown sky's radiance. three reads
- * `ShaderLib.backgroundCube` when a renderer first draws a cube background. A three release that
- * rewrites a replaced line keeps its own chunks, and `fogComposite.test.ts` fails on that release.
- * True when the cube background holds the fog after the call. A second call changes nothing.
- */
-export function installFogComposite(): boolean {
+/** Patches three's fog and flat background programs compiled after the call. A second call does nothing. */
+export function installFogComposite(): void {
   Object.assign(THREE.ShaderChunk, { [GODOT_FOG_PARS_CHUNK]: GODOT_FOG_PARS });
   installGodotFog();
-  const isCubeFogged = installCubeBackgroundFog();
   installPlaneBackgroundFog();
   for (const [name, uniform] of Object.entries({ ...fogUniformRecord(), ...skyRadianceUniforms() })) {
     installMergedUniform(FOG_UNIFORMS_MERGE, name, uniform.value);
-    backgroundCube().uniforms[name] = { value: uniform.value };
     backgroundPlane().uniforms[name] = { value: uniform.value };
   }
-  return isCubeFogged;
 }
