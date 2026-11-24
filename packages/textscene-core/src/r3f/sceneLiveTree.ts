@@ -1,5 +1,6 @@
 import type { SceneGraph } from '../core/SceneGraph.js';
 import { isGltfPath } from '../godot/import/gltf.js';
+import { GLB_SCENE_ROOT_TYPE } from '../resources/glbSceneRoot.js';
 import type { ResourceReference } from '../godot/variant/variantValue.js';
 import {
   projectDefaultEnvironmentPath,
@@ -85,6 +86,9 @@ function ownerOf(link: LiveLink, ancestors: readonly LiveLink[]): LiveLink | nul
   return ancestors[0]!;
 }
 
+/** The class Godot gives the node: the glTF importer roots a scene at a Node3D (gltf_document.cpp:6885). */
+const godotClassOf = (type: string) => (type === GLB_SCENE_ROOT_TYPE ? 'Node3D' : type);
+
 function treeNodeOf(
   tree: LiveTree,
   link: LiveLink,
@@ -96,7 +100,7 @@ function treeNodeOf(
   const parent = ancestors.at(-1) ?? null;
   return {
     name: node.name,
-    type: node.type,
+    type: godotClassOf(node.type),
     rawProperties: node.rawProperties,
     childNames: groups.flatMap((group) => group.children.map((child) => child.name)),
     resourceOf: resourceInScope(scope, rootScenePath),

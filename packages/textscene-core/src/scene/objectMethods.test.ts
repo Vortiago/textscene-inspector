@@ -54,3 +54,17 @@ describe('get_class', () => {
     );
   });
 });
+
+// With no GODOT_single_root extension, the glTF importer roots a scene at a Node3D (gltf_document.cpp:6885).
+describe('the root node of a .glb scene', () => {
+  const glbRoot = () =>
+    openScene({ source: '', provider, rootScenePath: 'res://ship.glb' }).getNode('/root').getChildren()[0]!;
+
+  it('answers get_class Node3D', async () => {
+    expect(await glbRoot().call('get_class')).toBe('Node3D');
+  });
+
+  it('answers is_class Node3D', async () => {
+    expect(await glbRoot().call('is_class', 'Node3D')).toBe(true);
+  });
+});

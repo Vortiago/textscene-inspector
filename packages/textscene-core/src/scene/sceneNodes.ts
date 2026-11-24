@@ -201,7 +201,7 @@ export class SceneNodes implements HandleHost {
     const reached = methods.findPropertyMethod(type, method);
     if (!reached) {
       throw new Error(
-        `${name}: not a method this release ports. It ports get_class, is_class, the camera methods and the property setters and getters.`
+        `${name}: not a method this release ports. It ports get_class, is_class, get_owner, the camera methods and the property setters and getters.`
       );
     }
     return this.callPropertyMethod(path, name, reached, args);

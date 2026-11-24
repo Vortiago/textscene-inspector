@@ -41,6 +41,15 @@ describe('<TextShell> workspace auto-select (Godot parity)', () => {
     expect(await screen.findByTestId('canvas-3d')).toBeTruthy();
   });
 
+  // The glTF importer roots the scene at a Node3D (gltf_document.cpp:6885), which Node3DEditor takes.
+  it('opens a .glb in the 3D workspace from the 2D one', async () => {
+    const { rerender } = render(<TextShell panelId="auto-glb" content={CONTROL_SCENE} />);
+    expect(await screen.findByTestId('canvas-2d')).toBeTruthy();
+
+    rerender(<TextShell panelId="auto-glb" content="" rootScenePath="res://ship.glb" />);
+    expect(await screen.findByTestId('canvas-3d')).toBeTruthy();
+  });
+
   it('keeps the current workspace for a plain-Node root (Godot: no plugin claims it)', async () => {
     render(<TextShell panelId="auto-d" content={PLAIN_NODE_SCENE} />);
     expect(await screen.findByTestId('canvas-3d')).toBeTruthy();
