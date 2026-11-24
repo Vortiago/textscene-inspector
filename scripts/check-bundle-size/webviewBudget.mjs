@@ -4,9 +4,9 @@ import { join } from 'node:path';
 import { ENTRY, WEBVIEW_DIR, formatKb } from './paths.mjs';
 
 // Growth inside the ceiling is invisible in a PASS line, so the report reads it against the last measure.
-const MEASURED_GZ = 2_244_188;
+const MEASURED_GZ = 2_288_261;
 // About 8 KB over the measure, the headroom the split build's gate kept: growth past it is raised here.
-const BUDGET_GZ = 2_253_000;
+const BUDGET_GZ = 2_297_100;
 
 /** The scripts of `files` beside the entry, each one more request a closed load holds (ADR-0090). */
 export function findExtraScripts(files) {

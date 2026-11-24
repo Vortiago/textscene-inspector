@@ -27,8 +27,9 @@ ended at its 30 s load deadline (#2075).
 
 `pnpm check:bundle-size` fails when the build writes a script beside `webview.js`, and when the
 script is over its gzipped ceiling (`scripts/check-bundle-size/webviewBudget.mjs`). The ceiling
-is 2,253,000 B, about 8 KB over the measured 2,244,188 B. It replaces ADR-0055's 1,150,000 B, which
-held only the canvas-paint closure of the split build.
+is 2,297,100 B, about 8 KB over the measured 2,288,261 B. It replaces ADR-0055's 1,150,000 B, which
+held only the canvas-paint closure of the split build. Godot's coefficient table for the high-quality
+fast filter of a sky's radiance (`skyFastFilterHighQualityCoefficients.ts`) adds 44,073 B of the measure.
 
 The shader translator adds about 464,000 B to the script. The groups below gzip alone, so they are shares
 of that growth, not exact bytes:
@@ -48,7 +49,7 @@ the translator read, at about 140,000 B over the 16 alone.
 
 ## Consequences
 
-- The whole script loads on each preview open: about 2.24 MB gzipped, where the canvas-paint
+- The whole script loads on each preview open: about 2.29 MB gzipped, where the canvas-paint
   closure of the split build was about 1.07 MB. A local load of the two builds took the same time,
   about 0.5 s.
 - A dynamic `import()` in core stays lazy in its evaluation, and the web previewer and the
