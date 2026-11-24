@@ -70,10 +70,11 @@ describe('transpileCanvasItem', () => {
   it("blends as Godot's blend_mix and culls no face, as Godot's canvas pipeline does", () => {
     const { material } = transpileCanvasItem(DEFAULT_CANVAS_SHADER).draw('quad');
 
-    expect([material.blending, material.transparent, material.side]).toEqual([
+    expect([material.blending, material.transparent, material.side, material.forceSinglePass]).toEqual([
       THREE.NormalBlending,
       true,
       THREE.DoubleSide,
+      true,
     ]);
   });
 

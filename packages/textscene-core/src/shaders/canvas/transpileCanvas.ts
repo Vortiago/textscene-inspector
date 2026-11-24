@@ -112,6 +112,8 @@ function canvasDraw(program: LinkedProgram, defines: string, shader: MaterialSha
   Object.assign(material, godotBlendState(BlendMode.MIX), {
     transparent: true,
     side: THREE.DoubleSide,
+    // three draws a transparent DoubleSide material back faces first, in a second draw; Godot draws once.
+    forceSinglePass: true,
     depthTest: false,
     depthWrite: false,
   });
