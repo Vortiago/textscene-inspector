@@ -389,11 +389,7 @@ const FRAGMENT_SCENES = [
   ]),
 ];
 
-/**
- * Each output only the lit template reads, as `[name, built-in, a vec3 of its value, a value to write]`.
- * The unshaded variant draws albedo and alpha only (`scene_forward_clustered.glsl:2980`), so the albedo
- * shows the default before the write and the value after it, and nothing else of the write.
- */
+// Unshaded draws albedo and alpha only (`scene_forward_clustered.glsl:2980`): no write shows.
 const LIT_OUTPUTS = [
   ['spatial-fragment-normal-map', 'NORMAL_MAP', 'NORMAL_MAP', 'vec3(0.1, 0.9, 0.4)'],
   ['spatial-fragment-normal-map-depth', 'NORMAL_MAP_DEPTH', 'vec3(NORMAL_MAP_DEPTH * 0.5)', '0.2'],
