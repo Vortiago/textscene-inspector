@@ -51,11 +51,29 @@ export function freelookDirectionOf(code: string): FreelookDirection | undefined
   return GODOT_FREELOOK_KEYS[code] ?? PREVIEWER_FREELOOK_KEYS[code];
 }
 
-/** `spatial_editor/freelook_toggle`: Shift+F and no other modifier (`node_3d_editor_plugin.cpp:9962`). */
+/** The physical key `code` with Shift held as `shift` says, and no other modifier. */
+function isKeyWithShift(event: KeyboardEvent, code: string, shift: boolean): boolean {
+  return event.code === code && event.shiftKey === shift && !event.ctrlKey && !event.altKey && !event.metaKey;
+}
+
+/** `spatial_editor/freelook_toggle`: Shift+F (`node_3d_editor_plugin.cpp:9962`). */
 export function isFreelookToggleKey(event: KeyboardEvent): boolean {
-  return (
-    event.key.toLowerCase() === 'f' && event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey
-  );
+  return isKeyWithShift(event, 'KeyF', true);
+}
+
+/** `spatial_editor/focus_selection` in 3D, `canvas_item_editor/center_selection` in 2D: a bare F. */
+export function isFocusSelectionKey(event: KeyboardEvent): boolean {
+  return isKeyWithShift(event, 'KeyF', false);
+}
+
+/** `spatial_editor/focus_origin`: a bare O (`node_3d_editor_plugin.cpp:2659`). */
+export function isFocusOriginKey(event: KeyboardEvent): boolean {
+  return isKeyWithShift(event, 'KeyO', false);
+}
+
+/** `canvas_item_editor/frame_selection`: Shift+F (`canvas_item_editor_plugin.cpp:5942`). */
+export function isFrameSelectionKey(event: KeyboardEvent): boolean {
+  return isFreelookToggleKey(event);
 }
 
 /**

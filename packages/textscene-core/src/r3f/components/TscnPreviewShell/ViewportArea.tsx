@@ -10,7 +10,6 @@ import { memo, type Ref } from 'react';
 import { TscnCanvas } from '../../TscnCanvas.js';
 import type { ViewAnswers } from '../../viewStatus/viewAnswers.js';
 import type { ViewStatus } from '../../viewStatus/viewStatus.js';
-import { FreelookSpeedReadout } from '../FreelookSpeedReadout/FreelookSpeedReadout.js';
 import { GameStartNotes } from './GameStartNotes.js';
 import { usePreviewCamera, viewCameraOf } from './previewCamera.js';
 import { useOutlinedNode, usePreviewSelection } from './previewSelection.js';
@@ -55,7 +54,6 @@ function ViewportChrome({ mode }: { mode: ViewportMode }) {
   return (
     <>
       <ViewportControlsHelp mode="3D" />
-      <FreelookSpeedReadout />
       <SwitchTo2DHint />
     </>
   );

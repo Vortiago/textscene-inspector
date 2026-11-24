@@ -18,6 +18,8 @@ import {
 } from '../../../r3f/canvasMesh/useCanvasMeshTexture';
 import { useSpriteQuad } from '../../../r3f/canvasMesh/spriteQuad';
 import type { Sprite2DProperties } from './types';
+import { usePublishEditRect } from '../../../r3f/editRect/editRects';
+import { sprite2DEditRect } from './editRect';
 
 export function Sprite2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Sprite2DProperties;
@@ -45,6 +47,7 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   });
   const frameSize = useMemo(() => frameSizePx(texture.size, props), [texture.size, props]);
   const surfaces = useSpriteQuad(props, frameSize);
+  usePublishEditRect(sprite2DEditRect(props.texture ? texture.size : undefined, props));
 
   return (
     <CanvasMeshBody node={node} props={props} texture={texture} withoutTexture="nothing" surfaces={surfaces}>

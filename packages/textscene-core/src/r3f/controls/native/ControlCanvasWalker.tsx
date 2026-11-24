@@ -38,6 +38,8 @@ import { NodePathProvider } from '../../contexts/NodePathContext';
 import { ControlClipProvider, useInheritedControlClip } from './controlClipping';
 import { snapControlsToPixelsEnabled, snappedControlOrigin } from './controlPixelSnap';
 import { backPieceId, backPiecesOf, controlTransformsOf, solvedDrawTransformOf } from './solvedSortInputs';
+import { controlEditRectsOf } from '../../editRect/controlEditRects.js';
+import { usePublishEditRects } from '../../editRect/editRects.js';
 import {
   usePublishControlLocalTransforms,
   usePublishControlTransforms,
@@ -117,6 +119,7 @@ export function ControlCanvasWalker({
     publishLocalTransforms?.(owner, controlTransformsOf(tree, solved, false, livePath));
   }, [publishLocalTransforms, owner, tree, solved, livePath]);
   useLayoutEffect(() => () => publishLocalTransforms?.(owner, null), [publishLocalTransforms, owner]);
+  usePublishEditRects(useMemo(() => controlEditRectsOf(tree, solved, livePath), [tree, solved, livePath]));
 
   return (
     <>

@@ -19,7 +19,8 @@ import { NodeDispatcher } from './NodeDispatcher.js';
 import { SelectionHighlight } from './components/SelectionHighlight.js';
 import { PendingSuspense } from '../resources/PendingSuspense.js';
 import { editorHelperUserData } from './editorHelpers.js';
-import { FrameSelectedShortcut } from './FrameSelectedShortcut.js';
+import { FocusShortcuts } from './FocusShortcuts.js';
+import { FreelookSpeedReadout } from './components/FreelookSpeedReadout/FreelookSpeedReadout.js';
 import { EditorControlsBridge } from './EditorControlsBridge.js';
 import { GodotEditorControls } from './GodotEditorControls.js';
 import { WorldEnvironmentScope } from './environment/WorldEnvironmentScope.js';
@@ -307,12 +308,13 @@ function EditorCanvas({ className, camera }: Pick<TscnCanvasProps, 'camera' | 'c
             {camera !== undefined && <ViewCamera camera={camera} />}
           </SceneCamerasProvider>
           <CameraFit />
-          <FrameSelectedShortcut />
+          <FocusShortcuts />
           <GodotEditorControls />
           <EditorControlsBridge />
           <EditorViewReport />
         </LookThroughProvider>
       </Canvas>
+      <FreelookSpeedReadout />
     </StageRoot>
   );
 }

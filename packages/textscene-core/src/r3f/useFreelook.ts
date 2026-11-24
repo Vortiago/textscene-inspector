@@ -32,7 +32,6 @@ function toggleFreelook(handle: EditorControlsHandle, get: RootState['get']): vo
   }
   if (!handle.canFreelook(state.camera)) return;
   // Focus leaves the control that started the toggle: Space would press a focused button.
-  element.tabIndex = -1;
   element.focus({ preventScroll: true });
   requestPointerLock(element);
 }
@@ -53,6 +52,7 @@ function handleKeyDown(event: KeyboardEvent, handle: EditorControlsHandle, get: 
   // so no other shortcut of the page hears a key.
   if (freelook.isActive) event.stopImmediatePropagation();
   if (isFreelookToggleKey(event)) {
+    if (!(event.target instanceof Node) || !get().gl.domElement.contains(event.target)) return;
     event.preventDefault();
     if (!event.repeat) toggleFreelook(handle, get);
     return;

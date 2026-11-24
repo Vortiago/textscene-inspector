@@ -8,7 +8,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import type { ReactNode } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import type { NodeHandle } from '../../../scene/nodeHandle.js';
 import { liveNodePathOf } from '../../../scene/nodePathWalk.js';
 import type { Scene } from '../../../scene/openScene.js';
@@ -145,6 +145,29 @@ const NO_SELECT = (): void => {};
 /** Hovers the node at a live path through the shell. Outside one, nothing hears it. */
 export function useHoverPath(): (path: string | null) => void {
   return usePreviewSelection()?.hoverPath ?? NO_SELECT;
+}
+
+/** F frames the selection (node_3d_editor_plugin.cpp:4886): a hover takes the view's keys, focus ends it. */
+export function HoverReleasesViewFocus({ viewArea }: { viewArea: RefObject<HTMLElement | null> }) {
+  const preview = usePreviewSelection();
+  useEffect(() => {
+    const area = viewArea.current;
+    if (!preview || !area) return undefined;
+    const { hovered, hoverPath } = preview;
+    const endHover = () => {
+      if (hovered.get()) hoverPath(null);
+    };
+    area.addEventListener('focusin', endHover);
+    const unsubscribe = hovered.subscribe(() => {
+      const focused = document.activeElement;
+      if (hovered.get() && focused instanceof HTMLElement && area.contains(focused)) focused.blur();
+    });
+    return () => {
+      area.removeEventListener('focusin', endHover);
+      unsubscribe();
+    };
+  }, [preview, viewArea]);
+  return null;
 }
 
 /** The node the view outlines: the hovered row's, else the selected one. Null outside a shell. */

@@ -81,7 +81,7 @@ export function backPieceId(livePath: string, name: string): string {
 }
 
 /** Visits every node of the forest in tree order. */
-function eachSolveNode(tree: readonly SolveNode[], visit: (node: SolveNode) => void): void {
+export function eachSolveNode(tree: readonly SolveNode[], visit: (node: SolveNode) => void): void {
   const walk = (node: SolveNode): void => {
     visit(node);
     for (const child of node.children) walk(child);

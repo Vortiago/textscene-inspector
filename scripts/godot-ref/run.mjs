@@ -1484,8 +1484,11 @@ ${
 	# A point (an empty particle AABB, a Label3D before its text shapes) has no span to fit, and a
 	# distance of 0 puts the camera inside it. frameSceneBounds.ts keeps the camera's own distance,
 	# which is the editor distance on open.
+	# The narrower half angle, as fitTangent in frameSceneBounds.ts: FOV is vertical (KEEP_HEIGHT).
+	var view_size := get_viewport().get_visible_rect().size
+	var fit_tangent := tan(deg_to_rad(FOV) / 2.0) * minf(1.0, view_size.x / view_size.y)
 	if span > 0.0:
-		distance = (span / 2.0 / tan(deg_to_rad(FOV) / 2.0)) * ${FRAME_MARGIN}
+		distance = (span / 2.0 / fit_tangent) * ${FRAME_MARGIN}
 	var focus := bounds.get_center()`
     : `	var focus := Vector3.ZERO`
 }

@@ -1,7 +1,7 @@
 /*
- * Bottom-left, the one free corner: the toolbar grows left from the top right,
- * and bottom-centre holds the 2D hint and the zoom HUD. The panel opens upward,
- * so the pill never moves, and outranks the toolbar, so it is never clipped.
+ * Bottom-left, the one free corner: the toolbar grows left from the top right, and bottom-centre
+ * holds the 3D hint or the 2D zoom HUD. The panel opens upward and outranks the toolbar.
+ * The root spans the viewport, so 50cqw is the viewport's centre for the pill.
  */
 .root {
   position: absolute;
@@ -14,14 +14,15 @@
   gap: var(--tsi-space-2);
   /* The viewport is one drag surface, so only the pill and the panel take pointer input. */
   pointer-events: none;
-  max-width: calc(100% - var(--tsi-space-3) * 2);
+  width: calc(100% - var(--tsi-space-3) * 2);
+  container-type: inline-size;
 }
 
 .hint {
   pointer-events: auto;
   display: flex;
-  /* Bounded to the root, so a narrow viewport ellipsises the summary instead of overflowing. */
-  max-width: 100%;
+  /* Ends a gap short of the bottom-centre band, so a narrow viewport ellipsises the summary. */
+  max-width: calc(50cqw - var(--tsi-bottom-centre-width) / 2 - var(--tsi-space-2));
   align-items: center;
   gap: var(--tsi-space-2);
   appearance: none;
