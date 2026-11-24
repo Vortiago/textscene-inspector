@@ -38,7 +38,10 @@ function useClaimedWorkspace(scene: Scene): ViewportMode | null {
       .then((workspace) => {
         if (isLatest) setClaim({ root, workspace });
       })
-      .catch((error: unknown) => logger.error(`expected the root's class to read, got ${String(error)}`));
+      .catch((error: unknown) => {
+        // A new text frees the root during the read, and the new root reads again.
+        if (root.isInsideTree()) logger.error(`expected the root's class to read, got ${String(error)}`);
+      });
     return () => {
       isLatest = false;
     };

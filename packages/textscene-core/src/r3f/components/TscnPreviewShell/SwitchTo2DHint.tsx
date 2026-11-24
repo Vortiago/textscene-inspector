@@ -40,7 +40,10 @@ function useHas2DContent(scene: Scene | undefined): boolean {
       .then((holds) => {
         if (isLatest) setHas2DContent(holds);
       })
-      .catch((error: unknown) => logger.error(`expected the scene's classes to read, got ${String(error)}`));
+      .catch((error: unknown) => {
+        // A new text frees the nodes during the walk, and the walk runs again over the new ones.
+        if (root?.isInsideTree()) logger.error(`expected the scene's classes to read, got ${String(error)}`);
+      });
     return () => {
       isLatest = false;
     };

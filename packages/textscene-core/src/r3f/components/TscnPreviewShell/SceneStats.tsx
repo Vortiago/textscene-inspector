@@ -53,7 +53,11 @@ function useSceneCounts(scene: Scene): SceneCounts | null {
       .then((next) => {
         if (isLatest) setCounts(next);
       })
-      .catch((error: unknown) => logger.error(`expected the scene's nodes to count, got ${String(error)}`));
+      .catch((error: unknown) => {
+        // A new text frees the nodes during the reads, and the counts read again over the new ones.
+        if (nodes?.every((node) => node.isInsideTree()))
+          logger.error(`expected the scene's nodes to count, got ${String(error)}`);
+      });
     return () => {
       isLatest = false;
     };
@@ -77,7 +81,7 @@ function treeNodes(scene: Scene): NodeHandle[] | undefined {
 async function countsOf([root, ...below]: readonly NodeHandle[]): Promise<SceneCounts> {
   const reads = await Promise.all(
     [root!, ...below].map(async (node) => ({
-      isOwned: node === root || ((await node.call('get_owner')) as NodeHandle | null)?.path === root!.path,
+      isOwned: node === root || (await ownerPathOf(node)) === root!.path,
       isCamera: (await node.call('is_class', 'Camera3D')) === true,
     }))
   );
@@ -85,4 +89,10 @@ async function countsOf([root, ...below]: readonly NodeHandle[]): Promise<SceneC
     nodes: reads.filter((read) => read.isOwned).length,
     cameras: reads.filter((read) => read.isCamera).length,
   };
+}
+
+/** Null for a node outside Godot's class table, such as a part of a `.glb`, which has no owner to read. */
+async function ownerPathOf(node: NodeHandle): Promise<string | null> {
+  if ((await node.call('is_class', 'Node')) !== true) return null;
+  return ((await node.call('get_owner')) as NodeHandle | null)?.path ?? null;
 }

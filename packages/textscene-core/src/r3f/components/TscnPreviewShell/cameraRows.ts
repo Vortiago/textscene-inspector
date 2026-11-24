@@ -36,10 +36,16 @@ export function useCameraRows(): readonly CameraRow[] {
 
 const NO_ROWS = Promise.resolve([]);
 
-/** Null for a camera a new text freed before its read. */
+/** Null for a camera a new text frees before or during its read. */
 async function rowOf(scene: Scene, state: CameraState): Promise<CameraRow | null> {
   const camera = scene.getNodeOrNull(absolutePathOf(state.path));
   if (!camera) return null;
-  const is3D = (await camera.call('is_class', 'Camera3D')) === true;
-  return { ...state, name: camera.name, dimension: is3D ? '3D' : '2D' };
+  try {
+    const is3D = (await camera.call('is_class', 'Camera3D')) === true;
+    return { ...state, name: camera.name, dimension: is3D ? '3D' : '2D' };
+  } catch (error) {
+    // A new text frees the camera during the read, and the rows read again over the new cameras.
+    if (!camera.isInsideTree()) return null;
+    throw error;
+  }
 }
