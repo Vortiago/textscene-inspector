@@ -1286,3 +1286,8 @@ each corpus's README.md, so it carries the copyright line below. It is not deriv
 Code is MIT under the same copyright as Godot Engine above. **Per-demo asset licences
 vary and are frequently CC-BY**. Each project keeps its own `README.md` with the specific
 attribution, and the vendoring script keeps those files.
+
+`scenes/fixtures/sky-volumetric-clouds/` holds a copy from the `3d/sky_shaders` demo, which names
+no other asset licence: `clouds.gdshader` is `sky_volumetric_clouds.gdshader` with its weather
+reads moved in front of a branch, `weather.webp` and `worlnoise.webp` are the demo's files, and
+`perlworlnoise-32.png` is the demo's `perlworlnoise.png` reduced to 32 × 32 × 32 texels.

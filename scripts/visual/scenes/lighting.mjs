@@ -256,6 +256,12 @@ export const LIGHTING_SCENES = [
   { name: 'shader-sky-fog', file: 'unit-shader-sky-fog.tscn' },
   { name: 'shader-sky-cubemap', file: 'unit-shader-sky-cubemap.tscn' },
   { name: 'shader-sky-volume-mipmaps', file: 'unit-shader-sky-volume-mipmaps.tscn' },
+  // The demo sky_volumetric_clouds in daylight, with its weather reads in uniform control flow.
+  {
+    name: 'shader-sky-volumetric-clouds',
+    file: 'sky-volumetric-clouds/unit-shader-sky-volumetric-clouds.tscn',
+    camera: 'Root/Camera3D',
+  },
   { name: 'shader-sky-light', file: 'unit-shader-sky-light.tscn' },
   { name: 'shader-sky-half-res', file: 'unit-shader-sky-half-res.tscn' },
   // A sky shader in Real-Time mode: the rough ball reads a sharp sun disc through the fast filter.
