@@ -12,11 +12,11 @@ export interface CameraRow extends CameraState {
   readonly dimension: '3D' | '2D';
 }
 
-/** The cameras in the order they enter the tree, each kind read with `is_class` once the reads land. */
-export function useCameraRows(): readonly CameraRow[] {
+/** The cameras in the order they enter the tree, each kind read with `is_class`. Null until the reads land. */
+export function useCameraRows(): readonly CameraRow[] | null {
   const scene = useOptionalHierarchy()?.scene;
   const states = useSceneCameras();
-  const [rows, setRows] = useState<readonly CameraRow[]>([]);
+  const [rows, setRows] = useState<readonly CameraRow[] | null>(null);
   useEffect(() => {
     let isLatest = true;
     const read = scene ? Promise.all([...states.values()].map((state) => rowOf(scene, state))) : NO_ROWS;

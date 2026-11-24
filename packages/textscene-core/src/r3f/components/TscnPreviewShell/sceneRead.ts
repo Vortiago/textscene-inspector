@@ -15,19 +15,30 @@ function sceneRootOf(scene: Scene): NodeHandle | null {
   return scene.getNodeOrNull(ROOT_WINDOW_PATH)?.getChildren()[0] ?? null;
 }
 
-/** Null until a read of the text lands. A write moves no owner and no class, so it reads nothing again. */
+/** The answer of `read` and the text it read, the last that landed for this scene. */
+export interface SceneAnswer<T> {
+  readonly parse: ParseResult | null;
+  readonly value: T | null;
+}
+
+/** The last answer that landed, kept through an edit so a chip stays up until the new answer lands. */
 export function useSceneRead<T>(scene: Scene | undefined, read: SceneRead<T>): T | null {
+  return useSceneAnswer(scene, read)?.value ?? null;
+}
+
+/** Null until a first read lands. A write moves no owner and no class, so it reads nothing again. */
+export function useSceneAnswer<T>(scene: Scene | undefined, read: SceneRead<T>): SceneAnswer<T> | null {
   const observeTree = useSceneTreeSubscription(scene);
   const parse = useSyncExternalStore(observeTree, () => scene?.parse() ?? null);
   const shape = useSyncExternalStore(observeTree, () => (scene ? shapeOf(sceneRootOf(scene)) : ''));
-  const [answer, setAnswer] = useState<{ parse: ParseResult | null; value: T | null } | null>(null);
+  const [landed, setLanded] = useState<{ scene: Scene | undefined; answer: SceneAnswer<T> } | null>(null);
   useEffect(() => {
     let isLatest = true;
     const root = scene ? sceneRootOf(scene) : null;
     const reading = root && scene ? sharedRead(scene, read, root, parse, shape) : Promise.resolve(null);
     reading
       .then((value) => {
-        if (isLatest) setAnswer({ parse, value });
+        if (isLatest) setLanded({ scene, answer: { parse, value } });
       })
       .catch((error: unknown) => {
         // A new text frees the nodes during the read, and the read runs again over the new ones.
@@ -37,7 +48,7 @@ export function useSceneRead<T>(scene: Scene | undefined, read: SceneRead<T>): T
       isLatest = false;
     };
   }, [scene, read, parse, shape]);
-  return answer?.parse === parse ? answer.value : null;
+  return landed && landed.scene === scene ? landed.answer : null;
 }
 
 function shapeOf(node: NodeHandle | null): string {
@@ -65,6 +76,9 @@ function sharedRead<T>(
   const pending = reads.get(read);
   if (pending?.parse === parse && pending.shape === shape) return pending.answer as Promise<T>;
   const answer = read(root);
-  reads.set(read, { parse, shape, answer });
+  const entry = { parse, shape, answer };
+  reads.set(read, entry);
+  // A read that fails stores nothing, so the next mount reads again.
+  answer.catch(() => reads.get(read) === entry && reads.delete(read));
   return answer;
 }

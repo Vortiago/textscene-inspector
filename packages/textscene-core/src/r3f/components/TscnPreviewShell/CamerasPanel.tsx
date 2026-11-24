@@ -11,9 +11,11 @@ import styles from './TscnPreviewShell.module.css';
 /** The scene's cameras: an editor preview in the 3D and 2D views, the current cameras In-game. */
 export function CamerasPanel() {
   const { mode } = useViewportMode();
-  const cameras = useCameraRows();
+  const read = useCameraRows();
+  const cameras = read ?? [];
 
   if (mode === 'in-game') {
+    if (!read) return null;
     if (cameras.length === 0) return <div className={styles.emptyState}>No camera nodes in this scene.</div>;
     return <GameCameraRows cameras={cameras} />;
   }
