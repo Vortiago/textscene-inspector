@@ -1,0 +1,10 @@
+; One red box of unit-instanced-click-part.tscn, 6 units off the origin, so Godot's fixed orbit
+; leaves it at the side of the view and a frame on open centres it.
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://unit-instanced-click-part.tscn" id="1_part"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Far" parent="." instance=ExtResource("1_part")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0, 0)

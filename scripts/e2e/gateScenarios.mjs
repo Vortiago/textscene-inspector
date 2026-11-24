@@ -6,6 +6,7 @@ import {
 } from './eyeAndHoverScenario.mjs';
 import { checkViewStatus, runViewStatusScenario, VIEW_STATUS_FIXTURE } from './viewStatusScenario.mjs';
 import { checkViewKeys, measureViewKeys, runViewKeysScenario } from './viewKeysScenario.mjs';
+import { checkFrameFit, measureFrameFit, runFrameFitScenario } from './frameFitScenario.mjs';
 import { checkZoomButtons, measureZoomButtons, runZoomButtonsScenario } from './zoomButtonsScenario.mjs';
 import { inkStats } from '../vscode/pixels.mjs';
 import { shardOf } from '../shards/shards.mjs';
@@ -116,6 +117,14 @@ export const SCENARIOS = [
     run: runViewKeysScenario,
     check: checkViewKeys,
     measure: measureViewKeys,
+  },
+  {
+    name: 'frame fit',
+    title: 'frame fit: F in a tall orthographic view, and frame on open',
+    seconds: 9,
+    run: runFrameFitScenario,
+    check: checkFrameFit,
+    measure: measureFrameFit,
   },
   {
     name: 'zoom buttons',

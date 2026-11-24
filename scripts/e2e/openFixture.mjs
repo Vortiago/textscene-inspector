@@ -11,8 +11,12 @@ import {
  * Installs each `[script, argument]` pair before the first navigation, so a probe sees the
  * first paint. Throws, tagged with `label`, when the fixture draws no canvas.
  */
-export async function openFixture(browser, baseUrl, { fixture, label, initScripts = [] }) {
-  const context = await browser.newContext({ viewport: VIEWPORT });
+export async function openFixture(
+  browser,
+  baseUrl,
+  { fixture, label, initScripts = [], viewport = VIEWPORT }
+) {
+  const context = await browser.newContext({ viewport });
   for (const [script, argument] of initScripts) await context.addInitScript(script, argument);
   const page = await context.newPage();
   const diagnostics = attachDiagnostics(page);
