@@ -44,10 +44,13 @@ function slotOf(element: Node | number, columns: number, column: number, base: n
 }
 
 /** Bits in a `Float32Array`: three copies a `Uint32Array` as floats (r187 `WebGLUniformsGroups.js:307`). */
-class BitsArrayNode extends UniformArrayNode<'uvec4'> {
+export class BitsArrayNode extends UniformArrayNode<'uvec4'> {
   readonly bits: Uint32Array;
   /** Written only by `setup`: the words three uploads, over the buffer of its `Float32Array`. */
   private uploaded: Uint32Array | undefined;
+
+  /** Runs before each upload, so a writer that holds its values elsewhere writes `bits` from them. */
+  beforeUpload: (() => void) | null = null;
 
   constructor(slots: number) {
     super(
@@ -68,11 +71,13 @@ class BitsArrayNode extends UniformArrayNode<'uvec4'> {
   }
 
   override updateBuffer(): void {
+    this.beforeUpload?.();
     this.uploaded?.set(this.bits);
   }
 }
 
-const SLOT_BYTES = 16;
+/** The bytes of one `uvec4` slot of a `BitsArrayNode`. */
+export const SLOT_BYTES = 16;
 const LANE_BYTES = 4;
 
 /** A node per uniform in one buffer at Godot's offsets (`shader_compiler.cpp:656`): WebGL 2 has 12 blocks. */
@@ -84,7 +89,12 @@ export function materialBits(uniforms: readonly StructMember[]): UniformValue[] 
 }
 
 /** A uniform of `type` at byte `offset` of `node`. A matrix column and an array element start a slot. */
-function bitsUniform(node: BitsArrayNode, offset: number, type: ValueType, arraySize: number): UniformValue {
+export function bitsUniform(
+  node: BitsArrayNode,
+  offset: number,
+  type: ValueType,
+  arraySize: number
+): UniformValue {
   const { scalar, lanes, columns = 1 } = shapeOf(type)!;
   const rows = lanes / columns;
   const first = Math.floor(offset / SLOT_BYTES);

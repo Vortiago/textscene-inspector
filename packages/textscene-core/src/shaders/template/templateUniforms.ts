@@ -1,79 +1,97 @@
 import * as THREE from 'three';
-import { uint, uniform, uniformArray } from 'three/tsl';
+import { uniform } from 'three/tsl';
 import type { Node, UniformNode } from 'three/webgpu';
 import type { ArrayValue, StructOf, StructValue, Value } from '../language/emitValue.js';
 import type { StructMember } from '../language/shaderTree.js';
+import { BlockArrays } from './blockArrays.js';
 import { glslShapeOf } from './glslTypes.js';
 import { Specialisation } from './specialisation.js';
 import type { InterfaceBlockNode } from './templateTree.js';
 
 /** The stages of one program share them, so a block both stages declare is one set. */
 export class TemplateUniforms {
-  /** Written only by `array` and `uniformOf`, at a member's first block. */
+  /** Written only by `array` and `uniformOf`, at a member's first block. An array holds only `array`. */
   readonly byName = new Map<string, UniformNode<unknown>>();
+
+  /** Written only by `block`: the arrays of each block by instance name, which both stages share. */
+  private readonly blockArrays = new Map<string, BlockArrays>();
+
+  /** Written only by `array`: each array's value, which the second stage's declaration reads. */
+  private readonly arrayValues = new Map<string, ArrayValue>();
 
   /** Written only by `specialisation`: the program's specialisation constants, which its materials key on. */
   readonly specialisations = new Map<string, Specialisation>();
 
   /** The value of a uniform block's instance: a struct of its members' uniforms. */
   block(block: InterfaceBlockNode, structOf: StructOf): StructValue {
+    const name = block.instanceName!;
+    const isDeclared = this.blockArrays.has(name);
+    const arrays = this.blockArrays.get(name) ?? new BlockArrays(name);
+    this.blockArrays.set(name, arrays);
     const members = new Map<string, Value>();
     for (const member of block.members) {
       if (member.kind === 'slot') continue;
-      members.set(member.name, this.member(`${block.instanceName}.${member.name}`, member, structOf));
+      members.set(member.name, this.member(`${name}.${member.name}`, member, structOf, arrays));
     }
+    if (!isDeclared) arrays.seal();
     return { kind: 'struct', members };
   }
 
-  private member(name: string, member: StructMember, structOf: StructOf): Value {
+  private member(name: string, member: StructMember, structOf: StructOf, arrays: BlockArrays): Value {
     const struct = structOf(member.type);
     const count = member.arraySize ?? 0;
-    if (struct && count === 0) return this.struct(name, struct.members, structOf);
-    if (struct) return this.structArray(name, struct.members, count);
-    if (count > 0) return this.array(name, member.type, count);
+    if (struct && count === 0) return this.struct(name, struct.members, structOf, arrays);
+    if (struct) return this.structArray(name, struct.members, count, arrays);
+    if (count > 0) return this.array(name, member.type, count, arrays);
     return this.uniformOf(name, member.type);
   }
 
   /** A struct as one uniform per member: `scene_data.fog.color`. */
-  private struct(name: string, members: readonly StructMember[], structOf: StructOf): StructValue {
+  private struct(
+    name: string,
+    members: readonly StructMember[],
+    structOf: StructOf,
+    arrays: BlockArrays
+  ): StructValue {
     return {
       kind: 'struct',
       members: new Map(
-        members.map((member) => [member.name, this.member(`${name}.${member.name}`, member, structOf)])
+        members.map((member) => [
+          member.name,
+          this.member(`${name}.${member.name}`, member, structOf, arrays),
+        ])
       ),
     };
   }
 
   /** An array of structs as one array per member: `directional_lights.data.enabled`. */
-  private structArray(name: string, members: readonly StructMember[], count: number): ArrayValue {
-    const arrays = members.map(
-      (member) => [member.name, this.array(`${name}.${member.name}`, member.type, count)] as const
+  private structArray(
+    name: string,
+    members: readonly StructMember[],
+    count: number,
+    arrays: BlockArrays
+  ): ArrayValue {
+    const memberArrays = members.map(
+      (member) => [member.name, this.array(`${name}.${member.name}`, member.type, count, arrays)] as const
     );
     return {
       kind: 'array',
       count,
       element: (index) => ({
         kind: 'struct',
-        members: new Map(arrays.map(([member, array]) => [member, array.element(index)])),
+        members: new Map(memberArrays.map(([member, array]) => [member, array.element(index)])),
       }),
     };
   }
 
-  private array(name: string, type: string, count: number): ArrayValue {
-    // A `uint` array, not `bool`: three pads a bool array to `vec4` and reads it with `all()`, a GLSL error.
-    const isBool = type === 'bool';
-    const stored = isBool ? 'uint' : type;
-    const node =
-      this.byName.get(name) ??
-      uniformArray(Array.from({ length: count }, () => initialValue(stored)) as never[], stored);
-    this.byName.set(name, node as unknown as UniformNode<unknown>);
-    const element = (index: Node | number) =>
-      (node as unknown as { element(index: Node | number): ReturnType<typeof uint> }).element(index);
-    return {
-      kind: 'array',
-      count,
-      element: (index) => (isBool ? element(index).notEqual(uint(0)) : element(index)) as unknown as Node,
-    };
+  /** An array of the block's buffer, the same one at a second stage's declaration of the block. */
+  private array(name: string, type: string, count: number, arrays: BlockArrays): ArrayValue {
+    const known = this.arrayValues.get(name);
+    if (known) return known;
+    const { value, written } = arrays.add(name, type, count);
+    this.arrayValues.set(name, value);
+    this.byName.set(name, written as unknown as UniformNode<unknown>);
+    return value;
   }
 
   /** The literal of the specialisation constant `name`, at its declared value until a binding writes it. */
