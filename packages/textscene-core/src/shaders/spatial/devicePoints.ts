@@ -1,21 +1,13 @@
 import { array, float, max, property, varying, vec2, vertexIndex } from 'three/tsl';
-import type { vec4 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import type { WrittenBuiltIn } from '../template/emitTemplate.js';
+import type { Stacked, Vec2, Vec4 } from '../tslTypes.js';
 
 /** `point_coords` (`scene_forward_clustered.glsl:709`): the corner each of a point's 6 vertices takes. */
 const CORNERS = [vec2(0, 1), vec2(0, 0), vec2(1, 1), vec2(0, 0), vec2(1, 0), vec2(1, 1)];
 
 /** Godot's Vulkan device draws a point of size 0.5, 0 or -3 exactly as one of size 1. */
 const SMALLEST_POINT_SIZE = 1;
-
-type Vec2 = ReturnType<typeof vec2>;
-type Vec4 = ReturnType<typeof vec4>;
-
-/** A node three's types give no `toStack`, which adds it to the function being built. */
-interface Stacked {
-  toStack(): void;
-}
 
 /** Points as Godot's Vulkan device draws them, as two triangles a point: the instance is the point. */
 export interface DevicePoints {

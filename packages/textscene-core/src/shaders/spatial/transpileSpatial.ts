@@ -47,6 +47,8 @@ import {
 import type { TemplateStageNode } from '../template/templateTree.js';
 import { declaresInvariantPosition, setPosition, type EmittedStages } from './emittedStages.js';
 import { TreeMemo } from '../template/treeMemo.js';
+import type { Stacked, Vec2, Vec4 } from '../tslTypes.js';
+import { VIEWPORT_SIZE } from './spatialBindings.js';
 import { setPrepassDraw } from '../pipeline/depthPrepass.js';
 import { spatialPrepassDraw } from './spatialPrepass.js';
 import { rendererOf } from '../preprocessor/renderingMethod.js';
@@ -171,7 +173,7 @@ function stageEmitter(
       {
         name: 'gl_Position',
         type: 'vec4',
-        beside: pipeline.pointDraw ? [points?.size ?? UNUSED_POINT_SIZE] : [],
+        beside: pointSizeWrites(pipeline.pointDraw, points),
       },
       resources
     );
@@ -195,7 +197,12 @@ function stageEmitter(
   };
 }
 
-/** The template's `gl_PointSize` write on a points surface, which draws each point at size 1. */
+/** The `gl_PointSize` write of a points surface: native points draw at size 1, emulated ones at the size. */
+function pointSizeWrites(pointDraw: PointDraw | null, points: DevicePoints | null): WrittenBuiltIn[] {
+  if (!pointDraw) return [];
+  return [points?.size ?? UNUSED_POINT_SIZE];
+}
+
 const UNUSED_POINT_SIZE: WrittenBuiltIn = {
   name: 'gl_PointSize',
   type: 'float',
@@ -224,8 +231,6 @@ function vertexAttributes(stage: TemplateStageNode): [string, Node][] {
   );
 }
 
-type Vec4 = ReturnType<typeof vec4>;
-
 /** Moves a clip position, a variable, before it turns to GL's. */
 type ClipStep = (clip: Vec4) => void;
 
@@ -234,9 +239,6 @@ function pointExpansion(points: DevicePoints, resources: ProgramResources): Clip
   const viewportSize = resources.uniforms.uniformOf(VIEWPORT_SIZE, 'vec2');
   return (clip) => points.expand(clip, viewportSize);
 }
-
-/** The template's `scene_data.viewport_size`, as `spatialBindings` writes it. */
-const VIEWPORT_SIZE = 'scene_data_block.data.viewport_size';
 
 /** Vulkan's y down and Godot's reversed depth (`render_scene_data_rd.cpp:83`) as GL's, built once. */
 function glClipPosition(position: Node, vulkanClip: Vec4, step: ClipStep | null): Node {
@@ -265,13 +267,6 @@ function vulkanFragCoord(clip: Vec4): Node {
 function vulkanPointCoord(): Node {
   const uv = pointUV as unknown as Vec2;
   return vec2(uv.x, float(1).sub(uv.y)) as unknown as Node;
-}
-
-type Vec2 = ReturnType<typeof vec2>;
-
-/** A node three's types give no `toStack`, which adds it to the function being built. */
-interface Stacked {
-  toStack(): void;
 }
 
 /** `gl_FragDepth`, which starts at Godot's depth: GL's depth is 1 minus it, as `glClipPosition` turns it. */

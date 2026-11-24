@@ -154,10 +154,10 @@ describe('emulatedPointGeometry', () => {
     expect([...vertex.array]).toEqual([0, 0, 0, 0, 1, 0, 1, 0, 0]);
   });
 
-  it('repeats an array the surface lacks for each point, so no instance reads past its end', () => {
+  it('shares the one value of an array the surface lacks across every point', () => {
     const color = emulated().getAttribute('color_attrib') as THREE.InstancedBufferAttribute;
-    expect(color.count).toBe(3);
-    expect([...color.array.slice(8)]).toEqual([1, 1, 1, 1]);
+    expect([color.count, color.meshPerAttribute]).toEqual([1, 3]);
+    expect([...color.array]).toEqual([1, 1, 1, 1]);
   });
 
   it("keeps the source's bounds, which three culls by", () => {

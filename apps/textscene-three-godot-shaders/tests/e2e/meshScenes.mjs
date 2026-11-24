@@ -909,7 +909,7 @@ function indexed(mesh) {
 
 const POINT_SIZE_ROWS = ['spatial.vertex.POINT_SIZE'];
 
-/** Off the ties where a quad's snapped corners and Vulkan's point square round apart (known-defects.md). */
+/** Off the pixel ties, where a quad's snapped corners and Vulkan's point square round to different pixels. */
 const POINT_PLACEMENT = { ...SPHERE_MOVED, position: [0.2991, -0.2033, -0.5] };
 
 /** `scene`, a stage scene, blending its colour onto the background by adding. */
@@ -993,7 +993,7 @@ const POINT_SCENES = [
       )
     )
   ),
-  // ANGLE's Bresenham lines leave these pixels apart from Godot's (known-defects.md): the gate fails above.
+  // ANGLE rasterises these lines on 93 px other than Godot's Vulkan device does: the gate fails above.
   {
     ...stageScene('spatial-lines-surface', { fragment: 'ALBEDO = vec3(UV, 0.3);' }, [], SPHERE_EDGES),
     primitive: 'lines',

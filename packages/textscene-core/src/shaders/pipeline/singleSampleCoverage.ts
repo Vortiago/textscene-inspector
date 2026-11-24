@@ -1,13 +1,12 @@
 import type * as THREE from 'three';
-import { Discard, Fn, If, uniform, vec4 } from 'three/tsl';
+import { Discard, Fn, If, uniform } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import {
   AlphaAntiAliasing,
   type AlphaToCoverageMode,
 } from '../../godot/rendering/materials/alphaAntialiasing.js';
 import { coversOneSample } from './oneSampleTarget.js';
-
-type Vec4 = ReturnType<typeof vec4>;
+import type { Vec4 } from '../tslTypes.js';
 
 /** WebGL skips alpha to coverage on one sample (GLES 3.0.6 §4.1.3): cut at 0.5, a dithered mask's mean. */
 export function coveredOnOneSample(colour: Node, mode: AlphaToCoverageMode): Node {

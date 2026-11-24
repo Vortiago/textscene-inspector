@@ -20,7 +20,7 @@ import { renderTargetSize } from '../renderTargetSize.js';
 import { renderedEnvironmentFog } from '../fog/fogFrame.js';
 
 export { setMaterialParameters } from '../../shaders/uniforms/materialParameters.js';
-export { drawPoints, undrawnMaterial } from './pointSurface.js';
+export { drawPoints } from './pointSurface.js';
 
 /** A spatial shader transpiled for one surface, or why the surface draws Godot's default one instead. */
 export type SpatialSurface =
@@ -62,9 +62,9 @@ export function spatialSurfaceOf(
 
 /** The attributes of the surface `object` draws, or of the surface its emulated points read. */
 function prepareDrawnSurface(object: THREE.Object3D): void {
-  const { parent } = object;
   if (isEmulatedPoints(object)) {
-    if (parent && withGodotSurface((parent as THREE.Mesh).geometry)) refreshEmulatedPoints(object);
+    const surface = (object.parent as Partial<THREE.Mesh> | null)?.geometry;
+    if (surface && withGodotSurface(surface)) refreshEmulatedPoints(object as THREE.Mesh, surface);
     return;
   }
   const geometry = (object as Partial<THREE.Mesh>).geometry;

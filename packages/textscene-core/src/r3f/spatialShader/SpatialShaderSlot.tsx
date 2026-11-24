@@ -10,6 +10,7 @@ import { warnOnce } from '../../utils/warnOnce';
 import { useNodesHandler } from '../canvasRenderer/canvasNodesHandler';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext';
 import { drawGroupOf, materialAt, placeMaterial, type MaterialHost } from '../materials/swappedMaterials';
+import { OTHER_DRAWS_SURFACE } from '../materials/useOneSurfaceStartingMaterial';
 import { useProjectShaderOptions } from '../projectShaderOptions';
 import { useShaderTextures } from '../shaderTextures/shaderTextures';
 
@@ -17,7 +18,6 @@ import { useShaderTextures } from '../shaderTextures/shaderTextures';
 const loadSpatialSurface = memoisedImport(() => import('./spatialSurface'));
 
 type SpatialSurfaceModule = typeof import('./spatialSurface');
-type PointHost = Parameters<SpatialSurfaceModule['drawPoints']>[0];
 
 const LOAD_FAILURE =
   "[material] The previewer could not load its spatial shader translator, and draws Godot's default 3D surface. Reload to try again.";
@@ -78,11 +78,11 @@ export function SpatialShaderSlot({ shader, attach, fallback }: SpatialShaderSlo
   );
 }
 
-interface GodotSurfaceHost extends MaterialHost {
+interface GodotSurfaceHost extends MaterialHost, THREE.Object3D {
   geometry: THREE.BufferGeometry;
 }
 
-type SurfaceModule = Pick<SpatialSurfaceModule, 'withGodotSurface' | 'drawPoints' | 'undrawnMaterial'>;
+type SurfaceModule = Pick<SpatialSurfaceModule, 'withGodotSurface' | 'drawPoints'>;
 
 /** Godot's attributes before the material: three builds the program from the attributes of the first draw. */
 function godotSurfaceAttach(attach: string | undefined, module: SurfaceModule, pointDraw: PointDraw | null) {
@@ -90,9 +90,8 @@ function godotSurfaceAttach(attach: string | undefined, module: SurfaceModule, p
   return (host: GodotSurfaceHost, material: THREE.Material) => {
     if (host.geometry.getAttribute('position')) module.withGodotSurface(host.geometry);
     const previous = materialAt(host, drawGroup);
-    const stopPoints =
-      pointDraw && module.drawPoints(host as unknown as PointHost, drawGroup, material, pointDraw);
-    placeMaterial(host, drawGroup, stopPoints ? module.undrawnMaterial() : material);
+    const stopPoints = pointDraw && module.drawPoints(host, drawGroup, material, pointDraw);
+    placeMaterial(host, drawGroup, stopPoints ? OTHER_DRAWS_SURFACE : material);
     return () => {
       stopPoints?.();
       if (previous) placeMaterial(host, drawGroup, previous);

@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { withGodotAttributes } from '../../shaders/spatial/meshAttributes';
-import { drawPoints, isEmulatedPoints, refreshEmulatedPoints, undrawnMaterial } from './pointSurface';
+import { OTHER_DRAWS_SURFACE } from '../materials/useOneSurfaceStartingMaterial';
+import { drawPoints, isEmulatedPoints, refreshEmulatedPoints } from './pointSurface';
 
 /** Two triangles of a quad, the first in draw group 0 and the second in draw group 1. */
 function twoGroupQuad(): THREE.BufferGeometry {
@@ -31,7 +32,7 @@ describe('drawPoints', () => {
     const [points] = host.children as THREE.Points[];
     expect(points!.isPoints).toBe(true);
     expect(points!.geometry).toBe(host.geometry);
-    expect(points!.material).toEqual([undrawnMaterial(), material]);
+    expect(points!.material).toEqual([OTHER_DRAWS_SURFACE, material]);
   });
 
   it("draws an emulated point for each corner of the group in Godot's order, as Vulkan draws indexed points", () => {
@@ -68,11 +69,7 @@ describe('refreshEmulatedPoints', () => {
     drawPoints(host, null, material, 'emulated');
     const [points] = host.children as THREE.Mesh[];
     const before = points!.geometry;
-    expect(refreshEmulatedPoints(points!)).toBe(true);
+    refreshEmulatedPoints(points!, host.geometry);
     expect(points!.geometry).not.toBe(before);
-  });
-
-  it('is false for a draw of no emulated points (edge case)', () => {
-    expect(refreshEmulatedPoints(new THREE.Mesh())).toBe(false);
   });
 });
