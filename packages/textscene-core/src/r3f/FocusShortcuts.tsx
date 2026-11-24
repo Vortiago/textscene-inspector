@@ -4,14 +4,9 @@ import * as THREE from 'three';
 import { useOptionalSelection, useSelectedNodePathStore } from './contexts/SelectionContext.js';
 import { EditorControlsHandle, isDrawingPreview } from './EditorControlsHandle.js';
 import { isViewKeyEvent } from './viewFocus.js';
+import { isFocusOriginKey, isFocusSelectionKey } from './editorKeyBindings.js';
 import { resolveFrameTarget } from './resolveFrameTarget.js';
 import { frameSceneBounds, type OrbitLike } from './frameSceneBounds.js';
-
-/** A bare letter: a held modifier makes a chord of the page, and Shift+F is freelook. */
-function isBareKey(event: KeyboardEvent, key: string): boolean {
-  if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return false;
-  return event.key.toLowerCase() === key;
-}
 
 /** Godot's F and O (node_3d_editor_plugin.cpp:2655-2659). F frames bounds, not a point (ADR-0029). */
 export function FocusShortcuts() {
@@ -39,8 +34,8 @@ export function FocusShortcuts() {
       if (!isViewKeyEvent(event, element)) return;
       // No key in a preview (node_3d_editor_plugin.cpp:1826-1829): F would move the authored Camera3D.
       if (isDrawingPreview(get())) return;
-      if (isBareKey(event, 'f')) focusSelection();
-      else if (isBareKey(event, 'o')) focusOrigin();
+      if (isFocusSelectionKey(event)) focusSelection();
+      else if (isFocusOriginKey(event)) focusOrigin();
     }
 
     element.addEventListener('keydown', onKeyDown);

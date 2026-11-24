@@ -29,7 +29,7 @@ import { World2DCanvas } from './World2DCanvas.js';
 import { FIT_ON_OPEN_2D_STORAGE_KEY } from './viewport2d.js';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext.js';
 import { createEditRects, EditRectsProvider } from '../../editRect/editRects.js';
-import { useFocusOnPointerEnter } from '../../viewFocus.js';
+import { useViewFocus } from '../../viewFocus.js';
 import { Stage2DProvider, type Stage2D } from './FocusSelection2D.js';
 import styles from './Canvas2DStage.module.css';
 
@@ -94,7 +94,7 @@ export function Canvas2DStage({
     stageRef.current = element;
     setStageElement(element);
   }, []);
-  useFocusOnPointerEnter(stageElement);
+  useViewFocus(stageElement);
   const [editRects] = useState(createEditRects);
   const [view, setView] = useState<View2D>({ pan: { x: 0, y: 0 }, zoom: 1 });
   const { pan, zoom } = view;

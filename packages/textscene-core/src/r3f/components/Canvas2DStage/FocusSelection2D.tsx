@@ -7,6 +7,7 @@ import { liveTreeOf } from '../../liveSceneTree.js';
 import { liveFilesOf } from '../../liveFiles.js';
 import { node2dWorldTransform } from '../../node2dWorldTransform.js';
 import { isViewKeyEvent } from '../../viewFocus.js';
+import { isFocusSelectionKey, isFrameSelectionKey } from '../../editorKeyBindings.js';
 import type { EditRects } from '../../editRect/editRects.js';
 import {
   centerSelection,
@@ -31,8 +32,6 @@ Stage2DContext.displayName = 'Stage2DContext';
 export function Stage2DProvider({ stage, children }: { stage: Stage2D; children: ReactNode }) {
   return <Stage2DContext.Provider value={stage}>{children}</Stage2DContext.Provider>;
 }
-
-const hasModifier = (event: KeyboardEvent) => event.ctrlKey || event.metaKey || event.altKey;
 
 /** Godot's Center Selection (F) and Frame Selection (Shift+F) (canvas_item_editor_plugin.cpp:5941-5942). */
 export function FocusSelection2D() {
@@ -62,7 +61,8 @@ function useFocusSelection2D(stage2D: Stage2D | null): void {
 
     function onKeyDown(event: KeyboardEvent): void {
       if (!isViewKeyEvent(event, stage)) return;
-      if (event.key.toLowerCase() !== 'f' || hasModifier(event)) return;
+      const isFrame = isFrameSelectionKey(event);
+      if (!isFrame && !isFocusSelectionKey(event)) return;
       const rect = selectedRect();
       // Godot centres on the origin with nothing selected: its merged rect stays empty (:5165-5167).
       const target = rect ?? { x: 0, y: 0, w: 0, h: 0 };
@@ -71,7 +71,7 @@ function useFocusSelection2D(stage2D: Stage2D | null): void {
       if (!current) return;
       event.preventDefault();
       moveView(
-        event.shiftKey
+        isFrame
           ? frameSelection(current, target, size, zoomRange.min, zoomRange.max)
           : centerSelection(current, target, size)
       );

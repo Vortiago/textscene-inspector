@@ -39,7 +39,7 @@ function RegisteredMesh({ path, position }: { path: string; position: [number, n
 
 /** A key pressed while the view holds focus. */
 function press(key: string) {
-  view.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+  view.dispatchEvent(new KeyboardEvent('keydown', { code: `Key${key.toUpperCase()}`, key, bubbles: true }));
 }
 
 const fireF = () => press('f');
@@ -77,7 +77,9 @@ describe('<FocusShortcuts> F', () => {
     await renderer.advanceFrames(1, 0);
     const before = camera.position.clone();
 
-    globalThis.document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'f', bubbles: true }));
+    globalThis.document.body.dispatchEvent(
+      new KeyboardEvent('keydown', { code: 'KeyF', key: 'f', bubbles: true })
+    );
     await renderer.advanceFrames(1, 0);
 
     expect(camera.position.equals(before)).toBe(true);
@@ -120,7 +122,7 @@ describe('<FocusShortcuts> F', () => {
     await renderer.advanceFrames(1, 0);
     const before = camera.position.clone();
 
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'f', bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyF', key: 'f', bubbles: true }));
     await renderer.advanceFrames(1, 0);
 
     expect(camera.position.equals(before)).toBe(true);

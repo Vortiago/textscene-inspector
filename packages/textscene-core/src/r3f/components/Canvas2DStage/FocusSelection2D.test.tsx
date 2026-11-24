@@ -86,7 +86,7 @@ describe('F in the 2D view', () => {
     const stage = await mountStage('Main/Sprite');
     const zoom = Number(world().dataset.zoom);
 
-    press(stage, { key: 'f' });
+    press(stage, { code: 'KeyF', key: 'f' });
 
     // The global rect (300, 200, 64, 32) centres at (332, 216), which lands on the stage centre.
     await waitFor(() => {
@@ -100,7 +100,7 @@ describe('F in the 2D view', () => {
     const stage = await mountStage('Main/Sprite');
     const zoom = Number(world().dataset.zoom);
 
-    press(stage, { key: 'f' });
+    press(stage, { code: 'KeyF', key: 'f' });
 
     await waitFor(() => {
       const [x] = world().dataset.pan!.split(',').map(Number);
@@ -112,7 +112,7 @@ describe('F in the 2D view', () => {
     item.rect = { x: -50, y: -25, w: 100, h: 50 };
     const stage = await mountStage('Main/Sprite');
 
-    press(stage, { key: 'F', shiftKey: true });
+    press(stage, { code: 'KeyF', key: 'F', shiftKey: true });
 
     // The global rect is 200 x 100: min(800 / 200, 600 / 100) * 0.9 = 3.6, held to the stage's 4.
     await waitFor(() => expect(Number(world().dataset.zoom)).toBeCloseTo(3.6, 6));
@@ -123,7 +123,7 @@ describe('F in the 2D view', () => {
     await mountStage('Main/Sprite');
     const before = world().dataset.pan;
 
-    press(document.body, { key: 'f' });
+    press(document.body, { code: 'KeyF', key: 'f' });
 
     expect(world().dataset.pan).toBe(before);
   });

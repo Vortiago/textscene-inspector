@@ -10,7 +10,6 @@ import { isFreelookToggleKey } from './editorKeyBindings.js';
 import type { Freelook, FreelookControl } from './freelook.js';
 import { freelookCursor } from './godotEditorCursor.js';
 import { isTypingTarget } from './hooks/isTypingTarget.js';
-import { isViewKeyEvent } from './viewFocus.js';
 import { exitPointerLock, holdsPointerLock, requestPointerLock } from './pointerLock.js';
 
 /** A lone Alt keyup opens the menu bar on Windows and Linux, which would take the keyboard mid-flight. */
@@ -53,7 +52,7 @@ function handleKeyDown(event: KeyboardEvent, handle: EditorControlsHandle, get: 
   // so no other shortcut of the page hears a key.
   if (freelook.isActive) event.stopImmediatePropagation();
   if (isFreelookToggleKey(event)) {
-    if (!isViewKeyEvent(event, get().gl.domElement)) return;
+    if (!(event.target instanceof Node) || !get().gl.domElement.contains(event.target)) return;
     event.preventDefault();
     if (!event.repeat) toggleFreelook(handle, get);
     return;
