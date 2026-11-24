@@ -12,6 +12,7 @@ import { loadPropertyAccess, type PropertyAccess, type SceneProperties } from '.
 import type { SceneTree, SceneTreeNode } from './sceneRuntime.js';
 import { sceneValueOf, valueOfSceneValue, variantOf, type SceneValue } from './variant.js';
 import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
+import { projectViewportSize } from '../parser/projectSettingsParser.js';
 import { isWritable } from './writtenScene.js';
 import {
   argumentCountError,
@@ -130,6 +131,7 @@ export class SceneNodes implements HandleHost {
 
   /** `Object::get`: a getter this release ports as a method runs it. */
   async get(path: string, property: string): Promise<SceneValue | null> {
+    if (path === ROOT_WINDOW_PATH) return this.rootWindowProperty(property);
     const generation = this.generation;
     const accessor = findPortedAccessor(this.typeOfNode(path), 'getter', property);
     if (!accessor) return this.getStored(path, property);
@@ -141,6 +143,17 @@ export class SceneNodes implements HandleHost {
       target,
       []
     )) as SceneValue | null;
+  }
+
+  /** The root window answers only `content_scale_size`, Godot's default until the settings load. */
+  private rootWindowProperty(property: string): SceneValue {
+    if (property !== 'content_scale_size') {
+      throw new Error(
+        `expected content_scale_size of the root window, got ${property}: its other properties are not in this release`
+      );
+    }
+    const { width, height } = this.source.tree()?.contentScaleSize ?? projectViewportSize(null);
+    return variantOf({ type: T.VECTOR2I, value: [width, height] });
   }
 
   /** `Object::set`: a setter this release ports as a method runs it. */

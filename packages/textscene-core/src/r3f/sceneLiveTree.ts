@@ -6,8 +6,10 @@ import {
   projectFontPath,
   projectThemePath,
   projectTreeSettings,
+  projectViewportSize,
   type ProjectSettings,
   type ProjectTreeSettings,
+  type ProjectViewportSize,
 } from '../parser/projectSettingsParser.js';
 import type { SceneScope } from '../parser/types.js';
 import { PROJECT_FILE_PATH } from '../godot/project/project.js';
@@ -129,8 +131,14 @@ const camerasOf = perObject((tree: LiveTree): readonly TreeCamera[] => {
 });
 
 /** The scene's view of one Live scene tree: a node is found once every instance above it has loaded. */
-function sceneTreeOf(tree: LiveTree, loader: ResourceLoader, rootScenePath: string): SceneTree {
+function sceneTreeOf(
+  tree: LiveTree,
+  loader: ResourceLoader,
+  rootScenePath: string,
+  contentScaleSize: ProjectViewportSize
+): SceneTree {
   return {
+    contentScaleSize,
     node(livePath) {
       const names = livePath.split('/');
       const ancestors: LiveLink[] = [];
@@ -153,7 +161,11 @@ function sceneTreeOf(tree: LiveTree, loader: ResourceLoader, rootScenePath: stri
 }
 
 const NO_CAMERAS: readonly TreeCamera[] = [];
-const NO_TREE: SceneTree = { node: () => null, uniquePaths: () => new Map(), cameras: () => NO_CAMERAS };
+const NO_TREE: Omit<SceneTree, 'contentScaleSize'> = {
+  node: () => null,
+  uniquePaths: () => new Map(),
+  cameras: () => NO_CAMERAS,
+};
 
 /** Godot loads these files as the game starts, for every scene (theme_db.cpp:52-53). */
 function projectReads(settings: ProjectSettings | null): FileRead[] {
@@ -197,10 +209,12 @@ function sceneRuntimeOf(scene: Scene): SceneRuntime {
   let starts: { graph: SceneGraph | null; settings: ProjectRead; key: string; starts: WalkStart[] } | null =
     null;
   let project: ProjectTreeSettings = projectTreeSettings(null);
+  let contentScaleSize = projectViewportSize(null);
   const readProject = async () => {
     const bus = loader.fileEventBus;
     settings = bus ? await readProjectSettings(bus) : null;
     project = projectTreeSettings(settings ?? null);
+    contentScaleSize = projectViewportSize(settings ?? null);
     notify();
     notifyFiles();
   };
@@ -214,8 +228,8 @@ function sceneRuntimeOf(scene: Scene): SceneRuntime {
     tree(graph: SceneGraph) {
       const shared = currentSharedTree(graph, loader, project);
       return shared
-        ? sceneTreeOf(liveTreeOf(shared.roots, shared.ctx), loader, scene.rootScenePath)
-        : NO_TREE;
+        ? sceneTreeOf(liveTreeOf(shared.roots, shared.ctx), loader, scene.rootScenePath, contentScaleSize)
+        : { ...NO_TREE, contentScaleSize };
     },
     subscribe(listener) {
       listeners.add(listener);

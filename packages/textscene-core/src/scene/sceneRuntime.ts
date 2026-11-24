@@ -1,5 +1,6 @@
 import type { ContainerWrite } from '../core/childVisibility.js';
 import type { SceneGraph } from '../core/SceneGraph.js';
+import type { ProjectViewportSize } from '../parser/projectSettingsParser.js';
 import type { ResourceReference, VariantValue } from '../godot/variant/variantValue.js';
 import type { Scene } from './openScene.js';
 import type { SceneFile } from './sceneFiles.js';
@@ -49,6 +50,8 @@ export interface SceneTree {
   uniquePaths(livePath: string): ReadonlyMap<string, string>;
   /** The cameras of the loaded nodes in the order they enter the tree. The same array while no load moves. */
   cameras(): readonly TreeCamera[];
+  /** The root window's `content_scale_size`, the project's viewport size: its default until the read ends. */
+  readonly contentScaleSize: ProjectViewportSize;
 }
 
 /** What the scene reads of the renderer: the Live scene tree and its loads. */
