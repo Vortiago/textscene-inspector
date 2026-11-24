@@ -37,7 +37,7 @@ export function emitShader(
       tree.lowered.body,
       EmitScope.of(new Map([...uniforms, ...names]))
     );
-  const context: EmitContext = { structOf, functions: new CalledFunctions(trees, structOf, body) };
+  const context: EmitContext = { structOf, functions: new CalledFunctions(trees, structOf, body, uniforms) };
   return new Map([...trees].map(([name, tree]) => [name, calledInPlace(tree, body, structOf)]));
 }
 

@@ -15,7 +15,9 @@ import {
   variablesOf,
 } from './emitValue.js';
 import type { CalledFunctions, CallResult } from './emitCall.js';
+import type { Lanes } from './glslangCalls.js';
 import type { GlslangFolding } from './glslangFolding.js';
+import { GuardFolding, literalLanes } from './guardFolding.js';
 import { isAssignOperator } from './operators.js';
 import { STEPS, writtenTargets } from './assignment.js';
 import { arraySizeOf, isCall } from './treeWalk.js';
@@ -48,7 +50,7 @@ export class ExpressionEmitter {
   }
 
   value(expression: Expression): Value {
-    const folded = this.folding.lanesOf(expression);
+    const folded = this.folding.lanesOf(expression) ?? this.guardLanes(expression);
     if (folded) return constantNode(expression.type, folded);
     switch (expression.kind) {
       case 'constant':
@@ -86,6 +88,24 @@ export class ExpressionEmitter {
       case 'operator':
         return this.operator(expression);
     }
+  }
+
+  /** A guard's value where it rests on literals: an `&&`, an `||` or a call of no arguments. */
+  guardLanes(expression: Expression): Lanes | undefined {
+    if (expression.kind !== 'operator') return undefined;
+    const isGuard =
+      expression.op === 'OP_AND' ||
+      expression.op === 'OP_OR' ||
+      (isCall(expression) && expression.row.id === 'OP_CALL' && expression.operands.length === 0);
+    return isGuard ? this.guards.lanesOf(expression) : undefined;
+  }
+
+  private get guards(): GuardFolding {
+    return new GuardFolding(
+      this.folding,
+      (name) => literalLanes(this.scope.lookup(name)),
+      (name) => this.context.functions.constantResult(name)
+    );
   }
 
   private arrayElement(arrayExpression: Expression, index: Expression): Value {

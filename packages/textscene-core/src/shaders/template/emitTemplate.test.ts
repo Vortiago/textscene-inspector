@@ -75,6 +75,36 @@ describe('emitTemplateStage', () => {
     expect(fragmentOf(globals, 'color = sampled(shadow_atlas);')).toMatch(/texture\(\s*nodeUniform/);
   });
 
+  describe('a guard on a specialisation constant', () => {
+    const guarded = (packed: string, guard = 'is_on()') =>
+      fragmentOf(
+        [
+          `layout(constant_id = 0) const uint packed = ${packed};`,
+          'bool is_on() { return (packed & 1u) != 0u; }',
+          'layout(set = 0, binding = 1) uniform texture2D atlas;',
+          'layout(set = 0, binding = 2) uniform sampler atlas_sampler;',
+          'layout(set = 0, binding = 3, std140) uniform Params {\n\tuint mode;\n} params;',
+        ].join('\n'),
+        `color = vec4(0.0);\nif (${guard}) { color = texture(sampler2D(atlas, atlas_sampler), vec2(0.5)); }`
+      );
+
+    it('emits no read of a branch the guard folds off, as a driver drops it', () => {
+      expect(guarded('0u')).not.toMatch(/uniform sampler2D/);
+    });
+
+    it('emits the branch the guard folds on', () => {
+      expect(guarded('1u')).toMatch(/uniform sampler2D/);
+    });
+
+    it('folds an `&&` whose first operand folds off, whatever the second reads', () => {
+      expect(guarded('0u', 'is_on() && params.mode != 0u')).not.toMatch(/uniform sampler2D/);
+    });
+
+    it('keeps a guard that reads a uniform (edge case)', () => {
+      expect(guarded('1u', 'is_on() && params.mode != 0u')).toMatch(/uniform sampler2D/);
+    });
+  });
+
   it('folds a specialisation constant to its declared value', () => {
     expect(fragmentOf(SPECIALISED, SPECIALISED_BODY)).toMatch(/vec4\(\s*3\.0\s*\)/);
   });

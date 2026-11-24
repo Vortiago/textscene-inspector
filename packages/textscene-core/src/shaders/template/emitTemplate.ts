@@ -106,7 +106,7 @@ export function emitTemplateStage(
       tree.lowered.body,
       EmitScope.of(new Map([...globals, ...names]))
     );
-  const context: EmitContext = { structOf, functions: new CalledFunctions(trees, structOf, body) };
+  const context: EmitContext = { structOf, functions: new CalledFunctions(trees, structOf, body, globals) };
   const main = trees.get('main');
   if (!main) throw new Error('expected a main function in the template stage');
   const run = Fn(() => {
