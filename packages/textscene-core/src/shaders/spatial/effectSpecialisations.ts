@@ -2,7 +2,7 @@ import type { Binding } from '../uniforms/bindingTable.js';
 
 const DATA = 'implementation_data_block.data';
 
-/** `ImplementationData` members a frame holds: the previewer draws no SSAO, SSIL, SSR or volumetric fog. */
+/** Members a frame holds: a transpiled material binds no SSAO, SSIL, SSR or volumetric fog texture yet. */
 export const EFFECT_SPECIALISATIONS: readonly Binding<unknown>[] = [
   { uniform: `${DATA}.ss_effects_flags`, godot: 'render_forward_clustered.cpp:749-769', value: () => 0 },
   {
