@@ -8,10 +8,10 @@ import {
   writeSkyBindings,
 } from '@textscene/three-godot-shaders';
 import { framePixels } from './framePixels.js';
-import { displayRenderer, euler, godotCamera, linear, shaderTime } from './godotView.js';
+import { displayRenderer, godotCamera, lightAxis, linear, shaderTime } from './godotView.js';
 
 function skyLight(light) {
-  const direction = new THREE.Vector3(0, 0, 1).applyEuler(euler(light.rotation)).normalize();
+  const direction = lightAxis(light.rotation);
   const color = linear(light.color);
   return { direction, energy: light.energy, color, size: THREE.MathUtils.degToRad(light.size) };
 }

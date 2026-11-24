@@ -25,6 +25,9 @@ const declaration = userDataDeclaration<LightSizeDeclaration>(
 );
 
 /** The `userData` entry that declares a light's size, to merge into its `userData`. */
+/** The light's declaration, or null for a light that made none, such as a GLB light. */
+export const readLightSizeDeclaration = declaration.read;
+
 export function lightSizeUserData(size: number): Record<string, unknown> {
   return declaration.userData({ size });
 }

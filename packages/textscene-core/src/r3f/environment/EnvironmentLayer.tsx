@@ -9,12 +9,12 @@
 import { useEffect, type ReactNode } from 'react';
 import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
+import { flatAmbientIntensity } from '../ambientLight';
 import { BackgroundMode } from '../../godot/scene/environment';
 import { FOG_SUN_SCATTER_MIN } from '../../godot/rendering/environment/depthFog';
 import type { EnvironmentSettings } from '../../resources/environment/types';
 import type { AuthoredSky } from '../../resources/sky/types';
 import { godotColorToLinear } from '../godotColor';
-import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { useDraws3D } from './draws3D';
 import { useViewShow } from '../viewShow/ViewShowContext';
 import { SkyLayer } from '../sky/SkyLayer';
@@ -107,11 +107,7 @@ function AtHolder({ path, children }: { path: string | null | undefined; childre
   return path ? <NodePathProvider path={path}>{children}</NodePathProvider> : <>{children}</>;
 }
 
-/**
- * Lights the scene with the flat ambient, when it has energy. `* LIGHT_INTENSITY_SCALE`: Godot adds
- * `ambient_light * albedo` with no 1/PI, while three multiplies the colour by `albedo/PI`. The sky
- * ambient takes no factor, because `godotIBLIrradiance` already returns `PI * envColor * intensity`.
- */
+/** The sky ambient takes no factor: `godotIBLIrradiance` already returns `PI * envColor * intensity`. */
 function useFlatAmbient(ambient: EnvironmentSettings['ambient']): void {
   const scene = useThree((state) => state.scene);
   const environment = useEnvironmentKey();
@@ -120,7 +116,7 @@ function useFlatAmbient(ambient: EnvironmentSettings['ambient']): void {
   const isClearColor = ambient?.isClearColor === true;
   useEffect(() => {
     if (!color || energy <= 0) return undefined;
-    const light = new THREE.AmbientLight(godotColorToLinear(color), energy * LIGHT_INTENSITY_SCALE);
+    const light = new THREE.AmbientLight(godotColorToLinear(color), flatAmbientIntensity(energy));
     // Shown, not added: an add per pass would tell every tracker of the scene that it changed.
     light.visible = false;
     scene.add(light);

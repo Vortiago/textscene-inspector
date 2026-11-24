@@ -9,7 +9,7 @@ import {
   writeSpatialBindings,
 } from '@textscene/three-godot-shaders';
 import { framePixels } from './framePixels.js';
-import { displayRenderer, euler, godotCamera, linear, shaderTime } from './godotView.js';
+import { displayRenderer, euler, godotCamera, lightAxis, linear, shaderTime } from './godotView.js';
 
 /** A fragment whose GLSL reads a name it never declares, which every driver refuses. */
 const BROKEN_FRAGMENT = glslFn('vec4 brokenFragment() { return undeclared_in_glsl; }');
@@ -59,6 +59,39 @@ function environmentFog(properties) {
     skyAffect: fog.fog_sky_affect,
     aerialPerspective: fog.fog_aerial_perspective,
   };
+}
+
+/** `DirectionalLight3D()`'s defaults (`scene/3d/light_3d.cpp:468-491, 600-608`). */
+const SUN_DEFAULTS = {
+  light_energy: 1,
+  light_color: [1, 1, 1],
+  light_specular: 1,
+  light_angular_distance: 0,
+  light_negative: false,
+  light_cull_mask: 0xffffffff,
+  light_bake_mode: 2,
+  light_volumetric_fog_energy: 1,
+  sky_mode: 0,
+};
+
+/** `DirectionalLight3D.SKY_MODE_SKY_ONLY`, a light Godot's light buffer skips (`light_storage.cpp:631`). */
+const SKY_ONLY = 2;
+
+/** The directional lights of a scene that light surfaces, as the light buffer reads them. */
+function directionalLights(lights = []) {
+  return lights
+    .map(({ rotation, properties }) => ({ rotation, ...SUN_DEFAULTS, ...properties }))
+    .filter((light) => light.sky_mode !== SKY_ONLY)
+    .map((light) => ({
+      direction: lightAxis(light.rotation),
+      energy: light.light_negative ? -light.light_energy : light.light_energy,
+      color: linear(light.light_color),
+      specular: light.light_specular,
+      size: 1 - Math.cos(THREE.MathUtils.degToRad(light.light_angular_distance)),
+      cullMask: light.light_cull_mask,
+      bakeMode: light.light_bake_mode,
+      volumetricFogEnergy: light.light_volumetric_fog_energy,
+    }));
 }
 
 /** Each corner of each triangle in three's order: three's front face winds the other way. */
@@ -135,8 +168,10 @@ function drawMesh(spec) {
       width,
       height,
       time: shaderTime(spec.clock),
-      clearColor: GODOT_CLEAR_COLOR,
+      ambientLight: GODOT_CLEAR_COLOR,
+      emissiveExposure: 1,
       fog,
+      directionalLights: directionalLights(spec.lights),
     });
     specialiseSpatial(spatial, fog);
   }

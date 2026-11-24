@@ -7,8 +7,9 @@ import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
 import type { EnvironmentFog } from '../pipeline/environmentFog.js';
 import { FOG_BINDINGS, FOG_SPECIALISATIONS, USE_FOG } from './fogBindings.js';
 import { EFFECT_SPECIALISATIONS } from './effectSpecialisations.js';
+import { DIRECTIONAL_LIGHT_BINDINGS, type DirectionalLight } from './directionalLights.js';
 
-/** What the colour pass reads from a frame with no light and no camera attributes. */
+/** What the colour pass reads from a frame with no camera attributes. */
 export interface SpatialScene {
   readonly camera: THREE.PerspectiveCamera | THREE.OrthographicCamera;
   /** The size of the viewport in pixels. */
@@ -16,20 +17,29 @@ export interface SpatialScene {
   readonly height: number;
   /** The shader time in seconds, `TIME`. */
   readonly time: number;
-  /** The viewport's clear colour, linear: with no environment it is the ambient light. */
-  readonly clearColor: THREE.Color;
+  /** The flat ambient light, linear and with its energy: the clear colour with no Environment. */
+  readonly ambientLight: THREE.Color;
+  /** The camera attributes' exposure factor, 1 with none (`render_scene_data_rd.cpp:239, 254`). */
+  readonly emissiveExposure: number;
   /** The environment's fog, or nothing when it is off. */
   readonly fog?: EnvironmentFog;
+  /** The directional lights that light surfaces, in the order Godot's cull hands them over. */
+  readonly directionalLights: readonly DirectionalLight[];
 }
 
-/** A scene with its Godot projection and the inverse, which four bindings read. */
+/** A scene with its Godot projection and the inverse, which four bindings read, and the pass of the draw. */
 export interface SpatialFrame extends SpatialScene {
   readonly projection: THREE.Matrix4;
   readonly inverseProjection: THREE.Matrix4;
+  /** Whether the material draws in Godot's alpha pass, whose scene data has no roughness limiter. */
+  readonly isAlphaPass: boolean;
 }
 
 /** `SCENE_DATA_FLAGS_USE_AMBIENT_LIGHT` (`scene_data_inc.glsl:6`). */
 const USE_AMBIENT_LIGHT = 1 << 0;
+
+/** `SCENE_DATA_FLAGS_USE_ROUGHNESS_LIMITER` (`scene_data_inc.glsl:9`), on by default in the opaque pass. */
+const USE_ROUGHNESS_LIMITER = 1 << 3;
 
 /** `Camera3D::layers`' default: the 20 visual layers. */
 const ALL_VISUAL_LAYERS = 0xfffff;
@@ -101,20 +111,21 @@ export const SCENE_BINDINGS: readonly Binding<SpatialFrame>[] = [
   { uniform: `${DATA}.time`, godot: 'render_scene_data_rd.cpp:149', value: (scene) => scene.time },
   {
     uniform: `${DATA}.flags`,
-    godot: 'render_scene_data_rd.cpp:208, 228',
-    value: ({ fog }) => USE_AMBIENT_LIGHT | (fog ? USE_FOG : 0),
+    godot: 'render_scene_data_rd.cpp:208, 228, 258-259; render_forward_clustered.cpp:2162, 2381',
+    value: ({ fog, isAlphaPass }) =>
+      USE_AMBIENT_LIGHT | (isAlphaPass ? 0 : USE_ROUGHNESS_LIMITER) | (fog ? USE_FOG : 0),
   },
   {
     uniform: `${DATA}.ambient_light_color_energy`,
-    godot: 'render_scene_data_rd.cpp:229-233',
-    value: ({ clearColor }) => new THREE.Vector4(clearColor.r, clearColor.g, clearColor.b, 1),
+    godot: 'render_scene_data_rd.cpp:174-185, 229-233',
+    value: ({ ambientLight }) => new THREE.Vector4(ambientLight.r, ambientLight.g, ambientLight.b, 1),
   },
   {
     uniform: `${DATA}.emissive_exposure_normalization`,
-    godot: 'render_scene_data_rd.cpp:255',
-    value: () => 1,
+    godot: 'render_scene_data_rd.cpp:239, 254',
+    value: ({ emissiveExposure }) => emissiveExposure,
   },
-  { uniform: `${DATA}.IBL_exposure_normalization`, godot: 'render_scene_data_rd.cpp:256', value: () => 1 },
+  { uniform: `${DATA}.IBL_exposure_normalization`, godot: 'render_scene_data_rd.cpp:255', value: () => 1 },
   {
     uniform: `${DATA}.roughness_limiter_amount`,
     godot: 'render_scene_data_rd.cpp:261',
@@ -131,9 +142,15 @@ export const SCENE_BINDINGS: readonly Binding<SpatialFrame>[] = [
 export function writeSpatialBindings(spatial: TranspiledSpatial, scene: SpatialScene): void {
   scene.camera.updateWorldMatrix(true, false);
   const projection = projectionOf(scene);
-  const frame = { ...scene, projection, inverseProjection: projection.clone().invert() };
+  const frame = {
+    ...scene,
+    projection,
+    inverseProjection: projection.clone().invert(),
+    isAlphaPass: spatial.material.transparent,
+  };
   writeBindings(SCENE_BINDINGS, spatial.uniforms, frame);
   writeBindings(FOG_BINDINGS, spatial.uniforms, frame);
+  writeBindings(DIRECTIONAL_LIGHT_BINDINGS, spatial.uniforms, frame);
 }
 
 /** Writes the specialisation constants of `spatial`, which pick the colour pass's program. */
@@ -145,17 +162,26 @@ export function specialiseSpatial(spatial: TranspiledSpatial, fog: EnvironmentFo
 /** The uniform every vertex stage of the scene template reads, so its object update runs before each draw. */
 const DRAW_HOOK = `${DATA}.projection_matrix`;
 
-/** Runs `draw` before each draw of the material or its depth materials, with that draw's camera. */
-export function beforeEachDraw(
-  spatial: TranspiledSpatial,
-  draw: (camera: THREE.Camera, object: THREE.Object3D, material: THREE.Material) => void
-): void {
+/** One draw of a transpiled material: its render, camera, scene, object and the material drawing it. */
+export interface SpatialDraw {
+  /** Counts the renders of the renderer's node handler, so a draw tells a new render from its own. */
+  readonly renderId: number;
+  readonly camera: THREE.Camera;
+  readonly scene: THREE.Scene;
+  readonly object: THREE.Object3D;
+  readonly material: THREE.Material;
+}
+
+/** Runs `draw` before each draw of the material or its depth materials. */
+export function beforeEachDraw(spatial: TranspiledSpatial, draw: (drawn: SpatialDraw) => void): void {
   const hook = spatial.uniforms.get(DRAW_HOOK);
   if (!hook || !('onObjectUpdate' in hook))
     throw new Error(
       `expected the scene template to read the uniform ${DRAW_HOOK}, found ${hook ? 'an array' : 'none'}`
     );
-  hook.onObjectUpdate(({ camera, object, material }: NodeFrame) => draw(camera!, object!, material!));
+  hook.onObjectUpdate(({ frameId, camera, scene, object, material }: NodeFrame) =>
+    draw({ renderId: frameId, camera: camera!, scene: scene!, object: object!, material: material! })
+  );
 }
 
 /** The camera's projection with y flipped and depth reversed into 0 to 1. */

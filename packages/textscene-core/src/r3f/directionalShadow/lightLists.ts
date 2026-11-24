@@ -65,7 +65,8 @@ export function declaredDirectionalLights(lights: readonly SceneLight[]): Declar
   return declaredLights(lights, isDirectionalLight, readDirectionalShadowDeclaration);
 }
 
-function isDirectionalLight(light: THREE.Light): light is THREE.DirectionalLight {
+/** A split sun is no `DirectionalLight`, so a walk of the lights meets each sun once. */
+export function isDirectionalLight(light: THREE.Object3D): light is THREE.DirectionalLight {
   return (light as THREE.DirectionalLight).isDirectionalLight === true;
 }
 

@@ -117,6 +117,11 @@ function showEnvironment(scene: THREE.Scene, environment: Environment): () => vo
   };
 }
 
+/** Whether an Environment is on `scene` for the draw that runs now, whether shown or a pass's own. */
+export function hasEnvironmentOn(scene: THREE.Scene): boolean {
+  return environmentsOf(scene).applied !== null;
+}
+
 /** Runs `draw` with `environment` on `scene`, and puts the shown one back after it. */
 function drawWithEnvironment<T>(scene: THREE.Scene, environment: Environment | null, draw: () => T): T {
   const environments = environmentsOf(scene);

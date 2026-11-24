@@ -7,6 +7,7 @@
 import type * as THREE from 'three';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants.js';
 import { userDataDeclaration } from '../userDataDeclaration.js';
+import { godotEnergyOfIntensity } from '../../nodes/3d/lights/shared/lightStrength.js';
 import { perObject } from '../../utils/perObject.js';
 
 interface SkyLightDeclaration {
@@ -36,7 +37,7 @@ export const skyLightUserData = declaration.userData;
  */
 export function skyLightEnergy(light: THREE.DirectionalLight): number | null {
   const sky = declaration.read(light);
-  if (!sky) return light.intensity / LIGHT_INTENSITY_SCALE;
+  if (!sky) return godotEnergyOfIntensity(light.intensity);
   return sky.drawsInSky ? sky.energy : null;
 }
 

@@ -41,17 +41,16 @@ describe('transpileSpatial', () => {
     expect(errorOf('shader_type sky;\n').position).toEqual({ file: 'user.gdshader', line: 1, column: 1 });
   });
 
-  it("refuses a built-in the slice does not draw yet, at the user's line", () => {
-    const source =
-      'shader_type spatial;\nrender_mode unshaded;\nvoid light() {\n\tDIFFUSE_LIGHT = vec3(1.0);\n}\n';
-    expect(errorOf(source).position).toMatchObject({ file: 'user.gdshader', line: 4 });
+  it("refuses a render mode the port does not draw yet, at the user's line", () => {
+    const source = 'shader_type spatial;\nrender_mode vertex_lighting;\nvoid fragment() {}\n';
+    expect(errorOf(source)).toMatchObject({ owner: '#1453', position: { file: 'user.gdshader', line: 2 } });
   });
 
-  it('refuses a lit shader with the owner of the light loop, as its draw needs it', () => {
-    const error = errorOf(
+  it("draws a lit shader through the scene template's light loop", () => {
+    const lit = transpileSpatial(
       'shader_type spatial;\nvoid fragment() { ALBEDO = vec3(1.0); EMISSION = vec3(1.0); }\n'
     );
-    expect(error).toMatchObject({ owner: '#1453', position: { line: 1, column: 1 } });
+    expect(lit.uniforms.has('directional_lights.data.direction')).toBe(true);
   });
 
   it('reads the instance from its row texture, with an integer sampler', () => {
