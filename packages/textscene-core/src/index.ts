@@ -5,7 +5,6 @@
  */
 
 export { TscnParser } from './parser/TscnParser';
-export type { TscnNode } from './parser/types';
 
 export { setLogAdapter, info, warn } from './logger';
 export type { LogAdapter } from './logger';
