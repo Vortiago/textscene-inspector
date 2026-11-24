@@ -79,6 +79,8 @@ interface Capture {
   matrixWorld: THREE.Matrix4;
   /** The sky state the capture's faces started from, which an ALWAYS capture compares. */
   skyState: string;
+  /** The fast filter's table, which only an ALWAYS capture reads. */
+  fastFilterQuality: FastFilterQuality;
 }
 
 export class SceneProbes {
@@ -113,7 +115,6 @@ export class SceneProbes {
   /** The environment the captures saw, which a later sky bake changes. Written by `markCapturesStale`. */
   private seenOwnEnvironmentChanges = -1;
   private seenClearColor = -1;
-  private seenFastFilterQuality: FastFilterQuality | null = null;
   /**
    * The exposure each probe last captured at, written only by `capture`, and only while the world
    * holds attributes: a capture without exposure leaves it (`render_forward_clustered.cpp:1714-1716`). A
@@ -160,7 +161,7 @@ export class SceneProbes {
     const atlas = this.atlasFor(probes);
     if (this.settledFrames < COMMIT_FRAMES_AFTER_SETTLE) return false;
     this.markCapturesStale(frame);
-    const drawn = layersToCapture(probes, (probe, layer) => !this.isCaptured(probe, layer));
+    const drawn = layersToCapture(probes, (probe, layer) => !this.isCaptured(probe, layer, frame));
     if (drawn.length > 0) {
       beginStep(this.renderer, 'Reflection probes');
       // Each capture of the frame keeps the sky state its faces start from, before any face steps it.
@@ -203,28 +204,24 @@ export class SceneProbes {
     return this.atlas;
   }
 
-  /**
-   * Marks every capture stale once new content settles, or once the world's own Environment the
-   * captures saw changes. A stale capture still draws, so no probe vanishes until it captures again.
-   * A change of exposure marks none: Godot rescales the capture instead.
-   */
-  private markCapturesStale({ clearColor, fastFilterQuality }: ProbeFrame): void {
+  /** Marks every capture stale once new content settles or the Environment or clear colour it saw changes. */
+  private markCapturesStale({ clearColor }: ProbeFrame): void {
     const changes = ownEnvironmentChanges(this.scene);
     const clearHex = clearColor.getHex();
-    const hasNewEnvironment =
-      changes !== this.seenOwnEnvironmentChanges ||
-      clearHex !== this.seenClearColor ||
-      fastFilterQuality !== this.seenFastFilterQuality;
+    const hasNewEnvironment = changes !== this.seenOwnEnvironmentChanges || clearHex !== this.seenClearColor;
     if (!this.hasNewContent && !hasNewEnvironment) return;
     this.seenOwnEnvironmentChanges = changes;
     this.seenClearColor = clearHex;
-    this.seenFastFilterQuality = fastFilterQuality;
     this.hasNewContent = false;
     this.generation += 1;
   }
 
   /** Whether `object`'s capture shows its content now. ALWAYS adds the sky, not every frame as in Godot. */
-  private isCaptured(object: ReflectionProbeObject, layer: number): boolean {
+  private isCaptured(
+    object: ReflectionProbeObject,
+    layer: number,
+    { fastFilterQuality }: ProbeFrame
+  ): boolean {
     const capture = this.captures.get(object);
     return (
       !!capture &&
@@ -232,7 +229,9 @@ export class SceneProbes {
       capture.generation === this.generation &&
       capture.probe === object.probe &&
       capture.matrixWorld.equals(object.matrixWorld) &&
-      (!isRealTimeProbe(object) || capture.skyState === realTimeSkyState(this.scene))
+      (!isRealTimeProbe(object) ||
+        (capture.skyState === realTimeSkyState(this.scene) &&
+          capture.fastFilterQuality === fastFilterQuality))
     );
   }
 
@@ -282,6 +281,7 @@ export class SceneProbes {
       probe,
       matrixWorld: object.matrixWorld.clone(),
       skyState,
+      fastFilterQuality,
     });
     const worldExposure = worldExposureOfScene(this.scene);
     if (worldExposure !== null) this.bakedExposures.set(object, worldExposure);

@@ -38,6 +38,7 @@
 
 import {
   FAST_FILTER_FRAME_LOWER_BOUND,
+  FAST_FILTER_AXES,
   FAST_FILTER_HIGH_QUALITY_SUPER_TAPS_PER_FRAME,
   FAST_FILTER_HIGH_QUALITY_TERMS,
   FAST_FILTER_PARTS,
@@ -190,7 +191,7 @@ export const FAST_FILTER_FRAGMENT_SHADER = /* glsl */ `
 uniform highp sampler2D coefficients;
 #else
 #define SUPER_TAPS_PER_FRAME ${FAST_FILTER_SUPER_TAPS_PER_FRAME}
-#define SUPER_TAPS (SUPER_TAPS_PER_FRAME * 3)
+#define SUPER_TAPS (SUPER_TAPS_PER_FRAME * ${FAST_FILTER_AXES})
 uniform vec4 frameX[SUPER_TAPS];
 uniform vec4 frameY[SUPER_TAPS];
 uniform vec4 frameZ[SUPER_TAPS];
@@ -218,12 +219,12 @@ void addTap(vec3 direction, float tapLod, float tapWeight) {
 
 #ifdef USE_HIGH_QUALITY
 // Each part of a super-tap as a polynomial in theta² and phi², one sub-tap a component.
-vec4 tapPart(int part, int index, vec2 thetaPhi2) {
+vec4 tapPart(int part, int index, vec2 angles2) {
   int row = (mipLevel * ${FAST_FILTER_PARTS} + part) * ${FAST_FILTER_HIGH_QUALITY_TERMS};
   vec4 constant = texelFetch(coefficients, ivec2(index, row), 0);
   vec4 theta2 = texelFetch(coefficients, ivec2(index, row + 1), 0);
   vec4 phi2 = texelFetch(coefficients, ivec2(index, row + 2), 0);
-  return constant + theta2 * thetaPhi2.x + phi2 * thetaPhi2.y;
+  return constant + theta2 * angles2.x + phi2 * angles2.y;
 }
 
 // octmap_filter.glsl:120-150
@@ -269,7 +270,7 @@ void addFrame(int axis, vec3 up, vec3 normal, vec2 sides) {
 
 vec3 filteredDirection() {
 #ifdef USE_TEXTURE_ARRAY
-  // Godot filters at half the layer's width and stores each result in a 2 by 2 block: octmap_filter.glsl:220.
+  // octmap_filter.glsl:220
   vec2 block = floor(gl_FragCoord.xy * 0.5) + 0.5;
   return octToVec3WithBorder(block / (layerSize * 0.5), borderSize);
 #else

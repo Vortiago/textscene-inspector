@@ -133,7 +133,9 @@ describe('bakeSkyLayers', () => {
     const { renderer } = await testRenderer();
     const sampling = { anisotropicFilteringLevel: 2, useNearestMipmapFilter: true };
 
-    const { texture } = bakeSkyLayers(renderer, radianceCube(renderer), IMPORTANCE_SAMPLED, sampling).target;
+    const { texture } = bakeSkyLayers(renderer, radianceCube(renderer), IMPORTANCE_SAMPLED, {
+      sampling,
+    }).target;
 
     expect(texture.minFilter).toBe(THREE.LinearMipmapNearestFilter);
   });
@@ -151,7 +153,7 @@ describe('bakeSkyLayers', () => {
     const { renderer } = await testRenderer();
     const selected = vi.spyOn(FAST_FILTERS.high.intoLayers, 'layerUniforms');
 
-    bakeSkyLayers(renderer, radianceCube(renderer), FAST, undefined, 'high');
+    bakeSkyLayers(renderer, radianceCube(renderer), FAST, { fastFilterQuality: 'high' });
 
     expect(selected.mock.calls.map(([layer]) => layer)).toEqual([1, 2, 3, 4, 5, 6]);
   });

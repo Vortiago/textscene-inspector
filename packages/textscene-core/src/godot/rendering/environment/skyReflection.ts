@@ -38,6 +38,9 @@ export const DEFAULT_FAST_FILTER_QUALITY: FastFilterQuality = 'low';
 /** NUM_TAPS / 4 with the high-quality table's 32 taps a frame (`octmap_filter.glsl:42-46`, `:155`). */
 export const FAST_FILTER_HIGH_QUALITY_SUPER_TAPS_PER_FRAME = 8;
 
+/** The axes the fast filter gathers along, a frame each (`octmap_filter.glsl:94`, `:156`). */
+export const FAST_FILTER_AXES = 3;
+
 /** The parts of each level of the fast filter's tables: three of the direction, the lod, the weight. */
 export const FAST_FILTER_PARTS = 5;
 

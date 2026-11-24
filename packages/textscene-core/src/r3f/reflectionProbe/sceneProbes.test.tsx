@@ -18,6 +18,7 @@ import { SCENE_ROW_TEXELS } from '../sceneRows/sceneRowTexels';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { drawAtExposure, useSceneExposure } from '../exposure/sceneExposure';
 import { observeSceneCamera, observeSceneCull } from '../sceneRenderCamera';
+import type { FastFilterQuality } from '../../godot/rendering/environment/skyReflection';
 import { useEffect, useMemo } from 'react';
 import { useThree } from '@react-three/fiber';
 import {
@@ -98,12 +99,12 @@ async function probesIn(scene: THREE.Scene, ...probes: ReflectionProbeObject[]) 
   const renders = vi.spyOn(renderer, 'render');
   const sceneRenders = () => renders.mock.calls.filter(([rendered]) => rendered === scene).length;
   /** The capture faces one `update` drew. */
-  const facesDrawn = (pending = 0) => {
+  const facesDrawn = (pending = 0, fastFilterQuality: FastFilterQuality = 'low') => {
     const before = sceneRenders();
     sceneProbes.update(pending, {
       clearColor: CLEAR,
       viewport: rootViewportDescription(null),
-      fastFilterQuality: 'low',
+      fastFilterQuality,
     });
     return sceneRenders() - before;
   };
@@ -261,6 +262,22 @@ describe('SceneProbes ALWAYS renders', () => {
     noteRealTimeSkyState(scene, 'x');
 
     expect(facesDrawn()).toBe(6);
+  });
+
+  it('captures an ALWAYS probe again once the fast filter quality changes', async () => {
+    const { facesDrawn, settle } = await sceneWith(probeObject({ update_mode: '1' }));
+    settle();
+    facesDrawn();
+
+    expect(facesDrawn(0, 'high')).toBe(6);
+  });
+
+  it('keeps a ONCE capture when the fast filter quality changes, as its filter reads no table', async () => {
+    const { facesDrawn, settle } = await sceneWith(probeObject());
+    settle();
+    facesDrawn();
+
+    expect(facesDrawn(0, 'high')).toBe(0);
   });
 
   it('keeps a ONCE capture when the sky state changes', async () => {

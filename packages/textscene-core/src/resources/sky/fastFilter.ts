@@ -6,6 +6,7 @@ import {
 import { FAST_FILTER_HIGH_QUALITY_COEFFICIENTS } from '../../godot/rendering/environment/skyFastFilterHighQualityCoefficients.js';
 import {
   FAST_FILTER_CHAIN_SIZES,
+  FAST_FILTER_AXES,
   FAST_FILTER_HIGH_QUALITY_SUPER_TAPS_PER_FRAME,
   type FastFilterQuality,
 } from '../../godot/rendering/environment/skyReflection.js';
@@ -54,7 +55,7 @@ let highQualityTable: THREE.DataTexture | undefined;
 /** The high-quality table, a super-tap a texel and a term of a part a row (`octmap_filter.glsl:62`). */
 function highQualityCoefficients(): THREE.DataTexture {
   if (highQualityTable) return highQualityTable;
-  const width = FAST_FILTER_HIGH_QUALITY_SUPER_TAPS_PER_FRAME * 3;
+  const width = FAST_FILTER_HIGH_QUALITY_SUPER_TAPS_PER_FRAME * FAST_FILTER_AXES;
   const texels = Float32Array.from(FAST_FILTER_HIGH_QUALITY_COEFFICIENTS);
   const table = new THREE.DataTexture(
     texels,
