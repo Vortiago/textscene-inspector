@@ -5,7 +5,7 @@ import { liveNodePathOf } from '../../../scene/nodePathWalk.js';
 import type { Scene } from '../../../scene/openScene.js';
 import { createExternalStore, type ExternalStore } from '../../../utils/externalStore.js';
 import { useAnimationTransport } from '../../contexts/AnimationTransportContext.js';
-import { useExpandedRows } from '../SceneTreeViewer/expandedRows.js';
+import { useExpandedRowActions } from '../SceneTreeViewer/expandedRows.js';
 import {
   UNWRITTEN_PATH_STORE,
   useOptionalSelection,
@@ -97,7 +97,7 @@ function useDropHoverOnLeave(scene: Scene, hovered: ExternalStore<NodeHandle | n
 
 /** The panel shows the selected row with its ancestors expanded. */
 function useShowInPanel(selected: NodeHandle | null): void {
-  const { reveal } = useExpandedRows();
+  const { reveal } = useExpandedRowActions();
   const path = liveNodePathOf(selected?.path);
   // Keyed on the path alone, so only a new selection expands rows: a collapse by hand holds.
   useLayoutEffect(() => {

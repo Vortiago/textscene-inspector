@@ -3,7 +3,7 @@ import * as logger from '../../../logger.js';
 import type { TscnNode, TscnExternalResource } from '../../../parser/types.js';
 import { getAncestorPaths } from '../../../utils/nodePath.js';
 import { useHierarchy } from '../../contexts/HierarchyContext.js';
-import { useExpandedRows } from './expandedRows.js';
+import { useExpandedPaths, useExpandedRowActions } from './expandedRows.js';
 import { useSelectPath, useSelectedPath } from '../TscnPreviewShell/previewSelection.js';
 import { absolutePathOf } from '../../../scene/nodePathWalk.js';
 import { useSeatedRoots, useSharedLiveTree } from '../../useLiveSceneTree.js';
@@ -32,11 +32,8 @@ export interface SceneTreeViewerProps {
 
 export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewerProps) {
   const { sceneGraph, scene } = useHierarchy();
-  const {
-    paths: expandedNodePaths,
-    set: setExpandedNodePaths,
-    toggle: toggleExpandedNodePath,
-  } = useExpandedRows();
+  const expandedPaths = useExpandedPaths();
+  const expandedRows = useExpandedRowActions();
   const selectedNodePath = useSelectedPath();
   const selectPath = useSelectPath();
   // The eye calls `set_visible` on the node (scene_tree_editor.cpp:241-247).
@@ -111,12 +108,8 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
   );
 
   const handleExpandAll = useCallback(() => {
-    setExpandedNodePaths(new Set(listedEntries.map((entry) => entry.path)));
-  }, [listedEntries, setExpandedNodePaths]);
-
-  const handleCollapseAll = useCallback(() => {
-    setExpandedNodePaths(new Set());
-  }, [setExpandedNodePaths]);
+    expandedRows.set(new Set(listedEntries.map((entry) => entry.path)));
+  }, [listedEntries, expandedRows]);
 
   const handleSearchChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -155,7 +148,7 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
           const expanded = currentRow.getAttribute('aria-expanded');
           if (expanded === 'false') {
             const path = nodePathFor(currentRow);
-            if (path) toggleExpandedNodePath(path);
+            if (path) expandedRows.toggle(path);
           } else if (expanded === 'true') {
             focusAndSelect(allRows[index + 1]);
           }
@@ -166,7 +159,7 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
           const expanded = currentRow.getAttribute('aria-expanded');
           const path = nodePathFor(currentRow);
           if (expanded === 'true') {
-            if (path) toggleExpandedNodePath(path);
+            if (path) expandedRows.toggle(path);
           } else if (path) {
             // The parent is the nearest ancestor path, not TreeNode's private DOM
             // nesting. A root row has none.
@@ -189,7 +182,7 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
           break;
       }
     },
-    [selectPath, toggleExpandedNodePath]
+    [selectPath, expandedRows]
   );
 
   // The selected row is the tab stop only while it renders, that is while it
@@ -198,7 +191,7 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
   const selectedRowRendered =
     selectedNodePath !== null &&
     matches(selectedNodePath) &&
-    getAncestorPaths(selectedNodePath).every((p) => expandedNodePaths.has(p));
+    getAncestorPaths(selectedNodePath).every((p) => expandedPaths.has(p));
 
   if (sceneGraph === null) {
     return (
@@ -233,7 +226,7 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
         <button
           type="button"
           className={`${styles.controlBtn} ${styles.iconBtn}`}
-          onClick={handleCollapseAll}
+          onClick={expandedRows.clear}
           aria-label="Collapse all"
           title="Collapse all"
         >

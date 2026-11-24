@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { SceneTreeViewer } from './SceneTreeViewer';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { SelectionProvider, useSelectedNodePath } from '../../contexts/SelectionContext';
-import { ExpandedRowsProvider, useExpandedRows } from './expandedRows';
+import { ExpandedRowsProvider, useExpandedPaths } from './expandedRows';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import type { TscnNode } from '../../../parser/types';
 
@@ -108,7 +108,7 @@ describe('<SceneTreeViewer>', () => {
 
     let captured: ReadonlySet<string> | null = null;
     function Observer() {
-      captured = useExpandedRows().paths;
+      captured = useExpandedPaths();
       return null;
     }
 

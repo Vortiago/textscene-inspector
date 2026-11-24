@@ -1,10 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { act, renderHook } from '@testing-library/react';
-import { ExpandedRowsProvider, useExpandedRows } from './expandedRows';
+import { act, render, renderHook } from '@testing-library/react';
+import {
+  ExpandedRowsProvider,
+  useExpandedPaths,
+  useExpandedRowActions,
+  withAncestorsExpanded,
+  type ExpandedRowActions,
+} from './expandedRows';
 
-const renderRows = () => renderHook(useExpandedRows, { wrapper: ExpandedRowsProvider });
+const useRows = () => ({ paths: useExpandedPaths(), ...useExpandedRowActions() });
+const renderRows = () => renderHook(useRows, { wrapper: ExpandedRowsProvider });
 
-describe('useExpandedRows', () => {
+describe('the expanded rows', () => {
   it('starts with every row collapsed', () => {
     expect(renderRows().result.current.paths.size).toBe(0);
   });
@@ -24,6 +31,13 @@ describe('useExpandedRows', () => {
     expect([...result.current.paths]).toEqual(['C']);
   });
 
+  it('collapses every row on a clear', () => {
+    const { result } = renderRows();
+    act(() => result.current.set(new Set(['A', 'A/B'])));
+    act(() => result.current.clear());
+    expect(result.current.paths.size).toBe(0);
+  });
+
   it('reveals a row by expanding each of its ancestors and keeps the others', () => {
     const { result } = renderRows();
     act(() => result.current.toggle('Other'));
@@ -31,15 +45,42 @@ describe('useExpandedRows', () => {
     expect([...result.current.paths].sort()).toEqual(['A', 'A/B', 'Other']);
   });
 
-  it('keeps the same set when a reveal finds every ancestor expanded', () => {
-    const { result } = renderRows();
-    act(() => result.current.reveal('A/B'));
-    const before = result.current.paths;
-    act(() => result.current.reveal('A/B'));
-    expect(result.current.paths).toBe(before);
+  it('renders no component that only changes the rows when a row toggles', () => {
+    let renders = 0;
+    let actions: ExpandedRowActions | null = null;
+    function ActionsOnly() {
+      renders++;
+      actions = useExpandedRowActions();
+      return null;
+    }
+    render(
+      <ExpandedRowsProvider>
+        <ActionsOnly />
+      </ExpandedRowsProvider>
+    );
+    const before = renders;
+    act(() => actions!.toggle('Root'));
+    expect(renders).toBe(before);
   });
 
   it('throws outside a provider', () => {
-    expect(() => renderHook(useExpandedRows)).toThrow(/ExpandedRowsProvider/);
+    expect(() => renderHook(useExpandedPaths)).toThrow(/ExpandedRowsProvider/);
+    expect(() => renderHook(useExpandedRowActions)).toThrow(/ExpandedRowsProvider/);
+  });
+});
+
+describe('withAncestorsExpanded', () => {
+  it('adds every missing ancestor of the path', () => {
+    expect([...withAncestorsExpanded(new Set(['Main']), 'Main/Ship/Engine')]).toEqual(['Main', 'Main/Ship']);
+  });
+
+  it('gives the same set when every ancestor is expanded', () => {
+    const expanded = new Set(['Main', 'Main/Ship']);
+    expect(withAncestorsExpanded(expanded, 'Main/Ship/Engine')).toBe(expanded);
+  });
+
+  it('gives the same set for the root, which has no ancestor (edge case)', () => {
+    const expanded = new Set<string>();
+    expect(withAncestorsExpanded(expanded, 'Main')).toBe(expanded);
   });
 });
