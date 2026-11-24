@@ -506,6 +506,13 @@ const cullScene = (name, modes, fragment = SIDES, scale = [0.8, 0.8, 0.8], rows 
     ...rows,
   ]);
 
+/** A cull mode scene under `wireframe`, on quads, as Godot on llvmpipe hangs on a wireframe sphere. */
+const wireframeScene = (name, cull, knownPixels, fragment = SIDES, rows = []) => ({
+  ...cullScene(name, ['wireframe', cull], fragment, undefined, rows),
+  // ANGLE's lines step a diagonal apart from Godot's, as in `spatial-lines-surface`.
+  knownPixels,
+});
+
 /** An opaque quad in front, at the lower right, that the scene's own quad meets. */
 const ORANGE_IN_FRONT = {
   object: { position: [0.25, -0.2, 0.4], rotation: [0, 0, 0], scale: [0.7, 0.7, 0.7] },
@@ -888,20 +895,16 @@ const RENDER_MODE_SCENES = [
   cullScene('spatial-cull-disabled-normal', ['cull_disabled'], 'ALBEDO = NORMAL * 0.5 + 0.5;', undefined, [
     'spatial.fragment.NORMAL',
   ]),
-  // Quads, as Godot on llvmpipe hangs on a wireframe sphere. ANGLE's Bresenham lines step diagonals apart.
-  { ...cullScene('spatial-wireframe-cull-back', ['wireframe', 'cull_back']), knownPixels: 24 },
-  { ...cullScene('spatial-wireframe-cull-front', ['wireframe', 'cull_front']), knownPixels: 19 },
-  { ...cullScene('spatial-wireframe-cull-disabled', ['wireframe', 'cull_disabled']), knownPixels: 43 },
-  {
-    ...cullScene(
-      'spatial-wireframe-cull-disabled-normal',
-      ['wireframe', 'cull_disabled'],
-      'ALBEDO = NORMAL * 0.5 + 0.5;',
-      undefined,
-      ['spatial.fragment.NORMAL']
-    ),
-    knownPixels: 26,
-  },
+  wireframeScene('spatial-wireframe-cull-back', 'cull_back', 24),
+  wireframeScene('spatial-wireframe-cull-front', 'cull_front', 19),
+  wireframeScene('spatial-wireframe-cull-disabled', 'cull_disabled', 43),
+  wireframeScene(
+    'spatial-wireframe-cull-disabled-normal',
+    'cull_disabled',
+    26,
+    'ALBEDO = NORMAL * 0.5 + 0.5;',
+    ['spatial.fragment.NORMAL']
+  ),
   depthTestScene('spatial-depth-test-default', ['depth_test_default']),
   depthTestScene('spatial-depth-test-disabled', ['depth_test_disabled']),
   depthTestScene('spatial-depth-test-inverted', ['depth_test_inverted']),
