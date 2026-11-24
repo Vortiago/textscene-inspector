@@ -125,7 +125,7 @@ describe('parseTemplateStage', () => {
   });
 
   it('converts a case label to the type of a uint switch', () => {
-    expect(inFunction('uint a = 0u;\nswitch (a) {\ncase 1: break;\n}')).toContain('case uint(1):');
+    expect(inFunction('uint a = 0u;\nswitch (a) {\ncase 1: break;\n}')).toContain('case 1u:');
   });
 
   it('refuses a label outside a switch', () => {

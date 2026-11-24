@@ -115,8 +115,15 @@ function printFunction(definition: FunctionNode): string {
 }
 
 function printBlock(block: BlockNode, indent: string): string {
+  return `{\n${printedLines(block, indent)
+    .map((line) => `${line}\n`)
+    .join('')}${indent}}`;
+}
+
+/** Each statement of `block` on a line of its own, one step in from `indent`. */
+function printedLines(block: BlockNode, indent: string): string[] {
   const inner = `${indent}\t`;
-  return `{\n${block.statements.map((statement) => `${inner}${printStatement(statement, inner)}\n`).join('')}${indent}}`;
+  return block.statements.map((statement) => `${inner}${printStatement(statement, inner)}`);
 }
 
 function printStatement(statement: Statement, indent: string): string {
@@ -180,10 +187,10 @@ function printFlowBody(flow: ControlFlowNode, indent: string): string {
   }
 }
 
-/** A label's statements, each on its own line one step in from the label. */
 function printLabelBody(body: BlockNode, indent: string): string {
-  const inner = `${indent}\t`;
-  return body.statements.map((statement) => `\n${inner}${printStatement(statement, inner)}`).join('');
+  return printedLines(body, indent)
+    .map((line) => `\n${line}`)
+    .join('');
 }
 
 function printFor(flow: ControlFlowNode, indent: string): string {

@@ -3,6 +3,7 @@ import type {
   Argument,
   BlockNode,
   CallNode,
+  ConstantNode,
   ControlFlowNode,
   DeclarationNode,
   Expression,
@@ -514,11 +515,11 @@ class TemplateParser implements TemplateScope {
     }
   }
 
-  /** The statements after a `{`, up to its `}`, in a scope of their own. */
-  private block(position: SourcePosition): BlockNode {
+  /** The statements after a `{`, up to its `}`, in a scope of their own, each read by `read`. */
+  private block(position: SourcePosition, read: () => Statement = () => this.statement()): BlockNode {
     return this.within(() => {
       const statements: Statement[] = [];
-      while (!this.tokens.accept('}')) statements.push(this.statement());
+      while (!this.tokens.accept('}')) statements.push(read());
       return { kind: 'block', statements, position };
     });
   }
@@ -768,17 +769,12 @@ class TemplateParser implements TemplateScope {
     return flow('FLOW_OP_DO', [condition], [body], position, attributes);
   }
 
-  /** `switch (v) { ... }`: a block of its labels, in one scope, as Godot's parser builds it. */
+  /** `switch (v) { ... }`: a block of its labels, the tree `parseBlock.ts` builds for Godot's own text. */
   private switchStatement(position: SourcePosition, attributes: readonly string[]): ControlFlowNode {
     this.tokens.next();
     const value = this.condition();
     const blockPosition = this.tokens.expect('{').position;
-    const labels = this.within(() => {
-      const read: ControlFlowNode[] = [];
-      while (!this.tokens.accept('}')) read.push(this.label(value.type));
-      return read;
-    });
-    const block: BlockNode = { kind: 'block', statements: labels, position: blockPosition };
+    const block = this.block(blockPosition, () => this.label(value.type));
     return flow('FLOW_OP_SWITCH', [value], [block], position, attributes);
   }
 
@@ -788,17 +784,23 @@ class TemplateParser implements TemplateScope {
     const word = this.tokens.peekText();
     if (!LABEL_WORDS.has(word)) this.tokens.fail("expected 'case' or 'default' in a switch");
     this.tokens.next();
-    const expressions = word === 'case' ? [this.caseValue(selectorType)] : [];
+    const isCase = word === 'case';
+    const expressions = isCase ? [this.caseValue(selectorType)] : [];
     this.tokens.expect(':');
     const statements: Statement[] = [];
     while (!LABEL_ENDS.has(this.tokens.peekText())) statements.push(this.statement());
     const body: BlockNode = { kind: 'block', statements, position };
-    return flow(word === 'case' ? 'FLOW_OP_CASE' : 'FLOW_OP_DEFAULT', expressions, [body], position, []);
+    return flow(isCase ? 'FLOW_OP_CASE' : 'FLOW_OP_DEFAULT', expressions, [body], position, []);
   }
 
-  /** A case label converts to the selector's type, as `case 0:` does in a `uint` switch (GLSL 4.60, 6.2). */
-  private caseValue(selectorType: string): Expression {
-    return this.expressions.converted(this.expressions.constantInteger(), selectorType);
+  /** A constant of the selector's type, as `case 0:` converts in a `uint` switch (GLSL 4.60, 6.2). */
+  private caseValue(selectorType: string): ConstantNode {
+    const written = this.expressions.constantInteger();
+    this.expressions.converted(written, selectorType);
+    const lanes = constantLanes(written, this.constantLanes);
+    if (!lanes) this.tokens.fail('case label must be a constant integer expression', written.position);
+    const values = selectorType === 'uint' ? lanes.map((lane) => Number(lane) >>> 0) : lanes;
+    return { kind: 'constant', type: selectorType, values, position: written.position };
   }
 
   private simpleFlow(position: SourcePosition): ControlFlowNode {
