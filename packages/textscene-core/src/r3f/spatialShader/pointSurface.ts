@@ -3,6 +3,7 @@ import { emulatedPointGeometry, type DrawRange } from '../../shaders/spatial/mes
 import type { PointDraw } from '../../shaders/spatial/spatialPipeline.js';
 import { NO_RAYCAST } from '../../shaders/pipeline/noRaycast.js';
 import { OTHER_DRAWS_SURFACE } from '../materials/useOneSurfaceStartingMaterial.js';
+import { setVisualLayers, visualLayersOf } from '../visualLayers.js';
 
 type SurfaceHost = THREE.Object3D & { geometry: THREE.BufferGeometry };
 
@@ -23,15 +24,26 @@ export function drawPoints(
       ? nativePoints(host.geometry, drawGroup, material)
       : emulated(host, drawGroup, material);
   drawn.raycast = NO_RAYCAST;
-  drawn.castShadow = host.castShadow;
-  drawn.receiveShadow = host.receiveShadow;
-  drawn.renderOrder = host.renderOrder;
-  drawn.layers.mask = host.layers.mask;
+  takeHostDraw(drawn, host);
   host.add(drawn);
   return () => {
     host.remove(drawn);
     if (pointDraw === 'emulated') drawn.geometry.dispose();
   };
+}
+
+/** `drawn` draws as `host` does: its shadows, layers, order, culling and the per-surface draw hooks. */
+function takeHostDraw(drawn: THREE.Object3D, host: SurfaceHost): void {
+  drawn.castShadow = host.castShadow;
+  drawn.receiveShadow = host.receiveShadow;
+  drawn.renderOrder = host.renderOrder;
+  drawn.frustumCulled = host.frustumCulled;
+  drawn.layers.mask = host.layers.mask;
+  setVisualLayers(drawn, visualLayersOf(host));
+  drawn.onBeforeRender = host.onBeforeRender;
+  drawn.onAfterRender = host.onAfterRender;
+  drawn.onBeforeShadow = host.onBeforeShadow;
+  drawn.onAfterShadow = host.onAfterShadow;
 }
 
 function nativePoints(geometry: THREE.BufferGeometry, drawGroup: number | null, material: THREE.Material) {
@@ -56,8 +68,10 @@ function emulated(host: SurfaceHost, drawGroup: number | null, material: THREE.M
 
 /** Rebuilds the quads of emulated points `drawn` after `withGodotSurface` writes its parent's surface. */
 export function refreshEmulatedPoints(drawn: THREE.Mesh, surface: THREE.BufferGeometry): void {
-  drawn.geometry.dispose();
+  const drawing = drawn.geometry;
   drawn.geometry = emulatedPointGeometry(surface, groupRange(surface, emulatedGroups.get(drawn) ?? null));
+  // Disposed after this draw: three draws the geometry its render list took (r187 `WebGLRenderer.js:2182`).
+  queueMicrotask(() => drawing.dispose());
 }
 
 /** Whether `drawn` draws emulated points, whose geometry is quads and no surface of its own. */

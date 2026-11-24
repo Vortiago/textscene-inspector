@@ -77,6 +77,8 @@ export function withGodotSurface(geometry: THREE.BufferGeometry): boolean {
   withGodotAttributes(geometry, geometryPrimitive(geometry));
   const uv = geometry.getAttribute('uv');
   if (uv) geometry.setAttribute('uv_attrib', fromTopRow(uv));
+  // Stamped after the write, which turns the index: a stamp before it sees a change on the next draw.
+  writtenSources.set(geometry, sourceStamp(geometry));
   return true;
 }
 
@@ -96,16 +98,14 @@ const SOURCE_ATTRIBUTES = [
   'skinWeight',
 ];
 
-/** Each geometry's index, source attributes and their versions at its last write, by `hasSourcesChanged`. */
+/** Each geometry's index, source attributes and versions after its last write, by `withGodotSurface`. */
 // eslint-disable-next-line no-restricted-syntax -- a record of the last write, compared on each draw, not a built value
 const writtenSources = new WeakMap<THREE.BufferGeometry, unknown[]>();
 
-/** Whether the index or a source attribute is new or changed since the last write, which it records. */
+/** Whether the index or a source attribute is new or changed since the last write. */
 function hasSourcesChanged(geometry: THREE.BufferGeometry): boolean {
   const written = writtenSources.get(geometry);
-  if (written && isWrittenStamp(geometry, written)) return false;
-  writtenSources.set(geometry, sourceStamp(geometry));
-  return true;
+  return !written || !isWrittenStamp(geometry, written);
 }
 
 /** Compared in place, with no array per draw: it runs before every draw of the surface. */

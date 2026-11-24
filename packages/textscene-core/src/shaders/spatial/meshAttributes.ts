@@ -8,7 +8,7 @@ const VERTEX_ANGLE_ATTRIBUTE = 'vertex_angle_attrib';
 /** The attribute at location 1: the normal and the tangent as four 16-bit unsigned normalised lanes. */
 const AXIS_TANGENT_ATTRIBUTE = 'axis_tangent_attrib';
 
-/** The `userData` key of a turned primitive's corner count, which `clone` carries. A new index deletes it. */
+/** The `userData` key of turned corners, which `clone` carries. A caller that sets a new index deletes it. */
 const FIRST_CORNER_LAST = 'godotFirstCornerLast';
 
 /** The primitive a surface draws: a line strip is drawn as its list of lines. */
@@ -170,6 +170,8 @@ export function emulatedPointGeometry(
   for (const [name, attribute] of Object.entries(surface.attributes))
     if (name.endsWith('_attrib')) geometry.setAttribute(name, perPoint(attribute, vertices));
   geometry.setAttribute(POINT_VERTEX_ATTRIBUTE, new THREE.InstancedBufferAttribute(vertices, 1));
+  // The quads' own positions are all zero, so bounds three computed from them would cull at the origin.
+  if (!surface.boundingSphere && surface.getAttribute('position')) surface.computeBoundingSphere();
   geometry.boundingSphere = surface.boundingSphere;
   geometry.boundingBox = surface.boundingBox;
   return geometry;
@@ -178,7 +180,8 @@ export function emulatedPointGeometry(
 /** The vertex of each corner in `range`, in draw order: every vertex once for a surface with no index. */
 function drawnVertices(surface: THREE.BufferGeometry, range: DrawRange | undefined): Float32Array {
   const index = surface.getIndex();
-  const cornerCount = index ? index.count : surface.getAttribute('position').count;
+  // No corners for a surface with no position yet, as a mesh has before its geometry attaches.
+  const cornerCount = index?.count ?? surface.getAttribute('position')?.count ?? 0;
   const start = range?.start ?? 0;
   const end = Math.min(range ? start + range.count : cornerCount, cornerCount);
   // A float holds every vertex index below 2^24 exactly.
