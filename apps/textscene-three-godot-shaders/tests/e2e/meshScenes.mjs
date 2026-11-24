@@ -898,7 +898,7 @@ const RENDER_MODE_SCENES = [
   wireframeScene('spatial-wireframe-cull-back', 'cull_back', 24),
   wireframeScene('spatial-wireframe-cull-front', 'cull_front', 19),
   wireframeScene('spatial-wireframe-cull-disabled', 'cull_disabled', 43),
-  // A game's Compatibility renderer draws the triangles filled. Colours of 0 and 1 read alike in its colour space.
+  // A game's Compatibility renderer draws the triangles filled. Colours of 0 and 1 read alike there.
   {
     ...cullScene(
       'spatial-wireframe-compatibility',
