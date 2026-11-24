@@ -4,7 +4,7 @@ import type { SkinLayout, SurfaceLayout } from './surfaceFormat.js';
 /** three skins with four bones a vertex. */
 const SKINNED_BONES = 4;
 
-/** Godot binds bone indices and weights as four 16-bit lanes each, 8 bytes apart (`mesh_storage.cpp:1386-1397`). */
+/** Godot binds four 16-bit bones, then four weights 8 bytes on (`mesh_storage.cpp:1386-1397`). */
 const VERTEX_STAGE_STRIDE = 16;
 const VERTEX_STAGE_WEIGHTS_OFFSET = 8;
 

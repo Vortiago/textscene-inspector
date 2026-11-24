@@ -1,10 +1,3 @@
-/**
- * Decodes an ArrayMesh's `_surfaces`, from a `.tres` or a binary file, into per-surface typed arrays:
- * the surface loop and its material resolution. Triangle, points and line surfaces decode, each flagged
- * as its primitive. Blend shapes and LODs are ignored. The byte layout lives in
- * `surfaceFormat.ts`, `surfaceVersion.ts`, `vertexBuffers.ts` and `surfaceFields.ts`.
- */
-
 import { warn } from '../../../logger.js';
 import type { TscnInternalResource } from '../../../parser/types.js';
 import { materialPathInFile } from '../../materials/materialPathInFile.js';

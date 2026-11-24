@@ -3,10 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { decodeArrayMeshTres } from '../../testing/decodeArrayMeshTres';
 
-/**
- * Godot 4.6.3's saves of `add_surface_from_arrays`. `customFormats.tres` holds one surface for each
- * custom format, in format order, its array in slot `format / 2` and RGBA_FLOAT fillers in the others.
- */
+// Saved by Godot 4.6.3: one surface per custom format, in slot `format / 2`, RGBA_FLOAT in the others.
 function savedMesh(file: string) {
   return decodeArrayMeshTres(
     readFileSync(join(import.meta.dirname, 'testing', file), 'utf8'),

@@ -3,10 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { decodeArrayMeshTres } from '../../testing/decodeArrayMeshTres';
 
-/**
- * Godot 4.6.3's save of `add_surface_from_arrays`: pairs of 4-weight, 4-weight compressed, 8-weight and
- * 8-weight compressed surfaces, then one surface with no skin.
- */
+// Saved by Godot 4.6.3: pairs of 4, compressed 4, 8 and compressed 8 weights, then a surface with no skin.
 const surfaces = decodeArrayMeshTres(
   readFileSync(join(import.meta.dirname, 'testing', 'skinFormats.tres'), 'utf8'),
   'res://skinFormats.tres'

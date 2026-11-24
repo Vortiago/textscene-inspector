@@ -1,13 +1,6 @@
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 import type { ArrayCustomFormat } from '../../../godot/rendering/meshArrayFormat.js';
 
-/**
- * A surface's byte geometry, derived from its Godot `format` bitfield.
- * `vertex_data` is two concatenated regions, not one interleaved record: the
- * positions, then the normal/tangent frame. `attribute_data` is a third,
- * interleaved COLOR, UV1, UV2 and CUSTOM0 to CUSTOM3.
- */
-
 /** Godot Mesh.ArrayFormat flags. */
 export const ARRAY_FORMAT_VERTEX = 1 << 0;
 export const ARRAY_FORMAT_NORMAL = 1 << 1;
@@ -115,6 +108,7 @@ function tangentStorage(format: {
   return format.isPosition2D ? 'none' : 'frame';
 }
 
+/** `vertex_data` holds the positions, then the normal and tangent frame. `attribute_data` holds the rest. */
 export function surfaceLayout(format: number): SurfaceLayout {
   const compressed = (format & ARRAY_FLAG_COMPRESS_ATTRIBUTES) !== 0;
   const isPosition2D = (format & ARRAY_FLAG_USE_2D_VERTICES) !== 0;

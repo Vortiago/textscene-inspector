@@ -37,10 +37,7 @@ const CUSTOM_READS: Readonly<Record<EnumValue<typeof ArrayCustomFormat>, CustomR
   [ArrayCustomFormat.RGBA_FLOAT]: { lanes: 4, laneBytes: 4, lane: (view, o) => view.getFloat32(o, true) },
 };
 
-/**
- * CUSTOM0 to CUSTOM3 as the vertex stage reads them, four lanes for each vertex, each undefined when the
- * surface has none or `attribute_data` is narrower than the format implies.
- */
+/** Four lanes for each vertex, each undefined when absent or when `attribute_data` is too narrow. */
 export function decodeCustomArrays(
   bytes: Uint8Array,
   vertexCount: number,
