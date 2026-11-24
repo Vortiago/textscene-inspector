@@ -39,13 +39,15 @@ export interface StoredTexts {
   readonly writtenReading: VariantReading;
 }
 
-/** A stored property as the setters read it: the last write, else the file, else the class default. */
+/** A stored property as the setters read it: the last write, a live pass, the file, then the default. */
 export function storedValueOf({ node, written, nodeReading, writtenReading }: StoredTexts): StoredValue {
   const raw = canonicalisePropertyBag(node.type, { ...node.rawProperties });
   // One parse per property for each call: a setter such as `global_position` reads one many times.
   const values = new Map<string, VariantValue>();
   const valueOf = (property: string): VariantValue => {
     const isWritten = Object.hasOwn(written, property);
+    const placed = isWritten ? undefined : node.placedProperty(property);
+    if (placed) return placed;
     const text = isWritten
       ? written[property]
       : Object.hasOwn(raw, property)

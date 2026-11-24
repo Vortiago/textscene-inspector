@@ -38,6 +38,10 @@ import { liveTreeOf, type LiveLink, type LiveTree } from './liveSceneTree.js';
 import { nodePathUniquePaths } from './nodePathUniqueNames.js';
 import { resourcePipelineOf } from './sceneResourcePipeline.js';
 import { currentSharedTree, subscribeToLoadTicks } from './useLiveSceneTree.js';
+import { solvedNodePatchesOf } from './liveNodePatches.js';
+import { liveFilesOf } from './liveFiles.js';
+import type { PatchLookup } from './nodePatch.js';
+import { placedPropertyOf } from './placedProperty.js';
 
 /** The scene `link` instances where it has not drawn in yet, as Godot has no such node until it loads. */
 function awaitedInstancePath({ step }: LiveLink): string | null {
@@ -85,7 +89,8 @@ function treeNodeOf(
   tree: LiveTree,
   link: LiveLink,
   ancestors: readonly LiveLink[],
-  rootScenePath: string
+  rootScenePath: string,
+  placed: () => PatchLookup
 ): SceneTreeNode {
   const { node, groups, scope } = link.step;
   const parent = ancestors.at(-1) ?? null;
@@ -98,6 +103,7 @@ function treeNodeOf(
     containerVisibility: parent && containerVisibilityOf(tree, link, parent),
     sortedProperty: (property) =>
       nodeRegistry.sortedProperties(node.type)?.(node, sortableChildCount(tree, link.step))[property],
+    placedProperty: (property) => placedPropertyOf(placed().get(link.path), property),
     sceneFilePath: ancestors.length === 0 ? rootScenePath : (link.step.instancePath ?? ''),
     ownerPath: ownerOf(link, ancestors)?.path ?? null,
   };
@@ -137,6 +143,8 @@ function sceneTreeOf(
   rootScenePath: string,
   contentScaleSize: ProjectViewportSize
 ): SceneTree {
+  let patches: PatchLookup | undefined;
+  const placed = () => (patches ??= solvedNodePatchesOf(tree, liveFilesOf(loader).current()));
   return {
     contentScaleSize,
     node(livePath) {
@@ -153,7 +161,7 @@ function sceneTreeOf(
           return null;
         }
       }
-      return link && treeNodeOf(tree, link, ancestors, rootScenePath);
+      return link && treeNodeOf(tree, link, ancestors, rootScenePath, placed);
     },
     uniquePaths: (livePath) => nodePathUniquePaths(livePath, tree.roots, tree.ctx),
     cameras: () => camerasOf(tree),
