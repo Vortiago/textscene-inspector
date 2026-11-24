@@ -11,6 +11,8 @@ import { useNodeReference } from '../../../resources/reading';
 import type { ImageSize } from '../../../resources/formats/image/imagePixels';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import type { Polygon2DProperties } from './types';
+import { usePublishEditRect } from '../../../r3f/editRect/editRects';
+import { polygon2DEditRect } from '../../../r3f/editRect/nodeEditRects';
 import { polygonRings, type PolygonRings } from './polygonShapes';
 import { quantizeVertexColor } from './vertexColorQuantize';
 import type { Vector2 } from '../../../godot/math/vector';
@@ -26,6 +28,7 @@ import { canvasSurfaceGeometry, type CanvasSurface } from '../../../r3f/canvasMe
 
 export function Polygon2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Polygon2DProperties;
+  usePublishEditRect(polygon2DEditRect(props.polygon, props.offset));
 
   // Either an image file or an inline procedural texture. `useCanvasMeshTexture` hides which, and
   // owns the lifetime of the procedural one it rasterises.

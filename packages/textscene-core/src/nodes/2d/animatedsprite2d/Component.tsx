@@ -19,6 +19,8 @@ import { loopsUnderOverride } from '../../../r3f/animation/loopOverride';
 import { useFrameReference, useSpriteFrames } from '../../../resources/textures/spriteframes/useSpriteFrames';
 import { frameAtTime, clipDuration } from '../../../resources/textures/spriteframes/playback';
 import type { SpriteFramesAnimation } from '../../../resources/textures/spriteframes/types';
+import { usePublishEditRect } from '../../../r3f/editRect/editRects';
+import { animatedSprite2DEditRect } from '../../../r3f/editRect/nodeEditRects';
 import type { AnimatedSprite2DProperties } from './types';
 
 export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
@@ -138,6 +140,9 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   const texture = useCanvasMeshTexture(props, { reference: useFrameReference(resolved, frameRef) });
   const frameSize = useMemo(() => frameSizePx(texture.size, WHOLE_FRAME), [texture.size]);
   const surfaces = useSpriteQuad(props, frameSize);
+  usePublishEditRect(
+    animatedSprite2DEditRect(frameRef ? texture.size : undefined, props.centered, props.offset)
+  );
 
   // No SpriteFrames, no animation or no frame texture draws nothing (`animated_sprite_2d.cpp:270-278`),
   // and so does a SpriteFrames or frame texture that is loading or failed.

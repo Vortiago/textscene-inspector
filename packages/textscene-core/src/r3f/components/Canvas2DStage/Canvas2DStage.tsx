@@ -4,7 +4,14 @@
  * the chrome: the project-viewport frame, the zoom HUD, wheel zoom and drag pan.
  * `<World2DCanvas>` draws the world with its camera glued to the stage view.
  */
-import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../../../parser/types.js';
 import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
 import { readPersisted } from '../../hooks/usePersistedState.js';
@@ -21,11 +28,15 @@ import {
 import { World2DCanvas } from './World2DCanvas.js';
 import { FIT_ON_OPEN_2D_STORAGE_KEY } from './viewport2d.js';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext.js';
+import { createEditRects, EditRectsProvider } from '../../editRect/editRects.js';
+import { useFocusOnPointerEnter } from '../../viewFocus.js';
+import { Stage2DProvider, type Stage2D } from './FocusSelection2D.js';
 import styles from './Canvas2DStage.module.css';
 
 const ZOOM_MIN = 0.1;
 const ZOOM_MAX = 4;
 const clampZoom = (z: number) => Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
+const ZOOM_RANGE = { min: ZOOM_MIN, max: ZOOM_MAX };
 
 /** CSS-scale step for one wheel notch: this stage's own feel, not Godot's. */
 const ZOOM_PER_NOTCH = 1.1;
@@ -77,6 +88,14 @@ export function Canvas2DStage({
   scenePath,
 }: Canvas2DStageProps) {
   const stageRef = useRef<HTMLDivElement>(null);
+  // State beside the ref, so the keys bind once the element exists.
+  const [stageElement, setStageElement] = useState<HTMLDivElement | null>(null);
+  const holdStage = useCallback((element: HTMLDivElement | null) => {
+    stageRef.current = element;
+    setStageElement(element);
+  }, []);
+  useFocusOnPointerEnter(stageElement);
+  const [editRects] = useState(createEditRects);
   const [view, setView] = useState<View2D>({ pan: { x: 0, y: 0 }, zoom: 1 });
   const { pan, zoom } = view;
   // `display/window/size/viewport_*`, or Godot's 1152x648 for a scene with no
@@ -317,6 +336,11 @@ export function Canvas2DStage({
     }
   };
 
+  const stage2D = useMemo<Stage2D>(
+    () => ({ stage: stageElement, rects: editRects, view: viewRef, moveView, zoomRange: ZOOM_RANGE }),
+    [stageElement, editRects, moveView]
+  );
+
   function zoomAroundCentre(factor: number) {
     const el = stageRef.current;
     if (!el) return;
@@ -326,7 +350,7 @@ export function Canvas2DStage({
 
   return (
     <div
-      ref={stageRef}
+      ref={holdStage}
       className={styles.canvasStage}
       onPointerDown={onStagePointerDown}
       onPointerMove={onStagePointerMove}
@@ -369,14 +393,18 @@ export function Canvas2DStage({
 
       {/* The CanvasItem world and, as a sibling inside this canvas, the native
           Control layer, in Godot's 2D editor order. */}
-      <World2DCanvas
-        nodes={nodes}
-        internalResources={internalResources}
-        externalResources={externalResources}
-        editableInstances={editableInstances}
-        pan={pan}
-        zoom={zoom}
-      />
+      <Stage2DProvider stage={stage2D}>
+        <EditRectsProvider rects={editRects}>
+          <World2DCanvas
+            nodes={nodes}
+            internalResources={internalResources}
+            externalResources={externalResources}
+            editableInstances={editableInstances}
+            pan={pan}
+            zoom={zoom}
+          />
+        </EditRectsProvider>
+      </Stage2DProvider>
 
       {/* The project-viewport rectangle a parity capture clips to, by the testid
           `scripts/visual/previewServer.mjs` uses. Nothing mounts into it. */}

@@ -13,6 +13,8 @@ import { useGizmoDrawn } from '../../../r3f/hooks/useGizmoState';
 import { useNodeResource } from '../../../resources/reading';
 import { CURVE_2D, tessellateCurve2D, type Curve2DSampler } from '../../../resources/curves/curve2d';
 import { Path2DCurveProvider } from '../../../r3f/contexts/Path2DCurveContext';
+import { usePublishEditRect } from '../../../r3f/editRect/editRects';
+import { path2DEditRect } from '../../../r3f/editRect/nodeEditRects';
 import type { Path2DProperties } from './types';
 
 /** Godot editor path line color (white). */
@@ -21,6 +23,7 @@ const PATH_COLOR = 0xffffff;
 export function Path2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Path2DProperties;
   const curve = useNodeResource(props.curve, CURVE_2D);
+  usePublishEditRect(curve.value ? path2DEditRect(curve.value) : null);
   const drawsCurve = useGizmoDrawn('every-node');
 
   // A curve that is missing, still loading or unreadable gives a null sampler: no gizmo, and
