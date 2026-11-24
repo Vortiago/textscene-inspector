@@ -1,0 +1,56 @@
+import { describe, expect, it } from 'vitest';
+import '../r3f/sceneLiveTree.js';
+import { openScene } from './openScene';
+import { variant } from './variant';
+import type { ResourceProvider } from '../resources/ResourceProvider';
+
+const provider: ResourceProvider = { loadResource: async () => null };
+
+const SOURCE = `[gd_scene format=3]
+
+[node name="Main" type="Node3D"]
+
+[node name="Eye" type="Camera3D" parent="."]
+`;
+
+const eye = () => openScene({ source: SOURCE, provider }).getNode('Eye');
+
+// Each answer is measured in Godot 4.6.3 on a Camera3D through `callv`.
+describe('is_class', () => {
+  it.each([
+    ['Camera3D', true],
+    ['Node3D', true],
+    ['Object', true],
+    ['Node2D', false],
+    ['', false],
+  ])('answers %j with %s', async (className, expected) => {
+    expect(await eye().call('is_class', className)).toBe(expected);
+  });
+
+  it('takes a StringName', async () => {
+    expect(await eye().call('is_class', variant('&"Node"'))).toBe(true);
+  });
+
+  it("throws Godot's error for an argument that is not a string", async () => {
+    await expect(eye().call('is_class', 5)).rejects.toThrow(
+      'Camera3D::is_class: Cannot convert argument 1 from int to String.'
+    );
+  });
+
+  it('answers on the root window, a Window', async () => {
+    const root = openScene({ source: SOURCE, provider }).getNodeOrNull('/root')!;
+    expect(await root.call('is_class', 'Viewport')).toBe(true);
+  });
+});
+
+describe('get_class', () => {
+  it("answers the node's class", async () => {
+    expect(await eye().call('get_class')).toBe('Camera3D');
+  });
+
+  it("throws Godot's error for an argument it does not take", async () => {
+    await expect(eye().call('get_class', 'x')).rejects.toThrow(
+      'Camera3D::get_class: Method expected 0 argument(s), but called with 1.'
+    );
+  });
+});

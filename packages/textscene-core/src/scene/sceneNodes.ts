@@ -188,7 +188,7 @@ export class SceneNodes implements HandleHost {
     const reached = methods.findPropertyMethod(type, method);
     if (!reached) {
       throw new Error(
-        `${name}: not a method this release ports. It ports the camera methods and the property setters and getters.`
+        `${name}: not a method this release ports. It ports get_class, is_class, the camera methods and the property setters and getters.`
       );
     }
     return this.callPropertyMethod(path, name, reached, args);
@@ -245,6 +245,7 @@ export class SceneNodes implements HandleHost {
   /** A target that refuses each step once a new text has freed the node the call began on. */
   private methodTarget(path: string, generation: number): MethodTarget {
     return {
+      className: this.typeOfNode(path),
       livePath: path === ROOT_WINDOW_PATH ? null : livePathOf(path),
       cameras: () => {
         this.assertSameText(generation, path);

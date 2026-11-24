@@ -1,4 +1,4 @@
-import { findInClassChain } from '../godot/classdb/classBaseTypes.js';
+import { descendsFromClass, findInClassChain } from '../godot/classdb/classBaseTypes.js';
 import type { NodeHandle } from './nodeHandle.js';
 import { VARIANT_TYPE as T, variantTypeName } from '../godot/variant/variantType.js';
 import { valueOfSceneValue, type SceneValue } from './variant.js';
@@ -9,6 +9,8 @@ export type CallResult = SceneValue | NodeHandle | null;
 
 /** What a ported method reads and moves of its node and its scene. */
 export interface MethodTarget {
+  /** The node's class, as `get_class` answers it. */
+  readonly className: string;
   /** The node's live path, null for the root window. */
   readonly livePath: string | null;
   /** The scene's cameras, while the node is still of the text the call began in. */
@@ -38,6 +40,15 @@ function numberArgument(value: SceneValue, name: string, to: 'bool' | 'int'): nu
   if (cast.type === T.BOOL || cast.type === T.INT || cast.type === T.FLOAT)
     return cast.value as number | boolean;
   throw new Error(`${name}: Cannot convert argument 1 from ${variantTypeName(cast.type)} to ${to}.`);
+}
+
+// A bound String takes a StringName and a NodePath, and refuses any other type (measured in Godot 4.6.3).
+const STRING_TYPES: ReadonlySet<number> = new Set([T.STRING, T.STRING_NAME, T.NODE_PATH]);
+
+function stringArgument(value: SceneValue, name: string): string {
+  const cast = valueOfSceneValue(value);
+  if (STRING_TYPES.has(cast.type)) return String(cast.value);
+  throw new Error(`${name}: Cannot convert argument 1 from ${variantTypeName(cast.type)} to String.`);
 }
 
 function boolArgument(value: SceneValue, name: string): boolean {
@@ -131,6 +142,19 @@ const VIEWPORT_METHODS: Readonly<Record<string, PortedMethod>> = {
   },
 };
 
+const OBJECT_METHODS: Readonly<Record<string, PortedMethod>> = {
+  get_class: { minArguments: 0, maxArguments: 0, run: (target) => target.className },
+  // object.cpp:2220. The class table stops below `Object`, which every class inherits.
+  is_class: {
+    minArguments: 1,
+    maxArguments: 1,
+    run: (target, [className], name) => {
+      const asked = stringArgument(className!, name);
+      return asked === 'Object' || descendsFromClass(target.className, asked);
+    },
+  },
+};
+
 const PORTED_METHODS: Readonly<Record<string, Readonly<Record<string, PortedMethod>>>> = {
   Camera3D: CAMERA_3D_METHODS,
   Camera2D: CAMERA_2D_METHODS,
@@ -153,11 +177,12 @@ export function findPortedAccessor(
 
 /** The nearest class's port of `method`, as a call resolves a method up the class chain. */
 export function findPortedMethod(className: string, method: string): PortedMethod | undefined {
-  return findInClassChain(className, (type) =>
+  const own = findInClassChain(className, (type) =>
     PORTED_METHODS[type] && Object.hasOwn(PORTED_METHODS[type], method)
       ? PORTED_METHODS[type][method]
       : undefined
   );
+  return own ?? (Object.hasOwn(OBJECT_METHODS, method) ? OBJECT_METHODS[method] : undefined);
 }
 
 /** Godot's error for a bound call with the wrong count, `name` as `Class::method` (`object.cpp:888`). */
