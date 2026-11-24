@@ -10,6 +10,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../../../parser/types.js';
@@ -34,9 +35,16 @@ import { Stage2DProvider, type Stage2D } from './FocusSelection2D.js';
 import type { StageView } from '../../editRect/focusSelection2D.js';
 import styles from './Canvas2DStage.module.css';
 
-const ZOOM_MIN = 0.1;
-const ZOOM_MAX = 4;
+/** editor_zoom_widget.h:44-45. */
+const ZOOM_MIN = 1 / 128;
+const ZOOM_MAX = 128;
 const clampZoom = (z: number) => Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
+
+/** editor_zoom_widget.cpp:46-51: whole percents from 1000 %, else tenths, else hundredths below 10 %. */
+function zoomPercentText(zoom: number): string {
+  const step = zoom >= 10 ? 1 : zoom >= 0.1 ? 0.1 : 0.01;
+  return `${Number((Math.round((zoom * 100) / step) * step).toFixed(2))}%`;
+}
 
 /** CSS-scale step for one wheel notch: this stage's own feel, not Godot's. */
 const ZOOM_PER_NOTCH = 1.1;
@@ -359,11 +367,14 @@ export function Canvas2DStage({
       <div
         className={styles.canvasFrame}
         data-testid="canvas-2d-frame"
-        style={{
-          width: canvasWidth,
-          height: canvasHeight,
-          transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-        }}
+        style={
+          {
+            width: canvasWidth,
+            height: canvasHeight,
+            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+            '--tsi-stage-zoom': zoom,
+          } as CSSProperties
+        }
       >
         <span className={styles.canvasDim} aria-hidden>
           {canvasWidth} × {canvasHeight}
@@ -415,11 +426,18 @@ export function Canvas2DStage({
         data-viewport-size={`${canvasWidth}x${canvasHeight}`}
       />
 
-      <div className={styles.zoomHud} role="group" aria-label="Canvas zoom" data-testid="canvas-2d-zoom">
+      <div
+        className={styles.zoomHud}
+        role="group"
+        aria-label="Canvas zoom"
+        data-testid="canvas-2d-zoom"
+        // The stage's drag captures the pointer, and a captured pointer's click never reaches a button.
+        onPointerDown={(event) => event.stopPropagation()}
+      >
         <button type="button" onClick={() => zoomAroundCentre(1 / ZOOM_STEP_BUTTON)} aria-label="Zoom out">
           −
         </button>
-        <span className={styles.zoomVal}>{Math.round(zoom * 100)}%</span>
+        <span className={styles.zoomVal}>{zoomPercentText(zoom)}</span>
         <button type="button" onClick={() => zoomAroundCentre(ZOOM_STEP_BUTTON)} aria-label="Zoom in">
           +
         </button>
