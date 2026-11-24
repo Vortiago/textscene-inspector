@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
-import type { ViewportMode } from '../../contexts/ViewportModeContext';
+import type { ViewportMode } from '../ViewportMode/ViewportModeContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 

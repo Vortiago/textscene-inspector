@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { TscnNode } from '../../../parser/types.js';
-import type { ViewportMode } from '../../contexts/ViewportModeContext.js';
+import type { ViewportMode } from '../ViewportMode/ViewportModeContext.js';
 import type { PreviewCaptureState } from './previewCaptureState.js';
 import type { Scene } from '../../../scene/openScene.js';
 import type { NodeHandle } from '../../../scene/nodeHandle.js';

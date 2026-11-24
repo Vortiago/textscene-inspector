@@ -40,7 +40,7 @@ function mountPeekIn(projectFile: string) {
   loader.setProvider(provider);
   return render(
     <ResourceLoaderProvider loader={loader}>
-      <ProjectSettingsProvider sceneKey="res://scene.tscn">
+      <ProjectSettingsProvider>
         <PeekProbe />
       </ProjectSettingsProvider>
     </ResourceLoaderProvider>

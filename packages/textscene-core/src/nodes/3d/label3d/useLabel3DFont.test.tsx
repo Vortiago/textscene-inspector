@@ -90,7 +90,7 @@ function renderMetrics(
   const rendered = renderHook(() => useLabel3DFont(fontRef), {
     wrapper: ({ children }: { children: ReactNode }) => (
       <ResourceLoaderProvider loader={loader}>
-        <ProjectSettingsProvider sceneKey="res://scene.tscn">
+        <ProjectSettingsProvider>
           <SceneResourcesProvider internalResources={[OWN_FONT, SHEARED_FONT, PLAIN_FILE, MIPMAPPED_FILE]}>
             {children}
           </SceneResourcesProvider>

@@ -1,7 +1,6 @@
-import { useContext, useEffect, useLayoutEffect, useRef } from 'react';
-import { useOptionalHierarchy } from '../../contexts/HierarchyContext.js';
-import { useViewportMode } from '../../contexts/ViewportModeContext.js';
-import { ResourceLoaderContext } from '../../../resources/ResourceLoaderContext.js';
+import { useEffect, useLayoutEffect, useRef, useSyncExternalStore } from 'react';
+import { useViewportMode } from '../ViewportMode/ViewportModeContext.js';
+import type { Scene } from '../../../scene/openScene.js';
 import type { SceneValue } from '../../../scene/variant.js';
 import { warnOfCameraFailure, type EditorViewAnswers } from '../../editorView/editorCamera/editorCameras.js';
 import type { HeardStatusStore } from './previewViewStatus.js';
@@ -11,17 +10,16 @@ import { usePreviewCamera } from './previewCamera.js';
 const FIT_DELAYS_MS = [150, 500, 1100];
 
 interface FrameOnOpenProps {
+  scene: Pick<Scene, 'rootScenePath' | 'parse' | 'files' | 'subscribe'>;
   view: EditorViewAnswers | null;
   heard: HeardStatusStore;
 }
 
 /** Opt-in: Godot opens each scene at a fixed orbit and frames only on F (node_3d_editor_plugin.h:420-426). */
-export function FrameOnOpen({ view, heard }: FrameOnOpenProps) {
+export function FrameOnOpen({ scene, view, heard }: FrameOnOpenProps) {
   const { mode, frameOnOpen } = useViewportMode();
-  const hierarchy = useOptionalHierarchy();
-  const rootKey = hierarchy?.sceneGraph?.rootScene ?? '';
-  const hasScene = !!hierarchy?.sceneGraph;
-  const loader = useContext(ResourceLoaderContext);
+  const rootKey = scene.rootScenePath;
+  const hasScene = useSyncExternalStore(scene.subscribe, () => scene.parse().sceneGraph !== null);
   // A return to the 3D mode finds the camera where it was left, as in Godot, so it frames no scene twice.
   const framedRoot = useRef<string | null>(null);
   // A ref, not a dependency: an ended preview starts no fit.
@@ -63,9 +61,10 @@ export function FrameOnOpen({ view, heard }: FrameOnOpenProps) {
     const timers = isFramed ? [] : FIT_DELAYS_MS.map((delay) => setTimeout(fitLogged, delay));
 
     // Each settle that ends a load fits, as one can precede an instanced `.glb` load. A write never does.
-    let hasLoadedSinceSettle = (loader?.pendingResourceCount ?? 0) > 0;
-    const stopWatchingLoads = loader?.subscribePending(() => {
-      if (loader.pendingResourceCount > 0) hasLoadedSinceSettle = true;
+    const isLoading = () => scene.files().some((file) => file.state === 'loading');
+    let hasLoadedSinceSettle = isLoading();
+    const stopWatchingLoads = scene.subscribe(() => {
+      if (isLoading()) hasLoadedSinceSettle = true;
     });
     let wasSettled = false;
     const fitOnSettle = () => {
@@ -81,10 +80,10 @@ export function FrameOnOpen({ view, heard }: FrameOnOpenProps) {
     return () => {
       isCancelled = true;
       timers.forEach(clearTimeout);
-      stopWatchingLoads?.();
+      stopWatchingLoads();
       stopHearing();
     };
-  }, [rootKey, isFraming, view, heard, loader]);
+  }, [rootKey, isFraming, view, heard, scene]);
 
   return null;
 }

@@ -12,7 +12,7 @@ import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { PreviewVisibilityProvider } from './contexts/PreviewVisibilityContext.js';
 import { TscnSceneProvider } from './TscnSceneProvider.js';
 import type { Scene } from '../scene/openScene.js';
-import type { ViewportMode } from './contexts/ViewportModeContext.js';
+import type { ViewportMode } from './viewportMode.js';
 import { ViewShowProvider } from './viewShow/ViewShowContext.js';
 import type { ViewShow } from './viewShow/viewShow.js';
 import { ViewportActionsProvider } from './contexts/ViewportActionsContext.js';
@@ -30,14 +30,11 @@ export type CanvasView = ViewAnswers & EditorViewAnswers;
 
 const GameView = lazy(() => import('./gameView/GameView.js').then((m) => ({ default: m.GameView })));
 
-/** `in-game` draws the game's start with no script run, `3D` and `2D` the editor's views. */
-export type TscnCanvasMode = ViewportMode;
-
 export interface TscnCanvasProps extends Omit<HostSelectionProps, 'children'> {
   /** The scene `openScene` gave. The entry requires it. Without it, the shell's view reads its provider. */
   scene?: Scene;
   /** `3D` by default. A change replaces the stage, so one canvas is live. */
-  mode?: TscnCanvasMode;
+  mode?: ViewportMode;
   /** `false` draws only the frames a load, a settle or a capture needs. Without it, the host decides. */
   visible?: boolean;
   /** As `mountScene`'s `camera`. Without it, the host decides. */

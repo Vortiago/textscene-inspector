@@ -3,7 +3,7 @@ import { subscribeToSceneTree } from '../../currentCamera.js';
 import type { ParseResult } from '../../../scene/parseScene.js';
 import type { Scene } from '../../../scene/openScene.js';
 import { ROOT_WINDOW_PATH } from '../../../scene/nodePathWalk.js';
-import { useViewportMode } from '../../contexts/ViewportModeContext.js';
+import { useViewportMode } from '../ViewportMode/ViewportModeContext.js';
 import { workspaceForRootType } from '../../workspaceForScene.js';
 
 /** The root's class picks the workspace once per scene (ADR-0006), an instanced root its sub-scene's. */

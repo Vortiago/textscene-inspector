@@ -247,12 +247,14 @@ describe('the app ids and keys a harness copies match the app', () => {
   });
 
   it('matches the storage key that turns the Gizmos toggle on', async () => {
-    const viewport = await import('../../packages/textscene-core/src/r3f/contexts/ViewportModeContext.tsx');
+    const viewport =
+      await import('../../packages/textscene-core/src/r3f/components/ViewportMode/ViewportModeContext.tsx');
     expect(SHOW_GIZMOS_STORAGE_KEY).toBe(viewport.SHOW_STORAGE_KEYS.gizmos);
   });
 
   it('matches the storage key that turns the Performance overlay on', async () => {
-    const viewport = await import('../../packages/textscene-core/src/r3f/contexts/ViewportModeContext.tsx');
+    const viewport =
+      await import('../../packages/textscene-core/src/r3f/components/ViewportMode/ViewportModeContext.tsx');
     expect(SHOW_PERFORMANCE_STORAGE_KEY).toBe(viewport.SHOW_STORAGE_KEYS.performance);
   });
 });

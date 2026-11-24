@@ -1,19 +1,19 @@
 /** `tscn-web-source-pane` in apps/textscene-web/src/sourcePane.ts. */
 export const SOURCE_PANE_STORAGE_KEY = 'tscn-web-source-pane';
-/** `FRAME_ON_OPEN_STORAGE_KEY` in r3f/contexts/ViewportModeContext.tsx. */
+/** `FRAME_ON_OPEN_STORAGE_KEY` in r3f/components/ViewportMode/ViewportModeContext.tsx. */
 export const FRAME_ON_OPEN_STORAGE_KEY = 'tsi.frameOnOpen';
 /** `FIT_ON_OPEN_2D_STORAGE_KEY` in r3f/world2D/viewport2d.ts. A test pins it: a stale key refits. */
 export const FIT_ON_OPEN_2D_STORAGE_KEY = 'tsi.fitOnOpen2D';
 /**
- * `VIEWPORT_MODE_STORAGE_KEY` in r3f/contexts/ViewportModeContext.tsx: the workspace preference,
+ * `VIEWPORT_MODE_STORAGE_KEY` in r3f/components/ViewportMode/ViewportModeContext.tsx: the workspace preference,
  * which `WorkspaceAutoSelect` overrides only when the scene root claims a workspace. A `Node`-rooted
  * 2D scene (`game_splitscreen.tscn`) claims neither, as in Godot's editor, so without it a 2D
  * capture opens in the 3D workspace.
  */
 export const VIEWPORT_MODE_STORAGE_KEY = 'tsi.viewportMode';
-/** `SHOW_STORAGE_KEYS.gizmos` in r3f/contexts/ViewportModeContext.tsx, pinned by `previewServer.test.mjs`. */
+/** `SHOW_STORAGE_KEYS.gizmos` in r3f/components/ViewportMode/ViewportModeContext.tsx, pinned by `previewServer.test.mjs`. */
 export const SHOW_GIZMOS_STORAGE_KEY = 'tsi.showGizmos';
-/** `SHOW_STORAGE_KEYS.performance` in r3f/contexts/ViewportModeContext.tsx, pinned the same way. */
+/** `SHOW_STORAGE_KEYS.performance` in r3f/components/ViewportMode/ViewportModeContext.tsx, pinned the same way. */
 export const SHOW_PERFORMANCE_STORAGE_KEY = 'tsi.showPerformance';
 /** The Performance overlay's testids, in r3f/frameProfile/performanceTestIds.ts. */
 export const PERFORMANCE_TESTIDS = {

@@ -1,10 +1,12 @@
 import { act, render, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { HierarchyProvider } from '../../contexts/HierarchyContext';
-import { ViewportModeProvider, useViewportMode, type ViewportMode } from '../../contexts/ViewportModeContext';
-import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
-import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
+import {
+  ViewportModeProvider,
+  useViewportMode,
+  type ViewportMode,
+} from '../ViewportMode/ViewportModeContext';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
+import type { SceneFile } from '../../../scene/sceneFiles';
 import { createEditorCameras } from '../../editorView/editorCamera/editorCameras';
 import { variant, type SceneValue } from '../../../scene/variant';
 import type { ViewStatus } from '../../viewStatus/viewStatus';
@@ -48,10 +50,45 @@ function fakeCamera() {
 
 const NO_SCENE_WATCH = { getNodeOrNull: () => null, observe: () => () => {} };
 
+const GLB: SceneFile = {
+  path: 'res://ship.glb',
+  type: 'PackedScene',
+  state: 'loading',
+  owners: ['res://main.tscn'],
+  reason: null,
+  addresses: [],
+};
+
+/** A parsed scene whose files a test sets, telling its subscribers of each change. */
+function fakeScene() {
+  const parsed = { sceneGraph: createSceneGraphFromTscnScene({ nodes: [] }), error: null };
+  let files: readonly SceneFile[] = [];
+  const listeners = new Set<() => void>();
+  const setFiles = (next: readonly SceneFile[]) => {
+    files = next;
+    listeners.forEach((listener) => listener());
+  };
+  const scene = {
+    rootScenePath: 'res://main.tscn',
+    parse: () => parsed,
+    files: () => files,
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => void listeners.delete(listener);
+    },
+  };
+  /** Starts a `.glb` load, and gives the call that ends it. */
+  const beginLoad = () => {
+    setFiles([GLB]);
+    return () => setFiles([{ ...GLB, state: 'loaded' }]);
+  };
+  return { scene, beginLoad };
+}
+
 async function mount({ frameOnOpen = true, mode = '3D' as ViewportMode } = {}) {
   const camera = fakeCamera();
   const heard = renderHook(useHeardStatus).result.current;
-  const fake = createFakeResourceLoader();
+  const fake = fakeScene();
   let preview: PreviewCamera | null = null;
   let setMode: (mode: ViewportMode) => void = () => {};
   function PreviewProbe() {
@@ -61,34 +98,30 @@ async function mount({ frameOnOpen = true, mode = '3D' as ViewportMode } = {}) {
   }
   await act(async () => {
     render(
-      <ResourceLoaderProvider loader={fake.loader}>
-        <HierarchyProvider value={{ sceneGraph: createSceneGraphFromTscnScene({ nodes: [] }), panelId: 'p' }}>
-          <ViewportModeProvider initialFrameOnOpen={frameOnOpen} initialMode={mode}>
-            <PreviewCameraProvider scene={NO_SCENE_WATCH}>
-              <PreviewProbe />
-              <FrameOnOpen view={camera.view} heard={heard} />
-            </PreviewCameraProvider>
-          </ViewportModeProvider>
-        </HierarchyProvider>
-      </ResourceLoaderProvider>
+      <ViewportModeProvider initialFrameOnOpen={frameOnOpen} initialMode={mode}>
+        <PreviewCameraProvider scene={NO_SCENE_WATCH}>
+          <PreviewProbe />
+          <FrameOnOpen scene={fake.scene} view={camera.view} heard={heard} />
+        </PreviewCameraProvider>
+      </ViewportModeProvider>
     );
   });
   const runTimers = () => act(async () => void vi.advanceTimersByTime(PAST_LAST_TIMER_MS));
   const switchTo = (next: ViewportMode) => act(async () => setMode(next));
-  return { ...camera, heard, loader: fake.loader, preview: () => preview!, runTimers, switchTo };
+  return { ...camera, heard, beginLoad: fake.beginLoad, preview: () => preview!, runTimers, switchTo };
 }
 
 /** A view that settled once, then started a `.glb` load, with every fit timer run out. */
 async function mountWithLateLoad() {
   const mounted = await mount();
   heardSettle(mounted.heard);
-  const releaseLateLoad = mounted.loader.beginPending();
+  const endLateLoad = mounted.beginLoad();
   mounted.heard.onStatusChange(EMPTY_VIEW_STATUS);
   await mounted.runTimers();
   mounted.focus.mockClear();
   const settleLoad = () =>
     act(async () => {
-      releaseLateLoad();
+      endLateLoad();
       heardSettle(mounted.heard);
     });
   return { ...mounted, settleLoad };

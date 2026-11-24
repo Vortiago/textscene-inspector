@@ -2,7 +2,7 @@ import type { NodeHandle } from '../../../scene/nodeHandle.js';
 import { nodeNotFound } from '../../../scene/nodeHandle.js';
 import type { CallResult } from '../../../scene/nodeMethods.js';
 import type { SceneValue } from '../../../scene/variant.js';
-import type { ViewportMode } from '../../contexts/ViewportModeContext.js';
+import type { ViewportMode } from '../../viewportMode.js';
 import * as logger from '../../../logger.js';
 
 /** What a mounted stage does to its camera. The node waits for one, as the stage loads on demand. */

@@ -1,4 +1,4 @@
-import { useViewportMode, type ViewportMode } from '../../contexts/ViewportModeContext.js';
+import { useViewportMode, type ViewportMode } from '../ViewportMode/ViewportModeContext.js';
 // The claim reads the slice registrations, loaded here so the hint works
 // whichever canvas, if any, imported them first.
 import '../../nodes/index.js';

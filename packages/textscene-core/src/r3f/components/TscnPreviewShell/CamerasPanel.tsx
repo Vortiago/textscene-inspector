@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useViewportMode } from '../../contexts/ViewportModeContext.js';
+import { useViewportMode } from '../ViewportMode/ViewportModeContext.js';
 import { useLiveSceneNodes, useSharedLiveTree } from '../../useLiveSceneTree.js';
 import { livePlacements, node2dWorldPosition } from '../../node2dWorldTransform.js';
 import { useResourceLoader } from '../../../resources/useResource.js';

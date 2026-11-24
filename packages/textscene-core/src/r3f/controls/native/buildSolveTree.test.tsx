@@ -1447,7 +1447,7 @@ describe('useBuildSolveTree — theme resolution', () => {
     const { result } = renderHook(() => useBuildSolveTree(nodes, [], []), {
       wrapper: ({ children }: { children: ReactNode }) => (
         <ResourceLoaderProvider loader={loader}>
-          <ProjectSettingsProvider sceneKey="res://scene.tscn">{children}</ProjectSettingsProvider>
+          <ProjectSettingsProvider>{children}</ProjectSettingsProvider>
         </ResourceLoaderProvider>
       ),
     });
@@ -1470,7 +1470,7 @@ describe('useBuildSolveTree — theme resolution', () => {
       const rendered = renderHook(() => useBuildSolveTree([label('Plain')], [], []), {
         wrapper: ({ children }: { children: ReactNode }) => (
           <ResourceLoaderProvider loader={loader}>
-            <ProjectSettingsProvider sceneKey="res://scene.tscn">{children}</ProjectSettingsProvider>
+            <ProjectSettingsProvider>{children}</ProjectSettingsProvider>
           </ResourceLoaderProvider>
         ),
       });
@@ -1515,7 +1515,7 @@ describe('useBuildSolveTree — theme resolution', () => {
         {
           wrapper: ({ children }: { children: ReactNode }) => (
             <ResourceLoaderProvider loader={loader}>
-              <ProjectSettingsProvider sceneKey="res://scene.tscn">{children}</ProjectSettingsProvider>
+              <ProjectSettingsProvider>{children}</ProjectSettingsProvider>
             </ResourceLoaderProvider>
           ),
         }
@@ -1722,7 +1722,7 @@ describe('useBuildSolveTree — theme StyleBox/Color/Constant resolution', () =>
     const { result } = renderHook(() => useBuildSolveTree(nodes, [], []), {
       wrapper: ({ children }: { children: ReactNode }) => (
         <ResourceLoaderProvider loader={loader}>
-          <ProjectSettingsProvider sceneKey="res://scene.tscn">{children}</ProjectSettingsProvider>
+          <ProjectSettingsProvider>{children}</ProjectSettingsProvider>
         </ResourceLoaderProvider>
       ),
     });
@@ -2177,7 +2177,7 @@ describe('useBuildSolveTree — layout direction', () => {
     const { result } = renderHook(() => useBuildSolveTree([label('Lone')], [], []), {
       wrapper: ({ children }: { children: ReactNode }) => (
         <ResourceLoaderProvider loader={loader}>
-          <ProjectSettingsProvider sceneKey="res://scene.tscn">{children}</ProjectSettingsProvider>
+          <ProjectSettingsProvider>{children}</ProjectSettingsProvider>
         </ResourceLoaderProvider>
       ),
     });
@@ -2589,7 +2589,7 @@ remote_path = NodePath("../../HolderA")
     const { result } = renderHook(() => useBuildSolveTree(scene.nodes, [], []), {
       wrapper: ({ children }: { children: ReactNode }) => (
         <ResourceLoaderProvider loader={loader}>
-          <ProjectSettingsProvider sceneKey="res://scene.tscn">{children}</ProjectSettingsProvider>
+          <ProjectSettingsProvider>{children}</ProjectSettingsProvider>
         </ResourceLoaderProvider>
       ),
     });

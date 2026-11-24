@@ -50,12 +50,10 @@ ProjectSettingsContext.displayName = 'ProjectSettingsContext';
 
 export interface ProjectSettingsProviderProps {
   children: ReactNode;
-  /** Changes on a scene swap, which re-reads `res://project.godot`: one path in every corpus. */
-  sceneKey?: string;
 }
 
-/** The project's settings, or null when the file is absent or is not a `project.godot`. */
-export function ProjectSettingsProvider({ children, sceneKey }: ProjectSettingsProviderProps) {
+/** The project's settings, or null when the file is absent or is not a `project.godot`. A new loader reads them again. */
+export function ProjectSettingsProvider({ children }: ProjectSettingsProviderProps) {
   const loader = useResourceLoader();
   const [settings, setSettings] = useState<ProjectSettings | null>(null);
   const [isSettled, setIsSettled] = useState(false);
@@ -96,7 +94,7 @@ export function ProjectSettingsProvider({ children, sceneKey }: ProjectSettingsP
       latestRead++;
       bus.off('invalidated', onInvalidated);
     };
-  }, [loader, sceneKey]);
+  }, [loader]);
 
   const value = useMemo<ProjectSettingsValue>(
     () => ({

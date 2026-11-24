@@ -4,7 +4,7 @@
  * Node3D, and a plain Node root neither. Light module: registry and type sets only.
  */
 
-import type { ViewportMode } from './contexts/ViewportModeContext';
+import type { ViewportMode } from './viewportMode.js';
 // The classification lives on the slice registrations, loaded here so the rule
 // works whichever canvas, if any, imported them first.
 import './nodes/index.js';

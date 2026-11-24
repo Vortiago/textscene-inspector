@@ -3,7 +3,11 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { CamerasPanel } from './CamerasPanel';
 import { PreviewCameraProvider, usePreviewCamera } from './previewCamera';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
-import { ViewportModeProvider, useViewportMode, type ViewportMode } from '../../contexts/ViewportModeContext';
+import {
+  ViewportModeProvider,
+  useViewportMode,
+  type ViewportMode,
+} from '../ViewportMode/ViewportModeContext';
 import { openScene, type Scene } from '../../../scene/openScene';
 import type { ResourceProvider } from '../../../resources/ResourceProvider';
 import '../../sceneLiveTree.js';

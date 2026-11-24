@@ -119,7 +119,7 @@ describe('useBuildSolveTree icons', () => {
     const { result } = renderHook(() => useBuildSolveTree([checkBox()], [], []), {
       wrapper: ({ children }: { children: ReactNode }) => (
         <ResourceLoaderProvider loader={loader}>
-          <ProjectSettingsProvider sceneKey="res://scene.tscn">{children}</ProjectSettingsProvider>
+          <ProjectSettingsProvider>{children}</ProjectSettingsProvider>
         </ResourceLoaderProvider>
       ),
     });
@@ -172,7 +172,7 @@ describe('useBuildSolveTree icons', () => {
     const { result } = renderHook(() => useBuildSolveTree([checkBox()], [], []), {
       wrapper: ({ children }: { children: ReactNode }) => (
         <ResourceLoaderProvider loader={loader}>
-          <ProjectSettingsProvider sceneKey="res://scene.tscn">{children}</ProjectSettingsProvider>
+          <ProjectSettingsProvider>{children}</ProjectSettingsProvider>
         </ResourceLoaderProvider>
       ),
     });

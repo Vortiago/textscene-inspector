@@ -36,13 +36,13 @@ function fakeProvider(files: Record<string, string>): ResourceProvider & { calls
   };
 }
 
-function mountWith(provider: ResourceProvider, sceneKey = 'res://scene.tscn') {
+function mountWith(provider: ResourceProvider) {
   const bus = new FileEventBus(provider);
   const loader = new ResourceLoader(bus);
   loader.setProvider(provider);
   return render(
     <ResourceLoaderProvider loader={loader}>
-      <ProjectSettingsProvider sceneKey={sceneKey}>
+      <ProjectSettingsProvider>
         <Probe />
       </ProjectSettingsProvider>
     </ResourceLoaderProvider>
@@ -92,7 +92,7 @@ describe('ProjectSettingsProvider', () => {
 
     render(
       <ResourceLoaderProvider loader={loader}>
-        <ProjectSettingsProvider sceneKey="res://scene.tscn">
+        <ProjectSettingsProvider>
           <Probe />
         </ProjectSettingsProvider>
       </ResourceLoaderProvider>
@@ -115,7 +115,7 @@ describe('ProjectSettingsProvider', () => {
     };
     const tree = (loader: ResourceLoader) => (
       <ResourceLoaderProvider loader={loader}>
-        <ProjectSettingsProvider sceneKey="res://main.tscn">
+        <ProjectSettingsProvider>
           <Probe />
         </ProjectSettingsProvider>
       </ResourceLoaderProvider>
@@ -143,7 +143,7 @@ describe('ProjectSettingsProvider', () => {
       }
       render(
         <ResourceLoaderProvider loader={loader}>
-          <ProjectSettingsProvider sceneKey="res://scene.tscn">
+          <ProjectSettingsProvider>
             <Probe />
             <ScaleLog />
           </ProjectSettingsProvider>

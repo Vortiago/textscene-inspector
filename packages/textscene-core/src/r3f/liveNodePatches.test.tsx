@@ -124,9 +124,7 @@ remote_path = NodePath("../../HolderA")
       <DispatchedScene
         sceneGraph={sceneGraph}
         loader={loader}
-        around={(nodes) => (
-          <ProjectSettingsProvider sceneKey="res://main.tscn">{nodes}</ProjectSettingsProvider>
-        )}
+        around={(nodes) => <ProjectSettingsProvider>{nodes}</ProjectSettingsProvider>}
       />
     );
     await settleLoads();

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { ViewportModeProvider } from '../../contexts/ViewportModeContext';
+import { ViewportModeProvider } from '../ViewportMode/ViewportModeContext';
 import { ViewportToolbar } from './ViewportToolbar';
 import { openDisplayMenu } from './DisplayMenu.testkit';
 

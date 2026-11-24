@@ -12,7 +12,7 @@ import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { createEditorCameras } from '../../editorView/editorCamera/editorCameras';
 import { PreviewViewProvider } from './previewView';
 import type { SceneValue } from '../../../scene/variant';
-import { ViewportModeProvider, useViewportMode } from '../../contexts/ViewportModeContext';
+import { ViewportModeProvider, useViewportMode } from '../ViewportMode/ViewportModeContext';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import { TscnParser } from '../../../parser/TscnParser';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';

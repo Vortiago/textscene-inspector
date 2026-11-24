@@ -14,14 +14,6 @@ function withViewProviders() {
   return viewProviders({
     hierarchyValue: { sceneGraph: null, panelId: 'p' },
     loader: createFakeResourceLoader().loader,
-    initialViewportMode: undefined,
-    initialViewport: {
-      mode: '2D',
-      show: { gizmos: true, grid: false, fog: true, performance: false },
-      frameOnOpen: false,
-    },
-    panelId: 'p',
-    rootScenePath: 'main.tscn',
   });
 }
 
