@@ -8,7 +8,12 @@ import { heldLiveTargetCopy } from '../liveTargets';
 import { installGodotOpaqueOrder } from '../../shaders/pipeline/opaqueOrder';
 import { prepareCanvasRenderer } from './prepareCanvasRenderer';
 
-const renderer = () => ({ setOpaqueSort: vi.fn() }) as unknown as THREE.WebGLRenderer;
+const renderer = () =>
+  ({
+    setOpaqueSort: vi.fn(),
+    renderBufferDirect: vi.fn(),
+    getContext: vi.fn(),
+  }) as unknown as THREE.WebGLRenderer;
 
 /** The opaque sort `installGodotOpaqueOrder` sets. */
 function godotOpaqueSort(): unknown {
@@ -34,5 +39,12 @@ describe('prepareCanvasRenderer', () => {
     const gl = renderer();
     prepareCanvasRenderer({ gl });
     expect(gl.setOpaqueSort).toHaveBeenCalledWith(godotOpaqueSort());
+  });
+
+  it('sets Godot’s polygon mode around each draw', () => {
+    const gl = renderer();
+    const draw = gl.renderBufferDirect;
+    prepareCanvasRenderer({ gl });
+    expect(gl.renderBufferDirect).not.toBe(draw);
   });
 });
