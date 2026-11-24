@@ -38,6 +38,22 @@ describe('transpileCanvasItem', () => {
     expect(samplersOf(generatedMaterialProgram(draw.material).fragment)).toBe(unlit + 3);
   });
 
+  it('keeps the msdf and lcd bits of the packed word when it sets lighting', () => {
+    const draw = transpileCanvasItem(DEFAULT_CANVAS_SHADER).draw('quad');
+    const packed = draw.specialisations.get('pso_sc_packed_0')!;
+    packed.value = 0b110;
+
+    specialiseCanvasDraw(draw, { useLighting: true });
+
+    expect(packed.value).toBe(0b111);
+  });
+
+  it("draws with no depth test and no depth write, as Godot's canvas pipeline does", () => {
+    const { material } = transpileCanvasItem(DEFAULT_CANVAS_SHADER).draw('quad');
+
+    expect([material.depthTest, material.depthWrite]).toEqual([false, false]);
+  });
+
   it('builds one material for each variant, however often it is asked for', () => {
     const item = transpileCanvasItem(DEFAULT_CANVAS_SHADER);
 

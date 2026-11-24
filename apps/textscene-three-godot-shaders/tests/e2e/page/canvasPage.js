@@ -22,15 +22,25 @@ function drawFaults(draw) {
 }
 
 /** Each variant of Godot's default canvas shader, unlit and lit, with the faults its program reports. */
-function linkCanvasVariants() {
-  const item = transpileCanvasItem(DEFAULT_CANVAS_SHADER);
-  return CANVAS_VARIANTS.flatMap((variant) =>
-    [false, true].map((useLighting) => {
-      const draw = item.draw(variant);
+function canvasVariantFaults(item) {
+  return CANVAS_VARIANTS.flatMap((variant) => {
+    const draw = item.draw(variant);
+    const linked = [false, true].map((useLighting) => {
       specialiseCanvasDraw(draw, { useLighting });
       return { variant, useLighting, faults: drawFaults(draw) };
-    })
-  );
+    });
+    draw.material.dispose();
+    return linked;
+  });
+}
+
+/** The faults of each variant, or the error that stopped the transpile, as `drawMesh` returns one. */
+function linkCanvasVariants() {
+  try {
+    return { linked: canvasVariantFaults(transpileCanvasItem(DEFAULT_CANVAS_SHADER)) };
+  } catch (error) {
+    return { error: String(error.message ?? error) };
+  }
 }
 
 globalThis.linkCanvasVariants = linkCanvasVariants;

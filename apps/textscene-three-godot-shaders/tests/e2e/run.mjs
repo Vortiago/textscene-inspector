@@ -68,7 +68,8 @@ async function unreportedFaults(page) {
 
 /** A failure for each variant of the canvas template whose program the GPU refuses, unlit or lit. */
 async function unlinkedCanvasVariants(page) {
-  const linked = await page.evaluate(() => globalThis.linkCanvasVariants());
+  const { linked, error } = await page.evaluate(() => globalThis.linkCanvasVariants());
+  if (error) return [`canvas template: expected the default canvas shader to transpile, got ${error}`];
   const refused = linked.filter(({ faults }) => faults.length > 0);
   console.log(`canvas template: ${linked.length - refused.length} of ${linked.length} variants link`);
   return refused.map(

@@ -1,9 +1,11 @@
 import { instanceIndex, int, varyingProperty, vertexIndex } from 'three/tsl';
-import type { Node } from 'three/webgpu';
+import type { Node, TextureNode } from 'three/webgpu';
 import { parsedShader, shaderSource, type ShaderOptions } from '../language/parseShader.js';
 import { emitTemplateStage, programResources } from '../template/emitTemplate.js';
 import { linkedProgram, type LinkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
+import type { RowBlock } from '../template/rowBlock.js';
 import type { Specialisation } from '../template/specialisation.js';
+import type { TemplateUniform } from '../template/templateUniforms.js';
 import { TreeMemo } from '../template/treeMemo.js';
 import { glClipPosition, vertexAttributes, vulkanFragCoord } from '../template/vulkanStage.js';
 import type { Vec4 } from '../tslTypes.js';
@@ -37,8 +39,14 @@ const CANVAS: ProgramTemplate = {
 /** One variant of a canvas item's material. */
 export interface CanvasDraw {
   readonly material: BoundNodeMaterial;
+  /** The template's uniforms of both stages, by `instance.member`: `canvas_data.screen_transform`. */
+  readonly uniforms: ReadonlyMap<string, TemplateUniform>;
   /** The template's specialisation constants, by name: `pso_sc_packed_0`. */
   readonly specialisations: ReadonlyMap<string, Specialisation>;
+  /** The template's textures, by name. */
+  readonly textures: ReadonlyMap<string, TextureNode>;
+  /** The template's storage buffers, by instance name. */
+  readonly buffers: ReadonlyMap<string, RowBlock>;
 }
 
 export interface TranspiledCanvasItem {
@@ -76,10 +84,15 @@ export interface CanvasSpecialisation {
   readonly useLighting: boolean;
 }
 
+/** Bit 0 of `sc_packed_0`, beside `use_msdf` and `use_lcd` (`canvas_uniforms_inc.glsl:94`). */
+const USE_LIGHTING_BIT = 1;
+
 /** Folds `specialisation` into `draw`'s programs, which emit their stages again for a new value. */
 export function specialiseCanvasDraw(draw: CanvasDraw, { useLighting }: CanvasSpecialisation): void {
   const packed = draw.specialisations.get('pso_sc_packed_0');
-  if (packed) packed.value = useLighting ? 1 : 0;
+  if (!packed) return;
+  const otherBits = (packed.value as number) & ~USE_LIGHTING_BIT;
+  packed.value = useLighting ? otherBits | USE_LIGHTING_BIT : otherBits;
 }
 
 /** The material of the variant of `defines`, with resources of its own and the program's parameters. */
@@ -87,9 +100,18 @@ function canvasDraw(program: LinkedProgram, defines: string, shader: MaterialSha
   const resources = programResources();
   const specialisations = resources.uniforms.specialisations;
   const material = new BoundNodeMaterial({ ...shader, specialisations });
+  // The canvas pipeline's default depth state tests nothing (`renderer_canvas_render_rd.cpp:1535`).
+  material.depthTest = false;
+  material.depthWrite = false;
   // Emitted anew at each specialisation: three caches function code by node (`NodeBuilder.js:2759`).
   material.stageWith(() => Object.assign(material, stages({ ...program, resources }, defines)));
-  return { material, specialisations };
+  return {
+    material,
+    uniforms: resources.uniforms.byName,
+    specialisations,
+    textures: resources.textures,
+    buffers: resources.buffers.byName,
+  };
 }
 
 function stages({ linked, resources, parameterValues }: LinkedProgram, defines: string) {
