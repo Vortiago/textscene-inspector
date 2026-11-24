@@ -108,6 +108,7 @@ describe('installFogComposite', () => {
 
     installFogComposite();
 
+    expect(THREE.ShaderChunk.backgroundCube_frag).toBe(threeChunks.backgroundCube_frag);
     expect(THREE.ShaderLib.backgroundCube!.fragmentShader).toBe(cube.fragmentShader);
     expect(THREE.ShaderLib.backgroundCube!.uniforms).toEqual(cube.uniforms);
   });

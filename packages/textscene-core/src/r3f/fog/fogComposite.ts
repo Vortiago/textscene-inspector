@@ -83,7 +83,7 @@ function installPlaneBackgroundFog(): void {
   backgroundPlane().fragmentShader = THREE.ShaderChunk.background_frag;
 }
 
-/** Patches three's fog and flat background programs compiled after the call. A second call does nothing. */
+/** Patches three's fog and flat background programs, with the fog uniforms and sky radiance. Idempotent. */
 export function installFogComposite(): void {
   Object.assign(THREE.ShaderChunk, { [GODOT_FOG_PARS_CHUNK]: GODOT_FOG_PARS });
   installGodotFog();
