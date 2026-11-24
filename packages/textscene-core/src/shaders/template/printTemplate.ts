@@ -174,10 +174,16 @@ function printFlowBody(flow: ControlFlowNode, indent: string): string {
     case 'FLOW_OP_SWITCH':
       return `switch (${text(first!)}) ${printBlock(block!, indent)}`;
     case 'FLOW_OP_CASE':
-      return `case ${text(first!)}:`;
+      return `case ${text(first!)}:${printLabelBody(block!, indent)}`;
     case 'FLOW_OP_DEFAULT':
-      return 'default:';
+      return `default:${printLabelBody(block!, indent)}`;
   }
+}
+
+/** A label's statements, each on its own line one step in from the label. */
+function printLabelBody(body: BlockNode, indent: string): string {
+  const inner = `${indent}\t`;
+  return body.statements.map((statement) => `\n${inner}${printStatement(statement, inner)}`).join('');
 }
 
 function printFor(flow: ControlFlowNode, indent: string): string {

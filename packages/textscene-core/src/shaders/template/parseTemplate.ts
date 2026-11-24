@@ -63,6 +63,11 @@ export function parseTemplateStage(
   return { kind: 'template stage', stage, directives: preprocessed.directives, declarations };
 }
 
+const LABEL_WORDS = new Set(['case', 'default']);
+
+/** What ends a label's statements: the next label, or the end of the switch. */
+const LABEL_ENDS = new Set([...LABEL_WORDS, '}']);
+
 /** The qualifier words of GLSL 4.50 that stand before a type (section 4.3 to 4.10). */
 const QUALIFIER_WORDS = new Set([
   'const',
@@ -632,7 +637,7 @@ class TemplateParser implements TemplateScope {
         return this.switchStatement(position, attributes);
       case 'case':
       case 'default':
-        return this.label(position);
+        return this.tokens.fail(`expected '${this.tokens.peekText()}' inside a switch`);
       case 'break':
       case 'continue':
       case 'discard':
@@ -763,22 +768,37 @@ class TemplateParser implements TemplateScope {
     return flow('FLOW_OP_DO', [condition], [body], position, attributes);
   }
 
-  /** `switch (v) { ... }`: its labels and statements in one block, as GLSL falls through. */
+  /** `switch (v) { ... }`: a block of its labels, in one scope, as Godot's parser builds it. */
   private switchStatement(position: SourcePosition, attributes: readonly string[]): ControlFlowNode {
     this.tokens.next();
     const value = this.condition();
     const blockPosition = this.tokens.expect('{').position;
-    const block = this.block(blockPosition);
+    const labels = this.within(() => {
+      const read: ControlFlowNode[] = [];
+      while (!this.tokens.accept('}')) read.push(this.label(value.type));
+      return read;
+    });
+    const block: BlockNode = { kind: 'block', statements: labels, position: blockPosition };
     return flow('FLOW_OP_SWITCH', [value], [block], position, attributes);
   }
 
-  /** `case n:` or `default:`, a statement of its own in the switch's block. */
-  private label(position: SourcePosition): ControlFlowNode {
-    const word = this.tokens.next().text;
-    const expressions = word === 'case' ? [this.expressions.constantInteger()] : [];
+  /** `case n:` or `default:` with its statements up to the next label, which an empty one falls into. */
+  private label(selectorType: string): ControlFlowNode {
+    const position = this.tokens.position();
+    const word = this.tokens.peekText();
+    if (!LABEL_WORDS.has(word)) this.tokens.fail("expected 'case' or 'default' in a switch");
+    this.tokens.next();
+    const expressions = word === 'case' ? [this.caseValue(selectorType)] : [];
     this.tokens.expect(':');
-    const empty: BlockNode = { kind: 'block', statements: [], position };
-    return flow(word === 'case' ? 'FLOW_OP_CASE' : 'FLOW_OP_DEFAULT', expressions, [empty], position, []);
+    const statements: Statement[] = [];
+    while (!LABEL_ENDS.has(this.tokens.peekText())) statements.push(this.statement());
+    const body: BlockNode = { kind: 'block', statements, position };
+    return flow(word === 'case' ? 'FLOW_OP_CASE' : 'FLOW_OP_DEFAULT', expressions, [body], position, []);
+  }
+
+  /** A case label converts to the selector's type, as `case 0:` does in a `uint` switch (GLSL 4.60, 6.2). */
+  private caseValue(selectorType: string): Expression {
+    return this.expressions.converted(this.expressions.constantInteger(), selectorType);
   }
 
   private simpleFlow(position: SourcePosition): ControlFlowNode {

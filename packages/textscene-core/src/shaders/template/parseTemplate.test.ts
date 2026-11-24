@@ -104,6 +104,34 @@ describe('parseTemplateStage', () => {
     ]);
   });
 
+  it('reads each switch label with its statements, an empty one falling into the next', () => {
+    const body = 'int a = 0;\nswitch (a) {\ncase 0: a = 1; break;\ncase 5:\ndefault: a = 2; break;\n}';
+    expect(inFunction(body)).toBe(
+      [
+        'void main() {',
+        '\tint a = 0;',
+        '\tswitch (a) {',
+        '\t\tcase 0:',
+        '\t\t\t(a = 1);',
+        '\t\t\tbreak;',
+        '\t\tcase 5:',
+        '\t\tdefault:',
+        '\t\t\t(a = 2);',
+        '\t\t\tbreak;',
+        '\t}',
+        '}',
+      ].join('\n')
+    );
+  });
+
+  it('converts a case label to the type of a uint switch', () => {
+    expect(inFunction('uint a = 0u;\nswitch (a) {\ncase 1: break;\n}')).toContain('case uint(1):');
+  });
+
+  it('refuses a label outside a switch', () => {
+    expect(() => inFunction('case 0: return;')).toThrow("expected 'case' inside a switch");
+  });
+
   it('gives the same tree for the same text', () => {
     const text = 'layout(local_size_x = 8) in;\nshared float data[8];\nvoid main() { data[0] = 1.0; }';
     expect(parsed(text)).toEqual(parsed(text));
