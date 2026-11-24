@@ -17,6 +17,9 @@ export type GodotPrimitive = 'triangles' | 'lines' | 'points';
 /** The corners of each primitive that a `flat` value is read across, and the list's name in a fault. */
 const LISTS = { triangles: { corners: 3, name: 'triangle' }, lines: { corners: 2, name: 'line' } } as const;
 
+/** The attribute that holds each vertex's index in its own surface, which `gl_VertexIndex` reads. */
+export const VERTEX_ID_ATTRIBUTE = 'vertex_id_attrib';
+
 /** `geometry` as an uncompressed Godot surface (`rendering_server.cpp:425-700`), first corners as Godot's. */
 export function withGodotAttributes(
   geometry: THREE.BufferGeometry,
@@ -24,6 +27,8 @@ export function withGodotAttributes(
 ): THREE.BufferGeometry {
   const position = geometry.getAttribute('position');
   if (!position) throw new Error('expected a geometry with a position attribute, found none');
+  if (geometry.getAttribute(VERTEX_ID_ATTRIBUTE)?.count !== position.count)
+    withSurfaceVertexIds(geometry, [0]);
   if (primitive !== 'points' && !geometry.userData[FIRST_CORNER_LAST])
     withFirstCornerLast(geometry, position.count, primitive);
   geometry.setAttribute(VERTEX_ANGLE_ATTRIBUTE, position);
@@ -50,6 +55,22 @@ export function withGodotAttributes(
   for (const [name, value] of Object.entries(MISSING_ARRAY_VALUES))
     if (!geometry.getAttribute(name)) geometry.setAttribute(name, constantAttribute(value));
   return geometry;
+}
+
+/**
+ * Each vertex's index in its surface, the surfaces from `surfaceStarts`, as Godot gives each its own array.
+ *
+ * @canonical The VERTEX_ID of a merged mesh's surfaces
+ */
+export function withSurfaceVertexIds(geometry: THREE.BufferGeometry, surfaceStarts: readonly number[]): void {
+  const vertexCount = geometry.getAttribute('position').count;
+  // A float holds every vertex index below 2^24 exactly.
+  const ids = new Float32Array(vertexCount);
+  surfaceStarts.forEach((start, surface) => {
+    const end = surfaceStarts[surface + 1] ?? vertexCount;
+    for (let vertex = start; vertex < end; vertex++) ids[vertex] = vertex - start;
+  });
+  geometry.setAttribute(VERTEX_ID_ATTRIBUTE, new THREE.BufferAttribute(ids, 1));
 }
 
 /** The value of each array a surface lacks: Godot's default vertex buffers (`mesh_storage.cpp:61-157`). */
@@ -148,9 +169,6 @@ function axisTangent(normal: Attribute, tangent: Attribute | undefined): THREE.B
 /** The vertices a point quad draws: `point_coords` of `scene_forward_clustered.glsl:709`. */
 const QUAD_VERTICES = 6;
 
-/** The attribute that holds the vertex each emulated point draws, which `gl_InstanceIndex` reads. */
-export const POINT_VERTEX_ATTRIBUTE = 'point_vertex_attrib';
-
 /** The corners of a surface that one draw reads, as a three.js draw group holds them. */
 export interface DrawRange {
   readonly start: number;
@@ -169,7 +187,6 @@ export function emulatedPointGeometry(
   geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(QUAD_VERTICES * 3), 3));
   for (const [name, attribute] of Object.entries(surface.attributes))
     if (name.endsWith('_attrib')) geometry.setAttribute(name, perPoint(attribute, vertices));
-  geometry.setAttribute(POINT_VERTEX_ATTRIBUTE, new THREE.InstancedBufferAttribute(vertices, 1));
   // The quads' own positions are all zero, so bounds three computed from them would cull at the origin.
   if (!surface.boundingSphere && surface.getAttribute('position')) surface.computeBoundingSphere();
   geometry.boundingSphere = surface.boundingSphere;

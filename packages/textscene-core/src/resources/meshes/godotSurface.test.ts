@@ -15,6 +15,7 @@ import {
 } from './godotSurface';
 import { headlightsSurface, wallQuadSurfaces } from '../testing/arrayMeshSurfaces';
 import { UV2_ATTRIBUTE } from './uv2';
+import { VERTEX_ID_ATTRIBUTE } from '../../shaders/spatial/meshAttributes';
 
 const WALL_TRES = `[gd_resource type="ArrayMesh" format=4 uid="uid://bett1yahcwe25"]
 
@@ -237,6 +238,26 @@ describe('godotSurfacesGeometry', () => {
     const uv = geo.getAttribute('uv');
     expect(uv.getY(3)).toBe(1);
     expect(uv.getY(5)).toBe(0);
+  });
+});
+
+describe('godotSurfacesGeometry of several surfaces', () => {
+  const surfaceOf = (vertexCount: number): GodotSurface => ({
+    positions: new Float32Array(vertexCount * 3),
+    indices: Array.from({ length: vertexCount }, (_, vertex) => vertex),
+    primitive: 'points',
+  });
+
+  // Godot gives each surface its own vertex array, so `gl_VertexIndex` counts from 0 in each.
+  const vertexIds = (geometry: THREE.BufferGeometry) => [...geometry.getAttribute(VERTEX_ID_ATTRIBUTE).array];
+
+  it("counts each vertex from 0 in its own surface's part of the merged arrays", () => {
+    const geometry = godotSurfacesGeometry([surfaceOf(3), surfaceOf(2), surfaceOf(1)]);
+    expect(vertexIds(geometry)).toEqual([0, 1, 2, 0, 1, 0]);
+  });
+
+  it('counts every vertex of one surface (edge case)', () => {
+    expect(vertexIds(godotSurfacesGeometry([surfaceOf(3)]))).toEqual([0, 1, 2]);
   });
 });
 

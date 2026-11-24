@@ -48,6 +48,8 @@ export const MATERIAL_SCENES = [
   { name: 'material-spatial-shader-stencil', file: 'unit-spatial-shader-stencil.tscn' },
   // Point and line surfaces of spatial shaders: POINT_SIZE, POINT_COORD, blend_add points and a line strip.
   { name: 'material-spatial-shader-points', file: 'unit-spatial-shader-points.tscn' },
+  // VERTEX_ID counted in each surface: triangle surfaces of a shared and an own material, and points surfaces.
+  { name: 'material-spatial-shader-vertex-id', file: 'unit-spatial-shader-vertex-id.tscn' },
   { name: 'surface-material-override', file: 'unit-surface-material-override.tscn' },
   // Multi-property guard, one row each: basic PBR, emission and normal,
   // advanced PBR, transparency and glass.

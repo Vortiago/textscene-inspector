@@ -3329,9 +3329,9 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 
 ## The vertex and its ids in `vertex()`
 
-`VERTEX` is the vertex in model space, which the template turns to view space after `vertex()` returns. A write to `POSITION` replaces the template's clip position. `COLOR` is the vertex colour that `fragment()` reads. `VERTEX_ID` and `INSTANCE_ID` are GL's vertex and instance index. A mesh outside a MultiMesh has an `INSTANCE_CUSTOM` of zero.
+`VERTEX` is the vertex in model space, which the template turns to view space after `vertex()` returns. A write to `POSITION` replaces the template's clip position. `COLOR` is the vertex colour that `fragment()` reads. `VERTEX_ID` is the vertex's index in its own surface, which Godot draws from its own vertex array, and `INSTANCE_ID` is GL's instance index. A mesh outside a MultiMesh has an `INSTANCE_CUSTOM` of zero.
 
-The transpiler emits the template's locals `vertex`, `position`, `color_interp` and `instance_custom`, three's `vertexIndex`, and an instance index of 0. Rows: `spatial.vertex.VERTEX`, `spatial.vertex.POSITION`, `spatial.vertex.COLOR`, `spatial.vertex.INSTANCE_ID`, `spatial.vertex.INSTANCE_CUSTOM`, `spatial.vertex.VERTEX_ID`. Godot source: `servers/rendering/shader_types.cpp:89`.
+The transpiler emits the template's locals `vertex`, `position`, `color_interp` and `instance_custom`, the attribute `vertex_id_attrib` that `withGodotAttributes` writes, and an instance index of 0. Rows: `spatial.vertex.VERTEX`, `spatial.vertex.POSITION`, `spatial.vertex.COLOR`, `spatial.vertex.INSTANCE_ID`, `spatial.vertex.INSTANCE_CUSTOM`, `spatial.vertex.VERTEX_ID`. Godot source: `servers/rendering/shader_types.cpp:89`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
