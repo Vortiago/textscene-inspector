@@ -59,6 +59,23 @@ describe('<SceneStats>', () => {
     expect(await screen.findByText('2 cameras')).toBeTruthy();
   });
 
+  // Godot 4.6.3 makes a placeholder Node of a class it cannot make, and the scene owns it.
+  it('counts a node of a class Godot does not have', async () => {
+    const scene = openScene({
+      source: `[gd_scene format=3]
+
+[node name="World" type="Node3D"]
+
+[node name="X" type="SomeFutureNode" parent="."]
+`,
+      provider: FILES,
+    });
+
+    render(<SceneStats scene={scene} />);
+
+    expect((await screen.findByTestId('scene-info-nodes')).textContent).toBe('2 nodes');
+  });
+
   it('shows nothing before the host has sent a scene', () => {
     render(<SceneStats scene={openScene({ source: '', provider: FILES })} />);
 

@@ -34,7 +34,9 @@ interface SceneCounts {
 async function countsOf(root: NodeHandle): Promise<SceneCounts> {
   const below = descendantsOf(root);
   const [ownedBelow, cameras] = await Promise.all([
-    Promise.all(below.map(async (node) => (await ownerPathOf(node)) === root.path)),
+    Promise.all(
+      below.map(async (node) => ((await node.call('get_owner')) as NodeHandle | null)?.path === root.path)
+    ),
     Promise.all([root, ...below].map(async (node) => (await node.call('is_class', 'Camera3D')) === true)),
   ]);
   return { nodes: 1 + ownedBelow.filter(Boolean).length, cameras: cameras.filter(Boolean).length };
@@ -43,10 +45,4 @@ async function countsOf(root: NodeHandle): Promise<SceneCounts> {
 /** Each node below `node`, in tree order. */
 function descendantsOf(node: NodeHandle): NodeHandle[] {
   return node.getChildren().flatMap((child) => [child, ...descendantsOf(child)]);
-}
-
-/** Null for a node outside Godot's class table, such as a part of a `.glb`, which has no owner to read. */
-async function ownerPathOf(node: NodeHandle): Promise<string | null> {
-  if ((await node.call('is_class', 'Node')) !== true) return null;
-  return ((await node.call('get_owner')) as NodeHandle | null)?.path ?? null;
 }

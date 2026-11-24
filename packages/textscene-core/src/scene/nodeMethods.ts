@@ -161,14 +161,14 @@ const NODE_METHODS: Readonly<Record<string, PortedMethod>> = {
 };
 
 const OBJECT_METHODS: Readonly<Record<string, PortedMethod>> = {
-  get_class: { minArguments: 0, maxArguments: 0, run: (target) => target.className },
+  get_class: { minArguments: 0, maxArguments: 0, run: (target) => classInTree(target.className) },
   // object.cpp:2220. The class table stops below `Object`, which every class inherits.
   is_class: {
     minArguments: 1,
     maxArguments: 1,
     run: (target, [className], name) => {
       const asked = stringArgument(className!, name);
-      return asked === 'Object' || descendsFromClass(target.className, asked);
+      return asked === 'Object' || descendsFromClass(classInTree(target.className), asked);
     },
   },
 };
@@ -194,9 +194,20 @@ export function findPortedAccessor(
   });
 }
 
+// packed_scene.cpp:331: Godot 4.6.3 makes a placeholder Node of a class it cannot make (measured).
+function classInTree(className: string): string {
+  return descendsFromClass(className, 'Node') ? className : 'Node';
+}
+
+/** Every method a call reaches without the property table, for the error that names them. */
+export const PORTED_METHOD_NAMES: readonly string[] = [
+  ...Object.keys(OBJECT_METHODS),
+  ...Object.values(PORTED_METHODS).flatMap((methods) => Object.keys(methods)),
+];
+
 /** The nearest class's port of `method`, as a call resolves a method up the class chain. */
 export function findPortedMethod(className: string, method: string): PortedMethod | undefined {
-  const own = findInClassChain(className, (type) =>
+  const own = findInClassChain(classInTree(className), (type) =>
     PORTED_METHODS[type] && Object.hasOwn(PORTED_METHODS[type], method)
       ? PORTED_METHODS[type][method]
       : undefined

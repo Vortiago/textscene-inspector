@@ -68,3 +68,32 @@ describe('the root node of a .glb scene', () => {
     expect(await glbRoot().call('is_class', 'Node3D')).toBe(true);
   });
 });
+
+// Godot 4.6.3 makes a placeholder Node of a class it cannot make, measured on this scene.
+describe('a node of a class Godot does not have', () => {
+  const unknown = () =>
+    openScene({
+      source: `[gd_scene format=3]
+
+[node name="Main" type="Node3D"]
+
+[node name="X" type="SomeFutureNode" parent="."]
+`,
+      provider,
+    }).getNode('X');
+
+  it('answers get_class Node', async () => {
+    expect(await unknown().call('get_class')).toBe('Node');
+  });
+
+  it.each([
+    ['Node', true],
+    ['Node3D', false],
+  ])('answers is_class %s with %s', async (className, expected) => {
+    expect(await unknown().call('is_class', className)).toBe(expected);
+  });
+
+  it('answers get_owner with the root', async () => {
+    expect(((await unknown().call('get_owner')) as { name: string } | null)?.name).toBe('Main');
+  });
+});
