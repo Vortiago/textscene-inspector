@@ -4,6 +4,7 @@ import type { ProjectShaderOptions } from '../../shaders/rendererShaderOptions';
 import type { SkyLight } from '../../shaders/sky/skyBindings';
 import type { Sky } from './types';
 import type { Vector3 } from '../../godot/math/vector';
+import type { FastFilterQuality } from '../../godot/rendering/environment/skyReflection';
 import type { SkyLayers } from './skyLayers';
 import type { SkyBackdrop } from '../../r3f/sky/skyBackground';
 
@@ -46,4 +47,6 @@ export interface SkyEnvironmentInput {
   shaderOptions?: ProjectShaderOptions;
   /** The project's filter settings, for the sky's samplers and each surface's read of the layers. */
   sampling?: ProjectSampling;
+  /** The table a real-time bake's fast filter reads, Godot's low-quality one when left out. */
+  fastFilterQuality?: FastFilterQuality;
 }

@@ -29,6 +29,24 @@ export const FAST_FILTER_FRAME_LOWER_BOUND = 0.57735;
 /** NUM_TAPS / 4 with the low-quality table's eight taps a frame (`octmap_filter.glsl:42-46`, `:155`). */
 export const FAST_FILTER_SUPER_TAPS_PER_FRAME = 2;
 
+/** The table the fast filter reads, by `rendering/reflections/sky_reflections/fast_filter_high_quality`. */
+export type FastFilterQuality = 'low' | 'high';
+
+/** Godot's default of `fast_filter_high_quality`, false (`rendering_server.cpp:3732`). */
+export const DEFAULT_FAST_FILTER_QUALITY: FastFilterQuality = 'low';
+
+/** NUM_TAPS / 4 with the high-quality table's 32 taps a frame (`octmap_filter.glsl:42-46`, `:155`). */
+export const FAST_FILTER_HIGH_QUALITY_SUPER_TAPS_PER_FRAME = 8;
+
+/** The axes the fast filter gathers along, a frame each (`octmap_filter.glsl:94`, `:156`). */
+export const FAST_FILTER_AXES = 3;
+
+/** The parts of each level of the fast filter's tables: three of the direction, the lod, the weight. */
+export const FAST_FILTER_PARTS = 5;
+
+/** A part's terms in the high-quality table: constant, theta² and phi² (`octmap_filter.glsl:173-177`). */
+export const FAST_FILTER_HIGH_QUALITY_TERMS = 3;
+
 /**
  * The default of `rendering/reflections/sky_reflections/roughness_layers`
  * (`servers/rendering/rendering_server.cpp:3727`). A reflection reads layer `sqrt(roughness)` times

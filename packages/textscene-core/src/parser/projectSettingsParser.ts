@@ -11,6 +11,10 @@ import {
   splitTopLevel,
 } from '../godot/string/string.js';
 import { boolSlotValue } from '../godot/variant/variantBool.js';
+import {
+  DEFAULT_FAST_FILTER_QUALITY,
+  type FastFilterQuality,
+} from '../godot/rendering/environment/skyReflection.js';
 import { DEPTH_PREPASS_DISABLED_VENDORS } from '../godot/rendering/depthPrepassVendors.js';
 import type { ProjectSampling } from '../shaders/uniforms/samplerState.js';
 import type { RenderingMethod } from '../shaders/preprocessor/renderingMethod.js';
@@ -491,6 +495,12 @@ export function projectUsesDebanding(settings: ProjectSettings | null): boolean 
  */
 export function projectTracesHalfSizeReflections(settings: ProjectSettings | null): boolean {
   return boolSlotValue(settings?.['rendering/environment/screen_space_reflection/half_size']) ?? true;
+}
+
+/** `rendering/reflections/sky_reflections/fast_filter_high_quality` (`rendering_server.cpp:3732`). */
+export function projectFastFilterQuality(settings: ProjectSettings | null): FastFilterQuality {
+  const isHigh = boolSlotValue(settings?.['rendering/reflections/sky_reflections/fast_filter_high_quality']);
+  return isHigh ? 'high' : DEFAULT_FAST_FILTER_QUALITY;
 }
 
 /**

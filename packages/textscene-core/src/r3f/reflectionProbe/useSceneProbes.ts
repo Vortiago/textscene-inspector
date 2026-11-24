@@ -5,14 +5,14 @@
 
 import { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import type * as THREE from 'three';
-import type { ViewportDescription } from '../viewportRender/viewportDescription.js';
 import { useResourceLoader } from '../../resources/useResource.js';
 import { pendingSceneWork, totalPendingWork } from '../sceneWork.js';
 import { SceneHolding } from '../sceneHolding.js';
 import { useSceneHolder } from '../useSceneHolder.js';
 import { useProjectClearColor } from '../useProjectClearColor.js';
-import { SceneProbes } from './sceneProbes.js';
+import { SceneProbes, type ProbeFrame } from './sceneProbes.js';
+import { useProjectSettings } from '../contexts/ProjectSettingsContext.js';
+import { projectFastFilterQuality } from '../../parser/projectSettingsParser.js';
 import { useViewportDescription } from '../viewportRender/viewportDescriptionContext.js';
 
 const probesOfScenes = new SceneHolding((scene, renderer) => new SceneProbes(renderer, scene));
@@ -21,16 +21,18 @@ export function useSceneProbes(): void {
   const scene = useThree((state) => state.scene);
   const invalidate = useThree((state) => state.invalidate);
   const loader = useResourceLoader();
-  const clearColor = useRef<THREE.Color>(null!);
-  clearColor.current = useProjectClearColor();
-  const viewport = useRef<ViewportDescription>(null!);
-  viewport.current = useViewportDescription();
+  const frame = useRef<ProbeFrame>(null!);
+  frame.current = {
+    clearColor: useProjectClearColor(),
+    viewport: useViewportDescription(),
+    fastFilterQuality: projectFastFilterQuality(useProjectSettings().settings),
+  };
   const holder = useSceneHolder(probesOfScenes);
 
   useFrame(() => {
     const probes = probesOfScenes.drivenBy(scene, holder);
     if (!probes) return;
     const pending = totalPendingWork(pendingSceneWork(loader));
-    if (probes.update(pending, clearColor.current, viewport.current)) invalidate();
+    if (probes.update(pending, frame.current)) invalidate();
   });
 }

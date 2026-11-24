@@ -12,13 +12,15 @@ import { withMipLevels } from '../../r3f/mipLevels.js';
 import { drawOffscreen } from '../../r3f/offscreen/draw.js';
 import { perObject } from '../../utils/perObject.js';
 import {
+  DEFAULT_FAST_FILTER_QUALITY,
   REAL_TIME_ROUGHNESS_LAYERS,
   SKY_ROUGHNESS_LAYERS_DEFAULT,
   skyOctmapLayout,
+  type FastFilterQuality,
   type SkyOctmapLayout,
   type SkyRadianceLayout,
 } from '../../godot/rendering/environment/skyReflection.js';
-import { fastFilter } from './fastFilter.js';
+import { FAST_FILTERS } from './fastFilter.js';
 import { importanceSampleFilter } from './importanceSampleFilter.js';
 import type { LayerFilter } from './layerFilter.js';
 import {
@@ -64,9 +66,13 @@ const radianceMipPassFor = perObject<THREE.WebGLRenderer, THREE.ShaderMaterial>(
   skyPass(RADIANCE_MIP_FRAGMENT_SHADER, ['layers', 'mip'])
 );
 
-/** Godot's fast filter, or its importance-sampling filter for layers laid out as `layout`. */
-function layerFilter(radianceFilter: SkyBake['radianceFilter'], layout: SkyOctmapLayout): LayerFilter {
-  return radianceFilter === 'fast' ? fastFilter : importanceSampleFilter(layout);
+/** `fast` for a real-time bake, or Godot's importance-sampling filter for `layout`. */
+function layerFilter(
+  fast: LayerFilter,
+  radianceFilter: SkyBake['radianceFilter'],
+  layout: SkyOctmapLayout
+): LayerFilter {
+  return radianceFilter === 'fast' ? fast : importanceSampleFilter(layout);
 }
 
 /** The roughness layers of a sky baked with `radianceFilter`: a real-time sky has seven (`sky.cpp:1547-1550`). */
@@ -117,9 +123,14 @@ export class SkyLayerBaker {
   constructor(
     private readonly gl: THREE.WebGLRenderer,
     private readonly layers: SkyLayers,
-    radianceFilter: SkyBake['radianceFilter']
+    radianceFilter: SkyBake['radianceFilter'],
+    fastFilterQuality: FastFilterQuality = DEFAULT_FAST_FILTER_QUALITY
   ) {
-    this.chain = new RadianceChain(gl, layers.layout, radianceFilter);
+    this.chain = new RadianceChain(
+      gl,
+      layers.layout,
+      layerFilter(FAST_FILTERS[fastFilterQuality].intoLayers, radianceFilter, layers.layout)
+    );
   }
 
   /** Draws `drawRadiance` into layer 0, then filters each other layer from it. */
@@ -159,7 +170,6 @@ export class SkyLayerBaker {
 /** A radiance octmap and the downsampled chain of it that a filter reads, for one bake after another. */
 class RadianceChain {
   readonly scratch = new ScratchOctmaps();
-  readonly filter: LayerFilter;
   // Not a scratch octmap: a chain's first mip can be as wide as it, and would then draw into its source.
   readonly octmap: THREE.WebGLRenderTarget;
   private readonly chain: THREE.WebGLRenderTarget;
@@ -167,9 +177,8 @@ class RadianceChain {
   constructor(
     private readonly gl: THREE.WebGLRenderer,
     private readonly layout: SkyOctmapLayout,
-    radianceFilter: SkyBake['radianceFilter']
+    readonly filter: LayerFilter
   ) {
-    this.filter = layerFilter(radianceFilter, layout);
     this.octmap = new THREE.WebGLRenderTarget(layout.size, layout.size, TARGET_OPTIONS);
     try {
       this.chain = chainTarget(this.filter.chainSizes);
@@ -246,12 +255,17 @@ export function bakeAtlasLayers(
   radiance: THREE.CubeTexture,
   atlas: ReflectionAtlas,
   index: number,
-  radianceFilter: SkyBake['radianceFilter']
+  radianceFilter: SkyBake['radianceFilter'],
+  fastFilterQuality: FastFilterQuality = DEFAULT_FAST_FILTER_QUALITY
 ): void {
   const { layout, target } = atlas;
   if (index < 0 || index >= target.depth)
     throw new Error(`expected an atlas layer from 0 to ${target.depth - 1}, got ${index}`);
-  const chain = new RadianceChain(gl, layout, radianceFilter);
+  const chain = new RadianceChain(
+    gl,
+    layout,
+    layerFilter(FAST_FILTERS[fastFilterQuality].intoMips, radianceFilter, layout)
+  );
   try {
     chain.draw(cubeRadiance(gl, radiance));
     drawOffscreen(gl, () => {

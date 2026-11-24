@@ -11,15 +11,16 @@ import { textureWork } from '../../resources/textures/textureWork';
 import { useSceneProbes } from './useSceneProbes';
 import { ViewportDescriptionProvider } from '../viewportRender/viewportDescriptionContext';
 import { rootViewportDescription } from '../viewportRender/viewportDescription';
+import type { ProbeFrame } from './sceneProbes';
 
 const updates = vi.hoisted(() => [] as number[]);
-const viewports = vi.hoisted(() => [] as unknown[]);
+const frames = vi.hoisted(() => [] as ProbeFrame[]);
 
 vi.mock('./sceneProbes', () => ({
   SceneProbes: class {
-    update(pendingResources: number, _clear: unknown, viewport: unknown): boolean {
+    update(pendingResources: number, frame: ProbeFrame): boolean {
       updates.push(pendingResources);
-      viewports.push(viewport);
+      frames.push(frame);
       return false;
     }
     dispose(): void {}
@@ -56,6 +57,15 @@ describe('useSceneProbes', () => {
     expect(await pendingSeenInOneFrame()).toBe(1);
   });
 
+  it("filters with Godot's default low-quality taps in a project that sets none", async () => {
+    const renderer = await ReactThreeTestRenderer.create(<Holder />);
+    frames.length = 0;
+    await renderer.advanceFrames(1, 16);
+    await renderer.unmount();
+
+    expect(frames.at(-1)?.fastFilterQuality).toBe('low');
+  });
+
   it('reports a texture build as pending', async () => {
     ends.push(textureWork.begin());
 
@@ -71,10 +81,10 @@ describe('useSceneProbes in a SubViewport', () => {
         <Holder />
       </ViewportDescriptionProvider>
     );
-    viewports.length = 0;
+    frames.length = 0;
     await renderer.advanceFrames(1, 16);
     await renderer.unmount();
 
-    expect(viewports.at(-1)).toBe(own);
+    expect(frames.at(-1)?.viewport).toBe(own);
   });
 });

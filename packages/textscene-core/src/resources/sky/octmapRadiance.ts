@@ -1,5 +1,5 @@
 import type * as THREE from 'three';
-import type { SkyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
+import type { FastFilterQuality, SkyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
 import { VECTOR3_ZERO, type Vector3 } from '../../godot/math/vector';
 import type { ProjectSampling } from '../../shaders/uniforms/samplerState';
 import {
@@ -28,6 +28,12 @@ export interface OctmapSky {
   dispose(): void;
 }
 
+/** The project's filter settings a radiance bake reads, Godot's defaults where left out. */
+export interface RadianceFilterSettings {
+  sampling?: ProjectSampling;
+  fastFilterQuality?: FastFilterQuality;
+}
+
 /** A sky's radiance layers from its octmap pass, kept for a dirty render to bake again in place. */
 export class OctmapRadiance implements RadianceInPlace {
   readonly layers: SkyLayers;
@@ -35,6 +41,7 @@ export class OctmapRadiance implements RadianceInPlace {
   /** The key of the full bake `layers` hold, null for layers drawn in steps or under no key. */
   private heldKey: string | null = null;
   private readonly bake: SkyBake;
+  private readonly sampling: ProjectSampling | undefined;
   /** The full bake before, by key: a software WebGL bake takes 0.9 s. Freed with the radiance. */
   private kept: { layers: SkyLayers; key: string | null } | null = null;
 
@@ -44,13 +51,14 @@ export class OctmapRadiance implements RadianceInPlace {
     bake: SkyBake,
     private readonly octmapSky: OctmapSky,
     energy: number,
-    private readonly sampling?: ProjectSampling
+    { sampling, fastFilterQuality }: RadianceFilterSettings = {}
   ) {
     this.bake = bake;
+    this.sampling = sampling;
     let layers: SkyLayers | undefined;
     try {
       layers = createSkyLayers(bake, sampling);
-      this.baker = new SkyLayerBaker(gl, layers, bake.radianceFilter);
+      this.baker = new SkyLayerBaker(gl, layers, bake.radianceFilter, fastFilterQuality);
     } catch (error) {
       if (layers) disposeSkyLayers(layers);
       octmapSky.dispose();

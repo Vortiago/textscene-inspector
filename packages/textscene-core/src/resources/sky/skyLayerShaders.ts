@@ -38,6 +38,10 @@
 
 import {
   FAST_FILTER_FRAME_LOWER_BOUND,
+  FAST_FILTER_AXES,
+  FAST_FILTER_HIGH_QUALITY_SUPER_TAPS_PER_FRAME,
+  FAST_FILTER_HIGH_QUALITY_TERMS,
+  FAST_FILTER_PARTS,
   FAST_FILTER_SUPER_TAPS_PER_FRAME,
   MOST_LAYER_SAMPLES,
 } from '../../godot/rendering/environment/skyReflection.js';
@@ -180,55 +184,105 @@ void main() {
 }
 `;
 
-/**
- * Godot's fast filter (`octmap_filter.glsl:94-217`): the level's taps in each of up to three frames
- * around the texel's direction, blended by how near the direction lies to each frame's axis. Each
- * uniform holds one part of the table, a `vec4` of four sub-taps per super-tap, frame by frame.
- * Godot's texture-array path runs it, with no lod offset.
- */
+/** `octmap_filter.glsl:66-217`. `mipLevel` is the layer minus one, set where a path reads it. */
 export const FAST_FILTER_FRAGMENT_SHADER = /* glsl */ `
+#ifdef USE_HIGH_QUALITY
+#define SUPER_TAPS_PER_FRAME ${FAST_FILTER_HIGH_QUALITY_SUPER_TAPS_PER_FRAME}
+uniform highp sampler2D coefficients;
+#else
 #define SUPER_TAPS_PER_FRAME ${FAST_FILTER_SUPER_TAPS_PER_FRAME}
-#define SUPER_TAPS (SUPER_TAPS_PER_FRAME * 3)
+#define SUPER_TAPS (SUPER_TAPS_PER_FRAME * ${FAST_FILTER_AXES})
 uniform vec4 frameX[SUPER_TAPS];
 uniform vec4 frameY[SUPER_TAPS];
 uniform vec4 frameZ[SUPER_TAPS];
 uniform vec4 lod[SUPER_TAPS];
 uniform vec4 weight[SUPER_TAPS];
+#endif
+#if defined(USE_HIGH_QUALITY) || !defined(USE_TEXTURE_ARRAY)
+uniform int mipLevel;
+#endif
 ${LAYER_FILTER_GLSL}
 vec3 sum = vec3(0.0);
 float total = 0.0;
 
-void addTap(vec3 axisX, vec3 axisY, vec3 axisZ, float x, float y, float z, float tapLod, float tapWeight) {
-  sum += chainAt(axisX * x + axisY * y + axisZ * z, tapLod) * tapWeight;
+void addTap(vec3 direction, float tapLod, float tapWeight) {
+#ifdef USE_HIGH_QUALITY
+  direction /= max(abs(direction.x), max(abs(direction.y), abs(direction.z)));
+  tapLod += 0.75 * log2(dot(direction, direction));
+#endif
+#ifndef USE_TEXTURE_ARRAY
+  tapLod += float(mipLevel) / 5.0; // octmap_filter.glsl:205
+#endif
+  sum += chainAt(direction, tapLod) * tapWeight;
   total += tapWeight;
 }
 
-void addFrame(int axis, vec3 up, vec3 normal, vec2 others) {
+#ifdef USE_HIGH_QUALITY
+// Each part of a super-tap as a polynomial in theta² and phi², one sub-tap a component.
+vec4 tapPart(int part, int index, vec2 angles2) {
+  int row = (mipLevel * ${FAST_FILTER_PARTS} + part) * ${FAST_FILTER_HIGH_QUALITY_TERMS};
+  vec4 constant = texelFetch(coefficients, ivec2(index, row), 0);
+  vec4 theta2 = texelFetch(coefficients, ivec2(index, row + 1), 0);
+  vec4 phi2 = texelFetch(coefficients, ivec2(index, row + 2), 0);
+  return constant + theta2 * angles2.x + phi2 * angles2.y;
+}
+
+// octmap_filter.glsl:120-150
+vec2 thetaPhi2(vec2 sides, float along) {
+  float largest = max(abs(sides.x), abs(sides.y));
+  vec2 n = sides / largest;
+  float theta = n.y < n.x ? (n.y <= -0.999 ? n.x : n.y) : (n.y >= 0.999 ? -n.x : -n.y);
+  float phi = along <= -0.999 ? -largest : (along >= 0.999 ? largest : along);
+  return vec2(theta * theta, phi * phi);
+}
+#endif
+
+void addFrame(int axis, vec3 up, vec3 normal, vec2 sides) {
   const float lowerBound = ${glslFloat(FAST_FILTER_FRAME_LOWER_BOUND)};
-  float frameWeight = (max(others.x, others.y) - lowerBound) / (1.0 - lowerBound);
+  vec2 along = abs(sides);
+  float frameWeight = (max(along.x, along.y) - lowerBound) / (1.0 - lowerBound);
   if (frameWeight <= 0.0) return;
   vec3 axisX = normalize(cross(up, normal));
   vec3 axisY = cross(normal, axisX);
+#ifdef USE_HIGH_QUALITY
+  vec2 polynomial = thetaPhi2(sides, abs(normal[axis]));
+#endif
   for (int tap = 0; tap < SUPER_TAPS_PER_FRAME; tap++) {
     int index = axis * SUPER_TAPS_PER_FRAME + tap;
+#ifdef USE_HIGH_QUALITY
+    vec4 x = tapPart(0, index, polynomial);
+    vec4 y = tapPart(1, index, polynomial);
+    vec4 z = tapPart(2, index, polynomial);
+    vec4 tapLods = tapPart(3, index, polynomial);
+    vec4 tapWeights = tapPart(4, index, polynomial) * frameWeight;
+#else
     vec4 x = frameX[index];
     vec4 y = frameY[index];
     vec4 z = frameZ[index];
     vec4 tapLods = lod[index];
     vec4 tapWeights = weight[index] * frameWeight;
-    addTap(axisX, axisY, normal, x.x, y.x, z.x, tapLods.x, tapWeights.x);
-    addTap(axisX, axisY, normal, x.y, y.y, z.y, tapLods.y, tapWeights.y);
-    addTap(axisX, axisY, normal, x.z, y.z, z.z, tapLods.z, tapWeights.z);
-    addTap(axisX, axisY, normal, x.w, y.w, z.w, tapLods.w, tapWeights.w);
+#endif
+    for (int subTap = 0; subTap < 4; subTap++) {
+      addTap(axisX * x[subTap] + axisY * y[subTap] + normal * z[subTap], tapLods[subTap], tapWeights[subTap]);
+    }
   }
 }
 
+vec3 filteredDirection() {
+#ifdef USE_TEXTURE_ARRAY
+  // octmap_filter.glsl:220
+  vec2 block = floor(gl_FragCoord.xy * 0.5) + 0.5;
+  return octToVec3WithBorder(block / (layerSize * 0.5), borderSize);
+#else
+  return texelDirection();
+#endif
+}
+
 void main() {
-  vec3 normal = texelDirection();
-  vec3 along = abs(normal);
-  addFrame(0, vec3(1.0, 0.0, 0.0), normal, along.yz);
-  addFrame(1, vec3(0.0, 1.0, 0.0), normal, along.xz);
-  addFrame(2, vec3(0.0, 0.0, 1.0), normal, along.xy);
+  vec3 normal = filteredDirection();
+  addFrame(0, vec3(1.0, 0.0, 0.0), normal, normal.yz);
+  addFrame(1, vec3(0.0, 1.0, 0.0), normal, normal.xz);
+  addFrame(2, vec3(0.0, 0.0, 1.0), normal, normal.xy);
   gl_FragColor = vec4(max(vec3(0.0), sum / total), 1.0);
 }
 `;
