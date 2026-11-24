@@ -22,8 +22,8 @@ const FAST: SkyBake = { radianceFilter: 'fast', radianceSize: 256 };
 /** The GPU gate's fast bake, at a size no real-time sky has: its octmap is as wide as the fast chain. */
 const FAST_AT_GATE_SIZE = { radianceFilter: 'fast', radianceSize: 64 } as unknown as SkyBake;
 
-/** The radiance pass, the downsampler, and the fast filter's four scatters of a 2 by 2 block. */
-const FAST_BAKE_PASSES = 6;
+/** The radiance pass, the downsampler, the GGX samples' fill and the roughness filter. */
+const IMPORTANCE_SAMPLED_BAKE_PASSES = 4;
 
 /** A radiance cube set up on `renderer`, as the sky's cube render leaves it. */
 function radianceCube(renderer: THREE.WebGLRenderer): THREE.CubeTexture {
@@ -181,10 +181,11 @@ describe('bakeSkyLayers', () => {
     const { renderer: first } = await nodeTestRenderer();
     const { renderer: second } = await nodeTestRenderer();
 
-    const firstPasses = passesDrawnBy(first, () => bakeSkyLayers(first, radianceCube(first), FAST));
-    const secondPasses = passesDrawnBy(second, () => bakeSkyLayers(second, radianceCube(second), FAST));
+    const bake = (renderer: THREE.WebGLRenderer) =>
+      passesDrawnBy(renderer, () => bakeSkyLayers(renderer, radianceCube(renderer), IMPORTANCE_SAMPLED));
+    const [firstPasses, secondPasses] = [bake(first), bake(second)];
 
-    expect(firstPasses.size).toBe(FAST_BAKE_PASSES);
+    expect(firstPasses.size).toBe(IMPORTANCE_SAMPLED_BAKE_PASSES);
     expect([...firstPasses].filter((pass) => secondPasses.has(pass))).toEqual([]);
   });
 
