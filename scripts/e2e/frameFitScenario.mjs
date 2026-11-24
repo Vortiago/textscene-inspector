@@ -1,5 +1,3 @@
-/** Whether a frame fits the whole selection: F in a tall orthographic view, and a scene framed on open. */
-/* global window */ // The init script runs in the browser.
 import { settleCanvas } from '../visual/previewServer.mjs';
 import { FRAME_ON_OPEN_STORAGE_KEY } from '../visual/preview/appContract.mjs';
 import { expandAllTreeRows, SELECT_SETTLE_MS, selectOutlinerNode } from './outliner.mjs';
@@ -16,6 +14,7 @@ export const FRAME_ON_OPEN_FIXTURE = 'unit-frame-on-open.tscn';
 // The fit timers end at 1,100 ms, so a frame on open has landed by then.
 const FRAME_ON_OPEN_SETTLE_MS = 1500;
 
+/* global window */ // An init script runs in the browser.
 const setStorage = ([key, value]) => window.localStorage.setItem(key, value);
 
 /** The span of red across the canvas, as fractions of its width, or null for no red pixel. */
