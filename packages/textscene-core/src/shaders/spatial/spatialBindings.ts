@@ -151,7 +151,10 @@ export function beforeEachDraw(
   draw: (camera: THREE.Camera, object: THREE.Object3D, material: THREE.Material) => void
 ): void {
   const hook = spatial.uniforms.get(DRAW_HOOK);
-  if (!hook) throw new Error(`expected the scene template to read ${DRAW_HOOK}, found no such uniform`);
+  if (!hook || !('onObjectUpdate' in hook))
+    throw new Error(
+      `expected the scene template to read the uniform ${DRAW_HOOK}, found ${hook ? 'an array' : 'none'}`
+    );
   hook.onObjectUpdate(({ camera, object, material }: NodeFrame) => draw(camera!, object!, material!));
 }
 

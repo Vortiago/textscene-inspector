@@ -3,6 +3,7 @@ import type { Lanes } from './glslangCalls.js';
 import type { GlslangFolding } from './glslangFolding.js';
 import type { Expression, OperatorNode } from './shaderTree.js';
 import { isCall } from './treeWalk.js';
+import { shapeOf } from './types.js';
 
 /** The value a name has in scope, or nothing. */
 export type Lookup = (name: string) => Value | undefined;
@@ -53,8 +54,9 @@ export class GuardFolding {
   }
 
   private literalLanes(expression: Expression): Lanes | undefined {
+    // A value type only: a `sampler` global is bound to a placeholder literal that names no value.
     if (expression.kind === 'variable' || expression.kind === 'field')
-      return constantLanes(this.valueAt(expression));
+      return shapeOf(expression.type) ? constantLanes(this.valueAt(expression)) : undefined;
     if (!isCall(expression) || expression.row.id !== 'OP_CALL') return undefined;
     return expression.operands.length === 0 ? this.constantCall(expression.function) : undefined;
   }

@@ -10,8 +10,8 @@ export class TemplateBuffers {
   /** Written only by `block`, at a buffer's first block, by its instance name: `instances`. */
   readonly byName = new Map<string, RowBlock>();
 
-  /** One texture for every buffer, so the program reads one sampler for all of them. */
-  private readonly store = new RowStore();
+  /** Written only by `block`, at the first buffer: one texture for every buffer, so one sampler for all. */
+  private store: RowStore | undefined;
 
   /** The value of a `buffer` block's instance, read from its region of the store. */
   block(block: InterfaceBlockNode, structOf: (type: string) => StructNode | undefined): StructValue {
@@ -19,7 +19,10 @@ export class TemplateBuffers {
     let rows = this.byName.get(name);
     if (!rows) {
       const members = block.members.flatMap((member) => (member.kind === 'slot' ? [] : [member]));
-      this.byName.set(name, (rows = new RowBlock(members, packingOf(block), structOf, this.store)));
+      this.byName.set(
+        name,
+        (rows = new RowBlock(members, packingOf(block), structOf, (this.store ??= new RowStore())))
+      );
     }
     return rows.value;
   }

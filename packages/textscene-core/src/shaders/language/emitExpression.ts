@@ -34,9 +34,6 @@ export interface EmitContext {
 }
 
 export class ExpressionEmitter {
-  /** Written only by `guardLanes`, at its first call. */
-  private guards: GuardFolding | undefined;
-
   constructor(
     private readonly scope: EmitScope,
     private readonly folding: GlslangFolding,
@@ -98,12 +95,12 @@ export class ExpressionEmitter {
 
   /** A guard's value where it rests on literals, as `bool(implementation_data.flags & 1u)`, or nothing. */
   guardLanes(expression: Expression): Lanes | undefined {
-    this.guards ??= new GuardFolding(
+    const guards = new GuardFolding(
       this.folding,
       (name) => this.scope.lookup(name),
       (name) => this.context.functions.constantResult(name)
     );
-    return this.guards.lanesOf(expression);
+    return guards.lanesOf(expression);
   }
 
   private arrayElement(arrayExpression: Expression, index: Expression): Value {
@@ -186,7 +183,10 @@ export class ExpressionEmitter {
   }
 
   /** `c ? a : b`: neither side writes, so both run and `select` picks one. */
+  /** `a ? b : c`. A condition that folds emits only the operand it takes, so WebGL counts no other. */
   private selected({ operands }: OperatorNode): Node {
+    const guard = this.guardLanes(operands[0]!);
+    if (guard !== undefined) return this.node(operands[guard[0] ? 1 : 2]!);
     const [condition, then, otherwise] = operands.map((operand) => this.node(operand)) as [Node, Node, Node];
     return choose(condition, then, otherwise);
   }

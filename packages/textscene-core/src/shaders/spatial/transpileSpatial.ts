@@ -16,7 +16,7 @@ import {
   vec2,
   vec4,
 } from 'three/tsl';
-import type { Node, TextureNode, UniformNode } from 'three/webgpu';
+import type { Node, TextureNode } from 'three/webgpu';
 import {
   parsedShader,
   shaderSource,
@@ -29,6 +29,7 @@ import {
   type StageResult,
   type WrittenBuiltIn,
 } from '../template/emitTemplate.js';
+import type { TemplateUniform } from '../template/templateUniforms.js';
 import { linkedProgram, type LinkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
 import type { RowBlock } from '../template/rowBlock.js';
 import { instanceWords } from './instanceData.js';
@@ -73,7 +74,7 @@ export interface TranspiledSpatial {
   /** The material of a mesh whose geometry holds Godot's attributes (`withGodotAttributes`). */
   readonly material: BoundNodeMaterial;
   /** The template's uniforms of both stages, by `instance.member`: `scene_data_block.data.time`. */
-  readonly uniforms: ReadonlyMap<string, UniformNode<unknown>>;
+  readonly uniforms: ReadonlyMap<string, TemplateUniform>;
   /** The template's specialisation constants, by name: `pso_sc_packed_0`. */
   readonly specialisations: ReadonlyMap<string, Specialisation>;
   /** The template's textures, by name. */

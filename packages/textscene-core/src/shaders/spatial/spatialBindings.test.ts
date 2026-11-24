@@ -119,7 +119,12 @@ describe('beforeEachDraw', () => {
         camera: THREE.Camera,
         object: THREE.Object3D = new THREE.Mesh(),
         material: THREE.Material = spatial.material
-      ) => uniform('projection_matrix').update({ camera, object, material } as unknown as NodeFrame),
+      ) =>
+        (uniform('projection_matrix') as UniformNode<unknown>).update({
+          camera,
+          object,
+          material,
+        } as unknown as NodeFrame),
       value: (name: string) => (uniform(name) as UniformNode<unknown>).value,
       drawnObjects,
       drawnMaterials,

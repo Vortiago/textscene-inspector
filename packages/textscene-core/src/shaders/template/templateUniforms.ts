@@ -8,10 +8,18 @@ import { glslShapeOf } from './glslTypes.js';
 import { Specialisation } from './specialisation.js';
 import type { InterfaceBlockNode } from './templateTree.js';
 
+/** A block array's values, which a binding table splices in: the array has no node of its own. */
+export interface WrittenArray {
+  readonly array: unknown[];
+}
+
+/** A template uniform as a binding table writes it: a uniform node, or an array of a block's buffer. */
+export type TemplateUniform = UniformNode<unknown> | WrittenArray;
+
 /** The stages of one program share them, so a block both stages declare is one set. */
 export class TemplateUniforms {
   /** Written only by `array` and `uniformOf`, at a member's first block. An array holds only `array`. */
-  readonly byName = new Map<string, UniformNode<unknown>>();
+  readonly byName = new Map<string, TemplateUniform>();
 
   /** Written only by `block`: the arrays of each block by instance name, which both stages share. */
   private readonly blockArrays = new Map<string, BlockArrays>();
@@ -94,7 +102,7 @@ export class TemplateUniforms {
     if (known) return known;
     const { value, written } = arrays.add(name, type, count);
     this.arrayValues.set(name, value);
-    this.byName.set(name, written as unknown as UniformNode<unknown>);
+    this.byName.set(name, written);
     return value;
   }
 

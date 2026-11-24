@@ -107,13 +107,14 @@ describe('emitTemplateStage', () => {
 
   describe('a guard on a specialised block member', () => {
     const FLAGS = 'params.flags';
+    const GLOBALS = [
+      'layout(set = 0, binding = 1) uniform texture2D atlas;',
+      'layout(set = 0, binding = 2) uniform sampler atlas_sampler;',
+      'layout(set = 0, binding = 3, std140) uniform Params {\n\tuint flags;\n} params;',
+    ].join('\n');
     const guarded = (flags: number) => {
       const resources = programResources(new Set([FLAGS]));
-      const globals = [
-        'layout(set = 0, binding = 1) uniform texture2D atlas;',
-        'layout(set = 0, binding = 2) uniform sampler atlas_sampler;',
-        'layout(set = 0, binding = 3, std140) uniform Params {\n\tuint flags;\n} params;',
-      ].join('\n');
+      const globals = GLOBALS;
       const body =
         'color = vec4(0.0);\nif (bool(params.flags & 4u)) { color = texture(sampler2D(atlas, atlas_sampler), vec2(0.5)); }';
       stageOf(globals, body, resources);
@@ -127,6 +128,21 @@ describe('emitTemplateStage', () => {
 
     it('emits the branch at the value a binding writes', () => {
       expect(guarded(4)).toMatch(/uniform sampler2D/);
+    });
+
+    it('emits only the operand a folded `?:` takes', () => {
+      const resources = programResources(new Set([FLAGS]));
+      const body =
+        'color = bool(params.flags & 4u) ? texture(sampler2D(atlas, atlas_sampler), vec2(0.5)) : vec4(0.0);';
+      expect(generatedFragmentShader(stageOf(GLOBALS, body, resources).result)).not.toMatch(
+        /uniform sampler2D/
+      );
+    });
+
+    it('keeps an `if` on a texture read, whose sampler is no literal', () => {
+      const body =
+        'color = vec4(0.0);\nif (texture(sampler2D(atlas, atlas_sampler), vec2(0.5)).a < 0.5) { color = vec4(1.0); }';
+      expect(generatedFragmentShader(stageOf(GLOBALS, body).result)).toMatch(/uniform sampler2D/);
     });
   });
 
