@@ -6,6 +6,7 @@
  */
 
 import type { SurfaceAabb, UvScale } from './surfaceFields.js';
+import { bytesView } from '../../../utils/bytesView.js';
 import { COLOR_BYTES, type SurfaceLayout } from './surfaceFormat.js';
 
 /**
@@ -60,19 +61,38 @@ export function decodePositions(
   return positions;
 }
 
-/**
- * The RGBA8 vertex colours, which lead each attribute record, or undefined when the surface has
- * none or the record is narrower than the format implies. They stay the stored bytes, the values
- * both draws multiply by.
- */
-export function decodeColors(
+/** Each vertex's record of `attribute_data`, which the colour, UV and custom array reads share. */
+export interface AttributeRecords {
+  bytes: Uint8Array;
+  view: DataView;
+  attributeStride: number;
+  vertexCount: number;
+  compressed: boolean;
+}
+
+/** Undefined for none, or for a misfit width: every attribute would read from the wrong place. */
+export function attributeRecords(
   bytes: Uint8Array,
   vertexCount: number,
+  layout: SurfaceLayout,
+  onMismatch: (actualStride: number) => void
+): AttributeRecords | undefined {
+  if (layout.attributeStride === 0 || vertexCount === 0 || bytes.byteLength === 0) return undefined;
+  const attributeStride = bytes.byteLength / vertexCount;
+  if (!Number.isInteger(attributeStride) || attributeStride < layout.attributeStride) {
+    onMismatch(attributeStride);
+    return undefined;
+  }
+  return { bytes, view: bytesView(bytes), attributeStride, vertexCount, compressed: layout.compressed };
+}
+
+/** The RGBA8 vertex colours that lead each record, kept as the stored bytes both draws multiply by. */
+export function decodeColors(
+  records: AttributeRecords | undefined,
   layout: SurfaceLayout
 ): Uint8Array | undefined {
-  if (!layout.hasColor || vertexCount === 0 || bytes.byteLength === 0) return undefined;
-  const attributeStride = bytes.byteLength / vertexCount;
-  if (!Number.isInteger(attributeStride) || attributeStride < layout.attributeStride) return undefined;
+  if (!records || !layout.hasColor) return undefined;
+  const { bytes, attributeStride, vertexCount } = records;
   const colors = new Uint8Array(vertexCount * COLOR_BYTES);
   for (let i = 0; i < vertexCount; i++) {
     const record = i * attributeStride;
@@ -87,49 +107,19 @@ interface UvSets {
   uv2s?: Float32Array;
 }
 
-/**
- * UV1 and UV2 from `attribute_data`, or none when the record is narrower than the format
- * implies: wrong UVs are worse than none. A compressed UV is 2×uint16 over the unit range.
- * A non-zero `uv_scale` holds the divisors Godot normalised out-of-range UVs by, so each set
- * re-expands around 0.5 (`rendering_server.cpp:1556-1557`, `:1581-1582`).
- */
+/** A non-zero `uv_scale` re-expands each set around 0.5 (`rendering_server.cpp:1556-1557`, `:1581-1582`). */
 export function decodeUVs(
-  bytes: Uint8Array,
-  vertexCount: number,
+  records: AttributeRecords | undefined,
   layout: SurfaceLayout,
-  uvScale: UvScale | undefined,
-  onMismatch: (actualStride: number) => void
+  uvScale: UvScale | undefined
 ): UvSets {
-  if ((layout.uvOffset < 0 && layout.uv2Offset < 0) || vertexCount === 0 || bytes.byteLength === 0) return {};
-
-  // Godot orders the record COLOR, UV1, UV2, CUSTOM0..3, so vertex colours put 4
-  // RGBA8 bytes ahead of UV1 and a wider record (an unmodelled CUSTOM channel)
-  // reads fine at its stride. A record too narrow or not dividing evenly puts
-  // the UVs somewhere else, so they go.
-  const attributeStride = bytes.byteLength / vertexCount;
-  if (!Number.isInteger(attributeStride) || attributeStride < layout.attributeStride) {
-    onMismatch(attributeStride);
-    return {};
-  }
-  const record = {
-    view: new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength),
-    attributeStride,
-    vertexCount,
-    compressed: layout.compressed,
-  };
+  if (!records) return {};
   // Godot re-expands when any component of the whole Vector4 is non-zero.
   const scale = uvScale && uvScale.some((component) => component !== 0) ? uvScale : undefined;
   return {
-    uvs: decodeUvSet(record, layout.uvOffset, scale && [scale[0], scale[1]]),
-    uv2s: decodeUvSet(record, layout.uv2Offset, scale && [scale[2], scale[3]]),
+    uvs: decodeUvSet(records, layout.uvOffset, scale && [scale[0], scale[1]]),
+    uv2s: decodeUvSet(records, layout.uv2Offset, scale && [scale[2], scale[3]]),
   };
-}
-
-interface AttributeRecords {
-  view: DataView;
-  attributeStride: number;
-  vertexCount: number;
-  compressed: boolean;
 }
 
 /** One UV set at `offset` in each record, re-expanded by `scale` when given. */

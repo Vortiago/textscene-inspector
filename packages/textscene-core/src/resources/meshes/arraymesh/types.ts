@@ -1,4 +1,4 @@
-/** ArrayMesh decoded data: one entry per decodable surface. */
+import type { SurfaceBones } from '../godotSurface.js';
 
 /**
  * One decoded mesh surface: a TRIANGLES primitive, a TRIANGLE_STRIP that `indices` already lists as
@@ -31,6 +31,12 @@ export interface ArrayMeshSurface {
   normals?: Float32Array;
   /** Per-vertex tangents `vertexCount × 4`, `w` the binormal sign, or undefined when the surface has none. */
   tangents?: Float32Array;
+  /** CUSTOM0 to CUSTOM3 as the vertex stage reads them, four lanes per vertex, each undefined when absent. */
+  customs?: readonly (Float32Array | undefined)[];
+  /** The bones that skin each vertex, or undefined when the surface has no `skin_data`. */
+  bones?: SurfaceBones;
+  /** What the vertex stage reads as BONE_INDICES and BONE_WEIGHTS, when it differs from `bones`. */
+  vertexStageBones?: SurfaceBones;
   /**
    * Three per triangle, or one per drawn point, in one width for every surface:
    * `godotSurfacesGeometry` copies them into the width the merged mesh needs.

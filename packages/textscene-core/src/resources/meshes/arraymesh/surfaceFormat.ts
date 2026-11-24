@@ -1,28 +1,39 @@
-/**
- * A surface's byte geometry, derived from its Godot `format` bitfield.
- * `vertex_data` is two concatenated regions, not one interleaved record: the
- * positions, then the normal/tangent frame. `attribute_data` is a third,
- * interleaved COLOR, UV1, UV2.
- */
-
-/** Godot Mesh.ArrayFormat flags. */
-export const ARRAY_FORMAT_VERTEX = 1 << 0;
-export const ARRAY_FORMAT_NORMAL = 1 << 1;
-export const ARRAY_FORMAT_TANGENT = 1 << 2;
-const ARRAY_FORMAT_COLOR = 1 << 3;
-const ARRAY_FORMAT_TEX_UV = 1 << 4;
-const ARRAY_FORMAT_TEX_UV2 = 1 << 5;
-/** Positions are 2×float32, not 3 (`rendering_server.h:339`). */
-export const ARRAY_FLAG_USE_2D_VERTICES = 1 << 25;
-/**
- * Attributes are quantised. `&` coerces to int32, so it reads only bits below 32, never
- * `ARRAY_FLAG_FORMAT_VERSION_2` (1 << 35): `surfaceVersion.ts` reads the version and upgrades an
- * older surface first.
- */
-const ARRAY_FLAG_COMPRESS_ATTRIBUTES = 1 << 29;
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
+import {
+  ARRAY_FLAG_COMPRESS_ATTRIBUTES,
+  ARRAY_FLAG_USE_2D_VERTICES,
+  ARRAY_FLAG_USE_8_BONE_WEIGHTS,
+  ARRAY_FORMAT_BONES,
+  ARRAY_FORMAT_COLOR,
+  ARRAY_FORMAT_CUSTOM0,
+  ARRAY_FORMAT_CUSTOM_BASE,
+  ARRAY_FORMAT_CUSTOM_BITS,
+  ARRAY_FORMAT_CUSTOM_MASK,
+  ARRAY_FORMAT_NORMAL,
+  ARRAY_FORMAT_TANGENT,
+  ARRAY_FORMAT_TEX_UV,
+  ARRAY_FORMAT_TEX_UV2,
+  ARRAY_FORMAT_WEIGHTS,
+  ARRAY_CUSTOM_COUNT,
+  CUSTOM_FORMAT_LANES,
+  type ArrayCustomFormat,
+} from '../../../godot/rendering/meshArrayFormat.js';
 
 /** RGBA8 vertex colour in both layouts, which Godot writes before UV1 in the attribute record. */
 export const COLOR_BYTES = 4;
+
+/** One custom array of a surface: its format and its byte offset in each attribute record. */
+export interface CustomArraySlot {
+  format: EnumValue<typeof ArrayCustomFormat>;
+  offset: number;
+}
+
+/** A surface's `skin_data`: bone indices, then weights, each `count` uint16s for every vertex. */
+export interface SkinLayout {
+  count: 4 | 8;
+  /** Bytes of one vertex's record: the indices and the weights. */
+  stride: number;
+}
 
 /**
  * Godot `Mesh.PrimitiveType` (`servers/rendering_server.h`: POINTS 0, LINES 1, LINE_STRIP 2,
@@ -62,6 +73,10 @@ export interface SurfaceLayout {
   uvOffset: number;
   /** Byte offset of UV2 within one attribute record, or -1 when the surface has none. */
   uv2Offset: number;
+  /** CUSTOM0 to CUSTOM3 in order, each undefined when the surface has none. */
+  customs: readonly (CustomArraySlot | undefined)[];
+  /** The bone indices and weights in `skin_data`, or undefined when the surface has neither. */
+  skin?: SkinLayout;
 }
 
 /**
@@ -79,6 +94,7 @@ function tangentStorage(format: {
   return format.isPosition2D ? 'none' : 'frame';
 }
 
+/** `vertex_data` holds the positions, then the normal and tangent frame. `attribute_data` holds the rest. */
 export function surfaceLayout(format: number): SurfaceLayout {
   const compressed = (format & ARRAY_FLAG_COMPRESS_ATTRIBUTES) !== 0;
   const isPosition2D = (format & ARRAY_FLAG_USE_2D_VERTICES) !== 0;
@@ -96,6 +112,8 @@ export function surfaceLayout(format: number): SurfaceLayout {
   const normalStride = hasNormal ? (compressed ? 4 : 4 + (hasTangent ? 4 : 0)) : 0;
   // 2×uint16 re-expanded by a non-zero `uv_scale` when compressed, else 2×float32.
   const uvBytes = compressed ? 4 : 8;
+  const uvsEnd = (hasColor ? COLOR_BYTES : 0) + (hasUV ? uvBytes : 0) + (hasUV2 ? uvBytes : 0);
+  const { customs, attributeStride } = customSlots(format, uvsEnd);
 
   return {
     compressed,
@@ -103,9 +121,39 @@ export function surfaceLayout(format: number): SurfaceLayout {
     tangent: tangentStorage({ compressed, isPosition2D, hasNormal, hasTangent }),
     positionStride,
     normalStride,
-    attributeStride: (hasColor ? COLOR_BYTES : 0) + (hasUV ? uvBytes : 0) + (hasUV2 ? uvBytes : 0),
+    attributeStride,
     hasColor,
     uvOffset: hasUV ? (hasColor ? COLOR_BYTES : 0) : -1,
     uv2Offset: hasUV2 ? (hasColor ? COLOR_BYTES : 0) + (hasUV ? uvBytes : 0) : -1,
+    customs,
+    ...skinLayout(format),
   };
+}
+
+/** The custom arrays after the UVs of each attribute record, in order, and the record's whole width. */
+function customSlots(
+  format: number,
+  firstOffset: number
+): { customs: (CustomArraySlot | undefined)[]; attributeStride: number } {
+  const customs: (CustomArraySlot | undefined)[] = [];
+  let offset = firstOffset;
+  for (let custom = 0; custom < ARRAY_CUSTOM_COUNT; custom++) {
+    if (!(format & (ARRAY_FORMAT_CUSTOM0 << custom))) {
+      customs.push(undefined);
+      continue;
+    }
+    const shift = ARRAY_FORMAT_CUSTOM_BASE + custom * ARRAY_FORMAT_CUSTOM_BITS;
+    const customFormat = (format >>> shift) & ARRAY_FORMAT_CUSTOM_MASK;
+    customs.push({ format: customFormat as EnumValue<typeof ArrayCustomFormat>, offset });
+    const { lanes, laneBytes } = CUSTOM_FORMAT_LANES[customFormat]!;
+    offset += lanes * laneBytes;
+  }
+  return { customs, attributeStride: offset };
+}
+
+/** Godot saves bones and weights together, each 2 bytes an element (`rendering_server.cpp:1134-1142`). */
+function skinLayout(format: number): { skin?: SkinLayout } {
+  if (!(format & ARRAY_FORMAT_BONES) || !(format & ARRAY_FORMAT_WEIGHTS)) return {};
+  const count = format & ARRAY_FLAG_USE_8_BONE_WEIGHTS ? 8 : 4;
+  return { skin: { count, stride: count * 2 * 2 } };
 }

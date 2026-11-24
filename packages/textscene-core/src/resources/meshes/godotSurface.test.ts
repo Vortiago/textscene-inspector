@@ -15,7 +15,12 @@ import {
 } from './godotSurface';
 import { headlightsSurface, wallQuadSurfaces } from '../testing/arrayMeshSurfaces';
 import { UV2_ATTRIBUTE } from './uv2';
-import { VERTEX_ID_ATTRIBUTE, withGodotAttributes } from '../../shaders/spatial/meshAttributes';
+import {
+  VERTEX_ID_ATTRIBUTE,
+  VERTEX_STAGE_BONES_ATTRIBUTE,
+  VERTEX_STAGE_WEIGHTS_ATTRIBUTE,
+  withGodotAttributes,
+} from '../../shaders/spatial/meshAttributes';
 
 const WALL_TRES = `[gd_resource type="ArrayMesh" format=4 uid="uid://bett1yahcwe25"]
 
@@ -190,6 +195,52 @@ describe('godotSurfacesGeometry', () => {
 
     expect(geometry.getAttribute('skinIndex')).toBeUndefined();
     expect(geometry.getAttribute('skinWeight')).toBeUndefined();
+  });
+
+  it('gives the vertex stage the bones of a skinned surface and zeros for one without (edge case)', () => {
+    const skinned = triangle({
+      bones: { indices: new Uint16Array(12).fill(4), weights: new Float32Array(12).fill(0.5) },
+    });
+
+    const geometry = godotSurfacesGeometry([skinned, triangle()]);
+
+    expect(geometry.getAttribute(VERTEX_STAGE_BONES_ATTRIBUTE).getX(2)).toBe(4);
+    expect(geometry.getAttribute(VERTEX_STAGE_BONES_ATTRIBUTE).getX(3)).toBe(0);
+    expect(geometry.getAttribute(VERTEX_STAGE_WEIGHTS_ATTRIBUTE).getW(2)).toBe(0.5);
+  });
+
+  it('gives the vertex stage its own bones where a surface has them', () => {
+    const geometry = godotSurfacesGeometry([
+      triangle({
+        bones: { indices: new Uint16Array(12).fill(1), weights: new Float32Array(12).fill(0.25) },
+        vertexStageBones: { indices: new Uint16Array(12).fill(9), weights: new Float32Array(12).fill(0.75) },
+      }),
+    ]);
+
+    expect(geometry.getAttribute('skinIndex').getX(0)).toBe(1);
+    expect(geometry.getAttribute(VERTEX_STAGE_BONES_ATTRIBUTE).getX(0)).toBe(9);
+    expect(geometry.getAttribute(VERTEX_STAGE_WEIGHTS_ATTRIBUTE).getX(0)).toBe(0.75);
+  });
+
+  it('leaves the vertex stage to the skin attributes when every surface skins with its own bones', () => {
+    const skinned = triangle({
+      bones: { indices: new Uint16Array(12).fill(4), weights: new Float32Array(12).fill(0.5) },
+    });
+
+    const geometry = godotSurfacesGeometry([skinned, skinned]);
+
+    expect(geometry.getAttribute('skinIndex').getX(3)).toBe(4);
+    expect(geometry.getAttribute(VERTEX_STAGE_BONES_ATTRIBUTE)).toBeUndefined();
+  });
+
+  it('writes each custom array a surface has, and zeros for a surface without it', () => {
+    const custom = new Float32Array(12).fill(0.5);
+
+    const geometry = godotSurfacesGeometry([triangle(), triangle({ customs: [undefined, custom] })]);
+
+    expect(geometry.getAttribute('custom0')).toBeUndefined();
+    expect(geometry.getAttribute('custom1').getX(0)).toBe(0);
+    expect(geometry.getAttribute('custom1').getW(3)).toBe(0.5);
   });
 
   it('gives a surface without bones no skin attribute', () => {

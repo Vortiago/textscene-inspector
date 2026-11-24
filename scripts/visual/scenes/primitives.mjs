@@ -57,6 +57,8 @@ export const PRIMITIVE_SCENES = [
   { name: 'ribbon-trail-mesh-texture-uv', file: 'unit-ribbon-trail-mesh-texture-uv.tscn' },
   // A MeshInstance3D bound to a Skeleton3D bends the ribbon along the posed bones.
   { name: 'mesh-instance-3d-skinned-ribbon', file: 'unit-mesh-instance-3d-skinned-ribbon.tscn' },
+  // An ArrayMesh whose skin_data binds it to the same kind of skeleton.
+  { name: 'mesh-instance-3d-skinned-arraymesh', file: 'unit-mesh-instance-3d-skinned-arraymesh.tscn' },
   // The same skeleton bends a TubeTrailMesh, whose caps follow the first and the last bone.
   { name: 'mesh-instance-3d-skinned-tube', file: 'unit-mesh-instance-3d-skinned-tube.tscn' },
   // A CopyTransformModifier3D copies the rotation of b2 onto b4, so the ribbon bends a second time.

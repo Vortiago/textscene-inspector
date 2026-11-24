@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { ARRAY_CUSTOM_COUNT } from '../../godot/rendering/meshArrayFormat.js';
 import { encodedNormalTangent } from '../../godot/rendering/meshNormalTangent.js';
 import { storedLanes } from '../storedLanes.js';
 
@@ -16,6 +17,10 @@ export type GodotPrimitive = 'triangles' | 'lines' | 'points';
 
 /** The corners of each primitive that a `flat` value is read across, and the list's name in a fault. */
 const LISTS = { triangles: { corners: 3, name: 'triangle' }, lines: { corners: 2, name: 'line' } } as const;
+
+/** The bone indices and weights the vertex stage reads, where they differ from those three skins with. */
+export const VERTEX_STAGE_BONES_ATTRIBUTE = 'godotBoneIndices';
+export const VERTEX_STAGE_WEIGHTS_ATTRIBUTE = 'godotBoneWeights';
 
 /** The attribute that holds each vertex's index in its own surface, which `gl_VertexIndex` reads. */
 export const VERTEX_ID_ATTRIBUTE = 'vertex_id_attrib';
@@ -50,17 +55,32 @@ export function withGodotAttributes(
     const uv = geometry.getAttribute(three);
     if (uv) geometry.setAttribute(godot, uv);
   }
-  for (let custom = 0; custom < CUSTOM_ARRAYS; custom++) {
+  for (let custom = 0; custom < ARRAY_CUSTOM_COUNT; custom++) {
     const values = geometry.getAttribute(`custom${custom}`);
     if (values) geometry.setAttribute(`custom${custom}_attrib`, values);
   }
-  const bones = geometry.getAttribute('skinIndex');
-  if (bones) geometry.setAttribute('bone_attrib', boneIndices(bones));
-  const weights = geometry.getAttribute('skinWeight');
-  if (weights) geometry.setAttribute('weight_attrib', weights);
+  const bones = vertexStageBones(geometry);
+  if (bones) {
+    geometry.setAttribute('bone_attrib', boneIndices(bones.indices));
+    geometry.setAttribute('weight_attrib', bones.weights);
+  }
   for (const [name, value] of Object.entries(MISSING_ARRAY_VALUES))
     if (!geometry.getAttribute(name)) geometry.setAttribute(name, constantAttribute(value));
   return geometry;
+}
+
+/** The bones and weights the vertex stage reads, as one pair: Godot's own, else three's skin, else none. */
+export function vertexStageBones(
+  geometry: THREE.BufferGeometry
+): { indices: Attribute; weights: Attribute } | undefined {
+  for (const [indices, weights] of [
+    [VERTEX_STAGE_BONES_ATTRIBUTE, VERTEX_STAGE_WEIGHTS_ATTRIBUTE],
+    ['skinIndex', 'skinWeight'],
+  ]) {
+    const pair = { indices: geometry.getAttribute(indices!), weights: geometry.getAttribute(weights!) };
+    if (pair.indices && pair.weights) return pair;
+  }
+  return undefined;
 }
 
 /**
@@ -112,9 +132,6 @@ const MISSING_ARRAY_VALUES: Readonly<Record<string, Float32Array | Uint32Array>>
 function constantAttribute(value: Float32Array | Uint32Array): THREE.InstancedBufferAttribute {
   return new THREE.InstancedBufferAttribute(value, 4);
 }
-
-/** `Mesh::ARRAY_CUSTOM0` to `ARRAY_CUSTOM3`, which this reads from the attributes `custom0` to `custom3`. */
-const CUSTOM_ARRAYS = 4;
 
 /** The bone indices as Godot stores them, four 16-bit unsigned integers that GL reads as integers. */
 function boneIndices(bones: Attribute): THREE.BufferAttribute {

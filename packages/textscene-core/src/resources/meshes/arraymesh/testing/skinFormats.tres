@@ -1,0 +1,83 @@
+[gd_resource type="ArrayMesh" format=4]
+
+[resource]
+_surfaces = [{
+"aabb": AABB(-1.15, -0.5, 0, 0.39999998, 1, 1e-05),
+"bone_aabbs": [AABB(-1.15, -0.5, 0, 0.39999998, 1, 1e-05), AABB(-0.75, 0.5, 0, 1e-05, 1e-05, 1e-05), AABB(-1.15, -0.5, 0, 0.40001, 1.001358e-05, 1e-05), AABB(-1.15, -0.5, 0, 0.40001, 1, 1e-05), AABB(-1.15, -0.5, 0, 1.001358e-05, 1, 1e-05), AABB(-1.15, -0.5, 0, 0.39999998, 1, 1e-05), AABB(-0.75, 0.5, 0, 1.001358e-05, 1.001358e-05, 1e-05), AABB(-0.75, -0.5, 0, 1e-05, 1e-05, 1e-05), AABB(-1.15, -0.5, 0, 0.40001, 1, 1e-05), AABB(-1.15, -0.5, 0, 1.001358e-05, 1, 1e-05), AABB(-1.15, -0.5, 0, 0.39999998, 1, 1e-05)],
+"format": 34359741447,
+"primitive": 3,
+"skin_data": PackedByteArray("AAAFAAoABADgenA99Si4HgMACAACAAcAvWN+Qt4x5ScGAAAABQAKANJZXkPkNeksCQADAAgAAgDgenA99Si4HgEABgAAAAUAvWN+Qt4x5ScEAAkAAwAIANJZXkPkNeks"),
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 6,
+"vertex_data": PackedByteArray("MzOTvwAAAL8AAAAAAABAvwAAAL8AAAAAAABAvwAAAD8AAAAAMzOTvwAAAL8AAAAAAABAvwAAAD8AAAAAMzOTvwAAAD8AAAAA/3//f/9/AID/f/9//38AgP9//3//fwCA/3//f/9/AID/f/9//38AgP9//3//fwCA")
+}, {
+"aabb": AABB(-0.7, -0.5, 0, 0.39999998, 1, 1e-05),
+"bone_aabbs": [AABB(-0.7, -0.5, 0, 0.39999998, 1, 1e-05), AABB(-0.3, 0.5, 0, 1e-05, 1e-05, 1e-05), AABB(-0.7, -0.5, 0, 0.40001, 1.001358e-05, 1e-05), AABB(-0.7, -0.5, 0, 0.40001, 1, 1e-05), AABB(-0.7, -0.5, 0, 1.001358e-05, 1, 1e-05), AABB(-0.7, -0.5, 0, 0.39999998, 1, 1e-05), AABB(-0.3, 0.5, 0, 1.001358e-05, 1.001358e-05, 1e-05), AABB(-0.3, -0.5, 0, 1e-05, 1e-05, 1e-05), AABB(-0.7, -0.5, 0, 0.40001, 1, 1e-05), AABB(-0.7, -0.5, 0, 1.001358e-05, 1, 1e-05), AABB(-0.7, -0.5, 0, 0.39999998, 1, 1e-05)],
+"format": 34359741447,
+"primitive": 3,
+"skin_data": PackedByteArray("AAAFAAoABADgenA99Si4HgMACAACAAcAvWN+Qt4x5ScGAAAABQAKANJZXkPkNeksCQADAAgAAgDgenA99Si4HgEABgAAAAUAvWN+Qt4x5ScEAAkAAwAIANJZXkPkNeks"),
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 6,
+"vertex_data": PackedByteArray("MzMzvwAAAL8AAAAAmpmZvgAAAL8AAAAAmpmZvgAAAD8AAAAAMzMzvwAAAL8AAAAAmpmZvgAAAD8AAAAAMzMzvwAAAD8AAAAA/3//f/9/AID/f/9//38AgP9//3//fwCA/3//f/9/AID/f/9//38AgP9//3//fwCA")
+}, {
+"aabb": AABB(-0.25, -0.5, 0, 0.4, 1, 1e-05),
+"bone_aabbs": [AABB(-0.25, -0.5, 0, 0.4, 1, 1e-05), AABB(0.15, 0.5, 0, 1e-05, 1e-05, 1e-05), AABB(-0.25, -0.5, 0, 0.40001, 1.001358e-05, 1e-05), AABB(-0.25, -0.5, 0, 0.40001, 1, 1e-05), AABB(-0.25, -0.5, 0, 9.998679e-06, 1, 1e-05), AABB(-0.25, -0.5, 0, 0.4, 1, 1e-05), AABB(0.15, 0.5, 0, 9.998679e-06, 1.001358e-05, 1e-05), AABB(0.15, -0.5, 0, 1e-05, 1e-05, 1e-05), AABB(-0.25, -0.5, 0, 0.40001, 1, 1e-05), AABB(-0.25, -0.5, 0, 9.998679e-06, 1, 1e-05), AABB(-0.25, -0.5, 0, 0.4, 1, 1e-05)],
+"format": 34896612359,
+"primitive": 3,
+"skin_data": PackedByteArray("AAAFAAoABADgenA99Si4HgMACAACAAcAvWN+Qt4x5ScGAAAABQAKANJZXkPkNeksCQADAAgAAgDgenA99Si4HgEABgAAAAUAvWN+Qt4x5ScEAAkAAwAIANJZXkPkNeks"),
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 6,
+"vertex_data": PackedByteArray("AAAAAAAA/7///wAAAAD/v/////8AAP+/AAAAAAAA/7//////AAD/vwAA//8AAP+//3//f/9//3//f/9//3//f/9//3//f/9/")
+}, {
+"aabb": AABB(0.2, -0.5, 0, 0.40000004, 1, 1e-05),
+"bone_aabbs": [AABB(0.2, -0.5, 0, 0.40000004, 1, 1e-05), AABB(0.6, 0.5, 0, 1e-05, 1e-05, 1e-05), AABB(0.2, -0.5, 0, 0.40001005, 1.001358e-05, 1e-05), AABB(0.2, -0.5, 0, 0.40001005, 1, 1e-05), AABB(0.2, -0.5, 0, 9.998679e-06, 1, 1e-05), AABB(0.2, -0.5, 0, 0.40000004, 1, 1e-05), AABB(0.6, 0.5, 0, 1.001358e-05, 1.001358e-05, 1e-05), AABB(0.6, -0.5, 0, 1e-05, 1e-05, 1e-05), AABB(0.2, -0.5, 0, 0.40001005, 1, 1e-05), AABB(0.2, -0.5, 0, 9.998679e-06, 1, 1e-05), AABB(0.2, -0.5, 0, 0.40000004, 1, 1e-05)],
+"format": 34896612359,
+"primitive": 3,
+"skin_data": PackedByteArray("AAAFAAoABADgenA99Si4HgMACAACAAcAvWN+Qt4x5ScGAAAABQAKANJZXkPkNeksCQADAAgAAgDgenA99Si4HgEABgAAAAUAvWN+Qt4x5ScEAAkAAwAIANJZXkPkNeks"),
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 6,
+"vertex_data": PackedByteArray("AAAAAAAA/7///wAAAAD/v/////8AAP+/AAAAAAAA/7//////AAD/vwAA//8AAP+//3//f/9//3//f/9//3//f/9//3//f/9/")
+}, {
+"aabb": AABB(0.65, -0.5, 0, 0.39999998, 1, 1e-05),
+"bone_aabbs": [AABB(0.65, -0.5, 0, 0.39999998, 1, 1e-05), AABB(0.65, -0.5, 0, 0.40001, 1, 1e-05), AABB(0.65, -0.5, 0, 0.39999998, 1, 1e-05), AABB(0.65, -0.5, 0, 0.39999998, 1, 1e-05), AABB(0.65, -0.5, 0, 0.39999998, 1, 1e-05), AABB(0.65, -0.5, 0, 0.39999998, 1, 1e-05), AABB(0.65, -0.5, 0, 0.40001, 1, 1e-05), AABB(0.65, -0.5, 0, 0.40001, 1, 1e-05), AABB(0.65, -0.5, 0, 0.39999998, 1, 1e-05), AABB(0.65, -0.5, 0, 0.39999998, 1, 1e-05), AABB(0.65, -0.5, 0, 0.39999998, 1, 1e-05)],
+"format": 34493959175,
+"primitive": 3,
+"skin_data": PackedByteArray("AAAFAAoABAAJAAMACAACADBeGC9lH4wX1hKyD3QNxgsDAAgAAgAHAAEABgAAAAUA+0WnLv0i/htTF/4TfhGNDwYAAAAFAAoABAAJAAMACAC3O8ks1CPbHZcZZBbnE+oRCQADAAgAAgAHAAEABgAAADBeGC9lH4wX1hKyD3QNxgsBAAYAAAAFAAoABAAJAAMA+0WnLv0i/htTF/4TfhGNDwQACQADAAgAAgAHAAEABgC3O8ks1CPbHZcZZBbnE+oR"),
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 6,
+"vertex_data": PackedByteArray("ZmYmPwAAAL8AAAAAZmaGPwAAAL8AAAAAZmaGPwAAAD8AAAAAZmYmPwAAAL8AAAAAZmaGPwAAAD8AAAAAZmYmPwAAAD8AAAAA/3//f/9/AID/f/9//38AgP9//3//fwCA/3//f/9/AID/f/9//38AgP9//3//fwCA")
+}, {
+"aabb": AABB(1.1, -0.5, 0, 0.39999998, 1, 1e-05),
+"bone_aabbs": [AABB(1.1, -0.5, 0, 0.39999998, 1, 1e-05), AABB(1.1, -0.5, 0, 0.40001, 1, 1e-05), AABB(1.1, -0.5, 0, 0.39999998, 1, 1e-05), AABB(1.1, -0.5, 0, 0.39999998, 1, 1e-05), AABB(1.1, -0.5, 0, 0.39999998, 1, 1e-05), AABB(1.1, -0.5, 0, 0.39999998, 1, 1e-05), AABB(1.1, -0.5, 0, 0.40001, 1, 1e-05), AABB(1.1, -0.5, 0, 0.40001, 1, 1e-05), AABB(1.1, -0.5, 0, 0.39999998, 1, 1e-05), AABB(1.1, -0.5, 0, 0.39999998, 1, 1e-05), AABB(1.1, -0.5, 0, 0.39999998, 1, 1e-05)],
+"format": 34493959175,
+"primitive": 3,
+"skin_data": PackedByteArray("AAAFAAoABAAJAAMACAACADBeGC9lH4wX1hKyD3QNxgsDAAgAAgAHAAEABgAAAAUA+0WnLv0i/htTF/4TfhGNDwYAAAAFAAoABAAJAAMACAC3O8ks1CPbHZcZZBbnE+oRCQADAAgAAgAHAAEABgAAADBeGC9lH4wX1hKyD3QNxgsBAAYAAAAFAAoABAAJAAMA+0WnLv0i/htTF/4TfhGNDwQACQADAAgAAgAHAAEABgC3O8ks1CPbHZcZZBbnE+oR"),
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 6,
+"vertex_data": PackedByteArray("zcyMPwAAAL8AAAAAAADAPwAAAL8AAAAAAADAPwAAAD8AAAAAzcyMPwAAAL8AAAAAAADAPwAAAD8AAAAAzcyMPwAAAD8AAAAA/3//f/9/AID/f/9//38AgP9//3//fwCA/3//f/9/AID/f/9//38AgP9//3//fwCA")
+}, {
+"aabb": AABB(1.55, -0.5, 0, 0.4000001, 1, 1e-05),
+"bone_aabbs": [AABB(1.55, -0.5, 0, 0.4000001, 1, 1e-05), AABB(1.55, -0.5, 0, 0.4000101, 1, 1e-05), AABB(1.55, -0.5, 0, 0.4000001, 1, 1e-05), AABB(1.55, -0.5, 0, 0.4000001, 1, 1e-05), AABB(1.55, -0.5, 0, 0.4000001, 1, 1e-05), AABB(1.55, -0.5, 0, 0.4000001, 1, 1e-05), AABB(1.55, -0.5, 0, 0.4000101, 1, 1e-05), AABB(1.55, -0.5, 0, 0.4000101, 1, 1e-05), AABB(1.55, -0.5, 0, 0.4000001, 1, 1e-05), AABB(1.55, -0.5, 0, 0.4000001, 1, 1e-05), AABB(1.55, -0.5, 0, 0.4000001, 1, 1e-05)],
+"format": 35030830087,
+"primitive": 3,
+"skin_data": PackedByteArray("AAAFAAoABAAJAAMACAACADBeGC9lH4wX1hKyD3QNxgsDAAgAAgAHAAEABgAAAAUA+0WnLv0i/htTF/4TfhGNDwYAAAAFAAoABAAJAAMACAC3O8ks1CPbHZcZZBbnE+oRCQADAAgAAgAHAAEABgAAADBeGC9lH4wX1hKyD3QNxgsBAAYAAAAFAAoABAAJAAMA+0WnLv0i/htTF/4TfhGNDwQACQADAAgAAgAHAAEABgC3O8ks1CPbHZcZZBbnE+oR"),
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 6,
+"vertex_data": PackedByteArray("AAAAAAAA/7///wAAAAD/v/////8AAP+/AAAAAAAA/7//////AAD/vwAA//8AAP+//3//f/9//3//f/9//3//f/9//3//f/9/")
+}, {
+"aabb": AABB(2, -0.5, 0, 0.4000001, 1, 1e-05),
+"bone_aabbs": [AABB(2, -0.5, 0, 0.4000001, 1, 1e-05), AABB(2, -0.5, 0, 0.4000101, 1, 1e-05), AABB(2, -0.5, 0, 0.4000001, 1, 1e-05), AABB(2, -0.5, 0, 0.4000001, 1, 1e-05), AABB(2, -0.5, 0, 0.4000001, 1, 1e-05), AABB(2, -0.5, 0, 0.4000001, 1, 1e-05), AABB(2, -0.5, 0, 0.4000101, 1, 1e-05), AABB(2, -0.5, 0, 0.4000101, 1, 1e-05), AABB(2, -0.5, 0, 0.4000001, 1, 1e-05), AABB(2, -0.5, 0, 0.4000001, 1, 1e-05), AABB(2, -0.5, 0, 0.4000001, 1, 1e-05)],
+"format": 35030830087,
+"primitive": 3,
+"skin_data": PackedByteArray("AAAFAAoABAAJAAMACAACADBeGC9lH4wX1hKyD3QNxgsDAAgAAgAHAAEABgAAAAUA+0WnLv0i/htTF/4TfhGNDwYAAAAFAAoABAAJAAMACAC3O8ks1CPbHZcZZBbnE+oRCQADAAgAAgAHAAEABgAAADBeGC9lH4wX1hKyD3QNxgsBAAYAAAAFAAoABAAJAAMA+0WnLv0i/htTF/4TfhGNDwQACQADAAgAAgAHAAEABgC3O8ks1CPbHZcZZBbnE+oR"),
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 6,
+"vertex_data": PackedByteArray("AAAAAAAA/7///wAAAAD/v/////8AAP+/AAAAAAAA/7//////AAD/vwAA//8AAP+//3//f/9//3//f/9//3//f/9//3//f/9/")
+}, {
+"aabb": AABB(2.45, -0.5, 0, 0.39999986, 1, 1e-05),
+"format": 34359738375,
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 6,
+"vertex_data": PackedByteArray("zcwcQAAAAL8AAAAAZmY2QAAAAL8AAAAAZmY2QAAAAD8AAAAAzcwcQAAAAL8AAAAAZmY2QAAAAD8AAAAAzcwcQAAAAD8AAAAA/3//f/9/AID/f/9//38AgP9//3//fwCA/3//f/9/AID/f/9//38AgP9//3//fwCA")
+}]

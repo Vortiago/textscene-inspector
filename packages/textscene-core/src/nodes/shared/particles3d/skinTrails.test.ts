@@ -2,6 +2,10 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { PARTICLE_COLOR_OFFSET, PARTICLE_FLOATS } from './particleBuffer';
 import { skinTrailGeometry } from './skinTrails';
+import {
+  VERTEX_STAGE_BONES_ATTRIBUTE,
+  VERTEX_STAGE_WEIGHTS_ATTRIBUTE,
+} from '../../../shaders/spatial/meshAttributes';
 
 /** Two vertices: the first bound to section 0 alone, the second half to section 0 and half to section 1. */
 function sourceGeometry(): THREE.BufferGeometry {
@@ -42,6 +46,23 @@ describe('skinTrailGeometry', () => {
     expect(position.getY(1)).toBeCloseTo(1, 6);
   });
 
+  it('follows the bones the vertex stage reads where they differ from the skin attributes', () => {
+    const geometry = sourceGeometry();
+    geometry.setAttribute(
+      VERTEX_STAGE_BONES_ATTRIBUTE,
+      new THREE.BufferAttribute(new Uint16Array(8).fill(1), 4)
+    );
+    geometry.setAttribute(
+      VERTEX_STAGE_WEIGHTS_ATTRIBUTE,
+      new THREE.BufferAttribute(new Float32Array([1, 0, 0, 0, 1, 0, 0, 0]), 4)
+    );
+
+    const merged = skinTrailGeometry(geometry, sections(1, 3), 2);
+
+    expect(merged.getAttribute('position').getX(0)).toBeCloseTo(3, 6);
+    expect(merged.hasAttribute(VERTEX_STAGE_BONES_ATTRIBUTE)).toBe(false);
+  });
+
   it('draws one copy of the surface for each particle, with its own sections', () => {
     const merged = skinTrailGeometry(sourceGeometry(), sections(1, 3, 10, 20), 2);
     expect(merged.getAttribute('position').count).toBe(4);
@@ -71,6 +92,6 @@ describe('skinTrailGeometry', () => {
   it('rejects a surface with no bones (error case)', () => {
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(3), 3));
-    expect(() => skinTrailGeometry(geometry, sections(0, 0), 2)).toThrow('skinIndex');
+    expect(() => skinTrailGeometry(geometry, sections(0, 0), 2)).toThrow('bones and weights');
   });
 });

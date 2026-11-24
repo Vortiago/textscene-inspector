@@ -6,7 +6,7 @@ renders_as: one merged THREE.BufferGeometry with a draw group per surface
 
 # ArrayMesh
 
-A baked mesh whose surfaces are base64 `PackedByteArray` blobs laid out by a `format` bitfield. The previewer decodes both the plain and the compressed layout. It merges the triangle, points and line surfaces into one `BufferGeometry` each, with a draw group per surface. A surface with 2D vertices (`ARRAY_FLAG_USE_2D_VERTICES`) reads its positions with z = 0, and a surface's vertex colours read as the stored RGBA8 bytes. A MeshInstance2D, a MeshInstance3D, a GridMap and a CPUParticles3D draw all three kinds. A line is one pixel wide, with the material's colour and the default normal along +Z that Godot gives a surface with no normal array. A mesh of triangles and points draws both. A points surface draws as `THREE.Points` at the material's point size. A surface's TEX_UV2 becomes the mesh's UV2, and a compressed UV2 re-expands by `uv_scale`'s z and w as in Godot (`rendering_server.cpp:1581-1582`).
+A baked mesh whose surfaces are base64 `PackedByteArray` blobs laid out by a `format` bitfield. The previewer decodes both the plain and the compressed layout. It merges the triangle, points and line surfaces into one `BufferGeometry` each, with a draw group per surface. A surface with 2D vertices (`ARRAY_FLAG_USE_2D_VERTICES`) reads its positions with z = 0, and a surface's vertex colours read as the stored RGBA8 bytes. A MeshInstance2D, a MeshInstance3D, a GridMap and a CPUParticles3D draw all three kinds. A line is one pixel wide, with the material's colour and the default normal along +Z that Godot gives a surface with no normal array. A mesh of triangles and points draws both. A points surface draws as `THREE.Points` at the material's point size. A surface's TEX_UV2 becomes the mesh's UV2, and a compressed UV2 re-expands by `uv_scale`'s z and w as in Godot (`rendering_server.cpp:1581-1582`). A surface's `skin_data` skins it to the MeshInstance3D's Skeleton3D, and its CUSTOM0 to CUSTOM3 arrays reach a spatial shader.
 
 ## Linting
 
@@ -52,8 +52,15 @@ A MeshLibrary item whose mesh has a LINES surface draws its segments at each cel
 
 A CPUParticles3D whose mesh has a LINES surface draws its segments at each particle, in the particle colour.
 
+## Skinned surface
+
+<!-- compare: image=unit-mesh-instance-3d-skinned-arraymesh status=done fixture=unit-mesh-instance-3d-skinned-arraymesh.tscn -->
+
+An ArrayMesh strip stores four bone weights for each vertex in its `skin_data`. It bends along the posed bones of the MeshInstance3D's Skeleton3D, where the third bone turns 60 degrees about Z.
+
 ## Known limitations
 
-- **Approximated** Blend shapes, LODs and skins are ignored, so a skinned mesh renders in its rest pose.
+- **Approximated** Blend shapes and LODs are ignored.
+- **Approximated** A surface with eight bone weights for each vertex skins with its four largest weights, renormalised.
 - **Approximated** A compressed surface with a normal but no tangent is decoded by symmetry and is not measured against Godot.
 - **Approximated** A `.tres` whose every surface is undecodable is listed in the missing-resources panel even though the file is present.

@@ -1,10 +1,3 @@
-/**
- * Decodes an ArrayMesh's `_surfaces`, from a `.tres` or a binary file, into per-surface typed arrays:
- * the surface loop and its material resolution. Triangle, points and line surfaces decode, each flagged
- * as its primitive. Blend shapes, LODs and skins are ignored. The byte layout lives in
- * `surfaceFormat.ts`, `surfaceVersion.ts`, `vertexBuffers.ts` and `surfaceFields.ts`.
- */
-
 import { warn } from '../../../logger.js';
 import type { TscnInternalResource } from '../../../parser/types.js';
 import { materialPathInFile } from '../../materials/materialPathInFile.js';
@@ -29,7 +22,10 @@ import {
 } from './surfaceFormat.js';
 import { currentVertexData } from './surfaceVersion.js';
 import type { ArrayMeshData, ArrayMeshSurface } from './types.js';
+import { decodeCustomArrays } from './customArrays.js';
+import { decodeSkin } from './skinData.js';
 import {
+  attributeRecords,
   decodeColors,
   decodeIndices,
   decodeNormalFrame,
@@ -188,13 +184,22 @@ function decodeSurfaces(
     }
     const { normals, tangents } = decodeNormalFrame(vertexData, vertexCount, layout);
     const attributeData = readPackedBytes(block, 'attribute_data');
-    const colors = decodeColors(attributeData, vertexCount, layout);
-    const { uvs, uv2s } = decodeUVs(attributeData, vertexCount, layout, readUvScale(block), (actualStride) =>
+    const records = attributeRecords(attributeData, vertexCount, layout, (actualStride) =>
       warn(
-        `[ArrayMesh] surface ${surfaceIndex}'s attribute_data is ${actualStride} B/vertex, ` +
-          `not the ${layout.attributeStride} B format ${format} implies — dropping its UVs`
+        `[ArrayMesh] surface ${surfaceIndex}'s attribute_data is ${actualStride} B/vertex, not the ` +
+          `${layout.attributeStride} B format ${format} implies — dropping its colours, UVs and custom arrays`
       )
     );
+    const colors = decodeColors(records, layout);
+    const { uvs, uv2s } = decodeUVs(records, layout, readUvScale(block));
+    const customs = decodeCustomArrays(records, layout);
+    const skinData = readPackedBytes(block, 'skin_data');
+    const skin = layout.skin && decodeSkin(skinData, vertexCount, layout.skin);
+    if (layout.skin && !skin && vertexCount > 0)
+      warn(
+        `[ArrayMesh] surface ${surfaceIndex}'s skin_data is ${skinData.byteLength} B, not the ` +
+          `${vertexCount * layout.skin.stride} B format ${format} implies — it draws unskinned`
+      );
     const indexData = readPackedBytes(block, 'index_data');
     const stored = indexCount === 0 ? drawOrderIndices(vertexCount) : decodeIndices(indexData, indexCount);
     if (!stored) {
@@ -217,6 +222,9 @@ function decodeSurfaces(
       uv2s,
       normals,
       tangents,
+      ...(customs.some(Boolean) && { customs }),
+      ...(skin && { bones: skin.bones }),
+      ...(skin?.vertexStageBones && { vertexStageBones: skin.vertexStageBones }),
       indices,
       ...(drawn.primitive && { primitive: drawn.primitive }),
       ...(primitive === PRIMITIVE_TRIANGLE_STRIP && { isTriangleStrip: true }),

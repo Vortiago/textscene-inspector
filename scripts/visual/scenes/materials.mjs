@@ -50,6 +50,9 @@ export const MATERIAL_SCENES = [
   { name: 'material-spatial-shader-points', file: 'unit-spatial-shader-points.tscn' },
   // VERTEX_ID counted in each surface: triangle surfaces of a shared and an own material, and points surfaces.
   { name: 'material-spatial-shader-vertex-id', file: 'unit-spatial-shader-vertex-id.tscn' },
+  // CUSTOM0 to CUSTOM3 in all eight formats, and the bones and weights the vertex stage reads.
+  { name: 'material-spatial-shader-custom-arrays', file: 'unit-spatial-shader-custom-arrays.tscn' },
+  { name: 'material-spatial-shader-bone-attributes', file: 'unit-spatial-shader-bone-attributes.tscn' },
   { name: 'surface-material-override', file: 'unit-surface-material-override.tscn' },
   // Multi-property guard, one row each: basic PBR, emission and normal,
   // advanced PBR, transparency and glass.
