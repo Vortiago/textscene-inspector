@@ -174,10 +174,15 @@ function printFlowBody(flow: ControlFlowNode, indent: string): string {
     case 'FLOW_OP_SWITCH':
       return `switch (${text(first!)}) ${printBlock(block!, indent)}`;
     case 'FLOW_OP_CASE':
-      return `case ${text(first!)}:`;
+      return `case ${text(first!)}:${printLabelBody(block!, indent)}`;
     case 'FLOW_OP_DEFAULT':
-      return 'default:';
+      return `default:${printLabelBody(block!, indent)}`;
   }
+}
+
+/** A label's statements, each on a line of its own after the label, as GLSL writes them. */
+function printLabelBody(body: BlockNode, indent: string): string {
+  return body.statements.map((statement) => `\n${indent}${printStatement(statement, indent)}`).join('');
 }
 
 function printFor(flow: ControlFlowNode, indent: string): string {

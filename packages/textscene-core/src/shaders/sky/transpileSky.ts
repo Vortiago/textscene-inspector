@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { int, screenCoordinate, screenSize, uniform, varyingProperty, vec4, vertexIndex } from 'three/tsl';
-import type { Node, TextureNode, UniformNode } from 'three/webgpu';
+import type { Node, TextureNode } from 'three/webgpu';
 import {
   parsedShader,
   shaderSource,
@@ -9,6 +9,7 @@ import {
 } from '../language/parseShader.js';
 import { emitTemplateStage } from '../template/emitTemplate.js';
 import { RADIANCE_ENERGY } from '../template/radianceCalls.js';
+import type { TemplateUniform } from '../template/templateUniforms.js';
 import { linkedProgram, type LinkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
 import { TreeMemo } from '../template/treeMemo.js';
 import { defaultTexture } from '../uniforms/defaultTextures.js';
@@ -48,7 +49,7 @@ export interface SkyDraw {
   /** The triangle that draws the sky at the far plane, after every opaque surface, where none drew. */
   readonly mesh: THREE.Mesh<THREE.BufferGeometry, THREE.Material>;
   /** The template's uniforms of both stages, by `instance.member`: `params.time`. */
-  readonly uniforms: ReadonlyMap<string, UniformNode<unknown>>;
+  readonly uniforms: ReadonlyMap<string, TemplateUniform>;
   /** The template's textures, by name: `radiance`, `half_res`, `volumetric_fog_texture`. */
   readonly textures: ReadonlyMap<string, TextureNode>;
 }

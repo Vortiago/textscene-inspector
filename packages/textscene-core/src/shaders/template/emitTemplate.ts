@@ -12,7 +12,7 @@ import { subgroupVariables } from '../language/subgroupComposites.js';
 import { emittedGlslTree, type EmittedTree } from '../language/emittedTree.js';
 import { copyInto, declareVariables, type StructOf, type Value } from '../language/emitValue.js';
 import type { FunctionNode, StructNode } from '../language/shaderTree.js';
-import type { ValueType } from '../language/types.js';
+import { isTextureType, type ValueType } from '../language/types.js';
 import { withGlobalParameters } from './globalParameters.js';
 import { withSquareMatrices } from './squareMatrices.js';
 import { StageVaryings } from './stageVaryings.js';
@@ -54,8 +54,8 @@ export interface ProgramResources {
   readonly varyings: StageVaryings;
 }
 
-export const programResources = (): ProgramResources => ({
-  uniforms: new TemplateUniforms(),
+export const programResources = (specialisedMembers?: ReadonlySet<string>): ProgramResources => ({
+  uniforms: new TemplateUniforms(specialisedMembers),
   textures: new Map(),
   buffers: new TemplateBuffers(),
   varyings: new StageVaryings(),
@@ -106,7 +106,7 @@ export function emitTemplateStage(
       tree.lowered.body,
       EmitScope.of(new Map([...globals, ...names]))
     );
-  const context: EmitContext = { structOf, functions: new CalledFunctions(trees, structOf, body) };
+  const context: EmitContext = { structOf, functions: new CalledFunctions(trees, structOf, body, globals) };
   const main = trees.get('main');
   if (!main) throw new Error('expected a main function in the template stage');
   const run = Fn(() => {
@@ -268,9 +268,6 @@ function constantGlobal(global: GlobalNode, declarator: GlobalNode['declarators'
 
 /** Folds the const globals. A tree never changes, so every stage shares one. */
 const FOLDING = new GlslangFolding();
-
-/** Every texture type, so a type the emitter has no node for fails by its name. */
-const isTextureType = (type: string) => /^[iu]?texture[A-Z0-9]/.test(type);
 
 /** A texture's node, or an array of them by `name[index]`. Three binds only the nodes a stage reads. */
 function textureValue(

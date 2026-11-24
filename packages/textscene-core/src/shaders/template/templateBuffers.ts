@@ -1,21 +1,28 @@
 import type { StructValue } from '../language/emitValue.js';
 import type { StructNode } from '../language/shaderTree.js';
 import type { BlockPacking } from './blockLayout.js';
-import { RowTexture } from './rowTexture.js';
+import { RowStore } from './rowStore.js';
+import { RowBlock } from './rowBlock.js';
 import type { InterfaceBlockNode } from './templateTree.js';
 
-/** The stages of one program share them, so a buffer both stages declare is one texture. */
+/** The stages of one program share them, so a buffer both stages declare is one region of one texture. */
 export class TemplateBuffers {
   /** Written only by `block`, at a buffer's first block, by its instance name: `instances`. */
-  readonly byName = new Map<string, RowTexture>();
+  readonly byName = new Map<string, RowBlock>();
 
-  /** The value of a `buffer` block's instance, read from its row texture. */
+  /** Written only by `block`, at the first buffer: one texture for every buffer, so one sampler for all. */
+  private store: RowStore | undefined;
+
+  /** The value of a `buffer` block's instance, read from its region of the store. */
   block(block: InterfaceBlockNode, structOf: (type: string) => StructNode | undefined): StructValue {
     const name = block.instanceName!;
     let rows = this.byName.get(name);
     if (!rows) {
       const members = block.members.flatMap((member) => (member.kind === 'slot' ? [] : [member]));
-      this.byName.set(name, (rows = new RowTexture(members, packingOf(block), structOf)));
+      this.byName.set(
+        name,
+        (rows = new RowBlock(members, packingOf(block), structOf, (this.store ??= new RowStore())))
+      );
     }
     return rows.value;
   }

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { UniformNode } from 'three/webgpu';
 import { describe, expect, it } from 'vitest';
 import type { StructNode } from '../language/shaderTree.js';
 import { parseTemplateStage } from './parseTemplate.js';
@@ -22,23 +23,25 @@ function uniformsOf(text: string): TemplateUniforms {
   return uniforms;
 }
 
+/** The value of the uniform node `name` of `uniforms`. */
+const valueOf = (uniforms: TemplateUniforms, name: string) =>
+  (uniforms.byName.get(name) as UniformNode<unknown>).value;
+
 describe('TemplateUniforms', () => {
   it('gives each member of a struct member one uniform of its own', () => {
     const uniforms = uniformsOf(
       'struct Fog { vec3 color; float density; };\nlayout(set = 0) uniform B { Fog fog; } b;'
     );
-    expect(uniforms.byName.get('b.fog.color')!.value).toEqual(new THREE.Vector3());
+    expect(valueOf(uniforms, 'b.fog.color')).toEqual(new THREE.Vector3());
   });
 
   it('starts an integer vector at zero', () => {
-    expect(uniformsOf('layout(set = 0) uniform B { ivec2 size; } b;').byName.get('b.size')!.value).toEqual(
-      new THREE.Vector2()
-    );
+    const uniforms = uniformsOf('layout(set = 0) uniform B { ivec2 size; } b;');
+    expect(valueOf(uniforms, 'b.size')).toEqual(new THREE.Vector2());
   });
 
   it('starts a two-column matrix at zero', () => {
-    const matrix = uniformsOf('layout(set = 0) uniform B { mat2 m; } b;').byName.get('b.m')!
-      .value as THREE.Matrix2;
+    const matrix = valueOf(uniformsOf('layout(set = 0) uniform B { mat2 m; } b;'), 'b.m') as THREE.Matrix2;
     expect(matrix.elements).toEqual([0, 0, 0, 0]);
   });
 });

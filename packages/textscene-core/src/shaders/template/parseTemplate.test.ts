@@ -97,6 +97,28 @@ describe('parseTemplateStage', () => {
     expect(inFunction('uint u = 1u;\nuint c = bitCount(u);')).toContain('uint c = uint(bitCount(u));');
   });
 
+  it("gives each switch label the statements up to the next label, as the template's switches hold them", () => {
+    const parsedSwitch = parsed(
+      'void main() {\nint m = 0;\nswitch (m) {\ncase 0: { m = 1; } break;\ndefault: m = 2;\n}\n}'
+    );
+    const main = parsedSwitch.declarations.at(-1) as unknown as { body: { statements: unknown[] } };
+    const switchNode = main.body.statements.at(-1) as {
+      blocks: { statements: { blocks: { statements: unknown[] }[] }[] }[];
+    };
+    const labelSizes = switchNode.blocks[0]!.statements.map((label) => label.blocks[0]!.statements.length);
+    expect(labelSizes).toEqual([2, 1]);
+  });
+
+  it('prints each label before its statements', () => {
+    expect(inFunction('int m = 0;\nswitch (m) {\ncase 0: m = 1; break;\n}')).toMatch(
+      /case 0:\n\t*\(?m = 1\)?;\n\t*break;/
+    );
+  });
+
+  it('refuses a label outside a switch', () => {
+    expect(() => parsed('void main() {\ncase 0: ;\n}')).toThrow("expected 'case' within a 'switch' block");
+  });
+
   it('keeps the slot of a stage function where a material puts its code', () => {
     const [main] = parsed('void main() {\n#CODE : SKY\n}').declarations;
     expect(main?.kind === 'function' && main.body.statements).toEqual([

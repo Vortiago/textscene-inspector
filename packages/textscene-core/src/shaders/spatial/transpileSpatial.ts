@@ -16,7 +16,7 @@ import {
   vec2,
   vec4,
 } from 'three/tsl';
-import type { Node, TextureNode, UniformNode } from 'three/webgpu';
+import type { Node, TextureNode } from 'three/webgpu';
 import {
   parsedShader,
   shaderSource,
@@ -29,10 +29,12 @@ import {
   type StageResult,
   type WrittenBuiltIn,
 } from '../template/emitTemplate.js';
+import type { TemplateUniform } from '../template/templateUniforms.js';
 import { linkedProgram, type LinkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
-import type { RowTexture } from '../template/rowTexture.js';
+import type { RowBlock } from '../template/rowBlock.js';
 import { instanceWords } from './instanceData.js';
 import { VERTEX_ID_ATTRIBUTE } from './meshAttributes.js';
+import { SPECIALISED_MEMBERS } from './effectSpecialisations.js';
 import { devicePoints, type DevicePoints } from './devicePoints.js';
 import { coveredOnOneSample } from '../pipeline/singleSampleCoverage.js';
 import {
@@ -65,19 +67,20 @@ const SCENE: ProgramTemplate = {
   template: 'forward_clustered/scene_forward_clustered.glsl',
   defines: '',
   memo: new TreeMemo(),
+  specialisedMembers: SPECIALISED_MEMBERS,
 };
 
 export interface TranspiledSpatial {
   /** The material of a mesh whose geometry holds Godot's attributes (`withGodotAttributes`). */
   readonly material: BoundNodeMaterial;
   /** The template's uniforms of both stages, by `instance.member`: `scene_data_block.data.time`. */
-  readonly uniforms: ReadonlyMap<string, UniformNode<unknown>>;
+  readonly uniforms: ReadonlyMap<string, TemplateUniform>;
   /** The template's specialisation constants, by name: `pso_sc_packed_0`. */
   readonly specialisations: ReadonlyMap<string, Specialisation>;
   /** The template's textures, by name. */
   readonly textures: ReadonlyMap<string, TextureNode>;
   /** The template's storage buffers, by instance name: `instances`. */
-  readonly buffers: ReadonlyMap<string, RowTexture>;
+  readonly buffers: ReadonlyMap<string, RowBlock>;
   /** Each uniform of the material by name, which takes `set_shader_parameter`'s value. */
   readonly parameters: ReadonlyMap<string, TranspiledUniform>;
   /** The errors Godot prints for a surface of this material, which still draws. */
