@@ -1,10 +1,9 @@
 import type { DependentRead } from './dependentRead';
-import type { ImportSlices } from '../../godot/import/layeredTextureImport';
 import type { ParsedImportFile } from '../../parser/importParser';
 import { readImportSidecar } from './readImportSidecar';
 
 /** The sidecar's import, read before the image so a missing sidecar costs no decode. `noun` names it. */
-export async function readLayeredImport<Import = ImportSlices>(
+export async function readLayeredImport<Import>(
   read: DependentRead,
   importOf: (sidecar: ParsedImportFile | null) => Import | null,
   noun: string
