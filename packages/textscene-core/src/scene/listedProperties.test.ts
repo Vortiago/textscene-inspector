@@ -1,5 +1,8 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import '../r3f/sceneLiveTree.js';
+import { fileBytes } from '../resources/testing/fileBytes';
 import { openScene, type Scene } from './openScene';
 import type { SceneValue } from './variant';
 
@@ -261,5 +264,38 @@ surface_material_override/0 = SubResource("mat")
 
   it('answers null for every index of a node with no mesh, which has no surface to override', async () => {
     expect(await overridesOf('None')).toEqual([null, null, null]);
+  });
+
+  it('counts the surfaces of a mesh another file holds, text or binary', async () => {
+    const fixtures = join(import.meta.dirname, '../../../../scenes/fixtures');
+    const files: Readonly<Record<string, string | ArrayBuffer>> = {
+      'res://quads.tres': readFileSync(join(fixtures, 'unit-arraymesh-surface-override-quads.tres'), 'utf8'),
+      'res://binary.res': fileBytes(join(fixtures, 'unit-binary-resource-mesh.res')),
+    };
+    const scene = openScene({
+      source: `[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://quads.tres" id="q"]
+[ext_resource type="ArrayMesh" path="res://binary.res" id="b"]
+
+[node name="Main" type="Node3D"]
+
+[node name="Quads" type="MeshInstance3D" parent="."]
+mesh = ExtResource("q")
+
+[node name="Binary" type="MeshInstance3D" parent="."]
+mesh = ExtResource("b")
+`,
+      provider: { loadResource: async (path) => files[path] ?? null },
+    });
+    const overrides = (path: string) =>
+      Promise.all(
+        [0, 1, 2].map(async (i) => textOf(await scene.getNode(path).get(`surface_material_override/${i}`)))
+      );
+
+    expect([await overrides('Quads'), await overrides('Binary')]).toEqual([
+      ['null', 'null', null],
+      ['null', 'null', null],
+    ]);
   });
 });

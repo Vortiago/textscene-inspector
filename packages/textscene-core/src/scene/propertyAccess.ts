@@ -134,17 +134,29 @@ export type GetOutcome =
   | { readonly kind: 'unported'; readonly declaredBy: string }
   | { readonly kind: 'value'; readonly value: VariantValue };
 
-export function resolveGet(
+/** `get` of a ClassDB row or a derived property, `unknown` for a name only a class's `_get` routes. */
+export function resolveClassGet(
+  node: SceneTreeNode,
+  property: string,
+  derived: DerivedProperties | null,
+  reads: NodeReads
+): GetOutcome {
+  if (findClassProperty(node.type, property)) return { kind: 'value', value: reads.stored(property) };
+  const derivedProperty = findDerivedProperty(node.type, property);
+  if (!derivedProperty) return { kind: 'unknown' };
+  const value = derived?.get(property, reads);
+  return value ? { kind: 'value', value } : { kind: 'unported', declaredBy: derivedProperty.declaredBy };
+}
+
+/** `get`: the class's own property first, then the class's `_get`, which may load the resource it reads. */
+export async function resolveGet(
   node: SceneTreeNode,
   property: string,
   derived: DerivedProperties | null,
   reads: NodeReads,
-  subResource: ListedReads['subResource']
-): GetOutcome {
-  if (findClassProperty(node.type, property)) return { kind: 'value', value: reads.stored(property) };
-  const derivedProperty = findDerivedProperty(node.type, property);
-  if (!derivedProperty)
-    return listedGet(node.type, property, { texts: node.rawProperties, stored: reads.stored, subResource });
-  const value = derived?.get(property, reads);
-  return value ? { kind: 'value', value } : { kind: 'unported', declaredBy: derivedProperty.declaredBy };
+  resource: ListedReads['resource']
+): Promise<GetOutcome> {
+  const outcome = resolveClassGet(node, property, derived, reads);
+  if (outcome.kind !== 'unknown') return outcome;
+  return listedGet(node.type, property, { texts: node.rawProperties, stored: reads.stored, resource });
 }

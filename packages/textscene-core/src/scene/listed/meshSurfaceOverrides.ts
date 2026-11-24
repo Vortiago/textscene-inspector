@@ -3,9 +3,8 @@ import { stringToInt } from '../../godot/string/string.js';
 import { strToVar } from '../../godot/variant/strToVar.js';
 import { VARIANT_TYPE as T } from '../../godot/variant/variantType.js';
 import type { VariantValue } from '../../godot/variant/variantValue.js';
-import type { TscnInternalResource } from '../../parser/types.js';
 import type { GetOutcome } from '../propertyAccess.js';
-import type { ListedReads } from './listedProperties.js';
+import type { ListedReads, LoadedResource } from './listedProperties.js';
 
 const PREFIX = 'surface_material_override/';
 
@@ -15,24 +14,24 @@ function surfaceOf(property: string): number {
 }
 
 /** `Mesh::get_surface_count`: one for a PrimitiveMesh, the `_surfaces` of an ArrayMesh, else none. */
-function surfaceCountOf(mesh: TscnInternalResource | null): number {
+function surfaceCountOf(mesh: LoadedResource | null): number {
   if (!mesh) return 0;
   if (descendsFromClass(mesh.type, 'PrimitiveMesh')) return 1;
-  if (mesh.type !== 'ArrayMesh' || mesh.data._surfaces === undefined) return 0;
-  const surfaces = strToVar(mesh.data._surfaces);
+  if (mesh.type !== 'ArrayMesh' || mesh.properties._surfaces === undefined) return 0;
+  const surfaces = strToVar(mesh.properties._surfaces);
   return surfaces.type === T.ARRAY ? surfaces.elements.length : 0;
 }
 
-function meshOf({ stored, subResource }: ListedReads): TscnInternalResource | null {
+async function meshOf({ stored, resource }: ListedReads): Promise<LoadedResource | null> {
   const mesh: VariantValue = stored('mesh');
-  return mesh.type === T.OBJECT && mesh.resource ? subResource(mesh.resource.path) : null;
+  return mesh.type === T.OBJECT && mesh.resource ? resource(mesh.resource.path) : null;
 }
 
 /** `MeshInstance3D::_get` (mesh_instance_3d.cpp:88-98): `set_mesh` sizes the overrides to the surfaces. */
-export function meshSurfaceOverrides(property: string, reads: ListedReads): GetOutcome {
+export async function meshSurfaceOverrides(property: string, reads: ListedReads): Promise<GetOutcome> {
   if (!property.startsWith(PREFIX)) return { kind: 'unknown' };
   const surface = surfaceOf(property);
-  if (surface < 0 || surface >= surfaceCountOf(meshOf(reads))) return { kind: 'refused' };
+  if (surface < 0 || surface >= surfaceCountOf(await meshOf(reads))) return { kind: 'refused' };
   // The last key that names the surface wins, as `_set` applies the keys in file order.
   const key = Object.keys(reads.texts)
     .filter((text) => text.startsWith(PREFIX) && surfaceOf(text) === surface)

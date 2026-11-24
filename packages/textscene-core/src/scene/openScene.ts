@@ -1,10 +1,12 @@
 import type { SceneGraph } from '../core/SceneGraph.js';
 import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
+import { fileExtension } from '../resources/fileExtension.js';
 import { findSubResource } from '../resources/SubResourceResolver.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { parseSubResourcePath } from '../resources/subResourcePath.js';
 import { loadedResourceType } from './loadedResourceType.js';
+import type { LoadedResource } from './listed/listedProperties.js';
 import type { NodeHandle } from './nodeHandle.js';
 import { parseTscnContent, type ParseResult } from './parseScene.js';
 import type { SceneFile } from './sceneFiles.js';
@@ -71,6 +73,11 @@ interface WrittenGraph {
   readonly graph: SceneGraph | null;
 }
 
+/** A section's class and texts, as a class's `_get` reads a resource. */
+function sectionOf(section: TscnInternalResource | null): LoadedResource | null {
+  return section && { type: section.type, properties: section.data };
+}
+
 export function openScene({
   source,
   provider,
@@ -91,7 +98,7 @@ export function openScene({
     () => graph()?.scenes.get(rootScenePath),
     (livePath) => tree()?.node(livePath) ?? null,
     (livePath) => writtenTree()?.node(livePath) ?? null,
-    (path) => subResource(path)
+    (path) => resource(path)
   );
   const tree = (): SceneTree | null => {
     const current = graph();
@@ -108,6 +115,15 @@ export function openScene({
     if (filePath !== rootScenePath) return runtime().loadedSubResource(filePath, subResourceId);
     const root = graph()?.scenes.get(rootScenePath);
     return (root && findSubResource(root.internalResources, subResourceId)) ?? null;
+  };
+  /** A sub-resource of a scene through `subResource`, else the resource the loader parses of a file. */
+  const resource = async (path: string): Promise<LoadedResource | null> => {
+    const { filePath, subResourceId } = parseSubResourcePath(path);
+    if (fileExtension(filePath) === '.tscn') return sectionOf(subResource(path));
+    const parsed = await runtime().loadedResource(filePath);
+    if (!parsed) return null;
+    if (subResourceId === undefined) return { type: parsed.resourceType, properties: parsed.properties };
+    return sectionOf(findSubResource(parsed.subResources, subResourceId) ?? null);
   };
   /** The class `load` gives: a sub-resource's heading names it, and no file is asked for one. */
   const resourceClass = async (path: string): Promise<string | null> =>

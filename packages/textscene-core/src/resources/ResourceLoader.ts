@@ -404,6 +404,15 @@ export class ResourceLoader {
     proc.request(path);
   }
 
+  /** The parse of a `.tres` or `.res` file, or null where the load fails or never answers. */
+  async parsedResource(path: string): Promise<ParsedResource | null> {
+    const cached = this.resources.getCached(path);
+    if (cached !== undefined) return cached;
+    const answer = this.eventBus.once<ParsedResource>('resource', 'loaded', path, PEER_LOAD_TIMEOUT_MS);
+    this.resources.request(path);
+    return answer.catch(() => null);
+  }
+
   /** Read a cached resource. Returns undefined when never requested. */
   getCached<T>(type: ResourceType, path: string): T | null | undefined {
     const proc = this.processors.get(type);

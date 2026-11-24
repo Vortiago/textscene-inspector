@@ -1,6 +1,7 @@
 import type { ContainerWrite } from '../core/childVisibility.js';
 import type { SceneGraph } from '../core/SceneGraph.js';
 import type { ProjectViewportSize } from '../parser/projectSettingsParser.js';
+import type { ParsedResource } from '../parser/parsedResource.js';
 import type { TscnInternalResource } from '../parser/types.js';
 import type { ResourceReference, VariantValue } from '../godot/variant/variantValue.js';
 import type { Scene } from './openScene.js';
@@ -70,6 +71,8 @@ export interface SceneRuntime {
   subscribeFiles(listener: () => void): () => void;
   /** Sub-resource `id` of the loaded scene at `scenePath`, null before it loads or for none. */
   loadedSubResource(scenePath: string, id: string): TscnInternalResource | null;
+  /** The parse of the `.tres` or `.res` file at `path`, null where it does not load. */
+  loadedResource(path: string): Promise<ParsedResource | null>;
   dispose(): void;
 }
 
