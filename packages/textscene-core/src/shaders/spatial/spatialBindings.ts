@@ -8,6 +8,7 @@ import type { EnvironmentFog } from '../pipeline/environmentFog.js';
 import { FOG_BINDINGS, FOG_SPECIALISATIONS, USE_FOG } from './fogBindings.js';
 import { EFFECT_SPECIALISATIONS } from './effectSpecialisations.js';
 import { DIRECTIONAL_LIGHT_BINDINGS, type DirectionalLight } from './directionalLights.js';
+import { GODOT_ROUGHNESS_LIMITER, type RoughnessLimiter } from '../../godot/rendering/roughnessLimiter.js';
 
 /** What the colour pass reads from a frame. */
 export interface SpatialScene {
@@ -25,6 +26,8 @@ export interface SpatialScene {
   readonly fog?: EnvironmentFog;
   /** The directional lights that light surfaces, the ones Godot's cull draws. */
   readonly directionalLights: readonly DirectionalLight[];
+  /** The project's screen-space roughness limiter, Godot's defaults when left out. */
+  readonly roughnessLimiter?: RoughnessLimiter;
 }
 
 /** A scene with its Godot projection and the inverse, which four bindings read, and the pass of the draw. */
@@ -38,14 +41,20 @@ export interface SpatialFrame extends SpatialScene {
 /** `SCENE_DATA_FLAGS_USE_AMBIENT_LIGHT` (`scene_data_inc.glsl:6`). */
 const USE_AMBIENT_LIGHT = 1 << 0;
 
-/** `SCENE_DATA_FLAGS_USE_ROUGHNESS_LIMITER` (`scene_data_inc.glsl:9`), on by default in the opaque pass. */
+/** `SCENE_DATA_FLAGS_USE_ROUGHNESS_LIMITER` (`scene_data_inc.glsl:9`). */
 const USE_ROUGHNESS_LIMITER = 1 << 3;
 
 /** `Camera3D::layers`' default: the 20 visual layers. */
 const ALL_VISUAL_LAYERS = 0xfffff;
 
-/** The project's `screen_space_roughness_limiter` amount and limit defaults (`rendering_server.cpp`). */
-const ROUGHNESS_LIMITER = { amount: 0.25, limit: 0.18 };
+function roughnessLimiterOf(scene: SpatialScene): RoughnessLimiter {
+  return scene.roughnessLimiter ?? GODOT_ROUGHNESS_LIMITER;
+}
+
+/** The alpha pass has no opaque render buffers, so no limiter (`render_scene_data_rd.cpp:258`). */
+function usesRoughnessLimiter(frame: SpatialFrame): boolean {
+  return !frame.isAlphaPass && roughnessLimiterOf(frame).isEnabled;
+}
 
 const DATA = 'scene_data_block.data';
 
@@ -112,8 +121,10 @@ export const SCENE_BINDINGS: readonly Binding<SpatialFrame>[] = [
   {
     uniform: `${DATA}.flags`,
     godot: 'render_scene_data_rd.cpp:208, 228, 258-259; render_forward_clustered.cpp:2162, 2381',
-    value: ({ fog, isAlphaPass }) =>
-      USE_AMBIENT_LIGHT | (isAlphaPass ? 0 : USE_ROUGHNESS_LIMITER) | (fog ? USE_FOG : 0),
+    value: (frame) =>
+      USE_AMBIENT_LIGHT |
+      (usesRoughnessLimiter(frame) ? USE_ROUGHNESS_LIMITER : 0) |
+      (frame.fog ? USE_FOG : 0),
   },
   {
     uniform: `${DATA}.ambient_light_color_energy`,
@@ -129,12 +140,12 @@ export const SCENE_BINDINGS: readonly Binding<SpatialFrame>[] = [
   {
     uniform: `${DATA}.roughness_limiter_amount`,
     godot: 'render_scene_data_rd.cpp:261',
-    value: () => ROUGHNESS_LIMITER.amount,
+    value: (frame) => roughnessLimiterOf(frame).amount,
   },
   {
     uniform: `${DATA}.roughness_limiter_limit`,
     godot: 'render_scene_data_rd.cpp:262',
-    value: () => ROUGHNESS_LIMITER.limit,
+    value: (frame) => roughnessLimiterOf(frame).limit,
   },
 ];
 

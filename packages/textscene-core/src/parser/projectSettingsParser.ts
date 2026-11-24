@@ -31,6 +31,7 @@ import type { ContentScale } from '../nodes/windows/window/contentScale.js';
 import { colorOr } from '../utils/colorParser.js';
 import { perObject } from '../utils/perObject.js';
 import { enumOr, parseOptionalFloat, parseOptionalInt } from './valueParsers.js';
+import { GODOT_ROUGHNESS_LIMITER, type RoughnessLimiter } from '../godot/rendering/roughnessLimiter.js';
 import { DEFAULT_TIME_ROLLOVER_SECONDS } from '../shaders/time/shaderClock.js';
 import { DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE, primitiveMeshTexelSize } from '../godot/scene/primitiveMesh.js';
 import {
@@ -441,6 +442,18 @@ export function projectSampling(settings: ProjectSettings | null): ProjectSampli
     anisotropicFilteringLevel: projectAnisotropicFilteringLevel(settings),
     useNearestMipmapFilter:
       boolSlotValue(settings?.['rendering/textures/default_filters/use_nearest_mipmap_filter']) === true,
+  };
+}
+
+const ROUGHNESS_LIMITER = 'rendering/anti_aliasing/screen_space_roughness_limiter';
+
+/** The screen-space roughness limiter settings (`renderer_scene_render_rd.cpp:1714-1716`). */
+export function projectRoughnessLimiter(settings: ProjectSettings | null): RoughnessLimiter {
+  const setting = (key: string) => settings?.[`${ROUGHNESS_LIMITER}/${key}`];
+  return {
+    isEnabled: boolSlotValue(setting('enabled')) ?? GODOT_ROUGHNESS_LIMITER.isEnabled,
+    amount: parseOptionalFloat(setting('amount')) ?? GODOT_ROUGHNESS_LIMITER.amount,
+    limit: parseOptionalFloat(setting('limit')) ?? GODOT_ROUGHNESS_LIMITER.limit,
   };
 }
 

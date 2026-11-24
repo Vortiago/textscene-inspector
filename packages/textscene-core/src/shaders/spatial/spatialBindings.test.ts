@@ -5,6 +5,7 @@ import type { EnvironmentFog } from '../pipeline/environmentFog.js';
 import { beforeEachDraw, specialiseSpatial, writeSpatialBindings } from './spatialBindings.js';
 import { transpileSpatial } from './transpileSpatial.js';
 import type { DirectionalLight } from './directionalLights.js';
+import type { RoughnessLimiter } from '../../godot/rendering/roughnessLimiter.js';
 
 const UNSHADED = 'shader_type spatial;\nrender_mode unshaded;\nvoid fragment() {\n\tALBEDO = vec3(0.6);\n}\n';
 
@@ -12,9 +13,10 @@ interface WrittenScene {
   fog?: EnvironmentFog;
   directionalLights?: readonly DirectionalLight[];
   source?: string;
+  roughnessLimiter?: RoughnessLimiter;
 }
 
-function written({ fog, directionalLights = [], source = UNSHADED }: WrittenScene = {}) {
+function written({ fog, directionalLights = [], source = UNSHADED, roughnessLimiter }: WrittenScene = {}) {
   const spatial = transpileSpatial(source);
   const camera = new THREE.PerspectiveCamera(75, 2, 0.05, 4000);
   camera.position.set(0, 1, 3);
@@ -28,6 +30,7 @@ function written({ fog, directionalLights = [], source = UNSHADED }: WrittenScen
     emissiveExposure: 0.25,
     fog,
     directionalLights,
+    roughnessLimiter,
   });
   specialiseSpatial(spatial, fog);
   const value = (name: string) =>
@@ -179,6 +182,19 @@ describe('the directional light bindings', () => {
     const limiter = (source: string) => (written({ source }).value('flags') as number) & (1 << 3);
     expect(limiter(LIT)).toBe(1 << 3);
     expect(limiter(LIT.replace('vec3(0.6);', 'vec3(0.6);\n\tALPHA = 0.5;'))).toBe(0);
+  });
+
+  it('leaves the roughness limiter off when the project turns it off', () => {
+    const roughnessLimiter = { isEnabled: false, amount: 0.25, limit: 0.18 };
+    expect((written({ source: LIT, roughnessLimiter }).value('flags') as number) & (1 << 3)).toBe(0);
+  });
+
+  it("writes the project's roughness limiter amount and limit", () => {
+    const { value } = written({
+      source: LIT,
+      roughnessLimiter: { isEnabled: true, amount: 1.5, limit: 0.5 },
+    });
+    expect([value('roughness_limiter_amount'), value('roughness_limiter_limit')]).toEqual([1.5, 0.5]);
   });
 });
 

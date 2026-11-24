@@ -29,7 +29,7 @@ export function lightIntensity(
 /**
  * The signed `light_energy` a three intensity holds, with the render's exposure in it.
  *
- * @canonical A light's intensity
+ * @canonical A light's Godot energy from its three intensity
  */
 export function godotEnergyOfIntensity(intensity: number): number {
   return intensity / LIGHT_INTENSITY_SCALE;

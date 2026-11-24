@@ -32,6 +32,7 @@ export {
 export type {
   DepthPrepass,
   DepthPrepassOptions,
+  DirectionalLight,
   EnvironmentFog,
   GodotPrimitive,
   GodotShading,
@@ -41,6 +42,7 @@ export type {
   PointDraw,
   RendererShaderOptions,
   RenderingMethod,
+  RoughnessLimiter,
   ShaderInclude,
   ShaderSource,
   ShaderOptions,

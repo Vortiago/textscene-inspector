@@ -14,15 +14,18 @@ function sceneWithAmbient(energy: number): { scene: THREE.Scene; light: THREE.Am
   return { scene, light };
 }
 
-/** The ambient light of a draw of `scene` with an Environment on it. */
+/** Each test's render id, so no test reads another's cached light. */
+let renderId = 0;
+
+/** The ambient light of a render of `scene` with an Environment on it. */
 function underEnvironment(scene: THREE.Scene): number[] {
-  return drawWith(scene, {}, null, () => sceneAmbientLight(scene, CLEAR, new THREE.Color()).toArray());
+  return drawWith(scene, {}, null, () => sceneAmbientLight(scene, CLEAR, ++renderId).toArray());
 }
 
 describe('sceneAmbientLight', () => {
   it('is the clear colour with no Environment', () => {
     const { scene } = sceneWithAmbient(2);
-    expect(sceneAmbientLight(scene, CLEAR, new THREE.Color()).toArray()).toEqual([0.3, 0.3, 0.3]);
+    expect(sceneAmbientLight(scene, CLEAR, ++renderId).toArray()).toEqual([0.3, 0.3, 0.3]);
   });
 
   it("is the flat ambient light's colour and energy under an Environment", () => {
@@ -33,5 +36,13 @@ describe('sceneAmbientLight', () => {
     const { scene, light } = sceneWithAmbient(2);
     light.visible = false;
     expect(underEnvironment(scene)).toEqual([0, 0, 0]);
+  });
+
+  it('reads the lights once a render', () => {
+    const { scene, light } = sceneWithAmbient(2);
+    const render = ++renderId;
+    const first = drawWith(scene, {}, null, () => sceneAmbientLight(scene, CLEAR, render).toArray());
+    light.intensity = 0;
+    expect(drawWith(scene, {}, null, () => sceneAmbientLight(scene, CLEAR, render).toArray())).toEqual(first);
   });
 });

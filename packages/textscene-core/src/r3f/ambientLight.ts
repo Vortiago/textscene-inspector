@@ -10,6 +10,11 @@ export function isAmbientLight(object: THREE.Object3D): object is THREE.Light {
   return !!(o.isAmbientLight || o.isHemisphereLight || o.isLightProbe);
 }
 
+/** Whether `object` is the `AmbientLight` that stands for a flat ambient, not a sky's light. */
+export function isFlatAmbientLight(object: THREE.Object3D): object is THREE.AmbientLight {
+  return (object as THREE.AmbientLight).isAmbientLight === true;
+}
+
 /** Godot adds `ambient_light * albedo` with no 1/PI, while three multiplies the colour by `albedo/PI`. */
 const FLAT_AMBIENT_SCALE = Math.PI;
 

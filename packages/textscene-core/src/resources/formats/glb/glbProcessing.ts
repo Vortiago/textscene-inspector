@@ -25,6 +25,7 @@ import { importingImages, restoreImportedSampling, type GltfImageImport } from '
 import { forEachSurfaceMaterial } from './surfaceMaterials';
 import { AnimationLoopMode } from '../../../godot/scene/animation';
 import { setImportedLoopMode } from './importedLoopMode';
+import { importLightEnergies } from './importedLights';
 
 type GLTFLoaderClass = (typeof import('three/addons/loaders/GLTFLoader.js'))['GLTFLoader'];
 
@@ -138,6 +139,7 @@ export async function createGLBMesh(
   groupFrames(root);
   importMissingMaterialsAsGodotDefault(root, gltf.parser.associations);
   importBlendAsDepthPrepass(root);
+  importLightEnergies(root);
   return root;
 }
 

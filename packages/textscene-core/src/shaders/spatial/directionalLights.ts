@@ -54,10 +54,21 @@ const viewDirections = Array.from({ length: MAX_DIRECTIONAL_LIGHTS }, () => new 
 /** Scratch for the camera's rotation of one draw. */
 const viewBasis = new THREE.Matrix3();
 
-/** `inverse_transform.basis.xform` (`light_storage.cpp:640`). */
-function viewDirection(light: DirectionalLight, slot: number, frame: SpatialFrame): THREE.Vector3 {
-  viewBasis.setFromMatrix4(frame.camera.matrixWorldInverse);
+/** `inverse_transform.basis.xform` (`light_storage.cpp:640`), by the basis of the draw's camera. */
+function viewDirection(light: DirectionalLight, slot: number): THREE.Vector3 {
   return viewDirections[slot]!.copy(light.direction).applyMatrix3(viewBasis).normalize();
+}
+
+/** The direction member, which takes the camera's basis once a draw before it fills the slots. */
+function directionMember(): Binding<SpatialFrame> {
+  const member = lightMember('direction', 'light_storage.cpp:640-644', viewDirection, NO_DIRECTION);
+  return {
+    ...member,
+    value: (frame) => {
+      viewBasis.setFromMatrix4(frame.camera.matrixWorldInverse);
+      return member.value(frame);
+    },
+  };
 }
 
 /** Each member of the row that a light with no shadow fills (`light_storage.cpp:636-692`). */
@@ -67,7 +78,7 @@ export const DIRECTIONAL_LIGHT_BINDINGS: readonly Binding<SpatialFrame>[] = [
     godot: 'render_scene_data_rd.cpp:151',
     value: (frame) => Math.min(frame.directionalLights.length, MAX_DIRECTIONAL_LIGHTS),
   },
-  lightMember('direction', 'light_storage.cpp:640-644', viewDirection, NO_DIRECTION),
+  directionMember(),
   // Without physical light units, the energy takes PI (`light_storage.cpp:650-654`).
   lightMember('energy', 'light_storage.cpp:648-654', (light) => light.energy * Math.PI, 0),
   lightMember('color', 'light_storage.cpp:660-663', (light) => light.color, NO_COLOR),
