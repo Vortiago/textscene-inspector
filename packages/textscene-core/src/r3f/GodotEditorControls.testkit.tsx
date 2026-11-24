@@ -35,6 +35,8 @@ export async function mountEditorControls() {
   // On the page, as a browser's canvas is, so a key sent to it bubbles to `window`.
   document.body.appendChild(state.gl.domElement);
   mounted.set(renderer, state.gl.domElement);
+  // As a click does: the view takes the keys through the focus it allows.
+  state.gl.domElement.focus();
   const controls = state.controls;
   if (!(controls instanceof EditorControlsHandle)) {
     throw new Error('controls were not published to the R3F store');
@@ -59,31 +61,31 @@ export function drag(
   element.dispatchEvent(new PointerEvent('pointerup', { ...common, button }));
 }
 
-/** The canvas a key goes to: the one mounted last, as the view the pointer entered holds focus. */
-function focusedView(): EventTarget {
-  return [...mounted.values()].at(-1) ?? document.body;
+/** The element that holds focus, where a browser sends a key. */
+const focused = (): EventTarget => document.activeElement ?? document.body;
+
+function keyOn(target: EventTarget, type: 'keydown' | 'keyup', code: string, init: KeyboardEventInit) {
+  const event = new KeyboardEvent(type, { code, bubbles: true, cancelable: true, ...init });
+  target.dispatchEvent(event);
+  return event;
 }
 
-/** A keydown in the focused view. Returns the event. */
+/** A keydown to the focused element. Returns the event. */
 export function keyDown(code: string, init: KeyboardEventInit = {}): KeyboardEvent {
-  const event = new KeyboardEvent('keydown', { code, bubbles: true, cancelable: true, ...init });
-  focusedView().dispatchEvent(event);
-  return event;
+  return keyOn(focused(), 'keydown', code, init);
 }
 
 /** A keydown from the page's body, as a key pressed while no view holds focus. Returns the event. */
 export function keyDownOnPage(code: string, init: KeyboardEventInit = {}): KeyboardEvent {
-  const event = new KeyboardEvent('keydown', { code, bubbles: true, cancelable: true, ...init });
-  document.body.dispatchEvent(event);
-  return event;
+  return keyOn(document.body, 'keydown', code, init);
 }
 
 export function keyUp(code: string, init: KeyboardEventInit = {}): void {
-  focusedView().dispatchEvent(new KeyboardEvent('keyup', { code, bubbles: true, cancelable: true, ...init }));
+  keyOn(focused(), 'keyup', code, init);
 }
 
 export async function pressKey(code: string, init: KeyboardEventInit = {}): Promise<void> {
-  await pressKeyOn(focusedView(), code, init);
+  await pressKeyOn(focused(), code, init);
 }
 
 /** A key pressed while `target` holds focus, for a canvas this kit did not mount. */
@@ -92,11 +94,10 @@ export async function pressKeyOn(
   code: string,
   init: KeyboardEventInit = {}
 ): Promise<void> {
-  const common = { code, bubbles: true, cancelable: true, ...init };
   await act(async () => {
-    target.dispatchEvent(new KeyboardEvent('keydown', common));
+    keyOn(target, 'keydown', code, init);
   });
-  target.dispatchEvent(new KeyboardEvent('keyup', common));
+  keyOn(target, 'keyup', code, init);
 }
 
 /** Where the camera is pointing, in world space. */

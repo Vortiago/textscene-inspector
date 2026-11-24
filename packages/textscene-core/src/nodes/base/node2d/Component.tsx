@@ -1,15 +1,18 @@
 /** <Node2D>: an invisible 2D transform container. */
 
 import type { Node2DProperties } from './types';
-import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
+import { useMemo } from 'react';
+import { nodeComponentRegistry, type NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { invisibleBase } from '../../../r3f/invisibleBase';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { usePublishEditRect } from '../../../r3f/editRect/editRects';
-import { rawPropertyEditRect } from '../../../r3f/editRect/nodeEditRects';
 
 export function Node2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Node2DProperties;
-  usePublishEditRect(rawPropertyEditRect(node.type, node.rawProperties));
+  const editRectOf = nodeComponentRegistry.editRectOf(node.type);
+  usePublishEditRect(
+    useMemo(() => editRectOf?.(node.rawProperties) ?? null, [editRectOf, node.rawProperties])
+  );
 
   // A Node2D is the CanvasItem ritual with nothing of its own to draw: transform, z, visibility,
   // modulate and material context. Going through CanvasItem2D

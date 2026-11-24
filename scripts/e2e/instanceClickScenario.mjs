@@ -17,7 +17,26 @@ export const OPEN_PICK = 'Root/Open/Mesh';
 // Godot 4.6.3's Scene dock lists the editable instance's mesh only (scene_tree_editor.cpp:283-290).
 export const LISTED_ROWS = ['Root', 'Root/Locked', 'Root/Open', 'Root/Open/Mesh'];
 
-export const isRed = (r, g, b) => r > 200 && g < 60 && b < 60;
+const isRed = (r, g, b) => r > 200 && g < 60 && b < 60;
+
+/**
+ * Every red pixel as [x, y], and the span of their x.
+ *
+ * @param {Buffer} buffer PNG bytes
+ */
+export function redPixels(buffer) {
+  const { data, width } = PNG.sync.read(buffer);
+  const red = [];
+  for (let i = 0; i < data.length; i += 4) {
+    if (isRed(data[i], data[i + 1], data[i + 2])) red.push([(i / 4) % width, Math.floor(i / 4 / width)]);
+  }
+  // A reduce, not a spread: a box that fills the canvas holds more pixels than the call stack takes.
+  const [minX, maxX] = red.reduce(
+    ([lo, hi], [x]) => [Math.min(lo, x), Math.max(hi, x)],
+    [Infinity, -Infinity]
+  );
+  return { red, minX, maxX };
+}
 
 /**
  * The centre of the red pixels on each side of the middle of their span, or null for no red pixel.
@@ -25,17 +44,8 @@ export const isRed = (r, g, b) => r > 200 && g < 60 && b < 60;
  * @param {Buffer} buffer PNG bytes
  */
 export function redBoxCentres(buffer) {
-  const { data, width } = PNG.sync.read(buffer);
-  const red = [];
-  for (let i = 0; i < data.length; i += 4) {
-    if (isRed(data[i], data[i + 1], data[i + 2])) red.push([(i / 4) % width, Math.floor(i / 4 / width)]);
-  }
+  const { red, minX, maxX } = redPixels(buffer);
   if (red.length === 0) return null;
-  // A reduce, not a spread: a box that fills the canvas holds more pixels than the call stack takes.
-  const [minX, maxX] = red.reduce(
-    ([lo, hi], [x]) => [Math.min(lo, x), Math.max(hi, x)],
-    [Infinity, -Infinity]
-  );
   const middle = (minX + maxX) / 2;
   return {
     left: centreOf(red.filter(([x]) => x < middle)),

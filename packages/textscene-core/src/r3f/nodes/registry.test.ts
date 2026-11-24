@@ -43,3 +43,19 @@ describe('R3F NodeComponentRegistry self-registration', () => {
     expect(nodeComponentRegistry.get('__HmrTest')).toBe(SecondFake);
   });
 });
+
+describe('the edit rect a type that draws nothing registers', () => {
+  it('reads BackBufferCopy off its properties', () => {
+    expect(nodeComponentRegistry.editRectOf('BackBufferCopy')?.({})).toEqual({
+      x: -100,
+      y: -100,
+      w: 200,
+      h: 200,
+    });
+  });
+
+  // Godot 4.6.3 headless: Marker2D's `_edit_use_rect()` is false.
+  it('is none for a Marker2D', () => {
+    expect(nodeComponentRegistry.editRectOf('Marker2D')).toBeUndefined();
+  });
+});

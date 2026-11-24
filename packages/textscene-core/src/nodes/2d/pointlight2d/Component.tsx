@@ -11,7 +11,7 @@ import { useTexture2D } from '../../../resources/useTexture2D';
 import { useNodeReference } from '../../../resources/reading';
 import type { ViewSampler } from '../../../resources/textures/textureView';
 import { usePublishEditRect } from '../../../r3f/editRect/editRects';
-import { pointLight2DEditRect } from '../../../r3f/editRect/nodeEditRects';
+import { pointLight2DEditRect } from './editRect';
 import { useTextureView } from '../../../r3f/useTextureView';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import type { PointLight2DProperties } from './types';

@@ -4,6 +4,7 @@
  */
 
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
+import { collisionPolygon2DEditRect } from './editRect';
 import { Node2D } from '../../../base/node2d/Component';
 
 nodeComponentRegistry.register({
@@ -11,4 +12,5 @@ nodeComponentRegistry.register({
   Component: Node2D,
   canvasItem: true,
   renderIntent: 'transform-only',
+  editRect: collisionPolygon2DEditRect,
 });

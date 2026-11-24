@@ -20,7 +20,7 @@ import { useFrameReference, useSpriteFrames } from '../../../resources/textures/
 import { frameAtTime, clipDuration } from '../../../resources/textures/spriteframes/playback';
 import type { SpriteFramesAnimation } from '../../../resources/textures/spriteframes/types';
 import { usePublishEditRect } from '../../../r3f/editRect/editRects';
-import { animatedSprite2DEditRect } from '../../../r3f/editRect/nodeEditRects';
+import { animatedSprite2DEditRect } from './editRect';
 import type { AnimatedSprite2DProperties } from './types';
 
 export function AnimatedSprite2D({ node, children }: NodeComponentProps) {

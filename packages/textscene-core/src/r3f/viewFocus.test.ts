@@ -79,13 +79,9 @@ describe('useViewFocus', () => {
 
 describe('isViewKeyEvent', () => {
   function keyFrom(target: EventTarget): KeyboardEvent {
-    let heard: KeyboardEvent | null = null;
-    const listen = (event: Event) => (heard = event as KeyboardEvent);
-    window.addEventListener('keydown', listen);
-    target.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyF', key: 'f', bubbles: true }));
-    window.removeEventListener('keydown', listen);
-    if (!heard) throw new Error('expected the keydown to reach the window, got none');
-    return heard;
+    const event = new KeyboardEvent('keydown', { code: 'KeyF', key: 'f', bubbles: true });
+    target.dispatchEvent(event);
+    return event;
   }
 
   it('is true for a key sent to the view', () => {

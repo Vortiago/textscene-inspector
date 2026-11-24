@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { Rect2 } from '../../godot/math/rect2';
-import {
-  line2DEditRect,
-  path2DEditRect,
-  pointLight2DEditRect,
-  polygon2DEditRect,
-  rawPropertyEditRect,
-  sprite2DEditRect,
-} from './nodeEditRects';
+import { sprite2DEditRect } from '../../nodes/2d/sprite2d/editRect';
+import { pointLight2DEditRect } from '../../nodes/2d/pointlight2d/editRect';
+import { line2DEditRect } from '../../nodes/2d/line2d/editRect';
+import { polygon2DEditRect } from '../../nodes/2d/polygon2d/editRect';
+import { path2DEditRect } from '../../nodes/2d/path2d/editRect';
+import { backBufferCopyEditRect } from '../../nodes/2d/backbuffercopy/editRect';
+import { visibleOnScreenNotifier2DEditRect } from '../../nodes/2d/visibleonscreennotifier2d/editRect';
+import { collisionPolygon2DEditRect } from '../../nodes/physics/2d/collisionpolygon2d/editRect';
 
 // Each expected rect is what Godot 4.6.3 printed for `_edit_get_rect()` on the same node, headless.
 const rect = (x: number, y: number, w: number, h: number): Rect2 => ({ x, y, w, h });
@@ -55,33 +55,20 @@ const ROWS: readonly [string, () => Rect2 | null, Rect2 | null][] = [
   ['Line2D width 2.5', () => line2DEditRect(points(-5, 3, 7, -9, 1, 1), 2.5), rect(-7.5, -11.5, 17, 17)],
   ['Polygon2D with no points', () => polygon2DEditRect(points(), ZERO), null],
   ['Polygon2D', () => polygon2DEditRect(points(0, 0, 30, 10, 10, 20), { x: 5, y: 5 }), rect(5, 5, 30, 20)],
-  [
-    'CollisionPolygon2D with no points',
-    () => rawPropertyEditRect('CollisionPolygon2D', {}),
-    rect(-10, -10, 20, 20),
-  ],
+  ['CollisionPolygon2D with no points', () => collisionPolygon2DEditRect({}), rect(-10, -10, 20, 20)],
   [
     'CollisionPolygon2D',
-    () => rawPropertyEditRect('CollisionPolygon2D', { polygon: 'PackedVector2Array(0, 0, 100, 0, 100, 50)' }),
+    () => collisionPolygon2DEditRect({ polygon: 'PackedVector2Array(0, 0, 100, 0, 100, 50)' }),
     rect(-30, -15, 160, 80),
   ],
-  ['BackBufferCopy default', () => rawPropertyEditRect('BackBufferCopy', {}), rect(-100, -100, 200, 200)],
-  [
-    'BackBufferCopy',
-    () => rawPropertyEditRect('BackBufferCopy', { rect: 'Rect2(1, 2, 3, 4)' }),
-    rect(1, 2, 3, 4),
-  ],
-  [
-    'VisibleOnScreenNotifier2D',
-    () => rawPropertyEditRect('VisibleOnScreenNotifier2D', {}),
-    rect(-10, -10, 20, 20),
-  ],
+  ['BackBufferCopy default', () => backBufferCopyEditRect({}), rect(-100, -100, 200, 200)],
+  ['BackBufferCopy', () => backBufferCopyEditRect({ rect: 'Rect2(1, 2, 3, 4)' }), rect(1, 2, 3, 4)],
+  ['VisibleOnScreenNotifier2D', () => visibleOnScreenNotifier2DEditRect({}), rect(-10, -10, 20, 20)],
   [
     'VisibleOnScreenNotifier2D with show_rect off',
-    () => rawPropertyEditRect('VisibleOnScreenNotifier2D', { show_rect: 'false' }),
+    () => visibleOnScreenNotifier2DEditRect({ show_rect: 'false' }),
     null,
   ],
-  ['Marker2D', () => rawPropertyEditRect('Marker2D', {}), null],
   [
     'Path2D with an out handle',
     () =>

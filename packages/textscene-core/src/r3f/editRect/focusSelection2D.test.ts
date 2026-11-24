@@ -3,6 +3,7 @@ import { transform2DFromParts } from '../../godot/math/transform2d';
 import { centerSelection, frameSelection, selectionRect } from './focusSelection2D';
 
 const STAGE = { width: 800, height: 600 };
+const clampZoom = (zoom: number) => Math.max(0.1, Math.min(4, zoom));
 
 describe('selectionRect', () => {
   it('puts a node with no edit rect at its origin', () => {
@@ -45,8 +46,7 @@ describe('frameSelection', () => {
       { pan: { x: 0, y: 0 }, zoom: 1 },
       { x: 0, y: 0, w: 400, h: 100 },
       STAGE,
-      0.1,
-      4
+      clampZoom
     );
     expect(view.zoom).toBeCloseTo(1.8, 6);
   });
@@ -56,14 +56,18 @@ describe('frameSelection', () => {
       { pan: { x: 0, y: 0 }, zoom: 1.5 },
       { x: 10, y: 20, w: 0, h: 0 },
       STAGE,
-      0.1,
-      4
+      clampZoom
     );
     expect(view.zoom).toBe(1.5);
   });
 
   it('holds the zoom to the stage range', () => {
-    const view = frameSelection({ pan: { x: 0, y: 0 }, zoom: 1 }, { x: 0, y: 0, w: 2, h: 2 }, STAGE, 0.1, 4);
+    const view = frameSelection(
+      { pan: { x: 0, y: 0 }, zoom: 1 },
+      { x: 0, y: 0, w: 2, h: 2 },
+      STAGE,
+      clampZoom
+    );
     expect(view.zoom).toBe(4);
   });
 });

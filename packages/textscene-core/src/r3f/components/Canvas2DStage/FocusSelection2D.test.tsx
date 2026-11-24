@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { sizeEveryElement } from '../../testing/sizeEveryElement';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import type { Rect2 } from '../../../godot/math/rect2';
 
@@ -42,20 +43,8 @@ scale = Vector2(2, 2)
 
 const STAGE = { width: 800, height: 600 };
 
-function sizeStage() {
-  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
-    ...STAGE,
-    left: 0,
-    top: 0,
-    right: STAGE.width,
-    bottom: STAGE.height,
-    x: 0,
-    y: 0,
-  } as DOMRect);
-}
-
 async function mountStage(selected: string | null) {
-  sizeStage();
+  sizeEveryElement(STAGE.width, STAGE.height);
   const scene = openScene({ source: SCENE, provider: { loadResource: async () => null } });
   render(
     <TscnSceneProvider scene={scene}>

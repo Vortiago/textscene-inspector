@@ -31,12 +31,12 @@ import { useProjectSettings } from '../../contexts/ProjectSettingsContext.js';
 import { createEditRects, EditRectsProvider } from '../../editRect/editRects.js';
 import { useViewFocus } from '../../viewFocus.js';
 import { Stage2DProvider, type Stage2D } from './FocusSelection2D.js';
+import type { StageView } from '../../editRect/focusSelection2D.js';
 import styles from './Canvas2DStage.module.css';
 
 const ZOOM_MIN = 0.1;
 const ZOOM_MAX = 4;
 const clampZoom = (z: number) => Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
-const ZOOM_RANGE = { min: ZOOM_MIN, max: ZOOM_MAX };
 
 /** CSS-scale step for one wheel notch: this stage's own feel, not Godot's. */
 const ZOOM_PER_NOTCH = 1.1;
@@ -44,18 +44,12 @@ const ZOOM_PER_NOTCH = 1.1;
 /** The −/+ HUD buttons' step. Coarser than a notch: one click, one visible jump. */
 const ZOOM_STEP_BUTTON = 1.2;
 
-/** Where the stage is looking: the CSS translate, and the CSS scale. */
-interface View2D {
-  pan: { x: number; y: number };
-  zoom: number;
-}
-
 /**
  * Scales about a point in stage-local pixels, keeping what sits under it pinned:
  * the cursor for the wheel, the fingers' midpoint for a pinch, the stage centre
  * for the HUD buttons.
  */
-function zoomViewAround(view: View2D, px: number, py: number, factor: number): View2D {
+function zoomViewAround(view: StageView, px: number, py: number, factor: number): StageView {
   const zoom = clampZoom(view.zoom * factor);
   const cx = (px - view.pan.x) / view.zoom;
   const cy = (py - view.pan.y) / view.zoom;
@@ -96,7 +90,7 @@ export function Canvas2DStage({
   }, []);
   useViewFocus(stageElement);
   const [editRects] = useState(createEditRects);
-  const [view, setView] = useState<View2D>({ pan: { x: 0, y: 0 }, zoom: 1 });
+  const [view, setView] = useState<StageView>({ pan: { x: 0, y: 0 }, zoom: 1 });
   const { pan, zoom } = view;
   // `display/window/size/viewport_*`, or Godot's 1152x648 for a scene with no
   // project around it. A root Control resolves its anchors to this rect.
@@ -108,7 +102,7 @@ export function Canvas2DStage({
    */
   const viewRef = useRef(view);
 
-  const applyView = useCallback((next: View2D) => {
+  const applyView = useCallback((next: StageView) => {
     const current = viewRef.current;
     // An identical view still re-renders the stage and the Control overlay.
     if (next.zoom === current.zoom && next.pan.x === current.pan.x && next.pan.y === current.pan.y) {
@@ -142,7 +136,7 @@ export function Canvas2DStage({
 
   /** A view change the user asked for. It ends load time. */
   const moveView = useCallback(
-    (next: View2D) => {
+    (next: StageView) => {
       userMovedViewRef.current = true;
       applyView(next);
     },
@@ -291,7 +285,7 @@ export function Canvas2DStage({
 
     const dx = centroid.x - origin.centroid.x;
     const dy = centroid.y - origin.centroid.y;
-    const panned: View2D = {
+    const panned: StageView = {
       pan: { x: view.pan.x + dx, y: view.pan.y + dy },
       zoom: view.zoom,
     };
@@ -337,8 +331,8 @@ export function Canvas2DStage({
   };
 
   const stage2D = useMemo<Stage2D>(
-    () => ({ stage: stageElement, rects: editRects, view: viewRef, moveView, zoomRange: ZOOM_RANGE }),
-    [stageElement, editRects, moveView]
+    () => ({ stage: stageElement, view: viewRef, moveView, clampZoom }),
+    [stageElement, moveView]
   );
 
   function zoomAroundCentre(factor: number) {

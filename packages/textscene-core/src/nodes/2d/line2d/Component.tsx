@@ -20,11 +20,11 @@ import { buildLineStroke, type LineStroke } from './lineBuilder';
 import { strokeGradient } from './strokeResources';
 import type { Line2DProperties } from './types';
 import { usePublishEditRect } from '../../../r3f/editRect/editRects';
-import { line2DEditRect } from '../../../r3f/editRect/nodeEditRects';
+import { line2DEditRect } from './editRect';
 
 export function Line2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Line2DProperties;
-  usePublishEditRect(line2DEditRect(props.points, props.width));
+  usePublishEditRect(useMemo(() => line2DEditRect(props.points, props.width), [props.points, props.width]));
   const widthCurve = useNodeResource(props.widthCurve, CURVE).value;
   const gradient = useNodeResource(props.gradient, GRADIENT).value;
   const scope = useSceneResources();

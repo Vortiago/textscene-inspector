@@ -5,6 +5,7 @@
  * which has its own suites; this one only covers the stage chrome around it.
  */
 import { useState } from 'react';
+import { sizeEveryElement } from '../../testing/sizeEveryElement';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, type RenderResult } from '@testing-library/react';
 
@@ -62,19 +63,6 @@ import { FIT_ON_OPEN_2D_STORAGE_KEY } from './viewport2d';
 import type { TscnNode } from '../../../parser/types';
 
 /** happy-dom reports a zero-sized rect, and `fit()` returns early on one. */
-function sizeEveryElement(width: number, height: number) {
-  return vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
-    width,
-    height,
-    left: 0,
-    top: 0,
-    right: width,
-    bottom: height,
-    x: 0,
-    y: 0,
-  } as DOMRect);
-}
-
 afterEach(() => {
   vi.restoreAllMocks();
   // Read once at mount, so a leaked value silently changes the next test's

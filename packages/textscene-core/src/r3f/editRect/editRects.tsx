@@ -21,7 +21,7 @@ export function EditRectsProvider({ rects, children }: { rects: EditRects; child
   return <EditRectsContext.Provider value={rects}>{children}</EditRectsContext.Provider>;
 }
 
-function useEditRects(): EditRects | null {
+export function useEditRects(): EditRects | null {
   return useContext(EditRectsContext);
 }
 

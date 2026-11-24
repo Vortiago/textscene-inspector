@@ -1,9 +1,8 @@
-import { PNG } from 'pngjs';
 import { settleCanvas } from '../visual/previewServer.mjs';
 import { expandAllTreeRows, SELECT_SETTLE_MS, selectOutlinerNode, treeRow } from './outliner.mjs';
 import { openFixture } from './openFixture.mjs';
 import { checkDiagnostics } from './diagnostics.mjs';
-import { INSTANCE_CLICK_FIXTURE, isRed, redBoxCentres } from './instanceClickScenario.mjs';
+import { INSTANCE_CLICK_FIXTURE, redBoxCentres, redPixels } from './instanceClickScenario.mjs';
 import { FIXTURE_2D } from './editorViewScenarios.mjs';
 
 const FOCUSED_3D = 'Root/Open';
@@ -24,15 +23,8 @@ async function boxesAfterKey(page, canvas, key) {
 
 /** The middle of the red span across the frame, or null for no red pixel. A framed box fills the span. */
 function redSpanMiddle(buffer) {
-  const { data, width } = PNG.sync.read(buffer);
-  let [minX, maxX] = [Infinity, -Infinity];
-  for (let i = 0; i < data.length; i += 4) {
-    if (isRed(data[i], data[i + 1], data[i + 2])) {
-      const x = (i / 4) % width;
-      [minX, maxX] = [Math.min(minX, x), Math.max(maxX, x)];
-    }
-  }
-  return minX === Infinity ? null : (minX + maxX) / 2;
+  const { red, minX, maxX } = redPixels(buffer);
+  return red.length === 0 ? null : (minX + maxX) / 2;
 }
 
 async function run3D(browser, baseUrl) {
@@ -76,13 +68,14 @@ async function run2D(browser, baseUrl) {
   const stage = page.getByTestId('canvas-2d-stage');
   const frame = page.getByTestId('canvas-2d-frame');
   await pointAtCentre(page, stage);
+  const panAfterKey = async (key) => {
+    await page.keyboard.press(key);
+    await page.waitForTimeout(SELECT_SETTLE_MS);
+    return panOf(frame);
+  };
   const before = await panOf(frame);
-  await page.keyboard.press('f');
-  await page.waitForTimeout(SELECT_SETTLE_MS);
-  const centred = await panOf(frame);
-  await page.keyboard.press('Shift+F');
-  await page.waitForTimeout(SELECT_SETTLE_MS);
-  const framed = await panOf(frame);
+  const centred = await panAfterKey('f');
+  const framed = await panAfterKey('Shift+F');
   const box = await stage.boundingBox();
   await context.close();
   return { before, centred, framed, stage: { width: box.width, height: box.height }, diagnostics };

@@ -18,6 +18,7 @@ import {
   viewDirection,
 } from './GodotEditorControls.testkit';
 import { holdsPointerLock } from './pointerLock';
+import { freelookControlOf } from './useFreelook';
 import { endFakePointerLock, installFakePointerLock } from './testing/fakePointerLock';
 
 /** `editors/3d/freelook/freelook_base_speed` (`editor_settings.cpp:961`). */
@@ -362,12 +363,11 @@ describe('toggled freelook', () => {
   });
 
   it('takes focus from the control that started it, so Space cannot press that control', async () => {
-    const { element } = await mountFreelook();
+    const { element, controls, get } = await mountFreelook();
     const button = addToPage(document.createElement('button'));
-    addToPage(element);
     button.focus();
 
-    await toggleFreelook();
+    await act(async () => freelookControlOf(controls, get).toggle());
 
     expect(document.activeElement).toBe(element);
   });

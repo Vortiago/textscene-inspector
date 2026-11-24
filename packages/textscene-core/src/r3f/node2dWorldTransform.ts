@@ -10,6 +10,11 @@ import { NO_PATCHES, type PatchLookup } from './nodePatch';
 import { transform2DOrigin, type Transform2DColumns } from '../godot/math/transform2d.js';
 import { resolveGlobalTransform2D } from '../nodes/canvasitem/shared/globalTransform2D.js';
 import { chainParentOf, posesAlong, solvedControlsAlong } from './liveTransform2D.js';
+import { solvedNodePatchesOf } from './liveNodePatches.js';
+import { liveTreeOf } from './liveSceneTree.js';
+import { liveFilesOf } from './liveFiles.js';
+import type { SharedLiveTree } from './useLiveSceneTree.js';
+import type { ResourceLoader } from '../resources/ResourceLoader.js';
 
 /** Null for an unknown path, an opaque ancestor, or an unsolved Control in the chain. */
 export function node2dWorldTransform(
@@ -39,4 +44,14 @@ export function node2dWorldPosition(
 ): { x: number; y: number } | null {
   const transform = node2dWorldTransform(roots, ctx, path, placed);
   return transform && transform2DOrigin(transform);
+}
+
+/** {@link node2dWorldTransform} where the live tree's poses, relays and solves have placed the nodes. */
+export function liveNode2dWorldTransform(
+  liveTree: SharedLiveTree,
+  loader: ResourceLoader | null,
+  path: string
+): Transform2DColumns | null {
+  const placed = solvedNodePatchesOf(liveTreeOf(liveTree.roots, liveTree.ctx), liveFilesOf(loader).current());
+  return node2dWorldTransform(liveTree.roots, liveTree.ctx, path, placed);
 }

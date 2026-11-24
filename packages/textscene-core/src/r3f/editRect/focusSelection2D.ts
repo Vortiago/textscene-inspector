@@ -1,5 +1,6 @@
 import type { Rect2 } from '../../godot/math/rect2.js';
 import {
+  transform2DBasisXform,
   transform2DFromParts,
   transform2DGetRotation,
   transform2DGetScale,
@@ -7,7 +8,7 @@ import {
   type Transform2DColumns,
 } from '../../godot/math/transform2d.js';
 
-/** Where the 2D stage looks: screen = pan + canvas pixel * zoom. */
+/** Where the 2D stage looks, its CSS translate and scale: screen = pan + canvas pixel * zoom. */
 export interface StageView {
   pan: { x: number; y: number };
   zoom: number;
@@ -24,29 +25,24 @@ const FRAME_FILL = 0.9;
 /** canvas_item_editor_plugin.cpp:5213, `CMP_EPSILON`. */
 const MIN_FRAME_SIZE = 0.00001;
 
-/** A rect's bounds after `transform` (transform_2d.h:229-240). */
-function transformedRect(transform: Transform2DColumns, rect: Rect2): Rect2 {
+/** A rect's bounds after the rotation `basis` (transform_2d.h:229-240). */
+function rotatedRect(basis: Transform2DColumns, rect: Rect2): Rect2 {
   const corners = [
-    [rect.x, rect.y],
-    [rect.x + rect.w, rect.y],
-    [rect.x, rect.y + rect.h],
-    [rect.x + rect.w, rect.y + rect.h],
-  ].map(([x, y]) => ({
-    x: transform.a * x! + transform.c * y! + transform.tx,
-    y: transform.b * x! + transform.d * y! + transform.ty,
-  }));
-  const xs = corners.map((p) => p.x);
-  const ys = corners.map((p) => p.y);
-  const x = Math.min(...xs);
-  const y = Math.min(...ys);
-  return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
+    { x: rect.x, y: rect.y },
+    { x: rect.x + rect.w, y: rect.y },
+    { x: rect.x, y: rect.y + rect.h },
+    { x: rect.x + rect.w, y: rect.y + rect.h },
+  ].map((corner) => transform2DBasisXform(basis, corner));
+  const x = Math.min(...corners.map((p) => p.x));
+  const y = Math.min(...corners.map((p) => p.y));
+  return { x, y, w: Math.max(...corners.map((p) => p.x)) - x, h: Math.max(...corners.map((p) => p.y)) - y };
 }
 
 /** canvas_item_editor_plugin.cpp:5168-5192. A null `editRect` frames the origin. */
 export function selectionRect(global: Transform2DColumns, editRect: Rect2 | null): Rect2 {
   const origin = transform2DOrigin(global);
   const scale = transform2DGetScale(global);
-  const turned = transformedRect(
+  const turned = rotatedRect(
     transform2DFromParts(transform2DGetRotation(global), { x: 1, y: 1 }, 0, { x: 0, y: 0 }),
     editRect ?? { x: 0, y: 0, w: 0, h: 0 }
   );
@@ -71,18 +67,16 @@ function centerAt(view: StageView, point: { x: number; y: number }, stage: Stage
 
 const centreOf = (rect: Rect2) => ({ x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 });
 
-/** `VIEW_FRAME_TO_SELECTION` (:5213-5223). The zoom holds to the stage's own range. */
+/** `VIEW_FRAME_TO_SELECTION` (:5213-5223). `clampZoom` holds the zoom to the stage's own range. */
 export function frameSelection(
   view: StageView,
   rect: Rect2,
   stage: StageSize,
-  minZoom: number,
-  maxZoom: number
+  clampZoom: (zoom: number) => number
 ): StageView {
-  if (rect.w <= MIN_FRAME_SIZE || rect.h <= MIN_FRAME_SIZE) return centerAt(view, centreOf(rect), stage);
+  const isFramable = rect.w > MIN_FRAME_SIZE && rect.h > MIN_FRAME_SIZE;
   const fit = Math.min(stage.width / rect.w, stage.height / rect.h) * FRAME_FILL;
-  const zoom = Math.max(minZoom, Math.min(maxZoom, fit));
-  return centerAt({ pan: view.pan, zoom }, centreOf(rect), stage);
+  return centerAt({ pan: view.pan, zoom: isFramable ? clampZoom(fit) : view.zoom }, centreOf(rect), stage);
 }
 
 /** `VIEW_CENTER_TO_SELECTION` (:5225). */

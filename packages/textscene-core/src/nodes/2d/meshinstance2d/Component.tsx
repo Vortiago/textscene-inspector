@@ -11,7 +11,7 @@ import { useMeshInstanceContent } from '../../3d/meshinstance3d/Component';
 import type { MeshInstance2DProperties } from './types';
 import { useMeshAabb } from '../../3d/meshinstance3d/meshAabb';
 import { usePublishEditRect } from '../../../r3f/editRect/editRects';
-import { meshInstance2DEditRect } from '../../../r3f/editRect/nodeEditRects';
+import { meshInstance2DEditRect } from './editRect';
 
 export function MeshInstance2D({ node, children }: NodeComponentProps) {
   const props = node.properties as MeshInstance2DProperties;

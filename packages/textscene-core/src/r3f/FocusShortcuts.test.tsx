@@ -42,7 +42,12 @@ function press(key: string) {
   view.dispatchEvent(new KeyboardEvent('keydown', { code: `Key${key.toUpperCase()}`, key, bubbles: true }));
 }
 
-const fireF = () => press('f');
+/** Makes `camera` the one R3F renders, as previewing a Camera3D does. */
+function PreviewCamera({ camera }: { camera: THREE.PerspectiveCamera }) {
+  const set = useThree((s) => s.set);
+  useEffect(() => set({ camera }), [set, camera]);
+  return null;
+}
 
 describe('<FocusShortcuts> F', () => {
   it('frames the SELECTED node, not the whole scene', async () => {
@@ -57,7 +62,7 @@ describe('<FocusShortcuts> F', () => {
     );
 
     await renderer.advanceFrames(1, 0);
-    fireF();
+    press('f');
     await renderer.advanceFrames(1, 0);
 
     // Framing "Far" alone centres the camera near x=80, not the x=40
@@ -97,7 +102,7 @@ describe('<FocusShortcuts> F', () => {
     );
 
     await renderer.advanceFrames(1, 0);
-    fireF();
+    press('f');
     await renderer.advanceFrames(1, 0);
 
     // Both meshes centre on x=40, but their 81-unit extent pulls the camera far back
@@ -134,23 +139,18 @@ describe('<FocusShortcuts> F', () => {
     // overwrite its position, near and far.
     const authored = new THREE.PerspectiveCamera(75, 1, 0.1, 100);
     authored.position.set(3, 1, 2);
-    function PreviewAuthoredCamera() {
-      const set = useThree((s) => s.set);
-      useEffect(() => set({ camera: authored }), [set]);
-      return null;
-    }
     const renderer = await ReactThreeTestRenderer.create(
       <SelectionProvider>
         <GodotEditorControls />
         <RegisteredMesh path="Far" position={[80, 0, 0]} />
         <SelectSeeder path="Far" />
-        <PreviewAuthoredCamera />
+        <PreviewCamera camera={authored} />
         <FocusShortcuts />
       </SelectionProvider>
     );
     await renderer.advanceFrames(1, 0);
 
-    fireF();
+    press('f');
     await renderer.advanceFrames(1, 0);
 
     expect(authored.position.toArray()).toEqual([3, 1, 2]);
@@ -172,7 +172,7 @@ describe('<FocusShortcuts> F', () => {
     await renderer.advanceFrames(1, 0);
     const before = camera.position.clone();
 
-    fireF();
+    press('f');
     await renderer.advanceFrames(1, 0);
 
     expect(camera.position.equals(before)).toBe(false);
@@ -199,18 +199,13 @@ describe('<FocusShortcuts> F', () => {
 
 describe('<FocusShortcuts> O', () => {
   const authored = new THREE.PerspectiveCamera(75, 1, 0.1, 100);
-  function PreviewAuthoredCamera() {
-    const set = useThree((s) => s.set);
-    useEffect(() => set({ camera: authored }), [set]);
-    return null;
-  }
 
   async function mountOrbit({ isPreviewing = false } = {}) {
     const renderer = await ReactThreeTestRenderer.create(
       <SelectionProvider>
         <CameraCapture />
         <GodotEditorControls />
-        {isPreviewing && <PreviewAuthoredCamera />}
+        {isPreviewing && <PreviewCamera camera={authored} />}
         <FocusShortcuts />
       </SelectionProvider>
     );

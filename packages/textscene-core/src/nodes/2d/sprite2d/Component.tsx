@@ -19,7 +19,7 @@ import {
 import { useSpriteQuad } from '../../../r3f/canvasMesh/spriteQuad';
 import type { Sprite2DProperties } from './types';
 import { usePublishEditRect } from '../../../r3f/editRect/editRects';
-import { sprite2DEditRect } from '../../../r3f/editRect/nodeEditRects';
+import { sprite2DEditRect } from './editRect';
 
 export function Sprite2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Sprite2DProperties;
