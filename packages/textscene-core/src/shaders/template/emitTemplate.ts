@@ -54,8 +54,8 @@ export interface ProgramResources {
   readonly varyings: StageVaryings;
 }
 
-export const programResources = (): ProgramResources => ({
-  uniforms: new TemplateUniforms(),
+export const programResources = (specialisedMembers?: ReadonlySet<string>): ProgramResources => ({
+  uniforms: new TemplateUniforms(specialisedMembers),
   textures: new Map(),
   buffers: new TemplateBuffers(),
   varyings: new StageVaryings(),

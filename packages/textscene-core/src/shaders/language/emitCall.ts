@@ -3,7 +3,7 @@ import type { Node } from 'three/webgpu';
 import type { EmittedTree } from './emittedTree.js';
 import { isSamplerType, isTextureType } from './types.js';
 import type { Lanes } from './glslangCalls.js';
-import { GuardFolding, literalLanes } from './guardFolding.js';
+import { GuardFolding } from './guardFolding.js';
 import { isArrayType, wholeArrays } from './wholeArray.js';
 import {
   copyInto,
@@ -51,7 +51,7 @@ export class CalledFunctions {
     if (only?.kind !== 'control flow' || only.flow !== 'FLOW_OP_RETURN') return undefined;
     const guards = new GuardFolding(
       definition.folding,
-      (global) => literalLanes(this.globals.get(global)),
+      (global) => this.globals.get(global),
       (called) => this.constantResult(called)
     );
     return guards.lanesOf(only.expressions[0]!);

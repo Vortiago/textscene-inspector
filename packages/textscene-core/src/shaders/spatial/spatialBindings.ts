@@ -6,6 +6,7 @@ import type { TranspiledSpatial } from './transpileSpatial.js';
 import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
 import type { EnvironmentFog } from '../pipeline/environmentFog.js';
 import { FOG_BINDINGS, FOG_SPECIALISATIONS, USE_FOG } from './fogBindings.js';
+import { EFFECT_SPECIALISATIONS } from './effectSpecialisations.js';
 
 /** What the colour pass reads from a frame with no light and no camera attributes. */
 export interface SpatialScene {
@@ -135,9 +136,10 @@ export function writeSpatialBindings(spatial: TranspiledSpatial, scene: SpatialS
   writeBindings(FOG_BINDINGS, spatial.uniforms, frame);
 }
 
-/** Writes the specialisation constants of `spatial` that `fog` sets, which pick the colour pass's program. */
+/** Writes the specialisation constants of `spatial`, which pick the colour pass's program. */
 export function specialiseSpatial(spatial: TranspiledSpatial, fog: EnvironmentFog | undefined): void {
   writeBindings(FOG_SPECIALISATIONS, spatial.specialisations, { fog });
+  writeBindings(EFFECT_SPECIALISATIONS, spatial.specialisations, { fog });
 }
 
 /** The uniform every vertex stage of the scene template reads, so its object update runs before each draw. */

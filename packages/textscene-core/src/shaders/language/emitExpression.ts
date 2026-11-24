@@ -17,7 +17,7 @@ import {
 import type { CalledFunctions, CallResult } from './emitCall.js';
 import type { Lanes } from './glslangCalls.js';
 import type { GlslangFolding } from './glslangFolding.js';
-import { GuardFolding, literalLanes } from './guardFolding.js';
+import { GuardFolding } from './guardFolding.js';
 import { isAssignOperator } from './operators.js';
 import { STEPS, writtenTargets } from './assignment.js';
 import { arraySizeOf, isCall } from './treeWalk.js';
@@ -100,10 +100,15 @@ export class ExpressionEmitter {
     return isGuard ? this.guards.lanesOf(expression) : undefined;
   }
 
+  /** An `if` condition's value where it rests on literals, as `bool(implementation_data.flags & 1u)`. */
+  conditionLanes(expression: Expression): Lanes | undefined {
+    return this.guards.lanesOf(expression);
+  }
+
   private get guards(): GuardFolding {
     return new GuardFolding(
       this.folding,
-      (name) => literalLanes(this.scope.lookup(name)),
+      (name) => this.scope.lookup(name),
       (name) => this.context.functions.constantResult(name)
     );
   }

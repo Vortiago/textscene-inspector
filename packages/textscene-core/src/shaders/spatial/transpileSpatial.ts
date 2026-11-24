@@ -33,6 +33,7 @@ import { linkedProgram, type LinkedProgram, type ProgramTemplate } from '../temp
 import type { RowTexture } from '../template/rowTexture.js';
 import { instanceWords } from './instanceData.js';
 import { VERTEX_ID_ATTRIBUTE } from './meshAttributes.js';
+import { SPECIALISED_MEMBERS } from './effectSpecialisations.js';
 import { devicePoints, type DevicePoints } from './devicePoints.js';
 import { coveredOnOneSample } from '../pipeline/singleSampleCoverage.js';
 import {
@@ -65,6 +66,7 @@ const SCENE: ProgramTemplate = {
   template: 'forward_clustered/scene_forward_clustered.glsl',
   defines: '',
   memo: new TreeMemo(),
+  specialisedMembers: SPECIALISED_MEMBERS,
 };
 
 export interface TranspiledSpatial {

@@ -89,7 +89,7 @@ export class StatementEmitter {
 
   private ifStatement(flow: ControlFlowNode, scope: EmitScope): void {
     const [then, otherwise] = flow.blocks;
-    const guard = this.expressions(scope).guardLanes(flow.expressions[0]!);
+    const guard = this.expressions(scope).conditionLanes(flow.expressions[0]!);
     // The branch a folded guard skips emits nothing, so WebGL counts none of its samplers.
     if (guard !== undefined) {
       const taken = guard[0] ? then : otherwise;

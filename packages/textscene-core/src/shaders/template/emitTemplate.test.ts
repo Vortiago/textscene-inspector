@@ -105,6 +105,31 @@ describe('emitTemplateStage', () => {
     });
   });
 
+  describe('a guard on a specialised block member', () => {
+    const FLAGS = 'params.flags';
+    const guarded = (flags: number) => {
+      const resources = programResources(new Set([FLAGS]));
+      const globals = [
+        'layout(set = 0, binding = 1) uniform texture2D atlas;',
+        'layout(set = 0, binding = 2) uniform sampler atlas_sampler;',
+        'layout(set = 0, binding = 3, std140) uniform Params {\n\tuint flags;\n} params;',
+      ].join('\n');
+      const body =
+        'color = vec4(0.0);\nif (bool(params.flags & 4u)) { color = texture(sampler2D(atlas, atlas_sampler), vec2(0.5)); }';
+      stageOf(globals, body, resources);
+      resources.uniforms.specialisations.get(FLAGS)!.value = flags;
+      return generatedFragmentShader(stageOf(globals, body, resources).result);
+    };
+
+    it('emits no read of a branch whose member folds off', () => {
+      expect(guarded(0)).not.toMatch(/uniform sampler2D/);
+    });
+
+    it('emits the branch at the value a binding writes', () => {
+      expect(guarded(4)).toMatch(/uniform sampler2D/);
+    });
+  });
+
   it('folds a specialisation constant to its declared value', () => {
     expect(fragmentOf(SPECIALISED, SPECIALISED_BODY)).toMatch(/vec4\(\s*3\.0\s*\)/);
   });

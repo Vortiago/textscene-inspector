@@ -22,6 +22,9 @@ export class TemplateUniforms {
   /** Written only by `specialisation`: the program's specialisation constants, which its materials key on. */
   readonly specialisations = new Map<string, Specialisation>();
 
+  /** `specialisedMembers` names each block member that folds as a specialisation constant (ADR-0088). */
+  constructor(private readonly specialisedMembers: ReadonlySet<string> = new Set()) {}
+
   /** The value of a uniform block's instance: a struct of its members' uniforms. */
   block(block: InterfaceBlockNode, structOf: StructOf): StructValue {
     const name = block.instanceName!;
@@ -43,6 +46,8 @@ export class TemplateUniforms {
     if (struct && count === 0) return this.struct(name, struct.members, structOf, arrays);
     if (struct) return this.structArray(name, struct.members, count, arrays);
     if (count > 0) return this.array(name, member.type, count, arrays);
+    if (this.specialisedMembers.has(name))
+      return this.specialisation(name, member.type, initialValue(member.type) as number | boolean);
     return this.uniformOf(name, member.type);
   }
 
