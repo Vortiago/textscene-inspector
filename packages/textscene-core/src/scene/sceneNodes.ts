@@ -21,6 +21,8 @@ import {
   findPortedAccessor,
   intArgument,
   runPortedMethod,
+  valueArguments,
+  type CallArgument,
   type CallResult,
   type MethodTarget,
 } from './nodeMethods.js';
@@ -191,7 +193,7 @@ export class SceneNodes implements HandleHost {
   }
 
   /** `Object::callv`: a ported method, else the property a setter or a getter reaches. */
-  async call(path: string, method: string, args: readonly SceneValue[]): Promise<CallResult> {
+  async call(path: string, method: string, args: readonly CallArgument[]): Promise<CallResult> {
     const generation = this.generation;
     const type = this.typeOfNode(path);
     const ported = findPortedMethod(type, method);
@@ -205,7 +207,7 @@ export class SceneNodes implements HandleHost {
         `${name}: not a method this release ports. It ports ${PORTED_METHOD_NAMES.join(', ')}, and the property setters and getters.`
       );
     }
-    return this.callPropertyMethod(path, name, reached, args);
+    return this.callPropertyMethod(path, name, reached, valueArguments(args, name));
   }
 
   /** A setter or a getter: an indexed one takes the index first (`class_db.cpp:1667-1673`). */
@@ -276,6 +278,12 @@ export class SceneNodes implements HandleHost {
       handleAt: (livePath) => this.handleAt(absolutePathOf(livePath)),
       sceneFilePath: () => this.treeNodeOf(path, generation)?.sceneFilePath ?? '',
       ownerPath: () => this.treeNodeOf(path, generation)?.ownerPath() ?? null,
+      isEditableInstance: (node) => {
+        this.assertSameText(generation, path);
+        return this.handles.get(node.path) === node && node.isInsideTree()
+          ? (this.nodeAt(node.path)?.isEditableInstance() ?? false)
+          : false;
+      },
     };
   }
 

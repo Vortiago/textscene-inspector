@@ -1,5 +1,6 @@
 import type { SceneGraph } from '../core/SceneGraph.js';
 import { isGltfPath } from '../godot/import/gltf.js';
+import { isEditableInstanceAt } from './dockListing.js';
 import { GLB_SCENE_ROOT_TYPE } from '../resources/glbSceneRoot.js';
 import type { ResourceReference } from '../godot/variant/variantValue.js';
 import {
@@ -100,11 +101,17 @@ function ownerOf(link: LiveLink, ancestors: readonly LiveLink[]): LiveLink | nul
 /** The class Godot gives the node: the glTF importer roots a scene at a Node3D (gltf_document.cpp:6885). */
 const godotClassOf = (type: string) => (type === GLB_SCENE_ROOT_TYPE ? 'Node3D' : type);
 
+/** The scene the host opened: its path, and the instances its `[editable]` lines name. */
+interface RootScene {
+  readonly scenePath: string;
+  readonly editablePaths: readonly string[];
+}
+
 function treeNodeOf(
   tree: LiveTree,
   link: LiveLink,
   ancestors: readonly LiveLink[],
-  rootScenePath: string,
+  root: RootScene,
   placed: () => PatchLookup
 ): SceneTreeNode {
   const { node, groups, scope } = link.step;
@@ -114,13 +121,14 @@ function treeNodeOf(
     type: godotClassOf(node.type),
     rawProperties: node.rawProperties,
     childNames: groups.flatMap((group) => group.children.map((child) => child.name)),
-    resourceOf: resourceInScope(scope, rootScenePath),
+    resourceOf: resourceInScope(scope, root.scenePath),
     containerVisibility: parent && containerVisibilityOf(tree, link, parent),
     sortedProperty: (property) =>
       nodeRegistry.sortedProperties(node.type)?.(node, sortableChildCount(tree, link.step))[property],
     placedProperty: (property) => placedPropertyOf(placed().get(link.path), property),
-    sceneFilePath: ancestors.length === 0 ? rootScenePath : (link.step.instancePath ?? ''),
+    sceneFilePath: ancestors.length === 0 ? root.scenePath : (link.step.instancePath ?? ''),
     ownerPath: () => ownerOf(link, ancestors)?.path ?? null,
+    isEditableInstance: () => isEditableInstanceAt(link.path, tree.roots, tree.ctx, root.editablePaths),
   };
 }
 
@@ -155,7 +163,7 @@ const camerasOf = perObject((tree: LiveTree): readonly TreeCamera[] => {
 function sceneTreeOf(
   tree: LiveTree,
   loader: ResourceLoader,
-  rootScenePath: string,
+  root: RootScene,
   contentScaleSize: ProjectViewportSize
 ): SceneTree {
   let patches: PatchLookup | undefined;
@@ -176,11 +184,18 @@ function sceneTreeOf(
           return null;
         }
       }
-      return link && treeNodeOf(tree, link, ancestors, rootScenePath, placed);
+      return link && treeNodeOf(tree, link, ancestors, root, placed);
     },
     uniquePaths: (livePath) => nodePathUniquePaths(livePath, tree.roots, tree.ctx),
     cameras: () => camerasOf(tree),
   };
+}
+
+const NO_EDITABLE_PATHS: readonly string[] = [];
+
+function rootSceneOf(scene: Scene, graph: SceneGraph): RootScene {
+  const editablePaths = graph.scenes.get(graph.rootScene)?.editableInstances ?? NO_EDITABLE_PATHS;
+  return { scenePath: scene.rootScenePath, editablePaths };
 }
 
 const NO_CAMERAS: readonly TreeCamera[] = [];
@@ -251,7 +266,12 @@ function sceneRuntimeOf(scene: Scene): SceneRuntime {
     tree(graph: SceneGraph) {
       const shared = currentSharedTree(graph, loader, project);
       return shared
-        ? sceneTreeOf(liveTreeOf(shared.roots, shared.ctx), loader, scene.rootScenePath, contentScaleSize)
+        ? sceneTreeOf(
+            liveTreeOf(shared.roots, shared.ctx),
+            loader,
+            rootSceneOf(scene, graph),
+            contentScaleSize
+          )
         : { ...NO_TREE, contentScaleSize };
     },
     subscribe(listener) {

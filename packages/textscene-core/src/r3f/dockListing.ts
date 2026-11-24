@@ -1,7 +1,7 @@
 import type { TscnNode } from '../parser/types.js';
 import { pathBetween } from '../utils/nodePath.js';
 import type { LiveTreeContext } from './liveSceneTree.js';
-import { claimOwnerOf, type ClaimOwner } from './uniqueNameOwner.js';
+import { claimOwnerOf, localSceneOf, type ClaimOwner } from './uniqueNameOwner.js';
 
 /** Whether the Scene dock lists `path` below a listed parent (`scene_tree_editor.cpp:283-290`). */
 export function dockListsChild(
@@ -11,6 +11,17 @@ export function dockListsChild(
   rootEditablePaths: readonly string[]
 ): boolean {
   return isListedOwner(claimOwnerOf(path, roots, ctx), rootEditablePaths);
+}
+
+/** `Node::is_editable_instance` of the node at `path`: only an instance node carries the flag. */
+export function isEditableInstanceAt(
+  path: string,
+  roots: readonly TscnNode[],
+  ctx: LiveTreeContext,
+  rootEditablePaths: readonly string[]
+): boolean {
+  const instance = localSceneOf(path, roots, ctx);
+  return instance.path === path && isEditableInstance(instance, rootEditablePaths);
 }
 
 function isListedOwner(owner: ClaimOwner, rootEditablePaths: readonly string[]): boolean {
