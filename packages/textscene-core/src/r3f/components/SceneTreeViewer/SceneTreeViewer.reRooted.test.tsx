@@ -2,37 +2,18 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { ReactNode } from 'react';
-import { SceneTreeViewer } from './SceneTreeViewer';
-import { HierarchyProvider } from '../../contexts/HierarchyContext';
-import { SelectionProvider, useSelectedNodePath } from '../../contexts/SelectionContext';
-import { ExpandedRowsProvider } from '../TscnPreviewShell/expandedRows';
-import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
-import { TscnParser } from '../../../parser/TscnParser';
+import { useSelectedNodePath } from '../../contexts/SelectionContext';
 import { fixturesDir } from '../../../parser/testing/parserKit';
+import { expandAllRows, renderSceneTree } from './sceneTree.testkit';
 
-function missingParentGraph() {
-  const source = readFileSync(join(fixturesDir(), 'edge-missing-parent.tscn'), 'utf8');
-  return createSceneGraphFromTscnScene(new TscnParser().parse(source));
-}
-
-function withPanel(children: ReactNode) {
-  return (
-    <HierarchyProvider value={{ sceneGraph: missingParentGraph(), panelId: 'p' }}>
-      <SelectionProvider>
-        <ExpandedRowsProvider>{children}</ExpandedRowsProvider>
-      </SelectionProvider>
-    </HierarchyProvider>
-  );
-}
+const MISSING_PARENT = readFileSync(join(fixturesDir(), 'edge-missing-parent.tscn'), 'utf8');
 
 describe('<SceneTreeViewer> over edge-missing-parent.tscn', () => {
   it('lists each orphan under Root by Godot’s rename', async () => {
-    render(withPanel(<SceneTreeViewer />));
-
-    await userEvent.click(screen.getByRole('button', { name: 'Expand' }));
+    const { scene } = await renderSceneTree(MISSING_PARENT);
+    await expandAllRows(scene);
 
     expect(screen.getByText('NonExistentParent#Orphan')).toBeTruthy();
     expect(screen.getByText('AlsoMissing#AnotherOrphan')).toBeTruthy();
@@ -44,16 +25,9 @@ describe('<SceneTreeViewer> over edge-missing-parent.tscn', () => {
       selected = useSelectedNodePath();
       return null;
     }
-    render(
-      withPanel(
-        <>
-          <SceneTreeViewer />
-          <Observer />
-        </>
-      )
-    );
+    const { scene } = await renderSceneTree(MISSING_PARENT, { beside: <Observer /> });
+    await expandAllRows(scene);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Expand' }));
     await userEvent.click(screen.getByText('AlsoMissing#AnotherOrphan'));
 
     expect(selected).toBe('Root/AlsoMissing#AnotherOrphan');

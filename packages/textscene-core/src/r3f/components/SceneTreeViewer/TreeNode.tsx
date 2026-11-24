@@ -1,22 +1,9 @@
-/** One tree row and its recursive children, internal to `<SceneTreeViewer>`. */
 import { memo, useMemo, type MouseEvent } from 'react';
-import type { LiveChildGroup } from '../../liveSceneTree.js';
-import type { SceneScope, TscnNode, TscnExternalResource } from '../../../parser/types.js';
-import { joinPath } from '../../../utils/nodePath.js';
-import { rendersOwnVisual } from '../../nodeSupport.js';
 import { useExpandedRowActions, useIsExpandedRow } from '../TscnPreviewShell/expandedRows.js';
 import { useHoverPath, useSelectPath, useSelectedPath } from '../TscnPreviewShell/previewSelection.js';
-import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
-import { spaceFamilyOf } from '../../../godot/scene/parentSpace.js';
-import { isCanvasLayerType } from '../../canvasItemClass.js';
-import { isShownCanvasNode } from '../../canvasScopes.js';
-import { scopeOf, type LiveNode } from '../../../resources/liveNode.js';
-import { useLiveStep } from './useLiveStep.js';
-import { useWrittenChildVisibility } from '../../useLiveSceneTree.js';
+import { useUndrawnNode } from '../TscnPreviewShell/previewViewStatus.js';
+import type { TreeRow, VisibilityChain } from './treeRows.js';
 import styles from './SceneTreeViewer.module.css';
-
-/** One empty pool for every row, so a row that mounts again asks the live tree in a scope it knows. */
-const NO_SUB_RESOURCES: SceneScope['internalResources'] = [];
 
 const TYPE_BADGE_CLASS: Record<string, string> = {
   Node3D: styles.typeNode3d!,
@@ -50,20 +37,6 @@ function getTypeShorthand(type: string): string {
   return (Object.hasOwn(TYPE_SHORTHAND, type) ? TYPE_SHORTHAND[type] : undefined) ?? type.substring(0, 4);
 }
 
-function hasTransform(node: TscnNode): boolean {
-  return 'transform' in node.properties && node.properties.transform !== undefined;
-}
-
-/** The classes that have the eye (scene_tree_editor.cpp:608). */
-type VisibilityChain = 'Node3D' | 'CanvasItem' | 'CanvasLayer' | 'Window';
-
-function visibilityChainOf(type: string): VisibilityChain | null {
-  const family = spaceFamilyOf(type);
-  if (family) return family;
-  if (isCanvasLayerType(type)) return 'CanvasLayer';
-  return descendsFromClass(type, 'Window') ? 'Window' : null;
-}
-
 /** What a row hands its children of `visible`. */
 export interface ParentVisibility {
   chain: VisibilityChain | null;
@@ -88,124 +61,52 @@ function isParentVisibleOf(chain: VisibilityChain | null, parent: ParentVisibili
 }
 
 interface TreeNodeProps {
-  node: TscnNode;
-  parentPath: string;
+  row: TreeRow;
   depth: number;
   /** The parent row's visibility, which dims this row's eye (scene_tree_editor.cpp:743-748). */
   parentVisibility: ParentVisibility;
-  /** The `visible` the parent container writes on this node, which its own gives way to. */
-  containerVisible?: boolean;
-  /** Writes `visible` to the node at `path`. */
-  onToggleVisibility: (path: string, visible: boolean) => void;
-  onNodeReveal?: (path: string, node: TscnNode) => void;
-  /**
-   * Opens an instanced sub-scene as its own previewed scene, like Godot's
-   * "Open in Editor". It receives the instance's resolved `res://` path.
-   */
+  /** `visible` of each row with the eye, by live path. */
+  visibility: ReadonlyMap<string, boolean>;
+  onToggleVisibility: (row: TreeRow, visible: boolean) => void;
+  onNodeReveal?: (path: string, name: string) => void;
+  /** Opens an instanced sub-scene as its own previewed scene, like Godot's "Open in Editor". */
   onOpenSubScene?: (scenePath: string) => void;
-  /**
-   * Whether the row at this node path survives the search. It is path-based,
-   * so a match inside a sub-scene keeps its ancestor rows visible.
-   */
+  /** Whether the row at this live path survives the search, so a match keeps its ancestor rows. */
   matches: (path: string) => boolean;
-  /** Whether Godot's Scene dock lists the node at this path (`dockListing.ts`). */
-  isListedChild: (path: string) => boolean;
-  /**
-   * The host scene's externalResources, which resolve `ExtResource("id")` to
-   * the PackedScene's `res://` path with no re-read of HierarchyContext.
-   */
-  externalResources: readonly TscnExternalResource[];
-  /**
-   * The scenes whose instances enclose this row, outermost first
-   * (`SceneScope.instancedScenePaths`), so a cyclic instance shows no content. A
-   * root row has none.
-   */
-  instancedScenePaths?: readonly string[];
-  /**
-   * True only for the first root row while no selected row renders.
-   * `<SceneTreeViewer>` computes it, and a child row never sets it.
-   */
+  /** True only for the first root row while no selected row renders. */
   isDefaultFocusable?: boolean;
 }
 
 function TreeNodeImpl({
-  node,
-  parentPath,
+  row,
   depth,
   parentVisibility,
-  containerVisible,
+  visibility,
   onToggleVisibility,
   onNodeReveal,
   onOpenSubScene,
   matches,
-  isListedChild,
-  externalResources,
-  instancedScenePaths,
   isDefaultFocusable = false,
 }: TreeNodeProps) {
-  const nodePath = joinPath(parentPath, node.name);
-  // The tree renders rows and resolves instance refs. It never reads a SubResource id, so it
-  // declares an empty pool explicitly. A grafted node's own scope replaces the group's.
-  const scope = useMemo(
-    () => scopeOf(node, { externalResources, internalResources: NO_SUB_RESOURCES, instancedScenePaths }),
-    [node, externalResources, instancedScenePaths]
-  );
-  // The node as the tree shows it, and what lives below it. Instance root merge (ADR-0013), the
-  // same decision the viewport and inspector make, for the row header. The hook keeps the step
-  // stable across selection and hover, so the row reuses one merge.
-  const step = useLiveStep(node, scope);
-  const { node: effective, groups: liveGroups, instancePath } = step;
-  const writtenVisibility = useWrittenChildVisibility(step);
-  const groups = useMemo(
-    () => listedGroups(liveGroups, (child) => isListedChild(joinPath(nodePath, child.name))),
-    [liveGroups, isListedChild, nodePath]
-  );
-  const instanceScenePath = onOpenSubScene ? instancePath : null;
-
-  const hasChildren = groups.some((g) => g.children.length > 0);
-
-  // `keyPrefix` is the group's origin, so an inline child that shares a name with
-  // a sub-scene root does not trip React's duplicate-key warning. `childScope` is
-  // the scope the child resolves its own instance ref against.
-  const renderChildRow = (child: TscnNode, keyPrefix: string, childScope: SceneScope) => (
-    <TreeNode
-      key={`${keyPrefix}:${child.name}`}
-      node={child}
-      parentPath={nodePath}
-      depth={depth + 1}
-      parentVisibility={ownVisibility}
-      containerVisible={writtenVisibility.get(child)}
-      onToggleVisibility={onToggleVisibility}
-      onNodeReveal={onNodeReveal}
-      onOpenSubScene={onOpenSubScene}
-      matches={matches}
-      isListedChild={isListedChild}
-      externalResources={childScope.externalResources}
-      instancedScenePaths={childScope.instancedScenePaths}
-    />
-  );
-
+  const { path, chain } = row;
   const { toggle: toggleExpanded } = useExpandedRowActions();
   const selectPath = useSelectPath();
   const hoverPath = useHoverPath();
+  const isExpanded = useIsExpandedRow(path);
+  const isSelected = useSelectedPath() === path;
+  const isUnsupported = useUndrawnNode(path)?.hasNoComponent ?? false;
 
-  const isExpanded = useIsExpandedRow(nodePath);
-  const isSelected = useSelectedPath() === nodePath;
+  const hasChildren = row.children.length > 0;
   // The eye shows the node's own `visible`, and only on a class that has it (scene_tree_editor.cpp:608-613).
-  const chain = useMemo(() => visibilityChainOf(effective.type), [effective.type]);
   const hasEye = chain !== null;
-  const isHidden = hasEye && !(containerVisible ?? isShownCanvasNode(effective));
+  const isHidden = hasEye && visibility.get(path) === false;
   const isParentVisible = isParentVisibleOf(chain, parentVisibility);
-  const isViewport = useMemo(() => descendsFromClass(effective.type, 'Viewport'), [effective.type]);
-  const isViewportShown = isViewport ? !isHidden : parentVisibility.isViewportShown;
+  const isViewportShown = row.isViewport ? !isHidden : parentVisibility.isViewportShown;
   const ownVisibility = useMemo<ParentVisibility>(
     () => ({ chain, isVisibleInTree: !isHidden && isParentVisible, isViewportShown }),
     [chain, isHidden, isParentVisible, isViewportShown]
   );
-
-  // A parser registration is no evidence of a render: only a type with no
-  // component at all is a gap.
-  const isUnsupported = rendersOwnVisual(effective.type) === 'not-implemented';
+  const instanceScenePath = onOpenSubScene && row.sceneFilePath ? row.sceneFilePath : null;
 
   // This row is the tab stop when it is selected or when it is the fallback row.
   const isRovingTabStop = isSelected || isDefaultFocusable;
@@ -217,39 +118,23 @@ function TreeNodeImpl({
 
   function handleExpand(e: MouseEvent) {
     e.stopPropagation();
-    toggleExpanded(nodePath);
-  }
-
-  function handleSelect() {
-    selectPath(nodePath);
-  }
-
-  function handleDoubleClick() {
-    onNodeReveal?.(nodePath, node);
-  }
-
-  function handleMouseEnter() {
-    hoverPath(nodePath);
-  }
-
-  function handleMouseLeave() {
-    hoverPath(null);
+    toggleExpanded(path);
   }
 
   function handleToggleVisibility(e: MouseEvent) {
     e.stopPropagation();
-    onToggleVisibility(nodePath, isHidden);
+    onToggleVisibility(row, isHidden);
   }
 
   return (
-    <div className={styles.node} data-node-path={nodePath} data-depth={depth}>
+    <div className={styles.node} data-node-path={path} data-depth={depth}>
       <div
         className={headerClasses.join(' ')}
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
-        onClick={handleSelect}
-        onDoubleClick={handleDoubleClick}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
+        onClick={() => selectPath(path)}
+        onDoubleClick={() => onNodeReveal?.(path, row.name)}
+        onMouseEnter={() => hoverPath(path)}
+        onMouseLeave={() => hoverPath(null)}
         role="treeitem"
         tabIndex={isRovingTabStop ? 0 : -1}
         aria-selected={isSelected}
@@ -268,30 +153,24 @@ function TreeNodeImpl({
           <span className={styles.expandSpacer}>•</span>
         )}
 
-        <span className={`${styles.typeBadge} ${getTypeBadgeClass(effective.type)}`} title={effective.type}>
-          {getTypeShorthand(effective.type)}
+        <span className={`${styles.typeBadge} ${getTypeBadgeClass(row.type)}`} title={row.type}>
+          {getTypeShorthand(row.type)}
         </span>
 
         {isUnsupported && (
           <span
             className={styles.notImplementedBadge}
-            title={`${effective.type} is not yet supported by the renderer`}
+            title={`${row.type} is not yet supported by the renderer`}
           >
             Not Implemented
           </span>
         )}
 
-        <span className={styles.nodeName}>{node.name}</span>
+        <span className={styles.nodeName}>{row.name}</span>
 
         <span className={styles.glyphs}>
-          {hasTransform(effective) && (
-            <span className={styles.transformIcon} title="Has transform">
-              ⌖
-            </span>
-          )}
-
-          {node.instance && (
-            <span className={styles.instanceIcon} title={`External scene: ${node.instance}`}>
+          {row.sceneFilePath && (
+            <span className={styles.instanceIcon} title={`Instance: ${row.sceneFilePath}`}>
               📦
             </span>
           )}
@@ -328,11 +207,21 @@ function TreeNodeImpl({
 
       {hasChildren && isExpanded && (
         <div className={styles.children} role="group">
-          {groups.flatMap((group) =>
-            group.children
-              .filter((child) => matches(joinPath(nodePath, child.name)))
-              .map((child) => renderChildRow(child, group.origin, group.scope))
-          )}
+          {row.children
+            .filter((child) => matches(child.path))
+            .map((child) => (
+              <TreeNode
+                key={child.name}
+                row={child}
+                depth={depth + 1}
+                parentVisibility={ownVisibility}
+                visibility={visibility}
+                onToggleVisibility={onToggleVisibility}
+                onNodeReveal={onNodeReveal}
+                onOpenSubScene={onOpenSubScene}
+                matches={matches}
+              />
+            ))}
         </div>
       )}
     </div>
@@ -340,17 +229,3 @@ function TreeNodeImpl({
 }
 
 export const TreeNode = memo(TreeNodeImpl);
-
-/** `groups` with the children the Scene dock lists, none without an owner (`tile_map_layer.cpp:1646`). */
-function listedGroups(
-  groups: readonly LiveChildGroup[],
-  lists: (child: LiveNode) => boolean
-): readonly LiveChildGroup[] {
-  let isAnyHidden = false;
-  const shown = groups.map((group) => {
-    const children = group.children.filter((child) => !child.isUnowned && lists(child));
-    isAnyHidden ||= children.length < group.children.length;
-    return { ...group, children };
-  });
-  return isAnyHidden ? shown : groups;
-}

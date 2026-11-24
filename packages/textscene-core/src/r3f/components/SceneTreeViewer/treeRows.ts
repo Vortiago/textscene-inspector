@@ -1,12 +1,12 @@
 import type { NodeHandle } from '../../../scene/nodeHandle.js';
-import type { Scene } from '../../../scene/openScene.js';
-import { livePathOf, ROOT_WINDOW_PATH } from '../../../scene/nodePathWalk.js';
+import { livePathOf } from '../../../scene/nodePathWalk.js';
 
 /** The classes that have the eye (scene_tree_editor.cpp:608). */
 export type VisibilityChain = 'Node3D' | 'CanvasItem' | 'CanvasLayer' | 'Window';
 
 /** One row of the Scene dock, as the node handles answer it. */
 export interface TreeRow {
+  readonly node: NodeHandle;
   /** The live path the selection names: `Main/Player`. */
   readonly path: string;
   readonly name: string;
@@ -20,10 +20,9 @@ export interface TreeRow {
 
 const CHAINS: readonly VisibilityChain[] = ['Node3D', 'CanvasItem', 'CanvasLayer', 'Window'];
 
-/** The dock's rows from the scene root, null before the host has sent a scene. */
-export async function treeRowsOf(scene: Scene): Promise<TreeRow | null> {
-  const root = scene.getNodeOrNull(ROOT_WINDOW_PATH)?.getChildren()[0];
-  return root ? rowOf(root, root) : null;
+/** The dock's rows from the scene's root node. */
+export function treeRowsOf(root: NodeHandle): Promise<TreeRow> {
+  return rowOf(root, root);
 }
 
 async function rowOf(root: NodeHandle, node: NodeHandle): Promise<TreeRow> {
@@ -34,6 +33,7 @@ async function rowOf(root: NodeHandle, node: NodeHandle): Promise<TreeRow> {
     listedChildrenOf(root, node),
   ]);
   return {
+    node,
     path: livePathOf(node.path),
     name: node.name,
     type: node.type,
