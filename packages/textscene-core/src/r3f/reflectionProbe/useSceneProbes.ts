@@ -26,6 +26,8 @@ const loadProbeBake = memoisedImport(() => import('../../resources/sky/skyLayers
 
 const PROBE_BAKE_LOAD_FAILURE =
   '[ReflectionProbe] The previewer could not load its probe bake, so no probe captures. Reload to try again.';
+const NODES_HANDLER_LOAD_FAILURE =
+  '[ReflectionProbe] The previewer could not load its node shaders, so no probe captures. Reload to try again.';
 
 export function useSceneProbes(): void {
   const scene = useThree((state) => state.scene);
@@ -36,11 +38,16 @@ export function useSceneProbes(): void {
   const nodesHandler = useNodesHandler(gl);
   const bake = typeof loaded === 'object' && loaded !== null ? loaded.module : null;
   const isBakeReady = nodesHandler === 'ready' && bake !== null;
-  const isLoadFailed = loaded === 'failed' || nodesHandler === 'failed';
+  const loadFailure =
+    loaded === 'failed'
+      ? PROBE_BAKE_LOAD_FAILURE
+      : nodesHandler === 'failed'
+        ? NODES_HANDLER_LOAD_FAILURE
+        : null;
   useEffect(() => {
     if (isBakeReady) invalidate();
-    else if (isLoadFailed) warnOnce(loadProbeBake, 'failed', PROBE_BAKE_LOAD_FAILURE);
-  }, [isBakeReady, isLoadFailed, invalidate]);
+    else if (loadFailure) warnOnce(loadProbeBake, loadFailure, loadFailure);
+  }, [isBakeReady, loadFailure, invalidate]);
   const frame = useRef<ProbeFrame>(null!);
   frame.current = {
     clearColor: useProjectClearColor(),

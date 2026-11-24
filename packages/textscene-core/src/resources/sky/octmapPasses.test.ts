@@ -8,6 +8,7 @@ import {
   coefficientWords,
   drawDownsample,
   drawFastFilter,
+  drawRoughness,
   filterInvocations,
   laidOut,
   roughnessValues,
@@ -172,6 +173,54 @@ describe('drawDownsample', () => {
 
     expect(boundWhileDrawing).toBe(source);
     expect(pass!.textures.get('source_octmap')!.value).not.toBe(source);
+  });
+});
+
+/** The target, layer and mip of each draw `renderer` makes while `draw` runs, with the samples it reads. */
+function roughnessDraws(renderer: THREE.WebGLRenderer, draw: () => void) {
+  const drawn: { target: THREE.RenderTarget | null; layer: number; mip: number; samples: unknown }[] = [];
+  const render = renderer.render.bind(renderer);
+  renderer.render = (mesh, camera) => {
+    const pass = draws.find((emitted) => emitted.mesh === mesh);
+    drawn.push({
+      target: renderer.getRenderTarget(),
+      layer: renderer.getActiveCubeFace(),
+      mip: renderer.getActiveMipmapLevel(),
+      samples: pass?.textures.get('compute_shared_samples')?.value,
+    });
+    render(mesh, camera);
+  };
+  draw();
+  return drawn;
+}
+
+describe('drawRoughness', () => {
+  it('fills the samples, then filters the layer into its layer and mip from them', async () => {
+    const { renderer } = await nodeTestRenderer();
+    const target = new THREE.WebGLRenderTarget(80, 80, { depth: 3 });
+
+    const [fill, filter] = roughnessDraws(renderer, () => drawRoughness(renderer, LAYER, target, 2, 1));
+
+    expect(fill!.target).not.toBe(target);
+    expect(filter).toMatchObject({ target, layer: 2, mip: 1, samples: fill!.target!.texture });
+  });
+
+  it('refuses a renderer with no nodes handler, as its passes are node materials (error case)', async () => {
+    const { renderer } = await testRenderer();
+
+    expect(() => drawRoughness(renderer, LAYER, new THREE.WebGLRenderTarget(4, 4), 0, 0)).toThrow(
+      'expected a nodes handler on the renderer before a lowered pass draws'
+    );
+  });
+
+  it("fills a texel for each entry of Godot's shared array of 256 samples (edge case)", async () => {
+    const { renderer } = await nodeTestRenderer();
+
+    const [fill] = roughnessDraws(renderer, () =>
+      drawRoughness(renderer, LAYER, new THREE.WebGLRenderTarget(4, 4), 0, 0)
+    );
+
+    expect([fill!.target!.width, fill!.target!.height]).toEqual([256, 1]);
   });
 });
 

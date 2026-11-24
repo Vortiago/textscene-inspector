@@ -27,10 +27,12 @@ ended at its 30 s load deadline (#2075).
 
 `pnpm check:bundle-size` fails when the build writes a script beside `webview.js`, and when the
 script is over its gzipped ceiling (`scripts/check-bundle-size/webviewBudget.mjs`). The ceiling
-is 2,307,373 B, about 8 KB over the measured 2,298,534 B. It replaces ADR-0055's 1,150,000 B, which
-held only the canvas-paint closure of the split build. The bake of a sky's layers through Godot's octmap
-compute stages (`shaders/template/compute`, `resources/sky/octmapPasses.ts`) adds 5,455 B of the measure. Godot's coefficient table for the high-quality
-fast filter of a sky's radiance (`skyFastFilterHighQualityCoefficients.ts`) adds 44,073 B of the measure.
+is 2,307,373 B, about 8 KB over the measured 2,298,558 B. It replaces ADR-0055's 1,150,000 B, which
+held only the canvas-paint closure of the split build. The bake of a sky's layers through Godot's
+octmap compute stages (`shaders/template/compute`, `resources/sky/octmapPasses.ts`) adds 5,479 B of
+the measure. The other 4,818 B over the measure before it are the shader branch's growth that no
+measure recorded. Godot's coefficient table for the high-quality fast filter of a sky's radiance
+(`skyFastFilterHighQualityCoefficients.ts`) adds 44,073 B of the measure.
 
 The shader translator adds about 464,000 B to the script. The groups below gzip alone, so they are shares
 of that growth, not exact bytes:
