@@ -3,7 +3,7 @@ import { createViewStatusStore, type DrawnFrame, type ViewSettled, type LiveScen
 import type { PendingSceneWork } from '../sceneWork';
 import type { FrameStats } from '../frameProfile/frameStats';
 
-const NO_PENDING_WORK: PendingSceneWork = { resources: 0, textures: 0, fonts: 0 };
+const NO_PENDING_WORK: PendingSceneWork = { resources: 0, textures: 0, fonts: 0, modules: 0 };
 
 const FACTS: ViewSettled = { scriptedNodeCount: 2, hasCurrentCamera: true };
 
@@ -61,9 +61,9 @@ describe('the settled signal of a view', () => {
   });
 
   it.each<[string, PendingSceneWork]>([
-    ['a resource', { resources: 1, textures: 0, fonts: 0 }],
-    ['a texture', { resources: 0, textures: 1, fonts: 0 }],
-    ['a font', { resources: 0, textures: 0, fonts: 1 }],
+    ['a resource', { resources: 1, textures: 0, fonts: 0, modules: 0 }],
+    ['a texture', { resources: 0, textures: 1, fonts: 0, modules: 0 }],
+    ['a font', { resources: 0, textures: 0, fonts: 1, modules: 0 }],
   ])('is pending on a frame drawn while %s is on its way', (_, work) => {
     const status = attachedStatus();
     drawFrame(status);
@@ -179,7 +179,7 @@ describe('the capture of a view', () => {
 
   it('rejects before the view settles, and names the pending work', async () => {
     const status = attachedStatus();
-    status.frameDrawn(frameOf(1, { resources: 2, textures: 1, fonts: 0 }));
+    status.frameDrawn(frameOf(1, { resources: 2, textures: 1, fonts: 0, modules: 0 }));
     await expect(status.captureImage()).rejects.toThrow(
       'expected a settled view, got 2 resources and 1 texture still loading'
     );
@@ -278,7 +278,7 @@ describe('the status a view reports', () => {
   it('counts the textures and fonts still building, also while no frame draws', () => {
     const status = attachedStatus();
     drawFrame(status);
-    status.workChanged({ resources: 4, textures: 2, fonts: 1 });
+    status.workChanged({ resources: 4, textures: 2, fonts: 1, modules: 0 });
     expect(status.status().pending).toEqual({ textures: 2, fonts: 1 });
   });
 

@@ -36,7 +36,7 @@ function frameDrawn(status: ViewStatusStore, resources: number, revision: number
     revision,
     isFullSize: true,
     awaitedCamera: null,
-    work: { resources, textures: 0, fonts: 0 },
+    work: { resources, textures: 0, fonts: 0, modules: 0 },
     facts: FACTS,
   };
   status.frameDrawn(frame);

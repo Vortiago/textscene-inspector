@@ -8,6 +8,7 @@ import { TscnSceneProvider } from '../TscnSceneProvider';
 import { openScene } from '../../scene/openScene';
 import type { ResourceProvider } from '../../resources/ResourceProvider';
 import { settleLoads } from '../testing/settleLoads';
+import { settleLazyImports } from '../../testing/lazyImports';
 import { CaptureRenderer } from '../testing/CaptureRenderer';
 import { r3fStateProbe } from '../testing/R3FStateProbe';
 import { EditorViewReport } from './EditorViewReport';
@@ -74,6 +75,8 @@ async function mountEditor(source: string) {
     </TscnSceneProvider>
   );
   await settleLoads();
+  // A view settles only once the code a scene draws with has landed, and a cold import outlasts a tick.
+  await act(settleLazyImports);
   const settle = () => drawFrames(state, FRAMES_TO_SETTLE);
   const drawFrame = () => drawFrames(state, 1);
   return { renderer, scene, status, gl: gl.current!, frames, settle, drawFrame };

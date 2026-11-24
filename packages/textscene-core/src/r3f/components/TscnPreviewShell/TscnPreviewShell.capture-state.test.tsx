@@ -41,7 +41,7 @@ function arrangeViews(error: Error | null = null): void {
 let viewStore: ViewStatusStore | null = null;
 let viewScene: LiveScene | null = null;
 
-const NO_WORK: PendingSceneWork = { resources: 0, textures: 0, fonts: 0 };
+const NO_WORK: PendingSceneWork = { resources: 0, textures: 0, fonts: 0, modules: 0 };
 
 /** Draws one frame of a view that waits on `work`, as a canvas reports a file it still loads. */
 function drawFrame(work: Partial<PendingSceneWork>): void {

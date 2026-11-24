@@ -8,6 +8,7 @@ import { hasPendingWork, pendingSceneWork } from '../sceneWork.js';
 import type { ResourceLoader } from '../../resources/ResourceLoader.js';
 import { textureWork } from '../../resources/textures/textureWork.js';
 import { fontWork } from '../controls/native/text/settledChannel.js';
+import { moduleWork } from '../../resources/memoisedImport.js';
 import { useGameStartFacts } from '../gameView/gameStartFacts.js';
 import { useViewStatusStore } from './ViewStatusContext.js';
 import type { DrawnFrame, ViewSettled, ViewStatusStore } from './viewStatus.js';
@@ -67,7 +68,7 @@ export function useViewReport(): (isFullSize: boolean, awaitedCamera?: string | 
     revision: 0,
     isFullSize: false,
     awaitedCamera: null,
-    work: { resources: 0, textures: 0, fonts: 0 },
+    work: { resources: 0, textures: 0, fonts: 0, modules: 0 },
     facts,
   }));
   useReportStartedWork(store, isAttached, loader, frame);
@@ -103,6 +104,7 @@ function useReportStartedWork(
       loader?.subscribePending(onWorkChange),
       textureWork.subscribe(onWorkChange),
       fontWork.subscribe(onWorkChange),
+      moduleWork.subscribe(onWorkChange),
     ];
     return () => stops.forEach((stop) => stop?.());
   }, [store, isAttached, loader, frame]);
