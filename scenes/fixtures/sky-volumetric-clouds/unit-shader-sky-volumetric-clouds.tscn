@@ -1,0 +1,64 @@
+[gd_scene format=3 uid="uid://unitshaderskyvolumetricclouds"]
+
+; The demo sky_volumetric_clouds in daylight, with its weather reads moved in front of the branch.
+; The variable is the minified reads of 3D noise volumes inside a sky shader's loops, the one case
+; shader-sky-volume-mipmaps does not reach. In the demo the weather reads sit inside `if (t > 0.0)`,
+; where GLSL leaves their lod undefined. Moved out, both sides agree.
+
+[ext_resource type="Shader" path="res://clouds.gdshader" id="1_shader"]
+[ext_resource type="Texture2D" path="res://weather.webp" id="2_weather"]
+[ext_resource type="CompressedTexture3D" path="res://perlworlnoise-32.png" id="3_perlworl"]
+[ext_resource type="CompressedTexture3D" path="res://worlnoise.webp" id="4_worl"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_clouds"]
+shader = ExtResource("1_shader")
+shader_parameter/worlnoise = ExtResource("4_worl")
+shader_parameter/perlworlnoise = ExtResource("3_perlworl")
+shader_parameter/cloud_map = ExtResource("2_weather")
+shader_parameter/cloud_density = 0.05
+shader_parameter/cloud_coverage = 0.2
+shader_parameter/cloud_time_scale = 5.0
+shader_parameter/cloud_time_offset = 0.0
+shader_parameter/cloud_direction = Vector2(0.9, 1)
+shader_parameter/cloud_steps_range = Vector2(192, 108)
+shader_parameter/clouds_screen_lod = 1.0
+shader_parameter/cloud_modulate = Color(1, 1, 1, 1)
+shader_parameter/cloud_camera_position_mult = Vector2(0.1, 0.2)
+shader_parameter/cloud_camera_height = 0.0
+shader_parameter/rayleigh = 1.467
+shader_parameter/rayleigh_color = Color(0.26, 0.41, 0.58, 1)
+shader_parameter/mie = 0.166
+shader_parameter/mie_eccentricity = 0.701
+shader_parameter/mie_color = Color(0.921569, 0.54902, 0.568627, 1)
+shader_parameter/turbidity = 0.797
+shader_parameter/sun_disk_scale = 1.823
+shader_parameter/ground_color = Color(1, 1, 1, 1)
+shader_parameter/exposure = 0.1
+shader_parameter/space_emit_strength = 0.0
+
+[sub_resource type="Sky" id="Sky_clouds"]
+sky_material = SubResource("ShaderMaterial_clouds")
+process_mode = 2
+radiance_size = 0
+
+[sub_resource type="Environment" id="Environment_clouds"]
+background_mode = 2
+sky = SubResource("Sky_clouds")
+tonemap_mode = 3
+tonemap_white = 6.0
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_clouds")
+
+[node name="YawLight" type="Node3D" parent="."]
+transform = Transform3D(0.965926, 0, 0.258819, 0, 1, 0, -0.258819, 0, 0.965926, 0, 0, 0)
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="YawLight"]
+transform = Transform3D(1, 0, 0, 0, 0.8065315, 0.5911911, 0, -0.5911912, 0.8065314, 0, 2, 0)
+light_color = Color(0.87513953, 0.92508376, 0.9344481, 1)
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 9)
+fov = 65.0

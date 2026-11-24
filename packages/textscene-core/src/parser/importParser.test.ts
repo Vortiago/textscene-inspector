@@ -12,7 +12,7 @@ import {
   importRootScale,
   importCubemap,
   importTexture2DArraySlices,
-  importTexture3DSlices,
+  importTexture3D,
   importTextureOptions,
   parseImportFile,
 } from './importParser';
@@ -457,32 +457,40 @@ describe('importTextureOptions', () => {
   });
 });
 
-describe('importTexture3DSlices', () => {
+describe('importTexture3D', () => {
   const texture3DSidecar = (importer: string, ...params: string[]) =>
     parseImportFile([`[remap]`, '', `importer="${importer}"`, '', '[params]', '', ...params].join('\n'));
 
   it('reads the slices across and down a 3D texture sidecar', () => {
     const sidecar = texture3DSidecar('3d_texture', 'slices/horizontal=4', 'slices/vertical=2');
-    expect(importTexture3DSlices(sidecar)).toEqual({ horizontal: 4, vertical: 2 });
+    expect(importTexture3D(sidecar)?.slices).toEqual({ horizontal: 4, vertical: 2 });
   });
 
   it("takes the importer's 8 for a count the sidecar omits", () => {
     const sidecar = texture3DSidecar('3d_texture', 'compress/mode=0');
-    expect(importTexture3DSlices(sidecar)).toEqual({ horizontal: 8, vertical: 8 });
+    expect(importTexture3D(sidecar)?.slices).toEqual({ horizontal: 8, vertical: 8 });
   });
 
   it('imports nothing for a count Godot cannot read as a number (error case)', () => {
     const sidecar = texture3DSidecar('3d_texture', 'slices/vertical="eight"');
-    expect(importTexture3DSlices(sidecar)).toBeNull();
+    expect(importTexture3D(sidecar)).toBeNull();
   });
 
   it('imports no 3D texture without a sidecar, or under another importer', () => {
-    expect(importTexture3DSlices(null)).toBeNull();
-    expect(importTexture3DSlices(texture3DSidecar('texture', 'slices/horizontal=4'))).toBeNull();
+    expect(importTexture3D(null)).toBeNull();
+    expect(importTexture3D(texture3DSidecar('texture', 'slices/horizontal=4'))).toBeNull();
   });
 
   it('imports nothing for a count of 0, which Godot divides by (edge case)', () => {
-    expect(importTexture3DSlices(texture3DSidecar('3d_texture', 'slices/horizontal=0'))).toBeNull();
+    expect(importTexture3D(texture3DSidecar('3d_texture', 'slices/horizontal=0'))).toBeNull();
+  });
+
+  it("generates mipmaps by default, as the importer's option does", () => {
+    expect(importTexture3D(texture3DSidecar('3d_texture', 'compress/mode=0'))?.hasMipmaps).toBe(true);
+  });
+
+  it('generates no mipmaps for a sidecar that turns them off', () => {
+    expect(importTexture3D(texture3DSidecar('3d_texture', 'mipmaps/generate=false'))?.hasMipmaps).toBe(false);
   });
 });
 

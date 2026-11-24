@@ -1,0 +1,34 @@
+[gd_scene format=3 uid="uid://unitshaderskyvolumemipmaps"]
+
+; A sky shader reads a 16x16x8 noise volume, imported with mipmaps, at 64 repeats across the sky.
+; The variable is the 3D texture's mip chain: each screen pixel spans several texels, so the read
+; lands below level 0. unit-fog-volume-density-image draws the same pixels with or without the
+; chain, and no other golden samples a 3D texture's lower levels, so a chain regression shows here.
+
+[ext_resource type="CompressedTexture3D" path="res://textures/sky-volume-noise.png" id="1_noise"]
+
+[sub_resource type="Shader" id="Shader_sky"]
+code = "shader_type sky;
+
+uniform sampler3D noise : filter_linear_mipmap, repeat_enable;
+
+void sky() {
+	COLOR = texture(noise, EYEDIR * 64.0).rgb;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="SkyMat_shader"]
+shader = SubResource("Shader_sky")
+shader_parameter/noise = ExtResource("1_noise")
+
+[sub_resource type="Sky" id="Sky_shader"]
+sky_material = SubResource("SkyMat_shader")
+
+[sub_resource type="Environment" id="Environment_stage"]
+background_mode = 2
+sky = SubResource("Sky_shader")
+
+[node name="ShaderSkyVolumeMipmapsRoot" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_stage")

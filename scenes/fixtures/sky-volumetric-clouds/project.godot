@@ -1,0 +1,9 @@
+; A res:// root of its own, so the scene reads its shader and textures by the paths the demo uses.
+
+config_version=5
+
+[application]
+
+config/name="Sky volumetric clouds"
+run/main_scene="res://unit-shader-sky-volumetric-clouds.tscn"
+config/features=PackedStringArray("4.6")

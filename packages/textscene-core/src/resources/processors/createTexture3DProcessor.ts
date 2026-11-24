@@ -12,8 +12,9 @@ import type { DependencyGraph } from '../dependencyGraph';
 import { decodeImagePixels, getMimeType, isTexturePath } from '../formats/image/textureProcessing';
 import { sliceImage } from '../textures/layeredTexels';
 import { dataTexture3D } from '../textures/dataTexture3D';
-import { readLayeredSlices } from './readLayeredSlices';
-import { importTexture3DSlices } from '../../parser/importParser';
+import { readLayeredImport } from './readLayeredImport';
+import { importTexture3D } from '../../parser/importParser';
+import { volumeMipChain, type VolumeLevel } from '../processing/volumeMipChain';
 
 export function createTexture3DProcessor(
   fileEventBus: FileEventBus | undefined,
@@ -27,9 +28,9 @@ export function createTexture3DProcessor(
     readsFile: isTexturePath,
     shouldProcess: (_path, data) => data instanceof ArrayBuffer,
     process: async (path, data) => {
-      const slices = await readLayeredSlices(
+      const { slices, hasMipmaps } = await readLayeredImport(
         { assetPath: path, dependent: { busType: 'texture3d', key: path }, fileEventBus, dependencies },
-        importTexture3DSlices,
+        importTexture3D,
         'a 3D texture'
       );
       const image = await decodeImagePixels(
@@ -40,8 +41,22 @@ export function createTexture3DProcessor(
       const volume = sliceImage(image, slices);
       if (!volume) throw new Error(`${path} is too small for ${slices.horizontal}x${slices.vertical} slices`);
       const { texels, width, height, depth } = volume;
-      return dataTexture3D(texels, width, height, depth, THREE.RGBAFormat);
+      const texture = dataTexture3D(texels, width, height, depth, THREE.RGBAFormat);
+      if (hasMipmaps) holdMipmapsUntilRead(texture, { data: texels, width, height, depth });
+      return texture;
     },
     dispose: (texture) => texture.dispose(),
+  });
+}
+
+// Built on the first read: a volume only the fog reads never uploads, and a 128³ chain takes 0.3 s.
+function holdMipmapsUntilRead(texture: THREE.Data3DTexture, base: VolumeLevel): void {
+  let levels: VolumeLevel[] | undefined;
+  Object.defineProperty(texture, 'mipmaps', {
+    get: () => (levels ??= [base, ...volumeMipChain(base)]),
+    set: (assigned: VolumeLevel[]) => {
+      levels = assigned;
+    },
+    configurable: true,
   });
 }

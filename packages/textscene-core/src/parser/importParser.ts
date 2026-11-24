@@ -38,7 +38,7 @@ import {
   CUBEMAP_ARRANGEMENTS,
   CUBEMAP_IMPORTER,
   DEFAULT_CUBEMAP_ARRANGEMENT,
-  type CubemapImport,
+  type LayeredImport,
   DEFAULT_SLICES,
   TEXTURE_2D_ARRAY_IMPORTER,
   TEXTURE_3D_IMPORTER,
@@ -205,30 +205,30 @@ function compressMode(value: string | undefined): TextureImportOptions['mode'] {
   return (index === undefined ? undefined : TEXTURE_COMPRESS_MODES[index]) ?? DEFAULT_TEXTURE_IMPORT.mode;
 }
 
-/**
- * The slices of a sidecar that imports its image as a 3D texture, a count it omits at the
- * importer's default. Null for no sidecar or another importer, under which Godot imports no 3D
- * texture, and for a count under 1, which Godot divides by
- * (`resource_importer_layered_texture.cpp:372-373`).
- */
-export function importTexture3DSlices(parsed: ParsedImportFile | null): ImportSlices | null {
-  return layeredSlices(parsed, TEXTURE_3D_IMPORTER);
+/** A 3D texture's import, null under 1 slice (`resource_importer_layered_texture.cpp:372`). */
+export function importTexture3D(parsed: ParsedImportFile | null): LayeredImport | null {
+  const slices = layeredSlices(parsed, TEXTURE_3D_IMPORTER);
+  if (!slices || !parsed) return null;
+  return { slices, hasMipmaps: generatesMipmaps(parsed) };
 }
 
-/** The slices a texture array's sidecar names, as {@link importTexture3DSlices} reads a 3D texture's. */
+/** The slices a texture array's sidecar names, as {@link importTexture3D} reads a 3D texture's. */
 export function importTexture2DArraySlices(parsed: ParsedImportFile | null): ImportSlices | null {
   return layeredSlices(parsed, TEXTURE_2D_ARRAY_IMPORTER);
 }
 
 /** How a cubemap's sidecar cuts its image. Godot reads an unreadable arrangement as 0, which is 1x6. */
-export function importCubemap(parsed: ParsedImportFile | null): CubemapImport | null {
+export function importCubemap(parsed: ParsedImportFile | null): LayeredImport | null {
   if (parsed?.importer !== CUBEMAP_IMPORTER) return null;
   const value = parsed.params['slices/arrangement'];
   const arrangement = value === undefined ? DEFAULT_CUBEMAP_ARRANGEMENT : (parseOptionalInt(value) ?? 0);
   const slices = CUBEMAP_ARRANGEMENTS[arrangement];
-  // `resource_importer_layered_texture.cpp:154` generates mipmaps unless the sidecar says otherwise.
-  const hasMipmaps = boolSlotValue(parsed.params['mipmaps/generate']) ?? true;
-  return slices ? { slices, hasMipmaps } : null;
+  return slices ? { slices, hasMipmaps: generatesMipmaps(parsed) } : null;
+}
+
+/** `mipmaps/generate`, on unless the sidecar turns it off (`resource_importer_layered_texture.cpp:154`). */
+function generatesMipmaps(parsed: ParsedImportFile): boolean {
+  return boolSlotValue(parsed.params['mipmaps/generate']) ?? true;
 }
 
 function layeredSlices(parsed: ParsedImportFile | null, importer: string): ImportSlices | null {
