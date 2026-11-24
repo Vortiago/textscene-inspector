@@ -105,7 +105,7 @@ describe('parseTileMap', () => {
       'layer_2000000000/name': '"Far"',
     });
 
-    expect(result.layers.map((layer) => layer.name)).toEqual(['Layer0', 'Layer1000', 'Far']);
+    expect(result.layers.map((layer) => layer.name)).toEqual(['Layer0', 'Layer1999', 'Far']);
   });
 
   // `int index = ….to_int()` (property_list_helper.cpp:130-131) keeps the low 32 bits, so

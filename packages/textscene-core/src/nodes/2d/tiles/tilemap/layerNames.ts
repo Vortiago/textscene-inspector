@@ -1,9 +1,15 @@
 import { visitIndexedKeys } from '../../../../godot/classdb/indexedKey.js';
 import { serialChildName, validateNodeName } from '../../../../godot/string/nodeName.js';
 import { unquoteString } from '../../../../parser/utils.js';
-import { LAYER_FILL_CEILING, LAYER_LEAVES } from '../shared/layerVector.js';
+import { LAYER_LEAVES } from '../shared/layerVector.js';
 
-/** Each layer's name as `_set` builds and renames them in file order. No suffix past the fill ceiling. */
+/**
+ * How far the names follow the loop. Past it the loop builds more TileMapLayer nodes than a scene holds,
+ * so a written layer keeps `Layer%d` of its own index and the gap layers have no name.
+ */
+const NAME_FILL_CEILING = 1 << 16;
+
+/** Each layer's name as `_set` builds and renames them in file order. */
 export function tileMapLayerNames(properties: Readonly<Record<string, string>>): Map<number, string> {
   // `TileMap()` builds and names the first layer (:1014-1018).
   const names = new Map([[0, 'Layer0']]);
@@ -15,14 +21,19 @@ export function tileMapLayerNames(properties: Readonly<Record<string, string>>):
   return names;
 }
 
-/** The loop names every layer it builds after the asked index, `vformat("Layer%d", index)` (:701-710). */
+/** The loop names every layer it builds up to the asked index `vformat("Layer%d", index)` (:701-710). */
 function buildLayersTo(names: Map<number, string>, index: number): void {
-  if (index >= LAYER_FILL_CEILING) {
+  if (index >= NAME_FILL_CEILING) {
     if (!names.has(index)) names.set(index, `Layer${index}`);
     return;
   }
-  for (let built = 0; built <= index; built++) {
-    if (!names.has(built)) names.set(built, serialChildName(`Layer${index}`, new Set(names.values())));
+  const taken = new Set(names.values());
+  // The serial scan of each built layer starts where the last one ended: every number before it is taken.
+  let serial = index;
+  for (let built = names.size; built <= index; built++) {
+    while (taken.has(`Layer${serial}`)) serial++;
+    names.set(built, `Layer${serial}`);
+    taken.add(`Layer${serial}`);
   }
 }
 

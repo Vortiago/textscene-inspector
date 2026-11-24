@@ -162,6 +162,28 @@ layer_4/name = "a.b"
       'layer_4/name': '"a_b"',
     });
   });
+  it('names each layer the loop builds past index 64 as it names the layers below it', async () => {
+    const scene = openScene({
+      source: `[gd_scene format=3]
+
+[node name="TM" type="TileMap"]
+layer_3/name = "Layer70"
+layer_64/z_index = 1
+layer_65/enabled = false
+`,
+      provider: { loadResource: async () => null },
+    });
+    const names = [9, 10, 63, 64, 65, 66].map((index) => `layer_${index}/name`);
+
+    expect(await answersOf(scene, '.', names)).toEqual({
+      'layer_9/name': '"Layer69"',
+      'layer_10/name': '"Layer71"',
+      'layer_63/name': '"Layer124"',
+      'layer_64/name': '"Layer125"',
+      'layer_65/name': '"Layer126"',
+      'layer_66/name': null,
+    });
+  });
 });
 
 describe('get of a MeshInstance3D surface material override', () => {

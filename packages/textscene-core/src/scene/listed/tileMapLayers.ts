@@ -35,7 +35,7 @@ function layerKeyOf(property: string): { index: number; leaf: string } | null {
   return key;
 }
 
-/** Each layer the file builds, by index, with its node name. */
+/** The leaves the file writes of each layer, and the node name of each layer the file builds. */
 const layersOf = perObject((texts: NodeTexts) => ({
   leaves: new Map(tileMapLayerVector(texts)),
   names: tileMapLayerNames(texts),
@@ -48,10 +48,10 @@ export function tileMapLayers(property: string, { texts }: ListedReads): GetOutc
   if (key.leaf === 'tile_data') return { kind: 'unported', declaredBy: 'TileMap' };
   const { leaves, names } = layersOf(texts);
   // `_get_property` refuses a layer past the last and an undeclared leaf (property_list_helper.cpp:58).
-  if (!leaves.has(key.index)) return { kind: 'refused' };
+  if (!names.has(key.index)) return { kind: 'refused' };
   if (key.leaf === 'name') return { kind: 'value', value: { type: T.STRING, value: names.get(key.index)! } };
   const leaf = Object.hasOwn(LAYER_LEAVES, key.leaf) ? LAYER_LEAVES[key.leaf] : undefined;
   if (!leaf) return { kind: 'refused' };
-  const text = leaves.get(key.index)!.get(key.leaf);
+  const text = leaves.get(key.index)?.get(key.leaf);
   return { kind: 'value', value: text === undefined ? leaf.initial : castVariant(strToVar(text), leaf.type) };
 }
