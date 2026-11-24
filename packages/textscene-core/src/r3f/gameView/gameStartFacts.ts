@@ -2,8 +2,6 @@ import { useMemo } from 'react';
 import { ROOT_VIEWPORT_PATH } from '../contexts/EnclosingViewportContext.js';
 import { useCurrentCamera2D, useCurrentCamera3D } from '../currentCamera.js';
 import { liveTreeOf } from '../liveSceneTree.js';
-// The claim reads the slice registrations, loaded here so the note works whichever canvas loads first.
-import '../nodes/index.js';
 import { isClaimedByNode3DEditor } from '../nodeWorkspaceVisibility.js';
 import { useLiveSceneNodes, useLiveTreeSelection, type SharedLiveTree } from '../useLiveSceneTree.js';
 import { keepsChildrenInViewport } from '../viewportRender/viewportBoundary.js';
