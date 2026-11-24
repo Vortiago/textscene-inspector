@@ -8,21 +8,30 @@ import {
 } from '../template/programLimits.testkit.js';
 import {
   CANVAS_VARIANTS,
+  DEFAULT_CANVAS_SHADER,
   specialiseCanvasDraw,
   transpileCanvasItem,
   type CanvasVariant,
 } from './transpileCanvas.js';
 
-function programOf(variant: CanvasVariant, useLighting: boolean) {
-  const draw = transpileCanvasItem('shader_type canvas_item;\n').draw(variant);
-  specialiseCanvasDraw(draw, { useLighting });
-  return generatedMaterialProgram(draw.material);
+/** Both stages of each variant, from one item for each lighting: a draw keeps its specialisation. */
+function programsOf(useLighting: boolean): ReadonlyMap<CanvasVariant, { vertex: string; fragment: string }> {
+  const item = transpileCanvasItem(DEFAULT_CANVAS_SHADER);
+  return new Map(
+    CANVAS_VARIANTS.map((variant) => {
+      const draw = item.draw(variant);
+      specialiseCanvasDraw(draw, { useLighting });
+      return [variant, generatedMaterialProgram(draw.material)];
+    })
+  );
 }
 
-describe.each(CANVAS_VARIANTS.flatMap((variant) => [[variant, false] as const, [variant, true] as const]))(
-  'the %s variant of the canvas template, lit %s',
-  (variant, useLighting) => {
-    const program = programOf(variant, useLighting);
+const PROGRAMS = { unlit: programsOf(false), lit: programsOf(true) };
+
+describe.each(CANVAS_VARIANTS.flatMap((variant) => [[variant, 'unlit'] as const, [variant, 'lit'] as const]))(
+  'the %s variant of the canvas template, %s',
+  (variant, lighting) => {
+    const program = PROGRAMS[lighting].get(variant)!;
 
     it('reads at most the 16 samplers WebGL 2 promises in each stage', () => {
       expect(samplersOf(program.vertex)).toBeLessThanOrEqual(MIN_SAMPLERS);
@@ -37,7 +46,7 @@ describe.each(CANVAS_VARIANTS.flatMap((variant) => [[variant, false] as const, [
 );
 
 describe("the lit quad, which a user's canvas_item shader adds its textures to", () => {
-  const program = programOf('quad', true);
+  const program = PROGRAMS.lit.get('quad')!;
 
   it('leaves a material 10 of the 16 fragment units', () => {
     expect(MIN_SAMPLERS - samplersOf(program.fragment)).toBe(10);
@@ -49,9 +58,7 @@ describe("the lit quad, which a user's canvas_item shader adds its textures to",
 });
 
 describe('the lit attributes variant, which reads the instance transforms in its vertex stage', () => {
-  const program = programOf('attributes', true);
-
   it('leaves a material 15 of the 16 vertex units', () => {
-    expect(MIN_SAMPLERS - samplersOf(program.vertex)).toBe(15);
+    expect(MIN_SAMPLERS - samplersOf(PROGRAMS.lit.get('attributes')!.vertex)).toBe(15);
   });
 });

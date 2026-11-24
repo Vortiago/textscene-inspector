@@ -7,6 +7,7 @@
 export {
   CANVAS_VARIANTS,
   createDepthPrepass,
+  DEFAULT_CANVAS_SHADER,
   DEFAULT_TIME_ROLLOVER_SECONDS,
   GODOT_VERSION,
   glVaryingSlots,

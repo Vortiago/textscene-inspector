@@ -1,10 +1,12 @@
 import * as THREE from 'three';
-import { CANVAS_VARIANTS, specialiseCanvasDraw, transpileCanvasItem } from '@textscene/three-godot-shaders';
+import {
+  CANVAS_VARIANTS,
+  DEFAULT_CANVAS_SHADER,
+  specialiseCanvasDraw,
+  transpileCanvasItem,
+} from '@textscene/three-godot-shaders';
 import { framePixels } from './framePixels.js';
 import { displayRenderer } from './godotView.js';
-
-/** Godot's default canvas shader, a version with empty slots (`renderer_canvas_render_rd.cpp:1762`). */
-const DEFAULT_CANVAS_SHADER = 'shader_type canvas_item;\n';
 
 /** The faults of drawing `draw` once, which a program the GPU refuses to compile or link reports. */
 function drawFaults(draw) {

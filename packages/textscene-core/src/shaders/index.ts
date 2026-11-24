@@ -41,6 +41,7 @@ export {
 export { transpileSpatial, type SpatialOptions, type TranspiledSpatial } from './spatial/transpileSpatial.js';
 export {
   CANVAS_VARIANTS,
+  DEFAULT_CANVAS_SHADER,
   specialiseCanvasDraw,
   transpileCanvasItem,
   type CanvasDraw,
