@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { generatedMaterialProgram } from '../generatedShader.testkit.js';
-import { MIN_SAMPLERS, MIN_UNIFORM_BLOCKS, samplersOf, uniformBlocksOf } from '../programLimits.testkit.js';
+import {
+  MIN_SAMPLERS,
+  MIN_UNIFORM_BLOCKS,
+  samplersOf,
+  uniformBlocksOf,
+} from '../template/programLimits.testkit.js';
 import {
   CANVAS_VARIANTS,
   specialiseCanvasDraw,

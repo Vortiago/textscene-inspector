@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { generatedMaterialProgram } from '../generatedShader.testkit.js';
 import { parsedShader } from '../language/parseShader.js';
-import { MIN_SAMPLERS, MIN_UNIFORM_BLOCKS, samplersOf, uniformBlocksOf } from '../programLimits.testkit.js';
+import {
+  MIN_SAMPLERS,
+  MIN_UNIFORM_BLOCKS,
+  samplersOf,
+  uniformBlocksOf,
+} from '../template/programLimits.testkit.js';
 import { transpileParsedSpatial } from './transpileSpatial.js';
 
 describe('the lit colour pass of a spatial shader', () => {

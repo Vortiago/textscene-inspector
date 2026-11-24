@@ -208,6 +208,8 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the shader package draws a sky for a plain three.js app with no React: one material per transpiled sky, its nodes fixed at construction, and the caller moves only uniforms',
   'packages/textscene-core/src/shaders/template/compute/emitComputePass.ts':
     'one material per lowered compute pass of a renderer, its nodes fixed at construction and drawn offscreen outside React; a bake moves only uniforms and textures',
+  'packages/textscene-core/src/shaders/canvas/transpileCanvas.ts':
+    'the shader package draws a canvas item for a plain three.js app with no React: one material per variant of a transpiled canvas_item shader, its nodes fixed at construction, and the caller moves only uniforms and specialisations',
   'packages/textscene-core/src/shaders/spatial/transpileSpatial.ts':
     'the shader package draws a mesh for a plain three.js app with no React: one material per transpiled spatial shader, its nodes fixed at construction, and the caller moves only uniforms and row textures',
   'packages/textscene-core/src/shaders/spatial/spatialPrepass.ts':
