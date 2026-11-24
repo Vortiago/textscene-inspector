@@ -1,9 +1,9 @@
 [gd_scene format=3 uid="uid://unitshaderskyvolumetricclouds"]
 
 ; The demo sky_volumetric_clouds in daylight, with its weather reads moved in front of the branch.
-; The variable is a sky shader that marches 3D noise volumes and a weather map in nested loops. In
-; the demo the reads sit inside `if (t > 0.0)`, where GLSL leaves their lod undefined; moved out,
-; both sides agree. No other golden marches a sky through 3D textures, so a regression shows here.
+; The variable is the minified reads of 3D noise volumes inside a sky shader's loops, the one case
+; shader-sky-volume-mipmaps does not reach. In the demo the weather reads sit inside `if (t > 0.0)`,
+; where GLSL leaves their lod undefined. Moved out, both sides agree.
 
 [ext_resource type="Shader" path="res://clouds.gdshader" id="1_shader"]
 [ext_resource type="Texture2D" path="res://weather.webp" id="2_weather"]

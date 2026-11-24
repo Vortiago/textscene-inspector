@@ -1,9 +1,3 @@
-/**
- * A `THREE.Data3DTexture` of raw values, sampled linearly and clamped: how Godot's fog shader
- * samples a density texture (`environment/fog.cpp:259-260`), with no `source_color` on its
- * uniform. The fog is the one Texture3D consumer the previewer draws.
- */
-
 import * as THREE from 'three';
 import { uploadedTexels } from './halfFloatTexels';
 
@@ -22,6 +16,7 @@ export function dataTexture3D(
   texture.format = format;
   texture.type = texels instanceof Float32Array ? THREE.HalfFloatType : THREE.UnsignedByteType;
   texture.colorSpace = THREE.NoColorSpace;
+  // The fog samples a density texture linear and clamped (`environment/fog.cpp:259-260`).
   texture.magFilter = THREE.LinearFilter;
   texture.minFilter = THREE.LinearFilter;
   texture.wrapS = THREE.ClampToEdgeWrapping;

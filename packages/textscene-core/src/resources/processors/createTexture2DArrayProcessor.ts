@@ -18,7 +18,7 @@ import { decodeImagePixels, getMimeType, isTexturePath } from '../formats/image/
 import { dataArrayTexture } from '../textures/dataArrayTexture';
 import { redOnly, sliceImage, type LayeredTexels } from '../textures/layeredTexels';
 import type { ImportSlices } from '../../godot/import/layeredTextureImport';
-import { readLayeredSlices } from './readLayeredSlices';
+import { readLayeredImport } from './readLayeredImport';
 import { importTexture2DArraySlices } from '../../parser/importParser';
 
 const isOpenExr = (path: string): boolean => resourceSliceRegistry.byPath(path)?.busType === 'texture2darray';
@@ -50,7 +50,7 @@ export function createTexture2DArrayProcessor(
     readsFile: (path) => isOpenExr(path) || isTexturePath(path),
     shouldProcess: (_path, data) => data instanceof ArrayBuffer,
     process: async (path, data) => {
-      const slices = await readLayeredSlices(
+      const slices = await readLayeredImport(
         { assetPath: path, dependent: { busType: 'texture2darray', key: path }, fileEventBus, dependencies },
         importTexture2DArraySlices,
         'a texture array'

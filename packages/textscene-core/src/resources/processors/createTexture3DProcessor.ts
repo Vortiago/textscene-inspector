@@ -12,7 +12,7 @@ import type { DependencyGraph } from '../dependencyGraph';
 import { decodeImagePixels, getMimeType, isTexturePath } from '../formats/image/textureProcessing';
 import { sliceImage } from '../textures/layeredTexels';
 import { dataTexture3D } from '../textures/dataTexture3D';
-import { readLayeredSlices } from './readLayeredSlices';
+import { readLayeredImport } from './readLayeredImport';
 import { importTexture3D } from '../../parser/importParser';
 import { volumeMipChain, type VolumeLevel } from '../processing/volumeMipChain';
 
@@ -28,7 +28,7 @@ export function createTexture3DProcessor(
     readsFile: isTexturePath,
     shouldProcess: (_path, data) => data instanceof ArrayBuffer,
     process: async (path, data) => {
-      const { slices, hasMipmaps } = await readLayeredSlices(
+      const { slices, hasMipmaps } = await readLayeredImport(
         { assetPath: path, dependent: { busType: 'texture3d', key: path }, fileEventBus, dependencies },
         importTexture3D,
         'a 3D texture'
