@@ -13,7 +13,8 @@ import { decodeImagePixels, getMimeType, isTexturePath } from '../formats/image/
 import { sliceImage } from '../textures/layeredTexels';
 import { dataTexture3D } from '../textures/dataTexture3D';
 import { readLayeredSlices } from './readLayeredSlices';
-import { importTexture3DSlices } from '../../parser/importParser';
+import { importTexture3D } from '../../parser/importParser';
+import { volumeMipChain, type VolumeLevel } from '../processing/volumeMipChain';
 
 export function createTexture3DProcessor(
   fileEventBus: FileEventBus | undefined,
@@ -27,9 +28,9 @@ export function createTexture3DProcessor(
     readsFile: isTexturePath,
     shouldProcess: (_path, data) => data instanceof ArrayBuffer,
     process: async (path, data) => {
-      const slices = await readLayeredSlices(
+      const { slices, hasMipmaps } = await readLayeredSlices(
         { assetPath: path, dependent: { busType: 'texture3d', key: path }, fileEventBus, dependencies },
-        importTexture3DSlices,
+        importTexture3D,
         'a 3D texture'
       );
       const image = await decodeImagePixels(
@@ -40,8 +41,15 @@ export function createTexture3DProcessor(
       const volume = sliceImage(image, slices);
       if (!volume) throw new Error(`${path} is too small for ${slices.horizontal}x${slices.vertical} slices`);
       const { texels, width, height, depth } = volume;
-      return dataTexture3D(texels, width, height, depth, THREE.RGBAFormat);
+      const texture = dataTexture3D(texels, width, height, depth, THREE.RGBAFormat);
+      if (hasMipmaps) texture.mipmaps = withMipmaps({ data: texels, width, height, depth });
+      return texture;
     },
     dispose: (texture) => texture.dispose(),
   });
+}
+
+/** `base` and the levels the layered importer generates below it, as three reads `Texture.mipmaps`. */
+function withMipmaps(base: VolumeLevel): VolumeLevel[] {
+  return [base, ...volumeMipChain(base)];
 }

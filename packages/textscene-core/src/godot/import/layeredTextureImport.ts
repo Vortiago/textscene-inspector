@@ -24,8 +24,8 @@ export const CUBEMAP_ARRANGEMENTS: readonly ImportSlices[] = [
   { horizontal: 6, vertical: 1 },
 ];
 
-/** A cubemap's six faces, cut from one image, and whether the import generates their mipmaps. */
-export interface CubemapImport {
+/** The slices a layered import cuts one image into, and whether it generates their mipmaps. */
+export interface LayeredImport {
   readonly slices: ImportSlices;
   readonly hasMipmaps: boolean;
 }

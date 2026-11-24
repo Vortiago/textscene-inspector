@@ -64,6 +64,29 @@ describe('createTexture3DProcessor', () => {
     expect([...(texture.image.data as Uint8Array)].filter((_, i) => i % 4 === 0)).toEqual([10, 20, 30, 40]);
   });
 
+  it("carries the importer's mipmaps, each level a halved volume, down to 1 × 1 × 1", async () => {
+    const texture = await harness({ [PNG_PATH]: bytes(), [SIDECAR_PATH]: SIDECAR }).load();
+    const sizes = (texture.mipmaps as { width: number; height: number; depth: number }[]).map(
+      ({ width, height, depth }) => [width, height, depth]
+    );
+    expect(sizes).toEqual([
+      [2, 1, 2],
+      [1, 1, 1],
+    ]);
+  });
+
+  it('averages each 2 × 2 × 2 block into the next level, as the importer does', async () => {
+    const texture = await harness({ [PNG_PATH]: bytes(), [SIDECAR_PATH]: SIDECAR }).load();
+    const [, level] = texture.mipmaps as { data: Uint8Array }[];
+    expect(level!.data[0]).toBe(25);
+  });
+
+  it('carries no mipmaps for a sidecar that turns them off', async () => {
+    const sidecar = `${SIDECAR}mipmaps/generate=false\n`;
+    const texture = await harness({ [PNG_PATH]: bytes(), [SIDECAR_PATH]: sidecar }).load();
+    expect(texture.mipmaps).toEqual([]);
+  });
+
   it('records the sidecar read, so a change to the sidecar reloads the texture', async () => {
     const { load, dependencies } = harness({ [PNG_PATH]: bytes(), [SIDECAR_PATH]: SIDECAR });
     await load();
