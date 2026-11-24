@@ -35,6 +35,17 @@ custom_minimum_size = Vector2(0, 40)
 custom_minimum_size = Vector2(0, 40)
 `;
 
+const TABS_SCENE = `[gd_scene format=3]
+
+[node name="Tabs" type="TabContainer"]
+offset_right = 200.0
+offset_bottom = 200.0
+
+[node name="First" type="ColorRect" parent="."]
+
+[node name="Second" type="ColorRect" parent="."]
+`;
+
 type Drawn = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 async function draw(scene: Scene): Promise<Drawn> {
@@ -103,5 +114,15 @@ describe("a host's visible = false", () => {
     await scene.getNode('/root/Column/First').set('visible', false);
 
     expect(groupNamed(await drawControls(scene), 'ColorRect:Second').position).toEqual(firstSlot);
+  });
+
+  it('draws the TabContainer page it shows, not the page before (tab_container.cpp:619-620)', async () => {
+    const scene = openScene({ source: TABS_SCENE, provider: { loadResource: async () => null } });
+
+    await scene.getNode('/root/Tabs/Second').set('visible', true);
+
+    const drawn = await drawControls(scene);
+    expect(groupNamed(drawn, 'ColorRect:Second').visible).toBe(true);
+    expect(groupNamed(drawn, 'ColorRect:First').visible).toBe(false);
   });
 });

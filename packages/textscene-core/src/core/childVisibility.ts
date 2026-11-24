@@ -5,6 +5,7 @@
  */
 
 import type { TscnNode } from '../parser/types';
+import type { VariantValue } from '../godot/variant/variantValue';
 
 /**
  * The `visible` a container writes onto one direct sortable Control child
@@ -21,3 +22,14 @@ export type ChildVisibilityFn = (
   index: number,
   count: number
 ) => boolean | undefined;
+
+/** A property the container writes on itself, with the value it takes. */
+export type ContainerWrite = readonly [property: string, value: VariantValue];
+
+/** The writes a container makes on itself when a child's `visible` is set; with none, its sort undoes it. */
+export type ChildVisibilityWriteFn = (
+  container: TscnNode,
+  index: number,
+  count: number,
+  visible: boolean
+) => readonly ContainerWrite[];

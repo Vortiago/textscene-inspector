@@ -2,12 +2,13 @@
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseTabContainer } from './parser';
-import { tabContainerChildVisibility } from './childVisibility';
+import { tabContainerChildVisibility, tabContainerChildVisibilityWrite } from './childVisibility';
 
 const tabContainerRegistration: NodeTypeRegistration = {
   typeName: 'TabContainer',
   parser: parseTabContainer,
   writesChildVisibility: tabContainerChildVisibility,
+  answersChildVisibilityWrite: tabContainerChildVisibilityWrite,
 };
 
 nodeRegistry.register(tabContainerRegistration);

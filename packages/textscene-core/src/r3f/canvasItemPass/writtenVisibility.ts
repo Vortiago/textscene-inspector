@@ -22,18 +22,40 @@ export const NOTHING_WRITTEN: ReadonlyMap<TscnNode, boolean> = new Map();
 export function writtenChildVisibility(tree: LiveTree, step: LiveStep): ReadonlyMap<TscnNode, boolean> {
   const write = nodeRegistry.childVisibility(step.node.type);
   if (!write) return NOTHING_WRITTEN;
-  const sortable = step.groups.flatMap((group) =>
-    group.children.flatMap((raw) => {
-      const live = tree.stepOf(raw, group.scope).node;
-      return isSortableChild(live) ? [{ raw, live }] : [];
-    })
-  );
+  const sortable = sortableChildren(tree, step);
   const written = new Map<TscnNode, boolean>();
   for (const [index, { raw, live }] of sortable.entries()) {
     const visible = write(step.node, live, index, sortable.length);
     if (visible !== undefined) written.set(raw, visible);
   }
   return written;
+}
+
+/** A sortable child whose `visible` its container writes, with its place among the sortable children. */
+export interface WrittenSlot {
+  readonly visible: boolean;
+  readonly index: number;
+  readonly count: number;
+}
+
+/** The slot of `raw` below the node of `step`, or null where the node writes no `visible` on it. */
+export function writtenSlotOf(tree: LiveTree, step: LiveStep, raw: TscnNode): WrittenSlot | null {
+  const write = nodeRegistry.childVisibility(step.node.type);
+  if (!write) return null;
+  const sortable = sortableChildren(tree, step);
+  const index = sortable.findIndex((child) => child.raw === raw);
+  if (index < 0) return null;
+  const visible = write(step.node, sortable[index]!.live, index, sortable.length);
+  return visible === undefined ? null : { visible, index, count: sortable.length };
+}
+
+function sortableChildren(tree: LiveTree, step: LiveStep): { raw: TscnNode; live: TscnNode }[] {
+  return step.groups.flatMap((group) =>
+    group.children.flatMap((raw) => {
+      const live = tree.stepOf(raw, group.scope).node;
+      return isSortableChild(live) ? [{ raw, live }] : [];
+    })
+  );
 }
 
 /**

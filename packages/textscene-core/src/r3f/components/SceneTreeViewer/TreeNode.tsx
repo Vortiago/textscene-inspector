@@ -12,6 +12,7 @@ import { isCanvasLayerType } from '../../canvasItemClass.js';
 import { isShownCanvasNode } from '../../canvasScopes.js';
 import { scopeOf, type LiveNode } from '../../../resources/liveNode.js';
 import { useLiveStep } from './useLiveStep.js';
+import { useWrittenChildVisibility } from '../../useLiveSceneTree.js';
 import styles from './SceneTreeViewer.module.css';
 
 /** One empty pool for every row, so a row that mounts again asks the live tree in a scope it knows. */
@@ -92,6 +93,8 @@ interface TreeNodeProps {
   depth: number;
   /** The parent row's visibility, which dims this row's eye (scene_tree_editor.cpp:743-748). */
   parentVisibility: ParentVisibility;
+  /** The `visible` the parent container writes on this node, which its own gives way to. */
+  containerVisible?: boolean;
   /** Writes `visible` to the node at `path`. */
   onToggleVisibility: (path: string, visible: boolean) => void;
   onNodeReveal?: (path: string, node: TscnNode) => void;
@@ -130,6 +133,7 @@ function TreeNodeImpl({
   parentPath,
   depth,
   parentVisibility,
+  containerVisible,
   onToggleVisibility,
   onNodeReveal,
   onOpenSubScene,
@@ -149,7 +153,9 @@ function TreeNodeImpl({
   // The node as the tree shows it, and what lives below it. Instance root merge (ADR-0013), the
   // same decision the viewport and inspector make, for the row header. The hook keeps the step
   // stable across selection and hover, so the row reuses one merge.
-  const { node: effective, groups: liveGroups, instancePath } = useLiveStep(node, scope);
+  const step = useLiveStep(node, scope);
+  const { node: effective, groups: liveGroups, instancePath } = step;
+  const writtenVisibility = useWrittenChildVisibility(step);
   const groups = useMemo(
     () => listedGroups(liveGroups, (child) => isListedChild(joinPath(nodePath, child.name))),
     [liveGroups, isListedChild, nodePath]
@@ -168,6 +174,7 @@ function TreeNodeImpl({
       parentPath={nodePath}
       depth={depth + 1}
       parentVisibility={ownVisibility}
+      containerVisible={writtenVisibility.get(child)}
       onToggleVisibility={onToggleVisibility}
       onNodeReveal={onNodeReveal}
       onOpenSubScene={onOpenSubScene}
@@ -187,7 +194,7 @@ function TreeNodeImpl({
   // The eye shows the node's own `visible`, and only on a class that has it (scene_tree_editor.cpp:608-613).
   const chain = useMemo(() => visibilityChainOf(effective.type), [effective.type]);
   const hasEye = chain !== null;
-  const isHidden = hasEye && !isShownCanvasNode(effective);
+  const isHidden = hasEye && !(containerVisible ?? isShownCanvasNode(effective));
   const isParentVisible = isParentVisibleOf(chain, parentVisibility);
   const isViewport = useMemo(() => descendsFromClass(effective.type, 'Viewport'), [effective.type]);
   const isViewportShown = isViewport ? !isHidden : parentVisibility.isViewportShown;

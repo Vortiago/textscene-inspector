@@ -7,7 +7,7 @@ import * as logger from '../logger.js';
 import { findSubResource } from '../resources/SubResourceResolver.js';
 import { parseSubResourcePath, subResourcePath } from '../resources/subResourcePath.js';
 import type { DerivedProperties, NodeReader, NodeReads } from './derived/derivedProperty.js';
-import type { SceneTreeNode } from './sceneRuntime.js';
+import type { ContainerVisibility, SceneTreeNode } from './sceneRuntime.js';
 import { WriteStore, type SceneWrites } from './sceneWrites.js';
 import { sceneValueOf, valueOfSceneValue, type SceneValue } from './variant.js';
 
@@ -36,7 +36,9 @@ export class SceneProperties {
   constructor(
     private readonly rootScenePath: string,
     private readonly rootScene: () => ParsedScene | undefined,
-    private readonly treeNode: (livePath: string) => SceneTreeNode | null
+    private readonly treeNode: (livePath: string) => SceneTreeNode | null,
+    /** The node in the tree of the written scene, where a container's sort reads the writes. */
+    private readonly writtenTreeNode: (livePath: string) => SceneTreeNode | null
   ) {}
 
   writes(): SceneWrites {
@@ -60,7 +62,8 @@ export class SceneProperties {
     const outcome = access.resolveGet(node, property, derived, this.readsAt(access, livePath, node));
     if (outcome.kind === 'unknown') return this.unknownProperty(node, property, null);
     if (outcome.kind === 'unported') throw unportedProperty(property, outcome.declaredBy);
-    return sceneValueOf(outcome.value);
+    const held = this.containerHold(livePath, property);
+    return sceneValueOf(held ? { type: T.BOOL, value: held.visible } : outcome.value);
   }
 
   /** Whether Godot reports the write valid. A write it drops leaves the writes as they were. */
@@ -77,6 +80,9 @@ export class SceneProperties {
     if (outcome.kind === 'unknown') return this.unknownProperty(node, property, false);
     if (outcome.kind === 'unported') throw unportedProperty(property, outcome.declaredBy);
     if (outcome.kind === 'dropped') return false;
+    const held = this.containerHold(livePath, property);
+    const ownVisible = outcome.writes.find(([stored]) => stored === 'visible')?.[1];
+    if (held && ownVisible?.type === T.BOOL) return this.writeContainer(held, ownVisible.value);
     // A setter that refuses the value writes nothing, so the writes and their views stay as they were.
     if (outcome.writes.length === 0) return outcome.isValid;
     const texts = outcome.writes.map(([stored, written]) => [stored, this.textOf(written)] as const);
@@ -84,6 +90,24 @@ export class SceneProperties {
     // A derived setter keeps its own cache: only a write of the stored property itself resets it.
     if (outcome.writes.some(([stored]) => stored === property)) derived?.storedWritten?.(property);
     return outcome.isValid;
+  }
+
+  /** The container's hold on the node's `visible`, which its sort writes over the node's own. */
+  private containerHold(livePath: string, property: string): ContainerVisibility | null {
+    return property === 'visible' ? (this.writtenTreeNode(livePath)?.containerVisibility ?? null) : null;
+  }
+
+  /** The child's write queues the sort, which writes the child's value back (`container.cpp:33-36`). */
+  private writeContainer(held: ContainerVisibility, visible: boolean): boolean {
+    const writes = held.writesFor(visible);
+    if (writes.length > 0) {
+      this.store.write(
+        'host',
+        held.containerPath,
+        writes.map(([stored, value]) => [stored, this.textOf(value)] as const)
+      );
+    }
+    return true;
   }
 
   private derivedAt(access: PropertyAccess, livePath: string, node: SceneTreeNode): DerivedProperties | null {

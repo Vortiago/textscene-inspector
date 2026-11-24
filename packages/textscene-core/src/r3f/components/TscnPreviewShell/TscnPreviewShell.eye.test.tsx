@@ -33,6 +33,24 @@ visible = false
 [node name="Below" type="Sprite2D" parent="Layer/Holder"]
 `;
 
+const TABS_SCENE = `[gd_scene format=3]
+
+[node name="Tabs" type="TabContainer"]
+
+[node name="First" type="Control" parent="."]
+
+[node name="Second" type="Control" parent="."]
+`;
+
+const FOLD_SCENE = `[gd_scene format=3]
+
+[node name="Fold" type="FoldableContainer"]
+
+[node name="Inner" type="Control" parent="."]
+`;
+
+const labelOf = (path: string) => eyeOf(path)?.getAttribute('aria-label');
+
 function isDimmed(path: string): boolean {
   return eyeOf(path)!.className.includes('underHidden');
 }
@@ -118,5 +136,30 @@ describe('<TscnPreviewShell> the eye of a tree row', () => {
     await renderShell(LAYERED_SCENE);
 
     expect(isDimmed('Main/Layer/Holder/Below')).toBe(false);
+  });
+
+  it('shows a TabContainer page that is not current as hidden (tab_container.cpp:377-399)', async () => {
+    await renderShell(TABS_SCENE);
+
+    expect(labelOf('Tabs/First')).toBe('Hide node');
+    expect(labelOf('Tabs/Second')).toBe('Show node');
+  });
+
+  it('makes a shown TabContainer page current (tab_container.cpp:619-620)', async () => {
+    await renderShell(TABS_SCENE);
+
+    await clickEye('Tabs/Second');
+
+    await vi.waitFor(() => expect(labelOf('Tabs/Second')).toBe('Hide node'));
+    expect(labelOf('Tabs/First')).toBe('Show node');
+  });
+
+  it('cannot keep a child of an unfolded FoldableContainer hidden (foldable_container.cpp:375-380)', async () => {
+    const scene = await renderShell(FOLD_SCENE);
+
+    await clickEye('Fold/Inner');
+
+    expect(await scene.getNode('/root/Fold/Inner').get('visible')).toBe(true);
+    expect(labelOf('Fold/Inner')).toBe('Hide node');
   });
 });
