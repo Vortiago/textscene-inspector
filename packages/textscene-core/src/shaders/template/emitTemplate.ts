@@ -269,8 +269,11 @@ function constantGlobal(global: GlobalNode, declarator: GlobalNode['declarators'
 /** Folds the const globals. A tree never changes, so every stage shares one. */
 const FOLDING = new GlslangFolding();
 
-/** Every texture type, so a type the emitter has no node for fails by its name. */
-const isTextureType = (type: string) => /^[iu]?texture[A-Z0-9]/.test(type);
+/** Every texture and combined sampler type, so a type the emitter has no node for fails by its name. */
+const isTextureType = (type: string) => /^[iu]?(texture|sampler)[A-Z0-9]/.test(type);
+
+/** The texture type a combined sampler reads: `texture2D` for `sampler2D`. */
+const textureTypeOf = (type: string) => type.replace(/^([iu]?)sampler/, '$1texture');
 
 /** A texture's node, or an array of them by `name[index]`. Three binds only the nodes a stage reads. */
 function textureValue(
@@ -298,12 +301,13 @@ function textureValue(
 }
 
 /** The caller binds a texture with the filter and the wrap that Godot's sampler names. */
-function textureNode(type: string, name: string): TextureNode {
+function textureNode(declared: string, name: string): TextureNode {
+  const type = textureTypeOf(declared);
   if (type === 'texture3D')
     return texture3D(new THREE.Data3DTexture(new Uint8Array(4), 1, 1, 1)) as TextureNode;
   if (type === 'texture2DArray')
     return texture(new THREE.DataArrayTexture(new Uint8Array(4), 1, 1, 1)) as TextureNode;
   if (type === 'textureCube') return cubeTexture(new THREE.CubeTexture()) as unknown as TextureNode;
   if (type === 'texture2D') return texture(new THREE.DataTexture(new Uint8Array(4), 1, 1)) as TextureNode;
-  throw new Error(`expected a texture type the emitter has a node for, got ${type} ${name}`);
+  throw new Error(`expected a texture type the emitter has a node for, got ${declared} ${name}`);
 }
