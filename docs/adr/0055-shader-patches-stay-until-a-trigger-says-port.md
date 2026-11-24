@@ -42,9 +42,8 @@ While the port runs:
 - A change to the lit surface lands in the node path, not in a new patch.
 - A golden may move by at most 1/255 when a material switches to nodes, and only if its comparison
   with Godot does not get worse.
-- The webview bundle ceiling is 1,195,300 B. It holds 45,300 B for Godot's high-quality sky filter
-  table (`cubemap_coeffs.h`). The pull request that removes the patches measures the bundle and
-  proposes the next ceiling.
+- The webview bundle ceiling is 1,150,000 B. The pull request that removes the patches measures the
+  bundle and proposes the next ceiling.
 
 ## Consequences
 

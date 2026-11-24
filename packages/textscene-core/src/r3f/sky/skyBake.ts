@@ -12,6 +12,7 @@ import {
 } from '../../godot/rendering/environment/skyRadianceUpdate';
 import type { Vector3 } from '../../godot/math/vector';
 import { skyUpdateMode } from '../../resources/sky/decode';
+import { DEFAULT_FAST_FILTER_QUALITY } from '../../godot/rendering/environment/skyReflection';
 import { perObject } from '../../utils/perObject';
 import { holdUntilReleased } from '../useDisposeOnRelease';
 import { SkyRadiance } from './skyRadiance';
@@ -87,9 +88,10 @@ export function holdSkyBake(
 
 /** The input a bake reads besides the sky and the lights. */
 function inputKey({
+  sky,
   textures = {},
   sampling,
-  fastFilterQuality,
+  fastFilterQuality = DEFAULT_FAST_FILTER_QUALITY,
   asBackground,
   rotation,
 }: SkyBakeInput): string {
@@ -99,7 +101,7 @@ function inputKey({
       .sort(),
     sampling?.anisotropicFilteringLevel ?? '',
     sampling?.useNearestMipmapFilter ?? '',
-    fastFilterQuality ?? '',
+    sky.radianceFilter === 'fast' ? fastFilterQuality : '',
     asBackground,
     rotation.x,
     rotation.y,
