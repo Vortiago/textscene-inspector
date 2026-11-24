@@ -4,6 +4,7 @@
  * `<Canvas>` and no context provider: `<TscnCanvas>` and `<TscnPreviewShell>` own those.
  */
 
+import { useNoComponentReport } from './viewStatus/useNoComponentReport.js';
 import { ControlCanvasSpace } from './ControlCanvasSpace.js';
 import { Fragment, useEffect, useMemo } from 'react';
 import type { ReactNode } from 'react';
@@ -275,6 +276,7 @@ function PlainNode({
   // A viewport takes its place in the pass order from here: a Control-only one mounts its pass
   // outside this walk.
   usePlaceViewport(isViewportBoundary(node.type) ? path : null);
+  useNoComponentReport(path, node.type);
 
   if (!drawsInWorkspace(node.type, workspace))
     return <UndrawnNodeChildren node={node} path={path} frames={childFrames} />;

@@ -250,6 +250,8 @@ Each read of `settled` gives a new promise, which rejects once the view unmounts
 - `undrawn`: each node the view holds and does not draw, sorted by path. An entry has the node's
   absolute `path`, as a node handle gives it, its `meshTypes` that no part of the view draws, and
   `isEmptyShape` for a CSG shape whose brush is empty. Godot warns of an empty shape too.
+  `hasNoComponent` is true when the renderer has no component for the node's class, so the node
+  draws nothing of its own.
 - `isSoftwareRendering`: the browser draws the view's WebGL on the CPU, so every frame is slow.
 - `freelook`: the 3D editor camera's freelook, `{ isToggled, isAvailable }`, or `null` outside the
   3D mode. See "Move the editor camera".

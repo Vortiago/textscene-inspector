@@ -121,7 +121,11 @@ describe('<NodeDetailsPanel>', () => {
     const graph = createSceneGraphFromTscnScene({ nodes: [makeNode('Sign', FAKE_TYPE)] });
 
     render(
-      <ViewReporting undrawn={[{ path: '/root/Sign', meshTypes: ['FutureMesh'], isEmptyShape: false }]}>
+      <ViewReporting
+        undrawn={[
+          { path: '/root/Sign', meshTypes: ['FutureMesh'], isEmptyShape: false, hasNoComponent: false },
+        ]}
+      >
         <NodeDetailsPanel />
         <Selector path="Sign" />
       </ViewReporting>,
@@ -139,7 +143,9 @@ describe('<NodeDetailsPanel>', () => {
     const graph = createSceneGraphFromTscnScene({ nodes: [makeNode('Wall', FAKE_TYPE)] });
 
     render(
-      <ViewReporting undrawn={[{ path: '/root/Wall', meshTypes: [], isEmptyShape: true }]}>
+      <ViewReporting
+        undrawn={[{ path: '/root/Wall', meshTypes: [], isEmptyShape: true, hasNoComponent: false }]}
+      >
         <NodeDetailsPanel />
         <Selector path="Wall" />
       </ViewReporting>,
@@ -158,7 +164,11 @@ describe('<NodeDetailsPanel>', () => {
     const graph = createSceneGraphFromTscnScene({ nodes: [makeNode('Wall', FAKE_TYPE)] });
 
     render(
-      <ViewReporting undrawn={[{ path: '/root/Wall', meshTypes: ['FutureMesh'], isEmptyShape: false }]}>
+      <ViewReporting
+        undrawn={[
+          { path: '/root/Wall', meshTypes: ['FutureMesh'], isEmptyShape: false, hasNoComponent: false },
+        ]}
+      >
         <NodeDetailsPanel />
         <Selector path="Wall" />
       </ViewReporting>,

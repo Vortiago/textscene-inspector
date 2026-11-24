@@ -9,6 +9,8 @@ export interface UndrawnNode {
   meshTypes: readonly string[];
   /** `CSGShape3D::get_configuration_warnings` (csg_shape.cpp:982): the shape's brush is empty. */
   isEmptyShape: boolean;
+  /** The view has no component for the node's type, so it draws nothing of the node's own. */
+  hasNoComponent: boolean;
 }
 
 /** The entry of the node at the live path `livePath`, or null. */
@@ -17,12 +19,12 @@ export function undrawnNodeAt(undrawn: readonly UndrawnNode[], livePath: string)
   return undrawn.find((node) => node.path === path) ?? null;
 }
 
-/** Why a node is undrawn: a mesh of a type the view does not draw, or an empty CSG shape. */
-export type UndrawnReason = { meshType: string } | 'empty-shape';
+/** Why a node is undrawn: a mesh of a type the view does not draw, an empty CSG shape, or no component. */
+export type UndrawnReason = { meshType: string } | 'empty-shape' | 'no-component';
 
-// A newline never occurs in a node path, so it splits the path from the mesh type, empty for a shape.
+// A newline never occurs in a node path, so it splits the path from the reason: `:` starts a mesh type.
 function keyOf(path: string, reason: UndrawnReason): string {
-  return `${path}\n${reason === 'empty-shape' ? '' : reason.meshType}`;
+  return `${path}\n${typeof reason === 'string' ? reason : `:${reason.meshType}`}`;
 }
 
 /** The undrawn nodes several reporters hold at once: a node stays while any report of it is open. */
@@ -56,21 +58,18 @@ export function createUndrawnNodes() {
 }
 
 function nodesOf(keys: ReadonlySet<string>): UndrawnNode[] {
-  const byPath = new Map<string, { meshTypes: string[]; isEmptyShape: boolean }>();
+  const byPath = new Map<string, { meshTypes: string[]; isEmptyShape: boolean; hasNoComponent: boolean }>();
   for (const key of keys) {
     const split = key.indexOf('\n');
     const path = key.slice(0, split);
-    const meshType = key.slice(split + 1);
-    const node = byPath.get(path) ?? { meshTypes: [], isEmptyShape: false };
-    if (meshType) node.meshTypes.push(meshType);
-    else node.isEmptyShape = true;
+    const reason = key.slice(split + 1);
+    const node = byPath.get(path) ?? { meshTypes: [], isEmptyShape: false, hasNoComponent: false };
+    if (reason.startsWith(':')) node.meshTypes.push(reason.slice(1));
+    else if (reason === 'empty-shape') node.isEmptyShape = true;
+    else node.hasNoComponent = true;
     byPath.set(path, node);
   }
   return [...byPath]
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-    .map(([path, { meshTypes, isEmptyShape }]) => ({
-      path: absolutePathOf(path),
-      meshTypes: meshTypes.sort(),
-      isEmptyShape,
-    }));
+    .map(([path, node]) => ({ path: absolutePathOf(path), ...node, meshTypes: node.meshTypes.sort() }));
 }
