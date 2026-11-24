@@ -16,7 +16,6 @@ vi.mock('../../TscnCanvas', () => ({
       />
     );
   },
-  TscnSceneContents: () => null,
 }));
 
 import { TextShell } from './TscnPreviewShell.testkit';

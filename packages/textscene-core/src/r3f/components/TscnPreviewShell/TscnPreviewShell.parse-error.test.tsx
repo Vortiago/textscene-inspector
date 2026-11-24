@@ -7,7 +7,6 @@ import { render, screen } from '@testing-library/react';
 
 vi.mock('../../TscnCanvas', () => ({
   TscnCanvas: () => <div data-testid="canvas-stub" />,
-  TscnSceneContents: () => null,
 }));
 
 import { TextShell } from './TscnPreviewShell.testkit';

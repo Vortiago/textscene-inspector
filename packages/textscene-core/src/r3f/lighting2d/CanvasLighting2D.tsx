@@ -7,7 +7,7 @@
 import type { CanvasColorSpace } from '../canvasColorSpace.js';
 import { useCallback, useMemo, useRef, type ReactNode } from 'react';
 import { useThree } from '@react-three/fiber';
-import { useCanvasLightPass } from '../components/Canvas2DStage/canvasFrameSequence.js';
+import { useCanvasLightPass } from '../world2D/canvasFrameSequence.js';
 import { CanvasLightPass } from './CanvasLightPass.js';
 import type { CanvasClip, LightPassHost } from './lightPassHost.js';
 import type { Rgba } from '../../godot/math/math.js';

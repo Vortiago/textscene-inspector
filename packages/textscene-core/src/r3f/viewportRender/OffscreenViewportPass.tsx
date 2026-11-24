@@ -48,7 +48,7 @@ import {
   createCanvasFrameSteps,
   runCanvasFrame,
   type CanvasFrameSteps,
-} from '../components/Canvas2DStage/canvasFrameSequence';
+} from '../world2D/canvasFrameSequence';
 import { viewportCanvasColorSpace } from './viewportTargetOptions';
 import { OffscreenToneMapStage, type OffscreenToneMap } from '../environment/offscreenToneMap';
 import { ViewportPassAttributes } from '../environment/worldExposure';

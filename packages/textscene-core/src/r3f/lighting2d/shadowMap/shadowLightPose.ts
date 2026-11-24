@@ -5,7 +5,7 @@
 
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { useShadowSampler } from '../../components/Canvas2DStage/canvasFrameSequence';
+import { useShadowSampler } from '../../world2D/canvasFrameSequence';
 import { sameShadowLight, sampleShadowLight, type ShadowLightPose } from './shadowLightSample';
 
 /**

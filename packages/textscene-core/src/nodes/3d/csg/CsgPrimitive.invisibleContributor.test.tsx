@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnParser } from '../../../parser/TscnParser';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { frameSceneBounds } from '../../../r3f/frameSceneBounds';
+import { frameSceneBounds } from '../../../r3f/editorView/frameSceneBounds';
 import './csgbox3d/index.r3f';
 import './csgcombiner3d/index.r3f';
 import './csgsphere3d/index.r3f';

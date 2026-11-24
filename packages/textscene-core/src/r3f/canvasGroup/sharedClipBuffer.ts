@@ -6,7 +6,7 @@
 import { useMemo } from 'react';
 import type * as THREE from 'three';
 import type { CanvasColorSpace } from '../canvasColorSpace';
-import { createCanvasFrame } from '../components/Canvas2DStage/canvasFrame';
+import { createCanvasFrame } from '../world2D/canvasFrame';
 import { perObject } from '../../utils/perObject';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
 

@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer, { act } from '@react-three/test-renderer';
-import { TscnSceneContents } from './TscnCanvas';
+import { TscnSceneContents } from './SceneContents';
 import { TscnSceneProvider } from './TscnSceneProvider';
-import { ActiveCameraSwitcher } from './ActiveCameraSwitcher';
+import { ActiveCameraSwitcher } from './editorView/ActiveCameraSwitcher';
 import { SceneCamerasProvider } from './sceneCameras';
 import { ViewportActionsProvider } from './contexts/ViewportActionsContext';
-import { GodotEditorControls } from './GodotEditorControls';
-import { EditorControlsBridge } from './EditorControlsBridge';
+import { GodotEditorControls } from './editorView/GodotEditorControls';
+import { EditorControlsBridge } from './editorView/EditorControlsBridge';
 import { ViewCamera, assertLoadedCamera } from './viewCamera';
 import { r3fStateProbe } from './testing/R3FStateProbe';
 import { settleLoads } from './testing/settleLoads';

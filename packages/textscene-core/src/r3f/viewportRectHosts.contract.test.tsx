@@ -1,8 +1,3 @@
-/**
- * A stretched SubViewport waits for the rect its SubViewportContainer publishes, so a host that
- * mounts the viewport passes without `ViewportRectProvider` would leave it blank. Every host reaches
- * the passes through `previewShellProviders`, and this contract fails when one stops doing so.
- */
 import { describe, expect, it, vi } from 'vitest';
 import { act, render } from '@testing-library/react';
 import { useEffect } from 'react';
@@ -59,9 +54,7 @@ describe('the viewport rect provider in every host entry', () => {
 
   it('mounts the pass registry only where the rect provider sits beside it', () => {
     const mounts = passProviderMounts(join(import.meta.dirname, '..'));
-    expect(mounts.map((file) => file.split('/src/')[1])).toEqual([
-      'r3f/components/TscnPreviewShell/previewShellProviders.tsx',
-    ]);
+    expect(mounts.map((file) => file.split('/src/')[1])).toEqual(['r3f/viewProviders.tsx']);
     expect(readFileSync(mounts[0]!, 'utf8')).toContain('<ViewportRectProvider>');
   });
 });

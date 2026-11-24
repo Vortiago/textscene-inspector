@@ -1,4 +1,3 @@
-import { Canvas } from '@react-three/fiber';
 import {
   lazy,
   useCallback,
@@ -10,130 +9,26 @@ import {
   type Ref,
 } from 'react';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
-import { useSeatedRoots } from './useLiveSceneTree.js';
-import { useViewShow } from './viewShow/ViewShowContext.js';
-import { SceneResourcesProvider } from './SceneResourcesContext.js';
-import { EditedRootProvider } from './contexts/InstanceOwnersContext.js';
-import { NodeDispatcher } from './NodeDispatcher.js';
-import { SelectionHighlight } from './components/SelectionHighlight.js';
-import { PendingSuspense } from '../resources/PendingSuspense.js';
-import { editorHelperUserData } from './editorHelpers.js';
-import { FocusShortcuts } from './FocusShortcuts.js';
-import { FreelookSpeedReadout } from './components/FreelookSpeedReadout/FreelookSpeedReadout.js';
-import { EditorControlsBridge } from './EditorControlsBridge.js';
-import { GodotEditorControls } from './GodotEditorControls.js';
-import { WorldEnvironmentScope } from './environment/WorldEnvironmentScope.js';
-import { editorCameraPosition, editorCameraProjection } from './godotEditorCamera.js';
-import { PreviewVisibilityProvider, usePreviewFrameloop } from './contexts/PreviewVisibilityContext.js';
-import { ControlRasterLayer } from '../nodes/viewport/subviewport/ControlRasterLayer.js';
-import { SceneShadowFitter } from './SceneShadowFitter.js';
-import { SceneDepthPrepass } from './depthPrepass/SceneDepthPrepass.js';
-import { ActiveCameraSwitcher } from './ActiveCameraSwitcher.js';
-import { SceneCamerasProvider } from './sceneCameras.js';
-import { CANVAS_RENDERER_GL, CANVAS_RENDERER_PROPS } from './canvasRenderer/canvasRendererProps.js';
-import { CanvasRendererScope } from './canvasRenderer/CanvasRendererScope.js';
+import { PreviewVisibilityProvider } from './contexts/PreviewVisibilityContext.js';
 import { TscnSceneProvider } from './TscnSceneProvider.js';
-import { DEFAULT_ROOT_SCENE_PATH, type Scene } from '../scene/openScene.js';
+import type { Scene } from '../scene/openScene.js';
 import type { ViewportMode } from './contexts/ViewportModeContext.js';
-import { StageRoot } from './StageRoot.js';
 import { ViewShowProvider } from './viewShow/ViewShowContext.js';
 import type { ViewShow } from './viewShow/viewShow.js';
 import { ViewportActionsProvider } from './contexts/ViewportActionsContext.js';
-import { LookThroughProvider, ViewCamera } from './viewCamera.js';
-import { EditorViewReport } from './viewStatus/EditorViewReport.js';
 import { HostSelection, type HostSelectionProps } from './hostSelection/HostSelection.js';
 import { useViewStatusStore, ViewStatusScope } from './viewStatus/ViewStatusContext.js';
 import { viewAnswers, type ViewAnswers } from './viewStatus/viewAnswers.js';
 import { StatusChangeReporter } from './viewStatus/StatusChangeReporter.js';
 import type { ViewStatus } from './viewStatus/viewStatus.js';
-import type { EditorViewAnswers } from './editorCamera/editorCameras.js';
-import { EditorCamerasScope, useEditorCameras } from './editorCamera/EditorCamerasContext.js';
+import { withEditorCamera, type EditorViewAnswers } from './editorView/editorCamera/editorCameras.js';
+import { EditorCamerasScope, useEditorCameras } from './editorView/editorCamera/EditorCamerasContext.js';
+import { Editor2DStage, EditorCanvas } from './editorView/EditorStages.js';
 
 /** What a `TscnCanvas` ref gives: the answers of `mountScene`'s view but `update` and `dispose`. */
 export type CanvasView = ViewAnswers & EditorViewAnswers;
 
-// Lazy, so the glyph engine and the parse of the prompt load only for an empty canvas.
-const EmptyScenePrompt = lazy(() => import('./emptyScenePrompt.js'));
-
-/**
- * The contents of the `<Canvas>`, exported so `@react-three/test-renderer`,
- * which cannot wrap a real `<Canvas>`, can mount it. With no `HierarchyContext`
- * provider it renders the empty default-lighting scene.
- */
-export function TscnSceneContents() {
-  const { rootScene, nodes } = useRootScene();
-  // A grid and a prompt, since an empty black canvas looks like a renderer crash.
-  const isEmpty = nodes === null || nodes.length === 0;
-
-  return (
-    <CanvasRendererScope>
-      {/* The root world's Environment, and Godot's editor preview sun and environment, each
-          preview mounted only while the scene has no DirectionalLight3D or WorldEnvironment of
-          its own (ADR-0025). Godot adds neither at runtime. This previewer takes the editor's rule. */}
-      <WorldEnvironmentScope world="root">
-        {isEmpty && <EmptySceneIndicator />}
-        {!isEmpty && <ContentGroundGrid />}
-        {nodes && rootScene && (
-          <SceneResourcesProvider
-            internalResources={rootScene.internalResources}
-            externalResources={rootScene.externalResources}
-          >
-            <EditedRootProvider editableInstances={rootScene.editableInstances}>
-              <NodeDispatcher nodes={nodes} />
-            </EditedRootProvider>
-          </SceneResourcesProvider>
-        )}
-        <ControlRasterLayer
-          nodes={nodes ?? []}
-          internalResources={rootScene?.internalResources ?? []}
-          externalResources={rootScene?.externalResources ?? []}
-        />
-        <SceneShadowFitter />
-        <SceneDepthPrepass />
-        <SelectionHighlight />
-      </WorldEnvironmentScope>
-    </CanvasRendererScope>
-  );
-}
-
-/** The root scene of the scene the view reads, and its seated roots: null before the scene loads. */
-function useRootScene() {
-  const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
-  const rootScene = sceneGraph?.scenes.get(sceneGraph.rootScene);
-  return { rootScene, nodes: useSeatedRoots() ?? null };
-}
-
-/** The 10-unit grid frames no mesh-free scene, such as a lone Path3D, and a SubViewport draws none of it. */
-function GroundGrid() {
-  return <gridHelper args={[10, 10, 0x444444, 0x222222]} userData={GROUND_GRID_USER_DATA} />;
-}
-
-/** One object, as R3F assigns a new `userData` object on each render. */
-const GROUND_GRID_USER_DATA = { tscnEmptyState: true, ...editorHelperUserData() };
-
-/** A child component, so a change of `show` re-renders this and not the node tree. */
-function ContentGroundGrid() {
-  const { grid } = useViewShow();
-  return grid ? <GroundGrid /> : null;
-}
-
-function EmptySceneIndicator() {
-  // paint-order-safe: the empty-scene indicator, mounted where no scene and
-  // so no canvas item exists.
-  return (
-    <group userData={{ tscnEmptyState: true }}>
-      <GroundGrid />
-      <PendingSuspense>
-        <EmptyScenePrompt />
-      </PendingSuspense>
-    </group>
-  );
-}
-
 const GameView = lazy(() => import('./gameView/GameView.js').then((m) => ({ default: m.GameView })));
-const Canvas2DStage = lazy(() =>
-  import('./components/Canvas2DStage/Canvas2DStage.js').then((m) => ({ default: m.Canvas2DStage }))
-);
 
 /** `in-game` draws the game's start with no script run, `3D` and `2D` the editor's views. */
 export type TscnCanvasMode = ViewportMode;
@@ -240,7 +135,11 @@ function ViewRef({ viewRef, mode, camera }: { viewRef: Ref<CanvasView> } & ViewR
     if (!ending.current) throw new Error('expected the view to mount before its ref, got no mount');
     // A new handle per mode, so a holder renders again with the camera the mode draws through.
     const drawn = () => mode;
-    return viewAnswers({ scene, store, ending: ending.current.signal, lookedThrough, cameras, mode: drawn });
+    return withEditorCamera(
+      viewAnswers({ scene, store, ending: ending.current.signal, lookedThrough }),
+      cameras,
+      drawn
+    );
   }, [scene, store, cameras, lookedThrough, mode]);
   return null;
 }
@@ -264,58 +163,11 @@ function stageOf({ mode, camera, className }: Pick<TscnCanvasProps, 'mode' | 'ca
   return <EditorCanvas className={className} camera={camera} />;
 }
 
-// The game and 2D stages load on demand, so a host that never shows one keeps it out of its first chunk.
+// The game stage loads on demand, so a host that never shows it keeps it out of its first chunk.
 function GameStage({ className }: { className?: string }) {
   return (
     <Suspense fallback={null}>
       <GameView className={className} />
     </Suspense>
-  );
-}
-
-/** The root scene as the editor's 2D view lays it out, over the scene the view reads. */
-function Editor2DStage({ className }: { className?: string }) {
-  const { rootScene, nodes } = useRootScene();
-  const scenePath = useOptionalHierarchy()?.scene?.rootScenePath ?? DEFAULT_ROOT_SCENE_PATH;
-  return (
-    <StageRoot className={className}>
-      <Suspense fallback={null}>
-        <Canvas2DStage
-          nodes={nodes ?? rootScene?.nodes ?? []}
-          internalResources={rootScene?.internalResources ?? []}
-          externalResources={rootScene?.externalResources ?? []}
-          editableInstances={rootScene?.editableInstances}
-          scenePath={scenePath}
-        />
-      </Suspense>
-    </StageRoot>
-  );
-}
-
-function EditorCanvas({ className, camera }: Pick<TscnCanvasProps, 'camera' | 'className'>) {
-  const frameloop = usePreviewFrameloop();
-  return (
-    <StageRoot className={className}>
-      {/* Godot's fixed opening orbit, FOV and clip planes. Framing is F there, and a host's call here. */}
-      <Canvas
-        {...CANVAS_RENDERER_PROPS}
-        camera={{ position: editorCameraPosition(), ...editorCameraProjection() }}
-        gl={CANVAS_RENDERER_GL}
-        frameloop={frameloop}
-      >
-        <LookThroughProvider>
-          <SceneCamerasProvider>
-            <TscnSceneContents />
-            <ActiveCameraSwitcher />
-            {camera !== undefined && <ViewCamera camera={camera} />}
-          </SceneCamerasProvider>
-          <FocusShortcuts />
-          <GodotEditorControls />
-          <EditorControlsBridge />
-          <EditorViewReport />
-        </LookThroughProvider>
-      </Canvas>
-      <FreelookSpeedReadout />
-    </StageRoot>
   );
 }

@@ -8,7 +8,7 @@ import { useEffect, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../parser/types';
-import { TscnSceneContents } from '../TscnCanvas';
+import { TscnSceneContents } from '../SceneContents';
 import { HierarchyProvider } from '../contexts/HierarchyContext';
 import { SelectionProvider } from '../contexts/SelectionContext';
 import {

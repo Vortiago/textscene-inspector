@@ -6,7 +6,6 @@ import type { ResourceProvider } from '../../../resources/ResourceProvider';
 
 vi.mock('../../TscnCanvas', () => ({
   TscnCanvas: () => <div data-testid="canvas-stub" />,
-  TscnSceneContents: () => null,
 }));
 
 import { TscnPreviewShell } from './TscnPreviewShell';

@@ -10,7 +10,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { stripComments } from '@textscene/dev-kit';
 import { dirname, extname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { frameSceneBounds } from './frameSceneBounds.js';
+import { frameSceneBounds } from './editorView/frameSceneBounds.js';
 
 const here = dirname(fileURLToPath(import.meta.url)); // .../src/r3f
 const srcRoot = resolve(here, '..'); // .../src

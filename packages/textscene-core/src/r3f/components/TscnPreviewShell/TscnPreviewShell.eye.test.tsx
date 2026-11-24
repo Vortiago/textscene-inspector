@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 
 // happy-dom has no WebGL, and the eye writes the scene, not the view.
-vi.mock('../../TscnCanvas', () => ({ TscnCanvas: () => null, TscnSceneContents: () => null }));
+vi.mock('../../TscnCanvas', () => ({ TscnCanvas: () => null }));
 
 import { openScene, type Scene } from '../../../scene/openScene';
 import { TscnPreviewShell } from './TscnPreviewShell';

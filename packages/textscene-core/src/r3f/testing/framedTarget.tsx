@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnParser } from '../../parser/TscnParser';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
-import { frameSceneBounds } from '../frameSceneBounds';
+import { frameSceneBounds } from '../editorView/frameSceneBounds';
 import { NodeTree } from './NodeTree';
 import { settleLoads } from './settleLoads';
 

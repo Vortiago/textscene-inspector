@@ -12,7 +12,6 @@ vi.mock('../../TscnCanvas', async () => {
       useResource('res://hud.tscn', 'scene');
       return <div data-testid="canvas-stub" />;
     },
-    TscnSceneContents: () => null,
   };
 });
 

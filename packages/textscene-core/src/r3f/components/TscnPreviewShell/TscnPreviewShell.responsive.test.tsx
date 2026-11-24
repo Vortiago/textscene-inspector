@@ -11,7 +11,6 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 
 vi.mock('../../TscnCanvas', () => ({
   TscnCanvas: () => <div data-testid="canvas-stub" />,
-  TscnSceneContents: () => null,
 }));
 
 import { extractMediaBlock, mediaQueries, stripMediaBlocks } from '../../testing/cssSource';

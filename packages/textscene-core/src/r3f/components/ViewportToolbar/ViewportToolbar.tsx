@@ -18,7 +18,7 @@ import {
 } from '../../preview/godotPreviewLighting.js';
 import { DisplayMenu, type DisplayToggle } from './DisplayMenu.js';
 import type { CanvasView } from '../../TscnCanvas.js';
-import { warnOfCameraFailure } from '../../editorCamera/editorCameras.js';
+import { warnOfCameraFailure } from '../../editorView/editorCamera/editorCameras.js';
 import { useHeardFreelook } from '../TscnPreviewShell/previewViewStatus.js';
 import { captureWhenSettled } from '../TscnPreviewShell/viewSettle.js';
 import { usePreviewCamera } from '../TscnPreviewShell/previewCamera.js';

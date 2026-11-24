@@ -5,7 +5,7 @@ import { ViewportModeProvider, useViewportMode, type ViewportMode } from '../../
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
-import { createEditorCameras } from '../../editorCamera/editorCameras';
+import { createEditorCameras } from '../../editorView/editorCamera/editorCameras';
 import { variant, type SceneValue } from '../../../scene/variant';
 import type { ViewStatus } from '../../viewStatus/viewStatus';
 import { EMPTY_VIEW_STATUS } from '../../viewStatus/viewStatus';

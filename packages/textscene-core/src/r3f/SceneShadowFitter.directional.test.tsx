@@ -10,7 +10,7 @@ import { SceneShadowFitter, useSceneShadowFit } from './SceneShadowFitter';
 import { directionalShadowUserData } from './directionalShadow/declaration';
 import { splitSunOf } from './directionalShadow/splitSun';
 import { positionalShadowUserData } from './positionalShadow/declaration';
-import { TscnSceneContents } from './TscnCanvas';
+import { TscnSceneContents } from './SceneContents';
 import { HierarchyProvider } from './contexts/HierarchyContext';
 import { SelectionProvider } from './contexts/SelectionContext';
 import { ViewShowProvider } from './viewShow/ViewShowContext';

@@ -3,6 +3,7 @@ import tseslint from '@typescript-eslint/eslint-plugin';
 import tsparser from '@typescript-eslint/parser';
 import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
+import { layersPlugin } from './scripts/layers/layers.mjs';
 
 /** The imports that pull React or THREE into a module, for a file that must stay free of both. */
 const REACT_AND_THREE_IMPORTS = [
@@ -374,6 +375,22 @@ export default [
             'Report a rule diagnostic through a declared arm: reportArm or armDiagnostic with a RuleArms entry, and emits: armEmits(arms).',
         },
       ],
+    },
+  },
+
+  // Core's renderer code imports downward through its layers (ADR-0092). A test mounts any layer.
+  {
+    files: ['packages/textscene-core/src/**/*.{ts,tsx}'],
+    ignores: [
+      '**/*.test.ts',
+      '**/*.test.tsx',
+      '**/*.testkit.ts',
+      '**/*.testkit.tsx',
+      'packages/textscene-core/src/**/testing/**',
+    ],
+    plugins: { layers: layersPlugin },
+    rules: {
+      'layers/import-down': 'error',
     },
   },
 

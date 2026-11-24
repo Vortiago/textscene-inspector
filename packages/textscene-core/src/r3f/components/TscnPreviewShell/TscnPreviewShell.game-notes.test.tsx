@@ -7,7 +7,6 @@ import { createFakeResourceLoader } from '../../../resources/testing/createFakeR
 // happy-dom has no WebGL. The notes sit beside the view, so the view is a stub.
 vi.mock('../../TscnCanvas', () => ({
   TscnCanvas: () => <div data-testid="view" />,
-  TscnSceneContents: () => null,
 }));
 
 import { TextShell } from './TscnPreviewShell.testkit';

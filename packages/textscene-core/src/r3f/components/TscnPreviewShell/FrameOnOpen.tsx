@@ -3,7 +3,7 @@ import { useOptionalHierarchy } from '../../contexts/HierarchyContext.js';
 import { useViewportMode } from '../../contexts/ViewportModeContext.js';
 import { ResourceLoaderContext } from '../../../resources/ResourceLoaderContext.js';
 import type { SceneValue } from '../../../scene/variant.js';
-import { warnOfCameraFailure, type EditorViewAnswers } from '../../editorCamera/editorCameras.js';
+import { warnOfCameraFailure, type EditorViewAnswers } from '../../editorView/editorCamera/editorCameras.js';
 import type { HeardStatusStore } from './previewViewStatus.js';
 import { usePreviewCamera } from './previewCamera.js';
 

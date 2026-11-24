@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnSceneProvider } from './TscnSceneProvider';
-import { TscnSceneContents } from './TscnCanvas';
+import { TscnSceneContents } from './SceneContents';
 import { openScene, type Scene } from '../scene/openScene';
 import { visibleInTree } from './visibleInTree';
 import { ControlCanvasLayer } from './controls/native/ControlCanvasLayer';

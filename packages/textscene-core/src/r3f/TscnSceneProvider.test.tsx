@@ -7,7 +7,7 @@ import { PROJECT_FILE_PATH } from '../godot/project/project';
 import type { ResourceProvider } from '../resources/ResourceProvider';
 import { ResourceLoaderContext } from '../resources/ResourceLoaderContext';
 import { TscnSceneProvider } from './TscnSceneProvider';
-import { TscnSceneContents } from './TscnCanvas';
+import { TscnSceneContents } from './SceneContents';
 import { useSelection, useSelectedNodePath } from './contexts/SelectionContext';
 import { useHierarchy } from './contexts/HierarchyContext';
 import { openScene } from '../scene/openScene';

@@ -15,7 +15,6 @@ vi.mock('../../TscnCanvas', () => ({
     reportStatus = onStatusChange;
     return <div data-testid="canvas-stub" />;
   },
-  TscnSceneContents: () => null,
 }));
 
 import { TextShell } from './TscnPreviewShell.testkit';

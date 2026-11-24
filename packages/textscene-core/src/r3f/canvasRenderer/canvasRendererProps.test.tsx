@@ -4,7 +4,7 @@ import { render } from '@testing-library/react';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Canvas, useThree } from '@react-three/fiber';
-import { World2DCanvas } from '../components/Canvas2DStage/World2DCanvas';
+import { World2DCanvas } from '../world2D/World2DCanvas';
 import { TscnCanvas } from '../TscnCanvas';
 import { CANVAS_RENDERER_GL, CANVAS_RENDERER_PROPS } from './canvasRendererProps';
 

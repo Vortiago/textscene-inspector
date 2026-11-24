@@ -174,7 +174,7 @@ Godot has no Reset Camera. The previewer's Reset Camera ends a preview and then 
 ## Amendment: freelook has a toggle, and three keys of the previewer's own
 
 Godot's freelook has two ways in: the held right button, and the `Shift+F` toggle
-(`node_3d_editor_plugin.cpp:9962`, `2741-2746`). Both run one state, `r3f/freelook.ts`: whether it
+(`node_3d_editor_plugin.cpp:9962`, `2741-2746`). Both run one state, `r3f/editorView/freelook.ts`: whether it
 is on, the held flight keys and the speed. The rules are Godot's:
 
 - The wheel changes the flight speed while freelook is on, and does not zoom (`:1880-1888`). The
@@ -201,8 +201,8 @@ tab, which no page can prevent. In VS Code the webview forwards the chord to the
 Ctrl+W closes the preview and Ctrl+Shift+W closes the window. Down stays on Q, Godot's key.
 
 **The toolbar has a Freelook button**, for a user who does not know the shortcut. It reaches the
-canvas through `ViewportActionsContext`, as Reset Camera does, so `@textscene/renderer`, which
-ships no toolbar, gains no export: its canvas has the `Shift+F` toggle alone.
+canvas through the view's editor camera (`camera.set('freelook', …)`), so `@textscene/renderer`,
+which ships no toolbar, gains no export: its canvas has the `Shift+F` toggle alone.
 
 ### Considered options
 

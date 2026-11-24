@@ -8,7 +8,7 @@ import { useViewportSelection } from '../hooks/useViewportSelection';
 import { useSelectedNodePath, useSelection } from '../contexts/SelectionContext';
 import { CanvasWorkspaceProvider, type CanvasWorkspace } from '../contexts/CanvasWorkspaceContext';
 import { TscnSceneProvider } from '../TscnSceneProvider';
-import { TscnSceneContents } from '../TscnCanvas';
+import { TscnSceneContents } from '../SceneContents';
 import { openScene, type Scene } from '../../scene/openScene';
 import type { ResourceProvider } from '../../resources/ResourceProvider';
 

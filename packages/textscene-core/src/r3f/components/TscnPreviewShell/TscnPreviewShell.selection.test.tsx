@@ -15,7 +15,6 @@ vi.mock('../../TscnCanvas', () => ({
     view.onSelect = props.onSelect;
     return null;
   },
-  TscnSceneContents: () => null,
 }));
 
 import { openScene } from '../../../scene/openScene';

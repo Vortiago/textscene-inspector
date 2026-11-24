@@ -18,7 +18,8 @@ const SRC = join(import.meta.dirname, '../..');
 const CANVAS_PATHS = [
   'r3f/canvasGroup',
   'r3f/lighting2d',
-  'r3f/components/Canvas2DStage',
+  'r3f/world2D',
+  'r3f/editorView/Canvas2DStage',
   'nodes/viewport',
   'r3f/viewportRender',
   'nodes/2d',
@@ -30,7 +31,7 @@ const DISPOSES = /\.dispose\(\)/;
 
 /** Targets made outside `r3f/offscreen/`, each with the reason it stays where it is. */
 const ALLOCATES_OUTSIDE_OFFSCREEN: Record<string, string> = {
-  'packages/textscene-core/src/r3f/components/Canvas2DStage/canvasFrame.ts':
+  'packages/textscene-core/src/r3f/world2D/canvasFrame.ts':
     'CanvasFrame draws the canvas frame through drawCanvasGroups, so in r3f/offscreen/ it would import r3f/canvasGroup/, which imports r3f/offscreen/draw.ts',
 };
 

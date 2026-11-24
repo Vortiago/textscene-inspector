@@ -4,9 +4,9 @@
  * a resolver change without a table change fails, and the reverse too.
  */
 import { describe, expect, it } from 'vitest';
-import { freelookDirectionOf } from '../../editorKeyBindings';
-import { resolveNavMode, resolveWheelMode } from '../../godotEditorCursor';
-import { resolveTouchMode } from '../../pointerGesture';
+import { freelookDirectionOf } from '../../editorView/editorKeyBindings';
+import { resolveNavMode, resolveWheelMode } from '../../editorView/godotEditorCursor';
+import { resolveTouchMode } from '../../editorView/pointerGesture';
 import { controlsFor, type Binding, type BindingOutcome } from './bindings';
 
 /** What a row's prose calls each navigation mode. A flight direction goes by its own name. */

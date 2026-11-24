@@ -6,7 +6,6 @@ vi.mock('../../TscnCanvas', () => ({
   TscnCanvas: ({ camera }: { camera?: string | null }) => (
     <div data-testid="view" data-camera={camera === undefined ? 'undefined' : String(camera)} />
   ),
-  TscnSceneContents: () => null,
 }));
 
 import { TextShell } from './TscnPreviewShell.testkit';

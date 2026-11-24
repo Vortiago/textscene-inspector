@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { TscnSceneContents } from './TscnCanvas';
+import { TscnSceneContents } from './SceneContents';
 import { HierarchyProvider } from './contexts/HierarchyContext';
 import { SelectionProvider } from './contexts/SelectionContext';
 import { ViewShowProvider } from './viewShow/ViewShowContext';

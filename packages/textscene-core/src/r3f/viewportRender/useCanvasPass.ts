@@ -5,8 +5,8 @@
 
 import { useCallback, useEffect, useMemo } from 'react';
 import * as THREE from 'three';
-import { World2DCamera } from '../components/Canvas2DStage/world2DCamera';
-import { createCanvasFrame } from '../components/Canvas2DStage/canvasFrame';
+import { World2DCamera } from '../world2D/world2DCamera';
+import { createCanvasFrame } from '../world2D/canvasFrame';
 import { useMultisampledTarget } from '../offscreen/multisampledTarget';
 import { applyOrthoFrame, orthoFrameForSize } from './viewportFraming';
 import type { CanvasColorSpace } from '../canvasColorSpace';

@@ -23,7 +23,7 @@ import { Splitter } from '../Splitter/Splitter.js';
 import { ViewportArea } from './ViewportArea.js';
 import { PreviewErrorBoundary } from './PreviewErrorBoundary.js';
 import { EscapeDeselect } from './EscapeDeselect.js';
-import { SceneChangeResetter } from './SceneChangeResetter.js';
+import { PreviewSceneReset } from './PreviewSceneReset.js';
 import { WorkspaceAutoSelect } from './WorkspaceAutoSelect.js';
 import { SceneStats } from './SceneStats.js';
 import { SceneLoadStatus } from './SceneLoadStatus.js';
@@ -41,7 +41,7 @@ import { HelpLink } from './HelpLink.js';
 import { AnimationTabWatcher } from './AnimationTabWatcher.js';
 import { DetailTabs, type DetailTab } from './DetailTabs.js';
 import { SceneTreePane } from './SceneTreePane.js';
-import { previewShellProviders } from './previewShellProviders.js';
+import { viewProviders } from '../../viewProviders.js';
 import { useSceneLoader } from '../../sceneResourcePipeline.js';
 import { CaptureStateReporter } from './CaptureStateReporter.js';
 import { PreviewCameraProvider } from './previewCamera.js';
@@ -138,7 +138,7 @@ export function TscnPreviewShell({
     frameOnOpen: readPersisted(FRAME_ON_OPEN_STORAGE_KEY, DEFAULT_VIEWPORT.frameOnOpen, isBoolean),
   }));
 
-  const withProviders = previewShellProviders({
+  const withProviders = viewProviders({
     hierarchyValue,
     loader: useSceneLoader(scene),
     initialViewportMode,
@@ -157,7 +157,7 @@ export function TscnPreviewShell({
             <FrameOnOpen view={view} heard={heard} />
             {/* A host-forced mode turns auto-select off, or the root's claim overrides it. */}
             {initialViewportMode === undefined && <WorkspaceAutoSelect scene={scene} />}
-            <SceneChangeResetter sceneGraph={parsedGraph} />
+            <PreviewSceneReset sceneGraph={parsedGraph} />
             <AnimationTabWatcher onVisibleChange={setAnimationTabVisible} />
             <CaptureStateReporter
               onCaptureStateChange={onCaptureStateChange}

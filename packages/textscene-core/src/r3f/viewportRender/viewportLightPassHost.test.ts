@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import { createViewportLightPassHost } from './viewportLightPassHost';
 import { applyOrthoFrame, orthoFrameForCamera2D, orthoFrameForSize } from './viewportFraming';
 import type { Camera2DTag } from './camera2DView';
-import { World2DCamera } from '../components/Canvas2DStage/world2DCamera';
+import { World2DCamera } from '../world2D/world2DCamera';
 import { Camera2DAnchorMode } from '../../godot/scene/camera2d';
 
 const SIZE = { x: 200, y: 150 };

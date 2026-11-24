@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
-vi.mock('../Canvas2DStage/Canvas2DStage', () => ({
+vi.mock('../../editorView/Canvas2DStage/Canvas2DStage', () => ({
   Canvas2DStage: ({ scenePath }: { scenePath: string }) => (
     <div data-testid="stage-2d-stub" data-scene-path={scenePath} />
   ),

@@ -21,7 +21,7 @@ import { SceneStack } from '../../../r3f/testing/SceneStack';
 import { InWorld } from '../../../r3f/testing/InWorld';
 import { withStubbedGl } from '../../../r3f/testing/stubbedGl';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import { TscnSceneContents } from '../../../r3f/TscnCanvas';
+import { TscnSceneContents } from '../../../r3f/SceneContents';
 import { HierarchyProvider } from '../../../r3f/contexts/HierarchyContext';
 import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
 import { ViewShowProvider } from '../../../r3f/viewShow/ViewShowContext';

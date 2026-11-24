@@ -10,7 +10,7 @@ vi.mock('@react-three/fiber', async (importOriginal) => ({
   Canvas: () => <canvas />,
 }));
 
-vi.mock('./components/Canvas2DStage/Canvas2DStage', () => ({
+vi.mock('./editorView/Canvas2DStage/Canvas2DStage', () => ({
   Canvas2DStage: () => <div data-stage="2D" />,
 }));
 
