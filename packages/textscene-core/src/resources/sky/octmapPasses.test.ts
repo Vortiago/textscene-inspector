@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { FAST_FILTER_COEFFICIENTS } from '../../godot/rendering/environment/skyFastFilterCoefficients';
 import { FAST_FILTER_HIGH_QUALITY_COEFFICIENTS } from '../../godot/rendering/environment/skyFastFilterHighQualityCoefficients';
@@ -12,6 +12,20 @@ import {
   laidOut,
   roughnessValues,
 } from './octmapPasses';
+import type { ComputeDraw } from '../../shaders/template/compute/emitComputePass';
+
+const draws = vi.hoisted(() => [] as ComputeDraw[]);
+vi.mock('../../shaders/template/compute/emitComputePass', async (original) => {
+  const emitted = await original<typeof import('../../shaders/template/compute/emitComputePass')>();
+  return {
+    ...emitted,
+    emitComputePass: (...args: Parameters<typeof emitted.emitComputePass>) => {
+      const draw = emitted.emitComputePass(...args);
+      draws.push(draw);
+      return draw;
+    },
+  };
+});
 
 const LAYER = { chain: new THREE.Texture(), chainSize: 128, roughness: 0.5, size: 80, borderSize: 0.8 };
 
@@ -140,6 +154,24 @@ describe('drawDownsample', () => {
     drawDownsample(renderer, new THREE.Texture(), new THREE.WebGLRenderTarget(4, 4), 4, 0.8);
 
     expect([drawnWith, renderer.toneMapping]).toEqual([THREE.NoToneMapping, THREE.ACESFilmicToneMapping]);
+  });
+
+  it('holds the source only while it draws, as its pass outlives the bake', async () => {
+    const { renderer } = await nodeTestRenderer();
+    const source = new THREE.Texture();
+    const render = renderer.render.bind(renderer);
+    let pass: ComputeDraw | undefined;
+    let boundWhileDrawing: unknown;
+    renderer.render = (drawn, camera) => {
+      pass = draws.find((draw) => draw.mesh === drawn);
+      boundWhileDrawing = pass?.textures.get('source_octmap')?.value;
+      render(drawn, camera);
+    };
+
+    drawDownsample(renderer, source, new THREE.WebGLRenderTarget(4, 4), 4, 0.8);
+
+    expect(boundWhileDrawing).toBe(source);
+    expect(pass!.textures.get('source_octmap')!.value).not.toBe(source);
   });
 });
 

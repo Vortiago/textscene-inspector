@@ -49,14 +49,15 @@ export function negativeFailure(name, ranges) {
 }
 
 /** The squared distance between two colours. */
-const distance = (a, b) => a.reduce((sum, channel, index) => sum + (channel - b[index]) ** 2, 0);
+const squaredDistance = (a, b) => a.reduce((sum, channel, index) => sum + (channel - b[index]) ** 2, 0);
 
 /** Each mip of each layer keeps +Y nearer the sky's top colour and -Y nearer its bottom one. */
 export function orientationFailure(name, texels, { top, bottom }) {
   for (const { layer, mip, up, down } of texels) {
     const at = `${name}, layer ${layer} mip ${mip}`;
-    if (distance(up, top) >= distance(up, bottom)) return `${at}: expected +Y nearer ${top}, found ${up}`;
-    if (distance(down, bottom) >= distance(down, top))
+    if (squaredDistance(up, top) >= squaredDistance(up, bottom))
+      return `${at}: expected +Y nearer ${top}, found ${up}`;
+    if (squaredDistance(down, bottom) >= squaredDistance(down, top))
       return `${at}: expected -Y nearer ${bottom}, found ${down}`;
   }
   return undefined;

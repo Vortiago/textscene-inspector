@@ -6,15 +6,13 @@ import * as THREE from 'three';
 import { installNodesHandler } from '../../packages/textscene-core/src/shaders/nodesHandler.ts';
 import { disposeSkyLayers } from '../../packages/textscene-core/src/resources/sky/octmapArrays.ts';
 import { bakeSkyLayers } from '../../packages/textscene-core/src/resources/sky/skyLayers.testkit.ts';
+import { REAL_TIME_RADIANCE_SIZE } from '../../packages/textscene-core/src/godot/rendering/environment/skyReflection.ts';
 
 /* global window, document */
 // `window` and `document` exist only in the browser that loads this page.
 
 /** A radiance size the importance filter reads, small enough for a fast bake. */
 const RADIANCE_SIZE = 64;
-
-/** Godot bakes a real-time sky at 256, the size the fast filter's fixed 320 grid covers (`sky.h:248`). */
-const REAL_TIME_RADIANCE_SIZE = 256;
 
 /** The uniform sky's radiance, a colour whose channels differ so a swizzle shows. */
 const UNIFORM_RADIANCE = [0.25, 0.5, 1];

@@ -7,6 +7,11 @@ import {
 } from '../../godot/rendering/environment/skyReflection.js';
 import { computePasses } from '../../shaders/template/compute/computePasses.js';
 import { computeStage } from '../../shaders/template/compute/computeStage.js';
+import {
+  COMPUTE_ATLAS_SIZE,
+  computeOriginName,
+  computeSizeName,
+} from '../../shaders/template/compute/scatterPasses.js';
 import { emitComputePass, type ComputeDraw } from '../../shaders/template/compute/emitComputePass.js';
 import { hasNodesHandler } from '../../shaders/pipeline/nodeObject.js';
 import { perObject } from '../../utils/perObject.js';
@@ -26,16 +31,23 @@ function drawCompute(
 ): void {
   if (!hasNodesHandler(gl))
     throw new Error('expected a nodes handler on the renderer before a lowered pass draws');
+  const unbound = new Map<{ value: unknown }, unknown>();
   for (const [name, value] of Object.entries(values)) {
     const binding = draw.textures.get(name) ?? draw.uniforms.get(name);
     if (!binding || !('value' in binding))
       throw new Error(`expected a uniform or texture of the lowered pass, got ${name}`);
+    if (draw.textures.has(name)) unbound.set(binding, binding.value);
     binding.value = value;
   }
-  withStoredOutput(gl, () => {
-    gl.setRenderTarget(target, layer, mip);
-    gl.render(draw.mesh, CAMERA);
-  });
+  try {
+    withStoredOutput(gl, () => {
+      gl.setRenderTarget(target, layer, mip);
+      gl.render(draw.mesh, CAMERA);
+    });
+  } finally {
+    // The pass outlives the bake, so it goes back to its own placeholders and holds no bake's textures.
+    for (const [binding, placeholder] of unbound) binding.value = placeholder;
+  }
 }
 
 /** Runs `draw` with no tone mapping and a linear output, as a node material's output takes both. */
@@ -60,10 +72,9 @@ const borderSizes = (borderSize: number) => new THREE.Vector2((1 - borderSize) /
 /** One draw of a stage's only pass per renderer, as each draw holds the programs the renderer compiles. */
 const onlyPassFor = (file: string, defines = '') =>
   perObject<THREE.WebGLRenderer, ComputeDraw>(() => {
-    const [pass, ...others] = computePasses(computeStage(file, defines));
-    if (!pass || others.length > 0)
-      throw new Error(`expected one pass of ${file}, found ${others.length + 1}`);
-    return emitComputePass(pass);
+    const passes = computePasses(computeStage(file, defines));
+    if (passes.length !== 1) throw new Error(`expected one pass of ${file}, found ${passes.length}`);
+    return emitComputePass(passes[0]!);
   });
 
 const downsamplerFor = onlyPassFor('effects/octmap_downsampler.glsl');
@@ -95,6 +106,8 @@ const samplesTargetFor = perObject<THREE.WebGLRenderer, THREE.WebGLRenderTarget>
     );
   return new THREE.WebGLRenderTarget(fill.target.array.length, 1, {
     type: THREE.FloatType,
+    minFilter: THREE.NearestFilter,
+    magFilter: THREE.NearestFilter,
     depthBuffer: false,
   });
 });
@@ -166,10 +179,15 @@ const FAST_FILTER_PASSES = {
   high: { layers: fastFilterPassesFor('high', true), mips: fastFilterPassesFor('high', false) },
 } as const;
 
+/** `coeffs` is `vec4[7][5][6]`, or `vec4[7][5][3][24]` with high quality (`octmap_filter.glsl:57-62`). */
+const COEFFICIENT_LEVELS = 7;
+const LEVEL_TEXELS = 5 * 6;
+const HIGH_QUALITY_LEVEL_TEXELS = 5 * 3 * 24;
+
 /** Godot's table as the std430 words of `coeffs`: 7 levels, 6 of them read (`octmap_filter.glsl:56-64`). */
 export function coefficientWords(quality: FastFilterQuality): Uint32Array {
-  const levelFloats = quality === 'high' ? 5 * 3 * 24 * 4 : 5 * 6 * 4;
-  const floats = new Float32Array(7 * levelFloats);
+  const levelFloats = (quality === 'high' ? HIGH_QUALITY_LEVEL_TEXELS : LEVEL_TEXELS) * 4;
+  const floats = new Float32Array(COEFFICIENT_LEVELS * levelFloats);
   if (quality === 'high') floats.set(FAST_FILTER_HIGH_QUALITY_COEFFICIENTS);
   else
     FAST_FILTER_COEFFICIENTS.forEach((level, index) =>
@@ -196,18 +214,24 @@ export function drawFastFilter(
   sizes: readonly number[]
 ): FilteredImages {
   const passes = FAST_FILTER_PASSES[quality][isTextureArray ? 'layers' : 'mips'](gl);
-  const images = passes[0]?.target.kind === 'scatter' ? passes[0].target.images.length : 0;
-  if (sizes.length !== images)
-    throw new Error(`expected ${images} images for the fast filter, got ${sizes.length}`);
+  const target = passes[0]?.target;
+  if (target?.kind !== 'scatter')
+    throw new Error(
+      `expected the fast filter to scatter its stores, got a ${target?.kind ?? 'missing'} pass`
+    );
+  if (sizes.length !== target.images.length)
+    throw new Error(`expected ${target.images.length} images for the fast filter, got ${sizes.length}`);
   const atlas = atlasFor(gl, sizes);
   const values: Record<string, unknown> = {
     source_octmap: chain,
     'params.border_size': borderSizes(borderSize),
-    compute_atlas_size: new THREE.Vector2(atlas.target.width, atlas.target.height),
+    [COMPUTE_ATLAS_SIZE]: new THREE.Vector2(atlas.target.width, atlas.target.height),
   };
   sizes.forEach((size, index) => {
-    values[`compute_origin_${index}`] = atlas.origins[index];
-    values[`compute_size_${index}`] = new THREE.Vector2(size, size);
+    const image = target.images.indexOf(`dest_octmap${index}`);
+    if (image < 0) throw new Error(`expected dest_octmap${index} among ${target.images.join(', ')}`);
+    values[computeOriginName(image)] = atlas.origins[index];
+    values[computeSizeName(image)] = new THREE.Vector2(size, size);
   });
   gl.setRenderTarget(atlas.target);
   gl.clear();
