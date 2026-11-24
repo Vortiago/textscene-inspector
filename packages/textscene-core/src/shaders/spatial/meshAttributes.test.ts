@@ -1,6 +1,11 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { emulatedPointGeometry, POINT_VERTEX_ATTRIBUTE, withGodotAttributes } from './meshAttributes.js';
+import {
+  emulatedPointGeometry,
+  VERTEX_ID_ATTRIBUTE,
+  withGodotAttributes,
+  withSurfaceStarts,
+} from './meshAttributes.js';
 
 /** The names `scene_forward_clustered.glsl` gives its first two vertex inputs. */
 const VERTEX_ANGLE_ATTRIBUTE = 'vertex_angle_attrib';
@@ -12,6 +17,52 @@ function triangle(): THREE.BufferGeometry {
   geometry.setAttribute('normal', new THREE.Float32BufferAttribute([0, 0, 1, 0, 0, 1, 0, 0, 1], 3));
   return geometry;
 }
+
+describe('VERTEX_ID', () => {
+  const sixVertices = () => {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(new Array(18).fill(0), 3));
+    return geometry;
+  };
+  const vertexIds = (geometry: THREE.BufferGeometry) => [...geometry.getAttribute(VERTEX_ID_ATTRIBUTE).array];
+  const withStarts = (starts: readonly number[]) => withSurfaceStarts(sixVertices(), starts);
+
+  it('counts each vertex from 0 in its own surface, as Godot draws each surface from its own array', () => {
+    expect(vertexIds(withGodotAttributes(withStarts([0, 2, 3]), 'points'))).toEqual([0, 1, 0, 0, 1, 2]);
+  });
+
+  it('counts every vertex of a geometry that records no surfaces', () => {
+    expect(vertexIds(withGodotAttributes(sixVertices(), 'points'))).toEqual([0, 1, 2, 3, 4, 5]);
+  });
+
+  it('writes no ids before the geometry takes Godot attributes', () => {
+    expect(withStarts([0, 3]).getAttribute(VERTEX_ID_ATTRIBUTE)).toBeUndefined();
+  });
+
+  it('keeps the ids while the surfaces and the vertex count are unchanged', () => {
+    const geometry = withGodotAttributes(withStarts([0, 3]), 'points');
+    const built = geometry.getAttribute(VERTEX_ID_ATTRIBUTE);
+    expect(withGodotAttributes(geometry, 'points').getAttribute(VERTEX_ID_ATTRIBUTE)).toBe(built);
+  });
+
+  it('counts again when the surfaces start at other vertices at the same vertex count', () => {
+    const geometry = withGodotAttributes(withStarts([0, 3]), 'points');
+    withSurfaceStarts(geometry, [0, 4]);
+    expect(vertexIds(withGodotAttributes(geometry, 'points'))).toEqual([0, 1, 2, 3, 0, 1]);
+  });
+
+  it('counts again when the position no longer has a vertex for each id (edge case)', () => {
+    const geometry = withGodotAttributes(sixVertices(), 'points');
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(new Array(6).fill(0), 3));
+    expect(vertexIds(withGodotAttributes(geometry, 'points'))).toEqual([0, 1]);
+  });
+
+  it('gives each emulated point the id of its own vertex in its surface', () => {
+    const geometry = withGodotAttributes(withStarts([0, 3]), 'points');
+    geometry.setIndex([1, 4]);
+    expect([...emulatedPointGeometry(geometry).getAttribute(VERTEX_ID_ATTRIBUTE).array]).toEqual([1, 1]);
+  });
+});
 
 describe('withGodotAttributes', () => {
   it('reads the position as the vertex attribute', () => {
@@ -179,7 +230,7 @@ describe('emulatedPointGeometry of an indexed surface', () => {
     return withGodotAttributes(geometry);
   }
   const pointVertices = (geometry: THREE.BufferGeometry) => [
-    ...geometry.getAttribute(POINT_VERTEX_ATTRIBUTE).array,
+    ...geometry.getAttribute(VERTEX_ID_ATTRIBUTE).array,
   ];
 
   it('draws a point for each index, so a shared vertex draws once for each corner', () => {

@@ -48,7 +48,7 @@ describe('writeSkyBindings', () => {
     const scene = { camera: new THREE.PerspectiveCamera(), time: 0, brightness: 1, lights: [] };
     writeSkyBindings(sky, { ...scene, radianceEnergy: 4 });
     writeSkyBindings(sky, scene);
-    expect(sky.uniforms.get(RADIANCE_ENERGY)!.value).toBe(1);
+    expect((sky.uniforms.get(RADIANCE_ENERGY) as UniformNode<unknown>).value).toBe(1);
   });
 
   it("writes POSITION as the camera's origin", () => {

@@ -20,6 +20,8 @@ export interface ProgramTemplate {
   readonly template: string;
   readonly defines: string;
   readonly memo: TreeMemo;
+  /** The block members the previewer holds for a whole frame, each folded as a specialisation constant. */
+  readonly specialisedMembers?: ReadonlySet<string>;
 }
 
 /** A user's shader linked into its template, before either stage is emitted. */
@@ -71,5 +73,5 @@ export function linkedProgram(
   // A source colour is converted to linear: `sky.cpp:193`, `scene_shader_forward_clustered.cpp:595`.
   const parameters = bindParameters(tree, { useLinearColor: true, sampling });
   const parameterValues = [...parameters].map(([name, binding]) => [godotId(name), binding.value] as const);
-  return { linked, resources: programResources(), parameters, parameterValues };
+  return { linked, resources: programResources(program.specialisedMembers), parameters, parameterValues };
 }

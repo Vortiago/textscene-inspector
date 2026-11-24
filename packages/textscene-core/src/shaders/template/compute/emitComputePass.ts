@@ -13,7 +13,8 @@ import {
 import type { Node, TextureNode, UniformNode } from 'three/webgpu';
 import { BoundNodeMaterial } from '../../uniforms/boundMaterial.js';
 import { emitTemplateStage, programResources } from '../emitTemplate.js';
-import type { RowTexture } from '../rowTexture.js';
+import type { RowBlock } from '../rowBlock.js';
+import type { TemplateUniform } from '../templateUniforms.js';
 import { COMPUTE_COLOR, COMPUTE_ENTRY, type ComputePass } from './computePasses.js';
 import {
   COMPUTE_ATLAS_SIZE,
@@ -27,11 +28,11 @@ import {
 export interface ComputeDraw {
   readonly mesh: THREE.Mesh<THREE.BufferGeometry, THREE.Material>;
   /** The template's uniforms by `instance.member`, `params.size`, and a scatter's by `compute_` names. */
-  readonly uniforms: ReadonlyMap<string, UniformNode<unknown>>;
+  readonly uniforms: ReadonlyMap<string, TemplateUniform>;
   /** The template's textures by name: `source_octmap`, `compute_shared_samples`. */
   readonly textures: ReadonlyMap<string, TextureNode>;
   /** The template's buffers by instance name, each a row texture the host writes: `data`. */
-  readonly buffers: ReadonlyMap<string, RowTexture>;
+  readonly buffers: ReadonlyMap<string, RowBlock>;
   /** A scatter's points for the invocations `x` by `y` by `z` of a dispatch: one point each. */
   readonly dispatch?: (extent: readonly [number, number, number]) => void;
 }
@@ -65,7 +66,7 @@ function readRowsAsStored(textures: ReadonlyMap<string, TextureNode>): void {
 function emitScatterPass(pass: ComputePass, imageCount: number): ComputeDraw {
   const resources = programResources();
   const dispatch = uniform(new THREE.Vector3(1, 1, 1)) as unknown as UniformNode<THREE.Vector3>;
-  const scatter = new Map<string, UniformNode<unknown>>([
+  const scatter = new Map<string, TemplateUniform>([
     ['compute_dispatch', dispatch as UniformNode<unknown>],
     [COMPUTE_ATLAS_SIZE, uniform(new THREE.Vector2(1, 1)) as unknown as UniformNode<unknown>],
   ]);

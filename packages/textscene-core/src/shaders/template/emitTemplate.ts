@@ -12,7 +12,7 @@ import { subgroupVariables } from '../language/subgroupComposites.js';
 import { emittedGlslTree, type EmittedTree } from '../language/emittedTree.js';
 import { copyInto, declareVariables, type StructOf, type Value } from '../language/emitValue.js';
 import type { FunctionNode, StructNode } from '../language/shaderTree.js';
-import type { ValueType } from '../language/types.js';
+import { isSamplerType, isTextureType, type ValueType } from '../language/types.js';
 import { withGlobalParameters } from './globalParameters.js';
 import { withSquareMatrices } from './squareMatrices.js';
 import { StageVaryings } from './stageVaryings.js';
@@ -54,8 +54,8 @@ export interface ProgramResources {
   readonly varyings: StageVaryings;
 }
 
-export const programResources = (): ProgramResources => ({
-  uniforms: new TemplateUniforms(),
+export const programResources = (specialisedMembers?: ReadonlySet<string>): ProgramResources => ({
+  uniforms: new TemplateUniforms(specialisedMembers),
   textures: new Map(),
   buffers: new TemplateBuffers(),
   varyings: new StageVaryings(),
@@ -106,7 +106,7 @@ export function emitTemplateStage(
       tree.lowered.body,
       EmitScope.of(new Map([...globals, ...names]))
     );
-  const context: EmitContext = { structOf, functions: new CalledFunctions(trees, structOf, body) };
+  const context: EmitContext = { structOf, functions: new CalledFunctions(trees, structOf, body, globals) };
   const main = trees.get('main');
   if (!main) throw new Error('expected a main function in the template stage');
   const run = Fn(() => {
@@ -243,10 +243,10 @@ function uniformGlobals(
 ): void {
   const { words } = global.qualifiers;
   for (const declarator of global.declarators) {
-    if (words.includes('uniform') && isTextureType(global.type)) {
-      values.set(declarator.name, textureValue(global.type, declarator, textures));
-    } else if (words.includes('uniform') && global.type === 'sampler') {
+    if (words.includes('uniform') && global.type === 'sampler') {
       values.set(declarator.name, int(0) as unknown as Node);
+    } else if (words.includes('uniform') && (isTextureType(global.type) || isSamplerType(global.type))) {
+      values.set(declarator.name, textureValue(global.type, declarator, textures));
     } else if (words.includes('const')) {
       values.set(declarator.name, constantGlobal(global, declarator));
     }
@@ -268,9 +268,6 @@ function constantGlobal(global: GlobalNode, declarator: GlobalNode['declarators'
 
 /** Folds the const globals. A tree never changes, so every stage shares one. */
 const FOLDING = new GlslangFolding(asWritten);
-
-/** Every texture and combined sampler type, so a type the emitter has no node for fails by its name. */
-const isTextureType = (type: string) => /^[iu]?(texture|sampler)[A-Z0-9]/.test(type);
 
 /** The texture type a combined sampler reads: `texture2D` for `sampler2D`. */
 const textureTypeOf = (type: string) => type.replace(/^([iu]?)sampler/, '$1texture');

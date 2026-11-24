@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { bottomUpV } from '../../godot/math/uv.js';
 import { UV2_ATTRIBUTE } from './uv2.js';
+import { withSurfaceStarts } from '../../shaders/spatial/meshAttributes.js';
 
 /** A surface's `ARRAY_BONES` and `ARRAY_WEIGHTS`: four bones and four weights for every vertex. */
 export interface SurfaceBones {
@@ -128,9 +129,11 @@ export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.
 
   let vertexBase = 0;
   let indexBase = 0;
+  const vertexStarts: number[] = [];
   surfaces.forEach((surface, surfaceIndex) => {
     const vertexCount = vertexCountOf(surface);
     const indexCount = surface.indices.length;
+    vertexStarts.push(vertexBase);
     positions.set(surface.positions, vertexBase * 3);
     if (colors && surface.colors) colors.set(surface.colors, vertexBase * 4);
     if (uvs) {
@@ -187,8 +190,7 @@ export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.
   }
   if (isListed) geometry.userData[DRAWN_PRIMITIVE] = primitive;
   if (isSkinned) geometry.userData[SURFACE_BONE_COUNTS] = surfaces.map((s) => boneCountOf(s.bones));
-
-  return geometry;
+  return withSurfaceStarts(geometry, vertexStarts);
 }
 
 function boneCountOf(bones: SurfaceBones | undefined): number {

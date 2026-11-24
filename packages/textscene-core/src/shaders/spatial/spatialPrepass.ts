@@ -4,6 +4,7 @@ import type { Node, UniformNode } from 'three/webgpu';
 import { DEPTH_PREPASS_OPAQUE_THRESHOLD } from '../../godot/rendering/opaquePrepass.js';
 import { colourDepthOf, type PrepassDraw } from '../pipeline/depthPrepass.js';
 import type { Renderer } from '../preprocessor/renderingMethod.js';
+import type { TemplateUniform } from '../template/templateUniforms.js';
 import { BoundNodeMaterial, type MaterialShader } from '../uniforms/boundMaterial.js';
 import { DEPTH_FLAGS, spatialPassMembership, type SpatialPipeline } from './spatialPipeline.js';
 import { setPosition, type EmittedStages } from './emittedStages.js';
@@ -37,7 +38,7 @@ export interface PrepassProgram {
   /** A new emit of both stages of the depth variant. */
   readonly depthStages: () => EmittedStages;
   readonly shader: MaterialShader;
-  readonly uniforms: ReadonlyMap<string, UniformNode<unknown>>;
+  readonly uniforms: ReadonlyMap<string, TemplateUniform>;
 }
 
 /** What `renderer`'s depth prepass draws of a transpiled surface: null keeps it out. */

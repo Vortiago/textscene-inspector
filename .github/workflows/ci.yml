@@ -616,7 +616,8 @@ jobs:
           failed=$(jq -r '(.changes.outputs["shader-only"] == "true") as $shaderOnly
             | {"visual-regression": (.changes.outputs.visual == "false" or $shaderOnly),
               "godot-ref": (.changes.outputs["godot-ref"] == "false" or $shaderOnly),
-              "web-previewer": $shaderOnly, "e2e-web": $shaderOnly, "renderer-consumer": $shaderOnly,
+              "web-previewer": $shaderOnly, "e2e-web": $shaderOnly, "perf-web": $shaderOnly,
+              "renderer-consumer": $shaderOnly,
               "integration": $shaderOnly, "vsix": $shaderOnly, "installed": $shaderOnly,
               "web": $shaderOnly} as $skippable | to_entries
             | map(select(.value.result != "success"

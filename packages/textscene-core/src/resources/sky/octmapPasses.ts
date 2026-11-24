@@ -27,7 +27,8 @@ function drawCompute(
     throw new Error('expected a nodes handler on the renderer before a lowered pass draws');
   for (const [name, value] of Object.entries(values)) {
     const binding = draw.textures.get(name) ?? draw.uniforms.get(name);
-    if (!binding) throw new Error(`expected a uniform or texture of the lowered pass, got ${name}`);
+    if (!binding || !('value' in binding))
+      throw new Error(`expected a uniform or texture of the lowered pass, got ${name}`);
     binding.value = value;
   }
   withStoredOutput(gl, () => {

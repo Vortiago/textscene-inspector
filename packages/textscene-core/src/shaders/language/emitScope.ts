@@ -20,6 +20,11 @@ export class EmitScope {
     this.names.set(name, value);
   }
 
+  /** The value of `name`, or nothing for a name no declaration in scope gives. */
+  lookup(name: string): Value | undefined {
+    return this.names.get(name);
+  }
+
   find(name: string): Value {
     const value = this.names.get(name);
     if (value === undefined) throw new Error(`expected a variable ${name} in scope`);
