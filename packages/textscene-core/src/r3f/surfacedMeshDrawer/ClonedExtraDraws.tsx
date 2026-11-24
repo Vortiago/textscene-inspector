@@ -17,7 +17,7 @@ import { GLTF_SURFACE } from '../materials/surfaceTextures.js';
 import { OTHER_DRAWS_SURFACE } from '../materials/useOneSurfaceStartingMaterial.js';
 import { useSurfaceMaterial } from '../materials/useSurfaceMaterial.js';
 import { useDisposeOnRelease } from '../useDisposeOnRelease.js';
-import { setVisualLayers, visualLayersOf } from '../visualLayers.js';
+import { copySurfaceDrawState } from '../surfaceDrawState.js';
 
 /**
  * The sibling draws `useClonedExtraDraws` holds in a clone. Written only there: added with the
@@ -215,12 +215,6 @@ function chainSibling(
   sibling.quaternion.copy(holder.quaternion);
   sibling.scale.copy(holder.scale);
   sibling.visible = holder.visible;
-  sibling.frustumCulled = holder.frustumCulled;
-  sibling.castShadow = holder.castShadow;
-  sibling.onBeforeRender = holder.onBeforeRender;
-  sibling.onAfterRender = holder.onAfterRender;
-  sibling.onBeforeShadow = holder.onBeforeShadow;
-  sibling.onAfterShadow = holder.onAfterShadow;
-  setVisualLayers(sibling, visualLayersOf(holder));
+  copySurfaceDrawState(sibling, holder);
   return sibling;
 }

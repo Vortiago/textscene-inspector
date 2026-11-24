@@ -68,7 +68,7 @@ ${shader.vertexShader}`;
   },
 };
 
-/** Writes `gl_PointSize` from the recorded size, 1 px by default, in the pixels of the target drawn. */
+/** Writes `gl_PointSize` as the recorded size, 1 px by default, in framebuffer px (`material.cpp:1232`). */
 const GODOT_POINT_SIZE: ProgramInjection = {
   cacheKey: 'godot-point-size',
   onBeforeCompile(shader) {
@@ -84,11 +84,16 @@ const GODOT_POINT_SIZE: ProgramInjection = {
 };
 
 /**
- * A 2D canvas point as one framebuffer pixel (`canvas.glsl:268,301`), which three leaves unwritten.
+ * A 2D canvas point, one viewport pixel (`canvas.glsl:268`): the 2D view's viewport pixel is a CSS pixel.
  *
  * @canonical The size of a point on the 2D canvas
  */
-export const CANVAS_POINT_SIZE: ProgramInjection = GODOT_POINT_SIZE;
+export function canvasPointSize(pixelRatio: number): {
+  injection: ProgramInjection;
+  userData: Record<string, number>;
+} {
+  return { injection: GODOT_POINT_SIZE, userData: { [POINT_SIZE_KEY]: pixelRatio } };
+}
 
 const MAP_PARS_CHUNK = '#include <map_pars_fragment>';
 
@@ -175,16 +180,14 @@ export function withLineDraw(
   }));
 }
 
-const GODOT_POINT_SHADOW_SIZE_AT_POINT_COORD = composeInjections([
-  GODOT_POINT_SIZE,
-  GODOT_POINT_COORD_ALBEDO,
-])!;
-
 /**
  * What a depth draw compiles with to cut a points surface's shadow as its colour pass draws the
  * points: at their size, across the square where the albedo map is read, and at each instance.
  */
 function pointShadowSizeInjection(readsMap: boolean, isAtInstances: boolean): ProgramInjection {
-  const size = readsMap ? GODOT_POINT_SHADOW_SIZE_AT_POINT_COORD : GODOT_POINT_SIZE;
-  return isAtInstances ? composeInjections([size, GODOT_INSTANCED_LISTED])! : size;
+  return composeInjections([
+    GODOT_POINT_SIZE,
+    readsMap ? GODOT_POINT_COORD_ALBEDO : undefined,
+    isAtInstances ? GODOT_INSTANCED_LISTED : undefined,
+  ])!;
 }

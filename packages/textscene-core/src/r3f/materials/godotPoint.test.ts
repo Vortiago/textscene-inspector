@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { pointDrawOf, withLineDraw, withPointDraw, type PointDraw } from './godotPoint';
+import { canvasPointSize, pointDrawOf, withLineDraw, withPointDraw, type PointDraw } from './godotPoint';
 import type { ProgramShader } from '../materialProgramInputs';
 import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars.testkit';
 import type { StandardMaterialBag } from '../../resources/materials/standardmaterial3d/materialBag';
@@ -60,6 +60,17 @@ describe('the point size uniform', () => {
     const { shader, material } = compiled(BAG, SIZE_6);
     material.userData = {};
     expect(shader.uniforms.godotPointSize!.value).toBe(1);
+  });
+});
+
+describe('canvasPointSize', () => {
+  // `canvas.glsl:268`: one viewport pixel, which the 2D view draws as one CSS pixel.
+  it('draws a 2D canvas point as many framebuffer pixels as the canvas pixel ratio', () => {
+    const { injection, userData } = canvasPointSize(2);
+    const material = new THREE.MeshBasicMaterial({ userData });
+    const shader: ProgramShader = { ...THREE.ShaderLib.basic, uniforms: {} };
+    injection.onBeforeCompile.call(material, shader);
+    expect(shader.uniforms.godotPointSize!.value).toBe(2);
   });
 });
 

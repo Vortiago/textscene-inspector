@@ -3,50 +3,40 @@ import { emulatedPointGeometry, type DrawRange } from '../../shaders/spatial/mes
 import type { PointDraw } from '../../shaders/spatial/spatialPipeline.js';
 import { NO_RAYCAST } from '../../shaders/pipeline/noRaycast.js';
 import { OTHER_DRAWS_SURFACE } from '../materials/useOneSurfaceStartingMaterial.js';
-import { followVisualLayers } from '../visualLayers.js';
+import { SURFACE_DRAW_STATE, followSurfaceDrawState } from '../surfaceDrawState.js';
+import { observeSceneCamera } from '../sceneRenderCamera.js';
+import { surfaceWriteOf, withGodotSurface } from './godotSurfaceWrite.js';
 
 type SurfaceHost = THREE.Object3D & { geometry: THREE.BufferGeometry };
 
 /** The draw group of each emulated draw, whose quads are rebuilt from its parent's surface on a change. */
-// eslint-disable-next-line no-restricted-syntax -- written by drawPoints, cleared when the draw is collected
+// eslint-disable-next-line no-restricted-syntax -- written by `emulated`, cleared when the draw is collected
 const emulatedGroups = new WeakMap<THREE.Object3D, number | null>();
+
+/** The points are the host's own draw, so they take its order, shadow receipt and camera layers too. */
+const POINTS_DRAW_STATE = [...SURFACE_DRAW_STATE, 'receiveShadow', 'renderOrder', 'layers'] as const;
 
 /** A child draws the points (`scene_shader_forward_clustered.cpp:417`). Null when the host already does. */
 export function drawPoints(
   host: SurfaceHost,
   drawGroup: number | null,
   material: THREE.Material,
-  pointDraw: PointDraw
+  pointDraw: PointDraw,
+  scene: THREE.Scene
 ): (() => void) | null {
   if (pointDraw === 'native' && (host as THREE.Points).isPoints) return null;
   const drawn =
     pointDraw === 'native' ? nativePoints(host, drawGroup, material) : emulated(host, drawGroup, material);
   drawn.raycast = NO_RAYCAST;
-  followHostDraw(drawn, host);
+  followSurfaceDrawState(drawn, host, POINTS_DRAW_STATE);
   host.add(drawn);
+  const stopRefresh =
+    drawn instanceof THREE.Mesh ? observeSceneCamera(scene, () => refreshEmulatedPoints(drawn, host)) : null;
   return () => {
+    stopRefresh?.();
     host.remove(drawn);
     if (pointDraw === 'emulated') drawn.geometry.dispose();
   };
-}
-
-/** What a live edit of the host can change about how it draws, which the points read from it. */
-const HOST_DRAW_STATE = [
-  'castShadow',
-  'receiveShadow',
-  'renderOrder',
-  'frustumCulled',
-  'layers',
-  'onBeforeRender',
-  'onAfterRender',
-  'onBeforeShadow',
-  'onAfterShadow',
-] as const;
-
-/** `drawn` draws as `host` does at each draw: no copy goes stale when a live edit changes the host. */
-function followHostDraw(drawn: THREE.Object3D, host: SurfaceHost): void {
-  for (const key of HOST_DRAW_STATE) Object.defineProperty(drawn, key, { get: () => host[key] });
-  followVisualLayers(drawn, host);
 }
 
 /** Points of the host's surface as it is at each draw, so a new mesh on the host draws at once. */
@@ -66,20 +56,30 @@ function groupMaterials(drawGroup: number, material: THREE.Material): THREE.Mate
   );
 }
 
-function emulated(host: SurfaceHost, drawGroup: number | null, material: THREE.Material) {
+function emulated(host: SurfaceHost, drawGroup: number | null, material: THREE.Material): THREE.Mesh {
   const drawn = new THREE.Mesh(
     emulatedPointGeometry(host.geometry, groupRange(host.geometry, drawGroup)),
     material
   );
   emulatedGroups.set(drawn, drawGroup);
+  builtFrom.set(drawn, surfaceWriteOf(host.geometry));
   return drawn;
 }
 
-/** Rebuilds the quads of emulated points `drawn` after `withGodotSurface` writes its parent's surface. */
-export function refreshEmulatedPoints(drawn: THREE.Mesh, surface: THREE.BufferGeometry): void {
+/** The surface write each emulated draw's quads come from. Written by `emulated` and the refresh. */
+// eslint-disable-next-line no-restricted-syntax -- a record of the last build, compared before each render
+const builtFrom = new WeakMap<THREE.Object3D, unknown>();
+
+/** Rebuilds `drawn`'s quads on a new write of its host's surface, before the render list culls them. */
+function refreshEmulatedPoints(drawn: THREE.Mesh, host: SurfaceHost): void {
+  const surface = host.geometry;
+  if (surface.getAttribute('position')) withGodotSurface(surface);
+  const write = surfaceWriteOf(surface);
+  if (builtFrom.get(drawn) === write) return;
+  builtFrom.set(drawn, write);
   const drawing = drawn.geometry;
   drawn.geometry = emulatedPointGeometry(surface, groupRange(surface, emulatedGroups.get(drawn) ?? null));
-  // Disposed after this draw: three draws the geometry its render list took (r187 `WebGLRenderer.js:2182`).
+  // Disposed after the render: a render of another camera, started before this one, may hold it in its list.
   queueMicrotask(() => drawing.dispose());
 }
 

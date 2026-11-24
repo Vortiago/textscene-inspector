@@ -33,6 +33,7 @@ interface SpatialShaderSlotProps {
 export function SpatialShaderSlot({ shader, attach, fallback }: SpatialShaderSlotProps) {
   const gl = useThree((state) => state.gl);
   const invalidate = useThree((state) => state.invalidate);
+  const scene = useThree((state) => state.scene);
   const loaded = useLazyModuleState(loadSpatialSurface, true);
   const module = typeof loaded === 'object' && loaded !== null ? loaded.module : null;
   const nodesHandler = useNodesHandler(gl);
@@ -66,8 +67,8 @@ export function SpatialShaderSlot({ shader, attach, fallback }: SpatialShaderSlo
   }, [module, spatial, shader.parameters, textures, invalidate]);
 
   const surfaceAttach = useMemo(
-    () => module && spatial && godotSurfaceAttach(attach, module, spatial.pointDraw),
-    [module, attach, spatial]
+    () => module && spatial && godotSurfaceAttach(attach, module, spatial.pointDraw, scene),
+    [module, attach, spatial, scene]
   );
   if (!spatial || !surfaceAttach) return <>{fallback}</>;
   return (
@@ -85,12 +86,17 @@ interface GodotSurfaceHost extends MaterialHost, THREE.Object3D {
 type SurfaceModule = Pick<SpatialSurfaceModule, 'withGodotSurface' | 'drawPoints'>;
 
 /** Godot's attributes before the material: three builds the program from the attributes of the first draw. */
-function godotSurfaceAttach(attach: string | undefined, module: SurfaceModule, pointDraw: PointDraw | null) {
+function godotSurfaceAttach(
+  attach: string | undefined,
+  module: SurfaceModule,
+  pointDraw: PointDraw | null,
+  scene: THREE.Scene
+) {
   const drawGroup = drawGroupOf(attach);
   return (host: GodotSurfaceHost, material: THREE.Material) => {
     if (host.geometry.getAttribute('position')) module.withGodotSurface(host.geometry);
     const previous = materialAt(host, drawGroup);
-    const stopPoints = pointDraw && module.drawPoints(host, drawGroup, material, pointDraw);
+    const stopPoints = pointDraw && module.drawPoints(host, drawGroup, material, pointDraw, scene);
     placeMaterial(host, drawGroup, stopPoints ? OTHER_DRAWS_SURFACE : material);
     return () => {
       stopPoints?.();

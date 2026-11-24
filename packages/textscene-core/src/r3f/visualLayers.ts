@@ -41,6 +41,8 @@ export function isInMask(object: THREE.Object3D, mask: number): boolean {
 export function followVisualLayers(object: THREE.Object3D, source: THREE.Object3D): void {
   Object.defineProperty(object.userData, VISUAL_LAYERS_KEY, {
     get: () => visualLayersOf(source),
+    // A walk that sets `object`'s mask sets its source's too, which `object` reads.
+    set: () => {},
     enumerable: true,
   });
 }
