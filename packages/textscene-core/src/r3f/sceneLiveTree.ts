@@ -1,7 +1,7 @@
 import type { SceneGraph } from '../core/SceneGraph.js';
 import { isGltfPath } from '../godot/import/gltf.js';
 import { isEditableInstanceAt } from './dockListing.js';
-import { GLB_SCENE_ROOT_TYPE } from '../resources/glbSceneRoot.js';
+import { GLB_SCENE_ROOT_TYPE, glbPathOf, loneGlbRootPath } from '../resources/glbSceneRoot.js';
 import type { ResourceReference } from '../godot/variant/variantValue.js';
 import {
   projectDefaultEnvironmentPath,
@@ -13,10 +13,11 @@ import {
   type ProjectTreeSettings,
   type ProjectViewportSize,
 } from '../parser/projectSettingsParser.js';
-import type { SceneScope } from '../parser/types.js';
+import type { SceneScope, TscnExternalResource, TscnScene } from '../parser/types.js';
 import { PROJECT_FILE_PATH } from '../godot/project/project.js';
 import { readProjectSettings } from '../resources/projectSettingsFile.js';
 import { registerInstanceResource } from '../resources/registerInstanceResource.js';
+import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { sceneReads, type FileRead } from '../resources/loadFailure/fileReads.js';
 import { createSceneFileWalk, type WalkStart } from '../resources/sceneFiles/sceneFileWalk.js';
 import type { ResourceLoader } from '../resources/ResourceLoader.js';
@@ -30,7 +31,7 @@ import {
   type TreeCamera,
 } from '../scene/sceneRuntime.js';
 import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
-import { scopeOf } from '../resources/liveNode.js';
+import { liveInstancePath, scopeOf } from '../resources/liveNode.js';
 import { isCamera2DType, isCamera3DType } from './cameraNodeTypes.js';
 import { perObject } from '../utils/perObject.js';
 import type { ContainerWrite } from '../core/childVisibility.js';
@@ -45,18 +46,59 @@ import { liveFilesOf } from './liveFiles.js';
 import type { PatchLookup } from './nodePatch.js';
 import { placedPropertyOf } from './placedProperty.js';
 
-/** The scene `link` instances where it has not drawn in yet, as Godot has no such node until it loads. */
-function awaitedInstancePath({ step }: LiveLink): string | null {
-  const isDrawnIn = step.isMerged || step.groups.some((group) => group.origin === 'glb');
-  return isDrawnIn ? null : step.instancePath;
+/** An instance ref, the files it resolves in, and the scene it names. */
+interface InstanceRef {
+  readonly ref: string | undefined;
+  readonly externalResources: readonly TscnExternalResource[];
+  readonly path: string;
 }
 
-// Only a scene never asked for: a request for a held one emits its answer again, which re-asks a reader.
-function requestInstance(loader: ResourceLoader, { raw, step }: LiveLink, path: string): void {
-  const type = isGltfPath(path) ? 'glb' : 'scene';
-  if (loader.getCached(type, path) !== undefined) return;
-  if (raw.instance) registerInstanceResource(loader, raw.instance, step.scope.externalResources);
-  loader.request(type, path);
+/** The scene the step's node instances: as authored, or, once merged, the one its sub-scene root inherits. */
+function instancedSceneOf({ raw, step }: LiveLink): InstanceRef | null {
+  const { externalResources } = step.scope;
+  if (!step.isMerged)
+    return step.instancePath ? { ref: raw.instance, externalResources, path: step.instancePath } : null;
+  const path = liveInstancePath(step.node, step.scope);
+  return path ? { ref: step.node.instance, externalResources, path } : null;
+}
+
+/** The glTF the step's node instances, as authored or through the root of the sub-scene it instances. */
+function instancedGltfOf(link: LiveLink): InstanceRef | null {
+  const instanced = instancedSceneOf(link);
+  return instanced && isGltfPath(instanced.path) ? instanced : null;
+}
+
+/** The scene `link` waits on, as Godot has no such node until it loads: a merged root waits on its glTF. */
+function awaitedInstanceOf(link: LiveLink): InstanceRef | null {
+  if (link.step.groups.some((group) => group.origin === 'glb')) return null;
+  return link.step.isMerged ? instancedGltfOf(link) : instancedSceneOf(link);
+}
+
+// Only a file never asked for: a request for a held one emits its answer again, which re-asks a reader.
+/** Asks for the scene at `path`, then for each scene its root inherits, as Godot loads a base first. */
+function requestSceneChain(loader: ResourceLoader, { ref, externalResources, path }: InstanceRef): void {
+  const scene = loader.getCached<TscnScene>('scene', path);
+  if (scene === undefined) {
+    if (ref) registerInstanceResource(loader, ref, externalResources);
+    loader.request('scene', path);
+    return;
+  }
+  if (!scene) return;
+  // A glTF's scene is one root that draws the file, whose nodes join the tree once the file loads.
+  const glbPath = loneGlbRootPath(scene.nodes);
+  if (glbPath) {
+    requestGltf(loader, glbPath);
+    return;
+  }
+  const baseRef = scene.nodes.length === 1 ? scene.nodes[0]!.instance : undefined;
+  const basePath = baseRef && resolveInstancePath(baseRef, scene.externalResources);
+  if (basePath && basePath !== path) {
+    requestSceneChain(loader, { ref: baseRef, externalResources: scene.externalResources, path: basePath });
+  }
+}
+
+function requestGltf(loader: ResourceLoader, glbPath: string): void {
+  if (loader.getCached('glb', glbPath) === undefined) loader.request('glb', glbPath);
 }
 
 /** The resource an id of a node's own texts names, in the scene file the node's scope reads. */
@@ -99,7 +141,10 @@ function ownerOf(link: LiveLink, ancestors: readonly LiveLink[]): LiveLink | nul
 }
 
 /** The class Godot gives the node: the glTF importer roots a scene at a Node3D (gltf_document.cpp:6885). */
-const godotClassOf = (type: string) => (type === GLB_SCENE_ROOT_TYPE ? 'Node3D' : type);
+function godotClassOf(link: LiveLink): string {
+  const { type } = link.step.node;
+  return type === GLB_SCENE_ROOT_TYPE || instancedGltfOf(link) ? 'Node3D' : type;
+}
 
 /** The scene the host opened: its path, and the instances its `[editable]` lines name. */
 interface RootScene {
@@ -118,7 +163,7 @@ function treeNodeOf(
   const parent = ancestors.at(-1) ?? null;
   return {
     name: node.name,
-    type: godotClassOf(node.type),
+    type: godotClassOf(link),
     rawProperties: node.rawProperties,
     childNames: groups.flatMap((group) => group.children.map((child) => child.name)),
     resourceOf: resourceInScope(scope, root.scenePath),
@@ -150,7 +195,7 @@ const NO_CONTAINER_WRITES: readonly ContainerWrite[] = [];
 const camerasOf = perObject((tree: LiveTree): readonly TreeCamera[] => {
   const cameras: TreeCamera[] = [];
   tree.fold<string | null, void>(null, (link, viewport, descend) => {
-    if (awaitedInstancePath(link)) return;
+    if (awaitedInstanceOf(link)) return;
     const { type, rawProperties } = link.step.node;
     const dimension = isCamera3DType(type) ? '3D' : isCamera2DType(type) ? '2D' : null;
     if (dimension) cameras.push({ path: link.path, type, dimension, viewport, rawProperties });
@@ -178,11 +223,14 @@ function sceneTreeOf(
         if (link) ancestors.push(link);
         link = tree.at(names.slice(0, depth).join('/'));
         if (!link) return null;
-        const awaited = awaitedInstancePath(link);
+        const awaited = awaitedInstanceOf(link);
         if (awaited) {
-          requestInstance(loader, link, awaited);
+          requestSceneChain(loader, awaited);
           return null;
         }
+        // The root of a glTF the host opens draws the file, and the file's nodes join once it loads.
+        const openedGltfPath = glbPathOf(link.step.node);
+        if (openedGltfPath) requestGltf(loader, openedGltfPath);
       }
       return link && treeNodeOf(tree, link, ancestors, root, placed);
     },
