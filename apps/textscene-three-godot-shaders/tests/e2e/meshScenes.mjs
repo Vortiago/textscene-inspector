@@ -392,7 +392,7 @@ const FRAGMENT_SCENES = [
   ]),
 ];
 
-// Unshaded draws albedo and alpha only (`scene_forward_clustered.glsl:2980`): no write shows.
+// Unshaded draws only albedo and alpha (`scene_forward_clustered.glsl:2980`): a write shows by its read.
 const LIT_OUTPUTS = [
   ['NORMAL_MAP', 'vec3(0.1, 0.9, 0.4)', 'NORMAL_MAP'],
   ['NORMAL_MAP_DEPTH', '0.2', 'vec3(NORMAL_MAP_DEPTH * 0.5)'],
@@ -432,6 +432,7 @@ const LIT_OUTPUT_SCENES = LIT_OUTPUTS.map(([builtIn, written, shown = `vec3(${bu
     [`spatial.fragment.${builtIn}`]
   )
 );
+
 /** The global built-ins and the constants, which every stage reads. */
 const GLOBAL_SCENES = [
   stageScene(

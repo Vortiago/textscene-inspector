@@ -22,6 +22,7 @@ const LIT_OUTPUTS = [
   'EMISSION',
 ];
 
+/** The rows whose ids `ids` lists. */
 const rowsWithIds = (ids) => (row) => ids.includes(row.id);
 
 /** The rows of the operator `op`, `OP_ADD(int,int)` and the rest. */

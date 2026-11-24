@@ -42,8 +42,16 @@ describe('transpileSpatial', () => {
   });
 
   it("refuses a built-in the slice does not draw yet, at the user's line", () => {
-    const source = 'shader_type spatial;\nvoid light() {\n\tDIFFUSE_LIGHT = vec3(1.0);\n}\n';
-    expect(errorOf(source).position).toMatchObject({ file: 'user.gdshader', line: 3 });
+    const source =
+      'shader_type spatial;\nrender_mode unshaded;\nvoid light() {\n\tDIFFUSE_LIGHT = vec3(1.0);\n}\n';
+    expect(errorOf(source).position).toMatchObject({ file: 'user.gdshader', line: 4 });
+  });
+
+  it('refuses a lit shader with the owner of the light loop, as its draw needs it', () => {
+    const error = errorOf(
+      'shader_type spatial;\nvoid fragment() { ALBEDO = vec3(1.0); EMISSION = vec3(1.0); }\n'
+    );
+    expect(error).toMatchObject({ owner: '#1453', position: { line: 1, column: 1 } });
   });
 
   it('reads the instance from its row texture, with an integer sampler', () => {

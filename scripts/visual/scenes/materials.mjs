@@ -28,7 +28,7 @@ export const MATERIAL_SCENES = [
   { name: 'material-spatial-shader-unshaded', file: 'unit-spatial-shader-unshaded.tscn' },
   // A spatial shader's parameters of six types, a vertex() that moves the vertices, and a varying.
   { name: 'material-spatial-shader-uniforms', file: 'unit-spatial-shader-uniforms.tscn' },
-  // Unshaded spatial shaders that write the outputs only the light reads, which draw nothing.
+  // Unshaded spatial shaders whose writes to the outputs only the light reads change nothing drawn.
   { name: 'material-spatial-shader-lit-outputs', file: 'unit-spatial-shader-lit-outputs.tscn' },
   // Spatial shaders with cull_back, cull_front and cull_disabled, on quads that face the camera and away.
   { name: 'material-spatial-shader-cull', file: 'unit-spatial-shader-cull.tscn' },
