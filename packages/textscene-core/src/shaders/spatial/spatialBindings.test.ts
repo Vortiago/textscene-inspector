@@ -161,7 +161,7 @@ describe('the instance buffer of a transpiled spatial shader', () => {
     const { spatial } = written();
     object.updateMatrixWorld();
     const rows = spatial.buffers.get('instances')!;
-    const fetch = (rows as unknown as { node: { update: (frame: NodeFrame) => void } }).node;
+    const fetch = (rows as unknown as { store: { node: { update: (frame: NodeFrame) => void } } }).store.node;
     fetch.update({ renderId: 1, object } as NodeFrame);
     return spatial;
   };

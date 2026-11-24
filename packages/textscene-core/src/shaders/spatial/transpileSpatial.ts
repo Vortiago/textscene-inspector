@@ -30,7 +30,7 @@ import {
   type WrittenBuiltIn,
 } from '../template/emitTemplate.js';
 import { linkedProgram, type LinkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
-import type { RowTexture } from '../template/rowTexture.js';
+import type { RowBlock } from '../template/rowBlock.js';
 import { instanceWords } from './instanceData.js';
 import { VERTEX_ID_ATTRIBUTE } from './meshAttributes.js';
 import { SPECIALISED_MEMBERS } from './effectSpecialisations.js';
@@ -79,7 +79,7 @@ export interface TranspiledSpatial {
   /** The template's textures, by name. */
   readonly textures: ReadonlyMap<string, TextureNode>;
   /** The template's storage buffers, by instance name: `instances`. */
-  readonly buffers: ReadonlyMap<string, RowTexture>;
+  readonly buffers: ReadonlyMap<string, RowBlock>;
   /** Each uniform of the material by name, which takes `set_shader_parameter`'s value. */
   readonly parameters: ReadonlyMap<string, TranspiledUniform>;
   /** The errors Godot prints for a surface of this material, which still draws. */
