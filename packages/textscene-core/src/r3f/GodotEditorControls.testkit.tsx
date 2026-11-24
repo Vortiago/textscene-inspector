@@ -83,10 +83,20 @@ export function keyUp(code: string, init: KeyboardEventInit = {}): void {
 }
 
 export async function pressKey(code: string, init: KeyboardEventInit = {}): Promise<void> {
+  await pressKeyOn(focusedView(), code, init);
+}
+
+/** A key pressed while `target` holds focus, for a canvas this kit did not mount. */
+export async function pressKeyOn(
+  target: EventTarget,
+  code: string,
+  init: KeyboardEventInit = {}
+): Promise<void> {
+  const common = { code, bubbles: true, cancelable: true, ...init };
   await act(async () => {
-    keyDown(code, init);
+    target.dispatchEvent(new KeyboardEvent('keydown', common));
   });
-  keyUp(code, init);
+  target.dispatchEvent(new KeyboardEvent('keyup', common));
 }
 
 /** Where the camera is pointing, in world space. */

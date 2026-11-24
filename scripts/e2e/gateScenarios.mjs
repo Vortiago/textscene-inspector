@@ -5,6 +5,7 @@ import {
   runEyeAndHoverScenario,
 } from './eyeAndHoverScenario.mjs';
 import { checkViewStatus, runViewStatusScenario, VIEW_STATUS_FIXTURE } from './viewStatusScenario.mjs';
+import { checkViewKeys, measureViewKeys, runViewKeysScenario } from './viewKeysScenario.mjs';
 import { inkStats } from '../vscode/pixels.mjs';
 import { shardOf } from '../shards/shards.mjs';
 import { longTasksAfterFirstReply, longTasksDuringTextureWork } from './textureWorkProbe.mjs';
@@ -106,6 +107,14 @@ export const SCENARIOS = [
     run: runEyeAndHoverScenario,
     check: checkEyeAndHover,
     measure: measureEyeAndHover,
+  },
+  {
+    name: 'view keys',
+    title: `view keys: F, O and Shift+F in the 3D and 2D views`,
+    seconds: 10,
+    run: runViewKeysScenario,
+    check: checkViewKeys,
+    measure: measureViewKeys,
   },
   {
     name: 'view status',

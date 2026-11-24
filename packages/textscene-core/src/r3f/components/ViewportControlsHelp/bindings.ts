@@ -249,6 +249,13 @@ const CONTROLS_2D: ControlsHelp = {
       ],
     },
     {
+      device: 'Keyboard',
+      bindings: [
+        { input: 'F', action: 'Centre the selection' },
+        { input: 'Shift + F', action: 'Frame the selection' },
+      ],
+    },
+    {
       device: 'Trackpad',
       bindings: [
         { input: 'Two-finger scroll', action: 'Zoom' },

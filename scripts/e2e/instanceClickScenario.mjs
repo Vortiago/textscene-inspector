@@ -17,7 +17,7 @@ export const OPEN_PICK = 'Root/Open/Mesh';
 // Godot 4.6.3's Scene dock lists the editable instance's mesh only (scene_tree_editor.cpp:283-290).
 export const LISTED_ROWS = ['Root', 'Root/Locked', 'Root/Open', 'Root/Open/Mesh'];
 
-const isRed = (r, g, b) => r > 200 && g < 60 && b < 60;
+export const isRed = (r, g, b) => r > 200 && g < 60 && b < 60;
 
 /**
  * The centre of the red pixels on each side of the middle of their span, or null for no red pixel.
@@ -31,8 +31,12 @@ export function redBoxCentres(buffer) {
     if (isRed(data[i], data[i + 1], data[i + 2])) red.push([(i / 4) % width, Math.floor(i / 4 / width)]);
   }
   if (red.length === 0) return null;
-  const xs = red.map(([x]) => x);
-  const middle = (Math.min(...xs) + Math.max(...xs)) / 2;
+  // A reduce, not a spread: a box that fills the canvas holds more pixels than the call stack takes.
+  const [minX, maxX] = red.reduce(
+    ([lo, hi], [x]) => [Math.min(lo, x), Math.max(hi, x)],
+    [Infinity, -Infinity]
+  );
+  const middle = (minX + maxX) / 2;
   return {
     left: centreOf(red.filter(([x]) => x < middle)),
     right: centreOf(red.filter(([x]) => x >= middle)),
