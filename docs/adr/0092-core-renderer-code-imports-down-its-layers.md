@@ -37,7 +37,11 @@ higher layer. A test, a testkit and a `testing/` folder mount any layer, so the 
 - A node's edit rect stays in its slice, as `_edit_get_rect` is a member of Godot's `CanvasItem`
   (`canvas_item.h:258`).
 - A node's gizmo stays in its slice too, and the `show` keys turn it off. Godot's node holds its
-  gizmos (`node_3d.h:164-165`), but the code that draws one is in `editor/scene/3d/gizmos/`.
+  gizmos (`node_3d.h:164-165`), but the code that draws one is in `editor/scene/3d/gizmos/`. The
+  slices keep the gizmo code because a move gains no bytes in a shipped build. 37 slices draw a
+  gizmo: 2,234 lines, between 7 and 18 KB of the 1,786,618 B webview script, gzipped. Every shipped
+  build includes the editor. With the gizmos off, no gizmo geometry is built. A build that leaves
+  the editor view out is the trigger to move the gizmos into the editor view.
 
 ## Consequences
 
