@@ -6,13 +6,8 @@
 
 import type { AsymmetryEntry } from './types.js';
 
-/**
- * Light3D base validators, registered under 'Light3D' in
- * 3d/lights/shared/linterParser.ts, that the shared parser helpers never read:
- * cull and fine shadow tuning with no effect on the static preview.
- */
+/** Light3D validators the shared parser never reads: indirect energy and fine shadow tuning. */
 const LIGHT3D_LINTER_ONLY_KEYS = [
-  'light_cull_mask',
   'light_indirect_energy',
   'shadow_reverse_cull_face',
   'shadow_transmittance_bias',

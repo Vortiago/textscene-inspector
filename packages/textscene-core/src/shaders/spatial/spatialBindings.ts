@@ -9,7 +9,7 @@ import { FOG_BINDINGS, FOG_SPECIALISATIONS, USE_FOG } from './fogBindings.js';
 import { EFFECT_SPECIALISATIONS } from './effectSpecialisations.js';
 import { DIRECTIONAL_LIGHT_BINDINGS, type DirectionalLight } from './directionalLights.js';
 
-/** What the colour pass reads from a frame with no camera attributes. */
+/** What the colour pass reads from a frame. */
 export interface SpatialScene {
   readonly camera: THREE.PerspectiveCamera | THREE.OrthographicCamera;
   /** The size of the viewport in pixels. */
@@ -23,7 +23,7 @@ export interface SpatialScene {
   readonly emissiveExposure: number;
   /** The environment's fog, or nothing when it is off. */
   readonly fog?: EnvironmentFog;
-  /** The directional lights that light surfaces, in the order Godot's cull hands them over. */
+  /** The directional lights that light surfaces, the ones Godot's cull draws. */
   readonly directionalLights: readonly DirectionalLight[];
 }
 
@@ -179,8 +179,9 @@ export function beforeEachDraw(spatial: TranspiledSpatial, draw: (drawn: Spatial
     throw new Error(
       `expected the scene template to read the uniform ${DRAW_HOOK}, found ${hook ? 'an array' : 'none'}`
     );
-  hook.onObjectUpdate(({ frameId, camera, scene, object, material }: NodeFrame) =>
-    draw({ renderId: frameId, camera: camera!, scene: scene!, object: object!, material: material! })
+  // `renderId`, not `frameId`: a probe capture and the view it lights draw in one frame, with other lights.
+  hook.onObjectUpdate(({ renderId, camera, scene, object, material }: NodeFrame) =>
+    draw({ renderId, camera: camera!, scene: scene!, object: object!, material: material! })
   );
 }
 

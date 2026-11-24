@@ -23,10 +23,10 @@ const declaration = userDataDeclaration<LightSpecularDeclaration>(
   ({ amount }) => typeof amount === 'number'
 );
 
-/** The `userData` entry that declares a light's specular amount, to merge into its `userData`. */
 /** The light's declaration, or null for a light that made none, such as a GLB light. */
 export const readLightSpecularDeclaration = declaration.read;
 
+/** The `userData` entry that declares a light's specular amount, to merge into its `userData`. */
 export function lightSpecularUserData(amount: number): Record<string, unknown> {
   return declaration.userData({ amount });
 }

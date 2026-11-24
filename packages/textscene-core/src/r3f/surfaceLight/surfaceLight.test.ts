@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { attachSplitSun } from '../directionalShadow/splitSun';
+import { dropLight } from '../directionalShadow/droppedLight';
 import type { DirectionalLight } from '../../shaders/spatial/directionalLights';
 import { lightSpecularUserData } from '../lightSpecular/lightSpecular';
 import { lightSizeUserData } from '../lightSize/lightSize';
@@ -89,6 +90,12 @@ describe('sceneDirectionalLights', () => {
     parent.visible = false;
     scene.add(parent);
     parent.add(sun(scene, [0, 1, 0]));
+    expect(sceneDirectionalLights(scene, 1)).toEqual([]);
+  });
+
+  it("skips a light the fitter drops past Godot's eighth", () => {
+    const scene = new THREE.Scene();
+    dropLight(sun(scene, [0, 1, 0]));
     expect(sceneDirectionalLights(scene, 1)).toEqual([]);
   });
 

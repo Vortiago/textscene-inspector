@@ -7,6 +7,7 @@ import { userDataDeclaration } from '../userDataDeclaration.js';
 import { visibleInTree } from '../visibleInTree.js';
 import { perObject } from '../../utils/perObject.js';
 import { isDirectionalLight } from '../directionalShadow/lightLists.js';
+import { isDropped } from '../directionalShadow/droppedLight.js';
 import { shineDirection } from '../fog/fogLights.js';
 import { readFogLightDeclaration } from '../fog/fogLightDeclaration.js';
 import { readLightSpecularDeclaration } from '../lightSpecular/lightSpecular.js';
@@ -54,7 +55,7 @@ const lastLightsOf = perObject((_scene: THREE.Scene) => ({
   lights: [] as DirectionalLight[],
 }));
 
-/** The directional lights of `scene` that light surfaces in the render `renderId`, read once a render. */
+/** The fitter drops a light past Godot's eighth, so it lights no surface here either. */
 export function sceneDirectionalLights(scene: THREE.Scene, renderId: number): readonly DirectionalLight[] {
   const last = lastLightsOf(scene);
   if (last.renderId === renderId) return last.lights;
@@ -63,7 +64,8 @@ export function sceneDirectionalLights(scene: THREE.Scene, renderId: number): re
     .current()
     .flatMap((light) => {
       const own = declaration.read(light) ?? UNDECLARED;
-      return own.lightsSurfaces && visibleInTree(light) ? [directionalLightOf(light, own.cullMask)] : [];
+      const isDrawn = own.lightsSurfaces && visibleInTree(light) && !isDropped(light);
+      return isDrawn ? [directionalLightOf(light, own.cullMask)] : [];
     });
   return last.lights;
 }

@@ -24,10 +24,10 @@ const declaration = userDataDeclaration<LightBakeModeDeclaration>(
   ({ bakeMode }) => typeof bakeMode === 'number'
 );
 
-/** The `userData` entry that declares a light's `light_bake_mode`, to merge into its `userData`. */
 /** The light's declaration, or null for a light that made none, such as a GLB light. */
 export const readLightBakeModeDeclaration = declaration.read;
 
+/** The `userData` entry that declares a light's `light_bake_mode`, to merge into its `userData`. */
 export function lightBakeModeUserData(bakeMode: number): Record<string, unknown> {
   return declaration.userData({ bakeMode });
 }

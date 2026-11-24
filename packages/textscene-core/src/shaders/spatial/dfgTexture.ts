@@ -8,7 +8,7 @@ import { DFG_SIZE } from '../../godot/rendering/materials/dfgTable.generated.js'
 let table: THREE.DataTexture | undefined;
 
 /** Godot's DFG table (`render_forward_clustered.cpp:5087-5126`), read with a linear sampler. */
-function dfgTexture(): THREE.DataTexture {
+export function dfgTexture(): THREE.DataTexture {
   if (table) return table;
   table = new THREE.DataTexture(
     godotRows(dfgHalfFloats()),

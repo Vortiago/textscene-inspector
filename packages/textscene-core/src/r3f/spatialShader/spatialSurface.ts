@@ -21,6 +21,8 @@ import { sceneDirectionalLights } from '../surfaceLight/surfaceLight.js';
 import { sceneAmbientLight } from '../surfaceLight/sceneAmbientLight.js';
 import { EMISSION_EXPOSURE } from '../exposure/emissionExposure.js';
 import { visualLayersOf } from '../visualLayers.js';
+import { releasedOnUnmount } from '../sharedTexture.js';
+import { dfgTexture } from '../../shaders/spatial/dfgTexture.js';
 
 export { setMaterialParameters } from '../../shaders/uniforms/materialParameters.js';
 export { drawPoints } from './pointSurface.js';
@@ -45,6 +47,7 @@ export function spatialSurfaceOf(
   if (!('spatial' in compile))
     return { refusal: `[material] ${unDrawnMessage(compile, 'spatial', '3D surface')}` };
   const { spatial } = compile;
+  releasedOnUnmount(dfgTexture());
   const specialise = () => specialiseSpatial(spatial, renderedEnvironmentFog());
   spatial.material.onBeforeProgram = specialise;
   try {
