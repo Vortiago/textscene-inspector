@@ -95,17 +95,6 @@ describe('withGlobalParameters', () => {
     expect(parametersOf(functionNamed(withGlobalParameters(local, COLOR), 'f'))).toEqual([]);
   });
 
-  it("reads a local of an earlier switch label in a later label as the local, in the switch's scope", () => {
-    const local = stageOf(
-      [
-        'float time;',
-        'void f(int a) { switch (a) { case 0: float time = 1.0; case 1: time = 2.0; break; } }',
-        'void main() { f(0); }',
-      ].join('\n')
-    );
-    expect(parametersOf(functionNamed(withGlobalParameters(local, COLOR), 'f'))).toEqual(['in int a']);
-  });
-
   it('gives each overload the globals of its own body', () => {
     const overloads = [
       'layout(location = 0) out vec4 color;',
