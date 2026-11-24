@@ -4,7 +4,7 @@ export const SOURCE_PANE_STORAGE_KEY = 'tscn-web-source-pane';
 export const FRAME_ON_OPEN_STORAGE_KEY = 'tsi.frameOnOpen';
 /** `FIT_ON_OPEN_2D_STORAGE_KEY` in r3f/world2D/viewport2d.ts. A test pins it: a stale key refits. */
 export const FIT_ON_OPEN_2D_STORAGE_KEY = 'tsi.fitOnOpen2D';
-/** `VIEWPORT_MODE_STORAGE_KEY` in ViewportModeContext.tsx, set for a `Node`-rooted 2D scene, which claims none. */
+/** `VIEWPORT_MODE_STORAGE_KEY` in ViewportModeContext.tsx: a `Node`-rooted 2D scene claims no mode. */
 export const VIEWPORT_MODE_STORAGE_KEY = 'tsi.viewportMode';
 /** `SHOW_STORAGE_KEYS.gizmos` in ViewportModeContext.tsx, pinned by `previewServer.test.mjs`. */
 export const SHOW_GIZMOS_STORAGE_KEY = 'tsi.showGizmos';
