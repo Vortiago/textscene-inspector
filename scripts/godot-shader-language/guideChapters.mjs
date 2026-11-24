@@ -780,6 +780,12 @@ const SPATIAL_CHAPTER = {
       tsl: "the material's `side`, and the defines of the template variant",
     },
     {
+      heading: 'Render mode `wireframe`',
+      rows: (row) => row.id === 'spatial render_mode wireframe',
+      what: '`wireframe` draws each triangle as its three edges (`scene_shader_forward_clustered.cpp:425`). The cull runs on the triangle first, so `cull_back` keeps the edges of the front faces only, and `FRONT_FACING` and `NORMAL` follow the face of the triangle. The depth prepass draws the edges too. The Compatibility renderer of a game draws the triangles filled, as it builds the line index only for the editor (`mesh_storage.cpp:289`). A shader that writes `POINT_SIZE` or reads `POINT_COORD` draws points, which the mode leaves as they are. Firefox has no `WEBGL_polygon_mode`, so there the edges of the faces seen from behind stay and `FRONT_FACING` is always true.',
+      tsl: "`WEBGL_polygon_mode` around the material's draw, and three's `wireframe` without it",
+    },
+    {
       heading: 'Depth modes',
       rows: (row) => /^spatial render_mode depth_(draw|test)_/.test(row.id),
       what: '`depth_test_disabled` draws with no depth test, and `depth_test_inverted` draws only the fragments behind the depth already drawn (`scene_shader_forward_clustered.cpp:352-360`). `depth_draw_never` writes no depth. `depth_draw_opaque`, the default, writes depth in the opaque pass only, and `depth_draw_always` in the alpha pass too. A shader with `depth_draw_never` or with a depth test other than the default draws in the alpha pass (`scene_shader_forward_clustered.h:279`), after the opaque objects, the farthest object first.',

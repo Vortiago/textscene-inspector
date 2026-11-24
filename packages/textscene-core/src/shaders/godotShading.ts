@@ -2,6 +2,7 @@ import type * as THREE from 'three';
 import { rendererShaderOptions, type RendererShaderOptions } from './rendererShaderOptions.js';
 import { installNodesHandler, type NodeOutput } from './nodesHandler.js';
 import { installGodotOpaqueOrder } from './pipeline/opaqueOrder.js';
+import { installGodotPolygonMode } from './pipeline/polygonMode.js';
 import type { RenderingMethod } from './preprocessor/renderingMethod.js';
 import { transpileSky, type SkyOptions, type TranspiledSky } from './sky/transpileSky.js';
 import { transpileSpatial, type SpatialOptions, type TranspiledSpatial } from './spatial/transpileSpatial.js';
@@ -23,13 +24,14 @@ export interface GodotShading {
   sky(source: string, options?: OwnOptions<SkyOptions>): TranspiledSky;
 }
 
-/** Gives `renderer` a nodes handler and Godot's opaque order, and answers the shading of its project. */
+/** Gives `renderer` Godot's nodes handler, opaque order and polygon mode, and answers its shading. */
 export function installGodotShading(
   renderer: THREE.WebGLRenderer,
   { output, renderingMethod = 'forward_plus' }: GodotShadingOptions = {}
 ): GodotShading {
   installNodesHandler(renderer, output);
   installGodotOpaqueOrder(renderer);
+  installGodotPolygonMode(renderer);
   const shaderOptions = rendererShaderOptions(renderer, renderingMethod);
   return {
     spatial: (source, options) => transpileSpatial(source, { ...options, ...shaderOptions }),

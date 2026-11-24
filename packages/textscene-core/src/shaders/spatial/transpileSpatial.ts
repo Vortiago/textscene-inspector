@@ -40,6 +40,7 @@ import { devicePoints, type DevicePoints } from './devicePoints.js';
 import { coveredOnOneSample } from '../pipeline/singleSampleCoverage.js';
 import {
   applySpatialPipeline,
+  drawsLines,
   stencilQueueError,
   spatialPipeline,
   drawsAlphaToCoverage,
@@ -52,6 +53,7 @@ import { TreeMemo } from '../template/treeMemo.js';
 import type { Stacked, Vec2, Vec4 } from '../tslTypes.js';
 import { VIEWPORT_SIZE } from './spatialBindings.js';
 import { setPrepassDraw } from '../pipeline/depthPrepass.js';
+import { drawAsLines } from '../pipeline/polygonMode.js';
 import { spatialPrepassDraw } from './spatialPrepass.js';
 import { rendererOf } from '../preprocessor/renderingMethod.js';
 import { BoundNodeMaterial } from '../uniforms/boundMaterial.js';
@@ -134,6 +136,7 @@ export function transpileParsedSpatial(
   material.stageWith(() => setColourStages(material, emitStages(SCENE.defines), pipeline));
   applySpatialPipeline(material, pipeline);
   const renderer = rendererOf(options.renderingMethod ?? 'forward_plus');
+  if (drawsLines(pipeline, renderer)) drawAsLines(material);
   const program = {
     depthStages: () => emitStages(DEPTH_DEFINES),
     shader,

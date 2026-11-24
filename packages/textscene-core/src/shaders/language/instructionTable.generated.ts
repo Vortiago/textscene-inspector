@@ -1861,7 +1861,7 @@ spatial render_mode cull_back	render mode	servers/rendering/shader_types.cpp:238
 spatial render_mode cull_front	render mode	servers/rendering/shader_types.cpp:238	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
 spatial render_mode cull_disabled	render mode	servers/rendering/shader_types.cpp:238	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
 spatial render_mode unshaded	render mode	servers/rendering/shader_types.cpp:239	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
-spatial render_mode wireframe	render mode	servers/rendering/shader_types.cpp:240	#1831	forward_clustered/scene_forward_clustered.glsl					
+spatial render_mode wireframe	render mode	servers/rendering/shader_types.cpp:240	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
 spatial render_mode diffuse_lambert	render mode	servers/rendering/shader_types.cpp:241	#1453	forward_clustered/scene_forward_clustered.glsl					
 spatial render_mode diffuse_lambert_wrap	render mode	servers/rendering/shader_types.cpp:241	#1453	forward_clustered/scene_forward_clustered.glsl					
 spatial render_mode diffuse_burley	render mode	servers/rendering/shader_types.cpp:241	#1453	forward_clustered/scene_forward_clustered.glsl					

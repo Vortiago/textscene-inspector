@@ -7,7 +7,8 @@ import { CullMode } from '../../godot/rendering/materials/cullMode.js';
 import { DepthDrawMode } from '../../godot/rendering/materials/depthDrawMode.js';
 import { StencilCompare, StencilFlag } from '../../godot/rendering/materials/stencil.js';
 import { parsedShader } from '../language/parseShader.js';
-import { drawsAlphaToCoverage, spatialPipeline, stencilQueueError } from './spatialPipeline.js';
+import { drawsAlphaToCoverage, drawsLines, spatialPipeline, stencilQueueError } from './spatialPipeline.js';
+import type { Renderer } from '../preprocessor/renderingMethod.js';
 import { transpileSpatial } from './transpileSpatial.js';
 
 /** The material of an unshaded shader with `modes` after `unshaded`. */
@@ -165,6 +166,7 @@ describe('spatialPipeline', () => {
       depthFlags: new Set(),
       stencil: null,
       pointDraw: null,
+      usesWireframe: false,
     });
   });
 
@@ -213,6 +215,27 @@ describe('spatialPipeline', () => {
   it('a screen texture uniform no function reads leaves readsScreen false', () => {
     const uniform = 'uniform sampler2D screen : hint_screen_texture;\n';
     expect(fragmentPipeline('ALBEDO = vec3(1.0);', uniform).readsScreen).toBe(false);
+  });
+
+  describe('drawsLines', () => {
+    const drawsLinesOf = (source: string, renderer: Renderer = 'forward_plus') =>
+      drawsLines(spatialPipeline(parsedShader(`shader_type spatial;\n${source}`).tree), renderer);
+
+    it('holds for render_mode wireframe', () => {
+      expect(drawsLinesOf('render_mode wireframe;\n')).toBe(true);
+    });
+
+    it('does not hold without render_mode wireframe', () => {
+      expect(drawsLinesOf('render_mode unshaded;\n')).toBe(false);
+    });
+
+    it('does not hold for a shader that draws points', () => {
+      expect(drawsLinesOf('render_mode wireframe;\nvoid vertex() {\n\tPOINT_SIZE = 2.0;\n}\n')).toBe(false);
+    });
+
+    it('does not hold on a game’s Compatibility renderer', () => {
+      expect(drawsLinesOf('render_mode wireframe;\n', 'gl_compatibility')).toBe(false);
+    });
   });
 
   describe('depthFlags', () => {

@@ -19,9 +19,17 @@ function rendererWithSlots(varyingSlots: number) {
   };
   const setNodesHandler = vi.fn();
   const setOpaqueSort = vi.fn();
-  const renderer = { setNodesHandler, setOpaqueSort, debug: {}, getContext: () => context };
+  const renderBufferDirect = vi.fn();
+  const renderer = {
+    setNodesHandler,
+    setOpaqueSort,
+    renderBufferDirect,
+    debug: {},
+    getContext: () => context,
+  };
   return {
     renderer: renderer as unknown as THREE.WebGLRenderer,
+    renderBufferDirect,
     getParameter,
     setNodesHandler,
     setOpaqueSort,
@@ -50,6 +58,12 @@ describe('installGodotShading', () => {
     const { renderer, setOpaqueSort } = rendererWithSlots(16);
     installGodotShading(renderer);
     expect(setOpaqueSort).toHaveBeenCalledWith(godotOpaqueSort());
+  });
+
+  it('wraps the renderer’s draw for Godot’s polygon mode', () => {
+    const { renderer, renderBufferDirect } = rendererWithSlots(16);
+    installGodotShading(renderer);
+    expect(renderer.renderBufferDirect).not.toBe(renderBufferDirect);
   });
 
   it("refuses varyings past the GL context's slots on a compatibility project", () => {

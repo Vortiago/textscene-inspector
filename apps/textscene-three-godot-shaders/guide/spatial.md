@@ -2317,6 +2317,91 @@ void fragment() {
 | --- | --- |
 | <img src="showcase/spatial-cull-disabled-normal-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-cull-disabled-normal-three.png" width="256" alt="Transpilation"> |
 
+## Showcase `spatial-wireframe-cull-back`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, wireframe, cull_back;
+
+void fragment() {
+	ALBEDO = FRONT_FACING ? vec3(UV, 0.3) : vec3(0.9, 0.3, UV.y);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-wireframe-cull-back-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-wireframe-cull-back-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-wireframe-cull-front`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, wireframe, cull_front;
+
+void fragment() {
+	ALBEDO = FRONT_FACING ? vec3(UV, 0.3) : vec3(0.9, 0.3, UV.y);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-wireframe-cull-front-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-wireframe-cull-front-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-wireframe-cull-disabled`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, wireframe, cull_disabled;
+
+void fragment() {
+	ALBEDO = FRONT_FACING ? vec3(UV, 0.3) : vec3(0.9, 0.3, UV.y);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-wireframe-cull-disabled-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-wireframe-cull-disabled-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-wireframe-compatibility`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, wireframe;
+
+void fragment() {
+	ALBEDO = vec3(0.0, 1.0, float(FRONT_FACING));
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-wireframe-compatibility-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-wireframe-compatibility-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-wireframe-cull-disabled-normal`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, wireframe, cull_disabled;
+
+void fragment() {
+	ALBEDO = NORMAL * 0.5 + 0.5;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-wireframe-cull-disabled-normal-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-wireframe-cull-disabled-normal-three.png" width="256" alt="Transpilation"> |
+
 ## Showcase `spatial-depth-test-default`
 
 Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
@@ -3692,6 +3777,15 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 `cull_back`, the default, culls the faces seen from behind, `cull_front` the faces seen from the front, and `cull_disabled` none. Godot turns the cull round for a mesh of a negative scale (`render_forward_clustered.cpp:411`). three turns the winding of the mesh round instead, which turns `gl_FrontFacing` round too, so the transpiler turns `FRONT_FACING` back for a mirrored mesh and reads as Godot does. `cull_front` and `cull_disabled` define `DO_SIDE_CHECK`, so the template turns `NORMAL` round on a face seen from behind (`scene_forward_clustered.glsl:1263`).
 
 The transpiler emits the material's `side`, and the defines of the template variant. Rows: `spatial render_mode cull_back`, `spatial render_mode cull_front`, `spatial render_mode cull_disabled`. Godot source: `servers/rendering/shader_types.cpp:238`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## Render mode `wireframe`
+
+`wireframe` draws each triangle as its three edges (`scene_shader_forward_clustered.cpp:425`). The cull runs on the triangle first, so `cull_back` keeps the edges of the front faces only, and `FRONT_FACING` and `NORMAL` follow the face of the triangle. The depth prepass draws the edges too. The Compatibility renderer of a game draws the triangles filled, as it builds the line index only for the editor (`mesh_storage.cpp:289`). A shader that writes `POINT_SIZE` or reads `POINT_COORD` draws points, which the mode leaves as they are. Firefox has no `WEBGL_polygon_mode`, so there the edges of the faces seen from behind stay and `FRONT_FACING` is always true.
+
+The transpiler emits `WEBGL_polygon_mode` around the material's draw, and three's `wireframe` without it. Rows: `spatial render_mode wireframe`. Godot source: `servers/rendering/shader_types.cpp:240`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
