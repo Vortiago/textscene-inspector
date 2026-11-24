@@ -1,11 +1,7 @@
 import { act, render, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  ViewportModeProvider,
-  useViewportMode,
-  type ViewportMode,
-} from '../ViewportMode/ViewportModeContext';
-import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
+import { ViewportModeProvider, useViewportMode } from '../ViewportMode/ViewportModeContext';
+import type { ViewportMode } from '../../viewportMode';
 import type { SceneFile } from '../../../scene/sceneFiles';
 import { createEditorCameras } from '../../editorView/editorCamera/editorCameras';
 import { variant, type SceneValue } from '../../../scene/variant';
@@ -59,9 +55,8 @@ const GLB: SceneFile = {
   addresses: [],
 };
 
-/** A parsed scene whose files a test sets, telling its subscribers of each change. */
+/** A scene whose files a test sets, telling its subscribers of each change. */
 function fakeScene() {
-  const parsed = { sceneGraph: createSceneGraphFromTscnScene({ nodes: [] }), error: null };
   let files: readonly SceneFile[] = [];
   const listeners = new Set<() => void>();
   const setFiles = (next: readonly SceneFile[]) => {
@@ -70,7 +65,6 @@ function fakeScene() {
   };
   const scene = {
     rootScenePath: 'res://main.tscn',
-    parse: () => parsed,
     files: () => files,
     subscribe: (listener: () => void) => {
       listeners.add(listener);
@@ -101,7 +95,7 @@ async function mount({ frameOnOpen = true, mode = '3D' as ViewportMode } = {}) {
       <ViewportModeProvider initialFrameOnOpen={frameOnOpen} initialMode={mode}>
         <PreviewCameraProvider scene={NO_SCENE_WATCH}>
           <PreviewProbe />
-          <FrameOnOpen scene={fake.scene} view={camera.view} heard={heard} />
+          <FrameOnOpen scene={fake.scene} hasScene view={camera.view} heard={heard} />
         </PreviewCameraProvider>
       </ViewportModeProvider>
     );

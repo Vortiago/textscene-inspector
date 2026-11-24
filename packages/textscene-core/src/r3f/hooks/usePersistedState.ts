@@ -12,6 +12,10 @@ import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 
 const WRITE_DEBOUNCE_MS = 200;
 
 /** Falls back to `defaultValue` on any failure. */
+export function isBoolean(value: unknown): value is boolean {
+  return typeof value === 'boolean';
+}
+
 export function readPersisted<T>(key: string, defaultValue: T, isValid?: (value: unknown) => value is T): T {
   try {
     if (typeof window === 'undefined') return defaultValue;

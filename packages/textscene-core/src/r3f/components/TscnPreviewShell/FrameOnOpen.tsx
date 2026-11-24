@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useSyncExternalStore } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useViewportMode } from '../ViewportMode/ViewportModeContext.js';
 import type { Scene } from '../../../scene/openScene.js';
 import type { SceneValue } from '../../../scene/variant.js';
@@ -10,16 +10,16 @@ import { usePreviewCamera } from './previewCamera.js';
 const FIT_DELAYS_MS = [150, 500, 1100];
 
 interface FrameOnOpenProps {
-  scene: Pick<Scene, 'rootScenePath' | 'parse' | 'files' | 'subscribe'>;
+  scene: Pick<Scene, 'rootScenePath' | 'files' | 'subscribe'>;
+  hasScene: boolean;
   view: EditorViewAnswers | null;
   heard: HeardStatusStore;
 }
 
 /** Opt-in: Godot opens each scene at a fixed orbit and frames only on F (node_3d_editor_plugin.h:420-426). */
-export function FrameOnOpen({ scene, view, heard }: FrameOnOpenProps) {
+export function FrameOnOpen({ scene, hasScene, view, heard }: FrameOnOpenProps) {
   const { mode, frameOnOpen } = useViewportMode();
   const rootKey = scene.rootScenePath;
-  const hasScene = useSyncExternalStore(scene.subscribe, () => scene.parse().sceneGraph !== null);
   // A return to the 3D mode finds the camera where it was left, as in Godot, so it frames no scene twice.
   const framedRoot = useRef<string | null>(null);
   // A ref, not a dependency: an ended preview starts no fit.
@@ -64,7 +64,8 @@ export function FrameOnOpen({ scene, view, heard }: FrameOnOpenProps) {
     const isLoading = () => scene.files().some((file) => file.state === 'loading');
     let hasLoadedSinceSettle = isLoading();
     const stopWatchingLoads = scene.subscribe(() => {
-      if (isLoading()) hasLoadedSinceSettle = true;
+      // A walk of the files per write notice, so one seen load ends the reads until the settle.
+      if (!hasLoadedSinceSettle && isLoading()) hasLoadedSinceSettle = true;
     });
     let wasSettled = false;
     const fitOnSettle = () => {

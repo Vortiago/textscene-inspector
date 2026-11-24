@@ -16,7 +16,7 @@ import {
 } from 'react';
 import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../../../parser/types.js';
 import { useEditorCamera2D } from '../editorCamera/useEditorCamera2D.js';
-import { readPersisted } from '../../hooks/usePersistedState.js';
+import { isBoolean, readPersisted } from '../../hooks/usePersistedState.js';
 import {
   clampWheelNotches,
   isGesturePointer,
@@ -65,8 +65,6 @@ function zoomViewAround(view: StageView, px: number, py: number, factor: number)
   const cy = (py - view.pan.y) / view.zoom;
   return { pan: { x: px - cx * zoom, y: py - cy * zoom }, zoom };
 }
-
-const isBoolean = (value: unknown): value is boolean => typeof value === 'boolean';
 
 interface Canvas2DStageProps {
   /** The root scene's nodes. The native canvas lays out their Control subtrees. */

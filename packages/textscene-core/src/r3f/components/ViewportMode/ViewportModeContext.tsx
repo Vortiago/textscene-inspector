@@ -1,9 +1,7 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
-import { readPersisted } from '../../hooks/usePersistedState.js';
+import { isBoolean, readPersisted } from '../../hooks/usePersistedState.js';
 import { DEFAULT_SHOW, withShown, type ViewShow } from '../../viewShow/viewShow.js';
-import type { ViewportMode } from '../../viewportMode.js';
-
-export type { ViewportMode } from '../../viewportMode.js';
+import { isViewportMode, type ViewportMode } from '../../viewportMode.js';
 
 /**
  * The localStorage keys of the persisted viewport preferences. The shell
@@ -44,14 +42,6 @@ export const DEFAULT_VIEWPORT: PersistedViewport = {
   show: DEFAULT_SHOW,
   frameOnOpen: false,
 };
-
-function isBoolean(value: unknown): value is boolean {
-  return typeof value === 'boolean';
-}
-
-function isViewportMode(value: unknown): value is ViewportMode {
-  return value === '2D' || value === '3D' || value === 'in-game';
-}
 
 /** The preferences of the last session. A persisted value of an unexpected shape takes its default. */
 export function readPersistedViewport(): PersistedViewport {

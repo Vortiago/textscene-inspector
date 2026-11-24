@@ -5,8 +5,8 @@ import {
   SHOW_STORAGE_KEYS,
   isPersistedShowKey,
   VIEWPORT_MODE_STORAGE_KEY,
-  type ViewportMode,
 } from '../ViewportMode/ViewportModeContext.js';
+import type { ViewportMode } from '../../viewportMode.js';
 import { RUNNING_GAME_SHOW, type ViewShow } from '../../viewShow/viewShow.js';
 import { useOptionalHierarchy } from '../../contexts/HierarchyContext.js';
 import { writePersisted } from '../../hooks/usePersistedState.js';

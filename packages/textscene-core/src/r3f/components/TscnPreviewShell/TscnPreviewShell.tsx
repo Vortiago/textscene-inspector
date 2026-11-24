@@ -7,7 +7,7 @@
  */
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { readPersistedViewport, ViewportModeProvider } from '../ViewportMode/ViewportModeContext.js';
-import { usePersistedState } from '../../hooks/usePersistedState.js';
+import { isBoolean, usePersistedState } from '../../hooks/usePersistedState.js';
 import { useSceneGraphs } from '../../hooks/useSceneGraphs.js';
 import { ViewportToolbar } from '../ViewportToolbar/ViewportToolbar.js';
 import { Splitter } from '../Splitter/Splitter.js';
@@ -57,9 +57,6 @@ export type { TscnPreviewShellProps } from './previewShellProps.js';
 // A persisted value of an unexpected shape falls back to the hook's default.
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
-}
-function isBoolean(value: unknown): value is boolean {
-  return typeof value === 'boolean';
 }
 
 export function TscnPreviewShell({
@@ -131,7 +128,7 @@ export function TscnPreviewShell({
           <PreviewViewStatusProvider value={heard}>
             <PreviewSelectionProvider scene={scene} selected={selected} onSelect={onSelect}>
               <HoverReleasesViewFocus viewArea={viewArea} />
-              <FrameOnOpen scene={scene} view={view} heard={heard} />
+              <FrameOnOpen scene={scene} hasScene={hasScene} view={view} heard={heard} />
               {/* A host-forced mode turns auto-select off, or the root's claim overrides it. */}
               {initialViewportMode === undefined && <WorkspaceAutoSelect scene={scene} />}
               <PreviewSceneReset sceneGraph={parsedGraph} />
