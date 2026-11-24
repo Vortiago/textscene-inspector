@@ -1,6 +1,6 @@
 import type { SceneGraph } from '../core/SceneGraph.js';
 import { isGltfPath } from '../godot/import/gltf.js';
-import { isEditableInstanceAt } from './dockListing.js';
+import { isEditableInstanceAt } from './editableInstance.js';
 import { GLB_SCENE_ROOT_TYPE, glbPathOf, loneGlbRootPath } from '../resources/glbSceneRoot.js';
 import type { ResourceReference } from '../godot/variant/variantValue.js';
 import {
@@ -54,13 +54,13 @@ interface InstanceRef {
 }
 
 /** The scene the step's node instances: as authored, or, once merged, the one its sub-scene root inherits. */
-function instancedSceneOf({ raw, step }: LiveLink): InstanceRef | null {
+const instancedSceneOf = perObject(({ raw, step }: LiveLink): InstanceRef | null => {
   const { externalResources } = step.scope;
   if (!step.isMerged)
     return step.instancePath ? { ref: raw.instance, externalResources, path: step.instancePath } : null;
   const path = liveInstancePath(step.node, step.scope);
   return path ? { ref: step.node.instance, externalResources, path } : null;
-}
+});
 
 /** The glTF the step's node instances, as authored or through the root of the sub-scene it instances. */
 function instancedGltfOf(link: LiveLink): InstanceRef | null {

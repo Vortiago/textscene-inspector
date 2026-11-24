@@ -1,18 +1,19 @@
 import { fireEvent, render, screen, waitFor, type RenderResult } from '@testing-library/react';
-import { expect } from 'vitest';
+import { expect, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import '../../sceneLiveTree.js';
 import { openScene, type Scene } from '../../../scene/openScene';
 import { ROOT_WINDOW_PATH } from '../../../scene/nodePathWalk';
 import type { ResourceProvider } from '../../../resources/ResourceProvider';
 import type { UndrawnNode } from '../../viewStatus/undrawnNodes';
+import { EMPTY_VIEW_STATUS } from '../../viewStatus/viewStatus';
 import { createExternalStore } from '../../../utils/externalStore';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { SelectionProvider } from '../../contexts/SelectionContext';
 import { ExpandedRowsProvider } from '../TscnPreviewShell/expandedRows';
 import { PreviewViewStatusProvider } from '../TscnPreviewShell/previewViewStatus';
 import { SceneTreeViewer, type SceneTreeViewerProps } from './SceneTreeViewer';
-import { treeRowsOf, type TreeRow } from './treeRows';
+import { rowsOf, treeRowsOf } from './treeRows';
 
 /** The files a scene of a tree test instances, by `res://` path: a text, or the bytes of a binary file. */
 export type TreeFiles = Readonly<Record<string, string | ArrayBuffer>>;
@@ -39,17 +40,7 @@ export async function renderSceneTree(
 ): Promise<RenderResult & { readonly scene: Scene }> {
   const { files, undrawn = [], beside, rootScenePath, ...props } = options;
   const scene = openTreeScene(source, files, rootScenePath);
-  const status = createExternalStore({
-    status: {
-      settled: null,
-      pending: { textures: 0, fonts: 0 },
-      frame: null,
-      undrawn,
-      isSoftwareRendering: false,
-      freelook: null,
-    },
-    round: 0,
-  });
+  const status = createExternalStore({ status: { ...EMPTY_VIEW_STATUS, undrawn }, round: 0 });
   const rendered = render(
     <HierarchyProvider value={{ sceneGraph: scene.written(), panelId: 'p', scene }}>
       <PreviewViewStatusProvider value={status}>
@@ -71,15 +62,19 @@ export function rowAt(path: string): HTMLElement | null {
   return document.querySelector<HTMLElement>(`[data-node-path="${path}"]`);
 }
 
-function rowCountOf(row: TreeRow): number {
-  return 1 + row.children.reduce((count, child) => count + rowCountOf(child), 0);
+/** The live path of each row in the document, in the dock's pre-order. */
+export function rowPaths(): string[] {
+  return Array.from(document.querySelectorAll('[data-node-path]')).map((row) =>
+    row.getAttribute('data-node-path')!
+  );
 }
 
-/** Expands every row once the tree shows each row the loaded scene lists, which no file load signals. */
-export async function expandAllRows(scene: Scene): Promise<void> {
+/** Expands every row once the scene holds `lastLoaded` and the tree shows each row it lists. */
+export async function expandAllRows(scene: Scene, lastLoaded?: string): Promise<void> {
+  if (lastLoaded) await vi.waitFor(() => expect(scene.getNodeOrNull(lastLoaded)).not.toBeNull());
   const root = scene.getNodeOrNull(ROOT_WINDOW_PATH)?.getChildren()[0];
   if (!root) throw new Error('expected a scene root to expand, got none');
-  const listedCount = rowCountOf(await treeRowsOf(root));
+  const listedCount = rowsOf(await treeRowsOf(root)).length;
   await waitFor(() => {
     fireEvent.click(screen.getByRole('button', { name: 'Expand all' }));
     expect(document.querySelectorAll('[data-node-path]')).toHaveLength(listedCount);

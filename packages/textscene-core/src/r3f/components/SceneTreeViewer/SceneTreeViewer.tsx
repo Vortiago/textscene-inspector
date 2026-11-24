@@ -6,7 +6,7 @@ import { useExpandedPaths, useExpandedRowActions } from '../TscnPreviewShell/exp
 import { useSelectPath, useSelectedPath } from '../TscnPreviewShell/previewSelection.js';
 import { useSceneRead } from '../TscnPreviewShell/sceneRead.js';
 import { ROOT_VISIBILITY, TreeNode } from './TreeNode.js';
-import { treeRowsOf, type TreeRow } from './treeRows.js';
+import { rowsOf, treeRowsOf, type TreeRow } from './treeRows.js';
 import { useRowVisibility } from './rowVisibility.js';
 import styles from './SceneTreeViewer.module.css';
 
@@ -17,11 +17,6 @@ import styles from './SceneTreeViewer.module.css';
  */
 function nodePathFor(row: HTMLElement): string | null {
   return row.closest<HTMLElement>('[data-node-path]')?.dataset.nodePath ?? null;
-}
-
-/** Every row below and including `row`, in the dock's pre-order. */
-function rowsOf(row: TreeRow | null): TreeRow[] {
-  return row ? [row, ...row.children.flatMap(rowsOf)] : [];
 }
 
 export interface SceneTreeViewerProps {
@@ -165,7 +160,7 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
     );
   }
 
-  const visibleRoots = root && matches(root.path) ? [root] : [];
+  const shownRoot = root && matches(root.path) ? root : null;
 
   return (
     <div className={styles.root}>
@@ -201,23 +196,20 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
       <div className={styles.tree} role="tree" aria-label="Scene tree" onKeyDown={handleTreeKeyDown}>
         {!root ? (
           <div className={styles.empty}>No nodes to display</div>
-        ) : visibleRoots.length === 0 ? (
+        ) : !shownRoot ? (
           <div className={styles.empty}>No nodes match &ldquo;{searchTerm}&rdquo;</div>
         ) : (
-          visibleRoots.map((row, index) => (
-            <TreeNode
-              key={row.name}
-              row={row}
-              depth={0}
-              parentVisibility={ROOT_VISIBILITY}
-              visibility={visibility}
-              onToggleVisibility={setVisible}
-              onNodeReveal={onNodeReveal}
-              onOpenSubScene={onOpenSubScene}
-              matches={matches}
-              isDefaultFocusable={index === 0 && !selectedRowRendered}
-            />
-          ))
+          <TreeNode
+            row={shownRoot}
+            depth={0}
+            parentVisibility={ROOT_VISIBILITY}
+            visibility={visibility}
+            onToggleVisibility={setVisible}
+            onNodeReveal={onNodeReveal}
+            onOpenSubScene={onOpenSubScene}
+            matches={matches}
+            isDefaultFocusable={!selectedRowRendered}
+          />
         )}
       </div>
     </div>

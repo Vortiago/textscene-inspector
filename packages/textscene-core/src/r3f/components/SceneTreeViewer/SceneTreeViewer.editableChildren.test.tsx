@@ -64,8 +64,7 @@ ${editables}
 async function renderMain(editablePaths: readonly string[] = []) {
   const { scene } = await renderSceneTree(mainScene(editablePaths), { files: FILES });
   await vi.waitFor(() => expect(scene.getNodeOrNull('Ship/Engine/Nozzle')).not.toBeNull());
-  await vi.waitFor(() => expect(scene.getNodeOrNull('Cube')?.getChildren().length).toBeGreaterThan(0));
-  await expandAllRows(scene);
+  await expandAllRows(scene, 'Cube/Cube');
   return (path: string) => rowAt(path) !== null;
 }
 

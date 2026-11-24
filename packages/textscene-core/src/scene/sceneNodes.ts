@@ -281,7 +281,7 @@ export class SceneNodes implements HandleHost {
       isEditableInstance: (node) => {
         this.assertSameText(generation, path);
         return this.handles.get(node.path) === node && node.isInsideTree()
-          ? (this.nodeAt(node.path)?.isEditableInstance() ?? false)
+          ? (this.treeNodeOf(node.path, generation)?.isEditableInstance() ?? false)
           : false;
       },
     };
