@@ -9,7 +9,7 @@ import './sceneLiveTree.js';
 type CurrentCamera = (scene: Scene, viewport: string | null) => string | null;
 
 /** A load can enter a node and a call can move a camera, so a reader of the tree hears both. */
-export function subscribeToSceneTree(scene: Scene | undefined, listener: () => void): () => void {
+function subscribeToSceneTree(scene: Scene | undefined, listener: () => void): () => void {
   if (!scene) return () => {};
   const stopViews = scene.subscribe(listener);
   const stopTree = scene.observe(null, listener);

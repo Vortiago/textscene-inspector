@@ -79,6 +79,11 @@ const openedDepth = ({ step }: LiveLink) =>
 /** The root of the scene that declares the node, as `add_child` under `instantiate` sets the owner. */
 function ownerOf(link: LiveLink, ancestors: readonly LiveLink[]): LiveLink | null {
   if (ancestors.length === 0 || link.raw.isUnowned) return null;
+  // The instance node of a glTF is the root its importer builds, so it owns each node of the file.
+  const gltfInstance = ancestors.find(
+    ({ step }) => step.instancePath !== null && isGltfPath(step.instancePath)
+  );
+  if (gltfInstance) return gltfInstance;
   const depth = declaringDepth(link);
   for (let index = ancestors.length - 1; index > 0; index--) {
     if (openedDepth(ancestors[index]!) === depth) return ancestors[index]!;
