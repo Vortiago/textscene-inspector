@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, type ReactNode } from 'react';
 import { useThree } from '@react-three/fiber';
 import type * as THREE from 'three';
+import type { PointDraw } from '../../shaders/spatial/spatialPipeline';
 import { projectSampling } from '../../parser/projectSettingsParser';
 import type { ShaderText } from '../../resources/materials/shadermaterial/types';
 import { memoisedImport } from '../../resources/memoisedImport';
@@ -9,11 +10,14 @@ import { warnOnce } from '../../utils/warnOnce';
 import { useNodesHandler } from '../canvasRenderer/canvasNodesHandler';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext';
 import { drawGroupOf, materialAt, placeMaterial, type MaterialHost } from '../materials/swappedMaterials';
+import { OTHER_DRAWS_SURFACE } from '../materials/useOneSurfaceStartingMaterial';
 import { useProjectShaderOptions } from '../projectShaderOptions';
 import { useShaderTextures } from '../shaderTextures/shaderTextures';
 
 /** Imported by the first spatial shader only: it holds the shader parser and three's TSL. */
 const loadSpatialSurface = memoisedImport(() => import('./spatialSurface'));
+
+type SpatialSurfaceModule = typeof import('./spatialSurface');
 
 const LOAD_FAILURE =
   "[material] The previewer could not load its spatial shader translator, and draws Godot's default 3D surface. Reload to try again.";
@@ -29,6 +33,7 @@ interface SpatialShaderSlotProps {
 export function SpatialShaderSlot({ shader, attach, fallback }: SpatialShaderSlotProps) {
   const gl = useThree((state) => state.gl);
   const invalidate = useThree((state) => state.invalidate);
+  const scene = useThree((state) => state.scene);
   const loaded = useLazyModuleState(loadSpatialSurface, true);
   const module = typeof loaded === 'object' && loaded !== null ? loaded.module : null;
   const nodesHandler = useNodesHandler(gl);
@@ -62,8 +67,8 @@ export function SpatialShaderSlot({ shader, attach, fallback }: SpatialShaderSlo
   }, [module, spatial, shader.parameters, textures, invalidate]);
 
   const surfaceAttach = useMemo(
-    () => module && godotSurfaceAttach(attach, module.withGodotSurface),
-    [module, attach]
+    () => module && spatial && godotSurfaceAttach(attach, module, spatial.pointDraw, scene),
+    [module, attach, spatial, scene]
   );
   if (!spatial || !surfaceAttach) return <>{fallback}</>;
   return (
@@ -74,21 +79,27 @@ export function SpatialShaderSlot({ shader, attach, fallback }: SpatialShaderSlo
   );
 }
 
-interface GodotSurfaceHost extends MaterialHost {
+interface GodotSurfaceHost extends MaterialHost, THREE.Object3D {
   geometry: THREE.BufferGeometry;
 }
+
+type SurfaceModule = Pick<SpatialSurfaceModule, 'withGodotSurface' | 'drawPoints'>;
 
 /** Godot's attributes before the material: three builds the program from the attributes of the first draw. */
 function godotSurfaceAttach(
   attach: string | undefined,
-  withGodotSurface: (geometry: THREE.BufferGeometry) => void
+  module: SurfaceModule,
+  pointDraw: PointDraw | null,
+  scene: THREE.Scene
 ) {
   const drawGroup = drawGroupOf(attach);
   return (host: GodotSurfaceHost, material: THREE.Material) => {
-    if (host.geometry.getAttribute('position')) withGodotSurface(host.geometry);
+    if (host.geometry.getAttribute('position')) module.withGodotSurface(host.geometry);
     const previous = materialAt(host, drawGroup);
-    placeMaterial(host, drawGroup, material);
+    const stopPoints = pointDraw && module.drawPoints(host, drawGroup, material, pointDraw, scene);
+    placeMaterial(host, drawGroup, stopPoints ? OTHER_DRAWS_SURFACE : material);
     return () => {
+      stopPoints?.();
       if (previous) placeMaterial(host, drawGroup, previous);
     };
   };

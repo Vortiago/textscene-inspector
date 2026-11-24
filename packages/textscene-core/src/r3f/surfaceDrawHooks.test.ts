@@ -262,7 +262,7 @@ describe('surfaceDrawHooks — point shadow', () => {
   function pointsSurface(): THREE.Mesh {
     const userData = withPointDraw(
       { materialClass: 'standard', props: {} },
-      { pixels: 100, pixelRatio: 1, samplesAlbedoAtPointCoord: false, placement: 'mesh' }
+      { pixels: 100, samplesAlbedoAtPointCoord: false, placement: 'mesh' }
     ).props.userData;
     const points = new THREE.Points(new THREE.BufferGeometry(), new THREE.MeshStandardMaterial({ userData }));
     applyShadowCasting(points, shadowCastingEffects(ShadowCastingSetting.ON));

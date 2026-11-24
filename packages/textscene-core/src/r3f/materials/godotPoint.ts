@@ -16,7 +16,6 @@ import { withDepthInjection } from './depthInjections';
 import { INSTANCE_MATRIX_ATTRIBUTE } from '../meshes/sharedInstances';
 
 const POINT_SIZE_KEY = 'godotPointSize';
-const POINT_PIXEL_RATIO_KEY = 'godotPointPixelRatio';
 const POINT_COORD_ALBEDO_KEY = 'godotPointCoordAlbedo';
 const POINTS_AT_INSTANCES_KEY = 'godotPointsAtInstances';
 const PROJECT_CHUNK = '#include <project_vertex>';
@@ -35,28 +34,21 @@ export interface ListedSurface {
 
 /** How a material draws the points of a points surface. */
 export interface PointDraw {
-  /** The side of each point's square in Godot's pixels: `point_size` under `use_point_size`, else 1. */
+  /** A side in framebuffer pixels (`scene_forward_clustered.glsl:724`): `point_size` under the flag. */
   pixels: number;
-  /**
-   * The canvas pixel ratio. Godot's pixels are its viewport's, which a canvas of ratio 2 draws
-   * twice over. A shadow map's texels are Godot's own, so only the colour pass reads it.
-   */
-  pixelRatio: number;
   /** `use_point_size` is on: the albedo map is read across the point's square, not at the UV. */
   samplesAlbedoAtPointCoord: boolean;
   placement: ListedPlacement;
 }
 
-/** `scalars` as a points draw on a canvas of `pixelRatio`, or Godot's default surface for none. */
+/** `scalars` as a points draw, or Godot's default surface for none. */
 export function pointDrawOf(
   scalars: StandardMaterial3DScalars | null,
-  pixelRatio: number,
   placement: ListedPlacement
 ): PointDraw {
   const pointSize = scalars?.usesPointSize ? scalars.pointSize : undefined;
   return {
     pixels: pointSize ?? BASE_MATERIAL_3D_DEFAULTS.pointSize,
-    pixelRatio,
     samplesAlbedoAtPointCoord: pointSize !== undefined,
     placement,
   };
@@ -76,41 +68,23 @@ ${shader.vertexShader}`;
   },
 };
 
-/** The uniforms of a points colour pass, each with the value it holds until the material's userData records one. */
-const POINT_SIZE_UNIFORMS = {
-  [POINT_SIZE_KEY]: BASE_MATERIAL_3D_DEFAULTS.pointSize,
-  [POINT_PIXEL_RATIO_KEY]: 1,
+/** Writes `gl_PointSize` as the recorded size, 1 px by default, in framebuffer px (`material.cpp:1232`). */
+const GODOT_POINT_SIZE: ProgramInjection = {
+  cacheKey: 'godot-point-size',
+  onBeforeCompile(shader) {
+    shader.uniforms[POINT_SIZE_KEY] = recordedUniform(
+      this,
+      POINT_SIZE_KEY,
+      BASE_MATERIAL_3D_DEFAULTS.pointSize
+    );
+    const size = `${PROJECT_CHUNK}\n\tgl_PointSize = ${POINT_SIZE_KEY};`;
+    editedProgram(shader, { vertex: [{ three: PROJECT_CHUNK, godot: size }] }, 'point size');
+    shader.vertexShader = `uniform float ${POINT_SIZE_KEY};\n${shader.vertexShader}`;
+  },
 };
 
-/** Writes `gl_PointSize` as the product of `uniforms`, each recorded from the material's userData. */
-function pointSizeInjection(cacheKey: string, uniforms: Readonly<Record<string, number>>): ProgramInjection {
-  const keys = Object.keys(uniforms);
-  const declarations = keys.map((key) => `uniform float ${key};`).join('\n');
-  return {
-    cacheKey,
-    onBeforeCompile(shader) {
-      for (const [key, initial] of Object.entries(uniforms)) {
-        shader.uniforms[key] = recordedUniform(this, key, initial);
-      }
-      const size = `${PROJECT_CHUNK}\n\tgl_PointSize = ${keys.join(' * ')};`;
-      editedProgram(shader, { vertex: [{ three: PROJECT_CHUNK, godot: size }] }, 'point size');
-      shader.vertexShader = `${declarations}\n${shader.vertexShader}`;
-    },
-  };
-}
-
-/** What a material compiles with to draw a points surface, at its size in canvas pixels. */
-const GODOT_POINT_SIZE = pointSizeInjection('godot-point-size', POINT_SIZE_UNIFORMS);
-
-/** What a depth draw compiles with to rasterise a point at its size in the shadow map's texels. */
-const GODOT_POINT_SHADOW_SIZE = pointSizeInjection('godot-point-shadow-size', {
-  [POINT_SIZE_KEY]: POINT_SIZE_UNIFORMS[POINT_SIZE_KEY],
-});
-
 /**
- * What a mesh material of the 2D canvas takes to draw a point as one of Godot's pixels
- * (`canvas.glsl:268,300`: `point_size = 1.0`), on a canvas of `pixelRatio`. three leaves
- * `gl_PointSize` unwritten for a `MeshBasicMaterial`.
+ * A 2D canvas point, one viewport pixel (`canvas.glsl:268`): the 2D view's viewport pixel is a CSS pixel.
  *
  * @canonical The size of a point on the 2D canvas
  */
@@ -118,7 +92,7 @@ export function canvasPointSize(pixelRatio: number): {
   injection: ProgramInjection;
   userData: Record<string, number>;
 } {
-  return { injection: GODOT_POINT_SIZE, userData: { [POINT_PIXEL_RATIO_KEY]: pixelRatio } };
+  return { injection: GODOT_POINT_SIZE, userData: { [POINT_SIZE_KEY]: pixelRatio } };
 }
 
 const MAP_PARS_CHUNK = '#include <map_pars_fragment>';
@@ -155,7 +129,7 @@ const pointForms = bagForms();
  */
 export function withPointDraw(bag: StandardMaterialBag, draw: PointDraw | undefined): StandardMaterialBag {
   if (!draw) return bag;
-  const drawKey = `${draw.pixels}:${draw.pixelRatio}:${draw.samplesAlbedoAtPointCoord}:${draw.placement}`;
+  const drawKey = `${draw.pixels}:${draw.samplesAlbedoAtPointCoord}:${draw.placement}`;
   return pointForms(bag, drawKey, () => pointBag(bag, draw));
 }
 
@@ -166,7 +140,6 @@ function pointBag(bag: StandardMaterialBag, draw: PointDraw): StandardMaterialBa
     {
       ...bag.props.userData,
       [POINT_SIZE_KEY]: draw.pixels,
-      [POINT_PIXEL_RATIO_KEY]: draw.pixelRatio,
       [POINT_COORD_ALBEDO_KEY]: readsMap,
       [POINTS_AT_INSTANCES_KEY]: isAtInstances,
     },
@@ -207,16 +180,14 @@ export function withLineDraw(
   }));
 }
 
-const GODOT_POINT_SHADOW_SIZE_AT_POINT_COORD = composeInjections([
-  GODOT_POINT_SHADOW_SIZE,
-  GODOT_POINT_COORD_ALBEDO,
-])!;
-
 /**
  * What a depth draw compiles with to cut a points surface's shadow as its colour pass draws the
  * points: at their size, across the square where the albedo map is read, and at each instance.
  */
 function pointShadowSizeInjection(readsMap: boolean, isAtInstances: boolean): ProgramInjection {
-  const size = readsMap ? GODOT_POINT_SHADOW_SIZE_AT_POINT_COORD : GODOT_POINT_SHADOW_SIZE;
-  return isAtInstances ? composeInjections([size, GODOT_INSTANCED_LISTED])! : size;
+  return composeInjections([
+    GODOT_POINT_SIZE,
+    readsMap ? GODOT_POINT_COORD_ALBEDO : undefined,
+    isAtInstances ? GODOT_INSTANCED_LISTED : undefined,
+  ])!;
 }

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { encodedNormalTangent } from '../../godot/rendering/meshNormalTangent.js';
+import { storedLanes } from '../storedLanes.js';
 
 /** The attribute the scene template reads at location 0: the position, which GL widens with w = 1. */
 const VERTEX_ANGLE_ATTRIBUTE = 'vertex_angle_attrib';
@@ -10,11 +11,21 @@ const AXIS_TANGENT_ATTRIBUTE = 'axis_tangent_attrib';
 /** The `userData` key of turned corners, which `clone` carries. A caller that sets a new index deletes it. */
 const FIRST_CORNER_LAST = 'godotFirstCornerLast';
 
+/** The primitive a surface draws: a line strip is drawn as its list of lines. */
+export type GodotPrimitive = 'triangles' | 'lines' | 'points';
+
+/** The corners of each primitive that a `flat` value is read across, and the list's name in a fault. */
+const LISTS = { triangles: { corners: 3, name: 'triangle' }, lines: { corners: 2, name: 'line' } } as const;
+
 /** `geometry` as an uncompressed Godot surface (`rendering_server.cpp:425-700`), first corners as Godot's. */
-export function withGodotAttributes(geometry: THREE.BufferGeometry): THREE.BufferGeometry {
+export function withGodotAttributes(
+  geometry: THREE.BufferGeometry,
+  primitive: GodotPrimitive = 'triangles'
+): THREE.BufferGeometry {
   const position = geometry.getAttribute('position');
   if (!position) throw new Error('expected a geometry with a position attribute, found none');
-  if (!geometry.userData[FIRST_CORNER_LAST]) withFirstCornerLast(geometry, position.count);
+  if (primitive !== 'points' && !geometry.userData[FIRST_CORNER_LAST])
+    withFirstCornerLast(geometry, position.count, primitive);
   geometry.setAttribute(VERTEX_ANGLE_ATTRIBUTE, position);
   const normal = geometry.getAttribute('normal');
   if (normal) geometry.setAttribute(AXIS_TANGENT_ATTRIBUTE, axisTangent(normal, signedTangent(geometry)));
@@ -75,19 +86,26 @@ function boneIndices(bones: Attribute): THREE.BufferAttribute {
   return attribute;
 }
 
-/** Each triangle turned to draw its first corner last: `flat` reads Vulkan's first vertex, WebGL's last. */
-function withFirstCornerLast(geometry: THREE.BufferGeometry, vertexCount: number): void {
+/** Each primitive turned to draw its first corner last: `flat` reads Vulkan's first vertex, WebGL's last. */
+function withFirstCornerLast(
+  geometry: THREE.BufferGeometry,
+  vertexCount: number,
+  primitive: 'triangles' | 'lines'
+): void {
   const index = geometry.getIndex()?.array;
   const cornerCount = index?.length ?? vertexCount;
-  if (cornerCount % 3 !== 0)
-    throw new Error(`expected a triangle list of a multiple of 3 corners, got ${cornerCount} corners`);
+  const { corners, name: list } = LISTS[primitive];
+  if (cornerCount % corners !== 0)
+    throw new Error(
+      `expected a ${list} list of a multiple of ${corners} corners, got ${cornerCount} corners`
+    );
   const turned = vertexCount > 0xffff ? new Uint32Array(cornerCount) : new Uint16Array(cornerCount);
   for (let corner = 0; corner < cornerCount; corner++) {
-    const source = corner - (corner % 3) + (((corner % 3) + 1) % 3);
+    const source = corner - (corner % corners) + (((corner % corners) + 1) % corners);
     turned[corner] = index ? index[source]! : source;
   }
   geometry.setIndex(new THREE.BufferAttribute(turned, 1));
-  geometry.userData[FIRST_CORNER_LAST] = true;
+  geometry.userData[FIRST_CORNER_LAST] = corners;
 }
 
 /** A colour as Godot stores it, four bytes cut down from 255 times each lane (`rendering_server.cpp:712`). */
@@ -125,4 +143,70 @@ function axisTangent(normal: Attribute, tangent: Attribute | undefined): THREE.B
     lanes.set(encodedNormalTangent(normalOf, tangentOf), vertex * 4);
   }
   return new THREE.BufferAttribute(lanes, 4, true);
+}
+
+/** The vertices a point quad draws: `point_coords` of `scene_forward_clustered.glsl:709`. */
+const QUAD_VERTICES = 6;
+
+/** The attribute that holds the vertex each emulated point draws, which `gl_InstanceIndex` reads. */
+export const POINT_VERTEX_ATTRIBUTE = 'point_vertex_attrib';
+
+/** The corners of a surface that one draw reads, as a three.js draw group holds them. */
+export interface DrawRange {
+  readonly start: number;
+  readonly count: number;
+}
+
+/** A point for each index in `range`, as Vulkan's indexed points: `render_forward_clustered.cpp:603`. */
+export function emulatedPointGeometry(
+  surface: THREE.BufferGeometry,
+  range?: DrawRange
+): THREE.InstancedBufferGeometry {
+  const vertices = drawnVertices(surface, range);
+  const geometry = new THREE.InstancedBufferGeometry();
+  geometry.instanceCount = vertices.length;
+  // three counts a draw's vertices by `position`, which the template does not read.
+  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(QUAD_VERTICES * 3), 3));
+  for (const [name, attribute] of Object.entries(surface.attributes))
+    if (name.endsWith('_attrib')) geometry.setAttribute(name, perPoint(attribute, vertices));
+  geometry.setAttribute(POINT_VERTEX_ATTRIBUTE, new THREE.InstancedBufferAttribute(vertices, 1));
+  // The quads' own positions are all zero, so bounds three computed from them would cull at the origin.
+  if (!surface.boundingSphere && surface.getAttribute('position')) surface.computeBoundingSphere();
+  geometry.boundingSphere = surface.boundingSphere;
+  geometry.boundingBox = surface.boundingBox;
+  return geometry;
+}
+
+/** The vertex of each corner in `range`, in draw order: every vertex once for a surface with no index. */
+function drawnVertices(surface: THREE.BufferGeometry, range: DrawRange | undefined): Float32Array {
+  const index = surface.getIndex();
+  // No corners for a surface with no position yet, as a mesh has before its geometry attaches.
+  const cornerCount = index?.count ?? surface.getAttribute('position')?.count ?? 0;
+  const start = range?.start ?? 0;
+  const end = Math.min(range ? start + range.count : cornerCount, cornerCount);
+  // A float holds every vertex index below 2^24 exactly.
+  const vertices = new Float32Array(Math.max(0, end - start));
+  const corners = surface.userData[FIRST_CORNER_LAST] as number | undefined;
+  for (let corner = start; corner < end; corner++)
+    vertices[corner - start] = index ? index.getX(corners ? godotCorner(corner, corners) : corner) : corner;
+  return vertices;
+}
+
+/** The loader swaps a triangle's last two corners and `withFirstCornerLast` turns it: Godot's in reverse. */
+function godotCorner(corner: number, corners: number): number {
+  return corner - (corner % corners) + corners - 1 - (corner % corners);
+}
+
+/** `attribute` read once a point: every point shares the one item of a constant attribute. */
+function perPoint(attribute: Attribute, vertices: Float32Array): THREE.InstancedBufferAttribute {
+  const isConstant = (attribute as THREE.InstancedBufferAttribute).isInstancedBufferAttribute === true;
+  const values = storedLanes(attribute, isConstant ? [0] : vertices);
+  const perInstance = new THREE.InstancedBufferAttribute(
+    values,
+    attribute.itemSize,
+    attribute.normalized,
+    isConstant ? Math.max(1, vertices.length) : 1
+  );
+  perInstance.gpuType = (attribute as THREE.BufferAttribute).gpuType ?? THREE.FloatType;
+  return perInstance;
 }

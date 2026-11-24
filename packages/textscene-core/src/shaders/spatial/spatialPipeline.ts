@@ -60,7 +60,12 @@ export interface SpatialPipeline {
   readonly depthFlags: ReadonlySet<DepthFlag>;
   /** Null without a reference, as Godot's `stencil_enabled` (`scene_shader_forward_clustered.cpp:208`). */
   readonly stencil: StencilTest | null;
+  /** Null for the surface's own primitive. Godot draws points whenever `uses_point_size` holds. */
+  readonly pointDraw: PointDraw | null;
 }
+
+/** Quads (`scene_shader_forward_clustered.cpp:414`), as three writes `gl_PointSize = 1.0`, or 1 px points. */
+export type PointDraw = 'emulated' | 'native';
 
 const DEPTH_TESTS: Readonly<Record<string, DepthTest>> = {
   depth_test_default: 'enabled',
@@ -169,6 +174,7 @@ export function spatialPipeline(tree: ShaderNode): SpatialPipeline {
     ...pipeline,
     depthFlags: depthFlags(tree, modes, { ...pipeline, usesPointSize, usesStencil: stencil !== null }),
     stencil,
+    pointDraw: reads('POINT_SIZE') ? 'emulated' : usesPointSize ? 'native' : null,
   };
 }
 
@@ -234,7 +240,8 @@ export function applySpatialPipeline(material: THREE.Material, pipeline: Spatial
   // `scene_shader_forward_clustered.cpp:355-358`, turned round for GL's depth, which is not reversed.
   material.depthFunc = pipeline.depthTest === 'inverted' ? THREE.GreaterDepth : THREE.LessEqualDepth;
   material.depthWrite = material.depthTest && depthWrites(pipeline.depthDrawMode, isAlphaPass);
-  material.side = CULL_SIDES[pipeline.cullMode];
+  // Vulkan culls polygons only, so no point is culled: the emulated quads draw both sides.
+  material.side = pipeline.pointDraw ? THREE.DoubleSide : CULL_SIDES[pipeline.cullMode];
   // three draws a transparent DoubleSide material back faces first, in a second draw; Godot draws once.
   material.forceSinglePass = true;
   if (pipeline.stencil) applyGodotStencil(material, pipeline.stencil);

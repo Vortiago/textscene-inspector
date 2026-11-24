@@ -40,8 +40,6 @@ export type UndrawnShaderSurface =
   | 'MultiMesh or GridMap'
   | 'particle draw pass'
   | 'particle trail'
-  | 'line mesh'
-  | 'point mesh'
   | 'next pass'
   | 'glTF surface';
 

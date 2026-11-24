@@ -6,7 +6,6 @@
  */
 
 import { useEffect, useMemo } from 'react';
-import { useThree } from '@react-three/fiber';
 import { MISSING_TEXTURE_MATERIAL } from '../../resources/materials/standardmaterial3d/materialBag';
 import { drawnBag, materialBagElement, StandardMaterialSlot } from './StandardMaterialSlot';
 import { pointDrawOf, type ListedSurface } from './godotPoint';
@@ -44,13 +43,12 @@ export function SurfaceMaterialSlot({
   drawnOn,
 }: SurfaceMaterialSlotProps) {
   const { scalars, bags, shader } = useShadedSurfaceMaterial(source);
-  const pixelRatio = useThree((state) => state.viewport.dpr);
   // Primitive and placement are strings: `listed` is a new object each render.
   const primitive = listed?.primitive;
   const placement = listed?.placement;
   const pointDraw = useMemo(
-    () => (primitive === 'points' && placement ? pointDrawOf(scalars, pixelRatio, placement) : undefined),
-    [primitive, placement, scalars, pixelRatio]
+    () => (primitive === 'points' && placement ? pointDrawOf(scalars, placement) : undefined),
+    [primitive, placement, scalars]
   );
   const particleDraw = useMemo(
     () => (particles ? { draw: particleDrawOf(scalars), program: particles } : undefined),
@@ -64,7 +62,7 @@ export function SurfaceMaterialSlot({
     }),
     [pointDraw, primitive, placement, particleDraw]
   );
-  const undrawnOn = undrawnSurfaceOf(drawnOn, primitive, particles !== undefined);
+  const undrawnOn = undrawnSurfaceOf(drawnOn, particles !== undefined);
   useEffect(() => {
     if (shader && undrawnOn) warnUndrawnShader(shader, undrawnOn);
   }, [shader, undrawnOn]);
@@ -77,14 +75,8 @@ export function SurfaceMaterialSlot({
   return <SpatialShaderSlot shader={shader} attach={attach} fallback={standard} />;
 }
 
-/** The surface a spatial shader falls back on, or null for a mesh of triangles, which draws it. */
-function undrawnSurfaceOf(
-  drawnOn: ShaderSurface,
-  primitive: ListedSurface['primitive'] | undefined,
-  isParticles: boolean
-): UndrawnShaderSurface | null {
-  if (primitive === 'lines') return 'line mesh';
-  if (primitive === 'points') return 'point mesh';
+/** The surface a spatial shader falls back on, or null for a mesh's own surface, which draws it. */
+function undrawnSurfaceOf(drawnOn: ShaderSurface, isParticles: boolean): UndrawnShaderSurface | null {
   if (isParticles) return 'particle draw pass';
   return drawnOn === 'mesh' ? null : drawnOn;
 }

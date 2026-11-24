@@ -74,18 +74,17 @@ describe('surfaceDepthMaterial', () => {
   });
 
   describe('of a points surface', () => {
-    const pointSurface = (pixels: number, pixelRatio: number) =>
+    const pointSurface = (pixels: number) =>
       new THREE.MeshBasicMaterial({
         userData: withPointDraw(
           { materialClass: 'basic', props: {} },
-          { pixels, pixelRatio, samplesAlbedoAtPointCoord: false, placement: 'mesh' }
+          { pixels, samplesAlbedoAtPointCoord: false, placement: 'mesh' }
         ).props.userData,
       });
 
-    // A shadow-map texel is Godot's own, so the canvas pixel ratio does not scale it.
-    it("writes the size in Godot's pixels, as the shadow map's texels", () => {
+    it("writes the size in the shadow map's texels, as the colour pass writes it in framebuffer pixels", () => {
       const { vertexShader, uniforms } = compiled(
-        surfaceDepthMaterial(pointSurface(20, 2), new THREE.MeshDepthMaterial())
+        surfaceDepthMaterial(pointSurface(20), new THREE.MeshDepthMaterial())
       );
       expect(vertexShader).toContain('gl_PointSize = godotPointSize;');
       expect(uniforms.godotPointSize!.value).toBe(20);
@@ -97,7 +96,7 @@ describe('surfaceDepthMaterial', () => {
         map: new THREE.Texture(),
         userData: withPointDraw(
           { materialClass: 'basic', props: { map: new THREE.Texture() } },
-          { pixels: 20, pixelRatio: 1, samplesAlbedoAtPointCoord: true, placement: 'mesh' }
+          { pixels: 20, samplesAlbedoAtPointCoord: true, placement: 'mesh' }
         ).props.userData,
       });
       const depth = surfaceDepthMaterial(surface, new THREE.MeshDepthMaterial());
@@ -216,7 +215,7 @@ describe('syncSurfaceDepth', () => {
     const version = depth.version;
     surface.userData = withPointDraw(
       { materialClass: 'basic', props: {} },
-      { pixels: 20, pixelRatio: 1, samplesAlbedoAtPointCoord: false, placement: 'mesh' }
+      { pixels: 20, samplesAlbedoAtPointCoord: false, placement: 'mesh' }
     ).props.userData!;
 
     syncSurfaceDepth(depth, surface, 0.5);

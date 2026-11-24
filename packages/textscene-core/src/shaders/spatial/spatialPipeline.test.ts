@@ -164,7 +164,19 @@ describe('spatialPipeline', () => {
       writesDepth: false,
       depthFlags: new Set(),
       stencil: null,
+      pointDraw: null,
     });
+  });
+
+  it("draws points of Godot's emulated size when a function names POINT_SIZE", () => {
+    const pipeline = spatialPipeline(
+      parsedShader('shader_type spatial;\nvoid vertex() {\n\tPOINT_SIZE = 4.0;\n}\n').tree
+    );
+    expect(pipeline.pointDraw).toBe('emulated');
+  });
+
+  it('draws points of the native size 1 when a function names POINT_COORD only', () => {
+    expect(fragmentPipeline('ALBEDO = vec3(POINT_COORD, 0.0);').pointDraw).toBe('native');
   });
 
   it('draws alpha to coverage in the alpha pass only', () => {

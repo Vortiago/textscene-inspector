@@ -39,7 +39,8 @@ export {
   type SkyVolumetricFog,
 } from './sky/skyBindings.js';
 export { transpileSpatial, type SpatialOptions, type TranspiledSpatial } from './spatial/transpileSpatial.js';
-export { withGodotAttributes } from './spatial/meshAttributes.js';
+export type { PointDraw } from './spatial/spatialPipeline.js';
+export { emulatedPointGeometry, withGodotAttributes, type GodotPrimitive } from './spatial/meshAttributes.js';
 export { createDepthPrepass, type DepthPrepass, type DepthPrepassOptions } from './pipeline/depthPrepass.js';
 export {
   SCENE_BINDINGS,

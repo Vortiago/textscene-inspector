@@ -306,6 +306,8 @@ const CONSTRUCTED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
     'an opaque-list sentinel: its material writes nothing and is never mutated, and its owner removes it with its scene',
   'packages/textscene-core/src/shaders/sky/transpileSky.ts':
     'the sky triangle of the shader package, which a plain three.js app with no React adds to its scene; the caller owns and disposes it',
+  'packages/textscene-core/src/r3f/spatialShader/pointSurface.ts':
+    'the points child of a spatial shader: the attach that R3F calls hands it the material React built, and the detach removes it',
   'packages/textscene-core/src/r3f/surfacedMeshDrawer/ClonedExtraDraws.tsx':
     'the next_pass chain sibling: the effect builds the draw beside a long-lived clone of the loader’s mesh and removes it when the link unmounts, so the material never passes through React',
 };

@@ -181,9 +181,12 @@ describe('the instance buffer of a transpiled spatial shader', () => {
     expect(() => drawn(instanced)).toThrow('InstancedMesh crowd');
   });
 
-  it('refuses points by name, as no line or point draw is ported', () => {
-    const points = new THREE.Points(new THREE.BufferGeometry());
-    points.name = 'stars';
-    expect(() => drawn(points)).toThrow('Points stars');
+  it.each([
+    ['Points', new THREE.Points()],
+    ['LineSegments', new THREE.LineSegments()],
+  ])("writes the instance of a %s, as Godot's point and line surfaces draw", (_type, object) => {
+    object.position.set(4, 5, 6);
+    const image = drawn(object).buffers.get('instances')!.texture.image as { data: Uint32Array };
+    expect([...new Float32Array(image.data.buffer).slice(0, 4)]).toEqual([1, 0, 0, 4]);
   });
 });

@@ -110,8 +110,11 @@ async function main() {
     const theirs = godot.get(showcase.name);
     if (!theirs) throw new Error(`expected Godot's image of showcase ${showcase.name}, found none`);
     const result = { showcase, ...compareImages(theirs, ours) };
-    if (result.overTolerance > 0)
-      failures.push(`${showcase.name}: ${result.overTolerance} pixels over ${TOLERANCE_STEPS}/255`);
+    const knownPixels = showcase.knownPixels ?? 0;
+    if (result.overTolerance > knownPixels)
+      failures.push(
+        `${showcase.name}: ${result.overTolerance} pixels over ${TOLERANCE_STEPS}/255, ${knownPixels} known`
+      );
     for (const [side, pixels] of [
       ['godot', theirs],
       ['three', ours],

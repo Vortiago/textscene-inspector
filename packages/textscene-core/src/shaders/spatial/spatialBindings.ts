@@ -38,6 +38,9 @@ const ROUGHNESS_LIMITER = { amount: 0.25, limit: 0.18 };
 
 const DATA = 'scene_data_block.data';
 
+/** The template's `scene_data.viewport_size`, which an emulated point's size is measured in. */
+export const VIEWPORT_SIZE = `${DATA}.viewport_size`;
+
 /** Each member of `SceneData` the colour pass of an unlit scene reads (`render_scene_data_rd.cpp:72-290`). */
 export const SCENE_BINDINGS: readonly Binding<SpatialFrame>[] = [
   {
@@ -85,7 +88,7 @@ export const SCENE_BINDINGS: readonly Binding<SpatialFrame>[] = [
   // The opaque pass applies no alpha multiplier without motion vectors (`render_forward_clustered.cpp:2162`).
   { uniform: `${DATA}.pass_alpha_multiplier`, godot: 'render_scene_data_rd.cpp:128', value: () => 1 },
   {
-    uniform: `${DATA}.viewport_size`,
+    uniform: VIEWPORT_SIZE,
     godot: 'render_scene_data_rd.cpp:130-131',
     value: (scene) => new THREE.Vector2(scene.width, scene.height),
   },

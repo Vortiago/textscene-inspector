@@ -118,7 +118,7 @@ const TRANSPARENT = { transparent: true };
 const pointBag = (samplesAlbedoAtPointCoord: boolean, placement: ListedPlacement = 'mesh') =>
   withPointDraw(
     { materialClass: 'standard', props: { map: new THREE.Texture() } },
-    { pixels: 4, pixelRatio: 1, samplesAlbedoAtPointCoord, placement }
+    { pixels: 4, samplesAlbedoAtPointCoord, placement }
   ).injection;
 
 /** A PARTICLES billboard that keeps the scale, which reaches every chunk the billboard edits. */
