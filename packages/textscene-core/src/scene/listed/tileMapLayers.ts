@@ -8,7 +8,7 @@ import { tileMapLayerNames } from '../../nodes/2d/tiles/tilemap/layerNames.js';
 import { perObject } from '../../utils/perObject.js';
 import { boolValue, intValue } from '../derived/valueOf.js';
 import type { GetOutcome } from '../propertyAccess.js';
-import type { NodeTexts } from './listedProperties.js';
+import type { ListedReads, NodeTexts } from './listedProperties.js';
 
 interface LayerLeaf {
   readonly type: number;
@@ -42,7 +42,7 @@ const layersOf = perObject((texts: NodeTexts) => ({
 }));
 
 /** `TileMap::_get` of a `layer_<i>/<leaf>` name, through its PropertyListHelper (tile_map.cpp:727-744). */
-export function tileMapLayers(property: string, texts: NodeTexts): GetOutcome {
+export function tileMapLayers(property: string, { texts }: ListedReads): GetOutcome {
   const key = layerKeyOf(property);
   if (!key) return { kind: 'unknown' };
   if (key.leaf === 'tile_data') return { kind: 'unported', declaredBy: 'TileMap' };

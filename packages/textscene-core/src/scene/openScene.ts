@@ -1,6 +1,7 @@
 import type { SceneGraph } from '../core/SceneGraph.js';
 import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
-import type { TscnExternalResource } from '../parser/types.js';
+import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
+import { findSubResource } from '../resources/SubResourceResolver.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { parseSubResourcePath } from '../resources/subResourcePath.js';
 import { loadedResourceType } from './loadedResourceType.js';
@@ -89,7 +90,8 @@ export function openScene({
     rootScenePath,
     () => graph()?.scenes.get(rootScenePath),
     (livePath) => tree()?.node(livePath) ?? null,
-    (livePath) => writtenTree()?.node(livePath) ?? null
+    (livePath) => writtenTree()?.node(livePath) ?? null,
+    (path) => subResource(path)
   );
   const tree = (): SceneTree | null => {
     const current = graph();
@@ -99,13 +101,19 @@ export function openScene({
     const current = scene.written();
     return current ? runtime().tree(current) : null;
   };
-  /** The class `load` gives: a sub-resource's heading names it, and no file is asked for one. */
-  const resourceClass = async (path: string): Promise<string | null> => {
+  /** A sub-resource of the root scene, else of a scene the tree has loaded. */
+  const subResource = (path: string): TscnInternalResource | null => {
     const { filePath, subResourceId } = parseSubResourcePath(path);
-    if (subResourceId === undefined) return loadedResourceType(provider, path);
-    if (filePath === rootScenePath) return properties.subResourceClass(path);
-    return runtime().loadedSubResourceClass(filePath, subResourceId);
+    if (subResourceId === undefined) return null;
+    if (filePath !== rootScenePath) return runtime().loadedSubResource(filePath, subResourceId);
+    const root = graph()?.scenes.get(rootScenePath);
+    return (root && findSubResource(root.internalResources, subResourceId)) ?? null;
   };
+  /** The class `load` gives: a sub-resource's heading names it, and no file is asked for one. */
+  const resourceClass = async (path: string): Promise<string | null> =>
+    parseSubResourcePath(path).subResourceId === undefined
+      ? loadedResourceType(provider, path)
+      : (subResource(path)?.type ?? null);
   const nodes = new SceneNodes({ graph, tree, resourceClass }, properties, (path) => listeners.written(path));
   const listeners = new SceneListeners((path) => nodes.getNodeOrNull(path)?.path ?? null);
 

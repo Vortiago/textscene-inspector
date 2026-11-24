@@ -355,9 +355,9 @@ function sceneRuntimeOf(scene: Scene): SceneRuntime {
       fileListeners.add(listener);
       return () => fileListeners.delete(listener);
     },
-    loadedSubResourceClass(scenePath, id) {
+    loadedSubResource(scenePath, id) {
       const loaded = loader.getCached<TscnScene>('scene', scenePath);
-      return (loaded && findSubResource(loaded.internalResources, id)?.type) ?? null;
+      return (loaded && findSubResource(loaded.internalResources, id)) ?? null;
     },
     dispose() {
       fileWalk.dispose();

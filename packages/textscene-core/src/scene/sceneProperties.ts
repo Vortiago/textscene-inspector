@@ -1,5 +1,5 @@
 import type { ParsedScene } from '../core/SceneGraph.js';
-import type { TscnExternalResource } from '../parser/types.js';
+import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
 import { varToStr } from '../godot/variant/varToStr.js';
 import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
 import type { ResourceReference, VariantValue } from '../godot/variant/variantValue.js';
@@ -38,7 +38,9 @@ export class SceneProperties {
     private readonly rootScene: () => ParsedScene | undefined,
     private readonly treeNode: (livePath: string) => SceneTreeNode | null,
     /** The node in the written scene's tree, where a container's sort and a live pass read the writes. */
-    private readonly writtenTreeNode: (livePath: string) => SceneTreeNode | null
+    private readonly writtenTreeNode: (livePath: string) => SceneTreeNode | null,
+    /** The sub-resource a `res://…::id` path names, in the root scene or a loaded one. */
+    private readonly subResource: (path: string) => TscnInternalResource | null
   ) {}
 
   writes(): SceneWrites {
@@ -59,7 +61,8 @@ export class SceneProperties {
 
   get(access: PropertyAccess, livePath: string, node: SceneTreeNode, property: string): SceneValue | null {
     const derived = this.derivedAt(access, livePath, node);
-    const outcome = access.resolveGet(node, property, derived, this.readsAt(access, livePath, node));
+    const reads = this.readsAt(access, livePath, node);
+    const outcome = access.resolveGet(node, property, derived, reads, this.subResource);
     if (outcome.kind === 'unknown') return this.unknownProperty(node, property, null);
     if (outcome.kind === 'refused') return null;
     if (outcome.kind === 'unported') throw unportedProperty(property, outcome.declaredBy);
@@ -147,7 +150,8 @@ export class SceneProperties {
       type: node.type,
       get: (property) => {
         const derived = this.derivedAt(access, livePath, node);
-        const outcome = access.resolveGet(node, property, derived, this.readsAt(access, livePath, node));
+        const reads = this.readsAt(access, livePath, node);
+        const outcome = access.resolveGet(node, property, derived, reads, this.subResource);
         return outcome.kind === 'value' ? outcome.value : undefined;
       },
       parent: () => this.parentReader(access, livePath),

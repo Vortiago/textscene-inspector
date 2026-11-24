@@ -163,3 +163,81 @@ layer_4/name = "a.b"
     });
   });
 });
+
+describe('get of a MeshInstance3D surface material override', () => {
+  /** A BoxMesh has one surface, the ArrayMesh two, and None has no mesh. */
+  const OVERRIDES = `[gd_scene format=3]
+
+[sub_resource type="BoxMesh" id="box"]
+
+[sub_resource type="StandardMaterial3D" id="mat"]
+
+[sub_resource type="StandardMaterial3D" id="mat2"]
+
+[sub_resource type="ArrayMesh" id="two"]
+_surfaces = [{
+"aabb": AABB(0, 0, 0, 1, 1, 0),
+"format": 34359742465,
+"index_count": 3,
+"index_data": PackedByteArray(0, 0, 1, 0, 2, 0),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 3,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 0, 0)
+}, {
+"aabb": AABB(0, 0, 0, 1, 1, 0),
+"format": 34359742465,
+"index_count": 3,
+"index_data": PackedByteArray(0, 0, 1, 0, 2, 0),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 3,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 0, 0)
+}]
+
+[node name="Main" type="Node3D"]
+
+[node name="Box" type="MeshInstance3D" parent="."]
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat")
+
+[node name="Unset" type="MeshInstance3D" parent="."]
+mesh = SubResource("box")
+
+[node name="Two" type="MeshInstance3D" parent="."]
+mesh = SubResource("two")
+surface_material_override/1 = SubResource("mat2")
+
+[node name="None" type="MeshInstance3D" parent="."]
+surface_material_override/0 = SubResource("mat")
+`;
+
+  /** Each override 0 to 2 as `var_to_str` writes it, `null` text when unset, null where _get refuses. */
+  async function overridesOf(path: string) {
+    const scene = openScene({
+      source: OVERRIDES,
+      rootScenePath: 'res://ovr.tscn',
+      provider: { loadResource: async () => null },
+    });
+    const node = scene.getNode(path);
+    return Promise.all(
+      [0, 1, 2].map(async (index) => textOf(await node.get(`surface_material_override/${index}`)))
+    );
+  }
+
+  it('answers the override of each surface of the mesh, and null past the last', async () => {
+    expect(await overridesOf('Box')).toEqual(['Resource("res://ovr.tscn::mat")', null, null]);
+  });
+
+  it('answers a null object for a surface the file sets no override of', async () => {
+    expect(await overridesOf('Unset')).toEqual(['null', null, null]);
+  });
+
+  it('counts the surfaces an ArrayMesh holds', async () => {
+    expect(await overridesOf('Two')).toEqual(['null', 'Resource("res://ovr.tscn::mat2")', null]);
+  });
+
+  it('answers null for every index of a node with no mesh, which has no surface to override', async () => {
+    expect(await overridesOf('None')).toEqual([null, null, null]);
+  });
+});

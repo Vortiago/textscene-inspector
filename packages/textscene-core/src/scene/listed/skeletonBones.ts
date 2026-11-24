@@ -8,7 +8,7 @@ import type { Bone } from '../../nodes/3d/skeleton3d/skeletonPose.js';
 import { perObject } from '../../utils/perObject.js';
 import { boolValue, intValue } from '../derived/valueOf.js';
 import type { GetOutcome } from '../propertyAccess.js';
-import type { NodeTexts } from './listedProperties.js';
+import type { ListedReads, NodeTexts } from './listedProperties.js';
 
 const vector3Value = ({ x, y, z }: Vector3): VariantValue => ({ type: T.VECTOR3, value: [x, y, z] });
 
@@ -32,7 +32,7 @@ const BONE_LEAVES: Readonly<Record<string, (bone: Bone) => VariantValue>> = {
 const bonesOf = perObject((texts: NodeTexts) => readBones({ ...texts }));
 
 /** `Skeleton3D::_get` of a `bones/<i>/<leaf>` name (skeleton_3d.cpp:141-180). */
-export function skeletonBones(property: string, texts: NodeTexts): GetOutcome {
+export function skeletonBones(property: string, { texts }: ListedReads): GetOutcome {
   const key = boneKeyOf(property);
   if (!key) return { kind: 'unknown' };
   const bone = bonesOf(texts)[key.which];

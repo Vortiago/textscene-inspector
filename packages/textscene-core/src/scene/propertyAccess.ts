@@ -10,7 +10,7 @@ import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
 import { NIL_VALUE, type VariantValue } from '../godot/variant/variantValue.js';
 import type { DerivedProperties, NodeReads, StoredValue, StoredWrite } from './derived/derivedProperty.js';
 import { derivedPropertiesOf } from './derived/derivedFamily.js';
-import { listedGet } from './listed/listedProperties.js';
+import { listedGet, type ListedReads } from './listed/listedProperties.js';
 import type { SceneTreeNode } from './sceneRuntime.js';
 import type { PropertyTexts } from './sceneWrites.js';
 
@@ -138,11 +138,13 @@ export function resolveGet(
   node: SceneTreeNode,
   property: string,
   derived: DerivedProperties | null,
-  reads: NodeReads
+  reads: NodeReads,
+  subResource: ListedReads['subResource']
 ): GetOutcome {
   if (findClassProperty(node.type, property)) return { kind: 'value', value: reads.stored(property) };
   const derivedProperty = findDerivedProperty(node.type, property);
-  if (!derivedProperty) return listedGet(node.type, property, node.rawProperties);
+  if (!derivedProperty)
+    return listedGet(node.type, property, { texts: node.rawProperties, stored: reads.stored, subResource });
   const value = derived?.get(property, reads);
   return value ? { kind: 'value', value } : { kind: 'unported', declaredBy: derivedProperty.declaredBy };
 }

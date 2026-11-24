@@ -1,6 +1,7 @@
 import type { ContainerWrite } from '../core/childVisibility.js';
 import type { SceneGraph } from '../core/SceneGraph.js';
 import type { ProjectViewportSize } from '../parser/projectSettingsParser.js';
+import type { TscnInternalResource } from '../parser/types.js';
 import type { ResourceReference, VariantValue } from '../godot/variant/variantValue.js';
 import type { Scene } from './openScene.js';
 import type { SceneFile } from './sceneFiles.js';
@@ -67,8 +68,8 @@ export interface SceneRuntime {
   files(graph: SceneGraph | null): readonly SceneFile[];
   /** Calls `listener` when a load answers for one of those files. Returns the removal. */
   subscribeFiles(listener: () => void): () => void;
-  /** The class of sub-resource `id` of the loaded scene at `scenePath`, null before it loads or for none. */
-  loadedSubResourceClass(scenePath: string, id: string): string | null;
+  /** Sub-resource `id` of the loaded scene at `scenePath`, null before it loads or for none. */
+  loadedSubResource(scenePath: string, id: string): TscnInternalResource | null;
   dispose(): void;
 }
 
