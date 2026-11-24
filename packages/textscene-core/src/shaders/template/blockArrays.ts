@@ -1,5 +1,6 @@
 import type { ArrayValue } from '../language/emitValue.js';
 import { shapeOf } from '../language/types.js';
+import { blockLayout } from './blockLayout.js';
 import { BitsArrayNode, bitsUniform, SLOT_BYTES, type UniformValue } from '../uniforms/uniformNodes.js';
 import type { Lanes } from '../uniforms/uniformLanes.js';
 
@@ -38,21 +39,20 @@ export class BlockArrays {
     return { value, written: packed };
   }
 
-  /** Lays the arrays out one after another, each element on slots of its own. */
+  /** Lays the arrays out at their std140 offsets, as Godot's block declares them. */
   seal(): void {
     if (this.node || this.arrays.length === 0) return;
-    const slotsOf = ({ type, count }: PackedArray) => count * (shapeOf(type)!.columns ?? 1);
-    const slots = this.arrays.reduce((total, array) => total + slotsOf(array), 0);
+    const members = this.arrays.map(({ name, type, count }) => ({ name, type, arraySize: count }));
+    const { members: placed, size } = blockLayout(members, 'std140', () => undefined);
+    const slots = size / SLOT_BYTES;
     if (slots > MAX_BLOCK_SLOTS)
       throw new Error(
         `expected the arrays of ${this.blockName} in at most ${MAX_BLOCK_SLOTS} slots, got ${slots}`
       );
     const node = new BitsArrayNode(slots);
-    let slot = 0;
-    for (const array of this.arrays) {
-      array.uniform = bitsUniform(node, slot * SLOT_BYTES, array.type, array.count);
-      slot += slotsOf(array);
-    }
+    this.arrays.forEach((array, index) => {
+      array.uniform = bitsUniform(node, placed[index]!.offset, array.type, array.count);
+    });
     node.beforeUpload = () => {
       for (const array of this.arrays) array.uniform!.write(arrayLanes(array));
     };

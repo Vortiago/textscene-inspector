@@ -34,6 +34,9 @@ export interface EmitContext {
 }
 
 export class ExpressionEmitter {
+  /** Written only by `guardLanes`, at its first call. */
+  private guards: GuardFolding | undefined;
+
   constructor(
     private readonly scope: EmitScope,
     private readonly folding: GlslangFolding,
@@ -50,7 +53,10 @@ export class ExpressionEmitter {
   }
 
   value(expression: Expression): Value {
-    const folded = this.folding.lanesOf(expression) ?? this.guardLanes(expression);
+    // Only a guard's shape is folded here, so a plain operator costs no second walk of its operands.
+    const folded =
+      this.folding.lanesOf(expression) ??
+      (isGuardShape(expression) ? this.guardLanes(expression) : undefined);
     if (folded) return constantNode(expression.type, folded);
     switch (expression.kind) {
       case 'constant':
@@ -90,27 +96,14 @@ export class ExpressionEmitter {
     }
   }
 
-  /** A guard's value where it rests on literals: an `&&`, an `||` or a call of no arguments. */
+  /** A guard's value where it rests on literals, as `bool(implementation_data.flags & 1u)`, or nothing. */
   guardLanes(expression: Expression): Lanes | undefined {
-    if (expression.kind !== 'operator') return undefined;
-    const isGuard =
-      expression.op === 'OP_AND' ||
-      expression.op === 'OP_OR' ||
-      (isCall(expression) && expression.row.id === 'OP_CALL' && expression.operands.length === 0);
-    return isGuard ? this.guards.lanesOf(expression) : undefined;
-  }
-
-  /** An `if` condition's value where it rests on literals, as `bool(implementation_data.flags & 1u)`. */
-  conditionLanes(expression: Expression): Lanes | undefined {
-    return this.guards.lanesOf(expression);
-  }
-
-  private get guards(): GuardFolding {
-    return new GuardFolding(
+    this.guards ??= new GuardFolding(
       this.folding,
       (name) => this.scope.lookup(name),
       (name) => this.context.functions.constantResult(name)
     );
+    return this.guards.lanesOf(expression);
   }
 
   private arrayElement(arrayExpression: Expression, index: Expression): Value {
@@ -236,3 +229,10 @@ const choose = (test: Node, onTrue: Node, onFalse: Node) =>
 
 const swizzle = (owner: Node, lanes: readonly number[]) =>
   (owner as unknown as Record<string, Node>)[lanes.map((lane) => LANE_LETTERS[lane]).join('')]!;
+
+/** An `&&`, an `||` or a call of no arguments: the shapes of Godot's guards on specialisation constants. */
+function isGuardShape(expression: Expression): boolean {
+  if (expression.kind !== 'operator') return false;
+  if (expression.op === 'OP_AND' || expression.op === 'OP_OR') return true;
+  return isCall(expression) && expression.row.id === 'OP_CALL' && expression.operands.length === 0;
+}

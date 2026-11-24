@@ -28,7 +28,6 @@ export class TemplateUniforms {
   /** The value of a uniform block's instance: a struct of its members' uniforms. */
   block(block: InterfaceBlockNode, structOf: StructOf): StructValue {
     const name = block.instanceName!;
-    const isDeclared = this.blockArrays.has(name);
     const arrays = this.blockArrays.get(name) ?? new BlockArrays(name);
     this.blockArrays.set(name, arrays);
     const members = new Map<string, Value>();
@@ -36,7 +35,7 @@ export class TemplateUniforms {
       if (member.kind === 'slot') continue;
       members.set(member.name, this.member(`${name}.${member.name}`, member, structOf, arrays));
     }
-    if (!isDeclared) arrays.seal();
+    arrays.seal();
     return { kind: 'struct', members };
   }
 

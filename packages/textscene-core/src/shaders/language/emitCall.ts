@@ -35,6 +35,9 @@ export class CalledFunctions {
   /** Written only by `functionNamed`, at a function's first call with each set of textures. */
   private readonly built = new Map<string, GlslFunction>();
 
+  /** Written only by `constantResult`, once for each function: nothing for one that does not fold. */
+  private readonly constantResults = new Map<string, Lanes | undefined>();
+
   constructor(
     private readonly trees: ReadonlyMap<string, EmittedTree>,
     private readonly structOf: StructOf,
@@ -44,6 +47,11 @@ export class CalledFunctions {
 
   /** The lanes a call of `name` gives when its one `return` rests on literals alone, as `sc_packed_0()`. */
   constantResult(name: string): Lanes | undefined {
+    if (!this.constantResults.has(name)) this.constantResults.set(name, this.foldedReturn(name));
+    return this.constantResults.get(name);
+  }
+
+  private foldedReturn(name: string): Lanes | undefined {
     const definition = this.trees.get(name);
     const statements = definition?.lowered.body.statements ?? [];
     const [only] = statements;
