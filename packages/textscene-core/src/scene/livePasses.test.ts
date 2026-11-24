@@ -49,6 +49,13 @@ describe('a node a RemoteTransform moves', () => {
     await vi.waitFor(async () => expect(await target.get('position')).toEqual(variant('Vector2(100, 50)')));
   });
 
+  it('answers the position a write to the 2D relay gives it', async () => {
+    const scene = relayScene();
+    await scene.getNode('Relay').set('position', variant('Vector2(200, 0)'));
+    const target = scene.getNode('Target');
+    await vi.waitFor(async () => expect(await target.get('position')).toEqual(variant('Vector2(200, 0)')));
+  });
+
   it('answers the rotation the 2D relay gives it', async () => {
     const target = relayScene().getNode('Target');
     await vi.waitFor(async () => expect(await target.get('rotation')).toBe(0.5));
