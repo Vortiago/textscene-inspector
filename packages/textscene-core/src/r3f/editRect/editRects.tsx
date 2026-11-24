@@ -25,6 +25,11 @@ export function useEditRects(): EditRects | null {
   return useContext(EditRectsContext);
 }
 
+// Only its own: another item that publishes the same path keeps its rect when this one leaves.
+function deleteOwn(rects: EditRects, path: string, rect: Rect2): void {
+  if (rects.get(path) === rect) rects.delete(path);
+}
+
 /** Publishes the drawing item's edit rect, or none for null, until it unmounts. */
 export function usePublishEditRect(rect: Rect2 | null): void {
   const rects = useEditRects();
@@ -37,8 +42,9 @@ export function usePublishEditRect(rect: Rect2 | null): void {
     if (!rects || !path || x === undefined || y === undefined || w === undefined || h === undefined) {
       return undefined;
     }
-    rects.set(path, { x, y, w, h });
-    return () => rects.delete(path);
+    const published = { x, y, w, h };
+    rects.set(path, published);
+    return () => deleteOwn(rects, path, published);
   }, [rects, path, x, y, w, h]);
 }
 
@@ -49,7 +55,7 @@ export function usePublishEditRects(byPath: ReadonlyMap<string, Rect2>): void {
     if (!rects) return undefined;
     for (const [path, rect] of byPath) rects.set(path, rect);
     return () => {
-      for (const path of byPath.keys()) rects.delete(path);
+      for (const [path, rect] of byPath) deleteOwn(rects, path, rect);
     };
   }, [rects, byPath]);
 }

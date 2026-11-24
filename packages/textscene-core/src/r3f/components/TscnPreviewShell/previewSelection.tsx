@@ -147,17 +147,26 @@ export function useHoverPath(): (path: string | null) => void {
   return usePreviewSelection()?.hoverPath ?? NO_SELECT;
 }
 
-/** Godot's F frames the selection (node_3d_editor_plugin.cpp:4886), so a hover takes the view's keys. */
+/** F frames the selection (node_3d_editor_plugin.cpp:4886): a hover takes the view's keys, focus ends it. */
 export function HoverReleasesViewFocus({ viewArea }: { viewArea: RefObject<HTMLElement | null> }) {
-  const hovered = usePreviewSelection()?.hovered;
+  const preview = usePreviewSelection();
   useEffect(() => {
-    if (!hovered) return undefined;
-    return hovered.subscribe(() => {
+    const area = viewArea.current;
+    if (!preview || !area) return undefined;
+    const { hovered, hoverPath } = preview;
+    const endHover = () => {
+      if (hovered.get()) hoverPath(null);
+    };
+    area.addEventListener('focusin', endHover);
+    const unsubscribe = hovered.subscribe(() => {
       const focused = document.activeElement;
-      if (!hovered.get() || !(focused instanceof HTMLElement)) return;
-      if (viewArea.current?.contains(focused)) focused.blur();
+      if (hovered.get() && focused instanceof HTMLElement && area.contains(focused)) focused.blur();
     });
-  }, [hovered, viewArea]);
+    return () => {
+      area.removeEventListener('focusin', endHover);
+      unsubscribe();
+    };
+  }, [preview, viewArea]);
   return null;
 }
 

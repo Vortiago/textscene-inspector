@@ -67,6 +67,16 @@ describe('<TscnPreviewShell> a hovered tree row', () => {
     expect(document.activeElement).toBe(row('Main/Box'));
   });
 
+  it('hands the view the clicked node again when the view takes focus under a hovered row', async () => {
+    await renderShell();
+    fireEvent.click(row('Main/Box'));
+    act(() => fireEvent.mouseEnter(row('Main/Lamp')));
+
+    act(() => screen.getByTestId('view').focus());
+
+    expect(view.selected?.path).toBe('/root/Main/Box');
+  });
+
   it('hands the view the clicked node again when the pointer leaves', async () => {
     await renderShell();
     fireEvent.click(row('Main/Box'));

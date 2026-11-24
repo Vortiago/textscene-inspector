@@ -1,4 +1,4 @@
-import type { Rect2 } from '../../godot/math/rect2.js';
+import { ZERO_RECT, type Rect2 } from '../../godot/math/rect2.js';
 import {
   transform2DBasisXform,
   transform2DFromParts,
@@ -44,7 +44,7 @@ export function selectionRect(global: Transform2DColumns, editRect: Rect2 | null
   const scale = transform2DGetScale(global);
   const turned = rotatedRect(
     transform2DFromParts(transform2DGetRotation(global), { x: 1, y: 1 }, 0, { x: 0, y: 0 }),
-    editRect ?? { x: 0, y: 0, w: 0, h: 0 }
+    editRect ?? ZERO_RECT
   );
   return {
     x: origin.x + scale.x * turned.x,

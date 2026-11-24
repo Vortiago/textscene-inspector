@@ -46,12 +46,7 @@ export function node2dWorldPosition(
   return transform && transform2DOrigin(transform);
 }
 
-/** {@link node2dWorldTransform} where the live tree's poses, relays and solves have placed the nodes. */
-export function liveNode2dWorldTransform(
-  liveTree: SharedLiveTree,
-  loader: ResourceLoader | null,
-  path: string
-): Transform2DColumns | null {
-  const placed = solvedNodePatchesOf(liveTreeOf(liveTree.roots, liveTree.ctx), liveFilesOf(loader).current());
-  return node2dWorldTransform(liveTree.roots, liveTree.ctx, path, placed);
+/** Where the live tree's poses, relays and solves have placed its nodes, for the `placed` of a walk here. */
+export function livePlacements(liveTree: SharedLiveTree, loader: ResourceLoader | null): PatchLookup {
+  return solvedNodePatchesOf(liveTreeOf(liveTree.roots, liveTree.ctx), liveFilesOf(loader).current());
 }

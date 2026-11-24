@@ -7,10 +7,11 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
+import { ZERO_RECT } from '../../../godot/math/rect2.js';
 import { useSelectedNodePathStore } from '../../contexts/SelectionContext.js';
 import { useSharedLiveTree } from '../../useLiveSceneTree.js';
 import { useResourceLoader } from '../../../resources/useResource.js';
-import { liveNode2dWorldTransform } from '../../node2dWorldTransform.js';
+import { livePlacements, node2dWorldTransform } from '../../node2dWorldTransform.js';
 import { isViewKeyEvent } from '../../viewFocus.js';
 import { isFocusSelectionKey, isFrameSelectionKey } from '../../editorKeyBindings.js';
 import { useEditRects } from '../../editRect/editRects.js';
@@ -56,7 +57,8 @@ export function FocusSelection2D() {
     function selectedRect() {
       const path = selectedPath.get();
       if (!path || !liveTree.current) return null;
-      const global = liveNode2dWorldTransform(liveTree.current, loader, path);
+      const { roots, ctx } = liveTree.current;
+      const global = node2dWorldTransform(roots, ctx, path, livePlacements(liveTree.current, loader));
       return global && selectionRect(global, rects?.get(path) ?? null);
     }
 
@@ -66,7 +68,7 @@ export function FocusSelection2D() {
       if (!isFrame && !isFocusSelectionKey(event)) return;
       event.preventDefault();
       // Godot centres on the origin with nothing selected: its merged rect stays empty (:5165-5167).
-      const target = selectedRect() ?? { x: 0, y: 0, w: 0, h: 0 };
+      const target = selectedRect() ?? ZERO_RECT;
       const size = stage.getBoundingClientRect();
       moveView(
         isFrame
