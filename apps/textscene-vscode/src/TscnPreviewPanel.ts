@@ -7,7 +7,7 @@
 import * as vscode from 'vscode';
 import { PROJECT_FILE_NAME } from '@textscene/core/godot';
 import { error as logError, warn } from '@textscene/core/logger';
-import type { HostToWebviewMessage } from './protocol';
+import type { HostToWebviewMessage, LoadTscnMessage } from './protocol';
 import { VSCodeResourceProvider } from './providers/VSCodeResourceProvider';
 import { buildPanelHtml } from './panelHtml';
 import { dispatchWebviewMessage, type WebviewMessageHandlers } from './webviewDispatch';
@@ -30,8 +30,8 @@ export class TscnPreviewPanel {
   private readonly _extensionUri: vscode.Uri;
   private _disposables: vscode.Disposable[] = [];
   private _currentResource: vscode.Uri;
-  /** Last text read off disk: both the re-read diff and the ready replay read it. */
-  private _previousContent: string | undefined;
+  /** Last text read off disk, with its `res://` path: both the re-read diff and the ready replay read it. */
+  private _previousLoad: LoadTscnMessage | undefined;
   /**
    * Written only by `_loadTscnContent`, which takes the next number per read. A save
    * starts two reads (the save event and the watcher), so a read that finishes
@@ -41,11 +41,7 @@ export class TscnPreviewPanel {
   private _onDidDispose: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidDispose: vscode.Event<void> = this._onDidDispose.event;
 
-  /**
-   * Webview-ready handshake. The `useEffect` that installs the webview's `message`
-   * listener runs after `createRoot().render(...)`, so a post sent before it is
-   * dropped. Posts wait on this flag, and `webviewReady` replays `_previousContent`.
-   */
+  /** Posts wait on this flag: one before the webview's listener is dropped. `webviewReady` sets it. */
   private _webviewReady = false;
   /**
    * The visibility last posted to the current document, so a view-state change that leaves it as
@@ -114,12 +110,9 @@ export class TscnPreviewPanel {
         // A remounted tree has rendered nothing yet, so it hears the visibility again.
         this._postedVisibility = null;
         this._postVisibility();
-        // Every remount, such as a move to another editor group, posts ready with
-        // an empty tree. Replay always, so a ready webview holds the current text:
-        // the `_previousContent` diff swallows a later re-read, which leaves the
-        // preview on "Loading scene…".
-        if (this._previousContent !== undefined) {
-          this._postMessageToWebview({ type: 'loadTscn', content: this._previousContent });
+        // A remount posts ready with an empty tree, and the diff swallows a re-read: replay always.
+        if (this._previousLoad !== undefined) {
+          this._postMessageToWebview(this._previousLoad);
         }
       },
       webviewLoadFailed: (msg) => {
@@ -334,18 +327,21 @@ export class TscnPreviewPanel {
         return;
       }
       const textContent = new TextDecoder().decode(fileContent);
-
-      if (this._previousContent === textContent) {
+      const scenePath = (await this._getResourceProvider()?.resPathOf(resource)) ?? null;
+      if (load !== this._latestLoad) {
+        return;
+      }
+      if (this._previousLoad?.content === textContent && this._previousLoad.scenePath === scenePath) {
         return;
       }
 
       // The host sends the full text: the webview re-parses and React reconciles.
-      this._previousContent = textContent;
+      this._previousLoad = { type: 'loadTscn', content: textContent, scenePath };
 
       // A tree without its `message` listener yet gets this text from the
       // `webviewReady` replay.
       if (this._webviewReady) {
-        this._postMessageToWebview({ type: 'loadTscn', content: textContent });
+        this._postMessageToWebview(this._previousLoad);
       }
     } catch (error) {
       // A later read decides what the preview shows, so its result is the one to report.

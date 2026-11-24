@@ -13,6 +13,8 @@ import type { WireResourcePayload } from './wireCodec';
 export type LoadTscnMessage = {
   type: 'loadTscn';
   content: string;
+  /** The document's `res://` path, which names its sub-resources. Null where no `res://` root holds it. */
+  scenePath: string | null;
 };
 
 /** Successful response to a webview `loadResource` request. */
