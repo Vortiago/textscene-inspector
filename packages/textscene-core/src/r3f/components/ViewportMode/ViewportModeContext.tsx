@@ -37,7 +37,7 @@ export interface PersistedViewport {
 }
 
 /** The preferences of a session that persisted none: 3D, the default helpers, Godot's fixed orbit. */
-export const DEFAULT_VIEWPORT: PersistedViewport = {
+const DEFAULT_VIEWPORT: PersistedViewport = {
   mode: '3D',
   show: DEFAULT_SHOW,
   frameOnOpen: false,
