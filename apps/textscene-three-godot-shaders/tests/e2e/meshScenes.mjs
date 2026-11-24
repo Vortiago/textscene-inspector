@@ -898,6 +898,15 @@ const RENDER_MODE_SCENES = [
   wireframeScene('spatial-wireframe-cull-back', 'cull_back', 24),
   wireframeScene('spatial-wireframe-cull-front', 'cull_front', 19),
   wireframeScene('spatial-wireframe-cull-disabled', 'cull_disabled', 43),
+  // A game's Compatibility renderer draws the triangles filled. Colours of 0 and 1 read alike in its colour space.
+  {
+    ...cullScene(
+      'spatial-wireframe-compatibility',
+      ['wireframe'],
+      'ALBEDO = vec3(0.0, 1.0, float(FRONT_FACING));'
+    ),
+    renderingMethod: 'gl_compatibility',
+  },
   wireframeScene(
     'spatial-wireframe-cull-disabled-normal',
     'cull_disabled',

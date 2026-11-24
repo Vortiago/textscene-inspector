@@ -7,7 +7,8 @@ import { CullMode } from '../../godot/rendering/materials/cullMode.js';
 import { DepthDrawMode } from '../../godot/rendering/materials/depthDrawMode.js';
 import { StencilCompare, StencilFlag } from '../../godot/rendering/materials/stencil.js';
 import { parsedShader } from '../language/parseShader.js';
-import { drawsAlphaToCoverage, spatialPipeline, stencilQueueError } from './spatialPipeline.js';
+import { drawsAlphaToCoverage, drawsLines, spatialPipeline, stencilQueueError } from './spatialPipeline.js';
+import type { Renderer } from '../preprocessor/renderingMethod.js';
 import { transpileSpatial } from './transpileSpatial.js';
 
 /** The material of an unshaded shader with `modes` after `unshaded`. */
@@ -165,7 +166,7 @@ describe('spatialPipeline', () => {
       depthFlags: new Set(),
       stencil: null,
       pointDraw: null,
-      drawsLines: false,
+      usesWireframe: false,
     });
   });
 
@@ -217,19 +218,23 @@ describe('spatialPipeline', () => {
   });
 
   describe('drawsLines', () => {
-    const drawsLines = (head: string, body = '') =>
-      spatialPipeline(parsedShader(`shader_type spatial;\n${head}${body}`).tree).drawsLines;
+    const drawsLinesOf = (source: string, renderer: Renderer = 'forward_plus') =>
+      drawsLines(spatialPipeline(parsedShader(`shader_type spatial;\n${source}`).tree), renderer);
 
-    it('is set by render_mode wireframe', () => {
-      expect(drawsLines('render_mode wireframe;\n')).toBe(true);
+    it('holds for render_mode wireframe', () => {
+      expect(drawsLinesOf('render_mode wireframe;\n')).toBe(true);
     });
 
-    it('is not set without render_mode wireframe', () => {
-      expect(drawsLines('render_mode unshaded;\n')).toBe(false);
+    it('does not hold without render_mode wireframe', () => {
+      expect(drawsLinesOf('render_mode unshaded;\n')).toBe(false);
     });
 
-    it('is not set for a shader that draws points', () => {
-      expect(drawsLines('render_mode wireframe;\n', 'void vertex() {\n\tPOINT_SIZE = 2.0;\n}\n')).toBe(false);
+    it('does not hold for a shader that draws points', () => {
+      expect(drawsLinesOf('render_mode wireframe;\nvoid vertex() {\n\tPOINT_SIZE = 2.0;\n}\n')).toBe(false);
+    });
+
+    it('does not hold on a game’s Compatibility renderer', () => {
+      expect(drawsLinesOf('render_mode wireframe;\n', 'gl_compatibility')).toBe(false);
     });
   });
 

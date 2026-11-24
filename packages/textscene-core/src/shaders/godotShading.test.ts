@@ -60,7 +60,7 @@ describe('installGodotShading', () => {
     expect(setOpaqueSort).toHaveBeenCalledWith(godotOpaqueSort());
   });
 
-  it('sets Godot’s polygon mode around each draw', () => {
+  it('wraps the renderer’s draw for Godot’s polygon mode', () => {
     const { renderer, renderBufferDirect } = rendererWithSlots(16);
     installGodotShading(renderer);
     expect(renderer.renderBufferDirect).not.toBe(renderBufferDirect);

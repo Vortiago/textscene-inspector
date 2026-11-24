@@ -2368,6 +2368,23 @@ void fragment() {
 | --- | --- |
 | <img src="showcase/spatial-wireframe-cull-disabled-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-wireframe-cull-disabled-three.png" width="256" alt="Transpilation"> |
 
+## Showcase `spatial-wireframe-compatibility`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded, wireframe;
+
+void fragment() {
+	ALBEDO = vec3(0.0, 1.0, float(FRONT_FACING));
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-wireframe-compatibility-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-wireframe-compatibility-three.png" width="256" alt="Transpilation"> |
+
 ## Showcase `spatial-wireframe-cull-disabled-normal`
 
 Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
@@ -3766,7 +3783,7 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 
 ## Render mode `wireframe`
 
-`wireframe` draws each triangle as its three edges (`scene_shader_forward_clustered.cpp:425`). The cull runs on the triangle first, so `cull_back` keeps the edges of the front faces only, and `FRONT_FACING` and `NORMAL` follow the face of the triangle. The depth prepass draws the edges too. A shader that writes `POINT_SIZE` or reads `POINT_COORD` draws points, which the mode leaves as they are. Firefox has no `WEBGL_polygon_mode`, so there the edges of the faces seen from behind stay and `FRONT_FACING` is always true.
+`wireframe` draws each triangle as its three edges (`scene_shader_forward_clustered.cpp:425`). The cull runs on the triangle first, so `cull_back` keeps the edges of the front faces only, and `FRONT_FACING` and `NORMAL` follow the face of the triangle. The depth prepass draws the edges too. The Compatibility renderer of a game draws the triangles filled, as it builds the line index only for the editor (`mesh_storage.cpp:289`). A shader that writes `POINT_SIZE` or reads `POINT_COORD` draws points, which the mode leaves as they are. Firefox has no `WEBGL_polygon_mode`, so there the edges of the faces seen from behind stay and `FRONT_FACING` is always true.
 
 The transpiler emits `WEBGL_polygon_mode` around the material's draw, and three's `wireframe` without it. Rows: `spatial render_mode wireframe`. Godot source: `servers/rendering/shader_types.cpp:240`.
 

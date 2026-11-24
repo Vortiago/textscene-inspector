@@ -41,7 +41,7 @@ describe('prepareCanvasRenderer', () => {
     expect(gl.setOpaqueSort).toHaveBeenCalledWith(godotOpaqueSort());
   });
 
-  it('sets Godot’s polygon mode around each draw', () => {
+  it('wraps the renderer’s draw for Godot’s polygon mode', () => {
     const gl = renderer();
     const draw = gl.renderBufferDirect;
     prepareCanvasRenderer({ gl });

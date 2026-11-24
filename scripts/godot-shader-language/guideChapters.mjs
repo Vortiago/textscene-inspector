@@ -782,7 +782,7 @@ const SPATIAL_CHAPTER = {
     {
       heading: 'Render mode `wireframe`',
       rows: (row) => row.id === 'spatial render_mode wireframe',
-      what: '`wireframe` draws each triangle as its three edges (`scene_shader_forward_clustered.cpp:425`). The cull runs on the triangle first, so `cull_back` keeps the edges of the front faces only, and `FRONT_FACING` and `NORMAL` follow the face of the triangle. The depth prepass draws the edges too. A shader that writes `POINT_SIZE` or reads `POINT_COORD` draws points, which the mode leaves as they are. Firefox has no `WEBGL_polygon_mode`, so there the edges of the faces seen from behind stay and `FRONT_FACING` is always true.',
+      what: '`wireframe` draws each triangle as its three edges (`scene_shader_forward_clustered.cpp:425`). The cull runs on the triangle first, so `cull_back` keeps the edges of the front faces only, and `FRONT_FACING` and `NORMAL` follow the face of the triangle. The depth prepass draws the edges too. The Compatibility renderer of a game draws the triangles filled, as it builds the line index only for the editor (`mesh_storage.cpp:289`). A shader that writes `POINT_SIZE` or reads `POINT_COORD` draws points, which the mode leaves as they are. Firefox has no `WEBGL_polygon_mode`, so there the edges of the faces seen from behind stay and `FRONT_FACING` is always true.',
       tsl: "`WEBGL_polygon_mode` around the material's draw, and three's `wireframe` without it",
     },
     {

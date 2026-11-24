@@ -28,22 +28,56 @@ export function installGodotPolygonMode(renderer: THREE.WebGLRenderer): void {
   if (installedRenderers.has(renderer)) return;
   installedRenderers.add(renderer);
   const draw = renderer.renderBufferDirect.bind(renderer);
+  const extension = polygonModeExtension(renderer);
+  renderer.renderBufferDirect = (camera, scene, geometry, material, object, group) => {
+    if (!drawsTriangleLines(material, object)) return draw(camera, scene, geometry, material, object, group);
+    const polygonMode = extension();
+    const lines = () => draw(camera, scene, geometry, material, object, group);
+    if (polygonMode) drawInLineMode(renderer.getContext(), polygonMode, lines);
+    else drawAsGlLines(material, lines);
+  };
+}
+
+/** The polygon mode leaves a points or lines primitive as it is. */
+const drawsTriangleLines = (material: THREE.Material, object: THREE.Object3D): boolean =>
+  lineMaterials.has(material) && (object as THREE.Mesh).isMesh === true;
+
+/** The extension of `renderer`'s context, asked for again after a restore, which drops the old object. */
+function polygonModeExtension(renderer: THREE.WebGLRenderer): () => PolygonModeExtension | null {
   // Asked for at the first line draw: WebKit logs a warning for each context that turns the extension on.
   let extension: PolygonModeExtension | null | undefined;
-  renderer.renderBufferDirect = (camera, scene, geometry, material, object, group) => {
-    if (!lineMaterials.has(material)) return draw(camera, scene, geometry, material, object, group);
-    const gl = renderer.getContext();
-    extension ??= gl.getExtension('WEBGL_polygon_mode') as PolygonModeExtension | null;
-    // Firefox has no polygon mode: three reads any material's `wireframe` (`WebGLRenderer.js:1215`).
-    if (!extension) {
-      Object.assign(material, { wireframe: true });
-      return draw(camera, scene, geometry, material, object, group);
+  return () => {
+    if (extension === undefined) {
+      extension = renderer.getContext().getExtension('WEBGL_polygon_mode') as PolygonModeExtension | null;
+      renderer.domElement.addEventListener('webglcontextrestored', () => (extension = undefined), {
+        once: true,
+      });
     }
-    extension.polygonModeWEBGL(gl.FRONT_AND_BACK, extension.LINE_WEBGL);
-    try {
-      draw(camera, scene, geometry, material, object, group);
-    } finally {
-      extension.polygonModeWEBGL(gl.FRONT_AND_BACK, extension.FILL_WEBGL);
-    }
+    return extension;
   };
+}
+
+function drawInLineMode(
+  gl: WebGLRenderingContext,
+  polygonMode: PolygonModeExtension,
+  draw: () => void
+): void {
+  polygonMode.polygonModeWEBGL(gl.FRONT_AND_BACK, polygonMode.LINE_WEBGL);
+  try {
+    draw();
+  } finally {
+    polygonMode.polygonModeWEBGL(gl.FRONT_AND_BACK, polygonMode.FILL_WEBGL);
+  }
+}
+
+/** Firefox has no polygon mode. three reads any material's `wireframe` (`WebGLRenderer.js:1215`). */
+function drawAsGlLines(material: THREE.Material, draw: () => void): void {
+  const withWireframe = material as THREE.Material & { wireframe?: boolean };
+  const wasWireframe = withWireframe.wireframe;
+  withWireframe.wireframe = true;
+  try {
+    draw();
+  } finally {
+    withWireframe.wireframe = wasWireframe;
+  }
 }
