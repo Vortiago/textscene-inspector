@@ -21,7 +21,7 @@ export interface SharedArray {
 }
 
 /** The texture a pass after the fill reads a shared array from. */
-export const sharedTextureName = (name: string) => `compute_shared_${name}`;
+const sharedTextureName = (name: string) => `compute_shared_${name}`;
 
 /** The lanes of a texel an element type of up to four floats takes. */
 const FLOAT_LANES: ReadonlyMap<string, string> = new Map([
@@ -79,7 +79,7 @@ export interface SharedWrite {
 const isBarrier = (statement: Statement) =>
   statement.kind === 'operator' && isCall(statement) && BARRIER_CALLS.has(statement.function);
 
-export const containsBarrier = (statement: Statement): boolean =>
+const containsBarrier = (statement: Statement): boolean =>
   isBarrier(statement) || statementBlocks(statement).some((inner) => inner.statements.some(containsBarrier));
 
 /** `body` without its barriers. */

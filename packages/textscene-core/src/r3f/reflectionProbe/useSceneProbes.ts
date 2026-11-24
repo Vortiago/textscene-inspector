@@ -24,7 +24,7 @@ const probesOfScenes = new SceneHolding((scene, renderer) => new SceneProbes(ren
 /** Imported by the first probe only: its bake draws Godot's compute stages, which hold three's TSL. */
 const loadProbeBake = memoisedImport(() => import('../../resources/sky/skyLayers.js'));
 
-export const PROBE_BAKE_LOAD_FAILURE =
+const PROBE_BAKE_LOAD_FAILURE =
   '[ReflectionProbe] The previewer could not load its probe bake, so no probe captures. Reload to try again.';
 
 export function useSceneProbes(): void {
