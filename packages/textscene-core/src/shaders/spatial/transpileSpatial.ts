@@ -34,6 +34,7 @@ import { linkedProgram, type LinkedProgram, type ProgramTemplate } from '../temp
 import type { RowTexture } from '../template/rowTexture.js';
 import { instanceWords } from './instanceData.js';
 import { POINT_VERTEX_ATTRIBUTE } from './meshAttributes.js';
+import { devicePoints, type DevicePoints } from './devicePoints.js';
 import { coveredOnOneSample } from '../pipeline/singleSampleCoverage.js';
 import {
   applySpatialPipeline,
@@ -84,9 +85,6 @@ export interface TranspiledSpatial {
   readonly pointDraw: PointDraw | null;
 }
 
-/** `sc_emulate_point_size` (`scene_forward_clustered_inc.glsl:150`). */
-const EMULATES_POINT_SIZE = 'sc_emulate_point_size';
-
 export interface SpatialOptions extends ShaderOptions {
   /** The project's texture filter settings, Godot's defaults when left out. */
   readonly sampling?: ProjectSampling;
@@ -109,7 +107,6 @@ export function transpileParsedSpatial(
     options.sampling
   );
   const pipeline = spatialPipeline(parsed.tree);
-  if (pipeline.pointDraw === 'emulated') resources.uniforms.specialisation(EMULATES_POINT_SIZE, 'bool', true);
   const emitStages = stageEmitter(linked, resources, parameterValues, pipeline);
   const shader = {
     parameters: [...parameters.values()],
@@ -140,10 +137,14 @@ export function transpileParsedSpatial(
   };
 }
 
-/** An emulated point's instance is the vertex its index names: `scene_forward_clustered_inc.glsl:154`. */
-function instanceIndexOf(pointDraw: SpatialPipeline['pointDraw']): Node {
-  if (pointDraw !== 'emulated') return int(instanceIndex) as unknown as Node;
+/** A point drawn as two triangles is an instance: the vertex its index names, of Godot's one instance. */
+function vertexIndexOf(pointDraw: SpatialPipeline['pointDraw']): Node {
+  if (pointDraw !== 'emulated') return int(vertexIndex) as unknown as Node;
   return int(attribute(POINT_VERTEX_ATTRIBUTE, 'float')) as unknown as Node;
+}
+
+function instanceIndexOf(pointDraw: SpatialPipeline['pointDraw']): Node {
+  return (pointDraw === 'emulated' ? int(0) : int(instanceIndex)) as unknown as Node;
 }
 
 /** Emits a variant's stages anew each call: three caches function code by node (`NodeBuilder.js:2759`). */
@@ -155,10 +156,11 @@ function stageEmitter(
 ): (defines: string) => EmittedStages {
   return (defines) => {
     const vertexStage = linked('vertex', defines);
+    const points = pipeline.pointDraw === 'emulated' ? devicePoints() : null;
     const vertexInputs = new Map([
       ...parameterValues,
       ...vertexAttributes(vertexStage),
-      ['gl_VertexIndex', int(vertexIndex) as unknown as Node],
+      ['gl_VertexIndex', vertexIndexOf(pipeline.pointDraw)],
       ['gl_InstanceIndex', instanceIndexOf(pipeline.pointDraw)],
     ]);
     const vulkanClip = varyingProperty('vec4', 'godot_clip_position') as unknown as Vec4;
@@ -166,14 +168,18 @@ function stageEmitter(
     const vertex = emitTemplateStage(
       vertexStage,
       vertexInputs,
-      { name: 'gl_Position', type: 'vec4', beside: pipeline.pointDraw ? [UNREACHED_POINT_SIZE] : [] },
+      {
+        name: 'gl_Position',
+        type: 'vec4',
+        beside: pipeline.pointDraw ? [points?.size ?? UNUSED_POINT_SIZE] : [],
+      },
       resources
     );
     const fragmentInputs = new Map([
       ...parameterValues,
       ['gl_FragCoord', fragCoord],
       ['gl_FrontFacing', pipeline.pointDraw ? (bool(true) as unknown as Node) : godotFrontFacing()],
-      ['gl_PointCoord', vulkanPointCoord()],
+      ['gl_PointCoord', points?.coord ?? vulkanPointCoord()],
     ]);
     const fragmentResult: StageResult = {
       name: 'frag_color',
@@ -181,7 +187,7 @@ function stageEmitter(
       beside: pipeline.writesDepth ? [fragDepth(fragCoord)] : [],
     };
     return {
-      position: glClipPosition(vertex.result, vulkanClip),
+      position: glClipPosition(vertex.result, vulkanClip, points && pointExpansion(points, resources)),
       isPositionInvariant: declaresInvariantPosition(vertexStage),
       fragment: () =>
         emitTemplateStage(linked('fragment', defines), fragmentInputs, fragmentResult, resources).result,
@@ -189,8 +195,8 @@ function stageEmitter(
   };
 }
 
-/** The template's `gl_PointSize` write, which runs only off the emulated draw this port always takes. */
-const UNREACHED_POINT_SIZE: WrittenBuiltIn = {
+/** The template's `gl_PointSize` write on a points surface, which draws each point at size 1. */
+const UNUSED_POINT_SIZE: WrittenBuiltIn = {
   name: 'gl_PointSize',
   type: 'float',
   initial: float(1) as unknown as Node,
@@ -220,10 +226,23 @@ function vertexAttributes(stage: TemplateStageNode): [string, Node][] {
 
 type Vec4 = ReturnType<typeof vec4>;
 
+/** Moves a clip position, a variable, before it turns to GL's. */
+type ClipStep = (clip: Vec4) => void;
+
+/** `points` widening each point by the size the template wrote, in Godot's viewport. */
+function pointExpansion(points: DevicePoints, resources: ProgramResources): ClipStep {
+  const viewportSize = resources.uniforms.uniformOf(VIEWPORT_SIZE, 'vec2');
+  return (clip) => points.expand(clip, viewportSize);
+}
+
+/** The template's `scene_data.viewport_size`, as `spatialBindings` writes it. */
+const VIEWPORT_SIZE = 'scene_data_block.data.viewport_size';
+
 /** Vulkan's y down and Godot's reversed depth (`render_scene_data_rd.cpp:83`) as GL's, built once. */
-function glClipPosition(position: Node, vulkanClip: Vec4): Node {
+function glClipPosition(position: Node, vulkanClip: Vec4, step: ClipStep | null): Node {
   return Fn(() => {
     const clip = (position as unknown as Vec4).toVar();
+    step?.(clip as unknown as Vec4);
     vulkanClip.assign(clip);
     return vec4(clip.x, clip.y.negate(), clip.w.sub(clip.z.mul(2)), clip.w);
   })() as unknown as Node;

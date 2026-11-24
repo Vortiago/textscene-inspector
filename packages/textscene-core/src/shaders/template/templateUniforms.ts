@@ -86,7 +86,8 @@ export class TemplateUniforms {
     return constant.literal();
   }
 
-  private uniformOf(name: string, type: string): Node {
+  /** The uniform `name` of `type`, which a block member of that name shares once a stage declares it. */
+  uniformOf(name: string, type: string): Node {
     const node =
       (this.byName.get(name) as unknown as Node | undefined) ??
       (uniform as unknown as (value: unknown, type: string) => Node)(initialValue(type), type);

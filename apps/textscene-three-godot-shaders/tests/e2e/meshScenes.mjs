@@ -940,6 +940,10 @@ const POINT_SCENES = [
   pointSizeScene('spatial-point-size-large', '17.0'),
   pointSizeScene('spatial-point-size-huge', '300.0'),
   pointSizeScene('spatial-point-size-by-uv', '1.0 + UV.x * 9.0'),
+  // Vulkan clamps a point's size to its range, which starts at 1 px.
+  pointSizeScene('spatial-point-size-half', '0.5'),
+  pointSizeScene('spatial-point-size-zero', '0.0'),
+  pointSizeScene('spatial-point-size-negative', '-3.0'),
   // Points whose middles leave the view still draw the part inside it.
   {
     ...pointSizeScene('spatial-point-size-past-edge', '20.0'),
@@ -989,6 +993,12 @@ const POINT_SCENES = [
       )
     )
   ),
+  // ANGLE's Bresenham lines leave these pixels apart from Godot's (known-defects.md): the gate fails above them.
+  {
+    ...stageScene('spatial-lines-surface', { fragment: 'ALBEDO = vec3(UV, 0.3);' }, [], SPHERE_EDGES),
+    primitive: 'lines',
+    knownPixels: 93,
+  },
   // A points surface with no POINT_SIZE draws each vertex at size 1.
   {
     ...stageScene('spatial-points-surface', { fragment: 'ALBEDO = vec3(UV, 0.3);' }, []),
