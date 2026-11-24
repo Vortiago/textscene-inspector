@@ -26,6 +26,7 @@ import {
   type TreeCamera,
 } from '../scene/sceneRuntime.js';
 import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
+import { scopeOf } from '../resources/liveNode.js';
 import { isCamera2DType, isCamera3DType } from './cameraNodeTypes.js';
 import { perObject } from '../utils/perObject.js';
 import type { ContainerWrite } from '../core/childVisibility.js';
@@ -60,13 +61,32 @@ function resourceInScope(scope: SceneScope, rootScenePath: string) {
   };
 }
 
+/** How many instances enclose the scene that declares `link`'s node. */
+const declaringDepth = (link: LiveLink) =>
+  scopeOf(link.raw, link.group.scope).instancedScenePaths?.length ?? 0;
+
+/** How many instances enclose the scene a merged instance root opens, or null for another node. */
+const openedDepth = ({ step }: LiveLink) =>
+  step.isMerged ? (step.scope.instancedScenePaths?.length ?? 0) : null;
+
+/** The root of the scene that declares the node, as `add_child` under `instantiate` sets the owner. */
+function ownerOf(link: LiveLink, ancestors: readonly LiveLink[]): LiveLink | null {
+  if (ancestors.length === 0 || link.raw.isUnowned) return null;
+  const depth = declaringDepth(link);
+  for (let index = ancestors.length - 1; index > 0; index--) {
+    if (openedDepth(ancestors[index]!) === depth) return ancestors[index]!;
+  }
+  return ancestors[0]!;
+}
+
 function treeNodeOf(
   tree: LiveTree,
   link: LiveLink,
-  parent: LiveLink | null,
+  ancestors: readonly LiveLink[],
   rootScenePath: string
 ): SceneTreeNode {
   const { node, groups, scope } = link.step;
+  const parent = ancestors.at(-1) ?? null;
   return {
     name: node.name,
     type: node.type,
@@ -76,6 +96,8 @@ function treeNodeOf(
     containerVisibility: parent && containerVisibilityOf(tree, link, parent),
     sortedProperty: (property) =>
       nodeRegistry.sortedProperties(node.type)?.(node, sortableChildCount(tree, link.step))[property],
+    sceneFilePath: ancestors.length === 0 ? rootScenePath : (link.step.instancePath ?? ''),
+    ownerPath: ownerOf(link, ancestors)?.path ?? null,
   };
 }
 
@@ -111,10 +133,10 @@ function sceneTreeOf(tree: LiveTree, loader: ResourceLoader, rootScenePath: stri
   return {
     node(livePath) {
       const names = livePath.split('/');
-      let parent: LiveLink | null = null;
+      const ancestors: LiveLink[] = [];
       let link: LiveLink | null = null;
       for (let depth = 1; depth <= names.length; depth++) {
-        parent = link;
+        if (link) ancestors.push(link);
         link = tree.at(names.slice(0, depth).join('/'));
         if (!link) return null;
         const awaited = awaitedInstancePath(link);
@@ -123,7 +145,7 @@ function sceneTreeOf(tree: LiveTree, loader: ResourceLoader, rootScenePath: stri
           return null;
         }
       }
-      return link && treeNodeOf(tree, link, parent, rootScenePath);
+      return link && treeNodeOf(tree, link, ancestors, rootScenePath);
     },
     uniquePaths: (livePath) => nodePathUniquePaths(livePath, tree.roots, tree.ctx),
     cameras: () => camerasOf(tree),

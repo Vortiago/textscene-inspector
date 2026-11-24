@@ -21,6 +21,9 @@ export interface MethodTarget {
   writeStored(property: string, value: SceneValue): Promise<boolean>;
   /** The handle of the node at a live path. */
   handleAt(livePath: string): NodeHandle;
+  /** As the node's tree entry gives them: empty and null for the root window. */
+  sceneFilePath(): string;
+  ownerPath(): string | null;
 }
 
 /** A method of Godot's class this release ports, with the count of arguments its binding takes. */
@@ -43,11 +46,9 @@ function numberArgument(value: SceneValue, name: string, to: 'bool' | 'int'): nu
 }
 
 // A bound String takes a StringName and a NodePath, and refuses any other type (measured in Godot 4.6.3).
-const STRING_TYPES: ReadonlySet<number> = new Set([T.STRING, T.STRING_NAME, T.NODE_PATH]);
-
 function stringArgument(value: SceneValue, name: string): string {
   const cast = valueOfSceneValue(value);
-  if (STRING_TYPES.has(cast.type)) return String(cast.value);
+  if (cast.type === T.STRING || cast.type === T.STRING_NAME || cast.type === T.NODE_PATH) return cast.value;
   throw new Error(`${name}: Cannot convert argument 1 from ${variantTypeName(cast.type)} to String.`);
 }
 
@@ -142,6 +143,23 @@ const VIEWPORT_METHODS: Readonly<Record<string, PortedMethod>> = {
   },
 };
 
+const NODE_METHODS: Readonly<Record<string, PortedMethod>> = {
+  get_owner: {
+    minArguments: 0,
+    maxArguments: 0,
+    run: (target) => {
+      const ownerPath = target.ownerPath();
+      return ownerPath === null ? null : target.handleAt(ownerPath);
+    },
+  },
+  get_scene_file_path: {
+    accessor: { role: 'getter', property: 'scene_file_path' },
+    minArguments: 0,
+    maxArguments: 0,
+    run: (target) => target.sceneFilePath(),
+  },
+};
+
 const OBJECT_METHODS: Readonly<Record<string, PortedMethod>> = {
   get_class: { minArguments: 0, maxArguments: 0, run: (target) => target.className },
   // object.cpp:2220. The class table stops below `Object`, which every class inherits.
@@ -156,6 +174,7 @@ const OBJECT_METHODS: Readonly<Record<string, PortedMethod>> = {
 };
 
 const PORTED_METHODS: Readonly<Record<string, Readonly<Record<string, PortedMethod>>>> = {
+  Node: NODE_METHODS,
   Camera3D: CAMERA_3D_METHODS,
   Camera2D: CAMERA_2D_METHODS,
   Viewport: VIEWPORT_METHODS,

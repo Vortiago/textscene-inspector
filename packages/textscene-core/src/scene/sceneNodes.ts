@@ -260,7 +260,15 @@ export class SceneNodes implements HandleHost {
         return this.setStored(path, property, value);
       },
       handleAt: (livePath) => this.handleAt(absolutePathOf(livePath)),
+      sceneFilePath: () => this.treeNodeOf(path, generation)?.sceneFilePath ?? '',
+      ownerPath: () => this.treeNodeOf(path, generation)?.ownerPath ?? null,
     };
+  }
+
+  /** The node's tree entry in the text the call began in, null for the root window. */
+  private treeNodeOf(path: string, generation: number): SceneTreeNode | null {
+    this.assertSameText(generation, path);
+    return path === ROOT_WINDOW_PATH ? null : this.nodeAt(path);
   }
 
   /** A call that awaited still acts on the text it began in, never on a node of a newer text. */
