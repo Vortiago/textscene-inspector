@@ -5,9 +5,11 @@ import { GODOT_FOG_PARS, GODOT_FOG_PARS_CHUNK } from './fogChunks.js';
 import { fogUniformRecord } from './fogUniforms.js';
 import { skyRadianceUniforms } from '../sky/skyRadiance.js';
 import { GODOT_SKY_VIEW_RAY } from '../sky/skyProjection.js';
-import { backgroundPlane } from '../shaderPatch/backgroundPrograms.js';
 
 const VIEW_VARYING = 'vGodotFogView';
+
+// three's types leave `ShaderLib.background` optional, though r187 ships it (`ShaderLib.js:218`).
+const backgroundPlane = (): THREE.ShaderLibShader => THREE.ShaderLib.background!;
 
 const THREE_FOG_DEPTH = 'vFogDepth = - mvPosition.z;';
 
