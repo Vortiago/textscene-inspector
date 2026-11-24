@@ -27,10 +27,10 @@ ended at its 30 s load deadline (#2075).
 
 `pnpm check:bundle-size` fails when the build writes a script beside `webview.js`, and when the
 script is over its gzipped ceiling (`scripts/check-bundle-size/webviewBudget.mjs`). The ceiling
-is 2,249,000 B, about 8 KB over the measured 2,240,816 B. It replaces ADR-0055's 1,150,000 B, which
+is 2,253,000 B, about 8 KB over the measured 2,244,188 B. It replaces ADR-0055's 1,150,000 B, which
 held only the canvas-paint closure of the split build.
 
-The shader translator adds 463,610 B to the script. The groups below gzip alone, so they are shares
+The shader translator adds about 464,000 B to the script. The groups below gzip alone, so they are shares
 of that growth, not exact bytes:
 
 | Group | Gzipped alone | What it is |
