@@ -1,7 +1,3 @@
-/**
- * Camera-framing math shared by the auto-fit (`CameraFit`) and the F-to-frame shortcut. A leaf
- * module, since `TscnCanvas` mounts `FrameSelectedShortcut`, which must not import back from it.
- */
 import * as THREE from 'three';
 import { EDITOR_CAMERA_FOV, editorCameraDirection } from './godotEditorCamera.js';
 import { computeWorldBoundingBox, frameBoxOf } from './bounds.js';
@@ -19,6 +15,13 @@ const FRAME_MARGIN = 1.6;
 function maxExtent(box: THREE.Box3): number {
   const size = box.getSize(new THREE.Vector3());
   return Math.max(size.x, size.y, size.z);
+}
+
+/** Skips a tagged subtree whole: a frame-excluded draw holds its `material_overlay` and `next_pass` draws. */
+function forEachFramed(root: THREE.Object3D, visit: (object: THREE.Object3D) => void): void {
+  if (root.userData?.tscnEmptyState || root.userData?.tscnFrameExcluded) return;
+  visit(root);
+  for (const child of root.children) forEachFramed(child, visit);
 }
 
 /** Minimal shape we touch on the viewport controls instance for framing. */
@@ -45,11 +48,8 @@ export function frameSceneBounds(
   const gizmoBox = new THREE.Box3();
   let hasMesh = false;
   let hasGizmo = false;
-  scene.traverse((obj) => {
-    if (obj.userData?.tscnEmptyState) return;
-    // A Label3D glyph mesh is skipped, so async mount timing cannot change the frame. Label3D frames
-    // by its zero-size `FramePoint` alone, as Godot's reference camera does.
-    if (obj.userData?.tscnFrameExcluded) return;
+  // A Label3D frames by its zero-size `FramePoint` alone, as Godot's reference camera does, never by glyphs.
+  forEachFramed(scene, (obj) => {
     // A node whose `get_aabb` Godot frames on, drawn or not, an empty one as the point it is.
     const nodeBox = frameBoxOf(obj, nodeBoxScratch);
     if (nodeBox) {
@@ -97,8 +97,7 @@ export function frameSceneBounds(
   // The only orthographic camera here is the editor camera's Numpad-5 projection, sized from the same
   // 70-degree field of view; three's 50-degree default would zoom it out by half again.
   const persp = camera as THREE.PerspectiveCamera;
-  const fov = degToRad(persp.isPerspectiveCamera ? persp.fov : EDITOR_CAMERA_FOV);
-  const distance = (maxDim / 2 / Math.tan(fov / 2) || maxDim) * FRAME_MARGIN;
+  const distance = (maxDim / 2 / fitTangent(persp) || maxDim) * FRAME_MARGIN;
 
   // Godot's editor viewing angle, so a scene presents the face it does in the editor, a coplanar
   // scene included: Godot's reference camera frames it obliquely, never head-on.
@@ -116,4 +115,11 @@ export function frameSceneBounds(
     controls.target.copy(center);
     controls.update?.();
   }
+}
+
+/** The tangent of the narrower half angle, so a view taller than it is wide still holds the box. */
+function fitTangent(camera: THREE.PerspectiveCamera): number {
+  const verticalTangent = Math.tan(degToRad(camera.isPerspectiveCamera ? camera.fov : EDITOR_CAMERA_FOV) / 2);
+  const aspect = camera.isPerspectiveCamera ? camera.aspect : 1;
+  return verticalTangent * Math.min(1, aspect);
 }

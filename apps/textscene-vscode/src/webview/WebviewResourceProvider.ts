@@ -1,6 +1,4 @@
-/** The webview ResourceProvider: it requests resources from the host by message. */
-
-import type { ResourceProvider } from '@textscene/core';
+import type { ResourceProvider } from '@textscene/renderer';
 import type { DirectoryEntry } from '@textscene/core/resources/projectListing';
 import { isHostToWebviewMessage, type WebviewToHostMessage } from '../protocol';
 import { decodeResourceResponse } from '../wireCodec';
@@ -21,6 +19,7 @@ interface PendingRequest {
 export class WebviewResourceProvider implements ResourceProvider {
   private pending = new Map<string, PendingRequest>();
   private requestCounter = 0;
+  private readonly watchers = new Set<(path: string) => void>();
 
   constructor(private vscode: VsCodeApi) {
     window.addEventListener('message', (event) => {
@@ -33,6 +32,9 @@ export class WebviewResourceProvider implements ResourceProvider {
         this.settle(message.requestId)?.reject(new Error(message.error));
       } else if (message.type === 'directoryListed') {
         this.settle(message.requestId)?.resolve(message.entries);
+      } else if (message.type === 'resourceChanged') {
+        // A dependency (texture, .tres, sub-scene, sidecar, project.godot) changed on disk.
+        for (const listener of this.watchers) listener(message.path);
       }
     });
   }
@@ -45,6 +47,11 @@ export class WebviewResourceProvider implements ResourceProvider {
       maxBytes,
       requestId,
     }));
+  }
+
+  watch(listener: (path: string) => void): () => void {
+    this.watchers.add(listener);
+    return () => this.watchers.delete(listener);
   }
 
   async listDirectory(folder: string): Promise<DirectoryEntry[] | null> {

@@ -1,23 +1,17 @@
-/**
- * <CollisionShape3D>: a transform-only node whose collision-shape resource draws as a wireframe
- * gizmo (ADR-0005 / ADR-0006). The gizmo shows only while `ViewportModeContext.showCollisions`
- * is on (off by default), like Godot's "Visible Collision Shapes".
- */
-
 import { useMemo } from 'react';
 import type { CollisionShape3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { node3dGroupSpread, transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { useNodeResource } from '../../../../resources/reading';
 import { SHAPE_3D } from '../../../../resources/shapes/shape3d';
-import { useViewportMode } from '../../../../r3f/contexts/ViewportModeContext';
+import { useViewShow } from '../../../../r3f/viewShow/ViewShowContext';
 import { CollisionGizmo } from './CollisionGizmo';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { DEFAULT_COLLISION_DEBUG_COLOR } from '../../shared/debugColor';
 
 export function CollisionShape3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as CollisionShape3DProperties;
-  const { showCollisions } = useViewportMode();
+  const { collisions: showCollisions } = useViewShow();
 
   const transform = useMemo(() => transformFromNode3DProperties(properties), [properties]);
 

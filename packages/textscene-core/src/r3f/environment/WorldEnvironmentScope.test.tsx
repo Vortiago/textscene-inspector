@@ -6,7 +6,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { ViewportModeProvider } from '../contexts/ViewportModeContext';
+import { ViewShowProvider } from '../viewShow/ViewShowContext';
 import { CanvasWorkspaceProvider } from '../contexts/CanvasWorkspaceContext';
 import { TreeOrderProvider, type TreeOrder } from '../contexts/TreeOrderContext';
 import type { EnvironmentLayerProps } from './EnvironmentLayer';
@@ -108,12 +108,9 @@ function appliedName(renderer: Renderer): unknown {
 
 function inRoot(children: ReactNode, showPreviewEnvironment = true, showPreviewSun = true) {
   return (
-    <ViewportModeProvider
-      initialShowPreviewEnvironment={showPreviewEnvironment}
-      initialShowPreviewSun={showPreviewSun}
-    >
+    <ViewShowProvider show={{ previewEnvironment: showPreviewEnvironment, previewSun: showPreviewSun }}>
       <WorldEnvironmentScope world="root">{children}</WorldEnvironmentScope>
-    </ViewportModeProvider>
+    </ViewShowProvider>
   );
 }
 

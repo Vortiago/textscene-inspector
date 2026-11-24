@@ -102,6 +102,15 @@ describe('getNode in a sub-scene', () => {
     expect(sceneWithEnemy().getNodeOrNull('Enemy/Body')).toBeNull();
   });
 
+  it('lists no child of a sub-scene that has not loaded, as find gives none', () => {
+    expect(
+      sceneWithEnemy()
+        .getNode('.')
+        .getChildren()
+        .map((child) => child.name)
+    ).toEqual([]);
+  });
+
   it('finds the node once the sub-scene loads', async () => {
     const scene = sceneWithEnemy();
     scene.getNodeOrNull('Enemy');
@@ -114,6 +123,19 @@ describe('getNode in a sub-scene', () => {
     await vi.waitFor(() =>
       expect(scene.getNode('Enemy').getNodeOrNull('%Body')?.path).toBe('/root/Level/Enemy/Body')
     );
+  });
+
+  it('tells a tree observer nothing when a lookup passes a sub-scene that failed to load', async () => {
+    const scene = openScene({ source: WITH_ENEMY, provider: filesOf({}), rootScenePath: MAIN });
+    const listener = vi.fn();
+    scene.observe(null, listener);
+    scene.getNodeOrNull('Enemy');
+    await vi.waitFor(() => expect(listener).toHaveBeenCalled());
+    listener.mockClear();
+
+    scene.getNodeOrNull('Enemy/Body');
+
+    expect(listener).not.toHaveBeenCalled();
   });
 
   it('tells a tree observer when the sub-scene loads', async () => {

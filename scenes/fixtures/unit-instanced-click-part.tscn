@@ -1,0 +1,14 @@
+; The sub-scene of unit-instanced-click.tscn: one unshaded red box, so a click finds it by colour.
+[gd_scene load_steps=3 format=3]
+
+[sub_resource type="StandardMaterial3D" id="Red_1"]
+shading_mode = 0
+albedo_color = Color(1, 0, 0, 1)
+
+[sub_resource type="BoxMesh" id="Box_1"]
+material = SubResource("Red_1")
+
+[node name="Part" type="Node3D"]
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+mesh = SubResource("Box_1")

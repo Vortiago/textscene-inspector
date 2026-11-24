@@ -45,6 +45,10 @@ export const KEPT_TEST_ONLY_EXPORTS = [
   // The switch of the TSL port ships before its one reader, the pick of a lit surface's material,
   // which the next slice of the port adds.
   'r3f/litSurface/litSurfaceForm.ts#litSurfaceForm',
+  // The step tests start a step at the root scene's scope, which the live tree builds once inside.
+  'r3f/liveSceneTree.ts#rootScope',
+  // A host's scene loads through the loader of its provider. Only a test hands a scene a loader it built.
+  'r3f/sceneResourcePipeline.ts#adoptLoader',
   // The layer tests bake a known cube through the real bake, and a sky draws its own radiance.
   'resources/sky/skyLayers.ts#cubeRadiance',
   // The builds and the cache are module state, so each test starts from the one reset that aborts
@@ -63,6 +67,8 @@ export const KEPT_TEST_ONLY_EXPORTS = [
   'shaders/material/stencilEffect.ts#stencilPassOf',
   // The template check prints each parsed template stage back to text, which no draw needs.
   'shaders/template/printTemplate.ts#printTemplateStage',
+  // Vitest resolves `virtual:texture-worker-source` here (`vitest.shared.ts`), which no import names.
+  'workers/textureWorkerSource.stub.ts#default',
 ];
 
 /** The `file#name` of every value export of core that only tests import, the kept ones included. */

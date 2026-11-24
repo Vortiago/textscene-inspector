@@ -270,7 +270,7 @@ One consistent view of what the loader holds. Each read on it answers `loaded`, 
 _Avoid_: reading the loader's cache directly in a reader.
 
 **Snapshot host** (`describeSnapshotHost`, `resources/reading/snapshotHost.testkit.ts`):
-Code that owns snapshots for a reader: it requests and pins each file the reader's reads touched, runs the reader again when one of them loads, fails or reloads, and reports a failed file once as a **Missing resource**. The hook host is the one behind `useNodeResource`, and `useSnapshotHost` runs any reader on it. The Control solve reads its fonts through `useSnapshotHost`. The live files (`r3f/liveFiles.ts`) are the host of the live scene tree, its passes and `useLiveFilesRead`: one snapshot for each loader that all of them share.
+Code that owns snapshots for a reader: it requests and pins each file the reader's reads touched, runs the reader again when one of them loads, fails or reloads. The hook host is the one behind `useNodeResource`, and `useSnapshotHost` runs any reader on it. The Control solve reads its fonts through `useSnapshotHost`. The live files (`r3f/liveFiles.ts`) are the host of the live scene tree, its passes and `useLiveFilesRead`: one snapshot for each loader that all of them share.
 _Avoid_: a reader that requests, pins or reports a file itself.
 
 **UID reference**:
@@ -589,12 +589,31 @@ A heuristic on the scene root type picks 2D or 3D, never In-game, and the toolba
 _Avoid_: "2D mode" alone.
 
 **In-game mode** (`<TscnCanvas mode="in-game">`, `r3f/gameView/`, ADR-0006):
-The mode of the one view that draws the root viewport as the game starts it: the scene's own cameras, the game's lighting, no **editor hint** and no input. The root viewport draws through the pass a **sub-viewport** draws through, with the game's **viewport description**. Scripts do not run.
+The mode of the one view that draws the root viewport as the game starts it: the scene's own cameras, the game's lighting, no **editor hint** and no input. The root viewport draws through the pass a **sub-viewport** draws through, with the game's **viewport description**. Scripts do not run. It shows the **root window**, fitted to the pane at one scale.
 _Avoid_: "game view" for a component of its own: one view draws every mode. "Play mode", "runtime view".
 
+**Standalone view** (`mountScene`, `r3f/mountScene.tsx`):
+The one view mounted in a page element by `mountScene`, with a React root of its own, for a page with no React code. It draws a **scene** from `openScene` in a mode, `in-game` by default. It answers `settled` once a frame shows the scene whole, and `captureImage()` gives a PNG of the **root window** at the window's size. `dispose()` loses its WebGL context and leaves the scene open.
+_Avoid_: "headless view": a browser draws it. "Embed" for the React `<TscnCanvas>`.
+
+**View status** (`ViewStatus` in `r3f/viewStatus/viewStatus.ts`, `view.status()`, `onStatusChange`):
+What one view reports of itself now: its settled value or null, the textures and fonts still building on the page, its last window of frame numbers, with the objects and primitives of Godot's editor monitor and, while `show.performance` is on, the timings, each **Undrawn node**, and whether the browser draws its WebGL in software. Each view keeps its own: the view's store is inside the `TscnCanvas`, unless the host gives one, as `mountScene` does. `onStatusChange` tells of each change but the frame numbers. The previewer reads its view only through it.
+_Avoid_: "scene status": the files a scene loads are **Scene file**s, a fact of the scene and not of the view.
+
+**Undrawn node** (`UndrawnNode` in `r3f/viewStatus/undrawnNodes.ts`):
+A node the view holds and does not draw: a mesh of a type no slice draws, or a CSG shape whose brush is empty, which Godot warns of (`csg_shape.cpp:982`). The node's details name each reason. The path is absolute, as a node handle gives it.
+
+**Root window** (`rootWindow`, `r3f/gameView/rootWindow.ts`, ADR-0087):
+The window the project opens: its size from `display/window/size/*`, and how `display/window/stretch/*` maps the root viewport into it, with the black bars around it. The pane is not the root window: a pane resize changes only the fit.
+_Avoid_: "game window" for the pane, "screen".
+
 **Editor hint** (`EditorHintContext`, `RunningGameScope`):
-Godot's `Engine::is_editor_hint()`: true in the editor's views, false where the game runs. It is the one intent every editor-only drawer reads. The toggles of `ViewportModeContext` read as the game draws where it is false, and a node with `editor_only` draws only where it is true.
+Godot's `Engine::is_editor_hint()`: true in the editor's views, false where the game runs. It is the one intent every editor-only drawer reads. The view's **show** reads as the game draws where it is false, and a node with `editor_only` draws only where it is true.
 _Avoid_: "game flag", a per-node "in game" prop.
+
+**Show** (`ViewShow` in `r3f/viewShow/viewShow.ts`, ADR-0006):
+The editor helpers a view draws over the scene, one boolean each: `grid`, `gizmos`, `collisions`, `labels`, `navigation`, `previewSun`, `previewEnvironment`, `fog` and `performance`. A host gives it as the `show` option, and the toolbar writes it in the shell.
+_Avoid_: "toggles" or "display flags" for the option, a separate option for each helper.
 
 **Scene** (`Scene` from `openScene` in `scene/openScene.ts`, ADR-0086):
 An open `.tscn` text with its resource provider: one parse, made the first time a view reads it, one resource loader, and the **host writes**. It is the seam of the renderer: a host's code finds a node with `getNode` and reads and writes its properties through a **node handle**, and every view draws the parse with the writes laid on. It holds no React and no three.js.
@@ -720,11 +739,11 @@ A `[sub_resource]` that carries collision geometry (`BoxShape3D`, `ConvexPolygon
 _Avoid_: "collision mesh".
 
 **Collision gizmo**:
-An optional wireframe of a CollisionShape3D's collision-shape resource in the 3D viewport, off by default and driven by `showCollisions`.
+An optional wireframe of a CollisionShape3D's collision-shape resource in the 3D viewport, off by default and driven by `show.collisions`.
 _Avoid_: "debug shape".
 
 **Shape drawing** (`resources/shapes/shape2d/drawing.ts`):
-The commands that a Shape2D class's `draw()` puts on the canvas item, in draw order: fills, one pixel lines and strokes. Each colour is a role against the colour the CollisionShape2D draws the shape in, so the drawing holds no colour. The 2D collision gizmo draws it while `showCollisions` is on.
+The commands that a Shape2D class's `draw()` puts on the canvas item, in draw order: fills, one pixel lines and strokes. Each colour is a role against the colour the CollisionShape2D draws the shape in, so the drawing holds no colour. The 2D collision gizmo draws it while `show.collisions` is on.
 _Avoid_: "outline", because a polygon shape draws a fill as well.
 
 **Node icon** (`r3f/nodeIcon/`):
@@ -792,7 +811,7 @@ Godot's flight navigation of the 3D viewport: the mouse turns the **Editor camer
 _Avoid_: "fly mode", "first-person camera", "WASD mode".
 
 **Camera preview**:
-The state in which the 3D viewport draws through a scene Camera3D, as Godot's **Preview** checkbox does. Navigation is off, and the **Editor camera** keeps its pose until the preview ends.
+The state in which the 3D viewport draws through a scene Camera3D, as Godot's **Preview** checkbox does. Navigation is off, and the **Editor camera** keeps its pose until the preview ends. A host starts it with the view's `camera` option, and `camera: null` ends it with the **Editor camera** at the pose it had before, as in Godot.
 _Avoid_: "use this camera", and "current camera", which is Godot's `current` property.
 
 **Preview sun**:
@@ -1176,9 +1195,14 @@ Whether Godot's loader loads a file. A text file fails when a `[sub_resource]` o
 _Avoid_: "broken dependency", "missing dependency" for a file that exists and fails through another.
 
 **Missing resource**:
-A `res://` reference or **Sub-resource path** whose load failed. Its consumer may draw a magenta placeholder, and the missing-resources panel shows one row per address. A **Sub-resource path** into a file that loads but declares no such `[sub_resource]` is one too, since Godot's load of it fails.
+A `res://` reference or **Sub-resource path** whose load failed. Its consumer may draw a magenta placeholder. A **Sub-resource path** into a file that loads but declares no such `[sub_resource]` is one too, since Godot's load of it fails.
 A text file that parses but has a **Load outcome** that fails is one too. Its row names the chain and takes an upload of the file that failed first.
+A missing resource is a **Scene file** in the state `missing`. The missing-resources panel shows one row per such file, with the addresses asked inside it.
 _Avoid_: "broken scene", "load error".
+
+**Scene file** (`scene/sceneFiles.ts`, `resources/sceneFiles/`):
+One `res://` file a scene loads, as a row of Godot's Load Errors dialog: its path, type, state (`loading`, `loaded` or `missing`), the files that name it, the reason it fails and the **Sub-resource path**s asked inside it. `scene.files()` gives them by path. The loader's parses and **Load outcome**s fill them, so no view needs to draw.
+The walk starts at the values of the scene after the host's writes, and follows each text file to the files its values read. A file that a heading declares and no value reads is in no list, as in Godot. `res://project.godot` and the files its settings name for every scene are rows too.
 
 ### Animation
 

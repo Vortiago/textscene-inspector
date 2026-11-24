@@ -20,6 +20,18 @@ describe('isTypingTarget', () => {
     expect(isTypingTarget(makeElement('div', true))).toBe(true);
   });
 
+  it('returns true for a search <input>', () => {
+    const input = document.createElement('input');
+    input.type = 'search';
+    expect(isTypingTarget(input)).toBe(true);
+  });
+
+  it.each(['checkbox', 'range', 'radio', 'button'])('returns false for an <input type="%s">', (type) => {
+    const input = document.createElement('input');
+    input.type = type;
+    expect(isTypingTarget(input)).toBe(false);
+  });
+
   it('returns false for a plain <div>', () => {
     expect(isTypingTarget(makeElement('div'))).toBe(false);
   });

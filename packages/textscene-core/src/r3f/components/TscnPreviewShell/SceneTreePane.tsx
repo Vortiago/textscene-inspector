@@ -4,6 +4,7 @@ import { lazy, Suspense, type CSSProperties, type ReactNode } from 'react';
 import type { SceneGraph } from '../../../core/SceneGraph.js';
 import type { TscnNode } from '../../../parser/types.js';
 import { SceneNodeCount } from './SceneStats.js';
+import type { Scene } from '../../../scene/openScene.js';
 import styles from './TscnPreviewShell.module.css';
 
 // Lazy, so the panel stays out of the first canvas-paint bundle. `React.lazy`
@@ -15,6 +16,7 @@ const SceneTreeViewer = lazy(() =>
 );
 
 export function SceneTreePane({
+  scene,
   sceneGraph,
   error,
   treeShare,
@@ -22,6 +24,7 @@ export function SceneTreePane({
   onNodeReveal,
   onOpenSubScene,
 }: {
+  scene: Scene;
   sceneGraph: SceneGraph | null;
   error: string | null;
   /** The master's fraction of the dock height (0..1). */
@@ -57,7 +60,7 @@ export function SceneTreePane({
     <div className={styles.masterPane} style={{ '--tsi-pane-grow': treeShare } as CSSProperties}>
       <div className={styles.dockHeader}>
         <span className={styles.dockTitle}>Scene Tree</span>
-        <SceneNodeCount />
+        <SceneNodeCount scene={scene} />
         <span className={styles.dockSpacer} />
         <button
           type="button"

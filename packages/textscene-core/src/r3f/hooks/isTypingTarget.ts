@@ -1,9 +1,19 @@
-/**
- * True when the target takes typed text: an `<input>`, a `<textarea>` (the web app's Source pane,
- * ADR-0020) or a contentEditable element. Without it, a global shortcut such as F-to-frame or
- * Escape-deselect takes "f" or "Escape" from someone editing `.tscn` text.
- */
+/** Input types that take no typed text, so a key pressed on one is not typing (Godot's `is_text_field`). */
+const NON_TEXT_INPUT_TYPES = new Set([
+  'button',
+  'checkbox',
+  'color',
+  'file',
+  'image',
+  'radio',
+  'range',
+  'reset',
+  'submit',
+]);
+
+/** Without it, a shortcut such as Escape-deselect takes "Escape" from text being typed (ADR-0020). */
 export function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
-  return target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+  if (target instanceof HTMLInputElement) return !NON_TEXT_INPUT_TYPES.has(target.type);
+  return target.tagName === 'TEXTAREA' || target.isContentEditable;
 }

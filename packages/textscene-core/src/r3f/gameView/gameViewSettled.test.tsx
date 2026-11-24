@@ -1,0 +1,142 @@
+import { describe, expect, it, vi } from 'vitest';
+import * as THREE from 'three';
+import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { act, useSyncExternalStore } from 'react';
+import { GameViewContents } from './GameViewContents';
+import { ViewStatusProvider, useViewStatusStore } from '../viewStatus/ViewStatusContext';
+import type { ViewSettled } from '../viewStatus/viewStatus';
+import { TscnSceneProvider } from '../TscnSceneProvider';
+import { openScene } from '../../scene/openScene';
+import type { ResourceProvider } from '../../resources/ResourceProvider';
+import { settleLoads } from '../testing/settleLoads';
+import * as logger from '../../logger';
+import { createTextureFromBuffer } from '../../resources/formats/image/textureProcessing';
+import '../nodes';
+
+vi.mock('../../resources/formats/image/textureProcessing', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../resources/formats/image/textureProcessing')>();
+  return { ...actual, createTextureFromBuffer: vi.fn() };
+});
+
+// happy-dom decodes no image.
+vi.mocked(createTextureFromBuffer).mockImplementation(async () => new THREE.Texture());
+
+const SCRIPT = 'extends Node\n';
+
+/** Enough frames for work that a frame advances, such as a texture upload, to finish. */
+const FRAMES_TO_SETTLE = 10;
+
+const TWO_SCRIPTS_AND_A_CAMERA = `[gd_scene format=3]
+
+[ext_resource type="Script" path="res://mover.gd" id="1"]
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+current = true
+
+[node name="Box" type="CSGBox3D" parent="."]
+script = ExtResource("1")
+`;
+
+const NO_CAMERA = `[gd_scene format=3]
+
+[node name="Main" type="Node3D"]
+
+[node name="Box" type="CSGBox3D" parent="."]
+`;
+
+const SPRITE = `[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://icon.png" id="1"]
+
+[node name="Main" type="Sprite2D"]
+texture = ExtResource("1")
+`;
+
+const ICON = new Uint8Array([0x89, 0x50, 0x4e, 0x47]).buffer;
+
+const files: ResourceProvider = {
+  loadResource: async (path) => (path === 'res://mover.gd' ? SCRIPT : null),
+};
+
+/** Written by the view's host each render: the settled value of the view's status now. */
+let seen: ViewSettled | null = null;
+
+function Host() {
+  const status = useViewStatusStore()!;
+  seen = useSyncExternalStore(status.subscribe, status.settled);
+  return null;
+}
+
+async function mountGame(source: string, provider = files, views = 1) {
+  seen = null;
+  const scene = openScene({ source, provider });
+  const renderer = await ReactThreeTestRenderer.create(
+    <TscnSceneProvider scene={scene}>
+      <ViewStatusProvider>
+        {Array.from({ length: views }, (_, view) => (
+          <GameViewContents key={view} />
+        ))}
+        <Host />
+      </ViewStatusProvider>
+    </TscnSceneProvider>
+  );
+  await settleLoads();
+  return Object.assign(renderer, { opened: scene });
+}
+
+async function drawFrames(renderer: Awaited<ReturnType<typeof mountGame>>, count: number) {
+  await renderer.advanceFrames(count, 1 / 60);
+}
+
+describe('the settled value of the In-game view', () => {
+  it('counts the nodes that hold a script, and sees the current camera', async () => {
+    const renderer = await mountGame(TWO_SCRIPTS_AND_A_CAMERA);
+    await drawFrames(renderer, FRAMES_TO_SETTLE);
+    expect(seen).toEqual({ scriptedNodeCount: 2, hasCurrentCamera: true });
+  });
+
+  it('reports no current camera for a 3D scene with no Camera3D', async () => {
+    const renderer = await mountGame(NO_CAMERA);
+    await drawFrames(renderer, FRAMES_TO_SETTLE);
+    expect(seen).toEqual({ scriptedNodeCount: 0, hasCurrentCamera: false });
+  });
+
+  it('is pending again after the text of the scene changes, until frames show the new text', async () => {
+    const renderer = await mountGame(NO_CAMERA);
+    await drawFrames(renderer, FRAMES_TO_SETTLE);
+    await act(async () => renderer.opened.setSource(TWO_SCRIPTS_AND_A_CAMERA));
+    await settleLoads();
+    expect(seen).toBeNull();
+    await drawFrames(renderer, FRAMES_TO_SETTLE);
+    expect(seen).toEqual({ scriptedNodeCount: 2, hasCurrentCamera: true });
+  });
+
+  it('is pending while a texture file is on its way, and settles after it lands', async () => {
+    // Each read waits, the texture's and the scene file report's.
+    const reads: ((bytes: ArrayBuffer) => void)[] = [];
+    const land = (bytes: ArrayBuffer) => reads.forEach((read) => read(bytes));
+    const slowIcon: ResourceProvider = {
+      loadResource: (path) =>
+        path === 'res://icon.png' ? new Promise((resolve) => reads.push(resolve)) : Promise.resolve(null),
+    };
+    const renderer = await mountGame(SPRITE, slowIcon);
+    await drawFrames(renderer, FRAMES_TO_SETTLE);
+    expect(seen).toBeNull();
+    await act(async () => land(ICON));
+    await settleLoads();
+    await drawFrames(renderer, FRAMES_TO_SETTLE);
+    expect(seen).toEqual({ scriptedNodeCount: 0, hasCurrentCamera: false });
+  });
+
+  it('refuses a second In-game view on one view status, and keeps the first one settled', async () => {
+    const error = vi.spyOn(logger, 'error').mockImplementation(() => {});
+    const renderer = await mountGame(TWO_SCRIPTS_AND_A_CAMERA, files, 2);
+    await drawFrames(renderer, FRAMES_TO_SETTLE);
+    expect(error).toHaveBeenCalledWith('[View] expected one view per view status, got a second');
+    expect(seen).toEqual({ scriptedNodeCount: 2, hasCurrentCamera: true });
+    error.mockRestore();
+  });
+});

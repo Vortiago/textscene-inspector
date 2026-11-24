@@ -6,10 +6,9 @@ import { FrameProfiler } from '../frameProfile/FrameProfiler.js';
 import { SoftwareRenderingProbe } from '../softwareRendering/SoftwareRenderingProbe.js';
 import { TiledUploadDriver } from '../tiledUpload/TiledUploadDriver.js';
 import { ViewportPassOrchestrator } from '../contexts/ViewportPassRegistryContext.js';
-import { ScreenshotBridge } from '../ScreenshotBridge.js';
 import { ShaderTimeFrame } from '../shaderTime/canvasShaderTime.js';
 
-// In the contents, as the test renderer mounts no `<Canvas>`. The screenshot bridge mounts after `children`.
+// In the contents, as the test renderer mounts no `<Canvas>`.
 export function CanvasRendererScope({ children }: { children: ReactNode }) {
   const renderer = useThree((state) => state.gl);
   useEffect(() => installShadowPass(renderer), [renderer]);
@@ -22,7 +21,6 @@ export function CanvasRendererScope({ children }: { children: ReactNode }) {
       <TiledUploadDriver>
         {children}
         <ViewportPassOrchestrator />
-        <ScreenshotBridge />
       </TiledUploadDriver>
     </>
   );

@@ -16,6 +16,7 @@ export class EditableProvider implements ResourceProvider {
   private readonly files = new Map<string, string | ArrayBuffer>();
   private readonly gates = new Map<string, Promise<void>>();
   private readonly openers = new Map<string, () => void>();
+  private readonly watchers = new Set<(path: string) => void>();
 
   write(path: string, data: string | ArrayBuffer): void {
     this.files.set(path, data);
@@ -23,6 +24,20 @@ export class EditableProvider implements ResourceProvider {
 
   remove(path: string): void {
     this.files.delete(path);
+  }
+
+  watch(listener: (path: string) => void): () => void {
+    this.watchers.add(listener);
+    return () => this.watchers.delete(listener);
+  }
+
+  /** Tells each watcher that the file at `path` changed, as a host's file watcher does. */
+  changed(path: string): void {
+    for (const listener of this.watchers) listener(path);
+  }
+
+  watcherCount(): number {
+    return this.watchers.size;
   }
 
   /** Holds the next read of `path` until `release(path)`. */

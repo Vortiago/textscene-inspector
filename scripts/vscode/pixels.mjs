@@ -128,10 +128,21 @@ export function diffMask(aBuffer, bBuffer, threshold = 24) {
  * @param {Buffer} buffer PNG bytes
  */
 export function missingPlaceholderPixels(buffer) {
-  const png = PNG.sync.read(buffer);
+  return pixelsWhere(buffer, (r, g, b) => r > 200 && g < 80 && b > 200);
+}
+
+/**
+ * The pixels of `buffer` whose colour passes `isMatch`.
+ *
+ * @canonical count the pixels of a PNG that match a colour test
+ * @param {Buffer} buffer PNG bytes
+ * @param {(r: number, g: number, b: number) => boolean} isMatch
+ */
+export function pixelsWhere(buffer, isMatch) {
+  const { data } = PNG.sync.read(buffer);
   let count = 0;
-  for (let i = 0; i < png.data.length; i += 4) {
-    if (png.data[i] > 200 && png.data[i + 1] < 80 && png.data[i + 2] > 200) count++;
+  for (let i = 0; i < data.length; i += 4) {
+    if (isMatch(data[i], data[i + 1], data[i + 2])) count++;
   }
   return count;
 }

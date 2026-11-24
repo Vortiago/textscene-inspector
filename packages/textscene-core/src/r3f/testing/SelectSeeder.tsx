@@ -4,15 +4,15 @@
  */
 import { useEffect } from 'react';
 import { useSelection } from '../contexts/SelectionContext';
+import { useAnimationTransport } from '../contexts/AnimationTransportContext';
 
-/**
- * Selects `path` from inside a SelectionProvider once mounted, and again whenever `path` changes.
- * Null clears the selection, which is how a test leaves every node unselected.
- */
+/** Selects `path` as the previewer does: the view outlines it, the transport drives it. Null clears both. */
 export function SelectSeeder({ path }: { path: string | null }): null {
   const { setSelectedNodePath } = useSelection();
+  const { setActivePath } = useAnimationTransport();
   useEffect(() => {
     setSelectedNodePath(path);
-  }, [path, setSelectedNodePath]);
+    setActivePath(path);
+  }, [path, setSelectedNodePath, setActivePath]);
   return null;
 }

@@ -8,7 +8,7 @@ vi.mock('../../TscnCanvas', () => ({
   TscnSceneContents: () => null,
 }));
 
-import { TscnPreviewShell } from './TscnPreviewShell';
+import { TextShell } from './TscnPreviewShell.testkit';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../../../parser/TscnParser';
@@ -26,32 +26,32 @@ const CONTROL_SCENE = `[gd_scene format=3]\n\n[node name="UI" type="Control"]\n`
 const THREED_SCENE = `[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n`;
 const PLAIN_NODE_SCENE = `[gd_scene format=3]\n\n[node name="Main" type="Node"]\n\n[node name="S" type="Sprite2D" parent="."]\n`;
 
-describe('<TscnPreviewShell> workspace auto-select (Godot parity)', () => {
+describe('<TextShell> workspace auto-select (Godot parity)', () => {
   it('opens a CanvasItem-root scene in the 2D workspace', async () => {
-    render(<TscnPreviewShell panelId="auto-a" content={SPRITE_SCENE} />);
+    render(<TextShell panelId="auto-a" content={SPRITE_SCENE} />);
     expect(await screen.findByTestId('canvas-2d')).toBeTruthy();
   });
 
   it('opens a Control-root scene in the 2D workspace', async () => {
-    render(<TscnPreviewShell panelId="auto-b" content={CONTROL_SCENE} />);
+    render(<TextShell panelId="auto-b" content={CONTROL_SCENE} />);
     expect(await screen.findByTestId('canvas-2d')).toBeTruthy();
   });
 
   it('opens a Node3D-root scene in the 3D workspace', async () => {
-    render(<TscnPreviewShell panelId="auto-c" content={THREED_SCENE} />);
+    render(<TextShell panelId="auto-c" content={THREED_SCENE} />);
     expect(await screen.findByTestId('canvas-3d')).toBeTruthy();
   });
 
   it('keeps the current workspace for a plain-Node root (Godot: no plugin claims it)', async () => {
-    render(<TscnPreviewShell panelId="auto-d" content={PLAIN_NODE_SCENE} />);
+    render(<TextShell panelId="auto-d" content={PLAIN_NODE_SCENE} />);
     expect(await screen.findByTestId('canvas-3d')).toBeTruthy();
   });
 
   it('re-derives the workspace when the scene switches', async () => {
-    const { rerender } = render(<TscnPreviewShell panelId="auto-e" content={THREED_SCENE} />);
+    const { rerender } = render(<TextShell panelId="auto-e" content={THREED_SCENE} />);
     expect(await screen.findByTestId('canvas-3d')).toBeTruthy();
 
-    rerender(<TscnPreviewShell panelId="auto-e" content={SPRITE_SCENE} />);
+    rerender(<TextShell panelId="auto-e" content={SPRITE_SCENE} />);
     expect(await screen.findByTestId('canvas-2d')).toBeTruthy();
   });
 
@@ -63,19 +63,19 @@ describe('<TscnPreviewShell> workspace auto-select (Godot parity)', () => {
     const content = `[gd_scene format=3]\n\n[ext_resource type="PackedScene" path="res://menu.tscn" id="m"]\n\n[node name="Menu" instance=ExtResource("m")]\n`;
     render(
       <ResourceLoaderProvider loader={loader}>
-        <TscnPreviewShell panelId="auto-rootinst" content={content} />
+        <TextShell panelId="auto-rootinst" content={content} />
       </ResourceLoaderProvider>
     );
     expect(await screen.findByTestId('canvas-2d')).toBeTruthy();
   });
 
   it('keeps the In-game mode when the scene switches', async () => {
-    const { rerender } = render(<TscnPreviewShell panelId="auto-f" content={THREED_SCENE} />);
+    const { rerender } = render(<TextShell panelId="auto-f" content={THREED_SCENE} />);
     await screen.findByTestId('canvas-3d');
     fireEvent.click(screen.getByRole('button', { name: 'In-game' }));
     expect(await screen.findByTestId('in-game')).toBeTruthy();
 
-    rerender(<TscnPreviewShell panelId="auto-f" content={SPRITE_SCENE} />);
+    rerender(<TextShell panelId="auto-f" content={SPRITE_SCENE} />);
     await screen.findAllByText('World');
     expect(screen.getByTestId('in-game')).toBeTruthy();
     expect(screen.queryByTestId('canvas-2d')).toBeNull();

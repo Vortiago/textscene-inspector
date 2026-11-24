@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import type { Label3DProperties } from './types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { node3dGroupSpread, transformFromNode3DProperties } from '../../../r3f/nodeTransform';
-import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
+import { useViewShow } from '../../../r3f/viewShow/ViewShowContext';
 import { useOwnMaterialPose } from '../../../r3f/hooks/useOwnMaterialPose';
 import { FramePoint } from '../../../r3f/components/NodeAabb';
 import { PendingSuspense } from '../../../resources/PendingSuspense';
@@ -20,7 +20,7 @@ import { PendingSuspense } from '../../../resources/PendingSuspense';
 const LabelGlyphs = lazy(() => import('./LabelGlyphs'));
 
 export function Label3D({ node, children }: NodeComponentProps) {
-  const { showLabels } = useViewportMode();
+  const { labels: showLabels } = useViewShow();
   const properties = node.properties as Label3DProperties;
   const transform = useMemo(() => transformFromNode3DProperties(properties), [properties]);
 

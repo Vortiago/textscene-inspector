@@ -6,7 +6,6 @@
 
 import { useCallback } from 'react';
 import { act, render } from '@testing-library/react';
-import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext';
 import type { SceneResources } from '../../SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
@@ -46,14 +45,11 @@ const SETTLE_TICKS = 5;
 
 function solveHost(loader: ResourceLoader): SnapshotHostHarness {
   const runs: Read<Named>[] = [];
-  let missing: readonly string[] = [];
   const onRun = (read: Read<Named>) => runs.push(read);
   const tree = (reference: string, scene: SceneResources, kind: ResourceKind<Named>) => (
-    <MissingResourcesProvider onMissingPathsChange={(paths) => (missing = [...paths])}>
-      <ResourceLoaderProvider loader={loader}>
-        <Solve reference={reference} scene={scene} kind={kind} onRun={onRun} />
-      </ResourceLoaderProvider>
-    </MissingResourcesProvider>
+    <ResourceLoaderProvider loader={loader}>
+      <Solve reference={reference} scene={scene} kind={kind} onRun={onRun} />
+    </ResourceLoaderProvider>
   );
   let rendered: ReturnType<typeof render> | null = null;
   return {
@@ -64,7 +60,6 @@ function solveHost(loader: ResourceLoader): SnapshotHostHarness {
       });
     },
     runs: () => runs,
-    reported: () => missing,
     async settle() {
       for (let tick = 0; tick < SETTLE_TICKS; tick++) {
         await act(() => new Promise<void>((resolve) => setTimeout(resolve)));

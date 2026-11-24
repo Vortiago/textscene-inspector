@@ -168,14 +168,6 @@ export function createResourceProcessor<T>(config: ResourceProcessorConfig<T>): 
       return cache.size;
     },
 
-    cachedPaths(): string[] {
-      return [...cache.keys()];
-    },
-
-    inflightPaths(): string[] {
-      return [...inflight.keys()];
-    },
-
     pin(path: string): void {
       cache.pin(path);
     },

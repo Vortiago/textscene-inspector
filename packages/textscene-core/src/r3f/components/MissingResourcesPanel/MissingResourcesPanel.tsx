@@ -1,21 +1,11 @@
-/**
- * Lists every missing-resource path that `useMissingReport` reported and every
- * path the user uploaded a file for, one row per path, uploaded rows first.
- * It knows only paths: the host supplies `onUpload` and `onRemove`. An
- * uploaded row is already a file, since `markUploaded` keys by file.
- */
-import { useMemo, type ChangeEvent } from 'react';
+import type { ChangeEvent } from 'react';
 import { useMissingResources } from '../../contexts/MissingResourcesContext.js';
-import { resourceFilePath } from '../../../resources/subResourcePath.js';
-import { useFirstLoadFailure } from '../../../resources/loadFailure/useFirstLoadFailure.js';
+import type { SceneFile } from '../../../scene/sceneFiles.js';
 import { failureChainText } from '../../../resources/loadFailure/failureText.js';
 import styles from './MissingResourcesPanel.module.css';
 
 export interface MissingResourcesPanelProps {
-  /**
-   * Called when the user picks a file for a missing row. The path is always a
-   * file, never a **Sub-resource path**, because a host keys its provider by file.
-   */
+  /** Called when the user picks a file for a missing row, with the file that failed first. */
   onUpload: (path: string, file: File) => void;
   /**
    * Called when the user clicks "Remove" on an uploaded row. It gets the same
@@ -25,15 +15,14 @@ export interface MissingResourcesPanelProps {
 }
 
 export function MissingResourcesPanel({ onUpload, onRemove }: MissingResourcesPanelProps) {
-  const { missingPaths, uploadedPaths, removeUploaded } = useMissingResources();
+  const { missingFiles, uploadedPaths, removeUploaded } = useMissingResources();
 
   // With nothing missing and nothing uploaded, the panel takes no space.
-  if (missingPaths.size === 0 && uploadedPaths.size === 0) {
+  if (missingFiles.length === 0 && uploadedPaths.size === 0) {
     return null;
   }
 
   const uploaded = Array.from(uploadedPaths).sort();
-  const missing = Array.from(missingPaths).sort();
 
   const handleRemove = (path: string) => {
     // Drop the row first so it disappears at once. If the host's re-resolve
@@ -78,8 +67,8 @@ export function MissingResourcesPanel({ onUpload, onRemove }: MissingResourcesPa
             </div>
           </div>
         ))}
-        {missing.map((path) => (
-          <MissingRow key={`m-${path}`} path={path} onUpload={onUpload} />
+        {missingFiles.map((file) => (
+          <MissingRow key={`m-${file.path}`} file={file} onUpload={onUpload} />
         ))}
       </div>
     </div>
@@ -87,16 +76,14 @@ export function MissingResourcesPanel({ onUpload, onRemove }: MissingResourcesPa
 }
 
 interface MissingRowProps {
-  path: string;
+  file: SceneFile;
   onUpload: (path: string, file: File) => void;
 }
 
-function MissingRow({ path, onUpload }: MissingRowProps) {
-  // A pick replaces the `.tres` a resource row names, or the file that failed first.
-  const filePath = resourceFilePath(path);
-  const failure = useFirstLoadFailure(useMemo(() => [filePath], [filePath]));
-  const failsThroughAnother = failure !== null && failure.chain.length > 1;
-  const uploadPath = failsThroughAnother ? failure.chain.at(-1)! : filePath;
+function MissingRow({ file: { path, addresses, reason }, onUpload }: MissingRowProps) {
+  // A pick replaces the file that failed first, which a sub-resource row names by its address.
+  const failsThroughAnother = reason !== null && reason.chain.length > 1;
+  const uploadPath = failsThroughAnother ? reason.chain.at(-1)! : path;
   const replacesOtherFile = uploadPath !== path;
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -113,13 +100,23 @@ function MissingRow({ path, onUpload }: MissingRowProps) {
         <div className={`${styles.icon} ${styles.missing}`} aria-hidden="true">
           ⚠
         </div>
-        <div className={styles.path} title={filePath !== path ? `${path}, inside ${filePath}` : path}>
+        <div className={styles.path} title={path}>
           {path}
         </div>
       </div>
+      {addresses.length > 0 && (
+        <div className={styles.chain} data-testid="missing-file-addresses">
+          Asked inside it: {addresses.join(', ')}
+        </div>
+      )}
+      {reason !== null && reason.addresses.length > 0 && (
+        <div className={styles.chain} data-testid="undeclared-addresses">
+          Not declared inside it: {reason.addresses.join(', ')}
+        </div>
+      )}
       {failsThroughAnother && (
         <div className={styles.chain} data-testid="load-failure-chain">
-          Fails to load: {failureChainText(failure.chain, failure.cause)}
+          Fails to load: {failureChainText(reason.chain, reason.cause)}
         </div>
       )}
       <div className={styles.action}>
@@ -127,8 +124,7 @@ function MissingRow({ path, onUpload }: MissingRowProps) {
           type="file"
           className={styles.upload}
           onChange={handleChange}
-          // Named by the row, so two sub-resource rows of one file stay distinct to
-          // assistive tech. The title names the file a pick replaces.
+          // The title names the file a pick replaces.
           aria-label={`Upload file for ${path}`}
           title={replacesOtherFile ? `Replaces ${uploadPath}` : undefined}
         />

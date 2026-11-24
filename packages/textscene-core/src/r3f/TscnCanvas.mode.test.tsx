@@ -20,6 +20,11 @@ vi.mock('./components/Canvas2DStage/Canvas2DStage', () => ({
   ),
 }));
 
+// FreelookSpeedReadout.test.tsx covers the readout. This records where the view draws it.
+vi.mock('./components/FreelookSpeedReadout/FreelookSpeedReadout', () => ({
+  FreelookSpeedReadout: () => <div data-testid="speed-readout" />,
+}));
+
 const SCENE = `[gd_scene format=3]
 
 [node name="Root" type="Node3D"]
@@ -53,6 +58,17 @@ describe('<TscnCanvas> mode', () => {
     rerender(<TscnCanvas mode="in-game" />);
     await screen.findByTestId('canvas');
     expect(stages()).toEqual(['game']);
+  });
+
+  it('draws the freelook speed readout over the 3D stage, as Godot draws it on its viewport', () => {
+    render(<TscnCanvas mode="3D" />);
+    expect(screen.queryByTestId('speed-readout')).not.toBeNull();
+  });
+
+  it('draws no freelook speed readout in the In-game mode', async () => {
+    render(<TscnCanvas mode="in-game" />);
+    await screen.findByTestId('canvas');
+    expect(screen.queryByTestId('speed-readout')).toBeNull();
   });
 
   it('puts the host’s class on the element it fills', () => {

@@ -8,7 +8,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { SceneTreeViewer } from './SceneTreeViewer';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
-import { SelectionProvider, useSelection } from '../../contexts/SelectionContext';
+import { SelectionProvider, useSelectedNodePath } from '../../contexts/SelectionContext';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import type { TscnNode } from '../../../parser/types';
 
@@ -65,7 +65,7 @@ describe('<SceneTreeViewer> keyboard operability (#224)', () => {
 
     let selectedNodePath: string | null = null;
     function Observer() {
-      selectedNodePath = useSelection().selectedNodePath;
+      selectedNodePath = useSelectedNodePath();
       return null;
     }
 

@@ -28,11 +28,6 @@ interface StackEntry extends StackedWindow {
   solveNode: SolveNode;
 }
 
-/** Whether the window enters the stack: it registers, and no animation hides it. */
-function isShown(window: SolveNode): boolean {
-  return !window.hidden && isRegisteredWindow(window.node);
-}
-
 /**
  * The stack entries in pre-order. `get_parent_visible_window` is the nearest visible window above,
  * and each such window comes earlier in pre-order, so it already has its entry.
@@ -61,7 +56,10 @@ function nearestWindowAbove(path: string, byPath: ReadonlyMap<string, StackEntry
 }
 
 export function EmbeddedWindows({ windows, embedderSize, forestPath, theme }: EmbeddedWindowsProps) {
-  const stack = useMemo(() => subwindowStack(stackEntries(windows.filter(isShown))), [windows]);
+  const stack = useMemo(
+    () => subwindowStack(stackEntries(windows.filter((window) => isRegisteredWindow(window.node)))),
+    [windows]
+  );
   if (stack.order.length === 0) return null;
   return (
     <SubwindowCanvasScope>

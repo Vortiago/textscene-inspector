@@ -6,15 +6,12 @@
 import type { ViewportRect } from '../../../r3f/contexts/ViewportRectContext';
 import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
 import { VIEWPORT_MIN_SIZE } from '../../../godot/rendering/viewport.js';
-import type { Vector2 } from '../../../godot/math/vector.js';
+import { VECTOR2_ZERO, vector2Equals, type Vector2 } from '../../../godot/math/vector.js';
 import type { TscnNode } from '../../../parser/types.js';
-import {
-  DEFAULT_CONTENT_SCALE,
-  windowContentScale,
-  type ContentScale,
-} from '../../windows/window/contentScale.js';
+import { windowContentScale } from '../../windows/window/contentScale.js';
 import type { WindowProperties } from '../../windows/window/types.js';
 import { isEmbeddedWindow } from '../../../r3f/viewportRender/viewportBoundary.js';
+import { warnOnce } from '../../../utils/warnOnce.js';
 import type { SubViewportProperties } from './types.js';
 
 /**
@@ -43,6 +40,8 @@ function flooredExtent(raw: number): number {
 
 /** The three sizes a viewport pass reads. */
 export interface ViewportPassSizes {
+  /** The pixels Godot renders, whose aspect the 3D camera takes (`renderer_viewport.cpp:318`). */
+  render: Vector2;
   /** The render target's pixels, capped. */
   target: Vector2;
   /** The rect Controls lay out in: `get_visible_rect()`. */
@@ -51,25 +50,95 @@ export interface ViewportPassSizes {
   view: Vector2;
 }
 
-/** A SubViewport draws its content 1:1, as a window with every `content_scale_*` key unset. */
-function contentScaleOf(node: TscnNode): ContentScale {
-  return isEmbeddedWindow(node.type)
-    ? (node.properties as WindowProperties).content_scale
-    : DEFAULT_CONTENT_SCALE;
+/** What a viewport hands `Viewport::_set_size` (`viewport.cpp:1100`), and the factor of a window. */
+interface SetSizeArguments {
+  size: Vector2;
+  sizeOverride: Vector2;
+  stretches: boolean;
+  /** The content scale factor of an embedded window, 1 for any other viewport. */
+  factor: number;
 }
 
-/**
- * A viewport renders and lays out by its content scale (`contentScale.ts`), and its canvas draws
- * scaled by the factor, so the target shows its pixels over the factor in canvas units
- * (`window.cpp:1362-1367`).
- */
-export function viewportPassSizes(node: TscnNode, forced: ViewportRect | null): ViewportPassSizes {
-  const size = viewportSize((node.properties as SubViewportProperties).size, forced);
-  const scale = windowContentScale(size, contentScaleOf(node));
-  const render = viewportSize(scale.renderSize, null);
+/** A SubViewport passes its own properties, a window what its content scale gives (`window.cpp:1351`). */
+function setSizeArguments(node: TscnNode, forced: ViewportRect | null): SetSizeArguments {
+  const properties = node.properties as SubViewportProperties;
+  const size = viewportSize(properties.size, forced);
+  if (!isEmbeddedWindow(node.type)) {
+    const { size_2d_override: sizeOverride, size_2d_override_stretch: stretches } = properties;
+    return { size, sizeOverride, stretches, factor: 1 };
+  }
+  const scale = windowContentScale(size, (node.properties as WindowProperties).content_scale);
+  // A window always stretches its 2D override (`viewport.h:727`).
   return {
-    target: cappedTargetSize(render),
-    layout: scale.layoutSize,
-    view: { x: render.x / scale.canvasScale, y: render.y / scale.canvasScale },
+    size: viewportSize(scale.renderSize, null),
+    sizeOverride: scale.sizeOverride,
+    stretches: true,
+    factor: scale.canvasScale,
   };
+}
+
+/** The canvas units the size shows: the 2D override where it stretches (`viewport.cpp:1103-1105`). */
+function stretchedView({ size, sizeOverride, stretches }: SetSizeArguments): Vector2 {
+  return stretches && sizeOverride.x > 0 && sizeOverride.y > 0 ? sizeOverride : size;
+}
+
+/** `get_visible_rect()`: the 2D override where one is set (`viewport.cpp:1212-1214`). */
+function visibleSize({ size, sizeOverride }: SetSizeArguments): Vector2 {
+  return vector2Equals(sizeOverride, VECTOR2_ZERO) ? size : sizeOverride;
+}
+
+/** The rect the viewport's Controls lay out in, which its embedder's stretch leaves as it is. */
+export function viewportLayoutSize(node: TscnNode, forced: ViewportRect | null): Vector2 {
+  return visibleSize(setSizeArguments(node, forced));
+}
+
+/** The smaller axis of the stretch transform, which the windows it embeds render at (`window.cpp:1363`). */
+export function embedderStretch(node: TscnNode, forced: ViewportRect | null): number {
+  const args = setSizeArguments(node, forced);
+  const view = stretchedView(args);
+  return smallerStretchAxis(args.size, view);
+}
+
+/** The smaller axis of `size` stretched over `view`: 1 where no 2D override stretches. */
+export function smallerStretchAxis(size: Vector2, view: Vector2): number {
+  if (view.x <= 0 || view.y <= 0) return 1;
+  return Math.min(size.x / view.x, size.y / view.y);
+}
+
+/** An embedded window renders at its embedder's stretch, its canvas at that times its factor. */
+export function viewportPassSizes(
+  node: TscnNode,
+  forced: ViewportRect | null,
+  stretchOfEmbedder: number
+): ViewportPassSizes {
+  const args = setSizeArguments(node, forced);
+  const layout = visibleSize(args);
+  if (!isEmbeddedWindow(node.type)) {
+    return { render: args.size, target: cappedTargetSize(args.size), layout, view: stretchedView(args) };
+  }
+  const render = {
+    x: Math.ceil(args.size.x * stretchOfEmbedder),
+    y: Math.ceil(args.size.y * stretchOfEmbedder),
+  };
+  // The ceiling of the stretched size, and the stretch on the canvas transform (`window.cpp:1364-1366`).
+  const canvasScale = stretchOfEmbedder * args.factor;
+  const view = { x: render.x / canvasScale, y: render.y / canvasScale };
+  return { render, target: cappedTargetSize(render), layout, view };
+}
+
+/** The owner of the cap warnings: one per path and size, for the session. */
+const CAPPED_TARGETS = {};
+
+/** Logs once for each path whose target the cap makes smaller than Godot renders it. */
+export function warnOfCappedTarget(
+  path: string,
+  { render, target }: Pick<ViewportPassSizes, 'render' | 'target'>
+): void {
+  if (vector2Equals(render, target)) return;
+  warnOnce(
+    CAPPED_TARGETS,
+    `${path} ${render.x}x${render.y}`,
+    `[SubViewport] ${path}: the ${render.x} x ${render.y} viewport is drawn at ${target.x} x ${target.y}, ` +
+      'the largest texture WebGL allocates'
+  );
 }

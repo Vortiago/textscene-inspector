@@ -680,8 +680,8 @@ describe('createResourceProcessor', () => {
     });
   });
 
-  describe('full-clear invalidation (corpus switch)', () => {
-    it("a full clear emits no invalidated, since announcing is the loader's job, and cachedPaths snapshots keys", async () => {
+  describe('full clear', () => {
+    it('drops every cached path and emits no invalidated', async () => {
       const processor = createResourceProcessor<string>({
         eventBus,
         resourceType: 'resource',
@@ -693,12 +693,11 @@ describe('createResourceProcessor', () => {
       processor.request('res://a');
       processor.request('res://b');
       await flush();
-      expect(processor.cachedPaths()).toEqual(['res://a', 'res://b']);
+      expect(processor.getCacheSize()).toBe(2);
 
       processor.clearCache();
       expect(invalidated).toEqual([]);
       expect(processor.getCacheSize()).toBe(0);
-      expect(processor.cachedPaths()).toEqual([]);
     });
   });
 

@@ -324,4 +324,12 @@ describe('frameOverView', () => {
       0, 240, 0, -120,
     ]);
   });
+
+  it('shows the whole view of a 2D override with a zero axis, which frames as one pixel', () => {
+    const framed = frameOverView(orthoFrameForSize({ x: 128, y: 0 }), { x: 128, y: 0 }, { x: 512, y: 300 });
+    const [cx, cy] = framed.position;
+    expect([cx + framed.left, cx + framed.right, cy + framed.top, cy + framed.bottom]).toEqual([
+      0, 512, 0, -300,
+    ]);
+  });
 });

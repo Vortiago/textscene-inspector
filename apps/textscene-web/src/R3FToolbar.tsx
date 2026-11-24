@@ -18,10 +18,7 @@ export interface ToolbarProps {
   uploadedTscnName: string | null;
   loadError: string | null;
   onFixtureChange: (value: string) => void;
-  /**
-   * Files picked in the file input: a scene, and its resources if any. The handler
-   * matches them against the missing paths the shell reports.
-   */
+  /** A scene and its resources, which the handler matches against the scene's missing files. */
   onFilesSelected: (files: File[]) => void;
   paneVisible: boolean;
   onTogglePane: () => void;
@@ -61,10 +58,8 @@ export function Toolbar({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
 
-  // Inside the shell's `<MissingResourcesProvider>`, this reads the live set the
-  // Resources tab aggregates. That tab takes missing files per path, apart from
-  // opening a scene, so a picked file maps to a known target. The badge points there.
-  const { missingPaths } = useMissingResources();
+  // The shell's `<MissingResourcesProvider>` gives the files the Resources tab lists.
+  const { missingFiles } = useMissingResources();
 
   const currentLabel = uploadedTscnName ?? fixtures.find((f) => f.file === fixtureFile)?.name ?? 'No scene';
 
@@ -175,13 +170,13 @@ export function Toolbar({
         </a>
       )}
 
-      {missingPaths.size > 0 && (
+      {missingFiles.length > 0 && (
         <span
           className={styles.missingResourcesBadge}
           data-testid="missing-resources-badge"
-          title="Resources referenced by this scene are missing — see the Resources tab"
+          title="Files this scene loads are missing: see the Resources tab"
         >
-          ⚠ {missingPaths.size} missing
+          ⚠ {missingFiles.length} missing
         </span>
       )}
 

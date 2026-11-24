@@ -13,11 +13,7 @@ import {
   useAnimationTransport,
   type AnimationTransport,
 } from '../../../r3f/contexts/AnimationTransportContext';
-import {
-  SelectionProvider,
-  useOptionalSelection,
-  type SelectionContextValue,
-} from '../../../r3f/contexts/SelectionContext';
+import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import type { TscnInternalResource } from '../../../parser/types';
 import { animationPlayerNode } from './animationPlayerNode.testkit';
@@ -43,15 +39,13 @@ const RESOLVABLE_INTERNAL: TscnInternalResource[] = [
 const AP_PATH = 'Root/AnimationPlayer';
 
 let transport: AnimationTransport;
-let selection: SelectionContextValue | null;
 function Capture() {
   transport = useAnimationTransport();
-  selection = useOptionalSelection();
   return null;
 }
 
 async function setSelection(path: string | null) {
-  await ReactThreeTestRenderer.act(async () => selection?.setSelectedNodePath(path));
+  await ReactThreeTestRenderer.act(async () => transport.setActivePath(path));
 }
 
 async function mountScene(

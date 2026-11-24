@@ -26,7 +26,9 @@ In the dev edition, a link can open a scene:
 ## Move the camera
 
 The 3D viewport uses Godot's editor controls. Press <kbd>?</kbd> in the viewport for the full list, including trackpad and touch.
+As in Godot, the viewport hears its keys while the pointer is over it, or after you click it or move to it with <kbd>Tab</kbd>.
 If zoom stops before you are close enough, select the node and press <kbd>F</kbd>, or fly there with freelook.
+<kbd>O</kbd> moves the point the camera orbits to the origin.
 
 To fly, click **Freelook** over the viewport or press <kbd>Shift</kbd>+<kbd>F</kbd>.
 The pointer hides, the mouse looks around, and <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or the arrow keys move.
@@ -38,12 +40,13 @@ As in Godot, the viewport ignores navigation while it previews a camera, so neit
 **Editor camera** in the **Cameras** tab, or **Reset Camera** over the viewport, ends the preview.
 
 The **3D/2D** switch over the viewport changes the view. A scene with only Control or Node2D content shows a hint to switch.
+In the 2D view, <kbd>F</kbd> centres the selected node and <kbd>Shift</kbd>+<kbd>F</kbd> zooms to fit it, as in Godot.
 
 ## Inspect nodes
 
 The right dock holds the scene tree above three tabs.
 
-- **Scene tree:** click a node to select it. Search, expand and collapse, and hide nodes with the eye icon.
+- **Scene tree:** click a node to select it, or point at a row to outline its node in the view. Search, expand and collapse, and hide nodes with the eye icon. The eye sets the node's `visible` until the file changes. On a TabContainer page, the eye shows that page, as in Godot. A FoldableContainer sets its children's `visible` itself, so their eye follows the fold. A GLB model's parts have no eye.
   A **Not Implemented** chip marks a type that the previewer parses but does not draw.
 - **Inspector:** the type, path and properties of the selected node.
 - **Resources:** the files the scene needs, and which are missing.

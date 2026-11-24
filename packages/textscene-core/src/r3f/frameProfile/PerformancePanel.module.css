@@ -1,21 +1,21 @@
-/* The performance overlay's styles. Every colour comes from a --tsi token. */
+/* Each --tsi token falls back to the shell's value: a host without the shell defines none. */
 
 /* Top-left, clear of the viewport toolbar in the top-right corner and below it in z-order, so a
    narrow viewport never hides a control. It takes no pointer events, so a drag over it still orbits
    the camera. */
 .panel {
   position: absolute;
-  top: var(--tsi-space-2);
-  left: var(--tsi-space-2);
+  top: var(--tsi-space-2, 0.5rem);
+  left: var(--tsi-space-2, 0.5rem);
   z-index: 5;
   pointer-events: none;
-  padding: var(--tsi-space-1) var(--tsi-space-2);
-  border: 1px solid var(--tsi-border);
-  border-radius: var(--tsi-radius-md);
-  background: var(--tsi-bg-panel);
-  color: var(--tsi-fg-default);
-  font-family: var(--tsi-font-mono);
-  font-size: var(--tsi-font-sm);
+  padding: var(--tsi-space-1, 0.25rem) var(--tsi-space-2, 0.5rem);
+  border: 1px solid var(--tsi-border, #2a2d2e);
+  border-radius: var(--tsi-radius-md, 6px);
+  background: var(--tsi-bg-panel, #1a1a1a);
+  color: var(--tsi-fg-default, #ddd);
+  font-family: var(--tsi-font-mono, 'Consolas', 'Monaco', monospace);
+  font-size: var(--tsi-font-sm, 0.75rem);
   line-height: 1.4;
   font-variant-numeric: tabular-nums;
 }
@@ -24,18 +24,18 @@
 .totals {
   display: grid;
   grid-template-columns: auto auto;
-  column-gap: var(--tsi-space-3);
+  column-gap: var(--tsi-space-3, 0.75rem);
   white-space: nowrap;
 }
 
 .steps {
-  margin-top: var(--tsi-space-1);
+  margin-top: var(--tsi-space-1, 0.25rem);
   border-collapse: collapse;
 }
 
 .steps th,
 .steps td {
-  padding: 0 var(--tsi-space-1);
+  padding: 0 var(--tsi-space-1, 0.25rem);
   font-weight: normal;
   text-align: right;
 }
@@ -47,5 +47,5 @@
 }
 
 .steps thead th {
-  color: var(--tsi-fg-muted);
+  color: var(--tsi-fg-muted, #888);
 }

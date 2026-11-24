@@ -8,8 +8,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import type * as THREE from 'three';
 import type { ViewportDescription } from '../viewportRender/viewportDescription.js';
 import { useResourceLoader } from '../../resources/useResource.js';
-import { textureWork } from '../../resources/textures/textureWork.js';
-import { fontWork } from '../controls/native/text/settledChannel.js';
+import { pendingSceneWork, totalPendingWork } from '../sceneWork.js';
 import { SceneHolding } from '../sceneHolding.js';
 import { useSceneHolder } from '../useSceneHolder.js';
 import { useProjectClearColor } from '../useProjectClearColor.js';
@@ -31,7 +30,7 @@ export function useSceneProbes(): void {
   useFrame(() => {
     const probes = probesOfScenes.drivenBy(scene, holder);
     if (!probes) return;
-    const pending = (loader?.pendingResourceCount ?? 0) + textureWork.pending() + fontWork.pending();
+    const pending = totalPendingWork(pendingSceneWork(loader));
     if (probes.update(pending, clearColor.current, viewport.current)) invalidate();
   });
 }

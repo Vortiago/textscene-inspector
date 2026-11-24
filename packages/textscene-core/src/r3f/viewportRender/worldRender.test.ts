@@ -11,7 +11,7 @@ function worldRender(mipmapBias: number): WorldRender {
   return {
     viewport: { ...rootViewportDescription(null), mipmapBias },
     shadowAtlas: null,
-    hasCanvasTransform: false,
+    canvasView: null,
   };
 }
 
@@ -100,11 +100,11 @@ describe('drawWorld and the anisotropic level', () => {
     return { lastTaps };
   }
 
-  function render(anisotropicLevel: number, hasCanvasTransform: boolean): WorldRender {
+  function render(anisotropicLevel: number, isCanvas: boolean): WorldRender {
     return {
       viewport: { ...rootViewportDescription(null), anisotropicLevel },
       shadowAtlas: null,
-      hasCanvasTransform,
+      canvasView: isCanvas ? { x: 1152, y: 648 } : null,
     };
   }
 

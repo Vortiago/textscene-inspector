@@ -1,13 +1,7 @@
-/**
- * The hook host: a component reads resources on one snapshot of the loader, renders again only
- * when a file one of its reads touched loads, fails or reloads, and leaves the request, the pin
- * and the **Missing resource** report to this host. A read never suspends and never throws.
- */
-
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
 import { useByValue } from '../../r3f/hooks/useByValue';
 import { useSceneResources, type SceneResources } from '../../r3f/SceneResourcesContext';
-import { hasUnsettledFile, useMissingFiles, useStableEntries } from '../useLoadedFiles';
+import { hasUnsettledFile } from '../useLoadedFiles';
 import { usePendingWhile } from '../usePendingWhile';
 import { useResourceLoader } from '../useResource';
 import { loaderSnapshots, NO_LOADER } from './loaderSnapshots';
@@ -61,8 +55,6 @@ export function useSnapshotRead<R>(readAll: (read: NodeRead) => R): R {
 }
 
 /**
- * `read` on the loader's current snapshot, run again when a file it touched loads, fails or
- * reloads. The host requests and pins each file the read touched, and reports the missing ones.
  * The caller keeps `read` stable while its inputs hold: a new `read` starts a new snapshot.
  *
  * @canonical Code with no hooks that reads resources, run by a component
@@ -77,10 +69,8 @@ export function useSnapshotHost<R>(read: (snapshot: ResourceSnapshot) => R): R {
   useMemo(() => source.restart(), [source, read]);
   const snapshot = useSyncExternalStore(source.subscribe, source.current, source.current);
   const result = useMemo(() => read(snapshot), [snapshot, read]);
-  const files = useStableEntries(new Map(source.files()));
   // After every commit: a read may have touched a file the last request did not see.
   useEffect(() => source.request());
-  useMissingFiles(files);
-  usePendingWhile(loader !== null && hasUnsettledFile(files));
+  usePendingWhile(loader !== null && hasUnsettledFile(source.files()));
   return result;
 }

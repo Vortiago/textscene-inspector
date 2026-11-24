@@ -5,7 +5,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act, render } from '@testing-library/react';
 import * as THREE from 'three';
-import { StrictMode, type ReactNode } from 'react';
+import { StrictMode, useEffect, type ReactNode } from 'react';
 import { useResource } from './useResource';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import type { ResourceLoader } from './ResourceLoader';
@@ -543,6 +543,48 @@ describe('useResource', () => {
       expect(loader.textures.pinCounts.size).toBe(0);
       unmount();
       expect(loader.textures.pinCounts.size).toBe(0);
+    });
+  });
+
+  describe("the loader's pending count", () => {
+    /** A consumer whose loaded texture mounts a child that records its passive effect. */
+    function Consumer({ path, onChildEffect }: { path: string; onChildEffect: () => void }) {
+      const { status } = useResource<THREE.Texture>(path, 'texture');
+      return status === 'loaded' ? <LoadedChild onEffect={onChildEffect} /> : null;
+    }
+    function LoadedChild({ onEffect }: { onEffect: () => void }) {
+      useEffect(onEffect, [onEffect]);
+      return null;
+    }
+
+    it('counts a pending path from its commit', () => {
+      loader.textures.setRequestImpl(() => {});
+      render(<Consumer path="res://t.png" onChildEffect={() => {}} />, { wrapper: withLoader(loader) });
+      expect(loader.pendingResourceCount).toBe(1);
+    });
+
+    it('releases a loaded path after the passive effects of the content it mounts', () => {
+      loader.textures.setRequestImpl(() => {});
+      let hasChildEffectRun = false;
+      const onChildEffect = () => {
+        hasChildEffectRun = true;
+      };
+      render(<Consumer path="res://t.png" onChildEffect={onChildEffect} />, { wrapper: withLoader(loader) });
+      const seenAtZero: boolean[] = [];
+      loader.subscribePending(() => {
+        if (loader.pendingResourceCount === 0) seenAtZero.push(hasChildEffectRun);
+      });
+      act(() => loader.textures._resolve('res://t.png', textureA));
+      expect(seenAtZero).toEqual([true]);
+    });
+
+    it('releases a pending path on unmount', () => {
+      loader.textures.setRequestImpl(() => {});
+      const { unmount } = render(<Consumer path="res://t.png" onChildEffect={() => {}} />, {
+        wrapper: withLoader(loader),
+      });
+      unmount();
+      expect(loader.pendingResourceCount).toBe(0);
     });
   });
 });

@@ -56,7 +56,7 @@ export interface CachedSceneSource {
 }
 
 type LoadedScene = Partial<SceneScope> &
-  Pick<TscnScene, 'refusesToInstantiate'> & { nodes: readonly TscnNode[] };
+  Pick<TscnScene, 'refusesToInstantiate' | 'editableInstances'> & { nodes: readonly TscnNode[] };
 
 type CachedScene = NonNullable<ReturnType<CachedSceneSource['getCached']>>;
 
@@ -689,6 +689,11 @@ export class LiveTree {
   /** The root nodes of the loaded scene at `scenePath`, or undefined while it is not loaded. */
   sceneNodes(scenePath: string): readonly TscnNode[] | undefined {
     return this.scenes.getCached(scenePath)?.nodes;
+  }
+
+  /** The `[editable]` paths of the loaded scene at `scenePath`, none while it is not loaded. */
+  sceneEditablePaths(scenePath: string): readonly string[] {
+    return this.scenes.getCached(scenePath)?.editableInstances ?? [];
   }
 
   /**

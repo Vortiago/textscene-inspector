@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types';
 import type { Label3DProperties } from './types';
 import { labelProperties } from './testing/labelProperties';
-import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
+import { ViewShowProvider } from '../../../r3f/viewShow/ViewShowContext';
 import './index.r3f';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
 import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
@@ -31,18 +31,18 @@ function makeNode(overrides: Partial<Label3DProperties> = {}): TscnNode {
 // amendment).
 function renderLabel(node: TscnNode) {
   return ReactThreeTestRenderer.create(
-    <ViewportModeProvider initialShowLabels>
+    <ViewShowProvider show={{ labels: true }}>
       <Label3D node={node} />
-    </ViewportModeProvider>
+    </ViewShowProvider>
   );
 }
 
 describe('<Label3D>', () => {
   it('renders only an invisible, un-tagged group when labels are toggled off', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ViewportModeProvider initialShowLabels={false}>
+      <ViewShowProvider show={{ labels: false }}>
         <Label3D node={makeNode()} />
-      </ViewportModeProvider>
+      </ViewShowProvider>
     );
     const group = renderer.scene.findByProps({ name: 'Label' });
     expect((group.instance.userData as { isLabel3D?: boolean }).isLabel3D).toBeUndefined();
@@ -153,11 +153,11 @@ describe('<Label3D>', () => {
 
   it('renders children in a sibling group carrying the same transform, not inside the label group', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ViewportModeProvider initialShowLabels>
+      <ViewShowProvider show={{ labels: true }}>
         <Label3D node={makeNode()}>
           <mesh name="Child" />
         </Label3D>
-      </ViewportModeProvider>
+      </ViewShowProvider>
     );
     const child = renderer.scene.findByProps({ name: 'Child' });
     const labelGroup = renderer.scene.findByProps({ name: 'Label' });

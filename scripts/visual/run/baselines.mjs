@@ -9,7 +9,7 @@ import { dirname, join } from 'node:path';
 import { PNG } from 'pngjs';
 import { REPO_ROOT } from '../../repoRoot.mjs';
 import { baselinePath } from '../baselinePath.mjs';
-import { compareImages, formatDelta } from '../imageDelta.mjs';
+import { compareImages, formatDelta, isSameImage } from '../imageDelta.mjs';
 import { isUniformImage } from '../previewServer.mjs';
 
 const OUTPUT_DIR = join(REPO_ROOT, 'scripts/visual/output');
@@ -51,7 +51,7 @@ export function pixelsMatchBaseline(baselineBuffer, actualBuffer) {
   } catch {
     return false;
   }
-  return !result.sizeMismatch && result.changedPixels === 0;
+  return isSameImage(result);
 }
 
 /**
@@ -60,6 +60,11 @@ export function pixelsMatchBaseline(baselineBuffer, actualBuffer) {
  * whose new PNG bytes would bury the images that moved.
  */
 export function writeBaseline(scene, buffer) {
+  return writeBaselineFile(baselineFile(scene), buffer);
+}
+
+/** `writeBaseline` for a baseline outside the golden tree, such as the renderer consumer's. */
+export function writeBaselineFile(file, buffer) {
   if (isUniformImage(buffer)) {
     return {
       status: 'refused',
@@ -68,7 +73,6 @@ export function writeBaseline(scene, buffer) {
         'baseline (a lost WebGL context or an unrendered scene, never a real golden)',
     };
   }
-  const file = baselineFile(scene);
   const existing = existsSync(file) ? readFileSync(file) : null;
   if (pixelsMatchBaseline(existing, buffer)) {
     return { status: 'unchanged', detail: 'pixels identical — not rewritten' };

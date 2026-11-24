@@ -1,9 +1,3 @@
-/**
- * `three-bvh-csg` is imported from exactly one file, and only dynamically: a static import puts
- * the CSG core and `three-mesh-bvh` on the webview's initial-paint path for every scene. The bundle
- * budget would catch it only after a full build, and would name a size, not the file.
- */
-
 import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
@@ -46,6 +40,7 @@ function mentioningFiles(pattern: RegExp): string[] {
     .sort();
 }
 
+// A static import puts the CSG core and `three-mesh-bvh` on the web previewer's initial-paint path.
 describe('three-bvh-csg import site', () => {
   it('is imported by only the allowlisted files', () => {
     const offenders = mentioningFiles(IMPORTS_LIBRARY).filter((f) => !ALLOWED.has(f));

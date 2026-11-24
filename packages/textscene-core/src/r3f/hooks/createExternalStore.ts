@@ -1,9 +1,3 @@
-/**
- * One mutable value and its subscribers, read through `useSyncExternalStore`, so a change
- * re-renders only the components that subscribe. On a React Context, every consumer re-renders on
- * any change. It holds high-frequency state with few readers, such as `hoveredNodePath`, which
- * only `<HoverHighlight>` reads.
- */
 import { useSyncExternalStore } from 'react';
 import type { ExternalStore } from '../../utils/externalStore.js';
 

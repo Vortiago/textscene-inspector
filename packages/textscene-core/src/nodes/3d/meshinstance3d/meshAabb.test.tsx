@@ -13,7 +13,7 @@ import {
   curveEndingAt,
   curveFile,
 } from '../../../resources/meshes/primitivemesh/surface.testkit';
-import { missingResourcesWrapper } from '../../../resources/testing/missingResourcesWrapper';
+import { loaderWrapper } from '../../../resources/testing/loaderWrapper';
 import { subResource } from '../../../testing/subResource';
 import { fixtureFontBytes } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
 import { useMeshAabb } from './meshAabb';
@@ -145,7 +145,7 @@ describe('useMeshAabb over a TubeTrailMesh whose Curve is a .tres', () => {
   };
   const renderTubeAabb = (fake: FakeResourceLoader) =>
     renderHook(() => useMeshAabb('SubResource("tube")', resources), {
-      wrapper: missingResourcesWrapper(fake.loader),
+      wrapper: loaderWrapper(fake.loader),
     }).result;
 
   it('is unknown while the Curve file loads, then bounds the tube by it', () => {
@@ -182,7 +182,7 @@ describe('useMeshAabb over a TextMesh', () => {
   const renderTextAabb = (resources: SceneResources) => {
     const fake = createFakeResourceLoader();
     const { result } = renderHook(() => useMeshAabb('SubResource("text")', resources), {
-      wrapper: missingResourcesWrapper(fake.loader),
+      wrapper: loaderWrapper(fake.loader),
     });
     return { fake, result };
   };

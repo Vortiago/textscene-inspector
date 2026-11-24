@@ -5,14 +5,12 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { Camera3DInWorld } from '../../nodes/3d/camera3d/Camera3DInWorld.testkit';
-import { ViewportModeProvider } from '../contexts/ViewportModeContext';
+import { ViewShowProvider } from '../viewShow/ViewShowContext';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import type { TscnNode } from '../../parser/types';
 import type { MeshInstance3DProperties } from '../../nodes/3d/meshinstance3d/types';
-import type { Camera3DProperties } from '../../nodes/3d/camera3d/types';
 
 import { labelProperties } from '../../nodes/3d/label3d/testing/labelProperties';
 import { inlineTwoSurfaceMesh } from '../../nodes/3d/meshinstance3d/testing/twoSurfaceMesh';
@@ -23,7 +21,6 @@ import '../../nodes/3d/meshinstance3d/index.r3f';
 import '../../nodes/3d/label3d/index.r3f';
 import { registeredComponent } from '../testing/registeredComponent';
 import { BillboardMode } from '../../godot/rendering/materials/billboardMode';
-import { Camera3DProjectionType, Camera3DKeepAspect } from '../../godot/scene/camera3d';
 
 const MeshInstance3D = registeredComponent('MeshInstance3D');
 const Label3D = registeredComponent('Label3D');
@@ -207,115 +204,6 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     }
   });
 
-  it('audit slot 66a — Camera3D h_offset shifts position along local X', async () => {
-    const node: TscnNode = {
-      rawProperties: {},
-      name: 'Cam',
-      type: 'Camera3D',
-      children: [],
-      properties: {
-        name: 'Cam',
-        projection: Camera3DProjectionType.PERSPECTIVE,
-        fov: 75,
-        size: 1,
-        near: 0.05,
-        far: 100,
-        keep_aspect: Camera3DKeepAspect.KEEP_HEIGHT,
-        h_offset: 2.5,
-        v_offset: 0,
-        frustum_offset: { x: 0, y: 0 },
-        current: false,
-        cull_mask: 1048575,
-        doppler_tracking: 0,
-        transform: {
-          basis_x: { x: 1, y: 0, z: 0 },
-          basis_y: { x: 0, y: 1, z: 0 },
-          basis_z: { x: 0, y: 0, z: 1 },
-          origin: { x: 0, y: 0, z: 5 },
-        },
-      } as Camera3DProperties,
-    };
-    const renderer = await ReactThreeTestRenderer.create(<Camera3DInWorld node={node} />);
-    const cam = renderer.scene.findByType('PerspectiveCamera').instance as THREE.Camera;
-    // Identity basis + h_offset=2.5 → position.x shifts by 2.5.
-    expect(cam.position.x).toBeCloseTo(2.5, 5);
-    expect(cam.position.y).toBeCloseTo(0, 5);
-    expect(cam.position.z).toBeCloseTo(5, 5);
-  });
-
-  it('audit slot 66b — Camera3D v_offset shifts position along local Y', async () => {
-    const node: TscnNode = {
-      rawProperties: {},
-      name: 'Cam',
-      type: 'Camera3D',
-      children: [],
-      properties: {
-        name: 'Cam',
-        projection: Camera3DProjectionType.PERSPECTIVE,
-        fov: 75,
-        size: 1,
-        near: 0.05,
-        far: 100,
-        keep_aspect: Camera3DKeepAspect.KEEP_HEIGHT,
-        h_offset: 0,
-        v_offset: -1.5,
-        frustum_offset: { x: 0, y: 0 },
-        current: false,
-        cull_mask: 1048575,
-        doppler_tracking: 0,
-        transform: {
-          basis_x: { x: 1, y: 0, z: 0 },
-          basis_y: { x: 0, y: 1, z: 0 },
-          basis_z: { x: 0, y: 0, z: 1 },
-          origin: { x: 0, y: 0, z: 5 },
-        },
-      } as Camera3DProperties,
-    };
-    const renderer = await ReactThreeTestRenderer.create(<Camera3DInWorld node={node} />);
-    const cam = renderer.scene.findByType('PerspectiveCamera').instance as THREE.Camera;
-    expect(cam.position.x).toBeCloseTo(0, 5);
-    expect(cam.position.y).toBeCloseTo(-1.5, 5);
-    expect(cam.position.z).toBeCloseTo(5, 5);
-  });
-
-  it('audit slot 66a/b — Camera3D h_offset+v_offset compose along local basis (yawed camera)', async () => {
-    // Yaw +90° about Y: basis_x = (0, 0, -1), basis_y = (0, 1, 0). With
-    // h_offset=2, the camera should move +2 along world -Z; with v_offset=1
-    // it moves +1 along world Y. Origin stays at (0, 0, 5).
-    const node: TscnNode = {
-      rawProperties: {},
-      name: 'Cam',
-      type: 'Camera3D',
-      children: [],
-      properties: {
-        name: 'Cam',
-        projection: Camera3DProjectionType.PERSPECTIVE,
-        fov: 75,
-        size: 1,
-        near: 0.05,
-        far: 100,
-        keep_aspect: Camera3DKeepAspect.KEEP_HEIGHT,
-        h_offset: 2,
-        v_offset: 1,
-        frustum_offset: { x: 0, y: 0 },
-        current: false,
-        cull_mask: 1048575,
-        doppler_tracking: 0,
-        transform: {
-          basis_x: { x: 0, y: 0, z: -1 },
-          basis_y: { x: 0, y: 1, z: 0 },
-          basis_z: { x: 1, y: 0, z: 0 },
-          origin: { x: 0, y: 0, z: 5 },
-        },
-      } as Camera3DProperties,
-    };
-    const renderer = await ReactThreeTestRenderer.create(<Camera3DInWorld node={node} />);
-    const cam = renderer.scene.findByType('PerspectiveCamera').instance as THREE.Camera;
-    expect(cam.position.x).toBeCloseTo(0, 5);
-    expect(cam.position.y).toBeCloseTo(1, 5);
-    expect(cam.position.z).toBeCloseTo(5 - 2, 5);
-  });
-
   it('audit slot 14a — surface_material_override slot 0 applies, slot 1 is refused', async () => {
     const surfaceMap = new Map<number, string>([
       [0, 'SubResource("MatA")'],
@@ -358,9 +246,9 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     const node: TscnNode = { rawProperties: {}, name: 'L', type: 'Label3D', children: [], properties: props };
 
     const renderer = await ReactThreeTestRenderer.create(
-      <ViewportModeProvider initialShowLabels>
+      <ViewShowProvider show={{ labels: true }}>
         <Label3D node={node} />
-      </ViewportModeProvider>
+      </ViewShowProvider>
     );
     const groupInstance = renderer.scene.findByProps({ name: 'L' }).instance as THREE.Group;
 
@@ -399,9 +287,9 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     const node: TscnNode = { rawProperties: {}, name: 'L', type: 'Label3D', children: [], properties: props };
 
     const renderer = await ReactThreeTestRenderer.create(
-      <ViewportModeProvider initialShowLabels>
+      <ViewShowProvider show={{ labels: true }}>
         <Label3D node={node} />
-      </ViewportModeProvider>
+      </ViewShowProvider>
     );
     const groupInstance = renderer.scene.findByProps({ name: 'L' }).instance as THREE.Group;
     const qBefore = groupInstance.quaternion.clone();

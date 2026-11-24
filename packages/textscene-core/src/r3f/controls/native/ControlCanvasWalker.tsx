@@ -38,6 +38,8 @@ import { NodePathProvider } from '../../contexts/NodePathContext';
 import { ControlClipProvider, useInheritedControlClip } from './controlClipping';
 import { snapControlsToPixelsEnabled, snappedControlOrigin } from './controlPixelSnap';
 import { backPieceId, backPiecesOf, controlTransformsOf, solvedDrawTransformOf } from './solvedSortInputs';
+import { controlEditRectsOf } from '../../editRect/controlEditRects.js';
+import { usePublishEditRects } from '../../editRect/editRects.js';
 import {
   usePublishControlLocalTransforms,
   usePublishControlTransforms,
@@ -117,6 +119,7 @@ export function ControlCanvasWalker({
     publishLocalTransforms?.(owner, controlTransformsOf(tree, solved, false, livePath));
   }, [publishLocalTransforms, owner, tree, solved, livePath]);
   useLayoutEffect(() => () => publishLocalTransforms?.(owner, null), [publishLocalTransforms, owner]);
+  usePublishEditRects(useMemo(() => controlEditRectsOf(tree, solved, livePath), [tree, solved, livePath]));
 
   return (
     <>
@@ -266,11 +269,8 @@ function ControlItemGroup({
   const pieceSlots = usePieceSlots(solveNode, solvedEntry, live, sort.runs, state.keyAt);
   const layerKey = state.keyAt(paint.layer);
   const layerSlot = useMemo(() => wholeKeySlot(layerKey), [layerKey]);
-  // `is_visible_in_tree()` is `visible && parent_visible_in_tree` (`canvas_item.cpp:62-64`).
-  // Both halves come from the solve, which read `hiddenNodePaths`: a skipped
-  // Node2D mounts no group, and a hoisted `top_level` or chain-broken Control is a
-  // sibling of the ancestor whose flag still reaches it.
-  const isVisible = !solveNode.hidden && props.visible !== false && solveNode.parentVisibleInTree;
+  // canvas_item.cpp:62-64. The solve gives the parent half, as a hoisted Control mounts beside its ancestor.
+  const isVisible = props.visible !== false && solveNode.parentVisibleInTree;
 
   // Always present, since the solve walks this tree. The fallback guards a
   // mismatched pair.

@@ -9,6 +9,7 @@ import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext';
 import { Freelook, type FreelookControl } from '../../freelook';
 import { RegisteredFreelook } from '../../testing/ViewportActionsProbe';
 import { ViewportToolbar } from './ViewportToolbar';
+import { TestPreviewCamera } from '../TscnPreviewShell/previewCamera.testkit';
 
 /** A canvas's freelook whose toggle the browser always grants. */
 function grantedFreelook(freelook = new Freelook()): FreelookControl {
@@ -26,9 +27,11 @@ function renderToolbar({
 }: { mode?: ViewportMode; control?: FreelookControl | null; previewedCameraPath?: string | null } = {}) {
   render(
     <ViewportModeProvider initialMode={mode}>
-      <ViewportActionsProvider initialPreviewedCameraPath={previewedCameraPath}>
-        {control && <RegisteredFreelook control={control} />}
-        <ViewportToolbar />
+      <ViewportActionsProvider>
+        <TestPreviewCamera initialCamera={previewedCameraPath}>
+          {control && <RegisteredFreelook control={control} />}
+          <ViewportToolbar view={null} />
+        </TestPreviewCamera>
       </ViewportActionsProvider>
     </ViewportModeProvider>
   );

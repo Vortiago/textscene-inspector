@@ -20,6 +20,7 @@ function uploadedScene(overrides = {}) {
     ink: { inkPixels: 21032, width: 631, height: 756 },
     paths: UPLOADED_PATHS,
     resources: [],
+    badge: null,
     ...overrides,
   };
 }
@@ -33,7 +34,9 @@ function passingRun() {
       sceneOnly: uploadedScene({
         frame: PLACEHOLDER_FRAME,
         resources: [{ state: 'missing', path: TEXTURE_PATH }],
+        badge: '⚠ 1 missing',
       }),
+      panelLeftWhileLoading: false,
       filled: uploadedScene({ resources: [{ state: 'uploaded', path: TEXTURE_PATH }] }),
       diagnostics: { ...CLEAN_LOAD, consoleWarnings: [MISSING_TEXTURE_WARNING] },
     },
@@ -49,6 +52,22 @@ function failuresOf(run) {
 describe('checkUploadScenarios', () => {
   it('records nothing for three healthy arms', () => {
     expect(failuresOf(passingRun())).toEqual([]);
+  });
+
+  it('records a Resources panel that leaves the page while the dropped texture loads', () => {
+    const run = passingRun();
+    run.repeatedDrop.panelLeftWhileLoading = true;
+    expect(failuresOf(run)).toEqual([
+      '[repeated drop, texture] the Resources panel left the page while the dropped texture loaded',
+    ]);
+  });
+
+  it('records a badge that counts other files than the Resources tab lists missing', () => {
+    const run = passingRun();
+    run.repeatedDrop.sceneOnly = { ...run.repeatedDrop.sceneOnly, badge: null };
+    expect(failuresOf(run)).toEqual([
+      '[repeated drop, scene only] the toolbar badge reads "null", expected "⚠ 1 missing"',
+    ]);
   });
 
   it('records an upload that left the start fixture open', () => {

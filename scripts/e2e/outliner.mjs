@@ -20,15 +20,27 @@ export async function readOutlinerPaths(page) {
   return page.$$eval('[data-node-path]', (nodes) => nodes.map((node) => node.getAttribute('data-node-path')));
 }
 
+/** The node paths of the selected rows, in document order. */
+export async function readSelectedPaths(page) {
+  return page.$$eval('[role="treeitem"][aria-selected="true"]', (rows) =>
+    rows.map((row) => row.parentElement?.getAttribute('data-node-path'))
+  );
+}
+
 /**
  * How long a selection takes to show. It re-renders synchronously off React state, so a fixed wait
  * suffices, as in `clickNode` in `scripts/showcase/record.mjs`.
  */
 export const SELECT_SETTLE_MS = 400;
 
+/** The row of the node at `nodePath`, by its exact path. */
+export function treeRow(page, nodePath) {
+  return page.locator(`[data-node-path="${nodePath}"] > [role="treeitem"]`).first();
+}
+
 /** Clicks a row by its exact node path, as a user selects in the tree. */
 export async function selectOutlinerNode(page, nodePath) {
-  const row = page.locator(`[data-node-path="${nodePath}"] > [role="treeitem"]`).first();
+  const row = treeRow(page, nodePath);
   await row.waitFor({ state: 'visible', timeout: 10000 });
   await row.click();
 }

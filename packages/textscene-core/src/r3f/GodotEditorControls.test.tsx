@@ -8,6 +8,8 @@ import * as THREE from 'three';
 import { act } from '@react-three/test-renderer';
 import {
   drag,
+  keyDown,
+  keyDownOnPage,
   mountEditorControls as mount,
   pressKey,
   previewAuthoredCamera,
@@ -390,6 +392,18 @@ describe('<GodotEditorControls> keyboard', () => {
     expect(controls.isOrthographic).toBe(false);
   });
 
+  it('hears no view key that reaches the page outside the view', async () => {
+    const { get } = await mount();
+    const camera = get().camera;
+    const before = camera.position.clone();
+
+    await act(async () => {
+      keyDownOnPage('Numpad7');
+    });
+
+    expect(camera.position.distanceTo(before)).toBe(0);
+  });
+
   it('ignores navigation keys typed into a text field', async () => {
     const { get } = await mount();
     const camera = get().camera;
@@ -457,9 +471,7 @@ describe('<GodotEditorControls> camera preview', () => {
   it('still consumes a numpad view key during a preview, so it scrolls no page', async () => {
     const { get } = await mount();
     await previewAuthoredCamera(get);
-    const event = new KeyboardEvent('keydown', { code: 'Numpad7', bubbles: true, cancelable: true });
-
-    window.dispatchEvent(event);
+    const event = keyDown('Numpad7');
 
     expect(event.defaultPrevented).toBe(true);
   });

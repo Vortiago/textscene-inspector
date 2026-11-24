@@ -1,93 +1,131 @@
-/**
- * `onCaptureStateChange` reports `ready` only once the canvas has rendered the current scene
- * and its resources and textures have landed, `unavailable` with the reason when the viewport
- * cannot capture, and `pending` in between. A host waits on these states instead of polling.
- */
-import { useEffect, useRef } from 'react';
+import { useEffect, useImperativeHandle, type Ref } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useViewportActions } from '../../testing/ViewportActionsProbe';
+import type { ViewAnswers } from '../../viewStatus/viewAnswers';
+import type {
+  DrawnFrame,
+  LiveScene,
+  ViewSettled,
+  ViewStatus,
+  ViewStatusStore,
+} from '../../viewStatus/viewStatus';
 import { useOptionalHierarchy } from '../../contexts/HierarchyContext';
-import { useResourceLoader } from '../../../resources/useResource';
-import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
-import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import { textureWork } from '../../../resources/textures/textureWork';
-import { fontWork } from '../../controls/native/text/settledChannel';
+import { ViewStatusProvider, useViewStatusStore } from '../../viewStatus/ViewStatusContext';
+import { StatusChangeReporter } from '../../viewStatus/StatusChangeReporter';
+import type { PendingSceneWork } from '../../sceneWork';
 import type { PreviewCaptureState } from './previewCaptureState';
 import { SCENE_LOAD_STATUS_TESTID, TEXTURE_WORK_STATUS_TESTID } from './statusTestIds';
-import type { SceneGraph } from '../../../core/SceneGraph';
 
-const DATA_URL = 'data:image/png;base64,AAA';
-const DATA_URL_2D = 'data:image/png;base64,BBB';
+const SETTLED: ViewSettled = { scriptedNodeCount: 0, hasCurrentCamera: false };
 
-interface CanvasStub {
-  /** Whether the stub registers a screenshot handler, as a canvas with a renderer does. */
-  registersHandler: boolean;
-  /** The error the stub throws as it renders, as a canvas with no WebGL context does. */
-  error: Error | null;
-  /** Whether the stub holds one resource pending through the shell's loader, as `useResource` does. */
-  holdsResource: boolean;
-  /** Whether the stub keeps showing the first scene it rendered after the shell gets another. */
-  lagsScene: boolean;
-  /** Ends the held resource. Written by the stub as it mounts. */
-  releaseResource: () => void;
+/** One mounted view, as a test drives it: it settles only when the test says so. */
+interface StubView {
+  readonly mode: string;
+  readonly image: Blob;
+  settle(): void;
+  fail(error: Error): void;
 }
 
-/** Written by `arrangeCanvas` before each render. The stub canvas reads it as it mounts. */
-const canvasStub: CanvasStub = {
-  registersHandler: false,
-  error: null,
-  holdsResource: false,
-  lagsScene: false,
-  releaseResource: () => {},
-};
+/** Written by each stub view as it mounts, and cleared by `arrangeViews`. */
+const views: StubView[] = [];
+/** The error the next stub view throws as it renders, as a canvas with no WebGL context does. */
+let renderError: Error | null = null;
 
-function arrangeCanvas(overrides: Partial<Omit<CanvasStub, 'releaseResource'>>): void {
-  Object.assign(
-    canvasStub,
-    { registersHandler: true, error: null, holdsResource: false, lagsScene: false },
-    overrides
-  );
+function arrangeViews(error: Error | null = null): void {
+  views.length = 0;
+  renderError = error;
 }
 
-/** Registers `dataUrl` as the screenshot of `shownScene` while `registers` holds, as a canvas's bridge does. */
-function useStubScreenshotHandler(dataUrl: string, shownScene: SceneGraph | null, registers = true): void {
-  const { registerScreenshotHandler } = useViewportActions();
-  useEffect(
-    () => (registers ? registerScreenshotHandler(() => dataUrl, shownScene) : undefined),
-    [registerScreenshotHandler, dataUrl, shownScene, registers]
-  );
+/** The status store of the stub view, and the scene it shows. Written by the stub as it renders. */
+let viewStore: ViewStatusStore | null = null;
+let viewScene: LiveScene | null = null;
+
+const NO_WORK: PendingSceneWork = { resources: 0, textures: 0, fonts: 0, modules: 0 };
+
+/** Draws one frame of a view that waits on `work`, as a canvas reports a file it still loads. */
+function drawFrame(work: Partial<PendingSceneWork>): void {
+  if (!viewStore || !viewScene) throw new Error('expected a mounted view with a status, got none');
+  const frame: DrawnFrame = {
+    revision: viewScene.revision(),
+    isFullSize: true,
+    awaitedCamera: null,
+    work: { ...NO_WORK, ...work },
+    facts: SETTLED,
+  };
+  viewStore.frameDrawn(frame);
 }
 
-// happy-dom has no WebGL, so the R3F canvas is a stub that registers or throws on demand.
+function latestView(): StubView {
+  const view = views[views.length - 1];
+  if (!view) throw new Error('expected a mounted view, got none');
+  return view;
+}
+
+// happy-dom has no WebGL, so the view is a stub whose ref answers as the test drives it.
 vi.mock('../../TscnCanvas', () => ({
-  TscnCanvas: ({ mode }: { mode?: string }) => (mode === '2D' ? <StubStage /> : <StubCanvas />),
+  TscnCanvas: (props: StubProps) => (
+    <ViewStatusProvider>
+      <StubCanvas {...props} />
+    </ViewStatusProvider>
+  ),
   TscnSceneContents: () => null,
 }));
 
-function StubCanvas() {
-  const loader = useResourceLoader();
-  const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
-  const firstScene = useRef(sceneGraph);
-  const shownScene = canvasStub.lagsScene ? firstScene.current : sceneGraph;
-  useEffect(() => {
-    if (!canvasStub.holdsResource || !loader) return undefined;
-    canvasStub.releaseResource = loader.beginPending();
-    return canvasStub.releaseResource;
-  }, [loader]);
-  useStubScreenshotHandler(DATA_URL, shownScene, canvasStub.registersHandler);
-  if (canvasStub.error) throw canvasStub.error;
-  return <div data-testid="canvas-stub" />;
+interface StubProps {
+  mode?: string;
+  onStatusChange?: (status: ViewStatus) => void;
+  ref?: Ref<ViewAnswers>;
 }
 
-// The 2D stage registers its own handler, as its world canvas's `ScreenshotBridge` does.
-function StubStage() {
-  useStubScreenshotHandler(DATA_URL_2D, useOptionalHierarchy()?.sceneGraph ?? null);
-  return <div data-testid="stage-2d-stub" />;
+function StubCanvas({ mode = '3D', onStatusChange, ref }: StubProps) {
+  const store = useViewStatusStore()!;
+  const scene = useOptionalHierarchy()!.scene!;
+  viewStore = store;
+  viewScene = scene;
+  // A switch replaces the stage, which leaves the status and attaches again.
+  useEffect(() => store.attach(scene) ?? undefined, [store, scene, mode]);
+  useImperativeHandle(ref, () => stubAnswers(mode, store), [mode, store]);
+  if (renderError) throw renderError;
+  return (
+    <>
+      <div data-testid="canvas-stub" />
+      {onStatusChange && <StatusChangeReporter onStatusChange={onStatusChange} />}
+    </>
+  );
 }
 
-import { TscnPreviewShell } from './TscnPreviewShell';
+/** A read of `settled` answers once the status settles, as a real view's does, or rejects once failed. */
+function stubAnswers(mode: string, store: ViewStatusStore): ViewAnswers {
+  const waits: { resolve: (settled: ViewSettled) => void; reject: (error: Error) => void }[] = [];
+  let failure: Error | null = null;
+  const view: StubView = {
+    mode,
+    image: new Blob([mode]),
+    settle: () => {
+      drawFrame(NO_WORK);
+      waits.splice(0).forEach((wait) => wait.resolve(SETTLED));
+    },
+    fail: (error) => {
+      failure = error;
+      drawFrame(NO_WORK);
+      waits.splice(0).forEach((wait) => wait.reject(error));
+    },
+  };
+  views.push(view);
+  return {
+    get settled() {
+      if (failure) return Promise.reject(failure);
+      const settled = store.settled();
+      if (settled) return Promise.resolve(settled);
+      return new Promise<ViewSettled>((resolve, reject) => waits.push({ resolve, reject }));
+    },
+    captureImage: () => Promise.resolve(view.image),
+    status: store.status,
+  };
+}
+
+import { TextShell } from './TscnPreviewShell.testkit';
 
 const SCENE_3D = `[gd_scene format=3]
 
@@ -107,17 +145,13 @@ interface RenderedShell {
 
 function renderShell(content = SCENE_3D): RenderedShell {
   const states: PreviewCaptureState[] = [];
-  const loader = createFakeResourceLoader().loader;
-  // A host wraps the shell in its resource loader, as the extension's webview does.
   const shellWith = (content: string) => (
-    <ResourceLoaderProvider loader={loader}>
-      <TscnPreviewShell
-        panelId="capture"
-        content={content}
-        initialViewportMode="3D"
-        onCaptureStateChange={(state) => states.push(state)}
-      />
-    </ResourceLoaderProvider>
+    <TextShell
+      panelId="capture"
+      content={content}
+      initialViewportMode="3D"
+      onCaptureStateChange={(state) => states.push(state)}
+    />
   );
   const { rerender, unmount } = render(shellWith(content));
   return { states, showScene: (content) => rerender(shellWith(content)), unmount };
@@ -127,30 +161,42 @@ function latest(states: PreviewCaptureState[]): PreviewCaptureState | undefined 
   return states[states.length - 1];
 }
 
-describe('<TscnPreviewShell> capture state', () => {
-  it('reports pending while the canvas has no screenshot handler', () => {
-    arrangeCanvas({ registersHandler: false });
+/** A capture waits for the view to settle again, as a host's request may follow a change. */
+async function expectCapture(state: PreviewCaptureState | undefined, view: StubView): Promise<void> {
+  if (state?.status !== 'ready') throw new Error(`expected a ready state, got ${state?.status}`);
+  const image = state.capture();
+  view.settle();
+  await expect(image).resolves.toBe(view.image);
+}
+
+/** After the scene's own tree work, which a handle read starts and which moves its revision. */
+async function settleLatestView(): Promise<void> {
+  await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
+  await act(async () => latestView().settle());
+}
+
+describe('<TextShell> capture state', () => {
+  it('reports pending until the view settles', () => {
+    arrangeViews();
 
     const { states } = renderShell();
 
     expect(latest(states)).toEqual({ status: 'pending' });
   });
 
-  it('reports ready with a working capture once the canvas registers its handler', () => {
-    arrangeCanvas({});
-
+  it('reports ready once the view settles, and its capture gives the view image', async () => {
+    arrangeViews();
     const { states } = renderShell();
+
+    await settleLatestView();
     const state = latest(states);
 
     expect(state?.status).toBe('ready');
-    expect(state?.status === 'ready' && state.capture()).toBe(DATA_URL);
+    await expectCapture(state, latestView());
   });
 
-  it('reports the renderer error when the canvas cannot create a WebGL context', async () => {
-    arrangeCanvas({
-      registersHandler: false,
-      error: new Error('THREE.WebGLRenderer: Error creating WebGL context.'),
-    });
+  it('reports the renderer error when the canvas cannot create a WebGL context', () => {
+    arrangeViews(new Error('THREE.WebGLRenderer: Error creating WebGL context.'));
     // The boundary logs the caught error, which is the case under test.
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -163,139 +209,143 @@ describe('<TscnPreviewShell> capture state', () => {
     });
   });
 
-  it('captures the 2D view once the 2D canvas registers its handler', async () => {
-    arrangeCanvas({});
+  it('reports why the view will never settle', async () => {
+    arrangeViews();
     const { states } = renderShell();
 
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
+    await act(async () => latestView().fail(new Error('Node not found: "Rig/Gone"')));
+
+    expect(latest(states)).toEqual({ status: 'unavailable', reason: 'Node not found: "Rig/Gone"' });
+  });
+
+  it('captures the 2D view once the 2D view settles', async () => {
+    arrangeViews();
+    const { states } = renderShell();
+    await settleLatestView();
+
     await userEvent.click(screen.getByRole('button', { name: '2D' }));
+    expect(latest(states)).toEqual({ status: 'pending' });
+    await settleLatestView();
     const state = latest(states);
 
-    expect(state?.status).toBe('ready');
-    expect(state?.status === 'ready' && state.capture()).toBe(DATA_URL_2D);
+    expect(latestView().mode).toBe('2D');
+    await expectCapture(state, latestView());
+  });
+
+  it.each([
+    ['a resource', 'resources'],
+    ['a texture', 'textures'],
+    ['a font', 'fonts'],
+  ] as const)('reports pending while the settled view loads %s, and ready once it lands', async (_, kind) => {
+    arrangeViews();
+    const { states } = renderShell();
+    await settleLatestView();
+
+    act(() => drawFrame({ [kind]: 1 }));
+    expect(latest(states)).toEqual({ status: 'pending' });
+    act(() => drawFrame(NO_WORK));
+    await settleLatestView();
+
+    await expectCapture(latest(states), latestView());
+  });
+
+  it('reports pending again for a load that starts and ends before the shell renders', async () => {
+    arrangeViews();
+    const { states } = renderShell();
+    act(() => drawFrame(NO_WORK));
+    await settleLatestView();
+    const readyCount = states.length;
+
+    act(() => {
+      drawFrame({ resources: 1 });
+      drawFrame(NO_WORK);
+    });
+
+    expect(states.slice(readyCount)).toEqual([{ status: 'pending' }]);
+    await settleLatestView();
+    await expectCapture(latest(states), latestView());
   });
 
   it('reports pending as the shell unmounts', async () => {
-    arrangeCanvas({});
+    arrangeViews();
     const { states, unmount } = renderShell();
+    await settleLatestView();
 
     await act(async () => unmount());
 
     expect(latest(states)).toEqual({ status: 'pending' });
   });
 
-  it('reports pending while a resource the scene uses is loading, and ready once it lands', async () => {
-    arrangeCanvas({ holdsResource: true });
-    const { states } = renderShell();
-    expect(latest(states)).toEqual({ status: 'pending' });
-
-    await act(async () => canvasStub.releaseResource());
-
-    expect(latest(states)?.status).toBe('ready');
-  });
-
-  it('reports pending while a texture is building, and ready once it is done', async () => {
-    arrangeCanvas({});
-    const endTextureWork = textureWork.begin();
-    try {
-      const { states } = renderShell();
-      expect(latest(states)).toEqual({ status: 'pending' });
-
-      await act(async () => endTextureWork());
-
-      expect(latest(states)?.status).toBe('ready');
-    } finally {
-      endTextureWork();
-    }
-  });
-
-  it('reports pending while a scene font is loading, and ready once it settles', async () => {
-    arrangeCanvas({});
-    const endFontWork = fontWork.begin();
-    try {
-      const { states } = renderShell();
-      expect(latest(states)).toEqual({ status: 'pending' });
-
-      await act(async () => endFontWork());
-
-      expect(latest(states)?.status).toBe('ready');
-    } finally {
-      endFontWork();
-    }
-  });
-
-  it('reports pending while the canvas still shows the previous scene', () => {
-    arrangeCanvas({ lagsScene: true });
+  it('reports pending after a scene change until the view settles on it', async () => {
+    arrangeViews();
     const { states, showScene } = renderShell();
+    await settleLatestView();
     expect(latest(states)?.status).toBe('ready');
 
-    showScene(OTHER_SCENE_3D);
+    await act(async () => showScene(OTHER_SCENE_3D));
 
     expect(latest(states)).toEqual({ status: 'pending' });
   });
 
-  it('reports pending before the host has sent a scene, so a capture never shows an empty view', () => {
-    arrangeCanvas({});
-
+  it('reports pending before the host has sent a scene, so a capture never shows an empty view', async () => {
+    arrangeViews();
     const { states } = renderShell('');
+
+    await settleLatestView();
 
     expect(latest(states)).toEqual({ status: 'pending' });
   });
 });
 
-describe('<TscnPreviewShell> scene load status', () => {
+describe('<TextShell> scene load status', () => {
   const sceneLoadStatus = () => screen.queryByTestId(SCENE_LOAD_STATUS_TESTID);
 
-  it('shows "Loading scene…" in the top bar while a resource is on its way, and leaves once it lands', async () => {
-    arrangeCanvas({ holdsResource: true });
+  it('shows "Loading scene…" in the top bar until the view settles', async () => {
+    arrangeViews();
     renderShell();
     const status = sceneLoadStatus();
     expect(status?.textContent).toBe('Loading scene…');
     expect(status?.closest('header')).not.toBeNull();
 
-    await act(async () => canvasStub.releaseResource());
+    await settleLatestView();
 
     expect(sceneLoadStatus()).toBeNull();
   });
 
-  it('shows while the canvas still shows the previous scene', () => {
-    arrangeCanvas({ lagsScene: true });
+  it('shows again after a scene change the view has not settled on', async () => {
+    arrangeViews();
     const { showScene } = renderShell();
-    expect(sceneLoadStatus()).toBeNull();
+    await settleLatestView();
 
-    showScene(OTHER_SCENE_3D);
+    await act(async () => showScene(OTHER_SCENE_3D));
 
     expect(sceneLoadStatus()).not.toBeNull();
   });
 
-  it('shows "Loading scene…" while a scene font is loading, and leaves once it settles', async () => {
-    arrangeCanvas({});
-    const endFontWork = fontWork.begin();
-    try {
-      renderShell();
-      expect(sceneLoadStatus()?.textContent).toBe('Loading scene…');
+  it('shows "Loading scene…" again while the settled view loads a font, and leaves once it lands', async () => {
+    arrangeViews();
+    renderShell();
+    await settleLatestView();
 
-      await act(async () => endFontWork());
+    act(() => drawFrame({ fonts: 1 }));
+    expect(sceneLoadStatus()?.textContent).toBe('Loading scene…');
+    act(() => drawFrame(NO_WORK));
+    await settleLatestView();
 
-      expect(sceneLoadStatus()).toBeNull();
-    } finally {
-      endFontWork();
-    }
+    expect(sceneLoadStatus()).toBeNull();
   });
 
   it('gives way to the texture work status, so one status shows at a time (edge case)', async () => {
-    arrangeCanvas({});
-    const endTextureWork = textureWork.begin();
-    try {
-      renderShell();
-      expect(sceneLoadStatus()).toBeNull();
-      expect(screen.queryByTestId(TEXTURE_WORK_STATUS_TESTID)).not.toBeNull();
-    } finally {
-      await act(async () => endTextureWork());
-    }
+    arrangeViews();
+    renderShell();
+    act(() => drawFrame({ textures: 1 }));
+    expect(sceneLoadStatus()).toBeNull();
+    expect(screen.queryByTestId(TEXTURE_WORK_STATUS_TESTID)).not.toBeNull();
   });
 
   it('is absent when the viewport crashed, which loads nothing (error case)', () => {
-    arrangeCanvas({ registersHandler: false, error: new Error('no WebGL') });
+    arrangeViews(new Error('no WebGL'));
     // The boundary logs the caught error, which is the case under test.
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     renderShell();
@@ -305,7 +355,7 @@ describe('<TscnPreviewShell> scene load status', () => {
   });
 
   it('is absent before the host has sent a scene (edge case)', () => {
-    arrangeCanvas({});
+    arrangeViews();
     renderShell('');
 
     expect(sceneLoadStatus()).toBeNull();

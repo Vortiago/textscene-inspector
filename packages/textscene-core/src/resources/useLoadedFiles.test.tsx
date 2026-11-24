@@ -1,11 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act, render, renderHook } from '@testing-library/react';
 import type { ParsedResource } from '../parser/parsedResource';
-import { useMissingResources } from '../r3f/contexts/MissingResourcesContext';
 import type { FontFileResource } from './fonts/font/types';
 import type { LoadedFile } from './scopedResource';
 import { createFakeResourceLoader, type FakeResourceLoader } from './testing/createFakeResourceLoader';
-import { missingResourcesWrapper } from './testing/missingResourcesWrapper';
+import { loaderWrapper } from './testing/loaderWrapper';
 import { renderWithSettleInGap } from './testing/renderWithSettleInGap';
 import { FONT_FILES } from './fileKinds';
 import { useCachedFiles, useLoadedFiles } from './useLoadedFiles';
@@ -18,9 +17,7 @@ const FILE: ParsedResource = { resourceType: 'Resource', properties: {}, extReso
 const NESTED_PLAN = (loadedFile: LoadedFile) => [OUTER, ...(loadedFile(OUTER) ? [INNER] : [])];
 
 function renderFiles(plan: (loadedFile: LoadedFile) => readonly string[], fake: FakeResourceLoader) {
-  return renderHook(() => ({ files: useLoadedFiles(plan), missing: useMissingResources().missingPaths }), {
-    wrapper: missingResourcesWrapper(fake.loader),
-  }).result;
+  return renderHook(() => ({ files: useLoadedFiles(plan) }), { wrapper: loaderWrapper(fake.loader) }).result;
 }
 
 function fakeRequesting() {
@@ -80,14 +77,13 @@ describe('useLoadedFiles', () => {
     expect(fake.resources.pinCounts.get(OUTER)).toBe(1);
   });
 
-  it('reports a file that failed as missing, and stops loading', () => {
+  it('stops loading for a file that failed', () => {
     const { fake } = fakeRequesting();
     const result = renderFiles(() => [OUTER], fake);
 
     act(() => fake.resources._fail(OUTER, 'gone'));
 
     expect(result.current.files.isLoading).toBe(false);
-    expect(result.current.missing.has(OUTER)).toBe(true);
   });
 
   it('requests and pins a file once, however often the plan names it', () => {
@@ -117,7 +113,7 @@ describe('useLoadedFiles', () => {
     const reads = renderWithSettleInGap(
       () => useLoadedFiles(() => [OUTER]).isLoading,
       () => fake.resources._resolve(OUTER, FILE),
-      missingResourcesWrapper(fake.loader)
+      loaderWrapper(fake.loader)
     );
 
     expect(reads.at(-1)).toBe(false);
@@ -134,7 +130,7 @@ describe('useLoadedFiles', () => {
       }
       return null;
     }
-    render(<Reader />, { wrapper: missingResourcesWrapper(fake.loader) });
+    render(<Reader />, { wrapper: loaderWrapper(fake.loader) });
 
     act(() => fake.resources._resolve(OUTER, FILE));
 
@@ -165,9 +161,8 @@ describe('useCachedFiles', () => {
     return renderHook(
       () => ({
         files: useCachedFiles(kind, () => [FONT_PATH]),
-        missing: useMissingResources().missingPaths,
       }),
-      { wrapper: missingResourcesWrapper(fake.loader) }
+      { wrapper: loaderWrapper(fake.loader) }
     ).result;
   }
 
@@ -193,14 +188,13 @@ describe('useCachedFiles', () => {
     expect(fake.fonts.pinCounts.get(FONT_PATH)).toBe(1);
   });
 
-  it('reports a font that failed as missing, and stops loading', () => {
+  it('stops loading for a font that failed', () => {
     const fake = createFakeResourceLoader();
     const result = renderFonts(FONT_FILES, fake);
 
     act(() => fake.fonts._fail(FONT_PATH, 'gone'));
 
     expect(result.current.files.isLoading).toBe(false);
-    expect(result.current.missing.has(FONT_PATH)).toBe(true);
   });
 
   it('answers null for a font that failed, so a reader tells it from one that loads', () => {

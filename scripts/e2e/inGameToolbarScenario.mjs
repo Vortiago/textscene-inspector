@@ -1,8 +1,7 @@
 import { diffMask } from '../vscode/pixels.mjs';
-import { findCanvas, settleCanvas } from '../visual/previewServer.mjs';
 import { checkDiagnostics } from './diagnostics.mjs';
-import { openFixture } from './openFixture.mjs';
-import { expandAllTreeRows, selectOutlinerNode, SELECT_SETTLE_MS } from './outliner.mjs';
+import { openFixture, shootCanvas } from './openFixture.mjs';
+import { expandAllTreeRows, selectOutlinerNode, SELECT_SETTLE_MS, treeRow } from './outliner.mjs';
 
 /* global document */
 // `document` exists only in the browser that runs the `page.evaluate` callback.
@@ -38,13 +37,7 @@ const viewButton = (page, view) =>
 
 const readNotes = (page) => page.getByTestId('game-start-note').allTextContents();
 
-async function shoot(page) {
-  const { canvas, reason } = await findCanvas(page);
-  if (reason) throw new Error(`[In-game toolbar] ${reason}`);
-  const { buffer, reason: settleReason } = await settleCanvas(page, canvas);
-  if (!buffer) throw new Error(`[In-game toolbar] the canvas never settled: ${settleReason}`);
-  return buffer;
-}
+const shoot = (page) => shootCanvas(page, 'In-game toolbar');
 
 /** Each Display toggle by its label: checked and disabled. */
 async function readToggles(page) {
@@ -103,8 +96,7 @@ async function runToggles(browser, baseUrl) {
   return { before, inGame, backIn3D, diagnostics };
 }
 
-const isRowSelected = (page, path) =>
-  page.locator(`[data-node-path="${path}"] > [role="treeitem"]`).first().getAttribute('aria-selected');
+const isRowSelected = (page, path) => treeRow(page, path).getAttribute('aria-selected');
 
 /** How many pixels clearing the selection changes in `view`: a box in 3D, none In-game. */
 async function selectionPixels(page, view) {

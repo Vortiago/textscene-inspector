@@ -1,0 +1,16 @@
+; Two instances of unit-instanced-click-part.tscn, for what a click on an instanced mesh selects.
+; `Locked` is a plain instance, so Godot selects the instance. `Open` is listed by `[editable]`,
+; so Godot selects the mesh itself.
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://unit-instanced-click-part.tscn" id="1_part"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Locked" parent="." instance=ExtResource("1_part")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0, 0)
+
+[node name="Open" parent="." instance=ExtResource("1_part")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0)
+
+[editable path="Open"]

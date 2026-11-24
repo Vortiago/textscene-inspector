@@ -16,7 +16,11 @@ function sceneWithCamera2D(): THREE.Scene {
 }
 
 function framingDuringCanvasDraw(camera: THREE.Camera): ReturnType<typeof currentCameraFraming> {
-  const render = { viewport: rootViewportDescription(null), shadowAtlas: null, hasCanvasTransform: true };
+  const render = {
+    viewport: rootViewportDescription(null),
+    shadowAtlas: null,
+    canvasView: { x: 1152, y: 648 },
+  };
   let framing: ReturnType<typeof currentCameraFraming> = null;
   drawWorld(render, () => {
     framing = currentCameraFraming(sceneWithCamera2D(), camera, CAMERA_2D_PATH);

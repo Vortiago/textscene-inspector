@@ -1,60 +1,51 @@
-/**
- * One `clearAll()` resets the selected and hovered paths, the expanded and
- * hidden sets, and the `nodeObjectMap`, so a scene swap leaves no highlight on
- * an unmounted Object3D.
- */
 import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import * as THREE from 'three';
-import { SelectionProvider, useSelection } from './SelectionContext';
+import { SelectionProvider, useSelectedNodePath, useSelection } from './SelectionContext';
 
 function wrap({ children }: { children: ReactNode }) {
   return <SelectionProvider>{children}</SelectionProvider>;
 }
 
+function useSelectionAndPath() {
+  return { selection: useSelection(), selectedNodePath: useSelectedNodePath() };
+}
+
 describe('SelectionContext.clearAll (WI-UX-5)', () => {
-  it('resets selected/hovered/expanded/hidden and empties the ref-map in one call', () => {
-    const { result } = renderHook(() => useSelection(), { wrapper: wrap });
+  it('resets selected and expanded and empties the ref-map in one call', () => {
+    const { result } = renderHook(useSelectionAndPath, { wrapper: wrap });
     const fakeObject = new THREE.Object3D();
 
     act(() => {
-      result.current.setSelectedNodePath('Root/Mesh');
-      result.current.hoverStore.set('Root/Light');
-      result.current.toggleExpandedNodePath('Root');
-      result.current.toggleHidden('Root/Mesh');
-      result.current.registerNodeObject('Root/Mesh', fakeObject);
+      result.current.selection.setSelectedNodePath('Root/Mesh');
+      result.current.selection.toggleExpandedNodePath('Root');
+      result.current.selection.registerNodeObject('Root/Mesh', fakeObject);
     });
 
     expect(result.current.selectedNodePath).toBe('Root/Mesh');
-    expect(result.current.hoverStore.get()).toBe('Root/Light');
-    expect(result.current.expandedNodePaths.has('Root')).toBe(true);
-    expect(result.current.hiddenNodePaths.has('Root/Mesh')).toBe(true);
-    expect(result.current.nodeObjectMap.has('Root/Mesh')).toBe(true);
+    expect(result.current.selection.expandedNodePaths.has('Root')).toBe(true);
+    expect(result.current.selection.nodeObjectMap.has('Root/Mesh')).toBe(true);
 
     act(() => {
-      result.current.clearAll();
+      result.current.selection.clearAll();
     });
 
     expect(result.current.selectedNodePath).toBeNull();
-    expect(result.current.hoverStore.get()).toBeNull();
-    expect(result.current.expandedNodePaths.size).toBe(0);
-    expect(result.current.hiddenNodePaths.size).toBe(0);
-    expect(result.current.nodeObjectMap.size).toBe(0);
+    expect(result.current.selection.expandedNodePaths.size).toBe(0);
+    expect(result.current.selection.nodeObjectMap.size).toBe(0);
   });
 
   it('is idempotent — calling clearAll on an already-empty state does not throw', () => {
-    const { result } = renderHook(() => useSelection(), { wrapper: wrap });
+    const { result } = renderHook(useSelectionAndPath, { wrapper: wrap });
 
     act(() => {
-      result.current.clearAll();
-      result.current.clearAll();
+      result.current.selection.clearAll();
+      result.current.selection.clearAll();
     });
 
     expect(result.current.selectedNodePath).toBeNull();
-    expect(result.current.hoverStore.get()).toBeNull();
-    expect(result.current.expandedNodePaths.size).toBe(0);
-    expect(result.current.hiddenNodePaths.size).toBe(0);
-    expect(result.current.nodeObjectMap.size).toBe(0);
+    expect(result.current.selection.expandedNodePaths.size).toBe(0);
+    expect(result.current.selection.nodeObjectMap.size).toBe(0);
   });
 });

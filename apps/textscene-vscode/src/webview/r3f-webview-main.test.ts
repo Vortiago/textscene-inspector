@@ -7,13 +7,23 @@
 // @vitest-environment happy-dom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createElement, useEffect, type ReactNode } from 'react';
+import { createElement, useEffect } from 'react';
 import type { HostToWebviewMessage, WebviewToHostMessage } from '../protocol';
 import type { PreviewCaptureState, TscnNode } from '@textscene/core';
+import type { ResourceProvider } from '@textscene/renderer';
+
+/** What the app does with a scene: it sets the text, and disposes it when the panel goes. */
+interface FakeScene {
+  text: string;
+  readonly provider: ResourceProvider;
+  isDisposed: boolean;
+  setSource(text: string): void;
+  dispose(): void;
+}
 
 interface CapturedShellProps {
   panelId?: string;
-  content?: string;
+  scene?: FakeScene;
   initialViewportMode?: '2D' | '3D' | undefined;
   onNodeReveal?: (path: string, node: TscnNode) => void;
   onCaptureStateChange?: (state: PreviewCaptureState) => void;
@@ -28,39 +38,59 @@ interface CapturedLogAdapter {
   error: (message: string, ...args: unknown[]) => void;
 }
 
-/** Mutable capture box the `@textscene/core` mock writes into on every render/call. */
+/** Written by the `@textscene/core` and `@textscene/renderer` mocks on every render and call. */
 const captured: {
   shellProps?: CapturedShellProps;
+  scenes: FakeScene[];
   logAdapter?: CapturedLogAdapter;
-  provideFile?: ReturnType<typeof vi.fn>;
-  pipelineProvider?: unknown;
-  pipelineOptions?: { createWorker?: unknown };
   /** The state the fake shell reports from its mount effect, as the real bridge does. */
   mountCaptureState?: PreviewCaptureState;
-} = {};
+  shellMountEffects: number;
+  shellMountCleanups: number;
+} = { scenes: [], shellMountEffects: 0, shellMountCleanups: 0 };
+
+/** The text of the scene the app opened last, as the shell would draw it. */
+const sceneText = () => captured.scenes.at(-1)?.text;
 
 // A synthetic mock, no `importActual`: the real `<TscnPreviewShell>` pulls in
 // three.js/r3f, which happy-dom cannot run without a WebGL context.
 vi.mock('@textscene/core', () => ({
-  createResourcePipeline: vi.fn((provider: unknown, options?: { createWorker?: unknown }) => {
-    captured.pipelineProvider = provider;
-    captured.pipelineOptions = options;
-    captured.provideFile = vi.fn();
-    return { loader: { provideFile: captured.provideFile } };
-  }),
   PENDING_CAPTURE: { status: 'pending' },
-  ResourceLoaderProvider: ({ children }: { children: ReactNode }) => children,
   TscnPreviewShell: function FakeShell(props: CapturedShellProps) {
     captured.shellProps = props;
     const { onCaptureStateChange } = props;
     useEffect(() => {
+      captured.shellMountEffects += 1;
+      return () => {
+        captured.shellMountCleanups += 1;
+      };
+    }, []);
+    useEffect(() => {
       if (captured.mountCaptureState) onCaptureStateChange?.(captured.mountCaptureState);
     }, [onCaptureStateChange]);
-    return createElement('div', { 'data-testid': 'fake-shell' }, props.content);
+    return createElement('div', { 'data-testid': 'fake-shell' });
   },
   setLogAdapter: vi.fn((adapter: CapturedLogAdapter) => {
     captured.logAdapter = adapter;
   }),
+}));
+
+vi.mock('@textscene/renderer', () => ({
+  openScene: ({ source, provider }: { source: string; provider: ResourceProvider }): FakeScene => {
+    const scene: FakeScene = {
+      text: source,
+      provider,
+      isDisposed: false,
+      setSource(text) {
+        scene.text = text;
+      },
+      dispose() {
+        scene.isDisposed = true;
+      },
+    };
+    captured.scenes.push(scene);
+    return scene;
+  },
 }));
 
 let messageListeners: Array<(event: MessageEvent) => void>;
@@ -93,11 +123,27 @@ function postedMessages(vscodeApi: MockVsCodeApi): WebviewToHostMessage[] {
   return vscodeApi.postMessage.mock.calls.map((call) => call[0] as WebviewToHostMessage);
 }
 
+/** What the host keeps: each `webviewReady` resets its copy, as a remount sends one. */
+function postedSinceLastReady(vscodeApi: MockVsCodeApi): WebviewToHostMessage[] {
+  const messages = postedMessages(vscodeApi);
+  const lastReady = messages.map((m) => m.type).lastIndexOf('webviewReady');
+  if (lastReady === -1) {
+    throw new Error(`expected a webviewReady among ${messages.length} posted messages, got none`);
+  }
+  return messages.slice(lastReady);
+}
+
 /** Mount a fresh copy of the module (config globals are read at module-load time). */
-async function mountFresh(config?: Record<string, unknown>): Promise<{ vscodeApi: MockVsCodeApi }> {
+async function mountFresh(
+  config?: Record<string, unknown>,
+  postMessage = vi.fn()
+): Promise<{ vscodeApi: MockVsCodeApi }> {
   vi.resetModules();
   captured.shellProps = undefined;
+  captured.scenes = [];
   captured.logAdapter = undefined;
+  captured.shellMountEffects = 0;
+  captured.shellMountCleanups = 0;
   messageListeners = [];
 
   if (config) {
@@ -108,11 +154,7 @@ async function mountFresh(config?: Record<string, unknown>): Promise<{ vscodeApi
 
   document.body.innerHTML = '<div id="r3f-root"></div>';
 
-  const vscodeApi: MockVsCodeApi = {
-    postMessage: vi.fn(),
-    getState: vi.fn(),
-    setState: vi.fn(),
-  };
+  const vscodeApi: MockVsCodeApi = { postMessage, getState: vi.fn(), setState: vi.fn() };
   (globalThis as { acquireVsCodeApi?: () => MockVsCodeApi }).acquireVsCodeApi = () => vscodeApi;
 
   const mod = await import('./r3f-webview-main');
@@ -136,7 +178,9 @@ beforeEach(() => {
       messageListeners.push(listener as (event: MessageEvent) => void);
     }
   });
-  vi.spyOn(window, 'removeEventListener').mockImplementation(() => {});
+  vi.spyOn(window, 'removeEventListener').mockImplementation((type, listener) => {
+    if (type === 'message') messageListeners = messageListeners.filter((l) => l !== listener);
+  });
 });
 
 afterEach(() => {
@@ -161,57 +205,66 @@ describe('mountR3FWebview', () => {
     expect(() => mod.mountR3FWebview()).toThrow(/r3f-root/);
   });
 
-  it('posts the webviewReady handshake once the message listener is installed', async () => {
-    const { vscodeApi } = await mountFresh();
-
-    const readyMessages = postedMessages(vscodeApi).filter((m) => m.type === 'webviewReady');
-    expect(readyMessages).toHaveLength(1);
-  });
-
-  it('renders <TscnPreviewShell> with an empty initial content and a stable vscode- panelId', async () => {
+  it('mounts under StrictMode, which runs a mount effect, its cleanup and the effect again', async () => {
     await mountFresh();
 
-    expect(captured.shellProps?.content).toBe('');
+    expect(captured.shellMountEffects).toBe(2);
+    expect(captured.shellMountCleanups).toBe(1);
+  });
+
+  it('posts each webviewReady handshake with its message listener installed once', async () => {
+    const listenersAtReady: number[] = [];
+    const postMessage = vi.fn((message: WebviewToHostMessage) => {
+      if (message.type === 'webviewReady') listenersAtReady.push(messageListeners.length);
+    });
+    const { vscodeApi } = await mountFresh(undefined, postMessage);
+
+    // One handshake per StrictMode mount. The provider listens too, so each sees the count after mount.
+    expect(postedMessages(vscodeApi).filter((m) => m.type === 'webviewReady')).toHaveLength(2);
+    expect(listenersAtReady).toEqual([messageListeners.length, messageListeners.length]);
+  });
+
+  it('hands <TscnPreviewShell> the scene it opened, empty, and a stable vscode- panelId', async () => {
+    await mountFresh();
+
+    expect(captured.shellProps?.scene).toBe(captured.scenes[0]);
+    expect(sceneText()).toBe('');
     expect(captured.shellProps?.panelId).toMatch(/^vscode-/);
-  });
-
-  it('gives the resource pipeline a job worker factory, so textures build off the main thread', async () => {
-    await mountFresh();
-
-    expect(typeof captured.pipelineOptions?.createWorker).toBe('function');
   });
 });
 
 describe('loadTscn handling', () => {
-  it('applies the full scene text to the shell content prop', async () => {
+  it('sets the full scene text on the scene it opened', async () => {
     await mountFresh();
     const expected = '[gd_scene format=3]\n[node name="Root" type="Node3D"]';
 
     dispatch({ type: 'loadTscn', content: expected });
-    await waitFor(() => captured.shellProps?.content === expected);
+    await waitFor(() => sceneText() === expected);
 
-    expect(captured.shellProps?.content).toBe(expected);
+    expect(captured.scenes).toHaveLength(1);
   });
 
   it('replaces previously-loaded content on a subsequent loadTscn (hot-reload)', async () => {
     await mountFresh();
 
     dispatch({ type: 'loadTscn', content: 'first content' });
-    await waitFor(() => captured.shellProps?.content === 'first content');
+    await waitFor(() => sceneText() === 'first content');
     dispatch({ type: 'loadTscn', content: 'second content' });
-    await waitFor(() => captured.shellProps?.content === 'second content');
+    await waitFor(() => sceneText() === 'second content');
 
-    expect(captured.shellProps?.content).toBe('second content');
+    expect(captured.scenes).toHaveLength(1);
   });
 });
 
 describe('resourceChanged handling', () => {
-  it('forwards the changed res:// path to the resource loader for re-fetch', async () => {
+  it("hands the shell a provider whose watchers hear the host's changed res:// path", async () => {
     await mountFresh();
+    const listener = vi.fn();
+    captured.shellProps?.scene?.provider.watch?.(listener);
 
     dispatch({ type: 'resourceChanged', path: 'res://textures/wood.png' });
 
-    expect(captured.provideFile).toHaveBeenCalledWith('res://textures/wood.png');
+    expect(listener).toHaveBeenCalledWith('res://textures/wood.png');
   });
 });
 
@@ -286,7 +339,15 @@ describe('preview visibility', () => {
 });
 
 describe('capture state reporting', () => {
-  const READY: PreviewCaptureState = { status: 'ready', capture: () => 'data:image/png;base64,AA==' };
+  const IMAGE = new Blob([new Uint8Array([0])], { type: 'image/png' });
+  const READY: PreviewCaptureState = { status: 'ready', capture: () => Promise.resolve(IMAGE) };
+  const captures = (vscodeApi: Parameters<typeof postedMessages>[0]) =>
+    postedMessages(vscodeApi).filter((m) => m.type === 'previewCaptured');
+  /** The answer posts once the image has read as a data URL, a task later. */
+  const answeredCaptures = async (vscodeApi: Parameters<typeof postedMessages>[0]) => {
+    await waitFor(() => captures(vscodeApi).length > 0);
+    return captures(vscodeApi);
+  };
   const isCaptureState = (m: WebviewToHostMessage) =>
     m.type === 'previewCaptureReady' ||
     m.type === 'previewCapturePending' ||
@@ -299,13 +360,15 @@ describe('capture state reporting', () => {
     const types = postedMessages(vscodeApi).map((m) => m.type);
 
     expect(types.indexOf('webviewReady')).toBeLessThan(types.indexOf('previewCaptureReady'));
-    expect(postedMessages(vscodeApi).filter(isCaptureState)).toEqual([{ type: 'previewCaptureReady' }]);
+    expect(postedSinceLastReady(vscodeApi).filter(isCaptureState)).toEqual([{ type: 'previewCaptureReady' }]);
   });
 
   it('posts pending after webviewReady while the shell has reported no other state', async () => {
     const { vscodeApi } = await mountFresh();
 
-    expect(postedMessages(vscodeApi).filter(isCaptureState)).toEqual([{ type: 'previewCapturePending' }]);
+    expect(postedSinceLastReady(vscodeApi).filter(isCaptureState)).toEqual([
+      { type: 'previewCapturePending' },
+    ]);
   });
 
   it('posts each later state with its reason', async () => {
@@ -325,7 +388,7 @@ describe('capture state reporting', () => {
 
     dispatch({ type: 'capturePreview', requestId: 'c1' });
 
-    expect(postedMessages(vscodeApi).filter((m) => m.type === 'previewCaptured')).toEqual([
+    expect(await answeredCaptures(vscodeApi)).toEqual([
       { type: 'previewCaptured', requestId: 'c1', dataUrl: 'data:image/png;base64,AA==' },
     ]);
   });
@@ -341,6 +404,25 @@ describe('capture state reporting', () => {
     ]);
   });
 
+  it('answers a capturePreview whose capture fails with the reason', async () => {
+    captured.mountCaptureState = {
+      status: 'ready',
+      capture: () => Promise.reject(new Error('expected the view to stay mounted until its capture')),
+    };
+    const { vscodeApi } = await mountFresh();
+
+    dispatch({ type: 'capturePreview', requestId: 'c6' });
+    await waitFor(() => postedMessages(vscodeApi).some((m) => m.type === 'previewCaptureError'));
+
+    expect(postedMessages(vscodeApi).filter((m) => m.type === 'previewCaptureError')).toEqual([
+      {
+        type: 'previewCaptureError',
+        requestId: 'c6',
+        error: 'The capture failed: expected the view to stay mounted until its capture',
+      },
+    ]);
+  });
+
   it('holds a capturePreview that arrives while pending, and answers it once the shell is ready', async () => {
     const { vscodeApi } = await mountFresh();
 
@@ -348,7 +430,7 @@ describe('capture state reporting', () => {
     expect(postedMessages(vscodeApi).filter((m) => m.type === 'previewCaptured')).toEqual([]);
     captured.shellProps?.onCaptureStateChange?.(READY);
 
-    expect(postedMessages(vscodeApi).filter((m) => m.type === 'previewCaptured')).toEqual([
+    expect(await answeredCaptures(vscodeApi)).toEqual([
       { type: 'previewCaptured', requestId: 'c3', dataUrl: 'data:image/png;base64,AA==' },
     ]);
   });
@@ -383,19 +465,8 @@ describe('capture state reporting', () => {
     dispatch({ type: 'loadTscn', content: 'the scene' });
     dispatch({ type: 'capturePreview', requestId: 'c5' });
 
-    expect(postedMessages(vscodeApi).filter((m) => m.type === 'previewCaptured')).toEqual([
+    expect(await answeredCaptures(vscodeApi)).toEqual([
       { type: 'previewCaptured', requestId: 'c5', dataUrl: 'data:image/png;base64,AA==' },
-    ]);
-  });
-
-  it('tells the host about a chunk that failed at both URLs, so the host loads a new document', async () => {
-    const { vscodeApi } = await mountFresh();
-    const { importChunk } = await import('./chunkImport');
-
-    await importChunk('./missing.mjs', import.meta.url).catch(() => {});
-
-    expect(postedMessages(vscodeApi).filter((m) => m.type === 'chunkLoadFailed')).toEqual([
-      { type: 'chunkLoadFailed', error: expect.stringContaining('missing.mjs?reload=1') },
     ]);
   });
 });

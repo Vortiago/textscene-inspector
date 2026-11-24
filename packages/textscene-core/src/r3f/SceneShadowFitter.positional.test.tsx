@@ -18,7 +18,7 @@ import { TscnSceneContents } from './TscnCanvas';
 import { EDITOR_CAMERA_FOV, editorCameraPosition } from './godotEditorCamera';
 import { HierarchyProvider } from './contexts/HierarchyContext';
 import { SelectionProvider } from './contexts/SelectionContext';
-import { ViewportModeProvider } from './contexts/ViewportModeContext';
+import { ViewShowProvider } from './viewShow/ViewShowContext';
 import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
 import { TscnParser } from '../parser/TscnParser';
 import { waitFor } from '@testing-library/react';
@@ -33,9 +33,9 @@ async function renderScene(sceneText: string): Promise<Renderer> {
   return ReactThreeTestRenderer.create(
     <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
       <SelectionProvider>
-        <ViewportModeProvider initialShowPreviewSun={false} initialShowPreviewEnvironment={false}>
+        <ViewShowProvider show={{ previewSun: false, previewEnvironment: false }}>
           <TscnSceneContents />
-        </ViewportModeProvider>
+        </ViewShowProvider>
       </SelectionProvider>
     </HierarchyProvider>
   );
@@ -52,7 +52,7 @@ function renderThrough(renderer: Renderer, camera: THREE.Camera): void {
 
 /** A SubViewport's world draw, fitting its lights in `shadowAtlas`. */
 function drawInViewport(shadowAtlas: ViewportShadowAtlas, draw: () => void): void {
-  drawWorld({ viewport: rootViewportDescription(null), shadowAtlas, hasCanvasTransform: false }, draw);
+  drawWorld({ viewport: rootViewportDescription(null), shadowAtlas, canvasView: null }, draw);
 }
 
 /** Godot's editor view of a scene: the fixed orbit round the origin. */

@@ -137,14 +137,15 @@ describe('<ViewportControlsHelp>', () => {
     expect(coarse).toMatch(/\.touchSummary\s*\{[^}]*display:\s*inline/);
   });
 
-  it('bounds the pill to the viewport, so a narrow one ellipsises the summary', () => {
-    expect(rule('.hint')).toMatch(/max-width:\s*100%/);
+  it('ends the pill before the bottom-centre band, so a narrow viewport ellipsises the summary', () => {
+    // The root is the container that 50cqw measures, and it spans the viewport.
+    expect(rule('.root')).toMatch(/container-type:\s*inline-size/);
+    expect(rule('.hint')).toMatch(/max-width:\s*calc\(50cqw - var\(--tsi-bottom-centre-width\) \/ 2/);
     expect(rule('.summary')).toMatch(/min-width:\s*0/);
   });
 
   it('sits clear of the toolbar overlay, which grows leftward and outranks it', () => {
-    // Bottom-left is the one free corner: a wrapped toolbar covers the top edge,
-    // and bottom-centre holds the 2D hint and the zoom HUD.
+    // A wrapped toolbar covers the top edge, and bottom-centre holds the 3D hint or the 2D zoom HUD.
     const root = rule('.root');
     expect(root).toContain('bottom:');
     expect(root).toContain('left:');

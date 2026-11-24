@@ -22,6 +22,8 @@ import type { LayoutDirectionEnv } from '../godot/scene/control.js';
 import { DEFAULT_CLEAR_COLOR } from '../godot/rendering/rendering.js';
 import { DEFAULT_PHYSICS_CLOCK, type PhysicsClock } from '../godot/scene/physicsTicks.js';
 import { unquoteLiteral } from './utils.js';
+import { ContentScaleAspect, ContentScaleMode, ContentScaleStretch } from '../godot/scene/window.js';
+import type { ContentScale } from '../nodes/windows/window/contentScale.js';
 import { colorOr } from '../utils/colorParser.js';
 import { perObject } from '../utils/perObject.js';
 import { enumOr, parseOptionalFloat, parseOptionalInt } from './valueParsers.js';
@@ -151,13 +153,53 @@ export interface ProjectViewportSize {
  * non-positive value takes the default: a zero-width viewport cannot be laid out.
  */
 export function projectViewportSize(settings: ProjectSettings | null): ProjectViewportSize {
-  const axis = (key: string, fallback: number): number => {
-    const value = parseOptionalInt(settings?.[key]);
-    return value === undefined || value <= 0 ? fallback : value;
-  };
   return {
-    width: axis('display/window/size/viewport_width', DEFAULT_VIEWPORT_WIDTH),
-    height: axis('display/window/size/viewport_height', DEFAULT_VIEWPORT_HEIGHT),
+    width: windowSizeOr(settings, 'viewport_width', DEFAULT_VIEWPORT_WIDTH),
+    height: windowSizeOr(settings, 'viewport_height', DEFAULT_VIEWPORT_HEIGHT),
+  };
+}
+
+/** A `display/window/size/<key>` pixel count above 0, else `fallback`. */
+function windowSizeOr(settings: ProjectSettings | null, key: string, fallback: number): number {
+  return positiveOr(parseOptionalInt(settings?.[`display/window/size/${key}`]), fallback);
+}
+
+function positiveOr(value: number | undefined, fallback: number): number {
+  return value === undefined || value <= 0 ? fallback : value;
+}
+
+/** Each axis its override above 0 (`main.cpp:2635-2644`), under every window mode (ADR-0087). */
+export function projectWindowSize(settings: ProjectSettings | null): ProjectViewportSize {
+  const viewport = projectViewportSize(settings);
+  return {
+    width: windowSizeOr(settings, 'window_width_override', viewport.width),
+    height: windowSizeOr(settings, 'window_height_override', viewport.height),
+  };
+}
+
+const CONTENT_SCALE_MODES = new Map<string, number>([
+  ['canvas_items', ContentScaleMode.CANVAS_ITEMS],
+  ['viewport', ContentScaleMode.VIEWPORT],
+]);
+
+const CONTENT_SCALE_ASPECTS = new Map<string, number>([
+  ['keep', ContentScaleAspect.KEEP],
+  ['keep_width', ContentScaleAspect.KEEP_WIDTH],
+  ['keep_height', ContentScaleAspect.KEEP_HEIGHT],
+  ['expand', ContentScaleAspect.EXPAND],
+]);
+
+/** `main.cpp:4528-4562`, defaults at `project_settings.cpp:1776-1779`, factor setter `window.cpp:1774`. */
+export function projectContentScale(settings: ProjectSettings | null): ContentScale {
+  const setting = (key: string) => settings?.[`display/window/stretch/${key}`];
+  const { width, height } = projectViewportSize(settings);
+  return {
+    mode: CONTENT_SCALE_MODES.get(setting('mode') ?? 'disabled') ?? ContentScaleMode.DISABLED,
+    aspect: CONTENT_SCALE_ASPECTS.get(setting('aspect') ?? 'keep') ?? ContentScaleAspect.IGNORE,
+    stretch:
+      setting('scale_mode') === 'integer' ? ContentScaleStretch.INTEGER : ContentScaleStretch.FRACTIONAL,
+    size: { x: width, y: height },
+    factor: positiveOr(parseOptionalFloat(setting('scale')), 1),
   };
 }
 
@@ -455,7 +497,7 @@ export function projectTracesHalfSizeReflections(settings: ProjectSettings | nul
  * `display/window/subwindows/embed_subwindows`, which `main/main.cpp` hands the root window: whether
  * it embeds its windows. It does by default (`project_settings.cpp:1756`).
  */
-function projectEmbedsSubwindows(settings: ProjectSettings | null): boolean {
+export function projectEmbedsSubwindows(settings: ProjectSettings | null): boolean {
   return boolSlotValue(settings?.['display/window/subwindows/embed_subwindows']) ?? true;
 }
 

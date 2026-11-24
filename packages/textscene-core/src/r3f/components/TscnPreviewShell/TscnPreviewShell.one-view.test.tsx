@@ -19,7 +19,7 @@ vi.mock('../../TscnCanvas', () => ({
   TscnSceneContents: () => null,
 }));
 
-import { TscnPreviewShell } from './TscnPreviewShell';
+import { TextShell } from './TscnPreviewShell.testkit';
 
 const SCENE = `[gd_scene format=3]
 
@@ -28,15 +28,15 @@ const SCENE = `[gd_scene format=3]
 
 const views = () => screen.queryAllByTestId('view');
 
-describe('<TscnPreviewShell> one view for every mode', () => {
+describe('<TextShell> one view for every mode', () => {
   it.each(['2D', '3D', 'in-game'] as const)('mounts one view in the %s mode', async (mode) => {
-    render(<TscnPreviewShell panelId={`one-${mode}`} content={SCENE} initialViewportMode={mode} />);
+    render(<TextShell panelId={`one-${mode}`} content={SCENE} initialViewportMode={mode} />);
     await screen.findAllByText('Root');
     expect(views().map((view) => view.dataset.mode)).toEqual([mode]);
   });
 
   it('draws the shell’s own scene, with no scene of its own', async () => {
-    render(<TscnPreviewShell panelId="one-scene" content={SCENE} initialViewportMode="2D" />);
+    render(<TextShell panelId="one-scene" content={SCENE} initialViewportMode="2D" />);
     await screen.findAllByText('Root');
     const [view] = views();
     expect([view?.dataset.ownScene, view?.dataset.shellScene]).toEqual(['false', 'true']);
@@ -44,7 +44,7 @@ describe('<TscnPreviewShell> one view for every mode', () => {
 
   it('parses the text once in the 2D mode', async () => {
     const parse = vi.spyOn(TscnParser.prototype, 'parse');
-    render(<TscnPreviewShell panelId="one-parse" content={SCENE} initialViewportMode="2D" />);
+    render(<TextShell panelId="one-parse" content={SCENE} initialViewportMode="2D" />);
     await screen.findAllByText('Root');
     expect(parse).toHaveBeenCalledTimes(1);
   });

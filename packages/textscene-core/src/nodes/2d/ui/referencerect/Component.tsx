@@ -6,7 +6,7 @@
 import { useMemo } from 'react';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { useShowGizmos } from '../../../../r3f/contexts/ViewportModeContext';
+import { useShowGizmos } from '../../../../r3f/viewShow/ViewShowContext';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 import { colorOr } from '../../../../utils/colorParser';

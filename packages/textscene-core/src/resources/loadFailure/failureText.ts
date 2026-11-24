@@ -1,5 +1,5 @@
 import type { ParsedScene } from '../../core/SceneGraph';
-import { extResourcePathIn } from './failingReads';
+import { extResourcePathIn } from './fileReads';
 import type { LoadFailureCause } from './loadOutcome';
 
 /** Godot's error line, less its number (resource_format_text.cpp:40, :152, :291). */

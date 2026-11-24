@@ -10,6 +10,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { TscnSceneProvider } from './TscnSceneProvider';
+import { openScene } from '../scene/openScene';
 import {
   useRegisterViewportRect,
   useViewportRect,
@@ -45,7 +46,7 @@ describe('the viewport rect provider in every host entry', () => {
     let register!: RegisterViewportRect;
     const provider: ResourceProvider = { loadResource: vi.fn(async () => null) };
     const { getByTestId } = render(
-      <TscnSceneProvider source={SCENE} provider={provider}>
+      <TscnSceneProvider scene={openScene({ source: SCENE, provider })}>
         <Publisher onReady={(fn) => (register = fn)} />
         <Reader path="Root/Booth/View" />
       </TscnSceneProvider>

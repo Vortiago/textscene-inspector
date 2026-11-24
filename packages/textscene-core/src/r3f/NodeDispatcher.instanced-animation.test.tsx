@@ -7,7 +7,6 @@ import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode, TscnScene, TscnInternalResource } from '../parser/types';
 import { NodeDispatcher } from './NodeDispatcher';
-import { useOptionalSelection, type SelectionContextValue } from './contexts/SelectionContext';
 import {
   AnimationTransportProvider,
   useAnimationTransport,
@@ -100,15 +99,13 @@ function makeCoinScene(): TscnScene {
 }
 
 let transport: AnimationTransport;
-let selection: SelectionContextValue | null;
 function Capture() {
   transport = useAnimationTransport();
-  selection = useOptionalSelection();
   return null;
 }
 
 async function setSelection(path: string | null) {
-  await ReactThreeTestRenderer.act(async () => selection?.setSelectedNodePath(path));
+  await ReactThreeTestRenderer.act(async () => transport.setActivePath(path));
 }
 
 describe('instanced AnimationPlayer — selection-driven tab via the collapsed path', () => {

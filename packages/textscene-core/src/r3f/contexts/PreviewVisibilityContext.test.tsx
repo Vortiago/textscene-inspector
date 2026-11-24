@@ -7,6 +7,8 @@ import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { textureWork } from '../../resources/textures/textureWork';
 import { PreviewVisibilityProvider, usePreviewFrameloop } from './PreviewVisibilityContext';
+import { ViewStatusProvider } from '../viewStatus/ViewStatusContext';
+import { createViewStatusStore } from '../viewStatus/viewStatus';
 
 /** Renders the hook under a host whose visibility `setVisible` changes. */
 function renderUnderHost(initiallyVisible: boolean) {
@@ -54,6 +56,60 @@ describe('usePreviewFrameloop', () => {
 
     await act(async () => endWork());
 
+    expect(result.current).toBe('never');
+  });
+
+  it('keeps the loop on while a hidden In-game view has yet to settle, and stops it once it has', async () => {
+    const status = createViewStatusStore();
+    status.attach({ revision: () => 0, subscribe: () => () => {} });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <ViewStatusProvider store={status}>
+        <PreviewVisibilityProvider isVisible={false}>{children}</PreviewVisibilityProvider>
+      </ViewStatusProvider>
+    );
+    const { result } = renderHook(() => usePreviewFrameloop(), { wrapper });
+    expect(result.current).toBe('always');
+
+    const frame = {
+      revision: 0,
+      isFullSize: true,
+      awaitedCamera: null,
+      work: { resources: 0, textures: 0, fonts: 0, modules: 0 },
+    };
+    const facts = { scriptedNodeCount: 0, hasCurrentCamera: false };
+    await act(async () => {
+      status.frameDrawn({ ...frame, facts });
+    });
+
+    expect(result.current).toBe('never');
+  });
+
+  it('keeps the loop on while a hidden In-game view owes a capture, and stops it once it answers', async () => {
+    const status = createViewStatusStore();
+    status.attach({ revision: () => 0, subscribe: () => () => {} });
+    status.frameDrawn({
+      revision: 0,
+      isFullSize: true,
+      awaitedCamera: null,
+      work: { resources: 0, textures: 0, fonts: 0, modules: 0 },
+      facts: { scriptedNodeCount: 0, hasCurrentCamera: false },
+    });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <ViewStatusProvider store={status}>
+        <PreviewVisibilityProvider isVisible={false}>{children}</PreviewVisibilityProvider>
+      </ViewStatusProvider>
+    );
+    const { result } = renderHook(() => usePreviewFrameloop(), { wrapper });
+    expect(result.current).toBe('never');
+
+    let image!: Promise<unknown>;
+    await act(async () => {
+      image = status.captureImage();
+    });
+    expect(result.current).toBe('always');
+
+    await act(async () => status.readWith(() => ({ width: 1, height: 1, data: new Uint8ClampedArray(4) })));
+    await image;
     expect(result.current).toBe('never');
   });
 });

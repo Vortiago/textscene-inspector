@@ -4,10 +4,12 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
+import { act } from '@react-three/test-renderer';
 import { degToRad } from '../godot/math/math';
 import {
   drag,
   keyDown,
+  keyDownOnPage,
   keyUp,
   mountEditorControls,
   pressKey,
@@ -16,6 +18,7 @@ import {
   viewDirection,
 } from './GodotEditorControls.testkit';
 import { holdsPointerLock } from './pointerLock';
+import { freelookControlOf } from './useFreelook';
 import { endFakePointerLock, installFakePointerLock } from './testing/fakePointerLock';
 
 /** `editors/3d/freelook/freelook_base_speed` (`editor_settings.cpp:961`). */
@@ -327,6 +330,16 @@ describe('toggled freelook', () => {
     expect(holdsPointerLock(element)).toBe(false);
   });
 
+  it('does not start from a Shift+F that reaches the page outside the view', async () => {
+    const { element } = await mountFreelook();
+
+    await act(async () => {
+      keyDownOnPage('KeyF', { key: 'F', shiftKey: true });
+    });
+
+    expect(holdsPointerLock(element)).toBe(false);
+  });
+
   it('stays off, and does not fly, when the browser refuses the lock', async () => {
     const mounted = await mountEditorControls();
 
@@ -350,12 +363,11 @@ describe('toggled freelook', () => {
   });
 
   it('takes focus from the control that started it, so Space cannot press that control', async () => {
-    const { element } = await mountFreelook();
+    const { element, controls, get } = await mountFreelook();
     const button = addToPage(document.createElement('button'));
-    addToPage(element);
     button.focus();
 
-    await toggleFreelook();
+    await act(async () => freelookControlOf(controls, get).toggle());
 
     expect(document.activeElement).toBe(element);
   });

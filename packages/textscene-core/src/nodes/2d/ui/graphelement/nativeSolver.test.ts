@@ -60,7 +60,7 @@ describe('graphElementMinimumSize', () => {
   });
 
   it('counts a HIDDEN child — SortableVisibilityMode::IGNORE (graph_element.cpp:62)', () => {
-    const hiddenChild: SolveNode = { ...leaf('h', { customMinimumSize: { x: 100, y: 5 } }), hidden: true };
+    const hiddenChild: SolveNode = leaf('h', { customMinimumSize: { x: 100, y: 5 }, visible: false });
     const n = {
       ...solveNode(),
       path: 'G',
@@ -88,7 +88,7 @@ describe('graphElementLayout', () => {
   });
 
   it('skips an invisible child — default SortableVisibilityMode::VISIBLE_IN_TREE (graph_element.cpp:51)', () => {
-    const hiddenChild: SolveNode = { ...leaf('h', {}), hidden: true };
+    const hiddenChild: SolveNode = leaf('h', { visible: false });
     const contentRect: Rect2 = { x: 0, y: 0, w: 200, h: 100 };
     const n = {
       ...solveNode(),
