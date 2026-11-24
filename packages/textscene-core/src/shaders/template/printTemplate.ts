@@ -1,4 +1,4 @@
-import { printExpression } from '../language/printer.js';
+import { indentedLines, printExpression } from '../language/printer.js';
 import type {
   Argument,
   BlockNode,
@@ -115,15 +115,9 @@ function printFunction(definition: FunctionNode): string {
 }
 
 function printBlock(block: BlockNode, indent: string): string {
-  return `{\n${printedLines(block, indent)
+  return `{\n${indentedLines(block, indent, printStatement)
     .map((line) => `${line}\n`)
     .join('')}${indent}}`;
-}
-
-/** Each statement of `block` on a line of its own, one step in from `indent`. */
-function printedLines(block: BlockNode, indent: string): string[] {
-  const inner = `${indent}\t`;
-  return block.statements.map((statement) => `${inner}${printStatement(statement, inner)}`);
 }
 
 function printStatement(statement: Statement, indent: string): string {
@@ -188,7 +182,7 @@ function printFlowBody(flow: ControlFlowNode, indent: string): string {
 }
 
 function printLabelBody(body: BlockNode, indent: string): string {
-  return printedLines(body, indent)
+  return indentedLines(body, indent, printStatement)
     .map((line) => `\n${line}`)
     .join('');
 }

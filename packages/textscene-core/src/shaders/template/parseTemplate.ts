@@ -786,17 +786,22 @@ class TemplateParser implements TemplateScope {
     return flow('FLOW_OP_SWITCH', [value], [block], position, attributes);
   }
 
-  /** `case n:` or `default:` with its statements up to the next label, which an empty one falls into. */
+  /** `case n:` or `default:` up to the next label, in a scope of its own as the lowering gives it a block. */
   private label(selectorType: string): ControlFlowNode {
     const position = this.tokens.position();
     const word = this.tokens.peekText();
-    if (!LABEL_WORDS.has(word)) this.tokens.fail("expected 'case' or 'default' in a switch");
+    if (!LABEL_WORDS.has(word)) this.tokens.fail(`expected 'case' or 'default' in a switch, found '${word}'`);
     this.tokens.next();
     const isCase = word === 'case';
     const expressions = isCase ? [this.caseValue(selectorType)] : [];
     this.tokens.expect(':');
-    const statements: Statement[] = [];
-    while (!LABEL_ENDS.has(this.tokens.peekText())) statements.push(this.statement());
+    const statements = this.within(() => {
+      const read: Statement[] = [];
+      while (!LABEL_ENDS.has(this.tokens.peekText())) read.push(this.statement());
+      return read;
+    });
+    if (statements.length === 0 && this.tokens.peekText() === '}')
+      this.tokens.fail(`expected a statement after the last label '${word}', found '}'`);
     const body: BlockNode = { kind: 'block', statements, position };
     return flow(isCase ? 'FLOW_OP_CASE' : 'FLOW_OP_DEFAULT', expressions, [body], position, []);
   }

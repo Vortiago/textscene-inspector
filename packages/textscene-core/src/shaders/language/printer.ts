@@ -120,9 +120,18 @@ function printArgument(argument: Argument): string {
 
 /** A block in braces, each statement on its own line one tab in from `indent`. */
 function printBlock(block: BlockNode, indent: string): string {
-  const inner = `${indent}\t`;
-  const lines = block.statements.map((statement) => `${inner}${printStatement(statement, inner)}\n`);
+  const lines = indentedLines(block, indent, printStatement).map((line) => `${line}\n`);
   return `{\n${lines.join('')}${indent}}`;
+}
+
+/** Each statement of `block` as `print` writes it, on a line of its own one tab in from `indent`. */
+export function indentedLines(
+  block: BlockNode,
+  indent: string,
+  print: (statement: Statement, indent: string) => string
+): string[] {
+  const inner = `${indent}\t`;
+  return block.statements.map((statement) => `${inner}${print(statement, inner)}`);
 }
 
 /** Written without braces, the one statement parses back to the same block. */
@@ -210,10 +219,7 @@ function printLabel(label: ControlFlowNode, indent: string): string {
     label.flow === 'FLOW_OP_CASE'
       ? `case ${printCaseLabel(label.expressions[0] as ConstantNode)}:`
       : 'default:';
-  const inner = `${indent}\t`;
-  const body = label.blocks[0]!.statements.map(
-    (statement) => `${inner}${printStatement(statement, inner)}\n`
-  );
+  const body = indentedLines(label.blocks[0]!, indent, printStatement).map((line) => `${line}\n`);
   return `${indent}${head}\n${body.join('')}`;
 }
 

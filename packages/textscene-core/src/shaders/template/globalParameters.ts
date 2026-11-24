@@ -136,8 +136,6 @@ function mapStatement(statement: Statement, hidden: Set<string>, map: ScopedMap)
 function sharedScope(flow: ControlFlowNode, hidden: Set<string>): Set<string> | undefined {
   // A `for` initialiser's names stay in scope in its later blocks: the condition, the step and the body.
   if (flow.flow === 'FLOW_OP_FOR') return new Set(hidden);
-  // A label's statements stand in its switch's scope, so a later label sees an earlier one's names.
-  if (flow.flow === 'FLOW_OP_CASE' || flow.flow === 'FLOW_OP_DEFAULT') return hidden;
   return undefined;
 }
 

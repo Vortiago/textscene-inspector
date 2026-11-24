@@ -138,6 +138,24 @@ describe('parseTemplateStage', () => {
     expect(inFunction('uint a = 0u;\nswitch (a) {\ncase -1: break;\n}')).toContain('case 4294967295u:');
   });
 
+  it("refuses a read of an earlier label's local, as each label has a scope of its own", () => {
+    expect(() =>
+      inFunction('int a = 0;\nswitch (a) {\ncase 0: float x = 1.0;\ncase 1: x = 2.0; break;\n}')
+    ).toThrow('undeclared identifier: x');
+  });
+
+  it('refuses a statement before the first label of a switch', () => {
+    expect(() => inFunction('int a = 0;\nswitch (a) {\na = 1;\n}')).toThrow(
+      "expected 'case' or 'default' in a switch, found 'a'"
+    );
+  });
+
+  it('refuses a last label with no statements, as glslang does', () => {
+    expect(() => inFunction('int a = 0;\nswitch (a) {\ncase 0: break;\ndefault:\n}')).toThrow(
+      "expected a statement after the last label 'default', found '}'"
+    );
+  });
+
   it('refuses a switch of a float', () => {
     expect(() => inFunction('float f = 0.0;\nswitch (f) {\ncase 1: break;\n}')).toThrow(
       'expected an int or uint switch value, found float'
