@@ -1,0 +1,5 @@
+[gd_scene format=3]
+
+[node name="PartRoot" type="Node3D"]
+
+[node name="Inner" type="Node3D" parent="."]
