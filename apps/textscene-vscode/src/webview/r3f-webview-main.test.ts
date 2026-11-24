@@ -9,7 +9,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createElement, useEffect } from 'react';
 import type { HostToWebviewMessage, WebviewToHostMessage } from '../protocol';
-import type { PreviewCaptureState, TscnNode } from '@textscene/core';
+import type { PreviewCaptureState } from '@textscene/core';
 import type { ResourceProvider } from '@textscene/renderer';
 
 /** What the app does with a scene: it sets the text, and disposes it when the panel goes. */
@@ -25,7 +25,7 @@ interface CapturedShellProps {
   panelId?: string;
   scene?: FakeScene;
   initialViewportMode?: '2D' | '3D' | undefined;
-  onNodeReveal?: (path: string, node: TscnNode) => void;
+  onNodeReveal?: (path: string, name: string) => void;
   onCaptureStateChange?: (state: PreviewCaptureState) => void;
   isVisible?: boolean;
 }
@@ -272,23 +272,10 @@ describe('jumpToNode forwarding', () => {
   it('posts a jumpToNode message with the node name and tree path on reveal', async () => {
     const { vscodeApi } = await mountFresh();
 
-    const fakeNode = { name: 'Leaf', parent: 'A' } as unknown as TscnNode;
-    captured.shellProps?.onNodeReveal?.('Root/A/Leaf', fakeNode);
+    captured.shellProps?.onNodeReveal?.('Root/A/Leaf', 'Leaf');
 
     const jumpMessages = postedMessages(vscodeApi).filter((m) => m.type === 'jumpToNode');
     expect(jumpMessages).toEqual([{ type: 'jumpToNode', nodeName: 'Leaf', path: 'Root/A/Leaf' }]);
-  });
-});
-
-describe('jumpToNode forwarding of a re-rooted node', () => {
-  it('posts the name the heading wrote, not the rename the tree carries', async () => {
-    const { vscodeApi } = await mountFresh();
-
-    const reRooted = { name: 'Gone#Leaf', authoredName: 'Leaf', parent: 'Gone' } as unknown as TscnNode;
-    captured.shellProps?.onNodeReveal?.('Root/Gone#Leaf', reRooted);
-
-    const jumpMessages = postedMessages(vscodeApi).filter((m) => m.type === 'jumpToNode');
-    expect(jumpMessages).toEqual([{ type: 'jumpToNode', nodeName: 'Leaf', path: 'Root/Gone#Leaf' }]);
   });
 });
 
