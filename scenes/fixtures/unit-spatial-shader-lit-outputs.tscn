@@ -1,7 +1,8 @@
 [gd_scene format=3 uid="uid://unit_spatial_shader_lit_outputs"]
 
-; The one variable: unshaded spatial shaders that write the outputs only the light reads. Each shader
-; shows the default it reads before its writes. Godot draws albedo and alpha only, so no write shows.
+; The one variable: unshaded spatial shaders that write the outputs only the light reads. Godot draws
+; albedo and alpha only, so no write shows. The shaders read six defaults. The shader package's
+; end-to-end scenes read each of the 18.
 ; No other golden writes these outputs, so only this one moves when the unshaded template reads them.
 
 [sub_resource type="Shader" id="Shader_emission"]

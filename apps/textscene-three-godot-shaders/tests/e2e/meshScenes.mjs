@@ -392,7 +392,7 @@ const FRAGMENT_SCENES = [
   ]),
 ];
 
-// Unshaded draws only albedo and alpha (`scene_forward_clustered.glsl:2980`): a write shows by its read.
+/** Unshaded draws only albedo and alpha (`scene_forward_clustered.glsl:2980`): a probe reads a write back. */
 const LIT_OUTPUTS = [
   ['NORMAL_MAP', 'vec3(0.1, 0.9, 0.4)', 'NORMAL_MAP'],
   ['NORMAL_MAP_DEPTH', '0.2', 'vec3(NORMAL_MAP_DEPTH * 0.5)'],
@@ -417,6 +417,9 @@ const LIT_OUTPUTS = [
   ['AO_LIGHT_AFFECT', '0.9'],
   ['EMISSION', 'vec3(1.0, 0.0, 1.0)', 'EMISSION'],
 ];
+
+/** The fragment outputs only the lit template reads, which the guide lists in one section. */
+export const LIT_OUTPUT_BUILT_INS = LIT_OUTPUTS.map(([builtIn]) => builtIn);
 
 /** A scene that shows an output's default on one half and the value written on the other. */
 const LIT_OUTPUT_SCENES = LIT_OUTPUTS.map(([builtIn, written, shown = `vec3(${builtIn})`]) =>

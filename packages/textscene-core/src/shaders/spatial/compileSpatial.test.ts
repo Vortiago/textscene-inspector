@@ -13,6 +13,14 @@ describe('compileSpatial', () => {
     expect('spatial' in compileSpatial(code, {})).toBe(true);
   });
 
+  it.each(['NORMAL_MAP = vec3(0.5);', 'BENT_NORMAL_MAP = vec3(0.5);', 'ANISOTROPY = 1.0;'])(
+    'compiles an unshaded shader whose %s runs the normal and tangent code after fragment()',
+    (write) => {
+      const code = `shader_type spatial;\nrender_mode unshaded;\nvoid fragment() { ${write} }\n`;
+      expect('spatial' in compileSpatial(code, {})).toBe(true);
+    }
+  );
+
   it('refuses a lit shader with the owner of the light loop, as its draw needs it', () => {
     const compile = compileSpatial('shader_type spatial;\nvoid fragment() { ALBEDO = vec3(1.0); }\n', {});
     const litOwner = instruction('spatial.light.DIFFUSE_LIGHT')?.owner;
