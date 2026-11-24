@@ -839,7 +839,7 @@ const SPATIAL_CHAPTER = {
           .map((name) => `spatial.vertex.${name}`)
           .includes(row.id),
       what: "`VERTEX` is the vertex in model space, which the template turns to view space after `vertex()` returns. A write to `POSITION` replaces the template's clip position. `COLOR` is the vertex colour that `fragment()` reads. `VERTEX_ID` is the vertex's index in its own surface, which Godot draws from its own vertex array, and `INSTANCE_ID` is GL's instance index. A mesh outside a MultiMesh has an `INSTANCE_CUSTOM` of zero.",
-      tsl: "the template's locals `vertex`, `position`, `color_interp` and `instance_custom`, the attribute `vertex_id_attrib` that `withGodotAttributes` writes, and an instance index of 0",
+      tsl: "the template's locals `vertex`, `position`, `color_interp` and `instance_custom`, the attribute `vertex_id_attrib` that `withGodotAttributes` writes, and an instance index of 0. A geometry that merges several surfaces names the first vertex of each with `withSurfaceStarts(geometry, starts)` before `withGodotAttributes`, so `VERTEX_ID` counts from 0 in each surface. With no starts, it counts every vertex of the geometry",
     },
     {
       heading: 'Custom arrays, bones and `Z_CLIP_SCALE` in `vertex()`',

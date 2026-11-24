@@ -15,7 +15,7 @@ import {
 } from './godotSurface';
 import { headlightsSurface, wallQuadSurfaces } from '../testing/arrayMeshSurfaces';
 import { UV2_ATTRIBUTE } from './uv2';
-import { VERTEX_ID_ATTRIBUTE } from '../../shaders/spatial/meshAttributes';
+import { VERTEX_ID_ATTRIBUTE, withGodotAttributes } from '../../shaders/spatial/meshAttributes';
 
 const WALL_TRES = `[gd_resource type="ArrayMesh" format=4 uid="uid://bett1yahcwe25"]
 
@@ -249,7 +249,9 @@ describe('godotSurfacesGeometry of several surfaces', () => {
   });
 
   // Godot gives each surface its own vertex array, so `gl_VertexIndex` counts from 0 in each.
-  const vertexIds = (geometry: THREE.BufferGeometry) => [...geometry.getAttribute(VERTEX_ID_ATTRIBUTE).array];
+  const vertexIds = (geometry: THREE.BufferGeometry) => [
+    ...withGodotAttributes(geometry, 'points').getAttribute(VERTEX_ID_ATTRIBUTE).array,
+  ];
 
   it("counts each vertex from 0 in its own surface's part of the merged arrays", () => {
     const geometry = godotSurfacesGeometry([surfaceOf(3), surfaceOf(2), surfaceOf(1)]);

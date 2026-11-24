@@ -25,6 +25,7 @@ export {
   transpileSky,
   transpileSpatial,
   withGodotAttributes,
+  withSurfaceStarts,
   writeSkyBindings,
   writeSpatialBindings,
 } from '@textscene/core/shaders';

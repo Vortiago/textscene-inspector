@@ -20,6 +20,13 @@ const LISTS = { triangles: { corners: 3, name: 'triangle' }, lines: { corners: 2
 /** The attribute that holds each vertex's index in its own surface, which `gl_VertexIndex` reads. */
 export const VERTEX_ID_ATTRIBUTE = 'vertex_id_attrib';
 
+/** The `userData` key of the first vertex of each surface of a merged mesh, which `clone` carries. */
+const SURFACE_STARTS = 'godotSurfaceStarts';
+
+/** The surface starts and vertex count each id attribute counts, so a new layout counts again. */
+// eslint-disable-next-line no-restricted-syntax -- it records a layout to compare, and builds nothing
+const vertexIdsBuiltFrom = new WeakMap<THREE.BufferAttribute | THREE.InterleavedBufferAttribute, string>();
+
 /** `geometry` as an uncompressed Godot surface (`rendering_server.cpp:425-700`), first corners as Godot's. */
 export function withGodotAttributes(
   geometry: THREE.BufferGeometry,
@@ -27,8 +34,7 @@ export function withGodotAttributes(
 ): THREE.BufferGeometry {
   const position = geometry.getAttribute('position');
   if (!position) throw new Error('expected a geometry with a position attribute, found none');
-  if (geometry.getAttribute(VERTEX_ID_ATTRIBUTE)?.count !== position.count)
-    withSurfaceVertexIds(geometry, [0]);
+  withVertexIds(geometry, position.count);
   if (primitive !== 'points' && !geometry.userData[FIRST_CORNER_LAST])
     withFirstCornerLast(geometry, position.count, primitive);
   geometry.setAttribute(VERTEX_ANGLE_ATTRIBUTE, position);
@@ -58,19 +64,33 @@ export function withGodotAttributes(
 }
 
 /**
- * Each vertex's index in its surface, the surfaces from `surfaceStarts`, as Godot gives each its own array.
+ * `geometry` as a merged mesh whose surfaces start at the vertices `surfaceStarts`: VERTEX_ID counts in each.
  *
- * @canonical The VERTEX_ID of a merged mesh's surfaces
+ * @canonical The surfaces of a merged mesh, which VERTEX_ID counts in
  */
-export function withSurfaceVertexIds(geometry: THREE.BufferGeometry, surfaceStarts: readonly number[]): void {
-  const vertexCount = geometry.getAttribute('position').count;
+export function withSurfaceStarts(
+  geometry: THREE.BufferGeometry,
+  surfaceStarts: readonly number[]
+): THREE.BufferGeometry {
+  geometry.userData[SURFACE_STARTS] = [...surfaceStarts];
+  return geometry;
+}
+
+/** Each vertex's index in its surface, as Godot gives each surface its own array. */
+function withVertexIds(geometry: THREE.BufferGeometry, vertexCount: number): void {
+  const surfaceStarts = (geometry.userData[SURFACE_STARTS] as readonly number[] | undefined) ?? [0];
+  const layout = `${vertexCount}:${surfaceStarts.join(',')}`;
+  const built = geometry.getAttribute(VERTEX_ID_ATTRIBUTE);
+  if (built && vertexIdsBuiltFrom.get(built) === layout) return;
   // A float holds every vertex index below 2^24 exactly.
   const ids = new Float32Array(vertexCount);
   surfaceStarts.forEach((start, surface) => {
     const end = surfaceStarts[surface + 1] ?? vertexCount;
     for (let vertex = start; vertex < end; vertex++) ids[vertex] = vertex - start;
   });
-  geometry.setAttribute(VERTEX_ID_ATTRIBUTE, new THREE.BufferAttribute(ids, 1));
+  const attribute = new THREE.BufferAttribute(ids, 1);
+  vertexIdsBuiltFrom.set(attribute, layout);
+  geometry.setAttribute(VERTEX_ID_ATTRIBUTE, attribute);
 }
 
 /** The value of each array a surface lacks: Godot's default vertex buffers (`mesh_storage.cpp:61-157`). */

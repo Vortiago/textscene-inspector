@@ -138,11 +138,6 @@ export function transpileParsedSpatial(
   };
 }
 
-/** Godot's `gl_VertexIndex`, which counts in the surface: the merged mesh's index counts across surfaces. */
-function vertexIndexOf(): Node {
-  return int(attribute(VERTEX_ID_ATTRIBUTE, 'float')) as unknown as Node;
-}
-
 function instanceIndexOf(pointDraw: SpatialPipeline['pointDraw']): Node {
   return (pointDraw === 'emulated' ? int(0) : int(instanceIndex)) as unknown as Node;
 }
@@ -160,7 +155,8 @@ function stageEmitter(
     const vertexInputs = new Map([
       ...parameterValues,
       ...vertexAttributes(vertexStage),
-      ['gl_VertexIndex', vertexIndexOf()],
+      // Godot's `gl_VertexIndex` counts in the surface, where a merged mesh's index counts across surfaces.
+      ['gl_VertexIndex', int(attribute(VERTEX_ID_ATTRIBUTE, 'float')) as unknown as Node],
       ['gl_InstanceIndex', instanceIndexOf(pipeline.pointDraw)],
     ]);
     const vulkanClip = varyingProperty('vec4', 'godot_clip_position') as unknown as Vec4;

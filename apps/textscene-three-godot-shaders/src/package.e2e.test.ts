@@ -40,6 +40,7 @@ const PUBLIC_VALUE_EXPORTS = [
   'transpileSky',
   'transpileSpatial',
   'withGodotAttributes',
+  'withSurfaceStarts',
   'writeSkyBindings',
   'writeSpatialBindings',
 ];
