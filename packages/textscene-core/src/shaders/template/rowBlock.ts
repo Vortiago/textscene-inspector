@@ -1,6 +1,6 @@
-import * as THREE from 'three';
-import { add, bitAnd, int, ivec2, mul, nodeObject, shiftRight } from 'three/tsl';
-import { NodeUpdateType, TextureNode, type Node, type NodeFrame } from 'three/webgpu';
+import type * as THREE from 'three';
+import { add, bitAnd, int, mul, shiftRight } from 'three/tsl';
+import type { Node } from 'three/webgpu';
 import { intNode, swizzles, tsl } from '../language/compositeParts.js';
 import { CONSTRUCTORS, floatNode } from '../language/emitConstant.js';
 import { element } from '../language/emitOperation.js';
@@ -10,12 +10,7 @@ import { vectorType, type ScalarKind } from '../language/types.js';
 import { LANE_OF_BITS } from '../uniforms/uniformNodes.js';
 import { blockLayout, columnStride, type BlockPacking, type PlacedMember } from './blockLayout.js';
 import { glslShapeOf } from './glslTypes.js';
-
-/** The texels of one row. WebGL 2 promises 2048 texels a side, so a row stays inside it. */
-const ROW_TEXELS = 1024;
-
-/** A texel holds 16 bytes: four 32-bit words. */
-const TEXEL_WORDS = 4;
+import { ROW_TEXELS, RowStore, TEXEL_WORDS, type RowRegion } from './rowStore.js';
 
 /** A word: `4 * texels + words` while each step is whole texels, so one texel takes one fetch. */
 type Index = { readonly texels?: Node; readonly words: number } | { readonly dynamicWords: Node };
@@ -26,80 +21,39 @@ type Element = Node | number;
 /** A member of a block, which may be the array of no size that ends a `buffer` block. */
 export type RowMember = StructMember & { readonly isRuntimeSized?: boolean };
 
-/** The write before a draw that every fetch of one block shares. Set only by `RowTexture.writeEachDraw`. */
-interface DrawWrite {
-  write?: (frame: NodeFrame) => void;
-}
-
-/** Each fetch is a clone, which keeps the class and the shared write. */
-class RowsNode extends TextureNode {
-  override updateType = NodeUpdateType.OBJECT;
-  drawWrite: DrawWrite = {};
-
-  override update(frame: NodeFrame): undefined {
-    this.drawWrite.write?.(frame);
-    return undefined;
-  }
-
-  override clone(): this {
-    const node = super.clone();
-    node.drawWrite = this.drawWrite;
-    return node;
-  }
-}
-
-/** A storage buffer block as an `RGBA32UI` texture, read at its packing's offsets: WebGL 2 has no buffers. */
-export class RowTexture {
-  readonly texture: THREE.DataTexture;
+/** A storage buffer block as a region of a `RowStore`, read at its offsets: WebGL 2 has no buffers. */
+export class RowBlock {
   /** The block's instance as the stage reads it: each member by name. */
   readonly value: StructValue;
-  private readonly node: RowsNode;
+  /** Written only by `region`, at the block's first read or write: a block no stage reads takes no rows. */
+  private placed: RowRegion | undefined;
 
   constructor(
     members: readonly RowMember[],
     private readonly packing: BlockPacking,
-    private readonly structOf: (type: string) => StructNode | undefined
+    private readonly structOf: (type: string) => StructNode | undefined,
+    private readonly store = new RowStore()
   ) {
-    this.texture = new THREE.DataTexture(
-      new Uint32Array(ROW_TEXELS * TEXEL_WORDS),
-      ROW_TEXELS,
-      1,
-      THREE.RGBAIntegerFormat,
-      THREE.UnsignedIntType
-    );
-    this.texture.internalFormat = 'RGBA32UI';
-    // three binds a float texture for one never uploaded, and an integer sampler of it fails the draw.
-    this.texture.needsUpdate = true;
-    this.node = nodeObject(new RowsNode(this.texture)) as unknown as RowsNode;
     this.value = this.struct(members, { words: 0 });
   }
 
-  /** Writes the block's words from byte 0, and grows the texture to hold them. */
-  write(words: Uint32Array): void {
-    const rows = Math.max(1, Math.ceil(words.length / (ROW_TEXELS * TEXEL_WORDS)));
-    const image = this.texture.image as { data: Uint32Array; height: number };
-    if (image.height === rows) image.data.fill(0, words.length).set(words);
-    else {
-      // three allocates a texture's storage once, so a new height takes a new texture.
-      this.texture.dispose();
-      const data = new Uint32Array(rows * ROW_TEXELS * TEXEL_WORDS);
-      data.set(words);
-      this.texture.image = { data, width: ROW_TEXELS, height: rows } as never;
-    }
-    this.texture.needsUpdate = true;
+  /** The texture of the store, which every block of the program shares. */
+  get texture(): THREE.DataTexture {
+    return this.store.texture;
   }
 
-  /** Writes each drawn object's words: the node handler owns onBeforeRender (`WebGLNodesHandler.js:455`). */
+  private get region(): RowRegion {
+    return (this.placed ??= this.store.region());
+  }
+
+  /** Writes the block's words from the first word of its region. */
+  write(words: Uint32Array): void {
+    this.store.write(this.region, words);
+  }
+
+  /** Writes each drawn object's words before its draw. */
   writeEachDraw(wordsOf: (object: THREE.Object3D) => Uint32Array): void {
-    let writtenFor: number | undefined;
-    this.node.drawWrite.write = (frame) => {
-      if (frame.renderId === writtenFor) return;
-      // The handler counts one render for each draw of a node material (`WebGLNodesHandler.js:598`).
-      const followsOwnDraw = frame.renderId === (writtenFor ?? Number.NaN) + 1;
-      writtenFor = frame.renderId;
-      this.write(wordsOf(frame.object!));
-      if (followsOwnDraw) uploadBetweenDraws(frame.renderer as unknown as THREE.WebGLRenderer, this.texture);
-    };
+    this.store.writeEachDraw(this.region, wordsOf);
   }
 
   private struct(members: readonly RowMember[], word: Index): StructValue {
@@ -169,36 +123,8 @@ export class RowTexture {
   }
 
   private fetch(x: Node, y: Node): Node {
-    return this.node.load(tsl(ivec2)(x, y) as never).level(intNode(0) as never) as unknown as Node;
+    return this.store.fetch(this.region, x, y);
   }
-}
-
-/** The unpack state of a plain row upload, which three's last upload may have left otherwise. */
-const UNPACK_PLAIN = [
-  ['UNPACK_FLIP_Y_WEBGL', 0],
-  ['UNPACK_PREMULTIPLY_ALPHA_WEBGL', 0],
-  ['UNPACK_ALIGNMENT', 4],
-  ['UNPACK_ROW_LENGTH', 0],
-  ['UNPACK_SKIP_PIXELS', 0],
-  ['UNPACK_SKIP_ROWS', 0],
-] as const;
-
-/** three uploads textures only after a draw of another material (`WebGLRenderer.js:2760`): this uploads. */
-function uploadBetweenDraws(renderer: THREE.WebGLRenderer, texture: THREE.DataTexture): void {
-  const properties = renderer.properties.get(texture) as {
-    __webglTexture?: WebGLTexture;
-    __version?: number;
-  };
-  // Not uploaded by this renderer yet: three allocates and uploads it as it binds it for this draw.
-  if (!properties.__webglTexture || properties.__version === undefined) return;
-  const gl = renderer.getContext() as WebGL2RenderingContext;
-  const { data, width, height } = texture.image as { data: Uint32Array; width: number; height: number };
-  const bound = gl.getParameter(gl.TEXTURE_BINDING_2D) as WebGLTexture | null;
-  gl.bindTexture(gl.TEXTURE_2D, properties.__webglTexture);
-  for (const [name, value] of UNPACK_PLAIN) renderer.state.pixelStorei(gl[name], value);
-  gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, gl.RGBA_INTEGER, gl.UNSIGNED_INT, data);
-  gl.bindTexture(gl.TEXTURE_2D, bound);
-  properties.__version = texture.version;
 }
 
 /** `base + words`. */
@@ -237,7 +163,7 @@ function oneTexel(word: { readonly texels?: Node; readonly words: number }, lane
   const lane = word.words % TEXEL_WORDS;
   if (lane + lanes > TEXEL_WORDS) return undefined;
   let fetched: Node | undefined;
-  return { lane, fetched: (rows: RowTexture) => (fetched ??= rows.texel(texelOf(word))) };
+  return { lane, fetched: (rows: RowBlock) => (fetched ??= rows.texel(texelOf(word))) };
 }
 
 /** A non-square matrix as `withSquareMatrices` holds it: the square of its larger side, zero outside it. */

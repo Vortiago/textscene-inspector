@@ -15,7 +15,9 @@ import {
   variablesOf,
 } from './emitValue.js';
 import type { CalledFunctions, CallResult } from './emitCall.js';
+import type { Lanes } from './glslangCalls.js';
 import type { GlslangFolding } from './glslangFolding.js';
+import { GuardFolding } from './guardFolding.js';
 import { isAssignOperator } from './operators.js';
 import { STEPS, writtenTargets } from './assignment.js';
 import { arraySizeOf, isCall } from './treeWalk.js';
@@ -48,7 +50,10 @@ export class ExpressionEmitter {
   }
 
   value(expression: Expression): Value {
-    const folded = this.folding.lanesOf(expression);
+    // Only a guard's shape is folded here, so a plain operator costs no second walk of its operands.
+    const folded =
+      this.folding.lanesOf(expression) ??
+      (isGuardShape(expression) ? this.guardLanes(expression) : undefined);
     if (folded) return constantNode(expression.type, folded);
     switch (expression.kind) {
       case 'constant':
@@ -86,6 +91,16 @@ export class ExpressionEmitter {
       case 'operator':
         return this.operator(expression);
     }
+  }
+
+  /** A guard's value where it rests on literals, as `bool(implementation_data.flags & 1u)`, or nothing. */
+  guardLanes(expression: Expression): Lanes | undefined {
+    const guards = new GuardFolding(
+      this.folding,
+      (name) => this.scope.lookup(name),
+      (name) => this.context.functions.constantResult(name)
+    );
+    return guards.lanesOf(expression);
   }
 
   private arrayElement(arrayExpression: Expression, index: Expression): Value {
@@ -168,7 +183,10 @@ export class ExpressionEmitter {
   }
 
   /** `c ? a : b`: neither side writes, so both run and `select` picks one. */
+  /** `a ? b : c`. A condition that folds emits only the operand it takes, so WebGL counts no other. */
   private selected({ operands }: OperatorNode): Node {
+    const guard = this.guardLanes(operands[0]!);
+    if (guard !== undefined) return this.node(operands[guard[0] ? 1 : 2]!);
     const [condition, then, otherwise] = operands.map((operand) => this.node(operand)) as [Node, Node, Node];
     return choose(condition, then, otherwise);
   }
@@ -211,3 +229,10 @@ const choose = (test: Node, onTrue: Node, onFalse: Node) =>
 
 const swizzle = (owner: Node, lanes: readonly number[]) =>
   (owner as unknown as Record<string, Node>)[lanes.map((lane) => LANE_LETTERS[lane]).join('')]!;
+
+/** An `&&`, an `||` or a call of no arguments: the shapes of Godot's guards on specialisation constants. */
+function isGuardShape(expression: Expression): boolean {
+  if (expression.kind !== 'operator') return false;
+  if (expression.op === 'OP_AND' || expression.op === 'OP_OR') return true;
+  return isCall(expression) && expression.row.id === 'OP_CALL' && expression.operands.length === 0;
+}

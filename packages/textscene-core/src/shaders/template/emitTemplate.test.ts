@@ -59,6 +59,93 @@ describe('emitTemplateStage', () => {
     expect(fragmentOf('const float HALF = 1.0 / 2.0;', 'color = vec4(HALF);')).toMatch(/vec4\(\s*0\.5\s*\)/);
   });
 
+  it("draws a uint switch's int labels as uint comparisons, as glslang converts them", () => {
+    const block = 'layout(set = 0, binding = 0, std140) uniform Params {\n\tuint mode;\n} params;';
+    const body =
+      'float v = 0.0;\nswitch (params.mode) {\ncase 0: { v = 1.0; } break;\ncase 1: v = 2.0;\n}\ncolor = vec4(v);';
+    expect(fragmentOf(block, body)).toMatch(/==\s*uint\(\s*1\s*\)|==\s*1u/);
+  });
+
+  it('reads a texture a function takes as an argument from the texture the call passes', () => {
+    const globals = [
+      'layout(set = 0, binding = 1) uniform texture2D shadow_atlas;',
+      'layout(set = 0, binding = 2) uniform sampler shadow_sampler;',
+      'vec4 sampled(texture2D atlas) { return texture(sampler2D(atlas, shadow_sampler), vec2(0.5)); }',
+    ].join('\n');
+    expect(fragmentOf(globals, 'color = sampled(shadow_atlas);')).toMatch(/texture\(\s*nodeUniform/);
+  });
+
+  describe('a guard on a specialisation constant', () => {
+    const guarded = (packed: string, guard = 'is_on()') =>
+      fragmentOf(
+        [
+          `layout(constant_id = 0) const uint packed = ${packed};`,
+          'bool is_on() { return (packed & 1u) != 0u; }',
+          'layout(set = 0, binding = 1) uniform texture2D atlas;',
+          'layout(set = 0, binding = 2) uniform sampler atlas_sampler;',
+          'layout(set = 0, binding = 3, std140) uniform Params {\n\tuint mode;\n} params;',
+        ].join('\n'),
+        `color = vec4(0.0);\nif (${guard}) { color = texture(sampler2D(atlas, atlas_sampler), vec2(0.5)); }`
+      );
+
+    it('emits no read of a branch the guard folds off, as a driver drops it', () => {
+      expect(guarded('0u')).not.toMatch(/uniform sampler2D/);
+    });
+
+    it('emits the branch the guard folds on', () => {
+      expect(guarded('1u')).toMatch(/uniform sampler2D/);
+    });
+
+    it('folds an `&&` whose first operand folds off, whatever the second reads', () => {
+      expect(guarded('0u', 'is_on() && params.mode != 0u')).not.toMatch(/uniform sampler2D/);
+    });
+
+    it('keeps a guard that reads a uniform (edge case)', () => {
+      expect(guarded('1u', 'is_on() && params.mode != 0u')).toMatch(/uniform sampler2D/);
+    });
+  });
+
+  describe('a guard on a specialised block member', () => {
+    const FLAGS = 'params.flags';
+    const GLOBALS = [
+      'layout(set = 0, binding = 1) uniform texture2D atlas;',
+      'layout(set = 0, binding = 2) uniform sampler atlas_sampler;',
+      'layout(set = 0, binding = 3, std140) uniform Params {\n\tuint flags;\n} params;',
+    ].join('\n');
+    const guarded = (flags: number) => {
+      const resources = programResources(new Set([FLAGS]));
+      const globals = GLOBALS;
+      const body =
+        'color = vec4(0.0);\nif (bool(params.flags & 4u)) { color = texture(sampler2D(atlas, atlas_sampler), vec2(0.5)); }';
+      stageOf(globals, body, resources);
+      resources.uniforms.specialisations.get(FLAGS)!.value = flags;
+      return generatedFragmentShader(stageOf(globals, body, resources).result);
+    };
+
+    it('emits no read of a branch whose member folds off', () => {
+      expect(guarded(0)).not.toMatch(/uniform sampler2D/);
+    });
+
+    it('emits the branch at the value a binding writes', () => {
+      expect(guarded(4)).toMatch(/uniform sampler2D/);
+    });
+
+    it('emits only the operand a folded `?:` takes', () => {
+      const resources = programResources(new Set([FLAGS]));
+      const body =
+        'color = bool(params.flags & 4u) ? texture(sampler2D(atlas, atlas_sampler), vec2(0.5)) : vec4(0.0);';
+      expect(generatedFragmentShader(stageOf(GLOBALS, body, resources).result)).not.toMatch(
+        /uniform sampler2D/
+      );
+    });
+
+    it('keeps an `if` on a texture read, whose sampler is no literal', () => {
+      const body =
+        'color = vec4(0.0);\nif (texture(sampler2D(atlas, atlas_sampler), vec2(0.5)).a < 0.5) { color = vec4(1.0); }';
+      expect(generatedFragmentShader(stageOf(GLOBALS, body).result)).toMatch(/uniform sampler2D/);
+    });
+  });
+
   it('folds a specialisation constant to its declared value', () => {
     expect(fragmentOf(SPECIALISED, SPECIALISED_BODY)).toMatch(/vec4\(\s*3\.0\s*\)/);
   });

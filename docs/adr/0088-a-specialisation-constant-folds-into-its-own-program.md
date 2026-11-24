@@ -18,8 +18,15 @@ WebGL has no specialisation constants. A uniform in place of the constant was me
 - `BoundNodeMaterial.customProgramCacheKey` adds the values, so three keeps one program for each set of values and reuses it.
 - The colour draw of a surface writes the constants, before three keys the first program (`onBeforeProgram`) and before each later draw. A shadow or depth draw writes none.
 
+**A block member that holds one value for each frame folds the same way.** Godot reads such members at run time, so its driver keeps their samplers. WebGL 2 counts every sampler the program reads and guarantees 16, and the lit template reads 24.
+
+- `ProgramTemplate.specialisedMembers` names the members, from the rows of a binding table (`EFFECT_SPECIALISATIONS`). `TemplateUniforms` gives each one a `Specialisation`, not a uniform.
+- The emitter folds an `if` whose condition rests on literals, read through struct members and constructors: `if (bool(implementation_data.ss_effects_flags & 1u))`. It emits only the branch taken, so the program reads no sampler of the other. A `?:` on such a condition emits only the operand taken.
+- A guard that rests on a call folds when the function's body is one `return` of literals, as `sc_use_forward_gi()`. ANGLE folds a literal condition, but not one behind a call.
+
 ## Consequences
 
 - A change of value emits the stages again and, the first time, compiles a program. The previewer sees this when the fog mode changes, not on each frame.
 - The depth variant gets a program for each value too, as Godot's depth pre-pass gets the same specialisation (`render_forward_clustered.cpp:2108`).
 - A new constant needs only a binding row: the emitter and the material already fold and key it.
+- A specialised member costs a program for each value. Only a member that a frame holds constant for every draw qualifies: a per-draw value, such as an instance flag, would build a program for each draw.

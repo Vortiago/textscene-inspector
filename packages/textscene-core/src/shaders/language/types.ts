@@ -37,6 +37,9 @@ export const shapeOf = (type: ValueType): TypeShape | undefined => SHAPES.get(ty
 /** Whether `type` is a sampler: `sampler2D`, `isampler3D`, `samplerCube`, `samplerExternalOES`. */
 export const isSamplerType = (type: ValueType): boolean => /^[iu]?sampler/.test(type);
 
+/** Whether `type` is a Vulkan texture with no sampler, as a template declares: `texture2D`, `utexture3D`. */
+export const isTextureType = (type: string): boolean => /^[iu]?texture[A-Z0-9]/.test(type);
+
 /** The texture kind a sampler type reads: 2D, a cube, 3D, 2D layers, or cubes as layers. */
 export type TextureKind = 'flat' | 'cube' | 'volume' | 'layers' | 'cubes';
 

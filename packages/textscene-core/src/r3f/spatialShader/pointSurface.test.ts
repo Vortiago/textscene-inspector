@@ -51,7 +51,7 @@ describe('drawPoints', () => {
     drawPoints(host, 1, material, 'emulated', scene);
     const [points] = host.children as THREE.Mesh<THREE.InstancedBufferGeometry>[];
     expect(isEmulatedPoints(points!)).toBe(true);
-    expect([...points!.geometry.getAttribute('point_vertex_attrib').array]).toEqual([0, 3, 2]);
+    expect([...points!.geometry.getAttribute('vertex_id_attrib').array]).toEqual([0, 3, 2]);
   });
 
   it("follows the host's shadows, layers and draw order after a live edit", () => {

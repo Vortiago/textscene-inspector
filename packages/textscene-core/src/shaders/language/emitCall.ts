@@ -1,7 +1,9 @@
 import { Fn, int, property, struct } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import type { EmittedTree } from './emittedTree.js';
-import { isSamplerType } from './types.js';
+import { isSamplerType, isTextureType } from './types.js';
+import type { Lanes } from './glslangCalls.js';
+import { GuardFolding } from './guardFolding.js';
 import { isArrayType, wholeArrays } from './wholeArray.js';
 import {
   copyInto,
@@ -33,11 +35,35 @@ export class CalledFunctions {
   /** Written only by `functionNamed`, at a function's first call with each set of textures. */
   private readonly built = new Map<string, GlslFunction>();
 
+  /** Written only by `constantResult`, once for each function: nothing for one that does not fold. */
+  private readonly constantResults = new Map<string, Lanes | undefined>();
+
   constructor(
     private readonly trees: ReadonlyMap<string, EmittedTree>,
     private readonly structOf: StructOf,
-    private readonly body: BodyEmitter
+    private readonly body: BodyEmitter,
+    private readonly globals: ReadonlyMap<string, Value>
   ) {}
+
+  /** The lanes a call of `name` gives when its one `return` rests on literals alone, as `sc_packed_0()`. */
+  constantResult(name: string): Lanes | undefined {
+    if (!this.constantResults.has(name)) this.constantResults.set(name, this.foldedReturn(name));
+    return this.constantResults.get(name);
+  }
+
+  private foldedReturn(name: string): Lanes | undefined {
+    const definition = this.trees.get(name);
+    const statements = definition?.lowered.body.statements ?? [];
+    const [only] = statements;
+    if (!definition || definition.lowered.arguments.length > 0 || statements.length !== 1) return undefined;
+    if (only?.kind !== 'control flow' || only.flow !== 'FLOW_OP_RETURN') return undefined;
+    const guards = new GuardFolding(
+      definition.folding,
+      (global) => this.globals.get(global),
+      (called) => this.constantResult(called)
+    );
+    return guards.lanesOf(only.expressions[0]!);
+  }
 
   /** With a value for each argument but an `out` one. */
   call(name: string, args: readonly (Value | undefined)[]): CallResult {
@@ -95,7 +121,7 @@ class GlslFunction {
   ) {
     const definition = tree.lowered;
     const typesOf = (argument: Argument) =>
-      isSamplerType(argument.type)
+      isTextureArgument(argument.type)
         ? samplerLeafTypes(samplers.get(argument.name)!)
         : leafTypes(argument.type, argument.arraySize ?? 0, structOf);
     this.parameters = definition.arguments.map((argument) => ({
@@ -142,7 +168,7 @@ class GlslFunction {
   } {
     const leaves = this.parameters.flatMap(({ argument }, index) => {
       if (argument.qualifier === 'out') return [];
-      if (isSamplerType(argument.type)) return samplerLeaves(args[index]!);
+      if (isTextureArgument(argument.type)) return samplerLeaves(args[index]!);
       return this.leavesOfValue(args[index]!, argument.type, argument.arraySize ?? 0);
     });
     const node = this.fn(...leaves);
@@ -191,7 +217,7 @@ class GlslFunction {
         continue;
       }
       const leaves = given[next++]!;
-      if (isSamplerType(argument.type)) {
+      if (isTextureArgument(argument.type)) {
         names.set(argument.name, samplerParameter(this.samplers.get(argument.name)!, leaves));
         continue;
       }
@@ -236,6 +262,9 @@ export function parameterValue(
     : given;
 }
 
+/** A sampler, or a template's texture that a call combines with a sampler: GLSL passes both as opaque. */
+const isTextureArgument = (type: string) => isSamplerType(type) || isTextureType(type);
+
 /** The value each sampler argument is given, by name. */
 function samplerArguments(
   parameters: readonly Argument[],
@@ -243,7 +272,7 @@ function samplerArguments(
 ): ReadonlyMap<string, Value> {
   return new Map(
     parameters.flatMap((argument, index) =>
-      isSamplerType(argument.type) ? [[argument.name, args[index]!] as const] : []
+      isTextureArgument(argument.type) ? [[argument.name, args[index]!] as const] : []
     )
   );
 }
