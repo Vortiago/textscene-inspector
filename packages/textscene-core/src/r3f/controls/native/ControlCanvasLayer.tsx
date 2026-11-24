@@ -23,37 +23,20 @@ interface ControlCanvasLayerProps {
   nodes: readonly TscnNode[];
 }
 
-/**
- * Forces the roots visible: a UI root often authors `visible = false` for a script
- * to toggle. A shallow copy leaves the SceneGraph untouched, and child visibility
- * and `hiddenNodePaths` still apply in `ControlCanvasWalker`.
- */
-function showRoots(nodes: readonly TscnNode[]): readonly TscnNode[] {
-  return nodes.map((n) =>
-    (n.properties as { visible?: boolean } | undefined)?.visible === false
-      ? { ...n, properties: { ...n.properties, visible: true } }
-      : n
-  );
-}
-
 export function ControlCanvasLayer({ nodes }: ControlCanvasLayerProps) {
   const { externalResources, internalResources } = useSceneResources();
-  const rootNodes = useMemo(() => showRoots(nodes), [nodes]);
-  const { tree, generation, windows } = useBuildSolveTree(rootNodes, externalResources, internalResources);
+  const { tree, generation, windows } = useBuildSolveTree(nodes, externalResources, internalResources);
 
   // The project's `gui/theme/default_theme_scale`, not a constant scale 1.
   const { themeScale } = useProjectSettings();
   const theme = nativeTheme(themeScale);
   const viewport = useGameViewportRect();
-  // A Control outside any `CanvasLayer` shares Godot's default canvas with the
-  // world, so this scans the root list `NodeDispatcher` scans. The raw roots: a
-  // root forced visible would find a CanvasModulate the world skips, and one
-  // canvas would draw with two tints.
+  // A Control outside a `CanvasLayer` shares the world's default canvas, so this scans the world's roots.
   const canvasModulate = useCanvasModulateColor(nodes);
   // The ranks `NodeDispatcher` derives: this walk is its sibling, so it cannot
   // inherit them, and a different layer set would order Controls against the
   // world wrongly.
-  const ranks = useMemo(() => canvasLayerRanks(rootNodes), [rootNodes]);
+  const ranks = useMemo(() => canvasLayerRanks(nodes), [nodes]);
   const embedderSize = useStableVector2({ x: viewport.w, y: viewport.h });
 
   return (

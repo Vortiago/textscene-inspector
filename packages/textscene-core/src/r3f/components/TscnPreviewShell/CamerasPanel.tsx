@@ -1,10 +1,7 @@
 import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
 import { useViewportMode } from '../../contexts/ViewportModeContext.js';
 import { useLiveSceneNodes, useSharedLiveTree } from '../../useLiveSceneTree.js';
-import { node2dWorldPosition } from '../../node2dWorldTransform.js';
-import { solvedNodePatchesOf } from '../../liveNodePatches.js';
-import { liveTreeOf } from '../../liveSceneTree.js';
-import { liveFilesOf } from '../../liveFiles.js';
+import { livePlacements, node2dWorldPosition } from '../../node2dWorldTransform.js';
 import { useResourceLoader } from '../../../resources/useResource.js';
 import { camera2DView } from '../../viewportRender/camera2DView.js';
 import type { Camera2DProperties } from '../../../nodes/2d/camera2d/types.js';
@@ -14,6 +11,7 @@ import { isCamera2DType, isCamera3DType } from '../../cameraNodeTypes.js';
 import { isViewportBoundary } from '../../viewportRender/viewportBoundary.js';
 import type { LiveTreeEntry } from '../../liveSceneTree.js';
 import { GameCameraRows } from './GameCameraRows.js';
+import { usePreviewCamera } from './previewCamera.js';
 import styles from './TscnPreviewShell.module.css';
 
 /** Module level, so it stays stable and the memo of `useLiveSceneNodes` holds. */
@@ -52,13 +50,14 @@ interface EditorCameraRowsProps {
 /** The editor's own cameras: Godot's 3D camera preview, which leaves the game's current camera alone. */
 function EditorCameraRows({ cameras3d, cameras2d }: EditorCameraRowsProps) {
   const cam = useOptionalViewportActions();
+  const preview = usePreviewCamera();
   const { mode, setMode } = useViewportMode();
   const liveTree = useSharedLiveTree();
   const loader = useResourceLoader();
   const { viewportSize } = useProjectSettings();
 
   function preview3D(path: string) {
-    cam?.previewCamera(path);
+    preview?.previewCamera(path);
     setMode('3D');
   }
 
@@ -66,10 +65,7 @@ function EditorCameraRows({ cameras3d, cameras2d }: EditorCameraRowsProps) {
     // Over the live tree, a Camera2D inside a sub-scene composes against the
     // instance transform instead of framing at the origin, and a RemoteTransform2D or a solved bone above it moves it.
     if (!liveTree) return;
-    const placed = solvedNodePatchesOf(
-      liveTreeOf(liveTree.roots, liveTree.ctx),
-      liveFilesOf(loader).current()
-    );
+    const placed = livePlacements(liveTree, loader);
     const worldPosition = node2dWorldPosition(liveTree.roots, liveTree.ctx, path, placed) ?? { x: 0, y: 0 };
     // The frame `<Canvas2DStage>` draws, so the camera lands where the stage shows it.
     cam?.requestFrame2D(
@@ -79,12 +75,12 @@ function EditorCameraRows({ cameras3d, cameras2d }: EditorCameraRowsProps) {
   }
 
   function showEditorCamera() {
-    cam?.endCameraPreview();
+    preview?.endPreview();
     setMode('3D');
   }
 
   // Only the 3D view draws through a previewed camera, so the 2D view marks none.
-  const activePath = mode === '3D' ? (cam?.previewedCameraPath ?? null) : null;
+  const activePath = mode === '3D' ? (preview?.camera ?? null) : null;
   // A path that names no listed camera previews nothing, so the editor camera draws.
   const isEditorActive = mode === '3D' && !cameras3d.some((c) => c.path === activePath);
   return (

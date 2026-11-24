@@ -71,7 +71,6 @@ const NEEDS_NO_OVERLAY = new Map([
     'r3f/components/SceneTreeViewer/useLiveStep.ts',
     'Shows the merged instance root in the tree, which no pass patches.',
   ],
-  ['r3f/components/TscnPreviewShell/SceneStats.tsx', 'Counts the cameras by type.'],
   ['r3f/components/TscnPreviewShell/ViewportArea.tsx', 'Asks whether the scene has 2D content, by type.'],
   ['r3f/components/ViewportToolbar/ViewportToolbar.tsx', 'Asks whether a node yields the preview, by type.'],
   ['r3f/liveSceneTree.ts', 'Builds the tree that the patches are keyed by.'],
@@ -98,6 +97,13 @@ describe('the readers of a live node and the live node patches', () => {
       ['r3f/Gizmo.tsx', `${READS_LIVE_NODE}const placed = patchedNode(node, patch);\n`],
     ]);
 
+    expect(readersWithoutPatches(files, new Map())).toEqual([]);
+  });
+
+  it('accepts a reader that places the nodes through the solved patches', () => {
+    const files = new Map([
+      ['r3f/Gizmo.tsx', `${READS_LIVE_NODE}const placed = livePlacements(tree, loader);\n`],
+    ]);
     expect(readersWithoutPatches(files, new Map())).toEqual([]);
   });
 

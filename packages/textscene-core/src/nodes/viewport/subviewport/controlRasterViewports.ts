@@ -25,7 +25,7 @@ import { windowEmbedderPathAt } from '../../../r3f/viewportRender/windowEmbedder
 import { viewportThemeOwners, type ThemeOwner } from '../../windows/window/themeOwners.js';
 
 /** The viewport a window embeds in, whose visible size limits the window's height. */
-interface EnclosingViewport {
+export interface EnclosingViewport {
   path: string;
   node: TscnNode;
 }
@@ -75,7 +75,8 @@ export function inheritedRtlAt(tree: LiveTree, path: string, env: LayoutDirectio
   return link ? rtlBelow(link.step.node, inheritedRtlAt(tree, above, env), env) : null;
 }
 
-function enclosingViewport(tree: LiveTree, path: string): EnclosingViewport | null {
+/** The viewport that embeds the window at `path`, or null under a root window that no node stands for. */
+export function enclosingViewport(tree: LiveTree, path: string): EnclosingViewport | null {
   const embedderPath = windowEmbedderPathAt(tree, path);
   const node = embedderPath === null ? undefined : tree.at(embedderPath)?.step.node;
   return embedderPath !== null && node ? { path: embedderPath, node } : null;

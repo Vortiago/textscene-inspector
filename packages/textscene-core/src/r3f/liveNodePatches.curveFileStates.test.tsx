@@ -1,8 +1,3 @@
-/**
- * What a CSGPolygon3D shows as its Curve3D file changes: an edit sweeps the new curve, an edit of a
- * file the pass never read keeps its patch object, and a file that is missing or does not parse
- * builds nothing and shows as a **Missing resource**.
- */
 import { describe, expect, it } from 'vitest';
 import { act, render } from '@testing-library/react';
 import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit.js';
@@ -11,7 +6,6 @@ import { ResourceLoader } from '../resources/ResourceLoader.js';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext.js';
 import { busServing } from '../resources/testing/servingFileBus.js';
 import { HierarchyProvider } from './contexts/HierarchyContext.js';
-import { MissingResourcesProvider } from './contexts/MissingResourcesContext.js';
 import { LiveFilesHost } from './LiveFilesHost.js';
 import { useLiveScenePass } from './liveScenePass.js';
 import { liveNodePatches } from './liveNodePatches.js';
@@ -56,33 +50,30 @@ async function settle() {
   }
 }
 
-/** The preview over `files`, with what the reader of the polygon's patch saw and what the report lists. */
+/** The preview over `files`, with what the reader of the polygon's patch saw. */
 function preview(files: Record<string, string>) {
   const { bus, provider } = busServing(files);
   const loader = new ResourceLoader(bus);
   loader.setProvider(provider);
   const sceneGraph = createSceneGraphFromTscnScene(new TscnParser().parse(MAIN));
   const seen: { patch: NodePatch | undefined } = { patch: undefined };
-  let missing: readonly string[] = [];
   function Reader() {
     seen.patch = useLiveScenePass(liveNodePatches, 'Root/Sweep');
     return null;
   }
   render(
-    <MissingResourcesProvider onMissingPathsChange={(paths) => (missing = [...paths])}>
-      <HierarchyProvider value={{ sceneGraph, panelId: 'p' }}>
-        <ResourceLoaderProvider loader={loader}>
-          <LiveFilesHost />
-          <Reader />
-        </ResourceLoaderProvider>
-      </HierarchyProvider>
-    </MissingResourcesProvider>
+    <HierarchyProvider value={{ sceneGraph, panelId: 'p' }}>
+      <ResourceLoaderProvider loader={loader}>
+        <LiveFilesHost />
+        <Reader />
+      </ResourceLoaderProvider>
+    </HierarchyProvider>
   );
   const endOfSweep = () => {
     const resolved = seen.patch?.resolvedPath as CSGPolygon3DResolvedPath | undefined;
     return resolved?.curvePoints.at(-1)?.position.z;
   };
-  return { loader, files, seen, endOfSweep, reported: () => missing };
+  return { loader, files, seen, endOfSweep };
 }
 
 describe('a CSGPolygon3D over a Curve3D file', () => {
@@ -112,19 +103,17 @@ describe('a CSGPolygon3D over a Curve3D file', () => {
     expect(shown.endOfSweep()).toBe(-4);
   });
 
-  it('builds nothing for a missing file, and reports it', async () => {
+  it('builds nothing for a missing file', async () => {
     const shown = preview({});
     await settle();
 
     expect(shown.seen.patch).toBeUndefined();
-    expect(shown.reported()).toEqual([CURVE_PATH]);
   });
 
-  it('builds nothing for a file that does not parse, and reports it', async () => {
+  it('builds nothing for a file that does not parse', async () => {
     const shown = preview({ [CURVE_PATH]: 'not a resource file' });
     await settle();
 
     expect(shown.seen.patch).toBeUndefined();
-    expect(shown.reported()).toEqual([CURVE_PATH]);
   });
 });

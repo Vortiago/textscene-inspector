@@ -80,7 +80,7 @@ export const GIZMO_SCENES = [
     name: 'instanced-gizmo-grey-selected',
     file: 'unit-instanced-gizmo-grey.tscn',
     gizmos: true,
-    select: 'Root/Locked/Emitter',
+    consoleSelect: '/root/Root/Locked/Emitter',
   },
   // The box gizmos of the types whose Godot editor gizmo is a box volume. VisibleOnScreenNotifier3D and
   // its Enabler draw the box, the axes and a faint fill. ReflectionProbe draws the blend box, the lines

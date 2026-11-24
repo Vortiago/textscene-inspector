@@ -60,6 +60,8 @@ export class WorkerJobRunner {
   private readonly queue: QueuedJob[] = [];
   private running: QueuedJob | null = null;
   private nextId = 1;
+  /** Set by `release`, cleared by `retain`. While set, the worker stops once its queue drains. */
+  private isReleased = false;
 
   constructor(options: { createWorker?: CreateJobWorker } = {}) {
     this.createWorker = options.createWorker;
@@ -97,6 +99,17 @@ export class WorkerJobRunner {
     for (const job of [...this.queue]) this.abort(job);
     if (this.running) this.abort(this.running);
     this.stopWorker();
+  }
+
+  /** Disposes, and stops the worker a later job starts once the queue drains, until `retain`. */
+  release(): void {
+    this.isReleased = true;
+    this.dispose();
+  }
+
+  /** Keeps the worker between jobs again. */
+  retain(): void {
+    this.isReleased = false;
   }
 
   private pump(): void {
@@ -214,6 +227,7 @@ export class WorkerJobRunner {
     if (this.running === job) this.running = null;
     settle();
     this.pump();
+    if (this.isReleased && !this.running) this.stopWorker();
   }
 }
 

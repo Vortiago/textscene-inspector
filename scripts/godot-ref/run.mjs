@@ -556,14 +556,17 @@ export function projectViewportSizeFromIni(sourceIni) {
 function windowSizeSetting(sourceIni, key) {
   const match = new RegExp(`^\\s*window/size/${key}\\s*=\\s*(\\S+)`, 'm').exec(sourceIni ?? '');
   const value = Number(match?.[1]);
-  return Number.isFinite(value) && value > 0 ? Math.round(value) : null;
+  const whole = Math.trunc(value);
+  return Number.isFinite(whole) && whole > 0 ? whole : null;
 }
 
-/** The window the project opens: the override when both axes set one, else the viewport (measured). */
+/** The window the project opens: each axis its override above 0, else the viewport's (main.cpp:2635-2644). */
 export function projectWindowSizeFromIni(sourceIni) {
-  const width = windowSizeSetting(sourceIni, 'window_width_override');
-  const height = windowSizeSetting(sourceIni, 'window_height_override');
-  return width && height ? { width, height } : projectViewportSizeFromIni(sourceIni);
+  const viewport = projectViewportSizeFromIni(sourceIni);
+  return {
+    width: windowSizeSetting(sourceIni, 'window_width_override') ?? viewport.width,
+    height: windowSizeSetting(sourceIni, 'window_height_override') ?? viewport.height,
+  };
 }
 
 /** Removes a whole `[name]` section of a Godot ConfigFile, whose keys no pattern can match. */
@@ -1174,7 +1177,27 @@ func _render_in_game(target: Node) -> void:
 	_apply_host_calls(target)
 	_run_skeleton_stacks(target)
 	await _converge(get_tree().root)
-	_save_capture(get_tree().root)
+	_save_window_capture(get_tree().root)
+
+# The window as the screen shows it: the root's target where the window attaches it, scaled with the
+# blit's nearest filter (rasterizer_gles3.cpp:440), on the black the blit clears to (:420).
+func _save_window_capture(root: Window) -> void:
+	var target := _viewport_image(root)
+	var rect := _attach_rect(root, target.get_size())
+	var window := Image.create(root.size.x, root.size.y, false, target.get_format())
+	window.fill(Color.BLACK)
+	target.resize(rect.size.x, rect.size.y, Image.INTERPOLATE_NEAREST)
+	window.blit_rect(target, Rect2i(Vector2i.ZERO, rect.size), rect.position)
+	window.save_png(OUT)
+
+# The rect window.cpp:1327-1348 attaches the target to. The final transform starts with the window
+# transform (window.cpp:3110), whose scale only the viewport mode sets.
+func _attach_rect(root: Window, target_size: Vector2i) -> Rect2i:
+	var final := root.get_final_transform()
+	var size := Vector2(target_size)
+	if root.content_scale_mode == Window.CONTENT_SCALE_MODE_VIEWPORT:
+		size = final.basis_xform(size)
+	return Rect2i(Vector2i(final.origin.round()), Vector2i(size.round()))
 
 # The pause would stop a modification stack, which the game runs (skeleton_2d.cpp:630-639).
 func _run_skeleton_stacks(node: Node) -> void:
@@ -1461,8 +1484,11 @@ ${
 	# A point (an empty particle AABB, a Label3D before its text shapes) has no span to fit, and a
 	# distance of 0 puts the camera inside it. frameSceneBounds.ts keeps the camera's own distance,
 	# which is the editor distance on open.
+	# The narrower half angle, as fitTangent in frameSceneBounds.ts: FOV is vertical (KEEP_HEIGHT).
+	var view_size := get_viewport().get_visible_rect().size
+	var fit_tangent := tan(deg_to_rad(FOV) / 2.0) * minf(1.0, view_size.x / view_size.y)
 	if span > 0.0:
-		distance = (span / 2.0 / tan(deg_to_rad(FOV) / 2.0)) * ${FRAME_MARGIN}
+		distance = (span / 2.0 / fit_tangent) * ${FRAME_MARGIN}
 	var focus := bounds.get_center()`
     : `	var focus := Vector3.ZERO`
 }

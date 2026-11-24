@@ -209,7 +209,7 @@ describe("a snapshot's read of a processor's value", () => {
     unsubscribe();
   });
 
-  it('lists a failed file for the Missing resource report', async () => {
+  it('lists a failed file among the files the snapshot read', async () => {
     const loader = loaderServing({});
     const source = loaderSnapshots(loader);
     const unsubscribe = source.subscribe(() => {});

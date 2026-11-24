@@ -22,7 +22,7 @@ import { writeSunShadowUniforms } from './directionalShadow/sunShadowUniforms.js
 import { OmniShadowCopy } from './positionalShadow/omniShadowCopy.js';
 import { positionalShadowAtlas, positionalShadowAtlasBuild } from './positionalShadow/shadowAtlasTarget.js';
 import { perObject } from '../utils/perObject.js';
-import { beginStep, endStep } from './frameProfile/frameProfile.js';
+import { beginStep, countShadowDraws, endStep } from './frameProfile/frameProfile.js';
 import type { RenderStep } from './frameProfile/frameStats.js';
 
 /**
@@ -90,13 +90,18 @@ function readersOf(renderer: THREE.WebGLRenderer): Readers {
   if (existing) return existing;
   const readers: Readers = new WeakMap();
   shadowMap[READERS] = readers;
-  const threePass: ThreeShadowPass = { shadowMap, draw: shadowMap.render.bind(shadowMap) };
-  const copy = new OmniShadowCopy();
-  /**
-   * True while the readers run. A reader's own render runs this pass again, and its time belongs to
-   * the reader's step, so that pass marks no step of its own.
-   */
+  /** True while the readers run: a reader's own render runs this pass again, as part of its step. */
   let isReading = false;
+  const drawCasters = shadowMap.render.bind(shadowMap);
+  // Each caster draw is an object of Godot's monitor (rasterizer_scene_gles3.cpp:3109). A copy is not.
+  const threePass: ThreeShadowPass = {
+    shadowMap,
+    draw: (lights, scene, camera) =>
+      isReading
+        ? drawCasters(lights, scene, camera)
+        : countShadowDraws(renderer, () => drawCasters(lights, scene, camera)),
+  };
+  const copy = new OmniShadowCopy();
   shadowMap.render = (lights, scene, camera) => {
     const draws = passDraws(shadowMap);
     const copied = draws ? collected(lights, needsCopy) : NO_LIGHTS;

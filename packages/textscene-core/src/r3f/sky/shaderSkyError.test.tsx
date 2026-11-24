@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { NodePathProvider } from '../contexts/NodePathContext';
-import { ShaderErrorsProvider, useShaderErrors } from '../contexts/ShaderErrorsContext';
+import { ViewStatusProvider } from '../viewStatus/ViewStatusContext';
+import { createViewStatusStore } from '../viewStatus/viewStatus';
+import { useShaderErrors } from '../testing/undrawnStatus';
 import * as transpiler from '../../resources/sky/shaderSky';
 import type { ShaderSkyProperties } from '../../resources/sky/types';
 import type { SkyTranspiler } from './skyTranspiler';
@@ -50,12 +52,12 @@ function renderSky(
   }: { loaded?: SkyTranspiler | null; options?: ProjectShaderOptions | null } = {}
 ) {
   render(
-    <ShaderErrorsProvider>
+    <ViewStatusProvider store={createViewStatusStore()}>
       <NodePathProvider path="World/Environment">
         <Sky material={material} transpiler={loaded} options={options} />
       </NodePathProvider>
       <Errors />
-    </ShaderErrorsProvider>
+    </ViewStatusProvider>
   );
   return screen.getByTestId('errors').textContent;
 }

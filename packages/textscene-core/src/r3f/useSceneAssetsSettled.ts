@@ -1,24 +1,11 @@
-import { usePendingResourceCount } from '../resources/usePendingResourceCount.js';
-import { usePendingWork } from '../resources/usePendingWork.js';
-import { textureWork } from '../resources/textures/textureWork.js';
-import { moduleWork } from '../resources/memoisedImport.js';
-import { fontWork } from './controls/native/text/settledChannel.js';
-
-export interface SceneAssetsState {
-  isSettled: boolean;
-  pendingTextures: number;
-}
+import { useCallback, useSyncExternalStore } from 'react';
+import { useResourceLoader } from '../resources/useResource.js';
+import { hasPendingWork, pendingSceneWork, subscribeSceneWork } from './sceneWork.js';
 
 /** Whether the resources, textures, fonts and code a scene draws with have arrived, shell or not. */
-export function useSceneAssetsSettled(): SceneAssetsState {
-  // Every hook runs on every render, so React sees one hook order.
-  const pendingResources = usePendingResourceCount();
-  const pendingTextures = usePendingWork(textureWork);
-  const pendingFontWork = usePendingWork(fontWork);
-  const pendingModules = usePendingWork(moduleWork);
-  return {
-    isSettled:
-      pendingResources === 0 && pendingTextures === 0 && pendingFontWork === 0 && pendingModules === 0,
-    pendingTextures,
-  };
+export function useSceneAssetsSettled(): boolean {
+  const loader = useResourceLoader();
+  const subscribe = useCallback((onChange: () => void) => subscribeSceneWork(loader, onChange), [loader]);
+  const isSettled = () => !hasPendingWork(pendingSceneWork(loader));
+  return useSyncExternalStore(subscribe, isSettled, isSettled);
 }

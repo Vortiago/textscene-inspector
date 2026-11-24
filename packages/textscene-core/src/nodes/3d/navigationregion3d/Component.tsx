@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../base/node3d/Component';
 import { useNodeResource } from '../../../resources/reading';
-import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
+import { useViewShow } from '../../../r3f/viewShow/ViewShowContext';
 import { editorHelperUserData } from '../../../r3f/editorHelpers';
 import { NAVIGATION_MESH } from '../../../resources/navigation/navigationmesh';
 import {
@@ -36,7 +36,7 @@ const NAV_FACES_MATERIAL = materialProgramInputs({
 
 export function NavigationRegion3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as NavigationRegion3DProperties;
-  const { showNavigation } = useViewportMode();
+  const { navigation: showNavigation } = useViewShow();
   const helperUserData = useMemo(editorHelperUserData, []);
 
   const navmesh = useNodeResource(properties.navigationMesh, NAVIGATION_MESH).value;

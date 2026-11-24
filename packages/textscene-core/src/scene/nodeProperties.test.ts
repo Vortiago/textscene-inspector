@@ -143,6 +143,97 @@ describe('a resource from scene.load', () => {
   });
 });
 
+/** A mesh and a sprite, with a sphere, a material and a texture the file holds for a host to name. */
+const HELD = `[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://icon.png" id="1_icon"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+
+[sub_resource type="StandardMaterial3D" id="Material_2"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_3"]
+
+[node name="Main" type="Node3D"]
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_3")
+material_override = SubResource("Material_2")
+
+[node name="Sprite" type="Sprite3D" parent="."]
+texture = ExtResource("1_icon")
+`;
+
+const ICON_SIDECAR = `[remap]
+
+type="CompressedTexture2D"
+`;
+
+const iconProvider: ResourceProvider = {
+  loadResource: async (path) => (path === 'res://icon.png.import' ? ICON_SIDECAR : null),
+};
+
+const sceneOfHeld = () =>
+  openScene({ source: HELD, provider: iconProvider, rootScenePath: 'res://main.tscn' });
+
+/** The text of `property` on the node at `path` in the graph a view draws. */
+function drawnText(scene: ReturnType<typeof sceneOfHeld>, path: string, property: string): unknown {
+  return scene.written()?.flattenedNodes.find((node) => node.path === path)?.data.rawProperties[property];
+}
+
+describe('a resource the scene file holds, named by its path as Godot loads it', () => {
+  const sphere = 'Resource("res://main.tscn::SphereMesh_1")';
+  const material = 'Resource("res://main.tscn::Material_2")';
+
+  it('draws the sub-resource a write names', async () => {
+    const scene = sceneOfHeld();
+    expect(await scene.getNode('Mesh').set('mesh', variant(sphere))).toBe(true);
+    expect(drawnText(scene, 'Main/Mesh', 'mesh')).toBe('SubResource("SphereMesh_1")');
+  });
+
+  it('answers get with the sub-resource written', async () => {
+    const mesh = sceneOfHeld().getNode('Mesh');
+    await mesh.set('mesh', variant(sphere));
+    expect(await mesh.get('mesh')).toEqual(variant(sphere));
+  });
+
+  it('draws the sub-resource scene.load gives for its path', async () => {
+    const scene = sceneOfHeld();
+    await scene.getNode('Sprite').set('material_override', await scene.load('res://main.tscn::Material_2'));
+    expect(drawnText(scene, 'Main/Sprite', 'material_override')).toBe('SubResource("Material_2")');
+  });
+
+  it('writes null for a sub-resource of another class, as a Ref<Mesh> cast gives', async () => {
+    const scene = sceneOfHeld();
+    expect(await scene.getNode('Mesh').set('mesh', variant(material))).toBe(false);
+    expect(drawnText(scene, 'Main/Mesh', 'mesh')).toBe('null');
+  });
+
+  it('writes null for a file of another class, as the class load reads', async () => {
+    const scene = sceneOfHeld();
+    expect(await scene.getNode('Mesh').set('mesh', variant('Resource("res://icon.png")'))).toBe(false);
+    expect(drawnText(scene, 'Main/Mesh', 'mesh')).toBe('null');
+  });
+
+  it('keeps the last of two writes the host did not await, though the first reads a class', async () => {
+    const scene = sceneOfHeld();
+    const mesh = scene.getNode('Mesh');
+    await Promise.all([mesh.set('mesh', variant(sphere)), mesh.set('mesh', variant('null'))]);
+    expect(drawnText(scene, 'Main/Mesh', 'mesh')).toBe('null');
+  });
+
+  it('asks the host for no file to read the class of a sub-resource', async () => {
+    const asked: string[] = [];
+    const scene = openScene({
+      source: HELD,
+      provider: { loadResource: async (path) => (asked.push(path), null) },
+      rootScenePath: 'res://main.tscn',
+    });
+    await scene.load('res://main.tscn::Undeclared_9');
+    expect(asked).toEqual([]);
+  });
+});
+
 describe('the refusals', () => {
   afterEach(() => vi.restoreAllMocks());
 

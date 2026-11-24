@@ -28,7 +28,8 @@ import { useResolvedGate } from '../../../r3f/viewportRender/useViewportGate.js'
 import { usePublishViewportPass } from '../../../r3f/viewportRender/usePublishViewportPass.js';
 import { useViewportRenderState } from '../../../r3f/viewportRender/useGatedViewport.js';
 import type { ControlRasterViewport } from './controlRasterViewports.js';
-import { viewportPassSizes } from './targetSize.js';
+import { viewportLayoutSize, viewportPassSizes } from './targetSize.js';
+import { useEmbedderStretch } from './useEmbedderStretch.js';
 import type { SubViewportProperties } from './types.js';
 import { useProjectClearColor } from '../../../r3f/useProjectClearColor.js';
 import { useCanvasModulateColor } from '../../../r3f/canvasModulate.js';
@@ -55,7 +56,7 @@ export function ControlRasterPasses({ viewports }: ControlRasterPassesProps) {
 function useEnclosingViewportSize(embedder: ControlRasterViewport['embedder']): Vector2 {
   const projectSize = useViewportSize();
   const forced = useViewportRect(embedder?.path ?? null);
-  const layout = embedder ? viewportPassSizes(embedder.node, forced).layout : projectSize;
+  const layout = embedder ? viewportLayoutSize(embedder.node, forced) : projectSize;
   return useStableVector2(layout);
 }
 
@@ -66,12 +67,13 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   const properties = node.properties as SubViewportProperties;
   const { render_target_clear_mode: clearMode } = properties;
   const description = useSubViewportDescription(properties);
+  const sizes = viewportPassSizes(node, useViewportRect(path), useEmbedderStretch(embedder));
+  const viewSize = useStableVector2(sizes.view);
   const canvasRender = useMemo<WorldRender>(
-    () => ({ viewport: description, shadowAtlas: null, hasCanvasTransform: true }),
-    [description]
+    () => ({ viewport: description, shadowAtlas: null, canvasView: viewSize }),
+    [description, viewSize]
   );
   const transparentBg = canvasRender.viewport.transparentBackground;
-  const sizes = viewportPassSizes(node, useViewportRect(path));
   const { x: width, y: height } = sizes.target;
 
   const gl = useThree((state) => state.gl);
@@ -93,12 +95,7 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   );
   // The frame takes the 2D buffer's multisampling, so the target it copies into never multisamples.
   const target = useMultisampledTarget(0, createTarget);
-  const { camera, frame } = useCanvasPass(
-    sizes.view.x,
-    sizes.view.y,
-    canvasRender.viewport.msaa2D,
-    canvasSpace
-  );
+  const { camera, frame } = useCanvasPass(viewSize.x, viewSize.y, canvasRender.viewport.msaa2D, canvasSpace);
 
   const canvasModulate = useCanvasModulateColor(node.children);
   const controlsSize = useStableVector2(sizes.layout);

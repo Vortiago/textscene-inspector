@@ -20,22 +20,25 @@ const distDir = join(packageDir, 'dist');
 const bundlePath = join(distDir, 'index.js');
 const bundleKey = 'dist/index.js';
 
-/** One view draws both modes, so no second view component is public, and core's internals stay out. */
-const PUBLIC_VALUE_EXPORTS = ['TscnCanvas', 'TscnSceneProvider', 'openScene', 'useSelection', 'variant'];
+/** One view draws every mode, its props are the options of `mountScene`, and core's internals stay out. */
+const PUBLIC_VALUE_EXPORTS = ['TscnCanvas', 'mountScene', 'openScene', 'variant'];
 const PUBLIC_TYPE_EXPORTS = [
   'CameraState',
   'NodeHandle',
   'ResourceProvider',
   'Scene',
+  'SceneFile',
+  'SceneFileFailure',
+  'SceneFileState',
   'SceneValue',
   'Variant',
+  'View',
+  'ViewOptions',
+  'ViewStatus',
 ];
 
-/** The packages the bundle imports from the consumer, so it has one React and one three.js. */
-const IMPORTED_PEERS = ['@react-three/fiber', 'react', 'three'];
-
-/** `react-dom` is a peer of `@react-three/fiber`, which the bundle imports and the consumer installs. */
-const PEER_PACKAGES = [...IMPORTED_PEERS, 'react-dom'];
+/** The consumer installs each, so it has one React and one three.js. `mountScene` imports react-dom. */
+const PEER_PACKAGES = ['@react-three/fiber', 'react', 'react-dom', 'three'];
 
 type Metafile = {
   inputs: Record<string, unknown>;
@@ -85,7 +88,7 @@ describe('@textscene/renderer bundle', () => {
     expect(findForbiddenHostInputs(metafile)).toEqual([]);
   });
 
-  it.each(IMPORTED_PEERS)('imports %s from the consumer', (peer) => {
+  it.each(PEER_PACKAGES)('imports %s from the consumer', (peer) => {
     expect(bareImports().map(packageOf)).toContain(peer);
   });
 

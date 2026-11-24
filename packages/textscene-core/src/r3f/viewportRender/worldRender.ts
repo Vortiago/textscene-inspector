@@ -1,3 +1,4 @@
+import type { Vector2 } from '../../godot/math/vector.js';
 import { clearsBlack, type ViewportDescription } from './viewportDescription.js';
 import type { ViewportShadowAtlas } from '../positionalShadow/viewportShadowAtlas.js';
 import type { ProbeCapture } from '../reflectionProbe/captureCameras.js';
@@ -8,8 +9,8 @@ export interface WorldRender {
   viewport: ViewportDescription;
   /** Null for the root's atlas, which each scene's shadow fit builds. A Control raster pass lights no 3D. */
   shadowAtlas: ViewportShadowAtlas | null;
-  /** Whether the render draws a canvas through a Godot canvas transform: a SubViewport's 2D pass. */
-  hasCanvasTransform: boolean;
+  /** The canvas units a SubViewport's 2D pass shows through its canvas transform, else null. */
+  canvasView: Vector2 | null;
   /** Set for a reflection probe capture. */
   probeCapture?: ProbeCapture;
 }
@@ -22,7 +23,7 @@ export function drawWorld(render: WorldRender, draw: () => void): void {
   rendersUnderWay.push(render);
   try {
     // A canvas samples through the default samplers (`renderer_canvas_render_rd.cpp:460`).
-    const anisotropicLevel = render.hasCanvasTransform ? null : render.viewport.anisotropicLevel;
+    const anisotropicLevel = render.canvasView ? null : render.viewport.anisotropicLevel;
     drawAtAnisotropicLevel(anisotropicLevel, () => drawAtMipmapBias(render.viewport.mipmapBias, draw));
   } finally {
     rendersUnderWay.pop();

@@ -171,7 +171,8 @@ The strict parser also returns `SourceLines`, which puts each diagnostic on its 
 - **Scene tree.** `TscnCanvas` mounts the R3F `<Canvas>`. Each node gets its own `<group>`.
 - **Parent space.** A node follows its parent's transform only where Godot does
   (`godot/scene/parentSpace.ts`). Any other node attaches to the world root (`ParentSpaceScope`).
-- **3D and 2D.** `ViewportModeContext` picks `TscnCanvas` or `Canvas2DStage` (ADR-0006).
+- **Modes and helpers.** The `mode` of `TscnCanvas` picks the 3D canvas, `Canvas2DStage` or the game view, and its
+  `show` the editor helpers they draw (ADR-0006).
 - **Canvas renderer.** Both canvases take one set of `<Canvas>` props and mount one
   `CanvasRendererScope`, which installs the shadow pass and runs the per-frame services
   (`r3f/canvasRenderer/`).
@@ -266,8 +267,10 @@ the selected node (ADR-0012). Playback starts stopped.
   `project.godot`, or from the own directory of a loose scene inside the workspace.
 - **Web.** The Source pane renders only a buffer the lenient parser accepts, and lints every
   buffer (ADR-0020).
-- **Job workers.** Each host starts one script built from `@textscene/core/worker`. VS Code
-  starts it from a `blob:` URL (`apps/textscene-vscode/src/bundler/textureWorkerPlugin.mjs`).
+- **Job workers.** The loader of each opened scene starts one worker from a `blob:` URL of a
+  script that every build embeds (`packages/textscene-core/src/workers/bundler/`, ADR-0042).
+- **Changed files.** A host's `ResourceProvider.watch` names a file that changed, and every
+  scene a mounted view shows loads it again (`resources/createResourcePipeline.ts`).
 
 ## Enforced boundaries
 
@@ -291,7 +294,7 @@ A test or a script fails when one of these rules breaks.
 | The worker's import closure holds no React, three.js or `.tsx` | `workers/workerClosure.test.ts` |
 | Every texture view a component draws goes through the tiled upload | `r3f/tiledUpload/textureViewGuard.test.ts` |
 | The VS Code host bundles hold no React or three.js | `scripts/check-bundle-size/hostBundles.mjs` |
-| The webview's initial bundle stays under its budget | `scripts/check-bundle-size/webviewBudget.mjs` |
+| The webview builds as one script, under its budget | `scripts/check-bundle-size/webviewBudget.mjs` |
 
 ## Bundle size
 
@@ -300,9 +303,8 @@ The VS Code extension host imports only the React-free core subpaths
 and CSS side effects, and grows the host bundle about four times. The `languageFeatures` subpath
 carries the generated ClassDB property tables, which the webview never loads.
 
-The webview builds ESM with code splitting (`apps/textscene-vscode/esbuild.config.mjs`), and
-loads the dock panels, the Control canvas, the empty canvas's prompt, the GLB loader, the area
-light's LTC tables and the in-thread noise jobs on demand. `pnpm check:bundle-size` prints the
-current sizes, and fails when a module that loads on demand reaches the canvas-paint path. The DFG and LTC tables
+The webview builds as one ESM script and one stylesheet (`apps/textscene-vscode/esbuild.config.mjs`,
+ADR-0090). `pnpm check:bundle-size` prints the script's size, and fails when the build writes
+another script or the script passes its gzipped ceiling. The DFG and LTC tables
 are stored as residuals of a linear prediction (`tableResiduals.ts`), which gzip packs about three
 times tighter than base64.

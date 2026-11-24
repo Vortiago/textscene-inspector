@@ -12,6 +12,27 @@ export const IN_GAME_SCENES = [
     mode: 'in-game',
     canvas: GAME_WINDOW,
   },
+  // The project's window stretch: canvas_items keeps the base aspect in a square window, with black bars.
+  {
+    name: 'in-game-stretch',
+    file: 'in-game-stretch/unit-in-game-stretch.tscn',
+    mode: 'in-game',
+    canvas: { width: 240, height: 240 },
+  },
+  // A transparent background: the window's clear stays transparent, and its bars are opaque black.
+  {
+    name: 'in-game-transparent',
+    file: 'in-game-transparent/unit-in-game-transparent.tscn',
+    mode: 'in-game',
+    canvas: { width: 640, height: 240 },
+  },
+  // The stretch on a CanvasLayer and on an embedded window, beside the root canvas.
+  {
+    name: 'in-game-stretch-canvases',
+    file: 'in-game-stretch-canvases/unit-in-game-stretch-canvases.tscn',
+    mode: 'in-game',
+    canvas: GAME_WINDOW,
+  },
   // A Polygon2D and a Camera2D whose parent is the Node3D root draw on the root canvas.
   {
     name: 'in-game-canvas-under-node3d',

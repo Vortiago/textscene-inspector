@@ -26,10 +26,10 @@ catalog:
   vite: ^8.3.6
   esbuild: ^0.28.2
   happy-dom: ^21.0.3
-  jsdom: ^31.0.0
+  jsdom: ^31.0.1
 
   # Declaration bundling for @textscene/tscn: one .d.ts that imports nothing from the workspace.
-  dts-bundle-generator: ^9.5.1
+  dts-bundle-generator: ^10.0.0
 
   # CLI dependencies
   commander: ^15.1.0
@@ -47,7 +47,7 @@ catalog:
   '@react-three/fiber': ^9.8.2
   '@react-three/test-renderer': ^9.1.1
   # ^6 targets vite ^8 exclusively, the workspace's vite pin.
-  '@vitejs/plugin-react': ^6.2.1
+  '@vitejs/plugin-react': ^6.3.0
   three: ^0.187
   '@types/three': ^0.187
 
@@ -88,18 +88,18 @@ catalog:
   # React Testing Library (WI-R3F-4) — DOM-level UI tests under jsdom
   '@testing-library/react': ^16.3.3
   '@testing-library/dom': ^10.4.2
-  '@testing-library/user-event': ^14.6.8
+  '@testing-library/user-event': ^14.6.12
 
   # ESLint plugins
   eslint-plugin-react-hooks: ^7.1
 
   # Formatting (prettier.config.mjs). Exact: a patch release can change the output, and
   # `pnpm format:check` fails on every file it reflows.
-  prettier: 3.9.10
+  prettier: 3.10.1
 
   # Font baking (scripts/fonts/bake-metrics.mjs) — devDependencies
   # of the repo root only, never shipped: fontkit reads hhea/OS-2/hmtx from
   # the vendored TTF/OTF (it does not decompress woff2 itself), and wawoff2
   # decompresses the vendored woff2 to the TTF fontkit needs.
-  fontkit: ^2.0.4
+  fontkit: ^3.0.0
   wawoff2: ^2.0.1

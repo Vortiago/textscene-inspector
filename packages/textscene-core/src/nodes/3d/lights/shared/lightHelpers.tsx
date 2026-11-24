@@ -1,10 +1,3 @@
-/**
- * Editor gizmos for the three light types: `<*LightGizmo lightRef={ref}>` attaches
- * a `THREE.*LightHelper` to the light. Only the selected light shows one, as in Godot
- * (`light_3d_gizmo_plugin.cpp:160,200,243`). Hover shows `HoverHighlight` instead.
- * Outside a NodeDispatcher, `useNodePath()` is `null` and the gizmo stays hidden.
- */
-
 import type { RefObject } from 'react';
 import * as THREE from 'three';
 import { usePrimitiveHelper, correctHelperForParentGroup } from '../../../../r3f/hooks/useTHREEHelper';
@@ -36,6 +29,7 @@ interface DirectionalGizmoProps {
   lightRef: RefObject<THREE.DirectionalLight | null>;
 }
 
+// Only the selected light shows its helper (light_3d_gizmo_plugin.cpp:160,200,243).
 export function DirectionalLightGizmo({ lightRef }: DirectionalGizmoProps) {
   return (
     <LightGizmoCommon

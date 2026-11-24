@@ -7,13 +7,11 @@ import type { ReactNode } from 'react';
 import { nodeRegistry } from '../../../core/NodeRegistry.js';
 import { rendersOwnVisual } from '../../nodeSupport.js';
 import { isCamera3DType } from '../../cameraNodeTypes.js';
-import { useSelection } from '../../contexts/SelectionContext.js';
-import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
+import { usePreviewCamera } from '../TscnPreviewShell/previewCamera.js';
+import { useSelectedPath } from '../TscnPreviewShell/previewSelection.js';
 import { useLiveNode } from '../../useLiveSceneTree.js';
 import { useLivePatchedNode } from '../../liveNodePatches.js';
-import { useUndrawnMeshTypes } from '../../contexts/UndrawnMeshesContext.js';
-import { useIsEmptyShape } from '../../contexts/EmptyShapesContext.js';
-import { useShaderErrors } from '../../contexts/ShaderErrorsContext.js';
+import { useUndrawnNode } from '../TscnPreviewShell/previewViewStatus.js';
 import { spelledLiveNodePath } from '../../../utils/nodePath.js';
 import { PropertySection } from './PropertySection.js';
 import type { PropertySection as PropertySectionData } from '../../../core/NodeRegistry.js';
@@ -27,8 +25,8 @@ interface NodeDetailsPanelProps {
 }
 
 export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
-  const { selectedNodePath } = useSelection();
-  const viewportActions = useOptionalViewportActions();
+  const selectedNodePath = useSelectedPath();
+  const preview = usePreviewCamera();
 
   // The merged node and its originating instance ref. It re-derives when a
   // lazily loaded sub-scene lands.
@@ -54,7 +52,7 @@ export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
     ? authoredSections(registration.propertyFormatter(node.properties), node.scope)
     : [];
 
-  const isPreviewed = viewportActions?.previewedCameraPath === path;
+  const isPreviewed = preview?.camera === path;
 
   return (
     <div className={styles.root}>
@@ -73,9 +71,7 @@ export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
         </WarningSection>
       )}
 
-      <UndrawnMeshNotice nodePath={path} />
-      <EmptyShapeNotice nodePath={path} />
-      <ShaderErrorNotice nodePath={path} />
+      <UndrawnNotices nodePath={path} />
 
       <div className={styles.section}>
         <div className={styles.row}>
@@ -109,7 +105,7 @@ export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
         )}
       </div>
 
-      {isCamera3DType(node.type) && viewportActions !== null && (
+      {isCamera3DType(node.type) && preview !== null && (
         <div className={styles.section}>
           <h4 className={styles.sectionTitle}>Camera</h4>
           {/* Godot's "Preview" checkbox for the selected Camera3D (`node_3d_editor_plugin.cpp:6303-6304`). */}
@@ -118,9 +114,7 @@ export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
               type="checkbox"
               checked={isPreviewed}
               onChange={(event) =>
-                event.target.checked
-                  ? viewportActions.previewCamera(path)
-                  : viewportActions.endCameraPreview()
+                event.target.checked ? preview.previewCamera(path) : preview.endPreview()
               }
             />
             Preview
@@ -156,9 +150,21 @@ function WarningSection({ title, children }: { title: string; children: ReactNod
   );
 }
 
+/** What the view reports it holds of the node and does not draw. */
+function UndrawnNotices({ nodePath }: { nodePath: string }) {
+  const undrawn = useUndrawnNode(nodePath);
+  if (!undrawn) return null;
+  return (
+    <>
+      <UndrawnMeshNotice types={undrawn.meshTypes} />
+      {undrawn.isEmptyShape && <EmptyShapeNotice />}
+      <ShaderErrorNotice errors={undrawn.shaderErrors} />
+    </>
+  );
+}
+
 /** Names each mesh type the node holds that the previewer does not draw. */
-function UndrawnMeshNotice({ nodePath }: { nodePath: string }) {
-  const types = useUndrawnMeshTypes(nodePath);
+function UndrawnMeshNotice({ types }: { types: readonly string[] }) {
   if (types.length === 0) return null;
   const meshes = types.length === 1 ? `${types[0]} mesh is` : `${types.join(', ')} meshes are`;
   return (
@@ -180,8 +186,7 @@ const EMPTY_SHAPE_WARNING = [
 ];
 
 /** Godot's warning for a CSG shape whose brush is empty, such as an open one. */
-function EmptyShapeNotice({ nodePath }: { nodePath: string }) {
-  if (!useIsEmptyShape(nodePath)) return null;
+function EmptyShapeNotice() {
   return (
     <WarningSection title="Empty Shape">
       {EMPTY_SHAPE_WARNING.map((line) => (
@@ -194,8 +199,7 @@ function EmptyShapeNotice({ nodePath }: { nodePath: string }) {
 }
 
 /** The error text of each shader of the node that the previewer does not draw. */
-function ShaderErrorNotice({ nodePath }: { nodePath: string }) {
-  const errors = useShaderErrors(nodePath);
+function ShaderErrorNotice({ errors }: { errors: readonly string[] }) {
   if (errors.length === 0) return null;
   return (
     <WarningSection title="Shader Error">

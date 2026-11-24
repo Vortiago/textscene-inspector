@@ -24,7 +24,7 @@ const HUD = new TscnParser().parse(`[gd_scene format=3]
 
 const HOST_PATH = 'res://main1.tscn';
 
-/** HudInstance's table holds `%Lamp` for a node outside the instance, so Shade leaves it. */
+/** HudInstance owns Lamp, outside it, so Shade leaves it. Lamp lists once HudInstance is editable. */
 const HOST = new TscnParser().parse(`[gd_scene format=3]
 
 [ext_resource type="PackedScene" path="${HUD_PATH}" id="hud"]
@@ -37,6 +37,8 @@ const HOST = new TscnParser().parse(`[gd_scene format=3]
 unique_name_in_owner = true
 
 [node name="Shade" type="Node3D" parent="HudInstance/%Lamp"]
+
+[editable path="HudInstance"]
 `);
 
 /** A file that instances the host as `Stage`, so the heading that leaves HudInstance sits in a sub-scene. */
@@ -47,6 +49,8 @@ const OUTER = new TscnParser().parse(`[gd_scene format=3]
 [node name="Outer" type="Node3D"]
 
 [node name="Stage" parent="." instance=ExtResource("main1")]
+
+[editable path="Stage"]
 `);
 
 function renderTree(file = HOST) {

@@ -1,9 +1,3 @@
-/**
- * The debug lines of a ConvexPolygonShape3D for both gizmos that draw it. The hull builder lives in
- * three's examples bundle, so it loads on demand: it stays off the static-paint closure and out of
- * the VS Code webview budget until a gizmo shows. Null until it loads.
- */
-
 import { useMemo } from 'react';
 import type { Shape3DResource } from '../../../resources/shapes/shape3d';
 import { decodeConvexPolygonShape3D } from '../../../resources/shapes/convexpolygonshape3d';
@@ -11,6 +5,7 @@ import { memoisedImport } from '../../../resources/memoisedImport';
 import { useLazyModule } from '../../../resources/useLazyModule';
 import { convexDebugLines } from './convexDebugLines';
 
+// Lazy: the hull builder lives in three's examples bundle, off the static-paint closure until a gizmo shows.
 const loadConvexGeometry = memoisedImport(() => import('three/addons/geometries/ConvexGeometry.js'));
 
 /**

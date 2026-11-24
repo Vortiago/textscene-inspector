@@ -7,7 +7,7 @@
 
 import type { RootState } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
-import { isTypingTarget } from './hooks/isTypingTarget.js';
+import { isViewKeyEvent } from './viewFocus.js';
 import type { EditorControlsHandle } from './EditorControlsHandle.js';
 import { resolveNavMode } from './godotEditorCursor.js';
 import { isGesturePointer, type TouchPoint } from './pointerGesture.js';
@@ -114,7 +114,7 @@ export function useEditorNavigation(
     }
 
     function handleKeyDown(event: KeyboardEvent): void {
-      if (isTypingTarget(event.target)) return;
+      if (!isViewKeyEvent(event, element)) return;
       if (isPreviewing()) {
         consumeEditorViewKey(event);
         return;
@@ -135,7 +135,7 @@ export function useEditorNavigation(
     element.addEventListener('contextmenu', handleContextMenu);
     // Not passive: a zoom must not also scroll the page behind the canvas.
     element.addEventListener('wheel', handleWheel, { passive: false });
-    window.addEventListener('keydown', handleKeyDown);
+    element.addEventListener('keydown', handleKeyDown);
     window.addEventListener('blur', handleBlur);
 
     return () => {
@@ -146,7 +146,7 @@ export function useEditorNavigation(
       element.removeEventListener('lostpointercapture', endPointer);
       element.removeEventListener('contextmenu', handleContextMenu);
       element.removeEventListener('wheel', handleWheel);
-      window.removeEventListener('keydown', handleKeyDown);
+      element.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('blur', handleBlur);
       endDrag();
       resetTouch();

@@ -1,7 +1,7 @@
 export interface ExternalStore<T> {
   /** Safe to call during render. */
   get(): T;
-  /** An `Object.is`-equal value notifies nobody. A throwing subscriber stops no later one. */
+  /** An `Object.is`-equal value notifies nobody. A throwing subscriber stops none of the others. */
   set(value: T): void;
   /** Returns the unsubscribe function. */
   subscribe(onStoreChange: () => void): () => void;

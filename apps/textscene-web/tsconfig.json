@@ -2,7 +2,10 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": "./src"
+    // Wide enough for the renderer's workspace source: nothing here emits, as a bundler builds the app.
+    "rootDir": "../..",
+    // The renderer's source in the workspace, as `scripts/workspaceRenderer.mjs` aliases it for the bundler.
+    "paths": { "@textscene/renderer": ["../textscene-renderer/src/index.ts"] }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts", "**/*.test.tsx", "**/*.spec.tsx"]

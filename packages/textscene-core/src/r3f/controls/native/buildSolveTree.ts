@@ -61,7 +61,6 @@ import type { AwaitedFonts } from './text/settledFonts';
 import { settledFontsOf, useAwaitedFontsVersion } from './text/useSettledFont';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import { useLayoutDirectionEnv } from '../../contexts/useLayoutDirectionEnv';
-import { useOptionalSelection } from '../../contexts/SelectionContext';
 import {
   liveTreeOf,
   type CachedSceneSource,
@@ -178,12 +177,6 @@ interface Ancestry {
    */
   canvasChainBroken: boolean;
   /**
-   * The eye toggle of every ancestor, by outliner subtree, so it never resets.
-   * A skipped ancestor has no group to hide, and a hoisted Control leaves its
-   * ancestor's group, so both would escape the toggle.
-   */
-  ancestorHidden: boolean;
-  /**
    * The nearest ancestor Control's `is_layout_rtl()`, or `null` off the top of
    * the tree (`scene/gui/control.cpp:3584-3608`). Other types pass it through: the
    * climb steps over them. No `Window`, the one other stop, is drawn here.
@@ -235,8 +228,6 @@ interface SkippedChain {
 
 const NOTHING_SKIPPED: SkippedChain = { above: null, parent: null };
 
-/** No provider (a headless or raster walk) hides nothing. */
-const NO_HIDDEN: ReadonlySet<string> = new Set();
 const NO_KEYS: ReadonlySet<string> = new Set();
 
 /**
@@ -299,7 +290,6 @@ function buildForest(
   loader: ResourceLoader | null,
   snapshot: ResourceSnapshot,
   projectSettings: ProjectSettings | null,
-  hiddenNodePaths: ReadonlySet<string>,
   layoutDirectionEnv: LayoutDirectionEnv,
   { inheritedRtl, viewport, themeOwners, rootRange }: ForestStart,
   viewportTargetSize: ViewportTargetSize
@@ -635,18 +625,16 @@ function buildForest(
     if (!embedsWindows) return NOTHING_WALKED;
     const { step, path } = link;
     const live = step.node;
-    const hidden = ancestry.ancestorHidden || hiddenNodePaths.has(path);
     const isWindow = isEmbeddedWindow(live.type);
     // Theme inheritance stops at a viewport that is no Window, as at any non-Control.
     const themeChain = isWindow ? withOwnTheme(live, step.scope, ancestry.themeChain) : [];
     if (isEmbeddableWindow(live)) {
-      windows.push(windowSolveNode(live, path, step.scope, themeChain, hidden, ancestry.inheritedRtl));
+      windows.push(windowSolveNode(live, path, step.scope, themeChain, ancestry.inheritedRtl));
     }
     if (embedsSubwindows(tree, live)) return NOTHING_WALKED;
     return descendForWindows(step, descend, {
       ...ancestry,
       themeChain,
-      ancestorHidden: hidden,
       windowsOnly: true,
     });
   }
@@ -687,7 +675,6 @@ function buildForest(
     path: string,
     scope: SceneScope,
     themeChain: readonly ThemeResource[],
-    hidden: boolean,
     inheritedRtl: boolean | null
   ): SolveNode {
     const props = window.properties as WindowProperties;
@@ -705,7 +692,6 @@ function buildForest(
       inheritance: CHAIN_START_INHERITANCE,
       rtl: inheritedRtl ?? layoutDirectionEnv.rootRtl,
       locale: layoutDirectionEnv.applicationLocale,
-      hidden,
       ...items,
       textureSize: texture.size,
       textureSlots: texture.slots,
@@ -725,7 +711,7 @@ function buildForest(
     descend: (ancestry: Ancestry) => WalkResult[]
   ): WalkResult {
     const { raw: node, step, path, group } = link;
-    const { themeChain, skippedChain, canvasChainBroken, ancestorHidden, inheritedRtl } = ancestry;
+    const { themeChain, skippedChain, canvasChainBroken, inheritedRtl } = ancestry;
     const { isContentRoot } = ancestry;
     // A viewport owns its own World2D (ADR-0033): its Control subtree draws in its own target. The
     // collapsed type, since an instance's own node has none when its sub-scene root is the viewport.
@@ -766,12 +752,10 @@ function buildForest(
     // (`ThemeOwner::propagate_theme_changed`, `scene/theme/theme_owner.cpp`),
     // though layout passes through it.
     const nodeThemeChain = isControl ? withOwnTheme(collapsed, ownScope, themeChain) : [];
-    const hidden = ancestorHidden || hiddenNodePaths.has(path);
     if (ancestry.windowsOnly) {
       return descendForWindows(step, descend, {
         ...ancestry,
         themeChain: nodeThemeChain,
-        ancestorHidden: hidden,
         inheritedRtl: rtl,
       });
     }
@@ -795,7 +779,6 @@ function buildForest(
             themeChain: nodeThemeChain,
             skippedChain: childSkippedChain,
             canvasChainBroken: childCanvasChainBroken,
-            ancestorHidden: hidden,
             inheritedRtl: rtl,
             windowsOnly: false,
             isContentRoot: false,
@@ -843,7 +826,6 @@ function buildForest(
       inheritance: inheritanceOf(path, canvasItem),
       rtl: rtl ?? layoutDirectionEnv.rootRtl,
       locale: layoutDirectionEnv.applicationLocale,
-      hidden,
       ...items,
       textureSize: texture.size,
       textureSlots: texture.slots,
@@ -867,7 +849,6 @@ function buildForest(
         themeChain: ownerThemeChain,
         skippedChain: NOTHING_SKIPPED,
         canvasChainBroken: false,
-        ancestorHidden: false,
         inheritedRtl,
         windowsOnly: false,
         isContentRoot: viewport !== null && isEmbeddedWindow(viewport.type),
@@ -935,7 +916,6 @@ function useSolveForest(
   start: ForestStart
 ): UseBuildSolveTreeResult {
   const loader = useResourceLoader();
-  const hiddenNodePaths = useOptionalSelection()?.hiddenNodePaths ?? NO_HIDDEN;
   // With or without a loader: `peekSceneFontMetrics` starts font loads from the solve itself and
   // answers with the bundled fallback until the metrics settle. Only a font the last build read
   // while it loaded wakes it.
@@ -977,7 +957,6 @@ function useSolveForest(
           loader,
           snapshot,
           projectSettings,
-          hiddenNodePaths,
           layoutDirectionEnv,
           start,
           viewportTargetSize
@@ -991,7 +970,6 @@ function useSolveForest(
         internalResources,
         loader,
         projectSettings,
-        hiddenNodePaths,
         layoutDirectionEnv,
         start,
         sizesKey,

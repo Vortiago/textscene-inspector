@@ -5,7 +5,7 @@ import { settleUnrelatedFontLoad } from '../../r3f/testing/settleFontWork';
 import { NO_RESOURCES } from '../../r3f/SceneResourcesContext';
 import type { ScopedResource } from '../scopedResource';
 import { createFakeResourceLoader } from '../testing/createFakeResourceLoader';
-import { missingResourcesWrapper } from '../testing/missingResourcesWrapper';
+import { loaderWrapper } from '../testing/loaderWrapper';
 import { COARSE_TUBE, curveEndingAt } from './primitivemesh/surface.testkit';
 import { FONT_PATH, textMeshWith, trueTypeFontFile } from './textmesh/textMeshFont.testkit';
 import { useResolvableMesh } from './useResolvableMesh';
@@ -27,7 +27,7 @@ const BOX: ScopedResource = {
 function renderMesh(scoped: ScopedResource | null) {
   const fake = createFakeResourceLoader();
   const result = renderHook(() => useResolvableMesh(scoped), {
-    wrapper: missingResourcesWrapper(fake.loader),
+    wrapper: loaderWrapper(fake.loader),
   }).result;
   return { fake, result };
 }
@@ -72,7 +72,7 @@ describe('useResolvableMesh for a TextMesh', () => {
     const request = vi.fn();
     fake.fonts.setRequestImpl(request);
     const { result } = renderHook(() => useResolvableMesh(textScoped), {
-      wrapper: missingResourcesWrapper(fake.loader),
+      wrapper: loaderWrapper(fake.loader),
     });
 
     expect(request).toHaveBeenCalledWith(FONT_PATH);
@@ -82,7 +82,7 @@ describe('useResolvableMesh for a TextMesh', () => {
   it('is no mesh while the metrics of the loaded font settle, then serves the mesh with its font', async () => {
     const fake = createFakeResourceLoader();
     const { result } = renderHook(() => useResolvableMesh(textScoped), {
-      wrapper: missingResourcesWrapper(fake.loader),
+      wrapper: loaderWrapper(fake.loader),
     });
     const font = trueTypeFontFile();
 
@@ -96,7 +96,7 @@ describe('useResolvableMesh for a TextMesh', () => {
   it('serves the mesh with the bundled font, once it has settled, for a font that failed to load', async () => {
     const fake = createFakeResourceLoader();
     const { result } = renderHook(() => useResolvableMesh(textScoped), {
-      wrapper: missingResourcesWrapper(fake.loader),
+      wrapper: loaderWrapper(fake.loader),
     });
 
     act(() => fake.fonts._fail(FONT_PATH, 'gone'));
@@ -114,7 +114,7 @@ describe('useResolvableMesh and the metrics of a font that settle', () => {
         renders += 1;
         return useResolvableMesh(scoped);
       },
-      { wrapper: missingResourcesWrapper(fake.loader) }
+      { wrapper: loaderWrapper(fake.loader) }
     );
     return { fake, result, renders: () => renders };
   }

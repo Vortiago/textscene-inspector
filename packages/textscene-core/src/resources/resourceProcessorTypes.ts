@@ -80,15 +80,6 @@ export interface ResourceProcessor<T> {
   release(path: string): void;
   /** For debugging. */
   getCacheSize(): number;
-  /** Snapshot of the currently-cached paths (for the loader's full-clear announcement). */
-  cachedPaths(): string[];
-  /**
-   * Snapshot of the paths currently loading. The loader's full-clear
-   * announcement must cover these too: their completions are dropped as
-   * cleared-era flights, so without an `invalidated` for them a mounted
-   * consumer waiting on the load would hang in `pending` forever.
-   */
-  inflightPaths(): string[];
   /**
    * Increment the pin count for `path` on mount, paired with `unpin` on unmount.
    * `evictOverflow` skips a pinned entry. `clearCache` still removes it but defers

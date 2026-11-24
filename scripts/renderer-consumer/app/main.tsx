@@ -1,11 +1,13 @@
 import { createRoot } from 'react-dom/client';
-import {
-  TscnCanvas,
-  TscnSceneProvider,
-  openScene,
-  variant,
-  type ResourceProvider,
-} from '@textscene/renderer';
+import { TscnCanvas, openScene, variant } from '@textscene/renderer';
+import { runHeldResourceChecks, type HeldResourceCheckResults } from './heldResourceChecks';
+import { runMissingFileChecks, type MissingFileCheckResults } from './missingFileChecks';
+import { runStatusChecks, type StatusCheckResults } from './statusChecks';
+import { projectOf, runMountChecks, type MountCheckResults } from './mountChecks';
+import { WINDOW_320_PROJECT, exposeSwitchChecks } from './switchView';
+import { exposeCameraChecks } from './cameraView';
+import { runLoadChecks, type LoadCheckResults } from './loadChecks';
+import { exposePickView } from './pickView';
 
 const FIXTURE_SCENE = `[gd_scene format=3]
 
@@ -52,16 +54,7 @@ offset_bottom = 210.0
 color = Color(1, 0, 0, 1)
 `;
 
-/** The game window matches the element, so the In-game mode draws no bars around it. */
-const PROJECT = `[display]
-
-window/size/viewport_width=320
-window/size/viewport_height=240
-`;
-
-const projectOnly: ResourceProvider = {
-  loadResource: async (path) => (path === 'res://project.godot' ? PROJECT : null),
-};
+const projectOnly = projectOf(WINDOW_320_PROJECT);
 
 const gameScene = openScene({ source: FIXTURE_SCENE, provider: projectOnly });
 const query = new URLSearchParams(location.search);
@@ -77,6 +70,7 @@ const called =
   query.get('call') === 'close' ? gameScene.getNode('Close').call('make_current') : Promise.resolve(null);
 
 const menuScene = openScene({ source: FIXTURE_2D_SCENE, provider: projectOnly });
+const editorScene = openScene({ source: FIXTURE_SCENE, provider: projectOnly });
 
 /** `?mode=in-game` draws the game's start, `?mode=2D` the editor's 2D view. The page holds one view. */
 function View() {
@@ -86,17 +80,56 @@ function View() {
   if (query.get('mode') === '2D') {
     return <TscnCanvas scene={menuScene} mode="2D" />;
   }
-  return (
-    <TscnSceneProvider source={FIXTURE_SCENE} provider={projectOnly}>
-      <TscnCanvas />
-    </TscnSceneProvider>
-  );
+  return <TscnCanvas scene={editorScene} />;
 }
 
-void Promise.all([written, called]).then(() =>
-  createRoot(document.getElementById('root')!).render(
-    <div id="viewport" style={{ width: 320, height: 240 }}>
-      <View />
-    </div>
-  )
-);
+/** `#viewport`, the element the runner's screenshots read. */
+function screenshotElement(): HTMLElement {
+  const viewport = document.createElement('div');
+  viewport.id = 'viewport';
+  viewport.style.cssText = 'width: 320px; height: 240px';
+  document.getElementById('root')!.append(viewport);
+  return viewport;
+}
+
+declare global {
+  interface Window {
+    /** Written once the checks of `mountScene` end, for the runner to read. */
+    mountChecks?: MountCheckResults;
+    /** Written once the checks of a resource the scene file holds end. */
+    heldResourceChecks?: HeldResourceCheckResults;
+    /** Written once the checks of the texture worker and a changed file end. */
+    loadChecks?: LoadCheckResults;
+    /** Written once the checks of the files a scene asked for and did not get end. */
+    missingFileChecks?: MissingFileCheckResults;
+    /** Written once the checks of `view.status()` and `onStatusChange` end. */
+    statusChecks?: StatusCheckResults;
+  }
+}
+
+/** Each `?checks=` value runs checks that mount views of their own. */
+if (query.get('checks') === 'mount') {
+  void runMountChecks().then((results) => (window.mountChecks = results));
+} else if (query.get('checks') === 'held') {
+  void runHeldResourceChecks().then((results) => (window.heldResourceChecks = results));
+} else if (query.get('checks') === 'load') {
+  void runLoadChecks().then((results) => (window.loadChecks = results));
+} else if (query.get('checks') === 'missing') {
+  void runMissingFileChecks().then((results) => (window.missingFileChecks = results));
+} else if (query.get('checks') === 'status') {
+  void runStatusChecks().then((results) => (window.statusChecks = results));
+} else if (query.get('checks') === 'switch') {
+  exposeSwitchChecks(screenshotElement());
+} else if (query.get('checks') === 'camera') {
+  exposeCameraChecks(screenshotElement());
+} else if (query.get('checks') === 'pick') {
+  exposePickView(screenshotElement());
+} else {
+  void Promise.all([written, called]).then(() =>
+    createRoot(document.getElementById('root')!).render(
+      <div id="viewport" style={{ width: 320, height: 240 }}>
+        <View />
+      </div>
+    )
+  );
+}

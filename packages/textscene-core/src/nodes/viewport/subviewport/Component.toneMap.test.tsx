@@ -13,7 +13,7 @@ import { TscnParser } from '../../../parser/TscnParser';
 import { NodeDispatcher } from '../../../r3f/NodeDispatcher';
 import { CanvasWorldScope, WorldEnvironmentScope } from '../../../r3f/environment/WorldEnvironmentScope';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
-import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
+import { ViewShowProvider } from '../../../r3f/viewShow/ViewShowContext';
 import { ViewportPassStack } from './viewportPasses.testkit';
 import { withStubbedGl } from '../../../r3f/testing/stubbedGl';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
@@ -111,13 +111,13 @@ async function mount(
       source={source}
       workspace={workspace}
     >
-      <ViewportModeProvider initialShowPreviewEnvironment={false}>
+      <ViewShowProvider show={{ previewEnvironment: false }}>
         <ViewportPassStack captured={captured}>
           <WorldScope>
             <NodeDispatcher nodes={parsed.nodes} />
           </WorldScope>
         </ViewportPassStack>
-      </ViewportModeProvider>
+      </ViewShowProvider>
     </SceneStack>
   );
   return async () => {

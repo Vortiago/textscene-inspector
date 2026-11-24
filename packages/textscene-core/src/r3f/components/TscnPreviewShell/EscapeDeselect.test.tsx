@@ -4,12 +4,13 @@
  */
 import { describe, expect, it } from 'vitest';
 import { act, fireEvent, render } from '@testing-library/react';
-import { SelectionProvider, useSelection } from '../../contexts/SelectionContext';
+import { SelectionProvider, useSelectedNodePath, useSelection } from '../../contexts/SelectionContext';
 import { ViewportControlsHelp } from '../ViewportControlsHelp/ViewportControlsHelp';
 import { EscapeDeselect } from './EscapeDeselect';
 
 function Harness() {
-  const { selectedNodePath, setSelectedNodePath } = useSelection();
+  const { setSelectedNodePath } = useSelection();
+  const selectedNodePath = useSelectedNodePath();
   return (
     <div>
       <span data-testid="selected">{selectedNodePath ?? '(none)'}</span>

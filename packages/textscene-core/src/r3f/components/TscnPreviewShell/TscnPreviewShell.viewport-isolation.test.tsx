@@ -1,8 +1,3 @@
-/**
- * Two <TscnPreviewShell> instances share no viewport mode. A selection and a
- * 2D switch in A leave B's mode and selection alone, and A's selection
- * survives its own mode switch.
- */
 import { describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -15,7 +10,7 @@ vi.mock('../../TscnCanvas', () => ({
   TscnSceneContents: () => null,
 }));
 
-import { TscnPreviewShell } from './TscnPreviewShell';
+import { TextShell } from './TscnPreviewShell.testkit';
 
 const MINIMAL_TSCN = `[gd_scene load_steps=1 format=3]
 
@@ -35,12 +30,12 @@ function modeButton(shell: HTMLElement, label: '2D' | '3D'): HTMLButtonElement {
   return button as HTMLButtonElement;
 }
 
-describe('<TscnPreviewShell> viewport-mode isolation between panels', () => {
+describe('<TextShell> viewport-mode isolation between panels', () => {
   it('switching A to 2D leaves B in 3D, and neither selection bleeds nor resets', async () => {
     render(
       <>
-        <TscnPreviewShell panelId="shell-a" content={MINIMAL_TSCN} />
-        <TscnPreviewShell panelId="shell-b" content={MINIMAL_TSCN} />
+        <TextShell panelId="shell-a" content={MINIMAL_TSCN} />
+        <TextShell panelId="shell-b" content={MINIMAL_TSCN} />
       </>
     );
     const shellA = shellEl('shell-a');
@@ -86,8 +81,8 @@ describe('<TscnPreviewShell> viewport-mode isolation between panels', () => {
   it('switching B afterwards does not pull A back to 3D', async () => {
     render(
       <>
-        <TscnPreviewShell panelId="shell-a" content={MINIMAL_TSCN} />
-        <TscnPreviewShell panelId="shell-b" content={MINIMAL_TSCN} />
+        <TextShell panelId="shell-a" content={MINIMAL_TSCN} />
+        <TextShell panelId="shell-b" content={MINIMAL_TSCN} />
       </>
     );
     const shellA = shellEl('shell-a');

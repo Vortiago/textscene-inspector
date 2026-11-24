@@ -3,7 +3,6 @@ import type { ReactNode } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ParsedResource } from '../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../parser/types';
-import { MissingResourcesProvider, useMissingResources } from '../contexts/MissingResourcesContext';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { FONT_PATH, trueTypeFontFile } from '../../resources/meshes/textmesh/textMeshFont.testkit';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
@@ -44,23 +43,15 @@ function renderSetupWith(
   externalResources: TscnExternalResource[] = EXT
 ) {
   return renderHook(
-    ({ root: current }: { root: TscnNode | null }) => {
-      const { missingPaths, uploadedPaths } = useMissingResources();
-      return { setup: useCsgGeometryContext(current), missing: missingPaths, uploaded: uploadedPaths };
-    },
+    ({ root: current }: { root: TscnNode | null }) => ({ setup: useCsgGeometryContext(current) }),
     {
       initialProps: { root },
       wrapper: ({ children }: { children: ReactNode }) => (
-        <MissingResourcesProvider>
-          <ResourceLoaderProvider loader={fake.loader}>
-            <SceneResourcesProvider
-              internalResources={internalResources}
-              externalResources={externalResources}
-            >
-              {children}
-            </SceneResourcesProvider>
-          </ResourceLoaderProvider>
-        </MissingResourcesProvider>
+        <ResourceLoaderProvider loader={fake.loader}>
+          <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>
+            {children}
+          </SceneResourcesProvider>
+        </ResourceLoaderProvider>
       ),
     }
   );
@@ -97,32 +88,12 @@ describe('useCsgGeometryContext', () => {
     expect(fake.resources.pinCounts.get(ROCK)).toBe(1);
   });
 
-  it('reports a file that failed as missing, and stops loading', () => {
+  it('stops loading for a file that failed, and answers null for it', () => {
     const fake = createFakeResourceLoader();
     const result = renderSetup(ROOT, fake);
     act(() => fake.resources._fail(ROCK, 'gone'));
     expect(result.current.setup.isLoading).toBe(false);
     expect(result.current.setup.context.loadedFile(ROCK)).toBeNull();
-    expect(result.current.missing.has(ROCK)).toBe(true);
-  });
-
-  it('keeps the row of a failed file that loads later, marked uploaded', () => {
-    const fake = createFakeResourceLoader();
-    const result = renderSetup(ROOT, fake);
-    act(() => fake.resources._fail(ROCK, 'gone'));
-    act(() => fake.resources._resolve(ROCK, ROCK_FILE));
-    expect(result.current.missing.has(ROCK)).toBe(false);
-    expect(result.current.uploaded.has(ROCK)).toBe(true);
-  });
-
-  it('shows no uploaded row for a failed file that leaves the subtree and loads on its return', () => {
-    const fake = createFakeResourceLoader();
-    const { result, rerender } = renderSetupWith(ROOT, fake);
-    act(() => fake.resources._fail(ROCK, 'gone'));
-    rerender({ root: node('CSGBox3D', {}) });
-    act(() => fake.resources._resolve(ROCK, ROCK_FILE));
-    rerender({ root: ROOT });
-    expect(result.current.uploaded.has(ROCK)).toBe(false);
   });
 
   it('reads no file for a node in an ancestor’s plan, which passes no root (edge case)', () => {
@@ -187,7 +158,7 @@ describe('useCsgGeometryContext for a TextMesh', () => {
     expect(result.current.setup.context).not.toBe(awaiting);
   });
 
-  it('stops loading, and names the failure, for a font file that failed', async () => {
+  it('stops loading for a font file that failed', async () => {
     const fake = createFakeResourceLoader();
     const result = renderText(fake);
 
@@ -195,7 +166,6 @@ describe('useCsgGeometryContext for a TextMesh', () => {
 
     // The bundled font draws in its place, once its outlines load in this preview.
     await waitFor(() => expect(result.current.setup.isLoading).toBe(false));
-    expect(result.current.missing.has(FONT_PATH)).toBe(true);
   });
 
   it('listens to no font bus for a subtree with no shape that reads a font', () => {

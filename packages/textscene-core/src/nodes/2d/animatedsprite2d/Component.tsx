@@ -12,13 +12,15 @@ import { CanvasMeshBody } from '../../../r3f/canvasMesh/CanvasMeshBody';
 import { useCanvasMeshTexture } from '../../../r3f/canvasMesh/useCanvasMeshTexture';
 import { useSpriteQuad } from '../../../r3f/canvasMesh/spriteQuad';
 import { frameSizePx, WHOLE_FRAME } from '../../../r3f/spriteFrame';
-import { useAnimationTransport } from '../../../r3f/contexts/AnimationTransportContext';
+import { useAnimationTransport, useIsActivePath } from '../../../r3f/contexts/AnimationTransportContext';
+import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { stepPlayback } from '../../../r3f/animation/stepPlayback';
 import { loopsUnderOverride } from '../../../r3f/animation/loopOverride';
-import { useIsSelected } from '../../../r3f/hooks/useIsSelected';
 import { useFrameReference, useSpriteFrames } from '../../../resources/textures/spriteframes/useSpriteFrames';
 import { frameAtTime, clipDuration } from '../../../resources/textures/spriteframes/playback';
 import type { SpriteFramesAnimation } from '../../../resources/textures/spriteframes/types';
+import { usePublishEditRect } from '../../../r3f/editRect/editRects';
+import { animatedSprite2DEditRect } from './editRect';
 import type { AnimatedSprite2DProperties } from './types';
 
 export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
@@ -39,7 +41,7 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
 
   // This sprite owns the transport only while it is the node selected in the tree.
   const transport = useAnimationTransport();
-  const isActive = useIsSelected();
+  const isActive = useIsActivePath(useNodePath());
 
   // Register this sprite's clips with the transport while selected, so the
   // Animation tab lists them (the authored `animation` pre-selects).
@@ -138,6 +140,9 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   const texture = useCanvasMeshTexture(props, { reference: useFrameReference(resolved, frameRef) });
   const frameSize = useMemo(() => frameSizePx(texture.size, WHOLE_FRAME), [texture.size]);
   const surfaces = useSpriteQuad(props, frameSize);
+  usePublishEditRect(
+    animatedSprite2DEditRect(frameRef ? texture.size : undefined, props.centered, props.offset)
+  );
 
   // No SpriteFrames, no animation or no frame texture draws nothing (`animated_sprite_2d.cpp:270-278`),
   // and so does a SpriteFrames or frame texture that is loading or failed.

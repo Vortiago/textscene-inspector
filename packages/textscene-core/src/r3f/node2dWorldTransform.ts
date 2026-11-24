@@ -7,22 +7,22 @@
 import type { TscnNode } from '../parser/types';
 import { liveNodeChain, type LiveTreeContext } from './liveSceneTree';
 import { NO_PATCHES, type PatchLookup } from './nodePatch';
-import { transform2DOrigin } from '../godot/math/transform2d.js';
+import { transform2DOrigin, type Transform2DColumns } from '../godot/math/transform2d.js';
 import { resolveGlobalTransform2D } from '../nodes/canvasitem/shared/globalTransform2D.js';
 import { chainParentOf, posesAlong, solvedControlsAlong } from './liveTransform2D.js';
+import { solvedNodePatchesOf } from './liveNodePatches.js';
+import { liveTreeOf } from './liveSceneTree.js';
+import { liveFilesOf } from './liveFiles.js';
+import type { SharedLiveTree } from './useLiveSceneTree.js';
+import type { ResourceLoader } from '../resources/ResourceLoader.js';
 
-/**
- * The node's world position in Godot pixel space, through Godot's canvas parent
- * chain. Null for an unknown path, and for a chain this cannot decode: an opaque
- * ancestor, or a Control between the node and the top of its chain. `placed` holds the poses the
- * live scene passes bound.
- */
-export function node2dWorldPosition(
+/** Null for an unknown path, an opaque ancestor, or an unsolved Control in the chain. */
+export function node2dWorldTransform(
   roots: readonly TscnNode[],
   ctx: LiveTreeContext,
   path: string,
   placed: PatchLookup = NO_PATCHES
-): { x: number; y: number } | null {
+): Transform2DColumns | null {
   const chain = liveNodeChain(path, roots, ctx);
   if (!chain) return null;
 
@@ -32,6 +32,21 @@ export function node2dWorldPosition(
     posesAlong(chain, path, placed),
     solvedControlsAlong(chain, path, ctx.controlTransforms)
   );
-  if (verdict.kind === 'unknowable') return null;
-  return transform2DOrigin(verdict.transform);
+  return verdict.kind === 'unknowable' ? null : verdict.transform;
+}
+
+/** The origin of {@link node2dWorldTransform}. */
+export function node2dWorldPosition(
+  roots: readonly TscnNode[],
+  ctx: LiveTreeContext,
+  path: string,
+  placed: PatchLookup = NO_PATCHES
+): { x: number; y: number } | null {
+  const transform = node2dWorldTransform(roots, ctx, path, placed);
+  return transform && transform2DOrigin(transform);
+}
+
+/** Where the live tree's poses, relays and solves have placed its nodes, for the `placed` of a walk here. */
+export function livePlacements(liveTree: SharedLiveTree, loader: ResourceLoader | null): PatchLookup {
+  return solvedNodePatchesOf(liveTreeOf(liveTree.roots, liveTree.ctx), liveFilesOf(loader).current());
 }

@@ -1,178 +1,47 @@
-/**
- * The webview budget: walks the static import closure from `dist/webview/webview.js`, gzips the
- * concatenation and compares it with `BUDGET_GZ`. The webview builds as `esm` with splitting, so
- * dynamic `import()` (React.lazy) chunks stay off the canvas-paint critical path and do not count.
- */
-
 import { gzipSync } from 'node:zlib';
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { ENTRY, WEBVIEW_DIR, WEBVIEW_METAFILE, formatKb } from './paths.mjs';
+import { ENTRY, WEBVIEW_DIR, formatKb } from './paths.mjs';
 
-// The ceiling catches an accidental import that pulls a whole library into the canvas-paint
-// path, not deliberate growth: every instantiable Godot node type bundles a parser (its linter
-// half stays out), so a tighter ceiling fails on the next slice, not on a regression. The report
-// reads growth against MEASURED_GZ, since growth inside the headroom is invisible in a PASS line.
-const MEASURED_GZ = 1_073_890; // the closure as last measured
-// ADR-0055: the ceiling while both the classic materials and the node lit surface ship.
-const BUDGET_GZ = 1_195_300; // absolute ceiling, gzipped
+// Growth inside the ceiling is invisible in a PASS line, so the report reads it against the last measure.
+const MEASURED_GZ = 2_244_188;
+// About 8 KB over the measure, the headroom the split build's gate kept: growth past it is raised here.
+const BUDGET_GZ = 2_253_000;
 
-// Modules a dynamic import() does not reach itself but that must stay off the closure: the
-// tables behind the area light's LTC textures and the noise jobs' `fastnoise-lite`.
-const LAZY_LEAF_RE = /\/ltcTable\.generated\.js$|\/node_modules\/fastnoise-lite\//;
-
-/** Where esbuild writes the webview, as the metafile's output keys begin. */
-const OUTPUT_PREFIX = 'dist/webview/';
-
-/** Every input that some input reaches through a dynamic import(). */
-function dynamicImportTargets(metafile) {
-  return new Set(
-    Object.values(metafile.inputs ?? {}).flatMap(({ imports = [] }) =>
-      imports.filter(({ kind }) => kind === 'dynamic-import').map(({ path }) => path)
-    )
-  );
-}
-
-/**
- * The lazy-only inputs that a closure file holds, from the webview build's metafile: each target
- * of a dynamic import(), and each lazy leaf. `closure` holds paths relative to the webview dir, as
- * `staticClosure` returns them.
- */
-export function findEagerLazyOnlyInputs(metafile, closure) {
-  const targets = dynamicImportTargets(metafile);
-  return Object.entries(metafile.outputs)
-    .filter(([output]) => closure.has(output.slice(OUTPUT_PREFIX.length)))
-    .flatMap(([, { inputs }]) =>
-      Object.keys(inputs).filter((input) => targets.has(input) || LAZY_LEAF_RE.test(input))
-    );
-}
-
-/**
- * The webview build's metafile, or nothing when it is missing or older than `webview.js`. A watch
- * build writes no metafile, so a stale one would name chunks that are no longer on disk.
- */
-function currentWebviewMetafile() {
-  if (!existsSync(WEBVIEW_METAFILE)) return null;
-  if (statSync(WEBVIEW_METAFILE).mtimeMs < statSync(join(WEBVIEW_DIR, ENTRY)).mtimeMs) return null;
-  return JSON.parse(readFileSync(WEBVIEW_METAFILE, 'utf8'));
-}
-
-/**
- * Static imports of a JS file. Dynamic `import()` calls, and the chunk importer calls the
- * webview build rewrites them into (chunkImportPlugin.mjs), become a sentinel first, since those
- * chunks load on demand and stay out of the closure.
- */
-function findStaticImports(content) {
-  const stripped = content.replace(/(?:import|__textsceneImportChunk)\([^)]*\)/g, '__DYN__()');
-  const out = new Set();
-  // `import ... from`, `export ... from` and `export * from`: a re-export pulls its target onto
-  // the critical path as an import does. esbuild emits only the import form, and the gate must
-  // not depend on that.
-  const re1 = /(?:import|export)[^'";]*?from[^'"]*["']\.\/(?:chunks\/)?([^'"]+)["']/g;
-  let m;
-  while ((m = re1.exec(stripped))) out.add(m[1]);
-  // bare side-effect import: import '...';
-  const re2 = /(?:^|[;\s])import\s*["']\.\/(?:chunks\/)?([^'"]+)["']/g;
-  while ((m = re2.exec(stripped))) out.add(m[1]);
-  return out;
-}
-
-/**
- * Where an import specifier lands on disk, or `null`, which fails the gate instead of shrinking
- * the closure. The walker reproduces the bundler's layout rather than reading it, so it tries
- * both a chunk under `chunks/` and a sibling beside the entry.
- */
-function resolveImport(dir, from, spec) {
-  const bare = spec.split('/').pop();
-  for (const candidate of [`chunks/${from === ENTRY ? spec : bare}`, bare, spec]) {
-    if (existsSync(join(dir, candidate))) return candidate;
-  }
-  return null;
-}
-
-/**
- * Breadth-first walk of the static-import closure from `entry`: the files (relative to the
- * webview dir) on the canvas-paint path, and every specifier that resolved to nothing. An
- * unresolved import is reported, never skipped, or a layout the resolver stopped matching would
- * shrink the closure to the entry alone and still pass `--enforce`.
- */
-function staticClosure(dir, entry) {
-  const visited = new Set();
-  const unresolved = new Set();
-  const queue = [entry];
-  while (queue.length > 0) {
-    const f = queue.shift();
-    if (visited.has(f)) continue;
-    visited.add(f);
-    const fp = join(dir, f);
-    if (!existsSync(fp)) continue;
-    const content = readFileSync(fp, 'utf8');
-    for (const imp of findStaticImports(content)) {
-      const target = resolveImport(dir, f, imp);
-      if (target === null) unresolved.add(`${f} -> ${imp}`);
-      else queue.push(target);
-    }
-  }
-  return { visited, unresolved };
+/** The scripts of `files` beside the entry, each one more request a closed load holds (ADR-0090). */
+export function findExtraScripts(files) {
+  return files.filter((file) => file.endsWith('.js') && file !== ENTRY);
 }
 
 /**
  * The exit code is the caller's: only `main()` sees both the budget and the host guard.
  *
- * @param {boolean} enforce whether an over-budget closure is an error or a warning
- * @returns {'ok' | 'over-budget' | 'missing-entry' | 'unresolved-imports' | 'eager-lazy-only'}
+ * @param {boolean} enforce whether an over-budget script is an error or a warning
+ * @returns {'ok' | 'over-budget' | 'missing-entry' | 'split-entry'}
  */
 export function checkWebviewBudget(enforce) {
-  if (!existsSync(join(WEBVIEW_DIR, ENTRY))) {
-    console.error(`\n[bundle-size] entry not found: ${join(WEBVIEW_DIR, ENTRY)}`);
+  const entryPath = join(WEBVIEW_DIR, ENTRY);
+  if (!existsSync(entryPath)) {
+    console.error(`\n[bundle-size] entry not found: ${entryPath}`);
     console.error('[bundle-size] run `pnpm --filter textscene-inspector build` first');
     return 'missing-entry';
   }
 
-  const { visited: closure, unresolved } = staticClosure(WEBVIEW_DIR, ENTRY);
-  if (unresolved.size > 0) {
-    console.error(`[bundle-size] FAIL: ${unresolved.size} import(s) resolved to no file on disk:`);
-    for (const miss of unresolved) console.error(`  ${miss}`);
-    console.error(
-      "[bundle-size] the closure walk reproduces the bundler's output layout; update it before trusting the number."
-    );
-    return 'unresolved-imports';
+  const extra = findExtraScripts(readdirSync(WEBVIEW_DIR, { recursive: true }));
+  if (extra.length > 0) {
+    console.error(`[bundle-size] FAIL: the build writes ${extra.length} script(s) beside ${ENTRY}:`);
+    for (const file of extra) console.error(`  ${file}`);
+    console.error('[bundle-size] the webview must load as one script file (ADR-0090).');
+    return 'split-entry';
   }
-  const metafile = currentWebviewMetafile();
-  if (!metafile) {
-    console.error(`\n[bundle-size] metafile missing or older than the webview build: ${WEBVIEW_METAFILE}`);
-    console.error('[bundle-size] run `pnpm --filter textscene-inspector build` first, not a watch build');
-    return 'missing-entry';
-  }
-  const eager = findEagerLazyOnlyInputs(metafile, closure);
-  if (eager.length > 0) {
-    console.error(`[bundle-size] FAIL: ${eager.length} lazy-only module(s) on the canvas-paint path:`);
-    for (const input of eager) console.error(`  ${input}`);
-    console.error('[bundle-size] reach each one only through a dynamic import().');
-    return 'eager-lazy-only';
-  }
-  const buffers = [];
-  let totalRaw = 0;
-  for (const f of [...closure].sort()) {
-    const fp = join(WEBVIEW_DIR, f);
-    if (!existsSync(fp)) continue;
-    const buf = readFileSync(fp);
-    totalRaw += buf.length;
-    buffers.push(buf);
-  }
-  const totalGz = gzipSync(Buffer.concat(buffers)).length;
-  const sinceMeasured = totalGz - MEASURED_GZ;
 
-  console.log('\n=== VS Code webview initial-paint bundle ===');
-  console.log(`Files (static-import closure): ${closure.size}`);
-  for (const f of [...closure].sort()) {
-    const fp = join(WEBVIEW_DIR, f);
-    if (existsSync(fp)) {
-      console.log(`  ${f}  ${formatKb(statSync(fp).size)}`);
-    }
-  }
-  console.log(`Total raw:        ${formatKb(totalRaw)}  (${totalRaw} B)`);
-  console.log(`Total gzipped:    ${formatKb(totalGz)}  (${totalGz} B)`);
+  const script = readFileSync(entryPath);
+
+  const totalGz = gzipSync(script).length;
+  const sinceMeasured = totalGz - MEASURED_GZ;
+  console.log('\n=== VS Code webview script ===');
+  console.log(`Raw:              ${formatKb(script.length)}  (${script.length} B)`);
+  console.log(`Gzipped:          ${formatKb(totalGz)}  (${totalGz} B)`);
   console.log(`Last measured:    ${formatKb(MEASURED_GZ)}  (${MEASURED_GZ} B)`);
   console.log(
     `Growth since:     ${sinceMeasured >= 0 ? '+' : ''}${formatKb(sinceMeasured)}  (${sinceMeasured} B)`
@@ -181,7 +50,7 @@ export function checkWebviewBudget(enforce) {
 
   const overBudget = totalGz - BUDGET_GZ;
   if (overBudget > 0) {
-    const msg = `[bundle-size] FAIL: initial chunk is ${formatKb(overBudget)} OVER the budget (gzipped ${totalGz} > ${BUDGET_GZ}).`;
+    const msg = `[bundle-size] FAIL: the script is ${formatKb(overBudget)} OVER the budget (gzipped ${totalGz} > ${BUDGET_GZ}).`;
     if (enforce) {
       console.error(msg);
     } else {

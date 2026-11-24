@@ -1,0 +1,23 @@
+; A res:// root of its own, because the transparent background and the window stretch are PROJECT
+; settings, which no .tscn can carry. The 640 x 240 window keeps the 320 x 240 base's aspect with bars at the sides.
+
+config_version=5
+
+[application]
+
+config/name="In-game transparent"
+config/features=PackedStringArray("4.6")
+
+[display]
+
+window/size/viewport_width=320
+window/size/viewport_height=240
+window/size/window_width_override=640
+window/size/window_height_override=240
+window/stretch/mode="canvas_items"
+window/size/transparent=true
+window/per_pixel_transparency/allowed=true
+
+[rendering]
+
+viewport/transparent_background=true

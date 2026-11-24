@@ -1,37 +1,31 @@
-/**
- * Picks the workspace from the root's type on each new scene (ADR-0006): a
- * CanvasItem gives 2D, a Node3D gives 3D, a plain Node keeps the current one.
- * The root is merged through the live tree first, so an instanced root claims
- * its sub-scene's workspace once that loads.
- */
-import { useEffect, useMemo, useRef } from 'react';
-import type { SceneGraph } from '../../../core/SceneGraph.js';
-import { useHierarchy } from '../../contexts/HierarchyContext.js';
+import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
+import { subscribeToSceneTree } from '../../currentCamera.js';
+import type { ParseResult } from '../../../scene/parseScene.js';
+import type { Scene } from '../../../scene/openScene.js';
+import { ROOT_WINDOW_PATH } from '../../../scene/nodePathWalk.js';
 import { useViewportMode } from '../../contexts/ViewportModeContext.js';
-import { workspaceForRoot } from '../../workspaceForScene.js';
-import { useSharedLiveTree } from '../../useLiveSceneTree.js';
-import { liveTreeOf, rootScope } from '../../liveSceneTree.js';
+import { workspaceForRootType } from '../../workspaceForScene.js';
 
-export function WorkspaceAutoSelect() {
-  const { sceneGraph } = useHierarchy();
+/** The root's class picks the workspace once per scene (ADR-0006), an instanced root its sub-scene's. */
+export function WorkspaceAutoSelect({ scene }: { scene: Scene }) {
   const { mode, setMode } = useViewportMode();
-  const liveTree = useSharedLiveTree();
-
-  const claimed = useMemo(() => {
-    const root = liveTree?.roots[0];
-    if (!liveTree || !root) return null;
-    const { roots, ctx } = liveTree;
-    return workspaceForRoot(liveTreeOf(roots, ctx).stepOf(root, rootScope(ctx)).node);
-  }, [liveTree]);
+  const parse = useSyncExternalStore(scene.subscribe, scene.parse);
+  const observeTree = useCallback((listener: () => void) => subscribeToSceneTree(scene, listener), [scene]);
+  const rootType = useSyncExternalStore(observeTree, () => rootTypeOf(scene));
+  const claimed = workspaceForRootType(rootType);
 
   // Once per scene, so a manual toggle holds until a switch. No root claims In-game, so a switch keeps it.
-  const appliedFor = useRef<SceneGraph | null>(null);
+  const appliedFor = useRef<ParseResult | null>(null);
   useEffect(() => {
-    if (claimed && appliedFor.current !== sceneGraph) {
-      appliedFor.current = sceneGraph;
+    if (claimed && appliedFor.current !== parse) {
+      appliedFor.current = parse;
       if (mode !== 'in-game') setMode(claimed);
     }
-  }, [sceneGraph, claimed, mode, setMode]);
+  }, [parse, claimed, mode, setMode]);
 
   return null;
+}
+
+function rootTypeOf(scene: Scene): string | null {
+  return scene.getNodeOrNull(ROOT_WINDOW_PATH)?.getChildren()[0]?.type ?? null;
 }

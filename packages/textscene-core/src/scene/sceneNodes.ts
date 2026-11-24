@@ -1,9 +1,17 @@
 import type { SceneGraph } from '../core/SceneGraph.js';
 import { nodeNotFound, SceneNodeHandle, type HandleHost, type NodeHandle } from './nodeHandle.js';
-import { getNodeOrNull, ROOT_WINDOW_PATH, type WalkedTree } from './nodePathWalk.js';
+import {
+  absolutePathOf,
+  getNodeOrNull,
+  livePathOf,
+  ROOT_WINDOW_PATH,
+  ROOT_WINDOW_PREFIX,
+  type WalkedTree,
+} from './nodePathWalk.js';
 import { loadPropertyAccess, type PropertyAccess, type SceneProperties } from './sceneProperties.js';
 import type { SceneTree, SceneTreeNode } from './sceneRuntime.js';
-import { sceneValueOf, valueOfSceneValue, type SceneValue } from './variant.js';
+import { sceneValueOf, valueOfSceneValue, variantOf, type SceneValue } from './variant.js';
+import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
 import { isWritable } from './writtenScene.js';
 import {
   argumentCountError,
@@ -23,24 +31,17 @@ const loadPropertyMethods = memoisedImport(() => import('../godot/classdb/proper
 
 /** `get_class` of the root viewport, the window above the scene's root node. */
 const ROOT_WINDOW_TYPE = 'Window';
-const ROOT_WINDOW_PREFIX = `${ROOT_WINDOW_PATH}/`;
 
 /** The properties whose write changes the shape of the tree, which this release does not port. */
 const SHAPE_PROPERTIES: ReadonlySet<string> = new Set(['script', 'instance', 'name']);
-
-function livePathOf(path: string): string {
-  return path.slice(ROOT_WINDOW_PREFIX.length);
-}
-
-function absolutePathOf(livePath: string): string {
-  return `${ROOT_WINDOW_PREFIX}${livePath}`;
-}
 
 /** What the nodes read of their scene: its parse and the Live scene tree over it. */
 export interface SceneNodesSource {
   graph(): SceneGraph | null;
   /** Null with no parse. */
   tree(): SceneTree | null;
+  /** The class `load` gives for the resource at `path`, or null where it reads none. */
+  resourceClass(path: string): Promise<string | null>;
 }
 
 /** The nodes of one text of the scene, each named by its absolute path. */
@@ -49,6 +50,8 @@ export class SceneNodes implements HandleHost {
   private readonly handles = new Map<string, NodeHandle>();
   /** Written only by `clear`: moves with each new text, so a write that waited on the load lands nowhere. */
   private generation = 0;
+  /** Written only by `inWriteOrder`: the class read of the latest `set`, which the next one waits on. */
+  private latestClassRead: Promise<unknown> = Promise.resolve();
   readonly cameras: ViewportCameras;
 
   constructor(
@@ -106,8 +109,12 @@ export class SceneNodes implements HandleHost {
     return this.nodeAt(path, tree)?.type ?? null;
   }
 
+  /** As `find`, a child whose scene has not loaded is no node yet. */
   childPaths(path: string): readonly string[] {
-    return (this.childNames(path) ?? []).map((name) => `${path}/${name}`);
+    const tree = this.source.tree();
+    return (this.childNames(path) ?? [])
+      .map((name) => `${path}/${name}`)
+      .filter((child) => this.typeOf(child, tree) !== null);
   }
 
   handleAt(path: string): NodeHandle {
@@ -137,8 +144,10 @@ export class SceneNodes implements HandleHost {
   }
 
   /** `Object::set`: a setter this release ports as a method runs it. */
-  async set(path: string, property: string, value: SceneValue): Promise<boolean> {
+  async set(path: string, property: string, written: SceneValue): Promise<boolean> {
     const generation = this.generation;
+    const value = await this.inWriteOrder(this.withResourceClass(written));
+    this.assertSameText(generation, path);
     const accessor = findPortedAccessor(this.typeOfNode(path), 'setter', property);
     if (!accessor) return this.setStored(path, property, value);
     // `Object::set` casts as `VariantCaster` does, and reports the call valid only for a strict cast.
@@ -149,6 +158,22 @@ export class SceneNodes implements HandleHost {
       sceneValueOf(cast.value),
     ]);
     return cast.isValid;
+  }
+
+  /** A class read waits on the host's files, so each `set` waits on the one before: the last write wins. */
+  private inWriteOrder(classRead: Promise<SceneValue>): Promise<SceneValue> {
+    const ordered = this.latestClassRead.then(() => classRead);
+    // The caller's `set` rejects with the error. The next write still runs.
+    this.latestClassRead = ordered.catch(() => undefined);
+    return ordered;
+  }
+
+  /** `str_to_var` loads the resource a text names, so a setter's `Ref<T>` check reads its class. */
+  private async withResourceClass(value: SceneValue): Promise<SceneValue> {
+    const variant = valueOfSceneValue(value);
+    if (variant.type !== T.OBJECT || !variant.resource || variant.className) return value;
+    const className = await this.source.resourceClass(variant.resource.path);
+    return className ? variantOf({ ...variant, className }) : value;
   }
 
   /** `Object::callv`: a ported method, else the property a setter or a getter reaches. */

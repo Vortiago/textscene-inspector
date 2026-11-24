@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { SKY_RENDER_ORDER } from '../../shaders/sky/skyRenderOrder.js';
 import { observeSceneRenderEnd } from '../sceneRenderCamera.js';
+import { ENGINE_DRAW_FLAG } from '../frameProfile/drawnSurfaces.js';
 
 /** A sky drawn at each pixel behind a scene, and hidden outside the renders that draw it. */
 export abstract class SkyBackdrop extends THREE.Mesh<THREE.BufferGeometry, THREE.Material> {
@@ -12,7 +13,7 @@ export abstract class SkyBackdrop extends THREE.Mesh<THREE.BufferGeometry, THREE
     this.matrixWorldAutoUpdate = false;
     this.layers.enableAll();
     this.raycast = () => {};
-    this.userData = { tscnFrameExcluded: true };
+    this.userData = { tscnFrameExcluded: true, [ENGINE_DRAW_FLAG]: true };
     this.visible = false;
   }
 

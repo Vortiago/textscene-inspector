@@ -4,7 +4,7 @@
  * nothing outside a SelectionProvider. `useSceneHelper` owns the lifecycle.
  */
 import * as THREE from 'three';
-import { useOptionalSelection } from '../contexts/SelectionContext.js';
+import { useOptionalSelection, useSelectedNodePath } from '../contexts/SelectionContext.js';
 import { useHelperTickUpdate, useSceneHelper } from '../hooks/useTHREEHelper.js';
 import { useResourceLoader } from '../../resources/useResource.js';
 import { useDrawnContentVersion } from '../../resources/useCacheVersion';
@@ -14,9 +14,8 @@ import { WorldBoxHelper } from './WorldBoxHelper.js';
 const HIGHLIGHT_COLOR = 0x00ff00;
 
 export function SelectionHighlight() {
-  const selection = useOptionalSelection();
-  const selectedNodePath = selection?.selectedNodePath ?? null;
-  const nodeObjectMap = selection?.nodeObjectMap ?? null;
+  const selectedNodePath = useSelectedNodePath();
+  const nodeObjectMap = useOptionalSelection()?.nodeObjectMap ?? null;
   const tickUpdate = useHelperTickUpdate();
   // With the tick gate closed, bounds still change when a GLB, a sub-scene or a resource file
   // replaces its placeholder inside the selection. Recreate the helper then.

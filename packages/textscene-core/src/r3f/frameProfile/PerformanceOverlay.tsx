@@ -1,11 +1,18 @@
-/** The performance overlay over the viewport, shown while the Display menu's Performance toggle is on. */
-
-import { useViewportMode } from '../contexts/ViewportModeContext.js';
-import { useFrameStats } from './FrameStatsContext.js';
+import { useSyncExternalStore } from 'react';
+import { useViewShow } from '../viewShow/ViewShowContext.js';
+import { useViewStatusStore } from '../viewStatus/ViewStatusContext.js';
+import { subscribeToNothing } from '../../utils/subscribeToNothing.js';
 import { PerformancePanel } from './PerformancePanel.js';
 
 export function PerformanceOverlay() {
-  const { showPerformance } = useViewportMode();
-  const stats = useFrameStats();
-  return showPerformance ? <PerformancePanel stats={stats} /> : null;
+  return useViewShow().performance ? <MeasuredPanel /> : null;
+}
+
+function MeasuredPanel() {
+  const store = useViewStatusStore();
+  const stats = useSyncExternalStore(
+    store?.subscribe ?? subscribeToNothing,
+    () => store?.status().frame ?? null
+  );
+  return <PerformancePanel stats={stats} />;
 }

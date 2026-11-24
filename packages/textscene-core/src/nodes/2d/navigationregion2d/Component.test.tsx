@@ -12,8 +12,9 @@ import { parseNavigationRegion2D } from './parser';
 import { NavigationRegion2D } from './Component';
 import { NAV_OVERLAY_COLOR } from '../../../r3f/navigationOverlay';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
-import { ResourceLoaderProvider, ResourceLoader } from '../../../index';
+import { ViewShowProvider } from '../../../r3f/viewShow/ViewShowContext';
+import { ResourceLoader } from '../../../index';
+import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 import { preloadResource } from '../../../resources/testing/preloadResource';
 import { settleLoads } from '../../../r3f/testing/settleLoads';
@@ -54,13 +55,13 @@ function navNode(): TscnNode {
 async function render(showNavigation: boolean, tres: ParsedResource = NAVPOLY_TRES) {
   const loader = makeLoaderWith('res://nav_polygon.tres', tres);
   const renderer = await ReactThreeTestRenderer.create(
-    <ViewportModeProvider initialShowNavigation={showNavigation}>
+    <ViewShowProvider show={{ navigation: showNavigation }}>
       <ResourceLoaderProvider loader={loader}>
         <SceneResourcesProvider internalResources={[]} externalResources={EXT}>
           <NavigationRegion2D node={navNode()} />
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
-    </ViewportModeProvider>
+    </ViewShowProvider>
   );
   await settleLoads();
   return renderer;

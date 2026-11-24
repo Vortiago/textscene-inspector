@@ -6,6 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { PositionalShadowAtlas } from '../godot/rendering/lights/positionalShadowAtlas';
+import { ContentScaleAspect, ContentScaleMode, ContentScaleStretch } from '../godot/scene/window';
 import {
   projectPrimitiveMeshTexelSize,
   projectTimeRolloverSeconds,
@@ -38,6 +39,8 @@ import {
   projectTextureMipmapBias,
   projectPositionalShadowAtlas,
   projectViewportSize,
+  projectWindowSize,
+  projectContentScale,
   projectVolumetricFogSettings,
   projectAmbientOcclusionSettings,
   projectTreeSettings,
@@ -1013,5 +1016,90 @@ describe('projectTimeRolloverSeconds', () => {
   it("is Godot's 3600 with no project or a malformed value", () => {
     expect(projectTimeRolloverSeconds(null)).toBe(3600);
     expect(projectTimeRolloverSeconds({ [KEY]: 'soon' })).toBe(3600);
+  });
+});
+
+describe('projectWindowSize', () => {
+  const VIEWPORT = {
+    'display/window/size/viewport_width': '400',
+    'display/window/size/viewport_height': '300',
+  };
+  const override = (width: string, height: string) => ({
+    ...VIEWPORT,
+    'display/window/size/window_width_override': width,
+    'display/window/size/window_height_override': height,
+  });
+
+  it('is the viewport size with no override', () => {
+    expect(projectWindowSize(VIEWPORT)).toEqual({ width: 400, height: 300 });
+    expect(projectWindowSize(null)).toEqual({ width: 1152, height: 648 });
+  });
+
+  it('is the override when the project sets both axes', () => {
+    expect(projectWindowSize(override('800', '600'))).toEqual({ width: 800, height: 600 });
+  });
+
+  it('takes an override on one axis alone', () => {
+    expect(projectWindowSize({ ...VIEWPORT, 'display/window/size/window_width_override': '800' })).toEqual({
+      width: 800,
+      height: 300,
+    });
+  });
+
+  it('keeps the viewport axis whose override is 0, unreadable or negative', () => {
+    expect(projectWindowSize(override('800', '0'))).toEqual({ width: 800, height: 300 });
+    expect(projectWindowSize(override('tall', '600'))).toEqual({ width: 400, height: 600 });
+    expect(projectWindowSize(override('-5', '600'))).toEqual({ width: 400, height: 600 });
+  });
+});
+
+describe('projectContentScale', () => {
+  const stretch = (key: string, value: string) =>
+    projectContentScale({ [`display/window/stretch/${key}`]: value });
+
+  it("takes Godot's defaults with no project: disabled, keep, fractional, 1, at the viewport size", () => {
+    expect(projectContentScale(null)).toEqual({
+      mode: ContentScaleMode.DISABLED,
+      aspect: ContentScaleAspect.KEEP,
+      stretch: ContentScaleStretch.FRACTIONAL,
+      size: { x: 1152, y: 648 },
+      factor: 1,
+    });
+  });
+
+  it('is sized by the viewport setting, not the window override', () => {
+    const scale = projectContentScale({
+      'display/window/size/viewport_width': '640',
+      'display/window/size/viewport_height': '360',
+      'display/window/size/window_width_override': '1280',
+      'display/window/size/window_height_override': '720',
+    });
+    expect(scale.size).toEqual({ x: 640, y: 360 });
+  });
+
+  it('maps each mode name, and an unknown one to disabled', () => {
+    expect(stretch('mode', 'canvas_items').mode).toBe(ContentScaleMode.CANVAS_ITEMS);
+    expect(stretch('mode', 'viewport').mode).toBe(ContentScaleMode.VIEWPORT);
+    expect(stretch('mode', '2d').mode).toBe(ContentScaleMode.DISABLED);
+  });
+
+  it('maps each aspect name, and an unknown one to ignore', () => {
+    expect(stretch('aspect', 'ignore').aspect).toBe(ContentScaleAspect.IGNORE);
+    expect(stretch('aspect', 'keep_width').aspect).toBe(ContentScaleAspect.KEEP_WIDTH);
+    expect(stretch('aspect', 'keep_height').aspect).toBe(ContentScaleAspect.KEEP_HEIGHT);
+    expect(stretch('aspect', 'expand').aspect).toBe(ContentScaleAspect.EXPAND);
+    expect(stretch('aspect', 'Keep').aspect).toBe(ContentScaleAspect.IGNORE);
+  });
+
+  it('maps the integer scale mode, and any other name to fractional', () => {
+    expect(stretch('scale_mode', 'integer').stretch).toBe(ContentScaleStretch.INTEGER);
+    expect(stretch('scale_mode', 'whole').stretch).toBe(ContentScaleStretch.FRACTIONAL);
+  });
+
+  it('reads the scale, and keeps 1 for a scale the setter refuses or cannot read', () => {
+    expect(stretch('scale', '1.5').factor).toBe(1.5);
+    expect(stretch('scale', '0').factor).toBe(1);
+    expect(stretch('scale', '-2').factor).toBe(1);
+    expect(stretch('scale', 'big').factor).toBe(1);
   });
 });

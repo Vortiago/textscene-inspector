@@ -86,6 +86,10 @@ embedded. The value stands only where an earlier line hides the window, or the c
 `content_scale_factor` scales the window's Controls. `content_scale_size` with a mode and an
 aspect gives the design rect, and black bars fill the rest of the window.
 
+The In-game view embeds the scene's windows in the root viewport, unless the project turns
+`display/window/subwindows/embed_subwindows` off. Under a stretched root, a window renders at the
+root's stretch, and its frame and target stretch with the root's canvas.
+
 ## Linting
 
 <!-- lint:begin Window -->

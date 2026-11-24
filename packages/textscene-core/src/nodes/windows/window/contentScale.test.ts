@@ -20,6 +20,7 @@ describe('windowContentScale', () => {
   it('leaves an unscaled window as it is', () => {
     expect(windowContentScale(WINDOW, UNSCALED)).toEqual({
       renderSize: WINDOW,
+      sizeOverride: WINDOW,
       layoutSize: WINDOW,
       canvasScale: 1,
       drawRect: { x: 0, y: 0, w: 240, h: 160 },
@@ -29,6 +30,7 @@ describe('windowContentScale', () => {
   it('lays out a factor-2 window in half its size and draws its canvas twice as large', () => {
     expect(windowContentScale(WINDOW, { ...UNSCALED, factor: 2 })).toEqual({
       renderSize: WINDOW,
+      sizeOverride: { x: 120, y: 80 },
       layoutSize: { x: 120, y: 80 },
       canvasScale: 2,
       drawRect: { x: 0, y: 0, w: 240, h: 160 },
@@ -44,6 +46,7 @@ describe('windowContentScale', () => {
     };
     expect(windowContentScale(WINDOW, scale)).toEqual({
       renderSize: { x: 240, y: 120 },
+      sizeOverride: DESIGN,
       layoutSize: DESIGN,
       canvasScale: 1,
       drawRect: { x: 0, y: 20, w: 240, h: 120 },
@@ -59,6 +62,7 @@ describe('windowContentScale', () => {
     };
     expect(windowContentScale(WINDOW, scale)).toEqual({
       renderSize: DESIGN,
+      sizeOverride: { x: 0, y: 0 },
       layoutSize: DESIGN,
       canvasScale: 1,
       drawRect: { x: 0, y: 20, w: 240, h: 120 },
@@ -74,6 +78,7 @@ describe('windowContentScale', () => {
     };
     expect(windowContentScale(WINDOW, scale)).toEqual({
       renderSize: WINDOW,
+      sizeOverride: { x: 120, y: 80 },
       layoutSize: { x: 120, y: 80 },
       canvasScale: 1,
       drawRect: { x: 0, y: 0, w: 240, h: 160 },
@@ -90,6 +95,7 @@ describe('windowContentScale', () => {
     };
     expect(windowContentScale(WINDOW, scale)).toEqual({
       renderSize: { x: 200, y: 120 },
+      sizeOverride: { x: 100, y: 60 },
       layoutSize: { x: 100, y: 60 },
       canvasScale: 1,
       drawRect: { x: 20, y: 20, w: 200, h: 120 },
@@ -106,6 +112,7 @@ describe('windowContentScale', () => {
     };
     expect(windowContentScale(WINDOW, scale)).toEqual({
       renderSize: { x: 80, y: 40 },
+      sizeOverride: { x: 0, y: 0 },
       layoutSize: { x: 80, y: 40 },
       canvasScale: 1.5,
       drawRect: { x: 0, y: 20, w: 240, h: 120 },

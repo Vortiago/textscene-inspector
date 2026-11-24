@@ -1,8 +1,3 @@
-/**
- * Which objects reach the bounds union of `frameSceneBounds`, and from which direction it frames.
- * `traverse()` recurses into every descendant, so only a `tscnEmptyState` tag on the visited object
- * excludes it, not a tag on a wrapping group.
- */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { frameSceneBounds } from './frameSceneBounds';
@@ -249,5 +244,61 @@ describe('frameSceneBounds: a boxless draw', () => {
       return camera.position.toArray();
     };
     expect(framed(true)).toEqual(framed(false));
+  });
+});
+
+describe('frameSceneBounds: an extra draw of a frame-excluded draw', () => {
+  it('frames the scene without the overlay of a Label3D glyph run', () => {
+    const framed = (withRun: boolean) => {
+      const scene = new THREE.Scene();
+      scene.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
+      if (withRun) {
+        const run = new THREE.Mesh(new THREE.PlaneGeometry(20, 20));
+        run.userData = { tscnFrameExcluded: true };
+        run.add(new THREE.Mesh(new THREE.PlaneGeometry(20, 20)));
+        scene.add(run);
+      }
+      const camera = makeCamera();
+      frameSceneBounds(scene, camera, null);
+      return camera.position.toArray();
+    };
+    expect(framed(true)).toEqual(framed(false));
+  });
+});
+
+describe('frameSceneBounds: a mesh inside the empty-scene indicator', () => {
+  it('frames the scene without a mesh under a `tscnEmptyState` group', () => {
+    const framed = (withPrompt: boolean) => {
+      const scene = new THREE.Scene();
+      scene.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
+      if (withPrompt) {
+        const indicator = new THREE.Group();
+        indicator.userData = { tscnEmptyState: true };
+        indicator.add(new THREE.Mesh(new THREE.PlaneGeometry(20, 20)));
+        scene.add(indicator);
+      }
+      const camera = makeCamera();
+      frameSceneBounds(scene, camera, null);
+      return camera.position.toArray();
+    };
+    expect(framed(true)).toEqual(framed(false));
+  });
+});
+
+describe('frameSceneBounds in a view taller than it is wide', () => {
+  function distanceToUnitBox(aspect: number): number {
+    const scene = new THREE.Scene();
+    scene.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
+    const camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 1000);
+    frameSceneBounds(scene, camera, null);
+    return camera.position.length();
+  }
+
+  it('moves back by the aspect, so the box fits the width', () => {
+    expect(distanceToUnitBox(0.5)).toBeCloseTo(distanceToUnitBox(1) * 2, 5);
+  });
+
+  it('keeps the distance of a square view in a wide view', () => {
+    expect(distanceToUnitBox(2)).toBeCloseTo(distanceToUnitBox(1), 5);
   });
 });

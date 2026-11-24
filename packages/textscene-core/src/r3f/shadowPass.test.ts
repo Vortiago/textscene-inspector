@@ -22,7 +22,12 @@ import {
   SUN_SHADOW_ROWS,
 } from './directionalShadow/sunShadowUniforms';
 import { litUniformArray } from './testing/litUniformArray';
-import { profiledRendererMembers, profiledWindow, stepCpuMs } from './frameProfile/frameProfile.testkit';
+import {
+  profiledRendererMembers,
+  profiledWindow,
+  stepCpuMs,
+  timingsOf,
+} from './frameProfile/frameProfile.testkit';
 
 holdPositionalShadowAtlas({}, 4096);
 
@@ -412,7 +417,7 @@ describe('the shadow pass under a frame profile', () => {
       () => renderer.shadowMap.render([new THREE.DirectionalLight()], fogged, camera)
     );
 
-    expect(stats.steps.map((s) => [s.step, s.cpuMs, s.runsPerFrame])).toEqual([
+    expect(timingsOf(stats).steps.map((s) => [s.step, s.cpuMs, s.runsPerFrame])).toEqual([
       ['Shadows', 3, 1],
       ['Fog', 5, 1],
       ['Other', 0, 1],

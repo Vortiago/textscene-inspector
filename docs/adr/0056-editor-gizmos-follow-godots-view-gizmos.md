@@ -17,7 +17,7 @@ The previewer follows Godot's split, and the Gizmos toggle replaces the selectio
 
 ### The toggle
 
-`ViewportModeContext` holds `showGizmos`, on by default, saved under `tsi.showGizmos`. The Display
+The view's `show.gizmos` (ADR-0006) is on by default. The shell saves the toolbar's value under `tsi.showGizmos`. The Display
 menu lists it as "Gizmos". `TscnPreviewShell` reads it once, and the toolbar writes it on a user
 choice, as it does for the grid. The web previewer and the VS Code extension share this shell.
 Godot's View Gizmos is on by default and saved with the viewport state

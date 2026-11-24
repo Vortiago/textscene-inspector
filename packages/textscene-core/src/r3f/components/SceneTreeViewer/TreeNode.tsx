@@ -5,8 +5,14 @@ import type { SceneScope, TscnNode, TscnExternalResource } from '../../../parser
 import { joinPath } from '../../../utils/nodePath.js';
 import { rendersOwnVisual } from '../../nodeSupport.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
-import { scopeOf } from '../../../resources/liveNode.js';
+import { useHoverPath, useSelectPath, useSelectedPath } from '../TscnPreviewShell/previewSelection.js';
+import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
+import { spaceFamilyOf } from '../../../godot/scene/parentSpace.js';
+import { isCanvasLayerType } from '../../canvasItemClass.js';
+import { isShownCanvasNode } from '../../canvasScopes.js';
+import { scopeOf, type LiveNode } from '../../../resources/liveNode.js';
 import { useLiveStep } from './useLiveStep.js';
+import { useWrittenChildVisibility } from '../../useLiveSceneTree.js';
 import styles from './SceneTreeViewer.module.css';
 
 /** One empty pool for every row, so a row that mounts again asks the live tree in a scope it knows. */
@@ -48,12 +54,49 @@ function hasTransform(node: TscnNode): boolean {
   return 'transform' in node.properties && node.properties.transform !== undefined;
 }
 
+/** The classes that have the eye (scene_tree_editor.cpp:608). */
+type VisibilityChain = 'Node3D' | 'CanvasItem' | 'CanvasLayer' | 'Window';
+
+function visibilityChainOf(type: string): VisibilityChain | null {
+  const family = spaceFamilyOf(type);
+  if (family) return family;
+  if (isCanvasLayerType(type)) return 'CanvasLayer';
+  return descendsFromClass(type, 'Window') ? 'Window' : null;
+}
+
+/** What a row hands its children of `visible`. */
+export interface ParentVisibility {
+  chain: VisibilityChain | null;
+  /** The row's own `visible` and that of every node it inherits from. */
+  isVisibleInTree: boolean;
+  /** Whether the nearest Viewport above is shown: false only for a hidden Window. */
+  isViewportShown: boolean;
+}
+
+export const ROOT_VISIBILITY: ParentVisibility = {
+  chain: null,
+  isVisibleInTree: true,
+  isViewportShown: true,
+};
+
+/** Whether the nodes a row inherits `visible` from are visible (node_3d.cpp:1132, canvas_item.cpp:309). */
+function isParentVisibleOf(chain: VisibilityChain | null, parent: ParentVisibility): boolean {
+  if (chain === 'Node3D') return parent.chain !== 'Node3D' || parent.isVisibleInTree;
+  if (chain !== 'CanvasItem') return true;
+  if (parent.chain === 'CanvasItem' || parent.chain === 'CanvasLayer') return parent.isVisibleInTree;
+  return parent.isViewportShown;
+}
+
 interface TreeNodeProps {
   node: TscnNode;
   parentPath: string;
   depth: number;
-  hiddenNodePaths: ReadonlySet<string>;
-  onToggleVisibility: (path: string) => void;
+  /** The parent row's visibility, which dims this row's eye (scene_tree_editor.cpp:743-748). */
+  parentVisibility: ParentVisibility;
+  /** The `visible` the parent container writes on this node, which its own gives way to. */
+  containerVisible?: boolean;
+  /** Writes `visible` to the node at `path`. */
+  onToggleVisibility: (path: string, visible: boolean) => void;
   onNodeReveal?: (path: string, node: TscnNode) => void;
   /**
    * Opens an instanced sub-scene as its own previewed scene, like Godot's
@@ -65,6 +108,8 @@ interface TreeNodeProps {
    * so a match inside a sub-scene keeps its ancestor rows visible.
    */
   matches: (path: string) => boolean;
+  /** Whether Godot's Scene dock lists the node at this path (`dockListing.ts`). */
+  isListedChild: (path: string) => boolean;
   /**
    * The host scene's externalResources, which resolve `ExtResource("id")` to
    * the PackedScene's `res://` path with no re-read of HierarchyContext.
@@ -87,11 +132,13 @@ function TreeNodeImpl({
   node,
   parentPath,
   depth,
-  hiddenNodePaths,
+  parentVisibility,
+  containerVisible,
   onToggleVisibility,
   onNodeReveal,
   onOpenSubScene,
   matches,
+  isListedChild,
   externalResources,
   instancedScenePaths,
   isDefaultFocusable = false,
@@ -106,8 +153,13 @@ function TreeNodeImpl({
   // The node as the tree shows it, and what lives below it. Instance root merge (ADR-0013), the
   // same decision the viewport and inspector make, for the row header. The hook keeps the step
   // stable across selection and hover, so the row reuses one merge.
-  const { node: effective, groups: liveGroups, instancePath } = useLiveStep(node, scope);
-  const groups = useMemo(() => ownedGroups(liveGroups), [liveGroups]);
+  const step = useLiveStep(node, scope);
+  const { node: effective, groups: liveGroups, instancePath } = step;
+  const writtenVisibility = useWrittenChildVisibility(step);
+  const groups = useMemo(
+    () => listedGroups(liveGroups, (child) => isListedChild(joinPath(nodePath, child.name))),
+    [liveGroups, isListedChild, nodePath]
+  );
   const instanceScenePath = onOpenSubScene ? instancePath : null;
 
   const hasChildren = groups.some((g) => g.children.length > 0);
@@ -121,22 +173,35 @@ function TreeNodeImpl({
       node={child}
       parentPath={nodePath}
       depth={depth + 1}
-      hiddenNodePaths={hiddenNodePaths}
+      parentVisibility={ownVisibility}
+      containerVisible={writtenVisibility.get(child)}
       onToggleVisibility={onToggleVisibility}
       onNodeReveal={onNodeReveal}
       onOpenSubScene={onOpenSubScene}
       matches={matches}
+      isListedChild={isListedChild}
       externalResources={childScope.externalResources}
       instancedScenePaths={childScope.instancedScenePaths}
     />
   );
 
-  const { selectedNodePath, expandedNodePaths, setSelectedNodePath, hoverStore, toggleExpandedNodePath } =
-    useSelection();
+  const { expandedNodePaths, toggleExpandedNodePath } = useSelection();
+  const selectPath = useSelectPath();
+  const hoverPath = useHoverPath();
 
   const isExpanded = expandedNodePaths.has(nodePath);
-  const isSelected = selectedNodePath === nodePath;
-  const isHidden = hiddenNodePaths.has(nodePath);
+  const isSelected = useSelectedPath() === nodePath;
+  // The eye shows the node's own `visible`, and only on a class that has it (scene_tree_editor.cpp:608-613).
+  const chain = useMemo(() => visibilityChainOf(effective.type), [effective.type]);
+  const hasEye = chain !== null;
+  const isHidden = hasEye && !(containerVisible ?? isShownCanvasNode(effective));
+  const isParentVisible = isParentVisibleOf(chain, parentVisibility);
+  const isViewport = useMemo(() => descendsFromClass(effective.type, 'Viewport'), [effective.type]);
+  const isViewportShown = isViewport ? !isHidden : parentVisibility.isViewportShown;
+  const ownVisibility = useMemo<ParentVisibility>(
+    () => ({ chain, isVisibleInTree: !isHidden && isParentVisible, isViewportShown }),
+    [chain, isHidden, isParentVisible, isViewportShown]
+  );
 
   // A parser registration is no evidence of a render: only a type with no
   // component at all is a gap.
@@ -156,7 +221,7 @@ function TreeNodeImpl({
   }
 
   function handleSelect() {
-    setSelectedNodePath(nodePath);
+    selectPath(nodePath);
   }
 
   function handleDoubleClick() {
@@ -164,16 +229,16 @@ function TreeNodeImpl({
   }
 
   function handleMouseEnter() {
-    hoverStore.set(nodePath);
+    hoverPath(nodePath);
   }
 
   function handleMouseLeave() {
-    hoverStore.set(null);
+    hoverPath(null);
   }
 
   function handleToggleVisibility(e: MouseEvent) {
     e.stopPropagation();
-    onToggleVisibility(nodePath);
+    onToggleVisibility(nodePath, isHidden);
   }
 
   return (
@@ -245,15 +310,19 @@ function TreeNodeImpl({
             </button>
           )}
 
-          <button
-            type="button"
-            className={styles.visibilityIcon}
-            onClick={handleToggleVisibility}
-            title={isHidden ? 'Click to show' : 'Click to hide'}
-            aria-label={isHidden ? 'Show node' : 'Hide node'}
-          >
-            {isHidden ? '🙈' : '👁️'}
-          </button>
+          {hasEye && (
+            <button
+              type="button"
+              className={
+                isParentVisible ? styles.visibilityIcon : `${styles.visibilityIcon} ${styles.underHidden}`
+              }
+              onClick={handleToggleVisibility}
+              title={isHidden ? 'Click to show' : 'Click to hide'}
+              aria-label={isHidden ? 'Show node' : 'Hide node'}
+            >
+              {isHidden ? '🙈' : '👁️'}
+            </button>
+          )}
         </span>
       </div>
 
@@ -272,11 +341,16 @@ function TreeNodeImpl({
 
 export const TreeNode = memo(TreeNodeImpl);
 
-/**
- * `groups` without the children Godot adds with no owner, such as a layer's scene tile instances
- * (`tile_map_layer.cpp:1646`), which the Scene dock does not list.
- */
-function ownedGroups(groups: readonly LiveChildGroup[]): readonly LiveChildGroup[] {
-  if (!groups.some((group) => group.children.some((child) => child.isUnowned))) return groups;
-  return groups.map((group) => ({ ...group, children: group.children.filter((child) => !child.isUnowned) }));
+/** `groups` with the children the Scene dock lists, none without an owner (`tile_map_layer.cpp:1646`). */
+function listedGroups(
+  groups: readonly LiveChildGroup[],
+  lists: (child: LiveNode) => boolean
+): readonly LiveChildGroup[] {
+  let isAnyHidden = false;
+  const shown = groups.map((group) => {
+    const children = group.children.filter((child) => !child.isUnowned && lists(child));
+    isAnyHidden ||= children.length < group.children.length;
+    return { ...group, children };
+  });
+  return isAnyHidden ? shown : groups;
 }

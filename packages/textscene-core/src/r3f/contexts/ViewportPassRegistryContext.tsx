@@ -227,7 +227,7 @@ export function ViewportPassOrchestrator(): null {
   const { passes, order, cycles } = useExternalStoreValue(useContext(StateContext));
   useTextureAtlasFrame();
   const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
-  const { isSettled: isLoaded } = useSceneAssetsSettled();
+  const isLoaded = useSceneAssetsSettled();
   const clock = useSceneGateClock(sceneGraph);
   const gated = useMemo(() => gatedPassesOf(passes), [passes]);
   useEffect(() => clock.prune((id) => passes.has(id)), [clock, passes]);

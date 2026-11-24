@@ -88,6 +88,9 @@ export const CANVAS_2D_SCENES = [
   // A GradientTexture2D whose `gradient` is a saved Gradient (.tres). The header states why no
   // other golden shows it.
   { name: 'sprite2d-gradienttexture-tres', file: 'unit-sprite2d-gradienttexture-tres.tscn' },
+  // A Gradient that omits `offsets`, `colors` or both draws Godot's default points. The header states
+  // why no other golden shows it.
+  { name: 'gradient-default-points', file: 'unit-gradient-default-points.tscn', mode: '2d' },
   // A NoiseTexture2D whose `noise` and `color_ramp` are saved resources (.tres). The header states
   // why no other golden shows it.
   { name: 'noisetexture2d-tres', file: 'unit-noisetexture2d-tres.tscn' },

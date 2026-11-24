@@ -1,15 +1,15 @@
-/**
- * The interactive scene-tree panel. It reads `sceneGraph` from
- * `<HierarchyContext>` and the selection from `<SelectionContext>`.
- */
 import { useCallback, useMemo, useState, type ChangeEvent, type KeyboardEvent } from 'react';
+import * as logger from '../../../logger.js';
 import type { TscnNode, TscnExternalResource } from '../../../parser/types.js';
 import { getAncestorPaths } from '../../../utils/nodePath.js';
 import { useHierarchy } from '../../contexts/HierarchyContext.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
+import { useSelectPath, useSelectedPath } from '../TscnPreviewShell/previewSelection.js';
+import { absolutePathOf } from '../../../scene/nodePathWalk.js';
 import { useSeatedRoots, useSharedLiveTree } from '../../useLiveSceneTree.js';
-import { walkLiveTree } from '../../liveSceneTree.js';
-import { TreeNode } from './TreeNode.js';
+import { walkLiveTree, type LiveTreeEntry } from '../../liveSceneTree.js';
+import { dockListsChild } from '../../dockListing.js';
+import { ROOT_VISIBILITY, TreeNode } from './TreeNode.js';
 import styles from './SceneTreeViewer.module.css';
 
 /**
@@ -22,6 +22,7 @@ function nodePathFor(row: HTMLElement): string | null {
 }
 
 const NO_NODES: readonly TscnNode[] = [];
+const NO_PATHS: readonly string[] = [];
 
 export interface SceneTreeViewerProps {
   /** Fired when a row is double-clicked, so the host can jump to the source. */
@@ -30,16 +31,25 @@ export interface SceneTreeViewerProps {
 }
 
 export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewerProps) {
-  const { sceneGraph } = useHierarchy();
-  const {
-    selectedNodePath,
-    expandedNodePaths,
-    setExpandedNodePaths,
-    hiddenNodePaths,
-    toggleHidden,
-    setSelectedNodePath,
-    toggleExpandedNodePath,
-  } = useSelection();
+  const { sceneGraph, scene } = useHierarchy();
+  const { expandedNodePaths, setExpandedNodePaths, toggleExpandedNodePath } = useSelection();
+  const selectedNodePath = useSelectedPath();
+  const selectPath = useSelectPath();
+  // The eye calls `set_visible` on the node (scene_tree_editor.cpp:241-247).
+  const setVisible = useCallback(
+    (path: string, visible: boolean) => {
+      const node = scene?.getNodeOrNull(absolutePathOf(path));
+      if (!node) {
+        logger.warn(`[SceneTreeViewer] the eye found no node at ${path}`);
+        return;
+      }
+      node.set('visible', visible).then(
+        (isWritten) => isWritten || logger.warn(`[SceneTreeViewer] ${path} refused visible`),
+        (error: unknown) => logger.warn(`[SceneTreeViewer] the eye did not write ${path}`, error)
+      );
+    },
+    [scene]
+  );
   const liveTree = useSharedLiveTree();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -53,6 +63,26 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
     return sceneGraph.scenes.get(sceneGraph.rootScene)?.externalResources ?? [];
   }, [sceneGraph]);
 
+  const editablePaths = sceneGraph?.scenes.get(sceneGraph.rootScene)?.editableInstances ?? NO_PATHS;
+  const isListedChild = useCallback(
+    (path: string): boolean => !liveTree || dockListsChild(path, liveTree.roots, liveTree.ctx, editablePaths),
+    [liveTree, editablePaths]
+  );
+  // The dock stops at an unlisted node, so a pre-order walk checks a node only below a listed parent.
+  const listedEntries = useMemo<readonly LiveTreeEntry[]>(() => {
+    if (!liveTree) return [];
+    const listed = new Set<string>();
+    const entries: LiveTreeEntry[] = [];
+    walkLiveTree(liveTree.roots, liveTree.ctx, (entry) => {
+      const parent = entry.path.slice(0, Math.max(entry.path.lastIndexOf('/'), 0));
+      const isListed = parent === '' || (listed.has(parent) && isListedChild(entry.path));
+      if (!isListed) return;
+      listed.add(entry.path);
+      entries.push(entry);
+    });
+    return entries;
+  }, [liveTree, isListedChild]);
+
   const term = searchTerm.trim().toLowerCase();
 
   // Search and expand walk the live tree, so a node inside an instance is
@@ -60,18 +90,16 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
   // means no search. It recomputes on each load tick, which gives a new live tree.
   const matchingPaths = useMemo<ReadonlySet<string> | null>(() => {
     if (!term) return null;
-    if (!liveTree) return new Set<string>();
     const found = new Set<string>();
-    walkLiveTree(liveTree.roots, liveTree.ctx, ({ node, path }) => {
-      if (node.name.toLowerCase().includes(term) || node.type.toLowerCase().includes(term)) {
-        found.add(path);
-        for (let slash = path.lastIndexOf('/'); slash > 0; slash = path.lastIndexOf('/', slash - 1)) {
-          found.add(path.slice(0, slash));
-        }
+    for (const { node, path } of listedEntries) {
+      if (!node.name.toLowerCase().includes(term) && !node.type.toLowerCase().includes(term)) continue;
+      found.add(path);
+      for (let slash = path.lastIndexOf('/'); slash > 0; slash = path.lastIndexOf('/', slash - 1)) {
+        found.add(path.slice(0, slash));
       }
-    });
+    }
     return found;
-  }, [term, liveTree]);
+  }, [term, listedEntries]);
 
   const matches = useCallback(
     (path: string): boolean => matchingPaths === null || matchingPaths.has(path),
@@ -79,11 +107,8 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
   );
 
   const handleExpandAll = useCallback(() => {
-    if (!liveTree) return;
-    const all = new Set<string>();
-    walkLiveTree(liveTree.roots, liveTree.ctx, ({ path }) => all.add(path));
-    setExpandedNodePaths(all);
-  }, [liveTree, setExpandedNodePaths]);
+    setExpandedNodePaths(new Set(listedEntries.map((entry) => entry.path)));
+  }, [listedEntries, setExpandedNodePaths]);
 
   const handleCollapseAll = useCallback(() => {
     setExpandedNodePaths(new Set());
@@ -109,7 +134,7 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
         if (!row) return;
         row.focus();
         const path = nodePathFor(row);
-        if (path) setSelectedNodePath(path);
+        if (path) selectPath(path);
       };
 
       switch (e.key) {
@@ -160,7 +185,7 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
           break;
       }
     },
-    [setSelectedNodePath, toggleExpandedNodePath]
+    [selectPath, toggleExpandedNodePath]
   );
 
   // The selected row is the tab stop only while it renders, that is while it
@@ -224,11 +249,12 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
               node={node}
               parentPath=""
               depth={0}
-              hiddenNodePaths={hiddenNodePaths}
-              onToggleVisibility={toggleHidden}
+              parentVisibility={ROOT_VISIBILITY}
+              onToggleVisibility={setVisible}
               onNodeReveal={onNodeReveal}
               onOpenSubScene={onOpenSubScene}
               matches={matches}
+              isListedChild={isListedChild}
               externalResources={externalResources}
               isDefaultFocusable={index === 0 && !selectedRowRendered}
             />

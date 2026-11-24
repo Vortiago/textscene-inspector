@@ -24,6 +24,7 @@ import { CanvasFrameStepsContext, createCanvasFrameSteps } from './canvasFrameSe
 import { PendingSuspense } from '../../../resources/PendingSuspense.js';
 import { useRootCanvasColorSpace } from '../../rootCanvasColorSpace.js';
 import { YSortProvider } from '../../contexts/YSortContext.js';
+import { FocusSelection2D } from './FocusSelection2D.js';
 import { CanvasRendererScope } from '../../canvasRenderer/CanvasRendererScope.js';
 
 // Through the controls barrel, whose side-effect imports register every Control
@@ -88,6 +89,7 @@ export function World2DContents({
                   <PendingSuspense>
                     <ControlCanvasLayer nodes={nodes} />
                   </PendingSuspense>
+                  <FocusSelection2D />
                 </YSortProvider>
                 {/* A `ViewportTexture` consumer may sample its target whoever draws
                 the on-screen Controls. */}

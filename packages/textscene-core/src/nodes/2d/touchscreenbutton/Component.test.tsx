@@ -6,7 +6,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { parseTouchScreenButton } from './parser';
 import { TouchScreenButton } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
+import { ViewShowProvider } from '../../../r3f/viewShow/ViewShowContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { heading } from '../../../parser/testing/parserKit';
@@ -41,7 +41,7 @@ function scene(
   fake.textures.seed(TEXTURE_PATH, texture);
   return (
     <ResourceLoaderProvider loader={fake.loader}>
-      <ViewportModeProvider initialShowCollisions={showCollisions}>
+      <ViewShowProvider show={{ collisions: showCollisions }}>
         <SceneResourcesProvider
           internalResources={[circleShape]}
           externalResources={[{ id: '1', type: 'Texture2D', path: TEXTURE_PATH }]}
@@ -54,7 +54,7 @@ function scene(
             <TouchScreenButton node={node}>{children}</TouchScreenButton>
           )}
         </SceneResourcesProvider>
-      </ViewportModeProvider>
+      </ViewShowProvider>
     </ResourceLoaderProvider>
   );
 }

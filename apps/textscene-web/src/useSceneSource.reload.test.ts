@@ -14,7 +14,13 @@ vi.mock('./sourceGate', () => ({
 }));
 
 import { useSceneSource } from './useSceneSource';
-import { FIXTURE_TSCN, UPLOADED_TSCN, mockFetchFail, mockFetchOk } from './useSceneSource.testkit';
+import {
+  FIXTURE_TSCN,
+  UPLOADED_TSCN,
+  mockFetchFail,
+  mockFetchOk,
+  mockRecoveringServer,
+} from './useSceneSource.testkit';
 
 beforeEach(() => {
   try {
@@ -30,12 +36,8 @@ afterEach(() => {
 
 describe('reload — refetch at an unchanged fixtureFile', () => {
   it('recovers the render after a failed load', async () => {
-    let attempt = 0;
-    globalThis.fetch = vi.fn().mockImplementation(async () => {
-      attempt += 1;
-      if (attempt === 1) return { ok: false, statusText: 'Not Found' } as Response;
-      return { ok: true, text: () => Promise.resolve(FIXTURE_TSCN) } as unknown as Response;
-    }) as unknown as typeof fetch;
+    const server = mockRecoveringServer(FIXTURE_TSCN);
+    globalThis.fetch = server.fetch;
 
     const { result } = renderHook(() =>
       useSceneSource({ fixtureFile: 'unit-plane-mesh.tscn', uploadedTscnName: null })
@@ -45,6 +47,8 @@ describe('reload — refetch at an unchanged fixtureFile', () => {
       expect(result.current.loadError).toBeTruthy();
     });
 
+    server.recover();
+    const fetchesBeforeReload = server.fetchCount();
     await act(async () => {
       result.current.reload();
     });
@@ -54,16 +58,12 @@ describe('reload — refetch at an unchanged fixtureFile', () => {
     });
     expect(result.current.loadError).toBeNull();
     expect(result.current.renderedFixtureFile).toBe('unit-plane-mesh.tscn');
-    expect(attempt).toBe(2);
+    expect(server.fetchCount() - fetchesBeforeReload).toBe(1);
   });
 
   it('re-announces the swap so the host can re-point resolution on the retry', async () => {
-    let attempt = 0;
-    globalThis.fetch = vi.fn().mockImplementation(async () => {
-      attempt += 1;
-      if (attempt === 1) return { ok: false, statusText: 'Not Found' } as Response;
-      return { ok: true, text: () => Promise.resolve(FIXTURE_TSCN) } as unknown as Response;
-    }) as unknown as typeof fetch;
+    const server = mockRecoveringServer(FIXTURE_TSCN);
+    globalThis.fetch = server.fetch;
 
     const onBeforeSwap = vi.fn();
     const { result } = renderHook(() =>
@@ -78,6 +78,7 @@ describe('reload — refetch at an unchanged fixtureFile', () => {
     });
     expect(onBeforeSwap).not.toHaveBeenCalled();
 
+    server.recover();
     await act(async () => {
       result.current.reload();
     });

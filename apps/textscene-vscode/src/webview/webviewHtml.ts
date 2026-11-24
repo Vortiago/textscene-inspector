@@ -3,7 +3,8 @@
  * `r3f-webview-main.tsx` mounts into, and the script and stylesheet tags.
  */
 
-import { RESOURCE_CACHE_PREFIX } from './dropCachedResource';
+/** The prefix of the cache's name (`resourceCacheName` in VS Code's `pre/service-worker.js`). */
+const RESOURCE_CACHE_PREFIX = 'vscode-resource-cache-';
 
 /** The bytes of a CSP nonce: 128 bits, the least the CSP specification recommends. */
 const NONCE_BYTES = 16;
@@ -50,15 +51,11 @@ function scriptLiteral(value: unknown): string {
   return JSON.stringify(value).replace(/</g, '\\u003c');
 }
 
-/**
- * Imports the entry script, and tells the host when the import fails, such as on a cut-off
- * copy (`webviewLoadFailed`). The failed copy leaves VS Code's resource cache first, or the
- * new document the host loads would get it again (`dropCachedResource`). An entry that threw
- * after it acquired the API leaves none to acquire, so that error goes to the console
- * instead of being replaced by the acquire's.
- */
+/** Imports the entry script, and posts `webviewLoadFailed` when the import fails, as on a cut-off copy. */
 function entryLoader(scriptUri: string): string {
+  // Dropped from VS Code's resource cache first, or the new document would load the cut copy again.
   const dropCachedEntry = `Promise.resolve().then(() => caches.keys()).then((names) => Promise.all(names.filter((name) => name.startsWith(${scriptLiteral(RESOURCE_CACHE_PREFIX)})).map((name) => caches.open(name).then((cache) => cache.delete(${scriptLiteral(scriptUri)}))))).catch(() => {})`;
+  // An entry that threw after it acquired the API leaves none to acquire, so its error goes to the console.
   const reportFailure = `try { acquireVsCodeApi().postMessage({ type: 'webviewLoadFailed', error: String(error) }); } catch { console.error(error); }`;
   return `import(${scriptLiteral(scriptUri)}).catch((error) => ${dropCachedEntry}.then(() => { ${reportFailure} }));`;
 }
@@ -72,10 +69,7 @@ export function generateWebviewHtml(options: WebviewHtmlOptions): string {
     ? `<script nonce="${nonce}">window.__TEXTSCENE_CONFIG__ = ${scriptLiteral(initialConfig)};</script>`
     : '';
 
-  // Dynamic `import()` of the ESM chunks needs `<script type="module">`, and
-  // `script-src` permits `${cspSource}` for the chunk URIs beside the nonce'd
-  // entry. Chunk imports inherit the entry's module context. `worker-src blob:`
-  // admits only workers built from the bundle's own code (ADR-0042).
+  // `script-src` admits the entry beside the loader. `worker-src blob:` admits our own workers (ADR-0042).
   return `
     <!DOCTYPE html>
     <html lang="en">

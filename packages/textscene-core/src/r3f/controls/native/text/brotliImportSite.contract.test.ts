@@ -30,6 +30,7 @@ const IMPORTING_FILES = walk(SRC)
   .map((file) => relative(SRC, file).split(sep).join('/'))
   .sort();
 
+// A static import puts the decoder and its dictionary on the web previewer's initial-paint path.
 describe('brotli import site', () => {
   it('is imported by only the allowlisted files', () => {
     const offenders = IMPORTING_FILES.filter((file) => !ALLOWED.has(file));

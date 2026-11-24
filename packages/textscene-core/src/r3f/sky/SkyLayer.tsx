@@ -57,7 +57,7 @@ import { useProjectShaderOptions } from '../projectShaderOptions';
 import { useShaderSkyErrorReport } from './shaderSkyError';
 import { useReadSky } from './readSky';
 import { useSkyTranslator } from './skyTranspiler';
-import { useShaderErrorReport } from '../contexts/ShaderErrorsContext';
+import { useShaderErrorReport } from '../viewStatus/shaderErrorReport';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext';
 import { projectFastFilterQuality, projectSampling } from '../../parser/projectSettingsParser';
 import { isLiveTarget, liveTargetDrawCount } from '../liveTargets';

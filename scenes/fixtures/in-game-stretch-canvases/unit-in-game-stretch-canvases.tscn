@@ -1,0 +1,30 @@
+[gd_scene format=3]
+
+; The variable is the window's stretch on the canvases beside the root canvas: a CanvasLayer and the
+; canvas the root draws its embedded windows on both stretch with it (`renderer_viewport.cpp:47`).
+; The embedded window renders at the stretch (`window.cpp:1362-1367`). The other In-game goldens
+; stretch only the root canvas, or none.
+
+[node name="Root" type="Node2D"]
+
+[node name="Bg" type="Polygon2D" parent="."]
+color = Color(0.2, 0.3, 0.5, 1)
+polygon = PackedVector2Array(0, 0, 160, 0, 160, 90, 0, 90)
+
+[node name="Hud" type="CanvasLayer" parent="."]
+
+[node name="Bar" type="ColorRect" parent="Hud"]
+offset_left = 10.0
+offset_top = 70.0
+offset_right = 150.0
+offset_bottom = 80.0
+color = Color(0.2, 0.8, 0.3, 1)
+
+[node name="Popup" type="Window" parent="."]
+position = Vector2i(90, 10)
+size = Vector2i(60, 50)
+borderless = true
+
+[node name="Shape" type="Polygon2D" parent="Popup"]
+color = Color(0.9, 0.2, 0.2, 1)
+polygon = PackedVector2Array(5, 5, 55, 5, 30, 45)

@@ -4,9 +4,10 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { EnvironmentLayer } from './EnvironmentLayer';
 import { environmentSettingsOf } from '../../resources/environment/testing/environmentSettings';
-import { ViewportModeProvider } from '../contexts/ViewportModeContext';
+import { ViewShowProvider } from '../viewShow/ViewShowContext';
 import { SCREEN_SPACE_STATE, screenSpaceState } from '../screenSpaceEffects/screenSpaceState';
-import { ShaderErrorsProvider, useShaderErrors } from '../contexts/ShaderErrorsContext';
+import { ViewStatusProvider } from '../viewStatus/ViewStatusContext';
+import { createViewStatusStore } from '../viewStatus/viewStatus';
 import { decodeSky } from '../../resources/sky/decode';
 import type { AuthoredSky } from '../../resources/sky/types';
 import * as logger from '../../logger';
@@ -18,9 +19,9 @@ interface MountOptions {
 
 function layer(properties: Record<string, string>, { showFog = true }: MountOptions) {
   return (
-    <ViewportModeProvider initialShowFog={showFog}>
+    <ViewShowProvider show={{ fog: showFog }}>
       <EnvironmentLayer settings={environmentSettingsOf(properties)} sky={null} />
-    </ViewportModeProvider>
+    </ViewShowProvider>
   );
 }
 
@@ -103,28 +104,25 @@ describe('<EnvironmentLayer> sky shader errors', () => {
     }
   );
 
+  /** The shader errors the view's status holds for the node at `holderPath`. */
   async function errorsAt(holderPath: string) {
-    const seen: string[][] = [];
-    function Errors() {
-      seen.push(useShaderErrors('World/Environment'));
-      return null;
-    }
+    const store = createViewStatusStore();
     await ReactThreeTestRenderer.create(
-      <ShaderErrorsProvider>
+      <ViewStatusProvider store={store}>
         <EnvironmentLayer
           settings={environmentSettingsOf({ background_mode: '2' })}
           sky={UNCOMPILED}
           holderPath={holderPath}
         />
-        <Errors />
-      </ShaderErrorsProvider>
+      </ViewStatusProvider>
     );
-    return seen;
+    return () =>
+      store.status().undrawn.find((node) => node.path === `/root/${holderPath}`)?.shaderErrors ?? [];
   }
 
   it("shows Godot's error in the details of the node that holds the Environment", async () => {
     vi.spyOn(logger, 'warn').mockImplementation(() => {});
-    const seen = await errorsAt('World/Environment');
-    await vi.waitFor(() => expect(seen.at(-1)?.[0]).toMatch(/^Godot does not compile the sky shader/));
+    const errors = await errorsAt('World/Environment');
+    await vi.waitFor(() => expect(errors()[0]).toMatch(/^Godot does not compile the sky shader/));
   });
 });

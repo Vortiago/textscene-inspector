@@ -11,7 +11,7 @@ import { WorldExposureScope, usePublishCameraAttributes } from './worldExposure'
 import { drawAtExposure } from '../exposure/sceneExposure';
 import { fireSceneRender } from '../testing/fireSceneRender';
 import { environmentSettingsOf } from '../../resources/environment/testing/environmentSettings';
-import { ViewportModeProvider } from '../contexts/ViewportModeContext';
+import { ViewShowProvider } from '../viewShow/ViewShowContext';
 import { textureTexel } from '../testing/backgroundTexel';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { sRGBToLinearRGB } from '../../utils/colorSpace';
@@ -30,12 +30,12 @@ function Exposure({ multiplier }: { multiplier: number }) {
 
 function layer(properties: Record<string, string>, multiplier: number | null) {
   return (
-    <ViewportModeProvider>
+    <ViewShowProvider>
       <WorldExposureScope>
         {multiplier !== null && <Exposure multiplier={multiplier} />}
         <EnvironmentLayer settings={environmentSettingsOf(properties)} sky={null} />
       </WorldExposureScope>
-    </ViewportModeProvider>
+    </ViewShowProvider>
   );
 }
 
