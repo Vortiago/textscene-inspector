@@ -15,6 +15,8 @@ function passingRun() {
     editorAfterPreview: EDITOR,
     previewAgain: PREVIEW,
     editorAfterReset: EDITOR,
+    editorAfterOrbitReset: EDITOR,
+    freelook: { isPressedAfterClick: true, isPressedAfterEscape: false },
     diagnostics: CLEAN_LOAD,
   };
 }
@@ -60,5 +62,25 @@ describe('checkCameraPreview', () => {
     expect(failuresOf({ ...passingRun(), editorAfterReset: PREVIEW }).join('\n')).toMatch(
       /Reset Camera left the preview/
     );
+  });
+
+  it('fails when Reset Camera leaves an orbit on screen', () => {
+    expect(failuresOf({ ...passingRun(), editorAfterOrbitReset: MOVED }).join('\n')).toMatch(
+      /Reset Camera left the orbit on screen/
+    );
+  });
+
+  it('fails when a click on Freelook leaves it unpressed', () => {
+    const freelook = { isPressedAfterClick: false, isPressedAfterEscape: false };
+    expect(failuresOf({ ...passingRun(), freelook })).toEqual([
+      '[camera preview] a click on Freelook did not press it',
+    ]);
+  });
+
+  it('fails when Escape leaves Freelook pressed', () => {
+    const freelook = { isPressedAfterClick: true, isPressedAfterEscape: true };
+    expect(failuresOf({ ...passingRun(), freelook })).toEqual([
+      '[camera preview] Escape left Freelook pressed',
+    ]);
   });
 });

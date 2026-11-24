@@ -120,8 +120,7 @@ describe('ResourceLoader (loader-level gaps)', () => {
     });
   });
 
-  // The signal CameraFit uses to know loading has finished. A timer can only guess,
-  // and frames whatever has decoded when large external .tres meshes are still loading.
+  // FrameOnOpen's end-of-load signal: a timer frames whatever has decoded while a large mesh still loads.
   describe('pending-resource activity', () => {
     it('starts settled', () => {
       expect(loader.pendingResourceCount).toBe(0);

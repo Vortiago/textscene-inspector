@@ -2,6 +2,8 @@ import type { Scene } from '../../scene/openScene.js';
 import { encodePng } from '../../utils/encodePng.js';
 import { assertLoadedCamera } from '../viewCamera.js';
 import type { ViewSettled, ViewStatus, ViewStatusStore } from './viewStatus.js';
+import type { EditorCameras, EditorViewAnswers } from '../editorCamera/editorCameras.js';
+import type { ViewportMode } from '../contexts/ViewportModeContext.js';
 
 /** What a view answers of its frames, in every mode: `mountScene` and a `TscnCanvas` ref give it. */
 export interface ViewAnswers {
@@ -21,9 +23,19 @@ interface AnsweringView {
   ending: AbortSignal;
   /** The Camera3D the 3D mode looks through now, or null. */
   lookedThrough(): string | null;
+  cameras: EditorCameras;
+  /** The mode the view draws in now. */
+  mode(): ViewportMode;
 }
 
-export function viewAnswers({ scene, store, ending, lookedThrough }: AnsweringView): ViewAnswers {
+export function viewAnswers({
+  scene,
+  store,
+  ending,
+  lookedThrough,
+  cameras,
+  mode,
+}: AnsweringView): ViewAnswers & EditorViewAnswers {
   const ended = () => Promise.reject(ending.reason as Error);
   return {
     get settled() {
@@ -39,5 +51,8 @@ export function viewAnswers({ scene, store, ending, lookedThrough }: AnsweringVi
       return store.captureImage().then(encodePng);
     },
     status: store.status,
+    get editorCamera() {
+      return cameras.of(mode());
+    },
   };
 }

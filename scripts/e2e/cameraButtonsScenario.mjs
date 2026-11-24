@@ -41,7 +41,7 @@ export const CASES = [
     view: '2D',
     steps: [{ click: 'Side' }, { click: EDITOR_ROW }],
     expected: {
-      start: { view: '2D', rows: [EDITOR_ROW, ...ROWS_3D], active: [] },
+      start: { view: '2D', rows: [EDITOR_ROW, ...ROWS_3D], active: [EDITOR_ROW] },
       steps: [
         { view: '3D', active: ['Side'], moved: true },
         { view: '3D', active: [EDITOR_ROW], differsFrom: 0 },
@@ -118,13 +118,17 @@ export const CASES = [
     },
   },
   {
+    // The 2D view's editor camera is a Camera2D, so its row keeps the 2D view where the frame left it.
     name: '2D frame',
     fixture: FIXTURE_2D,
     view: '2D',
-    steps: [{ click: 'Right' }],
+    steps: [{ click: 'Right' }, { click: EDITOR_ROW }],
     expected: {
-      start: { view: '2D', rows: [EDITOR_ROW, ...ROWS_2D], active: [] },
-      steps: [{ view: '2D', active: [], moved: true }],
+      start: { view: '2D', rows: [EDITOR_ROW, ...ROWS_2D], active: [EDITOR_ROW] },
+      steps: [
+        { view: '2D', active: [EDITOR_ROW], moved: true },
+        { view: '2D', active: [EDITOR_ROW], sameAs: 0 },
+      ],
     },
   },
   {
@@ -145,13 +149,21 @@ export const CASES = [
       steps: [{ view: 'In-game', active: ['Close', 'Root'], moved: true }],
     },
   },
-  ...['3D', '2D', 'In-game'].map((view) => ({
+  ...['3D', '2D'].map((view) => ({
     name: `No camera in ${view}`,
     fixture: FIXTURE_NO_CAMERA,
     view,
     steps: [],
-    expected: { start: { view, rows: [], active: [], isEmpty: true }, steps: [] },
+    expected: { start: { view, rows: [EDITOR_ROW], active: [EDITOR_ROW] }, steps: [] },
   })),
+  {
+    // The running game has no editor camera, and Godot draws no 3D without a camera.
+    name: 'No camera in In-game',
+    fixture: FIXTURE_NO_CAMERA,
+    view: 'In-game',
+    steps: [],
+    expected: { start: { view: 'In-game', rows: [], active: [], isEmpty: true }, steps: [] },
+  },
 ];
 
 const viewButtons = (page) => page.getByRole('group', { name: 'Viewport dimension' }).getByRole('button');

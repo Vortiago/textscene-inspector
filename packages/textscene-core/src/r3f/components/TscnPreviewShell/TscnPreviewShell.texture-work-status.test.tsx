@@ -28,6 +28,7 @@ function statusBuilding(textures: number): ViewStatus {
     frame: null,
     undrawn: [],
     isSoftwareRendering: false,
+    freelook: null,
   };
 }
 

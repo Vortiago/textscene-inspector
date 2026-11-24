@@ -4,10 +4,10 @@
  * drag-to-pan. The native Control canvas mounts inside `<World2DCanvas>`,
  * which has its own suites; this one only covers the stage chrome around it.
  */
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { sizeEveryElement } from '../../testing/sizeEveryElement';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, type RenderResult } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, type RenderResult } from '@testing-library/react';
 
 /**
  * Renders of the stubbed world canvas. A delta of 0 across an event shows the
@@ -57,8 +57,9 @@ vi.mock('../../contexts/ProjectSettingsContext', async (importOriginal) => {
 });
 
 import { Canvas2DStage } from './Canvas2DStage';
-import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext';
-import { useViewportActions } from '../../testing/ViewportActionsProbe';
+import { createEditorCameras, type EditorCameras } from '../../editorCamera/editorCameras';
+import { EditorCamerasProvider } from '../../editorCamera/EditorCamerasContext';
+import { variant } from '../../../scene/variant';
 import { FIT_ON_OPEN_2D_STORAGE_KEY } from './viewport2d';
 import type { TscnNode } from '../../../parser/types';
 
@@ -121,14 +122,27 @@ function touch(
   else fireEvent.pointerUp(target, init);
 }
 
-/** A button that drives the context the Cameras panel uses: frame (300, 200) at zoom 2. */
-function FrameProbe() {
-  const cam = useViewportActions();
-  return (
-    <button type="button" onClick={() => cam.requestFrame2D({ center: { x: 300, y: 200 }, zoom: 2 })}>
-      frame camera
-    </button>
-  );
+/** The view's editor cameras, new for each test. */
+let cameras: EditorCameras = createEditorCameras();
+beforeEach(() => {
+  cameras = createEditorCameras();
+});
+
+function ViewCameras({ children }: { children: ReactNode }) {
+  return <EditorCamerasProvider cameras={cameras}>{children}</EditorCamerasProvider>;
+}
+
+/** What the Cameras panel writes for a Camera2D row: zoom 2, then its view centre (300, 200). */
+function writeCameraView(): Promise<unknown> {
+  const camera = cameras.of('2D')!;
+  return Promise.all([
+    camera.set('zoom', variant('Vector2(2, 2)')),
+    camera.set('position', variant('Vector2(300, 200)')),
+  ]);
+}
+
+async function frameCamera(): Promise<void> {
+  await act(async () => void (await writeCameraView()));
 }
 
 describe('<Canvas2DStage>', () => {
@@ -394,24 +408,78 @@ describe('<Canvas2DStage>', () => {
     expect(frame.style.transform).toBe('translate(50px, 30px) scale(1)');
   });
 
-  it('frames a 2D camera view on request: centers the view point at the requested zoom', () => {
+  it('centres the editor camera’s position at its zoom on a write of both', async () => {
     render(
-      <ViewportActionsProvider>
-        <FrameProbe />
+      <ViewCameras>
         <Canvas2DStage nodes={[]} internalResources={[]} externalResources={[]} scenePath={SCENE_PATH} />
-      </ViewportActionsProvider>
+      </ViewCameras>
     );
     const stage = screen.getByLabelText('2D canvas');
     // happy-dom rects are 0×0, so the stage gets a real size for the centring.
     stage.getBoundingClientRect = () =>
       ({ width: 800, height: 600, left: 0, top: 0, right: 800, bottom: 600, x: 0, y: 0 }) as DOMRect;
 
-    fireEvent.click(screen.getByRole('button', { name: 'frame camera' }));
+    await frameCamera();
 
     // pan = stage/2 − center·zoom → (400 − 600, 300 − 400) = (−200, −100).
     const frame = screen.getByText('1152 × 648').parentElement as HTMLElement;
     expect(frame.style.transform).toBe('translate(-200px, -100px) scale(2)');
     expect(zoomLabel()).toBe('200%');
+  });
+
+  it('gives the view centre as the editor camera’s position, and its magnification as zoom', async () => {
+    window.localStorage.setItem(FIT_ON_OPEN_2D_STORAGE_KEY, 'false');
+    sizeEveryElement(800, 600);
+    render(
+      <ViewCameras>
+        <Canvas2DStage nodes={[]} internalResources={[]} externalResources={[]} scenePath={SCENE_PATH} />
+      </ViewCameras>
+    );
+    const camera = cameras.of('2D')!;
+
+    expect(await camera.get('position')).toMatchObject({ text: 'Vector2(400, 300)' });
+    expect(await camera.get('zoom')).toMatchObject({ text: 'Vector2(1, 1)' });
+    await act(async () => void (await camera.set('zoom', variant('Vector2(4, 4)'))));
+    expect(await camera.get('position')).toMatchObject({ text: 'Vector2(400, 300)' });
+    expect(zoomLabel()).toBe('400%');
+  });
+
+  it('goes back to the fitted view on reset', async () => {
+    sizeEveryElement(800, 600);
+    render(
+      <ViewCameras>
+        <Canvas2DStage nodes={[]} internalResources={[]} externalResources={[]} scenePath={SCENE_PATH} />
+      </ViewCameras>
+    );
+    const fitted = screen.getByTestId('canvas-2d-frame').style.transform;
+    await frameCamera();
+
+    await act(async () => void (await cameras.of('2D')!.call('reset')));
+
+    expect(screen.getByTestId('canvas-2d-frame').style.transform).toBe(fitted);
+  });
+
+  it('refuses a method the 2D editor camera lacks', async () => {
+    render(
+      <ViewCameras>
+        <Canvas2DStage nodes={[]} internalResources={[]} externalResources={[]} scenePath={SCENE_PATH} />
+      </ViewCameras>
+    );
+
+    await expect(cameras.of('2D')!.call('make_current')).rejects.toThrow(
+      'expected a method of the 2D editor camera (reset, focus, center), got make_current'
+    );
+  });
+
+  it('refuses a zoom that differs along x and y, which the stage cannot draw', async () => {
+    sizeEveryElement(800, 600);
+    render(
+      <ViewCameras>
+        <Canvas2DStage nodes={[]} internalResources={[]} externalResources={[]} scenePath={SCENE_PATH} />
+      </ViewCameras>
+    );
+
+    expect(await cameras.of('2D')!.set('zoom', variant('Vector2(2, 1)'))).toBe(false);
   });
 
   it('ignores pointer move when no drag is active, and non-primary buttons', () => {
@@ -491,31 +559,22 @@ describe('<Canvas2DStage> fit on open: load time', () => {
   /** The stage as the viewport area mounts it, with the props a rerender changes. */
   function stageAt(scenePath: string, nodes: TscnNode[] = []) {
     return (
-      <ViewportActionsProvider>
-        <FrameProbe />
+      <ViewCameras>
         <Canvas2DStage nodes={nodes} internalResources={[]} externalResources={[]} scenePath={scenePath} />
-      </ViewportActionsProvider>
+      </ViewCameras>
     );
   }
 
-  /** The same tree in the 3D workspace: the stage unmounts and the provider stays. */
+  /** The same tree in the 3D workspace: the stage unmounts and the cameras stay. */
   function withoutStage() {
-    return (
-      <ViewportActionsProvider>
-        <FrameProbe />
-      </ViewportActionsProvider>
-    );
+    return <ViewCameras>{null}</ViewCameras>;
   }
 
-  /**
-   * The Cameras panel's look-through: one click requests a framing and switches to 2D,
-   * so the stage mounts in the render that carries the new request.
-   */
+  /** One click writes the camera and switches to 2D, so the write waits for the stage it mounts. */
   function LookThrough2DHost() {
-    const cam = useViewportActions();
     const [is2D, setIs2D] = useState(false);
     function lookThrough() {
-      cam.requestFrame2D({ center: { x: 300, y: 200 }, zoom: 2 });
+      void writeCameraView();
       setIs2D(true);
     }
     return (
@@ -622,10 +681,10 @@ describe('<Canvas2DStage> fit on open: load time', () => {
     expect(frameTransform()).toBe(pinched);
   });
 
-  it('keeps a Camera2D framing made before the project viewport resolves', () => {
+  it('keeps a Camera2D framing made before the project viewport resolves', async () => {
     sizeEveryElement(800, 600);
     const { rerender } = render(stageAt(SCENE_PATH));
-    fireEvent.click(screen.getByRole('button', { name: 'frame camera' }));
+    await frameCamera();
     // pan = stage/2 − center·zoom → (400 − 600, 300 − 400).
     expect(frameTransform()).toBe('translate(-200px, -100px) scale(2)');
 
@@ -669,10 +728,10 @@ describe('<Canvas2DStage> fit on open: load time', () => {
     expect(frameTransform()).toBe(FITTED_LATE);
   });
 
-  it('does not replay an old Camera2D framing on a remount, so a late viewport refits', () => {
+  it('does not replay an old Camera2D framing on a remount, so a late viewport refits', async () => {
     sizeEveryElement(800, 600);
     const { rerender } = render(stageAt(SCENE_PATH));
-    fireEvent.click(screen.getByRole('button', { name: 'frame camera' }));
+    await frameCamera();
     rerender(withoutStage());
 
     rerender(stageAt('res://other.tscn'));
@@ -681,15 +740,27 @@ describe('<Canvas2DStage> fit on open: load time', () => {
     expect(frameTransform()).toBe(FITTED_LATE);
   });
 
-  it('applies a Camera2D framing requested in the click that mounts the stage', () => {
+  it('gives a remount of the same scene the view the last stage left', async () => {
+    sizeEveryElement(800, 600);
+    const { rerender } = render(stageAt(SCENE_PATH));
+    dragPan();
+    const panned = frameTransform();
+    rerender(withoutStage());
+
+    rerender(stageAt(SCENE_PATH));
+
+    expect(frameTransform()).toBe(panned);
+  });
+
+  it('applies a Camera2D framing written in the click that mounts the stage', async () => {
     sizeEveryElement(800, 600);
     render(
-      <ViewportActionsProvider>
+      <ViewCameras>
         <LookThrough2DHost />
-      </ViewportActionsProvider>
+      </ViewCameras>
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'look through' }));
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'look through' })));
 
     // pan = stage/2 − center·zoom → (400 − 600, 300 − 400).
     expect(frameTransform()).toBe('translate(-200px, -100px) scale(2)');

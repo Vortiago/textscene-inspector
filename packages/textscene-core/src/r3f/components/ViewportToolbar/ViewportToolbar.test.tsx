@@ -7,10 +7,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { SHOW_STORAGE_KEYS, ViewportModeProvider } from '../../contexts/ViewportModeContext';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
-import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext';
-import type { ViewAnswers } from '../../viewStatus/viewAnswers';
+import type { CanvasView } from '../../TscnCanvas';
+import { fakeEditorView } from '../../testing/fakeEditorCamera';
+import { TestPreviewCamera } from '../TscnPreviewShell/previewCamera.testkit';
 
-type ToolbarView = Pick<ViewAnswers, 'settled' | 'captureImage'>;
+type ToolbarView = Pick<CanvasView, 'settled' | 'captureImage' | 'editorCamera'>;
 import { ViewportToolbar } from './ViewportToolbar';
 import { openDisplayMenu } from './DisplayMenu.testkit';
 
@@ -133,19 +134,29 @@ describe('ViewportToolbar', () => {
   });
 });
 
+/** A view whose editor camera records its calls, and that never settles. */
+function editorView(): { view: ToolbarView; calls: string[] } {
+  const { view, calls } = fakeEditorView();
+  return {
+    view: { ...view, settled: new Promise(() => {}), captureImage: () => new Promise(() => {}) },
+    calls,
+  };
+}
+
 /** Mounts with the camera and hierarchy contexts that Reset Camera needs. */
 function renderWithChrome({
   mode = '3D' as '2D' | '3D',
   sceneGraph = {} as unknown,
-  view = null as ToolbarView | null,
+  view = editorView().view as ToolbarView | null,
+  previewedCameraPath = null as string | null,
 } = {}) {
   return render(
     <HierarchyProvider value={{ sceneGraph: sceneGraph as never, panelId: 'p' }}>
-      <ViewportActionsProvider>
-        <ViewportModeProvider initialMode={mode}>
+      <ViewportModeProvider initialMode={mode}>
+        <TestPreviewCamera initialCamera={previewedCameraPath}>
           <ViewportToolbar view={view} />
-        </ViewportModeProvider>
-      </ViewportActionsProvider>
+        </TestPreviewCamera>
+      </ViewportModeProvider>
     </HierarchyProvider>
   );
 }
@@ -166,6 +177,20 @@ describe('ViewportToolbar — Reset Camera', () => {
     renderWithChrome({ mode: '2D', sceneGraph: {} });
     expect(screen.queryByTestId('reset-camera-button')).toBeNull();
   });
+
+  it('hides Reset Camera while no view is mounted', () => {
+    renderWithChrome({ view: null });
+    expect(screen.queryByTestId('reset-camera-button')).toBeNull();
+  });
+
+  it('resets the view’s editor camera on a click', async () => {
+    const { view, calls } = editorView();
+    renderWithChrome({ view });
+
+    await act(async () => fireEvent.click(screen.getByTestId('reset-camera-button')));
+
+    expect(calls).toEqual(['reset']);
+  });
 });
 
 describe('ViewportToolbar — Screenshot', () => {
@@ -173,6 +198,7 @@ describe('ViewportToolbar — Screenshot', () => {
   const settledView = (): ToolbarView => ({
     settled: Promise.resolve({ scriptedNodeCount: 0, hasCurrentCamera: false }),
     captureImage: () => Promise.resolve(IMAGE),
+    editorCamera: null,
   });
 
   it.each(['3D', '2D'] as const)(
@@ -235,6 +261,7 @@ describe('ViewportToolbar — Screenshot', () => {
         settle = () => resolve({ scriptedNodeCount: 0, hasCurrentCamera: false });
       }),
       captureImage,
+      editorCamera: null,
     };
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
     vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:shot');

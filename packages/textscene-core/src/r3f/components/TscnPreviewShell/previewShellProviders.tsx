@@ -8,7 +8,6 @@ import { HierarchyProvider, type HierarchyContextValue } from '../../contexts/Hi
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext.js';
 import type { ResourceLoader } from '../../../resources/ResourceLoader.js';
 import { SelectionProvider } from '../../contexts/SelectionContext.js';
-import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext.js';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext.js';
 import { LiveFilesHost } from '../../LiveFilesHost.js';
 import {
@@ -60,7 +59,6 @@ export function previewShellProviders({
     (children) => <HierarchyProvider value={hierarchyValue}>{children}</HierarchyProvider>,
     (children) => <SelectionProvider>{children}</SelectionProvider>,
     (children) => <PreviewVisibilityProvider isVisible={isVisible}>{children}</PreviewVisibilityProvider>,
-    (children) => <ViewportActionsProvider>{children}</ViewportActionsProvider>,
     (children) => (
       <MissingResourcesProvider>
         <LiveFilesHost />

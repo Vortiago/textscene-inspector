@@ -15,6 +15,7 @@ function passingRun() {
   return {
     views: ['3D', '2D', 'In-game', '3D'].map(view),
     inGamePixels: OTHER_VIEW_PIXELS * 400,
+    movedPixels: OTHER_VIEW_PIXELS * 50,
     back3DPixels: 0,
     panelPixels2D: PANEL_PIXELS * 2,
     diagnostics: CLEAN_LOAD,
@@ -68,5 +69,13 @@ describe('checkModeSwitch', () => {
     const run = passingRun();
     run.back3DPixels = SAME_VIEW_PIXELS * 50;
     expect(failuresOf(run)).toHaveLength(1);
+  });
+
+  it('fails a run whose orbit left the camera where it opened', () => {
+    const run = passingRun();
+    run.movedPixels = 0;
+    expect(failuresOf(run)).toEqual([
+      `[Mode switch] the orbit moved 0 px of the 3D view, expected over ${OTHER_VIEW_PIXELS}`,
+    ]);
   });
 });

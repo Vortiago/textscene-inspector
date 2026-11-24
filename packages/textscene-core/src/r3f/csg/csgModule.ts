@@ -19,10 +19,7 @@ export const loadCsgModule = memoisedImport(() =>
   import('three-bvh-csg').then((m) => m as unknown as CsgModule)
 );
 
-/**
- * Starts the load without waiting, as soon as a parsed scene holds any CSG type, so the boolean
- * result reaches the opening frame sooner. `CameraFit` re-frames it only once the loader settles.
- */
+/** Early, so the result reaches the opening frame: `FrameOnOpen` re-frames only once the loader settles. */
 export function prefetchCsgModule(): void {
   void loadCsgModule().catch(() => {
     // Swallowed deliberately. The real load path reports the failure and degrades to

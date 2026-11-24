@@ -7,7 +7,6 @@ import {
   useLayoutEffect,
   memo,
   useRef,
-  type ReactNode,
   type Ref,
 } from 'react';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
@@ -30,7 +29,6 @@ import { ControlRasterLayer } from '../nodes/viewport/subviewport/ControlRasterL
 import { SceneShadowFitter } from './SceneShadowFitter.js';
 import { SceneDepthPrepass } from './depthPrepass/SceneDepthPrepass.js';
 import { ActiveCameraSwitcher } from './ActiveCameraSwitcher.js';
-import { CameraFit } from './CameraFit.js';
 import { SceneCamerasProvider } from './sceneCameras.js';
 import { CANVAS_RENDERER_GL, CANVAS_RENDERER_PROPS } from './canvasRenderer/canvasRendererProps.js';
 import { CanvasRendererScope } from './canvasRenderer/CanvasRendererScope.js';
@@ -40,7 +38,7 @@ import type { ViewportMode } from './contexts/ViewportModeContext.js';
 import { StageRoot } from './StageRoot.js';
 import { ViewShowProvider } from './viewShow/ViewShowContext.js';
 import type { ViewShow } from './viewShow/viewShow.js';
-import { ViewportActionsProvider, useOptionalViewportActions } from './contexts/ViewportActionsContext.js';
+import { ViewportActionsProvider } from './contexts/ViewportActionsContext.js';
 import { LookThroughProvider, ViewCamera } from './viewCamera.js';
 import { EditorViewReport } from './viewStatus/EditorViewReport.js';
 import { HostSelection, type HostSelectionProps } from './hostSelection/HostSelection.js';
@@ -48,6 +46,11 @@ import { useViewStatusStore, ViewStatusScope } from './viewStatus/ViewStatusCont
 import { viewAnswers, type ViewAnswers } from './viewStatus/viewAnswers.js';
 import { StatusChangeReporter } from './viewStatus/StatusChangeReporter.js';
 import type { ViewStatus } from './viewStatus/viewStatus.js';
+import type { EditorViewAnswers } from './editorCamera/editorCameras.js';
+import { EditorCamerasScope, useEditorCameras } from './editorCamera/EditorCamerasContext.js';
+
+/** What a `TscnCanvas` ref gives: the answers of `mountScene`'s view but `update` and `dispose`. */
+export type CanvasView = ViewAnswers & EditorViewAnswers;
 
 // Lazy, so the glyph engine and the parse of the prompt load only for an empty canvas.
 const EmptyScenePrompt = lazy(() => import('./emptyScenePrompt.js'));
@@ -150,8 +153,8 @@ export interface TscnCanvasProps extends Omit<HostSelectionProps, 'children'> {
   className?: string;
   /** As `mountScene`'s `onStatusChange`. */
   onStatusChange?: ((status: ViewStatus) => void) | null;
-  /** The view's `settled`, `captureImage` and `status`, as `mountScene` gives them. Props change the view. */
-  ref?: Ref<ViewAnswers>;
+  /** The view's answers, as `mountScene` gives them. Props change the view. */
+  ref?: Ref<CanvasView>;
 }
 
 export function TscnCanvas({
@@ -190,7 +193,7 @@ type ViewProps = Pick<
   TscnCanvasProps,
   'visible' | 'show' | 'mode' | 'camera' | 'className' | 'onStatusChange'
 > & {
-  viewRef?: Ref<ViewAnswers>;
+  viewRef?: Ref<CanvasView>;
 };
 
 // A memo: the previewer gives a new `selected` per hovered row, which renders the selection alone.
@@ -207,9 +210,11 @@ const View = memo(function View({
     <PreviewVisibilityProvider isVisible={visible}>
       <ViewShowProvider show={show}>
         <ViewStatusScope>
-          <ViewportActionsScope>{stageOf({ mode, camera, className })}</ViewportActionsScope>
-          {viewRef && <ViewRef viewRef={viewRef} mode={mode} camera={camera} />}
-          {onStatusChange && <StatusChangeReporter onStatusChange={onStatusChange} />}
+          <EditorCamerasScope>
+            <ViewportActionsProvider>{stageOf({ mode, camera, className })}</ViewportActionsProvider>
+            {viewRef && <ViewRef viewRef={viewRef} mode={mode} camera={camera} />}
+            {onStatusChange && <StatusChangeReporter onStatusChange={onStatusChange} />}
+          </EditorCamerasScope>
         </ViewStatusScope>
       </ViewShowProvider>
     </PreviewVisibilityProvider>
@@ -217,9 +222,10 @@ const View = memo(function View({
 });
 
 /** Hands the ref the answers of the view below the same scene. They end when the view unmounts. */
-function ViewRef({ viewRef, mode, camera }: { viewRef: Ref<ViewAnswers> } & ViewRefLook) {
+function ViewRef({ viewRef, mode, camera }: { viewRef: Ref<CanvasView> } & ViewRefLook) {
   const scene = useOptionalHierarchy()?.scene;
   const store = useViewStatusStore();
+  const cameras = useEditorCameras();
   const ending = useRef<AbortController | null>(null);
   const lookedThrough = useLookedThrough({ mode, camera });
   // A layout effect before the handle, so each mount's controller exists when the handle is built.
@@ -230,9 +236,12 @@ function ViewRef({ viewRef, mode, camera }: { viewRef: Ref<ViewAnswers> } & View
   }, []);
   useImperativeHandle(viewRef, () => {
     if (!scene || !store) throw new Error('expected a TscnCanvas with a scene, got none');
+    if (!cameras) throw new Error('expected a TscnCanvas with editor cameras, got none');
     if (!ending.current) throw new Error('expected the view to mount before its ref, got no mount');
-    return viewAnswers({ scene, store, ending: ending.current.signal, lookedThrough });
-  }, [scene, store, lookedThrough]);
+    // A new handle per mode, so a holder renders again with the camera the mode draws through.
+    const drawn = () => mode;
+    return viewAnswers({ scene, store, ending: ending.current.signal, lookedThrough, cameras, mode: drawn });
+  }, [scene, store, cameras, lookedThrough, mode]);
   return null;
 }
 
@@ -247,12 +256,6 @@ function useLookedThrough({ mode, camera }: ViewRefLook): () => string | null {
     isLooking3D.current = mode === '3D';
   }, [mode, camera]);
   return useCallback(() => (isLooking3D.current ? keptCamera.current : null), []);
-}
-
-/** A host's own provider wins, so its panels and the `camera` prop move the same preview. */
-function ViewportActionsScope({ children }: { children: ReactNode }) {
-  if (useOptionalViewportActions()) return children;
-  return <ViewportActionsProvider>{children}</ViewportActionsProvider>;
 }
 
 function stageOf({ mode, camera, className }: Pick<TscnCanvasProps, 'mode' | 'camera' | 'className'>) {
@@ -293,8 +296,7 @@ function EditorCanvas({ className, camera }: Pick<TscnCanvasProps, 'camera' | 'c
   const frameloop = usePreviewFrameloop();
   return (
     <StageRoot className={className}>
-      {/* Godot's editor opens every scene at the same fixed orbit, 70-degree FOV and
-          clip planes (godotEditorCamera.ts). Framing is F there and opt-in here. */}
+      {/* Godot's fixed opening orbit, FOV and clip planes. Framing is F there, and a host's call here. */}
       <Canvas
         {...CANVAS_RENDERER_PROPS}
         camera={{ position: editorCameraPosition(), ...editorCameraProjection() }}
@@ -307,7 +309,6 @@ function EditorCanvas({ className, camera }: Pick<TscnCanvasProps, 'camera' | 'c
             <ActiveCameraSwitcher />
             {camera !== undefined && <ViewCamera camera={camera} />}
           </SceneCamerasProvider>
-          <CameraFit />
           <FocusShortcuts />
           <GodotEditorControls />
           <EditorControlsBridge />

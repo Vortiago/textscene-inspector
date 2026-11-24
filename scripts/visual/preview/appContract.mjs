@@ -1,9 +1,3 @@
-/**
- * What both harnesses know about the app: the shell's localStorage keys, the toolbar's testids,
- * the capture frames and CameraFit's load-time timers. A second copy would not fail when the app
- * changes: it would measure the wrong pixels, such as the toolbar composited into a probe.
- */
-
 /** `tscn-web-source-pane` in apps/textscene-web/src/sourcePane.ts. */
 export const SOURCE_PANE_STORAGE_KEY = 'tscn-web-source-pane';
 /** `FRAME_ON_OPEN_STORAGE_KEY` in r3f/contexts/ViewportModeContext.tsx. */
@@ -90,8 +84,7 @@ export const CANVAS_CAPTURE = {
   height: VIEWPORT.height - SHELL_CHROME.height,
 };
 export const NETWORK_IDLE_MS = 20000; // Ceiling for the app's own resource chain to go quiet.
-// Covers CameraFit's last fit timer at 1100 ms. Its fit on a loader settle can come later, and
-// changes the frame, so the convergence loop below waits that one out.
+// Past FrameOnOpen's last timer (1100 ms). The convergence loop below waits out a later fit on settle.
 export const SETTLE_INITIAL_MS = 1200;
 // Convergence, the frames until the picture stops changing, may differ per side: Godot steps a
 // fixed count of process frames, and ours captures until two are byte-identical.

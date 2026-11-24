@@ -3,6 +3,7 @@ import { CANVAS_2D_TESTIDS } from '../visual/preview/appContract.mjs';
 import { checkDiagnostics } from './diagnostics.mjs';
 import { openFixture, shootCanvas } from './openFixture.mjs';
 import { expandAllTreeRows, selectOutlinerNode, SELECT_SETTLE_MS, treeRow } from './outliner.mjs';
+import { navigate } from './cameraPreviewScenario.mjs';
 
 export const SWITCH_FIXTURE = 'in-game/unit-mode-switch.tscn';
 const SELECTED_NODE = 'Main/Box';
@@ -52,9 +53,15 @@ function withoutShot(view) {
   return facts;
 }
 
-/** Selects a node in 3D, then switches through each mode and back to 3D. */
+/** No focus ring of a clicked button or the view, and no hovered button, shows in the shot. */
+async function blurAndPark(page) {
+  await page.evaluate(() => globalThis.document.activeElement?.blur());
+  await page.mouse.move(0, 0);
+}
+
+/** Selects a node in 3D and moves the camera, then switches through each mode and back to 3D. */
 export async function runModeSwitchScenario(browser, baseUrl) {
-  const { context, page, diagnostics } = await openFixture(browser, baseUrl, {
+  const { context, page, canvas, diagnostics } = await openFixture(browser, baseUrl, {
     fixture: SWITCH_FIXTURE,
     label: 'Mode switch',
   });
@@ -62,13 +69,14 @@ export async function runModeSwitchScenario(browser, baseUrl) {
   await expandAllTreeRows(page);
   await selectOutlinerNode(page, SELECTED_NODE);
   await page.waitForTimeout(SELECT_SETTLE_MS);
+  const opening = await shoot(page);
+  // A moved camera, so the return to 3D shows whether the view kept the pose.
+  await navigate(page, canvas);
+  await blurAndPark(page);
   const views = [await readView(page, '3D')];
   for (const view of SWITCHES) {
     await viewButton(page, view).click();
-    // A click shows the focus ring of the pressed view button, which the shot of the canvas holds.
-    await page.evaluate(() => globalThis.document.activeElement?.blur());
-    // The pointer rests off the toolbar, so no hovered button shows in the shot.
-    await page.mouse.move(0, 0);
+    await blurAndPark(page);
     views.push(await readView(page, view));
   }
   await context.close();
@@ -76,6 +84,7 @@ export async function runModeSwitchScenario(browser, baseUrl) {
   return {
     views: views.map(withoutShot),
     inGamePixels: diffMask(first3D.shot, inGame.shot).diffPixels,
+    movedPixels: diffMask(opening, first3D.shot).diffPixels,
     back3DPixels: diffMask(first3D.shot, last3D.shot).diffPixels,
     panelPixels2D: redPixels(twoD.shot),
     diagnostics,
@@ -83,7 +92,10 @@ export async function runModeSwitchScenario(browser, baseUrl) {
 }
 
 /** Records the scenario's claims on `gate`. */
-export function checkModeSwitch(gate, { views, inGamePixels, back3DPixels, panelPixels2D, diagnostics }) {
+export function checkModeSwitch(
+  gate,
+  { views, inGamePixels, movedPixels, back3DPixels, panelPixels2D, diagnostics }
+) {
   for (const view of views) {
     const at = `[Mode switch] ${view.view}`;
     gate.check(view.isPressed, `${at}: the toolbar does not show ${view.view} pressed`);
@@ -103,8 +115,12 @@ export function checkModeSwitch(gate, { views, inGamePixels, back3DPixels, panel
     `[Mode switch] In-game differs from 3D in ${inGamePixels} px, expected over ${OTHER_VIEW_PIXELS}`
   );
   gate.check(
+    movedPixels > OTHER_VIEW_PIXELS,
+    `[Mode switch] the orbit moved ${movedPixels} px of the 3D view, expected over ${OTHER_VIEW_PIXELS}`
+  );
+  gate.check(
     back3DPixels < SAME_VIEW_PIXELS,
-    `[Mode switch] back in 3D the view differs in ${back3DPixels} px, expected under ${SAME_VIEW_PIXELS}`
+    `[Mode switch] back in 3D the moved view differs in ${back3DPixels} px, expected under ${SAME_VIEW_PIXELS}`
   );
   checkDiagnostics(gate, '[Mode switch]', diagnostics);
 }

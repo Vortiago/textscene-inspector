@@ -7,8 +7,7 @@ import { useLiveSceneNodes } from '../../useLiveSceneTree.js';
 import { keepsChildrenInViewport } from '../../viewportRender/viewportBoundary.js';
 import type { TscnNode } from '../../../parser/types.js';
 import { memo, type Ref } from 'react';
-import { TscnCanvas } from '../../TscnCanvas.js';
-import type { ViewAnswers } from '../../viewStatus/viewAnswers.js';
+import { TscnCanvas, type CanvasView } from '../../TscnCanvas.js';
 import type { ViewStatus } from '../../viewStatus/viewStatus.js';
 import { GameStartNotes } from './GameStartNotes.js';
 import { usePreviewCamera, viewCameraOf } from './previewCamera.js';
@@ -21,7 +20,7 @@ const IS_2D_CONTENT = (node: TscnNode): boolean => isClaimedByCanvasItemEditor(n
 
 interface ViewportAreaProps {
   /** Hears each view's answers as it mounts, and null as it leaves. */
-  viewRef: Ref<ViewAnswers>;
+  viewRef: Ref<CanvasView>;
   onStatusChange: (status: ViewStatus) => void;
 }
 

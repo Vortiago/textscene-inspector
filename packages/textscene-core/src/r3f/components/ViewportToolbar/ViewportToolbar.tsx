@@ -8,11 +8,6 @@ import {
   type ViewportMode,
 } from '../../contexts/ViewportModeContext.js';
 import { RUNNING_GAME_SHOW, type ViewShow } from '../../viewShow/viewShow.js';
-import {
-  useIsFreelookAvailable,
-  useIsFreelookToggled,
-  useOptionalViewportActions,
-} from '../../contexts/ViewportActionsContext.js';
 import { useOptionalHierarchy } from '../../contexts/HierarchyContext.js';
 import { writePersisted } from '../../hooks/usePersistedState.js';
 import { useLiveSceneNodes } from '../../useLiveSceneTree.js';
@@ -22,7 +17,9 @@ import {
   YIELDS_A_PREVIEW,
 } from '../../preview/godotPreviewLighting.js';
 import { DisplayMenu, type DisplayToggle } from './DisplayMenu.js';
-import type { ViewAnswers } from '../../viewStatus/viewAnswers.js';
+import type { CanvasView } from '../../TscnCanvas.js';
+import { warnOfCameraFailure } from '../../editorCamera/editorCameras.js';
+import { useHeardFreelook } from '../TscnPreviewShell/previewViewStatus.js';
 import { captureWhenSettled } from '../TscnPreviewShell/viewSettle.js';
 import { usePreviewCamera } from '../TscnPreviewShell/previewCamera.js';
 import * as logger from '../../../logger.js';
@@ -140,15 +137,15 @@ function download(file: Blob, filename: string): void {
 }
 
 export interface ViewportToolbarProps {
-  /** The mounted view, or null while none is: Screenshot saves its image. */
-  view: Pick<ViewAnswers, 'captureImage' | 'settled'> | null;
+  /** Null while no view is mounted. The camera buttons move its editor camera. */
+  view: Pick<CanvasView, 'captureImage' | 'settled' | 'editorCamera'> | null;
 }
 
 export function ViewportToolbar({ view }: ViewportToolbarProps) {
   const { mode, setMode, show, setShow, frameOnOpen, setFrameOnOpen } = useViewportMode();
-  const camera = useOptionalViewportActions();
-  const isFreelookToggled = useIsFreelookToggled();
-  const isFreelookAvailable = useIsFreelookAvailable() ?? false;
+  // Both: the view's camera follows a mode switch one render after the toolbar does.
+  const camera = mode === '3D' && view?.editorCamera?.type === 'Camera3D' ? view.editorCamera : null;
+  const freelook = useHeardFreelook();
   const preview = usePreviewCamera();
   const isPreviewing = (preview?.camera ?? null) !== null;
   const hierarchy = useOptionalHierarchy();
@@ -195,13 +192,13 @@ export function ViewportToolbar({ view }: ViewportToolbarProps) {
   return (
     <div className={styles.toolbar} role="toolbar" aria-label="Viewport controls">
       {/* Reset Camera orbits in 3D, so it hides in 2D. */}
-      {mode === '3D' && camera && (
+      {camera && (
         <button
           type="button"
           className={styles.resetButton}
           onClick={() => {
             preview?.endPreview();
-            camera.resetCamera();
+            camera.call('reset').catch(warnOfCameraFailure);
           }}
           disabled={!sceneLoaded}
           data-testid="reset-camera-button"
@@ -210,16 +207,16 @@ export function ViewportToolbar({ view }: ViewportToolbarProps) {
           Reset Camera
         </button>
       )}
-      {/* Present once a 3D canvas has registered its freelook, so it hides in 2D too. */}
-      {mode === '3D' && camera && isFreelookToggled !== null && (
+      {/* Present once the view reports a 3D canvas's freelook, so it hides in 2D too. */}
+      {camera && freelook && (
         <button
           type="button"
-          className={isFreelookToggled ? `${styles.freelookButton} ${styles.active}` : styles.freelookButton}
-          onClick={camera.toggleFreelook}
-          disabled={isPreviewing || !isFreelookAvailable}
-          aria-pressed={isFreelookToggled}
+          className={freelook.isToggled ? `${styles.freelookButton} ${styles.active}` : styles.freelookButton}
+          onClick={() => void camera.set('freelook', !freelook.isToggled).catch(warnOfCameraFailure)}
+          disabled={isPreviewing || !freelook.isAvailable}
+          aria-pressed={freelook.isToggled}
           data-testid="freelook-button"
-          title={freelookTitle(isPreviewing, isFreelookAvailable)}
+          title={freelookTitle(isPreviewing, freelook.isAvailable)}
         >
           Freelook
         </button>

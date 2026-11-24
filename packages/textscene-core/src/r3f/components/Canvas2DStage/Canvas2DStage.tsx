@@ -7,6 +7,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -14,7 +15,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../../../parser/types.js';
-import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
+import { useEditorCamera2D } from '../../editorCamera/useEditorCamera2D.js';
 import { readPersisted } from '../../hooks/usePersistedState.js';
 import {
   clampWheelNotches,
@@ -33,6 +34,7 @@ import { createEditRects, EditRectsProvider } from '../../editRect/editRects.js'
 import { useViewFocus } from '../../viewFocus.js';
 import { Stage2DProvider, type Stage2D } from './FocusSelection2D.js';
 import type { StageView } from '../../editRect/focusSelection2D.js';
+import type { Rect2 } from '../../../godot/math/rect2.js';
 import styles from './Canvas2DStage.module.css';
 
 /** editor_zoom_widget.h:44-45. */
@@ -161,28 +163,31 @@ export function Canvas2DStage({
     if (fitOnOpen && !userMovedViewRef.current) fit();
   }, [fit, fitOnOpen, scenePath]);
 
-  // "View through" a Camera2D: a one-shot request that centres the camera's view
-  // point at its magnification. Pan and zoom stay free afterwards. The claim keeps a
-  // remount from replaying an old request, and still applies one made with the mount.
-  const viewportActions = useOptionalViewportActions();
-  const frame2D = viewportActions?.frame2D ?? null;
-  const claimFrame2D = viewportActions?.claimFrame2D;
-  useEffect(() => {
-    if (!frame2D || !claimFrame2D) return;
-    const el = stageRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    if (r.width <= 0 || r.height <= 0) return;
-    if (!claimFrame2D(frame2D.requestId)) return;
-    const zoom = clampZoom(frame2D.zoom);
-    moveView({
-      zoom,
-      pan: {
-        x: r.width / 2 - frame2D.center.x * zoom,
-        y: r.height / 2 - frame2D.center.y * zoom,
-      },
-    });
-  }, [frame2D, claimFrame2D, moveView]);
+  // Filled by the keys inside the canvas, where the Live scene tree places each node.
+  const rectOf = useRef<(livePath: string) => Rect2 | null>(() => null);
+  // Refs, so a later project size or scene keeps the camera node's backing.
+  const openView = useRef(() => {});
+  const openScenePath = useRef(scenePath);
+  useLayoutEffect(() => {
+    openView.current = () => (fitOnOpen ? fit() : applyView({ pan: { x: 0, y: 0 }, zoom: 1 }));
+    openScenePath.current = scenePath;
+  }, [fit, fitOnOpen, applyView, scenePath]);
+  // Declared after the fit on open, so a write made before the mount lands on the fitted view.
+  useEditorCamera2D(
+    useMemo(
+      () => ({
+        size: () => stageRef.current?.getBoundingClientRect() ?? { width: 0, height: 0 },
+        view: () => viewRef.current,
+        moveView,
+        restoreView: applyView,
+        clampZoom,
+        rectOf: (livePath) => rectOf.current(livePath),
+        reset: () => openView.current(),
+        scenePath: () => openScenePath.current,
+      }),
+      [moveView, applyView]
+    )
+  );
 
   // Wheel-to-zoom, anchored to the cursor. Added as a non-passive native
   // listener so preventDefault actually suppresses page scroll.
@@ -338,10 +343,7 @@ export function Canvas2DStage({
     }
   };
 
-  const stage2D = useMemo<Stage2D>(
-    () => ({ stage: stageElement, view: viewRef, moveView, clampZoom }),
-    [stageElement, moveView]
-  );
+  const stage2D = useMemo<Stage2D>(() => ({ stage: stageElement, rectOf }), [stageElement]);
 
   function zoomAroundCentre(factor: number) {
     const el = stageRef.current;

@@ -9,6 +9,7 @@ const PENDING: ViewStatus = {
   frame: null,
   undrawn: [],
   isSoftwareRendering: true,
+  freelook: null,
 };
 const SETTLED: ViewStatus = { ...PENDING, settled: { scriptedNodeCount: 0, hasCurrentCamera: true } };
 

@@ -3,7 +3,6 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { CamerasPanel } from './CamerasPanel';
 import { PreviewCameraProvider, usePreviewCamera } from './previewCamera';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
-import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext';
 import { ViewportModeProvider, useViewportMode, type ViewportMode } from '../../contexts/ViewportModeContext';
 import { openScene, type Scene } from '../../../scene/openScene';
 import type { ResourceProvider } from '../../../resources/ResourceProvider';
@@ -43,14 +42,12 @@ function renderPanel(mode: ViewportMode, source = SCENE): Scene {
   const scene = openScene({ source, provider });
   render(
     <HierarchyProvider value={{ sceneGraph: scene.written(), panelId: 'cams-in-game', scene }}>
-      <ViewportActionsProvider>
-        <PreviewCameraProvider scene={scene}>
-          <ViewportModeProvider initialMode={mode}>
-            <Probe />
-            <CamerasPanel />
-          </ViewportModeProvider>
-        </PreviewCameraProvider>
-      </ViewportActionsProvider>
+      <PreviewCameraProvider scene={scene}>
+        <ViewportModeProvider initialMode={mode}>
+          <Probe />
+          <CamerasPanel />
+        </ViewportModeProvider>
+      </PreviewCameraProvider>
     </HierarchyProvider>
   );
   return scene;
@@ -152,11 +149,9 @@ describe('<CamerasPanel> in the In-game mode before a camera enters', () => {
     const graphWithCameras = openScene({ source: SCENE, provider }).written();
     render(
       <HierarchyProvider value={{ sceneGraph: graphWithCameras, panelId: 'cams-not-entered', scene }}>
-        <ViewportActionsProvider>
-          <ViewportModeProvider initialMode="in-game">
-            <CamerasPanel />
-          </ViewportModeProvider>
-        </ViewportActionsProvider>
+        <ViewportModeProvider initialMode="in-game">
+          <CamerasPanel />
+        </ViewportModeProvider>
       </HierarchyProvider>
     );
     expect(screen.getByText('No camera has entered the running scene.')).toBeTruthy();
@@ -180,10 +175,26 @@ describe('<CamerasPanel> in the 2D mode, after a preview', () => {
     expect(isActive('Side')).toBe(false);
   });
 
-  it('opens the 3D view on the editor camera from the editor camera row', () => {
+  it('keeps the 2D view on the editor camera row, whose camera there is a Camera2D', () => {
     renderPanel('2D');
     fireEvent.click(row('Editor camera'));
-    expect(probe().getAttribute('data-mode')).toBe('3D');
+    expect(probe().getAttribute('data-mode')).toBe('2D');
+    expect(isActive('Editor camera')).toBe(true);
+  });
+});
+
+describe('<CamerasPanel> in a scene with no camera', () => {
+  const NO_CAMERA = '[gd_scene format=3]\n\n[node name="Main" type="Node3D"]\n';
+
+  it.each(['3D', '2D'] as const)('lists the editor camera alone in the %s mode', (mode) => {
+    renderPanel(mode, NO_CAMERA);
+    expect(screen.getAllByRole('button', { name: /Editor camera/ })).toHaveLength(1);
+    expect(screen.queryByText('No camera nodes in this scene.')).toBeNull();
+  });
+
+  it('says so in the In-game mode, which has no editor camera', () => {
+    renderPanel('in-game', NO_CAMERA);
+    expect(screen.getByText('No camera nodes in this scene.')).toBeTruthy();
   });
 });
 

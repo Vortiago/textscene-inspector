@@ -2,7 +2,7 @@ import { createContext, useContext, useState } from 'react';
 import { createExternalStore, type ExternalStore } from '../../../utils/externalStore.js';
 import { useExternalStoreSelection } from '../../hooks/createExternalStore.js';
 import { undrawnNodeAt, type UndrawnNode } from '../../viewStatus/undrawnNodes.js';
-import type { ViewStatus } from '../../viewStatus/viewStatus.js';
+import type { ViewFreelook, ViewStatus } from '../../viewStatus/viewStatus.js';
 
 /** The status the shell's view last reported, and how many times it has turned pending. */
 export interface HeardStatus {
@@ -63,4 +63,10 @@ export const PreviewViewStatusProvider = PreviewViewStatusContext.Provider;
 export function useUndrawnNode(livePath: string): UndrawnNode | null {
   const store = useContext(PreviewViewStatusContext);
   return useHeardSelection(store, (status) => (status ? undrawnNodeAt(status.undrawn, livePath) : null));
+}
+
+/** The 3D canvas's freelook, as the shell's view last reported it, or null with none. */
+export function useHeardFreelook(): ViewFreelook | null {
+  const store = useContext(PreviewViewStatusContext);
+  return useHeardSelection(store, (status) => status?.freelook ?? null);
 }

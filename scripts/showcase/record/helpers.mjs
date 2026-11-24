@@ -49,7 +49,7 @@ export async function selectScene(page, label) {
   // The palette's tree view has no Enter-to-select; click the matching row.
   await page.locator('[role="dialog"]').getByText(label, { exact: true }).first().click();
   await page.locator('[role="dialog"]').waitFor({ state: 'detached', timeout: ACTION_TIMEOUT_MS });
-  await page.waitForTimeout(1300); // parse + resource load + CameraFit settle
+  await page.waitForTimeout(1300); // parse + resource load + FrameOnOpen settle
 }
 
 /** Expands every collapsed tree row, so deep nodes such as cameras are reachable. */

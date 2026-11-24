@@ -212,9 +212,7 @@ export function createFakeResourceLoader({ loadFace }: { loadFace?: FaceLoader }
       eventBus.clear();
       metadata.clear();
     },
-    // The pending-resource count the real loader tracks for `CameraFit`. Mirrored,
-    // not stubbed: every mounted `useResource` registers here, so a dropped count
-    // would hide a leak.
+    // Mirrored, not stubbed: every mounted `useResource` registers here, so a dropped count hides a leak.
     pendingCount: 0,
     pendingListeners: new Set<() => void>(),
     beginPending(): () => void {

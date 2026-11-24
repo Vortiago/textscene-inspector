@@ -802,8 +802,8 @@ _Avoid_: "controller" (collides with `XRController3D`). "inert".
 Godot's `Cursor`, an orbit focus point plus the pitch, yaw and radius of the eye, from which every 3D gesture rebuilds the camera.
 _Avoid_: "camera state". "orbit target" for the whole cursor.
 
-**Editor camera** (`r3f/EditorControlsHandle.ts`):
-The previewer's own 3D camera, which the **Editor cursor** drives. It is never a scene Camera3D, so no gesture moves an authored camera.
+**Editor camera** (`r3f/editorCamera/`, `r3f/EditorControlsHandle.ts`):
+The view's own camera node in an editor mode: a Camera3D in 3D, which the **Editor cursor** drives, and a Camera2D in 2D. It is never in the scene, so no gesture moves an authored camera. A host reaches it as `view.editorCamera` (ADR-0091).
 _Avoid_: "default camera", "orbit camera".
 
 **Freelook** (`r3f/freelook.ts`):

@@ -45,6 +45,7 @@ describe('the status of a mounted view', () => {
       frame: null,
       undrawn: [{ path: '/root/Main', meshTypes: ['EditorMesh'], isEmptyShape: false }],
       isSoftwareRendering: true,
+      freelook: null,
     });
     view.dispose();
   });

@@ -4,12 +4,14 @@
  * and switches to the 2D workspace.
  */
 import { describe, expect, it } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { useLayoutEffect, useRef, type ReactNode } from 'react';
 import { CamerasPanel } from './CamerasPanel';
 import { TestPreviewCamera } from './previewCamera.testkit';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
-import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext';
-import { useViewportActions } from '../../testing/ViewportActionsProbe';
+import { createEditorCameras } from '../../editorCamera/editorCameras';
+import { PreviewViewProvider } from './previewView';
+import type { SceneValue } from '../../../scene/variant';
 import { ViewportModeProvider, useViewportMode } from '../../contexts/ViewportModeContext';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import { TscnParser } from '../../../parser/TscnParser';
@@ -33,16 +35,51 @@ zoom = Vector2(2, 2)
 [node name="Eye" type="Camera3D" parent="."]
 `;
 
-function Probe() {
-  const cam = useViewportActions();
+/** The writes the panel made to the 2D mode's editor camera, by property, in Godot's spelling. */
+let written2D: Map<string, string> = new Map();
+
+/** A view whose editor camera follows the mode, as a `TscnCanvas` ref does, and records 2D writes. */
+function FakeView({ children }: { children: ReactNode }) {
   const { mode } = useViewportMode();
-  return (
-    <div
-      data-testid="probe"
-      data-mode={mode}
-      data-frame={cam.frame2D ? `${cam.frame2D.center.x},${cam.frame2D.center.y}@${cam.frame2D.zoom}` : ''}
-    />
+  const currentMode = useRef(mode);
+  useLayoutEffect(() => {
+    currentMode.current = mode;
+  }, [mode]);
+  const view = useRef<{ editorCamera: ReturnType<ReturnType<typeof createEditorCameras>['of']> } | null>(
+    null
   );
+  if (!view.current) {
+    const cameras = createEditorCameras();
+    written2D = new Map();
+    cameras.slot('Camera2D').bind({
+      get: () => null,
+      set: (property: string, value: SceneValue) => {
+        written2D.set(property, typeof value === 'object' ? value.text : String(value));
+        return true;
+      },
+      call: () => null,
+      pose: () => null,
+      setPose: () => {},
+      scene: () => '',
+    });
+    view.current = {
+      get editorCamera() {
+        return cameras.of(currentMode.current);
+      },
+    };
+  }
+  return <PreviewViewProvider value={view.current as never}>{children}</PreviewViewProvider>;
+}
+
+function Probe() {
+  const { mode } = useViewportMode();
+  return <div data-testid="probe" data-mode={mode} />;
+}
+
+/** The frame the panel wrote: `position@zoom`, once both writes landed. */
+async function writtenFrame(): Promise<string> {
+  await waitFor(() => expect(written2D.size).toBe(2));
+  return `${written2D.get('position')}@${written2D.get('zoom')}`;
 }
 
 function renderPanel(scene = SCENE, previewedCameraPath?: string) {
@@ -50,14 +87,14 @@ function renderPanel(scene = SCENE, previewedCameraPath?: string) {
   const sceneGraph = createSceneGraphFromTscnScene(parsed, 'res://test.tscn');
   return render(
     <HierarchyProvider value={{ sceneGraph, panelId: 'cams-test' }}>
-      <ViewportActionsProvider>
-        <TestPreviewCamera initialCamera={previewedCameraPath}>
-          <ViewportModeProvider>
+      <TestPreviewCamera initialCamera={previewedCameraPath}>
+        <ViewportModeProvider>
+          <FakeView>
             <Probe />
             <CamerasPanel />
-          </ViewportModeProvider>
-        </TestPreviewCamera>
-      </ViewportActionsProvider>
+          </FakeView>
+        </ViewportModeProvider>
+      </TestPreviewCamera>
     </HierarchyProvider>
   );
 }
@@ -69,16 +106,16 @@ describe('<CamerasPanel> with 2D cameras', () => {
     expect(screen.getByRole('button', { name: /Eye/ })).toBeTruthy();
   });
 
-  it('clicking a Camera2D frames the 2D stage on its world view and opens the 2D workspace', () => {
+  it('clicking a Camera2D frames the 2D stage on its world view and opens the 2D workspace', async () => {
     renderPanel();
     fireEvent.click(screen.getByRole('button', { name: /Cam/ }));
     const probe = screen.getByTestId('probe');
     // World position (120, 60), DRAG_CENTER default, zoom 2.
-    expect(probe.getAttribute('data-frame')).toBe('120,60@2');
+    expect(await writtenFrame()).toBe('Vector2(120, 60)@Vector2(2, 2)');
     expect(probe.getAttribute('data-mode')).toBe('2D');
   });
 
-  it('frames a Camera2D that a RemoteTransform2D moved at the relay’s position', () => {
+  it('frames a Camera2D that a RemoteTransform2D moved at the relay’s position', async () => {
     renderPanel(`[gd_scene format=3]
 
 [node name="World" type="Node2D"]
@@ -91,11 +128,11 @@ position = Vector2(500, 200)
 remote_path = NodePath("../Cam")
 `);
     fireEvent.click(screen.getByRole('button', { name: /Cam/ }));
-    expect(screen.getByTestId('probe').getAttribute('data-frame')).toBe('500,200@1');
+    expect(await writtenFrame()).toBe('Vector2(500, 200)@Vector2(1, 1)');
   });
 
   // The LookAt turns the arm a quarter turn at the target below it (`skeleton_2d.cpp:786-796`).
-  it('frames a Camera2D below a bone that a modification stack turned at the end of the turned bone', () => {
+  it('frames a Camera2D below a bone that a modification stack turned at the end of the turned bone', async () => {
     renderPanel(`[gd_scene format=3]
 
 [sub_resource type="SkeletonModification2DLookAt" id="lookat"]
@@ -126,10 +163,10 @@ position = Vector2(200, 0)
 position = Vector2(300, 400)
 `);
     fireEvent.click(screen.getByRole('button', { name: /Cam/ }));
-    expect(screen.getByTestId('probe').getAttribute('data-frame')).toBe('300,350@1');
+    expect(await writtenFrame()).toBe('Vector2(300, 350)@Vector2(1, 1)');
   });
 
-  it('frames a Camera2D under a Node2D that a RemoteTransform2D moved with its parent', () => {
+  it('frames a Camera2D under a Node2D that a RemoteTransform2D moved with its parent', async () => {
     renderPanel(`[gd_scene format=3]
 
 [node name="World" type="Node2D"]
@@ -145,10 +182,10 @@ position = Vector2(300, 0)
 remote_path = NodePath("../Player")
 `);
     fireEvent.click(screen.getByRole('button', { name: /Cam/ }));
-    expect(screen.getByTestId('probe').getAttribute('data-frame')).toBe('320,10@1');
+    expect(await writtenFrame()).toBe('Vector2(320, 10)@Vector2(1, 1)');
   });
 
-  it('frames a top_level Camera2D under a translated Node2D at its own position', () => {
+  it('frames a top_level Camera2D under a translated Node2D at its own position', async () => {
     renderPanel(`[gd_scene format=3]
 
 [node name="World" type="Node2D"]
@@ -159,10 +196,10 @@ top_level = true
 position = Vector2(20, 10)
 `);
     fireEvent.click(screen.getByRole('button', { name: /Cam/ }));
-    expect(screen.getByTestId('probe').getAttribute('data-frame')).toBe('20,10@1');
+    expect(await writtenFrame()).toBe('Vector2(20, 10)@Vector2(1, 1)');
   });
 
-  it('frames a Camera2D under a Node under a translated Node2D at its own position', () => {
+  it('frames a Camera2D under a Node under a translated Node2D at its own position', async () => {
     renderPanel(`[gd_scene format=3]
 
 [node name="World" type="Node2D"]
@@ -174,7 +211,7 @@ position = Vector2(100, 50)
 position = Vector2(20, 10)
 `);
     fireEvent.click(screen.getByRole('button', { name: /Cam/ }));
-    expect(screen.getByTestId('probe').getAttribute('data-frame')).toBe('20,10@1');
+    expect(await writtenFrame()).toBe('Vector2(20, 10)@Vector2(1, 1)');
   });
 });
 
@@ -259,11 +296,9 @@ describe('<CamerasPanel> with cameras inside instanced sub-scenes', () => {
     render(
       <ResourceLoaderProvider loader={loader}>
         <HierarchyProvider value={{ sceneGraph, panelId: 'cams-nested' }}>
-          <ViewportActionsProvider>
-            <ViewportModeProvider>
-              <CamerasPanel />
-            </ViewportModeProvider>
-          </ViewportActionsProvider>
+          <ViewportModeProvider>
+            <CamerasPanel />
+          </ViewportModeProvider>
         </HierarchyProvider>
       </ResourceLoaderProvider>
     );
@@ -271,7 +306,7 @@ describe('<CamerasPanel> with cameras inside instanced sub-scenes', () => {
     expect(screen.getByRole('button', { name: /FollowCam/ })).toBeTruthy();
   });
 
-  it('frames a Camera2D inside an instanced sub-scene at its world position, not the origin', () => {
+  it('frames a Camera2D inside an instanced sub-scene at its world position, not the origin', async () => {
     // Player instances player.tscn at 100,50, whose Cam sits at 20,10 with zoom 2.
     // The live tree composes the camera's world position to 120,60.
     const root = `[gd_scene format=3]
@@ -298,19 +333,19 @@ zoom = Vector2(2, 2)
     render(
       <ResourceLoaderProvider loader={loader}>
         <HierarchyProvider value={{ sceneGraph, panelId: 'cams-2d-nested' }}>
-          <ViewportActionsProvider>
-            <ViewportModeProvider>
+          <ViewportModeProvider>
+            <FakeView>
               <Probe />
               <CamerasPanel />
-            </ViewportModeProvider>
-          </ViewportActionsProvider>
+            </FakeView>
+          </ViewportModeProvider>
         </HierarchyProvider>
       </ResourceLoaderProvider>
     );
 
     fireEvent.click(screen.getByRole('button', { name: /Cam/ }));
     const probe = screen.getByTestId('probe');
-    expect(probe.getAttribute('data-frame')).toBe('120,60@2');
+    expect(await writtenFrame()).toBe('Vector2(120, 60)@Vector2(2, 2)');
     expect(probe.getAttribute('data-mode')).toBe('2D');
   });
 });
@@ -330,14 +365,12 @@ describe('<CamerasPanel> with a Camera3D subclass', () => {
     const sceneGraph = createSceneGraphFromTscnScene(parsed, 'res://xr.tscn');
     render(
       <HierarchyProvider value={{ sceneGraph, panelId: 'cams-xr' }}>
-        <ViewportActionsProvider>
-          <TestPreviewCamera>
-            <ViewportModeProvider>
-              <Probe />
-              <CamerasPanel />
-            </ViewportModeProvider>
-          </TestPreviewCamera>
-        </ViewportActionsProvider>
+        <TestPreviewCamera>
+          <ViewportModeProvider>
+            <Probe />
+            <CamerasPanel />
+          </ViewportModeProvider>
+        </TestPreviewCamera>
       </HierarchyProvider>
     );
 

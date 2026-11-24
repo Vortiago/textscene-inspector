@@ -41,6 +41,7 @@ function changesBeyondFrame(heard: ViewStatus, now: ViewStatus): boolean {
     heard.pending.textures !== now.pending.textures ||
     heard.pending.fonts !== now.pending.fonts ||
     heard.undrawn !== now.undrawn ||
-    heard.isSoftwareRendering !== now.isSoftwareRendering
+    heard.isSoftwareRendering !== now.isSoftwareRendering ||
+    heard.freelook !== now.freelook
   );
 }
