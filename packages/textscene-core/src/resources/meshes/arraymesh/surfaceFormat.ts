@@ -34,7 +34,7 @@ export const COLOR_BYTES = 4;
 const CUSTOM_ELEMENT_BYTES: readonly number[] = [4, 4, 4, 8, 4, 8, 12, 16];
 
 /** `ARRAY_CUSTOM_COUNT` (`rendering_server.h:296`). */
-export const CUSTOM_ARRAY_COUNT = 4;
+const CUSTOM_ARRAY_COUNT = 4;
 
 /** One custom array of a surface: its format and its byte offset in each attribute record. */
 export interface CustomArraySlot {
