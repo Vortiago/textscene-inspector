@@ -72,9 +72,15 @@ function resourceInScope(scope: SceneScope, rootScenePath: string) {
 const declaringDepth = (link: LiveLink) =>
   scopeOf(link.raw, link.group.scope).instancedScenePaths?.length ?? 0;
 
-/** How many instances enclose the scene a merged instance root opens, or null for another node. */
+/** How many instances enclose the deepest scene a merged instance root opens, or null for another node. */
 const openedDepth = ({ step }: LiveLink) =>
   step.isMerged ? (step.scope.instancedScenePaths?.length ?? 0) : null;
+
+/** Whether `root` opens the scene at `depth`: each scene of its chain of inherited roots, as one instance. */
+function opensSceneAt(root: LiveLink, depth: number): boolean {
+  const deepest = openedDepth(root);
+  return deepest !== null && declaringDepth(root) < depth && depth <= deepest;
+}
 
 /** The root of the scene that declares the node, as `add_child` under `instantiate` sets the owner. */
 function ownerOf(link: LiveLink, ancestors: readonly LiveLink[]): LiveLink | null {
@@ -86,7 +92,7 @@ function ownerOf(link: LiveLink, ancestors: readonly LiveLink[]): LiveLink | nul
   if (gltfInstance) return gltfInstance;
   const depth = declaringDepth(link);
   for (let index = ancestors.length - 1; index > 0; index--) {
-    if (openedDepth(ancestors[index]!) === depth) return ancestors[index]!;
+    if (opensSceneAt(ancestors[index]!, depth)) return ancestors[index]!;
   }
   return ancestors[0]!;
 }

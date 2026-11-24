@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://owners/base.tscn" id="1"]
+
+[node name="SubRoot" instance=ExtResource("1")]
+
+[node name="SubChild" type="Node3D" parent="."]

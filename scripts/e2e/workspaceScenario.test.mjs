@@ -4,7 +4,7 @@ import { checkWorkspace } from './workspaceScenario.mjs';
 
 const failuresOf = (run) => {
   const gate = fakeGate();
-  checkWorkspace(gate, { diagnostics: CLEAN_LOAD, nodeCount: '2 nodes', ...run });
+  checkWorkspace(gate, { diagnostics: CLEAN_LOAD, ...run });
   return gate.failures;
 };
 
@@ -22,12 +22,6 @@ describe('checkWorkspace', () => {
   it('fails a .glb that keeps the 2D view', () => {
     expect(failuresOf({ controlRoot: '2D', glbRoot: '2D' })).toEqual([
       '[workspace] a .glb opened on its own: expected the 3D view, got 2D',
-    ]);
-  });
-
-  it('fails a count that takes in the nodes of the .glb', () => {
-    expect(failuresOf({ controlRoot: '2D', glbRoot: '3D', nodeCount: '3 nodes' })).toEqual([
-      '[workspace] the node count: expected 2 nodes, got 3 nodes',
     ]);
   });
 });

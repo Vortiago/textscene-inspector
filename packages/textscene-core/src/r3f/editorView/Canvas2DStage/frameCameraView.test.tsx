@@ -97,6 +97,21 @@ describe('frame_camera_view of the 2D editor camera', () => {
     await waitFor(() => expect(framed()).toEqual({ centre: { x: 500, y: 400 }, zoom: 0.5 }));
   });
 
+  it('refuses a camera whose zoom is not above 0, and keeps the view', async () => {
+    const camera = await mountStage(`[gd_scene format=3]
+
+[node name="World" type="Node2D"]
+
+[node name="Broken" type="Camera2D" parent="."]
+zoom = Vector2(-1, -1)
+`);
+    const before = framed();
+    await expect(camera.call('frame_camera_view', '/root/World/Broken')).rejects.toThrow(
+      'expected a Camera2D zoom above 0 to frame, got -1'
+    );
+    expect(framed()).toEqual(before);
+  });
+
   it('refuses a path that names no Camera2D', async () => {
     const camera = await mountStage();
     await expect(camera.call('frame_camera_view', '/root/World')).rejects.toThrow(

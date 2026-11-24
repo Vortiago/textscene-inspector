@@ -59,11 +59,11 @@ export function FocusSelection2D() {
     stage2D.cameraViewOf.fill((path) => {
       if (!liveTree) return null;
       const { roots, ctx } = liveTree;
-      const camera = resolveLiveEntry(path, roots, ctx)?.node;
-      if (!camera || !isCamera2DType(camera.type)) return null;
+      const sceneCamera = resolveLiveEntry(path, roots, ctx)?.node;
+      if (!sceneCamera || !isCamera2DType(sceneCamera.type)) return null;
       const position = node2dWorldPosition(roots, ctx, path, livePlacements(liveTree, loader)) ?? ORIGIN;
       const screen = { x: viewportSize.width, y: viewportSize.height };
-      const { center, zoom } = camera2DView(camera.properties as Camera2DProperties, position, screen);
+      const { center, zoom } = camera2DView(sceneCamera.properties as Camera2DProperties, position, screen);
       return { centre: center, zoom };
     });
   }, [stage2D, liveTree, loader, rects, viewportSize]);

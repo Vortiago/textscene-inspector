@@ -25,8 +25,6 @@ export function SwitchTo2DHint() {
 async function holdsCanvasItem(node: NodeHandle): Promise<boolean> {
   if ((await node.call('is_class', 'CanvasItem')) === true) return true;
   if ((await node.call('is_class', 'Viewport')) === true) return false;
-  for (const child of node.getChildren()) {
-    if (await holdsCanvasItem(child)) return true;
-  }
-  return false;
+  const answers = await Promise.all(node.getChildren().map(holdsCanvasItem));
+  return answers.includes(true);
 }

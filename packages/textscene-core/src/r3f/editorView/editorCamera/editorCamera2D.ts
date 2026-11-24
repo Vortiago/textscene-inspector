@@ -86,6 +86,8 @@ export function editorCamera2D(stage: Camera2DStage): EditorCameraBacking {
         stage.moveView(centerSelection(stage.view(), rectOf(args[0]), stage.size()));
       } else if (method === 'frame_camera_view') {
         return cameraViewOf(args[0]).then(({ centre, zoom }) => {
+          // The stage draws one zoom above 0, as a `set` of `zoom` keeps it.
+          if (!(zoom > 0)) throw new Error(`expected a Camera2D zoom above 0 to frame, got ${zoom}`);
           stage.moveView(centredAt(centre, stage.clampZoom(zoom)));
           return null;
         });

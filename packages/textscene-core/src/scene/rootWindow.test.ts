@@ -42,6 +42,10 @@ describe('the root window', () => {
     expect(await root.get('content_scale_size')).toEqual(variant('Vector2i(1152, 648)'));
   });
 
+  it('answers the scene_file_path getter it inherits from Node with an empty path', async () => {
+    expect(await rootWindowOf({}).get('scene_file_path')).toBe('');
+  });
+
   it('refuses a property this release does not port', async () => {
     await expect(rootWindowOf({}).get('size')).rejects.toThrow(
       'expected content_scale_size of the root window, got size: its other properties are not in this release'

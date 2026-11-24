@@ -132,9 +132,9 @@ export class SceneNodes implements HandleHost {
 
   /** `Object::get`: a getter this release ports as a method runs it. */
   async get(path: string, property: string): Promise<SceneValue | null> {
-    if (path === ROOT_WINDOW_PATH) return this.rootWindowProperty(property);
     const generation = this.generation;
     const accessor = findPortedAccessor(this.typeOfNode(path), 'getter', property);
+    if (!accessor && path === ROOT_WINDOW_PATH) return this.rootWindowProperty(property);
     if (!accessor) return this.getStored(path, property);
     const { name, method } = accessor;
     const target = this.methodTarget(path, generation);

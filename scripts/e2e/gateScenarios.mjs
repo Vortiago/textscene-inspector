@@ -36,6 +36,7 @@ import { checkCameraButtons, runCameraButtonsScenario } from './cameraButtonsSce
 import { checkInGameToolbar, runInGameToolbarScenario } from './inGameToolbarScenario.mjs';
 import { checkModeSwitch, runModeSwitchScenario } from './modeSwitchScenario.mjs';
 import { checkWorkspace, runWorkspaceScenario, WORKSPACE_FIXTURE } from './workspaceScenario.mjs';
+import { checkSceneStats, runSceneStatsScenario } from './sceneStatsScenario.mjs';
 import {
   CAMERA_FRAME_2D_FIXTURE,
   checkCameraFrame2D,
@@ -146,6 +147,13 @@ export const SCENARIOS = [
     seconds: 8,
     run: runWorkspaceScenario,
     check: checkWorkspace,
+  },
+  {
+    name: 'scene stats',
+    title: 'scene stats node count by owner: a .glb instance and an inherited root',
+    seconds: 6,
+    run: runSceneStatsScenario,
+    check: checkSceneStats,
   },
   {
     name: 'camera frame 2D',

@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { useOptionalHierarchy } from '../../contexts/HierarchyContext.js';
-import { useSceneCameras } from '../../currentCamera.js';
+import { useSceneCameras, useSceneTreeSubscription } from '../../currentCamera.js';
 import { absolutePathOf } from '../../../scene/nodePathWalk.js';
 import type { CameraState } from '../../../scene/viewportCameras.js';
 import type { Scene } from '../../../scene/openScene.js';
@@ -12,17 +12,32 @@ export interface CameraRow extends CameraState {
   readonly dimension: '3D' | '2D';
 }
 
+type CameraKind = Pick<CameraRow, 'name' | 'dimension'>;
+
 /** The cameras in the order they enter the tree, kinds read with `is_class`. Null until the reads land. */
 export function useCameraRows(): readonly CameraRow[] | null {
   const scene = useOptionalHierarchy()?.scene;
   const states = useSceneCameras();
-  const [rows, setRows] = useState<readonly CameraRow[] | null>(null);
+  const kinds = useCameraKinds(scene, [...states.keys()].join('\n'));
+  if (!kinds) return null;
+  return [...states.values()].flatMap((state) => {
+    const kind = kinds.get(state.path);
+    return kind ? [{ ...state, ...kind }] : [];
+  });
+}
+
+/** Read again only for a new text or a camera that enters or leaves, so a current switch reads nothing. */
+function useCameraKinds(scene: Scene | undefined, pathList: string): ReadonlyMap<string, CameraKind> | null {
+  const paths = useMemo(() => (pathList ? pathList.split('\n') : []), [pathList]);
+  const parse = useSyncExternalStore(useSceneTreeSubscription(scene), () => scene?.parse() ?? null);
+  const [kinds, setKinds] = useState<ReadonlyMap<string, CameraKind> | null>(null);
   useEffect(() => {
     let isLatest = true;
-    const read = scene ? Promise.all([...states.values()].map((state) => rowOf(scene, state))) : NO_ROWS;
+    const read = scene ? Promise.all(paths.map((path) => kindOf(scene, path))) : NO_KINDS;
     read
       .then((next) => {
-        if (isLatest) setRows(next.flatMap((row) => row ?? []));
+        if (isLatest)
+          setKinds(new Map(paths.flatMap((path, index) => (next[index] ? [[path, next[index]]] : []))));
       })
       .catch((error: unknown) =>
         logger.error(`expected the cameras of the scene to read, got ${String(error)}`)
@@ -30,19 +45,19 @@ export function useCameraRows(): readonly CameraRow[] | null {
     return () => {
       isLatest = false;
     };
-  }, [scene, states]);
-  return rows;
+  }, [scene, paths, parse]);
+  return kinds;
 }
 
-const NO_ROWS = Promise.resolve([]);
+const NO_KINDS = Promise.resolve([]);
 
 /** Null for a camera a new text frees before or during its read. */
-async function rowOf(scene: Scene, state: CameraState): Promise<CameraRow | null> {
-  const camera = scene.getNodeOrNull(absolutePathOf(state.path));
+async function kindOf(scene: Scene, path: string): Promise<CameraKind | null> {
+  const camera = scene.getNodeOrNull(absolutePathOf(path));
   if (!camera) return null;
   try {
     const is3D = (await camera.call('is_class', 'Camera3D')) === true;
-    return { ...state, name: camera.name, dimension: is3D ? '3D' : '2D' };
+    return { name: camera.name, dimension: is3D ? '3D' : '2D' };
   } catch (error) {
     // A new text frees the camera during the read, and the rows read again over the new cameras.
     if (!camera.isInsideTree()) return null;
