@@ -31,6 +31,7 @@ import {
   type MaterialBlendState,
 } from '../pipeline/blendState.js';
 import { CULL_SIDES } from '../pipeline/cullSide.js';
+import { drawAsLines } from '../pipeline/polygonMode.js';
 import { applyGodotStencil, type StencilTest } from '../pipeline/stencilState.js';
 
 /** `depth_test_disabled` is a material flag beside the DEFAULT and INVERTED depth test. */
@@ -62,6 +63,8 @@ export interface SpatialPipeline {
   readonly stencil: StencilTest | null;
   /** Null for the surface's own primitive. Godot draws points whenever `uses_point_size` holds. */
   readonly pointDraw: PointDraw | null;
+  /** `render_mode wireframe` on triangles. The polygon mode leaves a point unchanged. */
+  readonly drawsLines: boolean;
 }
 
 /** Quads (`scene_shader_forward_clustered.cpp:414`), as three writes `gl_PointSize = 1.0`, or 1 px points. */
@@ -175,6 +178,7 @@ export function spatialPipeline(tree: ShaderNode): SpatialPipeline {
     depthFlags: depthFlags(tree, modes, { ...pipeline, usesPointSize, usesStencil: stencil !== null }),
     stencil,
     pointDraw: reads('POINT_SIZE') ? 'emulated' : usesPointSize ? 'native' : null,
+    drawsLines: modes.includes('wireframe') && !usesPointSize,
   };
 }
 
@@ -245,6 +249,7 @@ export function applySpatialPipeline(material: THREE.Material, pipeline: Spatial
   // three draws a transparent DoubleSide material back faces first, in a second draw; Godot draws once.
   material.forceSinglePass = true;
   if (pipeline.stencil) applyGodotStencil(material, pipeline.stencil);
+  if (pipeline.drawsLines) drawAsLines(material);
 }
 
 /** Godot's error for a stencil read outside the alpha pass (`render_forward_clustered.cpp:4099`). */

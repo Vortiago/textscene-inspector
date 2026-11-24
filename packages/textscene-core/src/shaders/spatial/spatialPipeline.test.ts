@@ -165,6 +165,7 @@ describe('spatialPipeline', () => {
       depthFlags: new Set(),
       stencil: null,
       pointDraw: null,
+      drawsLines: false,
     });
   });
 
@@ -213,6 +214,23 @@ describe('spatialPipeline', () => {
   it('a screen texture uniform no function reads leaves readsScreen false', () => {
     const uniform = 'uniform sampler2D screen : hint_screen_texture;\n';
     expect(fragmentPipeline('ALBEDO = vec3(1.0);', uniform).readsScreen).toBe(false);
+  });
+
+  describe('drawsLines', () => {
+    const drawsLines = (head: string, body = '') =>
+      spatialPipeline(parsedShader(`shader_type spatial;\n${head}${body}`).tree).drawsLines;
+
+    it('is set by render_mode wireframe', () => {
+      expect(drawsLines('render_mode wireframe;\n')).toBe(true);
+    });
+
+    it('is not set without render_mode wireframe', () => {
+      expect(drawsLines('render_mode unshaded;\n')).toBe(false);
+    });
+
+    it('is not set for a shader that draws points', () => {
+      expect(drawsLines('render_mode wireframe;\n', 'void vertex() {\n\tPOINT_SIZE = 2.0;\n}\n')).toBe(false);
+    });
   });
 
   describe('depthFlags', () => {

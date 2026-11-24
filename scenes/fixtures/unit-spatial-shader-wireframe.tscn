@@ -1,0 +1,55 @@
+[gd_scene format=3 uid="uid://unit_spatial_shader_wireframe"]
+
+; The one variable: `render_mode wireframe`, which draws each triangle's edges after the cull. The left box
+; culls back faces, so only the front edges show. The right box culls none, so the back edges show too.
+; No other golden uses this mode, so only this one changes when the previewer draws it.
+
+[sub_resource type="Shader" id="Shader_cull_back"]
+code = "shader_type spatial;
+render_mode unshaded, wireframe, cull_back;
+
+void fragment() {
+	ALBEDO = vec3(UV, 0.3);
+}
+"
+
+[sub_resource type="Shader" id="Shader_cull_disabled"]
+code = "shader_type spatial;
+render_mode unshaded, wireframe, cull_disabled;
+
+void fragment() {
+	ALBEDO = FRONT_FACING ? vec3(UV, 0.3) : vec3(0.9, 0.3, UV.y);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_cull_back"]
+shader = SubResource("Shader_cull_back")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_cull_disabled"]
+shader = SubResource("Shader_cull_disabled")
+
+[sub_resource type="BoxMesh" id="BoxMesh_cull_back"]
+material = SubResource("ShaderMaterial_cull_back")
+
+[sub_resource type="BoxMesh" id="BoxMesh_cull_disabled"]
+material = SubResource("ShaderMaterial_cull_disabled")
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.1, 0.12, 0.16, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.9659258, 0.2588190, 0, -0.2588190, 0.9659258, 0, 1.2, 3.5)
+
+[node name="BoxCullBack" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.7071068, 0, 0.7071068, 0, 1, 0, -0.7071068, 0, 0.7071068, -0.9, 0, 0)
+mesh = SubResource("BoxMesh_cull_back")
+
+[node name="BoxCullDisabled" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.7071068, 0, 0.7071068, 0, 1, 0, -0.7071068, 0, 0.7071068, 0.9, 0, 0)
+mesh = SubResource("BoxMesh_cull_disabled")

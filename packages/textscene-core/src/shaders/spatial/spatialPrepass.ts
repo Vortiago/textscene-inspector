@@ -3,6 +3,7 @@ import { vec4 } from 'three/tsl';
 import type { Node, UniformNode } from 'three/webgpu';
 import { DEPTH_PREPASS_OPAQUE_THRESHOLD } from '../../godot/rendering/opaquePrepass.js';
 import { colourDepthOf, type PrepassDraw } from '../pipeline/depthPrepass.js';
+import { drawAsLines, drawsAsLines } from '../pipeline/polygonMode.js';
 import type { Renderer } from '../preprocessor/renderingMethod.js';
 import type { TemplateUniform } from '../template/templateUniforms.js';
 import { BoundNodeMaterial, type MaterialShader } from '../uniforms/boundMaterial.js';
@@ -102,6 +103,7 @@ function depthMaterial(material: BoundNodeMaterial, shader: MaterialShader): Bou
     forceSinglePass: true,
   });
   depth.onTranslatorFault = (fault) => material.reportFault(fault);
+  if (drawsAsLines(material)) drawAsLines(depth);
   material.addEventListener('dispose', () => depth.dispose());
   return depth;
 }
