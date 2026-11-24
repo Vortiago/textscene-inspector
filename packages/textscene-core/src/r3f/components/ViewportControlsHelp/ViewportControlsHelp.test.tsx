@@ -145,8 +145,7 @@ describe('<ViewportControlsHelp>', () => {
   });
 
   it('sits clear of the toolbar overlay, which grows leftward and outranks it', () => {
-    // Bottom-left is the one free corner: a wrapped toolbar covers the top edge,
-    // and bottom-centre holds the 3D hint or the 2D zoom HUD.
+    // A wrapped toolbar covers the top edge, and bottom-centre holds the 3D hint or the 2D zoom HUD.
     const root = rule('.root');
     expect(root).toContain('bottom:');
     expect(root).toContain('left:');
