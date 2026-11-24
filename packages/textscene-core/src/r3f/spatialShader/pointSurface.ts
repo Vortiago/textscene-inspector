@@ -3,7 +3,7 @@ import { emulatedPointGeometry, type DrawRange } from '../../shaders/spatial/mes
 import type { PointDraw } from '../../shaders/spatial/spatialPipeline.js';
 import { NO_RAYCAST } from '../../shaders/pipeline/noRaycast.js';
 import { OTHER_DRAWS_SURFACE } from '../materials/useOneSurfaceStartingMaterial.js';
-import { setVisualLayers, visualLayersOf } from '../visualLayers.js';
+import { followVisualLayers } from '../visualLayers.js';
 
 type SurfaceHost = THREE.Object3D & { geometry: THREE.BufferGeometry };
 
@@ -20,11 +20,9 @@ export function drawPoints(
 ): (() => void) | null {
   if (pointDraw === 'native' && (host as THREE.Points).isPoints) return null;
   const drawn =
-    pointDraw === 'native'
-      ? nativePoints(host.geometry, drawGroup, material)
-      : emulated(host, drawGroup, material);
+    pointDraw === 'native' ? nativePoints(host, drawGroup, material) : emulated(host, drawGroup, material);
   drawn.raycast = NO_RAYCAST;
-  takeHostDraw(drawn, host);
+  followHostDraw(drawn, host);
   host.add(drawn);
   return () => {
     host.remove(drawn);
@@ -32,22 +30,33 @@ export function drawPoints(
   };
 }
 
-/** `drawn` draws as `host` does: its shadows, layers, order, culling and the per-surface draw hooks. */
-function takeHostDraw(drawn: THREE.Object3D, host: SurfaceHost): void {
-  drawn.castShadow = host.castShadow;
-  drawn.receiveShadow = host.receiveShadow;
-  drawn.renderOrder = host.renderOrder;
-  drawn.frustumCulled = host.frustumCulled;
-  drawn.layers.mask = host.layers.mask;
-  setVisualLayers(drawn, visualLayersOf(host));
-  drawn.onBeforeRender = host.onBeforeRender;
-  drawn.onAfterRender = host.onAfterRender;
-  drawn.onBeforeShadow = host.onBeforeShadow;
-  drawn.onAfterShadow = host.onAfterShadow;
+/** What a live edit of the host can change about how it draws, which the points read from it. */
+const HOST_DRAW_STATE = [
+  'castShadow',
+  'receiveShadow',
+  'renderOrder',
+  'frustumCulled',
+  'layers',
+  'onBeforeRender',
+  'onAfterRender',
+  'onBeforeShadow',
+  'onAfterShadow',
+] as const;
+
+/** `drawn` draws as `host` does at each draw: no copy goes stale when a live edit changes the host. */
+function followHostDraw(drawn: THREE.Object3D, host: SurfaceHost): void {
+  for (const key of HOST_DRAW_STATE) Object.defineProperty(drawn, key, { get: () => host[key] });
+  followVisualLayers(drawn, host);
 }
 
-function nativePoints(geometry: THREE.BufferGeometry, drawGroup: number | null, material: THREE.Material) {
-  return new THREE.Points(geometry, drawGroup === null ? material : groupMaterials(drawGroup, material));
+/** Points of the host's surface as it is at each draw, so a new mesh on the host draws at once. */
+function nativePoints(host: SurfaceHost, drawGroup: number | null, material: THREE.Material): THREE.Points {
+  const drawn = new THREE.Points(
+    host.geometry,
+    drawGroup === null ? material : groupMaterials(drawGroup, material)
+  );
+  Object.defineProperty(drawn, 'geometry', { get: () => host.geometry });
+  return drawn;
 }
 
 /** Each group's material: `material` at `drawGroup`, the others drawing nothing. */

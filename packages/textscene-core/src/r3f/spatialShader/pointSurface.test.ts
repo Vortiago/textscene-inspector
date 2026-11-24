@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { withGodotAttributes } from '../../shaders/spatial/meshAttributes';
 import { OTHER_DRAWS_SURFACE } from '../materials/useOneSurfaceStartingMaterial';
+import { visualLayersOf } from '../visualLayers';
 import { drawPoints, isEmulatedPoints, refreshEmulatedPoints } from './pointSurface';
 
 /** Two triangles of a quad, the first in draw group 0 and the second in draw group 1. */
@@ -41,6 +42,39 @@ describe('drawPoints', () => {
     const [points] = host.children as THREE.Mesh<THREE.InstancedBufferGeometry>[];
     expect(isEmulatedPoints(points!)).toBe(true);
     expect([...points!.geometry.getAttribute('point_vertex_attrib').array]).toEqual([0, 3, 2]);
+  });
+
+  it("follows the host's shadows, layers and draw order after a live edit", () => {
+    const host = new THREE.Mesh(twoGroupQuad());
+    drawPoints(host, null, material, 'emulated');
+    host.castShadow = true;
+    host.renderOrder = 5;
+    host.frustumCulled = false;
+    host.layers.set(2);
+    host.userData = { godotLayers: 4 };
+    const [points] = host.children;
+    expect([points!.castShadow, points!.renderOrder, points!.frustumCulled, points!.layers.mask]).toEqual([
+      true,
+      5,
+      false,
+      1 << 2,
+    ]);
+    expect(visualLayersOf(points!)).toBe(4);
+  });
+
+  it("follows the host's draw hooks after a live edit", () => {
+    const host = new THREE.Mesh(twoGroupQuad());
+    drawPoints(host, null, material, 'native');
+    const onBeforeShadow = () => {};
+    host.onBeforeShadow = onBeforeShadow;
+    expect(host.children[0]!.onBeforeShadow).toBe(onBeforeShadow);
+  });
+
+  it('draws native points of the mesh the host holds now', () => {
+    const host = new THREE.Mesh(twoGroupQuad());
+    drawPoints(host, 1, material, 'native');
+    host.geometry = twoGroupQuad();
+    expect((host.children[0] as THREE.Points).geometry).toBe(host.geometry);
   });
 
   it("takes the host's shadows, layers and draw order, and is never picked", () => {

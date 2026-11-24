@@ -37,6 +37,14 @@ export function isInMask(object: THREE.Object3D, mask: number): boolean {
   return (mask & visualLayersOf(object)) !== 0;
 }
 
+/** Gives `object` the mask of `source` as it is at each read, for a draw that stands in for its parent's. */
+export function followVisualLayers(object: THREE.Object3D, source: THREE.Object3D): void {
+  Object.defineProperty(object.userData, VISUAL_LAYERS_KEY, {
+    get: () => visualLayersOf(source),
+    enumerable: true,
+  });
+}
+
 /** Sets the mask of one object built outside JSX, such as a GLB's mesh. */
 export function setVisualLayers(object: THREE.Object3D, layers: number): void {
   object.userData[VISUAL_LAYERS_KEY] = layers;
