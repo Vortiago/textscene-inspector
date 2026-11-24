@@ -22,13 +22,15 @@ export async function runTreeRowsScenario(browser, baseUrl) {
   });
   await treeRow(page, GLB_ROW)
     .waitFor({ timeout: ROWS_TIMEOUT_MS })
-    .catch(() => {});
+    // A missing row is a finding: the row check below names it.
+    .catch(() => undefined);
   await expandAllTreeRows(page);
   const rows = await readOutlinerPaths(page);
   const badge = await treeRow(page, GLB_ROW)
     .locator('[title]')
     .first()
     .getAttribute('title', { timeout: ROWS_TIMEOUT_MS })
+    // No badge reads as null, which the badge check reports.
     .catch(() => null);
   await context.close();
   return { rows, badge, diagnostics };

@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { fileBytes } from '../../../resources/testing/fileBytes';
 import { expandAllRows, renderSceneTree, rowAt, rowPaths, type TreeFiles } from './sceneTree.testkit';
 
@@ -75,5 +75,28 @@ describe('<SceneTreeViewer> glTF rows', () => {
       'Main/Body/Rig/Torso/Arm',
     ]);
     expect(rowAt('Main/Body')!.querySelector('[title="Node3D"]')).not.toBeNull();
+  });
+
+  it('draws a row for each of two children of one name, a host child beside the glTF node', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    await renderTree(
+      `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://rig.glb" id="rig"]
+
+[node name="Main" type="Node3D"]
+
+[node name="Body" parent="." instance=ExtResource("rig")]
+
+[node name="Rig" type="Node3D" parent="Body"]
+
+[editable path="Body"]
+`,
+      'Body/Rig/Torso/Arm'
+    );
+
+    const duplicateKeys = consoleError.mock.calls.filter(([text]) => String(text).includes('same key'));
+    consoleError.mockRestore();
+    expect(duplicateKeys).toEqual([]);
   });
 });

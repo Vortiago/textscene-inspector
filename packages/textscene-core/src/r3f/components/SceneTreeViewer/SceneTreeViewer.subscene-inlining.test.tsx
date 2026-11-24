@@ -111,6 +111,40 @@ describe('<SceneTreeViewer> instanced scenes', () => {
     expect(rowAt('Main/Plain')!.textContent).not.toContain('▶');
   });
 
+  it('lists no row of a scene Godot refuses to instance, and keeps the instance its own class', async () => {
+    await renderTree(
+      `[ext_resource type="PackedScene" path="res://refused.tscn" id="refused"]
+
+[node name="Main" type="Node3D"]
+
+[node name="Refusing" type="Node3D" parent="." instance=ExtResource("refused")]
+
+[editable path="Refusing"]
+`,
+      // A root heading with a parent= makes Godot give up on the scene.
+      { 'res://refused.tscn': scene('[node name="RootA" type="Node3D" parent="."]\n') },
+      'Refusing'
+    );
+
+    expect(within(rowAt('Main/Refusing')!).getByTitle('Node3D')).toBeTruthy();
+    expect(rowAt('Main/Refusing/RootA')).toBeNull();
+  });
+
+  it('keeps the row of an instance whose scene the provider has no file for', async () => {
+    await renderTree(
+      `[ext_resource type="PackedScene" path="res://not-there.tscn" id="missing"]
+
+[node name="Main" type="Node3D"]
+
+[node name="Unresolved" parent="." instance=ExtResource("missing")]
+`,
+      {},
+      'Unresolved'
+    );
+
+    expect(rowAt('Main/Unresolved')).not.toBeNull();
+  });
+
   it('reaches a node inside an instanced scene by search, with the instance row above it', async () => {
     await renderTree(
       `[ext_resource type="PackedScene" path="res://frame.tscn" id="f"]

@@ -207,21 +207,23 @@ function TreeNodeImpl({
 
       {hasChildren && isExpanded && (
         <div className={styles.children} role="group">
-          {row.children
-            .filter((child) => matches(child.path))
-            .map((child) => (
-              <TreeNode
-                key={child.name}
-                row={child}
-                depth={depth + 1}
-                parentVisibility={ownVisibility}
-                visibility={visibility}
-                onToggleVisibility={onToggleVisibility}
-                onNodeReveal={onNodeReveal}
-                onOpenSubScene={onOpenSubScene}
-                matches={matches}
-              />
-            ))}
+          {row.children.map(
+            (child, index) =>
+              matches(child.path) && (
+                // The index keeps apart a host child and a glTF node of one name.
+                <TreeNode
+                  key={`${index}:${child.name}`}
+                  row={child}
+                  depth={depth + 1}
+                  parentVisibility={ownVisibility}
+                  visibility={visibility}
+                  onToggleVisibility={onToggleVisibility}
+                  onNodeReveal={onNodeReveal}
+                  onOpenSubScene={onOpenSubScene}
+                  matches={matches}
+                />
+              )
+          )}
         </div>
       )}
     </div>

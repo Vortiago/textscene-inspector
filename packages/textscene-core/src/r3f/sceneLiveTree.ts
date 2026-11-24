@@ -69,9 +69,22 @@ function instancedGltfOf(link: LiveLink): InstanceRef | null {
 }
 
 /** The scene `link` waits on, as Godot has no such node until it loads: a merged root waits on its glTF. */
-function awaitedInstanceOf(link: LiveLink): InstanceRef | null {
-  if (link.step.groups.some((group) => group.origin === 'glb')) return null;
-  return link.step.isMerged ? instancedGltfOf(link) : instancedSceneOf(link);
+function awaitedInstanceOf(link: LiveLink, loader: ResourceLoader): InstanceRef | null {
+  const { step } = link;
+  // A failed or refused instance is a node of its own, as the view draws it with the failed-load mark.
+  if (step.isFailedInstance || step.isRefusedInstance) return null;
+  if (step.groups.some((group) => group.origin === 'glb')) return null;
+  const instanced = step.isMerged ? instancedGltfOf(link) : instancedSceneOf(link);
+  return instanced && !(isGltfPath(instanced.path) && hasFailedGltf(loader, instanced.path))
+    ? instanced
+    : null;
+}
+
+function hasFailedGltf(loader: ResourceLoader, path: string): boolean {
+  const scene = loader.getCached<TscnScene>('scene', path);
+  if (scene === null) return true;
+  const glbPath = scene ? loneGlbRootPath(scene.nodes) : undefined;
+  return glbPath !== undefined && loader.getCached('glb', glbPath) === null;
 }
 
 // Only a file never asked for: a request for a held one emits its answer again, which re-asks a reader.
@@ -192,17 +205,21 @@ function containerVisibilityOf(tree: LiveTree, link: LiveLink, parent: LiveLink)
 const NO_CONTAINER_WRITES: readonly ContainerWrite[] = [];
 
 /** Each camera of the loaded tree with its viewport, in the pre-order `NOTIFICATION_ENTER_TREE` takes. */
-const camerasOf = perObject((tree: LiveTree): readonly TreeCamera[] => {
+const camerasIn = perObject((loader: ResourceLoader) =>
+  perObject((tree: LiveTree): readonly TreeCamera[] => camerasOf(tree, loader))
+);
+
+function camerasOf(tree: LiveTree, loader: ResourceLoader): readonly TreeCamera[] {
   const cameras: TreeCamera[] = [];
   tree.fold<string | null, void>(null, (link, viewport, descend) => {
-    if (awaitedInstanceOf(link)) return;
+    if (awaitedInstanceOf(link, loader)) return;
     const { type, rawProperties } = link.step.node;
     const dimension = isCamera3DType(type) ? '3D' : isCamera2DType(type) ? '2D' : null;
     if (dimension) cameras.push({ path: link.path, type, dimension, viewport, rawProperties });
     descend(descendsFromClass(type, 'Viewport') ? link.path : viewport);
   });
   return cameras;
-});
+}
 
 /** The scene's view of one Live scene tree: a node is found once every instance above it has loaded. */
 function sceneTreeOf(
@@ -223,7 +240,7 @@ function sceneTreeOf(
         if (link) ancestors.push(link);
         link = tree.at(names.slice(0, depth).join('/'));
         if (!link) return null;
-        const awaited = awaitedInstanceOf(link);
+        const awaited = awaitedInstanceOf(link, loader);
         if (awaited) {
           requestSceneChain(loader, awaited);
           return null;
@@ -235,7 +252,7 @@ function sceneTreeOf(
       return link && treeNodeOf(tree, link, ancestors, root, placed);
     },
     uniquePaths: (livePath) => nodePathUniquePaths(livePath, tree.roots, tree.ctx),
-    cameras: () => camerasOf(tree),
+    cameras: () => camerasIn(loader)(tree),
   };
 }
 

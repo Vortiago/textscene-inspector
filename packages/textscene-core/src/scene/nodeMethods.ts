@@ -80,10 +80,12 @@ export function valueArguments(args: readonly CallArgument[], name: string): Sce
   });
 }
 
-// A bound Object takes a node, and refuses a value of any other type (measured in Godot 4.6.3).
-function nodeArgument(value: CallArgument, name: string): NodeHandle {
+// A bound Object takes a node or null, and refuses a value of any other type (measured in Godot 4.6.3).
+function nodeArgument(value: CallArgument, name: string): NodeHandle | null {
   if (isNodeHandle(value)) return value;
-  throw cannotConvert(name, variantTypeName(valueOfSceneValue(value).type) ?? 'Nil', 'Object');
+  const { type } = valueOfSceneValue(value);
+  if (type === T.NIL) return null;
+  throw cannotConvert(name, variantTypeName(type) ?? 'Nil', 'Object');
 }
 
 function boolArgument(value: CallArgument, name: string): boolean {
@@ -192,12 +194,13 @@ const NODE_METHODS: Readonly<Record<string, PortedMethod>> = {
     maxArguments: 0,
     run: (target) => target.sceneFilePath(),
   },
-  // node.cpp:2696: a node that is not below the caller answers false.
+  // node.cpp:2696: null, or a node that is not below the caller, answers false.
   is_editable_instance: {
     minArguments: 1,
     maxArguments: 1,
     run: (target, [node], name) => {
       const instance = nodeArgument(node!, name);
+      if (!instance) return false;
       const callerPath = target.livePath === null ? ROOT_WINDOW_PATH : absolutePathOf(target.livePath);
       const isBelow = instance.path.startsWith(`${callerPath}/`);
       return isBelow && target.isEditableInstance(instance);
