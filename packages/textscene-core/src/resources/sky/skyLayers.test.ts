@@ -8,7 +8,7 @@ import {
   SkyLayerBaker,
 } from './skyLayers';
 import { reflectionAtlasLayout } from '../../godot/rendering/environment/reflectionProbe';
-import { fastFilter } from './fastFilter';
+import { fastFilterIntoLayers, fastFilterIntoMips } from './fastFilter';
 import { testRenderer } from '../../testing/recordingWebGL';
 import type { SkyBake } from './types';
 import { bakeSkyLayers } from './skyLayers.testkit';
@@ -138,9 +138,9 @@ describe('bakeSkyLayers', () => {
     expect(texture.minFilter).toBe(THREE.LinearMipmapNearestFilter);
   });
 
-  it('filters each of the layers 1 to 6 of a real-time sky with the fast filter (edge case)', async () => {
+  it('filters each of the layers 1 to 6 of a real-time sky with the fast filter into layers (edge case)', async () => {
     const { renderer } = await testRenderer();
-    const selected = vi.spyOn(fastFilter, 'layerUniforms');
+    const selected = vi.spyOn(fastFilterIntoLayers, 'layerUniforms');
 
     bakeSkyLayers(renderer, radianceCube(renderer), FAST);
 
@@ -292,10 +292,10 @@ describe('bakeAtlasLayers', () => {
     expect(draws()).toEqual([1, 2, 3, 4, 5, 6, 7].map((mip) => [2, mip]));
   });
 
-  it("filters an update-always probe's layers 1 to 6 with the fast filter", async () => {
+  it("filters an update-always probe's layers 1 to 6 with the fast filter into mips", async () => {
     const { renderer } = await testRenderer();
     const atlas = createReflectionAtlas(reflectionAtlasLayout(true), 1);
-    const selected = vi.spyOn(fastFilter, 'layerUniforms');
+    const selected = vi.spyOn(fastFilterIntoMips, 'layerUniforms');
 
     bakeAtlasLayers(renderer, radianceCube(renderer), atlas, 0, 'fast');
 

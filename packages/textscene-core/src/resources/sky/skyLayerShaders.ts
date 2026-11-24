@@ -180,12 +180,7 @@ void main() {
 }
 `;
 
-/**
- * Godot's fast filter (`octmap_filter.glsl:94-217`): the level's taps in each of up to three frames
- * around the texel's direction, blended by how near the direction lies to each frame's axis. Each
- * uniform holds one part of the table, a `vec4` of four sub-taps per super-tap, frame by frame.
- * Godot's texture-array path runs it, with no lod offset.
- */
+/** `octmap_filter.glsl:66-217`. Each tap uniform holds one part of the table, four sub-taps per `vec4`. */
 export const FAST_FILTER_FRAGMENT_SHADER = /* glsl */ `
 #define SUPER_TAPS_PER_FRAME ${FAST_FILTER_SUPER_TAPS_PER_FRAME}
 #define SUPER_TAPS (SUPER_TAPS_PER_FRAME * 3)
@@ -194,6 +189,7 @@ uniform vec4 frameY[SUPER_TAPS];
 uniform vec4 frameZ[SUPER_TAPS];
 uniform vec4 lod[SUPER_TAPS];
 uniform vec4 weight[SUPER_TAPS];
+uniform int mipLevel;
 ${LAYER_FILTER_GLSL}
 vec3 sum = vec3(0.0);
 float total = 0.0;
@@ -215,6 +211,9 @@ void addFrame(int axis, vec3 up, vec3 normal, vec2 others) {
     vec4 y = frameY[index];
     vec4 z = frameZ[index];
     vec4 tapLods = lod[index];
+#ifndef USE_TEXTURE_ARRAY
+    tapLods += float(mipLevel) / 5.0; // octmap_filter.glsl:205
+#endif
     vec4 tapWeights = weight[index] * frameWeight;
     addTap(axisX, axisY, normal, x.x, y.x, z.x, tapLods.x, tapWeights.x);
     addTap(axisX, axisY, normal, x.y, y.y, z.y, tapLods.y, tapWeights.y);
@@ -223,8 +222,18 @@ void addFrame(int axis, vec3 up, vec3 normal, vec2 others) {
   }
 }
 
+vec3 filteredDirection() {
+#ifdef USE_TEXTURE_ARRAY
+  // Godot filters at half the layer's width and stores each result in a 2 by 2 block: octmap_filter.glsl:220.
+  vec2 block = floor(gl_FragCoord.xy * 0.5) + 0.5;
+  return octToVec3WithBorder(block / (layerSize * 0.5), borderSize);
+#else
+  return texelDirection();
+#endif
+}
+
 void main() {
-  vec3 normal = texelDirection();
+  vec3 normal = filteredDirection();
   vec3 along = abs(normal);
   addFrame(0, vec3(1.0, 0.0, 0.0), normal, along.yz);
   addFrame(1, vec3(0.0, 1.0, 0.0), normal, along.xz);

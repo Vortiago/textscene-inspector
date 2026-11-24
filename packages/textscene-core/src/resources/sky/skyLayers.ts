@@ -18,7 +18,7 @@ import {
   type SkyOctmapLayout,
   type SkyRadianceLayout,
 } from '../../godot/rendering/environment/skyReflection.js';
-import { fastFilter } from './fastFilter.js';
+import { fastFilterIntoLayers, fastFilterIntoMips } from './fastFilter.js';
 import { importanceSampleFilter } from './importanceSampleFilter.js';
 import type { LayerFilter } from './layerFilter.js';
 import {
@@ -64,9 +64,14 @@ const radianceMipPassFor = perObject<THREE.WebGLRenderer, THREE.ShaderMaterial>(
   skyPass(RADIANCE_MIP_FRAGMENT_SHADER, ['layers', 'mip'])
 );
 
-/** Godot's fast filter, or its importance-sampling filter for layers laid out as `layout`. */
-function layerFilter(radianceFilter: SkyBake['radianceFilter'], layout: SkyOctmapLayout): LayerFilter {
-  return radianceFilter === 'fast' ? fastFilter : importanceSampleFilter(layout);
+/** Godot's fast filter into a sky's layers, or its importance-sampling filter for `layout`. */
+function skyLayerFilter(radianceFilter: SkyBake['radianceFilter'], layout: SkyOctmapLayout): LayerFilter {
+  return radianceFilter === 'fast' ? fastFilterIntoLayers : importanceSampleFilter(layout);
+}
+
+/** Godot's fast filter into a probe's mips, or its importance-sampling filter for `layout`. */
+function atlasLayerFilter(radianceFilter: SkyBake['radianceFilter'], layout: SkyOctmapLayout): LayerFilter {
+  return radianceFilter === 'fast' ? fastFilterIntoMips : importanceSampleFilter(layout);
 }
 
 /** The roughness layers of a sky baked with `radianceFilter`: a real-time sky has seven (`sky.cpp:1547-1550`). */
@@ -119,7 +124,7 @@ export class SkyLayerBaker {
     private readonly layers: SkyLayers,
     radianceFilter: SkyBake['radianceFilter']
   ) {
-    this.chain = new RadianceChain(gl, layers.layout, radianceFilter);
+    this.chain = new RadianceChain(gl, layers.layout, skyLayerFilter(radianceFilter, layers.layout));
   }
 
   /** Draws `drawRadiance` into layer 0, then filters each other layer from it. */
@@ -159,7 +164,6 @@ export class SkyLayerBaker {
 /** A radiance octmap and the downsampled chain of it that a filter reads, for one bake after another. */
 class RadianceChain {
   readonly scratch = new ScratchOctmaps();
-  readonly filter: LayerFilter;
   // Not a scratch octmap: a chain's first mip can be as wide as it, and would then draw into its source.
   readonly octmap: THREE.WebGLRenderTarget;
   private readonly chain: THREE.WebGLRenderTarget;
@@ -167,9 +171,8 @@ class RadianceChain {
   constructor(
     private readonly gl: THREE.WebGLRenderer,
     private readonly layout: SkyOctmapLayout,
-    radianceFilter: SkyBake['radianceFilter']
+    readonly filter: LayerFilter
   ) {
-    this.filter = layerFilter(radianceFilter, layout);
     this.octmap = new THREE.WebGLRenderTarget(layout.size, layout.size, TARGET_OPTIONS);
     try {
       this.chain = chainTarget(this.filter.chainSizes);
@@ -251,7 +254,7 @@ export function bakeAtlasLayers(
   const { layout, target } = atlas;
   if (index < 0 || index >= target.depth)
     throw new Error(`expected an atlas layer from 0 to ${target.depth - 1}, got ${index}`);
-  const chain = new RadianceChain(gl, layout, radianceFilter);
+  const chain = new RadianceChain(gl, layout, atlasLayerFilter(radianceFilter, layout));
   try {
     chain.draw(cubeRadiance(gl, radiance));
     drawOffscreen(gl, () => {
