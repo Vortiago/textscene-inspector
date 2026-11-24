@@ -7,7 +7,7 @@ const view = vi.hoisted(() => ({ selected: undefined as NodeHandle | null | unde
 vi.mock('../../TscnCanvas', () => ({
   TscnCanvas: (props: { selected?: NodeHandle | null }) => {
     view.selected = props.selected;
-    return null;
+    return <canvas data-testid="view" tabIndex={-1} />;
   },
   TscnSceneContents: () => null,
 }));
@@ -46,6 +46,25 @@ describe('<TscnPreviewShell> a hovered tree row', () => {
     act(() => fireEvent.mouseEnter(row('Main/Lamp')));
 
     expect(view.selected?.path).toBe('/root/Main/Lamp');
+  });
+
+  it('takes the keys from a focused view, so its F never frames the hovered node', async () => {
+    await renderShell();
+    const canvas = screen.getByTestId('view');
+    canvas.focus();
+
+    act(() => fireEvent.mouseEnter(row('Main/Lamp')));
+
+    expect(document.activeElement).not.toBe(canvas);
+  });
+
+  it('leaves the focus of a row the keyboard moved to', async () => {
+    await renderShell();
+    row('Main/Box').focus();
+
+    act(() => fireEvent.mouseEnter(row('Main/Lamp')));
+
+    expect(document.activeElement).toBe(row('Main/Box'));
   });
 
   it('hands the view the clicked node again when the pointer leaves', async () => {
