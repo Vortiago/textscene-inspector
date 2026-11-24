@@ -3,7 +3,8 @@
  * and reads every texel of every layer back, so the gate can judge what the shaders wrote.
  */
 import * as THREE from 'three';
-import { disposeSkyLayers } from '../../packages/textscene-core/src/resources/sky/skyLayers.ts';
+import { installNodesHandler } from '../../packages/textscene-core/src/shaders/nodesHandler.ts';
+import { disposeSkyLayers } from '../../packages/textscene-core/src/resources/sky/octmapArrays.ts';
 import { bakeSkyLayers } from '../../packages/textscene-core/src/resources/sky/skyLayers.testkit.ts';
 
 /* global window, document */
@@ -21,6 +22,8 @@ const BRIGHT_RADIANCE = [8, 8, 8];
 
 THREE.ColorManagement.enabled = false;
 const renderer = new THREE.WebGLRenderer({ canvas: document.createElement('canvas') });
+// The bake draws Godot's compute stages as node materials, which write linear values here.
+installNodesHandler(renderer, 'linear');
 
 /** The radiance cube of a sky whose face `face` has `colourOf(face)`. */
 function radianceCube(colourOf) {

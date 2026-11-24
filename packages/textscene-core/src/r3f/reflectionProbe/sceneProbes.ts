@@ -14,11 +14,8 @@ import {
   reflectionProbeOrder,
   ReflectionProbeUpdateMode,
 } from '../../godot/rendering/environment/reflectionProbe.js';
-import {
-  bakeAtlasLayers,
-  createReflectionAtlas,
-  type ReflectionAtlas,
-} from '../../resources/sky/skyLayers.js';
+import { createReflectionAtlas, type ReflectionAtlas } from '../../resources/sky/octmapArrays.js';
+import type { bakeAtlasLayers } from '../../resources/sky/skyLayers.js';
 import type { FastFilterQuality } from '../../godot/rendering/environment/skyReflection.js';
 import { COMMIT_FRAMES_AFTER_SETTLE } from '../../resources/ResourceLoaderContext.js';
 import { compareTreeOrder } from '../contexts/TreeOrderContext.js';
@@ -62,12 +59,15 @@ export interface ProbeFrame {
   readonly clearColor: THREE.Color;
   readonly viewport: ViewportDescription;
   readonly fastFilterQuality: FastFilterQuality;
+  /** The bake of a capture into the atlas, loaded on demand, null until it and the nodes handler load. */
+  readonly bakeAtlasLayers: typeof bakeAtlasLayers | null;
 }
 
 /** What every capture of one frame shares. */
 interface CaptureFrame extends ProbeFrame {
   /** `realTimeSkyState` as the frame's captures start. */
   readonly skyState: string;
+  readonly bakeAtlasLayers: typeof bakeAtlasLayers;
 }
 
 /** What a probe's capture shows: changed, it captures again. */
@@ -159,14 +159,16 @@ export class SceneProbes {
       probes.filter((object) => isRealTimeProbe(object) && !object.probe.interior).length
     );
     const atlas = this.atlasFor(probes);
-    if (this.settledFrames < COMMIT_FRAMES_AFTER_SETTLE) return false;
+    const bake = frame.bakeAtlasLayers;
+    if (this.settledFrames < COMMIT_FRAMES_AFTER_SETTLE || !bake) return false;
     this.markCapturesStale(frame);
     const drawn = layersToCapture(probes, (probe, layer) => !this.isCaptured(probe, layer, frame));
     if (drawn.length > 0) {
       beginStep(this.renderer, 'Reflection probes');
       // Each capture of the frame keeps the sky state its faces start from, before any face steps it.
       const skyState = realTimeSkyState(this.scene);
-      for (const layer of drawn) this.capture(probes[layer]!, layer, atlas, { ...frame, skyState });
+      const captureFrame = { ...frame, skyState, bakeAtlasLayers: bake };
+      for (const layer of drawn) this.capture(probes[layer]!, layer, atlas, captureFrame);
       endStep(this.renderer, 'Reflection probes');
     }
     const captured = probes.filter((probe) => this.captures.has(probe));
@@ -240,7 +242,7 @@ export class SceneProbes {
     object: ReflectionProbeObject,
     layer: number,
     atlas: ReflectionAtlas,
-    { clearColor, viewport, fastFilterQuality, skyState }: CaptureFrame
+    { clearColor, viewport, fastFilterQuality, skyState, bakeAtlasLayers }: CaptureFrame
   ): void {
     const { probe } = object;
     const capture = {

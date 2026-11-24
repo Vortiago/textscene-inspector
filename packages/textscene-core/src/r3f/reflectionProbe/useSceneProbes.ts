@@ -3,9 +3,12 @@
  * frame. The first holder drives, so a scene with several probes updates them once.
  */
 
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
+import { memoisedImport } from '../../resources/memoisedImport.js';
+import { useLazyModule } from '../../resources/useLazyModule.js';
 import { useResourceLoader } from '../../resources/useResource.js';
+import { useNodesHandler } from '../canvasRenderer/canvasNodesHandler.js';
 import { pendingSceneWork, totalPendingWork } from '../sceneWork.js';
 import { SceneHolding } from '../sceneHolding.js';
 import { useSceneHolder } from '../useSceneHolder.js';
@@ -17,15 +20,25 @@ import { useViewportDescription } from '../viewportRender/viewportDescriptionCon
 
 const probesOfScenes = new SceneHolding((scene, renderer) => new SceneProbes(renderer, scene));
 
+/** Imported by the first probe only: its bake draws Godot's compute stages, which hold three's TSL. */
+const loadProbeBake = memoisedImport(() => import('../../resources/sky/skyLayers.js'));
+
 export function useSceneProbes(): void {
   const scene = useThree((state) => state.scene);
+  const gl = useThree((state) => state.gl);
   const invalidate = useThree((state) => state.invalidate);
   const loader = useResourceLoader();
+  const bake = useLazyModule(loadProbeBake);
+  const isBakeReady = useNodesHandler(gl) === 'ready' && bake !== null;
+  useEffect(() => {
+    if (isBakeReady) invalidate();
+  }, [isBakeReady, invalidate]);
   const frame = useRef<ProbeFrame>(null!);
   frame.current = {
     clearColor: useProjectClearColor(),
     viewport: useViewportDescription(),
     fastFilterQuality: projectFastFilterQuality(useProjectSettings().settings),
+    bakeAtlasLayers: isBakeReady ? bake.bakeAtlasLayers : null,
   };
   const holder = useSceneHolder(probesOfScenes);
 

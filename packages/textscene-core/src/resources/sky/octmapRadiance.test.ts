@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { testRenderer } from '../../testing/recordingWebGL';
+import { nodeTestRenderer } from '../../testing/nodeTestRenderer';
 import { OctmapRadiance, octmapSkyEnvironment, type OctmapSky } from './octmapRadiance';
 import type { SkyBake } from './types';
 
@@ -23,7 +23,7 @@ const NO_PARTS = { background: null, disposeBackground: () => {}, setLights: () 
 
 describe('OctmapRadiance', () => {
   it('bakes the first radiance with POSITION at the origin', async () => {
-    const { renderer } = await testRenderer();
+    const { renderer } = await nodeTestRenderer();
     const { sky, origins } = recordedSky();
 
     new OctmapRadiance(renderer, BAKE, sky, 1);
@@ -32,7 +32,7 @@ describe('OctmapRadiance', () => {
   });
 
   it('frees the octmap sky when the first bake fails (error case)', async () => {
-    const { renderer } = await testRenderer();
+    const { renderer } = await nodeTestRenderer();
     const { sky } = recordedSky(() => {
       throw new Error('expected a draw, got a lost context');
     });
@@ -42,7 +42,7 @@ describe('OctmapRadiance', () => {
   });
 
   it('bakes again at the origin it is given, and keeps the radiance for the next draw', async () => {
-    const { renderer } = await testRenderer();
+    const { renderer } = await nodeTestRenderer();
     const { sky, origins } = recordedSky();
     const radiance = new OctmapRadiance(renderer, BAKE, sky, 1);
 
@@ -53,7 +53,7 @@ describe('OctmapRadiance', () => {
   });
 
   it('draws only layer 0 again for an incremental bake, and filters a layer without a draw', async () => {
-    const { renderer } = await testRenderer();
+    const { renderer } = await nodeTestRenderer();
     const { sky } = recordedSky();
     const radiance = new OctmapRadiance(renderer, BAKE, sky, 1);
 
@@ -64,7 +64,7 @@ describe('OctmapRadiance', () => {
   });
 
   it('hands its layers to the caller and frees the octmap sky on release', async () => {
-    const { renderer } = await testRenderer();
+    const { renderer } = await nodeTestRenderer();
     const { sky } = recordedSky();
 
     const layers = new OctmapRadiance(renderer, BAKE, sky, 1).releaseLayers();
@@ -79,7 +79,7 @@ describe('OctmapRadiance kept layers', () => {
 
   /** A radiance baked under key `A`, then `B`, with the array each bake drew into. */
   async function bakedTwice() {
-    const { renderer } = await testRenderer();
+    const { renderer } = await nodeTestRenderer();
     const { sky } = recordedSky();
     const radiance = new OctmapRadiance(renderer, BAKE, sky, 1);
     radiance.bakeAgain(ORIGIN, 1, 'A');
@@ -137,7 +137,7 @@ describe('OctmapRadiance kept layers', () => {
 
 describe('octmapSkyEnvironment', () => {
   it('keeps a bake in place for a sky a render can dirty', async () => {
-    const { renderer } = await testRenderer();
+    const { renderer } = await nodeTestRenderer();
     const radiance = new OctmapRadiance(renderer, BAKE, recordedSky().sky, 1);
 
     const environment = octmapSkyEnvironment(radiance, true, NO_PARTS);
@@ -146,7 +146,7 @@ describe('octmapSkyEnvironment', () => {
   });
 
   it('keeps only the layers of a sky no render dirties (edge case)', async () => {
-    const { renderer } = await testRenderer();
+    const { renderer } = await nodeTestRenderer();
     const { sky } = recordedSky();
     const radiance = new OctmapRadiance(renderer, BAKE, sky, 1);
 
@@ -157,7 +157,7 @@ describe('octmapSkyEnvironment', () => {
   });
 
   it('frees the background and the radiance together', async () => {
-    const { renderer } = await testRenderer();
+    const { renderer } = await nodeTestRenderer();
     const { sky } = recordedSky();
     const disposeBackground = vi.fn();
     const radiance = new OctmapRadiance(renderer, BAKE, sky, 1);

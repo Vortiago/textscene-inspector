@@ -24,7 +24,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/resources/sky/skyShaders.ts` | `scene/resources/3d/sky_material.cpp` |
 | `packages/textscene-core/src/godot/rendering/environment/skyCoords.ts` | `servers/rendering/renderer_rd/shaders/environment/sky.glsl` (`atan2_approx` and `SKY_COORDS`) |
 | `packages/textscene-core/src/godot/rendering/acosApprox.ts` | `servers/rendering/renderer_rd/shaders/environment/sky.glsl` (`acos_approx`) |
-| `packages/textscene-core/src/resources/sky/skyLayerShaders.ts` | `servers/rendering/renderer_rd/shaders/oct_inc.glsl` (the octahedral map), `.../effects/octmap_downsampler.glsl` (the downsample chain), `.../effects/octmap_roughness.glsl` (the GGX importance-sampled filter) and `.../effects/octmap_filter.glsl` (the low-quality fast filter: its three frames, their weights and the eight taps of each) |
+| `packages/textscene-core/src/resources/sky/skyLayerShaders.ts` | `servers/rendering/renderer_rd/shaders/oct_inc.glsl` (the octahedral map) |
 | `packages/textscene-core/src/r3f/areaLight/ltcIntegral.ts` | `servers/rendering/renderer_rd/shaders/area_lights_inc.glsl` (the edge fit, the horizon clip and the LTC integrals for diffuse and specular) |
 | `packages/textscene-core/src/r3f/areaLight/areaLightChunk.ts` | `servers/rendering/renderer_rd/shaders/scene_forward_lights_inc.glsl` (`light_process_area` and `get_omni_attenuation`) |
 | `packages/textscene-core/src/r3f/areaLight/areaTextureFetch.ts` | `servers/rendering/renderer_rd/shaders/area_lights_inc.glsl` (`fetch_ltc_lod` and the form-factor texture fetch) |
@@ -685,8 +685,7 @@ and ambient light ARE that table's output.
 levels 0 to 5 of `high_quality_coeffs`, the table that `fast_filter_high_quality` selects.
 Godot vendors both tables as `thirdparty/misc/cubemap_coeffs.h`.
 It is by Activision Publishing and is licensed MIT, separately from Godot's own MIT licence above.
-`packages/textscene-core/src/resources/sky/skyLayerShaders.ts` ports Godot's `octmap_downsampler.glsl`
-and `octmap_filter.glsl`, which carry the same Activision notice.
+Godot's `octmap_downsampler.glsl` and `octmap_filter.glsl` carry the same Activision notice.
 `packages/textscene-core/src/shaders/template/templateFiles.generated.ts` holds those two templates
 unmodified, with the notice.
 

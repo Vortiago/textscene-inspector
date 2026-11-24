@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { handleOf, installedSlot, leaveSlot, showInSlot } from '../sharedTexture.js';
-import type { SkyLayers } from '../../resources/sky/skyLayers.js';
+import type { SkyLayers } from '../../resources/sky/octmapArrays.js';
 import { OCTMAP_GLSL } from '../../resources/sky/skyLayerShaders.js';
 import { installedOr } from '../shaderPatch/litUniform.js';
 import { worldToSky } from './skyRotation.js';

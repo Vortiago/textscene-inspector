@@ -2,13 +2,8 @@ import type * as THREE from 'three';
 import type { FastFilterQuality, SkyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
 import { VECTOR3_ZERO, type Vector3 } from '../../godot/math/vector';
 import type { ProjectSampling } from '../../shaders/uniforms/samplerState';
-import {
-  createSkyLayers,
-  disposeSkyLayers,
-  SkyLayerBaker,
-  swapSkyLayerTargets,
-  type SkyLayers,
-} from './skyLayers';
+import { createSkyLayers, disposeSkyLayers, swapSkyLayerTargets, type SkyLayers } from './octmapArrays';
+import { SkyLayerBaker } from './skyLayers';
 import type { RadianceInPlace, SkyEnvironment, SkyLight } from './build';
 import type { SkyBackdrop } from '../../r3f/sky/skyBackground';
 import type { SkyBake } from './types';

@@ -3,7 +3,7 @@ import { writeSkyBindings, type SkyLight, type SkyVolumetricFog } from '../../sh
 import { fogUniforms } from '../fog/fogUniforms.js';
 import { renderedEnvironmentFog } from '../fog/fogFrame.js';
 import { bindRadiance, disposeSky, type TranspiledSky } from '../../shaders/sky/transpileSky.js';
-import type { SkyLayers } from '../../resources/sky/skyLayers.js';
+import type { SkyLayers } from '../../resources/sky/octmapArrays.js';
 import { SkyResolutionPasses } from '../../shaders/sky/skyResolutionPasses.js';
 import { SkyBackdrop } from './skyBackground.js';
 import { writeFramebufferHeight } from '../shadowFilter/framebufferRows.js';

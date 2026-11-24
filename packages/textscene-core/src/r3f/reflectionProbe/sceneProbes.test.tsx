@@ -3,7 +3,8 @@ import * as THREE from 'three';
 import { COMMIT_FRAMES_AFTER_SETTLE } from '../../resources/ResourceLoaderContext';
 import { heading } from '../../parser/testing/parserKit';
 import { parseReflectionProbe } from '../../nodes/3d/reflectionprobe/parser';
-import { testRenderer } from '../../testing/recordingWebGL';
+import { nodeTestRenderer } from '../../testing/nodeTestRenderer';
+import { bakeAtlasLayers } from '../../resources/sky/skyLayers';
 import { fireSceneRender, fireSceneRenderEnd } from '../testing/fireSceneRender';
 import { drawAsProbeCapture } from '../testing/worldRenders';
 import { renderUnderWay } from '../viewportRender/worldRender';
@@ -92,7 +93,7 @@ async function sceneWith(...probes: ReflectionProbeObject[]) {
 }
 
 async function probesIn(scene: THREE.Scene, ...probes: ReflectionProbeObject[]) {
-  const { renderer } = await testRenderer();
+  const { renderer } = await nodeTestRenderer();
   scene.add(...probes);
   scene.updateMatrixWorld();
   const sceneProbes = new SceneProbes(renderer, scene);
@@ -105,6 +106,7 @@ async function probesIn(scene: THREE.Scene, ...probes: ReflectionProbeObject[]) 
       clearColor: CLEAR,
       viewport: rootViewportDescription(null),
       fastFilterQuality,
+      bakeAtlasLayers,
     });
     return sceneRenders() - before;
   };
@@ -142,6 +144,20 @@ describe('SceneProbes.update', () => {
     settle();
 
     expect([facesDrawn(), facesDrawn()]).toEqual([6, 0]);
+  });
+
+  it('captures nothing in a settled scene until its bake loads', async () => {
+    const { sceneProbes, facesDrawn, settle } = await sceneWith(probeObject());
+    settle();
+    const frame = {
+      clearColor: CLEAR,
+      viewport: rootViewportDescription(null),
+      fastFilterQuality: 'low' as const,
+    };
+
+    sceneProbes.update(0, { ...frame, bakeAtlasLayers: null });
+
+    expect(facesDrawn()).toBe(6);
   });
 
   it('captures one ONCE probe a frame, as Godot captures one at a time', async () => {
@@ -408,6 +424,7 @@ describe('SceneProbes rendering', () => {
       clearColor: CLEAR,
       viewport: { ...rootViewportDescription(null), mipmapBias: -0.5 },
       fastFilterQuality: 'low',
+      bakeAtlasLayers,
     });
 
     expect([...biases]).toEqual([0]);

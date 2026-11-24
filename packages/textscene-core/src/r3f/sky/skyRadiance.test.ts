@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { skyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
-import type { SkyLayers } from '../../resources/sky/skyLayers';
+import type { SkyLayers } from '../../resources/sky/octmapArrays';
 import { hideShownSky, SkyRadiance, skyEnergies, skyRotation } from './skyRadiance';
 import { REFLECTION_SLOT, shownSky, skyLayersSlot } from './skyRadiance.testkit';
 import { boundHandle, testRenderer } from '../../testing/recordingWebGL';

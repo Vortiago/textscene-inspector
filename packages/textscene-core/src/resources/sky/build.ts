@@ -5,7 +5,7 @@ import type { SkyLight } from '../../shaders/sky/skyBindings';
 import type { Sky } from './types';
 import type { Vector3 } from '../../godot/math/vector';
 import type { FastFilterQuality } from '../../godot/rendering/environment/skyReflection';
-import type { SkyLayers } from './skyLayers';
+import type { SkyLayers } from './octmapArrays';
 import type { SkyBackdrop } from '../../r3f/sky/skyBackground';
 
 export type { SkyLight } from '../../shaders/sky/skyBindings';

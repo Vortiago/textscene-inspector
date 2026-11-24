@@ -32,8 +32,18 @@ function Holder() {
   return null;
 }
 
-async function pendingSeenInOneFrame(): Promise<number> {
+/** A holder whose probe bake and nodes handler have loaded, as every frame after the first few. */
+async function readyHolder() {
   const renderer = await ReactThreeTestRenderer.create(<Holder />);
+  await vi.waitFor(async () => {
+    await renderer.advanceFrames(1, 16);
+    expect(frames.at(-1)?.bakeAtlasLayers).toBeTypeOf('function');
+  });
+  return renderer;
+}
+
+async function pendingSeenInOneFrame(): Promise<number> {
+  const renderer = await readyHolder();
   updates.length = 0;
   await renderer.advanceFrames(1, 16);
   const seen = updates.at(-1);
