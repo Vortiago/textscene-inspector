@@ -15,10 +15,8 @@ function wrap({ children }: { children: ReactNode }) {
 
 describe('SelectionContext', () => {
   it('starts with no selection', () => {
-    const { result } = renderHook(() => ({ selection: useSelection(), selected: useSelectedNodePath() }), {
-      wrapper: wrap,
-    });
-    expect(result.current.selected).toBeNull();
+    const { result } = renderHook(() => useSelectedNodePath(), { wrapper: wrap });
+    expect(result.current).toBeNull();
   });
 
   it('updates the selected path when setSelectedNodePath is called', () => {

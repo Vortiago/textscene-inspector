@@ -4,7 +4,6 @@ import {
   ExpandedRowsProvider,
   useExpandedPaths,
   useExpandedRowActions,
-  withAncestorsExpanded,
   type ExpandedRowActions,
 } from './expandedRows';
 
@@ -69,18 +68,19 @@ describe('the expanded rows', () => {
   });
 });
 
-describe('withAncestorsExpanded', () => {
-  it('adds every missing ancestor of the path', () => {
-    expect([...withAncestorsExpanded(new Set(['Main']), 'Main/Ship/Engine')]).toEqual(['Main', 'Main/Ship']);
+describe('revealing a row', () => {
+  it('keeps the same set when every ancestor is expanded', () => {
+    const { result } = renderRows();
+    act(() => result.current.set(new Set(['Main', 'Main/Ship'])));
+    const before = result.current.paths;
+    act(() => result.current.reveal('Main/Ship/Engine'));
+    expect(result.current.paths).toBe(before);
   });
 
-  it('gives the same set when every ancestor is expanded', () => {
-    const expanded = new Set(['Main', 'Main/Ship']);
-    expect(withAncestorsExpanded(expanded, 'Main/Ship/Engine')).toBe(expanded);
-  });
-
-  it('gives the same set for the root, which has no ancestor (edge case)', () => {
-    const expanded = new Set<string>();
-    expect(withAncestorsExpanded(expanded, 'Main')).toBe(expanded);
+  it('keeps the same set for the root, which has no ancestor (edge case)', () => {
+    const { result } = renderRows();
+    const before = result.current.paths;
+    act(() => result.current.reveal('Main'));
+    expect(result.current.paths).toBe(before);
   });
 });

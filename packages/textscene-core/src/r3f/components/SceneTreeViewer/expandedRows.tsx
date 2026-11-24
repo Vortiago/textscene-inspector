@@ -43,7 +43,7 @@ export function ExpandedRowsProvider({ children }: { children: ReactNode }) {
 }
 
 /** `expanded` with each ancestor of `nodePath` added, or `expanded` itself when none is missing. */
-export function withAncestorsExpanded(expanded: ReadonlySet<string>, nodePath: string): ReadonlySet<string> {
+function withAncestorsExpanded(expanded: ReadonlySet<string>, nodePath: string): ReadonlySet<string> {
   const missing = getAncestorPaths(nodePath).filter((ancestor) => !expanded.has(ancestor));
   return missing.length === 0 ? expanded : new Set([...expanded, ...missing]);
 }
