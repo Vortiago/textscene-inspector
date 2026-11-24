@@ -2,6 +2,7 @@ import type {
   Argument,
   BlockNode,
   CallNode,
+  ControlFlowNode,
   Expression,
   FunctionNode,
   Statement,
@@ -108,11 +109,10 @@ function mapStatement(statement: Statement, hidden: Set<string>, map: ScopedMap)
       return mapScoped(statement, hidden, map);
     case 'control flow': {
       const expressions = statement.expressions.map(deep);
-      // A `for` initialiser's names stay in scope in its later blocks: the condition, the step and the body.
-      const loopScope = new Set(hidden);
+      const shared = sharedScope(statement, hidden);
       const blocks = statement.blocks.map((inner) =>
-        statement.flow === 'FLOW_OP_FOR'
-          ? { ...inner, statements: inner.statements.map((part) => mapStatement(part, loopScope, map)) }
+        shared
+          ? { ...inner, statements: inner.statements.map((part) => mapStatement(part, shared, map)) }
           : mapScoped(inner, hidden, map)
       );
       return { ...statement, expressions, blocks };
@@ -130,6 +130,15 @@ function mapStatement(statement: Statement, hidden: Set<string>, map: ScopedMap)
     default:
       return deep(statement);
   }
+}
+
+/** The one scope a flow's blocks share, or nothing when each block has a scope of its own. */
+function sharedScope(flow: ControlFlowNode, hidden: Set<string>): Set<string> | undefined {
+  // A `for` initialiser's names stay in scope in its later blocks: the condition, the step and the body.
+  if (flow.flow === 'FLOW_OP_FOR') return new Set(hidden);
+  // A label's statements stand in its switch's scope, so a later label sees an earlier one's names.
+  if (flow.flow === 'FLOW_OP_CASE' || flow.flow === 'FLOW_OP_DEFAULT') return hidden;
+  return undefined;
 }
 
 /** Calls `visit` with each expression of `block` and the local names in scope where it stands. */

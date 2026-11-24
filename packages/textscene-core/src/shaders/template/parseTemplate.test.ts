@@ -129,7 +129,31 @@ describe('parseTemplateStage', () => {
   });
 
   it('refuses a label outside a switch', () => {
-    expect(() => inFunction('case 0: return;')).toThrow("expected 'case' inside a switch");
+    expect(() => inFunction('case 0: return;')).toThrow(
+      "expected a statement, found a 'case' label outside a switch"
+    );
+  });
+
+  it('converts a negative case label to the uint a uint switch reads', () => {
+    expect(inFunction('uint a = 0u;\nswitch (a) {\ncase -1: break;\n}')).toContain('case 4294967295u:');
+  });
+
+  it('refuses a switch of a float', () => {
+    expect(() => inFunction('float f = 0.0;\nswitch (f) {\ncase 1: break;\n}')).toThrow(
+      'expected an int or uint switch value, found float'
+    );
+  });
+
+  it('refuses a case value a switch names twice', () => {
+    expect(() => inFunction('int a = 0;\nswitch (a) {\ncase 1: break;\ncase 1: break;\n}')).toThrow(
+      "expected one 'case 1' in a switch, found a second"
+    );
+  });
+
+  it('refuses a second default', () => {
+    expect(() => inFunction('int a = 0;\nswitch (a) {\ndefault: break;\ndefault: break;\n}')).toThrow(
+      "expected one 'default' in a switch, found a second"
+    );
   });
 
   it('gives the same tree for the same text', () => {
