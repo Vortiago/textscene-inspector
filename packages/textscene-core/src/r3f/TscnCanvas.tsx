@@ -239,7 +239,8 @@ function ViewRef({ viewRef, mode, camera }: { viewRef: Ref<CanvasView> } & ViewR
     return () => controller.abort(new Error('expected the view to settle before its unmount'));
   }, []);
   useImperativeHandle(viewRef, () => {
-    if (!scene || !store || !cameras) throw new Error('expected a TscnCanvas with a scene, got none');
+    if (!scene || !store) throw new Error('expected a TscnCanvas with a scene, got none');
+    if (!cameras) throw new Error('expected a TscnCanvas with editor cameras, got none');
     if (!ending.current) throw new Error('expected the view to mount before its ref, got no mount');
     const mode = () => currentMode.current;
     return viewAnswers({ scene, store, ending: ending.current.signal, lookedThrough, cameras, mode });

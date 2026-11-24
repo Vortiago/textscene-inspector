@@ -9,6 +9,7 @@ import { isFocusSelectionKey, isFrameSelectionKey } from '../../editorKeyBinding
 import { useEditRects } from '../../editRect/editRects.js';
 import { selectionRect } from '../../editRect/focusSelection2D.js';
 import { useEditorCameras } from '../../editorCamera/EditorCamerasContext.js';
+import { warnOfCameraFailure } from '../../editorCamera/editorCameras.js';
 import { absolutePathOf } from '../../../scene/nodePathWalk.js';
 
 /** What the stage hands the keys inside its canvas, where the Live scene tree holds the solved Controls. */
@@ -54,7 +55,9 @@ export function FocusSelection2D() {
       if (!isFrame && !isFocusSelectionKey(event)) return;
       event.preventDefault();
       const path = selectedPath.get();
-      void node.call(isFrame ? 'focus' : 'center', ...(path ? [absolutePathOf(path)] : []));
+      node
+        .call(isFrame ? 'focus' : 'center', ...(path ? [absolutePathOf(path)] : []))
+        .catch(warnOfCameraFailure);
     }
 
     stage.addEventListener('keydown', onKeyDown);

@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { useSelectedNodePathStore } from './contexts/SelectionContext.js';
 import { EditorControlsHandle, isDrawingPreview } from './EditorControlsHandle.js';
 import { useEditorCameras } from './editorCamera/EditorCamerasContext.js';
+import { warnOfCameraFailure } from './editorCamera/editorCameras.js';
 import { isViewKeyEvent } from './viewFocus.js';
 import { isFocusOriginKey, isFocusSelectionKey } from './editorKeyBindings.js';
 import { absolutePathOf } from '../scene/nodePathWalk.js';
@@ -18,7 +19,7 @@ export function FocusShortcuts() {
   useEffect(() => {
     function focusSelection(): void {
       const path = selectedPath.get();
-      void camera?.call('focus', ...(path ? [absolutePathOf(path)] : []));
+      camera?.call('focus', ...(path ? [absolutePathOf(path)] : [])).catch(warnOfCameraFailure);
     }
 
     /** node_3d_editor_plugin.cpp:4034-4036. */

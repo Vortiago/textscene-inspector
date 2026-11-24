@@ -1,10 +1,11 @@
-import { useContext, useEffect, useRef } from 'react';
+import { useContext, useEffect, useLayoutEffect, useRef } from 'react';
 import { useOptionalHierarchy } from '../../contexts/HierarchyContext.js';
 import { useViewportMode } from '../../contexts/ViewportModeContext.js';
 import { ResourceLoaderContext } from '../../../resources/ResourceLoaderContext.js';
 import type { SceneValue } from '../../../scene/variant.js';
-import type { EditorViewAnswers } from '../../editorCamera/editorCameras.js';
+import { warnOfCameraFailure, type EditorViewAnswers } from '../../editorCamera/editorCameras.js';
 import type { HeardStatusStore } from './previewViewStatus.js';
+import { usePreviewCamera } from './previewCamera.js';
 
 // The visual harness clicks for a `-selected` capture only after the last one.
 const FIT_DELAYS_MS = [150, 500, 1100];
@@ -23,6 +24,12 @@ export function FrameOnOpen({ view, heard }: FrameOnOpenProps) {
   const loader = useContext(ResourceLoaderContext);
   // A return to the 3D mode finds the camera where it was left, as in Godot, so it frames no scene twice.
   const framedRoot = useRef<string | null>(null);
+  // A ref, not a dependency: an ended preview starts no fit.
+  const previewed = usePreviewCamera()?.camera ?? null;
+  const isPreviewing = useRef(previewed !== null);
+  useLayoutEffect(() => {
+    isPreviewing.current = previewed !== null;
+  }, [previewed]);
 
   const isFraming = frameOnOpen && hasScene && mode === '3D' && view !== null;
   useEffect(() => {
@@ -34,7 +41,8 @@ export function FrameOnOpen({ view, heard }: FrameOnOpenProps) {
     let framedPose: SceneValue | null = null;
     const fit = async () => {
       await camera.call('focus');
-      framedRoot.current = rootKey;
+      // A focus through a previewed Camera3D frames nothing, so the next return to the 3D mode frames.
+      if (!isPreviewing.current) framedRoot.current = rootKey;
       framedPose = await camera.get('transform');
     };
     const fitUnlessMoved = async () => {
@@ -42,8 +50,14 @@ export function FrameOnOpen({ view, heard }: FrameOnOpenProps) {
       if (framedPose === null || samePose(pose, framedPose)) await fit();
     };
     const isFramed = framedRoot.current === rootKey;
-    if (isFramed) void camera.get('transform').then((pose) => (framedPose ??= pose));
-    const timers = isFramed ? [] : FIT_DELAYS_MS.map((delay) => setTimeout(() => void fit(), delay));
+    if (isFramed) {
+      camera
+        .get('transform')
+        .then((pose) => (framedPose ??= pose))
+        .catch(warnOfCameraFailure);
+    }
+    const fitLogged = () => void fit().catch(warnOfCameraFailure);
+    const timers = isFramed ? [] : FIT_DELAYS_MS.map((delay) => setTimeout(fitLogged, delay));
 
     // Each settle that ends a load fits, as one can precede an instanced `.glb` load. A write never does.
     let hasLoadedSinceSettle = (loader?.pendingResourceCount ?? 0) > 0;
@@ -55,7 +69,7 @@ export function FrameOnOpen({ view, heard }: FrameOnOpenProps) {
       const isSettled = heard.get().status?.settled != null;
       if (isSettled && !wasSettled && hasLoadedSinceSettle) {
         hasLoadedSinceSettle = false;
-        void fitUnlessMoved();
+        fitUnlessMoved().catch(warnOfCameraFailure);
       }
       wasSettled = isSettled;
     };

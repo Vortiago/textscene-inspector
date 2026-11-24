@@ -13,6 +13,7 @@ import type { LiveTreeEntry } from '../../liveSceneTree.js';
 import { GameCameraRows } from './GameCameraRows.js';
 import { usePreviewCamera } from './previewCamera.js';
 import { usePreviewView } from './previewView.js';
+import { warnOfCameraFailure } from '../../editorCamera/editorCameras.js';
 import { variantOf } from '../../../scene/variant.js';
 import { VARIANT_TYPE as T } from '../../../godot/variant/variantType.js';
 import styles from './TscnPreviewShell.module.css';
@@ -135,8 +136,10 @@ function useFrame2D(): (frame: Frame2D) => void {
     if (!pending || mode !== '2D' || camera?.type !== 'Camera2D') return;
     setPending(null);
     // The zoom first, so the centre lands at the zoom it is framed at.
-    void camera.set('zoom', variantOf({ type: T.VECTOR2, value: [pending.zoom, pending.zoom] }));
-    void camera.set('position', variantOf({ type: T.VECTOR2, value: [pending.center.x, pending.center.y] }));
+    const zoom = variantOf({ type: T.VECTOR2, value: [pending.zoom, pending.zoom] });
+    const centre = variantOf({ type: T.VECTOR2, value: [pending.center.x, pending.center.y] });
+    camera.set('zoom', zoom).catch(warnOfCameraFailure);
+    camera.set('position', centre).catch(warnOfCameraFailure);
   }, [pending, mode, view]);
   return setPending;
 }

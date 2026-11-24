@@ -30,6 +30,10 @@ export function editorCamera2D(stage: Camera2DStage): EditorCameraBacking {
   };
   const centredAt = (point: { x: number; y: number }, zoom: number): StageView => {
     const { width, height } = stage.size();
+    // A stage with no area has no centre: a pan from it lands off the view once the stage lays out.
+    if (width <= 0 || height <= 0) {
+      throw new Error(`expected a laid-out 2D stage to centre the camera, got ${width}x${height}`);
+    }
     return { zoom, pan: { x: width / 2 - point.x * zoom, y: height / 2 - point.y * zoom } };
   };
   // Nothing selected centres on the origin (canvas_item_editor_plugin.cpp:5165-5167).

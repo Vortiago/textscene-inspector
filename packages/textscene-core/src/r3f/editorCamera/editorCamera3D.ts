@@ -96,8 +96,9 @@ function setProperty(canvas: Camera3DCanvas, property: string, value: SceneValue
     }
     case 'fov': {
       if (typeof value !== 'number') return false;
-      // Godot's setter refuses the value and the write still reports valid (camera_3d.cpp:725).
-      if (value < 1 || value > 179) logger.warn(`[EditorCamera] expected a fov from 1 to 179, got ${value}`);
+      // Godot's setter refuses it, the write still reports valid (camera_3d.cpp:725). Negated to refuse NaN.
+      if (!(value >= 1 && value <= 179))
+        logger.warn(`[EditorCamera] expected a fov from 1 to 179, got ${value}`);
       else handle.setFov(value);
       return true;
     }
@@ -117,10 +118,11 @@ function setProperty(canvas: Camera3DCanvas, property: string, value: SceneValue
 
 /** F on a node, by its absolute path, else on the whole scene (ADR-0029). */
 function focus(canvas: Camera3DCanvas, node: SceneValue | null): void {
-  if (node !== null && typeof node !== 'string') {
+  const livePath = typeof node === 'string' ? liveNodePathOf(node) : null;
+  if (node !== null && livePath === null) {
     throw new Error(`expected the absolute path of a node to focus, got ${String(node)}`);
   }
-  const target = resolveFrameTarget(canvas.scene(), liveNodePathOf(node ?? undefined), canvas.nodeObjects());
+  const target = resolveFrameTarget(canvas.scene(), livePath, canvas.nodeObjects());
   frameSceneBounds(target, canvas.handle.camera, canvas.handle);
 }
 

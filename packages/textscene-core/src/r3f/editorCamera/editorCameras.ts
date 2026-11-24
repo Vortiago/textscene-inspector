@@ -3,6 +3,7 @@ import { nodeNotFound } from '../../scene/nodeHandle.js';
 import type { CallResult } from '../../scene/nodeMethods.js';
 import type { SceneValue } from '../../scene/variant.js';
 import type { ViewportMode } from '../contexts/ViewportModeContext.js';
+import * as logger from '../../logger.js';
 
 /** What a mounted stage does to its camera. The node waits for one, as the stage loads on demand. */
 export interface EditorCameraBacking {
@@ -114,4 +115,12 @@ function createSlot(
 export interface EditorViewAnswers {
   /** The current editor mode's camera, never in the scene tree. Null in the In-game mode. */
   readonly editorCamera: NodeHandle | null;
+}
+
+/**
+ * A write the view ended under, or its stage refused, warns instead of rejecting unhandled.
+ * @canonical A UI write to the editor camera that no caller awaits
+ */
+export function warnOfCameraFailure(error: unknown): void {
+  logger.warn(`[EditorCamera] ${error instanceof Error ? error.message : String(error)}`);
 }

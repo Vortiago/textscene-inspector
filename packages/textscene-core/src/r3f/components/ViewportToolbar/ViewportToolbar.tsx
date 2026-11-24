@@ -18,6 +18,7 @@ import {
 } from '../../preview/godotPreviewLighting.js';
 import { DisplayMenu, type DisplayToggle } from './DisplayMenu.js';
 import type { CanvasView } from '../../TscnCanvas.js';
+import { warnOfCameraFailure } from '../../editorCamera/editorCameras.js';
 import { useHeardFreelook } from '../TscnPreviewShell/previewViewStatus.js';
 import { captureWhenSettled } from '../TscnPreviewShell/viewSettle.js';
 import { usePreviewCamera } from '../TscnPreviewShell/previewCamera.js';
@@ -197,7 +198,7 @@ export function ViewportToolbar({ view }: ViewportToolbarProps) {
           className={styles.resetButton}
           onClick={() => {
             preview?.endPreview();
-            void camera.call('reset');
+            camera.call('reset').catch(warnOfCameraFailure);
           }}
           disabled={!sceneLoaded}
           data-testid="reset-camera-button"
@@ -211,7 +212,7 @@ export function ViewportToolbar({ view }: ViewportToolbarProps) {
         <button
           type="button"
           className={freelook.isToggled ? `${styles.freelookButton} ${styles.active}` : styles.freelookButton}
-          onClick={() => void camera.set('freelook', !freelook.isToggled)}
+          onClick={() => void camera.set('freelook', !freelook.isToggled).catch(warnOfCameraFailure)}
           disabled={isPreviewing || !freelook.isAvailable}
           aria-pressed={freelook.isToggled}
           data-testid="freelook-button"
