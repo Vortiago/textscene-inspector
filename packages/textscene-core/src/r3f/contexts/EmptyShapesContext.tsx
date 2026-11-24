@@ -1,6 +1,6 @@
-import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { parentPathOf } from '../../utils/nodePath.js';
-import { useViewStatusStore } from '../viewStatus/ViewStatusContext.js';
+import { useUndrawnReport } from '../viewStatus/useUndrawnReport.js';
 import { useNodePath } from './NodePathContext.js';
 
 /** The nearest enclosing CSG shape, which a child checks against its own parent path. */
@@ -19,11 +19,7 @@ export function useReportEmptyShape(hasOwnEmptyBrush: boolean): boolean {
   const isParentEmpty =
     parent !== null && path !== null && parent.isEmpty && parent.path === parentPathOf(path);
   const isEmpty = hasOwnEmptyBrush || isParentEmpty;
-  const store = useViewStatusStore();
-  useEffect(() => {
-    if (!store || !isEmpty || path === null) return undefined;
-    return store.reportUndrawn(path, 'empty-shape');
-  }, [store, isEmpty, path]);
+  useUndrawnReport(isEmpty ? 'empty-shape' : null);
   return isEmpty;
 }
 

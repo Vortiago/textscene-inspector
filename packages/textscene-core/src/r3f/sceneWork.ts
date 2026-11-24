@@ -22,6 +22,17 @@ export function pendingSceneWork(
   return into;
 }
 
+/** Calls `onChange` after each change to any pending work. Returns the unsubscribe. */
+export function subscribeSceneWork(loader: ResourceLoader | null, onChange: () => void): () => void {
+  const stops = [
+    loader?.subscribePending(onChange),
+    textureWork.subscribe(onChange),
+    fontWork.subscribe(onChange),
+    moduleWork.subscribe(onChange),
+  ];
+  return () => stops.forEach((stop) => stop?.());
+}
+
 export function totalPendingWork({ resources, textures, fonts, modules }: PendingSceneWork): number {
   return resources + textures + fonts + modules;
 }

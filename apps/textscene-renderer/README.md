@@ -247,9 +247,11 @@ Each read of `settled` gives a new promise, which rejects once the view unmounts
   `show.performance` is on, `timings` holds the GPU time and the time of each render step too.
   A GPU time costs a timer query per step, so without `show.performance` there is no `timings`.
   The performance panel shows the same numbers.
-- `undrawn`: each node the view holds and does not draw, sorted by path. An entry has the node's
-  absolute `path`, as a node handle gives it, its `meshTypes` that no part of the view draws, and
-  `isEmptyShape` for a CSG shape whose brush is empty. Godot warns of an empty shape too.
+- `undrawn`: each node the view holds and does not draw as authored, sorted by path. An entry has
+  the node's absolute `path`, as a node handle gives it, its `meshTypes` that no part of the view
+  draws, and `isEmptyShape` for a CSG shape whose brush is empty. Godot warns of an empty shape too.
+  Its `shaderErrors` hold the error text of each shader of the node that fails, in text order. The
+  view draws Godot's fallback in place of a failed shader, for example the default sky.
 - `isSoftwareRendering`: the browser draws the view's WebGL on the CPU, so every frame is slow.
 
 `status()` gives the same object while nothing in it changes. The option `onStatusChange` calls

@@ -1,7 +1,7 @@
 import { CountedReports } from '../../utils/countedReports.js';
 import { absolutePathOf } from '../../scene/nodePathWalk.js';
 
-/** What the view holds of one node and does not draw. */
+/** What the view holds of one node and does not draw as authored. */
 export interface UndrawnNode {
   /** The absolute node path, as a node handle's `path` gives it: `/root/Main/Sign`. */
   path: string;
@@ -9,7 +9,7 @@ export interface UndrawnNode {
   meshTypes: readonly string[];
   /** `CSGShape3D::get_configuration_warnings` (csg_shape.cpp:982): the shape's brush is empty. */
   isEmptyShape: boolean;
-  /** The error text of each shader of the node that the view does not draw, in text order. */
+  /** The error text of each failed shader of the node, in text order: the view draws Godot's fallback. */
   shaderErrors: readonly string[];
 }
 
