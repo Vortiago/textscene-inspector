@@ -56,7 +56,7 @@ A CPUParticles3D whose mesh has a LINES surface draws its segments at each parti
 
 <!-- compare: image=unit-mesh-instance-3d-skinned-arraymesh status=done fixture=unit-mesh-instance-3d-skinned-arraymesh.tscn -->
 
-An ArrayMesh strip with four bone weights for each vertex in its `skin_data` bends along the posed bones of the MeshInstance3D's Skeleton3D, where the third bone turns 60 degrees about Z.
+An ArrayMesh strip stores four bone weights for each vertex in its `skin_data`. It bends along the posed bones of the MeshInstance3D's Skeleton3D, where the third bone turns 60 degrees about Z.
 
 ## Known limitations
 
