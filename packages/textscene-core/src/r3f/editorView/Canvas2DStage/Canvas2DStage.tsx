@@ -17,6 +17,7 @@ import {
 import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../../../parser/types.js';
 import { useEditorCamera2D } from '../editorCamera/useEditorCamera2D.js';
 import type { CameraView2D } from '../editorCamera/editorCamera2D.js';
+import { createLateReader } from './lateReader.js';
 import { isBoolean, readPersisted } from '../../hooks/usePersistedState.js';
 import {
   clampWheelNotches,
@@ -164,7 +165,7 @@ export function Canvas2DStage({
 
   // Filled by the keys inside the canvas, where the Live scene tree places each node.
   const rectOf = useRef<(livePath: string) => Rect2 | null>(() => null);
-  const cameraViewOf = useRef<(livePath: string) => CameraView2D | null>(() => null);
+  const [cameraViewOf] = useState(createLateReader<string, CameraView2D | null>);
   // Refs, so a later project size or scene keeps the camera node's backing.
   const openView = useRef(() => {});
   const openScenePath = useRef(scenePath);
@@ -182,11 +183,11 @@ export function Canvas2DStage({
         restoreView: applyView,
         clampZoom,
         rectOf: (livePath) => rectOf.current(livePath),
-        cameraViewOf: (livePath) => cameraViewOf.current(livePath),
+        cameraViewOf: (livePath) => cameraViewOf.read(livePath),
         reset: () => openView.current(),
         scenePath: () => openScenePath.current,
       }),
-      [moveView, applyView]
+      [moveView, applyView, cameraViewOf]
     )
   );
 
@@ -344,7 +345,10 @@ export function Canvas2DStage({
     }
   };
 
-  const stage2D = useMemo<Stage2D>(() => ({ stage: stageElement, rectOf, cameraViewOf }), [stageElement]);
+  const stage2D = useMemo<Stage2D>(
+    () => ({ stage: stageElement, rectOf, cameraViewOf }),
+    [stageElement, cameraViewOf]
+  );
 
   function zoomAroundCentre(factor: number) {
     const el = stageRef.current;

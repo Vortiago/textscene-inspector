@@ -24,13 +24,18 @@ async function redBox(page) {
   return { box: { left: minX, top: minY, width: maxX + 1 - minX, height: maxY + 1 - minY }, width, height };
 }
 
-/** Opens a 2D scene, then clicks the Camera2D's "2D · frame view" row in the Cameras tab. */
+/** Opens a 2D scene, switches to 3D, then clicks the Camera2D's "2D · frame view" row in the Cameras tab. */
 export async function runCameraFrame2DScenario(browser, baseUrl) {
   const { context, page, diagnostics } = await openFixture(browser, baseUrl, {
     fixture: CAMERA_FRAME_2D_FIXTURE,
     label: 'camera frame 2D',
   });
   const opened = await redBox(page);
+  // From 3D, the click mounts the 2D canvas, which fills the camera's view only once R3F measures it.
+  await page
+    .getByRole('group', { name: 'Viewport dimension' })
+    .getByRole('button', { name: '3D', exact: true })
+    .click();
   await page.getByRole('tab', { name: /Cameras/ }).click();
   await page.getByRole('button', { name: 'Cam 2D · frame view' }).click();
   await page.waitForTimeout(FRAME_SETTLE_MS);

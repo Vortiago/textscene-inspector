@@ -10,6 +10,7 @@ import { camera2DView } from '../../viewportRender/camera2DView.js';
 import type { Camera2DProperties } from '../../../nodes/2d/camera2d/types.js';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext.js';
 import type { CameraView2D } from '../editorCamera/editorCamera2D.js';
+import type { LateReader } from './lateReader.js';
 import { isViewKeyEvent } from '../viewFocus.js';
 import { isFocusSelectionKey, isFrameSelectionKey } from '../editorKeyBindings.js';
 import { useEditRects } from '../../editRect/editRects.js';
@@ -24,7 +25,7 @@ export interface Stage2D {
   /** The 2D editor camera reads it to place a node. */
   rectOf: RefObject<(livePath: string) => Rect2 | null>;
   /** The 2D editor camera reads it to frame what a Camera2D shows. */
-  cameraViewOf: RefObject<(livePath: string) => CameraView2D | null>;
+  cameraViewOf: LateReader<string, CameraView2D | null>;
 }
 
 /** A camera whose chain this cannot place frames at the origin, as the Cameras panel always has. */
@@ -55,7 +56,7 @@ export function FocusSelection2D() {
       const global = node2dWorldTransform(roots, ctx, path, livePlacements(liveTree, loader));
       return global && selectionRect(global, rects?.get(path) ?? null);
     };
-    stage2D.cameraViewOf.current = (path) => {
+    stage2D.cameraViewOf.fill((path) => {
       if (!liveTree) return null;
       const { roots, ctx } = liveTree;
       const camera = resolveLiveEntry(path, roots, ctx)?.node;
@@ -64,7 +65,7 @@ export function FocusSelection2D() {
       const screen = { x: viewportSize.width, y: viewportSize.height };
       const { center, zoom } = camera2DView(camera.properties as Camera2DProperties, position, screen);
       return { centre: center, zoom };
-    };
+    });
   }, [stage2D, liveTree, loader, rects, viewportSize]);
 
   useEffect(() => {

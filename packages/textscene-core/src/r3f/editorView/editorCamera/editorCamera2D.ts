@@ -23,7 +23,7 @@ export interface Camera2DStage {
   /** The selection rect of a node by its live path, or null while the stage cannot place it. */
   rectOf(livePath: string): Rect2 | null;
   /** What the Camera2D at a live path shows on the project's screen, or null for another node. */
-  cameraViewOf(livePath: string): CameraView2D | null;
+  cameraViewOf(livePath: string): Promise<CameraView2D | null>;
   /** The view the stage opens a scene at. */
   reset(): void;
   scenePath(): string;
@@ -53,9 +53,9 @@ export function editorCamera2D(stage: Camera2DStage): EditorCameraBacking {
     return stage.rectOf(livePath) ?? ZERO_RECT;
   };
   // Godot's F frames a Camera2D's origin, as it has no edit rect (canvas_item.h:258-259): another act.
-  const cameraViewOf = (camera: SceneValue | undefined): CameraView2D => {
+  const cameraViewOf = async (camera: SceneValue | undefined): Promise<CameraView2D> => {
     const livePath = typeof camera === 'string' ? liveNodePathOf(camera) : null;
-    const view = livePath === null ? null : stage.cameraViewOf(livePath);
+    const view = livePath === null ? null : await stage.cameraViewOf(livePath);
     if (!view) throw new Error(`expected the absolute path of a Camera2D to frame, got ${String(camera)}`);
     return view;
   };
@@ -85,8 +85,10 @@ export function editorCamera2D(stage: Camera2DStage): EditorCameraBacking {
       } else if (method === 'center') {
         stage.moveView(centerSelection(stage.view(), rectOf(args[0]), stage.size()));
       } else if (method === 'frame_camera_view') {
-        const { centre, zoom } = cameraViewOf(args[0]);
-        stage.moveView(centredAt(centre, stage.clampZoom(zoom)));
+        return cameraViewOf(args[0]).then(({ centre, zoom }) => {
+          stage.moveView(centredAt(centre, stage.clampZoom(zoom)));
+          return null;
+        });
       } else {
         throw new Error(
           `expected a method of the 2D editor camera (reset, focus, center, frame_camera_view), got ${method}`
