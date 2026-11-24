@@ -993,7 +993,7 @@ const POINT_SCENES = [
       )
     )
   ),
-  // ANGLE's Bresenham lines leave these pixels apart from Godot's (known-defects.md): the gate fails above them.
+  // ANGLE's Bresenham lines leave these pixels apart from Godot's (known-defects.md): the gate fails above.
   {
     ...stageScene('spatial-lines-surface', { fragment: 'ALBEDO = vec3(UV, 0.3);' }, [], SPHERE_EDGES),
     primitive: 'lines',
