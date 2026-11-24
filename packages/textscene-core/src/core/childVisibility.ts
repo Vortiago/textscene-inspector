@@ -23,6 +23,12 @@ export type ChildVisibilityFn = (
   count: number
 ) => boolean | undefined;
 
+/** The properties a container's getter resolves from its sortable children, as a TabContainer's page. */
+export type SortedPropertiesFn = (
+  container: TscnNode,
+  sortableCount: number
+) => Readonly<Record<string, VariantValue>>;
+
 /** A property the container writes on itself, with the value it takes. */
 export type ContainerWrite = readonly [property: string, value: VariantValue];
 

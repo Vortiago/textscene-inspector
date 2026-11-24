@@ -30,7 +30,7 @@ import { isCamera2DType, isCamera3DType } from './cameraNodeTypes.js';
 import { perObject } from '../utils/perObject.js';
 import type { ContainerWrite } from '../core/childVisibility.js';
 import { nodeRegistry } from '../core/NodeRegistry.js';
-import { writtenSlotOf } from './canvasItemPass/writtenVisibility.js';
+import { sortableChildCount, writtenSlotOf } from './canvasItemPass/writtenVisibility.js';
 import { liveTreeOf, type LiveLink, type LiveTree } from './liveSceneTree.js';
 import { nodePathUniquePaths } from './nodePathUniqueNames.js';
 import { resourcePipelineOf } from './sceneResourcePipeline.js';
@@ -74,6 +74,8 @@ function treeNodeOf(
     childNames: groups.flatMap((group) => group.children.map((child) => child.name)),
     resourceOf: resourceInScope(scope, rootScenePath),
     containerVisibility: parent && containerVisibilityOf(tree, link, parent),
+    sortedProperty: (property) =>
+      nodeRegistry.sortedProperties(node.type)?.(node, sortableChildCount(tree, link.step))[property],
   };
 }
 

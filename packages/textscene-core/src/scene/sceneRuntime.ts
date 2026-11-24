@@ -1,6 +1,6 @@
 import type { ContainerWrite } from '../core/childVisibility.js';
 import type { SceneGraph } from '../core/SceneGraph.js';
-import type { ResourceReference } from '../godot/variant/variantValue.js';
+import type { ResourceReference, VariantValue } from '../godot/variant/variantValue.js';
 import type { Scene } from './openScene.js';
 import type { SceneFile } from './sceneFiles.js';
 
@@ -15,6 +15,8 @@ export interface SceneTreeNode {
   resourceOf(kind: 'ExtResource' | 'SubResource', id: string): ResourceReference | null;
   /** The `visible` the parent container writes on the node, or null where none writes it. */
   readonly containerVisibility: ContainerVisibility | null;
+  /** The value the node's getter resolves from its sortable children, else undefined. */
+  sortedProperty(property: string): VariantValue | undefined;
 }
 
 /** A container's hold on one sortable child's `visible`, as its sort writes it. */

@@ -67,6 +67,29 @@ describe("a TabContainer page's visible", () => {
   });
 });
 
+describe("a TabContainer's current_tab", () => {
+  const currentTabOf = (scene: Scene) => scene.getNode('/root/Tabs').get('current_tab');
+
+  it('is the first page with none authored (tab_bar.cpp:763-767)', async () => {
+    expect(await currentTabOf(open(TABS))).toBe(0);
+  });
+
+  it('is -1 with no page (tab_bar.cpp:763-767)', async () => {
+    expect(await currentTabOf(open('[gd_scene format=3]\n\n[node name="Tabs" type="TabContainer"]\n'))).toBe(
+      -1
+    );
+  });
+
+  it('moves past the page a write hides (tab_container.cpp:600-617)', async () => {
+    const scene = open(TABS);
+    await scene.getNode('/root/Tabs/Second').set('visible', true);
+
+    await scene.getNode('/root/Tabs/Second').set('visible', false);
+
+    expect(await currentTabOf(scene)).toBe(2);
+  });
+});
+
 describe("a FoldableContainer child's visible", () => {
   it('is false under a folded container (foldable_container.cpp:375-380)', async () => {
     expect(await visibleOf(open(FOLD.replace('%FOLDED%', 'true')), '/root/Fold/Inner')).toBe(false);

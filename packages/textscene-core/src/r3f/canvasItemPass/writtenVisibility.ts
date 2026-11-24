@@ -49,6 +49,11 @@ export function writtenSlotOf(tree: LiveTree, step: LiveStep, raw: TscnNode): Wr
   return visible === undefined ? null : { visible, index, count: sortable.length };
 }
 
+/** The count of children the node of `step` sorts, as a TabContainer counts its pages. */
+export function sortableChildCount(tree: LiveTree, step: LiveStep): number {
+  return sortableChildren(tree, step).length;
+}
+
 function sortableChildren(tree: LiveTree, step: LiveStep): { raw: TscnNode; live: TscnNode }[] {
   return step.groups.flatMap((group) =>
     group.children.flatMap((raw) => {

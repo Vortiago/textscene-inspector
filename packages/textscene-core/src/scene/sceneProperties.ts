@@ -62,8 +62,7 @@ export class SceneProperties {
     const outcome = access.resolveGet(node, property, derived, this.readsAt(access, livePath, node));
     if (outcome.kind === 'unknown') return this.unknownProperty(node, property, null);
     if (outcome.kind === 'unported') throw unportedProperty(property, outcome.declaredBy);
-    const held = this.containerHold(livePath, property);
-    return sceneValueOf(held ? { type: T.BOOL, value: held.visible } : outcome.value);
+    return sceneValueOf(this.sortedValue(livePath, property) ?? outcome.value);
   }
 
   /** Whether Godot reports the write valid. A write it drops leaves the writes as they were. */
@@ -90,6 +89,13 @@ export class SceneProperties {
     // A derived setter keeps its own cache: only a write of the stored property itself resets it.
     if (outcome.writes.some(([stored]) => stored === property)) derived?.storedWritten?.(property);
     return outcome.isValid;
+  }
+
+  /** The value a container's sort resolves, over the stored one: a page's `visible`, a `current_tab`. */
+  private sortedValue(livePath: string, property: string): VariantValue | undefined {
+    const node = this.writtenTreeNode(livePath);
+    const held = property === 'visible' ? node?.containerVisibility : null;
+    return held ? { type: T.BOOL, value: held.visible } : node?.sortedProperty(property);
   }
 
   /** The container's hold on the node's `visible`, which its sort writes over the node's own. */

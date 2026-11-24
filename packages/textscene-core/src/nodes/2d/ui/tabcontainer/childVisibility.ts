@@ -3,7 +3,11 @@
  * declares it, so every walk reads it before any renderer chunk loads.
  */
 
-import type { ChildVisibilityFn, ChildVisibilityWriteFn } from '../../../../core/childVisibility';
+import type {
+  ChildVisibilityFn,
+  ChildVisibilityWriteFn,
+  SortedPropertiesFn,
+} from '../../../../core/childVisibility';
 import { VARIANT_TYPE as T } from '../../../../godot/variant/variantType';
 import { isTabUnselectable, resolveTabBarCurrentTab } from '../tabbar/currentTab';
 import type { TabContainerProperties } from './types';
@@ -69,3 +73,11 @@ function previousSelectablePage(props: TabContainerProperties, current: number):
   for (let page = current - 1; page >= 0; page--) if (!isPageUnselectable(props, page)) return page;
   return null;
 }
+
+/** `get_current_tab` reads the bar, which resolves the page once the pages load (`tab_bar.cpp:763-767`). */
+export const tabContainerSortedProperties: SortedPropertiesFn = (container, count) => ({
+  current_tab: {
+    type: T.INT,
+    value: tabContainerCurrentTab(container.properties as TabContainerProperties, count),
+  },
+});
