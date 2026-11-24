@@ -67,6 +67,8 @@ export interface SceneRuntime {
   files(graph: SceneGraph | null): readonly SceneFile[];
   /** Calls `listener` when a load answers for one of those files. Returns the removal. */
   subscribeFiles(listener: () => void): () => void;
+  /** The class of sub-resource `id` of the loaded scene at `scenePath`, null before it loads or for none. */
+  loadedSubResourceClass(scenePath: string, id: string): string | null;
   dispose(): void;
 }
 

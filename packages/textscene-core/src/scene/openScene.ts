@@ -100,10 +100,12 @@ export function openScene({
     return current ? runtime().tree(current) : null;
   };
   /** The class `load` gives: a sub-resource's heading names it, and no file is asked for one. */
-  const resourceClass = async (path: string): Promise<string | null> =>
-    parseSubResourcePath(path).subResourceId === undefined
-      ? loadedResourceType(provider, path)
-      : properties.subResourceClass(path);
+  const resourceClass = async (path: string): Promise<string | null> => {
+    const { filePath, subResourceId } = parseSubResourcePath(path);
+    if (subResourceId === undefined) return loadedResourceType(provider, path);
+    if (filePath === rootScenePath) return properties.subResourceClass(path);
+    return runtime().loadedSubResourceClass(filePath, subResourceId);
+  };
   const nodes = new SceneNodes({ graph, tree, resourceClass }, properties, (path) => listeners.written(path));
   const listeners = new SceneListeners((path) => nodes.getNodeOrNull(path)?.path ?? null);
 

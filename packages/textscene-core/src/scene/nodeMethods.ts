@@ -1,9 +1,10 @@
 import { descendsFromClass, findInClassChain } from '../godot/classdb/classBaseTypes.js';
 import type { NodeHandle } from './nodeHandle.js';
 import { VARIANT_TYPE as T, variantTypeName } from '../godot/variant/variantType.js';
-import { valueOfSceneValue, type SceneValue } from './variant.js';
+import { sceneValueOf, valueOfSceneValue, type SceneValue } from './variant.js';
 import { absolutePathOf, ROOT_WINDOW_PATH } from './nodePathWalk.js';
 import type { ViewportCameras } from './viewportCameras.js';
+import { animationLibrariesOf, type LibraryTexts } from './animationLibraries.js';
 
 /** What `call` answers: a value, a node, or null for a method that returns nothing. */
 export type CallResult = SceneValue | NodeHandle | null;
@@ -30,6 +31,8 @@ export interface MethodTarget {
   ownerPath(): string | null;
   /** The flag an `[editable]` of any enclosing file sets on `node`, false for a node of another scene. */
   isEditableInstance(node: NodeHandle): boolean;
+  /** Each text the node's files set, in the order `_set` applies them, and the class of a resource. */
+  ownTexts(): Promise<LibraryTexts>;
 }
 
 /** A method of Godot's class this release ports, with the count of arguments its binding takes. */
@@ -208,6 +211,29 @@ const NODE_METHODS: Readonly<Record<string, PortedMethod>> = {
   },
 };
 
+const ANIMATION_MIXER_METHODS: Readonly<Record<string, PortedMethod>> = {
+  get_animation_library_list: {
+    minArguments: 0,
+    maxArguments: 0,
+    run: async (target) => {
+      const libraries = await animationLibrariesOf(await target.ownTexts());
+      const elements = libraries.map(({ name }) => ({ type: T.STRING_NAME, value: name }) as const);
+      return sceneValueOf({ type: T.ARRAY, elements, elementType: { builtin: T.STRING_NAME } });
+    },
+  },
+  // animation_mixer.cpp:266-273: a name it does not hold answers a null Ref.
+  get_animation_library: {
+    minArguments: 1,
+    maxArguments: 1,
+    run: async (target, [name], methodName) => {
+      const asked = stringArgument(name!, methodName);
+      const libraries = await animationLibrariesOf(await target.ownTexts());
+      const held = libraries.find((entry) => entry.name === asked);
+      return held ? sceneValueOf(held.library) : null;
+    },
+  },
+};
+
 const OBJECT_METHODS: Readonly<Record<string, PortedMethod>> = {
   get_class: { minArguments: 0, maxArguments: 0, run: (target) => classInTree(target.className) },
   // object.cpp:2220. The class table stops below `Object`, which every class inherits.
@@ -226,6 +252,7 @@ const PORTED_METHODS: Readonly<Record<string, Readonly<Record<string, PortedMeth
   Camera3D: CAMERA_3D_METHODS,
   Camera2D: CAMERA_2D_METHODS,
   Viewport: VIEWPORT_METHODS,
+  AnimationMixer: ANIMATION_MIXER_METHODS,
 };
 
 /** The nearest class's port of the setter or the getter of `property`, with the method's name. */

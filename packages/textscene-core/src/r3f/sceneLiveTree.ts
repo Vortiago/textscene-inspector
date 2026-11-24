@@ -17,7 +17,7 @@ import type { SceneScope, TscnExternalResource, TscnScene } from '../parser/type
 import { PROJECT_FILE_PATH } from '../godot/project/project.js';
 import { readProjectSettings } from '../resources/projectSettingsFile.js';
 import { registerInstanceResource } from '../resources/registerInstanceResource.js';
-import { resolveInstancePath } from '../resources/SubResourceResolver.js';
+import { findSubResource, resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { sceneReads, type FileRead } from '../resources/loadFailure/fileReads.js';
 import { createSceneFileWalk, type WalkStart } from '../resources/sceneFiles/sceneFileWalk.js';
 import type { ResourceLoader } from '../resources/ResourceLoader.js';
@@ -354,6 +354,10 @@ function sceneRuntimeOf(scene: Scene): SceneRuntime {
     subscribeFiles(listener) {
       fileListeners.add(listener);
       return () => fileListeners.delete(listener);
+    },
+    loadedSubResourceClass(scenePath, id) {
+      const loaded = loader.getCached<TscnScene>('scene', scenePath);
+      return (loaded && findSubResource(loaded.internalResources, id)?.type) ?? null;
     },
     dispose() {
       fileWalk.dispose();

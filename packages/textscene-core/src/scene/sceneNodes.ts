@@ -12,6 +12,7 @@ import { loadPropertyAccess, type PropertyAccess, type SceneProperties } from '.
 import type { SceneTree, SceneTreeNode } from './sceneRuntime.js';
 import { sceneValueOf, valueOfSceneValue, variantOf, type SceneValue } from './variant.js';
 import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
+import { strToVar } from '../godot/variant/strToVar.js';
 import { projectViewportSize } from '../parser/projectSettingsParser.js';
 import { isWritable } from './writtenScene.js';
 import {
@@ -284,6 +285,15 @@ export class SceneNodes implements HandleHost {
         return this.handles.get(node.path) === node && node.isInsideTree()
           ? (this.treeNodeOf(node.path, generation)?.isEditableInstance() ?? false)
           : false;
+      },
+      ownTexts: async () => {
+        const { access, node } = await this.propertyTarget(path);
+        this.assertSameText(generation, path);
+        const reading = { classExists: access.classExists, resourceOf: node.resourceOf.bind(node) };
+        const texts = Object.entries(node.rawProperties).map(
+          ([key, text]) => [key, strToVar(text, reading)] as const
+        );
+        return { texts, resourceClass: (resourcePath) => this.source.resourceClass(resourcePath) };
       },
     };
   }
