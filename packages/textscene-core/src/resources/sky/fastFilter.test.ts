@@ -25,7 +25,7 @@ describe('fastFilterIntoLayers', () => {
     expect(() => fastFilterIntoLayers.layerUniforms(0)).toThrow('expected a layer from 1 to 6, got 0');
   });
 
-  it("filters a 2 by 2 block of texels as one, as Godot's texture array path does", async () => {
+  it("compiles Godot's texture array path, which filters a 2 by 2 block of texels as one", async () => {
     const { renderer } = await testRenderer();
 
     expect(fastFilterIntoLayers.passFor(renderer).fragmentShader).toContain('#define USE_TEXTURE_ARRAY');
@@ -46,7 +46,7 @@ describe('fastFilterIntoLayers', () => {
 });
 
 describe('fastFilterIntoMips', () => {
-  it('filters each texel of a mip on its own, with the lod offset of the path without arrays', async () => {
+  it('compiles the path without arrays, which filters each texel of a mip with a lod offset', async () => {
     const { renderer } = await testRenderer();
 
     expect(fastFilterIntoMips.passFor(renderer).fragmentShader).not.toContain('#define USE_TEXTURE_ARRAY');

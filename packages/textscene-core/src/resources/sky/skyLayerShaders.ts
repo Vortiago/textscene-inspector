@@ -180,7 +180,7 @@ void main() {
 }
 `;
 
-/** `octmap_filter.glsl:66-217`. Each tap uniform holds one part of the table, four sub-taps per `vec4`. */
+/** `octmap_filter.glsl:66-217`. Without `USE_TEXTURE_ARRAY` the caller sets `mipLevel`, layer minus one. */
 export const FAST_FILTER_FRAGMENT_SHADER = /* glsl */ `
 #define SUPER_TAPS_PER_FRAME ${FAST_FILTER_SUPER_TAPS_PER_FRAME}
 #define SUPER_TAPS (SUPER_TAPS_PER_FRAME * 3)
