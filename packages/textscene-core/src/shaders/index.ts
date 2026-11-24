@@ -39,6 +39,16 @@ export {
   type SkyVolumetricFog,
 } from './sky/skyBindings.js';
 export { transpileSpatial, type SpatialOptions, type TranspiledSpatial } from './spatial/transpileSpatial.js';
+export {
+  CANVAS_VARIANTS,
+  specialiseCanvasDraw,
+  transpileCanvasItem,
+  type CanvasDraw,
+  type CanvasItemOptions,
+  type CanvasSpecialisation,
+  type CanvasVariant,
+  type TranspiledCanvasItem,
+} from './canvas/transpileCanvas.js';
 export type { PointDraw } from './spatial/spatialPipeline.js';
 export {
   emulatedPointGeometry,

@@ -71,6 +71,23 @@ async function unreportedFaults() {
   );
 }
 
+/** A failure for each variant of the canvas template whose program the GPU refuses, unlit or lit. */
+async function unlinkedCanvasVariants() {
+  return withConsumerPage(
+    { pageDir: join(import.meta.dirname, 'page'), module: 'e2ePage.js', harness: 'shaderEndToEnd' },
+    async (page) => {
+      const linked = await page.evaluate(() => globalThis.linkCanvasVariants());
+      for (const { variant, useLighting, faults } of linked)
+        console.log(
+          `canvas ${variant}${useLighting ? ' lit' : ''}: ${faults.length === 0 ? 'links' : 'refused'}`
+        );
+      return linked
+        .filter(({ faults }) => faults.length > 0)
+        .map(({ variant, useLighting, faults }) => `canvas ${variant}, lit ${useLighting}: ${faults[0].log}`);
+    }
+  );
+}
+
 function writePng(path, { width, height }, pixels) {
   const png = new PNG({ width, height });
   png.data = Buffer.from(pixels);
@@ -128,6 +145,7 @@ async function main() {
     return result;
   });
   failures.push(...(await unreportedFaults()));
+  failures.push(...(await unlinkedCanvasVariants()));
   const table = resultTable(results);
   console.log(table);
   writeJobSummary(`## Shader showcases against Godot\n\n${table}\n`);
