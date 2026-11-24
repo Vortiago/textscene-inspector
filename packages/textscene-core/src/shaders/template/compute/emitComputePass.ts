@@ -15,7 +15,7 @@ import { BoundNodeMaterial } from '../../uniforms/boundMaterial.js';
 import { emitTemplateStage, programResources } from '../emitTemplate.js';
 import type { RowBlock } from '../rowBlock.js';
 import type { TemplateUniform } from '../templateUniforms.js';
-import { COMPUTE_COLOR, COMPUTE_ENTRY, type ComputePass } from './computePasses.js';
+import { COMPUTE_COLOR, COMPUTE_ENTRY, type ComputePass, type ComputeTarget } from './computePasses.js';
 import {
   COMPUTE_ATLAS_SIZE,
   COMPUTE_PLACE,
@@ -27,6 +27,7 @@ import {
 /** A compute pass as one draw: a triangle over its target or a point per invocation, by name its inputs. */
 export interface ComputeDraw {
   readonly mesh: THREE.Mesh<THREE.BufferGeometry, THREE.Material>;
+  readonly target: ComputeTarget;
   /** The template's uniforms by `instance.member`, `params.size`, and a scatter's by `compute_` names. */
   readonly uniforms: ReadonlyMap<string, TemplateUniform>;
   /** The template's textures by name: `source_octmap`, `compute_shared_samples`. */
@@ -50,6 +51,7 @@ export function emitComputePass(pass: ComputePass): ComputeDraw {
   readRowsAsStored(resources.textures);
   return {
     mesh: passMesh(stage.result),
+    target: pass.target,
     uniforms: resources.uniforms.byName,
     textures: resources.textures,
     buffers: resources.buffers.byName,
@@ -86,10 +88,11 @@ function emitScatterPass(pass: ComputePass, imageCount: number): ComputeDraw {
   readRowsAsStored(resources.textures);
   const dispatchTo = ([x, y, z]: readonly [number, number, number]) => {
     (dispatch.value as THREE.Vector3).set(x, y, z);
-    mesh.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(x * y * z * 3), 3));
+    pointsFor(mesh.geometry, x * y * z);
   };
   return {
     mesh,
+    target: pass.target,
     uniforms,
     textures: resources.textures,
     buffers: resources.buffers.byName,
@@ -104,6 +107,16 @@ function dispatchId(dispatch: UniformNode<THREE.Vector3>): Node {
   const across = index.mod(extent.x);
   const down = index.div(extent.x).mod(extent.y);
   return uvec3(across, down, index.div(extent.x.mul(extent.y))) as unknown as Node;
+}
+
+/** Sets `count` points to draw, growing the attribute three counts them by only past its length. */
+function pointsFor(geometry: THREE.BufferGeometry, count: number): void {
+  const held = geometry.getAttribute('position');
+  if (!held || held.count < count) {
+    geometry.dispose();
+    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(count * 3), 3));
+  }
+  geometry.setDrawRange(0, count);
 }
 
 /** Points the dispatch sizes, each at `place` with the colour `value`. */

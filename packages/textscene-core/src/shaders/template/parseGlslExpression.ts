@@ -513,7 +513,7 @@ export class GlslExpressionParser {
         name.position
       );
     const operands = args.map((arg, index) => this.converted(arg, row.args![index]!));
-    return builtInCall(name, row, operands);
+    return builtInCall(name.text, row, operands, name.position);
   }
 
   private userCall(
@@ -656,17 +656,22 @@ function constructs(type: string, args: readonly string[]): boolean {
   return false;
 }
 
-function builtInCall(name: PpToken, row: InstructionRow, operands: readonly Expression[]): CallNode {
+export function builtInCall(
+  name: string,
+  row: InstructionRow,
+  operands: readonly Expression[],
+  position: SourcePosition
+): CallNode {
   return {
     kind: 'operator',
     op: 'OP_CALL',
     row,
-    function: name.text,
-    rname: name.text,
+    function: name,
+    rname: name,
     qualifiers: operands.map(() => 'in'),
     type: row.returns!,
     operands,
-    position: name.position,
+    position,
   };
 }
 

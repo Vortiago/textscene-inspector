@@ -143,12 +143,15 @@ describe('drawDownsample', () => {
   });
 });
 
+const LOW_INTO_LAYERS = { quality: 'low', isTextureArray: true } as const;
+const LOW_INTO_MIPS = { quality: 'low', isTextureArray: false } as const;
+
 describe('drawFastFilter', () => {
   it("draws Godot's four scatters of a 2 by 2 block on the texture array path", async () => {
     const { renderer } = await nodeTestRenderer();
 
     const drawn = materialsDrawnBy(renderer, () =>
-      drawFastFilter(renderer, new THREE.Texture(), 0.8, 'low', Array(6).fill(16), true)
+      drawFastFilter(renderer, new THREE.Texture(), 0.8, LOW_INTO_LAYERS, Array(6).fill(16))
     );
 
     expect(drawn).toHaveLength(4);
@@ -157,7 +160,7 @@ describe('drawFastFilter', () => {
   it('refuses other than six images (error case)', async () => {
     const { renderer } = await nodeTestRenderer();
 
-    expect(() => drawFastFilter(renderer, new THREE.Texture(), 0.8, 'low', [16, 16], false)).toThrow(
+    expect(() => drawFastFilter(renderer, new THREE.Texture(), 0.8, LOW_INTO_MIPS, [16, 16])).toThrow(
       'expected 6 images for the fast filter, got 2'
     );
   });

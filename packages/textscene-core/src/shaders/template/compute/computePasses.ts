@@ -15,12 +15,12 @@ import {
   variable,
 } from '../../language/lowering/nodes.js';
 import { rewriteFunction } from '../../language/lowering/rewrite.js';
-import type { BlockNode, CallNode, Expression, FunctionNode, Statement } from '../../language/shaderTree.js';
+import type { BlockNode, Expression, FunctionNode, Statement } from '../../language/shaderTree.js';
 import { everyStatement, isCall, withExpressionsMapped } from '../../language/treeWalk.js';
 import { constantScalar } from '../constantValue.js';
 import type { TemplateDeclaration, TemplateStageNode } from '../templateTree.js';
 import { constructed, glslCall, imageOf, isStore, scalar } from './computeCalls.js';
-import { mostStoresPerInvocation, scatterMain } from './scatterPasses.js';
+import { mostStores, scatterMain } from './scatterPasses.js';
 import {
   beforeBarrier,
   dependsOnGroup,
@@ -60,7 +60,8 @@ export interface ComputePass {
  */
 export function computePasses(stage: TemplateStageNode): ComputePass[] {
   if (stage.stage !== 'compute') throw new Error(`expected a compute stage, got a ${stage.stage} stage`);
-  const main = withLevelZeroReads(lowerFunction(mainOf(stage)));
+  const source = mainOf(stage);
+  const main = withLevelZeroReads(lowerFunction(source));
   const groupSize = groupSizeOf(stage);
   const arrays = sharedArraysOf(stage);
   const fills = arrays.map((array): ComputePass => ({
@@ -73,26 +74,43 @@ export function computePasses(stage: TemplateStageNode): ComputePass[] {
     body: withSharedReads(withoutSharedWrites(withoutBarriers(main.body), arrays), arrays),
   };
   const usedStage = withDeclarations(stage, sharedTextureGlobals(arrays, main.position));
-  const stores = storesIn(used);
+  const stores = [...everyStatement(used.body)].filter(isStore);
   if (stores.length === 0) throw new Error('expected an imageStore in the compute stage, found none');
   const images = [...new Set(stores.map(imageOf))];
-  if (!stores.every((store) => isInvocationTexel(store.operands[1]!, used))) {
-    const scatters = Array.from(
-      { length: mostStoresPerInvocation(mainOf(stage)) },
-      (_, ordinal): ComputePass => ({
-        target: { kind: 'scatter', images, ordinal },
-        stage: withMain(usedStage, scatterMain(used, images, ordinal)),
-        groupSize,
-      })
-    );
-    return [...fills, ...scatters];
-  }
-  const direct = images.map((name): ComputePass => ({
+  const isDirect = stores.every((store) => isInvocationTexel(store.operands[1]!, used));
+  const storing = isDirect
+    ? directPasses(usedStage, used, images, groupSize)
+    : scatterPasses(usedStage, used, images, groupSize, mostStores(source.body));
+  return [...fills, ...storing];
+}
+
+/** A pass for each image, each fragment the invocation that stores at its texel. */
+function directPasses(
+  stage: TemplateStageNode,
+  main: FunctionNode,
+  images: readonly string[],
+  groupSize: readonly [number, number, number]
+): ComputePass[] {
+  return images.map((name) => ({
     target: { kind: 'image', name },
-    stage: withMain(usedStage, storingInto(used, name)),
+    stage: withMain(stage, storingInto(main, name)),
     groupSize,
   }));
-  return [...fills, ...direct];
+}
+
+/** A pass for each store an invocation makes, counted on the template's own main, before lowering. */
+function scatterPasses(
+  stage: TemplateStageNode,
+  main: FunctionNode,
+  images: readonly string[],
+  groupSize: readonly [number, number, number],
+  storeCount: number
+): ComputePass[] {
+  return Array.from({ length: storeCount }, (_, ordinal) => ({
+    target: { kind: 'scatter', images, ordinal },
+    stage: withMain(stage, scatterMain(main, images, ordinal)),
+    groupSize,
+  }));
 }
 
 function mainOf(stage: TemplateStageNode): FunctionNode {
@@ -144,10 +162,6 @@ function groupSizeOf(stage: TemplateStageNode): [number, number, number] {
     return typeof value === 'number' ? value : 1;
   };
   return [size('local_size_x'), size('local_size_y'), size('local_size_z')];
-}
-
-function storesIn(main: FunctionNode): CallNode[] {
-  return [...everyStatement(main.body)].filter(isStore);
 }
 
 /** `ivec2(id)`, where `id` is a local set once to `gl_GlobalInvocationID.xy`. */

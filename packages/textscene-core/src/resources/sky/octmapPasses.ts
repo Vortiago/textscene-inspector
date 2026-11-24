@@ -10,6 +10,7 @@ import { computeStage } from '../../shaders/template/compute/computeStage.js';
 import { emitComputePass, type ComputeDraw } from '../../shaders/template/compute/emitComputePass.js';
 import { hasNodesHandler } from '../../shaders/pipeline/nodeObject.js';
 import { perObject } from '../../utils/perObject.js';
+import type { FastFilter } from './layerFilter.js';
 
 /** A value a lowered pass reads by its template name: a uniform's, or a texture. */
 type PassValues = Readonly<Record<string, unknown>>;
@@ -85,13 +86,18 @@ const roughnessFor = perObject<THREE.WebGLRenderer, readonly [ComputeDraw, Compu
   return [emitComputePass(fill!), emitComputePass(layer!)];
 });
 
-/** The target the GGX samples fill, one texel an entry of `samples[256]`, per renderer. */
-const samplesTargetFor = perObject<THREE.WebGLRenderer, THREE.WebGLRenderTarget>(
-  () => new THREE.WebGLRenderTarget(GGX_SAMPLE_ENTRIES, 1, { type: THREE.FloatType, depthBuffer: false })
-);
-
-/** `octmap_roughness.glsl:11`: `samples[GROUP_SIZE * GROUP_SIZE * 4]`. */
-const GGX_SAMPLE_ENTRIES = 256;
+/** The target the GGX samples fill, one texel an entry of the stage's shared array, per renderer. */
+const samplesTargetFor = perObject<THREE.WebGLRenderer, THREE.WebGLRenderTarget>((gl) => {
+  const [fill] = roughnessFor(gl);
+  if (fill.target.kind !== 'shared')
+    throw new Error(
+      `expected the roughness stage to fill a shared array first, got a ${fill.target.kind} pass`
+    );
+  return new THREE.WebGLRenderTarget(fill.target.array.length, 1, {
+    type: THREE.FloatType,
+    depthBuffer: false,
+  });
+});
 
 /** What `copy_effects.cpp:1345-1363` reads to filter one roughness layer. */
 export interface RoughnessLayer {
@@ -186,13 +192,13 @@ export function drawFastFilter(
   gl: THREE.WebGLRenderer,
   chain: THREE.Texture,
   borderSize: number,
-  quality: FastFilterQuality,
-  sizes: readonly number[],
-  isTextureArray: boolean
+  { quality, isTextureArray }: Pick<FastFilter, 'quality' | 'isTextureArray'>,
+  sizes: readonly number[]
 ): FilteredImages {
-  if (sizes.length !== FILTER_IMAGES)
-    throw new Error(`expected ${FILTER_IMAGES} images for the fast filter, got ${sizes.length}`);
   const passes = FAST_FILTER_PASSES[quality][isTextureArray ? 'layers' : 'mips'](gl);
+  const images = passes[0]?.target.kind === 'scatter' ? passes[0].target.images.length : 0;
+  if (sizes.length !== images)
+    throw new Error(`expected ${images} images for the fast filter, got ${sizes.length}`);
   const atlas = atlasFor(gl, sizes);
   const values: Record<string, unknown> = {
     source_octmap: chain,
@@ -225,15 +231,15 @@ export function drawFastFilter(
   };
 }
 
-/** `dest_octmap0` to `dest_octmap5` (`octmap_filter.glsl:34-39`). */
-const FILTER_IMAGES = 6;
+/** `dest_octmap0` to `dest_octmap5` (`octmap_filter.glsl:34-39`): layers 1 to 6 of a sky. */
+export const FAST_FILTER_IMAGES = 6;
 
 /** Each image's width in invocations, halved for each mip without arrays (`octmap_filter.glsl:53`). */
 const BASE_RESOLUTION = 320;
 
 /** The invocations that store: Godot dispatches this many groups (`copy_effects.cpp:1222`). */
 export function filterInvocations(isTextureArray: boolean): number {
-  const sizes = Array.from({ length: 6 }, (_, mip) =>
+  const sizes = Array.from({ length: FAST_FILTER_IMAGES }, (_, mip) =>
     isTextureArray ? BASE_RESOLUTION : BASE_RESOLUTION >> mip
   );
   return sizes.reduce((sum, size) => sum + size * size, 0);

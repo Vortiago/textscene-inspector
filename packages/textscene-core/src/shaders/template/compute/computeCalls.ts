@@ -2,23 +2,14 @@ import type { SourcePosition } from '../../language/shadingLanguageError.js';
 import type { CallNode, Expression, Statement } from '../../language/shaderTree.js';
 import { isCall } from '../../language/treeWalk.js';
 import { builtInOverloads, constructorRow, resolvedOverload } from '../glslRows.js';
+import { builtInCall } from '../parseGlslExpression.js';
 
 /** A call of the GLSL built-in `name` on `operands`, typed by the overload they resolve to. */
 export function glslCall(name: string, operands: readonly Expression[], position: SourcePosition): CallNode {
   const types = operands.map((operand) => operand.type);
   const row = resolvedOverload(builtInOverloads(name), types);
   if (!row) throw new Error(`expected a GLSL overload ${name}(${types.join(', ')}), found none`);
-  return {
-    kind: 'operator',
-    op: 'OP_CALL',
-    row,
-    function: name,
-    rname: name,
-    qualifiers: operands.map(() => 'in'),
-    type: row.returns!,
-    operands,
-    position,
-  };
+  return builtInCall(name, row, operands, position);
 }
 
 /** A constant of one lane. */

@@ -9,7 +9,13 @@ import {
   type SkyOctmapLayout,
 } from '../../godot/rendering/environment/skyReflection.js';
 import { FAST_FILTERS, importanceSampleFilter, type FastFilter, type LayerFilter } from './layerFilter.js';
-import { drawDownsample, drawFastFilter, drawRoughness, type FilteredImages } from './octmapPasses.js';
+import {
+  drawDownsample,
+  drawFastFilter,
+  drawRoughness,
+  FAST_FILTER_IMAGES,
+  type FilteredImages,
+} from './octmapPasses.js';
 import { RADIANCE_MIP_FRAGMENT_SHADER, RADIANCE_OCTMAP_FRAGMENT_SHADER } from './skyLayerShaders.js';
 import {
   MIPMAPPED_TARGET_OPTIONS,
@@ -19,9 +25,6 @@ import {
 } from './octmapArrays.js';
 import { skyPass } from './skyPass.js';
 import type { SkyBake } from './types.js';
-
-/** The layers the fast filter draws, 1 to 6: a real-time sky's seven but the radiance (`sky.cpp:1547`). */
-const FAST_LAYERS = 6;
 
 /** Made once per renderer, as each bake would otherwise compile them again. */
 const radianceOctmapPassFor = perObject<THREE.WebGLRenderer, THREE.ShaderMaterial>(() =>
@@ -71,7 +74,7 @@ export class SkyLayerBaker {
       return;
     }
     const filtered = this.chain.fastFiltered(filter);
-    for (let layer = 1; layer <= FAST_LAYERS; layer += 1) {
+    for (let layer = 1; layer <= FAST_FILTER_IMAGES; layer += 1) {
       drawOffscreen(this.gl, () => filtered.copyInto(layer - 1, octmap, 0, 0));
       this.store(layer);
     }
@@ -161,19 +164,8 @@ class RadianceChain {
   /** Draws `filter` of layers 1 to 6 in one go (`sky.cpp:409-419`), for the caller to copy out. */
   fastFiltered(filter: FastFilter): FilteredImages {
     const { gl, layout } = this;
-    const sizes = layout.layerSizes.slice(1, FAST_LAYERS + 1);
-    let filtered: FilteredImages | undefined;
-    drawOffscreen(gl, () => {
-      filtered = drawFastFilter(
-        gl,
-        this.chain.texture,
-        layout.borderSize,
-        filter.quality,
-        sizes,
-        filter.isTextureArray
-      );
-    });
-    return filtered!;
+    const sizes = layout.layerSizes.slice(1, FAST_FILTER_IMAGES + 1);
+    return drawOffscreen(gl, () => drawFastFilter(gl, this.chain.texture, layout.borderSize, filter, sizes));
   }
 
   dispose(): void {
@@ -227,7 +219,7 @@ export function bakeAtlasLayers(
     if (filter.kind === 'fast') {
       const filtered = chain.fastFiltered(filter);
       drawOffscreen(gl, () => {
-        for (let layer = 1; layer <= FAST_LAYERS; layer += 1)
+        for (let layer = 1; layer <= FAST_FILTER_IMAGES; layer += 1)
           filtered.copyInto(layer - 1, target, index, layer);
       });
     } else

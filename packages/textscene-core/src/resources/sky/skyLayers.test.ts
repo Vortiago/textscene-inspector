@@ -52,7 +52,7 @@ afterEach(() => {
 
 /** The quality and the path of each fast filter draw, and the widths of its six images. */
 const fastFilterDraws = () =>
-  vi.mocked(drawFastFilter).mock.calls.map(([, , , quality, sizes, isTextureArray]) => ({
+  vi.mocked(drawFastFilter).mock.calls.map(([, , , { quality, isTextureArray }, sizes]) => ({
     quality,
     sizes,
     isTextureArray,

@@ -7,14 +7,14 @@ import * as THREE from 'three';
  * and `autoClear`, even when `draw` throws: a renderer left on a pass's target would draw the next
  * frame into it.
  */
-export function drawOffscreen(renderer: THREE.WebGLRenderer, draw: () => void): void {
+export function drawOffscreen<T>(renderer: THREE.WebGLRenderer, draw: () => T): T {
   const target = renderer.getRenderTarget();
   const layer = renderer.getActiveCubeFace();
   const mipmapLevel = renderer.getActiveMipmapLevel();
   const autoClear = renderer.autoClear;
   renderer.autoClear = false;
   try {
-    draw();
+    return draw();
   } finally {
     renderer.autoClear = autoClear;
     renderer.setRenderTarget(target, layer, mipmapLevel);

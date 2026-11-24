@@ -31,12 +31,8 @@ export const COMPUTE_ATLAS_SIZE = 'compute_atlas_size';
 export const computeOriginName = (index: number) => `compute_origin_${index}`;
 export const computeSizeName = (index: number) => `compute_size_${index}`;
 
-/** The most stores one invocation of `main`, as the template writes it, runs on any path. */
-export function mostStoresPerInvocation(main: FunctionNode): number {
-  return mostStores(main.body);
-}
-
-function mostStores(body: BlockNode): number {
+/** The most stores one run of `body` makes on any path. */
+export function mostStores(body: BlockNode): number {
   return body.statements.reduce((sum, statement) => sum + mostStoresOf(statement), 0);
 }
 
@@ -96,9 +92,10 @@ export function scatterMain(main: FunctionNode, images: readonly string[], ordin
     const [, address, stored] = statement.operands as [Expression, Expression, Expression];
     const at = statement.position;
     const isOrdinal = operator('OP_EQUAL', [stores, uint(ordinal)], at);
+    const image = images.indexOf(imageOf(statement));
     const kept = ifStatement(
-      operator('OP_AND', [isOrdinal, isInImage(address, images.indexOf(imageOf(statement)))], at),
-      [assign(value, stored), assign(place, atlasPlace(address, images.indexOf(imageOf(statement))))],
+      operator('OP_AND', [isOrdinal, isInImage(address, image)], at),
+      [assign(value, stored), assign(place, atlasPlace(address, image))],
       at
     );
     return [kept, assign(stores, operator('OP_ADD', [stores, uint(1)], at))];

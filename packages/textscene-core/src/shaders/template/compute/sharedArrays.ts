@@ -56,12 +56,17 @@ export function sharedTextureGlobals(arrays: readonly SharedArray[], position: S
   }));
 }
 
+/** The shared array `array`, a variable, names, or nothing. */
+function sharedArrayOf(array: Expression & { kind: 'variable' }, arrays: readonly SharedArray[]) {
+  return arrays.find(({ name }) => name === array.name);
+}
+
 /** The shared array an assignment statement writes an element of, or nothing. */
 export function sharedWriteOf(statement: Statement, arrays: readonly SharedArray[]): SharedWrite | undefined {
   if (statement.kind !== 'operator' || statement.op !== 'OP_ASSIGN') return undefined;
   const [target, value] = statement.operands as [Expression, Expression];
   if (target.kind !== 'array element' || target.array.kind !== 'variable') return undefined;
-  const array = arrays.find(({ name }) => name === (target.array as { name: string }).name);
+  const array = sharedArrayOf(target.array, arrays);
   return array && { array, index: target.index, value };
 }
 
@@ -121,7 +126,7 @@ export function withSharedReads(body: BlockNode, arrays: readonly SharedArray[])
   const read = (expression: Expression): Expression => {
     const mapped = withSubExpressions(expression, read);
     if (mapped.kind !== 'array element' || mapped.array.kind !== 'variable') return mapped;
-    const array = arrays.find(({ name }) => name === (mapped.array as { name: string }).name);
+    const array = sharedArrayOf(mapped.array, arrays);
     return array ? texelOf(array, mapped.index, mapped.position) : mapped;
   };
   const statement = (part: Statement): Statement => {
@@ -166,9 +171,11 @@ function texelOf(array: SharedArray, index: Expression, position: SourcePosition
 /** Whether the value or position of `write`, or a branch it stands in, reads an id that differs by group. */
 export function dependsOnGroup(body: BlockNode, write: SharedWrite, context: readonly Expression[]): boolean {
   const tainted = groupTainted(body);
-  const reads = (expression: Expression) =>
-    [...everyExpression(expression)].some((part) => part.kind === 'variable' && tainted.has(part.name));
-  return [write.index, write.value, ...context].some(reads);
+  return [write.index, write.value, ...context].some((expression) => readsAny(expression, tainted));
+}
+
+function readsAny(expression: Expression, names: ReadonlySet<string>): boolean {
+  return [...everyExpression(expression)].some((part) => part.kind === 'variable' && names.has(part.name));
 }
 
 /** The ids that differ from one group to the next, and every local a value or a branch of them reaches. */
@@ -176,8 +183,7 @@ const GROUP_IDS = ['gl_GlobalInvocationID', 'gl_WorkGroupID'];
 
 function groupTainted(body: BlockNode): Set<string> {
   const tainted = new Set(GROUP_IDS);
-  const reads = (expression: Expression) =>
-    [...everyExpression(expression)].some((part) => part.kind === 'variable' && tainted.has(part.name));
+  const reads = (expression: Expression) => readsAny(expression, tainted);
   const walk = (inner: BlockNode, isTaintedBranch: boolean): boolean => {
     let changed = false;
     const mark = (name: string) => {
