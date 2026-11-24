@@ -915,6 +915,12 @@ const SPATIAL_CHAPTER = {
       tsl: "the template's fog code with `CUSTOM_FOG_USED` or `FOG_DISABLED` defined",
     },
     {
+      heading: '`POINT_SIZE` and `POINT_COORD`',
+      rows: (row) => ['spatial.vertex.POINT_SIZE', 'spatial.fragment.POINT_COORD'].includes(row.id),
+      what: "A shader that names `POINT_SIZE` or `POINT_COORD` draws its surface as points, whatever the mesh's primitive (`scene_shader_forward_clustered.cpp:417-418`). Each vertex is a point, so a triangle list draws each corner. `POINT_SIZE` is the point's size in pixels, 1 when the shader leaves it alone (`scene_forward_clustered.glsl:446`). `POINT_COORD` runs from 0 to 1 across the point, with y down, and is `(0.5, 0.5)` when the shader names no `POINT_SIZE` (`:1337-1347`). three's node shaders write a size of 1 to every point, so the package takes Godot's draw for a device with no point size (`:707-725`): each vertex is an instance of six vertices, which the template moves to the corners of a square of `POINT_SIZE` pixels. Draw such a surface with `emulatedPointGeometry(geometry)` when `TranspiledSpatial.pointDraw` is `emulated`, and as `THREE.Points` when it is `native`. Points ignore the cull mode, and `FRONT_FACING` is true. Vulkan draws a size below 1 as 1 pixel, while Godot's square for it is smaller, or empty at 0 or below. A surface of lines draws each line from its first vertex, so `withGodotAttributes(geometry, 'lines')` turns each line for a `flat` varying. Chromium draws a line with ANGLE's Bresenham rule, which differs from Vulkan's on some pixels of each line.",
+      tsl: "the template's emulated point size with `sc_emulate_point_size` true, `gl_InstanceIndex` as three's `instanceIndex`, and three's `pointUV` turned for `gl_PointCoord`",
+    },
+    {
       heading: '`RADIANCE` and `IRRADIANCE`',
       rows: (row) => ['spatial.fragment.RADIANCE', 'spatial.fragment.IRRADIANCE'].includes(row.id),
       what: "`RADIANCE` and `IRRADIANCE` are colours a shader writes, which start at `(0, 0, 0, 0)` (`scene_forward_clustered.glsl:1241-1246`). The lit template mixes the sky's reflection towards `RADIANCE.rgb` by `RADIANCE.a`, and the ambient light towards `IRRADIANCE.rgb` by `IRRADIANCE.a` (`scene_forward_clustered.glsl:1735-1737, 1760-1762`). An unshaded surface reads neither, so on it a write changes nothing. The lit template is #1453.",

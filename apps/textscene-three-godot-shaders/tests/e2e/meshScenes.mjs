@@ -880,6 +880,122 @@ const SMALL_AT = (position, rotation) => ({ position, rotation, scale: [0.5, 0.5
 /** A second unshaded material, so the objects of two materials draw in turn. */
 const ORANGE = showing('vec3(0.9, 0.3, 0.1)');
 
+/** `mesh`, a triangle list, as the list of its triangles' edges: three lines a triangle. */
+function edgesOf(mesh) {
+  const corners = mesh.positions.flatMap((_, corner) =>
+    corner % 3 === 0 ? [corner, corner + 1, corner + 1, corner + 2, corner + 2, corner] : []
+  );
+  return Object.fromEntries(
+    Object.entries(mesh).map(([array, values]) => [array, corners.map((corner) => values[corner])])
+  );
+}
+
+const SPHERE_EDGES = edgesOf(SPHERE);
+
+/** `mesh`, a triangle list, with each vertex held once and an index, as a SphereMesh holds them. */
+function indexed(mesh) {
+  const keys = mesh.positions.map((_, corner) =>
+    JSON.stringify(Object.values(mesh).map((values) => values[corner]))
+  );
+  const firsts = [...new Set(keys)].map((key) => keys.indexOf(key));
+  const vertexOf = new Map(firsts.map((corner, vertex) => [keys[corner], vertex]));
+  return {
+    ...Object.fromEntries(
+      Object.entries(mesh).map(([array, values]) => [array, firsts.map((corner) => values[corner])])
+    ),
+    indices: keys.map((key) => vertexOf.get(key)),
+  };
+}
+
+const POINT_SIZE_ROWS = ['spatial.vertex.POINT_SIZE'];
+
+/** Off the ties where a quad's snapped corners and Vulkan's point square round apart (known-defects.md). */
+const POINT_PLACEMENT = { ...SPHERE_MOVED, position: [0.2991, -0.2033, -0.5] };
+
+/** `scene`, a stage scene, blending its colour onto the background by adding. */
+const withBlendAdd = (scene) => ({
+  ...scene,
+  source: scene.source.replace('render_mode unshaded;', 'render_mode unshaded, blend_add;'),
+});
+
+/** `scene` with its sphere at `POINT_PLACEMENT`. */
+const offTies = (scene) => ({ ...scene, object: POINT_PLACEMENT });
+
+/** The sphere drawn as points of `size`, a float expression of `vertex()`, coloured by its UV. */
+const pointSizeScene = (name, size, mesh = SPHERE) =>
+  offTies(
+    stageScene(
+      name,
+      { vertex: `POINT_SIZE = ${size};`, fragment: 'ALBEDO = vec3(UV, 0.3);' },
+      [...POINT_SIZE_ROWS, 'spatial.vertex.UV'],
+      mesh
+    )
+  );
+
+// Godot draws a surface as points whenever a function names POINT_SIZE or POINT_COORD.
+const POINT_SCENES = [
+  pointSizeScene('spatial-point-size', '4.0'),
+  pointSizeScene('spatial-point-size-one', '1.0'),
+  pointSizeScene('spatial-point-size-fraction', '2.5'),
+  pointSizeScene('spatial-point-size-large', '17.0'),
+  pointSizeScene('spatial-point-size-huge', '300.0'),
+  pointSizeScene('spatial-point-size-by-uv', '1.0 + UV.x * 9.0'),
+  // Points whose middles leave the view still draw the part inside it.
+  {
+    ...pointSizeScene('spatial-point-size-past-edge', '20.0'),
+    object: { ...SPHERE_MOVED, position: [1.6, -0.2, -0.5] },
+  },
+  // A line surface draws as points too: each line's two vertices.
+  { ...pointSizeScene('spatial-point-size-lines', '5.0', SPHERE_EDGES), primitive: 'lines' },
+  offTies(
+    stageScene(
+      'spatial-point-coord',
+      { vertex: 'POINT_SIZE = 12.0;', fragment: 'ALBEDO = vec3(POINT_COORD, 0.0);' },
+      [...POINT_SIZE_ROWS, 'spatial.fragment.POINT_COORD']
+    )
+  ),
+  // With no POINT_SIZE, POINT_COORD is the point's middle (`scene_forward_clustered.glsl:1346`).
+  stageScene('spatial-point-coord-alone', { fragment: 'ALBEDO = vec3(POINT_COORD, 0.9);' }, [
+    'spatial.fragment.POINT_COORD',
+  ]),
+  // Each point reads its own vertex, as the emulated draw makes a vertex an instance.
+  offTies(
+    stageScene(
+      'spatial-point-size-vertex-id',
+      {
+        declaration: 'varying vec3 band;',
+        vertex: 'POINT_SIZE = 5.0; band = vec3(float(VERTEX_ID % 7) / 7.0, 0.2, 0.6);',
+        fragment: 'ALBEDO = band;',
+      },
+      [...POINT_SIZE_ROWS, 'varying', 'spatial.vertex.VERTEX_ID']
+    )
+  ),
+  // Blended points: each vertex of the triangle list draws, so a shared corner blends once a triangle.
+  offTies(
+    stageScene(
+      'spatial-point-size-alpha',
+      { vertex: 'POINT_SIZE = 6.0;', fragment: 'ALBEDO = vec3(UV, 0.3); ALPHA = 0.4;' },
+      [...POINT_SIZE_ROWS, 'spatial.fragment.ALPHA']
+    )
+  ),
+  // One point an index adds a vertex once a triangle. Bright: this page's target is 8-bit, not RGBA16F.
+  withBlendAdd(
+    offTies(
+      stageScene(
+        'spatial-point-size-indexed-add',
+        { vertex: 'POINT_SIZE = 6.0;', fragment: 'ALBEDO = vec3(UV, 0.3) * 0.5;' },
+        [...POINT_SIZE_ROWS, 'spatial render_mode blend_add'],
+        indexed(SPHERE)
+      )
+    )
+  ),
+  // A points surface with no POINT_SIZE draws each vertex at size 1.
+  {
+    ...stageScene('spatial-points-surface', { fragment: 'ALBEDO = vec3(UV, 0.3);' }, []),
+    primitive: 'points',
+  },
+];
+
 export const MESH_SCENES = [
   {
     name: 'spatial-default-unshaded',
@@ -1003,6 +1119,7 @@ export const MESH_SCENES = [
   ...STENCIL_SCENES,
   ...FOG_SCENES,
   ...ENVIRONMENT_FOG_SCENES,
+  ...POINT_SCENES,
 ];
 
 /** Scenes whose program the GPU refuses: each must reach the material as a fault with this log. */

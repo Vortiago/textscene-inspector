@@ -64,7 +64,7 @@ export function SurfaceMaterialSlot({
     }),
     [pointDraw, primitive, placement, particleDraw]
   );
-  const undrawnOn = undrawnSurfaceOf(drawnOn, primitive, particles !== undefined);
+  const undrawnOn = undrawnSurfaceOf(drawnOn, particles !== undefined);
   useEffect(() => {
     if (shader && undrawnOn) warnUndrawnShader(shader, undrawnOn);
   }, [shader, undrawnOn]);
@@ -77,14 +77,8 @@ export function SurfaceMaterialSlot({
   return <SpatialShaderSlot shader={shader} attach={attach} fallback={standard} />;
 }
 
-/** The surface a spatial shader falls back on, or null for a mesh of triangles, which draws it. */
-function undrawnSurfaceOf(
-  drawnOn: ShaderSurface,
-  primitive: ListedSurface['primitive'] | undefined,
-  isParticles: boolean
-): UndrawnShaderSurface | null {
-  if (primitive === 'lines') return 'line mesh';
-  if (primitive === 'points') return 'point mesh';
+/** The surface a spatial shader falls back on, or null for a mesh's own surface, which draws it. */
+function undrawnSurfaceOf(drawnOn: ShaderSurface, isParticles: boolean): UndrawnShaderSurface | null {
   if (isParticles) return 'particle draw pass';
   return drawnOn === 'mesh' ? null : drawnOn;
 }

@@ -46,6 +46,8 @@ export const MATERIAL_SCENES = [
   { name: 'material-spatial-shader-environment-fog', file: 'unit-spatial-shader-environment-fog.tscn' },
   // Stencil modes on unshaded spatial shaders: an x-ray box behind a wall, a sphere cut out of a veil.
   { name: 'material-spatial-shader-stencil', file: 'unit-spatial-shader-stencil.tscn' },
+  // Point and line surfaces of spatial shaders: POINT_SIZE, POINT_COORD, blend_add points and a line strip.
+  { name: 'material-spatial-shader-points', file: 'unit-spatial-shader-points.tscn' },
   { name: 'surface-material-override', file: 'unit-surface-material-override.tscn' },
   // Multi-property guard, one row each: basic PBR, emission and normal,
   // advanced PBR, transparency and glass.

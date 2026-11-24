@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { unDrawnMessage } from '../../shaders/fault/shaderRefusal.js';
 import { compileSpatial } from '../../shaders/spatial/compileSpatial.js';
 import { withGodotAttributes } from '../../shaders/spatial/meshAttributes.js';
+import { geometryPrimitive } from '../../resources/meshes/godotSurface.js';
+import { isEmulatedPoints, refreshEmulatedPoints } from './pointSurface.js';
 import {
   beforeEachDraw,
   specialiseSpatial,
@@ -18,6 +20,7 @@ import { renderTargetSize } from '../renderTargetSize.js';
 import { renderedEnvironmentFog } from '../fog/fogFrame.js';
 
 export { setMaterialParameters } from '../../shaders/uniforms/materialParameters.js';
+export { drawPoints, undrawnMaterial } from './pointSurface.js';
 
 /** A spatial shader transpiled for one surface, or why the surface draws Godot's default one instead. */
 export type SpatialSurface =
@@ -38,7 +41,7 @@ export function spatialSurfaceOf(
   spatial.material.onBeforeProgram = specialise;
   try {
     beforeEachDraw(spatial, (camera, object, material) => {
-      if (object instanceof THREE.Mesh) withGodotSurface(object.geometry);
+      prepareDrawnSurface(object);
       writeSpatialBindings(spatial, sceneOf(gl, camera));
       // A shadow or depth draw runs before the frame's fog, and folds none: only the colour draw picks it.
       if (material === spatial.material) specialise();
@@ -57,12 +60,24 @@ export function spatialSurfaceOf(
   return compile;
 }
 
-/** Godot's attributes, written again when one the previewer holds changes, as a sprite's frame does. */
-export function withGodotSurface(geometry: THREE.BufferGeometry): void {
-  if (!hasSourcesChanged(geometry)) return;
-  withGodotAttributes(geometry);
+/** The attributes of the surface `object` draws, or of the surface its emulated points read. */
+function prepareDrawnSurface(object: THREE.Object3D): void {
+  const { parent } = object;
+  if (isEmulatedPoints(object)) {
+    if (parent && withGodotSurface((parent as THREE.Mesh).geometry)) refreshEmulatedPoints(object);
+    return;
+  }
+  const geometry = (object as Partial<THREE.Mesh>).geometry;
+  if (geometry) withGodotSurface(geometry);
+}
+
+/** Godot's attributes, written again when a held one changes, as a sprite's frame does. True when written. */
+export function withGodotSurface(geometry: THREE.BufferGeometry): boolean {
+  if (!hasSourcesChanged(geometry)) return false;
+  withGodotAttributes(geometry, geometryPrimitive(geometry));
   const uv = geometry.getAttribute('uv');
   if (uv) geometry.setAttribute('uv_attrib', fromTopRow(uv));
+  return true;
 }
 
 /** The previewer's attributes that Godot's are built from, as `withGodotAttributes` reads them. */

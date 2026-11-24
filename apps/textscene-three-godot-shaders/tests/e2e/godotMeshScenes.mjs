@@ -70,8 +70,11 @@ func mesh_of(scene: Dictionary) -> ArrayMesh:
 	if scene.mesh.has("bones"):
 		arrays[Mesh.ARRAY_BONES] = ints(scene.mesh.bones)
 		arrays[Mesh.ARRAY_WEIGHTS] = floats(scene.mesh.weights)
+	if scene.mesh.has("indices"):
+		arrays[Mesh.ARRAY_INDEX] = PackedInt32Array(scene.mesh.indices)
+	var primitives := { "triangles": Mesh.PRIMITIVE_TRIANGLES, "lines": Mesh.PRIMITIVE_LINES, "points": Mesh.PRIMITIVE_POINTS }
 	var mesh := ArrayMesh.new()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays, [], {}, flags)
+	mesh.add_surface_from_arrays(primitives[scene.get("primitive", "triangles")], arrays, [], {}, flags)
 	return mesh
 `,
   fill: `		var material := ShaderMaterial.new()
@@ -116,6 +119,7 @@ export function meshProjectFiles(scenes) {
     object: scene.object,
     ...(scene.parent ? { parent: scene.parent } : {}),
     ...(scene.compressed ? { compressed: true } : {}),
+    ...(scene.primitive ? { primitive: scene.primitive } : {}),
     ...(scene.fog ? { fog: scene.fog } : {}),
     ...(scene.others
       ? {

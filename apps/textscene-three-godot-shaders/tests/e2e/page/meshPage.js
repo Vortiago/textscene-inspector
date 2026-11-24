@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { glslFn } from 'three/tsl';
 import {
   createDepthPrepass,
+  emulatedPointGeometry,
   specialiseSpatial,
   transpileSpatial,
   withGodotAttributes,
@@ -79,15 +80,27 @@ const ARRAYS = [
   ['weights', 'skinWeight', 4],
 ];
 
-/** Godot's arrays as three's geometry in Godot's vertex order, its index counter-clockwise. */
-function geometryOf(mesh) {
+/** Godot's arrays as three's geometry in Godot's vertex order, a triangle's index counter-clockwise. */
+function geometryOf(mesh, primitive) {
   const geometry = new THREE.BufferGeometry();
   for (const [array, attribute, lanes] of ARRAYS) {
     const values = mesh[array];
     if (values) geometry.setAttribute(attribute, new THREE.Float32BufferAttribute(values.flat(), lanes));
   }
-  geometry.setIndex(mesh.positions.map((_, corner) => counterClockwiseCorner(corner)));
-  return withGodotAttributes(geometry);
+  const indices = mesh.indices ?? mesh.positions.map((_, corner) => corner);
+  if (primitive === 'triangles')
+    geometry.setIndex(indices.map((_, corner) => indices[counterClockwiseCorner(corner)]));
+  return withGodotAttributes(geometry, primitive);
+}
+
+/** The three object that draws `geometry` as Godot draws its surface with `spatial`. */
+function drawnObject(geometry, primitive, spatial) {
+  if (spatial.pointDraw === 'emulated')
+    return new THREE.Mesh(emulatedPointGeometry(geometry), spatial.material);
+  if (spatial.pointDraw === 'native' || primitive === 'points')
+    return new THREE.Points(geometry, spatial.material);
+  if (primitive === 'lines') return new THREE.LineSegments(geometry, spatial.material);
+  return new THREE.Mesh(geometry, spatial.material);
 }
 
 /** `node` placed by a spec's position, rotation in degrees and scale. */
@@ -127,11 +140,13 @@ function drawMesh(spec) {
     });
     specialiseSpatial(spatial, fog);
   }
-  const geometry = geometryOf(spec.mesh);
+  const primitive = spec.primitive ?? 'triangles';
+  const geometry = geometryOf(spec.mesh, primitive);
   const objects = [{ object: spec.object, source: spec.source }, ...(spec.others ?? [])];
   const meshes = objects.map(({ object, source = spec.source }, order) => {
-    const { material } = transpiled.get(source);
-    const mesh = placed(new THREE.Mesh(geometry, material), object);
+    const spatial = transpiled.get(source);
+    const { material } = spatial;
+    const mesh = placed(drawnObject(geometry, primitive, spatial), object);
     mesh.frustumCulled = false;
     // The alpha pass sorts by depth, as Godot's does (`render_forward_clustered.cpp:955`).
     mesh.renderOrder = material.transparent ? 0 : order;
@@ -161,7 +176,7 @@ function drawMesh(spec) {
   });
   for (const spatial of transpiled.values()) spatial.material.dispose();
   prepass.dispose();
-  geometry.dispose();
+  for (const drawn of new Set([geometry, ...meshes.map((mesh) => mesh.geometry)])) drawn.dispose();
   if (faults.length > 0) return { faults: faults.map(({ name, message, log }) => ({ name, message, log })) };
   return { pixels: Array.from(pixels) };
 }

@@ -1,0 +1,117 @@
+[gd_scene format=3 uid="uid://unit_spatial_shader_points"]
+
+; Spatial shaders that draw points: a sphere at POINT_SIZE 9 with POINT_COORD as colour, a sphere at
+; POINT_SIZE 4 under blend_add, a line strip drawn by a shader, and a points mesh with POINT_COORD only.
+; No other golden gives a translated surface POINT_SIZE, POINT_COORD or a line or point primitive.
+
+[sub_resource type="Shader" id="Shader_coord"]
+code = "shader_type spatial;
+render_mode unshaded;
+
+void vertex() {
+	POINT_SIZE = 9.0;
+}
+
+void fragment() {
+	ALBEDO = vec3(POINT_COORD, 0.6);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_coord"]
+shader = SubResource("Shader_coord")
+
+[sub_resource type="Shader" id="Shader_add"]
+code = "shader_type spatial;
+render_mode unshaded, blend_add;
+
+void vertex() {
+	POINT_SIZE = 4.0;
+}
+
+void fragment() {
+	ALBEDO = vec3(0.4, 0.2, 0.05);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_add"]
+shader = SubResource("Shader_add")
+
+[sub_resource type="Shader" id="Shader_line"]
+code = "shader_type spatial;
+render_mode unshaded;
+
+varying flat vec3 band;
+
+void vertex() {
+	band = vec3(float(VERTEX_ID % 4) / 4.0, 0.9, 0.3);
+}
+
+void fragment() {
+	ALBEDO = band;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_line"]
+shader = SubResource("Shader_line")
+
+[sub_resource type="Shader" id="Shader_centre"]
+code = "shader_type spatial;
+render_mode unshaded;
+
+void fragment() {
+	ALBEDO = vec3(POINT_COORD, 1.0);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_centre"]
+shader = SubResource("Shader_centre")
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+radial_segments = 16
+rings = 8
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_strip"]
+_surfaces = [{
+"aabb": AABB(-0.4, -0.4, 0, 0.8, 0.8, 1e-05),
+"format": 34359738369,
+"primitive": 2,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("zczMvs3MzL4AAAAAzczMPs3MzL4AAAAAzczMPs3MzD4AAAAAzczMvs3MzD4AAAAA")
+}]
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_points"]
+_surfaces = [{
+"aabb": AABB(-0.4, -0.4, 0, 0.8, 0.8, 1e-05),
+"format": 34359738369,
+"primitive": 0,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("zczMvs3MzL4AAAAAzczMPs3MzL4AAAAAzczMPs3MzD4AAAAAzczMvs3MzD4AAAAA")
+}]
+
+[node name="Root" type="Node3D"]
+
+[node name="CoordSphere" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.3, 0.6, 0)
+mesh = SubResource("SphereMesh_1")
+material_override = SubResource("ShaderMaterial_coord")
+
+[node name="AddSphere" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.3, 0.6, 0)
+mesh = SubResource("SphereMesh_1")
+material_override = SubResource("ShaderMaterial_add")
+
+[node name="Strip" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1, -1.1, -1.1, 0)
+mesh = SubResource("ArrayMesh_strip")
+material_override = SubResource("ShaderMaterial_line")
+
+[node name="Points" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1, 1.1, -1.1, 0)
+mesh = SubResource("ArrayMesh_points")
+material_override = SubResource("ShaderMaterial_centre")
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4.2)
+fov = 60.0
