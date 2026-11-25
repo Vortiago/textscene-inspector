@@ -32,7 +32,7 @@ export const MATERIAL_SCENES = [
   { name: 'material-spatial-shader-lit-outputs', file: 'unit-spatial-shader-lit-outputs.tscn' },
   // A lit dielectric with RIM under two suns. Godot 4.6.3: 0 px over 2/255. Ambient black: 5,426 px, max 5/255.
   { name: 'material-spatial-shader-lit-sun-dielectric', file: 'unit-spatial-shader-lit-sun-dielectric.tscn' },
-  // A lit metal under two suns. Godot 4.6.3: 0 px over 2/255. Ambient read black: 0 px over, max 1/255.
+  // A lit metal under two suns. Godot 4.6.3: 0 px over 2/255. Sun specular 0: 20,785 px, max 239/255.
   { name: 'material-spatial-shader-lit-sun-metal', file: 'unit-spatial-shader-lit-sun-metal.tscn' },
   // A lit light() shader under two suns. Godot 4.6.3: 0 px over 2/255. Ambient black: 28,079 px, max 38/255.
   { name: 'material-spatial-shader-lit-sun-light', file: 'unit-spatial-shader-lit-sun-light.tscn' },
