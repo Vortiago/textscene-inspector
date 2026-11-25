@@ -24,6 +24,12 @@ describe('surfaceShaderOf', () => {
     expect(shader.parametersWith({ map: texture })).toEqual({ tint: real(0.5), map: texture });
   });
 
+  it('reads one material once for the surfaces that share it', () => {
+    const material = { materialClass: 'StandardMaterial3D', properties: {}, resources: {} } as const;
+
+    expect(surfaceShaderOf({ baseMaterial: material })).toBe(surfaceShaderOf({ baseMaterial: material }));
+  });
+
   it("writes a StandardMaterial3D's shader and names its textures by their sampler", () => {
     const shader = baseMaterial({ roughness: '0.25' }, { normal_texture: reference, next_pass: reference });
 

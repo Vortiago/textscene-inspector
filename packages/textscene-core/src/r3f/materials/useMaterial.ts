@@ -26,10 +26,13 @@ export type LoadedMaterial =
   | { status: 'base-material'; baseMaterial: BaseMaterialProperties }
   /** A material type this previewer does not build: Godot's default 3D surface (ADR-0041). */
   | { status: 'declined'; type: string }
-  /** No reference, a file still loading or a missing one: nothing replaces what the surface had. */
+  /** A file that cannot load: a mesh surface draws Godot's default material, any other slot as `absent`. */
+  | { status: 'unavailable' }
+  /** No reference or a file still loading: nothing replaces what the surface had. */
   | { status: 'absent' };
 
 const ABSENT: LoadedMaterial = { status: 'absent' };
+const UNAVAILABLE: LoadedMaterial = { status: 'unavailable' };
 const DECLINED_SHADER: LoadedMaterial = { status: 'declined', type: 'ShaderMaterial' };
 const DECLINED_ORM: LoadedMaterial = { status: 'declined', type: 'ORMMaterial3D' };
 
@@ -70,6 +73,7 @@ export function useMaterial(
     if (shader) warnUndrawnShader(shader, surface);
   }, [shader, surface]);
   if (shader) return DECLINED_SHADER;
+  if (loaded.status === 'unavailable') return ABSENT;
   return loaded.status === 'base-material' ? DECLINED_ORM : loaded;
 }
 
@@ -88,6 +92,7 @@ function useLoadedMaterial(reference: ScopedReference | undefined): LoadedMateri
 }
 
 function loadedOf(read: Read<Material>): LoadedMaterial {
+  if (read.status === 'unavailable') return UNAVAILABLE;
   if (read.status !== 'loaded') return ABSENT;
   const material = read.value;
   if (material.form === 'standard') return { status: 'ready', material };

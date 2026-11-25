@@ -2,12 +2,13 @@ import type * as THREE from 'three';
 import type { BaseMaterialProperties } from '../../resources/materials/material/types';
 import type { ShaderText, ShaderTextureReference } from '../../resources/materials/shadermaterial/types';
 import { baseMaterialSurface } from '../../shaders/material/baseMaterialShader';
-import { ALBEDO_TEXTURE_SIZE } from '../../shaders/material/materialParameters';
+import { ALBEDO_TEXTURE_SIZE, textureParameterOf } from '../../shaders/material/materialParameters';
 import type { SamplerValue } from '../../shaders/uniforms/samplerUniform';
 import type { ParameterValue } from '../../shaders/uniforms/transpiledUniform';
 import { parameterVariants } from '../../shaders/uniforms/materialParameters';
 import { imageSizeOf } from '../../shaders/uniforms/textureLevels';
 import { variant } from '../../godot/variant/value/variant';
+import { perObject } from '../../utils/perObject';
 
 /** The material a spatial surface draws through its shader: a ShaderMaterial, or a BaseMaterial3D. */
 export type SurfaceShaderSource =
@@ -23,11 +24,14 @@ export interface SurfaceShader {
   parametersWith(textures: Readonly<Record<string, SamplerValue>>): Readonly<Record<string, ParameterValue>>;
 }
 
-/** The shader `source` draws, with its parameters read once. */
+const shaderMaterialSurfaceOf = perObject(shaderMaterialSurface);
+const baseMaterial3DSurfaceOf = perObject(baseMaterial3DSurface);
+
+/** The shader `source` draws, its parameters read once for the surfaces that share one material. */
 export function surfaceShaderOf(source: SurfaceShaderSource): SurfaceShader {
   return 'shader' in source
-    ? shaderMaterialSurface(source.shader)
-    : baseMaterial3DSurface(source.baseMaterial);
+    ? shaderMaterialSurfaceOf(source.shader)
+    : baseMaterial3DSurfaceOf(source.baseMaterial);
 }
 
 function shaderMaterialSurface({ code, file, parameters, textures }: ShaderText): SurfaceShader {
@@ -45,9 +49,11 @@ function baseMaterial3DSurface({
     code,
     file: materialClass,
     textures,
-    parametersWith: (loaded) => ({ ...parameters, ...loaded, ...albedoTextureSize(loaded.texture_albedo) }),
+    parametersWith: (loaded) => ({ ...parameters, ...loaded, ...albedoTextureSize(loaded[ALBEDO_TEXTURE]) }),
   };
 }
+
+const ALBEDO_TEXTURE = textureParameterOf('albedo_texture')!;
 
 /** `set_texture` gives the albedo texture's size to its own parameter (`material.cpp:2545`). */
 function albedoTextureSize(albedo: SamplerValue | undefined): Record<string, ParameterValue> {

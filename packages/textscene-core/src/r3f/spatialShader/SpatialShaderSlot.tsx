@@ -31,6 +31,8 @@ export function SpatialShaderSlot({ source, attach, fallback }: SpatialShaderSlo
   const gl = useThree((state) => state.gl);
   const invalidate = useThree((state) => state.invalidate);
   const scene = useThree((state) => state.scene);
+  // The material, not its wrapper, so the surfaces that share it warn once.
+  const material = 'shader' in source ? source.shader : source.baseMaterial;
   const fileCode = 'shader' in source ? source.shader.code : null;
   const translator = useShaderTranslator(loadSpatialSurface, fileCode, LOAD_FAILURE);
   const module = translator?.module ?? null;
@@ -51,7 +53,7 @@ export function SpatialShaderSlot({ source, attach, fallback }: SpatialShaderSlo
   const drawn = surface && 'spatial' in surface ? surface : null;
   const spatial = drawn?.spatial ?? null;
   useEffect(() => (spatial ? () => module!.disposeSpatial(spatial) : undefined), [module, spatial]);
-  useShaderRefusalWarning(source, surface && 'refusal' in surface ? surface.refusal : null);
+  useShaderRefusalWarning(material, surface && 'refusal' in surface ? surface.refusal : null);
 
   const samplers = drawn?.samplers ?? null;
   const [textures, textureSlots] = useShaderTextures(

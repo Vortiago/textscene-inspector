@@ -89,7 +89,7 @@ function shadedSourceOf(loaded: LoadedMaterial): SurfaceShaderSource | null {
   if (litSurfaceForm() !== 'nodes') return null;
   if (loaded.status === 'base-material') return { baseMaterial: loaded.baseMaterial };
   if (loaded.status === 'ready') return { baseMaterial: loaded.material.baseMaterial };
-  return loaded.status === 'declined' ? GODOT_DEFAULT_SOURCE : null;
+  return loaded.status === 'declined' || loaded.status === 'unavailable' ? GODOT_DEFAULT_SOURCE : null;
 }
 
 function useSurfaceOf(loaded: LoadedMaterial, surface?: TexturedSurface): SurfaceMaterial {
@@ -100,5 +100,11 @@ function useSurfaceOf(loaded: LoadedMaterial, surface?: TexturedSurface): Surfac
   // No bags while unresolved, so a late map leaves the placeholder material as it is.
   const bags = useMemo(() => textures && standardMaterialBags(scalars, textures), [scalars, textures]);
   const shader = loaded.status === 'spatial-shader' ? loaded.shader : null;
-  return { scalars, isAbsent: loaded.status === 'absent', bags, material, shader };
+  return {
+    scalars,
+    isAbsent: loaded.status === 'absent' || loaded.status === 'unavailable',
+    bags,
+    material,
+    shader,
+  };
 }
