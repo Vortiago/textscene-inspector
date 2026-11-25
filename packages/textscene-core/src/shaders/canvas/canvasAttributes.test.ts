@@ -88,6 +88,14 @@ describe('attributesGeometry', () => {
 
     expect(new THREE.Frustum().intersectsSphere(geometry.boundingSphere!)).toBe(true);
   });
+
+  it('refuses a surface with a colour count that is not 0, 1 or one for each point', () => {
+    const surface = { primitive: 'triangles' as const, points: SQUARE, colors: [RED, RED], uvs: [] };
+
+    expect(() => attributesGeometry(surface)).toThrow(
+      'expected 0, 1 or 4 colours and 0 or 4 UVs, got 2 and 0'
+    );
+  });
 });
 
 describe('attributesVariant', () => {
@@ -137,6 +145,14 @@ describe('primitiveObject', () => {
     const strip = primitiveObject('triangle_strip', geometry(), material) as THREE.Mesh;
 
     expect([...strip.geometry.index!.array]).toEqual([0, 1, 2, 1, 3, 2]);
+  });
+
+  it('leaves the strip geometry it reads as it was, so a second object reads the same strip', () => {
+    const strip = geometry();
+
+    primitiveObject('triangle_strip', strip, material);
+
+    expect([...strip.index!.array]).toEqual([0, 1, 2, 3]);
   });
 });
 

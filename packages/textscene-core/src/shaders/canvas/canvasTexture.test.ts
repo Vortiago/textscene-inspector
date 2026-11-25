@@ -26,12 +26,12 @@ describe('CanvasTextureBinding', () => {
     expect(firstTexel(texture('color_texture'))).toEqual([255, 255, 255, 255]);
   });
 
-  it('writes a texel size of 1 for no texture, as the default canvas texture has no diffuse size', () => {
+  it('writes a texel size of 1 for no texture and returns none, as the default canvas texture has no diffuse size', () => {
     const { binding, param } = bound();
 
     const texelSize = binding.bind(undefined, GODOT_CANVAS_TEXTURE_STATE);
 
-    expect([param('color_texture_pixel_size'), texelSize]).toEqual([new THREE.Vector2(1, 1), { x: 1, y: 1 }]);
+    expect([param('color_texture_pixel_size'), texelSize]).toEqual([new THREE.Vector2(1, 1), undefined]);
   });
 
   it('returns the texel size it writes', () => {

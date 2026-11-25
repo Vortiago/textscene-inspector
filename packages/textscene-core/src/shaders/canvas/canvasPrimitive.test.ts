@@ -119,6 +119,12 @@ describe('primitiveBatchGeometry', () => {
     expect([...primitiveBatchGeometry(records, count).index!.array]).toEqual(indices);
   });
 
+  it('refuses a batch of no points', () => {
+    expect(() => primitiveBatchGeometry(records, 0)).toThrow(
+      'expected a batch of primitives of 1 to 4 points, got 0'
+    );
+  });
+
   it('reads attrib_A to attrib_E as floats and attrib_F to attrib_H as unsigned integers', () => {
     const geometry = primitiveBatchGeometry(records, 3);
     const arrayOf = (name: string) =>

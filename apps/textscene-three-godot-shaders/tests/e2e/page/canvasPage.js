@@ -223,7 +223,7 @@ function ninePatchObjects(draws, { patch }) {
     axisY: patch.axisY,
     drawsCenter: patch.drawsCenter,
   };
-  const record = ninePatchInstanceData(command, draws.itemDraw, patch.isTextured ? texelSize : undefined);
+  const record = ninePatchInstanceData(command, draws.itemDraw, texelSize);
   return [primitiveObject('triangles', quadBatchGeometry([record]), draw.material)];
 }
 

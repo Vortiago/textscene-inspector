@@ -61,7 +61,6 @@ export {
   type CanvasNinePatchCommand,
   type CanvasRectCommand,
   type NinePatchAxisMode,
-  type TexelSize,
 } from './canvas/canvasRect.js';
 export {
   primitiveBatchGeometry,
@@ -90,6 +89,7 @@ export {
   type CanvasTextureFilter,
   type CanvasTextureRepeat,
   type CanvasTextureState,
+  type TexelSize,
 } from './canvas/canvasTexture.js';
 export type { PointDraw } from './spatial/spatialPipeline.js';
 export type { DirectionalLight } from './spatial/directionalLights.js';

@@ -4,6 +4,7 @@ import { TRANSFORM2D_IDENTITY } from '../../godot/math/transform2d.js';
 import {
   CANVAS_RECT,
   type CanvasNinePatchCommand,
+  type NinePatchAxisMode,
   ninePatchInstanceData,
   quadBatchGeometry,
   rectInstanceData,
@@ -211,6 +212,14 @@ describe('ninePatchInstanceData', () => {
   it('writes the axis modes from bit 9 and 11 and the centre from bit 8 in attrib_G.z', () => {
     expect(lanes(ninePatchInstanceData(PATCH, ITEM, TEXEL), 6).words[2]).toBe(
       (1 << 9) | (2 << 11) | (1 << 8)
+    );
+  });
+
+  it('refuses an axis mode Godot does not have', () => {
+    const patch = { ...PATCH, axisX: 'tile-fit' as NinePatchAxisMode };
+
+    expect(() => ninePatchInstanceData(patch, ITEM, TEXEL)).toThrow(
+      'expected an axis mode of stretch, tile, tile_fit, got tile-fit'
     );
   });
 

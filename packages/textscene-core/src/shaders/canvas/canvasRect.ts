@@ -8,12 +8,7 @@ import {
   instanceRecord,
   modulated,
 } from './canvasInstance.js';
-
-/** A texture's `texpixel_size`: one over its size in texels. */
-export interface TexelSize {
-  readonly x: number;
-  readonly y: number;
-}
+import type { TexelSize } from './canvasTexture.js';
 
 /** `RendererCanvasRender::CANVAS_RECT_*` (`renderer_canvas_render.h:41-49`). */
 export const CANVAS_RECT = {
@@ -173,10 +168,16 @@ export function ninePatchInstanceData(
   floats.set(command.margins, NINEPATCH_MARGINS);
   floats.set(rectValuesAsGiven(command.rect), DST_RECT);
   words[FLAGS] =
-    (NINE_PATCH_AXIS_MODES.indexOf(command.axisX) << NINEPATCH_H_MODE_SHIFT) |
-    (NINE_PATCH_AXIS_MODES.indexOf(command.axisY) << NINEPATCH_V_MODE_SHIFT) |
+    (axisModeIndex(command.axisX) << NINEPATCH_H_MODE_SHIFT) |
+    (axisModeIndex(command.axisY) << NINEPATCH_V_MODE_SHIFT) |
     (command.drawsCenter ? NINEPATCH_DRAW_CENTER : 0);
   return bytes;
+}
+
+function axisModeIndex(mode: NinePatchAxisMode): number {
+  const index = NINE_PATCH_AXIS_MODES.indexOf(mode);
+  if (index < 0) throw new Error(`expected an axis mode of ${NINE_PATCH_AXIS_MODES.join(', ')}, got ${mode}`);
+  return index;
 }
 
 /** Godot turns no negative size of a nine-patch (`renderer_canvas_render_rd.cpp:2564`). */

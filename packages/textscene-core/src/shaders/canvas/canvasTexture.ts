@@ -4,8 +4,13 @@ import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
 import { applySamplerState, GODOT_SAMPLING, type ProjectSampling } from '../uniforms/samplerState.js';
 import type { SamplerSettings } from '../uniforms/samplerTextures.js';
 import { TextureCopies } from '../uniforms/textureCopies.js';
-import type { TexelSize } from './canvasRect.js';
 import type { CanvasDraw } from './transpileCanvas.js';
+
+/** A texture's `texpixel_size`: one over its size in texels. */
+export interface TexelSize {
+  readonly x: number;
+  readonly y: number;
+}
 
 /** `CanvasItem.texture_filter` past `DEFAULT`, which the item resolves to the project's filter. */
 export type CanvasTextureFilter =
@@ -92,14 +97,15 @@ export class CanvasTextureBinding {
   }
 
   /** Binds `texture`, or Godot's default canvas texture, white, for a command with none. */
-  bind(texture: THREE.Texture | undefined, state: CanvasTextureState): TexelSize {
+  bind(texture: THREE.Texture | undefined, state: CanvasTextureState): TexelSize | undefined {
     const key = stateKey(state);
     const bound = texture ? this.copiesOf(key, state).copyOf(texture) : this.white;
     this.setTexture('color_texture', bound);
     const size = texture ? sizeOf(bound) : DEFAULT_TEXTURE_SIZE;
     writeBindings(TEXTURE_BINDINGS, this.draw.uniforms, size);
     for (const [held, copies] of this.copies) copies.release(held === key ? [bound] : []);
-    return { x: 1 / size.width, y: 1 / size.height };
+    // Nothing, not the default's size: a record with no texture reads the whole default texture.
+    return texture ? { x: 1 / size.width, y: 1 / size.height } : undefined;
   }
 
   /** Frees the copies and the default textures it binds. */

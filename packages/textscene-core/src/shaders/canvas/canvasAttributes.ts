@@ -39,12 +39,17 @@ export function triangleArrayCommand(
   colors: readonly Rgba[],
   uvs: readonly Vector2[]
 ): CanvasVertexArrays {
+  return checkedArrays({ primitive: 'triangles', indices, points, colors, uvs });
+}
+
+function checkedArrays(arrays: CanvasVertexArrays): CanvasVertexArrays {
+  const { points, colors, uvs } = arrays;
   const isColorCountValid = colors.length === 0 || colors.length === 1 || colors.length === points.length;
   if (!isColorCountValid || (uvs.length !== 0 && uvs.length !== points.length))
     throw new Error(
       `expected 0, 1 or ${points.length} colours and 0 or ${points.length} UVs, got ${colors.length} and ${uvs.length}`
     );
-  return { primitive: 'triangles', indices, points, colors, uvs };
+  return arrays;
 }
 
 /** The variant of a draw of `primitive` (`renderer_canvas_render_rd.cpp:2638, 3195`). */
@@ -61,7 +66,7 @@ const DEFAULT_UV = [0, 0];
  * @canonical The vertex attributes of a canvas polygon or mesh surface
  */
 export function attributesGeometry(arrays: CanvasVertexArrays): THREE.BufferGeometry {
-  const { points, colors, uvs, indices } = arrays;
+  const { points, colors, uvs, indices } = checkedArrays(arrays);
   const count = points.length;
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute(
@@ -216,10 +221,12 @@ function objectOf(primitive: CanvasPrimitive, geometry: THREE.BufferGeometry, ma
   }
 }
 
-/** Reads the strip from the index that `attributesGeometry` always sets. */
-function stripGeometry(geometry: THREE.BufferGeometry): THREE.BufferGeometry {
-  const strip = geometry.index;
-  if (!strip) throw new Error('expected an indexed strip geometry, got one with no index');
-  geometry.setIndex(new THREE.BufferAttribute(stripToTriangles(strip.array), 1));
-  return geometry;
+/** A new geometry over the same attributes, its index the triangles of the strip's index. */
+function stripGeometry(strip: THREE.BufferGeometry): THREE.BufferGeometry {
+  if (!strip.index) throw new Error('expected an indexed strip geometry, got one with no index');
+  const triangles = new THREE.BufferGeometry();
+  for (const [name, attribute] of Object.entries(strip.attributes)) triangles.setAttribute(name, attribute);
+  triangles.setIndex(new THREE.BufferAttribute(stripToTriangles(strip.index.array), 1));
+  triangles.boundingSphere = strip.boundingSphere;
+  return triangles;
 }

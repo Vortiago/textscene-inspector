@@ -96,6 +96,8 @@ export function primitiveBatchGeometry(
   records: readonly ArrayBuffer[],
   pointCount: number
 ): THREE.InstancedBufferGeometry {
+  if (pointCount < 1 || pointCount > 4)
+    throw new Error(`expected a batch of primitives of 1 to 4 points, got ${pointCount}`);
   const indices = PRIMITIVE_INDICES[Math.min(3, pointCount) - 1]!;
   return instanceBatchGeometry(records, PRIMITIVE_FLOAT_ATTRIBUTES, indices);
 }
