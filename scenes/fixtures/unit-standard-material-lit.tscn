@@ -4,6 +4,8 @@
 ; template (?litSurface=nodes). An albedo map, a normal map, roughness and metallic under a shadowed
 ; sun and a colour ambient light. The sphere and the ground share the material, so the golden holds
 ; one lit shader, as each costs about 25 s to compile on SwiftShader in CI.
+; Every other material golden draws the classic path, so only this one shows a regression in the
+; generated shader.
 
 [ext_resource type="Texture2D" path="res://textures/decal-checker.png" id="1_albedo"]
 [ext_resource type="Texture2D" path="res://textures/rough-limit-normal.png" id="2_normal"]
