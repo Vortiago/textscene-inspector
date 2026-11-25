@@ -1,6 +1,7 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, screen } from '@testing-library/react';
 import type { UndrawnNode } from '../../viewStatus/undrawnNodes';
+import { SceneNodeHandle } from '../../../scene/nodeHandle';
 import { renderInspector } from './inspector.testkit';
 
 /** `Main`, and below it a node of `type` named `name` that sets `properties`. */
@@ -19,6 +20,8 @@ function undrawnAt(path: string, reason: Partial<UndrawnNode>): UndrawnNode {
 }
 
 describe('<NodeDetailsPanel>', () => {
+  afterEach(() => vi.restoreAllMocks());
+
   it('shows the empty-state copy when nothing is selected', async () => {
     await renderInspector(sceneWith('Lamp', 'Node3D'), null);
     expect(screen.getByText(/Select a node/i)).toBeTruthy();
@@ -31,6 +34,13 @@ describe('<NodeDetailsPanel>', () => {
     expect(screen.getByText('OmniLight3D')).toBeTruthy();
     expect(screen.getByText('Main/Lamp')).toBeTruthy();
     expect(screen.getByText('Parent:').nextElementSibling?.textContent).toBe('Main');
+  });
+
+  it('shows the name and the class of the selected node before its inspection lands', async () => {
+    vi.spyOn(SceneNodeHandle.prototype, 'call').mockReturnValue(new Promise(() => undefined));
+    await renderInspector(sceneWith('Lamp', 'OmniLight3D'), 'Main/Lamp');
+
+    expect(screen.getByText('OmniLight3D')).toBeTruthy();
   });
 
   it('shows no Parent row for the scene root', async () => {

@@ -60,6 +60,14 @@ describe('formatCPUParticles2DProperties', () => {
     expect(params.items[1]!.value).toBe('1 × curve');
   });
 
+  it('writes a fractional range as the shortest decimal of each bound', async () => {
+    const params = sectionTitled(
+      await format({ initial_velocity_min: '0.1', initial_velocity_max: '0.5' }),
+      'Parameters'
+    );
+    expect(params!.items).toEqual([{ label: 'Initial Velocity', value: '0.1 … 0.5' }]);
+  });
+
   it('names the empty resource slots as none', async () => {
     const sections = await format();
     expect(value(sections, 'Colour', 'Texture')).toBe('(none)');

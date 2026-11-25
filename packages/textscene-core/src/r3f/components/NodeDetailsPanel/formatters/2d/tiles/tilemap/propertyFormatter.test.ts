@@ -24,6 +24,12 @@ describe('formatTileMapProperties', () => {
     expect(tileSection!.items).toContainEqual({ label: 'Layer1', value: '1 cell' });
   });
 
+  it('lists the first layer and the named far layer, and no row for the gap between', async () => {
+    const sections = await sectionsOf(formatTileMapProperties, 'TileMap', { 'layer_70000/name': '"A"' });
+    const rows = sectionTitled(sections, 'Tile Map')!.items.map((item) => item.label);
+    expect(rows).toEqual(['Tile Set', 'Layers', 'Layer0', 'A']);
+  });
+
   it('appends the Node2D base sections', async () => {
     const sections = await sectionsOf(formatTileMapProperties, 'TileMap');
     expect(sectionTitled(sections, 'Position')).toBeDefined();

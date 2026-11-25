@@ -45,3 +45,21 @@ describe('a particle range the file crosses', () => {
     expect(await node.get('initial_velocity_max')).toBe(200);
   });
 });
+
+describe('a particle range bound to infinity', () => {
+  it.each([
+    ['inf', Infinity],
+    ['-inf', -Infinity],
+  ])('reads %s back as the number', async (text, expected) => {
+    const scene = openScene({
+      source: `[gd_scene format=3]
+
+[node name="Main" type="CPUParticles2D"]
+scale_amount_max = ${text}
+`,
+      rootScenePath: 'res://infinite.tscn',
+      provider: { loadResource: async () => null },
+    });
+    expect(await scene.getNode('.').get('scale_amount_max')).toBe(expected);
+  });
+});

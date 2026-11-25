@@ -1,8 +1,3 @@
-/**
- * One labelled section of label and value rows, internal to `<NodeDetailsPanel>`.
- * Every `PropertyFormatter` emits a display string, so `value` renders as a
- * text node with no `dangerouslySetInnerHTML` and no XSS surface.
- */
 import type { PropertySection as PropertySectionData } from './formatters/inspectedNode.js';
 import styles from './NodeDetailsPanel.module.css';
 
@@ -17,6 +12,7 @@ export function PropertySection({ section }: PropertySectionProps) {
       {section.items.map((item, idx) => (
         <div className={styles.row} key={`${item.label}-${idx}`}>
           <span className={styles.label}>{item.label}:</span>
+          {/* A text node, not dangerouslySetInnerHTML: a value is text a file wrote. */}
           <span className={styles.value}>{item.value}</span>
         </div>
       ))}

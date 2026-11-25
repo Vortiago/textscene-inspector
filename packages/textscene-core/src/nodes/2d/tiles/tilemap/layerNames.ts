@@ -27,7 +27,9 @@ function buildLayersTo(names: Map<number, string>, index: number): void {
   const taken = new Set(names.values());
   // The serial scan of each built layer starts where the last one ended: every number before it is taken.
   let serial = index;
-  for (let built = names.size; built <= index; built++) {
+  // The layers below the ceiling run from 0 with no gap. A layer past it is not one of them.
+  const filled = [...names.keys()].filter((built) => built < NAME_FILL_CEILING).length;
+  for (let built = filled; built <= index; built++) {
     while (taken.has(`Layer${serial}`)) serial++;
     names.set(built, `Layer${serial}`);
     taken.add(`Layer${serial}`);

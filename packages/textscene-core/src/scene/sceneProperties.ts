@@ -4,7 +4,6 @@ import { varToStr } from '../godot/variant/varToStr.js';
 import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
 import type { ResourceReference, VariantValue } from '../godot/variant/variantValue.js';
 import * as logger from '../logger.js';
-import { findSubResource } from '../resources/SubResourceResolver.js';
 import { parseSubResourcePath, subResourcePath } from '../resources/subResourcePath.js';
 import type { DerivedProperties, NodeReader, NodeReads } from './derived/derivedProperty.js';
 import type { ListedReads } from './listed/listedProperties.js';
@@ -182,14 +181,6 @@ export class SceneProperties {
       logger.warn(`expected a property of ${node.type}, got "${property}": the class has no such property`);
     }
     return answer;
-  }
-
-  /** The class of the root scene's sub-resource that `path` names, or null for any other path. */
-  subResourceClass(path: string): string | null {
-    const { filePath, subResourceId } = parseSubResourcePath(path);
-    if (subResourceId === undefined || filePath !== this.rootScenePath) return null;
-    const scene = this.rootScene();
-    return (scene && findSubResource(scene.internalResources, subResourceId)?.type) ?? null;
   }
 
   /** The resource an id of the host's writes names: a file `scene.load` gave, else one of the root scene. */

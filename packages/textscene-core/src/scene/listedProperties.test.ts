@@ -221,6 +221,20 @@ layer_65/enabled = false
       'layer_66/name': null,
     });
   });
+
+  it('names a layer below a written layer far past the ceiling as the loop builds it', async () => {
+    const scene = openScene({
+      source: `[gd_scene format=3]
+
+[node name="TM" type="TileMap"]
+layer_70000/name = "A"
+layer_1/enabled = false
+`,
+      provider: { loadResource: async () => null },
+    });
+
+    expect(await answersOf(scene, '.', ['layer_1/name'])).toEqual({ 'layer_1/name': '"Layer1"' });
+  });
 });
 
 describe('get of a MeshInstance3D surface material override', () => {

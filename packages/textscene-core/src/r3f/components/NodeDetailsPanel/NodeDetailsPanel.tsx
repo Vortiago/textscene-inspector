@@ -22,7 +22,7 @@ export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
   const inspection = useInspection(scene, node);
   const undrawn = useUndrawnNode(path ?? '');
 
-  if (!node || !path || !inspection) {
+  if (!node || !path) {
     return (
       <div className={styles.root}>
         <div className={styles.empty}>Select a node to see its properties.</div>
@@ -73,7 +73,7 @@ export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
             <span className={styles.value}>{liveNodePathOf(parent.path)}</span>
           </div>
         )}
-        {inspection.instancedScene !== null && (
+        {inspection && inspection.instancedScene !== null && (
           <div className={`${styles.row} ${styles.externalInstance}`}>
             <span className={styles.label}>📦 External:</span>
             <span className={styles.value}>{inspection.instancedScene}</span>
@@ -81,7 +81,7 @@ export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
         )}
       </div>
 
-      {inspection.isCamera3D && preview !== null && (
+      {inspection?.isCamera3D && preview !== null && (
         <div className={styles.section}>
           <h4 className={styles.sectionTitle}>Camera</h4>
           {/* Godot's "Preview" checkbox for the selected Camera3D (`node_3d_editor_plugin.cpp:6303-6304`). */}
@@ -98,7 +98,7 @@ export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
         </div>
       )}
 
-      {inspection.sections.map((section, idx) => (
+      {inspection?.sections.map((section, idx) => (
         <PropertySection key={`${section.title}-${idx}`} section={section} />
       ))}
     </div>

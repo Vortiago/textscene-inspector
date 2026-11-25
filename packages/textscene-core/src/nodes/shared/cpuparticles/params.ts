@@ -86,9 +86,16 @@ export function withLoadedParamRanges(
     const [minKey, maxKey] = [`${prefix}_min`, `${prefix}_max`];
     if (!Object.hasOwn(properties, minKey) && !Object.hasOwn(properties, maxKey)) continue;
     const { min, max } = loadedParamRange(properties, prefix, def);
-    loaded = { ...loaded, [minKey]: String(min), [maxKey]: String(max) };
+    loaded = { ...loaded, [minKey]: realLiteral(min), [maxKey]: realLiteral(max) };
   }
   return loaded;
+}
+
+/** A number as Godot's text spells it: `String(Infinity)` gives `Infinity`, which `str_to_var` refuses. */
+function realLiteral(real: number): string {
+  if (Number.isNaN(real)) return 'nan';
+  if (!Number.isFinite(real)) return real > 0 ? 'inf' : '-inf';
+  return String(real);
 }
 
 /** The `amount` both constructors set (`cpu_particles_2d.cpp:1692`, `cpu_particles_3d.cpp:1781`). */

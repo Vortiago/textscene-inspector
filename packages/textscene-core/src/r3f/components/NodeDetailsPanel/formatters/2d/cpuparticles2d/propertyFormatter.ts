@@ -6,7 +6,7 @@ import {
 import { PARAM_SLOTS } from '../../../../../../nodes/shared/cpuparticles/params';
 import type { InspectedNode, NodeValues, PropertyItem, PropertySection } from '../../inspectedNode';
 import { formatNode2DProperties } from '../../base/node2d/propertyFormatter';
-import { resourceText, rgbaText, tupleText, yesNo } from '../../valueText';
+import { realText, resourceText, rgbaText, tupleText, yesNo } from '../../valueText';
 
 const PARTICLES_PROPERTIES = [
   'emitting',
@@ -130,7 +130,7 @@ async function paramItems(node: InspectedNode): Promise<PropertyItem[]> {
     const [min, max] = [values.number(`${prefix}_min`), values.number(`${prefix}_max`)];
     const hasCurve = curve && values.resource(`${prefix}_curve`) !== null;
     if (min === def && max === def && !hasCurve) return [];
-    const range = min === max ? String(min) : `${min} … ${max}`;
+    const range = min === max ? realText(min) : `${realText(min)} … ${realText(max)}`;
     return [{ label, value: hasCurve ? `${range} × curve` : range }];
   });
 }
