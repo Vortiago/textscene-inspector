@@ -1,5 +1,3 @@
-/* global document, window, MutationObserver, WebGL2RenderingContext */ // Browser globals.
-
 /** Prints the page's `[gltiming]` console lines on the runner's log, each with the runner's clock. */
 export function printTimingLines(page) {
   page.on('console', (message) => {
@@ -7,6 +5,8 @@ export function printTimingLines(page) {
     if (text.startsWith('[gltiming]')) console.log(`${new Date().toISOString()} ${text}`);
   });
 }
+
+/* global document, window, MutationObserver, WebGL2RenderingContext */
 
 /** Logs first draws, the canvas insert and long tasks, in ms since navigation start. */
 export function installTimingLog() {
