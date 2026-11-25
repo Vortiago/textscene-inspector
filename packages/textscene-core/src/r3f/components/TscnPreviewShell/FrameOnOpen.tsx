@@ -69,8 +69,8 @@ export function FrameOnOpen({ rootScenePath, hasScene, view, heard }: FrameOnOpe
     // Each settle that ends a load fits, as one can precede an instanced `.glb` load. A write never does.
     const isLoading = () => {
       const status = heard.get().status;
-      // A view that has not reported may have loaded already.
-      return status === null || status.pending.resources > 0;
+      // A view that has not reported may have loaded already, unless it shows a scene framed before.
+      return status === null ? !isFramed : status.pending.resources > 0;
     };
     let hasLoadedSinceSettle = isLoading();
     let wasSettled = false;

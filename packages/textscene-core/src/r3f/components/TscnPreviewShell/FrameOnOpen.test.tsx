@@ -192,6 +192,19 @@ describe('FrameOnOpen', () => {
     expect(focus).toHaveBeenCalledTimes(1);
   });
 
+  it('leaves an orbit made before a switch to 2D and back when the view first reports a settle', async () => {
+    const { focus, heard, moveByUser, runTimers, switchTo } = await mount();
+    await runTimers();
+    moveByUser();
+    await switchTo('2D');
+    await switchTo('3D');
+    focus.mockClear();
+
+    await act(async () => heardSettle(heard));
+
+    expect(focus).not.toHaveBeenCalled();
+  });
+
   it('frames a load that finishes after an earlier settle and after every timer', async () => {
     const { focus, settleLoad } = await mountWithLateLoad();
 

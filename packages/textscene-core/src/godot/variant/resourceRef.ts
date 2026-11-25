@@ -210,7 +210,9 @@ export type ValueRead = { kind: 'ExtResource'; id: string } | { kind: 'Resource'
 /** Each `ExtResource(…)` and `Resource(…)` literal of `text`, in the order the loader meets them. */
 export function valueReadsIn(text: string): ValueRead[] {
   if (!text.includes(RESOURCE_TOKEN)) return [];
-  const extReads = loadedRefSpans(text)
+  // The span scan reads each character, so a value of `SubResource` refs alone skips it.
+  const extSpans = text.includes(EXT_RESOURCE_TOKEN) ? loadedRefSpans(text) : [];
+  const extReads = extSpans
     .filter((span) => span.kind === 'ExtResource')
     .map((span) => ({ start: span.start, read: { kind: 'ExtResource', id: span.id } as const }));
   const literals = [...text.matchAll(PATH_RESOURCE_ANYWHERE_RE)].flatMap((match) => {
