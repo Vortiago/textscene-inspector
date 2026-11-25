@@ -43,6 +43,16 @@ interface BatchTexture {
   readonly height: number;
 }
 
+/** The texel size reads the image's size, so a texture whose image has not loaded cannot draw. */
+function sizeOf(texture: THREE.Texture): BatchTexture {
+  const image = texture.image as Partial<BatchTexture> | null;
+  if (!image?.width || !image.height)
+    throw new Error(
+      `expected a canvas texture with a loaded, sized image, got ${image?.width ?? 'no'} by ${image?.height ?? 'no'} texels`
+    );
+  return { width: image.width, height: image.height };
+}
+
 /** The members of `Params` a rect batch writes from its texture and the default canvas texture's maps. */
 const TEXTURE_BINDINGS: readonly Binding<BatchTexture>[] = [
   {
@@ -80,7 +90,7 @@ export class CanvasTextureBinding {
     const key = stateKey(state);
     const bound = texture ? this.copiesOf(key, state).copyOf(texture) : this.white;
     this.setTexture('color_texture', bound);
-    writeBindings(TEXTURE_BINDINGS, this.draw.uniforms, bound.image as BatchTexture);
+    writeBindings(TEXTURE_BINDINGS, this.draw.uniforms, sizeOf(bound));
     for (const [held, copies] of this.copies) copies.release(held === key ? [bound] : []);
   }
 

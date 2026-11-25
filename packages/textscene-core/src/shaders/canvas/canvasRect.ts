@@ -143,6 +143,8 @@ export function rectBatchGeometry(instances: readonly ArrayBuffer[]): THREE.Inst
     new THREE.InstancedInterleavedBuffer(words, RECORD_LANES - FLOAT_LANES)
   );
   geometry.instanceCount = instances.length;
+  // The template places each vertex from its record, and the geometry has no `position` to bound.
+  geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), Infinity);
   return geometry;
 }
 

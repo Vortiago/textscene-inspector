@@ -34,6 +34,12 @@ describe('CanvasTextureBinding', () => {
     expect(param('color_texture_pixel_size')).toEqual(new THREE.Vector2(1 / 8, 1 / 4));
   });
 
+  it('refuses a texture whose image has not loaded, as its texel size is unknown', () => {
+    const { binding } = bound();
+
+    expect(() => binding.bind(new THREE.Texture(), GODOT_CANVAS_TEXTURE_STATE)).toThrow(/no by no texels/);
+  });
+
   it("binds a copy of the texture with the item's filter and repeat, read as stored", () => {
     const { binding, texture } = bound();
     const source = texture8x4();

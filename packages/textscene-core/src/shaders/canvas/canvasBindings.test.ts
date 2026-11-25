@@ -51,15 +51,13 @@ describe('writeCanvasBindings', () => {
     expect(through(value('canvas_normal_transform'), 3, 5)).toEqual([0, 5]);
   });
 
-  it('writes the pixel size, the time, the pixel snap and the canvas modulation', () => {
-    const value = written();
-
-    expect([
-      value('screen_pixel_size'),
-      value('time'),
-      value('use_pixel_snap'),
-      value('canvas_modulation'),
-    ]).toEqual([new THREE.Vector2(1 / 128, 1 / 64), 1.5, true, new THREE.Vector4(1, 0.5, 0.25, 1)]);
+  it.each([
+    ['screen_pixel_size', new THREE.Vector2(1 / 128, 1 / 64)],
+    ['time', 1.5],
+    ['use_pixel_snap', true],
+    ['canvas_modulation', new THREE.Vector4(1, 0.5, 0.25, 1)],
+  ])('writes %s from the frame', (member, expected) => {
+    expect(written()(member)).toEqual(expected);
   });
 
   it('writes no light and keeps the vertex colours as they are', () => {

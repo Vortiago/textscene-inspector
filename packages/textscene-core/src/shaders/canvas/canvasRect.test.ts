@@ -1,4 +1,4 @@
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { TRANSFORM2D_IDENTITY } from '../../godot/math/transform2d.js';
 import { CANVAS_RECT, rectBatchGeometry, rectInstanceData, textureRectRegion } from './canvasRect.js';
@@ -122,6 +122,10 @@ describe('rectBatchGeometry', () => {
       (geometry.getAttribute(name) as unknown as { data: { stride: number } }).data.stride;
 
     expect([strideOf('attrib_A'), strideOf('attrib_H')]).toEqual([24, 8]);
+  });
+
+  it('is never culled, as it has no position to bound', () => {
+    expect(new THREE.Frustum().intersectsSphere(rectBatchGeometry(records).boundingSphere!)).toBe(true);
   });
 
   it("reads the record's flags in attrib_G.z of its own instance", () => {

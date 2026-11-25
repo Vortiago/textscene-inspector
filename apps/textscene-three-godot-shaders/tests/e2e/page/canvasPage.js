@@ -91,9 +91,9 @@ function rectsGeometry({ rects, item, texture }) {
   return rectBatchGeometry(records);
 }
 
-/** The pixels of the scene's rects drawn with Godot's default canvas shader, or `{ faults }`. */
+/** The pixels of the scene's rects drawn through its canvas shader, or `{ faults }`. */
 function drawCanvas(spec) {
-  const draw = transpileCanvasItem(DEFAULT_CANVAS_SHADER).draw('quad');
+  const draw = transpileCanvasItem(spec.source).draw('quad');
   const [a, b, c, d, tx, ty] = spec.canvasTransform;
   writeCanvasBindings(draw, {
     width: spec.width,
