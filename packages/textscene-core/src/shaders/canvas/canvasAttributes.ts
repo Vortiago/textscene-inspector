@@ -6,8 +6,8 @@ import type { Vector2 } from '../../godot/math/vector.js';
 import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
 import type { CanvasPrimitive } from './canvasPrimitive.js';
 import { type CanvasItemDraw, modulated, NO_INSTANCE_UNIFORMS, WHITE, worldOf } from './canvasInstance.js';
-import { emulatedPointGeometry } from '../spatial/meshAttributes.js';
-import { POINT_VERTEX_ID_ATTRIBUTE, type CanvasDraw, type CanvasVariant } from './transpileCanvas.js';
+import { emulatedPointGeometry, VERTEX_ID_ATTRIBUTE } from '../spatial/meshAttributes.js';
+import type { CanvasDraw, CanvasVariant } from './transpileCanvas.js';
 
 /** The vertex arrays of `Item::CommandPolygon`, or of one surface of a mesh. */
 export interface CanvasVertexArrays {
@@ -60,8 +60,8 @@ export function attributesVariant(primitive: CanvasPrimitive): CanvasVariant {
   return primitive === 'points' ? 'attributes_points' : 'attributes';
 }
 
-/** The template reads CUSTOM0 and CUSTOM1 only (`canvas.glsl:12-18`). */
-const CANVAS_CUSTOM_COUNT = 2;
+/** The custom arrays of a surface geometry that the template reads, CUSTOM0 first (`canvas.glsl:12-18`). */
+export const CANVAS_CUSTOM_ARRAYS = ['custom0', 'custom1'] as const;
 
 /** The default vertex buffers of a missing array (`mesh_storage.cpp:86-157`): a custom array's is zero. */
 const DEFAULT_COLOR = [1, 1, 1, 1];
@@ -87,12 +87,15 @@ export function attributesGeometry(arrays: CanvasVertexArrays): THREE.BufferGeom
   geometry.setAttribute('color_attrib', floats(colorValues ?? repeated(DEFAULT_COLOR, count), 4));
   const uvValues = uvs.length === count ? uvs.flatMap(({ x, y }) => [x, y]) : repeated(DEFAULT_UV, count);
   geometry.setAttribute('uv_attrib', floats(uvValues, 2));
-  for (let custom = 0; custom < CANVAS_CUSTOM_COUNT; custom++) {
+  CANVAS_CUSTOM_ARRAYS.forEach((name, custom) => {
     const values = arrays.customs?.[custom] ?? new Float32Array(count * 4);
-    geometry.setAttribute(`custom${custom}_attrib`, new THREE.BufferAttribute(values, 4));
-  }
+    geometry.setAttribute(`${name}_attrib`, new THREE.BufferAttribute(values, 4));
+  });
   if (arrays.primitive === 'points')
-    geometry.setAttribute(POINT_VERTEX_ID_ATTRIBUTE, floats([...points.keys()], 1));
+    geometry.setAttribute(
+      VERTEX_ID_ATTRIBUTE,
+      new THREE.BufferAttribute(Float32Array.from(points.keys()), 1)
+    );
   geometry.setAttribute('bone_attrib', new THREE.BufferAttribute(new Uint32Array(count * 4), 4));
   geometry.setAttribute('weight_attrib', new THREE.BufferAttribute(new Float32Array(count * 4), 4));
   // In order without indices: three counts the vertices of an unindexed draw from `position` alone.
@@ -208,7 +211,7 @@ export function attributesObject(
   geometry: THREE.BufferGeometry,
   primitive: CanvasPrimitive,
   constants: AttributesConstants
-): THREE.Object3D {
+): PrimitiveObject {
   writeEachDraw(draw);
   const object = draw.emulatesPoints
     ? primitiveObject('triangles', emulatedPointGeometry(geometry), draw.material)
@@ -233,6 +236,9 @@ function writeEachDraw(draw: CanvasDraw): void {
   });
 }
 
+/** The three object of one canvas primitive type. */
+export type PrimitiveObject = THREE.Mesh | THREE.Points | THREE.Line;
+
 /**
  * `RD::RenderPrimitive` (`renderer_canvas_render_rd.cpp:355`), a strip's geometry already cut into triangles.
  * @canonical The three object that draws a canvas primitive type
@@ -241,13 +247,17 @@ export function primitiveObject(
   primitive: CanvasPrimitive,
   geometry: THREE.BufferGeometry,
   material: THREE.Material
-): THREE.Object3D {
+): PrimitiveObject {
   const object = objectOf(primitive, geometry, material);
   object.frustumCulled = false;
   return object;
 }
 
-function objectOf(primitive: CanvasPrimitive, geometry: THREE.BufferGeometry, material: THREE.Material) {
+function objectOf(
+  primitive: CanvasPrimitive,
+  geometry: THREE.BufferGeometry,
+  material: THREE.Material
+): PrimitiveObject {
   switch (primitive) {
     case 'points':
       return new THREE.Points(geometry, material);

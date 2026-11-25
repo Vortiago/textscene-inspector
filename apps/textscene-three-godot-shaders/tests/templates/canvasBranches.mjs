@@ -116,17 +116,20 @@ function sceneMaterial(scene) {
   };
 }
 
+/** Each scene's material with the variants the scene draws, compiled once for both stages. */
+const sceneDraws = (scenes) =>
+  scenes.map((scene) => ({ material: sceneMaterial(scene), variants: drawnVariants(scene) }));
+
 /** The branches of `stage` each scene's material takes in each variant the scene draws. */
-const drawnBranches = (stage, scenes) =>
+const drawnBranches = (stage, draws) =>
   new Set(
-    scenes.flatMap((scene) => {
-      const material = sceneMaterial(scene);
-      return drawnVariants(scene).flatMap((variant) =>
+    draws.flatMap(({ material, variants }) =>
+      variants.flatMap((variant) =>
         decidedBranches(stage, variant, material)
           .filter((branch) => branch.isTaken)
           .map((branch) => branch.key)
-      );
-    })
+      )
+    )
   );
 
 /** The rows of each branch some material takes in some variant, and every branch a variant decides. */
@@ -152,9 +155,10 @@ const openState = (rows) =>
  */
 export function canvasBranchStates(scenes) {
   const materials = [DEFAULT_SHADER, ...definedMaterials()];
+  const draws = sceneDraws(scenes);
   return Object.fromEntries(
     STAGES.map((stage) => {
-      const drawn = drawnBranches(stage, scenes);
+      const drawn = drawnBranches(stage, draws);
       const { takenBy, decided } = materialBranches(stage, materials);
       const states = [...decided].map((key) => {
         if (drawn.has(key)) return [key, DRAWN];

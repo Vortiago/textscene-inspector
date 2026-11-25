@@ -5,7 +5,7 @@ import { bottomUpV } from '../../godot/math/uv';
 import type { Vector2 } from '../../godot/math/vector';
 import { geometryPrimitive } from '../../resources/meshes/godotSurface';
 import type { AtlasCellRects } from '../../resources/useTexture2D';
-import type { CanvasVertexArrays } from '../../shaders/canvas/canvasAttributes';
+import { CANVAS_CUSTOM_ARRAYS, type CanvasVertexArrays } from '../../shaders/canvas/canvasAttributes';
 import type { CanvasSurface } from '../canvasMesh/canvasSurface';
 
 /** `canvas_item_add_texture_rect_region` with a white modulate (`renderer_canvas_cull.cpp:1624`). */
@@ -84,9 +84,6 @@ export function meshCommands(geometries: readonly THREE.BufferGeometry[]): Canva
   }));
 }
 
-/** The custom arrays `godotSurfacesGeometry` writes that the canvas template reads, CUSTOM0 first. */
-const CUSTOM_ATTRIBUTES = ['custom0', 'custom1'];
-
 /** The sign that turns a geometry's y into Godot's, which runs down: three's runs up. */
 const THREE_FRAME_Y = -1;
 const GODOT_FRAME_Y = 1;
@@ -118,7 +115,7 @@ function vertexArraysOf(
       });
   }
   const index = geometry.getIndex();
-  const customs = CUSTOM_ATTRIBUTES.map(
+  const customs = CANVAS_CUSTOM_ARRAYS.map(
     (name) => geometry.getAttribute(name)?.array as Float32Array | undefined
   );
   return {

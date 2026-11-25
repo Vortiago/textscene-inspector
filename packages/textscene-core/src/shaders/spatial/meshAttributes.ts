@@ -204,7 +204,7 @@ function axisTangent(normal: Attribute, tangent: Attribute | undefined): THREE.B
 }
 
 /** The vertices a point quad draws: `point_coords` of `scene_forward_clustered.glsl:709`. */
-const QUAD_VERTICES = 6;
+export const QUAD_VERTICES = 6;
 
 /** The corners of a surface that one draw reads, as a three.js draw group holds them. */
 export interface DrawRange {

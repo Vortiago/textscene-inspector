@@ -9,7 +9,8 @@ import {
   modulated,
   WHITE,
 } from './canvasInstance.js';
-import { primitiveObject } from './canvasAttributes.js';
+import { QUAD_VERTICES } from '../spatial/meshAttributes.js';
+import { primitiveObject, type PrimitiveObject } from './canvasAttributes.js';
 import type { CanvasDraw, CanvasVariant } from './transpileCanvas.js';
 
 /** `Item::CommandPrimitive`: each point with its UV and colour. */
@@ -106,14 +107,14 @@ export function primitiveBatchGeometry(
 }
 
 /** The six corners of a point's two triangles, which `devicePoints` places. */
-const POINT_CORNERS = [0, 1, 2, 3, 4, 5];
+const POINT_CORNERS = [...Array(QUAD_VERTICES).keys()];
 
 /** A batch of primitives of `pointCount` points, each point two triangles where `draw` emulates points. */
 export function primitiveBatchObject(
   draw: CanvasDraw,
   records: readonly ArrayBuffer[],
   pointCount: number
-): THREE.Object3D {
+): PrimitiveObject {
   const geometry = primitiveBatchGeometry(records, pointCount);
   if (!draw.emulatesPoints)
     return primitiveObject(primitiveDraw(pointCount).primitive, geometry, draw.material);

@@ -4,6 +4,7 @@ import type { Node, TextureNode } from 'three/webgpu';
 import type { MaterialBlendState } from '../pipeline/blendState.js';
 import { parsedShader, shaderSource, type ShaderOptions } from '../language/parseShader.js';
 import { variablesRead } from '../language/treeWalk.js';
+import { VERTEX_ID_ATTRIBUTE } from '../spatial/meshAttributes.js';
 import { devicePoints, type DevicePoints } from '../template/devicePoints.js';
 import { emitTemplateStage, programResources, type WrittenBuiltIn } from '../template/emitTemplate.js';
 import { linkedProgram, type LinkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
@@ -75,9 +76,6 @@ export interface CanvasDraw {
   /** Whether each point draws as two triangles, at the shader's `POINT_SIZE`: three's points are 1 px. */
   readonly emulatesPoints: boolean;
 }
-
-/** The attribute of a points geometry that holds each point's vertex index, which `gl_VertexIndex` reads. */
-export const POINT_VERTEX_ID_ATTRIBUTE = 'vertex_id_attrib';
 
 export interface TranspiledCanvasItem {
   /** Each uniform of the material by name, which takes `set_shader_parameter`'s value in every variant. */
@@ -233,18 +231,13 @@ function pointSizeWrites({ variant, points }: VariantPoints): WrittenBuiltIn[] {
 
 /** `gl_VertexIndex` and `gl_InstanceIndex` as Godot counts them, for an emulated point too. */
 function drawIndices({ variant, points }: VariantPoints): [string, Node][] {
-  if (points && variant === 'primitive_points')
-    return [
-      ['gl_VertexIndex', int(0) as unknown as Node],
-      ['gl_InstanceIndex', int(instanceIndex) as unknown as Node],
-    ];
-  if (points)
-    return [
-      ['gl_VertexIndex', int(attribute(POINT_VERTEX_ID_ATTRIBUTE, 'float')) as unknown as Node],
-      ['gl_InstanceIndex', int(0) as unknown as Node],
-    ];
+  const [vertex, instance] = (!points
+    ? [int(vertexIndex), int(instanceIndex)]
+    : variant === 'primitive_points'
+      ? [int(0), int(instanceIndex)]
+      : [int(attribute(VERTEX_ID_ATTRIBUTE, 'float')), int(0)]) as unknown as [Node, Node];
   return [
-    ['gl_VertexIndex', int(vertexIndex) as unknown as Node],
-    ['gl_InstanceIndex', int(instanceIndex) as unknown as Node],
+    ['gl_VertexIndex', vertex],
+    ['gl_InstanceIndex', instance],
   ];
 }

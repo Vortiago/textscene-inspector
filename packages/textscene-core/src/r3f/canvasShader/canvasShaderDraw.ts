@@ -258,7 +258,7 @@ function meshBatch(
   const geometry = attributesGeometry(arrays);
   // Written in place by this batch, and read by the attributes draw before each draw.
   const constants = { world: mutableTransform2D(), modulation: WHITE };
-  const object = attributesObject(draw, geometry, arrays.primitive, constants) as THREE.Mesh;
+  const object = attributesObject(draw, geometry, arrays.primitive, constants);
   boundItem(object.geometry, [command]);
   return {
     object,
