@@ -5,6 +5,7 @@
  * the lenient skip-and-continue recovery.
  */
 
+import { headingReads, type HeadingReads } from './headingReads.js';
 import { resolveDeprecatedProperty, type ResolvedProperty } from '../godot/classdb/deprecated.js';
 import type {
   TscnScene,
@@ -57,6 +58,7 @@ interface CoreParseResult<N extends SceneNode<N>> {
   origins: readonly NodeOrigin<N>[];
   /** The seating of `origins`: the tree, and the copy each heading's node became in it. */
   seating: SceneSeating<N>;
+  headingReads: HeadingReads;
 }
 
 /** One property value the scan completed, after any multiline accumulation. */
@@ -128,6 +130,7 @@ export class TscnParserCore {
     // (`resource_format_text.cpp:837-841`), so a later one is a corrupt file, and the last one read stays.
     let mainResource: TscnMainResource | undefined;
     const editableInstances: string[] = [];
+    const headings = headingReads();
 
     let currentSection: SectionType = 'none';
     let currentHeading: ParsedHeading | null = null;
@@ -250,6 +253,7 @@ export class TscnParserCore {
           const editablePath =
             currentHeading.type === 'editable' ? currentHeading.attributes.path : undefined;
           if (editablePath !== undefined) editableInstances.push(simplifiedNodePath(editablePath));
+          headings.read(currentHeading, lineNumber);
           observer?.onSectionStart?.(currentHeading, currentSection, lineNumber);
         } else {
           observer?.onError?.({
@@ -337,10 +341,12 @@ export class TscnParserCore {
         refusesToInstantiate: refusesToInstantiate(origins),
         ...(headerResourceType !== undefined ? { resourceType: headerResourceType } : {}),
         ...(editableInstances.length > 0 ? { editableInstances } : {}),
+        ...headingValueReads(headings.reads),
         ...(mainResource ? { mainResource } : {}),
       },
       origins,
       seating,
+      headingReads: headings.reads,
     };
   }
 
@@ -354,4 +360,16 @@ export class TscnParserCore {
 
     return 'none';
   }
+}
+
+/** The heading values whose failed read ends the load, where a heading has any. */
+function headingValueReads({
+  instancesOutsideNodeBody,
+  connections,
+}: HeadingReads): Pick<TscnScene, 'abortingInstances' | 'connectionBinds'> {
+  const connectionBinds = connections.flatMap(({ binds }) => (binds === undefined ? [] : [binds]));
+  return {
+    ...(instancesOutsideNodeBody.length > 0 ? { abortingInstances: instancesOutsideNodeBody } : {}),
+    ...(connectionBinds.length > 0 ? { connectionBinds } : {}),
+  };
 }

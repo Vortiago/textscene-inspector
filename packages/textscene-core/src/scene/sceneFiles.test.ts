@@ -428,6 +428,40 @@ describe('the failure through which the game refuses the scene', () => {
     });
   });
 
+  it('sits on the missing base scene of an inherited scene, as Godot fails its load', async () => {
+    const source = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://base.tscn" id="1"]
+
+[node name="Main" instance=ExtResource("1")]
+`;
+    expect(await sceneFailures(source, {})).toEqual({
+      'res://base.tscn': {
+        line: 'res://main.tscn - Parse Error: [ext_resource] referenced non-existent resource at: res://base.tscn.',
+        chain: ['res://base.tscn'],
+        cause: 'missing',
+      },
+    });
+  });
+
+  it('sits on the missing file a connection binds, as Godot fails its load', async () => {
+    const source = `[gd_scene format=3]
+
+[ext_resource type="Resource" path="res://gone.tres" id="1"]
+
+[node name="Main" type="Node2D"]
+
+[connection signal="ready" from="." to="." method="queue_free" binds=[ExtResource("1")]]
+`;
+    expect(await sceneFailures(source, {})).toEqual({
+      'res://gone.tres': {
+        line: 'res://main.tscn - Parse Error: [ext_resource] referenced non-existent resource at: res://gone.tres.',
+        chain: ['res://gone.tres'],
+        cause: 'missing',
+      },
+    });
+  });
+
   it('is on no file once each file the scene reads loads', async () => {
     const files = { 'res://atlas.tres': ATLAS_READS_GONE, 'res://gone.png': 'bytes' };
     expect(await sceneFailures(READS_ATLAS, files)).toEqual({});

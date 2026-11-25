@@ -71,6 +71,10 @@ export interface TscnScene<N extends RawNode = TscnNode> {
    * content the editor lets the user edit (`resource_format_text.cpp:400`). Absent where none.
    */
   editableInstances?: readonly string[];
+  /** Each `instance=` of a `[node]` heading that follows no other `[node]`: a failed read ends the load. */
+  abortingInstances?: readonly string[];
+  /** The `binds=` value of each `[connection]` heading, in file order. Absent where none. */
+  connectionBinds?: readonly string[];
   /**
    * A `.tres` file's own `[resource]` body. Absent in a `.tscn`, where the loader refuses the tag
    * (`resource_format_text.cpp:723-728`).

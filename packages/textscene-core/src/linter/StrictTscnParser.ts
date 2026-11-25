@@ -35,8 +35,8 @@ export class StrictTscnParser {
    * @returns Parse result with errors or parsed scene
    */
   parse(content: string): StrictParseResult {
-    const { observer, errors, lines, headingReads } = strictObserver();
-    const { scene, origins, seating } = this.core.parse(content, createRawNode, observer);
+    const { observer, errors, lines } = strictObserver();
+    const { scene, origins, seating, headingReads } = this.core.parse(content, createRawNode, observer);
 
     // The scene comes back even when a property failed: a bad value does not invalidate the tree. Withholding it
     // would skip the rule phase, so one out-of-range property would silence every semantic rule in the file, and a

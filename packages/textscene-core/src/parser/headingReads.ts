@@ -1,12 +1,6 @@
-/**
- * What a heading's own fields carry, which no section body holds: each `[connection]` heading, the `[editable]`
- * headings with no `path=`, and the `ExtResource` uses of a node's `instance=`. Only the linter asks, so the strict
- * parser collects them from `onSectionStart` and the shared scan never does.
- */
-
-import type { ParsedHeading } from '../../parser/utils.js';
-import type { ConnectionHeading, HeadingFacts } from '../../parser/types.js';
-import { parseIdTrail } from '../../godot/scene/packedScene.js';
+import type { ParsedHeading } from './utils.js';
+import type { ConnectionHeading, HeadingFacts } from './types.js';
+import { parseIdTrail } from '../godot/scene/packedScene.js';
 
 export type HeadingReads = Pick<
   HeadingFacts,

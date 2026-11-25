@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { headingReads } from './headingReads.js';
-import { parseHeading } from '../../parser/utils.js';
+import { parseHeading } from './utils.js';
 
 function readsOf(...headings: string[]) {
   const collector = headingReads();

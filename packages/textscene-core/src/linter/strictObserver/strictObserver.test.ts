@@ -67,27 +67,4 @@ describe('strictObserver', () => {
     ).errors;
     expect(Object.keys(error!).slice(-2)).toEqual(['nodeName', 'nodeType']);
   });
-
-  it('collects the heading reads', () => {
-    const { headingReads } = observe(
-      '[gd_scene format=3]\n\n[node name="Root" instance=ExtResource("1")]\n\n' +
-        '[connection signal="ready" from="." to="." method="go" binds=[1]]\n'
-    );
-    expect(headingReads).toEqual({
-      connections: [
-        {
-          line: 5,
-          signal: 'ready',
-          from: '.',
-          to: '.',
-          method: 'go',
-          binds: '[1]',
-          fromIdTrail: undefined,
-          toIdTrail: undefined,
-        },
-      ],
-      pathlessEditableLines: [],
-      instancesOutsideNodeBody: ['ExtResource("1")'],
-    });
-  });
 });

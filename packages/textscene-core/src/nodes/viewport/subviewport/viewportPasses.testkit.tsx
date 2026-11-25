@@ -169,14 +169,7 @@ export async function framesOf(
   const animated: { current: AnimatedValueRegistry | null } = { current: null };
   const rectPublisher: { current: RegisterViewportRect | null } = { current: null };
   const parsedFirst = new TscnParser().parse(tscn);
-  const sceneGraph = buildSceneGraph(
-    tscnSceneToParsedScene(
-      'res://test.tscn',
-      parsedFirst.nodes,
-      parsedFirst.externalResources,
-      parsedFirst.internalResources
-    )
-  );
+  const sceneGraph = buildSceneGraph(tscnSceneToParsedScene('res://test.tscn', parsedFirst));
   const treeOf = (source: string) => {
     const parsed = new TscnParser().parse(source);
     return (

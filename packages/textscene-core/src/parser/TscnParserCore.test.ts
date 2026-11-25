@@ -759,3 +759,34 @@ describe('TscnParserCore editable instances', () => {
     );
   });
 });
+
+describe('the heading reads of a scan', () => {
+  const content =
+    '[gd_scene format=3]\n\n[node name="Root" instance=ExtResource("1")]\n\n' +
+    '[connection signal="ready" from="." to="." method="go" binds=[1]]\n';
+
+  it('collects each connection, each pathless editable line and each instance outside a node body', () => {
+    expect(new TscnParserCore().parse(content, () => null).headingReads).toEqual({
+      connections: [
+        {
+          line: 5,
+          signal: 'ready',
+          from: '.',
+          to: '.',
+          method: 'go',
+          binds: '[1]',
+          fromIdTrail: undefined,
+          toIdTrail: undefined,
+        },
+      ],
+      pathlessEditableLines: [],
+      instancesOutsideNodeBody: ['ExtResource("1")'],
+    });
+  });
+
+  it('puts the heading values whose failed read ends the load on the scene', () => {
+    const { scene } = new TscnParserCore().parse(content, () => null);
+
+    expect(scene).toMatchObject({ abortingInstances: ['ExtResource("1")'], connectionBinds: ['[1]'] });
+  });
+});

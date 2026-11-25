@@ -63,7 +63,7 @@ interface ResourceRefSpan extends ResourceRef {
  * @returns whether `text` ends inside a string
  */
 function scanLoadedRefs(text: string, inString: boolean, sink: ScanSink): boolean {
-  const { refs, literals, isExtOnly } = sink;
+  const { refs, literals } = sink;
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
     if (inString) {
@@ -87,7 +87,7 @@ function scanLoadedRefs(text: string, inString: boolean, sink: ScanSink): boolea
       if (literals) i = readLiteralAt(text, i, literals);
       continue;
     }
-    if (!refs || (isExtOnly && char === 'S')) continue;
+    if (!refs) continue;
     RESOURCE_REF_AT_RE.lastIndex = i;
     const match = RESOURCE_REF_AT_RE.exec(text);
     if (!match) continue;
@@ -102,8 +102,6 @@ function scanLoadedRefs(text: string, inString: boolean, sink: ScanSink): boolea
 interface ScanSink {
   refs: ResourceRefSpan[] | null;
   literals: LiteralSpan[] | null;
-  /** True to skip each `SubResource(…)`, which a read of other files has no use for. */
-  isExtOnly?: boolean;
 }
 
 /** Every reference the loader resolves in one value, as {@link scanLoadedRefs} reads it. */
@@ -227,8 +225,8 @@ function readLiteralAt(text: string, start: number, literals: LiteralSpan[]): nu
   return PATH_RESOURCE_AT_RE.lastIndex - 1;
 }
 
-/** An `ExtResource` id, a `Resource(…)` literal's path and its `uid://`, or a literal Godot refuses. */
-export type ValueRead = { kind: 'ExtResource'; id: string } | LiteralRead | RefusedRead;
+/** A reference's id, a `Resource(…)` literal's path and its `uid://`, or a literal Godot refuses. */
+export type ValueRead = ResourceRef | LiteralRead | RefusedRead;
 
 /** A null path is a literal with only a `uid://`, which nothing here resolves. */
 export type LiteralRead = { kind: 'Resource'; path: string | null; uid: string };
@@ -236,18 +234,19 @@ export type LiteralRead = { kind: 'Resource'; path: string | null; uid: string }
 /** A literal with two paths or two `uid://`, at which the parse fails (`variant_parser.cpp:1141-1152`). */
 export type RefusedRead = { kind: 'Refused' };
 
-/** Each `ExtResource(…)` and `Resource(…)` literal of `text`, in the order the loader meets them. */
+/** Each reference and `Resource(…)` literal of `text`, in the order the loader meets them. */
 export function valueReadsIn(text: string): ValueRead[] {
+  // Each of the three spellings holds this word.
+  if (!text.includes('Resource')) return [];
   const hasLiteral = PATH_RESOURCE_SOMEWHERE_RE.test(text);
-  if (!hasLiteral && !text.includes(EXT_RESOURCE_TOKEN)) return [];
   const refs: ResourceRefSpan[] = [];
   const literals: LiteralSpan[] = [];
-  scanLoadedRefs(text, false, { refs, literals: hasLiteral ? literals : null, isExtOnly: true });
-  const extReads = refs.map((span): { start: number; read: ValueRead } => ({
+  scanLoadedRefs(text, false, { refs, literals: hasLiteral ? literals : null });
+  const refReads = refs.map((span): { start: number; read: ValueRead } => ({
     start: span.start,
-    read: { kind: 'ExtResource', id: span.id },
+    read: { kind: span.kind, id: span.id },
   }));
-  return [...extReads, ...literals].sort((a, b) => a.start - b.start).map(({ read }) => read);
+  return [...refReads, ...literals].sort((a, b) => a.start - b.start).map(({ read }) => read);
 }
 
 /** The read of each `Resource(…)` literal of `text` that Godot parses, in order, each with its `uid://`. */

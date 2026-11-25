@@ -322,8 +322,11 @@ describe('valueReadsIn', () => {
     ]);
   });
 
-  it('reads no SubResource', () => {
-    expect(valueReadsIn('[SubResource("x"), ExtResource("1")]')).toEqual([{ kind: 'ExtResource', id: '1' }]);
+  it('gives the id of a SubResource beside an ExtResource, as Godot fails an undeclared one', () => {
+    expect(valueReadsIn('[SubResource("x"), ExtResource("1")]')).toEqual([
+      { kind: 'SubResource', id: 'x' },
+      { kind: 'ExtResource', id: '1' },
+    ]);
   });
 
   it('gives a refused read for a literal with two paths or two uids, which Godot does not parse', () => {

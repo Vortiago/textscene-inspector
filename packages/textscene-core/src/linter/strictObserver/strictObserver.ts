@@ -1,12 +1,6 @@
-/**
- * The strict parser's `ParseObserver`: it collects every syntax and format error as a `ParseError`, checks each
- * `[node]` heading, runs the registered property validators and records the lines and heading reads the linter needs.
- */
-
 import type { ParseObserver } from '../../parser/TscnParserCore.js';
 import type { BuiltSection } from '../../parser/types.js';
 import type { ParseError, SectionLines } from '../types.js';
-import { headingReads, type HeadingReads } from './headingReads.js';
 import { instancedPaths } from './instancedPaths.js';
 import { nodeHeadingErrors } from './nodeHeadingChecks.js';
 import { propertyRefusal } from './propertyCheck.js';
@@ -19,13 +13,11 @@ interface StrictObserver {
   /** Filled while the scan runs. */
   errors: ParseError[];
   lines: Map<BuiltSection, SectionLines>;
-  headingReads: HeadingReads;
 }
 
 export function strictObserver(): StrictObserver {
   const errors: ParseError[] = [];
   const lines = sectionLines();
-  const reads = headingReads();
   const instanced = instancedPaths();
   const isRootHeading = rootHeadingCounter();
   // Written on each heading. Every refusal raised while it is set is about that section.
@@ -46,7 +38,6 @@ export function strictObserver(): StrictObserver {
     },
 
     onSectionStart: (heading, section, line) => {
-      reads.read(heading, line);
       lines.start();
       if (section !== 'node') {
         owner = sectionOwnerOf(heading, section);
@@ -75,5 +66,5 @@ export function strictObserver(): StrictObserver {
     onSectionBuilt: (built, headingLine) => lines.built(built, headingLine),
   };
 
-  return { observer, errors, lines: lines.lines, headingReads: reads.reads };
+  return { observer, errors, lines: lines.lines };
 }
