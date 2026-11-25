@@ -24,12 +24,12 @@ const IDENTITY: Readonly<Record<string, Variant>> = {
 };
 
 /** The lanes of a uniform the material gives no value (`material_storage.cpp:804`). */
-function defaultLanes(uniform: UniformNode, useLinearColor: boolean): Lanes {
-  if (uniform.defaultValue) return constantLanes(uniform, uniform.defaultValue, useLinearColor);
+function defaultLanes(uniform: UniformNode, usesLinearColors: boolean): Lanes {
+  if (uniform.defaultValue) return constantLanes(uniform, uniform.defaultValue, usesLinearColors);
   const arraySize = uniform.arraySize ?? 0;
   const isColor = uniform.type === 'vec3' || uniform.type === 'vec4';
   if (isColor && uniform.hint === 'source_color')
-    return valueLanes(uniform.type, arraySize, BLACK, useLinearColor);
+    return valueLanes(uniform.type, arraySize, BLACK, usesLinearColors);
   if (isColor && uniform.hint === 'color_conversion_disabled')
     return valueLanes(uniform.type, arraySize, BLACK, false);
   const identity = IDENTITY[uniform.type];
@@ -38,17 +38,17 @@ function defaultLanes(uniform: UniformNode, useLinearColor: boolean): Lanes {
 }
 
 /** The lanes of the material's value of a uniform (`material_storage.cpp:799`). NIL erases the value. */
-export function materialLanes(uniform: UniformNode, value: Variant, useLinearColor: boolean): Lanes {
-  if (value.type === 'NIL') return defaultLanes(uniform, useLinearColor);
-  const isLinear = useLinearColor && uniform.hint !== 'color_conversion_disabled';
+export function materialLanes(uniform: UniformNode, value: Variant, usesLinearColors: boolean): Lanes {
+  if (value.type === 'NIL') return defaultLanes(uniform, usesLinearColors);
+  const isLinear = usesLinearColors && uniform.hint !== 'color_conversion_disabled';
   return valueLanes(uniform.type, uniform.arraySize ?? 0, value, isLinear);
 }
 
 /** `_fill_std140_ubo_value` (`material_storage.cpp:347`): a source colour default goes to linear. */
-function constantLanes(uniform: UniformNode, values: readonly Scalar[], useLinearColor: boolean): Lanes {
+function constantLanes(uniform: UniformNode, values: readonly Scalar[], usesLinearColors: boolean): Lanes {
   const lanes = values.map(Number);
   const isColor = uniform.type === 'vec3' || uniform.type === 'vec4';
-  if (!isColor || uniform.hint !== 'source_color' || !useLinearColor) return lanes;
+  if (!isColor || uniform.hint !== 'source_color' || !usesLinearColors) return lanes;
   return lanes.map((lane, index) => (index < 3 ? srgbToLinear(lane) : lane));
 }
 

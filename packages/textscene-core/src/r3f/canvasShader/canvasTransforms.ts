@@ -1,27 +1,27 @@
 import * as THREE from 'three';
-import type { Transform2DColumns } from '../../godot/math/transform2d';
+import type { MutableTransform2D } from '../../godot/math/transform2d';
 import { FLIP_Y } from '../components/Canvas2DStage/world2DCamera';
 
 /** Scratch for one transform, overwritten by the next call. */
 const clip = new THREE.Matrix4();
 
-/** `canvas_data.canvas_transform`: the canvas of `frame` in target pixels, with the camera's pan and zoom. */
-export function canvasTransformOf(
+/** Writes `canvas_data.canvas_transform` into `out`: `frame` in target pixels, as the camera sees it. */
+export function canvasDataTransformInto(
+  out: MutableTransform2D,
   camera: THREE.Camera,
   frame: THREE.Object3D | null,
   { width, height }: { readonly width: number; readonly height: number }
-): Transform2DColumns {
+): MutableTransform2D {
   clip.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
   if (frame) clip.multiply(frame.matrixWorld);
   const e = clip.multiply(FLIP_Y).elements;
   const halfWidth = width / 2;
   const halfHeight = height / 2;
-  return {
-    a: e[0]! * halfWidth,
-    b: e[1]! * halfHeight,
-    c: e[4]! * halfWidth,
-    d: e[5]! * halfHeight,
-    tx: (e[12]! + 1) * halfWidth,
-    ty: (e[13]! + 1) * halfHeight,
-  };
+  out.a = e[0]! * halfWidth;
+  out.b = e[1]! * halfHeight;
+  out.c = e[4]! * halfWidth;
+  out.d = e[5]! * halfHeight;
+  out.tx = (e[12]! + 1) * halfWidth;
+  out.ty = (e[13]! + 1) * halfHeight;
+  return out;
 }

@@ -7,10 +7,9 @@ import { canvasItemMaterialOf } from './decode';
 import type { CanvasItemMaterialProperties } from './types';
 
 /** A canvas item's material: a CanvasItemMaterial's properties or a canvas_item shader, at most one. */
-export interface CanvasItemMaterialSlot {
-  readonly properties: CanvasItemMaterialProperties | null;
-  readonly shader: ShaderText | null;
-}
+export type CanvasItemMaterialSlot =
+  | { readonly properties: CanvasItemMaterialProperties | null; readonly shader: null }
+  | { readonly properties: null; readonly shader: ShaderText };
 
 /** A Material of no type a canvas item draws: plain canvas blending. */
 export const NO_MATERIAL: CanvasItemMaterialSlot = Object.freeze({ properties: null, shader: null });

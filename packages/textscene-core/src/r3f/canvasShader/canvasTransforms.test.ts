@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { World2DCamera, world2DCameraPose } from '../components/Canvas2DStage/world2DCamera';
 import type { Transform2DColumns } from '../../godot/math/transform2d';
-import { canvasTransformOf } from './canvasTransforms';
+import { mutableTransform2D } from '../../godot/math/transform2d';
+import { canvasDataTransformInto } from './canvasTransforms';
 
 const STAGE = { width: 200, height: 100 };
 
@@ -24,9 +25,11 @@ const rounded = (transform: Transform2DColumns) =>
     Object.entries(transform).map(([key, value]) => [key, Math.round(value * 1e6) / 1e6 + 0])
   );
 
-describe('canvasTransformOf', () => {
+describe('canvasDataTransformInto', () => {
   it('is the identity for an unpanned, unzoomed stage on the root canvas', () => {
-    expect(rounded(canvasTransformOf(stageCamera({ x: 0, y: 0 }, 1), null, STAGE))).toEqual({
+    expect(
+      rounded(canvasDataTransformInto(mutableTransform2D(), stageCamera({ x: 0, y: 0 }, 1), null, STAGE))
+    ).toEqual({
       a: 1,
       b: 0,
       c: 0,
@@ -37,7 +40,9 @@ describe('canvasTransformOf', () => {
   });
 
   it('scales by the zoom and moves by the pan, as a canvas pixel lands at pan + p * zoom', () => {
-    expect(rounded(canvasTransformOf(stageCamera({ x: 10, y: 20 }, 2), null, STAGE))).toEqual({
+    expect(
+      rounded(canvasDataTransformInto(mutableTransform2D(), stageCamera({ x: 10, y: 20 }, 2), null, STAGE))
+    ).toEqual({
       a: 2,
       b: 0,
       c: 0,
@@ -52,7 +57,9 @@ describe('canvasTransformOf', () => {
     frame.position.set(30, -40, 0);
     frame.updateMatrixWorld();
 
-    expect(rounded(canvasTransformOf(stageCamera({ x: 0, y: 0 }, 1), frame, STAGE))).toMatchObject({
+    expect(
+      rounded(canvasDataTransformInto(mutableTransform2D(), stageCamera({ x: 0, y: 0 }, 1), frame, STAGE))
+    ).toMatchObject({
       tx: 30,
       ty: 40,
     });

@@ -41,7 +41,7 @@ export interface ParameterOptions {
   /** The project's texture filter settings, Godot's defaults when left out. */
   readonly sampling?: ProjectSampling;
   /** Whether a source colour converts to linear, true when left out. */
-  readonly useLinearColor?: boolean;
+  readonly usesLinearColors?: boolean;
 }
 
 /**
@@ -52,7 +52,7 @@ export function linkedProgram(
   { code, tree }: ParsedShader,
   file: string,
   program: ProgramTemplate,
-  { sampling = GODOT_SAMPLING, useLinearColor = true }: ParameterOptions = {}
+  { sampling = GODOT_SAMPLING, usesLinearColors = true }: ParameterOptions = {}
 ): LinkedProgram {
   if (tree.shaderType !== program.shaderType)
     throw new ShadingLanguageError(
@@ -79,7 +79,7 @@ export function linkedProgram(
       }
     );
   // Sky and spatial targets are linear: `sky.cpp:193`, `scene_shader_forward_clustered.cpp:595`.
-  const parameters = bindParameters(tree, { useLinearColor, sampling });
+  const parameters = bindParameters(tree, { usesLinearColors, sampling });
   const parameterValues = [...parameters].map(([name, binding]) => [godotId(name), binding.value] as const);
   return { linked, resources: programResources(program.specialisedMembers), parameters, parameterValues };
 }

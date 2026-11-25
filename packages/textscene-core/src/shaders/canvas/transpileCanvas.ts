@@ -94,7 +94,7 @@ export function transpileCanvasItem(source: string, options: CanvasItemOptions =
   // Godot keeps an sRGB and a linear uniform set (`renderer_canvas_render_rd.cpp:1703-1704`).
   const program = linkedProgram(parsed, file, CANVAS, {
     sampling: options.sampling,
-    useLinearColor: options.usesLinearColors ?? false,
+    usesLinearColors: options.usesLinearColors ?? false,
   });
   const item: ItemProgram = {
     program,

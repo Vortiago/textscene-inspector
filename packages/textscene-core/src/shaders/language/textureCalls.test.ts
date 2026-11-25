@@ -210,7 +210,11 @@ describe('builtInCall of a texture function', () => {
 
   it('gathers a cube texture from the four texel centres of the face the direction picks', () => {
     const declaration = treeOf('uniform samplerCube s;').uniforms[0]!;
-    const context = { defaults: SAMPLER_DEFAULTS.spatial!, sampling: GODOT_SAMPLING, useLinearColor: false };
+    const context = {
+      defaults: SAMPLER_DEFAULTS.spatial!,
+      sampling: GODOT_SAMPLING,
+      usesLinearColors: false,
+    };
     const cube = new SamplerBinding(declaration, context).value as unknown as Node;
     const glsl = glslOf('textureGather(samplerCube,vec3)', [cube, vec3(1, 0.2, -0.3) as unknown as Node]);
     expect(glsl.match(/textureLod\( nodeUniform/g)).toHaveLength(4);

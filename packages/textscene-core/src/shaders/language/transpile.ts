@@ -18,7 +18,7 @@ export interface TranspiledShader {
 
 export interface TranspileOptions extends ShaderOptions {
   /** Godot's `p_use_linear_color`: false only for a `canvas_item` outside an HDR 2D viewport. */
-  readonly useLinearColor?: boolean;
+  readonly usesLinearColors?: boolean;
   /** The project's texture filter settings, Godot's defaults when left out. */
   readonly sampling?: ProjectSampling;
 }
@@ -31,7 +31,7 @@ export function transpileShadingLanguage(source: string, options: TranspileOptio
 /** The functions and uniforms of a parsed shader, for a caller that has read its tree already. */
 export function transpileParsedShader(
   { tree }: ParsedShader,
-  { useLinearColor = isLinearByDefault(tree.shaderType), sampling = GODOT_SAMPLING }: TranspileOptions = {}
+  { usesLinearColors = isLinearByDefault(tree.shaderType), sampling = GODOT_SAMPLING }: TranspileOptions = {}
 ): TranspiledShader {
   checkTranspiled(tree);
   const entry = tree.shaderType && TEMPLATE_ENTRIES[tree.shaderType];
@@ -40,7 +40,7 @@ export function transpileParsedShader(
       `a shader of 'shader_type ${tree.shaderType}' links into Godot's ${tree.shaderType} template: draw it with ${entry}`,
       tree.headPosition!
     );
-  const parameters = bindParameters(tree, { useLinearColor, sampling });
+  const parameters = bindParameters(tree, { usesLinearColors, sampling });
   const values = new Map([...parameters].map(([name, binding]) => [name, binding.value]));
   return { functions: emitShader(withGlslTypes(tree), values), parameters };
 }

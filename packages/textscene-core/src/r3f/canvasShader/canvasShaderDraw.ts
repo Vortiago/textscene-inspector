@@ -28,7 +28,7 @@ import { canvasFrameOf } from '../canvasFrame';
 import { renderTargetSize } from '../renderTargetSize';
 import { canvasShaderTime } from '../shaderTime/canvasShaderTime';
 import type { CanvasRectRegion } from './canvasCommands';
-import { canvasTransformOf } from './canvasTransforms';
+import { canvasDataTransformInto } from './canvasTransforms';
 import { canvasTransformInto } from '../node2dTransform';
 import { mutableTransform2D } from '../../godot/math/transform2d';
 
@@ -127,7 +127,7 @@ const targetSize = new THREE.Vector2();
 function writeFrameEachDraw(
   gl: THREE.WebGLRenderer,
   draw: CanvasDraw,
-  frame: { readonly canvasModulate: Rgba },
+  colors: { readonly canvasModulate: Rgba },
   usesLinearColors: boolean
 ): void {
   const hook = draw.uniforms.get(DRAW_HOOK);
@@ -135,17 +135,24 @@ function writeFrameEachDraw(
     throw new Error(
       `expected a canvas draw to read the uniform ${DRAW_HOOK}, found ${hook ? 'an array' : 'none'}`
     );
+  // One block for the draw, rewritten before each draw: no object per draw.
+  const frame = {
+    width: 0,
+    height: 0,
+    canvasTransform: mutableTransform2D(),
+    canvasModulate: WHITE,
+    time: 0,
+    snapVerticesToPixel: false,
+    usesLinearColors,
+  };
   hook.onObjectUpdate(({ object, camera }) => {
     const { x: width, y: height } = renderTargetSize(gl, targetSize);
-    writeCanvasBindings(draw, {
-      width,
-      height,
-      canvasTransform: canvasTransformOf(camera!, canvasFrameOf(object!), { width, height }),
-      canvasModulate: frame.canvasModulate,
-      time: canvasShaderTime(gl).time,
-      snapVerticesToPixel: false,
-      usesLinearColors,
-    });
+    frame.width = width;
+    frame.height = height;
+    canvasDataTransformInto(frame.canvasTransform, camera!, canvasFrameOf(object!), frame);
+    frame.canvasModulate = colors.canvasModulate;
+    frame.time = canvasShaderTime(gl).time;
+    writeCanvasBindings(draw, frame);
   });
 }
 

@@ -1245,7 +1245,7 @@ shader.parameters.get('tint').set(textToVariant('Color(1, 0.5, 0, 1)'));
 
 \`set(undefined)\` gives back Godot's own value. The transpiler fills each uniform as Godot's \`update_uniform_buffer\` does (\`material_storage.cpp:741\`): it converts the value to the uniform's type as \`_fill_std140_variant_ubo_value\` does, and a default as \`_fill_std140_ubo_value\` does. A uniform the material does not set reads the shader's default. With no default, a \`source_color\` \`vec3\` or \`vec4\` reads opaque black, a matrix reads the identity, and everything else reads zero. An array element the value has no whole element for reads zero, or the identity for a matrix.
 
-Godot's \`p_use_linear_color\` decides whether a colour goes to linear. It is true for every material but a \`canvas_item\` one, which converts only in a viewport with \`use_hdr_2d\`. \`TranspileOptions.useLinearColor\` sets it for \`transpileShadingLanguage\`, and a sky always converts (\`sky.cpp:193\`). The probes run both ways.
+Godot's \`p_use_linear_color\` decides whether a colour goes to linear. It is true for every material but a \`canvas_item\` one, which converts only in a viewport with \`use_hdr_2d\`. \`TranspileOptions.usesLinearColors\` sets it for \`transpileShadingLanguage\`, and a sky always converts (\`sky.cpp:193\`). The probes run both ways.
 
 An array reaches the shader as the bits of one \`uvec4\` per column, as std140 lays it out, and the shader reads each lane back from its bits. So a float array whose first value is NaN reaches the shader whole.`,
   sections: [

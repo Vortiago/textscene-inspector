@@ -56,13 +56,27 @@ export function worldOf({ a, b, c, d, tx, ty }: Transform2DColumns): number[] {
 export function writeBatchWorld(
   geometry: THREE.BufferGeometry,
   index: number,
-  transform: Transform2DColumns
+  { a, b, c, d, tx, ty }: Transform2DColumns
 ): void {
   const floats = (geometry.getAttribute(ATTRIBUTES[0]!) as THREE.InterleavedBufferAttribute).data;
+  const lanes = floats.array as Float32Array;
   const offset = index * floats.stride + WORLD;
-  const world = worldOf(transform);
-  if (world.every((value, lane) => floats.array[offset + lane] === Math.fround(value))) return;
-  floats.array.set(world, offset);
+  // Lane by lane, not through `worldOf`: this runs for each shaded item each frame.
+  if (
+    lanes[offset] === Math.fround(a) &&
+    lanes[offset + 1] === Math.fround(b) &&
+    lanes[offset + 2] === Math.fround(c) &&
+    lanes[offset + 3] === Math.fround(d) &&
+    lanes[offset + 4] === Math.fround(tx) &&
+    lanes[offset + 5] === Math.fround(ty)
+  )
+    return;
+  lanes[offset] = a;
+  lanes[offset + 1] = b;
+  lanes[offset + 2] = c;
+  lanes[offset + 3] = d;
+  lanes[offset + 4] = tx;
+  lanes[offset + 5] = ty;
   floats.needsUpdate = true;
 }
 
