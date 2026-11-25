@@ -41,12 +41,16 @@ export async function captureScene(pageState, baseUrl, scene) {
   const { page, diagnostics } = pageState;
   clearDiagnostics(diagnostics);
 
+  console.log(`${new Date().toISOString()} [gltiming] runner open ${scene.name}`);
   // A silent stalled resource chain would become a baseline, so it is logged.
   const { target: canvas, reason: canvasReason } = await openScene(page, baseUrl, scene.file, {
     canvas2D,
     ...sceneQuery(scene),
     onSlow: (ms) => console.log(`[visual]   ${scene.name}: no network idle within ${ms}ms`),
   });
+  console.log(
+    `${new Date().toISOString()} [gltiming] runner canvas ${scene.name} ${canvasReason ?? 'found'}`
+  );
   if (!canvas) return { buffer: null, reason: withFailedRequests(canvasReason, diagnostics) };
 
   try {
