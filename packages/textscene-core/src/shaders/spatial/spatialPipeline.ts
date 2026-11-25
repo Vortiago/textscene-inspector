@@ -228,6 +228,12 @@ export function spatialPassMembership(pipeline: SpatialPipeline): PassMembership
 
 const usesAlphaPass = (pipeline: SpatialPipeline): boolean => spatialPassMembership(pipeline).alphaPass;
 
+/** Godot's render list puts the surface in the shadow pass (`render_forward_clustered.cpp:4078-4088`). */
+export function castsShadow(pipeline: SpatialPipeline): boolean {
+  const { alphaPass, depthInAlphaPass } = spatialPassMembership(pipeline);
+  return !alphaPass || depthInAlphaPass;
+}
+
 /** Alpha to coverage: on in the transparent colour pass only (`scene_shader_forward_clustered.cpp:431`). */
 export const drawsAlphaToCoverage = (
   pipeline: SpatialPipeline

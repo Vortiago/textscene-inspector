@@ -42,6 +42,12 @@ export const MATERIAL_SCENES = [
   { name: 'material-spatial-shader-lit-sky-metal', file: 'unit-spatial-shader-lit-sky-metal.tscn' },
   // A lit shader receiving a split sun shadow. Godot 4.6.3: 4 px over 2/255. No shadow: 15,151 px, max 199/255.
   { name: 'material-spatial-shader-lit-sun-shadow', file: 'unit-spatial-shader-lit-sun-shadow.tscn' },
+  // A StandardMaterial3D through its generated shader and the lit template. Godot 4.6.3: 10 px over 2/255, max 9.
+  {
+    name: 'material-standard-material-lit',
+    file: 'unit-standard-material-lit.tscn',
+    litSurface: 'nodes',
+  },
   // Spatial shaders with render_mode wireframe, drawn as the edges left after cull_back and cull_disabled.
   { name: 'material-spatial-shader-wireframe', file: 'unit-spatial-shader-wireframe.tscn' },
   // Spatial shaders with cull_back, cull_front and cull_disabled, on quads that face the camera and away.

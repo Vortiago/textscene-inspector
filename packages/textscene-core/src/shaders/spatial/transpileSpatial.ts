@@ -32,6 +32,7 @@ import { devicePoints, type DevicePoints } from './devicePoints.js';
 import { coveredOnOneSample } from '../pipeline/singleSampleCoverage.js';
 import {
   applySpatialPipeline,
+  castsShadow,
   drawsLines,
   stencilQueueError,
   spatialPipeline,
@@ -91,6 +92,8 @@ export interface TranspiledSpatial {
   readonly printedErrors: readonly string[];
   /** How a surface of this material draws as points, or null for its own primitive. */
   readonly pointDraw: PointDraw | null;
+  /** A surface of this material draws into a light's shadow. */
+  readonly castsShadow: boolean;
 }
 
 export interface SpatialOptions extends ShaderOptions {
@@ -146,6 +149,7 @@ export function transpileSpatial(source: string, options: SpatialOptions = {}): 
     parameters,
     printedErrors: queueError === undefined ? [] : [queueError],
     pointDraw: pipeline.pointDraw,
+    castsShadow: castsShadow(pipeline),
   };
 }
 

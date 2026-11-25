@@ -42,6 +42,13 @@ function program(source = DEFAULT_UNSHADED) {
 }
 
 describe('transpileSpatial', () => {
+  it('casts no shadow from a surface that draws only in the alpha pass', () => {
+    const alpha = 'shader_type spatial;\nrender_mode unshaded;\nvoid fragment() {\n\tALPHA = 0.5;\n}\n';
+
+    expect(transpileSpatial('shader_type spatial;\nrender_mode unshaded;\n').castsShadow).toBe(true);
+    expect(transpileSpatial(alpha).castsShadow).toBe(false);
+  });
+
   it('refuses a shader of another type, at its first line', () => {
     expect(errorOf('shader_type sky;\n').position).toEqual({ file: 'user.gdshader', line: 1, column: 1 });
   });

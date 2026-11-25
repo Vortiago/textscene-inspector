@@ -25,6 +25,7 @@ import { EMISSION_EXPOSURE } from '../exposure/emissionExposure.js';
 import { visualLayersOf } from '../visualLayers.js';
 import { releasedOnUnmount } from '../sharedTexture.js';
 import { dfgTexture } from '../../shaders/spatial/dfgTexture.js';
+import { recordCastsShadow } from '../../resources/materials/standardmaterial3d/materialBag.js';
 import type { RoughnessLimiter } from '../../godot/rendering/roughnessLimiter.js';
 
 export { setParameterValues } from '../../shaders/uniforms/materialParameters.js';
@@ -56,6 +57,7 @@ export function spatialSurfaceOf(
   if (!('spatial' in compile))
     return { refusal: `[material] ${unDrawnMessage(compile, 'spatial', '3D surface')}` };
   const { spatial } = compile;
+  recordCastsShadow(spatial.material, spatial.castsShadow);
   releasedOnUnmount(dfgTexture());
   const specialise = () => specialiseSpatial(spatial, renderedEnvironmentFog());
   spatial.material.onBeforeProgram = specialise;

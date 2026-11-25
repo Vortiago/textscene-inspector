@@ -183,6 +183,10 @@ Strict parsing format-checks the inherited set (131 inherited from BaseMaterial3
 
 The lenient parser never rejects. Each field falls back to Godot's default through the shared value decoders, so a malformed `roughness` renders with default roughness. A texture reference it cannot resolve leaves the slot empty, and the mesh renders untextured.
 
+## Generated shader on the node lit surface
+
+With `?litSurface=nodes`, the material draws the shader text Godot generates for it (`material.cpp:685`), through the lit scene template, as an ORMMaterial3D and a surface with no material do. The roughness limiter then reads the project's `screen_space_roughness_limiter` settings. `unit-standard-material-lit.tscn` draws an albedo map, a normal map, roughness and metallic under a shadowed sun this way.
+
 ## Known limitations
 
 - **Approximated** Under msaa_3d Disabled, alpha to coverage cuts at alpha 0.5, where lavapipe draws a 2 by 2 dither and another driver can differ.
@@ -191,3 +195,5 @@ The lenient parser never rejects. Each field falls back to Godot's default throu
 - **Approximated** Under msaa_3d, `ALPHA_TO_COVERAGE_AND_TO_ONE` stores the ramped alpha where Godot stores 1, so a transparent background shows the edge fainter.
 - **Approximated** `ALPHA_HASH` keeps about Godot's share of pixels but not the same pixels, as the ported hash's `fract(1e4 * sin())` rounds differently on each GPU (`scene_forward_aa_inc.glsl:3-39`).
 - **Shader missing** `proximity_fade_*` and `distance_fade_*` decide the pass but are not rendered, so the surface stays at full opacity.
+- **Not supported** On the node lit surface, a material on a skinned mesh, a MultiMesh, a particle draw pass, a next pass or a glTF surface draws the classic material (#2013).
+- **Not supported** On the node lit surface, an OmniLight3D or a SpotLight3D lights no material (#1455).

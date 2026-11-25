@@ -332,6 +332,11 @@ export function castsShadowOf(material: THREE.Material): boolean {
   return recordedOn(material, CASTS_SHADOW_KEY, true);
 }
 
+/** Records whether a surface of `material` draws into a light's shadow, as `castsShadowOf` reads it. */
+export function recordCastsShadow(material: THREE.Material, castsShadow: boolean): void {
+  material.userData[CASTS_SHADOW_KEY] = castsShadow;
+}
+
 /**
  * Derive the material this decoded StandardMaterial3D describes, in each pass a geometry
  * instance's fade can draw it in: unfaded, and the alpha pass.
