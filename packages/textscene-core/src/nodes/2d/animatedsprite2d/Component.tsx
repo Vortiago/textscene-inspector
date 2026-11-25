@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasMeshBody } from '../../../r3f/canvasMesh/CanvasMeshBody';
+import { animatedSprite2DRectRegion } from './rectRegion';
 import { useCanvasMeshTexture } from '../../../r3f/canvasMesh/useCanvasMeshTexture';
 import { useSpriteQuad } from '../../../r3f/canvasMesh/spriteQuad';
 import { frameSizePx, WHOLE_FRAME } from '../../../r3f/spriteFrame';
@@ -143,12 +144,23 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   usePublishEditRect(
     animatedSprite2DEditRect(frameRef ? texture.size : undefined, props.centered, props.offset)
   );
+  const shaderRegion = useMemo(
+    () => (texture.size ? animatedSprite2DRectRegion(props, texture.size) : undefined),
+    [props, texture.size]
+  );
 
   // No SpriteFrames, no animation or no frame texture draws nothing (`animated_sprite_2d.cpp:270-278`),
   // and so does a SpriteFrames or frame texture that is loading or failed.
 
   return (
-    <CanvasMeshBody node={node} props={props} texture={texture} withoutTexture="nothing" surfaces={surfaces}>
+    <CanvasMeshBody
+      node={node}
+      props={props}
+      texture={texture}
+      withoutTexture="nothing"
+      surfaces={surfaces}
+      shaderRegion={shaderRegion}
+    >
       {children}
     </CanvasMeshBody>
   );

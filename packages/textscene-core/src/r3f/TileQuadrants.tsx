@@ -20,6 +20,8 @@ import { childCanvasPlace } from './canvasItemState';
 import { TileSourceMesh, type TileTint } from './TileSourceMesh';
 import type { CanvasItemTextureSampler } from './canvasItemTextureSampler';
 import type { Rgba } from '../godot/math/math';
+import type { ShaderText } from '../resources/materials/shadermaterial/types';
+import { TileShaderRun } from './canvasShader/TileShaderRun';
 
 interface TileLayerItem {
   model: TileSetModel;
@@ -30,6 +32,8 @@ interface TileLayerItem {
   selfTint: Rgba;
   /** The layer's material, which a tile with no material of its own draws with. */
   material: CanvasItemMaterialProperties | null;
+  /** The layer's canvas_item shader, which a tile with no material of its own draws with. */
+  shader: ShaderText | null;
   lightMask: number | undefined;
   zFinal: number;
   /** The layer's effective filter and repeat, which its atlas textures sample with. */
@@ -81,6 +85,11 @@ function tileTint(
 
 function TileItem({ item, layer }: { item: DrawnItem; layer: TileLayerItem }) {
   const material = tileItemMaterial(item.material, layer.material);
+  const shader = item.material ? item.material.shader : layer.shader;
+  const tileSet = useMemo(
+    () => ({ grid: layer.model, usesUvClipping: layer.model.usesUvClipping }),
+    [layer.model]
+  );
   const { key: canvasKey, zFinal } = childCanvasPlace(
     { key: useCanvasItemKey(), zFinal: layer.zFinal },
     item.zIndex
@@ -97,17 +106,33 @@ function TileItem({ item, layer }: { item: DrawnItem; layer: TileLayerItem }) {
   return (
     <CanvasItemGroup renderOrder={canvasKey}>
       <LitCanvasItem material={material} lightMask={layer.lightMask} zFinal={zFinal}>
-        {item.runs.map(({ source, cells }, runIndex) => (
-          <TileSourceMesh
-            key={runIndex}
-            source={source}
-            cells={cells}
-            grid={layer.model}
-            renderOrder={item.firstOrder + runIndex}
-            tint={tint}
-            sampler={layer.sampler}
-          />
-        ))}
+        {item.runs.map(({ source, cells }, runIndex) => {
+          const mesh = (
+            <TileSourceMesh
+              key={runIndex}
+              source={source}
+              cells={cells}
+              grid={layer.model}
+              renderOrder={item.firstOrder + runIndex}
+              tint={tint}
+              sampler={layer.sampler}
+            />
+          );
+          if (!shader) return mesh;
+          return (
+            <TileShaderRun
+              key={runIndex}
+              shader={shader}
+              source={source}
+              cells={cells}
+              tileSet={tileSet}
+              finalModulate={layer.selfTint}
+              sampler={layer.sampler}
+              renderOrder={item.firstOrder + runIndex}
+              fallback={mesh}
+            />
+          );
+        })}
       </LitCanvasItem>
     </CanvasItemGroup>
   );

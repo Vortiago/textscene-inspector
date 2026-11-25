@@ -13,7 +13,7 @@ import { useCanvasModulate } from '../canvasModulate';
 import { useRecordWriter } from '../components/Canvas2DStage/canvasFrameSequence';
 import { useShaderTextures } from '../shaderTextures/shaderTextures';
 import { useShaderRefusalWarning, useShaderTranslator } from '../shaderTranslator/useShaderTranslator';
-import type { CanvasRectRegion } from './canvasCommands';
+import type { CanvasShaderCommand } from './canvasCommands';
 import { useCanvasShaderMaps } from './useCanvasShaderMaps';
 import type { CanvasItemTexture } from '../canvasItemTexture';
 
@@ -23,24 +23,29 @@ const loadCanvasShaderDraw = memoisedImport(() => import('./canvasShaderDraw'));
 const LOAD_FAILURE =
   "[material] The previewer could not load its canvas shader translator, and draws Godot's default canvas shader. Reload to try again.";
 
-interface CanvasShaderSlotProps {
-  shader: ShaderText;
-  /** The rect the item draws its texture with. */
-  region: CanvasRectRegion;
-  texture: THREE.Texture;
+/** What an item draws through a canvas_item shader: its commands, and the texture they share. */
+export interface CanvasItemCommands {
+  /** In draw order. */
+  readonly commands: readonly CanvasShaderCommand[];
+  /** The texture the commands draw, or null for Godot's white default texture. */
+  readonly texture: THREE.Texture | null;
   /** The item's CanvasTexture, whose maps the shader reads, or undefined for a plain texture. */
-  canvasTexture: CanvasItemTexture | undefined;
-  sampler: CanvasItemTextureSampler;
+  readonly canvasTexture: CanvasItemTexture | undefined;
+  readonly sampler: CanvasItemTextureSampler;
+}
+
+interface CanvasShaderSlotProps extends CanvasItemCommands {
+  shader: ShaderText;
   /** `Item::final_modulate`, in sRGB. */
   finalModulate: Rgba;
   /** What the item draws while the translator loads, and for a shader it refuses. */
   fallback: ReactNode;
 }
 
-/** An item's own rect drawn through Godot's canvas template with a user's canvas_item shader. */
+/** An item's own commands drawn through Godot's canvas template with a user's canvas_item shader. */
 export function CanvasShaderSlot({
   shader,
-  region,
+  commands,
   texture,
   canvasTexture,
   sampler,
@@ -79,14 +84,17 @@ export function CanvasShaderSlot({
   );
   const maps = useCanvasShaderMaps(canvasTexture);
   const draw = useMemo(
-    () => item && sampling && module!.rectShaderDraw(gl, item, { texture, maps, textureState, sampling }),
-    [module, gl, item, texture, maps, textureState, sampling]
+    () =>
+      item &&
+      sampling &&
+      module!.canvasShaderDraw(gl, item, { texture, maps, textureState, sampling }, commands),
+    [module, gl, item, texture, maps, textureState, sampling, commands]
   );
   useEffect(() => (draw ? draw.dispose : undefined), [draw]);
   useLayoutEffect(() => {
-    draw?.setRect({ region, finalModulate, canvasModulate });
+    draw?.setColors({ finalModulate, canvasModulate });
     invalidate();
-  }, [draw, region, finalModulate, canvasModulate, invalidate]);
+  }, [draw, finalModulate, canvasModulate, invalidate]);
   useRecordWriter(draw?.writeRecords ?? null);
 
   const samplers = shaded?.samplers ?? null;

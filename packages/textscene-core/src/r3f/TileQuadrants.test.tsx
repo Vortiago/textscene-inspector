@@ -75,6 +75,7 @@ const FAILED_SOURCE = 2;
 
 /** A square 16 px tileset with atlas sources 0 and 1, and source 2, whose texture fails to load. */
 const MODEL: TileSetModel = {
+  usesUvClipping: false,
   shape: 0,
   layout: 0,
   offsetAxis: 0,
@@ -138,6 +139,7 @@ function render(
         model={MODEL}
         selfTint={selfTint}
         material={material}
+        shader={null}
         lightMask={1}
         zFinal={zFinal}
         sampler={{ filter: 2, repeat: 1 }}

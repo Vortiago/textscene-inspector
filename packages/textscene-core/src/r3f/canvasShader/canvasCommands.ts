@@ -1,5 +1,12 @@
+import type * as THREE from 'three';
+import type { Rgba } from '../../godot/math/math';
 import { rect2Intersection, type Rect2 } from '../../godot/math/rect2';
+import { bottomUpV } from '../../godot/math/uv';
+import type { Vector2 } from '../../godot/math/vector';
+import { geometryPrimitive } from '../../resources/meshes/godotSurface';
 import type { AtlasCellRects } from '../../resources/useTexture2D';
+import type { CanvasVertexArrays } from '../../shaders/canvas/canvasAttributes';
+import type { CanvasSurface } from '../canvasMesh/canvasSurface';
 
 /** `canvas_item_add_texture_rect_region` with a white modulate (`renderer_canvas_cull.cpp:1624`). */
 export interface CanvasRectRegion {
@@ -8,6 +15,8 @@ export interface CanvasRectRegion {
   /** In the texture's texels. */
   readonly source: Rect2;
   readonly clipUv: boolean;
+  /** Whether the texture's x runs along the rect's y, as a transposed tile draws. */
+  readonly transpose?: boolean;
 }
 
 /** `AtlasTexture::get_rect_region` (`atlas_texture.cpp:193-224`): the rect on the atlas, or null for none. */
@@ -36,5 +45,51 @@ export function atlasRectRegion(
     },
     source: clipped,
     clipUv: atlas.filterClip,
+  };
+}
+
+/** An item's command that a canvas_item shader draws through Godot's canvas template. */
+export type CanvasShaderCommand =
+  | { readonly kind: 'rect'; readonly region: CanvasRectRegion; readonly modulate: Rgba }
+  | { readonly kind: 'mesh'; readonly arrays: CanvasVertexArrays };
+
+/** Each surface at the item's origin, white (`polygon_2d.cpp:401`), or null for a placed or skinned one. */
+export function surfaceCommands(surfaces: readonly CanvasSurface[]): CanvasShaderCommand[] | null {
+  if (surfaces.some(isPlacedOrSkinned)) return null;
+  return surfaces.map(({ geometry, arrayColor }) => ({
+    kind: 'mesh',
+    arrays: vertexArraysOf(geometry, arrayColor),
+  }));
+}
+
+const isPlacedOrSkinned = ({ position, scale, matrix, isSkinned }: CanvasSurface) =>
+  Boolean(position || scale || matrix || isSkinned);
+
+/** The arrays of a geometry in three's frame (`canvasSurfaceGeometry`) back in Godot's: y and v down. */
+function vertexArraysOf(geometry: THREE.BufferGeometry, arrayColor: Rgba | undefined): CanvasVertexArrays {
+  const position = geometry.getAttribute('position');
+  const uv = geometry.getAttribute('uv');
+  const color = geometry.getAttribute('color');
+  const points: Vector2[] = [];
+  const uvs: Vector2[] = [];
+  const colors: Rgba[] = arrayColor && !color ? [arrayColor] : [];
+  for (let i = 0; i < position.count; i++) {
+    points.push({ x: position.getX(i), y: 0 - position.getY(i) });
+    if (uv) uvs.push({ x: uv.getX(i), y: bottomUpV(uv.getY(i)) });
+    if (color)
+      colors.push({
+        r: color.getX(i),
+        g: color.getY(i),
+        b: color.getZ(i),
+        a: color.itemSize === 4 ? color.getW(i) : 1,
+      });
+  }
+  const index = geometry.getIndex();
+  return {
+    primitive: geometryPrimitive(geometry),
+    ...(index && { indices: Array.from(index.array) }),
+    points,
+    colors,
+    uvs,
   };
 }

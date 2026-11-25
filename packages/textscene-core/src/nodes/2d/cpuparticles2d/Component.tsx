@@ -50,7 +50,12 @@ export function CPUParticles2D({ node, children }: NodeComponentProps) {
   const surfaces = useMemo(
     () =>
       props.emitting
-        ? { input: { props, container, size: texture.size }, useSurfaces: useParticleSurfaces }
+        ? {
+            input: { props, container, size: texture.size },
+            useSurfaces: useParticleSurfaces,
+            // Godot draws particles as a multimesh, which the canvas_item shader's draw does not instance.
+            shadedCommands: null,
+          }
         : null,
     [props, container, texture.size]
   );

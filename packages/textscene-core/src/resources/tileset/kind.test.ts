@@ -157,3 +157,22 @@ describe('a TileSetScenesCollectionSource', () => {
     });
   });
 });
+
+describe('a TileSet', () => {
+  const read = (body: string) =>
+    loaded(
+      readTileSet({
+        scene: `[sub_resource type="TileSet" id="ts"]\n${body}`,
+        ref: 'SubResource("ts")',
+        files: {},
+      })
+    );
+
+  it('clips no tile UV by default', () => {
+    expect(read('tile_size = Vector2i(16, 16)').usesUvClipping).toBe(false);
+  });
+
+  it('clips each tile UV to its region with uv_clipping', () => {
+    expect(read('uv_clipping = true').usesUvClipping).toBe(true);
+  });
+});

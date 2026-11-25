@@ -71,8 +71,8 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
     const arrayColor = geometry.hasAttribute('color') ? undefined : quantizeVertexColor(props.color);
     // A polygon's geometry draws triangles, so its object is a mesh.
     const meshRef = (drawn: THREE.Object3D | null) => setMesh(drawn instanceof THREE.Mesh ? drawn : null);
-    return [{ geometry, arrayColor, meshRef }];
-  }, [geometry, props.color]);
+    return [{ geometry, arrayColor, meshRef, isSkinned: namesSkeletonToBind(props) }];
+  }, [geometry, props]);
 
   return (
     <CanvasMeshBody node={node} props={props} texture={texture} withoutTexture="white" surfaces={surfaces}>

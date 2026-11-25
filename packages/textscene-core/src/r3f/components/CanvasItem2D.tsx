@@ -26,10 +26,10 @@ import { useNodePath } from '../contexts/NodePathContext';
 import { useSceneResources } from '../SceneResourcesContext';
 import { node2dZStep, useCanvasItemState, type CanvasItemState } from '../canvasItemState';
 import type { CanvasItemMaterialProperties } from '../../resources/materials/canvasitemmaterial/types';
-import type { ShaderText } from '../../resources/materials/shadermaterial/types';
 import type { CanvasItemSurface } from '../lighting2d/normalMappedLighting';
 import { ClipChildrenScope } from '../canvasGroup/ClipChildrenScope';
 import type { PaintRange } from '../canvasPaintOrder';
+import { CanvasShaderSlot, type CanvasItemCommands } from '../canvasShader/CanvasShaderSlot';
 
 /** No behind ranges: an item that clips nothing draws its behind children outside its group. */
 const NO_RANGES: readonly PaintRange[] = [];
@@ -41,8 +41,6 @@ export interface CanvasItemBody {
   readonly material: CanvasItemMaterialProperties | null;
   /** What each mesh merges: the CanvasItemMaterial's blend state and the light list. */
   readonly pixelMaterial: CanvasItemPixelMaterial;
-  /** The canvas_item shader in force, or null. */
-  readonly shader: ShaderText | null;
 }
 
 interface CanvasItem2DProps {
@@ -55,6 +53,8 @@ interface CanvasItem2DProps {
    * specular maps light the pixels, and without a normal map they light flat (`canvas.glsl:652-665`).
    */
   canvasTexture?: CanvasItemTexture;
+  /** What a canvas_item shader in force draws in place of `body`. Without it, `body` draws. */
+  shadedCommands?: CanvasItemCommands | null;
   /** Whether `body` draws any pixels, true when omitted. A body that draws none declares no light read. */
   isDrawn?: boolean;
   /**
@@ -72,6 +72,7 @@ export function CanvasItem2D({
   props,
   body,
   canvasTexture,
+  shadedCommands,
   isDrawn,
   ownItems,
   children,
@@ -140,7 +141,18 @@ export function CanvasItem2D({
                 surface={surface}
                 isDrawn={isDrawn}
               >
-                {(pixelMaterial) => body({ tint, material, pixelMaterial, shader })}
+                {(pixelMaterial) => {
+                  const pixels = body({ tint, material, pixelMaterial });
+                  if (!shader || !shadedCommands) return pixels;
+                  return (
+                    <CanvasShaderSlot
+                      shader={shader}
+                      {...shadedCommands}
+                      finalModulate={tint.self}
+                      fallback={pixels}
+                    />
+                  );
+                }}
               </LitCanvasItemPixels>
             )}
             {ownItems?.(state)}

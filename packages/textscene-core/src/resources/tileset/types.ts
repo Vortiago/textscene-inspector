@@ -30,6 +30,8 @@ export interface TileGrid {
 
 /** A resolved TileSet: grid shape plus its sources, ready for pure lookups. */
 export interface TileSetModel extends TileGrid {
+  /** `uv_clipping`: each tile's draw clips its UV to its region (`tile_map_layer.cpp:2700`). */
+  usesUvClipping: boolean;
   /** Atlas sources keyed by their `sources/N` id. */
   sources: Map<number, AtlasSourceModel>;
   /** Scene-collection sources keyed by their `sources/N` id, in the id space of `sources`. */
@@ -99,7 +101,7 @@ export function alternativeNoTransform(alternativeId: number): number {
 }
 
 /** A tile's pixel rect in the atlas image, frame 0 (`get_tile_texture_region`, `tile_set.cpp:5283-5296`). */
-function atlasTileRegion(
+export function atlasTileRegion(
   source: Pick<AtlasSourceModel, 'margins' | 'separation' | 'textureRegionSize'>,
   atlasCoords: Vector2,
   sizeInAtlas: Vector2

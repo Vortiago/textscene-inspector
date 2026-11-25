@@ -2,7 +2,13 @@ import * as THREE from 'three';
 import type { UniformNode } from 'three/webgpu';
 import { describe, expect, it } from 'vitest';
 import { TRANSFORM2D_IDENTITY } from '../../godot/math/transform2d.js';
-import { type CanvasFrame, transform2DMatrix, writeCanvasBindings } from './canvasBindings.js';
+import {
+  bindCanvasData,
+  type CanvasFrame,
+  canvasDataBlock,
+  writeCanvasBindings,
+  writeCanvasData,
+} from './canvasBindings.js';
 import { DEFAULT_CANVAS_SHADER, transpileCanvasItem } from './transpileCanvas.js';
 
 const FRAME: CanvasFrame = {
@@ -82,8 +88,45 @@ describe('writeCanvasBindings', () => {
   });
 });
 
-describe('transform2DMatrix', () => {
+describe('writeCanvasData', () => {
+  it('writes a new frame into the values of the last one', () => {
+    const block = canvasDataBlock();
+    writeCanvasData(block, FRAME);
+    const { canvasTransform, screenTransform, canvasModulation } = block;
+
+    writeCanvasData(block, { ...FRAME, width: 64, canvasTransform: TRANSFORM2D_IDENTITY });
+
+    expect([block.canvasTransform, block.screenTransform, block.canvasModulation]).toEqual([
+      canvasTransform,
+      screenTransform,
+      canvasModulation,
+    ]);
+    expect(through(block.canvasTransform, 3, 5)).toEqual([3, 5]);
+  });
+});
+
+describe('bindCanvasData', () => {
+  it('binds one block to the draws of two items, so one write reaches both', () => {
+    const block = canvasDataBlock();
+    const draws = [1, 2].map(() => transpileCanvasItem(DEFAULT_CANVAS_SHADER).draw('quad'));
+    for (const draw of draws) bindCanvasData(draw, block);
+
+    writeCanvasData(block, FRAME);
+
+    const transforms = draws.map(
+      (draw) => (draw.uniforms.get('canvas_data.canvas_transform') as UniformNode<unknown>).value
+    );
+    expect(transforms.map((matrix) => through(matrix, 3, 5))).toEqual([
+      [16, 6],
+      [16, 6],
+    ]);
+  });
+});
+
+describe('the canvas transform matrix', () => {
   it('maps a point as Transform2D.xform does', () => {
-    expect(through(transform2DMatrix({ a: 0, b: 1, c: -1, d: 0, tx: 4, ty: 2 }), 3, 5)).toEqual([-1, 5]);
+    const value = written({ ...FRAME, canvasTransform: { a: 0, b: 1, c: -1, d: 0, tx: 4, ty: 2 } });
+
+    expect(through(value('canvas_transform'), 3, 5)).toEqual([-1, 5]);
   });
 });

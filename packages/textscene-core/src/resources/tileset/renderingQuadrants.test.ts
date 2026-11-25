@@ -6,6 +6,7 @@ import { tileTextureAt } from './testing/tileTexture';
 
 /** A square 16 px tileset whose source 0 holds tile (0, 0). */
 const SQUARE: TileSetModel = {
+  usesUvClipping: false,
   shape: 0,
   layout: 0,
   offsetAxis: 0,
