@@ -16,7 +16,10 @@ import { OTHER_DRAWS_SURFACE } from '../materials/useOneSurfaceStartingMaterial'
 import { useShaderTextures } from '../shaderTextures/shaderTextures';
 import { useTexture2DSize } from '../../resources/useTexture2D';
 import { useShaderRefusalWarning, useShaderTranslator } from '../shaderTranslator/useShaderTranslator';
-import type { SurfaceShaderSource } from './surfaceShader';
+import type { SurfaceShader, SurfaceShaderSource } from './surfaceShader';
+import type { SamplerValue } from '../../shaders/uniforms/samplerUniform';
+import type { ImageSize } from '../../resources/formats/image/imagePixels';
+import { hasEverySampledTexture } from '../shaderTextures/samplerValues';
 
 /** Imported by the first spatial shader only: it holds the shader parser and three's TSL. */
 const loadSpatialSurface = memoisedImport(() => import('./spatialSurface'));
@@ -41,7 +44,7 @@ export function SpatialShaderSlot({ source, attach, fallback }: SpatialShaderSlo
   const invalidate = useThree((state) => state.invalidate);
   const scene = useThree((state) => state.scene);
   // The material, not its wrapper, so the surfaces that share it warn once.
-  const material = 'shader' in source ? source.shader : source.baseMaterial;
+  const material = materialOf(source);
   const fileCode = 'shader' in source ? source.shader.code : null;
   const loadFailure = 'shader' in source ? LOAD_FAILURE : GENERATED_LOAD_FAILURE;
   const translator = useShaderTranslator(loadSpatialSurface, fileCode, loadFailure);
@@ -81,6 +84,15 @@ export function SpatialShaderSlot({ source, attach, fallback }: SpatialShaderSlo
     [module, attach, spatial, scene]
   );
   if (!spatial || !surfaceAttach) return <>{fallback}</>;
+  // A generated shader waits for its textures, so the classic material that already draws them stays.
+  if (!('shader' in source) && !isLoaded(shader!, samplers!, textures, albedoSize)) {
+    return (
+      <>
+        {fallback}
+        {textureSlots}
+      </>
+    );
+  }
   return (
     <>
       <primitive object={spatial.material} attach={surfaceAttach} />
@@ -125,3 +137,20 @@ const placedAt =
       if (previous) placeMaterial(host, drawGroup, previous);
     };
   };
+
+/** The material `source` names. */
+function materialOf(source: SurfaceShaderSource): object {
+  if ('shader' in source) return source.shader;
+  return 'baseMaterial' in source ? source.baseMaterial : source.defaultMaterial;
+}
+
+/** True once `shader`'s sampled textures, and the albedo's reported size it reads, have loaded. */
+function isLoaded(
+  shader: SurfaceShader,
+  samplers: Readonly<Record<string, unknown>>,
+  textures: Readonly<Record<string, SamplerValue>>,
+  albedoSize: ImageSize | undefined
+): boolean {
+  const hasAlbedoSize = shader.albedoTexture === null || albedoSize !== undefined;
+  return hasAlbedoSize && hasEverySampledTexture(shader.textures, samplers, textures);
+}

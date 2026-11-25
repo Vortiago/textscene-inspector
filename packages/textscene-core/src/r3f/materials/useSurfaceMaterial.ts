@@ -62,7 +62,12 @@ export function useSurfaceMaterial(
 
 /** Godot's default material: its default shader, with no parameters. */
 const GODOT_DEFAULT_SOURCE: SurfaceShaderSource = {
-  shader: { code: DEFAULT_MATERIAL_SHADER, file: 'the default 3D material', parameters: {}, textures: {} },
+  defaultMaterial: {
+    code: DEFAULT_MATERIAL_SHADER,
+    file: 'the default 3D material',
+    parameters: {},
+    textures: {},
+  },
 };
 
 /** The material `reference` draws on the surface of a mesh, a spatial shader included. */

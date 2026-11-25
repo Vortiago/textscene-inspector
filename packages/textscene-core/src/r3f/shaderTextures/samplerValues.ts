@@ -32,3 +32,12 @@ export function samplerValues(
   }
   return values;
 }
+
+/** True once every texture a declared sampler reads has loaded: Godot ignores an undeclared one. */
+export function hasEverySampledTexture(
+  references: Readonly<Record<string, ShaderTextureReference>>,
+  samplers: Readonly<Record<string, unknown>>,
+  textures: Readonly<Record<string, SamplerValue>>
+): boolean {
+  return Object.keys(references).every((name) => !(name in samplers) || textures[name] !== undefined);
+}

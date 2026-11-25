@@ -75,4 +75,15 @@ describe('surfaceShaderOf', () => {
   it('names the class in a fault for a material built into a scene', () => {
     expect(baseMaterial({}).file).toBe('StandardMaterial3D');
   });
+
+  it("names Godot's default material as a shader Godot generates", () => {
+    const text = {
+      code: 'shader_type spatial;',
+      file: 'the default 3D material',
+      parameters: {},
+      textures: {},
+    };
+
+    expect(surfaceShaderOf({ defaultMaterial: text }).generatedFor).toBe('default material');
+  });
 });

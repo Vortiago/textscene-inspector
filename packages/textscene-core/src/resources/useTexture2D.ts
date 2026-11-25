@@ -182,10 +182,7 @@ export function useTexture2DRid(
   return namesCanvasTexture ? CANVAS_TEXTURE_RID : { ...result, namesTexture: true };
 }
 
-/**
- * The size Godot's `get_width` and `get_height` report for the texture `reference` names, which
- * `set_texture` gives a material's albedo size (`material.cpp:2545`). Undefined until it loads.
- */
+/** The size `get_width` and `get_height` report for `reference`'s texture, undefined until it loads. */
 export function useTexture2DSize(reference: ScopedReference | null): ImageSize | undefined {
   const { atlas, result } = useTexture2DSlot(reference, 'plain');
   return useReportedSize(result.texture, atlas, result);

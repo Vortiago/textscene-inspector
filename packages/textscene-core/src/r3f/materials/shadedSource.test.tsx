@@ -20,7 +20,13 @@ const translated = vi.hoisted(() => ({ surface: null as unknown }));
 vi.mock('../litSurface/litSurfaceForm', () => ({ litSurfaceForm: () => page.form }));
 
 vi.mock('../spatialShader/spatialSurface', () => ({
-  surfaceShaderOf: vi.fn(() => ({ code: '', file: '', textures: {}, parametersWith: () => ({}) })),
+  surfaceShaderOf: vi.fn(() => ({
+    code: '',
+    file: '',
+    textures: {},
+    albedoTexture: null,
+    parametersWith: () => ({}),
+  })),
   spatialSurfaceOf: () => translated.surface ?? { refusal: { message: 'stub' } },
   disposeSpatial: () => {},
   setParameterValues: () => {},
@@ -109,7 +115,7 @@ describe('the shader a mesh surface draws', () => {
     await renderSlot(undefined);
 
     expect(surfaceShaderOf).toHaveBeenCalledWith({
-      shader: expect.objectContaining({ code: expect.stringContaining('ALBEDO = vec3(0.6);') }),
+      defaultMaterial: expect.objectContaining({ code: expect.stringContaining('ALBEDO = vec3(0.6);') }),
     });
   });
 
@@ -144,5 +150,26 @@ describe('the shader a mesh surface draws', () => {
     const mesh = await renderSlot(inlineSource(RESOURCES[1]!, RESOURCES), undefined, surfaces);
 
     expect(mesh.material).toBe(material);
+  });
+
+  it("keeps the classic material until a generated shader's textures load", async () => {
+    page.form = 'nodes';
+    const material = new THREE.MeshBasicMaterial();
+    translated.surface = {
+      spatial: { material, parameters: {}, pointDraw: null },
+      samplers: { texture_albedo: { kind: 'flat', isColor: true } },
+    };
+    const pending = inlineSource(RESOURCES[0]!, RESOURCES);
+    surfaceShaderOf.mockReturnValueOnce({
+      code: '',
+      file: '',
+      textures: { texture_albedo: pending },
+      albedoTexture: null,
+      parametersWith: () => ({}),
+    } as never);
+
+    const mesh = await renderSlot(inlineSource(RESOURCES[0]!, RESOURCES));
+
+    expect(mesh.material).not.toBe(material);
   });
 });

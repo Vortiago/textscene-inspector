@@ -87,13 +87,10 @@ export function SurfaceMaterialSlot({
   return <StandardMaterialSlot bags={bags} attach={attach} draws={draws} unfaded={unfaded} />;
 }
 
-/**
- * True for a StandardMaterial3D or Godot's default material, whose classic variants draw as Godot does.
- * A user's shader has none, and the classic path declines an ORMMaterial3D.
- */
+/** True for a StandardMaterial3D or Godot's default: the classic path declines an ORMMaterial3D. */
 function drawsClassicVariants(shaded: SurfaceShaderSource, shader: ShaderText | null): boolean {
   if (shader) return false;
-  return 'shader' in shaded || shaded.baseMaterial.materialClass === 'StandardMaterial3D';
+  return !('baseMaterial' in shaded) || shaded.baseMaterial.materialClass === 'StandardMaterial3D';
 }
 
 /** The surface a spatial shader falls back on, or null for a mesh's own surface, which draws it. */

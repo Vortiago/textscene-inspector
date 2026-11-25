@@ -53,6 +53,6 @@ describe('a material file on the node lit surface', () => {
     const { result, resources } = renderShaded(fileMaterial(MATERIAL_PATH));
     act(() => resources._fail(MATERIAL_PATH, 'not found'));
 
-    expect(result.current.shaded).toMatchObject({ shader: { file: 'the default 3D material' } });
+    expect(result.current.shaded).toMatchObject({ defaultMaterial: { file: 'the default 3D material' } });
   });
 });

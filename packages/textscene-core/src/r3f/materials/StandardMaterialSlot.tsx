@@ -24,10 +24,7 @@ interface StandardMaterialSlotProps {
   /** R3F attach key: `material-0` for multi-surface meshes. */
   attach?: string;
   draws?: SurfaceDraws;
-  /**
-   * The unfaded pass's element, given the classic one and its mount: the node lit surface draws it
-   * through Godot's generated shader. Undefined draws the classic one.
-   */
+  /** The unfaded pass's element from the classic one and its mount, or undefined for the classic one. */
   unfaded?: (classic: ReactNode, mount: string | MaterialAttach | undefined) => ReactNode;
 }
 
