@@ -10,6 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { rgbaEquals } from '../../../../godot/math/math';
 import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalBool, parseOptionalInt } from '../../../../parser/valueParsers';
 import { parseColorOrUndefined } from '../../../../utils/colorParser';
@@ -41,10 +42,6 @@ export function defaultGraphNodeSlot(): GraphNodeSlot {
   };
 }
 
-function colorEquals(a: GraphNodeSlot['leftColor'], b: GraphNodeSlot['leftColor']): boolean {
-  return a.r === b.r && a.g === b.g && a.b === b.b && a.a === b.a;
-}
-
 /**
  * `GraphNode::set_slot`'s erase condition (`graph_node.cpp:708-713`):
  * `draw_stylebox` is not one of its tested fields, so a slot authoring only
@@ -56,10 +53,10 @@ function isEraseCondition(slot: GraphNodeSlot): boolean {
   return (
     !slot.leftEnabled &&
     slot.leftType === 0 &&
-    colorEquals(slot.leftColor, white) &&
+    rgbaEquals(slot.leftColor, white) &&
     !slot.rightEnabled &&
     slot.rightType === 0 &&
-    colorEquals(slot.rightColor, white) &&
+    rgbaEquals(slot.rightColor, white) &&
     slot.leftIcon === undefined &&
     slot.rightIcon === undefined
   );

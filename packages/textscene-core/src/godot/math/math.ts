@@ -102,6 +102,15 @@ export interface Rgba {
 }
 
 /**
+ * `Color::operator==` (`core/math/color.h`): whether each channel is equal.
+ *
+ * @canonical An Rgba channel-wise equality
+ */
+export function rgbaEquals(a: Rgba, b: Rgba): boolean {
+  return a.r === b.r && a.g === b.g && a.b === b.b && a.a === b.a;
+}
+
+/**
  * `Color::operator*` (`core/math/color.h`) in `float`: each channel product rounded.
  *
  * @canonical A Color product in float32

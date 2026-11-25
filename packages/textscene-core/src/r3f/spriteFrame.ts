@@ -12,6 +12,7 @@
 import type * as THREE from 'three';
 import { imageSize, type ImageSize } from '../resources/formats/image/imagePixels';
 import type { Rect2 } from '../godot/math/rect2';
+import type { Vector2 } from '../godot/math/vector';
 import { FULL_UV_WINDOW, regionUvWindow, type UvWindow } from './uvWindow';
 import { frameCoords } from '../godot/scene/spriteFrames';
 
@@ -140,5 +141,27 @@ function cellWindow({ repeat, offset }: UvWindow, props: SpriteFrameProps): UvWi
   return {
     repeat: { x: repeat.x / H, y: repeat.y / V },
     offset: { x: offset.x + col * (repeat.x / H), y: offset.y + repeat.y - (row + 1) * (repeat.y / V) },
+  };
+}
+
+/** How a sprite places its frame: Sprite2D's and AnimatedSprite2D's shared properties. */
+export interface SpritePlacement {
+  readonly offset: Vector2;
+  readonly centered: boolean;
+  readonly flip_h: boolean;
+  readonly flip_v: boolean;
+}
+
+/** The rect a sprite draws a frame of `w` by `h` with, a flip as a negative size (`sprite_2d.cpp:95-130`). */
+export function spriteDestRect(
+  w: number,
+  h: number,
+  { offset, centered, flip_h, flip_v }: SpritePlacement
+): Rect2 {
+  return {
+    x: offset.x - (centered ? w / 2 : 0),
+    y: offset.y - (centered ? h / 2 : 0),
+    w: flip_h ? -w : w,
+    h: flip_v ? -h : h,
   };
 }

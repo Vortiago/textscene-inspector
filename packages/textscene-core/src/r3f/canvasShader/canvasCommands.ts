@@ -58,7 +58,7 @@ export function surfaceCommands(surfaces: readonly CanvasSurface[]): CanvasShade
   if (surfaces.some(isPlacedOrSkinned)) return null;
   return surfaces.map(({ geometry, arrayColor }) => ({
     kind: 'mesh',
-    arrays: vertexArraysOf(geometry, arrayColor, threeFramePoint),
+    arrays: vertexArraysOf(geometry, arrayColor, THREE_FRAME_Y),
   }));
 }
 
@@ -66,24 +66,22 @@ export function surfaceCommands(surfaces: readonly CanvasSurface[]): CanvasShade
 export function meshCommands(geometries: readonly THREE.BufferGeometry[]): CanvasShaderCommand[] {
   return geometries.map((geometry) => ({
     kind: 'mesh',
-    arrays: vertexArraysOf(geometry, undefined, godotFramePoint),
+    arrays: vertexArraysOf(geometry, undefined, GODOT_FRAME_Y),
   }));
 }
 
-type PointReader = (position: THREE.BufferAttribute | THREE.InterleavedBufferAttribute, i: number) => Vector2;
-
-const threeFramePoint: PointReader = (position, i) => ({ x: position.getX(i), y: 0 - position.getY(i) });
-
-const godotFramePoint: PointReader = (position, i) => ({ x: position.getX(i), y: position.getY(i) });
+/** The sign that turns a geometry's y into Godot's, which runs down: three's runs up. */
+const THREE_FRAME_Y = -1;
+const GODOT_FRAME_Y = 1;
 
 const isPlacedOrSkinned = ({ position, scale, matrix, isSkinned }: CanvasSurface) =>
   Boolean(position || scale || matrix || isSkinned);
 
-/** The arrays of a geometry in Godot's frame, its points through `pointOf`, v down from the top. */
+/** The arrays of a geometry in Godot's frame, its y times `ySign`, v down from the top. */
 function vertexArraysOf(
   geometry: THREE.BufferGeometry,
   arrayColor: Rgba | undefined,
-  pointOf: PointReader
+  ySign: number
 ): CanvasVertexArrays {
   const position = geometry.getAttribute('position');
   const uv = geometry.getAttribute('uv');
@@ -92,7 +90,7 @@ function vertexArraysOf(
   const uvs: Vector2[] = [];
   const colors: Rgba[] = arrayColor && !color ? [arrayColor] : [];
   for (let i = 0; i < position.count; i++) {
-    points.push(pointOf(position, i));
+    points.push({ x: position.getX(i), y: ySign * position.getY(i) });
     if (uv) uvs.push({ x: uv.getX(i), y: bottomUpV(uv.getY(i)) });
     if (color)
       colors.push({

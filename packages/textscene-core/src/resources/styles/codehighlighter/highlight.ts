@@ -10,9 +10,9 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { colorEquals, DEFAULT_COLOR } from './decode';
+import { DEFAULT_COLOR } from './decode';
 import type { CodeHighlighterData } from './types';
-import type { Rgba } from '../../../godot/math/math';
+import { rgbaEquals, type Rgba } from '../../../godot/math/math';
 
 /** `core/string/char_utils.h:113-114`. */
 function isSymbol(ch: string | undefined): boolean {
@@ -232,7 +232,7 @@ function scanLine(
           }
         }
       }
-      if (col !== undefined && !colorEquals(col, DEFAULT_COLOR)) {
+      if (col !== undefined && !rgbaEquals(col, DEFAULT_COLOR)) {
         inKeyword = true;
         keywordColor = col;
       }
@@ -271,7 +271,7 @@ function scanLine(
     prevIsChar = isChar;
     prevIsNumber = isNumber;
 
-    if (!colorEquals(color, prevColor)) {
+    if (!rgbaEquals(color, prevColor)) {
       prevColor = color;
       deltas.push({ index: j, color });
     }

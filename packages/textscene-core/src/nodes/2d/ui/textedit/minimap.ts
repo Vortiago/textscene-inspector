@@ -9,7 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { Rect2 } from '../../../../godot/math/rect2';
-import type { Rgba } from '../../../../godot/math/math';
+import { rgbaEquals, type Rgba } from '../../../../godot/math/math';
 import type { CodeHighlighterColorSpan } from '../../../../resources/styles/codehighlighter/highlight';
 import {
   textEditFirstIndentRow,
@@ -97,10 +97,6 @@ export interface TextEditMinimapRect extends Rect2 {
   color: Rgba;
 }
 
-function sameColor(a: Rgba, b: Rgba): boolean {
-  return a.r === b.r && a.g === b.g && a.b === b.b && a.a === b.a;
-}
-
 /** `_get_wrapped_indent_level` (`:4107-4131`): tabs by `tab_size` plus spaces, on the first row the indent does not span. */
 function wrappedIndentColumns(
   { text, rowStarts }: TextEditMinimapLine,
@@ -166,7 +162,7 @@ function rowBars(
       nextColor =
         highlightedColorAt(line.spans, rowStart + index, input.fontColor, input.editable) ?? nextColor;
       if (characters === 0) current = nextColor;
-      if (!sameColor(nextColor, current)) break;
+      if (!rgbaEquals(nextColor, current)) break;
       nextIsWhitespace = isWhitespace(row[index]!);
       if (nextIsWhitespace) {
         nextIsTab = row[index] === '\t';

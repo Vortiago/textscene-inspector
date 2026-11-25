@@ -11,13 +11,19 @@ import { bindCanvasData } from '../../shaders/canvas/canvasBindings';
 import { compileCanvas, type CanvasCompile } from '../../shaders/canvas/compileCanvas';
 import {
   INSTANCE_BYTES,
+  instanceRecord,
   modulated,
   writeBatchRecord,
   writeBatchWorld,
   WHITE,
   type CanvasItemDraw,
 } from '../../shaders/canvas/canvasInstance';
-import { quadBatchGeometry, rectInstanceData, textureRectRegion } from '../../shaders/canvas/canvasRect';
+import {
+  quadBatchGeometry,
+  textureRectRegion,
+  writeRectInstance,
+  type CanvasRectCommand,
+} from '../../shaders/canvas/canvasRect';
 import {
   CanvasTextureBinding,
   type CanvasMaps,
@@ -210,29 +216,32 @@ function rectBatch(variant: BoundVariant, count: number): Batch {
   const geometry = quadBatchGeometry(Array.from({ length: count }, () => new ArrayBuffer(INSTANCE_BYTES)));
   const object = new THREE.Mesh(geometry, variant.draw.material);
   object.frustumCulled = false;
-  let rects: readonly RectCommand[] = [];
+  let regions: readonly CanvasRectCommand[] = [];
   return {
     object,
     setRun: (run) => {
-      if (run.kind === 'rect') rects = run.commands;
+      if (run.kind === 'rect') regions = run.commands.map(rectRegionOf);
     },
-    writeColors: (item) =>
-      rects.forEach(({ region: { rect, source, clipUv, transpose }, modulate }, index) =>
-        writeBatchRecord(
-          geometry,
-          index,
-          rectInstanceData(
-            textureRectRegion(rect, source, modulate, { clipUv, transpose }),
-            item,
-            variant.texelSize
-          )
-        )
-      ),
+    writeColors: (item) => {
+      // One record for the batch, rewritten for each rect: this runs each frame an animated colour changes.
+      const record = instanceRecord(item);
+      regions.forEach((region, index) => {
+        writeRectInstance(record, region, item, variant.texelSize);
+        writeBatchRecord(geometry, index, record.bytes);
+      });
+    },
     writeWorld: (world) => {
       for (let index = 0; index < count; index++) writeBatchWorld(geometry, index, world);
     },
     dispose: () => geometry.dispose(),
   };
+}
+
+function rectRegionOf({
+  region: { rect, source, clipUv, transpose },
+  modulate,
+}: RectCommand): CanvasRectCommand {
+  return textureRectRegion(rect, source, modulate, { clipUv, transpose });
 }
 
 function meshBatch(

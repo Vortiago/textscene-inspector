@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { Rgba } from '../../godot/math/math';
+import { rgbaEquals, type Rgba } from '../../godot/math/math';
 import { mutableTransform2D } from '../../godot/math/transform2d';
 import { canvasDataBlock, writeCanvasData, type CanvasDataBlock } from '../../shaders/canvas/canvasBindings';
 import { WHITE } from '../../shaders/canvas/canvasInstance';
@@ -95,9 +95,5 @@ function newWrittenBlock(blocks: WrittenBlock[]): WrittenBlock {
 }
 
 function sameColors(a: CanvasColors, b: CanvasColors): boolean {
-  const { canvasModulate: x } = a;
-  const { canvasModulate: y } = b;
-  return (
-    a.usesLinearColors === b.usesLinearColors && x.r === y.r && x.g === y.g && x.b === y.b && x.a === y.a
-  );
+  return a.usesLinearColors === b.usesLinearColors && rgbaEquals(a.canvasModulate, b.canvasModulate);
 }

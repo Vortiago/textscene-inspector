@@ -40,7 +40,7 @@ import type { Rect2 } from '../../../../godot/math/rect2';
 import type { CodeHighlighterColorSpan } from '../../../../resources/styles/codehighlighter/highlight';
 import type { TextEditProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
-import type { Rgba } from '../../../../godot/math/math';
+import { rgbaEquals, type Rgba } from '../../../../godot/math/math';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 
@@ -544,10 +544,6 @@ export function textEditGlyphColorAt(
   return spans ? colorAt(spans, lineIndex, fallback) : fallback;
 }
 
-function sameColor(a: Rgba, b: Rgba): boolean {
-  return a.r === b.r && a.g === b.g && a.b === b.b && a.a === b.a;
-}
-
 interface TextEditGlyphColorRun {
   glyphs: GlyphPlacement[];
   color: Rgba;
@@ -593,7 +589,7 @@ export function textEditRowColorRuns(
   rowGlyphs.forEach((glyph, k) => {
     if (isDrawn && !isDrawn[k]) return;
     const color = textEditGlyphColorAt(spans, textEditGlyphLineIndex(glyph, rowStartIndex, k), fallbackColor);
-    if (current && sameColor(current.color, color)) {
+    if (current && rgbaEquals(current.color, color)) {
       current.glyphs.push(glyph);
     } else {
       current = { glyphs: [glyph], color };
