@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bool, real, variant, vector2, vector3 } from '../../godot/variant/value/variant.js';
+import { bool, int, real, variant, vector2, vector3 } from '../../godot/variant/value/variant.js';
 import { materialParameters, textureParameterOf } from './materialParameters.js';
 import { materialStateOf, type MaterialSettings } from './materialProperties.js';
 
@@ -16,10 +16,17 @@ describe('materialParameters', () => {
       roughness: real(1),
       emission_energy: real(1),
       refraction: real(0.05),
-      heightmap_min_layers: real(8),
-      heightmap_max_layers: real(32),
       alpha_antialiasing_edge: real(0.3),
       fov_override: real(75),
+    });
+  });
+
+  it('gives an int uniform the int its setter passes', () => {
+    expect(parametersOf({ particles_anim_h_frames: 4 })).toMatchObject({
+      heightmap_min_layers: int(8),
+      heightmap_max_layers: int(32),
+      particles_anim_h_frames: int(4),
+      particles_anim_v_frames: int(1),
     });
   });
 

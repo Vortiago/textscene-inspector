@@ -6,7 +6,15 @@ import {
   PROXIMITY_FADE_DISTANCE_MIN,
   TRIPLANAR_SHARPNESS_RANGE,
 } from '../../godot/scene/baseMaterial3D.js';
-import { bool, real, variant, vector2, vector3, type Variant } from '../../godot/variant/value/variant.js';
+import {
+  bool,
+  int,
+  real,
+  variant,
+  vector2,
+  vector3,
+  type Variant,
+} from '../../godot/variant/value/variant.js';
 import type { MaterialState, MaterialValue } from './materialProperties.js';
 
 /** The value of each property the constructor sets (`material.cpp:3936`), under the property's name. */
@@ -149,10 +157,18 @@ const COLOR_PARAMETERS: ReadonlySet<string> = new Set([
   'transmittance_color',
 ]);
 
+/** The parameters Godot's setters write as an `int` (`material.cpp:2832-2848,2869-2885`). */
+const INT_PARAMETERS: ReadonlySet<string> = new Set([
+  'heightmap_min_layers',
+  'heightmap_max_layers',
+  'particles_anim_h_frames',
+  'particles_anim_v_frames',
+]);
+
 /** The Variant a setter passes for parameter `name`: a lane list is a vector, or a colour. */
 function parameterVariant(name: string, value: MaterialValue): Variant {
   if (typeof value === 'boolean') return bool(value);
-  if (typeof value === 'number') return real(value);
+  if (typeof value === 'number') return INT_PARAMETERS.has(name) ? int(Math.trunc(value)) : real(value);
   const [x = 0, y = 0, z = 0, w = 0] = value;
   if (value.length === 2) return vector2({ x, y });
   if (value.length === 3) return vector3({ x, y, z });

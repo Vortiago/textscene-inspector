@@ -8,7 +8,7 @@ import { materialUniforms } from './materialUniforms.js';
 import { originComment, renderModes } from './renderModes.js';
 import { vertexFunction } from './vertexFunction.js';
 
-/** A scene holds a few dozen keys, and a key past the bound is written again in under a millisecond. */
+/** The bound on the texts kept, well above the few dozen keys a scene holds. */
 export const CACHED_TEXTS = 256;
 
 /** Written only by `shaderTextOf`, most recently read last. It drops the oldest past `CACHED_TEXTS`. */

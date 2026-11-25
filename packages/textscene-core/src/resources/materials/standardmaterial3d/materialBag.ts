@@ -22,7 +22,7 @@ import {
   alphaAntialiasingProps,
   alphaAntialiasingUserData,
 } from '../../../r3f/materials/godotAlphaAntialiasing';
-import { CASTS_SHADOW_KEY, recordedOn } from '../../../r3f/materials/recordedOnMaterial';
+import { castsShadowUserData, recordedOn } from '../../../r3f/materials/recordedOnMaterial';
 import {
   emissionTextureAddInjection,
   emissionTextureAddUserData,
@@ -223,7 +223,7 @@ function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unk
   const billboard = surfaceBillboard(scalars);
   const userData = {
     [BILLBOARD_KEY]: billboard,
-    [CASTS_SHADOW_KEY]: scalars.castsShadow,
+    ...castsShadowUserData(scalars.castsShadow),
     ...alphaHashScaleUserData(scalars.alphaHashScale),
     ...alphaAntialiasingUserData(scalars.alphaAntialiasing),
     ...ambientOcclusionUserData(scalars.aoLightAffect, scalars.aoTextureChannelMask),
