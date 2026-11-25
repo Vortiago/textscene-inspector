@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { emulatedPointGeometry, type DrawRange } from '../../shaders/spatial/meshAttributes.js';
+import { emulatedPointGeometry, type DrawRange } from '../../shaders/template/emulatedPoints.js';
 import type { PointDraw } from '../../shaders/spatial/spatialPipeline.js';
 import { NO_RAYCAST } from '../../shaders/pipeline/noRaycast.js';
 import { OTHER_DRAWS_SURFACE } from '../materials/useOneSurfaceStartingMaterial.js';

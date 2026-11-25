@@ -9,7 +9,7 @@ import {
   modulated,
   WHITE,
 } from './canvasInstance.js';
-import { QUAD_VERTICES } from '../template/surfaceAttributes.js';
+import { QUAD_VERTICES } from '../../godot/rendering/emulatedPoints.js';
 import { primitiveObject, type PrimitiveObject } from './canvasAttributes.js';
 import type { CanvasDraw, CanvasVariant } from './transpileCanvas.js';
 

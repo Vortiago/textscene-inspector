@@ -125,6 +125,16 @@ describe('transpileCanvasItem', () => {
       ]).toEqual([false, false]);
     });
 
+    it('builds every variant of triangles for a shader that writes POINT_SIZE', () => {
+      const item = transpileCanvasItem(SIZED);
+
+      expect(
+        (['quad', 'ninepatch', 'primitive', 'attributes'] as const).map(
+          (variant) => generatedMaterialProgram(item.draw(variant).material).vertex.length > 0
+        )
+      ).toEqual([true, true, true, true]);
+    });
+
     it("sizes the emulated points from the shader's POINT_SIZE, where three's points take none", () => {
       const emulated = generatedMaterialProgram(
         transpileCanvasItem(SIZED).draw('attributes_points').material

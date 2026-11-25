@@ -6,7 +6,7 @@ import type { Vector2 } from '../../godot/math/vector.js';
 import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
 import type { CanvasPrimitive } from './canvasPrimitive.js';
 import { type CanvasItemDraw, modulated, NO_INSTANCE_UNIFORMS, WHITE, worldOf } from './canvasInstance.js';
-import { emulatedPointGeometry } from '../spatial/meshAttributes.js';
+import { emulatedPointGeometry } from '../template/emulatedPoints.js';
 import { CUSTOM_ARRAY_LANES } from '../../godot/rendering/meshArrayFormat.js';
 import { customArrayTemplateAttribute, VERTEX_ID_ATTRIBUTE } from '../template/surfaceAttributes.js';
 import type { CanvasDraw, CanvasVariant } from './transpileCanvas.js';
@@ -78,7 +78,7 @@ const DEFAULT_UV = [0, 0];
  */
 export function attributesGeometry(
   arrays: CanvasVertexArrays,
-  customsRead: CanvasDraw['customsRead']
+  { customsRead, emulatesPoints }: Pick<CanvasDraw, 'customsRead' | 'emulatesPoints'>
 ): THREE.BufferGeometry {
   const { points, colors, uvs, indices } = checkedArrays(arrays);
   const count = points.length;
@@ -103,7 +103,8 @@ export function attributesGeometry(
       new THREE.BufferAttribute(values, CUSTOM_ARRAY_LANES)
     );
   });
-  if (arrays.primitive === 'points')
+  // Only an emulated point reads its vertex's index from an attribute: three's own points read `vertexIndex`.
+  if (emulatesPoints)
     geometry.setAttribute(
       VERTEX_ID_ATTRIBUTE,
       new THREE.BufferAttribute(Float32Array.from(points.keys()), 1)

@@ -3,11 +3,15 @@ import type { Rgba } from '../../godot/math/math';
 import { rect2Intersection, type Rect2 } from '../../godot/math/rect2';
 import { bottomUpV } from '../../godot/math/uv';
 import type { Vector2 } from '../../godot/math/vector';
-import { CUSTOM_ARRAY_LANES, MISSING_CUSTOM_LANES } from '../../godot/rendering/meshArrayFormat';
+import {
+  CANVAS_CUSTOM_ARRAYS,
+  CUSTOM_ARRAY_LANES,
+  MISSING_CUSTOM_LANES,
+} from '../../godot/rendering/meshArrayFormat';
 import { geometryPrimitive } from '../../resources/meshes/godotSurface';
 import type { AtlasCellRects } from '../../resources/useTexture2D';
 import type { CanvasVertexArrays } from '../../shaders/canvas/canvasAttributes';
-import { CANVAS_CUSTOM_ARRAYS, customArrayAttribute } from '../../shaders/template/surfaceAttributes';
+import { customArrayAttribute } from '../../shaders/template/surfaceAttributes';
 import { geometryBoxUserData } from '../bounds';
 import type { CanvasSurface } from '../canvasMesh/canvasSurface';
 
@@ -150,6 +154,8 @@ function vertexArraysOf(
 function customLanes(geometry: THREE.BufferGeometry, name: string): Float32Array | undefined {
   const attribute = geometry.getAttribute(name);
   if (!attribute) return undefined;
+  // The surface loader already writes four float lanes, so its array serves as it is.
+  if (isFourFloatLanes(attribute)) return attribute.array;
   const lanes = new Float32Array(attribute.count * CUSTOM_ARRAY_LANES);
   const width = Math.min(attribute.itemSize, CUSTOM_ARRAY_LANES);
   for (let point = 0; point < attribute.count; point++)
@@ -158,6 +164,13 @@ function customLanes(geometry: THREE.BufferGeometry, name: string): Float32Array
         lane < width ? attribute.getComponent(point, lane) : MISSING_CUSTOM_LANES[lane]!;
   return lanes;
 }
+
+const isFourFloatLanes = (
+  attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute
+): attribute is THREE.BufferAttribute & { array: Float32Array } =>
+  !(attribute as THREE.InterleavedBufferAttribute).isInterleavedBufferAttribute &&
+  attribute.itemSize === CUSTOM_ARRAY_LANES &&
+  attribute.array instanceof Float32Array;
 
 /** Whether two command lists draw the same batches: the same kinds in order, and the same mesh arrays. */
 export function sameCommandLayout(

@@ -204,7 +204,7 @@ function drawnPolygonObjects(draws, { polygon }) {
 /** One polygon command through the attributes variant, with the item's push constants. */
 function polygonObject(draws, command, isTextured) {
   const { draw } = draws.draw('attributes', isTextured);
-  const geometry = attributesGeometry(command, draw.customsRead);
+  const geometry = attributesGeometry(command, draw);
   return attributesObject(draw, geometry, 'triangles', polygonConstants(draws.itemDraw));
 }
 
@@ -223,7 +223,7 @@ function meshObjects(draws, { surface, isTextured }) {
   };
   const { draw } = draws.draw(attributesVariant(surface.primitive), isTextured);
   const constants = meshConstants(draws.itemDraw, { transform: IDENTITY, modulate: WHITE });
-  return [attributesObject(draw, attributesGeometry(arrays, draw.customsRead), surface.primitive, constants)];
+  return [attributesObject(draw, attributesGeometry(arrays, draw), surface.primitive, constants)];
 }
 
 /** The quad batch of the scene's one nine-patch. */

@@ -257,7 +257,7 @@ function meshBatch(
 ): Batch {
   const { arrays } = command;
   const { draw } = variantOf(attributesVariant(arrays.primitive));
-  const geometry = attributesGeometry(arrays, draw.customsRead);
+  const geometry = attributesGeometry(arrays, draw);
   // Written in place by this batch, and read by the attributes draw before each draw.
   const constants = { world: mutableTransform2D(), modulation: WHITE };
   const object = attributesObject(draw, geometry, arrays.primitive, constants);

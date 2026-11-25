@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { emulatedPointGeometry, withGodotAttributes } from '../../shaders/spatial/meshAttributes';
+import { withGodotAttributes } from '../../shaders/spatial/meshAttributes';
+import { emulatedPointGeometry } from '../../shaders/template/emulatedPoints';
 import { geometryBoxUserData } from '../bounds';
 import { canvasSurfaceGeometry } from '../canvasMesh/canvasSurface';
 import { canvasMeshGeometry } from '../meshes/canvasMeshGeometry';
@@ -166,6 +167,15 @@ describe('meshCommands', () => {
     const [command] = meshCommands([geometry]);
 
     expect(command?.kind === 'mesh' && [...command.arrays.customs![0]!]).toEqual(lanes);
+  });
+
+  it('passes a custom array of four float lanes through, as the surface loader writes it', () => {
+    const geometry = canvasSurfaceGeometry(TRIANGLE);
+    const values = new Float32Array(3 * 4);
+    geometry.setAttribute('custom0', new THREE.BufferAttribute(values, 4));
+    const [command] = meshCommands([geometry]);
+
+    expect(command?.kind === 'mesh' && command.arrays.customs![0]).toBe(values);
   });
 
   it('reads an interleaved custom array by its lanes', () => {

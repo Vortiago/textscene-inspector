@@ -52,3 +52,6 @@ export const CUSTOM_ARRAY_LANES = 4;
 
 /** A 1 to 3 lane float format binds as R32 to R32G32B32 (`mesh_storage.cpp:1382`): a gap reads 0, alpha 1. */
 export const MISSING_CUSTOM_LANES = [0, 0, 0, 1] as const;
+
+/** The custom arrays the canvas template reads: CUSTOM0 and CUSTOM1 (`canvas.glsl:12-18`). */
+export const CANVAS_CUSTOM_ARRAYS = [0, 1] as const;

@@ -139,7 +139,7 @@ function renderModeDefines(shader: ShaderNode, table: ModeTable): string[] {
 }
 
 /** Each usage define of the built-ins `shader` reads, once, in the order of the text. */
-function usageDefines(shader: ShaderNode, table: ModeTable): string[] {
+export function usageDefines(shader: ShaderNode, table: ModeTable): string[] {
   const defines = new Set<string>();
   for (const definition of shader.functions)
     for (const expression of everyExpressionIn(definition.body)) {

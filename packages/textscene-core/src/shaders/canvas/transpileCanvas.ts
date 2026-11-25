@@ -3,10 +3,14 @@ import { attribute, instanceIndex, int, screenSize, varyingProperty, vertexIndex
 import type { Node, TextureNode } from 'three/webgpu';
 import type { MaterialBlendState } from '../pipeline/blendState.js';
 import { parsedShader, shaderSource, type ShaderOptions } from '../language/parseShader.js';
+import type { ShaderNode } from '../language/shaderTree.js';
 import { variablesRead } from '../language/treeWalk.js';
-import { CANVAS_CUSTOM_ARRAYS, VERTEX_ID_ATTRIBUTE } from '../template/surfaceAttributes.js';
+import { CANVAS_CUSTOM_ARRAYS } from '../../godot/rendering/meshArrayFormat.js';
+import { VERTEX_ID_ATTRIBUTE } from '../template/surfaceAttributes.js';
 import { devicePoints, sizesPoints, type DevicePoints } from '../template/devicePoints.js';
 import { emitTemplateStage, programResources, type WrittenBuiltIn } from '../template/emitTemplate.js';
+import { usageDefines, usageDefineOf } from '../template/link.js';
+import { MODE_TABLES } from '../template/modeTables.generated.js';
 import { linkedProgram, type LinkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
 import type { RowBlock } from '../template/rowBlock.js';
 import type { Specialisation } from '../template/specialisation.js';
@@ -108,7 +112,8 @@ export function transpileCanvasItem(source: string, options: CanvasItemOptions =
     program,
     shader: { parameters: [...program.parameters.values()], source: shaderSource(parsed, file) },
     blend: canvasBlendState(parsed.tree),
-    ...builtInUses(variablesRead(parsed.tree, (variable) => variable.builtIn !== undefined)),
+    usesPointSize: sizesPoints(variablesRead(parsed.tree, (variable) => variable.builtIn !== undefined)),
+    customsRead: customsRead(parsed.tree),
   };
   const rows = options.rows ?? 'flipped';
   const draws = new Map<CanvasVariant, CanvasDraw>();
@@ -154,12 +159,11 @@ interface ItemProgram {
   readonly customsRead: readonly number[];
 }
 
-/** What the built-ins a shader names ask of its draws. */
-function builtInUses(builtInsNamed: ReadonlySet<string>): Pick<ItemProgram, 'usesPointSize' | 'customsRead'> {
-  return {
-    usesPointSize: sizesPoints(builtInsNamed),
-    customsRead: CANVAS_CUSTOM_ARRAYS.filter((custom) => builtInsNamed.has(`CUSTOM${custom}`)),
-  };
+/** The custom arrays whose usage define the shader makes, as the template declares (`canvas.glsl:12-18`). */
+function customsRead(shader: ShaderNode): number[] {
+  const table = MODE_TABLES.canvas_item!;
+  const defines = new Set(usageDefines(shader, table));
+  return CANVAS_CUSTOM_ARRAYS.filter((custom) => defines.has(usageDefineOf(table, `CUSTOM${custom}`) ?? ''));
 }
 
 /** The variant a draw links, and the rows of the target it draws to. */
@@ -172,6 +176,11 @@ interface DrawTarget {
 interface VariantPoints {
   readonly variant: CanvasVariant;
   readonly points: DevicePoints | null;
+}
+
+/** A variant's points, and whether the shader names `POINT_SIZE`, which defines `USE_POINT_SIZE` too. */
+interface PointSizeUse extends VariantPoints {
+  readonly usesPointSize: boolean;
 }
 
 /** The material of `variant`, with resources of its own and the program's parameters. */
@@ -194,7 +203,13 @@ function canvasDraw(
   });
   // Emitted anew at each specialisation: three caches function code by node (`NodeBuilder.js:2759`).
   material.stageWith(() =>
-    Object.assign(material, stages({ ...program, resources }, target, emulatesPoints ? devicePoints() : null))
+    Object.assign(
+      material,
+      stages({ ...program, resources }, target, {
+        points: emulatesPoints ? devicePoints() : null,
+        usesPointSize,
+      })
+    )
   );
   return {
     material,
@@ -210,7 +225,7 @@ function canvasDraw(
 function stages(
   { linked, resources, parameterValues }: LinkedProgram,
   { variant, rows }: DrawTarget,
-  points: DevicePoints | null
+  { points, usesPointSize }: Omit<PointSizeUse, 'variant'>
 ) {
   const defines = CANVAS_VARIANT_DEFINES[variant];
   const vertexStage = linked('vertex', defines);
@@ -218,7 +233,7 @@ function stages(
   const vertex = emitTemplateStage(
     vertexStage,
     new Map([...parameterValues, ...vertexAttributes(vertexStage), ...drawIndices({ variant, points })]),
-    { name: 'gl_Position', type: 'vec4', beside: pointSizeWrites({ variant, points }) },
+    { name: 'gl_Position', type: 'vec4', beside: pointSizeWrites({ variant, points, usesPointSize }) },
     resources
   );
   const fragment = emitTemplateStage(
@@ -239,9 +254,10 @@ function stages(
 }
 
 /** The template's `gl_PointSize` write: the shader's size where points are emulated, else three's 1. */
-function pointSizeWrites({ variant, points }: VariantPoints): WrittenBuiltIn[] {
+function pointSizeWrites({ variant, points, usesPointSize }: PointSizeUse): WrittenBuiltIn[] {
   if (points) return [points.size];
-  return writesPointSize(variant) ? [NATIVE_POINT_SIZE] : [];
+  // The shader's usage define writes `gl_PointSize` in a variant of triangles too (`canvas.glsl:300-302`).
+  return writesPointSize(variant) || usesPointSize ? [NATIVE_POINT_SIZE] : [];
 }
 
 /** `gl_VertexIndex` and `gl_InstanceIndex` as Godot counts them, for an emulated point too. */

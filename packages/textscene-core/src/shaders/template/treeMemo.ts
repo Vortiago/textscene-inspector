@@ -2,7 +2,7 @@ import type { StageName } from './stages.js';
 import type { TemplateStageNode } from './templateTree.js';
 
 /** Raise it with each change that gives a text another tree, so no stored tree outlives its transpiler. */
-export const TRANSPILER_VERSION = 2;
+export const TRANSPILER_VERSION = 3;
 
 /** Everything a linked stage's tree depends on. */
 export interface TreeKey {

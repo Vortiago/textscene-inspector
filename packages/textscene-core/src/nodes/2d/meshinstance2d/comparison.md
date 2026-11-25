@@ -23,6 +23,16 @@ draws each surface through Godot's canvas template with the user's shader, with 
 and `uv`. A 2D light
 does not shade it yet.
 
+## A canvas_item shader's built-ins
+
+<!-- compare: image=unit-canvas-shader-builtins status=done fixture=unit-canvas-shader-builtins.tscn -->
+
+A user's `canvas_item` shader on a MeshInstance2D reads the mesh's `CUSTOM0` and `CUSTOM1` arrays. A lane the
+array format lacks reads 0, and a missing alpha reads 1, as in Godot. A PRIMITIVE_POINTS mesh whose shader
+writes `POINT_SIZE` draws each point as a square of that many pixels, with `POINT_COORD` across it. Sprite2D
+rows beside them draw `world_vertex_coords`, `NORMAL`, `NORMAL_MAP`, `light_only`, a uniform at its default
+and a shader that writes `POINT_SIZE` on a sprite.
+
 ## Linting
 
 <!-- lint:begin MeshInstance2D -->
