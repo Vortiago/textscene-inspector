@@ -1,22 +1,30 @@
 import * as THREE from 'three';
 import type { SceneSky } from '../../shaders/spatial/sceneSky.js';
-import { renderedSky, skyRotation } from '../sky/skyRadiance.js';
+import { uvBorderSizeOf } from '../../shaders/sky/skyBindings.js';
+import { renderedSky, skyRotation, type ShownSky } from '../sky/skyRadiance.js';
 
-/** Scratch for one draw's sky basis, overwritten by the next. */
-const skyBasis = new THREE.Matrix3();
+/** Written only by `sceneSkyLight`, cleared by a draw with no sky. `show` makes a new record each render. */
+let last: { readonly shown: ShownSky; readonly light: SceneSky } | null = null;
 
 /** The sky of the render under way as a lit surface reads it, or nothing when the render shows none. */
 export function sceneSkyLight(): SceneSky | undefined {
-  const sky = renderedSky();
-  if (!sky) return undefined;
+  const shown = renderedSky();
+  if (!shown) {
+    last = null;
+    return undefined;
+  }
+  if (last?.shown !== shown) last = { shown, light: lightOf(shown) };
+  return last.light;
+}
+
+function lightOf(sky: ShownSky): SceneSky {
   const { layout, target } = sky.layers;
   return {
     layers: target.texture,
     layerEnergies: sky.energies,
     pixelSize: layout.pixelSize,
-    // The layout keeps the width inside the padding, and Godot the padding of one side (`sky.cpp:1559`).
-    borderSize: (1 - layout.borderSize) / 2,
-    worldToSky: skyBasis.fromArray(skyRotation),
+    borderSize: uvBorderSizeOf(layout.borderSize),
+    worldToSky: new THREE.Matrix3().fromArray(skyRotation),
     energyMultiplier: sky.energyMultiplier,
     ambientContribution: sky.contribution,
     isAmbientSource: sky.isAmbientSource,

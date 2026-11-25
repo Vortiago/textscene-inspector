@@ -6,6 +6,7 @@ import { roundedLayer } from '../language/textureLayer.js';
 import { scaleLayerReads } from '../language/layerScaledReads.js';
 import { skyLayersTextureNode } from '../sky/radianceTextureNode.js';
 import { defaultTexture } from '../uniforms/defaultTextures.js';
+import { SceneDataFlag } from '../../godot/rendering/sceneDataFlags.js';
 import {
   MAX_ROUGHNESS_LOD,
   SKY_ROUGHNESS_LAYERS_DEFAULT,
@@ -37,10 +38,6 @@ export interface SceneSky {
 /** The template's texture of the sky's layers. */
 const RADIANCE_OCTMAP = 'radiance_octmap';
 
-/** The scene data flags of the sky (`scene_data_inc.glsl:7-8`). */
-const USE_AMBIENT_CUBEMAP = 1 << 1;
-const USE_REFLECTION_CUBEMAP = 1 << 2;
-
 /** What a scene with no sky binds, as Godot binds a black array (`render_forward_clustered.cpp:3325`). */
 const NO_LAYERS = defaultTexture('layers', 'black') as THREE.DataArrayTexture;
 
@@ -64,7 +61,10 @@ export function radianceOctmapNode(): TextureNode {
 /** The scene data flags of `sky` (`render_scene_data_rd.cpp:188-199`). */
 export function skyFlagsOf(sky: SceneSky | undefined): number {
   if (!sky) return 0;
-  return (sky.isAmbientSource ? USE_AMBIENT_CUBEMAP : 0) | (sky.isReflected ? USE_REFLECTION_CUBEMAP : 0);
+  return (
+    (sky.isAmbientSource ? SceneDataFlag.USE_AMBIENT_CUBEMAP : 0) |
+    (sky.isReflected ? SceneDataFlag.USE_REFLECTION_CUBEMAP : 0)
+  );
 }
 
 /** Binds the layers of `sky` to `textures`, black with no sky. */

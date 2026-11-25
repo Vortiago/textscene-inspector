@@ -185,9 +185,14 @@ function projectionOf(scene: SkyScene): THREE.Vector4 {
   return new THREE.Vector4(columns[8], columns[0], columns[9], -columns[5]!);
 }
 
+/** Godot's `uv_border_size`, the padding of one side in UV, from a layout's width inside the padding. */
+export function uvBorderSizeOf(borderSize: number): number {
+  return (1 - borderSize) / 2;
+}
+
 /** The padding in UV, then 1 minus twice it, as `_render_sky` writes them from the padding. */
 function borderSizeOf({ borderSize = 1 }: SkyScene): THREE.Vector2 {
-  return new THREE.Vector2((1 - borderSize) / 2, borderSize);
+  return new THREE.Vector2(uvBorderSizeOf(borderSize), borderSize);
 }
 
 /** One value per light slot: the light's, then `empty` for each slot past the last light. */

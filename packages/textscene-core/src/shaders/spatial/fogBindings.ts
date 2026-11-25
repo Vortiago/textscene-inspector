@@ -3,9 +3,6 @@ import type { Binding } from '../uniforms/bindingTable.js';
 import { fogLightColor } from '../pipeline/environmentFog.js';
 import type { SpatialFrame } from './spatialBindings.js';
 
-/** `SCENE_DATA_FLAGS_USE_FOG` (`scene_data_inc.glsl:10`). */
-export const USE_FOG = 1 << 4;
-
 /** `use_depth_fog` in the first packed specialisation constant (`scene_forward_clustered_inc.glsl:101`). */
 const USE_DEPTH_FOG = 1 << 6;
 

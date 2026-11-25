@@ -5,7 +5,8 @@ import { transposed3x4 } from './instanceData.js';
 import type { TranspiledSpatial } from './transpileSpatial.js';
 import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
 import type { EnvironmentFog } from '../pipeline/environmentFog.js';
-import { FOG_BINDINGS, FOG_SPECIALISATIONS, USE_FOG } from './fogBindings.js';
+import { FOG_BINDINGS, FOG_SPECIALISATIONS } from './fogBindings.js';
+import { SceneDataFlag } from '../../godot/rendering/sceneDataFlags.js';
 import { EFFECT_SPECIALISATIONS } from './effectSpecialisations.js';
 import { DIRECTIONAL_LIGHT_BINDINGS, type DirectionalLight } from './directionalLights.js';
 import { GODOT_ROUGHNESS_LIMITER, type RoughnessLimiter } from '../../godot/rendering/roughnessLimiter.js';
@@ -40,12 +41,6 @@ export interface SpatialFrame extends SpatialScene {
   /** Whether the material draws in Godot's alpha pass, whose scene data has no roughness limiter. */
   readonly isAlphaPass: boolean;
 }
-
-/** `SCENE_DATA_FLAGS_USE_AMBIENT_LIGHT` (`scene_data_inc.glsl:6`). */
-const USE_AMBIENT_LIGHT = 1 << 0;
-
-/** `SCENE_DATA_FLAGS_USE_ROUGHNESS_LIMITER` (`scene_data_inc.glsl:9`). */
-const USE_ROUGHNESS_LIMITER = 1 << 3;
 
 /** `Camera3D::layers`' default: the 20 visual layers. */
 const ALL_VISUAL_LAYERS = 0xfffff;
@@ -125,10 +120,10 @@ export const SCENE_BINDINGS: readonly Binding<SpatialFrame>[] = [
     uniform: `${DATA}.flags`,
     godot: 'render_scene_data_rd.cpp:188-199, 208, 228, 258-259; render_forward_clustered.cpp:2162, 2381',
     value: (frame) =>
-      USE_AMBIENT_LIGHT |
+      SceneDataFlag.USE_AMBIENT_LIGHT |
       skyFlagsOf(frame.sky) |
-      (usesRoughnessLimiter(frame) ? USE_ROUGHNESS_LIMITER : 0) |
-      (frame.fog ? USE_FOG : 0),
+      (usesRoughnessLimiter(frame) ? SceneDataFlag.USE_ROUGHNESS_LIMITER : 0) |
+      (frame.fog ? SceneDataFlag.USE_FOG : 0),
   },
   {
     uniform: `${DATA}.ambient_light_color_energy`,
