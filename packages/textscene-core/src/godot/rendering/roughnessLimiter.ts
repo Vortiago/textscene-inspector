@@ -8,3 +8,17 @@
 export const ROUGHNESS_LIMITER_AMOUNT = 0.25;
 /** `rendering/anti_aliasing/screen_space_roughness_limiter/limit`. */
 export const ROUGHNESS_LIMITER_LIMIT = 0.18;
+
+/** The project's screen-space roughness limiter, which the opaque pass's scene data carries. */
+export interface RoughnessLimiter {
+  /** `rendering/anti_aliasing/screen_space_roughness_limiter/enabled`. */
+  readonly isEnabled: boolean;
+  readonly amount: number;
+  readonly limit: number;
+}
+
+export const GODOT_ROUGHNESS_LIMITER: RoughnessLimiter = {
+  isEnabled: true,
+  amount: ROUGHNESS_LIMITER_AMOUNT,
+  limit: ROUGHNESS_LIMITER_LIMIT,
+};

@@ -1,7 +1,13 @@
 /** Parsing shared by the light nodes. */
 
 import type { BaseLightProperties, BaseLightWithNormalBias, PositionalLightProperties } from './types';
-import { floatOr, intOr, parseOptionalBool, parseOptionalFloat } from '../../../../parser/valueParsers';
+import {
+  floatOr,
+  intOr,
+  parseOptionalBool,
+  parseOptionalFloat,
+  parseOptionalInt,
+} from '../../../../parser/valueParsers';
 import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { parseVisualLayers } from '../../visualinstance3d/parser';
 import { LIGHT_3D_DEFAULTS } from '../../../../godot/scene/light';
@@ -13,6 +19,7 @@ function parseBaseLightProperties(properties: Record<string, string>): BaseLight
     editor_only: boolSlotValue(properties.editor_only) === true,
     light_color: properties.light_color || LIGHT_3D_DEFAULTS.color,
     light_energy: floatOr(properties.light_energy, LIGHT_3D_DEFAULTS.energy, 'light_energy'),
+    light_cull_mask: parseOptionalInt(properties.light_cull_mask, 'uint32') ?? LIGHT_3D_DEFAULTS.cullMask,
     light_bake_mode: intOr(properties.light_bake_mode, LIGHT_3D_DEFAULTS.bakeMode, 'light_bake_mode'),
     light_negative: parseOptionalBool(properties.light_negative),
     light_specular: parseOptionalFloat(properties.light_specular),

@@ -1,3 +1,4 @@
+import { GODOT_DEFAULT_VISUAL_LAYERS } from '../../godot/scene/visualLayers.js';
 import * as THREE from 'three';
 import {
   attribute,
@@ -14,13 +15,7 @@ import {
   vec2,
 } from 'three/tsl';
 import type { Node, TextureNode } from 'three/webgpu';
-import { ShadingLanguageError } from '../language/shadingLanguageError.js';
-import {
-  parsedShader,
-  shaderSource,
-  type ParsedShader,
-  type ShaderOptions,
-} from '../language/parseShader.js';
+import { parsedShader, shaderSource, type ShaderOptions } from '../language/parseShader.js';
 import {
   emitTemplateStage,
   type ProgramResources,
@@ -52,6 +47,7 @@ import { VIEWPORT_SIZE } from './spatialBindings.js';
 import { setPrepassDraw } from '../pipeline/depthPrepass.js';
 import { drawAsLines } from '../pipeline/polygonMode.js';
 import { spatialPrepassDraw } from './spatialPrepass.js';
+import { dfgTextureNode } from './dfgTexture.js';
 import { rendererOf } from '../preprocessor/renderingMethod.js';
 import { BoundNodeMaterial } from '../uniforms/boundMaterial.js';
 import type { Specialisation } from '../template/specialisation.js';
@@ -92,36 +88,20 @@ export interface TranspiledSpatial {
 export interface SpatialOptions extends ShaderOptions {
   /** The project's texture filter settings, Godot's defaults when left out. */
   readonly sampling?: ProjectSampling;
+  /** The render layers a light's cull mask tests, the first layer when left out. */
+  readonly instanceLayers?: (object: THREE.Object3D) => number;
 }
 
-/** The material of `source`, an unshaded shader of `shader_type spatial`, preprocessed with `options`. */
+/** The material of `source`, a shader of `shader_type spatial`, preprocessed with `options`. */
 export function transpileSpatial(source: string, options: SpatialOptions = {}): TranspiledSpatial {
   const parsed = parsedShader(source, options);
-  refuseLit(parsed, options.file ?? '');
-  return transpileParsedSpatial(parsed, options);
-}
-
-/** The owner of the light loop, which a lit shader's draw needs. */
-const LIGHT_LOOP_OWNER = '#1453';
-
-function refuseLit(parsed: ParsedShader, file: string): void {
-  if (parsed.tree.renderModes.some((mode) => mode.name === 'unshaded')) return;
-  const reason =
-    'the shader is lit, as it has no `render_mode unshaded`, and the light loop is not ported yet';
-  throw new ShadingLanguageError(reason, { file, line: 1, column: 1 }, LIGHT_LOOP_OWNER);
-}
-
-/** The material of `parsed`, a parse of a `shader_type spatial` text with `options`. */
-export function transpileParsedSpatial(
-  parsed: ParsedShader,
-  options: SpatialOptions = {}
-): TranspiledSpatial {
   const { linked, resources, parameters, parameterValues } = linkedProgram(
     parsed,
     options.file ?? '',
     SCENE,
     options.sampling
   );
+  resources.textures.set('dfg', dfgTextureNode());
   const pipeline = spatialPipeline(parsed.tree);
   const emitStages = stageEmitter(linked, resources, parameterValues, pipeline);
   const shader = {
@@ -141,7 +121,10 @@ export function transpileParsedSpatial(
   };
   setPrepassDraw(material, spatialPrepassDraw(material, pipeline, renderer, program));
   const queueError = stencilQueueError(pipeline, options.file ?? '');
-  resources.buffers.byName.get('instances')?.writeEachDraw(instanceWordsOf);
+  const instanceLayers = options.instanceLayers ?? (() => GODOT_DEFAULT_VISUAL_LAYERS);
+  resources.buffers.byName
+    .get('instances')
+    ?.writeEachDraw((object) => instanceWordsOf(object, instanceLayers(object)));
   return {
     material,
     uniforms: resources.uniforms.byName,
@@ -221,13 +204,13 @@ const UNUSED_POINT_SIZE: WrittenBuiltIn = {
   store: () => undefined,
 };
 
-/** The instance of a draw's object, as Godot writes one for each draw. */
-function instanceWordsOf(object: THREE.Object3D): Uint32Array {
+/** The instance of a draw's object on the render layers `layers`, as Godot writes one for each draw. */
+function instanceWordsOf(object: THREE.Object3D, layers: number): Uint32Array {
   if ((object as THREE.InstancedMesh).isInstancedMesh)
     throw new Error(
       `expected a Mesh for a transpiled spatial shader, got the InstancedMesh ${object.name || object.uuid}: Godot's MultiMesh rows are not ported yet`
     );
-  return instanceWords(object.matrixWorld);
+  return instanceWords(object.matrixWorld, layers);
 }
 
 /** `points` widening each point by the size the template wrote, in Godot's viewport. */

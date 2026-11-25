@@ -33,6 +33,7 @@ import {
   projectAnisotropicFilteringLevel,
   projectRenderingMethod,
   projectSampling,
+  projectRoughnessLimiter,
   projectDecalFilter,
   projectDefaultFontGeneratesMipmaps,
   projectDefaultFontHinting,
@@ -802,6 +803,19 @@ describe('projectSampling', () => {
 
   it("takes Godot's defaults with no project", () => {
     expect(projectSampling(null)).toEqual({ anisotropicFilteringLevel: 2, useNearestMipmapFilter: false });
+  });
+});
+
+describe('projectRoughnessLimiter', () => {
+  it('reads whether the limiter is on, its amount and its limit', () => {
+    const settings = parseProjectSettings(
+      '[rendering]\n\nanti_aliasing/screen_space_roughness_limiter/enabled=false\nanti_aliasing/screen_space_roughness_limiter/amount=1.5\nanti_aliasing/screen_space_roughness_limiter/limit=0.5\n'
+    );
+    expect(projectRoughnessLimiter(settings)).toEqual({ isEnabled: false, amount: 1.5, limit: 0.5 });
+  });
+
+  it("takes Godot's defaults with no project", () => {
+    expect(projectRoughnessLimiter(null)).toEqual({ isEnabled: true, amount: 0.25, limit: 0.18 });
   });
 });
 

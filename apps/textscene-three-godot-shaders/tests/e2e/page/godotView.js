@@ -10,6 +10,9 @@ displayRenderer.toneMapping = THREE.NoToneMapping;
 /** Godot's rotation in degrees, in Godot's order of axes: Y, then X, then Z. */
 export const euler = ([x, y, z]) => new THREE.Euler(...[x, y, z].map(THREE.MathUtils.degToRad), 'YXZ');
 
+/** A light's +Z axis for a rotation in degrees: away from where it shines. */
+export const lightAxis = (rotation) => new THREE.Vector3(0, 0, 1).applyEuler(euler(rotation));
+
 /** A colour Godot holds in sRGB, linear, as Godot's C++ converts it. */
 export const linear = ([r, g, b]) => new THREE.Color().setRGB(r, g, b, THREE.SRGBColorSpace);
 

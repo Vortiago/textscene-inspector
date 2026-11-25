@@ -111,6 +111,22 @@ describe('createGLBMesh with GODOT_single_root', () => {
   });
 });
 
+describe('createGLBMesh lights', () => {
+  const SUN = {
+    extensionsUsed: ['KHR_lights_punctual'],
+    extensions: { KHR_lights_punctual: { lights: [{ type: 'directional', intensity: 2 }] } },
+  };
+
+  it('holds a light at the three intensity of a Godot energy equal to its glTF intensity', async () => {
+    const glb = nodesGlb([{ name: 'Sun', extensions: { KHR_lights_punctual: { light: 0 } } }], SUN);
+    const lights: THREE.Light[] = [];
+    (await createGLBMesh(glb, NO_SIDECAR)).traverse((object) => {
+      if ((object as THREE.Light).isLight) lights.push(object as THREE.Light);
+    });
+    expect(lights.map((light) => light.intensity)).toEqual([2 * Math.PI]);
+  });
+});
+
 describe('createGLBMesh alpha modes', () => {
   async function importedMaterial(alphaMode: string): Promise<THREE.Material> {
     const object = await createGLBMesh(triangleGlb({ material: { alphaMode } }), NO_SIDECAR);

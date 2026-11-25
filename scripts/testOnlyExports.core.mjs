@@ -71,8 +71,6 @@ export const KEPT_TEST_ONLY_EXPORTS = [
   'shaders/material/baseMaterialShader.ts#shaderTextOf',
   'shaders/material/materialParameters.ts#materialParameters',
   'shaders/material/stencilEffect.ts#stencilPassOf',
-  // The lit template's fit in WebGL 2's limits is measured before any runtime path draws a lit shader.
-  'shaders/spatial/transpileSpatial.ts#transpileParsedSpatial',
   // The template check prints each parsed template stage back to text, which no draw needs.
   'shaders/template/printTemplate.ts#printTemplateStage',
   // The sampler test checks the state of each hint without a texture copy.

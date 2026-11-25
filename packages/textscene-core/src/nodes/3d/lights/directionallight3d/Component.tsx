@@ -35,6 +35,7 @@ import { directionalLightSize } from '../../../../godot/rendering/lights/directi
 import { degToRad } from '../../../../godot/math/math';
 import { fogLightUserData } from '../../../../r3f/fog/fogLightDeclaration';
 import { useDrawsEditorOnly } from '../../../../r3f/contexts/EditorHintContext';
+import { surfaceLightUserData } from '../../../../r3f/surfaceLight/surfaceLight';
 
 export function DirectionalLight3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as DirectionalLight3DProperties;
@@ -65,6 +66,10 @@ export function DirectionalLight3D({ node, children }: NodeComponentProps) {
       ...lightSizeUserData(size),
       ...lightBakeModeUserData(properties.light_bake_mode),
       ...visualLayersUserData(properties.layers),
+      ...surfaceLightUserData({
+        lightsSurfaces: directionalLightLightsSurfaces(skyMode),
+        cullMask: properties.light_cull_mask,
+      }),
     }),
     [
       skyMode,
@@ -76,6 +81,7 @@ export function DirectionalLight3D({ node, children }: NodeComponentProps) {
       size,
       properties.light_bake_mode,
       properties.layers,
+      properties.light_cull_mask,
     ]
   );
 
