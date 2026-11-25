@@ -102,15 +102,21 @@ export class NodeValues<P extends string> {
   }
 }
 
-/** The node a formatter reads: the handle's `get` and `call`, and the names the scene says the file sets. */
+/** The handle's `get`, each property asked once, its `call`, and the names the file sets. */
 export function inspectedNode(node: NodeHandle, fileProperties: readonly string[]): InspectedNode {
+  const asked = new Map<string, Promise<SceneValue | null>>();
+  const get = (property: string): Promise<SceneValue | null> => {
+    let answer = asked.get(property);
+    if (!answer) asked.set(property, (answer = node.get(property)));
+    return answer;
+  };
   return {
     fileProperties: new Set(fileProperties),
     read: async (properties) => {
-      const answers = await Promise.all(properties.map((property) => node.get(property)));
+      const answers = await Promise.all(properties.map(get));
       return new NodeValues(new Map(properties.map((property, index) => [property, answers[index]!])));
     },
-    call: (method, ...args) => node.call(method, ...args),
+    call: node.call.bind(node),
   };
 }
 

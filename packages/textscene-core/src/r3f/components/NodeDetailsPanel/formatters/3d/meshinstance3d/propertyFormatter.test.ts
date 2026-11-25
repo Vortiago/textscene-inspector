@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { formatMeshInstance3DProperties } from './propertyFormatter';
-import { SCENE_PATH, sectionsOf, sectionTitled } from '../../testing/inspectedScene';
+import { SCENE_PATH, sectionIn } from '../../testing/inspectedScene';
 
 const RESOURCES = {
   ext: { '1_mat': 'Material', '2_mat': 'Material' },
@@ -8,10 +8,7 @@ const RESOURCES = {
 };
 
 async function section(title: string, properties: Record<string, string> = {}) {
-  return sectionTitled(
-    await sectionsOf(formatMeshInstance3DProperties, 'MeshInstance3D', properties, RESOURCES),
-    title
-  );
+  return sectionIn(formatMeshInstance3DProperties, 'MeshInstance3D', title, properties, RESOURCES);
 }
 
 describe('formatMeshInstance3DProperties', () => {

@@ -1,11 +1,8 @@
 import { OMNI_LIGHT_3D_SHADOW_MODE_NAMES } from '../../../../../../../godot/scene/light';
 import type { InspectedNode, PropertySection } from '../../../inspectedNode';
 import { formatNode3DProperties } from '../../../base/node3d/propertyFormatter';
-import {
-  formatBaseLightSection,
-  formatShadowSectionWithNormalBias,
-  setRows,
-} from '../shared/propertyFormatter';
+import { formatBaseLightSection, formatShadowSectionWithNormalBias } from '../shared/propertyFormatter';
+import { setRows } from '../../../setRows';
 
 export async function formatOmniLight3DProperties(node: InspectedNode): Promise<PropertySection[]> {
   const values = await node.read(['omni_range', 'omni_attenuation']);

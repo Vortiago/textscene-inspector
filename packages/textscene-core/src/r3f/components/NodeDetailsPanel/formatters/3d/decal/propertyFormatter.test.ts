@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { formatDecalProperties } from './propertyFormatter';
-import { sectionsOf, sectionTitled } from '../../testing/inspectedScene';
+import { sectionIn } from '../../testing/inspectedScene';
 
 const TEXTURES = {
   '1_albedo': 'Texture2D',
@@ -10,10 +10,7 @@ const TEXTURES = {
 };
 
 async function section(title: string, properties: Record<string, string> = {}) {
-  return sectionTitled(
-    await sectionsOf(formatDecalProperties, 'Decal', properties, { ext: TEXTURES }),
-    title
-  );
+  return sectionIn(formatDecalProperties, 'Decal', title, properties, { ext: TEXTURES });
 }
 
 describe('formatDecalProperties', () => {

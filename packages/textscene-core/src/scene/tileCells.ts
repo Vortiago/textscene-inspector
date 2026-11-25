@@ -6,9 +6,7 @@ import {
   type PlacedCell,
 } from '../nodes/2d/tiles/shared/tileData.js';
 import { intOr } from '../parser/valueParsers.js';
-
-/** The texts a node's file sets, by property name. */
-type NodeTexts = Readonly<Record<string, string>>;
+import type { NodeTexts } from './listed/listedProperties.js';
 
 /** The format a TileMap starts at when the file writes none: TILE_MAP_DATA_FORMAT_3 (tile_map.h:64). */
 const CURRENT_TILE_MAP_FORMAT = 2;

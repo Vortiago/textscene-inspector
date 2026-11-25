@@ -68,6 +68,17 @@ export function valueOf(sections: readonly PropertySection[], label: string): st
   return undefined;
 }
 
+/** The section titled `title` that `formatter` gives a node of `type` that sets `properties`. */
+export async function sectionIn(
+  formatter: Formatter,
+  type: string,
+  title: string,
+  properties: Readonly<Record<string, string>> = {},
+  resources: NamedResources = {}
+): Promise<PropertySection | undefined> {
+  return sectionTitled(await sectionsOf(formatter, type, properties, resources), title);
+}
+
 export function sectionTitled(
   sections: readonly PropertySection[],
   title: string

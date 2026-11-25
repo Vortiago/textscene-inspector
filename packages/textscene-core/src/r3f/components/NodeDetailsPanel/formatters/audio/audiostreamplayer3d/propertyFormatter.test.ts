@@ -1,14 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { formatAudioStreamPlayer3DProperties } from './propertyFormatter';
-import { sectionsOf, sectionTitled } from '../../testing/inspectedScene';
+import { sectionIn } from '../../testing/inspectedScene';
 
 async function section(title: string, properties: Record<string, string> = {}) {
-  return sectionTitled(
-    await sectionsOf(formatAudioStreamPlayer3DProperties, 'AudioStreamPlayer3D', properties, {
-      ext: { '1_snd': 'AudioStream' },
-    }),
-    title
-  );
+  return sectionIn(formatAudioStreamPlayer3DProperties, 'AudioStreamPlayer3D', title, properties, {
+    ext: { '1_snd': 'AudioStream' },
+  });
 }
 
 describe('formatAudioStreamPlayer3DProperties', () => {

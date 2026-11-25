@@ -1,12 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { formatDirectionalLight3DProperties } from './propertyFormatter';
-import { sectionsOf, sectionTitled } from '../../../testing/inspectedScene';
+import { sectionIn } from '../../../testing/inspectedScene';
 
 async function section(title: string, properties: Record<string, string> = {}) {
-  return sectionTitled(
-    await sectionsOf(formatDirectionalLight3DProperties, 'DirectionalLight3D', properties),
-    title
-  );
+  return sectionIn(formatDirectionalLight3DProperties, 'DirectionalLight3D', title, properties);
 }
 
 describe('formatDirectionalLight3DProperties', () => {

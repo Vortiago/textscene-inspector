@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { formatLabel3DProperties } from './propertyFormatter';
-import { sectionsOf, sectionTitled } from '../../testing/inspectedScene';
+import { sectionIn } from '../../testing/inspectedScene';
 
 async function section(title: string, properties: Record<string, string> = {}) {
-  return sectionTitled(await sectionsOf(formatLabel3DProperties, 'Label3D', properties), title);
+  return sectionIn(formatLabel3DProperties, 'Label3D', title, properties);
 }
 
 describe('formatLabel3DProperties', () => {

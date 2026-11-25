@@ -1,5 +1,6 @@
 import type { InspectedNode, PropertyItem, PropertySection } from '../../../inspectedNode';
 import { formatNode3DProperties } from '../../../base/node3d/propertyFormatter';
+import { setRows } from '../../../setRows';
 
 /** Each section's rows: the label and the property it reads. */
 const WHEEL_ROWS = [
@@ -19,17 +20,16 @@ const SUSPENSION_ROWS = [
 
 /** The forces a script drives each frame, shown only where the file sets them. */
 const DRIVE_SET_ROWS = [
-  ['Engine Force', 'engine_force'],
-  ['Brake', 'brake'],
-  ['Steering Angle', 'steering'],
-] as const;
+  { property: 'engine_force', label: 'Engine Force', text: String },
+  { property: 'brake', label: 'Brake', text: String },
+  { property: 'steering', label: 'Steering Angle', text: String },
+];
 
 export async function formatVehicleWheel3DProperties(node: InspectedNode): Promise<PropertySection[]> {
-  const driveSetRows = DRIVE_SET_ROWS.filter(([, property]) => node.fileProperties.has(property));
   const values = await node.read<string>([
     'use_as_traction',
     'use_as_steering',
-    ...[...WHEEL_ROWS, ...SUSPENSION_ROWS, ...driveSetRows].map(([, property]) => property),
+    ...[...WHEEL_ROWS, ...SUSPENSION_ROWS].map(([, property]) => property),
   ]);
   const rows = (pairs: readonly (readonly [string, string])[]): PropertyItem[] =>
     pairs.map(([label, property]) => ({ label, value: String(values.number(property)) }));
@@ -41,7 +41,7 @@ export async function formatVehicleWheel3DProperties(node: InspectedNode): Promi
       items: [
         { label: 'Traction', value: String(values.boolean('use_as_traction')) },
         { label: 'Steering', value: String(values.boolean('use_as_steering')) },
-        ...rows(driveSetRows),
+        ...(await setRows(node, DRIVE_SET_ROWS)),
       ],
     },
     ...(await formatNode3DProperties(node)),

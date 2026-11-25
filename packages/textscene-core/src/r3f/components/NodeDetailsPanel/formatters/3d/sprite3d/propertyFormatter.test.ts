@@ -1,12 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { formatSprite3DProperties } from './propertyFormatter';
-import { sectionsOf, sectionTitled } from '../../testing/inspectedScene';
+import { sectionIn } from '../../testing/inspectedScene';
 
 async function section(title: string, properties: Record<string, string> = {}) {
-  return sectionTitled(
-    await sectionsOf(formatSprite3DProperties, 'Sprite3D', properties, { ext: { '1_tex': 'Texture2D' } }),
-    title
-  );
+  return sectionIn(formatSprite3DProperties, 'Sprite3D', title, properties, {
+    ext: { '1_tex': 'Texture2D' },
+  });
 }
 
 describe('formatSprite3DProperties', () => {
