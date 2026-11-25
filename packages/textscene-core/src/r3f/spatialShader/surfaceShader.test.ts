@@ -23,7 +23,7 @@ describe('surfaceShaderOf', () => {
       },
     });
 
-    expect(shader.parametersWith({ map: texture })).toEqual({ tint: real(0.5), map: texture });
+    expect(shader.parametersWith({ map: texture }, undefined)).toEqual({ tint: real(0.5), map: texture });
   });
 
   it('reads one material once for the surfaces that share it', () => {
@@ -42,19 +42,23 @@ describe('surfaceShaderOf', () => {
 
     expect(shader.code).toContain('shader_type spatial;');
     expect(shader.textures).toEqual({ texture_normal: reference });
-    expect(shader.parametersWith({}).roughness).toEqual(real(0.25));
+    expect(shader.parametersWith({}, undefined).roughness).toEqual(real(0.25));
   });
 
-  it('gives the albedo texture its size once it loads', () => {
-    const albedo = new THREE.Texture({ width: 64, height: 32 });
+  it('gives the albedo texture the size its texture reports, not its sheet', () => {
+    const sheet = new THREE.Texture({ width: 128, height: 128 });
 
-    const parameters = baseMaterial({}).parametersWith({ texture_albedo: albedo });
+    const parameters = baseMaterial({}).parametersWith({ texture_albedo: sheet }, { width: 64, height: 32 });
 
     expect(parameters.albedo_texture_size).toEqual(variant('VECTOR2I', { x: 64, y: 32 }));
   });
 
-  it('gives no albedo size before the albedo texture loads', () => {
-    expect(baseMaterial({}).parametersWith({})).not.toHaveProperty('albedo_texture_size');
+  it('gives no albedo size before the albedo texture reports one', () => {
+    expect(baseMaterial({}).parametersWith({}, undefined)).not.toHaveProperty('albedo_texture_size');
+  });
+
+  it("names the albedo texture whose size Godot's setter reads", () => {
+    expect(baseMaterial({}, { albedo_texture: reference }).albedoTexture).toBe(reference);
   });
 
   it('names the material file in a fault', () => {

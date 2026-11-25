@@ -8,6 +8,7 @@ import { useProjectSettings } from '../contexts/ProjectSettingsContext';
 import { drawGroupOf, materialAt, placeMaterial, type MaterialHost } from '../materials/swappedMaterials';
 import { OTHER_DRAWS_SURFACE } from '../materials/useOneSurfaceStartingMaterial';
 import { useShaderTextures } from '../shaderTextures/shaderTextures';
+import { useTexture2DSize } from '../../resources/useTexture2D';
 import { useShaderRefusalWarning, useShaderTranslator } from '../shaderTranslator/useShaderTranslator';
 import type { SurfaceShaderSource } from './surfaceShader';
 
@@ -62,11 +63,12 @@ export function SpatialShaderSlot({ source, attach, fallback }: SpatialShaderSlo
   const [textures, textureSlots] = useShaderTextures(
     useMemo(() => samplers && shader && { references: shader.textures, samplers }, [samplers, shader])
   );
+  const albedoSize = useTexture2DSize(shader?.albedoTexture ?? null);
   useLayoutEffect(() => {
     if (!spatial || !shader) return;
-    module!.setParameterValues(spatial.parameters, shader.parametersWith(textures));
+    module!.setParameterValues(spatial.parameters, shader.parametersWith(textures, albedoSize));
     invalidate();
-  }, [module, spatial, shader, textures, invalidate]);
+  }, [module, spatial, shader, textures, albedoSize, invalidate]);
 
   const surfaceAttach = useMemo(
     () => module && spatial && godotSurfaceAttach(attach, module, spatial.pointDraw, scene),

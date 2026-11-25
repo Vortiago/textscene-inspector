@@ -24,7 +24,7 @@ interface ImageSize {
 }
 
 /** A cube's image is its six faces of one size: the faces' list has no size of its own. */
-export const imageSizeOf = (image: unknown): ImageSize =>
+const imageSizeOf = (image: unknown): ImageSize =>
   ((Array.isArray(image) ? image[0] : image) ?? {}) as ImageSize;
 
 const MIPMAP_FILTERS: ReadonlySet<number> = new Set([
