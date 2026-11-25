@@ -858,7 +858,7 @@ export function resolveLiveEntry(
  *
  * @canonical A walk of the Live scene tree
  */
-export function walkLiveTree(
+function walkLiveTree(
   roots: readonly TscnNode[],
   ctx: LiveTreeContext,
   visit: (entry: LiveTreeEntry) => void,
