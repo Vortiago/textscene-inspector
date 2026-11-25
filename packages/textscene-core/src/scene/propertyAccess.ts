@@ -2,6 +2,7 @@ import { findClassProperty, valueTypeOf, type ClassProperty } from '../godot/cla
 import { findDerivedProperty, nodeDefaultText } from '../godot/classdb/nodeDefault.js';
 import { classInheritanceChain, descendsFromClass } from '../godot/classdb/classBaseTypes.js';
 import { canonicalisePropertyBag } from '../godot/classdb/deprecated.js';
+import { withLoadedParamRanges } from '../nodes/shared/cpuparticles/params.js';
 import { PROPERTY_HINT } from '../godot/classdb/propertyHint.js';
 import { resourceTypeHint } from '../godot/classdb/resourceTypeHint.js';
 import { strToVar, type VariantReading } from '../godot/variant/strToVar.js';
@@ -50,7 +51,7 @@ export function storedValueOf({
   writtenReading,
   placedProperty,
 }: StoredTexts): StoredValue {
-  const raw = canonicalisePropertyBag(node.type, { ...node.rawProperties });
+  const raw = withLoadedParamRanges(node.type, canonicalisePropertyBag(node.type, { ...node.rawProperties }));
   // One parse per property for each call: a setter such as `global_position` reads one many times.
   const values = new Map<string, VariantValue>();
   const valueOf = (property: string): VariantValue => {
