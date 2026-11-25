@@ -1,3 +1,5 @@
+import { radToDeg } from '../../../../godot/math/math';
+
 /** `rgba(r, g, b, a)` with 0 to 255 whole channels and a two-place alpha, from a Color's four numbers. */
 export function rgbaText([r = 0, g = 0, b = 0, a = 1]: readonly number[]): string {
   return `rgba(${channelOf(r)}, ${channelOf(g)}, ${channelOf(b)}, ${a.toFixed(2)})`;
@@ -10,7 +12,7 @@ function channelOf(component: number): number {
 
 /** A rotation in radians as degrees to two places. */
 export function degreesText(radians: number): string {
-  return (radians * (180 / Math.PI)).toFixed(2);
+  return radToDeg(radians).toFixed(2);
 }
 
 /** A vector's numbers in brackets, each as `realText` writes it: `(1, 0.4)`. */
