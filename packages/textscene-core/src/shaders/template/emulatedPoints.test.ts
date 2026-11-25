@@ -50,6 +50,13 @@ describe('emulatedPointGeometry', () => {
 
     expect(geometry.boundingBox!.max.x).toBe(9);
   });
+
+  it("leaves the box of a surface with no position null, so three's lazy compute still bounds its later points", () => {
+    const surface = new THREE.BufferGeometry();
+    emulatedPointGeometry(surface);
+
+    expect(surface.boundingBox).toBeNull();
+  });
 });
 
 describe('emulatedPointGeometry of an indexed surface', () => {

@@ -115,11 +115,15 @@ function spatialPoints(host: THREE.Mesh, drawGroup: number | null = null, scene 
   return host.children[0]!;
 }
 
+/** The surface gains its position and index in place, and the render after rebuilds the quads. */
 function gainsPositionInPlace(): THREE.Object3D {
+  const scene = new THREE.Scene();
   const host = new THREE.Mesh(new THREE.BufferGeometry());
-  const drawn = spatialPoints(host);
-  host.geometry.setAttribute('position', quadSurface().getAttribute('position'));
-  host.geometry.computeBoundingBox();
+  const drawn = spatialPoints(host, null, scene);
+  const quad = quadSurface();
+  host.geometry.setAttribute('position', quad.getAttribute('position'));
+  host.geometry.setIndex(quad.getIndex());
+  beforeRenderList(scene);
   return drawn;
 }
 
@@ -212,7 +216,7 @@ describe('the bounds of a shaded draw', () => {
       { frame: EMPTY, clip: null },
     ],
     [
-      'emulated points of a surface that gains positions in place',
+      'emulated points of a surface that gains positions in place before a render',
       gainsPositionInPlace,
       { frame: QUAD_BOX, clip: QUAD_BOX },
     ],

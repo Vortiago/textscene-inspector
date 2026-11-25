@@ -32,8 +32,8 @@ export function emulatedPointGeometry(
   }
   // Shared, not copied: three recomputes a box in place, so a new box of the surface reaches the quads.
   geometry.boundingSphere = surface.boundingSphere;
-  // A surface with no position yet bounds nothing, in a box of its own that its first compute fills in place.
-  geometry.boundingBox = surface.boundingBox ??= new THREE.Box3();
+  // A positionless surface keeps a null box for three's lazy compute. The quads bound nothing till a rebuild.
+  geometry.boundingBox = surface.boundingBox ?? new THREE.Box3();
   return geometry;
 }
 
