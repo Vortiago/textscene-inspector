@@ -5,8 +5,13 @@ import { bottomUpV } from '../../godot/math/uv';
 import type { Vector2 } from '../../godot/math/vector';
 import { geometryPrimitive } from '../../resources/meshes/godotSurface';
 import type { AtlasCellRects } from '../../resources/useTexture2D';
-import { CANVAS_CUSTOM_ARRAYS, type CanvasVertexArrays } from '../../shaders/canvas/canvasAttributes';
-import { CUSTOM_ARRAY_LANES, MISSING_CUSTOM_LANES } from '../../shaders/template/surfaceAttributes';
+import type { CanvasVertexArrays } from '../../shaders/canvas/canvasAttributes';
+import {
+  CANVAS_CUSTOM_ARRAYS,
+  CUSTOM_ARRAY_LANES,
+  customArrayAttribute,
+  MISSING_CUSTOM_LANES,
+} from '../../shaders/template/surfaceAttributes';
 import type { CanvasSurface } from '../canvasMesh/canvasSurface';
 
 /** `canvas_item_add_texture_rect_region` with a white modulate (`renderer_canvas_cull.cpp:1624`). */
@@ -116,7 +121,7 @@ function vertexArraysOf(
       });
   }
   const index = geometry.getIndex();
-  const customs = CANVAS_CUSTOM_ARRAYS.map((name) => customLanes(geometry, name));
+  const customs = CANVAS_CUSTOM_ARRAYS.map((custom) => customLanes(geometry, customArrayAttribute(custom)));
   return {
     primitive: geometryPrimitive(geometry),
     ...(index && { indices: Array.from(index.array) }),

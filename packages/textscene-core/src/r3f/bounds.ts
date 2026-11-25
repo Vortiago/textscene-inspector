@@ -67,6 +67,14 @@ export function boxlessUserData(): { godotBoxless: true } {
   return { [BOXLESS_KEY]: true };
 }
 
+/** Where an object records that its geometry's box bounds it, though the geometry is instanced. */
+const GEOMETRY_BOX_KEY = 'godotGeometryBox';
+
+/** The userData of a draw over an instanced geometry whose box bounds every instance, as a canvas batch. */
+export function geometryBoxUserData(): { godotGeometryBox: true } {
+  return { [GEOMETRY_BOX_KEY]: true };
+}
+
 const AABB_KEY = 'godotAabb';
 
 /**
@@ -121,11 +129,11 @@ function unionOwnBox(object: THREE.Object3D, target: THREE.Box3): void {
   // BatchedMesh, or points over an instanced geometry (`instancesBounds`). Without it a GridMap
   // frames one tile. Any other mesh uses the bind-pose `geometry.boundingBox`.
   const isInstanced =
-    bearing.isInstancedMesh ||
-    bearing.isBatchedMesh ||
-    (geometry as THREE.InstancedBufferGeometry).isInstancedBufferGeometry;
-  // A plain mesh over an instanced geometry, as a canvas shader batch, has no box of its own.
-  const src = isInstanced && bearing.boundingBox !== undefined ? bearing : geometry;
+    object.userData[GEOMETRY_BOX_KEY] !== true &&
+    (bearing.isInstancedMesh ||
+      bearing.isBatchedMesh ||
+      (geometry as THREE.InstancedBufferGeometry).isInstancedBufferGeometry);
+  const src = isInstanced ? bearing : geometry;
   if (src.boundingBox === null) src.computeBoundingBox?.();
   if (!src.boundingBox) return;
   _box.copy(src.boundingBox).applyMatrix4(godotMatrixWorld(object, _matrix));

@@ -4,6 +4,9 @@ export const customArrayAttribute = (custom: number) => `custom${custom}`;
 /** The template attribute that reads the custom array `custom`. */
 export const customArrayTemplateAttribute = (custom: number) => `${customArrayAttribute(custom)}_attrib`;
 
+/** The custom arrays the canvas template reads: CUSTOM0 and CUSTOM1 (`canvas.glsl:12-18`). */
+export const CANVAS_CUSTOM_ARRAYS = [0, 1] as const;
+
 /** The lanes of one vertex of a custom array attribute: every format decodes to four floats. */
 export const CUSTOM_ARRAY_LANES = 4;
 

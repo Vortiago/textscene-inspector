@@ -5,7 +5,12 @@
  */
 import * as THREE from 'three';
 import { describe, it, expect } from 'vitest';
-import { boxlessUserData, computeWorldBoundingBox, godotAabbUserData } from './bounds.js';
+import {
+  boxlessUserData,
+  computeWorldBoundingBox,
+  geometryBoxUserData,
+  godotAabbUserData,
+} from './bounds.js';
 import { editorHelperUserData, nodeIconUserData } from './editorHelpers.js';
 import { placeSkinnedMeshInSkeletonSpace } from '../resources/formats/glb/skinnedMeshSpace.js';
 
@@ -28,12 +33,21 @@ describe('computeWorldBoundingBox', () => {
     expect(center.z).toBeCloseTo(4, 5);
   });
 
-  it('bounds a plain mesh over an instanced geometry by the box of its geometry', () => {
+  const instancedMesh = () => {
     const geometry = new THREE.InstancedBufferGeometry();
     geometry.boundingBox = new THREE.Box3(new THREE.Vector3(0, -4, 0), new THREE.Vector3(8, 0, 0));
-    const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial());
+    return new THREE.Mesh(geometry, new THREE.MeshBasicMaterial());
+  };
 
-    expect(computeWorldBoundingBox(mesh)).toEqual(geometry.boundingBox);
+  it('bounds a mesh marked by geometryBoxUserData over an instanced geometry by its geometry box', () => {
+    const mesh = instancedMesh();
+    Object.assign(mesh.userData, geometryBoxUserData());
+
+    expect(computeWorldBoundingBox(mesh)).toEqual(mesh.geometry.boundingBox);
+  });
+
+  it('gives an unmarked plain mesh over an instanced geometry no box, as one instance is not the draw', () => {
+    expect(computeWorldBoundingBox(instancedMesh()).isEmpty()).toBe(true);
   });
 
   it('uses the geometry (bind) box for a SkinnedMesh, ignoring a corrupt cached SkinnedMesh.boundingBox', () => {

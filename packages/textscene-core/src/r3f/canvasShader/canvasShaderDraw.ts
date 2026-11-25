@@ -38,6 +38,7 @@ import type {
 import { unDrawnMessage } from '../../shaders/fault/shaderRefusal';
 import type { ProjectSampling } from '../../shaders/uniforms/samplerState';
 import type { NodeFrame } from 'three/webgpu';
+import { geometryBoxUserData } from '../bounds';
 import { perObject } from '../../utils/perObject';
 import { warnOnce } from '../../utils/warnOnce';
 import { canvasTransformInto } from '../node2dTransform';
@@ -158,9 +159,7 @@ export function canvasShaderDraw(
     return made;
   };
   const batches = commandRuns(layout).map((run) =>
-    run.kind === 'rect'
-      ? rectBatch(variantOf('quad'), run.commands.length)
-      : meshBatch(variantOf, run.command)
+    run.kind === 'rect' ? rectBatch(variantOf('quad'), run.commands) : meshBatch(variantOf, run.command)
   );
   for (const batch of batches) object.add(batch.object);
   const world = mutableTransform2D();
@@ -219,10 +218,14 @@ function commandRuns(commands: readonly CanvasShaderCommand[]): CommandRun[] {
   return runs;
 }
 
-function rectBatch(variant: BoundVariant, count: number): Batch {
+function rectBatch(variant: BoundVariant, layout: readonly RectCommand[]): Batch {
+  const count = layout.length;
   const geometry = quadBatchGeometry(Array.from({ length: count }, () => new ArrayBuffer(INSTANCE_BYTES)));
   const object = new THREE.Mesh(geometry, variant.draw.material);
   object.frustumCulled = false;
+  Object.assign(object.userData, geometryBoxUserData());
+  // Bounded by the layout until the first source, so a clip group reads the rects at once.
+  boundItem(geometry, layout);
   let regions: readonly CanvasRectCommand[] = [];
   return {
     object,
@@ -259,6 +262,7 @@ function meshBatch(
   // Written in place by this batch, and read by the attributes draw before each draw.
   const constants = { world: mutableTransform2D(), modulation: WHITE };
   const object = attributesObject(draw, geometry, arrays.primitive, constants);
+  Object.assign(object.userData, geometryBoxUserData());
   boundItem(object.geometry, [command]);
   return {
     object,

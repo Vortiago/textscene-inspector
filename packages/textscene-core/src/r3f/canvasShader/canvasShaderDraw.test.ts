@@ -12,6 +12,7 @@ import {
   type CanvasShader,
 } from './canvasShaderDraw';
 import type { CanvasShaderCommand } from './canvasCommands';
+import { geometryBoxUserData } from '../bounds';
 
 const VALID = 'shader_type canvas_item;\nvoid fragment() { COLOR = vec4(UV, 0.5, 1.0); }\n';
 const INVALID = 'shader_type canvas_item;\nvoid fragment() { COLOR = 1; }\n';
@@ -130,6 +131,24 @@ describe('canvasShaderDraw', () => {
     const itemRect = new THREE.Box3(new THREE.Vector3(0, -4, 0), new THREE.Vector3(8, -0, 0));
     expect(rects!.geometry.boundingBox).toEqual(itemRect);
     expect(mesh!.geometry.boundingBox).toEqual(itemRect);
+  });
+
+  it('bounds a rect batch by its layout before the first setSource', () => {
+    const sampling = {
+      maps: DEFAULT_CANVAS_MAPS,
+      textureState: GODOT_CANVAS_TEXTURE_STATE,
+      sampling: GODOT_SAMPLING,
+    };
+    const draw = canvasShaderDraw(gl, itemOf(), sampling, [RECT_COMMAND]);
+
+    const box = (draw.object.children[0] as THREE.Mesh).geometry.boundingBox;
+    expect(box).toEqual(new THREE.Box3(new THREE.Vector3(0, -4, 0), new THREE.Vector3(8, -0, 0)));
+  });
+
+  it('marks each batch as bounded by its geometry box, which the framing box reads', () => {
+    const batches = drawOf([RECT_COMMAND, meshCommand()]).object.children;
+
+    for (const batch of batches) expect(batch.userData).toMatchObject(geometryBoxUserData());
   });
 
   it('bounds a rect batch by the rects setSource gives last', () => {
