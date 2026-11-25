@@ -4,20 +4,41 @@ import { describe, expect, it } from 'vitest';
 import type { EnvironmentFog } from '../pipeline/environmentFog.js';
 import { beforeEachDraw, specialiseSpatial, writeSpatialBindings } from './spatialBindings.js';
 import { transpileSpatial } from './transpileSpatial.js';
+import type { DirectionalLight } from './directionalLights.js';
+import type { RoughnessLimiter } from '../../godot/rendering/roughnessLimiter.js';
 
 const UNSHADED = 'shader_type spatial;\nrender_mode unshaded;\nvoid fragment() {\n\tALBEDO = vec3(0.6);\n}\n';
 
-function written(fog?: EnvironmentFog) {
-  const spatial = transpileSpatial(UNSHADED);
+interface WrittenScene {
+  fog?: EnvironmentFog;
+  directionalLights?: readonly DirectionalLight[];
+  source?: string;
+  roughnessLimiter?: RoughnessLimiter;
+}
+
+function written({ fog, directionalLights = [], source = UNSHADED, roughnessLimiter }: WrittenScene = {}) {
+  const spatial = transpileSpatial(source);
   const camera = new THREE.PerspectiveCamera(75, 2, 0.05, 4000);
   camera.position.set(0, 1, 3);
-  const clearColor = new THREE.Color(0.1, 0.2, 0.3);
-  writeSpatialBindings(spatial, { camera, width: 128, height: 64, time: 2.5, clearColor, fog });
+  const ambientLight = new THREE.Color(0.1, 0.2, 0.3);
+  writeSpatialBindings(spatial, {
+    camera,
+    width: 128,
+    height: 64,
+    time: 2.5,
+    ambientLight,
+    emissiveExposure: 0.25,
+    fog,
+    directionalLights,
+    roughnessLimiter,
+  });
   specialiseSpatial(spatial, fog);
   const value = (name: string) =>
     (spatial.uniforms.get(`scene_data_block.data.${name}`) as UniformNode<unknown>).value;
   const specialisation = (name: string) => spatial.specialisations.get(name)!.value;
-  return { spatial, camera, value, specialisation };
+  const light = (member: string) =>
+    (spatial.uniforms.get(`directional_lights.data.${member}`) as { array: unknown[] }).array;
+  return { spatial, camera, value, specialisation, light };
 }
 
 /** A depth fog with no depth end, so it ends at the far plane. */
@@ -53,12 +74,16 @@ describe('writeSpatialBindings', () => {
     expect(columns.slice(12)).toEqual([0, 0, 0, 0]);
   });
 
-  it('writes the size, the time, and the clear colour as the ambient light', () => {
+  it('writes the size, the time, and the ambient light', () => {
     const { value } = written();
     expect((value('viewport_size') as THREE.Vector2).toArray()).toEqual([128, 64]);
     expect((value('screen_pixel_size') as THREE.Vector2).toArray()).toEqual([1 / 128, 1 / 64]);
     expect(value('time')).toBe(2.5);
     expect((value('ambient_light_color_energy') as THREE.Vector4).toArray()).toEqual([0.1, 0.2, 0.3, 1]);
+  });
+
+  it("writes the camera attributes' exposure as the emission's", () => {
+    expect(written().value('emissive_exposure_normalization')).toBe(0.25);
   });
 });
 
@@ -70,7 +95,7 @@ describe('the fog bindings', () => {
   });
 
   it('turns on the fog flag and the depth fog bit for a depth fog', () => {
-    const { value, specialisation } = written(DEPTH_FOG);
+    const { value, specialisation } = written({ fog: DEPTH_FOG });
     expect((value('flags') as number) & (1 << 4)).toBe(1 << 4);
     expect(specialisation('pso_sc_packed_0')).toBe(1 << 6);
   });
@@ -83,16 +108,93 @@ describe('the fog bindings', () => {
   });
 
   it('ends a depth fog with no end at the far plane', () => {
-    const { value } = written(DEPTH_FOG);
+    const { value } = written({ fog: DEPTH_FOG });
     expect([value('fog_depth_begin'), value('fog_depth_end')]).toEqual([10, 4000]);
   });
 
   it('writes the light colour times its energy', () => {
-    expect((written(DEPTH_FOG).value('fog_light_color') as THREE.Vector3).toArray()).toEqual([1, 0.5, 2]);
+    expect((written({ fog: DEPTH_FOG }).value('fog_light_color') as THREE.Vector3).toArray()).toEqual([
+      1, 0.5, 2,
+    ]);
   });
 
   it('writes no aerial perspective, since the scene template binds no sky radiance', () => {
-    expect(written(DEPTH_FOG).value('fog_aerial_perspective')).toBe(0);
+    expect(written({ fog: DEPTH_FOG }).value('fog_aerial_perspective')).toBe(0);
+  });
+});
+
+const LIT = 'shader_type spatial;\nvoid fragment() {\n\tALBEDO = vec3(0.6);\n}\n';
+
+/** A sun shining down and towards -Z: its +Z axis points up and back. */
+const SUN: DirectionalLight = {
+  direction: new THREE.Vector3(0, 1, 1).normalize(),
+  energy: -2,
+  color: new THREE.Color(0.5, 0.25, 1),
+  specular: 0.7,
+  size: 0.01,
+  cullMask: 0xfffffffe,
+  bakeMode: 1,
+  volumetricFogEnergy: 3,
+};
+
+describe('the directional light bindings', () => {
+  it('counts the lights that light surfaces', () => {
+    expect(written({ directionalLights: [SUN, SUN], source: LIT }).value('directional_light_count')).toBe(2);
+  });
+
+  it("turns the light's direction into view space", () => {
+    const [direction] = written({ directionalLights: [SUN], source: LIT }).light(
+      'direction'
+    ) as THREE.Vector3[];
+    const camera = new THREE.PerspectiveCamera();
+    camera.position.set(0, 1, 3);
+    camera.updateMatrixWorld();
+    const expected = SUN.direction.clone().transformDirection(camera.matrixWorldInverse);
+    expect(direction!.toArray()).toEqual(expected.toArray());
+  });
+
+  it('writes the energy times PI, the sign kept, as Godot does without physical light units', () => {
+    expect(written({ directionalLights: [SUN], source: LIT }).light('energy')[0]).toBeCloseTo(
+      -2 * Math.PI,
+      12
+    );
+  });
+
+  it("writes the light's own values unchanged", () => {
+    const { light } = written({ directionalLights: [SUN], source: LIT });
+    const own = ['specular', 'size', 'mask', 'bake_mode', 'volumetric_fog_energy'].map((m) => light(m)[0]);
+    expect(own).toEqual([0.7, 0.01, 0xfffffffe, 1, 3]);
+  });
+
+  it('casts no shadow from any light yet', () => {
+    expect(written({ directionalLights: [SUN], source: LIT }).light('shadow_opacity')[0]).toBe(0);
+  });
+
+  it('zeroes each slot past the last light, so a light that leaves lights nothing', () => {
+    expect(
+      written({ directionalLights: [SUN], source: LIT })
+        .light('energy')
+        .slice(1)
+    ).toEqual([0, 0, 0, 0, 0, 0, 0]);
+  });
+
+  it('turns on the roughness limiter in the opaque pass only', () => {
+    const limiter = (source: string) => (written({ source }).value('flags') as number) & (1 << 3);
+    expect(limiter(LIT)).toBe(1 << 3);
+    expect(limiter(LIT.replace('vec3(0.6);', 'vec3(0.6);\n\tALPHA = 0.5;'))).toBe(0);
+  });
+
+  it('leaves the roughness limiter off when the project turns it off', () => {
+    const roughnessLimiter = { isEnabled: false, amount: 0.25, limit: 0.18 };
+    expect((written({ source: LIT, roughnessLimiter }).value('flags') as number) & (1 << 3)).toBe(0);
+  });
+
+  it("writes the project's roughness limiter amount and limit", () => {
+    const { value } = written({
+      source: LIT,
+      roughnessLimiter: { isEnabled: true, amount: 1.5, limit: 0.5 },
+    });
+    expect([value('roughness_limiter_amount'), value('roughness_limiter_limit')]).toEqual([1.5, 0.5]);
   });
 });
 
@@ -102,7 +204,7 @@ describe('beforeEachDraw', () => {
     const spatial = transpileSpatial(UNSHADED);
     const drawnObjects: THREE.Object3D[] = [];
     const drawnMaterials: THREE.Material[] = [];
-    beforeEachDraw(spatial, (camera, object, material) => {
+    beforeEachDraw(spatial, ({ camera, object, material }) => {
       drawnObjects.push(object);
       drawnMaterials.push(material);
       writeSpatialBindings(spatial, {
@@ -110,7 +212,9 @@ describe('beforeEachDraw', () => {
         width: 32,
         height: 16,
         time: 1,
-        clearColor: new THREE.Color(),
+        ambientLight: new THREE.Color(),
+        emissiveExposure: 1,
+        directionalLights: [],
       });
     });
     const uniform = (name: string) => spatial.uniforms.get(`scene_data_block.data.${name}`)!;

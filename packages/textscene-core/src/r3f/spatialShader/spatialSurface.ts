@@ -7,6 +7,7 @@ import {
   beforeEachDraw,
   specialiseSpatial,
   writeSpatialBindings,
+  type SpatialDraw,
   type SpatialScene,
 } from '../../shaders/spatial/spatialBindings.js';
 import type { SpatialOptions, TranspiledSpatial } from '../../shaders/spatial/transpileSpatial.js';
@@ -16,6 +17,13 @@ import { warnOnce } from '../../utils/warnOnce.js';
 import { canvasShaderTime } from '../shaderTime/canvasShaderTime.js';
 import { renderTargetSize } from '../renderTargetSize.js';
 import { renderedEnvironmentFog } from '../fog/fogFrame.js';
+import { sceneDirectionalLights } from '../surfaceLight/surfaceLight.js';
+import { sceneAmbientLight } from '../surfaceLight/sceneAmbientLight.js';
+import { EMISSION_EXPOSURE } from '../exposure/emissionExposure.js';
+import { visualLayersOf } from '../visualLayers.js';
+import { releasedOnUnmount } from '../sharedTexture.js';
+import { dfgTexture } from '../../shaders/spatial/dfgTexture.js';
+import type { RoughnessLimiter } from '../../godot/rendering/roughnessLimiter.js';
 
 export { setMaterialParameters } from '../../shaders/uniforms/materialParameters.js';
 export { drawPoints } from './pointSurface.js';
@@ -26,24 +34,34 @@ export type SpatialSurface =
   | { readonly spatial: TranspiledSpatial; readonly samplers: Readonly<Record<string, ShaderSampler>> }
   | { readonly refusal: string };
 
+/** The options of a transpile, and the project settings each draw's scene reads. */
+export interface SurfaceOptions extends SpatialOptions {
+  readonly roughnessLimiter: RoughnessLimiter;
+}
+
 /** The material of `shader` for a surface `gl` draws, which writes the scene of each draw's camera. */
 export function spatialSurfaceOf(
   gl: THREE.WebGLRenderer,
   shader: ShaderText,
-  options: SpatialOptions
+  { roughnessLimiter, ...options }: SurfaceOptions
 ): SpatialSurface {
-  const compile = compileSpatial(shader.code, { ...options, file: shader.file });
+  const compile = compileSpatial(shader.code, {
+    ...options,
+    file: shader.file,
+    instanceLayers: visualLayersOf,
+  });
   if (!('spatial' in compile))
     return { refusal: `[material] ${unDrawnMessage(compile, 'spatial', '3D surface')}` };
   const { spatial } = compile;
+  releasedOnUnmount(dfgTexture());
   const specialise = () => specialiseSpatial(spatial, renderedEnvironmentFog());
   spatial.material.onBeforeProgram = specialise;
   try {
-    beforeEachDraw(spatial, (camera, object, material) => {
-      prepareDrawnSurface(object);
-      writeSpatialBindings(spatial, sceneOf(gl, camera));
+    beforeEachDraw(spatial, (drawn) => {
+      prepareDrawnSurface(drawn.object);
+      writeSpatialBindings(spatial, sceneOf(gl, drawn, roughnessLimiter));
       // A shadow or depth draw runs before the frame's fog, and folds none: only the colour draw picks it.
-      if (material === spatial.material) specialise();
+      if (drawn.material === spatial.material) specialise();
     });
   } catch (failure) {
     disposeSpatial(spatial);
@@ -75,15 +93,22 @@ export function disposeSpatial({ material, buffers }: TranspiledSpatial): void {
 const clearColor = new THREE.Color();
 const targetSize = new THREE.Vector2();
 
-/** What the colour pass reads from the frame `gl` draws through `camera`. */
-function sceneOf(gl: THREE.WebGLRenderer, camera: THREE.Camera): SpatialScene {
+/** What the colour pass reads from the frame `gl` draws for `drawn`. */
+function sceneOf(
+  gl: THREE.WebGLRenderer,
+  { camera, scene, renderId }: SpatialDraw,
+  roughnessLimiter: RoughnessLimiter
+): SpatialScene {
   const { x: width, y: height } = renderTargetSize(gl, targetSize);
   return {
     camera: camera as SpatialScene['camera'],
     width,
     height,
     time: canvasShaderTime(gl).time,
-    clearColor: gl.getClearColor(clearColor),
+    ambientLight: sceneAmbientLight(scene, gl.getClearColor(clearColor), renderId),
+    emissiveExposure: EMISSION_EXPOSURE[0]!,
     fog: renderedEnvironmentFog(),
+    directionalLights: sceneDirectionalLights(scene, renderId),
+    roughnessLimiter,
   };
 }

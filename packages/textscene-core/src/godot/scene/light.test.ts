@@ -35,6 +35,7 @@ describe('LIGHT_3D_DEFAULTS', () => {
       shadowNormalBias: 1,
       distanceFade: { begin: 40, shadow: 50, length: 10 },
       bakeMode: BakeMode.DYNAMIC,
+      cullMask: 0xffffffff,
     });
   });
 });

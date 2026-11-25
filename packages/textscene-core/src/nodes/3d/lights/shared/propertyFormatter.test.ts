@@ -13,6 +13,7 @@ describe('Base Light Property Formatter', () => {
       const properties = {
         editor_only: false,
         layers: 1,
+        light_cull_mask: 0xffffffff,
         light_color: 'Color(1, 0.5, 0, 1)',
         light_energy: 2.5,
         light_bake_mode: 2,
@@ -31,6 +32,7 @@ describe('Base Light Property Formatter', () => {
       const properties = {
         editor_only: false,
         layers: 1,
+        light_cull_mask: 0xffffffff,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         light_bake_mode: 2,
@@ -47,6 +49,7 @@ describe('Base Light Property Formatter', () => {
       const properties = {
         editor_only: false,
         layers: 1,
+        light_cull_mask: 0xffffffff,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         light_bake_mode: 2,
@@ -69,6 +72,7 @@ describe('Base Light Property Formatter', () => {
       const properties = {
         editor_only: false,
         layers: 1,
+        light_cull_mask: 0xffffffff,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 0.75,
         light_bake_mode: 2,
@@ -84,6 +88,7 @@ describe('Base Light Property Formatter', () => {
       const properties = {
         editor_only: false,
         layers: 1,
+        light_cull_mask: 0xffffffff,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 100.5,
         light_bake_mode: 2,
@@ -99,6 +104,7 @@ describe('Base Light Property Formatter', () => {
       const properties = {
         editor_only: false,
         layers: 1,
+        light_cull_mask: 0xffffffff,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         light_bake_mode: 2,
@@ -120,6 +126,7 @@ describe('Base Light Property Formatter', () => {
       const properties = {
         editor_only: false,
         layers: 1,
+        light_cull_mask: 0xffffffff,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         light_bake_mode: 2,
@@ -138,6 +145,7 @@ describe('Base Light Property Formatter', () => {
       const properties = {
         editor_only: false,
         layers: 1,
+        light_cull_mask: 0xffffffff,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         light_bake_mode: 1,
@@ -155,6 +163,7 @@ describe('Base Light Property Formatter', () => {
       const properties = {
         editor_only: false,
         layers: 1,
+        light_cull_mask: 0xffffffff,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         light_bake_mode: 2,
@@ -170,6 +179,7 @@ describe('Base Light Property Formatter', () => {
       const properties = {
         editor_only: false,
         layers: 1,
+        light_cull_mask: 0xffffffff,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         light_bake_mode: 2,
@@ -187,6 +197,7 @@ describe('Base Light Property Formatter', () => {
       const properties = {
         editor_only: false,
         layers: 1,
+        light_cull_mask: 0xffffffff,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         light_bake_mode: 2,
@@ -202,6 +213,7 @@ describe('Base Light Property Formatter', () => {
       const properties = {
         editor_only: false,
         layers: 1,
+        light_cull_mask: 0xffffffff,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         light_bake_mode: 2,
@@ -219,6 +231,7 @@ describe('Base Light Property Formatter', () => {
       const properties = {
         editor_only: false,
         layers: 1,
+        light_cull_mask: 0xffffffff,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         light_bake_mode: 2,
@@ -236,6 +249,7 @@ describe('Base Light Property Formatter', () => {
       const properties = {
         editor_only: false,
         layers: 1,
+        light_cull_mask: 0xffffffff,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         light_bake_mode: 2,
@@ -256,6 +270,7 @@ describe('Base Light Property Formatter', () => {
       const properties = {
         editor_only: false,
         layers: 1,
+        light_cull_mask: 0xffffffff,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         light_bake_mode: 2,
@@ -275,6 +290,7 @@ describe('Base Light Property Formatter', () => {
       const properties = {
         editor_only: false,
         layers: 1,
+        light_cull_mask: 0xffffffff,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         light_bake_mode: 2,
@@ -291,6 +307,7 @@ describe('Base Light Property Formatter', () => {
       const properties = {
         editor_only: false,
         layers: 1,
+        light_cull_mask: 0xffffffff,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         light_bake_mode: 2,
@@ -309,6 +326,7 @@ describe('Base Light Property Formatter', () => {
       const properties = {
         editor_only: false,
         layers: 1,
+        light_cull_mask: 0xffffffff,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         light_bake_mode: 2,
@@ -328,6 +346,7 @@ describe('Base Light Property Formatter', () => {
       const properties = {
         editor_only: false,
         layers: 1,
+        light_cull_mask: 0xffffffff,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         light_bake_mode: 2,
@@ -350,6 +369,7 @@ describe('Base Light Property Formatter', () => {
       const properties = {
         editor_only: false,
         layers: 1,
+        light_cull_mask: 0xffffffff,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         light_bake_mode: 2,
@@ -367,6 +387,7 @@ describe('Base Light Property Formatter', () => {
       const properties = {
         editor_only: false,
         layers: 1,
+        light_cull_mask: 0xffffffff,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         light_bake_mode: 2,
@@ -386,6 +407,7 @@ describe('Base Light Property Formatter', () => {
       const properties = {
         editor_only: false,
         layers: 1,
+        light_cull_mask: 0xffffffff,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         light_bake_mode: 2,
@@ -403,6 +425,7 @@ describe('Base Light Property Formatter', () => {
       const properties = {
         editor_only: false,
         layers: 1,
+        light_cull_mask: 0xffffffff,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         light_bake_mode: 2,

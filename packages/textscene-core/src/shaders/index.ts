@@ -51,6 +51,7 @@ export {
   type TranspiledCanvasItem,
 } from './canvas/transpileCanvas.js';
 export type { PointDraw } from './spatial/spatialPipeline.js';
+export type { DirectionalLight } from './spatial/directionalLights.js';
 export {
   emulatedPointGeometry,
   withGodotAttributes,

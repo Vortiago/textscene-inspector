@@ -67,20 +67,21 @@ The instruction count says how much of the language is transpiled, not how many 
 | docs | 37 | 37 | spatial, canvas_item, sky |
 | scenes | 2 | 2 | spatial, sky |
 
-**41 of 176 real shaders transpile.** Godot rejects the other 192. Each shader ends in one of three states: transpiled, refused as Godot refuses with the same message and line, or not transpiled yet, where the transpiler names the open row and its owner. Any other outcome fails the test. A shader never moves back from transpiled or from refused as Godot refuses, so the shaders not transpiled yet only grow fewer.
+**115 of 176 real shaders transpile.** Godot rejects the other 192. Each shader ends in one of three states: transpiled, refused as Godot refuses with the same message and line, or not transpiled yet, where the transpiler names the open row and its owner. Any other outcome fails the test. A shader never moves back from transpiled or from refused as Godot refuses, so the shaders not transpiled yet only grow fewer.
 
-The printed tree of each shader the transpiler accepts is a checked-in file under `tests/corpus/trees/`, so a review shows how a change moves a real shader's tree. It holds 41 files. `vitest -u` writes a moved tree, and a tree file whose shader the transpiler no longer accepts fails the test. The generated GLSL gets no file: three.js writes that text, and each upgrade of three.js would change every file.
+The printed tree of each shader the transpiler accepts is a checked-in file under `tests/corpus/trees/`, so a review shows how a change moves a real shader's tree. It holds 115 files. `vitest -u` writes a moved tree, and a tree file whose shader the transpiler no longer accepts fails the test. The generated GLSL gets no file: three.js writes that text, and each upgrade of three.js would change every file.
 
 | State | Shaders |
 | --- | --- |
 | refused as Godot refuses | 192 |
-| not transpiled yet (#1453) | 80 |
-| transpiled | 41 |
+| transpiled | 115 |
 | not transpiled yet (#686) | 24 |
-| not transpiled yet (#1524) | 17 |
+| not transpiled yet (#1524) | 18 |
 | not transpiled yet (#1726) | 10 |
+| not transpiled yet (#1453) | 3 |
+| not transpiled yet (#1610) | 2 |
 | not transpiled yet (#1783) | 2 |
-| not transpiled yet (#1610) | 1 |
+| not transpiled yet (#1831) | 1 |
 | not transpiled yet (#1792) | 1 |
 
 The mismatches below are known, each with its owner. The list only shrinks, as for the random programs.
@@ -89,83 +90,15 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | --- | --- | --- |
 
 
-<details><summary>The 135 shaders not transpiled yet, with their owners</summary>
+<details><summary>The 61 shaders not transpiled yet, with their owners</summary>
 
 | Shader | Owner |
 | --- | --- |
-| `generator/StandardMaterial3D/defaults` | #1453 |
-| `generator/StandardMaterial3D/transparency=2` | #1453 |
-| `generator/StandardMaterial3D/blend_mode=3` | #1453 |
-| `generator/StandardMaterial3D/cull_mode=1` | #1453 |
-| `generator/StandardMaterial3D/depth_draw_mode=1` | #1453 |
-| `generator/StandardMaterial3D/shading_mode=0` | #1453 |
-| `generator/StandardMaterial3D/diffuse_mode=1` | #1453 |
-| `generator/StandardMaterial3D/diffuse_mode=3` | #1453 |
-| `generator/StandardMaterial3D/specular_mode=2` | #1453 |
-| `generator/StandardMaterial3D/disable_ambient_light=true` | #1453 |
-| `generator/StandardMaterial3D/disable_fog=true` | #1453 |
-| `generator/StandardMaterial3D/vertex_color_use_as_albedo=true` | #1453 |
-| `generator/StandardMaterial3D/vertex_color_is_srgb=true` | #1453 |
-| `generator/StandardMaterial3D/albedo_texture_msdf=true` | #1453 |
-| `generator/StandardMaterial3D/roughness_texture_channel=1` | #1453 |
-| `generator/StandardMaterial3D/roughness_texture_channel=2` | #1453 |
-| `generator/StandardMaterial3D/roughness_texture_channel=4` | #1453 |
-| `generator/StandardMaterial3D/emission_enabled=true` | #1453 |
-| `generator/StandardMaterial3D/normal_enabled=true` | #1453 |
-| `generator/StandardMaterial3D/clearcoat_enabled=true` | #1453 |
-| `generator/StandardMaterial3D/heightmap_enabled=true` | #1453 |
-| `generator/StandardMaterial3D/subsurf_scatter_enabled=true` | #1453 |
-| `generator/StandardMaterial3D/backlight_enabled=true` | #1453 |
-| `generator/StandardMaterial3D/refraction_enabled=true` | #1453 |
-| `generator/StandardMaterial3D/detail_uv_layer=1` | #1453 |
-| `generator/StandardMaterial3D/uv2_triplanar=true` | #1453 |
-| `generator/StandardMaterial3D/texture_filter=0` | #1453 |
-| `generator/StandardMaterial3D/texture_filter=2` | #1453 |
-| `generator/StandardMaterial3D/texture_filter=5` | #1453 |
-| `generator/StandardMaterial3D/disable_receive_shadows=true` | #1453 |
-| `generator/StandardMaterial3D/billboard_mode=2` | #1453 |
-| `generator/StandardMaterial3D/fixed_size=true` | #1453 |
-| `generator/StandardMaterial3D/use_z_clip_scale=true` | #1453 |
-| `generator/StandardMaterial3D/distance_fade_mode=1` | #1453 |
-| `generator/StandardMaterial3D/distance_fade_mode=2` | #1453 |
-| `generator/StandardMaterial3D/stencil_mode=1` | #1453 |
-| `generator/ORMMaterial3D/transparency=1` | #1453 |
-| `generator/ORMMaterial3D/transparency=2` | #1453 |
-| `generator/ORMMaterial3D/transparency=4` | #1453 |
-| `generator/ORMMaterial3D/blend_mode=0` | #1453 |
-| `generator/ORMMaterial3D/blend_mode=2` | #1453 |
-| `generator/ORMMaterial3D/blend_mode=3` | #1453 |
-| `generator/ORMMaterial3D/cull_mode=1` | #1453 |
-| `generator/ORMMaterial3D/depth_draw_mode=1` | #1453 |
-| `generator/ORMMaterial3D/no_depth_test=true` | #1453 |
-| `generator/ORMMaterial3D/diffuse_mode=2` | #1453 |
-| `generator/ORMMaterial3D/diffuse_mode=3` | #1453 |
-| `generator/ORMMaterial3D/specular_mode=1` | #1453 |
-| `generator/ORMMaterial3D/specular_mode=2` | #1453 |
-| `generator/ORMMaterial3D/disable_fog=true` | #1453 |
+| `generator/StandardMaterial3D/refraction_enabled=true` | #1524 |
 | `generator/ORMMaterial3D/disable_specular_occlusion=true` | #1453 |
-| `generator/ORMMaterial3D/vertex_color_is_srgb=true` | #1453 |
-| `generator/ORMMaterial3D/albedo_texture_force_srgb=true` | #1453 |
-| `generator/ORMMaterial3D/emission_enabled=true` | #1453 |
-| `generator/ORMMaterial3D/normal_enabled=true` | #1453 |
-| `generator/ORMMaterial3D/clearcoat_enabled=true` | #1453 |
-| `generator/ORMMaterial3D/subsurf_scatter_transmittance_enabled=true` | #1453 |
-| `generator/ORMMaterial3D/detail_enabled=true` | #1453 |
-| `generator/ORMMaterial3D/uv1_triplanar=true` | #1453 |
-| `generator/ORMMaterial3D/texture_filter=1` | #1453 |
-| `generator/ORMMaterial3D/texture_filter=4` | #1453 |
-| `generator/ORMMaterial3D/texture_repeat=false` | #1453 |
 | `generator/ORMMaterial3D/shadow_to_opacity=true` | #1453 |
-| `generator/ORMMaterial3D/billboard_mode=1` | #1453 |
-| `generator/ORMMaterial3D/billboard_mode=3` | #1453 |
-| `generator/ORMMaterial3D/grow=true` | #1453 |
-| `generator/ORMMaterial3D/use_point_size=true` | #1453 |
-| `generator/ORMMaterial3D/use_particle_trails=true` | #1453 |
-| `generator/ORMMaterial3D/use_fov_override=true` | #1453 |
-| `generator/ORMMaterial3D/proximity_fade_enabled=true` | #1453 |
-| `generator/ORMMaterial3D/distance_fade_mode=3` | #1453 |
-| `generator/ORMMaterial3D/stencil_mode=1` | #1453 |
-| `generator/ORMMaterial3D/stencil_mode=2` | #1453 |
+| `generator/ORMMaterial3D/use_particle_trails=true` | #1831 |
+| `generator/ORMMaterial3D/proximity_fade_enabled=true` | #1610 |
 | `generator/CanvasItemMaterial/resource_local_to_scene=true` | #686 |
 | `generator/CanvasItemMaterial/blend_mode=1` | #686 |
 | `generator/CanvasItemMaterial/blend_mode=2` | #686 |
@@ -204,19 +137,14 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `demos/2d/sprite_shaders/shaders/silouette.gdshader` | #686 |
 | `demos/3d/procedural_materials/shaders/plasma.gdshader` | #686 |
 | `demos/3d/variable_rate_shading/vrs_texture.gdshader` | #686 |
-| `demos/compute/texture/water_plane/water_shader.gdshader` | #1453 |
 | `demos/misc/hdr_output/color_sweep/color_sweep.gdshader` | #686 |
 | `demos/misc/noise_viewer/noise_viewer.gdshader` | #686 |
 | `demos/viewport/dynamic_split_screen/split_screen.gdshader` | #686 |
 | `demos/xr/openxr_composition_layers/cursor.gdshader` | #686 |
 | `demos/xr/openxr_passthrough/holepunch.gdshader` | #1453 |
 | `demos/xr/openxr_spectator_view/shaders/eye_output.gdshader` | #686 |
-| `demos/xr/openxr_spectator_view/shaders/textured.gdshader` | #1453 |
 | `demos/2d/platformer/level/props/wind_sway.tres#0` | #686 |
-| `demos/3d/antialiasing/anti_aliasing.tscn#0` | #1453 |
-| `demos/3d/antialiasing/anti_aliasing.tscn#1` | #1453 |
 | `demos/3d/volumetric_fog/volumetric_fog.tscn#0` | #1783 |
-| `demos/xr/openxr_hand_tracking_demo/shaders/highlight_shader.tres#0` | #1453 |
 | `docs/tutorials/shaders/advanced_postprocessing.rst#7` | #1610 |
 | `docs/tutorials/shaders/custom_postprocessing.rst#0` | #1524 |
 | `docs/tutorials/shaders/custom_postprocessing.rst#1` | #1524 |
@@ -224,7 +152,6 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `docs/tutorials/shaders/screen-reading_shaders.rst#0` | #1524 |
 | `docs/tutorials/shaders/screen-reading_shaders.rst#1` | #1524 |
 | `docs/tutorials/shaders/shader_reference/canvas_item_shader.rst#0` | #686 |
-| `docs/tutorials/shaders/shader_reference/shading_language.rst#34` | #1453 |
 | `docs/tutorials/shaders/shader_reference/shading_language.rst#44` | #1792 |
 | `docs/tutorials/shaders/shaders_style_guide.rst#0` | #1524 |
 | `docs/tutorials/shaders/using_viewport_as_texture.rst#0` | #686 |

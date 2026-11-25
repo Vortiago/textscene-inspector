@@ -13,6 +13,9 @@ export interface BaseLightProperties {
 
   light_energy: number;
 
+  /** The render layers of the instances the light lights. */
+  light_cull_mask: number;
+
   /** `Light3D::BakeMode`: a Static light is baked into a lightmap, which then skips it. */
   light_bake_mode: number;
 

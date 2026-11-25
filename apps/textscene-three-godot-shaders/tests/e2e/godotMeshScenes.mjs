@@ -48,6 +48,14 @@ func fogged_world(fog: Dictionary) -> WorldEnvironment:
 	world.environment = environment
 	return world
 
+func light_of(entry: Dictionary) -> Light3D:
+	var light: Light3D = ClassDB.instantiate(entry.type)
+	light.rotation = degrees(entry.rotation)
+	for property in entry.properties:
+		var value = entry.properties[property]
+		light.set(property, Color(value[0], value[1], value[2]) if value is Array else value)
+	return light
+
 func mesh_of(scene: Dictionary) -> ArrayMesh:
 	var arrays := []
 	arrays.resize(Mesh.ARRAY_MAX)
@@ -105,6 +113,8 @@ func mesh_of(scene: Dictionary) -> ArrayMesh:
 			drawn.rotation = degrees(other.object.rotation)
 			drawn.scale = vector(other.object.scale)
 			holder.add_child(drawn)
+		for entry in scene.get("lights", []):
+			viewport.add_child(light_of(entry))
 		if scene.has("fog"):
 			viewport.add_child(fogged_world(scene.fog))`,
 });
@@ -121,6 +131,7 @@ export function meshProjectFiles(scenes) {
     ...(scene.compressed ? { compressed: true } : {}),
     ...(scene.primitive ? { primitive: scene.primitive } : {}),
     ...(scene.fog ? { fog: scene.fog } : {}),
+    ...(scene.lights ? { lights: scene.lights } : {}),
     ...(scene.others
       ? {
           others: scene.others.map(({ object, source }, other) => ({

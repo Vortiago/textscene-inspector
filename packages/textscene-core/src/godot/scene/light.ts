@@ -38,6 +38,8 @@ export const LIGHT_3D_DEFAULTS = {
   shadowNormalBias: 1, // :491
   distanceFade: { begin: 40, shadow: 50, length: 10 }, // light_3d.h:79-81
   bakeMode: BakeMode.DYNAMIC, // light_3d.h:85
+  /** Every one of the 32 render layers. */
+  cullMask: 0xffffffff, // :471
 } as const;
 
 /** `DirectionalLight3D()` (`scene/3d/light_3d.cpp:600-608`). */

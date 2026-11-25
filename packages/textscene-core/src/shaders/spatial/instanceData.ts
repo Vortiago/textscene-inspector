@@ -9,14 +9,11 @@ const NON_UNIFORM_SCALE = 1 << 4;
 /** `INSTANCE_FLAGS_FADE_SHIFT`: the fade alpha's byte, 255 for an object that does not fade. */
 const FADE_SHIFT = 24;
 
-/** `RenderGeometryInstanceBase::layer_mask`'s default, the first visual layer. */
-const FIRST_LAYER = 1;
-
 /** No instance uniforms: `shader_uniforms_offset` of -1, as a uint. */
 const NO_INSTANCE_UNIFORMS = 0xffffffff;
 
-/** An instance of an uncompressed surface, unfaded and unlightmapped (`render_forward_clustered.cpp:820`). */
-export function instanceWords(world: THREE.Matrix4): Uint32Array {
+/** An uncompressed surface, unfaded and unlightmapped (`render_forward_clustered.cpp:820`). */
+export function instanceWords(world: THREE.Matrix4, layers: number): Uint32Array {
   const words = new Uint32Array(INSTANCE_WORDS);
   const floats = new Float32Array(words.buffer);
   const transform = transposed3x4(world);
@@ -25,7 +22,7 @@ export function instanceWords(world: THREE.Matrix4): Uint32Array {
   floats.set([1, 1, 1, 0], 16);
   words[24] = instanceFlags(world);
   words[25] = NO_INSTANCE_UNIFORMS;
-  words[27] = FIRST_LAYER;
+  words[27] = layers;
   floats.set(transform, 28);
   return words;
 }

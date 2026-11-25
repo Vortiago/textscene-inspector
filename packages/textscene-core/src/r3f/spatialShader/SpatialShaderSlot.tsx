@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, type ReactNode } from 'react';
 import { useThree } from '@react-three/fiber';
 import type * as THREE from 'three';
 import type { PointDraw } from '../../shaders/spatial/spatialPipeline';
-import { projectSampling } from '../../parser/projectSettingsParser';
+import { projectRoughnessLimiter, projectSampling } from '../../parser/projectSettingsParser';
 import type { ShaderText } from '../../resources/materials/shadermaterial/types';
 import { memoisedImport } from '../../resources/memoisedImport';
 import { useLazyModuleState } from '../../resources/useLazyModule';
@@ -40,10 +40,11 @@ export function SpatialShaderSlot({ shader, attach, fallback }: SpatialShaderSlo
   const options = useProjectShaderOptions(shader.code);
   const { settings } = useProjectSettings();
   const sampling = useMemo(() => projectSampling(settings), [settings]);
+  const roughnessLimiter = useMemo(() => projectRoughnessLimiter(settings), [settings]);
   const isReady = module !== null && options !== null && nodesHandler === 'ready';
   const surface = useMemo(
-    () => (isReady ? module.spatialSurfaceOf(gl, shader, { ...options, sampling }) : null),
-    [isReady, module, gl, shader, options, sampling]
+    () => (isReady ? module.spatialSurfaceOf(gl, shader, { ...options, sampling, roughnessLimiter }) : null),
+    [isReady, module, gl, shader, options, sampling, roughnessLimiter]
   );
   const drawn = surface && 'spatial' in surface ? surface : null;
   const spatial = drawn?.spatial ?? null;

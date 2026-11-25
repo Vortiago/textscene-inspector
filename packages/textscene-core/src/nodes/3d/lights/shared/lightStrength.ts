@@ -26,6 +26,15 @@ export function lightIntensity(
   return signedLightEnergy(properties) * LIGHT_INTENSITY_SCALE;
 }
 
+/**
+ * The signed `light_energy` a three intensity holds, with the render's exposure in it.
+ *
+ * @canonical A light's Godot energy from its three intensity
+ */
+export function godotEnergyOfIntensity(intensity: number): number {
+  return intensity / LIGHT_INTENSITY_SCALE;
+}
+
 /** three's `shadow.intensity` mixes towards unshadowed as Godot's `shadow_opacity` does (`scene_forward_lights_inc.glsl:577`). */
 export function lightShadowOpacity(properties: Pick<BaseLightProperties, 'shadow_opacity'>): number {
   return properties.shadow_opacity ?? LIGHT_3D_DEFAULTS.shadowOpacity;

@@ -8,3 +8,4 @@ export { PROJECT_FILE_NAME, PROJECT_FILE_PATH } from './project/project.js';
 export { SCAN_STOP_FILES, isScannedPath } from './project/editorScan.js';
 export { importSidecarPath, isGodotTextResourcePath } from './project/resourceFormats.js';
 export type { Variant } from './variant/value/variant.js';
+export type { RoughnessLimiter } from './rendering/roughnessLimiter.js';
