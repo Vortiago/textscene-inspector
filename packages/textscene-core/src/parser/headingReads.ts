@@ -23,7 +23,8 @@ function connectionHeading({ attributes }: ParsedHeading, line: number): Connect
 /** A collector to feed each parsed heading in scan order, and the reads it has gathered so far. */
 export function headingReads(): {
   reads: HeadingReads;
-  read(heading: ParsedHeading, line: number): void;
+  /** Records `heading`, and answers whether its `instance=` sits outside a node body. */
+  read(heading: ParsedHeading, line: number): boolean;
 } {
   const connections: ConnectionHeading[] = [];
   const pathlessEditableLines: number[] = [];
@@ -37,10 +38,11 @@ export function headingReads(): {
       if (heading.type === 'connection') connections.push(connectionHeading(heading, line));
       if (heading.type === 'editable' && heading.attributes.path === undefined)
         pathlessEditableLines.push(line);
-      if (heading.type === 'node' && previousHeadingType !== 'node' && instance !== undefined) {
-        instancesOutsideNodeBody.push(instance);
-      }
+      const isOutsideNodeBody =
+        heading.type === 'node' && previousHeadingType !== 'node' && instance !== undefined;
+      if (isOutsideNodeBody) instancesOutsideNodeBody.push(instance);
       previousHeadingType = heading.type;
+      return isOutsideNodeBody;
     },
   };
 }

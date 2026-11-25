@@ -1,5 +1,5 @@
 import type { ParsedResource } from '../../parser/parsedResource';
-import type { RawNode, TscnExternalResource, TscnScene } from '../../parser/types';
+import type { HeadingValues, RawNode, TscnExternalResource, TscnScene } from '../../parser/types';
 import {
   getBaseDir,
   isAbsolutePath,
@@ -12,10 +12,7 @@ import { findExtResource } from '../SubResourceResolver';
 
 type Values = Readonly<Record<string, string>>;
 
-type SceneSections = Pick<
-  TscnScene,
-  'externalResources' | 'internalResources' | 'abortingInstances' | 'connectionBinds'
-> & {
+type SceneSections = Pick<TscnScene, 'externalResources' | 'internalResources' | 'headingValues'> & {
   readonly nodes: readonly RawNode[];
 };
 
@@ -44,33 +41,23 @@ export interface FileReads {
   readonly failsToParse: boolean;
 }
 
-/** A `.tscn`: its sections, its `[node]` sections and their instances, and its `[connection]` binds. */
+/** A `.tscn`: its files read from the written nodes, and its failure from the file's values in file order. */
 export function sceneFileReads(file: string, scene: SceneSections): FileReads {
   const sections = scene.internalResources.map((section) => readsOf([section.data]).flat());
-  const nodes = nodeValues(scene.nodes, [...(scene.abortingInstances ?? [])]).map(
-    ({ values, isAborting }) => ({
-      reads: readsOf([values]).flat(),
-      isAborting,
-    })
-  );
-  const binds = readsOf((scene.connectionBinds ?? []).map((value) => ({ binds: value })));
   const context = { file, externalResources: scene.externalResources, subResources: scene.internalResources };
+  const headings = (scene.headingValues ?? []).flatMap((values) => headingReads(context, values));
+  const binds = (scene.headingValues ?? []).flatMap((values) =>
+    values.kind === 'connection' ? valueReadsIn(values.binds) : []
+  );
   return {
     reads: filesRead(file, scene.externalResources, [
       ...sections,
-      ...nodes.map(({ reads }) => reads),
-      ...binds,
+      ...readsOf(nodeValues(scene.nodes)),
+      binds,
     ]),
     ...failingFileReads(context, [
       ...sections.flatMap((reads, at) => reads.map((read) => sectionRead(context, read, at))),
-      ...nodes.flatMap(({ reads, isAborting }) =>
-        reads.map((read) =>
-          isAborting
-            ? sectionRead(context, read, AFTER_SECTIONS)
-            : { read, at: AFTER_SECTIONS, failure: nodeFailingRead(read) }
-        )
-      ),
-      ...binds.flat().map((read) => ({ read, at: AFTER_SECTIONS, failure: bindFailingRead(context, read) })),
+      ...headings,
     ]),
   };
 }
@@ -190,24 +177,31 @@ function extResourcePathIn(file: string, path: string): string {
   return simplifyPath(pathJoin(getBaseDir(file), path));
 }
 
-/** One `[node]` value, and whether a failed read of it ends the load. */
-interface NodeValues {
-  readonly values: Values;
-  readonly isAborting: boolean;
+/** A heading's reads in file order: a node's `instance=` before its properties, or a connection's binds. */
+function headingReads(context: ReadContext, values: HeadingValues): OrderedRead[] {
+  if (values.kind === 'connection') {
+    return valueReadsIn(values.binds).map((read) => ({
+      read,
+      at: AFTER_SECTIONS,
+      failure: bindFailingRead(context, read),
+    }));
+  }
+  const instance = (values.instance ? valueReadsIn(values.instance) : []).map((read) =>
+    values.isInstanceAborting
+      ? sectionRead(context, read, AFTER_SECTIONS)
+      : { read, at: AFTER_SECTIONS, failure: nodeFailingRead(read) }
+  );
+  const properties = readsOf([values.properties])
+    .flat()
+    .map((read) => ({ read, at: AFTER_SECTIONS, failure: nodeFailingRead(read) }));
+  return [...instance, ...properties];
 }
 
-/** In node order, each heading's `instance=` before its properties, as the parser reads them. */
-function nodeValues(nodes: readonly RawNode[], abortingInstances: string[]): NodeValues[] {
+/** Each node's `instance=` and properties, written ones included, as the live tree reads them. */
+function nodeValues(nodes: readonly RawNode[]): Values[] {
   return nodes.flatMap((node) => [
-    ...(node.instance ? [instanceValues(node.instance, abortingInstances)] : []),
-    { values: node.rawProperties, isAborting: false },
-    ...nodeValues(node.children, abortingInstances),
+    ...(node.instance ? [{ instance: node.instance }] : []),
+    node.rawProperties,
+    ...nodeValues(node.children),
   ]);
-}
-
-/** Takes the next aborting instance off `abortingInstances` where it is this one: both run in node order. */
-function instanceValues(instance: string, abortingInstances: string[]): NodeValues {
-  const isAborting = abortingInstances[0] === instance;
-  if (isAborting) abortingInstances.shift();
-  return { values: { instance }, isAborting };
 }

@@ -71,10 +71,8 @@ export interface TscnScene<N extends RawNode = TscnNode> {
    * content the editor lets the user edit (`resource_format_text.cpp:400`). Absent where none.
    */
   editableInstances?: readonly string[];
-  /** Each `instance=` of a `[node]` heading that follows no other `[node]`: a failed read ends the load. */
-  abortingInstances?: readonly string[];
-  /** The `binds=` value of each `[connection]` heading, in file order. Absent where none. */
-  connectionBinds?: readonly string[];
+  /** The values of each `[node]` and `[connection]` heading in file order, as the loader reads them. */
+  headingValues?: readonly HeadingValues[];
   /**
    * A `.tres` file's own `[resource]` body. Absent in a `.tscn`, where the loader refuses the tag
    * (`resource_format_text.cpp:723-728`).
@@ -266,6 +264,17 @@ export interface HeadingFacts {
    */
   instancesOutsideNodeBody: readonly string[];
 }
+
+/** In file order: a `[node]` heading's `instance=` and body, or a `[connection]` heading's `binds=`. */
+export type HeadingValues =
+  | {
+      readonly kind: 'node';
+      readonly instance: string | undefined;
+      /** True where the heading follows no other `[node]`, so a failed read of its instance ends the load. */
+      readonly isInstanceAborting: boolean;
+      readonly properties: Readonly<Record<string, string>>;
+    }
+  | { readonly kind: 'connection'; readonly binds: string };
 
 /** The **Raw view** of a scene: the tree a **Lint rule** reads. */
 export type RawScene = TscnScene<RawNode>;

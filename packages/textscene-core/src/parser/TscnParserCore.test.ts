@@ -204,6 +204,7 @@ item/0/mesh = ExtResource("1_tree")
 
       expect(Object.keys(scene).sort()).toEqual([
         'externalResources',
+        'headingValues',
         'internalResources',
         'nodes',
         'refusesToInstantiate',
@@ -784,9 +785,12 @@ describe('the heading reads of a scan', () => {
     });
   });
 
-  it('puts the heading values whose failed read ends the load on the scene', () => {
+  it('puts each node and connection heading value on the scene in file order', () => {
     const { scene } = new TscnParserCore().parse(content, () => null);
 
-    expect(scene).toMatchObject({ abortingInstances: ['ExtResource("1")'], connectionBinds: ['[1]'] });
+    expect(scene.headingValues).toEqual([
+      { kind: 'node', instance: 'ExtResource("1")', isInstanceAborting: true, properties: {} },
+      { kind: 'connection', binds: '[1]' },
+    ]);
   });
 });

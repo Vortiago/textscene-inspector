@@ -15,6 +15,7 @@ import type {
   TscnMainResource,
   NodeOrigin,
   BuiltSection,
+  HeadingValues,
 } from './types.js';
 import {
   parseHeading,
@@ -131,6 +132,9 @@ export class TscnParserCore {
     let mainResource: TscnMainResource | undefined;
     const editableInstances: string[] = [];
     const headings = headingReads();
+    const headingValues: HeadingValues[] = [];
+    // Written on each `[node]` heading, read when its section ends.
+    let isInstanceAborting = false;
 
     let currentSection: SectionType = 'none';
     let currentHeading: ParsedHeading | null = null;
@@ -156,6 +160,8 @@ export class TscnParserCore {
       if (!currentHeading) return;
 
       if (currentSection === 'node') {
+        const { instance } = currentHeading.attributes;
+        headingValues.push({ kind: 'node', instance, isInstanceAborting, properties: currentProperties });
         const node = nodeCreator(currentHeading, currentProperties);
         if (node) {
           origins.push(nodeOrigin(currentHeading, node, currentHeadingLine));
@@ -253,7 +259,11 @@ export class TscnParserCore {
           const editablePath =
             currentHeading.type === 'editable' ? currentHeading.attributes.path : undefined;
           if (editablePath !== undefined) editableInstances.push(simplifiedNodePath(editablePath));
-          headings.read(currentHeading, lineNumber);
+          isInstanceAborting = headings.read(currentHeading, lineNumber);
+          const { binds } = currentHeading.attributes;
+          if (currentHeading.type === 'connection' && binds !== undefined) {
+            headingValues.push({ kind: 'connection', binds });
+          }
           observer?.onSectionStart?.(currentHeading, currentSection, lineNumber);
         } else {
           observer?.onError?.({
@@ -341,7 +351,7 @@ export class TscnParserCore {
         refusesToInstantiate: refusesToInstantiate(origins),
         ...(headerResourceType !== undefined ? { resourceType: headerResourceType } : {}),
         ...(editableInstances.length > 0 ? { editableInstances } : {}),
-        ...headingValueReads(headings.reads),
+        ...(headingValues.length > 0 ? { headingValues } : {}),
         ...(mainResource ? { mainResource } : {}),
       },
       origins,
@@ -360,16 +370,4 @@ export class TscnParserCore {
 
     return 'none';
   }
-}
-
-/** The heading values whose failed read ends the load, where a heading has any. */
-function headingValueReads({
-  instancesOutsideNodeBody,
-  connections,
-}: HeadingReads): Pick<TscnScene, 'abortingInstances' | 'connectionBinds'> {
-  const connectionBinds = connections.flatMap(({ binds }) => (binds === undefined ? [] : [binds]));
-  return {
-    ...(instancesOutsideNodeBody.length > 0 ? { abortingInstances: instancesOutsideNodeBody } : {}),
-    ...(connectionBinds.length > 0 ? { connectionBinds } : {}),
-  };
 }

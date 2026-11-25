@@ -515,6 +515,72 @@ metadata/x = ExtResource("99")
     failing: [],
     failsToParse: true,
   },
+  {
+    row: 35,
+    reads: 'a [node] reads a missing literal before a later [node] seated earlier in the tree',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="A" type="Node2D" parent="."]
+
+[node name="B" type="Sprite2D" parent="."]
+texture = Resource("res://gone20.png")
+
+[node name="C" type="Sprite2D" parent="A"]
+texture = Resource("res://gone21.png")
+`,
+    failing: [
+      { path: 'res://gone20.png', kind: 'node Resource' },
+      { path: 'res://gone21.png', kind: 'node Resource' },
+    ],
+    failsToParse: false,
+  },
+  {
+    row: 36,
+    reads: 'a [connection] binds a missing literal before a later [node] reads one',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[connection signal="ready" from="." to="." method="queue_free" binds=[Resource("res://gone22.tres")]]
+
+[node name="X" type="Sprite2D" parent="."]
+texture = Resource("res://gone23.png")
+`,
+    failing: [
+      { path: 'res://gone22.tres', kind: 'node Resource' },
+      { path: 'res://gone23.png', kind: 'node Resource' },
+    ],
+    failsToParse: false,
+  },
+  {
+    row: 37,
+    reads: 'a [node] reads a missing literal between two [node] headings that instance one text',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://gone25.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="A" parent="." instance=ExtResource("1")]
+
+[node name="X" type="Sprite2D" parent="."]
+texture = Resource("res://gone24.png")
+
+[connection signal="ready" from="." to="." method="queue_free"]
+
+[node name="B" parent="." instance=ExtResource("1")]
+`,
+    failing: [
+      { path: 'res://gone24.png', kind: 'node Resource' },
+      { path: 'res://gone25.tscn', kind: 'section ExtResource' },
+    ],
+    failsToParse: false,
+  },
 ];
 
 function fileReadsOf({ file, text }: GodotRow) {

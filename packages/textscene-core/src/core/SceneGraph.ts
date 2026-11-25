@@ -30,8 +30,7 @@ export interface ParsedScene {
   readonly externalResources: ReadonlyArray<ExtResource>;
   /** The `[editable]` paths of this scene's file, root-relative. Absent where it has none. */
   readonly editableInstances?: ReadonlyArray<string>;
-  readonly abortingInstances?: TscnScene['abortingInstances'];
-  readonly connectionBinds?: TscnScene['connectionBinds'];
+  readonly headingValues?: TscnScene['headingValues'];
 }
 
 /**
@@ -53,15 +52,14 @@ export interface SceneNode {
 /** Wrap a TscnScene's parts in a ParsedScene, without copying them. */
 export function tscnSceneToParsedScene(path: string, scene: TscnScene): ParsedScene {
   const { nodes, internalResources, externalResources } = scene;
-  const { editableInstances, abortingInstances, connectionBinds } = scene;
+  const { editableInstances, headingValues } = scene;
   return {
     path,
     nodes,
     internalResources,
     externalResources,
     ...(editableInstances ? { editableInstances } : {}),
-    ...(abortingInstances ? { abortingInstances } : {}),
-    ...(connectionBinds ? { connectionBinds } : {}),
+    ...(headingValues ? { headingValues } : {}),
   };
 }
 
