@@ -222,6 +222,17 @@ function camerasOf(tree: LiveTree, loader: ResourceLoader): readonly TreeCamera[
 }
 
 /** The scene's view of one Live scene tree: a node is found once every instance above it has loaded. */
+/** A heading can seat a node under a walked one from an unloaded instance beside it: a miss loads those. */
+function requestAwaitedChildren(tree: LiveTree, loader: ResourceLoader, walked: readonly LiveLink[]): void {
+  for (const parent of walked)
+    for (const group of parent.step.groups)
+      for (const child of group.children) {
+        const link = tree.at(`${parent.path}/${child.name}`);
+        const awaited = link && awaitedInstanceOf(link, loader);
+        if (awaited) requestSceneChain(loader, awaited);
+      }
+}
+
 function sceneTreeOf(
   tree: LiveTree,
   loader: ResourceLoader,
@@ -239,7 +250,10 @@ function sceneTreeOf(
       for (let depth = 1; depth <= names.length; depth++) {
         if (link) ancestors.push(link);
         link = tree.at(names.slice(0, depth).join('/'));
-        if (!link) return null;
+        if (!link) {
+          requestAwaitedChildren(tree, loader, ancestors);
+          return null;
+        }
         const awaited = awaitedInstanceOf(link, loader);
         if (awaited) {
           requestSceneChain(loader, awaited);

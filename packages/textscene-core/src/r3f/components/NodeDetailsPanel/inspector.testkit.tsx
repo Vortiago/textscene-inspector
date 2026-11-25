@@ -21,8 +21,6 @@ export interface InspectorOptions {
   readonly onCopyNodePath?: (nodePath: string) => void;
   /** Mounts the shell's camera preview, which the Camera3D Preview checkbox drives. */
   readonly hasPreviewCamera?: boolean;
-  /** Live paths looked up before the selected one, as the tree's walk looks them up. */
-  readonly loadFirst?: readonly string[];
 }
 
 function Selector({ path }: { path: string | null }) {
@@ -36,14 +34,7 @@ export async function renderInspector(
   selected: string | null,
   options: InspectorOptions = {}
 ): Promise<RenderResult & { readonly scene: Scene }> {
-  const {
-    files,
-    rootScenePath,
-    undrawn = [],
-    onCopyNodePath,
-    hasPreviewCamera = false,
-    loadFirst = [],
-  } = options;
+  const { files, rootScenePath, undrawn = [], onCopyNodePath, hasPreviewCamera = false } = options;
   const scene = openTreeScene(source, files, rootScenePath);
   const status = createExternalStore({ status: { ...EMPTY_VIEW_STATUS, undrawn }, round: 0 });
   const panel: ReactNode = (
@@ -61,8 +52,6 @@ export async function renderInspector(
       </PreviewViewStatusProvider>
     </HierarchyProvider>
   );
-  for (const path of loadFirst)
-    await vi.waitFor(() => expect(scene.getNodeOrNull(absolutePathOf(path))).not.toBeNull());
   if (selected !== null) {
     await vi.waitFor(() => expect(scene.getNodeOrNull(absolutePathOf(selected))).not.toBeNull());
     await act(async () => screen.getByTestId('select-node').click());

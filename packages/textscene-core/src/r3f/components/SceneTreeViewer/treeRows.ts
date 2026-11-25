@@ -21,9 +21,22 @@ export interface TreeRow {
 
 const CHAINS: readonly VisibilityChain[] = ['Node3D', 'CanvasItem', 'CanvasLayer', 'Window'];
 
-/** The dock's rows from the scene's root node. */
-export function treeRowsOf(root: NodeHandle): Promise<TreeRow> {
-  return rowOf({ root, editableOwners: new Map() }, root);
+function treeRowsOf(root: NodeHandle): Promise<TreeRow> {
+  return rowOf({ root, editableOwners: new Map(), classes: new Map() }, root);
+}
+
+/** The dock's rows from the scene's root node, or why they did not read while the nodes stay in the tree. */
+export type TreeRead = { readonly root: TreeRow } | { readonly failure: string };
+
+/** A read that fails over freed nodes rejects, as the next text reads its own rows. */
+export function treeReadOf(root: NodeHandle): Promise<TreeRead> {
+  return treeRowsOf(root).then(
+    (row) => ({ root: row }),
+    (error: unknown) => {
+      if (!root.isInsideTree()) throw error;
+      return { failure: String(error) };
+    }
+  );
 }
 
 /** Every row below and including `row`, in the dock's pre-order. */
@@ -31,16 +44,23 @@ export function rowsOf(row: TreeRow | null): TreeRow[] {
   return row ? [row, ...row.children.flatMap(rowsOf)] : [];
 }
 
-/** One walk: the scene root, and `is_editable_instance` of each owner it asked, as siblings share one. */
+/** One walk: the scene root, and the answers it asked once, as siblings share an owner and a class. */
 interface RowWalk {
   readonly root: NodeHandle;
+  /** `is_editable_instance` of each owner. */
   readonly editableOwners: Map<NodeHandle, Promise<boolean>>;
+  /** The `is_class` answers of each class, which name only the class (object.cpp:2220-2227). */
+  readonly classes: Map<string, Promise<ClassAnswers>>;
+}
+
+interface ClassAnswers {
+  readonly chain: VisibilityChain | null;
+  readonly isViewport: boolean;
 }
 
 async function rowOf(walk: RowWalk, node: NodeHandle): Promise<TreeRow> {
-  const [chain, isViewport, sceneFilePath, children] = await Promise.all([
-    chainOf(node),
-    node.call('is_class', 'Viewport'),
+  const [{ chain, isViewport }, sceneFilePath, children] = await Promise.all([
+    classAnswersOf(walk, node),
     node === walk.root ? '' : node.get('scene_file_path'),
     listedChildrenOf(walk, node),
   ]);
@@ -50,15 +70,21 @@ async function rowOf(walk: RowWalk, node: NodeHandle): Promise<TreeRow> {
     name: node.name,
     type: node.type,
     chain,
-    isViewport: isViewport === true,
+    isViewport,
     sceneFilePath: typeof sceneFilePath === 'string' ? sceneFilePath : '',
     children: await Promise.all(children.map((child) => rowOf(walk, child))),
   };
 }
 
-async function chainOf(node: NodeHandle): Promise<VisibilityChain | null> {
-  const answers = await Promise.all(CHAINS.map((chain) => node.call('is_class', chain)));
-  return CHAINS[answers.indexOf(true)] ?? null;
+function classAnswersOf(walk: RowWalk, node: NodeHandle): Promise<ClassAnswers> {
+  let answers = walk.classes.get(node.type);
+  if (!answers) {
+    answers = Promise.all([...CHAINS, 'Viewport'].map((name) => node.call('is_class', name))).then(
+      (isClass) => ({ chain: CHAINS[isClass.indexOf(true)] ?? null, isViewport: isClass.at(-1) === true })
+    );
+    walk.classes.set(node.type, answers);
+  }
+  return answers;
 }
 
 async function listedChildrenOf(walk: RowWalk, node: NodeHandle): Promise<readonly NodeHandle[]> {

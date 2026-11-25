@@ -27,8 +27,6 @@ describe('<NodeDetailsPanel> a node seated outside the instance its heading walk
   it('shows the node at its new path', async () => {
     await renderInspector(HOST, 'Main/Lamp/Shade', {
       files: { 'res://hud.tscn': HUD },
-      // The tree's walk loads the instance Shade's heading walks into. A lookup of Shade alone does not yet.
-      loadFirst: ['Main/HudInstance'],
     });
 
     expect(screen.getByRole('heading', { name: 'Shade' })).toBeTruthy();

@@ -478,6 +478,19 @@ describe('capture state reporting', () => {
     expect(postedMessages(vscodeApi).filter(isCaptureState).pop()).toEqual({ type: 'previewCapturePending' });
   });
 
+  it('holds a capturePreview that follows the same text under a new scene path', async () => {
+    captured.mountCaptureState = READY;
+    const { vscodeApi } = await mountFresh();
+    dispatch({ type: 'loadTscn', content: 'the scene', scenePath: 'res://old.tscn' });
+    captured.shellProps?.onCaptureStateChange?.(READY);
+
+    dispatch({ type: 'loadTscn', content: 'the scene', scenePath: 'res://renamed.tscn' });
+    dispatch({ type: 'capturePreview', requestId: 'c7' });
+
+    expect(postedMessages(vscodeApi).filter((m) => m.type === 'previewCaptured')).toEqual([]);
+    expect(postedMessages(vscodeApi).filter(isCaptureState).pop()).toEqual({ type: 'previewCapturePending' });
+  });
+
   it('answers a capturePing at once while the shell is still pending', async () => {
     const { vscodeApi } = await mountFresh();
 

@@ -6,7 +6,7 @@ import { useExpandedPaths, useExpandedRowActions } from '../TscnPreviewShell/exp
 import { useSelectPath, useSelectedPath } from '../TscnPreviewShell/previewSelection.js';
 import { useSceneRead } from '../TscnPreviewShell/sceneRead.js';
 import { ROOT_VISIBILITY, TreeNode } from './TreeNode.js';
-import { rowsOf, treeRowsOf, type TreeRow } from './treeRows.js';
+import { rowsOf, treeReadOf, type TreeRow } from './treeRows.js';
 import { useRowVisibility } from './rowVisibility.js';
 import styles from './SceneTreeViewer.module.css';
 
@@ -31,7 +31,8 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
   const expandedRows = useExpandedRowActions();
   const selectedNodePath = useSelectedPath();
   const selectPath = useSelectPath();
-  const root = useSceneRead(scene, treeRowsOf);
+  const read = useSceneRead(scene, treeReadOf);
+  const root = read && 'root' in read ? read.root : null;
   const visibility = useRowVisibility(scene, root);
   // The eye calls `set_visible` on the node (scene_tree_editor.cpp:241-247).
   const setVisible = useCallback((row: TreeRow, visible: boolean) => {
@@ -152,6 +153,13 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
     getAncestorPaths(selectedNodePath).every((p) => expandedPaths.has(p));
 
   const hasNodes = (sceneGraph?.scenes.get(sceneGraph.rootScene)?.nodes.length ?? 0) > 0;
+  if (read && 'failure' in read) {
+    return (
+      <div className={styles.root}>
+        <div className={styles.empty}>The scene tree did not read: {read.failure}</div>
+      </div>
+    );
+  }
   if (sceneGraph === null || (hasNodes && !root)) {
     return (
       <div className={styles.root}>

@@ -73,7 +73,7 @@ interface TreeNodeProps {
   onOpenSubScene?: (scenePath: string) => void;
   /** Whether the row at this live path survives the search, so a match keeps its ancestor rows. */
   matches: (path: string) => boolean;
-  /** True only for the first root row while no selected row renders. */
+  /** True only for the root row while no selected row renders. */
   isDefaultFocusable?: boolean;
 }
 
@@ -210,9 +210,8 @@ function TreeNodeImpl({
           {row.children.map(
             (child, index) =>
               matches(child.path) && (
-                // The index keeps apart a host child and a glTF node of one name.
                 <TreeNode
-                  key={`${index}:${child.name}`}
+                  key={rowKeyOf(row.children, index)}
                   row={child}
                   depth={depth + 1}
                   parentVisibility={ownVisibility}
@@ -231,3 +230,10 @@ function TreeNodeImpl({
 }
 
 export const TreeNode = memo(TreeNodeImpl);
+
+/** The path and its count among earlier siblings: a host child and a glTF node can share one name. */
+function rowKeyOf(siblings: readonly TreeRow[], index: number): string {
+  const { path } = siblings[index]!.node;
+  const earlier = siblings.slice(0, index).filter((sibling) => sibling.node.path === path).length;
+  return `${earlier}:${path}`;
+}

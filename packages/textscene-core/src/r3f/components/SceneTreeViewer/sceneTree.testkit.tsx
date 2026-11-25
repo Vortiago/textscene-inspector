@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import '../../sceneLiveTree.js';
 import { openScene, type Scene } from '../../../scene/openScene';
 import { ROOT_WINDOW_PATH } from '../../../scene/nodePathWalk';
+import type { NodeHandle } from '../../../scene/nodeHandle';
 import type { ResourceProvider } from '../../../resources/ResourceProvider';
 import type { UndrawnNode } from '../../viewStatus/undrawnNodes';
 import { EMPTY_VIEW_STATUS } from '../../viewStatus/viewStatus';
@@ -13,10 +14,10 @@ import { SelectionProvider } from '../../contexts/SelectionContext';
 import { ExpandedRowsProvider } from '../TscnPreviewShell/expandedRows';
 import { PreviewViewStatusProvider } from '../TscnPreviewShell/previewViewStatus';
 import { SceneTreeViewer, type SceneTreeViewerProps } from './SceneTreeViewer';
-import { rowsOf, treeRowsOf } from './treeRows';
+import { rowsOf, treeReadOf, type TreeRow } from './treeRows';
 
-/** The files a scene of a tree test instances, by `res://` path: a text, or the bytes of a binary file. */
-export type TreeFiles = Readonly<Record<string, string | ArrayBuffer>>;
+/** The files a scene of a tree test instances, by `res://` path: a text, bytes, or a load the test ends. */
+export type TreeFiles = Readonly<Record<string, string | ArrayBuffer | Promise<string>>>;
 
 export interface TreeOptions extends SceneTreeViewerProps {
   readonly files?: TreeFiles;
@@ -79,4 +80,11 @@ export async function expandAllRows(scene: Scene, lastLoaded?: string): Promise<
     fireEvent.click(screen.getByRole('button', { name: 'Expand all' }));
     expect(document.querySelectorAll('[data-node-path]')).toHaveLength(listedCount);
   });
+}
+
+/** The dock's rows from `root`, throwing the failure of a read that fails. */
+export async function treeRowsOf(root: NodeHandle): Promise<TreeRow> {
+  const read = await treeReadOf(root);
+  if ('failure' in read) throw new Error(`expected the tree rows to read, got ${read.failure}`);
+  return read.root;
 }

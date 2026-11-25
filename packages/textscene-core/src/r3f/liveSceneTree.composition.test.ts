@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../parser/TscnParser';
 import type { TscnScene } from '../parser/types';
-import { collectLiveNodes, rootScope, walkLiveTree, type LiveTreeContext } from './liveSceneTree';
+import { collectLiveNodes, rootScope, type LiveTreeContext } from './liveSceneTree';
 import { contextOver, stepOver } from './liveSceneTree.testkit';
 import { recordingReads } from './cacheSources';
 
@@ -101,13 +101,11 @@ function tableOf(main: TscnScene, ctx: LiveTreeContext, path: string) {
 }
 
 describe('a walk over many instances of one inherited scene', () => {
-  const noop = () => undefined;
-
   it('reads the base from the cache once', () => {
     const main = manyKids();
     const { ctx, reads } = countingContext(main, sceneRecord());
 
-    walkLiveTree(main.nodes, ctx, noop);
+    collectLiveNodes(main.nodes, ctx, () => true);
 
     expect(reads('res://base.tscn')).toBe(1);
   });
@@ -115,10 +113,10 @@ describe('a walk over many instances of one inherited scene', () => {
   it('reads the base zero times when it walks the same snapshot again', () => {
     const main = manyKids();
     const { ctx, reads } = countingContext(main, sceneRecord());
-    walkLiveTree(main.nodes, ctx, noop);
+    collectLiveNodes(main.nodes, ctx, () => true);
     const afterFirst = reads('res://base.tscn');
 
-    walkLiveTree(main.nodes, ctx, noop);
+    collectLiveNodes(main.nodes, ctx, () => true);
 
     expect(reads('res://base.tscn')).toBe(afterFirst);
   });
