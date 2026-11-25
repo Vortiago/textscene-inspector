@@ -10,7 +10,11 @@ import {
   type CanvasItemDraw,
 } from '../../shaders/canvas/canvasInstance';
 import { quadBatchGeometry, rectInstanceData, textureRectRegion } from '../../shaders/canvas/canvasRect';
-import { CanvasTextureBinding, type CanvasTextureState } from '../../shaders/canvas/canvasTexture';
+import {
+  CanvasTextureBinding,
+  type CanvasMaps,
+  type CanvasTextureState,
+} from '../../shaders/canvas/canvasTexture';
 import type {
   CanvasItemOptions,
   CanvasDraw,
@@ -45,9 +49,10 @@ export function disposeCanvasShader(item: TranspiledCanvasItem): void {
   for (const parameter of item.parameters.values()) parameter.dispose?.();
 }
 
-/** What a rect's draw binds once: the item's texture with its sampler state. */
+/** What a rect's draw binds once: the item's texture and its CanvasTexture's maps, with its sampler state. */
 export interface RectTexture {
   readonly texture: THREE.Texture;
+  readonly maps: CanvasMaps;
   readonly textureState: CanvasTextureState;
   readonly sampling: ProjectSampling;
 }
@@ -82,7 +87,7 @@ export function rectShaderDraw(
   const draw = item.draw('quad');
   const binding = new CanvasTextureBinding(draw, bound.sampling);
   const usesLinearColors = bound.textureState.usesLinearColors ?? false;
-  const texelSize = binding.bind(bound.texture, bound.textureState);
+  const texelSize = binding.bind(bound.texture, bound.textureState, bound.maps);
   const geometry = quadBatchGeometry([new ArrayBuffer(INSTANCE_BYTES)]);
   const object = new THREE.Mesh(geometry, draw.material);
   object.frustumCulled = false;

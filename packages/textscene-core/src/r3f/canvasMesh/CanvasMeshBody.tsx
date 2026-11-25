@@ -110,6 +110,7 @@ export function CanvasMeshBody<Input>({
               shader={shader}
               region={shaderRect.region}
               texture={shaderRect.texture}
+              canvasTexture={canvasTexture}
               sampler={sampler}
               finalModulate={tint.self}
               fallback={meshes}

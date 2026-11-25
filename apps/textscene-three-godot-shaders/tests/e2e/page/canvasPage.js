@@ -93,12 +93,22 @@ function dataTexture({ width, height, texels }) {
   return texture;
 }
 
+/** A CanvasTexture's maps, with `specular_shininess` as the specular colour's alpha. */
+function canvasMaps({ normal, specular, specularColor: [r, g, b], shininess }) {
+  return {
+    normal: dataTexture(normal),
+    specular: dataTexture(specular),
+    specularShininess: { r, g, b, a: shininess },
+  };
+}
+
 /** The draws of one scene: one per variant, each with the frame's bindings and its texture binding. */
 class SceneDraws {
   constructor(spec) {
     this.spec = spec;
     this.item = transpileCanvasItem(spec.source, { usesLinearColors: spec.linear });
     this.texture = dataTexture(spec.texture);
+    this.maps = spec.maps && canvasMaps(spec.maps);
     this.bindings = [];
     this.materials = new Set();
     this.faults = [];
@@ -123,7 +133,9 @@ class SceneDraws {
     writeCanvasBindings(draw, this.frame);
     const binding = new CanvasTextureBinding(draw);
     const state = { filter: this.spec.filter, repeat: this.spec.repeat, usesLinearColors: this.spec.linear };
-    const texelSize = binding.bind(isTextured ? this.texture : undefined, state);
+    const texelSize = isTextured
+      ? binding.bind(this.texture, state, this.maps)
+      : binding.bind(undefined, state);
     this.bindings.push(binding);
     this.materials.add(draw.material);
     draw.material.onTranslatorFault = (fault) => this.faults.push(fault);
@@ -133,6 +145,8 @@ class SceneDraws {
   dispose() {
     for (const binding of this.bindings) binding.dispose();
     this.texture.dispose();
+    this.maps?.normal.dispose();
+    this.maps?.specular.dispose();
     for (const material of this.materials) material.dispose();
   }
 }

@@ -39,6 +39,19 @@ func texture_of(texture: Dictionary) -> ImageTexture:
 	var image := Image.create_from_data(int(texture.width), int(texture.height), false, Image.FORMAT_RGBA8, bytes)
 	return ImageTexture.create_from_image(image)
 
+func drawn_texture(scene: Dictionary) -> Texture2D:
+	var diffuse := texture_of(scene.texture)
+	if not scene.has("maps"):
+		return diffuse
+	var maps: Dictionary = scene.maps
+	var canvas_texture := CanvasTexture.new()
+	canvas_texture.diffuse_texture = diffuse
+	canvas_texture.normal_texture = texture_of(maps.normal)
+	canvas_texture.specular_texture = texture_of(maps.specular)
+	canvas_texture.specular_color = color4(maps.specularColor)
+	canvas_texture.specular_shininess = maps.shininess
+	return canvas_texture
+
 func draw_rects(item: Node2D, texture: Texture2D, rects: Array) -> void:
 	for each in rects:
 		item.draw_texture_rect_region(texture, rect2(each.rect), rect2(each.source), color4(each.modulate), each.transpose, each.clipUv)
@@ -108,7 +121,7 @@ func canvas_item_of(scene: Dictionary, texture: Texture2D) -> Node2D:
 		var canvas_modulate := CanvasModulate.new()
 		canvas_modulate.color = color4(scene.canvasModulate)
 		viewport.add_child(canvas_modulate)
-		var item := canvas_item_of(scene, texture_of(scene.texture))
+		var item := canvas_item_of(scene, drawn_texture(scene))
 		item.position = Vector2(scene.item.position[0], scene.item.position[1])
 		item.rotation_degrees = scene.item.rotation
 		item.scale = Vector2(scene.item.scale[0], scene.item.scale[1])
@@ -127,6 +140,7 @@ func canvas_item_of(scene: Dictionary, texture: Texture2D) -> Node2D:
 const SCENE_FIELDS = [
   'kind',
   'texture',
+  'maps',
   'filter',
   'repeat',
   'item',

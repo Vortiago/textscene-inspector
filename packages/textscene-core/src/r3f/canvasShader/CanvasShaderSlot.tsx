@@ -24,6 +24,8 @@ import { useProjectSettings } from '../contexts/ProjectSettingsContext';
 import { useProjectShaderOptions } from '../projectShaderOptions';
 import { useShaderTextures } from '../shaderTextures/shaderTextures';
 import type { CanvasRectRegion } from './canvasCommands';
+import { useCanvasShaderMaps } from './useCanvasShaderMaps';
+import type { CanvasItemTexture } from '../canvasItemTexture';
 
 /** Imported by the first canvas_item shader only: it holds the shader parser and three's TSL. */
 const loadCanvasShaderDraw = memoisedImport(() => import('./canvasShaderDraw'));
@@ -36,6 +38,8 @@ interface CanvasShaderSlotProps {
   /** The rect the item draws its texture with. */
   region: CanvasRectRegion;
   texture: THREE.Texture;
+  /** The item's CanvasTexture, whose maps the shader reads, or undefined for a plain texture. */
+  canvasTexture: CanvasItemTexture | undefined;
   sampler: CanvasItemTextureSampler;
   /** `Item::final_modulate`, in sRGB. */
   finalModulate: Rgba;
@@ -48,6 +52,7 @@ export function CanvasShaderSlot({
   shader,
   region,
   texture,
+  canvasTexture,
   sampler,
   finalModulate,
   fallback,
@@ -86,9 +91,10 @@ export function CanvasShaderSlot({
     () => canvasTextureState(sampler, usesLinearColors),
     [sampler, usesLinearColors]
   );
+  const maps = useCanvasShaderMaps(canvasTexture);
   const draw = useMemo(
-    () => item && module!.rectShaderDraw(gl, item, { texture, textureState, sampling }),
-    [module, gl, item, texture, textureState, sampling]
+    () => item && module!.rectShaderDraw(gl, item, { texture, maps, textureState, sampling }),
+    [module, gl, item, texture, maps, textureState, sampling]
   );
   useEffect(() => (draw ? draw.dispose : undefined), [draw]);
   useLayoutEffect(() => {

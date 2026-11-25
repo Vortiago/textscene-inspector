@@ -1689,9 +1689,9 @@ canvases draw on WebGPURenderer (#1788).
 | `canvas_item.fragment.UV` | transpiled (`canvas-shader-fragment-uv`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:294` |
 | `canvas_item.fragment.TEXTURE` | transpiled (`canvas-shader-fragment-texture`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:296` |
 | `canvas_item.fragment.TEXTURE_PIXEL_SIZE` | transpiled (`canvas-shader-fragment-texture`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:297` |
-| `canvas_item.fragment.NORMAL_TEXTURE` | transpiled (`canvas-shader-normal-specular-textures`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:298` |
-| `canvas_item.fragment.SPECULAR_SHININESS_TEXTURE` | transpiled (`canvas-shader-normal-specular-textures`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:299` |
-| `canvas_item.fragment.SPECULAR_SHININESS` | transpiled (`canvas-shader-normal-specular-textures`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:300` |
+| `canvas_item.fragment.NORMAL_TEXTURE` | transpiled (`canvas-shader-normal-specular-textures`, `canvas-shader-canvas-texture-maps`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:298` |
+| `canvas_item.fragment.SPECULAR_SHININESS_TEXTURE` | transpiled (`canvas-shader-normal-specular-textures`, `canvas-shader-canvas-texture-maps`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:299` |
+| `canvas_item.fragment.SPECULAR_SHININESS` | transpiled (`canvas-shader-normal-specular-textures`, `canvas-shader-canvas-texture-maps`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:300` |
 | `canvas_item.fragment.SCREEN_UV` | transpiled (`canvas-shader-screen-uv`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:301` |
 | `canvas_item.fragment.REGION_RECT` | transpiled (`canvas-shader-region-rect`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:302` |
 | `canvas_item.fragment.SCREEN_PIXEL_SIZE` | transpiled (`canvas-shader-screen-uv`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:303` |

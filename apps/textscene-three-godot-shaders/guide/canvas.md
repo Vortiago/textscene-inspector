@@ -830,6 +830,22 @@ void fragment() {
 | --- | --- |
 | <img src="showcase/canvas-shader-normal-specular-textures-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-normal-specular-textures-three.png" width="256" alt="Transpilation"> |
 
+## Showcase `canvas-shader-canvas-texture-maps`
+
+Godot draws the scene's rects on a Node2D of a 2D view, with a ShaderMaterial of this shader (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+
+void fragment() {
+	COLOR = vec4(texture(NORMAL_TEXTURE, UV).rg, texture(SPECULAR_SHININESS_TEXTURE, UV).b * SPECULAR_SHININESS.a, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-shader-canvas-texture-maps-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-canvas-texture-maps-three.png" width="256" alt="Transpilation"> |
+
 ## Showcase `canvas-shader-light-vertex`
 
 Godot draws the scene's rects on a Node2D of a 2D view, with a ShaderMaterial of this shader (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.

@@ -21,6 +21,17 @@ const FADING_GRID = gridTexture(8, 4, (x) => Math.round(255 - (x * 255) / 7));
 
 const WHITE = [1, 1, 1, 1];
 
+/** The grid with its channels turned, so a map shows apart from the diffuse and the other map. */
+const turnedGrid = (turn) => ({ ...GRID, texels: GRID.texels.map(turn) });
+
+/** A CanvasTexture over the grid, with maps of their own texels and a shininess that turns specular on. */
+const GRID_MAPS = {
+  normal: turnedGrid(([r, g, b, a]) => [b, r, g, a]),
+  specular: turnedGrid(([r, g, b, a]) => [g, b, r, a]),
+  specularColor: [0.5, 0.25, 1, 1],
+  shininess: 0.5,
+};
+
 /** A root item at `position`, with no turn, scale or modulate. */
 const placedAt = (position) => ({
   position,
@@ -466,6 +477,15 @@ const SHADER_SCENES = [
         'COLOR = vec4(texture(NORMAL_TEXTURE, UV).rg, texture(SPECULAR_SHININESS_TEXTURE, UV).b * SPECULAR_SHININESS.a, 1.0);',
     }),
     fragmentRows('NORMAL_TEXTURE', 'SPECULAR_SHININESS_TEXTURE', 'SPECULAR_SHININESS')
+  ),
+  shadedRectScene(
+    'canvas-shader-canvas-texture-maps',
+    shaderText({
+      fragment:
+        'COLOR = vec4(texture(NORMAL_TEXTURE, UV).rg, texture(SPECULAR_SHININESS_TEXTURE, UV).b * SPECULAR_SHININESS.a, 1.0);',
+    }),
+    fragmentRows('NORMAL_TEXTURE', 'SPECULAR_SHININESS_TEXTURE', 'SPECULAR_SHININESS'),
+    { maps: GRID_MAPS }
   ),
   shadedRectScene(
     'canvas-shader-light-vertex',
