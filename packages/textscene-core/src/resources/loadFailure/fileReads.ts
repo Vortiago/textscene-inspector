@@ -47,16 +47,29 @@ export interface FileReads {
 /** A `.tscn`: its sections, its `[node]` sections and their instances, and its `[connection]` binds. */
 export function sceneFileReads(file: string, scene: SceneSections): FileReads {
   const sections = scene.internalResources.map((section) => readsOf([section.data]).flat());
-  const abortingInstances = readsOf((scene.abortingInstances ?? []).map((instance) => ({ instance })));
-  const nodes = readsOf(nodeValues(scene.nodes));
+  const nodes = nodeValues(scene.nodes, [...(scene.abortingInstances ?? [])]).map(
+    ({ values, isAborting }) => ({
+      reads: readsOf([values]).flat(),
+      isAborting,
+    })
+  );
   const binds = readsOf((scene.connectionBinds ?? []).map((value) => ({ binds: value })));
   const context = { file, externalResources: scene.externalResources, subResources: scene.internalResources };
   return {
-    reads: filesRead(file, scene.externalResources, [...sections, ...nodes, ...binds]),
+    reads: filesRead(file, scene.externalResources, [
+      ...sections,
+      ...nodes.map(({ reads }) => reads),
+      ...binds,
+    ]),
     ...failingFileReads(context, [
       ...sections.flatMap((reads, at) => reads.map((read) => sectionRead(context, read, at))),
-      ...abortingInstances.flat().map((read) => sectionRead(context, read, AFTER_SECTIONS)),
-      ...nodes.flat().map((read) => ({ read, at: AFTER_SECTIONS, failure: nodeFailingRead(read) })),
+      ...nodes.flatMap(({ reads, isAborting }) =>
+        reads.map((read) =>
+          isAborting
+            ? sectionRead(context, read, AFTER_SECTIONS)
+            : { read, at: AFTER_SECTIONS, failure: nodeFailingRead(read) }
+        )
+      ),
       ...binds.flat().map((read) => ({ read, at: AFTER_SECTIONS, failure: bindFailingRead(context, read) })),
     ]),
   };
@@ -177,11 +190,24 @@ function extResourcePathIn(file: string, path: string): string {
   return simplifyPath(pathJoin(getBaseDir(file), path));
 }
 
+/** One `[node]` value, and whether a failed read of it ends the load. */
+interface NodeValues {
+  readonly values: Values;
+  readonly isAborting: boolean;
+}
+
 /** In node order, each heading's `instance=` before its properties, as the parser reads them. */
-function nodeValues(nodes: readonly RawNode[]): Values[] {
+function nodeValues(nodes: readonly RawNode[], abortingInstances: string[]): NodeValues[] {
   return nodes.flatMap((node) => [
-    ...(node.instance ? [{ instance: node.instance }] : []),
-    node.rawProperties,
-    ...nodeValues(node.children),
+    ...(node.instance ? [instanceValues(node.instance, abortingInstances)] : []),
+    { values: node.rawProperties, isAborting: false },
+    ...nodeValues(node.children, abortingInstances),
   ]);
+}
+
+/** Takes the next aborting instance off `abortingInstances` where it is this one: both run in node order. */
+function instanceValues(instance: string, abortingInstances: string[]): NodeValues {
+  const isAborting = abortingInstances[0] === instance;
+  if (isAborting) abortingInstances.shift();
+  return { values: { instance }, isAborting };
 }

@@ -471,6 +471,50 @@ metadata/x = ExtResource("1")
     failing: [],
     failsToParse: false,
   },
+  {
+    row: 33,
+    reads: 'a [node] reads a missing literal before a [node] after an [editable] instances a missing file',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://gone17.tscn" id="2"]
+
+[node name="Root" type="Sprite2D"]
+texture = Resource("res://gone18.png")
+
+[node name="X" type="Node2D" parent="."]
+
+[editable path="X"]
+
+[node name="After" parent="." instance=ExtResource("2")]
+`,
+    failing: [
+      { path: 'res://gone18.png', kind: 'node Resource' },
+      { path: 'res://gone17.tscn', kind: 'section ExtResource' },
+    ],
+    failsToParse: false,
+  },
+  {
+    row: 34,
+    reads:
+      'a [node] reads an undeclared ExtResource before a [node] after an [editable] instances a missing file',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://gone19.tscn" id="2"]
+
+[node name="Root" type="Node2D"]
+metadata/x = ExtResource("99")
+
+[node name="X" type="Node2D" parent="."]
+
+[editable path="X"]
+
+[node name="After" parent="." instance=ExtResource("2")]
+`,
+    failing: [],
+    failsToParse: true,
+  },
 ];
 
 function fileReadsOf({ file, text }: GodotRow) {
