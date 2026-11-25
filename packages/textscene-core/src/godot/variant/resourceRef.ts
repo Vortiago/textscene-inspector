@@ -60,13 +60,14 @@ interface ResourceRefSpan extends ResourceRef {
  * Each reference the loader resolves, past strings and `;` comments (variant_parser.cpp:214, :265).
  *
  * @param inString whether `text` starts inside a string an earlier line opened
+ * @param spans where each reference goes, or null to skip them
  * @param literals where each `Resource(…)` literal goes, or null to skip them
  * @returns whether `text` ends inside a string
  */
 function scanLoadedRefs(
   text: string,
   inString: boolean,
-  spans: ResourceRefSpan[],
+  spans: ResourceRefSpan[] | null,
   literals: LiteralSpan[] | null = null
 ): boolean {
   for (let i = 0; i < text.length; i++) {
@@ -92,6 +93,7 @@ function scanLoadedRefs(
       if (literals) i = readLiteralAt(text, i, literals);
       continue;
     }
+    if (!spans) continue;
     RESOURCE_REF_AT_RE.lastIndex = i;
     const match = RESOURCE_REF_AT_RE.exec(text);
     if (!match) continue;
@@ -253,7 +255,7 @@ export function valueReadsIn(text: string): ValueRead[] {
 export function literalReadsIn(text: string): LiteralRead[] {
   if (!PATH_RESOURCE_SOMEWHERE_RE.test(text)) return [];
   const literals: LiteralSpan[] = [];
-  scanLoadedRefs(text, false, [], literals);
+  scanLoadedRefs(text, false, null, literals);
   return literals.flatMap(({ reads }) => reads);
 }
 
