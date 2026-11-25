@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { eventLine, LoadTimeline } from './loadTimeline.mjs';
+import { eventLine, isPrinted, LoadTimeline } from './loadTimeline.mjs';
 
 const NAVIGATE = { at: 20, kind: 'navigate', search: '?fixture=lit.tscn' };
 const CANVAS = { at: 480, kind: 'canvas' };
@@ -19,6 +19,16 @@ describe('eventLine', () => {
 
   it('refuses an event kind the recorder does not write', () => {
     expect(() => eventLine({ at: 0, kind: 'paint' })).toThrow('got kind paint');
+  });
+});
+
+describe('isPrinted', () => {
+  it('prints a long task of a second or more', () => {
+    expect(isPrinted(COMPILE_TASK)).toBe(true);
+  });
+
+  it('leaves out an ordinary frame', () => {
+    expect(isPrinted(FRAME_TASK)).toBe(false);
   });
 });
 

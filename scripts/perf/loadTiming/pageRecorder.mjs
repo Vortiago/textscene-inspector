@@ -33,29 +33,63 @@ export function installPageRecorder(prefix) {
   };
   // A default-framebuffer read waits for the GPU, unlike `finish`: a bound one can refuse it, multisampled.
   const waitForGpu = (context) => {
+    const packParameters = [context.PACK_ROW_LENGTH, context.PACK_SKIP_PIXELS, context.PACK_SKIP_ROWS];
+    const packValues = packParameters.map((parameter) => context.getParameter(parameter));
     const readFramebuffer = context.getParameter(context.READ_FRAMEBUFFER_BINDING);
     const packBuffer = context.getParameter(context.PIXEL_PACK_BUFFER_BINDING);
+    for (const parameter of packParameters) context.pixelStorei(parameter, 0);
     context.bindFramebuffer(context.READ_FRAMEBUFFER, null);
     context.bindBuffer(context.PIXEL_PACK_BUFFER, null);
     context.readPixels(0, 0, 1, 1, context.RGBA, context.UNSIGNED_BYTE, pixel);
     context.bindBuffer(context.PIXEL_PACK_BUFFER, packBuffer);
     context.bindFramebuffer(context.READ_FRAMEBUFFER, readFramebuffer);
+    packParameters.forEach((parameter, index) => context.pixelStorei(parameter, packValues[index]));
   };
-  for (const name of ['drawArrays', 'drawElements', 'drawArraysInstanced', 'drawElementsInstanced']) {
+  const timeFirstDraw = (context, draw, target, args) => {
+    const program = currentProgram.get(context);
+    if (!program || drawn.has(program)) return draw.apply(target, args);
+    drawn.add(program);
+    const start = performance.now();
+    const result = draw.apply(target, args);
+    waitForGpu(context);
+    const ms = Math.round(performance.now() - start);
+    const lengths = (programShaders.get(program) ?? []).map((shader) => shaderLengths.get(shader) ?? 0);
+    emit({ kind: 'first-draw', ms, shaderLengths: lengths });
+    return result;
+  };
+  const drawNames = [
+    'drawArrays',
+    'drawElements',
+    'drawArraysInstanced',
+    'drawElementsInstanced',
+    'drawRangeElements',
+  ];
+  for (const name of drawNames) {
     const draw = gl[name];
     gl[name] = function (...args) {
-      const program = currentProgram.get(this);
-      if (!program || drawn.has(program)) return draw.apply(this, args);
-      drawn.add(program);
-      const start = performance.now();
-      const result = draw.apply(this, args);
-      waitForGpu(this);
-      const ms = Math.round(performance.now() - start);
-      const lengths = (programShaders.get(program) ?? []).map((shader) => shaderLengths.get(shader) ?? 0);
-      emit({ kind: 'first-draw', ms, shaderLengths: lengths });
-      return result;
+      return timeFirstDraw(this, draw, this, args);
     };
   }
+  // three.js draws a BatchedMesh through the extension's own entry points.
+  const multiDrawNames = [
+    'multiDrawArraysWEBGL',
+    'multiDrawElementsWEBGL',
+    'multiDrawArraysInstancedWEBGL',
+    'multiDrawElementsInstancedWEBGL',
+  ];
+  const wrappedExtensions = new WeakSet();
+  const { getExtension } = gl;
+  gl.getExtension = function (name) {
+    const extension = getExtension.call(this, name);
+    if (name !== 'WEBGL_multi_draw' || !extension || wrappedExtensions.has(extension)) return extension;
+    wrappedExtensions.add(extension);
+    for (const drawName of multiDrawNames) {
+      const draw = extension[drawName];
+      if (typeof draw !== 'function') continue;
+      extension[drawName] = (...args) => timeFirstDraw(this, draw, extension, args);
+    }
+    return extension;
+  };
 
   new PerformanceObserver((list) => {
     for (const task of list.getEntries()) {

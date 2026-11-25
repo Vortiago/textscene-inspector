@@ -1,8 +1,8 @@
 [gd_scene format=3 uid="uid://unit_spatial_shader_lit_sun_light"]
 
 ; The one variable: a lit spatial shader that writes its own light(), under two suns with no shadow.
-; The second sun's cull mask leaves out the cylinder's layer 2. Each lit shader has a scene of its
-; own, as one costs about 25 s to compile on SwiftShader in CI.
+; The second sun's cull mask leaves out the cylinder's layer 2. No other golden runs a light().
+; It holds one lit shader, as each costs about 25 s to compile on SwiftShader in CI.
 
 [sub_resource type="Shader" id="Shader_light"]
 code = "shader_type spatial;

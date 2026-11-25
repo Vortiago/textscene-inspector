@@ -1,4 +1,4 @@
-import { LoadTimeline, eventLine } from './loadTimeline.mjs';
+import { LoadTimeline, eventLine, isPrinted } from './loadTimeline.mjs';
 import { installPageRecorder, LOAD_TIMING_PREFIX } from './pageRecorder.mjs';
 
 /** Prints how `context`'s pages load when `TEXTSCENE_LOAD_TIMING=1`. Off by default: it slows first draws. */
@@ -16,7 +16,7 @@ export async function recordLoadTimingWhenOn(context, env, print = console.log) 
         const event = JSON.parse(text.slice(LOAD_TIMING_PREFIX.length));
         const line = eventLine(event);
         logSummary(timeline.add(event));
-        log(line);
+        if (isPrinted(event)) log(line);
       } catch (error) {
         // A diagnostic never fails the harness it runs in: an unread line is printed with its reason.
         log(`unread line ${JSON.stringify(text)}: ${error.message}`);

@@ -1,8 +1,8 @@
 [gd_scene format=3 uid="uid://unit_spatial_shader_lit_sun_dielectric"]
 
 ; The one variable: a lit spatial shader of a rough dielectric with RIM, under two suns with no shadow
-; and the background colour as the ambient light. Each lit shader has a scene of its own, as one costs
-; about 25 s to compile on SwiftShader in CI.
+; and the background colour as the ambient light. No other golden draws a lit shader's diffuse and rim.
+; It holds one lit shader, as each costs about 25 s to compile on SwiftShader in CI.
 
 [sub_resource type="Shader" id="Shader_dielectric"]
 code = "shader_type spatial;

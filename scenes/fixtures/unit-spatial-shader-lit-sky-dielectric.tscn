@@ -1,8 +1,8 @@
 [gd_scene format=3 uid="uid://unit_spatial_shader_lit_sky_dielectric"]
 
 ; The one variable: a ProceduralSkyMaterial background as the ambient light of the rough dielectric
-; of unit-spatial-shader-lit-sun-dielectric. Each lit shader has a scene of its own, as one costs
-; about 25 s to compile on SwiftShader in CI.
+; of unit-spatial-shader-lit-sun-dielectric. No other golden lights a lit spatial shader's diffuse
+; with a sky. It holds one lit shader, as each costs about 25 s to compile on SwiftShader in CI.
 
 [sub_resource type="Shader" id="Shader_dielectric"]
 code = "shader_type spatial;

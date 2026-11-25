@@ -1,5 +1,10 @@
-/** A long task under this is a frame's ordinary work, so the summary leaves it out. */
+/** A long task under this is a frame's ordinary work, so neither a line nor the summary shows it. */
 const NOTABLE_TASK_MS = 1000;
+
+/** Whether `event` gets a line of its own: every event but an ordinary frame's long task. */
+export function isPrinted(event) {
+  return event.kind !== 'long-task' || event.ms >= NOTABLE_TASK_MS;
+}
 
 /** The line of one recorded event. */
 export function eventLine(event) {

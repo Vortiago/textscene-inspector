@@ -30,7 +30,7 @@ export const MATERIAL_SCENES = [
   { name: 'material-spatial-shader-uniforms', file: 'unit-spatial-shader-uniforms.tscn' },
   // Unshaded spatial shaders whose writes to the outputs only the light reads change nothing drawn.
   { name: 'material-spatial-shader-lit-outputs', file: 'unit-spatial-shader-lit-outputs.tscn' },
-  // A lit dielectric with RIM under two suns. Godot 4.6.3: 0 px over 2/255. Ambient black: 5,426 px, max 5/255.
+  // A lit dielectric with RIM under two suns. Godot 4.6.3: 0 px over 2/255. Ambient black: 5,426 px, max 5.
   { name: 'material-spatial-shader-lit-sun-dielectric', file: 'unit-spatial-shader-lit-sun-dielectric.tscn' },
   // A lit metal under two suns. Godot 4.6.3: 0 px over 2/255. Sun specular 0: 20,785 px, max 239/255.
   { name: 'material-spatial-shader-lit-sun-metal', file: 'unit-spatial-shader-lit-sun-metal.tscn' },
@@ -50,11 +50,11 @@ export const MATERIAL_SCENES = [
   { name: 'material-spatial-shader-depth-test', file: 'unit-spatial-shader-depth-test.tscn' },
   // A depth_draw_never spatial shader through an orange quad that crosses it.
   { name: 'material-spatial-shader-depth-draw', file: 'unit-spatial-shader-depth-draw.tscn' },
-  // Spatial shaders that write ALPHA: a fade, a scissor cut, a hash cut and alpha to coverage, over orange quads.
+  // Spatial shaders that write ALPHA: a fade, a scissor cut, a hash cut and alpha to coverage, on orange quads.
   { name: 'material-spatial-shader-alpha', file: 'unit-spatial-shader-alpha.tscn' },
   // Spatial shaders that write DEPTH, shared and own, and a depth_prepass_alpha fade, across orange quads.
   { name: 'material-spatial-shader-depth', file: 'unit-spatial-shader-depth.tscn' },
-  // Spatial shaders that write FOG, FOG.rgb alone, FOG under fog_disabled, RADIANCE and IRRADIANCE, over orange quads.
+  // Spatial shaders that write FOG, FOG.rgb alone, FOG under fog_disabled, RADIANCE and IRRADIANCE, on orange.
   { name: 'material-spatial-shader-fog', file: 'unit-spatial-shader-fog.tscn' },
   // The environment's depth fog and height fog on unshaded spatial shaders: three boxes and a floor.
   { name: 'material-spatial-shader-environment-fog', file: 'unit-spatial-shader-environment-fog.tscn' },
@@ -62,7 +62,7 @@ export const MATERIAL_SCENES = [
   { name: 'material-spatial-shader-stencil', file: 'unit-spatial-shader-stencil.tscn' },
   // Point and line surfaces of spatial shaders: POINT_SIZE, POINT_COORD, blend_add points and a line strip.
   { name: 'material-spatial-shader-points', file: 'unit-spatial-shader-points.tscn' },
-  // VERTEX_ID counted in each surface: triangle surfaces of a shared and an own material, and points surfaces.
+  // VERTEX_ID counted in each surface: triangles of a shared and an own material, and points surfaces.
   { name: 'material-spatial-shader-vertex-id', file: 'unit-spatial-shader-vertex-id.tscn' },
   // CUSTOM0 to CUSTOM3 in all eight formats, and the bones and weights the vertex stage reads.
   { name: 'material-spatial-shader-custom-arrays', file: 'unit-spatial-shader-custom-arrays.tscn' },

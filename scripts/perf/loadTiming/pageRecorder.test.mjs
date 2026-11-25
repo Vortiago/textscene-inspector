@@ -22,8 +22,18 @@ beforeEach(() => {
     drawElements() {}
     drawArraysInstanced() {}
     drawElementsInstanced() {}
-    getParameter() {
-      return null;
+    drawRangeElements() {}
+    PACK_ROW_LENGTH = 0x0d02;
+    PACK_SKIP_ROWS = 0x0d03;
+    PACK_SKIP_PIXELS = 0x0d04;
+    getExtension(name) {
+      return name === 'WEBGL_multi_draw' ? { multiDrawElementsWEBGL() {} } : null;
+    }
+    pixelStorei(parameter, value) {
+      this.pack = { ...this.pack, [parameter]: value };
+    }
+    getParameter(parameter) {
+      return this.pack?.[parameter] ?? null;
     }
     bindFramebuffer() {}
     bindBuffer() {}
@@ -90,5 +100,21 @@ describe('installPageRecorder', () => {
     other.drawArrays();
     main.drawArrays();
     expect(events.filter((event) => event.kind === 'first-draw')).toHaveLength(2);
+  });
+
+  it('records the first draw of a program drawn through the multi-draw extension', () => {
+    const gl = new FakeGL();
+    const program = {};
+    gl.useProgram(program);
+    gl.getExtension('WEBGL_multi_draw').multiDrawElementsWEBGL();
+    expect(events.filter((event) => event.kind === 'first-draw')).toHaveLength(1);
+  });
+
+  it('puts back the pack state it zeroes for its read', () => {
+    const gl = new FakeGL();
+    gl.pixelStorei(gl.PACK_ROW_LENGTH, 7);
+    gl.useProgram({});
+    gl.drawRangeElements();
+    expect(gl.getParameter(gl.PACK_ROW_LENGTH)).toBe(7);
   });
 });
