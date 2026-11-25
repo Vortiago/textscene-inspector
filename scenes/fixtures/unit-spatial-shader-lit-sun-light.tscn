@@ -1,28 +1,8 @@
-[gd_scene format=3 uid="uid://unit_spatial_shader_lit_sun"]
+[gd_scene format=3 uid="uid://unit_spatial_shader_lit_sun_light"]
 
-; The one variable: lit spatial shaders under two suns with no shadow, and the background colour
-; as the ambient light. The sphere is a rough dielectric, the box a smooth metal, and the cylinder
-; writes its own light(). The second sun's cull mask leaves out the cylinder's layer 2.
-
-[sub_resource type="Shader" id="Shader_dielectric"]
-code = "shader_type spatial;
-
-void fragment() {
-	ALBEDO = vec3(0.8, 0.7, 0.6);
-	ROUGHNESS = 0.6;
-	RIM = 0.5;
-}
-"
-
-[sub_resource type="Shader" id="Shader_metal"]
-code = "shader_type spatial;
-
-void fragment() {
-	ALBEDO = vec3(0.9, 0.6, 0.3);
-	METALLIC = 1.0;
-	ROUGHNESS = 0.25;
-}
-"
+; The one variable: a lit spatial shader that writes its own light(), under two suns with no shadow.
+; The second sun's cull mask leaves out the cylinder's layer 2. Each lit shader has a scene of its
+; own, as one costs about 25 s to compile on SwiftShader in CI.
 
 [sub_resource type="Shader" id="Shader_light"]
 code = "shader_type spatial;
@@ -37,20 +17,8 @@ void light() {
 }
 "
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_dielectric"]
-shader = SubResource("Shader_dielectric")
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_metal"]
-shader = SubResource("Shader_metal")
-
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_light"]
 shader = SubResource("Shader_light")
-
-[sub_resource type="SphereMesh" id="SphereMesh_1"]
-material = SubResource("ShaderMaterial_dielectric")
-
-[sub_resource type="BoxMesh" id="BoxMesh_1"]
-material = SubResource("ShaderMaterial_metal")
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_1"]
 material = SubResource("ShaderMaterial_light")
@@ -75,13 +43,6 @@ transform = Transform3D(-0.7071068, 0.5, -0.5, 0, 0.7071068, 0.7071068, 0.707106
 light_color = Color(1, 0.55, 0.3, 1)
 light_energy = 0.8
 light_cull_mask = 4294967293
-
-[node name="Box" type="MeshInstance3D" parent="."]
-transform = Transform3D(0.7071068, 0, 0.7071068, 0, 1, 0, -0.7071068, 0, 0.7071068, -1.4, 0, 0)
-mesh = SubResource("BoxMesh_1")
-
-[node name="Sphere" type="MeshInstance3D" parent="."]
-mesh = SubResource("SphereMesh_1")
 
 [node name="Cylinder" type="MeshInstance3D" parent="."]
 transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 1.4, 0, 0)

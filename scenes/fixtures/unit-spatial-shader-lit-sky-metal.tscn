@@ -1,19 +1,8 @@
-[gd_scene format=3 uid="uid://unit_spatial_shader_lit_sky"]
+[gd_scene format=3 uid="uid://unit_spatial_shader_lit_sky_metal"]
 
-; The one variable: the sky lights two lit spatial shaders of unit-spatial-shader-lit-sun. A
-; ProceduralSkyMaterial background gives the ambient light and the smooth metal box's reflection.
-; No other golden draws a lit spatial shader under a sky. It leaves out the light() cylinder, which
-; unit-spatial-shader-lit-sun draws, as each lit shader costs about 30 s to compile on SwiftShader in CI.
-
-[sub_resource type="Shader" id="Shader_dielectric"]
-code = "shader_type spatial;
-
-void fragment() {
-	ALBEDO = vec3(0.8, 0.7, 0.6);
-	ROUGHNESS = 0.6;
-	RIM = 0.5;
-}
-"
+; The one variable: a ProceduralSkyMaterial background as the ambient light and the reflection of
+; the smooth metal of unit-spatial-shader-lit-sun-metal. Each lit shader has a scene of its own, as
+; one costs about 25 s to compile on SwiftShader in CI.
 
 [sub_resource type="Shader" id="Shader_metal"]
 code = "shader_type spatial;
@@ -25,14 +14,8 @@ void fragment() {
 }
 "
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_dielectric"]
-shader = SubResource("Shader_dielectric")
-
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_metal"]
 shader = SubResource("Shader_metal")
-
-[sub_resource type="SphereMesh" id="SphereMesh_1"]
-material = SubResource("ShaderMaterial_dielectric")
 
 [sub_resource type="BoxMesh" id="BoxMesh_1"]
 material = SubResource("ShaderMaterial_metal")
@@ -66,6 +49,3 @@ light_cull_mask = 4294967293
 [node name="Box" type="MeshInstance3D" parent="."]
 transform = Transform3D(0.7071068, 0, 0.7071068, 0, 1, 0, -0.7071068, 0, 0.7071068, -1.4, 0, 0)
 mesh = SubResource("BoxMesh_1")
-
-[node name="Sphere" type="MeshInstance3D" parent="."]
-mesh = SubResource("SphereMesh_1")

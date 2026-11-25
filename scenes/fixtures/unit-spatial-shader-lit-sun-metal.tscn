@@ -1,0 +1,46 @@
+[gd_scene format=3 uid="uid://unit_spatial_shader_lit_sun_metal"]
+
+; The one variable: a lit spatial shader of a smooth metal, under two suns with no shadow and the
+; background colour as the ambient light. Each lit shader has a scene of its own, as one costs about
+; 25 s to compile on SwiftShader in CI.
+
+[sub_resource type="Shader" id="Shader_metal"]
+code = "shader_type spatial;
+
+void fragment() {
+	ALBEDO = vec3(0.9, 0.6, 0.3);
+	METALLIC = 1.0;
+	ROUGHNESS = 0.25;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_metal"]
+shader = SubResource("Shader_metal")
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+material = SubResource("ShaderMaterial_metal")
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.1, 0.12, 0.16, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.9659258, 0.2588190, 0, -0.2588190, 0.9659258, 0, 1.2, 4)
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.8660254, -0.3830222, 0.3213938, 0, 0.6427876, 0.7660444, -0.5, -0.6634139, 0.5566704, 0, 3, 0)
+
+[node name="RimSun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.7071068, 0.5, -0.5, 0, 0.7071068, 0.7071068, 0.7071068, 0.5, -0.5, 0, 3, 0)
+light_color = Color(1, 0.55, 0.3, 1)
+light_energy = 0.8
+light_cull_mask = 4294967293
+
+[node name="Box" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.7071068, 0, 0.7071068, 0, 1, 0, -0.7071068, 0, 0.7071068, -1.4, 0, 0)
+mesh = SubResource("BoxMesh_1")

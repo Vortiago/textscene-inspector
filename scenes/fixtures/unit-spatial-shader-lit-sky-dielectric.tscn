@@ -1,0 +1,50 @@
+[gd_scene format=3 uid="uid://unit_spatial_shader_lit_sky_dielectric"]
+
+; The one variable: a ProceduralSkyMaterial background as the ambient light of the rough dielectric
+; of unit-spatial-shader-lit-sun-dielectric. Each lit shader has a scene of its own, as one costs
+; about 25 s to compile on SwiftShader in CI.
+
+[sub_resource type="Shader" id="Shader_dielectric"]
+code = "shader_type spatial;
+
+void fragment() {
+	ALBEDO = vec3(0.8, 0.7, 0.6);
+	ROUGHNESS = 0.6;
+	RIM = 0.5;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_dielectric"]
+shader = SubResource("Shader_dielectric")
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+material = SubResource("ShaderMaterial_dielectric")
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMat_1"]
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("SkyMat_1")
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 2
+sky = SubResource("Sky_1")
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.9659258, 0.2588190, 0, -0.2588190, 0.9659258, 0, 1.2, 4)
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.8660254, -0.3830222, 0.3213938, 0, 0.6427876, 0.7660444, -0.5, -0.6634139, 0.5566704, 0, 3, 0)
+
+[node name="RimSun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.7071068, 0.5, -0.5, 0, 0.7071068, 0.7071068, 0.7071068, 0.5, -0.5, 0, 3, 0)
+light_color = Color(1, 0.55, 0.3, 1)
+light_energy = 0.8
+light_cull_mask = 4294967293
+
+[node name="Sphere" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_1")

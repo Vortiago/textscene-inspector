@@ -30,12 +30,16 @@ export const MATERIAL_SCENES = [
   { name: 'material-spatial-shader-uniforms', file: 'unit-spatial-shader-uniforms.tscn' },
   // Unshaded spatial shaders whose writes to the outputs only the light reads change nothing drawn.
   { name: 'material-spatial-shader-lit-outputs', file: 'unit-spatial-shader-lit-outputs.tscn' },
-  // Lit spatial shaders under two suns and a colour background's ambient light. Godot 4.6.3: 0 px over
-  // 2/255. An ambient light read black puts 33,505 px over, at most 38/255 (the cylinder's dark side).
-  { name: 'material-spatial-shader-lit-sun', file: 'unit-spatial-shader-lit-sun.tscn' },
-  // Two of the same lit spatial shaders under a ProceduralSkyMaterial's ambient light and reflection.
-  // Godot 4.6.3: 0 px over 2/255. The sky read black puts 35,262 px over, at most 66/255.
-  { name: 'material-spatial-shader-lit-sky', file: 'unit-spatial-shader-lit-sky.tscn' },
+  // A lit dielectric with RIM under two suns. Godot 4.6.3: 0 px over 2/255. Ambient black: 5,426 px, max 5/255.
+  { name: 'material-spatial-shader-lit-sun-dielectric', file: 'unit-spatial-shader-lit-sun-dielectric.tscn' },
+  // A lit metal under two suns. Godot 4.6.3: 0 px over 2/255. Ambient read black: 0 px over, max 1/255.
+  { name: 'material-spatial-shader-lit-sun-metal', file: 'unit-spatial-shader-lit-sun-metal.tscn' },
+  // A lit light() shader under two suns. Godot 4.6.3: 0 px over 2/255. Ambient black: 28,079 px, max 38/255.
+  { name: 'material-spatial-shader-lit-sun-light', file: 'unit-spatial-shader-lit-sun-light.tscn' },
+  // A lit dielectric under a sky. Godot 4.6.3: 0 px over 2/255. The sky read black: 14,477 px, max 27/255.
+  { name: 'material-spatial-shader-lit-sky-dielectric', file: 'unit-spatial-shader-lit-sky-dielectric.tscn' },
+  // A lit metal under a sky. Godot 4.6.3: 0 px over 2/255. The sky read black: 20,785 px, max 66/255.
+  { name: 'material-spatial-shader-lit-sky-metal', file: 'unit-spatial-shader-lit-sky-metal.tscn' },
   // Spatial shaders with render_mode wireframe, drawn as the edges left after cull_back and cull_disabled.
   { name: 'material-spatial-shader-wireframe', file: 'unit-spatial-shader-wireframe.tscn' },
   // Spatial shaders with cull_back, cull_front and cull_disabled, on quads that face the camera and away.
