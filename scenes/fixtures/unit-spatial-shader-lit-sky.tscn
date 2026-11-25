@@ -1,8 +1,9 @@
 [gd_scene format=3 uid="uid://unit_spatial_shader_lit_sky"]
 
-; The one variable: the sky lights the lit spatial shaders of unit-spatial-shader-lit-sun. A
+; The one variable: the sky lights two lit spatial shaders of unit-spatial-shader-lit-sun. A
 ; ProceduralSkyMaterial background gives the ambient light and the smooth metal box's reflection.
-; No other golden draws a lit spatial shader under a sky.
+; No other golden draws a lit spatial shader under a sky. It leaves out the light() cylinder, which
+; unit-spatial-shader-lit-sun draws, as each lit shader costs about 30 s to compile on SwiftShader in CI.
 
 [sub_resource type="Shader" id="Shader_dielectric"]
 code = "shader_type spatial;
@@ -24,36 +25,17 @@ void fragment() {
 }
 "
 
-[sub_resource type="Shader" id="Shader_light"]
-code = "shader_type spatial;
-
-void fragment() {
-	ALBEDO = vec3(0.3, 0.6, 0.9);
-}
-
-void light() {
-	float bands = floor(clamp(dot(NORMAL, LIGHT), 0.0, 1.0) * 3.0) / 3.0;
-	DIFFUSE_LIGHT += bands * ATTENUATION * LIGHT_COLOR / PI;
-}
-"
-
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_dielectric"]
 shader = SubResource("Shader_dielectric")
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_metal"]
 shader = SubResource("Shader_metal")
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_light"]
-shader = SubResource("Shader_light")
-
 [sub_resource type="SphereMesh" id="SphereMesh_1"]
 material = SubResource("ShaderMaterial_dielectric")
 
 [sub_resource type="BoxMesh" id="BoxMesh_1"]
 material = SubResource("ShaderMaterial_metal")
-
-[sub_resource type="CylinderMesh" id="CylinderMesh_1"]
-material = SubResource("ShaderMaterial_light")
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat_1"]
 
@@ -87,8 +69,3 @@ mesh = SubResource("BoxMesh_1")
 
 [node name="Sphere" type="MeshInstance3D" parent="."]
 mesh = SubResource("SphereMesh_1")
-
-[node name="Cylinder" type="MeshInstance3D" parent="."]
-transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 1.4, 0, 0)
-layers = 2
-mesh = SubResource("CylinderMesh_1")
