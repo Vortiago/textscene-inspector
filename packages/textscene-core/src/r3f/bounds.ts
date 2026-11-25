@@ -70,6 +70,16 @@ export function boxlessUserData(): { godotBoxless: true } {
 /** Where an object records that its geometry's box bounds it, though the geometry is instanced. */
 const GEOMETRY_BOX_KEY = 'godotGeometryBox';
 
+/** Whether `object` draws instances: its box unions every one, unposed, so a GridMap frames all its tiles. */
+export function drawsInstances(object: THREE.Object3D): boolean {
+  const bearing = object as BoundsBearing;
+  return Boolean(
+    bearing.isInstancedMesh ||
+    bearing.isBatchedMesh ||
+    (bearing.geometry as THREE.InstancedBufferGeometry | undefined)?.isInstancedBufferGeometry
+  );
+}
+
 /** The userData of a draw over an instanced geometry whose box bounds every instance, as a canvas batch. */
 export function geometryBoxUserData(): { godotGeometryBox: true } {
   return { [GEOMETRY_BOX_KEY]: true };
@@ -125,13 +135,8 @@ function unionOwnBox(object: THREE.Object3D, target: THREE.Box3): void {
   const geometry = bearing.geometry;
   if (!geometry || isNodeIcon(object) || object.userData[BOXLESS_KEY] === true) return;
 
-  // An instanced draw's own box unions every instance, unposed, so a GridMap frames all its tiles.
-  const isInstanced =
-    // A draw marked by `geometryBoxUserData`, as any other mesh, reads the bind-pose `geometry.boundingBox`.
-    object.userData[GEOMETRY_BOX_KEY] !== true &&
-    (bearing.isInstancedMesh ||
-      bearing.isBatchedMesh ||
-      (geometry as THREE.InstancedBufferGeometry).isInstancedBufferGeometry);
+  // A draw marked by `geometryBoxUserData`, as any other mesh, reads the bind-pose `geometry.boundingBox`.
+  const isInstanced = object.userData[GEOMETRY_BOX_KEY] !== true && drawsInstances(object);
   const src = isInstanced ? bearing : geometry;
   if (src.boundingBox === null) src.computeBoundingBox?.();
   if (!src.boundingBox) return;
