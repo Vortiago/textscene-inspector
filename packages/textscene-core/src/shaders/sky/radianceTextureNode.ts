@@ -13,9 +13,14 @@ class RadianceTextureNode extends TextureNode {
   }
 }
 
+/** A node over a sky's layer array `layers`, read in Godot's rows. */
+export function skyLayersTextureNode(layers: THREE.DataArrayTexture): TextureNode {
+  return new RadianceTextureNode(layers);
+}
+
 /** The template's `radiance` over the layer array `layers`, read at its first layer. */
 export function radianceTextureNode(layers: THREE.DataArrayTexture): TextureNode {
-  const node = new RadianceTextureNode(layers);
+  const node = skyLayersTextureNode(layers);
   // three gives a layer only to `isArrayTexture`, not to a DataArrayTexture (`TextureNode.js:708`).
   node.depthNode = int(READ_LAYER) as unknown as Node;
   return node;

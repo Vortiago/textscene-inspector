@@ -19,6 +19,7 @@ import { renderTargetSize } from '../renderTargetSize.js';
 import { renderedEnvironmentFog } from '../fog/fogFrame.js';
 import { sceneDirectionalLights } from '../surfaceLight/surfaceLight.js';
 import { sceneAmbientLight } from '../surfaceLight/sceneAmbientLight.js';
+import { sceneSkyLight, unmixedAmbientLight } from '../surfaceLight/sceneSkyLight.js';
 import { EMISSION_EXPOSURE } from '../exposure/emissionExposure.js';
 import { visualLayersOf } from '../visualLayers.js';
 import { releasedOnUnmount } from '../sharedTexture.js';
@@ -89,8 +90,9 @@ export function disposeSpatial({ material, buffers }: TranspiledSpatial): void {
   for (const rows of buffers.values()) rows.texture.dispose();
 }
 
-/** Scratch for the clear colour and target size of one draw, overwritten by the next. */
+/** Scratch for the clear colour, ambient light and target size of one draw, overwritten by the next. */
 const clearColor = new THREE.Color();
+const ambientLight = new THREE.Color();
 const targetSize = new THREE.Vector2();
 
 /** What the colour pass reads from the frame `gl` draws for `drawn`. */
@@ -100,12 +102,15 @@ function sceneOf(
   roughnessLimiter: RoughnessLimiter
 ): SpatialScene {
   const { x: width, y: height } = renderTargetSize(gl, targetSize);
+  const sky = sceneSkyLight();
+  const sceneAmbient = sceneAmbientLight(scene, gl.getClearColor(clearColor), renderId);
   return {
     camera: camera as SpatialScene['camera'],
     width,
     height,
     time: canvasShaderTime(gl).time,
-    ambientLight: sceneAmbientLight(scene, gl.getClearColor(clearColor), renderId),
+    ambientLight: unmixedAmbientLight(sceneAmbient, sky, ambientLight),
+    ...(sky && { sky }),
     emissiveExposure: EMISSION_EXPOSURE[0]!,
     fog: renderedEnvironmentFog(),
     directionalLights: sceneDirectionalLights(scene, renderId),

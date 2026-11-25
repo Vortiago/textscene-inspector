@@ -9,6 +9,7 @@ import { levelCountOf, levelOfDetail } from './textureQueries.js';
 import { arrayLayerSize, cubeArraySize, isArrayLayerRead, SizeNode } from './textureSize.js';
 import { TextureBuiltNode } from './textureBuiltNode.js';
 import { roundedLayer } from './textureLayer.js';
+import { layerScaledRead } from './layerScaledReads.js';
 import { swizzles } from './compositeParts.js';
 import { textureKindOf } from './types.js';
 
@@ -169,11 +170,17 @@ function sampledCall(name: string, row: InstructionRow, operands: readonly Node[
   const [texture, coordinate, ...rest] = operands as [TextureNode, Node, ...Node[]];
   const [sampler, coordinateType] = row.args!;
   const projectedCall = PROJECTED[name];
-  if (projectedCall === undefined)
-    return CALLS[name]!(texture, coordinateOf(sampler!, coordinate), rest, sampler!);
+  if (projectedCall === undefined) {
+    const placed = coordinateOf(sampler!, coordinate);
+    const read = CALLS[name]!(texture, placed, rest, sampler!);
+    return placed.layer && LAYER_SCALED_CALLS.has(name) ? layerScaledRead(texture, read, placed.layer) : read;
+  }
   const divided = projected(sampler!, coordinate, coordinateType!);
   return CALLS[projectedCall]!(texture, { uv: divided }, rest, sampler!);
 }
+
+/** The calls that read a colour: a gather reads one channel of four texels, which no layer scale fits. */
+const LAYER_SCALED_CALLS: ReadonlySet<string> = new Set(['texture', 'textureLod', 'textureGrad']);
 
 const INTEGER_TYPES: ReadonlySet<number> = new Set([IntType, UnsignedIntType]);
 

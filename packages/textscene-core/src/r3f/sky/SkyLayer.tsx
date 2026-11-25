@@ -216,7 +216,12 @@ export function SkyLayer({
       scene.environmentIntensity = render.brightness;
       bake.showLightsAt(render.exposure);
       radiance.background?.drawIn(scene, render.brightness, skyRotation);
-      radiance.radiance.show(contributionRef.current, reflectsRef.current, radiance.drawn.energies);
+      radiance.radiance.show({
+        contribution: contributionRef.current,
+        isReflected: reflectsRef.current,
+        energies: radiance.drawn.energies,
+        energyMultiplier,
+      });
     };
     const stopRegistering = registerEnvironmentPart(scene, environment, () => {
       const previousEnvironment = scene.environment;

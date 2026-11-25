@@ -66,6 +66,7 @@ const PUBLIC_TYPE_EXPORTS = [
   'RendererShaderOptions',
   'RenderingMethod',
   'RoughnessLimiter',
+  'SceneSky',
   'ShaderInclude',
   'ShaderOptions',
   'ShaderSource',

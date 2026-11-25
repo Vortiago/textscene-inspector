@@ -31,8 +31,11 @@ export const FOG_BINDINGS: readonly Binding<SpatialFrame>[] = [
     godot: 'render_scene_data_rd.cpp:211',
     value: ({ fog }) => fog?.heightDensity ?? 0,
   },
-  // The scene template binds no sky radiance yet, which the aerial perspective reads.
-  { uniform: `${DATA}.fog_aerial_perspective`, godot: 'render_scene_data_rd.cpp:212', value: () => 0 },
+  {
+    uniform: `${DATA}.fog_aerial_perspective`,
+    godot: 'render_scene_data_rd.cpp:212',
+    value: ({ fog }) => fog?.aerialPerspective ?? 0,
+  },
   {
     uniform: `${DATA}.fog_depth_curve`,
     godot: 'render_scene_data_rd.cpp:214',

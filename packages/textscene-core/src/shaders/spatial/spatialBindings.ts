@@ -9,6 +9,7 @@ import { FOG_BINDINGS, FOG_SPECIALISATIONS, USE_FOG } from './fogBindings.js';
 import { EFFECT_SPECIALISATIONS } from './effectSpecialisations.js';
 import { DIRECTIONAL_LIGHT_BINDINGS, type DirectionalLight } from './directionalLights.js';
 import { GODOT_ROUGHNESS_LIMITER, type RoughnessLimiter } from '../../godot/rendering/roughnessLimiter.js';
+import { bindSkyLayers, SKY_BINDINGS, skyEnergyOf, skyFlagsOf, type SceneSky } from './sceneSky.js';
 
 /** What the colour pass reads from a frame. */
 export interface SpatialScene {
@@ -18,8 +19,10 @@ export interface SpatialScene {
   readonly height: number;
   /** The shader time in seconds, `TIME`. */
   readonly time: number;
-  /** The flat ambient light, linear and with its energy: the clear colour with no Environment. */
+  /** `ambient_light_color_energy.rgb`, linear: the clear colour with no Environment. */
   readonly ambientLight: THREE.Color;
+  /** The sky the Environment lights surfaces with, or nothing with no sky. */
+  readonly sky?: SceneSky;
   /** The camera attributes' exposure factor, 1 with none (`render_scene_data_rd.cpp:239, 254`). */
   readonly emissiveExposure: number;
   /** The environment's fog, or nothing when it is off. */
@@ -120,23 +123,24 @@ export const SCENE_BINDINGS: readonly Binding<SpatialFrame>[] = [
   { uniform: `${DATA}.time`, godot: 'render_scene_data_rd.cpp:149', value: (scene) => scene.time },
   {
     uniform: `${DATA}.flags`,
-    godot: 'render_scene_data_rd.cpp:208, 228, 258-259; render_forward_clustered.cpp:2162, 2381',
+    godot: 'render_scene_data_rd.cpp:188-199, 208, 228, 258-259; render_forward_clustered.cpp:2162, 2381',
     value: (frame) =>
       USE_AMBIENT_LIGHT |
+      skyFlagsOf(frame.sky) |
       (usesRoughnessLimiter(frame) ? USE_ROUGHNESS_LIMITER : 0) |
       (frame.fog ? USE_FOG : 0),
   },
   {
     uniform: `${DATA}.ambient_light_color_energy`,
-    godot: 'render_scene_data_rd.cpp:174-185, 229-233',
-    value: ({ ambientLight }) => new THREE.Vector4(ambientLight.r, ambientLight.g, ambientLight.b, 1),
+    godot: 'render_scene_data_rd.cpp:165-185, 229-233',
+    value: ({ ambientLight, sky }) =>
+      new THREE.Vector4(ambientLight.r, ambientLight.g, ambientLight.b, skyEnergyOf(sky)),
   },
   {
     uniform: `${DATA}.emissive_exposure_normalization`,
     godot: 'render_scene_data_rd.cpp:239, 254',
     value: ({ emissiveExposure }) => emissiveExposure,
   },
-  { uniform: `${DATA}.IBL_exposure_normalization`, godot: 'render_scene_data_rd.cpp:255', value: () => 1 },
   {
     uniform: `${DATA}.roughness_limiter_amount`,
     godot: 'render_scene_data_rd.cpp:261',
@@ -162,6 +166,8 @@ export function writeSpatialBindings(spatial: TranspiledSpatial, scene: SpatialS
   writeBindings(SCENE_BINDINGS, spatial.uniforms, frame);
   writeBindings(FOG_BINDINGS, spatial.uniforms, frame);
   writeBindings(DIRECTIONAL_LIGHT_BINDINGS, spatial.uniforms, frame);
+  writeBindings(SKY_BINDINGS, spatial.uniforms, frame);
+  bindSkyLayers(spatial.textures, scene.sky);
 }
 
 /** Writes the specialisation constants of `spatial`, which pick the colour pass's program. */

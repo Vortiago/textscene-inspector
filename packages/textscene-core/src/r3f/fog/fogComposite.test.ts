@@ -5,7 +5,7 @@ import { GODOT_FOG_PARS_CHUNK } from './fogChunks';
 import { fogUniforms } from './fogUniforms';
 import { GODOT_SKY_VIEW_RAY } from '../sky/skyProjection';
 import { SKY_RADIANCE_UNIFORMS, skyRotation } from '../sky/skyRadiance';
-import { shownSky, skyLayersSlot } from '../sky/skyRadiance.testkit';
+import { shownValues, skyLayersSlot } from '../sky/skyRadiance.testkit';
 import { warningsOf } from '../testing/logWarnings';
 import { functionBody } from '../testing/glslSource';
 import { restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
@@ -80,7 +80,7 @@ describe('installFogComposite', () => {
     for (const shader of fogShaders) {
       const uniforms = THREE.UniformsUtils.clone(shader.uniforms);
       expect(uniforms[SKY_RADIANCE_UNIFORMS.layers]!.value).toBe(skyLayersSlot);
-      expect(uniforms[SKY_RADIANCE_UNIFORMS.shown]!.value).toBe(shownSky);
+      expect(uniforms[SKY_RADIANCE_UNIFORMS.shown]!.value).toBe(shownValues);
       expect(uniforms[SKY_RADIANCE_UNIFORMS.rotation]!.value).toBe(skyRotation);
     }
   });
