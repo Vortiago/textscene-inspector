@@ -1,11 +1,15 @@
-import { descendsFromClass, findInClassChain } from '../godot/classdb/classBaseTypes.js';
+import { classInTree, descendsFromClass, findInClassChain } from '../godot/classdb/classBaseTypes.js';
 import type { NodeHandle } from './nodeHandle.js';
 import { VARIANT_TYPE as T, variantTypeName } from '../godot/variant/variantType.js';
 import { valueOfSceneValue, type SceneValue } from './variant.js';
+import { absolutePathOf, ROOT_WINDOW_PATH } from './nodePathWalk.js';
 import type { ViewportCameras } from './viewportCameras.js';
 
 /** What `call` answers: a value, a node, or null for a method that returns nothing. */
 export type CallResult = SceneValue | NodeHandle | null;
+
+/** What `call` takes: a value, or a node for a method whose binding takes an Object. */
+export type CallArgument = SceneValue | NodeHandle;
 
 /** What a ported method reads and moves of its node and its scene. */
 export interface MethodTarget {
@@ -24,6 +28,8 @@ export interface MethodTarget {
   /** As the node's tree entry gives them: empty and null for the root window. */
   sceneFilePath(): string;
   ownerPath(): string | null;
+  /** The flag an `[editable]` of any enclosing file sets on `node`, false for a node of another scene. */
+  isEditableInstance(node: NodeHandle): boolean;
 }
 
 /** A method of Godot's class this release ports, with the count of arguments its binding takes. */
@@ -34,30 +40,60 @@ export interface PortedMethod {
   readonly maxArguments: number;
   /** `args` holds `minArguments` at least, as `runPortedMethod` checks first. */
   /** `name` is `Class::method` of the node's own class, for Godot's error text. */
-  run(target: MethodTarget, args: readonly SceneValue[], name: string): CallResult | Promise<CallResult>;
+  run(target: MethodTarget, args: readonly CallArgument[], name: string): CallResult | Promise<CallResult>;
+}
+
+export function isNodeHandle(value: unknown): value is NodeHandle {
+  return typeof value === 'object' && value !== null && 'getChildren' in value;
+}
+
+function cannotConvert(name: string, from: string, to: string): Error {
+  return new Error(`${name}: Cannot convert argument 1 from ${from} to ${to}.`);
+}
+
+/** The value of a bound value argument: a node is an Object, which a value binding refuses. */
+function valueArgument(value: CallArgument, name: string, to: string) {
+  if (isNodeHandle(value)) throw cannotConvert(name, 'Object', to);
+  return valueOfSceneValue(value);
 }
 
 /** A bound call casts between bool, int and float, and refuses any other type (measured in Godot 4.6.3). */
-function numberArgument(value: SceneValue, name: string, to: 'bool' | 'int'): number | boolean {
-  const cast = valueOfSceneValue(value);
+function numberArgument(value: CallArgument, name: string, to: 'bool' | 'int'): number | boolean {
+  const cast = valueArgument(value, name, to);
   if (cast.type === T.BOOL || cast.type === T.INT || cast.type === T.FLOAT)
     return cast.value as number | boolean;
-  throw new Error(`${name}: Cannot convert argument 1 from ${variantTypeName(cast.type)} to ${to}.`);
+  throw cannotConvert(name, variantTypeName(cast.type) ?? 'Nil', to);
 }
 
 // A bound String takes a StringName and a NodePath, and refuses any other type (measured in Godot 4.6.3).
-function stringArgument(value: SceneValue, name: string): string {
-  const cast = valueOfSceneValue(value);
+function stringArgument(value: CallArgument, name: string): string {
+  const cast = valueArgument(value, name, 'String');
   if (cast.type === T.STRING || cast.type === T.STRING_NAME || cast.type === T.NODE_PATH) return cast.value;
-  throw new Error(`${name}: Cannot convert argument 1 from ${variantTypeName(cast.type)} to String.`);
+  throw cannotConvert(name, variantTypeName(cast.type) ?? 'Nil', 'String');
 }
 
-function boolArgument(value: SceneValue, name: string): boolean {
+/** A property's setter or getter takes values only, so a node argument is refused before the call. */
+export function valueArguments(args: readonly CallArgument[], name: string): SceneValue[] {
+  return args.map((arg, index) => {
+    if (!isNodeHandle(arg)) return arg;
+    throw new Error(`${name}: expected a value for argument ${index + 1}, got the node at ${arg.path}`);
+  });
+}
+
+// A bound Object takes a node or null, and refuses a value of any other type (measured in Godot 4.6.3).
+function nodeArgument(value: CallArgument, name: string): NodeHandle | null {
+  if (isNodeHandle(value)) return value;
+  const { type } = valueOfSceneValue(value);
+  if (type === T.NIL) return null;
+  throw cannotConvert(name, variantTypeName(type) ?? 'Nil', 'Object');
+}
+
+function boolArgument(value: CallArgument, name: string): boolean {
   return Number(numberArgument(value, name, 'bool')) !== 0;
 }
 
 /** A float truncates, as Godot's cast to `int64_t` does. */
-export function intArgument(value: SceneValue, name: string): number {
+export function intArgument(value: CallArgument, name: string): number {
   return Math.trunc(Number(numberArgument(value, name, 'int')));
 }
 
@@ -158,6 +194,18 @@ const NODE_METHODS: Readonly<Record<string, PortedMethod>> = {
     maxArguments: 0,
     run: (target) => target.sceneFilePath(),
   },
+  // node.cpp:2696: null, or a node that is not below the caller, answers false.
+  is_editable_instance: {
+    minArguments: 1,
+    maxArguments: 1,
+    run: (target, [node], name) => {
+      const instance = nodeArgument(node!, name);
+      if (!instance) return false;
+      const callerPath = target.livePath === null ? ROOT_WINDOW_PATH : absolutePathOf(target.livePath);
+      const isBelow = instance.path.startsWith(`${callerPath}/`);
+      return isBelow && target.isEditableInstance(instance);
+    },
+  },
 };
 
 const OBJECT_METHODS: Readonly<Record<string, PortedMethod>> = {
@@ -186,17 +234,12 @@ export function findPortedAccessor(
   role: 'setter' | 'getter',
   property: string
 ): { name: string; method: PortedMethod } | undefined {
-  return findInClassChain(className, (type) => {
+  return findInClassChain(classInTree(className), (type) => {
     const found = Object.entries(PORTED_METHODS[type] ?? {}).find(
       ([, method]) => method.accessor?.role === role && method.accessor.property === property
     );
     return found && { name: found[0], method: found[1] };
   });
-}
-
-// packed_scene.cpp:331: Godot 4.6.3 makes a placeholder Node of a class it cannot make (measured).
-function classInTree(className: string): string {
-  return descendsFromClass(className, 'Node') ? className : 'Node';
 }
 
 /** Every method a call reaches without the property table, for the error that names them. */
@@ -225,7 +268,7 @@ export function runPortedMethod(
   method: PortedMethod,
   name: string,
   target: MethodTarget,
-  args: readonly SceneValue[]
+  args: readonly CallArgument[]
 ): CallResult | Promise<CallResult> {
   if (args.length > method.maxArguments) throw argumentCountError(name, method.maxArguments, args.length);
   if (args.length < method.minArguments) throw argumentCountError(name, method.minArguments, args.length);

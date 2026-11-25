@@ -1,6 +1,6 @@
 import { findClassProperty, valueTypeOf, type ClassProperty } from '../godot/classdb/classProperty.js';
 import { findDerivedProperty, nodeDefaultText } from '../godot/classdb/nodeDefault.js';
-import { classInheritanceChain, descendsFromClass } from '../godot/classdb/classBaseTypes.js';
+import { classInheritanceChain, classInTree, descendsFromClass } from '../godot/classdb/classBaseTypes.js';
 import { canonicalisePropertyBag } from '../godot/classdb/deprecated.js';
 import { PROPERTY_HINT } from '../godot/classdb/propertyHint.js';
 import { resourceTypeHint } from '../godot/classdb/resourceTypeHint.js';
@@ -49,7 +49,8 @@ export function storedValueOf({
   writtenReading,
   placedProperty,
 }: StoredTexts): StoredValue {
-  const raw = canonicalisePropertyBag(node.type, { ...node.rawProperties });
+  const className = classInTree(node.type);
+  const raw = canonicalisePropertyBag(className, { ...node.rawProperties });
   // One parse per property for each call: a setter such as `global_position` reads one many times.
   const values = new Map<string, VariantValue>();
   const valueOf = (property: string): VariantValue => {
@@ -60,9 +61,9 @@ export function storedValueOf({
       ? written[property]
       : Object.hasOwn(raw, property)
         ? raw[property]
-        : nodeDefaultText(node.type, property);
+        : nodeDefaultText(className, property);
     if (text === undefined) return NIL_VALUE;
-    const stored = findClassProperty(node.type, property);
+    const stored = findClassProperty(className, property);
     const value = strToVar(text, isWritten ? writtenReading : nodeReading);
     return stored ? castVariant(value, valueTypeOf(stored)) : value;
   };
@@ -98,7 +99,8 @@ export function resolveSet(
   derived: DerivedProperties | null,
   reads: NodeReads
 ): SetOutcome {
-  const storedProperty = findClassProperty(node.type, property);
+  const className = classInTree(node.type);
+  const storedProperty = findClassProperty(className, property);
   if (storedProperty) {
     if (storedProperty.isSetterless) return { kind: 'dropped' };
     const to = valueTypeOf(storedProperty);
@@ -106,7 +108,7 @@ export function resolveSet(
     if (writes) return { kind: 'written', writes, isValid: canConvertStrict(value.type, to) };
     return setStored(storedProperty, value);
   }
-  const derivedProperty = findDerivedProperty(node.type, property);
+  const derivedProperty = findDerivedProperty(className, property);
   if (!derivedProperty) return { kind: 'unknown' };
   if (!derivedProperty.hasSetter) return { kind: 'dropped' };
   const writes = derived?.set(property, castVariant(value, derivedProperty.type), reads);
@@ -137,8 +139,9 @@ export function resolveGet(
   derived: DerivedProperties | null,
   reads: NodeReads
 ): GetOutcome {
-  if (findClassProperty(node.type, property)) return { kind: 'value', value: reads.stored(property) };
-  const derivedProperty = findDerivedProperty(node.type, property);
+  const className = classInTree(node.type);
+  if (findClassProperty(className, property)) return { kind: 'value', value: reads.stored(property) };
+  const derivedProperty = findDerivedProperty(className, property);
   if (!derivedProperty) return { kind: 'unknown' };
   const value = derived?.get(property, reads);
   return value ? { kind: 'value', value } : { kind: 'unported', declaredBy: derivedProperty.declaredBy };

@@ -24,6 +24,8 @@ export interface SceneTreeNode {
   readonly sceneFilePath: string;
   /** The live path of the root of the scene that declares the node, null for the root node. */
   ownerPath(): string | null;
+  /** Whether an `[editable]` of any file that encloses the node lists it (`packed_scene.cpp:691-695`). */
+  isEditableInstance(): boolean;
 }
 
 /** A container's hold on one sortable child's `visible`, as its sort writes it. */

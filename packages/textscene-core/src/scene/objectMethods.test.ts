@@ -37,6 +37,13 @@ describe('is_class', () => {
     );
   });
 
+  it("throws Godot's error for a node argument", async () => {
+    const scene = openScene({ source: SOURCE, provider });
+    await expect(scene.getNode('Eye').call('is_class', scene.getNode('.'))).rejects.toThrow(
+      'Camera3D::is_class: Cannot convert argument 1 from Object to String.'
+    );
+  });
+
   it('answers on the root window, a Window', async () => {
     const root = openScene({ source: SOURCE, provider }).getNodeOrNull('/root')!;
     expect(await root.call('is_class', 'Viewport')).toBe(true);
@@ -95,5 +102,22 @@ describe('a node of a class Godot does not have', () => {
 
   it('answers get_owner with the root', async () => {
     expect(((await unknown().call('get_owner')) as { name: string } | null)?.name).toBe('Main');
+  });
+
+  it.each([
+    ['scene_file_path', ''],
+    ['process_mode', 0],
+    ['visible', null],
+  ])("answers get %s with a Node's %s", async (property, expected) => {
+    expect(await unknown().get(property)).toBe(expected);
+  });
+});
+
+describe('a property setter called with a node', () => {
+  it('refuses it and names the node, as no setter takes an Object', async () => {
+    const scene = openScene({ source: SOURCE, provider });
+    await expect(scene.getNode('Eye').call('set_fov', scene.getNode('.'))).rejects.toThrow(
+      'Camera3D::set_fov: expected a value for argument 1, got the node at /root/Main'
+    );
   });
 });

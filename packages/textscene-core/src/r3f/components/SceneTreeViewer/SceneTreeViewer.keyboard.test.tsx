@@ -4,29 +4,31 @@
  * and selection together, since the app has no focused-but-unselected state.
  */
 import { describe, expect, it } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { act, screen, fireEvent } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { SceneTreeViewer } from './SceneTreeViewer';
-import { HierarchyProvider } from '../../contexts/HierarchyContext';
-import { SelectionProvider, useSelectedNodePath } from '../../contexts/SelectionContext';
-import { ExpandedRowsProvider } from '../TscnPreviewShell/expandedRows';
-import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
-import type { TscnNode } from '../../../parser/types';
+import { useSelectedNodePath, useSelection } from '../../contexts/SelectionContext';
+import { renderSceneTree } from './sceneTree.testkit';
 
-function makeNode(name: string, type: string, children: TscnNode[] = []): TscnNode {
-  return { rawProperties: {}, name, type, children, properties: {} };
+/** A scene of `names` below one root, as Node3D, nested where `nested` is true. */
+function sceneOf(names: readonly string[], nested = false): string {
+  const [root, ...rest] = names;
+  const headings = rest.map((name, index) => {
+    const parent = nested ? (index === 0 ? '.' : rest.slice(0, index).join('/')) : '.';
+    return `[node name="${name}" type="Node3D" parent="${parent}"]`;
+  });
+  return [`[gd_scene format=3]`, `[node name="${root}" type="Node3D"]`, ...headings].join('\n\n') + '\n';
 }
 
-function withPanel(graph: ReturnType<typeof createSceneGraphFromTscnScene>) {
-  return function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
-        <SelectionProvider>
-          <ExpandedRowsProvider>{children}</ExpandedRowsProvider>
-        </SelectionProvider>
-      </HierarchyProvider>
-    );
-  };
+const SIBLINGS = sceneOf(['Root', 'Alpha', 'Bravo']);
+const PARENT = sceneOf(['Root', 'Child']);
+
+/** The tree of a scene with its root row expanded, so the siblings below it render. */
+async function renderExpanded(source: string, beside?: ReactNode) {
+  await renderSceneTree(source, { beside });
+  act(() => {
+    rowFor('Root').focus();
+    fireEvent.keyDown(rowFor('Root'), { key: 'ArrowRight' });
+  });
 }
 
 /** Every rendered row, in DOM order, which is the visible order. */
@@ -39,59 +41,41 @@ function rowFor(name: string): HTMLElement {
 }
 
 describe('<SceneTreeViewer> keyboard operability (#224)', () => {
-  it('gives the FIRST root row tabIndex=0 and every other row -1 when nothing is selected', () => {
-    const graph = createSceneGraphFromTscnScene({
-      nodes: [makeNode('Alpha', 'Node3D'), makeNode('Bravo', 'Node3D')],
-    });
-    render(<SceneTreeViewer />, { wrapper: withPanel(graph) });
+  it('gives the root row tabIndex=0 and every other row -1 when nothing is selected', async () => {
+    await renderSceneTree(SIBLINGS);
+    fireEvent.click(screen.getByRole('button', { name: 'Expand' }));
 
-    expect(rowFor('Alpha').tabIndex).toBe(0);
+    expect(rowFor('Root').tabIndex).toBe(0);
+    expect(rowFor('Alpha').tabIndex).toBe(-1);
     expect(rowFor('Bravo').tabIndex).toBe(-1);
   });
 
   it('moves the tab stop to the selected row', async () => {
-    const graph = createSceneGraphFromTscnScene({
-      nodes: [makeNode('Alpha', 'Node3D'), makeNode('Bravo', 'Node3D')],
-    });
-    render(<SceneTreeViewer />, { wrapper: withPanel(graph) });
+    await renderExpanded(SIBLINGS);
 
     fireEvent.click(rowFor('Bravo'));
 
     expect(rowFor('Bravo').tabIndex).toBe(0);
-    expect(rowFor('Alpha').tabIndex).toBe(-1);
+    expect(rowFor('Root').tabIndex).toBe(-1);
   });
 
-  it('ArrowDown moves focus + selection to the next sibling row', () => {
-    const graph = createSceneGraphFromTscnScene({
-      nodes: [makeNode('Alpha', 'Node3D'), makeNode('Bravo', 'Node3D')],
-    });
-
+  it('ArrowDown moves focus + selection to the next sibling row', async () => {
     let selectedNodePath: string | null = null;
     function Observer() {
       selectedNodePath = useSelectedNodePath();
       return null;
     }
-
-    render(
-      <>
-        <SceneTreeViewer />
-        <Observer />
-      </>,
-      { wrapper: withPanel(graph) }
-    );
+    await renderExpanded(SIBLINGS, <Observer />);
 
     rowFor('Alpha').focus();
     fireEvent.keyDown(rowFor('Alpha'), { key: 'ArrowDown' });
 
-    expect(selectedNodePath).toBe('Bravo');
+    expect(selectedNodePath).toBe('Root/Bravo');
     expect(globalThis.document.activeElement).toBe(rowFor('Bravo'));
   });
 
-  it('ArrowUp moves focus + selection to the previous sibling row', () => {
-    const graph = createSceneGraphFromTscnScene({
-      nodes: [makeNode('Alpha', 'Node3D'), makeNode('Bravo', 'Node3D')],
-    });
-    render(<SceneTreeViewer />, { wrapper: withPanel(graph) });
+  it('ArrowUp moves focus + selection to the previous sibling row', async () => {
+    await renderExpanded(SIBLINGS);
 
     rowFor('Bravo').focus();
     fireEvent.keyDown(rowFor('Bravo'), { key: 'ArrowUp' });
@@ -99,20 +83,16 @@ describe('<SceneTreeViewer> keyboard operability (#224)', () => {
     expect(globalThis.document.activeElement).toBe(rowFor('Alpha'));
   });
 
-  it('ArrowDown does nothing past the last row', () => {
-    const graph = createSceneGraphFromTscnScene({ nodes: [makeNode('Only', 'Node3D')] });
-    render(<SceneTreeViewer />, { wrapper: withPanel(graph) });
+  it('ArrowDown does nothing past the last row', async () => {
+    await renderSceneTree(sceneOf(['Only']));
 
     rowFor('Only').focus();
     expect(() => fireEvent.keyDown(rowFor('Only'), { key: 'ArrowDown' })).not.toThrow();
     expect(globalThis.document.activeElement).toBe(rowFor('Only'));
   });
 
-  it('ArrowRight on a collapsed parent expands it without moving focus', () => {
-    const graph = createSceneGraphFromTscnScene({
-      nodes: [makeNode('Root', 'Node3D', [makeNode('Child', 'MeshInstance3D')])],
-    });
-    render(<SceneTreeViewer />, { wrapper: withPanel(graph) });
+  it('ArrowRight on a collapsed parent expands it without moving focus', async () => {
+    await renderSceneTree(PARENT);
 
     expect(screen.queryByText('Child')).toBeNull();
     rowFor('Root').focus();
@@ -122,11 +102,8 @@ describe('<SceneTreeViewer> keyboard operability (#224)', () => {
     expect(globalThis.document.activeElement).toBe(rowFor('Root'));
   });
 
-  it('ArrowRight on an EXPANDED parent moves focus to its first child', () => {
-    const graph = createSceneGraphFromTscnScene({
-      nodes: [makeNode('Root', 'Node3D', [makeNode('Child', 'MeshInstance3D')])],
-    });
-    render(<SceneTreeViewer />, { wrapper: withPanel(graph) });
+  it('ArrowRight on an EXPANDED parent moves focus to its first child', async () => {
+    await renderSceneTree(PARENT);
 
     rowFor('Root').focus();
     fireEvent.keyDown(rowFor('Root'), { key: 'ArrowRight' }); // expand
@@ -135,11 +112,8 @@ describe('<SceneTreeViewer> keyboard operability (#224)', () => {
     expect(globalThis.document.activeElement).toBe(rowFor('Child'));
   });
 
-  it('ArrowLeft on an expanded parent collapses it without moving focus', () => {
-    const graph = createSceneGraphFromTscnScene({
-      nodes: [makeNode('Root', 'Node3D', [makeNode('Child', 'MeshInstance3D')])],
-    });
-    render(<SceneTreeViewer />, { wrapper: withPanel(graph) });
+  it('ArrowLeft on an expanded parent collapses it without moving focus', async () => {
+    await renderSceneTree(PARENT);
 
     rowFor('Root').focus();
     fireEvent.keyDown(rowFor('Root'), { key: 'ArrowRight' }); // expand
@@ -150,11 +124,8 @@ describe('<SceneTreeViewer> keyboard operability (#224)', () => {
     expect(globalThis.document.activeElement).toBe(rowFor('Root'));
   });
 
-  it('ArrowLeft on a leaf/collapsed row moves focus to its parent', () => {
-    const graph = createSceneGraphFromTscnScene({
-      nodes: [makeNode('Root', 'Node3D', [makeNode('Child', 'MeshInstance3D')])],
-    });
-    render(<SceneTreeViewer />, { wrapper: withPanel(graph) });
+  it('ArrowLeft on a leaf/collapsed row moves focus to its parent', async () => {
+    await renderSceneTree(PARENT);
 
     rowFor('Root').focus();
     fireEvent.keyDown(rowFor('Root'), { key: 'ArrowRight' }); // expand
@@ -164,26 +135,20 @@ describe('<SceneTreeViewer> keyboard operability (#224)', () => {
     expect(globalThis.document.activeElement).toBe(rowFor('Root'));
   });
 
-  it('Home focuses the first row and End focuses the last row', () => {
-    const graph = createSceneGraphFromTscnScene({
-      nodes: [makeNode('Alpha', 'Node3D'), makeNode('Bravo', 'Node3D'), makeNode('Charlie', 'Node3D')],
-    });
-    render(<SceneTreeViewer />, { wrapper: withPanel(graph) });
+  it('Home focuses the first row and End focuses the last row', async () => {
+    await renderExpanded(sceneOf(['Root', 'Alpha', 'Bravo', 'Charlie']));
 
     rowFor('Bravo').focus();
     fireEvent.keyDown(rowFor('Bravo'), { key: 'End' });
     expect(globalThis.document.activeElement).toBe(rowFor('Charlie'));
 
     fireEvent.keyDown(rowFor('Charlie'), { key: 'Home' });
-    expect(globalThis.document.activeElement).toBe(rowFor('Alpha'));
+    expect(globalThis.document.activeElement).toBe(rowFor('Root'));
   });
 
-  it('keeps a tab stop on the first root row when the SELECTED row is collapsed out of view', () => {
+  it('keeps a tab stop on the first root row when the SELECTED row is collapsed out of view', async () => {
     // A selection whose row is unmounted must not leave the tree without a tab stop.
-    const graph = createSceneGraphFromTscnScene({
-      nodes: [makeNode('Root', 'Node3D', [makeNode('Child', 'MeshInstance3D')])],
-    });
-    render(<SceneTreeViewer />, { wrapper: withPanel(graph) });
+    await renderSceneTree(PARENT);
 
     rowFor('Root').focus();
     fireEvent.keyDown(rowFor('Root'), { key: 'ArrowRight' }); // expand
@@ -196,11 +161,22 @@ describe('<SceneTreeViewer> keyboard operability (#224)', () => {
     expect(rowFor('Root').tabIndex).toBe(0);
   });
 
-  it('all treeitems stay reachable in one flat DOM query regardless of nesting depth', () => {
-    const graph = createSceneGraphFromTscnScene({
-      nodes: [makeNode('A', 'Node3D', [makeNode('B', 'Node3D', [makeNode('C', 'MeshInstance3D')])])],
-    });
-    render(<SceneTreeViewer />, { wrapper: withPanel(graph) });
+  it('keeps the tab stop on the root row while the selected node has no row', async () => {
+    let select: (path: string) => void = () => undefined;
+    function Selector() {
+      select = useSelection().setSelectedNodePath;
+      return null;
+    }
+    await renderSceneTree(PARENT, { beside: <Selector /> });
+    fireEvent.click(screen.getByRole('button', { name: 'Expand all' }));
+
+    act(() => select('Root/Child/Unlisted'));
+
+    expect(rowFor('Root').tabIndex).toBe(0);
+  });
+
+  it('all treeitems stay reachable in one flat DOM query regardless of nesting depth', async () => {
+    await renderSceneTree(sceneOf(['A', 'B', 'C'], true));
 
     rowFor('A').focus();
     fireEvent.keyDown(rowFor('A'), { key: 'ArrowRight' }); // expand A

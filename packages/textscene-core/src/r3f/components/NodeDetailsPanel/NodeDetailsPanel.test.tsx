@@ -90,16 +90,18 @@ describe('<NodeDetailsPanel>', () => {
     expect(screen.getByText(FAKE_TYPE)).toBeTruthy();
   });
 
-  it('renders the "Not Implemented" banner for unregistered types', async () => {
+  it('renders the "Not Implemented" banner for a node the view reports it has no component for', async () => {
     const graph = createSceneGraphFromTscnScene({
       nodes: [makeNode('Mystery', 'TotallyUnknownType')],
     });
 
     render(
-      <>
+      <ViewReporting
+        undrawn={[{ path: '/root/Mystery', meshTypes: [], isEmptyShape: false, hasNoComponent: true }]}
+      >
         <NodeDetailsPanel />
         <Selector path="Mystery" />
-      </>,
+      </ViewReporting>,
       { wrapper: panelWrap(graph) }
     );
 
@@ -116,12 +118,35 @@ describe('<NodeDetailsPanel>', () => {
     expect(screen.getByText('Path:')).toBeTruthy();
   });
 
+  it('shows no "Not Implemented" banner while the view reports nothing of the node', async () => {
+    const graph = createSceneGraphFromTscnScene({
+      nodes: [makeNode('Mystery', 'TotallyUnknownType')],
+    });
+
+    render(
+      <ViewReporting undrawn={[]}>
+        <NodeDetailsPanel />
+        <Selector path="Mystery" />
+      </ViewReporting>,
+      { wrapper: panelWrap(graph) }
+    );
+    await act(async () => {
+      screen.getByTestId('select-node').click();
+    });
+
+    expect(screen.queryByText('Not Implemented')).toBeNull();
+  });
+
   it('names a mesh type the previewer does not draw', async () => {
     nodeRegistry.register({ typeName: FAKE_TYPE, parser: () => ({}) });
     const graph = createSceneGraphFromTscnScene({ nodes: [makeNode('Sign', FAKE_TYPE)] });
 
     render(
-      <ViewReporting undrawn={[{ path: '/root/Sign', meshTypes: ['FutureMesh'], isEmptyShape: false }]}>
+      <ViewReporting
+        undrawn={[
+          { path: '/root/Sign', meshTypes: ['FutureMesh'], isEmptyShape: false, hasNoComponent: false },
+        ]}
+      >
         <NodeDetailsPanel />
         <Selector path="Sign" />
       </ViewReporting>,
@@ -139,7 +164,9 @@ describe('<NodeDetailsPanel>', () => {
     const graph = createSceneGraphFromTscnScene({ nodes: [makeNode('Wall', FAKE_TYPE)] });
 
     render(
-      <ViewReporting undrawn={[{ path: '/root/Wall', meshTypes: [], isEmptyShape: true }]}>
+      <ViewReporting
+        undrawn={[{ path: '/root/Wall', meshTypes: [], isEmptyShape: true, hasNoComponent: false }]}
+      >
         <NodeDetailsPanel />
         <Selector path="Wall" />
       </ViewReporting>,
@@ -158,7 +185,11 @@ describe('<NodeDetailsPanel>', () => {
     const graph = createSceneGraphFromTscnScene({ nodes: [makeNode('Wall', FAKE_TYPE)] });
 
     render(
-      <ViewReporting undrawn={[{ path: '/root/Wall', meshTypes: ['FutureMesh'], isEmptyShape: false }]}>
+      <ViewReporting
+        undrawn={[
+          { path: '/root/Wall', meshTypes: ['FutureMesh'], isEmptyShape: false, hasNoComponent: false },
+        ]}
+      >
         <NodeDetailsPanel />
         <Selector path="Wall" />
       </ViewReporting>,

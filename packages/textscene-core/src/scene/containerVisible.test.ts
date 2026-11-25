@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import '../r3f/sceneLiveTree.js';
 import '../nodes/2d/ui/tabcontainer/index';
 import '../nodes/2d/ui/foldablecontainer/index';
@@ -43,6 +43,16 @@ describe("a TabContainer page's visible", () => {
     expect(await scene.getNode('/root/Tabs').get('current_tab')).toBe(1);
     expect(await visibleOf(scene, '/root/Tabs/Second')).toBe(true);
     expect(await visibleOf(scene, '/root/Tabs/First')).toBe(false);
+  });
+
+  it('tells the observers of the TabContainer when a page write makes it current', async () => {
+    const scene = open(TABS);
+    const heard = vi.fn();
+    scene.observe('/root/Tabs', heard);
+
+    await scene.getNode('/root/Tabs/Second').set('visible', true);
+
+    await vi.waitFor(() => expect(heard).toHaveBeenCalled());
   });
 
   it('moves a hidden current page on to the next one (tab_container.cpp:600-617)', async () => {

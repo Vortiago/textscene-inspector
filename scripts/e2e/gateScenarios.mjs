@@ -37,6 +37,7 @@ import { checkInGameToolbar, runInGameToolbarScenario } from './inGameToolbarSce
 import { checkModeSwitch, runModeSwitchScenario } from './modeSwitchScenario.mjs';
 import { checkWorkspace, runWorkspaceScenario, WORKSPACE_FIXTURE } from './workspaceScenario.mjs';
 import { checkSceneStats, runSceneStatsScenario } from './sceneStatsScenario.mjs';
+import { checkTreeRows, runTreeRowsScenario, TREE_ROWS_FIXTURE } from './treeRowsScenario.mjs';
 import {
   CAMERA_FRAME_2D_FIXTURE,
   checkCameraFrame2D,
@@ -154,6 +155,13 @@ export const SCENARIOS = [
     seconds: 6,
     run: runSceneStatsScenario,
     check: checkSceneStats,
+  },
+  {
+    name: 'tree rows',
+    title: `Scene tree rows as Godot's dock lists them: ${TREE_ROWS_FIXTURE}`,
+    seconds: 5,
+    run: runTreeRowsScenario,
+    check: checkTreeRows,
   },
   {
     name: 'camera frame 2D',

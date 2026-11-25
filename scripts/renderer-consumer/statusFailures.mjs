@@ -1,6 +1,8 @@
 import { equalityFailure } from './mountFailures.mjs';
 
-const UNDRAWN = [{ path: '/root/Root/Sign', meshTypes: ['FutureMesh'], isEmptyShape: false }];
+const UNDRAWN = [
+  { path: '/root/Root/Sign', meshTypes: ['FutureMesh'], isEmptyShape: false, hasNoComponent: false },
+];
 
 /** Godot 4.6.3's editor monitor on the counted scene, from `Viewport.get_render_info` in Compatibility. */
 const GODOT_PLAIN = { objects: 3, primitives: 4248, hasTimings: false };

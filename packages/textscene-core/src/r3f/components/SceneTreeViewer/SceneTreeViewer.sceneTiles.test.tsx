@@ -3,20 +3,8 @@
  * Scene dock lists no row for it. The panel follows the dock.
  */
 import { describe, expect, it } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import type { ReactNode } from 'react';
-import { SceneTreeViewer } from './SceneTreeViewer';
-import { HierarchyProvider } from '../../contexts/HierarchyContext';
-import { SelectionProvider } from '../../contexts/SelectionContext';
-import { ExpandedRowsProvider } from '../TscnPreviewShell/expandedRows';
-import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext';
-import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
-import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
-import { TscnParser } from '../../../parser/TscnParser';
-import { parseTresFile } from '../../../parser/parsedResource';
-import '../../nodes/index';
+import { screen } from '@testing-library/react';
+import { expandAllRows, renderSceneTree } from './sceneTree.testkit';
 
 const CRATE = `[gd_scene format=3]
 
@@ -60,46 +48,26 @@ format = 2
 layer_0/tile_data = PackedInt32Array(0, 0, 65536)
 `;
 
-/** Renders the panel over `level`, with the crate scene and the TileSet file loaded, and expands the root. */
+/** Renders the panel over `level`, with the crate scene and the TileSet file, and expands every row. */
 async function renderPanel(level: string) {
-  const parser = new TscnParser();
-  const fake = createFakeResourceLoader();
-  fake.scenes.seed('res://crate.tscn', parser.parse(CRATE));
-  fake.resources.seed('res://tiles.tres', parseTresFile(TILE_SET));
-  const sceneGraph = createSceneGraphFromTscnScene(parser.parse(level));
-  const wrapper = ({ children }: { children: ReactNode }) => (
-    <HierarchyProvider value={{ sceneGraph, panelId: 'p' }}>
-      <SelectionProvider>
-        <ExpandedRowsProvider>
-          <ResourceLoaderProvider loader={fake.loader}>
-            <MissingResourcesProvider>{children}</MissingResourcesProvider>
-          </ResourceLoaderProvider>
-        </ExpandedRowsProvider>
-      </SelectionProvider>
-    </HierarchyProvider>
-  );
-  render(<SceneTreeViewer />, { wrapper });
-  await settle();
-  await userEvent.click(screen.getByRole('button', { name: 'Expand' }));
-  await settle();
-}
-
-async function settle() {
-  await act(async () => {
-    await new Promise<void>((resolve) => setTimeout(resolve));
+  const { scene } = await renderSceneTree(level, {
+    files: { 'res://crate.tscn': CRATE, 'res://tiles.tres': TILE_SET },
   });
+  await expandAllRows(scene);
 }
 
 describe('<SceneTreeViewer> scene tiles', () => {
   it('lists no row for the scene tile instances of a TileMapLayer', async () => {
     await renderPanel(LEVEL);
+
     expect(screen.getByText('Layer')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Expand' })).toBeNull();
+    expect(document.querySelectorAll('[data-node-path]')).toHaveLength(2);
   });
 
   it('lists no row for the scene tile instances of a TileMap', async () => {
     await renderPanel(OLD_LEVEL);
+
     expect(screen.getByText('Map')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Expand' })).toBeNull();
+    expect(document.querySelectorAll('[data-node-path]')).toHaveLength(2);
   });
 });

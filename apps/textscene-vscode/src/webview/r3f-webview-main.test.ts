@@ -9,13 +9,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createElement, useEffect } from 'react';
 import type { HostToWebviewMessage, WebviewToHostMessage } from '../protocol';
-import type { PreviewCaptureState, TscnNode } from '@textscene/core';
+import type { PreviewCaptureState } from '@textscene/core';
 import type { ResourceProvider } from '@textscene/renderer';
 
 /** What the app does with a scene: it sets the text, and disposes it when the panel goes. */
 interface FakeScene {
   text: string;
   readonly provider: ResourceProvider;
+  readonly rootScenePath: string;
   isDisposed: boolean;
   setSource(text: string): void;
   dispose(): void;
@@ -25,7 +26,7 @@ interface CapturedShellProps {
   panelId?: string;
   scene?: FakeScene;
   initialViewportMode?: '2D' | '3D' | undefined;
-  onNodeReveal?: (path: string, node: TscnNode) => void;
+  onNodeReveal?: (path: string, name: string) => void;
   onCaptureStateChange?: (state: PreviewCaptureState) => void;
   isVisible?: boolean;
 }
@@ -76,10 +77,19 @@ vi.mock('@textscene/core', () => ({
 }));
 
 vi.mock('@textscene/renderer', () => ({
-  openScene: ({ source, provider }: { source: string; provider: ResourceProvider }): FakeScene => {
+  openScene: ({
+    source,
+    provider,
+    rootScenePath = 'res://__inline__.tscn',
+  }: {
+    source: string;
+    provider: ResourceProvider;
+    rootScenePath?: string;
+  }): FakeScene => {
     const scene: FakeScene = {
       text: source,
       provider,
+      rootScenePath,
       isDisposed: false,
       setSource(text) {
         scene.text = text;
@@ -238,7 +248,7 @@ describe('loadTscn handling', () => {
     await mountFresh();
     const expected = '[gd_scene format=3]\n[node name="Root" type="Node3D"]';
 
-    dispatch({ type: 'loadTscn', content: expected });
+    dispatch({ type: 'loadTscn', content: expected, scenePath: null });
     await waitFor(() => sceneText() === expected);
 
     expect(captured.scenes).toHaveLength(1);
@@ -247,12 +257,47 @@ describe('loadTscn handling', () => {
   it('replaces previously-loaded content on a subsequent loadTscn (hot-reload)', async () => {
     await mountFresh();
 
-    dispatch({ type: 'loadTscn', content: 'first content' });
+    dispatch({ type: 'loadTscn', content: 'first content', scenePath: null });
     await waitFor(() => sceneText() === 'first content');
-    dispatch({ type: 'loadTscn', content: 'second content' });
+    dispatch({ type: 'loadTscn', content: 'second content', scenePath: null });
     await waitFor(() => sceneText() === 'second content');
 
     expect(captured.scenes).toHaveLength(1);
+  });
+});
+
+describe('scene path handling', () => {
+  it('opens a scene under the path the host names, and disposes the one before', async () => {
+    await mountFresh();
+
+    dispatch({ type: 'loadTscn', content: 'level text', scenePath: 'res://levels/main.tscn' });
+    await waitFor(() => sceneText() === 'level text');
+
+    expect(captured.scenes.map((scene) => scene.rootScenePath)).toEqual([
+      'res://__inline__.tscn',
+      'res://levels/main.tscn',
+    ]);
+    expect(captured.scenes[0]!.isDisposed).toBe(true);
+    expect(captured.shellProps?.scene).toBe(captured.scenes[1]);
+  });
+
+  it('keeps the scene for a new text under the same path', async () => {
+    await mountFresh();
+
+    dispatch({ type: 'loadTscn', content: 'first', scenePath: 'res://main.tscn' });
+    dispatch({ type: 'loadTscn', content: 'second', scenePath: 'res://main.tscn' });
+    await waitFor(() => sceneText() === 'second');
+
+    expect(captured.scenes).toHaveLength(2);
+  });
+
+  it('shares one provider between the scenes it opens, so a load in flight still answers', async () => {
+    await mountFresh();
+
+    dispatch({ type: 'loadTscn', content: 'text', scenePath: 'res://main.tscn' });
+    await waitFor(() => sceneText() === 'text');
+
+    expect(captured.scenes[1]!.provider).toBe(captured.scenes[0]!.provider);
   });
 });
 
@@ -272,23 +317,10 @@ describe('jumpToNode forwarding', () => {
   it('posts a jumpToNode message with the node name and tree path on reveal', async () => {
     const { vscodeApi } = await mountFresh();
 
-    const fakeNode = { name: 'Leaf', parent: 'A' } as unknown as TscnNode;
-    captured.shellProps?.onNodeReveal?.('Root/A/Leaf', fakeNode);
+    captured.shellProps?.onNodeReveal?.('Root/A/Leaf', 'Leaf');
 
     const jumpMessages = postedMessages(vscodeApi).filter((m) => m.type === 'jumpToNode');
     expect(jumpMessages).toEqual([{ type: 'jumpToNode', nodeName: 'Leaf', path: 'Root/A/Leaf' }]);
-  });
-});
-
-describe('jumpToNode forwarding of a re-rooted node', () => {
-  it('posts the name the heading wrote, not the rename the tree carries', async () => {
-    const { vscodeApi } = await mountFresh();
-
-    const reRooted = { name: 'Gone#Leaf', authoredName: 'Leaf', parent: 'Gone' } as unknown as TscnNode;
-    captured.shellProps?.onNodeReveal?.('Root/Gone#Leaf', reRooted);
-
-    const jumpMessages = postedMessages(vscodeApi).filter((m) => m.type === 'jumpToNode');
-    expect(jumpMessages).toEqual([{ type: 'jumpToNode', nodeName: 'Leaf', path: 'Root/Gone#Leaf' }]);
   });
 });
 
@@ -439,8 +471,21 @@ describe('capture state reporting', () => {
     captured.mountCaptureState = READY;
     const { vscodeApi } = await mountFresh();
 
-    dispatch({ type: 'loadTscn', content: 'a new scene' });
+    dispatch({ type: 'loadTscn', content: 'a new scene', scenePath: null });
     dispatch({ type: 'capturePreview', requestId: 'c4' });
+
+    expect(postedMessages(vscodeApi).filter((m) => m.type === 'previewCaptured')).toEqual([]);
+    expect(postedMessages(vscodeApi).filter(isCaptureState).pop()).toEqual({ type: 'previewCapturePending' });
+  });
+
+  it('holds a capturePreview that follows the same text under a new scene path', async () => {
+    captured.mountCaptureState = READY;
+    const { vscodeApi } = await mountFresh();
+    dispatch({ type: 'loadTscn', content: 'the scene', scenePath: 'res://old.tscn' });
+    captured.shellProps?.onCaptureStateChange?.(READY);
+
+    dispatch({ type: 'loadTscn', content: 'the scene', scenePath: 'res://renamed.tscn' });
+    dispatch({ type: 'capturePreview', requestId: 'c7' });
 
     expect(postedMessages(vscodeApi).filter((m) => m.type === 'previewCaptured')).toEqual([]);
     expect(postedMessages(vscodeApi).filter(isCaptureState).pop()).toEqual({ type: 'previewCapturePending' });
@@ -459,10 +504,10 @@ describe('capture state reporting', () => {
   it('stays ready when the host replays the scene text it already sent', async () => {
     captured.mountCaptureState = READY;
     const { vscodeApi } = await mountFresh();
-    dispatch({ type: 'loadTscn', content: 'the scene' });
+    dispatch({ type: 'loadTscn', content: 'the scene', scenePath: null });
     captured.shellProps?.onCaptureStateChange?.(READY);
 
-    dispatch({ type: 'loadTscn', content: 'the scene' });
+    dispatch({ type: 'loadTscn', content: 'the scene', scenePath: null });
     dispatch({ type: 'capturePreview', requestId: 'c5' });
 
     expect(await answeredCaptures(vscodeApi)).toEqual([

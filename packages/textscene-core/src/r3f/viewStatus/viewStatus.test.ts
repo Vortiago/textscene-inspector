@@ -296,8 +296,22 @@ describe('the status a view reports', () => {
     status.reportUndrawn('Main/Cube', { meshType: 'TorusMesh' });
     status.reportUndrawn('Main/Box', 'empty-shape');
     expect(status.status().undrawn).toEqual([
-      { path: '/root/Main/Box', meshTypes: [], isEmptyShape: true },
-      { path: '/root/Main/Cube', meshTypes: ['TextMesh', 'TorusMesh'], isEmptyShape: false },
+      { path: '/root/Main/Box', meshTypes: [], isEmptyShape: true, hasNoComponent: false },
+      {
+        path: '/root/Main/Cube',
+        meshTypes: ['TextMesh', 'TorusMesh'],
+        isEmptyShape: false,
+        hasNoComponent: false,
+      },
+    ]);
+  });
+
+  it('names a node whose type has no component apart from its meshes and its shape', () => {
+    const status = attachedStatus();
+    status.reportUndrawn('Main/Future', 'no-component');
+    status.reportUndrawn('Main/Future', { meshType: 'TextMesh' });
+    expect(status.status().undrawn).toEqual([
+      { path: '/root/Main/Future', meshTypes: ['TextMesh'], isEmptyShape: false, hasNoComponent: true },
     ]);
   });
 

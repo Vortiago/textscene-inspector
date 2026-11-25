@@ -1,128 +1,102 @@
-import { describe, expect, it } from 'vitest';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
-import type { ReactNode } from 'react';
-import * as THREE from 'three';
-import { SceneTreeViewer } from './SceneTreeViewer';
-import { HierarchyProvider } from '../../contexts/HierarchyContext';
-import { SelectionProvider } from '../../contexts/SelectionContext';
-import { ExpandedRowsProvider } from '../TscnPreviewShell/expandedRows';
-import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext';
-import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
-import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import { seedGlbInstance } from '../../../resources/testing/seedGlbInstance';
-import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
-import type { ResourceLoader } from '../../../resources/ResourceLoader';
-import { TscnParser } from '../../../parser/TscnParser';
-import '../../../nodes/node/index';
+import { join } from 'node:path';
+import { describe, expect, it, vi } from 'vitest';
+import { fileBytes } from '../../../resources/testing/fileBytes';
+import { expandAllRows, renderSceneTree, rowAt, rowPaths, type TreeFiles } from './sceneTree.testkit';
 
-function named<T extends THREE.Object3D>(o: T, name: string): T {
-  o.name = name;
-  return o;
+/** Rig, its mesh Torso, and Arm below Torso. */
+const RIG_GLB = fileBytes(
+  join(import.meta.dirname, '../../../../../../scenes/fixtures/meshes/unit-glb-rig.glb')
+);
+
+const WRAPPER = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://rig.glb" id="rig"]
+
+[node name="WrapperRoot" instance=ExtResource("rig")]
+`;
+
+const FILES: TreeFiles = { 'res://rig.glb': RIG_GLB, 'res://wrapper.tscn': WRAPPER };
+
+async function renderTree(source: string, lastLoaded: string, rootScenePath?: string) {
+  const { scene } = await renderSceneTree(source, { files: FILES, rootScenePath });
+  await expandAllRows(scene, lastLoaded);
 }
 
-/** A small GLB scene root: body (Mesh), spine (Bone), Armature (Group → hand). */
-function fakeGlb(): THREE.Object3D {
-  const root = new THREE.Group();
-  const armature = named(new THREE.Group(), 'Armature');
-  armature.add(named(new THREE.Mesh(), 'hand'));
-  root.add(named(new THREE.Mesh(), 'body'), named(new THREE.Bone(), 'spine'), armature);
-  return root;
-}
+describe('<SceneTreeViewer> glTF rows', () => {
+  it('lists each node of a glTF the host opens on its own below its Node3D root', async () => {
+    await renderTree('', 'Rig/Torso/Arm', 'res://rig.glb');
 
-function wrap(loader: ResourceLoader, graph: ReturnType<typeof createSceneGraphFromTscnScene>) {
-  return function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
-        <SelectionProvider>
-          <ExpandedRowsProvider>
-            <ResourceLoaderProvider loader={loader}>
-              <MissingResourcesProvider>{children}</MissingResourcesProvider>
-            </ResourceLoaderProvider>
-          </ExpandedRowsProvider>
-        </SelectionProvider>
-      </HierarchyProvider>
-    );
-  };
-}
-
-function glbGraph() {
-  return createSceneGraphFromTscnScene({
-    nodes: [
-      {
-        rawProperties: {},
-        name: 'player',
-        type: 'GLBSceneRoot',
-        children: [],
-        properties: { glbPath: 'res://player.glb' } as Record<string, unknown>,
-      },
-    ],
-    externalResources: [],
-    internalResources: [],
-  });
-}
-
-const RIG_PATH = 'res://rig.glb';
-
-const parse = (text: string) => new TscnParser().parse(`[gd_scene format=3]\n\n${text}`);
-
-function expandRow(name: string) {
-  const row = screen.getByText(name).closest('[data-node-path]') as HTMLElement;
-  act(() => fireEvent.click(within(row).getAllByRole('button', { name: /expand/i })[0]!));
-}
-
-describe('<SceneTreeViewer> WI-C — GLB internal hierarchy', () => {
-  it('shows the GLB row with children and never flags it "Not implemented"', () => {
-    const fake = createFakeResourceLoader();
-    fake.glbMeshes.seed('res://player.glb', fakeGlb());
-
-    render(<SceneTreeViewer />, { wrapper: wrap(fake.loader, glbGraph()) });
-
-    const row = screen.getByText('player').closest('[data-node-path]');
-    expect(row).not.toBeNull();
-    expect(row!.textContent).toContain('▶'); // It has children, so it expands.
-    expect(screen.queryByText(/not implemented/i)).toBeNull();
+    expect(rowPaths()).toEqual(['rig', 'rig/Rig', 'rig/Rig/Torso', 'rig/Rig/Torso/Arm']);
+    expect(rowAt('rig')!.querySelector('[title="Node3D"]')).not.toBeNull();
   });
 
-  it('lists a typed node the inheriting scene adds inside the GLB under the GLB row it addresses', () => {
-    const fake = createFakeResourceLoader();
-    seedGlbInstance(fake, RIG_PATH, fakeGlb());
-    const graph = createSceneGraphFromTscnScene(
-      parse(`[ext_resource type="PackedScene" path="${RIG_PATH}" id="rig"]
+  it('lists a node the inheriting scene adds inside the glTF under the glTF node it names', async () => {
+    await renderTree(
+      `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://rig.glb" id="rig"]
 
 [node name="Rig" instance=ExtResource("rig")]
 
-[node name="Marker" type="Marker3D" parent="Armature"]
-`)
+[node name="Marker" type="Marker3D" parent="Rig/Torso"]
+`,
+      'Rig/Torso/Arm'
     );
 
-    const { container } = render(<SceneTreeViewer />, { wrapper: wrap(fake.loader, graph) });
-    for (const name of ['Rig', 'Armature']) expandRow(name);
-
-    expect(container.querySelector('[data-node-path="Rig/Armature/Marker"]')).not.toBeNull();
-    expect(container.querySelector('[data-node-path="Rig/rig"]')).toBeNull();
-    expect(container.querySelector('[data-node-path="Rig/Marker"]')).toBeNull();
+    expect(rowPaths()).toEqual([
+      'Rig',
+      'Rig/Rig',
+      'Rig/Rig/Torso',
+      'Rig/Rig/Torso/Arm',
+      'Rig/Rig/Torso/Marker',
+    ]);
   });
 
-  it('lists the GLB a sub-scene’s root instances below the node that instances the sub-scene', () => {
-    const fake = createFakeResourceLoader();
-    seedGlbInstance(fake, RIG_PATH, fakeGlb());
-    fake.scenes.seed(
-      'res://wrapper.tscn',
-      parse(`[ext_resource type="PackedScene" path="${RIG_PATH}" id="rig"]
+  it('lists the glTF a sub-scene root inherits below the editable node that instances the sub-scene', async () => {
+    await renderTree(
+      `[gd_scene format=3]
 
-[node name="WrapperRoot" instance=ExtResource("rig")]
-`)
-    );
-    const graph = createSceneGraphFromTscnScene(
-      parse(`[ext_resource type="PackedScene" path="res://wrapper.tscn" id="wrapper"]
+[ext_resource type="PackedScene" path="res://wrapper.tscn" id="wrapper"]
 
-[node name="Body" instance=ExtResource("wrapper")]
-`)
+[node name="Main" type="Node3D"]
+
+[node name="Body" parent="." instance=ExtResource("wrapper")]
+
+[editable path="Body"]
+`,
+      'Body/Rig/Torso/Arm'
     );
 
-    const { container } = render(<SceneTreeViewer />, { wrapper: wrap(fake.loader, graph) });
-    expandRow('Body');
+    expect(rowPaths()).toEqual([
+      'Main',
+      'Main/Body',
+      'Main/Body/Rig',
+      'Main/Body/Rig/Torso',
+      'Main/Body/Rig/Torso/Arm',
+    ]);
+    expect(rowAt('Main/Body')!.querySelector('[title="Node3D"]')).not.toBeNull();
+  });
 
-    expect(container.querySelector('[data-node-path="Body/Armature"]')).not.toBeNull();
+  it('draws a row for each of two children of one name, a host child beside the glTF node', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    await renderTree(
+      `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://rig.glb" id="rig"]
+
+[node name="Main" type="Node3D"]
+
+[node name="Body" parent="." instance=ExtResource("rig")]
+
+[node name="Rig" type="Node3D" parent="Body"]
+
+[editable path="Body"]
+`,
+      'Body/Rig/Torso/Arm'
+    );
+
+    const duplicateKeys = consoleError.mock.calls.filter(([text]) => String(text).includes('same key'));
+    consoleError.mockRestore();
+    expect(duplicateKeys).toEqual([]);
   });
 });

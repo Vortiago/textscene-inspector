@@ -1,0 +1,14 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://unit-tree-dock-rows-part.tscn" id="1_part"]
+[ext_resource type="PackedScene" path="res://meshes/unit-cube.glb" id="2_glb"]
+
+[node name="Main" type="Node3D"]
+
+[node name="Plain" parent="." instance=ExtResource("1_part")]
+
+[node name="Editable" parent="." instance=ExtResource("1_part")]
+
+[node name="Cube" parent="." instance=ExtResource("2_glb")]
+
+[editable path="Editable"]

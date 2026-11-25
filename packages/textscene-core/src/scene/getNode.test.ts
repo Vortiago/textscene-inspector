@@ -171,3 +171,36 @@ describe('a node handle after a new text', () => {
     await expect(player.set('visible', false)).rejects.toThrow(/freed by a new text/);
   });
 });
+
+describe('a lookup of a node an instance seats', () => {
+  const HUD = `[gd_scene format=3]
+
+[node name="Hud" type="Node3D"]
+`;
+
+  const HOST = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://hud.tscn" id="hud"]
+
+[node name="Main" type="Node3D"]
+
+[node name="HudInstance" parent="." instance=ExtResource("hud")]
+
+[node name="Lamp" type="Node3D" parent="." owner="HudInstance"]
+unique_name_in_owner = true
+
+[node name="Shade" type="Node3D" parent="HudInstance/%Lamp"]
+
+[editable path="HudInstance"]
+`;
+
+  it('loads the sibling instance a heading walks into, so the node it seats is found', async () => {
+    const files: Record<string, string> = { 'res://hud.tscn': HUD };
+    const scene = openScene({
+      source: HOST,
+      provider: { loadResource: async (path) => files[path] ?? null },
+    });
+
+    await vi.waitFor(() => expect(scene.getNodeOrNull('/root/Main/Lamp/Shade')).not.toBeNull());
+  });
+});

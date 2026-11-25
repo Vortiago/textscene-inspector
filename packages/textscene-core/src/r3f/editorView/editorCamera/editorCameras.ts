@@ -1,6 +1,6 @@
 import type { NodeHandle } from '../../../scene/nodeHandle.js';
 import { nodeNotFound } from '../../../scene/nodeHandle.js';
-import type { CallResult } from '../../../scene/nodeMethods.js';
+import { valueArguments, type CallResult } from '../../../scene/nodeMethods.js';
 import type { SceneValue } from '../../../scene/variant.js';
 import type { ViewportMode } from '../../viewportMode.js';
 import * as logger from '../../../logger.js';
@@ -85,7 +85,8 @@ function createSlot(
     isInsideTree: () => bound !== null && ended() === null,
     get: async (property) => (await mounted()).get(property),
     set: async (property, value) => (await mounted()).set(property, value),
-    call: async (method, ...args) => (await mounted()).call(method, args),
+    call: async (method, ...args) =>
+      (await mounted()).call(method, valueArguments(args, `${type}::${method}`)),
   };
 
   return {

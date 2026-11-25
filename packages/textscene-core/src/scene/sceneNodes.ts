@@ -9,6 +9,7 @@ import {
   type WalkedTree,
 } from './nodePathWalk.js';
 import { loadPropertyAccess, type PropertyAccess, type SceneProperties } from './sceneProperties.js';
+import type { SceneWrites } from './sceneWrites.js';
 import type { SceneTree, SceneTreeNode } from './sceneRuntime.js';
 import { sceneValueOf, valueOfSceneValue, variantOf, type SceneValue } from './variant.js';
 import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
@@ -21,6 +22,8 @@ import {
   findPortedAccessor,
   intArgument,
   runPortedMethod,
+  valueArguments,
+  type CallArgument,
   type CallResult,
   type MethodTarget,
 } from './nodeMethods.js';
@@ -90,8 +93,14 @@ export class SceneNodes implements HandleHost {
     const tree = this.source.tree();
     if (!tree) return null;
     const found = getNodeOrNull(this.walkedTree(tree), from, path);
+    if (found === null) {
+      // The tree's lookup loads the instance a heading seats the node from, which the name walk skips.
+      const target = plainTargetOf(from, path);
+      if (target) tree.node(livePathOf(target));
+      return null;
+    }
     // A child whose scene has not loaded is listed by its parent, but Godot has no node there yet.
-    return found === null || this.typeOf(found, tree) === null ? null : this.handleAt(found);
+    return this.typeOf(found, tree) === null ? null : this.handleAt(found);
   }
 
   /** `get_node` from the scene's root node. */
@@ -191,7 +200,7 @@ export class SceneNodes implements HandleHost {
   }
 
   /** `Object::callv`: a ported method, else the property a setter or a getter reaches. */
-  async call(path: string, method: string, args: readonly SceneValue[]): Promise<CallResult> {
+  async call(path: string, method: string, args: readonly CallArgument[]): Promise<CallResult> {
     const generation = this.generation;
     const type = this.typeOfNode(path);
     const ported = findPortedMethod(type, method);
@@ -213,12 +222,13 @@ export class SceneNodes implements HandleHost {
     path: string,
     method: string,
     { role, properties }: PropertyMethod,
-    args: readonly SceneValue[]
+    called: readonly CallArgument[]
   ): Promise<CallResult> {
     const isIndexed = !properties.has(null);
     const argumentCount = Number(isIndexed) + (role === 'setter' ? 1 : 0);
     // The count is checked before the index, as a bound call checks it first (`method_bind.h`).
-    if (args.length !== argumentCount) throw argumentCountError(method, argumentCount, args.length);
+    if (called.length !== argumentCount) throw argumentCountError(method, argumentCount, called.length);
+    const args = valueArguments(called, method);
     const index = isIndexed ? intArgument(args[0]!, method) : null;
     const values = isIndexed ? args.slice(1) : args;
     const property = properties.get(index);
@@ -252,7 +262,8 @@ export class SceneNodes implements HandleHost {
     }
     const before = this.properties.writes();
     const isValid = this.properties.set(access, livePathOf(path), node, property, value);
-    if (this.properties.writes() !== before) this.onWritten(path);
+    for (const livePath of changedPaths(before, this.properties.writes()))
+      this.onWritten(absolutePathOf(livePath));
     return isValid;
   }
 
@@ -276,6 +287,12 @@ export class SceneNodes implements HandleHost {
       handleAt: (livePath) => this.handleAt(absolutePathOf(livePath)),
       sceneFilePath: () => this.treeNodeOf(path, generation)?.sceneFilePath ?? '',
       ownerPath: () => this.treeNodeOf(path, generation)?.ownerPath() ?? null,
+      isEditableInstance: (node) => {
+        this.assertSameText(generation, path);
+        return this.handles.get(node.path) === node && node.isInsideTree()
+          ? (this.treeNodeOf(node.path, generation)?.isEditableInstance() ?? false)
+          : false;
+      },
     };
   }
 
@@ -337,4 +354,17 @@ export class SceneNodes implements HandleHost {
       },
     };
   }
+}
+
+/** Each node a `set` wrote: a page's `visible` writes its container's `current_tab` (container.cpp:33-36). */
+function changedPaths(before: SceneWrites, after: SceneWrites): string[] {
+  if (after === before) return [];
+  return [...after.keys()].filter((livePath) => after.get(livePath) !== before.get(livePath));
+}
+
+/** The absolute path a NodePath of names only reaches from `from`, null for `.`, `..` or `%`. */
+function plainTargetOf(from: string, path: string): string | null {
+  const isPlain = path.split('/').every((name) => name !== '.' && name !== '..' && !name.startsWith('%'));
+  if (!isPlain) return null;
+  return path.startsWith('/') ? path : `${from}/${path}`;
 }

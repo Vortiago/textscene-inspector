@@ -67,10 +67,6 @@ const NEEDS_NO_OVERLAY = new Map([
     'r3f/canvasItemPass/writtenVisibility.ts',
     'Reads the type and `top_level` of each child and the container properties that pick its pages, which no pass patches.',
   ],
-  [
-    'r3f/components/SceneTreeViewer/useLiveStep.ts',
-    'Shows the merged instance root in the tree, which no pass patches.',
-  ],
   ['r3f/components/ViewportToolbar/ViewportToolbar.tsx', 'Asks whether a node yields the preview, by type.'],
   ['r3f/liveSceneTree.ts', 'Builds the tree that the patches are keyed by.'],
   ['r3f/preview/usePreviewYield.ts', 'Asks whether a node yields the preview, by type.'],

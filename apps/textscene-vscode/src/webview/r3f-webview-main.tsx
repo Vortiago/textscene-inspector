@@ -12,7 +12,6 @@ import {
   type LogAdapter,
   type PreviewCaptureState,
 } from '@textscene/core';
-import type { TscnNode } from '@textscene/core';
 import { openScene, type Scene } from '@textscene/renderer';
 import { isHostToWebviewMessage, type WebviewToHostMessage } from '../protocol';
 import { WebviewResourceProvider } from './WebviewResourceProvider';
@@ -54,7 +53,16 @@ class WebviewLogAdapter implements LogAdapter {
   }
 }
 
-function R3FWebviewApp({ vscode, scene }: { vscode: VsCodeApi; scene: Scene }) {
+interface WebviewAppProps {
+  readonly vscode: VsCodeApi;
+  /** The scene the webview opens with, under the default path, until the host names the document's path. */
+  readonly firstScene: Scene;
+}
+
+function R3FWebviewApp({ vscode, firstScene }: WebviewAppProps) {
+  const [scene, setScene] = useState(firstScene);
+  /** Written only by the `loadTscn` handler, which disposes the scene it replaces. */
+  const sceneRef = useRef(firstScene);
   const [content, setContent] = useState<string>('');
   /** Written by the host's `previewVisibility`. Undefined until it posts one, and the shell then shows the preview. */
   const [isVisible, setIsVisible] = useState<boolean>();
@@ -87,9 +95,19 @@ function R3FWebviewApp({ vscode, scene }: { vscode: VsCodeApi; scene: Scene }) {
       const message: unknown = event.data;
       if (!isHostToWebviewMessage(message)) return;
       if (message.type === 'loadTscn') {
-        // React renders the new text on a later task, so until the shell reports on it, a
-        // capture would show the scene before. The same text again changes nothing.
-        if (message.content !== contentRef.current) {
+        const scenePath = message.scenePath ?? firstScene.rootScenePath;
+        const isNewScene = scenePath !== sceneRef.current.rootScenePath;
+        if (isNewScene) {
+          sceneRef.current.dispose();
+          sceneRef.current = openScene({
+            source: '',
+            provider: firstScene.provider,
+            rootScenePath: scenePath,
+          });
+          setScene(sceneRef.current);
+        }
+        // A capture before the shell reports on a new scene or text would show the scene before.
+        if (isNewScene || message.content !== contentRef.current) {
           contentRef.current = message.content;
           handleCaptureStateChange(PENDING_CAPTURE);
         }
@@ -117,17 +135,12 @@ function R3FWebviewApp({ vscode, scene }: { vscode: VsCodeApi; scene: Scene }) {
       isListeningRef.current = false;
       window.removeEventListener('message', onMessage);
     };
-  }, [vscode, handleCaptureStateChange]);
+  }, [vscode, firstScene, handleCaptureStateChange]);
 
   const [panelId] = useState(() => `vscode-${Math.random().toString(36).slice(2, 10)}`);
 
-  const handleNodeReveal = (path: string, node: TscnNode) => {
-    vscode.postMessage({
-      type: 'jumpToNode',
-      // The name the heading wrote: a re-rooted node's `name` is Godot's rename, which no heading spells.
-      nodeName: node.authoredName ?? node.name,
-      path,
-    } satisfies WebviewToHostMessage);
+  const handleNodeReveal = (path: string, nodeName: string) => {
+    vscode.postMessage({ type: 'jumpToNode', nodeName, path } satisfies WebviewToHostMessage);
   };
 
   const handleCopyNodePath = (nodePath: string) => {
@@ -202,11 +215,11 @@ export function mountR3FWebview(): void {
   root.style.height = '100vh';
   root.style.display = 'block';
 
-  // Not in a render, which StrictMode runs twice. It lives as long as the webview, so nothing disposes it.
-  const scene = openScene({ source: '', provider: new WebviewResourceProvider(vscode) });
+  // Not in a render, which StrictMode runs twice. Nothing disposes the last scene: it lives with the webview.
+  const firstScene = openScene({ source: '', provider: new WebviewResourceProvider(vscode) });
   createRoot(root).render(
     <StrictMode>
-      <R3FWebviewApp vscode={vscode} scene={scene} />
+      <R3FWebviewApp vscode={vscode} firstScene={firstScene} />
     </StrictMode>
   );
 }

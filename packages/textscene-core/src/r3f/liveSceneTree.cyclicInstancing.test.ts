@@ -62,7 +62,7 @@ const A_SCENE: TscnScene = {
 };
 const INDIRECT_CTX = contextOver(A_SCENE, { 'res://a.tscn': A_SCENE, 'res://b.tscn': B_SCENE });
 
-describe('walkLiveTree over cyclic instancing', () => {
+describe('the live tree walk over cyclic instancing', () => {
   it('stops at the instance whose scene instances itself, under each of two siblings', () => {
     expect(allPaths(SELF_ROOTS, SELF_CTX)).toEqual([
       'Root',

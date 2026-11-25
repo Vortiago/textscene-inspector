@@ -1,3 +1,4 @@
+/* global requestAnimationFrame, MutationObserver */
 import { pixelsWhere } from '../vscode/pixels.mjs';
 import { settleCanvas } from '../visual/previewServer.mjs';
 import { expandAllTreeRows, readSelectedPaths, SELECT_SETTLE_MS, treeRow } from './outliner.mjs';
@@ -30,14 +31,46 @@ async function hoverRows(page, canvas) {
   return { before, hovered, left, selectedWhileHovered };
 }
 
+/** A read that waits on a task, as an `import()` does, waits behind about 4 frames of the view. */
+export const MAX_EYE_FRAMES = 1;
+
+/** The frames the page draws between a click on `eye` and its "Show node" label, null if it never flips. */
+function framesToShowLabel(eye) {
+  return eye.evaluate(
+    (button, limitMs) =>
+      new Promise((resolve) => {
+        let frames = 0;
+        let isWaiting = true;
+        const countFrame = () => {
+          frames++;
+          if (isWaiting) requestAnimationFrame(countFrame);
+        };
+        const finish = (answer) => {
+          isWaiting = false;
+          resolve(answer);
+        };
+        new MutationObserver((_, observer) => {
+          if (button.getAttribute('aria-label') !== 'Show node') return;
+          observer.disconnect();
+          finish(frames);
+        }).observe(button, { attributes: true });
+        requestAnimationFrame(countFrame);
+        button.click();
+        setTimeout(() => finish(null), limitMs);
+      }),
+    SELECT_SETTLE_MS * 10
+  );
+}
+
 async function clickEye(page, canvas) {
   const eye = treeRow(page, HIDDEN_ROW).locator('button[aria-label$=" node"]');
   const labelBefore = await eye.getAttribute('aria-label');
-  await eye.click();
+  const framesToLabel = await framesToShowLabel(eye);
   await page.waitForTimeout(SELECT_SETTLE_MS);
   await page.mouse.move(0, 0);
   return {
     labelBefore,
+    framesToLabel,
     labelAfter: await eye.getAttribute('aria-label'),
     boxesAfter: redBoxCentres(await canvas.screenshot()),
   };
@@ -80,6 +113,11 @@ export function checkEyeAndHover(gate, { boxesBefore, hover, eye, diagnostics })
       'expected "Hide node" then "Show node"'
   );
   gate.check(
+    eye.framesToLabel !== null && eye.framesToLabel <= MAX_EYE_FRAMES,
+    `[eye and hover] the ${HIDDEN_ROW} eye flips its label ${eye.framesToLabel} frames after the click, ` +
+      `expected at most ${MAX_EYE_FRAMES}`
+  );
+  gate.check(
     isLeftBoxGone(boxesBefore, eye.boxesAfter),
     `[eye and hover] the view draws boxes at ${JSON.stringify(eye.boxesAfter)} after the eye hides ${HIDDEN_ROW}, ` +
       `expected one box from ${JSON.stringify(boxesBefore)}`
@@ -88,4 +126,4 @@ export function checkEyeAndHover(gate, { boxesBefore, hover, eye, diagnostics })
 
 export const measureEyeAndHover = ({ boxesBefore, hover, eye }) =>
   `eye and hover  outline pixels: ${hover.before} / hovered ${hover.hovered} / left ${hover.left} | ` +
-  `boxes before the eye: ${JSON.stringify(boxesBefore)}, after: ${JSON.stringify(eye.boxesAfter)}`;
+  `label in ${eye.framesToLabel} frames | boxes before the eye: ${JSON.stringify(boxesBefore)}, after: ${JSON.stringify(eye.boxesAfter)}`;

@@ -855,10 +855,8 @@ export function resolveLiveEntry(
  * Depth-first walk of the live tree, calling `visit` with each collapsed node and its full path.
  * It skips a scene tile's instance and what it holds, which the edited scene does not own, so no
  * panel lists them, as Godot's Scene dock lists none.
- *
- * @canonical A walk of the Live scene tree
  */
-export function walkLiveTree(
+function walkLiveTree(
   roots: readonly TscnNode[],
   ctx: LiveTreeContext,
   visit: (entry: LiveTreeEntry) => void,
@@ -874,10 +872,9 @@ export function walkLiveTree(
 }
 
 /**
- * Every live-tree node whose collapsed identity satisfies `predicate`, with its
- * path. `descend` returns false for a node whose children are not collected. A
- * sub-viewport's content shows only through its surface, so the 2D-content hint
- * stops there while the scene tree panel does not.
+ * Every live-tree node that satisfies `predicate`, with its path. `descend` false skips its children.
+ *
+ * @canonical A walk of the Live scene tree
  */
 export function collectLiveNodes(
   roots: readonly TscnNode[],
