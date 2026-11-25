@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { parseTresFile } from '../../parser/parsedResource';
 import { TscnParser } from '../../parser/TscnParser';
-import { resourceFailingReads, resourceReads, sceneFailingReads, sceneReads } from './fileReads';
+import {
+  resourceFailingReads,
+  resourceReads,
+  sceneFailingFileReads,
+  sceneFailingReads,
+  sceneReads,
+} from './fileReads';
 
 const scene = (text: string) => new TscnParser().parse(text);
 const MAIN = 'res://levels/main.tscn';
@@ -186,6 +192,38 @@ albedo_texture = ExtResource("1")
     const reads = resourceReads(
       MAIN_TRES,
       parseTresFile('[gd_resource type="Curve" format=3]\n[resource]\n')
+    );
+
+    expect(reads).toEqual([]);
+  });
+});
+
+describe('sceneFailingFileReads', () => {
+  it('gives the kind of each failing read, in file order', () => {
+    const reads = sceneFailingFileReads(
+      MAIN,
+      scene(`[gd_scene format=3]
+[ext_resource type="Texture2D" path="res://ext.png" id="1"]
+[sub_resource type="AtlasTexture" id="a"]
+atlas = Resource("uid://b1", "res://literal.png")
+[sub_resource type="AtlasTexture" id="b"]
+atlas = ExtResource("1")
+[node name="Root" type="Sprite2D"]
+texture = Resource("res://node.png")
+`)
+    );
+
+    expect(reads).toEqual([
+      { path: 'res://literal.png', kind: 'section Resource', uid: 'uid://b1' },
+      { path: 'res://ext.png', kind: 'section ExtResource', uid: '' },
+      { path: 'res://node.png', kind: 'node Resource', uid: '' },
+    ]);
+  });
+
+  it('gives no read for a scene that reads no file', () => {
+    const reads = sceneFailingFileReads(
+      MAIN,
+      scene(`[gd_scene format=3]\n[node name="Root" type="Node2D"]\n`)
     );
 
     expect(reads).toEqual([]);

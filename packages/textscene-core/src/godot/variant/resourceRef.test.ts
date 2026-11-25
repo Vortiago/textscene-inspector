@@ -8,6 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   valueReadsIn,
+  literalReadsIn,
   EXT_RESOURCE_CALL_ANYWHERE_RE,
   dictSubResourceEntries,
   extResourceIdsIn,
@@ -342,5 +343,24 @@ describe('valueReadsIn', () => {
 
   it('reads no SubResource and no literal with only a uid', () => {
     expect(valueReadsIn('[SubResource("x"), Resource("uid://abc")]')).toEqual([]);
+  });
+
+  it('reads each path of a literal with two, as the walk does', () => {
+    expect(valueReadsIn('Resource("res://a.tres", "res://b.tres")')).toEqual([
+      { kind: 'Resource', path: 'res://a.tres', uid: '' },
+      { kind: 'Resource', path: 'res://b.tres', uid: '' },
+    ]);
+  });
+});
+
+describe('literalReadsIn', () => {
+  it('gives the Resource() literals and no ExtResource', () => {
+    expect(literalReadsIn('[ExtResource("1"), Resource("uid://abc", "res://a.tres")]')).toEqual([
+      { kind: 'Resource', path: 'res://a.tres', uid: 'uid://abc' },
+    ]);
+  });
+
+  it('reads nothing from a value that names no resource', () => {
+    expect(literalReadsIn('Vector3(1, 2, 3)')).toEqual([]);
   });
 });

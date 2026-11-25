@@ -19,7 +19,11 @@ import { readProjectSettings } from '../resources/projectSettingsFile.js';
 import { registerInstanceResource } from '../resources/registerInstanceResource.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { sceneFailingFileReads, sceneReads, type FileRead } from '../resources/loadFailure/fileReads.js';
-import { createSceneFileWalk, type WalkStart } from '../resources/sceneFiles/sceneFileWalk.js';
+import {
+  createSceneFileWalk,
+  type SceneFailingReads,
+  type WalkStart,
+} from '../resources/sceneFiles/sceneFileWalk.js';
 import type { ResourceLoader } from '../resources/ResourceLoader.js';
 import type { Scene } from '../scene/openScene.js';
 import {
@@ -297,24 +301,23 @@ function projectReads(settings: ProjectSettings | null): FileRead[] {
 /** Undefined while the engine reads the project settings, null where the project has none. */
 type ProjectRead = ProjectSettings | null | undefined;
 
-function walkStarts(graph: SceneGraph | null, settings: ProjectRead): WalkStart[] {
+interface WalkInput {
+  readonly starts: WalkStart[];
+  readonly failing: SceneFailingReads | null;
+}
+
+function walkInput(graph: SceneGraph | null, settings: ProjectRead): WalkInput {
   const root = graph?.scenes.get(graph.rootScene);
-  const scene = root
-    ? [
-        {
-          owner: root.path,
-          reads: sceneReads(root.path, root),
-          failingReads: sceneFailingFileReads(root.path, root),
-        },
-      ]
-    : [];
-  if (settings === null) return scene;
+  const scene = root ? [{ owner: root.path, reads: sceneReads(root.path, root) }] : [];
+  const failing = root ? { scene: root.path, reads: sceneFailingFileReads(root.path, root) } : null;
+  if (settings === null) return { starts: scene, failing };
   const engine = {
     owner: null,
     reads: [{ path: PROJECT_FILE_PATH, type: 'ProjectSettings' }],
     isReading: settings === undefined,
   };
-  return [...scene, engine, { owner: PROJECT_FILE_PATH, reads: projectReads(settings ?? null) }];
+  const project = { owner: PROJECT_FILE_PATH, reads: projectReads(settings ?? null) };
+  return { starts: [...scene, engine, project], failing };
 }
 
 /** The Live scene tree of `scene`, over the loader every view of it shares. */
@@ -330,8 +333,8 @@ function sceneRuntimeOf(scene: Scene): SceneRuntime {
   };
   const fileWalk = createSceneFileWalk(loader, notifyFiles);
   let settings: ProjectRead;
-  /** Written only by `files`. A write moves the graph on each drag frame, so equal reads keep the starts. */
-  let starts: { graph: SceneGraph | null; settings: ProjectRead; key: string; starts: WalkStart[] } | null =
+  /** Written only by `files`. A write moves the graph on each drag frame, so equal reads keep the input. */
+  let walked: { graph: SceneGraph | null; settings: ProjectRead; key: string; input: WalkInput } | null =
     null;
   let project: ProjectTreeSettings = projectTreeSettings(null);
   let contentScaleSize = projectViewportSize(null);
@@ -366,12 +369,12 @@ function sceneRuntimeOf(scene: Scene): SceneRuntime {
       return () => listeners.delete(listener);
     },
     files(graph) {
-      if (starts?.graph !== graph || starts.settings !== settings) {
-        const next = walkStarts(graph, settings);
+      if (walked?.graph !== graph || walked.settings !== settings) {
+        const next = walkInput(graph, settings);
         const key = JSON.stringify(next);
-        starts = { graph, settings, key, starts: key === starts?.key ? starts.starts : next };
+        walked = { graph, settings, key, input: key === walked?.key ? walked.input : next };
       }
-      return fileWalk.files(starts.starts);
+      return fileWalk.files(walked.input.starts, walked.input.failing);
     },
     subscribeFiles(listener) {
       fileListeners.add(listener);

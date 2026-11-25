@@ -199,29 +199,38 @@ const PATH_RESOURCE_ANYWHERE_RE = new RegExp(`\\b${PATH_RESOURCE_RE.source.slice
  * skipped: nothing here resolves one.
  */
 export function pathResourcePathsIn(text: string): string[] {
-  return [...text.matchAll(PATH_RESOURCE_ANYWHERE_RE)].flatMap(([, first, second]) =>
-    [first!, second].filter((arg): arg is string => arg !== undefined && !arg.startsWith('uid://'))
-  );
+  return literalReadsIn(text).map((read) => read.path);
 }
 
 /** An `ExtResource` id, or a `Resource(…)` literal's path and its `uid://`, empty for none. */
-export type ValueRead = { kind: 'ExtResource'; id: string } | { kind: 'Resource'; path: string; uid: string };
+export type ValueRead = { kind: 'ExtResource'; id: string } | LiteralRead;
+
+type LiteralRead = { kind: 'Resource'; path: string; uid: string };
 
 /** Each `ExtResource(…)` and `Resource(…)` literal of `text`, in the order the loader meets them. */
 export function valueReadsIn(text: string): ValueRead[] {
-  if (!text.includes(RESOURCE_TOKEN)) return [];
-  // The span scan reads each character, so a value of `SubResource` refs alone skips it.
-  const extSpans = text.includes(EXT_RESOURCE_TOKEN) ? loadedRefSpans(text) : [];
-  const extReads = extSpans
+  // The span scan reads each character, so a value with no `ExtResource` skips it.
+  if (!text.includes(EXT_RESOURCE_TOKEN)) return literalReadsIn(text);
+  const extReads = loadedRefSpans(text)
     .filter((span) => span.kind === 'ExtResource')
     .map((span) => ({ start: span.start, read: { kind: 'ExtResource', id: span.id } as const }));
-  const literals = [...text.matchAll(PATH_RESOURCE_ANYWHERE_RE)].flatMap((match) => {
+  return [...extReads, ...literalsIn(text)].sort((a, b) => a.start - b.start).map(({ read }) => read);
+}
+
+/** One read per `res://` path of each `Resource(…)` literal of `text`, in order, each with its `uid://`. */
+export function literalReadsIn(text: string): LiteralRead[] {
+  return literalsIn(text).map(({ read }) => read);
+}
+
+function literalsIn(text: string): Array<{ start: number; read: LiteralRead }> {
+  if (!text.includes(RESOURCE_TOKEN)) return [];
+  return [...text.matchAll(PATH_RESOURCE_ANYWHERE_RE)].flatMap((match) => {
     const args = [match[1]!, match[2]].filter((arg): arg is string => arg !== undefined);
-    const path = args.find((arg) => !arg.startsWith('uid://'));
     const uid = args.find((arg) => arg.startsWith('uid://')) ?? '';
-    return path === undefined ? [] : [{ start: match.index, read: { kind: 'Resource', path, uid } as const }];
+    return args
+      .filter((arg) => !arg.startsWith('uid://'))
+      .map((path) => ({ start: match.index, read: { kind: 'Resource', path, uid } as const }));
   });
-  return [...extReads, ...literals].sort((a, b) => a.start - b.start).map(({ read }) => read);
 }
 
 /** The id of the first `SubResource(…)` anywhere in `text`, or null. */

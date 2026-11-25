@@ -7,7 +7,12 @@ import {
   simplifyPath,
   simplifyResPath,
 } from '../../godot/string/string';
-import { extResourceIdsIn, pathResourcePathsIn, valueReadsIn } from '../../godot/variant/resourceRef';
+import {
+  extResourceIdsIn,
+  literalReadsIn,
+  pathResourcePathsIn,
+  valueReadsIn,
+} from '../../godot/variant/resourceRef';
 import { findExtResource } from '../SubResourceResolver';
 
 type Values = Readonly<Record<string, string>>;
@@ -67,10 +72,8 @@ function failingFileReads(
     }
   }
   for (const value of nodes.flatMap(Object.values)) {
-    for (const read of valueReadsIn(value)) {
-      if (read.kind === 'Resource')
-        add({ path: simplifyResPath(read.path), kind: 'node Resource', uid: read.uid });
-    }
+    for (const read of literalReadsIn(value))
+      add({ path: simplifyResPath(read.path), kind: 'node Resource', uid: read.uid });
   }
   return [...reads.values()];
 }

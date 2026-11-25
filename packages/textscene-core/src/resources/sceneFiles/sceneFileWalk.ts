@@ -16,13 +16,17 @@ export interface WalkStart {
   readonly reads: readonly FileRead[];
   /** True while the owner still reads the files, so each stays `loading` whatever its outcome. */
   readonly isReading?: boolean;
-  /** The root scene's reads that fail the whole scene, in its read order. */
-  readonly failingReads?: readonly FailingFileRead[];
+}
+
+/** The root scene and its reads that fail the whole scene, in its read order. */
+export interface SceneFailingReads {
+  readonly scene: string;
+  readonly reads: readonly FailingFileRead[];
 }
 
 export interface SceneFileWalk {
   /** The same array while no file moves. The caller passes the same starts while none moves. */
-  files(starts: readonly WalkStart[]): readonly SceneFile[];
+  files(starts: readonly WalkStart[], failing: SceneFailingReads | null): readonly SceneFile[];
   dispose(): void;
 }
 
@@ -164,7 +168,7 @@ export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void
   });
 
   return {
-    files(starts) {
+    files(starts, failing) {
       if (starts === walkedStarts) return walked;
       walkedStarts = starts;
       const entries = entriesFrom(starts);
@@ -173,8 +177,7 @@ export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void
       const rows = [...entries]
         .sort(([a], [b]) => (a < b ? -1 : 1))
         .map(([path, entry]) => sceneFileOf(path, entry));
-      const scene = starts.find((start) => start.owner !== null && start.failingReads);
-      const files = scene ? withSceneFailure(rows, scene.owner!, scene.failingReads!) : rows;
+      const files = failing ? withSceneFailure(rows, failing.scene, failing.reads) : rows;
       const key = JSON.stringify(files);
       if (key !== walkedKey) {
         walked = files;

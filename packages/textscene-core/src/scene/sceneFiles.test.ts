@@ -15,15 +15,16 @@ function filesOf(files: Record<string, string | ArrayBuffer>): ResourceProvider 
 }
 
 /** The files once none is loading. A notice of a change comes in a frame. */
-function whenFilesLoaded(scene: Scene): Promise<readonly SceneFile[]> {
+function whenFiles(
+  scene: Scene,
+  isReady: (files: readonly SceneFile[]) => boolean,
+  label: string
+): Promise<readonly SceneFile[]> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(
-      () => reject(new Error(`still loading: ${JSON.stringify(scene.files())}`)),
-      2000
-    );
+    const timer = setTimeout(() => reject(new Error(`${label}: ${JSON.stringify(scene.files())}`)), 2000);
     const check = () => {
       const files = scene.files();
-      if (files.some((file) => file.state === 'loading')) return;
+      if (!isReady(files)) return;
       clearTimeout(timer);
       stop();
       resolve(files);
@@ -31,6 +32,10 @@ function whenFilesLoaded(scene: Scene): Promise<readonly SceneFile[]> {
     const stop = scene.subscribe(check);
     check();
   });
+}
+
+function whenFilesLoaded(scene: Scene): Promise<readonly SceneFile[]> {
+  return whenFiles(scene, (files) => !files.some((file) => file.state === 'loading'), 'still loading');
 }
 
 const SPRITE = `[gd_scene format=3]
@@ -486,16 +491,7 @@ atlas = ExtResource("2")
 
 /** The files once `path` is missing. A notice of a change comes in a frame. */
 function whenFileMissing(scene: Scene, path: string): Promise<readonly SceneFile[]> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`not missing: ${JSON.stringify(scene.files())}`)), 2000);
-    const check = () => {
-      const files = scene.files();
-      if (!files.some((file) => file.path === path && file.state === 'missing')) return;
-      clearTimeout(timer);
-      stop();
-      resolve(files);
-    };
-    const stop = scene.subscribe(check);
-    check();
-  });
+  const isMissing = (files: readonly SceneFile[]) =>
+    files.some((file) => file.path === path && file.state === 'missing');
+  return whenFiles(scene, isMissing, 'not missing');
 }
