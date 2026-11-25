@@ -26,6 +26,7 @@ import { useNodePath } from '../contexts/NodePathContext';
 import { useSceneResources } from '../SceneResourcesContext';
 import { node2dZStep, useCanvasItemState, type CanvasItemState } from '../canvasItemState';
 import type { CanvasItemMaterialProperties } from '../../resources/materials/canvasitemmaterial/types';
+import type { ShaderText } from '../../resources/materials/shadermaterial/types';
 import type { CanvasItemSurface } from '../lighting2d/normalMappedLighting';
 import { ClipChildrenScope } from '../canvasGroup/ClipChildrenScope';
 import type { PaintRange } from '../canvasPaintOrder';
@@ -33,19 +34,22 @@ import type { PaintRange } from '../canvasPaintOrder';
 /** No behind ranges: an item that clips nothing draws its behind children outside its group. */
 const NO_RANGES: readonly PaintRange[] = [];
 
+/** What a body draws its own pixels with, the material resolved through `use_parent_material`. */
+export interface CanvasItemBody {
+  readonly tint: CanvasItemTint;
+  /** The CanvasItemMaterial in force, or null. */
+  readonly material: CanvasItemMaterialProperties | null;
+  /** What each mesh merges: the CanvasItemMaterial's blend state and the light list. */
+  readonly pixelMaterial: CanvasItemPixelMaterial;
+  /** The canvas_item shader in force, or null. */
+  readonly shader: ShaderText | null;
+}
+
 interface CanvasItem2DProps {
   node: TscnNode;
   props: Node2DProperties;
-  /**
-   * Renders this node's own pixels with the own-pixel tint and the CanvasItemMaterial
-   * in force, resolved through `use_parent_material`, or `null`. Each mesh merges
-   * `pixelMaterial`, which carries that material's blend state and the light list.
-   */
-  body?: (
-    tint: CanvasItemTint,
-    material: CanvasItemMaterialProperties | null,
-    pixelMaterial: CanvasItemPixelMaterial
-  ) => ReactNode;
+  /** Renders this node's own pixels, or `null`. */
+  body?: (drawn: CanvasItemBody) => ReactNode;
   /**
    * The CanvasTexture `body` draws, if any, with the sampler it draws with. Its normal and
    * specular maps light the pixels, and without a normal map they light flat (`canvas.glsl:652-665`).
@@ -105,7 +109,7 @@ export function CanvasItem2D({
   });
   const clips = props.clip_children !== CanvasItemClipChildrenMode.DISABLED;
   const behindRanges = clips ? paint.behind : NO_RANGES;
-  const { key, zFinal, tint, material } = state;
+  const { key, zFinal, tint, material, shader } = state;
   // A pushed `visible` takes the place of the authored one, as for a Node3D.
   const animatedVisible = useAnimatedValue('visible', (value) => value[0] !== 0);
 
@@ -136,7 +140,7 @@ export function CanvasItem2D({
                 surface={surface}
                 isDrawn={isDrawn}
               >
-                {(pixelMaterial) => body(tint, material, pixelMaterial)}
+                {(pixelMaterial) => body({ tint, material, pixelMaterial, shader })}
               </LitCanvasItemPixels>
             )}
             {ownItems?.(state)}

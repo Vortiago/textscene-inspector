@@ -81,6 +81,8 @@ export interface TranspiledCanvasItem {
 export interface CanvasItemOptions extends ShaderOptions {
   /** The project's texture filter settings, Godot's defaults when left out. */
   readonly sampling?: ProjectSampling;
+  /** A render target with `use_hdr_2d`, whose colour uniforms convert to linear. */
+  readonly usesLinearColors?: boolean;
   /** How the target holds Godot's rows: `flipped`, three's drawing buffer, when left out. */
   readonly rows?: TargetRows;
 }
@@ -89,7 +91,11 @@ export interface CanvasItemOptions extends ShaderOptions {
 export function transpileCanvasItem(source: string, options: CanvasItemOptions = {}): TranspiledCanvasItem {
   const parsed = parsedShader(source, options);
   const file = options.file ?? '';
-  const program = linkedProgram(parsed, file, CANVAS, options.sampling);
+  // Godot keeps an sRGB and a linear uniform set (`renderer_canvas_render_rd.cpp:1703-1704`).
+  const program = linkedProgram(parsed, file, CANVAS, {
+    sampling: options.sampling,
+    useLinearColor: options.usesLinearColors ?? false,
+  });
   const item: ItemProgram = {
     program,
     shader: { parameters: [...program.parameters.values()], source: shaderSource(parsed, file) },

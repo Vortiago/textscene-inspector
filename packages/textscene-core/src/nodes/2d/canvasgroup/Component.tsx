@@ -28,7 +28,7 @@ function CompositingGroup({ node, children }: { node: TscnNode; children?: React
     <CanvasItem2D
       node={node}
       props={props}
-      body={(tint, material, pixelMaterial) => (
+      body={({ tint, material, pixelMaterial }) => (
         <CompositeGroupRect
           window={window}
           tint={tint}

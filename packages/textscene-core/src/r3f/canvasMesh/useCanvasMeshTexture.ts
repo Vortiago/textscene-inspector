@@ -12,6 +12,7 @@ import type { ImageSize } from '../../resources/formats/image/imagePixels';
 import { useCanvasItemTexture, type CanvasItemTexture } from '../canvasItemTexture';
 import { useWindowedCanvas2DTexture } from '../canvas2DTextureDecode';
 import type { UvWindow } from '../uvWindow';
+import type { CanvasItemTextureSampler } from '../canvasItemTextureSampler';
 import { textureState, type CanvasMeshTextureState } from './canvasMeshTextureState';
 
 /** The texture as it loaded, for a window that depends on it. */
@@ -40,6 +41,10 @@ export interface CanvasMeshTexture {
     view: THREE.Texture | null;
     /** The CanvasTexture whose maps light the item. */
     canvasTexture: CanvasItemTexture | undefined;
+    /** The whole texture, unwindowed, which a canvas_item shader samples. Null unless 'ready'. */
+    source: THREE.Texture | null;
+    /** The item's effective filter and repeat. */
+    sampler: CanvasItemTextureSampler;
   };
 }
 
@@ -74,8 +79,13 @@ export function useCanvasMeshTexture(
     () => ({
       state,
       size: state === 'ready' ? size : undefined,
-      [DRAWN_TEXTURE]: { view: state === 'ready' ? view : null, canvasTexture },
+      [DRAWN_TEXTURE]: {
+        view: state === 'ready' ? view : null,
+        canvasTexture,
+        source: state === 'ready' ? source : null,
+        sampler,
+      },
     }),
-    [state, size, view, canvasTexture]
+    [state, size, view, canvasTexture, source, sampler]
   );
 }

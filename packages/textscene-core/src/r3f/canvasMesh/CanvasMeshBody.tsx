@@ -18,6 +18,8 @@ import { CanvasItemGroup } from '../components/CanvasItemGroup';
 import type { CanvasItemPixelMaterial } from '../components/LitCanvasItemPixels';
 import { MissingResourcePlaceholder } from '../components/MissingResourcePlaceholder';
 import { CanvasSurfaceMaterial } from './CanvasSurfaceMaterial';
+import { CanvasShaderSlot } from '../canvasShader/CanvasShaderSlot';
+import type { CanvasRectRegion } from '../canvasShader/canvasCommands';
 import { DRAWN_TEXTURE, type CanvasMeshTexture } from './useCanvasMeshTexture';
 import type { CanvasSurface } from './canvasSurface';
 
@@ -58,6 +60,8 @@ interface CanvasMeshBodyProps<Input> {
    * group mounts while the item draws, before a surface hook returns its first surfaces.
    */
   bodyGroup?: CanvasMeshBodyGroup;
+  /** The rect Godot draws the texture with, which a canvas_item shader draws through the template. */
+  shaderRegion?: CanvasRectRegion;
   children?: ReactNode;
 }
 
@@ -69,9 +73,10 @@ export function CanvasMeshBody<Input>({
   withoutTexture,
   surfaces,
   bodyGroup,
+  shaderRegion,
   children,
 }: CanvasMeshBodyProps<Input>) {
-  const { view, canvasTexture } = texture[DRAWN_TEXTURE];
+  const { view, canvasTexture, source, sampler } = texture[DRAWN_TEXTURE];
   // Godot draws a cycle's viewports in tree order, each sampling the other's last frame
   // (`renderer_viewport.cpp:91-126`). The previewer cannot, so it shows the placeholder.
   const isCyclic = texture.state === 'cyclic';
@@ -85,7 +90,7 @@ export function CanvasMeshBody<Input>({
       props={props}
       canvasTexture={surfaces === null ? undefined : canvasTexture}
       isDrawn={isDrawn}
-      body={(tint, material, pixelMaterial) => {
+      body={({ tint, material, pixelMaterial, shader }) => {
         if (isCyclic) return <MissingResourcePlaceholder shape="plane" name={node.name} />;
         if (!isDrawn) return null;
         const drawn = { map: view, tint, pixelMaterial };
@@ -94,12 +99,23 @@ export function CanvasMeshBody<Input>({
         ) : (
           <SurfaceMeshes surfaces={surfaces} {...drawn} />
         );
-        return bodyGroup ? (
+        const drawnMeshes = bodyGroup ? (
           <CanvasItemGroup ref={bodyGroup.ref} name={bodyGroup.name}>
             {meshes}
           </CanvasItemGroup>
         ) : (
           meshes
+        );
+        if (!shader || !shaderRegion || !source) return drawnMeshes;
+        return (
+          <CanvasShaderSlot
+            shader={shader}
+            region={shaderRegion}
+            texture={source}
+            sampler={sampler}
+            finalModulate={tint.self}
+            fallback={drawnMeshes}
+          />
         );
       }}
     >

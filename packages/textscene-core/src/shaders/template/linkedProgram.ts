@@ -36,6 +36,14 @@ export interface LinkedProgram {
   readonly parameterValues: ReadonlyArray<readonly [string, Value]>;
 }
 
+/** How a material's uniforms take their values. */
+export interface ParameterOptions {
+  /** The project's texture filter settings, Godot's defaults when left out. */
+  readonly sampling?: ProjectSampling;
+  /** Whether a source colour converts to linear, true when left out. */
+  readonly useLinearColor?: boolean;
+}
+
 /**
  * Links a parsed shader from `file` into `program`'s template.
  * @canonical link a user's shader into a Godot template
@@ -44,7 +52,7 @@ export function linkedProgram(
   { code, tree }: ParsedShader,
   file: string,
   program: ProgramTemplate,
-  sampling: ProjectSampling = GODOT_SAMPLING
+  { sampling = GODOT_SAMPLING, useLinearColor = true }: ParameterOptions = {}
 ): LinkedProgram {
   if (tree.shaderType !== program.shaderType)
     throw new ShadingLanguageError(
@@ -70,8 +78,8 @@ export function linkedProgram(
         return linkTemplateStage(program.template, stage, defines, material);
       }
     );
-  // A source colour is converted to linear: `sky.cpp:193`, `scene_shader_forward_clustered.cpp:595`.
-  const parameters = bindParameters(tree, { useLinearColor: true, sampling });
+  // A sky and a spatial material convert a source colour: `sky.cpp:193`, `scene_shader_forward_clustered.cpp:595`.
+  const parameters = bindParameters(tree, { useLinearColor, sampling });
   const parameterValues = [...parameters].map(([name, binding]) => [godotId(name), binding.value] as const);
   return { linked, resources: programResources(program.specialisedMembers), parameters, parameterValues };
 }

@@ -106,7 +106,7 @@ export function transpileSpatial(source: string, options: SpatialOptions = {}): 
     parsed,
     options.file ?? '',
     SCENE,
-    options.sampling
+    { sampling: options.sampling }
   );
   resources.textures.set('dfg', dfgTextureNode());
   resources.textures.set('radiance_octmap', radianceOctmapNode());
