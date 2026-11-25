@@ -89,4 +89,12 @@ describe('transpileCanvasItem', () => {
 
     expect(item.draw('attributes')).toBe(item.draw('attributes'));
   });
+
+  it("samples TEXTURE with the item's sampler, as Godot's compiler pairs them", () => {
+    const shader = 'shader_type canvas_item;\nvoid fragment() { COLOR = texture(TEXTURE, UV).bgra; }\n';
+
+    const { material } = transpileCanvasItem(shader).draw('quad');
+
+    expect(generatedMaterialProgram(material).fragment).toContain('texture(');
+  });
 });

@@ -1664,43 +1664,43 @@ spatial.light.DIFFUSE_LIGHT	built-in	servers/rendering/shader_types.cpp:223	#145
 spatial.light.SPECULAR_LIGHT	built-in	servers/rendering/shader_types.cpp:224	#1453	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
 spatial.light.ALPHA	built-in	servers/rendering/shader_types.cpp:225	#1453	forward_clustered/scene_forward_clustered.glsl		float		native	native
 spatial.light.SCREEN_UV	built-in (read only)	servers/rendering/shader_types.cpp:226	#1453	forward_clustered/scene_forward_clustered.glsl		vec2		native	native
-canvas_item.global.TIME	built-in (read only)	servers/rendering/shader_types.cpp:264	#686	canvas.glsl		float			
-canvas_item.constants.PI	built-in (read only)	servers/rendering/shader_types.cpp:265	#686	canvas.glsl		float			
-canvas_item.constants.TAU	built-in (read only)	servers/rendering/shader_types.cpp:266	#686	canvas.glsl		float			
-canvas_item.constants.E	built-in (read only)	servers/rendering/shader_types.cpp:267	#686	canvas.glsl		float			
-canvas_item.vertex.VERTEX	built-in	servers/rendering/shader_types.cpp:269	#686	canvas.glsl		vec2			
-canvas_item.vertex.UV	built-in	servers/rendering/shader_types.cpp:270	#686	canvas.glsl		vec2			
-canvas_item.vertex.COLOR	built-in	servers/rendering/shader_types.cpp:271	#686	canvas.glsl		vec4			
+canvas_item.global.TIME	built-in (read only)	servers/rendering/shader_types.cpp:264	#686	canvas.glsl		float		native	native
+canvas_item.constants.PI	built-in (read only)	servers/rendering/shader_types.cpp:265	#686	canvas.glsl		float		native	native
+canvas_item.constants.TAU	built-in (read only)	servers/rendering/shader_types.cpp:266	#686	canvas.glsl		float		native	native
+canvas_item.constants.E	built-in (read only)	servers/rendering/shader_types.cpp:267	#686	canvas.glsl		float		native	native
+canvas_item.vertex.VERTEX	built-in	servers/rendering/shader_types.cpp:269	#686	canvas.glsl		vec2		native	native
+canvas_item.vertex.UV	built-in	servers/rendering/shader_types.cpp:270	#686	canvas.glsl		vec2		native	native
+canvas_item.vertex.COLOR	built-in	servers/rendering/shader_types.cpp:271	#686	canvas.glsl		vec4		native	native
 canvas_item.vertex.POINT_SIZE	built-in	servers/rendering/shader_types.cpp:272	#686	canvas.glsl		float			
-canvas_item.vertex.MODEL_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:274	#686	canvas.glsl		mat4			
-canvas_item.vertex.CANVAS_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:275	#686	canvas.glsl		mat4			
-canvas_item.vertex.SCREEN_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:276	#686	canvas.glsl		mat4			
-canvas_item.vertex.INSTANCE_CUSTOM	built-in (read only)	servers/rendering/shader_types.cpp:277	#686	canvas.glsl		vec4			
-canvas_item.vertex.INSTANCE_ID	built-in (read only)	servers/rendering/shader_types.cpp:278	#686	canvas.glsl		int			
-canvas_item.vertex.VERTEX_ID	built-in (read only)	servers/rendering/shader_types.cpp:279	#686	canvas.glsl		int			
-canvas_item.vertex.AT_LIGHT_PASS	built-in (read only)	servers/rendering/shader_types.cpp:280	#686	canvas.glsl		bool			
-canvas_item.vertex.TEXTURE_PIXEL_SIZE	built-in (read only)	servers/rendering/shader_types.cpp:281	#686	canvas.glsl		vec2			
-canvas_item.vertex.CUSTOM0	built-in (read only)	servers/rendering/shader_types.cpp:282	#686	canvas.glsl		vec4			
-canvas_item.vertex.CUSTOM1	built-in (read only)	servers/rendering/shader_types.cpp:283	#686	canvas.glsl		vec4			
-canvas_item.fragment.VERTEX	built-in	servers/rendering/shader_types.cpp:287	#686	canvas.glsl		vec2			
-canvas_item.fragment.SHADOW_VERTEX	built-in	servers/rendering/shader_types.cpp:288	#686	canvas.glsl		vec2			
-canvas_item.fragment.LIGHT_VERTEX	built-in	servers/rendering/shader_types.cpp:289	#686	canvas.glsl		vec3			
-canvas_item.fragment.FRAGCOORD	built-in (read only)	servers/rendering/shader_types.cpp:290	#686	canvas.glsl		vec4			
-canvas_item.fragment.NORMAL	built-in	servers/rendering/shader_types.cpp:291	#686	canvas.glsl		vec3			
-canvas_item.fragment.NORMAL_MAP	built-in	servers/rendering/shader_types.cpp:292	#686	canvas.glsl		vec3			
-canvas_item.fragment.NORMAL_MAP_DEPTH	built-in	servers/rendering/shader_types.cpp:293	#686	canvas.glsl		float			
+canvas_item.vertex.MODEL_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:274	#686	canvas.glsl		mat4		native	native
+canvas_item.vertex.CANVAS_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:275	#686	canvas.glsl		mat4		native	native
+canvas_item.vertex.SCREEN_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:276	#686	canvas.glsl		mat4		native	native
+canvas_item.vertex.INSTANCE_CUSTOM	built-in (read only)	servers/rendering/shader_types.cpp:277	#686	canvas.glsl		vec4		native	native
+canvas_item.vertex.INSTANCE_ID	built-in (read only)	servers/rendering/shader_types.cpp:278	#686	canvas.glsl		int		native	native
+canvas_item.vertex.VERTEX_ID	built-in (read only)	servers/rendering/shader_types.cpp:279	#686	canvas.glsl		int		native	native
+canvas_item.vertex.AT_LIGHT_PASS	built-in (read only)	servers/rendering/shader_types.cpp:280	#686	canvas.glsl		bool		native	native
+canvas_item.vertex.TEXTURE_PIXEL_SIZE	built-in (read only)	servers/rendering/shader_types.cpp:281	#686	canvas.glsl		vec2		native	native
+canvas_item.vertex.CUSTOM0	built-in (read only)	servers/rendering/shader_types.cpp:282	#686	canvas.glsl		vec4		native	native
+canvas_item.vertex.CUSTOM1	built-in (read only)	servers/rendering/shader_types.cpp:283	#686	canvas.glsl		vec4		native	native
+canvas_item.fragment.VERTEX	built-in	servers/rendering/shader_types.cpp:287	#686	canvas.glsl		vec2		native	native
+canvas_item.fragment.SHADOW_VERTEX	built-in	servers/rendering/shader_types.cpp:288	#686	canvas.glsl		vec2		native	native
+canvas_item.fragment.LIGHT_VERTEX	built-in	servers/rendering/shader_types.cpp:289	#686	canvas.glsl		vec3		native	native
+canvas_item.fragment.FRAGCOORD	built-in (read only)	servers/rendering/shader_types.cpp:290	#686	canvas.glsl		vec4		native	native
+canvas_item.fragment.NORMAL	built-in	servers/rendering/shader_types.cpp:291	#686	canvas.glsl		vec3		native	native
+canvas_item.fragment.NORMAL_MAP	built-in	servers/rendering/shader_types.cpp:292	#686	canvas.glsl		vec3		native	native
+canvas_item.fragment.NORMAL_MAP_DEPTH	built-in	servers/rendering/shader_types.cpp:293	#686	canvas.glsl		float		native	native
 canvas_item.fragment.UV	built-in (read only)	servers/rendering/shader_types.cpp:294	#686	canvas.glsl		vec2		native	native
 canvas_item.fragment.COLOR	built-in	servers/rendering/shader_types.cpp:295	#686	canvas.glsl		vec4		native	native
-canvas_item.fragment.TEXTURE	built-in (read only)	servers/rendering/shader_types.cpp:296	#686	canvas.glsl		sampler2D			
-canvas_item.fragment.TEXTURE_PIXEL_SIZE	built-in (read only)	servers/rendering/shader_types.cpp:297	#686	canvas.glsl		vec2			
-canvas_item.fragment.NORMAL_TEXTURE	built-in (read only)	servers/rendering/shader_types.cpp:298	#686	canvas.glsl		sampler2D			
-canvas_item.fragment.SPECULAR_SHININESS_TEXTURE	built-in (read only)	servers/rendering/shader_types.cpp:299	#686	canvas.glsl		sampler2D			
-canvas_item.fragment.SPECULAR_SHININESS	built-in (read only)	servers/rendering/shader_types.cpp:300	#686	canvas.glsl		vec4			
-canvas_item.fragment.SCREEN_UV	built-in (read only)	servers/rendering/shader_types.cpp:301	#686	canvas.glsl		vec2			
-canvas_item.fragment.REGION_RECT	built-in (read only)	servers/rendering/shader_types.cpp:302	#686	canvas.glsl		vec4			
-canvas_item.fragment.SCREEN_PIXEL_SIZE	built-in (read only)	servers/rendering/shader_types.cpp:303	#686	canvas.glsl		vec2			
+canvas_item.fragment.TEXTURE	built-in (read only)	servers/rendering/shader_types.cpp:296	#686	canvas.glsl		sampler2D		native	native
+canvas_item.fragment.TEXTURE_PIXEL_SIZE	built-in (read only)	servers/rendering/shader_types.cpp:297	#686	canvas.glsl		vec2		native	native
+canvas_item.fragment.NORMAL_TEXTURE	built-in (read only)	servers/rendering/shader_types.cpp:298	#686	canvas.glsl		sampler2D		native	native
+canvas_item.fragment.SPECULAR_SHININESS_TEXTURE	built-in (read only)	servers/rendering/shader_types.cpp:299	#686	canvas.glsl		sampler2D		native	native
+canvas_item.fragment.SPECULAR_SHININESS	built-in (read only)	servers/rendering/shader_types.cpp:300	#686	canvas.glsl		vec4		native	native
+canvas_item.fragment.SCREEN_UV	built-in (read only)	servers/rendering/shader_types.cpp:301	#686	canvas.glsl		vec2		native	native
+canvas_item.fragment.REGION_RECT	built-in (read only)	servers/rendering/shader_types.cpp:302	#686	canvas.glsl		vec4		native	native
+canvas_item.fragment.SCREEN_PIXEL_SIZE	built-in (read only)	servers/rendering/shader_types.cpp:303	#686	canvas.glsl		vec2		native	native
 canvas_item.fragment.POINT_COORD	built-in (read only)	servers/rendering/shader_types.cpp:304	#686	canvas.glsl		vec2			
-canvas_item.fragment.AT_LIGHT_PASS	built-in (read only)	servers/rendering/shader_types.cpp:305	#686	canvas.glsl		bool			
+canvas_item.fragment.AT_LIGHT_PASS	built-in (read only)	servers/rendering/shader_types.cpp:305	#686	canvas.glsl		bool		native	native
 canvas_item.light.FRAGCOORD	built-in (read only)	servers/rendering/shader_types.cpp:332	#686	canvas.glsl		vec4			
 canvas_item.light.NORMAL	built-in (read only)	servers/rendering/shader_types.cpp:333	#686	canvas.glsl		vec3			
 canvas_item.light.COLOR	built-in (read only)	servers/rendering/shader_types.cpp:334	#686	canvas.glsl		vec4			
@@ -1892,16 +1892,16 @@ spatial stencil_mode compare_less_or_equal	stencil mode	servers/rendering/shader
 spatial stencil_mode compare_greater	stencil mode	servers/rendering/shader_types.cpp:259	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
 spatial stencil_mode compare_not_equal	stencil mode	servers/rendering/shader_types.cpp:259	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
 spatial stencil_mode compare_greater_or_equal	stencil mode	servers/rendering/shader_types.cpp:259	#1831	forward_clustered/scene_forward_clustered.glsl				native	native
-canvas_item render_mode skip_vertex_transform	render mode	servers/rendering/shader_types.cpp:354	#686	canvas.glsl					
-canvas_item render_mode blend_mix	render mode	servers/rendering/shader_types.cpp:355	#686	canvas.glsl					
-canvas_item render_mode blend_add	render mode	servers/rendering/shader_types.cpp:355	#686	canvas.glsl					
-canvas_item render_mode blend_sub	render mode	servers/rendering/shader_types.cpp:355	#686	canvas.glsl					
-canvas_item render_mode blend_mul	render mode	servers/rendering/shader_types.cpp:355	#686	canvas.glsl					
-canvas_item render_mode blend_premul_alpha	render mode	servers/rendering/shader_types.cpp:355	#686	canvas.glsl					
-canvas_item render_mode blend_disabled	render mode	servers/rendering/shader_types.cpp:355	#686	canvas.glsl					
-canvas_item render_mode unshaded	render mode	servers/rendering/shader_types.cpp:356	#686	canvas.glsl					
-canvas_item render_mode light_only	render mode	servers/rendering/shader_types.cpp:357	#686	canvas.glsl					
-canvas_item render_mode world_vertex_coords	render mode	servers/rendering/shader_types.cpp:358	#686	canvas.glsl					
+canvas_item render_mode skip_vertex_transform	render mode	servers/rendering/shader_types.cpp:354	#686	canvas.glsl				native	native
+canvas_item render_mode blend_mix	render mode	servers/rendering/shader_types.cpp:355	#686	canvas.glsl				native	native
+canvas_item render_mode blend_add	render mode	servers/rendering/shader_types.cpp:355	#686	canvas.glsl				native	native
+canvas_item render_mode blend_sub	render mode	servers/rendering/shader_types.cpp:355	#686	canvas.glsl				native	native
+canvas_item render_mode blend_mul	render mode	servers/rendering/shader_types.cpp:355	#686	canvas.glsl				native	native
+canvas_item render_mode blend_premul_alpha	render mode	servers/rendering/shader_types.cpp:355	#686	canvas.glsl				native	native
+canvas_item render_mode blend_disabled	render mode	servers/rendering/shader_types.cpp:355	#686	canvas.glsl				native	native
+canvas_item render_mode unshaded	render mode	servers/rendering/shader_types.cpp:356	#686	canvas.glsl				native	native
+canvas_item render_mode light_only	render mode	servers/rendering/shader_types.cpp:357	#686	canvas.glsl				native	native
+canvas_item render_mode world_vertex_coords	render mode	servers/rendering/shader_types.cpp:358	#686	canvas.glsl				native	native
 particles render_mode collision_use_scale	render mode	servers/rendering/shader_types.cpp:448	#1726	particles.glsl					
 particles render_mode disable_force	render mode	servers/rendering/shader_types.cpp:449	#1726	particles.glsl					
 particles render_mode disable_velocity	render mode	servers/rendering/shader_types.cpp:450	#1726	particles.glsl					

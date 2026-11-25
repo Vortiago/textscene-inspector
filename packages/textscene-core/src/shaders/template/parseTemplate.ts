@@ -588,9 +588,12 @@ class TemplateParser implements TemplateScope {
   }
 
   private builtInText(variable: VariableNode, macros: SlotMacros): Expression {
-    const text = this.material!.renames[variable.name];
-    if (text === undefined)
+    const rename = this.material!.renames[variable.name];
+    if (rename === undefined)
       this.tokens.fail(`'${variable.name}' has no GLSL text in the mode table`, variable.position);
+    // A texture built-in with a sampler pairs with it, as Vulkan GLSL samples (`shader_compiler.cpp:1275-1336`).
+    const sampler = this.material!.customSamplers[variable.name];
+    const text = sampler ? `${variable.type}(${rename}, ${sampler})` : rename;
     const tokens = this.textTokens(text, variable.position, macros);
     const expression = new GlslExpressionParser(tokens, this).expression();
     if (!tokens.isAtEnd()) tokens.fail(`expected the end of the text of '${variable.name}'`);

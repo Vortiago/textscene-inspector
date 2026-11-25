@@ -716,11 +716,608 @@ void fragment() {
 | --- | --- |
 | <img src="showcase/canvas-shader-fragment-uv-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-fragment-uv-three.png" width="256" alt="Transpilation"> |
 
+## Showcase `canvas-shader-fragment-texture`
+
+Godot draws the scene's rects on a Node2D of a 2D view, with a ShaderMaterial of this shader (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+
+void fragment() {
+	COLOR = vec4(texture(TEXTURE, UV + vec2(TEXTURE_PIXEL_SIZE.x, 0.0)).bgr, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-shader-fragment-texture-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-fragment-texture-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-shader-fragment-vertex`
+
+Godot draws the scene's rects on a Node2D of a 2D view, with a ShaderMaterial of this shader (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+
+void fragment() {
+	COLOR = vec4(fract(VERTEX / 8.0), 0.0, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-shader-fragment-vertex-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-fragment-vertex-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-shader-fragcoord`
+
+Godot draws the scene's rects on a Node2D of a 2D view, with a ShaderMaterial of this shader (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+
+void fragment() {
+	COLOR = vec4(FRAGCOORD.xy / vec2(64.0, 48.0), FRAGCOORD.z, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-shader-fragcoord-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-fragcoord-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-shader-screen-uv`
+
+Godot draws the scene's rects on a Node2D of a 2D view, with a ShaderMaterial of this shader (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+
+void fragment() {
+	COLOR = vec4(SCREEN_UV, SCREEN_PIXEL_SIZE.x * 32.0, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-shader-screen-uv-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-screen-uv-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-shader-region-rect`
+
+Godot draws the scene's rects on a Node2D of a 2D view, with a ShaderMaterial of this shader (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+
+void fragment() {
+	COLOR = vec4(REGION_RECT.xy * 2.0, REGION_RECT.zw);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-shader-region-rect-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-region-rect-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-shader-normal-map`
+
+Godot draws the scene's rects on a Node2D of a 2D view, with a ShaderMaterial of this shader (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+
+void fragment() {
+	NORMAL_MAP = vec3(UV, 1.0);
+	NORMAL_MAP_DEPTH = 0.5;
+	COLOR = vec4(NORMAL * 0.5 + 0.5, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-shader-normal-map-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-normal-map-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-shader-normal-specular-textures`
+
+Godot draws the scene's rects on a Node2D of a 2D view, with a ShaderMaterial of this shader (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+
+void fragment() {
+	COLOR = vec4(texture(NORMAL_TEXTURE, UV).rg, texture(SPECULAR_SHININESS_TEXTURE, UV).b * SPECULAR_SHININESS.a, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-shader-normal-specular-textures-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-normal-specular-textures-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-shader-light-vertex`
+
+Godot draws the scene's rects on a Node2D of a 2D view, with a ShaderMaterial of this shader (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+
+void fragment() {
+	LIGHT_VERTEX.z = 0.5;
+	SHADOW_VERTEX += vec2(1.0);
+	COLOR = vec4(fract(LIGHT_VERTEX.xy / 8.0), LIGHT_VERTEX.z + fract(SHADOW_VERTEX.x / 16.0) * 0.25, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-shader-light-vertex-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-light-vertex-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-shader-at-light-pass`
+
+Godot draws the scene's rects on a Node2D of a 2D view, with a ShaderMaterial of this shader (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+
+varying float vertex_pass;
+
+void vertex() {
+	vertex_pass = AT_LIGHT_PASS ? 1.0 : 0.25;
+}
+
+void fragment() {
+	COLOR = vec4(AT_LIGHT_PASS ? 1.0 : 0.5, vertex_pass, 0.0, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-shader-at-light-pass-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-at-light-pass-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-shader-vertex-moved`
+
+Godot draws the scene's rects on a Node2D of a 2D view, with a ShaderMaterial of this shader (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+
+void vertex() {
+	VERTEX += vec2(4.0, -2.0);
+	UV = UV.yx;
+	COLOR = vec4(1.0, 0.5, 0.25, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-shader-vertex-moved-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-vertex-moved-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-shader-vertex-matrices`
+
+Godot draws the scene's rects on a Node2D of a 2D view, with a ShaderMaterial of this shader (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+
+void vertex() {
+	COLOR = vec4(MODEL_MATRIX[0].y + 0.5, CANVAS_MATRIX[3].x / -20.0, SCREEN_MATRIX[0].x * 16.0, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-shader-vertex-matrices-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-vertex-matrices-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-shader-vertex-ids`
+
+Godot draws the scene's rects on a Node2D of a 2D view, with a ShaderMaterial of this shader (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+
+void vertex() {
+	COLOR = vec4(float(VERTEX_ID) / 4.0, float(INSTANCE_ID) / 3.0 + 0.25, INSTANCE_CUSTOM.x + CUSTOM0.x + CUSTOM1.x + 0.5, TEXTURE_PIXEL_SIZE.x * 8.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-shader-vertex-ids-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-vertex-ids-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-shader-constants`
+
+Godot draws the scene's rects on a Node2D of a 2D view, with a ShaderMaterial of this shader (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+
+void fragment() {
+	COLOR = vec4(PI / 4.0, TAU / 8.0, E / 4.0, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-shader-constants-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-constants-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-shader-time`
+
+Godot draws the scene's rects on a Node2D of a 2D view, with a ShaderMaterial of this shader (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+
+void fragment() {
+	COLOR = vec4(fract(TIME), fract(TIME * 0.5), 0.5, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-shader-time-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-time-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-shader-skip-vertex-transform`
+
+Godot draws the scene's rects on a Node2D of a 2D view, with a ShaderMaterial of this shader (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+
+render_mode skip_vertex_transform;
+
+void vertex() {
+	VERTEX = (MODEL_MATRIX * vec4(VERTEX, 0.0, 1.0)).xy + vec2(6.0, 0.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-shader-skip-vertex-transform-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-skip-vertex-transform-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-shader-world-vertex-coords`
+
+Godot draws the scene's rects on a Node2D of a 2D view, with a ShaderMaterial of this shader (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+
+render_mode world_vertex_coords;
+
+void vertex() {
+	VERTEX.x += 6.0;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-shader-world-vertex-coords-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-world-vertex-coords-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-shader-unshaded`
+
+Godot draws the scene's rects on a Node2D of a 2D view, with a ShaderMaterial of this shader (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+
+render_mode unshaded;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-shader-unshaded-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-unshaded-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-shader-light-only`
+
+Godot draws the scene's rects on a Node2D of a 2D view, with a ShaderMaterial of this shader (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+
+render_mode light_only;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-shader-light-only-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-light-only-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-shader-blend-mix`
+
+Godot draws the scene's rects on a Node2D of a 2D view, with a ShaderMaterial of this shader (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+
+render_mode blend_mix;
+
+void fragment() {
+	COLOR.rgb *= 0.75;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-shader-blend-mix-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-blend-mix-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-shader-blend-add`
+
+Godot draws the scene's rects on a Node2D of a 2D view, with a ShaderMaterial of this shader (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+
+render_mode blend_add;
+
+void fragment() {
+	COLOR.rgb *= 0.75;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-shader-blend-add-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-blend-add-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-shader-blend-sub`
+
+Godot draws the scene's rects on a Node2D of a 2D view, with a ShaderMaterial of this shader (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+
+render_mode blend_sub;
+
+void fragment() {
+	COLOR.rgb *= 0.75;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-shader-blend-sub-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-blend-sub-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-shader-blend-mul`
+
+Godot draws the scene's rects on a Node2D of a 2D view, with a ShaderMaterial of this shader (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+
+render_mode blend_mul;
+
+void fragment() {
+	COLOR.rgb *= 0.75;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-shader-blend-mul-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-blend-mul-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-shader-blend-premul-alpha`
+
+Godot draws the scene's rects on a Node2D of a 2D view, with a ShaderMaterial of this shader (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+
+render_mode blend_premul_alpha;
+
+void fragment() {
+	COLOR.rgb *= 0.75;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-shader-blend-premul-alpha-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-blend-premul-alpha-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-shader-blend-disabled`
+
+Godot draws the scene's rects on a Node2D of a 2D view, with a ShaderMaterial of this shader (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+
+render_mode blend_disabled;
+
+void fragment() {
+	COLOR.rgb *= 0.75;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-shader-blend-disabled-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-blend-disabled-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-shader-source-color`
+
+Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+
+uniform vec4 tint : source_color = vec4(0.5, 0.25, 0.75, 1.0);
+
+void fragment() {
+	COLOR = tint;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-shader-source-color-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-source-color-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-shader-source-color-linear`
+
+Godot draws the scene's rects on a Node2D of a 2D view with `use_hdr_2d`, whose image holds linear colours, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+
+uniform vec4 tint : source_color = vec4(0.5, 0.25, 0.75, 1.0);
+
+void fragment() {
+	COLOR = tint;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-shader-source-color-linear-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-source-color-linear-three.png" width="256" alt="Transpilation"> |
+
 ## `COLOR` and `UV` in `fragment()`
 
 `COLOR` starts as the vertex colour times the texture's texel at `UV`, and `fragment()` writes the colour the item blends. `UV` is the texture coordinate, read only: the rect's source in 0 to 1, clamped half a texel inside a region with `clipUv` (`canvas.glsl:292-297`).
 
 The transpiler emits the template's locals `color` and `uv`. Rows: `canvas_item.fragment.UV`, `canvas_item.fragment.COLOR`. Godot source: `servers/rendering/shader_types.cpp:294`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `TEXTURE` and `TEXTURE_PIXEL_SIZE` in `fragment()`
+
+`TEXTURE` is the item's texture with the item's filter and repeat, or Godot's white default texture. `TEXTURE_PIXEL_SIZE` is one over the texture's size in texels (`renderer_canvas_render_rd.cpp:1791-1792`).
+
+The transpiler emits the template's texture `color_texture` and the record's texel size. Rows: `canvas_item.fragment.TEXTURE`, `canvas_item.fragment.TEXTURE_PIXEL_SIZE`. Godot source: `servers/rendering/shader_types.cpp:296`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `VERTEX` in `fragment()`
+
+`VERTEX` in `fragment()` is the pixel's place after the item's transform and the canvas transform, in the render target's pixels (`canvas.glsl:290-296`, `canvas.glsl:572`).
+
+The transpiler emits the template's local `vertex`, from the varying `uv_vertex_interp.zw`. Rows: `canvas_item.fragment.VERTEX`. Godot source: `servers/rendering/shader_types.cpp:287`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `FRAGCOORD`
+
+`FRAGCOORD` is the pixel's window coordinate, with y down from the render target's top row, as Godot's Vulkan frame counts it (`renderer_canvas_render_rd.cpp:1799`).
+
+The transpiler emits `screenCoordinate`, counted from the top row for a target of Godot's rows. Rows: `canvas_item.fragment.FRAGCOORD`. Godot source: `servers/rendering/shader_types.cpp:290`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `SCREEN_UV` and `SCREEN_PIXEL_SIZE`
+
+`SCREEN_PIXEL_SIZE` is one over the render target's size in pixels. `SCREEN_UV` is `FRAGCOORD.xy` times it, from 0 to 1 across the target (`canvas.glsl:684-688`).
+
+The transpiler emits the template's local `screen_uv` and the block member `canvas_data.screen_pixel_size`. Rows: `canvas_item.fragment.SCREEN_UV`, `canvas_item.fragment.SCREEN_PIXEL_SIZE`. Godot source: `servers/rendering/shader_types.cpp:301`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `REGION_RECT`
+
+`REGION_RECT` is the rect's source region in uv: its corner, then its size. A primitive, a polygon and a mesh read the whole texture, `(0, 0, 1, 1)` (`canvas.glsl:575-579`).
+
+The transpiler emits the template's local `region_rect`. Rows: `canvas_item.fragment.REGION_RECT`. Godot source: `servers/rendering/shader_types.cpp:302`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `NORMAL`, `NORMAL_MAP` and `NORMAL_MAP_DEPTH`
+
+`NORMAL` starts as the item's normal texture at `UV`, or `(0, 0, 1)` with none. After `fragment()`, a written `NORMAL_MAP` replaces it, mixed from `(0, 0, 1)` by `NORMAL_MAP_DEPTH` (`canvas.glsl:654-705`). Only a 2D light reads the normal.
+
+The transpiler emits the template's locals `normal`, `normal_map` and `normal_map_depth`. Rows: `canvas_item.fragment.NORMAL`, `canvas_item.fragment.NORMAL_MAP`, `canvas_item.fragment.NORMAL_MAP_DEPTH`. Godot source: `servers/rendering/shader_types.cpp:291`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `NORMAL_TEXTURE`, `SPECULAR_SHININESS_TEXTURE` and `SPECULAR_SHININESS`
+
+`NORMAL_TEXTURE` and `SPECULAR_SHININESS_TEXTURE` are the item's CanvasTexture maps, or Godot's default normal and white textures. `SPECULAR_SHININESS` is the specular texture at `UV` times the item's specular colour and shininess (`canvas.glsl:667-682`).
+
+The transpiler emits the template's textures `normal_texture` and `specular_texture`, and its local `specular_shininess`. Rows: `canvas_item.fragment.NORMAL_TEXTURE`, `canvas_item.fragment.SPECULAR_SHININESS_TEXTURE`, `canvas_item.fragment.SPECULAR_SHININESS`. Godot source: `servers/rendering/shader_types.cpp:298`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `LIGHT_VERTEX` and `SHADOW_VERTEX`
+
+`LIGHT_VERTEX` starts as `vec3(VERTEX, 0.0)` and `SHADOW_VERTEX` as `VERTEX`. A 2D light reads the first for its direction and the second for its shadow (`canvas.glsl:690-691`).
+
+The transpiler emits the template's locals `light_vertex` and `shadow_vertex`. Rows: `canvas_item.fragment.SHADOW_VERTEX`, `canvas_item.fragment.LIGHT_VERTEX`. Godot source: `servers/rendering/shader_types.cpp:288`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `AT_LIGHT_PASS`
+
+`AT_LIGHT_PASS` is always false: Godot draws an item's lights in the item's one pass (`renderer_canvas_render_rd.cpp:1784`).
+
+The transpiler emits `false`. Rows: `canvas_item.vertex.AT_LIGHT_PASS`, `canvas_item.fragment.AT_LIGHT_PASS`. Godot source: `servers/rendering/shader_types.cpp:280`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `VERTEX`, `UV` and `COLOR` in `vertex()`
+
+`VERTEX` is the vertex in the item's local pixels, `UV` its texture coordinate and `COLOR` its colour times the final modulate. After `vertex()`, the template moves `VERTEX` by the item's transform and the canvas transform (`canvas.glsl:268-300`).
+
+The transpiler emits the template's locals `vertex`, `uv` and `color`. Rows: `canvas_item.vertex.VERTEX`, `canvas_item.vertex.UV`, `canvas_item.vertex.COLOR`. Godot source: `servers/rendering/shader_types.cpp:269`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `MODEL_MATRIX`, `CANVAS_MATRIX` and `SCREEN_MATRIX`
+
+`MODEL_MATRIX` is the item's transform to the canvas, `CANVAS_MATRIX` the canvas transform to the render target's pixels, and `SCREEN_MATRIX` the pixels to clip space (`renderer_canvas_render_rd.cpp:1777-1779`).
+
+The transpiler emits the template's local `model_matrix` and the block members `canvas_data.canvas_transform` and `canvas_data.screen_transform`. Rows: `canvas_item.vertex.MODEL_MATRIX`, `canvas_item.vertex.CANVAS_MATRIX`, `canvas_item.vertex.SCREEN_MATRIX`. Godot source: `servers/rendering/shader_types.cpp:274`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `VERTEX_ID`, `INSTANCE_ID`, `INSTANCE_CUSTOM`, `CUSTOM0`, `CUSTOM1` and `TEXTURE_PIXEL_SIZE` in `vertex()`
+
+`VERTEX_ID` and `INSTANCE_ID` are the draw's vertex and instance index: a quad batch draws one instance for each rect. `INSTANCE_CUSTOM` is a MultiMesh instance's custom data, and `CUSTOM0` and `CUSTOM1` a mesh's custom arrays, each zero with none (`canvas.glsl:139-188`).
+
+The transpiler emits `vertexIndex`, `instanceIndex` and the template's locals `instance_custom`, `custom0` and `custom1`. Rows: `canvas_item.vertex.INSTANCE_CUSTOM`, `canvas_item.vertex.INSTANCE_ID`, `canvas_item.vertex.VERTEX_ID`, `canvas_item.vertex.TEXTURE_PIXEL_SIZE`, `canvas_item.vertex.CUSTOM0`, `canvas_item.vertex.CUSTOM1`. Godot source: `servers/rendering/shader_types.cpp:277`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `PI`, `TAU` and `E`
+
+Each constant is the number that Godot writes in the text of the shader (`renderer_canvas_render_rd.cpp:1781-1783`).
+
+The transpiler emits `a float literal`. Rows: `canvas_item.constants.PI`, `canvas_item.constants.TAU`, `canvas_item.constants.E`. Godot source: `servers/rendering/shader_types.cpp:265`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `TIME`
+
+`TIME` is the shader time in seconds, with the same sum and wrap as a sky's `TIME`. `writeCanvasBindings(draw, { time })` writes it (`renderer_canvas_render_rd.cpp:1780`).
+
+The transpiler emits the block member `canvas_data.time`. Rows: `canvas_item.global.TIME`. Godot source: `servers/rendering/shader_types.cpp:264`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `skip_vertex_transform` and `world_vertex_coords`
+
+`skip_vertex_transform` leaves the item's transform to `vertex()`. `world_vertex_coords` moves `VERTEX` by the item's transform before `vertex()` instead of after (`canvas.glsl:270-283`).
+
+The transpiler emits the template's defines `SKIP_TRANSFORM_USED` and `USE_WORLD_VERTEX_COORDS`. Rows: `canvas_item render_mode skip_vertex_transform`, `canvas_item render_mode world_vertex_coords`. Godot source: `servers/rendering/shader_types.cpp:354`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `unshaded` and `light_only`
+
+`unshaded` leaves out the CanvasModulate colour and the 2D lights. `light_only` draws the item only where a 2D light reaches it, so with no light it draws nothing (`canvas.glsl:717-721`, `canvas.glsl:861-863`).
+
+The transpiler emits the template's defines `MODE_UNSHADED` and `MODE_LIGHT_ONLY`. Rows: `canvas_item render_mode unshaded`, `canvas_item render_mode light_only`. Godot source: `servers/rendering/shader_types.cpp:356`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## Blend modes
+
+A blend word sets the blend of the item's pass, as on a spatial material. `blend_disabled` writes the colour and its alpha as they are (`renderer_canvas_render_rd.cpp:1502-1516`, `renderer_canvas_render_rd.cpp:1566-1571`).
+
+The transpiler emits the material's blend state from `canvasBlendState(tree)`. Rows: `canvas_item render_mode blend_mix`, `canvas_item render_mode blend_add`, `canvas_item render_mode blend_sub`, `canvas_item render_mode blend_mul`, `canvas_item render_mode blend_premul_alpha`, `canvas_item render_mode blend_disabled`. Godot source: `servers/rendering/shader_types.cpp:355`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 

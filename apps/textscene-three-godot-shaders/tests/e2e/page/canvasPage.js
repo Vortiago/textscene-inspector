@@ -97,7 +97,7 @@ function dataTexture({ width, height, texels }) {
 class SceneDraws {
   constructor(spec) {
     this.spec = spec;
-    this.item = transpileCanvasItem(spec.source);
+    this.item = transpileCanvasItem(spec.source, { usesLinearColors: spec.linear });
     this.texture = dataTexture(spec.texture);
     this.bindings = [];
     this.materials = new Set();

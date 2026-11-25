@@ -14,6 +14,6 @@ describe('compileCanvas', () => {
   it("refuses a text Godot does not compile, with Godot's message", () => {
     const compile = compileCanvas('shader_type canvas_item;\nvoid fragment() { COLOR = 1.0; }\n', {});
 
-    expect('refusal' in compile && compile.refusal.message).toMatch(/Invalid assignment/);
+    expect('refusal' in compile && compile.refusal.message).toMatch(/Invalid arguments to operator '='/);
   });
 });

@@ -21,20 +21,30 @@ const SHOWCASE_DIR = join(import.meta.dirname, '../../guide/showcase');
 
 const showcaseImage = (name, side) => join(SHOWCASE_DIR, `${name}-${side}.png`);
 
+/** The text after `--scenes`: a run of only the scenes whose names hold it, to iterate on a few. */
+const sceneFilter = process.argv[process.argv.indexOf('--scenes') + 1];
+const isSelected = (scene) => !process.argv.includes('--scenes') || scene.name.includes(sceneFilter);
+const selected = (scenes) => scenes.filter(isSelected);
+
+/** One Godot run of `script` for each group of `scenes` that Godot runs apart, with none for no scene. */
+const godotRunsOf = (scenes, script, projectFiles, parse) =>
+  godotRuns(selected(scenes)).map(({ scenes: group, options }) =>
+    runGodotScript(script, projectFiles(group), options).then(parse)
+  );
+
 /** Godot's image of each showcase and of each sky, mesh and canvas scene, by name. */
 async function godotImages() {
-  const [showcases, ...runs] = await Promise.all([
-    runGodotScript(MAIN_SCRIPT, showcaseProjectFiles(SHOWCASES)).then(parseShowcaseOutput),
-    ...godotRuns(MESH_SCENES).map(({ scenes, options }) =>
-      runGodotScript(MESH_MAIN_SCRIPT, meshProjectFiles(scenes), options).then(parseMeshOutput)
-    ),
-    ...godotRuns(SKY_SCENES).map(({ scenes, options }) =>
-      runGodotScript(SKY_MAIN_SCRIPT, skyProjectFiles(scenes), options).then(parseSkyOutput)
-    ),
-    runGodotScript(CANVAS_MAIN_SCRIPT, canvasProjectFiles(CANVAS_SCENES)).then(parseCanvasOutput),
+  const showcases = selected(SHOWCASES);
+  const runs = await Promise.all([
+    ...(showcases.length > 0
+      ? [runGodotScript(MAIN_SCRIPT, showcaseProjectFiles(showcases)).then(parseShowcaseOutput)]
+      : []),
+    ...godotRunsOf(MESH_SCENES, MESH_MAIN_SCRIPT, meshProjectFiles, parseMeshOutput),
+    ...godotRunsOf(SKY_SCENES, SKY_MAIN_SCRIPT, skyProjectFiles, parseSkyOutput),
+    ...godotRunsOf(CANVAS_SCENES, CANVAS_MAIN_SCRIPT, canvasProjectFiles, parseCanvasOutput),
   ]);
-  for (const run of [showcases, ...runs]) requireGodotVersion(run.godot);
-  return new Map([...showcases.images, ...runs.flatMap((run) => [...run.images])]);
+  for (const run of runs) requireGodotVersion(run.godot);
+  return new Map(runs.flatMap((run) => [...run.images]));
 }
 
 /** The page's image of each showcase and of each sky, mesh and canvas scene, by name. */
@@ -43,7 +53,7 @@ async function transpiledImages() {
     { pageDir: join(import.meta.dirname, 'page'), module: 'e2ePage.js', harness: 'shaderEndToEnd' },
     async (page) => {
       const images = new Map();
-      for (const { spec, draw } of DRAWN_SCENES) {
+      for (const { spec, draw } of DRAWN_SCENES.filter(({ spec }) => isSelected(spec))) {
         const drawn = await page.evaluate(([value, name]) => globalThis[name](value), [spec, draw]);
         if (drawn.error) throw new Error(`${spec.name}: ${drawn.error}`);
         if (drawn.faults) throw new Error(`${spec.name}: ${drawn.faults[0].message}`);
@@ -122,7 +132,7 @@ async function main() {
   const update = process.argv.includes('--update');
   if (update) mkdirSync(SHOWCASE_DIR, { recursive: true });
   const failures = [];
-  const results = ALL_SCENES.map((showcase) => {
+  const results = selected(ALL_SCENES).map((showcase) => {
     const ours = transpilation.get(showcase.name);
     const theirs = godot.get(showcase.name);
     if (!theirs) throw new Error(`expected Godot's image of showcase ${showcase.name}, found none`);
