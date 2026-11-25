@@ -7,6 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  valueReadsIn,
   EXT_RESOURCE_CALL_ANYWHERE_RE,
   dictSubResourceEntries,
   extResourceIdsIn,
@@ -321,5 +322,25 @@ describe('renameResourceRefs', () => {
 
   it('returns a value with no reference unchanged', () => {
     expect(renameResourceRefs('Vector3(1, 2, 3)', tagged)).toBe('Vector3(1, 2, 3)');
+  });
+});
+
+describe('valueReadsIn', () => {
+  it('gives the ExtResource ids and Resource() literals in text order', () => {
+    expect(valueReadsIn('[Resource("res://a.tres"), ExtResource("1"), Resource("res://b.tres")]')).toEqual([
+      { kind: 'Resource', path: 'res://a.tres', uid: '' },
+      { kind: 'ExtResource', id: '1' },
+      { kind: 'Resource', path: 'res://b.tres', uid: '' },
+    ]);
+  });
+
+  it('keeps the uid of a literal beside its path', () => {
+    expect(valueReadsIn('Resource("uid://abc", "res://a.tres")')).toEqual([
+      { kind: 'Resource', path: 'res://a.tres', uid: 'uid://abc' },
+    ]);
+  });
+
+  it('reads no SubResource and no literal with only a uid', () => {
+    expect(valueReadsIn('[SubResource("x"), Resource("uid://abc")]')).toEqual([]);
   });
 });

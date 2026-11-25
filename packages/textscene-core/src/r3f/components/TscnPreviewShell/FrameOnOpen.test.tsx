@@ -182,6 +182,16 @@ describe('FrameOnOpen', () => {
     expect(focus).toHaveBeenCalledWith('focus', []);
   });
 
+  it('frames on the first settle when the view reports nothing before it, as its loads may be over', async () => {
+    const { focus, heard, runTimers } = await mount();
+    await runTimers();
+    focus.mockClear();
+
+    await act(async () => heardSettle(heard));
+
+    expect(focus).toHaveBeenCalledTimes(1);
+  });
+
   it('frames a load that finishes after an earlier settle and after every timer', async () => {
     const { focus, settleLoad } = await mountWithLateLoad();
 

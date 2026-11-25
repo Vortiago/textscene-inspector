@@ -425,4 +425,74 @@ atlas = ExtResource("2")
 `;
     expect(Object.keys(await sceneFailures(source, {}))).toEqual(['res://first.png']);
   });
+
+  it('gives the line Godot prints for a Resource() literal of a section', async () => {
+    const source = `[gd_scene format=3]
+
+[sub_resource type="Resource" id="x"]
+m = Resource("res://gone.tres")
+
+[node name="Main" type="Node2D"]
+`;
+    expect(await sceneFailures(source, {})).toEqual({
+      'res://gone.tres': {
+        line: "res://main.tscn - Parse Error: Can't load resource at path: res://gone.tres with uid: .",
+        chain: ['res://gone.tres'],
+      },
+    });
+  });
+
+  it('follows the file order across an ExtResource read and a Resource() literal', async () => {
+    const source = `[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://b.png" id="1"]
+
+[sub_resource type="AtlasTexture" id="x"]
+atlas = Resource("res://a.tres")
+
+[sub_resource type="AtlasTexture" id="y"]
+atlas = ExtResource("1")
+
+[node name="Main" type="Node2D"]
+`;
+    expect(Object.keys(await sceneFailures(source, {}))).toEqual(['res://a.tres']);
+  });
+
+  it('is on no file while an earlier read still loads, though a later one fails', async () => {
+    const source = `[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://slow.tres" id="1"]
+[ext_resource type="Texture2D" path="res://gone.png" id="2"]
+
+[sub_resource type="AtlasTexture" id="a"]
+atlas = ExtResource("1")
+
+[sub_resource type="AtlasTexture" id="b"]
+atlas = ExtResource("2")
+
+[node name="Main" type="Node2D"]
+`;
+    const provider: ResourceProvider = {
+      loadResource: (path) => (path === 'res://slow.tres' ? new Promise(() => {}) : Promise.resolve(null)),
+    };
+    const scene = openScene({ source, provider, rootScenePath: MAIN });
+    const files = await whenFileMissing(scene, 'res://gone.png');
+    expect(files.filter((file) => file.sceneFailure)).toEqual([]);
+  });
 });
+
+/** The files once `path` is missing. A notice of a change comes in a frame. */
+function whenFileMissing(scene: Scene, path: string): Promise<readonly SceneFile[]> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`not missing: ${JSON.stringify(scene.files())}`)), 2000);
+    const check = () => {
+      const files = scene.files();
+      if (!files.some((file) => file.path === path && file.state === 'missing')) return;
+      clearTimeout(timer);
+      stop();
+      resolve(files);
+    };
+    const stop = scene.subscribe(check);
+    check();
+  });
+}

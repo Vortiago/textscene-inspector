@@ -7,7 +7,7 @@ import {
   simplifyPath,
   simplifyResPath,
 } from '../../godot/string/string';
-import { extResourceIdsIn, pathResourcePathsIn } from '../../godot/variant/resourceRef';
+import { extResourceIdsIn, pathResourcePathsIn, valueReadsIn } from '../../godot/variant/resourceRef';
 import { findExtResource } from '../SubResourceResolver';
 
 type Values = Readonly<Record<string, string>>;
@@ -22,25 +22,66 @@ export interface FileRead {
   readonly type: string | null;
 }
 
+/** Where a failing read sits, which names the error line Godot prints for it. */
+export type FailingReadKind = 'section ExtResource' | 'section Resource' | 'node Resource';
+
+export interface FailingFileRead {
+  readonly path: string;
+  readonly kind: FailingReadKind;
+  /** The literal's `uid://` argument, empty where it has none. */
+  readonly uid: string;
+}
+
 /** A `.tscn`: its `[sub_resource]` sections, and the `Resource()` literals of its `[node]` sections. */
-export function sceneFailingReads(file: string, scene: SceneSections): string[] {
+export function sceneFailingFileReads(file: string, scene: SceneSections): FailingFileRead[] {
   const sections = scene.internalResources.map((section) => section.data);
-  return failingReads(file, scene.externalResources, sections, nodeValues(scene.nodes));
+  return failingFileReads(file, scene.externalResources, sections, nodeValues(scene.nodes));
+}
+
+export function sceneFailingReads(file: string, scene: SceneSections): string[] {
+  return sceneFailingFileReads(file, scene).map((read) => read.path);
 }
 
 /** A `.tres`: its `[sub_resource]` sections and its `[resource]` section. */
 export function resourceFailingReads(file: string, parsed: ParsedResource): string[] {
-  return failingReads(file, parsed.extResources, resourceSections(parsed), []);
+  return failingFileReads(file, parsed.extResources, resourceSections(parsed), []).map((read) => read.path);
 }
 
 // A section read fails the file and a [node] read does not (resource_format_text.cpp:647-650, :288-290).
-function failingReads(
+function failingFileReads(
   file: string,
   externalResources: readonly TscnExternalResource[],
   sections: readonly Values[],
   nodes: readonly Values[]
-): string[] {
-  return readFiles(file, externalResources, sections, [...sections, ...nodes]).map((read) => read.path);
+): FailingFileRead[] {
+  const reads = new Map<string, FailingFileRead>();
+  const add = (read: FailingFileRead | null) => {
+    if (read?.path.startsWith('res://') && !reads.has(read.path)) reads.set(read.path, read);
+  };
+  // In file order, as the parse stops at the first value that fails (resource_format_text.cpp:152, :291).
+  for (const value of sections.flatMap(Object.values)) {
+    for (const read of valueReadsIn(value)) {
+      if (read.kind === 'Resource')
+        add({ path: simplifyResPath(read.path), kind: 'section Resource', uid: read.uid });
+      else add(extFailingRead(file, externalResources, read.id));
+    }
+  }
+  for (const value of nodes.flatMap(Object.values)) {
+    for (const read of valueReadsIn(value)) {
+      if (read.kind === 'Resource')
+        add({ path: simplifyResPath(read.path), kind: 'node Resource', uid: read.uid });
+    }
+  }
+  return [...reads.values()];
+}
+
+function extFailingRead(
+  file: string,
+  externalResources: readonly TscnExternalResource[],
+  id: string
+): FailingFileRead | null {
+  const ext = findExtResource(externalResources, id);
+  return ext ? { path: extResourcePathIn(file, ext.path), kind: 'section ExtResource', uid: '' } : null;
 }
 
 /** Values only, as only a read reports a failed load (resource_format_text.cpp:147-157). */

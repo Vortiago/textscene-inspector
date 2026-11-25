@@ -1,7 +1,7 @@
 import type { ParsedScene } from '../../core/SceneGraph.js';
 import type { SceneFailure, SceneFile } from '../../scene/sceneFiles.js';
 import { resourceFilePath } from '../subResourcePath.js';
-import { extResourcePathIn, sceneFailingReads } from './fileReads.js';
+import { sceneFailingFileReads, type FailingFileRead } from './fileReads.js';
 
 /** A read of the root scene that fails the whole scene when it fails, with the line Godot prints for it. */
 export interface FailingRead {
@@ -10,20 +10,19 @@ export interface FailingRead {
 }
 
 export function failingReadsOf(scene: ParsedScene): FailingRead[] {
-  return sceneFailingReads(scene.path, scene).map((address) => ({
-    address,
-    line: godotFailureLine(scene, address),
+  return sceneFailingFileReads(scene.path, scene).map((read) => ({
+    address: read.path,
+    line: godotFailureLine(scene.path, read),
   }));
 }
 
-/** Godot's error line, less its number (resource_format_text.cpp:40, :152, :291). */
-function godotFailureLine(scene: Pick<ParsedScene, 'path' | 'externalResources'>, read: string): string {
-  const isExtResource = scene.externalResources.some(
-    (ext) => extResourcePathIn(scene.path, ext.path) === read
-  );
-  return isExtResource
-    ? `${scene.path} - Parse Error: [ext_resource] referenced non-existent resource at: ${read}.`
-    : `Parse Error: Parse error. [Resource file ${scene.path}]`;
+/** Godot's error line, less its number, measured in 4.6.3 (resource_format_text.cpp:40, :152, :291). */
+function godotFailureLine(scenePath: string, { path, kind, uid }: FailingFileRead): string {
+  if (kind === 'section ExtResource')
+    return `${scenePath} - Parse Error: [ext_resource] referenced non-existent resource at: ${path}.`;
+  if (kind === 'section Resource')
+    return `${scenePath} - Parse Error: Can't load resource at path: ${path} with uid: ${uid}.`;
+  return `Parse Error: Parse error. [Resource file ${scenePath}]`;
 }
 
 /** `files` with the failure of the first failing read: a whole file, or the undeclared address it names. */
@@ -37,6 +36,8 @@ export function withSceneFailure(
     const index = indexByPath.get(resourceFilePath(read.address));
     if (index === undefined) continue;
     const file = files[index]!;
+    // A read still loading may yet fail first, so no later read names the failure.
+    if (file.state === 'loading') return files;
     const failure = failureThrough(file, read);
     if (!failure) continue;
     const marked = files.slice();

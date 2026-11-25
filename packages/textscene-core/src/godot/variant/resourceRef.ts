@@ -204,6 +204,24 @@ export function pathResourcePathsIn(text: string): string[] {
   );
 }
 
+/** An `ExtResource` id, or a `Resource(…)` literal's path and its `uid://`, empty for none. */
+export type ValueRead = { kind: 'ExtResource'; id: string } | { kind: 'Resource'; path: string; uid: string };
+
+/** Each `ExtResource(…)` and `Resource(…)` literal of `text`, in the order the loader meets them. */
+export function valueReadsIn(text: string): ValueRead[] {
+  if (!text.includes(RESOURCE_TOKEN)) return [];
+  const extReads = loadedRefSpans(text)
+    .filter((span) => span.kind === 'ExtResource')
+    .map((span) => ({ start: span.start, read: { kind: 'ExtResource', id: span.id } as const }));
+  const literals = [...text.matchAll(PATH_RESOURCE_ANYWHERE_RE)].flatMap((match) => {
+    const args = [match[1]!, match[2]].filter((arg): arg is string => arg !== undefined);
+    const path = args.find((arg) => !arg.startsWith('uid://'));
+    const uid = args.find((arg) => arg.startsWith('uid://')) ?? '';
+    return path === undefined ? [] : [{ start: match.index, read: { kind: 'Resource', path, uid } as const }];
+  });
+  return [...extReads, ...literals].sort((a, b) => a.start - b.start).map(({ read }) => read);
+}
+
 /** The id of the first `SubResource(…)` anywhere in `text`, or null. */
 export function subResourceRefAnywhere(text: string): string | null {
   const match = SUB_RESOURCE_REF_ANYWHERE_RE.exec(text);
