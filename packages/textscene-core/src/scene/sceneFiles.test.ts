@@ -518,6 +518,37 @@ atlas = ExtResource("2")
     expect(await whenFilesLoaded(scene)).toEqual([]);
   });
 
+  it('follows the reads of a file a write drops once a nested read lists it', async () => {
+    const source = `[gd_scene format=3]
+
+[node name="Main" type="Sprite2D"]
+texture = Resource("res://a.tres")
+
+[node name="Other" type="Sprite2D" parent="."]
+texture = Resource("res://b.tres")
+`;
+    const resourceReading = (path: string) =>
+      `[gd_resource type="AtlasTexture" format=3]\n\n[resource]\natlas = Resource("${path}")\n`;
+    const provider = filesOf({
+      'res://a.tres': resourceReading('res://d.png'),
+      'res://b.tres': resourceReading('res://c.tres'),
+      'res://c.tres': resourceReading('res://a.tres'),
+      'res://d.png': PNG,
+    });
+    const scene = openScene({ source, provider, rootScenePath: MAIN });
+    await whenFilesLoaded(scene);
+
+    await scene.getNode('.').set('texture', variant('null'));
+    const files = await whenFilesLoaded(scene);
+
+    expect(files.map(({ path, owners }) => ({ path, owners }))).toEqual([
+      { path: 'res://a.tres', owners: ['res://c.tres'] },
+      { path: 'res://b.tres', owners: [MAIN] },
+      { path: 'res://c.tres', owners: ['res://b.tres'] },
+      { path: 'res://d.png', owners: ['res://a.tres'] },
+    ]);
+  });
+
   it('gives the line Godot prints for a Resource() literal of a section', async () => {
     const source = `[gd_scene format=3]
 

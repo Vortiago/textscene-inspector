@@ -118,10 +118,14 @@ export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void
         entry = { type, isReading, isListed, owners: [], addresses: [] };
         entries.set(file, entry);
         queue.push(file);
+      } else if (isListed && !entry.isListed) {
+        // The queue may have passed a judged-only file, so the read that lists it queues it again.
+        entry.isListed = true;
+        queue.push(file);
       }
-      entry.isListed ||= isListed;
       entry.type ??= type;
-      if (owner !== null && !entry.owners.includes(owner)) entry.owners.push(owner);
+      // A judged-only read is one no value makes, so its owner does not read the file.
+      if (isListed && owner !== null && !entry.owners.includes(owner)) entry.owners.push(owner);
       if (path !== file && !entry.addresses.includes(path)) entry.addresses.push(path);
     };
     for (const { owner, reads, isReading, isJudgedOnly } of starts)

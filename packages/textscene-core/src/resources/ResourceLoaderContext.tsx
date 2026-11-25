@@ -1,4 +1,3 @@
-/** React context that exposes the per-panel ResourceLoader to descendants, provided by `<TscnPreviewShell>`. */
 import { createContext, useContext, useState, type ReactNode } from 'react';
 import type { ResourceLoader } from './ResourceLoader';
 import { createPendingLoads, type PendingLoads } from './pendingLoads';

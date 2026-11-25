@@ -151,9 +151,7 @@ export function useResource<T>(path: string, type: ResourceBusType): ResourceRes
     const onInvalidated = (eventPath: string) => {
       if (eventPath !== path) return;
       if (!isCurrent()) return;
-      // A reload's refetch is real work to a capture: the loader counts it, so
-      // isSceneComplete moves through the reload's window and the shell posts the
-      // states again. It releases on the next settled event of this path, or on unmount.
+      // The view counts a reload's refetch, released on this path's next settle or on unmount.
       if (pending) reloadPendingReleases.push(pending.begin());
       access.request(path);
     };

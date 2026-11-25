@@ -83,27 +83,26 @@ export function resourceFileReads(file: string, parsed: ParsedResource): FileRea
 
 /** A `.tscn`'s failing reads, from its text in file order. */
 export function sceneFailingReads(file: string, scene: TextSections): FailingReads {
-  const sections = { externalResources: scene.externalResources, subResources: scene.internalResources };
-  return failingFileReads(
-    file,
-    readsUpToStop(sections, scene.fileValues ?? [], scene.misplacedHeading ?? null)
-  );
+  return failingFileReads(file, sceneReadsToStop(scene));
 }
 
 /** A `.tres`'s failing reads, from its text in file order. */
 export function resourceFailingReads(file: string, parsed: ParsedResource): FailingReads {
   const sections = { externalResources: parsed.extResources, subResources: parsed.subResources };
-  return failingFileReads(
-    file,
-    readsUpToStop(sections, parsed.fileValues ?? [], parsed.misplacedHeading ?? null)
-  );
+  return failingFileReads(file, readsUpToStop(sections, parsed));
 }
 
 /** Each read the loader makes before its parse stops, in file order, with the value it sits in. */
 export function readsBeforeParseStop(scene: TextSections): readonly OrderedRead[] {
-  const sections = { externalResources: scene.externalResources, subResources: scene.internalResources };
-  const { ordered, stop } = readsUpToStop(sections, scene.fileValues ?? [], scene.misplacedHeading ?? null);
+  const { ordered, stop } = sceneReadsToStop(scene);
   return stop < 0 ? ordered : ordered.slice(0, stop);
+}
+
+function sceneReadsToStop(scene: TextSections): ReadsToStop {
+  return readsUpToStop(
+    { externalResources: scene.externalResources, subResources: scene.internalResources },
+    scene
+  );
 }
 
 function readsOf(values: readonly Values[]): ValueRead[][] {
@@ -151,13 +150,16 @@ interface ReadsToStop {
   readonly misplaced: MisplacedHeading | null;
 }
 
+/** What the scan records of a file's text as the loader parses it. */
+type ScannedValues = Pick<TscnScene, 'fileValues' | 'misplacedHeading'>;
+
 function readsUpToStop(
   sections: Sections,
-  values: readonly FileValue[],
-  misplaced: MisplacedHeading | null
+  { fileValues = [], misplacedHeading }: ScannedValues
 ): ReadsToStop {
+  const misplaced = misplacedHeading ?? null;
   // The loader reads a misplaced heading's own fields before it refuses the heading.
-  const read = misplaced ? values.filter((value) => value.line <= misplaced.line) : values;
+  const read = misplaced ? fileValues.filter((value) => value.line <= misplaced.line) : fileValues;
   const ordered = read.flatMap((value) => orderedReadsOf(sections.externalResources, value));
   const declaredAt = new Map<string, number>();
   sections.subResources.forEach(({ id }, at) => declaredAt.has(id) || declaredAt.set(id, at));
