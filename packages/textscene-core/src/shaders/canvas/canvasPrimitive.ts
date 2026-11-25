@@ -115,6 +115,8 @@ export function primitiveBatchObject(
   records: readonly ArrayBuffer[],
   pointCount: number
 ): PrimitiveObject {
+  if (draw.emulatesPoints && pointCount !== 1)
+    throw new Error(`expected a batch of one-point primitives for a points draw, got ${pointCount} points`);
   const geometry = primitiveBatchGeometry(records, pointCount);
   if (!draw.emulatesPoints)
     return primitiveObject(primitiveDraw(pointCount).primitive, geometry, draw.material);

@@ -2,8 +2,7 @@ import { attributesVariant } from '../../../../packages/textscene-core/src/shade
 import { primitiveDraw } from '../../../../packages/textscene-core/src/shaders/canvas/canvasPrimitive.ts';
 import { CANVAS_VARIANT_DEFINES } from '../../../../packages/textscene-core/src/shaders/canvas/transpileCanvas.ts';
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
-import { parse } from '../../../../packages/textscene-core/src/shaders/language/parse.ts';
-import { tokenize } from '../../../../packages/textscene-core/src/shaders/language/tokenizer.ts';
+import { parsedShader } from '../../../../packages/textscene-core/src/shaders/language/parseShader.ts';
 import { GENERAL_DEFINES } from '../../../../packages/textscene-core/src/shaders/template/generalDefines.ts';
 import {
   compileMaterial,
@@ -108,7 +107,8 @@ function drawnVariants(scene) {
 
 /** The defines of a scene's shader, Godot's default one included, as `transpileCanvasItem` compiles it. */
 function sceneMaterial(scene) {
-  const material = compileMaterial(parse(tokenize(scene.source, 'scene.gdshader')), MODE_TABLES.canvas_item);
+  const { tree } = parsedShader(scene.source, { file: 'scene.gdshader' });
+  const material = compileMaterial(tree, MODE_TABLES.canvas_item);
   return {
     custom: material.custom,
     hasUniforms: material.hasUniforms,

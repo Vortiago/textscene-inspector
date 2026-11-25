@@ -52,6 +52,12 @@ function checkedArrays(arrays: CanvasVertexArrays): CanvasVertexArrays {
     throw new Error(
       `expected 0, 1 or ${points.length} colours and 0 or ${points.length} UVs, got ${colors.length} and ${uvs.length}`
     );
+  arrays.customs?.forEach((lanes, custom) => {
+    if (lanes && lanes.length !== points.length * CUSTOM_LANES)
+      throw new Error(
+        `expected ${points.length * CUSTOM_LANES} lanes in CUSTOM${custom}, got ${lanes.length}`
+      );
+  });
   return arrays;
 }
 
@@ -62,6 +68,9 @@ export function attributesVariant(primitive: CanvasPrimitive): CanvasVariant {
 
 /** The custom arrays of a surface geometry that the template reads, CUSTOM0 first (`canvas.glsl:12-18`). */
 export const CANVAS_CUSTOM_ARRAYS = ['custom0', 'custom1'] as const;
+
+/** The lanes of one point of a custom array, as `ARRAY_CUSTOM_RGBA_FLOAT` holds them. */
+const CUSTOM_LANES = 4;
 
 /** The default vertex buffers of a missing array (`mesh_storage.cpp:86-157`): a custom array's is zero. */
 const DEFAULT_COLOR = [1, 1, 1, 1];
@@ -88,8 +97,8 @@ export function attributesGeometry(arrays: CanvasVertexArrays): THREE.BufferGeom
   const uvValues = uvs.length === count ? uvs.flatMap(({ x, y }) => [x, y]) : repeated(DEFAULT_UV, count);
   geometry.setAttribute('uv_attrib', floats(uvValues, 2));
   CANVAS_CUSTOM_ARRAYS.forEach((name, custom) => {
-    const values = arrays.customs?.[custom] ?? new Float32Array(count * 4);
-    geometry.setAttribute(`${name}_attrib`, new THREE.BufferAttribute(values, 4));
+    const values = arrays.customs?.[custom] ?? new Float32Array(count * CUSTOM_LANES);
+    geometry.setAttribute(`${name}_attrib`, new THREE.BufferAttribute(values, CUSTOM_LANES));
   });
   if (arrays.primitive === 'points')
     geometry.setAttribute(

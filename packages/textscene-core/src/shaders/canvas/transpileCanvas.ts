@@ -147,7 +147,7 @@ interface ItemProgram {
   readonly program: LinkedProgram;
   readonly shader: MaterialShader;
   readonly blend: MaterialBlendState;
-  /** Whether the shader reads `POINT_SIZE` (`renderer_canvas_render_rd.cpp:1826`). */
+  /** Whether the shader reads or writes `POINT_SIZE` (`renderer_canvas_render_rd.cpp:1826`). */
   readonly usesPointSize: boolean;
 }
 
@@ -231,13 +231,12 @@ function pointSizeWrites({ variant, points }: VariantPoints): WrittenBuiltIn[] {
 
 /** `gl_VertexIndex` and `gl_InstanceIndex` as Godot counts them, for an emulated point too. */
 function drawIndices({ variant, points }: VariantPoints): [string, Node][] {
-  const [vertex, instance] = (!points
-    ? [int(vertexIndex), int(instanceIndex)]
-    : variant === 'primitive_points'
-      ? [int(0), int(instanceIndex)]
-      : [int(attribute(VERTEX_ID_ATTRIBUTE, 'float')), int(0)]) as unknown as [Node, Node];
-  return [
-    ['gl_VertexIndex', vertex],
-    ['gl_InstanceIndex', instance],
+  const indices = (vertex: unknown, instance: unknown): [string, Node][] => [
+    ['gl_VertexIndex', vertex as Node],
+    ['gl_InstanceIndex', instance as Node],
   ];
+  if (!points) return indices(int(vertexIndex), int(instanceIndex));
+  // An emulated point is an instance: a primitive's point is its one vertex, a mesh's point its vertex id.
+  if (variant === 'primitive_points') return indices(int(0), int(instanceIndex));
+  return indices(int(attribute(VERTEX_ID_ATTRIBUTE, 'float')), int(0));
 }

@@ -90,6 +90,15 @@ describe('attributesGeometry', () => {
     ]);
   });
 
+  it('refuses a custom array of other than four lanes a point', () => {
+    const arrays = {
+      ...triangleArrayCommand([0, 1, 2], SQUARE.slice(0, 3), [], []),
+      customs: [undefined, new Float32Array(6)],
+    };
+
+    expect(() => attributesGeometry(arrays)).toThrow('expected 12 lanes in CUSTOM1, got 6');
+  });
+
   it('reads bones as unsigned integers and weights as floats, all zero', () => {
     const geometry = attributesGeometry(triangleArrayCommand([0, 1, 2], SQUARE.slice(0, 3), [], []));
 

@@ -156,6 +156,16 @@ describe('primitiveBatchObject', () => {
     expect([object.isMesh, [...object.geometry.index!.array]]).toEqual([true, [0, 1, 2, 3, 4, 5]]);
   });
 
+  it('refuses a points draw for a batch of primitives of more than one point', () => {
+    const draw = transpileCanvasItem('shader_type canvas_item;\nvoid vertex() { POINT_SIZE = 4.0; }\n').draw(
+      'primitive_points'
+    );
+
+    expect(() => primitiveBatchObject(draw, records, 3)).toThrow(
+      'expected a batch of one-point primitives for a points draw, got 3 points'
+    );
+  });
+
   it("draws three's points for a shader that leaves POINT_SIZE", () => {
     const draw = transpileCanvasItem(DEFAULT_CANVAS_SHADER).draw('primitive_points');
 

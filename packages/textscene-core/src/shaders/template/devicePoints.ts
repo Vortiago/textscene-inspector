@@ -1,6 +1,6 @@
 import { array, float, max, property, varying, vec2, vertexIndex } from 'three/tsl';
 import type { Node } from 'three/webgpu';
-import type { WrittenBuiltIn } from '../template/emitTemplate.js';
+import type { WrittenBuiltIn } from './emitTemplate.js';
 import type { Stacked, Vec2, Vec4 } from '../tslTypes.js';
 
 /** `point_coords` (`scene_forward_clustered.glsl:709`): the corner each of a point's 6 vertices takes. */
