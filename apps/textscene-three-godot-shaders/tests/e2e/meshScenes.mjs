@@ -1058,6 +1058,15 @@ export const MESH_SCENES = [
   attributeScene('spatial-tangent-made-up', 'TANGENT', 'TANGENT * 0.5 + 0.5', SPHERE_NO_TANGENTS),
   attributeScene('spatial-binormal-made-up', 'BINORMAL', 'BINORMAL * 0.5 + 0.5', SPHERE_NO_TANGENTS),
   attributeScene('spatial-uv', 'UV', 'vec3(UV, 0.0)'),
+  stageScene(
+    'spatial-material-uniforms',
+    {
+      declaration:
+        'uniform vec4 tint : source_color = vec4(0.5, 0.25, 0.75, 1.0);\nuniform float amount = 0.6;',
+      fragment: 'ALBEDO = tint.rgb * amount + vec3(UV, 0.0) * 0.3;',
+    },
+    ['spatial.fragment.UV']
+  ),
   attributeScene('spatial-uv2', 'UV2', 'vec3(UV2, 0.0)'),
   attributeScene('spatial-color', 'COLOR', 'COLOR.rgb'),
   { ...attributeScene('spatial-compressed', 'NORMAL', 'NORMAL * 0.5 + 0.5'), compressed: true },

@@ -19,7 +19,7 @@ export interface DevicePoints {
   expand(clip: Vec4, viewportSize: Node): void;
 }
 
-/** Whether a shader sizes its points: Godot emulates points only for a shader that names `POINT_SIZE`. */
+/** Whether a shader sizes its points, so the previewer emulates them: three's points are 1 px. */
 export function sizesPoints(builtInsNamed: ReadonlySet<string>): boolean {
   return builtInsNamed.has('POINT_SIZE');
 }

@@ -428,6 +428,29 @@ void fragment() {
 | --- | --- |
 | <img src="showcase/spatial-uv-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-uv-three.png" width="256" alt="Transpilation"> |
 
+## Showcase `spatial-material-uniforms`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+uniform vec4 tint : source_color = vec4(0.5, 0.25, 0.75, 1.0);
+uniform float amount = 0.6;
+
+void vertex() {
+	
+}
+
+void fragment() {
+	ALBEDO = tint.rgb * amount + vec3(UV, 0.0) * 0.3;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-material-uniforms-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-material-uniforms-three.png" width="256" alt="Transpilation"> |
+
 ## Showcase `spatial-uv2`
 
 Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
