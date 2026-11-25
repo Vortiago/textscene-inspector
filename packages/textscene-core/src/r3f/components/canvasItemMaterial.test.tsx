@@ -16,6 +16,7 @@ import {
 } from '../../resources/testing/createFakeResourceLoader';
 
 import { useSceneResources } from '../SceneResourcesContext';
+import { NO_MATERIAL } from '../../resources/materials/canvasitemmaterial/kind';
 import { useResolvedCanvasItemMaterial } from './canvasItemMaterial';
 import '../../resources/formats/binaryresource/index';
 import { CanvasItemMaterialBlendMode } from '../../godot/scene/canvasItemMaterial';
@@ -31,10 +32,23 @@ const SHADER_TRES = parseTresFile(`[gd_resource type="ShaderMaterial" format=3]
 [resource]
 `);
 
+const CANVAS_SHADER_TRES = parseTresFile(`[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+
+[sub_resource type="Shader" id="s"]
+code = "shader_type canvas_item;
+void fragment() { COLOR.r = 1.0; }
+"
+
+[resource]
+shader = SubResource("s")
+shader_parameter/tint = Color(1, 0, 0, 1)
+`);
+
 const SCENE_EXT: TscnExternalResource[] = [
   { id: 'm', type: 'Material', path: 'res://add.tres' },
   { id: 'bin', type: 'Material', path: 'res://add.res' },
   { id: 'shader', type: 'Material', path: 'res://shader.tres' },
+  { id: 'canvas-shader', type: 'Material', path: 'res://canvas-shader.tres' },
   { id: 'gone', type: 'Material', path: 'res://gone.tres' },
   { id: 'png', type: 'Material', path: 'res://add.png' },
 ];
@@ -58,6 +72,7 @@ function seededLoader(): FakeResourceLoader {
   const fake = createFakeResourceLoader();
   fake.resources.seed('res://add.tres', ADD_TRES);
   fake.resources.seed('res://shader.tres', SHADER_TRES);
+  fake.resources.seed('res://canvas-shader.tres', CANVAS_SHADER_TRES);
   fake.resources.seed('res://gone.tres', null);
   // The binary reader parses a `.res` to the ParsedResource a `.tres` gives.
   fake.resources.seed('res://add.res', ADD_TRES);
@@ -74,30 +89,43 @@ const nodeMaterial = (ref: string) =>
 
 describe('useResolvedCanvasItemMaterial', () => {
   it("reads a node's ExtResource material from its .tres", () => {
-    expect(nodeMaterial('ExtResource("m")')?.blendMode).toBe(CanvasItemMaterialBlendMode.ADD);
+    expect(nodeMaterial('ExtResource("m")').properties?.blendMode).toBe(CanvasItemMaterialBlendMode.ADD);
   });
 
   it("reads a node's SubResource material", () => {
-    expect(nodeMaterial('SubResource("sub")')?.blendMode).toBe(CanvasItemMaterialBlendMode.SUB);
+    expect(nodeMaterial('SubResource("sub")').properties?.blendMode).toBe(CanvasItemMaterialBlendMode.SUB);
   });
 
   it("reads a node's ExtResource material from its binary .res", () => {
-    expect(nodeMaterial('ExtResource("bin")')?.blendMode).toBe(CanvasItemMaterialBlendMode.ADD);
+    expect(nodeMaterial('ExtResource("bin")').properties?.blendMode).toBe(CanvasItemMaterialBlendMode.ADD);
   });
 
-  it('gives null for an ExtResource id the scene does not declare', () => {
-    expect(nodeMaterial('ExtResource("missing")')).toBeNull();
+  it('gives no material for an ExtResource id the scene does not declare', () => {
+    expect(nodeMaterial('ExtResource("missing")')).toEqual(NO_MATERIAL);
   });
 
-  it('gives null for a material file that failed to load', () => {
-    expect(nodeMaterial('ExtResource("gone")')).toBeNull();
+  it('gives no material for a material file that failed to load', () => {
+    expect(nodeMaterial('ExtResource("gone")')).toEqual(NO_MATERIAL);
   });
 
-  it('gives null for another material type, which draws with plain canvas blending', () => {
-    expect(nodeMaterial('ExtResource("shader")')).toBeNull();
+  it('gives no material for a ShaderMaterial with no shader, which draws with plain canvas blending', () => {
+    expect(nodeMaterial('ExtResource("shader")')).toEqual(NO_MATERIAL);
   });
 
-  it('gives null for a path no resource file has, such as an image', () => {
-    expect(nodeMaterial('ExtResource("png")')).toBeNull();
+  it('gives no material for a path no resource file has, such as an image', () => {
+    expect(nodeMaterial('ExtResource("png")')).toEqual(NO_MATERIAL);
+  });
+
+  it("gives a canvas_item ShaderMaterial's shader text and parameters", () => {
+    const { shader } = nodeMaterial('ExtResource("canvas-shader")');
+
+    expect([shader?.code, shader?.parameters]).toEqual([
+      'shader_type canvas_item;\nvoid fragment() { COLOR.r = 1.0; }\n',
+      { tint: 'Color(1, 0, 0, 1)' },
+    ]);
+  });
+
+  it('gives a canvas_item ShaderMaterial no CanvasItemMaterial properties', () => {
+    expect(nodeMaterial('ExtResource("canvas-shader")').properties).toBeNull();
   });
 });

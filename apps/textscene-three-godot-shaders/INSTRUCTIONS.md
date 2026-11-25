@@ -12,7 +12,7 @@ GLSL or WGSL operation itself, `lowered` with the name of the operations it writ
 probes run on WebGL 2. WebGPURenderer runs the same TSL nodes, and no probe runs there until the
 canvases draw on WebGPURenderer (#1788).
 
-1721 of 1889 instructions transpiled.
+1766 of 1889 instructions transpiled.
 
 ## data type
 
@@ -1671,32 +1671,32 @@ canvases draw on WebGPURenderer (#1788).
 | `spatial.light.METALLIC` | transpiled (`spatial-lit-light-function`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:221` |
 | `spatial.light.ROUGHNESS` | transpiled (`spatial-lit-light-function`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:222` |
 | `spatial.light.SCREEN_UV` | transpiled (`spatial-lit-light-function-space`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:226` |
-| `canvas_item.global.TIME` | open, #686 | | | `servers/rendering/shader_types.cpp:264` |
-| `canvas_item.constants.PI` | open, #686 | | | `servers/rendering/shader_types.cpp:265` |
-| `canvas_item.constants.TAU` | open, #686 | | | `servers/rendering/shader_types.cpp:266` |
-| `canvas_item.constants.E` | open, #686 | | | `servers/rendering/shader_types.cpp:267` |
-| `canvas_item.vertex.MODEL_MATRIX` | open, #686 | | | `servers/rendering/shader_types.cpp:274` |
-| `canvas_item.vertex.CANVAS_MATRIX` | open, #686 | | | `servers/rendering/shader_types.cpp:275` |
-| `canvas_item.vertex.SCREEN_MATRIX` | open, #686 | | | `servers/rendering/shader_types.cpp:276` |
-| `canvas_item.vertex.INSTANCE_CUSTOM` | open, #686 | | | `servers/rendering/shader_types.cpp:277` |
-| `canvas_item.vertex.INSTANCE_ID` | open, #686 | | | `servers/rendering/shader_types.cpp:278` |
-| `canvas_item.vertex.VERTEX_ID` | open, #686 | | | `servers/rendering/shader_types.cpp:279` |
-| `canvas_item.vertex.AT_LIGHT_PASS` | open, #686 | | | `servers/rendering/shader_types.cpp:280` |
-| `canvas_item.vertex.TEXTURE_PIXEL_SIZE` | open, #686 | | | `servers/rendering/shader_types.cpp:281` |
-| `canvas_item.vertex.CUSTOM0` | open, #686 | | | `servers/rendering/shader_types.cpp:282` |
-| `canvas_item.vertex.CUSTOM1` | open, #686 | | | `servers/rendering/shader_types.cpp:283` |
-| `canvas_item.fragment.FRAGCOORD` | open, #686 | | | `servers/rendering/shader_types.cpp:290` |
-| `canvas_item.fragment.UV` | open, #686 | | | `servers/rendering/shader_types.cpp:294` |
-| `canvas_item.fragment.TEXTURE` | open, #686 | | | `servers/rendering/shader_types.cpp:296` |
-| `canvas_item.fragment.TEXTURE_PIXEL_SIZE` | open, #686 | | | `servers/rendering/shader_types.cpp:297` |
-| `canvas_item.fragment.NORMAL_TEXTURE` | open, #686 | | | `servers/rendering/shader_types.cpp:298` |
-| `canvas_item.fragment.SPECULAR_SHININESS_TEXTURE` | open, #686 | | | `servers/rendering/shader_types.cpp:299` |
-| `canvas_item.fragment.SPECULAR_SHININESS` | open, #686 | | | `servers/rendering/shader_types.cpp:300` |
-| `canvas_item.fragment.SCREEN_UV` | open, #686 | | | `servers/rendering/shader_types.cpp:301` |
-| `canvas_item.fragment.REGION_RECT` | open, #686 | | | `servers/rendering/shader_types.cpp:302` |
-| `canvas_item.fragment.SCREEN_PIXEL_SIZE` | open, #686 | | | `servers/rendering/shader_types.cpp:303` |
+| `canvas_item.global.TIME` | transpiled (`canvas-shader-time`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:264` |
+| `canvas_item.constants.PI` | transpiled (`canvas-shader-constants`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:265` |
+| `canvas_item.constants.TAU` | transpiled (`canvas-shader-constants`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:266` |
+| `canvas_item.constants.E` | transpiled (`canvas-shader-constants`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:267` |
+| `canvas_item.vertex.MODEL_MATRIX` | transpiled (`canvas-shader-vertex-matrices`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:274` |
+| `canvas_item.vertex.CANVAS_MATRIX` | transpiled (`canvas-shader-vertex-matrices`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:275` |
+| `canvas_item.vertex.SCREEN_MATRIX` | transpiled (`canvas-shader-vertex-matrices`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:276` |
+| `canvas_item.vertex.INSTANCE_CUSTOM` | transpiled (`canvas-shader-vertex-ids`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:277` |
+| `canvas_item.vertex.INSTANCE_ID` | transpiled (`canvas-shader-vertex-ids`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:278` |
+| `canvas_item.vertex.VERTEX_ID` | transpiled (`canvas-shader-vertex-ids`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:279` |
+| `canvas_item.vertex.AT_LIGHT_PASS` | transpiled (`canvas-shader-at-light-pass`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:280` |
+| `canvas_item.vertex.TEXTURE_PIXEL_SIZE` | transpiled (`canvas-shader-vertex-ids`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:281` |
+| `canvas_item.vertex.CUSTOM0` | transpiled (`canvas-shader-vertex-ids`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:282` |
+| `canvas_item.vertex.CUSTOM1` | transpiled (`canvas-shader-vertex-ids`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:283` |
+| `canvas_item.fragment.FRAGCOORD` | transpiled (`canvas-shader-fragcoord`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:290` |
+| `canvas_item.fragment.UV` | transpiled (`canvas-shader-fragment-uv`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:294` |
+| `canvas_item.fragment.TEXTURE` | transpiled (`canvas-shader-fragment-texture`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:296` |
+| `canvas_item.fragment.TEXTURE_PIXEL_SIZE` | transpiled (`canvas-shader-fragment-texture`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:297` |
+| `canvas_item.fragment.NORMAL_TEXTURE` | transpiled (`canvas-shader-normal-specular-textures`, `canvas-shader-canvas-texture-maps`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:298` |
+| `canvas_item.fragment.SPECULAR_SHININESS_TEXTURE` | transpiled (`canvas-shader-normal-specular-textures`, `canvas-shader-canvas-texture-maps`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:299` |
+| `canvas_item.fragment.SPECULAR_SHININESS` | transpiled (`canvas-shader-normal-specular-textures`, `canvas-shader-canvas-texture-maps`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:300` |
+| `canvas_item.fragment.SCREEN_UV` | transpiled (`canvas-shader-screen-uv`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:301` |
+| `canvas_item.fragment.REGION_RECT` | transpiled (`canvas-shader-region-rect`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:302` |
+| `canvas_item.fragment.SCREEN_PIXEL_SIZE` | transpiled (`canvas-shader-screen-uv`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:303` |
 | `canvas_item.fragment.POINT_COORD` | open, #686 | | | `servers/rendering/shader_types.cpp:304` |
-| `canvas_item.fragment.AT_LIGHT_PASS` | open, #686 | | | `servers/rendering/shader_types.cpp:305` |
+| `canvas_item.fragment.AT_LIGHT_PASS` | transpiled (`canvas-shader-at-light-pass`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:305` |
 | `canvas_item.light.FRAGCOORD` | open, #686 | | | `servers/rendering/shader_types.cpp:332` |
 | `canvas_item.light.NORMAL` | open, #686 | | | `servers/rendering/shader_types.cpp:333` |
 | `canvas_item.light.COLOR` | open, #686 | | | `servers/rendering/shader_types.cpp:334` |
@@ -1855,17 +1855,17 @@ canvases draw on WebGPURenderer (#1788).
 | `spatial.light.DIFFUSE_LIGHT` | transpiled (`spatial-lit-light-function`, `spatial-lit-light-function-directional`, `spatial-lit-light-function-uv2`, `spatial-lit-light-function-space`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:223` |
 | `spatial.light.SPECULAR_LIGHT` | transpiled (`spatial-lit-light-function`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:224` |
 | `spatial.light.ALPHA` | transpiled (`spatial-lit-light-function-backlight-alpha`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:225` |
-| `canvas_item.vertex.VERTEX` | open, #686 | | | `servers/rendering/shader_types.cpp:269` |
-| `canvas_item.vertex.UV` | open, #686 | | | `servers/rendering/shader_types.cpp:270` |
-| `canvas_item.vertex.COLOR` | open, #686 | | | `servers/rendering/shader_types.cpp:271` |
+| `canvas_item.vertex.VERTEX` | transpiled (`canvas-shader-vertex-moved`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:269` |
+| `canvas_item.vertex.UV` | transpiled (`canvas-shader-vertex-moved`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:270` |
+| `canvas_item.vertex.COLOR` | transpiled (`canvas-shader-vertex-moved`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:271` |
 | `canvas_item.vertex.POINT_SIZE` | open, #686 | | | `servers/rendering/shader_types.cpp:272` |
-| `canvas_item.fragment.VERTEX` | open, #686 | | | `servers/rendering/shader_types.cpp:287` |
-| `canvas_item.fragment.SHADOW_VERTEX` | open, #686 | | | `servers/rendering/shader_types.cpp:288` |
-| `canvas_item.fragment.LIGHT_VERTEX` | open, #686 | | | `servers/rendering/shader_types.cpp:289` |
-| `canvas_item.fragment.NORMAL` | open, #686 | | | `servers/rendering/shader_types.cpp:291` |
-| `canvas_item.fragment.NORMAL_MAP` | open, #686 | | | `servers/rendering/shader_types.cpp:292` |
-| `canvas_item.fragment.NORMAL_MAP_DEPTH` | open, #686 | | | `servers/rendering/shader_types.cpp:293` |
-| `canvas_item.fragment.COLOR` | open, #686 | | | `servers/rendering/shader_types.cpp:295` |
+| `canvas_item.fragment.VERTEX` | transpiled (`canvas-shader-fragment-vertex`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:287` |
+| `canvas_item.fragment.SHADOW_VERTEX` | transpiled (`canvas-shader-light-vertex`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:288` |
+| `canvas_item.fragment.LIGHT_VERTEX` | transpiled (`canvas-shader-light-vertex`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:289` |
+| `canvas_item.fragment.NORMAL` | transpiled (`canvas-shader-normal-map`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:291` |
+| `canvas_item.fragment.NORMAL_MAP` | transpiled (`canvas-shader-normal-map`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:292` |
+| `canvas_item.fragment.NORMAL_MAP_DEPTH` | transpiled (`canvas-shader-normal-map`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:293` |
+| `canvas_item.fragment.COLOR` | transpiled (`canvas-shader-fragment-uv`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:295` |
 | `canvas_item.light.LIGHT` | open, #686 | | | `servers/rendering/shader_types.cpp:343` |
 | `canvas_item.light.SHADOW_MODULATE` | open, #686 | | | `servers/rendering/shader_types.cpp:344` |
 | `particles.start.COLOR` | open, #1726 | | | `servers/rendering/shader_types.cpp:368` |
@@ -1956,16 +1956,16 @@ canvases draw on WebGPURenderer (#1788).
 | `spatial render_mode debug_shadow_splits` | open, #1453 | | | `servers/rendering/shader_types.cpp:253` |
 | `spatial render_mode fog_disabled` | transpiled (`spatial-fog-disabled`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:254` |
 | `spatial render_mode specular_occlusion_disabled` | open, #1453 | | | `servers/rendering/shader_types.cpp:255` |
-| `canvas_item render_mode skip_vertex_transform` | open, #686 | | | `servers/rendering/shader_types.cpp:354` |
-| `canvas_item render_mode blend_mix` | open, #686 | | | `servers/rendering/shader_types.cpp:355` |
-| `canvas_item render_mode blend_add` | open, #686 | | | `servers/rendering/shader_types.cpp:355` |
-| `canvas_item render_mode blend_sub` | open, #686 | | | `servers/rendering/shader_types.cpp:355` |
-| `canvas_item render_mode blend_mul` | open, #686 | | | `servers/rendering/shader_types.cpp:355` |
-| `canvas_item render_mode blend_premul_alpha` | open, #686 | | | `servers/rendering/shader_types.cpp:355` |
-| `canvas_item render_mode blend_disabled` | open, #686 | | | `servers/rendering/shader_types.cpp:355` |
-| `canvas_item render_mode unshaded` | open, #686 | | | `servers/rendering/shader_types.cpp:356` |
-| `canvas_item render_mode light_only` | open, #686 | | | `servers/rendering/shader_types.cpp:357` |
-| `canvas_item render_mode world_vertex_coords` | open, #686 | | | `servers/rendering/shader_types.cpp:358` |
+| `canvas_item render_mode skip_vertex_transform` | transpiled (`canvas-shader-skip-vertex-transform`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:354` |
+| `canvas_item render_mode blend_mix` | transpiled (`canvas-shader-blend-mix`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:355` |
+| `canvas_item render_mode blend_add` | transpiled (`canvas-shader-blend-add`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:355` |
+| `canvas_item render_mode blend_sub` | transpiled (`canvas-shader-blend-sub`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:355` |
+| `canvas_item render_mode blend_mul` | transpiled (`canvas-shader-blend-mul`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:355` |
+| `canvas_item render_mode blend_premul_alpha` | transpiled (`canvas-shader-blend-premul-alpha`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:355` |
+| `canvas_item render_mode blend_disabled` | transpiled (`canvas-shader-blend-disabled`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:355` |
+| `canvas_item render_mode unshaded` | transpiled (`canvas-shader-unshaded`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:356` |
+| `canvas_item render_mode light_only` | transpiled (`canvas-shader-light-only`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:357` |
+| `canvas_item render_mode world_vertex_coords` | transpiled (`canvas-shader-world-vertex-coords`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:358` |
 | `particles render_mode collision_use_scale` | open, #1726 | | | `servers/rendering/shader_types.cpp:448` |
 | `particles render_mode disable_force` | open, #1726 | | | `servers/rendering/shader_types.cpp:449` |
 | `particles render_mode disable_velocity` | open, #1726 | | | `servers/rendering/shader_types.cpp:450` |

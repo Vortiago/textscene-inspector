@@ -92,7 +92,9 @@ export function transpileParsedSky(
   pass: SkyPass = 'background'
 ): TranspiledSky {
   const program = (resolution: SkyResolution) =>
-    linkedProgram(parsed, file, VERSION_TEMPLATES[pass][resolution], defaultSamplers(sampling));
+    linkedProgram(parsed, file, VERSION_TEMPLATES[pass][resolution], {
+      sampling: defaultSamplers(sampling),
+    });
   const full = program('full');
   const { parameters, parameterValues } = full;
   // Each pass reads the full pass's parameters, so one `set_shader_parameter` reaches all three.

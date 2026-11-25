@@ -1,0 +1,17 @@
+shader_type canvas_item;
+
+uniform float min_value = (-1.0);
+
+uniform float max_value = 1.0;
+
+void fragment() {
+	vec4 color = texture(TEXTURE, UV);
+	float gray = color.x;
+	if ((gray < min_value)) {
+		(color = vec4(0.0, 0.0, 0.0, 1.0));
+	}
+	else if ((gray > max_value)) {
+		(color = vec4(1.0, 1.0, 1.0, 1.0));
+	}
+	(COLOR = color);
+}

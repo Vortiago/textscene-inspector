@@ -27,7 +27,7 @@ export interface TranspiledUniform {
 /** What every uniform of a shader takes from the material and the project. */
 export interface BindingContext {
   /** Godot's `p_use_linear_color`. */
-  readonly useLinearColor: boolean;
+  readonly usesLinearColors: boolean;
   readonly sampling: ProjectSampling;
 }
 
@@ -38,7 +38,7 @@ class UniformBinding implements TranspiledUniform {
   constructor(
     readonly declaration: UniformNode,
     private readonly node: UniformValue,
-    private readonly useLinearColor: boolean
+    private readonly usesLinearColors: boolean
   ) {
     this.set(NIL);
   }
@@ -51,7 +51,7 @@ class UniformBinding implements TranspiledUniform {
   set(value: ParameterValue | undefined): void {
     if (isSamplerValue(value))
       throw new Error(`expected a Variant for ${this.declaration.name}, got a texture`);
-    this.node.write(materialLanes(this.declaration, value ?? NIL, this.useLinearColor));
+    this.node.write(materialLanes(this.declaration, value ?? NIL, this.usesLinearColors));
   }
 }
 
@@ -96,6 +96,6 @@ export function bindParameters(
   const bindingOf = (uniform: UniformNode) =>
     isSamplerType(uniform.type)
       ? new SamplerBinding(uniform, samplerContext)
-      : new UniformBinding(uniform, nodeOf.get(uniform)!, context.useLinearColor);
+      : new UniformBinding(uniform, nodeOf.get(uniform)!, context.usesLinearColors);
   return new Map(shader.uniforms.map((uniform) => [uniform.name, bindingOf(uniform)]));
 }

@@ -6,7 +6,7 @@
 import { useState, type ReactNode } from 'react';
 import { useFrame } from '@react-three/fiber';
 import {
-  CanvasFrameStepsContext,
+  CanvasFrameStepsProvider,
   createCanvasFrameSteps,
   runCanvasFrame,
 } from '../components/Canvas2DStage/canvasFrameSequence';
@@ -16,5 +16,5 @@ const DRAWS_NOTHING = () => {};
 export function CanvasFrameDriver({ children }: { children: ReactNode }) {
   const [steps] = useState(createCanvasFrameSteps);
   useFrame(() => runCanvasFrame(steps, DRAWS_NOTHING));
-  return <CanvasFrameStepsContext.Provider value={steps}>{children}</CanvasFrameStepsContext.Provider>;
+  return <CanvasFrameStepsProvider steps={steps}>{children}</CanvasFrameStepsProvider>;
 }

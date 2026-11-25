@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { clamp, type Rgba } from '../../godot/math/math.js';
+import type { TextureFilterWord } from '../../godot/rendering/materials/textureFilter.js';
 import { defaultTexture } from '../uniforms/defaultTextures.js';
 import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
 import { applySamplerState, GODOT_SAMPLING, type ProjectSampling } from '../uniforms/samplerState.js';
@@ -13,13 +15,7 @@ export interface TexelSize {
 }
 
 /** `CanvasItem.texture_filter` past `DEFAULT`, which the item resolves to the project's filter. */
-export type CanvasTextureFilter =
-  | 'nearest'
-  | 'linear'
-  | 'nearest_mipmap'
-  | 'linear_mipmap'
-  | 'nearest_mipmap_anisotropic'
-  | 'linear_mipmap_anisotropic';
+export type CanvasTextureFilter = TextureFilterWord;
 
 /** `CanvasItem.texture_repeat` past `DEFAULT`. */
 export type CanvasTextureRepeat = 'disabled' | 'enabled' | 'mirror';
@@ -45,14 +41,50 @@ const settingsOf = ({ filter, repeat }: CanvasTextureState): SamplerSettings => 
   repeat: REPEAT_WORDS[repeat],
 });
 
+/** A CanvasTexture's maps, which a batch binds beside its diffuse (`texture_storage.cpp:761-786`). */
+export interface CanvasMaps {
+  /** Null for none: the batch binds Godot's flat default normal map. */
+  readonly normal: THREE.Texture | null;
+  /** Null for none: the batch binds white. */
+  readonly specular: THREE.Texture | null;
+  /** `specular_color` with `specular_shininess` as its alpha. */
+  readonly specularShininess: Rgba;
+}
+
+/** The maps of Godot's default canvas texture, and of a texture that is no CanvasTexture. */
+export const DEFAULT_CANVAS_MAPS: CanvasMaps = Object.freeze({
+  normal: null,
+  specular: null,
+  specularShininess: Object.freeze({ r: 1, g: 1, b: 1, a: 1 }),
+});
+
 /** What the push constants of a rect batch read from its texture (`renderer_canvas_render_rd.h:554-565`). */
 interface BatchTexture {
   readonly width: number;
   readonly height: number;
+  readonly maps: CanvasMaps;
 }
 
+/** `renderer_canvas_render_rd.h:83-84`. */
+const DEFAULT_NORMAL_MAP_USED = 1 << 9;
+const DEFAULT_SPECULAR_MAP_USED = 1 << 10;
+
+/** A shininess at or over this leaves the default specular map off (`renderer_canvas_render_rd.cpp:3337`). */
+const SPECULAR_OFF_SHININESS = 0.999;
+
+/** One channel as `uint8_t(CLAMP(x * 255.0, 0.0, 255.0))` casts it: truncated. */
+const unorm8 = (channel: number) => Math.trunc(clamp(channel * 255, 0, 255));
+
+/** `renderer_canvas_render_rd.cpp:3345-3349`, unsigned as `unpackUnorm4x8` reads it. */
+const packedSpecular = ({ r, g, b, a }: Rgba) =>
+  ((unorm8(a) << 24) | (unorm8(b) << 16) | (unorm8(g) << 8) | unorm8(r)) >>> 0;
+
+const batchFlagsOf = ({ normal, specularShininess }: CanvasMaps) =>
+  (specularShininess.a < SPECULAR_OFF_SHININESS ? DEFAULT_SPECULAR_MAP_USED : 0) |
+  (normal ? DEFAULT_NORMAL_MAP_USED : 0);
+
 /** The texel size reads the image's size, so a texture whose image has not loaded cannot draw. */
-function sizeOf(texture: THREE.Texture): BatchTexture {
+function sizeOf(texture: THREE.Texture): { width: number; height: number } {
   const image = texture.image as Partial<BatchTexture> | null;
   if (!image?.width || !image.height)
     throw new Error(
@@ -62,28 +94,30 @@ function sizeOf(texture: THREE.Texture): BatchTexture {
 }
 
 /** The default canvas texture has no diffuse map, so its size is 1 by 1 (`texture_storage.cpp:751-752`). */
-const DEFAULT_TEXTURE_SIZE: BatchTexture = { width: 1, height: 1 };
+const DEFAULT_TEXTURE_SIZE = { width: 1, height: 1 };
 
 export const DEFAULT_TEXEL_SIZE: TexelSize = {
   x: 1 / DEFAULT_TEXTURE_SIZE.width,
   y: 1 / DEFAULT_TEXTURE_SIZE.height,
 };
 
-/** The members of `Params` a rect batch writes from its texture and the default canvas texture's maps. */
+/** The members of `Params` a rect batch writes from its texture and its CanvasTexture's maps. */
 const TEXTURE_BINDINGS: readonly Binding<BatchTexture>[] = [
   {
     uniform: 'params.color_texture_pixel_size',
     godot: 'renderer_canvas_render_rd.cpp:3351',
     value: ({ width, height }) => new THREE.Vector2(1 / width, 1 / height),
   },
-  // The default canvas texture's specular colour is white, packed as `unpackUnorm4x8` reads it.
   {
     uniform: 'params.specular_shininess',
     godot: 'renderer_canvas_render_rd.cpp:3345-3349',
-    value: () => 0xffffffff,
+    value: ({ maps }) => packedSpecular(maps.specularShininess),
   },
-  // It has no normal map and an opaque specular colour, so it sets no default map flag.
-  { uniform: 'params.batch_flags', godot: 'renderer_canvas_render_rd.cpp:3337-3343', value: () => 0 },
+  {
+    uniform: 'params.batch_flags',
+    godot: 'renderer_canvas_render_rd.cpp:3337-3343',
+    value: ({ maps }) => batchFlagsOf(maps),
+  },
 ];
 
 /** A rect batch's texture with its item's sampler (`renderer_canvas_render_rd.cpp:3006-3019, 3320-3351`). */
@@ -96,19 +130,29 @@ export class CanvasTextureBinding {
   constructor(
     private readonly draw: CanvasDraw,
     private readonly sampling: ProjectSampling = GODOT_SAMPLING
-  ) {
-    this.setTexture('normal_texture', this.normal);
-    this.setTexture('specular_texture', this.white);
-  }
+  ) {}
 
-  /** Binds `texture`, or Godot's default canvas texture, white, for a command with none. */
-  bind(texture: THREE.Texture | undefined, state: CanvasTextureState): TexelSize | undefined {
-    const key = stateKey(state);
-    const bound = texture ? this.copiesOf(key, state).copyOf(texture) : this.white;
-    this.setTexture('color_texture', bound);
-    const size = texture ? sizeOf(bound) : DEFAULT_TEXTURE_SIZE;
-    writeBindings(TEXTURE_BINDINGS, this.draw.uniforms, size);
-    for (const [held, copies] of this.copies) copies.release(held === key ? [bound] : []);
+  /** Binds `texture`, or white for none, and `maps` raw with its sampler (`texture_storage.cpp:767, 780`). */
+  bind(
+    texture: THREE.Texture | undefined,
+    state: CanvasTextureState,
+    maps: CanvasMaps = DEFAULT_CANVAS_MAPS
+  ): TexelSize | undefined {
+    const kept = new Map<TextureCopies, THREE.Texture[]>();
+    const copyOf = (source: THREE.Texture, copyState: CanvasTextureState) => {
+      const copies = this.copiesOf(copyState);
+      const copy = copies.copyOf(source);
+      kept.set(copies, [...(kept.get(copies) ?? []), copy]);
+      return copy;
+    };
+    const raw = { ...state, usesLinearColors: false };
+    const color = texture ? copyOf(texture, state) : this.white;
+    this.setTexture('color_texture', color);
+    this.setTexture('normal_texture', maps.normal ? copyOf(maps.normal, raw) : this.normal);
+    this.setTexture('specular_texture', maps.specular ? copyOf(maps.specular, raw) : this.white);
+    const size = texture ? sizeOf(color) : DEFAULT_TEXTURE_SIZE;
+    writeBindings(TEXTURE_BINDINGS, this.draw.uniforms, { ...size, maps });
+    for (const copies of this.copies.values()) copies.release(kept.get(copies) ?? []);
     // Nothing, not the default's size: a record with no texture reads the whole default texture.
     return texture ? { x: 1 / size.width, y: 1 / size.height } : undefined;
   }
@@ -120,7 +164,8 @@ export class CanvasTextureBinding {
     this.normal.dispose();
   }
 
-  private copiesOf(key: string, state: CanvasTextureState): TextureCopies {
+  private copiesOf(state: CanvasTextureState): TextureCopies {
+    const key = stateKey(state);
     const held = this.copies.get(key);
     if (held) return held;
     const settings = settingsOf(state);

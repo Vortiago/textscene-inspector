@@ -145,6 +145,8 @@ export function offTagMounts(source: string): OffTagMount[] {
  * that stops matching fails the staleness check below.
  */
 const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
+  'packages/textscene-core/src/r3f/canvasShader/CanvasShaderSlot.tsx':
+    "the translated material of a user's canvas_item shader: memoised on the shader text and the project options, disposed on replacement, with its parameters written to its uniforms",
   'packages/textscene-core/src/r3f/spatialShader/SpatialShaderSlot.tsx':
     "the translated material of a user's spatial shader: memoised on the shader text and the project options, disposed on replacement, with its parameters written to its uniforms",
   'packages/textscene-core/src/nodes/2d/camera2d/Component.tsx':
@@ -294,6 +296,8 @@ const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
  * and separate from both lists above for the same reason.
  */
 const CONSTRUCTED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
+  'packages/textscene-core/src/r3f/canvasShader/canvasShaderDraw.ts':
+    "the rect of a user's canvas_item shader: built once per material and texture, mounted as a primitive, and disposed on replacement",
   'packages/textscene-core/src/r3f/gameView/presentRootTarget.ts':
     'the present quad: built once per renderer and drawn outside React, so the material never passes through it',
   'packages/textscene-core/src/shaders/pipeline/opaqueSentinel.ts':

@@ -21,6 +21,7 @@ function asUncentredSprite(
     flip_h: false,
     flip_v: false,
     region_enabled: false,
+    region_filter_clip_enabled: false,
     hframes: 1,
     vframes: 1,
     frame: 0,

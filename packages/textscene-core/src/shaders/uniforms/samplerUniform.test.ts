@@ -19,11 +19,11 @@ import { GODOT_SAMPLING } from './samplerState.js';
 import { SAMPLER_DEFAULTS } from './samplerTextures.js';
 import { SamplerBinding } from './samplerUniform.js';
 
-const bindingOf = (declaration: string, useLinearColor = false) =>
+const bindingOf = (declaration: string, usesLinearColors = false) =>
   new SamplerBinding(treeOf(declaration).uniforms[0]!, {
     defaults: SAMPLER_DEFAULTS.spatial!,
     sampling: GODOT_SAMPLING,
-    useLinearColor,
+    usesLinearColors,
   });
 
 const textureOf = (binding: SamplerBinding): Texture => (binding.value as TextureNode).value;

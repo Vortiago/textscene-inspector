@@ -18,6 +18,11 @@ import { CanvasModulateContext, useCanvasModulate } from '../canvasModulate';
 import type { Rgba } from '../../godot/math/math';
 import { OccluderPolygon2DCullMode } from '../../godot/scene/lightOccluder2d';
 import { canvasColorSpaceOf } from '../canvasColorSpace';
+import {
+  CanvasFrameStepsProvider,
+  createCanvasFrameSteps,
+  useRecordWriter,
+} from '../components/Canvas2DStage/canvasFrameSequence';
 
 const WHITE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 const NIGHT: Rgba = { r: 0.2, g: 0.3, b: 0.6, a: 1 };
@@ -106,5 +111,22 @@ describe('World2DLightingBoundary', () => {
       </CanvasModulateContext.Provider>
     );
     expect(seen).toEqual(WHITE);
+  });
+
+  it('keeps the record writer of an item inside on the canvas that draws it', async () => {
+    const steps = createCanvasFrameSteps();
+    const write = () => {};
+    function Writer() {
+      useRecordWriter(write);
+      return null;
+    }
+    await ReactThreeTestRenderer.create(
+      <CanvasFrameStepsProvider steps={steps}>
+        <World2DLightingBoundary space={canvasColorSpaceOf(false)} canvasModulate={WHITE}>
+          <Writer />
+        </World2DLightingBoundary>
+      </CanvasFrameStepsProvider>
+    );
+    expect([...steps.recordWriters]).toEqual([write]);
   });
 });

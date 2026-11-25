@@ -1,0 +1,87 @@
+shader_type canvas_item;
+
+render_mode unshaded;
+
+uniform float log2_min = (-18.0);
+
+uniform float log2_max = 5.0;
+
+uniform bool clip_to_max = false;
+
+uniform float max_value = 10.0;
+
+void fragment() {
+	vec3 color;
+	float top_bar = 5.000000074505806e-2;
+	float log2_value = ((UV.x * (log2_max - log2_min)) + log2_min);
+	float scale = pow(2.0, log2_value);
+	if ((UV.y >= top_bar)) {
+		float padding = 4.999999888241291e-3;
+		float y = (((UV.y - top_bar) - padding) / ((1.0 - top_bar) - (padding * 2.0)));
+		(y = clamp(y, 0.0, 1.0));
+		float segments = (1.0 / 6.0);
+		vec3 col = vec3(0.0, 0.0, 0.0);
+		if ((y < segments)) {
+			(col.r = 1.0);
+			(col.g = (y / segments));
+			(col.b = 0.0);
+		}
+		else if ((y < (segments * 2.0))) {
+			(col.r = ((y - (segments * 2.0)) / -(segments)));
+			(col.g = 1.0);
+			(col.b = 0.0);
+		}
+		else if ((y < (segments * 3.0))) {
+			(col.r = 0.0);
+			(col.g = 1.0);
+			(col.b = ((y - (segments * 2.0)) / segments));
+		}
+		else if ((y < (segments * 4.0))) {
+			(col.r = 0.0);
+			(col.g = ((y - (segments * 4.0)) / -(segments)));
+			(col.b = 1.0);
+		}
+		else if ((y < (segments * 5.0))) {
+			(col.r = ((y - (segments * 4.0)) / segments));
+			(col.g = 0.0);
+			(col.b = 1.0);
+		}
+		else {
+			(col.r = 1.0);
+			(col.g = 0.0);
+			(col.b = ((y - (segments * 6.0)) / -(segments)));
+		}
+		(color = (col * scale));
+	}
+	else {
+		(color = (vec3(1.0, 1.0, 1.0) * scale));
+		if ((UV.y < 9.999999776482582e-3)) {
+			float max_log2 = log2(max_value);
+			float scale_log2 = log2(scale);
+			float mark_size = 2.9999999329447746e-2;
+			if (((scale_log2 > (max_log2 - mark_size)) && (scale_log2 < (max_log2 + mark_size)))) {
+				(color = vec3(0.0, 0.0, 0.0));
+			}
+		}
+		else if ((UV.y > 2.9999999329447746e-2)) {
+			float tick_col = ((scale > 1.8400000035762787e-1) ? 0.0 : 1.0);
+			while ((scale >= 1.0)) {
+				(scale /= 10.0);
+			}
+			while ((scale < 1.0000000149011612e-1)) {
+				(scale *= 10.0);
+			}
+			float tick_threshold = (scale * 1.9999999552965164e-2);
+			if (((((scale > (1.0 - tick_threshold)) && (scale < (1.0 + tick_threshold))) || ((scale > (0.0 - tick_threshold)) && (scale < (0.0 + tick_threshold)))) || ((scale > (1.0000000149011612e-1 - tick_threshold)) && (scale < (1.0000000149011612e-1 + tick_threshold))))) {
+				(color = vec3(tick_col));
+			}
+			else if (((UV.y > 3.999999910593033e-2) && (((((((((scale > (8.999999761581421e-1 - tick_threshold)) && (scale < (8.999999761581421e-1 + tick_threshold))) || ((scale > (8.00000011920929e-1 - tick_threshold)) && (scale < (8.00000011920929e-1 + tick_threshold)))) || ((scale > (6.99999988079071e-1 - tick_threshold)) && (scale < (6.99999988079071e-1 + tick_threshold)))) || ((scale > (6.000000238418579e-1 - tick_threshold)) && (scale < (6.000000238418579e-1 + tick_threshold)))) || ((scale > (5.0e-1 - tick_threshold)) && (scale < (5.0e-1 + tick_threshold)))) || ((scale > (4.000000059604645e-1 - tick_threshold)) && (scale < (4.000000059604645e-1 + tick_threshold)))) || ((scale > (3.0000001192092896e-1 - tick_threshold)) && (scale < (3.0000001192092896e-1 + tick_threshold)))) || ((scale > (2.0000000298023224e-1 - tick_threshold)) && (scale < (2.0000000298023224e-1 + tick_threshold)))))) {
+				(color = vec3(tick_col));
+			}
+		}
+	}
+	if (clip_to_max) {
+		(color = min(color, max_value));
+	}
+	(COLOR = vec4(color.rgb, 1.0));
+}

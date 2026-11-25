@@ -9,7 +9,7 @@ import { bindParameters } from './transpiledUniform.js';
 import { wordsOf } from './uniformNodes.testkit.js';
 
 const parametersOf = (source: string) =>
-  bindParameters(treeOf(source), { useLinearColor: false, sampling: GODOT_SAMPLING });
+  bindParameters(treeOf(source), { usesLinearColors: false, sampling: GODOT_SAMPLING });
 
 const sampledTexture = (source: string) => {
   const binding = parametersOf(source).get('s')!;

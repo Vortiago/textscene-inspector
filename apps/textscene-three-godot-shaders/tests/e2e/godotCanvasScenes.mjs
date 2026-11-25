@@ -1,3 +1,4 @@
+import { DEFAULT_CANVAS } from './canvasScenes.mjs';
 import { parseViewportOutput, viewportProjectFiles, viewportScript } from './godotViewports.mjs';
 
 const LINE_PREFIX = 'CANVAS ';
@@ -37,6 +38,19 @@ func texture_of(texture: Dictionary) -> ImageTexture:
 		bytes.append_array(PackedByteArray([int(texel[0]), int(texel[1]), int(texel[2]), int(texel[3])]))
 	var image := Image.create_from_data(int(texture.width), int(texture.height), false, Image.FORMAT_RGBA8, bytes)
 	return ImageTexture.create_from_image(image)
+
+func drawn_texture(scene: Dictionary) -> Texture2D:
+	var diffuse := texture_of(scene.texture)
+	if not scene.has("maps"):
+		return diffuse
+	var maps: Dictionary = scene.maps
+	var canvas_texture := CanvasTexture.new()
+	canvas_texture.diffuse_texture = diffuse
+	canvas_texture.normal_texture = texture_of(maps.normal)
+	canvas_texture.specular_texture = texture_of(maps.specular)
+	canvas_texture.specular_color = color4(maps.specularColor)
+	canvas_texture.specular_shininess = maps.shininess
+	return canvas_texture
 
 func draw_rects(item: Node2D, texture: Texture2D, rects: Array) -> void:
 	for each in rects:
@@ -107,7 +121,7 @@ func canvas_item_of(scene: Dictionary, texture: Texture2D) -> Node2D:
 		var canvas_modulate := CanvasModulate.new()
 		canvas_modulate.color = color4(scene.canvasModulate)
 		viewport.add_child(canvas_modulate)
-		var item := canvas_item_of(scene, texture_of(scene.texture))
+		var item := canvas_item_of(scene, drawn_texture(scene))
 		item.position = Vector2(scene.item.position[0], scene.item.position[1])
 		item.rotation_degrees = scene.item.rotation
 		item.scale = Vector2(scene.item.scale[0], scene.item.scale[1])
@@ -115,6 +129,10 @@ func canvas_item_of(scene: Dictionary, texture: Texture2D) -> Node2D:
 		item.self_modulate = color4(scene.item.selfModulate)
 		item.texture_filter = FILTERS[scene.filter]
 		item.texture_repeat = REPEATS[scene.repeat]
+		if scene.hasMaterial:
+			var material := ShaderMaterial.new()
+			material.shader = load(scene.shader)
+			item.material = material
 		viewport.add_child(item)`,
 });
 
@@ -122,6 +140,7 @@ func canvas_item_of(scene: Dictionary, texture: Texture2D) -> Node2D:
 const SCENE_FIELDS = [
   'kind',
   'texture',
+  'maps',
   'filter',
   'repeat',
   'item',
@@ -140,7 +159,11 @@ const SCENE_FIELDS = [
 /** The files beside the main script, keyed by their names in the project. */
 export const canvasProjectFiles = (scenes) =>
   viewportProjectFiles(FILES, scenes, (scene) =>
-    Object.fromEntries(SCENE_FIELDS.filter((field) => field in scene).map((field) => [field, scene[field]]))
+    Object.fromEntries([
+      ...SCENE_FIELDS.filter((field) => field in scene).map((field) => [field, scene[field]]),
+      // Godot's default canvas shader is what an item with no material draws.
+      ['hasMaterial', scene.source !== DEFAULT_CANVAS],
+    ])
   );
 
 export const parseCanvasOutput = (stdout) => parseViewportOutput(stdout, LINE_PREFIX);

@@ -43,7 +43,6 @@ const UNMOVED = new Map([
   ['nodes/animation/animationplayer/animationResolver.ts', { calls: 5, issue: 1682 }],
   ['nodes/animation/animationtree/treeResources.ts', { calls: 1, issue: 1682 }],
   ['nodes/shared/particles3d/ParticleMesh.tsx', { calls: 1, issue: 1685 }],
-  ['r3f/components/canvasItemMaterial.tsx', { calls: 2, issue: 1688 }],
   ['r3f/controls/native/StyleBoxQuad.tsx', { calls: 1, issue: 1679 }],
   ['r3f/controls/native/buildSolveTree.ts', { calls: 6, issue: 1696 }],
   ['r3f/controls/native/parseStyleBox.ts', { calls: 2, issue: 1679 }],

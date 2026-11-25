@@ -22,7 +22,7 @@ export interface SamplerContext {
   readonly defaults: SamplerSettings;
   readonly sampling: ProjectSampling;
   /** Godot's `p_use_linear_color`: a `source_color` texture reads through its sRGB view. */
-  readonly useLinearColor: boolean;
+  readonly usesLinearColors: boolean;
 }
 
 /** A texture, or a list of them for an array with null for a missing element. */
@@ -55,7 +55,7 @@ export class SamplerBinding implements TranspiledUniform {
   ) {
     this.kind = textureKindOf(declaration.type);
     const settings = samplerSettings(declaration, context.defaults);
-    const isSrgb = context.useLinearColor && declaration.usesColor;
+    const isSrgb = context.usesLinearColors && declaration.usesColor;
     this.copies = new TextureCopies((copy, source) => {
       applySamplerState(copy, source, settings, context.sampling);
       copy.colorSpace = copyColorSpace(copy, source, isSrgb);

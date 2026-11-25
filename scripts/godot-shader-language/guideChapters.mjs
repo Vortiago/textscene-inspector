@@ -665,6 +665,18 @@ const BIT_FUNCTIONS_CHAPTER = {
   ],
 };
 
+/** A section's rows: each of `names` in `stage` of a canvas_item shader. */
+const canvasRows =
+  (stage, ...names) =>
+  (row) =>
+    names.some((name) => row.id === `canvas_item.${stage}.${name}`);
+
+/** A section's rows: each of `modes` of a canvas_item shader. */
+const canvasModes =
+  (...modes) =>
+  (row) =>
+    modes.some((mode) => row.id === `canvas_item render_mode ${mode}`);
+
 const CANVAS_CHAPTER = {
   file: 'canvas.md',
   title: 'Canvas items',
@@ -675,8 +687,135 @@ const CANVAS_CHAPTER = {
     "A rect and a nine-patch draw as Godot's quad batch does. `textureRectRegion(rect, source, modulate, { transpose, clipUv })` is the rect command of `draw_texture_rect_region`: a negative size flips that axis. `rectInstanceData(command, item, texelSize)` and `ninePatchInstanceData(command, item, texelSize)` write Godot's 128-byte `InstanceData` record. `quadBatchGeometry(records)` gives the instanced quad that reads each record as the attributes `attrib_A` to `attrib_H`.\n\n" +
     "A primitive of `draw_primitive` draws as Godot's primitive batch does. `primitiveCommand(points, colors, uvs)` repeats the first colour for a point with none. `primitiveInstanceData(command, item)` writes one record for a point, a line or a triangle, and two for a quad, with each colour in half floats. `primitiveDraw(pointCount)` names the variant and the primitive, and `primitiveBatchGeometry(records, pointCount)` gives the geometry. `primitiveObject(primitive, geometry, material)` gives the three.js object that draws it: points, lines, a line strip, triangles or a triangle strip.\n\n" +
     "A polygon and a mesh surface draw through the attributes variant, one draw each. `polygonCommand(points, colors, uvs)` cuts an outline into triangles, as `draw_polygon` does, and `triangleArrayCommand(indices, points, colors, uvs)` takes the triangles of a Polygon2D. `attributesGeometry(arrays)` writes the vertex arrays, with Godot's default white colour and zero UV for a missing array. `polygonConstants(item)` and `meshConstants(item, { transform, modulate })` give the push constants, and `attributesObject(draw, geometry, primitive, constants)` writes them before each draw of the object.\n\n" +
-    "A viewport with `use_hdr_2d` keeps colours linear. Set `usesLinearColors` on the frame, the item and the texture state: the template then turns the vertex colours linear, Godot's C++ turns the modulate colours linear, and the texture reads through its sRGB view. Without it, the texels and the colours reach the frame as they are stored. A user's `canvas_item` shader and 2D lights do not draw yet, and their rows stay open with their issues.",
-  sections: [],
+    "A viewport with `use_hdr_2d` keeps colours linear. Set `usesLinearColors` on the frame, the item and the texture state: the template then turns the vertex colours linear, Godot's C++ turns the modulate colours linear, and the texture reads through its sRGB view. Without it, the texels and the colours reach the frame as they are stored. 2D lights do not draw yet, and their rows stay open with their issues.\n\n" +
+    "A user's `canvas_item` shader links into the same template: `vertex()` fills the slot after the template reads the command's vertex, UV and colour, and `fragment()` fills the slot after the template samples the texture. Each built-in reads as the template's local for it. A shader's `render_mode` blend word sets the material's blend state, and `blend_disabled` blends nothing. Give `transpileCanvasItem` the option `rows: 'godot'` for a render target whose GL row 0 is Godot's top row, as the previewer's 2D frame is: the clip y and `FRAGCOORD` then keep Godot's direction.",
+  sections: [
+    {
+      heading: '`COLOR` and `UV` in `fragment()`',
+      rows: canvasRows('fragment', 'COLOR', 'UV'),
+      what: "`COLOR` starts as the vertex colour times the texture's texel at `UV`, and `fragment()` writes the colour the item blends. `UV` is the texture coordinate, read only: the rect's source in 0 to 1, clamped half a texel inside a region with `clipUv` (`canvas.glsl:292-297`).",
+      tsl: "the template's locals `color` and `uv`",
+    },
+    {
+      heading: '`TEXTURE` and `TEXTURE_PIXEL_SIZE` in `fragment()`',
+      rows: canvasRows('fragment', 'TEXTURE', 'TEXTURE_PIXEL_SIZE'),
+      what: "`TEXTURE` is the item's texture with the item's filter and repeat, or Godot's white default texture. `TEXTURE_PIXEL_SIZE` is one over the texture's size in texels (`renderer_canvas_render_rd.cpp:1791-1792`).",
+      tsl: "the template's texture `color_texture` and the record's texel size",
+    },
+    {
+      heading: '`VERTEX` in `fragment()`',
+      rows: canvasRows('fragment', 'VERTEX'),
+      what: "`VERTEX` in `fragment()` is the pixel's place after the item's transform and the canvas transform, in the render target's pixels (`canvas.glsl:290-296`, `canvas.glsl:572`).",
+      tsl: "the template's local `vertex`, from the varying `uv_vertex_interp.zw`",
+    },
+    {
+      heading: '`FRAGCOORD`',
+      rows: canvasRows('fragment', 'FRAGCOORD'),
+      what: "`FRAGCOORD` is the pixel's window coordinate, with y down from the render target's top row, as Godot's Vulkan frame counts it (`renderer_canvas_render_rd.cpp:1799`).",
+      tsl: "`screenCoordinate`, counted from the top row for a target of Godot's rows",
+    },
+    {
+      heading: '`SCREEN_UV` and `SCREEN_PIXEL_SIZE`',
+      rows: canvasRows('fragment', 'SCREEN_UV', 'SCREEN_PIXEL_SIZE'),
+      what: "`SCREEN_PIXEL_SIZE` is one over the render target's size in pixels. `SCREEN_UV` is `FRAGCOORD.xy` times it, from 0 to 1 across the target (`canvas.glsl:684-688`).",
+      tsl: "the template's local `screen_uv` and the block member `canvas_data.screen_pixel_size`",
+    },
+    {
+      heading: '`REGION_RECT`',
+      rows: canvasRows('fragment', 'REGION_RECT'),
+      what: "`REGION_RECT` is the rect's source region in uv: its corner, then its size. A primitive, a polygon and a mesh read the whole texture, `(0, 0, 1, 1)` (`canvas.glsl:575-579`).",
+      tsl: "the template's local `region_rect`",
+    },
+    {
+      heading: '`NORMAL`, `NORMAL_MAP` and `NORMAL_MAP_DEPTH`',
+      rows: canvasRows('fragment', 'NORMAL', 'NORMAL_MAP', 'NORMAL_MAP_DEPTH'),
+      what: "`NORMAL` starts as the item's normal texture at `UV`, or `(0, 0, 1)` with none. After `fragment()`, a written `NORMAL_MAP` replaces it, mixed from `(0, 0, 1)` by `NORMAL_MAP_DEPTH` (`canvas.glsl:654-705`). Only a 2D light reads the normal.",
+      tsl: "the template's locals `normal`, `normal_map` and `normal_map_depth`",
+    },
+    {
+      heading: '`NORMAL_TEXTURE`, `SPECULAR_SHININESS_TEXTURE` and `SPECULAR_SHININESS`',
+      rows: canvasRows('fragment', 'NORMAL_TEXTURE', 'SPECULAR_SHININESS_TEXTURE', 'SPECULAR_SHININESS'),
+      what: "`NORMAL_TEXTURE` and `SPECULAR_SHININESS_TEXTURE` are the item's CanvasTexture maps, or Godot's default normal and white textures. `SPECULAR_SHININESS` is the specular texture at `UV` times the item's specular colour and shininess (`canvas.glsl:667-682`).",
+      tsl: "the template's textures `normal_texture` and `specular_texture`, and its local `specular_shininess`",
+    },
+    {
+      heading: '`LIGHT_VERTEX` and `SHADOW_VERTEX`',
+      rows: canvasRows('fragment', 'LIGHT_VERTEX', 'SHADOW_VERTEX'),
+      what: '`LIGHT_VERTEX` starts as `vec3(VERTEX, 0.0)` and `SHADOW_VERTEX` as `VERTEX`. A 2D light reads the first for its direction and the second for its shadow (`canvas.glsl:690-691`).',
+      tsl: "the template's locals `light_vertex` and `shadow_vertex`",
+    },
+    {
+      heading: '`AT_LIGHT_PASS`',
+      rows: (row) =>
+        row.id === 'canvas_item.vertex.AT_LIGHT_PASS' || row.id === 'canvas_item.fragment.AT_LIGHT_PASS',
+      what: "`AT_LIGHT_PASS` is always false: Godot draws an item's lights in the item's one pass (`renderer_canvas_render_rd.cpp:1784`).",
+      tsl: '`false`',
+    },
+    {
+      heading: '`VERTEX`, `UV` and `COLOR` in `vertex()`',
+      rows: canvasRows('vertex', 'VERTEX', 'UV', 'COLOR'),
+      what: "`VERTEX` is the vertex in the item's local pixels, `UV` its texture coordinate and `COLOR` its colour times the final modulate. After `vertex()`, the template moves `VERTEX` by the item's transform and the canvas transform (`canvas.glsl:268-300`).",
+      tsl: "the template's locals `vertex`, `uv` and `color`",
+    },
+    {
+      heading: '`MODEL_MATRIX`, `CANVAS_MATRIX` and `SCREEN_MATRIX`',
+      rows: canvasRows('vertex', 'MODEL_MATRIX', 'CANVAS_MATRIX', 'SCREEN_MATRIX'),
+      what: "`MODEL_MATRIX` is the item's transform to the canvas, `CANVAS_MATRIX` the canvas transform to the render target's pixels, and `SCREEN_MATRIX` the pixels to clip space (`renderer_canvas_render_rd.cpp:1777-1779`).",
+      tsl: "the template's local `model_matrix` and the block members `canvas_data.canvas_transform` and `canvas_data.screen_transform`",
+    },
+    {
+      heading:
+        '`VERTEX_ID`, `INSTANCE_ID`, `INSTANCE_CUSTOM`, `CUSTOM0`, `CUSTOM1` and `TEXTURE_PIXEL_SIZE` in `vertex()`',
+      rows: canvasRows(
+        'vertex',
+        'VERTEX_ID',
+        'INSTANCE_ID',
+        'INSTANCE_CUSTOM',
+        'CUSTOM0',
+        'CUSTOM1',
+        'TEXTURE_PIXEL_SIZE'
+      ),
+      what: "`VERTEX_ID` and `INSTANCE_ID` are the draw's vertex and instance index: a quad batch draws one instance for each rect. `INSTANCE_CUSTOM` is a MultiMesh instance's custom data, and `CUSTOM0` and `CUSTOM1` a mesh's custom arrays, each zero with none (`canvas.glsl:139-188`).",
+      tsl: "`vertexIndex`, `instanceIndex` and the template's locals `instance_custom`, `custom0` and `custom1`",
+    },
+    {
+      heading: '`PI`, `TAU` and `E`',
+      rows: canvasRows('constants', 'PI', 'TAU', 'E'),
+      what: 'Each constant is the number that Godot writes in the text of the shader (`renderer_canvas_render_rd.cpp:1781-1783`).',
+      tsl: 'a float literal',
+    },
+    {
+      heading: '`TIME`',
+      rows: canvasRows('global', 'TIME'),
+      what: "`TIME` is the shader time in seconds, with the same sum and wrap as a sky's `TIME`. `writeCanvasBindings(draw, { time })` writes it (`renderer_canvas_render_rd.cpp:1780`).",
+      tsl: 'the block member `canvas_data.time`',
+    },
+    {
+      heading: '`skip_vertex_transform` and `world_vertex_coords`',
+      rows: canvasModes('skip_vertex_transform', 'world_vertex_coords'),
+      what: "`skip_vertex_transform` leaves the item's transform to `vertex()`. `world_vertex_coords` moves `VERTEX` by the item's transform before `vertex()` instead of after (`canvas.glsl:270-283`).",
+      tsl: "the template's defines `SKIP_TRANSFORM_USED` and `USE_WORLD_VERTEX_COORDS`",
+    },
+    {
+      heading: '`unshaded` and `light_only`',
+      rows: canvasModes('unshaded', 'light_only'),
+      what: '`unshaded` leaves out the CanvasModulate colour and the 2D lights. `light_only` draws the item only where a 2D light reaches it, so with no light it draws nothing (`canvas.glsl:717-721`, `canvas.glsl:861-863`).',
+      tsl: "the template's defines `MODE_UNSHADED` and `MODE_LIGHT_ONLY`",
+    },
+    {
+      heading: 'Blend modes',
+      rows: canvasModes(
+        'blend_mix',
+        'blend_add',
+        'blend_sub',
+        'blend_mul',
+        'blend_premul_alpha',
+        'blend_disabled'
+      ),
+      what: "A blend word sets the blend of the item's pass, as on a spatial material. `blend_disabled` writes the colour and its alpha as they are (`renderer_canvas_render_rd.cpp:1502-1516`, `renderer_canvas_render_rd.cpp:1566-1571`).",
+      tsl: "the material's blend state from `canvasBlendState(tree)`",
+    },
+  ],
 };
 
 const SKY_CHAPTER = {
@@ -1106,7 +1245,7 @@ shader.parameters.get('tint').set(textToVariant('Color(1, 0.5, 0, 1)'));
 
 \`set(undefined)\` gives back Godot's own value. The transpiler fills each uniform as Godot's \`update_uniform_buffer\` does (\`material_storage.cpp:741\`): it converts the value to the uniform's type as \`_fill_std140_variant_ubo_value\` does, and a default as \`_fill_std140_ubo_value\` does. A uniform the material does not set reads the shader's default. With no default, a \`source_color\` \`vec3\` or \`vec4\` reads opaque black, a matrix reads the identity, and everything else reads zero. An array element the value has no whole element for reads zero, or the identity for a matrix.
 
-Godot's \`p_use_linear_color\` decides whether a colour goes to linear. It is true for every material but a \`canvas_item\` one, which converts only in a viewport with \`use_hdr_2d\`. \`TranspileOptions.useLinearColor\` sets it for \`transpileShadingLanguage\`, and a sky always converts (\`sky.cpp:193\`). The probes run both ways.
+Godot's \`p_use_linear_color\` decides whether a colour goes to linear. It is true for every material but a \`canvas_item\` one, which converts only in a viewport with \`use_hdr_2d\`. \`TranspileOptions.usesLinearColors\` sets it for \`transpileShadingLanguage\`, and a sky always converts (\`sky.cpp:193\`). The probes run both ways.
 
 An array reaches the shader as the bits of one \`uvec4\` per column, as std140 lays it out, and the shader reads each lane back from its bits. So a float array whose first value is NaN reaches the shader whole.`,
   sections: [

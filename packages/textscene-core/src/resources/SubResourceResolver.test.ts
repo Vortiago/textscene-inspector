@@ -6,7 +6,7 @@ import {
   findSubResourceOfType,
   parseResourceReference,
   resolveExtResourceFilePath,
-  isResourceFilePath,
+  loadsAsParsedResource,
   resolveInstancePath,
   resolveSubResourceRef,
   resolveTexture2DPath,
@@ -286,21 +286,21 @@ describe('parsedResourcePath', () => {
   });
 });
 
-describe('isResourceFilePath', () => {
-  it('names a .tres and a binary .res resource files', () => {
-    expect(isResourceFilePath('res://tiles.tres')).toBe(true);
-    expect(isResourceFilePath('res://meshes/crate.res')).toBe(true);
+describe('loadsAsParsedResource', () => {
+  it('names a .tres, a binary .res and a .gdshader', () => {
+    expect(loadsAsParsedResource('res://tiles.tres')).toBe(true);
+    expect(loadsAsParsedResource('res://meshes/crate.res')).toBe(true);
+    expect(loadsAsParsedResource('res://fog.gdshader')).toBe(true);
   });
 
-  it('leaves out an image, a shader and a binary scene (error case)', () => {
-    expect(isResourceFilePath('res://rock.png')).toBe(false);
-    expect(isResourceFilePath('res://fog.gdshader')).toBe(false);
-    expect(isResourceFilePath('res://stage/grid_map.scn')).toBe(false);
+  it('leaves out an image and a binary scene (error case)', () => {
+    expect(loadsAsParsedResource('res://rock.png')).toBe(false);
+    expect(loadsAsParsedResource('res://stage/grid_map.scn')).toBe(false);
   });
 
   it('reads the extension case-insensitively (edge case)', () => {
-    expect(isResourceFilePath('res://tiles.TRES')).toBe(true);
-    expect(isResourceFilePath('res://materials/paint.Material')).toBe(true);
+    expect(loadsAsParsedResource('res://tiles.TRES')).toBe(true);
+    expect(loadsAsParsedResource('res://materials/paint.Material')).toBe(true);
   });
 });
 

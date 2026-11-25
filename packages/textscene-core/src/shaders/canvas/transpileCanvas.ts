@@ -1,8 +1,7 @@
 import * as THREE from 'three';
 import { instanceIndex, int, varyingProperty, vertexIndex } from 'three/tsl';
 import type { Node, TextureNode } from 'three/webgpu';
-import { BlendMode } from '../../godot/rendering/materials/blendMode.js';
-import { godotBlendState } from '../pipeline/blendState.js';
+import type { MaterialBlendState } from '../pipeline/blendState.js';
 import { parsedShader, shaderSource, type ShaderOptions } from '../language/parseShader.js';
 import { emitTemplateStage, programResources } from '../template/emitTemplate.js';
 import { linkedProgram, type LinkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
@@ -13,6 +12,7 @@ import { TreeMemo } from '../template/treeMemo.js';
 import {
   glClipPosition,
   NATIVE_POINT_SIZE,
+  type TargetRows,
   vertexAttributes,
   vulkanFragCoord,
 } from '../template/vulkanStage.js';
@@ -20,6 +20,7 @@ import type { Vec4 } from '../tslTypes.js';
 import { BoundNodeMaterial, type MaterialShader } from '../uniforms/boundMaterial.js';
 import type { ProjectSampling } from '../uniforms/samplerState.js';
 import type { TranspiledUniform } from '../uniforms/transpiledUniform.js';
+import { canvasBlendState } from './canvasBlend.js';
 
 /** Godot's default canvas shader, a version with empty slots (`renderer_canvas_render_rd.cpp:1762`). */
 export const DEFAULT_CANVAS_SHADER = 'shader_type canvas_item;\n';
@@ -80,20 +81,33 @@ export interface TranspiledCanvasItem {
 export interface CanvasItemOptions extends ShaderOptions {
   /** The project's texture filter settings, Godot's defaults when left out. */
   readonly sampling?: ProjectSampling;
+  /** A render target with `use_hdr_2d`, whose colour uniforms convert to linear. */
+  readonly usesLinearColors?: boolean;
+  /** How the target holds Godot's rows: `flipped`, three's drawing buffer, when left out. */
+  readonly rows?: TargetRows;
 }
 
 /** The material of `source`, a shader of `shader_type canvas_item`, preprocessed with `options`. */
 export function transpileCanvasItem(source: string, options: CanvasItemOptions = {}): TranspiledCanvasItem {
   const parsed = parsedShader(source, options);
   const file = options.file ?? '';
-  const program = linkedProgram(parsed, file, CANVAS, options.sampling);
-  const shader = { parameters: [...program.parameters.values()], source: shaderSource(parsed, file) };
+  // Godot keeps an sRGB and a linear uniform set (`renderer_canvas_render_rd.cpp:1703-1704`).
+  const program = linkedProgram(parsed, file, CANVAS, {
+    sampling: options.sampling,
+    usesLinearColors: options.usesLinearColors ?? false,
+  });
+  const item: ItemProgram = {
+    program,
+    shader: { parameters: [...program.parameters.values()], source: shaderSource(parsed, file) },
+    blend: canvasBlendState(parsed.tree),
+  };
+  const rows = options.rows ?? 'flipped';
   const draws = new Map<CanvasVariant, CanvasDraw>();
   return {
     parameters: program.parameters,
     draw(variant) {
       let draw = draws.get(variant);
-      if (!draw) draws.set(variant, (draw = canvasDraw(program, variant, shader)));
+      if (!draw) draws.set(variant, (draw = canvasDraw(item, { variant, rows })));
       return draw;
     },
   };
@@ -121,22 +135,35 @@ export function specialiseCanvasDraw(draw: CanvasDraw, { useLighting }: CanvasSp
   packed.value = useLighting ? otherBits | USE_LIGHTING_BIT : otherBits;
 }
 
+/** What every variant of one item's material shares. */
+interface ItemProgram {
+  readonly program: LinkedProgram;
+  readonly shader: MaterialShader;
+  readonly blend: MaterialBlendState;
+}
+
+/** The variant a draw links, and the rows of the target it draws to. */
+interface DrawTarget {
+  readonly variant: CanvasVariant;
+  readonly rows: TargetRows;
+}
+
 /** The material of `variant`, with resources of its own and the program's parameters. */
-function canvasDraw(program: LinkedProgram, variant: CanvasVariant, shader: MaterialShader): CanvasDraw {
+function canvasDraw({ program, shader, blend }: ItemProgram, target: DrawTarget): CanvasDraw {
   const resources = programResources();
   const specialisations = resources.uniforms.specialisations;
   const material = new BoundNodeMaterial({ ...shader, specialisations });
-  // Godot's canvas pipeline: blend_mix, no cull and no depth (`renderer_canvas_render_rd.cpp:1535, 1559`).
-  Object.assign(material, godotBlendState(BlendMode.MIX), {
+  // Godot's canvas pipeline: no cull and no depth (`renderer_canvas_render_rd.cpp:1535`).
+  Object.assign(material, blend, {
     transparent: true,
     side: THREE.DoubleSide,
-    // three draws a transparent DoubleSide material back faces first, in a second draw; Godot draws once.
+    // three draws a transparent DoubleSide material back faces first, in a second draw. Godot draws once.
     forceSinglePass: true,
     depthTest: false,
     depthWrite: false,
   });
   // Emitted anew at each specialisation: three caches function code by node (`NodeBuilder.js:2759`).
-  material.stageWith(() => Object.assign(material, stages({ ...program, resources }, variant)));
+  material.stageWith(() => Object.assign(material, stages({ ...program, resources }, target)));
   return {
     material,
     uniforms: resources.uniforms.byName,
@@ -146,7 +173,7 @@ function canvasDraw(program: LinkedProgram, variant: CanvasVariant, shader: Mate
   };
 }
 
-function stages({ linked, resources, parameterValues }: LinkedProgram, variant: CanvasVariant) {
+function stages({ linked, resources, parameterValues }: LinkedProgram, { variant, rows }: DrawTarget) {
   const defines = CANVAS_VARIANT_DEFINES[variant];
   const vertexStage = linked('vertex', defines);
   const vulkanClip = varyingProperty('vec4', 'godot_clip_position') as unknown as Vec4;
@@ -164,9 +191,12 @@ function stages({ linked, resources, parameterValues }: LinkedProgram, variant: 
   );
   const fragment = emitTemplateStage(
     linked('fragment', defines),
-    new Map([...parameterValues, ['gl_FragCoord', vulkanFragCoord(vulkanClip)]]),
+    new Map([...parameterValues, ['gl_FragCoord', vulkanFragCoord(vulkanClip, rows)]]),
     { name: 'frag_color', type: 'vec4' },
     resources
   );
-  return { vertexNode: glClipPosition(vertex.result, vulkanClip), fragmentNode: fragment.result };
+  return {
+    vertexNode: glClipPosition(vertex.result, vulkanClip, { rows }),
+    fragmentNode: fragment.result,
+  };
 }

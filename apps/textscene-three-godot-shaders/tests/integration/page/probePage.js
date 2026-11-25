@@ -131,7 +131,7 @@ function colourOf(bits) {
 function runProbe(spec) {
   try {
     // Godot's harness draws a canvas_item, which converts a source colour only in an HDR 2D viewport.
-    const options = { ...probeShaderOptions(spec.includes), useLinearColor: spec.hdr2d };
+    const options = { ...probeShaderOptions(spec.includes), usesLinearColors: spec.hdr2d };
     const shader = transpileShadingLanguage(spec.source, options);
     for (const [name, text] of Object.entries(spec.materialValues))
       shader.parameters.get(name).set(textToVariant(text));

@@ -44,7 +44,7 @@ import {
 import { createCanvasTarget, createSceneTarget } from '../offscreen/targets';
 import { renderToOffscreenTarget } from '../offscreen/draw';
 import {
-  CanvasFrameStepsContext,
+  CanvasFrameStepsProvider,
   createCanvasFrameSteps,
   runCanvasFrame,
   type CanvasFrameSteps,
@@ -437,11 +437,7 @@ export function OffscreenViewportPass({
   );
 }
 
-/**
- * A canvas lit by its viewport's 2D light pass, or one that no light reaches where `host` is null.
- * Either scope provides the canvas `space` with its modulate, so the lights seed in the space the
- * items shade in.
- */
+/** A canvas lit by its viewport's light pass, or unlit with no `host`: its `steps` run either way. */
 function LitCanvas({
   host,
   steps,
@@ -455,16 +451,18 @@ function LitCanvas({
   space: CanvasColorSpace;
   children: ReactNode;
 }) {
-  return host ? (
-    <CanvasFrameStepsContext.Provider value={steps}>
-      <CanvasLightPass host={host} canvasModulate={canvasModulate} space={space}>
-        {children}
-      </CanvasLightPass>
-    </CanvasFrameStepsContext.Provider>
-  ) : (
-    <World2DLightingBoundary canvasModulate={canvasModulate} space={space}>
-      {children}
-    </World2DLightingBoundary>
+  return (
+    <CanvasFrameStepsProvider steps={steps}>
+      {host ? (
+        <CanvasLightPass host={host} canvasModulate={canvasModulate} space={space}>
+          {children}
+        </CanvasLightPass>
+      ) : (
+        <World2DLightingBoundary canvasModulate={canvasModulate} space={space}>
+          {children}
+        </World2DLightingBoundary>
+      )}
+    </CanvasFrameStepsProvider>
   );
 }
 

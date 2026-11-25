@@ -20,6 +20,7 @@ import { useSpriteQuad } from '../../../r3f/canvasMesh/spriteQuad';
 import type { Sprite2DProperties } from './types';
 import { usePublishEditRect } from '../../../r3f/editRect/editRects';
 import { sprite2DEditRect } from './editRect';
+import { sprite2DRectRegion } from './rectRegion';
 
 export function Sprite2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Sprite2DProperties;
@@ -33,11 +34,8 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   // With `texture_repeat` Disabled, an overrunning `region_rect` stretches its edge texels,
   // where Sprite3D tiles.
   const windowOf = useCallback(
-    ({ source, size, hasNoImage }: LoadedCanvasMeshTexture) => {
-      const frameProps =
-        animatedFrame !== null ? { ...props, frame: animatedFrame, frame_coords: undefined } : props;
-      return frameUvWindow(source ?? undefined, frameProps, hasNoImage ? size : undefined);
-    },
+    ({ source, size, hasNoImage }: LoadedCanvasMeshTexture) =>
+      frameUvWindow(source ?? undefined, framedProps(props, animatedFrame), hasNoImage ? size : undefined),
     [props, animatedFrame]
   );
   const scope = useSceneResources();
@@ -48,10 +46,26 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   const frameSize = useMemo(() => frameSizePx(texture.size, props), [texture.size, props]);
   const surfaces = useSpriteQuad(props, frameSize);
   usePublishEditRect(sprite2DEditRect(props.texture ? texture.size : undefined, props));
+  const shaderRegion = useMemo(
+    () => (texture.size ? sprite2DRectRegion(framedProps(props, animatedFrame), texture.size) : undefined),
+    [props, animatedFrame, texture.size]
+  );
 
   return (
-    <CanvasMeshBody node={node} props={props} texture={texture} withoutTexture="nothing" surfaces={surfaces}>
+    <CanvasMeshBody
+      node={node}
+      props={props}
+      texture={texture}
+      withoutTexture="nothing"
+      surfaces={surfaces}
+      shaderRegion={shaderRegion}
+    >
       {children}
     </CanvasMeshBody>
   );
+}
+
+/** The sprite's properties with a driven `frame` in place of the authored `frame` and `frame_coords`. */
+function framedProps(props: Sprite2DProperties, animatedFrame: number | null): Sprite2DProperties {
+  return animatedFrame !== null ? { ...props, frame: animatedFrame, frame_coords: undefined } : props;
 }

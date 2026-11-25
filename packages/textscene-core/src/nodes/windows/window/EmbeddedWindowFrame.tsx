@@ -3,6 +3,7 @@
  * `scene/main/viewport.cpp:342-401`): the border StyleBox, the title and the close icon unless the
  * window is borderless, then the window's own target over the rect its content scale gives.
  */
+import { NO_MATERIAL } from '../../../resources/materials/canvasitemmaterial/kind';
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
@@ -82,7 +83,7 @@ export function EmbeddedWindowFrame({
     selfModulate: WHITE_MODULATE,
     zIndex: 0,
     zAsRelative: true,
-    material: null,
+    material: NO_MATERIAL,
     // The viewport's default filter and repeat: the subwindow canvas item names neither.
     sampler: useTextureSamplerOver(undefined, undefined, CHAIN_START.sampler),
     lightMask: undefined,

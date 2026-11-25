@@ -116,7 +116,7 @@ describe('CanvasItem2D', () => {
       self_modulate: 'Color(0, 0, 0, 1)',
     });
     const child = makeNode({});
-    const body = (tint: { color: THREE.Color; opacity: number }) => (
+    const body = ({ tint }: { tint: { color: THREE.Color; opacity: number } }) => (
       <mesh>
         <planeGeometry />
         <meshBasicMaterial color={tint.color} opacity={tint.opacity} transparent />

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { UniformNode } from 'three/webgpu';
 import { describe, expect, it } from 'vitest';
 import { CanvasTextureBinding, GODOT_CANVAS_TEXTURE_STATE } from './canvasTexture.js';
+import { WHITE } from './canvasInstance.js';
 import { DEFAULT_CANVAS_SHADER, transpileCanvasItem } from './transpileCanvas.js';
 
 function bound() {
@@ -104,5 +105,55 @@ describe('CanvasTextureBinding', () => {
       firstTexel(texture('specular_texture')),
       param('specular_shininess'),
     ]).toEqual([[128, 128, 255, 255], [255, 255, 255, 255], 0xffffffff]);
+  });
+
+  it("binds a CanvasTexture's normal and specular maps raw, with the item's sampler", () => {
+    const { binding, texture } = bound();
+    const normal = texture8x4();
+    const specular = texture8x4();
+
+    binding.bind(
+      texture8x4(),
+      { filter: 'nearest', repeat: 'mirror', usesLinearColors: true },
+      { normal, specular, specularShininess: WHITE }
+    );
+
+    const read = (name: string) => {
+      const copy = texture(name);
+      return [
+        copy.source === normal.source || copy.source === specular.source,
+        copy.magFilter,
+        copy.wrapS,
+        copy.colorSpace,
+      ];
+    };
+    expect([read('normal_texture'), read('specular_texture')]).toEqual([
+      [false, THREE.NearestFilter, THREE.MirroredRepeatWrapping, THREE.NoColorSpace],
+      [false, THREE.NearestFilter, THREE.MirroredRepeatWrapping, THREE.NoColorSpace],
+    ]);
+  });
+
+  it('packs the specular colour and shininess as unorm8, truncated as Godot casts them', () => {
+    const { binding, param } = bound();
+
+    binding.bind(texture8x4(), GODOT_CANVAS_TEXTURE_STATE, {
+      normal: null,
+      specular: null,
+      specularShininess: { r: 0.5, g: 0.25, b: 1, a: 0.1 },
+    });
+
+    expect(param('specular_shininess')).toBe(((25 << 24) | (255 << 16) | (63 << 8) | 127) >>> 0);
+  });
+
+  it.each([
+    ['no map', { normal: null, specularShininess: WHITE }, 0],
+    ['a normal map', { normal: texture8x4(), specularShininess: WHITE }, 1 << 9],
+    ['a shininess under 0.999', { normal: null, specularShininess: { ...WHITE, a: 0.5 } }, 1 << 10],
+  ])('sets the default map flags for %s', (_, maps, flags) => {
+    const { binding, param } = bound();
+
+    binding.bind(texture8x4(), GODOT_CANVAS_TEXTURE_STATE, { specular: null, ...maps });
+
+    expect(param('batch_flags')).toBe(flags);
   });
 });

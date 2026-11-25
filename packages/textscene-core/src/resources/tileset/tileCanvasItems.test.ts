@@ -10,8 +10,8 @@ import type { AlternativeTileModel, TileMaterial } from './types';
 import type { DrawableCell } from './drawableCell';
 
 /** Two distinct materials: the split compares identity, not properties. */
-const MATERIAL_A: TileMaterial = { properties: null };
-const MATERIAL_B: TileMaterial = { properties: null };
+const MATERIAL_A: TileMaterial = { properties: null, shader: null };
+const MATERIAL_B: TileMaterial = { properties: null, shader: null };
 
 function cell(x: number, tileData: Partial<AlternativeTileModel> = {}, sourceId = 0): DrawableCell {
   return drawableCellOf({ coords: { x, y: 0 }, sourceId }, tileData);

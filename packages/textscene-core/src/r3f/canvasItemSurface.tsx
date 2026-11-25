@@ -59,7 +59,7 @@ function useCanvasItemSurface(
 }
 
 /** A map's texture, or null for a CanvasTexture, which each map setter refuses (`canvas_item.cpp:1801,1815`). */
-function unnested(map: Texture2DResult): THREE.Texture | null {
+export function unnested(map: Texture2DResult): THREE.Texture | null {
   return map.canvasTexture ? null : map.texture;
 }
 

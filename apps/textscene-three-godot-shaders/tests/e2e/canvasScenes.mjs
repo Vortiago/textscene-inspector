@@ -1,3 +1,5 @@
+import { FRAMES_BEFORE_READ } from '../../../../scripts/godot-probes/godotRun.mjs';
+
 /** Godot's default canvas shader, for an item with no material (`renderer_canvas_render_rd.cpp:1762`). */
 export const DEFAULT_CANVAS = 'shader_type canvas_item;\n';
 
@@ -18,6 +20,17 @@ const GRID = gridTexture(8, 4);
 const FADING_GRID = gridTexture(8, 4, (x) => Math.round(255 - (x * 255) / 7));
 
 const WHITE = [1, 1, 1, 1];
+
+/** The grid with its channels turned, so a map shows apart from the diffuse and the other map. */
+const turnedGrid = (turn) => ({ ...GRID, texels: GRID.texels.map(turn) });
+
+/** A CanvasTexture over the grid, with maps of their own texels and a shininess that turns specular on. */
+const GRID_MAPS = {
+  normal: turnedGrid(([r, g, b, a]) => [b, r, g, a]),
+  specular: turnedGrid(([r, g, b, a]) => [g, b, r, a]),
+  specularColor: [0.5, 0.25, 1, 1],
+  shininess: 0.5,
+};
 
 /** A root item at `position`, with no turn, scale or modulate. */
 const placedAt = (position) => ({
@@ -380,6 +393,188 @@ const LINEAR_RECT_SCENES = [
   }),
 ];
 
+/** A rect of the grid drawn with `source`, a user's shader, which proves `rows`. */
+const shadedRectScene = (name, source, rows, fields = {}) => rectScene(name, { source, rows, ...fields });
+
+/** The text of a canvas_item shader with `head` above its `vertex()` and `fragment()` lines. */
+const shaderText = ({ head = '', vertex, fragment }) =>
+  [
+    'shader_type canvas_item;',
+    head,
+    vertex && `void vertex() {\n\t${vertex}\n}`,
+    fragment && `void fragment() {\n\t${fragment}\n}`,
+  ]
+    .filter(Boolean)
+    .join('\n\n') + '\n';
+
+const row = (stage) => (name) => `canvas_item.${stage}.${name}`;
+const fragmentRows = (...names) => names.map(row('fragment'));
+const vertexRows = (...names) => names.map(row('vertex'));
+
+/** Each blend word over the clear colour, with the alpha falling across the grid. */
+const BLEND_SCENES = ['mix', 'add', 'sub', 'mul', 'premul_alpha', 'disabled'].map((blend) =>
+  shadedRectScene(
+    `canvas-shader-blend-${blend.replace('_', '-')}`,
+    shaderText({ head: `render_mode blend_${blend};`, fragment: 'COLOR.rgb *= 0.75;' }),
+    [`canvas_item render_mode blend_${blend}`],
+    { texture: FADING_GRID }
+  )
+);
+
+const TINTED = shaderText({
+  head: 'uniform vec4 tint : source_color = vec4(0.5, 0.25, 0.75, 1.0);',
+  fragment: 'COLOR = tint;',
+});
+
+const SHADER_SCENES = [
+  shadedRectScene(
+    'canvas-shader-fragment-uv',
+    shaderText({ fragment: 'COLOR = vec4(UV, 0.5, 1.0);' }),
+    fragmentRows('COLOR', 'UV')
+  ),
+  shadedRectScene(
+    'canvas-shader-fragment-texture',
+    shaderText({
+      fragment: 'COLOR = vec4(texture(TEXTURE, UV + vec2(TEXTURE_PIXEL_SIZE.x, 0.0)).bgr, 1.0);',
+    }),
+    fragmentRows('TEXTURE', 'TEXTURE_PIXEL_SIZE')
+  ),
+  shadedRectScene(
+    'canvas-shader-fragment-vertex',
+    shaderText({ fragment: 'COLOR = vec4(fract(VERTEX / 8.0), 0.0, 1.0);' }),
+    fragmentRows('VERTEX'),
+    { item: { ...CENTRE, rotation: 30 } }
+  ),
+  shadedRectScene(
+    'canvas-shader-fragcoord',
+    shaderText({ fragment: 'COLOR = vec4(FRAGCOORD.xy / vec2(64.0, 48.0), FRAGCOORD.z, 1.0);' }),
+    fragmentRows('FRAGCOORD')
+  ),
+  shadedRectScene(
+    'canvas-shader-screen-uv',
+    shaderText({ fragment: 'COLOR = vec4(SCREEN_UV, SCREEN_PIXEL_SIZE.x * 32.0, 1.0);' }),
+    fragmentRows('SCREEN_UV', 'SCREEN_PIXEL_SIZE'),
+    { canvasTransform: [1.5, 0, 0, 0.75, -10, 6] }
+  ),
+  shadedRectScene(
+    'canvas-shader-region-rect',
+    shaderText({ fragment: 'COLOR = vec4(REGION_RECT.xy * 2.0, REGION_RECT.zw);' }),
+    fragmentRows('REGION_RECT'),
+    { rects: [rect({ rect: [-12, -12, 24, 24], source: [2, 1, 3, 3] })] }
+  ),
+  shadedRectScene(
+    'canvas-shader-normal-map',
+    shaderText({
+      fragment:
+        'NORMAL_MAP = vec3(UV, 1.0);\n\tNORMAL_MAP_DEPTH = 0.5;\n\tCOLOR = vec4(NORMAL * 0.5 + 0.5, 1.0);',
+    }),
+    fragmentRows('NORMAL', 'NORMAL_MAP', 'NORMAL_MAP_DEPTH')
+  ),
+  shadedRectScene(
+    'canvas-shader-normal-specular-textures',
+    shaderText({
+      fragment:
+        'COLOR = vec4(texture(NORMAL_TEXTURE, UV).rg, texture(SPECULAR_SHININESS_TEXTURE, UV).b * SPECULAR_SHININESS.a, 1.0);',
+    }),
+    fragmentRows('NORMAL_TEXTURE', 'SPECULAR_SHININESS_TEXTURE', 'SPECULAR_SHININESS')
+  ),
+  shadedRectScene(
+    'canvas-shader-canvas-texture-maps',
+    shaderText({
+      fragment:
+        'COLOR = vec4(texture(NORMAL_TEXTURE, UV).rg, texture(SPECULAR_SHININESS_TEXTURE, UV).b * SPECULAR_SHININESS.a, 1.0);',
+    }),
+    fragmentRows('NORMAL_TEXTURE', 'SPECULAR_SHININESS_TEXTURE', 'SPECULAR_SHININESS'),
+    { maps: GRID_MAPS }
+  ),
+  shadedRectScene(
+    'canvas-shader-light-vertex',
+    shaderText({
+      fragment:
+        'LIGHT_VERTEX.z = 0.5;\n\tSHADOW_VERTEX += vec2(1.0);\n\tCOLOR = vec4(fract(LIGHT_VERTEX.xy / 8.0), LIGHT_VERTEX.z + fract(SHADOW_VERTEX.x / 16.0) * 0.25, 1.0);',
+    }),
+    fragmentRows('LIGHT_VERTEX', 'SHADOW_VERTEX')
+  ),
+  shadedRectScene(
+    'canvas-shader-at-light-pass',
+    shaderText({
+      head: 'varying float vertex_pass;',
+      vertex: 'vertex_pass = AT_LIGHT_PASS ? 1.0 : 0.25;',
+      fragment: 'COLOR = vec4(AT_LIGHT_PASS ? 1.0 : 0.5, vertex_pass, 0.0, 1.0);',
+    }),
+    [...fragmentRows('AT_LIGHT_PASS'), ...vertexRows('AT_LIGHT_PASS')]
+  ),
+  shadedRectScene(
+    'canvas-shader-vertex-moved',
+    shaderText({ vertex: 'VERTEX += vec2(4.0, -2.0);\n\tUV = UV.yx;\n\tCOLOR = vec4(1.0, 0.5, 0.25, 1.0);' }),
+    vertexRows('VERTEX', 'UV', 'COLOR'),
+    { item: { ...CENTRE, rotation: 30 } }
+  ),
+  shadedRectScene(
+    'canvas-shader-vertex-matrices',
+    shaderText({
+      vertex:
+        'COLOR = vec4(MODEL_MATRIX[0].y + 0.5, CANVAS_MATRIX[3].x / -20.0, SCREEN_MATRIX[0].x * 16.0, 1.0);',
+    }),
+    vertexRows('MODEL_MATRIX', 'CANVAS_MATRIX', 'SCREEN_MATRIX'),
+    { item: { ...CENTRE, rotation: 20 }, canvasTransform: [1.5, 0, 0, 0.75, -10, 6] }
+  ),
+  shadedRectScene(
+    'canvas-shader-vertex-ids',
+    shaderText({
+      vertex:
+        'COLOR = vec4(float(VERTEX_ID) / 4.0, float(INSTANCE_ID) / 3.0 + 0.25, INSTANCE_CUSTOM.x + CUSTOM0.x + CUSTOM1.x + 0.5, TEXTURE_PIXEL_SIZE.x * 8.0);',
+    }),
+    vertexRows('VERTEX_ID', 'INSTANCE_ID', 'INSTANCE_CUSTOM', 'CUSTOM0', 'CUSTOM1', 'TEXTURE_PIXEL_SIZE'),
+    {
+      rects: [
+        rect({ rect: [-30, -20, 16, 8], source: [0, 0, 4, 2] }),
+        rect({ rect: [-10, -6, 24, 12] }),
+        rect({ rect: [14, 4, -16, 16], source: [4, 2, 4, 2] }),
+      ],
+    }
+  ),
+  shadedRectScene(
+    'canvas-shader-constants',
+    shaderText({ fragment: 'COLOR = vec4(PI / 4.0, TAU / 8.0, E / 4.0, 1.0);' }),
+    ['PI', 'TAU', 'E'].map(row('constants'))
+  ),
+  shadedRectScene(
+    'canvas-shader-time',
+    shaderText({ fragment: 'COLOR = vec4(fract(TIME), fract(TIME * 0.5), 0.5, 1.0);' }),
+    ['canvas_item.global.TIME'],
+    { clock: { fixedFps: 3, rolloverSeconds: 3600, frames: FRAMES_BEFORE_READ } }
+  ),
+  shadedRectScene(
+    'canvas-shader-skip-vertex-transform',
+    shaderText({
+      head: 'render_mode skip_vertex_transform;',
+      vertex: 'VERTEX = (MODEL_MATRIX * vec4(VERTEX, 0.0, 1.0)).xy + vec2(6.0, 0.0);',
+    }),
+    ['canvas_item render_mode skip_vertex_transform'],
+    { item: { ...CENTRE, rotation: 30 } }
+  ),
+  shadedRectScene(
+    'canvas-shader-world-vertex-coords',
+    shaderText({ head: 'render_mode world_vertex_coords;', vertex: 'VERTEX.x += 6.0;' }),
+    ['canvas_item render_mode world_vertex_coords'],
+    { item: { ...CENTRE, rotation: 30 } }
+  ),
+  shadedRectScene(
+    'canvas-shader-unshaded',
+    shaderText({ head: 'render_mode unshaded;' }),
+    ['canvas_item render_mode unshaded'],
+    { canvasModulate: [0.5, 1, 0.75, 1] }
+  ),
+  shadedRectScene('canvas-shader-light-only', shaderText({ head: 'render_mode light_only;' }), [
+    'canvas_item render_mode light_only',
+  ]),
+  ...BLEND_SCENES,
+  // A source colour that a linear target turns linear (`renderer_canvas_render_rd.cpp:1703-1704`).
+  rectScene('canvas-shader-source-color', { source: TINTED }),
+  rectScene('canvas-shader-source-color-linear', { source: TINTED, linear: true }),
+];
+
 export const CANVAS_SCENES = [
   ...RECT_SCENES,
   ...PRIMITIVE_SCENES,
@@ -387,4 +582,5 @@ export const CANVAS_SCENES = [
   ...MESH_SCENES,
   ...NINE_PATCH_SCENES,
   ...LINEAR_RECT_SCENES,
+  ...SHADER_SCENES,
 ];

@@ -78,12 +78,14 @@ export interface AtlasCell extends AtlasCellRects {
   sheet: THREE.Texture;
 }
 
-interface AtlasCellRects {
+export interface AtlasCellRects {
   sheetSize: ImageSize;
   /** The cell in atlas pixels, margin and all. It can reach past the atlas. */
   cell: Rect2;
   /** The rectangle of the cell, in its pixels, that the region fills. */
   region: Rect2;
+  /** `filter_clip`, which clamps a rect's UV inside the region. */
+  filterClip: boolean;
 }
 
 /** A CanvasTexture's maps, which a canvas item lights through. */
@@ -131,7 +133,12 @@ function atlasCellRects(
   const sheetSize = imageSize(sheet?.image);
   const layout = sheetSize && atlasTextureLayout(atlas, sheetSize);
   if (!layout) return undefined;
-  return { sheetSize, cell: atlasCellRect(layout), region: atlasRegionInCell(layout) };
+  return {
+    sheetSize,
+    cell: atlasCellRect(layout),
+    region: atlasRegionInCell(layout),
+    filterClip: atlas.filterClip,
+  };
 }
 
 /**

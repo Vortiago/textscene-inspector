@@ -2,17 +2,14 @@ import { useEffect, useLayoutEffect, useMemo, type ReactNode } from 'react';
 import { useThree } from '@react-three/fiber';
 import type * as THREE from 'three';
 import type { PointDraw } from '../../shaders/spatial/spatialPipeline';
-import { projectRoughnessLimiter, projectSampling } from '../../parser/projectSettingsParser';
+import { projectRoughnessLimiter } from '../../parser/projectSettingsParser';
 import type { ShaderText } from '../../resources/materials/shadermaterial/types';
 import { memoisedImport } from '../../resources/memoisedImport';
-import { useLazyModuleState } from '../../resources/useLazyModule';
-import { warnOnce } from '../../utils/warnOnce';
-import { useNodesHandler } from '../canvasRenderer/canvasNodesHandler';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext';
 import { drawGroupOf, materialAt, placeMaterial, type MaterialHost } from '../materials/swappedMaterials';
 import { OTHER_DRAWS_SURFACE } from '../materials/useOneSurfaceStartingMaterial';
-import { useProjectShaderOptions } from '../projectShaderOptions';
 import { useShaderTextures } from '../shaderTextures/shaderTextures';
+import { useShaderRefusalWarning, useShaderTranslator } from '../shaderTranslator/useShaderTranslator';
 
 /** Imported by the first spatial shader only: it holds the shader parser and three's TSL. */
 const loadSpatialSurface = memoisedImport(() => import('./spatialSurface'));
@@ -34,28 +31,24 @@ export function SpatialShaderSlot({ shader, attach, fallback }: SpatialShaderSlo
   const gl = useThree((state) => state.gl);
   const invalidate = useThree((state) => state.invalidate);
   const scene = useThree((state) => state.scene);
-  const loaded = useLazyModuleState(loadSpatialSurface, true);
-  const module = typeof loaded === 'object' && loaded !== null ? loaded.module : null;
-  const nodesHandler = useNodesHandler(gl);
-  const options = useProjectShaderOptions(shader.code);
+  const translator = useShaderTranslator(loadSpatialSurface, shader, LOAD_FAILURE);
+  const module = translator?.module ?? null;
   const { settings } = useProjectSettings();
-  const sampling = useMemo(() => projectSampling(settings), [settings]);
   const roughnessLimiter = useMemo(() => projectRoughnessLimiter(settings), [settings]);
-  const isReady = module !== null && options !== null && nodesHandler === 'ready';
   const surface = useMemo(
-    () => (isReady ? module.spatialSurfaceOf(gl, shader, { ...options, sampling, roughnessLimiter }) : null),
-    [isReady, module, gl, shader, options, sampling, roughnessLimiter]
+    () =>
+      translator &&
+      translator.module.spatialSurfaceOf(gl, shader, {
+        ...translator.options,
+        sampling: translator.sampling,
+        roughnessLimiter,
+      }),
+    [translator, gl, shader, roughnessLimiter]
   );
   const drawn = surface && 'spatial' in surface ? surface : null;
   const spatial = drawn?.spatial ?? null;
   useEffect(() => (spatial ? () => module!.disposeSpatial(spatial) : undefined), [module, spatial]);
-
-  const refusal = surface && 'refusal' in surface ? surface.refusal : null;
-  const isLoadFailed = loaded === 'failed' || nodesHandler === 'failed';
-  useEffect(() => {
-    if (refusal) warnOnce(shader, 'refused', refusal);
-    else if (isLoadFailed) warnOnce(loadSpatialSurface, 'failed', LOAD_FAILURE);
-  }, [shader, refusal, isLoadFailed]);
+  useShaderRefusalWarning(shader, surface && 'refusal' in surface ? surface.refusal : null);
 
   const samplers = drawn?.samplers ?? null;
   const [textures, textureSlots] = useShaderTextures(

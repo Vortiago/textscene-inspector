@@ -16,7 +16,7 @@ export interface CanvasItemDraw {
 export const WHITE: Rgba = Object.freeze({ r: 1, g: 1, b: 1, a: 1 });
 
 /** `sizeof(InstanceData)` (`renderer_canvas_render_rd.h:379`). */
-const INSTANCE_BYTES = 128;
+export const INSTANCE_BYTES = 128;
 
 /** Float offset of `InstanceData::world`, the item transform's six floats. */
 const WORLD = 0;
@@ -52,6 +52,57 @@ export function worldOf({ a, b, c, d, tx, ty }: Transform2DColumns): number[] {
   return [a, b, c, d, tx, ty];
 }
 
+/** Writes `transform` as record `index`'s world, and uploads the floats only when they change. */
+export function writeBatchWorld(
+  geometry: THREE.BufferGeometry,
+  index: number,
+  { a, b, c, d, tx, ty }: Transform2DColumns
+): void {
+  const floats = (geometry.getAttribute(ATTRIBUTES[0]!) as THREE.InterleavedBufferAttribute).data;
+  const lanes = floats.array as Float32Array;
+  const offset = index * floats.stride + WORLD;
+  // Lane by lane, not through `worldOf`: this runs for each shaded item each frame.
+  if (
+    lanes[offset] === Math.fround(a) &&
+    lanes[offset + 1] === Math.fround(b) &&
+    lanes[offset + 2] === Math.fround(c) &&
+    lanes[offset + 3] === Math.fround(d) &&
+    lanes[offset + 4] === Math.fround(tx) &&
+    lanes[offset + 5] === Math.fround(ty)
+  )
+    return;
+  lanes[offset] = a;
+  lanes[offset + 1] = b;
+  lanes[offset + 2] = c;
+  lanes[offset + 3] = d;
+  lanes[offset + 4] = tx;
+  lanes[offset + 5] = ty;
+  floats.needsUpdate = true;
+}
+
+/** Writes `record` over record `index` of `geometry`, a batch of `instanceBatchGeometry`, and uploads it. */
+export function writeBatchRecord(geometry: THREE.BufferGeometry, index: number, record: ArrayBuffer): void {
+  const floats = (geometry.getAttribute(ATTRIBUTES[0]!) as THREE.InterleavedBufferAttribute).data;
+  const words = (
+    geometry.getAttribute(ATTRIBUTES[ATTRIBUTES.length - 1]!) as THREE.InterleavedBufferAttribute
+  ).data;
+  const lanes = { floats: floats.array as Float32Array, words: words.array as Uint32Array };
+  writeRecordInto(lanes, floats.stride, index, record);
+  floats.needsUpdate = true;
+  words.needsUpdate = true;
+}
+
+/** Writes `record` as record `index`: its first `floatLanes` lanes into `floats`, the rest into `words`. */
+function writeRecordInto(
+  { floats, words }: { floats: Float32Array; words: Uint32Array },
+  floatLanes: number,
+  index: number,
+  record: ArrayBuffer
+): void {
+  floats.set(new Float32Array(record, 0, floatLanes), index * floatLanes);
+  words.set(new Uint32Array(record, floatLanes * 4), index * (RECORD_LANES - floatLanes));
+}
+
 /** `color * base_color`, turned linear for a linear render target (`renderer_canvas_render_rd.cpp:2425`). */
 export function modulated(color: Rgba, item: CanvasItemDraw): Rgba {
   const product = multiplyColor(color, item.finalModulate);
@@ -76,10 +127,7 @@ export function instanceBatchGeometry(
   // Two buffers, as three uploads one GL buffer for each interleaved buffer: each byte goes up once.
   const floats = new Float32Array(floatLanes * records.length);
   const words = new Uint32Array(wordLanes * records.length);
-  records.forEach((record, index) => {
-    floats.set(new Float32Array(record, 0, floatLanes), index * floatLanes);
-    words.set(new Uint32Array(record, floatLanes * 4), index * wordLanes);
-  });
+  records.forEach((record, index) => writeRecordInto({ floats, words }, floatLanes, index, record));
   const geometry = new THREE.InstancedBufferGeometry();
   geometry.setIndex([...indices]);
   setAttributes(geometry, ATTRIBUTES.slice(0, floatAttributes), floats, floatLanes);

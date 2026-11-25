@@ -1,0 +1,139 @@
+[gd_scene format=3]
+
+; One variable: a ShaderMaterial of shader_type canvas_item on a Sprite2D, which no other golden draws.
+; Each sprite reads one part of it: the UV, a set parameter, a moved vertex with an add blend, a
+; parent's material through use_parent_material, a flipped region, an AtlasTexture with a margin,
+; whose UV is on its atlas, and a shader Godot does not compile, which draws as Godot's default canvas
+; shader. Plain has no material.
+
+[ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
+
+[sub_resource type="Shader" id="Shader_uv"]
+code = "shader_type canvas_item;
+
+void fragment() {
+	COLOR = vec4(UV, 0.5, 1.0);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_uv"]
+shader = SubResource("Shader_uv")
+
+[sub_resource type="Shader" id="Shader_tint"]
+code = "shader_type canvas_item;
+
+uniform vec4 tint : source_color = vec4(1.0);
+uniform float amount = 0.0;
+
+void fragment() {
+	COLOR = mix(texture(TEXTURE, UV), tint, amount);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_tint"]
+shader = SubResource("Shader_tint")
+shader_parameter/tint = Color(0.9, 0.3, 0.1, 1)
+shader_parameter/amount = 0.6
+
+[sub_resource type="Shader" id="Shader_moved"]
+code = "shader_type canvas_item;
+render_mode blend_add;
+
+void vertex() {
+	VERTEX += vec2(0.0, -20.0);
+	COLOR = vec4(0.2, 0.6, 1.0, 1.0);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_moved"]
+shader = SubResource("Shader_moved")
+
+[sub_resource type="Shader" id="Shader_parent"]
+code = "shader_type canvas_item;
+
+void fragment() {
+	COLOR.rgb = vec3(1.0) - texture(TEXTURE, UV).rgb;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_parent"]
+shader = SubResource("Shader_parent")
+
+[sub_resource type="Shader" id="Shader_region"]
+code = "shader_type canvas_item;
+
+void fragment() {
+	COLOR = vec4(UV, REGION_RECT.z, 1.0);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_region"]
+shader = SubResource("Shader_region")
+
+[sub_resource type="Shader" id="Shader_broken"]
+code = "shader_type canvas_item;
+
+void fragment() {
+	COLOR = 1.0;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_broken"]
+shader = SubResource("Shader_broken")
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_margin"]
+atlas = ExtResource("1_marker")
+region = Rect2(24, 24, 40, 40)
+margin = Rect2(8, 4, 16, 12)
+
+[node name="World" type="Node2D"]
+
+[node name="Uv" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_uv")
+position = Vector2(120, 140)
+rotation = 0.4
+scale = Vector2(1.5, 1)
+texture = ExtResource("1_marker")
+
+[node name="Tint" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_tint")
+position = Vector2(320, 140)
+texture = ExtResource("1_marker")
+
+[node name="Moved" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_moved")
+modulate = Color(1, 1, 1, 0.8)
+position = Vector2(520, 160)
+texture = ExtResource("1_marker")
+
+[node name="Parent" type="Node2D" parent="."]
+material = SubResource("ShaderMaterial_parent")
+position = Vector2(720, 140)
+
+[node name="Child" type="Sprite2D" parent="Parent"]
+use_parent_material = true
+texture = ExtResource("1_marker")
+
+[node name="Region" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_region")
+position = Vector2(120, 400)
+scale = Vector2(2, 2)
+texture = ExtResource("1_marker")
+flip_h = true
+region_enabled = true
+region_rect = Rect2(16, 8, 48, 64)
+
+[node name="Broken" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_broken")
+position = Vector2(320, 400)
+texture = ExtResource("1_marker")
+
+[node name="Plain" type="Sprite2D" parent="."]
+position = Vector2(520, 400)
+texture = ExtResource("1_marker")
+
+[node name="Atlas" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_uv")
+position = Vector2(720, 400)
+scale = Vector2(2, 2)
+texture = SubResource("AtlasTexture_margin")
