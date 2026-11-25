@@ -16,12 +16,14 @@ export function installPageRecorder(prefix) {
   const gl = WebGL2RenderingContext.prototype;
   const { shaderSource, attachShader, useProgram } = gl;
   let current = null;
+  let lastDrawn = null;
   gl.shaderSource = function (shader, source) {
     shaderLengths.set(shader, source.length);
     return shaderSource.call(this, shader, source);
   };
   gl.attachShader = function (program, shader) {
-    programShaders.set(program, [...(programShaders.get(program) ?? []), shaderLengths.get(shader)]);
+    if (!programShaders.has(program)) programShaders.set(program, []);
+    programShaders.get(program).push(shaderLengths.get(shader));
     return attachShader.call(this, program, shader);
   };
   gl.useProgram = function (program) {
@@ -31,8 +33,9 @@ export function installPageRecorder(prefix) {
   for (const name of ['drawArrays', 'drawElements', 'drawArraysInstanced', 'drawElementsInstanced']) {
     const draw = gl[name];
     gl[name] = function (...args) {
-      if (!current || drawn.has(current)) return draw.apply(this, args);
+      if (!current || current === lastDrawn || drawn.has(current)) return draw.apply(this, args);
       drawn.add(current);
+      lastDrawn = current;
       const start = performance.now();
       const result = draw.apply(this, args);
       // A read waits for the GPU process, which `finish` does not in Chromium: the time holds earlier work.
@@ -50,9 +53,10 @@ export function installPageRecorder(prefix) {
     }
   }).observe({ type: 'longtask', buffered: true });
 
+  const canvases = document.getElementsByTagName('canvas');
   const watchCanvas = () => {
     const observer = new MutationObserver(() => {
-      if (!document.querySelector('canvas')) return;
+      if (canvases.length === 0) return;
       observer.disconnect();
       emit({ kind: 'canvas' });
     });

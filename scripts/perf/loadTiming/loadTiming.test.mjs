@@ -1,13 +1,13 @@
 import { EventEmitter } from 'node:events';
-import { describe, expect, it } from 'vitest';
-import { isLoadTimingOn, recordLoadTiming } from './loadTiming.mjs';
+import { describe, expect, it, vi } from 'vitest';
+import { recordLoadTimingWhenOn } from './loadTiming.mjs';
 import { LOAD_TIMING_PREFIX } from './pageRecorder.mjs';
 
-/** A context with the two members `recordLoadTiming` uses, and the init scripts it was given. */
+const ON = { TEXTSCENE_LOAD_TIMING: '1' };
+
 function fakeContext() {
   const context = new EventEmitter();
-  context.initScripts = [];
-  context.addInitScript = async (script, arg) => context.initScripts.push({ script, arg });
+  context.addInitScript = vi.fn(async () => {});
   return context;
 }
 
@@ -15,35 +15,39 @@ function logFrom(page, event) {
   page.emit('console', { text: () => LOAD_TIMING_PREFIX + JSON.stringify(event) });
 }
 
-describe('isLoadTimingOn', () => {
-  it('is on only for TEXTSCENE_LOAD_TIMING=1', () => {
-    expect(isLoadTimingOn({ TEXTSCENE_LOAD_TIMING: '1' })).toBe(true);
-    expect(isLoadTimingOn({ TEXTSCENE_LOAD_TIMING: '0' })).toBe(false);
-    expect(isLoadTimingOn({})).toBe(false);
-  });
-});
-
-describe('recordLoadTiming', () => {
-  it('installs the page recorder with the prefix it reads', async () => {
+describe('recordLoadTimingWhenOn', () => {
+  it('installs the page recorder with the prefix it reads when the switch is on', async () => {
     const context = fakeContext();
-    await recordLoadTiming(context, () => {});
-    expect(context.initScripts).toHaveLength(1);
-    expect(context.initScripts[0].arg).toBe(LOAD_TIMING_PREFIX);
+    await recordLoadTimingWhenOn(context, ON, () => {});
+    expect(context.addInitScript).toHaveBeenCalledWith(expect.any(Function), LOAD_TIMING_PREFIX);
   });
 
-  it('prints each recorded event, then the summary when the page closes', async () => {
+  it('installs nothing unless the switch is 1', async () => {
+    const context = fakeContext();
+    await recordLoadTimingWhenOn(context, {}, () => {});
+    await recordLoadTimingWhenOn(context, { TEXTSCENE_LOAD_TIMING: '0' }, () => {});
+    expect(context.addInitScript).not.toHaveBeenCalled();
+  });
+
+  it('prints each recorded event and skips the app log lines', async () => {
     const context = fakeContext();
     const lines = [];
-    await recordLoadTiming(context, (line) => lines.push(line));
+    await recordLoadTimingWhenOn(context, ON, (line) => lines.push(line));
     const page = new EventEmitter();
     context.emit('page', page);
     logFrom(page, { at: 20, kind: 'navigate', search: '?fixture=lit.tscn' });
     page.emit('console', { text: () => 'an app log line' });
+    expect(lines).toEqual(['[load-timing] 20 ms navigate ?fixture=lit.tscn']);
+  });
+
+  it('prints the summary when the page closes', async () => {
+    const context = fakeContext();
+    const lines = [];
+    await recordLoadTimingWhenOn(context, ON, (line) => lines.push(line));
+    const page = new EventEmitter();
+    context.emit('page', page);
+    logFrom(page, { at: 20, kind: 'navigate', search: '?fixture=lit.tscn' });
     page.emit('close');
-    expect(lines).toEqual([
-      '[load-timing] 20 ms navigate ?fixture=lit.tscn',
-      '[load-timing] ?fixture=lit.tscn: canvas inserted at no time, 0 programs drawn, ' +
-        'the slowest first draw 0 ms, 0 main-thread tasks over 1000 ms, the longest 0 ms',
-    ]);
+    expect(lines.at(-1)).toMatch(/^\[load-timing\] \?fixture=lit\.tscn: canvas inserted at no time/);
   });
 });

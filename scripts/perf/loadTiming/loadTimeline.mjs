@@ -25,9 +25,12 @@ export class LoadTimeline {
 
   /** Adds `event`, and answers the summary of the load it ends when it is a navigation. */
   add(event) {
-    const ended = event.kind === 'navigate' ? this.summary() : null;
-    if (event.kind === 'navigate') this.#events = [];
-    this.#events.push(event);
+    if (event.kind !== 'navigate') {
+      this.#events.push(event);
+      return null;
+    }
+    const ended = this.summary();
+    this.#events = [event];
     return ended;
   }
 

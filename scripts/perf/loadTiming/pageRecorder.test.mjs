@@ -3,9 +3,18 @@ import { installPageRecorder } from './pageRecorder.mjs';
 
 const PREFIX = '[test] ';
 
-/** A WebGL2 class whose calls do nothing, new for each test, as the recorder wraps its prototype. */
-function fakeGLClass() {
-  return class {
+const NoopObserver = class {
+  observe() {}
+};
+
+let events;
+let FakeGL;
+
+beforeEach(() => {
+  events = [];
+  vi.spyOn(console, 'log').mockImplementation((line) => events.push(JSON.parse(line.slice(PREFIX.length))));
+  // New for each test, as the recorder wraps the prototype it finds.
+  FakeGL = class {
     shaderSource() {}
     attachShader() {}
     useProgram() {}
@@ -16,30 +25,11 @@ function fakeGLClass() {
     readPixels() {}
     getError() {}
   };
-}
-
-let events;
-let FakeGL;
-
-beforeEach(() => {
-  events = [];
-  vi.spyOn(console, 'log').mockImplementation((line) => events.push(JSON.parse(line.slice(PREFIX.length))));
-  FakeGL = fakeGLClass();
   vi.stubGlobal('WebGL2RenderingContext', FakeGL);
   vi.stubGlobal('window', { location: { search: '?fixture=lit.tscn' }, addEventListener() {} });
-  vi.stubGlobal('document', { documentElement: {}, querySelector: () => null });
-  vi.stubGlobal(
-    'MutationObserver',
-    class {
-      observe() {}
-    }
-  );
-  vi.stubGlobal(
-    'PerformanceObserver',
-    class {
-      observe() {}
-    }
-  );
+  vi.stubGlobal('document', { documentElement: {}, getElementsByTagName: () => [] });
+  vi.stubGlobal('MutationObserver', NoopObserver);
+  vi.stubGlobal('PerformanceObserver', NoopObserver);
   installPageRecorder(PREFIX);
 });
 
@@ -65,14 +55,15 @@ describe('installPageRecorder', () => {
     expect(events[0]).toMatchObject({ kind: 'navigate', search: '?fixture=lit.tscn' });
   });
 
-  it('records one first draw for each program, with its shader lengths', () => {
+  it('records one first draw for each program', () => {
     const gl = new FakeGL();
     drawProgramTwice(gl, 12, 34);
     drawProgramTwice(gl, 5, 6);
-    const draws = events.filter((event) => event.kind === 'first-draw');
-    expect(draws.map((draw) => draw.shaderLengths)).toEqual([
-      [12, 34],
-      [5, 6],
-    ]);
+    expect(events.filter((event) => event.kind === 'first-draw')).toHaveLength(2);
+  });
+
+  it('records the source length of each shader of the program drawn', () => {
+    drawProgramTwice(new FakeGL(), 12, 34);
+    expect(events.find((event) => event.kind === 'first-draw').shaderLengths).toEqual([12, 34]);
   });
 });

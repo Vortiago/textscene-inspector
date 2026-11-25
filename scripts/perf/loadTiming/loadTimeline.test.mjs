@@ -23,7 +23,7 @@ describe('eventLine', () => {
 });
 
 describe('LoadTimeline', () => {
-  it('sums up a load: the canvas insert, the programs drawn and the tasks over a second', () => {
+  it('sums up a load', () => {
     const timeline = new LoadTimeline();
     for (const event of [NAVIGATE, CANVAS, SKY_DRAW, LIT_DRAW, COMPILE_TASK, FRAME_TASK]) timeline.add(event);
     expect(timeline.summary()).toBe(
@@ -32,13 +32,24 @@ describe('LoadTimeline', () => {
     );
   });
 
-  it('answers the summary of the load a navigation ends, and starts a new one', () => {
+  it('answers the summary of the load a navigation ends', () => {
     const timeline = new LoadTimeline();
     timeline.add(NAVIGATE);
     timeline.add(CANVAS);
     const ended = timeline.add({ ...NAVIGATE, search: '?fixture=next.tscn' });
     expect(ended).toMatch(/^\?fixture=lit\.tscn: canvas inserted at 480 ms/);
+  });
+
+  it('starts a new load at a navigation', () => {
+    const timeline = new LoadTimeline();
+    timeline.add(NAVIGATE);
+    timeline.add(CANVAS);
+    timeline.add({ ...NAVIGATE, search: '?fixture=next.tscn' });
     expect(timeline.summary()).toMatch(/^\?fixture=next\.tscn: canvas inserted at no time, 0 programs/);
+  });
+
+  it('answers no summary for an event that is not a navigation', () => {
+    expect(new LoadTimeline().add(CANVAS)).toBeNull();
   });
 
   it('has no summary before the first navigation', () => {

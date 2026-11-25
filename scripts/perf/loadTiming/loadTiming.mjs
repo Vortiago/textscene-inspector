@@ -1,24 +1,21 @@
 import { LoadTimeline, eventLine } from './loadTimeline.mjs';
 import { installPageRecorder, LOAD_TIMING_PREFIX } from './pageRecorder.mjs';
 
-/** Whether `env` switches load timing on: off by default, as its reads slow each program's first draw. */
-export function isLoadTimingOn(env) {
-  return env.TEXTSCENE_LOAD_TIMING === '1';
-}
-
-/** Prints each event of `context`'s pages with `print`, and a summary line when a load ends. */
-export async function recordLoadTiming(context, print = console.log) {
+/** Prints how `context`'s pages load when `TEXTSCENE_LOAD_TIMING=1`. Off by default: it slows first draws. */
+export async function recordLoadTimingWhenOn(context, env, print = console.log) {
+  if (env.TEXTSCENE_LOAD_TIMING !== '1') return;
   await context.addInitScript(installPageRecorder, LOAD_TIMING_PREFIX);
+  const log = (text) => print(`[load-timing] ${text}`);
   context.on('page', (page) => {
     const timeline = new LoadTimeline();
-    const printSummary = (summary) => summary && print(`[load-timing] ${summary}`);
+    const logSummary = (summary) => summary && log(summary);
     page.on('console', (message) => {
       const text = message.text();
       if (!text.startsWith(LOAD_TIMING_PREFIX)) return;
       const event = JSON.parse(text.slice(LOAD_TIMING_PREFIX.length));
-      printSummary(timeline.add(event));
-      print(`[load-timing] ${eventLine(event)}`);
+      logSummary(timeline.add(event));
+      log(eventLine(event));
     });
-    page.on('close', () => printSummary(timeline.summary()));
+    page.on('close', () => logSummary(timeline.summary()));
   });
 }
