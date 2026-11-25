@@ -28,6 +28,14 @@ polygon's rotation and scale turn the normal (`canvas.glsl:708`). `texture_rotat
 and `texture_scale` move only the UV, so they do not. Turned, rotated a quarter turn, is lit from
 below, as in Godot.
 
+## A user's canvas_item shader
+
+<!-- compare: image=unit-canvas-shader-items status=done fixture=unit-canvas-shader-items.tscn -->
+
+A Polygon2D can have a ShaderMaterial of `shader_type canvas_item` as its `material`. It then draws its
+triangles through Godot's canvas template with the user's shader, with its vertex colours and `uv`. A skinned
+Polygon2D still draws with Godot's default canvas shader. A 2D light does not shade it yet.
+
 ## Linting
 
 <!-- lint:begin Polygon2D -->

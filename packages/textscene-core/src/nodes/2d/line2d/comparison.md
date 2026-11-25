@@ -22,6 +22,15 @@ DirectionalLight2D. Only the node's rotation and scale turn the normal (`canvas.
 line's direction and its UVs do not. A vertical line lights as a horizontal one. A line rotated a
 quarter turn is lit from below, as in Godot.
 
+## A user's canvas_item shader
+
+<!-- compare: image=unit-canvas-shader-items status=done fixture=unit-canvas-shader-items.tscn -->
+
+A Line2D can have a ShaderMaterial of `shader_type canvas_item` as its `material`. It then draws its
+strip through Godot's canvas template with the user's shader, with its gradient colours and texture
+coordinates. A
+2D light does not shade it yet.
+
 ## Linting
 
 <!-- lint:begin Line2D -->
