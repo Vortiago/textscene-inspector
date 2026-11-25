@@ -5,6 +5,7 @@ import type { Binding } from '../uniforms/bindingTable.js';
 import { roundedLayer } from '../language/textureLayer.js';
 import { scaleLayerReads } from '../language/layerScaledReads.js';
 import { skyLayersTextureNode } from '../sky/radianceTextureNode.js';
+import { defaultTexture } from '../uniforms/defaultTextures.js';
 import {
   MAX_ROUGHNESS_LOD,
   SKY_ROUGHNESS_LAYERS_DEFAULT,
@@ -39,8 +40,7 @@ const USE_AMBIENT_CUBEMAP = 1 << 1;
 const USE_REFLECTION_CUBEMAP = 1 << 2;
 
 /** What a scene with no sky binds, as Godot binds a black array (`render_forward_clustered.cpp:3325`). */
-const NO_LAYERS = new THREE.DataArrayTexture(new Uint8Array(4), 1, 1, 1);
-NO_LAYERS.needsUpdate = true;
+const NO_LAYERS = defaultTexture('layers', 'black') as THREE.DataArrayTexture;
 
 /** Each program's energies of its layers, by its texture node. Written only by `radianceOctmapNode`. */
 // eslint-disable-next-line no-restricted-syntax -- perObject is outside the shader module, which imports only its own files (ADR-0072).
@@ -85,8 +85,8 @@ const cameraBasis = new THREE.Matrix3();
 
 /** Zero unless a surface reads the sky, as Godot writes it only then (`render_scene_data_rd.cpp:201-205`). */
 function radianceInverseXform({ sky, camera }: SpatialFrame): THREE.Matrix3 {
-  if (!skyFlagsOf(sky)) return radianceBasis.set(0, 0, 0, 0, 0, 0, 0, 0, 0);
-  return radianceBasis.multiplyMatrices(sky!.worldToSky, cameraBasis.setFromMatrix4(camera.matrixWorld));
+  if (!sky || !skyFlagsOf(sky)) return radianceBasis.set(0, 0, 0, 0, 0, 0, 0, 0, 0);
+  return radianceBasis.multiplyMatrices(sky.worldToSky, cameraBasis.setFromMatrix4(camera.matrixWorld));
 }
 
 /** Each member of `SceneData` the sky's light on a surface reads. */
@@ -117,8 +117,3 @@ export const SKY_BINDINGS: readonly Binding<SpatialFrame>[] = [
     value: ({ sky, emissiveExposure }) => (sky ? emissiveExposure : 1),
   },
 ];
-
-/** `ambient_light_color_energy.a`: the background energy, which every read of the sky takes (`:167`). */
-export function skyEnergyOf(sky: SceneSky | undefined): number {
-  return sky?.energyMultiplier ?? 1;
-}

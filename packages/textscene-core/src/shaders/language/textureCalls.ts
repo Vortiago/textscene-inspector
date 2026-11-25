@@ -166,6 +166,9 @@ function cubeArrayReader(
   return (texture) => new CubeArrayReadNode(texture, held, level) as unknown as Node;
 }
 
+/** The calls that read a colour: a gather reads one channel of four texels, which no layer scale fits. */
+const LAYER_SCALED_CALLS: ReadonlySet<string> = new Set(['texture', 'textureLod', 'textureGrad']);
+
 function sampledCall(name: string, row: InstructionRow, operands: readonly Node[]): Node {
   const [texture, coordinate, ...rest] = operands as [TextureNode, Node, ...Node[]];
   const [sampler, coordinateType] = row.args!;
@@ -178,9 +181,6 @@ function sampledCall(name: string, row: InstructionRow, operands: readonly Node[
   const divided = projected(sampler!, coordinate, coordinateType!);
   return CALLS[projectedCall]!(texture, { uv: divided }, rest, sampler!);
 }
-
-/** The calls that read a colour: a gather reads one channel of four texels, which no layer scale fits. */
-const LAYER_SCALED_CALLS: ReadonlySet<string> = new Set(['texture', 'textureLod', 'textureGrad']);
 
 const INTEGER_TYPES: ReadonlySet<number> = new Set([IntType, UnsignedIntType]);
 

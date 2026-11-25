@@ -3,7 +3,7 @@ import type { SceneSky } from '../../shaders/spatial/sceneSky.js';
 import { renderedSky, skyRotation } from '../sky/skyRadiance.js';
 
 /** Scratch for one draw's sky basis, overwritten by the next. */
-const worldToSky = new THREE.Matrix3();
+const skyBasis = new THREE.Matrix3();
 
 /** The sky of the render under way as a lit surface reads it, or nothing when the render shows none. */
 export function sceneSkyLight(): SceneSky | undefined {
@@ -16,7 +16,7 @@ export function sceneSkyLight(): SceneSky | undefined {
     pixelSize: layout.pixelSize,
     // The layout keeps the width inside the padding, and Godot the padding of one side (`sky.cpp:1559`).
     borderSize: (1 - layout.borderSize) / 2,
-    worldToSky: worldToSky.fromArray(skyRotation),
+    worldToSky: skyBasis.fromArray(skyRotation),
     energyMultiplier: sky.energyMultiplier,
     ambientContribution: sky.contribution,
     isReflected: sky.isReflected,

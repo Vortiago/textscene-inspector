@@ -9,7 +9,7 @@ import { FOG_BINDINGS, FOG_SPECIALISATIONS, USE_FOG } from './fogBindings.js';
 import { EFFECT_SPECIALISATIONS } from './effectSpecialisations.js';
 import { DIRECTIONAL_LIGHT_BINDINGS, type DirectionalLight } from './directionalLights.js';
 import { GODOT_ROUGHNESS_LIMITER, type RoughnessLimiter } from '../../godot/rendering/roughnessLimiter.js';
-import { bindSkyLayers, SKY_BINDINGS, skyEnergyOf, skyFlagsOf, type SceneSky } from './sceneSky.js';
+import { bindSkyLayers, SKY_BINDINGS, skyFlagsOf, type SceneSky } from './sceneSky.js';
 
 /** What the colour pass reads from a frame. */
 export interface SpatialScene {
@@ -133,8 +133,9 @@ export const SCENE_BINDINGS: readonly Binding<SpatialFrame>[] = [
   {
     uniform: `${DATA}.ambient_light_color_energy`,
     godot: 'render_scene_data_rd.cpp:165-185, 229-233',
+    // The alpha is the background energy, which every read of the sky takes (`:167`).
     value: ({ ambientLight, sky }) =>
-      new THREE.Vector4(ambientLight.r, ambientLight.g, ambientLight.b, skyEnergyOf(sky)),
+      new THREE.Vector4(ambientLight.r, ambientLight.g, ambientLight.b, sky?.energyMultiplier ?? 1),
   },
   {
     uniform: `${DATA}.emissive_exposure_normalization`,

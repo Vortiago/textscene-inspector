@@ -113,6 +113,7 @@ describe('bindSkyLayers', () => {
   it('binds a black array with no sky', () => {
     const layers = octmap(written().spatial).value as THREE.DataArrayTexture;
     expect(layers).not.toBe(LAYERS);
-    expect([...(layers.image.data as Uint8Array)]).toEqual([0, 0, 0, 0]);
+    const colours = [...(layers.image.data as Uint8Array)].filter((_, channel) => channel % 4 !== 3);
+    expect(new Set(colours)).toEqual(new Set([0]));
   });
 });
