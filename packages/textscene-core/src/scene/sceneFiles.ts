@@ -15,8 +15,9 @@ export interface SceneFileFailure {
 export interface SceneFailure {
   /** Godot's error line, less its number. */
   readonly line: string;
-  /** The address the scene reads: the file and the files through which it fails, or an undeclared address. */
+  /** The file the scene reads and each file through which it fails, or the address the file lacks. */
   readonly chain: readonly string[];
+  readonly cause: LoadFailureCause;
 }
 
 /** One row of Godot's Load Errors dialog (dependency_editor.cpp:802-826). */

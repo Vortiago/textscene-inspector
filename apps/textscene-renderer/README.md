@@ -285,11 +285,12 @@ const view = mountScene(element, scene, {
   file that is not missing.
 - `addresses`: each sub-resource address inside the file that the scene reads, such as
   `res://wood.tres::Material_1`.
-- `sceneFailure`: `{ line, chain }` on the one file through which the game refuses to load the
-  whole scene, and null on every other file. It is the first such file in the order the scene
-  reads. `line` is the error line Godot prints, less its number. `chain` starts at the address
-  the scene reads: the file and each file through which it fails, or the sub-resource address the
-  file does not declare. A failure that only a node reads does not refuse the scene, as in Godot.
+- `sceneFailure`: `{ line, chain, cause }` on the one file through which the game refuses to load
+  the whole scene, and null on every other file. It is the first such file in the order the scene
+  reads, and none is named while an earlier read still loads. `line` is the error line Godot
+  prints, less its number. `chain` holds the file the scene reads and each file through which it
+  fails, or the sub-resource address the file does not declare. `cause` is the cause of the
+  `reason`. A failure that only a node reads does not refuse the scene, as in Godot.
 
 The list follows each file the scene's values read, as Godot's Load Errors dialog does: a
 sub-scene and a `.tres` add the files that they read. A file that a heading declares and no value

@@ -372,6 +372,7 @@ describe('the failure through which the game refuses the scene', () => {
       'res://atlas.tres': {
         line: 'res://main.tscn - Parse Error: [ext_resource] referenced non-existent resource at: res://atlas.tres.',
         chain: ['res://atlas.tres', 'res://gone.png'],
+        cause: 'missing',
       },
     });
   });
@@ -405,6 +406,7 @@ material_overlay = Resource("res://wood.tres::B")
       'res://wood.tres': {
         line: 'Parse Error: Parse error. [Resource file res://main.tscn]',
         chain: ['res://wood.tres::B'],
+        cause: 'missing',
       },
     });
   });
@@ -438,6 +440,7 @@ m = Resource("res://gone.tres")
       'res://gone.tres': {
         line: "res://main.tscn - Parse Error: Can't load resource at path: res://gone.tres with uid: .",
         chain: ['res://gone.tres'],
+        cause: 'missing',
       },
     });
   });

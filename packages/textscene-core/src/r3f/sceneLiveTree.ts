@@ -18,8 +18,7 @@ import { PROJECT_FILE_PATH } from '../godot/project/project.js';
 import { readProjectSettings } from '../resources/projectSettingsFile.js';
 import { registerInstanceResource } from '../resources/registerInstanceResource.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
-import { sceneReads, type FileRead } from '../resources/loadFailure/fileReads.js';
-import { failingReadsOf } from '../resources/loadFailure/sceneFailure.js';
+import { sceneFailingFileReads, sceneReads, type FileRead } from '../resources/loadFailure/fileReads.js';
 import { createSceneFileWalk, type WalkStart } from '../resources/sceneFiles/sceneFileWalk.js';
 import type { ResourceLoader } from '../resources/ResourceLoader.js';
 import type { Scene } from '../scene/openScene.js';
@@ -301,7 +300,13 @@ type ProjectRead = ProjectSettings | null | undefined;
 function walkStarts(graph: SceneGraph | null, settings: ProjectRead): WalkStart[] {
   const root = graph?.scenes.get(graph.rootScene);
   const scene = root
-    ? [{ owner: root.path, reads: sceneReads(root.path, root), failingReads: failingReadsOf(root) }]
+    ? [
+        {
+          owner: root.path,
+          reads: sceneReads(root.path, root),
+          failingReads: sceneFailingFileReads(root.path, root),
+        },
+      ]
     : [];
   if (settings === null) return scene;
   const engine = {
