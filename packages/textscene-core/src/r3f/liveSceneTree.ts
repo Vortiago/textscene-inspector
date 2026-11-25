@@ -872,10 +872,7 @@ function walkLiveTree(
 }
 
 /**
- * Every live-tree node whose collapsed identity satisfies `predicate`, with its
- * path. `descend` returns false for a node whose children are not collected. A
- * sub-viewport's content shows only through its surface, so the 2D-content hint
- * stops there while the scene tree panel does not.
+ * Every live-tree node that satisfies `predicate`, with its path. `descend` false skips its children.
  *
  * @canonical A walk of the Live scene tree
  */
