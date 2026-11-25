@@ -12,6 +12,9 @@ function bound() {
   return { binding, texture, param };
 }
 
+/** The first texel of a data texture. */
+const firstTexel = (texture: THREE.Texture) => [...(texture.image as { data: Uint8Array }).data.slice(0, 4)];
+
 const texture8x4 = () => new THREE.DataTexture(new Uint8Array(8 * 4 * 4), 8, 4);
 
 describe('CanvasTextureBinding', () => {
@@ -20,10 +23,10 @@ describe('CanvasTextureBinding', () => {
 
     binding.bind(undefined, GODOT_CANVAS_TEXTURE_STATE);
 
-    expect([
-      [...(texture('color_texture').image.data as Uint8Array).slice(0, 4)],
-      param('color_texture_pixel_size'),
-    ]).toEqual([[255, 255, 255, 255], new THREE.Vector2(1 / 4, 1 / 4)]);
+    expect([firstTexel(texture('color_texture')), param('color_texture_pixel_size')]).toEqual([
+      [255, 255, 255, 255],
+      new THREE.Vector2(1 / 4, 1 / 4),
+    ]);
   });
 
   it("writes the texture's texel size", () => {
@@ -74,10 +77,9 @@ describe('CanvasTextureBinding', () => {
 
     binding.bind(texture8x4(), GODOT_CANVAS_TEXTURE_STATE);
 
-    const firstTexel = (name: string) => [...(texture(name).image.data as Uint8Array).slice(0, 4)];
     expect([
-      firstTexel('normal_texture'),
-      firstTexel('specular_texture'),
+      firstTexel(texture('normal_texture')),
+      firstTexel(texture('specular_texture')),
       param('specular_shininess'),
     ]).toEqual([[128, 128, 255, 255], [255, 255, 255, 255], 0xffffffff]);
   });
