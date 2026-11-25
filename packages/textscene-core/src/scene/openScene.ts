@@ -132,7 +132,9 @@ export function openScene({
     parseSubResourcePath(path).subResourceId === undefined
       ? loadedResourceType(provider, path)
       : (subResource(path)?.type ?? null);
-  const nodes = new SceneNodes({ graph, tree, resourceClass }, properties, (path) => listeners.written(path));
+  const nodes = new SceneNodes({ graph, tree, resourceClass, resource }, properties, (path) =>
+    listeners.written(path)
+  );
   const listeners = new SceneListeners((path) => nodes.getNodeOrNull(path)?.path ?? null);
 
   const scene: Scene = {

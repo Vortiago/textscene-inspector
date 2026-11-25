@@ -4,7 +4,8 @@ import { VARIANT_TYPE as T, variantTypeName } from '../godot/variant/variantType
 import { sceneValueOf, valueOfSceneValue, type SceneValue } from './variant.js';
 import { absolutePathOf, ROOT_WINDOW_PATH } from './nodePathWalk.js';
 import type { ViewportCameras } from './viewportCameras.js';
-import { animationLibrariesOf, type LibraryTexts } from './animationLibraries.js';
+import { animationLibrariesOf, animationNamesOf, type LibraryTexts } from './animationLibraries.js';
+import type { LoadedResource } from './listed/listedProperties.js';
 import { boneCountOf } from './listed/skeletonBones.js';
 import { tileMapLayerCount, tileMapUsedCells } from './listed/tileMapLayers.js';
 import { tileMapLayerCells, usedCellsValue } from './tileCells.js';
@@ -38,6 +39,8 @@ export interface MethodTarget {
   ownTexts(): Promise<LibraryTexts>;
   /** The same texts as the files spell them, by property name. */
   fileTexts(): Promise<Readonly<Record<string, string>>>;
+  /** The resource a path names, loaded as `load` would. Null where none loads. */
+  resource(path: string): Promise<LoadedResource | null>;
 }
 
 /** A method of Godot's class this release ports, with the count of arguments its binding takes. */
@@ -239,6 +242,43 @@ const ANIMATION_MIXER_METHODS: Readonly<Record<string, PortedMethod>> = {
   },
 };
 
+// animation_player.cpp:150-153: a running scene plays `autoplay` on ready where a library holds it.
+const ANIMATION_PLAYER_METHODS: Readonly<Record<string, PortedMethod>> = {
+  get_current_animation: {
+    accessor: { role: 'getter', property: 'current_animation' },
+    minArguments: 0,
+    maxArguments: 0,
+    run: async (target) => {
+      const autoplay = await target.readStored('autoplay');
+      const asked = typeof autoplay === 'object' && autoplay !== null ? valueOfSceneValue(autoplay) : null;
+      const name = asked?.type === T.STRING_NAME || asked?.type === T.STRING ? asked.value : '';
+      const { texts, resourceClass } = await target.ownTexts();
+      const libraries = await animationLibrariesOf({ texts, resourceClass });
+      const isHeld =
+        name !== '' && (await animationNamesOf(libraries, texts, target.resource)).includes(name);
+      return sceneValueOf({ type: T.STRING_NAME, value: isHeld ? name : '' });
+    },
+  },
+};
+
+// audio_stream_player_internal.cpp:93-96: a running scene plays an autoplay stream as it enters the tree.
+const AUDIO_STREAM_PLAYER_METHODS: Readonly<Record<string, PortedMethod>> = {
+  is_playing: {
+    accessor: { role: 'getter', property: 'playing' },
+    minArguments: 0,
+    maxArguments: 0,
+    run: async (target) => {
+      if ((await target.readStored('autoplay')) !== true) return false;
+      const stream = await target.readStored('stream');
+      const path = typeof stream === 'object' && stream !== null ? valueOfSceneValue(stream) : null;
+      if (path?.type !== T.OBJECT || !path.resource) return false;
+      return (
+        (await target.ownTexts().then(({ resourceClass }) => resourceClass(path.resource!.path))) !== null
+      );
+    },
+  },
+};
+
 const SKELETON_3D_METHODS: Readonly<Record<string, PortedMethod>> = {
   get_bone_count: {
     minArguments: 0,
@@ -288,6 +328,10 @@ const PORTED_METHODS: Readonly<Record<string, Readonly<Record<string, PortedMeth
   Camera2D: CAMERA_2D_METHODS,
   Viewport: VIEWPORT_METHODS,
   AnimationMixer: ANIMATION_MIXER_METHODS,
+  AnimationPlayer: ANIMATION_PLAYER_METHODS,
+  AudioStreamPlayer: AUDIO_STREAM_PLAYER_METHODS,
+  AudioStreamPlayer2D: AUDIO_STREAM_PLAYER_METHODS,
+  AudioStreamPlayer3D: AUDIO_STREAM_PLAYER_METHODS,
   Skeleton3D: SKELETON_3D_METHODS,
   TileMap: TILE_MAP_METHODS,
   TileMapLayer: TILE_MAP_LAYER_METHODS,

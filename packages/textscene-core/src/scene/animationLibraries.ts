@@ -1,5 +1,7 @@
 import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
+import { strToVar } from '../godot/variant/strToVar.js';
 import type { VariantValue } from '../godot/variant/variantValue.js';
+import type { LoadedResource } from './listed/listedProperties.js';
 
 /** One library an AnimationMixer holds: its name and the resource, or an object `anims/` builds in place. */
 export interface AnimationLibraryEntry {
@@ -72,4 +74,35 @@ function isSameResource(a: VariantValue, b: VariantValue): boolean {
 function insertSorted(libraries: AnimationLibraryEntry[], entry: AnimationLibraryEntry): void {
   const at = libraries.findIndex((held) => held.name >= entry.name);
   libraries.splice(at === -1 ? libraries.length : at, 0, entry);
+}
+
+/** The names `animation_set` keys: `anim` in the library named `""`, else `library/anim` (:192-215). */
+export async function animationNamesOf(
+  libraries: readonly AnimationLibraryEntry[],
+  texts: LibraryTexts['texts'],
+  resource: (path: string) => Promise<LoadedResource | null>
+): Promise<string[]> {
+  const names: string[] = [];
+  for (const { name, library } of libraries) {
+    const prefix = name === '' ? '' : `${name}/`;
+    for (const animation of await libraryAnimations(library, texts, resource)) names.push(prefix + animation);
+  }
+  return names;
+}
+
+/** The keys of a library's `_data`. The library a 3.x file builds holds each `anims/<name>` text. */
+async function libraryAnimations(
+  library: VariantValue,
+  texts: LibraryTexts['texts'],
+  resource: (path: string) => Promise<LoadedResource | null>
+): Promise<string[]> {
+  if (library === BUILT_LIBRARY) {
+    return texts.flatMap(([property]) =>
+      property.startsWith('anims/') ? [property.slice('anims/'.length)] : []
+    );
+  }
+  const path = library.type === T.OBJECT ? library.resource?.path : undefined;
+  const data = path ? (await resource(path))?.properties._data : undefined;
+  const dictionary = data === undefined ? null : strToVar(data);
+  return dictionary?.type === T.DICTIONARY ? dictionary.entries.map(([key]) => nameOf(key)) : [];
 }
