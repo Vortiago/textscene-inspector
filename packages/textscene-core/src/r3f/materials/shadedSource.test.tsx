@@ -82,7 +82,12 @@ describe('the shader a mesh surface draws', () => {
     await renderSlot(inlineSource(RESOURCES[1]!, RESOURCES));
 
     expect(surfaceShaderOf).toHaveBeenCalledWith({
-      baseMaterial: { materialClass: 'ORMMaterial3D', properties: { roughness: '0.5' }, resources: {} },
+      baseMaterial: {
+        materialClass: 'ORMMaterial3D',
+        address: null,
+        properties: { roughness: '0.5' },
+        resources: {},
+      },
     });
   });
 

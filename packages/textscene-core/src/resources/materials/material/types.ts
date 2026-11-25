@@ -6,6 +6,8 @@ import type { StandardMaterial3DData, TextureSlot } from '../standardmaterial3d/
 /** A BaseMaterial3D as Godot's generated shader reads it. */
 export interface BaseMaterialProperties {
   readonly materialClass: 'StandardMaterial3D' | 'ORMMaterial3D';
+  /** The material's file or **Sub-resource path**, which a fault names. Null for one built into a scene. */
+  readonly address: string | null;
   /** Each property the file writes that holds no resource, as Variant text, in the file's order. */
   readonly properties: Readonly<Record<string, string>>;
   /** Each property the file writes that holds a resource, resolved in the material's own file. */

@@ -1,5 +1,9 @@
 import * as THREE from 'three';
-import { unDrawnMessage } from '../../shaders/fault/shaderRefusal.js';
+import {
+  generatedUnDrawnMessage,
+  unDrawnMessage,
+  type ShaderUnDrawn,
+} from '../../shaders/fault/shaderRefusal.js';
 import { compileSpatial } from '../../shaders/spatial/compileSpatial.js';
 import { isEmulatedPoints } from './pointSurface.js';
 import { withGodotSurface } from './godotSurfaceWrite.js';
@@ -54,8 +58,7 @@ export function spatialSurfaceOf(
     file: shader.file,
     instanceLayers: visualLayersOf,
   });
-  if (!('spatial' in compile))
-    return { refusal: `[material] ${unDrawnMessage(compile, 'spatial', '3D surface')}` };
+  if (!('spatial' in compile)) return { refusal: refusalOf(shader, compile) };
   const { spatial } = compile;
   recordCastsShadow(spatial.material, spatial.castsShadow);
   releasedOnUnmount(dfgTexture());
@@ -70,7 +73,7 @@ export function spatialSurfaceOf(
     });
   } catch (failure) {
     disposeSpatial(spatial);
-    return { refusal: `[material] ${unDrawnMessage({ failure }, 'spatial', '3D surface')}` };
+    return { refusal: refusalOf(shader, { failure }) };
   }
   for (const error of spatial.printedErrors) warnOnce(shader, error, `[material] ${error}`);
   spatial.material.onTranslatorFault = (fault) =>
@@ -125,4 +128,12 @@ function sceneOf(
     }),
     roughnessLimiter,
   };
+}
+
+/** The warning for a surface that draws its fallback, named for the kind of its source. */
+function refusalOf({ generatedFor }: SurfaceShader, compile: ShaderUnDrawn): string {
+  const message = generatedFor
+    ? generatedUnDrawnMessage(compile, generatedFor)
+    : unDrawnMessage(compile, 'spatial', '3D surface');
+  return `[material] ${message}`;
 }

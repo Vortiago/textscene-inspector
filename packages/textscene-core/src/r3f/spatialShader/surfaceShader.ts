@@ -19,6 +19,8 @@ export interface SurfaceShader {
   readonly code: string;
   /** The address a fault names. */
   readonly file: string;
+  /** The class whose shader Godot generates, or null for a user's ShaderMaterial. */
+  readonly generatedFor: BaseMaterialProperties['materialClass'] | null;
   readonly textures: Readonly<Record<string, ShaderTextureReference>>;
   /** The value of each parameter, with the material's textures once they load. */
   parametersWith(textures: Readonly<Record<string, SamplerValue>>): Readonly<Record<string, ParameterValue>>;
@@ -36,18 +38,20 @@ export function surfaceShaderOf(source: SurfaceShaderSource): SurfaceShader {
 
 function shaderMaterialSurface({ code, file, parameters, textures }: ShaderText): SurfaceShader {
   const values = parameterVariants(parameters);
-  return { code, file, textures, parametersWith: (loaded) => ({ ...values, ...loaded }) };
+  return { code, file, generatedFor: null, textures, parametersWith: (loaded) => ({ ...values, ...loaded }) };
 }
 
 function baseMaterial3DSurface({
   materialClass,
+  address,
   properties,
   resources,
 }: BaseMaterialProperties): SurfaceShader {
   const { code, parameters, textures } = baseMaterialSurface(materialClass, properties, resources);
   return {
     code,
-    file: materialClass,
+    file: address ?? materialClass,
+    generatedFor: materialClass,
     textures,
     parametersWith: (loaded) => ({ ...parameters, ...loaded, ...albedoTextureSize(loaded[ALBEDO_TEXTURE]) }),
   };

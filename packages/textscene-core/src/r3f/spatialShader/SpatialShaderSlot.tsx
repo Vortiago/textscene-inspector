@@ -18,6 +18,8 @@ type SpatialSurfaceModule = typeof import('./spatialSurface');
 
 const LOAD_FAILURE =
   "[material] The previewer could not load its spatial shader translator, and draws Godot's default 3D surface. Reload to try again.";
+const GENERATED_LOAD_FAILURE =
+  '[material] The previewer could not load its spatial shader translator, and draws the classic material. Reload to try again.';
 
 interface SpatialShaderSlotProps {
   source: SurfaceShaderSource;
@@ -34,7 +36,8 @@ export function SpatialShaderSlot({ source, attach, fallback }: SpatialShaderSlo
   // The material, not its wrapper, so the surfaces that share it warn once.
   const material = 'shader' in source ? source.shader : source.baseMaterial;
   const fileCode = 'shader' in source ? source.shader.code : null;
-  const translator = useShaderTranslator(loadSpatialSurface, fileCode, LOAD_FAILURE);
+  const loadFailure = 'shader' in source ? LOAD_FAILURE : GENERATED_LOAD_FAILURE;
+  const translator = useShaderTranslator(loadSpatialSurface, fileCode, loadFailure);
   const module = translator?.module ?? null;
   const shader = useMemo(() => module?.surfaceShaderOf(source) ?? null, [module, source]);
   const { settings } = useProjectSettings();

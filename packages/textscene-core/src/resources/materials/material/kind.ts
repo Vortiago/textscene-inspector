@@ -20,15 +20,15 @@ export const MATERIAL: ResourceKind<Material> = {
   decode: (held, follow) => {
     if (held.type === 'StandardMaterial3D') return standardMaterial(held, follow);
     if (held.type === 'ORMMaterial3D')
-      return { form: 'orm', baseMaterial: baseMaterialProperties('ORMMaterial3D', held.properties, follow) };
+      return { form: 'orm', baseMaterial: baseMaterialProperties('ORMMaterial3D', held, follow) };
     if (held.type === 'ShaderMaterial') return shaderMaterial(held.properties, follow);
     return skyMaterial(held, follow) ?? { form: 'declined', type: held.type };
   },
 };
 
-function standardMaterial({ properties }: HeldResource, follow: Follow): StandardMaterial {
-  const data = decodeStandardMaterial3D(properties);
-  const baseMaterial = baseMaterialProperties('StandardMaterial3D', properties, follow);
+function standardMaterial(held: HeldResource, follow: Follow): StandardMaterial {
+  const data = decodeStandardMaterial3D(held.properties);
+  const baseMaterial = baseMaterialProperties('StandardMaterial3D', held, follow);
   // The decode's gated table, never the raw property bag: Godot samples a gated slot only inside
   // its `if (features[…])` branch (`scene/resources/material.cpp:1090,1745`).
   const slots = Object.entries(data.textureSlots) as [TextureSlot, string][];
@@ -44,10 +44,10 @@ function standardMaterial({ properties }: HeldResource, follow: Follow): Standar
 /** The properties of a BaseMaterial3D, split into Variant text and resources. */
 function baseMaterialProperties(
   materialClass: BaseMaterialProperties['materialClass'],
-  held: Readonly<Record<string, string>>,
+  { address, properties }: HeldResource,
   follow: Follow
 ): BaseMaterialProperties {
-  return { materialClass, ...splitResources(held, follow) };
+  return { materialClass, address, ...splitResources(properties, follow) };
 }
 
 /** A property bag split into its Variant text and the resources it names. */

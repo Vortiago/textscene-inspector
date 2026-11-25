@@ -7,7 +7,9 @@ import { surfaceShaderOf } from './surfaceShader';
 const reference = { ref: 'SubResource("map")' } as ScopedReference;
 
 const baseMaterial = (properties: Record<string, string>, resources: Record<string, ScopedReference> = {}) =>
-  surfaceShaderOf({ baseMaterial: { materialClass: 'StandardMaterial3D', properties, resources } });
+  surfaceShaderOf({
+    baseMaterial: { materialClass: 'StandardMaterial3D', address: null, properties, resources },
+  });
 
 describe('surfaceShaderOf', () => {
   it("reads a ShaderMaterial's parameters from their text, and adds its textures as they load", () => {
@@ -25,7 +27,12 @@ describe('surfaceShaderOf', () => {
   });
 
   it('reads one material once for the surfaces that share it', () => {
-    const material = { materialClass: 'StandardMaterial3D', properties: {}, resources: {} } as const;
+    const material = {
+      materialClass: 'StandardMaterial3D',
+      address: null,
+      properties: {},
+      resources: {},
+    } as const;
 
     expect(surfaceShaderOf({ baseMaterial: material })).toBe(surfaceShaderOf({ baseMaterial: material }));
   });
@@ -48,5 +55,20 @@ describe('surfaceShaderOf', () => {
 
   it('gives no albedo size before the albedo texture loads', () => {
     expect(baseMaterial({}).parametersWith({})).not.toHaveProperty('albedo_texture_size');
+  });
+
+  it('names the material file in a fault', () => {
+    const material = {
+      materialClass: 'ORMMaterial3D',
+      address: 'res://rock.tres',
+      properties: {},
+      resources: {},
+    } as const;
+
+    expect(surfaceShaderOf({ baseMaterial: material }).file).toBe('res://rock.tres');
+  });
+
+  it('names the class in a fault for a material built into a scene', () => {
+    expect(baseMaterial({}).file).toBe('StandardMaterial3D');
   });
 });
