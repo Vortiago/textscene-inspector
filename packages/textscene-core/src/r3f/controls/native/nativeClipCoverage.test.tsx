@@ -19,6 +19,7 @@ import { createFakeResourceLoader } from '../../../resources/testing/createFakeR
 import { TscnParser } from '../../../parser/TscnParser';
 import { SceneStack } from '../../testing/SceneStack';
 import { settlePendingLoads } from '../../testing/settleLoads';
+import { createPendingProbe } from '../../../resources/testing/pendingProbe';
 
 import '../../nodes/index';
 import '../index';
@@ -103,13 +104,15 @@ describe('every native quad primitive spreads useControlClipPlanes()', () => {
 async function meshesOf(tscn: string): Promise<THREE.Mesh[]> {
   const parsed = new TscnParser().parse(tscn);
   const fake = createFakeResourceLoader();
+  const { Probe, pending } = createPendingProbe();
   const renderer = await ReactThreeTestRenderer.create(
     <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
+      <Probe />
       <ControlCanvasLayer nodes={parsed.nodes} />
     </SceneStack>
   );
   // A run of the bundled font is a pending load until its outlines load.
-  await settlePendingLoads(fake.loader);
+  await settlePendingLoads({ pending });
   const first = (renderer.scene as unknown as { children?: Array<{ instance?: THREE.Object3D }> })
     .children?.[0]?.instance;
   let root: THREE.Object3D | null | undefined = first;

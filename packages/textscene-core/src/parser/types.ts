@@ -5,6 +5,7 @@
 import type { Node3DProperties } from '../nodes/base/node3d/types';
 import type { InstanceNameSetting } from './nodeOwner';
 import type { ConnectionEndResolver } from './connectionEnd.js';
+import type { MisplacedHeading } from './headingOrder.js';
 
 /**
  * One `[node]` heading as the scan saw it, before `seatScene` placed it. Kept off
@@ -73,6 +74,8 @@ export interface TscnScene<N extends RawNode = TscnNode> {
   editableInstances?: readonly string[];
   /** Each value the loader reads a resource in, in file order. Absent where none. */
   fileValues?: readonly FileValue[];
+  /** The first heading the loader refuses for its place in the file. Absent where it takes each one. */
+  misplacedHeading?: MisplacedHeading;
   /**
    * A `.tres` file's own `[resource]` body. Absent in a `.tscn`, where the loader refuses the tag
    * (`resource_format_text.cpp:723-728`).
@@ -269,6 +272,8 @@ export interface FileValue {
   readonly place: FileValuePlace;
   /** The `[sub_resource]` sections built before it, so its own section's index inside one. */
   readonly subResourcesBefore: number;
+  /** The `[ext_resource]` headings before it, the only ids it can name (resource_format_text.cpp:930). */
+  readonly extResourcesBefore: number;
   /** True for a value of the first heading after the header, which the loader reads as it opens the file. */
   readonly isOpeningTag: boolean;
 }

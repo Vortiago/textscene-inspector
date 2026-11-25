@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { parseTresFile } from '../../parser/parsedResource';
 import { TscnParser } from '../../parser/TscnParser';
-import { resourceFileReads, sceneFileReads, type FailingFileRead } from './fileReads';
+import {
+  resourceFailingReads,
+  resourceFileReads,
+  sceneFailingReads,
+  sceneFileReads,
+  type FailingFileRead,
+} from './fileReads';
 import type { ParsedResource } from '../../parser/parsedResource';
 
 const scene = (text: string) => new TscnParser().parse(text);
@@ -17,10 +23,11 @@ atlas = ${read}
 atlas = ExtResource("2")
 [node name="Root" type="Node2D"]
 `;
-const sceneFailing = (file: string, parsed: ReturnType<typeof scene>) => sceneFileReads(file, parsed).failing;
-const sceneFilesRead = (file: string, parsed: ReturnType<typeof scene>) => sceneFileReads(file, parsed).reads;
-const resourceFailing = (file: string, parsed: ParsedResource) => resourceFileReads(file, parsed).failing;
-const resourceFilesRead = (file: string, parsed: ParsedResource) => resourceFileReads(file, parsed).reads;
+const sceneFailing = (file: string, parsed: ReturnType<typeof scene>) =>
+  sceneFailingReads(file, parsed).failing;
+const sceneFilesRead = sceneFileReads;
+const resourceFailing = (file: string, parsed: ParsedResource) => resourceFailingReads(file, parsed).failing;
+const resourceFilesRead = resourceFileReads;
 
 describe('the failing reads of a scene', () => {
   it('lists the file a [sub_resource] property reads', () => {
@@ -231,8 +238,8 @@ describe('the kind of each failing read of a scene', () => {
   });
 
   it('says the file fails to parse at an undeclared id, and not where every id is declared', () => {
-    expect(sceneFileReads(MAIN, scene(sectionsReading('ExtResource("99")'))).parseStop).not.toBeNull();
-    expect(sceneFileReads(MAIN, scene(sectionsReading('ExtResource("2")'))).parseStop).toBeNull();
+    expect(sceneFailingReads(MAIN, scene(sectionsReading('ExtResource("99")'))).parseStop).not.toBeNull();
+    expect(sceneFailingReads(MAIN, scene(sectionsReading('ExtResource("2")'))).parseStop).toBeNull();
   });
 
   it('stops at an undeclared ExtResource id in a [node] section, as the parse fails there too', () => {
@@ -243,7 +250,7 @@ texture = ExtResource("99")
 texture = Resource("res://gone.png")
 `);
 
-    expect(sceneFileReads(MAIN, parsed)).toMatchObject({ failing: [], parseStop: expect.anything() });
+    expect(sceneFailingReads(MAIN, parsed)).toMatchObject({ failing: [], parseStop: expect.anything() });
   });
 
   it('stops at an undeclared ExtResource id in an instance field, as the parse fails there too', () => {
@@ -254,13 +261,13 @@ texture = Resource("res://gone.png")
 texture = Resource("res://gone.png")
 `);
 
-    expect(sceneFileReads(MAIN, parsed)).toMatchObject({ failing: [], parseStop: expect.anything() });
+    expect(sceneFailingReads(MAIN, parsed)).toMatchObject({ failing: [], parseStop: expect.anything() });
   });
 
   it('stops at a Resource() literal with two paths, which Godot does not parse', () => {
     const parsed = scene(sectionsReading('Resource("res://a.png", "res://b.png")'));
 
-    expect(sceneFileReads(MAIN, parsed)).toMatchObject({ failing: [], parseStop: expect.anything() });
+    expect(sceneFailingReads(MAIN, parsed)).toMatchObject({ failing: [], parseStop: expect.anything() });
   });
 
   it('reads past a literal that may load: a uid alone, or a path off res://', () => {

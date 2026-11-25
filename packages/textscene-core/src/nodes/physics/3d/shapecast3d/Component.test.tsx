@@ -12,6 +12,7 @@ import { heading } from '../../../../parser/testing/parserKit';
 import { GizmoScene, lineMaterials, lineOpacities } from '../../../../r3f/testing/GizmoScene';
 import { settlePendingLoads } from '../../../../r3f/testing/settleLoads';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
+import { createPendingProbe } from '../../../../resources/testing/pendingProbe';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
@@ -344,8 +345,10 @@ describe('<ShapeCast3D> shape wireframe', () => {
 
   it('draws the 12 hull edges of a convex cube, every corner offset by the target', async () => {
     const { loader } = createFakeResourceLoader();
+    const probe = createPendingProbe();
     const tree = (
       <ResourceLoaderProvider loader={loader}>
+        <probe.Probe />
         <SceneResourcesProvider internalResources={[convexShape]}>
           <GizmoScene nodePath="Cast" selectedPath="Cast">
             <ShapeCast3D
@@ -359,7 +362,7 @@ describe('<ShapeCast3D> shape wireframe', () => {
       </ResourceLoaderProvider>
     );
     const renderer = await ReactThreeTestRenderer.create(tree);
-    await settlePendingLoads(loader);
+    await settlePendingLoads(probe);
     // Re-flushes so the test renderer's fiber snapshot picks up the hull's commit. The wireframe
     // holds the cube's 12 edges and no face diagonal, as Godot's `get_debug_mesh()` gives.
     await renderer.update(tree);

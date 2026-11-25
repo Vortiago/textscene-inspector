@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useLayoutEffect, type ReactNode, 
 import type { Rect2 } from '../../../godot/math/rect2.js';
 import { useSelectedNodePathStore } from '../../contexts/SelectionContext.js';
 import { useSharedLiveTree } from '../../useLiveSceneTree.js';
-import { useResourceLoader } from '../../../resources/useResource.js';
+import { useResourceLoader } from '../../../resources/ResourceLoaderContext.js';
 import { livePlacements, node2dWorldPosition, node2dWorldTransform } from '../../node2dWorldTransform.js';
 import { resolveLiveEntry } from '../../liveSceneTree.js';
 import { isCamera2DType } from '../../cameraNodeTypes.js';

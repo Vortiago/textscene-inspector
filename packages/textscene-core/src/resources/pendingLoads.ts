@@ -1,6 +1,4 @@
-import type { ResourceLoader } from './ResourceLoader';
-
-/** The loads one view's consumers wait on. Each also counts on the loader, which every view shares. */
+/** The loads one view's consumers wait on. */
 export interface PendingLoads {
   /** Counts one pending load until the returned end runs. The end is idempotent. */
   begin(): () => void;
@@ -9,7 +7,7 @@ export interface PendingLoads {
   subscribe(listener: () => void): () => void;
 }
 
-export function createPendingLoads(loader: Pick<ResourceLoader, 'beginPending'>): PendingLoads {
+export function createPendingLoads(): PendingLoads {
   const listeners = new Set<() => void>();
   let count = 0;
   const change = (by: number) => {
@@ -18,14 +16,12 @@ export function createPendingLoads(loader: Pick<ResourceLoader, 'beginPending'>)
   };
   return {
     begin() {
-      const endOnLoader = loader.beginPending();
       change(1);
       let isEnded = false;
       return () => {
         if (isEnded) return;
         isEnded = true;
         change(-1);
-        endOnLoader();
       };
     },
     pending: () => count,

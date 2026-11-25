@@ -27,14 +27,15 @@ ended at its 30 s load deadline (#2075).
 
 `pnpm check:bundle-size` fails when the build writes a script beside `webview.js`, and when the
 script is over its gzipped ceiling (`scripts/check-bundle-size/webviewBudget.mjs`). The ceiling
-is 1,796,559 B. It replaces ADR-0055's 1,150,000 B, which held only the canvas-paint closure of the
+is 1,796,727 B. It replaces ADR-0055's 1,150,000 B, which held only the canvas-paint closure of the
 split build. A change that outgrows the ceiling, with no shrink found, raises it by its measured growth:
 the editor camera node (ADR-0091) added 1,820 B, the panels that read the scene through node
 handles added 1,413 B, the Scene tree on node handles added 409 B, its review fixes added 685 B,
 the inspector on node handles added 5,525 B, its review fixes added 266 B,
 the scene failure field with its review fixes added 257 B, the reads of each place a
-scene names a resource, as Godot 4.6.3 fails them, added 847 B, and the scene failure on the
-scene with Godot's line number and a per-view count of loads added 337 B.
+scene names a resource, as Godot 4.6.3 fails them, added 847 B, the scene failure on the
+scene with Godot's line number and a per-view count of loads added 337 B, and the order in
+which Godot takes a file's headings added 168 B.
 
 ## Consequences
 

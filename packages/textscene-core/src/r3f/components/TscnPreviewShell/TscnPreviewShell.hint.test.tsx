@@ -38,8 +38,6 @@ function makeLoader(scenes: Record<string, TscnScene>): ResourceLoader {
     resources: proc<never>({}),
     loadOutcomes: proc<never>({}),
     register: () => {},
-    pendingResourceCount: 0,
-    subscribePending: () => () => {},
   } as unknown as ResourceLoader;
 }
 

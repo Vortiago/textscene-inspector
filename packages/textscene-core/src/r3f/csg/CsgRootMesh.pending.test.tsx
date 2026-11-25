@@ -13,6 +13,7 @@ import { loadCsgModule, type CsgModule } from './csgModule';
 import '../nodes/index';
 import { NodeTree } from '../testing/NodeTree';
 import { settleLoads } from '../testing/settleLoads';
+import { createPendingProbe, type PendingProbe } from '../../resources/testing/pendingProbe';
 
 /** The library load, held open until a test lets it land. */
 const libraryLoad = vi.hoisted(() => {
@@ -46,11 +47,12 @@ operation = 2
 radius = 1.25
 `;
 
-async function mountSubtraction(loader: ResourceLoader) {
+async function mountSubtraction(loader: ResourceLoader, probe: PendingProbe) {
   const scene = new TscnParser().parse(SUBTRACTION);
   const block = scene.nodes[0]!.children[0]!;
   await ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={loader}>
+      <probe.Probe />
       <SceneResourcesProvider internalResources={scene.internalResources}>
         <NodeTree node={block} path="Root/Block" />
       </SceneResourcesProvider>
@@ -60,9 +62,9 @@ async function mountSubtraction(loader: ResourceLoader) {
 
 describe('<CsgRootMesh> and the loader', () => {
   it('counts as a pending load while the CSG library loads, and releases it once it lands', async () => {
-    const loader = new ResourceLoader();
-    await mountSubtraction(loader);
-    expect(loader.pendingResourceCount).toBe(1);
+    const probe = createPendingProbe();
+    await mountSubtraction(new ResourceLoader(), probe);
+    expect(probe.pending()).toBe(1);
 
     // Awaits the import itself, not a count of timer ticks: vitest resolves the dynamic import
     // through its module server, which a full run keeps busy for longer than ten ticks.
@@ -71,6 +73,6 @@ describe('<CsgRootMesh> and the loader', () => {
       await loadCsgModule();
     });
     await settleLoads();
-    expect(loader.pendingResourceCount).toBe(0);
+    expect(probe.pending()).toBe(0);
   });
 });

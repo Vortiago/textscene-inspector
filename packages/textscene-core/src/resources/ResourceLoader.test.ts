@@ -119,47 +119,4 @@ describe('ResourceLoader (loader-level gaps)', () => {
       expect(handler).not.toHaveBeenCalled();
     });
   });
-
-  // FrameOnOpen's end-of-load signal: a timer frames whatever has decoded while a large mesh still loads.
-  describe('pending-resource activity', () => {
-    it('starts settled', () => {
-      expect(loader.pendingResourceCount).toBe(0);
-    });
-
-    it('counts concurrent waiters and only reaches zero when the last releases', () => {
-      const releaseA = loader.beginPending();
-      const releaseB = loader.beginPending();
-      expect(loader.pendingResourceCount).toBe(2);
-      releaseA();
-      expect(loader.pendingResourceCount).toBe(1);
-      releaseB();
-      expect(loader.pendingResourceCount).toBe(0);
-    });
-
-    it('ignores a double release, so one consumer cannot drive the count negative', () => {
-      const release = loader.beginPending();
-      release();
-      release();
-      expect(loader.pendingResourceCount).toBe(0);
-    });
-
-    it('notifies subscribers on begin and on release', () => {
-      const seen: number[] = [];
-      const unsubscribe = loader.subscribePending(() => seen.push(loader.pendingResourceCount));
-      const release = loader.beginPending();
-      release();
-      unsubscribe();
-      expect(seen).toEqual([1, 0]);
-    });
-
-    it('stops notifying after unsubscribe', () => {
-      let calls = 0;
-      const unsubscribe = loader.subscribePending(() => {
-        calls += 1;
-      });
-      unsubscribe();
-      loader.beginPending()();
-      expect(calls).toBe(0);
-    });
-  });
 });

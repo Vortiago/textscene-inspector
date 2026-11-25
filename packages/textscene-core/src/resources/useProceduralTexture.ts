@@ -11,7 +11,7 @@ import type * as THREE from 'three';
 import { inThreadJobRunner } from '../workers/WorkerJobRunner.js';
 import { usePendingWhile } from './usePendingWhile.js';
 import { textureWork } from './textures/textureWork.js';
-import { useResourceLoader } from './useResource.js';
+import { useResourceLoader } from './ResourceLoaderContext.js';
 import { withKey } from '../utils/keySet.js';
 import type { ProceduralTextureLookup } from './textures/proceduralBuilds.js';
 import {

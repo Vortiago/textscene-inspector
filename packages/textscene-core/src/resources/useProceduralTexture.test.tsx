@@ -11,6 +11,7 @@ import { act, render, renderHook } from '@testing-library/react';
 import { loadedValue } from './reading/reading.testkit';
 import { fakeJobRunner } from '../workers/fakeJobRunner.testkit';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
+import { createPendingProbe } from './testing/pendingProbe';
 import { createFakeResourceLoader, withJobRunner } from './testing/createFakeResourceLoader';
 import { resetProceduralTextures, type JobRunner } from './textures/proceduralBuilds';
 import { textureWork } from './textures/textureWork';
@@ -221,19 +222,25 @@ async function flush(): Promise<void> {
   });
 }
 
-/** A loader whose job runner the test drives, and a wrapper that provides it. */
+/** A loader whose job runner the test drives, a wrapper that provides it, and the count of its view. */
 function withRunner(runner: JobRunner, strictMode = false) {
   const fake = createFakeResourceLoader();
   const loader = withJobRunner(fake, runner);
+  const { Probe, pending } = createPendingProbe();
   const wrapper = ({ children }: { children: ReactNode }) => {
-    const provided = <ResourceLoaderProvider loader={loader}>{children}</ResourceLoaderProvider>;
+    const provided = (
+      <ResourceLoaderProvider loader={loader}>
+        <Probe />
+        {children}
+      </ResourceLoaderProvider>
+    );
     return strictMode ? <StrictMode>{provided}</StrictMode> : provided;
   };
-  return { loader, wrapper };
+  return { pending, wrapper };
 }
 
 function renderSlots(runner: JobRunner, sceneText: string, strictMode = false) {
-  const { loader, wrapper } = withRunner(runner, strictMode);
+  const { pending, wrapper } = withRunner(runner, strictMode);
   const hook = renderHook(
     ({ lookups }: { lookups: ReturnType<typeof lookupsOf> }) => [
       useProceduralTexture(lookups[0]),
@@ -241,7 +248,7 @@ function renderSlots(runner: JobRunner, sceneText: string, strictMode = false) {
     ],
     { initialProps: { lookups: lookupsOf(sceneText) }, wrapper }
   );
-  return { ...hook, loader, rerender: (next: string) => hook.rerender({ lookups: lookupsOf(next) }) };
+  return { ...hook, pending, rerender: (next: string) => hook.rerender({ lookups: lookupsOf(next) }) };
 }
 
 describe('useProceduralTexture with a NoiseTexture2D', () => {
@@ -254,23 +261,23 @@ describe('useProceduralTexture with a NoiseTexture2D', () => {
     expect(result.current[1]?.texture).toBeInstanceOf(THREE.Texture);
   });
 
-  it('counts a pending build as a pending load on the loader', async () => {
+  it('counts a pending build as a pending load of its view', async () => {
     const { runner } = fakeJobRunner();
-    const { loader } = renderSlots(runner, noiseScene(1));
+    const { pending } = renderSlots(runner, noiseScene(1));
     await flush();
 
-    expect(loader.pendingResourceCount).toBe(1);
+    expect(pending()).toBe(1);
   });
 
   it('shows the built texture once the build lands, and stops counting it', async () => {
     const { runner, runs } = fakeJobRunner();
-    const { result, loader } = renderSlots(runner, noiseScene(1));
+    const { result, pending } = renderSlots(runner, noiseScene(1));
     await flush();
     runs[0]?.complete();
     await flush();
 
     expect(result.current[0]?.texture).toBeInstanceOf(THREE.DataTexture);
-    expect(loader.pendingResourceCount).toBe(0);
+    expect(pending()).toBe(0);
   });
 
   it('keeps the texture work counted until the commit that shows the built texture', async () => {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
-import { useResourceLoader } from '../useResource';
+import { useResourceLoader } from '../ResourceLoaderContext';
 import type { LoadFailure } from './loadOutcome';
 
 /** Null for no path, while the file loads, and while its outcome is still to load. */

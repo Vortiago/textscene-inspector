@@ -22,7 +22,7 @@ import { createThemeProcessor } from './processors/createThemeProcessor';
 import { createDirectoryProcessor } from './processors/createDirectoryProcessor';
 import { createLoadOutcomeProcessor } from './processors/createLoadOutcomeProcessor';
 import type { LoadFacts, LoadOutcome } from './loadFailure/loadOutcome';
-import { resourceFileReads, sceneFileReads } from './loadFailure/fileReads';
+import { resourceFailingReads, sceneFailingReads } from './loadFailure/fileReads';
 import { existsInListing, folderOf, listsImportSidecar } from './loadFailure/fileExists';
 import { importSidecarPath } from '../godot/project/resourceFormats';
 import { parseImportFile } from '../parser/importParser';
@@ -99,37 +99,6 @@ export class ResourceLoader {
 
   private _fileEventBus: FileEventBus | null;
 
-  /** How many consumers of every view on this loader still wait: the sum of each view's `PendingLoads`. */
-  private pendingResources = 0;
-  private readonly pendingListeners = new Set<() => void>();
-
-  /** Called by each view's `PendingLoads` while a consumer is pending; returns the release. */
-  beginPending(): () => void {
-    this.pendingResources += 1;
-    this.notifyPending();
-    let released = false;
-    return () => {
-      if (released) return;
-      released = true;
-      this.pendingResources -= 1;
-      this.notifyPending();
-    };
-  }
-
-  get pendingResourceCount(): number {
-    return this.pendingResources;
-  }
-
-  /** Subscribe to pending-count changes; returns the unsubscribe. */
-  subscribePending(listener: () => void): () => void {
-    this.pendingListeners.add(listener);
-    return () => this.pendingListeners.delete(listener);
-  }
-
-  private notifyPending(): void {
-    for (const listener of this.pendingListeners) listener();
-  }
-
   /**
    * Await a peer processor's resource for `dependent`: answer from cache, else request
    * it and wait on that processor's bus slot. Rejects with the peer's failure. Bounded,
@@ -186,8 +155,11 @@ export class ResourceLoader {
         try {
           const { failing, parseStop } =
             fileExtension(file) === '.tscn'
-              ? sceneFileReads(file, await this.peerRequire(dependent, this.scenes, 'scene', file))
-              : resourceFileReads(file, await this.peerRequire(dependent, this.resources, 'resource', file));
+              ? sceneFailingReads(file, await this.peerRequire(dependent, this.scenes, 'scene', file))
+              : resourceFailingReads(
+                  file,
+                  await this.peerRequire(dependent, this.resources, 'resource', file)
+                );
           const paths = failing.map((read) => read.path);
           return parseStop ? { unparsedAfter: paths } : paths;
         } catch (error) {

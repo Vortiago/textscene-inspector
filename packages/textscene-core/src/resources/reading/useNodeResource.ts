@@ -3,7 +3,7 @@ import { useByValue } from '../../r3f/hooks/useByValue';
 import { useSceneResources, type SceneResources } from '../../r3f/SceneResourcesContext';
 import { hasUnsettledFile } from '../useLoadedFiles';
 import { usePendingWhile } from '../usePendingWhile';
-import { useResourceLoader } from '../useResource';
+import { useResourceLoader } from '../ResourceLoaderContext';
 import { loaderSnapshots, NO_LOADER } from './loaderSnapshots';
 import { NONE, type Read, type ResourceKind, type ResourceSnapshot } from './read';
 import { nodeReference, sameReference, type ScopedReference } from './scopedReference';

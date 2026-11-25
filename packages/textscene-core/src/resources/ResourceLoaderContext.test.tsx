@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
-import { useResourceLoader } from './useResource';
+import { useResourceLoader } from './ResourceLoaderContext';
 import { createFakeResourceLoader } from './testing/createFakeResourceLoader';
 
 describe('ResourceLoaderContext', () => {

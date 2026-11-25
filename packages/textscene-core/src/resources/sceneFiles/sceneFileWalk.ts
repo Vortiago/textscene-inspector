@@ -203,8 +203,8 @@ export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void
 
 function textFileOf(file: string, parsed: TscnScene | ParsedResource): TextFile {
   return 'internalResources' in parsed
-    ? { reads: sceneFileReads(file, parsed).reads, subResourceIds: idsOf(parsed.internalResources) }
-    : { reads: resourceFileReads(file, parsed).reads, subResourceIds: idsOf(parsed.subResources) };
+    ? { reads: sceneFileReads(file, parsed), subResourceIds: idsOf(parsed.internalResources) }
+    : { reads: resourceFileReads(file, parsed), subResourceIds: idsOf(parsed.subResources) };
 }
 
 function idsOf(sections: readonly { readonly id: string }[]): ReadonlySet<string> {

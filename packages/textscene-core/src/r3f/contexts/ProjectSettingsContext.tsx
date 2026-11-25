@@ -18,7 +18,7 @@ import {
 } from '../../parser/projectSettingsParser.js';
 import type { FontHinting } from '../../godot/text/textServerEnums.js';
 import { PROJECT_FILE_PATH } from '../../godot/project/project.js';
-import { useResourceLoader } from '../../resources/useResource.js';
+import { useResourceLoader } from '../../resources/ResourceLoaderContext.js';
 import { readProjectSettings } from '../../resources/projectSettingsFile.js';
 import { useOptionalHierarchy } from './HierarchyContext.js';
 

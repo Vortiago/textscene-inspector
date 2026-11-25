@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseTresFile } from '../../parser/parsedResource';
 import { TscnParser } from '../../parser/TscnParser';
-import { resourceFileReads, sceneFileReads, type FailingReadKind } from './fileReads';
+import { resourceFailingReads, sceneFailingReads, type FailingReadKind } from './fileReads';
 import { sceneFailureOf } from './sceneFailure';
 
 interface GodotRow {
@@ -9,8 +9,7 @@ interface GodotRow {
   reads: string;
   file: 'tscn' | 'tres';
   text: string;
-  /** The reads whose failure fails the file, up to where the parse fails. */
-  /** Each with the line Godot prints for it, measured with the reads before it loading. */
+  /** The reads whose failure fails the file, up to where the parse fails, each with Godot's line for it. */
   failing: { path: string; kind: FailingReadKind; line: number }[];
   /** The line Godot prints where the parse stops, null where the file parses. */
   stop: string | null;
@@ -878,6 +877,194 @@ metadata/x = 1
     failing: [],
     stop: 'res://row57.tscn:7 - Parse Error: Two non-uid paths in one Resource reference.',
   },
+  {
+    row: 58,
+    reads: '[sub_resource] reads an ExtResource whose heading comes after it',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[sub_resource type="Resource" id="a"]
+metadata/x = ExtResource("1")
+
+[ext_resource type="Resource" path="res://ok58.tres" id="1"]
+
+[node name="Root" type="Node2D"]
+`,
+    failing: [],
+    stop: "res://row58.tscn:4 - Parse Error: Can't load cached ext-resource id: 1.",
+  },
+  {
+    row: 59,
+    reads: 'an [ext_resource] heading after a [sub_resource] that nothing reads',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[sub_resource type="Resource" id="a"]
+
+[ext_resource type="Resource" path="res://ok58.tres" id="1"]
+
+[node name="Root" type="Node2D"]
+metadata/x = ExtResource("1")
+`,
+    failing: [],
+    stop: "res://row59.tscn:5 - Parse Error: Unknown tag 'ext_resource' in file.",
+  },
+  {
+    row: 60,
+    reads: '[node] reads an ExtResource whose heading comes after it',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+metadata/x = ExtResource("1")
+
+[ext_resource type="Resource" path="res://ok58.tres" id="1"]
+`,
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row60.tscn:4]',
+  },
+  {
+    row: 61,
+    reads: 'an [ext_resource] heading after a [node]',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[ext_resource type="Resource" path="res://ok58.tres" id="1"]
+`,
+    failing: [],
+    stop: "res://row61.tscn:5 - Parse Error: Unknown tag 'ext_resource' in file.",
+  },
+  {
+    row: 62,
+    reads: 'a [sub_resource] heading after a [node]',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[sub_resource type="Resource" id="a"]
+`,
+    failing: [],
+    stop: "res://row62.tscn:5 - Parse Error: Unknown tag 'sub_resource' in file.",
+  },
+  {
+    row: 63,
+    reads: '.tres: an [ext_resource] heading after a [sub_resource]',
+    file: 'tres',
+    text: `[gd_resource type="Resource" format=3]
+
+[sub_resource type="Resource" id="a"]
+
+[ext_resource type="Resource" path="res://ok58.tres" id="1"]
+
+[resource]
+`,
+    failing: [],
+    stop: "res://row63.tres:5 - Parse Error: Unknown tag 'ext_resource' in file.",
+  },
+  {
+    row: 64,
+    reads: '.tres: a [sub_resource] heading after the [resource]',
+    file: 'tres',
+    text: `[gd_resource type="Resource" format=3]
+
+[resource]
+
+[sub_resource type="Resource" id="a"]
+`,
+    failing: [],
+    stop: 'res://row64.tres:5 - Parse Error: Extra tag found when parsing main resource file.',
+  },
+  {
+    row: 65,
+    reads: 'a [sub_resource] heading after a [connection]',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[connection signal="ready" from="." to="." method="x"]
+
+[sub_resource type="Resource" id="a"]
+`,
+    failing: [],
+    stop: "res://row65.tscn:7 - Parse Error: Unknown tag 'sub_resource' in file.",
+  },
+  {
+    row: 66,
+    reads: 'an [ext_resource], a [sub_resource] and a [node] in order',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[ext_resource type="Resource" path="res://ok58.tres" id="1"]
+
+[sub_resource type="Resource" id="a"]
+
+[node name="Root" type="Node2D"]
+`,
+    failing: [],
+    stop: null,
+  },
+  {
+    row: 67,
+    reads: 'a [resource] heading in a scene',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[resource]
+
+[node name="Root" type="Node2D"]
+`,
+    failing: [],
+    stop: "res://row67.tscn:3 - Parse Error: Unexpected 'resource' tag in a scene file.",
+  },
+  {
+    row: 68,
+    reads: '.tres: a [node] heading',
+    file: 'tres',
+    text: `[gd_resource type="Resource" format=3]
+
+[node name="Root" type="Node2D"]
+`,
+    failing: [],
+    stop: "res://row68.tres:3 - Parse Error: Unexpected 'node' tag in a resource file.",
+  },
+  {
+    row: 69,
+    reads: '[sub_resource] reads a missing literal, then a late [ext_resource] heading',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[sub_resource type="Resource" id="a"]
+metadata/x = Resource("res://gone69.tres")
+
+[ext_resource type="Resource" path="res://ok58.tres" id="1"]
+
+[node name="Root" type="Node2D"]
+`,
+    failing: [{ path: 'res://gone69.tres', kind: 'section Resource', line: 4 }],
+    stop: "res://row69.tscn:6 - Parse Error: Unknown tag 'ext_resource' in file.",
+  },
+  {
+    row: 70,
+    reads: 'a late [ext_resource] heading, then a [sub_resource] that reads a missing literal',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[sub_resource type="Resource" id="a"]
+
+[ext_resource type="Resource" path="res://ok58.tres" id="1"]
+
+[sub_resource type="Resource" id="b"]
+metadata/x = Resource("res://gone70.tres")
+
+[node name="Root" type="Node2D"]
+`,
+    failing: [],
+    stop: "res://row70.tscn:5 - Parse Error: Unknown tag 'ext_resource' in file.",
+  },
 ];
 
 /** The path Godot loaded the row under, which its stop line names. */
@@ -885,16 +1072,16 @@ function rowPath({ row, file }: GodotRow): string {
   return `res://row${String(row).padStart(2, '0')}.${file}`;
 }
 
-function fileReadsOf(row: GodotRow) {
+function failingReadsOf(row: GodotRow) {
   const path = rowPath(row);
   return row.file === 'tscn'
-    ? sceneFileReads(path, new TscnParser().parse(row.text))
-    : resourceFileReads(path, parseTresFile(row.text));
+    ? sceneFailingReads(path, new TscnParser().parse(row.text))
+    : resourceFailingReads(path, parseTresFile(row.text));
 }
 
 describe('the reads that fail a file, as Godot 4.6.3 loads it', () => {
   it.each(ROWS)('row $row: $reads', (row) => {
-    const { failing, parseStop } = fileReadsOf(row);
+    const { failing, parseStop } = failingReadsOf(row);
 
     expect({
       failing: failing.map(({ path, kind, line }) => ({ path, kind, line })),

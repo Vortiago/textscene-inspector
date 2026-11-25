@@ -25,7 +25,7 @@ import {
   parsedResourcePath,
   unwrapCanvasTextureRef,
 } from '../../../resources/SubResourceResolver';
-import { useResourceLoader } from '../../../resources/useResource';
+import { useResourceLoader } from '../../../resources/ResourceLoaderContext';
 import { useCacheVersion } from '../../../resources/useCacheVersion';
 import type { ResourceType } from '../../../resources/ResourceEventBus';
 import {

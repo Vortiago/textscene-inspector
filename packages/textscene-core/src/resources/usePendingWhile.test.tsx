@@ -6,57 +6,54 @@ import { describe, expect, it } from 'vitest';
 import { act, render } from '@testing-library/react';
 import { ResourceLoader } from './ResourceLoader';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
+import { createPendingProbe, type PendingProbe } from './testing/pendingProbe';
 import { usePendingWhile } from './usePendingWhile';
 
-function Pending({ pending }: { pending: boolean }) {
-  usePendingWhile(pending);
+function Pending({ isPending }: { isPending: boolean }) {
+  usePendingWhile(isPending);
   return null;
 }
 
-function mount(loader: ResourceLoader, pending: boolean) {
-  return render(
+function tree(loader: ResourceLoader, probe: PendingProbe, isPending: boolean) {
+  return (
     <ResourceLoaderProvider loader={loader}>
-      <Pending pending={pending} />
+      <probe.Probe />
+      <Pending isPending={isPending} />
     </ResourceLoaderProvider>
   );
 }
 
 describe('usePendingWhile', () => {
   it('counts one pending load while the condition holds', () => {
-    const loader = new ResourceLoader();
-    mount(loader, true);
+    const probe = createPendingProbe();
+    render(tree(new ResourceLoader(), probe, true));
 
-    expect(loader.pendingResourceCount).toBe(1);
+    expect(probe.pending()).toBe(1);
   });
 
   it('releases the load when the condition clears', () => {
     const loader = new ResourceLoader();
-    const view = mount(loader, true);
+    const probe = createPendingProbe();
+    const view = render(tree(loader, probe, true));
 
-    act(() => {
-      view.rerender(
-        <ResourceLoaderProvider loader={loader}>
-          <Pending pending={false} />
-        </ResourceLoaderProvider>
-      );
-    });
+    act(() => view.rerender(tree(loader, probe, false)));
 
-    expect(loader.pendingResourceCount).toBe(0);
+    expect(probe.pending()).toBe(0);
   });
 
   it('releases the load when the caller unmounts', () => {
-    const loader = new ResourceLoader();
-    const view = mount(loader, true);
+    const probe = createPendingProbe();
+    const view = render(tree(new ResourceLoader(), probe, true));
 
     view.unmount();
 
-    expect(loader.pendingResourceCount).toBe(0);
+    expect(probe.pending()).toBe(0);
   });
 
   it('counts nothing while the condition is false', () => {
-    const loader = new ResourceLoader();
-    mount(loader, false);
+    const probe = createPendingProbe();
+    render(tree(new ResourceLoader(), probe, false));
 
-    expect(loader.pendingResourceCount).toBe(0);
+    expect(probe.pending()).toBe(0);
   });
 });

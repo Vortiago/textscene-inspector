@@ -1,6 +1,6 @@
-import type { ParsedHeading } from './utils.js';
-import type { ConnectionHeading, HeadingFacts } from './types.js';
-import { parseIdTrail } from '../godot/scene/packedScene.js';
+import type { ParsedHeading } from '../../parser/utils.js';
+import type { ConnectionHeading, HeadingFacts } from '../../parser/types.js';
+import { parseIdTrail } from '../../godot/scene/packedScene.js';
 
 export type HeadingReads = Pick<HeadingFacts, 'connections' | 'pathlessEditableLines'>;
 
@@ -17,24 +17,19 @@ function connectionHeading({ attributes }: ParsedHeading, line: number): Connect
   };
 }
 
-/** A collector to feed each parsed heading in scan order, and the reads it has gathered so far. */
+/** Only the linter reads these, so the strict observer collects them from each heading in scan order. */
 export function headingReads(): {
   reads: HeadingReads;
-  /** Records `heading`, and answers the type of the heading before it, null for the first. */
-  read(heading: ParsedHeading, line: number): string | null;
+  read(heading: ParsedHeading, line: number): void;
 } {
   const connections: ConnectionHeading[] = [];
   const pathlessEditableLines: number[] = [];
-  let previousHeadingType: string | null = null;
   return {
     reads: { connections, pathlessEditableLines },
     read(heading, line) {
       if (heading.type === 'connection') connections.push(connectionHeading(heading, line));
       if (heading.type === 'editable' && heading.attributes.path === undefined)
         pathlessEditableLines.push(line);
-      const previous = previousHeadingType;
-      previousHeadingType = heading.type;
-      return previous;
     },
   };
 }

@@ -45,7 +45,7 @@ import { InstanceOwnerProvider } from './contexts/InstanceOwnersContext.js';
 import { UnownedSubtree } from './contexts/UnownedSubtreeContext.js';
 import { useLiveStepOf } from './useLiveSceneTree.js';
 import { useLiveDrawnNode } from './liveNodePatches.js';
-import { useResourceLoader } from '../resources/useResource.js';
+import { useResourceLoader } from '../resources/ResourceLoaderContext.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { useInstancedScene } from './hooks/useInstancedScene.js';
 import { SceneResourcesProvider, useSceneResources } from './SceneResourcesContext.js';

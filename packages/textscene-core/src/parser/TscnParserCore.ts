@@ -5,7 +5,7 @@
  * the lenient skip-and-continue recovery.
  */
 
-import { headingReads, type HeadingReads } from './headingReads.js';
+import { headingOrder } from './headingOrder.js';
 import { resolveDeprecatedProperty, type ResolvedProperty } from '../godot/classdb/deprecated.js';
 import type {
   TscnScene,
@@ -59,7 +59,6 @@ interface CoreParseResult<N extends SceneNode<N>> {
   origins: readonly NodeOrigin<N>[];
   /** The seating of `origins`: the tree, and the copy each heading's node became in it. */
   seating: SceneSeating<N>;
-  headingReads: HeadingReads;
 }
 
 /** One property value the scan completed, after any multiline accumulation. */
@@ -131,7 +130,7 @@ export class TscnParserCore {
     // (`resource_format_text.cpp:837-841`), so a later one is a corrupt file, and the last one read stays.
     let mainResource: TscnMainResource | undefined;
     const editableInstances: string[] = [];
-    const headings = headingReads();
+    const headings = headingOrder();
     const fileValues: FileValue[] = [];
 
     let currentSection: SectionType = 'none';
@@ -194,8 +193,12 @@ export class TscnParserCore {
     };
 
     // The value as written, not as stored: the loader parses the text the file holds.
-    const addFileValue = (value: Omit<FileValue, 'subResourcesBefore'>) => {
-      fileValues.push({ ...value, subResourcesBefore: internalResources.length });
+    const addFileValue = (value: Omit<FileValue, 'subResourcesBefore' | 'extResourcesBefore'>) => {
+      const before = {
+        subResourcesBefore: internalResources.length,
+        extResourcesBefore: externalResources.length,
+      };
+      fileValues.push({ ...value, ...before });
     };
     // A body is read after the file opens, so no body value sits in the opening tag.
     const addBodyValue = (text: string, line: number) => {
@@ -267,7 +270,7 @@ export class TscnParserCore {
           const editablePath =
             currentHeading.type === 'editable' ? currentHeading.attributes.path : undefined;
           if (editablePath !== undefined) editableInstances.push(simplifiedNodePath(editablePath));
-          const previous = headings.read(currentHeading, lineNumber);
+          const previous = headings.read(currentHeading.type, lineNumber);
           const isOpeningTag = previous === 'gd_scene' || previous === 'gd_resource';
           const { instance, binds } = currentHeading.attributes;
           const place = previous === 'node' ? 'node' : 'section';
@@ -347,6 +350,7 @@ export class TscnParserCore {
 
     // Each lookup by id indexes a table once (`utils/keyedLookup.ts`), so a table never changes after the scan.
     Object.freeze(origins);
+    const misplacedHeading = headings.misplaced();
     Object.freeze(externalResources);
     Object.freeze(internalResources);
     const seating = seatScene(origins);
@@ -364,11 +368,11 @@ export class TscnParserCore {
         ...(headerResourceType !== undefined ? { resourceType: headerResourceType } : {}),
         ...(editableInstances.length > 0 ? { editableInstances } : {}),
         ...(fileValues.length > 0 ? { fileValues } : {}),
+        ...(misplacedHeading ? { misplacedHeading } : {}),
         ...(mainResource ? { mainResource } : {}),
       },
       origins,
       seating,
-      headingReads: headings.reads,
     };
   }
 

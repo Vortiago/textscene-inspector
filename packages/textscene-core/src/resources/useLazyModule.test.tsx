@@ -5,6 +5,7 @@ import { ResourceLoader } from './ResourceLoader';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import { memoisedImport, type LazyImport } from './memoisedImport';
 import { useLazyModule } from './useLazyModule';
+import { createPendingProbe, type PendingProbe } from './testing/pendingProbe';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -21,9 +22,10 @@ function Reader({ load, seen }: { load: LazyImport<string>; seen: (string | null
   return null;
 }
 
-function mount(loader: ResourceLoader, load: LazyImport<string>, seen: (string | null)[]) {
+function mount(probe: PendingProbe, load: LazyImport<string>, seen: (string | null)[]) {
   return render(
-    <ResourceLoaderProvider loader={loader}>
+    <ResourceLoaderProvider loader={new ResourceLoader()}>
+      <probe.Probe />
       <Reader load={load} seen={seen} />
     </ResourceLoaderProvider>
   );
@@ -31,47 +33,47 @@ function mount(loader: ResourceLoader, load: LazyImport<string>, seen: (string |
 
 describe('useLazyModule', () => {
   it('reads null and counts one pending load until the module lands', async () => {
-    const loader = new ResourceLoader();
+    const probe = createPendingProbe();
     const chunk = deferred<string>();
     const seen: (string | null)[] = [];
     mount(
-      loader,
+      probe,
       memoisedImport(() => chunk.promise),
       seen
     );
-    expect([seen.at(-1), loader.pendingResourceCount]).toEqual([null, 1]);
+    expect([seen.at(-1), probe.pending()]).toEqual([null, 1]);
     await act(async () => chunk.resolve('module'));
-    expect([seen.at(-1), loader.pendingResourceCount]).toEqual(['module', 0]);
+    expect([seen.at(-1), probe.pending()]).toEqual(['module', 0]);
   });
 
   it('stops counting a module that fails to load, and keeps reading null', async () => {
-    const loader = new ResourceLoader();
+    const probe = createPendingProbe();
     const chunk = deferred<string>();
     const seen: (string | null)[] = [];
     mount(
-      loader,
+      probe,
       memoisedImport(() => chunk.promise),
       seen
     );
     await act(async () => chunk.reject(new Error('chunk lost')));
-    expect([seen.at(-1), loader.pendingResourceCount]).toEqual([null, 0]);
+    expect([seen.at(-1), probe.pending()]).toEqual([null, 0]);
   });
 
   it('reads a module that has already landed on the first render, with no pending load', async () => {
-    const loader = new ResourceLoader();
+    const probe = createPendingProbe();
     const load = memoisedImport(() => Promise.resolve('module'));
     await load();
     const seen: (string | null)[] = [];
-    mount(loader, load, seen);
-    expect([seen[0], loader.pendingResourceCount]).toEqual(['module', 0]);
+    mount(probe, load, seen);
+    expect([seen[0], probe.pending()]).toEqual(['module', 0]);
   });
 
   it('counts no pending load for a module that has already failed', async () => {
-    const loader = new ResourceLoader();
+    const probe = createPendingProbe();
     const load = memoisedImport(() => Promise.reject(new Error('chunk lost')));
     await load().catch(() => {});
     const seen: (string | null)[] = [];
-    mount(loader, load, seen);
-    expect([seen[0], loader.pendingResourceCount]).toEqual([null, 0]);
+    mount(probe, load, seen);
+    expect([seen[0], probe.pending()]).toEqual([null, 0]);
   });
 });

@@ -32,7 +32,7 @@ function renderTwoViews(isPendingInB: boolean) {
     </>
   );
   const { rerender } = render(tree(isPendingInB));
-  return { loader, counts, rerender: (isPending: boolean) => rerender(tree(isPending)) };
+  return { counts, rerender: (isPending: boolean) => rerender(tree(isPending)) };
 }
 
 describe('usePendingResourceCount', () => {
@@ -51,12 +51,6 @@ describe('usePendingResourceCount', () => {
     const { counts } = renderTwoViews(true);
 
     expect(counts).toEqual({ a: 0, b: 1 });
-  });
-
-  it('counts each view’s load on the loader the views share', () => {
-    const { loader } = renderTwoViews(true);
-
-    expect(loader.pendingResourceCount).toBe(1);
   });
 
   it('answers zero outside a loader (error case)', () => {

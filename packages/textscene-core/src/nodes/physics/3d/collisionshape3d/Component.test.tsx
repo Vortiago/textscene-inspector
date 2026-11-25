@@ -9,6 +9,7 @@ import type { TscnInternalResource, TscnNode } from '../../../../parser/types';
 import type { CollisionShape3DProperties } from './types';
 import { settlePendingLoads } from '../../../../r3f/testing/settleLoads';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
+import { createPendingProbe } from '../../../../resources/testing/pendingProbe';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 
 const boxShape: TscnInternalResource = {
@@ -71,8 +72,10 @@ describe('<CollisionShape3D> gizmo', () => {
 
   it('renders the 12 hull edges of a cube for ConvexPolygonShape3D (lazy ConvexGeometry)', async () => {
     const { loader } = createFakeResourceLoader();
+    const probe = createPendingProbe();
     const tree = (
       <ResourceLoaderProvider loader={loader}>
+        <probe.Probe />
         <ViewShowProvider show={{ collisions: true }}>
           <SceneResourcesProvider internalResources={[convexShape]}>
             <CollisionShape3D node={makeNode({ shape: 'SubResource("ConvexPolygonShape3D_1")' })} />
@@ -84,7 +87,7 @@ describe('<CollisionShape3D> gizmo', () => {
 
     // Lets the hull's lazy chunk land, then re-flushes so the test renderer's fiber snapshot picks
     // up the commit.
-    await settlePendingLoads(loader);
+    await settlePendingLoads(probe);
     await renderer.update(tree);
 
     expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(1);

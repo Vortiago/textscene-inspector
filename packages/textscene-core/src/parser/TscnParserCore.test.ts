@@ -760,35 +760,46 @@ describe('TscnParserCore editable instances', () => {
   });
 });
 
-describe('the heading reads of a scan', () => {
+describe('the file values and heading order of a scan', () => {
   const content =
     '[gd_scene format=3]\n\n[node name="Root" instance=ExtResource("1")]\n\n' +
     '[connection signal="ready" from="." to="." method="go" binds=[1]]\n';
 
-  it('collects each connection and each pathless editable line', () => {
-    expect(new TscnParserCore().parse(content, () => null).headingReads).toEqual({
-      connections: [
-        {
-          line: 5,
-          signal: 'ready',
-          from: '.',
-          to: '.',
-          method: 'go',
-          binds: '[1]',
-          fromIdTrail: undefined,
-          toIdTrail: undefined,
-        },
-      ],
-      pathlessEditableLines: [],
+  it('records the first heading the loader refuses for its place, with its line', () => {
+    const late =
+      '[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\n\n[sub_resource type="Resource" id="a"]\n';
+
+    expect(new TscnParserCore().parse(late, () => null).scene.misplacedHeading).toEqual({
+      type: 'sub_resource',
+      line: 5,
+      reason: 'unknown tag',
     });
+  });
+
+  it('records no misplaced heading where each heading is in its place', () => {
+    expect(new TscnParserCore().parse(content, () => null).scene).not.toHaveProperty('misplacedHeading');
   });
 
   it('puts each value on the scene in file order, with its line and place', () => {
     const { scene } = new TscnParserCore().parse(content, () => null);
 
     expect(scene.fileValues).toEqual([
-      { text: 'ExtResource("1")', line: 3, place: 'section', subResourcesBefore: 0, isOpeningTag: true },
-      { text: '[1]', line: 5, place: 'binds', subResourcesBefore: 0, isOpeningTag: false },
+      {
+        text: 'ExtResource("1")',
+        line: 3,
+        place: 'section',
+        subResourcesBefore: 0,
+        extResourcesBefore: 0,
+        isOpeningTag: true,
+      },
+      {
+        text: '[1]',
+        line: 5,
+        place: 'binds',
+        subResourcesBefore: 0,
+        extResourcesBefore: 0,
+        isOpeningTag: false,
+      },
     ]);
   });
 
@@ -835,7 +846,14 @@ metadata/x = [1,
     );
 
     expect(scene.fileValues).toEqual([
-      { text: '[1,\n2]', line: 2, place: 'node', subResourcesBefore: 0, isOpeningTag: false },
+      {
+        text: '[1,\n2]',
+        line: 2,
+        place: 'node',
+        subResourcesBefore: 0,
+        extResourcesBefore: 0,
+        isOpeningTag: false,
+      },
     ]);
   });
 });

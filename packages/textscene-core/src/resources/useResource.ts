@@ -22,8 +22,6 @@ export interface ResourceResult<T> {
 
 const PENDING: ResourceResult<never> = { value: undefined, status: 'pending' };
 
-export { useResourceLoader };
-
 export function useResource<T>(path: string, type: ResourceBusType): ResourceResult<T> {
   const loader = useResourceLoader();
   const pending = usePendingLoads();

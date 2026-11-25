@@ -5,7 +5,7 @@
 
 import { useEffect, useState, type RefObject } from 'react';
 import type { BoundClips } from '../contexts/AnimationDriverContext';
-import { useResourceLoader } from '../../resources/useResource';
+import { useResourceLoader } from '../../resources/ResourceLoaderContext';
 import { useDrawnContentVersion } from '../../resources/useCacheVersion';
 
 /**

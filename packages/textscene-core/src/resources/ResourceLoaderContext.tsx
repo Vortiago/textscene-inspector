@@ -1,5 +1,5 @@
 /** React context that exposes the per-panel ResourceLoader to descendants, provided by `<TscnPreviewShell>`. */
-import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
 import type { ResourceLoader } from './ResourceLoader';
 import { createPendingLoads, type PendingLoads } from './pendingLoads';
 
@@ -23,7 +23,7 @@ PendingLoadsContext.displayName = 'PendingLoadsContext';
 
 /** Each provider counts its own consumers' loads, so two views on one loader do not wait on each other. */
 export function ResourceLoaderProvider({ loader, children }: ResourceLoaderProviderProps) {
-  const pending = useMemo(() => createPendingLoads(loader), [loader]);
+  const [pending] = useState(createPendingLoads);
   return (
     <ResourceLoaderContext.Provider value={loader}>
       <PendingLoadsContext.Provider value={pending}>{children}</PendingLoadsContext.Provider>

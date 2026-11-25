@@ -1,7 +1,7 @@
 import { useLayoutEffect, useMemo } from 'react';
 import { openScene, type Scene } from '../../scene/openScene.js';
 import type { ResourceProvider } from '../../resources/ResourceProvider.js';
-import { useResourceLoader } from '../../resources/useResource.js';
+import { useResourceLoader } from '../../resources/ResourceLoaderContext.js';
 import { adoptLoader } from '../sceneResourcePipeline.js';
 
 /** The files of a scene with no loader above it, which draws with no file. */

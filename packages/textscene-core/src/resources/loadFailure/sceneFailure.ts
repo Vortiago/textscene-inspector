@@ -1,6 +1,7 @@
 import type { SceneFailure, SceneFile } from '../../scene/sceneFiles.js';
 import { resourceFilePath } from '../subResourcePath.js';
 import type { FailingFileRead, ParseStop } from './fileReads.js';
+import type { MisplacedHeading } from '../../parser/headingOrder.js';
 
 /** The root scene, its reads that fail the whole scene in file order, and the read that stops its parse. */
 export interface SceneFailingReads {
@@ -48,9 +49,11 @@ function godotFailureLine(scenePath: string, { path, kind, uid, line }: FailingF
   return `Parse Error: Parse error. [Resource file ${scenePath}:${line}]`;
 }
 
-/** Godot's line for the read that stops the parse, measured in 4.6.3 (resource_format_text.cpp:1185). */
-function godotStopLine(scenePath: string, { read, place, isOpeningTag, line }: ParseStop): string {
-  const at = `${scenePath}:${line}`;
+/** Godot's line where the parse stops, measured in 4.6.3 (resource_format_text.cpp:40, :1185). */
+function godotStopLine(scenePath: string, stop: ParseStop): string {
+  const at = `${scenePath}:${stop.line}`;
+  if ('reason' in stop) return `${at} - Parse Error: ${misplacedError(stop)}.`;
+  const { read, place, isOpeningTag } = stop;
   if (isOpeningTag) return `${at} - Parse Error: Unexpected end of file.`;
   if (place !== 'section') {
     const error = read.kind === 'SubResource' ? 'Invalid parameter.' : 'Parse error.';
@@ -63,4 +66,12 @@ function godotStopLine(scenePath: string, { read, place, isOpeningTag, line }: P
   if (read.kind === 'ExtResource')
     return `${at} - Parse Error: Can't load cached ext-resource id: ${read.id}.`;
   return `${at} - Parse Error: .`;
+}
+
+/** The loader's error for a heading it refuses (resource_format_text.cpp:415, :724, :840, :871, :903). */
+function misplacedError({ type, reason }: MisplacedHeading): string {
+  if (reason === 'extra tag') return 'Extra tag found when parsing main resource file';
+  if (reason === 'resource in scene') return "Unexpected 'resource' tag in a scene file";
+  if (reason === 'node in resource') return "Unexpected 'node' tag in a resource file";
+  return `Unknown tag '${type}' in file`;
 }

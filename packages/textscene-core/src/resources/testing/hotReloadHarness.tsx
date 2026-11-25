@@ -3,6 +3,7 @@
  * mounted `useResource` consumer holds, for the **Dependency hot-reload** tests.
  * Test-only, like the rest of `testing/`.
  */
+import type { ReactNode } from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { FileEventBus } from '../FileEventBus';
 import { ResourceLoader } from '../ResourceLoader';
@@ -85,11 +86,16 @@ function Probe<T>({ path, type, read }: ProbeProps<T>) {
   );
 }
 
-/** Mounts one consumer of `path` and returns a reader of what it shows. */
-export function mountProbe<T>(loader: ResourceLoader, props: ProbeProps<T>): () => string {
+/** Mounts one consumer of `path` with `beside` in its view, and returns a reader of what it shows. */
+export function mountProbe<T>(
+  loader: ResourceLoader,
+  props: ProbeProps<T>,
+  beside?: ReactNode
+): () => string {
   render(
     <ResourceLoaderProvider loader={loader}>
       <Probe {...props} />
+      {beside}
     </ResourceLoaderProvider>
   );
   return () => screen.getByTestId('probe').textContent ?? '';

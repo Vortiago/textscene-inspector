@@ -27,16 +27,18 @@ async function freshTextModules() {
     ...(await importOriginal<object>()),
     peekOutlines: (fonts: SettledFonts) => fonts.peekOutlines(outlinesLoad, () => outlines),
   }));
-  const [{ TextRun }, { shapeText }, { ResourceLoader }, { ResourceLoaderProvider }, runtime] =
+  const [{ TextRun }, { shapeText }, { ResourceLoader }, { ResourceLoaderProvider }, runtime, probes] =
     await Promise.all([
       import('./TextRun'),
       import('./textLayout'),
       import('../../../../resources/ResourceLoader'),
       import('../../../../resources/ResourceLoaderContext'),
       import('./runtimeFontMetrics'),
+      import('../../../../resources/testing/pendingProbe'),
     ]);
   /** Hands the outlines over, and waits until the load has woken the runs that read it. */
   const loader = new ResourceLoader();
+  const { Probe, pending } = probes.createPendingProbe();
   const loadOutlines = () => {
     deliverOutlines(TRIANGLE_OUTLINES);
     return settleFontWork();
@@ -51,6 +53,7 @@ async function freshTextModules() {
     });
     return ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={loader}>
+        <Probe />
         <TextRun layout={layout} fontSizePx={16} tint={WHITE} />
       </ResourceLoaderProvider>
     );
@@ -64,7 +67,7 @@ async function freshTextModules() {
         cssFontFamily: 'scene-font-pending-test',
       })
     );
-  return { loader, mountBundledRun: () => mount(), mountCanvasRun, loadOutlines };
+  return { pending, mountBundledRun: () => mount(), mountCanvasRun, loadOutlines };
 }
 
 afterEach(() => vi.doUnmock('./sceneFontOutlines'));
@@ -74,30 +77,30 @@ const FRESH_IMPORT_TIMEOUT_MS = 20_000;
 
 describe('<TextRun> pending load', { timeout: FRESH_IMPORT_TIMEOUT_MS }, () => {
   it('counts a run of the bundled face as pending until its outlines load, then draws it', async () => {
-    const { loader, mountBundledRun, loadOutlines } = await freshTextModules();
+    const { pending, mountBundledRun, loadOutlines } = await freshTextModules();
     const renderer = await mountBundledRun();
-    expect(loader.pendingResourceCount).toBe(1);
+    expect(pending()).toBe(1);
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
 
     await ReactThreeTestRenderer.act(loadOutlines);
 
-    expect(loader.pendingResourceCount).toBe(0);
+    expect(pending()).toBe(0);
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(1);
   });
 
   it('counts a canvas run as nothing, since it carries all it draws with (edge case)', async () => {
-    const { loader, mountCanvasRun } = await freshTextModules();
+    const { pending, mountCanvasRun } = await freshTextModules();
     await mountCanvasRun();
 
-    expect(loader.pendingResourceCount).toBe(0);
+    expect(pending()).toBe(0);
   });
 
   it('releases the load when the run unmounts before the outlines load (error path)', async () => {
-    const { loader, mountBundledRun } = await freshTextModules();
+    const { pending, mountBundledRun } = await freshTextModules();
     const renderer = await mountBundledRun();
 
     await renderer.unmount();
 
-    expect(loader.pendingResourceCount).toBe(0);
+    expect(pending()).toBe(0);
   });
 });

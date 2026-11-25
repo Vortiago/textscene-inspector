@@ -9,7 +9,7 @@ import { useMemo } from 'react';
 
 import type { TscnNode } from '../../../parser/types.js';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext.js';
-import { useResourceLoader } from '../../../resources/useResource.js';
+import { useResourceLoader } from '../../../resources/ResourceLoaderContext.js';
 import { treeScenesOf, useLiveTreeVersion, useProjectTreeSettings } from '../../../r3f/useLiveSceneTree.js';
 import { standaloneViewportContent, type ViewportContent } from './viewportContent.js';
 

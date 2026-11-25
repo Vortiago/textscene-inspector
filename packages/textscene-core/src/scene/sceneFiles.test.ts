@@ -493,6 +493,20 @@ atlas = ExtResource("2")
     expect((await sceneFailureOf(source, {}))?.chain[0]).toBe('res://first.png');
   });
 
+  it('keeps the failure of the file on disk after a write drops the read', async () => {
+    const source =
+      '[gd_scene format=3]\n\n[node name="Main" type="Sprite2D"]\ntexture = Resource("res://gone.png")\n';
+    const scene = openScene({ source, provider: filesOf({}), rootScenePath: MAIN });
+    await whenFilesLoaded(scene);
+    const failure = scene.sceneFailure();
+
+    await scene.getNode('.').set('texture', variant('null'));
+    await whenFilesLoaded(scene);
+
+    expect(failure).toMatchObject({ chain: ['res://gone.png'], cause: 'missing' });
+    expect(scene.sceneFailure()).toEqual(failure);
+  });
+
   it('gives the line Godot prints for a Resource() literal of a section', async () => {
     const source = `[gd_scene format=3]
 

@@ -18,7 +18,12 @@ import { PROJECT_FILE_PATH } from '../godot/project/project.js';
 import { readProjectSettings } from '../resources/projectSettingsFile.js';
 import { registerInstanceResource } from '../resources/registerInstanceResource.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
-import { sceneFileReads, type FileRead } from '../resources/loadFailure/fileReads.js';
+import {
+  sceneFailingReads,
+  sceneFileReads,
+  type FailingReads,
+  type FileRead,
+} from '../resources/loadFailure/fileReads.js';
 import { createSceneFileWalk, type WalkInput } from '../resources/sceneFiles/sceneFileWalk.js';
 import type { ResourceLoader } from '../resources/ResourceLoader.js';
 import type { Scene } from '../scene/openScene.js';
@@ -297,14 +302,24 @@ function projectReads(settings: ProjectSettings | null): FileRead[] {
 /** Undefined while the engine reads the project settings, null where the project has none. */
 type ProjectRead = ProjectSettings | null | undefined;
 
-function rootInput(root: ParsedScene | undefined): WalkInput {
+/** The root's failing reads, judged on its text: the same while the text stays, however the nodes move. */
+type FailingOf = (root: ParsedScene) => FailingReads;
+
+function rootInput(root: ParsedScene | undefined, failingOf: FailingOf): WalkInput {
   if (!root) return { starts: [], failing: null };
-  const { reads, failing, parseStop } = sceneFileReads(root.path, root);
-  return { starts: [{ owner: root.path, reads }], failing: { scene: root.path, reads: failing, parseStop } };
+  const { failing, parseStop } = failingOf(root);
+  // A write can drop a read the file on disk still makes, so each failing read's file is walked too.
+  const reads = sceneFileReads(root.path, root);
+  const read = new Set(reads.map(({ path }) => path));
+  const unwritten = failing.flatMap(({ path }) => (read.has(path) ? [] : [{ path, type: null }]));
+  return {
+    starts: [{ owner: root.path, reads: [...reads, ...unwritten] }],
+    failing: { scene: root.path, reads: failing, parseStop },
+  };
 }
 
-function walkInput(graph: SceneGraph | null, settings: ProjectRead): WalkInput {
-  const { starts: scene, failing } = rootInput(graph?.scenes.get(graph.rootScene));
+function walkInput(graph: SceneGraph | null, settings: ProjectRead, failingOf: FailingOf): WalkInput {
+  const { starts: scene, failing } = rootInput(graph?.scenes.get(graph.rootScene), failingOf);
   if (settings === null) return { starts: scene, failing };
   const engine = {
     owner: null,
@@ -313,6 +328,18 @@ function walkInput(graph: SceneGraph | null, settings: ProjectRead): WalkInput {
   };
   const project = { owner: PROJECT_FILE_PATH, reads: projectReads(settings ?? null) };
   return { starts: [...scene, engine, project], failing };
+}
+
+/** One entry: a write keeps the root's `fileValues`, so a drag judges the text once. */
+function lastFailingReads(): FailingOf {
+  let last: { values: ParsedScene['fileValues']; path: string; reads: FailingReads } | null = null;
+  return (root) => {
+    if (last && root.fileValues && last.values === root.fileValues && last.path === root.path)
+      return last.reads;
+    const reads = sceneFailingReads(root.path, root);
+    last = { values: root.fileValues, path: root.path, reads };
+    return reads;
+  };
 }
 
 /** The Live scene tree of `scene`, over the loader every view of it shares. */
@@ -327,6 +354,7 @@ function sceneRuntimeOf(scene: Scene): SceneRuntime {
     for (const listener of [...fileListeners]) listener();
   };
   const fileWalk = createSceneFileWalk(loader, notifyFiles);
+  const failingOf = lastFailingReads();
   let settings: ProjectRead;
   /** Written only by `files`. A write moves the graph on each drag frame, so equal reads keep the input. */
   let walked: { graph: SceneGraph | null; settings: ProjectRead; key: string; input: WalkInput } | null =
@@ -365,7 +393,7 @@ function sceneRuntimeOf(scene: Scene): SceneRuntime {
     },
     files(graph) {
       if (walked?.graph !== graph || walked.settings !== settings) {
-        const next = walkInput(graph, settings);
+        const next = walkInput(graph, settings, failingOf);
         const key = JSON.stringify(next);
         walked = { graph, settings, key, input: key === walked?.key ? walked.input : next };
       }
