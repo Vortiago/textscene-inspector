@@ -229,8 +229,9 @@ export function emulatedPointGeometry(
     if (!surface.boundingSphere) surface.computeBoundingSphere();
     if (!surface.boundingBox) surface.computeBoundingBox();
   }
-  geometry.boundingSphere = surface.boundingSphere?.clone() ?? null;
-  geometry.boundingBox = surface.boundingBox?.clone() ?? null;
+  // Shared, not copied: three recomputes a box in place, so a new box of the surface reaches the quads.
+  geometry.boundingSphere = surface.boundingSphere;
+  geometry.boundingBox = surface.boundingBox;
   return geometry;
 }
 

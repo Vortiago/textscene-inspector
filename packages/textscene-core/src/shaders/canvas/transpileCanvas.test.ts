@@ -98,6 +98,15 @@ describe('transpileCanvasItem', () => {
     expect(generatedMaterialProgram(material).fragment).toContain('texture(');
   });
 
+  it('names the custom arrays a shader reads, which its draws bind', () => {
+    const readsCustom1 = 'shader_type canvas_item;\nvoid vertex() { COLOR = CUSTOM1; }\n';
+
+    expect([
+      transpileCanvasItem(readsCustom1).draw('attributes').customsRead,
+      transpileCanvasItem(DEFAULT_CANVAS_SHADER).draw('attributes').customsRead,
+    ]).toEqual([[1], []]);
+  });
+
   describe("points at the shader's POINT_SIZE", () => {
     const SIZED = 'shader_type canvas_item;\nvoid vertex() { POINT_SIZE = 6.0; }\n';
 

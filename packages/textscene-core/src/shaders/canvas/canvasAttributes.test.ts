@@ -79,14 +79,23 @@ describe('attributesGeometry', () => {
 
   it('writes CUSTOM0 and CUSTOM1 at four lanes a point, and zero for a missing one', () => {
     const custom0 = Float32Array.from({ length: 12 }, (_, lane) => lane / 4);
-    const geometry = attributesGeometry({
-      ...triangleArrayCommand([0, 1, 2], SQUARE.slice(0, 3), [], []),
-      customs: [custom0],
-    });
+    const arrays = { ...triangleArrayCommand([0, 1, 2], SQUARE.slice(0, 3), [], []), customs: [custom0] };
+    const geometry = attributesGeometry(arrays, [0, 1]);
 
     expect([arrayOf(geometry, 'custom0_attrib'), arrayOf(geometry, 'custom1_attrib')]).toEqual([
       [...custom0],
       Array(12).fill(0),
+    ]);
+  });
+
+  it('binds no custom array the shader does not read', () => {
+    const custom0 = new Float32Array(12);
+    const arrays = { ...triangleArrayCommand([0, 1, 2], SQUARE.slice(0, 3), [], []), customs: [custom0] };
+    const geometry = attributesGeometry(arrays, [1]);
+
+    expect(['custom0_attrib', 'custom1_attrib'].map((name) => geometry.hasAttribute(name))).toEqual([
+      false,
+      true,
     ]);
   });
 

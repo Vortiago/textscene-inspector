@@ -4,7 +4,7 @@ import type { Node, TextureNode } from 'three/webgpu';
 import type { MaterialBlendState } from '../pipeline/blendState.js';
 import { parsedShader, shaderSource, type ShaderOptions } from '../language/parseShader.js';
 import { variablesRead } from '../language/treeWalk.js';
-import { VERTEX_ID_ATTRIBUTE } from '../template/surfaceAttributes.js';
+import { CANVAS_CUSTOM_ARRAYS, VERTEX_ID_ATTRIBUTE } from '../template/surfaceAttributes.js';
 import { devicePoints, sizesPoints, type DevicePoints } from '../template/devicePoints.js';
 import { emitTemplateStage, programResources, type WrittenBuiltIn } from '../template/emitTemplate.js';
 import { linkedProgram, type LinkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
@@ -75,6 +75,8 @@ export interface CanvasDraw {
   readonly buffers: ReadonlyMap<string, RowBlock>;
   /** Whether each point draws as two triangles, at the shader's `POINT_SIZE`: three's points are 1 px. */
   readonly emulatesPoints: boolean;
+  /** The custom arrays the shader reads, which `CUSTOMn_USED` binds (`canvas.glsl:12-18`). */
+  readonly customsRead: readonly number[];
 }
 
 export interface TranspiledCanvasItem {
@@ -106,7 +108,7 @@ export function transpileCanvasItem(source: string, options: CanvasItemOptions =
     program,
     shader: { parameters: [...program.parameters.values()], source: shaderSource(parsed, file) },
     blend: canvasBlendState(parsed.tree),
-    usesPointSize: sizesPoints(variablesRead(parsed.tree, (variable) => variable.builtIn !== undefined)),
+    ...builtInUses(variablesRead(parsed.tree, (variable) => variable.builtIn !== undefined)),
   };
   const rows = options.rows ?? 'flipped';
   const draws = new Map<CanvasVariant, CanvasDraw>();
@@ -149,6 +151,15 @@ interface ItemProgram {
   readonly blend: MaterialBlendState;
   /** Whether the shader reads or writes `POINT_SIZE` (`renderer_canvas_render_rd.cpp:1826`). */
   readonly usesPointSize: boolean;
+  readonly customsRead: readonly number[];
+}
+
+/** What the built-ins a shader names ask of its draws. */
+function builtInUses(builtInsNamed: ReadonlySet<string>): Pick<ItemProgram, 'usesPointSize' | 'customsRead'> {
+  return {
+    usesPointSize: sizesPoints(builtInsNamed),
+    customsRead: CANVAS_CUSTOM_ARRAYS.filter((custom) => builtInsNamed.has(`CUSTOM${custom}`)),
+  };
 }
 
 /** The variant a draw links, and the rows of the target it draws to. */
@@ -164,7 +175,10 @@ interface VariantPoints {
 }
 
 /** The material of `variant`, with resources of its own and the program's parameters. */
-function canvasDraw({ program, shader, blend, usesPointSize }: ItemProgram, target: DrawTarget): CanvasDraw {
+function canvasDraw(
+  { program, shader, blend, usesPointSize, customsRead }: ItemProgram,
+  target: DrawTarget
+): CanvasDraw {
   const emulatesPoints = usesPointSize && writesPointSize(target.variant);
   const resources = programResources();
   const specialisations = resources.uniforms.specialisations;
@@ -185,6 +199,7 @@ function canvasDraw({ program, shader, blend, usesPointSize }: ItemProgram, targ
   return {
     material,
     emulatesPoints,
+    customsRead,
     uniforms: resources.uniforms.byName,
     specialisations,
     textures: resources.textures,

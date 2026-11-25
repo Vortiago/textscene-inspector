@@ -8,7 +8,6 @@ import type { CanvasPrimitive } from './canvasPrimitive.js';
 import { type CanvasItemDraw, modulated, NO_INSTANCE_UNIFORMS, WHITE, worldOf } from './canvasInstance.js';
 import { emulatedPointGeometry } from '../spatial/meshAttributes.js';
 import {
-  CANVAS_CUSTOM_ARRAYS,
   CUSTOM_ARRAY_LANES,
   customArrayTemplateAttribute,
   VERTEX_ID_ATTRIBUTE,
@@ -77,10 +76,13 @@ const DEFAULT_COLOR = [1, 1, 1, 1];
 const DEFAULT_UV = [0, 0];
 
 /**
- * `request_polygon` (`renderer_canvas_render_rd.cpp:104-300`), a missing array as its default buffer.
+ * `request_polygon` (`renderer_canvas_render_rd.cpp:104-300`): default buffers, and the custom arrays read.
  * @canonical The vertex attributes of a canvas polygon or mesh surface
  */
-export function attributesGeometry(arrays: CanvasVertexArrays): THREE.BufferGeometry {
+export function attributesGeometry(
+  arrays: CanvasVertexArrays,
+  customsRead: readonly number[] = []
+): THREE.BufferGeometry {
   const { points, colors, uvs, indices } = checkedArrays(arrays);
   const count = points.length;
   const geometry = new THREE.BufferGeometry();
@@ -96,7 +98,7 @@ export function attributesGeometry(arrays: CanvasVertexArrays): THREE.BufferGeom
   geometry.setAttribute('color_attrib', floats(colorValues ?? repeated(DEFAULT_COLOR, count), 4));
   const uvValues = uvs.length === count ? uvs.flatMap(({ x, y }) => [x, y]) : repeated(DEFAULT_UV, count);
   geometry.setAttribute('uv_attrib', floats(uvValues, 2));
-  CANVAS_CUSTOM_ARRAYS.forEach((custom) => {
+  customsRead.forEach((custom) => {
     // A missing custom array reads zero (`mesh_storage.cpp:120-131`).
     const values = arrays.customs?.[custom] ?? new Float32Array(count * CUSTOM_ARRAY_LANES);
     geometry.setAttribute(

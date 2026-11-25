@@ -252,12 +252,13 @@ describe('emulatedPointGeometry', () => {
     expect(emulatedPointGeometry(source).boundingSphere).toEqual(source.boundingSphere);
   });
 
-  it("copies the source's box, so a write to one leaves the other", () => {
+  it("follows a recompute of the source's box, which three writes in place", () => {
     const source = withGodotAttributes(triangle());
     const geometry = emulatedPointGeometry(source);
-    geometry.boundingBox!.makeEmpty();
+    source.getAttribute('position').setX(0, 9);
+    source.computeBoundingBox();
 
-    expect(source.boundingBox!.isEmpty()).toBe(false);
+    expect(geometry.boundingBox!.max.x).toBe(9);
   });
 
   it('bounds a source with no box by its positions, which the framing box reads', () => {
