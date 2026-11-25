@@ -21,6 +21,16 @@ The texture never gets an image, so a Sprite2D draws Godot's 4 by 4 magenta and 
 divides the source rectangle by the placeholder's size, so the sprite shows the corner texel
 stretched. A TextureRect shows the whole checkerboard.
 
+## A user's canvas_item shader
+
+<!-- compare: image=unit-sprite2d-canvas-shader status=done fixture=unit-sprite2d-canvas-shader.tscn -->
+
+A Sprite2D whose `material` is a ShaderMaterial of `shader_type canvas_item` draws through Godot's
+canvas template with the user's `vertex()` and `fragment()`, as Godot does. The shader reads the
+ShaderMaterial's `shader_parameter/*` values, and a child with `use_parent_material` draws with its
+parent's material. A shader that Godot does not compile draws as Godot's default canvas shader. A
+2D light does not shade a sprite with a user's shader yet.
+
 ## Linting
 
 <!-- lint:begin Sprite2D -->
