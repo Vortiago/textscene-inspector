@@ -1,7 +1,14 @@
-import * as THREE from 'three';
-import { multiplyColor, type Rgba } from '../../godot/math/math.js';
+import type * as THREE from 'three';
+import type { Rgba } from '../../godot/math/math.js';
 import type { Rect2 } from '../../godot/math/rect2.js';
-import type { Transform2DColumns } from '../../godot/math/transform2d.js';
+import {
+  type CanvasItemDraw,
+  FLAGS,
+  instanceBatchGeometry,
+  instanceRecord,
+  modulated,
+} from './canvasInstance.js';
+import { DEFAULT_TEXEL_SIZE, type TexelSize } from './canvasTexture.js';
 
 /** `RendererCanvasRender::CANVAS_RECT_*` (`renderer_canvas_render.h:41-49`). */
 export const CANVAS_RECT = {
@@ -44,23 +51,11 @@ export function textureRectRegion(
   };
 }
 
-/** What a rect reads from the item that holds it. */
-export interface CanvasItemDraw {
-  /** The item's transform into the canvas, `Item::final_transform`. */
-  readonly transform: Transform2DColumns;
-  /** The item's modulate times its parents', times its self modulate: `Item::final_modulate`. */
-  readonly finalModulate: Rgba;
-}
-
-/** `sizeof(InstanceData)` (`renderer_canvas_render_rd.h:379`). */
-const INSTANCE_BYTES = 128;
-
-/** Float offsets of `InstanceData`'s rect members (`renderer_canvas_render_rd.h:355-377`). */
-const WORLD = 0;
+/** Float offsets of `InstanceData`'s rect members (`renderer_canvas_render_rd.h:359-363`). */
 const MODULATION = 8;
+const NINEPATCH_MARGINS = 12;
 const DST_RECT = 16;
 const SRC_RECT = 20;
-const FLAGS = 26;
 
 /** `INSTANCE_FLAGS_*` of a rect (`canvas_uniforms_inc.glsl:9-10`). */
 const INSTANCE_FLAGS_CLIP_RECT_UV = 1 << 4;
@@ -71,19 +66,15 @@ export function rectInstanceData(
   command: CanvasRectCommand,
   item: CanvasItemDraw,
   /** The texture's `texpixel_size`, or nothing for a rect with no texture. */
-  texelSize: { readonly x: number; readonly y: number } | undefined
+  texelSize: TexelSize | undefined
 ): ArrayBuffer {
-  const record = new ArrayBuffer(INSTANCE_BYTES);
-  const floats = new Float32Array(record);
-  const words = new Uint32Array(record);
-  const { transform: t, finalModulate } = item;
-  floats.set([t.a, t.b, t.c, t.d, t.tx, t.ty], WORLD);
-  const { r, g, b, a } = multiplyColor(command.modulate, finalModulate);
+  const { bytes, floats, words } = instanceRecord(item);
+  const { r, g, b, a } = modulated(command.modulate, item);
   floats.set([r, g, b, a], MODULATION);
   floats.set(rectValues(command.rect), DST_RECT);
   floats.set(sourceRect(command, texelSize), SRC_RECT);
   words[FLAGS] = texelSize ? instanceFlags(command.flags) : 0;
-  return record;
+  return bytes;
 }
 
 /** The rect with a negative size turned positive from its far edge. */
@@ -92,10 +83,7 @@ function rectValues({ x, y, w, h }: Rect2): number[] {
 }
 
 /** The texture's region in 0 to 1, its size negated by a flip. */
-function sourceRect(
-  { flags, source }: CanvasRectCommand,
-  texelSize: { x: number; y: number } | undefined
-): number[] {
+function sourceRect({ flags, source }: CanvasRectCommand, texelSize: TexelSize | undefined): number[] {
   if (!texelSize) return [0, 0, 1, 1];
   const region = flags & CANVAS_RECT.REGION;
   const [x, y, w, h] = region
@@ -114,47 +102,80 @@ function instanceFlags(flags: number): number {
 /** `quad_index_buffer` (`renderer_canvas_render_rd.cpp:1945-1956`): two triangles over vertices 0 to 3. */
 const QUAD_INDICES = [0, 1, 2, 0, 2, 3];
 
-/** The vertex format of a rect batch (`renderer_canvas_render_rd.cpp:1960-2011`): eight vec4 per instance. */
-const FLOAT_ATTRIBUTES = ['attrib_A', 'attrib_B', 'attrib_C', 'attrib_D', 'attrib_E', 'attrib_F'];
-const UINT_ATTRIBUTES = ['attrib_G', 'attrib_H'];
-
-/** The record's floats come first, then its `R32G32B32A32_UINT` lanes. */
-const FLOAT_LANES = FLOAT_ATTRIBUTES.length * 4;
-const RECORD_LANES = INSTANCE_BYTES / 4;
+/** `attrib_A` to `attrib_F` read floats (`renderer_canvas_render_rd.cpp:1960-2011`). */
+const QUAD_FLOAT_ATTRIBUTES = 6;
 
 /**
- * The geometry of a batch of rects: one instance for each record of `rectInstanceData`.
- * @canonical The instanced geometry of a canvas rect batch
+ * The geometry of a batch of rects or nine-patches: one instance for each record.
+ * @canonical The instanced geometry of a canvas quad batch
  */
-export function rectBatchGeometry(instances: readonly ArrayBuffer[]): THREE.InstancedBufferGeometry {
-  // Two buffers, as three uploads one GL buffer for each interleaved buffer: each byte goes up once.
-  const floats = new Float32Array(FLOAT_LANES * instances.length);
-  const words = new Uint32Array((RECORD_LANES - FLOAT_LANES) * instances.length);
-  instances.forEach((record, index) => {
-    floats.set(new Float32Array(record, 0, FLOAT_LANES), index * FLOAT_LANES);
-    words.set(new Uint32Array(record, FLOAT_LANES * 4), index * (RECORD_LANES - FLOAT_LANES));
-  });
-  const geometry = new THREE.InstancedBufferGeometry();
-  geometry.setIndex(QUAD_INDICES);
-  setAttributes(geometry, FLOAT_ATTRIBUTES, new THREE.InstancedInterleavedBuffer(floats, FLOAT_LANES));
-  setAttributes(
-    geometry,
-    UINT_ATTRIBUTES,
-    new THREE.InstancedInterleavedBuffer(words, RECORD_LANES - FLOAT_LANES)
-  );
-  geometry.instanceCount = instances.length;
-  // The template places each vertex from its record, and the geometry has no `position` to bound.
-  geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), Infinity);
-  return geometry;
+export function quadBatchGeometry(records: readonly ArrayBuffer[]): THREE.InstancedBufferGeometry {
+  return instanceBatchGeometry(records, QUAD_FLOAT_ATTRIBUTES, QUAD_INDICES);
 }
 
-/** One vec4 attribute of `names` for each four lanes of `buffer`. */
-function setAttributes(
-  geometry: THREE.BufferGeometry,
-  names: readonly string[],
-  buffer: THREE.InterleavedBuffer
-) {
-  names.forEach((name, index) =>
-    geometry.setAttribute(name, new THREE.InterleavedBufferAttribute(buffer, 4, index * 4))
-  );
+/** The nine-patch of `CanvasItem.draw_style_box` and `NinePatchRect`: `Item::CommandNinePatch`. */
+export interface CanvasNinePatchCommand {
+  /** The patch in the item's pixels. */
+  readonly rect: Rect2;
+  /** The texture's region in texels: the whole texture when its size is zero. */
+  readonly source: Rect2;
+  readonly modulate: Rgba;
+  /** In the source's texels: left, top, right, bottom (`renderer_canvas_cull.cpp:1677-1680`). */
+  readonly margins: readonly [number, number, number, number];
+  readonly axisX: NinePatchAxisMode;
+  readonly axisY: NinePatchAxisMode;
+  readonly drawsCenter: boolean;
 }
+
+/** `RS::NinePatchAxisMode`, in its order. */
+export const NINE_PATCH_AXIS_MODES = ['stretch', 'tile', 'tile_fit'] as const;
+export type NinePatchAxisMode = (typeof NINE_PATCH_AXIS_MODES)[number];
+
+/** `INSTANCE_FLAGS_NINEPATCH_*` (`canvas_uniforms_inc.glsl:12-14`). */
+const NINEPATCH_DRAW_CENTER = 1 << 8;
+const NINEPATCH_H_MODE_SHIFT = 9;
+const NINEPATCH_V_MODE_SHIFT = 11;
+
+/** Float offset of `InstanceData::ninepatch_pixel_size`. */
+const NINEPATCH_PIXEL_SIZE = 6;
+
+/** `InstanceData` of a nine-patch with no light (`renderer_canvas_render_rd.cpp:2560-2608`). */
+export function ninePatchInstanceData(
+  command: CanvasNinePatchCommand,
+  item: CanvasItemDraw,
+  /** The texture's `texpixel_size`, or nothing for a nine-patch with no texture. */
+  texelSize: TexelSize | undefined
+): ArrayBuffer {
+  const { bytes, floats, words } = instanceRecord(item);
+  const { source } = command;
+  const hasSource = source.x !== 0 || source.y !== 0 || source.w !== 0 || source.h !== 0;
+  if (texelSize && hasSource) {
+    floats.set(
+      [source.x * texelSize.x, source.y * texelSize.y, source.w * texelSize.x, source.h * texelSize.y],
+      SRC_RECT
+    );
+    floats.set([1 / source.w, 1 / source.h], NINEPATCH_PIXEL_SIZE);
+  } else {
+    const { x, y } = texelSize ?? DEFAULT_TEXEL_SIZE;
+    floats.set([0, 0, 1, 1], SRC_RECT);
+    floats.set([x, y], NINEPATCH_PIXEL_SIZE);
+  }
+  const { r, g, b, a } = modulated(command.modulate, item);
+  floats.set([r, g, b, a], MODULATION);
+  floats.set(command.margins, NINEPATCH_MARGINS);
+  floats.set(rectValuesAsGiven(command.rect), DST_RECT);
+  words[FLAGS] =
+    (axisModeIndex(command.axisX) << NINEPATCH_H_MODE_SHIFT) |
+    (axisModeIndex(command.axisY) << NINEPATCH_V_MODE_SHIFT) |
+    (command.drawsCenter ? NINEPATCH_DRAW_CENTER : 0);
+  return bytes;
+}
+
+function axisModeIndex(mode: NinePatchAxisMode): number {
+  const index = NINE_PATCH_AXIS_MODES.indexOf(mode);
+  if (index < 0) throw new Error(`expected an axis mode of ${NINE_PATCH_AXIS_MODES.join(', ')}, got ${mode}`);
+  return index;
+}
+
+/** Godot turns no negative size of a nine-patch (`renderer_canvas_render_rd.cpp:2564`). */
+const rectValuesAsGiven = ({ x, y, w, h }: Rect2) => [x, y, w, h];

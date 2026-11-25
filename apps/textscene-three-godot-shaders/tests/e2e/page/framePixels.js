@@ -18,6 +18,24 @@ export function framePixels(
   return withOpaqueAlpha(topRowFirst(pixels, width, height));
 }
 
+/** A half float target, as with `use_hdr_2d`, read to bytes with truncation (`image.cpp:3577`). */
+export function linearFramePixels(renderer, scene, camera, { width, height }) {
+  const target = new THREE.WebGLRenderTarget(width, height, {
+    type: THREE.HalfFloatType,
+    stencilBuffer: true,
+  });
+  renderer.setRenderTarget(target);
+  renderer.render(scene, camera);
+  const halves = new Uint16Array(width * height * 4);
+  renderer.readRenderTargetPixels(target, 0, 0, width, height, halves);
+  renderer.setRenderTarget(null);
+  target.dispose();
+  const pixels = Uint8Array.from(halves, (half) =>
+    Math.trunc(THREE.MathUtils.clamp(THREE.DataUtils.fromHalfFloat(half) * 255, 0, 255))
+  );
+  return withOpaqueAlpha(topRowFirst(pixels, width, height));
+}
+
 /** An opaque viewport's image is RGB8, so its alpha reads as 1 (`texture_storage.cpp:3574`). */
 function withOpaqueAlpha(pixels) {
   for (let alpha = 3; alpha < pixels.length; alpha += 4) pixels[alpha] = 255;

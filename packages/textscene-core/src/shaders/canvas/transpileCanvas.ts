@@ -10,7 +10,12 @@ import type { RowBlock } from '../template/rowBlock.js';
 import type { Specialisation } from '../template/specialisation.js';
 import type { TemplateUniform } from '../template/templateUniforms.js';
 import { TreeMemo } from '../template/treeMemo.js';
-import { glClipPosition, vertexAttributes, vulkanFragCoord } from '../template/vulkanStage.js';
+import {
+  glClipPosition,
+  NATIVE_POINT_SIZE,
+  vertexAttributes,
+  vulkanFragCoord,
+} from '../template/vulkanStage.js';
 import type { Vec4 } from '../tslTypes.js';
 import { BoundNodeMaterial, type MaterialShader } from '../uniforms/boundMaterial.js';
 import type { ProjectSampling } from '../uniforms/samplerState.js';
@@ -19,23 +24,36 @@ import type { TranspiledUniform } from '../uniforms/transpiledUniform.js';
 /** Godot's default canvas shader, a version with empty slots (`renderer_canvas_render_rd.cpp:1762`). */
 export const DEFAULT_CANVAS_SHADER = 'shader_type canvas_item;\n';
 
-/** The variants of `canvas.glsl` with no points that a draw picks (`renderer_canvas_render_rd.cpp:1751`). */
-export const CANVAS_VARIANTS = ['quad', 'ninepatch', 'primitive', 'attributes'] as const;
+/** In Godot's order (`renderer_canvas_render_rd.cpp:1750-1755`). */
+export const CANVAS_VARIANTS = [
+  'quad',
+  'ninepatch',
+  'primitive',
+  'primitive_points',
+  'attributes',
+  'attributes_points',
+] as const;
 
 export type CanvasVariant = (typeof CANVAS_VARIANTS)[number];
 
-const VARIANT_DEFINES: Readonly<Record<CanvasVariant, string>> = {
+/** Godot's defines of each variant, which the branch rows of `canvas.glsl` read too. */
+export const CANVAS_VARIANT_DEFINES: Readonly<Record<CanvasVariant, string>> = {
   quad: '',
   ninepatch: '#define USE_NINEPATCH\n',
   primitive: '#define USE_PRIMITIVE\n',
+  primitive_points: '#define USE_PRIMITIVE\n#define USE_POINT_SIZE\n',
   attributes: '#define USE_ATTRIBUTES\n',
+  attributes_points: '#define USE_ATTRIBUTES\n#define USE_POINT_SIZE\n',
 };
+
+const writesPointSize = (variant: CanvasVariant) =>
+  CANVAS_VARIANT_DEFINES[variant].includes('USE_POINT_SIZE');
 
 /** One template for every variant: the defines key each stage in the memo, which lives with the page. */
 const CANVAS: ProgramTemplate = {
   shaderType: 'canvas_item',
   template: 'canvas.glsl',
-  defines: VARIANT_DEFINES.quad,
+  defines: CANVAS_VARIANT_DEFINES.quad,
   memo: new TreeMemo(),
 };
 
@@ -75,7 +93,7 @@ export function transpileCanvasItem(source: string, options: CanvasItemOptions =
     parameters: program.parameters,
     draw(variant) {
       let draw = draws.get(variant);
-      if (!draw) draws.set(variant, (draw = canvasDraw(program, VARIANT_DEFINES[variant], shader)));
+      if (!draw) draws.set(variant, (draw = canvasDraw(program, variant, shader)));
       return draw;
     },
   };
@@ -103,8 +121,8 @@ export function specialiseCanvasDraw(draw: CanvasDraw, { useLighting }: CanvasSp
   packed.value = useLighting ? otherBits | USE_LIGHTING_BIT : otherBits;
 }
 
-/** The material of the variant of `defines`, with resources of its own and the program's parameters. */
-function canvasDraw(program: LinkedProgram, defines: string, shader: MaterialShader): CanvasDraw {
+/** The material of `variant`, with resources of its own and the program's parameters. */
+function canvasDraw(program: LinkedProgram, variant: CanvasVariant, shader: MaterialShader): CanvasDraw {
   const resources = programResources();
   const specialisations = resources.uniforms.specialisations;
   const material = new BoundNodeMaterial({ ...shader, specialisations });
@@ -118,7 +136,7 @@ function canvasDraw(program: LinkedProgram, defines: string, shader: MaterialSha
     depthWrite: false,
   });
   // Emitted anew at each specialisation: three caches function code by node (`NodeBuilder.js:2759`).
-  material.stageWith(() => Object.assign(material, stages({ ...program, resources }, defines)));
+  material.stageWith(() => Object.assign(material, stages({ ...program, resources }, variant)));
   return {
     material,
     uniforms: resources.uniforms.byName,
@@ -128,7 +146,8 @@ function canvasDraw(program: LinkedProgram, defines: string, shader: MaterialSha
   };
 }
 
-function stages({ linked, resources, parameterValues }: LinkedProgram, defines: string) {
+function stages({ linked, resources, parameterValues }: LinkedProgram, variant: CanvasVariant) {
+  const defines = CANVAS_VARIANT_DEFINES[variant];
   const vertexStage = linked('vertex', defines);
   const vulkanClip = varyingProperty('vec4', 'godot_clip_position') as unknown as Vec4;
   const vertex = emitTemplateStage(
@@ -139,7 +158,8 @@ function stages({ linked, resources, parameterValues }: LinkedProgram, defines: 
       ['gl_VertexIndex', int(vertexIndex) as unknown as Node],
       ['gl_InstanceIndex', int(instanceIndex) as unknown as Node],
     ]),
-    { name: 'gl_Position', type: 'vec4' },
+    // The default `point_size` is 1. A user's `POINT_SIZE` arrives with user canvas shaders.
+    { name: 'gl_Position', type: 'vec4', beside: writesPointSize(variant) ? [NATIVE_POINT_SIZE] : [] },
     resources
   );
   const fragment = emitTemplateStage(

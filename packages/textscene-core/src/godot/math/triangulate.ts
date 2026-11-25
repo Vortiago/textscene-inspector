@@ -67,3 +67,20 @@ export function triangulatePolygon(contour: readonly Vector2[]): number[] {
   }
   return triangles;
 }
+
+/**
+ * `mesh.cpp:352-366`: an odd slot swaps its last two indices, so every triangle keeps one winding.
+ * @canonical A triangle strip as a triangle list
+ */
+export function stripToTriangles(strip: ArrayLike<number>): Uint32Array {
+  const triangleCount = Math.max(strip.length - 2, 0);
+  const triangles = new Uint32Array(triangleCount * 3);
+  for (let j = 2; j < strip.length; j++) {
+    const odd = j % 2 === 1;
+    const out = (j - 2) * 3;
+    triangles[out] = strip[j - 2]!;
+    triangles[out + 1] = strip[odd ? j : j - 1]!;
+    triangles[out + 2] = strip[odd ? j - 1 : j]!;
+  }
+  return triangles;
+}

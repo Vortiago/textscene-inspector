@@ -65,6 +65,21 @@ describe('writeCanvasBindings', () => {
 
     expect([value('directional_light_count'), value('flags')]).toEqual([0, 0]);
   });
+
+  it('turns the vertex colours linear for a render target with linear colours', () => {
+    expect(written({ ...FRAME, usesLinearColors: true })('flags')).toBe(1);
+  });
+
+  it('writes the CanvasModulate colour linear for a render target with linear colours', () => {
+    const modulation = written({ ...FRAME, usesLinearColors: true })('canvas_modulation') as THREE.Vector4;
+
+    expect(modulation.toArray().map((channel) => channel.toFixed(4))).toEqual([
+      '1.0000',
+      '0.2140',
+      '0.0509',
+      '1.0000',
+    ]);
+  });
 });
 
 describe('transform2DMatrix', () => {

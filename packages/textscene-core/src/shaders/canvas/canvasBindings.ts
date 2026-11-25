@@ -1,11 +1,12 @@
 import * as THREE from 'three';
+import { srgbToLinearColor } from '../../godot/math/color.js';
 import type { Rgba } from '../../godot/math/math.js';
 import type { Transform2DColumns } from '../../godot/math/transform2d.js';
 import { normalizedVector2 } from '../../godot/math/vector.js';
 import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
 import type { CanvasDraw } from './transpileCanvas.js';
 
-/** What a canvas draw reads from its viewport, with no light and an sRGB render target. */
+/** What a canvas draw reads from its viewport, with no light. */
 export interface CanvasFrame {
   /** The size of the render target in pixels. */
   readonly width: number;
@@ -18,7 +19,12 @@ export interface CanvasFrame {
   readonly time: number;
   /** `Viewport.snap_2d_vertices_to_pixel`. */
   readonly snapVerticesToPixel: boolean;
+  /** Whether the render target keeps colours linear, `Viewport.use_hdr_2d`. */
+  readonly usesLinearColors?: boolean;
 }
+
+/** `CANVAS_FLAGS_CONVERT_ATTRIBUTES_TO_LINEAR` (`canvas_uniforms_inc.glsl:114`). */
+const CONVERT_ATTRIBUTES_TO_LINEAR = 1 << 0;
 
 const DATA = 'canvas_data';
 
@@ -42,7 +48,10 @@ export const CANVAS_BINDINGS: readonly Binding<CanvasFrame>[] = [
   {
     uniform: `${DATA}.canvas_modulation`,
     godot: 'renderer_canvas_render_rd.cpp:691-698',
-    value: ({ canvasModulate: { r, g, b, a } }) => new THREE.Vector4(r, g, b, a),
+    value: ({ canvasModulate, usesLinearColors }) => {
+      const { r, g, b, a } = usesLinearColors ? srgbToLinearColor(canvasModulate) : canvasModulate;
+      return new THREE.Vector4(r, g, b, a);
+    },
   },
   {
     uniform: `${DATA}.screen_pixel_size`,
@@ -56,8 +65,11 @@ export const CANVAS_BINDINGS: readonly Binding<CanvasFrame>[] = [
     value: (frame) => frame.snapVerticesToPixel,
   },
   { uniform: `${DATA}.directional_light_count`, godot: 'renderer_canvas_render_rd.cpp:707', value: () => 0 },
-  // An sRGB render target keeps vertex colours as stored: no `CANVAS_FLAGS_CONVERT_ATTRIBUTES_TO_LINEAR`.
-  { uniform: `${DATA}.flags`, godot: 'renderer_canvas_render_rd.cpp:729', value: () => 0 },
+  {
+    uniform: `${DATA}.flags`,
+    godot: 'renderer_canvas_render_rd.cpp:729',
+    value: (frame) => (frame.usesLinearColors ? CONVERT_ATTRIBUTES_TO_LINEAR : 0),
+  },
 ];
 
 /** Writes each uniform of `draw` the binding table names, from `frame`. */

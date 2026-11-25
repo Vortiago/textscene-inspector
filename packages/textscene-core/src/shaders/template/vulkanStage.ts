@@ -1,6 +1,7 @@
-import { attribute, Fn, screenCoordinate, vec4 } from 'three/tsl';
+import { attribute, float, Fn, screenCoordinate, vec4 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import type { Vec4 } from '../tslTypes.js';
+import type { WrittenBuiltIn } from './emitTemplate.js';
 import type { TemplateStageNode } from './templateTree.js';
 
 /** Each `in` global of the vertex stage as the geometry attribute of its name. */
@@ -32,3 +33,11 @@ export function glClipPosition(position: Node, vulkanClip: Vec4, step?: ClipStep
 export function vulkanFragCoord(clip: Vec4): Node {
   return vec4(screenCoordinate, clip.z.div(clip.w), clip.w.reciprocal()) as unknown as Node;
 }
+
+/** The `gl_PointSize` write of native points: three's GLSL builder writes 1 (`GLSLNodeBuilder.js:1749`). */
+export const NATIVE_POINT_SIZE: WrittenBuiltIn = {
+  name: 'gl_PointSize',
+  type: 'float',
+  initial: float(1) as unknown as Node,
+  store: () => undefined,
+};

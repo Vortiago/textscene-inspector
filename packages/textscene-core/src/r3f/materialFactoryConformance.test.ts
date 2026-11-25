@@ -300,6 +300,8 @@ const CONSTRUCTED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
     'an opaque-list sentinel: its material writes nothing and is never mutated, and its owner removes it with its scene',
   'packages/textscene-core/src/shaders/sky/transpileSky.ts':
     'the sky triangle of the shader package, which a plain three.js app with no React adds to its scene; the caller owns and disposes it',
+  'packages/textscene-core/src/shaders/canvas/canvasAttributes.ts':
+    'the canvas draws of the shader package, which a plain three.js app with no React adds to its scene; the caller owns and disposes them',
   'packages/textscene-core/src/shaders/template/compute/emitComputePass.ts':
     'the triangle or points of a lowered compute pass, drawn offscreen by a bake and never added to a scene, so the material never passes through React',
   'packages/textscene-core/src/r3f/spatialShader/pointSurface.ts':
