@@ -5,6 +5,12 @@ import { liveNodePathOf } from '../../../scene/nodePathWalk.js';
 import { valueOfSceneValue, variantOf, type SceneValue } from '../../../scene/variant.js';
 import type { EditorCameraBacking } from './editorCameras.js';
 
+/** The canvas point at the centre of a Camera2D's view, and its magnification. */
+export interface CameraView2D {
+  readonly centre: { x: number; y: number };
+  readonly zoom: number;
+}
+
 /** What the camera node reads and moves of the stage. */
 export interface Camera2DStage {
   size(): { width: number; height: number };
@@ -16,6 +22,8 @@ export interface Camera2DStage {
   clampZoom(zoom: number): number;
   /** The selection rect of a node by its live path, or null while the stage cannot place it. */
   rectOf(livePath: string): Rect2 | null;
+  /** What the Camera2D at a live path shows on the project's screen, or null for another node. */
+  cameraViewOf(livePath: string): Promise<CameraView2D | null>;
   /** The view the stage opens a scene at. */
   reset(): void;
   scenePath(): string;
@@ -44,6 +52,13 @@ export function editorCamera2D(stage: Camera2DStage): EditorCameraBacking {
       throw new Error(`expected the absolute path of a node to focus, got ${String(node)}`);
     return stage.rectOf(livePath) ?? ZERO_RECT;
   };
+  // Godot's F frames a Camera2D's origin, as it has no edit rect (canvas_item.h:258-259): another act.
+  const cameraViewOf = async (camera: SceneValue | undefined): Promise<CameraView2D> => {
+    const livePath = typeof camera === 'string' ? liveNodePathOf(camera) : null;
+    const view = livePath === null ? null : await stage.cameraViewOf(livePath);
+    if (!view) throw new Error(`expected the absolute path of a Camera2D to frame, got ${String(camera)}`);
+    return view;
+  };
   return {
     get(property) {
       if (property === 'position') return vector2(centre());
@@ -69,8 +84,18 @@ export function editorCamera2D(stage: Camera2DStage): EditorCameraBacking {
         stage.moveView(frameSelection(stage.view(), rectOf(args[0]), stage.size(), stage.clampZoom));
       } else if (method === 'center') {
         stage.moveView(centerSelection(stage.view(), rectOf(args[0]), stage.size()));
-      } else
-        throw new Error(`expected a method of the 2D editor camera (reset, focus, center), got ${method}`);
+      } else if (method === 'frame_camera_view') {
+        return cameraViewOf(args[0]).then(({ centre, zoom }) => {
+          // The stage draws one zoom above 0, as a `set` of `zoom` keeps it.
+          if (!(zoom > 0)) throw new Error(`expected a Camera2D zoom above 0 to frame, got ${zoom}`);
+          stage.moveView(centredAt(centre, stage.clampZoom(zoom)));
+          return null;
+        });
+      } else {
+        throw new Error(
+          `expected a method of the 2D editor camera (reset, focus, center, frame_camera_view), got ${method}`
+        );
+      }
       return null;
     },
     pose: () => stage.view(),

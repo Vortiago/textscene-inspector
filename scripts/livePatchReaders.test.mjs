@@ -71,16 +71,11 @@ const NEEDS_NO_OVERLAY = new Map([
     'r3f/components/SceneTreeViewer/useLiveStep.ts',
     'Shows the merged instance root in the tree, which no pass patches.',
   ],
-  ['r3f/components/TscnPreviewShell/ViewportArea.tsx', 'Asks whether the scene has 2D content, by type.'],
   ['r3f/components/ViewportToolbar/ViewportToolbar.tsx', 'Asks whether a node yields the preview, by type.'],
   ['r3f/liveSceneTree.ts', 'Builds the tree that the patches are keyed by.'],
   ['r3f/preview/usePreviewYield.ts', 'Asks whether a node yields the preview, by type.'],
   ['r3f/uniqueNameOwner.ts', 'Reads the `%Name` tables, which no pass patches.'],
   ['r3f/useLiveSceneTree.ts', 'The hooks that hand out the tree and its nodes.'],
-  [
-    'r3f/sceneLiveTree.ts',
-    'Reads the type and the authored `current` and `enabled` of each camera for the enter rule, which no pass patches.',
-  ],
 ]);
 
 const READS_LIVE_NODE = 'const node = link.step.node;\n';

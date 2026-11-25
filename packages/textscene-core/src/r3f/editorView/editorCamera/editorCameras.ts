@@ -9,7 +9,7 @@ import * as logger from '../../../logger.js';
 export interface EditorCameraBacking {
   get(property: string): SceneValue | null;
   set(property: string, value: SceneValue): boolean;
-  call(method: string, args: readonly SceneValue[]): CallResult;
+  call(method: string, args: readonly SceneValue[]): CallResult | Promise<CallResult>;
   /** The view keeps it while the stage is unmounted, and gives it to the next stage of the mode. */
   pose(): unknown;
   setPose(pose: unknown): void;

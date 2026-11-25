@@ -1,0 +1,8 @@
+; Godot 4.6.3 owns Inst/BaseChild and Inst/SubChild by Inst, so the scene dock counts 2 nodes (measured).
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://owners/inheriting.tscn" id="1"]
+
+[node name="Main" type="Node3D"]
+
+[node name="Inst" parent="." instance=ExtResource("1")]

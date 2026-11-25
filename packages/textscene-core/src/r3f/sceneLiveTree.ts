@@ -1,13 +1,16 @@
 import type { SceneGraph } from '../core/SceneGraph.js';
 import { isGltfPath } from '../godot/import/gltf.js';
+import { GLB_SCENE_ROOT_TYPE } from '../resources/glbSceneRoot.js';
 import type { ResourceReference } from '../godot/variant/variantValue.js';
 import {
   projectDefaultEnvironmentPath,
   projectFontPath,
   projectThemePath,
   projectTreeSettings,
+  projectViewportSize,
   type ProjectSettings,
   type ProjectTreeSettings,
+  type ProjectViewportSize,
 } from '../parser/projectSettingsParser.js';
 import type { SceneScope } from '../parser/types.js';
 import { PROJECT_FILE_PATH } from '../godot/project/project.js';
@@ -26,6 +29,7 @@ import {
   type TreeCamera,
 } from '../scene/sceneRuntime.js';
 import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
+import { scopeOf } from '../resources/liveNode.js';
 import { isCamera2DType, isCamera3DType } from './cameraNodeTypes.js';
 import { perObject } from '../utils/perObject.js';
 import type { ContainerWrite } from '../core/childVisibility.js';
@@ -35,6 +39,10 @@ import { liveTreeOf, type LiveLink, type LiveTree } from './liveSceneTree.js';
 import { nodePathUniquePaths } from './nodePathUniqueNames.js';
 import { resourcePipelineOf } from './sceneResourcePipeline.js';
 import { currentSharedTree, subscribeToLoadTicks } from './useLiveSceneTree.js';
+import { solvedNodePatchesOf } from './liveNodePatches.js';
+import { liveFilesOf } from './liveFiles.js';
+import type { PatchLookup } from './nodePatch.js';
+import { placedPropertyOf } from './placedProperty.js';
 
 /** The scene `link` instances where it has not drawn in yet, as Godot has no such node until it loads. */
 function awaitedInstancePath({ step }: LiveLink): string | null {
@@ -60,22 +68,59 @@ function resourceInScope(scope: SceneScope, rootScenePath: string) {
   };
 }
 
+/** How many instances enclose the scene that declares `link`'s node. */
+const declaringDepth = (link: LiveLink) =>
+  scopeOf(link.raw, link.group.scope).instancedScenePaths?.length ?? 0;
+
+/** How many instances enclose the deepest scene a merged instance root opens, or null for another node. */
+const openedDepth = ({ step }: LiveLink) =>
+  step.isMerged ? (step.scope.instancedScenePaths?.length ?? 0) : null;
+
+/** Whether `root` opens the scene at `depth`: each scene of its chain of inherited roots, as one instance. */
+function opensSceneAt(root: LiveLink, depth: number): boolean {
+  const deepest = openedDepth(root);
+  return deepest !== null && declaringDepth(root) < depth && depth <= deepest;
+}
+
+/** The root of the scene that declares the node, as `add_child` under `instantiate` sets the owner. */
+function ownerOf(link: LiveLink, ancestors: readonly LiveLink[]): LiveLink | null {
+  if (ancestors.length === 0 || link.raw.isUnowned) return null;
+  // The instance node of a glTF is the root its importer builds, so it owns each node of the file.
+  const gltfInstance = ancestors.find(
+    ({ step }) => step.instancePath !== null && isGltfPath(step.instancePath)
+  );
+  if (gltfInstance) return gltfInstance;
+  const depth = declaringDepth(link);
+  for (let index = ancestors.length - 1; index > 0; index--) {
+    if (opensSceneAt(ancestors[index]!, depth)) return ancestors[index]!;
+  }
+  return ancestors[0]!;
+}
+
+/** The class Godot gives the node: the glTF importer roots a scene at a Node3D (gltf_document.cpp:6885). */
+const godotClassOf = (type: string) => (type === GLB_SCENE_ROOT_TYPE ? 'Node3D' : type);
+
 function treeNodeOf(
   tree: LiveTree,
   link: LiveLink,
-  parent: LiveLink | null,
-  rootScenePath: string
+  ancestors: readonly LiveLink[],
+  rootScenePath: string,
+  placed: () => PatchLookup
 ): SceneTreeNode {
   const { node, groups, scope } = link.step;
+  const parent = ancestors.at(-1) ?? null;
   return {
     name: node.name,
-    type: node.type,
+    type: godotClassOf(node.type),
     rawProperties: node.rawProperties,
     childNames: groups.flatMap((group) => group.children.map((child) => child.name)),
     resourceOf: resourceInScope(scope, rootScenePath),
     containerVisibility: parent && containerVisibilityOf(tree, link, parent),
     sortedProperty: (property) =>
       nodeRegistry.sortedProperties(node.type)?.(node, sortableChildCount(tree, link.step))[property],
+    placedProperty: (property) => placedPropertyOf(placed().get(link.path), property),
+    sceneFilePath: ancestors.length === 0 ? rootScenePath : (link.step.instancePath ?? ''),
+    ownerPath: () => ownerOf(link, ancestors)?.path ?? null,
   };
 }
 
@@ -107,14 +152,22 @@ const camerasOf = perObject((tree: LiveTree): readonly TreeCamera[] => {
 });
 
 /** The scene's view of one Live scene tree: a node is found once every instance above it has loaded. */
-function sceneTreeOf(tree: LiveTree, loader: ResourceLoader, rootScenePath: string): SceneTree {
+function sceneTreeOf(
+  tree: LiveTree,
+  loader: ResourceLoader,
+  rootScenePath: string,
+  contentScaleSize: ProjectViewportSize
+): SceneTree {
+  let patches: PatchLookup | undefined;
+  const placed = () => (patches ??= solvedNodePatchesOf(tree, liveFilesOf(loader).current()));
   return {
+    contentScaleSize,
     node(livePath) {
       const names = livePath.split('/');
-      let parent: LiveLink | null = null;
+      const ancestors: LiveLink[] = [];
       let link: LiveLink | null = null;
       for (let depth = 1; depth <= names.length; depth++) {
-        parent = link;
+        if (link) ancestors.push(link);
         link = tree.at(names.slice(0, depth).join('/'));
         if (!link) return null;
         const awaited = awaitedInstancePath(link);
@@ -123,7 +176,7 @@ function sceneTreeOf(tree: LiveTree, loader: ResourceLoader, rootScenePath: stri
           return null;
         }
       }
-      return link && treeNodeOf(tree, link, parent, rootScenePath);
+      return link && treeNodeOf(tree, link, ancestors, rootScenePath, placed);
     },
     uniquePaths: (livePath) => nodePathUniquePaths(livePath, tree.roots, tree.ctx),
     cameras: () => camerasOf(tree),
@@ -131,7 +184,11 @@ function sceneTreeOf(tree: LiveTree, loader: ResourceLoader, rootScenePath: stri
 }
 
 const NO_CAMERAS: readonly TreeCamera[] = [];
-const NO_TREE: SceneTree = { node: () => null, uniquePaths: () => new Map(), cameras: () => NO_CAMERAS };
+const NO_TREE: Omit<SceneTree, 'contentScaleSize'> = {
+  node: () => null,
+  uniquePaths: () => new Map(),
+  cameras: () => NO_CAMERAS,
+};
 
 /** Godot loads these files as the game starts, for every scene (theme_db.cpp:52-53). */
 function projectReads(settings: ProjectSettings | null): FileRead[] {
@@ -175,10 +232,12 @@ function sceneRuntimeOf(scene: Scene): SceneRuntime {
   let starts: { graph: SceneGraph | null; settings: ProjectRead; key: string; starts: WalkStart[] } | null =
     null;
   let project: ProjectTreeSettings = projectTreeSettings(null);
+  let contentScaleSize = projectViewportSize(null);
   const readProject = async () => {
     const bus = loader.fileEventBus;
     settings = bus ? await readProjectSettings(bus) : null;
     project = projectTreeSettings(settings ?? null);
+    contentScaleSize = projectViewportSize(settings ?? null);
     notify();
     notifyFiles();
   };
@@ -192,8 +251,8 @@ function sceneRuntimeOf(scene: Scene): SceneRuntime {
     tree(graph: SceneGraph) {
       const shared = currentSharedTree(graph, loader, project);
       return shared
-        ? sceneTreeOf(liveTreeOf(shared.roots, shared.ctx), loader, scene.rootScenePath)
-        : NO_TREE;
+        ? sceneTreeOf(liveTreeOf(shared.roots, shared.ctx), loader, scene.rootScenePath, contentScaleSize)
+        : { ...NO_TREE, contentScaleSize };
     },
     subscribe(listener) {
       listeners.add(listener);

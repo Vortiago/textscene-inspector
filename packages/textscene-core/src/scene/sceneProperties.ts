@@ -37,7 +37,7 @@ export class SceneProperties {
     private readonly rootScenePath: string,
     private readonly rootScene: () => ParsedScene | undefined,
     private readonly treeNode: (livePath: string) => SceneTreeNode | null,
-    /** The node in the tree of the written scene, where a container's sort reads the writes. */
+    /** The node in the written scene's tree, where a container's sort and a live pass read the writes. */
     private readonly writtenTreeNode: (livePath: string) => SceneTreeNode | null
   ) {}
 
@@ -160,6 +160,7 @@ export class SceneProperties {
       written: this.writes().get(livePath) ?? {},
       nodeReading: { classExists, resourceOf: (kind, id) => node.resourceOf(kind, id) },
       writtenReading: { classExists, resourceOf: (kind, id) => this.rootResourceOf(kind, id) },
+      placedProperty: (property) => this.writtenTreeNode(livePath)?.placedProperty(property),
     });
   }
 

@@ -1,5 +1,6 @@
 import type { ContainerWrite } from '../core/childVisibility.js';
 import type { SceneGraph } from '../core/SceneGraph.js';
+import type { ProjectViewportSize } from '../parser/projectSettingsParser.js';
 import type { ResourceReference, VariantValue } from '../godot/variant/variantValue.js';
 import type { Scene } from './openScene.js';
 import type { SceneFile } from './sceneFiles.js';
@@ -17,6 +18,12 @@ export interface SceneTreeNode {
   readonly containerVisibility: ContainerVisibility | null;
   /** The value the node's getter resolves from its sortable children, else undefined. */
   sortedProperty(property: string): VariantValue | undefined;
+  /** The value a live pass lays over the stored one, a RemoteTransform target's pose, else undefined. */
+  placedProperty(property: string): VariantValue | undefined;
+  /** The scene the node instances, or the root scene's own path for the root node, else empty. */
+  readonly sceneFilePath: string;
+  /** The live path of the root of the scene that declares the node, null for the root node. */
+  ownerPath(): string | null;
 }
 
 /** A container's hold on one sortable child's `visible`, as its sort writes it. */
@@ -45,6 +52,8 @@ export interface SceneTree {
   uniquePaths(livePath: string): ReadonlyMap<string, string>;
   /** The cameras of the loaded nodes in the order they enter the tree. The same array while no load moves. */
   cameras(): readonly TreeCamera[];
+  /** The root window's `content_scale_size`, the project's viewport size: its default until the read ends. */
+  readonly contentScaleSize: ProjectViewportSize;
 }
 
 /** What the scene reads of the renderer: the Live scene tree and its loads. */

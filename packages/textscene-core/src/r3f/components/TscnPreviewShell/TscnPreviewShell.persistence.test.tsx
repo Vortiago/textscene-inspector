@@ -3,7 +3,7 @@
  * mode, one field each. usePersistedState.test.ts tests the hook itself.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 vi.mock('../../TscnCanvas', () => ({
   TscnCanvas: ({ show }: { show?: { performance?: boolean } }) => (
@@ -113,7 +113,7 @@ describe('<TextShell> persisted dock layout + viewport mode (#224)', () => {
     expect(screen.getByRole('button', { name: '3D' }).getAttribute('aria-pressed')).toBe('true');
   });
 
-  it('a TYPED scene root (Node3D) still wins over a persisted 2D preference — WorkspaceAutoSelect is unchanged', () => {
+  it('a TYPED scene root (Node3D) still wins over a persisted 2D preference — WorkspaceAutoSelect is unchanged', async () => {
     const { unmount } = render(<TextShell panelId="p1" content={PLAIN_ROOT_TSCN} />);
     fireEvent.click(screen.getByRole('button', { name: '2D' }));
     unmount();
@@ -121,10 +121,12 @@ describe('<TextShell> persisted dock layout + viewport mode (#224)', () => {
     // A Node3D root's claim wins over the persisted preference, as it does over
     // a manual toggle.
     render(<TextShell panelId="p1" content={MINIMAL_TSCN} />);
-    expect(screen.getByRole('button', { name: '3D' }).getAttribute('aria-pressed')).toBe('true');
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '3D' }).getAttribute('aria-pressed')).toBe('true')
+    );
   });
 
-  it("WorkspaceAutoSelect's programmatic mode pick does NOT overwrite the persisted user preference", () => {
+  it("WorkspaceAutoSelect's programmatic mode pick does NOT overwrite the persisted user preference", async () => {
     // Auto-select shows 3D for a Node3D scene but writes nothing to storage: only
     // the toolbar click persists. A later plain-Node scene restores the 2D choice.
     const first = render(<TextShell panelId="p1" content={PLAIN_ROOT_TSCN} />);
@@ -132,7 +134,9 @@ describe('<TextShell> persisted dock layout + viewport mode (#224)', () => {
     first.unmount();
 
     const typed = render(<TextShell panelId="p1" content={MINIMAL_TSCN} />);
-    expect(screen.getByRole('button', { name: '3D' }).getAttribute('aria-pressed')).toBe('true');
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '3D' }).getAttribute('aria-pressed')).toBe('true')
+    );
     typed.unmount();
 
     render(<TextShell panelId="p1" content={PLAIN_ROOT_TSCN} />);

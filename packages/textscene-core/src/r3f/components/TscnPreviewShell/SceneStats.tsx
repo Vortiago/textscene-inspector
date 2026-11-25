@@ -1,23 +1,18 @@
-import { useCallback, useSyncExternalStore } from 'react';
-import { subscribeToSceneTree } from '../../currentCamera.js';
 import type { NodeHandle } from '../../../scene/nodeHandle.js';
 import type { Scene } from '../../../scene/openScene.js';
-import { ROOT_WINDOW_PATH } from '../../../scene/nodePathWalk.js';
-import { isCamera3DType } from '../../cameraNodeTypes.js';
+import { useSceneRead } from './sceneRead.js';
 import styles from './TscnPreviewShell.module.css';
 
 /** The node count is authored, an instance counting once as in Godot's scene dock. */
 export function SceneStats({ scene }: { scene: Scene }) {
-  const nodeCount = useAuthoredNodeCount(scene);
-  const cameraCount = useCamera3DCount(scene);
-  if (nodeCount === null) return null;
+  const counts = useSceneRead(scene, countsOf);
+  if (!counts) return null;
+  const { nodes, cameras } = counts;
   return (
     <div className={styles.statChips} role="group" aria-label="Scene info">
-      <span className={styles.statChip} data-testid="scene-info-nodes">{`${nodeCount} nodes`}</span>
-      {cameraCount > 0 && (
-        <span
-          className={styles.statChip}
-        >{`${cameraCount} ${cameraCount === 1 ? 'camera' : 'cameras'}`}</span>
+      <span className={styles.statChip} data-testid="scene-info-nodes">{`${nodes} nodes`}</span>
+      {cameras > 0 && (
+        <span className={styles.statChip}>{`${cameras} ${cameras === 1 ? 'camera' : 'cameras'}`}</span>
       )}
     </div>
   );
@@ -25,23 +20,29 @@ export function SceneStats({ scene }: { scene: Scene }) {
 
 /** Node-count badge for the Scene Tree dock header. */
 export function SceneNodeCount({ scene }: { scene: Scene }) {
-  const nodeCount = useAuthoredNodeCount(scene);
-  if (nodeCount === null) return null;
-  return <span className={styles.dockCount}>{nodeCount} nodes</span>;
+  const counts = useSceneRead(scene, countsOf);
+  if (!counts) return null;
+  return <span className={styles.dockCount}>{counts.nodes} nodes</span>;
 }
 
-/** Null before the host has sent a scene. */
-function useAuthoredNodeCount(scene: Scene): number | null {
-  return useSyncExternalStore(scene.subscribe, () => scene.parse().sceneGraph?.flattenedNodes.length ?? null);
+interface SceneCounts {
+  /** The scene's root node and each node it owns, as `get_owner` answers. */
+  readonly nodes: number;
+  readonly cameras: number;
 }
 
-function useCamera3DCount(scene: Scene): number {
-  const observeTree = useCallback((listener: () => void) => subscribeToSceneTree(scene, listener), [scene]);
-  return useSyncExternalStore(observeTree, () => camera3DCountUnder(scene.getNodeOrNull(ROOT_WINDOW_PATH)));
+async function countsOf(root: NodeHandle): Promise<SceneCounts> {
+  const below = descendantsOf(root);
+  const [ownedBelow, cameras] = await Promise.all([
+    Promise.all(
+      below.map(async (node) => ((await node.call('get_owner')) as NodeHandle | null)?.path === root.path)
+    ),
+    Promise.all([root, ...below].map(async (node) => (await node.call('is_class', 'Camera3D')) === true)),
+  ]);
+  return { nodes: 1 + ownedBelow.filter(Boolean).length, cameras: cameras.filter(Boolean).length };
 }
 
-function camera3DCountUnder(node: NodeHandle | null): number {
-  if (!node) return 0;
-  const own = isCamera3DType(node.type) ? 1 : 0;
-  return node.getChildren().reduce((count, child) => count + camera3DCountUnder(child), own);
+/** Each node below `node`, in tree order. */
+function descendantsOf(node: NodeHandle): NodeHandle[] {
+  return node.getChildren().flatMap((child) => [child, ...descendantsOf(child)]);
 }

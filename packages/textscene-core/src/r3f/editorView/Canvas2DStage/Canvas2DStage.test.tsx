@@ -467,7 +467,7 @@ describe('<Canvas2DStage>', () => {
     );
 
     await expect(cameras.of('2D')!.call('make_current')).rejects.toThrow(
-      'expected a method of the 2D editor camera (reset, focus, center), got make_current'
+      'expected a method of the 2D editor camera (reset, focus, center, frame_camera_view), got make_current'
     );
   });
 

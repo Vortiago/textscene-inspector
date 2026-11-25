@@ -9,7 +9,7 @@ import './sceneLiveTree.js';
 type CurrentCamera = (scene: Scene, viewport: string | null) => string | null;
 
 /** A load can enter a node and a call can move a camera, so a reader of the tree hears both. */
-export function subscribeToSceneTree(scene: Scene | undefined, listener: () => void): () => void {
+function subscribeToSceneTree(scene: Scene | undefined, listener: () => void): () => void {
   if (!scene) return () => {};
   const stopViews = scene.subscribe(listener);
   const stopTree = scene.observe(null, listener);
@@ -24,13 +24,17 @@ function sceneViewportOf(viewportPath: string | null): string | null {
   return viewportPath === ROOT_VIEWPORT_PATH ? null : viewportPath;
 }
 
+/** A `useSyncExternalStore` subscription to `subscribeToSceneTree`, stable while the scene is. */
+export function useSceneTreeSubscription(scene: Scene | undefined): (listener: () => void) => () => void {
+  return useCallback((listener: () => void) => subscribeToSceneTree(scene, listener), [scene]);
+}
+
 function useCameraSubscription(): {
   scene: Scene | undefined;
   subscribe: (listener: () => void) => () => void;
 } {
   const scene = useOptionalHierarchy()?.scene;
-  const subscribe = useCallback((listener: () => void) => subscribeToSceneTree(scene, listener), [scene]);
-  return { scene, subscribe };
+  return { scene, subscribe: useSceneTreeSubscription(scene) };
 }
 
 function useCurrentCamera(read: CurrentCamera, viewportPath: string | null): string | null {

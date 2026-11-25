@@ -35,6 +35,13 @@ import { checkInGameStretch, runInGameStretchScenario, STRETCH_FIXTURE } from '.
 import { checkCameraButtons, runCameraButtonsScenario } from './cameraButtonsScenario.mjs';
 import { checkInGameToolbar, runInGameToolbarScenario } from './inGameToolbarScenario.mjs';
 import { checkModeSwitch, runModeSwitchScenario } from './modeSwitchScenario.mjs';
+import { checkWorkspace, runWorkspaceScenario, WORKSPACE_FIXTURE } from './workspaceScenario.mjs';
+import { checkSceneStats, runSceneStatsScenario } from './sceneStatsScenario.mjs';
+import {
+  CAMERA_FRAME_2D_FIXTURE,
+  checkCameraFrame2D,
+  runCameraFrame2DScenario,
+} from './cameraFrame2DScenario.mjs';
 import {
   checkEditorHelpers,
   measureEditorHelpers,
@@ -133,6 +140,27 @@ export const SCENARIOS = [
     run: runZoomButtonsScenario,
     check: checkZoomButtons,
     measure: measureZoomButtons,
+  },
+  {
+    name: 'workspace',
+    title: `workspace by the root's class: ${WORKSPACE_FIXTURE} and its .glb`,
+    seconds: 8,
+    run: runWorkspaceScenario,
+    check: checkWorkspace,
+  },
+  {
+    name: 'scene stats',
+    title: 'scene stats node count by owner: a .glb instance and an inherited root',
+    seconds: 6,
+    run: runSceneStatsScenario,
+    check: checkSceneStats,
+  },
+  {
+    name: 'camera frame 2D',
+    title: `Cameras panel frame of a Camera2D: ${CAMERA_FRAME_2D_FIXTURE}`,
+    seconds: 6,
+    run: runCameraFrame2DScenario,
+    check: checkCameraFrame2D,
   },
   {
     name: 'view status',

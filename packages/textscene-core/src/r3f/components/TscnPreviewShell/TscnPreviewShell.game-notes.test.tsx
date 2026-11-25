@@ -8,6 +8,8 @@ import { createFakeResourceLoader } from '../../../resources/testing/createFakeR
 vi.mock('../../TscnCanvas', () => ({
   TscnCanvas: () => <div data-testid="view" />,
 }));
+// The stubbed view loads no node slices, and the camera note reads their registrations.
+import '../../nodes/index';
 
 import { TextShell } from './TscnPreviewShell.testkit';
 import type { ResourceProvider } from '../../../resources/ResourceProvider';

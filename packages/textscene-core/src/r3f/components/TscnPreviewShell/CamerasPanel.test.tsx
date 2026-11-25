@@ -1,8 +1,3 @@
-/**
- * The Cameras panel lists both camera kinds. A Camera3D row swaps the 3D
- * viewport camera. A Camera2D row frames the 2D stage on the camera's view
- * and switches to the 2D workspace.
- */
 import { describe, expect, it } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useLayoutEffect, useRef, type ReactNode } from 'react';
@@ -13,13 +8,8 @@ import { createEditorCameras } from '../../editorView/editorCamera/editorCameras
 import { PreviewViewProvider } from './previewView';
 import type { SceneValue } from '../../../scene/variant';
 import { ViewportModeProvider, useViewportMode } from '../ViewportMode/ViewportModeContext';
-import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
-import { TscnParser } from '../../../parser/TscnParser';
-import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
-import { ResourceEventBus } from '../../../resources/ResourceEventBus';
-import type { ResourceLoader } from '../../../resources/ResourceLoader';
-import type { TscnNode, TscnScene } from '../../../parser/types';
-import { INSTANTIABLE_SCENE } from '../../../parser/sceneDefaults.testkit';
+import { openScene } from '../../../scene/openScene';
+import '../../sceneLiveTree.js';
 
 const SCENE = `[gd_scene format=3]
 
@@ -35,10 +25,10 @@ zoom = Vector2(2, 2)
 [node name="Eye" type="Camera3D" parent="."]
 `;
 
-/** The writes the panel made to the 2D mode's editor camera, by property, in Godot's spelling. */
-let written2D: Map<string, string> = new Map();
+/** The calls the panel made on the 2D mode's editor camera, each as `method(arguments)`. */
+let called2D: string[] = [];
 
-/** A view whose editor camera follows the mode, as a `TscnCanvas` ref does, and records 2D writes. */
+/** A view whose editor camera follows the mode, as a `TscnCanvas` ref does, and records 2D calls. */
 function FakeView({ children }: { children: ReactNode }) {
   const { mode } = useViewportMode();
   const currentMode = useRef(mode);
@@ -50,14 +40,14 @@ function FakeView({ children }: { children: ReactNode }) {
   );
   if (!view.current) {
     const cameras = createEditorCameras();
-    written2D = new Map();
+    called2D = [];
     cameras.slot('Camera2D').bind({
       get: () => null,
-      set: (property: string, value: SceneValue) => {
-        written2D.set(property, typeof value === 'object' ? value.text : String(value));
-        return true;
+      set: () => false,
+      call: (method: string, args: readonly SceneValue[]) => {
+        called2D.push(`${method}(${args.join(', ')})`);
+        return null;
       },
-      call: () => null,
       pose: () => null,
       setPose: () => {},
       scene: () => '',
@@ -76,17 +66,11 @@ function Probe() {
   return <div data-testid="probe" data-mode={mode} />;
 }
 
-/** The frame the panel wrote: `position@zoom`, once both writes landed. */
-async function writtenFrame(): Promise<string> {
-  await waitFor(() => expect(written2D.size).toBe(2));
-  return `${written2D.get('position')}@${written2D.get('zoom')}`;
-}
-
-function renderPanel(scene = SCENE, previewedCameraPath?: string) {
-  const parsed = new TscnParser().parse(scene);
-  const sceneGraph = createSceneGraphFromTscnScene(parsed, 'res://test.tscn');
-  return render(
-    <HierarchyProvider value={{ sceneGraph, panelId: 'cams-test' }}>
+function renderPanel(source = SCENE, files: Record<string, string> = {}, previewedCameraPath?: string) {
+  const provider = { loadResource: async (path: string) => files[path] ?? null };
+  const scene = openScene({ source, provider, rootScenePath: 'res://main.tscn' });
+  render(
+    <HierarchyProvider value={{ sceneGraph: scene.written(), panelId: 'cams-test', scene }}>
       <TestPreviewCamera initialCamera={previewedCameraPath}>
         <ViewportModeProvider>
           <FakeView>
@@ -97,128 +81,35 @@ function renderPanel(scene = SCENE, previewedCameraPath?: string) {
       </TestPreviewCamera>
     </HierarchyProvider>
   );
+  return scene;
 }
 
+const findRow = (name: RegExp) => screen.findByRole('button', { name });
+
 describe('<CamerasPanel> with 2D cameras', () => {
-  it('lists Camera2D nodes alongside Camera3D nodes', () => {
+  it('lists Camera2D nodes alongside Camera3D nodes', async () => {
     renderPanel();
-    expect(screen.getByRole('button', { name: /Cam/ })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Eye/ })).toBeTruthy();
+    expect(await findRow(/Cam/)).toBeTruthy();
+    expect(await findRow(/Eye/)).toBeTruthy();
   });
 
-  it('clicking a Camera2D frames the 2D stage on its world view and opens the 2D workspace', async () => {
+  it('frames the 2D editor camera on a clicked Camera2D', async () => {
     renderPanel();
-    fireEvent.click(screen.getByRole('button', { name: /Cam/ }));
-    const probe = screen.getByTestId('probe');
-    // World position (120, 60), DRAG_CENTER default, zoom 2.
-    expect(await writtenFrame()).toBe('Vector2(120, 60)@Vector2(2, 2)');
-    expect(probe.getAttribute('data-mode')).toBe('2D');
+    fireEvent.click(await findRow(/Cam/));
+    await waitFor(() => expect(called2D).toEqual(['frame_camera_view(/root/World/Player/Cam)']));
   });
 
-  it('frames a Camera2D that a RemoteTransform2D moved at the relay’s position', async () => {
-    renderPanel(`[gd_scene format=3]
-
-[node name="World" type="Node2D"]
-
-[node name="Cam" type="Camera2D" parent="."]
-position = Vector2(20, 10)
-
-[node name="Relay" type="RemoteTransform2D" parent="."]
-position = Vector2(500, 200)
-remote_path = NodePath("../Cam")
-`);
-    fireEvent.click(screen.getByRole('button', { name: /Cam/ }));
-    expect(await writtenFrame()).toBe('Vector2(500, 200)@Vector2(1, 1)');
-  });
-
-  // The LookAt turns the arm a quarter turn at the target below it (`skeleton_2d.cpp:786-796`).
-  it('frames a Camera2D below a bone that a modification stack turned at the end of the turned bone', async () => {
-    renderPanel(`[gd_scene format=3]
-
-[sub_resource type="SkeletonModification2DLookAt" id="lookat"]
-bone_index = 0
-bone2d_node = NodePath("Arm")
-target_nodepath = NodePath("../Target")
-
-[sub_resource type="SkeletonModificationStack2D" id="stack"]
-enabled = true
-modification_count = 1
-modifications/0 = SubResource("lookat")
-
-[node name="World" type="Node2D"]
-
-[node name="Skeleton" type="Skeleton2D" parent="."]
-position = Vector2(300, 150)
-modification_stack = SubResource("stack")
-
-[node name="Arm" type="Bone2D" parent="Skeleton"]
-rest = Transform2D(1, 0, 0, 1, 0, 0)
-auto_calculate_length_and_angle = false
-length = 200.0
-
-[node name="Cam" type="Camera2D" parent="Skeleton/Arm"]
-position = Vector2(200, 0)
-
-[node name="Target" type="Node2D" parent="."]
-position = Vector2(300, 400)
-`);
-    fireEvent.click(screen.getByRole('button', { name: /Cam/ }));
-    expect(await writtenFrame()).toBe('Vector2(300, 350)@Vector2(1, 1)');
-  });
-
-  it('frames a Camera2D under a Node2D that a RemoteTransform2D moved with its parent', async () => {
-    renderPanel(`[gd_scene format=3]
-
-[node name="World" type="Node2D"]
-
-[node name="Player" type="Node2D" parent="."]
-position = Vector2(100, 50)
-
-[node name="Cam" type="Camera2D" parent="Player"]
-position = Vector2(20, 10)
-
-[node name="Relay" type="RemoteTransform2D" parent="."]
-position = Vector2(300, 0)
-remote_path = NodePath("../Player")
-`);
-    fireEvent.click(screen.getByRole('button', { name: /Cam/ }));
-    expect(await writtenFrame()).toBe('Vector2(320, 10)@Vector2(1, 1)');
-  });
-
-  it('frames a top_level Camera2D under a translated Node2D at its own position', async () => {
-    renderPanel(`[gd_scene format=3]
-
-[node name="World" type="Node2D"]
-position = Vector2(100, 50)
-
-[node name="Cam" type="Camera2D" parent="."]
-top_level = true
-position = Vector2(20, 10)
-`);
-    fireEvent.click(screen.getByRole('button', { name: /Cam/ }));
-    expect(await writtenFrame()).toBe('Vector2(20, 10)@Vector2(1, 1)');
-  });
-
-  it('frames a Camera2D under a Node under a translated Node2D at its own position', async () => {
-    renderPanel(`[gd_scene format=3]
-
-[node name="World" type="Node2D"]
-position = Vector2(100, 50)
-
-[node name="Group" type="Node" parent="."]
-
-[node name="Cam" type="Camera2D" parent="Group"]
-position = Vector2(20, 10)
-`);
-    fireEvent.click(screen.getByRole('button', { name: /Cam/ }));
-    expect(await writtenFrame()).toBe('Vector2(20, 10)@Vector2(1, 1)');
+  it('opens the 2D workspace for a clicked Camera2D', async () => {
+    renderPanel();
+    fireEvent.click(await findRow(/Cam/));
+    expect(screen.getByTestId('probe').getAttribute('data-mode')).toBe('2D');
   });
 });
 
 describe('<CamerasPanel> editor camera row', () => {
   // A `?camera=` path that names no camera previews nothing, so the editor camera draws.
   it('marks the editor camera active while the previewed path names no camera', () => {
-    renderPanel(SCENE, 'World/Missing');
+    renderPanel(SCENE, {}, 'World/Missing');
     expect(screen.getByRole('button', { name: /Editor camera/ }).getAttribute('data-active')).toBe('true');
   });
 });
@@ -226,7 +117,7 @@ describe('<CamerasPanel> editor camera row', () => {
 describe('<CamerasPanel> with a SubViewport', () => {
   // A Camera2D in a SubViewport is that viewport's camera (`camera_2d.cpp:342`), so
   // its view is not a place on the root stage.
-  it('offers no stage framing for a Camera2D inside a SubViewport', () => {
+  it('offers no stage framing for a Camera2D inside a SubViewport', async () => {
     renderPanel(`[gd_scene format=3]
 
 [node name="World" type="Node2D"]
@@ -238,123 +129,43 @@ position = Vector2(500, 400)
 
 [node name="Outer" type="Camera2D" parent="."]
 `);
+    expect(await findRow(/Outer/)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Inner/ })).toBeNull();
-    expect(screen.getByRole('button', { name: /Outer/ })).toBeTruthy();
   });
 });
 
-describe('<CamerasPanel> with cameras inside instanced sub-scenes', () => {
-  function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): TscnNode {
-    return { rawProperties: {}, name, type, children: [], properties: {}, ...extras };
-  }
-
-  function makeLoader(scenes: Record<string, TscnScene>): ResourceLoader {
-    const proc = <T,>(cache: Record<string, T>) => ({
-      getCached: (p: string) => cache[p],
-      isCached: (p: string) => p in cache,
-      isLoading: () => false,
-      request: () => {},
-      pin: () => {},
-      unpin: () => {},
-      clearCache: () => {},
-      getCacheSize: () => Object.keys(cache).length,
-    });
-    return {
-      eventBus: new ResourceEventBus(),
-      scenes: proc<TscnScene>(scenes),
-      glbMeshes: proc<never>({}),
-      resources: proc<never>({}),
-      loadOutcomes: proc<never>({}),
-      register: () => {},
-    } as unknown as ResourceLoader;
-  }
-
-  it('lists a Camera3D nested inside an instance (absent from flattenedNodes)', () => {
-    // The root scene instances player.tscn, which holds the follow-camera.
-    const root = `[gd_scene format=3]
-
-[ext_resource type="PackedScene" path="res://player.tscn" id="4_ray"]
-
-[node name="Game" type="Node3D"]
-
-[node name="Player" parent="." instance=ExtResource("4_ray")]
-`;
-    const playerScene: TscnScene = {
-      ...INSTANTIABLE_SCENE,
-      nodes: [
-        makeNode('Player', 'CharacterBody3D', {
-          children: [makeNode('Target', 'Node3D', { children: [makeNode('FollowCam', 'Camera3D')] })],
-        }),
-      ],
-      externalResources: [],
-      internalResources: [],
-    };
-    const parsed = new TscnParser().parse(root);
-    const sceneGraph = createSceneGraphFromTscnScene(parsed, 'res://game.tscn');
-    const loader = makeLoader({ 'res://player.tscn': playerScene });
-
-    render(
-      <ResourceLoaderProvider loader={loader}>
-        <HierarchyProvider value={{ sceneGraph, panelId: 'cams-nested' }}>
-          <ViewportModeProvider>
-            <CamerasPanel />
-          </ViewportModeProvider>
-        </HierarchyProvider>
-      </ResourceLoaderProvider>
-    );
-
-    expect(screen.getByRole('button', { name: /FollowCam/ })).toBeTruthy();
-  });
-
-  it('frames a Camera2D inside an instanced sub-scene at its world position, not the origin', async () => {
-    // Player instances player.tscn at 100,50, whose Cam sits at 20,10 with zoom 2.
-    // The live tree composes the camera's world position to 120,60.
-    const root = `[gd_scene format=3]
+describe('<CamerasPanel> with a camera inside an instanced sub-scene', () => {
+  it('lists the camera once the sub-scene loads', async () => {
+    const scene = renderPanel(
+      `[gd_scene format=3]
 
 [ext_resource type="PackedScene" path="res://player.tscn" id="p"]
 
-[node name="Game" type="Node2D"]
+[node name="Game" type="Node3D"]
 
 [node name="Player" parent="." instance=ExtResource("p")]
-position = Vector2(100, 50)
-`;
-    const playerScene = new TscnParser().parse(`[gd_scene format=3]
+`,
+      {
+        'res://player.tscn': `[gd_scene format=3]
 
-[node name="PlayerRoot" type="Node2D"]
+[node name="Player" type="CharacterBody3D"]
 
-[node name="Cam" type="Camera2D" parent="."]
-position = Vector2(20, 10)
-zoom = Vector2(2, 2)
-`);
-    const parsed = new TscnParser().parse(root);
-    const sceneGraph = createSceneGraphFromTscnScene(parsed, 'res://game.tscn');
-    const loader = makeLoader({ 'res://player.tscn': playerScene as TscnScene });
+[node name="Target" type="Node3D" parent="."]
 
-    render(
-      <ResourceLoaderProvider loader={loader}>
-        <HierarchyProvider value={{ sceneGraph, panelId: 'cams-2d-nested' }}>
-          <ViewportModeProvider>
-            <FakeView>
-              <Probe />
-              <CamerasPanel />
-            </FakeView>
-          </ViewportModeProvider>
-        </HierarchyProvider>
-      </ResourceLoaderProvider>
+[node name="FollowCam" type="Camera3D" parent="Target"]
+`,
+      }
     );
-
-    fireEvent.click(screen.getByRole('button', { name: /Cam/ }));
-    const probe = screen.getByTestId('probe');
-    expect(await writtenFrame()).toBe('Vector2(120, 60)@Vector2(2, 2)');
-    expect(probe.getAttribute('data-mode')).toBe('2D');
+    // A walk into the instance loads it, as the mounted view's walk does.
+    scene.getNodeOrNull('Player');
+    expect(await findRow(/FollowCam/)).toBeTruthy();
   });
 });
 
 describe('<CamerasPanel> with a Camera3D subclass', () => {
-  // The panel follows Godot's class tree: an XRCamera3D is a Camera3D and mounts
-  // that component, so it belongs in the 3D list.
-  it('lists an XRCamera3D as a 3D camera row and activates it on click', () => {
-    const parsed = new TscnParser().parse(`[gd_scene format=3]
+  // The panel follows Godot's class tree: an XRCamera3D is a Camera3D, so it belongs in the 3D list.
+  it('lists an XRCamera3D as a 3D camera row and activates it on click', async () => {
+    renderPanel(`[gd_scene format=3]
 
 [node name="World" type="Node3D"]
 
@@ -362,20 +173,7 @@ describe('<CamerasPanel> with a Camera3D subclass', () => {
 
 [node name="Headset" type="XRCamera3D" parent="Origin"]
 `);
-    const sceneGraph = createSceneGraphFromTscnScene(parsed, 'res://xr.tscn');
-    render(
-      <HierarchyProvider value={{ sceneGraph, panelId: 'cams-xr' }}>
-        <TestPreviewCamera>
-          <ViewportModeProvider>
-            <Probe />
-            <CamerasPanel />
-          </ViewportModeProvider>
-        </TestPreviewCamera>
-      </HierarchyProvider>
-    );
-
-    const row = screen.getByRole('button', { name: /Headset/ });
-    fireEvent.click(row);
+    fireEvent.click(await findRow(/Headset/));
 
     // `data-active` marks only a 3D row. A 2D row switches the workspace instead.
     expect(screen.getByRole('button', { name: /Headset/ }).getAttribute('data-active')).toBe('true');

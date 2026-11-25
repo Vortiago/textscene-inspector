@@ -1,4 +1,4 @@
-import { findInClassChain } from '../godot/classdb/classBaseTypes.js';
+import { descendsFromClass, findInClassChain } from '../godot/classdb/classBaseTypes.js';
 import type { NodeHandle } from './nodeHandle.js';
 import { VARIANT_TYPE as T, variantTypeName } from '../godot/variant/variantType.js';
 import { valueOfSceneValue, type SceneValue } from './variant.js';
@@ -9,6 +9,8 @@ export type CallResult = SceneValue | NodeHandle | null;
 
 /** What a ported method reads and moves of its node and its scene. */
 export interface MethodTarget {
+  /** The node's class, as `get_class` answers it. */
+  readonly className: string;
   /** The node's live path, null for the root window. */
   readonly livePath: string | null;
   /** The scene's cameras, while the node is still of the text the call began in. */
@@ -19,6 +21,9 @@ export interface MethodTarget {
   writeStored(property: string, value: SceneValue): Promise<boolean>;
   /** The handle of the node at a live path. */
   handleAt(livePath: string): NodeHandle;
+  /** As the node's tree entry gives them: empty and null for the root window. */
+  sceneFilePath(): string;
+  ownerPath(): string | null;
 }
 
 /** A method of Godot's class this release ports, with the count of arguments its binding takes. */
@@ -38,6 +43,13 @@ function numberArgument(value: SceneValue, name: string, to: 'bool' | 'int'): nu
   if (cast.type === T.BOOL || cast.type === T.INT || cast.type === T.FLOAT)
     return cast.value as number | boolean;
   throw new Error(`${name}: Cannot convert argument 1 from ${variantTypeName(cast.type)} to ${to}.`);
+}
+
+// A bound String takes a StringName and a NodePath, and refuses any other type (measured in Godot 4.6.3).
+function stringArgument(value: SceneValue, name: string): string {
+  const cast = valueOfSceneValue(value);
+  if (cast.type === T.STRING || cast.type === T.STRING_NAME || cast.type === T.NODE_PATH) return cast.value;
+  throw new Error(`${name}: Cannot convert argument 1 from ${variantTypeName(cast.type)} to String.`);
 }
 
 function boolArgument(value: SceneValue, name: string): boolean {
@@ -131,7 +143,38 @@ const VIEWPORT_METHODS: Readonly<Record<string, PortedMethod>> = {
   },
 };
 
+const NODE_METHODS: Readonly<Record<string, PortedMethod>> = {
+  get_owner: {
+    minArguments: 0,
+    maxArguments: 0,
+    run: (target) => {
+      const ownerPath = target.ownerPath();
+      return ownerPath === null ? null : target.handleAt(ownerPath);
+    },
+  },
+  get_scene_file_path: {
+    accessor: { role: 'getter', property: 'scene_file_path' },
+    minArguments: 0,
+    maxArguments: 0,
+    run: (target) => target.sceneFilePath(),
+  },
+};
+
+const OBJECT_METHODS: Readonly<Record<string, PortedMethod>> = {
+  get_class: { minArguments: 0, maxArguments: 0, run: (target) => classInTree(target.className) },
+  // object.cpp:2220. The class table stops below `Object`, which every class inherits.
+  is_class: {
+    minArguments: 1,
+    maxArguments: 1,
+    run: (target, [className], name) => {
+      const asked = stringArgument(className!, name);
+      return asked === 'Object' || descendsFromClass(classInTree(target.className), asked);
+    },
+  },
+};
+
 const PORTED_METHODS: Readonly<Record<string, Readonly<Record<string, PortedMethod>>>> = {
+  Node: NODE_METHODS,
   Camera3D: CAMERA_3D_METHODS,
   Camera2D: CAMERA_2D_METHODS,
   Viewport: VIEWPORT_METHODS,
@@ -151,13 +194,25 @@ export function findPortedAccessor(
   });
 }
 
+// packed_scene.cpp:331: Godot 4.6.3 makes a placeholder Node of a class it cannot make (measured).
+function classInTree(className: string): string {
+  return descendsFromClass(className, 'Node') ? className : 'Node';
+}
+
+/** Every method a call reaches without the property table, for the error that names them. */
+export const PORTED_METHOD_NAMES: readonly string[] = [
+  ...Object.keys(OBJECT_METHODS),
+  ...Object.values(PORTED_METHODS).flatMap((methods) => Object.keys(methods)),
+];
+
 /** The nearest class's port of `method`, as a call resolves a method up the class chain. */
 export function findPortedMethod(className: string, method: string): PortedMethod | undefined {
-  return findInClassChain(className, (type) =>
+  const own = findInClassChain(classInTree(className), (type) =>
     PORTED_METHODS[type] && Object.hasOwn(PORTED_METHODS[type], method)
       ? PORTED_METHODS[type][method]
       : undefined
   );
+  return own ?? (Object.hasOwn(OBJECT_METHODS, method) ? OBJECT_METHODS[method] : undefined);
 }
 
 /** Godot's error for a bound call with the wrong count, `name` as `Class::method` (`object.cpp:888`). */

@@ -12,10 +12,12 @@ import { loadPropertyAccess, type PropertyAccess, type SceneProperties } from '.
 import type { SceneTree, SceneTreeNode } from './sceneRuntime.js';
 import { sceneValueOf, valueOfSceneValue, variantOf, type SceneValue } from './variant.js';
 import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
+import { projectViewportSize } from '../parser/projectSettingsParser.js';
 import { isWritable } from './writtenScene.js';
 import {
   argumentCountError,
   findPortedMethod,
+  PORTED_METHOD_NAMES,
   findPortedAccessor,
   intArgument,
   runPortedMethod,
@@ -132,6 +134,7 @@ export class SceneNodes implements HandleHost {
   async get(path: string, property: string): Promise<SceneValue | null> {
     const generation = this.generation;
     const accessor = findPortedAccessor(this.typeOfNode(path), 'getter', property);
+    if (!accessor && path === ROOT_WINDOW_PATH) return this.rootWindowProperty(property);
     if (!accessor) return this.getStored(path, property);
     const { name, method } = accessor;
     const target = this.methodTarget(path, generation);
@@ -141,6 +144,17 @@ export class SceneNodes implements HandleHost {
       target,
       []
     )) as SceneValue | null;
+  }
+
+  /** The root window answers only `content_scale_size`, Godot's default until the settings load. */
+  private rootWindowProperty(property: string): SceneValue {
+    if (property !== 'content_scale_size') {
+      throw new Error(
+        `expected content_scale_size of the root window, got ${property}: its other properties are not in this release`
+      );
+    }
+    const { width, height } = this.source.tree()?.contentScaleSize ?? projectViewportSize(null);
+    return variantOf({ type: T.VECTOR2I, value: [width, height] });
   }
 
   /** `Object::set`: a setter this release ports as a method runs it. */
@@ -188,7 +202,7 @@ export class SceneNodes implements HandleHost {
     const reached = methods.findPropertyMethod(type, method);
     if (!reached) {
       throw new Error(
-        `${name}: not a method this release ports. It ports the camera methods and the property setters and getters.`
+        `${name}: not a method this release ports. It ports ${PORTED_METHOD_NAMES.join(', ')}, and the property setters and getters.`
       );
     }
     return this.callPropertyMethod(path, name, reached, args);
@@ -245,6 +259,7 @@ export class SceneNodes implements HandleHost {
   /** A target that refuses each step once a new text has freed the node the call began on. */
   private methodTarget(path: string, generation: number): MethodTarget {
     return {
+      className: this.typeOfNode(path),
       livePath: path === ROOT_WINDOW_PATH ? null : livePathOf(path),
       cameras: () => {
         this.assertSameText(generation, path);
@@ -259,7 +274,15 @@ export class SceneNodes implements HandleHost {
         return this.setStored(path, property, value);
       },
       handleAt: (livePath) => this.handleAt(absolutePathOf(livePath)),
+      sceneFilePath: () => this.treeNodeOf(path, generation)?.sceneFilePath ?? '',
+      ownerPath: () => this.treeNodeOf(path, generation)?.ownerPath() ?? null,
     };
+  }
+
+  /** The node's tree entry in the text the call began in, null for the root window. */
+  private treeNodeOf(path: string, generation: number): SceneTreeNode | null {
+    this.assertSameText(generation, path);
+    return path === ROOT_WINDOW_PATH ? null : this.nodeAt(path);
   }
 
   /** A call that awaited still acts on the text it began in, never on a node of a newer text. */

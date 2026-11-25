@@ -39,7 +39,7 @@ function Probe() {
   );
 }
 
-function renderPanel(mode: ViewportMode, source = SCENE): Scene {
+async function renderPanel(mode: ViewportMode, source = SCENE): Promise<Scene> {
   const scene = openScene({ source, provider });
   render(
     <HierarchyProvider value={{ sceneGraph: scene.written(), panelId: 'cams-in-game', scene }}>
@@ -50,6 +50,13 @@ function renderPanel(mode: ViewportMode, source = SCENE): Scene {
         </ViewportModeProvider>
       </PreviewCameraProvider>
     </HierarchyProvider>
+  );
+  // Each row waits on its `is_class` read: every camera of these scenes has a row once the reads land.
+  const editorRows = mode === 'in-game' ? 0 : 1;
+  await waitFor(() =>
+    expect(screen.queryAllByRole('button', { name: /^(?!2D$)/ })).toHaveLength(
+      scene.cameras().size + editorRows
+    )
   );
   return scene;
 }
@@ -76,14 +83,14 @@ const TWIN_BOOTHS = `[gd_scene format=3]
 `;
 
 describe('<CamerasPanel> in the In-game mode', () => {
-  it('names the whole path of a SubViewport, so two viewports of one name differ', () => {
-    renderPanel('in-game', TWIN_BOOTHS);
+  it('names the whole path of a SubViewport, so two viewports of one name differ', async () => {
+    await renderPanel('in-game', TWIN_BOOTHS);
     const tags = screen.getAllByRole('button', { name: /^Near/ }).map((button) => button.textContent);
     expect(tags).toEqual(['Nearcurrent · Main/A/Booth', 'Nearcurrent · Main/B/Booth']);
   });
 
-  it('marks the current Camera3D and Camera2D of the root viewport', () => {
-    renderPanel('in-game');
+  it('marks the current Camera3D and Camera2D of the root viewport', async () => {
+    await renderPanel('in-game');
     expect([isActive('Front'), isActive('Side'), isActive('Left'), isActive('Right')]).toEqual([
       true,
       false,
@@ -92,76 +99,57 @@ describe('<CamerasPanel> in the In-game mode', () => {
     ]);
   });
 
-  it('lists no editor camera, since the running game has none', () => {
-    renderPanel('in-game');
+  it('lists no editor camera, since the running game has none', async () => {
+    await renderPanel('in-game');
     expect(screen.queryByRole('button', { name: /^Editor camera/ })).toBeNull();
   });
 
   it('makes a clicked Camera3D current and stays in the In-game mode', async () => {
-    const scene = renderPanel('in-game');
+    const scene = await renderPanel('in-game');
     fireEvent.click(row('Side'));
     await waitFor(() => expect(scene.currentCamera3D(null)).toBe('Main/Side'));
-    expect(isActive('Side')).toBe(true);
+    await waitFor(() => expect(isActive('Side')).toBe(true));
     expect(probe().getAttribute('data-mode')).toBe('in-game');
   });
 
   it('makes a clicked Camera2D current and stays in the In-game mode', async () => {
-    const scene = renderPanel('in-game');
+    const scene = await renderPanel('in-game');
     fireEvent.click(row('Right'));
     await waitFor(() => expect(scene.currentCamera2D(null)).toBe('Main/Right'));
-    expect(isActive('Right')).toBe(true);
+    await waitFor(() => expect(isActive('Right')).toBe(true));
     expect(probe().getAttribute('data-mode')).toBe('in-game');
   });
 
   // `make_current` refuses a Camera2D that is not enabled (`camera_2d.cpp:585`).
-  it('offers no click on a Camera2D that is not enabled', () => {
-    renderPanel('in-game');
+  it('offers no click on a Camera2D that is not enabled', async () => {
+    await renderPanel('in-game');
     expect((row('Off') as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('offers no click on a Camera2D that outside code disables', async () => {
-    const scene = renderPanel('in-game');
+    const scene = await renderPanel('in-game');
     await act(() => scene.getNode('Right').set('enabled', false));
     expect((row('Right') as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('marks a camera that outside code makes current', async () => {
-    const scene = renderPanel('in-game');
+    const scene = await renderPanel('in-game');
     await act(() => scene.getNode('Side').call('make_current'));
     expect(isActive('Side')).toBe(true);
     expect(isActive('Front')).toBe(false);
   });
 
   it('leaves the editor preview alone', async () => {
-    const scene = renderPanel('in-game');
+    const scene = await renderPanel('in-game');
     fireEvent.click(row('Side'));
     await waitFor(() => expect(scene.currentCamera3D(null)).toBe('Main/Side'));
     expect(probe().getAttribute('data-preview')).toBe('');
   });
 });
 
-describe('<CamerasPanel> in the In-game mode before a camera enters', () => {
-  // A camera of a sub-scene that has not loaded is in the live tree's list but not yet in the scene.
-  it('says no camera has entered rather than showing an empty list', () => {
-    const scene = openScene({
-      source: '[gd_scene format=3]\n\n[node name="Main" type="Node3D"]\n',
-      provider,
-    });
-    const graphWithCameras = openScene({ source: SCENE, provider }).written();
-    render(
-      <HierarchyProvider value={{ sceneGraph: graphWithCameras, panelId: 'cams-not-entered', scene }}>
-        <ViewportModeProvider initialMode="in-game">
-          <CamerasPanel />
-        </ViewportModeProvider>
-      </HierarchyProvider>
-    );
-    expect(screen.getByText('No camera has entered the running scene.')).toBeTruthy();
-  });
-});
-
 describe('<CamerasPanel> in the 2D mode', () => {
-  it('opens the 3D view to preview a clicked Camera3D, as a Camera2D opens the 2D view', () => {
-    renderPanel('2D');
+  it('opens the 3D view to preview a clicked Camera3D, as a Camera2D opens the 2D view', async () => {
+    await renderPanel('2D');
     fireEvent.click(row('Side'));
     expect(probe().getAttribute('data-mode')).toBe('3D');
     expect(probe().getAttribute('data-preview')).toBe('Main/Side');
@@ -169,15 +157,15 @@ describe('<CamerasPanel> in the 2D mode', () => {
 });
 
 describe('<CamerasPanel> in the 2D mode, after a preview', () => {
-  it('marks no Camera3D, since the 2D view draws through none', () => {
-    renderPanel('2D');
+  it('marks no Camera3D, since the 2D view draws through none', async () => {
+    await renderPanel('2D');
     fireEvent.click(row('Side'));
     fireEvent.click(screen.getByRole('button', { name: /^2D$/ }));
     expect(isActive('Side')).toBe(false);
   });
 
-  it('keeps the 2D view on the editor camera row, whose camera there is a Camera2D', () => {
-    renderPanel('2D');
+  it('keeps the 2D view on the editor camera row, whose camera there is a Camera2D', async () => {
+    await renderPanel('2D');
     fireEvent.click(row('Editor camera'));
     expect(probe().getAttribute('data-mode')).toBe('2D');
     expect(isActive('Editor camera')).toBe(true);
@@ -187,21 +175,21 @@ describe('<CamerasPanel> in the 2D mode, after a preview', () => {
 describe('<CamerasPanel> in a scene with no camera', () => {
   const NO_CAMERA = '[gd_scene format=3]\n\n[node name="Main" type="Node3D"]\n';
 
-  it.each(['3D', '2D'] as const)('lists the editor camera alone in the %s mode', (mode) => {
-    renderPanel(mode, NO_CAMERA);
+  it.each(['3D', '2D'] as const)('lists the editor camera alone in the %s mode', async (mode) => {
+    await renderPanel(mode, NO_CAMERA);
     expect(screen.getAllByRole('button', { name: /Editor camera/ })).toHaveLength(1);
     expect(screen.queryByText('No camera nodes in this scene.')).toBeNull();
   });
 
-  it('says so in the In-game mode, which has no editor camera', () => {
-    renderPanel('in-game', NO_CAMERA);
+  it('says so in the In-game mode, which has no editor camera', async () => {
+    await renderPanel('in-game', NO_CAMERA);
     expect(screen.getByText('No camera nodes in this scene.')).toBeTruthy();
   });
 });
 
 describe('<CamerasPanel> in the 3D mode', () => {
   it('previews a clicked Camera3D and leaves the current camera of the game', async () => {
-    const scene = renderPanel('3D');
+    const scene = await renderPanel('3D');
     fireEvent.click(row('Side'));
     expect(probe().getAttribute('data-preview')).toBe('Main/Side');
     expect(scene.currentCamera3D(null)).toBe('Main/Front');
