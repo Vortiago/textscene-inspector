@@ -69,17 +69,25 @@ const GODOT_DEFAULT_SOURCE: SurfaceShaderSource = {
 export function useShadedSurfaceMaterial(reference: ScopedReference | undefined): ShadedSurfaceMaterial {
   const loaded = useShadedMaterial(reference);
   const surface = useSurfaceOf(loaded);
-  const shaded = useMemo(() => shadedSourceOf(loaded, reference === undefined), [loaded, reference]);
+  const namesNoMaterial = reference === undefined;
+  const shaded = useMemo(
+    () => (namesNoMaterial ? defaultSourceOf() : shadedSourceOf(loaded)),
+    [loaded, namesNoMaterial]
+  );
   return { ...surface, shaded };
 }
 
+/** Only the node lit surface draws Godot's default material through its shader. */
+const defaultSourceOf = (): SurfaceShaderSource | null =>
+  litSurfaceForm() === 'nodes' ? GODOT_DEFAULT_SOURCE : null;
+
 /** What a mesh surface draws through a shader: a ShaderMaterial, or on the node lit surface any material. */
-function shadedSourceOf(loaded: LoadedMaterial, namesNoMaterial: boolean): SurfaceShaderSource | null {
+function shadedSourceOf(loaded: LoadedMaterial): SurfaceShaderSource | null {
   if (loaded.status === 'spatial-shader') return { shader: loaded.shader };
   if (litSurfaceForm() !== 'nodes') return null;
   if (loaded.status === 'base-material') return { baseMaterial: loaded.baseMaterial };
   if (loaded.status === 'ready') return { baseMaterial: loaded.material.baseMaterial };
-  return namesNoMaterial || loaded.status === 'declined' ? GODOT_DEFAULT_SOURCE : null;
+  return loaded.status === 'declined' ? GODOT_DEFAULT_SOURCE : null;
 }
 
 function useSurfaceOf(loaded: LoadedMaterial, surface?: TexturedSurface): SurfaceMaterial {

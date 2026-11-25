@@ -332,7 +332,7 @@ export function castsShadowOf(material: THREE.Material): boolean {
   return recordedOn(material, CASTS_SHADOW_KEY, true);
 }
 
-/** Records whether a surface of `material` draws into a light's shadow, as `castsShadowOf` reads it. */
+/** For a material no bag derives: a translated spatial shader records its own shadow pass. */
 export function recordCastsShadow(material: THREE.Material, castsShadow: boolean): void {
   material.userData[CASTS_SHADOW_KEY] = castsShadow;
 }

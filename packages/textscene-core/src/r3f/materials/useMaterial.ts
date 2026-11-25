@@ -12,7 +12,6 @@ import type {
   Material,
   StandardMaterial,
 } from '../../resources/materials/material/types';
-import { litSurfaceForm } from '../litSurface/litSurfaceForm';
 import type { ShaderText } from '../../resources/materials/shadermaterial/types';
 import { warnOnce } from '../../utils/warnOnce';
 import { useReferencedResource, type Read, type ScopedReference } from '../../resources/reading';
@@ -23,7 +22,7 @@ export type LoadedMaterial =
   | { status: 'ready'; material: StandardMaterial }
   /** A spatial ShaderMaterial, which the node lit surface draws. */
   | { status: 'spatial-shader'; shader: ShaderText }
-  /** An ORMMaterial3D on the node lit surface, which draws it through Godot's generated shader. */
+  /** An ORMMaterial3D, which only the node lit surface draws, through Godot's generated shader. */
   | { status: 'base-material'; baseMaterial: BaseMaterialProperties }
   /** A material type this previewer does not build: Godot's default 3D surface (ADR-0041). */
   | { status: 'declined'; type: string }
@@ -93,8 +92,6 @@ function loadedOf(read: Read<Material>): LoadedMaterial {
   const material = read.value;
   if (material.form === 'standard') return { status: 'ready', material };
   if (material.form === 'spatial-shader') return { status: 'spatial-shader', shader: material.shader };
-  if (material.form !== 'orm') return { status: 'declined', type: material.type };
-  return litSurfaceForm() === 'nodes'
-    ? { status: 'base-material', baseMaterial: material.baseMaterial }
-    : DECLINED_ORM;
+  if (material.form === 'orm') return { status: 'base-material', baseMaterial: material.baseMaterial };
+  return { status: 'declined', type: material.type };
 }

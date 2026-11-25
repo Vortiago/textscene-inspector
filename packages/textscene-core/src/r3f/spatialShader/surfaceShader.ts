@@ -6,6 +6,7 @@ import { ALBEDO_TEXTURE_SIZE } from '../../shaders/material/materialParameters';
 import type { SamplerValue } from '../../shaders/uniforms/samplerUniform';
 import type { ParameterValue } from '../../shaders/uniforms/transpiledUniform';
 import { parameterVariants } from '../../shaders/uniforms/materialParameters';
+import { imageSizeOf } from '../../shaders/uniforms/textureLevels';
 import { variant } from '../../godot/variant/value/variant';
 
 /** The material a spatial surface draws through its shader: a ShaderMaterial, or a BaseMaterial3D. */
@@ -51,7 +52,7 @@ function baseMaterial3DSurface({
 /** `set_texture` gives the albedo texture's size to its own parameter (`material.cpp:2545`). */
 function albedoTextureSize(albedo: SamplerValue | undefined): Record<string, ParameterValue> {
   if (!albedo || isTextureList(albedo)) return {};
-  const { width, height } = (albedo.image ?? {}) as Partial<Record<'width' | 'height', number>>;
+  const { width, height } = imageSizeOf(albedo.image);
   if (width === undefined || height === undefined) return {};
   return { [ALBEDO_TEXTURE_SIZE]: variant('VECTOR2I', { x: width, y: height }) };
 }
