@@ -1,9 +1,11 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
+import { emulatedPointGeometry, withGodotAttributes } from '../../shaders/spatial/meshAttributes';
 import { canvasSurfaceGeometry } from '../canvasMesh/canvasSurface';
 import { canvasMeshGeometry } from '../meshes/canvasMeshGeometry';
 import {
   atlasRectRegion,
+  boundItem,
   growItemBox,
   meshCommands,
   sameCommandLayout,
@@ -199,6 +201,30 @@ describe('sameCommandLayout', () => {
 
   it('tells a mesh of other arrays apart', () => {
     expect(sameCommandLayout([mesh()], [mesh()])).toBe(false);
+  });
+});
+
+describe('boundItem', () => {
+  /** A surface with a box of its own, and the emulated points that share it. */
+  function pointsOverSurface() {
+    const source = withGodotAttributes(new THREE.BoxGeometry(2, 2, 2));
+    source.computeBoundingBox();
+    return { source, emulated: emulatedPointGeometry(source) };
+  }
+
+  it("bounds emulated points by the item rect and leaves their source's box as it was", () => {
+    const { source, emulated } = pointsOverSurface();
+    boundItem(emulated, [meshCommands([canvasSurfaceGeometry(TRIANGLE)])[0]!]);
+
+    expect([emulated.boundingBox!.max.x, source.boundingBox!.max.x]).toEqual([8, 1]);
+  });
+
+  it("lets emulated points follow a recompute of their source's box until the item bounds them", () => {
+    const { source, emulated } = pointsOverSurface();
+    source.getAttribute('position').setX(0, 9);
+    source.computeBoundingBox();
+
+    expect(emulated.boundingBox!.max.x).toBe(9);
   });
 });
 

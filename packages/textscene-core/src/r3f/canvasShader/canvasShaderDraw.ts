@@ -42,7 +42,7 @@ import { geometryBoxUserData } from '../bounds';
 import { perObject } from '../../utils/perObject';
 import { warnOnce } from '../../utils/warnOnce';
 import { canvasTransformInto } from '../node2dTransform';
-import { growItemBox, type CanvasShaderCommand } from './canvasCommands';
+import { boundItem, type CanvasShaderCommand } from './canvasCommands';
 import { canvasDataOf, type CanvasColors } from './canvasFrameBlocks';
 
 export { setMaterialParameters } from '../../shaders/uniforms/materialParameters';
@@ -277,14 +277,6 @@ function meshBatch(
       if (object.geometry !== geometry) object.geometry.dispose();
     },
   };
-}
-
-/** Bounds `geometry` by the item rect of `commands`, which a canvas group's region reads (`worldBox`). */
-function boundItem(geometry: THREE.BufferGeometry, commands: readonly CanvasShaderCommand[]): void {
-  // A fresh box, not the one in place: an emulated points geometry may share its source's box.
-  const box = new THREE.Box3();
-  for (const command of commands) growItemBox(box, command);
-  geometry.boundingBox = box;
 }
 
 /** The uniform each variant's vertex stage reads, whose object update binds the canvas's block. */
