@@ -1,6 +1,11 @@
 import { createExternalStore } from '../../utils/externalStore.js';
 import type { RgbaImage } from '../../utils/encodePng.js';
-import { describePendingWork, hasPendingWork, type PendingSceneWork } from '../sceneWork.js';
+import {
+  describePendingWork,
+  hasPendingWork,
+  isSamePendingWork,
+  type PendingSceneWork,
+} from '../sceneWork.js';
 import type { FrameStats } from '../frameProfile/frameStats.js';
 import { createUndrawnNodes, type UndrawnNode, type UndrawnReason } from './undrawnNodes.js';
 
@@ -162,12 +167,7 @@ export function createViewStatusStore(): ViewStatusStore {
   }
 
   function workChanged(work: PendingSceneWork): void {
-    if (
-      work.resources === pending.resources &&
-      work.textures === pending.textures &&
-      work.fonts === pending.fonts
-    )
-      return;
+    if (isSamePendingWork(work, pending)) return;
     Object.assign(pending, work);
     notify();
   }

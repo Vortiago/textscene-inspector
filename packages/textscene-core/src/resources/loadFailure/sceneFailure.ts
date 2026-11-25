@@ -31,11 +31,17 @@ export function withSceneFailure(
   files: readonly SceneFile[],
   reads: readonly FailingRead[]
 ): readonly SceneFile[] {
-  const byPath = new Map(files.map((file) => [file.path, file]));
+  if (reads.length === 0) return files;
+  const indexByPath = new Map(files.map((file, index) => [file.path, index]));
   for (const read of reads) {
-    const file = byPath.get(resourceFilePath(read.address));
-    const failure = file && failureThrough(file, read);
-    if (failure) return files.map((row) => (row === file ? { ...row, sceneFailure: failure } : row));
+    const index = indexByPath.get(resourceFilePath(read.address));
+    if (index === undefined) continue;
+    const file = files[index]!;
+    const failure = failureThrough(file, read);
+    if (!failure) continue;
+    const marked = files.slice();
+    marked[index] = { ...file, sceneFailure: failure };
+    return marked;
   }
   return files;
 }

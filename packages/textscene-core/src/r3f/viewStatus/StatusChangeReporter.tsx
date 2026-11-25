@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useViewStatusStore } from './ViewStatusContext.js';
 import { EMPTY_VIEW_STATUS, type ViewStatus } from './viewStatus.js';
+import { isSamePendingWork } from '../sceneWork.js';
 
 /** Calls `onStatusChange` on each change, so a host hears a load that starts and ends in one task. */
 export function StatusChangeReporter({ onStatusChange }: { onStatusChange: (status: ViewStatus) => void }) {
@@ -38,9 +39,7 @@ function tell(onStatusChange: (status: ViewStatus) => void, status: ViewStatus):
 function changesBeyondFrame(heard: ViewStatus, now: ViewStatus): boolean {
   return (
     heard.settled !== now.settled ||
-    heard.pending.resources !== now.pending.resources ||
-    heard.pending.textures !== now.pending.textures ||
-    heard.pending.fonts !== now.pending.fonts ||
+    !isSamePendingWork(heard.pending, now.pending) ||
     heard.undrawn !== now.undrawn ||
     heard.isSoftwareRendering !== now.isSoftwareRendering ||
     heard.freelook !== now.freelook

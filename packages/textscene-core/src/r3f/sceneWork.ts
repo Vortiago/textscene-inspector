@@ -23,6 +23,10 @@ export function totalPendingWork({ resources, textures, fonts }: PendingSceneWor
   return resources + textures + fonts;
 }
 
+export function isSamePendingWork(a: PendingSceneWork, b: PendingSceneWork): boolean {
+  return a.resources === b.resources && a.textures === b.textures && a.fonts === b.fonts;
+}
+
 export function hasPendingWork(work: PendingSceneWork): boolean {
   return totalPendingWork(work) > 0;
 }

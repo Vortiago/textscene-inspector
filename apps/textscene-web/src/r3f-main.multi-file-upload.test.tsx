@@ -20,6 +20,7 @@ const missingFile = (path: string) => ({
   owners: ['res://main.tscn'],
   reason: { chain: [path], cause: 'missing' as const, addresses: [] },
   addresses: [],
+  sceneFailure: null,
 });
 
 vi.mock('@textscene/renderer', async () => {
