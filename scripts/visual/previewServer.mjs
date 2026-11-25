@@ -31,6 +31,7 @@ export { FIT_QUIESCENCE_MS, readViewportMode, showDisplayOverlay } from './previ
 export { withPreviewBrowser } from './preview/session.mjs';
 export { targetShooter } from './preview/targetShot.mjs';
 export {
+  CANVAS_WAIT_MS,
   findCanvas,
   findCaptureTarget,
   gotoFixture,

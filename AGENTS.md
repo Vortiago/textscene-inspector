@@ -74,6 +74,12 @@ CI job fails, fix the cause.
   `docs/comparison/index.html` are untracked. Never commit them. `pnpm generate:fixtures` and
   `pnpm docs:gallery` write them.
 - Never list a file that the harness or the web build reads in `scripts/ci/visualScope.mjs`.
+- `TEXTSCENE_LOAD_TIMING=1` before a harness command prints how each page loads: the canvas insert, each
+  GL program's first draw, each main-thread task, and one summary line for each scene. It works on every
+  page that `createCaptureContext`, `openFixture`, `runPhoneScenario` and `recordShowcase` open:
+  `pnpm test:visual`, `pnpm test:perf`, `pnpm ref:diff`, the comparison sheets, `pnpm test:e2e:web` and
+  the showcase clips. It is off by default, because it slows each program's first draw. Use it to find
+  where a slow scene spends its time.
 
 ### Godot reference
 

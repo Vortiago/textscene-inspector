@@ -1,7 +1,6 @@
-/** The query a golden scene opens the previewer with. */
 import { describe, expect, it } from 'vitest';
 import { fixtureUrl } from '../preview/fixtureUrl.mjs';
-import { sceneQuery } from './sceneCapture.mjs';
+import { sceneQuery, slowCanvasLine } from './sceneCapture.mjs';
 
 const SITE = 'http://127.0.0.1:4173';
 
@@ -16,5 +15,17 @@ describe('sceneQuery', () => {
     const scene = { name: 'plain', file: 'a.tscn', camera: 'Camera3D' };
 
     expect(fixtureUrl(SITE, scene.file, sceneQuery(scene))).toBe(`${SITE}/?fixture=a.tscn&camera=Camera3D`);
+  });
+});
+
+describe('slowCanvasLine', () => {
+  it('logs no line for an open under ten seconds', () => {
+    expect(slowCanvasLine('quick', 9999)).toBeNull();
+  });
+
+  it('logs a slow open with its share of the canvas wait', () => {
+    expect(slowCanvasLine('lit', 54000)).toBe(
+      '[visual]   lit: opened in 54.0 s, 60 % of the 90 s canvas wait'
+    );
   });
 });

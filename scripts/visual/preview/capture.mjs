@@ -53,15 +53,16 @@ function assertOpenedFixture(page, requested) {
   );
 }
 
+/** Software GL under contention can take over 30 s to first paint; a timeout costs one 'unstable' row. */
+export const CANVAS_WAIT_MS = 90000;
+
 /** The single canvas the scene renders into, or a reason there is not exactly one. */
 export async function findCanvas(page) {
   const canvases = page.locator('canvas');
   try {
-    // 90 s: under host contention with software GL a healthy scene can take over 30 s to first
-    // paint. A timeout reports, so one slow scene costs one 'unstable' row, not the whole run.
-    await canvases.first().waitFor({ timeout: 90000 });
+    await canvases.first().waitFor({ timeout: CANVAS_WAIT_MS });
   } catch {
-    return { canvas: null, reason: 'no canvas appeared within 90s' };
+    return { canvas: null, reason: `no canvas appeared within ${CANVAS_WAIT_MS / 1000}s` };
   }
   const count = await canvases.count();
   if (count !== 1) return { canvas: null, reason: `expected exactly 1 canvas, found ${count}` };

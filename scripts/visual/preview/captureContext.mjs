@@ -18,6 +18,7 @@ import {
   VIEWPORT_MODE_STORAGE_KEY,
   windowForCanvas,
 } from './appContract.mjs';
+import { recordLoadTimingWhenOn } from '../../perf/loadTiming/loadTiming.mjs';
 
 /**
  * A context that renders only the scene: the source pane closed and the floating chrome painted out.
@@ -89,6 +90,7 @@ export async function createCaptureContext(
     );
   }
   await context.addInitScript(installStyle, paintedOutChromeCss({ canvas2D }));
+  await recordLoadTimingWhenOn(context, process.env);
   return context;
 }
 

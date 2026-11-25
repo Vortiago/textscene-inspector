@@ -30,12 +30,16 @@ export const MATERIAL_SCENES = [
   { name: 'material-spatial-shader-uniforms', file: 'unit-spatial-shader-uniforms.tscn' },
   // Unshaded spatial shaders whose writes to the outputs only the light reads change nothing drawn.
   { name: 'material-spatial-shader-lit-outputs', file: 'unit-spatial-shader-lit-outputs.tscn' },
-  // Lit spatial shaders under two suns and a colour background's ambient light. Godot 4.6.3: 0 px over
-  // 2/255. An ambient light read black puts 33,505 px over, at most 38/255 (the cylinder's dark side).
-  { name: 'material-spatial-shader-lit-sun', file: 'unit-spatial-shader-lit-sun.tscn' },
-  // Two of the same lit spatial shaders under a ProceduralSkyMaterial's ambient light and reflection.
-  // Godot 4.6.3: 0 px over 2/255. The sky read black puts 35,262 px over, at most 66/255.
-  { name: 'material-spatial-shader-lit-sky', file: 'unit-spatial-shader-lit-sky.tscn' },
+  // A lit dielectric with RIM under two suns. Godot 4.6.3: 0 px over 2/255. Ambient black: 5,426 px, max 5.
+  { name: 'material-spatial-shader-lit-sun-dielectric', file: 'unit-spatial-shader-lit-sun-dielectric.tscn' },
+  // A lit metal under two suns. Godot 4.6.3: 0 px over 2/255. Sun specular 0: 20,785 px, max 239/255.
+  { name: 'material-spatial-shader-lit-sun-metal', file: 'unit-spatial-shader-lit-sun-metal.tscn' },
+  // A lit light() shader under two suns. Godot 4.6.3: 0 px over 2/255. Ambient black: 28,079 px, max 38/255.
+  { name: 'material-spatial-shader-lit-sun-light', file: 'unit-spatial-shader-lit-sun-light.tscn' },
+  // A lit dielectric under a sky. Godot 4.6.3: 0 px over 2/255. The sky read black: 14,477 px, max 27/255.
+  { name: 'material-spatial-shader-lit-sky-dielectric', file: 'unit-spatial-shader-lit-sky-dielectric.tscn' },
+  // A lit metal under a sky. Godot 4.6.3: 0 px over 2/255. The sky read black: 20,785 px, max 66/255.
+  { name: 'material-spatial-shader-lit-sky-metal', file: 'unit-spatial-shader-lit-sky-metal.tscn' },
   // Spatial shaders with render_mode wireframe, drawn as the edges left after cull_back and cull_disabled.
   { name: 'material-spatial-shader-wireframe', file: 'unit-spatial-shader-wireframe.tscn' },
   // Spatial shaders with cull_back, cull_front and cull_disabled, on quads that face the camera and away.
@@ -46,11 +50,11 @@ export const MATERIAL_SCENES = [
   { name: 'material-spatial-shader-depth-test', file: 'unit-spatial-shader-depth-test.tscn' },
   // A depth_draw_never spatial shader through an orange quad that crosses it.
   { name: 'material-spatial-shader-depth-draw', file: 'unit-spatial-shader-depth-draw.tscn' },
-  // Spatial shaders that write ALPHA: a fade, a scissor cut, a hash cut and alpha to coverage, over orange quads.
+  // Spatial shaders that write ALPHA: a fade, a scissor cut, a hash cut and alpha to coverage, on orange quads.
   { name: 'material-spatial-shader-alpha', file: 'unit-spatial-shader-alpha.tscn' },
   // Spatial shaders that write DEPTH, shared and own, and a depth_prepass_alpha fade, across orange quads.
   { name: 'material-spatial-shader-depth', file: 'unit-spatial-shader-depth.tscn' },
-  // Spatial shaders that write FOG, FOG.rgb alone, FOG under fog_disabled, RADIANCE and IRRADIANCE, over orange quads.
+  // Spatial shaders that write FOG, FOG.rgb alone, FOG under fog_disabled, RADIANCE and IRRADIANCE, on orange.
   { name: 'material-spatial-shader-fog', file: 'unit-spatial-shader-fog.tscn' },
   // The environment's depth fog and height fog on unshaded spatial shaders: three boxes and a floor.
   { name: 'material-spatial-shader-environment-fog', file: 'unit-spatial-shader-environment-fog.tscn' },
@@ -58,7 +62,7 @@ export const MATERIAL_SCENES = [
   { name: 'material-spatial-shader-stencil', file: 'unit-spatial-shader-stencil.tscn' },
   // Point and line surfaces of spatial shaders: POINT_SIZE, POINT_COORD, blend_add points and a line strip.
   { name: 'material-spatial-shader-points', file: 'unit-spatial-shader-points.tscn' },
-  // VERTEX_ID counted in each surface: triangle surfaces of a shared and an own material, and points surfaces.
+  // VERTEX_ID counted in each surface: triangles of a shared and an own material, and points surfaces.
   { name: 'material-spatial-shader-vertex-id', file: 'unit-spatial-shader-vertex-id.tscn' },
   // CUSTOM0 to CUSTOM3 in all eight formats, and the bones and weights the vertex stage reads.
   { name: 'material-spatial-shader-custom-arrays', file: 'unit-spatial-shader-custom-arrays.tscn' },
