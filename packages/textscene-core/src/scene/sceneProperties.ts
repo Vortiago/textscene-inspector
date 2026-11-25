@@ -5,9 +5,9 @@ import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
 import type { ResourceReference, VariantValue } from '../godot/variant/variantValue.js';
 import * as logger from '../logger.js';
 import { memoisedImport } from '../resources/memoisedImport.js';
-import { findSubResource } from '../resources/SubResourceResolver.js';
 import { parseSubResourcePath, subResourcePath } from '../resources/subResourcePath.js';
 import type { DerivedProperties, NodeReader, NodeReads } from './derived/derivedProperty.js';
+import type { ListedReads } from './listed/listedProperties.js';
 import type { ContainerVisibility, SceneTreeNode } from './sceneRuntime.js';
 import { WriteStore, type SceneWrites } from './sceneWrites.js';
 import { sceneValueOf, valueOfSceneValue, type SceneValue } from './variant.js';
@@ -37,7 +37,9 @@ export class SceneProperties {
     private readonly rootScene: () => ParsedScene | undefined,
     private readonly treeNode: (livePath: string) => SceneTreeNode | null,
     /** The node in the written scene's tree, where a container's sort and a live pass read the writes. */
-    private readonly writtenTreeNode: (livePath: string) => SceneTreeNode | null
+    private readonly writtenTreeNode: (livePath: string) => SceneTreeNode | null,
+    /** The resource a path names, as a class's `_get` loads it. */
+    private readonly resource: ListedReads['resource']
   ) {}
 
   writes(): SceneWrites {
@@ -56,10 +58,17 @@ export class SceneProperties {
     this.loadedList = [];
   }
 
-  get(access: PropertyAccess, livePath: string, node: SceneTreeNode, property: string): SceneValue | null {
+  async get(
+    access: PropertyAccess,
+    livePath: string,
+    node: SceneTreeNode,
+    property: string
+  ): Promise<SceneValue | null> {
     const derived = this.derivedAt(access, livePath, node);
-    const outcome = access.resolveGet(node, property, derived, this.readsAt(access, livePath, node));
+    const reads = this.readsAt(access, livePath, node);
+    const outcome = await access.resolveGet(node, property, derived, reads, this.resource);
     if (outcome.kind === 'unknown') return this.unknownProperty(node, property, null);
+    if (outcome.kind === 'refused') return null;
     if (outcome.kind === 'unported') throw unportedProperty(property, outcome.declaredBy);
     return sceneValueOf(this.sortedValue(livePath, property) ?? outcome.value);
   }
@@ -139,13 +148,14 @@ export class SceneProperties {
     return parent && this.readerAt(access, parentPath, parent);
   }
 
-  /** A node's properties as `get` answers them, with undefined where `get` would refuse. */
+  /** A node's ClassDB and derived properties as `get` answers them, undefined for any other name. */
   private readerAt(access: PropertyAccess, livePath: string, node: SceneTreeNode): NodeReader {
     return {
       type: node.type,
       get: (property) => {
         const derived = this.derivedAt(access, livePath, node);
-        const outcome = access.resolveGet(node, property, derived, this.readsAt(access, livePath, node));
+        const reads = this.readsAt(access, livePath, node);
+        const outcome = access.resolveClassGet(node, property, derived, reads);
         return outcome.kind === 'value' ? outcome.value : undefined;
       },
       parent: () => this.parentReader(access, livePath),
@@ -170,14 +180,6 @@ export class SceneProperties {
       logger.warn(`expected a property of ${node.type}, got "${property}": the class has no such property`);
     }
     return answer;
-  }
-
-  /** The class of the root scene's sub-resource that `path` names, or null for any other path. */
-  subResourceClass(path: string): string | null {
-    const { filePath, subResourceId } = parseSubResourcePath(path);
-    if (subResourceId === undefined || filePath !== this.rootScenePath) return null;
-    const scene = this.rootScene();
-    return (scene && findSubResource(scene.internalResources, subResourceId)?.type) ?? null;
   }
 
   /** The resource an id of the host's writes names: a file `scene.load` gave, else one of the root scene. */

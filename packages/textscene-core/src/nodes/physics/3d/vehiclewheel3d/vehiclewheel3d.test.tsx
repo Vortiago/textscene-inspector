@@ -4,6 +4,8 @@
  * child-placement case pins that the registration keeps the `transform`
  * GenericNodeFallback also applies.
  */
+import { formatterOf } from '../../../../r3f/components/NodeDetailsPanel/formatters/index';
+import { sectionsOf } from '../../../../r3f/components/NodeDetailsPanel/formatters/testing/inspectedScene';
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -11,7 +13,6 @@ import { visibleInTree } from '../../../../r3f/visibleInTree';
 import '../../../../r3f/nodes/index'; // side-effect: component registrations
 import '../../../../parser/TscnParser'; // side-effect: parser registrations
 import { rendersOwnVisual } from '../../../../r3f/nodeSupport';
-import { nodeRegistry } from '../../../../core/NodeRegistry';
 import { TscnParser } from '../../../../parser/TscnParser';
 import { NodeDispatcher } from '../../../../r3f/NodeDispatcher';
 import { SelectionProvider } from '../../../../r3f/contexts/SelectionContext';
@@ -94,13 +95,11 @@ describe('VehicleWheel3D registration', () => {
     expect(props.use_as_steering).toBe(true);
   });
 
-  it('surfaces its configuration to the inspector via a property formatter', () => {
-    const registration = nodeRegistry.getRegistration('VehicleWheel3D');
-    expect(registration?.propertyFormatter).toBeDefined();
-    const titles = registration!.propertyFormatter!({ name: 'Wheel1', wheel_radius: 0.25 }).map(
-      (s) => s.title
-    );
-    expect(titles).toContain('Wheel');
+  it('surfaces its configuration to the inspector through a property formatter', async () => {
+    const formatter = formatterOf('VehicleWheel3D');
+    expect(formatter).toBeDefined();
+    const sections = await sectionsOf(formatter!, 'VehicleWheel3D', { wheel_radius: '0.25' });
+    expect(sections.map((s) => s.title)).toContain('Wheel');
   });
 
   it('still places its wheel mesh at the authored offset', async () => {

@@ -40,13 +40,13 @@ export function useSceneAnswer<T>(scene: Scene | undefined, read: SceneRead<T>):
 }
 
 /** An async read over the nodes below `root`, which a new text frees. */
-interface LandingRead<T> {
+export interface LandingRead<T> {
   readonly root: NodeHandle | null;
   readonly answer: Promise<T>;
 }
 
 /** The last answer that landed for this scene, read again on each new `start`. Null until one lands. */
-function useLandedRead<T>(scene: Scene | undefined, start: (() => LandingRead<T>) | null): T | null {
+export function useLandedRead<T>(scene: Scene | undefined, start: (() => LandingRead<T>) | null): T | null {
   const [landed, setLanded] = useState<{ scene: Scene | undefined; answer: T } | null>(null);
   useEffect(() => {
     if (!start) return undefined;

@@ -7,6 +7,7 @@
  */
 
 import { CPU_PARTICLES_PARAMS, type CpuParticlesParam } from '../../../godot/scene/cpuParticles.js';
+import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { loadedParamRange } from '../../../godot/scene/particleParamRange.js';
 import { packedOr, settableIntOr } from '../../../parser/valueParsers.js';
 import { NO_FLOATS, parsePackedColorArray } from '../../../resources/shapes/packedArray.js';
@@ -69,6 +70,32 @@ export function parseParticleParams(properties: Record<string, string>): Particl
     if (ref) param.curve = ref;
     return param;
   });
+}
+
+/** The classes whose paired setters pull one bound onto the other as a file loads. */
+const PARTICLE_CLASSES = ['CPUParticles2D', 'CPUParticles3D'];
+
+/** Each `_min` and `_max` the file writes as its setters leave it, so a crossed pair loads as in Godot. */
+export function withLoadedParamRanges(
+  className: string,
+  properties: Record<string, string>
+): Record<string, string> {
+  if (!PARTICLE_CLASSES.some((base) => descendsFromClass(className, base))) return properties;
+  let loaded = properties;
+  for (const { prefix, def } of PARAM_SLOTS) {
+    const [minKey, maxKey] = [`${prefix}_min`, `${prefix}_max`];
+    if (!Object.hasOwn(properties, minKey) && !Object.hasOwn(properties, maxKey)) continue;
+    const { min, max } = loadedParamRange(properties, prefix, def);
+    loaded = { ...loaded, [minKey]: realLiteral(min), [maxKey]: realLiteral(max) };
+  }
+  return loaded;
+}
+
+/** A number as Godot's text spells it: `String(Infinity)` gives `Infinity`, which `str_to_var` refuses. */
+function realLiteral(real: number): string {
+  if (Number.isNaN(real)) return 'nan';
+  if (!Number.isFinite(real)) return real > 0 ? 'inf' : '-inf';
+  return String(real);
 }
 
 /** The `amount` both constructors set (`cpu_particles_2d.cpp:1692`, `cpu_particles_3d.cpp:1781`). */

@@ -23,10 +23,9 @@ packages/textscene-core/src/nodes/[category]/[nodetype]/
 ├── Component.tsx        # react-three-fiber component that renders the node
 ├── linterParser.ts      # Strict parsing for the linter
 ├── linter.ts            # Semantic lint rules
-├── propertyFormatter.ts # Format properties for UI display (optional)
 ├── types.ts             # TypeScript type definitions
 ├── comparison.md        # Godot-parity sheet
-├── index.ts             # Parser/formatter registration with NodeRegistry
+├── index.ts             # Parser registration with NodeRegistry
 ├── index.r3f.ts         # Component registration with nodeComponentRegistry
 ├── index.linter.ts      # Linter registration (imports linterParser + linter)
 └── *.test.ts(x)         # Co-located tests

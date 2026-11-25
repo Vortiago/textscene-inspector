@@ -5,16 +5,17 @@ import { nodeRegistry } from '../../../core/NodeRegistry';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { rendersOwnVisual } from '../../../r3f/nodeSupport';
 import { parseDirectionalLight2D } from './parser';
-import { formatDirectionalLight2DProperties } from './propertyFormatter';
+import { formatDirectionalLight2DProperties } from '../../../r3f/components/NodeDetailsPanel/formatters/2d/directionallight2d/propertyFormatter';
+import { formatterOf } from '../../../r3f/components/NodeDetailsPanel/formatters/index';
 import { DirectionalLight2D } from './Component';
 import './index';
 import './index.r3f';
 
 describe('DirectionalLight2D registration', () => {
-  it('registers its own parser and property formatter', () => {
+  it('registers its own parser, and the inspector has its formatter', () => {
     const registration = nodeRegistry.getRegistration('DirectionalLight2D');
     expect(registration!.parser).toBe(parseDirectionalLight2D);
-    expect(registration!.propertyFormatter).toBe(formatDirectionalLight2DProperties);
+    expect(formatterOf('DirectionalLight2D')).toBe(formatDirectionalLight2DProperties);
   });
 
   it('registers the component that draws its light', () => {

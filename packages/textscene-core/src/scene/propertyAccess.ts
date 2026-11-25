@@ -2,6 +2,8 @@ import { findClassProperty, valueTypeOf, type ClassProperty } from '../godot/cla
 import { findDerivedProperty, nodeDefaultText } from '../godot/classdb/nodeDefault.js';
 import { classInheritanceChain, classInTree, descendsFromClass } from '../godot/classdb/classBaseTypes.js';
 import { canonicalisePropertyBag } from '../godot/classdb/deprecated.js';
+import { perObject } from '../utils/perObject.js';
+import { withLoadedParamRanges } from '../nodes/shared/cpuparticles/params.js';
 import { PROPERTY_HINT } from '../godot/classdb/propertyHint.js';
 import { resourceTypeHint } from '../godot/classdb/resourceTypeHint.js';
 import { strToVar, type VariantReading } from '../godot/variant/strToVar.js';
@@ -10,6 +12,7 @@ import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
 import { NIL_VALUE, type VariantValue } from '../godot/variant/variantValue.js';
 import type { DerivedProperties, NodeReads, StoredValue, StoredWrite } from './derived/derivedProperty.js';
 import { derivedPropertiesOf } from './derived/derivedFamily.js';
+import { listedGet, type ListedReads } from './listed/listedProperties.js';
 import type { SceneTreeNode } from './sceneRuntime.js';
 import type { PropertyTexts } from './sceneWrites.js';
 
@@ -41,6 +44,12 @@ export interface StoredTexts {
   readonly placedProperty: (property: string) => VariantValue | undefined;
 }
 
+/** A node's texts as its setters leave them on load. Built once for each node, as each `get` reads them. */
+const loadedTextsOf = perObject((node: SceneTreeNode): Readonly<Record<string, string>> => {
+  const className = classInTree(node.type);
+  return withLoadedParamRanges(className, canonicalisePropertyBag(className, { ...node.rawProperties }));
+});
+
 /** A stored property as the setters read it: the last write, a live pass, the file, then the default. */
 export function storedValueOf({
   node,
@@ -50,7 +59,7 @@ export function storedValueOf({
   placedProperty,
 }: StoredTexts): StoredValue {
   const className = classInTree(node.type);
-  const raw = canonicalisePropertyBag(className, { ...node.rawProperties });
+  const raw = loadedTextsOf(node);
   // One parse per property for each call: a setter such as `global_position` reads one many times.
   const values = new Map<string, VariantValue>();
   const valueOf = (property: string): VariantValue => {
@@ -130,10 +139,13 @@ export function castForSetter(
 /** What `get` reads of one property, or `unknown` for a name the class does not have. */
 export type GetOutcome =
   | { readonly kind: 'unknown' }
+  /** A name the class's own `_get` routes and refuses, such as a bone past the last: null, unwarned. */
+  | { readonly kind: 'refused' }
   | { readonly kind: 'unported'; readonly declaredBy: string }
   | { readonly kind: 'value'; readonly value: VariantValue };
 
-export function resolveGet(
+/** `get` of a ClassDB row or a derived property, `unknown` for a name only a class's `_get` routes. */
+export function resolveClassGet(
   node: SceneTreeNode,
   property: string,
   derived: DerivedProperties | null,
@@ -145,4 +157,21 @@ export function resolveGet(
   if (!derivedProperty) return { kind: 'unknown' };
   const value = derived?.get(property, reads);
   return value ? { kind: 'value', value } : { kind: 'unported', declaredBy: derivedProperty.declaredBy };
+}
+
+/** `get`: the class's own property first, then the class's `_get`, which may load the resource it reads. */
+export async function resolveGet(
+  node: SceneTreeNode,
+  property: string,
+  derived: DerivedProperties | null,
+  reads: NodeReads,
+  resource: ListedReads['resource']
+): Promise<GetOutcome> {
+  const outcome = resolveClassGet(node, property, derived, reads);
+  if (outcome.kind !== 'unknown') return outcome;
+  return listedGet(classInTree(node.type), property, {
+    texts: node.rawProperties,
+    stored: reads.stored,
+    resource,
+  });
 }

@@ -5,7 +5,7 @@ import type { PlacedCell } from '../shared/tileData';
 import type { Rgba } from '../../../../godot/math/math';
 
 export interface TileMapLayerData {
-  /** Layer display name (`layer_N/name`); an unnamed layer answers to `LayerN`. */
+  /** The layer's node name, as `_set` builds and renames it (`layerNames.ts`). */
   name: string;
   /** Whether the layer renders (`layer_N/enabled`, default true). */
   enabled: boolean;

@@ -6,7 +6,7 @@ import type { ResourceProvider } from '../resources/ResourceProvider';
 import { TscnSceneProvider } from './TscnSceneProvider';
 import { TscnSceneContents } from './SceneContents';
 import { useHierarchy } from './contexts/HierarchyContext';
-import { useLiveNode } from './useLiveSceneTree';
+import { useLiveNode } from './liveNode.testkit';
 import { openScene, type Scene } from '../scene/openScene';
 import { variant } from '../scene/variant';
 import { useBuildSolveTree } from './controls/native/buildSolveTree';

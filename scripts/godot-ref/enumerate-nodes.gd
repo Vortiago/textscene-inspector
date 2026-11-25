@@ -147,30 +147,46 @@ func derived_properties(c: String) -> Array:
 		rows.append([p["name"], int(p["type"]), setter != ""])
 	return rows
 
+# ClassDB's default, or a fresh instance's value where ClassDB answers null: its cache holds only the
+# properties `_validate_property` lists on that instance, so CPUParticles2D's ring radius reads null.
+func default_text(c: String, instance: Object, name: String) -> String:
+	var value: Variant = ClassDB.class_get_property_default_value(c, name)
+	if value == null and instance != null:
+		value = instance.get(name)
+	return var_to_str(value)
+
+func free_instance(instance: Object) -> void:
+	if instance is Node:
+		instance.free()
+
 func node_defaults(properties: Dictionary) -> Dictionary:
 	var declared: Dictionary = {}
 	for c in properties:
 		var reader: String = default_reader(c)
 		if reader == "":
 			continue
+		var instance: Object = ClassDB.instantiate(reader)
 		var values: Dictionary = {}
 		for p in properties[c]:
-			values[p["name"]] = var_to_str(ClassDB.class_get_property_default_value(reader, p["name"]))
+			values[p["name"]] = default_text(reader, instance, p["name"])
 		declared[c] = values
+		free_instance(instance)
 	var overrides: Dictionary = {}
 	for c in ClassDB.get_class_list():
 		if not ClassDB.is_parent_class(c, "Node") or not ClassDB.can_instantiate(c):
 			continue
+		var instance: Object = ClassDB.instantiate(c)
 		var differing: Dictionary = {}
 		var declarer: String = c
 		while declarer != "":
 			for name in declared.get(declarer, {}):
 				if differing.has(name):
 					continue
-				var value: String = var_to_str(ClassDB.class_get_property_default_value(c, name))
+				var value: String = default_text(c, instance, name)
 				if value != declared[declarer][name]:
 					differing[name] = value
 			declarer = ClassDB.get_parent_class(declarer)
+		free_instance(instance)
 		if differing.size() > 0:
 			overrides[c] = differing
 	var derived: Dictionary = {}
@@ -238,6 +254,8 @@ func _init() -> void:
 	print(JSON.stringify(resource_bases))
 	print("###RESOURCE_GETTERS_JSON###")
 	print(JSON.stringify({"collections": collections, "variant_properties": variant_property_names}))
+	# Read before the marker: a getter's error lines must not land between it and its blob.
+	var defaults: Dictionary = node_defaults(properties)
 	print("###NODE_DEFAULTS_JSON###")
-	print(JSON.stringify(node_defaults(properties)))
+	print(JSON.stringify(defaults))
 	quit()

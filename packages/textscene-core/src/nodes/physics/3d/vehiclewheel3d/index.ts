@@ -7,12 +7,10 @@
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseVehicleWheel3D } from './parser';
-import { formatVehicleWheel3DProperties } from './propertyFormatter';
 
 const vehicleWheel3DRegistration: NodeTypeRegistration = {
   typeName: 'VehicleWheel3D',
   parser: parseVehicleWheel3D,
-  propertyFormatter: formatVehicleWheel3DProperties,
 };
 
 nodeRegistry.register(vehicleWheel3DRegistration);

@@ -99,8 +99,9 @@ describe('<TscnPreviewShell> a hovered tree row', () => {
   it('keeps the clicked node in the inspector while another row is hovered', async () => {
     await renderShell();
     fireEvent.click(row('Main/Box'));
+    await screen.findByRole('heading', { level: 3, name: 'Box' });
 
-    act(() => fireEvent.mouseEnter(row('Main/Lamp')));
+    await act(async () => fireEvent.mouseEnter(row('Main/Lamp')));
 
     expect(screen.getByRole('heading', { level: 3 }).textContent).toBe('Box');
   });

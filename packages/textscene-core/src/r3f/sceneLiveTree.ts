@@ -369,6 +369,8 @@ function sceneRuntimeOf(scene: Scene): SceneRuntime {
       fileListeners.add(listener);
       return () => fileListeners.delete(listener);
     },
+    loadedScene: (scenePath) => loader.getCached<TscnScene>('scene', scenePath) ?? null,
+    loadedResource: (path) => loader.parsedResource(path),
     dispose() {
       fileWalk.dispose();
       fileListeners.clear();

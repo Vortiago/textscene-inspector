@@ -5,16 +5,13 @@
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
 import { parseRemoteTransform2D } from './parser';
-import { formatRemoteTransform2DProperties } from './propertyFormatter';
 
 const remoteTransform2DRegistration: NodeTypeRegistration = {
   typeName: 'RemoteTransform2D',
   parser: parseRemoteTransform2D,
-  propertyFormatter: formatRemoteTransform2DProperties,
 };
 
 nodeRegistry.register(remoteTransform2DRegistration);
 
 export * from './parser';
-export * from './propertyFormatter';
 export * from './types';

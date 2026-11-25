@@ -1,6 +1,8 @@
 import type { ContainerWrite } from '../core/childVisibility.js';
 import type { SceneGraph } from '../core/SceneGraph.js';
 import type { ProjectViewportSize } from '../parser/projectSettingsParser.js';
+import type { ParsedResource } from '../parser/parsedResource.js';
+import type { TscnScene } from '../parser/types.js';
 import type { ResourceReference, VariantValue } from '../godot/variant/variantValue.js';
 import type { Scene } from './openScene.js';
 import type { SceneFile } from './sceneFiles.js';
@@ -67,6 +69,10 @@ export interface SceneRuntime {
   files(graph: SceneGraph | null): readonly SceneFile[];
   /** Calls `listener` when a load answers for one of those files. Returns the removal. */
   subscribeFiles(listener: () => void): () => void;
+  /** The parse of the scene at `scenePath`, null before it loads. */
+  loadedScene(scenePath: string): TscnScene | null;
+  /** The parse of the `.tres` or `.res` file at `path`, null where it does not load. */
+  loadedResource(path: string): Promise<ParsedResource | null>;
   dispose(): void;
 }
 

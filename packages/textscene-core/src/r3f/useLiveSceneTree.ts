@@ -9,11 +9,9 @@ import { useResourceLoader } from '../resources/useResource.js';
 import {
   collectLiveNodes,
   liveTreeOf,
-  resolveLiveEntry,
   type LiveStep,
   type LiveTreeContext,
   type LiveTreeEntry,
-  type ResolvedLiveNode,
 } from './liveSceneTree.js';
 import type { SceneScope, TscnNode, TscnScene } from '../parser/types.js';
 import { liveInstancePath, type LiveNode } from '../resources/liveNode.js';
@@ -500,19 +498,5 @@ export function useLiveSceneNodes(
   return useMemo(
     () => (liveTree ? collectLiveNodes(liveTree.roots, liveTree.ctx, predicate, descend) : []),
     [liveTree, predicate, descend]
-  );
-}
-
-/**
- * The live-tree node at `path`: its effective (collapsed) identity (Instance root
- * merge, ADR-0013) and its `instanceRef`, descending into sub-scenes and GLBs.
- * A node inside a sub-scene resolves the moment that sub-scene lands. `null` for an
- * empty path or an unresolvable segment.
- */
-export function useLiveNode(path: string | null | undefined): ResolvedLiveNode | null {
-  const liveTree = useSharedLiveTree();
-  return useMemo(
-    () => (path && liveTree ? resolveLiveEntry(path, liveTree.roots, liveTree.ctx) : null),
-    [liveTree, path]
   );
 }

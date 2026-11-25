@@ -8,16 +8,13 @@
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
 import { parseNavigationAgent3D } from './parser';
-import { formatNavigationAgent3DProperties } from './propertyFormatter';
 
 const navigationAgent3DRegistration: NodeTypeRegistration = {
   typeName: 'NavigationAgent3D',
   parser: parseNavigationAgent3D,
-  propertyFormatter: formatNavigationAgent3DProperties,
 };
 
 nodeRegistry.register(navigationAgent3DRegistration);
 
 export * from './parser';
-export * from './propertyFormatter';
 export * from './types';

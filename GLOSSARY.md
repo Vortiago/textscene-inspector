@@ -623,6 +623,14 @@ _Avoid_: "scene context", "document". "scene graph" for the parse.
 A node of a **scene** as a script holds it: by identity for the life of the text, with `get`, `set` and the NodePath walk of `get_node`. Two lookups of one node give one handle. After a new text the handle answers `isInsideTree() === false`.
 _Avoid_: a node path string as a handle, "node reference".
 
+**File properties** (`scene.fileProperties(path)`, `scene/sceneNodes.ts`):
+The names of the properties a node's files set, in file order, as Godot's `SceneState::get_node_property_name` lists them (`packed_scene.cpp:2104-2112`). The inspector shows a row only for these, and reads each value through the **node handle**'s `get`.
+_Avoid_: "raw properties" or "authored properties" for the names. Reading a value from the file text.
+
+**Inspected node** (`InspectedNode`, `r3f/components/NodeDetailsPanel/formatters/inspectedNode.ts`):
+What a formatter of the inspector reads: the **file properties** of one node, its `get` answers, asked once for each property in one inspection, and its `call`. A formatter spells no Godot literal grammar.
+_Avoid_: a formatter that reads the parsed scene or a node's property texts.
+
 **Current camera** (`ViewportCameras`, `scene/viewportCameras.ts`):
 The Camera3D and the Camera2D a viewport draws through, as Godot's `Viewport` holds them: one of each for the root window and for each **sub-viewport**. The enter rule fills it, and `make_current`, `clear_current`, `set('current')` and `set('enabled')` move it. The In-game mode reads it, and the editor's 3D view does not.
 _Avoid_: "elected camera", "active camera".

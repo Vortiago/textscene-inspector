@@ -1,9 +1,12 @@
 import type { SceneGraph } from '../core/SceneGraph.js';
 import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
-import type { TscnExternalResource } from '../parser/types.js';
+import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
+import { fileExtension } from '../resources/fileExtension.js';
+import { findSubResource } from '../resources/SubResourceResolver.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { parseSubResourcePath } from '../resources/subResourcePath.js';
 import { loadedResourceType } from './loadedResourceType.js';
+import type { LoadedResource } from './listed/listedProperties.js';
 import type { NodeHandle } from './nodeHandle.js';
 import { parseTscnContent, type ParseResult } from './parseScene.js';
 import type { SceneFile } from './sceneFiles.js';
@@ -50,6 +53,8 @@ export interface Scene {
   /** `get_node` from the scene's root node: throws `Node not found` where `path` names no node. */
   getNode(path: string): NodeHandle;
   getNodeOrNull(path: string): NodeHandle | null;
+  /** The names the scene's files set on the node at `path`, in file order. Throws as `getNode` does. */
+  fileProperties(path: string): readonly string[];
   /** `load`: a value a property of a resource type takes. A missing file draws as a Missing resource. */
   load(path: string): Promise<Variant>;
   /** Calls `listener` when the node at `path` changes, or the tree's shape for null. Returns the removal. */
@@ -68,6 +73,11 @@ interface WrittenGraph {
   readonly writes: SceneWrites;
   readonly resources: readonly TscnExternalResource[];
   readonly graph: SceneGraph | null;
+}
+
+/** A section's class and texts, as a class's `_get` reads a resource. */
+function sectionOf(section: TscnInternalResource | null): LoadedResource | null {
+  return section && { type: section.type, properties: section.data };
 }
 
 export function openScene({
@@ -89,7 +99,8 @@ export function openScene({
     rootScenePath,
     () => graph()?.scenes.get(rootScenePath),
     (livePath) => tree()?.node(livePath) ?? null,
-    (livePath) => writtenTree()?.node(livePath) ?? null
+    (livePath) => writtenTree()?.node(livePath) ?? null,
+    (path) => resource(path)
   );
   const tree = (): SceneTree | null => {
     const current = graph();
@@ -99,12 +110,31 @@ export function openScene({
     const current = scene.written();
     return current ? runtime().tree(current) : null;
   };
+  /** A sub-resource of the root scene, else of a scene the tree has loaded. */
+  const subResource = (path: string): TscnInternalResource | null => {
+    const { filePath, subResourceId } = parseSubResourcePath(path);
+    if (subResourceId === undefined) return null;
+    const owner =
+      filePath === rootScenePath ? graph()?.scenes.get(rootScenePath) : runtime().loadedScene(filePath);
+    return (owner && findSubResource(owner.internalResources, subResourceId)) ?? null;
+  };
+  /** A sub-resource of a scene through `subResource`, else the resource the loader parses of a file. */
+  const resource = async (path: string): Promise<LoadedResource | null> => {
+    const { filePath, subResourceId } = parseSubResourcePath(path);
+    if (fileExtension(filePath) === '.tscn') return sectionOf(subResource(path));
+    const parsed = await runtime().loadedResource(filePath);
+    if (!parsed) return null;
+    if (subResourceId === undefined) return { type: parsed.resourceType, properties: parsed.properties };
+    return sectionOf(findSubResource(parsed.subResources, subResourceId) ?? null);
+  };
   /** The class `load` gives: a sub-resource's heading names it, and no file is asked for one. */
   const resourceClass = async (path: string): Promise<string | null> =>
     parseSubResourcePath(path).subResourceId === undefined
       ? loadedResourceType(provider, path)
-      : properties.subResourceClass(path);
-  const nodes = new SceneNodes({ graph, tree, resourceClass }, properties, (path) => listeners.written(path));
+      : (subResource(path)?.type ?? null);
+  const nodes = new SceneNodes({ graph, tree, resourceClass, resource }, properties, (path) =>
+    listeners.written(path)
+  );
   const listeners = new SceneListeners((path) => nodes.getNodeOrNull(path)?.path ?? null);
 
   const scene: Scene = {
@@ -139,6 +169,7 @@ export function openScene({
     },
     getNode: (path) => nodes.getNode(path),
     getNodeOrNull: (path) => nodes.getNodeOrNull(path),
+    fileProperties: (path) => nodes.fileProperties(nodes.getNode(path).path),
     async load(path) {
       const className = (await resourceClass(path)) ?? undefined;
       return variantOf({ type: T.OBJECT, resource: { path }, ...(className ? { className } : {}) });

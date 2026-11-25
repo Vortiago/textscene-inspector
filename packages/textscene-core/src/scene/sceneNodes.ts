@@ -11,8 +11,10 @@ import {
 import { loadPropertyAccess, type PropertyAccess, type SceneProperties } from './sceneProperties.js';
 import type { SceneWrites } from './sceneWrites.js';
 import type { SceneTree, SceneTreeNode } from './sceneRuntime.js';
+import type { LoadedResource } from './listed/listedProperties.js';
 import { sceneValueOf, valueOfSceneValue, variantOf, type SceneValue } from './variant.js';
 import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
+import { strToVar } from '../godot/variant/strToVar.js';
 import { projectViewportSize } from '../parser/projectSettingsParser.js';
 import { isWritable } from './writtenScene.js';
 import {
@@ -47,6 +49,8 @@ export interface SceneNodesSource {
   tree(): SceneTree | null;
   /** The class `load` gives for the resource at `path`, or null where it reads none. */
   resourceClass(path: string): Promise<string | null>;
+  /** The resource at `path`, loaded as `load` would. Null where none loads. */
+  resource(path: string): Promise<LoadedResource | null>;
 }
 
 /** The nodes of one text of the scene, each named by its absolute path. */
@@ -113,6 +117,11 @@ export class SceneNodes implements HandleHost {
   getNodeOrNull(path: string): NodeHandle | null {
     const root = this.rootPath();
     return root ? this.find(root, path) : null;
+  }
+
+  /** The names the files set on the node at the absolute `path`: a sub-scene's first, then its instance's. */
+  fileProperties(path: string): readonly string[] {
+    return Object.keys(this.nodeAt(path)?.rawProperties ?? {});
   }
 
   typeOf(path: string, tree = this.source.tree()): string | null {
@@ -292,6 +301,21 @@ export class SceneNodes implements HandleHost {
         return this.handles.get(node.path) === node && node.isInsideTree()
           ? (this.treeNodeOf(node.path, generation)?.isEditableInstance() ?? false)
           : false;
+      },
+      ownTexts: async () => {
+        const { access, node } = await this.propertyTarget(path);
+        this.assertSameText(generation, path);
+        const reading = { classExists: access.classExists, resourceOf: node.resourceOf.bind(node) };
+        const texts = Object.entries(node.rawProperties).map(
+          ([key, text]) => [key, strToVar(text, reading)] as const
+        );
+        return { texts, resourceClass: (resourcePath) => this.source.resourceClass(resourcePath) };
+      },
+      resource: (resourcePath) => this.source.resource(resourcePath),
+      fileTexts: async () => {
+        const { node } = await this.propertyTarget(path);
+        this.assertSameText(generation, path);
+        return node.rawProperties;
       },
     };
   }

@@ -62,16 +62,6 @@ export function parseColorToHex(value: string | undefined): number {
 }
 
 /**
- * Format a Color for Inspector display as `rgba(r, g, b, a)` with 0–255
- * integer channels and a 2-decimal alpha. Shared by the node property
- * formatters (Node2D, Sprite3D, Label3D, Decal, …) so the modulate display
- * stays consistent across slices.
- */
-export function formatColorRgba(color: Rgba): string {
-  return `rgba(${(color.r * 255).toFixed(0)}, ${(color.g * 255).toFixed(0)}, ${(color.b * 255).toFixed(0)}, ${color.a.toFixed(2)})`;
-}
-
-/**
  * Each sRGB channel times `energy`, alpha kept. Godot scales a background colour and a sky
  * material's colours this way before any linear conversion (`render_forward_clustered.cpp:1999-2001`,
  * `sky_material.cpp:41`).

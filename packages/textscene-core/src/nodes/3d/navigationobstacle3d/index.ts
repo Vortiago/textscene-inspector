@@ -8,16 +8,13 @@
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
 import { parseNavigationObstacle3D } from './parser';
-import { formatNavigationObstacle3DProperties } from './propertyFormatter';
 
 const navigationObstacle3DRegistration: NodeTypeRegistration = {
   typeName: 'NavigationObstacle3D',
   parser: parseNavigationObstacle3D,
-  propertyFormatter: formatNavigationObstacle3DProperties,
 };
 
 nodeRegistry.register(navigationObstacle3DRegistration);
 
 export * from './parser';
-export * from './propertyFormatter';
 export * from './types';

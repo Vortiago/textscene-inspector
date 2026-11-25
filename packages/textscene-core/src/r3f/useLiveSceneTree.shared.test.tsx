@@ -10,7 +10,8 @@ import { TscnParser } from '../parser/TscnParser.js';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext.js';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader.js';
 import { HierarchyProvider } from './contexts/HierarchyContext.js';
-import { useLiveNode, useLiveTreeVersion } from './useLiveSceneTree.js';
+import { useLiveTreeVersion } from './useLiveSceneTree.js';
+import { useLiveNode } from './liveNode.testkit.js';
 import { useLocalScene, useUniqueNamePaths } from './useUniqueNames.js';
 
 const MAIN = `[gd_scene format=3]

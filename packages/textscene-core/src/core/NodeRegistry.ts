@@ -24,19 +24,6 @@ import type { TscnNode } from '../parser/types';
 import { warn } from '../logger';
 import { createTypeRegistry } from './createTypeRegistry';
 
-export interface PropertyItem {
-  label: string;
-  value: string;
-}
-
-export interface PropertySection {
-  title: string;
-  items: PropertyItem[];
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic formatter accepts any parsed properties
-type PropertyFormatter = (properties: any) => PropertySection[];
-
 export interface NodeTypeRegistration {
   /** Node type name, such as 'MeshInstance3D' or 'Node3D'. */
   typeName: string;
@@ -52,9 +39,6 @@ export interface NodeTypeRegistration {
     override?: OverrideLayer<any>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic registry supports any node property type
   ) => any;
-
-  /** Optional property formatter for custom details panel display */
-  propertyFormatter?: PropertyFormatter;
 
   /** The `visible` the node writes onto its children, for a container that writes one. */
   writesChildVisibility?: ChildVisibilityFn;
