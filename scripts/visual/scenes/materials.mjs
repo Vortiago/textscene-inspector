@@ -48,6 +48,18 @@ export const MATERIAL_SCENES = [
     file: 'unit-standard-material-lit.tscn',
     litSurface: 'nodes',
   },
+  // Nine shading features on the generated shader. Godot 4.6.3: 0 px over 2/255. Classic: 11,140 px, max 217.
+  {
+    name: 'material-standard-material-shading-lit',
+    file: 'unit-standard-material-shading-lit.tscn',
+    litSurface: 'nodes',
+  },
+  // Fades, alpha and fallback materials on the generated shader. Godot 4.6.3: 363 px over 2/255, max 25.
+  {
+    name: 'material-standard-material-alpha-fallback-lit',
+    file: 'standard-material-alpha-fallback-lit/unit-standard-material-alpha-fallback-lit.tscn',
+    litSurface: 'nodes',
+  },
   // An AtlasTexture albedo's size under MSDF, on the generated shader. Godot 4.6.3: 156 px, max 46.
   {
     name: 'material-albedo-atlas-msdf',

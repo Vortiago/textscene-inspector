@@ -1,0 +1,16 @@
+; A res:// root of its own, because the screen-space roughness limiter's `amount` and `limit` are
+; PROJECT settings and no .tscn can carry one. Kept in a subdirectory rather than at
+; scenes/fixtures: a project.godot there would apply to every other fixture.
+
+config_version=5
+
+[application]
+
+config/name="Standard material alpha and fallback"
+run/main_scene="res://unit-standard-material-alpha-fallback-lit.tscn"
+config/features=PackedStringArray("4.6")
+
+[rendering]
+
+anti_aliasing/screen_space_roughness_limiter/amount=1.0
+anti_aliasing/screen_space_roughness_limiter/limit=0.6
