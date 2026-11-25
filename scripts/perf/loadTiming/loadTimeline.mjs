@@ -26,7 +26,8 @@ export class LoadTimeline {
   /** Adds `event`, and answers the summary of the load it ends when it is a navigation. */
   add(event) {
     if (event.kind !== 'navigate') {
-      this.#events.push(event);
+      // An event before the first navigation belongs to no load this timeline sums up.
+      if (this.#events.length > 0) this.#events.push(event);
       return null;
     }
     const ended = this.summary();

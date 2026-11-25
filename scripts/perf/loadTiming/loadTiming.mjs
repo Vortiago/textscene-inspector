@@ -12,9 +12,15 @@ export async function recordLoadTimingWhenOn(context, env, print = console.log) 
     page.on('console', (message) => {
       const text = message.text();
       if (!text.startsWith(LOAD_TIMING_PREFIX)) return;
-      const event = JSON.parse(text.slice(LOAD_TIMING_PREFIX.length));
-      logSummary(timeline.add(event));
-      log(eventLine(event));
+      try {
+        const event = JSON.parse(text.slice(LOAD_TIMING_PREFIX.length));
+        const line = eventLine(event);
+        logSummary(timeline.add(event));
+        log(line);
+      } catch (error) {
+        // A diagnostic never fails the harness it runs in: an unread line is printed with its reason.
+        log(`unread line ${JSON.stringify(text)}: ${error.message}`);
+      }
     });
     page.on('close', () => logSummary(timeline.summary()));
   });

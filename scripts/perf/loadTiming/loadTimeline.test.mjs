@@ -52,6 +52,12 @@ describe('LoadTimeline', () => {
     expect(new LoadTimeline().add(CANVAS)).toBeNull();
   });
 
+  it('leaves out an event that comes before the first navigation', () => {
+    const timeline = new LoadTimeline();
+    timeline.add(CANVAS);
+    expect(timeline.summary()).toBeNull();
+  });
+
   it('has no summary before the first navigation', () => {
     expect(new LoadTimeline().summary()).toBeNull();
   });

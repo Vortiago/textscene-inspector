@@ -40,6 +40,18 @@ describe('recordLoadTimingWhenOn', () => {
     expect(lines).toEqual(['[load-timing] 20 ms navigate ?fixture=lit.tscn']);
   });
 
+  it('prints a line it cannot read with the reason, and keeps listening', async () => {
+    const context = fakeContext();
+    const lines = [];
+    await recordLoadTimingWhenOn(context, ON, (line) => lines.push(line));
+    const page = new EventEmitter();
+    context.emit('page', page);
+    page.emit('console', { text: () => `${LOAD_TIMING_PREFIX}{cut` });
+    logFrom(page, { at: 20, kind: 'navigate', search: '?fixture=lit.tscn' });
+    expect(lines[0]).toMatch(/^\[load-timing\] unread line ".*\{cut": /);
+    expect(lines[1]).toBe('[load-timing] 20 ms navigate ?fixture=lit.tscn');
+  });
+
   it('prints the summary when the page closes', async () => {
     const context = fakeContext();
     const lines = [];
