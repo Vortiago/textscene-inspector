@@ -277,8 +277,10 @@ function meshBatch(
 
 /** Bounds `geometry` by the item rect of `commands`, which a canvas group's region reads (`worldBox`). */
 function boundItem(geometry: THREE.BufferGeometry, commands: readonly CanvasShaderCommand[]): void {
-  const box = (geometry.boundingBox ??= new THREE.Box3()).makeEmpty();
+  // A fresh box, not the one in place: an emulated points geometry may share its source's box.
+  const box = new THREE.Box3();
   for (const command of commands) growItemBox(box, command);
+  geometry.boundingBox = box;
 }
 
 /** The uniform each variant's vertex stage reads, whose object update binds the canvas's block. */

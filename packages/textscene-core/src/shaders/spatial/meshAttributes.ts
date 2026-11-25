@@ -229,8 +229,8 @@ export function emulatedPointGeometry(
     if (!surface.boundingSphere) surface.computeBoundingSphere();
     if (!surface.boundingBox) surface.computeBoundingBox();
   }
-  geometry.boundingSphere = surface.boundingSphere;
-  geometry.boundingBox = surface.boundingBox;
+  geometry.boundingSphere = surface.boundingSphere?.clone() ?? null;
+  geometry.boundingBox = surface.boundingBox?.clone() ?? null;
   return geometry;
 }
 

@@ -221,7 +221,7 @@ function constantsOf(object: THREE.Object3D): AttributesConstants {
 /** Written only by `writeEachDraw`: the draws whose hook writes each object's constants. */
 const hookedDraws = new WeakSet<CanvasDraw>();
 
-/** An object that draws `geometry` as `primitive` with `draw`, which writes `constants` before it draws. */
+/** An object that draws `geometry` as `primitive` with `draw`. The caller disposes `object.geometry` too. */
 export function attributesObject(
   draw: CanvasDraw,
   geometry: THREE.BufferGeometry,
