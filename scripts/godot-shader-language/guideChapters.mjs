@@ -665,6 +665,15 @@ const BIT_FUNCTIONS_CHAPTER = {
   ],
 };
 
+const CANVAS_CHAPTER = {
+  file: 'canvas.md',
+  title: 'Canvas items',
+  contents: "Godot's default canvas shader on a rect",
+  intro:
+    "A shader of `shader_type canvas_item` draws a 2D item. Godot links it into its canvas template, `canvas.glsl`, in the variant of the item's draw: a rect, a nine-patch, a primitive or a mesh with attributes. `transpileCanvasItem(text)` links the shader once, and `draw(variant)` gives the material of each variant, with its own uniforms and textures. Godot's default canvas shader, `DEFAULT_CANVAS_SHADER`, is the text with empty slots that draws an item with no material.\n\nA rect draws as Godot's rect batch does. `textureRectRegion(rect, source, modulate, { transpose, clipUv })` is the rect command of `draw_texture_rect_region`: a negative size flips that axis. `rectInstanceData(command, item, texelSize)` writes Godot's 128-byte `InstanceData` record of the rect from the item's transform and final modulate, and `rectBatchGeometry(records)` gives the instanced quad that reads each record as the attributes `attrib_A` to `attrib_H`. `writeCanvasBindings(draw, frame)` writes the template's `CanvasData` block from the render target's size, the canvas transform, the CanvasModulate colour, the time and the pixel snap, and `CANVAS_BINDINGS` names the line of Godot's C++ behind each one. `CanvasTextureBinding` binds the item's texture with the item's filter and repeat, or Godot's white default texture, and writes the texture's texel size. The draw is one pass with Godot's mix blend, no cull and no depth.\n\nThe draws use an sRGB 2D render target, as a viewport without HDR 2D does: the texture's texels and the modulate colours reach the frame as they are stored. Only a rect draws now. A user's `canvas_item` shader, 2D lights, nine-patches, primitives and meshes do not draw yet, and their rows stay open with their issues.",
+  sections: [],
+};
+
 const SKY_CHAPTER = {
   file: 'sky.md',
   title: 'Sky shaders',
@@ -1180,4 +1189,5 @@ export const GUIDE_CHAPTERS = [
   HEAD_CHAPTER,
   SKY_CHAPTER,
   SPATIAL_CHAPTER,
+  CANVAS_CHAPTER,
 ];

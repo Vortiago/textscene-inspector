@@ -43,6 +43,7 @@ three reports a refused program when it first uses it, in a draw or in `compile`
 - [The shader head and the processor functions](head.md): The shader type, Processor functions, Render modes, Stencil modes, Global constants.
 - [Sky shaders](sky.md): `COLOR`, `TIME`, `EYEDIR`, `SKY_COORDS`, `SCREEN_UV` and `FRAGCOORD`, `POSITION`, `PI`, `TAU` and `E`, `FOG`, `LIGHT0_*` to `LIGHT3_*`, The half and quarter resolution passes, `ALPHA`, `RADIANCE`, `AT_CUBEMAP_PASS`, Render modes.
 - [Spatial shaders](spatial.md): Render mode `unshaded`, Cull modes, Render mode `wireframe`, Depth modes, Blend modes, Alpha to coverage modes, The space of `VERTEX` in `vertex()`, `ALBEDO`, `ROUGHNESS` and `METALLIC`, `NORMAL`, `TANGENT`, `BINORMAL`, `UV`, `UV2` and `COLOR`, `NORMAL`, `TANGENT`, `BINORMAL`, `UV` and `UV2` in `vertex()`, The vertex and its ids in `vertex()`, Custom arrays, bones and `Z_CLIP_SCALE` in `vertex()`, Matrices, Positions, layers and the viewport, Views, `ALPHA` and `PREMUL_ALPHA_FACTOR`, The alpha cut, The depth prepass and `depth_prepass_alpha`, Stencil modes of `spatial`, `DEPTH`, `FOG` and `fog_disabled`, `POINT_SIZE` and `POINT_COORD`, `RADIANCE` and `IRRADIANCE`, Outputs only the light reads, in `fragment()`, The fragment and the view in `fragment()`, Constants and the global built-ins, Varyings.
+- [Canvas items](canvas.md): Godot's default canvas shader on a rect.
 - [How the tests check the transpiler against Godot](testing.md): every operator rule, random programs and a corpus of real shaders.
 
 ## Coverage by family

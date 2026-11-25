@@ -3,6 +3,7 @@ import {
   LinearFilter,
   LinearMipmapLinearFilter,
   LinearMipmapNearestFilter,
+  MirroredRepeatWrapping,
   NearestFilter,
   NearestMipmapLinearFilter,
   NearestMipmapNearestFilter,
@@ -41,6 +42,12 @@ const MIPMAP_FILTERS = {
   [LinearFilter]: { nearest: LinearMipmapNearestFilter, blended: LinearMipmapLinearFilter },
 } as const;
 
+/** A canvas item's `TEXTURE_REPEAT_MIRROR` has no shader hint, so `repeat_mirror` names it here. */
+const WRAPS: Readonly<Record<string, Wrapping>> = {
+  repeat_enable: RepeatWrapping,
+  repeat_mirror: MirroredRepeatWrapping,
+};
+
 /** `samplers_rd_allocate` (`material_storage.cpp:2454`) for a texture of `levels` mip levels. */
 export function samplerState(
   settings: SamplerSettings,
@@ -56,7 +63,7 @@ export function samplerState(
   return {
     magFilter,
     minFilter,
-    wrap: repeat === 'repeat_enable' ? RepeatWrapping : ClampToEdgeWrapping,
+    wrap: WRAPS[repeat] ?? ClampToEdgeWrapping,
     anisotropy: isAnisotropic ? 1 << sampling.anisotropicFilteringLevel : 1,
   };
 }

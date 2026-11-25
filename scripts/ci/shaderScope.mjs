@@ -5,9 +5,14 @@ import { pathToFileURL } from 'node:url';
 /** The branch the port lands on. A pull request into any other branch runs every job. */
 export const SHADER_BRANCH = 'feature/shader-translator';
 
+/** The shader folders the previewer imports, so a change to one runs the previewer's jobs. */
+const PREVIEWER_SHADER_FOLDERS = ['fault', 'pipeline', 'time'];
+
 /** No file outside them imports one (`shaderScope.test.mjs`), so the previewer's jobs cannot see a change. */
-const TRANSPILER_PATHS =
-  /^(?:packages\/textscene-core\/src\/shaders\/(?:canvas|language|material|preprocessor|sky|spatial|template|uniforms)\/|apps\/textscene-three-godot-shaders\/|scripts\/godot-shader-language\/|scripts\/godot-templates\/|scripts\/godot-probes\/)/;
+const TRANSPILER_PATHS = new RegExp(
+  `^(?:packages/textscene-core/src/shaders/(?!(?:${PREVIEWER_SHADER_FOLDERS.join('|')})/)[^/]+/` +
+    '|apps/textscene-three-godot-shaders/|scripts/godot-shader-language/|scripts/godot-templates/|scripts/godot-probes/)'
+);
 
 /**
  * @param {string[]} changedPaths - repo-relative paths, as `git diff --name-only` prints them.
