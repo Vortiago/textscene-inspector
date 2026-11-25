@@ -1,12 +1,7 @@
+import type * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { TRANSFORM2D_IDENTITY } from '../../godot/math/transform2d.js';
-import {
-  CANVAS_RECT,
-  INSTANCE_BYTES,
-  rectBatchGeometry,
-  rectInstanceData,
-  textureRectRegion,
-} from './canvasRect.js';
+import { CANVAS_RECT, rectBatchGeometry, rectInstanceData, textureRectRegion } from './canvasRect.js';
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 const ITEM = {
@@ -121,10 +116,21 @@ describe('rectBatchGeometry', () => {
     ]);
   });
 
-  it('strides one InstanceData record per instance', () => {
+  it('reads the 24 floats and the 8 unsigned lanes of each InstanceData record', () => {
     const geometry = rectBatchGeometry(records);
-    const { data } = geometry.getAttribute('attrib_H') as unknown as { data: { stride: number } };
+    const strideOf = (name: string) =>
+      (geometry.getAttribute(name) as unknown as { data: { stride: number } }).data.stride;
 
-    expect(data.stride * 4).toBe(INSTANCE_BYTES);
+    expect([strideOf('attrib_A'), strideOf('attrib_H')]).toEqual([24, 8]);
+  });
+
+  it("reads the record's flags in attrib_G.z of its own instance", () => {
+    const transposed = textureRectRegion({ x: 0, y: 0, w: 4, h: 2 }, { x: 0, y: 0, w: 4, h: 2 }, WHITE, {
+      transpose: true,
+    });
+    const geometry = rectBatchGeometry([records[0]!, rectInstanceData(transposed, ITEM, TEXEL)]);
+    const flags = geometry.getAttribute('attrib_G') as unknown as THREE.InterleavedBufferAttribute;
+
+    expect([flags.getZ(0), flags.getZ(1)]).toEqual([0, 1 << 5]);
   });
 });

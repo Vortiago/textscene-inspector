@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { Rgba } from '../../godot/math/math.js';
 import type { Transform2DColumns } from '../../godot/math/transform2d.js';
+import { normalizedVector2 } from '../../godot/math/vector.js';
 import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
 import type { CanvasDraw } from './transpileCanvas.js';
 
@@ -79,13 +80,7 @@ function screenTransform(width: number, height: number): THREE.Matrix4 {
 
 /** The canvas transform's axes made unit length, with no origin. */
 function normalTransform({ a, b, c, d }: Transform2DColumns): Transform2DColumns {
-  const [xa, xb] = normalized(a, b);
-  const [yc, yd] = normalized(c, d);
-  return { a: xa, b: xb, c: yc, d: yd, tx: 0, ty: 0 };
-}
-
-/** `Vector2::normalize` (`vector2.cpp:52`): a zero vector stays zero. */
-function normalized(x: number, y: number): [number, number] {
-  const length = Math.hypot(x, y);
-  return length === 0 ? [0, 0] : [x / length, y / length];
+  const x = normalizedVector2({ x: a, y: b });
+  const y = normalizedVector2({ x: c, y: d });
+  return { a: x.x, b: x.y, c: y.x, d: y.y, tx: 0, ty: 0 };
 }

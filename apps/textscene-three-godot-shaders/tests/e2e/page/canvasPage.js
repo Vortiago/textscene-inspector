@@ -70,7 +70,7 @@ function itemTransform({ position: [tx, ty], rotation, scale: [sx, sy] }) {
   };
 }
 
-function gridTexture({ width, height, texels }) {
+function dataTexture({ width, height, texels }) {
   const texture = new THREE.DataTexture(Uint8Array.from(texels.flat()), width, height);
   texture.needsUpdate = true;
   return texture;
@@ -103,7 +103,7 @@ function drawCanvas(spec) {
     time: 0,
     snapVerticesToPixel: spec.snapVertices,
   });
-  const texture = gridTexture(spec.texture);
+  const texture = dataTexture(spec.texture);
   const binding = new CanvasTextureBinding(draw);
   binding.bind(texture, { filter: spec.filter, repeat: spec.repeat });
   const faults = [];

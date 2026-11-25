@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import { defaultTexture } from '../uniforms/defaultTextures.js';
-import { GODOT_SAMPLING, type ProjectSampling, samplerState } from '../uniforms/samplerState.js';
+import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
+import { applySamplerState, GODOT_SAMPLING, type ProjectSampling } from '../uniforms/samplerState.js';
 import type { SamplerSettings } from '../uniforms/samplerTextures.js';
 import { TextureCopies } from '../uniforms/textureCopies.js';
-import { levelsOf } from '../uniforms/textureLevels.js';
 import type { CanvasDraw } from './transpileCanvas.js';
 
 /** `CanvasItem.texture_filter` past `DEFAULT`, which the item resolves to the project's filter. */
@@ -37,8 +37,28 @@ const settingsOf = ({ filter, repeat }: CanvasTextureState): SamplerSettings => 
   repeat: REPEAT_WORDS[repeat],
 });
 
-/** The default canvas texture's specular colour, white, packed as `unpackUnorm4x8` reads it. */
-const WHITE_SPECULAR_SHININESS = 0xffffffff;
+/** What the push constants of a rect batch read from its texture (`renderer_canvas_render_rd.h:554-565`). */
+interface BatchTexture {
+  readonly width: number;
+  readonly height: number;
+}
+
+/** The members of `Params` a rect batch writes from its texture and the default canvas texture's maps. */
+const TEXTURE_BINDINGS: readonly Binding<BatchTexture>[] = [
+  {
+    uniform: 'params.color_texture_pixel_size',
+    godot: 'renderer_canvas_render_rd.cpp:3351',
+    value: ({ width, height }) => new THREE.Vector2(1 / width, 1 / height),
+  },
+  // The default canvas texture's specular colour is white, packed as `unpackUnorm4x8` reads it.
+  {
+    uniform: 'params.specular_shininess',
+    godot: 'renderer_canvas_render_rd.cpp:3345-3349',
+    value: () => 0xffffffff,
+  },
+  // It has no normal map and an opaque specular colour, so it sets no default map flag.
+  { uniform: 'params.batch_flags', godot: 'renderer_canvas_render_rd.cpp:3337-3343', value: () => 0 },
+];
 
 /** A rect batch's texture with its item's sampler (`renderer_canvas_render_rd.cpp:3006-3019, 3320-3351`). */
 export class CanvasTextureBinding {
@@ -50,19 +70,18 @@ export class CanvasTextureBinding {
   constructor(
     private readonly draw: CanvasDraw,
     private readonly sampling: ProjectSampling = GODOT_SAMPLING
-  ) {}
+  ) {
+    this.setTexture('normal_texture', this.normal);
+    this.setTexture('specular_texture', this.white);
+  }
 
   /** Binds `texture`, or Godot's default canvas texture, white, for a rect with none. */
   bind(texture: THREE.Texture | undefined, state: CanvasTextureState): void {
-    const bound = texture ? this.copiesOf(state).copyOf(texture) : this.white;
+    const key = stateKey(state);
+    const bound = texture ? this.copiesOf(key, state).copyOf(texture) : this.white;
     this.setTexture('color_texture', bound);
-    this.setTexture('normal_texture', this.normal);
-    this.setTexture('specular_texture', this.white);
-    const { width, height } = bound.image as { width: number; height: number };
-    this.setParam('color_texture_pixel_size', new THREE.Vector2(1 / width, 1 / height));
-    this.setParam('specular_shininess', WHITE_SPECULAR_SHININESS);
-    this.setParam('batch_flags', 0);
-    for (const [key, copies] of this.copies) copies.release(key === stateKey(state) ? [bound] : []);
+    writeBindings(TEXTURE_BINDINGS, this.draw.uniforms, bound.image as BatchTexture);
+    for (const [held, copies] of this.copies) copies.release(held === key ? [bound] : []);
   }
 
   /** Frees the copies and the default textures it binds. */
@@ -72,36 +91,22 @@ export class CanvasTextureBinding {
     this.normal.dispose();
   }
 
-  private copiesOf(state: CanvasTextureState): TextureCopies {
-    const key = stateKey(state);
-    let copies = this.copies.get(key);
-    if (!copies)
-      this.copies.set(
-        key,
-        (copies = new TextureCopies((copy, source) => this.configure(copy, source, state)))
-      );
+  private copiesOf(key: string, state: CanvasTextureState): TextureCopies {
+    const held = this.copies.get(key);
+    if (held) return held;
+    const settings = settingsOf(state);
+    // An sRGB render target reads the texels as they are stored, with no decode.
+    const copies = new TextureCopies((copy, source) => {
+      applySamplerState(copy, source, settings, this.sampling);
+      copy.colorSpace = THREE.NoColorSpace;
+    });
+    this.copies.set(key, copies);
     return copies;
-  }
-
-  /** An sRGB render target reads the texels as they are stored, with no decode. */
-  private configure(copy: THREE.Texture, source: THREE.Texture, state: CanvasTextureState): void {
-    const sampler = samplerState(settingsOf(state), levelsOf(source), this.sampling);
-    copy.flipY = false;
-    copy.magFilter = sampler.magFilter;
-    copy.minFilter = sampler.minFilter;
-    copy.wrapS = copy.wrapT = sampler.wrap;
-    copy.anisotropy = sampler.anisotropy;
-    copy.colorSpace = THREE.NoColorSpace;
   }
 
   private setTexture(name: string, texture: THREE.Texture): void {
     const node = this.draw.textures.get(name);
     if (node) node.value = texture;
-  }
-
-  private setParam(member: string, value: unknown): void {
-    const uniform = this.draw.uniforms.get(`params.${member}`);
-    if (uniform && 'value' in uniform) uniform.value = value;
   }
 }
 

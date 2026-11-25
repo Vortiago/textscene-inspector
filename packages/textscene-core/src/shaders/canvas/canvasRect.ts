@@ -1,12 +1,11 @@
 import * as THREE from 'three';
-import type { Rgba } from '../../godot/math/math.js';
+import { multiplyColor, type Rgba } from '../../godot/math/math.js';
 import type { Rect2 } from '../../godot/math/rect2.js';
 import type { Transform2DColumns } from '../../godot/math/transform2d.js';
 
 /** `RendererCanvasRender::CANVAS_RECT_*` (`renderer_canvas_render.h:41-49`). */
 export const CANVAS_RECT = {
   REGION: 1,
-  TILE: 2,
   FLIP_H: 4,
   FLIP_V: 8,
   TRANSPOSE: 16,
@@ -54,7 +53,7 @@ export interface CanvasItemDraw {
 }
 
 /** `sizeof(InstanceData)` (`renderer_canvas_render_rd.h:379`). */
-export const INSTANCE_BYTES = 128;
+const INSTANCE_BYTES = 128;
 
 /** Float offsets of `InstanceData`'s rect members (`renderer_canvas_render_rd.h:355-377`). */
 const WORLD = 0;
@@ -79,16 +78,8 @@ export function rectInstanceData(
   const words = new Uint32Array(record);
   const { transform: t, finalModulate } = item;
   floats.set([t.a, t.b, t.c, t.d, t.tx, t.ty], WORLD);
-  const { modulate } = command;
-  floats.set(
-    [
-      modulate.r * finalModulate.r,
-      modulate.g * finalModulate.g,
-      modulate.b * finalModulate.b,
-      modulate.a * finalModulate.a,
-    ],
-    MODULATION
-  );
+  const { r, g, b, a } = multiplyColor(command.modulate, finalModulate);
+  floats.set([r, g, b, a], MODULATION);
   floats.set(rectValues(command.rect), DST_RECT);
   floats.set(sourceRect(command, texelSize), SRC_RECT);
   words[FLAGS] = texelSize ? instanceFlags(command.flags) : 0;
@@ -124,39 +115,44 @@ function instanceFlags(flags: number): number {
 const QUAD_INDICES = [0, 1, 2, 0, 2, 3];
 
 /** The vertex format of a rect batch (`renderer_canvas_render_rd.cpp:1960-2011`): eight vec4 per instance. */
-const ATTRIBUTES = [
-  'attrib_A',
-  'attrib_B',
-  'attrib_C',
-  'attrib_D',
-  'attrib_E',
-  'attrib_F',
-  'attrib_G',
-  'attrib_H',
-];
+const FLOAT_ATTRIBUTES = ['attrib_A', 'attrib_B', 'attrib_C', 'attrib_D', 'attrib_E', 'attrib_F'];
+const UINT_ATTRIBUTES = ['attrib_G', 'attrib_H'];
 
-/** The first attribute read as unsigned integers, `R32G32B32A32_UINT`. */
-const FIRST_UINT_ATTRIBUTE = 6;
+/** The record's floats come first, then its `R32G32B32A32_UINT` lanes. */
+const FLOAT_LANES = FLOAT_ATTRIBUTES.length * 4;
+const RECORD_LANES = INSTANCE_BYTES / 4;
 
 /**
  * The geometry of a batch of rects: one instance for each record of `rectInstanceData`.
  * @canonical The instanced geometry of a canvas rect batch
  */
 export function rectBatchGeometry(instances: readonly ArrayBuffer[]): THREE.InstancedBufferGeometry {
-  const records = new ArrayBuffer(INSTANCE_BYTES * instances.length);
-  instances.forEach((record, index) =>
-    new Uint8Array(records, index * INSTANCE_BYTES).set(new Uint8Array(record))
-  );
-  const lanes = INSTANCE_BYTES / 4;
-  const floats = new THREE.InstancedInterleavedBuffer(new Float32Array(records), lanes);
-  const words = new THREE.InstancedInterleavedBuffer(new Uint32Array(records), lanes);
+  // Two buffers, as three uploads one GL buffer for each interleaved buffer: each byte goes up once.
+  const floats = new Float32Array(FLOAT_LANES * instances.length);
+  const words = new Uint32Array((RECORD_LANES - FLOAT_LANES) * instances.length);
+  instances.forEach((record, index) => {
+    floats.set(new Float32Array(record, 0, FLOAT_LANES), index * FLOAT_LANES);
+    words.set(new Uint32Array(record, FLOAT_LANES * 4), index * (RECORD_LANES - FLOAT_LANES));
+  });
   const geometry = new THREE.InstancedBufferGeometry();
   geometry.setIndex(QUAD_INDICES);
-  ATTRIBUTES.forEach((name, index) => {
-    const isUint = index >= FIRST_UINT_ATTRIBUTE;
-    const attribute = new THREE.InterleavedBufferAttribute(isUint ? words : floats, 4, index * 4);
-    geometry.setAttribute(name, attribute);
-  });
+  setAttributes(geometry, FLOAT_ATTRIBUTES, new THREE.InstancedInterleavedBuffer(floats, FLOAT_LANES));
+  setAttributes(
+    geometry,
+    UINT_ATTRIBUTES,
+    new THREE.InstancedInterleavedBuffer(words, RECORD_LANES - FLOAT_LANES)
+  );
   geometry.instanceCount = instances.length;
   return geometry;
+}
+
+/** One vec4 attribute of `names` for each four lanes of `buffer`. */
+function setAttributes(
+  geometry: THREE.BufferGeometry,
+  names: readonly string[],
+  buffer: THREE.InterleavedBuffer
+) {
+  names.forEach((name, index) =>
+    geometry.setAttribute(name, new THREE.InterleavedBufferAttribute(buffer, 4, index * 4))
+  );
 }

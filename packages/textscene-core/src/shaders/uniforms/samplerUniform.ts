@@ -1,4 +1,4 @@
-import { Data3DTexture, NoColorSpace, SRGBColorSpace, type Texture } from 'three';
+import { NoColorSpace, SRGBColorSpace, type Texture } from 'three';
 import type { Node, TextureNode } from 'three/webgpu';
 import type { ArrayValue, Value } from '../language/emitValue.js';
 import { SamplerChoice } from '../language/textureCalls.js';
@@ -7,8 +7,7 @@ import { textureKindOf, type TextureKind } from '../language/types.js';
 import type { ParameterValue, TranspiledUniform } from './transpiledUniform.js';
 import { defaultTexture } from './defaultTextures.js';
 import { samplerNodeOf } from './samplerNodes.js';
-import { samplerState, type ProjectSampling } from './samplerState.js';
-import { levelsOf } from './textureLevels.js';
+import { applySamplerState, type ProjectSampling } from './samplerState.js';
 import { TextureCopies } from './textureCopies.js';
 import {
   samplerSettings,
@@ -58,13 +57,7 @@ export class SamplerBinding implements TranspiledUniform {
     const settings = samplerSettings(declaration, context.defaults);
     const isSrgb = context.useLinearColor && declaration.usesColor;
     this.copies = new TextureCopies((copy, source) => {
-      const state = samplerState(settings, levelsOf(source), context.sampling);
-      copy.flipY = false;
-      copy.magFilter = state.magFilter;
-      copy.minFilter = state.minFilter;
-      copy.wrapS = copy.wrapT = state.wrap;
-      if (copy instanceof Data3DTexture) copy.wrapR = state.wrap;
-      copy.anisotropy = state.anisotropy;
+      applySamplerState(copy, source, settings, context.sampling);
       copy.colorSpace = copyColorSpace(copy, source, isSrgb);
     });
     const placeholder = this.textureOf('white');
