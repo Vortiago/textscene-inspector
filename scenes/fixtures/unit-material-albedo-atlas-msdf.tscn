@@ -1,0 +1,41 @@
+[gd_scene format=3]
+
+; The one variable: the albedo size of an AtlasTexture with a margin, on the node lit surface. Godot
+; gives albedo_texture_size the region plus the margin, 48 by 40, while the sampler reads the whole
+; ramp sheet, and the MSDF edge's width follows that size (material.cpp:1639,2545). No other golden
+; draws an MSDF albedo or reads albedo_texture_size.
+
+[ext_resource type="Texture2D" path="res://textures/ramp-sheet.png" id="1_sheet"]
+
+[sub_resource type="Environment" id="Env"]
+background_mode = 1
+background_color = Color(0.15, 0.15, 0.2, 1)
+
+[sub_resource type="AtlasTexture" id="A"]
+atlas = ExtResource("1_sheet")
+region = Rect2(32, 0, 32, 32)
+margin = Rect2(4, 4, 16, 8)
+
+[sub_resource type="QuadMesh" id="Quad"]
+size = Vector2(2, 2)
+
+[sub_resource type="StandardMaterial3D" id="Mat"]
+shading_mode = 0
+albedo_texture = SubResource("A")
+texture_filter = 0
+albedo_texture_msdf = true
+transparency = 1
+
+[node name="Scratch" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4)
+projection = 1
+size = 2.2
+
+[node name="Quad" type="MeshInstance3D" parent="."]
+mesh = SubResource("Quad")
+surface_material_override/0 = SubResource("Mat")

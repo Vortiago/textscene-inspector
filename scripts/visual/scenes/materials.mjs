@@ -48,6 +48,12 @@ export const MATERIAL_SCENES = [
     file: 'unit-standard-material-lit.tscn',
     litSurface: 'nodes',
   },
+  // An AtlasTexture albedo's size under MSDF, on the generated shader. Godot 4.6.3: 156 px, max 46.
+  {
+    name: 'material-albedo-atlas-msdf',
+    file: 'unit-material-albedo-atlas-msdf.tscn',
+    litSurface: 'nodes',
+  },
   // Spatial shaders with render_mode wireframe, drawn as the edges left after cull_back and cull_disabled.
   { name: 'material-spatial-shader-wireframe', file: 'unit-spatial-shader-wireframe.tscn' },
   // Spatial shaders with cull_back, cull_front and cull_disabled, on quads that face the camera and away.

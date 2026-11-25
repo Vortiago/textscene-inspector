@@ -185,7 +185,7 @@ The lenient parser never rejects. Each field falls back to Godot's default throu
 
 ## Generated shader on the node lit surface
 
-With `?litSurface=nodes`, the material draws the shader text Godot generates for it (`material.cpp:685`) through the lit scene template. An ORMMaterial3D and a surface with no material draw the same way. The roughness limiter then reads the project's `screen_space_roughness_limiter` settings. `unit-standard-material-lit.tscn` draws an albedo map, a normal map, roughness and metallic under a shadowed sun this way.
+With `?litSurface=nodes`, the material draws the shader text Godot generates for it (`material.cpp:685`) through the lit scene template. An ORMMaterial3D and a surface with no material draw the same way. The roughness limiter then reads the project's `screen_space_roughness_limiter` settings. `unit-standard-material-lit.tscn` draws an albedo map, a normal map, roughness and metallic under a shadowed sun this way. `unit-material-albedo-atlas-msdf.tscn` draws an MSDF albedo AtlasTexture with a margin, whose own size the shader reads (`material.cpp:2545`).
 
 ## Known limitations
 
@@ -197,4 +197,7 @@ With `?litSurface=nodes`, the material draws the shader text Godot generates for
 - **Shader missing** `proximity_fade_*` and `distance_fade_*` decide the pass but are not rendered, so the surface stays at full opacity.
 - **Not supported** On the node lit surface, skinned meshes, MultiMeshes, particle passes, next passes, glTF surfaces, points and lines draw the classic material.
 - **Not supported** On the node lit surface, an OmniLight3D or a SpotLight3D lights no material.
-- **Not supported** On the node lit surface, a material draws no lightmap and no GeometryInstance3D `transparency` fade.
+- **Not supported** On the node lit surface, a material draws no lightmap.
+- **Not supported** On the node lit surface, an ORMMaterial3D draws no GeometryInstance3D `transparency` or visibility-range fade.
+- **Not supported** On the classic path, `albedo_texture_msdf` samples the albedo as a plain texture.
+- **Not supported** An albedo AtlasTexture whose `atlas` is another AtlasTexture draws the missing-texture placeholder.
