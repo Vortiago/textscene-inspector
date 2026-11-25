@@ -5,6 +5,7 @@ import { multiplyTransform2D, type Transform2DColumns } from '../../godot/math/t
 import type { Vector2 } from '../../godot/math/vector.js';
 import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
 import type { CanvasPrimitive } from './canvasPrimitive.js';
+import type { Drawable } from '../pipeline/drawable.js';
 import { type CanvasItemDraw, modulated, NO_INSTANCE_UNIFORMS, WHITE, worldOf } from './canvasInstance.js';
 import { emulatedPointGeometry } from '../template/emulatedPoints.js';
 import { CUSTOM_ARRAY_LANES } from '../../godot/rendering/meshArrayFormat.js';
@@ -224,7 +225,7 @@ export function attributesObject(
   geometry: THREE.BufferGeometry,
   primitive: CanvasPrimitive,
   constants: AttributesConstants
-): PrimitiveObject {
+): Drawable {
   writeEachDraw(draw);
   if (draw.emulatesPoints && primitive !== 'points')
     throw new Error(`expected points for a draw that emulates points, got ${primitive}`);
@@ -251,9 +252,6 @@ function writeEachDraw(draw: CanvasDraw): void {
   });
 }
 
-/** The three object of one canvas primitive type. */
-export type PrimitiveObject = THREE.Mesh | THREE.Points | THREE.Line;
-
 /**
  * `RD::RenderPrimitive` (`renderer_canvas_render_rd.cpp:355`), a strip's geometry already cut into triangles.
  * @canonical The three object that draws a canvas primitive type
@@ -262,7 +260,7 @@ export function primitiveObject(
   primitive: CanvasPrimitive,
   geometry: THREE.BufferGeometry,
   material: THREE.Material
-): PrimitiveObject {
+): Drawable {
   const object = objectOf(primitive, geometry, material);
   object.frustumCulled = false;
   return object;
@@ -272,7 +270,7 @@ function objectOf(
   primitive: CanvasPrimitive,
   geometry: THREE.BufferGeometry,
   material: THREE.Material
-): PrimitiveObject {
+): Drawable {
   switch (primitive) {
     case 'points':
       return new THREE.Points(geometry, material);

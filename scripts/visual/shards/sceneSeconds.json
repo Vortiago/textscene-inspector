@@ -92,6 +92,7 @@
   "canvas-light-render-budget": 9.6,
   "canvas-root-visibility": 3.1,
   "canvas-shader-builtins": 4.9,
+  "canvas-shader-clip": 4.2,
   "capsule-mesh": 27.8,
   "capsule-mesh-texture-uv": 17.3,
   "characterbody3d": 26.1,

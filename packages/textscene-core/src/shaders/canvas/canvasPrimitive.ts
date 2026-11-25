@@ -10,7 +10,8 @@ import {
   WHITE,
 } from './canvasInstance.js';
 import { QUAD_VERTICES } from '../../godot/rendering/emulatedPoints.js';
-import { primitiveObject, type PrimitiveObject } from './canvasAttributes.js';
+import { primitiveObject } from './canvasAttributes.js';
+import type { Drawable } from '../pipeline/drawable.js';
 import type { CanvasDraw, CanvasVariant } from './transpileCanvas.js';
 
 /** `Item::CommandPrimitive`: each point with its UV and colour. */
@@ -114,7 +115,7 @@ export function primitiveBatchObject(
   draw: CanvasDraw,
   records: readonly ArrayBuffer[],
   pointCount: number
-): PrimitiveObject {
+): Drawable {
   if (draw.emulatesPoints && pointCount !== 1)
     throw new Error(`expected a batch of one-point primitives for a points draw, got ${pointCount} points`);
   const geometry = primitiveBatchGeometry(records, pointCount);

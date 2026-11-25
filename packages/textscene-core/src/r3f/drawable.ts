@@ -1,8 +1,7 @@
-/** The objects three draws with a geometry and a material: a mesh, a line or points. */
-
 import type * as THREE from 'three';
+import type { Drawable } from '../shaders/pipeline/drawable.js';
 
-export type Drawable = THREE.Mesh | THREE.Line | THREE.Points;
+export type { Drawable };
 
 /**
  * Whether `object` is a mesh, a line or points. Line segments and a line loop are lines.

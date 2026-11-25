@@ -172,14 +172,10 @@ interface DrawTarget {
   readonly rows: TargetRows;
 }
 
-/** A variant, and the device points that draw its points at the shader's size, or null for three's. */
-interface VariantPoints {
+/** A variant, its device points at the shader's size or null for three's, and the POINT_SIZE use. */
+interface PointSizeUse {
   readonly variant: CanvasVariant;
   readonly points: DevicePoints | null;
-}
-
-/** A variant's points, and whether the shader names `POINT_SIZE`, which defines `USE_POINT_SIZE` too. */
-interface PointSizeUse extends VariantPoints {
   readonly usesPointSize: boolean;
 }
 
@@ -205,7 +201,8 @@ function canvasDraw(
   material.stageWith(() =>
     Object.assign(
       material,
-      stages({ ...program, resources }, target, {
+      stages({ ...program, resources }, target.rows, {
+        variant: target.variant,
         points: emulatesPoints ? devicePoints() : null,
         usesPointSize,
       })
@@ -224,16 +221,17 @@ function canvasDraw(
 
 function stages(
   { linked, resources, parameterValues }: LinkedProgram,
-  { variant, rows }: DrawTarget,
-  { points, usesPointSize }: Omit<PointSizeUse, 'variant'>
+  rows: TargetRows,
+  pointSizeUse: PointSizeUse
 ) {
+  const { variant, points } = pointSizeUse;
   const defines = CANVAS_VARIANT_DEFINES[variant];
   const vertexStage = linked('vertex', defines);
   const vulkanClip = varyingProperty('vec4', 'godot_clip_position') as unknown as Vec4;
   const vertex = emitTemplateStage(
     vertexStage,
-    new Map([...parameterValues, ...vertexAttributes(vertexStage), ...drawIndices({ variant, points })]),
-    { name: 'gl_Position', type: 'vec4', beside: pointSizeWrites({ variant, points, usesPointSize }) },
+    new Map([...parameterValues, ...vertexAttributes(vertexStage), ...drawIndices(pointSizeUse)]),
+    { name: 'gl_Position', type: 'vec4', beside: pointSizeWrites(pointSizeUse) },
     resources
   );
   const fragment = emitTemplateStage(
@@ -261,7 +259,7 @@ function pointSizeWrites({ variant, points, usesPointSize }: PointSizeUse): Writ
 }
 
 /** `gl_VertexIndex` and `gl_InstanceIndex` as Godot counts them, for an emulated point too. */
-function drawIndices({ variant, points }: VariantPoints): [string, Node][] {
+function drawIndices({ variant, points }: PointSizeUse): [string, Node][] {
   const indices = (vertex: unknown, instance: unknown): [string, Node][] => [
     ['gl_VertexIndex', vertex as Node],
     ['gl_InstanceIndex', instance as Node],

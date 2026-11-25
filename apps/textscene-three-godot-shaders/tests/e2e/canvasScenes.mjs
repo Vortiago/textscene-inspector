@@ -593,6 +593,7 @@ const SHADER_SCENES = [
         fragment: 'COLOR = vec4(POINT_COORD, COLOR.b, 1.0);',
       }),
       rows: [...vertexRows('POINT_SIZE'), ...fragmentRows('POINT_COORD')],
+      // An even point's edge lies on pixel centres, and lavapipe takes the top row, llvmpipe the bottom.
       knownPixels: 20,
     }
   ),
