@@ -59,7 +59,8 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
   useDisposeOnRelease(geometry);
   const [mesh, setMesh] = useState<THREE.Mesh | null>(null);
   const nodePath = useNodePath();
-  const binding = useLiveScenePass(bindPolygonsToSkeletons, namesSkeletonToBind(props) ? nodePath : null);
+  const isSkinned = namesSkeletonToBind(props);
+  const binding = useLiveScenePass(bindPolygonsToSkeletons, isSkinned ? nodePath : null);
   useSkeletonSkin(mesh, geometry, binding);
 
   const surfaces = useMemo((): readonly CanvasSurface[] | null => {
@@ -71,8 +72,8 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
     const arrayColor = geometry.hasAttribute('color') ? undefined : quantizeVertexColor(props.color);
     // A polygon's geometry draws triangles, so its object is a mesh.
     const meshRef = (drawn: THREE.Object3D | null) => setMesh(drawn instanceof THREE.Mesh ? drawn : null);
-    return [{ geometry, arrayColor, meshRef, isSkinned: namesSkeletonToBind(props) }];
-  }, [geometry, props]);
+    return [{ geometry, arrayColor, meshRef, isSkinned }];
+  }, [geometry, props.color, isSkinned]);
 
   return (
     <CanvasMeshBody node={node} props={props} texture={texture} withoutTexture="white" surfaces={surfaces}>

@@ -51,27 +51,25 @@ export function canvasShaderOf(shader: ShaderText, options: CanvasItemOptions): 
   return { refusal: `[material] ${unDrawnMessage(compile, 'canvas_item', 'canvas shader')}` };
 }
 
-/** Written only by `variantDraw`: the variants each item's draws use, which `disposeCanvasShader` frees. */
-const drawnVariantsOf = perObject((_item: TranspiledCanvasItem) => new Set<CanvasVariant>());
-
-/** Written only by `warnOnTranslatorFault`: the warning each item's variants give. */
-const faultWarningOf = perObject((_item: TranspiledCanvasItem): { warning: BoundFault | null } => ({
-  warning: null,
-}));
-
 type BoundFault = NonNullable<CanvasDraw['material']['onTranslatorFault']>;
+
+/** Each item's drawn variants, written by `variantDraw`, and its warning, by `warnOnTranslatorFault`. */
+const drawnOf = perObject((_item: TranspiledCanvasItem) => ({
+  variants: new Set<CanvasVariant>(),
+  warning: null as BoundFault | null,
+}));
 
 function variantDraw(item: TranspiledCanvasItem, variant: CanvasVariant): CanvasDraw {
   const draw = item.draw(variant);
-  drawnVariantsOf(item).add(variant);
-  const { warning } = faultWarningOf(item);
-  if (warning) draw.material.onTranslatorFault = warning;
+  const drawn = drawnOf(item);
+  drawn.variants.add(variant);
+  if (drawn.warning) draw.material.onTranslatorFault = drawn.warning;
   return draw;
 }
 
 /** Frees what `item`'s draws hold. The variants stay listed: StrictMode reruns the effect with this item. */
 export function disposeCanvasShader(item: TranspiledCanvasItem): void {
-  for (const variant of drawnVariantsOf(item)) item.draw(variant).material.dispose();
+  for (const variant of drawnOf(item).variants) item.draw(variant).material.dispose();
   for (const parameter of item.parameters.values()) parameter.dispose?.();
 }
 
@@ -83,8 +81,9 @@ export function warnOnTranslatorFault(shader: ShaderText, item: TranspiledCanvas
       'translator fault',
       `[material] The previewer failed to draw this canvas_item shader: ${fault.message}`
     );
-  faultWarningOf(item).warning = warning;
-  for (const variant of drawnVariantsOf(item)) item.draw(variant).material.onTranslatorFault = warning;
+  const drawn = drawnOf(item);
+  drawn.warning = warning;
+  for (const variant of drawn.variants) item.draw(variant).material.onTranslatorFault = warning;
 }
 
 /** What an item's draws bind for as long as they live: its CanvasTexture's maps and its sampler state. */
@@ -107,6 +106,8 @@ export interface CanvasShaderDraw {
   readonly object: THREE.Object3D;
   /** Binds `texture`, or Godot's white default for null, and draws `commands` of the draw's layout. */
   readonly setSource: (texture: THREE.Texture | null, commands: readonly CanvasShaderCommand[]) => void;
+  /** Orders the batches from `renderOrder` `firstOrder` on, inside the canvas item's group. */
+  readonly setFirstOrder: (firstOrder: number) => void;
   /** Writes the records and the colours the next frames read, with no new geometry. */
   readonly setColors: (colors: ItemColors) => void;
   readonly writeRecords: () => void;
@@ -129,13 +130,12 @@ interface BoundVariant {
   texelSize: TexelSize | undefined;
 }
 
-/** An item's draw through Godot's canvas template for `layout`'s layout, batches from `firstOrder` on. */
+/** An item's draw through Godot's canvas template, with the batches of `layout`. */
 export function canvasShaderDraw(
   gl: THREE.WebGLRenderer,
   item: TranspiledCanvasItem,
   bound: ItemSampling,
-  layout: readonly CanvasShaderCommand[],
-  firstOrder: number
+  layout: readonly CanvasShaderCommand[]
 ): CanvasShaderDraw {
   // An Object3D, not a Group: three takes the group order from the nearest Group, the canvas item's key.
   const object = new THREE.Object3D();
@@ -157,11 +157,7 @@ export function canvasShaderDraw(
       ? rectBatch(variantOf('quad'), run.commands.length)
       : meshBatch(variantOf, run.command)
   );
-  batches.forEach((batch, order) => {
-    // Godot draws an item's batches in command order: three compares this order inside the item's group.
-    batch.object.renderOrder = firstOrder + order;
-    object.add(batch.object);
-  });
+  for (const batch of batches) object.add(batch.object);
   const world = mutableTransform2D();
   return {
     object,
@@ -170,6 +166,9 @@ export function canvasShaderDraw(
         variant.texelSize = variant.binding.bind(texture ?? undefined, bound.textureState, bound.maps);
       commandRuns(commands).forEach((run, index) => batches[index]!.setRun(run));
     },
+    setFirstOrder: (firstOrder) =>
+      // Godot draws an item's batches in command order: three compares this order inside the item's group.
+      batches.forEach((batch, order) => (batch.object.renderOrder = firstOrder + order)),
     setColors: ({ finalModulate, canvasModulate }) => {
       canvas.canvasModulate = canvasModulate;
       const itemDraw = { transform: canvasTransformInto(world, object), finalModulate, usesLinearColors };
@@ -196,11 +195,13 @@ type CommandRun =
 /** Consecutive rects as one batch (`renderer_canvas_render_rd.cpp:2406`). */
 function commandRuns(commands: readonly CanvasShaderCommand[]): CommandRun[] {
   const runs: CommandRun[] = [];
+  let rects: RectCommand[] | null = null;
   for (const command of commands) {
-    const last = runs.at(-1);
-    if (command.kind === 'mesh') runs.push({ kind: 'mesh', command });
-    else if (last?.kind === 'rect') (last.commands as CanvasShaderCommand[]).push(command);
-    else runs.push({ kind: 'rect', commands: [command] });
+    if (command.kind === 'mesh') {
+      runs.push({ kind: 'mesh', command });
+      rects = null;
+    } else if (rects) rects.push(command);
+    else runs.push({ kind: 'rect', commands: (rects = [command]) });
   }
   return runs;
 }

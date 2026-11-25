@@ -27,7 +27,8 @@ interface WrittenBlock {
   readonly block: CanvasDataBlock;
   renderId: number;
   camera: THREE.Camera | null;
-  readonly colors: { -readonly [K in keyof CanvasColors]: CanvasColors[K] };
+  canvasModulate: Rgba;
+  usesLinearColors: boolean;
 }
 
 /** Written only by `canvasDataOf`: each canvas's blocks, one for each set of colours its items draw with. */
@@ -57,14 +58,14 @@ export function canvasDataOf(
   // A loop, not `.find`: no closure per draw per render.
   for (const written of blocks) {
     if (!isWrittenFor(written, drawn)) free ??= written;
-    else if (sameColors(written.colors, colors)) return written.block;
+    else if (sameColors(written, colors)) return written.block;
   }
   // A block of an earlier render is free, so a canvas holds as many blocks as one render's colour sets.
   const written = free ?? newWrittenBlock(blocks);
   written.renderId = drawn.renderId;
   written.camera = drawn.camera;
-  written.colors.canvasModulate = colors.canvasModulate;
-  written.colors.usesLinearColors = colors.usesLinearColors;
+  written.canvasModulate = colors.canvasModulate;
+  written.usesLinearColors = colors.usesLinearColors;
   const { x: width, y: height } = renderTargetSize(gl, targetSize);
   frame.width = width;
   frame.height = height;
@@ -82,8 +83,13 @@ function isWrittenFor(written: WrittenBlock, drawn: CanvasItemFrame): boolean {
 }
 
 function newWrittenBlock(blocks: WrittenBlock[]): WrittenBlock {
-  const colors = { canvasModulate: WHITE, usesLinearColors: false };
-  const written = { block: canvasDataBlock(), renderId: -1, camera: null, colors };
+  const written = {
+    block: canvasDataBlock(),
+    renderId: -1,
+    camera: null,
+    canvasModulate: WHITE,
+    usesLinearColors: false,
+  };
   blocks.push(written);
   return written;
 }

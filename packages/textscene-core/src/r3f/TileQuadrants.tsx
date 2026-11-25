@@ -60,14 +60,13 @@ interface DrawnItem extends TileCanvasItem {
 
 function drawnItems(quadrants: readonly RenderingQuadrant[]): DrawnItem[] {
   let firstOrder = 0;
-  const items = quadrants.flatMap(({ canvasItemsPosition, cells }) =>
-    quadrantCanvasItems(cells).map((item) => ({ ...item, canvasItemsPosition }))
+  return quadrants.flatMap(({ canvasItemsPosition, cells }) =>
+    quadrantCanvasItems(cells).map((item) => {
+      const drawn = { ...item, canvasItemsPosition, firstOrder };
+      firstOrder += item.runs.length;
+      return drawn;
+    })
   );
-  return items.map((item) => {
-    const drawn = { ...item, firstOrder };
-    firstOrder += item.runs.length;
-    return drawn;
-  });
 }
 
 /**
@@ -90,10 +89,6 @@ function tileTint(
 function TileItem({ item, layer }: { item: DrawnItem; layer: TileLayerItem }) {
   const material = tileItemMaterial(item.material, layer.material);
   const shader = item.material ? item.material.shader : layer.shader;
-  const tileSet = useMemo(
-    () => ({ grid: layer.model, usesUvClipping: layer.model.usesUvClipping }),
-    [layer.model]
-  );
   const { key: canvasKey, zFinal } = childCanvasPlace(
     { key: useCanvasItemKey(), zFinal: layer.zFinal },
     item.zIndex
@@ -130,7 +125,7 @@ function TileItem({ item, layer }: { item: DrawnItem; layer: TileLayerItem }) {
               shader={shader}
               source={source}
               cells={cells}
-              tileSet={tileSet}
+              tileSet={layer.model}
               finalModulate={selfTint}
               itemOrigin={item.canvasItemsPosition}
               sampler={layer.sampler}

@@ -41,10 +41,12 @@ export function TileShaderRun({
 }: TileShaderRunProps) {
   const drawn = useCanvasItemTextureSampledBy(sampler, source.texture);
   const texture = useRuntimeAtlasTexture(drawn.texture ?? null, source);
+  const { x: originX, y: originY } = itemOrigin;
   const commands = useMemo(() => {
     const textureSize = drawn.texture && imageSize(drawn.texture.image);
-    return textureSize && tileRectCommands(cellsInAtlas(cells, source, textureSize), tileSet, itemOrigin);
-  }, [cells, source, drawn.texture, tileSet, itemOrigin]);
+    const origin = { x: originX, y: originY };
+    return textureSize && tileRectCommands(cellsInAtlas(cells, source, textureSize), tileSet, origin);
+  }, [cells, source, drawn.texture, tileSet, originX, originY]);
   // A source with no texture, a pending one or a failed one draws nothing (`tile_map_layer.cpp:2676-2677`).
   if (!source.texture || drawn.missing || !texture || !commands) return null;
   // Object3Ds keep the layer's canvas key. The fallback draws in layer pixels, so it undoes the item's place.

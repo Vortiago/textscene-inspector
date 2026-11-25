@@ -89,13 +89,11 @@ export function CanvasShaderSlot({
   // A new frame of an animation keeps its draw: only a new layout builds new batches.
   const layout = useCommandLayout(commands);
   const draw = useMemo(
-    () =>
-      item &&
-      sampling &&
-      module!.canvasShaderDraw(gl, item, { maps, textureState, sampling }, layout, firstOrder),
-    [module, gl, item, maps, textureState, sampling, layout, firstOrder]
+    () => item && sampling && module!.canvasShaderDraw(gl, item, { maps, textureState, sampling }, layout),
+    [module, gl, item, maps, textureState, sampling, layout]
   );
   useEffect(() => (draw ? draw.dispose : undefined), [draw]);
+  useLayoutEffect(() => draw?.setFirstOrder(firstOrder), [draw, firstOrder]);
   useLayoutEffect(() => draw?.setSource(texture, commands), [draw, texture, commands]);
   useLayoutEffect(() => {
     draw?.setColors({ finalModulate, canvasModulate });
@@ -122,7 +120,6 @@ export function CanvasShaderSlot({
   );
 }
 
-/** The template's sampler state of the item's effective filter and repeat. */
 /** The first of the command lists given since the layout last changed. */
 function useCommandLayout(commands: readonly CanvasShaderCommand[]): readonly CanvasShaderCommand[] {
   const [layout, setLayout] = useState(commands);
@@ -133,6 +130,7 @@ function useCommandLayout(commands: readonly CanvasShaderCommand[]): readonly Ca
   return layout;
 }
 
+/** The template's sampler state of the item's effective filter and repeat. */
 function canvasTextureState(
   sampler: CanvasItemTextureSampler,
   usesLinearColors: boolean

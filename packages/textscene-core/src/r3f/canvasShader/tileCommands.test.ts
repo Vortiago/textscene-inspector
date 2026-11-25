@@ -40,7 +40,7 @@ const rounded = (rect: { x: number; y: number; w: number; h: number }) =>
 const ITEM_ORIGIN = { x: 0, y: 0 };
 
 const drawn = (cell: DrawableCell, usesUvClipping = false, itemOrigin = ITEM_ORIGIN) => {
-  const [command] = tileRectCommands([cell], { grid: GRID, usesUvClipping }, itemOrigin);
+  const [command] = tileRectCommands([cell], { ...GRID, usesUvClipping }, itemOrigin);
   if (command?.kind !== 'rect') throw new Error(`expected a rect command, got ${command?.kind}`);
   return command;
 };

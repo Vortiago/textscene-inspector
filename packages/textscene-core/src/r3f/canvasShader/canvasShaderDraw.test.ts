@@ -65,7 +65,8 @@ function drawOf(commands: readonly CanvasShaderCommand[] = [RECT_COMMAND], item 
     textureState: GODOT_CANVAS_TEXTURE_STATE,
     sampling: GODOT_SAMPLING,
   };
-  const draw = canvasShaderDraw(gl, item, sampling, commands, firstOrder);
+  const draw = canvasShaderDraw(gl, item, sampling, commands);
+  draw.setFirstOrder(firstOrder);
   draw.setSource(TEXTURE, commands);
   return draw;
 }

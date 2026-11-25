@@ -115,7 +115,7 @@ export function atlasTileRegion(
   };
 }
 
-interface TileDrawInfo {
+export interface TileDrawInfo {
   /** Pixel rect of the tile's texture region within the atlas (image-Y top-left). */
   regionPx: { x: number; y: number; width: number; height: number };
   orientation: TileOrientation;

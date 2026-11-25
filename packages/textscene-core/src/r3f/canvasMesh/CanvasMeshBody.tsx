@@ -42,8 +42,8 @@ type CanvasSurfaces = readonly CanvasSurface[] | null;
 export interface MaterialSurfaces<Input> {
   readonly input: Input;
   readonly useSurfaces: (input: Input, material: CanvasItemMaterialProperties | null) => CanvasSurfaces;
-  /** What a canvas_item shader draws, asked only while one is in force, or null for the default shader. */
-  readonly shadedCommands: (() => readonly CanvasShaderCommand[]) | null;
+  /** What a canvas_item shader draws, asked only while one is in force. None for a multimesh. */
+  readonly shadedCommands?: (() => readonly CanvasShaderCommand[]) | null;
 }
 
 /** A named group around the drawn surfaces, which the drawer receives once it is in the tree. */
