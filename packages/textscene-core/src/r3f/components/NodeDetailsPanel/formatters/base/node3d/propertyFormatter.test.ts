@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { formatNode3DProperties } from './propertyFormatter';
-import { sectionsOf, sectionTitled } from '../../testing/inspectedScene';
+import { sectionsAt, sectionsOf, sectionTitled } from '../../testing/inspectedScene';
 
 async function axes(title: string, transform: string): Promise<string[]> {
   const sections = await sectionsOf(formatNode3DProperties, 'Node3D', { transform });
@@ -20,6 +20,26 @@ describe('formatNode3DProperties', () => {
       '-1.000',
       '-1.000',
       '-1.000',
+    ]);
+  });
+
+  it('lists the pose a RemoteTransform3D pushes onto a target whose file sets no transform', async () => {
+    const relayed = `[gd_scene format=3]
+
+[node name="Main" type="Node3D"]
+
+[node name="Relay" type="RemoteTransform3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1)
+remote_path = NodePath("../Target")
+
+[node name="Target" type="Node3D" parent="."]
+`;
+    const sections = await sectionsAt(relayed, 'Target', formatNode3DProperties);
+
+    expect(sectionTitled(sections, 'Position')!.items.map((item) => item.value)).toEqual([
+      '1.000',
+      '0.000',
+      '1.000',
     ]);
   });
 
