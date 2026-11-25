@@ -5,7 +5,7 @@ import type { MaterialBlendState } from '../pipeline/blendState.js';
 import { parsedShader, shaderSource, type ShaderOptions } from '../language/parseShader.js';
 import { variablesRead } from '../language/treeWalk.js';
 import { VERTEX_ID_ATTRIBUTE } from '../spatial/meshAttributes.js';
-import { devicePoints, type DevicePoints } from '../template/devicePoints.js';
+import { devicePoints, sizesPoints, type DevicePoints } from '../template/devicePoints.js';
 import { emitTemplateStage, programResources, type WrittenBuiltIn } from '../template/emitTemplate.js';
 import { linkedProgram, type LinkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
 import type { RowBlock } from '../template/rowBlock.js';
@@ -106,7 +106,7 @@ export function transpileCanvasItem(source: string, options: CanvasItemOptions =
     program,
     shader: { parameters: [...program.parameters.values()], source: shaderSource(parsed, file) },
     blend: canvasBlendState(parsed.tree),
-    usesPointSize: variablesRead(parsed.tree, (variable) => variable.builtIn !== undefined).has('POINT_SIZE'),
+    usesPointSize: sizesPoints(variablesRead(parsed.tree, (variable) => variable.builtIn !== undefined)),
   };
   const rows = options.rows ?? 'flipped';
   const draws = new Map<CanvasVariant, CanvasDraw>();

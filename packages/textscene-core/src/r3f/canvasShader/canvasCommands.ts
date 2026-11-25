@@ -115,9 +115,7 @@ function vertexArraysOf(
       });
   }
   const index = geometry.getIndex();
-  const customs = CANVAS_CUSTOM_ARRAYS.map(
-    (name) => geometry.getAttribute(name)?.array as Float32Array | undefined
-  );
+  const customs = CANVAS_CUSTOM_ARRAYS.map((name) => customLanes(geometry, name));
   return {
     primitive: geometryPrimitive(geometry),
     ...(index && { indices: Array.from(index.array) }),
@@ -126,6 +124,21 @@ function vertexArraysOf(
     uvs,
     ...(customs.some(Boolean) && { customs }),
   };
+}
+
+/** The four float lanes a point of the custom array `name` holds, as `godotSurface` writes them. */
+function customLanes(geometry: THREE.BufferGeometry, name: string): Float32Array | undefined {
+  const attribute = geometry.getAttribute(name);
+  if (!attribute) return undefined;
+  if (
+    !(attribute instanceof THREE.BufferAttribute) ||
+    attribute.itemSize !== 4 ||
+    !(attribute.array instanceof Float32Array)
+  )
+    throw new Error(
+      `expected ${name} as a plain attribute of 4 float lanes, got item size ${attribute.itemSize}`
+    );
+  return attribute.array;
 }
 
 /** Whether two command lists draw the same batches: the same kinds in order, and the same mesh arrays. */

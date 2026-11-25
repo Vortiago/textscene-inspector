@@ -72,7 +72,7 @@ export const CANVAS_CUSTOM_ARRAYS = ['custom0', 'custom1'] as const;
 /** The lanes of one point of a custom array, as `ARRAY_CUSTOM_RGBA_FLOAT` holds them. */
 const CUSTOM_LANES = 4;
 
-/** The default vertex buffers of a missing array (`mesh_storage.cpp:86-157`): a custom array's is zero. */
+/** The default vertex buffers of a missing array (`mesh_storage.cpp:86-157`). */
 const DEFAULT_COLOR = [1, 1, 1, 1];
 const DEFAULT_UV = [0, 0];
 
@@ -97,6 +97,7 @@ export function attributesGeometry(arrays: CanvasVertexArrays): THREE.BufferGeom
   const uvValues = uvs.length === count ? uvs.flatMap(({ x, y }) => [x, y]) : repeated(DEFAULT_UV, count);
   geometry.setAttribute('uv_attrib', floats(uvValues, 2));
   CANVAS_CUSTOM_ARRAYS.forEach((name, custom) => {
+    // A missing custom array reads zero (`mesh_storage.cpp:120-131`).
     const values = arrays.customs?.[custom] ?? new Float32Array(count * CUSTOM_LANES);
     geometry.setAttribute(`${name}_attrib`, new THREE.BufferAttribute(values, CUSTOM_LANES));
   });

@@ -80,6 +80,15 @@ describe('compileMaterial uniforms', () => {
     const lines = templateVariant('canvas.glsl', 'fragment', '', material);
     expect(lines.some((line) => 'text' in line && line.text === '#define MATERIAL_UNIFORMS_USED')).toBe(true);
   });
+
+  it('defines MATERIAL_UNIFORMS_USED in a spatial stage too, as one compiler serves both', () => {
+    const material = compileMaterial(
+      materialOf('shader_type spatial;\nuniform float amount;\n'),
+      MODE_TABLES.spatial!
+    );
+    const lines = templateVariant('forward_clustered/scene_forward_clustered.glsl', 'fragment', '', material);
+    expect(lines.some((line) => 'text' in line && line.text === '#define MATERIAL_UNIFORMS_USED')).toBe(true);
+  });
 });
 
 describe('compileMaterial varyings', () => {

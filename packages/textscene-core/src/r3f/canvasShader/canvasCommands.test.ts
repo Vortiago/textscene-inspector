@@ -151,6 +151,15 @@ describe('meshCommands', () => {
 
     expect(command?.kind === 'mesh' && 'customs' in command.arrays).toBe(false);
   });
+
+  it('throws for a custom array of other than four lanes', () => {
+    const geometry = canvasSurfaceGeometry(TRIANGLE);
+    geometry.setAttribute('custom0', new THREE.BufferAttribute(new Float32Array(9), 3));
+
+    expect(() => meshCommands([geometry])).toThrow(
+      'expected custom0 as a plain attribute of 4 float lanes, got item size 3'
+    );
+  });
 });
 
 describe('sameCommandLayout', () => {
@@ -206,5 +215,14 @@ describe('growItemBox', () => {
     };
 
     expect(growItemBox(box(), mesh)).toEqual(corners([-3, -4], [5, 7]));
+  });
+
+  it('leaves the box empty for a mesh of no points', () => {
+    const empty: CanvasShaderCommand = {
+      kind: 'mesh',
+      arrays: { primitive: 'triangles', points: [], colors: [], uvs: [] },
+    };
+
+    expect(growItemBox(box(), empty).isEmpty()).toBe(true);
   });
 });

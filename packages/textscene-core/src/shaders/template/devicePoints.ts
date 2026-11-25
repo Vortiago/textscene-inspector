@@ -19,6 +19,11 @@ export interface DevicePoints {
   expand(clip: Vec4, viewportSize: Node): void;
 }
 
+/** Whether a shader sizes its points: Godot emulates points only for a shader that names `POINT_SIZE`. */
+export function sizesPoints(builtInsNamed: ReadonlySet<string>): boolean {
+  return builtInsNamed.has('POINT_SIZE');
+}
+
 export function devicePoints(): DevicePoints {
   const corner = array(CORNERS).element(vertexIndex.mod(6)) as unknown as Vec2;
   const pointSize = property('float', 'godot_point_size') as unknown as ReturnType<typeof float>;
