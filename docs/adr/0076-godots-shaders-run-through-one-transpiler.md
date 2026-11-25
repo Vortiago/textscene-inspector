@@ -53,6 +53,10 @@ chain as text, as Godot's own materials do.
 - **The guide explains what is transpiled.** `apps/textscene-three-godot-shaders/guide/` has one
   chapter for each family the transpiler reads, with Godot's recorded values, and the showcases of
   the end to end layer. The table's generator writes it, and `--check` fails when it is stale.
+- **Each program builds its GLSL functions again.** three builds a second program from the same
+  nodes when a scene gains an environment or a light changes, and it reuses a layout function's
+  first code, with that build's uniform names, for every later program (r187
+  `NodeBuilder.js:2759-2790`). So `CalledFunctions` keeps one map of functions for each node builder.
 
 The switch, the golden rule and the bundle ceiling of ADR-0055 stay until the transpiled materials
 are the default. The anchor checks of the shader patches stay until the last patch goes.

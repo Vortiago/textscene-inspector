@@ -70,6 +70,9 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
    */
   readonly rangeBegins = new THREE.Vector4();
 
+  /** Godot's `shadow_bias` of each slot in world units, which the fitter writes with `_cascadeData`. */
+  readonly depthBiases = new THREE.Vector4();
+
   /** The fade over the far end of the last split, which the fitter writes with the slots. */
   fade: DirectionalShadowFade = NO_SHADOW_FADE;
 

@@ -109,7 +109,8 @@ export function emitTemplateStage(
   const context: EmitContext = { structOf, functions: new CalledFunctions(trees, structOf, body, globals) };
   const main = trees.get('main');
   if (!main) throw new Error('expected a main function in the template stage');
-  const run = Fn(() => {
+  const run = Fn((builder: object) => {
+    context.functions.buildingFor(builder);
     const variable = declareVariables(result.type, 0, structOf) as Node;
     const arrays = written.map(
       ({ name, type, count }) => [name, declareVariables(type, count, structOf)] as const

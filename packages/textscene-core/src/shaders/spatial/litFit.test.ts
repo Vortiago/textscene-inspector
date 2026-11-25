@@ -29,7 +29,7 @@ describe('the lit colour pass of a spatial shader', () => {
     expect(uniformBlocksOf(program.vertex)).toBeLessThanOrEqual(MIN_UNIFORM_BLOCKS);
   });
 
-  it('leaves a material 5 of the 16 fragment units', () => {
-    expect(MIN_SAMPLERS - samplersOf(program.fragment)).toBe(5);
+  it('leaves a material 6 of the 16 fragment units', () => {
+    expect(MIN_SAMPLERS - samplersOf(program.fragment)).toBe(6);
   });
 });

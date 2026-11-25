@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import { NodeMaterial, WebGPURenderer, type Node } from 'three/webgpu';
+import { Compatibility, NodeMaterial, WebGPURenderer, type Node } from 'three/webgpu';
 
 /** The members of a node builder that three's types leave out. */
 interface ProgramBuilder {
@@ -28,14 +28,22 @@ interface UnstartedBackend {
 /** WebGL 2's lowest count of uniform buffers in a stage, which no generated program may pass. */
 const MIN_UNIFORM_BUFFERS = 12;
 
-/** The program three builds for `material`, with no GL context. */
-function builtProgram(material: THREE.Material): ProgramBuilder {
+/** A renderer whose backend has not started, which builds programs with no GL context. */
+function unstartedRenderer(): WebGPURenderer {
   const renderer = new WebGPURenderer({ forceWebGL: true, canvas: document.createElement('canvas') });
   const backend = renderer.backend as unknown as UnstartedBackend;
   backend.extensions = { has: () => false };
   backend.capabilities = { getUniformBufferLimit: () => MIN_UNIFORM_BUFFERS };
   // A renderer that has not started holds null here, and the builder shares groups unless it is undefined.
   (renderer as unknown as { _bindings: undefined })._bindings = undefined;
+  // The answer of the nodes handler a `WebGLRenderer` draws with (r187 `WebGLNodesHandler.js:247-255`).
+  renderer.hasCompatibility = (name: string) => name === Compatibility.TEXTURE_COMPARE;
+  return renderer;
+}
+
+/** The program three builds for `material` on `renderer`'s backend, with no GL context. */
+function builtProgram(material: THREE.Material, renderer = unstartedRenderer()): ProgramBuilder {
+  const backend = renderer.backend as unknown as UnstartedBackend;
   const builder = backend.createNodeBuilder(new THREE.Mesh(new THREE.PlaneGeometry(), material), renderer);
   builder.scene = new THREE.Scene();
   builder.material = material;
@@ -68,6 +76,14 @@ export function generatedProgram(nodes: { positionNode?: Node; fragmentNode?: No
 
 /** Both stages three generates for `material`, a transpiled material among them. */
 export function generatedMaterialProgram(material: THREE.Material): { vertex: string; fragment: string } {
-  const builder = builtProgram(material);
-  return { vertex: builder.vertexShader ?? '', fragment: builder.fragmentShader ?? '' };
+  return oneBackendBuilds()(material);
+}
+
+/** Builds each material it is given on one backend, as one renderer builds every program it draws. */
+export function oneBackendBuilds(): (material: THREE.Material) => { vertex: string; fragment: string } {
+  const renderer = unstartedRenderer();
+  return (material) => {
+    const builder = builtProgram(material, renderer);
+    return { vertex: builder.vertexShader ?? '', fragment: builder.fragmentShader ?? '' };
+  };
 }

@@ -4,19 +4,27 @@ import { describe, expect, it } from 'vitest';
 import type { EnvironmentFog } from '../pipeline/environmentFog.js';
 import { beforeEachDraw, specialiseSpatial, writeSpatialBindings } from './spatialBindings.js';
 import { transpileSpatial } from './transpileSpatial.js';
-import type { DirectionalLight } from './directionalLights.js';
+import type { DirectionalLight, DirectionalShadow } from './directionalLights.js';
 import type { RoughnessLimiter } from '../../godot/rendering/roughnessLimiter.js';
+import { comparedTextureOf, UNBOUND_DEPTH } from '../language/comparedTextures.js';
 
 const UNSHADED = 'shader_type spatial;\nrender_mode unshaded;\nvoid fragment() {\n\tALBEDO = vec3(0.6);\n}\n';
 
 interface WrittenScene {
   fog?: EnvironmentFog;
+  directionalShadowAtlas?: THREE.DepthTexture;
   directionalLights?: readonly DirectionalLight[];
   source?: string;
   roughnessLimiter?: RoughnessLimiter;
 }
 
-function written({ fog, directionalLights = [], source = UNSHADED, roughnessLimiter }: WrittenScene = {}) {
+function written({
+  fog,
+  directionalLights = [],
+  source = UNSHADED,
+  roughnessLimiter,
+  directionalShadowAtlas,
+}: WrittenScene = {}) {
   const spatial = transpileSpatial(source);
   const camera = new THREE.PerspectiveCamera(75, 2, 0.05, 4000);
   camera.position.set(0, 1, 3);
@@ -31,6 +39,7 @@ function written({ fog, directionalLights = [], source = UNSHADED, roughnessLimi
     fog,
     directionalLights,
     roughnessLimiter,
+    directionalShadowAtlas,
   });
   specialiseSpatial(spatial, fog);
   const value = (name: string) =>
@@ -91,13 +100,13 @@ describe('the fog bindings', () => {
   it('leaves the fog flag and the depth fog off with no fog', () => {
     const { value, specialisation } = written();
     expect((value('flags') as number) & (1 << 4)).toBe(0);
-    expect(specialisation('pso_sc_packed_0')).toBe(0);
+    expect((specialisation('pso_sc_packed_0') as number) & (1 << 6)).toBe(0);
   });
 
   it('turns on the fog flag and the depth fog bit for a depth fog', () => {
     const { value, specialisation } = written({ fog: DEPTH_FOG });
     expect((value('flags') as number) & (1 << 4)).toBe(1 << 4);
-    expect(specialisation('pso_sc_packed_0')).toBe(1 << 6);
+    expect((specialisation('pso_sc_packed_0') as number) & (1 << 6)).toBe(1 << 6);
   });
 
   it('emits the stages again for the program of a depth fog', () => {
@@ -166,7 +175,7 @@ describe('the directional light bindings', () => {
     expect(own).toEqual([0.7, 0.01, 0xfffffffe, 1, 3]);
   });
 
-  it('casts no shadow from any light yet', () => {
+  it('casts no shadow from a light without one', () => {
     expect(written({ directionalLights: [SUN], source: LIT }).light('shadow_opacity')[0]).toBe(0);
   });
 
@@ -297,5 +306,115 @@ describe('the instance buffer of a transpiled spatial shader', () => {
     object.position.set(4, 5, 6);
     const image = drawn(object).buffers.get('instances')!.texture.image as { data: Uint32Array };
     expect([...new Float32Array(image.data.buffer).slice(0, 4)]).toEqual([1, 0, 0, 4]);
+  });
+});
+
+/** Split `split`'s world-to-atlas matrix: a scale and an offset that tell the splits apart. */
+const splitMatrix = (split: number) =>
+  new THREE.Matrix4().makeScale(0.5, 0.25, 0.125).setPosition(split * 0.25, 0.5, 0.5);
+
+const SHADOW: DirectionalShadow = {
+  opacity: 0.75,
+  softShadowScale: 3,
+  softShadowAngle: 0.2,
+  blendSplits: true,
+  fade: { from: 80, to: 100 },
+  splitEnds: [10, 25, 60, 100],
+  depthBiases: [0.1, 0.2, 0.3, 0.4],
+  normalBiases: [0.01, 0.02, 0.03, 0.04],
+  splitMatrix,
+};
+
+const SHADOWED_SUN: DirectionalLight = { ...SUN, shadow: SHADOW };
+
+describe('the directional shadow bindings', () => {
+  const shadowed = () => written({ directionalLights: [SUN, SHADOWED_SUN], source: LIT });
+
+  it("writes the shadow's opacity, kernel scale and angle in its light's slot", () => {
+    const { light } = shadowed();
+    const values = ['shadow_opacity', 'soft_shadow_scale', 'softshadow_angle'].map(
+      (member) => light(member)[1]
+    );
+    expect(values).toEqual([0.75, 3, 0.2]);
+  });
+
+  it('writes whether the splits blend', () => {
+    expect(shadowed().light('blend_splits').slice(0, 2)).toEqual([false, true]);
+  });
+
+  it('writes the fade as negative view depths, as Godot compares it with vertex.z', () => {
+    const { light } = shadowed();
+    expect([light('fade_from')[1], light('fade_to')[1]]).toEqual([-80, -100]);
+  });
+
+  it('writes each split end and bias as one lane of its vector', () => {
+    const { light } = shadowed();
+    const lanes = ['shadow_split_offsets', 'shadow_bias', 'shadow_normal_bias'].map((member) =>
+      (light(member)[1] as THREE.Vector4).toArray()
+    );
+    expect(lanes).toEqual([SHADOW.splitEnds, SHADOW.depthBiases, SHADOW.normalBiases]);
+  });
+
+  it("maps a view-space point where each split's matrix maps its world position", () => {
+    const { light, camera } = shadowed();
+    const world = new THREE.Vector3(1, 2, -3);
+    const view = world.clone().applyMatrix4(camera.matrixWorldInverse);
+    const reads = [1, 2, 3, 4].map((split) => {
+      const matrix = light(`shadow_matrix${split}`)[1] as THREE.Matrix4;
+      return view
+        .clone()
+        .applyMatrix4(matrix)
+        .toArray()
+        .map((lane) => +lane.toFixed(6));
+    });
+    const expected = [0, 1, 2, 3].map((split) =>
+      world
+        .clone()
+        .applyMatrix4(splitMatrix(split))
+        .toArray()
+        .map((lane) => +lane.toFixed(6))
+    );
+    expect(reads).toEqual(expected);
+  });
+
+  it("writes the atlas's texel size", () => {
+    const size = shadowed().value('directional_shadow_pixel_size') as THREE.Vector2;
+    expect(size.toArray()).toEqual([1 / 4096, 1 / 4096]);
+  });
+
+  it("writes Soft Low's PCF taps of the directional kernel", () => {
+    const { spatial } = shadowed();
+    const kernel = (
+      spatial.uniforms.get('scene_data_block.data.directional_soft_shadow_kernel') as {
+        array: THREE.Vector4[];
+      }
+    ).array;
+    expect(kernel[0]!.toArray().map((lane) => +lane.toFixed(6))).toEqual([0.353553, 0, 0, 0]);
+  });
+});
+
+describe('the shadow quality specialisation', () => {
+  /** The six bits of `pso_sc_packed_0` from bit `shift` (`scene_forward_clustered_inc.glsl:109-123`). */
+  const samples = (shift: number) => ((written().specialisation('pso_sc_packed_0') as number) >>> shift) & 63;
+
+  it("takes Soft Low's four PCF taps for omni, spot and directional shadows", () => {
+    expect([samples(8), samples(20)]).toEqual([4, 4]);
+  });
+
+  it("takes Soft Low's eight penumbra taps for omni, spot and directional shadows", () => {
+    expect([samples(14), samples(26)]).toEqual([8, 8]);
+  });
+});
+
+describe('the directional shadow atlas', () => {
+  it("gives the atlas to the template's compared reads of directional_shadow_atlas", () => {
+    const atlas = new THREE.DepthTexture(4096, 4096);
+    const { spatial } = written({ source: LIT, directionalShadowAtlas: atlas });
+    expect(comparedTextureOf(spatial.textures.get('directional_shadow_atlas')!).value).toBe(atlas);
+  });
+
+  it('gives the compared reads a depth of one texel while no light has a shadow (edge case)', () => {
+    const { spatial } = written({ source: LIT });
+    expect(comparedTextureOf(spatial.textures.get('directional_shadow_atlas')!).value).toBe(UNBOUND_DEPTH);
   });
 });

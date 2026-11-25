@@ -59,6 +59,8 @@ export interface DirectionalShadowSplits {
    * moves away by that bias.
    */
   rangeBegins: number[];
+  /** Godot's `shadow_bias` of each of the four slots, in world units (`light_storage.cpp:723`). */
+  depthBiases: number[];
 }
 
 /** Null when a split gets no finite box. The caller then leaves the light's shadow as it is. */
@@ -87,15 +89,17 @@ export function fitDirectionalShadowSplits(
     const blendStart = blends && slot < lastSplit ? directionalShadowBlendStart(splitEnd) : NO_BLEND;
     return [splitEnd, box.bias, box.normalBias, blendStart];
   });
-  const rangeBegins = slots.map((_, slot) => rangeBegin(boxes[Math.min(slot, lastSplit)]!));
+  const slotBoxes = slots.map((_, slot) => boxes[Math.min(slot, lastSplit)]!);
   return {
     boxes,
     fade: directionalShadowFade(distances[splitCount]!, declaration.fadeStart),
     slots,
-    rangeBegins,
+    rangeBegins: slotBoxes.map((box) => box.rangeBegin - godotDepthBias(box)),
+    depthBiases: slotBoxes.map(godotDepthBias),
   };
 }
 
-function rangeBegin(box: DirectionalShadowBox): number {
-  return box.rangeBegin + box.bias * (box.far - box.near);
+/** The box's bias is negated into its own normalised depth, so its depth range gives Godot's back. */
+function godotDepthBias(box: DirectionalShadowBox): number {
+  return -box.bias * (box.far - box.near);
 }

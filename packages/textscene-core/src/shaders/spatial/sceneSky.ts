@@ -12,6 +12,7 @@ import {
   SKY_ROUGHNESS_LAYERS_DEFAULT,
 } from '../../godot/rendering/environment/skyReflection.js';
 import type { SpatialFrame } from './spatialBindings.js';
+import { SCENE_DATA } from './sceneDataBlock.js';
 
 /** The sky an Environment lights surfaces with: Godot's radiance octmap array and its settings. */
 export interface SceneSky {
@@ -77,8 +78,6 @@ export function bindSkyLayers(textures: ReadonlyMap<string, TextureNode>, sky: S
     energies[layer] = sky ? (sky.layerEnergies[Math.min(layer, sky.layerEnergies.length - 1)] ?? 0) : 0;
 }
 
-const DATA = 'scene_data_block.data';
-
 /** Scratch for one draw's sky basis, overwritten by the next. */
 const radianceBasis = new THREE.Matrix3();
 const cameraBasis = new THREE.Matrix3();
@@ -92,27 +91,27 @@ function radianceInverseXform({ sky, camera }: SpatialFrame): THREE.Matrix3 {
 /** Each member of `SceneData` the sky's light on a surface reads. */
 export const SCENE_SKY_BINDINGS: readonly Binding<SpatialFrame>[] = [
   {
-    uniform: `${DATA}.radiance_pixel_size`,
+    uniform: `${SCENE_DATA}.radiance_pixel_size`,
     godot: 'render_scene_data_rd.cpp:143; renderer_scene_render_rd.cpp:1396',
     value: ({ sky }) => sky?.pixelSize ?? 0,
   },
   {
-    uniform: `${DATA}.radiance_border_size`,
+    uniform: `${SCENE_DATA}.radiance_border_size`,
     godot: 'render_scene_data_rd.cpp:144; renderer_scene_render_rd.cpp:1398',
     value: ({ sky }) => sky?.borderSize ?? 0,
   },
   {
-    uniform: `${DATA}.radiance_inverse_xform`,
+    uniform: `${SCENE_DATA}.radiance_inverse_xform`,
     godot: 'render_scene_data_rd.cpp:201-205',
     value: radianceInverseXform,
   },
   {
-    uniform: `${DATA}.ambient_color_sky_mix`,
+    uniform: `${SCENE_DATA}.ambient_color_sky_mix`,
     godot: 'render_scene_data_rd.cpp:169',
     value: ({ sky }) => sky?.ambientContribution ?? 0,
   },
   {
-    uniform: `${DATA}.IBL_exposure_normalization`,
+    uniform: `${SCENE_DATA}.IBL_exposure_normalization`,
     godot: 'render_scene_data_rd.cpp:240-246, 255',
     value: ({ sky, emissiveExposure }) => (sky ? emissiveExposure : 1),
   },

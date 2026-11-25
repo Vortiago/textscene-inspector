@@ -20,6 +20,7 @@ three r187 keeps the filter, the wrap, the anisotropy, the origin and the colour
 - A material that cannot draw, because a `samplerExternalOES` has no texture, is a `BoundNodeMaterial`: three skips it while it is not `visible`.
 - An integer sampler over a texture of normalised or float texels reads each texel's float bits, as Godot's Vulkan driver (Mesa lavapipe) returns them. The texture call reads them back with `floatBitsToInt` or `floatBitsToUint`.
 - A sampler array element at a computed index is a call on each element, picked by the index: GLSL ES 3.0 indexes a sampler array by a constant only.
+- A `sampler2DShadow(t, s)` read samples a twin node of the template's texture (`comparedTextures.ts`). WebGL reads a depth texture either compared or raw, never both (OpenGL ES 3.0 §3.8.13), so a binding gives the twin the depth to compare, and a depth of one texel while none is bound. The twin keys its program by its node alone, so a swap of the depth keeps the program. It reads the rows as a pass stores them, without three's WebGL flip of a render target (`readAsStored.ts`).
 - The port lives in `shaders/uniforms/samplerUniform.ts`, `textureCopies.ts`, `samplerNodes.ts`, `boundMaterial.ts` and `shaders/language/textureCalls.ts`.
 
 ## Consequences

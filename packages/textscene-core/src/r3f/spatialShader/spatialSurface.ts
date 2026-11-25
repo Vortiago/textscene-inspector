@@ -17,7 +17,8 @@ import { warnOnce } from '../../utils/warnOnce.js';
 import { canvasShaderTime } from '../shaderTime/canvasShaderTime.js';
 import { renderTargetSize } from '../renderTargetSize.js';
 import { renderedEnvironmentFog } from '../fog/fogFrame.js';
-import { sceneDirectionalLights } from '../surfaceLight/surfaceLight.js';
+import { sceneSuns } from '../surfaceLight/surfaceLight.js';
+import { directionalShadowAtlasDepth } from '../directionalShadow/shadowAtlas.js';
 import { sceneAmbientLight } from '../surfaceLight/sceneAmbientLight.js';
 import { sceneSkyLight, unmixedAmbientLight } from '../surfaceLight/sceneSkyLight.js';
 import { EMISSION_EXPOSURE } from '../exposure/emissionExposure.js';
@@ -104,6 +105,7 @@ function sceneOf(
   const { x: width, y: height } = renderTargetSize(gl, targetSize);
   const sky = sceneSkyLight();
   const sceneAmbient = sceneAmbientLight(scene, gl.getClearColor(clearColor), renderId);
+  const directionalLights = sceneSuns(scene);
   return {
     camera: camera as SpatialScene['camera'],
     width,
@@ -113,7 +115,11 @@ function sceneOf(
     ...(sky && { sky }),
     emissiveExposure: EMISSION_EXPOSURE[0]!,
     fog: renderedEnvironmentFog(),
-    directionalLights: sceneDirectionalLights(scene, renderId),
+    directionalLights,
+    // The atlas holds GPU memory only while a shadow draws into it.
+    ...(directionalLights.some(({ shadow }) => shadow) && {
+      directionalShadowAtlas: directionalShadowAtlasDepth(),
+    }),
     roughnessLimiter,
   };
 }

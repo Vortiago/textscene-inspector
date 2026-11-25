@@ -37,6 +37,7 @@ import {
   searchesDirectionalBlockers,
   setSunSoftShadowAngles,
 } from './directionalShadow/sunSoftShadow.js';
+import { publishSceneSuns } from './surfaceLight/surfaceLight.js';
 
 /**
  * One render's light pass, the directional fit first. It changes no omni, spot or area light, so
@@ -58,6 +59,7 @@ function prepareSceneLights(
   const shadedLights = sceneLights(scene);
   const drawsSoftShadows = drawsDirectionalSoftShadows(shadedLights, camera);
   setSunSoftShadowAngles(shadedLights, drawsSoftShadows);
+  publishSceneSuns(scene, shadedLights);
   const slotted = slottedLights(shadedLights, camera);
   writeLightSpecularUniforms(slotted);
   writeLightBakeModeUniforms(slotted);
