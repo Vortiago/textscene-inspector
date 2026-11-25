@@ -16,7 +16,8 @@ import {
 } from '../../resources/testing/createFakeResourceLoader';
 
 import { useSceneResources } from '../SceneResourcesContext';
-import { NO_MATERIAL, useResolvedCanvasItemMaterial } from './canvasItemMaterial';
+import { NO_MATERIAL } from '../../resources/materials/canvasitemmaterial/kind';
+import { useResolvedCanvasItemMaterial } from './canvasItemMaterial';
 import '../../resources/formats/binaryresource/index';
 import { CanvasItemMaterialBlendMode } from '../../godot/scene/canvasItemMaterial';
 

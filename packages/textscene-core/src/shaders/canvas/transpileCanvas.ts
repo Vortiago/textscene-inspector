@@ -196,7 +196,7 @@ function stages({ linked, resources, parameterValues }: LinkedProgram, { variant
     resources
   );
   return {
-    vertexNode: glClipPosition(vertex.result, vulkanClip, null, rows),
+    vertexNode: glClipPosition(vertex.result, vulkanClip, { rows }),
     fragmentNode: fragment.result,
   };
 }

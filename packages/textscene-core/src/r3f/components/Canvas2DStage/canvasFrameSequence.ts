@@ -1,8 +1,3 @@
-/**
- * The steps one 2D canvas runs for one frame, in Godot's order: sample the shadow inputs, accumulate
- * the lights, write the instance records of the translated items, then draw the items. The root canvas and a SubViewport's canvas both run this sequence.
- */
-
 import { createContext, useContext, useLayoutEffect } from 'react';
 
 /** The steps one canvas runs for one frame. Each canvas holds one, and its steps register in it. */
@@ -11,10 +6,7 @@ export interface CanvasFrameSteps {
   readonly shadowSamplers: Set<() => void>;
   /** The pass steps and the light accumulation of this canvas, or null with no light pass. */
   lightPass: (() => void) | null;
-  /**
-   * What a translated item writes into its instance records before the draw: three uploads a
-   * geometry before the first draw hook runs (r187 `WebGLRenderer.js:1912`).
-   */
+  /** Translated items' record writes: three uploads geometry before a draw hook (`WebGLRenderer.js:1912`). */
   readonly recordWriters: Set<() => void>;
 }
 
@@ -22,11 +14,7 @@ export function createCanvasFrameSteps(): CanvasFrameSteps {
   return { shadowSamplers: new Set(), lightPass: null, recordWriters: new Set() };
 }
 
-/**
- * Runs the shadow samplers, the light pass and the record writers, then `drawItems` (`renderer_viewport.cpp:688`),
- * which fills the group buffers and copies the frame out. Godot runs every `_process` and animation
- * of a frame before it draws, so each step sees the poses of the frame it lights.
- */
+/** Runs the shadow samplers, the light pass, the record writers, then draws (`renderer_viewport.cpp:688`). */
 export function runCanvasFrame(steps: CanvasFrameSteps, drawItems: () => void): void {
   for (const sample of steps.shadowSamplers) sample();
   steps.lightPass?.();

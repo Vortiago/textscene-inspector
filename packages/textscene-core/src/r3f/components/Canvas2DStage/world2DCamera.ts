@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import type { Vector2 } from '../../../godot/math/vector.js';
 
 /** Negates NDC y. */
-const FLIP_Y = new THREE.Matrix4().makeScale(1, -1, 1);
+export const FLIP_Y = new THREE.Matrix4().makeScale(1, -1, 1);
 
 /**
  * The 2D world's orthographic camera, whose projection maps the canvas top to NDC y = -1, so GL row 0

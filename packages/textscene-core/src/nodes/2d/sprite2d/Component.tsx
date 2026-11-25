@@ -34,9 +34,8 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   // With `texture_repeat` Disabled, an overrunning `region_rect` stretches its edge texels,
   // where Sprite3D tiles.
   const windowOf = useCallback(
-    ({ source, size, hasNoImage }: LoadedCanvasMeshTexture) => {
-      return frameUvWindow(source ?? undefined, framedProps(props, animatedFrame), hasNoImage ? size : undefined);
-    },
+    ({ source, size, hasNoImage }: LoadedCanvasMeshTexture) =>
+      frameUvWindow(source ?? undefined, framedProps(props, animatedFrame), hasNoImage ? size : undefined),
     [props, animatedFrame]
   );
   const scope = useSceneResources();

@@ -3,10 +3,7 @@ import { frameRectPx } from '../../../r3f/spriteFrame';
 import type { CanvasRectRegion } from '../../../r3f/canvasShader/canvasCommands';
 import type { Sprite2DProperties } from './types';
 
-/**
- * The rect a Sprite2D draws its texture of `size` with (`sprite_2d.cpp:95-130, 169`). A viewport's
- * `snap_2d_transforms_to_pixel` is not read: its default is off.
- */
+/** The rect a Sprite2D draws its texture of `size` with, unsnapped (`sprite_2d.cpp:95-130, 169`). */
 export function sprite2DRectRegion(props: Sprite2DProperties, size: ImageSize): CanvasRectRegion {
   const source = frameRectPx(size, props);
   const x = props.offset.x - (props.centered ? source.w / 2 : 0);

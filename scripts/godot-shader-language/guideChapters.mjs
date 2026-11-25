@@ -692,7 +692,7 @@ const CANVAS_CHAPTER = {
   sections: [
     {
       heading: '`COLOR` and `UV` in `fragment()`',
-      rows: (row) => row.id === 'canvas_item.fragment.COLOR' || row.id === 'canvas_item.fragment.UV',
+      rows: canvasRows('fragment', 'COLOR', 'UV'),
       what: "`COLOR` starts as the vertex colour times the texture's texel at `UV`, and `fragment()` writes the colour the item blends. `UV` is the texture coordinate, read only: the rect's source in 0 to 1, clamped half a texel inside a region with `clipUv` (`canvas.glsl:292-297`).",
       tsl: "the template's locals `color` and `uv`",
     },
@@ -780,13 +780,13 @@ const CANVAS_CHAPTER = {
     },
     {
       heading: '`PI`, `TAU` and `E`',
-      rows: (row) => ['PI', 'TAU', 'E'].some((name) => row.id === `canvas_item.constants.${name}`),
+      rows: canvasRows('constants', 'PI', 'TAU', 'E'),
       what: 'Each constant is the number that Godot writes in the text of the shader (`renderer_canvas_render_rd.cpp:1781-1783`).',
       tsl: 'a float literal',
     },
     {
       heading: '`TIME`',
-      rows: (row) => row.id === 'canvas_item.global.TIME',
+      rows: canvasRows('global', 'TIME'),
       what: "`TIME` is the shader time in seconds, with the same sum and wrap as a sky's `TIME`. `writeCanvasBindings(draw, { time })` writes it (`renderer_canvas_render_rd.cpp:1780`).",
       tsl: 'the block member `canvas_data.time`',
     },

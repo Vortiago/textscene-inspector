@@ -16,7 +16,7 @@ export interface CanvasItemDraw {
 export const WHITE: Rgba = Object.freeze({ r: 1, g: 1, b: 1, a: 1 });
 
 /** `sizeof(InstanceData)` (`renderer_canvas_render_rd.h:379`). */
-const INSTANCE_BYTES = 128;
+export const INSTANCE_BYTES = 128;
 
 /** Float offset of `InstanceData::world`, the item transform's six floats. */
 const WORLD = 0;
@@ -52,10 +52,7 @@ export function worldOf({ a, b, c, d, tx, ty }: Transform2DColumns): number[] {
   return [a, b, c, d, tx, ty];
 }
 
-/**
- * Writes `transform` as the world of record `index` in `geometry`, a batch of `instanceBatchGeometry`,
- * and uploads the floats again only when it changed. Godot writes each record's world each frame.
- */
+/** Writes `transform` as record `index`'s world, and uploads the floats only when they change. */
 export function writeBatchWorld(
   geometry: THREE.BufferGeometry,
   index: number,
@@ -67,6 +64,16 @@ export function writeBatchWorld(
   if (world.every((value, lane) => floats.array[offset + lane] === Math.fround(value))) return;
   floats.array.set(world, offset);
   floats.needsUpdate = true;
+}
+
+/** Writes `record` over record `index` of `geometry`, a batch of `instanceBatchGeometry`, and uploads it. */
+export function writeBatchRecord(geometry: THREE.BufferGeometry, index: number, record: ArrayBuffer): void {
+  const floats = (geometry.getAttribute(ATTRIBUTES[0]!) as THREE.InterleavedBufferAttribute).data;
+  const words = (geometry.getAttribute(ATTRIBUTES[ATTRIBUTES.length - 1]!) as THREE.InterleavedBufferAttribute).data;
+  floats.array.set(new Float32Array(record, 0, floats.stride), index * floats.stride);
+  words.array.set(new Uint32Array(record, floats.stride * 4), index * words.stride);
+  floats.needsUpdate = true;
+  words.needsUpdate = true;
 }
 
 /** `color * base_color`, turned linear for a linear render target (`renderer_canvas_render_rd.cpp:2425`). */

@@ -22,8 +22,9 @@ const SHOWCASE_DIR = join(import.meta.dirname, '../../guide/showcase');
 const showcaseImage = (name, side) => join(SHOWCASE_DIR, `${name}-${side}.png`);
 
 /** The text after `--scenes`: a run of only the scenes whose names hold it, to iterate on a few. */
-const sceneFilter = process.argv[process.argv.indexOf('--scenes') + 1];
-const isSelected = (scene) => !process.argv.includes('--scenes') || scene.name.includes(sceneFilter);
+const flagAt = process.argv.indexOf('--scenes');
+const sceneFilter = flagAt === -1 ? undefined : process.argv[flagAt + 1];
+const isSelected = (scene) => sceneFilter === undefined || scene.name.includes(sceneFilter);
 const selected = (scenes) => scenes.filter(isSelected);
 
 /** One Godot run of `script` for each group of `scenes` that Godot runs apart, with none for no scene. */

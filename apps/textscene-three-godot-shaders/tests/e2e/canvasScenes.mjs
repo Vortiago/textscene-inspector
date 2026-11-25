@@ -385,7 +385,7 @@ const LINEAR_RECT_SCENES = [
 /** A rect of the grid drawn with `source`, a user's shader, which proves `rows`. */
 const shadedRectScene = (name, source, rows, fields = {}) => rectScene(name, { source, rows, ...fields });
 
-/** The text of a shader with `body`, one `vertex()` or `fragment()` line each, and `head` above them. */
+/** The text of a canvas_item shader with `head` above its `vertex()` and `fragment()` lines. */
 const shaderText = ({ head = '', vertex, fragment }) =>
   [
     'shader_type canvas_item;',
@@ -410,7 +410,10 @@ const BLEND_SCENES = ['mix', 'add', 'sub', 'mul', 'premul_alpha', 'disabled'].ma
   )
 );
 
-const TINT = 'uniform vec4 tint : source_color = vec4(0.5, 0.25, 0.75, 1.0);';
+const TINTED = shaderText({
+  head: 'uniform vec4 tint : source_color = vec4(0.5, 0.25, 0.75, 1.0);',
+  fragment: 'COLOR = tint;',
+});
 
 const SHADER_SCENES = [
   shadedRectScene(
@@ -547,15 +550,9 @@ const SHADER_SCENES = [
     'canvas_item render_mode light_only',
   ]),
   ...BLEND_SCENES,
-  shadedRectScene('canvas-shader-source-color', shaderText({ head: TINT, fragment: 'COLOR = tint;' })),
-  shadedRectScene(
-    'canvas-shader-source-color-linear',
-    shaderText({ head: TINT, fragment: 'COLOR = tint;' }),
-    undefined,
-    {
-      linear: true,
-    }
-  ),
+  // A source colour that a linear target turns linear (`renderer_canvas_render_rd.cpp:1703-1704`).
+  rectScene('canvas-shader-source-color', { source: TINTED }),
+  rectScene('canvas-shader-source-color-linear', { source: TINTED, linear: true }),
 ];
 
 export const CANVAS_SCENES = [

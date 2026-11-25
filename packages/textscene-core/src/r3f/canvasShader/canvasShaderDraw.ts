@@ -1,28 +1,33 @@
 import * as THREE from 'three';
-import type { Rgba } from '../../godot/math/math.js';
-import { compileCanvas } from '../../shaders/canvas/compileCanvas.js';
-import { writeCanvasBindings } from '../../shaders/canvas/canvasBindings.js';
-import { writeBatchWorld, WHITE, type CanvasItemDraw } from '../../shaders/canvas/canvasInstance.js';
-import { quadBatchGeometry, rectInstanceData, textureRectRegion } from '../../shaders/canvas/canvasRect.js';
-import { CanvasTextureBinding, type CanvasTextureState } from '../../shaders/canvas/canvasTexture.js';
-import type { CanvasItemOptions, CanvasDraw, TranspiledCanvasItem } from '../../shaders/canvas/transpileCanvas.js';
-import { unDrawnMessage } from '../../shaders/fault/shaderRefusal.js';
-import type { ShaderSampler } from '../../shaders/uniforms/shaderSamplers.js';
-import type { ProjectSampling } from '../../shaders/uniforms/samplerState.js';
-import type { ShaderText } from '../../resources/materials/shadermaterial/types.js';
-import { warnOnce } from '../../utils/warnOnce.js';
-import { canvasFrameOf } from '../canvasFrame.js';
-import { renderTargetSize } from '../renderTargetSize.js';
-import { canvasShaderTime } from '../shaderTime/canvasShaderTime.js';
-import type { CanvasRectRegion } from './canvasCommands.js';
-import { canvasTransformOf, itemTransformOf } from './canvasTransforms.js';
+import type { Rgba } from '../../godot/math/math';
+import { compileCanvas, type CanvasCompile } from '../../shaders/canvas/compileCanvas';
+import { writeCanvasBindings } from '../../shaders/canvas/canvasBindings';
+import {
+  INSTANCE_BYTES,
+  writeBatchRecord,
+  writeBatchWorld,
+  WHITE,
+  type CanvasItemDraw,
+} from '../../shaders/canvas/canvasInstance';
+import { quadBatchGeometry, rectInstanceData, textureRectRegion } from '../../shaders/canvas/canvasRect';
+import { CanvasTextureBinding, type CanvasTextureState } from '../../shaders/canvas/canvasTexture';
+import type { CanvasItemOptions, CanvasDraw, TranspiledCanvasItem } from '../../shaders/canvas/transpileCanvas';
+import { unDrawnMessage } from '../../shaders/fault/shaderRefusal';
+import type { ProjectSampling } from '../../shaders/uniforms/samplerState';
+import type { ShaderText } from '../../resources/materials/shadermaterial/types';
+import { warnOnce } from '../../utils/warnOnce';
+import { canvasFrameOf } from '../canvasFrame';
+import { renderTargetSize } from '../renderTargetSize';
+import { canvasShaderTime } from '../shaderTime/canvasShaderTime';
+import type { CanvasRectRegion } from './canvasCommands';
+import { canvasTransformOf } from './canvasTransforms';
+import { canvasTransformInto } from '../node2dTransform';
+import { mutableTransform2D } from '../../godot/math/transform2d';
 
-export { setMaterialParameters } from '../../shaders/uniforms/materialParameters.js';
+export { setMaterialParameters } from '../../shaders/uniforms/materialParameters';
 
 /** A canvas_item shader transpiled for one item, or why the item draws Godot's default canvas shader. */
-export type CanvasShader =
-  | { readonly item: TranspiledCanvasItem; readonly samplers: Readonly<Record<string, ShaderSampler>> }
-  | { readonly refusal: string };
+export type CanvasShader = Extract<CanvasCompile, { readonly item: unknown }> | { readonly refusal: string };
 
 /** The material of `shader` for an item of a previewer 2D frame, whose GL row 0 is Godot's top row. */
 export function canvasShaderOf(shader: ShaderText, options: CanvasItemOptions): CanvasShader {
@@ -36,14 +41,18 @@ export function disposeCanvasShader(item: TranspiledCanvasItem): void {
   for (const parameter of item.parameters.values()) parameter.dispose?.();
 }
 
-/** What a rect of an item reads beside its command: the item's colours, its texture and the frame's. */
-export interface RectInputs {
-  readonly region: CanvasRectRegion;
-  /** `Item::final_modulate`: the modulate chain times `self_modulate`, in sRGB. */
-  readonly finalModulate: Rgba;
+/** What a rect's draw binds once: the item's texture with its sampler state. */
+export interface RectTexture {
   readonly texture: THREE.Texture;
   readonly textureState: CanvasTextureState;
   readonly sampling: ProjectSampling;
+}
+
+/** What a rect's record and the frame's block read, which an animation may change each frame. */
+export interface RectColors {
+  readonly region: CanvasRectRegion;
+  /** `Item::final_modulate`: the modulate chain times `self_modulate`, in sRGB. */
+  readonly finalModulate: Rgba;
   /** The CanvasModulate colour of the item's canvas, white with none. */
   readonly canvasModulate: Rgba;
 }
@@ -51,6 +60,8 @@ export interface RectInputs {
 /** A translated item's draw: its three object, and the record writer the frame runs before the draw. */
 export interface CanvasShaderDraw {
   readonly object: THREE.Object3D;
+  /** Writes the rect's record and the colours the next frames read, with no new geometry. */
+  readonly setRect: (colors: RectColors) => void;
   readonly writeRecords: () => void;
   readonly dispose: () => void;
 }
@@ -59,27 +70,27 @@ export interface CanvasShaderDraw {
 const DRAW_HOOK = 'canvas_data.canvas_transform';
 
 /** The quad batch of one rect, as Godot draws a Sprite2D (`renderer_canvas_render_rd.cpp:2406`). */
-export function rectShaderDraw(gl: THREE.WebGLRenderer, item: TranspiledCanvasItem, inputs: RectInputs): CanvasShaderDraw {
+export function rectShaderDraw(gl: THREE.WebGLRenderer, item: TranspiledCanvasItem, bound: RectTexture): CanvasShaderDraw {
   const draw = item.draw('quad');
-  const binding = new CanvasTextureBinding(draw, inputs.sampling);
-  const usesLinearColors = inputs.textureState.usesLinearColors ?? false;
-  const texelSize = binding.bind(inputs.texture, inputs.textureState);
-  const { rect, source, clipUv } = inputs.region;
-  const itemDraw: CanvasItemDraw = {
-    transform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
-    finalModulate: inputs.finalModulate,
-    usesLinearColors,
-  };
-  const record = rectInstanceData(textureRectRegion(rect, source, WHITE, { clipUv }), itemDraw, texelSize);
-  const geometry = quadBatchGeometry([record]);
+  const binding = new CanvasTextureBinding(draw, bound.sampling);
+  const usesLinearColors = bound.textureState.usesLinearColors ?? false;
+  const texelSize = binding.bind(bound.texture, bound.textureState);
+  const geometry = quadBatchGeometry([new ArrayBuffer(INSTANCE_BYTES)]);
   const object = new THREE.Mesh(geometry, draw.material);
   object.frustumCulled = false;
-  writeFrameEachDraw(gl, draw, inputs.canvasModulate, usesLinearColors);
+  const world = mutableTransform2D();
+  const frame = { canvasModulate: WHITE };
+  writeFrameEachDraw(gl, draw, frame, usesLinearColors);
   return {
     object,
+    setRect: ({ region: { rect, source, clipUv }, finalModulate, canvasModulate }) => {
+      const itemDraw: CanvasItemDraw = { transform: canvasTransformInto(world, object), finalModulate, usesLinearColors };
+      writeBatchRecord(geometry, 0, rectInstanceData(textureRectRegion(rect, source, WHITE, { clipUv }), itemDraw, texelSize));
+      frame.canvasModulate = canvasModulate;
+    },
     writeRecords: () => {
       object.updateWorldMatrix(true, false);
-      writeBatchWorld(geometry, 0, itemTransformOf(object, canvasFrameOf(object)));
+      writeBatchWorld(geometry, 0, canvasTransformInto(world, object));
     },
     dispose: () => {
       geometry.dispose();
@@ -91,11 +102,11 @@ export function rectShaderDraw(gl: THREE.WebGLRenderer, item: TranspiledCanvasIt
 /** Scratch for the target size of one draw, overwritten by the next. */
 const targetSize = new THREE.Vector2();
 
-/** Writes the frame's `CanvasData` block before each draw of `draw`, from the camera and canvas it draws in. */
+/** Writes the frame's `CanvasData` block before each draw, from the draw's camera and canvas. */
 function writeFrameEachDraw(
   gl: THREE.WebGLRenderer,
   draw: CanvasDraw,
-  canvasModulate: Rgba,
+  frame: { readonly canvasModulate: Rgba },
   usesLinearColors: boolean
 ): void {
   const hook = draw.uniforms.get(DRAW_HOOK);
@@ -107,7 +118,7 @@ function writeFrameEachDraw(
       width,
       height,
       canvasTransform: canvasTransformOf(camera!, canvasFrameOf(object!), { width, height }),
-      canvasModulate,
+      canvasModulate: frame.canvasModulate,
       time: canvasShaderTime(gl).time,
       snapVerticesToPixel: false,
       usesLinearColors,

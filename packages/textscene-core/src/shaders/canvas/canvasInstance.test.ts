@@ -1,6 +1,6 @@
 import type * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { instanceRecord, writeBatchWorld } from './canvasInstance.js';
+import { instanceRecord, writeBatchRecord, writeBatchWorld } from './canvasInstance.js';
 import { quadBatchGeometry } from './canvasRect.js';
 
 const IDENTITY = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
@@ -44,5 +44,31 @@ describe('writeBatchWorld', () => {
     writeBatchWorld(geometry, 0, IDENTITY);
 
     expect(buffer.version).toBe(version);
+  });
+});
+
+describe('writeBatchRecord', () => {
+  it('writes the floats and the words of one record, and leaves the others', () => {
+    const geometry = batch();
+    const record = instanceRecord({ transform: MOVED, finalModulate: { r: 1, g: 1, b: 1, a: 1 } }).bytes;
+
+    writeBatchRecord(geometry, 1, record);
+
+    expect([worldOfRecord(geometry, 0), worldOfRecord(geometry, 1)]).toEqual([
+      [1, 0, 0, 1, 0, 0],
+      [0, 1, -1, 0, 12, 7],
+    ]);
+  });
+
+  it('uploads both buffers again', () => {
+    const geometry = batch();
+    const buffers = ['attrib_A', 'attrib_H'].map(
+      (name) => (geometry.getAttribute(name) as THREE.InterleavedBufferAttribute).data
+    );
+    const versions = buffers.map(({ version }) => version);
+
+    writeBatchRecord(geometry, 0, instanceRecord({ transform: IDENTITY, finalModulate: { r: 1, g: 1, b: 1, a: 1 } }).bytes);
+
+    expect(buffers.map(({ version }) => version)).toEqual(versions.map((version) => version + 1));
   });
 });

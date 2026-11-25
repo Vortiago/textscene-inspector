@@ -19,19 +19,17 @@ export function vertexAttributes(stage: TemplateStageNode): [string, Node][] {
 /** Moves a clip position, a variable, before it turns to GL's. */
 export type ClipStep = (clip: Vec4) => void;
 
-/**
- * How a target's GL rows hold Godot's. `flipped`: GL row 0 is Godot's bottom row, as three shows the
- * drawing buffer. `godot`: GL row 0 is Godot's top row, as in a previewer 2D frame (`world2DCamera.ts`).
- */
+/** Godot's row on GL row 0: its bottom one as three shows a buffer, or its top one in a 2D frame. */
 export type TargetRows = 'flipped' | 'godot';
 
+/** What turns a clip position to GL's: a move before the turn, and the target's rows. */
+export interface ClipTurn {
+  readonly step?: ClipStep | null;
+  readonly rows?: TargetRows;
+}
+
 /** Vulkan's y down and Godot's reversed depth (`render_scene_data_rd.cpp:83`) as GL's, built once. */
-export function glClipPosition(
-  position: Node,
-  vulkanClip: Vec4,
-  step?: ClipStep | null,
-  rows: TargetRows = 'flipped'
-): Node {
+export function glClipPosition(position: Node, vulkanClip: Vec4, { step, rows = 'flipped' }: ClipTurn = {}): Node {
   return Fn(() => {
     const clip = (position as unknown as Vec4).toVar();
     step?.(clip as unknown as Vec4);

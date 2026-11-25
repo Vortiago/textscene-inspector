@@ -591,7 +591,7 @@ class TemplateParser implements TemplateScope {
     const rename = this.material!.renames[variable.name];
     if (rename === undefined)
       this.tokens.fail(`'${variable.name}' has no GLSL text in the mode table`, variable.position);
-    // A texture built-in with a sampler pairs with it, as Vulkan GLSL samples (`shader_compiler.cpp:1275-1336`).
+    // A texture built-in pairs with its sampler, as in Vulkan GLSL (`shader_compiler.cpp:1275-1336`).
     const sampler = this.material!.customSamplers[variable.name];
     const text = sampler ? `${variable.type}(${rename}, ${sampler})` : rename;
     const tokens = this.textTokens(text, variable.position, macros);

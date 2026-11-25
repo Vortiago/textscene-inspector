@@ -191,7 +191,7 @@ function stageEmitter(
       beside: pipeline.writesDepth ? [fragDepth(fragCoord)] : [],
     };
     return {
-      position: glClipPosition(vertex.result, vulkanClip, points && pointExpansion(points, resources)),
+      position: glClipPosition(vertex.result, vulkanClip, { step: points && pointExpansion(points, resources) }),
       isPositionInvariant: declaresInvariantPosition(vertexStage),
       fragment: () =>
         emitTemplateStage(linked('fragment', defines), fragmentInputs, fragmentResult, resources).result,

@@ -55,7 +55,8 @@ export function CanvasShaderSlot({ shader, region, texture, sampler, finalModula
     () => (isReady ? module.canvasShaderOf(shader, { ...options, sampling, usesLinearColors }) : null),
     [isReady, module, shader, options, sampling, usesLinearColors]
   );
-  const item = compiled && 'item' in compiled ? compiled.item : null;
+  const shaded = compiled && 'item' in compiled ? compiled : null;
+  const item = shaded?.item ?? null;
   useEffect(() => {
     if (!item) return;
     module!.warnOnTranslatorFault(shader, item);
@@ -72,15 +73,17 @@ export function CanvasShaderSlot({ shader, region, texture, sampler, finalModula
   const canvasModulate = useCanvasModulate();
   const textureState = useMemo(() => canvasTextureState(sampler, usesLinearColors), [sampler, usesLinearColors]);
   const draw = useMemo(
-    () =>
-      item &&
-      module!.rectShaderDraw(gl, item, { region, finalModulate, texture, textureState, sampling, canvasModulate }),
-    [module, gl, item, region, finalModulate, texture, textureState, sampling, canvasModulate]
+    () => item && module!.rectShaderDraw(gl, item, { texture, textureState, sampling }),
+    [module, gl, item, texture, textureState, sampling]
   );
   useEffect(() => (draw ? draw.dispose : undefined), [draw]);
+  useLayoutEffect(() => {
+    draw?.setRect({ region, finalModulate, canvasModulate });
+    invalidate();
+  }, [draw, region, finalModulate, canvasModulate, invalidate]);
   useRecordWriter(draw?.writeRecords ?? null);
 
-  const samplers = compiled && 'item' in compiled ? compiled.samplers : null;
+  const samplers = shaded?.samplers ?? null;
   const [textures, textureSlots] = useShaderTextures(
     useMemo(() => samplers && { references: shader.textures, samplers }, [samplers, shader.textures])
   );
