@@ -83,6 +83,12 @@ describe('attributesGeometry', () => {
     ).toEqual(['Uint32Array', 'Float32Array']);
   });
 
+  it('cuts a strip into its triangles, every second one turned', () => {
+    const geometry = attributesGeometry({ primitive: 'triangle_strip', points: SQUARE, colors: [], uvs: [] });
+
+    expect([...geometry.index!.array]).toEqual([0, 1, 2, 1, 3, 2]);
+  });
+
   it('is never culled, as it has no position to bound', () => {
     const geometry = attributesGeometry(triangleArrayCommand([0, 1, 2], SQUARE.slice(0, 3), [], []));
 
@@ -141,18 +147,8 @@ describe('primitiveObject', () => {
     expect(primitiveObject(primitive, geometry(), material).type).toBe(type);
   });
 
-  it('draws a strip as its triangles, every second one turned', () => {
-    const strip = primitiveObject('triangle_strip', geometry(), material) as THREE.Mesh;
-
-    expect([...strip.geometry.index!.array]).toEqual([0, 1, 2, 1, 3, 2]);
-  });
-
-  it('leaves the strip geometry it reads as it was, so a second object reads the same strip', () => {
-    const strip = geometry();
-
-    primitiveObject('triangle_strip', strip, material);
-
-    expect([...strip.index!.array]).toEqual([0, 1, 2, 3]);
+  it('draws a strip as a three Mesh', () => {
+    expect(primitiveObject('triangle_strip', geometry(), material).type).toBe('Mesh');
   });
 });
 
@@ -166,6 +162,21 @@ describe('attributesObject', () => {
     };
 
     hook.update({ object });
+
+    expect((draw.uniforms.get('params.world_ofs') as UniformNode<unknown>).value).toEqual(
+      new THREE.Vector2(5, 7)
+    );
+  });
+
+  it('writes the push constants of a clone, which shares the material', () => {
+    const draw = transpileCanvasItem(DEFAULT_CANVAS_SHADER).draw('attributes');
+    const geometry = attributesGeometry(polygonCommand(SQUARE, [], []));
+    const clone = attributesObject(draw, geometry, 'triangles', polygonConstants(ITEM)).clone();
+    const hook = draw.uniforms.get('params.world_x') as UniformNode<unknown> & {
+      update(frame: { object: THREE.Object3D }): void;
+    };
+
+    hook.update({ object: clone });
 
     expect((draw.uniforms.get('params.world_ofs') as UniformNode<unknown>).value).toEqual(
       new THREE.Vector2(5, 7)

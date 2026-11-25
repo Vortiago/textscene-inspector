@@ -61,7 +61,7 @@ const rectScene = (name, fields) => canvasScene('rect', name, { rects: [WHOLE_GR
 
 const rect = (fields) => ({ ...WHOLE_GRID, ...fields });
 
-export const CANVAS_RECT_SCENES = [
+const RECT_SCENES = [
   rectScene('canvas-rect-texture', {}),
   rectScene('canvas-rect-region', { rects: [rect({ rect: [-12, -12, 24, 24], source: [2, 1, 3, 3] })] }),
   rectScene('canvas-rect-flip-h', { rects: [rect({ rect: [-16, -8, -32, 16] })] }),
@@ -360,6 +360,12 @@ const NINE_PATCH_SCENES = [
     { knownPixels: 52 }
   ),
   ninePatchScene('canvas-ninepatch-linear', { axisX: 'tile_fit' }, { filter: 'linear' }),
+  // A zero source reads the whole texture, with the texel size as the patch's pixel size.
+  ninePatchScene('canvas-ninepatch-whole-texture', {
+    source: [0, 0, 0, 0],
+    axisX: 'tile',
+    axisY: 'tile_fit',
+  }),
   ninePatchScene('canvas-ninepatch-no-texture', { isTextured: false, modulate: [0.4, 0.8, 1, 1] }),
 ];
 
@@ -374,13 +380,11 @@ const LINEAR_RECT_SCENES = [
   }),
 ];
 
-/** The mesh scenes of S2b: primitives, polygons, meshes, nine-patches and the linear canvas. */
-export const CANVAS_MESH_SCENES = [
+export const CANVAS_SCENES = [
+  ...RECT_SCENES,
   ...PRIMITIVE_SCENES,
   ...POLYGON_SCENES,
   ...MESH_SCENES,
   ...NINE_PATCH_SCENES,
   ...LINEAR_RECT_SCENES,
 ];
-
-export const CANVAS_SCENES = [...CANVAS_RECT_SCENES, ...CANVAS_MESH_SCENES];

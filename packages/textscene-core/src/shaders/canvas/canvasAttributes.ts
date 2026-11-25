@@ -84,7 +84,9 @@ export function attributesGeometry(arrays: CanvasVertexArrays): THREE.BufferGeom
   geometry.setAttribute('bone_attrib', new THREE.BufferAttribute(new Uint32Array(count * 4), 4));
   geometry.setAttribute('weight_attrib', new THREE.BufferAttribute(new Float32Array(count * 4), 4));
   // In order without indices: three counts the vertices of an unindexed draw from `position` alone.
-  geometry.setIndex(indices ? [...indices] : points.map((_, index) => index));
+  const order = indices ?? points.map((_, index) => index);
+  // WebGL 2 draws no strip of a three `Mesh`, so a strip draws as the triangles it makes.
+  geometry.setIndex(arrays.primitive === 'triangle_strip' ? [...stripToTriangles(order)] : [...order]);
   // The template places each vertex through the push constants, so `position` bounds nothing.
   geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), Infinity);
   return geometry;
@@ -120,31 +122,51 @@ export function meshConstants(item: CanvasItemDraw, mesh: CanvasMeshPlacement): 
   };
 }
 
+/** The vector members of `Params`, one set for each draw, which each object's hook sets in place. */
+interface AttributesParams {
+  readonly worldX: THREE.Vector2;
+  readonly worldY: THREE.Vector2;
+  readonly worldOfs: THREE.Vector2;
+  readonly modulation: THREE.Vector4;
+}
+
+const newParams = (): AttributesParams => ({
+  worldX: new THREE.Vector2(),
+  worldY: new THREE.Vector2(),
+  worldOfs: new THREE.Vector2(),
+  modulation: new THREE.Vector4(),
+});
+
+function setParams(
+  params: AttributesParams,
+  { world, modulation: { r, g, b, a } }: AttributesConstants
+): void {
+  const [xx, xy, yx, yy, ox, oy] = worldOf(world);
+  params.worldX.set(xx!, xy!);
+  params.worldY.set(yx!, yy!);
+  params.worldOfs.set(ox!, oy!);
+  params.modulation.set(r, g, b, a);
+}
+
+const NO_LIGHTS = new THREE.Vector4();
+
 /** Each member of `Params` an attributes draw writes (`renderer_canvas_render_rd.cpp:567`). */
-const ATTRIBUTES_BINDINGS: readonly Binding<AttributesConstants>[] = [
-  {
-    uniform: 'params.world_x',
-    godot: 'renderer_canvas_render_rd.cpp:570',
-    value: ({ world }) => new THREE.Vector2(...worldOf(world).slice(0, 2)),
-  },
-  {
-    uniform: 'params.world_y',
-    godot: 'renderer_canvas_render_rd.cpp:570',
-    value: ({ world }) => new THREE.Vector2(...worldOf(world).slice(2, 4)),
-  },
+const ATTRIBUTES_BINDINGS: readonly Binding<AttributesParams>[] = [
+  { uniform: 'params.world_x', godot: 'renderer_canvas_render_rd.cpp:570', value: ({ worldX }) => worldX },
+  { uniform: 'params.world_y', godot: 'renderer_canvas_render_rd.cpp:570', value: ({ worldY }) => worldY },
   {
     uniform: 'params.world_ofs',
     godot: 'renderer_canvas_render_rd.cpp:570',
-    value: ({ world }) => new THREE.Vector2(...worldOf(world).slice(4, 6)),
+    value: ({ worldOfs }) => worldOfs,
   },
   {
     uniform: 'params.modulation',
     godot: 'renderer_canvas_render_rd.cpp:571',
-    value: ({ modulation: { r, g, b, a } }) => new THREE.Vector4(r, g, b, a),
+    value: ({ modulation }) => modulation,
   },
   // No light reaches the item, so its flags and light indices are zero.
   { uniform: 'params.flags', godot: 'renderer_canvas_render_rd.cpp:573', value: () => 0 },
-  { uniform: 'params.lights', godot: 'renderer_canvas_render_rd.cpp:572', value: () => new THREE.Vector4() },
+  { uniform: 'params.lights', godot: 'renderer_canvas_render_rd.cpp:572', value: () => NO_LIGHTS },
   {
     uniform: 'params.instance_uniforms_ofs',
     godot: 'renderer_canvas_render_rd.cpp:574',
@@ -155,9 +177,15 @@ const ATTRIBUTES_BINDINGS: readonly Binding<AttributesConstants>[] = [
 /** The uniform every attributes vertex stage reads, so its object update runs before each draw. */
 const DRAW_HOOK = 'params.world_x';
 
-/** Written only by `attributesObject`: the constants of each object an attributes draw draws. */
-// eslint-disable-next-line no-restricted-syntax -- a store the caller fills, not a value built from its key
-const constantsByObject = new WeakMap<THREE.Object3D, AttributesConstants>();
+/** The `userData` key of an object's constants: `Object3D.copy` copies it, so a clone draws as its source. */
+const CONSTANTS_KEY = 'attributesConstants';
+
+function constantsOf(object: THREE.Object3D): AttributesConstants {
+  const constants = object.userData[CONSTANTS_KEY] as AttributesConstants | undefined;
+  if (!constants)
+    throw new Error(`expected an object of attributesObject, got ${object.name || object.uuid}`);
+  return constants;
+}
 
 /** Written only by `writeEachDraw`: the draws whose hook writes each object's constants. */
 const hookedDraws = new WeakSet<CanvasDraw>();
@@ -171,7 +199,7 @@ export function attributesObject(
 ): THREE.Object3D {
   writeEachDraw(draw);
   const object = primitiveObject(primitive, geometry, draw.material);
-  constantsByObject.set(object, constants);
+  object.userData[CONSTANTS_KEY] = constants;
   return object;
 }
 
@@ -184,16 +212,15 @@ function writeEachDraw(draw: CanvasDraw): void {
       `expected an attributes draw to read the uniform ${DRAW_HOOK}, found ${hook ? 'an array' : 'none'}`
     );
   hookedDraws.add(draw);
+  const params = newParams();
   hook.onObjectUpdate(({ object }) => {
-    const constants = constantsByObject.get(object!);
-    if (!constants)
-      throw new Error(`expected an object of attributesObject, got ${object?.name || object?.uuid}`);
-    writeBindings(ATTRIBUTES_BINDINGS, draw.uniforms, constants);
+    setParams(params, constantsOf(object!));
+    writeBindings(ATTRIBUTES_BINDINGS, draw.uniforms, params);
   });
 }
 
 /**
- * `RD::RenderPrimitive` (`renderer_canvas_render_rd.cpp:355`). A strip draws as triangles: WebGL 2 has none.
+ * `RD::RenderPrimitive` (`renderer_canvas_render_rd.cpp:355`), a strip's geometry already cut into triangles.
  * @canonical The three object that draws a canvas primitive type
  */
 export function primitiveObject(
@@ -215,18 +242,7 @@ function objectOf(primitive: CanvasPrimitive, geometry: THREE.BufferGeometry, ma
     case 'line_strip':
       return new THREE.Line(geometry, material);
     case 'triangles':
-      return new THREE.Mesh(geometry, material);
     case 'triangle_strip':
-      return new THREE.Mesh(stripGeometry(geometry), material);
+      return new THREE.Mesh(geometry, material);
   }
-}
-
-/** A new geometry over the same attributes, its index the triangles of the strip's index. */
-function stripGeometry(strip: THREE.BufferGeometry): THREE.BufferGeometry {
-  if (!strip.index) throw new Error('expected an indexed strip geometry, got one with no index');
-  const triangles = new THREE.BufferGeometry();
-  for (const [name, attribute] of Object.entries(strip.attributes)) triangles.setAttribute(name, attribute);
-  triangles.setIndex(new THREE.BufferAttribute(stripToTriangles(strip.index.array), 1));
-  triangles.boundingSphere = strip.boundingSphere;
-  return triangles;
 }

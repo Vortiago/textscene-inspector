@@ -8,7 +8,7 @@ import {
   instanceRecord,
   modulated,
 } from './canvasInstance.js';
-import type { TexelSize } from './canvasTexture.js';
+import { DEFAULT_TEXEL_SIZE, type TexelSize } from './canvasTexture.js';
 
 /** `RendererCanvasRender::CANVAS_RECT_*` (`renderer_canvas_render.h:41-49`). */
 export const CANVAS_RECT = {
@@ -138,9 +138,6 @@ const NINEPATCH_V_MODE_SHIFT = 11;
 
 /** Float offset of `InstanceData::ninepatch_pixel_size`. */
 const NINEPATCH_PIXEL_SIZE = 6;
-
-/** The texel size of the default canvas texture, which has no diffuse map (`texture_storage.cpp:752`). */
-const DEFAULT_TEXEL_SIZE: TexelSize = { x: 1, y: 1 };
 
 /** `InstanceData` of a nine-patch with no light (`renderer_canvas_render_rd.cpp:2560-2608`). */
 export function ninePatchInstanceData(

@@ -38,6 +38,8 @@ export function primitiveDraw(pointCount: number): {
   readonly variant: CanvasVariant;
   readonly primitive: CanvasPrimitive;
 } {
+  if (pointCount < 1 || pointCount > 4)
+    throw new Error(`expected a primitive of 1 to 4 points, got ${pointCount}`);
   if (pointCount === 1) return { variant: 'primitive_points', primitive: 'points' };
   return { variant: 'primitive', primitive: pointCount === 2 ? 'lines' : 'triangles' };
 }

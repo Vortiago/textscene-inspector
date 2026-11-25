@@ -64,6 +64,11 @@ function sizeOf(texture: THREE.Texture): BatchTexture {
 /** The default canvas texture has no diffuse map, so its size is 1 by 1 (`texture_storage.cpp:751-752`). */
 const DEFAULT_TEXTURE_SIZE: BatchTexture = { width: 1, height: 1 };
 
+export const DEFAULT_TEXEL_SIZE: TexelSize = {
+  x: 1 / DEFAULT_TEXTURE_SIZE.width,
+  y: 1 / DEFAULT_TEXTURE_SIZE.height,
+};
+
 /** The members of `Params` a rect batch writes from its texture and the default canvas texture's maps. */
 const TEXTURE_BINDINGS: readonly Binding<BatchTexture>[] = [
   {

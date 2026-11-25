@@ -650,6 +650,18 @@ shader_type canvas_item;
 | --- | --- |
 | <img src="showcase/canvas-ninepatch-linear-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-ninepatch-linear-three.png" width="256" alt="Transpilation"> |
 
+## Showcase `canvas-ninepatch-whole-texture`
+
+Godot draws a `canvas_item_add_nine_patch` on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-ninepatch-whole-texture-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-ninepatch-whole-texture-three.png" width="256" alt="Transpilation"> |
+
 ## Showcase `canvas-ninepatch-no-texture`
 
 Godot draws a `canvas_item_add_nine_patch` on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.

@@ -58,6 +58,10 @@ describe('primitiveDraw', () => {
   ])('draws %i points with the %s variant as %s', (count, variant, primitive) => {
     expect(primitiveDraw(count)).toEqual({ variant, primitive });
   });
+
+  it('refuses five points', () => {
+    expect(() => primitiveDraw(5)).toThrow('expected a primitive of 1 to 4 points, got 5');
+  });
 });
 
 describe('primitiveInstanceData', () => {
