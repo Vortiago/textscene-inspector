@@ -13,7 +13,8 @@ import {
   buildTileGeometryArrays,
   buildTileOrientations,
 } from '../resources/tileset/tileGeometry';
-import type { DrawableCell } from '../resources/tileset/drawableCell';
+import { cellsInAtlasGrid, type DrawableCell } from '../resources/tileset/drawableCell';
+import { imageSize } from '../resources/formats/image/imagePixels';
 import type { AtlasSourceModel, TileGrid } from '../resources/tileset/types';
 import { useCanvas2DTexture } from './canvas2DTextureDecode';
 import type { CanvasItemTextureSampler } from './canvasItemTextureSampler';
@@ -60,12 +61,13 @@ export function TileSourceMesh({
 
   const { canvasTexture } = texResult;
   const hasNormalMap = Boolean(canvasTexture?.slot.normalTexture);
+  const drawnCells = useCellsInAtlasGrid(cells, source, texResult.texture);
   const arrays = useMemo(() => {
     if (!texW || !texH) return null;
     return isStandIn
-      ? buildPaddedStandInGeometryArrays(cells, source, grid, texW, texH)
-      : buildTileGeometryArrays(cells, source, grid, texW, texH);
-  }, [cells, source, grid, texW, texH, isStandIn]);
+      ? buildPaddedStandInGeometryArrays(drawnCells, source, grid, texW, texH)
+      : buildTileGeometryArrays(drawnCells, source, grid, texW, texH);
+  }, [drawnCells, source, grid, texW, texH, isStandIn]);
   const colors = useMemo(() => arrays && tintedColors(arrays.colors, tint.vertex), [arrays, tint.vertex]);
   const geometry = useMemo(() => {
     if (!arrays || !colors) return null;
@@ -80,7 +82,7 @@ export function TileSourceMesh({
   }, [arrays, colors]);
   // R3F does not dispose a geometry passed as a prop, so this releases it.
   useDisposeOnRelease(geometry);
-  const orientsNormals = useOrientationAttribute(geometry, hasNormalMap, cells, source);
+  const orientsNormals = useOrientationAttribute(geometry, hasNormalMap, drawnCells, source);
 
   // The run's own maps, so runs of one tile item from different sources each light with theirs.
   const [surface, setSurface] = useState<CanvasItemSurface | null>(null);
@@ -149,4 +151,19 @@ function tintedColors(colors: Float32Array, vertexTint: Rgba): Float32Array {
   const { r, g, b } = vertexTint;
   const factors = [r, g, b, 1];
   return colors.map((value, index) => value * (factors[index % 4] ?? 1));
+}
+
+/** The cells inside the source texture's grid. A texture with no image knows no grid: all its cells draw. */
+function useCellsInAtlasGrid(
+  cells: readonly DrawableCell[],
+  source: AtlasSourceModel,
+  texture: THREE.Texture | null | undefined
+): readonly DrawableCell[] {
+  const size = imageSize(texture?.image);
+  const width = size?.width;
+  const height = size?.height;
+  return useMemo(
+    () => (width && height ? cellsInAtlasGrid(cells, source, { width, height }) : cells),
+    [cells, source, width, height]
+  );
 }

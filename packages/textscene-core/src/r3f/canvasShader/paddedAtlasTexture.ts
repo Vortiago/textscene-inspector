@@ -8,9 +8,7 @@ import { isBottomUp, reversedRows } from '../../utils/reversedRows';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
 
 /** Written only by `sharedAtlas`: each texture's padded copies by source, each dropped as it is disposed. */
-const paddedCopiesOf = perObject(
-  (_texture: THREE.Texture) => new Map<AtlasSourceModel, THREE.Texture | null>()
-);
+const paddedCopiesOf = perObject((_texture: THREE.Texture) => new Map<AtlasSourceModel, THREE.Texture>());
 
 /** The texture a source's tiles draw from: Godot's padded copy (`tile_set.cpp:5622`), or its own. */
 export function useRuntimeAtlasTexture(
@@ -26,13 +24,15 @@ export function useRuntimeAtlasTexture(
   return source.usesTexturePadding ? padded : texture;
 }
 
-/** The padded copy every run of `source` shares, made by the first. */
+/** The padded copy every run of `source` shares. A failed read is not kept: the next run reads again. */
 function sharedAtlas(texture: THREE.Texture, source: AtlasSourceModel): THREE.Texture | null {
   const copies = paddedCopiesOf(texture);
-  if (copies.has(source)) return copies.get(source)!;
+  const held = copies.get(source);
+  if (held) return held;
   const atlas = paddedAtlasTexture(texture, source);
+  if (!atlas) return null;
   copies.set(source, atlas);
-  atlas?.addEventListener('dispose', () => copies.delete(source));
+  atlas.addEventListener('dispose', () => copies.delete(source));
   return atlas;
 }
 

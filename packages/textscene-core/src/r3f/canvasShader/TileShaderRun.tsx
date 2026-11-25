@@ -2,8 +2,7 @@ import { useMemo, type ReactNode } from 'react';
 import type { Rgba } from '../../godot/math/math';
 import type { Vector2 } from '../../godot/math/vector';
 import type { ShaderText } from '../../resources/materials/shadermaterial/types';
-import type { DrawableCell } from '../../resources/tileset/drawableCell';
-import { atlasGridSize } from '../../resources/tileset/paddedAtlas';
+import { cellsInAtlasGrid, type DrawableCell } from '../../resources/tileset/drawableCell';
 import type { AtlasSourceModel } from '../../resources/tileset/types';
 import { imageSize } from '../../resources/formats/image/imagePixels';
 import { useCanvasItemTextureSampledBy } from '../canvasItemTexture';
@@ -45,7 +44,7 @@ export function TileShaderRun({
   const commands = useMemo(() => {
     const textureSize = drawn.texture && imageSize(drawn.texture.image);
     const origin = { x: originX, y: originY };
-    return textureSize && tileRectCommands(cellsInAtlas(cells, source, textureSize), tileSet, origin);
+    return textureSize && tileRectCommands(cellsInAtlasGrid(cells, source, textureSize), tileSet, origin);
   }, [cells, source, drawn.texture, tileSet, originX, originY]);
   // A source with no texture, a pending one or a failed one draws nothing (`tile_map_layer.cpp:2676-2677`).
   if (!source.texture || drawn.missing || !texture || !commands) return null;
@@ -64,14 +63,4 @@ export function TileShaderRun({
       />
     </object3D>
   );
-}
-
-/** The cells inside the texture's grid, which alone draw (`tile_map_layer.cpp:2680-2683`). */
-function cellsInAtlas(
-  cells: readonly DrawableCell[],
-  source: AtlasSourceModel,
-  textureSize: { width: number; height: number }
-): readonly DrawableCell[] {
-  const grid = atlasGridSize(source, textureSize);
-  return cells.filter(({ atlasCoords: { x, y } }) => x < grid.x && y < grid.y);
 }

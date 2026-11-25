@@ -1,6 +1,6 @@
 /** Godot draws a placed cell only when its source, tile and alternative exist (`tile_map_layer.cpp:527-531`). */
 import { describe, expect, it } from 'vitest';
-import { drawableCells } from './drawableCell';
+import { cellsInAtlasGrid, drawableCells } from './drawableCell';
 import type { PlacedCell } from '../../nodes/2d/tiles/shared/tileData';
 import { defaultTileData, type AtlasSourceModel } from './types';
 import { tileTextureAt } from './testing/tileTexture';
@@ -53,5 +53,16 @@ describe('drawableCells', () => {
 
   it('returns no cell for no cells', () => {
     expect(drawableCells(MODEL, [])).toEqual([]);
+  });
+});
+
+describe('cellsInAtlasGrid', () => {
+  it('keeps the cells inside the texture grid and drops those past it', () => {
+    const [inside] = drawableCells(MODEL, [cell(0)]);
+    const past = { ...inside!, atlasCoords: { x: 2, y: 0 } };
+
+    const drawn = cellsInAtlasGrid([inside!, past], SOURCE, { width: 32, height: 16 });
+
+    expect(drawn).toEqual([inside]);
   });
 });
