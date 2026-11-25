@@ -1,16 +1,22 @@
 # Canvas items
 
-A shader of `shader_type canvas_item` draws a 2D item. Godot links it into its canvas template, `canvas.glsl`, in the variant of the item's draw: a rect, a nine-patch, a primitive or a mesh with attributes. `transpileCanvasItem(text)` links the shader once, and `draw(variant)` gives the material of each variant, with its own uniforms and textures. Godot's default canvas shader, `DEFAULT_CANVAS_SHADER`, is the text with empty slots that draws an item with no material.
+A shader of `shader_type canvas_item` draws a 2D item. Godot links it into its canvas template, `canvas.glsl`, in the variant of the item's draw: a rect, a nine-patch, a primitive or a mesh with attributes, and the primitive and the mesh again as points. `transpileCanvasItem(text)` links the shader once, and `draw(variant)` gives the material of each variant, with its own uniforms and textures. Godot's default canvas shader, `DEFAULT_CANVAS_SHADER`, is the text with empty slots that draws an item with no material.
 
-A rect draws as Godot's rect batch does. `textureRectRegion(rect, source, modulate, { transpose, clipUv })` is the rect command of `draw_texture_rect_region`: a negative size flips that axis. `rectInstanceData(command, item, texelSize)` writes Godot's 128-byte `InstanceData` record of the rect from the item's transform and final modulate. `rectBatchGeometry(records)` gives the instanced quad that reads each record as the attributes `attrib_A` to `attrib_H`. `writeCanvasBindings(draw, frame)` writes the template's `CanvasData` block from the render target's size, the canvas transform, the CanvasModulate colour, the time and the pixel snap. `CANVAS_BINDINGS` names the line of Godot's C++ behind each one. `CanvasTextureBinding` binds the item's texture with the item's filter and repeat, or Godot's white default texture, and writes the texture's texel size. The draw is one pass with Godot's mix blend, no cull and no depth.
+Each draw reads the item's transform, its final modulate and the render target's colour mode as a `CanvasItemDraw`. `writeCanvasBindings(draw, frame)` writes the template's `CanvasData` block from the render target's size, the canvas transform, the CanvasModulate colour, the time, the pixel snap and the colour mode. `CANVAS_BINDINGS` names the line of Godot's C++ behind each one. `CanvasTextureBinding` binds the item's texture with the item's filter and repeat, or Godot's white default texture, and returns the texel size it writes. Each draw is one pass with Godot's mix blend, no cull and no depth.
 
-The draws use an sRGB 2D render target, as a viewport without HDR 2D does: the texture's texels and the modulate colours reach the frame as they are stored. Only a rect draws now. A user's `canvas_item` shader, 2D lights, nine-patches, primitives and meshes do not draw yet, and their rows stay open with their issues.
+A rect and a nine-patch draw as Godot's quad batch does. `textureRectRegion(rect, source, modulate, { transpose, clipUv })` is the rect command of `draw_texture_rect_region`: a negative size flips that axis. `rectInstanceData(command, item, texelSize)` and `ninePatchInstanceData(command, item, texelSize)` write Godot's 128-byte `InstanceData` record. `quadBatchGeometry(records)` gives the instanced quad that reads each record as the attributes `attrib_A` to `attrib_H`.
+
+A primitive of `draw_primitive` draws as Godot's primitive batch does. `primitiveCommand(points, colors, uvs)` repeats the first colour for a point with none. `primitiveInstanceData(command, item)` writes one record for a point, a line or a triangle, and two for a quad, with each colour in half floats. `primitiveDraw(pointCount)` names the variant and the primitive, and `primitiveBatchGeometry(records, pointCount)` gives the geometry. `primitiveObject(primitive, geometry, material)` gives the three.js object that draws it: points, lines, a line strip, triangles or a triangle strip.
+
+A polygon and a mesh surface draw through the attributes variant, one draw each. `polygonCommand(points, colors, uvs)` cuts an outline into triangles, as `draw_polygon` does, and `triangleArrayCommand(indices, points, colors, uvs)` takes the triangles of a Polygon2D. `attributesGeometry(arrays)` writes the vertex arrays, with Godot's default white colour and zero UV for a missing array. `polygonConstants(item)` and `meshConstants(item, { transform, modulate })` give the push constants, and `attributesObject(draw, geometry, primitive, constants)` writes them before each draw of the object.
+
+A viewport with `use_hdr_2d` keeps colours linear. Set `usesLinearColors` on the frame, the item and the texture state: the template then turns the vertex colours linear, Godot's C++ turns the modulate colours linear, and the texture reads through its sRGB view. Without it, the texels and the colours reach the frame as they are stored. A user's `canvas_item` shader and 2D lights do not draw yet, and their rows stay open with their issues.
 
 Godot 4.6.3-stable (official), probed on llvmpipe (LLVM 20.1.2). Each table shows at most 8 of a probe's rows, picked to show as many mixes of zero, subnormal, normal, infinite and NaN values as fit. The real-GL test (`pnpm test:shaders:gpu`) checks every row, bit for bit, NaN lanes compared as NaN. Generated by `pnpm godot:shader-language`: do not edit by hand.
 
 ## Showcase `canvas-rect-texture`
 
-Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws them (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same rects through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
 
 ```glsl
 shader_type canvas_item;
@@ -22,7 +28,7 @@ shader_type canvas_item;
 
 ## Showcase `canvas-rect-region`
 
-Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws them (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same rects through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
 
 ```glsl
 shader_type canvas_item;
@@ -34,7 +40,7 @@ shader_type canvas_item;
 
 ## Showcase `canvas-rect-flip-h`
 
-Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws them (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same rects through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
 
 ```glsl
 shader_type canvas_item;
@@ -46,7 +52,7 @@ shader_type canvas_item;
 
 ## Showcase `canvas-rect-flip-v`
 
-Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws them (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same rects through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
 
 ```glsl
 shader_type canvas_item;
@@ -58,7 +64,7 @@ shader_type canvas_item;
 
 ## Showcase `canvas-rect-flip-source`
 
-Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws them (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same rects through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
 
 ```glsl
 shader_type canvas_item;
@@ -70,7 +76,7 @@ shader_type canvas_item;
 
 ## Showcase `canvas-rect-transposed`
 
-Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws them (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same rects through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
 
 ```glsl
 shader_type canvas_item;
@@ -82,7 +88,7 @@ shader_type canvas_item;
 
 ## Showcase `canvas-rect-modulate`
 
-Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws them (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same rects through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
 
 ```glsl
 shader_type canvas_item;
@@ -94,7 +100,7 @@ shader_type canvas_item;
 
 ## Showcase `canvas-rect-modulate-over-1`
 
-Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws them (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same rects through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
 
 ```glsl
 shader_type canvas_item;
@@ -106,7 +112,7 @@ shader_type canvas_item;
 
 ## Showcase `canvas-rect-modulate-alpha-0`
 
-Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws them (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same rects through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
 
 ```glsl
 shader_type canvas_item;
@@ -118,7 +124,7 @@ shader_type canvas_item;
 
 ## Showcase `canvas-rect-self-modulate-alpha`
 
-Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws them (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same rects through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
 
 ```glsl
 shader_type canvas_item;
@@ -130,7 +136,7 @@ shader_type canvas_item;
 
 ## Showcase `canvas-rect-blend-alpha`
 
-Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws them (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same rects through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
 
 ```glsl
 shader_type canvas_item;
@@ -142,7 +148,7 @@ shader_type canvas_item;
 
 ## Showcase `canvas-rect-linear`
 
-Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws them (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same rects through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
 
 ```glsl
 shader_type canvas_item;
@@ -154,7 +160,7 @@ shader_type canvas_item;
 
 ## Showcase `canvas-rect-linear-clip-uv`
 
-Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws them (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same rects through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
 
 ```glsl
 shader_type canvas_item;
@@ -166,7 +172,7 @@ shader_type canvas_item;
 
 ## Showcase `canvas-rect-linear-no-clip`
 
-Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws them (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same rects through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
 
 ```glsl
 shader_type canvas_item;
@@ -178,7 +184,7 @@ shader_type canvas_item;
 
 ## Showcase `canvas-rect-repeat`
 
-Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws them (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same rects through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
 
 ```glsl
 shader_type canvas_item;
@@ -190,7 +196,7 @@ shader_type canvas_item;
 
 ## Showcase `canvas-rect-mirror`
 
-Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws them (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same rects through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
 
 ```glsl
 shader_type canvas_item;
@@ -202,7 +208,7 @@ shader_type canvas_item;
 
 ## Showcase `canvas-rect-clamp`
 
-Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws them (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same rects through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
 
 ```glsl
 shader_type canvas_item;
@@ -214,7 +220,7 @@ shader_type canvas_item;
 
 ## Showcase `canvas-rect-rotated`
 
-Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws them (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same rects through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
 
 ```glsl
 shader_type canvas_item;
@@ -226,7 +232,7 @@ shader_type canvas_item;
 
 ## Showcase `canvas-rect-rotated-linear`
 
-Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws them (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same rects through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
 
 ```glsl
 shader_type canvas_item;
@@ -238,7 +244,7 @@ shader_type canvas_item;
 
 ## Showcase `canvas-rect-subpixel`
 
-Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws them (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same rects through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
 
 ```glsl
 shader_type canvas_item;
@@ -250,7 +256,7 @@ shader_type canvas_item;
 
 ## Showcase `canvas-rect-subpixel-snapped`
 
-Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws them (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same rects through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
 
 ```glsl
 shader_type canvas_item;
@@ -262,7 +268,7 @@ shader_type canvas_item;
 
 ## Showcase `canvas-rect-canvas-transform`
 
-Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws them (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same rects through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
 
 ```glsl
 shader_type canvas_item;
@@ -274,7 +280,7 @@ shader_type canvas_item;
 
 ## Showcase `canvas-rect-canvas-modulate`
 
-Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws them (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same rects through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
 
 ```glsl
 shader_type canvas_item;
@@ -286,7 +292,7 @@ shader_type canvas_item;
 
 ## Showcase `canvas-rect-batch`
 
-Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws them (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same rects through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
 
 ```glsl
 shader_type canvas_item;
@@ -295,4 +301,388 @@ shader_type canvas_item;
 | Godot | Transpilation on three.js |
 | --- | --- |
 | <img src="showcase/canvas-rect-batch-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-rect-batch-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-primitive-points`
+
+Godot draws the scene's `draw_primitive` calls on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-primitive-points-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-primitive-points-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-primitive-lines`
+
+Godot draws the scene's `draw_primitive` calls on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-primitive-lines-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-primitive-lines-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-primitive-triangle`
+
+Godot draws the scene's `draw_primitive` calls on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-primitive-triangle-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-primitive-triangle-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-primitive-quad`
+
+Godot draws the scene's `draw_primitive` calls on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-primitive-quad-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-primitive-quad-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-primitive-quad-textured`
+
+Godot draws the scene's `draw_primitive` calls on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-primitive-quad-textured-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-primitive-quad-textured-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-primitive-modulate`
+
+Godot draws the scene's `draw_primitive` calls on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-primitive-modulate-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-primitive-modulate-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-primitive-linear-canvas`
+
+Godot draws the scene's `draw_primitive` calls on a Node2D of a 2D view with `use_hdr_2d`, whose image holds linear colours, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-primitive-linear-canvas-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-primitive-linear-canvas-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-polygon-vertex-colors`
+
+Godot draws a Polygon2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-polygon-vertex-colors-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-polygon-vertex-colors-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-polygon-color`
+
+Godot draws a Polygon2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-polygon-color-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-polygon-color-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-polygon-textured`
+
+Godot draws a Polygon2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-polygon-textured-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-polygon-textured-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-polygon-textured-linear-filter`
+
+Godot draws a Polygon2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-polygon-textured-linear-filter-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-polygon-textured-linear-filter-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-polygon-modulate`
+
+Godot draws a Polygon2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-polygon-modulate-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-polygon-modulate-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-polygon-linear-canvas`
+
+Godot draws a Polygon2D of a 2D view with `use_hdr_2d`, whose image holds linear colours, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-polygon-linear-canvas-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-polygon-linear-canvas-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-draw-polygon-one-color`
+
+Godot draws the scene's `draw_polygon` call on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-draw-polygon-one-color-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-draw-polygon-one-color-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-draw-polygon-textured`
+
+Godot draws the scene's `draw_polygon` call on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-draw-polygon-textured-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-draw-polygon-textured-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-mesh-triangles`
+
+Godot draws an ArrayMesh of 2D vertices on a MeshInstance2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-mesh-triangles-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-mesh-triangles-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-mesh-textured`
+
+Godot draws an ArrayMesh of 2D vertices on a MeshInstance2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-mesh-textured-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-mesh-textured-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-mesh-no-colors`
+
+Godot draws an ArrayMesh of 2D vertices on a MeshInstance2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-mesh-no-colors-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-mesh-no-colors-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-mesh-strip`
+
+Godot draws an ArrayMesh of 2D vertices on a MeshInstance2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-mesh-strip-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-mesh-strip-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-mesh-lines`
+
+Godot draws an ArrayMesh of 2D vertices on a MeshInstance2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-mesh-lines-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-mesh-lines-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-mesh-points`
+
+Godot draws an ArrayMesh of 2D vertices on a MeshInstance2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-mesh-points-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-mesh-points-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-mesh-modulate`
+
+Godot draws an ArrayMesh of 2D vertices on a MeshInstance2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-mesh-modulate-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-mesh-modulate-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-mesh-linear-canvas`
+
+Godot draws an ArrayMesh of 2D vertices on a MeshInstance2D of a 2D view with `use_hdr_2d`, whose image holds linear colours, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-mesh-linear-canvas-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-mesh-linear-canvas-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-ninepatch-stretch`
+
+Godot draws a `canvas_item_add_nine_patch` on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-ninepatch-stretch-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-ninepatch-stretch-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-ninepatch-tile`
+
+Godot draws a `canvas_item_add_nine_patch` on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-ninepatch-tile-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-ninepatch-tile-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-ninepatch-tile-fit`
+
+Godot draws a `canvas_item_add_nine_patch` on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-ninepatch-tile-fit-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-ninepatch-tile-fit-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-ninepatch-no-centre`
+
+Godot draws a `canvas_item_add_nine_patch` on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-ninepatch-no-centre-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-ninepatch-no-centre-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-ninepatch-region`
+
+Godot draws a `canvas_item_add_nine_patch` on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-ninepatch-region-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-ninepatch-region-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-ninepatch-linear`
+
+Godot draws a `canvas_item_add_nine_patch` on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-ninepatch-linear-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-ninepatch-linear-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-ninepatch-no-texture`
+
+Godot draws a `canvas_item_add_nine_patch` on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-ninepatch-no-texture-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-ninepatch-no-texture-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-rect-linear-canvas`
+
+Godot draws the scene's rects on a Node2D of a 2D view with `use_hdr_2d`, whose image holds linear colours, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-rect-linear-canvas-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-rect-linear-canvas-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-rect-linear-canvas-modulate`
+
+Godot draws the scene's rects on a Node2D of a 2D view with `use_hdr_2d`, whose image holds linear colours, with no material, so Godot's default canvas shader draws it (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-rect-linear-canvas-modulate-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-rect-linear-canvas-modulate-three.png" width="256" alt="Transpilation"> |
 

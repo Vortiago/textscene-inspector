@@ -51,13 +51,39 @@ export {
   type TranspiledCanvasItem,
 } from './canvas/transpileCanvas.js';
 export { CANVAS_BINDINGS, writeCanvasBindings, type CanvasFrame } from './canvas/canvasBindings.js';
+export type { CanvasItemDraw } from './canvas/canvasInstance.js';
 export {
-  rectBatchGeometry,
+  NINE_PATCH_AXIS_MODES,
+  ninePatchInstanceData,
+  quadBatchGeometry,
   rectInstanceData,
   textureRectRegion,
-  type CanvasItemDraw,
+  type CanvasNinePatchCommand,
   type CanvasRectCommand,
+  type NinePatchAxisMode,
+  type TexelSize,
 } from './canvas/canvasRect.js';
+export {
+  primitiveBatchGeometry,
+  primitiveCommand,
+  primitiveDraw,
+  primitiveInstanceData,
+  type CanvasPrimitive,
+  type CanvasPrimitiveCommand,
+} from './canvas/canvasPrimitive.js';
+export {
+  attributesGeometry,
+  attributesObject,
+  attributesVariant,
+  meshConstants,
+  polygonCommand,
+  polygonConstants,
+  primitiveObject,
+  triangleArrayCommand,
+  type AttributesConstants,
+  type CanvasMeshPlacement,
+  type CanvasVertexArrays,
+} from './canvas/canvasAttributes.js';
 export {
   CanvasTextureBinding,
   GODOT_CANVAS_TEXTURE_STATE,

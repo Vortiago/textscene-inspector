@@ -39,7 +39,13 @@ import {
   type PointDraw,
   type SpatialPipeline,
 } from './spatialPipeline.js';
-import { glClipPosition, vertexAttributes, vulkanFragCoord, type ClipStep } from '../template/vulkanStage.js';
+import {
+  glClipPosition,
+  NATIVE_POINT_SIZE,
+  vertexAttributes,
+  vulkanFragCoord,
+  type ClipStep,
+} from '../template/vulkanStage.js';
 import { declaresInvariantPosition, setPosition, type EmittedStages } from './emittedStages.js';
 import { TreeMemo } from '../template/treeMemo.js';
 import type { Stacked, Vec2, Vec4 } from '../tslTypes.js';
@@ -194,15 +200,8 @@ function stageEmitter(
 /** The `gl_PointSize` write of a points surface: native points draw at size 1, emulated ones at the size. */
 function pointSizeWrites(pointDraw: PointDraw | null, points: DevicePoints | null): WrittenBuiltIn[] {
   if (!pointDraw) return [];
-  return [points?.size ?? UNUSED_POINT_SIZE];
+  return [points?.size ?? NATIVE_POINT_SIZE];
 }
-
-const UNUSED_POINT_SIZE: WrittenBuiltIn = {
-  name: 'gl_PointSize',
-  type: 'float',
-  initial: float(1) as unknown as Node,
-  store: () => undefined,
-};
 
 /** The instance of a draw's object on the render layers `layers`, as Godot writes one for each draw. */
 function instanceWordsOf(object: THREE.Object3D, layers: number): Uint32Array {

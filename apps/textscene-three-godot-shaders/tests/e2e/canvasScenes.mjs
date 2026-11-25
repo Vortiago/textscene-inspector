@@ -39,25 +39,29 @@ const WHOLE_GRID = {
   clipUv: false,
 };
 
-/** One scene of rects of `texture` on an item, with Godot's default viewport and canvas. */
-const rectScene = (name, fields) => ({
+/** One scene of `kind` on an item, with Godot's default viewport and canvas, on an sRGB target. */
+const canvasScene = (kind, name, fields) => ({
   name,
+  kind,
   ...SIZE,
   source: DEFAULT_CANVAS,
   texture: GRID,
   filter: 'nearest',
   repeat: 'disabled',
   item: CENTRE,
-  rects: [WHOLE_GRID],
   canvasTransform: [1, 0, 0, 1, 0, 0],
   canvasModulate: WHITE,
   snapVertices: false,
+  linear: false,
   ...fields,
 });
 
+/** One scene of rects of `texture` on an item: `draw_texture_rect_region`. */
+const rectScene = (name, fields) => canvasScene('rect', name, { rects: [WHOLE_GRID], ...fields });
+
 const rect = (fields) => ({ ...WHOLE_GRID, ...fields });
 
-export const CANVAS_SCENES = [
+export const CANVAS_RECT_SCENES = [
   rectScene('canvas-rect-texture', {}),
   rectScene('canvas-rect-region', { rects: [rect({ rect: [-12, -12, 24, 24], source: [2, 1, 3, 3] })] }),
   rectScene('canvas-rect-flip-h', { rects: [rect({ rect: [-16, -8, -32, 16] })] }),
@@ -114,3 +118,269 @@ export const CANVAS_SCENES = [
     ],
   }),
 ];
+
+const RED = [1, 0, 0, 1];
+const GREEN = [0, 1, 0, 1];
+const BLUE = [0, 0, 1, 1];
+const YELLOW = [1, 1, 0, 0.5];
+
+/** Points at pixel centres, so a point or a line covers the same pixels on every rasteriser. */
+const centre = ([x, y]) => [x + 0.5, y + 0.5];
+
+/** One scene of `draw_primitive` calls on the item, each `{ points, colors, uvs }`, all textured or none. */
+const primitiveScene = (name, primitives, fields = {}) =>
+  canvasScene('primitive', name, { primitives, isTextured: false, ...fields });
+
+/** A quad of the grid's corners, with a colour at each corner. */
+const GRID_QUAD = {
+  points: [
+    [-16, -12],
+    [16, -12],
+    [16, 12],
+    [-16, 12],
+  ],
+  colors: [RED, GREEN, BLUE, YELLOW],
+  uvs: [
+    [0, 0],
+    [1, 0],
+    [1, 1],
+    [0, 1],
+  ],
+};
+
+const PRIMITIVE_SCENES = [
+  primitiveScene(
+    'canvas-primitive-points',
+    [RED, GREEN, BLUE, YELLOW].map((color, index) => ({
+      points: [centre([-12 + index * 8, -4])],
+      colors: [color],
+      uvs: [],
+    }))
+  ),
+  // ANGLE leaves out the first pixel of an upward line where Vulkan leaves out its last, as in 3D.
+  primitiveScene(
+    'canvas-primitive-lines',
+    [
+      { points: [centre([-20, -8]), centre([20, -8])], colors: [RED, BLUE], uvs: [] },
+      { points: [centre([-20, 6]), centre([-20, -14])], colors: [GREEN], uvs: [] },
+    ],
+    { knownPixels: 2 }
+  ),
+  primitiveScene('canvas-primitive-triangle', [
+    { points: GRID_QUAD.points.slice(0, 3), colors: GRID_QUAD.colors.slice(0, 3), uvs: [] },
+  ]),
+  primitiveScene('canvas-primitive-quad', [{ ...GRID_QUAD, uvs: [] }]),
+  primitiveScene('canvas-primitive-quad-textured', [GRID_QUAD], { isTextured: true }),
+  primitiveScene('canvas-primitive-modulate', [{ ...GRID_QUAD, uvs: [] }], {
+    item: { ...CENTRE, rotation: 20, modulate: [1.5, 1, 0.5, 0.75] },
+  }),
+  primitiveScene('canvas-primitive-linear-canvas', [GRID_QUAD], { isTextured: true, linear: true }),
+];
+
+/** Halfway to grey: `srgb_to_linear` leaves 0 and 1 as they are, so a linear canvas needs mid tones. */
+const midTone = ([r, g, b, a]) => [0.25 + r / 2, 0.25 + g / 2, 0.25 + b / 2, a];
+
+/** A concave outline with a colour at each point, as a Polygon2D with `vertex_colors` draws it. */
+const ARROW = {
+  points: [
+    [-20, -4],
+    [0, -4],
+    [0, -14],
+    [20, 0],
+    [0, 14],
+    [0, 4],
+    [-20, 4],
+  ],
+  colors: [RED, RED, GREEN, BLUE, GREEN, YELLOW, YELLOW],
+};
+
+/** One Polygon2D: its outline, its vertex colours or its one `color`, and its UVs in texels. */
+const polygonScene = (name, polygon, fields = {}) =>
+  canvasScene('polygon', name, {
+    polygon: { color: WHITE, colors: [], uvs: [], isTextured: false, ...polygon },
+    ...fields,
+  });
+
+/** The arrow's points as texels of the grid, which is 8 by 4. */
+const ARROW_UVS = ARROW.points.map(([x, y]) => [(x + 20) / 5, (y + 14) / 7]);
+
+const POLYGON_SCENES = [
+  polygonScene('canvas-polygon-vertex-colors', ARROW),
+  polygonScene('canvas-polygon-color', { points: ARROW.points, color: [0.2, 0.6, 1, 0.8] }),
+  polygonScene('canvas-polygon-textured', { points: ARROW.points, uvs: ARROW_UVS, isTextured: true }),
+  polygonScene(
+    'canvas-polygon-textured-linear-filter',
+    { points: ARROW.points, uvs: ARROW_UVS, isTextured: true },
+    {
+      filter: 'linear',
+    }
+  ),
+  polygonScene('canvas-polygon-modulate', ARROW, {
+    item: {
+      ...CENTRE,
+      rotation: -35,
+      scale: [1.2, 0.8],
+      modulate: [1, 0.5, 2, 1],
+      selfModulate: [1, 1, 1, 0.6],
+    },
+  }),
+  polygonScene(
+    'canvas-polygon-linear-canvas',
+    { ...ARROW, colors: ARROW.colors.map(midTone) },
+    { linear: true }
+  ),
+  // `draw_polygon` with one colour, which the vertex buffer repeats on every point.
+  canvasScene('drawPolygon', 'canvas-draw-polygon-one-color', {
+    polygon: { points: ARROW.points, colors: [[1, 0.5, 0.2, 0.9]], uvs: [], isTextured: false },
+  }),
+  canvasScene('drawPolygon', 'canvas-draw-polygon-textured', {
+    polygon: {
+      points: ARROW.points,
+      colors: [],
+      uvs: ARROW_UVS.map(([x, y]) => [x / 8, y / 4]),
+      isTextured: true,
+    },
+  }),
+];
+
+/** A strip of four triangles across the grid, with a colour and a UV at each vertex. */
+const STRIP = {
+  vertices: [
+    [-24, -10],
+    [-24, 10],
+    [-8, -10],
+    [-8, 10],
+    [8, -10],
+    [8, 10],
+    [24, -10],
+    [24, 10],
+  ],
+  colors: [RED, GREEN, BLUE, YELLOW, RED, GREEN, BLUE, YELLOW],
+  uvs: [
+    [0, 0],
+    [0, 1],
+    [1 / 3, 0],
+    [1 / 3, 1],
+    [2 / 3, 0],
+    [2 / 3, 1],
+    [1, 0],
+    [1, 1],
+  ],
+};
+
+/** One surface of an ArrayMesh with 2D vertices on a MeshInstance2D. */
+const meshScene = (name, surface, fields = {}) =>
+  canvasScene('mesh', name, {
+    surface: { primitive: 'triangles', colors: [], uvs: [], indices: null, ...surface },
+    isTextured: false,
+    ...fields,
+  });
+
+/** The strip as triangles of an index array. */
+const STRIP_TRIANGLES = [0, 1, 2, 2, 1, 3, 2, 3, 4, 4, 3, 5, 4, 5, 6, 6, 5, 7];
+
+const MESH_SCENES = [
+  meshScene('canvas-mesh-triangles', { ...STRIP, indices: STRIP_TRIANGLES }),
+  meshScene('canvas-mesh-textured', { ...STRIP, indices: STRIP_TRIANGLES }, { isTextured: true }),
+  meshScene(
+    'canvas-mesh-no-colors',
+    { vertices: STRIP.vertices, uvs: STRIP.uvs, indices: STRIP_TRIANGLES },
+    {
+      isTextured: true,
+    }
+  ),
+  meshScene('canvas-mesh-strip', { ...STRIP, primitive: 'triangle_strip' }),
+  meshScene('canvas-mesh-lines', {
+    primitive: 'lines',
+    vertices: [centre([-20, -10]), centre([20, -10]), centre([-20, 10]), centre([20, 10])],
+    colors: [RED, BLUE, GREEN, YELLOW],
+  }),
+  meshScene('canvas-mesh-points', {
+    primitive: 'points',
+    vertices: STRIP.vertices.map(centre),
+    colors: STRIP.colors,
+  }),
+  meshScene(
+    'canvas-mesh-modulate',
+    { ...STRIP, indices: STRIP_TRIANGLES },
+    {
+      item: { ...CENTRE, rotation: 15, scale: [0.9, 1.3], modulate: [0.5, 1, 1, 0.7] },
+    }
+  ),
+  meshScene(
+    'canvas-mesh-linear-canvas',
+    { ...STRIP, colors: STRIP.colors.map(midTone), indices: STRIP_TRIANGLES },
+    { isTextured: true, linear: true }
+  ),
+];
+
+/** A 16 by 8 texture with a border of 3 texels left and right and 2 top and bottom, and a lit centre. */
+function patchTexture() {
+  const width = 16;
+  const height = 8;
+  const isBorder = (x, y) => x < 3 || x >= width - 3 || y < 2 || y >= height - 2;
+  const texels = [];
+  for (let y = 0; y < height; y++)
+    for (let x = 0; x < width; x++)
+      texels.push(
+        isBorder(x, y) ? [40 + x * 12, 200 - y * 20, 60, 255] : [230, 200 + x * 2, 40 + y * 20, 200]
+      );
+  return { width, height, texels };
+}
+
+const PATCH = patchTexture();
+
+/** One `canvas_item_add_nine_patch` on the item, over the whole patch texture. */
+const ninePatchScene = (name, patch, fields = {}) =>
+  canvasScene('ninepatch', name, {
+    texture: PATCH,
+    patch: {
+      rect: [-26, -18, 52, 36],
+      source: [0, 0, 16, 8],
+      margins: [3, 2, 3, 2],
+      axisX: 'stretch',
+      axisY: 'stretch',
+      drawsCenter: true,
+      modulate: WHITE,
+      isTextured: true,
+      ...patch,
+    },
+    ...fields,
+  });
+
+const NINE_PATCH_SCENES = [
+  ninePatchScene('canvas-ninepatch-stretch', {}),
+  ninePatchScene('canvas-ninepatch-tile', { axisX: 'tile', axisY: 'tile' }),
+  ninePatchScene('canvas-ninepatch-tile-fit', { axisX: 'tile_fit', axisY: 'tile_fit' }),
+  ninePatchScene('canvas-ninepatch-no-centre', { drawsCenter: false, modulate: [1, 0.5, 1, 0.8] }),
+  // Row 15 maps to texel row 3.0 of the texture exactly, a nearest-filter tie each GPU breaks its own way.
+  ninePatchScene(
+    'canvas-ninepatch-region',
+    { source: [2, 1, 12, 6], margins: [2, 1, 2, 1] },
+    { knownPixels: 52 }
+  ),
+  ninePatchScene('canvas-ninepatch-linear', { axisX: 'tile_fit' }, { filter: 'linear' }),
+  ninePatchScene('canvas-ninepatch-no-texture', { isTextured: false, modulate: [0.4, 0.8, 1, 1] }),
+];
+
+/** Rects on a render target that keeps colours linear, `use_hdr_2d`. */
+const LINEAR_RECT_SCENES = [
+  rectScene('canvas-rect-linear-canvas', { texture: FADING_GRID, linear: true }),
+  rectScene('canvas-rect-linear-canvas-modulate', {
+    linear: true,
+    filter: 'linear',
+    canvasModulate: [0.5, 1, 0.75, 1],
+    item: { ...CENTRE, modulate: [1, 0.6, 0.6, 0.8] },
+  }),
+];
+
+/** The mesh scenes of S2b: primitives, polygons, meshes, nine-patches and the linear canvas. */
+export const CANVAS_MESH_SCENES = [
+  ...PRIMITIVE_SCENES,
+  ...POLYGON_SCENES,
+  ...MESH_SCENES,
+  ...NINE_PATCH_SCENES,
+  ...LINEAR_RECT_SCENES,
+];
+
+export const CANVAS_SCENES = [...CANVAS_RECT_SCENES, ...CANVAS_MESH_SCENES];

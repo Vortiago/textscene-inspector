@@ -19,14 +19,36 @@ const texture8x4 = () => new THREE.DataTexture(new Uint8Array(8 * 4 * 4), 8, 4);
 
 describe('CanvasTextureBinding', () => {
   it("binds Godot's white default texture for a rect with no texture", () => {
-    const { binding, texture, param } = bound();
+    const { binding, texture } = bound();
 
     binding.bind(undefined, GODOT_CANVAS_TEXTURE_STATE);
 
-    expect([firstTexel(texture('color_texture')), param('color_texture_pixel_size')]).toEqual([
-      [255, 255, 255, 255],
-      new THREE.Vector2(1 / 4, 1 / 4),
-    ]);
+    expect(firstTexel(texture('color_texture'))).toEqual([255, 255, 255, 255]);
+  });
+
+  it('writes a texel size of 1 for no texture, as the default canvas texture has no diffuse size', () => {
+    const { binding, param } = bound();
+
+    const texelSize = binding.bind(undefined, GODOT_CANVAS_TEXTURE_STATE);
+
+    expect([param('color_texture_pixel_size'), texelSize]).toEqual([new THREE.Vector2(1, 1), { x: 1, y: 1 }]);
+  });
+
+  it('returns the texel size it writes', () => {
+    const { binding } = bound();
+
+    expect(binding.bind(texture8x4(), GODOT_CANVAS_TEXTURE_STATE)).toEqual({ x: 1 / 8, y: 1 / 4 });
+  });
+
+  it.each([
+    [false, THREE.NoColorSpace],
+    [true, THREE.SRGBColorSpace],
+  ])('reads the texture of a render target with linear colours %s in %s', (usesLinearColors, colorSpace) => {
+    const { binding, texture } = bound();
+
+    binding.bind(texture8x4(), { ...GODOT_CANVAS_TEXTURE_STATE, usesLinearColors });
+
+    expect(texture('color_texture').colorSpace).toBe(colorSpace);
   });
 
   it("writes the texture's texel size", () => {

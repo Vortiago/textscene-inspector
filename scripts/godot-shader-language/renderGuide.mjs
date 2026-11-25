@@ -204,10 +204,25 @@ function chapterSections(chapters, rows, probes) {
 /** The width the guide shows a showcase image at: four screen pixels to each image pixel. */
 const SHOWCASE_SCALE = 4;
 
-/** What the page draws of a showcase: a function of UV, a sky, a mesh, or a canvas item's rects. */
+/** What Godot draws of a canvas scene of each kind, with no material. */
+const CANVAS_DRAWS = {
+  rect: "the scene's rects on a Node2D",
+  primitive: "the scene's `draw_primitive` calls on a Node2D",
+  polygon: 'a Polygon2D',
+  drawPolygon: "the scene's `draw_polygon` call on a Node2D",
+  mesh: 'an ArrayMesh of 2D vertices on a MeshInstance2D',
+  ninepatch: 'a `canvas_item_add_nine_patch` on a Node2D',
+};
+
+/** What Godot draws of a canvas scene, and the target it draws to. */
+function canvasText({ kind, linear }) {
+  const target = linear ? ' with `use_hdr_2d`, whose image holds linear colours' : '';
+  return `Godot draws ${CANVAS_DRAWS[kind]} of a 2D view${target}, with no material, so Godot's default canvas shader draws it (\`tests/e2e/canvasScenes.mjs\`). A plain three.js page draws the same commands through the transpiled canvas template with the same values.`;
+}
+
+/** What the page draws of a showcase: a function of UV, a sky, a mesh, or a canvas item. */
 function showcaseText(showcase) {
-  if (showcase.rects)
-    return "Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws them (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same rects through the transpiled canvas template with the same values.";
+  if (showcase.kind) return canvasText(showcase);
   if (showcase.mesh)
     return "Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values.";
   if (showcase.camera)
@@ -223,7 +238,7 @@ function renderShowcase(showcase) {
 ${showcaseText(showcase)} \`pnpm test:shaders:e2e\` draws both again and fails on any pixel over 2/255 apart.
 
 \`\`\`glsl
-${(showcase.camera || showcase.rects ? showcase.source : godotShader(showcase)).trim()}
+${(showcase.camera || showcase.kind ? showcase.source : godotShader(showcase)).trim()}
 \`\`\`
 
 | Godot | Transpilation on three.js |

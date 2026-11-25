@@ -1,7 +1,14 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { TRANSFORM2D_IDENTITY } from '../../godot/math/transform2d.js';
-import { CANVAS_RECT, rectBatchGeometry, rectInstanceData, textureRectRegion } from './canvasRect.js';
+import {
+  CANVAS_RECT,
+  type CanvasNinePatchCommand,
+  ninePatchInstanceData,
+  quadBatchGeometry,
+  rectInstanceData,
+  textureRectRegion,
+} from './canvasRect.js';
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 const ITEM = {
@@ -88,6 +95,21 @@ describe('rectInstanceData', () => {
     expect(lanes(rectInstanceData(flagged, ITEM, TEXEL), 6).words[2]).toBe((1 << 5) | (1 << 4));
   });
 
+  it('writes the modulate linear for a render target with linear colours', () => {
+    const record = rectInstanceData(command, { ...ITEM, usesLinearColors: true }, TEXEL);
+
+    expect(lanes(record, 2).floats.map((channel) => channel.toFixed(4))).toEqual([
+      '0.2140',
+      '0.2140',
+      '1.0000',
+      '0.5000',
+    ]);
+  });
+
+  it('writes no instance uniforms as an offset of -1 in attrib_G.w', () => {
+    expect(lanes(rectInstanceData(command, ITEM, TEXEL), 6).words[3]).toBe(0xffffffff);
+  });
+
   it('reads the whole texture and no flag for a rect with no texture', () => {
     const record = rectInstanceData(command, { ...ITEM, transform: TRANSFORM2D_IDENTITY }, undefined);
 
@@ -95,18 +117,18 @@ describe('rectInstanceData', () => {
   });
 });
 
-describe('rectBatchGeometry', () => {
+describe('quadBatchGeometry', () => {
   const command = textureRectRegion({ x: 0, y: 0, w: 4, h: 2 }, { x: 0, y: 0, w: 4, h: 2 }, WHITE);
   const records = [rectInstanceData(command, ITEM, TEXEL), rectInstanceData(command, ITEM, TEXEL)];
 
   it('draws two triangles over four vertices for each instance', () => {
-    const geometry = rectBatchGeometry(records);
+    const geometry = quadBatchGeometry(records);
 
     expect([[...geometry.index!.array], geometry.instanceCount]).toEqual([[0, 1, 2, 0, 2, 3], 2]);
   });
 
   it('reads attrib_A to attrib_F as floats and attrib_G and attrib_H as unsigned integers', () => {
-    const geometry = rectBatchGeometry(records);
+    const geometry = quadBatchGeometry(records);
     const arrayOf = (name: string) =>
       (geometry.getAttribute(name) as unknown as { data: { array: unknown } }).data.array;
 
@@ -117,7 +139,7 @@ describe('rectBatchGeometry', () => {
   });
 
   it('reads the 24 floats and the 8 unsigned lanes of each InstanceData record', () => {
-    const geometry = rectBatchGeometry(records);
+    const geometry = quadBatchGeometry(records);
     const strideOf = (name: string) =>
       (geometry.getAttribute(name) as unknown as { data: { stride: number } }).data.stride;
 
@@ -125,16 +147,74 @@ describe('rectBatchGeometry', () => {
   });
 
   it('is never culled, as it has no position to bound', () => {
-    expect(new THREE.Frustum().intersectsSphere(rectBatchGeometry(records).boundingSphere!)).toBe(true);
+    expect(new THREE.Frustum().intersectsSphere(quadBatchGeometry(records).boundingSphere!)).toBe(true);
   });
 
   it("reads the record's flags in attrib_G.z of its own instance", () => {
     const transposed = textureRectRegion({ x: 0, y: 0, w: 4, h: 2 }, { x: 0, y: 0, w: 4, h: 2 }, WHITE, {
       transpose: true,
     });
-    const geometry = rectBatchGeometry([records[0]!, rectInstanceData(transposed, ITEM, TEXEL)]);
+    const geometry = quadBatchGeometry([records[0]!, rectInstanceData(transposed, ITEM, TEXEL)]);
     const flags = geometry.getAttribute('attrib_G') as unknown as THREE.InterleavedBufferAttribute;
 
     expect([flags.getZ(0), flags.getZ(1)]).toEqual([0, 1 << 5]);
+  });
+});
+
+describe('ninePatchInstanceData', () => {
+  const PATCH: CanvasNinePatchCommand = {
+    rect: { x: -8, y: -4, w: 16, h: 8 },
+    source: { x: 2, y: 1, w: 8, h: 4 },
+    modulate: { r: 1, g: 0.5, b: 1, a: 1 },
+    margins: [1, 2, 3, 4],
+    axisX: 'tile',
+    axisY: 'tile_fit',
+    drawsCenter: true,
+  };
+
+  it('writes the source in texture units in attrib_F and one over its size in attrib_B.zw', () => {
+    const record = ninePatchInstanceData(PATCH, ITEM, TEXEL);
+
+    expect([lanes(record, 5).floats, lanes(record, 1).floats.slice(2)]).toEqual([
+      [0.125, 0.125, 0.5, 0.5],
+      [0.125, 0.25],
+    ]);
+  });
+
+  it('reads the whole texture with its texel size for a zero source', () => {
+    const record = ninePatchInstanceData({ ...PATCH, source: { x: 0, y: 0, w: 0, h: 0 } }, ITEM, TEXEL);
+
+    expect([lanes(record, 5).floats, lanes(record, 1).floats.slice(2)]).toEqual([
+      [0, 0, 1, 1],
+      [1 / 16, 1 / 8],
+    ]);
+  });
+
+  it('reads the whole default texture with its texel size of 1 for no texture, whatever its source', () => {
+    const record = ninePatchInstanceData(PATCH, ITEM, undefined);
+
+    expect([lanes(record, 5).floats, lanes(record, 1).floats.slice(2)]).toEqual([
+      [0, 0, 1, 1],
+      [1, 1],
+    ]);
+  });
+
+  it('writes the margins left, top, right, bottom in attrib_D and the rect in attrib_E', () => {
+    const record = ninePatchInstanceData(PATCH, ITEM, TEXEL);
+
+    expect([lanes(record, 3).floats, lanes(record, 4).floats]).toEqual([
+      [1, 2, 3, 4],
+      [-8, -4, 16, 8],
+    ]);
+  });
+
+  it('writes the axis modes from bit 9 and 11 and the centre from bit 8 in attrib_G.z', () => {
+    expect(lanes(ninePatchInstanceData(PATCH, ITEM, TEXEL), 6).words[2]).toBe(
+      (1 << 9) | (2 << 11) | (1 << 8)
+    );
+  });
+
+  it('writes the patch modulate times the item modulate in attrib_C', () => {
+    expect(lanes(ninePatchInstanceData(PATCH, ITEM, TEXEL), 2).floats).toEqual([0.5, 0.5, 1, 0.5]);
   });
 });

@@ -22,6 +22,14 @@ const SRGB_EXPONENT = f(1 / f(2.4));
 export const srgbToLinear = (c: number): number =>
   c < SRGB_KNEE ? f(c * LINEAR_SLOPE) : f(Math.pow(f((c + 0.055) * (1 / 1.055)), f(2.4)));
 
+/** `Color::srgb_to_linear` (`color.h:192`): the colour channels converted, alpha kept. */
+export const srgbToLinearColor = ({ r, g, b, a }: Rgba): Rgba => ({
+  r: srgbToLinear(r),
+  g: srgbToLinear(g),
+  b: srgbToLinear(b),
+  a,
+});
+
 /** A channel of `Color::linear_to_srgb` (`color.h:199`). */
 export const linearToSrgb = (c: number): number =>
   c < LINEAR_KNEE ? f(f(12.92) * c) : f(1.055 * f(Math.pow(c, SRGB_EXPONENT)) - 0.055);

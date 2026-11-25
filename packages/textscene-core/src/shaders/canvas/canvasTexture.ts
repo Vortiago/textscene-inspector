@@ -4,6 +4,7 @@ import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
 import { applySamplerState, GODOT_SAMPLING, type ProjectSampling } from '../uniforms/samplerState.js';
 import type { SamplerSettings } from '../uniforms/samplerTextures.js';
 import { TextureCopies } from '../uniforms/textureCopies.js';
+import type { TexelSize } from './canvasRect.js';
 import type { CanvasDraw } from './transpileCanvas.js';
 
 /** `CanvasItem.texture_filter` past `DEFAULT`, which the item resolves to the project's filter. */
@@ -21,6 +22,8 @@ export type CanvasTextureRepeat = 'disabled' | 'enabled' | 'mirror';
 export interface CanvasTextureState {
   readonly filter: CanvasTextureFilter;
   readonly repeat: CanvasTextureRepeat;
+  /** A linear render target reads a colour texture through its sRGB view (`texture_storage.cpp:754`). */
+  readonly usesLinearColors?: boolean;
 }
 
 /** The project's default canvas texture filter and repeat (`project_settings.cpp:1833-1834`). */
@@ -52,6 +55,9 @@ function sizeOf(texture: THREE.Texture): BatchTexture {
     );
   return { width: image.width, height: image.height };
 }
+
+/** The default canvas texture has no diffuse map, so its size is 1 by 1 (`texture_storage.cpp:751-752`). */
+const DEFAULT_TEXTURE_SIZE: BatchTexture = { width: 1, height: 1 };
 
 /** The members of `Params` a rect batch writes from its texture and the default canvas texture's maps. */
 const TEXTURE_BINDINGS: readonly Binding<BatchTexture>[] = [
@@ -85,13 +91,15 @@ export class CanvasTextureBinding {
     this.setTexture('specular_texture', this.white);
   }
 
-  /** Binds `texture`, or Godot's default canvas texture, white, for a rect with none. */
-  bind(texture: THREE.Texture | undefined, state: CanvasTextureState): void {
+  /** Binds `texture`, or Godot's default canvas texture, white, for a command with none. */
+  bind(texture: THREE.Texture | undefined, state: CanvasTextureState): TexelSize {
     const key = stateKey(state);
     const bound = texture ? this.copiesOf(key, state).copyOf(texture) : this.white;
     this.setTexture('color_texture', bound);
-    writeBindings(TEXTURE_BINDINGS, this.draw.uniforms, sizeOf(bound));
+    const size = texture ? sizeOf(bound) : DEFAULT_TEXTURE_SIZE;
+    writeBindings(TEXTURE_BINDINGS, this.draw.uniforms, size);
     for (const [held, copies] of this.copies) copies.release(held === key ? [bound] : []);
+    return { x: 1 / size.width, y: 1 / size.height };
   }
 
   /** Frees the copies and the default textures it binds. */
@@ -105,10 +113,11 @@ export class CanvasTextureBinding {
     const held = this.copies.get(key);
     if (held) return held;
     const settings = settingsOf(state);
-    // An sRGB render target reads the texels as they are stored, with no decode.
+    // An sRGB render target reads the texels as they are stored, and a linear one decodes them.
+    const colorSpace = state.usesLinearColors ? THREE.SRGBColorSpace : THREE.NoColorSpace;
     const copies = new TextureCopies((copy, source) => {
       applySamplerState(copy, source, settings, this.sampling);
-      copy.colorSpace = THREE.NoColorSpace;
+      copy.colorSpace = colorSpace;
     });
     this.copies.set(key, copies);
     return copies;
@@ -120,4 +129,5 @@ export class CanvasTextureBinding {
   }
 }
 
-const stateKey = ({ filter, repeat }: CanvasTextureState) => `${filter} ${repeat}`;
+const stateKey = ({ filter, repeat, usesLinearColors = false }: CanvasTextureState) =>
+  `${filter} ${repeat} ${usesLinearColors}`;
