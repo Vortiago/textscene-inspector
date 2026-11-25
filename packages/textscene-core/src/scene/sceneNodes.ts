@@ -109,6 +109,11 @@ export class SceneNodes implements HandleHost {
     return root ? this.find(root, path) : null;
   }
 
+  /** The names the files set on the node at the absolute `path`: a sub-scene's first, then its instance's. */
+  fileProperties(path: string): readonly string[] {
+    return Object.keys(this.nodeAt(path)?.rawProperties ?? {});
+  }
+
   typeOf(path: string, tree = this.source.tree()): string | null {
     if (path === ROOT_WINDOW_PATH) return ROOT_WINDOW_TYPE;
     return this.nodeAt(path, tree)?.type ?? null;

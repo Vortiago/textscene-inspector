@@ -53,6 +53,8 @@ export interface Scene {
   /** `get_node` from the scene's root node: throws `Node not found` where `path` names no node. */
   getNode(path: string): NodeHandle;
   getNodeOrNull(path: string): NodeHandle | null;
+  /** The names the scene's files set on the node at `path`, in file order. Throws as `getNode` does. */
+  fileProperties(path: string): readonly string[];
   /** `load`: a value a property of a resource type takes. A missing file draws as a Missing resource. */
   load(path: string): Promise<Variant>;
   /** Calls `listener` when the node at `path` changes, or the tree's shape for null. Returns the removal. */
@@ -165,6 +167,7 @@ export function openScene({
     },
     getNode: (path) => nodes.getNode(path),
     getNodeOrNull: (path) => nodes.getNodeOrNull(path),
+    fileProperties: (path) => nodes.fileProperties(nodes.getNode(path).path),
     async load(path) {
       const className = (await resourceClass(path)) ?? undefined;
       return variantOf({ type: T.OBJECT, resource: { path }, ...(className ? { className } : {}) });
