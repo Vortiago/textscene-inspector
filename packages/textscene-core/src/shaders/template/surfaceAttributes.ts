@@ -7,6 +7,9 @@ export const customArrayTemplateAttribute = (custom: number) => `${customArrayAt
 /** The lanes of one vertex of a custom array attribute: every format decodes to four floats. */
 export const CUSTOM_ARRAY_LANES = 4;
 
+/** A vertex format of fewer than four lanes reads 0 for a missing lane and 1 for a missing alpha. */
+export const MISSING_CUSTOM_LANES = [0, 0, 0, 1] as const;
+
 /** The attribute that holds each vertex's index in its own surface, which `gl_VertexIndex` reads. */
 export const VERTEX_ID_ATTRIBUTE = 'vertex_id_attrib';
 

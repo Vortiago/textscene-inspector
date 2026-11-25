@@ -6,7 +6,7 @@ import type { Vector2 } from '../../godot/math/vector';
 import { geometryPrimitive } from '../../resources/meshes/godotSurface';
 import type { AtlasCellRects } from '../../resources/useTexture2D';
 import { CANVAS_CUSTOM_ARRAYS, type CanvasVertexArrays } from '../../shaders/canvas/canvasAttributes';
-import { CUSTOM_ARRAY_LANES } from '../../shaders/template/surfaceAttributes';
+import { CUSTOM_ARRAY_LANES, MISSING_CUSTOM_LANES } from '../../shaders/template/surfaceAttributes';
 import type { CanvasSurface } from '../canvasMesh/canvasSurface';
 
 /** `canvas_item_add_texture_rect_region` with a white modulate (`renderer_canvas_cull.cpp:1624`). */
@@ -127,15 +127,16 @@ function vertexArraysOf(
   };
 }
 
-/** A copy of the custom array `name` as four float lanes a point, a missing lane zero, from any layout. */
+/** A copy of the custom array `name` as four float lanes a point, from any layout. */
 function customLanes(geometry: THREE.BufferGeometry, name: string): Float32Array | undefined {
   const attribute = geometry.getAttribute(name);
   if (!attribute) return undefined;
   const lanes = new Float32Array(attribute.count * CUSTOM_ARRAY_LANES);
   const width = Math.min(attribute.itemSize, CUSTOM_ARRAY_LANES);
   for (let point = 0; point < attribute.count; point++)
-    for (let lane = 0; lane < width; lane++)
-      lanes[point * CUSTOM_ARRAY_LANES + lane] = attribute.getComponent(point, lane);
+    for (let lane = 0; lane < CUSTOM_ARRAY_LANES; lane++)
+      lanes[point * CUSTOM_ARRAY_LANES + lane] =
+        lane < width ? attribute.getComponent(point, lane) : MISSING_CUSTOM_LANES[lane]!;
   return lanes;
 }
 

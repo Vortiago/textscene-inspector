@@ -152,20 +152,17 @@ describe('meshCommands', () => {
     expect(command?.kind === 'mesh' && 'customs' in command.arrays).toBe(false);
   });
 
-  it('reads a custom array of three lanes as four, the fourth zero', () => {
+  it.each([
+    [1, [1, 0, 0, 1, 2, 0, 0, 1, 3, 0, 0, 1]],
+    [2, [1, 2, 0, 1, 3, 4, 0, 1, 5, 6, 0, 1]],
+    [3, [1, 2, 3, 1, 4, 5, 6, 1, 7, 8, 9, 1]],
+  ])('reads a custom array of %i lanes as four, a missing lane 0 and a missing alpha 1', (width, lanes) => {
     const geometry = canvasSurfaceGeometry(TRIANGLE);
-    geometry.setAttribute(
-      'custom0',
-      new THREE.BufferAttribute(
-        Float32Array.from({ length: 9 }, (_, i) => i + 1),
-        3
-      )
-    );
+    const values = Float32Array.from({ length: 3 * width }, (_, i) => i + 1);
+    geometry.setAttribute('custom0', new THREE.BufferAttribute(values, width));
     const [command] = meshCommands([geometry]);
 
-    expect(command?.kind === 'mesh' && [...command.arrays.customs![0]!]).toEqual([
-      1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0,
-    ]);
+    expect(command?.kind === 'mesh' && [...command.arrays.customs![0]!]).toEqual(lanes);
   });
 
   it('reads an interleaved custom array by its lanes', () => {
