@@ -300,6 +300,11 @@ export class SceneNodes implements HandleHost {
         );
         return { texts, resourceClass: (resourcePath) => this.source.resourceClass(resourcePath) };
       },
+      fileTexts: async () => {
+        const { node } = await this.propertyTarget(path);
+        this.assertSameText(generation, path);
+        return node.rawProperties;
+      },
     };
   }
 

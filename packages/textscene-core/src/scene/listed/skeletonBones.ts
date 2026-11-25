@@ -40,3 +40,8 @@ export function skeletonBones(property: string, { texts }: ListedReads): GetOutc
   // `ERR_FAIL_UNSIGNED_INDEX_V` past the last bone, and a leaf with no arm, return false (:157, :176).
   return bone && leaf ? { kind: 'value', value: leaf(bone) } : { kind: 'refused' };
 }
+
+/** `get_bone_count`: the bones the file's `bones/<i>/name` rows build (skeleton_3d.cpp:714). */
+export function boneCountOf(texts: NodeTexts): number {
+  return bonesOf(texts).length;
+}

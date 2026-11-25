@@ -5,6 +5,9 @@ import { sceneValueOf, valueOfSceneValue, type SceneValue } from './variant.js';
 import { absolutePathOf, ROOT_WINDOW_PATH } from './nodePathWalk.js';
 import type { ViewportCameras } from './viewportCameras.js';
 import { animationLibrariesOf, type LibraryTexts } from './animationLibraries.js';
+import { boneCountOf } from './listed/skeletonBones.js';
+import { tileMapLayerCount, tileMapUsedCells } from './listed/tileMapLayers.js';
+import { tileMapLayerCells, usedCellsValue } from './tileCells.js';
 
 /** What `call` answers: a value, a node, or null for a method that returns nothing. */
 export type CallResult = SceneValue | NodeHandle | null;
@@ -33,6 +36,8 @@ export interface MethodTarget {
   isEditableInstance(node: NodeHandle): boolean;
   /** Each text the node's files set, in the order `_set` applies them, and the class of a resource. */
   ownTexts(): Promise<LibraryTexts>;
+  /** The same texts as the files spell them, by property name. */
+  fileTexts(): Promise<Readonly<Record<string, string>>>;
 }
 
 /** A method of Godot's class this release ports, with the count of arguments its binding takes. */
@@ -234,6 +239,36 @@ const ANIMATION_MIXER_METHODS: Readonly<Record<string, PortedMethod>> = {
   },
 };
 
+const SKELETON_3D_METHODS: Readonly<Record<string, PortedMethod>> = {
+  get_bone_count: {
+    minArguments: 0,
+    maxArguments: 0,
+    run: async (target) => boneCountOf(await target.fileTexts()),
+  },
+};
+
+const TILE_MAP_METHODS: Readonly<Record<string, PortedMethod>> = {
+  get_layers_count: {
+    minArguments: 0,
+    maxArguments: 0,
+    run: async (target) => tileMapLayerCount(await target.fileTexts()),
+  },
+  get_used_cells: {
+    minArguments: 1,
+    maxArguments: 1,
+    run: async (target, [layer], name) =>
+      sceneValueOf(usedCellsValue(tileMapUsedCells(await target.fileTexts(), intArgument(layer!, name)))),
+  },
+};
+
+const TILE_MAP_LAYER_METHODS: Readonly<Record<string, PortedMethod>> = {
+  get_used_cells: {
+    minArguments: 0,
+    maxArguments: 0,
+    run: async (target) => sceneValueOf(usedCellsValue(tileMapLayerCells(await target.fileTexts()))),
+  },
+};
+
 const OBJECT_METHODS: Readonly<Record<string, PortedMethod>> = {
   get_class: { minArguments: 0, maxArguments: 0, run: (target) => classInTree(target.className) },
   // object.cpp:2220. The class table stops below `Object`, which every class inherits.
@@ -253,6 +288,9 @@ const PORTED_METHODS: Readonly<Record<string, Readonly<Record<string, PortedMeth
   Camera2D: CAMERA_2D_METHODS,
   Viewport: VIEWPORT_METHODS,
   AnimationMixer: ANIMATION_MIXER_METHODS,
+  Skeleton3D: SKELETON_3D_METHODS,
+  TileMap: TILE_MAP_METHODS,
+  TileMapLayer: TILE_MAP_LAYER_METHODS,
 };
 
 /** The nearest class's port of the setter or the getter of `property`, with the method's name. */

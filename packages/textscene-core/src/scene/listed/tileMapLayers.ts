@@ -4,9 +4,9 @@ import { castVariant } from '../../godot/variant/variantCast.js';
 import { VARIANT_TYPE as T } from '../../godot/variant/variantType.js';
 import type { VariantValue } from '../../godot/variant/variantValue.js';
 import { tileMapLayerVector } from '../../nodes/2d/tiles/shared/layerVector.js';
-import { decodeLegacyTileData, type PlacedCell } from '../../nodes/2d/tiles/shared/tileData.js';
+import type { PlacedCell } from '../../nodes/2d/tiles/shared/tileData.js';
 import { tileMapLayerNames } from '../../nodes/2d/tiles/tilemap/layerNames.js';
-import { intOr } from '../../parser/valueParsers.js';
+import { legacyLayerCells } from '../tileCells.js';
 import { perObject } from '../../utils/perObject.js';
 import { boolValue, intValue } from '../derived/valueOf.js';
 import type { GetOutcome } from '../propertyAccess.js';
@@ -58,26 +58,27 @@ export function tileMapLayers(property: string, { texts }: ListedReads): GetOutc
   return { kind: 'value', value: text === undefined ? leaf.initial : castVariant(strToVar(text), leaf.type) };
 }
 
-/** The format the member starts at when the file writes none: TILE_MAP_DATA_FORMAT_3 (tile_map.h:64). */
-const CURRENT_FORMAT = 2;
-
 /** `_get_tile_map_data_using_compatibility_format` (tile_map.cpp:146-170): each cell, in the format it saves. */
 function tileDataOf(text: string | undefined, texts: NodeTexts): GetOutcome {
-  // A Godot 3 format loads no cells in a build without the deprecated code.
-  if (text === undefined || intOr(texts.format, CURRENT_FORMAT) !== CURRENT_FORMAT) return cellsValue([]);
-  const cells = decodeLegacyTileData(text, CURRENT_FORMAT);
-  return cells ? cellsValue(cellsByCoords(cells)) : { kind: 'unported', declaredBy: 'TileMap' };
+  const cells = legacyLayerCells(text, texts);
+  return cells ? cellsValue(cells) : { kind: 'unported', declaredBy: 'TileMap' };
 }
 
 function cellsValue(cells: readonly PlacedCell[]): GetOutcome {
   return { kind: 'value', value: { type: T.PACKED_INT32_ARRAY, value: encodeCells(cells) } };
 }
 
-/** The layer's `HashMap<Vector2i, CellData>`: a cell set twice keeps its first place and its last value. */
-function cellsByCoords(cells: readonly PlacedCell[]): PlacedCell[] {
-  const byCoords = new Map<string, PlacedCell>();
-  for (const cell of cells) byCoords.set(`${cell.coords.x},${cell.coords.y}`, cell);
-  return [...byCoords.values()];
+/** `get_layers_count`: the layers `_set` builds, up to the last a file writes (tile_map.cpp:265). */
+export function tileMapLayerCount(texts: NodeTexts): number {
+  return Math.max(...layersOf(texts).names.keys()) + 1;
+}
+
+/** `get_used_cells(layer)`, a negative layer counted from the last (tile_map.cpp:771-772). */
+export function tileMapUsedCells(texts: NodeTexts, layer: number): readonly PlacedCell[] {
+  const count = tileMapLayerCount(texts);
+  const index = layer < 0 ? count + layer : layer;
+  if (index < 0 || index >= count) return [];
+  return legacyLayerCells(layersOf(texts).leaves.get(index)?.get('tile_data'), texts) ?? [];
 }
 
 /** Three int32s a cell: int16 x and y, then uint16 source, atlas x, atlas y and alternative, little-endian. */
