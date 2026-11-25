@@ -7,7 +7,8 @@ import type { ShaderText } from '../../resources/materials/shadermaterial/types'
 import { moduleWork } from '../../resources/memoisedImport';
 import { CanvasShaderSlot } from './CanvasShaderSlot';
 
-vi.mock('../canvasRenderer/canvasNodesHandler', () => ({ useNodesHandler: () => 'ready' }));
+const nodesHandler = vi.hoisted(() => ({ state: 'ready' as 'ready' | 'loading' }));
+vi.mock('../canvasRenderer/canvasNodesHandler', () => ({ useNodesHandler: () => nodesHandler.state }));
 vi.mock('../projectShaderOptions', () => ({ useProjectShaderOptions: () => ({}) }));
 
 const REFUSED = 'shader_type canvas_item;\nvoid fragment() { COLOR = 1; }\n';
@@ -43,14 +44,19 @@ async function settle() {
   });
 }
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  nodesHandler.state = 'ready';
+});
 
 describe('CanvasShaderSlot', () => {
+  // Three's node handler, not the module: another file in the worker may have loaded the module already.
   it('draws the fallback while the translator loads', async () => {
+    nodesHandler.state = 'loading';
     const renderer = await renderSlot('shader_type canvas_item;\n');
+    await settle();
 
     expect(drawn(renderer)).toEqual(['Group:fallback']);
-    await settle();
   });
 
   it('draws the fallback for a shader the translator refuses', async () => {
