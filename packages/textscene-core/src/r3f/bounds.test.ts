@@ -28,6 +28,14 @@ describe('computeWorldBoundingBox', () => {
     expect(center.z).toBeCloseTo(4, 5);
   });
 
+  it('bounds a plain mesh over an instanced geometry by the box of its geometry', () => {
+    const geometry = new THREE.InstancedBufferGeometry();
+    geometry.boundingBox = new THREE.Box3(new THREE.Vector3(0, -4, 0), new THREE.Vector3(8, 0, 0));
+    const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial());
+
+    expect(computeWorldBoundingBox(mesh)).toEqual(geometry.boundingBox);
+  });
+
   it('uses the geometry (bind) box for a SkinnedMesh, ignoring a corrupt cached SkinnedMesh.boundingBox', () => {
     const skinned = new THREE.SkinnedMesh(unitBoxGeometry(), new THREE.MeshBasicMaterial());
     // Mimic the GLTF-clone bug: a posed/cached box in a far-away frame.

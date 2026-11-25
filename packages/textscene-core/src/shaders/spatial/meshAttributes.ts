@@ -22,6 +22,12 @@ const LISTS = { triangles: { corners: 3, name: 'triangle' }, lines: { corners: 2
 export const VERTEX_STAGE_BONES_ATTRIBUTE = 'godotBoneIndices';
 export const VERTEX_STAGE_WEIGHTS_ATTRIBUTE = 'godotBoneWeights';
 
+/** The geometry attribute of the custom array `custom`, as a surface geometry holds it. */
+export const customArrayAttribute = (custom: number) => `custom${custom}`;
+
+/** The lanes of one vertex of a custom array attribute: every format decodes to four floats. */
+export const CUSTOM_ARRAY_LANES = 4;
+
 /** The attribute that holds each vertex's index in its own surface, which `gl_VertexIndex` reads. */
 export const VERTEX_ID_ATTRIBUTE = 'vertex_id_attrib';
 
@@ -56,8 +62,8 @@ export function withGodotAttributes(
     if (uv) geometry.setAttribute(godot, uv);
   }
   for (let custom = 0; custom < ARRAY_CUSTOM_COUNT; custom++) {
-    const values = geometry.getAttribute(`custom${custom}`);
-    if (values) geometry.setAttribute(`custom${custom}_attrib`, values);
+    const values = geometry.getAttribute(customArrayAttribute(custom));
+    if (values) geometry.setAttribute(`${customArrayAttribute(custom)}_attrib`, values);
   }
   const bones = vertexStageBones(geometry);
   if (bones) {

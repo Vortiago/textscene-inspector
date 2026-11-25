@@ -6,7 +6,12 @@ import type { Vector2 } from '../../godot/math/vector.js';
 import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
 import type { CanvasPrimitive } from './canvasPrimitive.js';
 import { type CanvasItemDraw, modulated, NO_INSTANCE_UNIFORMS, WHITE, worldOf } from './canvasInstance.js';
-import { emulatedPointGeometry, VERTEX_ID_ATTRIBUTE } from '../spatial/meshAttributes.js';
+import {
+  CUSTOM_ARRAY_LANES,
+  customArrayAttribute,
+  emulatedPointGeometry,
+  VERTEX_ID_ATTRIBUTE,
+} from '../spatial/meshAttributes.js';
 import type { CanvasDraw, CanvasVariant } from './transpileCanvas.js';
 
 /** The vertex arrays of `Item::CommandPolygon`, or of one surface of a mesh. */
@@ -53,9 +58,9 @@ function checkedArrays(arrays: CanvasVertexArrays): CanvasVertexArrays {
       `expected 0, 1 or ${points.length} colours and 0 or ${points.length} UVs, got ${colors.length} and ${uvs.length}`
     );
   arrays.customs?.forEach((lanes, custom) => {
-    if (lanes && lanes.length !== points.length * CUSTOM_LANES)
+    if (lanes && lanes.length !== points.length * CUSTOM_ARRAY_LANES)
       throw new Error(
-        `expected ${points.length * CUSTOM_LANES} lanes in CUSTOM${custom}, got ${lanes.length}`
+        `expected ${points.length * CUSTOM_ARRAY_LANES} lanes in CUSTOM${custom}, got ${lanes.length}`
       );
   });
   return arrays;
@@ -67,10 +72,7 @@ export function attributesVariant(primitive: CanvasPrimitive): CanvasVariant {
 }
 
 /** The custom arrays of a surface geometry that the template reads, CUSTOM0 first (`canvas.glsl:12-18`). */
-export const CANVAS_CUSTOM_ARRAYS = ['custom0', 'custom1'] as const;
-
-/** The lanes of one point of a custom array, as `ARRAY_CUSTOM_RGBA_FLOAT` holds them. */
-const CUSTOM_LANES = 4;
+export const CANVAS_CUSTOM_ARRAYS = [0, 1].map(customArrayAttribute);
 
 /** The default vertex buffers of a missing array (`mesh_storage.cpp:86-157`). */
 const DEFAULT_COLOR = [1, 1, 1, 1];
@@ -98,8 +100,8 @@ export function attributesGeometry(arrays: CanvasVertexArrays): THREE.BufferGeom
   geometry.setAttribute('uv_attrib', floats(uvValues, 2));
   CANVAS_CUSTOM_ARRAYS.forEach((name, custom) => {
     // A missing custom array reads zero (`mesh_storage.cpp:120-131`).
-    const values = arrays.customs?.[custom] ?? new Float32Array(count * CUSTOM_LANES);
-    geometry.setAttribute(`${name}_attrib`, new THREE.BufferAttribute(values, CUSTOM_LANES));
+    const values = arrays.customs?.[custom] ?? new Float32Array(count * CUSTOM_ARRAY_LANES);
+    geometry.setAttribute(`${name}_attrib`, new THREE.BufferAttribute(values, CUSTOM_ARRAY_LANES));
   });
   if (arrays.primitive === 'points')
     geometry.setAttribute(
@@ -223,6 +225,8 @@ export function attributesObject(
   constants: AttributesConstants
 ): PrimitiveObject {
   writeEachDraw(draw);
+  if (draw.emulatesPoints && primitive !== 'points')
+    throw new Error(`expected points for a draw that emulates points, got ${primitive}`);
   const object = draw.emulatesPoints
     ? primitiveObject('triangles', emulatedPointGeometry(geometry), draw.material)
     : primitiveObject(primitive, geometry, draw.material);

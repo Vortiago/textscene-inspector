@@ -22,7 +22,6 @@ shader = SubResource("Shader_uv")
 [node name="Clipper" type="Sprite2D" parent="."]
 position = Vector2(300, 300)
 clip_children = 1
-rotation = 0.5
 scale = Vector2(1.2, 1.2)
 texture = ExtResource("1_marker")
 

@@ -157,7 +157,7 @@ describe('meshCommands', () => {
     geometry.setAttribute('custom0', new THREE.BufferAttribute(new Float32Array(9), 3));
 
     expect(() => meshCommands([geometry])).toThrow(
-      'expected custom0 as a plain attribute of 4 float lanes, got item size 3'
+      'expected custom0 as a plain attribute of 4 float lanes, got Float32Array of item size 3'
     );
   });
 });

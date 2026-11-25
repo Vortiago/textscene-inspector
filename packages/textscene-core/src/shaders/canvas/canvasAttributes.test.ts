@@ -207,6 +207,15 @@ describe('attributesObject', () => {
     );
   });
 
+  it('throws for a draw that emulates points over arrays of another primitive', () => {
+    const draw = transpileCanvasItem(SIZED_POINTS).draw('attributes_points');
+    const geometry = attributesGeometry(polygonCommand(SQUARE, [], []));
+
+    expect(() => attributesObject(draw, geometry, 'triangles', polygonConstants(ITEM))).toThrow(
+      'expected points for a draw that emulates points, got triangles'
+    );
+  });
+
   it('draws each point of a shader that names POINT_SIZE as an instance of two triangles, with its vertex index', () => {
     const draw = transpileCanvasItem(SIZED_POINTS).draw('attributes_points');
     const points = {

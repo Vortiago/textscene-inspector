@@ -124,7 +124,8 @@ function unionOwnBox(object: THREE.Object3D, target: THREE.Box3): void {
     bearing.isInstancedMesh ||
     bearing.isBatchedMesh ||
     (geometry as THREE.InstancedBufferGeometry).isInstancedBufferGeometry;
-  const src = isInstanced ? bearing : geometry;
+  // A plain mesh over an instanced geometry, as a canvas shader batch, has no box of its own.
+  const src = isInstanced && bearing.boundingBox !== undefined ? bearing : geometry;
   if (src.boundingBox === null) src.computeBoundingBox?.();
   if (!src.boundingBox) return;
   _box.copy(src.boundingBox).applyMatrix4(godotMatrixWorld(object, _matrix));
