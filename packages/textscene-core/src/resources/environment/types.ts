@@ -291,6 +291,8 @@ export interface EnvironmentSettings {
      * `AmbientSource.COLOR`. It scales the ambient only, never the reflection.
      */
     contribution: number;
+    /** Whether the ambient source is the sky, which Godot reads at any share (`USE_AMBIENT_CUBEMAP`). */
+    isAmbientSource: boolean;
   } | null;
   /**
    * Whether a surface reflects the sky: `reflected_light_source` is the background over a sky

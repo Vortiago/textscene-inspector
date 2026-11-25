@@ -220,7 +220,7 @@ function ambientFor(
 
   // The sky mounts for the diffuse share only when it is the background or the ambient source:
   // `contribution` scales the ambient apart from the reflection, which `reflectsSky` decides.
-  const skyAmbient = fromCubemap || overSky ? { contribution } : null;
+  const skyAmbient = fromCubemap || overSky ? { contribution, isAmbientSource: fromCubemap } : null;
 
   if (!fromCubemap && source !== AmbientSource.COLOR) {
     return { ambient: null, skyAmbient };

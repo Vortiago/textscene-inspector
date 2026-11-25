@@ -166,7 +166,7 @@ function cubeArrayReader(
   return (texture) => new CubeArrayReadNode(texture, held, level) as unknown as Node;
 }
 
-/** The calls that read a colour: a gather reads one channel of four texels, which no layer scale fits. */
+/** The filtered reads: a gather reads one channel of four texels, which no layer scale fits. */
 const LAYER_SCALED_CALLS: ReadonlySet<string> = new Set(['texture', 'textureLod', 'textureGrad']);
 
 function sampledCall(name: string, row: InstructionRow, operands: readonly Node[]): Node {

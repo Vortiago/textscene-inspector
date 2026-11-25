@@ -1,12 +1,18 @@
 import * as THREE from 'three';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { skyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
 import { hideShownSky, SkyRadiance } from '../sky/skyRadiance';
 import { testRenderer } from '../../testing/recordingWebGL';
 import { sceneSkyLight, unmixedAmbientLight } from './sceneSkyLight';
 import type { SceneSky } from '../../shaders/spatial/sceneSky';
 
-const surfaces = { contribution: 0.25, isReflected: true, energies: [2, 3], energyMultiplier: 1.5 };
+const surfaces = {
+  contribution: 0.25,
+  isAmbientSource: true,
+  isReflected: true,
+  energies: [2, 3],
+  energyMultiplier: 1.5,
+};
 
 async function shownSkyAt(radianceSize: number) {
   const { renderer } = await testRenderer();
@@ -16,6 +22,8 @@ async function shownSkyAt(radianceSize: number) {
   new SkyRadiance(renderer, { layout, target }, new THREE.Euler(0, Math.PI / 2, 0)).show(surfaces);
   return { layout, target };
 }
+
+afterEach(hideShownSky);
 
 describe('sceneSkyLight', () => {
   it("gives the shown sky's layers and how surfaces take them", async () => {
@@ -27,6 +35,7 @@ describe('sceneSkyLight', () => {
       pixelSize: 1 / 32,
       energyMultiplier: 1.5,
       ambientContribution: 0.25,
+      isAmbientSource: true,
       isReflected: true,
     });
   });
@@ -42,8 +51,9 @@ describe('sceneSkyLight', () => {
 
     const toSky = new THREE.Vector3(1, 0, 0).applyMatrix3(sceneSkyLight()!.worldToSky);
 
+    // A quarter turn about Y takes the sky's +Z to the world's +X, so world +X is sky +Z.
     expect(toSky.x).toBeCloseTo(0, 6);
-    expect(Math.abs(toSky.z)).toBeCloseTo(1, 6);
+    expect(toSky.z).toBeCloseTo(1, 6);
   });
 
   it('gives nothing when the render shows no sky (edge case)', async () => {

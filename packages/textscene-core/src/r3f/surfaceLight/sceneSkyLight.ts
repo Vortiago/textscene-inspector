@@ -19,6 +19,7 @@ export function sceneSkyLight(): SceneSky | undefined {
     worldToSky: skyBasis.fromArray(skyRotation),
     energyMultiplier: sky.energyMultiplier,
     ambientContribution: sky.contribution,
+    isAmbientSource: sky.isAmbientSource,
     isReflected: sky.isReflected,
   };
 }

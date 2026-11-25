@@ -110,6 +110,8 @@ export function skyRadianceUniforms(): Record<string, THREE.IUniform> {
 export interface SkyOnSurfaces {
   /** The sky's share of the ambient light, 0 when the ambient source takes none of it. */
   readonly contribution: number;
+  /** Whether the ambient source is the sky, which surfaces read even at a share of 0. */
+  readonly isAmbientSource: boolean;
   /** Whether the reflection source gives surfaces the sky. */
   readonly isReflected: boolean;
   /** The energy each layer was baked at. A layer past the last reads the last. */

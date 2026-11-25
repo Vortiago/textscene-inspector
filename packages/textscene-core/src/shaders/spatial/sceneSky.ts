@@ -28,6 +28,8 @@ export interface SceneSky {
   readonly energyMultiplier: number;
   /** The sky's share of the ambient light, 0 when the ambient source takes none of it. */
   readonly ambientContribution: number;
+  /** Whether the ambient source is the sky: the flag at any share (`render_scene_data_rd.cpp:189`). */
+  readonly isAmbientSource: boolean;
   /** Whether the reflection source gives surfaces the sky (`render_scene_data_rd.cpp:196-199`). */
   readonly isReflected: boolean;
 }
@@ -62,9 +64,7 @@ export function radianceOctmapNode(): TextureNode {
 /** The scene data flags of `sky` (`render_scene_data_rd.cpp:188-199`). */
 export function skyFlagsOf(sky: SceneSky | undefined): number {
   if (!sky) return 0;
-  return (
-    (sky.ambientContribution > 0 ? USE_AMBIENT_CUBEMAP : 0) | (sky.isReflected ? USE_REFLECTION_CUBEMAP : 0)
-  );
+  return (sky.isAmbientSource ? USE_AMBIENT_CUBEMAP : 0) | (sky.isReflected ? USE_REFLECTION_CUBEMAP : 0);
 }
 
 /** Binds the layers of `sky` to `textures`, black with no sky. */
@@ -90,7 +90,7 @@ function radianceInverseXform({ sky, camera }: SpatialFrame): THREE.Matrix3 {
 }
 
 /** Each member of `SceneData` the sky's light on a surface reads. */
-export const SKY_BINDINGS: readonly Binding<SpatialFrame>[] = [
+export const SCENE_SKY_BINDINGS: readonly Binding<SpatialFrame>[] = [
   {
     uniform: `${DATA}.radiance_pixel_size`,
     godot: 'render_scene_data_rd.cpp:143; renderer_scene_render_rd.cpp:1396',

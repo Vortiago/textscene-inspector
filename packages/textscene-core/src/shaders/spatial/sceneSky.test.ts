@@ -22,6 +22,7 @@ function sky(overrides: Partial<SceneSky> = {}): SceneSky {
     worldToSky: new THREE.Matrix3().makeRotation(0.5),
     energyMultiplier: 1.5,
     ambientContribution: 0.75,
+    isAmbientSource: true,
     isReflected: true,
     ...overrides,
   };
@@ -59,8 +60,19 @@ describe('writeSpatialBindings with a sky', () => {
     expect(flagsOf() & (AMBIENT_CUBEMAP | REFLECTION_CUBEMAP)).toBe(0);
   });
 
-  it('leaves the ambient cubemap off when the ambient takes none of the sky', () => {
-    expect(flagsOf(sky({ ambientContribution: 0 })) & AMBIENT_CUBEMAP).toBe(0);
+  it('leaves the ambient cubemap off when the ambient source is not the sky', () => {
+    expect(flagsOf(sky({ ambientContribution: 0, isAmbientSource: false })) & AMBIENT_CUBEMAP).toBe(0);
+  });
+
+  it('sets the ambient cubemap for a sky ambient source at a share of 0', () => {
+    expect(flagsOf(sky({ ambientContribution: 0 })) & AMBIENT_CUBEMAP).toBe(AMBIENT_CUBEMAP);
+  });
+
+  it('writes the sky basis for a sky ambient source at a share of 0, which the aerial perspective reads', () => {
+    const xform = written(sky({ ambientContribution: 0, isReflected: false })).value(
+      'radiance_inverse_xform'
+    );
+    expect((xform as THREE.Matrix3).elements.some((element) => element !== 0)).toBe(true);
   });
 
   it('leaves the reflection cubemap off when the reflection source gives no sky', () => {
@@ -84,7 +96,7 @@ describe('writeSpatialBindings with a sky', () => {
   });
 
   it('writes a zero sky basis when no surface reads the sky', () => {
-    const xform = written(sky({ ambientContribution: 0, isReflected: false })).value(
+    const xform = written(sky({ ambientContribution: 0, isAmbientSource: false, isReflected: false })).value(
       'radiance_inverse_xform'
     );
     expect((xform as THREE.Matrix3).elements).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0]);

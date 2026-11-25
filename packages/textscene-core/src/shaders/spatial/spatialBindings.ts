@@ -9,7 +9,7 @@ import { FOG_BINDINGS, FOG_SPECIALISATIONS, USE_FOG } from './fogBindings.js';
 import { EFFECT_SPECIALISATIONS } from './effectSpecialisations.js';
 import { DIRECTIONAL_LIGHT_BINDINGS, type DirectionalLight } from './directionalLights.js';
 import { GODOT_ROUGHNESS_LIMITER, type RoughnessLimiter } from '../../godot/rendering/roughnessLimiter.js';
-import { bindSkyLayers, SKY_BINDINGS, skyFlagsOf, type SceneSky } from './sceneSky.js';
+import { bindSkyLayers, SCENE_SKY_BINDINGS, skyFlagsOf, type SceneSky } from './sceneSky.js';
 
 /** What the colour pass reads from a frame. */
 export interface SpatialScene {
@@ -167,7 +167,7 @@ export function writeSpatialBindings(spatial: TranspiledSpatial, scene: SpatialS
   writeBindings(SCENE_BINDINGS, spatial.uniforms, frame);
   writeBindings(FOG_BINDINGS, spatial.uniforms, frame);
   writeBindings(DIRECTIONAL_LIGHT_BINDINGS, spatial.uniforms, frame);
-  writeBindings(SKY_BINDINGS, spatial.uniforms, frame);
+  writeBindings(SCENE_SKY_BINDINGS, spatial.uniforms, frame);
   bindSkyLayers(spatial.textures, scene.sky);
 }
 

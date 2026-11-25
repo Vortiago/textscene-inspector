@@ -148,6 +148,7 @@ function showSky(renderer: RecordingRenderer, shown: Partial<ShownSky>): void {
   const layers = { layout: skyOctmapLayout(32, 8), target: new THREE.WebGLArrayRenderTarget(1, 1, 1) };
   new SkyRadiance(renderer.asWebGL, layers, shown.rotation ?? new THREE.Euler()).show({
     contribution: 1,
+    isAmbientSource: true,
     isReflected: true,
     energies: shown.energies ?? [1],
     energyMultiplier: 1,
@@ -367,11 +368,23 @@ describe('VolumetricFogPass.prepare', () => {
     const fog = inputs({ volumetric_fog_temporal_reprojection_enabled: 'false' });
     const layers = { layout: skyOctmapLayout(32, 8), target: new THREE.WebGLArrayRenderTarget(1, 1, 1) };
     const sky = new SkyRadiance(renderer.asWebGL, layers, new THREE.Euler());
-    sky.show({ contribution: 1, isReflected: true, energies: [1], energyMultiplier: 1 });
+    sky.show({
+      contribution: 1,
+      isAmbientSource: true,
+      isReflected: true,
+      energies: [1],
+      energyMultiplier: 1,
+    });
     pass.prepare(renderer.asWebGL, scene, view, fog);
     renderer.take();
 
-    sky.show({ contribution: 0.25, isReflected: true, energies: [1], energyMultiplier: 1 });
+    sky.show({
+      contribution: 0.25,
+      isAmbientSource: true,
+      isReflected: true,
+      energies: [1],
+      energyMultiplier: 1,
+    });
     pass.prepare(renderer.asWebGL, scene, view, fog);
     expect(renderer.take().lightDraws).toHaveLength(0);
   });

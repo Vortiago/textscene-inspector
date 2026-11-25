@@ -93,6 +93,7 @@ function EnvironmentParts({ settings, sky, holderPath }: EnvironmentLayerProps) 
             energyMultiplier={settings.background.energyMultiplier}
             rotation={settings.skyRotation}
             contribution={skyAmbient ? skyAmbient.contribution : 0}
+            isAmbientSource={skyAmbient?.isAmbientSource ?? false}
             reflects={reflectsSky}
             fogScattersSun={(settings.fog?.sunScatter ?? 0) > FOG_SUN_SCATTER_MIN}
           />
