@@ -18,7 +18,7 @@ import {
   VIEWPORT_MODE_STORAGE_KEY,
   windowForCanvas,
 } from './appContract.mjs';
-import { installTimingLog, printTimingLines } from './glTiming.mjs';
+import { isLoadTimingOn, recordLoadTiming } from '../../perf/loadTiming/loadTiming.mjs';
 
 /**
  * A context that renders only the scene: the source pane closed and the floating chrome painted out.
@@ -90,8 +90,7 @@ export async function createCaptureContext(
     );
   }
   await context.addInitScript(installStyle, paintedOutChromeCss({ canvas2D }));
-  await context.addInitScript(installTimingLog);
-  context.on?.('page', printTimingLines);
+  if (isLoadTimingOn(process.env)) await recordLoadTiming(context);
   return context;
 }
 

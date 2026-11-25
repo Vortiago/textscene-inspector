@@ -28,8 +28,7 @@ export const NON_RENDERING_PATHS = [
   // The linter's half of core. It feeds the Source pane's gutter, never the canvas.
   /^packages\/textscene-core\/src\/linter\//,
   /^packages\/textscene-core\/src\/.+\/(linter|linterParser|index\.linter)\.ts$/,
-  // Scripts the harness does not import (it imports visual/, godot-ref/, showcase/ and
-  // corpusRoots.mjs, so those stay unlisted).
+  // Scripts the harness never imports: it imports visual/, godot-ref/, showcase/, perf/, corpusRoots.mjs.
   /^scripts\/(githooks|vendor|compare-docs|coverage-report|new-node-slice|vscode|e2e|ci)\//,
   /^scripts\/(coverage-report|new-node-slice|check-bundle-size|check-public-site)\.mjs$/,
 ];

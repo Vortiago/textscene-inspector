@@ -30,13 +30,11 @@ import { PNG } from 'pngjs';
  */
 export async function gotoFixture(page, baseUrl, fixture, onSlow = () => {}, extraParams = {}) {
   await page.goto(fixtureUrl(baseUrl, fixture, extraParams), { waitUntil: 'load' });
-  console.log(`${new Date().toISOString()} [gltiming] runner loaded ${fixture}`);
   await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_MS }).catch((err) => {
     // Anything but a timeout, such as a crashed target or a closed page, is a real failure.
     if (err?.name !== 'TimeoutError') throw err;
     onSlow(NETWORK_IDLE_MS);
   });
-  console.log(`${new Date().toISOString()} [gltiming] runner network idle ${fixture}`);
   assertOpenedFixture(page, fixture);
 }
 
