@@ -195,6 +195,6 @@ With `?litSurface=nodes`, the material draws the shader text Godot generates for
 - **Approximated** Under msaa_3d, `ALPHA_TO_COVERAGE_AND_TO_ONE` stores the ramped alpha where Godot stores 1, so a transparent background shows the edge fainter.
 - **Approximated** `ALPHA_HASH` keeps about Godot's share of pixels but not the same pixels, as the ported hash's `fract(1e4 * sin())` rounds differently on each GPU (`scene_forward_aa_inc.glsl:3-39`).
 - **Shader missing** `proximity_fade_*` and `distance_fade_*` decide the pass but are not rendered, so the surface stays at full opacity.
-- **Not supported** On the node lit surface, skinned meshes, MultiMeshes, particle passes, next passes and glTF surfaces draw the classic material.
+- **Not supported** On the node lit surface, skinned meshes, MultiMeshes, particle passes, next passes, glTF surfaces, points and lines draw the classic material.
 - **Not supported** On the node lit surface, an OmniLight3D or a SpotLight3D lights no material.
 - **Not supported** On the node lit surface, a material draws no lightmap and no GeometryInstance3D `transparency` fade.

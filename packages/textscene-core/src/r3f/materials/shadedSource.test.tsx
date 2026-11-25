@@ -10,6 +10,7 @@ import { SceneResourcesProvider } from '../SceneResourcesContext';
 import * as spatialSurface from '../spatialShader/spatialSurface';
 import { inlineSource } from './surfaceMaterial.testkit';
 import { SurfaceMaterialSlot } from './SurfaceMaterialSlot';
+import type { ListedSurface } from './godotPoint';
 
 const page = vi.hoisted(() => ({ form: 'patched' as 'patched' | 'nodes' }));
 
@@ -30,14 +31,14 @@ const RESOURCES: TscnInternalResource[] = [
   { id: 'Orm', type: 'ORMMaterial3D', data: { roughness: '0.5' } },
 ];
 
-async function renderSlot(source: ScopedReference | undefined) {
+async function renderSlot(source: ScopedReference | undefined, listed?: ListedSurface) {
   const fake = createFakeResourceLoader();
   await ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider internalResources={RESOURCES} externalResources={[]}>
         <mesh>
           <boxGeometry />
-          <SurfaceMaterialSlot source={source} drawnOn="mesh" />
+          <SurfaceMaterialSlot source={source} listed={listed} drawnOn="mesh" />
         </mesh>
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
@@ -94,5 +95,13 @@ describe('the shader a mesh surface draws', () => {
     expect(surfaceShaderOf).toHaveBeenCalledWith({
       shader: expect.objectContaining({ code: expect.stringContaining('ALBEDO = vec3(0.6);') }),
     });
+  });
+
+  it('draws a StandardMaterial3D on points or lines as the classic material on the node lit surface', async () => {
+    page.form = 'nodes';
+
+    await renderSlot(inlineSource(RESOURCES[0]!, RESOURCES), { primitive: 'points', placement: 'mesh' });
+
+    expect(surfaceShaderOf).not.toHaveBeenCalled();
   });
 });

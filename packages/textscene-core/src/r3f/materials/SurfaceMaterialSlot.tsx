@@ -71,7 +71,8 @@ export function SurfaceMaterialSlot({
   ) : (
     materialBagElement(drawnBag(MISSING_TEXTURE_MATERIAL, draws), attach, null)
   );
-  if (!shaded || undrawnOn) return standard;
+  // Points and lines keep the classic point size and line placement unless a user's shader draws them.
+  if (!shaded || undrawnOn || (listed && !shader)) return standard;
   return <SpatialShaderSlot source={shaded} attach={attach} fallback={standard} />;
 }
 
