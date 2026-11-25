@@ -32,7 +32,8 @@ export function emulatedPointGeometry(
   }
   // Shared, not copied: three recomputes a box in place, so a new box of the surface reaches the quads.
   geometry.boundingSphere = surface.boundingSphere;
-  geometry.boundingBox = surface.boundingBox;
+  // A surface with no position yet bounds nothing, not the quads' origin, until its points arrive.
+  geometry.boundingBox = surface.boundingBox ?? new THREE.Box3();
   return geometry;
 }
 

@@ -70,7 +70,10 @@ export function boxlessUserData(): { godotBoxless: true } {
 /** Where an object records that its geometry's box bounds it, though the geometry is instanced. */
 const GEOMETRY_BOX_KEY = 'godotGeometryBox';
 
-/** Whether `object` draws instances: its box unions every one, unposed, so a GridMap frames all its tiles. */
+/**
+ * Whether `object` draws instances: its box unions every one, unposed, so a GridMap frames all its tiles.
+ * @canonical Whether an object draws instances, for its bounds
+ */
 export function drawsInstances(object: THREE.Object3D): boolean {
   const bearing = object as BoundsBearing;
   return Boolean(
@@ -80,7 +83,10 @@ export function drawsInstances(object: THREE.Object3D): boolean {
   );
 }
 
-/** The userData of a draw over an instanced geometry whose box bounds every instance, as a canvas batch. */
+/**
+ * The userData of a draw over an instanced geometry whose box bounds every instance, as a canvas batch.
+ * @canonical Mark an instanced draw as bounded by its geometry box
+ */
 export function geometryBoxUserData(): { godotGeometryBox: true } {
   return { [GEOMETRY_BOX_KEY]: true };
 }

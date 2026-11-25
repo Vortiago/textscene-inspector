@@ -59,7 +59,10 @@ export const NATIVE_POINT_SIZE: WrittenBuiltIn = {
   store: () => undefined,
 };
 
-/** Vulkan's `gl_PointCoord`, read as GL's: both start at the top row. */
+/**
+ * Vulkan's `gl_PointCoord`, read as GL's: both start at the top row.
+ * @canonical gl_PointCoord with Vulkan's top-left origin
+ */
 export function vulkanPointCoord(): Node {
   const uv = pointUV as unknown as Vec2;
   return vec2(uv.x, float(1).sub(uv.y)) as unknown as Node;

@@ -2,9 +2,9 @@ import { array, float, max, property, varying, vec2, vertexIndex } from 'three/t
 import type { Node } from 'three/webgpu';
 import type { WrittenBuiltIn } from './emitTemplate.js';
 import type { Stacked, Vec2, Vec4 } from '../tslTypes.js';
+import { POINT_CORNERS, QUAD_VERTICES } from '../../godot/rendering/emulatedPoints.js';
 
-/** `point_coords` (`scene_forward_clustered.glsl:709`): the corner each of a point's 6 vertices takes. */
-const CORNERS = [vec2(0, 1), vec2(0, 0), vec2(1, 1), vec2(0, 0), vec2(1, 0), vec2(1, 1)];
+const CORNERS = POINT_CORNERS.map(([x, y]) => vec2(x, y));
 
 /** Godot's Vulkan device draws a point of size 0.5, 0 or -3 exactly as one of size 1. */
 const SMALLEST_POINT_SIZE = 1;
@@ -19,13 +19,16 @@ export interface DevicePoints {
   expand(clip: Vec4, viewportSize: Node): void;
 }
 
-/** Whether a shader sizes its points, so the previewer emulates them: three's points are 1 px. */
+/**
+ * Whether a shader sizes its points, so the previewer emulates them: three's points are 1 px.
+ * @canonical Whether a shader sizes its points, so they are emulated
+ */
 export function sizesPoints(builtInsNamed: ReadonlySet<string>): boolean {
   return builtInsNamed.has('POINT_SIZE');
 }
 
 export function devicePoints(): DevicePoints {
-  const corner = array(CORNERS).element(vertexIndex.mod(6)) as unknown as Vec2;
+  const corner = array(CORNERS).element(vertexIndex.mod(QUAD_VERTICES)) as unknown as Vec2;
   const pointSize = property('float', 'godot_point_size') as unknown as ReturnType<typeof float>;
   return {
     size: {

@@ -2,9 +2,8 @@ import { halfToFloat } from '../../../godot/math/halfFloat.js';
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 import {
   ArrayCustomFormat,
-  CUSTOM_ARRAY_LANES,
   CUSTOM_FORMAT_LANES,
-  MISSING_CUSTOM_LANES,
+  fourCustomLanes,
 } from '../../../godot/rendering/meshArrayFormat.js';
 import type { CustomArraySlot, SurfaceLayout } from './surfaceFormat.js';
 import type { AttributeRecords } from './vertexBuffers.js';
@@ -42,13 +41,7 @@ function customValues(
 ): Float32Array {
   const { lanes, laneBytes } = CUSTOM_FORMAT_LANES[slot.format]!;
   const lane = LANE_READS[slot.format];
-  const values = new Float32Array(vertexCount * CUSTOM_ARRAY_LANES);
-  for (let vertex = 0; vertex < vertexCount; vertex++) {
-    const record = vertex * attributeStride + slot.offset;
-    for (let index = 0; index < lanes; index++)
-      values[vertex * CUSTOM_ARRAY_LANES + index] = lane(view, record + index * laneBytes);
-    for (let index = lanes; index < CUSTOM_ARRAY_LANES; index++)
-      values[vertex * CUSTOM_ARRAY_LANES + index] = MISSING_CUSTOM_LANES[index]!;
-  }
-  return values;
+  return fourCustomLanes(vertexCount, lanes, (vertex, index) =>
+    lane(view, vertex * attributeStride + slot.offset + index * laneBytes)
+  );
 }

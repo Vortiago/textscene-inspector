@@ -4,10 +4,9 @@ import type { Node, TextureNode } from 'three/webgpu';
 import type { MaterialBlendState } from '../pipeline/blendState.js';
 import { parsedShader, shaderSource, type ShaderOptions } from '../language/parseShader.js';
 import type { ShaderNode } from '../language/shaderTree.js';
-import { variablesRead } from '../language/treeWalk.js';
 import { CANVAS_CUSTOM_ARRAYS } from '../../godot/rendering/meshArrayFormat.js';
 import { VERTEX_ID_ATTRIBUTE } from '../template/surfaceAttributes.js';
-import { devicePoints, sizesPoints, type DevicePoints } from '../template/devicePoints.js';
+import { devicePoints, type DevicePoints } from '../template/devicePoints.js';
 import { emitTemplateStage, programResources, type WrittenBuiltIn } from '../template/emitTemplate.js';
 import { usageDefines, usageDefineOf } from '../template/link.js';
 import { MODE_TABLES } from '../template/modeTables.generated.js';
@@ -112,8 +111,7 @@ export function transpileCanvasItem(source: string, options: CanvasItemOptions =
     program,
     shader: { parameters: [...program.parameters.values()], source: shaderSource(parsed, file) },
     blend: canvasBlendState(parsed.tree),
-    usesPointSize: sizesPoints(variablesRead(parsed.tree, (variable) => variable.builtIn !== undefined)),
-    customsRead: customsRead(parsed.tree),
+    ...builtInUses(parsed.tree),
   };
   const rows = options.rows ?? 'flipped';
   const draws = new Map<CanvasVariant, CanvasDraw>();
@@ -159,11 +157,16 @@ interface ItemProgram {
   readonly customsRead: readonly number[];
 }
 
-/** The custom arrays whose usage define the shader makes, as the template declares (`canvas.glsl:12-18`). */
-function customsRead(shader: ShaderNode): number[] {
+/** What the usage defines of `shader` ask of its draws: the walk that links the template decides both. */
+function builtInUses(shader: ShaderNode): Pick<ItemProgram, 'usesPointSize' | 'customsRead'> {
   const table = MODE_TABLES.canvas_item!;
   const defines = new Set(usageDefines(shader, table));
-  return CANVAS_CUSTOM_ARRAYS.filter((custom) => defines.has(usageDefineOf(table, `CUSTOM${custom}`) ?? ''));
+  const defined = (builtIn: string) => defines.has(usageDefineOf(table, builtIn) ?? '');
+  return {
+    usesPointSize: defined('POINT_SIZE'),
+    // The template declares only the custom arrays whose define the shader makes (`canvas.glsl:12-18`).
+    customsRead: CANVAS_CUSTOM_ARRAYS.filter((custom) => defined(`CUSTOM${custom}`)),
+  };
 }
 
 /** The variant a draw links, and the rows of the target it draws to. */

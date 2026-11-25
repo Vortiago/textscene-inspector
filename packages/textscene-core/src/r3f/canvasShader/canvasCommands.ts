@@ -6,7 +6,7 @@ import type { Vector2 } from '../../godot/math/vector';
 import {
   CANVAS_CUSTOM_ARRAYS,
   CUSTOM_ARRAY_LANES,
-  MISSING_CUSTOM_LANES,
+  fourCustomLanes,
 } from '../../godot/rendering/meshArrayFormat';
 import { geometryPrimitive } from '../../resources/meshes/godotSurface';
 import type { AtlasCellRects } from '../../resources/useTexture2D';
@@ -63,7 +63,10 @@ export type CanvasShaderCommand =
 /** Scratch of one corner, overwritten by the next. */
 const corner = new THREE.Vector3();
 
-/** Bounds `object` by the item rect of `commands`, which a canvas group's region reads (`worldBox`). */
+/**
+ * Bounds `object` by the item rect of `commands`, which a canvas group's region reads (`worldBox`).
+ * @canonical Bound a canvas shader batch by its item rect
+ */
 export function boundByItem(
   object: THREE.Object3D & { geometry: THREE.BufferGeometry },
   commands: readonly CanvasShaderCommand[]
@@ -73,7 +76,10 @@ export function boundByItem(
   return (object.geometry.boundingBox = itemBox(new THREE.Box3(), commands));
 }
 
-/** Writes the item rect of `commands` to `box`, which the caller owns. */
+/**
+ * Writes the item rect of `commands` to `box`, which the caller owns.
+ * @canonical The item rect of canvas shader commands as a box
+ */
 export function itemBox(box: THREE.Box3, commands: readonly CanvasShaderCommand[]): THREE.Box3 {
   box.makeEmpty();
   for (const command of commands) growItemBox(box, command);
@@ -156,13 +162,9 @@ function customLanes(geometry: THREE.BufferGeometry, name: string): Float32Array
   if (!attribute) return undefined;
   // The surface loader already writes four float lanes, so its array serves as it is.
   if (isFourFloatLanes(attribute)) return attribute.array;
-  const lanes = new Float32Array(attribute.count * CUSTOM_ARRAY_LANES);
-  const width = Math.min(attribute.itemSize, CUSTOM_ARRAY_LANES);
-  for (let point = 0; point < attribute.count; point++)
-    for (let lane = 0; lane < CUSTOM_ARRAY_LANES; lane++)
-      lanes[point * CUSTOM_ARRAY_LANES + lane] =
-        lane < width ? attribute.getComponent(point, lane) : MISSING_CUSTOM_LANES[lane]!;
-  return lanes;
+  return fourCustomLanes(attribute.count, Math.min(attribute.itemSize, CUSTOM_ARRAY_LANES), (point, lane) =>
+    attribute.getComponent(point, lane)
+  );
 }
 
 const isFourFloatLanes = (

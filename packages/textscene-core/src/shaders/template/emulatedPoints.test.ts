@@ -51,6 +51,10 @@ describe('emulatedPointGeometry', () => {
     expect(geometry.boundingBox!.max.x).toBe(9);
   });
 
+  it('bounds a source with no position yet by an empty box, not the origin', () => {
+    expect(emulatedPointGeometry(new THREE.BufferGeometry()).boundingBox!.isEmpty()).toBe(true);
+  });
+
   it('bounds a source with no box by its positions, which the framing box reads', () => {
     const expected = withGodotAttributes(triangle());
     expected.computeBoundingBox();

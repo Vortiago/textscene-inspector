@@ -1,9 +1,11 @@
 [gd_scene format=3]
 
-; One variable: the built-ins of a canvas_item shader that Godot's canvas template draws. A points mesh
-; writes POINT_SIZE and reads POINT_COORD. A mesh reads CUSTOM0 as four floats and CUSTOM1 as two, so its
-; missing lanes show. Five sprites follow: world_vertex_coords, NORMAL with NORMAL_MAP, light_only, a
-; uniform at its default, and POINT_SIZE written by a sprite's shader. No other golden draws one of them.
+; One variable: the built-ins a canvas_item shader reads or writes through Godot's canvas template, which no
+; other golden draws. A points mesh writes POINT_SIZE and reads POINT_COORD. A mesh reads CUSTOM0 as four
+; floats and CUSTOM1 as two, so its missing lanes show. Five sprites follow: world_vertex_coords, NORMAL with
+; NORMAL_MAP, light_only, a uniform at its default, and POINT_SIZE written by a sprite's shader. One scene holds
+; them because each is one define of the same template link, and each sits at its own place, so a diff
+; names the built-in that moved.
 
 [ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
 

@@ -63,6 +63,13 @@ describe('drawPoints', () => {
     expect(computeWorldBoundingBox(host.children[0]!)).toEqual(host.geometry.boundingBox);
   });
 
+  it('frames nothing for the emulated points of a host whose surface has no position yet', () => {
+    const host = new THREE.Mesh(new THREE.BufferGeometry());
+    drawPoints(host, null, material, 'emulated', scene);
+
+    expect(computeWorldBoundingBox(host.children[0]!).isEmpty()).toBe(true);
+  });
+
   it('gives the emulated points of a host over instances no box of one unplaced instance', () => {
     const instances = new THREE.InstancedBufferGeometry().copy(
       twoGroupQuad() as THREE.InstancedBufferGeometry

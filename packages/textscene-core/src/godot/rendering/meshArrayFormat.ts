@@ -53,5 +53,22 @@ export const CUSTOM_ARRAY_LANES = 4;
 /** A 1 to 3 lane float format binds as R32 to R32G32B32 (`mesh_storage.cpp:1382`): a gap reads 0, alpha 1. */
 export const MISSING_CUSTOM_LANES = [0, 0, 0, 1] as const;
 
+/**
+ * Four lanes for each of `count` vertices, `width` of them read and the rest as the vertex input fills them.
+ * @canonical Widen a custom array to the four lanes the template reads
+ */
+export function fourCustomLanes(
+  count: number,
+  width: number,
+  read: (vertex: number, lane: number) => number
+): Float32Array {
+  const values = new Float32Array(count * CUSTOM_ARRAY_LANES);
+  for (let vertex = 0; vertex < count; vertex++)
+    for (let lane = 0; lane < CUSTOM_ARRAY_LANES; lane++)
+      values[vertex * CUSTOM_ARRAY_LANES + lane] =
+        lane < width ? read(vertex, lane) : MISSING_CUSTOM_LANES[lane]!;
+  return values;
+}
+
 /** The custom arrays the canvas template reads: CUSTOM0 and CUSTOM1 (`canvas.glsl:12-18`). */
 export const CANVAS_CUSTOM_ARRAYS = [0, 1] as const;
