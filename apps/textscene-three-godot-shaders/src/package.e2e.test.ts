@@ -19,6 +19,8 @@ const bundleKey = 'dist/index.js';
 
 /** What a three.js app needs from the shader module. Core's internals stay out. */
 const PUBLIC_VALUE_EXPORTS = [
+  'CANVAS_VARIANTS',
+  'DEFAULT_CANVAS_SHADER',
   'DEFAULT_TIME_ROLLOVER_SECONDS',
   'GODOT_VERSION',
   'PlaybackShaderTime',
@@ -34,8 +36,10 @@ const PUBLIC_VALUE_EXPORTS = [
   'glVaryingSlots',
   'installGodotShading',
   'skyMaterialShader',
+  'specialiseCanvasDraw',
   'specialiseSpatial',
   'textToVariant',
+  'transpileCanvasItem',
   'transpileShadingLanguage',
   'transpileSky',
   'transpileSpatial',
@@ -45,6 +49,10 @@ const PUBLIC_VALUE_EXPORTS = [
   'writeSpatialBindings',
 ];
 const PUBLIC_TYPE_EXPORTS = [
+  'CanvasDraw',
+  'CanvasItemOptions',
+  'CanvasSpecialisation',
+  'CanvasVariant',
   'DepthPrepass',
   'DepthPrepassOptions',
   'DirectionalLight',
@@ -71,6 +79,7 @@ const PUBLIC_TYPE_EXPORTS = [
   'SkyVolumetricFog',
   'SpatialOptions',
   'SpatialScene',
+  'TranspiledCanvasItem',
   'TranspiledFunction',
   'TranspiledShader',
   'TranspiledSky',
