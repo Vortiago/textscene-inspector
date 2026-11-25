@@ -1,11 +1,13 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { emulatedPointGeometry, withGodotAttributes } from '../../shaders/spatial/meshAttributes';
+import { geometryBoxUserData } from '../bounds';
 import { canvasSurfaceGeometry } from '../canvasMesh/canvasSurface';
 import { canvasMeshGeometry } from '../meshes/canvasMeshGeometry';
 import {
   atlasRectRegion,
-  boundItem,
+  boundByItem,
+  itemBox,
   meshCommands,
   sameCommandLayout,
   surfaceCommands,
@@ -203,7 +205,7 @@ describe('sameCommandLayout', () => {
   });
 });
 
-describe('boundItem', () => {
+describe('boundByItem', () => {
   /** A surface with a box of its own, and the emulated points that share it. */
   function pointsOverSurface() {
     const source = withGodotAttributes(new THREE.BoxGeometry(2, 2, 2));
@@ -213,9 +215,16 @@ describe('boundItem', () => {
 
   it("bounds emulated points by the item rect and leaves their source's box as it was", () => {
     const { source, emulated } = pointsOverSurface();
-    boundItem(emulated, [meshCommands([canvasSurfaceGeometry(TRIANGLE)])[0]!]);
+    boundByItem(new THREE.Mesh(emulated), [meshCommands([canvasSurfaceGeometry(TRIANGLE)])[0]!]);
 
     expect([emulated.boundingBox!.max.x, source.boundingBox!.max.x]).toEqual([8, 1]);
+  });
+
+  it('marks the object so that its bounds read the item rect, not its instances', () => {
+    const object = new THREE.Mesh(new THREE.BufferGeometry());
+    boundByItem(object, [meshCommands([canvasSurfaceGeometry(TRIANGLE)])[0]!]);
+
+    expect(object.userData).toEqual(geometryBoxUserData());
   });
 
   it("lets emulated points follow a recompute of their source's box until the item bounds them", () => {
@@ -227,12 +236,8 @@ describe('boundItem', () => {
   });
 });
 
-describe('boundItem of one command', () => {
-  const itemBox = (command: CanvasShaderCommand) => {
-    const geometry = new THREE.BufferGeometry();
-    boundItem(geometry, [command]);
-    return geometry.boundingBox!;
-  };
+describe('itemBox of one command', () => {
+  const boxOf = (command: CanvasShaderCommand) => itemBox(new THREE.Box3(), [command]);
   const corners = (min: [number, number], max: [number, number]) =>
     new THREE.Box3(new THREE.Vector3(...min, 0), new THREE.Vector3(...max, 0));
 
@@ -243,7 +248,7 @@ describe('boundItem of one command', () => {
       modulate: { r: 1, g: 1, b: 1, a: 1 },
     };
 
-    expect(itemBox(flipped)).toEqual(corners([-8, -6], [8, -2]));
+    expect(boxOf(flipped)).toEqual(corners([-8, -6], [8, -2]));
   });
 
   it("takes a mesh's points, which Godot bounds as the surface's AABB", () => {
@@ -261,7 +266,7 @@ describe('boundItem of one command', () => {
       },
     };
 
-    expect(itemBox(mesh)).toEqual(corners([-3, -4], [5, 7]));
+    expect(boxOf(mesh)).toEqual(corners([-3, -4], [5, 7]));
   });
 
   it('leaves the box empty for a mesh of no points', () => {
@@ -270,6 +275,6 @@ describe('boundItem of one command', () => {
       arrays: { primitive: 'triangles', points: [], colors: [], uvs: [] },
     };
 
-    expect(itemBox(empty).isEmpty()).toBe(true);
+    expect(boxOf(empty).isEmpty()).toBe(true);
   });
 });

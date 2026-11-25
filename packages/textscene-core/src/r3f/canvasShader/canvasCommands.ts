@@ -8,6 +8,7 @@ import { geometryPrimitive } from '../../resources/meshes/godotSurface';
 import type { AtlasCellRects } from '../../resources/useTexture2D';
 import type { CanvasVertexArrays } from '../../shaders/canvas/canvasAttributes';
 import { CANVAS_CUSTOM_ARRAYS, customArrayAttribute } from '../../shaders/template/surfaceAttributes';
+import { geometryBoxUserData } from '../bounds';
 import type { CanvasSurface } from '../canvasMesh/canvasSurface';
 
 /** `canvas_item_add_texture_rect_region` with a white modulate (`renderer_canvas_cull.cpp:1624`). */
@@ -58,10 +59,14 @@ export type CanvasShaderCommand =
 /** Scratch of one corner, overwritten by the next. */
 const corner = new THREE.Vector3();
 
-/** Bounds `geometry` by the item rect of `commands`, which a canvas group's region reads (`worldBox`). */
-export function boundItem(geometry: THREE.BufferGeometry, commands: readonly CanvasShaderCommand[]): void {
+/** Bounds `object` by the item rect of `commands`, which a canvas group's region reads (`worldBox`). */
+export function boundByItem(
+  object: THREE.Object3D & { geometry: THREE.BufferGeometry },
+  commands: readonly CanvasShaderCommand[]
+): THREE.Box3 {
+  Object.assign(object.userData, geometryBoxUserData());
   // A fresh box, not the one in place: an emulated points geometry shares its source's box.
-  geometry.boundingBox = itemBox(new THREE.Box3(), commands);
+  return (object.geometry.boundingBox = itemBox(new THREE.Box3(), commands));
 }
 
 /** Writes the item rect of `commands` to `box`, which the caller owns. */

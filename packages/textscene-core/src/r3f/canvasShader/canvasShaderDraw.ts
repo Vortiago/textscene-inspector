@@ -38,11 +38,10 @@ import type {
 import { unDrawnMessage } from '../../shaders/fault/shaderRefusal';
 import type { ProjectSampling } from '../../shaders/uniforms/samplerState';
 import type { NodeFrame } from 'three/webgpu';
-import { geometryBoxUserData } from '../bounds';
 import { perObject } from '../../utils/perObject';
 import { warnOnce } from '../../utils/warnOnce';
 import { canvasTransformInto } from '../node2dTransform';
-import { boundItem, itemBox, type CanvasShaderCommand } from './canvasCommands';
+import { boundByItem, itemBox, type CanvasShaderCommand } from './canvasCommands';
 import { canvasDataOf, type CanvasColors } from './canvasFrameBlocks';
 
 export { setMaterialParameters } from '../../shaders/uniforms/materialParameters';
@@ -223,9 +222,8 @@ function rectBatch(variant: BoundVariant, layout: readonly RectCommand[]): Batch
   const geometry = quadBatchGeometry(Array.from({ length: count }, () => new ArrayBuffer(INSTANCE_BYTES)));
   const object = new THREE.Mesh(geometry, variant.draw.material);
   object.frustumCulled = false;
-  Object.assign(object.userData, geometryBoxUserData());
   // Bounded by the layout until the first source, so a clip group reads the rects at once.
-  const box = (geometry.boundingBox = itemBox(new THREE.Box3(), layout));
+  const box = boundByItem(object, layout);
   let regions: readonly CanvasRectCommand[] = [];
   return {
     object,
@@ -263,8 +261,7 @@ function meshBatch(
   // Written in place by this batch, and read by the attributes draw before each draw.
   const constants = { world: mutableTransform2D(), modulation: WHITE };
   const object = attributesObject(draw, geometry, arrays.primitive, constants);
-  Object.assign(object.userData, geometryBoxUserData());
-  boundItem(object.geometry, [command]);
+  boundByItem(object, [command]);
   return {
     object,
     // The layout holds the mesh's arrays, so a command of the same layout gives the same ones.
