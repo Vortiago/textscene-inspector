@@ -192,8 +192,8 @@ export class ResourceLoader {
             fileExtension(file) === '.tscn'
               ? sceneFileReads(file, await this.peerRequire(dependent, this.scenes, 'scene', file))
               : resourceFileReads(file, await this.peerRequire(dependent, this.resources, 'resource', file));
-          // A failing read before the value that fails the parse stops the load first.
-          return failsToParse && failing.length === 0 ? 'unparsed' : failing.map((read) => read.path);
+          const paths = failing.map((read) => read.path);
+          return failsToParse ? { unparsedAfter: paths } : paths;
         } catch (error) {
           return error instanceof UnparsedTextError ? 'unparsed' : 'unread';
         }

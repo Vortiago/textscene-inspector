@@ -12,7 +12,12 @@ export interface LoadFailure {
 export type LoadOutcome = { readonly isFailed: false } | LoadFailure;
 
 /** The files whose failure fails a text file, or why it gave none. */
-export type FailingReads = readonly string[] | 'unparsed' | 'unread';
+export type FailingReads = readonly string[] | UnparsedAfterReads | 'unparsed' | 'unread';
+
+/** A file whose parse fails once each of `unparsedAfter` loads. */
+export interface UnparsedAfterReads {
+  readonly unparsedAfter: readonly string[];
+}
 
 export interface LoadFacts {
   readonly failingReads: (path: string) => Promise<FailingReads>;
@@ -21,8 +26,10 @@ export interface LoadFacts {
   readonly isImportFailed: (path: string) => Promise<boolean>;
 }
 
-/** One file of a walk: why it fails on its own, or the files whose failure fails it. */
-type WalkedFile = { readonly cause: LoadFailureCause } | { readonly reads: readonly string[] };
+/** One file of a walk: why it fails on its own, or the files whose failure fails it, then its parse. */
+type WalkedFile =
+  | { readonly cause: LoadFailureCause }
+  | { readonly reads: readonly string[]; readonly failsToParse: boolean };
 
 const LOADS: LoadOutcome = Object.freeze({ isFailed: false });
 
@@ -43,7 +50,9 @@ export async function loadOutcome(path: string, facts: LoadFacts): Promise<LoadO
 async function walkedFile(path: string, facts: LoadFacts): Promise<WalkedFile> {
   if (!isGodotTextResourcePath(path)) return importedFile(path, facts);
   const reads = await facts.failingReads(path);
-  if (typeof reads !== 'string') return { reads };
+  if (typeof reads === 'object' && 'unparsedAfter' in reads)
+    return { reads: reads.unparsedAfter, failsToParse: true };
+  if (typeof reads !== 'string') return { reads, failsToParse: false };
   if (!(await facts.exists(path))) return { cause: 'missing' };
   if (reads === 'unparsed') return { cause: 'unparsed' };
   throw new Error(`read ${path}: the host lists the file but could not read it`);
@@ -51,7 +60,7 @@ async function walkedFile(path: string, facts: LoadFacts): Promise<WalkedFile> {
 
 async function importedFile(path: string, facts: LoadFacts): Promise<WalkedFile> {
   if (!(await facts.exists(path))) return { cause: 'missing' };
-  return (await facts.isImportFailed(path)) ? { cause: 'unimported' } : { reads: [] };
+  return (await facts.isImportFailed(path)) ? { cause: 'unimported' } : { reads: [], failsToParse: false };
 }
 
 // Godot refuses a cycle with its own error, which the previewer does not report, so a cycle reads as loads.
@@ -66,7 +75,7 @@ function outcomeIn(
   if (known) return known;
   const file = walked.get(path)!;
   const outcome =
-    'cause' in file ? failed(path, file.cause) : firstFailure(walked, path, file.reads, decided, stack);
+    'cause' in file ? failed(path, file.cause) : firstFailure(walked, path, file, decided, stack);
   decided.set(path, outcome);
   return outcome;
 }
@@ -74,15 +83,15 @@ function outcomeIn(
 function firstFailure(
   walked: ReadonlyMap<string, WalkedFile>,
   path: string,
-  reads: readonly string[],
+  file: Extract<WalkedFile, { reads: readonly string[] }>,
   decided: Map<string, LoadOutcome>,
   stack: readonly string[]
 ): LoadOutcome {
-  for (const read of reads) {
+  for (const read of file.reads) {
     const outcome = outcomeIn(walked, read, decided, [...stack, path]);
     if (outcome.isFailed) return { ...outcome, chain: [path, ...outcome.chain] };
   }
-  return LOADS;
+  return file.failsToParse ? failed(path, 'unparsed') : LOADS;
 }
 
 function failed(path: string, cause: LoadFailureCause): LoadFailure {

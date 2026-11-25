@@ -411,6 +411,23 @@ describe('the failure through which the game refuses the scene', () => {
     });
   });
 
+  it('sits on a nested file whose reads all load before its undeclared ExtResource id', async () => {
+    const atlas = ATLAS_READS_GONE.replace(
+      '[resource]',
+      '[sub_resource type="AtlasTexture" id="g"]\natlas = ExtResource("1")\n\n' +
+        '[sub_resource type="AtlasTexture" id="u"]\natlas = ExtResource("9")\n\n[resource]'
+    );
+    expect(
+      await sceneFailures(READS_ATLAS, { 'res://atlas.tres': atlas, 'res://gone.png': 'bytes' })
+    ).toEqual({
+      'res://atlas.tres': {
+        line: 'res://main.tscn - Parse Error: [ext_resource] referenced non-existent resource at: res://atlas.tres.',
+        chain: ['res://atlas.tres'],
+        cause: 'unparsed',
+      },
+    });
+  });
+
   it('is on no file once each file the scene reads loads', async () => {
     const files = { 'res://atlas.tres': ATLAS_READS_GONE, 'res://gone.png': 'bytes' };
     expect(await sceneFailures(READS_ATLAS, files)).toEqual({});

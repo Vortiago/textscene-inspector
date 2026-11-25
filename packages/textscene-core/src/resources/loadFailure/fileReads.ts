@@ -45,9 +45,8 @@ export interface FileReads {
 export function sceneFileReads(file: string, scene: SceneSections): FileReads {
   const sections = readsOf(scene.internalResources.map((section) => section.data));
   const nodes = readsOf(nodeValues(scene.nodes));
-  const instances = readsOf(instancesOf(scene.nodes));
   return {
-    reads: filesRead(file, scene.externalResources, [...sections, ...nodes, ...instances]),
+    reads: filesRead(file, scene.externalResources, [...sections, ...nodes]),
     ...failingFileReads(file, scene.externalResources, sections, nodes),
   };
 }
@@ -96,20 +95,17 @@ function failingFileReads(
   nodes: readonly ValueRead[][]
 ): Pick<FileReads, 'failing' | 'failsToParse'> {
   const failing = new Map<string, FailingFileRead>();
-  const keep = (read: FailingFileRead | null) => {
-    // A uid or a path off `res://` may load.
-    if (read?.path.startsWith('res://') && !failing.has(read.path)) failing.set(read.path, read);
-  };
+  const ordered = [
+    ...sections.flat().map((read) => ({ read, failure: sectionFailingRead(file, externalResources, read) })),
+    ...nodes.flat().map((read) => ({ read, failure: nodeFailingRead(read) })),
+  ];
   // In file order, as the parse stops at the first value that fails (resource_format_text.cpp:152, :291).
-  for (const read of sections.flat()) {
-    if (failsParse(externalResources, read)) return { failing: [...failing.values()], failsToParse: true };
-    keep(sectionFailingRead(file, externalResources, read));
+  const stop = ordered.findIndex(({ read }) => failsParse(externalResources, read));
+  for (const { failure } of stop < 0 ? ordered : ordered.slice(0, stop)) {
+    // A uid or a path off `res://` may load.
+    if (failure?.path.startsWith('res://') && !failing.has(failure.path)) failing.set(failure.path, failure);
   }
-  for (const read of nodes.flat()) {
-    if (failsParse(externalResources, read)) return { failing: [...failing.values()], failsToParse: true };
-    if (read.kind === 'Resource') keep(literalFailingRead(read, 'node Resource'));
-  }
-  return { failing: [...failing.values()], failsToParse: false };
+  return { failing: [...failing.values()], failsToParse: stop >= 0 };
 }
 
 /** An `ExtResource` id that no heading declares (resource_format_text.cpp:125-151), or a refused literal. */
@@ -129,15 +125,12 @@ function sectionFailingRead(
   return ext ? { path: extResourcePathIn(file, ext.path), kind: 'section ExtResource', uid: '' } : null;
 }
 
-function literalFailingRead(read: LiteralRead, kind: FailingReadKind): FailingFileRead | null {
-  return read.path === null ? null : { path: simplifyResPath(read.path), kind, uid: read.uid };
+function nodeFailingRead(read: ValueRead): FailingFileRead | null {
+  return read.kind === 'Resource' ? literalFailingRead(read, 'node Resource') : null;
 }
 
-function instancesOf(nodes: readonly RawNode[]): Values[] {
-  return nodes.flatMap((node) => [
-    ...(node.instance ? [{ instance: node.instance }] : []),
-    ...instancesOf(node.children),
-  ]);
+function literalFailingRead(read: LiteralRead, kind: FailingReadKind): FailingFileRead | null {
+  return read.path === null ? null : { path: simplifyResPath(read.path), kind, uid: read.uid };
 }
 
 /** A `path=` relative to the file that writes it (resource_format_text.cpp:508-510). */
@@ -146,6 +139,11 @@ function extResourcePathIn(file: string, path: string): string {
   return simplifyPath(pathJoin(getBaseDir(file), path));
 }
 
+/** In node order, each heading's `instance=` before its properties, as the parser reads them. */
 function nodeValues(nodes: readonly RawNode[]): Values[] {
-  return nodes.flatMap((node) => [node.rawProperties, ...nodeValues(node.children)]);
+  return nodes.flatMap((node) => [
+    ...(node.instance ? [{ instance: node.instance }] : []),
+    node.rawProperties,
+    ...nodeValues(node.children),
+  ]);
 }

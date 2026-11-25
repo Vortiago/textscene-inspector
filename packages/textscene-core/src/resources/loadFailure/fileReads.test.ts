@@ -246,6 +246,17 @@ texture = Resource("res://gone.png")
     expect(sceneFileReads(MAIN, parsed)).toMatchObject({ failing: [], failsToParse: true });
   });
 
+  it('stops at an undeclared ExtResource id in an instance field, as the parse fails there too', () => {
+    const parsed = scene(`[gd_scene format=3]
+[node name="Root" type="Node2D"]
+[node name="X" parent="." instance=ExtResource("99")]
+[node name="Y" parent="." type="Sprite2D"]
+texture = Resource("res://gone.png")
+`);
+
+    expect(sceneFileReads(MAIN, parsed)).toMatchObject({ failing: [], failsToParse: true });
+  });
+
   it('stops at a Resource() literal with two paths, which Godot does not parse', () => {
     const parsed = scene(sectionsReading('Resource("res://a.png", "res://b.png")'));
 
