@@ -324,10 +324,7 @@ export function billboardOf(material: THREE.Material): SurfaceBillboard {
   return recordedOn(material, BILLBOARD_KEY, NO_BILLBOARD);
 }
 
-/**
- * Whether a material's surface joins Godot's shadow pass. True for Godot's default
- * surface, which is opaque, and for any material this derivation did not build.
- */
+/** True for Godot's default surface, which is opaque, and for a material that records no shadow pass. */
 export function castsShadowOf(material: THREE.Material): boolean {
   return recordedOn(material, CASTS_SHADOW_KEY, true);
 }

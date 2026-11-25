@@ -9,6 +9,7 @@ import {
   billboardOf,
   castsShadowOf,
   isAnisotropic,
+  recordCastsShadow,
   standardMaterialBags,
   surfaceBillboard,
 } from './materialBag';
@@ -528,6 +529,14 @@ describe('standardMaterialBags — shadow-pass membership', () => {
   it('casts from Godot’s default surface and from a foreign material', () => {
     expect(castsShadowOf(materialFromBag(standardMaterialBags(null).unfaded))).toBe(true);
     expect(castsShadowOf(new THREE.MeshBasicMaterial())).toBe(true);
+  });
+
+  it('reads the membership a material no bag derives records for itself', () => {
+    const translated = new THREE.MeshBasicMaterial();
+
+    recordCastsShadow(translated, false);
+
+    expect(castsShadowOf(translated)).toBe(false);
   });
 });
 

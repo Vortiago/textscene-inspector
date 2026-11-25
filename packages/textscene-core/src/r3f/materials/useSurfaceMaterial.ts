@@ -41,7 +41,7 @@ export interface SurfaceMaterial {
   bags: FadeVariants<StandardMaterialBag> | null;
   /** The ready material, whose `next_pass` a chain walker follows. Null while the reference names no material to draw. */
   material: StandardMaterial | null;
-  /** The spatial shader the node lit surface draws, or null for any other material. */
+  /** The spatial ShaderMaterial's text, or null for any other material. */
   shader: ShaderText | null;
 }
 
@@ -70,10 +70,12 @@ export function useShadedSurfaceMaterial(reference: ScopedReference | undefined)
   const loaded = useShadedMaterial(reference);
   const surface = useSurfaceOf(loaded);
   const namesNoMaterial = reference === undefined;
-  const shaded = useMemo(
-    () => (namesNoMaterial ? defaultSourceOf() : shadedSourceOf(loaded)),
-    [loaded, namesNoMaterial]
-  );
+  // A texture that never draws keeps the placeholder: the shader would draw its sampler's default.
+  const isMissingTexture = loaded.status === 'ready' && surface.bags === null;
+  const shaded = useMemo(() => {
+    if (namesNoMaterial) return defaultSourceOf();
+    return isMissingTexture ? null : shadedSourceOf(loaded);
+  }, [loaded, namesNoMaterial, isMissingTexture]);
   return { ...surface, shaded };
 }
 

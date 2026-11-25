@@ -20,7 +20,7 @@ import { useReferencedResource, type Read, type ScopedReference } from '../../re
 export type LoadedMaterial =
   /** A StandardMaterial3D to draw. */
   | { status: 'ready'; material: StandardMaterial }
-  /** A spatial ShaderMaterial, which the node lit surface draws. */
+  /** A spatial ShaderMaterial, which a mesh surface draws through the Shader module. */
   | { status: 'spatial-shader'; shader: ShaderText }
   /** An ORMMaterial3D, which only the node lit surface draws, through Godot's generated shader. */
   | { status: 'base-material'; baseMaterial: BaseMaterialProperties }
