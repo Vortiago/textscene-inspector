@@ -4,6 +4,7 @@
  * viewport over a bottom sheet, one half of the sheet at a time, and no sideways scroll.
  */
 import { attachDiagnostics, findCanvas, gotoFixture, settleCanvas } from '../visual/previewServer.mjs';
+import { recordLoadTimingWhenOn } from '../perf/loadTiming/loadTiming.mjs';
 import { checkDiagnostics } from './diagnostics.mjs';
 import { checkNodePaths, expandAllTreeRows, readOutlinerPaths, selectOutlinerNode } from './outliner.mjs';
 import { readInspectorPanel } from './inspector.mjs';
@@ -28,6 +29,7 @@ function inspectorVisible(page) {
 
 export async function runPhoneScenario(browser, baseUrl, { fixture, selectPath }) {
   const context = await browser.newContext({ viewport: PHONE_VIEWPORT, isMobile: true, hasTouch: true });
+  await recordLoadTimingWhenOn(context, process.env);
   const page = await context.newPage();
   const diagnostics = attachDiagnostics(page);
 

@@ -10,6 +10,7 @@ import { join } from 'node:path';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { fixtureUrl } from '../visual/preview/fixtureUrl.mjs';
 import { attachDiagnostics, FIT_QUIESCENCE_MS, loggedErrors } from '../visual/previewServer.mjs';
+import { recordLoadTimingWhenOn } from '../perf/loadTiming/loadTiming.mjs';
 import {
   ACTION_TIMEOUT_MS,
   cameraNodePaths,
@@ -48,6 +49,7 @@ export async function recordShowcase(browser, baseUrl, { name, file, run: scenar
   // timeouts and navigation keep their own budgets.
   context.setDefaultTimeout(ACTION_TIMEOUT_MS);
   context.setDefaultNavigationTimeout(30000);
+  await recordLoadTimingWhenOn(context, process.env);
   const page = await context.newPage();
   const diagnostics = attachDiagnostics(page);
 

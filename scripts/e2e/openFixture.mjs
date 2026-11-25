@@ -6,6 +6,7 @@ import {
   settleCanvas,
   VIEWPORT,
 } from '../visual/previewServer.mjs';
+import { recordLoadTimingWhenOn } from '../perf/loadTiming/loadTiming.mjs';
 
 /**
  * Installs each `[script, argument]` pair before the first navigation, so a probe sees the
@@ -13,6 +14,7 @@ import {
  */
 export async function openFixture(browser, baseUrl, { fixture, label, initScripts = [] }) {
   const context = await browser.newContext({ viewport: VIEWPORT });
+  await recordLoadTimingWhenOn(context, process.env);
   for (const [script, argument] of initScripts) await context.addInitScript(script, argument);
   const page = await context.newPage();
   const diagnostics = attachDiagnostics(page);
