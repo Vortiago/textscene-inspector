@@ -27,10 +27,11 @@ ended at its 30 s load deadline (#2075).
 
 `pnpm check:bundle-size` fails when the build writes a script beside `webview.js`, and when the
 script is over its gzipped ceiling (`scripts/check-bundle-size/webviewBudget.mjs`). The ceiling
-is 1,789,327 B. It replaces ADR-0055's 1,150,000 B, which held only the canvas-paint closure of the
+is 1,794,852 B. It replaces ADR-0055's 1,150,000 B, which held only the canvas-paint closure of the
 split build. A change that outgrows the ceiling, with no shrink found, raises it by its measured growth:
 the editor camera node (ADR-0091) added 1,820 B, the panels that read the scene through node
-handles added 1,413 B, the Scene tree on node handles added 409 B, and its review fixes added 685 B.
+handles added 1,413 B, the Scene tree on node handles added 409 B, its review fixes added 685 B,
+and the inspector on node handles added 5,525 B.
 
 ## Consequences
 
