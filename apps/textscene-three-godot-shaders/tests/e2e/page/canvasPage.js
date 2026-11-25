@@ -204,7 +204,8 @@ function drawnPolygonObjects(draws, { polygon }) {
 /** One polygon command through the attributes variant, with the item's push constants. */
 function polygonObject(draws, command, isTextured) {
   const { draw } = draws.draw('attributes', isTextured);
-  return attributesObject(draw, attributesGeometry(command), 'triangles', polygonConstants(draws.itemDraw));
+  const geometry = attributesGeometry(command, draw.customsRead);
+  return attributesObject(draw, geometry, 'triangles', polygonConstants(draws.itemDraw));
 }
 
 /** `Geometry2D::triangulate_polygon`, which `polygonCommand` runs. */
@@ -222,7 +223,7 @@ function meshObjects(draws, { surface, isTextured }) {
   };
   const { draw } = draws.draw(attributesVariant(surface.primitive), isTextured);
   const constants = meshConstants(draws.itemDraw, { transform: IDENTITY, modulate: WHITE });
-  return [attributesObject(draw, attributesGeometry(arrays), surface.primitive, constants)];
+  return [attributesObject(draw, attributesGeometry(arrays, draw.customsRead), surface.primitive, constants)];
 }
 
 /** The quad batch of the scene's one nine-patch. */

@@ -64,7 +64,7 @@ function emulated(host: SurfaceHost, drawGroup: number | null, material: THREE.M
   );
   emulatedGroups.set(drawn, drawGroup);
   builtFrom.set(drawn, surfaceWriteOf(host.geometry));
-  // The quads copy the surface's box. Under an instanced host one surface is not the draw.
+  // The quads share the surface's box. Under an instanced host one surface is not the draw.
   if (!(host as THREE.InstancedMesh).isInstancedMesh) Object.assign(drawn.userData, geometryBoxUserData());
   return drawn;
 }

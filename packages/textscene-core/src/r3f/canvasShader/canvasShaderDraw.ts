@@ -42,7 +42,7 @@ import { geometryBoxUserData } from '../bounds';
 import { perObject } from '../../utils/perObject';
 import { warnOnce } from '../../utils/warnOnce';
 import { canvasTransformInto } from '../node2dTransform';
-import { boundItem, type CanvasShaderCommand } from './canvasCommands';
+import { boundItem, itemBox, type CanvasShaderCommand } from './canvasCommands';
 import { canvasDataOf, type CanvasColors } from './canvasFrameBlocks';
 
 export { setMaterialParameters } from '../../shaders/uniforms/materialParameters';
@@ -225,14 +225,15 @@ function rectBatch(variant: BoundVariant, layout: readonly RectCommand[]): Batch
   object.frustumCulled = false;
   Object.assign(object.userData, geometryBoxUserData());
   // Bounded by the layout until the first source, so a clip group reads the rects at once.
-  boundItem(geometry, layout);
+  const box = (geometry.boundingBox = itemBox(new THREE.Box3(), layout));
   let regions: readonly CanvasRectCommand[] = [];
   return {
     object,
     setRun: (run) => {
       if (run.kind !== 'rect') return;
       regions = run.commands.map(rectRegionOf);
-      boundItem(geometry, run.commands);
+      // The batch owns its quads, so each source writes the one box: AnimatedSprite2D sets one a frame.
+      itemBox(box, run.commands);
     },
     writeColors: (item) =>
       writeBatchRecords(geometry, item, regions.length, (record, index) =>

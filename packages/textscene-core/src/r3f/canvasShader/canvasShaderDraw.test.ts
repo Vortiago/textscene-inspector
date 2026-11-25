@@ -153,6 +153,15 @@ describe('canvasShaderDraw', () => {
     expect(batches.map((batch) => computeWorldBoundingBox(batch))).toEqual([itemRect, itemRect]);
   });
 
+  it('keeps one box across the sources of a rect batch', () => {
+    const draw = drawOf();
+    const geometry = (draw.object.children[0] as THREE.Mesh).geometry;
+    const box = geometry.boundingBox;
+    draw.setSource(TEXTURE, [RECT_COMMAND]);
+
+    expect(geometry.boundingBox).toBe(box);
+  });
+
   it('bounds a rect batch by the rects setSource gives last', () => {
     const draw = drawOf();
     const moved = { ...RECT_COMMAND, region: { ...RECT_COMMAND.region, rect: { x: -2, y: 1, w: 8, h: 4 } } };

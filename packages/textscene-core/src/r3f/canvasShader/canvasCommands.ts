@@ -65,9 +65,14 @@ const corner = new THREE.Vector3();
 /** Bounds `geometry` by the item rect of `commands`, which a canvas group's region reads (`worldBox`). */
 export function boundItem(geometry: THREE.BufferGeometry, commands: readonly CanvasShaderCommand[]): void {
   // A fresh box, not the one in place: an emulated points geometry shares its source's box.
-  const box = new THREE.Box3();
+  geometry.boundingBox = itemBox(new THREE.Box3(), commands);
+}
+
+/** Writes the item rect of `commands` to `box`, which the caller owns. */
+export function itemBox(box: THREE.Box3, commands: readonly CanvasShaderCommand[]): THREE.Box3 {
+  box.makeEmpty();
   for (const command of commands) growItemBox(box, command);
-  geometry.boundingBox = box;
+  return box;
 }
 
 /** Grows `box` by `command` as `Item::get_rect` does (`renderer_canvas_render.cpp:59-86`), with three's y. */

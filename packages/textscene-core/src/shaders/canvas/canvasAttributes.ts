@@ -81,7 +81,7 @@ const DEFAULT_UV = [0, 0];
  */
 export function attributesGeometry(
   arrays: CanvasVertexArrays,
-  customsRead: readonly number[] = []
+  customsRead: CanvasDraw['customsRead']
 ): THREE.BufferGeometry {
   const { points, colors, uvs, indices } = checkedArrays(arrays);
   const count = points.length;
