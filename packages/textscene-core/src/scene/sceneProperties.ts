@@ -4,6 +4,7 @@ import { varToStr } from '../godot/variant/varToStr.js';
 import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
 import type { ResourceReference, VariantValue } from '../godot/variant/variantValue.js';
 import * as logger from '../logger.js';
+import { memoisedImport } from '../resources/memoisedImport.js';
 import { findSubResource } from '../resources/SubResourceResolver.js';
 import { parseSubResourcePath, subResourcePath } from '../resources/subResourcePath.js';
 import type { DerivedProperties, NodeReader, NodeReads } from './derived/derivedProperty.js';
@@ -14,9 +15,7 @@ import { sceneValueOf, valueOfSceneValue, type SceneValue } from './variant.js';
 /** The class table and the defaults: hundreds of kB, so they load on the first `get` or `set`. */
 export type PropertyAccess = typeof import('./propertyAccess.js');
 
-export function loadPropertyAccess(): Promise<PropertyAccess> {
-  return import('./propertyAccess.js');
-}
+export const loadPropertyAccess = memoisedImport(() => import('./propertyAccess.js'));
 
 /** The id prefix of a file `scene.load` gave, which no Godot-written id starts with. */
 const LOADED_ID_PREFIX = 'textscene_load_';

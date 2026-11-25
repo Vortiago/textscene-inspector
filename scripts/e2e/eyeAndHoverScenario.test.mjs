@@ -6,7 +6,7 @@ import { checkEyeAndHover, outlinePixels } from './eyeAndHoverScenario.mjs';
 const TWO_BOXES = { left: { x: 10, y: 5 }, right: { x: 30, y: 5 } };
 const RIGHT_BOX = { left: { x: 28, y: 5 }, right: { x: 32, y: 5 } };
 const HOVER = { before: 0, hovered: 120, left: 0, selectedWhileHovered: [] };
-const EYE = { labelBefore: 'Hide node', labelAfter: 'Show node', boxesAfter: RIGHT_BOX };
+const EYE = { labelBefore: 'Hide node', framesToLabel: 0, labelAfter: 'Show node', boxesAfter: RIGHT_BOX };
 
 function failuresOf(run) {
   const gate = fakeGate();
@@ -37,6 +37,10 @@ describe('checkEyeAndHover', () => {
 
   it('fails an eye that leaves the left box drawn', () => {
     expect(failuresOf({ eye: { ...EYE, boxesAfter: TWO_BOXES } })).toHaveLength(1);
+  });
+
+  it('fails an eye whose label waits on the frames the view draws', () => {
+    expect(failuresOf({ eye: { ...EYE, framesToLabel: 8 } })).toHaveLength(1);
   });
 
   it('fails an eye whose label does not flip', () => {
