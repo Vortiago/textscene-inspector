@@ -5,14 +5,8 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import {
-  billboardOf,
-  castsShadowOf,
-  isAnisotropic,
-  recordCastsShadow,
-  standardMaterialBags,
-  surfaceBillboard,
-} from './materialBag';
+import { billboardOf, isAnisotropic, standardMaterialBags, surfaceBillboard } from './materialBag';
+import { castsShadowOf } from '../../../r3f/materials/recordedOnMaterial';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import { alphaAntialiasingOf } from '../../../r3f/materials/godotAlphaAntialiasing';
 import { ambientOcclusionUserData } from '../../../r3f/materials/godotAmbientOcclusion';
@@ -529,14 +523,6 @@ describe('standardMaterialBags — shadow-pass membership', () => {
   it('casts from Godot’s default surface and from a foreign material', () => {
     expect(castsShadowOf(materialFromBag(standardMaterialBags(null).unfaded))).toBe(true);
     expect(castsShadowOf(new THREE.MeshBasicMaterial())).toBe(true);
-  });
-
-  it('reads the membership a material no bag derives records for itself', () => {
-    const translated = new THREE.MeshBasicMaterial();
-
-    recordCastsShadow(translated, false);
-
-    expect(castsShadowOf(translated)).toBe(false);
   });
 });
 

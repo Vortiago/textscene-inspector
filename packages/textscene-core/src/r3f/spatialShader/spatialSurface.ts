@@ -25,7 +25,7 @@ import { EMISSION_EXPOSURE } from '../exposure/emissionExposure.js';
 import { visualLayersOf } from '../visualLayers.js';
 import { releasedOnUnmount } from '../sharedTexture.js';
 import { dfgTexture } from '../../shaders/spatial/dfgTexture.js';
-import { recordCastsShadow } from '../../resources/materials/standardmaterial3d/materialBag.js';
+import { recordCastsShadow } from '../materials/recordedOnMaterial.js';
 import type { RoughnessLimiter } from '../../godot/rendering/roughnessLimiter.js';
 
 export { setParameterValues } from '../../shaders/uniforms/materialParameters.js';

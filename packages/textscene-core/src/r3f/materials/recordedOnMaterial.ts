@@ -25,3 +25,16 @@ export function recordedUniform<T>(
     },
   };
 }
+
+/** Where a material records whether it draws in the shadow pass, for the draw hooks to read. */
+export const CASTS_SHADOW_KEY = 'godotCastsShadow';
+
+/** True for Godot's default surface, which is opaque, and for a material that records no shadow pass. */
+export function castsShadowOf(material: Pick<THREE.Material, 'userData'>): boolean {
+  return recordedOn(material, CASTS_SHADOW_KEY, true);
+}
+
+/** Records whether `material` draws in the shadow pass. */
+export function recordCastsShadow(material: Pick<THREE.Material, 'userData'>, castsShadow: boolean): void {
+  material.userData[CASTS_SHADOW_KEY] = castsShadow;
+}
