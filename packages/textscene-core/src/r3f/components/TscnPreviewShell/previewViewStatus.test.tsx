@@ -5,7 +5,7 @@ import type { ViewStatus } from '../../viewStatus/viewStatus';
 
 const PENDING: ViewStatus = {
   settled: null,
-  pending: { textures: 0, fonts: 0 },
+  pending: { resources: 0, textures: 0, fonts: 0 },
   frame: null,
   undrawn: [],
   isSoftwareRendering: true,

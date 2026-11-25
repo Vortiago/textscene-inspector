@@ -23,7 +23,7 @@ import { TEXTURE_WORK_STATUS_TESTID } from './statusTestIds';
 function statusBuilding(textures: number): ViewStatus {
   return {
     settled: null,
-    pending: { textures, fonts: 0 },
+    pending: { resources: 0, textures, fonts: 0 },
     frame: null,
     undrawn: [],
     isSoftwareRendering: false,

@@ -9,6 +9,14 @@ const MISSING_FILE = {
   owners: ['res://main.tscn'],
   reason: { chain: [MISSING_PATH], cause: 'missing', addresses: [] },
   addresses: [],
+  sceneFailure: null,
+};
+const REFUSING_FILE = {
+  ...MISSING_FILE,
+  sceneFailure: {
+    line: `res://main.tscn - Parse Error: [ext_resource] referenced non-existent resource at: ${MISSING_PATH}.`,
+    chain: [MISSING_PATH],
+  },
 };
 
 const PASSING = {
@@ -16,6 +24,7 @@ const PASSING = {
   settledKeys: ['scriptedNodeCount', 'hasCurrentCamera'],
   heard: [[], [MISSING_PATH], []],
   afterWrite: [],
+  refused: [REFUSING_FILE],
 };
 
 describe('missingFileFailures', () => {
@@ -52,5 +61,11 @@ describe('missingFileFailures', () => {
     expect(missingFileFailures({ ...PASSING, afterWrite: [MISSING_PATH] })).toEqual([
       'missing files: scene.files() after texture = null: expected [], got ["res://missing.png"]',
     ]);
+  });
+
+  it('names a refused scene whose file row carries no failure of the scene', () => {
+    expect(missingFileFailures({ ...PASSING, refused: [MISSING_FILE] })[0]).toMatch(
+      /^missing files: scene\.files\(\) of a refused scene: expected/
+    );
   });
 });

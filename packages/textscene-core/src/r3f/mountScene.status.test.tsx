@@ -41,7 +41,7 @@ describe('the status of a mounted view', () => {
 
     expect(view.status()).toEqual({
       settled: null,
-      pending: { textures: 0, fonts: 0 },
+      pending: { resources: 0, textures: 0, fonts: 0 },
       frame: null,
       undrawn: [
         { path: '/root/Main', meshTypes: ['EditorMesh'], isEmptyShape: false, hasNoComponent: false },

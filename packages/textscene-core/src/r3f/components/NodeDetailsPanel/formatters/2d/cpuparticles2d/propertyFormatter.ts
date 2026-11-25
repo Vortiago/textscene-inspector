@@ -3,7 +3,7 @@ import {
   CPU_PARTICLES_2D_EMISSION_SHAPE_HINT_NAMES,
   CPUParticles2DEmissionShape,
 } from '../../../../../../godot/scene/particles2d';
-import { PARAM_SLOTS } from '../../../../../../nodes/shared/cpuparticles/params';
+import { PARAM_SLOTS } from '../../../../../../godot/scene/cpuParticles';
 import type { InspectedNode, NodeValues, PropertyItem, PropertySection } from '../../inspectedNode';
 import { formatNode2DProperties } from '../../base/node2d/propertyFormatter';
 import { realText, resourceText, rgbaText, tupleText, yesNo } from '../../valueText';

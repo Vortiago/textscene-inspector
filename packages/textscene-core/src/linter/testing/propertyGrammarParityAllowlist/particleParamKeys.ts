@@ -5,7 +5,7 @@
  * both sides at once.
  */
 
-import { PARAM_SLOTS } from '../../../nodes/shared/cpuparticles/params.js';
+import { PARAM_SLOTS } from '../../../godot/scene/cpuParticles.js';
 
 export const PARTICLE_PARAM_KEYS: readonly string[] = PARAM_SLOTS.flatMap(({ prefix, curve }) => [
   `${prefix}_min`,

@@ -68,6 +68,7 @@ describe('the files of a scene', () => {
         owners: [MAIN],
         reason: { chain: ['res://icon.png'], cause: 'missing', addresses: [] },
         addresses: [],
+        sceneFailure: null,
       },
     ]);
   });
@@ -209,6 +210,7 @@ material_override = ExtResource("1")
           addresses: ['res://wood.tres::Absent'],
         },
         addresses: ['res://wood.tres::Absent'],
+        sceneFailure: null,
       },
     ]);
   });
@@ -241,6 +243,7 @@ material_overlay = ExtResource("2")
         owners: ['res://project.godot'],
         reason: { chain: ['res://fonts/body.ttf'], cause: 'missing', addresses: [] },
         addresses: [],
+        sceneFailure: null,
       },
       {
         path: 'res://project.godot',
@@ -249,6 +252,7 @@ material_overlay = ExtResource("2")
         owners: [],
         reason: null,
         addresses: [],
+        sceneFailure: null,
       },
     ]);
   });
@@ -330,5 +334,95 @@ texture = ExtResource("1")
     expect(scene.files()).toEqual([]);
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(asked).toEqual([]);
+  });
+});
+
+const READS_ATLAS = `[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://atlas.tres" id="1"]
+
+[sub_resource type="AtlasTexture" id="a"]
+atlas = ExtResource("1")
+
+[node name="Main" type="Node2D"]
+`;
+
+const ATLAS_READS_GONE = `[gd_resource type="AtlasTexture" format=3]
+
+[ext_resource type="Texture2D" path="res://gone.png" id="1"]
+
+[resource]
+atlas = ExtResource("1")
+`;
+
+const EMPTY_MATERIAL = '[gd_resource type="StandardMaterial3D" format=3]\n\n[resource]\n';
+
+/** The rows that carry a failure of the whole scene, by path. */
+async function sceneFailures(source: string, files: Record<string, string>) {
+  const scene = openScene({ source, provider: filesOf(files), rootScenePath: MAIN });
+  const loaded = await whenFilesLoaded(scene);
+  return Object.fromEntries(
+    loaded.flatMap((file) => (file.sceneFailure ? [[file.path, file.sceneFailure]] : []))
+  );
+}
+
+describe('the failure through which the game refuses the scene', () => {
+  it('sits on the file a section reads, with Godot error line and the chain from that file', async () => {
+    expect(await sceneFailures(READS_ATLAS, { 'res://atlas.tres': ATLAS_READS_GONE })).toEqual({
+      'res://atlas.tres': {
+        line: 'res://main.tscn - Parse Error: [ext_resource] referenced non-existent resource at: res://atlas.tres.',
+        chain: ['res://atlas.tres', 'res://gone.png'],
+      },
+    });
+  });
+
+  it('is on no file once each file the scene reads loads', async () => {
+    const files = { 'res://atlas.tres': ATLAS_READS_GONE, 'res://gone.png': 'bytes' };
+    expect(await sceneFailures(READS_ATLAS, files)).toEqual({});
+  });
+
+  it('is on no file where only a node reads a failing file (resource_format_text.cpp:647-650)', async () => {
+    const source = `[gd_scene format=3]
+
+[ext_resource type="Material" path="res://wood.tres::Absent" id="1"]
+
+[node name="Main" type="MeshInstance3D"]
+material_override = ExtResource("1")
+`;
+    expect(await sceneFailures(source, { 'res://wood.tres': EMPTY_MATERIAL })).toEqual({});
+  });
+
+  it('names the undeclared address of a Resource() literal, as Godot fails its parse', async () => {
+    const source = `[gd_scene format=3]
+
+[ext_resource type="Material" path="res://wood.tres::A" id="1"]
+
+[node name="Main" type="MeshInstance3D"]
+material_override = ExtResource("1")
+material_overlay = Resource("res://wood.tres::B")
+`;
+    expect(await sceneFailures(source, { 'res://wood.tres': EMPTY_MATERIAL })).toEqual({
+      'res://wood.tres': {
+        line: 'Parse Error: Parse error. [Resource file res://main.tscn]',
+        chain: ['res://wood.tres::B'],
+      },
+    });
+  });
+
+  it('sits only on the first failing file in the order the scene reads', async () => {
+    const source = `[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://second.png" id="2"]
+[ext_resource type="Texture2D" path="res://first.png" id="1"]
+
+[sub_resource type="AtlasTexture" id="a"]
+atlas = ExtResource("1")
+
+[sub_resource type="AtlasTexture" id="b"]
+atlas = ExtResource("2")
+
+[node name="Main" type="Node2D"]
+`;
+    expect(Object.keys(await sceneFailures(source, {}))).toEqual(['res://first.png']);
   });
 });

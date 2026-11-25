@@ -38,6 +38,7 @@ function tell(onStatusChange: (status: ViewStatus) => void, status: ViewStatus):
 function changesBeyondFrame(heard: ViewStatus, now: ViewStatus): boolean {
   return (
     heard.settled !== now.settled ||
+    heard.pending.resources !== now.pending.resources ||
     heard.pending.textures !== now.pending.textures ||
     heard.pending.fonts !== now.pending.fonts ||
     heard.undrawn !== now.undrawn ||

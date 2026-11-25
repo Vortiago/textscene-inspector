@@ -15,8 +15,8 @@ export interface ViewSettled {
 export interface ViewStatus {
   /** The settled value, or null while the view is pending. */
   settled: ViewSettled | null;
-  /** The textures and fonts still building on the page: two views of one page count each other's. */
-  pending: { textures: number; fonts: number };
+  /** The view's resources still loading, and the page's textures and fonts, which its views share. */
+  pending: PendingSceneWork;
   /** The last window of frame numbers, or null before the first: its `timings` need `show.performance`. */
   frame: FrameStats | null;
   /** Each node the view holds and does not draw, in path order. */
@@ -36,7 +36,7 @@ export interface ViewFreelook {
 /** What a host has heard before a view reports: nothing settled, pending, measured, undrawn or found. */
 export const EMPTY_VIEW_STATUS: ViewStatus = {
   settled: null,
-  pending: { textures: 0, fonts: 0 },
+  pending: { resources: 0, textures: 0, fonts: 0 },
   frame: null,
   undrawn: [],
   isSoftwareRendering: false,
@@ -105,7 +105,7 @@ export function createViewStatusStore(): ViewStatusStore {
   let capture: PendingCapture | null = null;
   let reader: (() => RgbaImage) | null = null;
   let isReadQueued = false;
-  const pending = { textures: 0, fonts: 0 };
+  const pending: PendingSceneWork = { resources: 0, textures: 0, fonts: 0 };
   let frame: FrameStats | null = null;
   let isSoftwareRendering = false;
   let freelook: ViewFreelook | null = null;
@@ -162,9 +162,13 @@ export function createViewStatusStore(): ViewStatusStore {
   }
 
   function workChanged(work: PendingSceneWork): void {
-    if (work.textures === pending.textures && work.fonts === pending.fonts) return;
-    pending.textures = work.textures;
-    pending.fonts = work.fonts;
+    if (
+      work.resources === pending.resources &&
+      work.textures === pending.textures &&
+      work.fonts === pending.fonts
+    )
+      return;
+    Object.assign(pending, work);
     notify();
   }
 

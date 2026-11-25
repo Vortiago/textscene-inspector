@@ -238,8 +238,9 @@ Each read of `settled` gives a new promise, which rejects once the view unmounts
 `view.status()` gives what the view reports of itself now, as one object:
 
 - `settled`: the settled value, or `null` while the view is pending.
-- `pending`: `{ textures, fonts }`, the textures and fonts still building on the page. Two views
-  on one page count each other's. The files that still load are in `scene.files()`.
+- `pending`: `{ resources, textures, fonts }`. `resources` counts the resources the view still loads.
+  `textures` and `fonts` count the textures and fonts still building on the page, and two views on
+  one page count each other's. The state of each file is in `scene.files()`.
 - `frame`: the last window of frame numbers, or `null` before the first window. A window lands
   twice a second and holds `fps`, `frameMs`, `cpuMs`, `drawCallsPerFrame`, `objectsPerFrame` and
   `primitivesPerFrame`. The objects and primitives are those of Godot's editor monitor: each
@@ -283,6 +284,11 @@ const view = mountScene(element, scene, {
   file that is not missing.
 - `addresses`: each sub-resource address inside the file that the scene reads, such as
   `res://wood.tres::Material_1`.
+- `sceneFailure`: `{ line, chain }` on the one file through which the game refuses to load the
+  whole scene, and null on every other file. It is the first such file in the order the scene
+  reads. `line` is the error line Godot prints, less its number. `chain` starts at the address
+  the scene reads: the file and each file through which it fails, or the sub-resource address the
+  file does not declare. A failure that only a node reads does not refuse the scene, as in Godot.
 
 The list follows each file the scene's values read, as Godot's Load Errors dialog does: a
 sub-scene and a `.tres` add the files that they read. A file that a heading declares and no value

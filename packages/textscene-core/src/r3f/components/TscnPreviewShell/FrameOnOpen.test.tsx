@@ -2,8 +2,6 @@ import { act, render, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ViewportModeProvider, useViewportMode } from '../ViewportMode/ViewportModeContext';
 import type { ViewportMode } from '../../viewportMode';
-import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
-import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { createEditorCameras } from '../../editorView/editorCamera/editorCameras';
 import { variant, type SceneValue } from '../../../scene/variant';
 import type { ViewStatus } from '../../viewStatus/viewStatus';
@@ -19,6 +17,10 @@ const FRAMED = variant('Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 9)');
 const SETTLED: ViewStatus = {
   ...EMPTY_VIEW_STATUS,
   settled: { scriptedNodeCount: 0, hasCurrentCamera: false },
+};
+const LOADING_A_RESOURCE: ViewStatus = {
+  ...EMPTY_VIEW_STATUS,
+  pending: { ...EMPTY_VIEW_STATUS.pending, resources: 1 },
 };
 
 /** A 3D editor camera whose pose a focus moves to `FRAMED`, and the user's moves to anything else. */
@@ -53,7 +55,6 @@ const NO_SCENE_WATCH = { getNodeOrNull: () => null, observe: () => () => {} };
 async function mount({ frameOnOpen = true, mode = '3D' as ViewportMode, isStageBound = true } = {}) {
   const camera = fakeCamera({ isBound: isStageBound });
   const heard = renderHook(useHeardStatus).result.current;
-  const fake = createFakeResourceLoader();
   let preview: PreviewCamera | null = null;
   let setMode: (mode: ViewportMode) => void = () => {};
   function PreviewProbe() {
@@ -63,32 +64,28 @@ async function mount({ frameOnOpen = true, mode = '3D' as ViewportMode, isStageB
   }
   await act(async () => {
     render(
-      <ResourceLoaderProvider loader={fake.loader}>
-        <ViewportModeProvider initialFrameOnOpen={frameOnOpen} initialMode={mode}>
-          <PreviewCameraProvider scene={NO_SCENE_WATCH}>
-            <PreviewProbe />
-            <FrameOnOpen rootScenePath="res://main.tscn" hasScene view={camera.view} heard={heard} />
-          </PreviewCameraProvider>
-        </ViewportModeProvider>
-      </ResourceLoaderProvider>
+      <ViewportModeProvider initialFrameOnOpen={frameOnOpen} initialMode={mode}>
+        <PreviewCameraProvider scene={NO_SCENE_WATCH}>
+          <PreviewProbe />
+          <FrameOnOpen rootScenePath="res://main.tscn" hasScene view={camera.view} heard={heard} />
+        </PreviewCameraProvider>
+      </ViewportModeProvider>
     );
   });
   const runTimers = () => act(async () => void vi.advanceTimersByTime(PAST_LAST_TIMER_MS));
   const switchTo = (next: ViewportMode) => act(async () => setMode(next));
-  return { ...camera, heard, loader: fake.loader, preview: () => preview!, runTimers, switchTo };
+  return { ...camera, heard, preview: () => preview!, runTimers, switchTo };
 }
 
 /** A view that settled once, then started a `.glb` load, with every fit timer run out. */
 async function mountWithLateLoad() {
   const mounted = await mount();
   heardSettle(mounted.heard);
-  const releaseLateLoad = mounted.loader.beginPending();
-  mounted.heard.onStatusChange(EMPTY_VIEW_STATUS);
+  mounted.heard.onStatusChange(LOADING_A_RESOURCE);
   await mounted.runTimers();
   mounted.focus.mockClear();
   const settleLoad = () =>
     act(async () => {
-      releaseLateLoad();
       heardSettle(mounted.heard);
     });
   return { ...mounted, settleLoad };

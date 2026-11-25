@@ -1,6 +1,5 @@
-import { useContext, useEffect, useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useViewportMode } from '../ViewportMode/ViewportModeContext.js';
-import { ResourceLoaderContext } from '../../../resources/ResourceLoaderContext.js';
 import type { SceneValue } from '../../../scene/variant.js';
 import { warnOfCameraFailure, type EditorViewAnswers } from '../../editorView/editorCamera/editorCameras.js';
 import type { HeardStatusStore } from './previewViewStatus.js';
@@ -19,7 +18,6 @@ interface FrameOnOpenProps {
 /** Opt-in: Godot opens each scene at a fixed orbit and frames only on F (node_3d_editor_plugin.h:420-426). */
 export function FrameOnOpen({ rootScenePath, hasScene, view, heard }: FrameOnOpenProps) {
   const { mode, frameOnOpen } = useViewportMode();
-  const loader = useContext(ResourceLoaderContext);
   // A return to the 3D mode finds the camera where it was left, as in Godot, so it frames no scene twice.
   const framedRoot = useRef<string | null>(null);
   // A ref, not a dependency: an ended preview starts no fit.
@@ -69,12 +67,11 @@ export function FrameOnOpen({ rootScenePath, hasScene, view, heard }: FrameOnOpe
     }
 
     // Each settle that ends a load fits, as one can precede an instanced `.glb` load. A write never does.
-    let hasLoadedSinceSettle = (loader?.pendingResourceCount ?? 0) > 0;
-    const stopWatchingLoads = loader?.subscribePending(() => {
-      if (loader.pendingResourceCount > 0) hasLoadedSinceSettle = true;
-    });
+    const isLoading = () => (heard.get().status?.pending.resources ?? 0) > 0;
+    let hasLoadedSinceSettle = isLoading();
     let wasSettled = false;
     const fitOnSettle = () => {
+      if (isLoading()) hasLoadedSinceSettle = true;
       const isSettled = heard.get().status?.settled != null;
       if (isSettled && !wasSettled && hasLoadedSinceSettle) {
         hasLoadedSinceSettle = false;
@@ -87,10 +84,9 @@ export function FrameOnOpen({ rootScenePath, hasScene, view, heard }: FrameOnOpe
     return () => {
       isCancelled = true;
       timers.forEach(clearTimeout);
-      stopWatchingLoads?.();
       stopHearing();
     };
-  }, [rootScenePath, isFraming, view, heard, loader]);
+  }, [rootScenePath, isFraming, view, heard]);
 
   return null;
 }

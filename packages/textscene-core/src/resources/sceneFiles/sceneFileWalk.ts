@@ -2,6 +2,7 @@ import { isGodotTextResourcePath } from '../../godot/project/resourceFormats.js'
 import type { SceneFile } from '../../scene/sceneFiles.js';
 import { resourceReads, sceneReads, type FileRead } from '../loadFailure/fileReads.js';
 import type { LoadOutcome } from '../loadFailure/loadOutcome.js';
+import { withSceneFailure, type FailingRead } from '../loadFailure/sceneFailure.js';
 import type { ParsedResource } from '../../parser/parsedResource.js';
 import type { TscnScene } from '../../parser/types.js';
 import type { ResourceLoader } from '../ResourceLoader.js';
@@ -15,6 +16,8 @@ export interface WalkStart {
   readonly reads: readonly FileRead[];
   /** True while the owner still reads the files, so each stays `loading` whatever its outcome. */
   readonly isReading?: boolean;
+  /** The root scene's reads that fail the whole scene, in its read order. */
+  readonly failingReads?: readonly FailingRead[];
 }
 
 export interface SceneFileWalk {
@@ -116,7 +119,8 @@ export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void
 
   function sceneFileOf(path: string, entry: Entry): SceneFile {
     const { state, reason } = stateOf(path, entry);
-    return { path, type: entry.type, state, owners: entry.owners, reason, addresses: entry.addresses };
+    const { type, owners, addresses } = entry;
+    return { path, type, state, owners, reason, addresses, sceneFailure: null };
   }
 
   function stateOf(path: string, { isReading, addresses }: Entry): Pick<SceneFile, 'state' | 'reason'> {
@@ -166,9 +170,13 @@ export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void
       const entries = entriesFrom(starts);
       releaseOutside(entries);
       walkedPaths = new Set(entries.keys());
-      const files = [...entries]
+      const rows = [...entries]
         .sort(([a], [b]) => (a < b ? -1 : 1))
         .map(([path, entry]) => sceneFileOf(path, entry));
+      const files = withSceneFailure(
+        rows,
+        starts.flatMap((start) => start.failingReads ?? [])
+      );
       const key = JSON.stringify(files);
       if (key !== walkedKey) {
         walked = files;

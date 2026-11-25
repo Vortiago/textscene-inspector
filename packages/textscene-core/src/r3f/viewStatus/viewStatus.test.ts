@@ -275,11 +275,20 @@ describe('the status a view reports', () => {
     expect(status.status().settled).toBeNull();
   });
 
-  it('counts the textures and fonts still building, also while no frame draws', () => {
+  it('counts the resources, textures and fonts still loading, also while no frame draws', () => {
     const status = attachedStatus();
     drawFrame(status);
     status.workChanged({ resources: 4, textures: 2, fonts: 1 });
-    expect(status.status().pending).toEqual({ textures: 2, fonts: 1 });
+    expect(status.status().pending).toEqual({ resources: 4, textures: 2, fonts: 1 });
+  });
+
+  it('tells its subscribers when only the resources still loading change', () => {
+    const status = attachedStatus();
+    drawFrame(status);
+    let notices = 0;
+    status.subscribe(() => notices++);
+    status.workChanged({ resources: 1, textures: 0, fonts: 0 });
+    expect(notices).toBe(1);
   });
 
   it('keeps one status object while nothing changes, so a reader renders once', () => {

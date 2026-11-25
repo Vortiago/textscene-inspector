@@ -19,7 +19,7 @@ import type { Curve } from '../../../../resources/curves/curve/types';
 import { curveOf, point } from '../../../../resources/curves/curve/curve.testkit';
 import type { Gradient } from '../../../../resources/textures/gradienttexture2d/types';
 import { GradientColorSpace, GradientInterpolationMode } from '../../../../godot/scene/gradientTexture';
-import { PARAM_SLOTS } from '../../../shared/cpuparticles/params';
+import { PARAM_SLOTS } from '../../../../godot/scene/cpuParticles';
 import { storedColor, storedReal } from '../../../../godot/math/real';
 
 /** A `Curve` as `Curve.add_point(position, left, right)` builds it, in the `real_t` the decoder stores. */

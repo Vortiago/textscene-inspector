@@ -21,6 +21,17 @@ position = Vector2(160, 120)
 texture = ExtResource("1")
 `;
 
+/** A section that reads the missing file, so the game refuses the whole scene. */
+const REFUSED_SCENE = `[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="${MISSING_PATH}" id="1"]
+
+[sub_resource type="AtlasTexture" id="a"]
+atlas = ExtResource("1")
+
+[node name="Root" type="Node2D"]
+`;
+
 export interface MissingFileCheckResults {
   /** `scene.files()` once none is loading, before any view mounts. */
   beforeView: readonly SceneFile[];
@@ -30,6 +41,8 @@ export interface MissingFileCheckResults {
   heard: string[][];
   /** The missing paths of `scene.files()` after the host writes `texture = null`. */
   afterWrite: string[];
+  /** `scene.files()` of a scene the game refuses, once none is loading. */
+  refused: readonly SceneFile[];
 }
 
 const missingPathsOf = (scene: Scene) =>
@@ -55,6 +68,15 @@ function loadedFiles(scene: Scene): Promise<readonly SceneFile[]> {
   });
 }
 
+async function refusedSceneFiles(): Promise<readonly SceneFile[]> {
+  const scene = openScene({ source: REFUSED_SCENE, provider: NO_FILES, rootScenePath: 'res://main.tscn' });
+  try {
+    return await loadedFiles(scene);
+  } finally {
+    scene.dispose();
+  }
+}
+
 export async function runMissingFileChecks(): Promise<MissingFileCheckResults> {
   const scene = openScene({
     source: MISSING_TEXTURE_SCENE,
@@ -70,7 +92,8 @@ export async function runMissingFileChecks(): Promise<MissingFileCheckResults> {
     await scene.getNode('Sprite').set('texture', variant('null'));
     await view.settled;
     await new Promise((resolve) => setTimeout(resolve, NOTICE_WAIT_MS));
-    return { beforeView, settledKeys, heard, afterWrite: missingPathsOf(scene) };
+    const afterWrite = missingPathsOf(scene);
+    return { beforeView, settledKeys, heard, afterWrite, refused: await refusedSceneFiles() };
   } finally {
     view.dispose();
     stopHearing();
