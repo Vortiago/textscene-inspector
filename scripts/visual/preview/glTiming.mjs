@@ -1,9 +1,4 @@
-/**
- * A diagnostic timing log of a page: each GL program's first draw, the canvas insert and each long
- * task, printed as `[gltiming]` lines with milliseconds since the page's navigation start.
- */
-
-/* global document, window, MutationObserver, WebGL2RenderingContext */ // The init script runs in the browser.
+/* global document, window, MutationObserver, WebGL2RenderingContext */ // Browser globals.
 
 /** Prints the page's `[gltiming]` console lines on the runner's log, each with the runner's clock. */
 export function printTimingLines(page) {
@@ -13,10 +8,7 @@ export function printTimingLines(page) {
   });
 }
 
-/**
- * The init script. A one-pixel read after a program's first draw waits for the GPU process, so the
- * draw's line holds the routine build that SwiftShader runs at that draw.
- */
+/** Logs first draws, the canvas insert and long tasks, in ms since navigation start. */
 export function installTimingLog() {
   const pixel = new Uint8Array(4);
   // `finish` returns at once in Chromium; a read is the call that waits for the draws before it.
