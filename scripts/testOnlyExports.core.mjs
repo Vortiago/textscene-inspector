@@ -57,6 +57,9 @@ export const KEPT_TEST_ONLY_EXPORTS = [
   // The builds and the cache are module state, so each test starts from the one reset that aborts
   // the builds in flight and clears the cache.
   'resources/textures/proceduralBuilds.ts#resetProceduralTextures',
+  // The canvas tests name each instance flag and check the item matrix without a draw.
+  'shaders/canvas/canvasBindings.ts#transform2DMatrix',
+  'shaders/canvas/canvasRect.ts#CANVAS_RECT',
   // The preprocessed-text check reads the text before any parse, also for a text the parser refuses.
   'shaders/language/parseShader.ts#shaderCode',
   // The round trip test prints each parsed tree back to text, which no transpilation needs.
@@ -70,6 +73,8 @@ export const KEPT_TEST_ONLY_EXPORTS = [
   'shaders/material/stencilEffect.ts#stencilPassOf',
   // The template check prints each parsed template stage back to text, which no draw needs.
   'shaders/template/printTemplate.ts#printTemplateStage',
+  // The sampler test checks the state of each hint without a texture copy.
+  'shaders/uniforms/samplerState.ts#samplerState',
   // Vitest resolves `virtual:texture-worker-source` here (`vitest.shared.ts`), which no import names.
   'workers/textureWorkerSource.stub.ts#default',
 ];

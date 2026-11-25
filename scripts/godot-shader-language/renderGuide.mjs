@@ -204,8 +204,10 @@ function chapterSections(chapters, rows, probes) {
 /** The width the guide shows a showcase image at: four screen pixels to each image pixel. */
 const SHOWCASE_SCALE = 4;
 
-/** What the page draws of a showcase: a function of UV, a sky scene's background, or a mesh scene's mesh. */
+/** What the page draws of a showcase: a function of UV, a sky, a mesh, or a canvas item's rects. */
 function showcaseText(showcase) {
+  if (showcase.rects)
+    return "Godot draws the scene's rects on a Node2D of a 2D view, with no material, so Godot's default canvas shader draws them (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same rects through the transpiled canvas template with the same values.";
   if (showcase.mesh)
     return "Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values.";
   if (showcase.camera)
@@ -221,7 +223,7 @@ function renderShowcase(showcase) {
 ${showcaseText(showcase)} \`pnpm test:shaders:e2e\` draws both again and fails on any pixel over 2/255 apart.
 
 \`\`\`glsl
-${(showcase.camera ? showcase.source : godotShader(showcase)).trim()}
+${(showcase.camera || showcase.rects ? showcase.source : godotShader(showcase)).trim()}
 \`\`\`
 
 | Godot | Transpilation on three.js |
@@ -284,7 +286,7 @@ function renderIndex(placed, rows, probes, record, version) {
   });
   const chapterLines = placed.map(
     ({ chapter, sections }) =>
-      `- [${chapter.title}](${chapter.file}): ${sections.map(({ section }) => section.heading).join(', ')}.`
+      `- [${chapter.title}](${chapter.file}): ${sections.map(({ section }) => section.heading).join(', ') || chapter.contents}.`
   );
   return `# The shading language transpiler
 

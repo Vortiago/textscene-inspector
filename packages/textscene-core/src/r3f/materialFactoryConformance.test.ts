@@ -181,8 +181,8 @@ const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
     "mounts the preview sun's aim target — an empty Object3D, added as a child",
 };
 
-/** `new THREE.SomethingMaterial(`, the imperative door. */
-const MATERIAL_CONSTRUCTOR = /\bnew\s+(?:THREE\.)?[A-Za-z0-9_]*Material\s*\(/;
+/** `new THREE.SomethingMaterial(`: a `BoundNodeMaterial` emits its stages again at each specialisation. */
+const MATERIAL_CONSTRUCTOR = /\bnew\s+(?:THREE\.)?(?!BoundNodeMaterial\b)[A-Za-z0-9_]*Material\s*\(/;
 
 export function materialConstructorLines(source: string): number[] {
   return offendingLines(source, MATERIAL_CONSTRUCTOR);
@@ -204,16 +204,6 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'one material per group buffer, its shaders fixed at construction; a render moves only its colour uniform',
   'packages/textscene-core/src/shaders/pipeline/opaqueSentinel.ts':
     "an opaque-list sentinel's material, which writes nothing and is never mutated",
-  'packages/textscene-core/src/shaders/sky/transpileSky.ts':
-    'the shader package draws a sky for a plain three.js app with no React: one material per transpiled sky, its nodes fixed at construction, and the caller moves only uniforms',
-  'packages/textscene-core/src/shaders/template/compute/emitComputePass.ts':
-    'one material per lowered compute pass of a renderer, its nodes fixed at construction and drawn offscreen outside React; a bake moves only uniforms and textures',
-  'packages/textscene-core/src/shaders/canvas/transpileCanvas.ts':
-    'the shader package draws a canvas item for a plain three.js app with no React: one material per variant of a transpiled canvas_item shader, its nodes fixed at construction, and the caller moves only uniforms and specialisations',
-  'packages/textscene-core/src/shaders/spatial/transpileSpatial.ts':
-    'the shader package draws a mesh for a plain three.js app with no React: one material per transpiled spatial shader, its nodes fixed at construction, and the caller moves only uniforms and row textures',
-  'packages/textscene-core/src/shaders/spatial/spatialPrepass.ts':
-    "the depth prepass draw of a transpiled spatial shader, built once at its first draw from the surface's nodes and disposed with it; the caller moves only uniforms",
   'packages/textscene-core/src/r3f/controls/native/text/canvasTextPainter.ts':
     'one material per built text run, replaced and disposed together with its geometry; its single `defines` write happens before the material has ever been rendered',
   'packages/textscene-core/src/r3f/materials/useOneSurfaceStartingMaterial.ts':

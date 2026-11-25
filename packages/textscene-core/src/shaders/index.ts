@@ -50,6 +50,21 @@ export {
   type CanvasVariant,
   type TranspiledCanvasItem,
 } from './canvas/transpileCanvas.js';
+export { CANVAS_BINDINGS, writeCanvasBindings, type CanvasFrame } from './canvas/canvasBindings.js';
+export {
+  rectBatchGeometry,
+  rectInstanceData,
+  textureRectRegion,
+  type CanvasItemDraw,
+  type CanvasRectCommand,
+} from './canvas/canvasRect.js';
+export {
+  CanvasTextureBinding,
+  GODOT_CANVAS_TEXTURE_STATE,
+  type CanvasTextureFilter,
+  type CanvasTextureRepeat,
+  type CanvasTextureState,
+} from './canvas/canvasTexture.js';
 export type { PointDraw } from './spatial/spatialPipeline.js';
 export type { DirectionalLight } from './spatial/directionalLights.js';
 export {
