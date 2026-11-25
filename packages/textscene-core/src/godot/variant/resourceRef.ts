@@ -57,15 +57,18 @@ interface ResourceRefSpan extends ResourceRef {
 }
 
 /**
- * Every reference the loader resolves in `text`, in order, pushed onto `spans`. It resolves each
- * one as it tokenises (`resource_format_text.cpp:125-151`), but never text inside a string or a
- * `StringName`, whose quotes `get_token` reads with `\\` escapes and across lines
- * (`variant_parser.cpp:265-300`), nor a `;` comment to the end of its line (`:214`).
+ * Each reference the loader resolves, past strings and `;` comments (variant_parser.cpp:214, :265).
  *
  * @param inString whether `text` starts inside a string an earlier line opened
+ * @param literals where each `Resource(…)` literal goes, or null to skip them
  * @returns whether `text` ends inside a string
  */
-function scanLoadedRefs(text: string, inString: boolean, spans: ResourceRefSpan[]): boolean {
+function scanLoadedRefs(
+  text: string,
+  inString: boolean,
+  spans: ResourceRefSpan[],
+  literals: LiteralSpan[] | null = null
+): boolean {
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
     if (inString) {
@@ -83,7 +86,12 @@ function scanLoadedRefs(text: string, inString: boolean, spans: ResourceRefSpan[
       i = lineEnd;
       continue;
     }
-    if ((char !== 'E' && char !== 'S') || (i > 0 && IDENTIFIER_CHAR_RE.test(text[i - 1]!))) continue;
+    if ((char !== 'E' && char !== 'S' && char !== 'R') || (i > 0 && IDENTIFIER_CHAR_RE.test(text[i - 1]!)))
+      continue;
+    if (char === 'R') {
+      if (literals) i = readLiteralAt(text, i, literals);
+      continue;
+    }
     RESOURCE_REF_AT_RE.lastIndex = i;
     const match = RESOURCE_REF_AT_RE.exec(text);
     if (!match) continue;
@@ -187,11 +195,29 @@ export function isPathResourceLiteral(raw: string): boolean {
   return match[1]!.startsWith('uid://') !== second.startsWith('uid://');
 }
 
-/**
- * Every `Resource(…)` literal in a text, `[1]` and `[2]` its arguments. The word boundary keeps the
- * tail of an `ExtResource(…)` or a `SubResource(…)` out, whose argument is an id, not a path.
- */
-const PATH_RESOURCE_ANYWHERE_RE = new RegExp(`\\b${PATH_RESOURCE_RE.source.slice(1, -1)}`, 'g');
+/** A native pre-check for a literal, as the scan reads each character. `\b` keeps out `SubResource(`. */
+const PATH_RESOURCE_SOMEWHERE_RE = new RegExp(`\\b${PATH_RESOURCE_RE.source.slice(1, -1)}`);
+
+/** One `Resource(…)` literal, read in place by {@link scanLoadedRefs}. */
+const PATH_RESOURCE_AT_RE = new RegExp(PATH_RESOURCE_RE.source.slice(1, -1), 'y');
+
+/** A literal's reads and where it starts in the text it was read from. */
+interface LiteralSpan {
+  start: number;
+  reads: LiteralRead[];
+}
+
+/** The index of the literal's last character at `start`, its reads pushed onto `literals`, or `start`. */
+function readLiteralAt(text: string, start: number, literals: LiteralSpan[]): number {
+  PATH_RESOURCE_AT_RE.lastIndex = start;
+  const match = PATH_RESOURCE_AT_RE.exec(text);
+  if (!match) return start;
+  const args = [match[1]!, match[2]].filter((arg): arg is string => arg !== undefined);
+  const uid = args.find((arg) => arg.startsWith('uid://')) ?? '';
+  const paths = args.filter((arg) => !arg.startsWith('uid://'));
+  literals.push({ start, reads: paths.map((path) => ({ kind: 'Resource', path, uid })) });
+  return PATH_RESOURCE_AT_RE.lastIndex - 1;
+}
 
 /**
  * The `res://` path of each `Resource(…)` literal in `text`, in order, as an import parameter such as
@@ -209,28 +235,26 @@ type LiteralRead = { kind: 'Resource'; path: string; uid: string };
 
 /** Each `ExtResource(…)` and `Resource(…)` literal of `text`, in the order the loader meets them. */
 export function valueReadsIn(text: string): ValueRead[] {
-  // The span scan reads each character, so a value with no `ExtResource` skips it.
-  if (!text.includes(EXT_RESOURCE_TOKEN)) return literalReadsIn(text);
-  const extReads = loadedRefSpans(text)
+  const hasLiteral = PATH_RESOURCE_SOMEWHERE_RE.test(text);
+  if (!hasLiteral && !text.includes(EXT_RESOURCE_TOKEN)) return [];
+  const spans: ResourceRefSpan[] = [];
+  const literals: LiteralSpan[] = [];
+  scanLoadedRefs(text, false, spans, hasLiteral ? literals : null);
+  const extReads = spans
     .filter((span) => span.kind === 'ExtResource')
-    .map((span) => ({ start: span.start, read: { kind: 'ExtResource', id: span.id } as const }));
-  return [...extReads, ...literalsIn(text)].sort((a, b) => a.start - b.start).map(({ read }) => read);
+    .map((span): { start: number; reads: ValueRead[] } => ({
+      start: span.start,
+      reads: [{ kind: 'ExtResource', id: span.id }],
+    }));
+  return [...extReads, ...literals].sort((a, b) => a.start - b.start).flatMap(({ reads }) => reads);
 }
 
 /** One read per `res://` path of each `Resource(…)` literal of `text`, in order, each with its `uid://`. */
 export function literalReadsIn(text: string): LiteralRead[] {
-  return literalsIn(text).map(({ read }) => read);
-}
-
-function literalsIn(text: string): Array<{ start: number; read: LiteralRead }> {
-  if (!text.includes(RESOURCE_TOKEN)) return [];
-  return [...text.matchAll(PATH_RESOURCE_ANYWHERE_RE)].flatMap((match) => {
-    const args = [match[1]!, match[2]].filter((arg): arg is string => arg !== undefined);
-    const uid = args.find((arg) => arg.startsWith('uid://')) ?? '';
-    return args
-      .filter((arg) => !arg.startsWith('uid://'))
-      .map((path) => ({ start: match.index, read: { kind: 'Resource', path, uid } as const }));
-  });
+  if (!PATH_RESOURCE_SOMEWHERE_RE.test(text)) return [];
+  const literals: LiteralSpan[] = [];
+  scanLoadedRefs(text, false, [], literals);
+  return literals.flatMap(({ reads }) => reads);
 }
 
 /** The id of the first `SubResource(…)` anywhere in `text`, or null. */

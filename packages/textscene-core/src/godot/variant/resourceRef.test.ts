@@ -363,4 +363,11 @@ describe('literalReadsIn', () => {
   it('reads nothing from a value that names no resource', () => {
     expect(literalReadsIn('Vector3(1, 2, 3)')).toEqual([]);
   });
+
+  it('skips a literal in a comment and in a string, as the loader does', () => {
+    const value =
+      '[\n; Resource("res://gone.png")\n"Resource(\\"res://text.png\\")", Resource("res://a.png")]';
+
+    expect(literalReadsIn(value)).toEqual([{ kind: 'Resource', path: 'res://a.png', uid: '' }]);
+  });
 });

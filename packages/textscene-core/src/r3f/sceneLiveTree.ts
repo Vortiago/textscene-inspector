@@ -19,11 +19,7 @@ import { readProjectSettings } from '../resources/projectSettingsFile.js';
 import { registerInstanceResource } from '../resources/registerInstanceResource.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { sceneFailingFileReads, sceneReads, type FileRead } from '../resources/loadFailure/fileReads.js';
-import {
-  createSceneFileWalk,
-  type SceneFailingReads,
-  type WalkStart,
-} from '../resources/sceneFiles/sceneFileWalk.js';
+import { createSceneFileWalk, type WalkInput } from '../resources/sceneFiles/sceneFileWalk.js';
 import type { ResourceLoader } from '../resources/ResourceLoader.js';
 import type { Scene } from '../scene/openScene.js';
 import {
@@ -301,11 +297,6 @@ function projectReads(settings: ProjectSettings | null): FileRead[] {
 /** Undefined while the engine reads the project settings, null where the project has none. */
 type ProjectRead = ProjectSettings | null | undefined;
 
-interface WalkInput {
-  readonly starts: WalkStart[];
-  readonly failing: SceneFailingReads | null;
-}
-
 function walkInput(graph: SceneGraph | null, settings: ProjectRead): WalkInput {
   const root = graph?.scenes.get(graph.rootScene);
   const scene = root ? [{ owner: root.path, reads: sceneReads(root.path, root) }] : [];
@@ -374,7 +365,7 @@ function sceneRuntimeOf(scene: Scene): SceneRuntime {
         const key = JSON.stringify(next);
         walked = { graph, settings, key, input: key === walked?.key ? walked.input : next };
       }
-      return fileWalk.files(walked.input.starts, walked.input.failing);
+      return fileWalk.files(walked.input);
     },
     subscribeFiles(listener) {
       fileListeners.add(listener);

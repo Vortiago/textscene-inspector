@@ -290,7 +290,7 @@ const view = mountScene(element, scene, {
   reads, and none is named while an earlier read still loads. `line` is the error line Godot
   prints, less its number. `chain` holds the file the scene reads and each file through which it
   fails, or the sub-resource address the file does not declare. `cause` is the cause of the
-  `reason`. A failure that only a node reads does not refuse the scene, as in Godot.
+  `reason`. An `ExtResource` that only a node reads does not refuse the scene, as in Godot.
 
 The list follows each file the scene's values read, as Godot's Load Errors dialog does: a
 sub-scene and a `.tres` add the files that they read. A file that a heading declares and no value

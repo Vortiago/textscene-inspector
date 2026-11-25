@@ -20,6 +20,8 @@ export function FrameOnOpen({ rootScenePath, hasScene, view, heard }: FrameOnOpe
   const { mode, frameOnOpen } = useViewportMode();
   // A return to the 3D mode finds the camera where it was left, as in Godot, so it frames no scene twice.
   const framedRoot = useRef<string | null>(null);
+  // The heard status outlives a scene, so a new root's view may have loaded before it reports.
+  const lastRoot = useRef<string | null>(null);
   // A ref, not a dependency: an ended preview starts no fit.
   const previewed = usePreviewCamera()?.camera ?? null;
   const isPreviewing = useRef(previewed !== null);
@@ -72,7 +74,9 @@ export function FrameOnOpen({ rootScenePath, hasScene, view, heard }: FrameOnOpe
       // A view that has not reported may have loaded already, unless it shows a scene framed before.
       return status === null ? !isFramed : status.pending.resources > 0;
     };
-    let hasLoadedSinceSettle = isLoading();
+    const isNewRoot = lastRoot.current !== rootScenePath;
+    lastRoot.current = rootScenePath;
+    let hasLoadedSinceSettle = isNewRoot || isLoading();
     let wasSettled = false;
     const fitOnSettle = () => {
       if (isLoading()) hasLoadedSinceSettle = true;

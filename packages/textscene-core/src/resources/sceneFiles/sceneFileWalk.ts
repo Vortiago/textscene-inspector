@@ -24,9 +24,15 @@ export interface SceneFailingReads {
   readonly reads: readonly FailingFileRead[];
 }
 
+/** What the walk reads from, one object so the starts and the failing reads cannot drift apart. */
+export interface WalkInput {
+  readonly starts: readonly WalkStart[];
+  readonly failing: SceneFailingReads | null;
+}
+
 export interface SceneFileWalk {
-  /** The same array while no file moves. The caller passes the same starts while none moves. */
-  files(starts: readonly WalkStart[], failing: SceneFailingReads | null): readonly SceneFile[];
+  /** The same array while no file moves. The caller passes the same input while none moves. */
+  files(input: WalkInput): readonly SceneFile[];
   dispose(): void;
 }
 
@@ -54,7 +60,7 @@ export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void
   /** Written only by `outcome` and `releaseOutside`: held in the loader's cache. */
   const pinnedOutcomes = new Set<string>();
   /** Written only by `files`: the starts of the last walk, which a load answer makes stale. */
-  let walkedStarts: readonly WalkStart[] | null = null;
+  let walkedInput: WalkInput | null = null;
   let walked: readonly SceneFile[] = [];
   let walkedPaths: ReadonlySet<string> = new Set();
   let walkedKey = '';
@@ -163,14 +169,15 @@ export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void
     if (busType === 'loadoutcome' && event === 'invalidated' && pinnedOutcomes.has(key))
       loader.loadOutcomes.request(key);
     if (!walkedPaths.has(key) && !textFiles.has(key)) return;
-    walkedStarts = null;
+    walkedInput = null;
     onChange();
   });
 
   return {
-    files(starts, failing) {
-      if (starts === walkedStarts) return walked;
-      walkedStarts = starts;
+    files(input) {
+      if (input === walkedInput) return walked;
+      walkedInput = input;
+      const { starts, failing } = input;
       const entries = entriesFrom(starts);
       releaseOutside(entries);
       walkedPaths = new Set(entries.keys());

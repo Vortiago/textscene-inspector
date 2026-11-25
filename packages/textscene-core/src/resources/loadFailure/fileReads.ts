@@ -43,13 +43,9 @@ export function sceneFailingFileReads(file: string, scene: SceneSections): Faili
   return failingFileReads(file, scene.externalResources, sections, nodeValues(scene.nodes));
 }
 
-export function sceneFailingReads(file: string, scene: SceneSections): string[] {
-  return sceneFailingFileReads(file, scene).map((read) => read.path);
-}
-
 /** A `.tres`: its `[sub_resource]` sections and its `[resource]` section. */
-export function resourceFailingReads(file: string, parsed: ParsedResource): string[] {
-  return failingFileReads(file, parsed.extResources, resourceSections(parsed), []).map((read) => read.path);
+export function resourceFailingFileReads(file: string, parsed: ParsedResource): FailingFileRead[] {
+  return failingFileReads(file, parsed.extResources, resourceSections(parsed), []);
 }
 
 // A section read fails the file and a [node] read does not (resource_format_text.cpp:647-650, :288-290).

@@ -62,19 +62,22 @@ async function mount({ frameOnOpen = true, mode = '3D' as ViewportMode, isStageB
     setMode = useViewportMode().setMode;
     return null;
   }
+  const shell = (rootScenePath: string) => (
+    <ViewportModeProvider initialFrameOnOpen={frameOnOpen} initialMode={mode}>
+      <PreviewCameraProvider scene={NO_SCENE_WATCH}>
+        <PreviewProbe />
+        <FrameOnOpen rootScenePath={rootScenePath} hasScene view={camera.view} heard={heard} />
+      </PreviewCameraProvider>
+    </ViewportModeProvider>
+  );
+  let rerender: (ui: ReturnType<typeof shell>) => void = () => {};
   await act(async () => {
-    render(
-      <ViewportModeProvider initialFrameOnOpen={frameOnOpen} initialMode={mode}>
-        <PreviewCameraProvider scene={NO_SCENE_WATCH}>
-          <PreviewProbe />
-          <FrameOnOpen rootScenePath="res://main.tscn" hasScene view={camera.view} heard={heard} />
-        </PreviewCameraProvider>
-      </ViewportModeProvider>
-    );
+    rerender = render(shell('res://main.tscn')).rerender;
   });
   const runTimers = () => act(async () => void vi.advanceTimersByTime(PAST_LAST_TIMER_MS));
   const switchTo = (next: ViewportMode) => act(async () => setMode(next));
-  return { ...camera, heard, preview: () => preview!, runTimers, switchTo };
+  const open = (rootScenePath: string) => act(async () => rerender(shell(rootScenePath)));
+  return { ...camera, heard, preview: () => preview!, runTimers, switchTo, open };
 }
 
 /** A view that settled once, then started a `.glb` load, with every fit timer run out. */
@@ -203,6 +206,19 @@ describe('FrameOnOpen', () => {
     await act(async () => heardSettle(heard));
 
     expect(focus).not.toHaveBeenCalled();
+  });
+
+  it("frames a new scene's first settle though the last status heard is the old scene's", async () => {
+    const { focus, heard, open, runTimers } = await mount();
+    heardSettle(heard);
+    await runTimers();
+    await open('res://other.tscn');
+    await runTimers();
+    focus.mockClear();
+
+    await act(async () => heardSettle(heard));
+
+    expect(focus).toHaveBeenCalledTimes(1);
   });
 
   it('frames a load that finishes after an earlier settle and after every timer', async () => {
