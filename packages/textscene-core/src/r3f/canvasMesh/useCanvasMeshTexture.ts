@@ -1,3 +1,4 @@
+import type { AtlasCell } from '../../resources/useTexture2D';
 /**
  * The texture of a canvas mesh drawer: loaded through `useCanvasItemTexture`, viewed in the
  * canvas's texture colour space and windowed for a sprite frame. A drawer reads the load state and
@@ -45,6 +46,8 @@ export interface CanvasMeshTexture {
     source: THREE.Texture | null;
     /** The item's effective filter and repeat. */
     sampler: CanvasItemTextureSampler;
+    /** For an AtlasTexture, where `source` lies in its atlas. */
+    atlasCell: AtlasCell | undefined;
   };
 }
 
@@ -62,6 +65,7 @@ export function useCanvasMeshTexture(
     hasNoImage,
     sampler,
     canvasTexture,
+    atlasCell,
   } = useCanvasItemTexture(props, reference);
   const window = useMemo(
     () => windowOf?.({ source, size, hasNoImage: hasNoImage ?? false }) ?? null,
@@ -84,8 +88,9 @@ export function useCanvasMeshTexture(
         canvasTexture,
         source: state === 'ready' ? source : null,
         sampler,
+        atlasCell,
       },
     }),
-    [state, size, view, canvasTexture, source, sampler]
+    [state, size, view, canvasTexture, source, sampler, atlasCell]
   );
 }

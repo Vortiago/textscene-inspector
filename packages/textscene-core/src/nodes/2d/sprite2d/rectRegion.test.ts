@@ -61,7 +61,10 @@ describe('sprite2DRectRegion', () => {
       region_filter_clip_enabled: true,
     });
 
-    expect(sprite2DRectRegion(region, SIZE)).toMatchObject({ source: { x: 8, y: 4, w: 16, h: 8 }, clipUv: true });
+    expect(sprite2DRectRegion(region, SIZE)).toMatchObject({
+      source: { x: 8, y: 4, w: 16, h: 8 },
+      clipUv: true,
+    });
   });
 
   it('clips no UVs while the region is off', () => {

@@ -2,8 +2,9 @@
 
 ; One variable: a ShaderMaterial of shader_type canvas_item on a Sprite2D, which no other golden draws.
 ; Each sprite reads one part of it: the UV, a set parameter, a moved vertex with an add blend, a
-; parent's material through use_parent_material, a flipped region, and a shader Godot does not
-; compile, which draws as Godot's default canvas shader. Plain has no material.
+; parent's material through use_parent_material, a flipped region, an AtlasTexture with a margin,
+; whose UV is on its atlas, and a shader Godot does not compile, which draws as Godot's default canvas
+; shader. Plain has no material.
 
 [ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
 
@@ -80,6 +81,11 @@ void fragment() {
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_broken"]
 shader = SubResource("Shader_broken")
 
+[sub_resource type="AtlasTexture" id="AtlasTexture_margin"]
+atlas = ExtResource("1_marker")
+region = Rect2(24, 24, 40, 40)
+margin = Rect2(8, 4, 16, 12)
+
 [node name="World" type="Node2D"]
 
 [node name="Uv" type="Sprite2D" parent="."]
@@ -125,3 +131,9 @@ texture = ExtResource("1_marker")
 [node name="Plain" type="Sprite2D" parent="."]
 position = Vector2(520, 400)
 texture = ExtResource("1_marker")
+
+[node name="Atlas" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_uv")
+position = Vector2(720, 400)
+scale = Vector2(2, 2)
+texture = SubResource("AtlasTexture_margin")

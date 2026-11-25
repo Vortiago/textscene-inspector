@@ -29,7 +29,11 @@ export interface ClipTurn {
 }
 
 /** Vulkan's y down and Godot's reversed depth (`render_scene_data_rd.cpp:83`) as GL's, built once. */
-export function glClipPosition(position: Node, vulkanClip: Vec4, { step, rows = 'flipped' }: ClipTurn = {}): Node {
+export function glClipPosition(
+  position: Node,
+  vulkanClip: Vec4,
+  { step, rows = 'flipped' }: ClipTurn = {}
+): Node {
   return Fn(() => {
     const clip = (position as unknown as Vec4).toVar();
     step?.(clip as unknown as Vec4);

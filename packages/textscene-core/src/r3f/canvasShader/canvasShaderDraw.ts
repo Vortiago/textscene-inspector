@@ -11,7 +11,11 @@ import {
 } from '../../shaders/canvas/canvasInstance';
 import { quadBatchGeometry, rectInstanceData, textureRectRegion } from '../../shaders/canvas/canvasRect';
 import { CanvasTextureBinding, type CanvasTextureState } from '../../shaders/canvas/canvasTexture';
-import type { CanvasItemOptions, CanvasDraw, TranspiledCanvasItem } from '../../shaders/canvas/transpileCanvas';
+import type {
+  CanvasItemOptions,
+  CanvasDraw,
+  TranspiledCanvasItem,
+} from '../../shaders/canvas/transpileCanvas';
 import { unDrawnMessage } from '../../shaders/fault/shaderRefusal';
 import type { ProjectSampling } from '../../shaders/uniforms/samplerState';
 import type { ShaderText } from '../../resources/materials/shadermaterial/types';
@@ -70,7 +74,11 @@ export interface CanvasShaderDraw {
 const DRAW_HOOK = 'canvas_data.canvas_transform';
 
 /** The quad batch of one rect, as Godot draws a Sprite2D (`renderer_canvas_render_rd.cpp:2406`). */
-export function rectShaderDraw(gl: THREE.WebGLRenderer, item: TranspiledCanvasItem, bound: RectTexture): CanvasShaderDraw {
+export function rectShaderDraw(
+  gl: THREE.WebGLRenderer,
+  item: TranspiledCanvasItem,
+  bound: RectTexture
+): CanvasShaderDraw {
   const draw = item.draw('quad');
   const binding = new CanvasTextureBinding(draw, bound.sampling);
   const usesLinearColors = bound.textureState.usesLinearColors ?? false;
@@ -84,8 +92,16 @@ export function rectShaderDraw(gl: THREE.WebGLRenderer, item: TranspiledCanvasIt
   return {
     object,
     setRect: ({ region: { rect, source, clipUv }, finalModulate, canvasModulate }) => {
-      const itemDraw: CanvasItemDraw = { transform: canvasTransformInto(world, object), finalModulate, usesLinearColors };
-      writeBatchRecord(geometry, 0, rectInstanceData(textureRectRegion(rect, source, WHITE, { clipUv }), itemDraw, texelSize));
+      const itemDraw: CanvasItemDraw = {
+        transform: canvasTransformInto(world, object),
+        finalModulate,
+        usesLinearColors,
+      };
+      writeBatchRecord(
+        geometry,
+        0,
+        rectInstanceData(textureRectRegion(rect, source, WHITE, { clipUv }), itemDraw, texelSize)
+      );
       frame.canvasModulate = canvasModulate;
     },
     writeRecords: () => {
@@ -111,7 +127,9 @@ function writeFrameEachDraw(
 ): void {
   const hook = draw.uniforms.get(DRAW_HOOK);
   if (!hook || !('onObjectUpdate' in hook))
-    throw new Error(`expected a canvas draw to read the uniform ${DRAW_HOOK}, found ${hook ? 'an array' : 'none'}`);
+    throw new Error(
+      `expected a canvas draw to read the uniform ${DRAW_HOOK}, found ${hook ? 'an array' : 'none'}`
+    );
   hook.onObjectUpdate(({ object, camera }) => {
     const { x: width, y: height } = renderTargetSize(gl, targetSize);
     writeCanvasBindings(draw, {
@@ -129,5 +147,9 @@ function writeFrameEachDraw(
 /** Warns once for `shader` when the GPU refuses a program of its draw. */
 export function warnOnTranslatorFault(shader: ShaderText, item: TranspiledCanvasItem): void {
   item.draw('quad').material.onTranslatorFault = (fault) =>
-    warnOnce(shader, 'translator fault', `[material] The previewer failed to draw this canvas_item shader: ${fault.message}`);
+    warnOnce(
+      shader,
+      'translator fault',
+      `[material] The previewer failed to draw this canvas_item shader: ${fault.message}`
+    );
 }

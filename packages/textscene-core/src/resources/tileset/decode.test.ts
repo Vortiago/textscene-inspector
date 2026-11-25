@@ -544,6 +544,17 @@ describe('per-tile TileData that changes a frame (tile_set.cpp:7174-7177)', () =
     expect(at(0).material).not.toBe(at(1).material);
   });
 
+  it('gives tiles that name two ShaderMaterials with no shader two materials', () => {
+    const at = alternativeOf(
+      { '0:0/1': '0', '0:0/0/material': 'SubResource("a")', '0:0/1/material': 'SubResource("b")' },
+      [
+        { id: 'a', type: 'ShaderMaterial', data: {} },
+        { id: 'b', type: 'ShaderMaterial', data: {} },
+      ]
+    );
+    expect(at(0).material).not.toBe(at(1).material);
+  });
+
   it('keeps a ShaderMaterial as an own material with no CanvasItemMaterial properties', () => {
     const alternative = alternativeOf({ '0:0/0/material': 'SubResource("shader")' }, [
       { id: 'shader', type: 'ShaderMaterial', data: {} },

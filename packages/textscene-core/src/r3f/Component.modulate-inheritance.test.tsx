@@ -35,7 +35,7 @@ function node2DProps(node: TscnNode): Node2DProperties {
   return node.properties as Node2DProperties;
 }
 
-function tintedBody(tint: { color: THREE.Color; opacity: number }) {
+function tintedBody({ tint }: { tint: { color: THREE.Color; opacity: number } }) {
   return (
     <mesh>
       <planeGeometry />

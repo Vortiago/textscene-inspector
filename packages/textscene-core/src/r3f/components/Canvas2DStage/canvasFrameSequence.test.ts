@@ -18,7 +18,7 @@ describe('runCanvasFrame', () => {
     expect(calls).toEqual(['casters', 'light pose', 'light pass', 'items']);
   });
 
-  it('writes the translated items\' records after the light pass and before the draw', () => {
+  it("writes the translated items' records after the light pass and before the draw", () => {
     const calls: string[] = [];
     const steps = createCanvasFrameSteps();
     steps.lightPass = () => calls.push('light pass');

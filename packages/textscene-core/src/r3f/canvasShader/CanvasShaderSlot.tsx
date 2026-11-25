@@ -9,7 +9,11 @@ import { projectSampling } from '../../parser/projectSettingsParser';
 import type { ShaderText } from '../../resources/materials/shadermaterial/types';
 import { memoisedImport } from '../../resources/memoisedImport';
 import { useLazyModuleState } from '../../resources/useLazyModule';
-import type { CanvasTextureFilter, CanvasTextureRepeat, CanvasTextureState } from '../../shaders/canvas/canvasTexture';
+import type {
+  CanvasTextureFilter,
+  CanvasTextureRepeat,
+  CanvasTextureState,
+} from '../../shaders/canvas/canvasTexture';
 import { warnOnce } from '../../utils/warnOnce';
 import { useNodesHandler } from '../canvasRenderer/canvasNodesHandler';
 import { useCanvasColorSpace } from '../canvasColorSpace';
@@ -40,7 +44,14 @@ interface CanvasShaderSlotProps {
 }
 
 /** An item's own rect drawn through Godot's canvas template with a user's canvas_item shader. */
-export function CanvasShaderSlot({ shader, region, texture, sampler, finalModulate, fallback }: CanvasShaderSlotProps) {
+export function CanvasShaderSlot({
+  shader,
+  region,
+  texture,
+  sampler,
+  finalModulate,
+  fallback,
+}: CanvasShaderSlotProps) {
   const gl = useThree((state) => state.gl);
   const invalidate = useThree((state) => state.invalidate);
   const loaded = useLazyModuleState(loadCanvasShaderDraw, true);
@@ -71,7 +82,10 @@ export function CanvasShaderSlot({ shader, region, texture, sampler, finalModula
   }, [shader, refusal, isLoadFailed]);
 
   const canvasModulate = useCanvasModulate();
-  const textureState = useMemo(() => canvasTextureState(sampler, usesLinearColors), [sampler, usesLinearColors]);
+  const textureState = useMemo(
+    () => canvasTextureState(sampler, usesLinearColors),
+    [sampler, usesLinearColors]
+  );
   const draw = useMemo(
     () => item && module!.rectShaderDraw(gl, item, { texture, textureState, sampling }),
     [module, gl, item, texture, textureState, sampling]
@@ -103,7 +117,10 @@ export function CanvasShaderSlot({ shader, region, texture, sampler, finalModula
 }
 
 /** The template's sampler state of the item's effective filter and repeat. */
-function canvasTextureState(sampler: CanvasItemTextureSampler, usesLinearColors: boolean): CanvasTextureState {
+function canvasTextureState(
+  sampler: CanvasItemTextureSampler,
+  usesLinearColors: boolean
+): CanvasTextureState {
   return {
     filter: FILTER_WORDS[canvasItemSamplerFilter(sampler.filter)],
     repeat: REPEAT_WORDS[canvasItemSamplerRepeat(sampler.repeat)],

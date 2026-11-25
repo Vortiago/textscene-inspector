@@ -303,10 +303,9 @@ describe('parse: whole arrays', () => {
 });
 
 describe('parse: what the transpiler does not read yet', () => {
-  it.each([['float f() { return TIME; }', "'canvas_item.global.TIME' is not transpiled yet (#686)"]])(
-    'names the issue that owns %s',
-    (source, message) => {
-      expect(() => checkTranspiled(parse(tokenize(source)))).toThrow(message);
-    }
-  );
+  it.each([
+    ['void light() { LIGHT = vec4(1.0); }', "'canvas_item.light.LIGHT' is not transpiled yet (#686)"],
+  ])('names the issue that owns %s', (source, message) => {
+    expect(() => checkTranspiled(parse(tokenize(source)))).toThrow(message);
+  });
 });

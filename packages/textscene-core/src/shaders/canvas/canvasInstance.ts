@@ -69,7 +69,9 @@ export function writeBatchWorld(
 /** Writes `record` over record `index` of `geometry`, a batch of `instanceBatchGeometry`, and uploads it. */
 export function writeBatchRecord(geometry: THREE.BufferGeometry, index: number, record: ArrayBuffer): void {
   const floats = (geometry.getAttribute(ATTRIBUTES[0]!) as THREE.InterleavedBufferAttribute).data;
-  const words = (geometry.getAttribute(ATTRIBUTES[ATTRIBUTES.length - 1]!) as THREE.InterleavedBufferAttribute).data;
+  const words = (
+    geometry.getAttribute(ATTRIBUTES[ATTRIBUTES.length - 1]!) as THREE.InterleavedBufferAttribute
+  ).data;
   floats.array.set(new Float32Array(record, 0, floats.stride), index * floats.stride);
   words.array.set(new Uint32Array(record, floats.stride * 4), index * words.stride);
   floats.needsUpdate = true;

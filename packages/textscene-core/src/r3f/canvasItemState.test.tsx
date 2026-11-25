@@ -24,6 +24,7 @@ import { PaintRun } from './testing/PaintRun';
 import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../godot/rendering/rendering';
 import { CanvasItemMaterialLightMode } from '../godot/scene/canvasItemMaterial';
 import { canvasItemMaterial } from './testing/canvasItemMaterial';
+import { NO_MATERIAL } from '../resources/materials/canvasitemmaterial/kind';
 import type { Rgba } from '../godot/math/math';
 
 const WHITE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
@@ -36,7 +37,7 @@ function fields(overrides: Partial<CanvasItemFields> = {}): Omit<CanvasItemField
     selfModulate: WHITE,
     zIndex: 0,
     zAsRelative: true,
-    material: null,
+    material: NO_MATERIAL,
     sampler: { filter: 1, repeat: 1 },
     lightMask: 1,
     sequence: 1,
@@ -92,9 +93,14 @@ describe('the tint', () => {
   });
 
   it('keeps the canvas tint off an Unshaded item, as the light-mode guard in canvas.glsl does', () => {
-    const { tint } = stateOf(fields({ material: canvasItemMaterial(CanvasItemMaterialLightMode.UNSHADED) }), {
-      canvasModulate: { r: 0.5, g: 0.2, b: 1, a: 1 },
-    });
+    const { tint } = stateOf(
+      fields({
+        material: { properties: canvasItemMaterial(CanvasItemMaterialLightMode.UNSHADED), shader: null },
+      }),
+      {
+        canvasModulate: { r: 0.5, g: 0.2, b: 1, a: 1 },
+      }
+    );
     expect(tint.own).toEqual(WHITE);
   });
 

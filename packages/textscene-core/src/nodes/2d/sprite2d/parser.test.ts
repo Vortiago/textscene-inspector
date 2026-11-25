@@ -24,10 +24,10 @@ describe('parseSprite2D', () => {
   });
 
   it('parses region_filter_clip_enabled, off by default', () => {
-    const named = parseSprite2D(heading('Sprite2D', { name: 'S' }), { region_filter_clip_enabled: 'true' });
-    const unnamed = parseSprite2D(heading('Sprite2D', { name: 'S' }), {});
+    const enabled = parseSprite2D(heading('Sprite2D', { name: 'S' }), { region_filter_clip_enabled: 'true' });
+    const unset = parseSprite2D(heading('Sprite2D', { name: 'S' }), {});
 
-    expect([named.region_filter_clip_enabled, unnamed.region_filter_clip_enabled]).toEqual([true, false]);
+    expect([enabled.region_filter_clip_enabled, unset.region_filter_clip_enabled]).toEqual([true, false]);
   });
 
   it('applies Godot defaults (centered true, frames 1, modulate white opaque)', () => {

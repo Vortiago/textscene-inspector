@@ -7,7 +7,9 @@ const IDENTITY = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
 const MOVED = { a: 0, b: 1, c: -1, d: 0, tx: 12, ty: 7 };
 
 const batch = () =>
-  quadBatchGeometry([0, 1].map(() => instanceRecord({ transform: IDENTITY, finalModulate: { r: 1, g: 1, b: 1, a: 1 } }).bytes));
+  quadBatchGeometry(
+    [0, 1].map(() => instanceRecord({ transform: IDENTITY, finalModulate: { r: 1, g: 1, b: 1, a: 1 } }).bytes)
+  );
 
 const worldOfRecord = (geometry: THREE.InstancedBufferGeometry, index: number) => {
   const buffer = (geometry.getAttribute('attrib_A') as THREE.InterleavedBufferAttribute).data;
@@ -67,7 +69,11 @@ describe('writeBatchRecord', () => {
     );
     const versions = buffers.map(({ version }) => version);
 
-    writeBatchRecord(geometry, 0, instanceRecord({ transform: IDENTITY, finalModulate: { r: 1, g: 1, b: 1, a: 1 } }).bytes);
+    writeBatchRecord(
+      geometry,
+      0,
+      instanceRecord({ transform: IDENTITY, finalModulate: { r: 1, g: 1, b: 1, a: 1 } }).bytes
+    );
 
     expect(buffers.map(({ version }) => version)).toEqual(versions.map((version) => version + 1));
   });

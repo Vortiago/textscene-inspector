@@ -48,9 +48,9 @@ const UNSHADED = canvasItemMaterial({ lightMode: CanvasItemMaterialLightMode.UNS
 const ALTERNATIVES: Partial<AlternativeTileModel>[] = [
   {},
   { zIndex: 2 },
-  { material: { properties: ADD } },
+  { material: { properties: ADD, shader: null } },
   { material: { properties: null, shader: null } },
-  { material: { properties: UNSHADED } },
+  { material: { properties: UNSHADED, shader: null } },
   { modulate: { r: 1, g: 0, b: 0, a: 1 } },
 ];
 

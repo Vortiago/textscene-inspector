@@ -25,8 +25,13 @@ export const CANVAS_ITEM_MATERIAL: ResourceKind<CanvasItemMaterialSlot> = {
 };
 
 /** A ShaderMaterial of `shader_type canvas_item`, or no material for any other shader or none. */
-function canvasShaderSlot(properties: Readonly<Record<string, string>>, follow: Follow): CanvasItemMaterialSlot {
+function canvasShaderSlot(
+  properties: Readonly<Record<string, string>>,
+  follow: Follow
+): CanvasItemMaterialSlot {
   const shader = decodeShaderText(properties, follow);
-  if (!shader || shaderModeOf(shader.code) !== ShaderMode.CANVAS_ITEM) return NO_MATERIAL;
+  // A slot of its own, not NO_MATERIAL: a tile layer splits its canvas items by material identity.
+  if (!shader || shaderModeOf(shader.code) !== ShaderMode.CANVAS_ITEM)
+    return { properties: null, shader: null };
   return { properties: null, shader };
 }

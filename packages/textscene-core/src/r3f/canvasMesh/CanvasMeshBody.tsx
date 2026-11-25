@@ -19,7 +19,8 @@ import type { CanvasItemPixelMaterial } from '../components/LitCanvasItemPixels'
 import { MissingResourcePlaceholder } from '../components/MissingResourcePlaceholder';
 import { CanvasSurfaceMaterial } from './CanvasSurfaceMaterial';
 import { CanvasShaderSlot } from '../canvasShader/CanvasShaderSlot';
-import type { CanvasRectRegion } from '../canvasShader/canvasCommands';
+import { atlasRectRegion, type CanvasRectRegion } from '../canvasShader/canvasCommands';
+import type { AtlasCell } from '../../resources/useTexture2D';
 import { DRAWN_TEXTURE, type CanvasMeshTexture } from './useCanvasMeshTexture';
 import type { CanvasSurface } from './canvasSurface';
 
@@ -76,7 +77,11 @@ export function CanvasMeshBody<Input>({
   shaderRegion,
   children,
 }: CanvasMeshBodyProps<Input>) {
-  const { view, canvasTexture, source, sampler } = texture[DRAWN_TEXTURE];
+  const { view, canvasTexture, source, sampler, atlasCell } = texture[DRAWN_TEXTURE];
+  const shaderRect = useMemo(
+    () => shaderRectOn(shaderRegion, source, atlasCell),
+    [shaderRegion, source, atlasCell]
+  );
   // Godot draws a cycle's viewports in tree order, each sampling the other's last frame
   // (`renderer_viewport.cpp:91-126`). The previewer cannot, so it shows the placeholder.
   const isCyclic = texture.state === 'cyclic';
@@ -99,23 +104,25 @@ export function CanvasMeshBody<Input>({
         ) : (
           <SurfaceMeshes surfaces={surfaces} {...drawn} />
         );
-        const drawnMeshes = bodyGroup ? (
+        const body =
+          shader && shaderRect ? (
+            <CanvasShaderSlot
+              shader={shader}
+              region={shaderRect.region}
+              texture={shaderRect.texture}
+              sampler={sampler}
+              finalModulate={tint.self}
+              fallback={meshes}
+            />
+          ) : (
+            meshes
+          );
+        return bodyGroup ? (
           <CanvasItemGroup ref={bodyGroup.ref} name={bodyGroup.name}>
-            {meshes}
+            {body}
           </CanvasItemGroup>
         ) : (
-          meshes
-        );
-        if (!shader || !shaderRegion || !source) return drawnMeshes;
-        return (
-          <CanvasShaderSlot
-            shader={shader}
-            region={shaderRegion}
-            texture={source}
-            sampler={sampler}
-            finalModulate={tint.self}
-            fallback={drawnMeshes}
-          />
+          body
         );
       }}
     >
@@ -176,4 +183,16 @@ function SurfaceMesh({ surface, map, tint, pixelMaterial }: DrawnSurfaces & { su
       />
     </Draw>
   );
+}
+
+/** The rect a shader draws and the texture it samples: an AtlasTexture's whole atlas, as Godot binds it. */
+function shaderRectOn(
+  region: CanvasRectRegion | undefined,
+  source: THREE.Texture | null,
+  atlasCell: AtlasCell | undefined
+): { region: CanvasRectRegion; texture: THREE.Texture } | null {
+  if (!region || !source) return null;
+  if (!atlasCell) return { region, texture: source };
+  const onAtlas = atlasRectRegion(region, atlasCell);
+  return onAtlas && { region: onAtlas, texture: atlasCell.sheet };
 }
