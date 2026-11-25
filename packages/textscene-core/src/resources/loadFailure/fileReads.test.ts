@@ -230,6 +230,11 @@ describe('the kind of each failing read of a scene', () => {
     expect(reads).toEqual([]);
   });
 
+  it('says the file fails at an undeclared id, and not where every id is declared', () => {
+    expect(sceneFileReads(MAIN, scene(sectionsReading('ExtResource("99")'))).failsAtUndeclaredId).toBe(true);
+    expect(sceneFileReads(MAIN, scene(sectionsReading('ExtResource("2")'))).failsAtUndeclaredId).toBe(false);
+  });
+
   it('reads past a literal that may load: a uid alone, or a path off res://', () => {
     for (const read of ['Resource("uid://b9")', 'Resource("user://x.tres")']) {
       const reads = sceneFailing(MAIN, scene(sectionsReading(read)));

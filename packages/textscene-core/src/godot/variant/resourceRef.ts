@@ -219,8 +219,11 @@ function readLiteralAt(text: string, start: number, literals: LiteralSpan[]): nu
   const args = [match[1]!, match[2]].filter((arg): arg is string => arg !== undefined);
   const uid = args.find((arg) => arg.startsWith('uid://')) ?? '';
   const paths = args.filter((arg) => !arg.startsWith('uid://'));
-  const reads = paths.length > 0 ? paths.map((path) => ({ kind: 'Resource', path, uid }) as const) : null;
-  literals.push({ start, reads: reads ?? [{ kind: 'Resource', path: null, uid }] });
+  const reads: LiteralRead[] =
+    paths.length > 0
+      ? paths.map((path) => ({ kind: 'Resource', path, uid }))
+      : [{ kind: 'Resource', path: null, uid }];
+  literals.push({ start, reads });
   return PATH_RESOURCE_AT_RE.lastIndex - 1;
 }
 

@@ -37,6 +37,8 @@ export interface FileReads {
   readonly reads: FileRead[];
   /** In file order, up to the first undeclared `ExtResource` id, at which the parse fails. */
   readonly failing: FailingFileRead[];
+  /** True where a section names an `ExtResource` id that no heading declares, so the file does not load. */
+  readonly failsAtUndeclaredId: boolean;
 }
 
 /** A `.tscn`: its sections, its `[node]` sections and their instances. */
@@ -46,7 +48,7 @@ export function sceneFileReads(file: string, scene: SceneSections): FileReads {
   const instances = readsOf(instancesOf(scene.nodes));
   return {
     reads: filesRead(file, scene.externalResources, [...sections, ...nodes, ...instances]),
-    failing: failingFileReads(file, scene.externalResources, sections, nodes),
+    ...failingFileReads(file, scene.externalResources, sections, nodes),
   };
 }
 
@@ -55,7 +57,7 @@ export function resourceFileReads(file: string, parsed: ParsedResource): FileRea
   const sections = readsOf(resourceSections(parsed));
   return {
     reads: filesRead(file, parsed.extResources, sections),
-    failing: failingFileReads(file, parsed.extResources, sections, []),
+    ...failingFileReads(file, parsed.extResources, sections, []),
   };
 }
 
@@ -92,7 +94,7 @@ function failingFileReads(
   externalResources: readonly TscnExternalResource[],
   sections: readonly ValueRead[][],
   nodes: readonly ValueRead[][]
-): FailingFileRead[] {
+): Pick<FileReads, 'failing' | 'failsAtUndeclaredId'> {
   const reads = new Map<string, FailingFileRead>();
   // In file order, as the parse stops at the first value that fails (resource_format_text.cpp:152, :291).
   const ordered = [
@@ -103,10 +105,10 @@ function failingFileReads(
   ];
   for (const read of ordered) {
     // An undeclared id fails the parse where no row shows it. A uid or a path off `res://` may load.
-    if (read === UNDECLARED_ID) break;
+    if (read === UNDECLARED_ID) return { failing: [...reads.values()], failsAtUndeclaredId: true };
     if (read?.path.startsWith('res://') && !reads.has(read.path)) reads.set(read.path, read);
   }
-  return [...reads.values()];
+  return { failing: [...reads.values()], failsAtUndeclaredId: false };
 }
 
 /** An `ExtResource` id that no heading declares (resource_format_text.cpp:125-151). */
