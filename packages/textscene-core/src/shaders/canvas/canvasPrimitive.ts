@@ -106,8 +106,8 @@ export function primitiveBatchGeometry(
   return instanceBatchGeometry(records, PRIMITIVE_FLOAT_ATTRIBUTES, indices);
 }
 
-/** The six corners of a point's two triangles, which `devicePoints` places. */
-const POINT_CORNERS = [...Array(QUAD_VERTICES).keys()];
+/** The index of each of the six corners of a point's two triangles, which `devicePoints` places. */
+const POINT_QUAD_INDICES = [...Array(QUAD_VERTICES).keys()];
 
 /** A batch of primitives of `pointCount` points, each point two triangles where `draw` emulates points. */
 export function primitiveBatchObject(
@@ -120,6 +120,6 @@ export function primitiveBatchObject(
   const geometry = primitiveBatchGeometry(records, pointCount);
   if (!draw.emulatesPoints)
     return primitiveObject(primitiveDraw(pointCount).primitive, geometry, draw.material);
-  geometry.setIndex(POINT_CORNERS);
+  geometry.setIndex(POINT_QUAD_INDICES);
   return primitiveObject('triangles', geometry, draw.material);
 }

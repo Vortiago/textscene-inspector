@@ -9,7 +9,7 @@ import type {
   VaryingNode,
 } from '../language/shaderTree.js';
 import { isSamplerType, shapeOf } from '../language/types.js';
-import { everyExpressionIn, withConstantsFirst } from '../language/treeWalk.js';
+import { builtInsNamed, withConstantsFirst } from '../language/treeWalk.js';
 import { GENERAL_DEFINES } from './generalDefines.js';
 import { godotId, GodotIds } from './godotIds.js';
 import type { ModeTable } from './modeTable.js';
@@ -138,16 +138,10 @@ function renderModeDefines(shader: ShaderNode, table: ModeTable): string[] {
   return [...modes].flatMap((mode) => table.render_mode_defines[mode] ?? []);
 }
 
-/** Each usage define of the built-ins `shader` reads, once, in the order of the text. */
-export function usageDefines(shader: ShaderNode, table: ModeTable): string[] {
-  const defines = new Set<string>();
-  for (const definition of shader.functions)
-    for (const expression of everyExpressionIn(definition.body)) {
-      if (expression.kind !== 'variable' || !expression.builtIn) continue;
-      const define = usageDefineOf(table, expression.name);
-      if (define) defines.add(define);
-    }
-  return [...defines];
+/** Each usage define of the built-ins `shader` names, once, in the order of the text. */
+function usageDefines(shader: ShaderNode, table: ModeTable): string[] {
+  const defines = [...builtInsNamed(shader)].flatMap((name) => usageDefineOf(table, name) ?? []);
+  return [...new Set(defines)];
 }
 
 /** The define a read of `name` adds, or nothing: `@NAME` reads NAME's (`shader_compiler.cpp:908-910`). */

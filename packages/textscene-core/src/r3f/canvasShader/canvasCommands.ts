@@ -64,7 +64,7 @@ export type CanvasShaderCommand =
 const corner = new THREE.Vector3();
 
 /**
- * Bounds `object` by the item rect of `commands`, which a canvas group's region reads (`worldBox`).
+ * Bounds `object` by the item rect of `commands` in a new box, which a canvas group's region reads.
  * @canonical Bound a canvas shader batch by its item rect
  */
 export function boundByItem(
@@ -72,7 +72,6 @@ export function boundByItem(
   commands: readonly CanvasShaderCommand[]
 ): THREE.Box3 {
   Object.assign(object.userData, geometryBoxUserData());
-  // A fresh box, not the one in place: an emulated points geometry shares its source's box.
   return (object.geometry.boundingBox = itemBox(new THREE.Box3(), commands));
 }
 
@@ -156,11 +155,11 @@ function vertexArraysOf(
   };
 }
 
-/** A copy of the custom array `name` as four float lanes a point, from any layout. */
+/** The custom array `name` in four float lanes a point: its own array when it holds them, else a copy. */
 function customLanes(geometry: THREE.BufferGeometry, name: string): Float32Array | undefined {
   const attribute = geometry.getAttribute(name);
   if (!attribute) return undefined;
-  // The surface loader already writes four float lanes, so its array serves as it is.
+  // Shared, not copied: the surface loader writes four float lanes once, and a draw only reads them.
   if (isFourFloatLanes(attribute)) return attribute.array;
   return fourCustomLanes(attribute.count, Math.min(attribute.itemSize, CUSTOM_ARRAY_LANES), (point, lane) =>
     attribute.getComponent(point, lane)
