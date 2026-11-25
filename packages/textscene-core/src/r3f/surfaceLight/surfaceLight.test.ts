@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { attachSplitSun } from '../directionalShadow/splitSun';
+import {
+  directionalShadowUserData,
+  type DirectionalShadowDeclaration,
+} from '../directionalShadow/declaration';
+import { NO_SHADOW_FADE } from '../directionalShadow/splitShadow';
 import { dropLight } from '../directionalShadow/droppedLight';
 import type { DirectionalLight } from '../../shaders/spatial/directionalLights';
 import { lightSpecularUserData } from '../lightSpecular/lightSpecular';
@@ -9,7 +14,7 @@ import { lightSizeUserData } from '../lightSize/lightSize';
 import { lightBakeModeUserData } from '../lightBakeMode/lightBakeMode';
 import { fogLightUserData } from '../fog/fogLightDeclaration';
 import { sceneLights } from '../directionalShadow/lightLists';
-import { publishSceneSuns, sceneSuns, surfaceLightUserData } from './surfaceLight';
+import { publishSceneSuns, releaseSceneSuns, sceneSuns, surfaceLightUserData } from './surfaceLight';
 
 const OWN = { cullMask: 6, lightsSurfaces: true };
 
@@ -32,6 +37,28 @@ function sun(
   if (own) Object.assign(light.userData, surfaceLightUserData(own), DECLARED);
   scene.add(light);
   scene.updateMatrixWorld(true);
+  return light;
+}
+
+const SHADOW: DirectionalShadowDeclaration = {
+  maxDistance: 100,
+  pancakeSize: 20,
+  fadeStart: 0.8,
+  depthBias: -0.001,
+  normalBias: 1,
+  filterRadius: 1,
+  softShadowAngle: 0.5,
+  drawsSoftShadow: true,
+  splitCount: 1,
+  splitOffsets: [0.1, 0.2, 0.5],
+  blendSplits: false,
+  sharesAtlas: true,
+};
+
+/** A sun of `scene` that declares a shadow with a soft shadow angle. */
+function shadowedSun(scene: THREE.Scene): THREE.DirectionalLight {
+  const light = sun(scene, [0, 1, 0]);
+  Object.assign(light.userData, directionalShadowUserData(SHADOW));
   return light;
 }
 
@@ -151,7 +178,32 @@ describe('sceneSuns', () => {
     expect(onlyLight(scene).shadow).toBeUndefined();
   });
 
+  it('reads the soft shadow angle the light pass gated for the render, as the classic path does', () => {
+    const scene = new THREE.Scene();
+    const split = attachSplitSun(shadowedSun(scene));
+    split.shadow.softShadowAngle = 0;
+    expect(onlyLight(scene).shadow?.softShadowAngle).toBe(0);
+  });
+
+  it('gives a sun no fit has placed a fade whose ends ascend past any view depth', () => {
+    const scene = new THREE.Scene();
+    attachSplitSun(shadowedSun(scene)).shadow.fade = NO_SHADOW_FADE;
+    const { from, to } = onlyLight(scene).shadow!.fade;
+    expect(from).toBeLessThan(to);
+    expect(from).toBeGreaterThan(1e20);
+  });
+
   it('reads nothing for a scene no light pass has published', () => {
     expect(sceneSuns(new THREE.Scene())).toEqual([]);
+  });
+});
+
+describe('releaseSceneSuns', () => {
+  it('leaves the scene no suns after its light pass stops', () => {
+    const scene = new THREE.Scene();
+    sun(scene, [0, 1, 0]);
+    publishSceneSuns(scene, sceneLights(scene));
+    releaseSceneSuns(scene);
+    expect(sceneSuns(scene)).toEqual([]);
   });
 });

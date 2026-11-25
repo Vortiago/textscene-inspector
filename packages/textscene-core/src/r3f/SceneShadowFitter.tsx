@@ -37,7 +37,7 @@ import {
   searchesDirectionalBlockers,
   setSunSoftShadowAngles,
 } from './directionalShadow/sunSoftShadow.js';
-import { publishSceneSuns } from './surfaceLight/surfaceLight.js';
+import { publishSceneSuns, releaseSceneSuns } from './surfaceLight/surfaceLight.js';
 
 /**
  * One render's light pass, the directional fit first. It changes no omni, spot or area light, so
@@ -82,6 +82,7 @@ export function useSceneShadowFit(scene: THREE.Scene | null, atlas: PositionalSh
     return () => {
       stopObserving();
       releaseSceneLights(scene);
+      releaseSceneSuns(scene);
       releaseSoftShadowSearch(scene);
       ownAtlas.dispose();
     };

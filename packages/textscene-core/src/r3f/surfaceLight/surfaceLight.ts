@@ -3,6 +3,7 @@ import type { DirectionalLight, DirectionalShadow } from '../../shaders/spatial/
 import { blendsSplits, MAX_DIRECTIONAL_LIGHTS } from '../../godot/rendering/lights/directionalShadow.js';
 import { readDirectionalShadowDeclaration } from '../directionalShadow/declaration.js';
 import { splitSunOf } from '../directionalShadow/splitSun.js';
+import { NO_SHADOW_FADE } from '../directionalShadow/splitShadow.js';
 import { LIGHT_3D_DEFAULTS, DIRECTIONAL_LIGHT_3D_DEFAULTS } from '../../godot/scene/light.js';
 import { godotEnergyOfIntensity } from '../../nodes/3d/lights/shared/lightStrength.js';
 import { userDataDeclaration } from '../userDataDeclaration.js';
@@ -52,6 +53,9 @@ function directionalLightOf(light: THREE.DirectionalLight, cullMask: number): Di
   };
 }
 
+/** Ends past any view depth, as Godot's smoothstep needs ends that differ (`light_storage.cpp:753`). */
+const FADES_NOTHING = { from: 0.999e30, to: 1e30 };
+
 /** The split sun's own slots and matrices, so a draw reads what its render's shadow pass wrote. */
 function shadowOf(light: THREE.DirectionalLight): DirectionalShadow | null {
   const sun = splitSunOf(light);
@@ -62,9 +66,9 @@ function shadowOf(light: THREE.DirectionalLight): DirectionalShadow | null {
   return {
     opacity: shadow.intensity,
     softShadowScale: declaration.filterRadius,
-    softShadowAngle: declaration.softShadowAngle,
+    softShadowAngle: shadow.softShadowAngle,
     blendSplits: blendsSplits(declaration.splitCount, declaration.blendSplits),
-    fade: shadow.fade,
+    fade: shadow.fade === NO_SHADOW_FADE ? FADES_NOTHING : shadow.fade,
     splitEnds: slots.map((slot) => slot.x),
     depthBiases: shadow.depthBiases.toArray(),
     normalBiases: slots.map((slot) => slot.z),
@@ -72,22 +76,39 @@ function shadowOf(light: THREE.DirectionalLight): DirectionalShadow | null {
   };
 }
 
-/** Each scene's suns of its last light pass. Written only by `publishSceneSuns`, before every render. */
-const publishedSunsOf = perObject((_scene: THREE.Scene) => ({ suns: [] as readonly DirectionalLight[] }));
+/** A light whose row the draw builds, with the cull mask its own declaration gives. */
+interface PublishedSun {
+  readonly light: THREE.DirectionalLight;
+  readonly cullMask: number;
+}
+
+/** Each scene's suns of its last light pass. Written by `publishSceneSuns`, cleared by `releaseSceneSuns`. */
+const publishedSunsOf = perObject((_scene: THREE.Scene) => ({
+  lights: [] as readonly PublishedSun[],
+  /** Built at the first `sceneSuns` of the render, so a scene with no lit translated draw builds none. */
+  suns: null as readonly DirectionalLight[] | null,
+}));
 
 /** A light the fitter dropped past Godot's eighth lights no surface either. */
 export function publishSceneSuns(scene: THREE.Scene, lights: readonly SceneLight[]): void {
-  const suns: DirectionalLight[] = [];
+  const published: PublishedSun[] = [];
   for (const { light, isVisible } of lights) {
-    if (suns.length === MAX_DIRECTIONAL_LIGHTS) break;
+    if (published.length === MAX_DIRECTIONAL_LIGHTS) break;
     if (!isDirectionalLight(light) || !isVisible || isDropped(light)) continue;
     const own = declaration.read(light) ?? UNDECLARED;
-    if (own.lightsSurfaces) suns.push(directionalLightOf(light, own.cullMask));
+    if (own.lightsSurfaces) published.push({ light, cullMask: own.cullMask });
   }
-  publishedSunsOf(scene).suns = suns;
+  Object.assign(publishedSunsOf(scene), { lights: published, suns: null });
 }
 
 /** The suns the light pass published for the render of `scene` under way, none before its first. */
 export function sceneSuns(scene: THREE.Scene): readonly DirectionalLight[] {
-  return publishedSunsOf(scene).suns;
+  const published = publishedSunsOf(scene);
+  published.suns ??= published.lights.map(({ light, cullMask }) => directionalLightOf(light, cullMask));
+  return published.suns;
+}
+
+/** Clears the suns of `scene` when its light pass stops, as they hold the released split suns' shadows. */
+export function releaseSceneSuns(scene: THREE.Scene): void {
+  Object.assign(publishedSunsOf(scene), { lights: [], suns: null });
 }

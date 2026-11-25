@@ -3,7 +3,10 @@ import type { TextureNode } from 'three/webgpu';
 import type { Binding } from '../uniforms/bindingTable.js';
 import { comparedTextureOf, UNBOUND_DEPTH } from '../language/comparedTextures.js';
 import type { SpatialFrame } from './spatialBindings.js';
-import { DIRECTIONAL_SHADOW_SIZE_DEFAULT } from '../../godot/rendering/lights/directionalShadow.js';
+import {
+  DIRECTIONAL_SHADOW_SIZE_DEFAULT,
+  MAX_DIRECTIONAL_LIGHTS,
+} from '../../godot/rendering/lights/directionalShadow.js';
 import { SOFT_LOW_SHADOW_SAMPLES, vogelDisk } from '../../godot/rendering/lights/softShadowKernel.js';
 import { SCENE_DATA } from './sceneDataBlock.js';
 
@@ -46,9 +49,6 @@ export interface DirectionalLight {
   /** Nothing for a light that casts no shadow in this render. */
   readonly shadow?: DirectionalShadow;
 }
-
-/** `MAX_DIRECTIONAL_LIGHT_DATA_STRUCTS`, the project's `max_directional_lights` default. */
-const MAX_DIRECTIONAL_LIGHTS = 8;
 
 const LIGHTS = 'directional_lights.data';
 
