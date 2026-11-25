@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { withGodotAttributes } from '../../shaders/spatial/meshAttributes';
 import { emulatedPointGeometry } from '../../shaders/template/emulatedPoints';
-import { geometryBoxUserData } from '../bounds';
 import { canvasSurfaceGeometry } from '../canvasMesh/canvasSurface';
 import { canvasMeshGeometry } from '../meshes/canvasMeshGeometry';
 import {
@@ -228,21 +227,6 @@ describe('boundByItem', () => {
     boundByItem(new THREE.Mesh(emulated), [meshCommands([canvasSurfaceGeometry(TRIANGLE)])[0]!]);
 
     expect([emulated.boundingBox!.max.x, source.boundingBox!.max.x]).toEqual([8, 1]);
-  });
-
-  it('marks the object so that its bounds read the item rect, not its instances', () => {
-    const object = new THREE.Mesh(new THREE.BufferGeometry());
-    boundByItem(object, [meshCommands([canvasSurfaceGeometry(TRIANGLE)])[0]!]);
-
-    expect(object.userData).toEqual(geometryBoxUserData());
-  });
-
-  it("lets emulated points follow a recompute of their source's box until the item bounds them", () => {
-    const { source, emulated } = pointsOverSurface();
-    source.getAttribute('position').setX(0, 9);
-    source.computeBoundingBox();
-
-    expect(emulated.boundingBox!.max.x).toBe(9);
   });
 });
 

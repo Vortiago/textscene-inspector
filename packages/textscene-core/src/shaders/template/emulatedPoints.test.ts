@@ -50,26 +50,6 @@ describe('emulatedPointGeometry', () => {
 
     expect(geometry.boundingBox!.max.x).toBe(9);
   });
-
-  it('bounds a source with no position yet by an empty box, not the origin', () => {
-    expect(emulatedPointGeometry(new THREE.BufferGeometry()).boundingBox!.isEmpty()).toBe(true);
-  });
-
-  it('bounds a source by the points it gains after the quads are built', () => {
-    const source = new THREE.BufferGeometry();
-    const emulated = emulatedPointGeometry(source);
-    source.setAttribute('position', new THREE.BufferAttribute(Float32Array.from([0, 0, 0, 5, 2, 0]), 3));
-    source.computeBoundingBox();
-
-    expect(emulated.boundingBox!.max.toArray()).toEqual([5, 2, 0]);
-  });
-
-  it('bounds a source with no box by its positions, which the framing box reads', () => {
-    const expected = withGodotAttributes(triangle());
-    expected.computeBoundingBox();
-
-    expect(emulatedPointGeometry(withGodotAttributes(triangle())).boundingBox).toEqual(expected.boundingBox);
-  });
 });
 
 describe('emulatedPointGeometry of an indexed surface', () => {

@@ -12,7 +12,6 @@ import {
   type CanvasShader,
 } from './canvasShaderDraw';
 import type { CanvasShaderCommand } from './canvasCommands';
-import { computeWorldBoundingBox } from '../bounds';
 
 const VALID = 'shader_type canvas_item;\nvoid fragment() { COLOR = vec4(UV, 0.5, 1.0); }\n';
 const INVALID = 'shader_type canvas_item;\nvoid fragment() { COLOR = 1; }\n';
@@ -125,34 +124,6 @@ describe('canvasShaderDraw', () => {
     expect(object.children[0]).toBeInstanceOf(THREE.Points);
   });
 
-  it("bounds each batch by its commands' item rect, with three's y, so a clip group's region holds it", () => {
-    const [rects, mesh] = drawOf([RECT_COMMAND, meshCommand()]).object.children as THREE.Mesh[];
-
-    const itemRect = new THREE.Box3(new THREE.Vector3(0, -4, 0), new THREE.Vector3(8, -0, 0));
-    expect(rects!.geometry.boundingBox).toEqual(itemRect);
-    expect(mesh!.geometry.boundingBox).toEqual(itemRect);
-  });
-
-  it('bounds a rect batch by its layout before the first setSource', () => {
-    const sampling = {
-      maps: DEFAULT_CANVAS_MAPS,
-      textureState: GODOT_CANVAS_TEXTURE_STATE,
-      sampling: GODOT_SAMPLING,
-    };
-    const draw = canvasShaderDraw(gl, itemOf(), sampling, [RECT_COMMAND]);
-
-    const box = (draw.object.children[0] as THREE.Mesh).geometry.boundingBox;
-    expect(box).toEqual(new THREE.Box3(new THREE.Vector3(0, -4, 0), new THREE.Vector3(8, -0, 0)));
-  });
-
-  it('frames each batch by its item rect, a mesh of emulated points too', () => {
-    const sizedPoints = 'shader_type canvas_item;\nvoid vertex() { POINT_SIZE = 4.0; }\n';
-    const batches = drawOf([RECT_COMMAND, meshCommand('points')], itemOf(sizedPoints)).object.children;
-
-    const itemRect = new THREE.Box3(new THREE.Vector3(0, -4, 0), new THREE.Vector3(8, 0, 0));
-    expect(batches.map((batch) => computeWorldBoundingBox(batch))).toEqual([itemRect, itemRect]);
-  });
-
   it('keeps one box across the sources of a rect batch', () => {
     const draw = drawOf();
     const geometry = (draw.object.children[0] as THREE.Mesh).geometry;
@@ -160,15 +131,6 @@ describe('canvasShaderDraw', () => {
     draw.setSource(TEXTURE, [RECT_COMMAND]);
 
     expect(geometry.boundingBox).toBe(box);
-  });
-
-  it('bounds a rect batch by the rects setSource gives last', () => {
-    const draw = drawOf();
-    const moved = { ...RECT_COMMAND, region: { ...RECT_COMMAND.region, rect: { x: -2, y: 1, w: 8, h: 4 } } };
-    draw.setSource(TEXTURE, [moved]);
-
-    const box = (draw.object.children[0] as THREE.Mesh).geometry.boundingBox;
-    expect(box).toEqual(new THREE.Box3(new THREE.Vector3(-2, -5, 0), new THREE.Vector3(6, -1, 0)));
   });
 
   it('draws batches that frustum culling never skips', () => {

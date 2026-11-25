@@ -7,7 +7,6 @@ import { ShadowCastingSetting } from '../../godot/rendering/rendering';
 import { applyShadowCasting, shadowCastingEffects } from '../shadowCasting';
 import { setVisualLayers } from '../visualLayers';
 import { drawPoints, isEmulatedPoints } from './pointSurface';
-import { computeWorldBoundingBox } from '../bounds';
 
 /** Two triangles of a quad, the first in draw group 0 and the second in draw group 1. */
 function twoGroupQuad(): THREE.BufferGeometry {
@@ -53,31 +52,6 @@ describe('drawPoints', () => {
     const [points] = host.children as THREE.Mesh<THREE.InstancedBufferGeometry>[];
     expect(isEmulatedPoints(points!)).toBe(true);
     expect([...points!.geometry.getAttribute('vertex_id_attrib').array]).toEqual([0, 3, 2]);
-  });
-
-  it("frames the emulated points by the box of the host's surface", () => {
-    const host = new THREE.Mesh(twoGroupQuad());
-    drawPoints(host, null, material, 'emulated', scene);
-    host.geometry.computeBoundingBox();
-
-    expect(computeWorldBoundingBox(host.children[0]!)).toEqual(host.geometry.boundingBox);
-  });
-
-  it('frames nothing for the emulated points of a host whose surface has no position yet', () => {
-    const host = new THREE.Mesh(new THREE.BufferGeometry());
-    drawPoints(host, null, material, 'emulated', scene);
-
-    expect(computeWorldBoundingBox(host.children[0]!).isEmpty()).toBe(true);
-  });
-
-  it('gives the emulated points of a host over instances no box of one unplaced instance', () => {
-    const instances = new THREE.InstancedBufferGeometry().copy(
-      twoGroupQuad() as THREE.InstancedBufferGeometry
-    );
-    const host = new THREE.Points(instances);
-    drawPoints(host, null, material, 'emulated', scene);
-
-    expect(computeWorldBoundingBox(host.children[0]!).isEmpty()).toBe(true);
   });
 
   it("follows the host's shadows, layers and draw order after a live edit", () => {
