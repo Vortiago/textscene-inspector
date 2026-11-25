@@ -1,7 +1,6 @@
 ---
 type: MeshInstance2D
 category: 2D
-status: unreviewed
 fixture: unit-mesh-instance-2d.tscn
 image: unit-mesh-instance-2d
 renders_as: a THREE.Mesh, THREE.Points or THREE.LineSegments per surface kind
@@ -14,6 +13,15 @@ surface at its vertices' x and y, with y down, and multiplies the texel, the ver
 modulate. The surfaces' own materials never apply. A texture that is set but fails to load draws the untextured mesh, as Godot does. Godot's loader
 leaves a property that names a missing file null (`resource_format_text.cpp:146-154`, `:288-289`). With a CanvasItemMaterial that sets
 `particles_animation`, the mesh shrinks to one cell and shows cell 0.
+
+## A user's canvas_item shader
+
+<!-- compare: image=unit-canvas-shader-items status=done fixture=unit-canvas-shader-items.tscn -->
+
+A MeshInstance2D can have a ShaderMaterial of `shader_type canvas_item` as its `material`. It then
+draws each surface through Godot's canvas template with the user's shader, with the mesh's colours
+and `uv`. A 2D light
+does not shade it yet.
 
 ## Linting
 

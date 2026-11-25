@@ -30,6 +30,7 @@ import {
   snapped,
   posmod,
   fposmodp,
+  rgbaEquals,
 } from './math.js';
 
 describe('degToRadf', () => {
@@ -396,5 +397,13 @@ describe('bezierDerivativef', () => {
     const single = bezierDerivativef(0, 0.1, 0.2, 1, 0.3);
 
     expect(single).toBe(Math.fround(single));
+  });
+});
+
+describe('rgbaEquals', () => {
+  it('is true for equal channels and false when one channel differs', () => {
+    const color = { r: 0.25, g: 0.5, b: 0.75, a: 1 };
+    expect(rgbaEquals(color, { ...color })).toBe(true);
+    expect(rgbaEquals(color, { ...color, a: 0.5 })).toBe(false);
   });
 });

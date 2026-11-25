@@ -93,10 +93,6 @@ function decodeColorDictionary(raw: string | undefined): Array<[string, Rgba]> {
   return pairs;
 }
 
-function colorEquals(a: Rgba, b: Rgba): boolean {
-  return a.r === b.r && a.g === b.g && a.b === b.b && a.a === b.a;
-}
-
 /**
  * `CodeHighlighter::add_keyword_color` and `add_member_keyword_color` add
  * unconditionally: a keyword gets no validation, unlike a color region's keys.
@@ -170,4 +166,4 @@ export function decodeCodeHighlighter(properties: Record<string, string>): CodeH
   };
 }
 
-export { colorEquals, DEFAULT_COLOR };
+export { DEFAULT_COLOR };

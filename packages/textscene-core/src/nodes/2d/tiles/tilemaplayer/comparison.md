@@ -71,6 +71,15 @@ flips compose as they do for the drawn cell (`canvas.glsl:655-661`). A padded so
 where it samples its diffuse. The layer's rotation and scale turn the normal after that
 (`canvas.glsl:708-710`). A TileMap lights its layers the same way.
 
+## A user's canvas_item shader
+
+<!-- compare: image=unit-canvas-shader-items status=done fixture=unit-canvas-shader-items.tscn -->
+
+A TileMapLayer whose `material` is a ShaderMaterial of `shader_type canvas_item` draws each tile through
+Godot's canvas template with the user's shader. A tile whose TileData has its own `material` draws with
+that material instead. Flips, transpose, tile `modulate`, `uv_clipping` and the padded atlas of
+`use_texture_padding` follow `draw_tile` (`tile_set.cpp`). A 2D light does not shade a shaded tile yet.
+
 ## Linting
 
 <!-- lint:begin TileMapLayer -->

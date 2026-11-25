@@ -58,7 +58,6 @@ export const KEPT_TEST_ONLY_EXPORTS = [
   // the builds in flight and clears the cache.
   'resources/textures/proceduralBuilds.ts#resetProceduralTextures',
   // The canvas tests name each instance flag and check the item matrix without a draw.
-  'shaders/canvas/canvasBindings.ts#transform2DMatrix',
   'shaders/canvas/canvasRect.ts#CANVAS_RECT',
   // The preprocessed-text check reads the text before any parse, also for a text the parser refuses.
   'shaders/language/parseShader.ts#shaderCode',

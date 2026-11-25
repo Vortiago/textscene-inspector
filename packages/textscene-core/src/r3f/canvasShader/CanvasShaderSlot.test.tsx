@@ -9,28 +9,44 @@ import { CanvasShaderSlot } from './CanvasShaderSlot';
 
 const nodesHandler = vi.hoisted(() => ({ state: 'ready' as 'ready' | 'loading' }));
 vi.mock('../canvasRenderer/canvasNodesHandler', () => ({ useNodesHandler: () => nodesHandler.state }));
-vi.mock('../projectShaderOptions', () => ({ useProjectShaderOptions: () => ({}) }));
+const shaderOptions = vi.hoisted(() => ({}));
+vi.mock('../projectShaderOptions', () => ({ useProjectShaderOptions: () => shaderOptions }));
 
 const REFUSED = 'shader_type canvas_item;\nvoid fragment() { COLOR = 1; }\n';
 const RECT = { x: 0, y: 0, w: 8, h: 4 };
+const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 
 function shaderOf(code: string): ShaderText {
   return { code, file: 'res://a.gdshader', parameters: {}, textures: {} };
 }
 
-async function renderSlot(code: string) {
-  const texture = new THREE.DataTexture(new Uint8Array(8 * 4 * 4), 8, 4);
-  return ReactThreeTestRenderer.create(
+const COMPILED = 'shader_type canvas_item;\nvoid fragment() { COLOR = vec4(1.0); }\n';
+const SAMPLER = { filter: 0, repeat: 0 };
+const TEXTURE = new THREE.DataTexture(new Uint8Array(8 * 4 * 4), 8, 4);
+
+function slotOf(shader: ShaderText, rectX = 0) {
+  return (
     <CanvasShaderSlot
-      shader={shaderOf(code)}
-      region={{ rect: RECT, source: RECT, clipUv: false }}
-      texture={texture}
+      shader={shader}
+      commands={[
+        {
+          kind: 'rect',
+          region: { rect: { ...RECT, x: rectX }, source: RECT, clipUv: false },
+          modulate: WHITE,
+        },
+      ]}
+      texture={TEXTURE}
       canvasTexture={undefined}
-      sampler={{ filter: 0, repeat: 0 }}
-      finalModulate={{ r: 1, g: 1, b: 1, a: 1 }}
+      sampler={SAMPLER}
+      finalModulate={WHITE}
+      firstOrder={0}
       fallback={<group name="fallback" />}
     />
   );
+}
+
+async function renderSlot(code: string) {
+  return ReactThreeTestRenderer.create(slotOf(shaderOf(code)));
 }
 
 function drawn(renderer: Awaited<ReturnType<typeof renderSlot>>): string[] {
@@ -68,9 +84,21 @@ describe('CanvasShaderSlot', () => {
   });
 
   it('draws the shader mesh, not the fallback, for a shader the translator compiles', async () => {
-    const renderer = await renderSlot('shader_type canvas_item;\nvoid fragment() { COLOR = vec4(1.0); }\n');
+    const renderer = await renderSlot(COMPILED);
     await settle();
 
-    expect(drawn(renderer)).toEqual(['Mesh:']);
+    expect(drawn(renderer)).toEqual(['Object3D:']);
+  });
+
+  it('keeps its draw for commands of the same layout, as the next frame of an animation gives', async () => {
+    const shader = shaderOf(COMPILED);
+    const renderer = await ReactThreeTestRenderer.create(slotOf(shader));
+    await settle();
+    const first = renderer.scene.children[0]!.instance;
+
+    await renderer.update(slotOf(shader, 3));
+    await settle();
+
+    expect(renderer.scene.children[0]!.instance).toBe(first);
   });
 });

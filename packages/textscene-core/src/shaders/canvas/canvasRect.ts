@@ -7,6 +7,7 @@ import {
   instanceBatchGeometry,
   instanceRecord,
   modulated,
+  type InstanceRecord,
 } from './canvasInstance.js';
 import { DEFAULT_TEXEL_SIZE, type TexelSize } from './canvasTexture.js';
 
@@ -68,28 +69,56 @@ export function rectInstanceData(
   /** The texture's `texpixel_size`, or nothing for a rect with no texture. */
   texelSize: TexelSize | undefined
 ): ArrayBuffer {
-  const { bytes, floats, words } = instanceRecord(item);
+  const record = instanceRecord(item);
+  writeRectInstance(record, command, item, texelSize);
+  return record.bytes;
+}
+
+/** Writes the rect members of `record`: the caller owns its world and instance uniforms, and reuses it. */
+export function writeRectInstance(
+  { floats, words }: InstanceRecord,
+  command: CanvasRectCommand,
+  item: CanvasItemDraw,
+  texelSize: TexelSize | undefined
+): void {
   const { r, g, b, a } = modulated(command.modulate, item);
-  floats.set([r, g, b, a], MODULATION);
-  floats.set(rectValues(command.rect), DST_RECT);
-  floats.set(sourceRect(command, texelSize), SRC_RECT);
+  writeLanes(floats, MODULATION, r, g, b, a);
+  writeDestRect(floats, command.rect);
+  writeSourceRect(floats, command, texelSize);
   words[FLAGS] = texelSize ? instanceFlags(command.flags) : 0;
-  return bytes;
+}
+
+/** Lane by lane, not through an array: a batch writes this for each rect. */
+function writeLanes(floats: Float32Array, offset: number, x: number, y: number, z: number, w: number): void {
+  floats[offset] = x;
+  floats[offset + 1] = y;
+  floats[offset + 2] = z;
+  floats[offset + 3] = w;
 }
 
 /** The rect with a negative size turned positive from its far edge. */
-function rectValues({ x, y, w, h }: Rect2): number[] {
-  return [w < 0 ? x + w : x, h < 0 ? y + h : y, Math.abs(w), Math.abs(h)];
+function writeDestRect(floats: Float32Array, { x, y, w, h }: Rect2): void {
+  writeLanes(floats, DST_RECT, w < 0 ? x + w : x, h < 0 ? y + h : y, Math.abs(w), Math.abs(h));
 }
 
 /** The texture's region in 0 to 1, its size negated by a flip. */
-function sourceRect({ flags, source }: CanvasRectCommand, texelSize: TexelSize | undefined): number[] {
-  if (!texelSize) return [0, 0, 1, 1];
-  const region = flags & CANVAS_RECT.REGION;
-  const [x, y, w, h] = region
-    ? [source.x * texelSize.x, source.y * texelSize.y, source.w * texelSize.x, source.h * texelSize.y]
-    : [0, 0, 1, 1];
-  return [x, y, flags & CANVAS_RECT.FLIP_H ? -w : w, flags & CANVAS_RECT.FLIP_V ? -h : h];
+function writeSourceRect(
+  floats: Float32Array,
+  { flags, source }: CanvasRectCommand,
+  texelSize: TexelSize | undefined
+): void {
+  if (!texelSize) return writeLanes(floats, SRC_RECT, 0, 0, 1, 1);
+  const isRegion = flags & CANVAS_RECT.REGION;
+  const w = isRegion ? source.w * texelSize.x : 1;
+  const h = isRegion ? source.h * texelSize.y : 1;
+  writeLanes(
+    floats,
+    SRC_RECT,
+    isRegion ? source.x * texelSize.x : 0,
+    isRegion ? source.y * texelSize.y : 0,
+    flags & CANVAS_RECT.FLIP_H ? -w : w,
+    flags & CANVAS_RECT.FLIP_V ? -h : h
+  );
 }
 
 function instanceFlags(flags: number): number {

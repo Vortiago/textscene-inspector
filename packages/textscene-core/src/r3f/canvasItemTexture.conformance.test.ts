@@ -46,12 +46,13 @@ const CANVAS_MESH_DRAWERS = ['animatedsprite2d', 'cpuparticles2d', 'line2d', 'po
 /** The drawers that mount `CanvasSurfaceMaterial` with a draw of their own, as a tile run and a CanvasGroup rect. */
 const CANVAS_SURFACE_ADAPTERS = ['r3f/TileSourceMesh.tsx', 'nodes/2d/canvasgroup/Component.tsx'];
 const BUILDS_ITS_OWN_MATERIAL = /<meshBasicMaterial\b|\bmaterialProgramInputs\(/;
-/**
- * What only `CanvasMeshBody` hands `CanvasItem2D`, and `CanvasItem2D` hands on inside itself. Any
- * such prop counts, on any tag: a tag's props can hold a `>` that ends a match of the tag early.
- */
+/** The props only the owners hand on, on any tag: a tag's props can hold a `>` that ends its match early. */
 const PASSES_BODY_PROPS = /\b(?:canvasTexture|isDrawn)=\{/;
-const BODY_PROP_OWNERS = ['r3f/canvasMesh/CanvasMeshBody.tsx', 'r3f/components/CanvasItem2D.tsx'];
+const BODY_PROP_OWNERS = [
+  'r3f/canvasMesh/CanvasMeshBody.tsx',
+  'r3f/components/CanvasItem2D.tsx',
+  'r3f/canvasShader/TileShaderRun.tsx',
+];
 const BUILDS_ITS_OWN_DRAW = new RegExp(`${BUILDS_ITS_OWN_MATERIAL.source}|\\buseCanvasItemTexture\\(`);
 
 describe('a texture-drawing canvas item', () => {
@@ -80,7 +81,7 @@ describe('a texture-drawing canvas item', () => {
     expect(buildsItsOwn).toEqual([]);
   });
 
-  it('lets only the canvas mesh body hand CanvasItem2D a canvasTexture or isDrawn', () => {
+  it('lets only the canvas mesh body, CanvasItem2D and a shaded tile run hand on a canvasTexture or isDrawn', () => {
     const passes = sources
       .filter(({ name, text }) => !BODY_PROP_OWNERS.includes(name) && PASSES_BODY_PROPS.test(text))
       .map(({ name }) => name);

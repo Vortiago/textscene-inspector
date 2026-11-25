@@ -33,7 +33,11 @@ export function TileGroupRenderer({ item, node: authored }: { item: YSortItem; n
   );
   // The row is one rendering quadrant (`tile_map_layer.cpp:546-548`). Memoised, so the row's
   // batches keep their geometry across a re-render of the sorted list.
-  const quadrants = useMemo(() => (cells ? [cells] : []), [cells]);
+  const rowY = item.tileData?.rowOrigin?.ty ?? 0;
+  const quadrants = useMemo(
+    () => (cells ? [{ canvasItemsPosition: { x: 0, y: rowY }, cells }] : []),
+    [cells, rowY]
+  );
   // The layer's children are items of the flat sort, so the row holds none. It is named for the
   // row, since every row of the layer draws a group of its own.
   const row = useMemo(
@@ -54,6 +58,7 @@ export function TileGroupRenderer({ item, node: authored }: { item: YSortItem; n
             model={model}
             selfTint={state.tint.self}
             material={state.material}
+            shader={state.shader}
             lightMask={state.lightMask}
             zFinal={state.zFinal}
             sampler={state.sampler}

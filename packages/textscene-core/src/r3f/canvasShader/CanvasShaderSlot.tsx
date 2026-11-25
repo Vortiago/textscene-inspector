@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from 'react';
 import { useThree } from '@react-three/fiber';
 import type * as THREE from 'three';
 import type { Rgba } from '../../godot/math/math';
@@ -13,7 +13,7 @@ import { useCanvasModulate } from '../canvasModulate';
 import { useRecordWriter } from '../components/Canvas2DStage/canvasFrameSequence';
 import { useShaderTextures } from '../shaderTextures/shaderTextures';
 import { useShaderRefusalWarning, useShaderTranslator } from '../shaderTranslator/useShaderTranslator';
-import type { CanvasRectRegion } from './canvasCommands';
+import { sameCommandLayout, type CanvasShaderCommand } from './canvasCommands';
 import { useCanvasShaderMaps } from './useCanvasShaderMaps';
 import type { CanvasItemTexture } from '../canvasItemTexture';
 
@@ -23,28 +23,36 @@ const loadCanvasShaderDraw = memoisedImport(() => import('./canvasShaderDraw'));
 const LOAD_FAILURE =
   "[material] The previewer could not load its canvas shader translator, and draws Godot's default canvas shader. Reload to try again.";
 
-interface CanvasShaderSlotProps {
-  shader: ShaderText;
-  /** The rect the item draws its texture with. */
-  region: CanvasRectRegion;
-  texture: THREE.Texture;
+/** What an item draws through a canvas_item shader: its commands, and the texture they share. */
+export interface CanvasItemCommands {
+  /** In draw order. */
+  readonly commands: readonly CanvasShaderCommand[];
+  /** The texture the commands draw, or null for Godot's white default texture. */
+  readonly texture: THREE.Texture | null;
   /** The item's CanvasTexture, whose maps the shader reads, or undefined for a plain texture. */
-  canvasTexture: CanvasItemTexture | undefined;
-  sampler: CanvasItemTextureSampler;
+  readonly canvasTexture: CanvasItemTexture | undefined;
+  readonly sampler: CanvasItemTextureSampler;
+}
+
+interface CanvasShaderSlotProps extends CanvasItemCommands {
+  shader: ShaderText;
   /** `Item::final_modulate`, in sRGB. */
   finalModulate: Rgba;
+  /** The `renderOrder` of the first batch, which orders it inside the canvas item's group. */
+  firstOrder: number;
   /** What the item draws while the translator loads, and for a shader it refuses. */
   fallback: ReactNode;
 }
 
-/** An item's own rect drawn through Godot's canvas template with a user's canvas_item shader. */
+/** An item's own commands drawn through Godot's canvas template with a user's canvas_item shader. */
 export function CanvasShaderSlot({
   shader,
-  region,
+  commands,
   texture,
   canvasTexture,
   sampler,
   finalModulate,
+  firstOrder,
   fallback,
 }: CanvasShaderSlotProps) {
   const gl = useThree((state) => state.gl);
@@ -78,15 +86,25 @@ export function CanvasShaderSlot({
     [sampler, usesLinearColors]
   );
   const maps = useCanvasShaderMaps(canvasTexture);
+  // A new frame of an animation keeps its draw: only a new layout builds new batches.
+  const layout = useCommandLayout(commands);
   const draw = useMemo(
-    () => item && sampling && module!.rectShaderDraw(gl, item, { texture, maps, textureState, sampling }),
-    [module, gl, item, texture, maps, textureState, sampling]
+    () => item && sampling && module!.canvasShaderDraw(gl, item, { maps, textureState, sampling }, layout),
+    [module, gl, item, maps, textureState, sampling, layout]
   );
   useEffect(() => (draw ? draw.dispose : undefined), [draw]);
   useLayoutEffect(() => {
-    draw?.setRect({ region, finalModulate, canvasModulate });
+    draw?.setFirstOrder(firstOrder);
     invalidate();
-  }, [draw, region, finalModulate, canvasModulate, invalidate]);
+  }, [draw, firstOrder, invalidate]);
+  useLayoutEffect(() => {
+    draw?.setSource(texture, commands);
+    invalidate();
+  }, [draw, texture, commands, invalidate]);
+  useLayoutEffect(() => {
+    draw?.setColors({ finalModulate, canvasModulate });
+    invalidate();
+  }, [draw, finalModulate, canvasModulate, invalidate]);
   useRecordWriter(draw?.writeRecords ?? null);
 
   const samplers = shaded?.samplers ?? null;
@@ -106,6 +124,16 @@ export function CanvasShaderSlot({
       {textureSlots}
     </>
   );
+}
+
+/** The first of the command lists given since the layout last changed. */
+function useCommandLayout(commands: readonly CanvasShaderCommand[]): readonly CanvasShaderCommand[] {
+  const [layout, setLayout] = useState(commands);
+  if (layout !== commands && !sameCommandLayout(layout, commands)) {
+    setLayout(commands);
+    return commands;
+  }
+  return layout;
 }
 
 /** The template's sampler state of the item's effective filter and repeat. */

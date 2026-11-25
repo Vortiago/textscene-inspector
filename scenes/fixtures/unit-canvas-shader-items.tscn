@@ -1,0 +1,98 @@
+[gd_scene format=3]
+
+; One variable: a ShaderMaterial of shader_type canvas_item on the items that are not a sprite: tiles,
+; a Polygon2D, a Line2D, a MeshInstance2D and an AnimatedSprite2D. Each draws the same shader, which
+; mixes its texture with its UV, so a wrong UV, texel or vertex colour shows. The tiles flip and
+; transpose, sit in a padded atlas, and one tile draws its own shader in place of the layer's. No other
+; golden draws a canvas_item shader on these items, so none shows a regression in it. One scene holds
+; the five because they share one draw, the template's rect and mesh commands, and one shader text.
+
+[ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
+
+[sub_resource type="Shader" id="Shader_mix"]
+code = "shader_type canvas_item;
+
+void fragment() {
+	COLOR = mix(texture(TEXTURE, UV), vec4(UV, 0.5, 1.0), 0.5) * COLOR;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_mix"]
+shader = SubResource("Shader_mix")
+
+[sub_resource type="Shader" id="Shader_own"]
+code = "shader_type canvas_item;
+
+void fragment() {
+	COLOR = vec4(1.0 - UV.x, UV.y, 1.0, 1.0);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_own"]
+shader = SubResource("Shader_own")
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_marker"]
+texture = ExtResource("1_marker")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+0:1/0/material = SubResource("ShaderMaterial_own")
+1:1/0 = 0
+1:1/0/modulate = Color(1, 0.6, 0.6, 1)
+2:1/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_marker"]
+tile_size = Vector2i(32, 32)
+sources/0 = SubResource("TileSetAtlasSource_marker")
+
+[sub_resource type="QuadMesh" id="QuadMesh_square"]
+size = Vector2(96, 64)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_marker"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_marker")
+}],
+"loop": true,
+"name": &"default",
+"speed": 5.0
+}]
+
+[node name="World" type="Node2D"]
+
+[node name="Tiles" type="TileMapLayer" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(40, 40)
+scale = Vector2(2, 2)
+tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 1, 0, 0, 16, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 64, 2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0)
+tile_set = SubResource("TileSet_marker")
+
+[node name="Polygon" type="Polygon2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(300, 40)
+texture = ExtResource("1_marker")
+polygon = PackedVector2Array(0, 0, 160, 20, 140, 150, 10, 120)
+color = Color(1, 0.9, 0.7, 1)
+
+[node name="Line" type="Line2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(540, 60)
+points = PackedVector2Array(0, 0, 120, 40, 160, 140)
+width = 24.0
+default_color = Color(0.4, 0.9, 1, 1)
+
+[node name="Mesh" type="MeshInstance2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(140, 330)
+rotation = 0.3
+mesh = SubResource("QuadMesh_square")
+texture = ExtResource("1_marker")
+
+[node name="Animated" type="AnimatedSprite2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+modulate = Color(1, 1, 1, 0.7)
+position = Vector2(380, 340)
+sprite_frames = SubResource("SpriteFrames_marker")
+flip_h = true

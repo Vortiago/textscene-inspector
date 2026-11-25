@@ -80,14 +80,27 @@ export function writeBatchWorld(
   floats.needsUpdate = true;
 }
 
-/** Writes `record` over record `index` of `geometry`, a batch of `instanceBatchGeometry`, and uploads it. */
-export function writeBatchRecord(geometry: THREE.BufferGeometry, index: number, record: ArrayBuffer): void {
+/** Writes a batch's first `count` records through one record of `item` that `write` fills, then uploads. */
+export function writeBatchRecords(
+  geometry: THREE.BufferGeometry,
+  item: CanvasItemDraw,
+  count: number,
+  write: (record: InstanceRecord, index: number) => void
+): void {
   const floats = (geometry.getAttribute(ATTRIBUTES[0]!) as THREE.InterleavedBufferAttribute).data;
   const words = (
     geometry.getAttribute(ATTRIBUTES[ATTRIBUTES.length - 1]!) as THREE.InterleavedBufferAttribute
   ).data;
-  const lanes = { floats: floats.array as Float32Array, words: words.array as Uint32Array };
-  writeRecordInto(lanes, floats.stride, index, record);
+  const floatLanes = floats.stride;
+  const wordLanes = RECORD_LANES - floatLanes;
+  const record = instanceRecord(item);
+  const recordFloats = record.floats.subarray(0, floatLanes);
+  const recordWords = record.words.subarray(floatLanes);
+  for (let index = 0; index < count; index++) {
+    write(record, index);
+    (floats.array as Float32Array).set(recordFloats, index * floatLanes);
+    (words.array as Uint32Array).set(recordWords, index * wordLanes);
+  }
   floats.needsUpdate = true;
   words.needsUpdate = true;
 }

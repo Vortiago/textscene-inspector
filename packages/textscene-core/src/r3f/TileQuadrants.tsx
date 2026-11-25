@@ -5,7 +5,7 @@
  */
 
 import { useMemo } from 'react';
-import type { DrawableCell } from '../resources/tileset/drawableCell';
+import type { RenderingQuadrant } from '../resources/tileset/renderingQuadrants';
 import type { TileMaterial, TileSetModel } from '../resources/tileset/types';
 import { quadrantCanvasItems, type TileCanvasItem } from '../resources/tileset/tileCanvasItems';
 import type { CanvasItemMaterialProperties } from '../resources/materials/canvasitemmaterial/types';
@@ -20,6 +20,8 @@ import { childCanvasPlace } from './canvasItemState';
 import { TileSourceMesh, type TileTint } from './TileSourceMesh';
 import type { CanvasItemTextureSampler } from './canvasItemTextureSampler';
 import type { Rgba } from '../godot/math/math';
+import type { ShaderText } from '../resources/materials/shadermaterial/types';
+import { TileShaderRun } from './canvasShader/TileShaderRun';
 
 interface TileLayerItem {
   model: TileSetModel;
@@ -30,6 +32,8 @@ interface TileLayerItem {
   selfTint: Rgba;
   /** The layer's material, which a tile with no material of its own draws with. */
   material: CanvasItemMaterialProperties | null;
+  /** The layer's canvas_item shader, which a tile with no material of its own draws with. */
+  shader: ShaderText | null;
   lightMask: number | undefined;
   zFinal: number;
   /** The layer's effective filter and repeat, which its atlas textures sample with. */
@@ -37,8 +41,8 @@ interface TileLayerItem {
 }
 
 interface TileQuadrantsProps extends TileLayerItem {
-  /** The drawable cells of each quadrant, in draw order (`layerQuadrants`). */
-  quadrants: readonly (readonly DrawableCell[])[];
+  /** The layer's rendering quadrants, in draw order (`layerQuadrants`). */
+  quadrants: readonly RenderingQuadrant[];
 }
 
 /** Draws inside the layer's canvas key (`useCanvasItemKey`), from which a tile `z_index` moves an item. */
@@ -48,18 +52,21 @@ export function TileQuadrants({ quadrants, ...layer }: TileQuadrantsProps) {
   return items.map((item, drawIndex) => <TileItem key={drawIndex} item={item} layer={layer} />);
 }
 
-/** A canvas item, and the `renderOrder` of its first batch, which follows the previous item's last. */
+/** A canvas item, its quadrant's origin, and its first batch's `renderOrder`, after the last item's. */
 interface DrawnItem extends TileCanvasItem {
+  canvasItemsPosition: RenderingQuadrant['canvasItemsPosition'];
   firstOrder: number;
 }
 
-function drawnItems(quadrants: readonly (readonly DrawableCell[])[]): DrawnItem[] {
+function drawnItems(quadrants: readonly RenderingQuadrant[]): DrawnItem[] {
   let firstOrder = 0;
-  return quadrants.flatMap(quadrantCanvasItems).map((item) => {
-    const drawn = { ...item, firstOrder };
-    firstOrder += item.runs.length;
-    return drawn;
-  });
+  return quadrants.flatMap(({ canvasItemsPosition, cells }) =>
+    quadrantCanvasItems(cells).map((item) => {
+      const drawn = { ...item, canvasItemsPosition, firstOrder };
+      firstOrder += item.runs.length;
+      return drawn;
+    })
+  );
 }
 
 /**
@@ -81,6 +88,7 @@ function tileTint(
 
 function TileItem({ item, layer }: { item: DrawnItem; layer: TileLayerItem }) {
   const material = tileItemMaterial(item.material, layer.material);
+  const shader = item.material ? item.material.shader : layer.shader;
   const { key: canvasKey, zFinal } = childCanvasPlace(
     { key: useCanvasItemKey(), zFinal: layer.zFinal },
     item.zIndex
@@ -90,24 +98,42 @@ function TileItem({ item, layer }: { item: DrawnItem; layer: TileLayerItem }) {
   const space = useCanvasColorSpace();
   // Memoised on the values: a legacy TileMap layer hands a fresh `selfTint` on every render.
   const { r, g, b, a } = layer.selfTint;
+  const selfTint = useMemo(() => ({ r, g, b, a }), [r, g, b, a]);
   const tint = useMemo(
-    () => tileTint({ r, g, b, a }, canvasModulate, linearModulate, space),
-    [r, g, b, a, canvasModulate, linearModulate, space]
+    () => tileTint(selfTint, canvasModulate, linearModulate, space),
+    [selfTint, canvasModulate, linearModulate, space]
   );
   return (
     <CanvasItemGroup renderOrder={canvasKey}>
       <LitCanvasItem material={material} lightMask={layer.lightMask} zFinal={zFinal}>
-        {item.runs.map(({ source, cells }, runIndex) => (
-          <TileSourceMesh
-            key={runIndex}
-            source={source}
-            cells={cells}
-            grid={layer.model}
-            renderOrder={item.firstOrder + runIndex}
-            tint={tint}
-            sampler={layer.sampler}
-          />
-        ))}
+        {item.runs.map(({ source, cells }, runIndex) => {
+          const mesh = (
+            <TileSourceMesh
+              key={runIndex}
+              source={source}
+              cells={cells}
+              grid={layer.model}
+              renderOrder={item.firstOrder + runIndex}
+              tint={tint}
+              sampler={layer.sampler}
+            />
+          );
+          if (!shader) return mesh;
+          return (
+            <TileShaderRun
+              key={runIndex}
+              shader={shader}
+              source={source}
+              cells={cells}
+              tileSet={layer.model}
+              finalModulate={selfTint}
+              itemOrigin={item.canvasItemsPosition}
+              sampler={layer.sampler}
+              renderOrder={item.firstOrder + runIndex}
+              fallback={mesh}
+            />
+          );
+        })}
       </LitCanvasItem>
     </CanvasItemGroup>
   );

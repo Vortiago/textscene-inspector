@@ -21,6 +21,15 @@ and DirectionalLight2D. The CanvasTexture's own `texture_filter` and `texture_re
 sprite's. `flip_h` and `flip_v` flip the normal with the frame
 (`renderer_canvas_cull.cpp:1638-1657`), so Flipped is lit from the left, as in Godot.
 
+## A user's canvas_item shader
+
+<!-- compare: image=unit-canvas-shader-items status=done fixture=unit-canvas-shader-items.tscn -->
+
+An AnimatedSprite2D can have a ShaderMaterial of `shader_type canvas_item` as its `material`. It then
+draws its frame through Godot's canvas template with the user's shader, with `centered`, `offset`
+and both flips. A 2D
+light does not shade it yet.
+
 ## Linting
 
 <!-- lint:begin AnimatedSprite2D -->

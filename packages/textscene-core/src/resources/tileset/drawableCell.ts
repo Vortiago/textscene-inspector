@@ -1,6 +1,8 @@
 /** The cells of a tile layer that Godot draws, each with the source, tile and tile data it draws with. */
 
 import type { PlacedCell } from '../../nodes/2d/tiles/shared/tileData';
+import type { ImageSize } from '../formats/image/imagePixels';
+import { atlasGridSize } from './paddedAtlas';
 import {
   alternativeNoTransform,
   type AlternativeTileModel,
@@ -33,4 +35,14 @@ export function drawableCells(
     if (source && tile && tileData) drawable.push({ ...cell, source, tile, tileData });
   }
   return drawable;
+}
+
+/** The cells inside the grid of the source's texture, which alone draw (`tile_map_layer.cpp:2680-2683`). */
+export function cellsInAtlasGrid(
+  cells: readonly DrawableCell[],
+  source: AtlasSourceModel,
+  textureSize: ImageSize
+): readonly DrawableCell[] {
+  const grid = atlasGridSize(source, textureSize);
+  return cells.filter(({ atlasCoords: { x, y } }) => x < grid.x && y < grid.y);
 }

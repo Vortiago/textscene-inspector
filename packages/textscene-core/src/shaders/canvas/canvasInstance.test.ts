@@ -1,6 +1,6 @@
 import type * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { instanceRecord, writeBatchRecord, writeBatchWorld } from './canvasInstance.js';
+import { FLAGS, instanceRecord, writeBatchRecords, writeBatchWorld } from './canvasInstance.js';
 import { quadBatchGeometry } from './canvasRect.js';
 
 const IDENTITY = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
@@ -49,31 +49,33 @@ describe('writeBatchWorld', () => {
   });
 });
 
-describe('writeBatchRecord', () => {
-  it('writes the floats and the words of one record, and leaves the others', () => {
+describe('writeBatchRecords', () => {
+  const WHITE = { r: 1, g: 1, b: 1, a: 1 };
+
+  it('writes the floats and the words of each record it is asked for, and leaves the others', () => {
     const geometry = batch();
-    const record = instanceRecord({ transform: MOVED, finalModulate: { r: 1, g: 1, b: 1, a: 1 } }).bytes;
 
-    writeBatchRecord(geometry, 1, record);
+    writeBatchRecords(geometry, { transform: MOVED, finalModulate: WHITE }, 1, (record) => {
+      record.words[FLAGS] = 7;
+    });
 
+    const words = (geometry.getAttribute('attrib_H') as THREE.InterleavedBufferAttribute).data;
+    const floatLanes = (geometry.getAttribute('attrib_A') as THREE.InterleavedBufferAttribute).data.stride;
     expect([worldOfRecord(geometry, 0), worldOfRecord(geometry, 1)]).toEqual([
-      [1, 0, 0, 1, 0, 0],
       [0, 1, -1, 0, 12, 7],
+      [1, 0, 0, 1, 0, 0],
     ]);
+    expect(words.array[FLAGS - floatLanes]).toBe(7);
   });
 
-  it('uploads both buffers again', () => {
+  it('uploads both buffers once for the batch', () => {
     const geometry = batch();
     const buffers = ['attrib_A', 'attrib_H'].map(
       (name) => (geometry.getAttribute(name) as THREE.InterleavedBufferAttribute).data
     );
     const versions = buffers.map(({ version }) => version);
 
-    writeBatchRecord(
-      geometry,
-      0,
-      instanceRecord({ transform: IDENTITY, finalModulate: { r: 1, g: 1, b: 1, a: 1 } }).bytes
-    );
+    writeBatchRecords(geometry, { transform: IDENTITY, finalModulate: WHITE }, 2, () => {});
 
     expect(buffers.map(({ version }) => version)).toEqual(versions.map((version) => version + 1));
   });

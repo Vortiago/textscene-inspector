@@ -26,6 +26,8 @@ export interface CanvasSurface {
   scale?: [number, number, number];
   /** Places the surface by a matrix instead, which `position` and `scale` then leave alone. */
   matrix?: THREE.Matrix4;
+  /** Whether a skeleton bends the geometry, which a canvas_item shader's draw does not. */
+  isSkinned?: boolean;
   /** Receives the object that draws the surface: a mesh, points or line segments, by the geometry. */
   meshRef?: (drawn: THREE.Object3D | null) => void;
 }

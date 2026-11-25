@@ -10,6 +10,7 @@ import { stringToInt } from '../../godot/string/string.js';
 import { warn } from '../../logger';
 import type { Follow, HeldResource, ResourceKind, UnavailableReason } from '../reading';
 import { decodeAtlasSource, decodeTileGrid } from './decode';
+import { boolSlotValue } from '../../godot/variant/variantBool.js';
 import { decodeSceneCollectionSource } from './sceneCollection';
 import type { AtlasSourceModel, SceneCollectionSourceModel, TileSetModel } from './types';
 
@@ -43,6 +44,7 @@ export const TILE_SET: ResourceKind<TileSetModel> = {
   accepts: (type) => type === 'TileSet',
   decode: ({ properties }, follow) => ({
     ...decodeTileGrid(properties),
+    usesUvClipping: boolSlotValue(properties.uv_clipping) === true,
     ...decodeSources(properties, follow),
   }),
 };

@@ -18,9 +18,8 @@ import { quantizeVertexColor } from './vertexColorQuantize';
 import type { Vector2 } from '../../../godot/math/vector';
 import { triangulatePolygon } from '../../../godot/math/triangulate';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
-import { useLiveScenePass } from '../../../r3f/liveScenePass';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
-import { bindPolygonsToSkeletons, namesSkeletonToBind } from './skeletonBinding';
+import { useSkeletonBinding } from './useSkeletonBinding';
 import { useSkeletonSkin } from './useSkeletonSkin';
 import { CanvasMeshBody } from '../../../r3f/canvasMesh/CanvasMeshBody';
 import { useCanvasMeshTexture } from '../../../r3f/canvasMesh/useCanvasMeshTexture';
@@ -59,7 +58,7 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
   useDisposeOnRelease(geometry);
   const [mesh, setMesh] = useState<THREE.Mesh | null>(null);
   const nodePath = useNodePath();
-  const binding = useLiveScenePass(bindPolygonsToSkeletons, namesSkeletonToBind(props) ? nodePath : null);
+  const { binding, isSkinned } = useSkeletonBinding(props, nodePath);
   useSkeletonSkin(mesh, geometry, binding);
 
   const surfaces = useMemo((): readonly CanvasSurface[] | null => {
@@ -71,8 +70,8 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
     const arrayColor = geometry.hasAttribute('color') ? undefined : quantizeVertexColor(props.color);
     // A polygon's geometry draws triangles, so its object is a mesh.
     const meshRef = (drawn: THREE.Object3D | null) => setMesh(drawn instanceof THREE.Mesh ? drawn : null);
-    return [{ geometry, arrayColor, meshRef }];
-  }, [geometry, props.color]);
+    return [{ geometry, arrayColor, meshRef, isSkinned }];
+  }, [geometry, props.color, isSkinned]);
 
   return (
     <CanvasMeshBody node={node} props={props} texture={texture} withoutTexture="white" surfaces={surfaces}>

@@ -55,6 +55,7 @@ export const CANVAS_2D_SCENES = [
   { name: 'sprite2d-magnified', file: 'unit-sprite2d-magnified.tscn' },
   // The one variable: a user's canvas_item shader on a Sprite2D. Godot 4.6.3: 0 px over 2/255.
   { name: 'sprite2d-canvas-shader', file: 'unit-sprite2d-canvas-shader.tscn' },
+  { name: 'canvas-shader-items', file: 'unit-canvas-shader-items.tscn' },
   // The one variable: `texture_filter` on the Node2D parent. A Nearest parent keeps a magnified
   // Sprite2D's edge a hard step, and the project's Linear default blends it over one texel.
   {

@@ -26,10 +26,11 @@ import { useNodePath } from '../contexts/NodePathContext';
 import { useSceneResources } from '../SceneResourcesContext';
 import { node2dZStep, useCanvasItemState, type CanvasItemState } from '../canvasItemState';
 import type { CanvasItemMaterialProperties } from '../../resources/materials/canvasitemmaterial/types';
-import type { ShaderText } from '../../resources/materials/shadermaterial/types';
 import type { CanvasItemSurface } from '../lighting2d/normalMappedLighting';
 import { ClipChildrenScope } from '../canvasGroup/ClipChildrenScope';
 import type { PaintRange } from '../canvasPaintOrder';
+import { CanvasShaderSlot, type CanvasItemCommands } from '../canvasShader/CanvasShaderSlot';
+import { useUndrawnShaderWarning } from '../canvasShader/undrawnShaderWarning';
 
 /** No behind ranges: an item that clips nothing draws its behind children outside its group. */
 const NO_RANGES: readonly PaintRange[] = [];
@@ -41,8 +42,6 @@ export interface CanvasItemBody {
   readonly material: CanvasItemMaterialProperties | null;
   /** What each mesh merges: the CanvasItemMaterial's blend state and the light list. */
   readonly pixelMaterial: CanvasItemPixelMaterial;
-  /** The canvas_item shader in force, or null. */
-  readonly shader: ShaderText | null;
 }
 
 interface CanvasItem2DProps {
@@ -55,6 +54,8 @@ interface CanvasItem2DProps {
    * specular maps light the pixels, and without a normal map they light flat (`canvas.glsl:652-665`).
    */
   canvasTexture?: CanvasItemTexture;
+  /** What a canvas_item shader draws in place of `body`, asked only while one is in force. Null: the body. */
+  shadedCommands?: (() => CanvasItemCommands | null) | null;
   /** Whether `body` draws any pixels, true when omitted. A body that draws none declares no light read. */
   isDrawn?: boolean;
   /**
@@ -72,6 +73,7 @@ export function CanvasItem2D({
   props,
   body,
   canvasTexture,
+  shadedCommands,
   isDrawn,
   ownItems,
   children,
@@ -110,6 +112,12 @@ export function CanvasItem2D({
   const clips = props.clip_children !== CanvasItemClipChildrenMode.DISABLED;
   const behindRanges = clips ? paint.behind : NO_RANGES;
   const { key, zFinal, tint, material, shader } = state;
+  // Null from the ask: the item draws, but the shader draw cannot draw it.
+  const shaded = useMemo(
+    () => (shader && shadedCommands ? shadedCommands() : undefined),
+    [shader, shadedCommands]
+  );
+  useUndrawnShaderWarning(shader, node, shaded === null);
   // A pushed `visible` takes the place of the authored one, as for a Node3D.
   const animatedVisible = useAnimatedValue('visible', (value) => value[0] !== 0);
 
@@ -140,7 +148,19 @@ export function CanvasItem2D({
                 surface={surface}
                 isDrawn={isDrawn}
               >
-                {(pixelMaterial) => body({ tint, material, pixelMaterial, shader })}
+                {(pixelMaterial) => {
+                  const pixels = body({ tint, material, pixelMaterial });
+                  if (!shader || !shaded) return pixels;
+                  return (
+                    <CanvasShaderSlot
+                      shader={shader}
+                      {...shaded}
+                      finalModulate={tint.self}
+                      firstOrder={0}
+                      fallback={pixels}
+                    />
+                  );
+                }}
               </LitCanvasItemPixels>
             )}
             {ownItems?.(state)}

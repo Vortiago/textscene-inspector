@@ -28,66 +28,106 @@ const CONVERT_ATTRIBUTES_TO_LINEAR = 1 << 0;
 
 const DATA = 'canvas_data';
 
-/** Each member of `CanvasData` the unlit variants read (`renderer_canvas_render_rd.cpp:673-729`). */
-export const CANVAS_BINDINGS: readonly Binding<CanvasFrame>[] = [
+/** The `CanvasData` values of one frame, changed in place: one write reaches every draw bound to it. */
+export interface CanvasDataBlock {
+  readonly canvasTransform: THREE.Matrix4;
+  readonly screenTransform: THREE.Matrix4;
+  readonly canvasNormalTransform: THREE.Matrix4;
+  readonly canvasModulation: THREE.Vector4;
+  readonly screenPixelSize: THREE.Vector2;
+  time: number;
+  usesPixelSnap: boolean;
+  flags: number;
+}
+
+export function canvasDataBlock(): CanvasDataBlock {
+  return {
+    canvasTransform: new THREE.Matrix4(),
+    screenTransform: new THREE.Matrix4(),
+    canvasNormalTransform: new THREE.Matrix4(),
+    canvasModulation: new THREE.Vector4(),
+    screenPixelSize: new THREE.Vector2(),
+    time: 0,
+    usesPixelSnap: false,
+    flags: 0,
+  };
+}
+
+/** Writes `frame` into `block` (`renderer_canvas_render_rd.cpp:673-729`), with no new object. */
+export function writeCanvasData(block: CanvasDataBlock, frame: CanvasFrame): void {
+  const { width, height, canvasTransform, canvasModulate, usesLinearColors } = frame;
+  transform2DMatrixInto(block.canvasTransform, canvasTransform);
+  // Pixels to Vulkan's clip space, y down: `x * 2 / width - 1`.
+  block.screenTransform.set(2 / width, 0, 0, -1, 0, 2 / height, 0, -1, 0, 0, 1, 0, 0, 0, 0, 1);
+  transform2DMatrixInto(block.canvasNormalTransform, normalTransform(canvasTransform));
+  const { r, g, b, a } = usesLinearColors ? srgbToLinearColor(canvasModulate) : canvasModulate;
+  block.canvasModulation.set(r, g, b, a);
+  block.screenPixelSize.set(1 / width, 1 / height);
+  block.time = frame.time;
+  block.usesPixelSnap = frame.snapVerticesToPixel;
+  block.flags = usesLinearColors ? CONVERT_ATTRIBUTES_TO_LINEAR : 0;
+}
+
+/** Each member of `CanvasData` the unlit variants read, by where Godot writes it. */
+export const CANVAS_BINDINGS: readonly Binding<CanvasDataBlock>[] = [
   {
     uniform: `${DATA}.canvas_transform`,
     godot: 'renderer_canvas_render_rd.cpp:683',
-    value: (frame) => transform2DMatrix(frame.canvasTransform),
+    value: (block) => block.canvasTransform,
   },
   {
     uniform: `${DATA}.screen_transform`,
     godot: 'renderer_canvas_render_rd.cpp:679-682',
-    value: (frame) => screenTransform(frame.width, frame.height),
+    value: (block) => block.screenTransform,
   },
   {
     uniform: `${DATA}.canvas_normal_transform`,
     godot: 'renderer_canvas_render_rd.cpp:685-689',
-    value: (frame) => transform2DMatrix(normalTransform(frame.canvasTransform)),
+    value: (block) => block.canvasNormalTransform,
   },
   {
     uniform: `${DATA}.canvas_modulation`,
     godot: 'renderer_canvas_render_rd.cpp:691-698',
-    value: ({ canvasModulate, usesLinearColors }) => {
-      const { r, g, b, a } = usesLinearColors ? srgbToLinearColor(canvasModulate) : canvasModulate;
-      return new THREE.Vector4(r, g, b, a);
-    },
+    value: (block) => block.canvasModulation,
   },
   {
     uniform: `${DATA}.screen_pixel_size`,
     godot: 'renderer_canvas_render_rd.cpp:700-702',
-    value: (frame) => new THREE.Vector2(1 / frame.width, 1 / frame.height),
+    value: (block) => block.screenPixelSize,
   },
-  { uniform: `${DATA}.time`, godot: 'renderer_canvas_render_rd.cpp:704', value: (frame) => frame.time },
+  { uniform: `${DATA}.time`, godot: 'renderer_canvas_render_rd.cpp:704', value: (block) => block.time },
   {
     uniform: `${DATA}.use_pixel_snap`,
     godot: 'renderer_canvas_render_rd.cpp:705',
-    value: (frame) => frame.snapVerticesToPixel,
+    value: (block) => block.usesPixelSnap,
   },
   { uniform: `${DATA}.directional_light_count`, godot: 'renderer_canvas_render_rd.cpp:707', value: () => 0 },
-  {
-    uniform: `${DATA}.flags`,
-    godot: 'renderer_canvas_render_rd.cpp:729',
-    value: (frame) => (frame.usesLinearColors ? CONVERT_ATTRIBUTES_TO_LINEAR : 0),
-  },
+  { uniform: `${DATA}.flags`, godot: 'renderer_canvas_render_rd.cpp:729', value: (block) => block.flags },
 ];
+
+/** Points the `CanvasData` uniforms of `draw` at `block`. Numbers are copied: bind before each draw. */
+export function bindCanvasData(draw: CanvasDraw, block: CanvasDataBlock): void {
+  writeBindings(CANVAS_BINDINGS, draw.uniforms, block);
+}
+
+/** Written only by `writeCanvasBindings`: the block of each draw it writes, built on its first write. */
+// eslint-disable-next-line no-restricted-syntax -- perObject is outside the shader module, which imports only its own files (ADR-0072).
+const blocksOfDraws = new WeakMap<CanvasDraw, CanvasDataBlock>();
 
 /** Writes each uniform of `draw` the binding table names, from `frame`. */
 export function writeCanvasBindings(draw: CanvasDraw, frame: CanvasFrame): void {
-  writeBindings(CANVAS_BINDINGS, draw.uniforms, frame);
+  let block = blocksOfDraws.get(draw);
+  if (!block) blocksOfDraws.set(draw, (block = canvasDataBlock()));
+  writeCanvasData(block, frame);
+  bindCanvasData(draw, block);
 }
 
-/**
- * `_update_transform_2d_to_mat4` (`renderer_canvas_render_rd.cpp:45`): the axes and origin in x and y.
- * @canonical A Transform2D as the column-major mat4 a canvas template reads
- */
-export function transform2DMatrix({ a, b, c, d, tx, ty }: Transform2DColumns): THREE.Matrix4 {
-  return new THREE.Matrix4().set(a, c, 0, tx, b, d, 0, ty, 0, 0, 1, 0, 0, 0, 0, 1);
-}
-
-/** Pixels to Vulkan's clip space, y down: `x * 2 / width - 1`. */
-function screenTransform(width: number, height: number): THREE.Matrix4 {
-  return new THREE.Matrix4().set(2 / width, 0, 0, -1, 0, 2 / height, 0, -1, 0, 0, 1, 0, 0, 0, 0, 1);
+/** `_update_transform_2d_to_mat4` (`renderer_canvas_render_rd.cpp:45`): the axes and origin in x and y. */
+function transform2DMatrixInto(
+  out: THREE.Matrix4,
+  { a, b, c, d, tx, ty }: Transform2DColumns
+): THREE.Matrix4 {
+  return out.set(a, c, 0, tx, b, d, 0, ty, 0, 0, 1, 0, 0, 0, 0, 1);
 }
 
 /** The canvas transform's axes made unit length, with no origin. */

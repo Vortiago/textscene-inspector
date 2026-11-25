@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { layerQuadrants } from './renderingQuadrants';
+import { layerQuadrants, type RenderingQuadrant } from './renderingQuadrants';
 import { defaultTileData, type TileSetModel } from './types';
 import type { PlacedCell } from '../../nodes/2d/tiles/shared/tileData';
 import { tileTextureAt } from './testing/tileTexture';
 
 /** A square 16 px tileset whose source 0 holds tile (0, 0). */
 const SQUARE: TileSetModel = {
+  usesUvClipping: false,
   shape: 0,
   layout: 0,
   offsetAxis: 0,
@@ -32,8 +33,8 @@ function placed(x: number, y: number, sourceId = 0): PlacedCell {
   return { coords: { x, y }, sourceId, atlasCoords: { x: 0, y: 0 }, alternativeId: 0 };
 }
 
-const coordsOf = (quadrants: readonly (readonly PlacedCell[])[]) =>
-  quadrants.map((cells) => cells.map(({ coords }) => [coords.x, coords.y]));
+const coordsOf = (quadrants: readonly RenderingQuadrant[]) =>
+  quadrants.map(({ cells }) => cells.map(({ coords }) => [coords.x, coords.y]));
 
 /** The rendering quadrants of a layer that is not y-sorted. */
 function quadrantsOf(cells: readonly PlacedCell[], quadrantSize: number) {
@@ -75,6 +76,12 @@ describe('the rendering quadrants of a layer that is not y-sorted', () => {
     ]);
   });
 
+  it('places its canvas items at map_to_local of quadrant_size times its coords (tile_map_layer.cpp:554)', () => {
+    const [quadrant] = quadrantsOf([placed(3, 1)], 2);
+
+    expect(quadrant!.canvasItemsPosition).toEqual({ x: 40, y: 8 });
+  });
+
   it('returns no quadrant for no cells', () => {
     expect(quadrantsOf([], 16)).toEqual([]);
   });
@@ -102,6 +109,16 @@ describe('layerQuadrants', () => {
       [[0, 1]],
     ]);
   });
+  it("places a y-sorted row's canvas items at its sort y (tile_map_layer.cpp:547)", () => {
+    const quadrants = layerQuadrants([placed(2, 1)], SQUARE, {
+      ySortEnabled: true,
+      ySortOrigin: 3,
+      quadrantSize: 16,
+    });
+
+    expect(quadrants[0]!.canvasItemsPosition).toEqual({ x: 0, y: 27 });
+  });
+
   it("sorts a y-sorted row's cells by x, as every quadrant's", () => {
     const row = [placed(2, 0), placed(0, 0), placed(1, 0)];
     const quadrants = layerQuadrants(row, SQUARE, { ySortEnabled: true, ySortOrigin: 0, quadrantSize: 16 });

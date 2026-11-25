@@ -50,7 +50,10 @@ export function CPUParticles2D({ node, children }: NodeComponentProps) {
   const surfaces = useMemo(
     () =>
       props.emitting
-        ? { input: { props, container, size: texture.size }, useSurfaces: useParticleSurfaces }
+        ? {
+            input: { props, container, size: texture.size },
+            useSurfaces: useParticleSurfaces,
+          }
         : null,
     [props, container, texture.size]
   );
