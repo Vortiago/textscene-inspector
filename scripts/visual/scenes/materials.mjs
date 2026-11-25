@@ -48,16 +48,28 @@ export const MATERIAL_SCENES = [
     file: 'unit-standard-material-lit.tscn',
     litSurface: 'nodes',
   },
-  // Nine shading features on the generated shader. Godot 4.6.3: 0 px over 2/255. Classic: 11,140 px, max 217.
+  // Toon diffuse, clearcoat, rim, emission, AO, unshaded. Godot 4.6.3: 0 px over 2/255. Classic: 33,291 px.
   {
     name: 'material-standard-material-shading-lit',
     file: 'unit-standard-material-shading-lit.tscn',
     litSurface: 'nodes',
   },
-  // Fades, alpha and fallback materials on the generated shader. Godot 4.6.3: 363 px over 2/255, max 25.
+  // A normal map and anisotropy under the project's roughness limiter. Godot 4.6.3: 2 px. Classic: 25,121 px.
   {
-    name: 'material-standard-material-alpha-fallback-lit',
-    file: 'standard-material-alpha-fallback-lit/unit-standard-material-alpha-fallback-lit.tscn',
+    name: 'material-standard-material-limiter-lit',
+    file: 'standard-material-limiter-lit/unit-standard-material-limiter-lit.tscn',
+    litSurface: 'nodes',
+  },
+  // An ORM map with toon specular, and alpha with no specular. Godot 4.6.3: 0 px. Classic: 11,806 px.
+  {
+    name: 'material-standard-material-orm-alpha-lit',
+    file: 'unit-standard-material-orm-alpha-lit.tscn',
+    litSurface: 'nodes',
+  },
+  // A missing and an absent material and two fades, all default. Godot 4.6.3: 4 px over 2/255. Classic: 8 px.
+  {
+    name: 'material-standard-material-default-fade-lit',
+    file: 'unit-standard-material-default-fade-lit.tscn',
     litSurface: 'nodes',
   },
   // An AtlasTexture albedo's size under MSDF, on the generated shader. Godot 4.6.3: 156 px, max 46.

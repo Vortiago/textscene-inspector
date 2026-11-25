@@ -1,0 +1,53 @@
+[gd_scene format=3 uid="uid://unit_standard_material_limiter_lit"]
+
+; What it holds: a StandardMaterial3D with a normal map and anisotropy on a ground and a sphere, under a shadowed sun and a
+; colour ambient light, in a project whose screen-space roughness limiter has amount 1.0 and limit 0.6. They draw through Godot's
+; generated shader and the lit scene template (?litSurface=nodes), which reads the project's limiter.
+; Every other material golden draws the classic path, so only this one shows a regression in these features on the node path.
+
+[ext_resource type="Texture2D" path="res://normal-bumps.png" id="1_normal_bumps"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bumpy"]
+albedo_color = Color(0.75, 0.55, 0.45, 1)
+roughness = 0.2
+anisotropy_enabled = true
+anisotropy = 0.8
+normal_enabled = true
+normal_texture = ExtResource("1_normal_bumps")
+uv1_scale = Vector3(6, 6, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_ball"]
+radius = 0.5
+height = 1.0
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(4, 4)
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.1, 0.12, 0.16, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.25, 0.3, 0.4, 1)
+
+[node name="StandardMaterialLimiterLitRoot" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.8660254, -0.3830222, 0.3213938, 0, 0.6427876, 0.7660444, -0.5, -0.6634139, 0.5566704, 0, 3, 0)
+shadow_enabled = true
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_ground")
+surface_material_override/0 = SubResource("StandardMaterial3D_bumpy")
+
+[node name="Bumpy" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.7, 0.5, -0.4)
+mesh = SubResource("SphereMesh_ball")
+surface_material_override/0 = SubResource("StandardMaterial3D_bumpy")
+
+[node name="Bumpy2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.7, 0.5, 0.6)
+mesh = SubResource("SphereMesh_ball")
+surface_material_override/0 = SubResource("StandardMaterial3D_bumpy")

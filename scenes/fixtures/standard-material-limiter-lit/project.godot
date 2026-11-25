@@ -6,8 +6,8 @@ config_version=5
 
 [application]
 
-config/name="Standard material alpha and fallback"
-run/main_scene="res://unit-standard-material-alpha-fallback-lit.tscn"
+config/name="Standard material roughness limiter"
+run/main_scene="res://unit-standard-material-limiter-lit.tscn"
 config/features=PackedStringArray("4.6")
 
 [rendering]
