@@ -6,7 +6,6 @@ import { canvasMeshGeometry } from '../meshes/canvasMeshGeometry';
 import {
   atlasRectRegion,
   boundItem,
-  growItemBox,
   meshCommands,
   sameCommandLayout,
   surfaceCommands,
@@ -228,8 +227,12 @@ describe('boundItem', () => {
   });
 });
 
-describe('growItemBox', () => {
-  const box = () => new THREE.Box3();
+describe('boundItem of one command', () => {
+  const itemBox = (command: CanvasShaderCommand) => {
+    const geometry = new THREE.BufferGeometry();
+    boundItem(geometry, [command]);
+    return geometry.boundingBox!;
+  };
   const corners = (min: [number, number], max: [number, number]) =>
     new THREE.Box3(new THREE.Vector3(...min, 0), new THREE.Vector3(...max, 0));
 
@@ -240,7 +243,7 @@ describe('growItemBox', () => {
       modulate: { r: 1, g: 1, b: 1, a: 1 },
     };
 
-    expect(growItemBox(box(), flipped)).toEqual(corners([-8, -6], [8, -2]));
+    expect(itemBox(flipped)).toEqual(corners([-8, -6], [8, -2]));
   });
 
   it("takes a mesh's points, which Godot bounds as the surface's AABB", () => {
@@ -258,7 +261,7 @@ describe('growItemBox', () => {
       },
     };
 
-    expect(growItemBox(box(), mesh)).toEqual(corners([-3, -4], [5, 7]));
+    expect(itemBox(mesh)).toEqual(corners([-3, -4], [5, 7]));
   });
 
   it('leaves the box empty for a mesh of no points', () => {
@@ -267,6 +270,6 @@ describe('growItemBox', () => {
       arrays: { primitive: 'triangles', points: [], colors: [], uvs: [] },
     };
 
-    expect(growItemBox(box(), empty).isEmpty()).toBe(true);
+    expect(itemBox(empty).isEmpty()).toBe(true);
   });
 });

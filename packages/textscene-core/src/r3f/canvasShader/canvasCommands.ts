@@ -71,14 +71,14 @@ export function boundItem(geometry: THREE.BufferGeometry, commands: readonly Can
 }
 
 /** Grows `box` by `command` as `Item::get_rect` does (`renderer_canvas_render.cpp:59-86`), with three's y. */
-export function growItemBox(box: THREE.Box3, command: CanvasShaderCommand): THREE.Box3 {
+function growItemBox(box: THREE.Box3, command: CanvasShaderCommand): void {
   if (command.kind === 'mesh') {
     for (const { x, y } of command.arrays.points) box.expandByPoint(corner.set(x, -y, 0));
-    return box;
+    return;
   }
   const { x, y, w, h } = command.region.rect;
   box.expandByPoint(corner.set(x, -y, 0));
-  return box.expandByPoint(corner.set(x + w, -(y + h), 0));
+  box.expandByPoint(corner.set(x + w, -(y + h), 0));
 }
 
 /** Each surface at the item's origin, white (`polygon_2d.cpp:401`), or null for a placed or skinned one. */
