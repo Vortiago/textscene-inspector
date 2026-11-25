@@ -1,35 +1,27 @@
-/** OmniLight3D property formatter: the inspector sections for the light. */
-
-import type { PropertySection } from '../../../../../../../core/NodeRegistry';
-import type { OmniLight3DProperties } from '../../../../../../../nodes/3d/lights/omnilight3d/types';
-import { formatNode3DProperties } from '../../../base/node3d/propertyFormatter';
 import { OMNI_LIGHT_3D_SHADOW_MODE_NAMES } from '../../../../../../../godot/scene/light';
-import { formatBaseLightSection, formatShadowSectionWithNormalBias } from '../shared/propertyFormatter';
+import type { InspectedNode, PropertySection } from '../../../inspectedNode';
+import { formatNode3DProperties } from '../../../base/node3d/propertyFormatter';
+import {
+  formatBaseLightSection,
+  formatShadowSectionWithNormalBias,
+  setRows,
+} from '../shared/propertyFormatter';
 
-export function formatOmniLight3DProperties(properties: OmniLight3DProperties): PropertySection[] {
-  const sections: PropertySection[] = [];
-
-  const omniLightItems: PropertySection['items'] = [
-    { label: 'Range', value: properties.omni_range.toFixed(2) },
-    { label: 'Attenuation', value: properties.omni_attenuation.toFixed(2) },
-  ];
-
-  sections.push(formatBaseLightSection(properties, omniLightItems));
-
-  const omniShadowItems: PropertySection['items'] = [];
-
-  if (properties.omni_shadow_mode !== undefined) {
-    omniShadowItems.push({
+export async function formatOmniLight3DProperties(node: InspectedNode): Promise<PropertySection[]> {
+  const values = await node.read(['omni_range', 'omni_attenuation']);
+  const shadowItems = await setRows(node, [
+    {
+      property: 'omni_shadow_mode',
       label: 'Shadow Mode',
-      value:
-        OMNI_LIGHT_3D_SHADOW_MODE_NAMES[properties.omni_shadow_mode] ??
-        `Unknown (${properties.omni_shadow_mode})`,
-    });
-  }
-
-  sections.push(formatShadowSectionWithNormalBias(properties, omniShadowItems));
-
-  sections.push(...formatNode3DProperties(properties));
-
-  return sections;
+      text: (mode) => OMNI_LIGHT_3D_SHADOW_MODE_NAMES[mode] ?? `Unknown (${mode})`,
+    },
+  ]);
+  return [
+    await formatBaseLightSection(node, [
+      { label: 'Range', value: values.number('omni_range').toFixed(2) },
+      { label: 'Attenuation', value: values.number('omni_attenuation').toFixed(2) },
+    ]),
+    await formatShadowSectionWithNormalBias(node, shadowItems),
+    ...(await formatNode3DProperties(node)),
+  ];
 }

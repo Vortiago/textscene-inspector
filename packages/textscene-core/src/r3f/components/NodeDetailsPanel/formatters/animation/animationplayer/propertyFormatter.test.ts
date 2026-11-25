@@ -1,99 +1,53 @@
-/**
- * AnimationPlayer propertyFormatter tests.
- */
-
 import { describe, it, expect } from 'vitest';
 import { formatAnimationPlayerProperties } from './propertyFormatter';
-import type { AnimationPlayerProperties } from '../../../../../../nodes/animation/animationplayer/types';
+import { SCENE_PATH, sectionsOf, sectionTitled, valueOf } from '../../testing/inspectedScene';
 
-import {
-  AnimationCallbackModeProcess,
-  AnimationCallbackModeMethod,
-} from '../../../../../../godot/scene/animation';
-
-function makeProps(overrides: Partial<AnimationPlayerProperties> = {}): AnimationPlayerProperties {
-  return {
-    name: 'AnimationPlayer',
-    speed_scale: 1.0,
-    playback_default_blend_time: 0.0,
-    callback_mode_process: AnimationCallbackModeProcess.IDLE,
-    callback_mode_method: AnimationCallbackModeMethod.DEFERRED,
-    active: true,
-    autoplay: '',
-    current_animation: '',
-    current_animation_length: 0.0,
-    current_animation_position: 0.0,
-    root_node: 'NodePath("..")',
-    libraries: [],
-    ...overrides,
-  };
+function sections(properties: Record<string, string> = {}) {
+  return sectionsOf(formatAnimationPlayerProperties, 'AnimationPlayer', properties, {
+    sub: { Lib_default: 'AnimationLibrary', Lib_combat: 'AnimationLibrary' },
+  });
 }
 
 describe('formatAnimationPlayerProperties', () => {
-  it('returns sections array with Playback and Animation Libraries sections', () => {
-    const sections = formatAnimationPlayerProperties(makeProps());
-    const titles = sections.map((s) => s.title);
+  it('lists a Playback and an Animation Libraries section', async () => {
+    const titles = (await sections()).map((s) => s.title);
     expect(titles).toContain('Playback');
-    expect(titles.some((t) => t.startsWith('Animation Libraries'))).toBe(true);
+    expect(titles).toContain('Animation Libraries');
   });
 
-  it('shows speed_scale in Playback section', () => {
-    const sections = formatAnimationPlayerProperties(makeProps({ speed_scale: 2.5 }));
-    const playback = sections.find((s) => s.title === 'Playback');
-    const speedItem = playback?.items.find((i) => i.label === 'Speed Scale');
-    expect(speedItem?.value).toBe('2.500');
+  it('lists the speed scale the file sets', async () => {
+    expect(valueOf(await sections({ speed_scale: '2.5' }), 'Speed Scale')).toBe('2.500');
   });
 
-  it('shows autoplay name when set', () => {
-    const sections = formatAnimationPlayerProperties(makeProps({ autoplay: 'idle' }));
-    const playback = sections.find((s) => s.title === 'Playback');
-    const autoItem = playback?.items.find((i) => i.label === 'Autoplay');
-    expect(autoItem?.value).toBe('idle');
+  it('lists the autoplay name the file sets', async () => {
+    expect(valueOf(await sections({ autoplay: '&"idle"' }), 'Autoplay')).toBe('idle');
   });
 
-  it('shows (none) for empty autoplay', () => {
-    const sections = formatAnimationPlayerProperties(makeProps({ autoplay: '' }));
-    const playback = sections.find((s) => s.title === 'Playback');
-    const autoItem = playback?.items.find((i) => i.label === 'Autoplay');
-    expect(autoItem?.value).toBe('(none)');
+  it('names an empty autoplay as none', async () => {
+    expect(valueOf(await sections(), 'Autoplay')).toBe('(none)');
   });
 
-  it('lists each library by name with its SubResource id', () => {
-    const sections = formatAnimationPlayerProperties(
-      makeProps({
-        libraries: [
-          { name: '', subResourceId: 'Lib_default' },
-          { name: 'combat', subResourceId: 'Lib_combat' },
-        ],
-      })
-    );
-    const libSection = sections.find((s) => s.title.startsWith('Animation Libraries'));
-    expect(libSection?.title).toBe('Animation Libraries (2)');
-    const defaultItem = libSection?.items.find((i) => i.label === '(default)');
-    expect(defaultItem?.value).toBe('SubResource("Lib_default")');
-    const combatItem = libSection?.items.find((i) => i.label === 'combat');
-    expect(combatItem?.value).toBe('SubResource("Lib_combat")');
+  it('lists each library by name with its path', async () => {
+    const set = await sections({
+      libraries: '{\n&"": SubResource("Lib_default"),\n&"combat": SubResource("Lib_combat")\n}',
+    });
+    const libraries = set.find((s) => s.title.startsWith('Animation Libraries'));
+    expect(libraries?.title).toBe('Animation Libraries (2)');
+    expect(libraries?.items).toEqual([
+      { label: '(default)', value: `${SCENE_PATH}::Lib_default` },
+      { label: 'combat', value: `${SCENE_PATH}::Lib_combat` },
+    ]);
   });
 
-  it('shows "0 — no libraries defined" when libraries list is empty', () => {
-    const sections = formatAnimationPlayerProperties(makeProps({ libraries: [] }));
-    const libSection = sections.find((s) => s.title === 'Animation Libraries');
-    expect(libSection?.items[0]?.value).toMatch(/no libraries/);
+  it('says no library is defined when the player holds none', async () => {
+    expect(sectionTitled(await sections(), 'Animation Libraries')?.items[0]?.value).toMatch(/no libraries/);
   });
 
-  it('shows process mode as human-readable string', () => {
-    const sections = formatAnimationPlayerProperties(
-      makeProps({ callback_mode_process: AnimationCallbackModeProcess.PHYSICS })
-    );
-    const playback = sections.find((s) => s.title === 'Playback');
-    const modeItem = playback?.items.find((i) => i.label === 'Process Mode');
-    expect(modeItem?.value).toBe('Physics');
+  it('names the process mode', async () => {
+    expect(valueOf(await sections({ callback_mode_process: '0' }), 'Process Mode')).toBe('Physics');
   });
 
-  it('shows active = false correctly', () => {
-    const sections = formatAnimationPlayerProperties(makeProps({ active: false }));
-    const playback = sections.find((s) => s.title === 'Playback');
-    const activeItem = playback?.items.find((i) => i.label === 'Active');
-    expect(activeItem?.value).toBe('false');
+  it('lists an inactive player as active false', async () => {
+    expect(valueOf(await sections({ active: 'false' }), 'Active')).toBe('false');
   });
 });

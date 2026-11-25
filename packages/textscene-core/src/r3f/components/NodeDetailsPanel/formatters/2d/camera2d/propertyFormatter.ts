@@ -1,27 +1,7 @@
-/** Camera2D property formatter: the view-framing properties for the details panel. */
-
-import type { PropertySection } from '../../../../../../core/NodeRegistry';
-import { type Camera2DProperties } from '../../../../../../nodes/2d/camera2d/types';
-import { formatNode2DProperties } from '../../base/node2d/propertyFormatter';
 import { Camera2DAnchorMode } from '../../../../../../godot/scene/camera2d';
-
-export function formatCamera2DProperties(properties: Camera2DProperties): PropertySection[] {
-  const sections: PropertySection[] = [];
-
-  sections.push({
-    title: 'Camera',
-    items: [
-      { label: 'Zoom', value: `(${properties.zoom.x}, ${properties.zoom.y})` },
-      { label: 'Offset', value: `(${properties.offset.x}, ${properties.offset.y})` },
-      { label: 'Anchor Mode', value: anchorModeName(properties.anchor_mode) },
-      { label: 'Enabled', value: properties.enabled ? 'Yes' : 'No' },
-    ],
-  });
-
-  sections.push(...formatNode2DProperties(properties));
-
-  return sections;
-}
+import type { InspectedNode, PropertySection } from '../../inspectedNode';
+import { formatNode2DProperties } from '../../base/node2d/propertyFormatter';
+import { tupleText, yesNo } from '../../valueText';
 
 function anchorModeName(mode: number): string {
   switch (mode) {
@@ -32,4 +12,20 @@ function anchorModeName(mode: number): string {
     default:
       return 'Unknown';
   }
+}
+
+export async function formatCamera2DProperties(node: InspectedNode): Promise<PropertySection[]> {
+  const values = await node.read(['zoom', 'offset', 'anchor_mode', 'enabled']);
+  return [
+    {
+      title: 'Camera',
+      items: [
+        { label: 'Zoom', value: tupleText(values.numbers('zoom')) },
+        { label: 'Offset', value: tupleText(values.numbers('offset')) },
+        { label: 'Anchor Mode', value: anchorModeName(values.number('anchor_mode')) },
+        { label: 'Enabled', value: yesNo(values.boolean('enabled')) },
+      ],
+    },
+    ...(await formatNode2DProperties(node)),
+  ];
 }

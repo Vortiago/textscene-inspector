@@ -1,55 +1,60 @@
-/**
- * Decal property formatter: formats decal properties for the details panel.
- */
-
-import type { PropertySection } from '../../../../../../core/NodeRegistry';
-import { formatColorRgba } from '../../../../../../utils/colorParser';
+import type { InspectedNode, PropertySection } from '../../inspectedNode';
 import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
-import type { DecalProperties } from '../../../../../../nodes/3d/decal/types';
+import { resourceText, rgbaText, tupleText } from '../../valueText';
 
-export function formatDecalProperties(properties: DecalProperties): PropertySection[] {
-  const sections: PropertySection[] = [];
+const DECAL_PROPERTIES = [
+  'texture_albedo',
+  'texture_normal',
+  'texture_orm',
+  'texture_emission',
+  'size',
+  'modulate',
+  'albedo_mix',
+  'normal_fade',
+  'upper_fade',
+  'lower_fade',
+  'cull_mask',
+  'distance_fade_enabled',
+  'distance_fade_begin',
+  'distance_fade_length',
+] as const;
 
-  const textureItems: PropertySection['items'] = [
-    { label: 'Albedo', value: properties.texture_albedo ?? '(none)' },
+/** The other maps show only where the decal holds one. */
+const OPTIONAL_TEXTURES = [
+  ['Normal', 'texture_normal'],
+  ['ORM', 'texture_orm'],
+  ['Emission', 'texture_emission'],
+] as const;
+
+export async function formatDecalProperties(node: InspectedNode): Promise<PropertySection[]> {
+  const values = await node.read(DECAL_PROPERTIES);
+  const textureItems = [{ label: 'Albedo', value: resourceText(values.resource('texture_albedo')) }];
+  for (const [label, property] of OPTIONAL_TEXTURES) {
+    const texture = values.resource(property);
+    if (texture !== null) textureItems.push({ label, value: texture });
+  }
+  return [
+    { title: 'Textures', items: textureItems },
+    {
+      title: 'Projection',
+      items: [
+        { label: 'Size', value: tupleText(values.numbers('size')) },
+        { label: 'Modulate', value: rgbaText(values.numbers('modulate')) },
+        { label: 'Albedo Mix', value: values.number('albedo_mix').toFixed(2) },
+        { label: 'Normal Fade', value: values.number('normal_fade').toFixed(2) },
+        { label: 'Upper Fade', value: values.number('upper_fade').toFixed(2) },
+        { label: 'Lower Fade', value: values.number('lower_fade').toFixed(2) },
+        { label: 'Cull Mask', value: `0x${values.number('cull_mask').toString(16)}` },
+      ],
+    },
+    {
+      title: 'Distance Fade',
+      items: [
+        { label: 'Enabled', value: String(values.boolean('distance_fade_enabled')) },
+        { label: 'Begin', value: values.number('distance_fade_begin').toFixed(2) },
+        { label: 'Length', value: values.number('distance_fade_length').toFixed(2) },
+      ],
+    },
+    ...(await formatNode3DProperties(node)),
   ];
-  if (properties.texture_normal) {
-    textureItems.push({ label: 'Normal', value: properties.texture_normal });
-  }
-  if (properties.texture_orm) {
-    textureItems.push({ label: 'ORM', value: properties.texture_orm });
-  }
-  if (properties.texture_emission) {
-    textureItems.push({ label: 'Emission', value: properties.texture_emission });
-  }
-  sections.push({ title: 'Textures', items: textureItems });
-
-  sections.push({
-    title: 'Projection',
-    items: [
-      {
-        label: 'Size',
-        value: `(${properties.size.x}, ${properties.size.y}, ${properties.size.z})`,
-      },
-      { label: 'Modulate', value: formatColorRgba(properties.modulate) },
-      { label: 'Albedo Mix', value: properties.albedo_mix.toFixed(2) },
-      { label: 'Normal Fade', value: properties.normal_fade.toFixed(2) },
-      { label: 'Upper Fade', value: properties.upper_fade.toFixed(2) },
-      { label: 'Lower Fade', value: properties.lower_fade.toFixed(2) },
-      { label: 'Cull Mask', value: `0x${properties.cull_mask.toString(16)}` },
-    ],
-  });
-
-  sections.push({
-    title: 'Distance Fade',
-    items: [
-      { label: 'Enabled', value: properties.distance_fade_enabled ? 'true' : 'false' },
-      { label: 'Begin', value: properties.distance_fade_begin.toFixed(2) },
-      { label: 'Length', value: properties.distance_fade_length.toFixed(2) },
-    ],
-  });
-
-  sections.push(...formatNode3DProperties(properties));
-
-  return sections;
 }

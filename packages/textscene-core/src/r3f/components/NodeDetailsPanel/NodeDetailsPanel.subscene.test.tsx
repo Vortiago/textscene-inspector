@@ -1,370 +1,109 @@
-/**
- * The inspector resolves a node selected inside an instanced PackedScene.
- * `SceneGraph.flattenedNodes` lacks the lazily loaded sub-scene interiors, so
- * the panel resolves through `useLiveNode` over the tree the outliner shows,
- * and re-derives on the live-tree version tick when a sub-scene lands.
- */
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
-import type { ReactNode } from 'react';
-import { NodeDetailsPanel } from './NodeDetailsPanel';
-import { HierarchyProvider } from '../../contexts/HierarchyContext';
-import { SelectionProvider, useSelection } from '../../contexts/SelectionContext';
-import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
-import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import { seedGlbInstance } from '../../../resources/testing/seedGlbInstance';
-import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
-import { nodeRegistry } from '../../../core/NodeRegistry';
-import { TscnParser } from '../../../parser/TscnParser';
-import '../../../nodes/2d/sprite2d/index';
-import * as THREE from 'three';
-import type { ResourceLoader } from '../../../resources/ResourceLoader';
-import type { TscnNode, TscnScene, TscnExternalResource } from '../../../parser/types';
-import { INSTANTIABLE_SCENE } from '../../../parser/sceneDefaults.testkit';
+import { join } from 'node:path';
+import { describe, expect, it, vi } from 'vitest';
+import { act, screen } from '@testing-library/react';
+import { fileBytes } from '../../../resources/testing/fileBytes';
+import { renderInspector } from './inspector.testkit';
 
-function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): TscnNode {
-  return { rawProperties: {}, name, type, children: [], properties: {}, ...extras };
-}
+const LAMP = `[gd_scene format=3]
 
-function makeExtResource(id: string, path: string, type = 'PackedScene'): TscnExternalResource {
-  return { id, path, type };
-}
+[node name="ceiling_lamp" type="Node3D"]
 
-function Selector({ path }: { path: string | null }) {
-  const { setSelectedNodePath } = useSelection();
-  return (
-    <button data-testid="select-node" onClick={() => setSelectedNodePath(path)}>
-      select
-    </button>
-  );
-}
+[node name="plafoniera" type="MeshInstance3D" parent="."]
+`;
 
-function wrap(loader: ResourceLoader, graph: ReturnType<typeof createSceneGraphFromTscnScene>) {
-  return function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
-        <SelectionProvider>
-          <ResourceLoaderProvider loader={loader}>{children}</ResourceLoaderProvider>
-        </SelectionProvider>
-      </HierarchyProvider>
-    );
-  };
-}
+const ROOM = `[gd_scene format=3]
 
-const LAMP_MESH_TYPE = '___LampMeshType___';
-const COIN_ROOT_TYPE = '___CoinRootType___';
+[ext_resource type="PackedScene" path="res://ceiling_lamp.tscn" id="3_as5ck"]
 
-afterEach(() => {
-  nodeRegistry.unregister(LAMP_MESH_TYPE);
-  nodeRegistry.unregister(COIN_ROOT_TYPE);
-});
+[node name="RoomGeometry" type="Node3D"]
 
-describe('<NodeDetailsPanel> BUG 1 — sub-scene interior selection', () => {
-  it('resolves a node INSIDE an instanced PackedScene (not just flattenedNodes)', async () => {
-    nodeRegistry.register({
-      typeName: LAMP_MESH_TYPE,
-      parser: () => ({}),
-    });
+[node name="ceiling_lamp" parent="." instance=ExtResource("3_as5ck")]
 
-    const { loader, scenes } = createFakeResourceLoader();
+[node name="InlineNode" type="Node3D" parent="."]
+`;
 
-    // The sub-scene: a root with an interior mesh node.
-    const subScene: TscnScene = {
-      ...INSTANTIABLE_SCENE,
-      nodes: [
-        makeNode('ceiling_lamp', 'Node3D', {
-          children: [makeNode('plafoniera', LAMP_MESH_TYPE)],
-        }),
-      ],
-      externalResources: [],
-      internalResources: [],
-    };
-    scenes.seed('res://ceiling_lamp.tscn', subScene);
+const FILES = { 'res://ceiling_lamp.tscn': LAMP };
 
-    // Root scene instances the sub-scene at "RoomGeometry/ceiling_lamp".
-    const graph = createSceneGraphFromTscnScene({
-      nodes: [
-        makeNode('RoomGeometry', 'Node3D', {
-          children: [makeNode('ceiling_lamp', 'Node3D', { instance: 'ExtResource("3_as5ck")' })],
-        }),
-      ],
-      externalResources: [makeExtResource('3_as5ck', 'res://ceiling_lamp.tscn')],
-      internalResources: [],
-    });
+/** Rig, its mesh Torso, and Arm below Torso. */
+const RIG_GLB = fileBytes(
+  join(import.meta.dirname, '../../../../../../scenes/fixtures/meshes/unit-glb-rig.glb')
+);
 
-    // Instance root merge (ADR-0013) collapses the sub-scene root into the
-    // instance node, so the interior child sits directly under its path.
-    const interiorPath = 'RoomGeometry/ceiling_lamp/plafoniera';
+describe('<NodeDetailsPanel> over an instance', () => {
+  it('shows a node inside an instanced scene once the scene loads', async () => {
+    await renderInspector(ROOM, 'RoomGeometry/ceiling_lamp/plafoniera', { files: FILES });
 
-    render(
-      <>
-        <NodeDetailsPanel />
-        <Selector path={interiorPath} />
-      </>,
-      { wrapper: wrap(loader, graph) }
-    );
-
-    expect(screen.getByText(/Select a node/i)).toBeTruthy();
-
-    await act(async () => {
-      screen.getByTestId('select-node').click();
-    });
-
-    expect(screen.queryByText(/Select a node/i)).toBeNull();
     expect(screen.getByRole('heading', { name: 'plafoniera' })).toBeTruthy();
-    expect(screen.getByText(interiorPath)).toBeTruthy();
+    expect(screen.getByText('RoomGeometry/ceiling_lamp/plafoniera')).toBeTruthy();
   });
 
-  it('resolves a sub-scene interior selected BEFORE the sub-scene loads (late arrival, no pre-seed)', async () => {
-    nodeRegistry.register({
-      typeName: LAMP_MESH_TYPE,
-      parser: () => ({}),
-    });
-
-    // The cache is empty at selection time, so the panel must re-resolve on the
-    // version tick when the sub-scene lands.
-    const { loader, scenes } = createFakeResourceLoader();
-
-    const graph = createSceneGraphFromTscnScene({
-      nodes: [
-        makeNode('RoomGeometry', 'Node3D', {
-          children: [makeNode('ceiling_lamp', 'Node3D', { instance: 'ExtResource("3_as5ck")' })],
-        }),
-      ],
-      externalResources: [makeExtResource('3_as5ck', 'res://ceiling_lamp.tscn')],
-      internalResources: [],
-    });
-
-    const interiorPath = 'RoomGeometry/ceiling_lamp/plafoniera';
-
-    render(
-      <>
-        <NodeDetailsPanel />
-        <Selector path={interiorPath} />
-      </>,
-      { wrapper: wrap(loader, graph) }
-    );
-
-    // Select the interior while its sub-scene is still loading.
-    await act(async () => {
-      screen.getByTestId('select-node').click();
-    });
-
-    // Unresolvable yet, so the placeholder shows for now.
-    expect(screen.getByText(/Select a node/i)).toBeTruthy();
-
-    // The sub-scene lands as the ResourceLoader announces it. The inspector picks
-    // it up through the version tick, with no re-selection.
-    const subScene: TscnScene = {
-      ...INSTANTIABLE_SCENE,
-      nodes: [
-        makeNode('ceiling_lamp', 'Node3D', {
-          children: [makeNode('plafoniera', LAMP_MESH_TYPE)],
-        }),
-      ],
-      externalResources: [],
-      internalResources: [],
-    };
-    await act(async () => {
-      scenes.seed('res://ceiling_lamp.tscn', subScene);
-      loader.eventBus.emit('scene', 'loaded', 'res://ceiling_lamp.tscn');
-    });
-
-    expect(screen.queryByText(/Select a node/i)).toBeNull();
-    expect(screen.getByRole('heading', { name: 'plafoniera' })).toBeTruthy();
-    expect(screen.getByText(interiorPath)).toBeTruthy();
-  });
-
-  it('still resolves an inline node', async () => {
-    nodeRegistry.register({
-      typeName: LAMP_MESH_TYPE,
-      parser: () => ({}),
-    });
-
-    const { loader } = createFakeResourceLoader();
-    const graph = createSceneGraphFromTscnScene({
-      nodes: [makeNode('InlineNode', LAMP_MESH_TYPE)],
-    });
-
-    render(
-      <>
-        <NodeDetailsPanel />
-        <Selector path="InlineNode" />
-      </>,
-      { wrapper: wrap(loader, graph) }
-    );
-
-    await act(async () => {
-      screen.getByTestId('select-node').click();
-    });
-
-    expect(screen.queryByText(/Select a node/i)).toBeNull();
+  it('shows a node the host file adds beside the instance', async () => {
+    await renderInspector(ROOM, 'RoomGeometry/InlineNode', { files: FILES });
     expect(screen.getByRole('heading', { name: 'InlineNode' })).toBeTruthy();
   });
-});
 
-describe('<NodeDetailsPanel> BUG 2 — instance root shows the collapsed identity', () => {
-  it('shows the merged sub-scene root type for a selected instance ROOT, not the wrapper', async () => {
-    nodeRegistry.register({
-      typeName: COIN_ROOT_TYPE,
-      parser: () => ({}),
-    });
+  it("shows an instance root by the class of its scene's root and the scene it instances", async () => {
+    const coin = `[gd_scene format=3]\n\n[node name="Coin" type="Area3D"]\n`;
+    const level = `[gd_scene format=3]
 
-    const { loader, scenes } = createFakeResourceLoader();
+[ext_resource type="PackedScene" path="res://coin.tscn" id="7_coin"]
 
-    // Instance root merge (ADR-0013): the instance node adopts the sub-scene
-    // root's type and properties, and the inspector agrees with the tree.
-    const subScene: TscnScene = {
-      ...INSTANTIABLE_SCENE,
-      nodes: [makeNode('CoinBody', COIN_ROOT_TYPE)],
-      externalResources: [],
-      internalResources: [],
-    };
-    scenes.seed('res://coin.tscn', subScene);
+[node name="Level" type="Node3D"]
 
-    // Root scene: a top-level instance node whose WRAPPER type is Node3D.
-    const graph = createSceneGraphFromTscnScene({
-      nodes: [makeNode('Coin1', 'Node3D', { instance: 'ExtResource("7_coin")' })],
-      externalResources: [makeExtResource('7_coin', 'res://coin.tscn')],
-      internalResources: [],
-    });
+[node name="Coin1" parent="." instance=ExtResource("7_coin")]
+`;
+    await renderInspector(level, 'Level/Coin1', { files: { 'res://coin.tscn': coin } });
 
-    render(
-      <>
-        <NodeDetailsPanel />
-        <Selector path="Coin1" />
-      </>,
-      { wrapper: wrap(loader, graph) }
-    );
-
-    await act(async () => {
-      screen.getByTestId('select-node').click();
-    });
-
-    // The merged node keeps the instance name but adopts the root's type.
-    expect(screen.getByRole('heading', { name: 'Coin1' })).toBeTruthy();
-    expect(screen.getByText(COIN_ROOT_TYPE)).toBeTruthy();
-    expect(screen.queryByText('Node3D')).toBeNull();
-    // It still shows the external-instance row, as the tree's 📦 badge does. The
-    // merged node's own `instance` is undefined for a plain root, so the row
-    // reads the originating instance ref.
-    expect(screen.getByText(/External/i)).toBeTruthy();
-    expect(screen.getByText('ExtResource("7_coin")')).toBeTruthy();
+    expect(screen.getByText('Area3D')).toBeTruthy();
+    expect(await screen.findByText('res://coin.tscn')).toBeTruthy();
   });
-});
 
-describe('<NodeDetailsPanel> on an override whose id the sub-scene also holds', () => {
-  it('shows the id the host file wrote', async () => {
-    const { loader, scenes } = createFakeResourceLoader();
-    scenes.seed(
-      'res://sprite.tscn',
-      new TscnParser().parse(`[gd_scene format=3]
+  it('shows the texture the host file sets over the one its instance sets, under an id both files hold', async () => {
+    const sprite = `[gd_scene format=3]
 
 [ext_resource type="Texture2D" path="res://inner.png" id="1"]
 
 [node name="Sprite" type="Sprite2D"]
 texture = ExtResource("1")
-`)
-    );
-    const graph = createSceneGraphFromTscnScene(
-      new TscnParser().parse(`[gd_scene format=3]
+`;
+    const hero = `[gd_scene format=3]
 
 [ext_resource type="Texture2D" path="res://outer.png" id="1"]
 [ext_resource type="PackedScene" path="res://sprite.tscn" id="2"]
 
 [node name="Hero" instance=ExtResource("2")]
 texture = ExtResource("1")
-`)
-    );
+`;
+    await renderInspector(hero, 'Hero', { files: { 'res://sprite.tscn': sprite } });
 
-    render(
-      <>
-        <NodeDetailsPanel />
-        <Selector path="Hero" />
-      </>,
-      { wrapper: wrap(loader, graph) }
-    );
-    await act(async () => {
-      screen.getByTestId('select-node').click();
-    });
-
-    expect(screen.getByText('ExtResource("1")')).toBeTruthy();
+    expect(await screen.findByText('res://outer.png')).toBeTruthy();
+    expect(screen.queryByText('res://inner.png')).toBeNull();
   });
 });
 
 describe('<NodeDetailsPanel> copy node path inside an instance', () => {
-  it('copies through the instance node, whose name is the merged sub-scene root', async () => {
-    nodeRegistry.register({ typeName: LAMP_MESH_TYPE, parser: () => ({}) });
-    const { loader, scenes } = createFakeResourceLoader();
-    scenes.seed('res://ceiling_lamp.tscn', {
-      ...INSTANTIABLE_SCENE,
-      nodes: [makeNode('ceiling_lamp', 'Node3D', { children: [makeNode('plafoniera', LAMP_MESH_TYPE)] })],
-      externalResources: [],
-      internalResources: [],
-    });
-    const graph = createSceneGraphFromTscnScene({
-      nodes: [
-        makeNode('RoomGeometry', 'Node3D', {
-          children: [makeNode('ceiling_lamp', 'Node3D', { instance: 'ExtResource("3_as5ck")' })],
-        }),
-      ],
-      externalResources: [makeExtResource('3_as5ck', 'res://ceiling_lamp.tscn')],
-      internalResources: [],
-    });
+  async function copyFor(source: string, selected: string, files: Record<string, string | ArrayBuffer>) {
     const onCopyNodePath = vi.fn();
+    await renderInspector(source, selected, { files, onCopyNodePath });
+    await act(async () => screen.getByRole('button', { name: 'Copy node path' }).click());
+    return onCopyNodePath;
+  }
 
-    render(
-      <>
-        <NodeDetailsPanel onCopyNodePath={onCopyNodePath} />
-        <Selector path="RoomGeometry/ceiling_lamp/plafoniera" />
-      </>,
-      { wrapper: wrap(loader, graph) }
-    );
-    await act(async () => {
-      screen.getByTestId('select-node').click();
-    });
-    await act(async () => {
-      screen.getByRole('button', { name: 'Copy node path' }).click();
-    });
-
-    expect(onCopyNodePath).toHaveBeenCalledExactlyOnceWith('ceiling_lamp/plafoniera');
+  it('copies the path through the instance node', async () => {
+    const copied = await copyFor(ROOM, 'RoomGeometry/ceiling_lamp/plafoniera', FILES);
+    expect(copied).toHaveBeenCalledExactlyOnceWith('ceiling_lamp/plafoniera');
   });
-});
 
-describe('<NodeDetailsPanel> copy node path inside an instanced GLB', () => {
-  it('copies the path Godot gives a GLB object, with no segment for the GLB file', async () => {
-    const fake = createFakeResourceLoader();
-    const { loader } = fake;
-    const named = (name: string) => Object.assign(new THREE.Group(), { name });
-    const rig = named('Scene');
-    const torso = named('Torso');
-    rig.add(torso);
-    seedGlbInstance(fake, 'res://rig.glb', rig);
-    const graph = createSceneGraphFromTscnScene({
-      nodes: [
-        makeNode('Root', 'Node3D', {
-          children: [makeNode('Body', 'Node3D', { instance: 'ExtResource("1_rig")' })],
-        }),
-      ],
-      externalResources: [makeExtResource('1_rig', 'res://rig.glb')],
-      internalResources: [],
-    });
-    const onCopyNodePath = vi.fn();
+  it('copies the path Godot gives a node of an instanced glTF', async () => {
+    const body = `[gd_scene format=3]
 
-    render(
-      <>
-        <NodeDetailsPanel onCopyNodePath={onCopyNodePath} />
-        <Selector path="Root/Body/Torso" />
-      </>,
-      { wrapper: wrap(loader, graph) }
-    );
-    await act(async () => {
-      screen.getByTestId('select-node').click();
-    });
-    await act(async () => {
-      screen.getByRole('button', { name: 'Copy node path' }).click();
-    });
+[ext_resource type="PackedScene" path="res://rig.glb" id="1_rig"]
 
-    expect(onCopyNodePath).toHaveBeenCalledExactlyOnceWith('Body/Torso');
+[node name="Root" type="Node3D"]
+
+[node name="Body" parent="." instance=ExtResource("1_rig")]
+`;
+    const copied = await copyFor(body, 'Root/Body/Rig/Torso', { 'res://rig.glb': RIG_GLB });
+    expect(copied).toHaveBeenCalledExactlyOnceWith('Body/Rig/Torso');
   });
 });

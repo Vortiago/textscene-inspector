@@ -1,105 +1,59 @@
-/**
- * AnimationTree propertyFormatter tests.
- */
-
 import { describe, it, expect } from 'vitest';
 import { formatAnimationTreeProperties } from './propertyFormatter';
-import type { AnimationTreeProperties } from '../../../../../../nodes/animation/animationtree/types';
+import { SCENE_PATH, sectionsOf, sectionTitled, valueOf } from '../../testing/inspectedScene';
 
-import {
-  AnimationCallbackModeProcess,
-  AnimationCallbackModeDiscrete,
-  AnimationCallbackModeMethod,
-} from '../../../../../../godot/scene/animation';
-
-function makeProps(overrides: Partial<AnimationTreeProperties> = {}): AnimationTreeProperties {
-  return {
-    name: 'AnimationTree',
-    active: false,
-    parameters: {},
-    anim_player: 'NodePath("..")',
-    process_callback: AnimationCallbackModeProcess.IDLE,
-    callback_mode_process: AnimationCallbackModeProcess.IDLE,
-    callback_mode_method: AnimationCallbackModeMethod.DEFERRED,
-    callback_mode_discrete: AnimationCallbackModeDiscrete.DOMINANT,
-    root_motion_track: 'NodePath("")',
-    advance_expression_base_node: 'NodePath("..")',
-    audio_max_polyphony: 32,
-    root_node: 'NodePath("..")',
-    deterministic: false,
-    reset_on_save: true,
-    root_motion_local: false,
-    ...overrides,
-  };
+function sections(properties: Record<string, string> = {}) {
+  return sectionsOf(formatAnimationTreeProperties, 'AnimationTree', properties, {
+    sub: { AnimSM_1: 'AnimationNodeStateMachine' },
+  });
 }
 
 describe('formatAnimationTreeProperties', () => {
-  it('returns sections with AnimationTree section', () => {
-    const sections = formatAnimationTreeProperties(makeProps());
-    const titles = sections.map((s) => s.title);
+  it('lists an AnimationTree and an Advanced section', async () => {
+    const titles = (await sections()).map((s) => s.title);
     expect(titles).toContain('AnimationTree');
     expect(titles).toContain('Advanced');
   });
 
-  it('shows active status', () => {
-    const sections = formatAnimationTreeProperties(makeProps({ active: true }));
-    const main = sections.find((s) => s.title === 'AnimationTree');
-    const activeItem = main?.items.find((i) => i.label === 'Active');
-    expect(activeItem?.value).toBe('true');
+  it('lists whether the tree is active', async () => {
+    expect(valueOf(await sections({ active: 'true' }), 'Active')).toBe('true');
   });
 
-  it('shows tree_root when set', () => {
-    const sections = formatAnimationTreeProperties(makeProps({ tree_root: 'SubResource("AnimSM_1")' }));
-    const main = sections.find((s) => s.title === 'AnimationTree');
-    const rootItem = main?.items.find((i) => i.label === 'Tree Root');
-    expect(rootItem?.value).toBe('SubResource("AnimSM_1")');
-  });
-
-  it('shows (none) for undefined tree_root', () => {
-    const sections = formatAnimationTreeProperties(makeProps({ tree_root: undefined }));
-    const main = sections.find((s) => s.title === 'AnimationTree');
-    const rootItem = main?.items.find((i) => i.label === 'Tree Root');
-    expect(rootItem?.value).toBe('(none)');
-  });
-
-  it('extracts NodePath value for AnimationPlayer display', () => {
-    const sections = formatAnimationTreeProperties(
-      makeProps({ anim_player: 'NodePath("../AnimationPlayer")' })
+  it('lists the path of the tree root the file sets', async () => {
+    expect(valueOf(await sections({ tree_root: 'SubResource("AnimSM_1")' }), 'Tree Root')).toBe(
+      `${SCENE_PATH}::AnimSM_1`
     );
-    const main = sections.find((s) => s.title === 'AnimationTree');
-    const playerItem = main?.items.find((i) => i.label === 'AnimationPlayer');
-    expect(playerItem?.value).toBe('../AnimationPlayer');
   });
 
-  it('shows Root Motion section when root_motion_track is non-empty', () => {
-    const sections = formatAnimationTreeProperties(
-      makeProps({ root_motion_track: 'NodePath("Skeleton3D:Root")' })
+  it('names an empty tree root as none', async () => {
+    expect(valueOf(await sections(), 'Tree Root')).toBe('(none)');
+  });
+
+  it('lists the path the anim_player NodePath holds', async () => {
+    expect(
+      valueOf(await sections({ anim_player: 'NodePath("../AnimationPlayer")' }), 'AnimationPlayer')
+    ).toBe('../AnimationPlayer');
+  });
+
+  it('lists a Root Motion section when root_motion_track names a track', async () => {
+    const set = await sections({ root_motion_track: 'NodePath("Skeleton3D:Root")' });
+    expect(sectionTitled(set, 'Root Motion')?.items.find((i) => i.label === 'Track')?.value).toBe(
+      'Skeleton3D:Root'
     );
-    const titles = sections.map((s) => s.title);
-    expect(titles).toContain('Root Motion');
-    const rmSection = sections.find((s) => s.title === 'Root Motion');
-    expect(rmSection?.items.find((i) => i.label === 'Track')?.value).toBe('Skeleton3D:Root');
   });
 
-  it('omits Root Motion section when root_motion_track is empty NodePath', () => {
-    const sections = formatAnimationTreeProperties(makeProps({ root_motion_track: 'NodePath("")' }));
-    const titles = sections.map((s) => s.title);
-    expect(titles).not.toContain('Root Motion');
+  it('lists no Root Motion section when root_motion_track is empty', async () => {
+    expect(sectionTitled(await sections(), 'Root Motion')).toBeUndefined();
   });
 
-  it('shows audio_max_polyphony in Advanced section', () => {
-    const sections = formatAnimationTreeProperties(makeProps({ audio_max_polyphony: 64 }));
-    const adv = sections.find((s) => s.title === 'Advanced');
-    const polyItem = adv?.items.find((i) => i.label === 'Audio Max Polyphony');
-    expect(polyItem?.value).toBe('64');
-  });
-
-  it('shows process callback as human-readable string', () => {
-    const sections = formatAnimationTreeProperties(
-      makeProps({ process_callback: AnimationCallbackModeProcess.PHYSICS })
+  it('lists the audio polyphony in the Advanced section', async () => {
+    const set = await sections({ audio_max_polyphony: '64' });
+    expect(sectionTitled(set, 'Advanced')?.items.find((i) => i.label === 'Audio Max Polyphony')?.value).toBe(
+      '64'
     );
-    const main = sections.find((s) => s.title === 'AnimationTree');
-    const cbItem = main?.items.find((i) => i.label === 'Process Callback');
-    expect(cbItem?.value).toBe('Physics');
+  });
+
+  it('names the process callback', async () => {
+    expect(valueOf(await sections({ callback_mode_process: '0' }), 'Process Callback')).toBe('Physics');
   });
 });

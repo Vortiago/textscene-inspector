@@ -1,17 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { ParsedHeading } from '../../../../../../parser/utils';
-import { valueOf } from '../../../../../../parser/testing/parserKit';
-import { parseRemoteTransform3D } from '../../../../../../nodes/3d/remotetransform3d/parser';
 import { formatRemoteTransform3DProperties } from './propertyFormatter';
-
-const HEADING: ParsedHeading = {
-  type: 'node',
-  attributes: { name: 'PositionSynchronizer', type: 'RemoteTransform3D' },
-};
+import { sectionsOf, valueOf } from '../../testing/inspectedScene';
 
 describe('formatRemoteTransform3DProperties', () => {
-  it('renders the Godot defaults when properties are absent (happy path)', () => {
-    const sections = formatRemoteTransform3DProperties(parseRemoteTransform3D(HEADING, {}));
+  it('lists the Godot defaults of a node that sets nothing', async () => {
+    const sections = await sectionsOf(formatRemoteTransform3DProperties, 'RemoteTransform3D');
     expect(sections.map((s) => s.title)).toContain('RemoteTransform3D');
     expect(valueOf(sections, 'Remote Path')).toBe('(none)');
     expect(valueOf(sections, 'Update Position')).toBe('true');
@@ -20,14 +13,12 @@ describe('formatRemoteTransform3DProperties', () => {
     expect(valueOf(sections, 'Use Global Coordinates')).toBe('true');
   });
 
-  it('extracts the inner path from a NodePath literal (edge case)', () => {
-    const sections = formatRemoteTransform3DProperties(
-      parseRemoteTransform3D(HEADING, {
-        remote_path: 'NodePath("../DetachTransform/Geometry")',
-        update_scale: 'false',
-      })
-    );
-    expect(valueOf(sections, 'Remote Path')).toBe('../DetachTransform/Geometry');
-    expect(valueOf(sections, 'Update Scale')).toBe('false');
+  it('lists the path a NodePath holds', async () => {
+    const sections = await sectionsOf(formatRemoteTransform3DProperties, 'RemoteTransform3D', {
+      remote_path: 'NodePath("../Target/Geometry")',
+      update_rotation: 'false',
+    });
+    expect(valueOf(sections, 'Remote Path')).toBe('../Target/Geometry');
+    expect(valueOf(sections, 'Update Rotation')).toBe('false');
   });
 });

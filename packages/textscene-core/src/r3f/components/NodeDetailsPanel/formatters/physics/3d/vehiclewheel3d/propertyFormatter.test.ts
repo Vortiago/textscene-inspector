@@ -1,36 +1,35 @@
 import { describe, expect, it } from 'vitest';
 import { formatVehicleWheel3DProperties } from './propertyFormatter';
-import type { VehicleWheel3DProperties } from '../../../../../../../nodes/physics/3d/vehiclewheel3d/types';
+import { sectionsOf, sectionTitled } from '../../../testing/inspectedScene';
 
-function sectionTitles(props: VehicleWheel3DProperties): string[] {
-  return formatVehicleWheel3DProperties(props).map((s) => s.title);
-}
+const FRONT_WHEEL = {
+  wheel_radius: '0.25',
+  wheel_friction_slip: '1',
+  wheel_roll_influence: '0.4',
+  suspension_stiffness: '40',
+  suspension_travel: '2',
+  damping_compression: '0.88',
+  use_as_traction: 'true',
+  use_as_steering: 'true',
+};
 
-function itemsOf(props: VehicleWheel3DProperties, title: string): Record<string, string> {
-  const section = formatVehicleWheel3DProperties(props).find((s) => s.title === title);
-  if (!section) throw new Error(`no "${title}" section`);
+async function itemsOf(properties: Record<string, string>, title: string): Promise<Record<string, string>> {
+  const section = sectionTitled(
+    await sectionsOf(formatVehicleWheel3DProperties, 'VehicleWheel3D', properties),
+    title
+  );
+  if (!section) throw new Error(`expected a "${title}" section, found none`);
   return Object.fromEntries(section.items.map((i) => [i.label, i.value]));
 }
 
-const frontWheel: VehicleWheel3DProperties = {
-  name: 'Wheel1',
-  wheel_radius: 0.25,
-  wheel_friction_slip: 1,
-  wheel_roll_influence: 0.4,
-  suspension_stiffness: 40,
-  suspension_travel: 2,
-  damping_compression: 0.88,
-  use_as_traction: true,
-  use_as_steering: true,
-};
-
 describe('formatVehicleWheel3DProperties', () => {
-  it('groups the wheel configuration into Wheel, Suspension and Drive sections', () => {
-    expect(sectionTitles(frontWheel)).toEqual(['Wheel', 'Suspension', 'Drive']);
+  it('groups the wheel into Wheel, Suspension and Drive sections', async () => {
+    const sections = await sectionsOf(formatVehicleWheel3DProperties, 'VehicleWheel3D', FRONT_WHEEL);
+    expect(sections.map((s) => s.title)).toEqual(['Wheel', 'Suspension', 'Drive']);
   });
 
-  it('reports the authored wheel geometry', () => {
-    expect(itemsOf(frontWheel, 'Wheel')).toEqual({
+  it('lists the wheel geometry the file sets', async () => {
+    expect(await itemsOf(FRONT_WHEEL, 'Wheel')).toEqual({
       Radius: '0.25',
       'Rest Length': '0.15',
       'Friction Slip': '1',
@@ -38,8 +37,8 @@ describe('formatVehicleWheel3DProperties', () => {
     });
   });
 
-  it('reports the authored suspension configuration', () => {
-    expect(itemsOf(frontWheel, 'Suspension')).toEqual({
+  it('lists the suspension the file sets', async () => {
+    expect(await itemsOf(FRONT_WHEEL, 'Suspension')).toEqual({
       Stiffness: '40',
       Travel: '2',
       'Max Force': '6000',
@@ -48,46 +47,34 @@ describe('formatVehicleWheel3DProperties', () => {
     });
   });
 
-  it('reports traction and steering roles', () => {
-    expect(itemsOf(frontWheel, 'Drive')).toEqual({ Traction: 'true', Steering: 'true' });
+  it('lists the traction and steering roles', async () => {
+    expect(await itemsOf(FRONT_WHEEL, 'Drive')).toEqual({ Traction: 'true', Steering: 'true' });
   });
 
-  it("substitutes Godot's defaults for an unconfigured wheel", () => {
-    // A bare VehicleWheel3D in Godot is a 0.5m wheel with 10.5 friction slip.
-    const bare: VehicleWheel3DProperties = { name: 'Wheel' };
-    expect(itemsOf(bare, 'Wheel')).toEqual({
+  it("lists Godot's defaults of a wheel that sets nothing", async () => {
+    expect(await itemsOf({}, 'Wheel')).toEqual({
       Radius: '0.5',
       'Rest Length': '0.15',
       'Friction Slip': '10.5',
       'Roll Influence': '0.1',
     });
-    expect(itemsOf(bare, 'Suspension').Stiffness).toBe('5.88');
-    expect(itemsOf(bare, 'Drive')).toEqual({ Traction: 'false', Steering: 'false' });
+    expect((await itemsOf({}, 'Suspension')).Stiffness).toBe('5.88');
+    expect(await itemsOf({}, 'Drive')).toEqual({ Traction: 'false', Steering: 'false' });
   });
 
-  it('appends the inherited Node3D transform sections', () => {
-    const placed: VehicleWheel3DProperties = {
-      name: 'Wheel1',
-      transform: {
-        basis_x: { x: 1, y: 0, z: 0 },
-        basis_y: { x: 0, y: 1, z: 0 },
-        basis_z: { x: 0, y: 0, z: 1 },
-        origin: { x: 0.573678, y: 0.115169, z: 1.10416 },
-      },
-    };
-    const sections = formatVehicleWheel3DProperties(placed);
-    expect(sections.map((s) => s.title)).toContain('Position');
-    const position = sections.find((s) => s.title === 'Position')!;
-    expect(position.items.map((i) => i.value)).toEqual(['0.574', '0.115', '1.104']);
+  it('appends the Node3D transform sections', async () => {
+    const position = await itemsOf(
+      { transform: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.573678, 0.115169, 1.10416)' },
+      'Position'
+    );
+    expect(Object.values(position)).toEqual(['0.574', '0.115', '1.104']);
   });
 
-  it('omits the runtime drive inputs unless authored (edge)', () => {
-    // engine_force, brake and steering are runtime inputs from GDScript. A
-    // static preview does not imply them.
-    expect(itemsOf(frontWheel, 'Drive')['Engine Force']).toBeUndefined();
+  it('lists the drive forces a script sets only where the file sets them', async () => {
+    expect((await itemsOf(FRONT_WHEEL, 'Drive'))['Engine Force']).toBeUndefined();
 
-    const driven: VehicleWheel3DProperties = { ...frontWheel, engine_force: 40, brake: 25 };
-    expect(itemsOf(driven, 'Drive')['Engine Force']).toBe('40');
-    expect(itemsOf(driven, 'Drive').Brake).toBe('25');
+    const driven = await itemsOf({ ...FRONT_WHEEL, engine_force: '40', brake: '25' }, 'Drive');
+    expect(driven['Engine Force']).toBe('40');
+    expect(driven.Brake).toBe('25');
   });
 });

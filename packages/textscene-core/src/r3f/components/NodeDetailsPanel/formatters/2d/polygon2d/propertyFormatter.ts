@@ -1,32 +1,19 @@
-/**
- * Formats Polygon2D properties: the fill colour, vertex count, offset and
- * texture reference, then the shared Node2D sections.
- */
-
-import type { PropertySection } from '../../../../../../core/NodeRegistry';
-import type { Polygon2DProperties } from '../../../../../../nodes/2d/polygon2d/types';
+import type { InspectedNode, PropertySection } from '../../inspectedNode';
 import { formatNode2DProperties } from '../../base/node2d/propertyFormatter';
+import { resourceText, tupleText } from '../../valueText';
 
-export function formatPolygon2DProperties(properties: Polygon2DProperties): PropertySection[] {
-  const sections: PropertySection[] = [];
-
-  const { color, offset } = properties;
-  const vertexCount = Math.floor(properties.polygon.length / 2);
-
-  sections.push({
-    title: 'Polygon',
-    items: [
-      { label: 'Vertices', value: vertexCount.toString() },
-      {
-        label: 'Color',
-        value: `(${color.r}, ${color.g}, ${color.b}, ${color.a})`,
-      },
-      { label: 'Offset', value: `(${offset.x}, ${offset.y})` },
-      { label: 'Texture', value: properties.texture ?? '(none)' },
-    ],
-  });
-
-  sections.push(...formatNode2DProperties(properties));
-
-  return sections;
+export async function formatPolygon2DProperties(node: InspectedNode): Promise<PropertySection[]> {
+  const values = await node.read(['polygon', 'color', 'offset', 'texture']);
+  return [
+    {
+      title: 'Polygon',
+      items: [
+        { label: 'Vertices', value: String(Math.floor(values.numbers('polygon').length / 2)) },
+        { label: 'Color', value: tupleText(values.numbers('color')) },
+        { label: 'Offset', value: tupleText(values.numbers('offset')) },
+        { label: 'Texture', value: resourceText(values.resource('texture')) },
+      ],
+    },
+    ...(await formatNode2DProperties(node)),
+  ];
 }

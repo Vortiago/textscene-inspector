@@ -1,24 +1,13 @@
-/** AreaLight3D property formatter: the inspector sections for an area light. */
-
-import type { PropertySection } from '../../../../../../../core/NodeRegistry';
-import type { AreaLight3DProperties } from '../../../../../../../nodes/3d/lights/arealight3d/types';
+import type { InspectedNode, PropertySection } from '../../../inspectedNode';
 import { formatNode3DProperties } from '../../../base/node3d/propertyFormatter';
 import { formatBaseLightSection, formatShadowSectionWithNormalBias } from '../shared/propertyFormatter';
 
-export function formatAreaLight3DProperties(properties: AreaLight3DProperties): PropertySection[] {
-  const sections: PropertySection[] = [];
-  const { x: w, y: h } = properties.area_size;
-
-  const areaLightItems: PropertySection['items'] = [{ label: 'Size', value: `${w} × ${h}` }];
-
-  sections.push(formatBaseLightSection(properties, areaLightItems));
-
-  // No area-light-specific shadow rows: RectAreaLight has no shadow support,
-  // so shadow_* is intentionally lossy at render (see Component.tsx). The
-  // shared Shadows section is still shown for parity with sibling lights.
-  sections.push(formatShadowSectionWithNormalBias(properties));
-
-  sections.push(...formatNode3DProperties(properties));
-
-  return sections;
+export async function formatAreaLight3DProperties(node: InspectedNode): Promise<PropertySection[]> {
+  const [width = 0, height = 0] = (await node.read(['area_size'])).numbers('area_size');
+  return [
+    await formatBaseLightSection(node, [{ label: 'Size', value: `${width} × ${height}` }]),
+    // An area light draws no shadow here, and the section stays for parity with the other lights.
+    await formatShadowSectionWithNormalBias(node),
+    ...(await formatNode3DProperties(node)),
+  ];
 }

@@ -1,24 +1,15 @@
-/** SpotLight3D property formatter: the inspector sections for the light. */
-
-import type { PropertySection } from '../../../../../../../core/NodeRegistry';
-import type { SpotLight3DProperties } from '../../../../../../../nodes/3d/lights/spotlight3d/types';
+import type { InspectedNode, PropertySection } from '../../../inspectedNode';
 import { formatNode3DProperties } from '../../../base/node3d/propertyFormatter';
 import { formatBaseLightSection, formatBaseShadowSection } from '../shared/propertyFormatter';
 
-export function formatSpotLight3DProperties(properties: SpotLight3DProperties): PropertySection[] {
-  const sections: PropertySection[] = [];
-
-  const spotLightItems: PropertySection['items'] = [
-    { label: 'Range', value: properties.spot_range.toFixed(2) },
-    { label: 'Angle', value: `${properties.spot_angle.toFixed(1)}°` },
+export async function formatSpotLight3DProperties(node: InspectedNode): Promise<PropertySection[]> {
+  const values = await node.read(['spot_range', 'spot_angle']);
+  return [
+    await formatBaseLightSection(node, [
+      { label: 'Range', value: values.number('spot_range').toFixed(2) },
+      { label: 'Angle', value: `${values.number('spot_angle').toFixed(1)}°` },
+    ]),
+    await formatBaseShadowSection(node),
+    ...(await formatNode3DProperties(node)),
   ];
-
-  sections.push(formatBaseLightSection(properties, spotLightItems));
-
-  // SpotLight3D has no shadow_normal_bias.
-  sections.push(formatBaseShadowSection(properties));
-
-  sections.push(...formatNode3DProperties(properties));
-
-  return sections;
 }

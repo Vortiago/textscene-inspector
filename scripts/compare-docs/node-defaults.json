@@ -165,16 +165,16 @@
       "rect": "Rect2(-100, -100, 200, 200)"
     },
     "BaseButton": {
-      "action_mode": "null",
+      "action_mode": "1",
       "button_group": "null",
-      "button_mask": "null",
-      "button_pressed": "null",
-      "disabled": "null",
-      "keep_pressed_outside": "null",
+      "button_mask": "1",
+      "button_pressed": "false",
+      "disabled": "false",
+      "keep_pressed_outside": "false",
       "shortcut": "null",
-      "shortcut_feedback": "null",
-      "shortcut_in_tooltip": "null",
-      "toggle_mode": "null"
+      "shortcut_feedback": "true",
+      "shortcut_in_tooltip": "true",
+      "toggle_mode": "false"
     },
     "Bone2D": {
       "rest": "Transform2D(0, 0, 0, 0, 0, 0)"
@@ -182,7 +182,7 @@
     "BoneAttachment3D": {
       "bone_idx": "-1",
       "bone_name": "\"\"",
-      "external_skeleton": "null",
+      "external_skeleton": "NodePath(\"\")",
       "override_pose": "false",
       "use_external_skeleton": "false"
     },
@@ -261,7 +261,7 @@
       "use_mipmaps": "false"
     },
     "CanvasItem": {
-      "clip_children": "null",
+      "clip_children": "0",
       "light_mask": "1",
       "material": "null",
       "modulate": "Color(1, 1, 1, 1)",
@@ -503,14 +503,14 @@
       "damping_min": "0.0",
       "direction": "Vector2(1, 0)",
       "draw_order": "0",
-      "emission_colors": "null",
-      "emission_normals": "null",
-      "emission_points": "null",
-      "emission_rect_extents": "null",
-      "emission_ring_inner_radius": "null",
-      "emission_ring_radius": "null",
+      "emission_colors": "PackedColorArray()",
+      "emission_normals": "PackedVector2Array()",
+      "emission_points": "PackedVector2Array()",
+      "emission_rect_extents": "Vector2(1, 1)",
+      "emission_ring_inner_radius": "0.8",
+      "emission_ring_radius": "1.0",
       "emission_shape": "0",
-      "emission_sphere_radius": "null",
+      "emission_sphere_radius": "1.0",
       "emitting": "true",
       "explosiveness": "0.0",
       "fixed_fps": "0",
@@ -574,17 +574,17 @@
       "damping_min": "0.0",
       "direction": "Vector3(1, 0, 0)",
       "draw_order": "0",
-      "emission_box_extents": "null",
+      "emission_box_extents": "Vector3(1, 1, 1)",
       "emission_colors": "PackedColorArray()",
-      "emission_normals": "null",
-      "emission_points": "null",
-      "emission_ring_axis": "null",
-      "emission_ring_cone_angle": "null",
-      "emission_ring_height": "null",
-      "emission_ring_inner_radius": "null",
-      "emission_ring_radius": "null",
+      "emission_normals": "PackedVector3Array()",
+      "emission_points": "PackedVector3Array()",
+      "emission_ring_axis": "Vector3(0, 0, 1)",
+      "emission_ring_cone_angle": "90.0",
+      "emission_ring_height": "1.0",
+      "emission_ring_inner_radius": "0.0",
+      "emission_ring_radius": "1.0",
       "emission_shape": "0",
-      "emission_sphere_radius": "null",
+      "emission_sphere_radius": "1.0",
       "emitting": "true",
       "explosiveness": "0.0",
       "fixed_fps": "0",
@@ -605,8 +605,8 @@
       "mesh": "null",
       "one_shot": "false",
       "orbit_velocity_curve": "null",
-      "orbit_velocity_max": "null",
-      "orbit_velocity_min": "null",
+      "orbit_velocity_max": "0.0",
+      "orbit_velocity_min": "0.0",
       "particle_flag_align_y": "false",
       "particle_flag_disable_z": "false",
       "particle_flag_rotate_y": "false",
@@ -651,20 +651,20 @@
       "depth": "1.0",
       "material": "null",
       "mode": "0",
-      "path_continuous_u": "null",
-      "path_interval": "null",
-      "path_interval_type": "null",
-      "path_joined": "null",
-      "path_local": "null",
-      "path_node": "null",
-      "path_rotation": "null",
-      "path_rotation_accurate": "null",
-      "path_simplify_angle": "null",
-      "path_u_distance": "null",
+      "path_continuous_u": "true",
+      "path_interval": "1.0",
+      "path_interval_type": "0",
+      "path_joined": "false",
+      "path_local": "false",
+      "path_node": "NodePath(\"\")",
+      "path_rotation": "2",
+      "path_rotation_accurate": "false",
+      "path_simplify_angle": "0.0",
+      "path_u_distance": "1.0",
       "polygon": "PackedVector2Array(0, 0, 0, 1, 1, 1, 1, 0)",
       "smooth_faces": "false",
-      "spin_degrees": "null",
-      "spin_sides": "null"
+      "spin_degrees": "360.0",
+      "spin_sides": "8"
     },
     "CSGPrimitive3D": {
       "flip_faces": "false"
@@ -904,21 +904,21 @@
       "linear_spring_z/stiffness": "0.01"
     },
     "GeometryInstance3D": {
-      "cast_shadow": "null",
-      "custom_aabb": "null",
-      "extra_cull_margin": "null",
-      "gi_lightmap_texel_scale": "null",
-      "gi_mode": "null",
-      "ignore_occlusion_culling": "null",
-      "lod_bias": "null",
+      "cast_shadow": "1",
+      "custom_aabb": "AABB(0, 0, 0, 0, 0, 0)",
+      "extra_cull_margin": "0.0",
+      "gi_lightmap_texel_scale": "1.0",
+      "gi_mode": "1",
+      "ignore_occlusion_culling": "false",
+      "lod_bias": "1.0",
       "material_overlay": "null",
       "material_override": "null",
-      "transparency": "null",
-      "visibility_range_begin": "null",
-      "visibility_range_begin_margin": "null",
-      "visibility_range_end": "null",
-      "visibility_range_end_margin": "null",
-      "visibility_range_fade_mode": "null"
+      "transparency": "0.0",
+      "visibility_range_begin": "0.0",
+      "visibility_range_begin_margin": "0.0",
+      "visibility_range_end": "0.0",
+      "visibility_range_end_margin": "0.0",
+      "visibility_range_fade_mode": "0"
     },
     "GPUParticles2D": {
       "amount": "8",
@@ -1240,10 +1240,10 @@
       "shadow_item_cull_mask": "1"
     },
     "Light3D": {
-      "distance_fade_begin": "null",
-      "distance_fade_enabled": "null",
-      "distance_fade_length": "null",
-      "distance_fade_shadow": "null",
+      "distance_fade_begin": "40.0",
+      "distance_fade_enabled": "false",
+      "distance_fade_length": "10.0",
+      "distance_fade_shadow": "50.0",
       "editor_only": "false",
       "light_angular_distance": "0.0",
       "light_bake_mode": "2",
@@ -1251,13 +1251,13 @@
       "light_cull_mask": "4294967295",
       "light_energy": "1.0",
       "light_indirect_energy": "1.0",
-      "light_intensity_lumens": "null",
-      "light_intensity_lux": "null",
+      "light_intensity_lumens": "100000.0",
+      "light_intensity_lux": "100000.0",
       "light_negative": "false",
       "light_projector": "null",
-      "light_size": "null",
+      "light_size": "0.0",
       "light_specular": "1.0",
-      "light_temperature": "null",
+      "light_temperature": "6500.0",
       "light_volumetric_fog_energy": "1.0",
       "shadow_bias": "0.1",
       "shadow_blur": "1.0",
@@ -1374,27 +1374,27 @@
       "duration": "0.0",
       "ease_type": "0",
       "forward_axis": "4",
-      "origin_bone": "null",
-      "origin_bone_name": "null",
-      "origin_external_node": "null",
+      "origin_bone": "-1",
+      "origin_bone_name": "\"\"",
+      "origin_external_node": "NodePath(\"\")",
       "origin_from": "0",
       "origin_offset": "Vector3(0, 0, 0)",
       "origin_safe_margin": "0.1",
-      "primary_damp_threshold": "null",
-      "primary_limit_angle": "null",
-      "primary_negative_damp_threshold": "null",
-      "primary_negative_limit_angle": "null",
-      "primary_positive_damp_threshold": "null",
-      "primary_positive_limit_angle": "null",
+      "primary_damp_threshold": "1.0",
+      "primary_limit_angle": "6.2831855",
+      "primary_negative_damp_threshold": "1.0",
+      "primary_negative_limit_angle": "3.1415927",
+      "primary_positive_damp_threshold": "1.0",
+      "primary_positive_limit_angle": "3.1415927",
       "primary_rotation_axis": "1",
       "relative": "false",
-      "secondary_damp_threshold": "null",
-      "secondary_limit_angle": "null",
-      "secondary_negative_damp_threshold": "null",
-      "secondary_negative_limit_angle": "null",
-      "secondary_positive_damp_threshold": "null",
-      "secondary_positive_limit_angle": "null",
-      "symmetry_limitation": "null",
+      "secondary_damp_threshold": "1.0",
+      "secondary_limit_angle": "6.2831855",
+      "secondary_negative_damp_threshold": "1.0",
+      "secondary_negative_limit_angle": "3.1415927",
+      "secondary_positive_damp_threshold": "1.0",
+      "secondary_positive_limit_angle": "3.1415927",
+      "symmetry_limitation": "true",
       "target_node": "NodePath(\"\")",
       "transition_type": "0",
       "use_angle_limitation": "false",
@@ -1591,8 +1591,8 @@
       "process_physics_priority": "0",
       "process_priority": "0",
       "process_thread_group": "0",
-      "process_thread_group_order": "null",
-      "process_thread_messages": "null",
+      "process_thread_group_order": "0",
+      "process_thread_messages": "0",
       "unique_name_in_owner": "false"
     },
     "Node2D": {
@@ -1808,21 +1808,21 @@
       "system_menu_id": "0"
     },
     "ProgressBar": {
-      "editor_preview_indeterminate": "null",
+      "editor_preview_indeterminate": "false",
       "fill_mode": "0",
       "indeterminate": "false",
       "show_percentage": "true"
     },
     "Range": {
-      "allow_greater": "null",
-      "allow_lesser": "null",
-      "exp_edit": "null",
-      "max_value": "null",
-      "min_value": "null",
-      "page": "null",
-      "rounded": "null",
-      "step": "null",
-      "value": "null"
+      "allow_greater": "false",
+      "allow_lesser": "false",
+      "exp_edit": "false",
+      "max_value": "100.0",
+      "min_value": "0.0",
+      "page": "0.0",
+      "rounded": "false",
+      "step": "1.0",
+      "value": "0.0"
     },
     "RayCast2D": {
       "collide_with_areas": "false",
@@ -2037,8 +2037,8 @@
       "use_magnet": "false"
     },
     "SkeletonModifier3D": {
-      "active": "null",
-      "influence": "null"
+      "active": "true",
+      "influence": "1.0"
     },
     "Slider": {
       "editable": "true",
@@ -2124,10 +2124,10 @@
       "spring_length": "1.0"
     },
     "SpringBoneCollision3D": {
-      "bone": "null",
-      "bone_name": "null",
-      "position_offset": "null",
-      "rotation_offset": "null"
+      "bone": "-1",
+      "bone_name": "\"\"",
+      "position_offset": "Vector3(0, 0, 0)",
+      "rotation_offset": "Quaternion(0, 0, 0, 1)"
     },
     "SpringBoneCollisionCapsule3D": {
       "height": "0.5",
@@ -2489,7 +2489,7 @@
       "aabb": "AABB(-1, -1, -1, 2, 2, 2)"
     },
     "VisualInstance3D": {
-      "layers": "null"
+      "layers": "1"
     },
     "VoxelGI": {
       "camera_attributes": "null",
@@ -2507,7 +2507,7 @@
       "content_scale_mode": "0",
       "content_scale_size": "Vector2i(0, 0)",
       "content_scale_stretch": "0",
-      "current_screen": "null",
+      "current_screen": "0",
       "exclude_from_capture": "false",
       "exclusive": "false",
       "extend_to_title": "false",
@@ -2578,29 +2578,6 @@
       "visible": "false",
       "wrap_controls": "true"
     },
-    "AimModifier3D": {
-      "active": "true",
-      "influence": "1.0"
-    },
-    "AnimatedSprite2D": {
-      "clip_children": "0"
-    },
-    "AnimatedSprite3D": {
-      "cast_shadow": "1",
-      "custom_aabb": "AABB(0, 0, 0, 0, 0, 0)",
-      "extra_cull_margin": "0.0",
-      "gi_lightmap_texel_scale": "1.0",
-      "gi_mode": "1",
-      "ignore_occlusion_culling": "false",
-      "layers": "1",
-      "lod_bias": "1.0",
-      "transparency": "0.0",
-      "visibility_range_begin": "0.0",
-      "visibility_range_begin_margin": "0.0",
-      "visibility_range_end": "0.0",
-      "visibility_range_end_margin": "0.0",
-      "visibility_range_fade_mode": "0"
-    },
     "AnimationTree": {
       "callback_mode_discrete": "2",
       "deterministic": "true"
@@ -2610,176 +2587,55 @@
     },
     "AspectRatioContainer": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "mouse_filter": "1",
       "physics_interpolation_mode": "2"
     },
     "BaseButton": {
-      "accessibility_controls_nodes": "null",
-      "accessibility_described_by_nodes": "null",
-      "accessibility_description": "null",
-      "accessibility_flow_to_nodes": "null",
-      "accessibility_labeled_by_nodes": "null",
-      "accessibility_live": "null",
-      "accessibility_name": "null",
-      "anchor_bottom": "null",
-      "anchor_left": "null",
-      "anchor_right": "null",
-      "anchor_top": "null",
-      "anchors_preset": "null",
-      "auto_translate_mode": "null",
-      "clip_contents": "null",
-      "custom_minimum_size": "null",
-      "editor_description": "null",
-      "focus_behavior_recursive": "null",
-      "focus_mode": "null",
-      "focus_neighbor_bottom": "null",
-      "focus_neighbor_left": "null",
-      "focus_neighbor_right": "null",
-      "focus_neighbor_top": "null",
-      "focus_next": "null",
-      "focus_previous": "null",
-      "grow_horizontal": "null",
-      "grow_vertical": "null",
-      "layout_direction": "null",
-      "layout_mode": "null",
-      "light_mask": "null",
-      "localize_numeral_system": "null",
-      "modulate": "null",
-      "mouse_behavior_recursive": "null",
-      "mouse_default_cursor_shape": "null",
-      "mouse_filter": "null",
-      "mouse_force_pass_scroll_events": "null",
-      "offset_bottom": "null",
-      "offset_left": "null",
-      "offset_right": "null",
-      "offset_top": "null",
-      "physics_interpolation_mode": "null",
-      "pivot_offset": "null",
-      "pivot_offset_ratio": "null",
-      "process_mode": "null",
-      "process_physics_priority": "null",
-      "process_priority": "null",
-      "process_thread_group": "null",
-      "rotation": "null",
-      "scale": "null",
-      "self_modulate": "null",
-      "show_behind_parent": "null",
-      "size_flags_horizontal": "null",
-      "size_flags_stretch_ratio": "null",
-      "size_flags_vertical": "null",
-      "texture_filter": "null",
-      "texture_repeat": "null",
-      "theme_type_variation": "null",
-      "tooltip_auto_translate_mode": "null",
-      "tooltip_text": "null",
-      "top_level": "null",
-      "unique_name_in_owner": "null",
-      "use_parent_material": "null",
-      "visibility_layer": "null",
-      "visible": "null",
-      "y_sort_enabled": "null",
-      "z_as_relative": "null",
-      "z_index": "null"
+      "anchors_preset": "0",
+      "focus_mode": "2",
+      "layout_mode": "3",
+      "physics_interpolation_mode": "2"
     },
     "BoneAttachment3D": {
       "physics_interpolation_mode": "2"
     },
-    "BoneConstraint3D": {
-      "auto_translate_mode": "null",
-      "editor_description": "null",
-      "physics_interpolation_mode": "null",
-      "process_mode": "null",
-      "process_physics_priority": "null",
-      "process_priority": "null",
-      "process_thread_group": "null",
-      "rotation_edit_mode": "null",
-      "rotation_order": "null",
-      "top_level": "null",
-      "transform": "null",
-      "unique_name_in_owner": "null",
-      "visibility_parent": "null",
-      "visible": "null"
-    },
-    "BoneTwistDisperser3D": {
-      "active": "true",
-      "influence": "1.0"
-    },
     "BoxContainer": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "mouse_filter": "1",
       "physics_interpolation_mode": "2"
     },
     "Button": {
-      "action_mode": "1",
       "anchors_preset": "0",
-      "button_mask": "1",
-      "button_pressed": "false",
-      "clip_children": "0",
-      "disabled": "false",
       "focus_mode": "2",
-      "keep_pressed_outside": "false",
       "layout_mode": "3",
-      "physics_interpolation_mode": "2",
-      "shortcut_feedback": "true",
-      "shortcut_in_tooltip": "true",
-      "toggle_mode": "false"
-    },
-    "CanvasGroup": {
-      "clip_children": "0"
-    },
-    "CanvasModulate": {
-      "clip_children": "0"
-    },
-    "CCDIK3D": {
-      "active": "true",
-      "influence": "1.0"
+      "physics_interpolation_mode": "2"
     },
     "CenterContainer": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "mouse_filter": "1",
       "physics_interpolation_mode": "2"
     },
     "CheckBox": {
-      "action_mode": "1",
       "alignment": "0",
       "anchors_preset": "0",
-      "button_mask": "1",
-      "button_pressed": "false",
-      "clip_children": "0",
-      "disabled": "false",
       "focus_mode": "2",
-      "keep_pressed_outside": "false",
       "layout_mode": "3",
       "physics_interpolation_mode": "2",
-      "shortcut_feedback": "true",
-      "shortcut_in_tooltip": "true",
       "toggle_mode": "true"
     },
     "CheckButton": {
-      "action_mode": "1",
       "alignment": "0",
       "anchors_preset": "0",
-      "button_mask": "1",
-      "button_pressed": "false",
-      "clip_children": "0",
-      "disabled": "false",
       "focus_mode": "2",
-      "keep_pressed_outside": "false",
       "layout_mode": "3",
       "physics_interpolation_mode": "2",
-      "shortcut_feedback": "true",
-      "shortcut_in_tooltip": "true",
       "toggle_mode": "true"
     },
     "CodeEdit": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "focus_mode": "2",
       "layout_direction": "2",
       "layout_mode": "3",
@@ -2789,30 +2645,20 @@
     },
     "ColorPicker": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "mouse_filter": "1",
       "physics_interpolation_mode": "2",
-      "vertical": "null"
+      "vertical": "true"
     },
     "ColorPickerButton": {
-      "action_mode": "1",
       "anchors_preset": "0",
-      "button_mask": "1",
-      "button_pressed": "false",
-      "clip_children": "0",
-      "disabled": "false",
       "focus_mode": "2",
-      "keep_pressed_outside": "false",
       "layout_mode": "3",
       "physics_interpolation_mode": "2",
-      "shortcut_feedback": "true",
-      "shortcut_in_tooltip": "true",
       "toggle_mode": "true"
     },
     "ColorRect": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "physics_interpolation_mode": "2"
     },
@@ -2831,160 +2677,15 @@
     },
     "Container": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "mouse_filter": "1",
       "physics_interpolation_mode": "2"
     },
     "Control": {
-      "clip_children": "0",
       "physics_interpolation_mode": "2"
-    },
-    "ConvertTransformModifier3D": {
-      "active": "true",
-      "influence": "1.0"
-    },
-    "CopyTransformModifier3D": {
-      "active": "true",
-      "influence": "1.0"
     },
     "CPUParticles2D": {
-      "clip_children": "0",
       "physics_interpolation_mode": "2"
-    },
-    "CPUParticles3D": {
-      "cast_shadow": "1",
-      "custom_aabb": "AABB(0, 0, 0, 0, 0, 0)",
-      "extra_cull_margin": "0.0",
-      "gi_lightmap_texel_scale": "1.0",
-      "gi_mode": "1",
-      "ignore_occlusion_culling": "false",
-      "layers": "1",
-      "lod_bias": "1.0",
-      "transparency": "0.0",
-      "visibility_range_begin": "0.0",
-      "visibility_range_begin_margin": "0.0",
-      "visibility_range_end": "0.0",
-      "visibility_range_end_margin": "0.0",
-      "visibility_range_fade_mode": "0"
-    },
-    "CSGBox3D": {
-      "cast_shadow": "1",
-      "custom_aabb": "AABB(0, 0, 0, 0, 0, 0)",
-      "extra_cull_margin": "0.0",
-      "gi_lightmap_texel_scale": "1.0",
-      "gi_mode": "1",
-      "ignore_occlusion_culling": "false",
-      "layers": "1",
-      "lod_bias": "1.0",
-      "transparency": "0.0",
-      "visibility_range_begin": "0.0",
-      "visibility_range_begin_margin": "0.0",
-      "visibility_range_end": "0.0",
-      "visibility_range_end_margin": "0.0",
-      "visibility_range_fade_mode": "0"
-    },
-    "CSGCombiner3D": {
-      "cast_shadow": "1",
-      "custom_aabb": "AABB(0, 0, 0, 0, 0, 0)",
-      "extra_cull_margin": "0.0",
-      "gi_lightmap_texel_scale": "1.0",
-      "gi_mode": "1",
-      "ignore_occlusion_culling": "false",
-      "layers": "1",
-      "lod_bias": "1.0",
-      "transparency": "0.0",
-      "visibility_range_begin": "0.0",
-      "visibility_range_begin_margin": "0.0",
-      "visibility_range_end": "0.0",
-      "visibility_range_end_margin": "0.0",
-      "visibility_range_fade_mode": "0"
-    },
-    "CSGCylinder3D": {
-      "cast_shadow": "1",
-      "custom_aabb": "AABB(0, 0, 0, 0, 0, 0)",
-      "extra_cull_margin": "0.0",
-      "gi_lightmap_texel_scale": "1.0",
-      "gi_mode": "1",
-      "ignore_occlusion_culling": "false",
-      "layers": "1",
-      "lod_bias": "1.0",
-      "transparency": "0.0",
-      "visibility_range_begin": "0.0",
-      "visibility_range_begin_margin": "0.0",
-      "visibility_range_end": "0.0",
-      "visibility_range_end_margin": "0.0",
-      "visibility_range_fade_mode": "0"
-    },
-    "CSGMesh3D": {
-      "cast_shadow": "1",
-      "custom_aabb": "AABB(0, 0, 0, 0, 0, 0)",
-      "extra_cull_margin": "0.0",
-      "gi_lightmap_texel_scale": "1.0",
-      "gi_mode": "1",
-      "ignore_occlusion_culling": "false",
-      "layers": "1",
-      "lod_bias": "1.0",
-      "transparency": "0.0",
-      "visibility_range_begin": "0.0",
-      "visibility_range_begin_margin": "0.0",
-      "visibility_range_end": "0.0",
-      "visibility_range_end_margin": "0.0",
-      "visibility_range_fade_mode": "0"
-    },
-    "CSGPolygon3D": {
-      "cast_shadow": "1",
-      "custom_aabb": "AABB(0, 0, 0, 0, 0, 0)",
-      "extra_cull_margin": "0.0",
-      "gi_lightmap_texel_scale": "1.0",
-      "gi_mode": "1",
-      "ignore_occlusion_culling": "false",
-      "layers": "1",
-      "lod_bias": "1.0",
-      "transparency": "0.0",
-      "visibility_range_begin": "0.0",
-      "visibility_range_begin_margin": "0.0",
-      "visibility_range_end": "0.0",
-      "visibility_range_end_margin": "0.0",
-      "visibility_range_fade_mode": "0"
-    },
-    "CSGSphere3D": {
-      "cast_shadow": "1",
-      "custom_aabb": "AABB(0, 0, 0, 0, 0, 0)",
-      "extra_cull_margin": "0.0",
-      "gi_lightmap_texel_scale": "1.0",
-      "gi_mode": "1",
-      "ignore_occlusion_culling": "false",
-      "layers": "1",
-      "lod_bias": "1.0",
-      "transparency": "0.0",
-      "visibility_range_begin": "0.0",
-      "visibility_range_begin_margin": "0.0",
-      "visibility_range_end": "0.0",
-      "visibility_range_end_margin": "0.0",
-      "visibility_range_fade_mode": "0"
-    },
-    "CSGTorus3D": {
-      "cast_shadow": "1",
-      "custom_aabb": "AABB(0, 0, 0, 0, 0, 0)",
-      "extra_cull_margin": "0.0",
-      "gi_lightmap_texel_scale": "1.0",
-      "gi_mode": "1",
-      "ignore_occlusion_culling": "false",
-      "layers": "1",
-      "lod_bias": "1.0",
-      "transparency": "0.0",
-      "visibility_range_begin": "0.0",
-      "visibility_range_begin_margin": "0.0",
-      "visibility_range_end": "0.0",
-      "visibility_range_end_margin": "0.0",
-      "visibility_range_fade_mode": "0"
-    },
-    "Decal": {
-      "layers": "1"
-    },
-    "DirectionalLight3D": {
-      "layers": "1"
     },
     "EditorCommandPalette": {
       "dialog_hide_on_ok": "false",
@@ -3002,32 +2703,26 @@
     },
     "EditorDock": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "mouse_filter": "1",
       "physics_interpolation_mode": "2"
     },
     "EditorFileDialog": {
       "dialog_hide_on_ok": "false",
-      "dialog_text": "null",
-      "display_mode": "null",
       "exclusive": "true",
       "keep_title_visible": "true",
       "maximize_disabled": "true",
       "min_size": "Vector2i(200, 70)",
       "minimize_disabled": "true",
       "physics_interpolation_mode": "1",
-      "show_hidden_files": "null",
       "size": "Vector2i(640, 360)",
       "title": "\"Save a File\"",
       "transient": "true",
-      "use_native_dialog": "null",
       "visible": "false",
       "wrap_controls": "true"
     },
     "EditorInspector": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "clip_contents": "true",
       "draw_focus_border": "true",
       "focus_mode": "2",
@@ -3039,7 +2734,6 @@
     },
     "EditorProperty": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "focus_mode": "3",
       "layout_mode": "3",
       "mouse_filter": "1",
@@ -3047,43 +2741,24 @@
     },
     "EditorResourcePicker": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "mouse_filter": "1",
-      "physics_interpolation_mode": "2",
-      "vertical": "null"
+      "physics_interpolation_mode": "2"
     },
     "EditorScriptPicker": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "mouse_filter": "1",
-      "physics_interpolation_mode": "2",
-      "vertical": "null"
+      "physics_interpolation_mode": "2"
     },
     "EditorSpinSlider": {
-      "allow_greater": "false",
-      "allow_lesser": "false",
       "anchors_preset": "0",
-      "clip_children": "0",
-      "exp_edit": "false",
       "focus_mode": "2",
       "layout_mode": "3",
-      "max_value": "100.0",
-      "min_value": "0.0",
-      "page": "0.0",
-      "physics_interpolation_mode": "2",
-      "rounded": "false",
-      "step": "1.0",
-      "value": "0.0"
-    },
-    "FABRIK3D": {
-      "active": "true",
-      "influence": "1.0"
+      "physics_interpolation_mode": "2"
     },
     "FileDialog": {
       "dialog_hide_on_ok": "false",
-      "dialog_text": "null",
       "exclusive": "true",
       "keep_title_visible": "true",
       "maximize_disabled": "true",
@@ -3098,80 +2773,18 @@
     },
     "FlowContainer": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "mouse_filter": "1",
       "physics_interpolation_mode": "2"
     },
-    "FogVolume": {
-      "layers": "1"
-    },
     "FoldableContainer": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "focus_mode": "2",
       "layout_mode": "3",
       "physics_interpolation_mode": "2"
     },
-    "GeometryInstance3D": {
-      "auto_translate_mode": "null",
-      "editor_description": "null",
-      "physics_interpolation_mode": "null",
-      "process_mode": "null",
-      "process_physics_priority": "null",
-      "process_priority": "null",
-      "process_thread_group": "null",
-      "rotation_edit_mode": "null",
-      "rotation_order": "null",
-      "top_level": "null",
-      "transform": "null",
-      "unique_name_in_owner": "null",
-      "visibility_parent": "null",
-      "visible": "null"
-    },
-    "GPUParticles2D": {
-      "clip_children": "0"
-    },
-    "GPUParticles3D": {
-      "cast_shadow": "1",
-      "custom_aabb": "AABB(0, 0, 0, 0, 0, 0)",
-      "extra_cull_margin": "0.0",
-      "gi_lightmap_texel_scale": "1.0",
-      "gi_mode": "1",
-      "ignore_occlusion_culling": "false",
-      "layers": "1",
-      "lod_bias": "1.0",
-      "transparency": "0.0",
-      "visibility_range_begin": "0.0",
-      "visibility_range_begin_margin": "0.0",
-      "visibility_range_end": "0.0",
-      "visibility_range_end_margin": "0.0",
-      "visibility_range_fade_mode": "0"
-    },
-    "GPUParticlesAttractorBox3D": {
-      "layers": "1"
-    },
-    "GPUParticlesAttractorSphere3D": {
-      "layers": "1"
-    },
-    "GPUParticlesAttractorVectorField3D": {
-      "layers": "1"
-    },
-    "GPUParticlesCollisionBox3D": {
-      "layers": "1"
-    },
-    "GPUParticlesCollisionHeightField3D": {
-      "layers": "1"
-    },
-    "GPUParticlesCollisionSDF3D": {
-      "layers": "1"
-    },
-    "GPUParticlesCollisionSphere3D": {
-      "layers": "1"
-    },
     "GraphEdit": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "clip_contents": "true",
       "focus_mode": "2",
       "layout_mode": "3",
@@ -3179,110 +2792,74 @@
     },
     "GraphElement": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "mouse_filter": "1",
       "physics_interpolation_mode": "2"
     },
     "GraphFrame": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "physics_interpolation_mode": "2"
     },
     "GraphNode": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "focus_mode": "3",
       "layout_mode": "3",
       "physics_interpolation_mode": "2"
     },
     "GridContainer": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "mouse_filter": "1",
       "physics_interpolation_mode": "2"
     },
     "HBoxContainer": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "mouse_filter": "1",
-      "physics_interpolation_mode": "2",
-      "vertical": "null"
+      "physics_interpolation_mode": "2"
     },
     "HFlowContainer": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "mouse_filter": "1",
-      "physics_interpolation_mode": "2",
-      "vertical": "null"
+      "physics_interpolation_mode": "2"
     },
     "HScrollBar": {
-      "allow_greater": "false",
-      "allow_lesser": "false",
       "anchors_preset": "0",
-      "clip_children": "0",
-      "exp_edit": "false",
       "focus_mode": "3",
       "layout_mode": "3",
-      "max_value": "100.0",
-      "min_value": "0.0",
-      "page": "0.0",
       "physics_interpolation_mode": "2",
-      "rounded": "false",
       "size_flags_vertical": "0",
-      "step": "0.0",
-      "value": "0.0"
+      "step": "0.0"
     },
     "HSeparator": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "physics_interpolation_mode": "2"
     },
     "HSlider": {
-      "allow_greater": "false",
-      "allow_lesser": "false",
       "anchors_preset": "0",
-      "clip_children": "0",
-      "exp_edit": "false",
       "focus_mode": "2",
       "layout_mode": "3",
-      "max_value": "100.0",
-      "min_value": "0.0",
-      "page": "0.0",
       "physics_interpolation_mode": "2",
-      "rounded": "false",
-      "size_flags_vertical": "0",
-      "step": "1.0",
-      "value": "0.0"
+      "size_flags_vertical": "0"
     },
     "HSplitContainer": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "mouse_filter": "1",
-      "physics_interpolation_mode": "2",
-      "vertical": "null"
+      "physics_interpolation_mode": "2"
     },
     "ItemList": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "clip_contents": "true",
       "focus_mode": "2",
       "layout_mode": "3",
       "physics_interpolation_mode": "2"
     },
-    "JacobianIK3D": {
-      "active": "true",
-      "influence": "1.0"
-    },
     "Label": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "mouse_filter": "2",
       "physics_interpolation_mode": "2",
@@ -3290,71 +2867,30 @@
     },
     "Label3D": {
       "cast_shadow": "0",
-      "custom_aabb": "AABB(0, 0, 0, 0, 0, 0)",
-      "extra_cull_margin": "0.0",
-      "gi_lightmap_texel_scale": "1.0",
-      "gi_mode": "0",
-      "ignore_occlusion_culling": "false",
-      "layers": "1",
-      "lod_bias": "1.0",
-      "transparency": "0.0",
-      "visibility_range_begin": "0.0",
-      "visibility_range_begin_margin": "0.0",
-      "visibility_range_end": "0.0",
-      "visibility_range_end_margin": "0.0",
-      "visibility_range_fade_mode": "0"
-    },
-    "LightmapGI": {
-      "layers": "1"
-    },
-    "LightOccluder2D": {
-      "clip_children": "0"
-    },
-    "LimitAngularVelocityModifier3D": {
-      "active": "true",
-      "influence": "1.0"
-    },
-    "Line2D": {
-      "clip_children": "0"
+      "gi_mode": "0"
     },
     "LineEdit": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "focus_mode": "2",
       "layout_mode": "3",
       "mouse_default_cursor_shape": "1",
       "physics_interpolation_mode": "2"
     },
     "LinkButton": {
-      "action_mode": "1",
       "anchors_preset": "0",
-      "button_mask": "1",
-      "button_pressed": "false",
-      "clip_children": "0",
-      "disabled": "false",
       "focus_mode": "3",
-      "keep_pressed_outside": "false",
       "layout_mode": "3",
       "mouse_default_cursor_shape": "2",
-      "physics_interpolation_mode": "2",
-      "shortcut_feedback": "true",
-      "shortcut_in_tooltip": "true",
-      "toggle_mode": "false"
-    },
-    "LookAtModifier3D": {
-      "active": "true",
-      "influence": "1.0"
+      "physics_interpolation_mode": "2"
     },
     "MarginContainer": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "mouse_filter": "1",
       "physics_interpolation_mode": "2"
     },
     "MenuBar": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "focus_mode": "3",
       "layout_mode": "3",
       "physics_interpolation_mode": "2"
@@ -3362,160 +2898,65 @@
     "MenuButton": {
       "action_mode": "0",
       "anchors_preset": "0",
-      "button_mask": "1",
-      "button_pressed": "false",
-      "clip_children": "0",
-      "disabled": "false",
       "flat": "true",
       "focus_mode": "3",
-      "keep_pressed_outside": "false",
       "layout_mode": "3",
       "physics_interpolation_mode": "2",
-      "shortcut_feedback": "true",
-      "shortcut_in_tooltip": "true",
       "toggle_mode": "true"
-    },
-    "MeshInstance2D": {
-      "clip_children": "0"
-    },
-    "MeshInstance3D": {
-      "cast_shadow": "1",
-      "custom_aabb": "AABB(0, 0, 0, 0, 0, 0)",
-      "extra_cull_margin": "0.0",
-      "gi_lightmap_texel_scale": "1.0",
-      "gi_mode": "1",
-      "ignore_occlusion_culling": "false",
-      "layers": "1",
-      "lod_bias": "1.0",
-      "transparency": "0.0",
-      "visibility_range_begin": "0.0",
-      "visibility_range_begin_margin": "0.0",
-      "visibility_range_end": "0.0",
-      "visibility_range_end_margin": "0.0",
-      "visibility_range_fade_mode": "0"
-    },
-    "ModifierBoneTarget3D": {
-      "active": "true"
-    },
-    "MultiMeshInstance2D": {
-      "clip_children": "0"
-    },
-    "MultiMeshInstance3D": {
-      "cast_shadow": "1",
-      "custom_aabb": "AABB(0, 0, 0, 0, 0, 0)",
-      "extra_cull_margin": "0.0",
-      "gi_lightmap_texel_scale": "1.0",
-      "gi_mode": "1",
-      "ignore_occlusion_culling": "false",
-      "layers": "1",
-      "lod_bias": "1.0",
-      "transparency": "0.0",
-      "visibility_range_begin": "0.0",
-      "visibility_range_begin_margin": "0.0",
-      "visibility_range_end": "0.0",
-      "visibility_range_end_margin": "0.0",
-      "visibility_range_fade_mode": "0"
-    },
-    "NavigationObstacle2D": {
-      "clip_children": "0"
     },
     "NinePatchRect": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "mouse_filter": "2",
       "physics_interpolation_mode": "2"
     },
-    "Node2D": {
-      "clip_children": "0"
-    },
-    "OccluderInstance3D": {
-      "layers": "1"
-    },
     "OmniLight3D": {
-      "distance_fade_begin": "40.0",
-      "distance_fade_enabled": "false",
-      "distance_fade_length": "10.0",
-      "distance_fade_shadow": "50.0",
-      "layers": "1",
-      "light_angular_distance": "null",
-      "light_size": "0.0",
+      "light_intensity_lumens": "1000.0",
+      "light_intensity_lux": "1000.0",
       "light_specular": "0.5",
       "shadow_normal_bias": "1.0"
     },
     "OpenXRBindingModifierEditor": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "physics_interpolation_mode": "2",
       "size_flags_horizontal": "3"
     },
     "OpenXRInteractionProfileEditor": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "mouse_filter": "1",
       "physics_interpolation_mode": "2",
       "size_flags_horizontal": "3",
-      "size_flags_vertical": "3",
-      "vertical": "null"
-    },
-    "OpenXRVisibilityMask": {
-      "layers": "1"
+      "size_flags_vertical": "3"
     },
     "OptionButton": {
       "action_mode": "0",
       "alignment": "0",
       "anchors_preset": "0",
-      "button_mask": "1",
-      "button_pressed": "false",
-      "clip_children": "0",
-      "disabled": "false",
       "focus_mode": "2",
-      "keep_pressed_outside": "false",
       "layout_mode": "3",
       "physics_interpolation_mode": "2",
-      "shortcut_feedback": "true",
-      "shortcut_in_tooltip": "true",
-      "text": "null",
       "toggle_mode": "true"
     },
     "Panel": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "physics_interpolation_mode": "2"
     },
     "PanelContainer": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "physics_interpolation_mode": "2"
     },
     "Parallax2D": {
-      "clip_children": "0",
-      "physics_interpolation_mode": "2",
-      "position": "null"
+      "physics_interpolation_mode": "2"
     },
     "ParallaxBackground": {
       "layer": "-100"
     },
     "ParallaxLayer": {
-      "clip_children": "0",
       "physics_interpolation_mode": "2"
-    },
-    "Path2D": {
-      "clip_children": "0"
-    },
-    "PathFollow2D": {
-      "clip_children": "0"
-    },
-    "PhysicalBoneSimulator3D": {
-      "active": "true",
-      "influence": "1.0"
-    },
-    "Polygon2D": {
-      "clip_children": "0"
     },
     "Popup": {
       "borderless": "true",
@@ -3558,112 +2999,28 @@
       "wrap_controls": "true"
     },
     "ProgressBar": {
-      "allow_greater": "false",
-      "allow_lesser": "false",
       "anchors_preset": "0",
-      "clip_children": "0",
-      "exp_edit": "false",
       "layout_mode": "3",
-      "max_value": "100.0",
-      "min_value": "0.0",
-      "page": "0.0",
       "physics_interpolation_mode": "2",
-      "rounded": "false",
       "size_flags_vertical": "0",
-      "step": "0.01",
-      "value": "0.0"
+      "step": "0.01"
     },
     "Range": {
-      "accessibility_controls_nodes": "null",
-      "accessibility_described_by_nodes": "null",
-      "accessibility_description": "null",
-      "accessibility_flow_to_nodes": "null",
-      "accessibility_labeled_by_nodes": "null",
-      "accessibility_live": "null",
-      "accessibility_name": "null",
-      "anchor_bottom": "null",
-      "anchor_left": "null",
-      "anchor_right": "null",
-      "anchor_top": "null",
-      "anchors_preset": "null",
-      "auto_translate_mode": "null",
-      "clip_contents": "null",
-      "custom_minimum_size": "null",
-      "editor_description": "null",
-      "focus_behavior_recursive": "null",
-      "focus_mode": "null",
-      "focus_neighbor_bottom": "null",
-      "focus_neighbor_left": "null",
-      "focus_neighbor_right": "null",
-      "focus_neighbor_top": "null",
-      "focus_next": "null",
-      "focus_previous": "null",
-      "grow_horizontal": "null",
-      "grow_vertical": "null",
-      "layout_direction": "null",
-      "layout_mode": "null",
-      "light_mask": "null",
-      "localize_numeral_system": "null",
-      "modulate": "null",
-      "mouse_behavior_recursive": "null",
-      "mouse_default_cursor_shape": "null",
-      "mouse_filter": "null",
-      "mouse_force_pass_scroll_events": "null",
-      "offset_bottom": "null",
-      "offset_left": "null",
-      "offset_right": "null",
-      "offset_top": "null",
-      "physics_interpolation_mode": "null",
-      "pivot_offset": "null",
-      "pivot_offset_ratio": "null",
-      "process_mode": "null",
-      "process_physics_priority": "null",
-      "process_priority": "null",
-      "process_thread_group": "null",
-      "rotation": "null",
-      "scale": "null",
-      "self_modulate": "null",
-      "show_behind_parent": "null",
-      "size_flags_horizontal": "null",
-      "size_flags_stretch_ratio": "null",
-      "size_flags_vertical": "null",
-      "texture_filter": "null",
-      "texture_repeat": "null",
-      "theme_type_variation": "null",
-      "tooltip_auto_translate_mode": "null",
-      "tooltip_text": "null",
-      "top_level": "null",
-      "unique_name_in_owner": "null",
-      "use_parent_material": "null",
-      "visibility_layer": "null",
-      "visible": "null",
-      "y_sort_enabled": "null",
-      "z_as_relative": "null",
-      "z_index": "null"
-    },
-    "ReferenceRect": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "physics_interpolation_mode": "2"
     },
-    "ReflectionProbe": {
-      "layers": "1"
-    },
-    "RetargetModifier3D": {
-      "active": "true",
-      "influence": "1.0"
+    "ReferenceRect": {
+      "anchors_preset": "0",
+      "layout_mode": "3",
+      "physics_interpolation_mode": "2"
     },
     "RichTextLabel": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "clip_contents": "true",
       "focus_mode": "3",
       "layout_mode": "3",
       "physics_interpolation_mode": "2"
-    },
-    "RootMotionView": {
-      "layers": "1"
     },
     "ScriptCreateDialog": {
       "dialog_hide_on_ok": "false",
@@ -3682,142 +3039,34 @@
     },
     "ScrollContainer": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "clip_contents": "true",
       "layout_mode": "3",
       "mouse_filter": "1",
       "physics_interpolation_mode": "2"
     },
-    "SkeletonIK3D": {
-      "active": "true",
-      "influence": "1.0"
-    },
-    "SkeletonModifier3D": {
-      "auto_translate_mode": "null",
-      "editor_description": "null",
-      "physics_interpolation_mode": "null",
-      "process_mode": "null",
-      "process_physics_priority": "null",
-      "process_priority": "null",
-      "process_thread_group": "null",
-      "rotation_edit_mode": "null",
-      "rotation_order": "null",
-      "top_level": "null",
-      "transform": "null",
-      "unique_name_in_owner": "null",
-      "visibility_parent": "null",
-      "visible": "null"
-    },
-    "SoftBody3D": {
-      "cast_shadow": "1",
-      "custom_aabb": "AABB(0, 0, 0, 0, 0, 0)",
-      "extra_cull_margin": "0.0",
-      "gi_lightmap_texel_scale": "1.0",
-      "gi_mode": "1",
-      "ignore_occlusion_culling": "false",
-      "layers": "1",
-      "lod_bias": "1.0",
-      "transparency": "0.0",
-      "visibility_range_begin": "0.0",
-      "visibility_range_begin_margin": "0.0",
-      "visibility_range_end": "0.0",
-      "visibility_range_end_margin": "0.0",
-      "visibility_range_fade_mode": "0"
-    },
     "SpinBox": {
-      "allow_greater": "false",
-      "allow_lesser": "false",
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
-      "max_value": "100.0",
-      "min_value": "0.0",
-      "page": "0.0",
-      "physics_interpolation_mode": "2",
-      "rounded": "false",
-      "step": "1.0",
-      "value": "0.0"
-    },
-    "SplineIK3D": {
-      "active": "true",
-      "influence": "1.0"
+      "physics_interpolation_mode": "2"
     },
     "SplitContainer": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "mouse_filter": "1",
       "physics_interpolation_mode": "2"
     },
     "SpotLight3D": {
-      "distance_fade_begin": "40.0",
-      "distance_fade_enabled": "false",
-      "distance_fade_length": "10.0",
-      "distance_fade_shadow": "50.0",
-      "layers": "1",
-      "light_angular_distance": "null",
-      "light_size": "0.0",
+      "light_intensity_lumens": "1000.0",
+      "light_intensity_lux": "1000.0",
       "light_specular": "0.5",
       "shadow_bias": "0.03",
       "shadow_normal_bias": "1.0"
-    },
-    "SpringBoneCollision3D": {
-      "auto_translate_mode": "null",
-      "editor_description": "null",
-      "physics_interpolation_mode": "null",
-      "process_mode": "null",
-      "process_physics_priority": "null",
-      "process_priority": "null",
-      "process_thread_group": "null",
-      "rotation_edit_mode": "null",
-      "rotation_order": "null",
-      "top_level": "null",
-      "transform": "null",
-      "unique_name_in_owner": "null",
-      "visibility_parent": "null",
-      "visible": "null"
-    },
-    "SpringBoneCollisionCapsule3D": {
-      "bone": "-1",
-      "bone_name": "\"\""
-    },
-    "SpringBoneCollisionPlane3D": {
-      "bone": "-1",
-      "bone_name": "\"\""
-    },
-    "SpringBoneCollisionSphere3D": {
-      "bone": "-1",
-      "bone_name": "\"\""
-    },
-    "SpringBoneSimulator3D": {
-      "active": "true",
-      "influence": "1.0"
-    },
-    "Sprite2D": {
-      "clip_children": "0"
-    },
-    "Sprite3D": {
-      "cast_shadow": "1",
-      "custom_aabb": "AABB(0, 0, 0, 0, 0, 0)",
-      "extra_cull_margin": "0.0",
-      "gi_lightmap_texel_scale": "1.0",
-      "gi_mode": "1",
-      "ignore_occlusion_culling": "false",
-      "layers": "1",
-      "lod_bias": "1.0",
-      "transparency": "0.0",
-      "visibility_range_begin": "0.0",
-      "visibility_range_begin_margin": "0.0",
-      "visibility_range_end": "0.0",
-      "visibility_range_end_margin": "0.0",
-      "visibility_range_fade_mode": "0"
     },
     "SubViewport": {
       "physics_interpolation_mode": "1"
     },
     "SubViewportContainer": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "focus_mode": "1",
       "layout_mode": "3",
       "mouse_filter": "1",
@@ -3825,92 +3074,54 @@
     },
     "TabBar": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "focus_mode": "2",
       "layout_mode": "3",
       "physics_interpolation_mode": "2"
     },
     "TabContainer": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "mouse_filter": "1",
       "physics_interpolation_mode": "2"
     },
     "TextEdit": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "focus_mode": "2",
       "layout_mode": "3",
       "mouse_default_cursor_shape": "1",
       "physics_interpolation_mode": "2"
     },
     "TextureButton": {
-      "action_mode": "1",
       "anchors_preset": "0",
-      "button_mask": "1",
-      "button_pressed": "false",
-      "clip_children": "0",
-      "disabled": "false",
       "focus_mode": "2",
-      "keep_pressed_outside": "false",
       "layout_mode": "3",
-      "physics_interpolation_mode": "2",
-      "shortcut_feedback": "true",
-      "shortcut_in_tooltip": "true",
-      "toggle_mode": "false"
+      "physics_interpolation_mode": "2"
     },
     "TextureProgressBar": {
-      "allow_greater": "false",
-      "allow_lesser": "false",
       "anchors_preset": "0",
-      "clip_children": "0",
-      "exp_edit": "false",
-      "layout_mode": "3",
-      "max_value": "100.0",
-      "min_value": "0.0",
-      "mouse_filter": "1",
-      "page": "0.0",
-      "physics_interpolation_mode": "2",
-      "rounded": "false",
-      "step": "1.0",
-      "value": "0.0"
-    },
-    "TextureRect": {
-      "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "mouse_filter": "1",
       "physics_interpolation_mode": "2"
     },
-    "TileMap": {
-      "clip_children": "0"
-    },
-    "TileMapLayer": {
-      "clip_children": "0"
-    },
-    "TouchScreenButton": {
-      "clip_children": "0"
+    "TextureRect": {
+      "anchors_preset": "0",
+      "layout_mode": "3",
+      "mouse_filter": "1",
+      "physics_interpolation_mode": "2"
     },
     "Tree": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "clip_contents": "true",
       "focus_mode": "2",
       "layout_mode": "3",
       "physics_interpolation_mode": "2"
     },
-    "TwoBoneIK3D": {
-      "active": "true",
-      "influence": "1.0"
-    },
     "VBoxContainer": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "mouse_filter": "1",
       "physics_interpolation_mode": "2",
-      "vertical": "null"
+      "vertical": "true"
     },
     "VehicleBody3D": {
       "mass": "40.0"
@@ -3920,90 +3131,42 @@
     },
     "VFlowContainer": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "mouse_filter": "1",
       "physics_interpolation_mode": "2",
-      "vertical": "null"
+      "vertical": "true"
     },
     "VideoStreamPlayer": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "physics_interpolation_mode": "2"
     },
-    "VisibleOnScreenEnabler3D": {
-      "layers": "1"
-    },
-    "VisibleOnScreenNotifier3D": {
-      "layers": "1"
-    },
-    "VisualInstance3D": {
-      "auto_translate_mode": "null",
-      "editor_description": "null",
-      "physics_interpolation_mode": "null",
-      "process_mode": "null",
-      "process_physics_priority": "null",
-      "process_priority": "null",
-      "process_thread_group": "null",
-      "rotation_edit_mode": "null",
-      "rotation_order": "null",
-      "top_level": "null",
-      "transform": "null",
-      "unique_name_in_owner": "null",
-      "visibility_parent": "null",
-      "visible": "null"
-    },
-    "VoxelGI": {
-      "layers": "1"
-    },
     "VScrollBar": {
-      "allow_greater": "false",
-      "allow_lesser": "false",
       "anchors_preset": "0",
-      "clip_children": "0",
-      "exp_edit": "false",
       "focus_mode": "3",
       "layout_mode": "3",
-      "max_value": "100.0",
-      "min_value": "0.0",
-      "page": "0.0",
       "physics_interpolation_mode": "2",
-      "rounded": "false",
       "size_flags_horizontal": "0",
-      "step": "0.0",
-      "value": "0.0"
+      "step": "0.0"
     },
     "VSeparator": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "physics_interpolation_mode": "2"
     },
     "VSlider": {
-      "allow_greater": "false",
-      "allow_lesser": "false",
       "anchors_preset": "0",
-      "clip_children": "0",
-      "exp_edit": "false",
       "focus_mode": "2",
       "layout_mode": "3",
-      "max_value": "100.0",
-      "min_value": "0.0",
-      "page": "0.0",
       "physics_interpolation_mode": "2",
-      "rounded": "false",
-      "size_flags_horizontal": "0",
-      "step": "1.0",
-      "value": "0.0"
+      "size_flags_horizontal": "0"
     },
     "VSplitContainer": {
       "anchors_preset": "0",
-      "clip_children": "0",
       "layout_mode": "3",
       "mouse_filter": "1",
       "physics_interpolation_mode": "2",
-      "vertical": "null"
+      "vertical": "true"
     },
     "Window": {
       "physics_interpolation_mode": "1"
@@ -4011,19 +3174,11 @@
     "XRAnchor3D": {
       "physics_interpolation_mode": "2"
     },
-    "XRBodyModifier3D": {
-      "active": "true",
-      "influence": "1.0"
-    },
     "XRCamera3D": {
       "physics_interpolation_mode": "2"
     },
     "XRController3D": {
       "physics_interpolation_mode": "2"
-    },
-    "XRHandModifier3D": {
-      "active": "true",
-      "influence": "1.0"
     },
     "XRNode3D": {
       "physics_interpolation_mode": "2"

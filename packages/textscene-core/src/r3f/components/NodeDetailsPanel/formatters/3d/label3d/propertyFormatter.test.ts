@@ -1,23 +1,14 @@
-/** Label3D property formatter. */
-
 import { describe, it, expect } from 'vitest';
 import { formatLabel3DProperties } from './propertyFormatter';
-import { parseLabel3D } from '../../../../../../nodes/3d/label3d/parser';
-import type { Label3DProperties } from '../../../../../../nodes/3d/label3d/types';
-import { heading } from '../../../../../../parser/testing/parserKit';
+import { sectionsOf, sectionTitled } from '../../testing/inspectedScene';
 
-function props(raw: Record<string, string> = {}): Label3DProperties {
-  return parseLabel3D(heading('Label3D', { name: 'Label' }), raw);
-}
-
-function section(sections: ReturnType<typeof formatLabel3DProperties>, title: string) {
-  return sections.find((s) => s.title === title);
+async function section(title: string, properties: Record<string, string> = {}) {
+  return sectionTitled(await sectionsOf(formatLabel3DProperties, 'Label3D', properties), title);
 }
 
 describe('formatLabel3DProperties', () => {
-  it('shows "(empty)" placeholder text, pixel size, and billboard mode by default (disabled)', () => {
-    // Label3D's billboard defaults to DISABLED (Component.parity.test.tsx).
-    const text = section(formatLabel3DProperties(props()), 'Text')!;
+  it('lists an empty text, the pixel size and a disabled billboard for a node that sets nothing', async () => {
+    const text = (await section('Text'))!;
     expect(text.items).toEqual([
       { label: 'Text', value: '(empty)' },
       { label: 'Pixel Size', value: '0.0050' },
@@ -26,13 +17,13 @@ describe('formatLabel3DProperties', () => {
     ]);
   });
 
-  it('shows an authored shaded flag', () => {
-    const text = section(formatLabel3DProperties(props({ shaded: 'true' })), 'Text')!;
+  it('shows an authored shaded flag', async () => {
+    const text = (await section('Text', { shaded: 'true' }))!;
     expect(text.items).toContainEqual({ label: 'Shaded', value: 'On' });
   });
 
-  it('shows the layout properties in a Layout section, at Godot defaults when unset', () => {
-    const layout = section(formatLabel3DProperties(props()), 'Layout')!;
+  it('shows the layout properties in a Layout section, at Godot defaults when unset', async () => {
+    const layout = (await section('Layout'))!;
     expect(layout.items).toEqual([
       { label: 'Horizontal Alignment', value: 'HORIZONTAL_ALIGNMENT_CENTER' },
       { label: 'Vertical Alignment', value: 'VERTICAL_ALIGNMENT_CENTER' },
@@ -45,20 +36,15 @@ describe('formatLabel3DProperties', () => {
     ]);
   });
 
-  it('reports the authored layout', () => {
-    const layout = section(
-      formatLabel3DProperties(
-        props({
-          horizontal_alignment: '3',
-          vertical_alignment: '2',
-          width: '120',
-          autowrap_mode: '3',
-          uppercase: 'true',
-          offset: 'Vector2(4, -6)',
-        })
-      ),
-      'Layout'
-    )!;
+  it('reports the authored layout', async () => {
+    const layout = (await section('Layout', {
+      horizontal_alignment: '3',
+      vertical_alignment: '2',
+      width: '120',
+      autowrap_mode: '3',
+      uppercase: 'true',
+      offset: 'Vector2(4, -6)',
+    }))!;
     expect(layout.items).toEqual([
       { label: 'Horizontal Alignment', value: 'HORIZONTAL_ALIGNMENT_FILL' },
       { label: 'Vertical Alignment', value: 'VERTICAL_ALIGNMENT_BOTTOM' },
@@ -71,55 +57,46 @@ describe('formatLabel3DProperties', () => {
     ]);
   });
 
-  it('shows the authored text verbatim (quotes stripped by the parser)', () => {
-    const text = section(formatLabel3DProperties(props({ text: '"Hello world"' })), 'Text')!;
+  it('shows the authored text verbatim the file sets', async () => {
+    const text = (await section('Text', { text: '"Hello world"' }))!;
     expect(text.items).toContainEqual({ label: 'Text', value: 'Hello world' });
   });
 
-  it('reports every billboard mode name', () => {
-    expect(section(formatLabel3DProperties(props({ billboard: '0' })), 'Text')!.items).toContainEqual({
+  it('reports every billboard mode name', async () => {
+    expect((await section('Text', { billboard: '0' }))!.items).toContainEqual({
       label: 'Billboard',
       value: 'Disabled',
     });
-    expect(section(formatLabel3DProperties(props({ billboard: '2' })), 'Text')!.items).toContainEqual({
+    expect((await section('Text', { billboard: '2' }))!.items).toContainEqual({
       label: 'Billboard',
       value: 'Y-Axis Only',
     });
   });
 
-  it('formats the Color section with the modulate as rgba', () => {
-    const color = section(formatLabel3DProperties(props({ modulate: 'Color(1, 0.5, 0, 1)' })), 'Color')!;
+  it('formats the Color section with the modulate as rgba', async () => {
+    const color = (await section('Color', { modulate: 'Color(1, 0.5, 0, 1)' }))!;
     expect(color.items).toEqual([{ label: 'Modulate', value: 'rgba(255, 128, 0, 1.00)' }]);
   });
 
-  it('omits the Outline section when outline_size is the Godot default (12 > 0 — always shown)', () => {
-    // Godot's default outline_size is 12, so the Outline section is present
-    // even with no explicit override.
-    const sections = formatLabel3DProperties(props());
-    expect(section(sections, 'Outline')).toBeDefined();
+  it("lists the Outline section at Godot's default outline_size of 12", async () => {
+    expect(await section('Outline')).toBeDefined();
   });
 
-  it('omits the Outline section only when outline_size is explicitly zero', () => {
-    const sections = formatLabel3DProperties(props({ outline_size: '0' }));
-    expect(section(sections, 'Outline')).toBeUndefined();
+  it('omits the Outline section only when outline_size is explicitly zero', async () => {
+    expect(await section('Outline', { outline_size: '0' })).toBeUndefined();
   });
 
-  it('formats the Outline section with size and color when outline_size > 0', () => {
-    const outline = section(
-      formatLabel3DProperties(props({ outline_size: '8', outline_modulate: 'Color(0, 0, 0, 1)' })),
-      'Outline'
-    )!;
+  it('formats the Outline section with size and color when outline_size > 0', async () => {
+    const outline = (await section('Outline', { outline_size: '8', outline_modulate: 'Color(0, 0, 0, 1)' }))!;
     expect(outline.items).toEqual([
       { label: 'Outline Size', value: '8' },
       { label: 'Outline Color', value: 'rgba(0, 0, 0, 1.00)' },
     ]);
   });
 
-  it('appends the Node3D transform sections', () => {
-    const sections = formatLabel3DProperties(
-      props({ transform: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1)' })
-    );
-    expect(section(sections, 'Position')).toBeDefined();
-    expect(section(sections, 'Scale')).toBeDefined();
+  it('appends the Node3D transform sections', async () => {
+    const transform = { transform: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1)' };
+    expect(await section('Position', transform)).toBeDefined();
+    expect(await section('Scale', transform)).toBeDefined();
   });
 });

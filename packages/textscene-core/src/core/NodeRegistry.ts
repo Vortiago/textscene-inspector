@@ -24,16 +24,6 @@ import type { TscnNode } from '../parser/types';
 import { warn } from '../logger';
 import { createTypeRegistry } from './createTypeRegistry';
 
-export interface PropertyItem {
-  label: string;
-  value: string;
-}
-
-export interface PropertySection {
-  title: string;
-  items: PropertyItem[];
-}
-
 export interface NodeTypeRegistration {
   /** Node type name, such as 'MeshInstance3D' or 'Node3D'. */
   typeName: string;

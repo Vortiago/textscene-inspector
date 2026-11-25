@@ -1,16 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { identityTransform3D } from '../../../../../../godot/math/transform3d';
-import { newBone } from '../../../../../../nodes/3d/skeleton3d/skeletonPose';
 import { formatSkeleton3DProperties } from './propertyFormatter';
+import { sectionsOf, sectionTitled } from '../../testing/inspectedScene';
 
 describe('formatSkeleton3DProperties', () => {
-  it('lists the bone count and show_rest_only in a Skeleton3D section ahead of the Node3D ones', () => {
-    const sections = formatSkeleton3DProperties({
-      name: 'Skeleton3D',
-      transform: { ...identityTransform3D(), origin: { x: 1, y: 2, z: 3 } },
-      bones: [newBone('a'), newBone('b')],
-      showRestOnly: true,
-      motionScale: 1,
+  it('lists the bone count and show_rest_only in a Skeleton3D section ahead of the Node3D ones', async () => {
+    const sections = await sectionsOf(formatSkeleton3DProperties, 'Skeleton3D', {
+      'bones/0/name': '"a"',
+      'bones/1/name': '"b"',
+      show_rest_only: 'true',
+      transform: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 2, 3)',
     });
 
     expect(sections[0]).toEqual({
@@ -20,16 +18,11 @@ describe('formatSkeleton3DProperties', () => {
         { label: 'Show Rest Only', value: 'true' },
       ],
     });
-    expect(sections.length).toBeGreaterThan(1);
+    expect(sectionTitled(sections, 'Position')).toBeDefined();
   });
 
-  it('counts no bone for a skeleton that adds none (edge case)', () => {
-    const [section] = formatSkeleton3DProperties({
-      name: 'S',
-      bones: [],
-      showRestOnly: false,
-      motionScale: 1,
-    });
+  it('counts no bone for a skeleton that adds none', async () => {
+    const [section] = await sectionsOf(formatSkeleton3DProperties, 'Skeleton3D');
 
     expect(section!.items[0]).toEqual({ label: 'Bones', value: '0' });
   });

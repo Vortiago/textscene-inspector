@@ -1,26 +1,10 @@
-/**
- * WorldEnvironment property formatter - formats WorldEnvironment properties for display
- */
+import type { InspectedNode, PropertySection } from '../../inspectedNode';
+import { resourceText } from '../../valueText';
 
-import type { PropertySection } from '../../../../../../core/NodeRegistry.js';
-import type { WorldEnvironmentProperties } from '../../../../../../nodes/3d/worldenvironment/types.js';
-
-export function formatWorldEnvironmentProperties(properties: WorldEnvironmentProperties): PropertySection[] {
-  const sections: PropertySection[] = [];
-
-  // Environment section
-  const environmentItems: PropertySection['items'] = [
-    { label: 'Environment', value: properties.environment || '(none)' },
-  ];
-
-  if (properties.camera_attributes) {
-    environmentItems.push({ label: 'Camera Attributes', value: properties.camera_attributes });
-  }
-
-  sections.push({
-    title: 'Environment',
-    items: environmentItems,
-  });
-
-  return sections;
+export async function formatWorldEnvironmentProperties(node: InspectedNode): Promise<PropertySection[]> {
+  const values = await node.read(['environment', 'camera_attributes']);
+  const items = [{ label: 'Environment', value: resourceText(values.resource('environment')) }];
+  const cameraAttributes = values.resource('camera_attributes');
+  if (cameraAttributes !== null) items.push({ label: 'Camera Attributes', value: cameraAttributes });
+  return [{ title: 'Environment', items }];
 }

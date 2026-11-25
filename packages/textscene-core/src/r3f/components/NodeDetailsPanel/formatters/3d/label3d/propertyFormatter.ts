@@ -1,70 +1,75 @@
-/** Label3D property formatter: the inspector sections for a label. */
-
-import type { PropertySection } from '../../../../../../core/NodeRegistry';
-import type { Label3DProperties } from '../../../../../../nodes/3d/label3d/types';
-import { formatColorRgba } from '../../../../../../utils/colorParser';
-import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
-import { billboardName } from '../../../../../../nodes/3d/sprites/shared/billboardName';
 import { HORIZONTAL_ALIGNMENT_NAMES, VERTICAL_ALIGNMENT_NAMES } from '../../../../../../godot/math/alignment';
 import { AUTOWRAP_MODE_NAMES } from '../../../../../../godot/text/textServerEnums';
+import type { InspectedNode, PropertySection } from '../../inspectedNode';
+import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
+import { billboardName } from '../../sprites/billboardName';
+import { rgbaText } from '../../valueText';
 
-export function formatLabel3DProperties(properties: Label3DProperties): PropertySection[] {
-  const sections: PropertySection[] = [];
+const LABEL_3D_PROPERTIES = [
+  'text',
+  'pixel_size',
+  'billboard',
+  'shaded',
+  'horizontal_alignment',
+  'vertical_alignment',
+  'width',
+  'autowrap_mode',
+  'autowrap_trim_flags',
+  'justification_flags',
+  'uppercase',
+  'offset',
+  'modulate',
+  'outline_size',
+  'outline_modulate',
+] as const;
 
-  const textItems: PropertySection['items'] = [
-    { label: 'Text', value: properties.text || '(empty)' },
-    { label: 'Pixel Size', value: properties.pixel_size.toFixed(4) },
-    { label: 'Billboard', value: billboardName(properties.billboard) },
-    { label: 'Shaded', value: properties.shaded ? 'On' : 'Off' },
-  ];
+function onOff(isOn: boolean): string {
+  return isOn ? 'On' : 'Off';
+}
 
-  sections.push({
-    title: 'Text',
-    items: textItems,
-  });
-
-  sections.push({
-    title: 'Layout',
-    items: [
-      { label: 'Horizontal Alignment', value: HORIZONTAL_ALIGNMENT_NAMES[properties.horizontal_alignment]! },
-      { label: 'Vertical Alignment', value: VERTICAL_ALIGNMENT_NAMES[properties.vertical_alignment]! },
-      { label: 'Width', value: String(properties.width) },
-      { label: 'Autowrap Mode', value: AUTOWRAP_MODE_NAMES[properties.autowrap_mode]! },
-      { label: 'Autowrap Trim Flags', value: String(properties.autowrap_trim_flags) },
-      { label: 'Justification Flags', value: String(properties.justification_flags) },
-      { label: 'Uppercase', value: properties.uppercase ? 'On' : 'Off' },
-      { label: 'Offset', value: `${properties.offset.x}, ${properties.offset.y}` },
-    ],
-  });
-
-  const colorItems: PropertySection['items'] = [
+export async function formatLabel3DProperties(node: InspectedNode): Promise<PropertySection[]> {
+  const values = await node.read(LABEL_3D_PROPERTIES);
+  const [offsetX = 0, offsetY = 0] = values.numbers('offset');
+  const sections: PropertySection[] = [
     {
-      label: 'Modulate',
-      value: formatColorRgba(properties.modulate),
+      title: 'Text',
+      items: [
+        { label: 'Text', value: values.string('text') || '(empty)' },
+        { label: 'Pixel Size', value: values.number('pixel_size').toFixed(4) },
+        { label: 'Billboard', value: billboardName(values.number('billboard')) },
+        { label: 'Shaded', value: onOff(values.boolean('shaded')) },
+      ],
     },
+    {
+      title: 'Layout',
+      items: [
+        {
+          label: 'Horizontal Alignment',
+          value: HORIZONTAL_ALIGNMENT_NAMES[values.number('horizontal_alignment')]!,
+        },
+        {
+          label: 'Vertical Alignment',
+          value: VERTICAL_ALIGNMENT_NAMES[values.number('vertical_alignment')]!,
+        },
+        { label: 'Width', value: String(values.number('width')) },
+        { label: 'Autowrap Mode', value: AUTOWRAP_MODE_NAMES[values.number('autowrap_mode')]! },
+        { label: 'Autowrap Trim Flags', value: String(values.number('autowrap_trim_flags')) },
+        { label: 'Justification Flags', value: String(values.number('justification_flags')) },
+        { label: 'Uppercase', value: onOff(values.boolean('uppercase')) },
+        { label: 'Offset', value: `${offsetX}, ${offsetY}` },
+      ],
+    },
+    { title: 'Color', items: [{ label: 'Modulate', value: rgbaText(values.numbers('modulate')) }] },
   ];
-
-  sections.push({
-    title: 'Color',
-    items: colorItems,
-  });
-
-  if (properties.outline_size > 0) {
-    const outlineItems: PropertySection['items'] = [
-      { label: 'Outline Size', value: properties.outline_size.toFixed(0) },
-      {
-        label: 'Outline Color',
-        value: formatColorRgba(properties.outline_modulate),
-      },
-    ];
-
+  const outlineSize = values.number('outline_size');
+  if (outlineSize > 0) {
     sections.push({
       title: 'Outline',
-      items: outlineItems,
+      items: [
+        { label: 'Outline Size', value: outlineSize.toFixed(0) },
+        { label: 'Outline Color', value: rgbaText(values.numbers('outline_modulate')) },
+      ],
     });
   }
-
-  sections.push(...formatNode3DProperties(properties));
-
-  return sections;
+  return [...sections, ...(await formatNode3DProperties(node))];
 }

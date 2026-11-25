@@ -3,10 +3,7 @@ import { serialChildName, validateNodeName } from '../../../../godot/string/node
 import { unquoteString } from '../../../../parser/utils.js';
 import { LAYER_LEAVES } from '../shared/layerVector.js';
 
-/**
- * How far the names follow the loop. Past it the loop builds more TileMapLayer nodes than a scene holds,
- * so a written layer keeps `Layer%d` of its own index and the gap layers have no name.
- */
+/** Past this layer index a written layer keeps `Layer%d` of its index, and a gap layer has no name. */
 const NAME_FILL_CEILING = 1 << 16;
 
 /** Each layer's name as `_set` builds and renames them in file order. */

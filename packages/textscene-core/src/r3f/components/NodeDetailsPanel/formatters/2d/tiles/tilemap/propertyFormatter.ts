@@ -1,21 +1,22 @@
-/** Formats TileMap properties for the details panel. */
-
-import type { PropertySection } from '../../../../../../../core/NodeRegistry';
+import type { InspectedNode, PropertySection } from '../../../inspectedNode';
 import { formatNode2DProperties } from '../../../base/node2d/propertyFormatter';
-import type { TileMapProperties } from '../../../../../../../nodes/2d/tiles/tilemap/types';
+import { resourceText } from '../../../valueText';
+import { cellCountText, usedCellCount } from '../usedCells';
 
-export function formatTileMapProperties(properties: TileMapProperties): PropertySection[] {
-  const items: PropertySection['items'] = [
-    { label: 'Tile Set', value: properties.tile_set ?? '(none)' },
-    { label: 'Layers', value: properties.layers.length.toString() },
+export async function formatTileMapProperties(node: InspectedNode): Promise<PropertySection[]> {
+  const layerCount = Number(await node.call('get_layers_count'));
+  const layers = [...Array(layerCount).keys()];
+  const names = await node.read(['tile_set', ...layers.map((layer) => `layer_${layer}/name`)]);
+  const counts = await Promise.all(
+    layers.map(async (layer) => usedCellCount(await node.call('get_used_cells', layer)))
+  );
+  const items = [
+    { label: 'Tile Set', value: resourceText(names.resource('tile_set')) },
+    { label: 'Layers', value: layerCount.toString() },
+    ...layers.map((layer) => ({
+      label: names.string(`layer_${layer}/name`),
+      value: cellCountText(counts[layer]!),
+    })),
   ];
-  for (const layer of properties.layers) {
-    const count = layer.cells?.length ?? 0;
-    items.push({
-      label: layer.name,
-      value: layer.cells === null ? 'invalid data' : `${count} cell${count === 1 ? '' : 's'}`,
-    });
-  }
-
-  return [{ title: 'Tile Map', items }, ...formatNode2DProperties(properties)];
+  return [{ title: 'Tile Map', items }, ...(await formatNode2DProperties(node))];
 }

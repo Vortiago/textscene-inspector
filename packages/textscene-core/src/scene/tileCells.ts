@@ -1,4 +1,3 @@
-/** The cells a tile layer holds, as Godot keeps them in its `HashMap<Vector2i, CellData>`. */
 import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
 import type { VariantValue } from '../godot/variant/variantValue.js';
 import {

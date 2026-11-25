@@ -1,17 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { ParsedHeading } from '../../../../../../parser/utils';
-import { valueOf } from '../../../../../../parser/testing/parserKit';
-import { parseRemoteTransform2D } from '../../../../../../nodes/2d/remotetransform2d/parser';
 import { formatRemoteTransform2DProperties } from './propertyFormatter';
-
-const HEADING: ParsedHeading = {
-  type: 'node',
-  attributes: { name: 'CameraAnchor', type: 'RemoteTransform2D' },
-};
+import { sectionsOf, valueOf } from '../../testing/inspectedScene';
 
 describe('formatRemoteTransform2DProperties', () => {
-  it('renders the Godot defaults when properties are absent (happy path)', () => {
-    const sections = formatRemoteTransform2DProperties(parseRemoteTransform2D(HEADING, {}));
+  it('lists the Godot defaults of a node that sets nothing', async () => {
+    const sections = await sectionsOf(formatRemoteTransform2DProperties, 'RemoteTransform2D');
     expect(sections.map((s) => s.title)).toContain('RemoteTransform2D');
     expect(valueOf(sections, 'Remote Path')).toBe('(none)');
     expect(valueOf(sections, 'Update Position')).toBe('true');
@@ -20,14 +13,12 @@ describe('formatRemoteTransform2DProperties', () => {
     expect(valueOf(sections, 'Use Global Coordinates')).toBe('true');
   });
 
-  it('extracts the inner path from a NodePath literal (edge case)', () => {
-    const sections = formatRemoteTransform2DProperties(
-      parseRemoteTransform2D(HEADING, {
-        remote_path: 'NodePath("../../Camera2D")',
-        update_rotation: 'false',
-      })
-    );
-    expect(valueOf(sections, 'Remote Path')).toBe('../../Camera2D');
+  it('lists the path a NodePath holds', async () => {
+    const sections = await sectionsOf(formatRemoteTransform2DProperties, 'RemoteTransform2D', {
+      remote_path: 'NodePath("../Target/Geometry")',
+      update_rotation: 'false',
+    });
+    expect(valueOf(sections, 'Remote Path')).toBe('../Target/Geometry');
     expect(valueOf(sections, 'Update Rotation')).toBe('false');
   });
 });

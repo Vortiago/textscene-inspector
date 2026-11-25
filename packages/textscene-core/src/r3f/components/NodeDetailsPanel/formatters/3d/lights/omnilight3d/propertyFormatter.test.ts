@@ -1,23 +1,14 @@
-/** OmniLight3D property formatter. */
-
 import { describe, it, expect } from 'vitest';
 import { formatOmniLight3DProperties } from './propertyFormatter';
-import { parseOmniLight3D } from '../../../../../../../nodes/3d/lights/omnilight3d/parser';
-import type { OmniLight3DProperties } from '../../../../../../../nodes/3d/lights/omnilight3d/types';
-import { heading } from '../../../../../../../parser/testing/parserKit';
+import { sectionsOf, sectionTitled } from '../../../testing/inspectedScene';
 
-function props(raw: Record<string, string> = {}): OmniLight3DProperties {
-  return parseOmniLight3D(heading('OmniLight3D', { name: 'Point' }), raw);
-}
-
-function section(sections: ReturnType<typeof formatOmniLight3DProperties>, title: string) {
-  return sections.find((s) => s.title === title);
+async function section(title: string, properties: Record<string, string> = {}) {
+  return sectionTitled(await sectionsOf(formatOmniLight3DProperties, 'OmniLight3D', properties), title);
 }
 
 describe('formatOmniLight3DProperties', () => {
-  it('formats the Light section with base items plus Range and Attenuation', () => {
-    const light = section(formatOmniLight3DProperties(props()), 'Light')!;
-    expect(light.items).toEqual([
+  it('lists the shared light rows, then the range and the attenuation', async () => {
+    expect((await section('Light'))!.items).toEqual([
       { label: 'Color', value: 'Color(1, 1, 1, 1)' },
       { label: 'Energy', value: '1.00' },
       { label: 'Range', value: '5.00' },
@@ -25,50 +16,42 @@ describe('formatOmniLight3DProperties', () => {
     ]);
   });
 
-  it('formats custom range and attenuation', () => {
-    const light = section(
-      formatOmniLight3DProperties(props({ omni_range: '12.5', omni_attenuation: '2.25' })),
-      'Light'
-    )!;
-    expect(light.items).toContainEqual({ label: 'Range', value: '12.50' });
-    expect(light.items).toContainEqual({ label: 'Attenuation', value: '2.25' });
+  it('lists the range and the attenuation the file sets', async () => {
+    const light = await section('Light', { omni_range: '12.5', omni_attenuation: '2.25' });
+    expect(light!.items).toContainEqual({ label: 'Range', value: '12.50' });
+    expect(light!.items).toContainEqual({ label: 'Attenuation', value: '2.25' });
   });
 
-  it('formats the Shadows section without omni items when shadow mode unset', () => {
-    const shadows = section(formatOmniLight3DProperties(props()), 'Shadows')!;
-    expect(shadows.items).toEqual([{ label: 'Enabled', value: 'No' }]);
+  it('lists no shadow mode row when the file sets none', async () => {
+    expect((await section('Shadows'))!.items).toEqual([{ label: 'Enabled', value: 'No' }]);
   });
 
-  it('maps every omni_shadow_mode value to its label, including an unknown value', () => {
-    const modeLabel = (mode: string) =>
-      section(formatOmniLight3DProperties(props({ omni_shadow_mode: mode })), 'Shadows')!.items.find(
-        (i) => i.label === 'Shadow Mode'
-      )!.value;
+  it('names each omni_shadow_mode, and an unknown one by its number', async () => {
+    const modeLabel = async (mode: string) =>
+      (await section('Shadows', { omni_shadow_mode: mode }))!.items.find((i) => i.label === 'Shadow Mode')!
+        .value;
 
-    expect(modeLabel('0')).toBe('DUAL_PARABOLOID');
-    expect(modeLabel('1')).toBe('CUBE');
-    expect(modeLabel('7')).toBe('Unknown (7)');
+    expect(await modeLabel('0')).toBe('DUAL_PARABOLOID');
+    expect(await modeLabel('1')).toBe('CUBE');
+    expect(await modeLabel('7')).toBe('Unknown (7)');
   });
 
-  it('shows Normal Bias and Shadow Mode together when both set', () => {
-    const shadows = section(
-      formatOmniLight3DProperties(
-        props({ shadow_enabled: 'true', shadow_normal_bias: '0.03', omni_shadow_mode: '1' })
-      ),
-      'Shadows'
-    )!;
-    expect(shadows.items).toEqual([
+  it('lists the normal bias and the shadow mode together when the file sets both', async () => {
+    const shadows = await section('Shadows', {
+      shadow_enabled: 'true',
+      shadow_normal_bias: '0.03',
+      omni_shadow_mode: '1',
+    });
+    expect(shadows!.items).toEqual([
       { label: 'Enabled', value: 'Yes' },
       { label: 'Normal Bias', value: '0.030' },
       { label: 'Shadow Mode', value: 'CUBE' },
     ]);
   });
 
-  it('appends the Node3D transform sections', () => {
-    const sections = formatOmniLight3DProperties(
-      props({ transform: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1)' })
-    );
-    expect(section(sections, 'Position')).toBeDefined();
-    expect(section(sections, 'Scale')).toBeDefined();
+  it('appends the Node3D transform sections', async () => {
+    const transform = { transform: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1)' };
+    expect(await section('Position', transform)).toBeDefined();
+    expect(await section('Scale', transform)).toBeDefined();
   });
 });

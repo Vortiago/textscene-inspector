@@ -1,4 +1,4 @@
-import type { PropertySection } from '../../../../core/NodeRegistry';
+import type { Formatter } from './inspectedNode';
 import { formatAnimatedSprite2DProperties } from './2d/animatedsprite2d/propertyFormatter';
 import { formatAnimationPlayerProperties } from './animation/animationplayer/propertyFormatter';
 import { formatAnimationTreeProperties } from './animation/animationtree/propertyFormatter';
@@ -37,11 +37,8 @@ import { formatTimerProperties } from './timers/timer/propertyFormatter';
 import { formatVehicleWheel3DProperties } from './physics/3d/vehiclewheel3d/propertyFormatter';
 import { formatWorldEnvironmentProperties } from './3d/worldenvironment/propertyFormatter';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- each formatter takes its own parsed properties
-type PropertyFormatter = (properties: any) => PropertySection[];
-
 /** The inspector sections of each class that has its own, by exact class name. */
-const FORMATTERS: ReadonlyMap<string, PropertyFormatter> = new Map<string, PropertyFormatter>([
+const FORMATTERS: ReadonlyMap<string, Formatter> = new Map<string, Formatter>([
   ['AnimatedSprite2D', formatAnimatedSprite2DProperties],
   ['AnimationPlayer', formatAnimationPlayerProperties],
   ['AnimationTree', formatAnimationTreeProperties],
@@ -82,6 +79,6 @@ const FORMATTERS: ReadonlyMap<string, PropertyFormatter> = new Map<string, Prope
 ]);
 
 /** The formatter of `className`, or undefined for a class with no sections of its own. */
-export function formatterOf(className: string): PropertyFormatter | undefined {
+export function formatterOf(className: string): Formatter | undefined {
   return FORMATTERS.get(className);
 }

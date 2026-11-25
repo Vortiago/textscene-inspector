@@ -75,10 +75,7 @@ export function parseParticleParams(properties: Record<string, string>): Particl
 /** The classes whose paired setters pull one bound onto the other as a file loads. */
 const PARTICLE_CLASSES = ['CPUParticles2D', 'CPUParticles3D'];
 
-/**
- * The texts with each `_min` and `_max` the file writes set to what the setters leave after the
- * file's lines, so a crossed pair loads as Godot loads it. Another class's texts stay as they are.
- */
+/** Each `_min` and `_max` the file writes as its setters leave it, so a crossed pair loads as in Godot. */
 export function withLoadedParamRanges(
   className: string,
   properties: Record<string, string>

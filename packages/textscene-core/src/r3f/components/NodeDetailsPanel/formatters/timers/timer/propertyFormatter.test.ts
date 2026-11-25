@@ -1,14 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { ParsedHeading } from '../../../../../../parser/utils';
-import { valueOf } from '../../../../../../parser/testing/parserKit';
-import { parseTimer } from '../../../../../../nodes/timers/timer/parser';
 import { formatTimerProperties } from './propertyFormatter';
-
-const HEADING: ParsedHeading = { type: 'node', attributes: { name: 'WaitTimer', type: 'Timer' } };
+import { sectionsOf, valueOf } from '../../testing/inspectedScene';
 
 describe('formatTimerProperties', () => {
-  it('renders the Godot defaults when properties are absent (happy path)', () => {
-    const sections = formatTimerProperties(parseTimer(HEADING, {}));
+  it('lists the Godot defaults of a node that sets nothing', async () => {
+    const sections = await sectionsOf(formatTimerProperties, 'Timer');
     expect(sections.map((s) => s.title)).toContain('Timer');
     expect(valueOf(sections, 'Wait Time (s)')).toBe('1.00');
     expect(valueOf(sections, 'Autostart')).toBe('false');
@@ -18,17 +14,15 @@ describe('formatTimerProperties', () => {
     expect(valueOf(sections, 'Ignore Time Scale')).toBe('false');
   });
 
-  it('reflects explicit values (edge case)', () => {
-    const sections = formatTimerProperties(
-      parseTimer(HEADING, {
-        wait_time: '2.5',
-        autostart: 'true',
-        one_shot: 'true',
-        paused: 'true',
-        process_callback: '0',
-        ignore_time_scale: 'true',
-      })
-    );
+  it('lists the values the file sets', async () => {
+    const sections = await sectionsOf(formatTimerProperties, 'Timer', {
+      wait_time: '2.5',
+      autostart: 'true',
+      one_shot: 'true',
+      paused: 'true',
+      process_callback: '0',
+      ignore_time_scale: 'true',
+    });
     expect(valueOf(sections, 'Wait Time (s)')).toBe('2.50');
     expect(valueOf(sections, 'Autostart')).toBe('true');
     expect(valueOf(sections, 'One Shot')).toBe('true');

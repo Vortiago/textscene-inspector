@@ -1,18 +1,17 @@
-/** Formats MeshInstance2D properties for the details panel: the mesh and texture, then Node2D. */
-
-import type { PropertySection } from '../../../../../../core/NodeRegistry';
+import type { InspectedNode, PropertySection } from '../../inspectedNode';
 import { formatNode2DProperties } from '../../base/node2d/propertyFormatter';
-import type { MeshInstance2DProperties } from '../../../../../../nodes/2d/meshinstance2d/types';
+import { resourceText } from '../../valueText';
 
-export function formatMeshInstance2DProperties(properties: MeshInstance2DProperties): PropertySection[] {
+export async function formatMeshInstance2DProperties(node: InspectedNode): Promise<PropertySection[]> {
+  const values = await node.read(['mesh', 'texture']);
   return [
     {
       title: 'Mesh',
       items: [
-        { label: 'Mesh', value: properties.mesh ?? '(none)' },
-        { label: 'Texture', value: properties.texture ?? '(none)' },
+        { label: 'Mesh', value: resourceText(values.resource('mesh')) },
+        { label: 'Texture', value: resourceText(values.resource('texture')) },
       ],
     },
-    ...formatNode2DProperties(properties),
+    ...(await formatNode2DProperties(node)),
   ];
 }

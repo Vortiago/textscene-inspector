@@ -3,7 +3,7 @@
  * Every `PropertyFormatter` emits a display string, so `value` renders as a
  * text node with no `dangerouslySetInnerHTML` and no XSS surface.
  */
-import type { PropertySection as PropertySectionData } from '../../../core/NodeRegistry.js';
+import type { PropertySection as PropertySectionData } from './formatters/inspectedNode.js';
 import styles from './NodeDetailsPanel.module.css';
 
 interface PropertySectionProps {

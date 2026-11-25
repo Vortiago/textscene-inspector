@@ -1,18 +1,17 @@
-/** Skeleton3D property formatter: the bone count and `show_rest_only`, ahead of the shared Node3D sections. */
-
-import type { PropertySection } from '../../../../../../core/NodeRegistry';
+import type { InspectedNode, PropertySection } from '../../inspectedNode';
 import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
-import type { Skeleton3DProperties } from '../../../../../../nodes/3d/skeleton3d/types';
 
-export function formatSkeleton3DProperties(properties: Skeleton3DProperties): PropertySection[] {
+export async function formatSkeleton3DProperties(node: InspectedNode): Promise<PropertySection[]> {
+  const bones = await node.call('get_bone_count');
+  const values = await node.read(['show_rest_only']);
   return [
     {
       title: 'Skeleton3D',
       items: [
-        { label: 'Bones', value: properties.bones.length.toString() },
-        { label: 'Show Rest Only', value: properties.showRestOnly.toString() },
+        { label: 'Bones', value: String(bones) },
+        { label: 'Show Rest Only', value: String(values.boolean('show_rest_only')) },
       ],
     },
-    ...formatNode3DProperties(properties),
+    ...(await formatNode3DProperties(node)),
   ];
 }

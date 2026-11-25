@@ -1,74 +1,76 @@
-/**
- * AudioStreamPlayer3D property formatter: the sections the details panel
- * shows. Calls out the "not played in preview" status so users
- * understand the gizmo is metadata-only.
- */
-
-import type { PropertySection } from '../../../../../../core/NodeRegistry';
-import { type AudioStreamPlayer3DProperties } from '../../../../../../nodes/audio/audiostreamplayer3d/types';
-import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
-import { audioStreamSection } from '../../../../../../nodes/audio/audioStreamSection';
 import { AttenuationModel, DopplerTracking } from '../../../../../../godot/scene/audio';
-import type { EnumValue } from '../../../../../../godot/classdb/enumNames.js';
+import type { InspectedNode, PropertySection } from '../../inspectedNode';
+import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
+import { audioStreamSection } from '../shared/audioSections';
 
-export function formatAudioStreamPlayer3DProperties(
-  properties: AudioStreamPlayer3DProperties
-): PropertySection[] {
-  const sections: PropertySection[] = [audioStreamSection(properties)];
+const PLAYER_3D_PROPERTIES = [
+  'volume_db',
+  'pitch_scale',
+  'max_db',
+  'panning_strength',
+  'max_polyphony',
+  'attenuation_model',
+  'unit_size',
+  'max_distance',
+  'attenuation_filter_cutoff_hz',
+  'attenuation_filter_db',
+  'emission_angle_enabled',
+  'emission_angle_degrees',
+  'emission_angle_filter_attenuation_db',
+  'doppler_tracking',
+  'area_mask',
+] as const;
 
-  sections.push({
-    title: 'Mixing',
-    items: [
-      { label: 'Volume (dB)', value: properties.volume_db.toFixed(2) },
-      { label: 'Pitch Scale', value: properties.pitch_scale.toFixed(3) },
-      { label: 'Max Volume (dB)', value: properties.max_db.toFixed(2) },
-      { label: 'Panning Strength', value: properties.panning_strength.toFixed(2) },
-      { label: 'Max Polyphony', value: properties.max_polyphony.toString() },
-    ],
-  });
-
-  sections.push({
-    title: 'Attenuation',
-    items: [
-      { label: 'Model', value: attenuationName(properties.attenuation_model) },
-      { label: 'Unit Size', value: properties.unit_size.toFixed(2) },
-      {
-        label: 'Max Distance',
-        value: properties.max_distance === 0 ? 'Unlimited' : properties.max_distance.toFixed(2),
-      },
-      { label: 'Filter Cutoff (Hz)', value: properties.attenuation_filter_cutoff_hz.toFixed(0) },
-      { label: 'Filter Strength (dB)', value: properties.attenuation_filter_db.toFixed(2) },
-    ],
-  });
-
-  if (properties.emission_angle_enabled) {
+export async function formatAudioStreamPlayer3DProperties(node: InspectedNode): Promise<PropertySection[]> {
+  const values = await node.read(PLAYER_3D_PROPERTIES);
+  const maxDistance = values.number('max_distance');
+  const sections: PropertySection[] = [
+    await audioStreamSection(node),
+    {
+      title: 'Mixing',
+      items: [
+        { label: 'Volume (dB)', value: values.number('volume_db').toFixed(2) },
+        { label: 'Pitch Scale', value: values.number('pitch_scale').toFixed(3) },
+        { label: 'Max Volume (dB)', value: values.number('max_db').toFixed(2) },
+        { label: 'Panning Strength', value: values.number('panning_strength').toFixed(2) },
+        { label: 'Max Polyphony', value: values.number('max_polyphony').toString() },
+      ],
+    },
+    {
+      title: 'Attenuation',
+      items: [
+        { label: 'Model', value: attenuationName(values.number('attenuation_model')) },
+        { label: 'Unit Size', value: values.number('unit_size').toFixed(2) },
+        { label: 'Max Distance', value: maxDistance === 0 ? 'Unlimited' : maxDistance.toFixed(2) },
+        { label: 'Filter Cutoff (Hz)', value: values.number('attenuation_filter_cutoff_hz').toFixed(0) },
+        { label: 'Filter Strength (dB)', value: values.number('attenuation_filter_db').toFixed(2) },
+      ],
+    },
+  ];
+  if (values.boolean('emission_angle_enabled')) {
     sections.push({
       title: 'Emission Cone',
       items: [
         { label: 'Enabled', value: 'true' },
-        { label: 'Half-angle (°)', value: properties.emission_angle_degrees.toFixed(1) },
+        { label: 'Half-angle (°)', value: values.number('emission_angle_degrees').toFixed(1) },
         {
           label: 'Outside Attenuation (dB)',
-          value: properties.emission_angle_filter_attenuation_db.toFixed(2),
+          value: values.number('emission_angle_filter_attenuation_db').toFixed(2),
         },
       ],
     });
   }
-
   sections.push({
     title: 'Spatial',
     items: [
-      { label: 'Doppler Tracking', value: dopplerName(properties.doppler_tracking) },
-      { label: 'Area Mask', value: `0x${properties.area_mask.toString(16)}` },
+      { label: 'Doppler Tracking', value: dopplerName(values.number('doppler_tracking')) },
+      { label: 'Area Mask', value: `0x${values.number('area_mask').toString(16)}` },
     ],
   });
-
-  sections.push(...formatNode3DProperties(properties));
-
-  return sections;
+  return [...sections, ...(await formatNode3DProperties(node))];
 }
 
-function attenuationName(mode: EnumValue<typeof AttenuationModel>): string {
+function attenuationName(mode: number): string {
   switch (mode) {
     case AttenuationModel.INVERSE_DISTANCE:
       return 'Inverse Distance';
@@ -83,7 +85,7 @@ function attenuationName(mode: EnumValue<typeof AttenuationModel>): string {
   }
 }
 
-function dopplerName(mode: EnumValue<typeof DopplerTracking>): string {
+function dopplerName(mode: number): string {
   switch (mode) {
     case DopplerTracking.DISABLED:
       return 'Disabled';

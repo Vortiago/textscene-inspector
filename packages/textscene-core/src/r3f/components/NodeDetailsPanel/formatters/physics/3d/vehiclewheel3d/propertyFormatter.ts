@@ -1,64 +1,49 @@
-/**
- * VehicleWheel3D property formatter. It substitutes Godot's defaults (types.ts),
- * so the panel shows the effective value Godot would simulate. `engine_force`,
- * `brake` and `steering` are runtime inputs, shown only when set, so a static
- * preview does not imply a vehicle is accelerating.
- */
-
-import type { PropertySection, PropertyItem } from '../../../../../../../core/NodeRegistry';
+import type { InspectedNode, PropertyItem, PropertySection } from '../../../inspectedNode';
 import { formatNode3DProperties } from '../../../base/node3d/propertyFormatter';
-import { VEHICLE_WHEEL_3D_DEFAULTS as DEFAULTS } from '../../../../../../../nodes/physics/3d/vehiclewheel3d/types';
-import type { VehicleWheel3DProperties } from '../../../../../../../nodes/physics/3d/vehiclewheel3d/types';
 
-export function formatVehicleWheel3DProperties(properties: VehicleWheel3DProperties): PropertySection[] {
-  const num = (value: number | undefined, fallback: number): string => String(value ?? fallback);
+/** Each section's rows: the label and the property it reads. */
+const WHEEL_ROWS = [
+  ['Radius', 'wheel_radius'],
+  ['Rest Length', 'wheel_rest_length'],
+  ['Friction Slip', 'wheel_friction_slip'],
+  ['Roll Influence', 'wheel_roll_influence'],
+] as const;
 
-  const drive: PropertyItem[] = [
-    { label: 'Traction', value: String(properties.use_as_traction ?? DEFAULTS.use_as_traction) },
-    { label: 'Steering', value: String(properties.use_as_steering ?? DEFAULTS.use_as_steering) },
-  ];
-  if (properties.engine_force !== undefined) {
-    drive.push({ label: 'Engine Force', value: String(properties.engine_force) });
-  }
-  if (properties.brake !== undefined) {
-    drive.push({ label: 'Brake', value: String(properties.brake) });
-  }
-  if (properties.steering !== undefined) {
-    drive.push({ label: 'Steering Angle', value: String(properties.steering) });
-  }
+const SUSPENSION_ROWS = [
+  ['Stiffness', 'suspension_stiffness'],
+  ['Travel', 'suspension_travel'],
+  ['Max Force', 'suspension_max_force'],
+  ['Damping Compression', 'damping_compression'],
+  ['Damping Relaxation', 'damping_relaxation'],
+] as const;
 
-  const sections: PropertySection[] = [
+/** The forces a script drives each frame, shown only where the file sets them. */
+const DRIVE_SET_ROWS = [
+  ['Engine Force', 'engine_force'],
+  ['Brake', 'brake'],
+  ['Steering Angle', 'steering'],
+] as const;
+
+export async function formatVehicleWheel3DProperties(node: InspectedNode): Promise<PropertySection[]> {
+  const driveSetRows = DRIVE_SET_ROWS.filter(([, property]) => node.fileProperties.has(property));
+  const values = await node.read<string>([
+    'use_as_traction',
+    'use_as_steering',
+    ...[...WHEEL_ROWS, ...SUSPENSION_ROWS, ...driveSetRows].map(([, property]) => property),
+  ]);
+  const rows = (pairs: readonly (readonly [string, string])[]): PropertyItem[] =>
+    pairs.map(([label, property]) => ({ label, value: String(values.number(property)) }));
+  return [
+    { title: 'Wheel', items: rows(WHEEL_ROWS) },
+    { title: 'Suspension', items: rows(SUSPENSION_ROWS) },
     {
-      title: 'Wheel',
+      title: 'Drive',
       items: [
-        { label: 'Radius', value: num(properties.wheel_radius, DEFAULTS.wheel_radius) },
-        { label: 'Rest Length', value: num(properties.wheel_rest_length, DEFAULTS.wheel_rest_length) },
-        { label: 'Friction Slip', value: num(properties.wheel_friction_slip, DEFAULTS.wheel_friction_slip) },
-        {
-          label: 'Roll Influence',
-          value: num(properties.wheel_roll_influence, DEFAULTS.wheel_roll_influence),
-        },
+        { label: 'Traction', value: String(values.boolean('use_as_traction')) },
+        { label: 'Steering', value: String(values.boolean('use_as_steering')) },
+        ...rows(driveSetRows),
       ],
     },
-    {
-      title: 'Suspension',
-      items: [
-        { label: 'Stiffness', value: num(properties.suspension_stiffness, DEFAULTS.suspension_stiffness) },
-        { label: 'Travel', value: num(properties.suspension_travel, DEFAULTS.suspension_travel) },
-        { label: 'Max Force', value: num(properties.suspension_max_force, DEFAULTS.suspension_max_force) },
-        {
-          label: 'Damping Compression',
-          value: num(properties.damping_compression, DEFAULTS.damping_compression),
-        },
-        {
-          label: 'Damping Relaxation',
-          value: num(properties.damping_relaxation, DEFAULTS.damping_relaxation),
-        },
-      ],
-    },
-    { title: 'Drive', items: drive },
+    ...(await formatNode3DProperties(node)),
   ];
-
-  sections.push(...formatNode3DProperties(properties));
-  return sections;
 }

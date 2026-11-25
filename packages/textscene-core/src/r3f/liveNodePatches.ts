@@ -152,11 +152,6 @@ function useNodeThrough<N extends TscnNode | null>(
   return useMemo(() => (node ? patchedNode(node, patch) : node), [node, patch]);
 }
 
-/** `node` with the property values the live passes bind at the live path `path`, as the inspector shows it. */
-export function useLivePatchedNode<N extends TscnNode | null>(node: N, path: string | null): N {
-  return useNodeThrough(liveNodePatches, node, path);
-}
-
 /** `node` as render draws it at the live path `path`: {@link liveDrawnPatches} laid over it. */
 export function useLiveDrawnNode<N extends TscnNode | null>(node: N, path: string | null): N {
   return useNodeThrough(liveDrawnPatches, node, path);

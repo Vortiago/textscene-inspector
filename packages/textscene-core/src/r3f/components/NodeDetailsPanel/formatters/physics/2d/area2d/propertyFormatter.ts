@@ -1,27 +1,18 @@
-/**
- * Area2D property formatter: shows monitoring, monitorable, layer and mask
- * (Godot defaults when the TSCN omits them) ahead of the shared Node2D
- * transform sections.
- */
-
-import type { PropertySection } from '../../../../../../../core/NodeRegistry';
-import type { Area2DProperties } from '../../../../../../../nodes/physics/2d/area2d/types';
+import type { InspectedNode, PropertySection } from '../../../inspectedNode';
 import { formatNode2DProperties } from '../../../base/node2d/propertyFormatter';
 
-export function formatArea2DProperties(properties: Area2DProperties): PropertySection[] {
-  const sections: PropertySection[] = [
+export async function formatArea2DProperties(node: InspectedNode): Promise<PropertySection[]> {
+  const values = await node.read(['monitoring', 'monitorable', 'collision_layer', 'collision_mask']);
+  return [
     {
       title: 'Area2D',
       items: [
-        { label: 'Monitoring', value: (properties.monitoring ?? true).toString() },
-        { label: 'Monitorable', value: (properties.monitorable ?? true).toString() },
-        { label: 'Collision Layer', value: (properties.collision_layer ?? 1).toString() },
-        { label: 'Collision Mask', value: (properties.collision_mask ?? 1).toString() },
+        { label: 'Monitoring', value: String(values.boolean('monitoring')) },
+        { label: 'Monitorable', value: String(values.boolean('monitorable')) },
+        { label: 'Collision Layer', value: String(values.number('collision_layer')) },
+        { label: 'Collision Mask', value: String(values.number('collision_mask')) },
       ],
     },
+    ...(await formatNode2DProperties(node)),
   ];
-
-  sections.push(...formatNode2DProperties(properties));
-
-  return sections;
 }

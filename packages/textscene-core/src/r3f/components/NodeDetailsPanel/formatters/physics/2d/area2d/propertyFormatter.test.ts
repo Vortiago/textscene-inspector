@@ -1,24 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import type { ParsedHeading } from '../../../../../../../parser/utils';
-import { valueOf } from '../../../../../../../parser/testing/parserKit';
-import { parseArea2D } from '../../../../../../../nodes/physics/2d/area2d/parser';
 import { formatArea2DProperties } from './propertyFormatter';
-
-const HEADING: ParsedHeading = {
-  type: 'node',
-  attributes: { name: 'Trigger', type: 'Area2D' },
-};
+import { sectionsOf, valueOf } from '../../../testing/inspectedScene';
 
 describe('formatArea2DProperties', () => {
-  it('shows monitoring/monitorable/layer/mask when explicitly set (happy path)', () => {
-    const sections = formatArea2DProperties(
-      parseArea2D(HEADING, {
-        monitoring: 'true',
-        monitorable: 'false',
-        collision_layer: '4',
-        collision_mask: '1',
-      })
-    );
+  it('lists the monitoring, layer and mask the file sets', async () => {
+    const sections = await sectionsOf(formatArea2DProperties, 'Area2D', {
+      monitoring: 'true',
+      monitorable: 'false',
+      collision_layer: '4',
+      collision_mask: '1',
+    });
     expect(sections.map((s) => s.title)).toContain('Area2D');
     expect(valueOf(sections, 'Monitoring')).toBe('true');
     expect(valueOf(sections, 'Monitorable')).toBe('false');
@@ -26,16 +17,16 @@ describe('formatArea2DProperties', () => {
     expect(valueOf(sections, 'Collision Mask')).toBe('1');
   });
 
-  it('falls back to Godot defaults when absent (edge case)', () => {
-    const sections = formatArea2DProperties(parseArea2D(HEADING, {}));
+  it('lists the Godot defaults of a node that sets nothing', async () => {
+    const sections = await sectionsOf(formatArea2DProperties, 'Area2D');
     expect(valueOf(sections, 'Monitoring')).toBe('true');
     expect(valueOf(sections, 'Monitorable')).toBe('true');
     expect(valueOf(sections, 'Collision Layer')).toBe('1');
     expect(valueOf(sections, 'Collision Mask')).toBe('1');
   });
 
-  it('appends the shared Node2D sections (Position, Rotation, Scale)', () => {
-    const sections = formatArea2DProperties(parseArea2D(HEADING, {}));
+  it('appends the Node2D sections', async () => {
+    const sections = await sectionsOf(formatArea2DProperties, 'Area2D');
     expect(sections.map((s) => s.title)).toEqual(
       expect.arrayContaining(['Position', 'Rotation (degrees)', 'Scale'])
     );

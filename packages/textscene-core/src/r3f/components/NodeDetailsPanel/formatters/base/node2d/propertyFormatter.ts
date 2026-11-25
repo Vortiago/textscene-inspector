@@ -1,90 +1,96 @@
-/**
- * Node2D property formatter: the 2D transform, draw order and CanvasItem tint.
- * The 2D analogue of `formatNode3DProperties`. 2D slices append these sections
- * after their own type-specific ones.
- */
-
-import type { PropertySection } from '../../../../../../core/NodeRegistry';
-import type { Node2DProperties } from '../../../../../../nodes/base/node2d/types';
-import { formatColorRgba } from '../../../../../../utils/colorParser';
-import type { Rgba } from '../../../../../../godot/math/math';
 import {
   CANVAS_ITEM_CLIP_CHILDREN_MODE_NAMES,
   CanvasItemClipChildrenMode,
 } from '../../../../../../godot/scene/canvasItem';
-import { formatDegrees } from '../../../../../../utils/transform';
+import type { InspectedNode, NodeValues, PropertySection } from '../../inspectedNode';
+import { instanceSection } from '../instanceSection';
+import { degreesText, rgbaText, yesNo } from '../../valueText';
 
-function isWhite(color: Rgba): boolean {
-  return color.r === 1 && color.g === 1 && color.b === 1 && color.a === 1;
+const NODE_2D_PROPERTIES = [
+  'position',
+  'rotation',
+  'skew',
+  'scale',
+  'z_index',
+  'z_as_relative',
+  'show_behind_parent',
+  'modulate',
+  'self_modulate',
+  'light_mask',
+  'clip_children',
+  'y_sort_enabled',
+] as const;
+
+type Node2DProperty = (typeof NODE_2D_PROPERTIES)[number];
+
+function isWhite(color: readonly number[]): boolean {
+  return color.every((channel) => channel === 1);
 }
 
-export function formatNode2DProperties(properties: Node2DProperties): PropertySection[] {
-  const sections: PropertySection[] = [];
-
-  sections.push({
-    title: 'Position',
-    items: [
-      { label: 'X', value: properties.position.x.toFixed(1) },
-      { label: 'Y', value: properties.position.y.toFixed(1) },
-    ],
-  });
-
-  const rotationItems: PropertySection['items'] = [
-    { label: 'Angle', value: formatDegrees(properties.rotation) },
+export async function formatNode2DProperties(node: InspectedNode): Promise<PropertySection[]> {
+  const values = await node.read(NODE_2D_PROPERTIES);
+  const [x = 0, y = 0] = values.numbers('position');
+  const [scaleX = 1, scaleY = 1] = values.numbers('scale');
+  const sections: PropertySection[] = [
+    {
+      title: 'Position',
+      items: [
+        { label: 'X', value: x.toFixed(1) },
+        { label: 'Y', value: y.toFixed(1) },
+      ],
+    },
   ];
-  if (properties.skew !== 0) {
-    rotationItems.push({ label: 'Skew', value: formatDegrees(properties.skew) });
-  }
+
+  const rotationItems = [{ label: 'Angle', value: degreesText(values.number('rotation')) }];
+  const skew = values.number('skew');
+  if (skew !== 0) rotationItems.push({ label: 'Skew', value: degreesText(skew) });
   sections.push({ title: 'Rotation (degrees)', items: rotationItems });
 
   sections.push({
     title: 'Scale',
     items: [
-      { label: 'X', value: properties.scale.x.toFixed(3) },
-      { label: 'Y', value: properties.scale.y.toFixed(3) },
+      { label: 'X', value: scaleX.toFixed(3) },
+      { label: 'Y', value: scaleY.toFixed(3) },
     ],
   });
 
-  const orderingItems: PropertySection['items'] = [
-    { label: 'Z Index', value: properties.z_index.toString() },
-    { label: 'Z As Relative', value: properties.z_as_relative ? 'Yes' : 'No' },
+  const orderingItems = [
+    { label: 'Z Index', value: values.number('z_index').toString() },
+    { label: 'Z As Relative', value: yesNo(values.boolean('z_as_relative')) },
   ];
-  if (properties.show_behind_parent) {
-    orderingItems.push({ label: 'Show Behind Parent', value: 'Yes' });
-  }
+  if (values.boolean('show_behind_parent')) orderingItems.push({ label: 'Show Behind Parent', value: 'Yes' });
   sections.push({ title: 'Ordering', items: orderingItems });
 
-  const canvasItems: PropertySection['items'] = [
-    { label: 'Modulate', value: formatColorRgba(properties.modulate) },
-  ];
-  if (!isWhite(properties.self_modulate)) {
-    canvasItems.push({ label: 'Self Modulate', value: formatColorRgba(properties.self_modulate) });
-  }
-  // Only when it says something: 1 is every item's default, and a row repeating
-  // it on every node would bury the masks that actually cull a light.
-  if (properties.light_mask !== 1) {
-    canvasItems.push({ label: 'Light Mask', value: properties.light_mask.toString() });
-  }
-  if (properties.clip_children !== CanvasItemClipChildrenMode.DISABLED) {
-    canvasItems.push({
-      label: 'Clip Children',
-      value: CANVAS_ITEM_CLIP_CHILDREN_MODE_NAMES[properties.clip_children] ?? '',
-    });
-  }
-  if (properties.y_sort_enabled) {
-    canvasItems.push({ label: 'Y Sort Enabled', value: 'Yes' });
-    if (properties.y_sort_origin !== 0) {
-      canvasItems.push({ label: 'Y Sort Origin', value: properties.y_sort_origin.toFixed(1) });
-    }
-  }
-  sections.push({ title: 'CanvasItem', items: canvasItems });
-
-  if (properties.instance) {
-    sections.push({
-      title: 'Instance',
-      items: [{ label: 'Scene', value: properties.instance }],
-    });
-  }
-
+  sections.push({ title: 'CanvasItem', items: await canvasItemRows(node, values) });
+  sections.push(...(await instanceSection(node)));
   return sections;
+}
+
+async function canvasItemRows(
+  node: InspectedNode,
+  values: NodeValues<Node2DProperty>
+): Promise<PropertySection['items']> {
+  const items = [{ label: 'Modulate', value: rgbaText(values.numbers('modulate')) }];
+  const selfModulate = values.numbers('self_modulate');
+  if (!isWhite(selfModulate)) items.push({ label: 'Self Modulate', value: rgbaText(selfModulate) });
+  // 1 is every item's default, and a row repeating it on every node would bury the masks that cull a light.
+  const lightMask = values.number('light_mask');
+  if (lightMask !== 1) items.push({ label: 'Light Mask', value: lightMask.toString() });
+  const clipChildren = values.number('clip_children');
+  if (clipChildren !== CanvasItemClipChildrenMode.DISABLED) {
+    items.push({ label: 'Clip Children', value: CANVAS_ITEM_CLIP_CHILDREN_MODE_NAMES[clipChildren] ?? '' });
+  }
+  if (values.boolean('y_sort_enabled')) {
+    items.push({ label: 'Y Sort Enabled', value: 'Yes' });
+    items.push(...(await ySortOriginRows(node)));
+  }
+  return items;
+}
+
+/** Only a TileMapLayer has `y_sort_origin`. Another class answers null, and shows no row. */
+async function ySortOriginRows(node: InspectedNode): Promise<PropertySection['items']> {
+  const values = await node.read(['y_sort_origin']);
+  if (!values.has('y_sort_origin')) return [];
+  const origin = values.number('y_sort_origin');
+  return origin === 0 ? [] : [{ label: 'Y Sort Origin', value: origin.toFixed(1) }];
 }

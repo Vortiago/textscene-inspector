@@ -1,24 +1,14 @@
-/** The Camera2D property formatter. */
-
 import { describe, it, expect } from 'vitest';
 import { formatCamera2DProperties } from './propertyFormatter';
-import { parseCamera2D } from '../../../../../../nodes/2d/camera2d/parser';
-import type { Camera2DProperties } from '../../../../../../nodes/2d/camera2d/types';
+import { sectionsOf, sectionTitled } from '../../testing/inspectedScene';
 
-const heading = { type: 'node', attributes: { type: 'Camera2D', name: 'Cam' } };
-
-function props(raw: Record<string, string> = {}): Camera2DProperties {
-  return parseCamera2D(heading, raw);
-}
-
-function section(sections: ReturnType<typeof formatCamera2DProperties>, title: string) {
-  return sections.find((s) => s.title === title);
+async function sections(properties: Record<string, string> = {}) {
+  return sectionsOf(formatCamera2DProperties, 'Camera2D', properties);
 }
 
 describe('formatCamera2DProperties', () => {
-  it('formats the camera section with Godot defaults', () => {
-    const sections = formatCamera2DProperties(props());
-    expect(section(sections, 'Camera')!.items).toEqual([
+  it('lists the Godot defaults', async () => {
+    expect(sectionTitled(await sections(), 'Camera')!.items).toEqual([
       { label: 'Zoom', value: '(1, 1)' },
       { label: 'Offset', value: '(0, 0)' },
       { label: 'Anchor Mode', value: 'Drag Center' },
@@ -26,16 +16,14 @@ describe('formatCamera2DProperties', () => {
     ]);
   });
 
-  it('formats explicit zoom, offset, anchor mode, and disabled state', () => {
-    const sections = formatCamera2DProperties(
-      props({
-        zoom: 'Vector2(2, 2)',
-        offset: 'Vector2(10, -20)',
-        anchor_mode: '0',
-        enabled: 'false',
-      })
-    );
-    expect(section(sections, 'Camera')!.items).toEqual([
+  it('lists the zoom, offset, anchor mode and enabled state the file sets', async () => {
+    const set = await sections({
+      zoom: 'Vector2(2, 2)',
+      offset: 'Vector2(10, -20)',
+      anchor_mode: '0',
+      enabled: 'false',
+    });
+    expect(sectionTitled(set, 'Camera')!.items).toEqual([
       { label: 'Zoom', value: '(2, 2)' },
       { label: 'Offset', value: '(10, -20)' },
       { label: 'Anchor Mode', value: 'Fixed Top-Left' },
@@ -43,20 +31,19 @@ describe('formatCamera2DProperties', () => {
     ]);
   });
 
-  it('labels an out-of-range anchor mode as Unknown', () => {
-    const sections = formatCamera2DProperties(props({ anchor_mode: '7' }));
-    expect(section(sections, 'Camera')!.items).toContainEqual({
+  it('labels an out-of-range anchor mode as Unknown', async () => {
+    expect(sectionTitled(await sections({ anchor_mode: '7' }), 'Camera')!.items).toContainEqual({
       label: 'Anchor Mode',
       value: 'Unknown',
     });
   });
 
-  it('appends the Node2D transform sections', () => {
-    const sections = formatCamera2DProperties(props({ position: 'Vector2(320, 180)' }));
-    expect(section(sections, 'Position')!.items).toEqual([
+  it('appends the Node2D transform sections', async () => {
+    const set = await sections({ position: 'Vector2(320, 180)' });
+    expect(sectionTitled(set, 'Position')!.items).toEqual([
       { label: 'X', value: '320.0' },
       { label: 'Y', value: '180.0' },
     ]);
-    expect(section(sections, 'Ordering')).toBeDefined();
+    expect(sectionTitled(set, 'Ordering')).toBeDefined();
   });
 });

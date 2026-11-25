@@ -1,11 +1,5 @@
-/**
- * AudioStreamPlayer and AudioStreamPlayer2D contract: their parsers keep the audio properties the
- * linter validates, both slices have an inspector formatter, and the plain player has the `bus` and
- * `playing` validators its 2D/3D siblings have. It uses only stable public surfaces (TscnParser,
- * nodeRegistry, Linter), so it survives refactors.
- */
-
 import { formatterOf } from '../../r3f/components/NodeDetailsPanel/formatters/index';
+import { sectionsAt } from '../../r3f/components/NodeDetailsPanel/formatters/testing/inspectedScene';
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -126,13 +120,12 @@ describe('#147 AudioStreamPlayer / AudioStreamPlayer2D audio properties — beha
   });
 
   // Criterion 1: both slices surface their audio data in the Inspector through a formatter.
-  it('has an inspector formatter that surfaces the audio properties for both players', () => {
+  it('has an inspector formatter that surfaces the audio properties for both players', async () => {
     const format = formatterOf('AudioStreamPlayer');
     const format2 = formatterOf('AudioStreamPlayer2D');
     expect(format, 'AudioStreamPlayer must have a formatter').toBeDefined();
     expect(format2, 'AudioStreamPlayer2D must have a formatter').toBeDefined();
-    const props = firstOfType(PLAIN_WITNESS, 'AudioStreamPlayer').properties;
-    const sections = format!(props);
+    const sections = await sectionsAt(PLAIN_WITNESS, 'Music', format!);
     expect(sections.length, 'the formatter should emit at least one inspector section').toBeGreaterThan(0);
     expect(
       /volume|bus|autoplay|stream/.test(JSON.stringify(sections).toLowerCase()),
@@ -141,8 +134,7 @@ describe('#147 AudioStreamPlayer / AudioStreamPlayer2D audio properties — beha
 
     // The 2D formatter's OUTPUT (not just its presence) must surface the audio
     // surface and render the 2D-specific spatial semantics correctly.
-    const props2 = firstOfType(TWO_D_WITNESS, 'AudioStreamPlayer2D').properties;
-    const sections2 = format2!(props2);
+    const sections2 = await sectionsAt(TWO_D_WITNESS, 'Jump', format2!);
     const json2 = JSON.stringify(sections2).toLowerCase();
     expect(sections2.length, 'the 2D formatter should emit at least one inspector section').toBeGreaterThan(
       0

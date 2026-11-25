@@ -1,32 +1,19 @@
-/**
- * Line2D property formatter: vertex count, width, colour and closed, then the
- * formatNode2DProperties sections.
- */
-
-import type { PropertySection } from '../../../../../../core/NodeRegistry';
-import type { Line2DProperties } from '../../../../../../nodes/2d/line2d/types';
+import type { InspectedNode, PropertySection } from '../../inspectedNode';
 import { formatNode2DProperties } from '../../base/node2d/propertyFormatter';
+import { tupleText } from '../../valueText';
 
-export function formatLine2DProperties(properties: Line2DProperties): PropertySection[] {
-  const sections: PropertySection[] = [];
-
-  const { defaultColor, width, closed } = properties;
-  const vertexCount = Math.floor(properties.points.length / 2);
-
-  sections.push({
-    title: 'Line',
-    items: [
-      { label: 'Vertex Count', value: String(vertexCount) },
-      { label: 'Width', value: String(width) },
-      {
-        label: 'Color',
-        value: `(${defaultColor.r}, ${defaultColor.g}, ${defaultColor.b}, ${defaultColor.a})`,
-      },
-      { label: 'Closed', value: closed ? 'true' : 'false' },
-    ],
-  });
-
-  sections.push(...formatNode2DProperties(properties));
-
-  return sections;
+export async function formatLine2DProperties(node: InspectedNode): Promise<PropertySection[]> {
+  const values = await node.read(['points', 'width', 'default_color', 'closed']);
+  return [
+    {
+      title: 'Line',
+      items: [
+        { label: 'Vertex Count', value: String(Math.floor(values.numbers('points').length / 2)) },
+        { label: 'Width', value: String(values.number('width')) },
+        { label: 'Color', value: tupleText(values.numbers('default_color')) },
+        { label: 'Closed', value: String(values.boolean('closed')) },
+      ],
+    },
+    ...(await formatNode2DProperties(node)),
+  ];
 }

@@ -1,12 +1,10 @@
-/** Formats PointLight2D properties for the details panel: the Light2D surface, its height and its texture scale. */
-
-import type { PropertySection } from '../../../../../../core/NodeRegistry';
-import type { PointLight2DProperties } from '../../../../../../nodes/2d/pointlight2d/types';
+import type { InspectedNode, PropertySection } from '../../inspectedNode';
 import { formatLight2DProperties } from '../lights/shared/propertyFormatter';
 
-export function formatPointLight2DProperties(props: PointLight2DProperties): PropertySection[] {
-  return formatLight2DProperties(props, [
-    { label: 'Height', value: `${props.height.toFixed(0)} px` },
-    { label: 'Texture Scale', value: props.texture_scale.toFixed(2) },
+export async function formatPointLight2DProperties(node: InspectedNode): Promise<PropertySection[]> {
+  const values = await node.read(['height', 'texture_scale']);
+  return formatLight2DProperties(node, [
+    { label: 'Height', value: `${values.number('height').toFixed(0)} px` },
+    { label: 'Texture Scale', value: values.number('texture_scale').toFixed(2) },
   ]);
 }

@@ -58,7 +58,7 @@ export function tileMapLayers(property: string, { texts }: ListedReads): GetOutc
   return { kind: 'value', value: text === undefined ? leaf.initial : castVariant(strToVar(text), leaf.type) };
 }
 
-/** `_get_tile_map_data_using_compatibility_format` (tile_map.cpp:146-170): each cell, in the format it saves. */
+/** Each cell in the format it saves: `_get_tile_map_data_using_compatibility_format` (tile_map.cpp:146). */
 function tileDataOf(text: string | undefined, texts: NodeTexts): GetOutcome {
   const cells = legacyLayerCells(text, texts);
   return cells ? cellsValue(cells) : { kind: 'unported', declaredBy: 'TileMap' };
@@ -81,7 +81,7 @@ export function tileMapUsedCells(texts: NodeTexts, layer: number): readonly Plac
   return legacyLayerCells(layersOf(texts).leaves.get(index)?.get('tile_data'), texts) ?? [];
 }
 
-/** Three int32s a cell: int16 x and y, then uint16 source, atlas x, atlas y and alternative, little-endian. */
+/** Three int32s a cell: int16 x and y, then uint16 source, atlas x, atlas y, alternative, little-endian. */
 function encodeCells(cells: readonly PlacedCell[]): number[] {
   const view = new DataView(new ArrayBuffer(cells.length * 12));
   cells.forEach((cell, index) => {

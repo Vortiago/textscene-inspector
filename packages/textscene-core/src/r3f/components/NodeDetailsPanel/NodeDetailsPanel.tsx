@@ -1,22 +1,12 @@
-/**
- * The properties pane for the selected node. It resolves the node through
- * `useLiveNode` over the live scene tree, so it shows the same identity as
- * the outliner and the viewport.
- */
 import type { ReactNode } from 'react';
-import { rendersOwnVisual } from '../../nodeSupport.js';
-import { isCamera3DType } from '../../cameraNodeTypes.js';
+import { useHierarchy } from '../../contexts/HierarchyContext.js';
 import { usePreviewCamera } from '../TscnPreviewShell/previewCamera.js';
 import { useSelectedPath } from '../TscnPreviewShell/previewSelection.js';
-import { useLiveNode } from '../../useLiveSceneTree.js';
-import { useLivePatchedNode } from '../../liveNodePatches.js';
 import { useUndrawnNode } from '../TscnPreviewShell/previewViewStatus.js';
+import { absolutePathOf, liveNodePathOf, ROOT_WINDOW_PATH } from '../../../scene/nodePathWalk.js';
 import { spelledLiveNodePath } from '../../../utils/nodePath.js';
-import { formatterOf } from './formatters/index.js';
 import { PropertySection } from './PropertySection.js';
-import type { PropertySection as PropertySectionData } from '../../../core/NodeRegistry.js';
-import { authoredSpelling, holdsRenamedCopy } from '../../../resources/authoredSpelling.js';
-import type { SceneScope } from '../../../parser/types.js';
+import { useInspection } from './inspection.js';
 import styles from './NodeDetailsPanel.module.css';
 
 interface NodeDetailsPanelProps {
@@ -25,16 +15,14 @@ interface NodeDetailsPanelProps {
 }
 
 export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
-  const selectedNodePath = useSelectedPath();
+  const path = useSelectedPath();
+  const { scene } = useHierarchy();
   const preview = usePreviewCamera();
+  const node = path === null ? null : (scene?.getNodeOrNull(absolutePathOf(path)) ?? null);
+  const inspection = useInspection(scene, node);
+  const undrawn = useUndrawnNode(path ?? '');
 
-  // The merged node and its originating instance ref. It re-derives when a
-  // lazily loaded sub-scene lands.
-  const entry = useLiveNode(selectedNodePath);
-  // The properties the live scene passes bind, such as the transform a RemoteTransform pushes.
-  const node = useLivePatchedNode(entry?.node ?? null, selectedNodePath);
-
-  if (!entry || !node || !selectedNodePath) {
+  if (!node || !path || !inspection) {
     return (
       <div className={styles.root}>
         <div className={styles.empty}>Select a node to see its properties.</div>
@@ -42,25 +30,15 @@ export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
     );
   }
 
-  const { instanceRef } = entry;
-  const path = selectedNodePath;
-  const formatter = formatterOf(node.type);
-  // A class with sections of its own need not draw.
-  const isNotRendered = rendersOwnVisual(node.type) === 'not-implemented';
-
-  const sections = formatter ? authoredSections(formatter(node.properties), node.scope) : [];
-
+  const parent = node.getParent();
   const isPreviewed = preview?.camera === path;
 
   return (
     <div className={styles.root}>
       <h3 className={styles.title}>{node.name}</h3>
 
-      {/*
-        A banner, not a replacement: an undrawn node still has parsed and
-        validated properties. The Type row below states the type.
-      */}
-      {isNotRendered && (
+      {/* A banner, not a replacement: an undrawn node still has its properties, and its Type row. */}
+      {undrawn?.hasNoComponent && (
         <WarningSection title="Not Implemented">
           <p className={styles.warningText}>
             This node type is not yet drawn by the previewer. It is preserved in the tree and its properties
@@ -89,21 +67,21 @@ export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
             </button>
           )}
         </div>
-        {node.parent && (
+        {parent && parent.path !== ROOT_WINDOW_PATH && (
           <div className={styles.row}>
             <span className={styles.label}>Parent:</span>
-            <span className={styles.value}>{node.parent}</span>
+            <span className={styles.value}>{liveNodePathOf(parent.path)}</span>
           </div>
         )}
-        {instanceRef && (
+        {inspection.instancedScene !== null && (
           <div className={`${styles.row} ${styles.externalInstance}`}>
             <span className={styles.label}>📦 External:</span>
-            <span className={styles.value}>{instanceRef}</span>
+            <span className={styles.value}>{inspection.instancedScene}</span>
           </div>
         )}
       </div>
 
-      {isCamera3DType(node.type) && preview !== null && (
+      {inspection.isCamera3D && preview !== null && (
         <div className={styles.section}>
           <h4 className={styles.sectionTitle}>Camera</h4>
           {/* Godot's "Preview" checkbox for the selected Camera3D (`node_3d_editor_plugin.cpp:6303-6304`). */}
@@ -120,23 +98,11 @@ export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
         </div>
       )}
 
-      {sections.map((section, idx) => (
+      {inspection.sections.map((section, idx) => (
         <PropertySection key={`${section.title}-${idx}`} section={section} />
       ))}
     </div>
   );
-}
-
-/** Each value with its references spelled as their own files wrote them. */
-function authoredSections(
-  sections: PropertySectionData[],
-  scope: SceneScope | undefined
-): PropertySectionData[] {
-  if (!scope || !holdsRenamedCopy(scope)) return sections;
-  return sections.map((section) => ({
-    ...section,
-    items: section.items.map((item) => ({ ...item, value: authoredSpelling(item.value, scope) })),
-  }));
 }
 
 function WarningSection({ title, children }: { title: string; children: ReactNode }) {

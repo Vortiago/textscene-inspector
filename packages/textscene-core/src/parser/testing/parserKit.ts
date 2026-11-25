@@ -10,7 +10,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ParsedHeading } from '../utils';
 import type { TscnNode, TscnScene } from '../types';
-import { parseNodeWithRegistry, type PropertySection } from '../../core/NodeRegistry';
+import { parseNodeWithRegistry } from '../../core/NodeRegistry';
 import type { Node3DProperties } from '../../nodes/base/node3d/types';
 import type { Transform3D } from '../../godot/math/transform3d';
 
@@ -48,18 +48,6 @@ export function makeNode(name: string, type: string, fields: Partial<TscnNode> =
  */
 export function translated(x: number, y: number, z: number): string {
   return `Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, ${x}, ${y}, ${z})`;
-}
-
-/**
- * Find the first item labelled `label` across a formatter's sections and
- * return its value, or undefined when no section carries it.
- */
-export function valueOf(sections: PropertySection[], label: string): string | undefined {
-  for (const section of sections) {
-    const item = section.items.find((i) => i.label === label);
-    if (item) return item.value;
-  }
-  return undefined;
 }
 
 /**

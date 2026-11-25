@@ -1,4 +1,4 @@
-import { descendsFromClass, findInClassChain } from '../godot/classdb/classBaseTypes.js';
+import { classInTree, descendsFromClass, findInClassChain } from '../godot/classdb/classBaseTypes.js';
 import type { NodeHandle } from './nodeHandle.js';
 import { VARIANT_TYPE as T, variantTypeName } from '../godot/variant/variantType.js';
 import { sceneValueOf, valueOfSceneValue, type SceneValue } from './variant.js';
@@ -343,17 +343,12 @@ export function findPortedAccessor(
   role: 'setter' | 'getter',
   property: string
 ): { name: string; method: PortedMethod } | undefined {
-  return findInClassChain(className, (type) => {
+  return findInClassChain(classInTree(className), (type) => {
     const found = Object.entries(PORTED_METHODS[type] ?? {}).find(
       ([, method]) => method.accessor?.role === role && method.accessor.property === property
     );
     return found && { name: found[0], method: found[1] };
   });
-}
-
-// packed_scene.cpp:331: Godot 4.6.3 makes a placeholder Node of a class it cannot make (measured).
-function classInTree(className: string): string {
-  return descendsFromClass(className, 'Node') ? className : 'Node';
 }
 
 /** Every method a call reaches without the property table, for the error that names them. */

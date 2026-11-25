@@ -1,38 +1,29 @@
-/**
- * NavigationObstacle3D property formatter: the radius, height and avoidance
- * properties, with Godot's defaults where the TSCN omits them, ahead of the
- * shared Node3D transform sections.
- */
-
-import type { PropertySection } from '../../../../../../core/NodeRegistry';
-import type { NavigationObstacle3DProperties } from '../../../../../../nodes/3d/navigationobstacle3d/types';
+import type { InspectedNode, PropertySection } from '../../inspectedNode';
 import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
 
-export function formatNavigationObstacle3DProperties(
-  properties: NavigationObstacle3DProperties
-): PropertySection[] {
-  const sections: PropertySection[] = [
+export async function formatNavigationObstacle3DProperties(node: InspectedNode): Promise<PropertySection[]> {
+  const values = await node.read([
+    'radius',
+    'height',
+    'avoidance_enabled',
+    'avoidance_layers',
+    'affect_navigation_mesh',
+    'carve_navigation_mesh',
+    'use_3d_avoidance',
+  ]);
+  return [
     {
       title: 'NavigationObstacle3D',
       items: [
-        { label: 'Radius', value: (properties.radius ?? 0).toFixed(2) },
-        { label: 'Height', value: (properties.height ?? 1).toFixed(2) },
-        { label: 'Avoidance Enabled', value: (properties.avoidance_enabled ?? true).toString() },
-        { label: 'Avoidance Layers', value: (properties.avoidance_layers ?? 1).toString() },
-        {
-          label: 'Affect Navigation Mesh',
-          value: (properties.affect_navigation_mesh ?? false).toString(),
-        },
-        {
-          label: 'Carve Navigation Mesh',
-          value: (properties.carve_navigation_mesh ?? false).toString(),
-        },
-        { label: 'Use 3D Avoidance', value: (properties.use_3d_avoidance ?? false).toString() },
+        { label: 'Radius', value: values.number('radius').toFixed(2) },
+        { label: 'Height', value: values.number('height').toFixed(2) },
+        { label: 'Avoidance Enabled', value: String(values.boolean('avoidance_enabled')) },
+        { label: 'Avoidance Layers', value: String(values.number('avoidance_layers')) },
+        { label: 'Affect Navigation Mesh', value: String(values.boolean('affect_navigation_mesh')) },
+        { label: 'Carve Navigation Mesh', value: String(values.boolean('carve_navigation_mesh')) },
+        { label: 'Use 3D Avoidance', value: String(values.boolean('use_3d_avoidance')) },
       ],
     },
+    ...(await formatNode3DProperties(node)),
   ];
-
-  sections.push(...formatNode3DProperties(properties));
-
-  return sections;
 }

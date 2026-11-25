@@ -1,20 +1,17 @@
-/** Formats MultiMeshInstance2D properties for the details panel: the MultiMesh and texture, then Node2D. */
-
-import type { PropertySection } from '../../../../../../core/NodeRegistry';
+import type { InspectedNode, PropertySection } from '../../inspectedNode';
 import { formatNode2DProperties } from '../../base/node2d/propertyFormatter';
-import type { MultiMeshInstance2DProperties } from '../../../../../../nodes/2d/multimeshinstance2d/types';
+import { resourceText } from '../../valueText';
 
-export function formatMultiMeshInstance2DProperties(
-  properties: MultiMeshInstance2DProperties
-): PropertySection[] {
+export async function formatMultiMeshInstance2DProperties(node: InspectedNode): Promise<PropertySection[]> {
+  const values = await node.read(['multimesh', 'texture']);
   return [
     {
       title: 'MultiMesh',
       items: [
-        { label: 'MultiMesh', value: properties.multimesh ?? '(none)' },
-        { label: 'Texture', value: properties.texture ?? '(none)' },
+        { label: 'MultiMesh', value: resourceText(values.resource('multimesh')) },
+        { label: 'Texture', value: resourceText(values.resource('texture')) },
       ],
     },
-    ...formatNode2DProperties(properties),
+    ...(await formatNode2DProperties(node)),
   ];
 }

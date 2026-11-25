@@ -1,50 +1,43 @@
-/**
- * Tests for the Decal property formatter.
- */
-
 import { describe, it, expect } from 'vitest';
 import { formatDecalProperties } from './propertyFormatter';
-import { parseDecal } from '../../../../../../nodes/3d/decal/parser';
-import type { DecalProperties } from '../../../../../../nodes/3d/decal/types';
-import { heading } from '../../../../../../parser/testing/parserKit';
+import { sectionsOf, sectionTitled } from '../../testing/inspectedScene';
 
-function props(raw: Record<string, string> = {}): DecalProperties {
-  return parseDecal(heading('Decal', { name: 'Decal' }), raw);
-}
+const TEXTURES = {
+  '1_albedo': 'Texture2D',
+  '2_normal': 'Texture2D',
+  '3_orm': 'Texture2D',
+  '4_emission': 'Texture2D',
+};
 
-function section(sections: ReturnType<typeof formatDecalProperties>, title: string) {
-  return sections.find((s) => s.title === title);
+async function section(title: string, properties: Record<string, string> = {}) {
+  return sectionTitled(
+    await sectionsOf(formatDecalProperties, 'Decal', properties, { ext: TEXTURES }),
+    title
+  );
 }
 
 describe('formatDecalProperties', () => {
-  it('shows the Albedo texture as "(none)" and no optional textures by default', () => {
-    const textures = section(formatDecalProperties(props()), 'Textures')!;
-    expect(textures.items).toEqual([{ label: 'Albedo', value: '(none)' }]);
+  it('names an empty albedo as none and lists no other texture of a node that sets none', async () => {
+    expect((await section('Textures'))!.items).toEqual([{ label: 'Albedo', value: '(none)' }]);
   });
 
-  it('shows every optional texture reference when set', () => {
-    const textures = section(
-      formatDecalProperties(
-        props({
-          texture_albedo: 'ExtResource("1_albedo")',
-          texture_normal: 'ExtResource("2_normal")',
-          texture_orm: 'ExtResource("3_orm")',
-          texture_emission: 'ExtResource("4_emission")',
-        })
-      ),
-      'Textures'
-    )!;
-    expect(textures.items).toEqual([
-      { label: 'Albedo', value: 'ExtResource("1_albedo")' },
-      { label: 'Normal', value: 'ExtResource("2_normal")' },
-      { label: 'ORM', value: 'ExtResource("3_orm")' },
-      { label: 'Emission', value: 'ExtResource("4_emission")' },
+  it('lists the path of each texture the file sets', async () => {
+    const textures = await section('Textures', {
+      texture_albedo: 'ExtResource("1_albedo")',
+      texture_normal: 'ExtResource("2_normal")',
+      texture_orm: 'ExtResource("3_orm")',
+      texture_emission: 'ExtResource("4_emission")',
+    });
+    expect(textures!.items).toEqual([
+      { label: 'Albedo', value: 'res://1_albedo' },
+      { label: 'Normal', value: 'res://2_normal' },
+      { label: 'ORM', value: 'res://3_orm' },
+      { label: 'Emission', value: 'res://4_emission' },
     ]);
   });
 
-  it('formats the Projection section with Godot defaults', () => {
-    const projection = section(formatDecalProperties(props()), 'Projection')!;
-    expect(projection.items).toEqual([
+  it('lists the Godot defaults in the Projection section', async () => {
+    expect((await section('Projection'))!.items).toEqual([
       { label: 'Size', value: '(2, 2, 2)' },
       { label: 'Modulate', value: 'rgba(255, 255, 255, 1.00)' },
       { label: 'Albedo Mix', value: '1.00' },
@@ -55,22 +48,17 @@ describe('formatDecalProperties', () => {
     ]);
   });
 
-  it('formats custom Projection values, including a non-default cull mask in hex', () => {
-    const projection = section(
-      formatDecalProperties(
-        props({
-          size: 'Vector3(4, 1, 4)',
-          modulate: 'Color(1, 0, 0, 0.5)',
-          albedo_mix: '0.5',
-          normal_fade: '0.2',
-          upper_fade: '0.1',
-          lower_fade: '0.9',
-          cull_mask: '255',
-        })
-      ),
-      'Projection'
-    )!;
-    expect(projection.items).toEqual([
+  it('lists the projection values the file sets, the cull mask in hex', async () => {
+    const projection = await section('Projection', {
+      size: 'Vector3(4, 1, 4)',
+      modulate: 'Color(1, 0, 0, 0.5)',
+      albedo_mix: '0.5',
+      normal_fade: '0.2',
+      upper_fade: '0.1',
+      lower_fade: '0.9',
+      cull_mask: '255',
+    });
+    expect(projection!.items).toEqual([
       { label: 'Size', value: '(4, 1, 4)' },
       { label: 'Modulate', value: 'rgba(255, 0, 0, 0.50)' },
       { label: 'Albedo Mix', value: '0.50' },
@@ -81,11 +69,9 @@ describe('formatDecalProperties', () => {
     ]);
   });
 
-  it('appends the Node3D transform sections', () => {
-    const sections = formatDecalProperties(
-      props({ transform: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)' })
-    );
-    expect(section(sections, 'Position')).toBeDefined();
-    expect(section(sections, 'Scale')).toBeDefined();
+  it('appends the Node3D transform sections', async () => {
+    const transform = { transform: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)' };
+    expect(await section('Position', transform)).toBeDefined();
+    expect(await section('Scale', transform)).toBeDefined();
   });
 });

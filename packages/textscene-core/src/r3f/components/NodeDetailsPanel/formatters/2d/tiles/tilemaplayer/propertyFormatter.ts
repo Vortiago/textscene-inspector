@@ -1,15 +1,14 @@
-/** TileMapLayer property formatter for the details panel. */
-
-import type { PropertySection } from '../../../../../../../core/NodeRegistry';
+import type { InspectedNode, PropertySection } from '../../../inspectedNode';
 import { formatNode2DProperties } from '../../../base/node2d/propertyFormatter';
-import type { TileMapLayerProperties } from '../../../../../../../nodes/2d/tiles/tilemaplayer/types';
+import { resourceText } from '../../../valueText';
+import { usedCellCount } from '../usedCells';
 
-export function formatTileMapLayerProperties(properties: TileMapLayerProperties): PropertySection[] {
-  const items: PropertySection['items'] = [
-    { label: 'Tile Set', value: properties.tile_set ?? '(none)' },
-    { label: 'Cells', value: (properties.cells?.length ?? 0).toString() },
+export async function formatTileMapLayerProperties(node: InspectedNode): Promise<PropertySection[]> {
+  const values = await node.read(['tile_set', 'enabled']);
+  const items = [
+    { label: 'Tile Set', value: resourceText(values.resource('tile_set')) },
+    { label: 'Cells', value: usedCellCount(await node.call('get_used_cells')).toString() },
   ];
-  if (!properties.enabled) items.push({ label: 'Enabled', value: 'No' });
-
-  return [{ title: 'Tile Map', items }, ...formatNode2DProperties(properties)];
+  if (!values.boolean('enabled')) items.push({ label: 'Enabled', value: 'No' });
+  return [{ title: 'Tile Map', items }, ...(await formatNode2DProperties(node))];
 }

@@ -1,38 +1,25 @@
-/** DirectionalLight3D property formatter: the inspector sections for the light. */
-
-import type { PropertySection } from '../../../../../../../core/NodeRegistry';
-import type { DirectionalLight3DProperties } from '../../../../../../../nodes/3d/lights/directionallight3d/types';
+import type { InspectedNode, PropertySection } from '../../../inspectedNode';
 import { formatNode3DProperties } from '../../../base/node3d/propertyFormatter';
-import { formatBaseLightSection, formatShadowSectionWithNormalBias } from '../shared/propertyFormatter';
+import {
+  formatBaseLightSection,
+  formatShadowSectionWithNormalBias,
+  setRows,
+} from '../shared/propertyFormatter';
 
-export function formatDirectionalLight3DProperties(
-  properties: DirectionalLight3DProperties
-): PropertySection[] {
-  const sections: PropertySection[] = [];
+const SHADOW_MODES = ['ORTHOGONAL', 'PARALLEL_2_SPLITS', 'PARALLEL_4_SPLITS'];
 
-  sections.push(formatBaseLightSection(properties));
-
-  const directionalShadowItems: PropertySection['items'] = [];
-
-  if (properties.directional_shadow_mode !== undefined) {
-    const shadowModes = ['ORTHOGONAL', 'PARALLEL_2_SPLITS', 'PARALLEL_4_SPLITS'];
-    directionalShadowItems.push({
+export async function formatDirectionalLight3DProperties(node: InspectedNode): Promise<PropertySection[]> {
+  const shadowItems = await setRows(node, [
+    {
+      property: 'directional_shadow_mode',
       label: 'Shadow Mode',
-      value:
-        shadowModes[properties.directional_shadow_mode] || `Unknown (${properties.directional_shadow_mode})`,
-    });
-  }
-
-  if (properties.directional_shadow_max_distance !== undefined) {
-    directionalShadowItems.push({
-      label: 'Max Distance',
-      value: properties.directional_shadow_max_distance.toFixed(2),
-    });
-  }
-
-  sections.push(formatShadowSectionWithNormalBias(properties, directionalShadowItems));
-
-  sections.push(...formatNode3DProperties(properties));
-
-  return sections;
+      text: (mode) => SHADOW_MODES[mode] ?? `Unknown (${mode})`,
+    },
+    { property: 'directional_shadow_max_distance', label: 'Max Distance', text: (value) => value.toFixed(2) },
+  ]);
+  return [
+    await formatBaseLightSection(node),
+    await formatShadowSectionWithNormalBias(node, shadowItems),
+    ...(await formatNode3DProperties(node)),
+  ];
 }

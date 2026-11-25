@@ -253,9 +253,7 @@ describe('liveNodeChain — the root→target chain of EFFECTIVE nodes (for ance
   });
 });
 
-describe('resolveLiveEntry — single-node path resolution (the inspector adapter)', () => {
-  // The single-node entry point the NodeDetailsPanel reads through
-  // `useLiveNode`, so the inspector resolves any tree row.
+describe('resolveLiveEntry, the live-tree node at one path', () => {
   const EXT: TscnExternalResource[] = [ext('3_as5ck', 'res://ceiling_lamp.tscn')];
 
   it('resolves an inline node by path', () => {

@@ -1,11 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  formatColorRgba,
-  parseColor,
-  parseColorOrUndefined,
-  parseColorToHex,
-  scaledRgb,
-} from './colorParser';
+import { parseColor, parseColorOrUndefined, parseColorToHex, scaledRgb } from './colorParser';
 
 describe('colorParser', () => {
   describe('parseColor', () => {
@@ -136,16 +130,6 @@ describe('colorParser', () => {
     it('should return white for invalid input', () => {
       expect(parseColorToHex('invalid')).toBe(0xffffff);
       expect(parseColorToHex(undefined)).toBe(0xffffff);
-    });
-  });
-
-  describe('formatColorRgba', () => {
-    it('formats a Color as rgba with 0-255 channels and 2-decimal alpha', () => {
-      expect(formatColorRgba({ r: 1, g: 0.5, b: 0, a: 1 })).toBe('rgba(255, 128, 0, 1.00)');
-    });
-
-    it('rounds channels to integers and keeps fractional alpha', () => {
-      expect(formatColorRgba({ r: 0.662745, g: 0.247059, b: 1, a: 0.8 })).toBe('rgba(169, 63, 255, 0.80)');
     });
   });
 
