@@ -37,19 +37,19 @@ describe('headingReads', () => {
     expect(connection).toMatchObject({ fromIdTrail: undefined, toIdTrail: [1, 2] });
   });
 
-  it('collects an instance on a node heading that follows no other node', () => {
-    const reads = readsOf(
+  it('answers whether each heading follows a node heading, whose body reads it', () => {
+    const collector = headingReads();
+    const headings = [
       '[node name="Root" type="Node3D"]',
       '[node name="Inner" parent="." instance=ExtResource("1")]',
       '[editable path="Inner"]',
-      '[node name="After" parent="." instance=ExtResource("2")]'
-    );
-    expect(reads.instancesOutsideNodeBody).toEqual(['ExtResource("2")']);
-  });
-
-  it('collects the first heading of the file when it instances a scene', () => {
-    expect(readsOf('[node name="Root" instance=ExtResource("1")]').instancesOutsideNodeBody).toEqual([
-      'ExtResource("1")',
+      '[node name="After" parent="." instance=ExtResource("2")]',
+    ];
+    expect(headings.map((heading, index) => collector.read(parseHeading(heading)!, index + 1))).toEqual([
+      false,
+      true,
+      true,
+      false,
     ]);
   });
 

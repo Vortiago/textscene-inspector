@@ -13,7 +13,7 @@ export interface SceneFileFailure {
 
 /** Why the game refuses the whole scene (resource_format_text.cpp:647-650). */
 export interface SceneFailure {
-  /** Godot's error line, less its number. */
+  /** Godot's error line, with the line number of the read. */
   readonly line: string;
   /** The file the scene reads and each file through which it fails, or the address the file lacks. */
   readonly chain: readonly string[];

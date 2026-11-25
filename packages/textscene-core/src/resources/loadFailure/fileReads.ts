@@ -1,5 +1,5 @@
 import type { ParsedResource } from '../../parser/parsedResource';
-import type { HeadingValues, RawNode, TscnExternalResource, TscnScene } from '../../parser/types';
+import type { FileValue, RawNode, TscnExternalResource, TscnScene } from '../../parser/types';
 import {
   getBaseDir,
   isAbsolutePath,
@@ -7,12 +7,17 @@ import {
   simplifyPath,
   simplifyResPath,
 } from '../../godot/string/string';
-import { valueReadsIn, type LiteralRead, type ValueRead } from '../../godot/variant/resourceRef';
+import {
+  valueReadsAt,
+  valueReadsIn,
+  type LiteralRead,
+  type ValueRead,
+} from '../../godot/variant/resourceRef';
 import { findExtResource } from '../SubResourceResolver';
 
 type Values = Readonly<Record<string, string>>;
 
-type SceneSections = Pick<TscnScene, 'externalResources' | 'internalResources' | 'headingValues'> & {
+type SceneSections = Pick<TscnScene, 'externalResources' | 'internalResources' | 'fileValues'> & {
   readonly nodes: readonly RawNode[];
 };
 
@@ -30,6 +35,8 @@ export interface FailingFileRead {
   readonly kind: FailingReadKind;
   /** The literal's `uid://` argument, empty where it has none. */
   readonly uid: string;
+  /** The line Godot prints: a reference's id, or a literal's closing `)` (resource_format_text.cpp:40). */
+  readonly line: number;
 }
 
 /** Every file a value reads, and the reads that fail the whole file, from one scan of each value. */
@@ -44,36 +51,27 @@ export interface FileReads {
 /** A `.tscn`: its files read from the written nodes, and its failure from the file's values in file order. */
 export function sceneFileReads(file: string, scene: SceneSections): FileReads {
   const sections = scene.internalResources.map((section) => readsOf([section.data]).flat());
-  const context = { file, externalResources: scene.externalResources, subResources: scene.internalResources };
-  const headings = (scene.headingValues ?? []).flatMap((values) => headingReads(context, values));
-  const binds = (scene.headingValues ?? []).flatMap((values) =>
-    values.kind === 'connection' ? valueReadsIn(values.binds) : []
+  const binds = (scene.fileValues ?? []).flatMap(({ text, place }) =>
+    place === 'binds' ? valueReadsIn(text) : []
   );
+  const context = { file, externalResources: scene.externalResources, subResources: scene.internalResources };
   return {
     reads: filesRead(file, scene.externalResources, [
       ...sections,
       ...readsOf(nodeValues(scene.nodes)),
       binds,
     ]),
-    ...failingFileReads(context, [
-      ...sections.flatMap((reads, at) => reads.map((read) => sectionRead(context, read, at))),
-      ...headings,
-    ]),
+    ...failingFileReads(context, scene.fileValues ?? []),
   };
 }
 
 /** A `.tres`: its `[sub_resource]` sections and its `[resource]` section. */
 export function resourceFileReads(file: string, parsed: ParsedResource): FileReads {
-  const sections = [...parsed.subResources.map((section) => section.data), parsed.properties].map((values) =>
-    readsOf([values]).flat()
-  );
+  const sections = [...parsed.subResources.map((section) => section.data), parsed.properties];
   const context = { file, externalResources: parsed.extResources, subResources: parsed.subResources };
   return {
-    reads: filesRead(file, parsed.extResources, sections),
-    ...failingFileReads(
-      context,
-      sections.flatMap((reads, at) => reads.map((read) => sectionRead(context, read, at)))
-    ),
+    reads: filesRead(file, parsed.extResources, readsOf(sections)),
+    ...failingFileReads(context, parsed.fileValues ?? []),
   };
 }
 
@@ -107,21 +105,19 @@ interface ReadContext {
   readonly subResources: readonly { readonly id: string }[];
 }
 
-/** One read in file order, the index of the section it sits in, and the failure its failed load gives. */
+/** One read in file order, the `[sub_resource]` sections before it, and the failure its failed load gives. */
 interface OrderedRead {
   readonly read: ValueRead;
-  readonly at: number;
+  readonly subResourcesBefore: number;
   readonly failure: FailingFileRead | null;
 }
-
-/** The section index of a read outside every `[sub_resource]`, which sees each one. */
-const AFTER_SECTIONS = Number.POSITIVE_INFINITY;
 
 // A section read fails the file and a [node] ExtResource read does not (resource_format_text.cpp:647-650).
 function failingFileReads(
   context: ReadContext,
-  ordered: readonly OrderedRead[]
+  values: readonly FileValue[]
 ): Pick<FileReads, 'failing' | 'failsToParse'> {
+  const ordered = values.flatMap((value) => orderedReadsOf(context, value));
   const failing = new Map<string, FailingFileRead>();
   const declaredAt = new Map<string, number>();
   context.subResources.forEach(({ id }, at) => declaredAt.has(id) || declaredAt.set(id, at));
@@ -134,67 +130,68 @@ function failingFileReads(
   return { failing: [...failing.values()], failsToParse: stop >= 0 };
 }
 
+/** A value's reads, each with the failure its failed load gives where the value sits. */
+function orderedReadsOf(
+  context: ReadContext,
+  { text, line, place, subResourcesBefore }: FileValue
+): OrderedRead[] {
+  return valueReadsAt(text).map(({ read, printedAt }) => {
+    const at = { context, line: line + newlinesBefore(text, printedAt) };
+    return { read, subResourcesBefore, failure: failingReadOf(at, read, place) };
+  });
+}
+
+function newlinesBefore(text: string, end: number): number {
+  let count = 0;
+  for (let at = text.indexOf('\n'); at >= 0 && at < end; at = text.indexOf('\n', at + 1)) count++;
+  return count;
+}
+
+/** Measured: a binds `ExtResource` prints the section line, and a binds literal the `Parse error.` line. */
+function failingReadOf(at: ReadAt, read: ValueRead, place: FileValue['place']): FailingFileRead | null {
+  if (read.kind === 'Resource')
+    return literalFailingRead(at, read, place === 'section' ? 'section Resource' : 'node Resource');
+  return place === 'node' ? null : extFailingRead(at, read);
+}
+
+/** Where a read sits: the file it is in, and the line Godot prints for it. */
+interface ReadAt {
+  readonly context: ReadContext;
+  readonly line: number;
+}
+
 /** An undeclared `ExtResource` id, a refused literal, or a `SubResource` no section up to here declares. */
 function failsParse(
   { externalResources }: ReadContext,
   declaredAt: ReadonlyMap<string, number>,
-  { read, at }: OrderedRead
+  { read, subResourcesBefore }: OrderedRead
 ): boolean {
   if (read.kind === 'Refused') return true;
   if (read.kind === 'ExtResource') return !findExtResource(externalResources, read.id);
   if (read.kind !== 'SubResource') return false;
   const declared = declaredAt.get(read.id);
-  return declared === undefined || declared > at;
+  return declared === undefined || declared > subResourcesBefore;
 }
 
-/** A read whose failed load fails the file: a section's value, or an `instance=` outside a node body. */
-function sectionRead(context: ReadContext, read: ValueRead, at: number): OrderedRead {
-  if (read.kind === 'Resource') return { read, at, failure: literalFailingRead(read, 'section Resource') };
-  return { read, at, failure: extFailingRead(context, read) };
+function extFailingRead({ context, line }: ReadAt, read: ValueRead): FailingFileRead | null {
+  const ext = read.kind === 'ExtResource' ? findExtResource(context.externalResources, read.id) : undefined;
+  return ext
+    ? { path: extResourcePathIn(context.file, ext.path), kind: 'section ExtResource', uid: '', line }
+    : null;
 }
 
-/** Measured: a binds `ExtResource` prints the section line, and a literal the node's `Parse error.` line. */
-function bindFailingRead(context: ReadContext, read: ValueRead): FailingFileRead | null {
-  return read.kind === 'Resource' ? literalFailingRead(read, 'node Resource') : extFailingRead(context, read);
-}
-
-function extFailingRead({ file, externalResources }: ReadContext, read: ValueRead): FailingFileRead | null {
-  const ext = read.kind === 'ExtResource' ? findExtResource(externalResources, read.id) : undefined;
-  return ext ? { path: extResourcePathIn(file, ext.path), kind: 'section ExtResource', uid: '' } : null;
-}
-
-function nodeFailingRead(read: ValueRead): FailingFileRead | null {
-  return read.kind === 'Resource' ? literalFailingRead(read, 'node Resource') : null;
-}
-
-function literalFailingRead(read: LiteralRead, kind: FailingReadKind): FailingFileRead | null {
-  return read.path === null ? null : { path: simplifyResPath(read.path), kind, uid: read.uid };
+function literalFailingRead(
+  { line }: ReadAt,
+  read: LiteralRead,
+  kind: FailingReadKind
+): FailingFileRead | null {
+  return read.path === null ? null : { path: simplifyResPath(read.path), kind, uid: read.uid, line };
 }
 
 /** A `path=` relative to the file that writes it (resource_format_text.cpp:508-510). */
 function extResourcePathIn(file: string, path: string): string {
   if (path.includes('://') || isAbsolutePath(path)) return simplifyResPath(path);
   return simplifyPath(pathJoin(getBaseDir(file), path));
-}
-
-/** A heading's reads in file order: a node's `instance=` before its properties, or a connection's binds. */
-function headingReads(context: ReadContext, values: HeadingValues): OrderedRead[] {
-  if (values.kind === 'connection') {
-    return valueReadsIn(values.binds).map((read) => ({
-      read,
-      at: AFTER_SECTIONS,
-      failure: bindFailingRead(context, read),
-    }));
-  }
-  const instance = (values.instance ? valueReadsIn(values.instance) : []).map((read) =>
-    values.isInstanceAborting
-      ? sectionRead(context, read, AFTER_SECTIONS)
-      : { read, at: AFTER_SECTIONS, failure: nodeFailingRead(read) }
-  );
-  const properties = readsOf([values.properties])
-    .flat()
-    .map((read) => ({ read, at: AFTER_SECTIONS, failure: nodeFailingRead(read) }));
-  return [...instance, ...properties];
 }
 
 /** Each node's `instance=` and properties, written ones included, as the live tree reads them. */

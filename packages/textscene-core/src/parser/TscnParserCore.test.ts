@@ -204,7 +204,6 @@ item/0/mesh = ExtResource("1_tree")
 
       expect(Object.keys(scene).sort()).toEqual([
         'externalResources',
-        'headingValues',
         'internalResources',
         'nodes',
         'refusesToInstantiate',
@@ -766,7 +765,7 @@ describe('the heading reads of a scan', () => {
     '[gd_scene format=3]\n\n[node name="Root" instance=ExtResource("1")]\n\n' +
     '[connection signal="ready" from="." to="." method="go" binds=[1]]\n';
 
-  it('collects each connection, each pathless editable line and each instance outside a node body', () => {
+  it('collects each connection and each pathless editable line', () => {
     expect(new TscnParserCore().parse(content, () => null).headingReads).toEqual({
       connections: [
         {
@@ -781,16 +780,60 @@ describe('the heading reads of a scan', () => {
         },
       ],
       pathlessEditableLines: [],
-      instancesOutsideNodeBody: ['ExtResource("1")'],
     });
   });
 
-  it('puts each node and connection heading value on the scene in file order', () => {
+  it('puts each value on the scene in file order, with its line and place', () => {
     const { scene } = new TscnParserCore().parse(content, () => null);
 
-    expect(scene.headingValues).toEqual([
-      { kind: 'node', instance: 'ExtResource("1")', isInstanceAborting: true, properties: {} },
-      { kind: 'connection', binds: '[1]' },
+    expect(scene.fileValues).toEqual([
+      { text: 'ExtResource("1")', line: 3, place: 'section', subResourcesBefore: 0 },
+      { text: '[1]', line: 5, place: 'binds', subResourcesBefore: 0 },
     ]);
+  });
+
+  it('places a node body value, and the instance of a heading after a node, in the node', () => {
+    const { scene } = new TscnParserCore().parse(
+      `[node name="Root" type="Node2D"]
+visible = false
+
+[node name="A" parent="." instance=ExtResource("1")]
+`,
+      () => null
+    );
+
+    expect(scene.fileValues?.map(({ text, place }) => [text, place])).toEqual([
+      ['false', 'node'],
+      ['ExtResource("1")', 'node'],
+    ]);
+  });
+
+  it('counts the [sub_resource] sections before a value, its own section inside one', () => {
+    const { scene } = new TscnParserCore().parse(
+      `[sub_resource type="Resource" id="a"]
+x = 1
+
+[sub_resource type="Resource" id="b"]
+x = 2
+
+[node name="Root" type="Node2D"]
+visible = false
+`,
+      () => null
+    );
+
+    expect(scene.fileValues?.map(({ subResourcesBefore }) => subResourcesBefore)).toEqual([0, 1, 2]);
+  });
+
+  it('gives a value over several lines the line it starts on', () => {
+    const { scene } = new TscnParserCore().parse(
+      `[node name="Root" type="Node2D"]
+metadata/x = [1,
+2]
+`,
+      () => null
+    );
+
+    expect(scene.fileValues).toEqual([{ text: '[1,\n2]', line: 2, place: 'node', subResourcesBefore: 0 }]);
   });
 });

@@ -293,8 +293,9 @@ const view = mountScene(element, scene, {
   - a `SubResource` id that no earlier section declares
   - a `Resource()` literal with two paths or two uids.
 
-  `line` is the error line Godot prints, less its number. `chain` holds the file the scene reads and
-  each file through which it fails, or the sub-resource address the file does not declare.
+  `line` is the error line Godot prints, with the number of the line that holds the read. `chain`
+  holds the file the scene reads and each file through which it fails, or the sub-resource
+  address the file does not declare.
   `cause` is the cause of the `reason`. A declared `ExtResource` that only a node reads does not
   refuse the scene, as in Godot. The base scene of an inherited scene and a `[connection]`
   heading's `binds=` do refuse it.

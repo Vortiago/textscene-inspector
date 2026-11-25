@@ -203,9 +203,10 @@ const PATH_RESOURCE_SOMEWHERE_RE = new RegExp(`\\b${PATH_RESOURCE_RE.source.slic
 /** One `Resource(…)` literal, read in place by {@link scanLoadedRefs}. */
 const PATH_RESOURCE_AT_RE = new RegExp(PATH_RESOURCE_RE.source.slice(1, -1), 'y');
 
-/** A literal's read and where it starts in the text it was read from. */
+/** A literal's read and where it starts and ends in the text it was read from, `end` exclusive. */
 interface LiteralSpan {
   start: number;
+  end: number;
   read: LiteralRead | RefusedRead;
 }
 
@@ -221,7 +222,7 @@ function readLiteralAt(text: string, start: number, literals: LiteralSpan[]): nu
     uids.length > 1 || paths.length > 1
       ? { kind: 'Refused' }
       : { kind: 'Resource', path: paths[0] ?? null, uid: uids[0] ?? '' };
-  literals.push({ start, read });
+  literals.push({ start, end: PATH_RESOURCE_AT_RE.lastIndex, read });
   return PATH_RESOURCE_AT_RE.lastIndex - 1;
 }
 
@@ -234,19 +235,41 @@ export type LiteralRead = { kind: 'Resource'; path: string | null; uid: string }
 /** A literal with two paths or two `uid://`, at which the parse fails (`variant_parser.cpp:1141-1152`). */
 export type RefusedRead = { kind: 'Refused' };
 
+/** A read and the offset whose line Godot prints for it: a reference's id, or a literal's closing `)`. */
+export interface ValueReadAt {
+  readonly read: ValueRead;
+  readonly printedAt: number;
+}
+
 /** Each reference and `Resource(…)` literal of `text`, in the order the loader meets them. */
 export function valueReadsIn(text: string): ValueRead[] {
+  return valueReadsAt(text).map(({ read }) => read);
+}
+
+/** {@link valueReadsIn}, each read with the offset whose line Godot prints when it fails. */
+export function valueReadsAt(text: string): ValueReadAt[] {
   // Each of the three spellings holds this word.
   if (!text.includes('Resource')) return [];
   const hasLiteral = PATH_RESOURCE_SOMEWHERE_RE.test(text);
   const refs: ResourceRefSpan[] = [];
   const literals: LiteralSpan[] = [];
   scanLoadedRefs(text, false, { refs, literals: hasLiteral ? literals : null });
-  const refReads = refs.map((span): { start: number; read: ValueRead } => ({
+  const refReads = refs.map((span) => ({
     start: span.start,
     read: { kind: span.kind, id: span.id },
+    printedAt: argumentAt(text, span.start),
   }));
-  return [...refReads, ...literals].sort((a, b) => a.start - b.start).map(({ read }) => read);
+  const literalReads = literals.map(({ start, end, read }) => ({ start, read, printedAt: end - 1 }));
+  return [...refReads, ...literalReads]
+    .sort((a, b) => a.start - b.start)
+    .map(({ read, printedAt }) => ({ read, printedAt }));
+}
+
+/** The offset of the first token after the `(` of the call at `start`, as `get_token` skips `<= 32`. */
+function argumentAt(text: string, start: number): number {
+  let at = text.indexOf('(', start) + 1;
+  while (at < text.length && text.charCodeAt(at) <= 32) at++;
+  return at;
 }
 
 /** The read of each `Resource(…)` literal of `text` that Godot parses, in order, each with its `uid://`. */

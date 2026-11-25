@@ -302,9 +302,9 @@ texture = Resource("res://node.png")
     );
 
     expect(reads).toEqual([
-      { path: 'res://literal.png', kind: 'section Resource', uid: 'uid://b1' },
-      { path: 'res://ext.png', kind: 'section ExtResource', uid: '' },
-      { path: 'res://node.png', kind: 'node Resource', uid: '' },
+      { path: 'res://literal.png', kind: 'section Resource', uid: 'uid://b1', line: 4 },
+      { path: 'res://ext.png', kind: 'section ExtResource', uid: '', line: 6 },
+      { path: 'res://node.png', kind: 'node Resource', uid: '', line: 8 },
     ]);
   });
 

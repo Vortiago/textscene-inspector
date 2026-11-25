@@ -14,7 +14,7 @@ const MISSING_FILE = {
 const REFUSING_FILE = {
   ...MISSING_FILE,
   sceneFailure: {
-    line: `res://main.tscn - Parse Error: [ext_resource] referenced non-existent resource at: ${MISSING_PATH}.`,
+    line: `res://main.tscn:6 - Parse Error: [ext_resource] referenced non-existent resource at: ${MISSING_PATH}.`,
     chain: [MISSING_PATH],
     cause: 'missing',
   },

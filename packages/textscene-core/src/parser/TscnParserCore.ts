@@ -15,7 +15,7 @@ import type {
   TscnMainResource,
   NodeOrigin,
   BuiltSection,
-  HeadingValues,
+  FileValue,
 } from './types.js';
 import {
   parseHeading,
@@ -132,9 +132,7 @@ export class TscnParserCore {
     let mainResource: TscnMainResource | undefined;
     const editableInstances: string[] = [];
     const headings = headingReads();
-    const headingValues: HeadingValues[] = [];
-    // Written on each `[node]` heading, read when its section ends.
-    let isInstanceAborting = false;
+    const fileValues: FileValue[] = [];
 
     let currentSection: SectionType = 'none';
     let currentHeading: ParsedHeading | null = null;
@@ -160,8 +158,6 @@ export class TscnParserCore {
       if (!currentHeading) return;
 
       if (currentSection === 'node') {
-        const { instance } = currentHeading.attributes;
-        headingValues.push({ kind: 'node', instance, isInstanceAborting, properties: currentProperties });
         const node = nodeCreator(currentHeading, currentProperties);
         if (node) {
           origins.push(nodeOrigin(currentHeading, node, currentHeadingLine));
@@ -197,12 +193,23 @@ export class TscnParserCore {
       return currentSection === 'resource' ? headerResourceType : undefined;
     };
 
+    // The value as written, not as stored: the loader parses the text the file holds.
+    const addFileValue = (text: string, line: number, place: FileValue['place']) => {
+      fileValues.push({ text, line, place, subResourcesBefore: internalResources.length });
+    };
+    const addBodyValue = (text: string, line: number) => {
+      if (currentSection === 'node') addFileValue(text, line, 'node');
+      else if (currentSection === 'sub_resource' || currentSection === 'resource')
+        addFileValue(text, line, 'section');
+    };
+
     const storePending = () => {
       if (pendingMultiline && currentHeading) {
         // The one join per value: O(total length), not one per appended line.
         const value = pendingMultiline.lines.join('\n');
         const resolved = resolveDeprecatedProperty(currentOwnerType(), pendingMultiline.key, value);
         currentProperties[resolved.key] = resolved.value;
+        addBodyValue(value, pendingMultiline.startLine);
         observer?.onProperty?.({
           section: currentSection,
           ownerType: currentOwnerType(),
@@ -259,11 +266,12 @@ export class TscnParserCore {
           const editablePath =
             currentHeading.type === 'editable' ? currentHeading.attributes.path : undefined;
           if (editablePath !== undefined) editableInstances.push(simplifiedNodePath(editablePath));
-          isInstanceAborting = headings.read(currentHeading, lineNumber);
-          const { binds } = currentHeading.attributes;
-          if (currentHeading.type === 'connection' && binds !== undefined) {
-            headingValues.push({ kind: 'connection', binds });
-          }
+          const isInNodeBody = headings.read(currentHeading, lineNumber);
+          const { instance, binds } = currentHeading.attributes;
+          if (currentHeading.type === 'node' && instance !== undefined)
+            addFileValue(instance, lineNumber, isInNodeBody ? 'node' : 'section');
+          if (currentHeading.type === 'connection' && binds !== undefined)
+            addFileValue(binds, lineNumber, 'binds');
           observer?.onSectionStart?.(currentHeading, currentSection, lineNumber);
         } else {
           observer?.onError?.({
@@ -316,6 +324,7 @@ export class TscnParserCore {
             // since a diagnostic names what is in the file, and the stored pair beside them.
             const resolved = resolveDeprecatedProperty(currentOwnerType(), property.key, property.value);
             currentProperties[resolved.key] = resolved.value;
+            addBodyValue(property.value, lineNumber);
             observer?.onProperty?.({
               section: currentSection,
               ownerType: currentOwnerType(),
@@ -351,7 +360,7 @@ export class TscnParserCore {
         refusesToInstantiate: refusesToInstantiate(origins),
         ...(headerResourceType !== undefined ? { resourceType: headerResourceType } : {}),
         ...(editableInstances.length > 0 ? { editableInstances } : {}),
-        ...(headingValues.length > 0 ? { headingValues } : {}),
+        ...(fileValues.length > 0 ? { fileValues } : {}),
         ...(mainResource ? { mainResource } : {}),
       },
       origins,

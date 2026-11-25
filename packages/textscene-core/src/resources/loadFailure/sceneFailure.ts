@@ -38,11 +38,11 @@ function failureThrough(
   return { line: godotFailureLine(scenePath, read), chain: [read.path], cause };
 }
 
-/** Godot's error line, less its number, measured in 4.6.3 (resource_format_text.cpp:40, :152, :291). */
-function godotFailureLine(scenePath: string, { path, kind, uid }: FailingFileRead): string {
+/** Godot's error line, measured in 4.6.3 (resource_format_text.cpp:40, :152, :291). */
+function godotFailureLine(scenePath: string, { path, kind, uid, line }: FailingFileRead): string {
   if (kind === 'section ExtResource')
-    return `${scenePath} - Parse Error: [ext_resource] referenced non-existent resource at: ${path}.`;
+    return `${scenePath}:${line} - Parse Error: [ext_resource] referenced non-existent resource at: ${path}.`;
   if (kind === 'section Resource')
-    return `${scenePath} - Parse Error: Can't load resource at path: ${path} with uid: ${uid}.`;
-  return `Parse Error: Parse error. [Resource file ${scenePath}]`;
+    return `${scenePath}:${line} - Parse Error: Can't load resource at path: ${path} with uid: ${uid}.`;
+  return `Parse Error: Parse error. [Resource file ${scenePath}:${line}]`;
 }

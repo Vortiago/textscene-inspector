@@ -2,10 +2,7 @@ import type { ParsedHeading } from './utils.js';
 import type { ConnectionHeading, HeadingFacts } from './types.js';
 import { parseIdTrail } from '../godot/scene/packedScene.js';
 
-export type HeadingReads = Pick<
-  HeadingFacts,
-  'connections' | 'pathlessEditableLines' | 'instancesOutsideNodeBody'
->;
+export type HeadingReads = Pick<HeadingFacts, 'connections' | 'pathlessEditableLines'>;
 
 function connectionHeading({ attributes }: ParsedHeading, line: number): ConnectionHeading {
   return {
@@ -23,26 +20,22 @@ function connectionHeading({ attributes }: ParsedHeading, line: number): Connect
 /** A collector to feed each parsed heading in scan order, and the reads it has gathered so far. */
 export function headingReads(): {
   reads: HeadingReads;
-  /** Records `heading`, and answers whether its `instance=` sits outside a node body. */
+  /** Records `heading`, and answers whether it follows a `[node]` heading, whose body reads it. */
   read(heading: ParsedHeading, line: number): boolean;
 } {
   const connections: ConnectionHeading[] = [];
   const pathlessEditableLines: number[] = [];
-  const instancesOutsideNodeBody: string[] = [];
   // Only a `[node]` body reads the heading after it leniently, so the previous heading's type decides.
   let previousHeadingType: string | null = null;
   return {
-    reads: { connections, pathlessEditableLines, instancesOutsideNodeBody },
+    reads: { connections, pathlessEditableLines },
     read(heading, line) {
-      const { instance } = heading.attributes;
       if (heading.type === 'connection') connections.push(connectionHeading(heading, line));
       if (heading.type === 'editable' && heading.attributes.path === undefined)
         pathlessEditableLines.push(line);
-      const isOutsideNodeBody =
-        heading.type === 'node' && previousHeadingType !== 'node' && instance !== undefined;
-      if (isOutsideNodeBody) instancesOutsideNodeBody.push(instance);
+      const isInNodeBody = previousHeadingType === 'node';
       previousHeadingType = heading.type;
-      return isOutsideNodeBody;
+      return isInNodeBody;
     },
   };
 }

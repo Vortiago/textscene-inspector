@@ -4,7 +4,7 @@ import type { FailingFileRead } from './fileReads';
 import { withSceneFailure } from './sceneFailure';
 
 const MAIN = 'res://main.tscn';
-const GONE: FailingFileRead = { path: 'res://gone.png', kind: 'section ExtResource', uid: '' };
+const GONE: FailingFileRead = { path: 'res://gone.png', kind: 'section ExtResource', uid: '', line: 7 };
 
 function row(path: string, overrides: Partial<SceneFile> = {}): SceneFile {
   return {
@@ -28,7 +28,7 @@ describe('withSceneFailure', () => {
     const files = withSceneFailure([missing('res://gone.png')], MAIN, [GONE]);
 
     expect(files[0]!.sceneFailure).toEqual({
-      line: `${MAIN} - Parse Error: [ext_resource] referenced non-existent resource at: res://gone.png.`,
+      line: `${MAIN}:7 - Parse Error: [ext_resource] referenced non-existent resource at: res://gone.png.`,
       chain: ['res://gone.png'],
       cause: 'missing',
     });

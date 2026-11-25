@@ -6,7 +6,7 @@
 
 import { stringLiteral } from '../godot/string/string.js';
 import { TscnParserCore } from './TscnParserCore.js';
-import type { TscnExternalResource, TscnInternalResource } from './types.js';
+import type { FileValue, TscnExternalResource, TscnInternalResource } from './types.js';
 import { UnparsedTextError } from './unparsedTextError';
 
 export interface ParsedResource {
@@ -16,6 +16,8 @@ export interface ParsedResource {
   properties: Record<string, string>;
   readonly extResources: readonly TscnExternalResource[];
   readonly subResources: readonly TscnInternalResource[];
+  /** Each value the text loader parses, in file order. Absent in a file that has no text sections. */
+  readonly fileValues?: readonly FileValue[];
 }
 
 /** Throws when the content has no [gd_resource] header (not a .tres file). */
@@ -32,6 +34,7 @@ export function parseTresFile(content: string): ParsedResource {
     properties: scene.mainResource?.data ?? {},
     extResources: scene.externalResources,
     subResources: scene.internalResources,
+    ...(scene.fileValues ? { fileValues: scene.fileValues } : {}),
   };
 }
 

@@ -9,7 +9,8 @@ interface GodotRow {
   file: 'tscn' | 'tres';
   text: string;
   /** The reads whose failure fails the file, up to where the parse fails. */
-  failing: { path: string; kind: FailingReadKind }[];
+  /** Each with the line Godot prints for it, measured with the reads before it loading. */
+  failing: { path: string; kind: FailingReadKind; line: number }[];
   failsToParse: boolean;
 }
 
@@ -42,7 +43,7 @@ metadata/x = ExtResource("1")
 
 [node name="Root" type="Node2D"]
 `,
-    failing: [{ path: 'res://gone1.tres', kind: 'section ExtResource' }],
+    failing: [{ path: 'res://gone1.tres', kind: 'section ExtResource', line: 6 }],
     failsToParse: false,
   },
   {
@@ -56,7 +57,7 @@ metadata/x = Resource("res://gone2.tres")
 
 [node name="Root" type="Node2D"]
 `,
-    failing: [{ path: 'res://gone2.tres', kind: 'section Resource' }],
+    failing: [{ path: 'res://gone2.tres', kind: 'section Resource', line: 4 }],
     failsToParse: false,
   },
   {
@@ -144,7 +145,7 @@ metadata/x = {
 
 [node name="Root" type="Node2D"]
 `,
-    failing: [{ path: 'res://gone3.tres', kind: 'section Resource' }],
+    failing: [{ path: 'res://gone3.tres', kind: 'section Resource', line: 5 }],
     failsToParse: false,
   },
   {
@@ -160,7 +161,7 @@ metadata/x = Array[Resource]([ExtResource("1")])
 
 [node name="Root" type="Node2D"]
 `,
-    failing: [{ path: 'res://gone4.tres', kind: 'section ExtResource' }],
+    failing: [{ path: 'res://gone4.tres', kind: 'section ExtResource', line: 6 }],
     failsToParse: false,
   },
   {
@@ -198,7 +199,7 @@ metadata/x = ExtResource("1")
 [node name="Root" type="Node2D"]
 metadata/x = Resource("res://gone6.tres")
 `,
-    failing: [{ path: 'res://gone6.tres', kind: 'node Resource' }],
+    failing: [{ path: 'res://gone6.tres', kind: 'node Resource', line: 4 }],
     failsToParse: false,
   },
   {
@@ -278,7 +279,7 @@ script = ExtResource("1")
 
 [connection signal="ready" from="." to="." method="queue_free" binds=[Resource("res://gone10.tres")]]
 `,
-    failing: [{ path: 'res://gone10.tres', kind: 'node Resource' }],
+    failing: [{ path: 'res://gone10.tres', kind: 'node Resource', line: 5 }],
     failsToParse: false,
   },
   {
@@ -312,7 +313,7 @@ metadata/x = ExtResource("99")
 
 [node name="Root" type="Node2D"]
 `,
-    failing: [{ path: 'res://ok.tres', kind: 'section ExtResource' }],
+    failing: [{ path: 'res://ok.tres', kind: 'section ExtResource', line: 6 }],
     failsToParse: true,
   },
   {
@@ -369,7 +370,7 @@ metadata/x = Resource("res://gone12.tres")
 
 [resource]
 `,
-    failing: [{ path: 'res://gone12.tres', kind: 'section Resource' }],
+    failing: [{ path: 'res://gone12.tres', kind: 'section Resource', line: 4 }],
     failsToParse: false,
   },
   {
@@ -394,7 +395,7 @@ metadata/x = Resource("res://a.tres", "res://b.tres")
 
 [node name="Root" instance=ExtResource("1")]
 `,
-    failing: [{ path: 'res://gone13.tscn', kind: 'section ExtResource' }],
+    failing: [{ path: 'res://gone13.tscn', kind: 'section ExtResource', line: 5 }],
     failsToParse: false,
   },
   {
@@ -422,7 +423,7 @@ metadata/x = Resource("res://a.tres", "res://b.tres")
 
 [node name="X" parent="." instance=ExtResource("1")]
 `,
-    failing: [{ path: 'res://gone14.tscn', kind: 'section ExtResource' }],
+    failing: [{ path: 'res://gone14.tscn', kind: 'section ExtResource', line: 9 }],
     failsToParse: false,
   },
   {
@@ -437,7 +438,7 @@ metadata/x = Resource("res://a.tres", "res://b.tres")
 
 [connection signal="ready" from="." to="." method="queue_free" binds=[ExtResource("1")]]
 `,
-    failing: [{ path: 'res://gone15.tres', kind: 'section ExtResource' }],
+    failing: [{ path: 'res://gone15.tres', kind: 'section ExtResource', line: 7 }],
     failsToParse: false,
   },
   {
@@ -489,8 +490,8 @@ texture = Resource("res://gone18.png")
 [node name="After" parent="." instance=ExtResource("2")]
 `,
     failing: [
-      { path: 'res://gone18.png', kind: 'node Resource' },
-      { path: 'res://gone17.tscn', kind: 'section ExtResource' },
+      { path: 'res://gone18.png', kind: 'node Resource', line: 6 },
+      { path: 'res://gone17.tscn', kind: 'section ExtResource', line: 12 },
     ],
     failsToParse: false,
   },
@@ -532,8 +533,8 @@ texture = Resource("res://gone20.png")
 texture = Resource("res://gone21.png")
 `,
     failing: [
-      { path: 'res://gone20.png', kind: 'node Resource' },
-      { path: 'res://gone21.png', kind: 'node Resource' },
+      { path: 'res://gone20.png', kind: 'node Resource', line: 8 },
+      { path: 'res://gone21.png', kind: 'node Resource', line: 11 },
     ],
     failsToParse: false,
   },
@@ -551,8 +552,8 @@ texture = Resource("res://gone21.png")
 texture = Resource("res://gone23.png")
 `,
     failing: [
-      { path: 'res://gone22.tres', kind: 'node Resource' },
-      { path: 'res://gone23.png', kind: 'node Resource' },
+      { path: 'res://gone22.tres', kind: 'node Resource', line: 5 },
+      { path: 'res://gone23.png', kind: 'node Resource', line: 8 },
     ],
     failsToParse: false,
   },
@@ -576,9 +577,124 @@ texture = Resource("res://gone24.png")
 [node name="B" parent="." instance=ExtResource("1")]
 `,
     failing: [
-      { path: 'res://gone24.png', kind: 'node Resource' },
-      { path: 'res://gone25.tscn', kind: 'section ExtResource' },
+      { path: 'res://gone24.png', kind: 'node Resource', line: 10 },
+      { path: 'res://gone25.tscn', kind: 'section ExtResource', line: 14 },
     ],
+    failsToParse: false,
+  },
+  {
+    row: 38,
+    reads: 'a [sub_resource] array value reads a missing file on its first line of three',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://gone.png" id="1"]
+
+[sub_resource type="Resource" id="a"]
+metadata/x = [ExtResource("1"),
+1,
+2]
+
+[node name="Root" type="Node2D"]
+`,
+    failing: [{ path: 'res://gone.png', kind: 'section ExtResource', line: 6 }],
+    failsToParse: false,
+  },
+  {
+    row: 39,
+    reads: 'a [sub_resource] array value reads a missing literal on its second line',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[sub_resource type="Resource" id="a"]
+metadata/x = [1,
+Resource("res://gone.tres"),
+2]
+
+[node name="Root" type="Node2D"]
+`,
+    failing: [{ path: 'res://gone.tres', kind: 'section Resource', line: 5 }],
+    failsToParse: false,
+  },
+  {
+    row: 40,
+    reads: 'a [node] array value reads a missing literal on its second line',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+metadata/x = [1,
+Resource("res://gone.tres"),
+2,
+3]
+`,
+    failing: [{ path: 'res://gone.tres', kind: 'node Resource', line: 5 }],
+    failsToParse: false,
+  },
+  {
+    row: 41,
+    reads: 'a [connection] binds= reads a missing Resource() literal',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[connection signal="ready" from="." to="." method="free" binds=[Resource("res://gone.tres")]]
+`,
+    failing: [{ path: 'res://gone.tres', kind: 'node Resource', line: 5 }],
+    failsToParse: false,
+  },
+  {
+    row: 42,
+    reads: 'a [sub_resource] value over four lines reads a missing file on its second',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://gone.png" id="1"]
+
+[sub_resource type="Resource" id="a"]
+metadata/x = 1
+metadata/y = [
+ExtResource("1"),
+3
+]
+metadata/z = 2
+
+[node name="Root" type="Node2D"]
+`,
+    failing: [{ path: 'res://gone.png', kind: 'section ExtResource', line: 8 }],
+    failsToParse: false,
+  },
+  {
+    row: 43,
+    reads: 'an ExtResource( call puts its id on the next line',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://gone.png" id="1"]
+
+[sub_resource type="Resource" id="a"]
+metadata/x = ExtResource(
+"1"
+)
+
+[node name="Root" type="Node2D"]
+`,
+    failing: [{ path: 'res://gone.png', kind: 'section ExtResource', line: 7 }],
+    failsToParse: false,
+  },
+  {
+    row: 44,
+    reads: 'a [node] Resource( literal puts its path on the next line',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+metadata/x = Resource(
+"res://gone.tres"
+)
+`,
+    failing: [{ path: 'res://gone.tres', kind: 'node Resource', line: 6 }],
     failsToParse: false,
   },
 ];
@@ -594,7 +710,7 @@ describe('the reads that fail a file, as Godot 4.6.3 loads it', () => {
   it.each(ROWS)('row $row: $reads', (row) => {
     const { failing, failsToParse } = fileReadsOf(row);
 
-    expect({ failing: failing.map(({ path, kind }) => ({ path, kind })), failsToParse }).toEqual({
+    expect({ failing: failing.map(({ path, kind, line }) => ({ path, kind, line })), failsToParse }).toEqual({
       failing: row.failing,
       failsToParse: row.failsToParse,
     });

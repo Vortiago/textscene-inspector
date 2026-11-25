@@ -7,6 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  valueReadsAt,
   valueReadsIn,
   literalReadsIn,
   EXT_RESOURCE_CALL_ANYWHERE_RE,
@@ -333,6 +334,16 @@ describe('valueReadsIn', () => {
     for (const literal of ['Resource("res://a.tres", "res://b.tres")', 'Resource("uid://a", "uid://b")']) {
       expect(valueReadsIn(literal), literal).toEqual([{ kind: 'Refused' }]);
     }
+  });
+});
+
+describe('valueReadsAt', () => {
+  it("gives a reference's id past the padding get_token skips, and a literal's closing parenthesis", () => {
+    const text = '[ExtResource(\n"1"), Resource( "res://a.tres"\n)]';
+    expect(valueReadsAt(text).map(({ printedAt }) => text.slice(printedAt, printedAt + 3))).toEqual([
+      '"1"',
+      ')]',
+    ]);
   });
 });
 

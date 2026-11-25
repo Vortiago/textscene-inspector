@@ -375,7 +375,7 @@ describe('the failure through which the game refuses the scene', () => {
   it('sits on the file a section reads, with Godot error line and the chain from that file', async () => {
     expect(await sceneFailures(READS_ATLAS, { 'res://atlas.tres': ATLAS_READS_GONE })).toEqual({
       'res://atlas.tres': {
-        line: 'res://main.tscn - Parse Error: [ext_resource] referenced non-existent resource at: res://atlas.tres.',
+        line: 'res://main.tscn:6 - Parse Error: [ext_resource] referenced non-existent resource at: res://atlas.tres.',
         chain: ['res://atlas.tres', 'res://gone.png'],
         cause: 'missing',
       },
@@ -389,7 +389,7 @@ describe('the failure through which the game refuses the scene', () => {
     );
     expect(await sceneFailures(READS_ATLAS, { 'res://atlas.tres': atlas })).toEqual({
       'res://atlas.tres': {
-        line: 'res://main.tscn - Parse Error: [ext_resource] referenced non-existent resource at: res://atlas.tres.',
+        line: 'res://main.tscn:6 - Parse Error: [ext_resource] referenced non-existent resource at: res://atlas.tres.',
         chain: ['res://atlas.tres'],
         cause: 'unparsed',
       },
@@ -404,7 +404,7 @@ describe('the failure through which the game refuses the scene', () => {
     );
     expect(await sceneFailures(READS_ATLAS, { 'res://atlas.tres': atlas })).toEqual({
       'res://atlas.tres': {
-        line: 'res://main.tscn - Parse Error: [ext_resource] referenced non-existent resource at: res://atlas.tres.',
+        line: 'res://main.tscn:6 - Parse Error: [ext_resource] referenced non-existent resource at: res://atlas.tres.',
         chain: ['res://atlas.tres', 'res://gone.png'],
         cause: 'missing',
       },
@@ -421,7 +421,7 @@ describe('the failure through which the game refuses the scene', () => {
       await sceneFailures(READS_ATLAS, { 'res://atlas.tres': atlas, 'res://gone.png': 'bytes' })
     ).toEqual({
       'res://atlas.tres': {
-        line: 'res://main.tscn - Parse Error: [ext_resource] referenced non-existent resource at: res://atlas.tres.',
+        line: 'res://main.tscn:6 - Parse Error: [ext_resource] referenced non-existent resource at: res://atlas.tres.',
         chain: ['res://atlas.tres'],
         cause: 'unparsed',
       },
@@ -437,7 +437,7 @@ describe('the failure through which the game refuses the scene', () => {
 `;
     expect(await sceneFailures(source, {})).toEqual({
       'res://base.tscn': {
-        line: 'res://main.tscn - Parse Error: [ext_resource] referenced non-existent resource at: res://base.tscn.',
+        line: 'res://main.tscn:5 - Parse Error: [ext_resource] referenced non-existent resource at: res://base.tscn.',
         chain: ['res://base.tscn'],
         cause: 'missing',
       },
@@ -455,7 +455,7 @@ describe('the failure through which the game refuses the scene', () => {
 `;
     expect(await sceneFailures(source, {})).toEqual({
       'res://gone.tres': {
-        line: 'res://main.tscn - Parse Error: [ext_resource] referenced non-existent resource at: res://gone.tres.',
+        line: 'res://main.tscn:7 - Parse Error: [ext_resource] referenced non-existent resource at: res://gone.tres.',
         chain: ['res://gone.tres'],
         cause: 'missing',
       },
@@ -489,7 +489,7 @@ material_overlay = Resource("res://wood.tres::B")
 `;
     expect(await sceneFailures(source, { 'res://wood.tres': EMPTY_MATERIAL })).toEqual({
       'res://wood.tres': {
-        line: 'Parse Error: Parse error. [Resource file res://main.tscn]',
+        line: 'Parse Error: Parse error. [Resource file res://main.tscn:7]',
         chain: ['res://wood.tres::B'],
         cause: 'missing',
       },
@@ -523,7 +523,7 @@ m = Resource("res://gone.tres")
 `;
     expect(await sceneFailures(source, {})).toEqual({
       'res://gone.tres': {
-        line: "res://main.tscn - Parse Error: Can't load resource at path: res://gone.tres with uid: .",
+        line: "res://main.tscn:4 - Parse Error: Can't load resource at path: res://gone.tres with uid: .",
         chain: ['res://gone.tres'],
         cause: 'missing',
       },
