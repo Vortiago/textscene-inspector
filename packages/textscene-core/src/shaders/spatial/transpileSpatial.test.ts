@@ -1,8 +1,13 @@
-import type { NodeMaterial } from 'three/webgpu';
+import type { Node, NodeMaterial } from 'three/webgpu';
 import { describe, expect, it } from 'vitest';
-import { generatedProgram } from '../generatedShader.testkit';
+import { uniform, vec4 } from 'three/tsl';
+import { generatedProgram, oneBackendBuilds } from '../generatedShader.testkit';
 import { ShadingLanguageError } from '../language/shadingLanguageError.js';
 import { transpileSpatial } from './transpileSpatial.js';
+import {
+  SOFT_LOW_PENUMBRA_SAMPLES,
+  SOFT_LOW_SHADOW_SAMPLES,
+} from '../../godot/rendering/lights/softShadowKernel.js';
 
 /** Godot's default spatial shader (`scene_shader_forward_clustered.cpp:910`), drawn unshaded. */
 const DEFAULT_UNSHADED = `shader_type spatial;
@@ -90,5 +95,42 @@ describe('transpileSpatial', () => {
     const source =
       'shader_type spatial;\nrender_mode unshaded, alpha_to_coverage_and_one;\nvoid fragment() {\n\tALPHA = 0.3;\n}\n';
     expect(program(source).fragment).toMatch(/discard;\s+\}\s+nodeVar\d+\.w = 1\.0;/);
+  });
+});
+
+/** The `nodeUniformN` names a stage reads that it never declares. */
+function undeclaredUniforms(stage: string): string[] {
+  const declared = new Set(
+    [...stage.matchAll(/(?:uniform\s+\w+|^\s+\w+)\s+(nodeUniform\d+)\s*(?:\[\s*\d+\s*\])?;/gm)].map(
+      (declaration) => declaration[1]
+    )
+  );
+  const read = new Set([...stage.matchAll(/\bnodeUniform\d+\b/g)].map((reading) => reading[0]));
+  return [...read].filter((name) => !declared.has(name));
+}
+
+describe("a transpiled spatial material's first program", () => {
+  it("keys Godot's default shadow quality before the first draw, so the first draw keeps its program", () => {
+    const material = transpileSpatial(
+      'shader_type spatial;\nvoid fragment() { ALBEDO = vec3(0.5); }'
+    ).material;
+    const [taps, penumbra] = [SOFT_LOW_SHADOW_SAMPLES, SOFT_LOW_PENUMBRA_SAMPLES];
+    const softLow = (taps << 8) | (penumbra << 14) | (taps << 20) | (penumbra << 26);
+
+    expect(material.customProgramCacheKey().split('|').at(-1)!.split(',')).toContain(String(softLow >>> 0));
+  });
+});
+
+describe('a transpiled spatial material built into two programs', () => {
+  it('declares every uniform its functions read in the second program too', () => {
+    const { material } = transpileSpatial(
+      'shader_type spatial;\nvoid fragment() {\n\tALBEDO = vec3(0.6);\n}\n'
+    );
+    const build = oneBackendBuilds();
+    build(material);
+    // A uniform read first renumbers every uniform after it, as three's own nodes of a scene do.
+    const colour = material.fragmentNode as unknown as ReturnType<typeof vec4>;
+    material.fragmentNode = vec4(uniform(0.5).add(colour.xyz), colour.w) as unknown as Node;
+    expect(undeclaredUniforms(build(material).fragment)).toEqual([]);
   });
 });

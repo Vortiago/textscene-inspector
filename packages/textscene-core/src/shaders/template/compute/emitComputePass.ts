@@ -11,6 +11,7 @@ import {
   vertexIndex,
 } from 'three/tsl';
 import type { Node, TextureNode, UniformNode } from 'three/webgpu';
+import { readAsStored } from '../../language/readAsStored.js';
 import { BoundNodeMaterial } from '../../uniforms/boundMaterial.js';
 import { emitTemplateStage, programResources } from '../emitTemplate.js';
 import type { RowBlock } from '../rowBlock.js';
@@ -48,7 +49,7 @@ export function emitComputePass(pass: ComputePass): ComputeDraw {
     { name: COMPUTE_COLOR, type: 'vec4' },
     resources
   );
-  readRowsAsStored(resources.textures);
+  for (const texture of resources.textures.values()) readAsStored(texture);
   return {
     mesh: passMesh(stage.result),
     target: pass.target,
@@ -56,12 +57,6 @@ export function emitComputePass(pass: ComputePass): ComputeDraw {
     textures: resources.textures,
     buffers: resources.buffers.byName,
   };
-}
-
-/** Turns off three's flip of a render-target read (r187 `TextureNode.js:412`), as passes store unflipped. */
-function readRowsAsStored(textures: ReadonlyMap<string, TextureNode>): void {
-  for (const texture of textures.values())
-    (texture as unknown as { _flipYUniform: unknown })._flipYUniform = uniform(false);
 }
 
 /** A point for each invocation of a dispatch, at the atlas texel of the store it keeps. */
@@ -85,7 +80,7 @@ function emitScatterPass(pass: ComputePass, imageCount: number): ComputeDraw {
   const stage = emitTemplateStage(pass.stage, inputs, { name: COMPUTE_PLACE, type: 'vec4' }, resources);
   const uniforms = new Map([...resources.uniforms.byName, ...scatter]);
   const mesh = pointsOf(stage.result, value);
-  readRowsAsStored(resources.textures);
+  for (const texture of resources.textures.values()) readAsStored(texture);
   const dispatchTo = ([x, y, z]: readonly [number, number, number]) => {
     (dispatch.value as THREE.Vector3).set(x, y, z);
     pointsFor(mesh.geometry, x * y * z);

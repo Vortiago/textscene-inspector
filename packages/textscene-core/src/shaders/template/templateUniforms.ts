@@ -30,6 +30,9 @@ export class TemplateUniforms {
   /** Written only by `specialisation`: the program's specialisation constants, which its materials key on. */
   readonly specialisations = new Map<string, Specialisation>();
 
+  /** Written only by `presetSpecialisation`: the values a first emit folds in place of the declared ones. */
+  private readonly presets = new Map<string, number | boolean>();
+
   /** `specialisedMembers` names each block member that folds as a specialisation constant (ADR-0088). */
   constructor(private readonly specialisedMembers: ReadonlySet<string> = new Set()) {}
 
@@ -110,10 +113,15 @@ export class TemplateUniforms {
   specialisation(name: string, type: string, declared: number | boolean): Node {
     let constant = this.specialisations.get(name);
     if (!constant) {
-      constant = new Specialisation(type, declared);
+      constant = new Specialisation(type, this.presets.get(name) ?? declared);
       this.specialisations.set(name, constant);
     }
     return constant.literal();
+  }
+
+  /** Folds `value` for the constant `name` from the first emit on. */
+  presetSpecialisation(name: string, value: number | boolean): void {
+    this.presets.set(name, value);
   }
 
   /** The uniform `name` of `type`, which a block member of that name shares once a stage declares it. */

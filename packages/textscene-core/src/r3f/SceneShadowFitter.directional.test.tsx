@@ -10,6 +10,7 @@ import { SceneShadowFitter, useSceneShadowFit } from './SceneShadowFitter';
 import { directionalShadowUserData } from './directionalShadow/declaration';
 import { splitSunOf } from './directionalShadow/splitSun';
 import { positionalShadowUserData } from './positionalShadow/declaration';
+import { sceneSuns } from './surfaceLight/surfaceLight';
 import { TscnSceneContents } from './TscnCanvas';
 import { HierarchyProvider } from './contexts/HierarchyContext';
 import { SelectionProvider } from './contexts/SelectionContext';
@@ -138,6 +139,32 @@ light_angular_distance = 5.0
     );
     renderThrough(renderer, cameraAt(0));
     expect(splitSunOf(onlyDirectionalLight(renderer))!.shadow.softShadowAngle).toBe(0);
+  });
+
+  it("publishes a shadowed sun with its shadow, in the split sun's matrices and slots", async () => {
+    const renderer = await renderScene(
+      scene(`
+[node name="Sun" type="DirectionalLight3D" parent="."]
+shadow_enabled = true
+shadow_opacity = 0.6
+directional_shadow_mode = 1
+directional_shadow_blend_splits = true
+`)
+    );
+    renderThrough(renderer, cameraAt(0));
+    const [sun] = sceneSuns(renderer.scene.instance as THREE.Scene);
+    const split = splitSunOf(onlyDirectionalLight(renderer))!.shadow;
+    const { opacity, blendSplits, splitEnds, normalBiases } = sun!.shadow!;
+    expect({ opacity, blendSplits }).toEqual({ opacity: 0.6, blendSplits: true });
+    expect(Array.from(splitEnds)).toEqual(split._cascadeData.map((slot) => slot.x));
+    expect(Array.from(normalBiases)).toEqual(split._cascadeData.map((slot) => slot.z));
+    expect(sun!.shadow!.splitMatrix(1)).toBe(split.getMatrix(1));
+  });
+
+  it('publishes a sun without shadows with no shadow (edge case)', async () => {
+    const renderer = await renderScene(scene('\n[node name="Sun" type="DirectionalLight3D" parent="."]\n'));
+    renderThrough(renderer, cameraAt(0));
+    expect(sceneSuns(renderer.scene.instance as THREE.Scene)[0]!.shadow).toBeUndefined();
   });
 
   it('leaves a sun without shadows alone (edge case)', async () => {

@@ -38,10 +38,14 @@ export function emitShader(
       EmitScope.of(new Map([...uniforms, ...names]))
     );
   const context: EmitContext = { structOf, functions: new CalledFunctions(trees, structOf, body, uniforms) };
-  return new Map([...trees].map(([name, tree]) => [name, calledInPlace(tree, body, structOf)]));
+  return new Map([...trees].map(([name, tree]) => [name, calledInPlace(tree, body, context)]));
 }
 
-function calledInPlace(tree: EmittedTree, body: BodyEmitter, structOf: StructOf): TranspiledFunction {
+function calledInPlace(
+  tree: EmittedTree,
+  body: BodyEmitter,
+  { structOf, functions }: EmitContext
+): TranspiledFunction {
   const definition = tree.lowered;
   return {
     name: definition.name,
@@ -56,7 +60,8 @@ function calledInPlace(tree: EmittedTree, body: BodyEmitter, structOf: StructOf)
       const misfit = misfitForOneNode(definition);
       if (misfit !== undefined)
         throw new Error(`expected ${definition.name} to take and give one node each, but ${misfit}`);
-      return Fn(() => {
+      return Fn((builder: object) => {
+        functions.buildingFor(builder);
         const names = new Map<string, Value>(
           definition.arguments.map((argument, index) => [
             argument.name,

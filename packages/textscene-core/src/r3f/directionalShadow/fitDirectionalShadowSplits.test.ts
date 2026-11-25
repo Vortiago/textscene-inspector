@@ -160,6 +160,13 @@ describe('fitDirectionalShadowSplits', () => {
     }
   });
 
+  it('writes each split’s Godot depth bias in world units, over the split’s diameter plus the pancake', () => {
+    const { boxes, depthBiases } = fit(fitInput());
+    boxes.forEach((box, split) => {
+      expect(depthBiases[split]! / 0.0003).toBeCloseTo(boxWidth(box) + 20, 0);
+    });
+  });
+
   it('writes each split’s far end, bias and normal bias into its slot', () => {
     const { boxes, slots } = fit(fitInput());
     slots.forEach(([splitEnd, depthBias, normalBias], slot) => {

@@ -1,12 +1,14 @@
 import * as THREE from 'three';
-import type { DirectionalLight } from '../../shaders/spatial/directionalLights.js';
+import type { DirectionalLight, DirectionalShadow } from '../../shaders/spatial/directionalLights.js';
+import { blendsSplits, MAX_DIRECTIONAL_LIGHTS } from '../../godot/rendering/lights/directionalShadow.js';
+import { readDirectionalShadowDeclaration } from '../directionalShadow/declaration.js';
+import { splitSunOf } from '../directionalShadow/splitSun.js';
+import { NO_SHADOW_FADE } from '../directionalShadow/splitShadow.js';
 import { LIGHT_3D_DEFAULTS, DIRECTIONAL_LIGHT_3D_DEFAULTS } from '../../godot/scene/light.js';
 import { godotEnergyOfIntensity } from '../../nodes/3d/lights/shared/lightStrength.js';
-import { TrackedObjects } from '../trackedObjects.js';
 import { userDataDeclaration } from '../userDataDeclaration.js';
-import { visibleInTree } from '../visibleInTree.js';
 import { perObject } from '../../utils/perObject.js';
-import { isDirectionalLight } from '../directionalShadow/lightLists.js';
+import { isDirectionalLight, type SceneLight } from '../directionalShadow/lightLists.js';
 import { isDropped } from '../directionalShadow/droppedLight.js';
 import { shineDirection } from '../fog/fogLights.js';
 import { readFogLightDeclaration } from '../fog/fogLightDeclaration.js';
@@ -32,14 +34,16 @@ export const surfaceLightUserData = declaration.userData;
 /** A light that declares none, such as a GLB light, holds Godot's defaults of a DirectionalLight3D. */
 const UNDECLARED: SurfaceLightDeclaration = { cullMask: LIGHT_3D_DEFAULTS.cullMask, lightsSurfaces: true };
 
-/** Each scene's directional lights, in no particular order: a lit draw sums them. */
-const trackedLightsOf = perObject((scene: THREE.Scene) => new TrackedObjects(scene, isDirectionalLight));
-
 /** The three intensity holds the render's exposure, as Godot's energy does (`light_storage.cpp:656-658`). */
 function directionalLightOf(light: THREE.DirectionalLight, cullMask: number): DirectionalLight {
+  const shadow = shadowOf(light);
   return {
+    ...(shadow && { shadow }),
     direction: shineDirection(light, new THREE.Vector3()).normalize().negate(),
-    energy: godotEnergyOfIntensity(light.intensity),
+    // Read at the draw: the render's exposure scales the intensity after the light pass publishes.
+    get energy() {
+      return godotEnergyOfIntensity(light.intensity);
+    },
     color: light.color.clone(),
     specular: readLightSpecularDeclaration(light)?.amount ?? DIRECTIONAL_LIGHT_3D_DEFAULTS.specular,
     size: readLightSizeDeclaration(light)?.size ?? 0,
@@ -49,23 +53,62 @@ function directionalLightOf(light: THREE.DirectionalLight, cullMask: number): Di
   };
 }
 
-/** Each scene's lights of the last render that read them. Written only by `sceneDirectionalLights`. */
-const lastLightsOf = perObject((_scene: THREE.Scene) => ({
-  renderId: NaN,
-  lights: [] as DirectionalLight[],
+/** Ends past any view depth, as Godot's smoothstep needs ends that differ (`light_storage.cpp:753`). */
+const FADES_NOTHING = { from: 0.999e30, to: 1e30 };
+
+/** The split sun's own slots and matrices, so a draw reads what its render's shadow pass wrote. */
+function shadowOf(light: THREE.DirectionalLight): DirectionalShadow | null {
+  const sun = splitSunOf(light);
+  const declaration = readDirectionalShadowDeclaration(light);
+  if (!sun || !declaration) return null;
+  const { shadow } = sun;
+  const slots = shadow._cascadeData;
+  return {
+    opacity: shadow.intensity,
+    softShadowScale: declaration.filterRadius,
+    softShadowAngle: shadow.softShadowAngle,
+    blendSplits: blendsSplits(declaration.splitCount, declaration.blendSplits),
+    fade: shadow.fade === NO_SHADOW_FADE ? FADES_NOTHING : shadow.fade,
+    splitEnds: slots.map((slot) => slot.x),
+    depthBiases: shadow.depthBiases.toArray(),
+    normalBiases: slots.map((slot) => slot.z),
+    splitMatrix: (split) => shadow.getMatrix(split),
+  };
+}
+
+/** A light whose row the draw builds, with the cull mask its own declaration gives. */
+interface PublishedSun {
+  readonly light: THREE.DirectionalLight;
+  readonly cullMask: number;
+}
+
+/** Each scene's suns of its last light pass. Written by `publishSceneSuns`, cleared by `releaseSceneSuns`. */
+const publishedSunsOf = perObject((_scene: THREE.Scene) => ({
+  lights: [] as readonly PublishedSun[],
+  /** Built at the first `sceneSuns` of the render, so a scene with no lit translated draw builds none. */
+  suns: null as readonly DirectionalLight[] | null,
 }));
 
-/** The fitter drops a light past Godot's eighth, so it lights no surface here either. */
-export function sceneDirectionalLights(scene: THREE.Scene, renderId: number): readonly DirectionalLight[] {
-  const last = lastLightsOf(scene);
-  if (last.renderId === renderId) return last.lights;
-  last.renderId = renderId;
-  last.lights = trackedLightsOf(scene)
-    .current()
-    .flatMap((light) => {
-      const own = declaration.read(light) ?? UNDECLARED;
-      const isDrawn = own.lightsSurfaces && visibleInTree(light) && !isDropped(light);
-      return isDrawn ? [directionalLightOf(light, own.cullMask)] : [];
-    });
-  return last.lights;
+/** A light the fitter dropped past Godot's eighth lights no surface either. */
+export function publishSceneSuns(scene: THREE.Scene, lights: readonly SceneLight[]): void {
+  const published: PublishedSun[] = [];
+  for (const { light, isVisible } of lights) {
+    if (published.length === MAX_DIRECTIONAL_LIGHTS) break;
+    if (!isDirectionalLight(light) || !isVisible || isDropped(light)) continue;
+    const own = declaration.read(light) ?? UNDECLARED;
+    if (own.lightsSurfaces) published.push({ light, cullMask: own.cullMask });
+  }
+  Object.assign(publishedSunsOf(scene), { lights: published, suns: null });
+}
+
+/** The suns the light pass published for the render of `scene` under way, none before its first. */
+export function sceneSuns(scene: THREE.Scene): readonly DirectionalLight[] {
+  const published = publishedSunsOf(scene);
+  published.suns ??= published.lights.map(({ light, cullMask }) => directionalLightOf(light, cullMask));
+  return published.suns;
+}
+
+/** Clears the suns of `scene` when its light pass stops, as they hold the released split suns' shadows. */
+export function releaseSceneSuns(scene: THREE.Scene): void {
+  Object.assign(publishedSunsOf(scene), { lights: [], suns: null });
 }

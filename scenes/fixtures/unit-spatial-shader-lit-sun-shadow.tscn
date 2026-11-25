@@ -1,0 +1,86 @@
+[gd_scene format=3 uid="uid://unit_spatial_shader_lit_sun_shadow"]
+
+; The one variable: a lit spatial shader on the ground, which receives the split shadow of a sun.
+; The background colour is the ambient light, as a late default sky compiles the lit shader again.
+; The 0.04-wide bars stay crisp only while the near split draws, so a wrong split, matrix or row
+; order shows. It holds one lit shader, as each costs about 25 s to compile on SwiftShader in CI.
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(3, 3)
+
+[sub_resource type="Shader" id="Shader_ground"]
+code = "shader_type spatial;
+
+void fragment() {
+	ALBEDO = vec3(0.5);
+	ROUGHNESS = 1.0;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ground"]
+shader = SubResource("Shader_ground")
+
+[sub_resource type="BoxMesh" id="BoxMesh_bar"]
+size = Vector3(0.04, 0.04, 2.4)
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.1, 0.12, 0.16, 1)
+
+[node name="SpatialShaderLitSunShadowRoot" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_ground")
+surface_material_override/0 = SubResource("ShaderMaterial_ground")
+
+[node name="Bar1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 0.6, 0)
+mesh = SubResource("BoxMesh_bar")
+
+[node name="Bar2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.64, 0.6, 0)
+mesh = SubResource("BoxMesh_bar")
+
+[node name="Bar3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.48, 0.6, 0)
+mesh = SubResource("BoxMesh_bar")
+
+[node name="Bar4" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.32, 0.6, 0)
+mesh = SubResource("BoxMesh_bar")
+
+[node name="Bar5" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.16, 0.6, 0)
+mesh = SubResource("BoxMesh_bar")
+
+[node name="Bar6" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+mesh = SubResource("BoxMesh_bar")
+
+[node name="Bar7" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.16, 0.6, 0)
+mesh = SubResource("BoxMesh_bar")
+
+[node name="Bar8" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.32, 0.6, 0)
+mesh = SubResource("BoxMesh_bar")
+
+[node name="Bar9" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.48, 0.6, 0)
+mesh = SubResource("BoxMesh_bar")
+
+[node name="Bar10" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.64, 0.6, 0)
+mesh = SubResource("BoxMesh_bar")
+
+[node name="Bar11" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 0.6, 0)
+mesh = SubResource("BoxMesh_bar")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, -0.75, 0.433013, 2, 4, 2)
+light_energy = 1.5
+shadow_enabled = true

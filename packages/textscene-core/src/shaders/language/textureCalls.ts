@@ -28,28 +28,36 @@ class GradientNode extends TslNode {
   }
 }
 
-/** The texture, the coordinate as three takes it, and the layer of a 2D array. */
+/** The coordinate as three takes it, the layer of a 2D array, and the depth a shadow sampler compares. */
 interface Coordinate {
   readonly uv: Node;
   readonly layer?: Node;
+  readonly reference?: Node;
 }
 
-/** A 2D array's coordinate keeps its layer in its last lane: `vec3(uv, layer)` or `ivec3(texel, layer)`. */
+const isShadowSampler = (sampler: string) => sampler === 'sampler2DShadow';
+
+/** The last lane holds a 2D array's layer, or the depth a 2D shadow sampler compares. */
 function coordinateOf(sampler: string, coordinate: Node): Coordinate {
+  if (isShadowSampler(sampler)) return { uv: swizzles(coordinate).xy, reference: swizzles(coordinate).z };
   if (textureKindOf(sampler) !== 'layers') return { uv: coordinate };
   return { uv: swizzles(coordinate).xy, layer: swizzles(coordinate).z };
 }
 
+const divided = (lanes: Node, divisor: Node) => TSL.div(lanes as never, divisor as never) as unknown as Node;
+
 /** `textureProj`'s coordinate: the lanes before the last, divided by the last (`vec3` or `vec4`). */
-function projected(sampler: string, coordinate: Node, type: string): Node {
+function projected(sampler: string, coordinate: Node, type: string): Coordinate {
   const lane = swizzles(coordinate);
   const divisor = type === 'vec3' ? lane.z : lane.w;
+  if (isShadowSampler(sampler)) return { uv: divided(lane.xy, divisor), reference: divided(lane.z, divisor) };
   const isVolume = textureKindOf(sampler) === 'volume';
-  return TSL.div((isVolume ? lane.xyz : lane.xy) as never, divisor as never) as unknown as Node;
+  return { uv: divided(isVolume ? lane.xyz : lane.xy, divisor) };
 }
 
-function sampled(texture: TextureNode, { uv, layer }: Coordinate): TextureNode {
+function sampled(texture: TextureNode, { uv, layer, reference }: Coordinate): TextureNode {
   const node = texture.sample(uv);
+  if (reference !== undefined) return node.compare(reference as never) as unknown as TextureNode;
   return layer === undefined ? node : (node.depth(roundedLayer(layer) as never) as unknown as TextureNode);
 }
 
@@ -178,8 +186,7 @@ function sampledCall(name: string, row: InstructionRow, operands: readonly Node[
     const read = CALLS[name]!(texture, placed, rest, sampler!);
     return placed.layer && LAYER_SCALED_CALLS.has(name) ? layerScaledRead(texture, read, placed.layer) : read;
   }
-  const divided = projected(sampler!, coordinate, coordinateType!);
-  return CALLS[projectedCall]!(texture, { uv: divided }, rest, sampler!);
+  return CALLS[projectedCall]!(texture, projected(sampler!, coordinate, coordinateType!), rest, sampler!);
 }
 
 const INTEGER_TYPES: ReadonlySet<number> = new Set([IntType, UnsignedIntType]);

@@ -1,6 +1,36 @@
 import * as THREE from 'three';
+import type { TextureNode } from 'three/webgpu';
 import type { Binding } from '../uniforms/bindingTable.js';
+import { comparedTextureOf, UNBOUND_DEPTH } from '../language/comparedTextures.js';
 import type { SpatialFrame } from './spatialBindings.js';
+import {
+  DIRECTIONAL_SHADOW_SIZE_DEFAULT,
+  MAX_DIRECTIONAL_LIGHTS,
+} from '../../godot/rendering/lights/directionalShadow.js';
+import { SOFT_LOW_SHADOW_SAMPLES, vogelDisk } from '../../godot/rendering/lights/softShadowKernel.js';
+import { SCENE_DATA } from './sceneDataBlock.js';
+
+/** A sun's shadow in the directional shadow atlas, as its row reads it (`light_storage.cpp:694-756`). */
+export interface DirectionalShadow {
+  /** `shadow_opacity`. */
+  readonly opacity: number;
+  /** `soft_shadow_scale`: the PCF kernel's radius in atlas texels. */
+  readonly softShadowScale: number;
+  /** `softshadow_angle`: the tangent of `light_angular_distance`. */
+  readonly softShadowAngle: number;
+  /** `blend_splits`: off in Orthogonal mode whatever the light sets. */
+  readonly blendSplits: boolean;
+  /** The view depths the fade runs between, positive: Godot's `fade_from` and `fade_to` negated. */
+  readonly fade: { readonly from: number; readonly to: number };
+  /** Four lanes each, one per split: `shadow_split_offsets`, `shadow_bias` and `shadow_normal_bias`. */
+  readonly splitEnds: ArrayLike<number>;
+  /** In world units along the light's direction, as the receiver moves by it. */
+  readonly depthBiases: ArrayLike<number>;
+  /** In world units. */
+  readonly normalBiases: ArrayLike<number>;
+  /** World space to split `split`'s atlas UV in x and y, and the depth its compare reads in z. */
+  splitMatrix(split: number): THREE.Matrix4;
+}
 
 /** A DirectionalLight3D that lights surfaces (`light_storage.cpp:630-692`). */
 export interface DirectionalLight {
@@ -16,10 +46,9 @@ export interface DirectionalLight {
   readonly cullMask: number;
   readonly bakeMode: number;
   readonly volumetricFogEnergy: number;
+  /** Nothing for a light that casts no shadow in this render. */
+  readonly shadow?: DirectionalShadow;
 }
-
-/** `MAX_DIRECTIONAL_LIGHT_DATA_STRUCTS`, the project's `max_directional_lights` default. */
-const MAX_DIRECTIONAL_LIGHTS = 8;
 
 const LIGHTS = 'directional_lights.data';
 
@@ -71,10 +100,56 @@ function directionMember(): Binding<SpatialFrame> {
   };
 }
 
-/** Each member of the row that a light with no shadow fills (`light_storage.cpp:636-692`). */
+/** A shadow member, which a light without a shadow fills with `empty`. */
+function shadowMember<T>(
+  member: string,
+  godot: string,
+  valueOf: (shadow: DirectionalShadow, slot: number, frame: SpatialFrame) => T,
+  empty: T
+): Binding<SpatialFrame> {
+  return lightMember(
+    member,
+    godot,
+    (light, slot, frame) => (light.shadow ? valueOf(light.shadow, slot, frame) : empty),
+    empty
+  );
+}
+
+const NO_LANES: Readonly<THREE.Vector4> = new THREE.Vector4();
+
+/** A member of four lanes, one per split, in a vector per slot that the next draw overwrites. */
+function splitLanesMember(
+  member: string,
+  godot: string,
+  lanesOf: (shadow: DirectionalShadow) => ArrayLike<number>
+) {
+  const vectors = Array.from({ length: MAX_DIRECTIONAL_LIGHTS }, () => new THREE.Vector4());
+  return shadowMember(
+    member,
+    godot,
+    (shadow, slot) => vectors[slot]!.fromArray(lanesOf(shadow) as number[]),
+    NO_LANES
+  );
+}
+
+const NO_MATRIX: Readonly<THREE.Matrix4> = new THREE.Matrix4().makeScale(0, 0, 0);
+
+/** `shadow_matrix1` to `4` take a view-space vertex (`light_storage.cpp:718-720`). */
+function splitMatrixMember(split: number): Binding<SpatialFrame> {
+  const matrices = Array.from({ length: MAX_DIRECTIONAL_LIGHTS }, () => new THREE.Matrix4());
+  return shadowMember(
+    `shadow_matrix${split + 1}`,
+    'light_storage.cpp:706-728',
+    (shadow, slot, frame) =>
+      matrices[slot]!.multiplyMatrices(shadow.splitMatrix(split), frame.camera.matrixWorld),
+    NO_MATRIX
+  );
+}
+
+/** Each member of the row a light fills (`light_storage.cpp:636-756`). */
 export const DIRECTIONAL_LIGHT_BINDINGS: readonly Binding<SpatialFrame>[] = [
   {
-    uniform: 'scene_data_block.data.directional_light_count',
+    uniform: `${SCENE_DATA}.directional_light_count`,
     godot: 'render_scene_data_rd.cpp:151',
     value: (frame) => Math.min(frame.directionalLights.length, MAX_DIRECTIONAL_LIGHTS),
   },
@@ -86,7 +161,49 @@ export const DIRECTIONAL_LIGHT_BINDINGS: readonly Binding<SpatialFrame>[] = [
   lightMember('volumetric_fog_energy', 'light_storage.cpp:666', (light) => light.volumetricFogEnergy, 0),
   lightMember('mask', 'light_storage.cpp:667', (light) => light.cullMask >>> 0, 0),
   lightMember('size', 'light_storage.cpp:669-671', (light) => light.size, 0),
-  // No light casts a shadow on a transpiled surface yet: a shadow opacity of 0 skips every shadow read.
-  lightMember('shadow_opacity', 'light_storage.cpp:673-675', () => 0, 0),
   lightMember('bake_mode', 'light_storage.cpp:692', (light) => light.bakeMode, 0),
+  // A shadow opacity of 0 skips every shadow read of the light, so its other shadow members stay unread.
+  shadowMember('shadow_opacity', 'light_storage.cpp:673-675', (shadow) => shadow.opacity, 0),
+  shadowMember('soft_shadow_scale', 'light_storage.cpp:697-701', (shadow) => shadow.softShadowScale, 0),
+  shadowMember('softshadow_angle', 'light_storage.cpp:698', (shadow) => shadow.softShadowAngle, 0),
+  shadowMember('blend_splits', 'light_storage.cpp:705', (shadow) => shadow.blendSplits, false),
+  shadowMember('fade_from', 'light_storage.cpp:753', (shadow) => -shadow.fade.from, 0),
+  shadowMember('fade_to', 'light_storage.cpp:754', (shadow) => -shadow.fade.to, 0),
+  splitLanesMember('shadow_split_offsets', 'light_storage.cpp:721', (shadow) => shadow.splitEnds),
+  splitLanesMember('shadow_bias', 'light_storage.cpp:722-723', (shadow) => shadow.depthBiases),
+  splitLanesMember('shadow_normal_bias', 'light_storage.cpp:724', (shadow) => shadow.normalBiases),
+  ...[0, 1, 2, 3].map(splitMatrixMember),
 ];
+
+const DIRECTIONAL_SHADOW_PIXEL_SIZE = new THREE.Vector2(1, 1).divideScalar(DIRECTIONAL_SHADOW_SIZE_DEFAULT);
+
+/** `vec4 directional_soft_shadow_kernel[32]`, Soft Low's taps first (`render_scene_data_rd.cpp:124`). */
+const DIRECTIONAL_SOFT_SHADOW_KERNEL = vogelDisk(SOFT_LOW_SHADOW_SAMPLES).map(
+  ([x, y]) => new THREE.Vector4(x, y, 0, 0)
+);
+
+/** The members of the scene data the directional shadows read. */
+export const DIRECTIONAL_SHADOW_SCENE_BINDINGS: readonly Binding<SpatialFrame>[] = [
+  {
+    uniform: `${SCENE_DATA}.directional_shadow_pixel_size`,
+    godot: 'renderer_scene_render_rd.cpp:1386-1390',
+    value: () => DIRECTIONAL_SHADOW_PIXEL_SIZE,
+  },
+  {
+    uniform: `${SCENE_DATA}.directional_soft_shadow_kernel`,
+    godot: 'render_scene_data_rd.cpp:124',
+    value: () => DIRECTIONAL_SOFT_SHADOW_KERNEL,
+  },
+];
+
+/** The template's texture of the directional shadows. */
+const DIRECTIONAL_SHADOW_ATLAS = 'directional_shadow_atlas';
+
+/** Gives `atlas` to the compared reads of the template's atlas, or a depth of one texel with none. */
+export function bindDirectionalShadowAtlas(
+  textures: ReadonlyMap<string, TextureNode>,
+  atlas: THREE.DepthTexture | undefined
+): void {
+  const node = textures.get(DIRECTIONAL_SHADOW_ATLAS);
+  if (node) comparedTextureOf(node).value = atlas ?? UNBOUND_DEPTH;
+}

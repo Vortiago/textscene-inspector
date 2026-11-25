@@ -23,7 +23,8 @@ import {
   shiftRight,
   sub,
 } from 'three/tsl';
-import type { Node } from 'three/webgpu';
+import type { Node, TextureNode } from 'three/webgpu';
+import { comparedTextureOf } from './comparedTextures.js';
 import { swizzles } from './compositeParts.js';
 import { CONSTRUCTORS, floatNode } from './emitConstant.js';
 import { shapeOf, type ValueType } from './types.js';
@@ -132,6 +133,8 @@ export function constructed(
   operandTypes: readonly ValueType[]
 ): Node {
   // A template's `sampler3D(texture, sampler)`: three keeps the sampler state on the texture.
+  if (type === 'sampler2DShadow')
+    return comparedTextureOf(operands[0] as unknown as TextureNode) as unknown as Node;
   if (type.startsWith('sampler')) return operands[0]!;
   const columns = shapeOf(type)!.columns;
   const [only] = operandTypes;

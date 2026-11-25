@@ -53,6 +53,7 @@ import { setPrepassDraw } from '../pipeline/depthPrepass.js';
 import { drawAsLines } from '../pipeline/polygonMode.js';
 import { spatialPrepassDraw } from './spatialPrepass.js';
 import { dfgTextureNode } from './dfgTexture.js';
+import { PACKED_SPECIALISATION_DEFAULTS } from './packedSpecialisation.js';
 import { radianceOctmapNode } from './sceneSky.js';
 import { rendererOf } from '../preprocessor/renderingMethod.js';
 import { BoundNodeMaterial } from '../uniforms/boundMaterial.js';
@@ -117,6 +118,9 @@ export function transpileSpatial(source: string, options: SpatialOptions = {}): 
     specialisations: resources.uniforms.specialisations,
   };
   const material = new BoundNodeMaterial(shader);
+  // Godot's default specialisation before the first emit (`render_forward_clustered.cpp:4968-4987`).
+  for (const [name, value] of PACKED_SPECIALISATION_DEFAULTS)
+    resources.uniforms.presetSpecialisation(name, value);
   material.stageWith(() => setColourStages(material, emitStages(SCENE.defines), pipeline));
   applySpatialPipeline(material, pipeline);
   const renderer = rendererOf(options.renderingMethod ?? 'forward_plus');
