@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { act, render } from '@testing-library/react';
 import { ResourceLoader } from './ResourceLoader';
-import { ResourceLoaderContext } from './ResourceLoaderContext';
+import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import { usePendingWhile } from './usePendingWhile';
 
 function Pending({ pending }: { pending: boolean }) {
@@ -15,9 +15,9 @@ function Pending({ pending }: { pending: boolean }) {
 
 function mount(loader: ResourceLoader, pending: boolean) {
   return render(
-    <ResourceLoaderContext.Provider value={loader}>
+    <ResourceLoaderProvider loader={loader}>
       <Pending pending={pending} />
-    </ResourceLoaderContext.Provider>
+    </ResourceLoaderProvider>
   );
 }
 
@@ -35,9 +35,9 @@ describe('usePendingWhile', () => {
 
     act(() => {
       view.rerender(
-        <ResourceLoaderContext.Provider value={loader}>
+        <ResourceLoaderProvider loader={loader}>
           <Pending pending={false} />
-        </ResourceLoaderContext.Provider>
+        </ResourceLoaderProvider>
       );
     });
 

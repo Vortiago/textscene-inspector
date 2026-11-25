@@ -8,7 +8,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { TscnParser } from '../../parser/TscnParser';
 import { ResourceLoader } from '../../resources/ResourceLoader';
-import { ResourceLoaderContext } from '../../resources/ResourceLoaderContext';
+import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { loadCsgModule, type CsgModule } from './csgModule';
 import '../nodes/index';
 import { NodeTree } from '../testing/NodeTree';
@@ -50,11 +50,11 @@ async function mountSubtraction(loader: ResourceLoader) {
   const scene = new TscnParser().parse(SUBTRACTION);
   const block = scene.nodes[0]!.children[0]!;
   await ReactThreeTestRenderer.create(
-    <ResourceLoaderContext.Provider value={loader}>
+    <ResourceLoaderProvider loader={loader}>
       <SceneResourcesProvider internalResources={scene.internalResources}>
         <NodeTree node={block} path="Root/Block" />
       </SceneResourcesProvider>
-    </ResourceLoaderContext.Provider>
+    </ResourceLoaderProvider>
   );
 }
 

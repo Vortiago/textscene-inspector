@@ -6,7 +6,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 import { act, render } from '@testing-library/react';
 import { lazy, type ComponentType } from 'react';
 import { ResourceLoader } from './ResourceLoader';
-import { ResourceLoaderContext } from './ResourceLoaderContext';
+import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import { PendingSuspense } from './PendingSuspense';
 
 /**
@@ -27,11 +27,11 @@ function deferredChunk(): { Chunk: ComponentType; land: () => Promise<void> } {
 
 function mount(loader: ResourceLoader, Chunk: ComponentType) {
   return render(
-    <ResourceLoaderContext.Provider value={loader}>
+    <ResourceLoaderProvider loader={loader}>
       <PendingSuspense>
         <Chunk />
       </PendingSuspense>
-    </ResourceLoaderContext.Provider>
+    </ResourceLoaderProvider>
   );
 }
 

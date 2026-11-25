@@ -4,7 +4,7 @@
  */
 
 import { createContext, useCallback, useContext, useSyncExternalStore, type ReactNode } from 'react';
-import { useResourceLoader } from '../../resources/useResource.js';
+import { usePendingLoads } from '../../resources/ResourceLoaderContext.js';
 import { textureWork } from '../../resources/textures/textureWork.js';
 import { fontWork } from '../controls/native/text/settledChannel.js';
 import { hasPendingWork, pendingSceneWork } from '../sceneWork.js';
@@ -36,7 +36,7 @@ export function PreviewVisibilityProvider({
 /** A hidden preview draws while its scene loads or owes a capture: each advances only in a frame. */
 export function usePreviewFrameloop(): 'always' | 'never' {
   const isVisible = useContext(PreviewVisibilityContext);
-  const loader = useResourceLoader();
+  const loads = usePendingLoads();
   const view = useViewStatusStore();
   // A visible preview subscribes to nothing: its canvas would re-render on every count change
   // of a load, and rebuild its whole tree, for a `frameloop` that stays 'always'.
@@ -44,18 +44,18 @@ export function usePreviewFrameloop(): 'always' | 'never' {
     (onChange: () => void) => {
       if (isVisible) return NO_UNSUBSCRIBE;
       const unsubscribes = [
-        loader?.subscribePending(onChange),
+        loads?.subscribe(onChange),
         textureWork.subscribe(onChange),
         fontWork.subscribe(onChange),
         view?.subscribe(onChange),
       ];
       return () => unsubscribes.forEach((unsubscribe) => unsubscribe?.());
     },
-    [isVisible, loader, view]
+    [isVisible, loads, view]
   );
   const isLoading = useSyncExternalStore(
     subscribe,
-    () => !isVisible && (hasPendingWork(pendingSceneWork(loader)) || isViewWaiting(view))
+    () => !isVisible && (hasPendingWork(pendingSceneWork(loads)) || isViewWaiting(view))
   );
   return isVisible || isLoading ? 'always' : 'never';
 }

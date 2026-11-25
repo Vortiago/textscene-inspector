@@ -99,15 +99,11 @@ export class ResourceLoader {
 
   private _fileEventBus: FileEventBus | null;
 
-  /**
-   * How many mounted `useResource` consumers are still waiting: the signal that
-   * loading has finished, which a timer can only guess at. It lives here, not in a
-   * context of its own, so no host mounts another provider.
-   */
+  /** How many consumers of every view on this loader still wait: the sum of each view's `PendingLoads`. */
   private pendingResources = 0;
   private readonly pendingListeners = new Set<() => void>();
 
-  /** Called by `useResource` while a consumer is pending; returns the release. */
+  /** Called by each view's `PendingLoads` while a consumer is pending; returns the release. */
   beginPending(): () => void {
     this.pendingResources += 1;
     this.notifyPending();

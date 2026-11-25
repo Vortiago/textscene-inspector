@@ -1,9 +1,9 @@
-import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
 import type { ResourceEventBus } from './ResourceEventBus';
 import { cloneWithMaterials, disposeClonedMaterials } from './processing/glbProcessing';
-import { ResourceLoaderContext } from './ResourceLoaderContext';
-import type { ResourceLoader } from './ResourceLoader';
+import { usePendingLoads, useResourceLoader } from './ResourceLoaderContext';
+import type { PendingLoads } from './pendingLoads';
 import { resourceSliceRegistry, type ResourceBusType } from './sliceRegistration';
 
 /**
@@ -22,13 +22,11 @@ export interface ResourceResult<T> {
 
 const PENDING: ResourceResult<never> = { value: undefined, status: 'pending' };
 
-/** The loader from context, or null outside the provider. */
-export function useResourceLoader() {
-  return useContext(ResourceLoaderContext);
-}
+export { useResourceLoader };
 
 export function useResource<T>(path: string, type: ResourceBusType): ResourceResult<T> {
   const loader = useResourceLoader();
+  const pending = usePendingLoads();
   // The request a result belongs to: the render that swaps the path or the bus still holds the
   // old request's result, whose value may be a disposed clone, so that render answers pending.
   const [settled, setSettled] = useState<{ path: string; type: ResourceBusType; result: ResourceResult<T> }>(
@@ -158,8 +156,7 @@ export function useResource<T>(path: string, type: ResourceBusType): ResourceRes
       // A reload's refetch is real work to a capture: the loader counts it, so
       // isSceneComplete moves through the reload's window and the shell posts the
       // states again. It releases on the next settled event of this path, or on unmount.
-      const releasePending = loader.beginPending();
-      reloadPendingReleases.push(releasePending);
+      if (pending) reloadPendingReleases.push(pending.begin());
       access.request(path);
     };
 
@@ -180,23 +177,23 @@ export function useResource<T>(path: string, type: ResourceBusType): ResourceRes
       eventBus.off(busType, 'invalidated', onInvalidated);
       disposePreviousClone();
     };
-  }, [loader, path, type]);
+  }, [loader, pending, path, type]);
 
-  useLoaderPending(loader, path && result.status === 'pending' ? path : null);
+  useLoaderPending(pending, path && result.status === 'pending' ? path : null);
 
   return result;
 }
 
 // Counted from the commit that shows it pending, released after the effects of the content that ends it.
-function useLoaderPending(loader: ResourceLoader | null, pendingPath: string | null): void {
+function useLoaderPending(pending: PendingLoads | null, pendingPath: string | null): void {
   const [releases] = useState<Array<() => void>>(() => []);
   useLayoutEffect(() => {
-    if (!loader || !pendingPath) return undefined;
-    const release = loader.beginPending();
+    if (!pending || !pendingPath) return undefined;
+    const release = pending.begin();
     return () => {
       releases.push(release);
     };
-  }, [loader, pendingPath, releases]);
+  }, [pending, pendingPath, releases]);
   useEffect(() => releaseAll(releases));
   useEffect(() => () => releaseAll(releases), [releases]);
 }

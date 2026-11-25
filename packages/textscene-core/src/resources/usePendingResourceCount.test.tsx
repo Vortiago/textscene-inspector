@@ -1,55 +1,68 @@
-/**
- * The React view of the nearest loader's pending resource count, which tells the shell whether
- * the scene's resources have landed.
- */
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { ReactNode } from 'react';
-import { act, renderHook } from '@testing-library/react';
+import { act, render, renderHook } from '@testing-library/react';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import { createFakeResourceLoader } from './testing/createFakeResourceLoader';
 import { usePendingResourceCount } from './usePendingResourceCount';
+import { usePendingWhile } from './usePendingWhile';
 
-function renderWithLoader(loader = createFakeResourceLoader().loader) {
-  const wrapper = ({ children }: { children: ReactNode }) => (
-    <ResourceLoaderProvider loader={loader}>{children}</ResourceLoaderProvider>
+function PendingWhile({ isPending }: { isPending: boolean }) {
+  usePendingWhile(isPending);
+  return null;
+}
+
+function Count({ onCount }: { onCount: (count: number) => void }) {
+  onCount(usePendingResourceCount());
+  return null;
+}
+
+/** Two views on one loader, each under its own provider, as two `mountScene` calls on one provider are. */
+function renderTwoViews(isPendingInB: boolean) {
+  const { loader } = createFakeResourceLoader();
+  const counts = { a: -1, b: -1 };
+  const tree = (isPending: boolean) => (
+    <>
+      <ResourceLoaderProvider loader={loader}>
+        <Count onCount={(count) => (counts.a = count)} />
+      </ResourceLoaderProvider>
+      <ResourceLoaderProvider loader={loader}>
+        <PendingWhile isPending={isPending} />
+        <Count onCount={(count) => (counts.b = count)} />
+      </ResourceLoaderProvider>
+    </>
   );
-  return { loader, ...renderHook(() => usePendingResourceCount(), { wrapper }) };
+  const { rerender } = render(tree(isPendingInB));
+  return { loader, counts, rerender: (isPending: boolean) => rerender(tree(isPending)) };
 }
 
 describe('usePendingResourceCount', () => {
-  it('follows the count from zero, up, and back to zero', () => {
-    const { loader, result } = renderWithLoader();
-    expect(result.current).toBe(0);
+  it("counts the loads of its own view's consumers, from zero, up, and back to zero", () => {
+    const { counts, rerender } = renderTwoViews(false);
+    expect(counts.b).toBe(0);
 
-    let release: () => void = () => {};
-    act(() => {
-      release = loader.beginPending();
-    });
-    expect(result.current).toBe(1);
+    act(() => rerender(true));
+    expect(counts.b).toBe(1);
 
-    act(() => release());
-    expect(result.current).toBe(0);
+    act(() => rerender(false));
+    expect(counts.b).toBe(0);
   });
 
-  it('unsubscribes from the loader once unmounted (edge case)', () => {
-    const { loader } = createFakeResourceLoader();
-    const unsubscribes: ReturnType<typeof vi.fn>[] = [];
-    const subscribe = loader.subscribePending.bind(loader);
-    vi.spyOn(loader, 'subscribePending').mockImplementation((listener) => {
-      const unsubscribe = vi.fn(subscribe(listener));
-      unsubscribes.push(unsubscribe);
-      return unsubscribe;
-    });
-    const { unmount } = renderWithLoader(loader);
-    expect(unsubscribes.length).toBeGreaterThan(0);
+  it('leaves another view on the same loader at zero while one view loads', () => {
+    const { counts } = renderTwoViews(true);
 
-    unmount();
+    expect(counts).toEqual({ a: 0, b: 1 });
+  });
 
-    expect(unsubscribes.every((unsubscribe) => unsubscribe.mock.calls.length > 0)).toBe(true);
+  it('counts each view’s load on the loader the views share', () => {
+    const { loader } = renderTwoViews(true);
+
+    expect(loader.pendingResourceCount).toBe(1);
   });
 
   it('answers zero outside a loader (error case)', () => {
-    const { result } = renderHook(() => usePendingResourceCount());
+    const { result } = renderHook(() => usePendingResourceCount(), {
+      wrapper: ({ children }: { children: ReactNode }) => children,
+    });
     expect(result.current).toBe(0);
   });
 });

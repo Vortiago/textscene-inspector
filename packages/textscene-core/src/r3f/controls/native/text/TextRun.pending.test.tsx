@@ -27,7 +27,7 @@ async function freshTextModules() {
     ...(await importOriginal<object>()),
     peekOutlines: (fonts: SettledFonts) => fonts.peekOutlines(outlinesLoad, () => outlines),
   }));
-  const [{ TextRun }, { shapeText }, { ResourceLoader }, { ResourceLoaderContext }, runtime] =
+  const [{ TextRun }, { shapeText }, { ResourceLoader }, { ResourceLoaderProvider }, runtime] =
     await Promise.all([
       import('./TextRun'),
       import('./textLayout'),
@@ -50,9 +50,9 @@ async function freshTextModules() {
       fontMetrics,
     });
     return ReactThreeTestRenderer.create(
-      <ResourceLoaderContext.Provider value={loader}>
+      <ResourceLoaderProvider loader={loader}>
         <TextRun layout={layout} fontSizePx={16} tint={WHITE} />
-      </ResourceLoaderContext.Provider>
+      </ResourceLoaderProvider>
     );
   };
   const mountCanvasRun = () =>

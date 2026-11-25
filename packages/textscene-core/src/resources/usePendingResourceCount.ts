@@ -1,12 +1,9 @@
-/** How many resources the nearest loader still waits for, as React state. Zero outside a loader. */
-import { useCallback, useSyncExternalStore } from 'react';
-import { useResourceLoader } from './useResource.js';
+import { useSyncExternalStore } from 'react';
+import { usePendingLoads } from './ResourceLoaderContext.js';
+import { subscribeToNothing } from '../utils/subscribeToNothing.js';
 
+/** How many loads the nearest provider's consumers still wait for, as React state. Zero outside one. */
 export function usePendingResourceCount(): number {
-  const loader = useResourceLoader();
-  const subscribe = useCallback(
-    (listener: () => void) => (loader ? loader.subscribePending(listener) : () => {}),
-    [loader]
-  );
-  return useSyncExternalStore(subscribe, () => loader?.pendingResourceCount ?? 0);
+  const pending = usePendingLoads();
+  return useSyncExternalStore(pending?.subscribe ?? subscribeToNothing, () => pending?.pending() ?? 0);
 }

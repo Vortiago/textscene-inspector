@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { act, render } from '@testing-library/react';
 import { ResourceLoader } from './ResourceLoader';
-import { ResourceLoaderContext } from './ResourceLoaderContext';
+import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import { memoisedImport, type LazyImport } from './memoisedImport';
 import { useLazyModule } from './useLazyModule';
 
@@ -23,9 +23,9 @@ function Reader({ load, seen }: { load: LazyImport<string>; seen: (string | null
 
 function mount(loader: ResourceLoader, load: LazyImport<string>, seen: (string | null)[]) {
   return render(
-    <ResourceLoaderContext.Provider value={loader}>
+    <ResourceLoaderProvider loader={loader}>
       <Reader load={load} seen={seen} />
-    </ResourceLoaderContext.Provider>
+    </ResourceLoaderProvider>
   );
 }
 

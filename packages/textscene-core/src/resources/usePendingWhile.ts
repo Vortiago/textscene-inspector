@@ -4,13 +4,13 @@
  */
 
 import { useEffect } from 'react';
-import { useResourceLoader } from './useResource';
+import { usePendingLoads } from './ResourceLoaderContext';
 
-/** Counts the caller as one pending load while `pending` holds. */
-export function usePendingWhile(pending: boolean): void {
-  const loader = useResourceLoader();
+/** Counts the caller as one pending load of its view while `isPending` holds. */
+export function usePendingWhile(isPending: boolean): void {
+  const pending = usePendingLoads();
   useEffect(() => {
-    if (!loader || !pending) return undefined;
-    return loader.beginPending();
-  }, [loader, pending]);
+    if (!pending || !isPending) return undefined;
+    return pending.begin();
+  }, [pending, isPending]);
 }
