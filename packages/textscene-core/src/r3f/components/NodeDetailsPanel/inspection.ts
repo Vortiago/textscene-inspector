@@ -1,6 +1,7 @@
 import { useMemo, useSyncExternalStore } from 'react';
 import type { NodeHandle } from '../../../scene/nodeHandle.js';
 import type { Scene } from '../../../scene/openScene.js';
+import * as logger from '../../../logger.js';
 import { useLandedRead, type LandingRead } from '../TscnPreviewShell/sceneRead.js';
 import { instancedScenePath } from './formatters/base/instanceSection.js';
 import { formatterOf } from './formatters/index.js';
@@ -34,9 +35,22 @@ async function inspect(scene: Scene, node: NodeHandle): Promise<Inspection> {
   const inspected = inspectedNode(node, scene.fileProperties(node.path));
   const formatter = formatterOf(node.type);
   const [sections, instancedScene, isCamera3D] = await Promise.all([
-    formatter ? formatter(inspected) : [],
+    formatter ? sectionsOf(node, formatter(inspected)) : [],
     instancedScenePath(inspected),
     node.call('is_class', 'Camera3D'),
   ]);
   return { node, sections, instancedScene, isCamera3D: isCamera3D === true };
+}
+
+/** A formatter that fails costs only its sections: the header rows and the camera toggle still show. */
+async function sectionsOf(
+  node: NodeHandle,
+  sections: Promise<PropertySection[]>
+): Promise<PropertySection[]> {
+  try {
+    return await sections;
+  } catch (error) {
+    logger.error(`expected the inspector to read ${node.path}, got ${String(error)}`);
+    return [];
+  }
 }

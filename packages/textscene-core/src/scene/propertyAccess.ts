@@ -2,6 +2,7 @@ import { findClassProperty, valueTypeOf, type ClassProperty } from '../godot/cla
 import { findDerivedProperty, nodeDefaultText } from '../godot/classdb/nodeDefault.js';
 import { classInheritanceChain, classInTree, descendsFromClass } from '../godot/classdb/classBaseTypes.js';
 import { canonicalisePropertyBag } from '../godot/classdb/deprecated.js';
+import { perObject } from '../utils/perObject.js';
 import { withLoadedParamRanges } from '../nodes/shared/cpuparticles/params.js';
 import { PROPERTY_HINT } from '../godot/classdb/propertyHint.js';
 import { resourceTypeHint } from '../godot/classdb/resourceTypeHint.js';
@@ -43,6 +44,12 @@ export interface StoredTexts {
   readonly placedProperty: (property: string) => VariantValue | undefined;
 }
 
+/** A node's texts as its setters leave them on load. Built once for each node, as each `get` reads them. */
+const loadedTextsOf = perObject((node: SceneTreeNode): Readonly<Record<string, string>> => {
+  const className = classInTree(node.type);
+  return withLoadedParamRanges(className, canonicalisePropertyBag(className, { ...node.rawProperties }));
+});
+
 /** A stored property as the setters read it: the last write, a live pass, the file, then the default. */
 export function storedValueOf({
   node,
@@ -52,7 +59,7 @@ export function storedValueOf({
   placedProperty,
 }: StoredTexts): StoredValue {
   const className = classInTree(node.type);
-  const raw = withLoadedParamRanges(className, canonicalisePropertyBag(className, { ...node.rawProperties }));
+  const raw = loadedTextsOf(node);
   // One parse per property for each call: a setter such as `global_position` reads one many times.
   const values = new Map<string, VariantValue>();
   const valueOf = (property: string): VariantValue => {

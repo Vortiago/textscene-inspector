@@ -24,7 +24,6 @@ describe('formatTileMapProperties', () => {
     expect(tileSection!.items).toContainEqual({ label: 'Layer1', value: '1 cell' });
   });
 
-  // The far layer makes 70,001 layers, and the formatter asks one `get` for each name.
   it(
     'lists the first layer and the named far layer, and no row for the gap between',
     { timeout: 20_000 },

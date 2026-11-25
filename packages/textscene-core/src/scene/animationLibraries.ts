@@ -62,7 +62,12 @@ async function isAddable(
   const className =
     library.className ?? (library.resource ? await resourceClass(library.resource.path) : null);
   if (className !== 'AnimationLibrary') return false;
-  return !libraries.some((entry) => entry.name === name || isSameResource(entry.library, library));
+  // The insert loop of animation_mixer.cpp:310-321 checks each entry up to its insert position only.
+  for (const entry of libraries) {
+    if (entry.name === name || isSameResource(entry.library, library)) return false;
+    if (entry.name >= name) break;
+  }
+  return true;
 }
 
 function isSameResource(a: VariantValue, b: VariantValue): boolean {

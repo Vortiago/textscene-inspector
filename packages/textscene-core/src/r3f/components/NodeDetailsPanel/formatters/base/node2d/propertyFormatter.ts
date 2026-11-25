@@ -87,10 +87,10 @@ async function canvasItemRows(
   return items;
 }
 
-/** Only a TileMapLayer has `y_sort_origin`. Another class answers null, and shows no row. */
+/** Only a TileMapLayer has `y_sort_origin`. */
 async function ySortOriginRows(node: InspectedNode): Promise<PropertySection['items']> {
+  if ((await node.call('is_class', 'TileMapLayer')) !== true) return [];
   const values = await node.read(['y_sort_origin']);
-  if (!values.has('y_sort_origin')) return [];
   const origin = values.number('y_sort_origin');
   return origin === 0 ? [] : [{ label: 'Y Sort Origin', value: origin.toFixed(1) }];
 }

@@ -21,7 +21,10 @@ export function tupleText(numbers: readonly number[]): string {
 }
 
 /** The shortest decimal that reads back as the same single-precision number: 0.4, not 0.4000000059604645. */
+// Godot's text spells the values with no digits `inf`, `-inf` and `nan`.
 export function realText(real: number): string {
+  if (Number.isNaN(real)) return 'nan';
+  if (!Number.isFinite(real)) return real > 0 ? 'inf' : '-inf';
   for (let digits = 1; digits <= 9; digits++) {
     const shortest = Number(real.toPrecision(digits));
     if (Math.fround(shortest) === real) return String(shortest);

@@ -32,6 +32,14 @@ describe('realText', () => {
     expect(realText(Math.fround(0.05))).toBe('0.05');
   });
 
+  it.each([
+    [Infinity, 'inf'],
+    [-Infinity, '-inf'],
+    [NaN, 'nan'],
+  ])('writes %s as Godot spells it', (real, text) => {
+    expect(realText(real)).toBe(text);
+  });
+
   it('writes a double-precision number whole', () => {
     expect(realText(0.1 + 0.2)).toBe('0.30000000000000004');
   });

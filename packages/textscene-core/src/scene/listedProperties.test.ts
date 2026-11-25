@@ -314,6 +314,27 @@ surface_material_override/0 = SubResource("mat")
     expect(await overridesOf('None')).toEqual([null, null, null]);
   });
 
+  it('keeps the overrides the file sets for an imported mesh, whose surfaces only the import knows', async () => {
+    const scene = openScene({
+      source: `[gd_scene format=3]
+
+[ext_resource type="Mesh" path="res://model.obj" id="obj"]
+[sub_resource type="StandardMaterial3D" id="mat"]
+
+[node name="Model" type="MeshInstance3D"]
+mesh = ExtResource("obj")
+surface_material_override/2 = SubResource("mat")
+`,
+      rootScenePath: 'res://model.tscn',
+      provider: { loadResource: async () => null },
+    });
+    const overrides = await Promise.all(
+      [0, 2].map(async (i) => textOf(await scene.getNode('.').get(`surface_material_override/${i}`)))
+    );
+
+    expect(overrides).toEqual([null, 'Resource("res://model.tscn::mat")']);
+  });
+
   it('counts the surfaces of a mesh another file holds, text or binary', async () => {
     const fixtures = join(import.meta.dirname, '../../../../scenes/fixtures');
     const files: Readonly<Record<string, string | ArrayBuffer>> = {

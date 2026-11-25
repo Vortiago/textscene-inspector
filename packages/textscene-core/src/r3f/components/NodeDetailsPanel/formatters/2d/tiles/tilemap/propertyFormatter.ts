@@ -5,10 +5,8 @@ import { cellCountText, usedCellCount } from '../usedCells';
 
 export async function formatTileMapProperties(node: InspectedNode): Promise<PropertySection[]> {
   const layerCount = Number(await node.call('get_layers_count'));
-  const indices = [...Array(layerCount).keys()];
-  const names = await node.read(['tile_set', ...indices.map((layer) => `layer_${layer}/name`)]);
-  // A gap layer past the name ceiling has no name to read (`layerNames.ts`), and shows no row.
-  const layers = indices.filter((layer) => names.has(`layer_${layer}/name`));
+  const layers = shownLayers(node.fileProperties, layerCount);
+  const names = await node.read(['tile_set', ...layers.map((layer) => `layer_${layer}/name`)]);
   const counts = await Promise.all(
     layers.map(async (layer) => usedCellCount(await node.call('get_used_cells', layer)))
   );
@@ -21,4 +19,14 @@ export async function formatTileMapProperties(node: InspectedNode): Promise<Prop
     })),
   ];
   return [{ title: 'Tile Map', items }, ...(await formatNode2DProperties(node))];
+}
+
+/** Layer 0, which every TileMap has, and each layer the file writes a property of. */
+function shownLayers(fileProperties: ReadonlySet<string>, layerCount: number): number[] {
+  const layers = new Set([0]);
+  for (const property of fileProperties) {
+    const index = /^layer_(\d+)\//.exec(property)?.[1];
+    if (index !== undefined) layers.add(Number(index));
+  }
+  return [...layers].filter((layer) => layer < layerCount).sort((a, b) => a - b);
 }

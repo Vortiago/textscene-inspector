@@ -52,6 +52,38 @@ describe('get_animation_library_list', () => {
   });
 });
 
+describe('get_animation_library_list of a library added twice', () => {
+  const TWICE = `[gd_scene format=3]
+
+[sub_resource type="AnimationLibrary" id="l1"]
+
+[sub_resource type="AnimationLibrary" id="l2"]
+
+[sub_resource type="AnimationLibrary" id="l3"]
+
+[node name="A" type="AnimationPlayer"]
+libraries = {
+&"a": SubResource("l1"),
+&"c": SubResource("l2"),
+&"z": SubResource("l3"),
+&"b": SubResource("l3"),
+&"y": SubResource("l2")
+}
+`;
+
+  it('refuses a library only where it lies before the insert position, as Godot does', async () => {
+    const scene = openScene({
+      source: TWICE,
+      rootScenePath: 'res://twice.tscn',
+      provider: { loadResource: async () => null },
+    });
+
+    expect(textOf(await scene.getNode('.').call('get_animation_library_list'))).toBe(
+      'Array[StringName]([&"a", &"b", &"c", &"z"])'
+    );
+  });
+});
+
 describe('get_animation_library', () => {
   it('answers the resource each listed name holds', async () => {
     const player = openLibraries().getNode('A');
