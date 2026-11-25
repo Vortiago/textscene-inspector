@@ -140,16 +140,6 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'mouse_target decides whether the container or its SubViewport receives input events; nothing about a frozen frame changes.',
   },
 
-  Sprite2D: {
-    renderGap: [
-      // Clamps the atlas sampler to the region rect, which is what stops a
-      // neighbouring tile bleeding in at the seam. Purely a render concern.
-      'region_filter_clip_enabled',
-    ],
-    reason:
-      'region_filter_clip_enabled prevents atlas-edge bleed at the region seam; the renderer samples the region without it.',
-  },
-
   TouchScreenButton: {
     linterOnly: [
       // Input routing and state: no finger is down in a preview, so `texture_pressed`
