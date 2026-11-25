@@ -20,11 +20,11 @@ export interface DevicePoints {
 }
 
 /**
- * Whether a shader sizes its points, so the previewer emulates them: three's points are 1 px.
+ * Whether a shader that reads `namesRead` sizes its points, so the previewer emulates them: three's are 1 px.
  * @canonical Whether a shader sizes its points, so they are emulated
  */
-export function sizesPoints(builtInsNamed: ReadonlySet<string>): boolean {
-  return builtInsNamed.has('POINT_SIZE');
+export function sizesPoints(namesRead: ReadonlySet<string>): boolean {
+  return namesRead.has('POINT_SIZE');
 }
 
 export function devicePoints(): DevicePoints {

@@ -12,7 +12,7 @@ import { geometryPrimitive } from '../../resources/meshes/godotSurface';
 import type { AtlasCellRects } from '../../resources/useTexture2D';
 import type { CanvasVertexArrays } from '../../shaders/canvas/canvasAttributes';
 import { customArrayAttribute } from '../../shaders/template/surfaceAttributes';
-import { geometryBoxUserData } from '../bounds';
+import { drawsInstances, geometryBoxUserData } from '../bounds';
 import type { CanvasSurface } from '../canvasMesh/canvasSurface';
 
 /** `canvas_item_add_texture_rect_region` with a white modulate (`renderer_canvas_cull.cpp:1624`). */
@@ -71,7 +71,7 @@ export function boundByItem(
   object: THREE.Object3D & { geometry: THREE.BufferGeometry },
   commands: readonly CanvasShaderCommand[]
 ): THREE.Box3 {
-  Object.assign(object.userData, geometryBoxUserData());
+  if (drawsInstances(object)) Object.assign(object.userData, geometryBoxUserData());
   return (object.geometry.boundingBox = itemBox(new THREE.Box3(), commands));
 }
 

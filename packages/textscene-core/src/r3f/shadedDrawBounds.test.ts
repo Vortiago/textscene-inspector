@@ -127,6 +127,16 @@ function gainsPositionInPlace(): THREE.Object3D {
   return drawn;
 }
 
+/** The host with its points, read after the surface gains its position in place and before any render. */
+function hostBeforeARender(): THREE.Object3D {
+  const host = new THREE.Mesh(new THREE.BufferGeometry());
+  spatialPoints(host);
+  const quad = quadSurface();
+  host.geometry.setAttribute('position', quad.getAttribute('position'));
+  host.geometry.setIndex(quad.getIndex());
+  return host;
+}
+
 function gainsSurfaceBeforeARender(): THREE.Object3D {
   const scene = new THREE.Scene();
   const host = new THREE.Mesh(new THREE.BufferGeometry());
@@ -218,6 +228,11 @@ describe('the bounds of a shaded draw', () => {
     [
       'emulated points of a surface that gains positions in place before a render',
       gainsPositionInPlace,
+      { frame: QUAD_BOX, clip: QUAD_BOX },
+    ],
+    [
+      'a host and its emulated points after the surface gains positions in place, before a render',
+      hostBeforeARender,
       { frame: QUAD_BOX, clip: QUAD_BOX },
     ],
     [
