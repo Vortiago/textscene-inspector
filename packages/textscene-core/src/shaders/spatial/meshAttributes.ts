@@ -2,6 +2,12 @@ import * as THREE from 'three';
 import { ARRAY_CUSTOM_COUNT } from '../../godot/rendering/meshArrayFormat.js';
 import { encodedNormalTangent } from '../../godot/rendering/meshNormalTangent.js';
 import { storedLanes } from '../storedLanes.js';
+import {
+  customArrayAttribute,
+  customArrayTemplateAttribute,
+  QUAD_VERTICES,
+  VERTEX_ID_ATTRIBUTE,
+} from '../template/surfaceAttributes.js';
 
 /** The attribute the scene template reads at location 0: the position, which GL widens with w = 1. */
 const VERTEX_ANGLE_ATTRIBUTE = 'vertex_angle_attrib';
@@ -21,15 +27,6 @@ const LISTS = { triangles: { corners: 3, name: 'triangle' }, lines: { corners: 2
 /** The bone indices and weights the vertex stage reads, where they differ from those three skins with. */
 export const VERTEX_STAGE_BONES_ATTRIBUTE = 'godotBoneIndices';
 export const VERTEX_STAGE_WEIGHTS_ATTRIBUTE = 'godotBoneWeights';
-
-/** The geometry attribute of the custom array `custom`, as a surface geometry holds it. */
-export const customArrayAttribute = (custom: number) => `custom${custom}`;
-
-/** The lanes of one vertex of a custom array attribute: every format decodes to four floats. */
-export const CUSTOM_ARRAY_LANES = 4;
-
-/** The attribute that holds each vertex's index in its own surface, which `gl_VertexIndex` reads. */
-export const VERTEX_ID_ATTRIBUTE = 'vertex_id_attrib';
 
 /** The `userData` key of the first vertex of each surface of a merged mesh, which `clone` carries. */
 const SURFACE_STARTS = 'godotSurfaceStarts';
@@ -63,7 +60,7 @@ export function withGodotAttributes(
   }
   for (let custom = 0; custom < ARRAY_CUSTOM_COUNT; custom++) {
     const values = geometry.getAttribute(customArrayAttribute(custom));
-    if (values) geometry.setAttribute(`${customArrayAttribute(custom)}_attrib`, values);
+    if (values) geometry.setAttribute(customArrayTemplateAttribute(custom), values);
   }
   const bones = vertexStageBones(geometry);
   if (bones) {
@@ -209,9 +206,6 @@ function axisTangent(normal: Attribute, tangent: Attribute | undefined): THREE.B
   return new THREE.BufferAttribute(lanes, 4, true);
 }
 
-/** The vertices a point quad draws: `point_coords` of `scene_forward_clustered.glsl:709`. */
-export const QUAD_VERTICES = 6;
-
 /** The corners of a surface that one draw reads, as a three.js draw group holds them. */
 export interface DrawRange {
   readonly start: number;
@@ -231,7 +225,10 @@ export function emulatedPointGeometry(
   for (const [name, attribute] of Object.entries(surface.attributes))
     if (name.endsWith('_attrib')) geometry.setAttribute(name, perPoint(attribute, vertices));
   // The quads' own positions are all zero, so bounds three computed from them would cull at the origin.
-  if (!surface.boundingSphere && surface.getAttribute('position')) surface.computeBoundingSphere();
+  if (surface.getAttribute('position')) {
+    if (!surface.boundingSphere) surface.computeBoundingSphere();
+    if (!surface.boundingBox) surface.computeBoundingBox();
+  }
   geometry.boundingSphere = surface.boundingSphere;
   geometry.boundingBox = surface.boundingBox;
   return geometry;

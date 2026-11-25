@@ -15,8 +15,8 @@ import {
 } from './godotSurface';
 import { headlightsSurface, wallQuadSurfaces } from '../testing/arrayMeshSurfaces';
 import { UV2_ATTRIBUTE } from './uv2';
+import { VERTEX_ID_ATTRIBUTE } from '../../shaders/template/surfaceAttributes';
 import {
-  VERTEX_ID_ATTRIBUTE,
   VERTEX_STAGE_BONES_ATTRIBUTE,
   VERTEX_STAGE_WEIGHTS_ATTRIBUTE,
   withGodotAttributes,

@@ -4,7 +4,7 @@ import type { Node, TextureNode } from 'three/webgpu';
 import type { MaterialBlendState } from '../pipeline/blendState.js';
 import { parsedShader, shaderSource, type ShaderOptions } from '../language/parseShader.js';
 import { variablesRead } from '../language/treeWalk.js';
-import { VERTEX_ID_ATTRIBUTE } from '../spatial/meshAttributes.js';
+import { VERTEX_ID_ATTRIBUTE } from '../template/surfaceAttributes.js';
 import { devicePoints, sizesPoints, type DevicePoints } from '../template/devicePoints.js';
 import { emitTemplateStage, programResources, type WrittenBuiltIn } from '../template/emitTemplate.js';
 import { linkedProgram, type LinkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';

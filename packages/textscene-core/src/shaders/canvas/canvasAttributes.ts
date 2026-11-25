@@ -6,12 +6,13 @@ import type { Vector2 } from '../../godot/math/vector.js';
 import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
 import type { CanvasPrimitive } from './canvasPrimitive.js';
 import { type CanvasItemDraw, modulated, NO_INSTANCE_UNIFORMS, WHITE, worldOf } from './canvasInstance.js';
+import { emulatedPointGeometry } from '../spatial/meshAttributes.js';
 import {
   CUSTOM_ARRAY_LANES,
   customArrayAttribute,
-  emulatedPointGeometry,
+  customArrayTemplateAttribute,
   VERTEX_ID_ATTRIBUTE,
-} from '../spatial/meshAttributes.js';
+} from '../template/surfaceAttributes.js';
 import type { CanvasDraw, CanvasVariant } from './transpileCanvas.js';
 
 /** The vertex arrays of `Item::CommandPolygon`, or of one surface of a mesh. */
@@ -98,10 +99,13 @@ export function attributesGeometry(arrays: CanvasVertexArrays): THREE.BufferGeom
   geometry.setAttribute('color_attrib', floats(colorValues ?? repeated(DEFAULT_COLOR, count), 4));
   const uvValues = uvs.length === count ? uvs.flatMap(({ x, y }) => [x, y]) : repeated(DEFAULT_UV, count);
   geometry.setAttribute('uv_attrib', floats(uvValues, 2));
-  CANVAS_CUSTOM_ARRAYS.forEach((name, custom) => {
+  CANVAS_CUSTOM_ARRAYS.forEach((_, custom) => {
     // A missing custom array reads zero (`mesh_storage.cpp:120-131`).
     const values = arrays.customs?.[custom] ?? new Float32Array(count * CUSTOM_ARRAY_LANES);
-    geometry.setAttribute(`${name}_attrib`, new THREE.BufferAttribute(values, CUSTOM_ARRAY_LANES));
+    geometry.setAttribute(
+      customArrayTemplateAttribute(custom),
+      new THREE.BufferAttribute(values, CUSTOM_ARRAY_LANES)
+    );
   });
   if (arrays.primitive === 'points')
     geometry.setAttribute(

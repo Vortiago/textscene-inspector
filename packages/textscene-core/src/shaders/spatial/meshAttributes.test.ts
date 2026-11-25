@@ -2,12 +2,12 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import {
   emulatedPointGeometry,
-  VERTEX_ID_ATTRIBUTE,
   VERTEX_STAGE_BONES_ATTRIBUTE,
   VERTEX_STAGE_WEIGHTS_ATTRIBUTE,
   withGodotAttributes,
   withSurfaceStarts,
 } from './meshAttributes.js';
+import { VERTEX_ID_ATTRIBUTE } from '../template/surfaceAttributes.js';
 
 /** The names `scene_forward_clustered.glsl` gives its first two vertex inputs. */
 const VERTEX_ANGLE_ATTRIBUTE = 'vertex_angle_attrib';
@@ -250,6 +250,13 @@ describe('emulatedPointGeometry', () => {
     const source = withGodotAttributes(triangle());
     source.computeBoundingSphere();
     expect(emulatedPointGeometry(source).boundingSphere).toEqual(source.boundingSphere);
+  });
+
+  it('bounds a source with no box by its positions, which the framing box reads', () => {
+    const expected = withGodotAttributes(triangle());
+    expected.computeBoundingBox();
+
+    expect(emulatedPointGeometry(withGodotAttributes(triangle())).boundingBox).toEqual(expected.boundingBox);
   });
 });
 

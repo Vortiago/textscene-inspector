@@ -24,7 +24,7 @@ import type { TemplateUniform } from '../template/templateUniforms.js';
 import { linkedProgram, type LinkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
 import type { RowBlock } from '../template/rowBlock.js';
 import { instanceWords } from './instanceData.js';
-import { VERTEX_ID_ATTRIBUTE } from './meshAttributes.js';
+import { VERTEX_ID_ATTRIBUTE } from '../template/surfaceAttributes.js';
 import { SPECIALISED_MEMBERS } from './effectSpecialisations.js';
 import { devicePoints, type DevicePoints } from '../template/devicePoints.js';
 import { coveredOnOneSample } from '../pipeline/singleSampleCoverage.js';

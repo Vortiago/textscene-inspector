@@ -6,7 +6,7 @@ import type { Vector2 } from '../../godot/math/vector';
 import { geometryPrimitive } from '../../resources/meshes/godotSurface';
 import type { AtlasCellRects } from '../../resources/useTexture2D';
 import { CANVAS_CUSTOM_ARRAYS, type CanvasVertexArrays } from '../../shaders/canvas/canvasAttributes';
-import { CUSTOM_ARRAY_LANES } from '../../shaders/spatial/meshAttributes';
+import { CUSTOM_ARRAY_LANES } from '../../shaders/template/surfaceAttributes';
 import type { CanvasSurface } from '../canvasMesh/canvasSurface';
 
 /** `canvas_item_add_texture_rect_region` with a white modulate (`renderer_canvas_cull.cpp:1624`). */
@@ -127,16 +127,16 @@ function vertexArraysOf(
   };
 }
 
-/** The four float lanes a point of the custom array `name` holds, as `godotSurface` writes them. */
+/** A copy of the custom array `name` as four float lanes a point, a missing lane zero, from any layout. */
 function customLanes(geometry: THREE.BufferGeometry, name: string): Float32Array | undefined {
   const attribute = geometry.getAttribute(name);
   if (!attribute) return undefined;
-  const lanes = attribute instanceof THREE.BufferAttribute ? attribute.array : null;
-  if (lanes instanceof Float32Array && attribute.itemSize === CUSTOM_ARRAY_LANES) return lanes;
-  const kind = lanes ? lanes.constructor.name : attribute.constructor.name;
-  throw new Error(
-    `expected ${name} as a plain attribute of ${CUSTOM_ARRAY_LANES} float lanes, got ${kind} of item size ${attribute.itemSize}`
-  );
+  const lanes = new Float32Array(attribute.count * CUSTOM_ARRAY_LANES);
+  const width = Math.min(attribute.itemSize, CUSTOM_ARRAY_LANES);
+  for (let point = 0; point < attribute.count; point++)
+    for (let lane = 0; lane < width; lane++)
+      lanes[point * CUSTOM_ARRAY_LANES + lane] = attribute.getComponent(point, lane);
+  return lanes;
 }
 
 /** Whether two command lists draw the same batches: the same kinds in order, and the same mesh arrays. */

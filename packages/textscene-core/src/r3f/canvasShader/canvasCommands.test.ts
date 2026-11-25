@@ -152,13 +152,34 @@ describe('meshCommands', () => {
     expect(command?.kind === 'mesh' && 'customs' in command.arrays).toBe(false);
   });
 
-  it('throws for a custom array of other than four lanes', () => {
+  it('reads a custom array of three lanes as four, the fourth zero', () => {
     const geometry = canvasSurfaceGeometry(TRIANGLE);
-    geometry.setAttribute('custom0', new THREE.BufferAttribute(new Float32Array(9), 3));
-
-    expect(() => meshCommands([geometry])).toThrow(
-      'expected custom0 as a plain attribute of 4 float lanes, got Float32Array of item size 3'
+    geometry.setAttribute(
+      'custom0',
+      new THREE.BufferAttribute(
+        Float32Array.from({ length: 9 }, (_, i) => i + 1),
+        3
+      )
     );
+    const [command] = meshCommands([geometry]);
+
+    expect(command?.kind === 'mesh' && [...command.arrays.customs![0]!]).toEqual([
+      1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0,
+    ]);
+  });
+
+  it('reads an interleaved custom array by its lanes', () => {
+    const geometry = canvasSurfaceGeometry(TRIANGLE);
+    const interleaved = new THREE.InterleavedBuffer(
+      Float32Array.from({ length: 15 }, (_, i) => i),
+      5
+    );
+    geometry.setAttribute('custom0', new THREE.InterleavedBufferAttribute(interleaved, 4, 1));
+    const [command] = meshCommands([geometry]);
+
+    expect(command?.kind === 'mesh' && [...command.arrays.customs![0]!]).toEqual([
+      1, 2, 3, 4, 6, 7, 8, 9, 11, 12, 13, 14,
+    ]);
   });
 });
 

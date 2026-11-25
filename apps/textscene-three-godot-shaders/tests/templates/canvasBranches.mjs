@@ -106,7 +106,7 @@ function drawnVariants(scene) {
 }
 
 /** The defines of a scene's shader, Godot's default one included, as `transpileCanvasItem` compiles it. */
-function sceneMaterial(scene) {
+export function sceneMaterial(scene) {
   const { tree } = parsedShader(scene.source, { file: 'scene.gdshader' });
   const material = compileMaterial(tree, MODE_TABLES.canvas_item);
   return {

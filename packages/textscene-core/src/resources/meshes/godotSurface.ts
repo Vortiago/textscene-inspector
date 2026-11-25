@@ -8,9 +8,8 @@ import * as THREE from 'three';
 import { bottomUpV } from '../../godot/math/uv.js';
 import { ARRAY_CUSTOM_COUNT } from '../../godot/rendering/meshArrayFormat.js';
 import { UV2_ATTRIBUTE } from './uv2.js';
+import { CUSTOM_ARRAY_LANES, customArrayAttribute } from '../../shaders/template/surfaceAttributes.js';
 import {
-  CUSTOM_ARRAY_LANES,
-  customArrayAttribute,
   VERTEX_STAGE_BONES_ATTRIBUTE,
   VERTEX_STAGE_WEIGHTS_ATTRIBUTE,
   withSurfaceStarts,
