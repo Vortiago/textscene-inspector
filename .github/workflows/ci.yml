@@ -277,7 +277,14 @@ jobs:
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: godot-live-answers
-          path: apps/textscene-three-godot-shaders/tests/.godot-answers/
+          # The six families the digest check reads. The GPU probes read no material answers.
+          path: |
+            apps/textscene-three-godot-shaders/tests/.godot-answers/probes.json
+            apps/textscene-three-godot-shaders/tests/.godot-answers/random.json
+            apps/textscene-three-godot-shaders/tests/.godot-answers/operators.json
+            apps/textscene-three-godot-shaders/tests/.godot-answers/corpus.json
+            apps/textscene-three-godot-shaders/tests/.godot-answers/expressions.json
+            apps/textscene-three-godot-shaders/tests/.godot-answers/heads.json
           if-no-files-found: error
           include-hidden-files: true
           retention-days: 1
