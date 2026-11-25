@@ -22,11 +22,17 @@ beforeEach(() => {
     drawElements() {}
     drawArraysInstanced() {}
     drawElementsInstanced() {}
+    getParameter() {
+      return null;
+    }
+    bindFramebuffer() {}
+    bindBuffer() {}
     readPixels() {}
-    getError() {}
   };
   vi.stubGlobal('WebGL2RenderingContext', FakeGL);
-  vi.stubGlobal('window', { location: { search: '?fixture=lit.tscn' }, addEventListener() {} });
+  const window = { location: { protocol: 'http:', search: '?fixture=lit.tscn' }, addEventListener() {} };
+  window.top = window;
+  vi.stubGlobal('window', window);
   vi.stubGlobal('document', { documentElement: {}, getElementsByTagName: () => [] });
   vi.stubGlobal('MutationObserver', NoopObserver);
   vi.stubGlobal('PerformanceObserver', NoopObserver);
@@ -65,5 +71,24 @@ describe('installPageRecorder', () => {
   it('records the source length of each shader of the program drawn', () => {
     drawProgramTwice(new FakeGL(), 12, 34);
     expect(events.find((event) => event.kind === 'first-draw').shaderLengths).toEqual([12, 34]);
+  });
+
+  it('records the length of a shader whose source arrives after it is attached', () => {
+    const gl = new FakeGL();
+    const [program, shader] = [{}, {}];
+    gl.attachShader(program, shader);
+    gl.shaderSource(shader, 'v'.repeat(7));
+    gl.useProgram(program);
+    gl.drawArrays();
+    expect(events.find((event) => event.kind === 'first-draw').shaderLengths).toEqual([7]);
+  });
+
+  it('keeps the program each context uses apart', () => {
+    const [main, other] = [new FakeGL(), new FakeGL()];
+    main.useProgram({});
+    other.useProgram({});
+    other.drawArrays();
+    main.drawArrays();
+    expect(events.filter((event) => event.kind === 'first-draw')).toHaveLength(2);
   });
 });
