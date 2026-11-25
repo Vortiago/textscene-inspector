@@ -42,7 +42,7 @@ export function SurfaceMaterialSlot({
   particles,
   drawnOn,
 }: SurfaceMaterialSlotProps) {
-  const { scalars, bags, shader } = useShadedSurfaceMaterial(source);
+  const { scalars, bags, shader, shaded } = useShadedSurfaceMaterial(source);
   // Primitive and placement are strings: `listed` is a new object each render.
   const primitive = listed?.primitive;
   const placement = listed?.placement;
@@ -71,8 +71,8 @@ export function SurfaceMaterialSlot({
   ) : (
     materialBagElement(drawnBag(MISSING_TEXTURE_MATERIAL, draws), attach, null)
   );
-  if (!shader || undrawnOn) return standard;
-  return <SpatialShaderSlot shader={shader} attach={attach} fallback={standard} />;
+  if (!shaded || undrawnOn) return standard;
+  return <SpatialShaderSlot source={shaded} attach={attach} fallback={standard} />;
 }
 
 /** The surface a spatial shader falls back on, or null for a mesh's own surface, which draws it. */

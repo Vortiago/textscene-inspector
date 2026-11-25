@@ -12,6 +12,22 @@ export const DEFAULT_MATERIAL_ROUGHNESS = 0.8;
 /** `METALLIC = 0.2` in `fragment()` (`scene_shader_forward_clustered.cpp:922`). */
 export const DEFAULT_MATERIAL_METALLIC = 0.2;
 
+/** The default shader's text (`scene_shader_forward_clustered.cpp:909-923`). */
+export const DEFAULT_MATERIAL_SHADER = `// Default 3D material shader (Forward+).
+
+shader_type spatial;
+
+void vertex() {
+	ROUGHNESS = ${DEFAULT_MATERIAL_ROUGHNESS};
+}
+
+void fragment() {
+	ALBEDO = vec3(${DEFAULT_MATERIAL_ALBEDO});
+	ROUGHNESS = ${DEFAULT_MATERIAL_ROUGHNESS};
+	METALLIC = ${DEFAULT_MATERIAL_METALLIC};
+}
+`;
+
 /**
  * `ALPHA_HASH_SCALE`'s value in a shader that never writes it (`scene_forward_clustered.glsl:1303`).
  * A BaseMaterial3D's own default is `alphaHashScale` in `scene/baseMaterial3D.ts`.

@@ -12,7 +12,7 @@ import {
 } from '../../shaders/spatial/spatialBindings.js';
 import type { SpatialOptions, TranspiledSpatial } from '../../shaders/spatial/transpileSpatial.js';
 import type { ShaderSampler } from '../../shaders/uniforms/shaderSamplers.js';
-import type { ShaderText } from '../../resources/materials/shadermaterial/types.js';
+import type { SurfaceShader } from './surfaceShader.js';
 import { warnOnce } from '../../utils/warnOnce.js';
 import { canvasShaderTime } from '../shaderTime/canvasShaderTime.js';
 import { renderTargetSize } from '../renderTargetSize.js';
@@ -27,7 +27,8 @@ import { releasedOnUnmount } from '../sharedTexture.js';
 import { dfgTexture } from '../../shaders/spatial/dfgTexture.js';
 import type { RoughnessLimiter } from '../../godot/rendering/roughnessLimiter.js';
 
-export { setMaterialParameters } from '../../shaders/uniforms/materialParameters.js';
+export { setParameterValues } from '../../shaders/uniforms/materialParameters.js';
+export { surfaceShaderOf } from './surfaceShader.js';
 export { drawPoints } from './pointSurface.js';
 export { withGodotSurface } from './godotSurfaceWrite.js';
 
@@ -44,7 +45,7 @@ export interface SurfaceOptions extends SpatialOptions {
 /** The material of `shader` for a surface `gl` draws, which writes the scene of each draw's camera. */
 export function spatialSurfaceOf(
   gl: THREE.WebGLRenderer,
-  shader: ShaderText,
+  shader: SurfaceShader,
   { roughnessLimiter, ...options }: SurfaceOptions
 ): SpatialSurface {
   const compile = compileSpatial(shader.code, {

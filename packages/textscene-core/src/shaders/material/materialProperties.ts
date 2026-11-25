@@ -8,14 +8,8 @@ import { TextureChannel } from '../../godot/rendering/materials/textureChannel.j
 import { MaterialFeature, MaterialFlag } from '../../godot/rendering/materials/materialFeatures.js';
 import { defaultKey, type Feature, type Flag, type MaterialKey } from './materialKey.js';
 
-/** A texture a material property holds: Godot sets `albedo_texture_size` from the albedo's size. */
-export interface MaterialTexture {
-  readonly width: number;
-  readonly height: number;
-}
-
-/** A property value: a bool, an enum index or a number, a colour or vector as lanes, or a texture. */
-export type MaterialValue = boolean | number | readonly number[] | MaterialTexture;
+/** A property value: a bool, an enum index or a number, or a colour or vector as lanes. */
+export type MaterialValue = boolean | number | readonly number[];
 
 /** A material's properties under Godot's names, in the order Godot's setters ran. */
 export type MaterialSettings = Readonly<Record<string, MaterialValue>>;

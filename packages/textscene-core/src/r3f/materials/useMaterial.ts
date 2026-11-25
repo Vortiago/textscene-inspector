@@ -7,7 +7,12 @@
 import { useEffect, useMemo } from 'react';
 import { warn } from '../../logger';
 import { MATERIAL } from '../../resources/materials/material/kind';
-import type { Material, StandardMaterial } from '../../resources/materials/material/types';
+import type {
+  BaseMaterialProperties,
+  Material,
+  StandardMaterial,
+} from '../../resources/materials/material/types';
+import { litSurfaceForm } from '../litSurface/litSurfaceForm';
 import type { ShaderText } from '../../resources/materials/shadermaterial/types';
 import { warnOnce } from '../../utils/warnOnce';
 import { useReferencedResource, type Read, type ScopedReference } from '../../resources/reading';
@@ -18,6 +23,8 @@ export type LoadedMaterial =
   | { status: 'ready'; material: StandardMaterial }
   /** A spatial ShaderMaterial, which the node lit surface draws. */
   | { status: 'spatial-shader'; shader: ShaderText }
+  /** An ORMMaterial3D on the node lit surface, which draws it through Godot's generated shader. */
+  | { status: 'base-material'; baseMaterial: BaseMaterialProperties }
   /** A material type this previewer does not build: Godot's default 3D surface (ADR-0041). */
   | { status: 'declined'; type: string }
   /** No reference, a file still loading or a missing one: nothing replaces what the surface had. */
@@ -25,6 +32,7 @@ export type LoadedMaterial =
 
 const ABSENT: LoadedMaterial = { status: 'absent' };
 const DECLINED_SHADER: LoadedMaterial = { status: 'declined', type: 'ShaderMaterial' };
+const DECLINED_ORM: LoadedMaterial = { status: 'declined', type: 'ORMMaterial3D' };
 
 /** The material to draw, or null for Godot's default surface. */
 export function readyMaterial(loaded: LoadedMaterial): StandardMaterial | null {
@@ -62,7 +70,8 @@ export function useMaterial(
   useEffect(() => {
     if (shader) warnUndrawnShader(shader, surface);
   }, [shader, surface]);
-  return shader ? DECLINED_SHADER : loaded;
+  if (shader) return DECLINED_SHADER;
+  return loaded.status === 'base-material' ? DECLINED_ORM : loaded;
 }
 
 /** What `reference` loads to for a mesh surface, which draws a spatial shader. */
@@ -84,5 +93,8 @@ function loadedOf(read: Read<Material>): LoadedMaterial {
   const material = read.value;
   if (material.form === 'standard') return { status: 'ready', material };
   if (material.form === 'spatial-shader') return { status: 'spatial-shader', shader: material.shader };
-  return { status: 'declined', type: material.type };
+  if (material.form !== 'orm') return { status: 'declined', type: material.type };
+  return litSurfaceForm() === 'nodes'
+    ? { status: 'base-material', baseMaterial: material.baseMaterial }
+    : DECLINED_ORM;
 }

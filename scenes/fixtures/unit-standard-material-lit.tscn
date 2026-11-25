@@ -1,0 +1,52 @@
+[gd_scene format=3 uid="uid://unit_standard_material_lit"]
+
+; The one variable: a StandardMaterial3D drawn through Godot's generated shader and the lit scene
+; template (?litSurface=nodes). An albedo map, a normal map, roughness and metallic under a shadowed
+; sun and a colour ambient light. The sphere and the ground share the material, so the golden holds
+; one lit shader, as each costs about 25 s to compile on SwiftShader in CI.
+
+[ext_resource type="Texture2D" path="res://textures/decal-checker.png" id="1_albedo"]
+[ext_resource type="Texture2D" path="res://textures/rough-limit-normal.png" id="2_normal"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_lit"]
+albedo_color = Color(0.9, 0.7, 0.5, 1)
+albedo_texture = ExtResource("1_albedo")
+metallic = 0.4
+roughness = 0.35
+normal_enabled = true
+normal_texture = ExtResource("2_normal")
+uv1_scale = Vector3(2, 2, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_ball"]
+material = SubResource("StandardMaterial3D_lit")
+radius = 0.6
+height = 1.2
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+material = SubResource("StandardMaterial3D_lit")
+size = Vector2(4, 4)
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.1, 0.12, 0.16, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.25, 0.3, 0.4, 1)
+
+[node name="StandardMaterialLitRoot" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.8660254, 0.5, 0, -0.5, 0.8660254, 0, 2, 3.2)
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.8660254, -0.3830222, 0.3213938, 0, 0.6427876, 0.7660444, -0.5, -0.6634139, 0.5566704, 0, 3, 0)
+shadow_enabled = true
+
+[node name="Ball" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+mesh = SubResource("SphereMesh_ball")
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_ground")

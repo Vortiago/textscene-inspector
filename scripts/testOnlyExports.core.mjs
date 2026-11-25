@@ -42,9 +42,6 @@ export const KEPT_TEST_ONLY_EXPORTS = [
   'r3f/lighting2d/lightBlend.ts#blendLayer',
   'r3f/lighting2d/lightBlend.ts#lightBlendCompute',
   'r3f/lighting2d/lightBlend.ts#shadowedLightTerms',
-  // The switch of the TSL port ships before its one reader, the pick of a lit surface's material,
-  // which the next slice of the port adds.
-  'r3f/litSurface/litSurfaceForm.ts#litSurfaceForm',
   // The step tests start a step at the root scene's scope, which the live tree builds once inside.
   'r3f/liveSceneTree.ts#rootScope',
   // A host's scene loads through the loader of its provider. Only a test hands a scene a loader it built.
@@ -65,10 +62,8 @@ export const KEPT_TEST_ONLY_EXPORTS = [
   'shaders/language/printer.ts#printShader',
   // The tree check proves each parsed tree has Godot's node types and positions, in tests only.
   'shaders/language/treeCheck.ts#treeFault',
-  // The BaseMaterial3D generator ships before its reader, the lit scene template.
-  'shaders/material/baseMaterialShader.ts#baseMaterialShader',
+  // The sweep of BaseMaterial3D texts writes each key's text, and the stencil pass's, without a material.
   'shaders/material/baseMaterialShader.ts#shaderTextOf',
-  'shaders/material/materialParameters.ts#materialParameters',
   'shaders/material/stencilEffect.ts#stencilPassOf',
   // The template check prints each parsed template stage back to text, which no draw needs.
   'shaders/template/printTemplate.ts#printTemplateStage',

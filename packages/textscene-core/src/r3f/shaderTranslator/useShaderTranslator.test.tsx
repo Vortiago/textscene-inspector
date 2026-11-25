@@ -30,7 +30,7 @@ async function renderTranslator(load: () => Promise<unknown>) {
   const shader = shaderOf();
   const seen: (ShaderTranslator<unknown> | null)[] = [];
   function Probe() {
-    seen.push(useShaderTranslator(lazy, shader, LOAD_FAILURE));
+    seen.push(useShaderTranslator(lazy, shader.code, LOAD_FAILURE));
     return null;
   }
   await ReactThreeTestRenderer.create(<Probe />);
