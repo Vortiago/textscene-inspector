@@ -27,7 +27,7 @@ ended at its 30 s load deadline (#2075).
 
 `pnpm check:bundle-size` fails when the build writes a script beside `webview.js`, and when the
 script is over its gzipped ceiling (`scripts/check-bundle-size/webviewBudget.mjs`). The ceiling
-is 2,307,373 B, 4,370 B over the measured 2,303,003 B. It replaces ADR-0055's 1,150,000 B, which
+is 2,307,373 B, 3,208 B over the measured 2,304,165 B. It replaces ADR-0055's 1,150,000 B, which
 held only the canvas-paint closure of the split build. The bake of a sky's layers through Godot's
 octmap compute stages (`shaders/template/compute`, `resources/sky/octmapPasses.ts`) adds 5,479 B of
 the measure. The other 4,818 B over the measure before it are the shader branch's growth that no
