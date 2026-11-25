@@ -9,7 +9,7 @@ import { loadedResourceType } from './loadedResourceType.js';
 import type { LoadedResource } from './listed/listedProperties.js';
 import type { NodeHandle } from './nodeHandle.js';
 import { parseTscnContent, type ParseResult } from './parseScene.js';
-import type { SceneFile } from './sceneFiles.js';
+import type { SceneFailure, SceneFile } from './sceneFiles.js';
 import { SceneListeners } from './sceneListeners.js';
 import { SceneNodes } from './sceneNodes.js';
 import type { CameraState } from './viewportCameras.js';
@@ -48,6 +48,8 @@ export interface Scene {
   revision(): number;
   /** Each file the scene and the project name, by path, none after `dispose`. `subscribe` tells a change. */
   files(): readonly SceneFile[];
+  /** Why the game refuses the whole scene, null where it loads or a read still loads. */
+  sceneFailure(): SceneFailure | null;
   /** Lets go of every listener. A view of a disposed scene draws its last parse. */
   dispose(): void;
   /** `get_node` from the scene's root node: throws `Node not found` where `path` names no node. */
@@ -160,7 +162,8 @@ export function openScene({
     },
     subscribe: (listener) => listeners.subscribe(listener),
     revision: () => listeners.revision(),
-    files: () => (isDisposed ? NO_FILES : runtime().files(scene.written())),
+    files: () => (isDisposed ? NO_FILES : runtime().files(scene.written()).files),
+    sceneFailure: () => (isDisposed ? null : runtime().files(scene.written()).failure),
     dispose() {
       isDisposed = true;
       listeners.clear();

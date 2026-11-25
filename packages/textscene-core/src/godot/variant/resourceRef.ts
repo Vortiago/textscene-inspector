@@ -219,9 +219,11 @@ function readLiteralAt(text: string, start: number, literals: LiteralSpan[]): nu
   const uids = args.filter((arg) => arg.startsWith('uid://'));
   const paths = args.filter((arg) => !arg.startsWith('uid://'));
   const read: LiteralRead | RefusedRead =
-    uids.length > 1 || paths.length > 1
-      ? { kind: 'Refused' }
-      : { kind: 'Resource', path: paths[0] ?? null, uid: uids[0] ?? '' };
+    paths.length > 1
+      ? { kind: 'Refused', twice: 'paths' }
+      : uids.length > 1
+        ? { kind: 'Refused', twice: 'uids' }
+        : { kind: 'Resource', path: paths[0] ?? null, uid: uids[0] ?? '' };
   literals.push({ start, end: PATH_RESOURCE_AT_RE.lastIndex, read });
   return PATH_RESOURCE_AT_RE.lastIndex - 1;
 }
@@ -233,7 +235,7 @@ export type ValueRead = ResourceRef | LiteralRead | RefusedRead;
 export type LiteralRead = { kind: 'Resource'; path: string | null; uid: string };
 
 /** A literal with two paths or two `uid://`, at which the parse fails (`variant_parser.cpp:1141-1152`). */
-export type RefusedRead = { kind: 'Refused' };
+export type RefusedRead = { kind: 'Refused'; twice: 'paths' | 'uids' };
 
 /** A read and the offset whose line Godot prints for it: a reference's id, or a literal's closing `)`. */
 export interface ValueReadAt {

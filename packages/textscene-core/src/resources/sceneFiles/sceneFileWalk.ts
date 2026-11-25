@@ -1,13 +1,8 @@
 import { isGodotTextResourcePath } from '../../godot/project/resourceFormats.js';
-import type { SceneFile } from '../../scene/sceneFiles.js';
-import {
-  resourceFileReads,
-  sceneFileReads,
-  type FailingFileRead,
-  type FileRead,
-} from '../loadFailure/fileReads.js';
+import type { SceneFailure, SceneFile } from '../../scene/sceneFiles.js';
+import { resourceFileReads, sceneFileReads, type FileRead } from '../loadFailure/fileReads.js';
 import type { LoadOutcome } from '../loadFailure/loadOutcome.js';
-import { withSceneFailure } from '../loadFailure/sceneFailure.js';
+import { sceneFailureOf, type SceneFailingReads } from '../loadFailure/sceneFailure.js';
 import type { ParsedResource } from '../../parser/parsedResource.js';
 import type { TscnScene } from '../../parser/types.js';
 import type { ResourceLoader } from '../ResourceLoader.js';
@@ -23,21 +18,21 @@ export interface WalkStart {
   readonly isReading?: boolean;
 }
 
-/** The root scene and its reads that fail the whole scene, in its read order. */
-export interface SceneFailingReads {
-  readonly scene: string;
-  readonly reads: readonly FailingFileRead[];
-}
-
 /** What the walk reads from, one object so the starts and the failing reads cannot drift apart. */
 export interface WalkInput {
   readonly starts: readonly WalkStart[];
   readonly failing: SceneFailingReads | null;
 }
 
+/** The files, and the failure through which the game refuses the scene. */
+export interface WalkedFiles {
+  readonly files: readonly SceneFile[];
+  readonly failure: SceneFailure | null;
+}
+
 export interface SceneFileWalk {
-  /** The same array while no file moves. The caller passes the same input while none moves. */
-  files(input: WalkInput): readonly SceneFile[];
+  /** The same object while no file moves. The caller passes the same input while none moves. */
+  files(input: WalkInput): WalkedFiles;
   dispose(): void;
 }
 
@@ -56,6 +51,8 @@ interface Entry {
 
 const WATCHED: ResourceType[] = ['scene', 'resource', 'loadoutcome'];
 
+const NO_FILES: WalkedFiles = { files: [], failure: null };
+
 /** `onChange` runs when a load answers for a file of the last walk. */
 export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void): SceneFileWalk {
   /** Written only by `textFile`, `releaseOutside` and the change listener. Null where a parse fails. */
@@ -66,7 +63,7 @@ export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void
   const pinnedOutcomes = new Set<string>();
   /** Written by `files` and cleared by the change listener: the input of the last walk. */
   let walkedInput: WalkInput | null = null;
-  let walked: readonly SceneFile[] = [];
+  let walked: WalkedFiles = NO_FILES;
   let walkedPaths: ReadonlySet<string> = new Set();
   let walkedKey = '';
 
@@ -135,7 +132,7 @@ export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void
   function sceneFileOf(path: string, entry: Entry): SceneFile {
     const { state, reason } = stateOf(path, entry);
     const { type, owners, addresses } = entry;
-    return { path, type, state, owners, reason, addresses, sceneFailure: null };
+    return { path, type, state, owners, reason, addresses };
   }
 
   function stateOf(path: string, { isReading, addresses }: Entry): Pick<SceneFile, 'state' | 'reason'> {
@@ -189,7 +186,7 @@ export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void
       const rows = [...entries]
         .sort(([a], [b]) => (a < b ? -1 : 1))
         .map(([path, entry]) => sceneFileOf(path, entry));
-      const files = failing ? withSceneFailure(rows, failing.scene, failing.reads) : rows;
+      const files = { files: rows, failure: failing ? sceneFailureOf(rows, failing) : null };
       const key = JSON.stringify(files);
       if (key !== walkedKey) {
         walked = files;

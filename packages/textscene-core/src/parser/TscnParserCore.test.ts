@@ -787,8 +787,8 @@ describe('the heading reads of a scan', () => {
     const { scene } = new TscnParserCore().parse(content, () => null);
 
     expect(scene.fileValues).toEqual([
-      { text: 'ExtResource("1")', line: 3, place: 'section', subResourcesBefore: 0 },
-      { text: '[1]', line: 5, place: 'binds', subResourcesBefore: 0 },
+      { text: 'ExtResource("1")', line: 3, place: 'section', subResourcesBefore: 0, isOpeningTag: true },
+      { text: '[1]', line: 5, place: 'binds', subResourcesBefore: 0, isOpeningTag: false },
     ]);
   });
 
@@ -834,6 +834,8 @@ metadata/x = [1,
       () => null
     );
 
-    expect(scene.fileValues).toEqual([{ text: '[1,\n2]', line: 2, place: 'node', subResourcesBefore: 0 }]);
+    expect(scene.fileValues).toEqual([
+      { text: '[1,\n2]', line: 2, place: 'node', subResourcesBefore: 0, isOpeningTag: false },
+    ]);
   });
 });

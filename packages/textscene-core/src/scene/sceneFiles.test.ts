@@ -73,7 +73,6 @@ describe('the files of a scene', () => {
         owners: [MAIN],
         reason: { chain: ['res://icon.png'], cause: 'missing', addresses: [] },
         addresses: [],
-        sceneFailure: null,
       },
     ]);
   });
@@ -215,7 +214,6 @@ material_override = ExtResource("1")
           addresses: ['res://wood.tres::Absent'],
         },
         addresses: ['res://wood.tres::Absent'],
-        sceneFailure: null,
       },
     ]);
   });
@@ -248,7 +246,6 @@ material_overlay = ExtResource("2")
         owners: ['res://project.godot'],
         reason: { chain: ['res://fonts/body.ttf'], cause: 'missing', addresses: [] },
         addresses: [],
-        sceneFailure: null,
       },
       {
         path: 'res://project.godot',
@@ -257,7 +254,6 @@ material_overlay = ExtResource("2")
         owners: [],
         reason: null,
         addresses: [],
-        sceneFailure: null,
       },
     ]);
   });
@@ -362,23 +358,19 @@ atlas = ExtResource("1")
 
 const EMPTY_MATERIAL = '[gd_resource type="StandardMaterial3D" format=3]\n\n[resource]\n';
 
-/** The rows that carry a failure of the whole scene, by path. */
-async function sceneFailures(source: string, files: Record<string, string>) {
+/** The failure of the whole scene once no file is loading. */
+async function sceneFailureOf(source: string, files: Record<string, string>) {
   const scene = openScene({ source, provider: filesOf(files), rootScenePath: MAIN });
-  const loaded = await whenFilesLoaded(scene);
-  return Object.fromEntries(
-    loaded.flatMap((file) => (file.sceneFailure ? [[file.path, file.sceneFailure]] : []))
-  );
+  await whenFilesLoaded(scene);
+  return scene.sceneFailure();
 }
 
 describe('the failure through which the game refuses the scene', () => {
   it('sits on the file a section reads, with Godot error line and the chain from that file', async () => {
-    expect(await sceneFailures(READS_ATLAS, { 'res://atlas.tres': ATLAS_READS_GONE })).toEqual({
-      'res://atlas.tres': {
-        line: 'res://main.tscn:6 - Parse Error: [ext_resource] referenced non-existent resource at: res://atlas.tres.',
-        chain: ['res://atlas.tres', 'res://gone.png'],
-        cause: 'missing',
-      },
+    expect(await sceneFailureOf(READS_ATLAS, { 'res://atlas.tres': ATLAS_READS_GONE })).toEqual({
+      line: 'res://main.tscn:6 - Parse Error: [ext_resource] referenced non-existent resource at: res://atlas.tres.',
+      chain: ['res://atlas.tres', 'res://gone.png'],
+      cause: 'missing',
     });
   });
 
@@ -387,12 +379,10 @@ describe('the failure through which the game refuses the scene', () => {
       '[resource]',
       '[sub_resource type="AtlasTexture" id="u"]\natlas = ExtResource("9")\n\n[resource]'
     );
-    expect(await sceneFailures(READS_ATLAS, { 'res://atlas.tres': atlas })).toEqual({
-      'res://atlas.tres': {
-        line: 'res://main.tscn:6 - Parse Error: [ext_resource] referenced non-existent resource at: res://atlas.tres.',
-        chain: ['res://atlas.tres'],
-        cause: 'unparsed',
-      },
+    expect(await sceneFailureOf(READS_ATLAS, { 'res://atlas.tres': atlas })).toEqual({
+      line: 'res://main.tscn:6 - Parse Error: [ext_resource] referenced non-existent resource at: res://atlas.tres.',
+      chain: ['res://atlas.tres'],
+      cause: 'unparsed',
     });
   });
 
@@ -402,12 +392,10 @@ describe('the failure through which the game refuses the scene', () => {
       '[sub_resource type="AtlasTexture" id="g"]\natlas = ExtResource("1")\n\n' +
         '[sub_resource type="AtlasTexture" id="u"]\natlas = ExtResource("9")\n\n[resource]'
     );
-    expect(await sceneFailures(READS_ATLAS, { 'res://atlas.tres': atlas })).toEqual({
-      'res://atlas.tres': {
-        line: 'res://main.tscn:6 - Parse Error: [ext_resource] referenced non-existent resource at: res://atlas.tres.',
-        chain: ['res://atlas.tres', 'res://gone.png'],
-        cause: 'missing',
-      },
+    expect(await sceneFailureOf(READS_ATLAS, { 'res://atlas.tres': atlas })).toEqual({
+      line: 'res://main.tscn:6 - Parse Error: [ext_resource] referenced non-existent resource at: res://atlas.tres.',
+      chain: ['res://atlas.tres', 'res://gone.png'],
+      cause: 'missing',
     });
   });
 
@@ -418,13 +406,11 @@ describe('the failure through which the game refuses the scene', () => {
         '[sub_resource type="AtlasTexture" id="u"]\natlas = ExtResource("9")\n\n[resource]'
     );
     expect(
-      await sceneFailures(READS_ATLAS, { 'res://atlas.tres': atlas, 'res://gone.png': 'bytes' })
+      await sceneFailureOf(READS_ATLAS, { 'res://atlas.tres': atlas, 'res://gone.png': 'bytes' })
     ).toEqual({
-      'res://atlas.tres': {
-        line: 'res://main.tscn:6 - Parse Error: [ext_resource] referenced non-existent resource at: res://atlas.tres.',
-        chain: ['res://atlas.tres'],
-        cause: 'unparsed',
-      },
+      line: 'res://main.tscn:6 - Parse Error: [ext_resource] referenced non-existent resource at: res://atlas.tres.',
+      chain: ['res://atlas.tres'],
+      cause: 'unparsed',
     });
   });
 
@@ -435,12 +421,10 @@ describe('the failure through which the game refuses the scene', () => {
 
 [node name="Main" instance=ExtResource("1")]
 `;
-    expect(await sceneFailures(source, {})).toEqual({
-      'res://base.tscn': {
-        line: 'res://main.tscn:5 - Parse Error: [ext_resource] referenced non-existent resource at: res://base.tscn.',
-        chain: ['res://base.tscn'],
-        cause: 'missing',
-      },
+    expect(await sceneFailureOf(source, {})).toEqual({
+      line: 'res://main.tscn:5 - Parse Error: [ext_resource] referenced non-existent resource at: res://base.tscn.',
+      chain: ['res://base.tscn'],
+      cause: 'missing',
     });
   });
 
@@ -453,21 +437,19 @@ describe('the failure through which the game refuses the scene', () => {
 
 [connection signal="ready" from="." to="." method="queue_free" binds=[ExtResource("1")]]
 `;
-    expect(await sceneFailures(source, {})).toEqual({
-      'res://gone.tres': {
-        line: 'res://main.tscn:7 - Parse Error: [ext_resource] referenced non-existent resource at: res://gone.tres.',
-        chain: ['res://gone.tres'],
-        cause: 'missing',
-      },
+    expect(await sceneFailureOf(source, {})).toEqual({
+      line: 'res://main.tscn:7 - Parse Error: [ext_resource] referenced non-existent resource at: res://gone.tres.',
+      chain: ['res://gone.tres'],
+      cause: 'missing',
     });
   });
 
-  it('is on no file once each file the scene reads loads', async () => {
+  it('is null once each file the scene reads loads', async () => {
     const files = { 'res://atlas.tres': ATLAS_READS_GONE, 'res://gone.png': 'bytes' };
-    expect(await sceneFailures(READS_ATLAS, files)).toEqual({});
+    expect(await sceneFailureOf(READS_ATLAS, files)).toBeNull();
   });
 
-  it('is on no file where only a node reads a failing file (resource_format_text.cpp:647-650)', async () => {
+  it('is null where only a node reads a failing file (resource_format_text.cpp:647-650)', async () => {
     const source = `[gd_scene format=3]
 
 [ext_resource type="Material" path="res://wood.tres::Absent" id="1"]
@@ -475,7 +457,7 @@ describe('the failure through which the game refuses the scene', () => {
 [node name="Main" type="MeshInstance3D"]
 material_override = ExtResource("1")
 `;
-    expect(await sceneFailures(source, { 'res://wood.tres': EMPTY_MATERIAL })).toEqual({});
+    expect(await sceneFailureOf(source, { 'res://wood.tres': EMPTY_MATERIAL })).toBeNull();
   });
 
   it('names the undeclared address of a Resource() literal, as Godot fails its parse', async () => {
@@ -487,12 +469,10 @@ material_override = ExtResource("1")
 material_override = ExtResource("1")
 material_overlay = Resource("res://wood.tres::B")
 `;
-    expect(await sceneFailures(source, { 'res://wood.tres': EMPTY_MATERIAL })).toEqual({
-      'res://wood.tres': {
-        line: 'Parse Error: Parse error. [Resource file res://main.tscn:7]',
-        chain: ['res://wood.tres::B'],
-        cause: 'missing',
-      },
+    expect(await sceneFailureOf(source, { 'res://wood.tres': EMPTY_MATERIAL })).toEqual({
+      line: 'Parse Error: Parse error. [Resource file res://main.tscn:7]',
+      chain: ['res://wood.tres::B'],
+      cause: 'missing',
     });
   });
 
@@ -510,7 +490,7 @@ atlas = ExtResource("2")
 
 [node name="Main" type="Node2D"]
 `;
-    expect(Object.keys(await sceneFailures(source, {}))).toEqual(['res://first.png']);
+    expect((await sceneFailureOf(source, {}))?.chain[0]).toBe('res://first.png');
   });
 
   it('gives the line Godot prints for a Resource() literal of a section', async () => {
@@ -521,12 +501,10 @@ m = Resource("res://gone.tres")
 
 [node name="Main" type="Node2D"]
 `;
-    expect(await sceneFailures(source, {})).toEqual({
-      'res://gone.tres': {
-        line: "res://main.tscn:4 - Parse Error: Can't load resource at path: res://gone.tres with uid: .",
-        chain: ['res://gone.tres'],
-        cause: 'missing',
-      },
+    expect(await sceneFailureOf(source, {})).toEqual({
+      line: "res://main.tscn:4 - Parse Error: Can't load resource at path: res://gone.tres with uid: .",
+      chain: ['res://gone.tres'],
+      cause: 'missing',
     });
   });
 
@@ -543,10 +521,10 @@ atlas = ExtResource("1")
 
 [node name="Main" type="Node2D"]
 `;
-    expect(Object.keys(await sceneFailures(source, {}))).toEqual(['res://a.tres']);
+    expect((await sceneFailureOf(source, {}))?.chain[0]).toBe('res://a.tres');
   });
 
-  it('is on no file while an earlier read still loads, though a later one fails', async () => {
+  it('is null while an earlier read still loads, though a later one fails', async () => {
     const source = `[gd_scene format=3]
 
 [ext_resource type="Texture2D" path="res://slow.tres" id="1"]
@@ -564,8 +542,8 @@ atlas = ExtResource("2")
       loadResource: (path) => (path === 'res://slow.tres' ? new Promise(() => {}) : Promise.resolve(null)),
     };
     const scene = openScene({ source, provider, rootScenePath: MAIN });
-    const files = await whenFileMissing(scene, 'res://gone.png');
-    expect(files.filter((file) => file.sceneFailure)).toEqual([]);
+    await whenFileMissing(scene, 'res://gone.png');
+    expect(scene.sceneFailure()).toBeNull();
   });
 });
 

@@ -15,7 +15,7 @@ export interface SceneFileFailure {
 export interface SceneFailure {
   /** Godot's error line, with the line number of the read. */
   readonly line: string;
-  /** The file the scene reads and each file through which it fails, or the address the file lacks. */
+  /** The file the scene reads and each file through which it fails, the address the file lacks, or none. */
   readonly chain: readonly string[];
   readonly cause: LoadFailureCause;
 }
@@ -32,6 +32,4 @@ export interface SceneFile {
   readonly reason: SceneFileFailure | null;
   /** The **Sub-resource path**s inside the file that the scene's files name. */
   readonly addresses: readonly string[];
-  /** Null on each row but the first, in the scene's read order, through which the game refuses the scene. */
-  readonly sceneFailure: SceneFailure | null;
 }

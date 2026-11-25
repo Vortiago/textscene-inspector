@@ -20,12 +20,11 @@ function connectionHeading({ attributes }: ParsedHeading, line: number): Connect
 /** A collector to feed each parsed heading in scan order, and the reads it has gathered so far. */
 export function headingReads(): {
   reads: HeadingReads;
-  /** Records `heading`, and answers whether it follows a `[node]` heading, whose body reads it. */
-  read(heading: ParsedHeading, line: number): boolean;
+  /** Records `heading`, and answers the type of the heading before it, null for the first. */
+  read(heading: ParsedHeading, line: number): string | null;
 } {
   const connections: ConnectionHeading[] = [];
   const pathlessEditableLines: number[] = [];
-  // Only a `[node]` body reads the heading after it leniently, so the previous heading's type decides.
   let previousHeadingType: string | null = null;
   return {
     reads: { connections, pathlessEditableLines },
@@ -33,9 +32,9 @@ export function headingReads(): {
       if (heading.type === 'connection') connections.push(connectionHeading(heading, line));
       if (heading.type === 'editable' && heading.attributes.path === undefined)
         pathlessEditableLines.push(line);
-      const isInNodeBody = previousHeadingType === 'node';
+      const previous = previousHeadingType;
       previousHeadingType = heading.type;
-      return isInNodeBody;
+      return previous;
     },
   };
 }

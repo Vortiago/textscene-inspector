@@ -188,12 +188,12 @@ export class ResourceLoader {
     return {
       failingReads: async (file) => {
         try {
-          const { failing, failsToParse } =
+          const { failing, parseStop } =
             fileExtension(file) === '.tscn'
               ? sceneFileReads(file, await this.peerRequire(dependent, this.scenes, 'scene', file))
               : resourceFileReads(file, await this.peerRequire(dependent, this.resources, 'resource', file));
           const paths = failing.map((read) => read.path);
-          return failsToParse ? { unparsedAfter: paths } : paths;
+          return parseStop ? { unparsedAfter: paths } : paths;
         } catch (error) {
           return error instanceof UnparsedTextError ? 'unparsed' : 'unread';
         }

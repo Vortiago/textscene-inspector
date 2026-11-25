@@ -269,6 +269,8 @@ export interface FileValue {
   readonly place: FileValuePlace;
   /** The `[sub_resource]` sections built before it, so its own section's index inside one. */
   readonly subResourcesBefore: number;
+  /** True for a value of the first heading after the header, which the loader reads as it opens the file. */
+  readonly isOpeningTag: boolean;
 }
 
 /** The **Raw view** of a scene: the tree a **Lint rule** reads. */

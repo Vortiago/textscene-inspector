@@ -37,19 +37,13 @@ describe('headingReads', () => {
     expect(connection).toMatchObject({ fromIdTrail: undefined, toIdTrail: [1, 2] });
   });
 
-  it('answers whether each heading follows a node heading, whose body reads it', () => {
+  it('answers the type of the heading before each heading', () => {
     const collector = headingReads();
-    const headings = [
-      '[node name="Root" type="Node3D"]',
-      '[node name="Inner" parent="." instance=ExtResource("1")]',
-      '[editable path="Inner"]',
-      '[node name="After" parent="." instance=ExtResource("2")]',
-    ];
+    const headings = ['[gd_scene format=3]', '[node name="Root" type="Node3D"]', '[editable path="Root"]'];
     expect(headings.map((heading, index) => collector.read(parseHeading(heading)!, index + 1))).toEqual([
-      false,
-      true,
-      true,
-      false,
+      null,
+      'gd_scene',
+      'node',
     ]);
   });
 

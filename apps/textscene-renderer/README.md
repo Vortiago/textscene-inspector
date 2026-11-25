@@ -285,20 +285,21 @@ const view = mountScene(element, scene, {
   file that is not missing.
 - `addresses`: each sub-resource address inside the file that the scene reads, such as
   `res://wood.tres::Material_1`.
-- `sceneFailure`: `{ line, chain, cause }` on the one file through which the game refuses to load
-  the whole scene, and null on every other file. It is the first such file in the order the scene
-  reads. None is named while an earlier read still loads. None is named after a value at which
-  the parse fails with no file to show:
-  - an `ExtResource` id that no heading declares
-  - a `SubResource` id that no earlier section declares
-  - a `Resource()` literal with two paths or two uids.
 
-  `line` is the error line Godot prints, with the number of the line that holds the read. `chain`
-  holds the file the scene reads and each file through which it fails, or the sub-resource
-  address the file does not declare.
-  `cause` is the cause of the `reason`. A declared `ExtResource` that only a node reads does not
-  refuse the scene, as in Godot. The base scene of an inherited scene and a `[connection]`
-  heading's `binds=` do refuse it.
+`scene.sceneFailure()` gives `{ line, chain, cause }`: why the game refuses to load the whole
+scene, or null where it loads. It is the first failure in the order the scene reads, and null
+while an earlier read still loads. `subscribe` tells a change.
+
+- A read whose file fails: `chain` holds the file the scene reads and each file through which it
+  fails, or the sub-resource address the file does not declare. `cause` is the `cause` of the
+  file's `reason`.
+- A value at which the parse fails with no file: an `ExtResource` id that no heading declares, a
+  `SubResource` id that no earlier section declares, or a `Resource()` literal with two paths or
+  two uids. `chain` is empty and `cause` is `unparsed`.
+
+`line` is the error line Godot 4.6.3 prints, with the number of the line that holds the read. A
+declared `ExtResource` that only a node reads does not refuse the scene, as in Godot. The base
+scene of an inherited scene and a `[connection]` heading's `binds=` do refuse it.
 
 The list follows each file the scene's values read, as Godot's Load Errors dialog does: a
 sub-scene and a `.tres` add the files that they read. A file that a heading declares and no value

@@ -44,8 +44,16 @@ export interface FileReads {
   readonly reads: FileRead[];
   /** In file order, up to the first value at which the parse fails. */
   readonly failing: FailingFileRead[];
-  /** True where a value names an undeclared or later id, or a refused literal: the file does not load. */
-  readonly failsToParse: boolean;
+  /** The read at which the parse fails, null where the file parses. */
+  readonly parseStop: ParseStop | null;
+}
+
+/** An undeclared or later id, or a refused literal: where it sits, and the line Godot prints for it. */
+export interface ParseStop {
+  readonly read: Exclude<ValueRead, LiteralRead>;
+  readonly place: FileValue['place'];
+  readonly isOpeningTag: boolean;
+  readonly line: number;
 }
 
 /** A `.tscn`: its files read from the written nodes, and its failure from the file's values in file order. */
@@ -105,10 +113,11 @@ interface ReadContext {
   readonly subResources: readonly { readonly id: string }[];
 }
 
-/** One read in file order, the `[sub_resource]` sections before it, and the failure its failed load gives. */
+/** One read in file order, the value it sits in, its line, and the failure its failed load gives. */
 interface OrderedRead {
   readonly read: ValueRead;
-  readonly subResourcesBefore: number;
+  readonly value: FileValue;
+  readonly line: number;
   readonly failure: FailingFileRead | null;
 }
 
@@ -116,7 +125,7 @@ interface OrderedRead {
 function failingFileReads(
   context: ReadContext,
   values: readonly FileValue[]
-): Pick<FileReads, 'failing' | 'failsToParse'> {
+): Pick<FileReads, 'failing' | 'parseStop'> {
   const ordered = values.flatMap((value) => orderedReadsOf(context, value));
   const failing = new Map<string, FailingFileRead>();
   const declaredAt = new Map<string, number>();
@@ -127,17 +136,19 @@ function failingFileReads(
     // A uid or a path off `res://` may load.
     if (failure?.path.startsWith('res://') && !failing.has(failure.path)) failing.set(failure.path, failure);
   }
-  return { failing: [...failing.values()], failsToParse: stop >= 0 };
+  return { failing: [...failing.values()], parseStop: stop < 0 ? null : parseStopOf(ordered[stop]!) };
+}
+
+function parseStopOf({ read, value, line }: OrderedRead): ParseStop {
+  if (read.kind === 'Resource') throw new Error(`expected a read that fails the parse, got ${read.path}`);
+  return { read, place: value.place, isOpeningTag: value.isOpeningTag, line };
 }
 
 /** A value's reads, each with the failure its failed load gives where the value sits. */
-function orderedReadsOf(
-  context: ReadContext,
-  { text, line, place, subResourcesBefore }: FileValue
-): OrderedRead[] {
-  return valueReadsAt(text).map(({ read, printedAt }) => {
-    const at = { context, line: line + newlinesBefore(text, printedAt) };
-    return { read, subResourcesBefore, failure: failingReadOf(at, read, place) };
+function orderedReadsOf(context: ReadContext, value: FileValue): OrderedRead[] {
+  return valueReadsAt(value.text).map(({ read, printedAt }) => {
+    const line = value.line + newlinesBefore(value.text, printedAt);
+    return { read, value, line, failure: failingReadOf({ context, line }, read, value.place) };
   });
 }
 
@@ -164,13 +175,13 @@ interface ReadAt {
 function failsParse(
   { externalResources }: ReadContext,
   declaredAt: ReadonlyMap<string, number>,
-  { read, subResourcesBefore }: OrderedRead
+  { read, value }: OrderedRead
 ): boolean {
   if (read.kind === 'Refused') return true;
   if (read.kind === 'ExtResource') return !findExtResource(externalResources, read.id);
   if (read.kind !== 'SubResource') return false;
   const declared = declaredAt.get(read.id);
-  return declared === undefined || declared > subResourcesBefore;
+  return declared === undefined || declared > value.subResourcesBefore;
 }
 
 function extFailingRead({ context, line }: ReadAt, read: ValueRead): FailingFileRead | null {

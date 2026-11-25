@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { parseTresFile } from '../../parser/parsedResource';
 import { TscnParser } from '../../parser/TscnParser';
 import { resourceFileReads, sceneFileReads, type FailingReadKind } from './fileReads';
+import { sceneFailureOf } from './sceneFailure';
 
 interface GodotRow {
   row: number;
@@ -11,7 +12,8 @@ interface GodotRow {
   /** The reads whose failure fails the file, up to where the parse fails. */
   /** Each with the line Godot prints for it, measured with the reads before it loading. */
   failing: { path: string; kind: FailingReadKind; line: number }[];
-  failsToParse: boolean;
+  /** The line Godot prints where the parse stops, null where the file parses. */
+  stop: string | null;
 }
 
 /** Each place a file names a resource, as Godot 4.6.3 loads it, measured one file per headless run. */
@@ -28,7 +30,7 @@ metadata/x = ExtResource("99")
 [node name="Root" type="Node2D"]
 `,
     failing: [],
-    failsToParse: true,
+    stop: "res://row01.tscn:4 - Parse Error: Can't load cached ext-resource id: 99.",
   },
   {
     row: 2,
@@ -44,7 +46,7 @@ metadata/x = ExtResource("1")
 [node name="Root" type="Node2D"]
 `,
     failing: [{ path: 'res://gone1.tres', kind: 'section ExtResource', line: 6 }],
-    failsToParse: false,
+    stop: null,
   },
   {
     row: 3,
@@ -58,7 +60,7 @@ metadata/x = Resource("res://gone2.tres")
 [node name="Root" type="Node2D"]
 `,
     failing: [{ path: 'res://gone2.tres', kind: 'section Resource', line: 4 }],
-    failsToParse: false,
+    stop: null,
   },
   {
     row: 4,
@@ -72,7 +74,7 @@ metadata/x = Resource("res://a.tres", "res://b.tres")
 [node name="Root" type="Node2D"]
 `,
     failing: [],
-    failsToParse: true,
+    stop: 'res://row04.tscn:4 - Parse Error: Two non-uid paths in one Resource reference.',
   },
   {
     row: 5,
@@ -86,7 +88,7 @@ metadata/x = Resource("uid://a1", "uid://b2")
 [node name="Root" type="Node2D"]
 `,
     failing: [],
-    failsToParse: true,
+    stop: 'res://row05.tscn:4 - Parse Error: Two uid:// paths in one Resource reference.',
   },
   {
     row: 6,
@@ -100,7 +102,7 @@ metadata/x = SubResource("zz")
 [node name="Root" type="Node2D"]
 `,
     failing: [],
-    failsToParse: true,
+    stop: 'res://row06.tscn:4 - Parse Error: .',
   },
   {
     row: 7,
@@ -116,7 +118,7 @@ metadata/x = SubResource("b")
 [node name="Root" type="Node2D"]
 `,
     failing: [],
-    failsToParse: true,
+    stop: 'res://row07.tscn:4 - Parse Error: .',
   },
   {
     row: 8,
@@ -130,7 +132,7 @@ metadata/x = [ExtResource("99")]
 [node name="Root" type="Node2D"]
 `,
     failing: [],
-    failsToParse: true,
+    stop: "res://row08.tscn:4 - Parse Error: Can't load cached ext-resource id: 99.",
   },
   {
     row: 9,
@@ -146,7 +148,7 @@ metadata/x = {
 [node name="Root" type="Node2D"]
 `,
     failing: [{ path: 'res://gone3.tres', kind: 'section Resource', line: 5 }],
-    failsToParse: false,
+    stop: null,
   },
   {
     row: 10,
@@ -162,7 +164,7 @@ metadata/x = Array[Resource]([ExtResource("1")])
 [node name="Root" type="Node2D"]
 `,
     failing: [{ path: 'res://gone4.tres', kind: 'section ExtResource', line: 6 }],
-    failsToParse: false,
+    stop: null,
   },
   {
     row: 11,
@@ -174,7 +176,7 @@ metadata/x = Array[Resource]([ExtResource("1")])
 metadata/x = ExtResource("99")
 `,
     failing: [],
-    failsToParse: true,
+    stop: 'Parse Error: Parse error. [Resource file res://row11.tscn:4]',
   },
   {
     row: 12,
@@ -188,7 +190,7 @@ metadata/x = ExtResource("99")
 metadata/x = ExtResource("1")
 `,
     failing: [],
-    failsToParse: false,
+    stop: null,
   },
   {
     row: 13,
@@ -200,7 +202,7 @@ metadata/x = ExtResource("1")
 metadata/x = Resource("res://gone6.tres")
 `,
     failing: [{ path: 'res://gone6.tres', kind: 'node Resource', line: 4 }],
-    failsToParse: false,
+    stop: null,
   },
   {
     row: 14,
@@ -212,7 +214,7 @@ metadata/x = Resource("res://gone6.tres")
 metadata/x = SubResource("zz")
 `,
     failing: [],
-    failsToParse: true,
+    stop: 'Parse Error: Invalid parameter. [Resource file res://row14.tscn:4]',
   },
   {
     row: 15,
@@ -226,7 +228,7 @@ metadata/x = SubResource("zz")
 script = ExtResource("1")
 `,
     failing: [],
-    failsToParse: false,
+    stop: null,
   },
   {
     row: 16,
@@ -241,7 +243,7 @@ script = ExtResource("1")
 [node name="X" parent="." instance=ExtResource("1")]
 `,
     failing: [],
-    failsToParse: false,
+    stop: null,
   },
   {
     row: 17,
@@ -254,7 +256,7 @@ script = ExtResource("1")
 [node name="X" parent="." instance_placeholder="res://gone9.tscn"]
 `,
     failing: [],
-    failsToParse: false,
+    stop: null,
   },
   {
     row: 18,
@@ -267,7 +269,7 @@ script = ExtResource("1")
 [connection signal="ready" from="." to="." method="queue_free" binds=[ExtResource("99")]]
 `,
     failing: [],
-    failsToParse: true,
+    stop: 'Parse Error: Parse error. [Resource file res://row18.tscn:5]',
   },
   {
     row: 19,
@@ -280,7 +282,7 @@ script = ExtResource("1")
 [connection signal="ready" from="." to="." method="queue_free" binds=[Resource("res://gone10.tres")]]
 `,
     failing: [{ path: 'res://gone10.tres', kind: 'node Resource', line: 5 }],
-    failsToParse: false,
+    stop: null,
   },
   {
     row: 20,
@@ -295,7 +297,7 @@ script = ExtResource("1")
 [editable path="X"]
 `,
     failing: [],
-    failsToParse: false,
+    stop: null,
   },
   {
     row: 21,
@@ -314,7 +316,7 @@ metadata/x = ExtResource("99")
 [node name="Root" type="Node2D"]
 `,
     failing: [{ path: 'res://ok.tres', kind: 'section ExtResource', line: 6 }],
-    failsToParse: true,
+    stop: "res://row21.tscn:9 - Parse Error: Can't load cached ext-resource id: 99.",
   },
   {
     row: 22,
@@ -333,7 +335,7 @@ metadata/x = ExtResource("1")
 [node name="Root" type="Node2D"]
 `,
     failing: [],
-    failsToParse: true,
+    stop: 'res://row22.tscn:6 - Parse Error: .',
   },
   {
     row: 23,
@@ -345,7 +347,7 @@ metadata/x = ExtResource("1")
 metadata/x = ExtResource("99")
 `,
     failing: [],
-    failsToParse: true,
+    stop: "res://row23.tres:4 - Parse Error: Can't load cached ext-resource id: 99.",
   },
   {
     row: 24,
@@ -357,7 +359,7 @@ metadata/x = ExtResource("99")
 metadata/x = SubResource("zz")
 `,
     failing: [],
-    failsToParse: true,
+    stop: 'res://row24.tres:4 - Parse Error: .',
   },
   {
     row: 25,
@@ -371,7 +373,7 @@ metadata/x = Resource("res://gone12.tres")
 [resource]
 `,
     failing: [{ path: 'res://gone12.tres', kind: 'section Resource', line: 4 }],
-    failsToParse: false,
+    stop: null,
   },
   {
     row: 26,
@@ -383,7 +385,7 @@ metadata/x = Resource("res://gone12.tres")
 metadata/x = Resource("res://a.tres", "res://b.tres")
 `,
     failing: [],
-    failsToParse: true,
+    stop: 'res://row26.tres:4 - Parse Error: Two non-uid paths in one Resource reference.',
   },
   {
     row: 27,
@@ -396,7 +398,7 @@ metadata/x = Resource("res://a.tres", "res://b.tres")
 [node name="Root" instance=ExtResource("1")]
 `,
     failing: [{ path: 'res://gone13.tscn', kind: 'section ExtResource', line: 5 }],
-    failsToParse: false,
+    stop: null,
   },
   {
     row: 28,
@@ -407,7 +409,7 @@ metadata/x = Resource("res://a.tres", "res://b.tres")
 [node name="Root" instance=ExtResource("99")]
 `,
     failing: [],
-    failsToParse: true,
+    stop: 'res://row28.tscn:3 - Parse Error: Unexpected end of file.',
   },
   {
     row: 29,
@@ -424,7 +426,7 @@ metadata/x = Resource("res://a.tres", "res://b.tres")
 [node name="X" parent="." instance=ExtResource("1")]
 `,
     failing: [{ path: 'res://gone14.tscn', kind: 'section ExtResource', line: 9 }],
-    failsToParse: false,
+    stop: null,
   },
   {
     row: 30,
@@ -439,7 +441,7 @@ metadata/x = Resource("res://a.tres", "res://b.tres")
 [connection signal="ready" from="." to="." method="queue_free" binds=[ExtResource("1")]]
 `,
     failing: [{ path: 'res://gone15.tres', kind: 'section ExtResource', line: 7 }],
-    failsToParse: false,
+    stop: null,
   },
   {
     row: 31,
@@ -454,7 +456,7 @@ metadata/x = Resource("res://a.tres", "res://b.tres")
 [node name="X" parent="." instance=ExtResource("1")]
 `,
     failing: [],
-    failsToParse: false,
+    stop: null,
   },
   {
     row: 32,
@@ -470,7 +472,7 @@ metadata/x = ExtResource("1")
 [node name="Y" type="Node2D" parent="."]
 `,
     failing: [],
-    failsToParse: false,
+    stop: null,
   },
   {
     row: 33,
@@ -493,7 +495,7 @@ texture = Resource("res://gone18.png")
       { path: 'res://gone18.png', kind: 'node Resource', line: 6 },
       { path: 'res://gone17.tscn', kind: 'section ExtResource', line: 12 },
     ],
-    failsToParse: false,
+    stop: null,
   },
   {
     row: 34,
@@ -514,7 +516,7 @@ metadata/x = ExtResource("99")
 [node name="After" parent="." instance=ExtResource("2")]
 `,
     failing: [],
-    failsToParse: true,
+    stop: 'Parse Error: Parse error. [Resource file res://row34.tscn:6]',
   },
   {
     row: 35,
@@ -536,7 +538,7 @@ texture = Resource("res://gone21.png")
       { path: 'res://gone20.png', kind: 'node Resource', line: 8 },
       { path: 'res://gone21.png', kind: 'node Resource', line: 11 },
     ],
-    failsToParse: false,
+    stop: null,
   },
   {
     row: 36,
@@ -555,7 +557,7 @@ texture = Resource("res://gone23.png")
       { path: 'res://gone22.tres', kind: 'node Resource', line: 5 },
       { path: 'res://gone23.png', kind: 'node Resource', line: 8 },
     ],
-    failsToParse: false,
+    stop: null,
   },
   {
     row: 37,
@@ -580,7 +582,7 @@ texture = Resource("res://gone24.png")
       { path: 'res://gone24.png', kind: 'node Resource', line: 10 },
       { path: 'res://gone25.tscn', kind: 'section ExtResource', line: 14 },
     ],
-    failsToParse: false,
+    stop: null,
   },
   {
     row: 38,
@@ -598,7 +600,7 @@ metadata/x = [ExtResource("1"),
 [node name="Root" type="Node2D"]
 `,
     failing: [{ path: 'res://gone.png', kind: 'section ExtResource', line: 6 }],
-    failsToParse: false,
+    stop: null,
   },
   {
     row: 39,
@@ -614,7 +616,7 @@ Resource("res://gone.tres"),
 [node name="Root" type="Node2D"]
 `,
     failing: [{ path: 'res://gone.tres', kind: 'section Resource', line: 5 }],
-    failsToParse: false,
+    stop: null,
   },
   {
     row: 40,
@@ -629,7 +631,7 @@ Resource("res://gone.tres"),
 3]
 `,
     failing: [{ path: 'res://gone.tres', kind: 'node Resource', line: 5 }],
-    failsToParse: false,
+    stop: null,
   },
   {
     row: 41,
@@ -642,7 +644,7 @@ Resource("res://gone.tres"),
 [connection signal="ready" from="." to="." method="free" binds=[Resource("res://gone.tres")]]
 `,
     failing: [{ path: 'res://gone.tres', kind: 'node Resource', line: 5 }],
-    failsToParse: false,
+    stop: null,
   },
   {
     row: 42,
@@ -663,7 +665,7 @@ metadata/z = 2
 [node name="Root" type="Node2D"]
 `,
     failing: [{ path: 'res://gone.png', kind: 'section ExtResource', line: 8 }],
-    failsToParse: false,
+    stop: null,
   },
   {
     row: 43,
@@ -681,7 +683,7 @@ metadata/x = ExtResource(
 [node name="Root" type="Node2D"]
 `,
     failing: [{ path: 'res://gone.png', kind: 'section ExtResource', line: 7 }],
-    failsToParse: false,
+    stop: null,
   },
   {
     row: 44,
@@ -695,24 +697,208 @@ metadata/x = Resource(
 )
 `,
     failing: [{ path: 'res://gone.tres', kind: 'node Resource', line: 6 }],
-    failsToParse: false,
+    stop: null,
+  },
+  {
+    row: 45,
+    reads: 'a [node] value reads a Resource() literal with two paths',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+metadata/x = Resource("res://a.tres", "res://b.tres")
+`,
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row45.tscn:4]',
+  },
+  {
+    row: 46,
+    reads: 'a [connection] binds= reads a Resource() literal with two uids',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[connection signal="ready" from="." to="." method="free" binds=[Resource("uid://a1", "uid://b2")]]
+`,
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row46.tscn:5]',
+  },
+  {
+    row: 47,
+    reads: 'a [connection] binds= reads an undeclared SubResource id',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[connection signal="ready" from="." to="." method="free" binds=[SubResource("zz")]]
+`,
+    failing: [],
+    stop: 'Parse Error: Invalid parameter. [Resource file res://row47.tscn:5]',
+  },
+  {
+    row: 48,
+    reads: 'the instance= of a [node] after a [connection] names an undeclared ExtResource id',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[connection signal="ready" from="." to="." method="free"]
+
+[node name="A" parent="." instance=ExtResource("99")]
+
+[node name="B" type="Node2D" parent="."]
+`,
+    failing: [],
+    stop: "res://row48.tscn:7 - Parse Error: Can't load cached ext-resource id: 99.",
+  },
+  {
+    row: 49,
+    reads: 'the instance= of the first heading names an undeclared ExtResource id, before a node',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" instance=ExtResource("99")]
+
+[node name="A" type="Node2D" parent="."]
+`,
+    failing: [],
+    stop: 'res://row49.tscn:3 - Parse Error: Unexpected end of file.',
+  },
+  {
+    row: 50,
+    reads: 'the instance= of a [node] after a node names an undeclared ExtResource id',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="A" parent="." instance=ExtResource("99")]
+
+[node name="B" type="Node2D" parent="."]
+`,
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row50.tscn:5]',
+  },
+  {
+    row: 51,
+    reads: 'the instance= of a [node] after a node names an undeclared SubResource id',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="A" parent="." instance=SubResource("zz")]
+`,
+    failing: [],
+    stop: 'Parse Error: Invalid parameter. [Resource file res://row51.tscn:5]',
+  },
+  {
+    row: 52,
+    reads: 'the instance= of the first heading names an undeclared SubResource id',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" instance=SubResource("zz")]
+
+[node name="A" type="Node2D" parent="."]
+`,
+    failing: [],
+    stop: 'res://row52.tscn:3 - Parse Error: Unexpected end of file.',
+  },
+  {
+    row: 53,
+    reads: 'the instance= of a [node] after a node is a Resource() literal with two paths',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="A" parent="." instance=Resource("res://a.tres", "res://b.tres")]
+`,
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row53.tscn:5]',
+  },
+  {
+    row: 54,
+    reads: 'the instance= of a [node] after a [sub_resource] names an undeclared ExtResource id',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[sub_resource type="Resource" id="a"]
+metadata/x = 1
+
+[node name="Root" instance=ExtResource("99")]
+`,
+    failing: [],
+    stop: "res://row54.tscn:6 - Parse Error: Can't load cached ext-resource id: 99.",
+  },
+  {
+    row: 55,
+    reads: 'the instance= of a [node] after a [connection] names an undeclared SubResource id',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[connection signal="ready" from="." to="." method="free"]
+
+[node name="A" parent="." instance=SubResource("zz")]
+`,
+    failing: [],
+    stop: 'res://row55.tscn:7 - Parse Error: .',
+  },
+  {
+    row: 56,
+    reads: 'the instance= of a [node] after an [ext_resource] is a Resource() literal with two paths',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[ext_resource type="Resource" path="res://ok.tres" id="1"]
+
+[node name="Root" instance=Resource("res://a.tres", "res://b.tres")]
+`,
+    failing: [],
+    stop: 'res://row56.tscn:5 - Parse Error: Two non-uid paths in one Resource reference.',
+  },
+  {
+    row: 57,
+    reads: 'the instance= of a [node] after a [connection] is a Resource() literal with two paths',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[connection signal="ready" from="." to="." method="free"]
+
+[node name="A" parent="." instance=Resource("res://a.tres", "res://b.tres")]
+`,
+    failing: [],
+    stop: 'res://row57.tscn:7 - Parse Error: Two non-uid paths in one Resource reference.',
   },
 ];
 
-function fileReadsOf({ file, text }: GodotRow) {
-  const path = `res://row.${file}`;
-  return file === 'tscn'
-    ? sceneFileReads(path, new TscnParser().parse(text))
-    : resourceFileReads(path, parseTresFile(text));
+/** The path Godot loaded the row under, which its stop line names. */
+function rowPath({ row, file }: GodotRow): string {
+  return `res://row${String(row).padStart(2, '0')}.${file}`;
+}
+
+function fileReadsOf(row: GodotRow) {
+  const path = rowPath(row);
+  return row.file === 'tscn'
+    ? sceneFileReads(path, new TscnParser().parse(row.text))
+    : resourceFileReads(path, parseTresFile(row.text));
 }
 
 describe('the reads that fail a file, as Godot 4.6.3 loads it', () => {
   it.each(ROWS)('row $row: $reads', (row) => {
-    const { failing, failsToParse } = fileReadsOf(row);
+    const { failing, parseStop } = fileReadsOf(row);
 
-    expect({ failing: failing.map(({ path, kind, line }) => ({ path, kind, line })), failsToParse }).toEqual({
-      failing: row.failing,
-      failsToParse: row.failsToParse,
-    });
+    expect({
+      failing: failing.map(({ path, kind, line }) => ({ path, kind, line })),
+      stop: sceneFailureOf([], { scene: rowPath(row), reads: [], parseStop })?.line ?? null,
+    }).toEqual({ failing: row.failing, stop: row.stop });
   });
 });

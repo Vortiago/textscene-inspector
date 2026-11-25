@@ -299,8 +299,8 @@ type ProjectRead = ProjectSettings | null | undefined;
 
 function rootInput(root: ParsedScene | undefined): WalkInput {
   if (!root) return { starts: [], failing: null };
-  const { reads, failing } = sceneFileReads(root.path, root);
-  return { starts: [{ owner: root.path, reads }], failing: { scene: root.path, reads: failing } };
+  const { reads, failing, parseStop } = sceneFileReads(root.path, root);
+  return { starts: [{ owner: root.path, reads }], failing: { scene: root.path, reads: failing, parseStop } };
 }
 
 function walkInput(graph: SceneGraph | null, settings: ProjectRead): WalkInput {

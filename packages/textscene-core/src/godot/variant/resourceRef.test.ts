@@ -330,10 +330,11 @@ describe('valueReadsIn', () => {
     ]);
   });
 
-  it('gives a refused read for a literal with two paths or two uids, which Godot does not parse', () => {
-    for (const literal of ['Resource("res://a.tres", "res://b.tres")', 'Resource("uid://a", "uid://b")']) {
-      expect(valueReadsIn(literal), literal).toEqual([{ kind: 'Refused' }]);
-    }
+  it.each([
+    ['Resource("res://a.tres", "res://b.tres")', 'paths'],
+    ['Resource("uid://a", "uid://b")', 'uids'],
+  ])('gives a refused read for %s, which Godot does not parse, naming two %s', (literal, twice) => {
+    expect(valueReadsIn(literal)).toEqual([{ kind: 'Refused', twice }]);
   });
 });
 

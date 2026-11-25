@@ -5,7 +5,7 @@ import type { ParsedResource } from '../parser/parsedResource.js';
 import type { TscnScene } from '../parser/types.js';
 import type { ResourceReference, VariantValue } from '../godot/variant/variantValue.js';
 import type { Scene } from './openScene.js';
-import type { SceneFile } from './sceneFiles.js';
+import type { WalkedFiles } from '../resources/sceneFiles/sceneFileWalk.js';
 
 /** A node of the Live scene tree as the scene reads it: its own instance overrides and writes laid on. */
 export interface SceneTreeNode {
@@ -65,8 +65,8 @@ export interface SceneRuntime {
   tree(graph: SceneGraph): SceneTree;
   /** Calls `listener` when a load changes the tree. Returns the removal. */
   subscribe(listener: () => void): () => void;
-  /** The files the root scene and the project settings name. The same array while none moves. */
-  files(graph: SceneGraph | null): readonly SceneFile[];
+  /** The files the root scene and the project name, and the failure. The same object while none moves. */
+  files(graph: SceneGraph | null): WalkedFiles;
   /** Calls `listener` when a load answers for one of those files. Returns the removal. */
   subscribeFiles(listener: () => void): () => void;
   /** The parse of the scene at `scenePath`, null before it loads. */

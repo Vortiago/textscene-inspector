@@ -9,15 +9,16 @@ const MISSING_FILE = {
   owners: ['res://main.tscn'],
   reason: { chain: [MISSING_PATH], cause: 'missing', addresses: [] },
   addresses: [],
-  sceneFailure: null,
 };
-const REFUSING_FILE = {
-  ...MISSING_FILE,
-  sceneFailure: {
-    line: `res://main.tscn:6 - Parse Error: [ext_resource] referenced non-existent resource at: ${MISSING_PATH}.`,
-    chain: [MISSING_PATH],
-    cause: 'missing',
-  },
+const REFUSED = {
+  line: `res://main.tscn:6 - Parse Error: [ext_resource] referenced non-existent resource at: ${MISSING_PATH}.`,
+  chain: [MISSING_PATH],
+  cause: 'missing',
+};
+const UNPARSED = {
+  line: "res://main.tscn:4 - Parse Error: Can't load cached ext-resource id: 99.",
+  chain: [],
+  cause: 'unparsed',
 };
 
 const PASSING = {
@@ -25,7 +26,8 @@ const PASSING = {
   settledKeys: ['scriptedNodeCount', 'hasCurrentCamera'],
   heard: [[], [MISSING_PATH], []],
   afterWrite: [],
-  refused: [REFUSING_FILE],
+  refused: REFUSED,
+  unparsed: UNPARSED,
 };
 
 describe('missingFileFailures', () => {
@@ -64,9 +66,15 @@ describe('missingFileFailures', () => {
     ]);
   });
 
-  it('names a refused scene whose file row carries no failure of the scene', () => {
-    expect(missingFileFailures({ ...PASSING, refused: [MISSING_FILE] })[0]).toMatch(
-      /^missing files: scene\.files\(\) of a refused scene: expected/
+  it('names a refused scene that gives no failure of the scene', () => {
+    expect(missingFileFailures({ ...PASSING, refused: null })[0]).toMatch(
+      /^missing files: scene\.sceneFailure\(\) through a missing file: expected/
+    );
+  });
+
+  it('names a scene refused at an undeclared id that gives no failure of the scene', () => {
+    expect(missingFileFailures({ ...PASSING, unparsed: null })[0]).toMatch(
+      /^missing files: scene\.sceneFailure\(\) at an undeclared id: expected/
     );
   });
 });

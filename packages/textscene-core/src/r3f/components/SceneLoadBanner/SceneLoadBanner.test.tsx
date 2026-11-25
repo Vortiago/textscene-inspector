@@ -92,4 +92,30 @@ describe('<SceneLoadBanner>', () => {
 
     expect((await screen.findByRole('alert')).textContent).toContain('res://wood.tres::B');
   });
+
+  // Measured with load() in Godot 4.6.3, the scene saved as res://main.tscn.
+  it.each([
+    [
+      'an undeclared ExtResource id in a section',
+      '[sub_resource type="Resource" id="a"]\nmetadata/x = ExtResource("99")\n\n[node name="Root" type="Node2D"]',
+      "res://main.tscn:4 - Parse Error: Can't load cached ext-resource id: 99.",
+    ],
+    [
+      'an undeclared SubResource id in a node',
+      '[node name="Root" type="Node2D"]\nmetadata/x = SubResource("zz")',
+      'Parse Error: Invalid parameter. [Resource file res://main.tscn:4]',
+    ],
+    [
+      'a Resource() literal with two paths in a section',
+      '[sub_resource type="Resource" id="a"]\nmetadata/x = Resource("res://a.tres", "res://b.tres")\n\n' +
+        '[node name="Root" type="Node2D"]',
+      'res://main.tscn:4 - Parse Error: Two non-uid paths in one Resource reference.',
+    ],
+  ])('says the game would fail to load the scene at %s, which names no file', async (_, body, line) => {
+    mount({}, `[gd_scene format=3]\n\n${body}\n`);
+
+    expect((await screen.findByRole('alert')).textContent).toBe(
+      ['The game would fail to load this scene', line, 'res://main.tscn (does not parse)'].join('')
+    );
+  });
 });

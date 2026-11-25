@@ -194,13 +194,14 @@ export class TscnParserCore {
     };
 
     // The value as written, not as stored: the loader parses the text the file holds.
-    const addFileValue = (text: string, line: number, place: FileValue['place']) => {
-      fileValues.push({ text, line, place, subResourcesBefore: internalResources.length });
+    const addFileValue = (value: Omit<FileValue, 'subResourcesBefore'>) => {
+      fileValues.push({ ...value, subResourcesBefore: internalResources.length });
     };
+    // A body is read after the file opens, so no body value sits in the opening tag.
     const addBodyValue = (text: string, line: number) => {
-      if (currentSection === 'node') addFileValue(text, line, 'node');
+      if (currentSection === 'node') addFileValue({ text, line, place: 'node', isOpeningTag: false });
       else if (currentSection === 'sub_resource' || currentSection === 'resource')
-        addFileValue(text, line, 'section');
+        addFileValue({ text, line, place: 'section', isOpeningTag: false });
     };
 
     const storePending = () => {
@@ -266,12 +267,14 @@ export class TscnParserCore {
           const editablePath =
             currentHeading.type === 'editable' ? currentHeading.attributes.path : undefined;
           if (editablePath !== undefined) editableInstances.push(simplifiedNodePath(editablePath));
-          const isInNodeBody = headings.read(currentHeading, lineNumber);
+          const previous = headings.read(currentHeading, lineNumber);
+          const isOpeningTag = previous === 'gd_scene' || previous === 'gd_resource';
           const { instance, binds } = currentHeading.attributes;
+          const place = previous === 'node' ? 'node' : 'section';
           if (currentHeading.type === 'node' && instance !== undefined)
-            addFileValue(instance, lineNumber, isInNodeBody ? 'node' : 'section');
+            addFileValue({ text: instance, line: lineNumber, place, isOpeningTag });
           if (currentHeading.type === 'connection' && binds !== undefined)
-            addFileValue(binds, lineNumber, 'binds');
+            addFileValue({ text: binds, line: lineNumber, place: 'binds', isOpeningTag });
           observer?.onSectionStart?.(currentHeading, currentSection, lineNumber);
         } else {
           observer?.onError?.({
