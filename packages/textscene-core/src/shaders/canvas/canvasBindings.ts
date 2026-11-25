@@ -126,7 +126,7 @@ export function writeCanvasBindings(draw: CanvasDraw, frame: CanvasFrame): void 
  * `_update_transform_2d_to_mat4` (`renderer_canvas_render_rd.cpp:45`): the axes and origin in x and y.
  * @canonical A Transform2D as the column-major mat4 a canvas template reads
  */
-function transform2DMatrixInto(
+export function transform2DMatrixInto(
   out: THREE.Matrix4,
   { a, b, c, d, tx, ty }: Transform2DColumns
 ): THREE.Matrix4 {
