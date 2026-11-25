@@ -380,6 +380,17 @@ const LINEAR_RECT_SCENES = [
   }),
 ];
 
+/** A rect of the grid drawn with `source`, a user's shader, which proves `rows`. */
+const shadedRectScene = (name, source, rows, fields = {}) => rectScene(name, { source, rows, ...fields });
+
+const SHADER_SCENES = [
+  shadedRectScene(
+    'canvas-shader-fragment-uv',
+    'shader_type canvas_item;\n\nvoid fragment() {\n\tCOLOR = vec4(UV, 0.5, 1.0);\n}\n',
+    ['canvas_item.fragment.COLOR', 'canvas_item.fragment.UV']
+  ),
+];
+
 export const CANVAS_SCENES = [
   ...RECT_SCENES,
   ...PRIMITIVE_SCENES,
@@ -387,4 +398,5 @@ export const CANVAS_SCENES = [
   ...MESH_SCENES,
   ...NINE_PATCH_SCENES,
   ...LINEAR_RECT_SCENES,
+  ...SHADER_SCENES,
 ];

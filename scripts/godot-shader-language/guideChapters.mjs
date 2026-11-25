@@ -675,8 +675,16 @@ const CANVAS_CHAPTER = {
     "A rect and a nine-patch draw as Godot's quad batch does. `textureRectRegion(rect, source, modulate, { transpose, clipUv })` is the rect command of `draw_texture_rect_region`: a negative size flips that axis. `rectInstanceData(command, item, texelSize)` and `ninePatchInstanceData(command, item, texelSize)` write Godot's 128-byte `InstanceData` record. `quadBatchGeometry(records)` gives the instanced quad that reads each record as the attributes `attrib_A` to `attrib_H`.\n\n" +
     "A primitive of `draw_primitive` draws as Godot's primitive batch does. `primitiveCommand(points, colors, uvs)` repeats the first colour for a point with none. `primitiveInstanceData(command, item)` writes one record for a point, a line or a triangle, and two for a quad, with each colour in half floats. `primitiveDraw(pointCount)` names the variant and the primitive, and `primitiveBatchGeometry(records, pointCount)` gives the geometry. `primitiveObject(primitive, geometry, material)` gives the three.js object that draws it: points, lines, a line strip, triangles or a triangle strip.\n\n" +
     "A polygon and a mesh surface draw through the attributes variant, one draw each. `polygonCommand(points, colors, uvs)` cuts an outline into triangles, as `draw_polygon` does, and `triangleArrayCommand(indices, points, colors, uvs)` takes the triangles of a Polygon2D. `attributesGeometry(arrays)` writes the vertex arrays, with Godot's default white colour and zero UV for a missing array. `polygonConstants(item)` and `meshConstants(item, { transform, modulate })` give the push constants, and `attributesObject(draw, geometry, primitive, constants)` writes them before each draw of the object.\n\n" +
-    "A viewport with `use_hdr_2d` keeps colours linear. Set `usesLinearColors` on the frame, the item and the texture state: the template then turns the vertex colours linear, Godot's C++ turns the modulate colours linear, and the texture reads through its sRGB view. Without it, the texels and the colours reach the frame as they are stored. A user's `canvas_item` shader and 2D lights do not draw yet, and their rows stay open with their issues.",
-  sections: [],
+    "A viewport with `use_hdr_2d` keeps colours linear. Set `usesLinearColors` on the frame, the item and the texture state: the template then turns the vertex colours linear, Godot's C++ turns the modulate colours linear, and the texture reads through its sRGB view. Without it, the texels and the colours reach the frame as they are stored. 2D lights do not draw yet, and their rows stay open with their issues.\n\n" +
+    "A user's `canvas_item` shader links into the same template: `vertex()` fills the slot after the template reads the command's vertex, UV and colour, and `fragment()` fills the slot after the template samples the texture. Each built-in reads as the template's local for it. A shader's `render_mode` blend word sets the material's blend state, and `blend_disabled` blends nothing. Give `transpileCanvasItem` the option `rows: 'godot'` for a render target whose GL row 0 is Godot's top row, as the previewer's 2D frame is: the clip y and `FRAGCOORD` then keep Godot's direction.",
+  sections: [
+    {
+      heading: '`COLOR` and `UV` in `fragment()`',
+      rows: (row) => row.id === 'canvas_item.fragment.COLOR' || row.id === 'canvas_item.fragment.UV',
+      what: "`COLOR` starts as the vertex colour times the texture's texel at `UV`, and `fragment()` writes the colour the item blends. `UV` is the texture coordinate, read only: the rect's source in 0 to 1, clamped half a texel inside a region with `clipUv` (`canvas.glsl:292-297`).",
+      tsl: "the template's locals `color` and `uv`",
+    },
+  ],
 };
 
 const SKY_CHAPTER = {

@@ -1689,8 +1689,8 @@ canvas_item.fragment.FRAGCOORD	built-in (read only)	servers/rendering/shader_typ
 canvas_item.fragment.NORMAL	built-in	servers/rendering/shader_types.cpp:291	#686	canvas.glsl		vec3			
 canvas_item.fragment.NORMAL_MAP	built-in	servers/rendering/shader_types.cpp:292	#686	canvas.glsl		vec3			
 canvas_item.fragment.NORMAL_MAP_DEPTH	built-in	servers/rendering/shader_types.cpp:293	#686	canvas.glsl		float			
-canvas_item.fragment.UV	built-in (read only)	servers/rendering/shader_types.cpp:294	#686	canvas.glsl		vec2			
-canvas_item.fragment.COLOR	built-in	servers/rendering/shader_types.cpp:295	#686	canvas.glsl		vec4			
+canvas_item.fragment.UV	built-in (read only)	servers/rendering/shader_types.cpp:294	#686	canvas.glsl		vec2		native	native
+canvas_item.fragment.COLOR	built-in	servers/rendering/shader_types.cpp:295	#686	canvas.glsl		vec4		native	native
 canvas_item.fragment.TEXTURE	built-in (read only)	servers/rendering/shader_types.cpp:296	#686	canvas.glsl		sampler2D			
 canvas_item.fragment.TEXTURE_PIXEL_SIZE	built-in (read only)	servers/rendering/shader_types.cpp:297	#686	canvas.glsl		vec2			
 canvas_item.fragment.NORMAL_TEXTURE	built-in (read only)	servers/rendering/shader_types.cpp:298	#686	canvas.glsl		sampler2D			

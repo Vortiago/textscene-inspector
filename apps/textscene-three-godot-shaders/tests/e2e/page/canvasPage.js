@@ -24,7 +24,7 @@ import {
   writeCanvasBindings,
 } from '@textscene/three-godot-shaders';
 import { framePixels, linearFramePixels } from './framePixels.js';
-import { displayRenderer } from './godotView.js';
+import { displayRenderer, shaderTime } from './godotView.js';
 
 /** The faults of drawing `draw` once, which a program the GPU refuses to compile or link reports. */
 function drawFaults(draw) {
@@ -108,7 +108,7 @@ class SceneDraws {
       height: spec.height,
       canvasTransform: { a, b, c, d, tx, ty },
       canvasModulate: rgba(spec.canvasModulate),
-      time: 0,
+      time: shaderTime(spec.clock),
       snapVerticesToPixel: spec.snapVertices,
       usesLinearColors: spec.linear,
     };

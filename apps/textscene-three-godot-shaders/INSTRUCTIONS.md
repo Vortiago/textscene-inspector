@@ -12,7 +12,7 @@ GLSL or WGSL operation itself, `lowered` with the name of the operations it writ
 probes run on WebGL 2. WebGPURenderer runs the same TSL nodes, and no probe runs there until the
 canvases draw on WebGPURenderer (#1788).
 
-1721 of 1889 instructions transpiled.
+1723 of 1889 instructions transpiled.
 
 ## data type
 
@@ -1686,7 +1686,7 @@ canvases draw on WebGPURenderer (#1788).
 | `canvas_item.vertex.CUSTOM0` | open, #686 | | | `servers/rendering/shader_types.cpp:282` |
 | `canvas_item.vertex.CUSTOM1` | open, #686 | | | `servers/rendering/shader_types.cpp:283` |
 | `canvas_item.fragment.FRAGCOORD` | open, #686 | | | `servers/rendering/shader_types.cpp:290` |
-| `canvas_item.fragment.UV` | open, #686 | | | `servers/rendering/shader_types.cpp:294` |
+| `canvas_item.fragment.UV` | transpiled (`canvas-shader-fragment-uv`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:294` |
 | `canvas_item.fragment.TEXTURE` | open, #686 | | | `servers/rendering/shader_types.cpp:296` |
 | `canvas_item.fragment.TEXTURE_PIXEL_SIZE` | open, #686 | | | `servers/rendering/shader_types.cpp:297` |
 | `canvas_item.fragment.NORMAL_TEXTURE` | open, #686 | | | `servers/rendering/shader_types.cpp:298` |
@@ -1865,7 +1865,7 @@ canvases draw on WebGPURenderer (#1788).
 | `canvas_item.fragment.NORMAL` | open, #686 | | | `servers/rendering/shader_types.cpp:291` |
 | `canvas_item.fragment.NORMAL_MAP` | open, #686 | | | `servers/rendering/shader_types.cpp:292` |
 | `canvas_item.fragment.NORMAL_MAP_DEPTH` | open, #686 | | | `servers/rendering/shader_types.cpp:293` |
-| `canvas_item.fragment.COLOR` | open, #686 | | | `servers/rendering/shader_types.cpp:295` |
+| `canvas_item.fragment.COLOR` | transpiled (`canvas-shader-fragment-uv`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:295` |
 | `canvas_item.light.LIGHT` | open, #686 | | | `servers/rendering/shader_types.cpp:343` |
 | `canvas_item.light.SHADOW_MODULATE` | open, #686 | | | `servers/rendering/shader_types.cpp:344` |
 | `particles.start.COLOR` | open, #1726 | | | `servers/rendering/shader_types.cpp:368` |

@@ -6,7 +6,9 @@
 
 import { useMemo } from 'react';
 import type { Rgba } from '../godot/math/math';
+import type { CanvasItemMaterialSlot } from '../resources/materials/canvasitemmaterial/kind';
 import type { CanvasItemMaterialProperties } from '../resources/materials/canvasitemmaterial/types';
+import type { ShaderText } from '../resources/materials/shadermaterial/types';
 import { useCanvasItemTint, type CanvasItemTint } from './canvasItemModulate';
 import { useCanvasModulateFor } from './canvasModulate';
 import type { CanvasItemTextureSampler } from './canvasItemTextureSampler';
@@ -39,8 +41,8 @@ export interface CanvasItemFields {
   selfModulate: Rgba;
   zIndex: number;
   zAsRelative: boolean;
-  /** The `CanvasItemMaterial` in force after `use_parent_material`, or null for plain canvas blending. */
-  material: CanvasItemMaterialProperties | null;
+  /** The material in force after `use_parent_material`. */
+  material: CanvasItemMaterialSlot;
   /** The effective filter and repeat, which the descendants inherit. */
   sampler: CanvasItemTextureSampler;
   /** `light_mask`, Godot's default 1 (`canvas_item.h:98`) when unset. */
@@ -57,7 +59,10 @@ export interface CanvasItemState {
   /** Godot's `z_final`: what a light's z window tests, and the bucket of `key`. */
   zFinal: number;
   tint: CanvasItemTint;
+  /** The `CanvasItemMaterial` in force, or null for plain canvas blending or a shader. */
   material: CanvasItemMaterialProperties | null;
+  /** The canvas_item shader in force, which draws the item's own pixels through the translator. */
+  shader: ShaderText | null;
   sampler: CanvasItemTextureSampler;
   lightMask: number | undefined;
 }
@@ -71,7 +76,7 @@ export function useCanvasItemState(fields: CanvasItemFields): CanvasItemState {
   const zFinal = stepZ(fields.inherited.zFinal, fields);
   // The canvas tint reaches the item's own pixels when its light mode admits it, never what its
   // children inherit. The light injection divides this value back out, so both read this one hook.
-  const canvasModulate = useCanvasModulateFor(fields.material);
+  const canvasModulate = useCanvasModulateFor(fields.material.properties);
   const tint = useCanvasItemTint(useTintInputs(fields), fields.inherited.modulate, canvasModulate);
   const keyAt = useCanvasKeyAt(zFinal);
   return {
@@ -79,7 +84,8 @@ export function useCanvasItemState(fields: CanvasItemFields): CanvasItemState {
     keyAt,
     zFinal,
     tint,
-    material: fields.material,
+    material: fields.material.properties,
+    shader: fields.material.shader,
     sampler: fields.sampler,
     lightMask: fields.lightMask,
   };

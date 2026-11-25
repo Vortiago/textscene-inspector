@@ -1,3 +1,4 @@
+import { DEFAULT_CANVAS } from './canvasScenes.mjs';
 import { parseViewportOutput, viewportProjectFiles, viewportScript } from './godotViewports.mjs';
 
 const LINE_PREFIX = 'CANVAS ';
@@ -115,6 +116,10 @@ func canvas_item_of(scene: Dictionary, texture: Texture2D) -> Node2D:
 		item.self_modulate = color4(scene.item.selfModulate)
 		item.texture_filter = FILTERS[scene.filter]
 		item.texture_repeat = REPEATS[scene.repeat]
+		if scene.hasMaterial:
+			var material := ShaderMaterial.new()
+			material.shader = load(scene.shader)
+			item.material = material
 		viewport.add_child(item)`,
 });
 
@@ -140,7 +145,11 @@ const SCENE_FIELDS = [
 /** The files beside the main script, keyed by their names in the project. */
 export const canvasProjectFiles = (scenes) =>
   viewportProjectFiles(FILES, scenes, (scene) =>
-    Object.fromEntries(SCENE_FIELDS.filter((field) => field in scene).map((field) => [field, scene[field]]))
+    Object.fromEntries([
+      ...SCENE_FIELDS.filter((field) => field in scene).map((field) => [field, scene[field]]),
+      // Godot's default canvas shader is what an item with no material draws.
+      ['hasMaterial', scene.source !== DEFAULT_CANVAS],
+    ])
   );
 
 export const parseCanvasOutput = (stdout) => parseViewportOutput(stdout, LINE_PREFIX);

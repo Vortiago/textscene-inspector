@@ -49,7 +49,7 @@ const ALTERNATIVES: Partial<AlternativeTileModel>[] = [
   {},
   { zIndex: 2 },
   { material: { properties: ADD } },
-  { material: { properties: null } },
+  { material: { properties: null, shader: null } },
   { material: { properties: UNSHADED } },
   { modulate: { r: 1, g: 0, b: 0, a: 1 } },
 ];

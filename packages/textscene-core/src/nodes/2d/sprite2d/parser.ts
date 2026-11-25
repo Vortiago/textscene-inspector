@@ -24,6 +24,7 @@ export function parseSprite2D(
     flip_h: boolOr(properties.flip_h, false),
     flip_v: boolOr(properties.flip_v, false),
     region_enabled: boolOr(properties.region_enabled, false),
+    region_filter_clip_enabled: boolOr(properties.region_filter_clip_enabled, false),
     // The grid and frame Godot holds after replaying the body in file order: a
     // refused `frame` stays 0, and a later `hframes` re-maps one that landed
     // (godot/scene/spriteFrames.ts).

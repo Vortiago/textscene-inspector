@@ -154,10 +154,11 @@ const emittedForm = (form) => (form.includes('`') ? form : `\`${form}\``);
 
 function renderSection(section, rows, probes, record) {
   const ids = new Set(rows.map((row) => row.id));
-  // A sky scene and a head case have no table of inputs: a showcase and a verdict prove their rows.
+  // A sky or canvas scene and a head case have no table of inputs: a showcase and a verdict prove their rows.
   const sectionProbes = probes.filter(
     (probe) =>
       !probe.camera &&
+      !probe.kind &&
       !probe.isVerdictCase &&
       probe.rows.some((id) => ids.has(id)) &&
       (section.probes?.(probe) ?? true)
@@ -214,10 +215,13 @@ const CANVAS_DRAWS = {
   ninepatch: 'a `canvas_item_add_nine_patch` on a Node2D',
 };
 
-/** What Godot draws of a canvas scene, and the target it draws to. */
-function canvasText({ kind, linear }) {
+/** What Godot draws of a canvas scene, the target it draws to, and the shader it draws with. */
+function canvasText({ kind, linear, rows }) {
   const target = linear ? ' with `use_hdr_2d`, whose image holds linear colours' : '';
-  return `Godot draws ${CANVAS_DRAWS[kind]} of a 2D view${target}, with no material, so Godot's default canvas shader draws it (\`tests/e2e/canvasScenes.mjs\`). A plain three.js page draws the same commands through the transpiled canvas template with the same values.`;
+  const shader = rows
+    ? 'with a ShaderMaterial of this shader'
+    : "with no material, so Godot's default canvas shader draws it";
+  return `Godot draws ${CANVAS_DRAWS[kind]} of a 2D view${target}, ${shader} (\`tests/e2e/canvasScenes.mjs\`). A plain three.js page draws the same commands through the transpiled canvas template with the same values.`;
 }
 
 /** What the page draws of a showcase: a function of UV, a sky, a mesh, or a canvas item. */

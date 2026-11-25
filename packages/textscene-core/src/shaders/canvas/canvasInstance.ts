@@ -52,6 +52,23 @@ export function worldOf({ a, b, c, d, tx, ty }: Transform2DColumns): number[] {
   return [a, b, c, d, tx, ty];
 }
 
+/**
+ * Writes `transform` as the world of record `index` in `geometry`, a batch of `instanceBatchGeometry`,
+ * and uploads the floats again only when it changed. Godot writes each record's world each frame.
+ */
+export function writeBatchWorld(
+  geometry: THREE.BufferGeometry,
+  index: number,
+  transform: Transform2DColumns
+): void {
+  const floats = (geometry.getAttribute(ATTRIBUTES[0]!) as THREE.InterleavedBufferAttribute).data;
+  const offset = index * floats.stride + WORLD;
+  const world = worldOf(transform);
+  if (world.every((value, lane) => floats.array[offset + lane] === Math.fround(value))) return;
+  floats.array.set(world, offset);
+  floats.needsUpdate = true;
+}
+
 /** `color * base_color`, turned linear for a linear render target (`renderer_canvas_render_rd.cpp:2425`). */
 export function modulated(color: Rgba, item: CanvasItemDraw): Rgba {
   const product = multiplyColor(color, item.finalModulate);

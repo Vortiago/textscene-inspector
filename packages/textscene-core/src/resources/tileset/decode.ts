@@ -11,7 +11,7 @@ import { boolSlotValue } from '../../godot/variant/variantBool.js';
 import { stringToInt } from '../../godot/string/string.js';
 import { intOr, vec2iOr } from '../../parser/valueParsers';
 import { parseColorOrUndefined } from '../../utils/colorParser';
-import { CANVAS_ITEM_MATERIAL } from '../materials/canvasitemmaterial/kind';
+import { CANVAS_ITEM_MATERIAL, NO_MATERIAL } from '../materials/canvasitemmaterial/kind';
 import { optionalReference, type Follow, type Read } from '../reading';
 import { TEXTURE_2D } from '../textures/texture2d/kind';
 import { texture2DSizeAtLoad } from '../textures/texture2d/sizeAtLoad';
@@ -57,9 +57,6 @@ function intEnumOr(value: string | undefined, fallback: number, label: string): 
 /** A tile's `material` reference to its material, or null for none. */
 type TileMaterialResolver = (ref: string) => TileMaterial | null;
 
-/** A material Godot loads that is no CanvasItemMaterial, or that it cannot load: plain canvas blending. */
-const PLAIN_MATERIAL: TileMaterial = { properties: null };
-
 /**
  * The material a tile's `material` names. One read for each reference, so tiles that name one
  * resource share one object, as Godot's loader hands both one `Ref` (`resource_format_text.cpp:113-114`,
@@ -82,7 +79,7 @@ function materialOf(read: Read<TileMaterial>, ref: string): TileMaterial | null 
     warn(`[TileSet] material ${ref} names nothing, no material`);
     return null;
   }
-  return PLAIN_MATERIAL;
+  return NO_MATERIAL;
 }
 
 /** A `TileSetAtlasSource` from its properties. Its texture and materials resolve in its own file. */

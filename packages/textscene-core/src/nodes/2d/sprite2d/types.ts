@@ -21,6 +21,8 @@ export interface Sprite2DProperties extends Node2DProperties {
   flip_v: boolean;
   region_enabled: boolean;
   region_rect?: Rect2;
+  /** Clamps the UVs to the region, so its filter reads no texel outside it. */
+  region_filter_clip_enabled: boolean;
   hframes: number;
   vframes: number;
   frame: number;
