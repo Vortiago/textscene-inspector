@@ -134,7 +134,7 @@ function instancesOf(nodes: readonly RawNode[]): Values[] {
 }
 
 /** A `path=` relative to the file that writes it (resource_format_text.cpp:508-510). */
-export function extResourcePathIn(file: string, path: string): string {
+function extResourcePathIn(file: string, path: string): string {
   if (path.includes('://') || isAbsolutePath(path)) return simplifyResPath(path);
   return simplifyPath(pathJoin(getBaseDir(file), path));
 }
