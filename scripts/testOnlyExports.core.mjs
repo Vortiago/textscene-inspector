@@ -62,6 +62,8 @@ export const KEPT_TEST_ONLY_EXPORTS = [
   'shaders/language/printer.ts#printShader',
   // The tree check proves each parsed tree has Godot's node types and positions, in tests only.
   'shaders/language/treeCheck.ts#treeFault',
+  // The cache test fills the text cache past its bound.
+  'shaders/material/baseMaterialShader.ts#CACHED_TEXTS',
   // The sweep of BaseMaterial3D texts writes each key's text, and the stencil pass's, without a material.
   'shaders/material/baseMaterialShader.ts#shaderTextOf',
   'shaders/material/stencilEffect.ts#stencilPassOf',
