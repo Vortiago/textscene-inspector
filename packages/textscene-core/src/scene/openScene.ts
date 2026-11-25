@@ -114,9 +114,9 @@ export function openScene({
   const subResource = (path: string): TscnInternalResource | null => {
     const { filePath, subResourceId } = parseSubResourcePath(path);
     if (subResourceId === undefined) return null;
-    if (filePath !== rootScenePath) return runtime().loadedSubResource(filePath, subResourceId);
-    const root = graph()?.scenes.get(rootScenePath);
-    return (root && findSubResource(root.internalResources, subResourceId)) ?? null;
+    const owner =
+      filePath === rootScenePath ? graph()?.scenes.get(rootScenePath) : runtime().loadedScene(filePath);
+    return (owner && findSubResource(owner.internalResources, subResourceId)) ?? null;
   };
   /** A sub-resource of a scene through `subResource`, else the resource the loader parses of a file. */
   const resource = async (path: string): Promise<LoadedResource | null> => {

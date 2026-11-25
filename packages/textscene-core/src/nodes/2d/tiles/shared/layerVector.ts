@@ -36,7 +36,7 @@ export const LAYER_LEAVES: ReadonlySet<string> = new Set(LAYER_LEAF_NAMES);
  * nothing, so past the ceiling only the written layers are kept, in order, and
  * the draw order of the written layers is the same.
  */
-export const LAYER_FILL_CEILING = 64;
+const LAYER_FILL_CEILING = 64;
 
 /**
  * Every layer the loaded TileMap has, in index order, with the leaves the file

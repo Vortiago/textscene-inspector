@@ -11,10 +11,10 @@ import { intOr } from '../parser/valueParsers.js';
 type NodeTexts = Readonly<Record<string, string>>;
 
 /** The format a TileMap starts at when the file writes none: TILE_MAP_DATA_FORMAT_3 (tile_map.h:64). */
-export const CURRENT_TILE_MAP_FORMAT = 2;
+const CURRENT_TILE_MAP_FORMAT = 2;
 
 /** A cell set twice keeps its first place and its last value. */
-export function cellsByCoords(cells: readonly PlacedCell[]): PlacedCell[] {
+function cellsByCoords(cells: readonly PlacedCell[]): PlacedCell[] {
   const byCoords = new Map<string, PlacedCell>();
   for (const cell of cells) byCoords.set(`${cell.coords.x},${cell.coords.y}`, cell);
   return [...byCoords.values()];
