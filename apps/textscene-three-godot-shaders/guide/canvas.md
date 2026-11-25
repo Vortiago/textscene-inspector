@@ -1342,7 +1342,7 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 
 ## `VERTEX_ID`, `INSTANCE_ID`, `INSTANCE_CUSTOM`, `CUSTOM0`, `CUSTOM1` and `TEXTURE_PIXEL_SIZE` in `vertex()`
 
-`VERTEX_ID` and `INSTANCE_ID` are the draw's vertex and instance index: a quad batch draws one instance for each rect. `INSTANCE_CUSTOM` is a MultiMesh instance's custom data, and `CUSTOM0` and `CUSTOM1` a mesh's custom arrays, each zero with none (`canvas.glsl:139-188`). `attributesGeometry` takes them as `customs`, four lanes a vertex, and binds those in the draw's `customsRead`, as `canvas.glsl:12-18` declares only the custom arrays a shader reads.
+`VERTEX_ID` and `INSTANCE_ID` are the draw's vertex and instance index: a quad batch draws one instance for each rect. `INSTANCE_CUSTOM` is a MultiMesh instance's custom data, and `CUSTOM0` and `CUSTOM1` a mesh's custom arrays, each zero with none (`canvas.glsl:139-188`). `attributesGeometry` takes them as `customs`, four lanes a vertex. It binds only those in the draw's `customsRead`, as `canvas.glsl:12-18` declares no other.
 
 The transpiler emits `vertexIndex`, `instanceIndex` and the template's locals `instance_custom`, `custom0` and `custom1`. Rows: `canvas_item.vertex.INSTANCE_CUSTOM`, `canvas_item.vertex.INSTANCE_ID`, `canvas_item.vertex.VERTEX_ID`, `canvas_item.vertex.TEXTURE_PIXEL_SIZE`, `canvas_item.vertex.CUSTOM0`, `canvas_item.vertex.CUSTOM1`. Godot source: `servers/rendering/shader_types.cpp:277`.
 
