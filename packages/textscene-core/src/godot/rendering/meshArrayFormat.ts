@@ -51,7 +51,7 @@ export const CUSTOM_FORMAT_LANES: readonly { lanes: number; laneBytes: number }[
 export const CUSTOM_ARRAY_LANES = 4;
 
 /** A 1 to 3 lane float format binds as R32 to R32G32B32 (`mesh_storage.cpp:1382`): a gap reads 0, alpha 1. */
-export const MISSING_CUSTOM_LANES = [0, 0, 0, 1] as const;
+const MISSING_CUSTOM_LANES = [0, 0, 0, 1] as const;
 
 /**
  * Four lanes for each of `count` vertices, `width` of them read and the rest as the vertex input fills them.
