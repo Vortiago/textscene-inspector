@@ -1,4 +1,4 @@
-import type { SceneGraph } from '../core/SceneGraph.js';
+import type { ParsedScene, SceneGraph } from '../core/SceneGraph.js';
 import { isGltfPath } from '../godot/import/gltf.js';
 import { isEditableInstanceAt } from './editableInstance.js';
 import { GLB_SCENE_ROOT_TYPE, glbPathOf, loneGlbRootPath } from '../resources/glbSceneRoot.js';
@@ -18,7 +18,7 @@ import { PROJECT_FILE_PATH } from '../godot/project/project.js';
 import { readProjectSettings } from '../resources/projectSettingsFile.js';
 import { registerInstanceResource } from '../resources/registerInstanceResource.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
-import { sceneFailingFileReads, sceneReads, type FileRead } from '../resources/loadFailure/fileReads.js';
+import { sceneFileReads, type FileRead } from '../resources/loadFailure/fileReads.js';
 import { createSceneFileWalk, type WalkInput } from '../resources/sceneFiles/sceneFileWalk.js';
 import type { ResourceLoader } from '../resources/ResourceLoader.js';
 import type { Scene } from '../scene/openScene.js';
@@ -297,10 +297,14 @@ function projectReads(settings: ProjectSettings | null): FileRead[] {
 /** Undefined while the engine reads the project settings, null where the project has none. */
 type ProjectRead = ProjectSettings | null | undefined;
 
+function rootInput(root: ParsedScene | undefined): WalkInput {
+  if (!root) return { starts: [], failing: null };
+  const { reads, failing } = sceneFileReads(root.path, root);
+  return { starts: [{ owner: root.path, reads }], failing: { scene: root.path, reads: failing } };
+}
+
 function walkInput(graph: SceneGraph | null, settings: ProjectRead): WalkInput {
-  const root = graph?.scenes.get(graph.rootScene);
-  const scene = root ? [{ owner: root.path, reads: sceneReads(root.path, root) }] : [];
-  const failing = root ? { scene: root.path, reads: sceneFailingFileReads(root.path, root) } : null;
+  const { starts: scene, failing } = rootInput(graph?.scenes.get(graph.rootScene));
   if (settings === null) return { starts: scene, failing };
   const engine = {
     owner: null,

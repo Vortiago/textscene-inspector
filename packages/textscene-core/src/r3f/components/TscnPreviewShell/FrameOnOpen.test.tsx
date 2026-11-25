@@ -221,6 +221,21 @@ describe('FrameOnOpen', () => {
     expect(focus).toHaveBeenCalledTimes(1);
   });
 
+  it("frames a new scene's first settle after a switch to 2D and back before it", async () => {
+    const { focus, heard, open, runTimers, switchTo } = await mount();
+    heardSettle(heard);
+    await runTimers();
+    await open('res://other.tscn');
+    await switchTo('2D');
+    await switchTo('3D');
+    await runTimers();
+    focus.mockClear();
+
+    await act(async () => heardSettle(heard));
+
+    expect(focus).toHaveBeenCalledTimes(1);
+  });
+
   it('frames a load that finishes after an earlier settle and after every timer', async () => {
     const { focus, settleLoad } = await mountWithLateLoad();
 

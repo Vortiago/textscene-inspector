@@ -22,11 +22,7 @@ import { createThemeProcessor } from './processors/createThemeProcessor';
 import { createDirectoryProcessor } from './processors/createDirectoryProcessor';
 import { createLoadOutcomeProcessor } from './processors/createLoadOutcomeProcessor';
 import type { LoadFacts, LoadOutcome } from './loadFailure/loadOutcome';
-import {
-  resourceFailingFileReads,
-  sceneFailingFileReads,
-  type FailingFileRead,
-} from './loadFailure/fileReads';
+import { resourceFileReads, sceneFileReads } from './loadFailure/fileReads';
 import { existsInListing, folderOf, listsImportSidecar } from './loadFailure/fileExists';
 import { importSidecarPath } from '../godot/project/resourceFormats';
 import { parseImportFile } from '../parser/importParser';
@@ -192,14 +188,11 @@ export class ResourceLoader {
     return {
       failingReads: async (file) => {
         try {
-          const reads: FailingFileRead[] =
+          const { failing } =
             fileExtension(file) === '.tscn'
-              ? sceneFailingFileReads(file, await this.peerRequire(dependent, this.scenes, 'scene', file))
-              : resourceFailingFileReads(
-                  file,
-                  await this.peerRequire(dependent, this.resources, 'resource', file)
-                );
-          return reads.map((read) => read.path);
+              ? sceneFileReads(file, await this.peerRequire(dependent, this.scenes, 'scene', file))
+              : resourceFileReads(file, await this.peerRequire(dependent, this.resources, 'resource', file));
+          return failing.map((read) => read.path);
         } catch (error) {
           return error instanceof UnparsedTextError ? 'unparsed' : 'unread';
         }

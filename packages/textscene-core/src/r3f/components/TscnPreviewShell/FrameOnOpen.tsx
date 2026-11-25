@@ -20,8 +20,10 @@ export function FrameOnOpen({ rootScenePath, hasScene, view, heard }: FrameOnOpe
   const { mode, frameOnOpen } = useViewportMode();
   // A return to the 3D mode finds the camera where it was left, as in Godot, so it frames no scene twice.
   const framedRoot = useRef<string | null>(null);
-  // The heard status outlives a scene, so a new root's view may have loaded before it reports.
-  const lastRoot = useRef<string | null>(null);
+  // The pose the last fit of `framedRoot` left, so a later run stands down once the user has moved.
+  const framedRootPose = useRef<SceneValue | null>(null);
+  // The heard status outlives a scene, so a new root's view may have loaded before it first settles.
+  const settleFitRoot = useRef<string | null>(null);
   // A ref, not a dependency: an ended preview starts no fit.
   const previewed = usePreviewCamera()?.camera ?? null;
   const isPreviewing = useRef(previewed !== null);
@@ -45,18 +47,14 @@ export function FrameOnOpen({ rootScenePath, hasScene, view, heard }: FrameOnOpe
       // A focus through a previewed Camera3D frames nothing, so the next return to the 3D mode frames.
       if (!isPreviewing.current) framedRoot.current = rootScenePath;
       framedPose = await camera.get('transform');
+      if (!isPreviewing.current) framedRootPose.current = framedPose;
     };
     const fitUnlessMoved = async () => {
       const pose = await camera.get('transform');
       if (framedPose === null || samePose(pose, framedPose)) await fit();
     };
     const isFramed = framedRoot.current === rootScenePath;
-    if (isFramed) {
-      camera
-        .get('transform')
-        .then((pose) => (framedPose ??= pose))
-        .catch(warnOfCameraFailure);
-    }
+    if (isFramed) framedPose = framedRootPose.current;
     const fitLogged = () => void fit().catch(warnOfCameraFailure);
     // The delays count from the stage's bind, which a hidden or slow canvas makes after the view mounts.
     const timers: ReturnType<typeof setTimeout>[] = [];
@@ -74,15 +72,14 @@ export function FrameOnOpen({ rootScenePath, hasScene, view, heard }: FrameOnOpe
       // A view that has not reported may have loaded already, unless it shows a scene framed before.
       return status === null ? !isFramed : status.pending.resources > 0;
     };
-    const isNewRoot = lastRoot.current !== rootScenePath;
-    lastRoot.current = rootScenePath;
-    let hasLoadedSinceSettle = isNewRoot || isLoading();
+    let hasLoadedSinceSettle = settleFitRoot.current !== rootScenePath || isLoading();
     let wasSettled = false;
     const fitOnSettle = () => {
       if (isLoading()) hasLoadedSinceSettle = true;
       const isSettled = heard.get().status?.settled != null;
       if (isSettled && !wasSettled && hasLoadedSinceSettle) {
         hasLoadedSinceSettle = false;
+        settleFitRoot.current = rootScenePath;
         fitUnlessMoved().catch(warnOfCameraFailure);
       }
       wasSettled = isSettled;

@@ -287,7 +287,9 @@ const view = mountScene(element, scene, {
   `res://wood.tres::Material_1`.
 - `sceneFailure`: `{ line, chain, cause }` on the one file through which the game refuses to load
   the whole scene, and null on every other file. It is the first such file in the order the scene
-  reads, and none is named while an earlier read still loads. `line` is the error line Godot
+  reads. None is named while an earlier read still loads, or when an earlier
+  read fails where no file shows it: an undeclared `ExtResource` id, or a `Resource()` literal with
+  only a `uid://` or with a path outside `res://`. `line` is the error line Godot
   prints, less its number. `chain` holds the file the scene reads and each file through which it
   fails, or the sub-resource address the file does not declare. `cause` is the cause of the
   `reason`. An `ExtResource` that only a node reads does not refuse the scene, as in Godot.

@@ -1,6 +1,11 @@
 import { isGodotTextResourcePath } from '../../godot/project/resourceFormats.js';
 import type { SceneFile } from '../../scene/sceneFiles.js';
-import { resourceReads, sceneReads, type FailingFileRead, type FileRead } from '../loadFailure/fileReads.js';
+import {
+  resourceFileReads,
+  sceneFileReads,
+  type FailingFileRead,
+  type FileRead,
+} from '../loadFailure/fileReads.js';
 import type { LoadOutcome } from '../loadFailure/loadOutcome.js';
 import { withSceneFailure } from '../loadFailure/sceneFailure.js';
 import type { ParsedResource } from '../../parser/parsedResource.js';
@@ -201,8 +206,8 @@ export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void
 
 function textFileOf(file: string, parsed: TscnScene | ParsedResource): TextFile {
   return 'internalResources' in parsed
-    ? { reads: sceneReads(file, parsed), subResourceIds: idsOf(parsed.internalResources) }
-    : { reads: resourceReads(file, parsed), subResourceIds: idsOf(parsed.subResources) };
+    ? { reads: sceneFileReads(file, parsed).reads, subResourceIds: idsOf(parsed.internalResources) }
+    : { reads: resourceFileReads(file, parsed).reads, subResourceIds: idsOf(parsed.subResources) };
 }
 
 function idsOf(sections: readonly { readonly id: string }[]): ReadonlySet<string> {

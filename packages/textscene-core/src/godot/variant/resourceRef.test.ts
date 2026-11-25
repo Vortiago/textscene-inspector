@@ -13,7 +13,6 @@ import {
   dictSubResourceEntries,
   extResourceIdsIn,
   isPathResourceLiteral,
-  pathResourcePathsIn,
   keyedResourceRefReader,
   openResourceRef,
   renameResourceRefs,
@@ -80,24 +79,6 @@ describe('resourceRef', () => {
   // No `g` flag, so `.exec()` carries no `lastIndex` between callers.
   it('is stateless across calls', () => {
     for (let i = 0; i < 3; i++) expect(resourceRef('SubResource("a")')).not.toBeNull();
-  });
-});
-
-describe('pathResourcePathsIn', () => {
-  it('reads the path of each Resource literal in an Array, in order', () => {
-    const value = '[Resource("res://a.ttf"), Resource ( "uid://b3x" , "res://b.fnt" )]';
-
-    expect(pathResourcePathsIn(value)).toEqual(['res://a.ttf', 'res://b.fnt']);
-  });
-
-  it('skips a literal that names only a uid, which nothing here resolves', () => {
-    expect(pathResourcePathsIn('[Resource("uid://b3x"), Resource("res://a.ttf")]')).toEqual(['res://a.ttf']);
-  });
-
-  it('reads no id from an ExtResource or a SubResource, whose argument is not a path', () => {
-    expect(
-      pathResourcePathsIn('[ExtResource("1_abc"), SubResource("Font_x"), Resource("res://a.ttf")]')
-    ).toEqual(['res://a.ttf']);
   });
 });
 
@@ -341,8 +322,8 @@ describe('valueReadsIn', () => {
     ]);
   });
 
-  it('reads no SubResource and no literal with only a uid', () => {
-    expect(valueReadsIn('[SubResource("x"), Resource("uid://abc")]')).toEqual([]);
+  it('reads no SubResource', () => {
+    expect(valueReadsIn('[SubResource("x"), ExtResource("1")]')).toEqual([{ kind: 'ExtResource', id: '1' }]);
   });
 
   it('reads each path of a literal with two, as the walk does', () => {
@@ -354,6 +335,21 @@ describe('valueReadsIn', () => {
 });
 
 describe('literalReadsIn', () => {
+  it('reads the path of each Resource literal in an Array, in order', () => {
+    const value = '[Resource("res://a.ttf"), Resource ( "uid://b3x" , "res://b.fnt" )]';
+
+    expect(literalReadsIn(value)).toEqual([
+      { kind: 'Resource', path: 'res://a.ttf', uid: '' },
+      { kind: 'Resource', path: 'res://b.fnt', uid: 'uid://b3x' },
+    ]);
+  });
+
+  it('gives a null path for a literal that names only a uid, which nothing here resolves', () => {
+    expect(literalReadsIn('Resource("uid://b3x")')).toEqual([
+      { kind: 'Resource', path: null, uid: 'uid://b3x' },
+    ]);
+  });
+
   it('gives the Resource() literals and no ExtResource', () => {
     expect(literalReadsIn('[ExtResource("1"), Resource("uid://abc", "res://a.tres")]')).toEqual([
       { kind: 'Resource', path: 'res://a.tres', uid: 'uid://abc' },

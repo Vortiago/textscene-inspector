@@ -1,24 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import { parseTresFile } from '../../parser/parsedResource';
 import { TscnParser } from '../../parser/TscnParser';
-import {
-  resourceFailingFileReads,
-  resourceReads,
-  sceneFailingFileReads,
-  sceneReads,
-  type FailingFileRead,
-} from './fileReads';
+import { resourceFileReads, sceneFileReads, type FailingFileRead } from './fileReads';
+import type { ParsedResource } from '../../parser/parsedResource';
 
 const scene = (text: string) => new TscnParser().parse(text);
 const MAIN = 'res://levels/main.tscn';
 const MAIN_TRES = 'res://levels/main.tres';
 
 const pathsOf = (reads: readonly FailingFileRead[]) => reads.map((read) => read.path);
+const sceneFailing = (file: string, parsed: ReturnType<typeof scene>) => sceneFileReads(file, parsed).failing;
+const sceneFilesRead = (file: string, parsed: ReturnType<typeof scene>) => sceneFileReads(file, parsed).reads;
+const resourceFailing = (file: string, parsed: ParsedResource) => resourceFileReads(file, parsed).failing;
+const resourceFilesRead = (file: string, parsed: ParsedResource) => resourceFileReads(file, parsed).reads;
 
-describe('sceneFailingFileReads paths', () => {
+describe('the failing reads of a scene', () => {
   it('lists the file a [sub_resource] property reads', () => {
     const reads = pathsOf(
-      sceneFailingFileReads(
+      sceneFailing(
         MAIN,
         scene(`[gd_scene format=3]
 [ext_resource type="Texture2D" path="res://gone.png" id="1"]
@@ -34,7 +33,7 @@ atlas = ExtResource("1")
 
   it('leaves out the file only a [node] property reads', () => {
     const reads = pathsOf(
-      sceneFailingFileReads(
+      sceneFailing(
         MAIN,
         scene(`[gd_scene format=3]
 [ext_resource type="Texture2D" path="res://gone.png" id="1"]
@@ -49,7 +48,7 @@ texture = ExtResource("1")
 
   it('leaves out a declared file nothing reads', () => {
     const reads = pathsOf(
-      sceneFailingFileReads(
+      sceneFailing(
         MAIN,
         scene(`[gd_scene format=3]
 [ext_resource type="Texture2D" path="res://gone.png" id="1"]
@@ -63,7 +62,7 @@ texture = ExtResource("1")
 
   it('lists the path of a Resource() literal in a [node] property', () => {
     const reads = pathsOf(
-      sceneFailingFileReads(
+      sceneFailing(
         MAIN,
         scene(`[gd_scene format=3]
 [node name="Root" type="Sprite2D"]
@@ -77,7 +76,7 @@ texture = Resource("res://gone.png")
 
   it('leaves out a Resource() literal written inside a string', () => {
     const reads = pathsOf(
-      sceneFailingFileReads(
+      sceneFailing(
         MAIN,
         scene(`[gd_scene format=3]
 [node name="Root" type="Label"]
@@ -93,7 +92,7 @@ text = "Resource(\\"res://gone.png\\")"
 describe('a relative ext_resource path', () => {
   it('resolves against the folder of the file that reads it', () => {
     const reads = pathsOf(
-      sceneFailingFileReads(
+      sceneFailing(
         MAIN,
         scene(`[gd_scene format=3]
 [ext_resource type="Texture2D" path="../art/rock.png" id="1"]
@@ -108,10 +107,10 @@ atlas = ExtResource("1")
   });
 });
 
-describe('resourceFailingFileReads', () => {
+describe('the failing reads of a resource', () => {
   it('lists the file the [resource] section reads', () => {
     const reads = pathsOf(
-      resourceFailingFileReads(
+      resourceFailing(
         MAIN_TRES,
         parseTresFile(`[gd_resource type="AtlasTexture" format=3]
 [ext_resource type="Texture2D" path="res://gone.png" id="1"]
@@ -126,7 +125,7 @@ atlas = ExtResource("1")
 
   it('lists the file a [sub_resource] of a .tres reads inside an array', () => {
     const reads = pathsOf(
-      resourceFailingFileReads(
+      resourceFailing(
         MAIN_TRES,
         parseTresFile(`[gd_resource type="Resource" format=3]
 [ext_resource type="Texture2D" path="res://gone.png" id="1"]
@@ -141,9 +140,9 @@ textures = [ExtResource("1")]
   });
 });
 
-describe('sceneReads', () => {
+describe('the files a scene reads', () => {
   it('lists each file a value reads, a [node] value and an instance included, with its heading type', () => {
-    const reads = sceneReads(
+    const reads = sceneFilesRead(
       MAIN,
       scene(`[gd_scene format=3]
 [ext_resource type="Texture2D" path="res://icon.png" id="1"]
@@ -161,7 +160,7 @@ texture = ExtResource("1")
   });
 
   it('gives a Resource() literal no type', () => {
-    const reads = sceneReads(
+    const reads = sceneFilesRead(
       MAIN,
       scene(`[gd_scene format=3]
 [node name="Root" type="Sprite2D"]
@@ -173,7 +172,7 @@ texture = Resource("res://icon.png")
   });
 
   it('leaves out a declared file nothing reads, and a path outside res://', () => {
-    const reads = sceneReads(
+    const reads = sceneFilesRead(
       MAIN,
       scene(`[gd_scene format=3]
 [ext_resource type="Texture2D" path="res://unused.png" id="1"]
@@ -187,9 +186,9 @@ texture = ExtResource("2")
   });
 });
 
-describe('resourceReads', () => {
-  it('lists the files the [resource] and [sub_resource] sections of a .tres read', () => {
-    const reads = resourceReads(
+describe('the files a resource reads', () => {
+  it('lists the files the [sub_resource] and [resource] sections of a .tres read, in file order', () => {
+    const reads = resourceFilesRead(
       MAIN_TRES,
       parseTresFile(`[gd_resource type="StandardMaterial3D" format=3]
 [ext_resource type="Texture2D" path="albedo.png" id="1"]
@@ -201,13 +200,13 @@ albedo_texture = ExtResource("1")
     );
 
     expect(reads).toEqual([
-      { path: 'res://levels/albedo.png', type: 'Texture2D' },
       { path: 'res://atlas.png', type: null },
+      { path: 'res://levels/albedo.png', type: 'Texture2D' },
     ]);
   });
 
   it('lists nothing for a .tres that reads no file', () => {
-    const reads = resourceReads(
+    const reads = resourceFilesRead(
       MAIN_TRES,
       parseTresFile('[gd_resource type="Curve" format=3]\n[resource]\n')
     );
@@ -216,9 +215,43 @@ albedo_texture = ExtResource("1")
   });
 });
 
-describe('sceneFailingFileReads', () => {
+describe('the kind of each failing read of a scene', () => {
+  it('stops at a section read that no file can show, as the parse fails there', () => {
+    for (const read of ['ExtResource("99")', 'Resource("uid://b9")', 'Resource("user://x.tres")']) {
+      const reads = sceneFailing(
+        MAIN,
+        scene(`[gd_scene format=3]
+[ext_resource type="Texture2D" path="res://gone.png" id="2"]
+[sub_resource type="AtlasTexture" id="a"]
+atlas = ${read}
+[sub_resource type="AtlasTexture" id="b"]
+atlas = ExtResource("2")
+[node name="Root" type="Node2D"]
+`)
+      );
+
+      expect(reads, read).toEqual([]);
+    }
+  });
+
+  it('keeps the type of an ext_resource heading over a literal of the same file read first', () => {
+    const reads = sceneFilesRead(
+      MAIN,
+      scene(`[gd_scene format=3]
+[ext_resource type="Texture2D" path="res://a.png" id="1"]
+[sub_resource type="AtlasTexture" id="a"]
+atlas = Resource("res://a.png")
+[sub_resource type="AtlasTexture" id="b"]
+atlas = ExtResource("1")
+[node name="Root" type="Node2D"]
+`)
+    );
+
+    expect(reads).toEqual([{ path: 'res://a.png', type: 'Texture2D' }]);
+  });
+
   it('gives the kind of each failing read, in file order', () => {
-    const reads = sceneFailingFileReads(
+    const reads = sceneFailing(
       MAIN,
       scene(`[gd_scene format=3]
 [ext_resource type="Texture2D" path="res://ext.png" id="1"]
@@ -239,10 +272,7 @@ texture = Resource("res://node.png")
   });
 
   it('gives no read for a scene that reads no file', () => {
-    const reads = sceneFailingFileReads(
-      MAIN,
-      scene(`[gd_scene format=3]\n[node name="Root" type="Node2D"]\n`)
-    );
+    const reads = sceneFailing(MAIN, scene(`[gd_scene format=3]\n[node name="Root" type="Node2D"]\n`));
 
     expect(reads).toEqual([]);
   });

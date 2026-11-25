@@ -60,16 +60,10 @@ interface ResourceRefSpan extends ResourceRef {
  * Each reference the loader resolves, past strings and `;` comments (variant_parser.cpp:214, :265).
  *
  * @param inString whether `text` starts inside a string an earlier line opened
- * @param spans where each reference goes, or null to skip them
- * @param literals where each `Resource(…)` literal goes, or null to skip them
  * @returns whether `text` ends inside a string
  */
-function scanLoadedRefs(
-  text: string,
-  inString: boolean,
-  spans: ResourceRefSpan[] | null,
-  literals: LiteralSpan[] | null = null
-): boolean {
+function scanLoadedRefs(text: string, inString: boolean, sink: ScanSink): boolean {
+  const { refs, literals, isExtOnly } = sink;
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
     if (inString) {
@@ -93,22 +87,30 @@ function scanLoadedRefs(
       if (literals) i = readLiteralAt(text, i, literals);
       continue;
     }
-    if (!spans) continue;
+    if (!refs || (isExtOnly && char === 'S')) continue;
     RESOURCE_REF_AT_RE.lastIndex = i;
     const match = RESOURCE_REF_AT_RE.exec(text);
     if (!match) continue;
     const end = RESOURCE_REF_AT_RE.lastIndex;
-    spans.push({ kind: match[1] as ResourceRef['kind'], id: refId(match[2], match[3]), start: i, end });
+    refs.push({ kind: match[1] as ResourceRef['kind'], id: refId(match[2], match[3]), start: i, end });
     i = end - 1;
   }
   return inString;
 }
 
+/** Where {@link scanLoadedRefs} puts what it reads, null to skip a kind. */
+interface ScanSink {
+  refs: ResourceRefSpan[] | null;
+  literals: LiteralSpan[] | null;
+  /** True to skip each `SubResource(…)`, which a read of other files has no use for. */
+  isExtOnly?: boolean;
+}
+
 /** Every reference the loader resolves in one value, as {@link scanLoadedRefs} reads it. */
 function loadedRefSpans(text: string): ResourceRefSpan[] {
-  const spans: ResourceRefSpan[] = [];
-  scanLoadedRefs(text, false, spans);
-  return spans;
+  const refs: ResourceRefSpan[] = [];
+  scanLoadedRefs(text, false, { refs, literals: null });
+  return refs;
 }
 
 /**
@@ -118,9 +120,9 @@ function loadedRefSpans(text: string): ResourceRefSpan[] {
 export function resourceRefSpansByLine(lines: readonly string[]): ResourceRefSpan[][] {
   let inString = false;
   return lines.map((line) => {
-    const spans: ResourceRefSpan[] = [];
-    inString = scanLoadedRefs(line, inString, spans);
-    return spans;
+    const refs: ResourceRefSpan[] = [];
+    inString = scanLoadedRefs(line, inString, { refs, literals: null });
+    return refs;
   });
 }
 
@@ -217,45 +219,36 @@ function readLiteralAt(text: string, start: number, literals: LiteralSpan[]): nu
   const args = [match[1]!, match[2]].filter((arg): arg is string => arg !== undefined);
   const uid = args.find((arg) => arg.startsWith('uid://')) ?? '';
   const paths = args.filter((arg) => !arg.startsWith('uid://'));
-  literals.push({ start, reads: paths.map((path) => ({ kind: 'Resource', path, uid })) });
+  const reads = paths.length > 0 ? paths.map((path) => ({ kind: 'Resource', path, uid }) as const) : null;
+  literals.push({ start, reads: reads ?? [{ kind: 'Resource', path: null, uid }] });
   return PATH_RESOURCE_AT_RE.lastIndex - 1;
-}
-
-/**
- * The `res://` path of each `Resource(…)` literal in `text`, in order, as an import parameter such as
- * `fallbacks=[Resource("uid://…", "res://a.ttf")]` holds them. A literal with only a `uid://` is
- * skipped: nothing here resolves one.
- */
-export function pathResourcePathsIn(text: string): string[] {
-  return literalReadsIn(text).map((read) => read.path);
 }
 
 /** An `ExtResource` id, or a `Resource(…)` literal's path and its `uid://`, empty for none. */
 export type ValueRead = { kind: 'ExtResource'; id: string } | LiteralRead;
 
-type LiteralRead = { kind: 'Resource'; path: string; uid: string };
+/** A null path is a literal with only a `uid://`, which nothing here resolves. */
+export type LiteralRead = { kind: 'Resource'; path: string | null; uid: string };
 
 /** Each `ExtResource(…)` and `Resource(…)` literal of `text`, in the order the loader meets them. */
 export function valueReadsIn(text: string): ValueRead[] {
   const hasLiteral = PATH_RESOURCE_SOMEWHERE_RE.test(text);
   if (!hasLiteral && !text.includes(EXT_RESOURCE_TOKEN)) return [];
-  const spans: ResourceRefSpan[] = [];
+  const refs: ResourceRefSpan[] = [];
   const literals: LiteralSpan[] = [];
-  scanLoadedRefs(text, false, spans, hasLiteral ? literals : null);
-  const extReads = spans
-    .filter((span) => span.kind === 'ExtResource')
-    .map((span): { start: number; reads: ValueRead[] } => ({
-      start: span.start,
-      reads: [{ kind: 'ExtResource', id: span.id }],
-    }));
+  scanLoadedRefs(text, false, { refs, literals: hasLiteral ? literals : null, isExtOnly: true });
+  const extReads = refs.map((span): { start: number; reads: ValueRead[] } => ({
+    start: span.start,
+    reads: [{ kind: 'ExtResource', id: span.id }],
+  }));
   return [...extReads, ...literals].sort((a, b) => a.start - b.start).flatMap(({ reads }) => reads);
 }
 
-/** One read per `res://` path of each `Resource(…)` literal of `text`, in order, each with its `uid://`. */
+/** One read per path of each `Resource(…)` literal of `text`, in order, each with its `uid://`. */
 export function literalReadsIn(text: string): LiteralRead[] {
   if (!PATH_RESOURCE_SOMEWHERE_RE.test(text)) return [];
   const literals: LiteralSpan[] = [];
-  scanLoadedRefs(text, false, null, literals);
+  scanLoadedRefs(text, false, { refs: null, literals });
   return literals.flatMap(({ reads }) => reads);
 }
 
