@@ -64,7 +64,7 @@ export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void
   const pinnedParses = new Set<string>();
   /** Written only by `outcome` and `releaseOutside`: held in the loader's cache. */
   const pinnedOutcomes = new Set<string>();
-  /** Written only by `files`: the starts of the last walk, which a load answer makes stale. */
+  /** Written by `files` and cleared by the change listener: the input of the last walk. */
   let walkedInput: WalkInput | null = null;
   let walked: readonly SceneFile[] = [];
   let walkedPaths: ReadonlySet<string> = new Set();

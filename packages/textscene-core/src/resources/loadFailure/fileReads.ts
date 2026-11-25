@@ -35,7 +35,7 @@ export interface FailingFileRead {
 /** Every file a value reads, and the reads that fail the whole file, from one scan of each value. */
 export interface FileReads {
   readonly reads: FileRead[];
-  /** In file order, up to the first read that fails the parse where no file can show it. */
+  /** In file order, up to the first undeclared `ExtResource` id, at which the parse fails. */
   readonly failing: FailingFileRead[];
 }
 
@@ -102,21 +102,26 @@ function failingFileReads(
       .flatMap((read) => (read.kind === 'Resource' ? [literalFailingRead(read, 'node Resource')] : [])),
   ];
   for (const read of ordered) {
-    // An undeclared id, an unresolved uid or a path off `res://` fails the parse where no row shows it.
-    if (!read?.path.startsWith('res://')) break;
-    if (!reads.has(read.path)) reads.set(read.path, read);
+    // An undeclared id fails the parse where no row shows it. A uid or a path off `res://` may load.
+    if (read === UNDECLARED_ID) break;
+    if (read?.path.startsWith('res://') && !reads.has(read.path)) reads.set(read.path, read);
   }
   return [...reads.values()];
 }
+
+/** An `ExtResource` id that no heading declares (resource_format_text.cpp:125-151). */
+const UNDECLARED_ID = 'undeclared id';
 
 function sectionFailingRead(
   file: string,
   externalResources: readonly TscnExternalResource[],
   read: ValueRead
-): FailingFileRead | null {
+): FailingFileRead | typeof UNDECLARED_ID | null {
   if (read.kind === 'Resource') return literalFailingRead(read, 'section Resource');
   const ext = findExtResource(externalResources, read.id);
-  return ext ? { path: extResourcePathIn(file, ext.path), kind: 'section ExtResource', uid: '' } : null;
+  return ext
+    ? { path: extResourcePathIn(file, ext.path), kind: 'section ExtResource', uid: '' }
+    : UNDECLARED_ID;
 }
 
 function literalFailingRead(read: LiteralRead, kind: FailingReadKind): FailingFileRead | null {

@@ -44,10 +44,13 @@ export function FrameOnOpen({ rootScenePath, hasScene, view, heard }: FrameOnOpe
       // A call waits for a stage, so a fit while none is bound would land on a later one.
       if (isCancelled || !camera.isInsideTree()) return;
       await camera.call('focus');
+      const pose = await camera.get('transform');
+      if (isCancelled) return;
+      framedPose = pose;
       // A focus through a previewed Camera3D frames nothing, so the next return to the 3D mode frames.
-      if (!isPreviewing.current) framedRoot.current = rootScenePath;
-      framedPose = await camera.get('transform');
-      if (!isPreviewing.current) framedRootPose.current = framedPose;
+      if (isPreviewing.current) return;
+      framedRoot.current = rootScenePath;
+      framedRootPose.current = pose;
     };
     const fitUnlessMoved = async () => {
       const pose = await camera.get('transform');
