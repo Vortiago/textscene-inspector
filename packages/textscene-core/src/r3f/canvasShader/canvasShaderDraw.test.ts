@@ -12,7 +12,7 @@ import {
   type CanvasShader,
 } from './canvasShaderDraw';
 import type { CanvasShaderCommand } from './canvasCommands';
-import { geometryBoxUserData } from '../bounds';
+import { computeWorldBoundingBox } from '../bounds';
 
 const VALID = 'shader_type canvas_item;\nvoid fragment() { COLOR = vec4(UV, 0.5, 1.0); }\n';
 const INVALID = 'shader_type canvas_item;\nvoid fragment() { COLOR = 1; }\n';
@@ -145,10 +145,12 @@ describe('canvasShaderDraw', () => {
     expect(box).toEqual(new THREE.Box3(new THREE.Vector3(0, -4, 0), new THREE.Vector3(8, -0, 0)));
   });
 
-  it('marks each batch as bounded by its geometry box, which the framing box reads', () => {
-    const batches = drawOf([RECT_COMMAND, meshCommand()]).object.children;
+  it('frames each batch by its item rect, a mesh of emulated points too', () => {
+    const sizedPoints = 'shader_type canvas_item;\nvoid vertex() { POINT_SIZE = 4.0; }\n';
+    const batches = drawOf([RECT_COMMAND, meshCommand('points')], itemOf(sizedPoints)).object.children;
 
-    for (const batch of batches) expect(batch.userData).toMatchObject(geometryBoxUserData());
+    const itemRect = new THREE.Box3(new THREE.Vector3(0, -4, 0), new THREE.Vector3(8, 0, 0));
+    expect(batches.map((batch) => computeWorldBoundingBox(batch))).toEqual([itemRect, itemRect]);
   });
 
   it('bounds a rect batch by the rects setSource gives last', () => {

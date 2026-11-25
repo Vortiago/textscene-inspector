@@ -6,6 +6,7 @@ import { OTHER_DRAWS_SURFACE } from '../materials/useOneSurfaceStartingMaterial.
 import { SURFACE_DRAW_STATE, followSurfaceDrawState } from '../surfaceDrawState.js';
 import { observeSceneCamera } from '../sceneRenderCamera.js';
 import { surfaceWriteOf, withGodotSurface } from './godotSurfaceWrite.js';
+import { geometryBoxUserData } from '../bounds.js';
 
 type SurfaceHost = THREE.Object3D & { geometry: THREE.BufferGeometry };
 
@@ -63,6 +64,8 @@ function emulated(host: SurfaceHost, drawGroup: number | null, material: THREE.M
   );
   emulatedGroups.set(drawn, drawGroup);
   builtFrom.set(drawn, surfaceWriteOf(host.geometry));
+  // The quads copy the surface's box. Under an instanced host one surface is not the draw.
+  if (!(host as THREE.InstancedMesh).isInstancedMesh) Object.assign(drawn.userData, geometryBoxUserData());
   return drawn;
 }
 
