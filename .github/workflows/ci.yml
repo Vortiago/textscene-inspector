@@ -287,7 +287,6 @@ jobs:
             apps/textscene-three-godot-shaders/tests/.godot-answers/heads.json
           if-no-files-found: error
           include-hidden-files: true
-          retention-days: 1
 
   # Its own job, so neither it nor the scene comparison shares the probes' time limit. It reads the
   # live answers the Shader package job recorded, without a second Godot run.
