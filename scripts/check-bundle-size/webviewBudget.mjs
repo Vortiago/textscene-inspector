@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { ENTRY, WEBVIEW_DIR, formatKb } from './paths.mjs';
 
 // Growth inside the ceiling is invisible in a PASS line, so the report reads it against the last measure.
-const MEASURED_GZ = 1_794_916;
+const MEASURED_GZ = 1_794_971;
 // A change that outgrows it, with no shrink found, raises it by its measured growth (ADR-0090).
 const BUDGET_GZ = 1_795_118;
 
