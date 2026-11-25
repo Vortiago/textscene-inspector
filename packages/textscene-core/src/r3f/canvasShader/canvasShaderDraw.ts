@@ -127,14 +127,16 @@ interface BoundVariant {
   readonly texelSize: TexelSize | undefined;
 }
 
-/** `commands` of one item drawn in order through Godot's canvas template with a user's shader. */
+/** `commands` of one item drawn in order through Godot's canvas template, batches from `firstOrder` on. */
 export function canvasShaderDraw(
   gl: THREE.WebGLRenderer,
   item: TranspiledCanvasItem,
   bound: ItemTexture,
-  commands: readonly CanvasShaderCommand[]
+  commands: readonly CanvasShaderCommand[],
+  firstOrder: number
 ): CanvasShaderDraw {
-  const object = new THREE.Group();
+  // An Object3D, not a Group: three takes the group order from the nearest Group, the canvas item's key.
+  const object = new THREE.Object3D();
   const usesLinearColors = bound.textureState.usesLinearColors ?? false;
   const canvas = { canvasModulate: WHITE, usesLinearColors };
   const bindings: CanvasTextureBinding[] = [];
@@ -156,7 +158,7 @@ export function canvasShaderDraw(
   );
   batches.forEach((batch, order) => {
     // Godot draws an item's batches in command order: three compares this order inside the item's group.
-    batch.object.renderOrder = order;
+    batch.object.renderOrder = firstOrder + order;
     object.add(batch.object);
   });
   const world = mutableTransform2D();

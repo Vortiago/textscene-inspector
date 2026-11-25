@@ -149,6 +149,7 @@ export function CanvasItem2D({
                       shader={shader}
                       {...shadedCommands}
                       finalModulate={tint.self}
+                      firstOrder={0}
                       fallback={pixels}
                     />
                   );

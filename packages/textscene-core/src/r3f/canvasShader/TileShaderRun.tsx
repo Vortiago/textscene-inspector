@@ -44,17 +44,16 @@ export function TileShaderRun({
   // A source with no texture, a pending one or a failed one draws nothing (`tile_map_layer.cpp:2676-2677`).
   if (!source.texture || drawn.missing || !texture || !commands) return null;
   return (
-    <group renderOrder={renderOrder}>
-      <CanvasShaderSlot
-        shader={shader}
-        commands={commands}
-        texture={texture}
-        canvasTexture={drawn.canvasTexture ?? undefined}
-        sampler={drawn.sampler}
-        finalModulate={finalModulate}
-        fallback={fallback}
-      />
-    </group>
+    <CanvasShaderSlot
+      shader={shader}
+      commands={commands}
+      texture={texture}
+      canvasTexture={drawn.canvasTexture ?? undefined}
+      sampler={drawn.sampler}
+      finalModulate={finalModulate}
+      firstOrder={renderOrder}
+      fallback={fallback}
+    />
   );
 }
 

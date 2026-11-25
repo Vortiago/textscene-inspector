@@ -38,6 +38,8 @@ interface CanvasShaderSlotProps extends CanvasItemCommands {
   shader: ShaderText;
   /** `Item::final_modulate`, in sRGB. */
   finalModulate: Rgba;
+  /** The `renderOrder` of the first batch, which orders it inside the canvas item's group. */
+  firstOrder: number;
   /** What the item draws while the translator loads, and for a shader it refuses. */
   fallback: ReactNode;
 }
@@ -50,6 +52,7 @@ export function CanvasShaderSlot({
   canvasTexture,
   sampler,
   finalModulate,
+  firstOrder,
   fallback,
 }: CanvasShaderSlotProps) {
   const gl = useThree((state) => state.gl);
@@ -87,8 +90,8 @@ export function CanvasShaderSlot({
     () =>
       item &&
       sampling &&
-      module!.canvasShaderDraw(gl, item, { texture, maps, textureState, sampling }, commands),
-    [module, gl, item, texture, maps, textureState, sampling, commands]
+      module!.canvasShaderDraw(gl, item, { texture, maps, textureState, sampling }, commands, firstOrder),
+    [module, gl, item, texture, maps, textureState, sampling, commands, firstOrder]
   );
   useEffect(() => (draw ? draw.dispose : undefined), [draw]);
   useLayoutEffect(() => {

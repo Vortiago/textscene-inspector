@@ -29,6 +29,7 @@ async function renderSlot(code: string) {
       canvasTexture={undefined}
       sampler={{ filter: 0, repeat: 0 }}
       finalModulate={WHITE}
+      firstOrder={0}
       fallback={<group name="fallback" />}
     />
   );
@@ -72,6 +73,6 @@ describe('CanvasShaderSlot', () => {
     const renderer = await renderSlot('shader_type canvas_item;\nvoid fragment() { COLOR = vec4(1.0); }\n');
     await settle();
 
-    expect(drawn(renderer)).toEqual(['Group:']);
+    expect(drawn(renderer)).toEqual(['Object3D:']);
   });
 });

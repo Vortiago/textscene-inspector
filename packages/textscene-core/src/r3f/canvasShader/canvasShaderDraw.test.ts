@@ -57,7 +57,7 @@ function meshCommand(primitive: 'triangles' | 'points' = 'triangles'): CanvasSha
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 
-function drawOf(commands: readonly CanvasShaderCommand[] = [RECT_COMMAND], item = itemOf()) {
+function drawOf(commands: readonly CanvasShaderCommand[] = [RECT_COMMAND], item = itemOf(), firstOrder = 0) {
   const texture = new THREE.DataTexture(new Uint8Array(8 * 4 * 4), 8, 4);
   return canvasShaderDraw(
     gl,
@@ -68,7 +68,8 @@ function drawOf(commands: readonly CanvasShaderCommand[] = [RECT_COMMAND], item 
       textureState: GODOT_CANVAS_TEXTURE_STATE,
       sampling: GODOT_SAMPLING,
     },
-    commands
+    commands,
+    firstOrder
   );
 }
 
@@ -105,6 +106,18 @@ describe('canvasShaderDraw', () => {
     expect(((object.children[0] as THREE.Mesh).geometry as THREE.InstancedBufferGeometry).instanceCount).toBe(
       2
     );
+  });
+
+  it('starts the batches at the first order it is given', () => {
+    const { object } = drawOf([RECT_COMMAND, meshCommand()], itemOf(), 5);
+
+    expect(object.children.map((batch) => batch.renderOrder)).toEqual([5, 6]);
+  });
+
+  it("holds its batches in no Group, so the canvas item's group keeps deciding three's group order", () => {
+    const { object } = drawOf();
+
+    expect((object as THREE.Group).isGroup).toBeUndefined();
   });
 
   it('draws a mesh of points through the points variant', () => {
