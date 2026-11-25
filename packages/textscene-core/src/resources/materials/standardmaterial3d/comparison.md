@@ -197,3 +197,4 @@ With `?litSurface=nodes`, the material draws the shader text Godot generates for
 - **Shader missing** `proximity_fade_*` and `distance_fade_*` decide the pass but are not rendered, so the surface stays at full opacity.
 - **Not supported** On the node lit surface, skinned meshes, MultiMeshes, particle passes, next passes and glTF surfaces draw the classic material (#2013).
 - **Not supported** On the node lit surface, an OmniLight3D or a SpotLight3D lights no material (#1455).
+- **Not supported** On the node lit surface, a material draws no lightmap and no GeometryInstance3D `transparency` fade (#2155).

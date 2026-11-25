@@ -82,4 +82,8 @@ describe('materialParameters', () => {
     expect(textureParameterOf('anisotropy_flowmap')).toBe('texture_flowmap');
     expect(textureParameterOf('albedo_color')).toBeUndefined();
   });
+
+  it('names no sampler for a property that shares a name with an Object member', () => {
+    expect(textureParameterOf('constructor')).toBeUndefined();
+  });
 });

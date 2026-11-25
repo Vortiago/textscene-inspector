@@ -135,7 +135,8 @@ const TEXTURE_PARAMETERS: Readonly<Record<string, string>> = {
 };
 
 /** The sampler parameter of the texture property `property`, or nothing for any other property. */
-export const textureParameterOf = (property: string): string | undefined => TEXTURE_PARAMETERS[property];
+export const textureParameterOf = (property: string): string | undefined =>
+  Object.hasOwn(TEXTURE_PARAMETERS, property) ? TEXTURE_PARAMETERS[property] : undefined;
 
 /** The parameter `set_texture` gives the albedo texture's size (`material.cpp:2545`). */
 export const ALBEDO_TEXTURE_SIZE = 'albedo_texture_size';
