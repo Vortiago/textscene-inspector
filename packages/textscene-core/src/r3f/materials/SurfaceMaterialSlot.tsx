@@ -5,7 +5,7 @@
  * for any surface count.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { MISSING_TEXTURE_MATERIAL } from '../../resources/materials/standardmaterial3d/materialBag';
 import { drawnBag, materialBagElement, StandardMaterialSlot } from './StandardMaterialSlot';
 import { pointDrawOf, type ListedSurface } from './godotPoint';
@@ -13,7 +13,10 @@ import { particleDrawOf, type ParticleProgram } from './godotParticles';
 import type { ScopedReference } from '../../resources/reading';
 import { useShadedSurfaceMaterial } from './useSurfaceMaterial';
 import { SpatialShaderSlot } from '../spatialShader/SpatialShaderSlot';
+import type { SurfaceShaderSource } from '../spatialShader/surfaceShader';
+import type { ShaderText } from '../../resources/materials/shadermaterial/types';
 import { warnUndrawnShader, type UndrawnShaderSurface } from './useMaterial';
+import type { MaterialAttach } from './swappedMaterials';
 
 interface SurfaceMaterialSlotProps {
   /** The material this surface renders with; undefined = the renderer's default. */
@@ -66,14 +69,31 @@ export function SurfaceMaterialSlot({
   useEffect(() => {
     if (shader && undrawnOn) warnUndrawnShader(shader, undrawnOn);
   }, [shader, undrawnOn]);
+  // Points and lines keep the classic point size and line placement unless a user's shader draws them.
+  const drawsShader = shaded !== null && !undrawnOn && !(listed && !shader);
   const standard = bags ? (
     <StandardMaterialSlot bags={bags} attach={attach} draws={draws} />
   ) : (
     materialBagElement(drawnBag(MISSING_TEXTURE_MATERIAL, draws), attach, null)
   );
-  // Points and lines keep the classic point size and line placement unless a user's shader draws them.
-  if (!shaded || undrawnOn || (listed && !shader)) return standard;
-  return <SpatialShaderSlot source={shaded} attach={attach} fallback={standard} />;
+  if (!drawsShader) return standard;
+  if (!bags || !drawsClassicVariants(shaded, shader)) {
+    return <SpatialShaderSlot source={shaded} attach={attach} fallback={standard} />;
+  }
+  // A generated shader keeps the classic alpha-pass variant, which a geometry instance's fade swaps in.
+  const unfaded = (classic: ReactNode, mount: string | MaterialAttach | undefined) => (
+    <SpatialShaderSlot source={shaded} attach={mount} fallback={classic} />
+  );
+  return <StandardMaterialSlot bags={bags} attach={attach} draws={draws} unfaded={unfaded} />;
+}
+
+/**
+ * True for a StandardMaterial3D or Godot's default material, whose classic variants draw as Godot does.
+ * A user's shader has none, and the classic path declines an ORMMaterial3D.
+ */
+function drawsClassicVariants(shaded: SurfaceShaderSource, shader: ShaderText | null): boolean {
+  if (shader) return false;
+  return 'shader' in shaded || shaded.baseMaterial.materialClass === 'StandardMaterial3D';
 }
 
 /** The surface a spatial shader falls back on, or null for a mesh's own surface, which draws it. */

@@ -4,6 +4,7 @@
  * GeometryInstance3D drawer it mounts the unfaded and the alpha-pass bag, which the cull swaps.
  */
 
+import type { ReactNode } from 'react';
 import type * as THREE from 'three';
 import type { StandardMaterialBag } from '../../resources/materials/standardmaterial3d/materialBag';
 import { composeInjections, materialProgramInputs } from '../materialProgramInputs';
@@ -23,6 +24,11 @@ interface StandardMaterialSlotProps {
   /** R3F attach key: `material-0` for multi-surface meshes. */
   attach?: string;
   draws?: SurfaceDraws;
+  /**
+   * The unfaded pass's element, given the classic one and its mount: the node lit surface draws it
+   * through Godot's generated shader. Undefined draws the classic one.
+   */
+  unfaded?: (classic: ReactNode, mount: string | MaterialAttach | undefined) => ReactNode;
 }
 
 /** How a material draws a surface that is not one plain mesh. */
@@ -35,13 +41,18 @@ export interface SurfaceDraws {
   particles?: { draw: ParticleDraw; program: ParticleProgram };
 }
 
-export function StandardMaterialSlot({ bags, attach, draws = {} }: StandardMaterialSlotProps) {
+export function StandardMaterialSlot({ bags, attach, draws = {}, unfaded }: StandardMaterialSlotProps) {
   const lightmap = useInstanceLightmap();
   return (
     <FadedMaterials attach={attach}>
-      {(pass, mount) =>
-        materialBagElement(drawnBag(bags[pass], draws), mount, pass === 'unfaded' ? lightmap : null)
-      }
+      {(pass, mount) => {
+        const classic = materialBagElement(
+          drawnBag(bags[pass], draws),
+          mount,
+          pass === 'unfaded' ? lightmap : null
+        );
+        return pass === 'unfaded' && unfaded ? unfaded(classic, mount) : classic;
+      }}
     </FadedMaterials>
   );
 }

@@ -5,7 +5,13 @@ import type { PointDraw } from '../../shaders/spatial/spatialPipeline';
 import { projectRoughnessLimiter } from '../../parser/projectSettingsParser';
 import { memoisedImport } from '../../resources/memoisedImport';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext';
-import { drawGroupOf, materialAt, placeMaterial, type MaterialHost } from '../materials/swappedMaterials';
+import {
+  drawGroupOf,
+  materialAt,
+  placeMaterial,
+  type MaterialAttach,
+  type MaterialHost,
+} from '../materials/swappedMaterials';
 import { OTHER_DRAWS_SURFACE } from '../materials/useOneSurfaceStartingMaterial';
 import { useShaderTextures } from '../shaderTextures/shaderTextures';
 import { useTexture2DSize } from '../../resources/useTexture2D';
@@ -24,8 +30,8 @@ const GENERATED_LOAD_FAILURE =
 
 interface SpatialShaderSlotProps {
   source: SurfaceShaderSource;
-  /** R3F attach key: `material-N` for a mesh of several surfaces. */
-  attach?: string;
+  /** R3F attach key: `material-N` for a mesh of several surfaces, or a fade's swap of one surface. */
+  attach?: string | MaterialAttach;
   /** What the surface draws while the translator loads, and for a shader it refuses. */
   fallback: ReactNode;
 }
@@ -91,20 +97,31 @@ type SurfaceModule = Pick<SpatialSurfaceModule, 'withGodotSurface' | 'drawPoints
 
 /** Godot's attributes before the material: three builds the program from the attributes of the first draw. */
 function godotSurfaceAttach(
-  attach: string | undefined,
+  attach: string | MaterialAttach | undefined,
   module: SurfaceModule,
   pointDraw: PointDraw | null,
   scene: THREE.Scene
 ) {
-  const drawGroup = drawGroupOf(attach);
+  const placed = typeof attach === 'function' ? attach : placedAt(drawGroupOf(attach));
+  const drawGroup = typeof attach === 'function' ? null : drawGroupOf(attach);
   return (host: GodotSurfaceHost, material: THREE.Material) => {
     if (host.geometry.getAttribute('position')) module.withGodotSurface(host.geometry);
-    const previous = materialAt(host, drawGroup);
     const stopPoints = pointDraw && module.drawPoints(host, drawGroup, material, pointDraw, scene);
-    placeMaterial(host, drawGroup, stopPoints ? OTHER_DRAWS_SURFACE : material);
+    const detach = placed(host, stopPoints ? OTHER_DRAWS_SURFACE : material);
     return () => {
       stopPoints?.();
-      if (previous) placeMaterial(host, drawGroup, previous);
+      detach();
     };
   };
 }
+
+/** Places a material at `drawGroup`, and puts back the one it replaced on detach. */
+const placedAt =
+  (drawGroup: number | null): MaterialAttach =>
+  (host, material) => {
+    const previous = materialAt(host, drawGroup);
+    placeMaterial(host, drawGroup, material);
+    return () => {
+      if (previous) placeMaterial(host, drawGroup, previous);
+    };
+  };
