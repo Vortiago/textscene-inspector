@@ -12,7 +12,7 @@ export const DEFAULT_MATERIAL_ROUGHNESS = 0.8;
 /** `METALLIC = 0.2` in `fragment()` (`scene_shader_forward_clustered.cpp:922`). */
 export const DEFAULT_MATERIAL_METALLIC = 0.2;
 
-/** A surface with no material draws this text, not a generated one (`scene_shader_forward_clustered.cpp:909`). */
+/** No material draws this text, not a generated one (`scene_shader_forward_clustered.cpp:909`). */
 export const DEFAULT_MATERIAL_SHADER = `// Default 3D material shader (Forward+).
 
 shader_type spatial;
