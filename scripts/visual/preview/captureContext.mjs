@@ -91,7 +91,7 @@ export async function createCaptureContext(
   }
   await context.addInitScript(installStyle, paintedOutChromeCss({ canvas2D }));
   await context.addInitScript(installTimingLog);
-  context.on('page', printTimingLines);
+  context.on?.('page', printTimingLines);
   return context;
 }
 
