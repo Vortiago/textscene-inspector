@@ -3,7 +3,9 @@
 ; One variable: a ShaderMaterial of shader_type canvas_item on the items that are not a sprite: tiles,
 ; a Polygon2D, a Line2D, a MeshInstance2D and an AnimatedSprite2D. Each draws the same shader, which
 ; mixes its texture with its UV, so a wrong UV, texel or vertex colour shows. The tiles flip and
-; transpose, sit in a padded atlas, and one tile draws its own shader in place of the layer's.
+; transpose, sit in a padded atlas, and one tile draws its own shader in place of the layer's. No other
+; golden draws a canvas_item shader on these items, so none shows a regression in it. One scene holds
+; the five because they share one draw, the template's rect and mesh commands, and one shader text.
 
 [ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
 

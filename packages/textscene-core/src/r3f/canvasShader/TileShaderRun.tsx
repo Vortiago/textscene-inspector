@@ -50,7 +50,7 @@ export function TileShaderRun({
   if (!source.texture || drawn.missing || !texture || !commands) return null;
   // Object3Ds keep the layer's canvas key. The fallback draws in layer pixels, so it undoes the item's place.
   return (
-    <object3D position={[itemOrigin.x, 0 - itemOrigin.y, 0]}>
+    <object3D position={[itemOrigin.x, -itemOrigin.y, 0]}>
       <CanvasShaderSlot
         shader={shader}
         commands={commands}

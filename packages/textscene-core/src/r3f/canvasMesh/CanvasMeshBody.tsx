@@ -87,9 +87,11 @@ export function CanvasMeshBody<Input>({
   children,
 }: CanvasMeshBodyProps<Input>) {
   const { view, canvasTexture, source, sampler, atlasCell } = texture[DRAWN_TEXTURE];
+  // Kept per surfaces: a texture swap keeps the mesh arrays, so the slot keeps its draw.
+  const surfaceLayout = useMemo(() => lazySurfaceCommands(surfaces), [surfaces]);
   const shadedCommands = useCallback(
-    () => shadedCommandsOf({ shaderRegion, surfaces, source, atlasCell, canvasTexture, sampler }),
-    [shaderRegion, surfaces, source, atlasCell, canvasTexture, sampler]
+    () => shadedCommandsOf({ shaderRegion, surfaceLayout, source, atlasCell, canvasTexture, sampler }),
+    [shaderRegion, surfaceLayout, source, atlasCell, canvasTexture, sampler]
   );
   // Godot draws a cycle's viewports in tree order, each sampling the other's last frame
   // (`renderer_viewport.cpp:91-126`). The previewer cannot, so it shows the placeholder.
@@ -182,9 +184,9 @@ function SurfaceMesh({ surface, map, tint, pixelMaterial }: DrawnSurfaces & { su
   );
 }
 
-interface ShadedSources<Input> {
+interface ShadedSources {
   shaderRegion: CanvasRectRegion | undefined;
-  surfaces: CanvasSurfaces | MaterialSurfaces<Input>;
+  surfaceLayout: () => readonly CanvasShaderCommand[] | null;
   source: THREE.Texture | null;
   atlasCell: AtlasCell | undefined;
   canvasTexture: CanvasItemCommands['canvasTexture'];
@@ -192,19 +194,31 @@ interface ShadedSources<Input> {
 }
 
 /** The rect or the surfaces a shader draws, with an AtlasTexture's whole atlas, as Godot binds it. */
-function shadedCommandsOf<Input>({
+function shadedCommandsOf({
   shaderRegion,
-  surfaces,
+  surfaceLayout,
   source,
   atlasCell,
   ...sampled
-}: ShadedSources<Input>): CanvasItemCommands | null {
+}: ShadedSources): CanvasItemCommands | null {
   const texture = atlasCell ? atlasCell.sheet : source;
-  const commands = shaderRegion
-    ? shadedRect(shaderRegion, source, atlasCell)
-    : surfaces &&
-      (isMaterialSurfaces(surfaces) ? (surfaces.shadedCommands?.() ?? null) : surfaceCommands(surfaces));
+  const commands = shaderRegion ? shadedRect(shaderRegion, source, atlasCell) : surfaceLayout();
   return commands ? { commands, texture, ...sampled } : null;
+}
+
+/** The commands of `surfaces`, built on the first ask and kept. Null: the template cannot draw them. */
+function lazySurfaceCommands<Input>(
+  surfaces: CanvasSurfaces | MaterialSurfaces<Input>
+): () => readonly CanvasShaderCommand[] | null {
+  let built: readonly CanvasShaderCommand[] | null | undefined;
+  return () => (built === undefined ? (built = surfaceCommandsOf(surfaces)) : built);
+}
+
+function surfaceCommandsOf<Input>(
+  surfaces: CanvasSurfaces | MaterialSurfaces<Input>
+): readonly CanvasShaderCommand[] | null {
+  if (!surfaces) return null;
+  return isMaterialSurfaces(surfaces) ? (surfaces.shadedCommands?.() ?? null) : surfaceCommands(surfaces);
 }
 
 /** A sprite's rect, none with no texture (`sprite_2d.cpp:159-161`) or a region wholly in the margin. */

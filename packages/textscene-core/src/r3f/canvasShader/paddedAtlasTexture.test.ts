@@ -18,6 +18,9 @@ function textureOf(): THREE.DataTexture {
   return new THREE.DataTexture(new Uint8Array(2 * 2 * 4).fill(255), 2, 2);
 }
 
+/** The release disposes in a microtask, so a test waits one out. */
+const flushMicrotasks = () => Promise.resolve();
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -42,5 +45,22 @@ describe('useRuntimeAtlasTexture', () => {
     const second = renderHook(() => useRuntimeAtlasTexture(texture, SOURCE));
 
     expect(second.result.current).toBe(first.result.current);
+  });
+
+  it('disposes the shared copy when its last run releases it', async () => {
+    const texture = textureOf();
+    const first = renderHook(() => useRuntimeAtlasTexture(texture, SOURCE));
+    const second = renderHook(() => useRuntimeAtlasTexture(texture, SOURCE));
+    const onDispose = vi.fn();
+    first.result.current!.addEventListener('dispose', onDispose);
+
+    first.unmount();
+    await flushMicrotasks();
+    const disposedWhileHeld = onDispose.mock.calls.length;
+    second.unmount();
+    await flushMicrotasks();
+
+    expect(disposedWhileHeld).toBe(0);
+    expect(onDispose).toHaveBeenCalledTimes(1);
   });
 });
