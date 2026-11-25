@@ -46,8 +46,8 @@ export const CANVAS_VARIANT_DEFINES: Readonly<Record<CanvasVariant, string>> = {
   attributes_points: '#define USE_ATTRIBUTES\n#define USE_POINT_SIZE\n',
 };
 
-/** The variants that write `gl_PointSize`. */
-const POINT_VARIANTS: ReadonlySet<CanvasVariant> = new Set(['primitive_points', 'attributes_points']);
+const writesPointSize = (variant: CanvasVariant) =>
+  CANVAS_VARIANT_DEFINES[variant].includes('USE_POINT_SIZE');
 
 /** One template for every variant: the defines key each stage in the memo, which lives with the page. */
 const CANVAS: ProgramTemplate = {
@@ -159,7 +159,7 @@ function stages({ linked, resources, parameterValues }: LinkedProgram, variant: 
       ['gl_InstanceIndex', int(instanceIndex) as unknown as Node],
     ]),
     // The default `point_size` is 1. A user's `POINT_SIZE` arrives with user canvas shaders.
-    { name: 'gl_Position', type: 'vec4', beside: POINT_VARIANTS.has(variant) ? [NATIVE_POINT_SIZE] : [] },
+    { name: 'gl_Position', type: 'vec4', beside: writesPointSize(variant) ? [NATIVE_POINT_SIZE] : [] },
     resources
   );
   const fragment = emitTemplateStage(

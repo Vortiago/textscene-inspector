@@ -175,8 +175,7 @@ function polygonObjects(draws, { polygon, texture }) {
     ? polygon.uvs.map(([x, y]) => ({ x: x / texture.width, y: y / texture.height }))
     : [];
   const command = triangleArrayCommand(triangulateOutline(points), points, colors.map(rgba), uvs);
-  const { draw } = draws.draw('attributes', polygon.isTextured);
-  return [attributesObject(draw, attributesGeometry(command), 'triangles', polygonConstants(draws.itemDraw))];
+  return [polygonObject(draws, command, polygon.isTextured)];
 }
 
 /** `draw_polygon` (`canvas_item.cpp:970`): the outline cut into triangles, its colours and UVs as given. */
@@ -186,8 +185,13 @@ function drawnPolygonObjects(draws, { polygon }) {
     polygon.colors.map(rgba),
     polygon.uvs.map(vector2)
   );
-  const { draw } = draws.draw('attributes', polygon.isTextured);
-  return [attributesObject(draw, attributesGeometry(command), 'triangles', polygonConstants(draws.itemDraw))];
+  return [polygonObject(draws, command, polygon.isTextured)];
+}
+
+/** One polygon command through the attributes variant, with the item's push constants. */
+function polygonObject(draws, command, isTextured) {
+  const { draw } = draws.draw('attributes', isTextured);
+  return attributesObject(draw, attributesGeometry(command), 'triangles', polygonConstants(draws.itemDraw));
 }
 
 /** `Geometry2D::triangulate_polygon`, which `polygonCommand` runs. */

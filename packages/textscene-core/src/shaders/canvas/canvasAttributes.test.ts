@@ -136,7 +136,7 @@ describe('primitiveObject', () => {
   it('draws a strip as its triangles, every second one turned', () => {
     const strip = primitiveObject('triangle_strip', geometry(), material) as THREE.Mesh;
 
-    expect([...strip.geometry.index!.array]).toEqual([0, 1, 2, 2, 1, 3]);
+    expect([...strip.geometry.index!.array]).toEqual([0, 1, 2, 1, 3, 2]);
   });
 });
 

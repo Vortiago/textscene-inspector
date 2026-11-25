@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 import type { Rgba } from '../../godot/math/math.js';
-import { triangulatePolygon } from '../../godot/math/triangulate.js';
+import { stripToTriangles, triangulatePolygon } from '../../godot/math/triangulate.js';
 import { multiplyTransform2D, type Transform2DColumns } from '../../godot/math/transform2d.js';
 import type { Vector2 } from '../../godot/math/vector.js';
 import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
 import type { CanvasPrimitive } from './canvasPrimitive.js';
-import { type CanvasItemDraw, modulated, NO_INSTANCE_UNIFORMS, worldOf } from './canvasInstance.js';
+import { type CanvasItemDraw, modulated, NO_INSTANCE_UNIFORMS, WHITE, worldOf } from './canvasInstance.js';
 import type { CanvasDraw, CanvasVariant } from './transpileCanvas.js';
 
 /** The vertex arrays of `Item::CommandPolygon`, or of one surface of a mesh. */
@@ -39,8 +39,8 @@ export function triangleArrayCommand(
   colors: readonly Rgba[],
   uvs: readonly Vector2[]
 ): CanvasVertexArrays {
-  const hasColors = colors.length === 0 || colors.length === 1 || colors.length === points.length;
-  if (!hasColors || (uvs.length !== 0 && uvs.length !== points.length))
+  const isColorCountValid = colors.length === 0 || colors.length === 1 || colors.length === points.length;
+  if (!isColorCountValid || (uvs.length !== 0 && uvs.length !== points.length))
     throw new Error(
       `expected 0, 1 or ${points.length} colours and 0 or ${points.length} UVs, got ${colors.length} and ${uvs.length}`
     );
@@ -100,8 +100,6 @@ export interface AttributesConstants {
 export function polygonConstants(item: CanvasItemDraw): AttributesConstants {
   return { world: item.transform, modulation: modulated(WHITE, item) };
 }
-
-const WHITE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 
 /** `Item::CommandMesh` past its mesh: `draw_mesh`'s transform and modulate. */
 export interface CanvasMeshPlacement {
@@ -214,19 +212,14 @@ function objectOf(primitive: CanvasPrimitive, geometry: THREE.BufferGeometry, ma
     case 'triangles':
       return new THREE.Mesh(geometry, material);
     case 'triangle_strip':
-      return new THREE.Mesh(stripTriangles(geometry), material);
+      return new THREE.Mesh(stripGeometry(geometry), material);
   }
 }
 
-/** The triangles of a strip: each three indices in a row, with every second triangle's order turned. */
-function stripTriangles(geometry: THREE.BufferGeometry): THREE.BufferGeometry {
-  const count = geometry.index?.count ?? geometry.getAttribute('vertex_attrib').count;
-  const at = (index: number) => geometry.index?.getX(index) ?? index;
-  const indices: number[] = [];
-  for (let first = 0; first + 2 < count; first++)
-    indices.push(
-      ...(first % 2 ? [at(first + 1), at(first), at(first + 2)] : [at(first), at(first + 1), at(first + 2)])
-    );
-  geometry.setIndex(indices);
+/** Reads the strip from the index that `attributesGeometry` always sets. */
+function stripGeometry(geometry: THREE.BufferGeometry): THREE.BufferGeometry {
+  const strip = geometry.index;
+  if (!strip) throw new Error('expected an indexed strip geometry, got one with no index');
+  geometry.setIndex(new THREE.BufferAttribute(stripToTriangles(strip.array), 1));
   return geometry;
 }

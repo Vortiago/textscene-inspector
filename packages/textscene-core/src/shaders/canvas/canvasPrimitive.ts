@@ -2,7 +2,13 @@ import type * as THREE from 'three';
 import { makeHalfFloat } from '../../godot/math/halfFloat.js';
 import type { Rgba } from '../../godot/math/math.js';
 import { VECTOR2_ZERO, type Vector2 } from '../../godot/math/vector.js';
-import { type CanvasItemDraw, instanceBatchGeometry, instanceRecord, modulated } from './canvasInstance.js';
+import {
+  type CanvasItemDraw,
+  instanceBatchGeometry,
+  instanceRecord,
+  modulated,
+  WHITE,
+} from './canvasInstance.js';
 import type { CanvasVariant } from './transpileCanvas.js';
 
 /** `Item::CommandPrimitive`: each point with its UV and colour. */
@@ -11,8 +17,6 @@ export interface CanvasPrimitiveCommand {
   readonly uvs: readonly Vector2[];
   readonly colors: readonly Rgba[];
 }
-
-const WHITE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 
 /** `canvas_item_add_primitive` (`renderer_canvas_cull.cpp:1686`): a missing colour repeats the first. */
 export function primitiveCommand(

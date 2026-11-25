@@ -23,12 +23,14 @@ export const NOT_BUILT = 'taken by no variant Godot builds';
 
 const STAGES = ['vertex', 'fragment'];
 
+const CANVAS_STAGES = splitStages(CANVAS_FILE, (path) => TEMPLATE_FILES[path]);
+
 /** A material's defines with no code: what the default shader, or a shader of some rows, makes. */
 const NO_MATERIAL = { custom: [], hasUniforms: false, codeSections: [] };
 
 /** Each branch of `stage` by `file:line`, and whether `variant` with `material`'s defines takes it. */
 function decidedBranches(stage, variant, material) {
-  const lines = splitStages(CANVAS_FILE, (path) => TEMPLATE_FILES[path])[stage];
+  const lines = CANVAS_STAGES[stage];
   const defines = {
     general: GENERAL_DEFINES[CANVAS_FILE],
     variant: CANVAS_VARIANT_DEFINES[variant],
@@ -114,11 +116,11 @@ const drawnBranches = (stage, variants) =>
   );
 
 /** The rows of each branch some material takes in some variant, and every branch a variant decides. */
-function materialBranches(stage) {
+function materialBranches(stage, materials) {
   const takenBy = new Map();
   const decided = new Set();
   for (const variant of Object.keys(CANVAS_VARIANT_DEFINES))
-    for (const { material, rows } of [DEFAULT_SHADER, ...definedMaterials()])
+    for (const { material, rows } of materials)
       for (const { key, isTaken } of decidedBranches(stage, variant, material)) {
         decided.add(key);
         if (isTaken) takenBy.set(key, [...(takenBy.get(key) ?? []), ...rows]);
@@ -136,10 +138,11 @@ const openState = (rows) =>
  */
 export function canvasBranchStates(scenes) {
   const variants = drawnVariants(scenes);
+  const materials = [DEFAULT_SHADER, ...definedMaterials()];
   return Object.fromEntries(
     STAGES.map((stage) => {
       const drawn = drawnBranches(stage, variants);
-      const { takenBy, decided } = materialBranches(stage);
+      const { takenBy, decided } = materialBranches(stage, materials);
       const states = [...decided].map((key) => {
         if (drawn.has(key)) return [key, DRAWN];
         const rows = takenBy.get(key) ?? [];

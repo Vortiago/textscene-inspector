@@ -13,6 +13,8 @@ export interface CanvasItemDraw {
   readonly usesLinearColors?: boolean;
 }
 
+export const WHITE: Rgba = Object.freeze({ r: 1, g: 1, b: 1, a: 1 });
+
 /** `sizeof(InstanceData)` (`renderer_canvas_render_rd.h:379`). */
 const INSTANCE_BYTES = 128;
 

@@ -1,4 +1,5 @@
 import { warn } from '../../../logger.js';
+import { stripToTriangles } from '../../../godot/math/triangulate.js';
 import type { TscnInternalResource } from '../../../parser/types.js';
 import { materialPathInFile } from '../../materials/materialPathInFile.js';
 import { fileResources, type LoadedSection } from '../../resourceSection.js';
@@ -83,24 +84,6 @@ function drawOrderIndices(vertexCount: number): Uint32Array {
   const indices = new Uint32Array(vertexCount);
   for (let i = 0; i < vertexCount; i++) indices[i] = i;
   return indices;
-}
-
-/**
- * A triangle strip as a triangle list, as `Mesh::generate_triangle_mesh` reads it (`mesh.cpp:352-366`):
- * slot `j` makes the triangle `(j-2, j-1, j)`, and an odd `j` swaps the last two so each keeps one
- * winding. Fewer than three indices make no triangle.
- */
-function stripToTriangles(strip: Uint32Array): Uint32Array {
-  const triangleCount = Math.max(strip.length - 2, 0);
-  const triangles = new Uint32Array(triangleCount * 3);
-  for (let j = 2; j < strip.length; j++) {
-    const odd = j % 2 === 1;
-    const out = (j - 2) * 3;
-    triangles[out] = strip[j - 2]!;
-    triangles[out + 1] = strip[odd ? j : j - 1]!;
-    triangles[out + 2] = strip[odd ? j - 1 : j]!;
-  }
-  return triangles;
 }
 
 /**
