@@ -7,11 +7,8 @@ import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
 import type { CanvasPrimitive } from './canvasPrimitive.js';
 import { type CanvasItemDraw, modulated, NO_INSTANCE_UNIFORMS, WHITE, worldOf } from './canvasInstance.js';
 import { emulatedPointGeometry } from '../spatial/meshAttributes.js';
-import {
-  CUSTOM_ARRAY_LANES,
-  customArrayTemplateAttribute,
-  VERTEX_ID_ATTRIBUTE,
-} from '../template/surfaceAttributes.js';
+import { CUSTOM_ARRAY_LANES } from '../../godot/rendering/meshArrayFormat.js';
+import { customArrayTemplateAttribute, VERTEX_ID_ATTRIBUTE } from '../template/surfaceAttributes.js';
 import type { CanvasDraw, CanvasVariant } from './transpileCanvas.js';
 
 /** The vertex arrays of `Item::CommandPolygon`, or of one surface of a mesh. */

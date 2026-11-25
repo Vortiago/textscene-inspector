@@ -3,15 +3,11 @@ import type { Rgba } from '../../godot/math/math';
 import { rect2Intersection, type Rect2 } from '../../godot/math/rect2';
 import { bottomUpV } from '../../godot/math/uv';
 import type { Vector2 } from '../../godot/math/vector';
+import { CUSTOM_ARRAY_LANES, MISSING_CUSTOM_LANES } from '../../godot/rendering/meshArrayFormat';
 import { geometryPrimitive } from '../../resources/meshes/godotSurface';
 import type { AtlasCellRects } from '../../resources/useTexture2D';
 import type { CanvasVertexArrays } from '../../shaders/canvas/canvasAttributes';
-import {
-  CANVAS_CUSTOM_ARRAYS,
-  CUSTOM_ARRAY_LANES,
-  customArrayAttribute,
-  MISSING_CUSTOM_LANES,
-} from '../../shaders/template/surfaceAttributes';
+import { CANVAS_CUSTOM_ARRAYS, customArrayAttribute } from '../../shaders/template/surfaceAttributes';
 import type { CanvasSurface } from '../canvasMesh/canvasSurface';
 
 /** `canvas_item_add_texture_rect_region` with a white modulate (`renderer_canvas_cull.cpp:1624`). */

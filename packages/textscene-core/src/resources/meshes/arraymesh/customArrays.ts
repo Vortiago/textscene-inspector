@@ -1,9 +1,12 @@
 import { halfToFloat } from '../../../godot/math/halfFloat.js';
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
-import { ArrayCustomFormat, CUSTOM_FORMAT_LANES } from '../../../godot/rendering/meshArrayFormat.js';
+import {
+  ArrayCustomFormat,
+  CUSTOM_FORMAT_LANES,
+  MISSING_CUSTOM_LANES,
+} from '../../../godot/rendering/meshArrayFormat.js';
 import type { CustomArraySlot, SurfaceLayout } from './surfaceFormat.js';
 import type { AttributeRecords } from './vertexBuffers.js';
-import { MISSING_CUSTOM_LANES } from '../../../shaders/template/surfaceAttributes.js';
 
 const readUnorm8 = (view: DataView, offset: number) => view.getUint8(offset) / 255;
 const readSnorm8 = (view: DataView, offset: number) => Math.max(view.getInt8(offset) / 127, -1);
