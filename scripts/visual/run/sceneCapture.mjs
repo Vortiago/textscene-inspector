@@ -5,6 +5,7 @@
  */
 
 import {
+  CANVAS_WAIT_MS,
   clearDiagnostics,
   describeFailedRequests,
   errorReport,
@@ -16,6 +17,17 @@ import {
 } from '../previewServer.mjs';
 import { pausePlayer, seekPlayer } from './seekAnimation.mjs';
 import { applySceneWrites, selectThroughConsole } from '../sceneWrites.mjs';
+
+/** Most scenes open in a few seconds, so a longer open is logged with its share of the canvas wait. */
+const SLOW_OPEN_MS = 10000;
+
+/** The line that logs a slow open against `CANVAS_WAIT_MS`, or null for an open under `SLOW_OPEN_MS`. */
+export function slowCanvasLine(sceneName, openMs) {
+  if (openMs < SLOW_OPEN_MS) return null;
+  const share = Math.round((openMs / CANVAS_WAIT_MS) * 100);
+  const seconds = (openMs / 1000).toFixed(1);
+  return `[visual]   ${sceneName}: opened in ${seconds} s, ${share} % of the ${CANVAS_WAIT_MS / 1000} s canvas wait`;
+}
 
 /**
  * `reason` with the requests the page lost, so a scene that never loads names the chunk or file
@@ -42,11 +54,14 @@ export async function captureScene(pageState, baseUrl, scene) {
   clearDiagnostics(diagnostics);
 
   // A silent stalled resource chain would become a baseline, so it is logged.
+  const openedAt = performance.now();
   const { target: canvas, reason: canvasReason } = await openScene(page, baseUrl, scene.file, {
     canvas2D,
     ...sceneQuery(scene),
     onSlow: (ms) => console.log(`[visual]   ${scene.name}: no network idle within ${ms}ms`),
   });
+  const waitLine = slowCanvasLine(scene.name, performance.now() - openedAt);
+  if (waitLine) console.log(waitLine);
   if (!canvas) return { buffer: null, reason: withFailedRequests(canvasReason, diagnostics) };
 
   try {
