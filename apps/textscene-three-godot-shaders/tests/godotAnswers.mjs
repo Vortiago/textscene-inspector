@@ -14,7 +14,7 @@ export const LIVE_DIR = join(import.meta.dirname, '.godot-answers');
 /** Written only by `pnpm godot:probes`: Godot's version, each family's digest and the smoke subset. */
 export const ANSWERS_FILE = join(import.meta.dirname, 'godot-answers.json');
 
-/** The value of `SHADER_ANSWERS` that makes a missing live run fail, as the Shader package job sets. */
+/** The `SHADER_ANSWERS` value that makes a missing live run fail. The Shader package and GPU jobs set it. */
 const LIVE_REQUIRED = 'live';
 
 export const livePath = (family) => join(LIVE_DIR, `${family}.json`);

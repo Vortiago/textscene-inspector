@@ -4,6 +4,7 @@ import {
   LinearFilter,
   LinearMipmapLinearFilter,
   LinearMipmapNearestFilter,
+  MirroredRepeatWrapping,
   NearestFilter,
   NearestMipmapLinearFilter,
   RepeatWrapping,
@@ -45,6 +46,7 @@ describe('samplerState', () => {
   it.each([
     ['repeat_enable', RepeatWrapping],
     ['repeat_disable', ClampToEdgeWrapping],
+    ['repeat_mirror', MirroredRepeatWrapping],
   ])('wraps %s with %s', (repeat, wrap) => {
     expect(samplerState(settings('filter_linear', repeat), 1, GODOT_SAMPLING).wrap).toBe(wrap);
   });

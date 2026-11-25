@@ -5,6 +5,8 @@ import { PNG } from 'pngjs';
 import { requireGodotVersion, runGodotScript } from '../../../../scripts/godot-probes/godotRun.mjs';
 import { withConsumerPage, writeJobSummary } from '../consumer.mjs';
 import { compareImages, TOLERANCE_STEPS } from './compareImages.mjs';
+import { CANVAS_MAIN_SCRIPT, canvasProjectFiles, parseCanvasOutput } from './godotCanvasScenes.mjs';
+import { CANVAS_SCENES } from './canvasScenes.mjs';
 import { MAIN_SCRIPT, parseShowcaseOutput, showcaseProjectFiles } from './godotShowcases.mjs';
 import { SHOWCASES } from './showcases.mjs';
 import { ALL_SCENES, DRAWN_SCENES } from './drawnScenes.mjs';
@@ -19,7 +21,7 @@ const SHOWCASE_DIR = join(import.meta.dirname, '../../guide/showcase');
 
 const showcaseImage = (name, side) => join(SHOWCASE_DIR, `${name}-${side}.png`);
 
-/** Godot's image of each showcase, each sky scene and each mesh scene, by name. */
+/** Godot's image of each showcase and of each sky, mesh and canvas scene, by name. */
 async function godotImages() {
   const [showcases, ...runs] = await Promise.all([
     runGodotScript(MAIN_SCRIPT, showcaseProjectFiles(SHOWCASES)).then(parseShowcaseOutput),
@@ -29,12 +31,13 @@ async function godotImages() {
     ...godotRuns(SKY_SCENES).map(({ scenes, options }) =>
       runGodotScript(SKY_MAIN_SCRIPT, skyProjectFiles(scenes), options).then(parseSkyOutput)
     ),
+    runGodotScript(CANVAS_MAIN_SCRIPT, canvasProjectFiles(CANVAS_SCENES)).then(parseCanvasOutput),
   ]);
   for (const run of [showcases, ...runs]) requireGodotVersion(run.godot);
   return new Map([...showcases.images, ...runs.flatMap((run) => [...run.images])]);
 }
 
-/** The page's image of each showcase, each sky scene and each mesh scene, by name. */
+/** The page's image of each showcase and of each sky, mesh and canvas scene, by name. */
 async function transpiledImages() {
   return withConsumerPage(
     { pageDir: join(import.meta.dirname, 'page'), module: 'e2ePage.js', harness: 'shaderEndToEnd' },

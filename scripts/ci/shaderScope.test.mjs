@@ -56,6 +56,14 @@ describe('isShaderOnly', () => {
   });
 });
 
+describe('isTranspilerPath', () => {
+  it('is false for the fixtures that a previewer test reads', () => {
+    expect(
+      isTranspilerPath('packages/textscene-core/src/shaders/shaderTextRule.fixtures/textWritingNode.txt')
+    ).toBe(false);
+  });
+});
+
 describe('changedPathsOf', () => {
   it('reads one path per line of the diff', () => {
     expect(changedPathsOf(`${LANGUAGE}parse.ts\nscripts/godot-probes/run.mjs\n`)).toEqual([
