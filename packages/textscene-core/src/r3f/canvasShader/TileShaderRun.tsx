@@ -47,7 +47,9 @@ export function TileShaderRun({
     return textureSize && tileRectCommands(cellsInAtlasGrid(cells, source, textureSize), tileSet, origin);
   }, [cells, source, drawn.texture, tileSet, originX, originY]);
   // A source with no texture, a pending one or a failed one draws nothing (`tile_map_layer.cpp:2676-2677`).
-  if (!source.texture || drawn.missing || !texture || !commands) return null;
+  if (!source.texture || drawn.missing || !drawn.texture) return null;
+  // No padded copy, as for a live viewport's pixels: Godot's default shader draws the run.
+  if (!texture || !commands) return <>{fallback}</>;
   // Object3Ds keep the layer's canvas key. The fallback draws in layer pixels, so it undoes the item's place.
   return (
     <object3D position={[itemOrigin.x, -itemOrigin.y, 0]}>

@@ -6,6 +6,7 @@ import { tileTextureAt } from '../../resources/tileset/testing/tileTexture';
 import { defaultTileData, type AtlasSourceModel, type TileGrid } from '../../resources/tileset/types';
 import type { ShaderText } from '../../resources/materials/shadermaterial/types';
 import type { CanvasShaderCommand } from './canvasCommands';
+import * as imagePixels from '../../resources/formats/image/imagePixels';
 import { TileShaderRun } from './TileShaderRun';
 
 /** What the mocked texture hook returns, set by each test and reset after it. */
@@ -70,11 +71,11 @@ function cellAt(x: number, atlasX: number): DrawableCell {
   };
 }
 
-function run(itemOrigin = { x: 0, y: 0 }, cells = [cellAt(0, 0)]) {
+function run(itemOrigin = { x: 0, y: 0 }, cells = [cellAt(0, 0)], source = SOURCE) {
   return ReactThreeTestRenderer.create(
     <TileShaderRun
       shader={SHADER}
-      source={SOURCE}
+      source={source}
       cells={cells}
       tileSet={{ ...GRID, usesUvClipping: false }}
       finalModulate={WHITE}
@@ -87,6 +88,7 @@ function run(itemOrigin = { x: 0, y: 0 }, cells = [cellAt(0, 0)]) {
 }
 
 afterEach(() => {
+  vi.restoreAllMocks();
   sampled.texture = null;
   sampled.missing = false;
   slotCommands.last = null;
@@ -129,5 +131,14 @@ describe('TileShaderRun', () => {
     await run(undefined, [cellAt(0, 0), cellAt(1, 3)]);
 
     expect(slotCommands.last).toHaveLength(1);
+  });
+
+  it('draws the fallback for a padded source whose pixels it cannot read', async () => {
+    sampled.texture = new THREE.DataTexture(new Uint8Array(32 * 16 * 4), 32, 16);
+    vi.spyOn(imagePixels, 'readImagePixels').mockReturnValue(undefined);
+    const renderer = await run(undefined, undefined, { ...SOURCE, usesTexturePadding: true });
+
+    expect(renderer.scene.findAll((node) => node.props.name === 'fallback')).toHaveLength(1);
+    expect(renderer.scene.findAll((node) => node.props.name === 'slot')).toHaveLength(0);
   });
 });
