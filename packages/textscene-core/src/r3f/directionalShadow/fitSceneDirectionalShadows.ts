@@ -177,6 +177,7 @@ function applySplits(sun: SplitSunLight, placement: LightPlacement, splits: Dire
   });
   splits.slots.forEach((slot, index) => sun.shadow._cascadeData[index]!.fromArray(slot));
   sun.shadow.rangeBegins.fromArray(splits.rangeBegins);
+  sun.shadow.depthBiases.fromArray(splits.depthBiases);
   sun.shadow.fade = splits.fade;
   sun.shadow.placeSplitFrusta();
 }

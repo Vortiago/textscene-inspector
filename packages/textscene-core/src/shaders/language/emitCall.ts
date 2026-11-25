@@ -32,8 +32,11 @@ export interface CallResult {
 
 /** The GLSL functions of one shader, each built at its first call. */
 export class CalledFunctions {
-  /** Written only by `functionNamed`, at a function's first call with each set of textures. */
-  private readonly built = new Map<string, GlslFunction>();
+  /** One map per build: three reuses a layout function's first code and names (`NodeBuilder.js:2759`). */
+  private readonly builtBy = new WeakMap<object, Map<string, GlslFunction>>();
+
+  /** The functions of the build under way. Written only by `buildingFor`. */
+  private built = new Map<string, GlslFunction>();
 
   /** Written only by `constantResult`, once for each function: nothing for one that does not fold. */
   private readonly constantResults = new Map<string, Lanes | undefined>();
@@ -63,6 +66,16 @@ export class CalledFunctions {
       (called) => this.constantResult(called)
     );
     return guards.lanesOf(only.expressions[0]!);
+  }
+
+  /** Builds the functions that `builder`'s program calls apart from every other build's. */
+  buildingFor(builder: object): void {
+    let built = this.builtBy.get(builder);
+    if (!built) {
+      built = new Map();
+      this.builtBy.set(builder, built);
+    }
+    this.built = built;
   }
 
   /** With a value for each argument but an `out` one. */

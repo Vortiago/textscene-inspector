@@ -17,6 +17,7 @@ WebGL has no specialisation constants. A uniform in place of the constant was me
 - A binding table writes a value as it writes a uniform. A new value tells each reader, and each reader emits its stages again: three keeps the first build of a function, so the same nodes cannot take a new literal.
 - `BoundNodeMaterial.customProgramCacheKey` adds the values, so three keeps one program for each set of values and reuses it.
 - The colour draw of a surface writes the constants, before three keys the first program (`onBeforeProgram`) and before each later draw. A shadow or depth draw writes none.
+- A constant starts at Godot's default for the pipeline, not at the template's declared value. `TemplateUniforms.presetSpecialisation` gives the first emit that value, so the first draw keeps the stages it starts with.
 
 **A block member that holds one value for each frame folds the same way.** Godot reads such members at run time, so its driver keeps their samplers. WebGL 2 counts every sampler the program reads and guarantees 16, and the lit template reads 24.
 

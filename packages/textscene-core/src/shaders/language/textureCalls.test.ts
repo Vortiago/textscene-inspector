@@ -3,6 +3,8 @@ import {
   Data3DTexture,
   DataArrayTexture,
   DataTexture,
+  DepthTexture,
+  LessEqualCompare,
   LinearMipmapLinearFilter,
   RGBAIntegerFormat,
   UnsignedIntType,
@@ -16,6 +18,7 @@ import {
 } from '../generatedShader.testkit.js';
 import { builtInCall } from './emitBuiltIn.js';
 import { instruction } from './instructions.js';
+import { GLSL_FUNCTION_ROWS } from '../template/glslBuiltIns.js';
 import { SamplerChoice } from './textureCalls.js';
 import { levelCountOf } from './textureQueries.js';
 import { treeOf } from './parsedTree.testkit.js';
@@ -27,12 +30,19 @@ const flat = () => texture(new DataTexture(new Uint8Array(4), 1, 1)) as unknown 
 const layers = () => texture(new DataArrayTexture(new Uint8Array(4), 1, 1, 1)) as unknown as Node;
 const volume = () => texture3D(new Data3DTexture(new Uint8Array(4), 1, 1, 1)) as unknown as Node;
 const uv = () => vec2(0.25, 0.75) as unknown as Node;
+
+function depth(): Node {
+  const atlas = new DepthTexture(1, 1);
+  atlas.compareFunction = LessEqualCompare;
+  return texture(atlas) as unknown as Node;
+}
 const lod = () => float(1.5) as unknown as Node;
 
-/** The GLSL of the call of row `id` over `operands`, written as a colour. */
+/** The GLSL of the call of row `id`, the shading language's or GLSL's own, over `operands`, as a colour. */
 function glslOf(id: string, operands: Node[]): string {
   const name = id.slice(0, id.indexOf('('));
-  const node = builtInCall(name, instruction(id)!, operands) as unknown as { x: Node };
+  const row = instruction(id) ?? GLSL_FUNCTION_ROWS.get(name)!.find((glslRow) => glslRow.id === id)!;
+  const node = builtInCall(name, row, operands) as unknown as { x: Node };
   return generatedFragmentShader(vec4(node as never) as unknown as Node);
 }
 
@@ -196,6 +206,21 @@ describe('builtInCall of a texture function', () => {
     const choice = new SamplerChoice(elements, int(1).toVar() as unknown as Node) as unknown as Node;
     const glsl = glslOf('texture(sampler2D,vec2)', [choice, uv()]);
     expect(glsl.match(/texture\( nodeUniform/g)).toHaveLength(2);
+  });
+
+  it('compares the third lane with the depth for a shadow sampler', () => {
+    const glsl = glslOf('texture(sampler2DShadow,vec3)', [depth(), vec3(0.25, 0.75, 0.5) as unknown as Node]);
+    expect(glsl).toMatch(/sampler2DShadow nodeUniform\d+;/);
+    expect(glsl).toMatch(/texture\( nodeUniform\d+, vec3\( .*0\.25, 0\.75.*, .*0\.5.* \) \)/);
+  });
+
+  it('divides the depth too for textureProj of a shadow sampler', () => {
+    const glsl = glslOf('textureProj(sampler2DShadow,vec4)', [
+      depth(),
+      vec4(0.5, 0.25, 1, 2) as unknown as Node,
+    ]);
+    expect(glsl).toMatch(/sampler2DShadow nodeUniform\d+;/);
+    expect(glsl).toMatch(/texture\( nodeUniform\d+, vec3\( \w+, \( vec4\(.*\)\.z \/ vec4\(.*\)\.w \) \) \)/);
   });
 
   it('divides the coordinate by its last lane for textureProj', () => {

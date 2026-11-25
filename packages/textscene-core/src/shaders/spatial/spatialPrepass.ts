@@ -9,8 +9,9 @@ import type { TemplateUniform } from '../template/templateUniforms.js';
 import { BoundNodeMaterial, type MaterialShader } from '../uniforms/boundMaterial.js';
 import { DEPTH_FLAGS, spatialPassMembership, type SpatialPipeline } from './spatialPipeline.js';
 import { setPosition, type EmittedStages } from './emittedStages.js';
+import { SCENE_DATA } from './sceneDataBlock.js';
 
-const THRESHOLD = 'scene_data_block.data.opaque_prepass_threshold';
+const THRESHOLD = `${SCENE_DATA}.opaque_prepass_threshold`;
 
 /** Which surfaces a renderer's depth prepass draws, and which it draws with the default material. */
 interface PrepassRule {

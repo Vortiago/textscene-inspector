@@ -17,6 +17,8 @@ const srcDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const FREED_OTHERWISE: Record<string, string> = {
   'shaders/sky/fogVolumeTextureNode.ts':
     'One empty 1x1x1 volume, shared by every sky that reads no fog, lives as long as the page.',
+  'shaders/language/comparedTextures.ts':
+    'One 1x1 depth, shared by every compared read while no shadow is bound, lives as long as the page.',
   'r3f/fog/fogUniforms.ts':
     "Each pass draws its texture as its own render target's, and three frees it with the target.",
   'r3f/decal/decalSlots.ts':
