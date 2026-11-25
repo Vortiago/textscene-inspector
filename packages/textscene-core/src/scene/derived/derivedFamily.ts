@@ -1,4 +1,4 @@
-import { descendsFromClass } from '../../godot/classdb/classBaseTypes.js';
+import { classInTree, descendsFromClass } from '../../godot/classdb/classBaseTypes.js';
 import type { VariantValue } from '../../godot/variant/variantValue.js';
 import type { DerivedProperties, NodeReads, StoredWrite } from './derivedProperty.js';
 import { AutoTranslateProperties } from './autoTranslateProperties.js';
@@ -47,9 +47,8 @@ const FAMILIES: readonly (readonly [baseClass: string, create: () => DerivedProp
 
 /** The ported families of a class, as one, or null where none is ported yet. */
 export function derivedPropertiesOf(className: string): DerivedProperties | null {
-  const families = FAMILIES.filter(([base]) => descendsFromClass(className, base)).map(([, create]) =>
-    create()
-  );
+  const placed = classInTree(className);
+  const families = FAMILIES.filter(([base]) => descendsFromClass(placed, base)).map(([, create]) => create());
   if (families.length === 0) return null;
   return families.length === 1 ? families[0]! : new DerivedFamilies(families);
 }

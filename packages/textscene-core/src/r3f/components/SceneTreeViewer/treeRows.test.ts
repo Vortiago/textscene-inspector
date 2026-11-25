@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import '../../sceneLiveTree.js';
 import { openScene, type Scene } from '../../../scene/openScene';
 import type { ResourceProvider } from '../../../resources/ResourceProvider';
-import { treeRowsOf, type TreeRow } from './treeRows';
+import { treeReadOf, treeRowsOf, type TreeRow } from './treeRows';
 
 const rowsOf = (scene: Scene) => treeRowsOf(scene.getNode('.'));
 
@@ -102,5 +102,41 @@ describe('treeRowsOf', () => {
   ])('reads %s as the eye chain %s, a Viewport %s', async (path, chain, isViewport) => {
     const scene = await loaded(MAIN, 'Editable/Inner');
     expect(rowAt(await rowsOf(scene), path)).toMatchObject({ chain, isViewport });
+  });
+});
+
+describe('treeRowsOf asks', () => {
+  it('is_class once for each class and name, however many rows share the class', async () => {
+    const scene = openScene({
+      source: `[gd_scene format=3]
+
+[node name="Main" type="Node3D"]
+
+[node name="A" type="Node3D" parent="."]
+
+[node name="B" type="Node3D" parent="."]
+
+[node name="C" type="Node3D" parent="."]
+`,
+      provider: { loadResource: async () => null },
+    });
+    const root = scene.getNode('.');
+    const nodes = [root, ...root.getChildren()];
+    const calls = nodes.map((node) => vi.spyOn(node, 'call'));
+
+    await treeRowsOf(root);
+
+    const asked = calls.flatMap((call) => call.mock.calls).filter(([method]) => method === 'is_class');
+    expect(asked).toHaveLength(5);
+  });
+});
+
+describe('treeReadOf', () => {
+  it('gives the failure of a read over nodes that stay in the tree', async () => {
+    const scene = openScene({ source: MAIN, provider: { loadResource: async () => null } });
+    const root = scene.getNode('.');
+    vi.spyOn(root.getChildren()[0]!, 'call').mockRejectedValue(new Error('no owner'));
+
+    expect(await treeReadOf(root)).toEqual({ failure: 'Error: no owner' });
   });
 });

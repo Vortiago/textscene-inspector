@@ -54,6 +54,11 @@ export function descendsFromClass(className: string, ancestor: string): boolean 
   return findInClassChain(className, (type) => type === ancestor || undefined) ?? false;
 }
 
+/** The node class Godot makes: a placeholder Node for a class it cannot make (packed_scene.cpp:331). */
+export function classInTree(className: string): string {
+  return descendsFromClass(className, 'Node') ? className : 'Node';
+}
+
 /** `className`, then each ancestor nearest first, over both hierarchies. A repeated class ends it. */
 function classAndBaseChain(className: string): string[] {
   const chain = new Set<string>();

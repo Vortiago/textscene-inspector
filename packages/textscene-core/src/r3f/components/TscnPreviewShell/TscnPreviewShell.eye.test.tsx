@@ -108,6 +108,16 @@ describe('<TscnPreviewShell> the eye of a tree row', () => {
     await vi.waitFor(() => expect(eyeOf('Main/Box')?.getAttribute('aria-label')).toBe('Show node'));
   });
 
+  it("reads no other row's visible after a click", async () => {
+    const scene = await renderShell();
+    const boxRead = vi.spyOn(scene.getNode('/root/Main/Box'), 'get');
+
+    await clickEye('Main/Hidden');
+
+    await vi.waitFor(() => expect(labelOf('Main/Hidden')).toBe('Hide node'));
+    expect(boxRead).not.toHaveBeenCalledWith('visible');
+  });
+
   it('has no eye on a node with no visible', async () => {
     await renderShell();
 

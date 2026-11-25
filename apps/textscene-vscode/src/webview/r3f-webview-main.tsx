@@ -96,7 +96,8 @@ function R3FWebviewApp({ vscode, firstScene }: WebviewAppProps) {
       if (!isHostToWebviewMessage(message)) return;
       if (message.type === 'loadTscn') {
         const scenePath = message.scenePath ?? firstScene.rootScenePath;
-        if (scenePath !== sceneRef.current.rootScenePath) {
+        const isNewScene = scenePath !== sceneRef.current.rootScenePath;
+        if (isNewScene) {
           sceneRef.current.dispose();
           sceneRef.current = openScene({
             source: '',
@@ -105,9 +106,8 @@ function R3FWebviewApp({ vscode, firstScene }: WebviewAppProps) {
           });
           setScene(sceneRef.current);
         }
-        // React renders the new text on a later task, so until the shell reports on it, a
-        // capture would show the scene before. The same text again changes nothing.
-        if (message.content !== contentRef.current) {
+        // A capture before the shell reports on a new scene or text would show the scene before.
+        if (isNewScene || message.content !== contentRef.current) {
           contentRef.current = message.content;
           handleCaptureStateChange(PENDING_CAPTURE);
         }

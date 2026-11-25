@@ -15,8 +15,8 @@ import { PreviewViewStatusProvider } from '../TscnPreviewShell/previewViewStatus
 import { SceneTreeViewer, type SceneTreeViewerProps } from './SceneTreeViewer';
 import { rowsOf, treeRowsOf } from './treeRows';
 
-/** The files a scene of a tree test instances, by `res://` path: a text, or the bytes of a binary file. */
-export type TreeFiles = Readonly<Record<string, string | ArrayBuffer>>;
+/** The files a scene of a tree test instances, by `res://` path: a text, bytes, or a load the test ends. */
+export type TreeFiles = Readonly<Record<string, string | ArrayBuffer | Promise<string>>>;
 
 export interface TreeOptions extends SceneTreeViewerProps {
   readonly files?: TreeFiles;

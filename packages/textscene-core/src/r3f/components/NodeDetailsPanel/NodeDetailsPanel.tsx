@@ -5,7 +5,6 @@
  */
 import type { ReactNode } from 'react';
 import { nodeRegistry } from '../../../core/NodeRegistry.js';
-import { rendersOwnVisual } from '../../nodeSupport.js';
 import { isCamera3DType } from '../../cameraNodeTypes.js';
 import { usePreviewCamera } from '../TscnPreviewShell/previewCamera.js';
 import { useSelectedPath } from '../TscnPreviewShell/previewSelection.js';
@@ -27,6 +26,7 @@ interface NodeDetailsPanelProps {
 export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
   const selectedNodePath = useSelectedPath();
   const preview = usePreviewCamera();
+  const undrawn = useUndrawnNode(selectedNodePath ?? '');
 
   // The merged node and its originating instance ref. It re-derives when a
   // lazily loaded sub-scene lands.
@@ -45,8 +45,6 @@ export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
   const { instanceRef } = entry;
   const path = selectedNodePath;
   const registration = nodeRegistry.getRegistration(node.type);
-  // A parser registration does not mean the node renders.
-  const isNotRendered = rendersOwnVisual(node.type) === 'not-implemented';
 
   const sections = registration?.propertyFormatter
     ? authoredSections(registration.propertyFormatter(node.properties), node.scope)
@@ -62,7 +60,7 @@ export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
         A banner, not a replacement: an undrawn node still has parsed and
         validated properties. The Type row below states the type.
       */}
-      {isNotRendered && (
+      {undrawn?.hasNoComponent && (
         <WarningSection title="Not Implemented">
           <p className={styles.warningText}>
             This node type is not yet drawn by the previewer. It is preserved in the tree and its properties

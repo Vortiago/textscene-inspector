@@ -103,6 +103,14 @@ describe('a node of a class Godot does not have', () => {
   it('answers get_owner with the root', async () => {
     expect(((await unknown().call('get_owner')) as { name: string } | null)?.name).toBe('Main');
   });
+
+  it.each([
+    ['scene_file_path', ''],
+    ['process_mode', 0],
+    ['visible', null],
+  ])("answers get %s with a Node's %s", async (property, expected) => {
+    expect(await unknown().get(property)).toBe(expected);
+  });
 });
 
 describe('a property setter called with a node', () => {
