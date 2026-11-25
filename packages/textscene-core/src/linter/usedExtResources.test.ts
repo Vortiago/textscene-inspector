@@ -152,6 +152,34 @@ metadata/icon = ExtResource("2_tex")
     ).toEqual({});
   });
 
+  it('reads no use after a heading the loader refuses, as the load stops there', () => {
+    expect(
+      uses(`[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="mat"]
+
+[ext_resource type="Texture2D" path="res://t.png" id="2_tex"]
+
+[sub_resource type="StandardMaterial3D" id="late"]
+albedo_texture = ExtResource("2_tex")
+
+[node name="Root" type="Node3D"]
+`)
+    ).toEqual({});
+  });
+
+  it('reads no use after a read the parse stops at', () => {
+    expect(
+      uses(`${HEADER}
+[sub_resource type="StandardMaterial3D" id="mat"]
+albedo_texture = ExtResource("99")
+normal_texture = ExtResource("2_tex")
+
+[node name="Root" type="Node3D"]
+`)
+    ).toEqual({});
+  });
+
   it('gives an empty map for a declaration no value names', () => {
     expect(
       uses(`${HEADER}

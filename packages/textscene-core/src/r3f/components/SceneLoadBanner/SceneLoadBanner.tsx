@@ -1,12 +1,12 @@
 import { useOptionalHierarchy } from '../../contexts/HierarchyContext.js';
-import { useSceneFailure } from '../../hooks/useSceneFailure.js';
+import { useSceneSnapshot } from '../../hooks/useSceneSnapshot.js';
 import { failureChainText } from '../../../resources/loadFailure/failureText.js';
 import styles from './SceneLoadBanner.module.css';
 
 /** The failure through which the game refuses the scene (resource_format_text.cpp:647-650). */
 export function SceneLoadBanner() {
   const scene = useOptionalHierarchy()?.scene;
-  const failure = useSceneFailure(scene);
+  const failure = useSceneSnapshot(scene, (current) => current.sceneFailure(), null);
   if (!scene || !failure) return null;
   const { line, chain, cause } = failure;
   return (

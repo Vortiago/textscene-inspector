@@ -41,6 +41,15 @@ describe('headingOrder', () => {
     expect(misplacedIn('gd_scene', 'node', 'sub_resource', 'ext_resource')).toMatchObject({ line: 3 });
   });
 
+  it('judges no heading after a heading line that does not parse, as the loader stops there', () => {
+    const order = headingOrder();
+    order.read('gd_scene', 1);
+    order.stop();
+    order.read('ext_resource', 3);
+
+    expect([order.misplaced(), order.isStopped()]).toEqual([null, true]);
+  });
+
   it('judges no heading of a file with no header line', () => {
     expect(misplacedIn('node', 'sub_resource')).toBeNull();
   });

@@ -32,13 +32,18 @@ export function headingOrder(): {
   /** Records the heading, and answers the type of the heading before it, null for the first. */
   read(type: string, line: number): string | null;
   misplaced(): MisplacedHeading | null;
+  /** Ends the judging at a heading line that does not parse, where the loader stops too. */
+  stop(): void;
+  /** True past a heading line that does not parse, where the loader reads no further. */
+  isStopped(): boolean;
 } {
   let previous: string | null = null;
   let isScene: boolean | null = null;
   let phase: Phase = 'ext_resource';
   let misplaced: MisplacedHeading | null = null;
+  let isUnparsed = false;
   const judge = (type: string, line: number) => {
-    if (isScene === null || misplaced) return;
+    if (isScene === null || misplaced || isUnparsed) return;
     const reason = refusalOf(phase, type, isScene);
     if (reason) misplaced = { type, line, reason };
     else phase = phaseAfter(phase, type);
@@ -53,5 +58,9 @@ export function headingOrder(): {
       return before;
     },
     misplaced: () => misplaced,
+    stop: () => {
+      isUnparsed = true;
+    },
+    isStopped: () => isUnparsed,
   };
 }

@@ -186,6 +186,21 @@ texture = Resource("res://icon.png")
     expect(reads).toEqual([{ path: 'res://icon.png', type: null }]);
   });
 
+  it('keeps an empty type the heading states over a later literal of the same file', () => {
+    const reads = sceneFilesRead(
+      MAIN,
+      scene(`[gd_scene format=3]
+[ext_resource type="" path="res://icon.png" id="1"]
+[node name="Root" type="Sprite2D"]
+texture = ExtResource("1")
+[node name="Child" parent="." type="Sprite2D"]
+texture = Resource("res://icon.png")
+`)
+    );
+
+    expect(reads).toEqual([{ path: 'res://icon.png', type: '' }]);
+  });
+
   it('leaves out a declared file nothing reads, and a path outside res://', () => {
     const reads = sceneFilesRead(
       MAIN,

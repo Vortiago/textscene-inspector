@@ -18,12 +18,12 @@ import { findExtResource } from '../SubResourceResolver';
 
 type Values = Readonly<Record<string, string>>;
 
-type SceneSections = Pick<
+type TextSections = Pick<
   TscnScene,
   'externalResources' | 'internalResources' | 'fileValues' | 'misplacedHeading'
-> & {
-  readonly nodes: readonly RawNode[];
-};
+>;
+
+type SceneSections = TextSections & { readonly nodes: readonly RawNode[] };
 
 /** The type is the `[ext_resource]` heading's, or null for a `Resource("…")` literal. */
 export interface FileRead {
@@ -82,15 +82,28 @@ export function resourceFileReads(file: string, parsed: ParsedResource): FileRea
 }
 
 /** A `.tscn`'s failing reads, from its text in file order. */
-export function sceneFailingReads(file: string, scene: SceneSections): FailingReads {
-  const context = { file, externalResources: scene.externalResources, subResources: scene.internalResources };
-  return failingFileReads(context, scene.fileValues ?? [], scene.misplacedHeading ?? null);
+export function sceneFailingReads(file: string, scene: TextSections): FailingReads {
+  const sections = { externalResources: scene.externalResources, subResources: scene.internalResources };
+  return failingFileReads(
+    file,
+    readsUpToStop(sections, scene.fileValues ?? [], scene.misplacedHeading ?? null)
+  );
 }
 
 /** A `.tres`'s failing reads, from its text in file order. */
 export function resourceFailingReads(file: string, parsed: ParsedResource): FailingReads {
-  const context = { file, externalResources: parsed.extResources, subResources: parsed.subResources };
-  return failingFileReads(context, parsed.fileValues ?? [], parsed.misplacedHeading ?? null);
+  const sections = { externalResources: parsed.extResources, subResources: parsed.subResources };
+  return failingFileReads(
+    file,
+    readsUpToStop(sections, parsed.fileValues ?? [], parsed.misplacedHeading ?? null)
+  );
+}
+
+/** Each read the loader makes before its parse stops, in file order, with the value it sits in. */
+export function readsBeforeParseStop(scene: TextSections): readonly OrderedRead[] {
+  const sections = { externalResources: scene.externalResources, subResources: scene.internalResources };
+  const { ordered, stop } = readsUpToStop(sections, scene.fileValues ?? [], scene.misplacedHeading ?? null);
+  return stop < 0 ? ordered : ordered.slice(0, stop);
 }
 
 function readsOf(values: readonly Values[]): ValueRead[][] {
@@ -110,44 +123,53 @@ function filesRead(
     if (!path) continue;
     const at = ext ? path : simplifyResPath(path);
     // The `[ext_resource]` heading's type wins over a literal's none.
-    if (!types.get(at)) types.set(at, ext?.type ?? null);
+    if (!types.has(at) || types.get(at) === null) types.set(at, ext?.type ?? null);
   }
   // A path the previewer cannot place is never claimed missing.
   return [...types].filter(([path]) => path.startsWith('res://')).map(([path, type]) => ({ path, type }));
 }
 
-/** What a read is judged against: the file, its `[ext_resource]` headings and its sections in order. */
-interface ReadContext {
-  readonly file: string;
+/** What a read is judged against: the file's `[ext_resource]` headings and its sections in order. */
+interface Sections {
   readonly externalResources: readonly TscnExternalResource[];
   readonly subResources: readonly { readonly id: string }[];
 }
 
-/** One read in file order, the value it sits in, its line, and the failure its failed load gives. */
-interface OrderedRead {
+/** One read in file order, the value it sits in, and the line Godot prints for it. */
+export interface OrderedRead {
   readonly read: ValueRead;
   /** The `[ext_resource]` headings before the value, the only ones its reads can name. */
   readonly declared: readonly TscnExternalResource[];
   readonly value: FileValue;
   readonly line: number;
-  readonly failure: FailingFileRead | null;
+}
+
+/** The reads up to the misplaced heading, and the index of the read the parse stops at, or -1. */
+interface ReadsToStop {
+  readonly ordered: readonly OrderedRead[];
+  readonly stop: number;
+  readonly misplaced: MisplacedHeading | null;
+}
+
+function readsUpToStop(
+  sections: Sections,
+  values: readonly FileValue[],
+  misplaced: MisplacedHeading | null
+): ReadsToStop {
+  // The loader reads a misplaced heading's own fields before it refuses the heading.
+  const read = misplaced ? values.filter((value) => value.line <= misplaced.line) : values;
+  const ordered = read.flatMap((value) => orderedReadsOf(sections.externalResources, value));
+  const declaredAt = new Map<string, number>();
+  sections.subResources.forEach(({ id }, at) => declaredAt.has(id) || declaredAt.set(id, at));
+  // In file order, as the parse stops at the first value that fails (resource_format_text.cpp:152, :291).
+  return { ordered, stop: ordered.findIndex((one) => failsParse(declaredAt, one)), misplaced };
 }
 
 // A section read fails the file and a [node] ExtResource read does not (resource_format_text.cpp:647-650).
-function failingFileReads(
-  context: ReadContext,
-  values: readonly FileValue[],
-  misplaced: MisplacedHeading | null
-): FailingReads {
-  // The loader reads a misplaced heading's own fields before it refuses the heading.
-  const read = misplaced ? values.filter((value) => value.line <= misplaced.line) : values;
-  const ordered = read.flatMap((value) => orderedReadsOf(context, value));
+function failingFileReads(file: string, { ordered, stop, misplaced }: ReadsToStop): FailingReads {
   const failing = new Map<string, FailingFileRead>();
-  const declaredAt = new Map<string, number>();
-  context.subResources.forEach(({ id }, at) => declaredAt.has(id) || declaredAt.set(id, at));
-  // In file order, as the parse stops at the first value that fails (resource_format_text.cpp:152, :291).
-  const stop = ordered.findIndex((ordered) => failsParse(declaredAt, ordered));
-  for (const { failure } of stop < 0 ? ordered : ordered.slice(0, stop)) {
+  for (const { read, declared, value, line } of stop < 0 ? ordered : ordered.slice(0, stop)) {
+    const failure = failingReadOf({ file, externalResources: declared, line }, read, value.place);
     // A uid or a path off `res://` may load.
     if (failure?.path.startsWith('res://') && !failing.has(failure.path)) failing.set(failure.path, failure);
   }
@@ -159,30 +181,29 @@ function readStopOf({ read, value, line }: OrderedRead): ReadStop {
   return { read, place: value.place, isOpeningTag: value.isOpeningTag, line };
 }
 
-/** A value's reads, each with the failure its failed load gives where the value sits. */
-function orderedReadsOf(context: ReadContext, value: FileValue): OrderedRead[] {
-  const { externalResources } = context;
+/** A value's reads, each with its line and the `[ext_resource]` headings before it. */
+function orderedReadsOf(externalResources: readonly TscnExternalResource[], value: FileValue): OrderedRead[] {
   const declared =
     value.extResourcesBefore < externalResources.length
       ? externalResources.slice(0, value.extResourcesBefore)
       : externalResources;
-  const before = { ...context, externalResources: declared };
-  return valueReadsAt(value.text).map(({ read, printedAt }) => {
-    const line = value.line + newlinesBefore(value.text, printedAt);
-    return {
-      read,
-      declared,
-      value,
-      line,
-      failure: failingReadOf({ context: before, line }, read, value.place),
-    };
-  });
+  const lineOf = lineCounter(value.text, value.line);
+  return valueReadsAt(value.text).map(({ read, printedAt }) => ({
+    read,
+    declared,
+    value,
+    line: lineOf(printedAt),
+  }));
 }
 
-function newlinesBefore(text: string, end: number): number {
-  let count = 0;
-  for (let at = text.indexOf('\n'); at >= 0 && at < end; at = text.indexOf('\n', at + 1)) count++;
-  return count;
+/** The line of each offset, asked in rising order, so the text is scanned once. */
+function lineCounter(text: string, firstLine: number): (offset: number) => number {
+  let line = firstLine;
+  let next = text.indexOf('\n');
+  return (offset) => {
+    for (; next >= 0 && next < offset; next = text.indexOf('\n', next + 1)) line++;
+    return line;
+  };
 }
 
 /** Measured: a binds `ExtResource` prints the section line, and a binds literal the `Parse error.` line. */
@@ -192,9 +213,10 @@ function failingReadOf(at: ReadAt, read: ValueRead, place: FileValue['place']): 
   return place === 'node' ? null : extFailingRead(at, read);
 }
 
-/** Where a read sits: the file it is in, and the line Godot prints for it. */
+/** Where a read sits: its file, the `[ext_resource]` headings before it, and the line Godot prints. */
 interface ReadAt {
-  readonly context: ReadContext;
+  readonly file: string;
+  readonly externalResources: readonly TscnExternalResource[];
   readonly line: number;
 }
 
@@ -210,11 +232,9 @@ function failsParse(
   return at === undefined || at > value.subResourcesBefore;
 }
 
-function extFailingRead({ context, line }: ReadAt, read: ValueRead): FailingFileRead | null {
-  const ext = read.kind === 'ExtResource' ? findExtResource(context.externalResources, read.id) : undefined;
-  return ext
-    ? { path: extResourcePathIn(context.file, ext.path), kind: 'section ExtResource', uid: '', line }
-    : null;
+function extFailingRead({ file, externalResources, line }: ReadAt, read: ValueRead): FailingFileRead | null {
+  const ext = read.kind === 'ExtResource' ? findExtResource(externalResources, read.id) : undefined;
+  return ext ? { path: extResourcePathIn(file, ext.path), kind: 'section ExtResource', uid: '', line } : null;
 }
 
 function literalFailingRead(

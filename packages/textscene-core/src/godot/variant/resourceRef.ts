@@ -38,9 +38,6 @@ const DICT_SUB_RESOURCE_ENTRY_RE = new RegExp(`"([^"]*)"${WS}:${WS}${SUB_RESOURC
  */
 export const EXT_RESOURCE_CALL_ANYWHERE_RE = new RegExp(`ExtResource${WS}\\(`);
 
-/** The token every `ExtResource(…)` call spells, so a value without it names no id. */
-const EXT_RESOURCE_TOKEN = 'ExtResource';
-
 /** The token both reference kinds spell, so a value without it names no resource. */
 const RESOURCE_TOKEN = 'Resource';
 
@@ -122,15 +119,6 @@ export function resourceRefSpansByLine(lines: readonly string[]): ResourceRefSpa
     inString = scanLoadedRefs(line, inString, { refs, literals: null });
     return refs;
   });
-}
-
-/** The id of every `ExtResource(…)` in a value, in order, as {@link loadedRefSpans} reads them. */
-export function extResourceIdsIn(text: string): string[] {
-  // Most values name no resource, and the walk reads every character of a multi-megabyte array.
-  if (!text.includes(EXT_RESOURCE_TOKEN)) return [];
-  return loadedRefSpans(text)
-    .filter((span) => span.kind === 'ExtResource')
-    .map((span) => span.id);
 }
 
 /**
@@ -276,10 +264,7 @@ function argumentAt(text: string, start: number): number {
 
 /** The read of each `Resource(…)` literal of `text` that Godot parses, in order, each with its `uid://`. */
 export function literalReadsIn(text: string): LiteralRead[] {
-  if (!PATH_RESOURCE_SOMEWHERE_RE.test(text)) return [];
-  const literals: LiteralSpan[] = [];
-  scanLoadedRefs(text, false, { refs: null, literals });
-  return literals.flatMap(({ read }) => (read.kind === 'Resource' ? [read] : []));
+  return valueReadsIn(text).filter((read): read is LiteralRead => read.kind === 'Resource');
 }
 
 /** The id of the first `SubResource(…)` anywhere in `text`, or null. */

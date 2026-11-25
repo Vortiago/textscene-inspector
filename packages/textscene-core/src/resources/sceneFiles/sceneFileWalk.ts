@@ -16,6 +16,8 @@ export interface WalkStart {
   readonly reads: readonly FileRead[];
   /** True while the owner still reads the files, so each stays `loading` whatever its outcome. */
   readonly isReading?: boolean;
+  /** True for reads the failure is judged on and no value makes: their files are not listed or followed. */
+  readonly isJudgedOnly?: boolean;
 }
 
 /** What the walk reads from, one object so the starts and the failing reads cannot drift apart. */
@@ -45,6 +47,7 @@ interface TextFile {
 interface Entry {
   type: string | null;
   isReading: boolean;
+  isListed: boolean;
   readonly owners: string[];
   readonly addresses: string[];
 }
@@ -107,23 +110,25 @@ export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void
     );
     const entries = new Map<string, Entry>();
     const queue: string[] = [];
-    const visit = (owner: string | null, { path, type }: FileRead, isReading = false) => {
+    const visit = (owner: string | null, { path, type }: FileRead, isReading = false, isListed = true) => {
       const file = resourceFilePath(path);
       if (roots.has(file)) return;
       let entry = entries.get(file);
       if (!entry) {
-        entry = { type, isReading, owners: [], addresses: [] };
+        entry = { type, isReading, isListed, owners: [], addresses: [] };
         entries.set(file, entry);
         queue.push(file);
       }
+      entry.isListed ||= isListed;
       entry.type ??= type;
       if (owner !== null && !entry.owners.includes(owner)) entry.owners.push(owner);
       if (path !== file && !entry.addresses.includes(path)) entry.addresses.push(path);
     };
-    for (const start of starts) for (const read of start.reads) visit(start.owner, read, start.isReading);
+    for (const { owner, reads, isReading, isJudgedOnly } of starts)
+      for (const read of reads) visit(owner, read, isReading, !isJudgedOnly);
     for (let next = 0; next < queue.length; next++) {
       const file = queue[next]!;
-      if (!isGodotTextResourcePath(file)) continue;
+      if (!isGodotTextResourcePath(file) || !entries.get(file)!.isListed) continue;
       for (const read of textFile(file)?.reads ?? []) visit(file, read);
     }
     return entries;
@@ -183,10 +188,17 @@ export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void
       const entries = entriesFrom(starts);
       releaseOutside(entries);
       walkedPaths = new Set(entries.keys());
-      const rows = [...entries]
+      const judged = [...entries]
         .sort(([a], [b]) => (a < b ? -1 : 1))
-        .map(([path, entry]) => sceneFileOf(path, entry));
-      const files = { files: rows, failure: failing ? sceneFailureOf(rows, failing) : null };
+        .map(([path, entry]) => ({ row: sceneFileOf(path, entry), isListed: entry.isListed }));
+      const rows = judged.flatMap(({ row, isListed }) => (isListed ? [row] : []));
+      const failure = failing
+        ? sceneFailureOf(
+            judged.map(({ row }) => row),
+            failing
+          )
+        : null;
+      const files = { files: rows, failure };
       const key = JSON.stringify(files);
       if (key !== walkedKey) {
         walked = files;

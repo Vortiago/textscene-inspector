@@ -194,6 +194,7 @@ export class TscnParserCore {
 
     // The value as written, not as stored: the loader parses the text the file holds.
     const addFileValue = (value: Omit<FileValue, 'subResourcesBefore' | 'extResourcesBefore'>) => {
+      if (headings.isStopped()) return;
       const before = {
         subResourcesBefore: internalResources.length,
         extResourcesBefore: externalResources.length,
@@ -286,6 +287,7 @@ export class TscnParserCore {
             column: 1,
             code: 'INVALID_HEADING_FORMAT',
           });
+          headings.stop();
         }
       } else {
         // A line that opens a bracket but never parses as a heading is malformed,
@@ -299,6 +301,7 @@ export class TscnParserCore {
             column: 1,
             code: 'INVALID_HEADING_FORMAT',
           });
+          headings.stop();
         }
 
         const property = parseProperty(line);

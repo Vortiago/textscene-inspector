@@ -12,7 +12,6 @@ import {
   literalReadsIn,
   EXT_RESOURCE_CALL_ANYWHERE_RE,
   dictSubResourceEntries,
-  extResourceIdsIn,
   isPathResourceLiteral,
   keyedResourceRefReader,
   openResourceRef,
@@ -209,13 +208,18 @@ describe('the ExtResource discriminator', () => {
   });
 });
 
-describe('extResourceIdsIn', () => {
+/** The id of each `ExtResource` read of `text`, in order. */
+function extResourceIds(text: string): string[] {
+  return valueReadsIn(text).flatMap((read) => (read.kind === 'ExtResource' ? [read.id] : []));
+}
+
+describe('the ExtResource reads of valueReadsIn', () => {
   it('reads the id of a whole-value reference', () => {
-    expect(extResourceIdsIn('ExtResource("1_glb")')).toEqual(['1_glb']);
+    expect(extResourceIds('ExtResource("1_glb")')).toEqual(['1_glb']);
   });
 
   it('reads every reference inside a container, in order, padded and integer ids included', () => {
-    expect(extResourceIdsIn('[ExtResource("a"), { "k": ExtResource ( "b" ) }, ExtResource(3)]')).toEqual([
+    expect(extResourceIds('[ExtResource("a"), { "k": ExtResource ( "b" ) }, ExtResource(3)]')).toEqual([
       'a',
       'b',
       '3',
@@ -223,21 +227,21 @@ describe('extResourceIdsIn', () => {
   });
 
   it('skips a reference spelled inside a string, which the loader never resolves', () => {
-    expect(extResourceIdsIn('["ExtResource(\\"a\\")", &"ExtResource(\\"b\\")", ExtResource("c")]')).toEqual([
+    expect(extResourceIds('["ExtResource(\\"a\\")", &"ExtResource(\\"b\\")", ExtResource("c")]')).toEqual([
       'c',
     ]);
   });
 
   it('keeps reading after a string that ends in an escaped backslash', () => {
-    expect(extResourceIdsIn('["dir\\\\", ExtResource("a")]')).toEqual(['a']);
+    expect(extResourceIds('["dir\\\\", ExtResource("a")]')).toEqual(['a']);
   });
 
   it('skips a SubResource and a malformed call', () => {
-    expect(extResourceIdsIn('[SubResource("a"), ExtResource(), MyExtResource("b")]')).toEqual([]);
+    expect(extResourceIds('[SubResource("a"), ExtResource(), MyExtResource("b")]')).toEqual([]);
   });
 
   it('gives an empty list for a value with no reference', () => {
-    expect(extResourceIdsIn('Vector3(1, 2, 3)')).toEqual([]);
+    expect(extResourceIds('Vector3(1, 2, 3)')).toEqual([]);
   });
 });
 
@@ -368,6 +372,10 @@ describe('literalReadsIn', () => {
     expect(literalReadsIn('[ExtResource("1"), Resource("uid://abc", "res://a.tres")]')).toEqual([
       { kind: 'Resource', path: 'res://a.tres', uid: 'uid://abc' },
     ]);
+  });
+
+  it('reads no path from a literal with two paths, which Godot refuses (variant_parser.cpp:1141-1152)', () => {
+    expect(literalReadsIn('[Resource("res://a.ttf", "res://b.ttf")]')).toEqual([]);
   });
 
   it('reads nothing from a value that names no resource', () => {

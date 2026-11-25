@@ -308,12 +308,15 @@ type FailingOf = (root: ParsedScene) => FailingReads;
 function rootInput(root: ParsedScene | undefined, failingOf: FailingOf): WalkInput {
   if (!root) return { starts: [], failing: null };
   const { failing, parseStop } = failingOf(root);
-  // A write can drop a read the file on disk still makes, so each failing read's file is walked too.
+  // A write can drop a read the file on disk still makes, so each failing read's file is judged too.
   const reads = sceneFileReads(root.path, root);
   const read = new Set(reads.map(({ path }) => path));
   const unwritten = failing.flatMap(({ path }) => (read.has(path) ? [] : [{ path, type: null }]));
   return {
-    starts: [{ owner: root.path, reads: [...reads, ...unwritten] }],
+    starts: [
+      { owner: root.path, reads },
+      { owner: root.path, reads: unwritten, isJudgedOnly: true },
+    ],
     failing: { scene: root.path, reads: failing, parseStop },
   };
 }

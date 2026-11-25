@@ -1,4 +1,4 @@
-import { extResourceIdsIn } from '../godot/variant/resourceRef.js';
+import { readsBeforeParseStop } from '../resources/loadFailure/fileReads.js';
 import type { StrictScene } from '../parser/types.js';
 
 /**
@@ -7,12 +7,18 @@ import type { StrictScene } from '../parser/types.js';
  */
 export type ExtResourceUse = 'aborting' | 'node';
 
-/** Each `[ext_resource]` id the scene's values name, and where, from the place the core scan gives each. */
-export function extResourceUses(scene: Pick<StrictScene, 'fileValues'>): Map<string, ExtResourceUse> {
+type ScannedText = Pick<
+  StrictScene,
+  'externalResources' | 'internalResources' | 'fileValues' | 'misplacedHeading'
+>;
+
+/** Each `[ext_resource]` id the values name before the parse stops, and where, as the preview reads them. */
+export function extResourceUses(scene: ScannedText): Map<string, ExtResourceUse> {
   const uses = new Map<string, ExtResourceUse>();
-  for (const { text, place } of scene.fileValues ?? []) {
-    const use = place === 'node' ? 'node' : 'aborting';
-    for (const id of extResourceIdsIn(text)) if (uses.get(id) !== 'aborting') uses.set(id, use);
+  for (const { read, value } of readsBeforeParseStop(scene)) {
+    if (read.kind !== 'ExtResource') continue;
+    const use = value.place === 'node' ? 'node' : 'aborting';
+    if (uses.get(read.id) !== 'aborting') uses.set(read.id, use);
   }
   return uses;
 }
