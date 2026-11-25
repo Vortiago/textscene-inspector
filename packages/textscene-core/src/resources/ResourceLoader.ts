@@ -188,12 +188,12 @@ export class ResourceLoader {
     return {
       failingReads: async (file) => {
         try {
-          const { failing, failsAtUndeclaredId } =
+          const { failing, failsToParse } =
             fileExtension(file) === '.tscn'
               ? sceneFileReads(file, await this.peerRequire(dependent, this.scenes, 'scene', file))
               : resourceFileReads(file, await this.peerRequire(dependent, this.resources, 'resource', file));
-          // Godot fails the parse at the undeclared id, whatever the reads before it do.
-          return failsAtUndeclaredId ? 'unparsed' : failing.map((read) => read.path);
+          // A failing read before the value that fails the parse stops the load first.
+          return failsToParse && failing.length === 0 ? 'unparsed' : failing.map((read) => read.path);
         } catch (error) {
           return error instanceof UnparsedTextError ? 'unparsed' : 'unread';
         }

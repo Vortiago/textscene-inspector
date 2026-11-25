@@ -205,33 +205,36 @@ const PATH_RESOURCE_SOMEWHERE_RE = new RegExp(`\\b${PATH_RESOURCE_RE.source.slic
 /** One `Resource(…)` literal, read in place by {@link scanLoadedRefs}. */
 const PATH_RESOURCE_AT_RE = new RegExp(PATH_RESOURCE_RE.source.slice(1, -1), 'y');
 
-/** A literal's reads and where it starts in the text it was read from. */
+/** A literal's read and where it starts in the text it was read from. */
 interface LiteralSpan {
   start: number;
-  reads: LiteralRead[];
+  read: LiteralRead | RefusedRead;
 }
 
-/** The index of the literal's last character at `start`, its reads pushed onto `literals`, or `start`. */
+/** The index of the literal's last character at `start`, its read pushed onto `literals`, or `start`. */
 function readLiteralAt(text: string, start: number, literals: LiteralSpan[]): number {
   PATH_RESOURCE_AT_RE.lastIndex = start;
   const match = PATH_RESOURCE_AT_RE.exec(text);
   if (!match) return start;
   const args = [match[1]!, match[2]].filter((arg): arg is string => arg !== undefined);
-  const uid = args.find((arg) => arg.startsWith('uid://')) ?? '';
+  const uids = args.filter((arg) => arg.startsWith('uid://'));
   const paths = args.filter((arg) => !arg.startsWith('uid://'));
-  const reads: LiteralRead[] =
-    paths.length > 0
-      ? paths.map((path) => ({ kind: 'Resource', path, uid }))
-      : [{ kind: 'Resource', path: null, uid }];
-  literals.push({ start, reads });
+  const read: LiteralRead | RefusedRead =
+    uids.length > 1 || paths.length > 1
+      ? { kind: 'Refused' }
+      : { kind: 'Resource', path: paths[0] ?? null, uid: uids[0] ?? '' };
+  literals.push({ start, read });
   return PATH_RESOURCE_AT_RE.lastIndex - 1;
 }
 
-/** An `ExtResource` id, or a `Resource(…)` literal's path and its `uid://`, empty for none. */
-export type ValueRead = { kind: 'ExtResource'; id: string } | LiteralRead;
+/** An `ExtResource` id, a `Resource(…)` literal's path and its `uid://`, or a literal Godot refuses. */
+export type ValueRead = { kind: 'ExtResource'; id: string } | LiteralRead | RefusedRead;
 
 /** A null path is a literal with only a `uid://`, which nothing here resolves. */
 export type LiteralRead = { kind: 'Resource'; path: string | null; uid: string };
+
+/** A literal with two paths or two `uid://`, at which the parse fails (`variant_parser.cpp:1141-1152`). */
+export type RefusedRead = { kind: 'Refused' };
 
 /** Each `ExtResource(…)` and `Resource(…)` literal of `text`, in the order the loader meets them. */
 export function valueReadsIn(text: string): ValueRead[] {
@@ -240,19 +243,19 @@ export function valueReadsIn(text: string): ValueRead[] {
   const refs: ResourceRefSpan[] = [];
   const literals: LiteralSpan[] = [];
   scanLoadedRefs(text, false, { refs, literals: hasLiteral ? literals : null, isExtOnly: true });
-  const extReads = refs.map((span): { start: number; reads: ValueRead[] } => ({
+  const extReads = refs.map((span): { start: number; read: ValueRead } => ({
     start: span.start,
-    reads: [{ kind: 'ExtResource', id: span.id }],
+    read: { kind: 'ExtResource', id: span.id },
   }));
-  return [...extReads, ...literals].sort((a, b) => a.start - b.start).flatMap(({ reads }) => reads);
+  return [...extReads, ...literals].sort((a, b) => a.start - b.start).map(({ read }) => read);
 }
 
-/** One read per path of each `Resource(…)` literal of `text`, in order, each with its `uid://`. */
+/** The read of each `Resource(…)` literal of `text` that Godot parses, in order, each with its `uid://`. */
 export function literalReadsIn(text: string): LiteralRead[] {
   if (!PATH_RESOURCE_SOMEWHERE_RE.test(text)) return [];
   const literals: LiteralSpan[] = [];
   scanLoadedRefs(text, false, { refs: null, literals });
-  return literals.flatMap(({ reads }) => reads);
+  return literals.flatMap(({ read }) => (read.kind === 'Resource' ? [read] : []));
 }
 
 /** The id of the first `SubResource(…)` anywhere in `text`, or null. */

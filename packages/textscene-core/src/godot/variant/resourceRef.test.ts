@@ -326,11 +326,10 @@ describe('valueReadsIn', () => {
     expect(valueReadsIn('[SubResource("x"), ExtResource("1")]')).toEqual([{ kind: 'ExtResource', id: '1' }]);
   });
 
-  it('reads each path of a literal with two, as the walk does', () => {
-    expect(valueReadsIn('Resource("res://a.tres", "res://b.tres")')).toEqual([
-      { kind: 'Resource', path: 'res://a.tres', uid: '' },
-      { kind: 'Resource', path: 'res://b.tres', uid: '' },
-    ]);
+  it('gives a refused read for a literal with two paths or two uids, which Godot does not parse', () => {
+    for (const literal of ['Resource("res://a.tres", "res://b.tres")', 'Resource("uid://a", "uid://b")']) {
+      expect(valueReadsIn(literal), literal).toEqual([{ kind: 'Refused' }]);
+    }
   });
 });
 
@@ -365,5 +364,9 @@ describe('literalReadsIn', () => {
       '[\n; Resource("res://gone.png")\n"Resource(\\"res://text.png\\")", Resource("res://a.png")]';
 
     expect(literalReadsIn(value)).toEqual([{ kind: 'Resource', path: 'res://a.png', uid: '' }]);
+  });
+
+  it('reads nothing from a literal with two paths, as Godot does not parse it', () => {
+    expect(literalReadsIn('Resource("res://a.ttf", "res://b.ttf")')).toEqual([]);
   });
 });

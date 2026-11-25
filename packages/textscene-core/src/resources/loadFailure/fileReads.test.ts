@@ -230,9 +230,26 @@ describe('the kind of each failing read of a scene', () => {
     expect(reads).toEqual([]);
   });
 
-  it('says the file fails at an undeclared id, and not where every id is declared', () => {
-    expect(sceneFileReads(MAIN, scene(sectionsReading('ExtResource("99")'))).failsAtUndeclaredId).toBe(true);
-    expect(sceneFileReads(MAIN, scene(sectionsReading('ExtResource("2")'))).failsAtUndeclaredId).toBe(false);
+  it('says the file fails to parse at an undeclared id, and not where every id is declared', () => {
+    expect(sceneFileReads(MAIN, scene(sectionsReading('ExtResource("99")'))).failsToParse).toBe(true);
+    expect(sceneFileReads(MAIN, scene(sectionsReading('ExtResource("2")'))).failsToParse).toBe(false);
+  });
+
+  it('stops at an undeclared ExtResource id in a [node] section, as the parse fails there too', () => {
+    const parsed = scene(`[gd_scene format=3]
+[node name="Root" type="Sprite2D"]
+texture = ExtResource("99")
+[node name="Child" parent="." type="Sprite2D"]
+texture = Resource("res://gone.png")
+`);
+
+    expect(sceneFileReads(MAIN, parsed)).toMatchObject({ failing: [], failsToParse: true });
+  });
+
+  it('stops at a Resource() literal with two paths, which Godot does not parse', () => {
+    const parsed = scene(sectionsReading('Resource("res://a.png", "res://b.png")'));
+
+    expect(sceneFileReads(MAIN, parsed)).toMatchObject({ failing: [], failsToParse: true });
   });
 
   it('reads past a literal that may load: a uid alone, or a path off res://', () => {
