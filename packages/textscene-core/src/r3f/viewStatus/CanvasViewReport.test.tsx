@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useFrame, type RootState } from '@react-three/fiber';
-import { act } from 'react';
+import { act, type ReactNode } from 'react';
 import type * as THREE from 'three';
 import { TscnSceneContents } from '../SceneContents';
 import { TscnSceneProvider } from '../TscnSceneProvider';
@@ -14,6 +14,7 @@ import { CanvasViewReport } from './CanvasViewReport';
 import { ViewStatusProvider } from './ViewStatusContext';
 import { createViewStatusStore, type ViewStatusStore } from './viewStatus';
 import { fontWork } from '../controls/native/text/settledChannel';
+import { usePendingWhile } from '../../resources/usePendingWhile';
 import '../nodes';
 
 /** Enough frames for work that a frame advances, such as a texture upload, to finish. */
@@ -56,7 +57,13 @@ function frameCounter() {
   return { frames, Counter };
 }
 
-async function mountEditor(source: string) {
+function PendingLoad(): null {
+  usePendingWhile(true);
+  return null;
+}
+
+/** `extra` renders inside the view, beside its contents. All views read `files`, so they share one loader. */
+async function mountEditor(source: string, extra?: ReactNode) {
   const status = createViewStatusStore();
   const scene = openScene({ source, provider: files });
   const gl: { current: THREE.WebGLRenderer | null } = { current: null };
@@ -70,6 +77,7 @@ async function mountEditor(source: string) {
         <Probe />
         <TscnSceneContents />
         <CanvasViewReport />
+        {extra}
       </ViewStatusProvider>
     </TscnSceneProvider>
   );
@@ -144,6 +152,17 @@ describe('the settled signal of an editor view', () => {
     await settle();
 
     expect(status.isPending()).toBe(false);
+  });
+
+  it('stays settled while another view on the same provider loads', async () => {
+    const quiet = await mountEditor(NO_CAMERA);
+    const loading = await mountEditor(NO_CAMERA, <PendingLoad />);
+    await loading.settle();
+    await quiet.settle();
+
+    expect(loading.status.status().pending.resources).toBe(1);
+    expect(quiet.status.status().pending.resources).toBe(0);
+    expect(quiet.status.settled()).not.toBeNull();
   });
 
   it('stops reporting once the view unmounts, so the status waits for the next view', async () => {
