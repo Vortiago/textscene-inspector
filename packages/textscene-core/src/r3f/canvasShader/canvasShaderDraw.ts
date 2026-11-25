@@ -11,9 +11,8 @@ import { bindCanvasData } from '../../shaders/canvas/canvasBindings';
 import { compileCanvas, type CanvasCompile } from '../../shaders/canvas/compileCanvas';
 import {
   INSTANCE_BYTES,
-  instanceRecord,
   modulated,
-  writeBatchRecord,
+  writeBatchRecords,
   writeBatchWorld,
   WHITE,
   type CanvasItemDraw,
@@ -110,7 +109,7 @@ export interface ItemColors {
 /** A translated item's draw: its three object, and the record writer the frame runs before the draw. */
 export interface CanvasShaderDraw {
   readonly object: THREE.Object3D;
-  /** Binds `texture`, or Godot's white default for null, and draws `commands` of the draw's layout. */
+  /** Binds `texture` (Godot's white default for null) and draws `commands` with the last colours. */
   readonly setSource: (texture: THREE.Texture | null, commands: readonly CanvasShaderCommand[]) => void;
   /** Orders the batches from `renderOrder` `firstOrder` on, inside the canvas item's group. */
   readonly setFirstOrder: (firstOrder: number) => void;
@@ -165,20 +164,28 @@ export function canvasShaderDraw(
   );
   for (const batch of batches) object.add(batch.object);
   const world = mutableTransform2D();
+  // Written by `setColors`, and read again by `setSource`: new rects or texel sizes need new records.
+  let finalModulate: Rgba | null = null;
+  const writeColors = () => {
+    if (!finalModulate) return;
+    const itemDraw = { transform: canvasTransformInto(world, object), finalModulate, usesLinearColors };
+    for (const batch of batches) batch.writeColors(itemDraw);
+  };
   return {
     object,
     setSource: (texture, commands) => {
       for (const variant of variants.values())
         variant.texelSize = variant.binding.bind(texture ?? undefined, bound.textureState, bound.maps);
       commandRuns(commands).forEach((run, index) => batches[index]!.setRun(run));
+      writeColors();
     },
     setFirstOrder: (firstOrder) =>
       // Godot draws an item's batches in command order: three compares this order inside the item's group.
       batches.forEach((batch, order) => (batch.object.renderOrder = firstOrder + order)),
-    setColors: ({ finalModulate, canvasModulate }) => {
-      canvas.canvasModulate = canvasModulate;
-      const itemDraw = { transform: canvasTransformInto(world, object), finalModulate, usesLinearColors };
-      for (const batch of batches) batch.writeColors(itemDraw);
+    setColors: (colors) => {
+      canvas.canvasModulate = colors.canvasModulate;
+      finalModulate = colors.finalModulate;
+      writeColors();
     },
     writeRecords: () => {
       object.updateWorldMatrix(true, false);
@@ -222,14 +229,10 @@ function rectBatch(variant: BoundVariant, count: number): Batch {
     setRun: (run) => {
       if (run.kind === 'rect') regions = run.commands.map(rectRegionOf);
     },
-    writeColors: (item) => {
-      // One record for the batch, rewritten for each rect: this runs each frame an animated colour changes.
-      const record = instanceRecord(item);
-      regions.forEach((region, index) => {
-        writeRectInstance(record, region, item, variant.texelSize);
-        writeBatchRecord(geometry, index, record.bytes);
-      });
-    },
+    writeColors: (item) =>
+      writeBatchRecords(geometry, item, regions.length, (record, index) =>
+        writeRectInstance(record, regions[index]!, item, variant.texelSize)
+      ),
     writeWorld: (world) => {
       for (let index = 0; index < count; index++) writeBatchWorld(geometry, index, world);
     },

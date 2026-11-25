@@ -18,9 +18,8 @@ import { quantizeVertexColor } from './vertexColorQuantize';
 import type { Vector2 } from '../../../godot/math/vector';
 import { triangulatePolygon } from '../../../godot/math/triangulate';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
-import { useLiveScenePass } from '../../../r3f/liveScenePass';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
-import { bindPolygonsToSkeletons, namesSkeletonToBind } from './skeletonBinding';
+import { useSkeletonBinding } from './useSkeletonBinding';
 import { useSkeletonSkin } from './useSkeletonSkin';
 import { CanvasMeshBody } from '../../../r3f/canvasMesh/CanvasMeshBody';
 import { useCanvasMeshTexture } from '../../../r3f/canvasMesh/useCanvasMeshTexture';
@@ -59,10 +58,8 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
   useDisposeOnRelease(geometry);
   const [mesh, setMesh] = useState<THREE.Mesh | null>(null);
   const nodePath = useNodePath();
-  const binding = useLiveScenePass(bindPolygonsToSkeletons, namesSkeletonToBind(props) ? nodePath : null);
+  const { binding, isSkinned } = useSkeletonBinding(props, nodePath);
   useSkeletonSkin(mesh, geometry, binding);
-  // A skeleton path that finds no Skeleton2D draws the polygon unskinned (`polygon_2d.cpp`, `_notification`).
-  const isSkinned = binding !== undefined;
 
   const surfaces = useMemo((): readonly CanvasSurface[] | null => {
     if (!geometry) return null;

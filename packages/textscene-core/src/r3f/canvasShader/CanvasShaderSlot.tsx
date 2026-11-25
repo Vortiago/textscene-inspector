@@ -97,11 +97,14 @@ export function CanvasShaderSlot({
     draw?.setFirstOrder(firstOrder);
     invalidate();
   }, [draw, firstOrder, invalidate]);
-  useLayoutEffect(() => draw?.setSource(texture, commands), [draw, texture, commands]);
+  useLayoutEffect(() => {
+    draw?.setSource(texture, commands);
+    invalidate();
+  }, [draw, texture, commands, invalidate]);
   useLayoutEffect(() => {
     draw?.setColors({ finalModulate, canvasModulate });
     invalidate();
-  }, [draw, texture, commands, finalModulate, canvasModulate, invalidate]);
+  }, [draw, finalModulate, canvasModulate, invalidate]);
   useRecordWriter(draw?.writeRecords ?? null);
 
   const samplers = shaded?.samplers ?? null;
