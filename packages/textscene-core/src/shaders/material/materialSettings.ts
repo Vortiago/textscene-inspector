@@ -1,4 +1,5 @@
 import { textToVariant } from '../../godot/variant/reader/variantReader.js';
+import { componentsOf } from '../../godot/variant/value/mathLayout.js';
 import type { Variant } from '../../godot/variant/value/variant.js';
 import type { MaterialSettings, MaterialValue } from './materialProperties.js';
 
@@ -12,11 +13,9 @@ function settingOf(value: Variant): MaterialValue | undefined {
     case 'FLOAT':
       return value.value;
     case 'COLOR':
-      return [value.value.r, value.value.g, value.value.b, value.value.a];
     case 'VECTOR2':
-      return [value.value.x, value.value.y];
     case 'VECTOR3':
-      return [value.value.x, value.value.y, value.value.z];
+      return componentsOf(value);
     default:
       return undefined;
   }

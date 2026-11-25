@@ -47,13 +47,18 @@ function baseMaterialProperties(
   held: Readonly<Record<string, string>>,
   follow: Follow
 ): BaseMaterialProperties {
+  return { materialClass, ...splitResources(held, follow) };
+}
+
+/** A property bag split into its Variant text and the resources it names. */
+function splitResources(held: Readonly<Record<string, string>>, follow: Follow) {
   const properties: Record<string, string> = {};
   const resources: Record<string, ScopedReference> = {};
   for (const [name, value] of Object.entries(held)) {
     if (resourceRef(value)) resources[name] = follow.reference(value);
     else properties[name] = value;
   }
-  return { materialClass, properties, resources };
+  return { properties, resources };
 }
 
 /** A ShaderMaterial as its shader's type draws it: a sky, a spatial surface, or declined for any other. */
@@ -68,9 +73,6 @@ function shaderMaterial(properties: Readonly<Record<string, string>>, follow: Fo
 
 /** The sky material of a class whose shader Godot generates, or null for any other class. */
 function skyMaterial({ type, properties }: HeldResource, follow: Follow): SkyMaterial | null {
-  const textures: Record<string, ScopedReference> = {};
-  for (const [name, value] of Object.entries(properties))
-    if (resourceRef(value)) textures[name] = follow.reference(value);
-  const shader = skyMaterialText(type, properties, textures);
+  const shader = skyMaterialText(type, properties, splitResources(properties, follow).resources);
   return shader && { form: 'sky', type, properties: shader };
 }
