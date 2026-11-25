@@ -125,10 +125,9 @@ function unionOwnBox(object: THREE.Object3D, target: THREE.Box3): void {
   const geometry = bearing.geometry;
   if (!geometry || isNodeIcon(object) || object.userData[BOXLESS_KEY] === true) return;
 
-  // An instanced draw's own box unions every instance and is not posed: an InstancedMesh, a
-  // BatchedMesh, or points over an instanced geometry (`instancesBounds`). Without it a GridMap
-  // frames one tile. Any other mesh uses the bind-pose `geometry.boundingBox`.
+  // An instanced draw's own box unions every instance, unposed, so a GridMap frames all its tiles.
   const isInstanced =
+    // A draw marked by `geometryBoxUserData`, as any other mesh, reads the bind-pose `geometry.boundingBox`.
     object.userData[GEOMETRY_BOX_KEY] !== true &&
     (bearing.isInstancedMesh ||
       bearing.isBatchedMesh ||
