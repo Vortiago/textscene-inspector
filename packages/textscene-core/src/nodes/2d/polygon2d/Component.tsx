@@ -59,9 +59,10 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
   useDisposeOnRelease(geometry);
   const [mesh, setMesh] = useState<THREE.Mesh | null>(null);
   const nodePath = useNodePath();
-  const isSkinned = namesSkeletonToBind(props);
-  const binding = useLiveScenePass(bindPolygonsToSkeletons, isSkinned ? nodePath : null);
+  const binding = useLiveScenePass(bindPolygonsToSkeletons, namesSkeletonToBind(props) ? nodePath : null);
   useSkeletonSkin(mesh, geometry, binding);
+  // A skeleton path that finds no Skeleton2D draws the polygon unskinned (`polygon_2d.cpp`, `_notification`).
+  const isSkinned = binding !== undefined;
 
   const surfaces = useMemo((): readonly CanvasSurface[] | null => {
     if (!geometry) return null;

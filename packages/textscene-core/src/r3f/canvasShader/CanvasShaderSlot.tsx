@@ -93,7 +93,10 @@ export function CanvasShaderSlot({
     [module, gl, item, maps, textureState, sampling, layout]
   );
   useEffect(() => (draw ? draw.dispose : undefined), [draw]);
-  useLayoutEffect(() => draw?.setFirstOrder(firstOrder), [draw, firstOrder]);
+  useLayoutEffect(() => {
+    draw?.setFirstOrder(firstOrder);
+    invalidate();
+  }, [draw, firstOrder, invalidate]);
   useLayoutEffect(() => draw?.setSource(texture, commands), [draw, texture, commands]);
   useLayoutEffect(() => {
     draw?.setColors({ finalModulate, canvasModulate });
