@@ -76,6 +76,8 @@ interface SkyLayerProps {
    * comes from elsewhere.
    */
   contribution?: number;
+  /** Whether the ambient source is this sky, which surfaces read even at a share of 0. */
+  isAmbientSource?: boolean;
   /** Whether surfaces reflect this sky: false under a reflection source that gives them none. */
   reflects?: boolean;
   /**
@@ -100,6 +102,7 @@ export function SkyLayer({
   sky: authoredSky,
   energyMultiplier = 1,
   contribution = 1,
+  isAmbientSource = true,
   reflects = true,
   asBackground = true,
   rotation,
@@ -116,6 +119,8 @@ export function SkyLayer({
   // Refs, not effect dependencies: a new share or reflection source needs no new bake.
   const contributionRef = useRef(contribution);
   contributionRef.current = contribution;
+  const isAmbientSourceRef = useRef(isAmbientSource);
+  isAmbientSourceRef.current = isAmbientSource;
   const reflectsRef = useRef(reflects);
   reflectsRef.current = reflects;
 
@@ -216,7 +221,13 @@ export function SkyLayer({
       scene.environmentIntensity = render.brightness;
       bake.showLightsAt(render.exposure);
       radiance.background?.drawIn(scene, render.brightness, skyRotation);
-      radiance.radiance.show(contributionRef.current, reflectsRef.current, radiance.drawn.energies);
+      radiance.radiance.show({
+        contribution: contributionRef.current,
+        isAmbientSource: isAmbientSourceRef.current,
+        isReflected: reflectsRef.current,
+        energies: radiance.drawn.energies,
+        energyMultiplier,
+      });
     };
     const stopRegistering = registerEnvironmentPart(scene, environment, () => {
       const previousEnvironment = scene.environment;

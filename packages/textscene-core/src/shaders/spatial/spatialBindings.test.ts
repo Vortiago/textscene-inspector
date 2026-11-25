@@ -118,8 +118,8 @@ describe('the fog bindings', () => {
     ]);
   });
 
-  it('writes no aerial perspective, since the scene template binds no sky radiance', () => {
-    expect(written({ fog: DEPTH_FOG }).value('fog_aerial_perspective')).toBe(0);
+  it("writes the fog's aerial perspective", () => {
+    expect(written({ fog: DEPTH_FOG }).value('fog_aerial_perspective')).toBe(0.5);
   });
 });
 

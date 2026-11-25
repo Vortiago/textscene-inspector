@@ -33,6 +33,9 @@ export const MATERIAL_SCENES = [
   // Lit spatial shaders under two suns and a colour background's ambient light. Godot 4.6.3: 0 px over
   // 2/255. An ambient light read black puts 33,505 px over, at most 38/255 (the cylinder's dark side).
   { name: 'material-spatial-shader-lit-sun', file: 'unit-spatial-shader-lit-sun.tscn' },
+  // Two of the same lit spatial shaders under a ProceduralSkyMaterial's ambient light and reflection.
+  // Godot 4.6.3: 0 px over 2/255. The sky read black puts 35,262 px over, at most 66/255.
+  { name: 'material-spatial-shader-lit-sky', file: 'unit-spatial-shader-lit-sky.tscn' },
   // Spatial shaders with render_mode wireframe, drawn as the edges left after cull_back and cull_disabled.
   { name: 'material-spatial-shader-wireframe', file: 'unit-spatial-shader-wireframe.tscn' },
   // Spatial shaders with cull_back, cull_front and cull_disabled, on quads that face the camera and away.

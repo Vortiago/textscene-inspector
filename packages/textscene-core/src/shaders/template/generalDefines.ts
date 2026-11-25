@@ -35,8 +35,11 @@ export const GENERAL_DEFINES: Readonly<Record<string, string>> = {
     `MAX_DIRECTIONAL_LIGHT_DATA_STRUCTS ${MAX_DIRECTIONAL_LIGHTS}`,
     `MAX_SKY_LOD ${MAX_ROUGHNESS_LOD}`
   ),
-  // render_forward_clustered.cpp:4998-5030 and render_forward_mobile.cpp:3434-3466.
-  'forward_clustered/scene_forward_clustered.glsl': forwardDefines(`SDFGI_OCT_SIZE ${OCT_SIZE}`),
+  // render_forward_clustered.cpp:4998-5030, render_forward_mobile.cpp:3434-3466 and sky.cpp:698.
+  'forward_clustered/scene_forward_clustered.glsl': forwardDefines(
+    'USE_RADIANCE_OCTMAP_ARRAY',
+    `SDFGI_OCT_SIZE ${OCT_SIZE}`
+  ),
   'forward_mobile/scene_forward_mobile.glsl': forwardDefines(),
   // gi.cpp:3445, 3502, 3512, 3526-3527, 3573, 3630 and 3639, gi.h:218.
   'environment/voxel_gi.glsl': defines('MAX_LIGHTS 32'),

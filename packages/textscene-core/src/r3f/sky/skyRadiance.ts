@@ -22,7 +22,7 @@ export const SKY_RADIANCE_UNIFORMS = {
 
 const { layers: LAYERS, shown: SHOWN, energies: ENERGIES, rotation: ROTATION } = SKY_RADIANCE_UNIFORMS;
 
-/** Where `shownSky` holds 1 when a surface reflects the sky and 0 when it reflects nothing. */
+/** Where `shownValues` holds 1 when a surface reflects the sky and 0 when it reflects nothing. */
 const SHOWN_REFLECTION = 5;
 
 /**
@@ -33,9 +33,9 @@ const SHOWN_REFLECTION = 5;
 const skyLayersSlot = installedSlot(LAYERS, THREE.DataArrayTexture);
 
 /** The shown sky's values, one buffer each material reads by reference (three r187 `UniformsUtils.js:43`). */
-const shownSky = installedOr(SHOWN, Float32Array, () => Float32Array.of(1, 1, 1, 0, 0, 0, 0, 0));
+const shownValues = installedOr(SHOWN, Float32Array, () => Float32Array.of(1, 1, 1, 0, 0, 0, 0, 0));
 
-/** The energy each layer of the shown sky holds, read as `shownSky` is. 0 while no sky shows. */
+/** The energy each layer of the shown sky holds, read as `shownValues` is. 0 while no sky shows. */
 export const skyEnergies = installedOr(
   ENERGIES,
   Float32Array,
@@ -44,7 +44,7 @@ export const skyEnergies = installedOr(
 
 const IDENTITY_BASIS = Float32Array.of(1, 0, 0, 0, 1, 0, 0, 0, 1);
 
-/** World to sky space, column-major, read as `shownSky` is. Identity while no sky shows. */
+/** World to sky space, column-major, read as `shownValues` is. Identity while no sky shows. */
 export const skyRotation = installedOr(ROTATION, Float32Array, () => IDENTITY_BASIS.slice());
 
 /**
@@ -100,10 +100,37 @@ vec3 godotSkyBlend( const in vec3 direction, const in float layerPosition ) {
 export function skyRadianceUniforms(): Record<string, THREE.IUniform> {
   return {
     [LAYERS]: { value: skyLayersSlot },
-    [SHOWN]: { value: shownSky },
+    [SHOWN]: { value: shownValues },
     [ENERGIES]: { value: skyEnergies },
     [ROTATION]: { value: skyRotation },
   };
+}
+
+/** How the surfaces of a render take the shown sky. */
+export interface SkyOnSurfaces {
+  /** The sky's share of the ambient light, 0 when the ambient source takes none of it. */
+  readonly contribution: number;
+  /** Whether the ambient source is the sky, which surfaces read even at a share of 0. */
+  readonly isAmbientSource: boolean;
+  /** Whether the reflection source gives surfaces the sky. */
+  readonly isReflected: boolean;
+  /** The energy each layer was baked at. A layer past the last reads the last. */
+  readonly energies: readonly number[];
+  /** `background_energy_multiplier`, which every read of the sky on a surface takes. */
+  readonly energyMultiplier: number;
+}
+
+/** The sky a render's surfaces read, its layers with how the surfaces take them. */
+export interface ShownSky extends SkyOnSurfaces {
+  readonly layers: SkyLayers;
+}
+
+/** Written only by `SkyRadiance.show`, `SkyRadiance.hide` and `hideShownSky`: null between renders. */
+let rendered: ShownSky | null = null;
+
+/** The sky of the render under way, or null when it shows none. */
+export function renderedSky(): ShownSky | null {
+  return rendered;
 }
 
 /**
@@ -124,21 +151,24 @@ export class SkyRadiance {
   }
 
   /** Points every reader at this array, with each layer read at its entry of `energies` or the last. */
-  show(contribution: number, reflects: boolean, energies: readonly number[]): void {
+  show(surfaces: SkyOnSurfaces): void {
+    const { contribution, isReflected, energies } = surfaces;
     const { borderSize, pixelSize } = this.layers.layout;
-    shownSky[0] = contribution;
-    shownSky[1] = borderSize;
+    shownValues[0] = contribution;
+    shownValues[1] = borderSize;
     // One over `vec3_to_oct_lod`'s `pixel_size_sqr` (`oct_inc.glsl:46`), so a fragment multiplies.
-    shownSky[2] = 1 / (4 * pixelSize * pixelSize);
-    shownSky[SHOWN_REFLECTION] = reflects ? 1 : 0;
+    shownValues[2] = 1 / (4 * pixelSize * pixelSize);
+    shownValues[SHOWN_REFLECTION] = isReflected ? 1 : 0;
     skyEnergies.set(energies);
     skyEnergies.fill(energies.at(-1)!, energies.length);
     skyRotation.set(this.toSky);
     showInSlot(this.renderer, skyLayersSlot, this.layers.target.texture);
+    rendered = { ...surfaces, layers: this.layers };
   }
 
   /** Leaves the slot off this array before it is freed. */
   hide(): void {
+    if (rendered?.layers === this.layers) rendered = null;
     leaveSlot(this.renderer, skyLayersSlot, this.layers.target.texture);
   }
 }
@@ -148,6 +178,7 @@ export class SkyRadiance {
  * own space, as Godot binds a black texture when the environment has no sky (`fog.cpp:980`).
  */
 export function hideShownSky(): void {
+  rendered = null;
   skyEnergies.fill(0);
   skyRotation.set(IDENTITY_BASIS);
 }

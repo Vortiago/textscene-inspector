@@ -101,7 +101,7 @@ describe('previewEnvironment', () => {
   it('is a sky background whose ambient comes from that sky', () => {
     const { settings } = previewEnvironment();
     expect(settings.background.mode).toBe(BackgroundMode.BG_SKY);
-    expect(settings.skyAmbient).toEqual({ contribution: 1 });
+    expect(settings.skyAmbient).toEqual({ contribution: 1, isAmbientSource: true });
   });
 
   it('tonemaps with FILMIC, as the editor preview does', () => {

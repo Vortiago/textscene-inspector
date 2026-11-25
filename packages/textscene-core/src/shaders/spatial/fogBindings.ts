@@ -3,9 +3,6 @@ import type { Binding } from '../uniforms/bindingTable.js';
 import { fogLightColor } from '../pipeline/environmentFog.js';
 import type { SpatialFrame } from './spatialBindings.js';
 
-/** `SCENE_DATA_FLAGS_USE_FOG` (`scene_data_inc.glsl:10`). */
-export const USE_FOG = 1 << 4;
-
 /** `use_depth_fog` in the first packed specialisation constant (`scene_forward_clustered_inc.glsl:101`). */
 const USE_DEPTH_FOG = 1 << 6;
 
@@ -31,8 +28,11 @@ export const FOG_BINDINGS: readonly Binding<SpatialFrame>[] = [
     godot: 'render_scene_data_rd.cpp:211',
     value: ({ fog }) => fog?.heightDensity ?? 0,
   },
-  // The scene template binds no sky radiance yet, which the aerial perspective reads.
-  { uniform: `${DATA}.fog_aerial_perspective`, godot: 'render_scene_data_rd.cpp:212', value: () => 0 },
+  {
+    uniform: `${DATA}.fog_aerial_perspective`,
+    godot: 'render_scene_data_rd.cpp:212',
+    value: ({ fog }) => fog?.aerialPerspective ?? 0,
+  },
   {
     uniform: `${DATA}.fog_depth_curve`,
     godot: 'render_scene_data_rd.cpp:214',

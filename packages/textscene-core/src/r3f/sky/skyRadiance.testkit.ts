@@ -10,4 +10,4 @@ export const skyLayersSlot = skyRadianceUniforms()[SKY_RADIANCE_UNIFORMS.layers]
 export const REFLECTION_SLOT = 5;
 
 /** The shown sky's values, as every reader receives them through `skyRadianceUniforms`. */
-export const shownSky = skyRadianceUniforms()[SKY_RADIANCE_UNIFORMS.shown]!.value as Float32Array;
+export const shownValues = skyRadianceUniforms()[SKY_RADIANCE_UNIFORMS.shown]!.value as Float32Array;

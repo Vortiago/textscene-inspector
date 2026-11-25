@@ -9,7 +9,7 @@ import { warningsOf } from './testing/logWarnings';
 import { restoreShaderGlobalsAfterEach } from './testing/shaderPatches';
 import { functionBody } from './testing/glslSource';
 import { SKY_RADIANCE_UNIFORMS, skyRotation } from './sky/skyRadiance';
-import { shownSky, skyLayersSlot } from './sky/skyRadiance.testkit';
+import { shownValues, skyLayersSlot } from './sky/skyRadiance.testkit';
 
 const threeChunks = { ...THREE.ShaderChunk };
 
@@ -58,7 +58,7 @@ describe('installGodotSkyLighting', () => {
     installGodotSkyLighting();
     expect(
       THREE.UniformsUtils.clone(THREE.ShaderLib.standard.uniforms)[SKY_RADIANCE_UNIFORMS.shown]!.value
-    ).toBe(shownSky);
+    ).toBe(shownValues);
   });
 
   it('reflects the whole sky, whatever its share of the ambient', () => {

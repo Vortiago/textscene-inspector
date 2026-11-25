@@ -63,6 +63,7 @@ export type {
   PointDraw,
   RendererShaderOptions,
   RenderingMethod,
+  SceneSky,
   ShaderInclude,
   ShaderSource,
   ShaderOptions,

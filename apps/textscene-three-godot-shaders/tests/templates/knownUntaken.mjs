@@ -6,8 +6,12 @@ const DOUBLE_PRECISION =
 const MOBILE_TRANSMITTANCE =
   "glslang refuses the mobile light_compute call with transmittance and no material's light code";
 
+const OCTMAP_ARRAY =
+  'the general defines hold USE_RADIANCE_OCTMAP_ARRAY, as texture_array_reflections defaults to true (rendering_server.cpp:3728)';
+
 const entries = (stage, cause, branches) => branches.map((branch) => [`${stage}: ${branch}`, cause]);
 const CLUSTERED = 'forward_clustered/scene_forward_clustered.glsl fragment';
+const CLUSTERED_VERTEX = 'forward_clustered/scene_forward_clustered.glsl vertex';
 const MOBILE_VERTEX = 'forward_mobile/scene_forward_mobile.glsl vertex';
 const MOBILE_FRAGMENT = 'forward_mobile/scene_forward_mobile.glsl fragment';
 
@@ -20,6 +24,14 @@ export const KNOWN_UNTAKEN = new Map([
     'environment/sdfgi_integrate.glsl compute: environment/sdfgi_integrate.glsl:149',
     'the C++ always defines SH_SIZE as 16 (gi.h:560)',
   ],
+  ...entries(CLUSTERED_VERTEX, OCTMAP_ARRAY, ['forward_clustered/scene_forward_clustered_inc.glsl:364']),
+  ...entries(CLUSTERED, OCTMAP_ARRAY, [
+    'forward_clustered/scene_forward_clustered_inc.glsl:364',
+    'forward_clustered/scene_forward_clustered.glsl:1118',
+    'forward_clustered/scene_forward_clustered.glsl:1724',
+    'forward_clustered/scene_forward_clustered.glsl:1750',
+    'forward_clustered/scene_forward_clustered.glsl:1790',
+  ]),
   ...entries(CLUSTERED, MOBILE_ONLY, ['half_inc.glsl:10', 'scene_forward_lights_inc.glsl:18']),
   ...entries(CLUSTERED, NO_CLIP_ALPHA, [
     'forward_clustered/scene_forward_clustered.glsl:1465',

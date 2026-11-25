@@ -48,6 +48,7 @@ import { setPrepassDraw } from '../pipeline/depthPrepass.js';
 import { drawAsLines } from '../pipeline/polygonMode.js';
 import { spatialPrepassDraw } from './spatialPrepass.js';
 import { dfgTextureNode } from './dfgTexture.js';
+import { radianceOctmapNode } from './sceneSky.js';
 import { rendererOf } from '../preprocessor/renderingMethod.js';
 import { BoundNodeMaterial } from '../uniforms/boundMaterial.js';
 import type { Specialisation } from '../template/specialisation.js';
@@ -102,6 +103,7 @@ export function transpileSpatial(source: string, options: SpatialOptions = {}): 
     options.sampling
   );
   resources.textures.set('dfg', dfgTextureNode());
+  resources.textures.set('radiance_octmap', radianceOctmapNode());
   const pipeline = spatialPipeline(parsed.tree);
   const emitStages = stageEmitter(linked, resources, parameterValues, pipeline);
   const shader = {
