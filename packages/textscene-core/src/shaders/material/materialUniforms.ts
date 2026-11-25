@@ -2,26 +2,26 @@ import type { EnumValue } from '../../godot/classdb/enumNames.js';
 import { BillboardMode } from '../../godot/rendering/materials/billboardMode.js';
 import { DistanceFadeMode } from '../../godot/rendering/materials/distanceFadeMode.js';
 import { TextureChannel } from '../../godot/rendering/materials/textureChannel.js';
-import { TextureFilter } from '../../godot/rendering/materials/textureFilter.js';
+import { TEXTURE_FILTER_WORDS, TextureFilter } from '../../godot/rendering/materials/textureFilter.js';
 import { Transparency } from '../../godot/rendering/materials/transparency.js';
 import { MaterialFeature, MaterialFlag } from '../../godot/rendering/materials/materialFeatures.js';
 import { isMsdf, usesAlphaAntialiasing, type MaterialKey } from './materialKey.js';
 
-/** Each filter's hint, then the hint of the heightmap, which reads linear under a nearest filter. */
-const TEXTURE_FILTERS: Readonly<Record<EnumValue<typeof TextureFilter>, readonly [string, string]>> = {
-  [TextureFilter.NEAREST]: ['filter_nearest', 'filter_linear'],
-  [TextureFilter.LINEAR]: ['filter_linear', 'filter_linear'],
-  [TextureFilter.NEAREST_WITH_MIPMAPS]: ['filter_nearest_mipmap', 'filter_linear_mipmap'],
-  [TextureFilter.LINEAR_WITH_MIPMAPS]: ['filter_linear_mipmap', 'filter_linear_mipmap'],
-  [TextureFilter.NEAREST_WITH_MIPMAPS_ANISOTROPIC]: [
-    'filter_nearest_mipmap_anisotropic',
-    'filter_linear_mipmap_anisotropic',
-  ],
-  [TextureFilter.LINEAR_WITH_MIPMAPS_ANISOTROPIC]: [
-    'filter_linear_mipmap_anisotropic',
-    'filter_linear_mipmap_anisotropic',
-  ],
+type Filter = EnumValue<typeof TextureFilter>;
+
+/** The heightmap's filter, which reads linear under a nearest filter (`material.cpp:730-760`). */
+const HEIGHTMAP_FILTERS: Readonly<Record<Filter, Filter>> = {
+  [TextureFilter.NEAREST]: TextureFilter.LINEAR,
+  [TextureFilter.LINEAR]: TextureFilter.LINEAR,
+  [TextureFilter.NEAREST_WITH_MIPMAPS]: TextureFilter.LINEAR_WITH_MIPMAPS,
+  [TextureFilter.LINEAR_WITH_MIPMAPS]: TextureFilter.LINEAR_WITH_MIPMAPS,
+  [TextureFilter.NEAREST_WITH_MIPMAPS_ANISOTROPIC]: TextureFilter.LINEAR_WITH_MIPMAPS_ANISOTROPIC,
+  [TextureFilter.LINEAR_WITH_MIPMAPS_ANISOTROPIC]: TextureFilter.LINEAR_WITH_MIPMAPS_ANISOTROPIC,
 };
+
+/** A filter's sampler hint, or nothing for a value past the enum. */
+const filterHint = (filter: Filter | undefined) =>
+  filter === undefined || !(filter in TEXTURE_FILTER_WORDS) ? '' : `filter_${TEXTURE_FILTER_WORDS[filter]}`;
 
 const ROUGHNESS_HINTS: Readonly<Record<EnumValue<typeof TextureChannel>, string>> = {
   [TextureChannel.TEXTURE_CHANNEL_RED]: 'hint_roughness_r',
@@ -33,7 +33,8 @@ const ROUGHNESS_HINTS: Readonly<Record<EnumValue<typeof TextureChannel>, string>
 
 /** The sampler hints of a texture and of the heightmap: the filter, then the repeat. */
 function samplerHints(key: MaterialKey): { texture: string; height: string } {
-  const [texture, height] = TEXTURE_FILTERS[key.textureFilter] ?? ['', ''];
+  const texture = filterHint(key.textureFilter);
+  const height = filterHint(HEIGHTMAP_FILTERS[key.textureFilter]);
   const repeat = key.flags.has(MaterialFlag.USE_TEXTURE_REPEAT) ? ', repeat_enable' : ', repeat_disable';
   return { texture: texture + repeat, height: height + repeat };
 }

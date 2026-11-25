@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { clamp, type Rgba } from '../../godot/math/math.js';
+import type { TextureFilterWord } from '../../godot/rendering/materials/textureFilter.js';
 import { defaultTexture } from '../uniforms/defaultTextures.js';
 import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
 import { applySamplerState, GODOT_SAMPLING, type ProjectSampling } from '../uniforms/samplerState.js';
@@ -14,13 +15,7 @@ export interface TexelSize {
 }
 
 /** `CanvasItem.texture_filter` past `DEFAULT`, which the item resolves to the project's filter. */
-export type CanvasTextureFilter =
-  | 'nearest'
-  | 'linear'
-  | 'nearest_mipmap'
-  | 'linear_mipmap'
-  | 'nearest_mipmap_anisotropic'
-  | 'linear_mipmap_anisotropic';
+export type CanvasTextureFilter = TextureFilterWord;
 
 /** `CanvasItem.texture_repeat` past `DEFAULT`. */
 export type CanvasTextureRepeat = 'disabled' | 'enabled' | 'mirror';

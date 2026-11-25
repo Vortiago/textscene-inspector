@@ -72,10 +72,21 @@ export function writeBatchRecord(geometry: THREE.BufferGeometry, index: number, 
   const words = (
     geometry.getAttribute(ATTRIBUTES[ATTRIBUTES.length - 1]!) as THREE.InterleavedBufferAttribute
   ).data;
-  floats.array.set(new Float32Array(record, 0, floats.stride), index * floats.stride);
-  words.array.set(new Uint32Array(record, floats.stride * 4), index * words.stride);
+  const lanes = { floats: floats.array as Float32Array, words: words.array as Uint32Array };
+  writeRecordInto(lanes, floats.stride, index, record);
   floats.needsUpdate = true;
   words.needsUpdate = true;
+}
+
+/** Writes `record` as record `index`: its first `floatLanes` lanes into `floats`, the rest into `words`. */
+function writeRecordInto(
+  { floats, words }: { floats: Float32Array; words: Uint32Array },
+  floatLanes: number,
+  index: number,
+  record: ArrayBuffer
+): void {
+  floats.set(new Float32Array(record, 0, floatLanes), index * floatLanes);
+  words.set(new Uint32Array(record, floatLanes * 4), index * (RECORD_LANES - floatLanes));
 }
 
 /** `color * base_color`, turned linear for a linear render target (`renderer_canvas_render_rd.cpp:2425`). */
@@ -102,10 +113,7 @@ export function instanceBatchGeometry(
   // Two buffers, as three uploads one GL buffer for each interleaved buffer: each byte goes up once.
   const floats = new Float32Array(floatLanes * records.length);
   const words = new Uint32Array(wordLanes * records.length);
-  records.forEach((record, index) => {
-    floats.set(new Float32Array(record, 0, floatLanes), index * floatLanes);
-    words.set(new Uint32Array(record, floatLanes * 4), index * wordLanes);
-  });
+  records.forEach((record, index) => writeRecordInto({ floats, words }, floatLanes, index, record));
   const geometry = new THREE.InstancedBufferGeometry();
   geometry.setIndex([...indices]);
   setAttributes(geometry, ATTRIBUTES.slice(0, floatAttributes), floats, floatLanes);

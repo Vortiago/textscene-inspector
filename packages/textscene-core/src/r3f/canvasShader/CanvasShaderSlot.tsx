@@ -3,26 +3,16 @@ import { useThree } from '@react-three/fiber';
 import type * as THREE from 'three';
 import type { Rgba } from '../../godot/math/math';
 import { canvasItemSamplerFilter, canvasItemSamplerRepeat } from '../../godot/scene/canvasItem';
-import type { EnumValue } from '../../godot/classdb/enumNames';
-import { TextureFilter } from '../../godot/rendering/materials/textureFilter';
-import { projectSampling } from '../../parser/projectSettingsParser';
+import { TEXTURE_FILTER_WORDS } from '../../godot/rendering/materials/textureFilter';
 import type { ShaderText } from '../../resources/materials/shadermaterial/types';
 import { memoisedImport } from '../../resources/memoisedImport';
-import { useLazyModuleState } from '../../resources/useLazyModule';
-import type {
-  CanvasTextureFilter,
-  CanvasTextureRepeat,
-  CanvasTextureState,
-} from '../../shaders/canvas/canvasTexture';
-import { warnOnce } from '../../utils/warnOnce';
-import { useNodesHandler } from '../canvasRenderer/canvasNodesHandler';
+import type { CanvasTextureRepeat, CanvasTextureState } from '../../shaders/canvas/canvasTexture';
 import { useCanvasColorSpace } from '../canvasColorSpace';
 import type { CanvasItemTextureSampler } from '../canvasItemTextureSampler';
 import { useCanvasModulate } from '../canvasModulate';
 import { useRecordWriter } from '../components/Canvas2DStage/canvasFrameSequence';
-import { useProjectSettings } from '../contexts/ProjectSettingsContext';
-import { useProjectShaderOptions } from '../projectShaderOptions';
 import { useShaderTextures } from '../shaderTextures/shaderTextures';
+import { useShaderRefusalWarning, useShaderTranslator } from '../shaderTranslator/useShaderTranslator';
 import type { CanvasRectRegion } from './canvasCommands';
 import { useCanvasShaderMaps } from './useCanvasShaderMaps';
 import type { CanvasItemTexture } from '../canvasItemTexture';
@@ -59,17 +49,19 @@ export function CanvasShaderSlot({
 }: CanvasShaderSlotProps) {
   const gl = useThree((state) => state.gl);
   const invalidate = useThree((state) => state.invalidate);
-  const loaded = useLazyModuleState(loadCanvasShaderDraw, true);
-  const module = typeof loaded === 'object' && loaded !== null ? loaded.module : null;
-  const nodesHandler = useNodesHandler(gl);
-  const options = useProjectShaderOptions(shader.code);
-  const { settings } = useProjectSettings();
-  const sampling = useMemo(() => projectSampling(settings), [settings]);
+  const translator = useShaderTranslator(loadCanvasShaderDraw, shader, LOAD_FAILURE);
+  const module = translator?.module ?? null;
+  const sampling = translator?.sampling;
   const usesLinearColors = useCanvasColorSpace().isLinear;
-  const isReady = module !== null && options !== null && nodesHandler === 'ready';
   const compiled = useMemo(
-    () => (isReady ? module.canvasShaderOf(shader, { ...options, sampling, usesLinearColors }) : null),
-    [isReady, module, shader, options, sampling, usesLinearColors]
+    () =>
+      translator &&
+      translator.module.canvasShaderOf(shader, {
+        ...translator.options,
+        sampling: translator.sampling,
+        usesLinearColors,
+      }),
+    [translator, shader, usesLinearColors]
   );
   const shaded = compiled && 'item' in compiled ? compiled : null;
   const item = shaded?.item ?? null;
@@ -78,13 +70,7 @@ export function CanvasShaderSlot({
     module!.warnOnTranslatorFault(shader, item);
     return () => module!.disposeCanvasShader(item);
   }, [module, shader, item]);
-
-  const refusal = compiled && 'refusal' in compiled ? compiled.refusal : null;
-  const isLoadFailed = loaded === 'failed' || nodesHandler === 'failed';
-  useEffect(() => {
-    if (refusal) warnOnce(shader, 'refused', refusal);
-    else if (isLoadFailed) warnOnce(loadCanvasShaderDraw, 'failed', LOAD_FAILURE);
-  }, [shader, refusal, isLoadFailed]);
+  useShaderRefusalWarning(shader, compiled && 'refusal' in compiled ? compiled.refusal : null);
 
   const canvasModulate = useCanvasModulate();
   const textureState = useMemo(
@@ -93,7 +79,7 @@ export function CanvasShaderSlot({
   );
   const maps = useCanvasShaderMaps(canvasTexture);
   const draw = useMemo(
-    () => item && module!.rectShaderDraw(gl, item, { texture, maps, textureState, sampling }),
+    () => item && sampling && module!.rectShaderDraw(gl, item, { texture, maps, textureState, sampling }),
     [module, gl, item, texture, maps, textureState, sampling]
   );
   useEffect(() => (draw ? draw.dispose : undefined), [draw]);
@@ -128,7 +114,7 @@ function canvasTextureState(
   usesLinearColors: boolean
 ): CanvasTextureState {
   return {
-    filter: FILTER_WORDS[canvasItemSamplerFilter(sampler.filter)],
+    filter: TEXTURE_FILTER_WORDS[canvasItemSamplerFilter(sampler.filter)],
     repeat: REPEAT_WORDS[canvasItemSamplerRepeat(sampler.repeat)],
     usesLinearColors,
   };
@@ -138,13 +124,4 @@ const REPEAT_WORDS: Readonly<Record<'clamp' | 'repeat' | 'mirror', CanvasTexture
   clamp: 'disabled',
   repeat: 'enabled',
   mirror: 'mirror',
-};
-
-const FILTER_WORDS: Readonly<Record<EnumValue<typeof TextureFilter>, CanvasTextureFilter>> = {
-  [TextureFilter.NEAREST]: 'nearest',
-  [TextureFilter.LINEAR]: 'linear',
-  [TextureFilter.NEAREST_WITH_MIPMAPS]: 'nearest_mipmap',
-  [TextureFilter.LINEAR_WITH_MIPMAPS]: 'linear_mipmap',
-  [TextureFilter.NEAREST_WITH_MIPMAPS_ANISOTROPIC]: 'nearest_mipmap_anisotropic',
-  [TextureFilter.LINEAR_WITH_MIPMAPS_ANISOTROPIC]: 'linear_mipmap_anisotropic',
 };
