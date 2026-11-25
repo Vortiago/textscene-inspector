@@ -57,20 +57,17 @@ function meshCommand(primitive: 'triangles' | 'points' = 'triangles'): CanvasSha
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 
+const TEXTURE = new THREE.DataTexture(new Uint8Array(8 * 4 * 4), 8, 4);
+
 function drawOf(commands: readonly CanvasShaderCommand[] = [RECT_COMMAND], item = itemOf(), firstOrder = 0) {
-  const texture = new THREE.DataTexture(new Uint8Array(8 * 4 * 4), 8, 4);
-  return canvasShaderDraw(
-    gl,
-    item,
-    {
-      texture,
-      maps: DEFAULT_CANVAS_MAPS,
-      textureState: GODOT_CANVAS_TEXTURE_STATE,
-      sampling: GODOT_SAMPLING,
-    },
-    commands,
-    firstOrder
-  );
+  const sampling = {
+    maps: DEFAULT_CANVAS_MAPS,
+    textureState: GODOT_CANVAS_TEXTURE_STATE,
+    sampling: GODOT_SAMPLING,
+  };
+  const draw = canvasShaderDraw(gl, item, sampling, commands, firstOrder);
+  draw.setSource(TEXTURE, commands);
+  return draw;
 }
 
 function rectWorldLanes(batch: THREE.Object3D, index = 0): number[] {
@@ -142,6 +139,26 @@ describe('canvasShaderDraw', () => {
     );
   });
 
+  it('draws the rects setSource gives in the batches it already has', () => {
+    const draw = drawOf();
+    const [batch] = draw.object.children;
+    const records = () =>
+      Array.from(
+        ((batch as THREE.Mesh).geometry.getAttribute('attrib_A') as THREE.InterleavedBufferAttribute).data
+          .array as Float32Array
+      );
+    draw.setColors({ finalModulate: WHITE, canvasModulate: WHITE });
+    const before = records();
+
+    draw.setSource(TEXTURE, [
+      { ...RECT_COMMAND, region: { ...RECT_COMMAND.region, rect: { ...RECT, x: 3 } } },
+    ]);
+    draw.setColors({ finalModulate: WHITE, canvasModulate: WHITE });
+
+    expect([draw.object.children[0], records()]).not.toEqual([batch, before]);
+    expect(draw.object.children[0]).toBe(batch);
+  });
+
   it('uploads the records when setColors writes them', () => {
     const draw = drawOf();
     const { data } = (draw.object.children[0] as THREE.Mesh).geometry.getAttribute(
@@ -196,6 +213,18 @@ describe('disposeCanvasShader', () => {
     item.draw('quad').material.addEventListener('dispose', disposed);
     item.draw('attributes').material.addEventListener('dispose', disposed);
 
+    disposeCanvasShader(item);
+
+    expect(disposed).toHaveBeenCalledTimes(2);
+  });
+
+  it('disposes the variants again on a second call, as a StrictMode effect makes it', () => {
+    const item = itemOf();
+    drawOf([RECT_COMMAND], item);
+    const disposed = vi.fn();
+    item.draw('quad').material.addEventListener('dispose', disposed);
+
+    disposeCanvasShader(item);
     disposeCanvasShader(item);
 
     expect(disposed).toHaveBeenCalledTimes(2);

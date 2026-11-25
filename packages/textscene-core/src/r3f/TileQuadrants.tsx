@@ -5,7 +5,7 @@
  */
 
 import { useMemo } from 'react';
-import type { DrawableCell } from '../resources/tileset/drawableCell';
+import type { RenderingQuadrant } from '../resources/tileset/renderingQuadrants';
 import type { TileMaterial, TileSetModel } from '../resources/tileset/types';
 import { quadrantCanvasItems, type TileCanvasItem } from '../resources/tileset/tileCanvasItems';
 import type { CanvasItemMaterialProperties } from '../resources/materials/canvasitemmaterial/types';
@@ -41,8 +41,8 @@ interface TileLayerItem {
 }
 
 interface TileQuadrantsProps extends TileLayerItem {
-  /** The drawable cells of each quadrant, in draw order (`layerQuadrants`). */
-  quadrants: readonly (readonly DrawableCell[])[];
+  /** The layer's rendering quadrants, in draw order (`layerQuadrants`). */
+  quadrants: readonly RenderingQuadrant[];
 }
 
 /** Draws inside the layer's canvas key (`useCanvasItemKey`), from which a tile `z_index` moves an item. */
@@ -52,14 +52,18 @@ export function TileQuadrants({ quadrants, ...layer }: TileQuadrantsProps) {
   return items.map((item, drawIndex) => <TileItem key={drawIndex} item={item} layer={layer} />);
 }
 
-/** A canvas item, and the `renderOrder` of its first batch, which follows the previous item's last. */
+/** A canvas item, its quadrant's origin, and its first batch's `renderOrder`, after the last item's. */
 interface DrawnItem extends TileCanvasItem {
+  canvasItemsPosition: RenderingQuadrant['canvasItemsPosition'];
   firstOrder: number;
 }
 
-function drawnItems(quadrants: readonly (readonly DrawableCell[])[]): DrawnItem[] {
+function drawnItems(quadrants: readonly RenderingQuadrant[]): DrawnItem[] {
   let firstOrder = 0;
-  return quadrants.flatMap(quadrantCanvasItems).map((item) => {
+  const items = quadrants.flatMap(({ canvasItemsPosition, cells }) =>
+    quadrantCanvasItems(cells).map((item) => ({ ...item, canvasItemsPosition }))
+  );
+  return items.map((item) => {
     const drawn = { ...item, firstOrder };
     firstOrder += item.runs.length;
     return drawn;
@@ -99,9 +103,10 @@ function TileItem({ item, layer }: { item: DrawnItem; layer: TileLayerItem }) {
   const space = useCanvasColorSpace();
   // Memoised on the values: a legacy TileMap layer hands a fresh `selfTint` on every render.
   const { r, g, b, a } = layer.selfTint;
+  const selfTint = useMemo(() => ({ r, g, b, a }), [r, g, b, a]);
   const tint = useMemo(
-    () => tileTint({ r, g, b, a }, canvasModulate, linearModulate, space),
-    [r, g, b, a, canvasModulate, linearModulate, space]
+    () => tileTint(selfTint, canvasModulate, linearModulate, space),
+    [selfTint, canvasModulate, linearModulate, space]
   );
   return (
     <CanvasItemGroup renderOrder={canvasKey}>
@@ -126,7 +131,8 @@ function TileItem({ item, layer }: { item: DrawnItem; layer: TileLayerItem }) {
               source={source}
               cells={cells}
               tileSet={tileSet}
-              finalModulate={layer.selfTint}
+              finalModulate={selfTint}
+              itemOrigin={item.canvasItemsPosition}
               sampler={layer.sampler}
               renderOrder={item.firstOrder + runIndex}
               fallback={mesh}

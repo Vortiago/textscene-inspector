@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from 'react';
 import { useThree } from '@react-three/fiber';
 import type * as THREE from 'three';
 import type { Rgba } from '../../godot/math/math';
@@ -13,7 +13,7 @@ import { useCanvasModulate } from '../canvasModulate';
 import { useRecordWriter } from '../components/Canvas2DStage/canvasFrameSequence';
 import { useShaderTextures } from '../shaderTextures/shaderTextures';
 import { useShaderRefusalWarning, useShaderTranslator } from '../shaderTranslator/useShaderTranslator';
-import type { CanvasShaderCommand } from './canvasCommands';
+import { sameCommandLayout, type CanvasShaderCommand } from './canvasCommands';
 import { useCanvasShaderMaps } from './useCanvasShaderMaps';
 import type { CanvasItemTexture } from '../canvasItemTexture';
 
@@ -86,18 +86,21 @@ export function CanvasShaderSlot({
     [sampler, usesLinearColors]
   );
   const maps = useCanvasShaderMaps(canvasTexture);
+  // A new frame of an animation keeps its draw: only a new layout builds new batches.
+  const layout = useCommandLayout(commands);
   const draw = useMemo(
     () =>
       item &&
       sampling &&
-      module!.canvasShaderDraw(gl, item, { texture, maps, textureState, sampling }, commands, firstOrder),
-    [module, gl, item, texture, maps, textureState, sampling, commands, firstOrder]
+      module!.canvasShaderDraw(gl, item, { maps, textureState, sampling }, layout, firstOrder),
+    [module, gl, item, maps, textureState, sampling, layout, firstOrder]
   );
   useEffect(() => (draw ? draw.dispose : undefined), [draw]);
+  useLayoutEffect(() => draw?.setSource(texture, commands), [draw, texture, commands]);
   useLayoutEffect(() => {
     draw?.setColors({ finalModulate, canvasModulate });
     invalidate();
-  }, [draw, finalModulate, canvasModulate, invalidate]);
+  }, [draw, texture, commands, finalModulate, canvasModulate, invalidate]);
   useRecordWriter(draw?.writeRecords ?? null);
 
   const samplers = shaded?.samplers ?? null;
@@ -120,6 +123,16 @@ export function CanvasShaderSlot({
 }
 
 /** The template's sampler state of the item's effective filter and repeat. */
+/** The first of the command lists given since the layout last changed. */
+function useCommandLayout(commands: readonly CanvasShaderCommand[]): readonly CanvasShaderCommand[] {
+  const [layout, setLayout] = useState(commands);
+  if (layout !== commands && !sameCommandLayout(layout, commands)) {
+    setLayout(commands);
+    return commands;
+  }
+  return layout;
+}
+
 function canvasTextureState(
   sampler: CanvasItemTextureSampler,
   usesLinearColors: boolean

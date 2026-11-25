@@ -1,5 +1,6 @@
 import { useMemo, type ReactNode } from 'react';
 import type { Rgba } from '../../godot/math/math';
+import type { Vector2 } from '../../godot/math/vector';
 import type { ShaderText } from '../../resources/materials/shadermaterial/types';
 import type { DrawableCell } from '../../resources/tileset/drawableCell';
 import { atlasGridSize } from '../../resources/tileset/paddedAtlas';
@@ -20,6 +21,8 @@ interface TileShaderRunProps {
   finalModulate: Rgba;
   sampler: CanvasItemTextureSampler;
   renderOrder: number;
+  /** `canvas_items_position` of the run's quadrant, where its canvas item sits in the layer. */
+  itemOrigin: Vector2;
   /** What the run draws while the translator loads, and for a shader it refuses. */
   fallback: ReactNode;
 }
@@ -33,27 +36,31 @@ export function TileShaderRun({
   finalModulate,
   sampler,
   renderOrder,
+  itemOrigin,
   fallback,
 }: TileShaderRunProps) {
   const drawn = useCanvasItemTextureSampledBy(sampler, source.texture);
   const texture = useRuntimeAtlasTexture(drawn.texture ?? null, source);
   const commands = useMemo(() => {
     const textureSize = drawn.texture && imageSize(drawn.texture.image);
-    return textureSize && tileRectCommands(cellsInAtlas(cells, source, textureSize), tileSet);
-  }, [cells, source, drawn.texture, tileSet]);
+    return textureSize && tileRectCommands(cellsInAtlas(cells, source, textureSize), tileSet, itemOrigin);
+  }, [cells, source, drawn.texture, tileSet, itemOrigin]);
   // A source with no texture, a pending one or a failed one draws nothing (`tile_map_layer.cpp:2676-2677`).
   if (!source.texture || drawn.missing || !texture || !commands) return null;
+  // Object3Ds keep the layer's canvas key. The fallback draws in layer pixels, so it undoes the item's place.
   return (
-    <CanvasShaderSlot
-      shader={shader}
-      commands={commands}
-      texture={texture}
-      canvasTexture={drawn.canvasTexture ?? undefined}
-      sampler={drawn.sampler}
-      finalModulate={finalModulate}
-      firstOrder={renderOrder}
-      fallback={fallback}
-    />
+    <object3D position={[itemOrigin.x, 0 - itemOrigin.y, 0]}>
+      <CanvasShaderSlot
+        shader={shader}
+        commands={commands}
+        texture={texture}
+        canvasTexture={drawn.canvasTexture ?? undefined}
+        sampler={drawn.sampler}
+        finalModulate={finalModulate}
+        firstOrder={renderOrder}
+        fallback={<object3D position={[-itemOrigin.x, itemOrigin.y, 0]}>{fallback}</object3D>}
+      />
+    </object3D>
   );
 }
 

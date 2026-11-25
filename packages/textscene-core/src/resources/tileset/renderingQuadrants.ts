@@ -11,7 +11,14 @@ import { mapToLocalPx } from './tilePlacement';
 import { ySortRows } from './tileYSort';
 import type { TileGrid, TileSetModel } from './types';
 
-interface Quadrant {
+/** A rendering quadrant's drawable cells, and where its canvas items sit in the layer. */
+export interface RenderingQuadrant {
+  /** `RenderingQuadrant::canvas_items_position`, the origin of its canvas items (`:544-555`). */
+  readonly canvasItemsPosition: { x: number; y: number };
+  readonly cells: readonly DrawableCell[];
+}
+
+interface Quadrant extends RenderingQuadrant {
   /** `map_to_local` of the quadrant coords, not of its first cell, which Godot sorts by (`:418`). */
   readonly local: { x: number; y: number };
   readonly cells: DrawableCell[];
@@ -27,7 +34,7 @@ function renderingQuadrants(
   cells: readonly DrawableCell[],
   grid: TileGrid,
   quadrantSize: number
-): readonly (readonly DrawableCell[])[] {
+): readonly RenderingQuadrant[] {
   const byKey = new Map<string, Quadrant>();
   for (const cell of cells) {
     // `_coords_to_quadrant_coords` (`:53-57`) rounds down, not towards zero.
@@ -38,9 +45,21 @@ function renderingQuadrants(
     const key = `${coords.x},${coords.y}`;
     const quadrant = byKey.get(key);
     if (quadrant) quadrant.cells.push(cell);
-    else byKey.set(key, { local: mapToLocalPx(grid, coords), cells: [cell] });
+    else byKey.set(key, quadrantAt(grid, coords, quadrantSize, cell));
   }
-  return [...byKey.values()].sort(compareQuadrants).map((quadrant) => quadrant.cells.sort(compareCells));
+  return [...byKey.values()]
+    .sort(compareQuadrants)
+    .map(({ canvasItemsPosition, cells }) => ({ canvasItemsPosition, cells: cells.sort(compareCells) }));
+}
+
+function quadrantAt(
+  grid: TileGrid,
+  coords: { x: number; y: number },
+  quadrantSize: number,
+  cell: DrawableCell
+): Quadrant {
+  const first = { x: coords.x * quadrantSize, y: coords.y * quadrantSize };
+  return { local: mapToLocalPx(grid, coords), canvasItemsPosition: mapToLocalPx(grid, first), cells: [cell] };
 }
 
 /** How a layer splits into quadrants. */
@@ -60,8 +79,11 @@ export function layerQuadrants(
   cells: readonly PlacedCell[],
   model: TileSetModel,
   layout: QuadrantLayout
-): readonly (readonly DrawableCell[])[] {
+): readonly RenderingQuadrant[] {
   const drawable = drawableCells(model, cells);
   if (!layout.ySortEnabled) return renderingQuadrants(drawable, model, layout.quadrantSize);
-  return ySortRows(drawable, model, layout.ySortOrigin).map((row) => row.cells);
+  return ySortRows(drawable, model, layout.ySortOrigin).map(({ y, cells }) => ({
+    canvasItemsPosition: { x: 0, y },
+    cells,
+  }));
 }

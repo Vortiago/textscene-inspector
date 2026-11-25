@@ -116,7 +116,9 @@ describe('isometric dungeon integration', () => {
 
   it('renders a dungeon layer end-to-end: one batched mesh per source run of each quadrant', async () => {
     const { floor, props, quadrants } = floorQuadrants();
-    const batches = quadrants.flatMap(quadrantCanvasItems).reduce((sum, item) => sum + item.runs.length, 0);
+    const batches = quadrants
+      .flatMap(({ cells }) => quadrantCanvasItems(cells))
+      .reduce((sum, item) => sum + item.runs.length, 0);
 
     const { renderer } = await renderLayer(floor);
 

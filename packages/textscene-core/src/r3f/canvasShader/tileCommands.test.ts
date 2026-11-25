@@ -37,8 +37,10 @@ const CENTRED = { x: 16 - 0.000005, y: -0.000005, w: 16.00001, h: 16.00001 };
 const rounded = (rect: { x: number; y: number; w: number; h: number }) =>
   Object.values(rect).map((value) => Number(value.toFixed(6)));
 
-const drawn = (cell: DrawableCell, usesUvClipping = false) => {
-  const [command] = tileRectCommands([cell], { grid: GRID, usesUvClipping });
+const ITEM_ORIGIN = { x: 0, y: 0 };
+
+const drawn = (cell: DrawableCell, usesUvClipping = false, itemOrigin = ITEM_ORIGIN) => {
+  const [command] = tileRectCommands([cell], { grid: GRID, usesUvClipping }, itemOrigin);
   if (command?.kind !== 'rect') throw new Error(`expected a rect command, got ${command?.kind}`);
   return command;
 };
@@ -52,6 +54,12 @@ describe('tileRectCommands', () => {
       { x: 16, y: 0, w: 16, h: 16 },
       { r: 1, g: 0.5, b: 1, a: 1 },
     ]);
+  });
+
+  it("places the rect in the pixels of the tile's canvas item, from its origin", () => {
+    const { rect } = drawn(cellAt(1), false, { x: 8, y: 8 }).region;
+
+    expect(rounded(rect)).toEqual(rounded({ ...CENTRED, x: CENTRED.x - 8, y: CENTRED.y - 8 }));
   });
 
   it('flips by a negative width, keeping the rect on its cell', () => {

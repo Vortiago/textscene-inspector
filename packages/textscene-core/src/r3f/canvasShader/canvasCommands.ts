@@ -58,15 +58,33 @@ export function surfaceCommands(surfaces: readonly CanvasSurface[]): CanvasShade
   if (surfaces.some(isPlacedOrSkinned)) return null;
   return surfaces.map(({ geometry, arrayColor }) => ({
     kind: 'mesh',
-    arrays: vertexArraysOf(geometry, arrayColor),
+    arrays: vertexArraysOf(geometry, arrayColor, threeFramePoint),
   }));
 }
+
+/** The command of each mesh geometry, read from the source: its y already runs down, as Godot's. */
+export function meshCommands(geometries: readonly THREE.BufferGeometry[]): CanvasShaderCommand[] {
+  return geometries.map((geometry) => ({
+    kind: 'mesh',
+    arrays: vertexArraysOf(geometry, undefined, godotFramePoint),
+  }));
+}
+
+type PointReader = (position: THREE.BufferAttribute | THREE.InterleavedBufferAttribute, i: number) => Vector2;
+
+const threeFramePoint: PointReader = (position, i) => ({ x: position.getX(i), y: 0 - position.getY(i) });
+
+const godotFramePoint: PointReader = (position, i) => ({ x: position.getX(i), y: position.getY(i) });
 
 const isPlacedOrSkinned = ({ position, scale, matrix, isSkinned }: CanvasSurface) =>
   Boolean(position || scale || matrix || isSkinned);
 
-/** The arrays of a geometry in three's frame (`canvasSurfaceGeometry`) back in Godot's: y and v down. */
-function vertexArraysOf(geometry: THREE.BufferGeometry, arrayColor: Rgba | undefined): CanvasVertexArrays {
+/** The arrays of a geometry in Godot's frame, its points through `pointOf`, v down from the top. */
+function vertexArraysOf(
+  geometry: THREE.BufferGeometry,
+  arrayColor: Rgba | undefined,
+  pointOf: PointReader
+): CanvasVertexArrays {
   const position = geometry.getAttribute('position');
   const uv = geometry.getAttribute('uv');
   const color = geometry.getAttribute('color');
@@ -74,7 +92,7 @@ function vertexArraysOf(geometry: THREE.BufferGeometry, arrayColor: Rgba | undef
   const uvs: Vector2[] = [];
   const colors: Rgba[] = arrayColor && !color ? [arrayColor] : [];
   for (let i = 0; i < position.count; i++) {
-    points.push({ x: position.getX(i), y: 0 - position.getY(i) });
+    points.push(pointOf(position, i));
     if (uv) uvs.push({ x: uv.getX(i), y: bottomUpV(uv.getY(i)) });
     if (color)
       colors.push({
@@ -92,4 +110,19 @@ function vertexArraysOf(geometry: THREE.BufferGeometry, arrayColor: Rgba | undef
     colors,
     uvs,
   };
+}
+
+/** Whether two command lists draw the same batches: the same kinds in order, and the same mesh arrays. */
+export function sameCommandLayout(
+  a: readonly CanvasShaderCommand[],
+  b: readonly CanvasShaderCommand[]
+): boolean {
+  return (
+    a.length === b.length &&
+    a.every((command, index) => {
+      const other = b[index]!;
+      if (command.kind === 'rect') return other.kind === 'rect';
+      return other.kind === 'mesh' && other.arrays === command.arrays;
+    })
+  );
 }

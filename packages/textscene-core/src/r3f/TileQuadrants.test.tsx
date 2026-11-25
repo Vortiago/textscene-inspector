@@ -135,7 +135,10 @@ function render(
   const tree = ReactThreeTestRenderer.create(
     wrap(
       <TileQuadrants
-        quadrants={quadrants.map((cells) => drawableCells(MODEL, cells))}
+        quadrants={quadrants.map((cells) => ({
+          canvasItemsPosition: { x: 0, y: 0 },
+          cells: drawableCells(MODEL, cells),
+        }))}
         model={MODEL}
         selfTint={selfTint}
         material={material}

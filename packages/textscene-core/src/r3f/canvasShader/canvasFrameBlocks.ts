@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { Rgba } from '../../godot/math/math';
 import { mutableTransform2D } from '../../godot/math/transform2d';
 import { canvasDataBlock, writeCanvasData, type CanvasDataBlock } from '../../shaders/canvas/canvasBindings';
+import { WHITE } from '../../shaders/canvas/canvasInstance';
 import { canvasFrameOf } from '../canvasFrame';
 import { perObject } from '../../utils/perObject';
 import { renderTargetSize } from '../renderTargetSize';
@@ -26,14 +27,11 @@ interface WrittenBlock {
   readonly block: CanvasDataBlock;
   renderId: number;
   camera: THREE.Camera | null;
+  readonly colors: { -readonly [K in keyof CanvasColors]: CanvasColors[K] };
 }
 
-/** Written only by `canvasDataOf`: each canvas's block, rewritten by the first item each render draws. */
-const writtenBlockOf = perObject((): WrittenBlock => ({
-  block: canvasDataBlock(),
-  renderId: -1,
-  camera: null,
-}));
+/** Written only by `canvasDataOf`: each canvas's blocks, one for each set of colours its items draw with. */
+const writtenBlocksOf = perObject((): WrittenBlock[] => []);
 
 /** Scratch of one write, overwritten by the next. */
 const frame = {
@@ -47,19 +45,26 @@ const frame = {
 };
 const targetSize = new THREE.Vector2();
 
-/** The block of the canvas `drawn.object` draws in, written for this render if no item wrote it yet. */
+/** The block of the canvas `drawn.object` draws in with `colors`, written once per render. */
 export function canvasDataOf(
   gl: THREE.WebGLRenderer,
   drawn: CanvasItemFrame,
   colors: CanvasColors
 ): CanvasDataBlock {
   const canvas = canvasFrameOf(drawn.object);
-  const key = canvas ?? drawn.camera;
-  const written = writtenBlockOf(key);
-  // Render gate first: a canvas draws all its items in one render with one camera.
-  if (written.renderId === drawn.renderId && written.camera === drawn.camera) return written.block;
+  const blocks = writtenBlocksOf(canvas ?? drawn.camera);
+  let free: WrittenBlock | undefined;
+  // A loop, not `.find`: no closure per draw per render.
+  for (const written of blocks) {
+    if (!isWrittenFor(written, drawn)) free ??= written;
+    else if (sameColors(written.colors, colors)) return written.block;
+  }
+  // A block of an earlier render is free, so a canvas holds as many blocks as one render's colour sets.
+  const written = free ?? newWrittenBlock(blocks);
   written.renderId = drawn.renderId;
   written.camera = drawn.camera;
+  written.colors.canvasModulate = colors.canvasModulate;
+  written.colors.usesLinearColors = colors.usesLinearColors;
   const { x: width, y: height } = renderTargetSize(gl, targetSize);
   frame.width = width;
   frame.height = height;
@@ -69,4 +74,24 @@ export function canvasDataOf(
   frame.usesLinearColors = colors.usesLinearColors;
   writeCanvasData(written.block, frame);
   return written.block;
+}
+
+/** Whether `written` holds the block of the render and camera `drawn` belongs to. */
+function isWrittenFor(written: WrittenBlock, drawn: CanvasItemFrame): boolean {
+  return written.renderId === drawn.renderId && written.camera === drawn.camera;
+}
+
+function newWrittenBlock(blocks: WrittenBlock[]): WrittenBlock {
+  const colors = { canvasModulate: WHITE, usesLinearColors: false };
+  const written = { block: canvasDataBlock(), renderId: -1, camera: null, colors };
+  blocks.push(written);
+  return written;
+}
+
+function sameColors(a: CanvasColors, b: CanvasColors): boolean {
+  const { canvasModulate: x } = a;
+  const { canvasModulate: y } = b;
+  return (
+    a.usesLinearColors === b.usesLinearColors && x.r === y.r && x.g === y.g && x.b === y.b && x.a === y.a
+  );
 }

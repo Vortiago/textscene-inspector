@@ -69,10 +69,9 @@ function variantDraw(item: TranspiledCanvasItem, variant: CanvasVariant): Canvas
   return draw;
 }
 
+/** Frees what `item`'s draws hold. The variants stay listed: StrictMode reruns the effect with this item. */
 export function disposeCanvasShader(item: TranspiledCanvasItem): void {
-  const variants = drawnVariantsOf(item);
-  for (const variant of variants) item.draw(variant).material.dispose();
-  variants.clear();
+  for (const variant of drawnVariantsOf(item)) item.draw(variant).material.dispose();
   for (const parameter of item.parameters.values()) parameter.dispose?.();
 }
 
@@ -88,9 +87,8 @@ export function warnOnTranslatorFault(shader: ShaderText, item: TranspiledCanvas
   for (const variant of drawnVariantsOf(item)) item.draw(variant).material.onTranslatorFault = warning;
 }
 
-/** What an item's draws bind once: its texture or none, its CanvasTexture's maps and its sampler state. */
-export interface ItemTexture {
-  readonly texture: THREE.Texture | null;
+/** What an item's draws bind for as long as they live: its CanvasTexture's maps and its sampler state. */
+export interface ItemSampling {
   readonly maps: CanvasMaps;
   readonly textureState: CanvasTextureState;
   readonly sampling: ProjectSampling;
@@ -107,6 +105,8 @@ export interface ItemColors {
 /** A translated item's draw: its three object, and the record writer the frame runs before the draw. */
 export interface CanvasShaderDraw {
   readonly object: THREE.Object3D;
+  /** Binds `texture`, or Godot's white default for null, and draws `commands` of the draw's layout. */
+  readonly setSource: (texture: THREE.Texture | null, commands: readonly CanvasShaderCommand[]) => void;
   /** Writes the records and the colours the next frames read, with no new geometry. */
   readonly setColors: (colors: ItemColors) => void;
   readonly writeRecords: () => void;
@@ -116,45 +116,46 @@ export interface CanvasShaderDraw {
 /** One batch of an item's draw, which Godot starts for a run of rects or for each mesh (`:2406, :2764`). */
 interface Batch {
   readonly object: THREE.Object3D;
+  readonly setRun: (run: CommandRun) => void;
   readonly writeColors: (item: CanvasItemDraw) => void;
   readonly writeWorld: (world: MutableTransform2D) => void;
   readonly dispose: () => void;
 }
 
-/** One draw of a variant, with the texel size its records read. */
+/** One draw of a variant, with the texel size of the texture it binds, which its records read. */
 interface BoundVariant {
   readonly draw: CanvasDraw;
-  readonly texelSize: TexelSize | undefined;
+  readonly binding: CanvasTextureBinding;
+  texelSize: TexelSize | undefined;
 }
 
-/** `commands` of one item drawn in order through Godot's canvas template, batches from `firstOrder` on. */
+/** An item's draw through Godot's canvas template for `layout`'s layout, batches from `firstOrder` on. */
 export function canvasShaderDraw(
   gl: THREE.WebGLRenderer,
   item: TranspiledCanvasItem,
-  bound: ItemTexture,
-  commands: readonly CanvasShaderCommand[],
+  bound: ItemSampling,
+  layout: readonly CanvasShaderCommand[],
   firstOrder: number
 ): CanvasShaderDraw {
   // An Object3D, not a Group: three takes the group order from the nearest Group, the canvas item's key.
   const object = new THREE.Object3D();
   const usesLinearColors = bound.textureState.usesLinearColors ?? false;
   const canvas = { canvasModulate: WHITE, usesLinearColors };
-  const bindings: CanvasTextureBinding[] = [];
   const variants = new Map<CanvasVariant, BoundVariant>();
   const variantOf = (variant: CanvasVariant): BoundVariant => {
     const held = variants.get(variant);
     if (held) return held;
     const draw = variantDraw(item, variant);
     const binding = new CanvasTextureBinding(draw, bound.sampling);
-    bindings.push(binding);
-    const texelSize = binding.bind(bound.texture ?? undefined, bound.textureState, bound.maps);
+    const made = { draw, binding, texelSize: binding.bind(undefined, bound.textureState, bound.maps) };
     bindFrameEachDraw(gl, draw, canvas);
-    const made = { draw, texelSize };
     variants.set(variant, made);
     return made;
   };
-  const batches = commandRuns(commands).map((run) =>
-    run.kind === 'rect' ? rectBatch(variantOf('quad'), run.commands) : meshBatch(variantOf, run.command)
+  const batches = commandRuns(layout).map((run) =>
+    run.kind === 'rect'
+      ? rectBatch(variantOf('quad'), run.commands.length)
+      : meshBatch(variantOf, run.command)
   );
   batches.forEach((batch, order) => {
     // Godot draws an item's batches in command order: three compares this order inside the item's group.
@@ -164,6 +165,11 @@ export function canvasShaderDraw(
   const world = mutableTransform2D();
   return {
     object,
+    setSource: (texture, commands) => {
+      for (const variant of variants.values())
+        variant.texelSize = variant.binding.bind(texture ?? undefined, bound.textureState, bound.maps);
+      commandRuns(commands).forEach((run, index) => batches[index]!.setRun(run));
+    },
     setColors: ({ finalModulate, canvasModulate }) => {
       canvas.canvasModulate = canvasModulate;
       const itemDraw = { transform: canvasTransformInto(world, object), finalModulate, usesLinearColors };
@@ -176,13 +182,15 @@ export function canvasShaderDraw(
     },
     dispose: () => {
       for (const batch of batches) batch.dispose();
-      for (const binding of bindings) binding.dispose();
+      for (const { binding } of variants.values()) binding.dispose();
     },
   };
 }
 
+type RectCommand = Extract<CanvasShaderCommand, { kind: 'rect' }>;
+
 type CommandRun =
-  | { readonly kind: 'rect'; readonly commands: readonly Extract<CanvasShaderCommand, { kind: 'rect' }>[] }
+  | { readonly kind: 'rect'; readonly commands: readonly RectCommand[] }
   | { readonly kind: 'mesh'; readonly command: Extract<CanvasShaderCommand, { kind: 'mesh' }> };
 
 /** Consecutive rects as one batch (`renderer_canvas_render_rd.cpp:2406`). */
@@ -197,25 +205,30 @@ function commandRuns(commands: readonly CanvasShaderCommand[]): CommandRun[] {
   return runs;
 }
 
-function rectBatch(
-  { draw, texelSize }: BoundVariant,
-  rects: readonly Extract<CanvasShaderCommand, { kind: 'rect' }>[]
-): Batch {
-  const geometry = quadBatchGeometry(rects.map(() => new ArrayBuffer(INSTANCE_BYTES)));
-  const object = new THREE.Mesh(geometry, draw.material);
+function rectBatch(variant: BoundVariant, count: number): Batch {
+  const geometry = quadBatchGeometry(Array.from({ length: count }, () => new ArrayBuffer(INSTANCE_BYTES)));
+  const object = new THREE.Mesh(geometry, variant.draw.material);
   object.frustumCulled = false;
+  let rects: readonly RectCommand[] = [];
   return {
     object,
+    setRun: (run) => {
+      if (run.kind === 'rect') rects = run.commands;
+    },
     writeColors: (item) =>
       rects.forEach(({ region: { rect, source, clipUv, transpose }, modulate }, index) =>
         writeBatchRecord(
           geometry,
           index,
-          rectInstanceData(textureRectRegion(rect, source, modulate, { clipUv, transpose }), item, texelSize)
+          rectInstanceData(
+            textureRectRegion(rect, source, modulate, { clipUv, transpose }),
+            item,
+            variant.texelSize
+          )
         )
       ),
     writeWorld: (world) => {
-      for (let index = 0; index < rects.length; index++) writeBatchWorld(geometry, index, world);
+      for (let index = 0; index < count; index++) writeBatchWorld(geometry, index, world);
     },
     dispose: () => geometry.dispose(),
   };
@@ -232,6 +245,8 @@ function meshBatch(
   const object = attributesObject(draw, geometry, arrays.primitive, constants);
   return {
     object,
+    // The layout holds the mesh's arrays, so a command of the same layout gives the same ones.
+    setRun: () => {},
     // `canvas_item_add_mesh`'s white modulate times the item's (`renderer_canvas_render_rd.cpp:2764-2855`).
     writeColors: (item) => (constants.modulation = modulated(WHITE, item)),
     writeWorld: (world) => Object.assign(constants.world, world),

@@ -20,17 +20,20 @@ export interface TileSetDraw {
   readonly usesUvClipping: boolean;
 }
 
-/** The rect command of each cell, frame 0, in the layer's pixels (`tile_map_layer.cpp:2661-2701`). */
+/** The rect of each cell, frame 0, in the pixels of the item at `itemOrigin` (`tile_map_layer.cpp:384`). */
 export function tileRectCommands(
   cells: readonly DrawableCell[],
-  tileSet: TileSetDraw
+  tileSet: TileSetDraw,
+  itemOrigin: Vector2
 ): CanvasShaderCommand[] {
   return cells.map((cell) => {
     const region = atlasTileRegion(cell.source, cell.atlasCoords, cell.tile.sizeInAtlas);
     const runtime = cell.source.usesTexturePadding
       ? paddedTileRegion(cell.source, cell.atlasCoords, region)
       : region;
-    const { rect, transpose } = transformedDestRect(cell, mapToLocalPx(tileSet.grid, cell.coords), {
+    const local = mapToLocalPx(tileSet.grid, cell.coords);
+    const position = { x: local.x - itemOrigin.x, y: local.y - itemOrigin.y };
+    const { rect, transpose } = transformedDestRect(cell, position, {
       x: region.width,
       y: region.height,
     });

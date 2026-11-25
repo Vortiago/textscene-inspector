@@ -5,7 +5,7 @@
  * The tile run (`TileSourceMesh`) and the CanvasGroup rect mount `CanvasSurfaceMaterial` alone.
  */
 
-import { useMemo, type ReactNode } from 'react';
+import { useCallback, useMemo, type ReactNode } from 'react';
 import type * as THREE from 'three';
 import type { TscnNode } from '../../parser/types';
 import type { Node2DProperties } from '../../nodes/base/node2d/types';
@@ -42,8 +42,8 @@ type CanvasSurfaces = readonly CanvasSurface[] | null;
 export interface MaterialSurfaces<Input> {
   readonly input: Input;
   readonly useSurfaces: (input: Input, material: CanvasItemMaterialProperties | null) => CanvasSurfaces;
-  /** What a canvas_item shader draws, which reads no CanvasItemMaterial, or null for the default shader. */
-  readonly shadedCommands: readonly CanvasShaderCommand[] | null;
+  /** What a canvas_item shader draws, asked only while one is in force, or null for the default shader. */
+  readonly shadedCommands: (() => readonly CanvasShaderCommand[]) | null;
 }
 
 /** A named group around the drawn surfaces, which the drawer receives once it is in the tree. */
@@ -87,7 +87,7 @@ export function CanvasMeshBody<Input>({
   children,
 }: CanvasMeshBodyProps<Input>) {
   const { view, canvasTexture, source, sampler, atlasCell } = texture[DRAWN_TEXTURE];
-  const shadedCommands = useMemo(
+  const shadedCommands = useCallback(
     () => shadedCommandsOf({ shaderRegion, surfaces, source, atlasCell, canvasTexture, sampler }),
     [shaderRegion, surfaces, source, atlasCell, canvasTexture, sampler]
   );
@@ -202,17 +202,18 @@ function shadedCommandsOf<Input>({
   const texture = atlasCell ? atlasCell.sheet : source;
   const commands = shaderRegion
     ? shadedRect(shaderRegion, source, atlasCell)
-    : surfaces && (isMaterialSurfaces(surfaces) ? surfaces.shadedCommands : surfaceCommands(surfaces));
+    : surfaces &&
+      (isMaterialSurfaces(surfaces) ? (surfaces.shadedCommands?.() ?? null) : surfaceCommands(surfaces));
   return commands ? { commands, texture, ...sampled } : null;
 }
 
-/** A sprite's rect, which draws nothing with no texture (`sprite_2d.cpp:159-161`). */
+/** A sprite's rect, none with no texture (`sprite_2d.cpp:159-161`) or a region wholly in the margin. */
 function shadedRect(
   region: CanvasRectRegion,
   source: THREE.Texture | null,
   atlasCell: AtlasCell | undefined
-): CanvasShaderCommand[] | null {
-  if (!source) return null;
+): CanvasShaderCommand[] {
+  if (!source) return [];
   const onAtlas = atlasCell ? atlasRectRegion(region, atlasCell) : region;
-  return onAtlas && [{ kind: 'rect', region: onAtlas, modulate: WHITE }];
+  return onAtlas ? [{ kind: 'rect', region: onAtlas, modulate: WHITE }] : [];
 }

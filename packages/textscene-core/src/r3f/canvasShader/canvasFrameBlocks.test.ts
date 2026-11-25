@@ -16,19 +16,37 @@ function cameraOf(): THREE.OrthographicCamera {
   return camera;
 }
 
-const modulationOf = (colors: { canvasModulate: typeof RED }, renderId: number, camera: THREE.Camera) =>
+const blockOf = (colors: { canvasModulate: typeof RED }, renderId: number, camera: THREE.Camera) =>
   canvasDataOf(
     gl,
     { renderId, object: new THREE.Object3D(), camera },
     { ...colors, usesLinearColors: false }
-  ).canvasModulation.toArray();
+  );
+
+const modulationOf = (colors: { canvasModulate: typeof RED }, renderId: number, camera: THREE.Camera) =>
+  blockOf(colors, renderId, camera).canvasModulation.toArray();
 
 describe('canvasDataOf', () => {
-  it('writes the block of a canvas once per render, from its first item', () => {
+  it('gives the items of a canvas with the same colours one block in a render', () => {
+    const camera = cameraOf();
+    const first = blockOf({ canvasModulate: RED }, 1, camera);
+
+    expect(blockOf({ canvasModulate: { ...RED } }, 1, camera)).toBe(first);
+  });
+
+  it('gives an item of a canvas with other colours a block of its own in a render', () => {
     const camera = cameraOf();
     modulationOf({ canvasModulate: RED }, 1, camera);
 
-    expect(modulationOf({ canvasModulate: BLUE }, 1, camera)).toEqual([1, 0, 0, 1]);
+    expect(modulationOf({ canvasModulate: BLUE }, 1, camera)).toEqual([0, 0, 1, 1]);
+  });
+
+  it('reuses the blocks of the last render in the next one', () => {
+    const camera = cameraOf();
+    const red = blockOf({ canvasModulate: RED }, 1, camera);
+    blockOf({ canvasModulate: BLUE }, 1, camera);
+
+    expect(blockOf({ canvasModulate: BLUE }, 2, camera)).toBe(red);
   });
 
   it('writes the block again for the next render', () => {

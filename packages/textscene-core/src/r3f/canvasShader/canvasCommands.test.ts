@@ -1,7 +1,14 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { canvasSurfaceGeometry } from '../canvasMesh/canvasSurface';
-import { atlasRectRegion, surfaceCommands } from './canvasCommands';
+import { canvasMeshGeometry } from '../meshes/canvasMeshGeometry';
+import {
+  atlasRectRegion,
+  meshCommands,
+  sameCommandLayout,
+  surfaceCommands,
+  type CanvasShaderCommand,
+} from './canvasCommands';
 
 /** A 16 by 8 cell at (32, 16) of its atlas, with a 2 px margin left and top around a 14 by 6 region. */
 const CELL = {
@@ -119,5 +126,35 @@ describe('surfaceCommands', () => {
     ['a matrix', { matrix: new THREE.Matrix4() }],
   ])('gives no commands for a surface placed by %s', (_, placement) => {
     expect(surfaceCommands([{ geometry: canvasSurfaceGeometry(TRIANGLE), ...placement }])).toBeNull();
+  });
+});
+
+describe('meshCommands', () => {
+  it("reads a mesh's own vertices as the canvas surface of the mesh gives them", () => {
+    const mesh = canvasMeshGeometry(canvasSurfaceGeometry(TRIANGLE));
+
+    expect(meshCommands([mesh])).toEqual(surfaceCommands([{ geometry: canvasMeshGeometry(mesh) }]));
+  });
+});
+
+describe('sameCommandLayout', () => {
+  const rect = (x: number): CanvasShaderCommand => ({
+    kind: 'rect',
+    region: { rect: { x, y: 0, w: 1, h: 1 }, source: { x: 0, y: 0, w: 1, h: 1 }, clipUv: false },
+    modulate: { r: 1, g: 1, b: 1, a: 1 },
+  });
+  const mesh = (): CanvasShaderCommand =>
+    surfaceCommands([{ geometry: canvasSurfaceGeometry(TRIANGLE) }])![0]!;
+
+  it('holds two lists of rects in the same places alike, whatever their regions', () => {
+    expect(sameCommandLayout([rect(0)], [rect(4)])).toBe(true);
+  });
+
+  it('tells a list with another count of commands apart', () => {
+    expect(sameCommandLayout([rect(0)], [rect(0), rect(1)])).toBe(false);
+  });
+
+  it('tells a mesh of other arrays apart', () => {
+    expect(sameCommandLayout([mesh()], [mesh()])).toBe(false);
   });
 });
