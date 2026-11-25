@@ -1,0 +1,13 @@
+shader_type canvas_item;
+
+render_mode blend_mix;
+
+uniform float amount = 20.0;
+
+void fragment() {
+	vec2 uv = (UV * 5.000000074505806e-2);
+	float a = fract((sin(dot(UV, vec2(1.2989800453186035e+1, 7.823300170898438e+1))) * 4.385452880859375e+2));
+	vec4 col = texture(TEXTURE, UV);
+	(col.a *= pow(a, amount));
+	(COLOR = col);
+}

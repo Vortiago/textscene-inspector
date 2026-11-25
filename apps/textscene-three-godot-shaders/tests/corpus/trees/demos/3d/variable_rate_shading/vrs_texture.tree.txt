@@ -1,0 +1,29 @@
+shader_type canvas_item;
+
+void fragment() {
+	float vrs = (texture(TEXTURE, UV).r * 255.0);
+	if ((vrs == 0.0)) {
+		(COLOR = vec4(0.0, 0.0, 0.0, 1.0));
+	}
+	else if ((vrs == 1.0)) {
+		(COLOR = vec4(0.0, 5.0e-1, 0.0, 1.0));
+	}
+	else if ((vrs == 4.0)) {
+		(COLOR = vec4(5.0e-1, 0.0, 0.0, 1.0));
+	}
+	else if ((vrs == 5.0)) {
+		(COLOR = vec4(5.0e-1, 5.0e-1, 0.0, 1.0));
+	}
+	else if ((vrs == 6.0)) {
+		(COLOR = vec4(5.0e-1, 1.0, 0.0, 1.0));
+	}
+	else if ((vrs == 9.0)) {
+		(COLOR = vec4(1.0, 5.0e-1, 0.0, 1.0));
+	}
+	else if ((vrs == 10.0)) {
+		(COLOR = vec4(1.0, 1.0, 0.0, 1.0));
+	}
+	else {
+		(COLOR = vec4(1.0, 5.0e-1, 1.0, 1.0));
+	}
+}

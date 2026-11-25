@@ -84,7 +84,7 @@ export function loadsAsParsedResource(path: string): boolean {
  * Whether `path` names a resource file, which records its own type: a `.tres`, or a binary file a
  * slice routes to the `resource` bus, such as a `.res`.
  */
-export function isResourceFilePath(path: string): boolean {
+function isResourceFilePath(path: string): boolean {
   return (
     fileExtension(path) === GODOT_TEXT_RESOURCE_FILE_EXTENSION ||
     resourceSliceRegistry.byPath(path)?.busType === 'resource'

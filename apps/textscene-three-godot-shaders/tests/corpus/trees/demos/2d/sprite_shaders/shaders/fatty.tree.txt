@@ -1,0 +1,15 @@
+shader_type canvas_item;
+
+render_mode blend_mix;
+
+uniform float fattyness = 2.0;
+
+void fragment() {
+	vec2 ruv = (UV - vec2(5.0e-1, 5.0e-1));
+	vec2 dir = normalize(ruv);
+	float len = length(ruv);
+	(len = (pow((len * 2.0), fattyness) * 5.0e-1));
+	(ruv = (len * dir));
+	vec4 col = texture(TEXTURE, (ruv + vec2(5.0e-1, 5.0e-1)));
+	(COLOR = col);
+}

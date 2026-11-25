@@ -1,0 +1,8 @@
+shader_type canvas_item;
+
+uniform vec3 color : source_color = vec3(1.0, 1.0, 1.0);
+
+void fragment() {
+	float dist = length((UV - vec2(5.0e-1, 5.0e-1)));
+	(COLOR.a = (1.0 - clamp((abs((4.000000059604645e-1 - dist)) / 1.0000000149011612e-1), 0.0, 1.0)));
+}
