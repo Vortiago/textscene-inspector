@@ -32,7 +32,7 @@ export function useRowVisibility(
           logger.error(`expected the eye rows to read visible, got ${String(error)}`);
       });
     void read(rows);
-    const removals = [...rowsByWrittenPath(rows)].map(([path, reread]) =>
+    const removals = [...rowsByWrittenPath(root)].map(([path, reread]) =>
       scene.observe(path, () => void read(reread))
     );
     return () => {
@@ -58,13 +58,12 @@ function withVisibility(
 }
 
 /** A container's write can change its children's `visible`, as a TabContainer's current tab does. */
-function rowsByWrittenPath(rows: readonly TreeRow[]): Map<string, TreeRow[]> {
+function rowsByWrittenPath(root: TreeRow): Map<string, TreeRow[]> {
   const byPath = new Map<string, TreeRow[]>();
   const add = (path: string, row: TreeRow) => byPath.set(path, [...(byPath.get(path) ?? []), row]);
-  for (const row of rows) {
-    add(row.node.path, row);
-    const parent = row.node.getParent();
-    if (parent) add(parent.path, row);
+  for (const row of rowsOf(root)) {
+    if (row.chain) add(row.node.path, row);
+    for (const child of row.children) if (child.chain) add(row.node.path, child);
   }
   return byPath;
 }

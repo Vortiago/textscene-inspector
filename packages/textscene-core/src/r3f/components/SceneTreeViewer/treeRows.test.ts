@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import '../../sceneLiveTree.js';
 import { openScene, type Scene } from '../../../scene/openScene';
 import type { ResourceProvider } from '../../../resources/ResourceProvider';
-import { treeReadOf, treeRowsOf, type TreeRow } from './treeRows';
+import { treeReadOf, type TreeRow } from './treeRows';
+import { treeRowsOf } from './sceneTree.testkit';
 
 const rowsOf = (scene: Scene) => treeRowsOf(scene.getNode('.'));
 

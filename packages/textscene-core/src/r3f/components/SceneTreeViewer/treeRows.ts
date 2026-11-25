@@ -21,12 +21,11 @@ export interface TreeRow {
 
 const CHAINS: readonly VisibilityChain[] = ['Node3D', 'CanvasItem', 'CanvasLayer', 'Window'];
 
-/** The dock's rows from the scene's root node. */
-export function treeRowsOf(root: NodeHandle): Promise<TreeRow> {
+function treeRowsOf(root: NodeHandle): Promise<TreeRow> {
   return rowOf({ root, editableOwners: new Map(), classes: new Map() }, root);
 }
 
-/** The dock's rows, or why they did not read while the nodes stay in the tree. */
+/** The dock's rows from the scene's root node, or why they did not read while the nodes stay in the tree. */
 export type TreeRead = { readonly root: TreeRow } | { readonly failure: string };
 
 /** A read that fails over freed nodes rejects, as the next text reads its own rows. */
