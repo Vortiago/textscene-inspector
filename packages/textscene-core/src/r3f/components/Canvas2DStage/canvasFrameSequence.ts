@@ -1,4 +1,4 @@
-import { createContext, useContext, useLayoutEffect } from 'react';
+import { createContext, createElement, useContext, useLayoutEffect, type ReactNode } from 'react';
 
 /** The steps one canvas runs for one frame. Each canvas holds one, and its steps register in it. */
 export interface CanvasFrameSteps {
@@ -22,11 +22,27 @@ export function runCanvasFrame(steps: CanvasFrameSteps, drawItems: () => void): 
   drawItems();
 }
 
-/**
- * The steps of the canvas around a component, or null outside every canvas. A sampler or a light
- * pass outside a canvas runs nowhere: no canvas draws what it would prepare.
- */
+/** The steps of the canvas around a component, or null outside one, where no canvas runs a step. */
 export const CanvasFrameStepsContext = createContext<CanvasFrameSteps | null>(null);
+
+// Apart from the steps: a lighting boundary hides the light steps, and the drawing canvas writes the records.
+const CanvasRecordWritersContext = createContext<Set<() => void> | null>(null);
+
+/** Provides `steps` as the frame steps of the canvas inside, its record writers among them. */
+export function CanvasFrameStepsProvider({
+  steps,
+  children,
+}: {
+  steps: CanvasFrameSteps;
+  children: ReactNode;
+}) {
+  const writers = createElement(
+    CanvasRecordWritersContext.Provider,
+    { value: steps.recordWriters },
+    children
+  );
+  return createElement(CanvasFrameStepsContext.Provider, { value: steps }, writers);
+}
 
 /** Runs `sample` as a shadow sampler of the enclosing canvas. */
 export function useShadowSampler(sample: () => void): void {
@@ -42,14 +58,14 @@ export function useShadowSampler(sample: () => void): void {
 
 /** Runs `write` as a record writer of the enclosing canvas. */
 export function useRecordWriter(write: (() => void) | null): void {
-  const steps = useContext(CanvasFrameStepsContext);
+  const writers = useContext(CanvasRecordWritersContext);
   useLayoutEffect(() => {
-    if (!steps || !write) return;
-    steps.recordWriters.add(write);
+    if (!writers || !write) return;
+    writers.add(write);
     return () => {
-      steps.recordWriters.delete(write);
+      writers.delete(write);
     };
-  }, [steps, write]);
+  }, [writers, write]);
 }
 
 /** Runs `lightPass` as the light pass of the enclosing canvas. */

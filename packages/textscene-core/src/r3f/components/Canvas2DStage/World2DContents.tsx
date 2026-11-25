@@ -20,7 +20,7 @@ import { useCanvasModulateColor } from '../../canvasModulate.js';
 import { ControlRasterLayer } from '../../../nodes/viewport/subviewport/ControlRasterLayer.js';
 import { ProjectClearColor } from '../../ProjectClearColor.js';
 import { CanvasFrameRender } from './CanvasFrameRender.js';
-import { CanvasFrameStepsContext, createCanvasFrameSteps } from './canvasFrameSequence.js';
+import { CanvasFrameStepsProvider, createCanvasFrameSteps } from './canvasFrameSequence.js';
 import { PendingSuspense } from '../../../resources/PendingSuspense.js';
 import { useRootCanvasColorSpace } from '../../rootCanvasColorSpace.js';
 import { YSortProvider } from '../../contexts/YSortContext.js';
@@ -75,7 +75,7 @@ export function World2DContents({
           <EditedRootProvider editableInstances={editableInstances}>
             <CameraRig pan={pan} zoom={zoom} />
             <ProjectClearColor />
-            <CanvasFrameStepsContext.Provider value={frameSteps}>
+            <CanvasFrameStepsProvider steps={frameSteps}>
               <CanvasFrameRender steps={frameSteps} />
               {/* The light accumulator starts from the canvas tint, the same pure
               function of `nodes` the dispatcher publishes to the items. */}
@@ -99,7 +99,7 @@ export function World2DContents({
                   externalResources={externalResources}
                 />
               </CanvasLighting2DProvider>
-            </CanvasFrameStepsContext.Provider>
+            </CanvasFrameStepsProvider>
           </EditedRootProvider>
         </SceneResourcesProvider>
       </CanvasRendererScope>

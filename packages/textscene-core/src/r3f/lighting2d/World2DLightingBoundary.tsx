@@ -1,11 +1,3 @@
-/**
- * The edge of a canvas's 2D lighting. Every Godot Viewport keeps its own World2D
- * (`viewport.cpp:5345`), so a SubViewport's lights, occluders and CanvasModulate never reach the
- * canvas around it, and its items are not lit or tinted by that canvas. The subtree inside draws
- * unlit under the tint of its own world, as it would outside any light pass, and joins none of the
- * outer canvas's frame steps.
- */
-
 import type { ReactNode } from 'react';
 import { CanvasModulateContext } from '../canvasModulate.js';
 import { CanvasColorSpaceProvider, type CanvasColorSpace } from '../canvasColorSpace.js';
@@ -22,6 +14,7 @@ interface World2DLightingBoundaryProps {
   children: ReactNode;
 }
 
+/** The edge of a SubViewport's own World2D (`viewport.cpp:5345`): no outer light, occluder or tint. */
 export function World2DLightingBoundary({ canvasModulate, space, children }: World2DLightingBoundaryProps) {
   return (
     <CanvasColorSpaceProvider value={space}>
