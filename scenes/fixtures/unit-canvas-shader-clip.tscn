@@ -1,0 +1,64 @@
+[gd_scene format=3]
+
+; One variable: a Sprite2D with a canvas_item ShaderMaterial under a parent with clip_children, in
+; clip-only (1) and clip-and-draw (2) mode. A plain child under a clip and a shaded child with no clip
+; are the controls. No other golden draws a shader under a clip, so none shows a regression in it.
+
+[ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
+
+[sub_resource type="Shader" id="Shader_uv"]
+code = "shader_type canvas_item;
+
+void fragment() {
+	COLOR = vec4(UV, 0.5, 1.0);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_uv"]
+shader = SubResource("Shader_uv")
+
+[node name="Root" type="Node2D"]
+
+[node name="Clipper" type="Sprite2D" parent="."]
+position = Vector2(300, 300)
+clip_children = 1
+rotation = 0.5
+scale = Vector2(1.2, 1.2)
+texture = ExtResource("1_marker")
+
+[node name="Shaded" type="Sprite2D" parent="Clipper"]
+material = SubResource("ShaderMaterial_uv")
+position = Vector2(40, 30)
+texture = ExtResource("1_marker")
+
+[node name="ClipperDraw" type="Sprite2D" parent="."]
+clip_children = 2
+position = Vector2(700, 300)
+scale = Vector2(1.2, 1.2)
+texture = ExtResource("1_marker")
+
+[node name="Shaded" type="Sprite2D" parent="ClipperDraw"]
+material = SubResource("ShaderMaterial_uv")
+position = Vector2(40, 30)
+texture = ExtResource("1_marker")
+
+[node name="PlainUnderClip" type="Sprite2D" parent="."]
+clip_children = 1
+position = Vector2(300, 520)
+scale = Vector2(1.2, 1.2)
+texture = ExtResource("1_marker")
+
+[node name="Plain" type="Sprite2D" parent="PlainUnderClip"]
+modulate = Color(1, 0.3, 0.3, 1)
+position = Vector2(40, 30)
+texture = ExtResource("1_marker")
+
+[node name="NoClip" type="Sprite2D" parent="."]
+position = Vector2(700, 520)
+scale = Vector2(1.2, 1.2)
+texture = ExtResource("1_marker")
+
+[node name="Shaded" type="Sprite2D" parent="NoClip"]
+material = SubResource("ShaderMaterial_uv")
+position = Vector2(40, 30)
+texture = ExtResource("1_marker")

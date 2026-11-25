@@ -32,7 +32,7 @@ function decidedBranches(stage, material) {
 }
 
 /** A material of no code with `custom` defines: what a shader of those built-ins and modes makes. */
-const definesOnly = (custom) => ({ custom, code: new Map() });
+const definesOnly = (custom) => ({ custom, hasUniforms: false, code: new Map() });
 
 /** Each define a spatial material can make, with the rows that make it, as `compileMaterial` writes each. */
 function rowsByDefine() {

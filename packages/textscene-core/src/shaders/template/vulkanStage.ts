@@ -1,6 +1,6 @@
-import { attribute, float, Fn, screenCoordinate, screenSize, vec2, vec4 } from 'three/tsl';
+import { attribute, float, Fn, pointUV, screenCoordinate, screenSize, vec2, vec4 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
-import type { Vec4 } from '../tslTypes.js';
+import type { Vec2, Vec4 } from '../tslTypes.js';
 import type { WrittenBuiltIn } from './emitTemplate.js';
 import type { TemplateStageNode } from './templateTree.js';
 
@@ -58,3 +58,9 @@ export const NATIVE_POINT_SIZE: WrittenBuiltIn = {
   initial: float(1) as unknown as Node,
   store: () => undefined,
 };
+
+/** Vulkan's `gl_PointCoord`, read as GL's: both start at the top row. */
+export function vulkanPointCoord(): Node {
+  const uv = pointUV as unknown as Vec2;
+  return vec2(uv.x, float(1).sub(uv.y)) as unknown as Node;
+}

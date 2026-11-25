@@ -4,6 +4,7 @@ import { canvasSurfaceGeometry } from '../canvasMesh/canvasSurface';
 import { canvasMeshGeometry } from '../meshes/canvasMeshGeometry';
 import {
   atlasRectRegion,
+  growItemBox,
   meshCommands,
   sameCommandLayout,
   surfaceCommands,
@@ -135,6 +136,21 @@ describe('meshCommands', () => {
 
     expect(meshCommands([mesh])).toEqual(surfaceCommands([{ geometry: canvasMeshGeometry(mesh) }]));
   });
+
+  it("reads the mesh's CUSTOM0 and CUSTOM1 arrays, which the canvas template reads", () => {
+    const geometry = canvasSurfaceGeometry(TRIANGLE);
+    const custom1 = new Float32Array(12).fill(0.25);
+    geometry.setAttribute('custom1', new THREE.BufferAttribute(custom1, 4));
+    const [command] = meshCommands([geometry]);
+
+    expect(command?.kind === 'mesh' && command.arrays.customs).toEqual([undefined, custom1]);
+  });
+
+  it('gives a mesh with no custom array no customs', () => {
+    const [command] = meshCommands([canvasSurfaceGeometry(TRIANGLE)]);
+
+    expect(command?.kind === 'mesh' && 'customs' in command.arrays).toBe(false);
+  });
 });
 
 describe('sameCommandLayout', () => {
@@ -156,5 +172,39 @@ describe('sameCommandLayout', () => {
 
   it('tells a mesh of other arrays apart', () => {
     expect(sameCommandLayout([mesh()], [mesh()])).toBe(false);
+  });
+});
+
+describe('growItemBox', () => {
+  const box = () => new THREE.Box3();
+  const corners = (min: [number, number], max: [number, number]) =>
+    new THREE.Box3(new THREE.Vector3(...min, 0), new THREE.Vector3(...max, 0));
+
+  it("takes a rect's corners with y negated, a flipped rect as the same area", () => {
+    const flipped: CanvasShaderCommand = {
+      kind: 'rect',
+      region: { rect: { x: 8, y: 6, w: -16, h: -4 }, source: { x: 0, y: 0, w: 4, h: 4 }, clipUv: false },
+      modulate: { r: 1, g: 1, b: 1, a: 1 },
+    };
+
+    expect(growItemBox(box(), flipped)).toEqual(corners([-8, -6], [8, -2]));
+  });
+
+  it("takes a mesh's points, which Godot bounds as the surface's AABB", () => {
+    const mesh: CanvasShaderCommand = {
+      kind: 'mesh',
+      arrays: {
+        primitive: 'triangles',
+        points: [
+          { x: -3, y: 2 },
+          { x: 5, y: -7 },
+          { x: 1, y: 4 },
+        ],
+        colors: [],
+        uvs: [],
+      },
+    };
+
+    expect(growItemBox(box(), mesh)).toEqual(corners([-3, -4], [5, 7]));
   });
 });

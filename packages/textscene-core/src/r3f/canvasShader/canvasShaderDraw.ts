@@ -41,7 +41,7 @@ import type { NodeFrame } from 'three/webgpu';
 import { perObject } from '../../utils/perObject';
 import { warnOnce } from '../../utils/warnOnce';
 import { canvasTransformInto } from '../node2dTransform';
-import type { CanvasShaderCommand } from './canvasCommands';
+import { growItemBox, type CanvasShaderCommand } from './canvasCommands';
 import { canvasDataOf, type CanvasColors } from './canvasFrameBlocks';
 
 export { setMaterialParameters } from '../../shaders/uniforms/materialParameters';
@@ -227,7 +227,9 @@ function rectBatch(variant: BoundVariant, count: number): Batch {
   return {
     object,
     setRun: (run) => {
-      if (run.kind === 'rect') regions = run.commands.map(rectRegionOf);
+      if (run.kind !== 'rect') return;
+      regions = run.commands.map(rectRegionOf);
+      boundItem(geometry, run.commands);
     },
     writeColors: (item) =>
       writeBatchRecords(geometry, item, regions.length, (record, index) =>
@@ -249,13 +251,15 @@ function rectRegionOf({
 
 function meshBatch(
   variantOf: (variant: CanvasVariant) => BoundVariant,
-  { arrays }: Extract<CanvasShaderCommand, { kind: 'mesh' }>
+  command: Extract<CanvasShaderCommand, { kind: 'mesh' }>
 ): Batch {
+  const { arrays } = command;
   const { draw } = variantOf(attributesVariant(arrays.primitive));
   const geometry = attributesGeometry(arrays);
   // Written in place by this batch, and read by the attributes draw before each draw.
   const constants = { world: mutableTransform2D(), modulation: WHITE };
-  const object = attributesObject(draw, geometry, arrays.primitive, constants);
+  const object = attributesObject(draw, geometry, arrays.primitive, constants) as THREE.Mesh;
+  boundItem(object.geometry, [command]);
   return {
     object,
     // The layout holds the mesh's arrays, so a command of the same layout gives the same ones.
@@ -263,8 +267,18 @@ function meshBatch(
     // `canvas_item_add_mesh`'s white modulate times the item's (`renderer_canvas_render_rd.cpp:2764-2855`).
     writeColors: (item) => (constants.modulation = modulated(WHITE, item)),
     writeWorld: (world) => Object.assign(constants.world, world),
-    dispose: () => geometry.dispose(),
+    dispose: () => {
+      geometry.dispose();
+      // An emulated points draw holds quads of its own beside the arrays.
+      if (object.geometry !== geometry) object.geometry.dispose();
+    },
   };
+}
+
+/** Bounds `geometry` by the item rect of `commands`, which a canvas group's region reads (`worldBox`). */
+function boundItem(geometry: THREE.BufferGeometry, commands: readonly CanvasShaderCommand[]): void {
+  const box = (geometry.boundingBox ??= new THREE.Box3()).makeEmpty();
+  for (const command of commands) growItemBox(box, command);
 }
 
 /** The uniform each variant's vertex stage reads, whose object update binds the canvas's block. */

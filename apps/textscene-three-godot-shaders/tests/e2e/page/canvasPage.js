@@ -10,7 +10,7 @@ import {
   ninePatchInstanceData,
   polygonCommand,
   polygonConstants,
-  primitiveBatchGeometry,
+  primitiveBatchObject,
   primitiveCommand,
   primitiveDraw,
   primitiveInstanceData,
@@ -175,9 +175,8 @@ function primitiveObjects(draws, { primitives, isTextured }) {
     else runs.push({ count: points.length, records });
   }
   return runs.map(({ count, records }) => {
-    const { variant, primitive } = primitiveDraw(count);
-    const { draw } = draws.draw(variant, isTextured);
-    return primitiveObject(primitive, primitiveBatchGeometry(records, count), draw.material);
+    const { draw } = draws.draw(primitiveDraw(count).variant, isTextured);
+    return primitiveBatchObject(draw, records, count);
   });
 }
 
@@ -219,6 +218,7 @@ function meshObjects(draws, { surface, isTextured }) {
     points: surface.vertices.map(vector2),
     colors: surface.colors.map(rgba),
     uvs: surface.uvs.map(vector2),
+    customs: surface.customs.map((lanes) => Float32Array.from(lanes)),
   };
   const { draw } = draws.draw(attributesVariant(surface.primitive), isTextured);
   const constants = meshConstants(draws.itemDraw, { transform: IDENTITY, modulate: WHITE });

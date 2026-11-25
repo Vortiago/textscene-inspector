@@ -1,7 +1,14 @@
 import { glslBlock } from '../language/godotText.js';
 import { INSTRUCTION_TABLE } from '../language/instructionTable.generated.js';
-import type { BlockNode, FunctionNode, ShaderNode, StructNode, VaryingNode } from '../language/shaderTree.js';
-import { shapeOf } from '../language/types.js';
+import type {
+  BlockNode,
+  FunctionNode,
+  ShaderNode,
+  StructNode,
+  UniformNode,
+  VaryingNode,
+} from '../language/shaderTree.js';
+import { isSamplerType, shapeOf } from '../language/types.js';
 import { everyExpressionIn, withConstantsFirst } from '../language/treeWalk.js';
 import { GENERAL_DEFINES } from './generalDefines.js';
 import { godotId, GodotIds } from './godotIds.js';
@@ -23,6 +30,8 @@ export interface CompiledMaterial {
   readonly varyings: Readonly<Record<'vertex' | 'fragment', readonly GlobalNode[]>>;
   /** The defines of the material's render modes, then of the built-ins it reads: `custom_defines`. */
   readonly custom: readonly string[];
+  /** Whether a uniform takes a member of the `MaterialUniforms` block (`shader_compiler.cpp:566-622`). */
+  readonly hasUniforms: boolean;
   /** The GLSL text of each built-in. */
   readonly renames: Readonly<Record<string, string>>;
   /** The sampler of each built-in texture. */
@@ -46,10 +55,14 @@ export function compileMaterial(shader: ShaderNode, table: ModeTable): CompiledM
     globals: [...shader.structs.map((struct) => ids.struct(struct)), ...functions],
     varyings: varyingGlobals(shader.varyings),
     custom: [...renderModeDefines(shader, table), ...usageDefines(shader, table)],
+    hasUniforms: shader.uniforms.some(isBlockMember),
     renames: table.renames,
     customSamplers: table.custom_samplers,
   };
 }
+
+/** An instance uniform and a sampler take no member of the block: Godot binds them apart. */
+const isBlockMember = (uniform: UniformNode) => uniform.scope !== 'instance' && !isSamplerType(uniform.type);
 
 /** Each varying as an `out` and an `in`, or a fragment global when `fragment()` writes it. */
 function varyingGlobals(varyings: readonly VaryingNode[]): CompiledMaterial['varyings'] {
@@ -97,7 +110,7 @@ export function templateVariant(
   file: string,
   stage: StageName,
   variant: string,
-  material: Pick<CompiledMaterial, 'custom' | 'code'>
+  material: Pick<CompiledMaterial, 'custom' | 'hasUniforms' | 'code'>
 ): VariantLine[] {
   const lines = splitStages(file, (path) => TEMPLATE_FILES[path])[stage];
   if (!lines) throw new Error(`expected a ${stage} stage in ${file}, found none`);
@@ -105,7 +118,7 @@ export function templateVariant(
     general: GENERAL_DEFINES[file] ?? '',
     variant,
     custom: material.custom,
-    hasUniforms: false,
+    hasUniforms: material.hasUniforms,
     codeSections: [...material.code.keys()],
   };
   return variantLines(lines, defines);

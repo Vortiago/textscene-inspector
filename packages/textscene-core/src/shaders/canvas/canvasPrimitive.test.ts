@@ -1,11 +1,14 @@
+import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { halfToFloat } from '../../godot/math/halfFloat.js';
 import {
   primitiveBatchGeometry,
+  primitiveBatchObject,
   primitiveCommand,
   primitiveDraw,
   primitiveInstanceData,
 } from './canvasPrimitive.js';
+import { DEFAULT_CANVAS_SHADER, transpileCanvasItem } from './transpileCanvas.js';
 
 const ITEM = {
   transform: { a: 1, b: 0, c: 0, d: 1, tx: 5, ty: 7 },
@@ -138,5 +141,24 @@ describe('primitiveBatchGeometry', () => {
       'Float32Array',
       'Uint32Array',
     ]);
+  });
+});
+
+describe('primitiveBatchObject', () => {
+  const records = primitiveInstanceData(primitiveCommand(QUAD.slice(0, 1), [], []), ITEM);
+
+  it('draws the points of a shader that names POINT_SIZE as the six corners of two triangles', () => {
+    const draw = transpileCanvasItem('shader_type canvas_item;\nvoid vertex() { POINT_SIZE = 4.0; }\n').draw(
+      'primitive_points'
+    );
+    const object = primitiveBatchObject(draw, records, 1) as THREE.Mesh;
+
+    expect([object.isMesh, [...object.geometry.index!.array]]).toEqual([true, [0, 1, 2, 3, 4, 5]]);
+  });
+
+  it("draws three's points for a shader that leaves POINT_SIZE", () => {
+    const draw = transpileCanvasItem(DEFAULT_CANVAS_SHADER).draw('primitive_points');
+
+    expect(primitiveBatchObject(draw, records, 1)).toBeInstanceOf(THREE.Points);
   });
 });

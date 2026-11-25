@@ -1,4 +1,4 @@
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import type { Rgba } from '../../godot/math/math';
 import { rect2Intersection, type Rect2 } from '../../godot/math/rect2';
 import { bottomUpV } from '../../godot/math/uv';
@@ -53,6 +53,20 @@ export type CanvasShaderCommand =
   | { readonly kind: 'rect'; readonly region: CanvasRectRegion; readonly modulate: Rgba }
   | { readonly kind: 'mesh'; readonly arrays: CanvasVertexArrays };
 
+/** Scratch of one corner, overwritten by the next. */
+const corner = new THREE.Vector3();
+
+/** Grows `box` by `command` as `Item::get_rect` does (`renderer_canvas_render.cpp:59-86`), with three's y. */
+export function growItemBox(box: THREE.Box3, command: CanvasShaderCommand): THREE.Box3 {
+  if (command.kind === 'mesh') {
+    for (const { x, y } of command.arrays.points) box.expandByPoint(corner.set(x, -y, 0));
+    return box;
+  }
+  const { x, y, w, h } = command.region.rect;
+  box.expandByPoint(corner.set(x, -y, 0));
+  return box.expandByPoint(corner.set(x + w, -(y + h), 0));
+}
+
 /** Each surface at the item's origin, white (`polygon_2d.cpp:401`), or null for a placed or skinned one. */
 export function surfaceCommands(surfaces: readonly CanvasSurface[]): CanvasShaderCommand[] | null {
   if (surfaces.some(isPlacedOrSkinned)) return null;
@@ -69,6 +83,9 @@ export function meshCommands(geometries: readonly THREE.BufferGeometry[]): Canva
     arrays: vertexArraysOf(geometry, undefined, GODOT_FRAME_Y),
   }));
 }
+
+/** The custom arrays `godotSurfacesGeometry` writes that the canvas template reads, CUSTOM0 first. */
+const CUSTOM_ATTRIBUTES = ['custom0', 'custom1'];
 
 /** The sign that turns a geometry's y into Godot's, which runs down: three's runs up. */
 const THREE_FRAME_Y = -1;
@@ -101,12 +118,16 @@ function vertexArraysOf(
       });
   }
   const index = geometry.getIndex();
+  const customs = CUSTOM_ATTRIBUTES.map(
+    (name) => geometry.getAttribute(name)?.array as Float32Array | undefined
+  );
   return {
     primitive: geometryPrimitive(geometry),
     ...(index && { indices: Array.from(index.array) }),
     points,
     colors,
     uvs,
+    ...(customs.some(Boolean) && { customs }),
   };
 }
 

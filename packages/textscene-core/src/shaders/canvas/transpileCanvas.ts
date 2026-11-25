@@ -1,9 +1,11 @@
 import * as THREE from 'three';
-import { instanceIndex, int, varyingProperty, vertexIndex } from 'three/tsl';
+import { attribute, instanceIndex, int, screenSize, varyingProperty, vertexIndex } from 'three/tsl';
 import type { Node, TextureNode } from 'three/webgpu';
 import type { MaterialBlendState } from '../pipeline/blendState.js';
 import { parsedShader, shaderSource, type ShaderOptions } from '../language/parseShader.js';
-import { emitTemplateStage, programResources } from '../template/emitTemplate.js';
+import { variablesRead } from '../language/treeWalk.js';
+import { devicePoints, type DevicePoints } from '../template/devicePoints.js';
+import { emitTemplateStage, programResources, type WrittenBuiltIn } from '../template/emitTemplate.js';
 import { linkedProgram, type LinkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
 import type { RowBlock } from '../template/rowBlock.js';
 import type { Specialisation } from '../template/specialisation.js';
@@ -15,6 +17,7 @@ import {
   type TargetRows,
   vertexAttributes,
   vulkanFragCoord,
+  vulkanPointCoord,
 } from '../template/vulkanStage.js';
 import type { Vec4 } from '../tslTypes.js';
 import { BoundNodeMaterial, type MaterialShader } from '../uniforms/boundMaterial.js';
@@ -69,7 +72,12 @@ export interface CanvasDraw {
   readonly textures: ReadonlyMap<string, TextureNode>;
   /** The template's storage buffers, by instance name. */
   readonly buffers: ReadonlyMap<string, RowBlock>;
+  /** Whether each point draws as two triangles, at the shader's `POINT_SIZE`: three's points are 1 px. */
+  readonly emulatesPoints: boolean;
 }
+
+/** The attribute of a points geometry that holds each point's vertex index, which `gl_VertexIndex` reads. */
+export const POINT_VERTEX_ID_ATTRIBUTE = 'vertex_id_attrib';
 
 export interface TranspiledCanvasItem {
   /** Each uniform of the material by name, which takes `set_shader_parameter`'s value in every variant. */
@@ -100,6 +108,7 @@ export function transpileCanvasItem(source: string, options: CanvasItemOptions =
     program,
     shader: { parameters: [...program.parameters.values()], source: shaderSource(parsed, file) },
     blend: canvasBlendState(parsed.tree),
+    usesPointSize: variablesRead(parsed.tree, (variable) => variable.builtIn !== undefined).has('POINT_SIZE'),
   };
   const rows = options.rows ?? 'flipped';
   const draws = new Map<CanvasVariant, CanvasDraw>();
@@ -140,6 +149,8 @@ interface ItemProgram {
   readonly program: LinkedProgram;
   readonly shader: MaterialShader;
   readonly blend: MaterialBlendState;
+  /** Whether the shader reads `POINT_SIZE` (`renderer_canvas_render_rd.cpp:1826`). */
+  readonly usesPointSize: boolean;
 }
 
 /** The variant a draw links, and the rows of the target it draws to. */
@@ -148,8 +159,15 @@ interface DrawTarget {
   readonly rows: TargetRows;
 }
 
+/** A variant, and the device points that draw its points at the shader's size, or null for three's. */
+interface VariantPoints {
+  readonly variant: CanvasVariant;
+  readonly points: DevicePoints | null;
+}
+
 /** The material of `variant`, with resources of its own and the program's parameters. */
-function canvasDraw({ program, shader, blend }: ItemProgram, target: DrawTarget): CanvasDraw {
+function canvasDraw({ program, shader, blend, usesPointSize }: ItemProgram, target: DrawTarget): CanvasDraw {
+  const emulatesPoints = usesPointSize && writesPointSize(target.variant);
   const resources = programResources();
   const specialisations = resources.uniforms.specialisations;
   const material = new BoundNodeMaterial({ ...shader, specialisations });
@@ -163,9 +181,12 @@ function canvasDraw({ program, shader, blend }: ItemProgram, target: DrawTarget)
     depthWrite: false,
   });
   // Emitted anew at each specialisation: three caches function code by node (`NodeBuilder.js:2759`).
-  material.stageWith(() => Object.assign(material, stages({ ...program, resources }, target)));
+  material.stageWith(() =>
+    Object.assign(material, stages({ ...program, resources }, target, emulatesPoints ? devicePoints() : null))
+  );
   return {
     material,
+    emulatesPoints,
     uniforms: resources.uniforms.byName,
     specialisations,
     textures: resources.textures,
@@ -173,30 +194,57 @@ function canvasDraw({ program, shader, blend }: ItemProgram, target: DrawTarget)
   };
 }
 
-function stages({ linked, resources, parameterValues }: LinkedProgram, { variant, rows }: DrawTarget) {
+function stages(
+  { linked, resources, parameterValues }: LinkedProgram,
+  { variant, rows }: DrawTarget,
+  points: DevicePoints | null
+) {
   const defines = CANVAS_VARIANT_DEFINES[variant];
   const vertexStage = linked('vertex', defines);
   const vulkanClip = varyingProperty('vec4', 'godot_clip_position') as unknown as Vec4;
   const vertex = emitTemplateStage(
     vertexStage,
-    new Map([
-      ...parameterValues,
-      ...vertexAttributes(vertexStage),
-      ['gl_VertexIndex', int(vertexIndex) as unknown as Node],
-      ['gl_InstanceIndex', int(instanceIndex) as unknown as Node],
-    ]),
-    // The default `point_size` is 1. A user's `POINT_SIZE` arrives with user canvas shaders.
-    { name: 'gl_Position', type: 'vec4', beside: writesPointSize(variant) ? [NATIVE_POINT_SIZE] : [] },
+    new Map([...parameterValues, ...vertexAttributes(vertexStage), ...drawIndices({ variant, points })]),
+    { name: 'gl_Position', type: 'vec4', beside: pointSizeWrites({ variant, points }) },
     resources
   );
   const fragment = emitTemplateStage(
     linked('fragment', defines),
-    new Map([...parameterValues, ['gl_FragCoord', vulkanFragCoord(vulkanClip, rows)]]),
+    new Map([
+      ...parameterValues,
+      ['gl_FragCoord', vulkanFragCoord(vulkanClip, rows)],
+      ['gl_PointCoord', points?.coord ?? vulkanPointCoord()],
+    ]),
     { name: 'frag_color', type: 'vec4' },
     resources
   );
+  const step = points ? (clip: Vec4) => points.expand(clip, screenSize as unknown as Node) : undefined;
   return {
-    vertexNode: glClipPosition(vertex.result, vulkanClip, { rows }),
+    vertexNode: glClipPosition(vertex.result, vulkanClip, { rows, step }),
     fragmentNode: fragment.result,
   };
+}
+
+/** The template's `gl_PointSize` write: the shader's size where points are emulated, else three's 1. */
+function pointSizeWrites({ variant, points }: VariantPoints): WrittenBuiltIn[] {
+  if (points) return [points.size];
+  return writesPointSize(variant) ? [NATIVE_POINT_SIZE] : [];
+}
+
+/** `gl_VertexIndex` and `gl_InstanceIndex` as Godot counts them, for an emulated point too. */
+function drawIndices({ variant, points }: VariantPoints): [string, Node][] {
+  if (points && variant === 'primitive_points')
+    return [
+      ['gl_VertexIndex', int(0) as unknown as Node],
+      ['gl_InstanceIndex', int(instanceIndex) as unknown as Node],
+    ];
+  if (points)
+    return [
+      ['gl_VertexIndex', int(attribute(POINT_VERTEX_ID_ATTRIBUTE, 'float')) as unknown as Node],
+      ['gl_InstanceIndex', int(0) as unknown as Node],
+    ];
+  return [
+    ['gl_VertexIndex', int(vertexIndex) as unknown as Node],
+    ['gl_InstanceIndex', int(instanceIndex) as unknown as Node],
+  ];
 }

@@ -27,6 +27,8 @@ const SQUARE = [
 
 const arrayOf = (geometry: THREE.BufferGeometry, name: string) => [...geometry.getAttribute(name).array];
 
+const SIZED_POINTS = 'shader_type canvas_item;\nvoid vertex() { POINT_SIZE = 4.0; }\n';
+
 describe('polygonCommand', () => {
   it('cuts the outline into triangles', () => {
     expect(polygonCommand(SQUARE, [], []).indices).toHaveLength(6);
@@ -72,6 +74,19 @@ describe('attributesGeometry', () => {
     ]).toEqual([
       [1, 1, 1, 1],
       [0, 0],
+    ]);
+  });
+
+  it('writes CUSTOM0 and CUSTOM1 at four lanes a point, and zero for a missing one', () => {
+    const custom0 = Float32Array.from({ length: 12 }, (_, lane) => lane / 4);
+    const geometry = attributesGeometry({
+      ...triangleArrayCommand([0, 1, 2], SQUARE.slice(0, 3), [], []),
+      customs: [custom0],
+    });
+
+    expect([arrayOf(geometry, 'custom0_attrib'), arrayOf(geometry, 'custom1_attrib')]).toEqual([
+      [...custom0],
+      Array(12).fill(0),
     ]);
   });
 
@@ -181,5 +196,38 @@ describe('attributesObject', () => {
     expect((draw.uniforms.get('params.world_ofs') as UniformNode<unknown>).value).toEqual(
       new THREE.Vector2(5, 7)
     );
+  });
+
+  it('draws each point of a shader that names POINT_SIZE as an instance of two triangles, with its vertex index', () => {
+    const draw = transpileCanvasItem(SIZED_POINTS).draw('attributes_points');
+    const points = {
+      primitive: 'points' as const,
+      indices: [2, 0],
+      points: SQUARE.slice(0, 3),
+      colors: [],
+      uvs: [],
+    };
+    const object = attributesObject(
+      draw,
+      attributesGeometry(points),
+      'points',
+      polygonConstants(ITEM)
+    ) as THREE.Mesh;
+    const geometry = object.geometry as THREE.InstancedBufferGeometry;
+
+    expect([object.isMesh, geometry.instanceCount, arrayOf(geometry, 'vertex_id_attrib')]).toEqual([
+      true,
+      2,
+      [2, 0],
+    ]);
+  });
+
+  it("draws three's points for a shader that leaves POINT_SIZE", () => {
+    const draw = transpileCanvasItem(DEFAULT_CANVAS_SHADER).draw('attributes_points');
+    const points = { primitive: 'points' as const, points: SQUARE.slice(0, 3), colors: [], uvs: [] };
+
+    expect(
+      attributesObject(draw, attributesGeometry(points), 'points', polygonConstants(ITEM))
+    ).toBeInstanceOf(THREE.Points);
   });
 });

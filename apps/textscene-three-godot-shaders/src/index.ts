@@ -27,6 +27,7 @@ export {
   polygonCommand,
   polygonConstants,
   primitiveBatchGeometry,
+  primitiveBatchObject,
   primitiveCommand,
   primitiveDraw,
   primitiveInstanceData,

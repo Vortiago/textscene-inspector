@@ -284,7 +284,7 @@ const STRIP = {
 /** One surface of an ArrayMesh with 2D vertices on a MeshInstance2D. */
 const meshScene = (name, surface, fields = {}) =>
   canvasScene('mesh', name, {
-    surface: { primitive: 'triangles', colors: [], uvs: [], indices: null, ...surface },
+    surface: { primitive: 'triangles', colors: [], uvs: [], indices: null, customs: [], ...surface },
     isTextured: false,
     ...fields,
   });
@@ -569,6 +569,48 @@ const SHADER_SCENES = [
   shadedRectScene('canvas-shader-light-only', shaderText({ head: 'render_mode light_only;' }), [
     'canvas_item render_mode light_only',
   ]),
+  meshScene(
+    'canvas-shader-mesh-customs',
+    {
+      ...STRIP,
+      indices: STRIP_TRIANGLES,
+      customs: [
+        STRIP.vertices.flatMap((_, vertex) => [vertex / 8, 1 - vertex / 8, 0.25, 0.5]),
+        STRIP.vertices.flatMap((_, vertex) => [0.1, 0.2, (vertex % 2) * 0.5 + 0.25, 0.75]),
+      ],
+    },
+    {
+      source: shaderText({ vertex: 'COLOR = vec4(CUSTOM0.xy, CUSTOM1.z, CUSTOM0.w + CUSTOM1.w * 0.5);' }),
+      rows: vertexRows('CUSTOM0', 'CUSTOM1'),
+    }
+  ),
+  meshScene(
+    'canvas-shader-point-size-mesh',
+    { primitive: 'points', vertices: STRIP.vertices.map(centre), colors: STRIP.colors },
+    {
+      source: shaderText({
+        vertex: 'POINT_SIZE = 2.0 + float(VERTEX_ID) * 1.5;',
+        fragment: 'COLOR = vec4(POINT_COORD, COLOR.b, 1.0);',
+      }),
+      rows: [...vertexRows('POINT_SIZE'), ...fragmentRows('POINT_COORD')],
+      knownPixels: 20,
+    }
+  ),
+  primitiveScene(
+    'canvas-shader-point-size-primitive',
+    [RED, GREEN, BLUE, YELLOW].map((color, index) => ({
+      points: [centre([-18 + index * 12, -4 + index * 3])],
+      colors: [color],
+      uvs: [],
+    })),
+    {
+      source: shaderText({
+        vertex: 'POINT_SIZE = 3.0 + float(INSTANCE_ID) * 2.0;',
+        fragment: 'COLOR = vec4(POINT_COORD.x, COLOR.g, POINT_COORD.y, 1.0);',
+      }),
+      rows: [...vertexRows('POINT_SIZE'), ...fragmentRows('POINT_COORD')],
+    }
+  ),
   ...BLEND_SCENES,
   // A source colour that a linear target turns linear (`renderer_canvas_render_rd.cpp:1703-1704`).
   rectScene('canvas-shader-source-color', { source: TINTED }),

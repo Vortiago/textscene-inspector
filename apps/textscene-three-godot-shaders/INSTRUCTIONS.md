@@ -12,7 +12,7 @@ GLSL or WGSL operation itself, `lowered` with the name of the operations it writ
 probes run on WebGL 2. WebGPURenderer runs the same TSL nodes, and no probe runs there until the
 canvases draw on WebGPURenderer (#1788).
 
-1766 of 1889 instructions transpiled.
+1768 of 1889 instructions transpiled.
 
 ## data type
 
@@ -1683,8 +1683,8 @@ canvases draw on WebGPURenderer (#1788).
 | `canvas_item.vertex.VERTEX_ID` | transpiled (`canvas-shader-vertex-ids`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:279` |
 | `canvas_item.vertex.AT_LIGHT_PASS` | transpiled (`canvas-shader-at-light-pass`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:280` |
 | `canvas_item.vertex.TEXTURE_PIXEL_SIZE` | transpiled (`canvas-shader-vertex-ids`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:281` |
-| `canvas_item.vertex.CUSTOM0` | transpiled (`canvas-shader-vertex-ids`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:282` |
-| `canvas_item.vertex.CUSTOM1` | transpiled (`canvas-shader-vertex-ids`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:283` |
+| `canvas_item.vertex.CUSTOM0` | transpiled (`canvas-shader-vertex-ids`, `canvas-shader-mesh-customs`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:282` |
+| `canvas_item.vertex.CUSTOM1` | transpiled (`canvas-shader-vertex-ids`, `canvas-shader-mesh-customs`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:283` |
 | `canvas_item.fragment.FRAGCOORD` | transpiled (`canvas-shader-fragcoord`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:290` |
 | `canvas_item.fragment.UV` | transpiled (`canvas-shader-fragment-uv`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:294` |
 | `canvas_item.fragment.TEXTURE` | transpiled (`canvas-shader-fragment-texture`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:296` |
@@ -1695,7 +1695,7 @@ canvases draw on WebGPURenderer (#1788).
 | `canvas_item.fragment.SCREEN_UV` | transpiled (`canvas-shader-screen-uv`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:301` |
 | `canvas_item.fragment.REGION_RECT` | transpiled (`canvas-shader-region-rect`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:302` |
 | `canvas_item.fragment.SCREEN_PIXEL_SIZE` | transpiled (`canvas-shader-screen-uv`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:303` |
-| `canvas_item.fragment.POINT_COORD` | open, #686 | | | `servers/rendering/shader_types.cpp:304` |
+| `canvas_item.fragment.POINT_COORD` | transpiled (`canvas-shader-point-size-mesh`, `canvas-shader-point-size-primitive`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:304` |
 | `canvas_item.fragment.AT_LIGHT_PASS` | transpiled (`canvas-shader-at-light-pass`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:305` |
 | `canvas_item.light.FRAGCOORD` | open, #686 | | | `servers/rendering/shader_types.cpp:332` |
 | `canvas_item.light.NORMAL` | open, #686 | | | `servers/rendering/shader_types.cpp:333` |
@@ -1858,7 +1858,7 @@ canvases draw on WebGPURenderer (#1788).
 | `canvas_item.vertex.VERTEX` | transpiled (`canvas-shader-vertex-moved`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:269` |
 | `canvas_item.vertex.UV` | transpiled (`canvas-shader-vertex-moved`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:270` |
 | `canvas_item.vertex.COLOR` | transpiled (`canvas-shader-vertex-moved`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:271` |
-| `canvas_item.vertex.POINT_SIZE` | open, #686 | | | `servers/rendering/shader_types.cpp:272` |
+| `canvas_item.vertex.POINT_SIZE` | transpiled (`canvas-shader-point-size-mesh`, `canvas-shader-point-size-primitive`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:272` |
 | `canvas_item.fragment.VERTEX` | transpiled (`canvas-shader-fragment-vertex`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:287` |
 | `canvas_item.fragment.SHADOW_VERTEX` | transpiled (`canvas-shader-light-vertex`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:288` |
 | `canvas_item.fragment.LIGHT_VERTEX` | transpiled (`canvas-shader-light-vertex`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:289` |

@@ -8,11 +8,9 @@ import {
   frontFacing,
   instanceIndex,
   int,
-  pointUV,
   select,
   uniform,
   varyingProperty,
-  vec2,
 } from 'three/tsl';
 import type { Node, TextureNode } from 'three/webgpu';
 import { parsedShader, shaderSource, type ShaderOptions } from '../language/parseShader.js';
@@ -28,7 +26,7 @@ import type { RowBlock } from '../template/rowBlock.js';
 import { instanceWords } from './instanceData.js';
 import { VERTEX_ID_ATTRIBUTE } from './meshAttributes.js';
 import { SPECIALISED_MEMBERS } from './effectSpecialisations.js';
-import { devicePoints, type DevicePoints } from './devicePoints.js';
+import { devicePoints, type DevicePoints } from '../template/devicePoints.js';
 import { coveredOnOneSample } from '../pipeline/singleSampleCoverage.js';
 import {
   applySpatialPipeline,
@@ -44,11 +42,12 @@ import {
   NATIVE_POINT_SIZE,
   vertexAttributes,
   vulkanFragCoord,
+  vulkanPointCoord,
   type ClipStep,
 } from '../template/vulkanStage.js';
 import { declaresInvariantPosition, setPosition, type EmittedStages } from './emittedStages.js';
 import { TreeMemo } from '../template/treeMemo.js';
-import type { Stacked, Vec2, Vec4 } from '../tslTypes.js';
+import type { Stacked, Vec4 } from '../tslTypes.js';
 import { VIEWPORT_SIZE } from './spatialBindings.js';
 import { setPrepassDraw } from '../pipeline/depthPrepass.js';
 import { drawAsLines } from '../pipeline/polygonMode.js';
@@ -228,12 +227,6 @@ function godotFrontFacing(): Node {
     (object as THREE.Mesh).isMesh === true && object!.matrixWorld.determinantAffine() < 0 ? 1 : 0
   );
   return select(isMirrored.equal(1), frontFacing.not(), frontFacing) as unknown as Node;
-}
-
-/** Vulkan's `gl_PointCoord`, read as GL's: both start at the top row. */
-function vulkanPointCoord(): Node {
-  const uv = pointUV as unknown as Vec2;
-  return vec2(uv.x, float(1).sub(uv.y)) as unknown as Node;
 }
 
 /** `gl_FragDepth`, which starts at Godot's depth: GL's depth is 1 minus it, as `glClipPosition` turns it. */

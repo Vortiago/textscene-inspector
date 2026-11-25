@@ -124,6 +124,23 @@ describe('canvasShaderDraw', () => {
     expect(object.children[0]).toBeInstanceOf(THREE.Points);
   });
 
+  it("bounds each batch by its commands' item rect, with three's y, so a clip group's region holds it", () => {
+    const [rects, mesh] = drawOf([RECT_COMMAND, meshCommand()]).object.children as THREE.Mesh[];
+
+    const itemRect = new THREE.Box3(new THREE.Vector3(0, -4, 0), new THREE.Vector3(8, -0, 0));
+    expect(rects!.geometry.boundingBox).toEqual(itemRect);
+    expect(mesh!.geometry.boundingBox).toEqual(itemRect);
+  });
+
+  it('bounds a rect batch by the rects setSource gives last', () => {
+    const draw = drawOf();
+    const moved = { ...RECT_COMMAND, region: { ...RECT_COMMAND.region, rect: { x: -2, y: 1, w: 8, h: 4 } } };
+    draw.setSource(TEXTURE, [moved]);
+
+    const box = (draw.object.children[0] as THREE.Mesh).geometry.boundingBox;
+    expect(box).toEqual(new THREE.Box3(new THREE.Vector3(-2, -5, 0), new THREE.Vector3(6, -1, 0)));
+  });
+
   it('draws batches that frustum culling never skips', () => {
     const { object } = drawOf([RECT_COMMAND, meshCommand()]);
 

@@ -64,6 +64,7 @@ export {
 } from './canvas/canvasRect.js';
 export {
   primitiveBatchGeometry,
+  primitiveBatchObject,
   primitiveCommand,
   primitiveDraw,
   primitiveInstanceData,

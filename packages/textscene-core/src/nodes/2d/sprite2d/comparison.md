@@ -31,6 +31,14 @@ ShaderMaterial's `shader_parameter/*` values, and a child with `use_parent_mater
 parent's material. A shader that Godot does not compile draws as Godot's default canvas shader. A
 2D light does not shade a sprite with a user's shader yet.
 
+## A user's canvas_item shader under clip_children
+
+<!-- compare: image=unit-canvas-shader-clip status=done fixture=unit-canvas-shader-clip.tscn -->
+
+A Sprite2D with a user's `canvas_item` shader under a parent with `clip_children` draws inside the
+parent's opaque pixels, as Godot does. This holds in clip-only and in clip-and-draw mode. The clip takes the
+shaded sprite's bounds from its rect, as Godot's `Item::get_rect` does (`renderer_canvas_render.cpp:59-86`).
+
 ## Linting
 
 <!-- lint:begin Sprite2D -->
