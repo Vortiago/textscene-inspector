@@ -291,7 +291,7 @@ export class TscnParserCore {
       // `isSectionHeading`, not `isHeading`, decides.
       if (pendingMultiline) {
         const awaitsValue = pendingMultiline.lines.length === 0;
-        if (isSectionHeading(line) || (awaitsValue && parseProperty(line))) {
+        if (isSectionHeading(line) || (awaitsValue && opensKey(line))) {
           // The lenient path keeps the next key, so an empty value stays empty.
           storePending();
         } else if (awaitsValue && isEmpty(line)) {
@@ -454,6 +454,11 @@ export class TscnParserCore {
 function escapesItsNewline(content: string, lineStarts: readonly number[], at: number): boolean {
   const next = lineStarts[at + 1];
   return next !== undefined && isEscapedNewline(content, next - 1);
+}
+
+/** True when `line` starts with a bare key and its `=`, not a value such as `"x=y"` that holds one. */
+function opensKey(line: string): boolean {
+  return /^\s*[^\s"'[\](){},=]+\s*=/.test(line);
 }
 
 /** The offset of each newline in raw `text` that Godot's counter skips. */

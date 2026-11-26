@@ -2517,6 +2517,15 @@ Vector2(5, 5)
     failing: [],
     stop: 'Parse Error: Parse error. [Resource file res://row194.tscn:5]',
   },
+  {
+    row: 195,
+    reads: 'a string that holds an `=` on the line after its key is the value, and the next key loads',
+    file: 'tscn',
+    text: '[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\nmetadata/a =\n"x=y"\nposition = Vector2(5, 5)\n',
+    failing: [],
+    stop: null,
+    tree: 'Root(5.0, 5.0)',
+  },
 ];
 
 /** The path Godot loaded the row under, which its stop line names. */

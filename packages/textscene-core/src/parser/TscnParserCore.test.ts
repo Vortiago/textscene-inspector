@@ -23,6 +23,12 @@ describe('TscnParserCore', () => {
     expect(scene.nodes[0]?.rawProperties).toEqual({ texture: '', position: 'Vector2(1, 2)' });
   });
 
+  it('reads a string that holds an `=` on the line after its key as the value', () => {
+    const content = '[node name="Root" type="Node2D"]\nmetadata/a =\n"x=y"\nvisible = false\n';
+    const { scene } = parser.parse(content, simpleCreator);
+    expect(scene.nodes[0]?.rawProperties).toEqual({ 'metadata/a': '"x=y"', visible: 'false' });
+  });
+
   describe('callback pattern', () => {
     it('should call node creator for each node heading', () => {
       const content = `
