@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import { woffFromSfnt } from './fontContainer.testkit';
-import { fontWork } from './settledChannel';
 import { drawLoad, peekOutlines, peekSceneFontOutlines } from './sceneFontOutlines';
 import { openFontOutlines } from './sfntOutlines';
 import { bundledFontBytes } from './bundledFontBytes';
@@ -88,10 +87,10 @@ describe('peekSceneFontOutlines', () => {
     const font = woffOfOpenSans();
 
     peekSceneFontOutlines(fonts, font);
-    expect(fontWork.pending()).toBe(1);
+    expect(fonts.work.pending()).toBe(1);
 
     await settledOutlines(font);
-    await vi.waitFor(() => expect(fontWork.pending()).toBe(0));
+    await vi.waitFor(() => expect(fonts.work.pending()).toBe(0));
   });
 
   it('answers null for a font file whose bytes hold no outlines', async () => {

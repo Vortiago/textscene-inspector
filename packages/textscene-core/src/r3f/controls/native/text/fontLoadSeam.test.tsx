@@ -25,7 +25,8 @@ import { solveNode } from '../testing/solveNode';
 import type { RegisteredCanvasFontMetrics } from './runtimeFontMetrics';
 import { peekSceneFontMetrics } from './sceneFontLoader';
 import { handLoader } from './settledFonts.testkit';
-import { useWatchedSettledFonts } from './useSettledFont';
+import { useSettledFonts, useWatchedSettledFonts } from './useSettledFont';
+import type { SettledFonts } from './settledFonts';
 import '../../../../nodes/3d/csg/csgbox3d/index.r3f';
 import '../../../../nodes/3d/csg/csgmesh3d/index.r3f';
 
@@ -134,9 +135,11 @@ describe('a reader that awaits its font', () => {
       const fake = createFakeResourceLoader({ loadFace: loader.load });
       const font = trueTypeFontFile();
       let renders = 0;
+      let viewFonts: SettledFonts | null = null;
       renderHook(
         () => {
           renders += 1;
+          viewFonts = useSettledFonts();
           return useReaderDraws(reader, font);
         },
         { wrapper: previewOf(fake) }
@@ -147,7 +150,7 @@ describe('a reader that awaits its font', () => {
 
       // A macrotask, not `settleFontWork`: the face load this reader awaits stays pending.
       await act(async () => {
-        fake.loader.settledFonts.peekOutlines({}, () => Promise.resolve(null));
+        viewFonts!.peekOutlines({}, () => Promise.resolve(null));
         await new Promise((resolve) => setTimeout(resolve, 0));
       });
 

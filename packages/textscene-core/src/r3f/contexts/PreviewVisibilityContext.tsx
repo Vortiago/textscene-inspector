@@ -4,10 +4,8 @@
  */
 
 import { createContext, useCallback, useContext, useSyncExternalStore, type ReactNode } from 'react';
-import { usePendingLoads } from '../../resources/ResourceLoaderContext.js';
-import { textureWork } from '../../resources/textures/textureWork.js';
-import { fontWork } from '../controls/native/text/settledChannel.js';
-import { hasPendingWork, pendingSceneWork } from '../sceneWork.js';
+import { useViewWork } from '../../resources/ResourceLoaderContext.js';
+import { hasPendingWork, pendingSceneWork, subscribeSceneWork } from '../sceneWork.js';
 import { useViewStatusStore } from '../viewStatus/ViewStatusContext.js';
 import type { ViewStatusStore } from '../viewStatus/viewStatus.js';
 
@@ -36,26 +34,21 @@ export function PreviewVisibilityProvider({
 /** A hidden preview draws while its scene loads or owes a capture: each advances only in a frame. */
 export function usePreviewFrameloop(): 'always' | 'never' {
   const isVisible = useContext(PreviewVisibilityContext);
-  const loads = usePendingLoads();
+  const work = useViewWork();
   const view = useViewStatusStore();
   // A visible preview subscribes to nothing: its canvas would re-render on every count change
   // of a load, and rebuild its whole tree, for a `frameloop` that stays 'always'.
   const subscribe = useCallback(
     (onChange: () => void) => {
       if (isVisible) return NO_UNSUBSCRIBE;
-      const unsubscribes = [
-        loads?.subscribe(onChange),
-        textureWork.subscribe(onChange),
-        fontWork.subscribe(onChange),
-        view?.subscribe(onChange),
-      ];
+      const unsubscribes = [subscribeSceneWork(work, onChange), view?.subscribe(onChange)];
       return () => unsubscribes.forEach((unsubscribe) => unsubscribe?.());
     },
-    [isVisible, loads, view]
+    [isVisible, work, view]
   );
   const isLoading = useSyncExternalStore(
     subscribe,
-    () => !isVisible && (hasPendingWork(pendingSceneWork(loads)) || isViewWaiting(view))
+    () => !isVisible && (hasPendingWork(pendingSceneWork(work)) || isViewWaiting(view))
   );
   return isVisible || isLoading ? 'always' : 'never';
 }

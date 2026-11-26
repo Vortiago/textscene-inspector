@@ -5,7 +5,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { act, renderHook } from '@testing-library/react';
-import { textureWork } from '../../resources/textures/textureWork';
+import type { ReactNode } from 'react';
+import { ResourceLoader } from '../../resources/ResourceLoader';
+import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
+import { createPendingProbe } from '../../resources/testing/pendingProbe';
 import { fakeTiledUploads, type FakeUpload } from './fakeTiledUploads.testkit';
 import { useTiledUpload } from './useTiledUpload';
 
@@ -20,6 +23,20 @@ async function finish(entry: FakeUpload | undefined): Promise<void> {
     entry?.finish(true);
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
+}
+
+/** The fake uploads in a view of their own, whose texture work `textures` reads. */
+function uploadsInView() {
+  const uploads = fakeTiledUploads();
+  const { Probe, work } = createPendingProbe();
+  const loader = new ResourceLoader();
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <ResourceLoaderProvider loader={loader}>
+      <Probe />
+      <uploads.wrapper>{children}</uploads.wrapper>
+    </ResourceLoaderProvider>
+  );
+  return { pending: uploads.pending, wrapper, textures: () => work().textures };
 }
 
 afterEach(() => {
@@ -38,13 +55,13 @@ describe('useTiledUpload', () => {
   });
 
   it('counts an upload as texture work until it finishes', async () => {
-    const { pending, wrapper } = fakeTiledUploads();
+    const { pending, wrapper, textures } = uploadsInView();
     const texture = named('a');
     renderHook(() => useTiledUpload(texture), { wrapper });
-    expect(textureWork.pending()).toBe(1);
+    expect(textures().pending()).toBe(1);
 
     await finish(pending[0]);
-    expect(textureWork.pending()).toBe(0);
+    expect(textures().pending()).toBe(0);
   });
 
   it('keeps showing the old texture while the new one uploads, then shows the new one', async () => {
@@ -122,7 +139,7 @@ describe('useTiledUpload', () => {
   });
 
   it('cancels an upload in flight on unmount', async () => {
-    const { pending, wrapper } = fakeTiledUploads();
+    const { pending, wrapper, textures } = uploadsInView();
     const { rerender, unmount } = renderHook(({ texture }) => useTiledUpload(texture), {
       initialProps: { texture: named('first') },
       wrapper,
@@ -132,7 +149,7 @@ describe('useTiledUpload', () => {
     unmount();
 
     expect(pending[1]?.cancelled).toBe(true);
-    expect(textureWork.pending()).toBe(0);
+    expect(textures().pending()).toBe(0);
   });
 
   it('shows nothing when the texture goes away', async () => {

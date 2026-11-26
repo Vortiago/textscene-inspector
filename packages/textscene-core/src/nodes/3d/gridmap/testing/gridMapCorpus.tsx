@@ -14,6 +14,7 @@ import { loaderServing } from '../../../../resources/testing/servingResourceLoad
 import { instanceAs } from '../../testing/reactThreeTestInstance';
 import { isInstancedMesh } from '../../../../r3f/testing/threeNarrow';
 import { settleFontWork } from '../../../../r3f/testing/settleFontWork';
+import { createPendingProbe } from '../../../../resources/testing/pendingProbe';
 import { wallQuadSurfaces, type SurfaceKeys } from '../../../../resources/testing/arrayMeshSurfaces';
 
 const LIBRARY_PATH = 'res://stage/tiles.tres';
@@ -157,8 +158,10 @@ export async function mountGridMap({
   );
 
   const gridMap = <GridMap node={gridMapNode(cells, gridMapProperties)} />;
+  const { Probe, work } = createPendingProbe();
   const tree = (
     <ResourceLoaderProvider loader={loader}>
+      <Probe />
       <SceneResourcesProvider internalResources={[]} externalResources={EXT}>
         {Wrapper ? <Wrapper>{gridMap}</Wrapper> : gridMap}
       </SceneResourcesProvider>
@@ -169,7 +172,7 @@ export async function mountGridMap({
   for (let i = 0; i < 12; i++) {
     await new Promise<void>((r) => setTimeout(r, 20));
     // A font decode outlasts every pass on a loaded runner, so each pass waits for the fonts it started.
-    await settleFontWork();
+    await settleFontWork(work().fonts);
     await renderer.update(tree);
   }
   // No frame has run, so the world matrices are brought up to date from the root.

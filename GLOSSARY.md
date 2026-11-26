@@ -159,7 +159,7 @@ The faces a font tries for each glyph, in order: its own face, then each of its 
 _Avoid_: "fallback font" for the bundled Open Sans, which is the **Project default font**'s last resort.
 
 **Settled font** (`SettledFont` in `r3f/controls/native/text/settledFonts.ts`, `readSettledFont` in `sceneFontLoader.ts`, `useSettledFont`):
-A font of the scene once the face of each font of its **Fallback chain** has loaded: its face, with the chain's faces as its fallbacks, and the chain. Each preview loads its fonts through the settled fonts its `ResourceLoader` holds (`settledFonts.ts`). A settle there wakes the readers of that font in that preview, and no reader of another preview. Until then the font is loading and draws nothing. No font set is none, and draws the bundled font.
+A font of the scene once the face of each font of its **Fallback chain** has loaded: its face, with the chain's faces as its fallbacks, and the chain. Each preview loads its fonts through the settled fonts its `ResourceLoaderProvider` holds (`settledFonts.ts`). A settle there wakes the readers of that font in that preview, and no reader of another preview. Until then the font is loading and draws nothing. No font set is none, and draws the bundled font.
 _Avoid_: "the font metrics" for the whole answer, which holds the chain too.
 
 **Cluster** (`GlyphPlacement.char` and `sourceIndex` in `r3f/controls/native/text/textLayout.ts`):
@@ -597,7 +597,7 @@ The one view mounted in a page element by `mountScene`, with a React root of its
 _Avoid_: "headless view": a browser draws it. "Embed" for the React `<TscnCanvas>`.
 
 **View status** (`ViewStatus` in `r3f/viewStatus/viewStatus.ts`, `view.status()`, `onStatusChange`):
-What one view reports of itself now: its settled value or null, the textures and fonts still building on the page, its last window of frame numbers, with the objects and primitives of Godot's editor monitor and, while `show.performance` is on, the timings, each **Undrawn node**, and whether the browser draws its WebGL in software. Each view keeps its own: the view's store is inside the `TscnCanvas`, unless the host gives one, as `mountScene` does. `onStatusChange` tells of each change but the frame numbers. The previewer reads its view only through it.
+What one view reports of itself now: its settled value or null, the resources, textures and fonts it still waits for, its last window of frame numbers, with the objects and primitives of Godot's editor monitor and, while `show.performance` is on, the timings, each **Undrawn node**, and whether the browser draws its WebGL in software. Each view keeps its own: the view's store is inside the `TscnCanvas`, unless the host gives one, as `mountScene` does. `onStatusChange` tells of each change but the frame numbers. The previewer reads its view only through it.
 _Avoid_: "scene status": the files a scene loads are **Scene file**s, a fact of the scene and not of the view.
 
 **Undrawn node** (`UndrawnNode` in `r3f/viewStatus/undrawnNodes.ts`):

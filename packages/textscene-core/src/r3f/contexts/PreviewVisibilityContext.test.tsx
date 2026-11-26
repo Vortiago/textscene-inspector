@@ -5,20 +5,28 @@
 import type { ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
-import { textureWork } from '../../resources/textures/textureWork';
+import { ResourceLoader } from '../../resources/ResourceLoader';
+import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
+import { createPendingProbe } from '../../resources/testing/pendingProbe';
 import { PreviewVisibilityProvider, usePreviewFrameloop } from './PreviewVisibilityContext';
 import { ViewStatusProvider } from '../viewStatus/ViewStatusContext';
 import { createViewStatusStore } from '../viewStatus/viewStatus';
 
-/** Renders the hook under a host whose visibility `setVisible` changes. */
+/** Renders the hook in a view, under a host whose visibility `setVisible` changes. */
 function renderUnderHost(initiallyVisible: boolean) {
   let isVisible = initiallyVisible;
+  const { Probe, work } = createPendingProbe();
+  const loader = new ResourceLoader();
   const wrapper = ({ children }: { children: ReactNode }) => (
-    <PreviewVisibilityProvider isVisible={isVisible}>{children}</PreviewVisibilityProvider>
+    <ResourceLoaderProvider loader={loader}>
+      <Probe />
+      <PreviewVisibilityProvider isVisible={isVisible}>{children}</PreviewVisibilityProvider>
+    </ResourceLoaderProvider>
   );
   const { result, rerender } = renderHook(() => usePreviewFrameloop(), { wrapper });
   return {
     result,
+    work,
     setVisible(next: boolean) {
       isVisible = next;
       rerender();
@@ -50,8 +58,8 @@ describe('usePreviewFrameloop', () => {
   });
 
   it('keeps the loop on while a hidden preview still uploads a texture, and stops it once that ends (edge case)', async () => {
-    const endWork = textureWork.begin();
-    const { result } = renderUnderHost(false);
+    const { result, work } = renderUnderHost(false);
+    const endWork = await act(async () => work().textures.begin());
     expect(result.current).toBe('always');
 
     await act(async () => endWork());

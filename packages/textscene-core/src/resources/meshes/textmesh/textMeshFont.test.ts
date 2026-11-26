@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fixtureFontBytes, systemFont } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
 import { peekSceneFontOutlines } from '../../../r3f/controls/native/text/sceneFontOutlines';
-import { settledFontsOf } from '../../../r3f/controls/native/text/useSettledFont';
+import { loaderlessSettledFonts } from '../../../r3f/controls/native/text/useSettledFont';
 import { NO_PROJECT_FONTS, type ProjectFonts } from '../../fonts/font/projectFonts';
 import type { FontFileResource, FontResource } from '../../fonts/font/types';
 import type { ThemeResource } from '../../styles/theme/types';
@@ -46,7 +46,7 @@ const withoutFont = (projectFonts: ProjectFonts = NO_PROJECT_FONTS) => ({
 
 /** The ready chain of `mesh`, once its outlines and metrics have settled. */
 async function readyChain(mesh: ReturnType<typeof textMeshWith>) {
-  const font = await settledPeek(() => textMeshFont(mesh));
+  const font = await settledPeek(loaderlessSettledFonts(), () => textMeshFont(mesh));
   if (font.status !== 'ready') throw new Error('expected a ready font');
   return font.chain;
 }
@@ -58,7 +58,7 @@ async function readyFace(mesh: ReturnType<typeof textMeshWith>) {
 
 /** The outlines a font settles to, which tells the font a chain chose. */
 async function outlinesOf(font: FontResource) {
-  return settledPeek(() => peekSceneFontOutlines(settledFontsOf(null), font));
+  return settledPeek(loaderlessSettledFonts(), () => peekSceneFontOutlines(loaderlessSettledFonts(), font));
 }
 
 describe('textMeshFont', () => {
@@ -78,7 +78,9 @@ describe('textMeshFont', () => {
     const notAnSfnt = { ...trueTypeFontFile(), bytes: new ArrayBuffer(8) };
     const mesh = textMeshWith({}, loaded(notAnSfnt));
 
-    expect(await settledPeek(() => textMeshFont(mesh))).toEqual({ status: 'unreadable' });
+    expect(await settledPeek(loaderlessSettledFonts(), () => textMeshFont(mesh))).toEqual({
+      status: 'unreadable',
+    });
   });
 
   it('draws the bundled Open Sans for a SystemFont, as Godot does when no OS font matches its names', async () => {
@@ -91,7 +93,7 @@ describe('textMeshFont', () => {
     const mesh = textMeshWith({}, loaded());
     expect(textMeshFont(mesh)).toEqual({ status: 'awaitingFont' });
 
-    const font = await settledPeek(() => textMeshFont(mesh));
+    const font = await settledPeek(loaderlessSettledFonts(), () => textMeshFont(mesh));
     if (font.status !== 'ready') throw new Error('expected a ready font');
     expect(font.chain[0].outlines.glyphIndex(0x48)).toBeGreaterThan(0);
   });
@@ -99,7 +101,7 @@ describe('textMeshFont', () => {
   it('is ready with the outlines of an OpenType-CFF font', async () => {
     const mesh = textMeshWith({}, loaded(openTypeFontFile()));
 
-    const font = await settledPeek(() => textMeshFont(mesh));
+    const font = await settledPeek(loaderlessSettledFonts(), () => textMeshFont(mesh));
     if (font.status !== 'ready') throw new Error('expected a ready font');
     expect(font.chain[0].outlines.glyphIndex(0x48)).toBeGreaterThan(0);
   });
@@ -111,14 +113,14 @@ describe('textMeshFont', () => {
     const mesh = textMeshWith({}, loaded(containerFile()));
     expect(textMeshFont(mesh)).toEqual({ status: 'awaitingFont' });
 
-    const font = await settledPeek(() => textMeshFont(mesh));
+    const font = await settledPeek(loaderlessSettledFonts(), () => textMeshFont(mesh));
     if (font.status !== 'ready') throw new Error('expected a ready font');
     expect(font.chain[0].outlines.glyphIndex(0x48)).toBeGreaterThan(0);
   });
 
   it('keeps a ready font for the same mesh object', async () => {
     const mesh = textMeshWith({}, loaded());
-    await settledPeek(() => textMeshFont(mesh));
+    await settledPeek(loaderlessSettledFonts(), () => textMeshFont(mesh));
 
     expect(textMeshFont(mesh)).toBe(textMeshFont(mesh));
   });
@@ -241,7 +243,7 @@ describe('textMeshFontKey', () => {
   it('tells a font that awaits its outlines and metrics from one that is ready', async () => {
     const mesh = textMeshWith({}, loaded());
     const awaiting = textMeshFontKey(textMeshFont(mesh));
-    await settledPeek(() => textMeshFont(mesh));
+    await settledPeek(loaderlessSettledFonts(), () => textMeshFont(mesh));
 
     expect(textMeshFontKey(textMeshFont(mesh))).not.toBe(awaiting);
   });
@@ -251,7 +253,7 @@ describe('textMeshFontKey', () => {
     const first = textMeshWith({}, loaded(file));
     const second = textMeshWith({ text: '"Other"' }, loaded(file));
     const reloaded = textMeshWith({}, loaded(trueTypeFontFile()));
-    await settledPeek(() => [first, second, reloaded].map(textMeshFont));
+    await settledPeek(loaderlessSettledFonts(), () => [first, second, reloaded].map(textMeshFont));
 
     expect(textMeshFontKey(textMeshFont(first))).toBe(textMeshFontKey(textMeshFont(second)));
     expect(textMeshFontKey(textMeshFont(reloaded))).not.toBe(textMeshFontKey(textMeshFont(first)));
@@ -307,15 +309,16 @@ describe('textMeshFont of a face that fails to load', () => {
     vi.resetModules();
     const fresh = await import('./textMeshFont');
     const freshOutlines = await import('../../../r3f/controls/native/text/sceneFontOutlines');
-    const { settledFontsOf: freshFontsOf } = await import('../../../r3f/controls/native/text/useSettledFont');
+    const { loaderlessSettledFonts: freshFonts } =
+      await import('../../../r3f/controls/native/text/useSettledFont');
     const { textMeshWith: freshMeshWith, trueTypeFontFile: freshFontFile } =
       await import('./textMeshFont.testkit');
     const font = freshFontFile();
     const mesh = freshMeshWith({}, { [FONT_PATH]: font });
 
     expect(
-      await settledPeek(() => freshOutlines.peekSceneFontOutlines(freshFontsOf(null), font))
+      await settledPeek(freshFonts(), () => freshOutlines.peekSceneFontOutlines(freshFonts(), font))
     ).toBeTruthy();
-    expect(await settledPeek(() => fresh.textMeshFont(mesh))).toEqual({ status: 'unreadable' });
+    expect(await settledPeek(freshFonts(), () => fresh.textMeshFont(mesh))).toEqual({ status: 'unreadable' });
   });
 });

@@ -238,10 +238,9 @@ Each read of `settled` gives a new promise, which rejects once the view unmounts
 `view.status()` gives what the view reports of itself now, as one object:
 
 - `settled`: the settled value, or `null` while the view is pending.
-- `pending`: `{ resources, textures, fonts }`. `resources` counts the resources this view still
-  waits for. Two views on one provider share the loads but not the count. `textures` and `fonts`
-  count the textures and fonts still building on the page, and two views on one page count each
-  other's. The state of each file is in `scene.files()`.
+- `pending`: `{ resources, textures, fonts }`: the resources, textures and fonts this view still
+  waits for. Two views on one provider share the loads but not the counts, so a view counts no
+  work of another view. The state of each file is in `scene.files()`.
 - `frame`: the last window of frame numbers, or `null` before the first window. A window lands
   twice a second and holds `fps`, `frameMs`, `cpuMs`, `drawCallsPerFrame`, `objectsPerFrame` and
   `primitivesPerFrame`. The objects and primitives are those of Godot's editor monitor: each

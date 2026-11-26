@@ -23,6 +23,8 @@ export const KEPT_TEST_ONLY_EXPORTS = [
   // The preview always mounts the shared live tree, so only the test setup installs the paint of a
   // subtree that a component test mounts bare (`r3f/testing/detachedPaint.ts`).
   'r3f/canvasItemPass/detachedPaintSlot.ts#installDetachedPaint',
+  // A test peeks the fonts a tree with no resource loader reads.
+  'r3f/controls/native/text/useSettledFont.ts#loaderlessSettledFonts',
   // A node and the painter it renders with no resource loader share one module store of settled
   // fonts, so the test setup empties it before each test.
   'r3f/controls/native/text/useSettledFont.ts#resetLoaderlessFonts',

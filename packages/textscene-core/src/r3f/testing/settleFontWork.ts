@@ -1,38 +1,30 @@
 /** Test-only: waits until every font load a peek started has settled and woken its listeners. */
 import type { SettledFonts } from '../controls/native/text/settledFonts';
+import type { WorkCount } from '../../resources/workCount';
 
-/**
- * Resolves when the work count a capture waits on reaches zero, with no wall-clock limit but the
- * test's own: a WOFF2 decode takes 130 ms alone and over 1 s on a loaded runner. The channel is
- * imported here, not at the top, so a test that resets its modules waits on its fresh loader's count.
- */
-export async function settleFontWork(): Promise<void> {
-  const { fontWork } = await import('../controls/native/text/settledChannel');
-  if (fontWork.pending() === 0) return;
+/** No wall-clock limit but the test's own: a WOFF2 decode takes 130 ms alone, over 1 s on a loaded runner. */
+export async function settleFontWork(work: WorkCount): Promise<void> {
+  if (work.pending() === 0) return;
   await new Promise<void>((resolve) => {
-    const unsubscribe = fontWork.subscribe(() => {
-      if (fontWork.pending() !== 0) return;
+    const unsubscribe = work.subscribe(() => {
+      if (work.pending() !== 0) return;
       unsubscribe();
       resolve();
     });
   });
 }
 
-/** Settles a font load that nothing reads in the preview of `fonts`, which should wake no reader there. */
+/** Settles a font load that nothing reads in the view of `fonts`, which should wake no reader there. */
 export async function settleUnrelatedFontLoad(fonts: SettledFonts): Promise<void> {
   fonts.peekOutlines({}, () => Promise.resolve(null));
-  await settleFontWork();
+  await settleFontWork(fonts.work);
 }
 
-/**
- * What `peek` answers once a peek starts no font load: each peek can start the next load, as a
- * TextMesh peeks its outlines and then its metrics.
- */
-export async function settledPeek<T>(peek: () => T): Promise<T> {
-  const { fontWork } = await import('../controls/native/text/settledChannel');
+/** Peeks again until a peek starts no load, as a TextMesh peeks its outlines and then its metrics. */
+export async function settledPeek<T>(fonts: SettledFonts, peek: () => T): Promise<T> {
   for (;;) {
     const value = peek();
-    if (fontWork.pending() === 0) return value;
-    await settleFontWork();
+    if (fonts.work.pending() === 0) return value;
+    await settleFontWork(fonts.work);
   }
 }

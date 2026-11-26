@@ -1,10 +1,6 @@
-/**
- * The font loads of one preview and the readers they wake: the second stage of a font, after its
- * file arrives on the font bus (ADR-0059). Each `ResourceLoader` holds one, so a font that settles
- * in one preview wakes no reader of another.
- */
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import { createExternalStore } from '../../../../utils/externalStore';
+import { createWorkCount, type WorkCount } from '../../../../resources/workCount';
 import { perObject } from '../../../../utils/perObject';
 import type { FontMetrics } from './fontMetrics';
 import type { RegisteredCanvasFontMetrics } from './runtimeFontMetrics';
@@ -45,6 +41,8 @@ export type ComposedFont = SettledFont & { readonly status: 'settled' };
 export type AwaitedFonts = ReadonlyMap<object, number>;
 
 export interface SettledFonts {
+  /** The loads of this preview in flight, from the peek that starts one until it settles. */
+  readonly work: WorkCount;
   /** The face of a font file's bytes, as {@link LoadedFace} answers, and undefined while it loads. */
   peekFace(bytes: ArrayBuffer, nodePath: string): LoadedFace | undefined;
   /** The outlines of a load of a font's bytes, keyed by `loadKey`: undefined while `read` runs. */
@@ -116,7 +114,10 @@ function awaitedIfPending<T>(fonts: SettledFonts, key: object, answer: T | undef
  *
  * @canonical The font loads of one preview, and the readers they wake
  */
-export function createSettledFonts(loadFace: FaceLoader = loadSceneFontMetrics): SettledFonts {
+export function createSettledFonts(
+  loadFace: FaceLoader = loadSceneFontMetrics,
+  work: WorkCount = createWorkCount()
+): SettledFonts {
   const settles = createExternalStore(0);
   const fontSettles = perObject((_font: object) => createExternalStore(0));
   /**
@@ -152,13 +153,14 @@ export function createSettledFonts(loadFace: FaceLoader = loadSceneFontMetrics):
   }
 
   const notePending = (load: object) => void pendingRead?.add(load);
-  const peekFaceOf = createSettledPeek<ArrayBuffer, LoadedFace>(notePending, wake);
-  const peekOutlinesOf = createSettledPeek<object, SfntOutlines | null>(notePending, wake);
+  const peekFaceOf = createSettledPeek<ArrayBuffer, LoadedFace>(work, notePending, wake);
+  const peekOutlinesOf = createSettledPeek<object, SfntOutlines | null>(work, notePending, wake);
   const fontVersion = (font: object) => fontSettles(font).get();
   /** Written only by `keep`, once for each font whose chain has settled. */
   const composed = new WeakMap<FontResource, ComposedFont>();
 
   const fonts: SettledFonts = {
+    work,
     peekFace: (bytes, nodePath) =>
       peekFaceOf(bytes, () => pageLoad(pageFaceLoads(loadFace)(bytes), () => loadFace(bytes, nodePath))),
     peekOutlines: (loadKey, read) => peekOutlinesOf(loadKey, () => pageLoad(pageOutlineLoads(loadKey), read)),

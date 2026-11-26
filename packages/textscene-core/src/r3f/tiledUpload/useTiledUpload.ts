@@ -7,9 +7,11 @@
 
 import { useContext, useEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
-import { textureWork } from '../../resources/textures/textureWork';
+import { useViewWork } from '../../resources/ResourceLoaderContext';
 import { useViewportAnisotropy } from '../viewportAnisotropy';
 import { TiledUploadContext } from './TiledUploadContext';
+
+const NO_WORK = () => {};
 
 /**
  * `texture` once it is on the GPU, else the texture shown before it, else null. The caller frees
@@ -22,11 +24,12 @@ export function useTiledUpload<T extends THREE.Texture>(texture: T | null): T | 
   const [uploaded, setUploaded] = useState<T | null>(null);
   /** Written after each commit: what the hook showed, kept while a tiled texture uploads. */
   const lastShown = useRef<T | null>(null);
+  const textures = useViewWork()?.textures;
 
   useEffect(() => {
     if (!isTiled || !texture || !queue) return undefined;
     const upload = queue.enqueue(texture);
-    const endWork = textureWork.begin();
+    const endWork = textures?.begin() ?? NO_WORK;
     let current = true;
     void upload.done.then((isUploaded) => {
       endWork();
@@ -37,7 +40,7 @@ export function useTiledUpload<T extends THREE.Texture>(texture: T | null): T | 
       upload.cancel();
       endWork();
     };
-  }, [texture, queue, isTiled]);
+  }, [texture, queue, isTiled, textures]);
 
   const shown = !isTiled ? texture : uploaded === texture ? texture : lastShown.current;
   useEffect(() => {

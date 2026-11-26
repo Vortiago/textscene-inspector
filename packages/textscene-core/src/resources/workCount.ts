@@ -8,7 +8,7 @@ export interface WorkCount {
   subscribe(onChange: () => void): () => void;
 }
 
-/** @canonical A page-wide count of work in flight */
+/** @canonical A count of work in flight, whose subscribers hear a change a microtask later */
 export function createWorkCount(): WorkCount {
   const notices = createExternalStore(0);
   let isNoticeQueued = false;

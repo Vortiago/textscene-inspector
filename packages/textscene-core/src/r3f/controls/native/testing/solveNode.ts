@@ -10,7 +10,7 @@ import type { ControlProperties } from '../../../../nodes/2d/ui/control/types';
 import { NO_PROJECT_FONTS, type ProjectFonts } from '../../../../resources/fonts/font/projectFonts';
 import { defaultThemeAt } from '../../../../godot/scene/defaultTheme/defaultTheme';
 import type { SolveNode } from '../solveTree';
-import { settledFontsOf } from '../text/useSettledFont';
+import { loaderlessSettledFonts } from '../text/useSettledFont';
 import { canvasItemFieldsOf } from '../../../canvasItemPass/canvasItemFields';
 import {
   CHAIN_START_INHERITANCE,
@@ -88,7 +88,7 @@ export function solveNode(): Pick<
     themeChain: NO_THEME_CHAIN,
     projectFonts: NO_PROJECT_FONTS,
     // The store a component rendered with no resource loader reads, so a node and its painter agree.
-    settledFonts: settledFontsOf(null),
+    settledFonts: loaderlessSettledFonts(),
     colors: NO_COLORS,
     constants: NO_CONSTANTS,
     icons: NO_ICONS,

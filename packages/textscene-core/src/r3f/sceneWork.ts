@@ -1,6 +1,4 @@
-import type { WorkCount } from '../resources/workCount.js';
-import { textureWork } from '../resources/textures/textureWork.js';
-import { fontWork } from './controls/native/text/settledChannel.js';
+import type { ViewWork } from '../resources/viewWork.js';
 
 export interface PendingSceneWork {
   resources: number;
@@ -10,14 +8,23 @@ export interface PendingSceneWork {
 
 /** Fills `into` when given, so a per-frame caller allocates nothing. */
 export function pendingSceneWork(
-  loads: WorkCount | null,
+  work: ViewWork | null,
   into: PendingSceneWork = { resources: 0, textures: 0, fonts: 0 }
 ): PendingSceneWork {
-  into.resources = loads?.pending() ?? 0;
-  into.textures = textureWork.pending();
-  into.fonts = fontWork.pending();
+  into.resources = work?.resources.pending() ?? 0;
+  into.textures = work?.textures.pending() ?? 0;
+  into.fonts = work?.fonts.pending() ?? 0;
   return into;
 }
+
+/** Subscribes `onChange` to each count of `work`. Returns the unsubscribe. */
+export function subscribeSceneWork(work: ViewWork | null, onChange: () => void): () => void {
+  if (!work) return NO_UNSUBSCRIBE;
+  const stops = [work.resources, work.textures, work.fonts].map((count) => count.subscribe(onChange));
+  return () => stops.forEach((stop) => stop());
+}
+
+const NO_UNSUBSCRIBE = () => {};
 
 export function totalPendingWork({ resources, textures, fonts }: PendingSceneWork): number {
   return resources + textures + fonts;

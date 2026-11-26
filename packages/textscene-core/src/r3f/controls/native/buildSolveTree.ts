@@ -57,8 +57,8 @@ import {
 import type { LabelSettingsResource } from '../../../resources/styles/labelsettings/types';
 import type { LabelProperties } from '../../../nodes/2d/ui/label/types';
 import { themeResolutionScope, type ThemeResolutionScope } from '../../../resources/styles/theme/lookup';
-import type { AwaitedFonts } from './text/settledFonts';
-import { settledFontsOf, useAwaitedFontsVersion } from './text/useSettledFont';
+import type { AwaitedFonts, SettledFonts } from './text/settledFonts';
+import { useAwaitedFontsVersion, useSettledFonts } from './text/useSettledFont';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import { useLayoutDirectionEnv } from '../../contexts/useLayoutDirectionEnv';
 import {
@@ -288,6 +288,7 @@ function buildForest(
   externalResources: readonly TscnExternalResource[],
   internalResources: readonly TscnInternalResource[],
   loader: ResourceLoader | null,
+  fonts: SettledFonts,
   snapshot: ResourceSnapshot,
   projectSettings: ProjectSettings | null,
   layoutDirectionEnv: LayoutDirectionEnv,
@@ -482,7 +483,7 @@ function buildForest(
   }
 
   const awaitedFonts = new Map<object, number>();
-  const settledFonts = settledFontsOf(loader).recording(awaitedFonts);
+  const settledFonts = fonts.recording(awaitedFonts);
 
   /** The project's theme and default font, resolved once for every node. */
   const projectFonts = resolveProjectFonts(
@@ -919,7 +920,8 @@ function useSolveForest(
   // With or without a loader: `peekSceneFontMetrics` starts font loads from the solve itself and
   // answers with the bundled fallback until the metrics settle. Only a font the last build read
   // while it loaded wakes it.
-  const awaitedFonts = useAwaitedFontsVersion(settledFontsOf(loader));
+  const fonts = useSettledFonts();
+  const awaitedFonts = useAwaitedFontsVersion(fonts);
   // `gui/theme/custom` and `gui/theme/custom_font`, the last rungs before the built-in default. Null
   // without a provider, like every unset project setting.
   const projectSettings = useProjectSettings().settings;
@@ -955,6 +957,7 @@ function useSolveForest(
           externalResources,
           internalResources,
           loader,
+          fonts,
           snapshot,
           projectSettings,
           layoutDirectionEnv,
@@ -969,6 +972,7 @@ function useSolveForest(
         externalResources,
         internalResources,
         loader,
+        fonts,
         projectSettings,
         layoutDirectionEnv,
         start,
