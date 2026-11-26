@@ -62,6 +62,7 @@ import { dfgTextureNode } from './dfgTexture.js';
 import { PACKED_SPECIALISATION_DEFAULTS } from './packedSpecialisation.js';
 import { radianceOctmapNode } from './sceneSky.js';
 import { readDirectionalShadowAtlas } from './directionalLights.js';
+import type { StoredDepthRead } from './directionalShadowDepth.js';
 import { rendererOf } from '../preprocessor/renderingMethod.js';
 import { BoundNodeMaterial } from '../uniforms/boundMaterial.js';
 import { textHash, type CodeKey } from '../uniforms/programKey.js';
@@ -108,8 +109,8 @@ export interface SpatialOptions extends ShaderOptions {
   readonly sampling?: ProjectSampling;
   /** The render layers a light's cull mask tests, the first layer when left out. */
   readonly instanceLayers?: (object: THREE.Object3D) => number;
-  /** A raw read of the directional atlas takes one filtered sample, not four texels filtered by hand. */
-  readonly samplesStoredDepth?: boolean;
+  /** How a raw read of the directional atlas takes the stored depth, four texels when left out. */
+  readonly storedDepthRead?: StoredDepthRead;
 }
 
 /** The material of `source`, a shader of `shader_type spatial`, preprocessed with `options`. */
@@ -123,7 +124,7 @@ export function transpileSpatial(source: string, options: SpatialOptions = {}): 
   );
   resources.textures.set('dfg', dfgTextureNode());
   resources.textures.set('radiance_octmap', radianceOctmapNode());
-  readDirectionalShadowAtlas(resources.textures, options.samplesStoredDepth ?? false);
+  readDirectionalShadowAtlas(resources.textures, options.storedDepthRead ?? 'fetched');
   const pipeline = spatialPipeline(parsed.tree);
   const emitStages = stageEmitter(linked, resources, parameterValues, pipeline);
   const shader = {
@@ -167,13 +168,13 @@ export function transpileSpatial(source: string, options: SpatialOptions = {}): 
 /** The colour pass's code key: the text, each option that changes the code, and the textures it samples. */
 function codeKeyOf(
   { code }: ParsedShader,
-  { renderingMethod, glVaryings, sampling, samplesStoredDepth }: SpatialOptions,
+  { renderingMethod, glVaryings, sampling, storedDepthRead }: SpatialOptions,
   templateTextures: ReadonlyMap<string, TextureNode>,
   parameters: ReadonlyMap<string, TranspiledUniform>
 ): CodeKey {
   return {
     // No `file`: it names a fault's position only, so two files of one text share a program.
-    source: `colour|${textHash(JSON.stringify([code, renderingMethod, glVaryings, sampling, samplesStoredDepth]))}`,
+    source: `colour|${textHash(JSON.stringify([code, renderingMethod, glVaryings, sampling, storedDepthRead]))}`,
     textures: function* () {
       yield* templateTextures.values();
       for (const parameter of parameters.values())

@@ -21,25 +21,38 @@ vec2 packAtlasDepth( float depth ) {
 	return vec2( high, bits - high * 256.0 ) / 255.0;
 }`;
 
-const ATLAS_DEPTH: ProgramInjection = {
-  cacheKey: 'godot-atlas-depth',
-  onBeforeCompile(shader) {
-    editedProgram(
-      shader,
-      {
-        fragment: [
-          { three: 'void main() {', godot: `${PACK_ATLAS_DEPTH}\nvoid main() {` },
-          // The last `#endif` of three's depth packing ends `main`, where the atlas colour is written.
-          {
-            three: '#endif\n}',
-            godot: '#endif\n\tgl_FragColor = vec4( packAtlasDepth( gl_FragCoord.z ), 0.0, 1.0 );\n}\n',
-          },
-        ],
-      },
-      'atlas depth'
-    );
-  },
-};
+/** Writes the atlas colour of each caster fragment as `colourOf`, a GLSL expression after `helpers`. */
+function atlasDepthInjection(cacheKey: string, helpers: string, colourOf: string): ProgramInjection {
+  return {
+    cacheKey,
+    onBeforeCompile(shader) {
+      editedProgram(
+        shader,
+        {
+          fragment: [
+            { three: 'void main() {', godot: `${helpers}\nvoid main() {` },
+            // The last `#endif` of three's depth packing ends `main`, where the atlas colour is written.
+            { three: '#endif\n}', godot: `#endif\n\tgl_FragColor = ${colourOf};\n}\n` },
+          ],
+        },
+        'atlas depth'
+      );
+    },
+  };
+}
+
+const ATLAS_DEPTH = atlasDepthInjection(
+  'godot-atlas-depth',
+  PACK_ATLAS_DEPTH,
+  'vec4( packAtlasDepth( gl_FragCoord.z ), 0.0, 1.0 )'
+);
+
+/** The 16-bit depth as a float in red, for an atlas whose float colour the GPU filters exactly. */
+const FLOAT_ATLAS_DEPTH = atlasDepthInjection(
+  'godot-float-atlas-depth',
+  '',
+  'vec4( floor( clamp( gl_FragCoord.z, 0.0, 1.0 ) * 65535.0 + 0.5 ) / 65535.0, 0.0, 0.0, 1.0 )'
+);
 
 /** Godot's reversed depth stops at 0.9999 (`scene_forward_clustered.glsl:679-682`), three's `t` at 0.0001. */
 const FLATTENED_VERTEX = /* glsl */ `#include <project_vertex>
@@ -111,6 +124,18 @@ export class AtlasDepthMaterial extends InjectedDepthMaterial {
 export class FlattenedAtlasDepthMaterial extends InjectedDepthMaterial {
   constructor() {
     super(composeInjections([FLATTEN_NEAR_CASTERS, ATLAS_DEPTH])!);
+  }
+}
+
+export class FloatAtlasDepthMaterial extends InjectedDepthMaterial {
+  constructor() {
+    super(FLOAT_ATLAS_DEPTH);
+  }
+}
+
+export class FlattenedFloatAtlasDepthMaterial extends InjectedDepthMaterial {
+  constructor() {
+    super(composeInjections([FLATTEN_NEAR_CASTERS, FLOAT_ATLAS_DEPTH])!);
   }
 }
 

@@ -13,7 +13,11 @@ import {
   vogelDisk,
 } from '../../godot/rendering/lights/softShadowKernel.js';
 import { SCENE_DATA } from './sceneDataBlock.js';
-import { bindDirectionalShadowColour, directionalShadowAtlasNode } from './directionalShadowDepth.js';
+import {
+  bindDirectionalShadowColour,
+  directionalShadowAtlasNode,
+  type StoredDepthRead,
+} from './directionalShadowDepth.js';
 
 /** A sun's shadow in the directional shadow atlas, as its row reads it (`light_storage.cpp:694-756`). */
 export interface DirectionalShadow {
@@ -277,11 +281,8 @@ export function hasDirectionalSoftShadowAngle(lights: readonly DirectionalLight[
 const DIRECTIONAL_SHADOW_ATLAS = 'directional_shadow_atlas';
 
 /** Makes the template's reads of its directional atlas take Godot's depth. Call it before the emit. */
-export function readDirectionalShadowAtlas(
-  textures: Map<string, TextureNode>,
-  samplesStoredDepth: boolean
-): void {
-  textures.set(DIRECTIONAL_SHADOW_ATLAS, directionalShadowAtlasNode(samplesStoredDepth));
+export function readDirectionalShadowAtlas(textures: Map<string, TextureNode>, read: StoredDepthRead): void {
+  textures.set(DIRECTIONAL_SHADOW_ATLAS, directionalShadowAtlasNode(read));
 }
 
 /** Where a draw's directional atlas reads go: the depth it compares and the colour it reads raw. */

@@ -59,6 +59,12 @@ export const MATERIAL_SCENES = [
     file: 'sun-soft-shadow/unit-spatial-shader-lit-sun-soft-shadow.tscn',
     storedDepthRead: 'fetched',
   },
+  // The same scene through one sample of a float colour: a GPU that rounds bytes but filters floats.
+  {
+    name: 'material-spatial-shader-lit-sun-soft-shadow-float',
+    file: 'sun-soft-shadow/unit-spatial-shader-lit-sun-soft-shadow.tscn',
+    storedDepthRead: 'float',
+  },
   // A StandardMaterial3D through Godot's generated shader. Godot 4.6.3: 10 px over 2/255, max 9.
   {
     name: 'material-standard-material-lit',

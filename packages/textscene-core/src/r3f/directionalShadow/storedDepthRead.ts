@@ -1,22 +1,43 @@
 import type * as THREE from 'three';
+import type { StoredDepthRead } from '../../shaders/spatial/directionalShadowDepth.js';
 import { filtersTwoBytesExactly } from './twoByteFilterProbe.js';
 
-/** `?storedDepthRead=sampled` or `fetched` forces a lit surface's read of the stored depth on any GPU. */
-type StoredDepthRead = 'sampled' | 'fetched' | 'probed';
+/** `?storedDepthRead=sampled`, `float` or `fetched` forces the page's read of the stored depth on any GPU. */
+const FORCED_READS: readonly StoredDepthRead[] = ['sampled', 'float', 'fetched'];
 
-const FORCED_READS: readonly StoredDepthRead[] = ['sampled', 'fetched'];
-
-function storedDepthReadOf(search: string): StoredDepthRead {
+function forcedReadOf(search: string): StoredDepthRead | null {
   const named = new URLSearchParams(search).get('storedDepthRead');
-  return FORCED_READS.find((read) => read === named) ?? 'probed';
+  return FORCED_READS.find((read) => read === named) ?? null;
 }
 
-/** Read once, when the module loads, so every surface on the page reads one way. */
-const LOADED_READ: StoredDepthRead =
-  typeof window === 'undefined' ? 'probed' : storedDepthReadOf(window.location.search);
+/** Read once, when the module loads. */
+const FORCED_READ: StoredDepthRead | null =
+  typeof window === 'undefined' ? null : forcedReadOf(window.location.search);
 
-/** Whether a lit surface on `renderer` reads the stored depth with one filtered sample. */
-export function readsStoredDepthSampled(renderer: THREE.WebGLRenderer): boolean {
-  if (LOADED_READ === 'probed') return filtersTwoBytesExactly(renderer);
-  return LOADED_READ === 'sampled';
+/** A float colour needs both: a linear filter of R32F and a draw into it. */
+function filtersFloatColour(renderer: THREE.WebGLRenderer): boolean {
+  const gl = renderer.getContext();
+  return (
+    gl.getExtension('OES_texture_float_linear') !== null && gl.getExtension('EXT_color_buffer_float') !== null
+  );
+}
+
+/** The read the probe picks: one sample wherever it matches the stored depth, the hand filter elsewhere. */
+function probedRead(renderer: THREE.WebGLRenderer): StoredDepthRead {
+  if (filtersTwoBytesExactly(renderer)) return 'sampled';
+  return filtersFloatColour(renderer) ? 'float' : 'fetched';
+}
+
+/** Written once per page by `decideStoredDepthRead`: every canvas shares one sun atlas and its read. */
+let pageRead: StoredDepthRead | null = null;
+
+/** Picks the page's read on the first canvas's renderer, before any shadow or lit program draws. */
+export function decideStoredDepthRead(renderer: THREE.WebGLRenderer): StoredDepthRead {
+  pageRead ??= FORCED_READ ?? probedRead(renderer);
+  return pageRead;
+}
+
+/** The page's read, or the hand filter, which reads the two bytes on any GPU, before a canvas decides. */
+export function storedDepthRead(): StoredDepthRead {
+  return pageRead ?? 'fetched';
 }

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { readsStoredDepthSampled } from '../directionalShadow/storedDepthRead.js';
+import { storedDepthRead } from '../directionalShadow/storedDepthRead.js';
 import {
   generatedUnDrawnMessage,
   spatialShaderName,
@@ -64,8 +64,7 @@ export function spatialSurfaceOf(
     ...options,
     file: shader.file,
     instanceLayers: visualLayersOf,
-    // Picked here, outside a render: the probe renders a pixel of its own.
-    samplesStoredDepth: readsStoredDepthSampled(gl),
+    storedDepthRead: storedDepthRead(),
   });
   if (!('spatial' in compile)) return { refusal: refusalOf(shader, compile) };
   const { spatial } = compile;

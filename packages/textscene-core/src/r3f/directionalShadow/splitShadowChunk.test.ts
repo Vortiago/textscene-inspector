@@ -5,7 +5,7 @@
  */
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { FRAMEBUFFER_HEIGHT_UNIFORM } from '../shadowFilter/framebufferRows';
 import { installedFramebufferHeight } from '../shadowFilter/framebufferRows.testkit';
@@ -16,6 +16,7 @@ import { SUN_RANGE_BEGINS, SUN_SHADOW_FADES, SUN_SHADOW_ROWS, SUN_SOFT_SHADOWS }
 import { GLSL_BUILT_INS } from '../testing/glslScalar';
 import { functionBody, withoutBlock } from '../testing/glslSource';
 import { DIRECTIONAL_SOFT_SHADOWS } from '../shadowFilter/softShadowSearch';
+import type { StoredDepthRead } from '../../shaders/spatial/directionalShadowDepth';
 import { warningsOf } from '../testing/logWarnings';
 import { installedShaderChunks, FILTER_PCF, restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
 
@@ -29,6 +30,14 @@ const THREE_SLOT_MATRICES = 'uniform mat4 sunShadowMatrix[ NUM_SUN_LIGHT_SHADOWS
 const SPLIT_LOOKUP = 'float getSunShadowSplit(';
 
 restoreShaderGlobalsAfterEach();
+
+vi.mock('./storedDepthRead.js', () => ({ storedDepthRead: () => page.read }));
+
+/** The page's read of the stored depth, as the mocked module gives it. */
+const page: { read: StoredDepthRead } = { read: 'fetched' };
+afterEach(() => {
+  page.read = 'fetched';
+});
 
 /** The shadow chunk a canvas compiles with. */
 const installedChunk = () => installedShaderChunks()[CHUNK];
@@ -404,7 +413,9 @@ describe('the soft split shadow', () => {
 
   it('reads blockers from the atlas colour and widens the penumbra by their distance', () => {
     // `scene_forward_lights_inc.glsl:393-405`, in a depth that grows away from the light.
-    expect(chunk()).toContain(`godotRawDepth( ${DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM}, uv )`);
+    expect(functionBody(chunk(), 'godotSunRawDepth')).toContain(
+      `godotRawDepth( ${DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM}, uv )`
+    );
     expect(chunk()).toContain('texScale *= ( coord.z - blockerAverage ) / ( blockerAverage - lightSide );');
   });
 
@@ -421,10 +432,16 @@ describe('the soft split shadow', () => {
     // Godot clamps the depth to 0.9999 of its range, so the blocker sits 1e-4 of that range past its
     // light side, and `1 - lightSide` is that range in this box's depth.
     // `scene_forward_clustered.glsl:679-682`.
-    expect(chunk()).toContain(
-      `float blocker = max( godotRawDepth( ${DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM}, uv ), pancaked );`
-    );
+    expect(chunk()).toContain('float blocker = max( godotSunRawDepth( uv ), pancaked );');
     expect(chunk()).toContain('float pancaked = lightSide + GODOT_SUN_PANCAKE * ( 1.0 - lightSide );');
+  });
+
+  it('reads a blocker with one filtered sample on a page whose atlas colour is a float', () => {
+    page.read = 'float';
+
+    expect(functionBody(chunk(), 'godotSunRawDepth')).toContain(
+      `textureLod( ${DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM}, uv, 0.0 ).r`
+    );
   });
 
   it('keeps the receiver lit without a blocker (edge case)', () => {

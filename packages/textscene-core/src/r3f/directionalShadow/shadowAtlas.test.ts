@@ -107,3 +107,27 @@ describe('releaseDirectionalShadowAtlas', () => {
     expect(frees()).toBe(1);
   });
 });
+
+describe('formatDirectionalShadowColour', () => {
+  it('holds the depth as a float in red for the float read', () => {
+    atlasModule.formatDirectionalShadowColour('float');
+
+    const colour = atlasModule.directionalShadowAtlasColour();
+    expect([colour.format, colour.type]).toEqual([THREE.RedFormat, THREE.FloatType]);
+  });
+
+  it.each(['sampled', 'fetched'] as const)('keeps two bytes for the %s read', (read) => {
+    atlasModule.formatDirectionalShadowColour(read);
+
+    const colour = atlasModule.directionalShadowAtlasColour();
+    expect([colour.format, colour.type]).toEqual([THREE.RGFormat, THREE.UnsignedByteType]);
+  });
+
+  it('frees the atlas only when the format changes, so three builds it again in the new one', () => {
+    const freed = freesOf(atlasModule.holdDirectionalShadowAtlas(aShadow()));
+    atlasModule.formatDirectionalShadowColour('fetched');
+    atlasModule.formatDirectionalShadowColour('float');
+
+    expect(freed()).toBe(1);
+  });
+});

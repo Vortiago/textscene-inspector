@@ -28,8 +28,8 @@ const RESIDUE_MAX_DELTA = 2;
 const LIT_SURFACE_NODES = 'nodes';
 /** The one canvas item form beside the default that the previewer opens with `?canvasItem=`. */
 const CANVAS_ITEM_TRANSLATED = 'translated';
-/** The two reads of the sun's stored depth that the previewer forces with `?storedDepthRead=`. */
-const STORED_DEPTH_READS = ['sampled', 'fetched'];
+/** The reads of the sun's stored depth that the previewer forces with `?storedDepthRead=`. */
+const STORED_DEPTH_READS = ['sampled', 'float', 'fetched'];
 /** The trees the catalog lists from their own `res://` root, so a name drops the prefix. */
 const FLATTENED_ROOTS = ['fixtures', ...FLATTENED_CORPUS_ROOTS].map((root) => `${root}/`);
 

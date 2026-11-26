@@ -16,8 +16,12 @@ The depth in the atlas also runs the other way. Godot's depth is 1 at the near s
 - Each split box's near plane is Godot's near side, `range_begin` (`renderer_scene_cull.cpp:2349`). So Godot's depth is `g = 1 - t`, where `t` is the stored depth.
 - The depth draw flattens a caster nearer the light than the box to `g = 0.9999`, as Godot's depth pass does for a positive pancake size (`scene_forward_clustered.glsl:679-682`). The cull reaches 1e6 units past the near side (`renderer_scene_cull.cpp:2322`).
 - `shadow_matrix1` to `4` give `g`. A compare reads the depth texture with the reference `t = 1 - g`.
-- A raw read takes the stored depth from the atlas's colour, an RG8 texture that holds it as two bytes. A GPU that filters each channel in floating point mixes the two bytes of four texels exactly, so the read takes one linear sample, as Godot's does. A GPU that rounds each filtered channel to 8 bits loses the low byte and draws seams in the transmittance. There the read filters four texels by hand.
-- A probe renders one pixel per renderer to tell the two apart (`twoByteFilterProbe.ts`), and the program builds only the read the probe picks. `?storedDepthRead=sampled` or `fetched` forces one read on any GPU, and `pnpm ref:diff --stored-depth-read` and a golden pass it on.
+- A raw read takes the stored depth from the atlas's colour, in one of three reads:
+  - `sampled`: the colour is RG8 and holds the depth as two bytes. A GPU that filters each channel in floating point mixes the two bytes of four texels exactly, so the read takes one linear sample, as Godot's does.
+  - `float`: a GPU that rounds each filtered channel to 8 bits loses the low byte and draws seams in the transmittance. Where it filters R32F (`OES_texture_float_linear`) and draws into it (`EXT_color_buffer_float`), the colour is R32F and holds the 16-bit depth as a float. The read takes one linear sample.
+  - `fetched`: a GPU that does neither keeps the RG8 colour, and the read filters four texels by hand.
+- A probe renders one pixel on the first renderer of the page to pick the read (`twoByteFilterProbe.ts`, `storedDepthRead.ts`). The colour format, the sun's depth draw and every program follow it. `?storedDepthRead=sampled`, `float` or `fetched` forces one read on any GPU, and `pnpm ref:diff --stored-depth-read` and a golden per read pass it on.
+- Spot and area lights keep the RG8 colour in their own atlas.
 - `readStoredDepth` hooks the translator's texture calls, so the template's text is not changed.
 
 ### How each format filters
@@ -31,10 +35,11 @@ The depth in the atlas also runs the other way. Godot's depth is 1 at the near s
 | R32F, with `OES_texture_float_linear` | 0 | 0 |
 | R16, with `EXT_texture_norm16` | no extension | 0 |
 
-No format WebGL 2 filters without an extension mixes 16-bit depths exactly on both. A depth texture filters only as a compare, and WebGL 2 has no `textureGather`. R32F is exact on both, but it needs `OES_texture_float_linear` and twice the colour memory, and a GPU without the extension still needs the hand filter. So the two reads stay, and each has a golden.
+No format WebGL 2 filters without an extension mixes 16-bit depths exactly on both. A depth texture filters only as a compare, and WebGL 2 has no `textureGather`. R32F is exact on both and costs one sample, but it needs the extensions and twice the colour memory. So the float read serves a GPU that rounds bytes, and the hand filter stays for a GPU without the extensions.
 
 ## Consequences
 
 - The colour and the depth texture hold 16 bits of depth, as Godot's default atlas does (`rendering_server.cpp:3708`). A project that sets `directional_shadow/16_bits` to false still gets 16 bits.
 - Each program binds one more texture, the atlas's colour.
-- A raw read costs one sample on a GPU that filters in floating point, as in Godot, and four texel loads on one that does not. On SwiftShader the two reads differ by 35 px, at most 1/255. A compare costs one sample, as in Godot.
+- A raw read costs one sample, as in Godot, on a GPU that filters bytes in floating point or filters R32F. Only a GPU with neither pays four texel loads. On SwiftShader the sampled and fetched reads differ by 35 px, at most 1/255. On lavapipe the float read draws the fetched read's pixels against Godot 4.6.3, within 1 px, on the soft golden and 14 sun scenes. A compare costs one sample, as in Godot.
+- The float colour of Godot's default 4096 atlas takes 64 MB, 32 MB more than RG8.

@@ -12,8 +12,8 @@ import { launchGodotComparisonBrowser, launchSwiftShaderBrowser } from '../showc
 
 /** A leftover of at most this many levels is residue, as `pnpm ref:diff` counts it. */
 const RESIDUE_MAX_DELTA = 2;
-/** SwiftShader filters the colour exactly, so the two reads should draw one picture there. */
-const READS = ['sampled', 'fetched'];
+/** SwiftShader filters both colours exactly, so each one-sample read draws the hand filter's picture. */
+const ONE_SAMPLE_READS = ['sampled', 'float'];
 
 /** `<fixture> [--lavapipe] [--set path:property=value]...`: lavapipe shows the check can fail. */
 function parseArgs(argv) {
@@ -45,9 +45,11 @@ const args = parseArgs(process.argv.slice(2));
 await withPreviewBrowser(
   { ...previewPort('perf'), launchBrowser: args.launchBrowser },
   async (browser, baseUrl) => {
-    const buffers = [];
-    for (const read of READS) buffers.push(await capture(browser, baseUrl, args, read));
-    const { over, maxChannelDelta } = compareImages(buffers[0], buffers[1], { overDelta: RESIDUE_MAX_DELTA });
-    console.log(`sampled against fetched: ${over.pixels} px over 2/255, max ${maxChannelDelta}/255`);
+    const fetched = await capture(browser, baseUrl, args, 'fetched');
+    for (const read of ONE_SAMPLE_READS) {
+      const buffer = await capture(browser, baseUrl, args, read);
+      const { over, maxChannelDelta } = compareImages(buffer, fetched, { overDelta: RESIDUE_MAX_DELTA });
+      console.log(`${read} against fetched: ${over.pixels} px over 2/255, max ${maxChannelDelta}/255`);
+    }
   }
 );

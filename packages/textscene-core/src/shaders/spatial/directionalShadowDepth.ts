@@ -5,7 +5,10 @@ import { readAsStored } from '../language/readAsStored.js';
 import { readStoredDepth } from '../language/storedDepthReads.js';
 import type { Float, Vec2 } from '../tslTypes.js';
 
-/** The atlas's colour holds each texel's stored depth as two bytes (`atlasDepthMaterials.ts`). */
+/** A raw read of the stored depth: one sample of two bytes or of a float, or four texels by hand. */
+export type StoredDepthRead = 'sampled' | 'float' | 'fetched';
+
+/** A byte colour holds each texel's stored depth as two bytes (`atlasDepthMaterials.ts`). */
 const DEPTH_BYTES = TSL.vec2(256, 1);
 const DEPTH_STEPS = 65535;
 
@@ -37,6 +40,19 @@ function sampledStoredDepth(colour: TextureNode, uv: Vec2): Float {
   return TSL.dot(sample.rg.mul(255), DEPTH_BYTES).div(DEPTH_STEPS) as unknown as Float;
 }
 
+/** One filtered sample of a float colour, which holds the 16-bit depth exactly. */
+function floatStoredDepth(colour: TextureNode, uv: Vec2): Float {
+  const sample = colour.sample(uv as never).level(TSL.float(0) as never) as unknown as TextureNode;
+  sample.updateMatrix = false;
+  return sample.r as unknown as Float;
+}
+
+const STORED_DEPTH_READS = {
+  sampled: sampledStoredDepth,
+  float: floatStoredDepth,
+  fetched: filteredStoredDepth,
+};
+
 /** Filtered by hand over four texels: a GPU that filters 8-bit channels at 8 bits loses the low byte. */
 function filteredStoredDepth(colour: TextureNode, uv: Vec2): Float {
   const size = TSL.vec2(colour.size(TSL.int(0)) as never) as unknown as Vec2;
@@ -55,13 +71,13 @@ function filteredStoredDepth(colour: TextureNode, uv: Vec2): Float {
 }
 
 /** The template's directional atlas, whose reads take Godot's depth through the one raw read picked. */
-export function directionalShadowAtlasNode(samplesStoredDepth: boolean): TextureNode {
+export function directionalShadowAtlasNode(read: StoredDepthRead): TextureNode {
   // Every read goes through the stored depth, so the node's own texture is never sampled.
   const atlas = TSL.texture(NO_COLOUR) as unknown as TextureNode;
   const colour = TSL.texture(NO_COLOUR) as unknown as TextureNode;
   readAsStored(colour);
   colourReads.set(atlas, colour);
-  const storedDepth = samplesStoredDepth ? sampledStoredDepth : filteredStoredDepth;
+  const storedDepth = STORED_DEPTH_READS[read];
   readStoredDepth(atlas, {
     read: (uv) => TSL.float(1).sub(storedDepth(colour, uv as unknown as Vec2) as never) as unknown as Node,
     storedReference: (_uv, reference) => TSL.float(1).sub(reference as never) as unknown as Node,

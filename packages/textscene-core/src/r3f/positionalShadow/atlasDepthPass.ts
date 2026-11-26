@@ -10,9 +10,12 @@ import type * as THREE from 'three';
 import type { AreaShadowLight } from './atlasAreaShadow.js';
 import type { AtlasSpotShadow } from './atlasSpotShadow.js';
 import { isSplitSun, type SplitSunLight } from '../directionalShadow/splitSun.js';
+import { storedDepthRead } from '../directionalShadow/storedDepthRead.js';
 import {
   AtlasDepthMaterial,
   FlattenedAtlasDepthMaterial,
+  FlattenedFloatAtlasDepthMaterial,
+  FloatAtlasDepthMaterial,
   ParaboloidDepthMaterial,
 } from './atlasDepthMaterials.js';
 
@@ -33,6 +36,10 @@ const atlasDepth = new AtlasDepthMaterial();
 /** The one depth material the casters of a split sun with a pancake size draw with. */
 const flattenedDepth = new FlattenedAtlasDepthMaterial();
 
+/** The depth materials of a split sun on a page whose directional atlas holds a float colour. */
+const floatDepth = new FloatAtlasDepthMaterial();
+const flattenedFloatDepth = new FlattenedFloatAtlasDepthMaterial();
+
 /** The one depth material every area light's casters draw with: each vertex bent onto its paraboloid. */
 const areaDepth = new ParaboloidDepthMaterial();
 
@@ -46,18 +53,23 @@ export function drawProjectedShadows(
   scene: THREE.Scene,
   camera: THREE.Camera
 ): void {
-  drawWearing(pass, lights.filter(flattensNearCasters), flattenedDepth, scene, camera);
-  drawWearing(
-    pass,
-    lights.filter((light) => !flattensNearCasters(light)),
-    atlasDepth,
-    scene,
-    camera
-  );
+  for (const depth of PROJECTED_DEPTHS)
+    drawWearing(
+      pass,
+      lights.filter((light) => depthOf(light) === depth),
+      depth,
+      scene,
+      camera
+    );
 }
 
-function flattensNearCasters(light: ProjectedShadowLight): boolean {
-  return isSplitSun(light) && light.shadow.flattensNearCasters;
+const PROJECTED_DEPTHS = [flattenedFloatDepth, floatDepth, flattenedDepth, atlasDepth];
+
+function depthOf(light: ProjectedShadowLight): THREE.MeshDepthMaterial {
+  const isFloat = isSplitSun(light) && storedDepthRead() === 'float';
+  if (isSplitSun(light) && light.shadow.flattensNearCasters)
+    return isFloat ? flattenedFloatDepth : flattenedDepth;
+  return isFloat ? floatDepth : atlasDepth;
 }
 
 /** Draws `lights` as `drawProjectedShadows` does, each caster bent onto the light's paraboloid. */

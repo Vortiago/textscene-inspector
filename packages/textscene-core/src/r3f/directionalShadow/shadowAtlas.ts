@@ -11,6 +11,7 @@ import {
 } from '../../godot/rendering/lights/directionalShadow.js';
 import { atlasTargetOf, createShadowAtlas } from '../shadowFilter/atlasTarget.js';
 import { installedUniformValue } from '../shaderPatch/litUniform.js';
+import type { StoredDepthRead } from '../../shaders/spatial/directionalShadowDepth.js';
 
 /** The uniform every lit material samples the atlas through. */
 export const DIRECTIONAL_SHADOW_ATLAS_UNIFORM = 'directionalShadowAtlas';
@@ -53,6 +54,20 @@ export function directionalShadowAtlasDepth(): THREE.DepthTexture {
 export function directionalShadowAtlasColour(): THREE.Texture {
   return atlas.texture;
 }
+
+/** Gives the colour the format of `read`. A change frees the atlas, which three builds at its next draw. */
+export function formatDirectionalShadowColour(read: StoredDepthRead): void {
+  const colour = atlas.texture;
+  const [format, type] = read === 'float' ? FLOAT_COLOUR : BYTE_COLOUR;
+  if (colour.format === format && colour.type === type) return;
+  colour.format = format;
+  colour.type = type;
+  atlas.dispose();
+}
+
+/** The float colour costs four bytes per texel against two: 32 MB more at Godot's default size. */
+const FLOAT_COLOUR = [THREE.RedFormat, THREE.FloatType] as const;
+const BYTE_COLOUR = [THREE.RGFormat, THREE.UnsignedByteType] as const;
 
 /** The atlas, which `shadow` draws its share into until it lets go. */
 export function holdDirectionalShadowAtlas(shadow: THREE.LightShadow): THREE.WebGLRenderTarget {

@@ -1,43 +1,81 @@
 import type * as THREE from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('./twoByteFilterProbe.js', () => ({ filtersTwoBytesExactly: () => probe.filtersExactly }));
+vi.mock('./twoByteFilterProbe.js', () => ({ filtersTwoBytesExactly: () => gpu.filtersBytesExactly }));
 
-/** The probe's answer for the renderer, as the mocked probe gives it. */
-const probe = { filtersExactly: false };
-const renderer = {} as THREE.WebGLRenderer;
+/** What the GPU of the fake renderer can do. */
+const gpu = { filtersBytesExactly: false, filtersFloat: false };
 
-/** The read a fresh load of the module picks, on a page at `url`. */
-async function readsSampledOnPageAt(url: string) {
+const renderer = {
+  getContext: () => ({ getExtension: () => (gpu.filtersFloat ? {} : null) }),
+} as unknown as THREE.WebGLRenderer;
+
+/** A fresh load of the module, on a page at `url`. */
+async function moduleOnPageAt(url: string) {
   window.history.replaceState(null, '', url);
   vi.resetModules();
-  const { readsStoredDepthSampled } = await import('./storedDepthRead.js');
-  return readsStoredDepthSampled(renderer);
+  return import('./storedDepthRead.js');
 }
 
-describe('readsStoredDepthSampled', () => {
-  afterEach(() => {
-    probe.filtersExactly = false;
-    window.history.replaceState(null, '', '/');
+async function decidedOnPageAt(url: string) {
+  return (await moduleOnPageAt(url)).decideStoredDepthRead(renderer);
+}
+
+afterEach(() => {
+  gpu.filtersBytesExactly = false;
+  gpu.filtersFloat = false;
+  window.history.replaceState(null, '', '/');
+});
+
+describe('decideStoredDepthRead', () => {
+  it('samples the bytes on a GPU that filters them exactly', async () => {
+    gpu.filtersBytesExactly = true;
+    gpu.filtersFloat = true;
+
+    expect(await decidedOnPageAt('/')).toBe('sampled');
   });
 
-  it('samples on a page opened with ?storedDepthRead=sampled, whatever the probe finds', async () => {
-    expect(await readsSampledOnPageAt('/?storedDepthRead=sampled')).toBe(true);
+  it('samples a float colour on a GPU that rounds a filtered byte but filters a float', async () => {
+    gpu.filtersFloat = true;
+
+    expect(await decidedOnPageAt('/')).toBe('float');
   });
 
-  it('fetches on a page opened with ?storedDepthRead=fetched, whatever the probe finds', async () => {
-    probe.filtersExactly = true;
-
-    expect(await readsSampledOnPageAt('/?storedDepthRead=fetched')).toBe(false);
+  it('fetches four texels on a GPU that does neither (edge case)', async () => {
+    expect(await decidedOnPageAt('/')).toBe('fetched');
   });
 
-  it('follows the probe on a page with no parameter', async () => {
-    probe.filtersExactly = true;
+  it.each(['sampled', 'float', 'fetched'] as const)('takes %s on a page that forces it', async (read) => {
+    gpu.filtersBytesExactly = read !== 'sampled';
 
-    expect(await readsSampledOnPageAt('/?fixture=a.tscn')).toBe(true);
+    expect(await decidedOnPageAt(`/?storedDepthRead=${read}`)).toBe(read);
   });
 
-  it('follows the probe for a value that names no read', async () => {
-    expect(await readsSampledOnPageAt('/?storedDepthRead=other')).toBe(false);
+  it('follows the probe for a value that names no read (error case)', async () => {
+    gpu.filtersFloat = true;
+
+    expect(await decidedOnPageAt('/?storedDepthRead=other')).toBe('float');
+  });
+
+  it('keeps the first renderer’s read for the page', async () => {
+    const { decideStoredDepthRead } = await moduleOnPageAt('/');
+    decideStoredDepthRead(renderer);
+    gpu.filtersBytesExactly = true;
+
+    expect(decideStoredDepthRead(renderer)).toBe('fetched');
+  });
+});
+
+describe('storedDepthRead', () => {
+  it('fetches four texels before a canvas decides (edge case)', async () => {
+    expect((await moduleOnPageAt('/')).storedDepthRead()).toBe('fetched');
+  });
+
+  it('gives the decided read', async () => {
+    gpu.filtersFloat = true;
+    const { decideStoredDepthRead, storedDepthRead } = await moduleOnPageAt('/');
+    decideStoredDepthRead(renderer);
+
+    expect(storedDepthRead()).toBe('float');
   });
 });
