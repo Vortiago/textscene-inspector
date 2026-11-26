@@ -46,7 +46,7 @@ export function preprocess(
   return new Preprocessor(scanLines(lines), macros).run();
 }
 
-/** The macros `#define` lines in `text` make, pinned, so a fold the previewer needs holds over the template's. */
+/** The macros of the `#define` lines in `text`, pinned, so each holds over the template's own define. */
 export function pinnedMacros(text: string): ReadonlyMap<string, Macro> {
   const lines = text.split('\n').map((line, index) => ({ text: line, file: '<pinned>', line: index + 1 }));
   const preprocessor = new Preprocessor(scanLines(lines), new Map());
