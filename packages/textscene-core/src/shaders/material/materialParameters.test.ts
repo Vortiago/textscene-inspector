@@ -103,6 +103,36 @@ describe('materialParameters', () => {
     expect(parameters.refraction_texture_channel).toEqual(variant('VECTOR4', { x: 1, y: 0, z: 0, w: 0 }));
   });
 
+  const RED_MASK = variant('VECTOR4', { x: 1, y: 0, z: 0, w: 0 });
+
+  it.each([5, -1, Number.NaN, Infinity])(
+    'keeps the red mask for a channel of %s, which `ERR_FAIL_INDEX` refuses',
+    (channel) => {
+      const parameters = parametersOf({ metallic_texture_channel: channel, ao_texture_channel: channel });
+
+      expect([parameters.metallic_texture_channel, parameters.ao_texture_channel]).toEqual([
+        RED_MASK,
+        RED_MASK,
+      ]);
+    }
+  );
+
+  it('keeps the default for a value of a type the setter cannot take', () => {
+    const parameters = parametersOf({
+      uv1_scale: [2, 3, 4, 1],
+      albedo_color: [0.5, 0.5, 0.5],
+      roughness: [1, 2],
+    });
+
+    expect(parameters.uv1_scale).toEqual(vector3({ x: 1, y: 1, z: 1 }));
+    expect(parameters.albedo).toEqual(variant('COLOR', { r: 1, g: 1, b: 1, a: 1 }));
+    expect(parameters.roughness).toEqual(real(1));
+  });
+
+  it('casts a bool to the float a float setter takes', () => {
+    expect(parametersOf({ roughness: true }).roughness).toEqual(real(1));
+  });
+
   it('clamps a triplanar sharpness to 0 to 150 and a proximity fade distance to at least 0.01', () => {
     const parameters = parametersOf({
       uv1_triplanar_sharpness: 200,
