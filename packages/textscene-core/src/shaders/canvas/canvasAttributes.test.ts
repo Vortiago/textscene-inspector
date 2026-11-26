@@ -111,13 +111,24 @@ describe('attributesGeometry', () => {
     ]);
   });
 
-  it('refuses a custom array of other than four lanes a point', () => {
+  it('refuses a custom array the shader reads at other than four lanes a point', () => {
     const arrays = {
       ...triangleArrayCommand([0, 1, 2], SQUARE.slice(0, 3), [], []),
       customs: [undefined, new Float32Array(6)],
     };
 
-    expect(() => attributesGeometry(arrays, PLAIN_DRAW)).toThrow('expected 12 lanes in CUSTOM1, got 6');
+    expect(() => attributesGeometry(arrays, { ...PLAIN_DRAW, customsRead: [1] })).toThrow(
+      'expected 12 lanes in CUSTOM1, got 6'
+    );
+  });
+
+  it('draws a mesh whose custom array the shader does not read, whatever its lane count', () => {
+    const arrays = {
+      ...triangleArrayCommand([0, 1, 2], SQUARE.slice(0, 3), [], []),
+      customs: [new Float32Array(6)],
+    };
+
+    expect(attributesGeometry(arrays, PLAIN_DRAW).hasAttribute('custom0_attrib')).toBe(false);
   });
 
   it('reads bones as unsigned integers and weights as floats, all zero', () => {

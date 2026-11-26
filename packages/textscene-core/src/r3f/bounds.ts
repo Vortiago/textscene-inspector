@@ -84,11 +84,12 @@ export function drawsInstances(object: THREE.Object3D): boolean {
 }
 
 /**
- * The userData of a draw over an instanced geometry whose box bounds every instance, as a canvas batch.
+ * Marks an instanced draw, as a canvas batch, as bounded by its geometry box, or clears the mark.
  * @canonical Mark an instanced draw as bounded by its geometry box
  */
-export function geometryBoxUserData(): { godotGeometryBox: true } {
-  return { [GEOMETRY_BOX_KEY]: true };
+export function setGeometryBoxBound(object: THREE.Object3D, isBoxBound: boolean): void {
+  if (isBoxBound) object.userData[GEOMETRY_BOX_KEY] = true;
+  else delete object.userData[GEOMETRY_BOX_KEY];
 }
 
 const AABB_KEY = 'godotAabb';
@@ -141,7 +142,7 @@ function unionOwnBox(object: THREE.Object3D, target: THREE.Box3): void {
   const geometry = bearing.geometry;
   if (!geometry || isNodeIcon(object) || object.userData[BOXLESS_KEY] === true) return;
 
-  // A draw marked by `geometryBoxUserData`, as any other mesh, reads the bind-pose `geometry.boundingBox`.
+  // A draw marked by `setGeometryBoxBound`, as any other mesh, reads the bind-pose `geometry.boundingBox`.
   const isInstanced = object.userData[GEOMETRY_BOX_KEY] !== true && drawsInstances(object);
   const src = isInstanced ? bearing : geometry;
   if (src.boundingBox === null) src.computeBoundingBox?.();

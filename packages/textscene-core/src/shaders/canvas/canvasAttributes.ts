@@ -55,12 +55,6 @@ function checkedArrays(arrays: CanvasVertexArrays): CanvasVertexArrays {
     throw new Error(
       `expected 0, 1 or ${points.length} colours and 0 or ${points.length} UVs, got ${colors.length} and ${uvs.length}`
     );
-  arrays.customs?.forEach((lanes, custom) => {
-    if (lanes && lanes.length !== points.length * CUSTOM_ARRAY_LANES)
-      throw new Error(
-        `expected ${points.length * CUSTOM_ARRAY_LANES} lanes in CUSTOM${custom}, got ${lanes.length}`
-      );
-  });
   return arrays;
 }
 
@@ -97,8 +91,7 @@ export function attributesGeometry(
   const uvValues = uvs.length === count ? uvs.flatMap(({ x, y }) => [x, y]) : repeated(DEFAULT_UV, count);
   geometry.setAttribute('uv_attrib', floats(uvValues, 2));
   customsRead.forEach((custom) => {
-    // A missing custom array reads zero (`mesh_storage.cpp:120-131`).
-    const values = arrays.customs?.[custom] ?? new Float32Array(count * CUSTOM_ARRAY_LANES);
+    const values = customLanesRead(arrays, custom);
     geometry.setAttribute(
       customArrayTemplateAttribute(custom),
       new THREE.BufferAttribute(values, CUSTOM_ARRAY_LANES)
@@ -119,6 +112,18 @@ export function attributesGeometry(
   // The template places each vertex through the push constants, so `position` bounds nothing.
   geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), Infinity);
   return geometry;
+}
+
+/** The lanes of the custom array `custom`, checked only when the shader reads it. */
+function customLanesRead({ customs, points }: CanvasVertexArrays, custom: number): Float32Array {
+  const lanes = customs?.[custom];
+  // A missing custom array reads zero (`mesh_storage.cpp:120-131`).
+  if (!lanes) return new Float32Array(points.length * CUSTOM_ARRAY_LANES);
+  if (lanes.length !== points.length * CUSTOM_ARRAY_LANES)
+    throw new Error(
+      `expected ${points.length * CUSTOM_ARRAY_LANES} lanes in CUSTOM${custom}, got ${lanes.length}`
+    );
+  return lanes;
 }
 
 const floats = (values: number[], size: number) => new THREE.BufferAttribute(new Float32Array(values), size);

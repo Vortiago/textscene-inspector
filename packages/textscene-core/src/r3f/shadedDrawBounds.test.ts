@@ -167,10 +167,17 @@ function newSurfaceEachFrame(): THREE.Object3D {
   return drawn;
 }
 
-function overInstances(): THREE.Object3D {
-  const instances = new THREE.InstancedBufferGeometry().copy(quadSurface() as THREE.InstancedBufferGeometry);
-  const host = new THREE.Mesh(instances);
-  return spatialPoints(host);
+const instancedQuad = () =>
+  new THREE.InstancedBufferGeometry().copy(quadSurface() as THREE.InstancedBufferGeometry);
+
+/** The host's surface turns to instances, or from them, and the render after rebuilds the quads. */
+function hostTurns(from: THREE.BufferGeometry, to: THREE.BufferGeometry): THREE.Object3D {
+  const scene = new THREE.Scene();
+  const host = new THREE.Mesh(from);
+  const drawn = spatialPoints(host, null, scene);
+  host.geometry = to;
+  beforeRenderList(scene);
+  return drawn;
 }
 
 describe('the bounds of a shaded draw', () => {
@@ -252,8 +259,18 @@ describe('the bounds of a shaded draw', () => {
     ],
     [
       'emulated points over instances, which the host frames, and which no clip group holds',
-      overInstances,
+      () => spatialPoints(new THREE.Mesh(instancedQuad())),
       { frame: EMPTY, clip: QUAD_BOX },
+    ],
+    [
+      'emulated points of a host whose surface turns to instances',
+      () => hostTurns(quadSurface(), instancedQuad()),
+      { frame: EMPTY, clip: QUAD_BOX },
+    ],
+    [
+      'emulated points of a host whose surface turns from instances',
+      () => hostTurns(instancedQuad(), quadSurface()),
+      { frame: QUAD_BOX, clip: QUAD_BOX },
     ],
   ])('%s', (_, drawn, bounds) => {
     expect(boundsOf(drawn())).toEqual(bounds);

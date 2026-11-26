@@ -6,7 +6,7 @@ import { OTHER_DRAWS_SURFACE } from '../materials/useOneSurfaceStartingMaterial.
 import { SURFACE_DRAW_STATE, followSurfaceDrawState } from '../surfaceDrawState.js';
 import { observeSceneCamera } from '../sceneRenderCamera.js';
 import { surfaceWriteOf, withGodotSurface } from './godotSurfaceWrite.js';
-import { drawsInstances, geometryBoxUserData } from '../bounds.js';
+import { drawsInstances, setGeometryBoxBound } from '../bounds.js';
 
 type SurfaceHost = THREE.Object3D & { geometry: THREE.BufferGeometry };
 
@@ -64,8 +64,7 @@ function emulated(host: SurfaceHost, drawGroup: number | null, material: THREE.M
   );
   emulatedGroups.set(drawn, drawGroup);
   builtFrom.set(drawn, surfaceWriteOf(host.geometry));
-  // The quads share the surface's box. Under an instanced host one surface is not the draw.
-  if (!drawsInstances(host)) Object.assign(drawn.userData, geometryBoxUserData());
+  followHostBounds(drawn, host);
   return drawn;
 }
 
@@ -84,6 +83,12 @@ function refreshEmulatedPoints(drawn: THREE.Mesh, host: SurfaceHost): void {
   drawn.geometry = emulatedPointGeometry(surface, groupRange(surface, emulatedGroups.get(drawn) ?? null));
   // Disposed after the render: a render of another camera, started before this one, may hold it in its list.
   queueMicrotask(() => drawing.dispose());
+  followHostBounds(drawn, host);
+}
+
+/** The quads share the surface's box. Under an instanced host one surface is not the draw. */
+function followHostBounds(drawn: THREE.Mesh, host: SurfaceHost): void {
+  setGeometryBoxBound(drawn, !drawsInstances(host));
 }
 
 /** Whether `drawn` draws emulated points, whose geometry is quads and no surface of its own. */

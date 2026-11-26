@@ -8,7 +8,7 @@ import { describe, it, expect } from 'vitest';
 import {
   boxlessUserData,
   computeWorldBoundingBox,
-  geometryBoxUserData,
+  setGeometryBoxBound,
   godotAabbUserData,
 } from './bounds.js';
 import { editorHelperUserData, nodeIconUserData } from './editorHelpers.js';
@@ -39,9 +39,9 @@ describe('computeWorldBoundingBox', () => {
     return new THREE.Mesh(geometry, new THREE.MeshBasicMaterial());
   };
 
-  it('bounds a mesh marked by geometryBoxUserData over an instanced geometry by its geometry box', () => {
+  it('bounds a mesh marked by setGeometryBoxBound over an instanced geometry by its geometry box', () => {
     const mesh = instancedMesh();
-    Object.assign(mesh.userData, geometryBoxUserData());
+    setGeometryBoxBound(mesh, true);
 
     expect(computeWorldBoundingBox(mesh)).toEqual(mesh.geometry.boundingBox);
   });

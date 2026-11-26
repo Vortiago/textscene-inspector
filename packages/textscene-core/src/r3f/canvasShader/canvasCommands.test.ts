@@ -177,6 +177,15 @@ describe('meshCommands', () => {
     expect(command?.kind === 'mesh' && command.arrays.customs![0]).toBe(values);
   });
 
+  it('copies the lanes of a four-lane custom array over a larger pool', () => {
+    const geometry = canvasSurfaceGeometry(TRIANGLE);
+    const pool = Float32Array.from({ length: 16 }, (_, i) => i);
+    geometry.setAttribute('custom0', Object.assign(new THREE.BufferAttribute(pool, 4), { count: 3 }));
+    const [command] = meshCommands([geometry]);
+
+    expect(command?.kind === 'mesh' && [...command.arrays.customs![0]!]).toEqual([...pool.slice(0, 12)]);
+  });
+
   it('reads an interleaved custom array by its lanes', () => {
     const geometry = canvasSurfaceGeometry(TRIANGLE);
     const interleaved = new THREE.InterleavedBuffer(
