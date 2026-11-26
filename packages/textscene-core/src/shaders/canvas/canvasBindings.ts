@@ -134,7 +134,7 @@ export const CANVAS_BINDINGS: readonly Binding<CanvasDataBlock>[] = [
 /** Points the `CanvasData` uniforms of `draw` at `block`. Numbers are copied: bind before each draw. */
 export function bindCanvasData(draw: CanvasDraw, block: CanvasDataBlock): void {
   writeBindings(CANVAS_BINDINGS, draw.uniforms, block);
-  draw.viewportInTarget.value = block.viewportInTarget;
+  draw.viewportInTarget.value.copy(block.viewportInTarget);
 }
 
 /** Written only by `writeCanvasBindings`: the block of each draw it writes, built on its first write. */

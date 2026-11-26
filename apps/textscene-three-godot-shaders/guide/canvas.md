@@ -1263,7 +1263,7 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 
 `FRAGCOORD` is the pixel's window coordinate, with y down from the render target's top row, as Godot's Vulkan frame counts it (`renderer_canvas_render_rd.cpp:1799`).
 
-The transpiler emits `screenCoordinate`, counted from the top row for a target of Godot's rows, less the viewport's top-left in the target and over its pixel scale, since a previewer draws Godot's viewport inside a larger target. Rows: `canvas_item.fragment.FRAGCOORD`. Godot source: `servers/rendering/shader_types.cpp:290`.
+The transpiler emits `screenCoordinate`, counted from the top row for a target of Godot's rows. It subtracts the viewport's top-left in the target and divides by the viewport's pixel scale, since a previewer draws Godot's viewport inside a larger target. Rows: `canvas_item.fragment.FRAGCOORD`. Godot source: `servers/rendering/shader_types.cpp:290`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 

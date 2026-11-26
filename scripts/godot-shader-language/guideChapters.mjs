@@ -712,7 +712,7 @@ const CANVAS_CHAPTER = {
       heading: '`FRAGCOORD`',
       rows: canvasRows('fragment', 'FRAGCOORD'),
       what: "`FRAGCOORD` is the pixel's window coordinate, with y down from the render target's top row, as Godot's Vulkan frame counts it (`renderer_canvas_render_rd.cpp:1799`).",
-      tsl: "`screenCoordinate`, counted from the top row for a target of Godot's rows, less the viewport's top-left in the target and over its pixel scale, since a previewer draws Godot's viewport inside a larger target",
+      tsl: "`screenCoordinate`, counted from the top row for a target of Godot's rows. It subtracts the viewport's top-left in the target and divides by the viewport's pixel scale, since a previewer draws Godot's viewport inside a larger target",
     },
     {
       heading: '`SCREEN_UV` and `SCREEN_PIXEL_SIZE`',
