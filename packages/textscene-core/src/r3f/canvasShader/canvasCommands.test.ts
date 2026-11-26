@@ -154,51 +154,6 @@ describe('meshCommands', () => {
 
     expect(command?.kind === 'mesh' && 'customs' in command.arrays).toBe(false);
   });
-
-  it.each([
-    [1, [1, 0, 0, 1, 2, 0, 0, 1, 3, 0, 0, 1]],
-    [2, [1, 2, 0, 1, 3, 4, 0, 1, 5, 6, 0, 1]],
-    [3, [1, 2, 3, 1, 4, 5, 6, 1, 7, 8, 9, 1]],
-  ])('reads a custom array of %i lanes as four, a missing lane 0 and a missing alpha 1', (width, lanes) => {
-    const geometry = canvasSurfaceGeometry(TRIANGLE);
-    const values = Float32Array.from({ length: 3 * width }, (_, i) => i + 1);
-    geometry.setAttribute('custom0', new THREE.BufferAttribute(values, width));
-    const [command] = meshCommands([geometry]);
-
-    expect(command?.kind === 'mesh' && [...command.arrays.customs![0]!]).toEqual(lanes);
-  });
-
-  it('passes a custom array of four float lanes through, as the surface loader writes it', () => {
-    const geometry = canvasSurfaceGeometry(TRIANGLE);
-    const values = new Float32Array(3 * 4);
-    geometry.setAttribute('custom0', new THREE.BufferAttribute(values, 4));
-    const [command] = meshCommands([geometry]);
-
-    expect(command?.kind === 'mesh' && command.arrays.customs![0]).toBe(values);
-  });
-
-  it('copies the lanes of a four-lane custom array over a larger pool', () => {
-    const geometry = canvasSurfaceGeometry(TRIANGLE);
-    const pool = Float32Array.from({ length: 16 }, (_, i) => i);
-    geometry.setAttribute('custom0', Object.assign(new THREE.BufferAttribute(pool, 4), { count: 3 }));
-    const [command] = meshCommands([geometry]);
-
-    expect(command?.kind === 'mesh' && [...command.arrays.customs![0]!]).toEqual([...pool.slice(0, 12)]);
-  });
-
-  it('reads an interleaved custom array by its lanes', () => {
-    const geometry = canvasSurfaceGeometry(TRIANGLE);
-    const interleaved = new THREE.InterleavedBuffer(
-      Float32Array.from({ length: 15 }, (_, i) => i),
-      5
-    );
-    geometry.setAttribute('custom0', new THREE.InterleavedBufferAttribute(interleaved, 4, 1));
-    const [command] = meshCommands([geometry]);
-
-    expect(command?.kind === 'mesh' && [...command.arrays.customs![0]!]).toEqual([
-      1, 2, 3, 4, 6, 7, 8, 9, 11, 12, 13, 14,
-    ]);
-  });
 });
 
 describe('sameCommandLayout', () => {

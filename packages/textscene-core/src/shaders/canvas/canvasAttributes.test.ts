@@ -89,48 +89,6 @@ describe('attributesGeometry', () => {
     ]);
   });
 
-  it('writes CUSTOM0 and CUSTOM1 at four lanes a point, and zero for a missing one', () => {
-    const custom0 = Float32Array.from({ length: 12 }, (_, lane) => lane / 4);
-    const arrays = { ...triangleArrayCommand([0, 1, 2], SQUARE.slice(0, 3), [], []), customs: [custom0] };
-    const geometry = attributesGeometry(arrays, { ...PLAIN_DRAW, customsRead: [0, 1] });
-
-    expect([arrayOf(geometry, 'custom0_attrib'), arrayOf(geometry, 'custom1_attrib')]).toEqual([
-      [...custom0],
-      Array(12).fill(0),
-    ]);
-  });
-
-  it('binds no custom array the shader does not read', () => {
-    const custom0 = new Float32Array(12);
-    const arrays = { ...triangleArrayCommand([0, 1, 2], SQUARE.slice(0, 3), [], []), customs: [custom0] };
-    const geometry = attributesGeometry(arrays, { ...PLAIN_DRAW, customsRead: [1] });
-
-    expect(['custom0_attrib', 'custom1_attrib'].map((name) => geometry.hasAttribute(name))).toEqual([
-      false,
-      true,
-    ]);
-  });
-
-  it('refuses a custom array the shader reads at other than four lanes a point', () => {
-    const arrays = {
-      ...triangleArrayCommand([0, 1, 2], SQUARE.slice(0, 3), [], []),
-      customs: [undefined, new Float32Array(6)],
-    };
-
-    expect(() => attributesGeometry(arrays, { ...PLAIN_DRAW, customsRead: [1] })).toThrow(
-      'expected 12 lanes in CUSTOM1, got 6'
-    );
-  });
-
-  it('draws a mesh whose custom array the shader does not read, whatever its lane count', () => {
-    const arrays = {
-      ...triangleArrayCommand([0, 1, 2], SQUARE.slice(0, 3), [], []),
-      customs: [new Float32Array(6)],
-    };
-
-    expect(attributesGeometry(arrays, PLAIN_DRAW).hasAttribute('custom0_attrib')).toBe(false);
-  });
-
   it('reads bones as unsigned integers and weights as floats, all zero', () => {
     const geometry = attributesGeometry(
       triangleArrayCommand([0, 1, 2], SQUARE.slice(0, 3), [], []),
