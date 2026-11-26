@@ -11,13 +11,12 @@
  *   node scripts/perf/run.mjs --scene glow
  */
 
-/* global document, window, requestAnimationFrame, PointerEvent */
+/* global document, window, requestAnimationFrame */
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   attachDiagnostics,
-  CANVAS_2D_TESTIDS,
   clearDiagnostics,
   createCaptureContext,
   errorReport,
@@ -28,6 +27,7 @@ import {
   sceneStillLoading,
   withPreviewBrowser,
 } from '../visual/previewServer.mjs';
+import { startCameraGesture } from './cameraGestures.mjs';
 import { BUDGET_SCENES } from './scenes.mjs';
 import { SteadyWork } from './steadyWork.mjs';
 import { compareToBudget, parseWorkCounts } from './workCounts.mjs';
@@ -118,10 +118,9 @@ async function measureScene({ page, diagnostics }, baseUrl, scene) {
   const loading = await sceneStillLoading(page);
   if (loading) return { work: null, reason: loading };
   if (scene.writesEachFrame) await startWritesEachFrame(page, scene.writesEachFrame);
-  if (scene.pansCamera) {
-    const isPanning = await startPanning(page);
-    const noStage = `expected the 2D stage to pan, found no ${CANVAS_2D_TESTIDS.stage}`;
-    if (!isPanning) return { work: null, reason: noStage };
+  if (scene.gesture) {
+    const noTarget = await startCameraGesture(page, scene.gesture);
+    if (noTarget) return { work: null, reason: noTarget };
   }
   const { work, reason: unsteady } = await steadyWork(page);
   if (loggedErrors(diagnostics).length > 0) {
@@ -153,39 +152,6 @@ async function startWritesEachFrame(page, { parent, count }) {
     },
     { parentPath: parent, writes: count }
   );
-}
-
-/** One pixel right and back each frame, so each window's mean work stays steady. False with no 2D stage. */
-async function startPanning(page) {
-  return page.evaluate((stageTestId) => {
-    const stage = document.querySelector(`[data-testid="${stageTestId}"]`);
-    if (!stage) return false;
-    const { left, top, width, height } = stage.getBoundingClientRect();
-    const y = top + height / 2;
-    const pointer = (type, x) =>
-      stage.dispatchEvent(
-        new PointerEvent(type, {
-          bubbles: true,
-          clientX: x,
-          clientY: y,
-          button: 0,
-          buttons: 1,
-          pointerId: 1,
-          pointerType: 'mouse',
-          isPrimary: true,
-        })
-      );
-    const x = left + width / 2;
-    pointer('pointerdown', x);
-    let frame = 0;
-    const move = () => {
-      frame += 1;
-      pointer('pointermove', x + (frame % 2));
-      requestAnimationFrame(move);
-    };
-    requestAnimationFrame(move);
-    return true;
-  }, CANVAS_2D_TESTIDS.stage);
 }
 
 /** The scene's work once it is steady, or a reason it never was. */

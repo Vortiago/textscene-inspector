@@ -262,6 +262,8 @@ export function Canvas2DStage({
       return;
     }
     if (e.button !== 0) return;
+    // A press on the stage would start a text selection, and over one a native drag that cancels the pan.
+    e.preventDefault();
     // The rendered `pan` is one commit behind a wheel or pinch earlier in this frame.
     const origin = viewStore.get().pan;
     pan2dDrag.current = {

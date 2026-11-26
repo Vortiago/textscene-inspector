@@ -54,8 +54,9 @@ pan or zoom makes no scene render.
 The work budget check (`pnpm test:perf`, `scripts/perf/`) holds the counts in CI, not the times.
 It opens each budget scene in headless Chromium with the overlay on, waits until the scene has
 loaded, waits until the counts stay the same over 30 frames, and fails when a scene's draw calls or scene renders, or a step's runs or draw calls, per frame
-go over `scripts/perf/budgets.json`. A budget scene can drag the 2D stage on every frame
-(`pansCamera`), so a pan that rebuilds the scene's React tree fails the check. Software GL on a shared runner gives times that change from run
+go over `scripts/perf/budgets.json`. A budget scene can hold a camera gesture on every frame
+(`gesture`, `scripts/perf/cameraGestures.mjs`): a 2D pan or zoom, or a 3D orbit, pan, zoom or
+freelook. A gesture that rebuilds the scene's React tree fails the check. Software GL on a shared runner gives times that change from run
 to run, and the counts do not change. A step that runs more often, or a draw that goes uncached,
 shows in the counts as well as in the times.
 

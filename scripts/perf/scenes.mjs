@@ -1,6 +1,6 @@
 /**
  * @type {Array<{ name: string, file: string, inGameFrame?: { width: number, height: number },
- *   writesEachFrame?: { parent: string, count: number }, pansCamera?: boolean }>}
+ *   writesEachFrame?: { parent: string, count: number }, gesture?: keyof typeof import('./cameraGestures.mjs').CAMERA_GESTURES }>}
  */
 export const BUDGET_SCENES = [
   { name: 'depth-fog', file: 'unit-depth-fog.tscn' },
@@ -16,7 +16,12 @@ export const BUDGET_SCENES = [
     writesEachFrame: { parent: 'Coins', count: 1 },
   },
   { name: 'demo-2d-lights-and-shadows', file: 'demos/2d/lights_and_shadows/light_shadows.tscn' },
-  { name: 'dungeon-pan', file: 'dungeon.tscn', pansCamera: true },
+  { name: 'dungeon-pan', file: 'dungeon.tscn', gesture: 'pan-2d' },
+  { name: 'dungeon-zoom', file: 'dungeon.tscn', gesture: 'zoom-2d' },
+  { name: 'depth-fog-orbit', file: 'unit-depth-fog.tscn', gesture: 'orbit-3d' },
+  { name: 'depth-fog-pan', file: 'unit-depth-fog.tscn', gesture: 'pan-3d' },
+  { name: 'depth-fog-zoom', file: 'unit-depth-fog.tscn', gesture: 'zoom-3d' },
+  { name: 'depth-fog-freelook', file: 'unit-depth-fog.tscn', gesture: 'freelook-3d' },
   {
     name: 'in-game-camera3d',
     file: 'in-game/unit-in-game-camera3d.tscn',

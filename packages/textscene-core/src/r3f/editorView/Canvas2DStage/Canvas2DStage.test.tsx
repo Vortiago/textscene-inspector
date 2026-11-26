@@ -267,6 +267,17 @@ describe('<Canvas2DStage>', () => {
     expect(frame.style.transform).toBe('translate(50px, 30px) scale(1)');
   });
 
+  it('takes a pan press from the browser, which would start a text selection or a native drag', () => {
+    const { stage } = renderStage();
+    const isDefaultKept = fireEvent.pointerDown(stage, { button: 0, clientX: 10, clientY: 10, pointerId: 1 });
+    expect(isDefaultKept).toBe(false);
+  });
+
+  it('keeps the browser default of a press that starts no pan (edge case)', () => {
+    const { stage } = renderStage();
+    expect(fireEvent.pointerDown(stage, { button: 2, clientX: 10, clientY: 10, pointerId: 1 })).toBe(true);
+  });
+
   it('pans on a one-finger drag, the same as a mouse drag', () => {
     const { stage, frame } = renderStage();
     touch(stage, 'down', 1, 10, 10);
