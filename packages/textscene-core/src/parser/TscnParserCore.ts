@@ -30,6 +30,7 @@ import {
   splitLines,
 } from './utils.js';
 import type { ParsedHeading, ValueScanState } from './utils.js';
+import { readTag, type TagField } from '../godot/variant/tagReader.js';
 import { parseExternalResource, parseInternalResource } from './resourceParsers.js';
 import { seatScene, type SceneSeating } from './sceneTreeBuilder.js';
 import { refusesToInstantiate } from './instantiateRefusal.js';
@@ -119,6 +120,7 @@ export class TscnParserCore {
     // Debug, not info: an editor host parses on each keystroke.
     logger.debug('[Parser] Starting TSCN parsing');
     const lines = splitLines(content);
+    const lineStarts = lineStartsOf(content);
 
     // Every node beside its heading's line, in scan order. The line stays off the node:
     // the orphan report reads it here, and a strict observer gets it from `onSectionBuilt`.
@@ -136,6 +138,8 @@ export class TscnParserCore {
     let currentSection: SectionType = 'none';
     let currentHeading: ParsedHeading | null = null;
     let currentHeadingLine = 0;
+    // Where the next pass starts on its line: past a heading's `]`, Godot reads the rest of the line as body.
+    let resumeColumn = 0;
     // The type a `.tres` header declares. Its `[resource]` body has no type:
     // `res_type` comes from the header (resource_format_text.cpp:1166) and
     // `ClassDB::instantiate(res_type)` builds it when the tag opens (:741). A `.tscn`
@@ -229,10 +233,41 @@ export class TscnParserCore {
       pendingMultiline = null;
     };
 
+    // Every field the loader parses in a heading, read before the heading opens its section.
+    const addFieldValues = (fields: readonly TagField[], type: string, previous: string | null) => {
+      const isOpeningTag = previous === 'gd_scene' || previous === 'gd_resource';
+      const place = type === 'connection' ? 'binds' : previous === 'node' ? 'node' : 'section';
+      for (const { start, end, line } of fields) {
+        const text = content.slice(start, end);
+        // A field is one value, so one that opens with a quote is a string and holds no read.
+        if (text[0] !== '"') addFileValue({ text, line, place, isOpeningTag });
+      }
+    };
+
+    const openSection = (
+      heading: ParsedHeading,
+      line: number,
+      endLine: number,
+      fields: readonly TagField[]
+    ) => {
+      currentHeading = heading;
+      currentSection = this.identifySection(heading);
+      currentHeadingLine = line;
+      if (heading.type === 'gd_resource') headerResourceType = heading.attributes.type;
+      const editablePath = heading.type === 'editable' ? heading.attributes.path : undefined;
+      if (editablePath !== undefined) editableInstances.push(simplifiedNodePath(editablePath));
+      addFieldValues(fields, heading.type, headings.previous());
+      // Godot judges a tag once it has read the `]`, so a refusal names the line it ends on.
+      headings.read(heading.type, endLine);
+      observer?.onSectionStart?.(heading, currentSection, line);
+    };
+
     for (let i = 0; i < lines.length; i++) {
       // A `;` comment ends the line for Godot's reader wherever it sits, so it
       // is gone before the line is read as heading, property or continuation.
-      const line = stripLineComment(lines[i]!, pendingMultiline?.scanState.inString ?? false);
+      const column = resumeColumn;
+      resumeColumn = 0;
+      const line = stripLineComment(lines[i]!.slice(column), pendingMultiline?.scanState.inString ?? false);
       const lineNumber = i + 1;
 
       // Inside an open string, append raw lines, blank ones included. Only a real
@@ -259,92 +294,77 @@ export class TscnParserCore {
         continue;
       }
 
-      if (isHeading(line)) {
-        finalizeSection();
-
-        currentHeading = parseHeading(line);
-        if (currentHeading) {
-          currentSection = this.identifySection(currentHeading);
-          currentHeadingLine = lineNumber;
-          if (currentHeading.type === 'gd_resource') {
-            headerResourceType = currentHeading.attributes.type;
-          }
-          const editablePath =
-            currentHeading.type === 'editable' ? currentHeading.attributes.path : undefined;
-          if (editablePath !== undefined) editableInstances.push(simplifiedNodePath(editablePath));
-          const previous = headings.read(currentHeading.type, lineNumber);
-          const isOpeningTag = previous === 'gd_scene' || previous === 'gd_resource';
-          const { instance, binds } = currentHeading.attributes;
-          const place = previous === 'node' ? 'node' : 'section';
-          if (currentHeading.type === 'node' && instance !== undefined)
-            addFileValue({ text: instance, line: lineNumber, place, isOpeningTag });
-          if (currentHeading.type === 'connection' && binds !== undefined)
-            addFileValue({ text: binds, line: lineNumber, place: 'binds', isOpeningTag });
-          observer?.onSectionStart?.(currentHeading, currentSection, lineNumber);
-        } else {
-          observer?.onError?.({
-            message: `Invalid heading format: "${line.trim()}"`,
-            line: lineNumber,
-            column: 1,
-            code: 'INVALID_HEADING_FORMAT',
-          });
-          headings.stop();
-        }
-      } else {
-        // A line that opens a bracket but never parses as a heading is malformed,
-        // for example a missing ']'. The lenient path recovers below. Strict
-        // consumers get the error.
-        const malformedHeading = line.trim().startsWith('[');
-        if (malformedHeading) {
-          observer?.onError?.({
-            message: `Invalid heading format: "${line.trim()}"`,
-            line: lineNumber,
-            column: 1,
-            code: 'INVALID_HEADING_FORMAT',
-          });
-          headings.stop();
-        }
-
-        const property = parseProperty(line);
-        if (!property) {
-          if (!malformedHeading) {
-            observer?.onError?.({
-              message: `Invalid property format: "${line.trim()}"`,
-              line: lineNumber,
-              column: 1,
-              code: 'INVALID_PROPERTY_FORMAT',
-            });
-          }
+      const indent = line.length - line.trimStart().length;
+      if (line[indent] === '[') {
+        const tag = readTag(content, lineStarts[i]! + column + indent, lineNumber);
+        if (tag && !('error' in tag)) {
+          const end = lineAndColumnOf(lineStarts, tag.end, i);
+          finalizeSection();
+          openSection(
+            parseHeading(headingText(lines, i, column, end))!,
+            lineNumber,
+            end.line + 1,
+            tag.fields
+          );
+          if (!isEmpty(lines[end.line]!.slice(end.column))) {
+            resumeColumn = end.column;
+            i = end.line - 1;
+          } else i = end.line;
           continue;
         }
+        if (tag) {
+          addFieldValues(tag.fields, tag.name ?? '', headings.previous());
+          headings.refuse(tag);
+        }
+        observer?.onError?.({
+          message: `Invalid heading format: "${line.trim()}"`,
+          line: lineNumber,
+          column: 1,
+          code: 'INVALID_HEADING_FORMAT',
+        });
+        // The lenient path draws what it can of a heading Godot refuses.
+        if (isHeading(line)) {
+          finalizeSection();
+          openSection(parseHeading(line)!, lineNumber, lineNumber, []);
+          continue;
+        }
+      }
+      const property = parseProperty(line);
+      if (!property) {
+        if (line[indent] !== '[') {
+          observer?.onError?.({
+            message: `Invalid property format: "${line.trim()}"`,
+            line: lineNumber,
+            column: 1,
+            code: 'INVALID_PROPERTY_FORMAT',
+          });
+        }
+        continue;
+      }
 
-        if (currentHeading) {
-          const scanState = scanValueChunk(property.value, INITIAL_SCAN_STATE);
-          if (isIncompleteState(scanState)) {
-            pendingMultiline = {
-              key: property.key,
-              lines: [property.value],
-              startLine: lineNumber,
-              scanState,
-            };
-          } else {
-            // Stored under the name and literal the setter receives: a pre-4.0 alias like
-            // `frames` is `sprite_frames`, and `extents` is `size` doubled, so every
-            // reader sees one key and one value. The observer gets both as written,
-            // since a diagnostic names what is in the file, and the stored pair beside them.
-            const resolved = resolveDeprecatedProperty(currentOwnerType(), property.key, property.value);
-            currentProperties[resolved.key] = resolved.value;
-            addBodyValue(property.value, lineNumber);
-            observer?.onProperty?.({
-              section: currentSection,
-              ownerType: currentOwnerType(),
-              key: property.key,
-              value: property.value,
-              line: lineNumber,
-              isMultiline: false,
-              stored: resolved,
-            });
-          }
+      if (currentHeading) {
+        const scanState = scanValueChunk(property.value, INITIAL_SCAN_STATE);
+        if (isIncompleteState(scanState)) {
+          pendingMultiline = {
+            key: property.key,
+            lines: [property.value],
+            startLine: lineNumber,
+            scanState,
+          };
+        } else {
+          // Stored as the setter takes it, `frames` as `sprite_frames`. A diagnostic names the text.
+          const resolved = resolveDeprecatedProperty(currentOwnerType(), property.key, property.value);
+          currentProperties[resolved.key] = resolved.value;
+          addBodyValue(property.value, lineNumber);
+          observer?.onProperty?.({
+            section: currentSection,
+            ownerType: currentOwnerType(),
+            key: property.key,
+            value: property.value,
+            line: lineNumber,
+            isMultiline: false,
+            stored: resolved,
+          });
         }
       }
     }
@@ -354,7 +374,7 @@ export class TscnParserCore {
 
     // Each lookup by id indexes a table once (`utils/keyedLookup.ts`), so a table never changes after the scan.
     Object.freeze(origins);
-    const misplacedHeading = headings.misplaced();
+    const headingStop = headings.stop();
     Object.freeze(externalResources);
     Object.freeze(internalResources);
     const seating = seatScene(origins);
@@ -372,7 +392,7 @@ export class TscnParserCore {
         ...(headerResourceType !== undefined ? { resourceType: headerResourceType } : {}),
         ...(editableInstances.length > 0 ? { editableInstances } : {}),
         ...(fileValues.length > 0 ? { fileValues } : {}),
-        ...(misplacedHeading ? { misplacedHeading } : {}),
+        ...(headingStop ? { headingStop } : {}),
         ...(mainResource ? { mainResource } : {}),
       },
       origins,
@@ -390,4 +410,40 @@ export class TscnParserCore {
 
     return 'none';
   }
+}
+
+/** The offset each line of `content` starts at, as `splitLines` splits it. */
+function lineStartsOf(content: string): number[] {
+  const starts = [0];
+  for (let at = content.indexOf('\n'); at !== -1; at = content.indexOf('\n', at + 1)) starts.push(at + 1);
+  return starts;
+}
+
+/** The 0-based line and column of `offset`, searched forward from line `from`. */
+function lineAndColumnOf(
+  lineStarts: readonly number[],
+  offset: number,
+  from: number
+): { line: number; column: number } {
+  let line = from;
+  while (line + 1 < lineStarts.length && lineStarts[line + 1]! <= offset) line++;
+  return { line, column: offset - lineStarts[line]! };
+}
+
+/** A heading's text to its `]`, comments gone. The `]` is code, so no comment strip on its line is needed. */
+function headingText(
+  lines: readonly string[],
+  first: number,
+  column: number,
+  end: { line: number; column: number }
+): string {
+  const parts: string[] = [];
+  let state = INITIAL_SCAN_STATE;
+  for (let at = first; at <= end.line; at++) {
+    const raw = lines[at]!.slice(at === first ? column : 0, at === end.line ? end.column : undefined);
+    const code = at === end.line ? raw : stripLineComment(raw, state.inString);
+    parts.push(code);
+    state = scanValueChunk(code, state);
+  }
+  return parts.join('\n');
 }

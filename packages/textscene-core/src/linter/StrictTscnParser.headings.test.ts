@@ -72,6 +72,33 @@ animations = [{
       expect(result.scene!.internalResources).toHaveLength(1);
     });
 
+    it('reads a heading split over lines as one heading, as Godot 4.6.3 loads it', () => {
+      const content = `[gd_scene format=3]
+
+[node name="Root"
+type="Node3D"]
+`;
+
+      const result = parser.parse(content);
+
+      expect(result.errors).toEqual([]);
+      expect(result.scene?.nodes.map(({ name, type }) => ({ name, type }))).toEqual([
+        { name: 'Root', type: 'Node3D' },
+      ]);
+    });
+
+    it('reports a heading split over lines that does not parse at the line it starts on', () => {
+      const content = `[gd_scene format=3]
+
+[node name="Root"
+type=]
+`;
+
+      expect(parser.parse(content).errors).toEqual([
+        expect.objectContaining({ code: 'INVALID_HEADING_FORMAT', line: 3 }),
+      ]);
+    });
+
     it('should report error for heading without attributes', () => {
       const content = `[gd_scene load_steps=1 format=3]
 

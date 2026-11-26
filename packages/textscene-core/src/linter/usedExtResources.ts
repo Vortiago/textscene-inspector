@@ -9,7 +9,7 @@ export type ExtResourceUse = 'aborting' | 'node';
 
 type ScannedText = Pick<
   StrictScene,
-  'externalResources' | 'internalResources' | 'fileValues' | 'misplacedHeading'
+  'externalResources' | 'internalResources' | 'fileValues' | 'headingStop'
 >;
 
 /** Each `[ext_resource]` id the values name before the parse stops, and where, as the preview reads them. */

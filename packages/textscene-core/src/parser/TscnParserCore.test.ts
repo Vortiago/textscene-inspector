@@ -769,7 +769,7 @@ describe('the file values and heading order of a scan', () => {
     const late =
       '[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\n\n[sub_resource type="Resource" id="a"]\n';
 
-    expect(new TscnParserCore().parse(late, () => null).scene.misplacedHeading).toEqual({
+    expect(new TscnParserCore().parse(late, () => null).scene.headingStop).toEqual({
       type: 'sub_resource',
       line: 5,
       reason: 'unknown tag',
@@ -778,13 +778,13 @@ describe('the file values and heading order of a scan', () => {
 
   it('records no value after a heading line that does not parse', () => {
     const broken =
-      '[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\n\n[node name="A" parent="."\nm = ExtResource("1")\n';
+      '[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\n\n[node name=A parent="."]\nm = ExtResource("1")\n';
 
     expect(new TscnParserCore().parse(broken, () => null).scene).not.toHaveProperty('fileValues');
   });
 
   it('records no misplaced heading where each heading is in its place', () => {
-    expect(new TscnParserCore().parse(content, () => null).scene).not.toHaveProperty('misplacedHeading');
+    expect(new TscnParserCore().parse(content, () => null).scene).not.toHaveProperty('headingStop');
   });
 
   it('puts each value on the scene in file order, with its line and place', () => {

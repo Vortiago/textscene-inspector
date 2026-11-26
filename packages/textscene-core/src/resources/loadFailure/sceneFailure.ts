@@ -1,7 +1,8 @@
 import type { SceneFailure, SceneFile } from '../../scene/sceneFiles.js';
 import { resourceFilePath } from '../subResourcePath.js';
 import type { FailingFileRead, ParseStop } from './fileReads.js';
-import type { MisplacedHeading } from '../../parser/headingOrder.js';
+import type { MisplacedHeading, UnparsedHeading } from '../../parser/headingOrder.js';
+import type { ParseErrorCode } from '../../godot/variant/strToVar.js';
 
 /** The root scene, its reads that fail the whole scene in file order, and the read that stops its parse. */
 export interface SceneFailingReads {
@@ -46,6 +47,7 @@ function godotFailureLine(scenePath: string, { path, kind, uid, line }: FailingF
     return `${scenePath}:${line} - Parse Error: [ext_resource] referenced non-existent resource at: ${path}.`;
   if (kind === 'section Resource')
     return `${scenePath}:${line} - Parse Error: Can't load resource at path: ${path} with uid: ${uid}.`;
+  if (kind === 'opening Resource') return `${scenePath}:${line} - Parse Error: Unexpected end of file.`;
   return `Parse Error: Parse error. [Resource file ${scenePath}:${line}]`;
 }
 
@@ -53,6 +55,7 @@ function godotFailureLine(scenePath: string, { path, kind, uid, line }: FailingF
 function godotStopLine(scenePath: string, stop: ParseStop): string {
   const at = `${scenePath}:${stop.line}`;
   if ('reason' in stop) return `${at} - Parse Error: ${misplacedError(stop)}.`;
+  if ('readBy' in stop) return unparsedLine(at, stop);
   const { read, place, isOpeningTag } = stop;
   if (isOpeningTag) return `${at} - Parse Error: Unexpected end of file.`;
   if (place !== 'section') {
@@ -66,6 +69,19 @@ function godotStopLine(scenePath: string, stop: ParseStop): string {
   if (read.kind === 'ExtResource')
     return `${at} - Parse Error: Can't load cached ext-resource id: ${read.id}.`;
   return `${at} - Parse Error: .`;
+}
+
+/** `Error`'s names as `error_names` prints them (core/error/error_list.cpp:53, :80). */
+const ERROR_NAMES: Readonly<Record<ParseErrorCode, string>> = {
+  ERR_PARSE_ERROR: 'Parse error',
+  ERR_FILE_CORRUPT: 'File corrupt',
+};
+
+/** Each caller of `parse_tag` prints its own line (resource_format_text.cpp:40, :291, :1133, :1185). */
+function unparsedLine(at: string, { error, code, readBy }: UnparsedHeading): string {
+  if (readBy === 'opening tag') return `${at} - Parse Error: Unexpected end of file.`;
+  if (readBy === 'node body') return `Parse Error: ${ERROR_NAMES[code]}. [Resource file ${at}]`;
+  return `${at} - Parse Error: ${error}.`;
 }
 
 /** The loader's error for a heading it refuses (resource_format_text.cpp:415, :724, :840, :871, :903). */

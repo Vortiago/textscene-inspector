@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseTresFile } from '../../parser/parsedResource';
 import { TscnParser } from '../../parser/TscnParser';
+import type { TscnNode } from '../../parser/types';
 import { resourceFailingReads, sceneFailingReads, type FailingReadKind } from './fileReads';
 import { sceneFailureOf } from './sceneFailure';
 
@@ -13,6 +14,8 @@ interface GodotRow {
   failing: { path: string; kind: FailingReadKind; line: number }[];
   /** The line Godot prints where the parse stops, null where the file parses. */
   stop: string | null;
+  /** The scene's nodes as Godot instantiates them, each Node2D's position where it is not zero. */
+  tree?: string;
 }
 
 /** Each place a file names a resource, as Godot 4.6.3 loads it, measured one file per headless run. */
@@ -1065,6 +1068,899 @@ metadata/x = Resource("res://gone70.tres")
     failing: [],
     stop: "res://row70.tscn:5 - Parse Error: Unknown tag 'ext_resource' in file.",
   },
+  {
+    row: 71,
+    reads: 'the first heading has no closing ], a [node] heading two lines below',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"
+
+[node name="A" parent="."]
+`,
+    failing: [],
+    stop: 'res://row71.tscn:5 - Parse Error: Unexpected end of file.',
+  },
+  {
+    row: 72,
+    reads: 'a heading after a node has an unquoted value',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name=A parent="."]
+`,
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row72.tscn:5]',
+  },
+  {
+    row: 73,
+    reads: 'a [sub_resource] heading after a section has a key with no value',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[sub_resource type="Resource" id="x"]
+
+[sub_resource type="Resource" id=]
+
+[node name="Root" type="Node2D"]
+
+`,
+    failing: [],
+    stop: "res://row73.tscn:5 - Parse Error: Expected value, got '']''.",
+  },
+  {
+    row: 74,
+    reads: 'a heading has a space after its [',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[ node name="A" parent="."]
+`,
+    failing: [],
+    stop: null,
+    tree: 'Root[A]',
+  },
+  {
+    row: 75,
+    reads: 'a heading value opens a string that closes inside the next value',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="abc type="Node2D" parent="."]
+
+position = Vector2(1, 2)
+`,
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row75.tscn:5]',
+  },
+  {
+    row: 76,
+    reads: 'a heading key has no =',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name "A" parent="."]
+`,
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row76.tscn:5]',
+  },
+  {
+    row: 77,
+    reads: 'a heading has a number where a key goes',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="A" parent="." 5]
+`,
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row77.tscn:5]',
+  },
+  {
+    row: 78,
+    reads: 'an empty [] after a node',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[]
+`,
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row78.tscn:5]',
+  },
+  {
+    row: 79,
+    reads: 'an empty [] after a section',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[sub_resource type="Resource" id="x"]
+
+[]
+
+[node name="Root" type="Node2D"]
+
+`,
+    failing: [],
+    stop: 'res://row79.tscn:5 - Parse Error: Expected identifier (tag name).',
+  },
+  {
+    row: 80,
+    reads: 'a tag name joined with a period',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node.x name="A" parent="."]
+`,
+    failing: [],
+    stop: "res://row80.tscn:5 - Parse Error: Unknown tag 'node.x' in file.",
+  },
+  {
+    row: 81,
+    reads: 'a tag name joined with a colon',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node:x name="A" parent="."]
+`,
+    failing: [],
+    stop: "res://row81.tscn:5 - Parse Error: Unknown tag 'node:x' in file.",
+  },
+  {
+    row: 82,
+    reads: 'a heading after a node runs to the end of the file',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="A" parent="."`,
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row82.tscn:5]',
+  },
+  {
+    row: 83,
+    reads: 'a heading after a node runs to the end of the file, a newline last',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="A" parent="."
+`,
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row83.tscn:6]',
+  },
+  {
+    row: 84,
+    reads: 'a heading after a section runs to the end of the file',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[sub_resource type="Resource" id="x"]
+
+[sub_resource type="Resource" id="y"`,
+    failing: [],
+    stop: 'res://row84.tscn:5 - Parse Error: Expected identifier.',
+  },
+  {
+    row: 85,
+    reads: 'a heading after a node ends inside a number',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="A" parent="." index=5`,
+    failing: [],
+    stop: 'Parse Error: File corrupt. [Resource file res://row85.tscn:5]',
+  },
+  {
+    row: 86,
+    reads: 'a heading after a section ends inside a number',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[sub_resource type="Resource" id="x"]
+
+[sub_resource type="Resource" id="y" a=5`,
+    failing: [],
+    stop: "res://row86.tscn:5 - Parse Error: Unexpected EOF while parsing tag 'sub_resource'.",
+  },
+  {
+    row: 87,
+    reads: 'binds= after a node ends inside an array',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[connection signal="ready" from="." to="." method="free" binds=[1, 2`,
+    failing: [],
+    stop: 'Parse Error: File corrupt. [Resource file res://row87.tscn:5]',
+  },
+  {
+    row: 88,
+    reads: 'a heading after a section ends inside an array, after a number',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[sub_resource type="Resource" id="x"]
+
+[sub_resource type="Resource" id="y" a=[1, 2`,
+    failing: [],
+    stop: 'res://row88.tscn:5 - Parse Error: Unexpected EOF while parsing array.',
+  },
+  {
+    row: 89,
+    reads: 'a heading after a section ends inside an array, after a string',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[sub_resource type="Resource" id="x"]
+
+[sub_resource type="Resource" id="y" a=[1, "b"`,
+    failing: [],
+    stop: "res://row89.tscn:5 - Parse Error: Expected ','.",
+  },
+  {
+    row: 90,
+    reads: 'a heading after a section ends inside a string',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[sub_resource type="Resource" id="x"]
+
+[sub_resource type="Resource" id="y" a="b`,
+    failing: [],
+    stop: "res://row90.tscn:5 - Parse Error: Expected value, got 'ERROR'.",
+  },
+  {
+    row: 91,
+    reads: 'binds= after a node never closes its array',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[connection signal="ready" from="." to="." method="free" binds=[1, 2
+`,
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row91.tscn:6]',
+  },
+  {
+    row: 92,
+    reads: 'the header has no closing ]',
+    file: 'tscn',
+    text: `[gd_scene format=3
+
+[node name="Root" type="Node2D"]
+
+`,
+    failing: [],
+    stop: 'res://row92.tscn:3 - Parse Error: Expected identifier.',
+  },
+  {
+    row: 93,
+    reads: 'the header has an unquoted value',
+    file: 'tscn',
+    text: `[gd_scene format=x]
+
+[node name="Root" type="Node2D"]
+
+`,
+    failing: [],
+    stop: "res://row93.tscn:1 - Parse Error: Unexpected identifier 'x'.",
+  },
+  {
+    row: 94,
+    reads: 'a heading value is & with no string',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[sub_resource type="Resource" id="x"]
+
+[sub_resource type=&abc id="y"]
+
+[node name="Root" type="Node2D"]
+
+`,
+    failing: [],
+    stop: "res://row94.tscn:5 - Parse Error: Expected value, got 'ERROR'.",
+  },
+  {
+    row: 95,
+    reads: 'an array in a heading holds & with no string',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[sub_resource type="Resource" id="x"]
+
+[sub_resource type="Resource" id="y" a=[&b]]
+
+[node name="Root" type="Node2D"]
+
+`,
+    failing: [],
+    stop: "res://row95.tscn:5 - Parse Error: Expected '\"' after '&'.",
+  },
+  {
+    row: 96,
+    reads: 'a constructor in a heading holds & with no string',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[sub_resource type="Resource" id="x"]
+
+[sub_resource type="Resource" id="y" a=Vector2(1, &b)]
+
+[node name="Root" type="Node2D"]
+
+`,
+    failing: [],
+    stop: 'res://row96.tscn:5 - Parse Error: Expected float in constructor.',
+  },
+  {
+    row: 97,
+    reads: 'a heading has a % where a key goes',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[sub_resource type="Resource" id="x"]
+
+[sub_resource type="Resource" id="y" %]
+
+[node name="Root" type="Node2D"]
+
+`,
+    failing: [],
+    stop: 'res://row97.tscn:5 - Parse Error: Expected identifier.',
+  },
+  {
+    row: 98,
+    reads: 'a heading string has a malformed \\u escape',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[sub_resource type="Resource" id="x"]
+
+[sub_resource type="Resource" id="\\uZZZZ"]
+
+[node name="Root" type="Node2D"]
+
+`,
+    failing: [],
+    stop: "res://row98.tscn:5 - Parse Error: Expected value, got 'ERROR'.",
+  },
+  {
+    row: 99,
+    reads: 'a heading string escapes a newline, which the line count skips',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[sub_resource type="Resource" id="x"]
+
+[sub_resource type="Resource" id="a\\
+b" c=]
+
+[node name="Root" type="Node2D"]
+
+`,
+    failing: [],
+    stop: "res://row99.tscn:5 - Parse Error: Expected value, got '']''.",
+  },
+  {
+    row: 100,
+    reads: '.tres: a heading after the [resource] body has a key with no value',
+    file: 'tres',
+    text: `[gd_resource type="Resource" format=3]
+
+[resource]
+metadata/a = 1
+[sub_resource id=]
+`,
+    failing: [],
+    stop: "res://row100.tres:5 - Parse Error: Expected value, got '']''.",
+  },
+  {
+    row: 101,
+    reads: '.tres: the [resource] heading has no closing ]',
+    file: 'tres',
+    text: `[gd_resource type="Resource" format=3]
+
+[resource
+metadata/a = 1
+`,
+    failing: [],
+    stop: 'res://row101.tres:4 - Parse Error: Unexpected end of file.',
+  },
+  {
+    row: 102,
+    reads: 'an [ext_resource] heading after another has a key with no value',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[ext_resource type="Resource" path="res://x.tres" id="1"]
+[ext_resource type= path="res://y.tres" id="2"]
+[node name="Root" type="Node2D"]
+
+`,
+    failing: [],
+    stop: "res://row102.tscn:4 - Parse Error: Unexpected identifier 'path'.",
+  },
+  {
+    row: 103,
+    reads: 'a [connection] heading after a connection has a key with no value',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[connection signal="ready" from="." to="." method="free"]
+[connection signal=]
+`,
+    failing: [],
+    stop: "res://row103.tscn:6 - Parse Error: Expected value, got '']''.",
+  },
+  {
+    row: 104,
+    reads: 'a heading string never closes, and the next heading reads as its rest',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[sub_resource type="Resource" id="x"]
+
+[sub_resource type="Resource" id="y
+
+[node name="Root" type="Node2D"]
+
+`,
+    failing: [],
+    stop: "res://row104.tscn:7 - Parse Error: Expected '=' after identifier.",
+  },
+  {
+    row: 105,
+    reads: 'CRLF: a heading over three lines has a key with no value',
+    file: 'tscn',
+    text: `[gd_scene format=3]\r
+\r
+[node name="Root" type="Node2D"]\r
+\r
+[node name="A"\r
+type="Node2D"\r
+parent=]\r
+`,
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row105.tscn:7]',
+  },
+  {
+    row: 106,
+    reads: 'a heading over three lines has a key with no value on the third',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="A"
+parent="."
+type=]
+`,
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row106.tscn:7]',
+  },
+  {
+    row: 107,
+    reads: 'a missing Resource() literal, then a heading that does not parse',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[sub_resource type="Resource" id="a"]
+metadata/x = Resource("res://gone1.tres")
+
+[sub_resource type="Resource" id=]
+
+[node name="Root" type="Node2D"]
+
+`,
+    failing: [{ path: 'res://gone1.tres', kind: 'section Resource', line: 4 }],
+    stop: "res://row107.tscn:6 - Parse Error: Expected value, got '']''.",
+  },
+  {
+    row: 108,
+    reads: 'an undeclared ExtResource, then a heading that does not parse',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[sub_resource type="Resource" id="a"]
+metadata/x = ExtResource("9")
+
+[sub_resource type="Resource" id=]
+
+[node name="Root" type="Node2D"]
+
+`,
+    failing: [],
+    stop: "res://row108.tscn:4 - Parse Error: Can't load cached ext-resource id: 9.",
+  },
+  {
+    row: 109,
+    reads:
+      'a heading after a node instances a missing file, which Godot prints and skips, then does not parse',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://gone.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="A" parent="." instance=ExtResource("1") x=]
+`,
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row109.tscn:7]',
+  },
+  {
+    row: 110,
+    reads: 'a heading that does not parse, then a misplaced [sub_resource]',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name=A]
+
+[sub_resource type="Resource" id="a"]
+`,
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row110.tscn:5]',
+  },
+  {
+    row: 111,
+    reads: 'a misplaced [sub_resource], then a heading that does not parse',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[sub_resource type="Resource" id="a"]
+
+[node name=A]
+`,
+    failing: [],
+    stop: "res://row111.tscn:5 - Parse Error: Unknown tag 'sub_resource' in file.",
+  },
+  {
+    row: 112,
+    reads: 'a heading reads an undeclared ExtResource, then does not parse',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[sub_resource type="Resource" id="x"]
+
+[sub_resource type="Resource" id="y" a=ExtResource("9") b=]
+
+[node name="Root" type="Node2D"]
+
+`,
+    failing: [],
+    stop: "res://row112.tscn:5 - Parse Error: Can't load cached ext-resource id: 9.",
+  },
+  {
+    row: 113,
+    reads: 'a [node] heading over two lines instances a missing file',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://gone.tscn" id="1"]
+
+[node name="Root"
+instance=ExtResource("1")]
+`,
+    failing: [{ path: 'res://gone.tscn', kind: 'section ExtResource', line: 6 }],
+    stop: null,
+  },
+  {
+    row: 114,
+    reads: 'a [connection] heading over two lines binds a missing file',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[ext_resource type="Resource" path="res://gone.tres" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[connection signal="ready" from="." to="." method="free" binds=[1,
+ExtResource("1")]]
+`,
+    failing: [{ path: 'res://gone.tres', kind: 'section ExtResource', line: 8 }],
+    stop: null,
+  },
+  {
+    row: 115,
+    reads: 'a [node] heading over three lines, then a property',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="A"
+type="Node2D"
+parent="."]
+position = Vector2(1, 2)
+`,
+    failing: [],
+    stop: null,
+    tree: 'Root[A(1.0, 2.0)]',
+  },
+  {
+    row: 116,
+    reads: 'a property after a heading on its line',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="A" type="Node2D" parent="."] position = Vector2(1, 2)
+`,
+    failing: [],
+    stop: null,
+    tree: 'Root[A(1.0, 2.0)]',
+  },
+  {
+    row: 117,
+    reads: 'two headings on one line',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="A" type="Node2D" parent="."] [node name="B" type="Node2D" parent="."]
+`,
+    failing: [],
+    stop: null,
+    tree: 'Root[A, B]',
+  },
+  {
+    row: 118,
+    reads: 'a heading name holds an escaped quote',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="a\\"b" type="Node2D" parent="."]
+`,
+    failing: [],
+    stop: null,
+    tree: 'Root[a"b]',
+  },
+  {
+    row: 119,
+    reads: 'heading keys with spaces around =',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name = "A" type = "Node2D" parent = "."]
+`,
+    failing: [],
+    stop: null,
+    tree: 'Root[A]',
+  },
+  {
+    row: 120,
+    reads: 'a heading over two lines with a comment after its first line',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="A" ; a comment
+type="Node2D" parent="."]
+`,
+    failing: [],
+    stop: null,
+    tree: 'Root[A]',
+  },
+  {
+    row: 121,
+    reads: 'heading fields with no space between them',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="A"type="Node2D"parent="."]
+`,
+    failing: [],
+    stop: null,
+    tree: 'Root[A]',
+  },
+  {
+    row: 122,
+    reads: 'a heading array over three lines',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="A" type="Node2D" parent="." groups=[
+"a",
+"b"]]
+`,
+    failing: [],
+    stop: null,
+    tree: 'Root[A]',
+  },
+  {
+    row: 123,
+    reads: 'a heading value starts on a line of its own with [',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="A" type="Node2D" parent="." groups=
+["a"]]
+`,
+    failing: [],
+    stop: null,
+    tree: 'Root[A]',
+  },
+  {
+    row: 124,
+    reads: 'a heading dictionary over two lines',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="A" type="Node2D" parent="." groups={
+"a": 1}]
+`,
+    failing: [],
+    stop: null,
+    tree: 'Root[A]',
+  },
+  {
+    row: 125,
+    reads: 'a [sub_resource] heading over three lines, then a missing literal',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[sub_resource type="Resource"
+
+id="a"]
+metadata/x = Resource("res://gone2.tres")
+
+[node name="Root" type="Node2D"]
+
+`,
+    failing: [{ path: 'res://gone2.tres', kind: 'section Resource', line: 6 }],
+    stop: null,
+  },
+  {
+    row: 126,
+    reads: 'a misplaced [sub_resource] heading over two lines',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[sub_resource
+type="Resource" id="a"]
+`,
+    failing: [],
+    stop: "res://row126.tscn:6 - Parse Error: Unknown tag 'sub_resource' in file.",
+  },
+  {
+    row: 127,
+    reads: 'a heading field after a node reads an undeclared ExtResource',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="A" type="Node2D" parent="." x=ExtResource("9")]
+`,
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row127.tscn:5]',
+  },
+  {
+    row: 128,
+    reads: 'a heading field after a node reads a missing Resource() literal',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="A" type="Node2D" parent="." x=Resource("res://gone3.tres")]
+`,
+    failing: [{ path: 'res://gone3.tres', kind: 'node Resource', line: 5 }],
+    stop: null,
+  },
+  {
+    row: 129,
+    reads: 'a [connection] field other than binds reads an undeclared ExtResource',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[connection signal="ready" from="." to="." method="free" flags=ExtResource("9")]
+`,
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row129.tscn:5]',
+  },
+  {
+    row: 130,
+    reads: 'a field of the first heading reads a missing Resource() literal',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[sub_resource type="Resource" id="a" x=Resource("res://gone4.tres")]
+
+[node name="Root" type="Node2D"]
+
+`,
+    failing: [{ path: 'res://gone4.tres', kind: 'opening Resource', line: 3 }],
+    stop: null,
+  },
+  {
+    row: 131,
+    reads: 'a field of the first [ext_resource] reads an undeclared ExtResource',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[ext_resource type="Resource" path="res://x.tres" id="1" x=ExtResource("9")]
+
+[node name="Root" type="Node2D"]
+
+`,
+    failing: [],
+    stop: 'res://row131.tscn:3 - Parse Error: Unexpected end of file.',
+  },
+  {
+    row: 132,
+    reads: 'a field of the first [node] reads an undeclared ExtResource',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D" x=ExtResource("9")]
+`,
+    failing: [],
+    stop: 'res://row132.tscn:3 - Parse Error: Unexpected end of file.',
+  },
+  {
+    row: 133,
+    reads: 'a field of the first [sub_resource] reads a later SubResource',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[sub_resource type="Resource" id="a" x=SubResource("b")]
+
+[sub_resource type="Resource" id="b"]
+
+[node name="Root" type="Node2D"]
+
+`,
+    failing: [],
+    stop: 'res://row133.tscn:3 - Parse Error: Unexpected end of file.',
+  },
 ];
 
 /** The path Godot loaded the row under, which its stop line names. */
@@ -1087,5 +1983,20 @@ describe('the reads that fail a file, as Godot 4.6.3 loads it', () => {
       failing: failing.map(({ path, kind, line }) => ({ path, kind, line })),
       stop: sceneFailureOf([], { scene: rowPath(row), reads: [], parseStop })?.line ?? null,
     }).toEqual({ failing: row.failing, stop: row.stop });
+  });
+});
+
+/** A node as the Godot load oracle prints it: `Root[A(1.0, 2.0), B]`. */
+function treeOf(node: TscnNode): string {
+  const position = (node.properties as { position?: { x: number; y: number } }).position;
+  const at =
+    position && (position.x || position.y) ? `(${position.x.toFixed(1)}, ${position.y.toFixed(1)})` : '';
+  const children = node.children.map(treeOf);
+  return `${node.name}${at}${children.length ? `[${children.join(', ')}]` : ''}`;
+}
+
+describe('the nodes of a file whose headings Godot 4.6.3 reads', () => {
+  it.each(ROWS.filter((row) => row.tree))('row $row: $reads', (row) => {
+    expect(new TscnParser().parse(row.text).nodes.map(treeOf).join(', ')).toBe(row.tree);
   });
 });
