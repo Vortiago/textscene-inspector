@@ -19,13 +19,9 @@ interface SpannedHeading extends ParsedHeading {
   unclosed: ReadonlySet<string>;
 }
 
-/**
- * Whitespace, as `\s` matches it. Splitting on the non-ASCII tail is the lenient
- * reading: it keeps the attribute, and so the node, where gluing the space into the
- * next key would drop a node the tree needs.
- */
+/** A code `get_token` skips (up to 32), or a `\s` space, split on so the lenient reading keeps the node. */
 function isSpaceCode(code: number): boolean {
-  if (code === 32 || (code >= 9 && code <= 13)) return true;
+  if (code <= 32) return true;
   // Godot rejects this tail: a heading key is `[A-Za-z_][A-Za-z0-9_]*`
   // (variant_parser.cpp:493), and an NBSP is neither whitespace (`cchar <= 32`) nor
   // an identifier character, so it raises "Unexpected character" (:508).
@@ -41,6 +37,20 @@ function isSpaceCode(code: number): boolean {
     code === 0x3000 ||
     code === 0xfeff
   );
+}
+
+/** The length of the white space `str` starts with. */
+function leadingSpace(str: string): number {
+  let at = 0;
+  while (at < str.length && isSpaceCode(str.charCodeAt(at))) at++;
+  return at;
+}
+
+/** `str` without the white space at either end, where `String.prototype.trim` keeps a control character. */
+function trimSpace(str: string): string {
+  let end = str.length;
+  while (end > 0 && isSpaceCode(str.charCodeAt(end - 1))) end--;
+  return str.slice(Math.min(leadingSpace(str), end), end);
 }
 
 /** `[A-Za-z0-9_]`: the characters a constructor name is built from. */
@@ -194,16 +204,16 @@ function keyedByAttribute<T>(): Record<string, T> {
 }
 
 export function parseHeading(line: string): SpannedHeading | null {
-  const trimmed = line.trim();
+  const trimmed = trimSpace(line);
 
   if (!trimmed.startsWith('[') || !trimmed.endsWith(']')) {
     return null;
   }
 
   const inner = trimmed.slice(1, -1);
-  const content = inner.trim();
+  const content = trimSpace(inner);
   // Offset of `content` within `line`: the white space before `[` and before the type.
-  const contentOffset = line.length - line.trimStart().length + 1 + (inner.length - inner.trimStart().length);
+  const contentOffset = leadingSpace(line) + 1 + leadingSpace(inner);
 
   // No whitespace means `spaceIndex === content.length`, so the type is the
   // whole content and the attribute scan runs over an empty string.
@@ -295,7 +305,7 @@ export function parseProperty(line: string): { key: string; value: string } | nu
 }
 
 export function isHeading(line: string): boolean {
-  const trimmed = line.trim();
+  const trimmed = trimSpace(line);
   return trimmed.startsWith('[') && trimmed.endsWith(']');
 }
 
