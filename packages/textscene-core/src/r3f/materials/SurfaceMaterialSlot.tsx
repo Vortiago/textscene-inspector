@@ -84,7 +84,13 @@ export function SurfaceMaterialSlot({
   }
   // A generated shader keeps the classic alpha pass, and takes the placeholder for maps it alone loads.
   const unfaded = (classic: ReactNode, mount: string | MaterialAttach | undefined) => (
-    <SpatialShaderSlot source={shaded} attach={mount} fallback={classic} placeholder={placeholderAt(mount)} />
+    <SpatialShaderSlot
+      source={shaded}
+      attach={attach}
+      swap={typeof mount === 'function' ? mount : undefined}
+      fallback={classic}
+      placeholder={placeholderAt(mount)}
+    />
   );
   return <StandardMaterialSlot bags={bags} attach={attach} draws={draws} unfaded={unfaded} />;
 }
