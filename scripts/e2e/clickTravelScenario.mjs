@@ -44,6 +44,7 @@ export async function runClickTravelScenario(browser, baseUrl) {
     run.dragOnNothing = await dragBy(page, canvas, EMPTY_SPOT, DRAG_TRAVEL_PX);
     run.dragBackOnBox = await pressAlong(page, canvas, centres.right, [DRAG_TRAVEL_PX, 0]);
     run.altClickOnBox = await pressAlong(page, canvas, centres.right, [0], { alt: true });
+    run.offBoxEdge = await dragBy(page, canvas, centres.rightEdge, CLICK_TRAVEL_PX);
   }
   await context.close();
   return run;
@@ -60,7 +61,17 @@ function checkSelection(gate, what, found, expected) {
 
 export function checkClickTravel(
   gate,
-  { centres, onBox, onNothing, onOtherBox, dragOnNothing, dragBackOnBox, altClickOnBox, diagnostics }
+  {
+    centres,
+    onBox,
+    onNothing,
+    onOtherBox,
+    dragOnNothing,
+    dragBackOnBox,
+    altClickOnBox,
+    offBoxEdge,
+    diagnostics,
+  }
 ) {
   checkDiagnostics(gate, '[click travel]', diagnostics);
   gate.check(!!centres, '[click travel] the view draws no red box, so no click was made');
@@ -71,6 +82,9 @@ export function checkClickTravel(
   checkSelection(gate, `a drag of ${DRAG_TRAVEL_PX} px from nothing`, dragOnNothing, [LOCKED_PICK]);
   checkSelection(gate, `a drag of ${DRAG_TRAVEL_PX} px from a box and back`, dragBackOnBox, [LOCKED_PICK]);
   checkSelection(gate, 'an Alt click on a box', altClickOnBox, [LOCKED_PICK]);
+  checkSelection(gate, `a click from a box's edge that moves ${CLICK_TRAVEL_PX} px off it`, offBoxEdge, [
+    OPEN_PICK,
+  ]);
 }
 
 export const measureClickTravel = ({
@@ -80,7 +94,8 @@ export const measureClickTravel = ({
   dragOnNothing,
   dragBackOnBox,
   altClickOnBox,
+  offBoxEdge,
 }) =>
   `click travel  box: ${listOf(onBox)} | nothing ${CLICK_TRAVEL_PX} px: ${listOf(onNothing)} | ` +
   `box ${CLICK_TRAVEL_PX} px: ${listOf(onOtherBox)} | drag: ${listOf(dragOnNothing)} | ` +
-  `drag back: ${listOf(dragBackOnBox)} | alt: ${listOf(altClickOnBox)}`;
+  `drag back: ${listOf(dragBackOnBox)} | alt: ${listOf(altClickOnBox)} | off edge: ${listOf(offBoxEdge)}`;

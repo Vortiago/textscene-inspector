@@ -14,7 +14,7 @@ function spyHandlers(): ViewportPointerHandlers {
   return {
     onCanvasPointerDown: vi.fn(),
     onCanvasClick: vi.fn(),
-    onPointerUp: vi.fn(),
+    onPointerDown: vi.fn(),
     onWindowPointerEnd: vi.fn(),
     onWindowPointerMove: vi.fn(),
   };

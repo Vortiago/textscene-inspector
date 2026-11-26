@@ -96,6 +96,26 @@ describe('useViewportSelection', () => {
     expect(view.result.current.selected).toBe('Root/Mesh');
   });
 
+  it('selects the node under the press when the release moves off it within the click travel', () => {
+    const view = setup();
+
+    click(view, { on: registerObjectAt(view, 'Root/Mesh'), travel: CLICK_TRAVEL_PX });
+
+    expect(view.result.current.selected).toBe('Root/Mesh');
+  });
+
+  it('keeps the press of the first touch when a second touch lands on another node', () => {
+    const view = setup();
+    const other = registerObjectAt(view, 'Root/Other');
+
+    click(view, {
+      on: registerObjectAt(view, 'Root/Mesh'),
+      otherPointer: { landsOn: other, wander: 0, lifts: false },
+    });
+
+    expect(view.result.current.selected).toBe('Root/Mesh');
+  });
+
   it('selects nothing for an Alt+left click, which navigates', () => {
     const view = setup();
 
@@ -150,15 +170,24 @@ describe('useViewportSelection', () => {
     expect(view.result.current.selected).toBe('Root/MeshInstance3D');
   });
 
-  it('picks nothing on a release whose press an earlier release off the canvas ended', () => {
+  it('picks no node from the hit of an earlier press that was released off the canvas', () => {
     const view = setup();
     const mesh = registerObjectAt(view, 'Root/Mesh');
     const { handlers } = view.result.current.vp;
+    const earlier = { pointerId: 1, button: 0, clientX: 10, clientY: 10 } as PointerEvent;
+    const later = { ...earlier } as PointerEvent;
 
     act(() => {
-      handlers.onCanvasPointerDown({ button: 0, clientX: 10, clientY: 10 } as PointerEvent);
-      handlers.onWindowPointerEnd({ type: 'pointerup', clientX: 10, clientY: 10 } as PointerEvent);
-      handlers.onPointerUp({ clientX: 10, clientY: 10, object: mesh, stopPropagation: () => {} } as never);
+      handlers.onCanvasPointerDown(earlier);
+      handlers.onPointerDown({
+        pointerId: 1,
+        nativeEvent: earlier,
+        object: mesh,
+        stopPropagation: () => {},
+      } as never);
+      handlers.onWindowPointerEnd({ ...earlier, type: 'pointerup' } as PointerEvent);
+      handlers.onCanvasPointerDown(later);
+      handlers.onCanvasClick(later);
     });
 
     expect(view.result.current.selected).toBeNull();

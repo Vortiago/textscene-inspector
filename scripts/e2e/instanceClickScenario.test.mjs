@@ -28,7 +28,20 @@ describe('redBoxCentres', () => {
       ])
     );
 
-    expect(centres).toEqual({ left: { x: 1, y: 1 }, right: { x: 8, y: 2 } });
+    expect(centres).toEqual({ left: { x: 1, y: 1 }, right: { x: 8, y: 2 }, rightEdge: { x: 8, y: 2 } });
+  });
+
+  it('gives the last red pixel on the row through the right centre as its edge', () => {
+    const centres = redBoxCentres(
+      pngWithRedAt([
+        [0, 1],
+        [7, 1],
+        [8, 1],
+        [9, 1],
+      ])
+    );
+
+    expect(centres.rightEdge).toEqual({ x: 9, y: 1 });
   });
 
   it('gives null for an image with no red pixel', () => {
