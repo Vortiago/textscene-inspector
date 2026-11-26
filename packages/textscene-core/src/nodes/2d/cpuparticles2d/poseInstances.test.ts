@@ -17,6 +17,7 @@ function particle(overrides: Partial<RenderedParticle> = {}): RenderedParticle {
     custom: [0, 0, 0, 1],
     age: 0,
     index: 0,
+    active: true,
     ...overrides,
   };
 }
@@ -87,6 +88,11 @@ describe('poseInstances', () => {
   it('carries all four of the custom data, as `_update_internal` writes them (cpu_particles_2d.cpp:1217-1220)', () => {
     const [instance] = poseInstances([particle({ custom: [0, 0.25, 0.75, 0.875] })]);
     expectClose(Array.from(instance!.customData!), [0, 0.25, 0.75, 0.875]);
+  });
+
+  it('writes a zero transform for an inactive slot, as Godot zeroes it (cpu_particles_2d.cpp:1205-1207)', () => {
+    const [instance] = poseInstances([particle({ transform: ROTATED_90, active: false })]);
+    expect(Array.from(instance!.transform)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
   });
 
   it('gives no instance for an empty pose', () => {

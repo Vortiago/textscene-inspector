@@ -87,6 +87,12 @@ describe('CPUParticles2D through the canvas template', () => {
     ]);
   });
 
+  it('keeps a slot for every particle, so INSTANCE_ID counts the inactive ones as Godot does', async () => {
+    const [command] = await shadedCommandsOf(emitter({ amount: '8', preprocess: '0.3' }));
+
+    expect(command?.kind === 'multimesh' && command.instances.count).toBe(8);
+  });
+
   it('gives each particle its colour and its custom data, which INSTANCE_CUSTOM reads', async () => {
     const [command] = await shadedCommandsOf(emitter({ amount: '2' }));
 

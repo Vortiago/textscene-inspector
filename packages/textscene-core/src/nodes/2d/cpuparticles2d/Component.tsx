@@ -35,6 +35,9 @@ const UNTEXTURED_QUAD: ImageSize = { width: 1, height: 1 };
 
 /** The frozen pose, and where it draws inside the emitter: through the inverse of its emission transform. */
 interface PlacedPose {
+  /** Every slot in draw order, as the multimesh holds them. */
+  readonly slots: readonly RenderedParticle[];
+  /** The active slots, which the classic draw copies the quad for. */
   readonly particles: readonly RenderedParticle[];
   readonly placement: Transform2DColumns;
 }
@@ -87,22 +90,17 @@ function useFrozenPose(props: CPUParticles2DProperties, anchor: THREE.Object3D |
     colorInitialRamp: props.color_initial_ramp,
   });
   const simulate = moduleOf(useLazyModuleState(loadSimulate, props.emitting));
-  return useMemo(
-    () =>
-      simulate && {
-        particles: simulate.simulateFrozenPose({
-          props,
-          curves,
-          scaleCurves,
-          colorRamp,
-          colorInitialRamp,
-          emissionTransform,
-        }),
-        // At the canvas transform (`renderer_canvas_cull.cpp:267`), by three's inverse as the classic draw.
-        placement: transform2DFromThreeMatrix(threeMatrixFromTransform2D(emissionTransform).invert()),
-      },
-    [simulate, props, curves, scaleCurves, colorRamp, colorInitialRamp, emissionTransform]
-  );
+  return useMemo(() => {
+    if (!simulate) return null;
+    const input = { props, curves, scaleCurves, colorRamp, colorInitialRamp, emissionTransform };
+    const slots = simulate.simulateFrozenSlots(input);
+    return {
+      slots,
+      particles: slots.filter(({ active }) => active),
+      // At the canvas transform (`renderer_canvas_cull.cpp:267`), by three's inverse as the classic draw.
+      placement: transform2DFromThreeMatrix(threeMatrixFromTransform2D(emissionTransform).invert()),
+    };
+  }, [simulate, props, curves, scaleCurves, colorRamp, colorInitialRamp, emissionTransform]);
 }
 
 /** Godot's quad is the texture's size, or 1 by 1 with none (`cpu_particles_2d.cpp:186-192`). */
@@ -114,7 +112,7 @@ const sizeOf = (size: ImageSize | undefined): [number, number] => {
 /** `canvas_item_add_multimesh` of the pose, a particle an instance (`cpu_particles_2d.cpp:1293`). */
 function particleCommands({ pose, size }: ParticleInput): CanvasShaderCommand[] {
   if (!pose) return [];
-  return multiMeshCommands([particleQuad(...sizeOf(size))], poseInstances(pose.particles), pose.placement);
+  return multiMeshCommands([particleQuad(...sizeOf(size))], poseInstances(pose.slots), pose.placement);
 }
 
 /** The texture quad copied for each particle in pose order, or null until the pose exists and for none. */

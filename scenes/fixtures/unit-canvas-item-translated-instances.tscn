@@ -3,7 +3,9 @@
 ; One variable: the canvas item form, switched to translated, for the items Godot draws as instances or
 ; through a skeleton. A CPUParticles2D flipbook reads each particle's cell from INSTANCE_CUSTOM, and a
 ; global-coords emitter under a turned, scaled parent draws at the canvas transform. A MultiMeshInstance2D
-; draws instance colours, a flipbook from custom data, and a shader that reads INSTANCE_ID. A Polygon2D
+; draws instance colours, a flipbook from custom data, and a shader that reads INSTANCE_ID. A one-shot
+; emitter whose first particles have died keeps their slots, so a shader's INSTANCE_ID counts every
+; particle. A Polygon2D
 ; skinned to a posed Skeleton2D draws its deformed, textured vertices. No other golden captures these
 ; with the switch on, so none shows a regression in their translated form.
 
@@ -33,6 +35,17 @@ void fragment() {
 
 [sub_resource type="ShaderMaterial" id="Material_instance"]
 shader = SubResource("Shader_instance")
+
+[sub_resource type="Shader" id="Shader_slots"]
+code = "shader_type canvas_item;
+void vertex() {
+	VERTEX += vec2(float(INSTANCE_ID) * 50.0, 0.0);
+	COLOR = vec4(float(INSTANCE_ID) / 8.0, 1.0 - float(INSTANCE_ID) / 8.0, 0.5, 1.0);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="Material_slots"]
+shader = SubResource("Shader_slots")
 
 [sub_resource type="Gradient" id="Gradient_fade"]
 offsets = PackedFloat32Array(0, 1)
@@ -104,6 +117,23 @@ initial_velocity_max = 70.0
 scale_amount_min = 0.4
 scale_amount_max = 0.8
 color_ramp = SubResource("Gradient_fade")
+
+[node name="Slots" type="CPUParticles2D" parent="."]
+material = SubResource("Material_slots")
+position = Vector2(440, 540)
+amount = 8
+texture = ExtResource("2_marker")
+lifetime = 2.0
+one_shot = true
+preprocess = 2.6
+use_fixed_seed = true
+seed = 99
+fixed_fps = 30
+gravity = Vector2(0, 0)
+initial_velocity_min = 0.0
+initial_velocity_max = 0.0
+scale_amount_min = 0.5
+scale_amount_max = 0.5
 
 [node name="Colors" type="MultiMeshInstance2D" parent="."]
 position = Vector2(680, 80)
