@@ -15,6 +15,6 @@ const DRAWS_NOTHING = () => {};
 
 export function CanvasFrameDriver({ children }: { children: ReactNode }) {
   const [steps] = useState(createCanvasFrameSteps);
-  useFrame(() => runCanvasFrame(steps, DRAWS_NOTHING));
+  useFrame(({ scene }) => runCanvasFrame(steps, scene, DRAWS_NOTHING));
   return <CanvasFrameStepsProvider steps={steps}>{children}</CanvasFrameStepsProvider>;
 }

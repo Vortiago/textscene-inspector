@@ -344,7 +344,7 @@ export function OffscreenViewportPass({
     if (kind === '3d' && !toneMapStage.current) return;
     if (kind === '2d') frameCanvas(passScene);
     if (canvasScene) frameCanvas(canvasScene);
-    drawWorld(canvasRender, () => runCanvasFrame(frameSteps, drawPass));
+    drawWorld(canvasRender, () => runCanvasFrame(frameSteps, canvasScene ?? passScene, drawPass));
   }, [kind, frameCanvas, passScene, canvasScene, frameSteps, drawPass, canvasRender]);
 
   // Consumers sample the texture directly. The ordered driver runs every

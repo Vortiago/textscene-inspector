@@ -6,9 +6,9 @@ import {
   samplersOf,
   uniformBlocksOf,
 } from '../template/programLimits.testkit.js';
+import { DEFAULT_CANVAS_SHADER } from './defaultCanvasShader.js';
 import {
   CANVAS_VARIANTS,
-  DEFAULT_CANVAS_SHADER,
   specialiseCanvasDraw,
   transpileCanvasItem,
   type CanvasVariant,

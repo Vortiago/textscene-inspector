@@ -12,6 +12,7 @@ scripts/compare-docs/vendor/
 *.generated.ts
 apps/textscene-three-godot-shaders/tests/godot-answers.json
 apps/textscene-three-godot-shaders/tests/materials/skyMaterials.generated.json
+apps/textscene-three-godot-shaders/tests/materials/canvasItemMaterials.generated.json
 apps/textscene-three-godot-shaders/tests/corpus/corpus.json
 apps/textscene-three-godot-shaders/tests/corpus/states.json
 apps/textscene-three-godot-shaders/tests/corpus/shaders/

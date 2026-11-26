@@ -36,7 +36,9 @@ export function CanvasFrameRender({ steps }: { steps: CanvasFrameSteps }) {
   const scene = useThree((state) => state.scene);
   const camera = useThree((state) => state.camera);
   useFrame(() => {
-    runCanvasFrame(steps, () => frame.render(gl, scene, camera, viewportTransfer(colour, isTransparent)));
+    runCanvasFrame(steps, scene, () =>
+      frame.render(gl, scene, camera, viewportTransfer(colour, isTransparent))
+    );
   }, OWNS_THE_RENDER);
   return null;
 }

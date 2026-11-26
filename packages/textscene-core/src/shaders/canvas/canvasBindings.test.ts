@@ -9,7 +9,8 @@ import {
   writeCanvasBindings,
   writeCanvasData,
 } from './canvasBindings.js';
-import { DEFAULT_CANVAS_SHADER, transpileCanvasItem } from './transpileCanvas.js';
+import { DEFAULT_CANVAS_SHADER } from './defaultCanvasShader.js';
+import { transpileCanvasItem } from './transpileCanvas.js';
 
 const FRAME: CanvasFrame = {
   width: 128,

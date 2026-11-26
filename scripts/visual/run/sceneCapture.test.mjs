@@ -11,6 +11,14 @@ describe('sceneQuery', () => {
     expect(fixtureUrl(SITE, scene.file, sceneQuery(scene))).toBe(`${SITE}/?fixture=a.tscn&litSurface=nodes`);
   });
 
+  it('opens a translated-only golden with the translated canvas item', () => {
+    const scene = { name: 'translated-only', file: 'a.tscn', canvasItem: 'translated' };
+
+    expect(fixtureUrl(SITE, scene.file, sceneQuery(scene))).toBe(
+      `${SITE}/?fixture=a.tscn&canvasItem=translated`
+    );
+  });
+
   it('opens every other golden with no lit surface parameter', () => {
     const scene = { name: 'plain', file: 'a.tscn', camera: 'Camera3D' };
 

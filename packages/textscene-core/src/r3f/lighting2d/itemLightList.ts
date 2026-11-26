@@ -133,9 +133,20 @@ function itemTakesLight(
   item: ItemPlacement,
   taken: ReadonlySet<number> | null
 ): boolean {
-  if (!lightReachesItem(light.reach, item.lightMask, item.z, item.layer)) return false;
-  return taken === null || taken.has(ordinal);
+  return reachesPlacement(light, item) && (taken === null || taken.has(ordinal));
 }
+
+/** Whether a light on the canvas passes the cull test for `item`, its rect left out. */
+export function isReachedByAnyLight(
+  lights: ReadonlyMap<number, CanvasLightDeclaration>,
+  item: ItemPlacement
+): boolean {
+  for (const light of lights.values()) if (reachesPlacement(light, item)) return true;
+  return false;
+}
+
+const reachesPlacement = (light: CanvasLightDeclaration, item: ItemPlacement) =>
+  lightReachesItem(light.reach, item.lightMask, item.z, item.layer);
 
 /** The lights on `item`'s list, in ordinal order. */
 function itemLightList(

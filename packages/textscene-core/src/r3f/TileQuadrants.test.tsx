@@ -143,6 +143,7 @@ function render(
         selfTint={selfTint}
         material={material}
         shader={null}
+        materialShader={null}
         lightMask={1}
         zFinal={zFinal}
         sampler={{ filter: 2, repeat: 1 }}

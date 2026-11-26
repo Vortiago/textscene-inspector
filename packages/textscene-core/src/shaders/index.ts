@@ -39,9 +39,9 @@ export {
   type SkyVolumetricFog,
 } from './sky/skyBindings.js';
 export { transpileSpatial, type SpatialOptions, type TranspiledSpatial } from './spatial/transpileSpatial.js';
+export { DEFAULT_CANVAS_SHADER } from './canvas/defaultCanvasShader.js';
 export {
   CANVAS_VARIANTS,
-  DEFAULT_CANVAS_SHADER,
   specialiseCanvasDraw,
   transpileCanvasItem,
   type CanvasDraw,

@@ -75,6 +75,8 @@ export interface CanvasLighting2D {
    * absent, and its items fall back to the canvas modulate they already know.
    */
   readonly lists: ReadonlyMap<string, CanvasLightList>;
+  /** The lights on the canvas, by ordinal, whatever the items read. */
+  readonly lights: ReadonlyMap<number, CanvasLightDeclaration>;
   /**
    * The accumulators' size in device pixels, the unit of `gl_FragCoord`. Mutated in place each
    * frame, so an item that binds it as a uniform value stays in step without re-rendering.
@@ -104,6 +106,7 @@ export interface CanvasLighting2D {
 /** The lighting outside a 2D light pass: no lists, and every declaration a no-op. */
 export const INERT_CANVAS_LIGHTING: CanvasLighting2D = {
   lists: new Map(),
+  lights: new Map(),
   resolution: new THREE.Vector2(1, 1),
   registerLight: (_declaration: CanvasLightDeclaration) => ({ ordinal: 0, release: () => {} }),
   registerItem: (_placement: ItemPlacement, _read: LitItemRead) => () => {},
