@@ -23,7 +23,10 @@ import { canvasInstancesGeometry } from '../../../r3f/meshes/canvasMeshInstances
 import { particlesFlipbook } from '../../../r3f/particlesFlipbook';
 import { useEmissionTransform } from './emissionTransform';
 import { particleQuad, poseInstances } from './poseInstances';
-import { useParticleResources } from '../../shared/cpuparticles/useParticleResources';
+import {
+  useParticleResources,
+  type ParticleResourceReferences,
+} from '../../shared/cpuparticles/useParticleResources';
 import { loadSimulate } from './simulateModule';
 import type { RenderedParticle } from './simulate';
 import type { CPUParticles2DProperties } from './types';
@@ -32,6 +35,12 @@ import { moduleOf, useLazyModuleState } from '../../../resources/useLazyModule';
 
 /** The quad of an emitter with no texture (`cpu_particles_2d.cpp:186-192`). */
 const UNTEXTURED_QUAD: ImageSize = { width: 1, height: 1 };
+
+const NO_RESOURCES: ParticleResourceReferences = {
+  params: [],
+  colorRamp: undefined,
+  colorInitialRamp: undefined,
+};
 
 /** The frozen pose, and where it draws inside the emitter: through the inverse of its emission transform. */
 interface PlacedPose {
@@ -82,13 +91,18 @@ export function CPUParticles2D({ node, children }: NodeComponentProps) {
 
 /** The pose of an emitting emitter, null until it exists, sampled where `anchor` sits. */
 function useFrozenPose(props: CPUParticles2DProperties, anchor: THREE.Object3D | null): PlacedPose | null {
-  const emissionTransform = useEmissionTransform(anchor, props.local_coords);
-  const { curves, scaleCurves, colorRamp, colorInitialRamp } = useParticleResources({
-    params: props.params,
-    scaleCurves: { x: props.scale_curve_x, y: props.scale_curve_y },
-    colorRamp: props.color_ramp,
-    colorInitialRamp: props.color_initial_ramp,
-  });
+  // An emitter that is not emitting draws nothing, so it samples no transform and reads no curve.
+  const emissionTransform = useEmissionTransform(props.emitting ? anchor : null, props.local_coords);
+  const { curves, scaleCurves, colorRamp, colorInitialRamp } = useParticleResources(
+    props.emitting
+      ? {
+          params: props.params,
+          scaleCurves: { x: props.scale_curve_x, y: props.scale_curve_y },
+          colorRamp: props.color_ramp,
+          colorInitialRamp: props.color_initial_ramp,
+        }
+      : NO_RESOURCES
+  );
   const simulate = moduleOf(useLazyModuleState(loadSimulate, props.emitting));
   return useMemo(() => {
     if (!simulate) return null;

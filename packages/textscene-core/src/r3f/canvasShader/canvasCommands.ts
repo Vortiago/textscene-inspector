@@ -146,9 +146,12 @@ function growByPoint(box: THREE.Box3, transform: Transform2DColumns, { x, y }: V
 /** The box of `points` in Godot's frame. */
 function pointsBox(points: readonly Vector2[]): THREE.Box2 {
   const box = new THREE.Box2();
-  for (const { x, y } of points) box.expandByPoint(new THREE.Vector2(x, y));
+  for (const { x, y } of points) box.expandByPoint(point.set(x, y));
   return box;
 }
+
+/** Scratch of one point of `pointsBox`, overwritten by the next. */
+const point = new THREE.Vector2();
 
 /** The `TRANSFORM_2D` rows at `offset` (`mesh_storage.cpp:1927-1934`) as a transform, written into `out`. */
 function instanceTransformInto(
