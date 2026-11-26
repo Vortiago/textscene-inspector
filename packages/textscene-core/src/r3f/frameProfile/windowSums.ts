@@ -8,7 +8,7 @@ import {
 
 const STEP_KEYS: readonly StepKey[] = [...RENDER_STEPS, 'Other'];
 
-const NS_PER_MS = 1e6;
+export const NS_PER_MS = 1e6;
 
 /** One run's sums: a published window's, reset each time it publishes, or a recording's. */
 export class WindowSums {

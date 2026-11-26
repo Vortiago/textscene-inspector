@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { beginStep, endStep, recordFrames, startFrameCount, type FrameProfile } from './frameProfile';
 import type { FrameRecording } from './frameStats';
-import { timeEachDraw } from './frameRecording';
+import { addDrawGpuTime, DrawSources, Recording, timeEachDraw } from './frameRecording';
 import {
   cpuOnlyRenderer,
   FRAME_INTERVAL_MS,
@@ -341,5 +341,60 @@ describe('timeEachDraw', () => {
     renderer.renderBufferDirect = over;
     remove();
     expect(renderer.renderBufferDirect).toBe(over);
+  });
+});
+
+describe('DrawSources', () => {
+  it('gives one source for each step, object and material', () => {
+    const sources = new DrawSources();
+    const floor = named(new THREE.Mesh(), 'Floor');
+    const material = new THREE.MeshBasicMaterial();
+
+    expect(sources.of('Shadows', floor, material)).toBe(sources.of('Shadows', floor, material));
+  });
+
+  it('names a material by its type when it has no name (edge case)', () => {
+    const source = new DrawSources().of(
+      'Other',
+      named(new THREE.Mesh(), 'Floor'),
+      new THREE.MeshBasicMaterial()
+    );
+
+    expect(source).toEqual({ step: 'Other', object: 'Floor', material: 'MeshBasicMaterial' });
+  });
+
+  it('tells the same object apart in another step', () => {
+    const sources = new DrawSources();
+    const floor = named(new THREE.Mesh(), 'Floor');
+    const material = new THREE.MeshBasicMaterial();
+
+    expect(sources.of('Shadows', floor, material)).not.toBe(sources.of('Other', floor, material));
+  });
+});
+
+describe('addDrawGpuTime', () => {
+  const source = { step: 'Other', object: 'Floor', material: 'MeshBasicMaterial' } as const;
+
+  /** Fails `recording` to clear its stall timer, with its rejection handled. */
+  function close(recording: Recording): void {
+    recording.result.catch(() => {});
+    recording.fail('the test ended');
+  }
+
+  it('adds the time to each recording that times draws', () => {
+    const recording = new Recording({ frames: 2, draws: true });
+    addDrawGpuTime([recording], source, 5);
+    addDrawGpuTime([recording], source, 3);
+    close(recording);
+
+    expect(recording.drawGpuNs.get(source)).toBe(8);
+  });
+
+  it('leaves a recording that does not time draws without draw times (edge case)', () => {
+    const recording = new Recording({ frames: 2 });
+    addDrawGpuTime([recording], source, 5);
+    close(recording);
+
+    expect(recording.drawGpuNs.size).toBe(0);
   });
 });

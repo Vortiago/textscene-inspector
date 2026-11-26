@@ -1,7 +1,7 @@
 import type * as THREE from 'three';
 import type { DrawSource, DrawStats, FrameRecording, GpuSpread, StepKey } from './frameStats.js';
 import type { RecordedDevice } from './recordedDevice.js';
-import { add, statsOf, WindowSums } from './windowSums.js';
+import { add, NS_PER_MS, statsOf, WindowSums } from './windowSums.js';
 
 export interface RecordOptions {
   /** 120 by default: two seconds at 60 frames a second. */
@@ -110,8 +110,6 @@ export class Recording {
     return this.drawTimedGpuFrames > 0 ? ns / NS_PER_MS / this.drawTimedGpuFrames : null;
   }
 }
-
-const NS_PER_MS = 1e6;
 
 /** The median and the 10th and 90th percentiles of `ns`, in ms, or null for no frames. */
 function spreadOf(ns: readonly number[]): GpuSpread | null {

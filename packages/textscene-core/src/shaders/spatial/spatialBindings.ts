@@ -186,6 +186,10 @@ export function writeSpatialBindings(spatial: TranspiledSpatial, scene: SpatialS
 
 /** Writes the specialisation constants of `spatial`, which pick the colour pass's program. */
 export function specialiseSpatial(spatial: TranspiledSpatial, render: SpecialisedRender): void {
+  // A JavaScript caller that passes the fog alone would drop the fog bit with no type error.
+  if (typeof render?.drawsDirectionalSoftShadows !== 'boolean') {
+    throw new Error(`expected a render with drawsDirectionalSoftShadows, got ${JSON.stringify(render)}`);
+  }
   writeBindings(PACKED_SPECIALISATIONS, spatial.specialisations, render);
   writeBindings(EFFECT_SPECIALISATIONS, spatial.specialisations, undefined);
 }

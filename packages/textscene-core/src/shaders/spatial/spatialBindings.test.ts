@@ -442,6 +442,15 @@ describe('the directional soft shadow specialisation', () => {
   it('leaves it off for a light with no shadow (edge case)', () => {
     expect(softBit([SUN])).toBe(0);
   });
+
+  it('refuses a render that names no soft shadow, as the fog passed alone (error case)', () => {
+    const spatial = transpileSpatial(UNSHADED);
+    const fogAlone = DEPTH_FOG as unknown as Parameters<typeof specialiseSpatial>[1];
+
+    expect(() => specialiseSpatial(spatial, fogAlone)).toThrow(
+      'expected a render with drawsDirectionalSoftShadows'
+    );
+  });
 });
 
 describe('the shadow quality specialisation', () => {
