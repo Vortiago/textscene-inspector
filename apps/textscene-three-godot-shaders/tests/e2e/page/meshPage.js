@@ -173,7 +173,7 @@ function drawMesh(spec) {
       fog,
       directionalLights: directionalLights(spec.lights),
     });
-    specialiseSpatial(spatial, fog);
+    specialiseSpatial(spatial, { fog, drawsDirectionalSoftShadows: false });
   }
   const primitive = spec.primitive ?? 'triangles';
   const geometry = geometryOf(spec.mesh, primitive);
