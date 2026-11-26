@@ -1,49 +1,117 @@
-import { useMemo } from 'react';
+import { useEffect, useReducer, useState } from 'react';
 import * as THREE from 'three';
 import { readImagePixels } from '../../resources/formats/image/imagePixels';
-import { paddedAtlasPixels } from '../../resources/tileset/paddedAtlas';
+import { texture2DPlaceholder } from '../../resources/textures/texture2DPlaceholder';
+import { textureWork } from '../../resources/textures/textureWork';
+import { paddedAtlasLayout } from '../../resources/tileset/paddedAtlas';
 import type { AtlasSourceModel } from '../../resources/tileset/types';
+import type { Texture2DResult } from '../../resources/useTexture2D';
+import { usePendingWhile } from '../../resources/usePendingWhile';
+import { useResourceLoader } from '../../resources/useResource';
 import { perObject } from '../../utils/perObject';
-import { isBottomUp, reversedRows } from '../../utils/reversedRows';
-import { useDisposeOnRelease } from '../useDisposeOnRelease';
+import { isBottomUp, reversedRows, reverseRowsInPlace } from '../../utils/reversedRows';
+import { inThreadJobRunner, type WorkerJobRunner } from '../../workers/WorkerJobRunner';
+import { usePaddedAtlasStandIn } from '../paddedAtlasStandIn';
 
-/** Written only by `sharedAtlas`: each texture's padded copies by source, each dropped as it is disposed. */
-const paddedCopiesOf = perObject((_texture: THREE.Texture) => new Map<AtlasSourceModel, THREE.Texture>());
+type JobRunner = Pick<WorkerJobRunner, 'run'>;
 
-/** The texture a source's tiles draw from: Godot's padded copy (`tile_set.cpp:5622`), or its own. */
+/** One padded copy and the runs that hold it. */
+interface PaddedCopy {
+  holders: number;
+  /** Null once built from a texture with no readable pixels, which Godot pads as an empty image. */
+  built: THREE.Texture | null | undefined;
+  readonly settled: Promise<THREE.Texture | null>;
+  readonly controller: AbortController;
+}
+
+/** Written only by `joinPaddedCopy`: each texture's padded copies by source, dropped with the last holder. */
+const paddedCopiesOf = perObject((_texture: THREE.Texture) => new Map<AtlasSourceModel, PaddedCopy>());
+
+/** The slot's texture, its padded copy (`tile_set.cpp:5622`) or a stand-in; null while the copy builds. */
 export function useRuntimeAtlasTexture(
-  texture: THREE.Texture | null,
+  slot: Pick<Texture2DResult, 'texture' | 'hasNoImage'>,
   source: AtlasSourceModel
 ): THREE.Texture | null {
-  const padded = useMemo(
-    () => (texture && source.usesTexturePadding ? sharedAtlas(texture, source) : null),
-    [texture, source]
-  );
-  // Every run of the source holds the one copy, which its last holder disposes.
-  useDisposeOnRelease(padded);
-  return source.usesTexturePadding ? padded : texture;
+  const standIn = usePaddedAtlasStandIn(slot, source);
+  const copied = usePaddedCopy(source.usesTexturePadding && !standIn ? slot.texture : null, source);
+  if (!source.usesTexturePadding) return slot.texture;
+  return standIn ?? copied;
 }
 
-/** The padded copy every run of `source` shares. A failed read is not kept: the next run reads again. */
-function sharedAtlas(texture: THREE.Texture, source: AtlasSourceModel): THREE.Texture | null {
+/** The padded copy of `texture` that every run of `source` shares, built off the render as a worker job. */
+function usePaddedCopy(texture: THREE.Texture | null, source: AtlasSourceModel): THREE.Texture | null {
+  const runner = useResourceLoader()?.jobRunner ?? inThreadJobRunner;
+  const [, landed] = useReducer((count: number) => count + 1, 0);
+  const [failure, setFailure] = useState<{ error: unknown } | null>(null);
+  if (failure) throw failure.error;
+  useEffect(() => {
+    if (!texture) return undefined;
+    let current = true;
+    const copy = joinPaddedCopy(texture, source, runner);
+    copy.settled.then(
+      () => current && landed(),
+      (error: unknown) => current && setFailure({ error })
+    );
+    return () => {
+      current = false;
+      releasePaddedCopy(texture, source, copy);
+    };
+  }, [texture, source, runner]);
+  const built = texture ? paddedCopiesOf(texture).get(source)?.built : undefined;
+  usePendingWhile(texture !== null && built === undefined);
+  if (built === undefined) return null;
+  return built ?? texture2DPlaceholder();
+}
+
+function joinPaddedCopy(texture: THREE.Texture, source: AtlasSourceModel, runner: JobRunner): PaddedCopy {
   const copies = paddedCopiesOf(texture);
   const held = copies.get(source);
-  if (held) return held;
-  const atlas = paddedAtlasTexture(texture, source);
-  if (!atlas) return null;
-  copies.set(source, atlas);
-  atlas.addEventListener('dispose', () => copies.delete(source));
-  return atlas;
+  if (held) {
+    held.holders += 1;
+    return held;
+  }
+  const controller = new AbortController();
+  const endWork = textureWork.begin();
+  const settled = buildPaddedCopy(texture, source, runner, controller.signal);
+  const copy: PaddedCopy = { holders: 1, built: undefined, settled, controller };
+  // Registered before any holder's, so a holder that hears the build land reads `built`.
+  settled.then(
+    (built) => (copy.built = built),
+    () => copies.delete(source)
+  );
+  settled.then(endWork, endWork);
+  copies.set(source, copy);
+  return copy;
 }
 
-/** Null for a texture with no readable pixels, which Godot pads as an empty image. */
-function paddedAtlasTexture(texture: THREE.Texture, source: AtlasSourceModel): THREE.Texture | null {
+/** A microtask, not now: StrictMode and a re-render release and take a copy again in one task. */
+function releasePaddedCopy(texture: THREE.Texture, source: AtlasSourceModel, copy: PaddedCopy): void {
+  copy.holders -= 1;
+  queueMicrotask(() => {
+    const copies = paddedCopiesOf(texture);
+    if (copy.holders > 0 || copies.get(source) !== copy) return;
+    copies.delete(source);
+    copy.controller.abort();
+    copy.built?.dispose();
+  });
+}
+
+/** Reads the pixels after the commit that asked, so neither a React render nor a frame waits on them. */
+async function buildPaddedCopy(
+  texture: THREE.Texture,
+  source: AtlasSourceModel,
+  runner: JobRunner,
+  signal: AbortSignal
+): Promise<THREE.Texture | null> {
+  await Promise.resolve();
   const pixels = readImagePixels(texture.image);
   if (!pixels) return null;
   const { width, height } = pixels;
-  const topDown = isBottomUp(texture) ? reversedRows(pixels.data, width, height) : pixels.data;
-  const padded = paddedAtlasPixels({ data: topDown, width, height }, source);
-  // Top row first, as a decoded image runs: Godot's UV v = 0 reads row 0.
+  const data = isBottomUp(texture) ? reversedRows(pixels.data, width, height) : pixels.data;
+  const layout = paddedAtlasLayout(source);
+  const padded = await runner.run('padded-atlas', { pixels: { data, width, height }, layout }, signal);
+  // Bottom-up, as every typed-array texture here runs (`utils/reversedRows.ts`).
+  reverseRowsInPlace(padded.data, padded.width, padded.height);
   const atlas = new THREE.DataTexture(padded.data, padded.width, padded.height);
   atlas.colorSpace = texture.colorSpace;
   atlas.needsUpdate = true;

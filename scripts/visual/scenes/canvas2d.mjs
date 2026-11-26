@@ -58,6 +58,12 @@ export const CANVAS_2D_SCENES = [
   { name: 'canvas-shader-items', file: 'unit-canvas-shader-items.tscn' },
   { name: 'canvas-shader-clip', file: 'unit-canvas-shader-clip.tscn' },
   { name: 'canvas-shader-builtins', file: 'unit-canvas-shader-builtins.tscn' },
+  { name: 'canvas-shader-tile-runtime-atlas', file: 'unit-canvas-shader-tile-runtime-atlas.tscn' },
+  { name: 'canvas-shader-bottom-up-textures', file: 'unit-canvas-shader-bottom-up-textures.tscn' },
+  { name: 'canvas-shader-sprites', file: 'unit-canvas-shader-sprites.tscn' },
+  { name: 'canvas-shader-polygons', file: 'unit-canvas-shader-polygons.tscn' },
+  { name: 'canvas-shader-lines-meshes', file: 'unit-canvas-shader-lines-meshes.tscn' },
+  { name: 'canvas-shader-tiles', file: 'unit-canvas-shader-tiles.tscn' },
   // The one variable: `texture_filter` on the Node2D parent. A Nearest parent keeps a magnified
   // Sprite2D's edge a hard step, and the project's Linear default blends it over one texel.
   {

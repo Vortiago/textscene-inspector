@@ -1,0 +1,227 @@
+[gd_scene format=3]
+
+; One variable: the Line2D properties and the MeshInstance2D mesh kinds that a canvas_item ShaderMaterial
+; draws: width_curve, gradient, joint_mode, cap modes, texture_mode tile and stretch, closed, and an
+; ArrayMesh, QuadMesh, PrismMesh and SphereMesh, one of them with vertex colours that vertex() rewrites.
+; The shader mixes TEXTURE with UV and COLOR, so a wrong UV, vertex or colour shows. The one other shaded
+; Line2D and MeshInstance2D golden draws one plain line and one quad, so none shows a regression in them.
+; Each case sits at its own cell of a 6 by 3 grid, so a diff names the property or mesh that moved.
+
+[ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
+
+[sub_resource type="Shader" id="Shader_mix"]
+code = "shader_type canvas_item;
+
+void fragment() {
+	COLOR = mix(texture(TEXTURE, UV), vec4(UV, 0.5, 1.0), 0.5) * COLOR;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_mix"]
+shader = SubResource("Shader_mix")
+
+[sub_resource type="Shader" id="Shader_shift"]
+code = "shader_type canvas_item;
+
+void vertex() {
+	VERTEX += vec2(0.0, sin(VERTEX.x * 0.12) * 12.0 - 10.0);
+}
+
+void fragment() {
+	COLOR = mix(texture(TEXTURE, UV), vec4(UV, 0.5, 1.0), 0.5) * COLOR;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_shift"]
+shader = SubResource("Shader_shift")
+
+[sub_resource type="Shader" id="Shader_colour"]
+code = "shader_type canvas_item;
+
+void vertex() {
+	COLOR.rgb = COLOR.bgr;
+}
+
+void fragment() {
+	COLOR = vec4(COLOR.rgb * (0.4 + 0.6 * texture(TEXTURE, UV).r), 1.0);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_colour"]
+shader = SubResource("Shader_colour")
+
+[sub_resource type="Curve" id="Curve_bump"]
+_data = [Vector2(0, 0.3), 0.0, 0.0, 0, 0, Vector2(0.5, 1), 0.0, 0.0, 0, 0, Vector2(1, 0.3), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="Gradient" id="Gradient_three"]
+offsets = PackedFloat32Array(0, 0.5, 1)
+colors = PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_triangle"]
+_surfaces = [{
+"2d": true,
+"aabb": AABB(0, 0, 0, 100, 100, 0),
+"attribute_data": PackedByteArray(0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 128, 63),
+"format": 34393296913,
+"index_count": 3,
+"index_data": PackedByteArray(0, 0, 1, 0, 2, 0),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 3,
+"vertex_data": PackedByteArray(0, 0, 72, 66, 0, 0, 0, 0, 0, 0, 200, 66, 0, 0, 200, 66, 0, 0, 0, 0, 0, 0, 200, 66)
+}]
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_colours"]
+_surfaces = [{
+"aabb": AABB(0, 0, 0, 100, 100, 1e-05),
+"attribute_data": PackedByteArray(255, 0, 0, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 0, 255, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 255, 255, 0, 0, 128, 63, 0, 0, 128, 63, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 128, 63),
+"format": 34359742489,
+"index_count": 6,
+"index_data": PackedByteArray(0, 0, 1, 0, 2, 0, 0, 0, 2, 0, 3, 0),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200, 66, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200, 66, 0, 0, 200, 66, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200, 66, 0, 0, 0, 0)
+}]
+
+[sub_resource type="QuadMesh" id="QuadMesh_wide"]
+size = Vector2(110, 80)
+
+[sub_resource type="PrismMesh" id="PrismMesh_flat"]
+size = Vector3(110, 100, 20)
+
+[sub_resource type="SphereMesh" id="SphereMesh_disc"]
+radius = 50.0
+height = 100.0
+
+[node name="World" type="Node2D"]
+
+[node name="WidthCurve" type="Line2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(0, 0)
+width = 26.0
+points = PackedVector2Array(20, 150, 96, 50, 172, 150)
+width_curve = SubResource("Curve_bump")
+
+[node name="Gradient" type="Line2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(192, 0)
+width = 26.0
+points = PackedVector2Array(20, 150, 96, 50, 172, 150)
+gradient = SubResource("Gradient_three")
+
+[node name="JointSharp" type="Line2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(384, 0)
+width = 26.0
+points = PackedVector2Array(20, 150, 96, 50, 172, 150)
+joint_mode = 0
+
+[node name="JointBevel" type="Line2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(576, 0)
+width = 26.0
+points = PackedVector2Array(20, 150, 96, 50, 172, 150)
+joint_mode = 1
+
+[node name="JointRound" type="Line2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(768, 0)
+width = 26.0
+points = PackedVector2Array(20, 150, 96, 50, 172, 150)
+joint_mode = 2
+
+[node name="CapsBox" type="Line2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(960, 0)
+width = 26.0
+points = PackedVector2Array(20, 150, 96, 50, 172, 150)
+begin_cap_mode = 1
+end_cap_mode = 1
+
+[node name="CapsRound" type="Line2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(0, 216)
+width = 26.0
+points = PackedVector2Array(20, 150, 96, 50, 172, 150)
+begin_cap_mode = 2
+end_cap_mode = 2
+
+[node name="TextureTile" type="Line2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(192, 216)
+width = 26.0
+texture_repeat = 2
+points = PackedVector2Array(20, 150, 96, 50, 172, 150)
+texture = ExtResource("1_marker")
+texture_mode = 1
+
+[node name="TextureStretch" type="Line2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(384, 216)
+width = 26.0
+points = PackedVector2Array(20, 150, 96, 50, 172, 150)
+texture = ExtResource("1_marker")
+texture_mode = 2
+
+[node name="Closed" type="Line2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(576, 216)
+width = 26.0
+points = PackedVector2Array(30, 60, 160, 60, 160, 160, 30, 160)
+closed = true
+
+[node name="ClosedShifted" type="Line2D" parent="."]
+material = SubResource("ShaderMaterial_shift")
+position = Vector2(768, 216)
+width = 26.0
+points = PackedVector2Array(30, 60, 160, 60, 160, 160, 30, 160)
+closed = true
+gradient = SubResource("Gradient_three")
+
+[node name="GradientCaps" type="Line2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(960, 216)
+width = 26.0
+points = PackedVector2Array(20, 150, 96, 50, 172, 150)
+gradient = SubResource("Gradient_three")
+begin_cap_mode = 2
+end_cap_mode = 1
+
+[node name="ArrayMeshTriangle" type="MeshInstance2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(46, 490)
+mesh = SubResource("ArrayMesh_triangle")
+texture = ExtResource("1_marker")
+
+[node name="QuadMesh" type="MeshInstance2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(288, 540)
+mesh = SubResource("QuadMesh_wide")
+texture = ExtResource("1_marker")
+
+[node name="PrismMesh" type="MeshInstance2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(480, 540)
+mesh = SubResource("PrismMesh_flat")
+texture = ExtResource("1_marker")
+
+[node name="SphereMesh" type="MeshInstance2D" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(672, 540)
+mesh = SubResource("SphereMesh_disc")
+texture = ExtResource("1_marker")
+
+[node name="ArrayMeshVertexColours" type="MeshInstance2D" parent="."]
+material = SubResource("ShaderMaterial_colour")
+position = Vector2(814, 490)
+mesh = SubResource("ArrayMesh_colours")
+texture = ExtResource("1_marker")
+
+[node name="QuadMeshShifted" type="MeshInstance2D" parent="."]
+material = SubResource("ShaderMaterial_shift")
+position = Vector2(1056, 540)
+rotation = 0.3
+mesh = SubResource("QuadMesh_wide")
+texture = ExtResource("1_marker")

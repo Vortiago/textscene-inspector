@@ -6,7 +6,12 @@
 
 import type { Vector2 } from '../../godot/math/vector';
 import type { ImagePixels } from '../formats/image/imagePixels';
-import { atlasTileRegion, type AtlasSourceModel } from './types';
+import { atlasTileRegion, type AtlasSourceModel, type AtlasTileModel } from './types';
+
+/** What the padded copy reads of a source: its grid, and each tile's size, without the tiles' data. */
+export type PaddedAtlasLayout = Pick<AtlasSourceModel, 'margins' | 'separation' | 'textureRegionSize'> & {
+  readonly tiles: ReadonlyMap<string, Pick<AtlasTileModel, 'sizeInAtlas'>>;
+};
 
 /** The cell padding on each side of a tile. */
 const PADDING = 1;
@@ -52,12 +57,20 @@ export function atlasGridSize(
   };
 }
 
+/** The size of the padded atlas of a texture of `textureSize` (`tile_set.cpp:5636`). */
+export function paddedAtlasSize(
+  source: Pick<AtlasSourceModel, 'margins' | 'separation' | 'textureRegionSize'>,
+  textureSize: { width: number; height: number }
+): { width: number; height: number } {
+  const grid = atlasGridSize(source, textureSize);
+  const { textureRegionSize: region } = source;
+  return { width: grid.x * (region.x + 2 * PADDING), height: grid.y * (region.y + 2 * PADDING) };
+}
+
 /** `tile_set.cpp:5622`, frame 0 only: the model holds no animation frames. */
-export function paddedAtlasPixels(pixels: ImagePixels, source: AtlasSourceModel): ImagePixels {
+export function paddedAtlasPixels(pixels: ImagePixels, source: PaddedAtlasLayout): ImagePixels {
   const cell = { x: source.textureRegionSize.x + 2 * PADDING, y: source.textureRegionSize.y + 2 * PADDING };
-  const grid = atlasGridSize(source, pixels);
-  const width = grid.x * cell.x;
-  const height = grid.y * cell.y;
+  const { width, height } = paddedAtlasSize(source, pixels);
   const padded: ImagePixels = { width, height, data: new Uint8Array(width * height * BYTES_PER_TEXEL) };
   for (const [key, tile] of source.tiles) {
     const [atlasX, atlasY] = key.split(':').map(Number) as [number, number];
@@ -100,4 +113,11 @@ function blitRect(target: ImagePixels, source: ImagePixels, from: Rect, toX: num
     const end = start + width * BYTES_PER_TEXEL;
     target.data.set(source.data.subarray(start, end), ((toY + row) * target.width + toX) * BYTES_PER_TEXEL);
   }
+}
+
+/** The layout of `source` alone, which a worker job takes by structured clone. */
+export function paddedAtlasLayout(source: AtlasSourceModel): PaddedAtlasLayout {
+  const { margins, separation, textureRegionSize } = source;
+  const tiles = new Map([...source.tiles].map(([key, { sizeInAtlas }]) => [key, { sizeInAtlas }]));
+  return { margins, separation, textureRegionSize, tiles };
 }

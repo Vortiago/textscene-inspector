@@ -133,12 +133,29 @@ describe('TileShaderRun', () => {
     expect(slotCommands.last).toHaveLength(1);
   });
 
-  it('draws the fallback for a padded source whose pixels it cannot read', async () => {
+  it('draws nothing while the padded copy builds, and never the fallback', async () => {
+    sampled.texture = new THREE.DataTexture(new Uint8Array(32 * 16 * 4), 32, 16);
+    const renderer = await run(undefined, undefined, { ...SOURCE, usesTexturePadding: true });
+
+    expect(renderer.scene.children).toHaveLength(0);
+  });
+
+  it('draws the slot from the padded copy once it is built', async () => {
+    sampled.texture = new THREE.DataTexture(new Uint8Array(32 * 16 * 4), 32, 16);
+    const renderer = await run(undefined, undefined, { ...SOURCE, usesTexturePadding: true });
+
+    await vi.waitFor(() =>
+      expect(renderer.scene.findAll((node) => node.props.name === 'slot')).toHaveLength(1)
+    );
+  });
+
+  it('draws the slot from the placeholder for a padded source whose pixels it cannot read', async () => {
     sampled.texture = new THREE.DataTexture(new Uint8Array(32 * 16 * 4), 32, 16);
     vi.spyOn(imagePixels, 'readImagePixels').mockReturnValue(undefined);
     const renderer = await run(undefined, undefined, { ...SOURCE, usesTexturePadding: true });
 
-    expect(renderer.scene.findAll((node) => node.props.name === 'fallback')).toHaveLength(1);
-    expect(renderer.scene.findAll((node) => node.props.name === 'slot')).toHaveLength(0);
+    await vi.waitFor(() =>
+      expect(renderer.scene.findAll((node) => node.props.name === 'slot')).toHaveLength(1)
+    );
   });
 });

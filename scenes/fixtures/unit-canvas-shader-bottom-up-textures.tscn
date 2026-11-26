@@ -1,0 +1,56 @@
+[gd_scene format=3]
+
+; One variable: the row order of a texture a canvas_item shader samples. A GradientTexture2D is stored
+; bottom-up, and Godot's UV v = 0 reads its top row, so a Sprite2D, a Polygon2D, a MeshInstance2D and a
+; Line2D each sample a red top and a blue bottom. The other shader goldens sample image files, which run
+; top-down, so none of them shows these rows flip.
+
+[sub_resource type="Gradient" id="Gradient_1"]
+colors = PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_1"]
+gradient = SubResource("Gradient_1")
+fill_to = Vector2(0, 1)
+
+[sub_resource type="QuadMesh" id="QuadMesh_1"]
+
+[sub_resource type="Shader" id="Shader_1"]
+code = "shader_type canvas_item;
+
+void fragment() {
+	COLOR = texture(TEXTURE, UV);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_1"]
+shader = SubResource("Shader_1")
+
+[node name="Root" type="Node2D"]
+
+[node name="Gradient" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_1")
+position = Vector2(200, 200)
+scale = Vector2(2, 2)
+texture = SubResource("GradientTexture2D_1")
+
+[node name="Polygon" type="Polygon2D" parent="."]
+material = SubResource("ShaderMaterial_1")
+position = Vector2(700, 100)
+texture = SubResource("GradientTexture2D_1")
+polygon = PackedVector2Array(0, 0, 128, 0, 128, 128, 0, 128)
+uv = PackedVector2Array(0, 0, 64, 0, 64, 64, 0, 64)
+
+[node name="Mesh" type="MeshInstance2D" parent="."]
+material = SubResource("ShaderMaterial_1")
+position = Vector2(1000, 200)
+scale = Vector2(128, 128)
+mesh = SubResource("QuadMesh_1")
+texture = SubResource("GradientTexture2D_1")
+
+[node name="Line" type="Line2D" parent="."]
+material = SubResource("ShaderMaterial_1")
+position = Vector2(100, 450)
+points = PackedVector2Array(0, 0, 400, 0)
+width = 64.0
+texture = SubResource("GradientTexture2D_1")
+texture_mode = 2

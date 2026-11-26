@@ -39,7 +39,7 @@ export function TileShaderRun({
   fallback,
 }: TileShaderRunProps) {
   const drawn = useCanvasItemTextureSampledBy(sampler, source.texture);
-  const texture = useRuntimeAtlasTexture(drawn.texture ?? null, source);
+  const texture = useRuntimeAtlasTexture(drawn, source);
   const { x: originX, y: originY } = itemOrigin;
   const commands = useMemo(() => {
     const textureSize = drawn.texture && imageSize(drawn.texture.image);
@@ -48,8 +48,8 @@ export function TileShaderRun({
   }, [cells, source, drawn.texture, tileSet, originX, originY]);
   // A source with no texture, a pending one or a failed one draws nothing (`tile_map_layer.cpp:2676-2677`).
   if (!source.texture || drawn.missing || !drawn.texture) return null;
-  // No padded copy, as for a live viewport's pixels: Godot's default shader draws the run.
-  if (!texture || !commands) return <>{fallback}</>;
+  // Nothing while the padded copy builds: the pending load holds the frame a capture waits for.
+  if (!texture || !commands) return null;
   // Object3Ds keep the layer's canvas key. The fallback draws in layer pixels, so it undoes the item's place.
   return (
     <object3D position={[itemOrigin.x, -itemOrigin.y, 0]}>
