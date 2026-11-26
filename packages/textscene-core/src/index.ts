@@ -24,3 +24,7 @@ export {
 } from './r3f/index';
 
 export { ResourceLoader } from './resources/ResourceLoader';
+
+export { recordFrames } from './r3f/frameProfile/frameProfile';
+export type { RecordOptions } from './r3f/frameProfile/frameRecording';
+export type { DrawStats, FrameRecording, StepStats } from './r3f/frameProfile/frameStats';

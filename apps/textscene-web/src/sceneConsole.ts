@@ -1,3 +1,4 @@
+import { recordFrames } from '@textscene/core';
 import { variant, type NodeHandle, type Scene } from '@textscene/renderer';
 
 /** What the browser console and a capture script reach: the open scene and the Variant reader. */
@@ -6,6 +7,8 @@ export interface SceneConsole {
   readonly variant: typeof variant;
   /** Selects a node, or none for null, as a click does. A capture script selects a node the tree hides. */
   readonly select: (node: NodeHandle | null) => void;
+  /** `await textscene.profile({ frames: 120, draws: true })`: the Performance overlay's numbers as JSON. */
+  readonly profile: typeof recordFrames;
 }
 
 declare global {
@@ -17,5 +20,5 @@ declare global {
 
 /** Puts the open scene on `window.textscene`, so a person or a capture script writes its nodes. */
 export function exposeScene(scene: Scene, select: (node: NodeHandle | null) => void): void {
-  window.textscene = { scene, variant, select };
+  window.textscene = { scene, variant, select, profile: recordFrames };
 }

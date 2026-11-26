@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type * as THREE from 'three';
 import { beginStep, endStep, innermostStep } from './frameProfile';
 import type { FrameStats } from './frameStats';
 import {
   cpuOnlyRenderer,
-  profiledRendererMembers,
   FRAME_INTERVAL_MS,
   FRAMES_PER_WINDOW,
   manualClock,
@@ -12,69 +10,8 @@ import {
   stepCpuMs,
   timingsOf,
   startFrameProfile,
+  timerContext,
 } from './frameProfile.testkit';
-
-/**
- * A WebGL 2 context with the timer query extension, whose queries measure a GPU clock the test moves
- * by hand. A query's result arrives once the test calls `resolve`. A lost context makes no query, and
- * a query from before a loss never resolves, as a browser's does.
- */
-function timerContext() {
-  const ext = { TIME_ELAPSED_EXT: 0x88bf, GPU_DISJOINT_EXT: 0x8fbb };
-  interface FakeQuery {
-    context: number;
-    startNs: number;
-    elapsedNs: number;
-    isAvailable: boolean;
-  }
-  let gpuNs = 0;
-  let running: FakeQuery | null = null;
-  const live = new Set<FakeQuery>();
-  const state = { isDisjoint: false, isLost: false, overlaps: 0, staleBegins: 0, contextsMade: 1 };
-  const isStale = (query: FakeQuery) => query.context !== state.contextsMade;
-  const context = {
-    QUERY_RESULT: 0x8866,
-    QUERY_RESULT_AVAILABLE: 0x8867,
-    getExtension: (name: string) => (name === 'EXT_disjoint_timer_query_webgl2' ? ext : null),
-    isContextLost: () => state.isLost,
-    createQuery: (): FakeQuery | null => {
-      if (state.isLost) return null;
-      const query = { context: state.contextsMade, startNs: 0, elapsedNs: 0, isAvailable: false };
-      live.add(query);
-      return query;
-    },
-    deleteQuery: (query: FakeQuery) => live.delete(query),
-    beginQuery: (_target: number, query: FakeQuery | null) => {
-      if (!query) throw new TypeError('beginQuery: query is not a WebGLQuery');
-      if (isStale(query)) state.staleBegins += 1;
-      if (running) state.overlaps += 1;
-      query.startNs = gpuNs;
-      query.isAvailable = false;
-      running = query;
-    },
-    endQuery: () => {
-      running!.elapsedNs = gpuNs - running!.startNs;
-      running = null;
-    },
-    getQueryParameter: (query: FakeQuery, pname: number) => {
-      if (state.isLost || isStale(query)) return null;
-      return pname === context.QUERY_RESULT_AVAILABLE ? query.isAvailable : query.elapsedNs;
-    },
-    getParameter: (pname: number) => (pname === ext.GPU_DISJOINT_EXT ? state.isDisjoint : null),
-  };
-  return {
-    renderer: { ...profiledRendererMembers(), getContext: () => context } as unknown as THREE.WebGLRenderer,
-    advanceGpu: (ms: number) => (gpuNs += ms * 1e6),
-    resolve: () => live.forEach((query) => (query.isAvailable = true)),
-    loseContext: () => (state.isLost = true),
-    restoreContext: () => {
-      state.isLost = false;
-      state.contextsMade += 1;
-    },
-    liveQueries: () => live.size,
-    state,
-  };
-}
 
 /** A CPU-only renderer, its clock, and a window helper that profiles it. */
 function cpuOnly() {

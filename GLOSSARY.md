@@ -643,6 +643,10 @@ _Avoid_: "patch" for a host write. A **node patch** is a pass result laid over t
 The measurement of every frame on one renderer while the Performance toggle is on: frame rate, frame interval, and the CPU time, GPU time and draw calls of each **render step**, averaged over half a second (ADR-0053).
 _Avoid_: "profiler" for the overlay. "stats" for the timing itself.
 
+**Frame recording** (`recordFrames`):
+The **frame profile**'s numbers on each view with Performance on, averaged over a count of frames the caller names, with each draw call's GPU time when asked. The web previewer's console calls it as `await textscene.profile({ frames: 120, draws: true })`.
+_Avoid_: "benchmark" (it measures the frames the view draws anyway).
+
 **Render step**:
 A named part of a frame that a **frame profile** times, such as Shadows or Fog. Its time and draw calls are its own: a step nested in it keeps its own.
 _Avoid_: "pass" (a pass is one render, and a step can hold many). "phase".

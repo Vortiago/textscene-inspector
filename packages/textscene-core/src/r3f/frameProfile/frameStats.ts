@@ -64,3 +64,28 @@ export interface FrameTimings {
    */
   steps: readonly StepStats[];
 }
+
+/** Where one draw call came from: the step it ran in, its object and its material. */
+export interface DrawSource {
+  step: StepKey;
+  /** The name of the object or of its nearest named ancestor, else the object's type. */
+  object: string;
+  /** The material's name, else its type. */
+  material: string;
+}
+
+export interface DrawStats extends DrawSource {
+  /** The GPU time per frame of every call from this source, or null while no GPU result has arrived. */
+  gpuMs: number | null;
+  callsPerFrame: number;
+}
+
+/** What a recording of one canvas answers: the overlay's numbers, averaged over its own frames. */
+export interface FrameRecording extends FrameStats {
+  frames: number;
+  /** The GPU the browser names, or null when it names none. */
+  gpu: string | null;
+  timings: FrameTimings;
+  /** Present when the recording timed each draw, slowest first. Each draw costs its own GPU query. */
+  draws?: readonly DrawStats[];
+}

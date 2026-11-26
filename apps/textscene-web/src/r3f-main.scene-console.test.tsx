@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
+import { recordFrames } from '@textscene/core';
 import { variant } from '@textscene/renderer';
 import { R3FApp } from './r3f-main';
 
@@ -34,6 +35,13 @@ describe('<R3FApp> scene console', () => {
 
     expect(window.textscene?.scene.rootScenePath).toBe('res://unit-plane-mesh.tscn');
     expect(window.textscene?.variant).toBe(variant);
+  });
+
+  it("puts the frame recording on window.textscene, so a person reads the overlay's numbers as JSON", async () => {
+    render(<R3FApp />);
+    await waitFor(() => expect(window.textscene).toBeDefined());
+
+    expect(window.textscene?.profile).toBe(recordFrames);
   });
 
   it('draws a host text set on that scene', async () => {

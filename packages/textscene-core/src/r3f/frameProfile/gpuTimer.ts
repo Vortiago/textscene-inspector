@@ -4,8 +4,6 @@
  * query times one segment of one step's own work, and the frame's segments sum to its GPU time.
  */
 
-import type { StepKey } from './frameStats.js';
-
 const TIMER_EXTENSION = 'EXT_disjoint_timer_query_webgl2';
 
 interface TimerQueryExtension {
@@ -19,22 +17,23 @@ interface TimerQueryExtension {
  */
 const MAX_PENDING_FRAMES = 10;
 
-interface Segment {
-  readonly step: StepKey;
+interface Segment<K> {
+  readonly key: K;
   readonly query: WebGLQuery;
 }
 
-export class GpuTimer {
-  private running: Segment | null = null;
-  private frame: Segment[] = [];
+/** Times segments named by a `K` each, such as a render step. */
+export class GpuTimer<K> {
+  private running: Segment<K> | null = null;
+  private frame: Segment<K>[] = [];
   /** Closed frames whose results have not all arrived, oldest first. */
-  private readonly pending: Segment[][] = [];
+  private readonly pending: Segment<K>[][] = [];
   private readonly pool: WebGLQuery[] = [];
 
   /** Null when the context offers no timer query. */
-  static create(gl: WebGL2RenderingContext): GpuTimer | null {
+  static create<K>(gl: WebGL2RenderingContext): GpuTimer<K> | null {
     const ext = gl.getExtension(TIMER_EXTENSION) as TimerQueryExtension | null;
-    return ext ? new GpuTimer(gl, ext) : null;
+    return ext ? new GpuTimer<K>(gl, ext) : null;
   }
 
   private constructor(
@@ -42,14 +41,14 @@ export class GpuTimer {
     private readonly ext: TimerQueryExtension
   ) {}
 
-  /** Ends the running segment and starts one for `step`. A lost context times nothing. */
-  switchTo(step: StepKey): void {
+  /** Ends the running segment and starts one for `key`. A lost context times nothing. */
+  switchTo(key: K): void {
     this.endSegment();
     // A lost context's `createQuery` returns null, which `beginQuery` refuses with a TypeError.
     if (this.gl.isContextLost()) return;
     const query = this.pool.pop() ?? this.gl.createQuery();
     this.gl.beginQuery(this.ext.TIME_ELAPSED_EXT, query);
-    this.running = { step, query };
+    this.running = { key, query };
     this.frame.push(this.running);
   }
 
@@ -67,7 +66,7 @@ export class GpuTimer {
    * result in flight, so those frames are dropped. A lost context voids every query it made, so
    * the pool empties too and a restored context gets new queries.
    */
-  collect(onSegment: (step: StepKey, ns: number) => void): number {
+  collect(onSegment: (key: K, ns: number) => void): number {
     if (this.gl.isContextLost()) {
       this.pending.length = 0;
       this.pool.length = 0;
@@ -80,8 +79,8 @@ export class GpuTimer {
     let frames = 0;
     while (this.pending.length > 0 && this.hasArrived(this.pending[0]!)) {
       const frame = this.pending.shift()!;
-      for (const { step, query } of frame) {
-        onSegment(step, this.gl.getQueryParameter(query, this.gl.QUERY_RESULT) as number);
+      for (const { key, query } of frame) {
+        onSegment(key, this.gl.getQueryParameter(query, this.gl.QUERY_RESULT) as number);
       }
       this.recycle(frame);
       frames += 1;
@@ -104,15 +103,15 @@ export class GpuTimer {
   }
 
   /** Queries resolve in order, so a frame whose last query has resolved has resolved whole. */
-  private hasArrived(frame: readonly Segment[]): boolean {
+  private hasArrived(frame: readonly Segment<K>[]): boolean {
     return this.gl.getQueryParameter(frame.at(-1)!.query, this.gl.QUERY_RESULT_AVAILABLE) as boolean;
   }
 
-  private recycle(frame: readonly Segment[]): void {
+  private recycle(frame: readonly Segment<K>[]): void {
     for (const { query } of frame) this.pool.push(query);
   }
 
-  private delete(frame: readonly Segment[]): void {
+  private delete(frame: readonly Segment<K>[]): void {
     for (const { query } of frame) this.gl.deleteQuery(query);
   }
 }
