@@ -7,16 +7,21 @@ export interface ShaderRefusal {
 /** Why a shader draws Godot's default instead: a refusal of its text, or a defect, which is no refusal. */
 export type ShaderUnDrawn = { readonly refusal: ShaderRefusal } | { readonly failure: unknown };
 
-/** The message for the shader Godot generates for a `materialClass`, which draws the classic material. */
+/** What a `materialClass` draws without its generated shader: the classic path declines an ORMMaterial3D. */
+export const generatedFallbackOf = (materialClass: string): string =>
+  materialClass === 'ORMMaterial3D' ? "Godot's default 3D surface" : 'the classic material';
+
+/** The message for the shader Godot generates for a `materialClass`, which draws its fallback. */
 export function generatedUnDrawnMessage(compile: ShaderUnDrawn, materialClass: string): string {
   const shader = `the shader Godot generates for this ${materialClass}`;
+  const fallback = generatedFallbackOf(materialClass);
   if ('failure' in compile)
-    return `The previewer failed to translate ${shader}, and draws the classic material: ${String(compile.failure)}`;
+    return `The previewer failed to translate ${shader}, and draws ${fallback}: ${String(compile.failure)}`;
   const { refusal } = compile;
   // Godot compiles every text it generates, so a refusal with no owner is the previewer's fault.
   if (refusal.owner === undefined)
-    return `The previewer wrote ${shader} wrongly, and draws the classic material: ${refusal.message}`;
-  return `The previewer does not translate ${shader} yet (${refusal.owner}), and draws the classic material: ${refusal.message}`;
+    return `The previewer wrote ${shader} wrongly, and draws ${fallback}: ${refusal.message}`;
+  return `The previewer does not translate ${shader} yet (${refusal.owner}), and draws ${fallback}: ${refusal.message}`;
 }
 
 /** The message for a `kind` shader the previewer does not draw, which draws Godot's default `fallback`. */

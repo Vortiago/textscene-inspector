@@ -32,7 +32,7 @@ describe('generatedUnDrawnMessage', () => {
 
   it('names a refusal with no owner as a fault of the generated text', () => {
     expect(generatedUnDrawnMessage({ refusal: { message: 'Unknown identifier' } }, 'ORMMaterial3D')).toBe(
-      'The previewer wrote the shader Godot generates for this ORMMaterial3D wrongly, and draws the classic material: Unknown identifier'
+      "The previewer wrote the shader Godot generates for this ORMMaterial3D wrongly, and draws Godot's default 3D surface: Unknown identifier"
     );
   });
 });

@@ -71,7 +71,9 @@ export function SurfaceMaterialSlot({
   }, [shader, undrawnOn]);
   // Points and lines keep the classic point size and line placement unless a user's shader draws them.
   const drawsShader = shaded !== null && !undrawnOn && !(listed && !shader);
-  const placeholder = materialBagElement(drawnBag(MISSING_TEXTURE_MATERIAL, draws), attach, null);
+  const placeholderAt = (mount: string | MaterialAttach | undefined) =>
+    materialBagElement(drawnBag(MISSING_TEXTURE_MATERIAL, draws), mount, null);
+  const placeholder = placeholderAt(attach);
   const standard = bags ? <StandardMaterialSlot bags={bags} attach={attach} draws={draws} /> : placeholder;
   // No bags means a texture that never draws, so the placeholder stands before any shader.
   if (!drawsShader || !bags) return standard;
@@ -80,9 +82,9 @@ export function SurfaceMaterialSlot({
       <SpatialShaderSlot source={shaded} attach={attach} fallback={standard} placeholder={placeholder} />
     );
   }
-  // A generated shader keeps the classic alpha-pass variant, which a geometry instance's fade swaps in.
+  // A generated shader keeps the classic alpha pass, and takes the placeholder for maps it alone loads.
   const unfaded = (classic: ReactNode, mount: string | MaterialAttach | undefined) => (
-    <SpatialShaderSlot source={shaded} attach={mount} fallback={classic} />
+    <SpatialShaderSlot source={shaded} attach={mount} fallback={classic} placeholder={placeholderAt(mount)} />
   );
   return <StandardMaterialSlot bags={bags} attach={attach} draws={draws} unfaded={unfaded} />;
 }

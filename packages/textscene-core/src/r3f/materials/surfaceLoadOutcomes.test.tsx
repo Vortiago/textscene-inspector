@@ -358,3 +358,43 @@ describe('what a ShaderMaterial draws for each load outcome of a cube or volume 
     await vi.waitFor(() => expect(drawn()).toBe('placeholder'));
   });
 });
+
+/** The maps a generated shader samples and the classic material never loads, with the flag for each. */
+const UNLOADED_IN_CLASSIC = [
+  { property: 'detail_albedo', flag: 'detail_enabled' },
+  { property: 'detail_mask', flag: 'detail_enabled' },
+  { property: 'bent_normal_texture', flag: 'bent_normal_enabled' },
+  { property: 'rim_texture', flag: 'rim_enabled' },
+  { property: 'clearcoat_texture', flag: 'clearcoat_enabled' },
+  { property: 'backlight_texture', flag: 'backlight_enabled' },
+  { property: 'refraction_texture', flag: 'refraction_enabled' },
+  { property: 'subsurf_scatter_texture', flag: 'subsurf_scatter_enabled' },
+] as const;
+
+describe('what a StandardMaterial3D draws for a map the classic material never loads', () => {
+  async function renderUnloaded({ property, flag }: (typeof UNLOADED_IN_CLASSIC)[number]) {
+    vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    const material: TscnInternalResource = {
+      id: 'Paint',
+      type: 'StandardMaterial3D',
+      data: { [flag]: 'true', [property]: 'ExtResource("1_map")' },
+    };
+    return renderSurface(referenceIn('SubResource("Paint")', EXTERNAL, [material]), [material]);
+  }
+
+  it.each(UNLOADED_IN_CLASSIC)('draws the node path once $property loads', async (row) => {
+    const { fake, drawn } = await renderUnloaded(row);
+
+    await act(async () => fake.textures._resolve(MAP_PATH, new THREE.Texture()));
+    await settleEffects();
+    await vi.waitFor(() => expect(drawn()).toBe('node path'));
+  });
+
+  it.each(UNLOADED_IN_CLASSIC)('draws the placeholder once the $property file is missing', async (row) => {
+    const { fake, drawn } = await renderUnloaded(row);
+
+    await act(async () => fake.textures._fail(MAP_PATH, 'not found'));
+    await settleEffects();
+    await vi.waitFor(() => expect(drawn()).toBe('placeholder'));
+  });
+});

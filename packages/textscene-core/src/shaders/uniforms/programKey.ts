@@ -17,11 +17,23 @@ export function programKeyOf({ source, textures }: CodeKey): string {
   return `${source}|${[...textures()].map(textureKeyOf).join(';')}`;
 }
 
-/** three's own texture key (`TextureNode.js:274`), with the colour space, depth and comparison it reads. */
+/** The flags three's GLSL builder reads to pick a texture's sampler and its sample call. */
+const SAMPLER_FLAGS = [
+  'isDepthTexture',
+  'isCubeTexture',
+  'isArrayTexture',
+  'isDataArrayTexture',
+  'isCompressedArrayTexture',
+  'isData3DTexture',
+] as const;
+
+/** three's own texture key (`TextureNode.js:274`), with the format, colour space and sampler it reads. */
 function textureKeyOf({ value }: TextureNode): string {
-  const { type, minFilter, magFilter, colorSpace } = value;
-  const { isDepthTexture, compareFunction } = value as Partial<THREE.DepthTexture>;
-  return `${type},${minFilter},${magFilter},${colorSpace},${isDepthTexture === true},${compareFunction ?? ''}`;
+  const { type, minFilter, magFilter, colorSpace, format } = value;
+  const { compareFunction } = value as Partial<THREE.DepthTexture>;
+  const flagged = value as unknown as Partial<Record<(typeof SAMPLER_FLAGS)[number], boolean>>;
+  const flags = SAMPLER_FLAGS.map((flag) => Number(flagged[flag] === true));
+  return `${type},${minFilter},${magFilter},${colorSpace},${format},${flags.join('')},${compareFunction ?? ''}`;
 }
 
 /**

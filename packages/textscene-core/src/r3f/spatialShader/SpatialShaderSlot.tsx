@@ -13,6 +13,7 @@ import {
   type MaterialHost,
 } from '../materials/swappedMaterials';
 import { OTHER_DRAWS_SURFACE } from '../materials/useOneSurfaceStartingMaterial';
+import { generatedFallbackOf } from '../../shaders/fault/shaderRefusal';
 import { useShaderTextures } from '../shaderTextures/shaderTextures';
 import { useShaderRefusalWarning, useShaderTranslator } from '../shaderTranslator/useShaderTranslator';
 import type { SurfaceShaderSource } from './surfaceShader';
@@ -22,10 +23,8 @@ const loadSpatialSurface = memoisedImport(() => import('./spatialSurface'));
 
 type SpatialSurfaceModule = typeof import('./spatialSurface');
 
-const LOAD_FAILURE =
-  "[material] The previewer could not load its spatial shader translator, and draws Godot's default 3D surface. Reload to try again.";
-const GENERATED_LOAD_FAILURE =
-  '[material] The previewer could not load its spatial shader translator, and draws the classic material. Reload to try again.';
+const loadFailureOf = (fallback: string) =>
+  `[material] The previewer could not load its spatial shader translator, and draws ${fallback}. Reload to try again.`;
 
 interface SpatialShaderSlotProps {
   source: SurfaceShaderSource;
@@ -41,9 +40,8 @@ export function SpatialShaderSlot({ source, attach, fallback, placeholder }: Spa
   const gl = useThree((state) => state.gl);
   const invalidate = useThree((state) => state.invalidate);
   const scene = useThree((state) => state.scene);
-  const { material, fileCode, isGenerated } = sourceOf(source);
-  const loadFailure = isGenerated ? GENERATED_LOAD_FAILURE : LOAD_FAILURE;
-  const translator = useShaderTranslator(loadSpatialSurface, fileCode, loadFailure);
+  const { material, fileCode, isGenerated, fallbackName } = sourceOf(source);
+  const translator = useShaderTranslator(loadSpatialSurface, fileCode, loadFailureOf(fallbackName));
   const module = translator?.module ?? null;
   const shader = useMemo(() => module?.surfaceShaderOf(source) ?? null, [module, source]);
   const { settings } = useProjectSettings();
@@ -136,10 +134,20 @@ const placedAt =
     };
   };
 
-/** The material its surfaces warn once for, the text decoders read, and whether Godot writes the text. */
+/** What its surfaces warn once for, the text decoders read, whether Godot writes it, and its fallback. */
 function sourceOf(source: SurfaceShaderSource) {
-  if ('shader' in source)
-    return { material: source.shader, fileCode: source.shader.code, isGenerated: false };
-  const material = 'baseMaterial' in source ? source.baseMaterial : source.defaultMaterial;
-  return { material, fileCode: null, isGenerated: true };
+  if ('shader' in source) {
+    const fallbackName = "Godot's default 3D surface";
+    return { material: source.shader, fileCode: source.shader.code, isGenerated: false, fallbackName };
+  }
+  if ('baseMaterial' in source) {
+    const fallbackName = generatedFallbackOf(source.baseMaterial.materialClass);
+    return { material: source.baseMaterial, fileCode: null, isGenerated: true, fallbackName };
+  }
+  return {
+    material: source.defaultMaterial,
+    fileCode: null,
+    isGenerated: true,
+    fallbackName: 'the classic material',
+  };
 }

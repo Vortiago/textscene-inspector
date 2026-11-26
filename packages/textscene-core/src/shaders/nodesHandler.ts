@@ -82,7 +82,10 @@ function reportTranslatorFaults(renderer: THREE.WebGLRenderer): void {
     try {
       const faulty = [...boundMaterials()].filter((material) => drawsWith(renderer, material, program));
       const log = driverLog(gl, program, vertexShader, fragmentShader);
-      for (const material of faulty) material.reportFault(new TranslatorFault(material.source, log));
+      for (const material of faulty) {
+        material.refuseSharedProgram();
+        material.reportFault(new TranslatorFault(material.source, log));
+      }
       if (callerHook) callerHook(gl, program, vertexShader, fragmentShader);
       else if (faulty.length === 0)
         console.error(

@@ -17,6 +17,9 @@ const NO_SHADER: MaterialShader = { parameters: [], source: { text: '', file: ''
 /** Written by the constructor and `dispose`: each transpiled material a refused program is matched to. */
 const liveMaterials = new Set<WeakRef<BoundNodeMaterial>>();
 
+/** Written only by `refuseSharedProgram`, never cleared: the code keys of programs the GPU refused. */
+const refusedCodes = new Set<string>();
+
 /** Each transpiled material not yet disposed or collected. */
 export function* boundMaterials(): Generator<BoundNodeMaterial> {
   for (const ref of liveMaterials) {
@@ -44,6 +47,9 @@ export class BoundNodeMaterial extends NodeMaterial {
 
   /** Runs before three keys a program, so the first program folds the specialisation values of its draw. */
   onBeforeProgram: (() => void) | null = null;
+
+  /** Written only by `customProgramCacheKey`: the shared code key of the material's last program. */
+  private sharedCode: string | null = null;
 
   /** Written only by `stageWith`: emits the stages again, as three keeps a function's first build. */
   private stage: (() => void) | null = null;
@@ -86,12 +92,19 @@ export class BoundNodeMaterial extends NodeMaterial {
     else console.error(fault);
   }
 
+  /** Stops sharing this refused program: three checks a program once (`WebGLProgram.js:822`). */
+  refuseSharedProgram(): void {
+    if (this.sharedCode) refusedCodes.add(this.sharedCode);
+  }
+
   /** three keeps one program for each key, so a draw with other specialisation values gets its own. */
   override customProgramCacheKey(): string {
     this.onBeforeProgram?.();
     const values = [...this.specialisations].map((constant) => constant.value);
+    const shared = this.codeKey && programKeyOf(this.codeKey);
+    this.sharedCode = shared && !refusedCodes.has(shared) ? shared : null;
     // three keys a node graph on each node's id, so two graphs of equal code would compile twice.
-    const code = this.codeKey ? programKeyOf(this.codeKey) : super.customProgramCacheKey();
+    const code = this.sharedCode ?? super.customProgramCacheKey();
     return `${code}|${values.join(',')}`;
   }
 
