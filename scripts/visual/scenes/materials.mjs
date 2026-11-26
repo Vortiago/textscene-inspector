@@ -47,7 +47,7 @@ export const MATERIAL_SCENES = [
     name: 'material-spatial-shader-lit-sun-shadow-splits',
     file: 'unit-spatial-shader-lit-sun-shadow-splits.tscn',
   },
-  // A sun's soft shadow and transmittance through a wall. Godot 4.6.3: 98 px over 2/255, max 9. Before: 2,335, max 81.
+  // A sun's soft shadow and transmittance through a wall. Godot 4.6.3: 75 px over 2/255, max 7, on the probed read.
   {
     name: 'material-spatial-shader-lit-sun-soft-shadow',
     file: 'sun-soft-shadow/unit-spatial-shader-lit-sun-soft-shadow.tscn',
