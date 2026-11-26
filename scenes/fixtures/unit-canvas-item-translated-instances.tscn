@@ -1,0 +1,144 @@
+[gd_scene format=3]
+
+; One variable: the canvas item form, switched to translated, for the items Godot draws as instances or
+; through a skeleton. A CPUParticles2D flipbook reads each particle's cell from INSTANCE_CUSTOM, and a
+; global-coords emitter under a turned, scaled parent draws at the canvas transform. A MultiMeshInstance2D
+; draws instance colours, a flipbook from custom data, and a shader that reads INSTANCE_ID. A Polygon2D
+; skinned to a posed Skeleton2D draws its deformed, textured vertices. No other golden captures these
+; with the switch on, so none shows a regression in their translated form.
+
+[ext_resource type="Texture2D" path="res://textures/atlas-quadrants.png" id="1_quadrants"]
+[ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="2_marker"]
+
+[sub_resource type="CanvasItemMaterial" id="Material_flipbook"]
+particles_animation = true
+particles_anim_h_frames = 2
+particles_anim_v_frames = 2
+
+[sub_resource type="CanvasItemMaterial" id="Material_strip"]
+particles_animation = true
+particles_anim_h_frames = 3
+particles_anim_v_frames = 1
+
+[sub_resource type="Shader" id="Shader_instance"]
+code = "shader_type canvas_item;
+varying vec4 tint;
+void vertex() {
+	tint = vec4(float(INSTANCE_ID) / 3.0, INSTANCE_CUSTOM.x, 1.0 - float(INSTANCE_ID) / 3.0, 1.0);
+}
+void fragment() {
+	COLOR = tint * texture(TEXTURE, UV);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="Material_instance"]
+shader = SubResource("Shader_instance")
+
+[sub_resource type="Gradient" id="Gradient_fade"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(1, 0.9, 0.4, 1, 0.3, 0.6, 1, 0.5)
+
+[sub_resource type="QuadMesh" id="QuadMesh_cell"]
+size = Vector2(48, 48)
+
+[sub_resource type="MultiMesh" id="MultiMesh_colors"]
+use_colors = true
+instance_count = 3
+mesh = SubResource("QuadMesh_cell")
+buffer = PackedFloat32Array(1, 0, 0, 0, 0, 1, 0, 0, 1, 0.3, 0.3, 1, 0.7, -0.7, 0, 70, 0.7, 0.7, 0, 0, 0.3, 1, 0.3, 0.4, 1.5, 0, 0, 150, 0, 0.6, 0, 0, 0.3, 0.3, 1, 1)
+
+[sub_resource type="MultiMesh" id="MultiMesh_flipbook"]
+use_custom_data = true
+instance_count = 3
+mesh = SubResource("QuadMesh_cell")
+buffer = PackedFloat32Array(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 70, 0, 1, 0, 0, 0, 0, 0.34, 0, 1, 0, 0, 140, 0, 1, 0, 0, 0, 0, 0.99, 0)
+
+[sub_resource type="MultiMesh" id="MultiMesh_shader"]
+use_custom_data = true
+instance_count = 4
+mesh = SubResource("QuadMesh_cell")
+buffer = PackedFloat32Array(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 60, 0, 1, 0, 0, 0.33, 0, 0, 0, 1, 0, 0, 120, 0, 1, 0, 0, 0.66, 0, 0, 0, 1, 0, 0, 180, 0, 1, 0, 0, 1, 0, 0, 0)
+
+[node name="Root" type="Node2D"]
+
+[node name="Flipbook" type="CPUParticles2D" parent="."]
+material = SubResource("Material_flipbook")
+position = Vector2(160, 170)
+amount = 10
+texture = ExtResource("1_quadrants")
+lifetime = 2.0
+explosiveness = 1.0
+preprocess = 0.8
+use_fixed_seed = true
+seed = 1234
+fixed_fps = 30
+emission_shape = 1
+emission_sphere_radius = 70.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 10.0
+initial_velocity_max = 30.0
+scale_amount_min = 0.4
+scale_amount_max = 0.6
+anim_speed_min = 1.0
+anim_speed_max = 1.0
+anim_offset_max = 1.0
+
+[node name="Turned" type="Node2D" parent="."]
+position = Vector2(420, 170)
+rotation = 0.6
+scale = Vector2(1.5, 0.8)
+
+[node name="Plume" type="CPUParticles2D" parent="Turned"]
+amount = 12
+texture = ExtResource("2_marker")
+lifetime = 1.5
+preprocess = 1.2
+use_fixed_seed = true
+seed = 4242
+fixed_fps = 30
+direction = Vector2(1, 0)
+spread = 25.0
+gravity = Vector2(0, 40)
+initial_velocity_min = 40.0
+initial_velocity_max = 70.0
+scale_amount_min = 0.4
+scale_amount_max = 0.8
+color_ramp = SubResource("Gradient_fade")
+
+[node name="Colors" type="MultiMeshInstance2D" parent="."]
+position = Vector2(680, 80)
+multimesh = SubResource("MultiMesh_colors")
+texture = ExtResource("2_marker")
+
+[node name="Cells" type="MultiMeshInstance2D" parent="."]
+material = SubResource("Material_strip")
+position = Vector2(680, 200)
+multimesh = SubResource("MultiMesh_flipbook")
+texture = ExtResource("1_quadrants")
+
+[node name="ByInstance" type="MultiMeshInstance2D" parent="."]
+material = SubResource("Material_instance")
+position = Vector2(680, 320)
+multimesh = SubResource("MultiMesh_shader")
+texture = ExtResource("2_marker")
+
+[node name="Skeleton" type="Skeleton2D" parent="."]
+position = Vector2(100, 420)
+
+[node name="Upper" type="Bone2D" parent="Skeleton"]
+rotation = 0.4
+rest = Transform2D(1, 0, 0, 1, 0, 0)
+
+[node name="Lower" type="Bone2D" parent="Skeleton/Upper"]
+position = Vector2(100, 0)
+rotation = -0.9
+scale = Vector2(1.3, 1)
+rest = Transform2D(1, 0, 0, 1, 100, 0)
+
+[node name="Strip" type="Polygon2D" parent="."]
+position = Vector2(100, 420)
+skeleton = NodePath("../Skeleton")
+texture = ExtResource("1_quadrants")
+polygon = PackedVector2Array(0, -30, 100, -30, 200, -30, 200, 30, 100, 30, 0, 30)
+uv = PackedVector2Array(0, 0, 64, 0, 128, 0, 128, 128, 64, 128, 0, 128)
+bones = [NodePath("Upper"), PackedFloat32Array(1, 0.5, 0, 0, 0.5, 1), NodePath("Upper/Lower"), PackedFloat32Array(0, 0.5, 1, 1, 0.5, 0)]
