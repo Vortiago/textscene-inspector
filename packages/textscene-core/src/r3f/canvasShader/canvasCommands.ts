@@ -2,7 +2,13 @@ import * as THREE from 'three';
 import type { Rgba } from '../../godot/math/math';
 import { rect2Intersection, type Rect2 } from '../../godot/math/rect2';
 import { bottomUpV } from '../../godot/math/uv';
-import type { Transform2DColumns } from '../../godot/math/transform2d';
+import {
+  multiplyTransform2DInto,
+  mutableTransform2D,
+  TRANSFORM2D_IDENTITY,
+  type MutableTransform2D,
+  type Transform2DColumns,
+} from '../../godot/math/transform2d';
 import type { Vector2 } from '../../godot/math/vector';
 import {
   CANVAS_CUSTOM_ARRAYS,
@@ -108,7 +114,54 @@ function growItemBox(box: THREE.Box3, command: CanvasShaderCommand): void {
     box.expandByPoint(corner.set(x + w, -(y + h), 0));
     return;
   }
-  for (const { x, y } of command.arrays.points) box.expandByPoint(corner.set(x, -y, 0));
+  const { transform = TRANSFORM2D_IDENTITY } = command;
+  if (command.kind === 'mesh') {
+    for (const point of command.arrays.points) growByPoint(box, transform, point);
+    return;
+  }
+  // The mesh's rect at each instance, as `multimesh_get_aabb` bounds it.
+  const local = pointsBox(command.arrays.points);
+  if (local.isEmpty()) return;
+  const { count, words } = command.instances;
+  const floats = new Float32Array(words.buffer, words.byteOffset, words.length);
+  const stride = floats.length / count;
+  for (let instance = 0; instance < count; instance++) {
+    const placed = instanceTransformInto(instancePlacement, floats, instance * stride);
+    multiplyTransform2DInto(placed, transform, placed);
+    for (const x of [local.min.x, local.max.x])
+      for (const y of [local.min.y, local.max.y]) growByPoint(box, placed, { x, y });
+  }
+}
+
+/** Scratch of one instance's placement, overwritten by the next. */
+const instancePlacement = mutableTransform2D();
+
+/** Grows `box` by `point` of Godot's frame, placed by `transform`, in three's y. */
+function growByPoint(box: THREE.Box3, transform: Transform2DColumns, { x, y }: Vector2): void {
+  const { a, b, c, d, tx, ty } = transform;
+  box.expandByPoint(corner.set(a * x + c * y + tx, 0 - (b * x + d * y + ty), 0));
+}
+
+/** The box of `points` in Godot's frame. */
+function pointsBox(points: readonly Vector2[]): THREE.Box2 {
+  const box = new THREE.Box2();
+  for (const { x, y } of points) box.expandByPoint(new THREE.Vector2(x, y));
+  return box;
+}
+
+/** The `TRANSFORM_2D` rows at `offset` (`mesh_storage.cpp:1927-1934`) as a transform, written into `out`. */
+function instanceTransformInto(
+  out: MutableTransform2D,
+  rows: Float32Array,
+  offset: number
+): MutableTransform2D {
+  out.a = rows[offset]!;
+  out.c = rows[offset + 1]!;
+  out.tx = rows[offset + 3]!;
+  out.b = rows[offset + 4]!;
+  out.d = rows[offset + 5]!;
+  out.ty = rows[offset + 7]!;
+  return out;
 }
 
 /** Each surface white (`polygon_2d.cpp:401`), at the transform its placement gives. */

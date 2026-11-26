@@ -14,6 +14,7 @@ import { useNodeReference } from '../../../resources/reading';
 import { threeMatrixFromTransform2D } from '../../../r3f/node2dTransform';
 import type { CanvasItemMaterialProperties } from '../../../resources/materials/canvasitemmaterial/types';
 import { CanvasMeshBody } from '../../../r3f/canvasMesh/CanvasMeshBody';
+import { CanvasItemGroup } from '../../../r3f/components/CanvasItemGroup';
 import { useCanvasMeshTexture } from '../../../r3f/canvasMesh/useCanvasMeshTexture';
 import type { CanvasSurface } from '../../../r3f/canvasMesh/canvasSurface';
 import { multiMeshCommands, type CanvasShaderCommand } from '../../../r3f/canvasShader/canvasCommands';
@@ -70,7 +71,7 @@ export function CPUParticles2D({ node, children }: NodeComponentProps) {
   return (
     <CanvasMeshBody node={node} props={props} texture={texture} withoutTexture="white" surfaces={surfaces}>
       {/* The emitter's own place in its canvas, which the emission transform samples. */}
-      <group ref={setAnchor} name={`${node.name}_Emitter`} />
+      <CanvasItemGroup ref={setAnchor} name={`${node.name}_Emitter`} />
       {children}
     </CanvasMeshBody>
   );
@@ -122,7 +123,7 @@ function useParticleSurfaces(
   material: CanvasItemMaterialProperties | null
 ): readonly CanvasSurface[] | null {
   const flipbook = useMemo(() => particlesFlipbook(material), [material]);
-  // The normal map then turns with the canvas basis, not the emitter's (`canvas.glsl:708`).
+  // The normal map turns with the canvas basis, not the emitter's (`canvas.glsl:708`).
   const canvasPlacement = useMemo(() => pose && threeMatrixFromTransform2D(pose.placement), [pose]);
   // An unset ViewportTexture reports size 0, so its quads have no area (`viewport.cpp:156-160`).
   const [width, height] = sizeOf(size);

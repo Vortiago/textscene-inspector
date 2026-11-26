@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { withGodotAttributes } from '../../shaders/spatial/meshAttributes';
+import { canvasInstances } from '../../shaders/canvas/canvasMultiMesh';
 import { emulatedPointGeometry } from '../../shaders/template/emulatedPoints';
 import { canvasSurfaceGeometry } from '../canvasMesh/canvasSurface';
 import { canvasMeshGeometry } from '../meshes/canvasMeshGeometry';
@@ -323,5 +324,41 @@ describe('itemBox of one command', () => {
     };
 
     expect(boxOf(empty).isEmpty()).toBe(true);
+  });
+
+  const SQUARE = {
+    primitive: 'triangles' as const,
+    points: [
+      { x: 0, y: 0 },
+      { x: 2, y: 2 },
+    ],
+    colors: [],
+    uvs: [],
+  };
+
+  it("places a mesh's points by its command transform", () => {
+    const moved: CanvasShaderCommand = {
+      kind: 'mesh',
+      arrays: SQUARE,
+      transform: { a: 1, b: 0, c: 0, d: 1, tx: 10, ty: 20 },
+    };
+
+    expect(boxOf(moved)).toEqual(corners([10, -22], [12, -20]));
+  });
+
+  it("takes a multimesh's mesh rect at every instance, then at the command transform", () => {
+    const instance = (tx: number, ty: number) => ({
+      transform: new Float32Array([1, 0, 0, tx, 0, 1, 0, ty]),
+      color: null,
+      customData: null,
+    });
+    const scaled: CanvasShaderCommand = {
+      kind: 'multimesh',
+      arrays: SQUARE,
+      instances: canvasInstances([instance(0, 0), instance(100, 50)]),
+      transform: { a: 2, b: 0, c: 0, d: 2, tx: 1, ty: 0 },
+    };
+
+    expect(boxOf(scaled)).toEqual(corners([1, -104], [205, 0]));
   });
 });
