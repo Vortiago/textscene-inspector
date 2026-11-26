@@ -80,19 +80,14 @@ export async function zoomStageIn(page, notches) {
 }
 
 /** Runs in the page, and resolves once the last notch has landed. */
-function wheelEachFrame({ selector, notches, deltaY }) {
+async function wheelEachFrame({ selector, notches, deltaY }) {
   const target = document.querySelector(selector);
   if (!target) return false;
   const { left, top, width, height } = target.getBoundingClientRect();
   const at = { bubbles: true, cancelable: true, clientX: left + width / 2, clientY: top + height / 2 };
-  return new Promise((resolve) => {
-    let landed = 0;
-    const notch = () => {
-      target.dispatchEvent(new WheelEvent('wheel', { ...at, deltaY }));
-      landed += 1;
-      if (landed < notches) requestAnimationFrame(notch);
-      else resolve(true);
-    };
-    requestAnimationFrame(notch);
-  });
+  for (let notch = 0; notch < notches; notch += 1) {
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    target.dispatchEvent(new WheelEvent('wheel', { ...at, deltaY }));
+  }
+  return true;
 }

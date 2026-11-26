@@ -1,6 +1,7 @@
 import type * as THREE from 'three';
 import type { AccumulationList, PassMesh } from './lightAccumulationPass.js';
 import { listWindow } from './lightListWindow.js';
+import { visibleInTree } from '../visibleInTree.js';
 import type { Rect2 } from '../../godot/math/rect2.js';
 
 /** What the pass draws from besides its targets. */
@@ -13,36 +14,23 @@ export interface LightPassFrame {
   readonly windows: ReadonlyMap<string, Rect2>;
 }
 
-/** A value whose change the numbers cannot show, so the frame that holds it always draws. */
-class Unreadable extends Error {}
-
 /** The numbers of the last drawn frame: a frame that reads the same keeps its buffers (ADR-0095). */
 export class LightPassInputs {
-  /** Written by `keep`, cleared by `forget`. */
+  /** Written by `drawIfChanged` once a draw returns, cleared by `forget`. */
   private keptLists: readonly AccumulationList[] | null = null;
   private kept: number[] = [];
   private read: number[] = [];
-  private readLists: readonly AccumulationList[] | null = null;
 
-  /** Whether `frame` reads as the kept frame. Never while it holds a render target's texture. */
-  matches(frame: LightPassFrame): boolean {
+  /** Runs `draw` unless `frame` reads as the kept frame, and keeps `frame` once `draw` returns. */
+  drawIfChanged(frame: LightPassFrame, draw: () => void): void {
     this.read.length = 0;
-    this.readLists = null;
-    try {
-      readFrame(frame, this.read);
-    } catch (error) {
-      if (!(error instanceof Unreadable)) throw error;
-      this.forget();
-      return false;
-    }
-    this.readLists = frame.lists;
-    return this.keptLists === frame.lists && sameNumbers(this.kept, this.read);
-  }
-
-  /** Keeps the frame `matches` last read, once the pass has drawn it. */
-  keep(): void {
-    if (this.readLists === null) return;
-    this.keptLists = this.readLists;
+    const isReadable = readFrame(frame, this.read);
+    if (isReadable && this.keptLists === frame.lists && sameNumbers(this.kept, this.read)) return;
+    // A draw that throws leaves part of a frame in the buffers, so nothing stays kept.
+    this.forget();
+    draw();
+    if (!isReadable) return;
+    this.keptLists = frame.lists;
     [this.kept, this.read] = [this.read, this.kept];
   }
 
@@ -59,14 +47,21 @@ function sameNumbers(a: readonly number[], b: readonly number[]): boolean {
   return true;
 }
 
-function readFrame(frame: LightPassFrame, out: number[]): void {
+function pushAll(out: number[], numbers: ArrayLike<number>): void {
+  for (let i = 0; i < numbers.length; i += 1) out.push(numbers[i]!);
+}
+
+/** False when the frame holds a value whose change its numbers cannot show. */
+function readFrame(frame: LightPassFrame, out: number[]): boolean {
   const { camera, lists, passMeshes, canvasModulate, resolution, windows } = frame;
   camera.updateWorldMatrix(true, false);
   out.push(resolution.x, resolution.y, canvasModulate.r, canvasModulate.g, canvasModulate.b);
-  out.push(...camera.projectionMatrix.elements, ...camera.matrixWorldInverse.elements);
+  pushAll(out, camera.projectionMatrix.elements);
+  pushAll(out, camera.matrixWorldInverse.elements);
   for (const list of lists) readWindow(listWindow(list.placementIds, windows), out);
   out.push(passMeshes.size);
-  for (const passMesh of passMeshes) readPassMesh(passMesh, out);
+  for (const passMesh of passMeshes) if (!readPassMesh(passMesh, out)) return false;
+  return true;
 }
 
 function readWindow(window: Rect2 | null, out: number[]): void {
@@ -74,63 +69,50 @@ function readWindow(window: Rect2 | null, out: number[]): void {
   else out.push(0);
 }
 
-function readPassMesh({ mesh, ordinal, role }: PassMesh, out: number[]): void {
+function readPassMesh({ mesh, ordinal, role }: PassMesh, out: number[]): boolean {
   mesh.updateWorldMatrix(true, false);
-  out.push(mesh.id, ordinal, role === 'lit' ? 1 : 0, areAncestorsShown(mesh) ? 1 : 0, mesh.renderOrder);
-  out.push(...mesh.matrixWorld.elements);
+  // The pass sets the mesh's own flag each draw, so only its ancestors' count.
+  const isShown = mesh.parent === null || visibleInTree(mesh.parent);
+  out.push(mesh.id, ordinal, role === 'lit' ? 1 : 0, isShown ? 1 : 0, mesh.renderOrder);
+  pushAll(out, mesh.matrixWorld.elements);
   const { geometry, material } = mesh as THREE.Object3D & {
     geometry?: THREE.BufferGeometry;
     material?: THREE.Material;
   };
   if (geometry) readGeometry(geometry, out);
-  if (material) readMaterial(material, out);
-}
-
-/** The pass sets the mesh's own flag each draw, but the renderer skips it under a hidden ancestor too. */
-function areAncestorsShown(mesh: THREE.Object3D): boolean {
-  for (let parent = mesh.parent; parent; parent = parent.parent) if (!parent.visible) return false;
-  return true;
+  return material ? readMaterial(material, out) : true;
 }
 
 function readGeometry(geometry: THREE.BufferGeometry, out: number[]): void {
   out.push(geometry.id, geometry.index?.version ?? -1);
-  for (const attribute of Object.values(geometry.attributes))
-    out.push((attribute as THREE.BufferAttribute).version);
+  for (const name in geometry.attributes) {
+    const attribute = geometry.attributes[name]!;
+    out.push('isInterleavedBufferAttribute' in attribute ? attribute.data.version : attribute.version);
+  }
 }
 
-function readMaterial(material: THREE.Material, out: number[]): void {
+function readMaterial(material: THREE.Material, out: number[]): boolean {
   out.push(material.id, material.version, material.blending, material.blendEquation, material.blendSrc);
   out.push(material.blendDst, material.blendEquationAlpha ?? -1, material.blendSrcAlpha ?? -1);
   out.push(material.blendDstAlpha ?? -1);
   const { uniforms } = material as THREE.Material & { uniforms?: Record<string, THREE.IUniform> };
-  if (uniforms) for (const uniform of Object.values(uniforms)) readValue(uniform.value, out);
+  if (!uniforms) return true;
+  for (const name in uniforms) if (!readValue(uniforms[name]!.value, out)) return false;
+  return true;
 }
 
-function readValue(value: unknown, out: number[]): void {
+/** A refill bumps a texture's version, but a render target's texels change with none. */
+function readValue(value: unknown, out: number[]): boolean {
   if (typeof value === 'number') out.push(value);
   else if (typeof value === 'boolean') out.push(value ? 1 : 0);
   else if (value === null || value === undefined) out.push(NaN);
-  else if (Array.isArray(value)) for (const item of value) readValue(item, out);
-  else if (isTexture(value)) readTexture(value, out);
-  else if (hasElements(value)) out.push(...value.elements);
-  else if (hasToArray(value)) out.push(...value.toArray());
-  else throw new Unreadable();
-}
-
-/** A refill bumps the version, but a render target's texels change with none. */
-function readTexture(texture: THREE.Texture, out: number[]): void {
-  if (texture.isRenderTargetTexture) throw new Unreadable();
-  out.push(texture.id, texture.version);
-}
-
-function isTexture(value: object): value is THREE.Texture {
-  return (value as THREE.Texture).isTexture === true;
-}
-
-function hasElements(value: object): value is { elements: Iterable<number> } {
-  return 'elements' in value;
-}
-
-function hasToArray(value: object): value is { toArray(): number[] } {
-  return typeof (value as { toArray?: unknown }).toArray === 'function';
+  else if (Array.isArray(value)) return value.every((item) => readValue(item, out));
+  else if ((value as THREE.Texture).isTexture) {
+    const texture = value as THREE.Texture;
+    if (texture.isRenderTargetTexture) return false;
+    out.push(texture.id, texture.version);
+  } else if (typeof (value as { toArray?: unknown }).toArray === 'function') {
+    pushAll(out, (value as { toArray(): ArrayLike<number> }).toArray());
+  } else return false;
+  return true;
 }

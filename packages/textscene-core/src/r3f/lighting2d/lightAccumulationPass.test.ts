@@ -275,9 +275,9 @@ describe('renderLightLists on a frame whose inputs match the last drawn frame', 
 
   /** Draws one frame, then a second after `change`, and answers the second frame's draws. */
   function secondFrameDraws(
-    change: (frame: ReturnType<typeof run>, light: ReturnType<typeof lightMesh>) => void
+    change: (frame: ReturnType<typeof run>, light: ReturnType<typeof lightMesh>) => void,
+    light = lightMesh('a', 0)
   ) {
-    const light = lightMesh('a', 0);
     const frame = run([list([SHADOWED(0)])], [light]);
     frame.run();
     const firstFrameDraws = frame.draws.length;
@@ -357,18 +357,18 @@ describe('renderLightLists on a frame whose inputs match the last drawn frame', 
     expect(secondFrameDraws(({ pass }) => (pass.lists = [list([SHADOWED(0)])]))).toBe(1);
   });
 
-  it('draws every frame while a light reads a render target, whose texels it cannot see change', () => {
+  it('draws again when a light starts to read a render target', () => {
     expect(
       secondFrameDraws((_, { mesh }) => {
         mesh.material.uniforms.uCookie!.value = new THREE.WebGLRenderTarget(1, 1).texture;
       })
     ).toBe(1);
+  });
+
+  it('draws every frame while a light reads a render target, whose texels change with no version', () => {
     const light = lightMesh('a', 0);
     light.mesh.material.uniforms.uCookie!.value = new THREE.WebGLRenderTarget(1, 1).texture;
-    const frame = run([list([SHADOWED(0)])], [light]);
-    frame.run();
-    frame.run();
-    expect(frame.draws).toHaveLength(2);
+    expect(secondFrameDraws(() => {}, light)).toBe(1);
   });
 
   it('draws again after a frame whose draw threw, as the buffers hold part of it', () => {

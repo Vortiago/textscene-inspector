@@ -158,35 +158,32 @@ export function renderLightLists({
   // `finally`, as in the SubViewport pass: a throw out of `gl.render` (a link failure, a lost
   // context) would leave the renderer on an accumulation buffer with most layers masked, and
   // r3f's main render would draw the scene into it: a black canvas, not one broken light.
-  beginStep(gl, '2D lights');
-  if (inputs.matches({ camera, lists, passMeshes, canvasModulate, resolution, windows })) {
-    endStep(gl, '2D lights');
-    return;
-  }
-  try {
-    camera.layers.set(LIGHT_PASS_LAYER);
-    for (const list of lists) {
-      fitListTargets(list, windows, camera, resolution);
-      if (list.summed) {
-        showListMeshes(passMeshes, list);
-        // An ordinary buffer starts from the canvas modulate. A list only Light Only items read
-        // keeps that buffer in attachment 0, which starts from white.
-        const { plain } = list.summed.attachments;
-        render(
-          list.summed.target,
-          plain >= 0 ? [canvasModulate.r, canvasModulate.g, canvasModulate.b] : WHITE
-        );
+  const draw = () => {
+    try {
+      camera.layers.set(LIGHT_PASS_LAYER);
+      for (const list of lists) {
+        fitListTargets(list, windows, camera, resolution);
+        if (list.summed) {
+          showListMeshes(passMeshes, list);
+          // A list only Light Only items read keeps their buffer in attachment 0, seeded white.
+          const { plain } = list.summed.attachments;
+          render(
+            list.summed.target,
+            plain >= 0 ? [canvasModulate.r, canvasModulate.g, canvasModulate.b] : WHITE
+          );
+        }
+        if (list.apart) renderLightsApart(list.apart, passMeshes, render);
       }
-      if (list.apart) renderLightsApart(list.apart, passMeshes, render);
+    } finally {
+      gl.setRenderTarget(previousTarget);
+      camera.layers.mask = previousMask;
+      scene.matrixWorldAutoUpdate = previousAutoUpdate;
     }
-    inputs.keep();
-  } catch (error) {
-    inputs.forget();
-    throw error;
+  };
+  beginStep(gl, '2D lights');
+  try {
+    inputs.drawIfChanged({ camera, lists, passMeshes, canvasModulate, resolution, windows }, draw);
   } finally {
-    gl.setRenderTarget(previousTarget);
-    camera.layers.mask = previousMask;
-    scene.matrixWorldAutoUpdate = previousAutoUpdate;
     endStep(gl, '2D lights');
   }
 }
