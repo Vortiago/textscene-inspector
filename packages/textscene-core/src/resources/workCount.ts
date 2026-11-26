@@ -1,25 +1,19 @@
-/**
- * A page-wide count of work in flight, with its subscribers. A preview status reads it to show that
- * something is still loading, and a capture harness waits for that status to detach.
- */
 import { createExternalStore } from '../utils/externalStore.js';
 
 export interface WorkCount {
   /** Counts one piece of work until the returned end runs. The end is idempotent. */
   begin(): () => void;
   pending(): number;
-  /** Calls `onChange` a microtask after each task that changes the count. Returns the unsubscribe. */
+  /** Calls `onChange` after a change of the count, as the factory states. Returns the unsubscribe. */
   subscribe(onChange: () => void): () => void;
 }
 
 /** @canonical A page-wide count of work in flight */
 export function createWorkCount(): WorkCount {
   const notices = createExternalStore(0);
-  let count = 0;
   let isNoticeQueued = false;
   // Work starts inside a React render, so the subscribers hear a microtask later, never mid-render.
-  const change = (by: number) => {
-    count += by;
+  const notify = () => {
     if (isNoticeQueued) return;
     isNoticeQueued = true;
     queueMicrotask(() => {
@@ -27,17 +21,38 @@ export function createWorkCount(): WorkCount {
       notices.set(notices.get() + 1);
     });
   };
+  return countNotifying(notify, notices.subscribe);
+}
+
+/** Subscribers hear each change at once, so a load that starts and ends in one task is heard. */
+export function createImmediateWorkCount(): WorkCount {
+  const listeners = new Set<() => void>();
+  const notify = () => {
+    for (const listener of listeners) listener();
+  };
+  return countNotifying(notify, (listener) => {
+    listeners.add(listener);
+    return () => listeners.delete(listener);
+  });
+}
+
+function countNotifying(notify: () => void, subscribe: WorkCount['subscribe']): WorkCount {
+  let count = 0;
+  const change = (by: number) => {
+    count += by;
+    notify();
+  };
   return {
     begin() {
       change(1);
-      let ended = false;
+      let isEnded = false;
       return () => {
-        if (ended) return;
-        ended = true;
+        if (isEnded) return;
+        isEnded = true;
         change(-1);
       };
     },
     pending: () => count,
-    subscribe: notices.subscribe,
+    subscribe,
   };
 }

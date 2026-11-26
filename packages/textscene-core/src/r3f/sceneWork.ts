@@ -1,4 +1,4 @@
-import type { PendingLoads } from '../resources/pendingLoads.js';
+import type { WorkCount } from '../resources/workCount.js';
 import { textureWork } from '../resources/textures/textureWork.js';
 import { fontWork } from './controls/native/text/settledChannel.js';
 
@@ -10,7 +10,7 @@ export interface PendingSceneWork {
 
 /** Fills `into` when given, so a per-frame caller allocates nothing. */
 export function pendingSceneWork(
-  loads: PendingLoads | null,
+  loads: WorkCount | null,
   into: PendingSceneWork = { resources: 0, textures: 0, fonts: 0 }
 ): PendingSceneWork {
   into.resources = loads?.pending() ?? 0;

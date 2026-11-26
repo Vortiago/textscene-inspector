@@ -5,7 +5,7 @@ import type { Scene } from '../../scene/openScene.js';
 import * as logger from '../../logger.js';
 import { subscribeToNothing } from '../../utils/subscribeToNothing.js';
 import { hasPendingWork, pendingSceneWork } from '../sceneWork.js';
-import type { PendingLoads } from '../../resources/pendingLoads.js';
+import type { WorkCount } from '../../resources/workCount.js';
 import { textureWork } from '../../resources/textures/textureWork.js';
 import { fontWork } from '../controls/native/text/settledChannel.js';
 import { useGameStartFacts } from '../gameView/gameStartFacts.js';
@@ -86,7 +86,7 @@ export function useViewReport(): (isFullSize: boolean, awaitedCamera?: string | 
 function useReportStartedWork(
   store: ViewStatusStore | null,
   isAttached: { readonly current: boolean },
-  loads: PendingLoads | null,
+  loads: WorkCount | null,
   frame: DrawnFrame
 ): void {
   useEffect(() => {

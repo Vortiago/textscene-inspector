@@ -763,7 +763,7 @@ describe('TscnParserCore editable instances', () => {
 describe('the file values and heading order of a scan', () => {
   const content =
     '[gd_scene format=3]\n\n[node name="Root" instance=ExtResource("1")]\n\n' +
-    '[connection signal="ready" from="." to="." method="go" binds=[1]]\n';
+    '[connection signal="ready" from="." to="." method="go" binds=[Resource("res://a.tres")]]\n';
 
   it('records the first heading the loader refuses for its place, with its line', () => {
     const late =
@@ -800,7 +800,7 @@ describe('the file values and heading order of a scan', () => {
         isOpeningTag: true,
       },
       {
-        text: '[1]',
+        text: '[Resource("res://a.tres")]',
         line: 5,
         place: 'binds',
         subResourcesBefore: 0,
@@ -813,7 +813,7 @@ describe('the file values and heading order of a scan', () => {
   it('places a node body value, and the instance of a heading after a node, in the node', () => {
     const { scene } = new TscnParserCore().parse(
       `[node name="Root" type="Node2D"]
-visible = false
+texture = ExtResource("2")
 
 [node name="A" parent="." instance=ExtResource("1")]
 `,
@@ -821,7 +821,7 @@ visible = false
     );
 
     expect(scene.fileValues?.map(({ text, place }) => [text, place])).toEqual([
-      ['false', 'node'],
+      ['ExtResource("2")', 'node'],
       ['ExtResource("1")', 'node'],
     ]);
   });
@@ -829,13 +829,13 @@ visible = false
   it('counts the [sub_resource] sections before a value, its own section inside one', () => {
     const { scene } = new TscnParserCore().parse(
       `[sub_resource type="Resource" id="a"]
-x = 1
+x = SubResource("b")
 
 [sub_resource type="Resource" id="b"]
-x = 2
+x = SubResource("a")
 
 [node name="Root" type="Node2D"]
-visible = false
+texture = SubResource("a")
 `,
       () => null
     );
@@ -843,18 +843,27 @@ visible = false
     expect(scene.fileValues?.map(({ subResourcesBefore }) => subResourcesBefore)).toEqual([0, 1, 2]);
   });
 
+  it('records no value that names no resource, as it holds no read', () => {
+    const { scene } = new TscnParserCore().parse(
+      '[node name="Root" type="Node2D"]\nvisible = false\n',
+      () => null
+    );
+
+    expect(scene).not.toHaveProperty('fileValues');
+  });
+
   it('gives a value over several lines the line it starts on', () => {
     const { scene } = new TscnParserCore().parse(
       `[node name="Root" type="Node2D"]
 metadata/x = [1,
-2]
+Resource("res://a.tres")]
 `,
       () => null
     );
 
     expect(scene.fileValues).toEqual([
       {
-        text: '[1,\n2]',
+        text: '[1,\nResource("res://a.tres")]',
         line: 2,
         place: 'node',
         subResourcesBefore: 0,

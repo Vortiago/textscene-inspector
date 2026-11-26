@@ -3,7 +3,7 @@ import type * as THREE from 'three';
 import type { ResourceEventBus } from './ResourceEventBus';
 import { cloneWithMaterials, disposeClonedMaterials } from './processing/glbProcessing';
 import { usePendingLoads, useResourceLoader } from './ResourceLoaderContext';
-import type { PendingLoads } from './pendingLoads';
+import type { WorkCount } from './workCount';
 import { resourceSliceRegistry, type ResourceBusType } from './sliceRegistration';
 
 /**
@@ -181,7 +181,7 @@ export function useResource<T>(path: string, type: ResourceBusType): ResourceRes
 }
 
 // Counted from the commit that shows it pending, released after the effects of the content that ends it.
-function useLoaderPending(pending: PendingLoads | null, pendingPath: string | null): void {
+function useLoaderPending(pending: WorkCount | null, pendingPath: string | null): void {
   const [releases] = useState<Array<() => void>>(() => []);
   useLayoutEffect(() => {
     if (!pending || !pendingPath) return undefined;

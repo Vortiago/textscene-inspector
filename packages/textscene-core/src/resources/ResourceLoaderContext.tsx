@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
 import type { ResourceLoader } from './ResourceLoader';
-import { createPendingLoads, type PendingLoads } from './pendingLoads';
+import { createImmediateWorkCount, type WorkCount } from './workCount';
 
 /**
  * Frames a load's consumers take to commit after the loader settles. They commit within a render
@@ -17,12 +17,12 @@ export interface ResourceLoaderProviderProps {
 }
 
 /** Null outside a provider, where nothing counts. */
-const PendingLoadsContext = createContext<PendingLoads | null>(null);
+const PendingLoadsContext = createContext<WorkCount | null>(null);
 PendingLoadsContext.displayName = 'PendingLoadsContext';
 
 /** Each provider counts its own consumers' loads, so two views on one loader do not wait on each other. */
 export function ResourceLoaderProvider({ loader, children }: ResourceLoaderProviderProps) {
-  const [pending] = useState(createPendingLoads);
+  const [pending] = useState(createImmediateWorkCount);
   return (
     <ResourceLoaderContext.Provider value={loader}>
       <PendingLoadsContext.Provider value={pending}>{children}</PendingLoadsContext.Provider>
@@ -36,6 +36,6 @@ export function useResourceLoader(): ResourceLoader | null {
 }
 
 /** The loads the nearest provider's consumers wait on. */
-export function usePendingLoads(): PendingLoads | null {
+export function usePendingLoads(): WorkCount | null {
   return useContext(PendingLoadsContext);
 }

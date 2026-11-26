@@ -194,7 +194,8 @@ export class TscnParserCore {
 
     // The value as written, not as stored: the loader parses the text the file holds.
     const addFileValue = (value: Omit<FileValue, 'subResourcesBefore' | 'extResourcesBefore'>) => {
-      if (headings.isStopped()) return;
+      // Every read names `Resource`, so a value without it holds no read and costs no object.
+      if (headings.isStopped() || !value.text.includes('Resource')) return;
       const before = {
         subResourcesBefore: internalResources.length,
         extResourcesBefore: externalResources.length,

@@ -33,7 +33,7 @@ export function trackedMemoisedImport(memoise: typeof memoisedImport): typeof me
 }
 
 /**
- * Waits until every tracked import has landed or failed. `settlePendingLoads` waits on a view count.
+ * Waits until each tracked import lands or fails. Throws if one still loads after {@link SETTLE_TIMEOUT_MS}.
  *
  * @canonical In tests, every lazy chunk import a test file started
  */

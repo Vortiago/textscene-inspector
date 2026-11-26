@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { createPendingLoads } from './pendingLoads';
+import { createImmediateWorkCount } from './workCount';
 
-describe('createPendingLoads', () => {
+describe('createImmediateWorkCount', () => {
   it('starts at zero', () => {
-    expect(createPendingLoads().pending()).toBe(0);
+    expect(createImmediateWorkCount().pending()).toBe(0);
   });
 
   it('reaches zero only when the last load ends', () => {
-    const loads = createPendingLoads();
+    const loads = createImmediateWorkCount();
     const endA = loads.begin();
     const endB = loads.begin();
     expect(loads.pending()).toBe(2);
@@ -18,7 +18,7 @@ describe('createPendingLoads', () => {
   });
 
   it('ignores a second end, so one load cannot drive the count negative', () => {
-    const loads = createPendingLoads();
+    const loads = createImmediateWorkCount();
     const end = loads.begin();
     end();
     end();
@@ -26,7 +26,7 @@ describe('createPendingLoads', () => {
   });
 
   it('notifies a subscriber on begin and on end', () => {
-    const loads = createPendingLoads();
+    const loads = createImmediateWorkCount();
     const seen: number[] = [];
     loads.subscribe(() => seen.push(loads.pending()));
     loads.begin()();
@@ -34,7 +34,7 @@ describe('createPendingLoads', () => {
   });
 
   it('stops notifying after unsubscribe', () => {
-    const loads = createPendingLoads();
+    const loads = createImmediateWorkCount();
     let calls = 0;
     const unsubscribe = loads.subscribe(() => {
       calls += 1;
