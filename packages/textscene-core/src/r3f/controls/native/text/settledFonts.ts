@@ -5,7 +5,7 @@ import { perObject } from '../../../../utils/perObject';
 import type { FontMetrics } from './fontMetrics';
 import type { RegisteredCanvasFontMetrics } from './runtimeFontMetrics';
 import { loadSceneFontMetrics } from './sceneFontLoad';
-import { createSettledPeek } from './settledChannel';
+import { createSettledPeek } from './settledPeek';
 import type { SfntOutlines } from './sfntOutlines';
 
 /** A face whose bytes FreeType cannot open: Godot draws no text in it (`text_server_adv.cpp:1466-1476`). */

@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { describePendingWork, hasPendingWork, isSamePendingWork, totalPendingWork } from './sceneWork';
+import { createViewWork } from '../resources/viewWork';
+import {
+  describePendingWork,
+  hasPendingWork,
+  isSamePendingWork,
+  isViewWorking,
+  subscribeSceneWork,
+  totalPendingWork,
+} from './sceneWork';
 
 const NO_WORK = { resources: 0, textures: 0, fonts: 0 };
 
@@ -27,5 +35,51 @@ describe('pending scene work', () => {
 
   it('describes no work as an empty text', () => {
     expect(describePendingWork(NO_WORK)).toBe('');
+  });
+});
+
+describe('the work of a view', () => {
+  it('is working while any kind of its work is in flight', () => {
+    const work = createViewWork();
+    const endWork = work.textures.begin();
+    expect(isViewWorking(work)).toBe(true);
+
+    endWork();
+
+    expect(isViewWorking(work)).toBe(false);
+  });
+
+  it('is never working outside a view (error case)', () => {
+    expect(isViewWorking(null)).toBe(false);
+  });
+
+  it('tells a subscriber of a change of each kind of work', async () => {
+    const work = createViewWork();
+    const heard: string[] = [];
+    subscribeSceneWork(work, () => heard.push('change'));
+    work.resources.begin();
+    work.textures.begin();
+    work.fonts.begin();
+    await Promise.resolve();
+
+    expect(heard).toHaveLength(3);
+  });
+
+  it('tells a subscriber nothing once it unsubscribes', async () => {
+    const work = createViewWork();
+    const heard: string[] = [];
+    subscribeSceneWork(work, () => heard.push('change'))();
+    work.resources.begin();
+    work.fonts.begin();
+    await Promise.resolve();
+
+    expect(heard).toEqual([]);
+  });
+
+  it('counts no work of another view', () => {
+    const working = createViewWork();
+    working.fonts.begin();
+
+    expect(isViewWorking(createViewWork())).toBe(false);
   });
 });
