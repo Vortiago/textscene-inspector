@@ -63,6 +63,7 @@ function shadowOf(light: THREE.DirectionalLight): DirectionalShadow | null {
   if (!sun || !declaration) return null;
   const { shadow } = sun;
   const slots = shadow._cascadeData;
+  const zRanges = shadow.zRanges.toArray();
   return {
     opacity: shadow.intensity,
     softShadowScale: declaration.filterRadius,
@@ -72,9 +73,9 @@ function shadowOf(light: THREE.DirectionalLight): DirectionalShadow | null {
     splitEnds: slots.map((slot) => slot.x),
     depthBiases: shadow.depthBiases.toArray(),
     normalBiases: slots.map((slot) => slot.z),
-    transmittanceBiases: shadow.zRanges.toArray().map((zRange) => zRange * declaration.transmittanceBias),
+    transmittanceBiases: zRanges.map((zRange) => zRange * declaration.transmittanceBias),
     rangeBegins: shadow.godotRangeBegins.toArray(),
-    zRanges: shadow.zRanges.toArray(),
+    zRanges,
     atlasShare: {
       rect: shadow.atlasRect,
       splitCount: shadow.splitCount,

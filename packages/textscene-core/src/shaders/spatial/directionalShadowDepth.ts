@@ -34,11 +34,15 @@ NO_COLOUR.needsUpdate = true;
 interface AtlasLayout {
   readonly colour: TextureNode;
   /** Columns and rows of the grid the lights' rectangles cut the atlas into (`light_storage.cpp:2577`). */
-  readonly grid: { value: THREE.Vector2 };
-  /** `AtlasCells.splitCounts`. */
-  readonly splitCounts: { array: number[] };
-  /** `AtlasCells.depthScales`. */
-  readonly depthScales: { array: number[] };
+  readonly grid: Vec2 & { value: THREE.Vector2 };
+  readonly splitCounts: FloatArray;
+  readonly depthScales: FloatArray;
+}
+
+/** A TSL `uniformArray` of floats, which three's types do not give. */
+interface FloatArray {
+  readonly array: number[];
+  element(index: Node): Float;
 }
 
 /** Written only by `directionalShadowAtlasNode`, once for each program's atlas node. */
@@ -50,7 +54,7 @@ function newLayout(): AtlasLayout {
   readAsStored(colour);
   return {
     colour,
-    grid: TSL.uniform(new THREE.Vector2(1, 1)) as unknown as { value: THREE.Vector2 },
+    grid: TSL.uniform(new THREE.Vector2(1, 1)) as unknown as AtlasLayout['grid'],
     splitCounts: TSL.uniformArray(new Array<number>(MAX_DIRECTIONAL_LIGHTS).fill(0), 'float') as never,
     depthScales: TSL.uniformArray(
       new Array<number>(MAX_DIRECTIONAL_LIGHTS * DIRECTIONAL_SHADOW_MAX_SPLITS).fill(1),
@@ -70,15 +74,14 @@ function splitInShare(local: Vec2, splitCount: Float): Float {
 }
 
 /** The depth scale of the split whose rectangle holds `uv`. */
-function depthScaleAt(layout: AtlasLayout, uv: Vec2): Float {
-  const grid = layout.grid as unknown as Vec2;
+function depthScaleAt({ grid, splitCounts, depthScales }: AtlasLayout, uv: Vec2): Float {
   const position = TSL.clamp(uv, 0, 1).mul(grid) as unknown as Vec2;
   const cell = TSL.min(TSL.floor(position), grid.sub(1)) as unknown as Vec2;
   const share = TSL.int(cell.y.mul(grid.x).add(cell.x));
-  const splitCount = (layout.splitCounts as unknown as { element(index: Node): Float }).element(share);
+  const splitCount = splitCounts.element(share);
   const split = splitInShare(position.sub(cell) as unknown as Vec2, splitCount);
   const index = share.mul(DIRECTIONAL_SHADOW_MAX_SPLITS).add(TSL.int(split));
-  return (layout.depthScales as unknown as { element(index: Node): Float }).element(index);
+  return depthScales.element(index);
 }
 
 function storedDepthAt(colour: TextureNode, texel: Node): Float {
