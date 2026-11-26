@@ -4,6 +4,7 @@ import { type CanvasLightRow } from '../../shaders/canvas/canvasLights';
 import { DEFAULT_LIGHT_CULL_KEY } from '../lighting2d/lightCullKey';
 import type { CanvasLightDeclaration } from '../lighting2d/itemLightList';
 import type { CanvasLightRows, LightRowWriter } from '../lighting2d/lightRows';
+import { markCanvasFrame } from '../canvasFrame';
 import { canvasLightsOf } from './canvasFrameLights';
 
 const gl = {
@@ -45,6 +46,18 @@ function rowsOf(writers: Record<number, LightRowWriter>): CanvasLightRows {
 
 const drawn = (frameId: number) => ({ frameId, object: new THREE.Object3D(), camera });
 
+function drawnIn(canvas: THREE.Object3D, frameId: number) {
+  const object = new THREE.Object3D();
+  canvas.add(object);
+  return { frameId, object, camera };
+}
+
+function canvasFrame(): THREE.Object3D {
+  const frame = new THREE.Object3D();
+  markCanvasFrame(frame);
+  return frame;
+}
+
 /** `sizeof(LightUniform)` in 32-bit words (`renderer_canvas_render_rd.h:443-457`). */
 const ROW_WORDS = 32;
 
@@ -75,6 +88,16 @@ describe('canvasLightsOf', () => {
     canvasLightsOf(gl, drawn(1), rows, 0);
 
     expect(writer).toHaveBeenCalledTimes(2);
+  });
+
+  it('writes the rows for each canvas of one layer number in one render', () => {
+    const writer = vi.fn(() => rowOf(0.5));
+    const rows = rowsOf({ 0: writer, 1: writer });
+
+    canvasLightsOf(gl, drawnIn(canvasFrame(), 1), rows, 0);
+    canvasLightsOf(gl, drawnIn(canvasFrame(), 1), rows, 0);
+
+    expect(writer).toHaveBeenCalledTimes(4);
   });
 
   it('writes the rows again for the next render', () => {

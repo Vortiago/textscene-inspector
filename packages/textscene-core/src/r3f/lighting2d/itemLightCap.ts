@@ -6,8 +6,7 @@
 
 import * as THREE from 'three';
 import { computeWorldBoundingBox } from '../bounds.js';
-import { MAX_LIGHTS_PER_RENDER } from '../../godot/rendering/rendering.js';
-import { MAX_POSITIONAL_LIGHTS_PER_ITEM } from '../../godot/rendering/rendering.js';
+import { MAX_LIGHTS_PER_RENDER, MAX_POSITIONAL_LIGHTS_PER_ITEM } from '../../godot/rendering/rendering.js';
 import { reachesCanvasLayer } from './lightCullKey.js';
 import {
   directionalListOrder,

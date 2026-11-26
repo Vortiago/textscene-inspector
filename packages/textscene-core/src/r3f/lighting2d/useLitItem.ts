@@ -137,8 +137,6 @@ export interface LitItem {
   readonly lightMode: CanvasItemMaterialProperties['lightMode'];
   /** Undefined while no light reaches the item. */
   readonly list: CanvasLightList | undefined;
-  /** Whether a light on the canvas reaches the placement, whether or not an item reads its list. */
-  readonly isReachedByLight: boolean;
   /** What a template draw of the item reads of its lights. */
   readonly template: ItemTemplateLighting;
   readonly plain: CanvasItemLightingUniforms;
@@ -217,8 +215,8 @@ export function useLitItem({ material, lightMask = 1, zFinal }: LitItemOptions):
   const { isLinear: isLinearCanvas } = canvasSpace;
   const plainProps = useMemo(() => canvasItemLightingProps(bound, isLinearCanvas), [bound, isLinearCanvas]);
   return useMemo(
-    () => ({ placement, lightMode, list, isReachedByLight, template, plain: bound, plainProps, geometryRef }),
-    [placement, lightMode, list, isReachedByLight, template, bound, plainProps]
+    () => ({ placement, lightMode, list, template, plain: bound, plainProps, geometryRef }),
+    [placement, lightMode, list, template, bound, plainProps]
   );
 }
 

@@ -350,7 +350,7 @@ describe('useLitSurface under the per-item cap', () => {
   });
 });
 
-describe('useLitItem isReachedByLight', () => {
+describe('useLitItem template isLit', () => {
   /** A canvas with `light` on it and no list, as before any item at the placement reads one. */
   function canvasWith(light: CanvasLightDeclaration) {
     const value: CanvasLighting2D = { ...INERT_CANVAS_LIGHTING, lights: new Map([[0, light]]) };
@@ -373,7 +373,7 @@ describe('useLitItem isReachedByLight', () => {
       wrapper: canvasWith(LIGHT),
     });
 
-    expect([result.current.list, result.current.isReachedByLight]).toEqual([undefined, true]);
+    expect([result.current.list, result.current.template.isLit]).toEqual([undefined, true]);
   });
 
   it("is false for a light whose item cull mask misses the item's light_mask", () => {
@@ -381,6 +381,6 @@ describe('useLitItem isReachedByLight', () => {
       wrapper: canvasWith(LIGHT),
     });
 
-    expect(result.current.isReachedByLight).toBe(false);
+    expect(result.current.template.isLit).toBe(false);
   });
 });
