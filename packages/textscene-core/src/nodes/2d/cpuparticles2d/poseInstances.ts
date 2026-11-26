@@ -7,10 +7,7 @@ import * as THREE from 'three';
 import type { MultiMeshInstance } from '../../../resources/meshes/multimesh';
 import type { RenderedParticle } from './simulate';
 
-/**
- * Each particle as the instance `_update_internal` writes (`cpu_particles_2d.cpp:1212-1220`): the
- * 2D buffer row of its Transform2D, its colour as stored, and its `custom`.
- */
+/** Each particle as the instance `_update_internal` writes (`cpu_particles_2d.cpp:1212-1220`). */
 export function poseInstances(pose: readonly RenderedParticle[]): MultiMeshInstance[] {
   return pose.map(({ transform: { a, b, c, d, tx, ty }, color, custom }) => ({
     transform: new Float32Array([a, c, 0, tx, b, d, 0, ty]),

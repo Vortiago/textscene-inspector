@@ -107,11 +107,7 @@ export interface RenderedParticle {
   transform: Transform2DColumns;
   /** Godot's `p.color`: sRGB, alpha included, curve, ramp and hue applied. */
   color: Rgba;
-  /**
-   * Godot's `p.custom`, reaching the canvas shader as `INSTANCE_CUSTOM`: y the lifetime phase, z
-   * `anim_offset + age × anim_speed`, w the lifetime ratio. A `CanvasItemMaterial` with
-   * `particles_animation` turns z into a flipbook cell index.
-   */
+  /** Godot's `p.custom`, read as `INSTANCE_CUSTOM`: y the phase, z the flipbook frame, w the life ratio. */
   custom: readonly [number, number, number, number];
   /** `p.time`, in seconds. The `draw_order = Lifetime` sort key. */
   age: number;
