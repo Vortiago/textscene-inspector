@@ -1,6 +1,14 @@
-import { describe, expect, it, vi } from 'vitest';
-import { bindCanvasPickListeners } from './useCanvasPickListeners';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { renderHook } from '@testing-library/react';
+import { useCanvasPickListeners } from './useCanvasPickListeners';
 import type { ViewportPointerHandlers } from './useViewportSelection';
+
+const canvas = document.createElement('canvas');
+
+vi.mock('@react-three/fiber', () => ({
+  useThree: (select: (state: { gl: { domElement: HTMLCanvasElement } }) => unknown) =>
+    select({ gl: { domElement: canvas } }),
+}));
 
 function spyHandlers(): ViewportPointerHandlers {
   return {
@@ -14,38 +22,37 @@ function spyHandlers(): ViewportPointerHandlers {
 
 const pointer = (type: string) => new Event(type);
 
-describe('bindCanvasPickListeners', () => {
+describe('useCanvasPickListeners', () => {
+  afterEach(() => vi.clearAllMocks());
+
   it('hears the press and the click on the canvas', () => {
-    const canvas = document.createElement('canvas');
     const handlers = spyHandlers();
-    const unbind = bindCanvasPickListeners(canvas, handlers);
+    const { unmount } = renderHook(() => useCanvasPickListeners(handlers));
 
     canvas.dispatchEvent(pointer('pointerdown'));
     canvas.dispatchEvent(pointer('click'));
-    unbind();
+    unmount();
 
     expect(handlers.onCanvasPointerDown).toHaveBeenCalledOnce();
     expect(handlers.onCanvasClick).toHaveBeenCalledOnce();
   });
 
   it('hears the release, the cancel and the move on the window, off the canvas too', () => {
-    const canvas = document.createElement('canvas');
     const handlers = spyHandlers();
-    const unbind = bindCanvasPickListeners(canvas, handlers);
+    const { unmount } = renderHook(() => useCanvasPickListeners(handlers));
 
     window.dispatchEvent(pointer('pointerup'));
     window.dispatchEvent(pointer('pointercancel'));
     window.dispatchEvent(pointer('pointermove'));
-    unbind();
+    unmount();
 
     expect(handlers.onWindowPointerEnd).toHaveBeenCalledTimes(2);
     expect(handlers.onWindowPointerMove).toHaveBeenCalledOnce();
   });
 
-  it('hears nothing once the remover runs', () => {
-    const canvas = document.createElement('canvas');
+  it('hears nothing once unmounted', () => {
     const handlers = spyHandlers();
-    bindCanvasPickListeners(canvas, handlers)();
+    renderHook(() => useCanvasPickListeners(handlers)).unmount();
 
     canvas.dispatchEvent(pointer('pointerdown'));
     window.dispatchEvent(pointer('pointerup'));
@@ -54,5 +61,13 @@ describe('bindCanvasPickListeners', () => {
     expect(handlers.onCanvasPointerDown).not.toHaveBeenCalled();
     expect(handlers.onWindowPointerEnd).not.toHaveBeenCalled();
     expect(handlers.onWindowPointerMove).not.toHaveBeenCalled();
+  });
+
+  it('binds nothing for no handlers', () => {
+    const spy = vi.spyOn(canvas, 'addEventListener');
+    const { unmount } = renderHook(() => useCanvasPickListeners(null));
+    unmount();
+
+    expect(spy).not.toHaveBeenCalled();
   });
 });
