@@ -37,9 +37,11 @@ restored WebGL context, forget them, since the buffers then hold part of a frame
 
 A value the reader cannot see change makes every frame draw: a render target's texture, such as a
 `ViewportTexture` cookie or a live copy of one, a light mesh with more than one material, and any
-uniform value that is not a number, a vector, a colour, a matrix or a texture. So does a mesh with
-instances, bones, morph targets, an interleaved attribute or a render hook, and a material that is no
-`ShaderMaterial` or that takes scene lights, fog, clipping or uniform groups. The light pass meshes
+uniform value the reader does not know. It knows a number, a boolean, an unset value, a texture,
+an array of known values (as its length, then its items) and an object with `toArray`, such as a
+vector, a colour or a matrix. A mesh with instances, bones, morph targets, an interleaved attribute
+or a render hook also makes every frame draw, and so does a material that is no `ShaderMaterial` or
+that takes scene lights, fog, clipping or uniform groups. The light pass meshes
 hold none of these. `lightPassInputs.test.ts` writes each input in a table, one case per input.
 
 ## Considered Options
