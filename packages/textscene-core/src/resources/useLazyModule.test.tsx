@@ -4,7 +4,7 @@ import { act, render } from '@testing-library/react';
 import { ResourceLoader } from './ResourceLoader';
 import { ResourceLoaderContext } from './ResourceLoaderContext';
 import { memoisedImport, type LazyImport } from './memoisedImport';
-import { useLazyModule, useLazyModuleState } from './useLazyModule';
+import { moduleOf, useLazyModule, useLazyModuleState } from './useLazyModule';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -107,5 +107,19 @@ describe('useLazyModuleState', () => {
     const seen: unknown[] = [];
     render(<StateReader load={load} isNeeded={false} seen={seen} />);
     expect([seen.at(-1), imports]).toEqual([null, 0]);
+  });
+});
+
+describe('moduleOf', () => {
+  it('reads the module of a landed load', () => {
+    expect(moduleOf({ module: 'chunk' })).toBe('chunk');
+  });
+
+  it('reads null for a failed load', () => {
+    expect(moduleOf<string>('failed')).toBeNull();
+  });
+
+  it('reads null while it loads and with no import', () => {
+    expect([moduleOf<string>('loading'), moduleOf<string>(null)]).toEqual([null, null]);
   });
 });
