@@ -23,6 +23,7 @@ export interface ViewportProperties extends Omit<NodeProperties, 'transform'> {
   /** When false the target clears to the opaque project clear colour. */
   transparent_bg: boolean;
   handle_input_locally: boolean;
+  snap_2d_transforms_to_pixel: boolean;
   /** `Viewport.MSAA` of the buffer canvas items draw into. */
   msaa_2d: number;
   /** `Viewport.MSAA` of the buffer the 3D world draws into. */

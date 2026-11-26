@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Rect2 } from '../../godot/math/rect2';
-import { sprite2DEditRect } from '../../nodes/2d/sprite2d/editRect';
+import { pixelSnappedRect, sprite2DEditRect } from '../../nodes/2d/sprite2d/editRect';
 import { pointLight2DEditRect } from '../../nodes/2d/pointlight2d/editRect';
 import { line2DEditRect } from '../../nodes/2d/line2d/editRect';
 import { polygon2DEditRect } from '../../nodes/2d/polygon2d/editRect';
@@ -21,6 +21,7 @@ const SPRITE = {
 };
 const T64 = { width: 64, height: 32 };
 const T100 = { width: 100, height: 50 };
+const T33 = { width: 33, height: 17 };
 const points = (...xy: number[]) => new Float32Array(xy);
 const ZERO = { x: 0, y: 0 };
 
@@ -47,6 +48,29 @@ const ROWS: readonly [string, () => Rect2 | null, Rect2 | null][] = [
     'Sprite2D 7x3 frames, fractional offset',
     () => sprite2DEditRect(T100, { ...SPRITE, hframes: 7, vframes: 3, offset: { x: -2.5, y: 1.25 } }),
     rect(-9.5, -6.75, 14, 16),
+  ],
+  [
+    'Sprite2D 7x3 frames, fractional offset, snapped to pixel',
+    () =>
+      pixelSnappedRect(
+        sprite2DEditRect(T100, { ...SPRITE, hframes: 7, vframes: 3, offset: { x: -2.5, y: 1.25 } })
+      ),
+    rect(-9, -7, 14, 16),
+  ],
+  [
+    'Sprite2D 33x17 centred, snapped to pixel',
+    () => pixelSnappedRect(sprite2DEditRect(T33, SPRITE)),
+    rect(-16, -8, 33, 17),
+  ],
+  [
+    'Sprite2D 100x50 centred, offset (-0.5, 0.5), snapped to pixel',
+    () => pixelSnappedRect(sprite2DEditRect(T100, { ...SPRITE, offset: { x: -0.5, y: 0.5 } })),
+    rect(-50, -24, 100, 50),
+  ],
+  [
+    'Sprite2D with no texture, snapped to pixel',
+    () => pixelSnappedRect(sprite2DEditRect(undefined, SPRITE)),
+    null,
   ],
   ['PointLight2D scale 2', () => pointLight2DEditRect(T64, 2, { x: 10, y: 0 }), rect(-54, -32, 128, 64)],
   ['PointLight2D scale 0.5', () => pointLight2DEditRect(T64, 0.5, { x: -3, y: 7 }), rect(-19, -1, 32, 16)],

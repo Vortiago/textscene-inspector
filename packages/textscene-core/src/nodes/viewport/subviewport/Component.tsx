@@ -17,6 +17,7 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { CanvasWorkspaceProvider, useCanvasWorkspace } from '../../../r3f/contexts/CanvasWorkspaceContext';
 import { EnclosingViewportProvider } from '../../../r3f/contexts/EnclosingViewportContext';
+import { PixelSnapProvider } from '../../../r3f/contexts/PixelSnapContext';
 import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext';
 import { ViewportSizeProvider } from '../../../r3f/contexts/ViewportSizeContext';
 import { LayerRanksProvider } from '../../../r3f/contexts/PaintOrderContext';
@@ -169,31 +170,33 @@ export function ViewportMount({
   return (
     <Node node={node}>
       <EnclosingViewportProvider path={path}>
-        {/* The pass first: a container both workspaces mount registers its path twice, and the
+        <PixelSnapProvider snaps={properties.snap_2d_transforms_to_pixel}>
+          {/* The pass first: a container both workspaces mount registers its path twice, and the
             last mount wins, which must be the world's (`SelectionContext.registerNodeObject`). */}
-        {rasterizes ? (
-          <OffscreenViewportPass
-            node={node}
-            path={path}
-            size={size}
-            renderSize={renderSize}
-            layoutSize={layoutSize}
-            viewSize={viewSize}
-            kind={kind}
-            rendersInline={rendersInline}
-            canvasModulate={canvasModulate}
-            canvasOverWorld={drawsCanvasOverWorld ? canvasContents : null}
-            holdsCanvasItems={holdsCanvasItems}
-            viewport={description}
-          >
-            {rendersInline ? null : contents}
-          </OffscreenViewportPass>
-        ) : null}
-        {rendersInline ? (
-          <World2DLightingBoundary canvasModulate={canvasModulate} space={canvasSpace}>
-            {contents}
-          </World2DLightingBoundary>
-        ) : null}
+          {rasterizes ? (
+            <OffscreenViewportPass
+              node={node}
+              path={path}
+              size={size}
+              renderSize={renderSize}
+              layoutSize={layoutSize}
+              viewSize={viewSize}
+              kind={kind}
+              rendersInline={rendersInline}
+              canvasModulate={canvasModulate}
+              canvasOverWorld={drawsCanvasOverWorld ? canvasContents : null}
+              holdsCanvasItems={holdsCanvasItems}
+              viewport={description}
+            >
+              {rendersInline ? null : contents}
+            </OffscreenViewportPass>
+          ) : null}
+          {rendersInline ? (
+            <World2DLightingBoundary canvasModulate={canvasModulate} space={canvasSpace}>
+              {contents}
+            </World2DLightingBoundary>
+          ) : null}
+        </PixelSnapProvider>
       </EnclosingViewportProvider>
     </Node>
   );

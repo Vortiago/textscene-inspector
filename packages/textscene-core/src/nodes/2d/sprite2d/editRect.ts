@@ -17,3 +17,9 @@ export function sprite2DEditRect(
   const y = props.offset.y - (props.centered ? h / 2 : 0);
   return { x, y, ...atLeastOnePixel(w, h) };
 }
+
+/** The rect a viewport that snaps 2D transforms to pixels gives (sprite_2d.cpp:138-140). */
+export function pixelSnappedRect(rect: Rect2 | null): Rect2 | null {
+  if (!rect) return null;
+  return { ...rect, x: Math.floor(rect.x + 0.5), y: Math.floor(rect.y + 0.5) };
+}

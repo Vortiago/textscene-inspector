@@ -41,6 +41,7 @@ export function parseViewport(
     msaa_3d: enumOr(properties.msaa_3d, MSAA_DISABLED, MSAA_MODES, context),
     use_hdr_2d: boolOr(properties.use_hdr_2d, false, context),
     use_debanding: boolOr(properties.use_debanding, false, context),
+    snap_2d_transforms_to_pixel: boolOr(properties.snap_2d_transforms_to_pixel, false, context),
     audio_listener_enable_2d: boolOr(properties.audio_listener_enable_2d, false, context),
     canvas_item_default_texture_filter: enumOr(
       properties.canvas_item_default_texture_filter,
