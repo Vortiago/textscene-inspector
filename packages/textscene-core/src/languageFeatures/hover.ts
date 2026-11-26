@@ -130,8 +130,8 @@ export function hoverAt(document: LanguageDocument, position: Position): Hover |
   const section = document.sectionAt(documentLine);
   if (!section) return undefined;
 
-  if (section.headingLine === documentLine) {
-    const type = headingAttribute(line, 'type');
+  if (document.isInHeading(documentLine, position.character)) {
+    const type = headingAttribute(document.headingText(section), 'type');
     if (!type || !spanContains(type.span, position.character)) return undefined;
     return classHover(type.value, lineRange(position.line, type.span));
   }

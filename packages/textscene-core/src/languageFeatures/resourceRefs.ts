@@ -119,10 +119,9 @@ function declarationIdAt(
 
 /** The reference or declaration a zero-based position touches, or undefined. */
 export function referenceAt(document: LanguageDocument, position: Position): ResourceReference | undefined {
-  const lineText = document.lines[position.line] ?? '';
   const section = document.sectionAt(position.line + 1);
-  if (section && section.headingLine === position.line + 1) {
-    const declared = declarationIdAt(section, lineText, position.character);
+  if (section && document.isInHeading(position.line + 1, position.character)) {
+    const declared = declarationIdAt(section, document.headingText(section), position.character);
     if (declared) return declared;
   }
   const span = (referencesByLine(document)[position.line] ?? []).find(({ range }) =>

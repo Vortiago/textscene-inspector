@@ -249,7 +249,9 @@ export async function completionsAt(
   const documentLine = position.line + 1;
   const section = document.sectionAt(documentLine);
   if (!section) return [];
-  if (section.headingLine === documentLine) return headingItems(document, section, line, position, context);
+  if (document.isInHeading(documentLine, position.character)) {
+    return headingItems(document, section, document.headingText(section), position, context);
+  }
 
   const location = document.propertyAt(documentLine);
   if (!location) return partialKeyItems(section, line, position);

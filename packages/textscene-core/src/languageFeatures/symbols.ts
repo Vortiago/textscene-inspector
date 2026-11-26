@@ -6,7 +6,7 @@
 
 import type { LanguageDocument } from './document.js';
 import { seatedNodeTree, type SeatedSection } from './nodeSeating.js';
-import { linesRange } from './ranges.js';
+import { lineRange, linesRange } from './ranges.js';
 import type { DocumentSymbol, SymbolKind } from './types.js';
 
 /** The icon a few common node types show. Every other node is an `object`. */
@@ -46,7 +46,7 @@ function toSymbol(document: LanguageDocument, node: SeatedSection): DocumentSymb
     detail: type,
     kind: symbolKindOf(type),
     range: linesRange(document, line, subtreeEnd(node) - 1),
-    selectionRange: linesRange(document, line, line),
+    selectionRange: lineRange(line, { start: 0, end: document.headingText(node.section).trimEnd().length }),
     children: namedSymbols(document, node.children),
   };
 }

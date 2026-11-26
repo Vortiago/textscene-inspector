@@ -83,4 +83,25 @@ describe('LanguageDocument', () => {
     expect(document.sectionAt(3)?.tag).toBe('resource');
     expect(document.sectionAt(3)?.ownerType).toBe('Environment');
   });
+
+  it('reads a heading line up to the property after its `]`', () => {
+    const document = new LanguageDocument('[node name="Root" type="Node2D"] visible = false\n');
+    expect(document.headingText(document.sections[0]!)).toBe('[node name="Root" type="Node2D"]');
+  });
+
+  it('reads a heading line whole where no property follows it', () => {
+    const document = new LanguageDocument('[node name="Root" type="Node2D"]\nvisible = false\n');
+    expect(document.headingText(document.sections[0]!)).toBe('[node name="Root" type="Node2D"]');
+  });
+
+  it('places a column on a heading line in the heading or in the property after it', () => {
+    const document = new LanguageDocument('[node name="Root" type="Node2D"] visible = false\n');
+    expect(document.isInHeading(1, 5)).toBe(true);
+    expect(document.isInHeading(1, 34)).toBe(false);
+  });
+
+  it('places no body line in a heading', () => {
+    const document = new LanguageDocument('[node name="Root" type="Node2D"]\nvisible = false\n');
+    expect(document.isInHeading(2, 0)).toBe(false);
+  });
 });

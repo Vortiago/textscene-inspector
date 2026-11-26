@@ -91,9 +91,7 @@ function typeAction(
 ): CodeAction | undefined {
   const className = section.attributes.type;
   if (!className || isKnownClass(className) || !coversLine(range, section.headingLine)) return undefined;
-  const line = document.lines[section.headingLine - 1];
-  if (line === undefined) return undefined;
-  const attribute = headingAttribute(line, 'type');
+  const attribute = headingAttribute(document.headingText(section), 'type');
   if (!attribute) return undefined;
   const candidates = section.tag === 'node' ? nodeClassNames() : resourceClassNames();
   const nearest = nearestName(className, candidates, MAX_TYPO_DISTANCE);

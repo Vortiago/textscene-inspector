@@ -15,6 +15,7 @@ export function propertyRefusal({
   key,
   value,
   line,
+  column,
   isMultiline,
   stored,
 }: ParsedProperty): ParseError | null {
@@ -36,8 +37,10 @@ export function propertyRefusal({
     lookupValue = stored.value;
   }
 
-  const found = validator(lookupKey, lookupValue, line);
-  if (!found) return null;
+  const validated = validator(lookupKey, lookupValue, line);
+  if (!validated) return null;
+  // The validator counts from the property's text, which starts past a heading's `]` where it follows one.
+  const found: ParseError = { ...validated, column: validated.column + column };
   const keyed: ParseError = { ...found, propertyKey: key };
   const error: ParseError =
     lookupKey === key

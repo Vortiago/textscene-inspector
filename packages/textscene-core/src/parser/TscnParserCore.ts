@@ -78,7 +78,7 @@ export interface ParsedProperty {
   value: string;
   /** The line the key sits on. */
   line: number;
-  /** The column the key's text starts at: past a heading's `]` where the property follows it, else 0. */
+  /** The column the property's text is read from: just past a heading's `]` where it follows one, else 0. */
   column: number;
   /** The line the value ends on, a later line where the value starts after its key's line. */
   endLine: number;
@@ -366,7 +366,7 @@ export class TscnParserCore {
         observer?.onError?.({
           message: `Invalid heading format: "${line.trim()}"`,
           line: lineNumber,
-          column: 1,
+          column: column + 1,
           code: 'INVALID_HEADING_FORMAT',
         });
         // A header refused past its line still names its type, so the file reads as a resource.
@@ -392,7 +392,7 @@ export class TscnParserCore {
         observer?.onError?.({
           message: `Invalid property format: "${line.trim()}"`,
           line: lineNumber,
-          column: 1,
+          column: column + 1,
           code: 'INVALID_PROPERTY_FORMAT',
         });
         continue;

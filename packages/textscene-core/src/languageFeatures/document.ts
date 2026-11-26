@@ -21,7 +21,7 @@ export interface PropertySlot {
   readonly value: string;
   /** One-based line the value starts on. */
   readonly startLine: number;
-  /** The column its key's text starts at on that line: past a heading's `]` where it follows one, else 0. */
+  /** The column its text is read from: just past a heading's `]` where it follows one, else 0. */
   readonly startColumn: number;
   /** One-based line the value ends on, the same line unless the value is multiline. */
   readonly endLine: number;
@@ -166,6 +166,20 @@ export class LanguageDocument {
   /** The section a one-based line belongs to, or undefined outside every heading. */
   sectionAt(line: number): DocumentSection | undefined {
     return this.sectionByLine.get(line);
+  }
+
+  /** A heading's first line up to the property its `]` may be followed by, so the heading reads alone. */
+  headingText(section: DocumentSection): string {
+    const line = this.lines[section.headingLine - 1] ?? '';
+    const property = this.propertyByLine.get(section.headingLine)?.property;
+    return property?.startLine === section.headingLine ? line.slice(0, property.startColumn) : line;
+  }
+
+  /** Whether a one-based line and a zero-based column fall in a heading, not in a property after its `]`. */
+  isInHeading(line: number, character: number): boolean {
+    if (this.sectionByLine.get(line)?.headingLine !== line) return false;
+    const property = this.propertyByLine.get(line)?.property;
+    return !(property && property.startLine === line && character >= property.startColumn);
   }
 
   /** The property a one-based line belongs to, with its section. */
