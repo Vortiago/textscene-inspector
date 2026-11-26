@@ -114,6 +114,41 @@ describe('recordFrames', () => {
     await expect(recorded).rejects.toThrow('expected 10 recorded frames, got 3: Performance turned off');
   });
 
+  it('rejects a recording once its view closes before its frames end (error case)', async () => {
+    const profile = timed(cpuOnlyRenderer());
+    const recorded = recordFrames({ frames: 10 });
+    runFrames(profile, 0, 3);
+    profile.stop();
+    await expect(recorded).rejects.toThrow('expected 10 recorded frames, got 3: the view closed its profile');
+  });
+
+  it('runs two recordings of one view at once, each over its own frames', async () => {
+    const profile = timed(cpuOnlyRenderer());
+    const longer = recordFrames({ frames: 4 });
+    runFrames(profile, 0, 2);
+    const shorter = recordFrames({ frames: 2 });
+    runFrames(profile, 2, 2);
+    expect([(await longer)[0]!.frames, (await shorter)[0]!.frames]).toEqual([4, 2]);
+  });
+
+  it('records across a lost context, timing only the frames the GPU drew (error case)', async () => {
+    const { gpu, renderer } = drawingRenderer(2);
+    const profile = timed(renderer);
+    const floor = named(new THREE.Mesh(), 'Floor');
+    const recorded = recordFrames({ frames: 6, draws: true });
+    const drawFrames = (first: number, count: number) =>
+      runFrames(profile, first, count, () => {
+        draw(renderer, floor, new THREE.MeshBasicMaterial());
+        gpu.resolve();
+      });
+    drawFrames(0, 3);
+    gpu.loseContext();
+    drawFrames(3, 4);
+    const [recording] = await recorded;
+    expect(recording!.frames).toBe(6);
+    expect(recording!.draws![0]!.gpuMs).toBe(2);
+  });
+
   it('rejects a recording once its view stops drawing, as a hidden view does (error case)', async () => {
     vi.useFakeTimers();
     try {

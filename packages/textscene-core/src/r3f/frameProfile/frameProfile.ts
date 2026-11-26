@@ -260,6 +260,7 @@ class Profile implements FrameProfile {
 
   stop(): void {
     this.isFrameOpen = false;
+    this.failRecordings('the view closed its profile');
     this.stopTimings();
     // A replaced profile's second stop leaves the renderer to the profile that replaced it.
     if (profiles.get(this.renderer) !== this) return;
