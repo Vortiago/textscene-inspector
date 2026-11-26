@@ -78,7 +78,9 @@ where it samples its diffuse. The layer's rotation and scale turn the normal aft
 A TileMapLayer whose `material` is a ShaderMaterial of `shader_type canvas_item` draws each tile through
 Godot's canvas template with the user's shader. A tile whose TileData has its own `material` draws with
 that material instead. Flips, transpose, tile `modulate`, `uv_clipping` and the padded atlas of
-`use_texture_padding` follow `draw_tile` (`tile_set.cpp`). A 2D light does not shade a shaded tile yet.
+`use_texture_padding` follow `draw_tile` (`tile_set.cpp`). A ViewportTexture source pads as Godot pads its image
+at load. A viewport never set up gives the placeholder, and a set-up one gives its target before the first render.
+A 2D light does not shade a shaded tile yet.
 
 ## Linting
 

@@ -9,12 +9,12 @@ interface StoredLevel {
   height: number;
 }
 
-/** `texture` with Godot's top row at v = 0, as the template uploads with no flip: a bottom-up one reversed. */
+/** `texture` with Godot's top row at v = 0, since the template uploads with no flip: bottom-up reversed. */
 export function useTopRowFirst(texture: THREE.Texture | null): THREE.Texture | null {
   const version = texture?.version;
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- the version keys the copy, so later texels reach it.
   const copy = useMemo(
     () => (texture && isBottomUp(texture) ? topRowFirstCopy(texture) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the version keys the copy, so later texels reach it.
     [texture, version]
   );
   useDisposeOnRelease(copy);

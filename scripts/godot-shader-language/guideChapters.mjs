@@ -712,13 +712,13 @@ const CANVAS_CHAPTER = {
       heading: '`FRAGCOORD`',
       rows: canvasRows('fragment', 'FRAGCOORD'),
       what: "`FRAGCOORD` is the pixel's window coordinate, with y down from the render target's top row, as Godot's Vulkan frame counts it (`renderer_canvas_render_rd.cpp:1799`).",
-      tsl: "`screenCoordinate`, counted from the top row for a target of Godot's rows",
+      tsl: "`screenCoordinate`, counted from the top row for a target of Godot's rows, less the viewport's top-left in the target and over its pixel scale, since a previewer draws Godot's viewport inside a larger target",
     },
     {
       heading: '`SCREEN_UV` and `SCREEN_PIXEL_SIZE`',
       rows: canvasRows('fragment', 'SCREEN_UV', 'SCREEN_PIXEL_SIZE'),
       what: "`SCREEN_PIXEL_SIZE` is one over the render target's size in pixels. `SCREEN_UV` is `FRAGCOORD.xy` times it, from 0 to 1 across the target (`canvas.glsl:684-688`).",
-      tsl: "the template's local `screen_uv` and the block member `canvas_data.screen_pixel_size`",
+      tsl: "the template's local `screen_uv` and the block member `canvas_data.screen_pixel_size`, which holds one over the viewport's size, not the WebGL target's",
     },
     {
       heading: '`REGION_RECT`',

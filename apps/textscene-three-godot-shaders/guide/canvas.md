@@ -1263,7 +1263,7 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 
 `FRAGCOORD` is the pixel's window coordinate, with y down from the render target's top row, as Godot's Vulkan frame counts it (`renderer_canvas_render_rd.cpp:1799`).
 
-The transpiler emits `screenCoordinate`, counted from the top row for a target of Godot's rows. Rows: `canvas_item.fragment.FRAGCOORD`. Godot source: `servers/rendering/shader_types.cpp:290`.
+The transpiler emits `screenCoordinate`, counted from the top row for a target of Godot's rows, less the viewport's top-left in the target and over its pixel scale, since a previewer draws Godot's viewport inside a larger target. Rows: `canvas_item.fragment.FRAGCOORD`. Godot source: `servers/rendering/shader_types.cpp:290`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
@@ -1272,7 +1272,7 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 
 `SCREEN_PIXEL_SIZE` is one over the render target's size in pixels. `SCREEN_UV` is `FRAGCOORD.xy` times it, from 0 to 1 across the target (`canvas.glsl:684-688`).
 
-The transpiler emits the template's local `screen_uv` and the block member `canvas_data.screen_pixel_size`. Rows: `canvas_item.fragment.SCREEN_UV`, `canvas_item.fragment.SCREEN_PIXEL_SIZE`. Godot source: `servers/rendering/shader_types.cpp:301`.
+The transpiler emits the template's local `screen_uv` and the block member `canvas_data.screen_pixel_size`, which holds one over the viewport's size, not the WebGL target's. Rows: `canvas_item.fragment.SCREEN_UV`, `canvas_item.fragment.SCREEN_PIXEL_SIZE`. Godot source: `servers/rendering/shader_types.cpp:301`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
