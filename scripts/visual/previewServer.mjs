@@ -11,6 +11,7 @@ export { assertPortFree } from './preview/server.mjs';
 export { previewPort } from './preview/ports.mjs';
 export {
   CANVAS_2D_CAPTURE,
+  CANVAS_2D_TESTIDS,
   CANVAS_CAPTURE,
   PERFORMANCE_TESTIDS,
   SETTLE_SIM_SECONDS,

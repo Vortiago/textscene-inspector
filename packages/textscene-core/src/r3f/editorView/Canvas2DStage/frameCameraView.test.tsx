@@ -5,12 +5,19 @@ import { sizeEveryElement } from '../../testing/sizeEveryElement';
 // The world canvas needs WebGL. The stub keeps the keys, which hand the stage where each node stands.
 vi.mock('../../world2D/World2DCanvas', async () => {
   const { FocusSelection2D } = await import('./FocusSelection2D');
+  const { useSyncExternalStore } = await import('react');
+  type Source = import('../../../utils/externalStore').ExternalStore<
+    import('../../world2D/stageView').StageView
+  >;
   return {
-    World2DCanvas: ({ pan, zoom }: { pan: { x: number; y: number }; zoom: number }) => (
-      <div data-testid="world" data-pan={`${pan.x},${pan.y}`} data-zoom={zoom}>
-        <FocusSelection2D />
-      </div>
-    ),
+    World2DCanvas: function World({ view }: { view: Source }) {
+      const { pan, zoom } = useSyncExternalStore(view.subscribe, view.get);
+      return (
+        <div data-testid="world" data-pan={`${pan.x},${pan.y}`} data-zoom={zoom}>
+          <FocusSelection2D />
+        </div>
+      );
+    },
   };
 });
 

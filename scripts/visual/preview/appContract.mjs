@@ -15,6 +15,7 @@ export const PERFORMANCE_TESTIDS = {
   overlay: 'performance-overlay',
   frameMs: 'performance-frame',
   drawCalls: 'performance-draws',
+  sceneRenders: 'performance-scene-renders',
 };
 
 export const VIEWPORT = { width: 1280, height: 800 };

@@ -1,6 +1,7 @@
 {
   "depth-fog": {
     "drawCalls": 13,
+    "sceneRenders": 0,
     "steps": {
       "Scene draw": {
         "drawCalls": 4,
@@ -30,6 +31,7 @@
   },
   "fog-volume": {
     "drawCalls": 13,
+    "sceneRenders": 0,
     "steps": {
       "Scene draw": {
         "drawCalls": 4,
@@ -59,6 +61,7 @@
   },
   "glow": {
     "drawCalls": 15,
+    "sceneRenders": 0,
     "steps": {
       "Scene draw": {
         "drawCalls": 2,
@@ -84,6 +87,7 @@
   },
   "reflection-probe": {
     "drawCalls": 10,
+    "sceneRenders": 0,
     "steps": {
       "Scene draw": {
         "drawCalls": 1,
@@ -109,6 +113,7 @@
   },
   "pointlight2d": {
     "drawCalls": 6,
+    "sceneRenders": 0,
     "steps": {
       "2D lights": {
         "drawCalls": 4,
@@ -130,6 +135,7 @@
   },
   "modulate-200-sprites": {
     "drawCalls": 201,
+    "sceneRenders": 0,
     "steps": {
       "Scene draw": {
         "drawCalls": 200,
@@ -147,6 +153,7 @@
   },
   "demo-3d-platformer": {
     "drawCalls": 308,
+    "sceneRenders": 0,
     "steps": {
       "Scene draw": {
         "drawCalls": 194,
@@ -176,6 +183,7 @@
   },
   "demo-3d-platformer-write-each-frame": {
     "drawCalls": 306,
+    "sceneRenders": 1,
     "steps": {
       "Scene draw": {
         "drawCalls": 194,
@@ -205,6 +213,7 @@
   },
   "demo-2d-lights-and-shadows": {
     "drawCalls": 46,
+    "sceneRenders": 0,
     "steps": {
       "2D lights": {
         "drawCalls": 10,
@@ -224,8 +233,173 @@
       }
     }
   },
+  "dungeon-pan": {
+    "drawCalls": 607,
+    "sceneRenders": 0,
+    "steps": {
+      "2D lights": {
+        "drawCalls": 298,
+        "runs": 1
+      },
+      "Scene draw": {
+        "drawCalls": 308,
+        "runs": 1
+      },
+      "Canvas copy": {
+        "drawCalls": 1,
+        "runs": 1
+      },
+      "Other": {
+        "drawCalls": 0,
+        "runs": 1
+      }
+    }
+  },
+  "dungeon-zoom": {
+    "drawCalls": 607,
+    "sceneRenders": 0,
+    "steps": {
+      "2D lights": {
+        "drawCalls": 298,
+        "runs": 1
+      },
+      "Scene draw": {
+        "drawCalls": 308,
+        "runs": 1
+      },
+      "Canvas copy": {
+        "drawCalls": 1,
+        "runs": 1
+      },
+      "Other": {
+        "drawCalls": 0,
+        "runs": 1
+      }
+    }
+  },
+  "depth-fog-orbit": {
+    "drawCalls": 13,
+    "sceneRenders": 0,
+    "steps": {
+      "Scene draw": {
+        "drawCalls": 4,
+        "runs": 1
+      },
+      "Depth prepass": {
+        "drawCalls": 0,
+        "runs": 1
+      },
+      "Shadows": {
+        "drawCalls": 8,
+        "runs": 1
+      },
+      "Fog": {
+        "drawCalls": 0,
+        "runs": 1
+      },
+      "Compositor": {
+        "drawCalls": 1,
+        "runs": 1
+      },
+      "Other": {
+        "drawCalls": 0,
+        "runs": 1
+      }
+    }
+  },
+  "depth-fog-pan": {
+    "drawCalls": 13,
+    "sceneRenders": 0,
+    "steps": {
+      "Scene draw": {
+        "drawCalls": 4,
+        "runs": 1
+      },
+      "Depth prepass": {
+        "drawCalls": 0,
+        "runs": 1
+      },
+      "Shadows": {
+        "drawCalls": 8,
+        "runs": 1
+      },
+      "Fog": {
+        "drawCalls": 0,
+        "runs": 1
+      },
+      "Compositor": {
+        "drawCalls": 1,
+        "runs": 1
+      },
+      "Other": {
+        "drawCalls": 0,
+        "runs": 1
+      }
+    }
+  },
+  "depth-fog-zoom": {
+    "drawCalls": 13,
+    "sceneRenders": 0,
+    "steps": {
+      "Scene draw": {
+        "drawCalls": 4,
+        "runs": 1
+      },
+      "Depth prepass": {
+        "drawCalls": 0,
+        "runs": 1
+      },
+      "Shadows": {
+        "drawCalls": 8,
+        "runs": 1
+      },
+      "Fog": {
+        "drawCalls": 0,
+        "runs": 1
+      },
+      "Compositor": {
+        "drawCalls": 1,
+        "runs": 1
+      },
+      "Other": {
+        "drawCalls": 0,
+        "runs": 1
+      }
+    }
+  },
+  "depth-fog-freelook": {
+    "drawCalls": 13,
+    "sceneRenders": 0,
+    "steps": {
+      "Scene draw": {
+        "drawCalls": 4,
+        "runs": 1
+      },
+      "Depth prepass": {
+        "drawCalls": 0,
+        "runs": 1
+      },
+      "Shadows": {
+        "drawCalls": 8,
+        "runs": 1
+      },
+      "Fog": {
+        "drawCalls": 0,
+        "runs": 1
+      },
+      "Compositor": {
+        "drawCalls": 1,
+        "runs": 1
+      },
+      "Other": {
+        "drawCalls": 0,
+        "runs": 1
+      }
+    }
+  },
   "in-game-camera3d": {
     "drawCalls": 5,
+    "sceneRenders": 0,
     "steps": {
       "SubViewports": {
         "drawCalls": 4,
@@ -243,6 +417,7 @@
   },
   "in-game-hud-over-world": {
     "drawCalls": 8,
+    "sceneRenders": 0,
     "steps": {
       "SubViewports": {
         "drawCalls": 6,

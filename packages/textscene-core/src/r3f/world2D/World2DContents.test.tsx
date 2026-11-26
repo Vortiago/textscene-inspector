@@ -30,6 +30,7 @@ vi.mock('./CanvasFrameRender.js', () => ({
 }));
 
 import { World2DContents } from './World2DContents';
+import { createExternalStore } from '../../utils/externalStore';
 import { withProject } from '../testing/ProjectFixture';
 import { TiledUploadQueue } from '../tiledUpload/TiledUploadQueue';
 import { r3fStateProbe } from '../testing/R3FStateProbe';
@@ -39,8 +40,7 @@ const baseProps = {
   nodes: [],
   internalResources: [],
   externalResources: [],
-  pan: { x: 0, y: 0 },
-  zoom: 1,
+  view: createExternalStore({ pan: { x: 0, y: 0 }, zoom: 1 }),
 };
 
 describe('World2DContents native-controls mount seam', () => {
@@ -128,5 +128,24 @@ describe('World2DContents renderer', () => {
     );
 
     expect(hasShadowPass(state().gl)).toBe(true);
+  });
+});
+
+describe('World2DContents camera', () => {
+  it('moves the camera to each new stage view', async () => {
+    const view = createExternalStore({ pan: { x: 0, y: 0 }, zoom: 1 });
+    const { Probe, state } = r3fStateProbe();
+    await ReactThreeTestRenderer.create(
+      <SelectionProvider>
+        <World2DContents {...baseProps} view={view} />
+        <Probe />
+      </SelectionProvider>
+    );
+    const restingX = state().camera.position.x;
+
+    await ReactThreeTestRenderer.act(async () => view.set({ pan: { x: 40, y: 0 }, zoom: 2 }));
+
+    expect(state().camera.zoom).toBe(2);
+    expect(state().camera.position.x).toBe((restingX - 40) / 2);
   });
 });

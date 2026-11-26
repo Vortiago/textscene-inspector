@@ -20,8 +20,14 @@ vi.mock('../NodeDispatcher.js', async () => {
 });
 
 import { World2DContents } from './World2DContents';
+import { createExternalStore } from '../../utils/externalStore';
 
-const noScene = { nodes: [], internalResources: [], externalResources: [], pan: { x: 0, y: 0 }, zoom: 1 };
+const noScene = {
+  nodes: [],
+  internalResources: [],
+  externalResources: [],
+  view: createExternalStore({ pan: { x: 0, y: 0 }, zoom: 1 }),
+};
 
 describe('the root canvas frame', () => {
   it("samples a light's shadow pose after the animation tick of the frame it draws", async () => {

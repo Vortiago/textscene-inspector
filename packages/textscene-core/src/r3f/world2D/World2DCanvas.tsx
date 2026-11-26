@@ -4,7 +4,7 @@
  * view, as Godot's 2D editor does.
  */
 
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { CANVAS_RENDERER_GL, CANVAS_RENDERER_PROPS } from '../canvasRenderer/canvasRendererProps.js';
 import { usePreviewFrameloop } from '../contexts/PreviewVisibilityContext.js';
@@ -12,7 +12,8 @@ import { World2DContents, type World2DCanvasProps } from './World2DContents.js';
 import { World2DCamera } from './world2DCamera.js';
 import { CanvasViewReport } from '../viewStatus/CanvasViewReport.js';
 
-export function World2DCanvas(props: World2DCanvasProps) {
+/** Memoised: the stage re-renders on each pan, and the scene tree under the canvas must not. */
+export const World2DCanvas = memo(function World2DCanvas(props: World2DCanvasProps) {
   // One instance for the canvas's life: R3F replaces its camera when the prop changes.
   const [camera] = useState(() => new World2DCamera());
   const frameloop = usePreviewFrameloop();
@@ -30,4 +31,4 @@ export function World2DCanvas(props: World2DCanvasProps) {
       <CanvasViewReport />
     </Canvas>
   );
-}
+});

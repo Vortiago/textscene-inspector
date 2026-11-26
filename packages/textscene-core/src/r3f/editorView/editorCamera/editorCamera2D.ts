@@ -1,4 +1,5 @@
-import { centerSelection, frameSelection, type StageView } from '../Canvas2DStage/selectionFrame2D.js';
+import { centerSelection, frameSelection } from '../Canvas2DStage/selectionFrame2D.js';
+import type { StageView } from '../../world2D/stageView.js';
 import { ZERO_RECT, type Rect2 } from '../../../godot/math/rect2.js';
 import { VARIANT_TYPE as T } from '../../../godot/variant/variantType.js';
 import { liveNodePathOf } from '../../../scene/nodePathWalk.js';

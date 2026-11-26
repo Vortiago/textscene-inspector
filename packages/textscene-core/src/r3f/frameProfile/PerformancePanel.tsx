@@ -40,6 +40,11 @@ function WindowStats({ stats }: { stats: FrameStats }) {
         <span data-testid={PERFORMANCE_TESTIDS.frameMs}>{formatMs(stats.frameMs)} ms</span>
         <span data-testid="performance-cpu">CPU {formatMs(stats.cpuMs)} ms</span>
         {stats.timings && <span data-testid="performance-gpu">{gpuTotalText(stats.timings)}</span>}
+        {stats.timings && (
+          <span data-testid={PERFORMANCE_TESTIDS.sceneRenders}>
+            {formatCount(stats.timings.sceneRendersPerFrame)} scene renders
+          </span>
+        )}
         <span data-testid={PERFORMANCE_TESTIDS.drawCalls}>{formatCount(stats.drawCallsPerFrame)} draws</span>
         <span data-testid="performance-objects">{formatCount(stats.objectsPerFrame)} objects</span>
         <span data-testid="performance-primitives">{formatCount(stats.primitivesPerFrame)} primitives</span>
