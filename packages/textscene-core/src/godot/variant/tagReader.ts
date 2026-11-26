@@ -16,13 +16,14 @@ export interface ReadTag {
   readonly endLine: number;
 }
 
-/** A tag that stops: Godot's message, its code and line, and the name and fields read before it. */
+/** A tag that stops: Godot's message, code and line, what it read, and the offset of its last token. */
 export interface RefusedTag {
   readonly name: string | undefined;
   readonly error: string;
   readonly code: ParseErrorCode;
   readonly line: number;
   readonly fields: readonly TagField[];
+  readonly stop: number;
 }
 
 /** The name and fields read so far, kept so a refusal can report them. */
@@ -43,7 +44,15 @@ export function readTag(text: string, start: number, line: number): ReadTag | Re
     return { name: tag.name!, fields: tag.fields, end: tokens.offset, endLine: tokens.line };
   } catch (error) {
     if (!(error instanceof ParseError)) throw error;
-    return { name: tag.name, error: error.message, code: error.code, line: tokens.line, fields: tag.fields };
+    const { message, code } = error;
+    return {
+      name: tag.name,
+      error: message,
+      code,
+      line: tokens.line,
+      fields: tag.fields,
+      stop: tokens.tokenStart.offset,
+    };
   }
 }
 

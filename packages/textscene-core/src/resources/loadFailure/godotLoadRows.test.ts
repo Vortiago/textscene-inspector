@@ -16,6 +16,8 @@ interface GodotRow {
   stop: string | null;
   /** The scene's nodes as Godot instantiates them, each Node2D's position where it is not zero. */
   tree?: string;
+  /** The tree the previewer draws of a file Godot refuses: the lines a refused tag read belong to no node. */
+  lenientTree?: string;
 }
 
 /** Each place a file names a resource, as Godot 4.6.3 loads it, measured one file per headless run. */
@@ -1992,6 +1994,42 @@ y"
     failing: [],
     stop: 'Parse Error: Parse error. [Resource file res://row135.tscn:6]',
   },
+  {
+    row: 136,
+    reads: 'a heading that never closes reads the next line as its own field, not as the node before',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="A" type="Node2D" parent="."]
+
+[node name="B" type="Node2D" parent="."
+position = Vector2(5, 5)
+`,
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row136.tscn:9]',
+    lenientTree: 'Root[A]',
+  },
+  {
+    row: 137,
+    reads: 'a heading that never closes stops at the next heading, which still draws',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="A" type="Node2D" parent="."]
+
+[node name="B" type="Node2D" parent="."
+position = Vector2(5, 5)
+
+[node name="C" type="Node2D" parent="."]
+`,
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row137.tscn:10]',
+    lenientTree: 'Root[A, C]',
+  },
 ];
 
 /** The path Godot loaded the row under, which its stop line names. */
@@ -2029,5 +2067,11 @@ function treeOf(node: TscnNode): string {
 describe('the nodes of a file whose headings Godot 4.6.3 reads', () => {
   it.each(ROWS.filter((row) => row.tree))('row $row: $reads', (row) => {
     expect(new TscnParser().parse(row.text).nodes.map(treeOf).join(', ')).toBe(row.tree);
+  });
+});
+
+describe('the nodes the previewer draws of a file whose heading Godot refuses', () => {
+  it.each(ROWS.filter((row) => row.lenientTree))('row $row: $reads', (row) => {
+    expect(new TscnParser().parse(row.text).nodes.map(treeOf).join(', ')).toBe(row.lenientTree);
   });
 });

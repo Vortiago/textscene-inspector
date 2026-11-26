@@ -330,6 +330,10 @@ export class TscnParserCore {
           openSection(parseHeading(line)!, lineNumber, godotLine, []);
           continue;
         }
+        // An unclosed heading draws nothing, and the lines its tag read are no section's body.
+        finalizeSection();
+        if (tag) i = Math.max(i, lineAndColumnOf(lineStarts, tag.stop, i).line - 1);
+        continue;
       }
       const property = parseProperty(line);
       if (!property) {
@@ -448,6 +452,8 @@ function headingText(
   column: number,
   end: { line: number; column: number }
 ): string {
+  // One line holds no comment before its `]`, since the tag reader skips a comment to the line's end.
+  if (end.line === first) return lines[first]!.slice(column, end.column);
   const parts: string[] = [];
   let state = INITIAL_SCAN_STATE;
   for (let at = first; at <= end.line; at++) {
