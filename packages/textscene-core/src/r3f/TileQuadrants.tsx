@@ -22,6 +22,8 @@ import type { CanvasItemTextureSampler } from './canvasItemTextureSampler';
 import type { Rgba } from '../godot/math/math';
 import type { ShaderText } from '../resources/materials/shadermaterial/types';
 import { TileShaderRun } from './canvasShader/TileShaderRun';
+import { ShaderInForce } from './canvasShader/ShaderInForce';
+import { materialShaderOf } from './canvasShader/materialShader';
 
 interface TileLayerItem {
   model: TileSetModel;
@@ -34,6 +36,8 @@ interface TileLayerItem {
   material: CanvasItemMaterialProperties | null;
   /** The layer's canvas_item shader, which a tile with no material of its own draws with. */
   shader: ShaderText | null;
+  /** The layer's `materialShaderOf`, which a tile with no material of its own draws with. */
+  materialShader: ShaderText | null;
   lightMask: number | undefined;
   zFinal: number;
   /** The layer's effective filter and repeat, which its atlas textures sample with. */
@@ -89,6 +93,7 @@ function tileTint(
 function TileItem({ item, layer }: { item: DrawnItem; layer: TileLayerItem }) {
   const material = tileItemMaterial(item.material, layer.material);
   const shader = item.material ? item.material.shader : layer.shader;
+  const materialShader = item.material ? materialShaderOf(item.material) : layer.materialShader;
   const { key: canvasKey, zFinal } = childCanvasPlace(
     { key: useCanvasItemKey(), zFinal: layer.zFinal },
     item.zIndex
@@ -118,20 +123,22 @@ function TileItem({ item, layer }: { item: DrawnItem; layer: TileLayerItem }) {
               sampler={layer.sampler}
             />
           );
-          if (!shader) return mesh;
           return (
-            <TileShaderRun
-              key={runIndex}
-              shader={shader}
-              source={source}
-              cells={cells}
-              tileSet={layer.model}
-              finalModulate={selfTint}
-              itemOrigin={item.canvasItemsPosition}
-              sampler={layer.sampler}
-              renderOrder={item.firstOrder + runIndex}
-              fallback={mesh}
-            />
+            <ShaderInForce key={runIndex} shader={shader} materialShader={materialShader} fallback={mesh}>
+              {(inForce) => (
+                <TileShaderRun
+                  shader={inForce}
+                  source={source}
+                  cells={cells}
+                  tileSet={layer.model}
+                  finalModulate={selfTint}
+                  itemOrigin={item.canvasItemsPosition}
+                  sampler={layer.sampler}
+                  renderOrder={item.firstOrder + runIndex}
+                  fallback={mesh}
+                />
+              )}
+            </ShaderInForce>
           );
         })}
       </LitCanvasItem>

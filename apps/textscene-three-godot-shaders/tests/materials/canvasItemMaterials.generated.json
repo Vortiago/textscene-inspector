@@ -1,0 +1,569 @@
+{
+ "godot": "4.6.3-stable (official)",
+ "texts": [
+  {
+   "properties": {
+    "blend_mode": 0,
+    "light_mode": 0,
+    "particles_animation": false
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_mix;\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 0,
+    "light_mode": 0,
+    "particles_animation": true
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_mix;\nuniform int particles_anim_h_frames;\nuniform int particles_anim_v_frames;\nuniform bool particles_anim_loop;\n\nvoid vertex() {\n\tfloat h_frames = float(particles_anim_h_frames);\n\tfloat v_frames = float(particles_anim_v_frames);\n\tVERTEX.xy /= vec2(h_frames, v_frames);\n\tfloat particle_total_frames = float(particles_anim_h_frames * particles_anim_v_frames);\n\tfloat particle_frame = floor(INSTANCE_CUSTOM.z * float(particle_total_frames));\n\tif (!particles_anim_loop) {\n\t\tparticle_frame = clamp(particle_frame, 0.0, particle_total_frames - 1.0);\n\t} else {\n\t\tparticle_frame = mod(particle_frame, particle_total_frames);\n\t}\tUV /= vec2(h_frames, v_frames);\n\tUV += vec2(mod(particle_frame, h_frames) / h_frames, floor((particle_frame + 0.5) / h_frames) / v_frames);\n}\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 0,
+    "light_mode": 1,
+    "particles_animation": false
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_mix,unshaded;\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 0,
+    "light_mode": 1,
+    "particles_animation": true
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_mix,unshaded;\nuniform int particles_anim_h_frames;\nuniform int particles_anim_v_frames;\nuniform bool particles_anim_loop;\n\nvoid vertex() {\n\tfloat h_frames = float(particles_anim_h_frames);\n\tfloat v_frames = float(particles_anim_v_frames);\n\tVERTEX.xy /= vec2(h_frames, v_frames);\n\tfloat particle_total_frames = float(particles_anim_h_frames * particles_anim_v_frames);\n\tfloat particle_frame = floor(INSTANCE_CUSTOM.z * float(particle_total_frames));\n\tif (!particles_anim_loop) {\n\t\tparticle_frame = clamp(particle_frame, 0.0, particle_total_frames - 1.0);\n\t} else {\n\t\tparticle_frame = mod(particle_frame, particle_total_frames);\n\t}\tUV /= vec2(h_frames, v_frames);\n\tUV += vec2(mod(particle_frame, h_frames) / h_frames, floor((particle_frame + 0.5) / h_frames) / v_frames);\n}\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 0,
+    "light_mode": 2,
+    "particles_animation": false
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_mix,light_only;\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 0,
+    "light_mode": 2,
+    "particles_animation": true
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_mix,light_only;\nuniform int particles_anim_h_frames;\nuniform int particles_anim_v_frames;\nuniform bool particles_anim_loop;\n\nvoid vertex() {\n\tfloat h_frames = float(particles_anim_h_frames);\n\tfloat v_frames = float(particles_anim_v_frames);\n\tVERTEX.xy /= vec2(h_frames, v_frames);\n\tfloat particle_total_frames = float(particles_anim_h_frames * particles_anim_v_frames);\n\tfloat particle_frame = floor(INSTANCE_CUSTOM.z * float(particle_total_frames));\n\tif (!particles_anim_loop) {\n\t\tparticle_frame = clamp(particle_frame, 0.0, particle_total_frames - 1.0);\n\t} else {\n\t\tparticle_frame = mod(particle_frame, particle_total_frames);\n\t}\tUV /= vec2(h_frames, v_frames);\n\tUV += vec2(mod(particle_frame, h_frames) / h_frames, floor((particle_frame + 0.5) / h_frames) / v_frames);\n}\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 0,
+    "light_mode": 3,
+    "particles_animation": false
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_mix;\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 0,
+    "light_mode": 3,
+    "particles_animation": true
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_mix;\nuniform int particles_anim_h_frames;\nuniform int particles_anim_v_frames;\nuniform bool particles_anim_loop;\n\nvoid vertex() {\n\tfloat h_frames = float(particles_anim_h_frames);\n\tfloat v_frames = float(particles_anim_v_frames);\n\tVERTEX.xy /= vec2(h_frames, v_frames);\n\tfloat particle_total_frames = float(particles_anim_h_frames * particles_anim_v_frames);\n\tfloat particle_frame = floor(INSTANCE_CUSTOM.z * float(particle_total_frames));\n\tif (!particles_anim_loop) {\n\t\tparticle_frame = clamp(particle_frame, 0.0, particle_total_frames - 1.0);\n\t} else {\n\t\tparticle_frame = mod(particle_frame, particle_total_frames);\n\t}\tUV /= vec2(h_frames, v_frames);\n\tUV += vec2(mod(particle_frame, h_frames) / h_frames, floor((particle_frame + 0.5) / h_frames) / v_frames);\n}\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 1,
+    "light_mode": 0,
+    "particles_animation": false
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_add;\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 1,
+    "light_mode": 0,
+    "particles_animation": true
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_add;\nuniform int particles_anim_h_frames;\nuniform int particles_anim_v_frames;\nuniform bool particles_anim_loop;\n\nvoid vertex() {\n\tfloat h_frames = float(particles_anim_h_frames);\n\tfloat v_frames = float(particles_anim_v_frames);\n\tVERTEX.xy /= vec2(h_frames, v_frames);\n\tfloat particle_total_frames = float(particles_anim_h_frames * particles_anim_v_frames);\n\tfloat particle_frame = floor(INSTANCE_CUSTOM.z * float(particle_total_frames));\n\tif (!particles_anim_loop) {\n\t\tparticle_frame = clamp(particle_frame, 0.0, particle_total_frames - 1.0);\n\t} else {\n\t\tparticle_frame = mod(particle_frame, particle_total_frames);\n\t}\tUV /= vec2(h_frames, v_frames);\n\tUV += vec2(mod(particle_frame, h_frames) / h_frames, floor((particle_frame + 0.5) / h_frames) / v_frames);\n}\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 1,
+    "light_mode": 1,
+    "particles_animation": false
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_add,unshaded;\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 1,
+    "light_mode": 1,
+    "particles_animation": true
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_add,unshaded;\nuniform int particles_anim_h_frames;\nuniform int particles_anim_v_frames;\nuniform bool particles_anim_loop;\n\nvoid vertex() {\n\tfloat h_frames = float(particles_anim_h_frames);\n\tfloat v_frames = float(particles_anim_v_frames);\n\tVERTEX.xy /= vec2(h_frames, v_frames);\n\tfloat particle_total_frames = float(particles_anim_h_frames * particles_anim_v_frames);\n\tfloat particle_frame = floor(INSTANCE_CUSTOM.z * float(particle_total_frames));\n\tif (!particles_anim_loop) {\n\t\tparticle_frame = clamp(particle_frame, 0.0, particle_total_frames - 1.0);\n\t} else {\n\t\tparticle_frame = mod(particle_frame, particle_total_frames);\n\t}\tUV /= vec2(h_frames, v_frames);\n\tUV += vec2(mod(particle_frame, h_frames) / h_frames, floor((particle_frame + 0.5) / h_frames) / v_frames);\n}\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 1,
+    "light_mode": 2,
+    "particles_animation": false
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_add,light_only;\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 1,
+    "light_mode": 2,
+    "particles_animation": true
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_add,light_only;\nuniform int particles_anim_h_frames;\nuniform int particles_anim_v_frames;\nuniform bool particles_anim_loop;\n\nvoid vertex() {\n\tfloat h_frames = float(particles_anim_h_frames);\n\tfloat v_frames = float(particles_anim_v_frames);\n\tVERTEX.xy /= vec2(h_frames, v_frames);\n\tfloat particle_total_frames = float(particles_anim_h_frames * particles_anim_v_frames);\n\tfloat particle_frame = floor(INSTANCE_CUSTOM.z * float(particle_total_frames));\n\tif (!particles_anim_loop) {\n\t\tparticle_frame = clamp(particle_frame, 0.0, particle_total_frames - 1.0);\n\t} else {\n\t\tparticle_frame = mod(particle_frame, particle_total_frames);\n\t}\tUV /= vec2(h_frames, v_frames);\n\tUV += vec2(mod(particle_frame, h_frames) / h_frames, floor((particle_frame + 0.5) / h_frames) / v_frames);\n}\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 1,
+    "light_mode": 3,
+    "particles_animation": false
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_add;\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 1,
+    "light_mode": 3,
+    "particles_animation": true
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_add;\nuniform int particles_anim_h_frames;\nuniform int particles_anim_v_frames;\nuniform bool particles_anim_loop;\n\nvoid vertex() {\n\tfloat h_frames = float(particles_anim_h_frames);\n\tfloat v_frames = float(particles_anim_v_frames);\n\tVERTEX.xy /= vec2(h_frames, v_frames);\n\tfloat particle_total_frames = float(particles_anim_h_frames * particles_anim_v_frames);\n\tfloat particle_frame = floor(INSTANCE_CUSTOM.z * float(particle_total_frames));\n\tif (!particles_anim_loop) {\n\t\tparticle_frame = clamp(particle_frame, 0.0, particle_total_frames - 1.0);\n\t} else {\n\t\tparticle_frame = mod(particle_frame, particle_total_frames);\n\t}\tUV /= vec2(h_frames, v_frames);\n\tUV += vec2(mod(particle_frame, h_frames) / h_frames, floor((particle_frame + 0.5) / h_frames) / v_frames);\n}\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 2,
+    "light_mode": 0,
+    "particles_animation": false
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_sub;\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 2,
+    "light_mode": 0,
+    "particles_animation": true
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_sub;\nuniform int particles_anim_h_frames;\nuniform int particles_anim_v_frames;\nuniform bool particles_anim_loop;\n\nvoid vertex() {\n\tfloat h_frames = float(particles_anim_h_frames);\n\tfloat v_frames = float(particles_anim_v_frames);\n\tVERTEX.xy /= vec2(h_frames, v_frames);\n\tfloat particle_total_frames = float(particles_anim_h_frames * particles_anim_v_frames);\n\tfloat particle_frame = floor(INSTANCE_CUSTOM.z * float(particle_total_frames));\n\tif (!particles_anim_loop) {\n\t\tparticle_frame = clamp(particle_frame, 0.0, particle_total_frames - 1.0);\n\t} else {\n\t\tparticle_frame = mod(particle_frame, particle_total_frames);\n\t}\tUV /= vec2(h_frames, v_frames);\n\tUV += vec2(mod(particle_frame, h_frames) / h_frames, floor((particle_frame + 0.5) / h_frames) / v_frames);\n}\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 2,
+    "light_mode": 1,
+    "particles_animation": false
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_sub,unshaded;\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 2,
+    "light_mode": 1,
+    "particles_animation": true
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_sub,unshaded;\nuniform int particles_anim_h_frames;\nuniform int particles_anim_v_frames;\nuniform bool particles_anim_loop;\n\nvoid vertex() {\n\tfloat h_frames = float(particles_anim_h_frames);\n\tfloat v_frames = float(particles_anim_v_frames);\n\tVERTEX.xy /= vec2(h_frames, v_frames);\n\tfloat particle_total_frames = float(particles_anim_h_frames * particles_anim_v_frames);\n\tfloat particle_frame = floor(INSTANCE_CUSTOM.z * float(particle_total_frames));\n\tif (!particles_anim_loop) {\n\t\tparticle_frame = clamp(particle_frame, 0.0, particle_total_frames - 1.0);\n\t} else {\n\t\tparticle_frame = mod(particle_frame, particle_total_frames);\n\t}\tUV /= vec2(h_frames, v_frames);\n\tUV += vec2(mod(particle_frame, h_frames) / h_frames, floor((particle_frame + 0.5) / h_frames) / v_frames);\n}\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 2,
+    "light_mode": 2,
+    "particles_animation": false
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_sub,light_only;\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 2,
+    "light_mode": 2,
+    "particles_animation": true
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_sub,light_only;\nuniform int particles_anim_h_frames;\nuniform int particles_anim_v_frames;\nuniform bool particles_anim_loop;\n\nvoid vertex() {\n\tfloat h_frames = float(particles_anim_h_frames);\n\tfloat v_frames = float(particles_anim_v_frames);\n\tVERTEX.xy /= vec2(h_frames, v_frames);\n\tfloat particle_total_frames = float(particles_anim_h_frames * particles_anim_v_frames);\n\tfloat particle_frame = floor(INSTANCE_CUSTOM.z * float(particle_total_frames));\n\tif (!particles_anim_loop) {\n\t\tparticle_frame = clamp(particle_frame, 0.0, particle_total_frames - 1.0);\n\t} else {\n\t\tparticle_frame = mod(particle_frame, particle_total_frames);\n\t}\tUV /= vec2(h_frames, v_frames);\n\tUV += vec2(mod(particle_frame, h_frames) / h_frames, floor((particle_frame + 0.5) / h_frames) / v_frames);\n}\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 2,
+    "light_mode": 3,
+    "particles_animation": false
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_sub;\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 2,
+    "light_mode": 3,
+    "particles_animation": true
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_sub;\nuniform int particles_anim_h_frames;\nuniform int particles_anim_v_frames;\nuniform bool particles_anim_loop;\n\nvoid vertex() {\n\tfloat h_frames = float(particles_anim_h_frames);\n\tfloat v_frames = float(particles_anim_v_frames);\n\tVERTEX.xy /= vec2(h_frames, v_frames);\n\tfloat particle_total_frames = float(particles_anim_h_frames * particles_anim_v_frames);\n\tfloat particle_frame = floor(INSTANCE_CUSTOM.z * float(particle_total_frames));\n\tif (!particles_anim_loop) {\n\t\tparticle_frame = clamp(particle_frame, 0.0, particle_total_frames - 1.0);\n\t} else {\n\t\tparticle_frame = mod(particle_frame, particle_total_frames);\n\t}\tUV /= vec2(h_frames, v_frames);\n\tUV += vec2(mod(particle_frame, h_frames) / h_frames, floor((particle_frame + 0.5) / h_frames) / v_frames);\n}\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 3,
+    "light_mode": 0,
+    "particles_animation": false
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_mul;\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 3,
+    "light_mode": 0,
+    "particles_animation": true
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_mul;\nuniform int particles_anim_h_frames;\nuniform int particles_anim_v_frames;\nuniform bool particles_anim_loop;\n\nvoid vertex() {\n\tfloat h_frames = float(particles_anim_h_frames);\n\tfloat v_frames = float(particles_anim_v_frames);\n\tVERTEX.xy /= vec2(h_frames, v_frames);\n\tfloat particle_total_frames = float(particles_anim_h_frames * particles_anim_v_frames);\n\tfloat particle_frame = floor(INSTANCE_CUSTOM.z * float(particle_total_frames));\n\tif (!particles_anim_loop) {\n\t\tparticle_frame = clamp(particle_frame, 0.0, particle_total_frames - 1.0);\n\t} else {\n\t\tparticle_frame = mod(particle_frame, particle_total_frames);\n\t}\tUV /= vec2(h_frames, v_frames);\n\tUV += vec2(mod(particle_frame, h_frames) / h_frames, floor((particle_frame + 0.5) / h_frames) / v_frames);\n}\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 3,
+    "light_mode": 1,
+    "particles_animation": false
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_mul,unshaded;\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 3,
+    "light_mode": 1,
+    "particles_animation": true
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_mul,unshaded;\nuniform int particles_anim_h_frames;\nuniform int particles_anim_v_frames;\nuniform bool particles_anim_loop;\n\nvoid vertex() {\n\tfloat h_frames = float(particles_anim_h_frames);\n\tfloat v_frames = float(particles_anim_v_frames);\n\tVERTEX.xy /= vec2(h_frames, v_frames);\n\tfloat particle_total_frames = float(particles_anim_h_frames * particles_anim_v_frames);\n\tfloat particle_frame = floor(INSTANCE_CUSTOM.z * float(particle_total_frames));\n\tif (!particles_anim_loop) {\n\t\tparticle_frame = clamp(particle_frame, 0.0, particle_total_frames - 1.0);\n\t} else {\n\t\tparticle_frame = mod(particle_frame, particle_total_frames);\n\t}\tUV /= vec2(h_frames, v_frames);\n\tUV += vec2(mod(particle_frame, h_frames) / h_frames, floor((particle_frame + 0.5) / h_frames) / v_frames);\n}\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 3,
+    "light_mode": 2,
+    "particles_animation": false
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_mul,light_only;\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 3,
+    "light_mode": 2,
+    "particles_animation": true
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_mul,light_only;\nuniform int particles_anim_h_frames;\nuniform int particles_anim_v_frames;\nuniform bool particles_anim_loop;\n\nvoid vertex() {\n\tfloat h_frames = float(particles_anim_h_frames);\n\tfloat v_frames = float(particles_anim_v_frames);\n\tVERTEX.xy /= vec2(h_frames, v_frames);\n\tfloat particle_total_frames = float(particles_anim_h_frames * particles_anim_v_frames);\n\tfloat particle_frame = floor(INSTANCE_CUSTOM.z * float(particle_total_frames));\n\tif (!particles_anim_loop) {\n\t\tparticle_frame = clamp(particle_frame, 0.0, particle_total_frames - 1.0);\n\t} else {\n\t\tparticle_frame = mod(particle_frame, particle_total_frames);\n\t}\tUV /= vec2(h_frames, v_frames);\n\tUV += vec2(mod(particle_frame, h_frames) / h_frames, floor((particle_frame + 0.5) / h_frames) / v_frames);\n}\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 3,
+    "light_mode": 3,
+    "particles_animation": false
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_mul;\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 3,
+    "light_mode": 3,
+    "particles_animation": true
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_mul;\nuniform int particles_anim_h_frames;\nuniform int particles_anim_v_frames;\nuniform bool particles_anim_loop;\n\nvoid vertex() {\n\tfloat h_frames = float(particles_anim_h_frames);\n\tfloat v_frames = float(particles_anim_v_frames);\n\tVERTEX.xy /= vec2(h_frames, v_frames);\n\tfloat particle_total_frames = float(particles_anim_h_frames * particles_anim_v_frames);\n\tfloat particle_frame = floor(INSTANCE_CUSTOM.z * float(particle_total_frames));\n\tif (!particles_anim_loop) {\n\t\tparticle_frame = clamp(particle_frame, 0.0, particle_total_frames - 1.0);\n\t} else {\n\t\tparticle_frame = mod(particle_frame, particle_total_frames);\n\t}\tUV /= vec2(h_frames, v_frames);\n\tUV += vec2(mod(particle_frame, h_frames) / h_frames, floor((particle_frame + 0.5) / h_frames) / v_frames);\n}\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 4,
+    "light_mode": 0,
+    "particles_animation": false
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_premul_alpha;\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 4,
+    "light_mode": 0,
+    "particles_animation": true
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_premul_alpha;\nuniform int particles_anim_h_frames;\nuniform int particles_anim_v_frames;\nuniform bool particles_anim_loop;\n\nvoid vertex() {\n\tfloat h_frames = float(particles_anim_h_frames);\n\tfloat v_frames = float(particles_anim_v_frames);\n\tVERTEX.xy /= vec2(h_frames, v_frames);\n\tfloat particle_total_frames = float(particles_anim_h_frames * particles_anim_v_frames);\n\tfloat particle_frame = floor(INSTANCE_CUSTOM.z * float(particle_total_frames));\n\tif (!particles_anim_loop) {\n\t\tparticle_frame = clamp(particle_frame, 0.0, particle_total_frames - 1.0);\n\t} else {\n\t\tparticle_frame = mod(particle_frame, particle_total_frames);\n\t}\tUV /= vec2(h_frames, v_frames);\n\tUV += vec2(mod(particle_frame, h_frames) / h_frames, floor((particle_frame + 0.5) / h_frames) / v_frames);\n}\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 4,
+    "light_mode": 1,
+    "particles_animation": false
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_premul_alpha,unshaded;\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 4,
+    "light_mode": 1,
+    "particles_animation": true
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_premul_alpha,unshaded;\nuniform int particles_anim_h_frames;\nuniform int particles_anim_v_frames;\nuniform bool particles_anim_loop;\n\nvoid vertex() {\n\tfloat h_frames = float(particles_anim_h_frames);\n\tfloat v_frames = float(particles_anim_v_frames);\n\tVERTEX.xy /= vec2(h_frames, v_frames);\n\tfloat particle_total_frames = float(particles_anim_h_frames * particles_anim_v_frames);\n\tfloat particle_frame = floor(INSTANCE_CUSTOM.z * float(particle_total_frames));\n\tif (!particles_anim_loop) {\n\t\tparticle_frame = clamp(particle_frame, 0.0, particle_total_frames - 1.0);\n\t} else {\n\t\tparticle_frame = mod(particle_frame, particle_total_frames);\n\t}\tUV /= vec2(h_frames, v_frames);\n\tUV += vec2(mod(particle_frame, h_frames) / h_frames, floor((particle_frame + 0.5) / h_frames) / v_frames);\n}\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 4,
+    "light_mode": 2,
+    "particles_animation": false
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_premul_alpha,light_only;\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 4,
+    "light_mode": 2,
+    "particles_animation": true
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_premul_alpha,light_only;\nuniform int particles_anim_h_frames;\nuniform int particles_anim_v_frames;\nuniform bool particles_anim_loop;\n\nvoid vertex() {\n\tfloat h_frames = float(particles_anim_h_frames);\n\tfloat v_frames = float(particles_anim_v_frames);\n\tVERTEX.xy /= vec2(h_frames, v_frames);\n\tfloat particle_total_frames = float(particles_anim_h_frames * particles_anim_v_frames);\n\tfloat particle_frame = floor(INSTANCE_CUSTOM.z * float(particle_total_frames));\n\tif (!particles_anim_loop) {\n\t\tparticle_frame = clamp(particle_frame, 0.0, particle_total_frames - 1.0);\n\t} else {\n\t\tparticle_frame = mod(particle_frame, particle_total_frames);\n\t}\tUV /= vec2(h_frames, v_frames);\n\tUV += vec2(mod(particle_frame, h_frames) / h_frames, floor((particle_frame + 0.5) / h_frames) / v_frames);\n}\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 4,
+    "light_mode": 3,
+    "particles_animation": false
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_premul_alpha;\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 4,
+    "light_mode": 3,
+    "particles_animation": true
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_premul_alpha;\nuniform int particles_anim_h_frames;\nuniform int particles_anim_v_frames;\nuniform bool particles_anim_loop;\n\nvoid vertex() {\n\tfloat h_frames = float(particles_anim_h_frames);\n\tfloat v_frames = float(particles_anim_v_frames);\n\tVERTEX.xy /= vec2(h_frames, v_frames);\n\tfloat particle_total_frames = float(particles_anim_h_frames * particles_anim_v_frames);\n\tfloat particle_frame = floor(INSTANCE_CUSTOM.z * float(particle_total_frames));\n\tif (!particles_anim_loop) {\n\t\tparticle_frame = clamp(particle_frame, 0.0, particle_total_frames - 1.0);\n\t} else {\n\t\tparticle_frame = mod(particle_frame, particle_total_frames);\n\t}\tUV /= vec2(h_frames, v_frames);\n\tUV += vec2(mod(particle_frame, h_frames) / h_frames, floor((particle_frame + 0.5) / h_frames) / v_frames);\n}\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 5,
+    "light_mode": 0,
+    "particles_animation": false
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_disabled;\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 5,
+    "light_mode": 0,
+    "particles_animation": true
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_disabled;\nuniform int particles_anim_h_frames;\nuniform int particles_anim_v_frames;\nuniform bool particles_anim_loop;\n\nvoid vertex() {\n\tfloat h_frames = float(particles_anim_h_frames);\n\tfloat v_frames = float(particles_anim_v_frames);\n\tVERTEX.xy /= vec2(h_frames, v_frames);\n\tfloat particle_total_frames = float(particles_anim_h_frames * particles_anim_v_frames);\n\tfloat particle_frame = floor(INSTANCE_CUSTOM.z * float(particle_total_frames));\n\tif (!particles_anim_loop) {\n\t\tparticle_frame = clamp(particle_frame, 0.0, particle_total_frames - 1.0);\n\t} else {\n\t\tparticle_frame = mod(particle_frame, particle_total_frames);\n\t}\tUV /= vec2(h_frames, v_frames);\n\tUV += vec2(mod(particle_frame, h_frames) / h_frames, floor((particle_frame + 0.5) / h_frames) / v_frames);\n}\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 5,
+    "light_mode": 1,
+    "particles_animation": false
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_disabled,unshaded;\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 5,
+    "light_mode": 1,
+    "particles_animation": true
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_disabled,unshaded;\nuniform int particles_anim_h_frames;\nuniform int particles_anim_v_frames;\nuniform bool particles_anim_loop;\n\nvoid vertex() {\n\tfloat h_frames = float(particles_anim_h_frames);\n\tfloat v_frames = float(particles_anim_v_frames);\n\tVERTEX.xy /= vec2(h_frames, v_frames);\n\tfloat particle_total_frames = float(particles_anim_h_frames * particles_anim_v_frames);\n\tfloat particle_frame = floor(INSTANCE_CUSTOM.z * float(particle_total_frames));\n\tif (!particles_anim_loop) {\n\t\tparticle_frame = clamp(particle_frame, 0.0, particle_total_frames - 1.0);\n\t} else {\n\t\tparticle_frame = mod(particle_frame, particle_total_frames);\n\t}\tUV /= vec2(h_frames, v_frames);\n\tUV += vec2(mod(particle_frame, h_frames) / h_frames, floor((particle_frame + 0.5) / h_frames) / v_frames);\n}\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 5,
+    "light_mode": 2,
+    "particles_animation": false
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_disabled,light_only;\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 5,
+    "light_mode": 2,
+    "particles_animation": true
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_disabled,light_only;\nuniform int particles_anim_h_frames;\nuniform int particles_anim_v_frames;\nuniform bool particles_anim_loop;\n\nvoid vertex() {\n\tfloat h_frames = float(particles_anim_h_frames);\n\tfloat v_frames = float(particles_anim_v_frames);\n\tVERTEX.xy /= vec2(h_frames, v_frames);\n\tfloat particle_total_frames = float(particles_anim_h_frames * particles_anim_v_frames);\n\tfloat particle_frame = floor(INSTANCE_CUSTOM.z * float(particle_total_frames));\n\tif (!particles_anim_loop) {\n\t\tparticle_frame = clamp(particle_frame, 0.0, particle_total_frames - 1.0);\n\t} else {\n\t\tparticle_frame = mod(particle_frame, particle_total_frames);\n\t}\tUV /= vec2(h_frames, v_frames);\n\tUV += vec2(mod(particle_frame, h_frames) / h_frames, floor((particle_frame + 0.5) / h_frames) / v_frames);\n}\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 5,
+    "light_mode": 3,
+    "particles_animation": false
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_disabled;\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 5,
+    "light_mode": 3,
+    "particles_animation": true
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode blend_disabled;\nuniform int particles_anim_h_frames;\nuniform int particles_anim_v_frames;\nuniform bool particles_anim_loop;\n\nvoid vertex() {\n\tfloat h_frames = float(particles_anim_h_frames);\n\tfloat v_frames = float(particles_anim_v_frames);\n\tVERTEX.xy /= vec2(h_frames, v_frames);\n\tfloat particle_total_frames = float(particles_anim_h_frames * particles_anim_v_frames);\n\tfloat particle_frame = floor(INSTANCE_CUSTOM.z * float(particle_total_frames));\n\tif (!particles_anim_loop) {\n\t\tparticle_frame = clamp(particle_frame, 0.0, particle_total_frames - 1.0);\n\t} else {\n\t\tparticle_frame = mod(particle_frame, particle_total_frames);\n\t}\tUV /= vec2(h_frames, v_frames);\n\tUV += vec2(mod(particle_frame, h_frames) / h_frames, floor((particle_frame + 0.5) / h_frames) / v_frames);\n}\n",
+   "verdict": "accepted"
+  },
+  {
+   "properties": {
+    "blend_mode": 6,
+    "light_mode": 0,
+    "particles_animation": false
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode ;\n",
+   "verdict": "line 4: Expected an identifier for render mode."
+  },
+  {
+   "properties": {
+    "blend_mode": 6,
+    "light_mode": 0,
+    "particles_animation": true
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode ;\nuniform int particles_anim_h_frames;\nuniform int particles_anim_v_frames;\nuniform bool particles_anim_loop;\n\nvoid vertex() {\n\tfloat h_frames = float(particles_anim_h_frames);\n\tfloat v_frames = float(particles_anim_v_frames);\n\tVERTEX.xy /= vec2(h_frames, v_frames);\n\tfloat particle_total_frames = float(particles_anim_h_frames * particles_anim_v_frames);\n\tfloat particle_frame = floor(INSTANCE_CUSTOM.z * float(particle_total_frames));\n\tif (!particles_anim_loop) {\n\t\tparticle_frame = clamp(particle_frame, 0.0, particle_total_frames - 1.0);\n\t} else {\n\t\tparticle_frame = mod(particle_frame, particle_total_frames);\n\t}\tUV /= vec2(h_frames, v_frames);\n\tUV += vec2(mod(particle_frame, h_frames) / h_frames, floor((particle_frame + 0.5) / h_frames) / v_frames);\n}\n",
+   "verdict": "line 4: Expected an identifier for render mode."
+  },
+  {
+   "properties": {
+    "blend_mode": 6,
+    "light_mode": 1,
+    "particles_animation": false
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode ,unshaded;\n",
+   "verdict": "line 4: Expected an identifier for render mode."
+  },
+  {
+   "properties": {
+    "blend_mode": 6,
+    "light_mode": 1,
+    "particles_animation": true
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode ,unshaded;\nuniform int particles_anim_h_frames;\nuniform int particles_anim_v_frames;\nuniform bool particles_anim_loop;\n\nvoid vertex() {\n\tfloat h_frames = float(particles_anim_h_frames);\n\tfloat v_frames = float(particles_anim_v_frames);\n\tVERTEX.xy /= vec2(h_frames, v_frames);\n\tfloat particle_total_frames = float(particles_anim_h_frames * particles_anim_v_frames);\n\tfloat particle_frame = floor(INSTANCE_CUSTOM.z * float(particle_total_frames));\n\tif (!particles_anim_loop) {\n\t\tparticle_frame = clamp(particle_frame, 0.0, particle_total_frames - 1.0);\n\t} else {\n\t\tparticle_frame = mod(particle_frame, particle_total_frames);\n\t}\tUV /= vec2(h_frames, v_frames);\n\tUV += vec2(mod(particle_frame, h_frames) / h_frames, floor((particle_frame + 0.5) / h_frames) / v_frames);\n}\n",
+   "verdict": "line 4: Expected an identifier for render mode."
+  },
+  {
+   "properties": {
+    "blend_mode": 6,
+    "light_mode": 2,
+    "particles_animation": false
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode ,light_only;\n",
+   "verdict": "line 4: Expected an identifier for render mode."
+  },
+  {
+   "properties": {
+    "blend_mode": 6,
+    "light_mode": 2,
+    "particles_animation": true
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode ,light_only;\nuniform int particles_anim_h_frames;\nuniform int particles_anim_v_frames;\nuniform bool particles_anim_loop;\n\nvoid vertex() {\n\tfloat h_frames = float(particles_anim_h_frames);\n\tfloat v_frames = float(particles_anim_v_frames);\n\tVERTEX.xy /= vec2(h_frames, v_frames);\n\tfloat particle_total_frames = float(particles_anim_h_frames * particles_anim_v_frames);\n\tfloat particle_frame = floor(INSTANCE_CUSTOM.z * float(particle_total_frames));\n\tif (!particles_anim_loop) {\n\t\tparticle_frame = clamp(particle_frame, 0.0, particle_total_frames - 1.0);\n\t} else {\n\t\tparticle_frame = mod(particle_frame, particle_total_frames);\n\t}\tUV /= vec2(h_frames, v_frames);\n\tUV += vec2(mod(particle_frame, h_frames) / h_frames, floor((particle_frame + 0.5) / h_frames) / v_frames);\n}\n",
+   "verdict": "line 4: Expected an identifier for render mode."
+  },
+  {
+   "properties": {
+    "blend_mode": 6,
+    "light_mode": 3,
+    "particles_animation": false
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode ;\n",
+   "verdict": "line 4: Expected an identifier for render mode."
+  },
+  {
+   "properties": {
+    "blend_mode": 6,
+    "light_mode": 3,
+    "particles_animation": true
+   },
+   "code": "// NOTE: Shader automatically converted from Godot Engine 4.6.3.stable's CanvasItemMaterial.\n\nshader_type canvas_item;\nrender_mode ;\nuniform int particles_anim_h_frames;\nuniform int particles_anim_v_frames;\nuniform bool particles_anim_loop;\n\nvoid vertex() {\n\tfloat h_frames = float(particles_anim_h_frames);\n\tfloat v_frames = float(particles_anim_v_frames);\n\tVERTEX.xy /= vec2(h_frames, v_frames);\n\tfloat particle_total_frames = float(particles_anim_h_frames * particles_anim_v_frames);\n\tfloat particle_frame = floor(INSTANCE_CUSTOM.z * float(particle_total_frames));\n\tif (!particles_anim_loop) {\n\t\tparticle_frame = clamp(particle_frame, 0.0, particle_total_frames - 1.0);\n\t} else {\n\t\tparticle_frame = mod(particle_frame, particle_total_frames);\n\t}\tUV /= vec2(h_frames, v_frames);\n\tUV += vec2(mod(particle_frame, h_frames) / h_frames, floor((particle_frame + 0.5) / h_frames) / v_frames);\n}\n",
+   "verdict": "line 4: Expected an identifier for render mode."
+  }
+ ],
+ "parameters": [
+  {
+   "properties": {
+    "particles_animation": true
+   },
+   "values": {
+    "particles_anim_h_frames": "1",
+    "particles_anim_loop": "false",
+    "particles_anim_v_frames": "1"
+   }
+  },
+  {
+   "properties": {
+    "particles_anim_h_frames": 4,
+    "particles_anim_loop": true,
+    "particles_anim_v_frames": 2,
+    "particles_animation": true
+   },
+   "values": {
+    "particles_anim_h_frames": "4",
+    "particles_anim_loop": "true",
+    "particles_anim_v_frames": "2"
+   }
+  },
+  {
+   "properties": {
+    "particles_anim_h_frames": 0,
+    "particles_anim_v_frames": -3,
+    "particles_animation": true
+   },
+   "values": {
+    "particles_anim_h_frames": "0",
+    "particles_anim_loop": "false",
+    "particles_anim_v_frames": "-3"
+   }
+  },
+  {
+   "properties": {
+    "particles_anim_h_frames": 500,
+    "particles_anim_v_frames": 129,
+    "particles_animation": true
+   },
+   "values": {
+    "particles_anim_h_frames": "500",
+    "particles_anim_loop": "false",
+    "particles_anim_v_frames": "129"
+   }
+  },
+  {
+   "properties": {
+    "particles_anim_h_frames": 3,
+    "particles_animation": false
+   },
+   "values": {
+    "particles_anim_h_frames": "3",
+    "particles_anim_loop": "false",
+    "particles_anim_v_frames": "1"
+   }
+  }
+ ]
+}

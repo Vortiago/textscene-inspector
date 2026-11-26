@@ -111,6 +111,13 @@ describe('canvasItemBlendState', () => {
     expect(state.premultipliedAlpha).toBe(godot.premultipliedAlpha);
   });
 
+  it('turns blending off for DISABLED, whose attachment keeps the default values (cpp:709-712)', () => {
+    expect(canvasItemBlendState(CanvasItemMaterialBlendMode.DISABLED)).toEqual({
+      blending: THREE.NoBlending,
+      premultipliedAlpha: false,
+    });
+  });
+
   it('leaves MIX to NormalBlending, which is Godot MIX exactly (cpp:655-662)', () => {
     // Godot MIX: colour SRC_ALPHA / ONE_MINUS_SRC_ALPHA, alpha ONE /
     // ONE_MINUS_SRC_ALPHA, both ADD: the pair three's NormalBlending sets for a
@@ -149,15 +156,6 @@ describe('canvasItemBlendState', () => {
       CanvasItemMaterialBlendMode.PREMULT_ALPHA,
     ].filter((mode) => canvasItemBlendState(mode).premultipliedAlpha);
     expect(premultiplied).toEqual([]);
-  });
-
-  it('falls back to MIX for the unauthorable DISABLED mode (h:45, unbound)', () => {
-    // BLEND_MODE_DISABLED is in the C++ enum but bound to neither the script API
-    // nor the inspector hint, so decode rejects a `blend_mode = 5` first; the
-    // build half still has to answer, and MIX is the safe answer.
-    const disabled = 5 as EnumValue<typeof CanvasItemMaterialBlendMode>;
-    expect(canvasItemBlendState(disabled)).toEqual(canvasItemBlendState(CanvasItemMaterialBlendMode.MIX));
-    expect(decode({ blend_mode: '5' }).blendMode).toBe(CanvasItemMaterialBlendMode.MIX);
   });
 
   it('is independent of light_mode — unshaded and light_only blend the same', () => {

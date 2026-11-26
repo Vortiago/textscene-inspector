@@ -124,6 +124,8 @@ const TEXTURE_BINDINGS: readonly Binding<BatchTexture>[] = [
 export class CanvasTextureBinding {
   /** Written only by `bind`: the copies of each sampler state, which three keeps on the texture. */
   private readonly copies = new Map<string, TextureCopies>();
+  /** Written only by `bind`: the textures the batch samples now. */
+  private bound: readonly THREE.Texture[] = [];
   private readonly white = defaultTexture('flat', 'white');
   private readonly normal = defaultTexture('flat', 'normal');
 
@@ -147,14 +149,22 @@ export class CanvasTextureBinding {
     };
     const raw = { ...state, usesLinearColors: false };
     const color = texture ? copyOf(texture, state) : this.white;
+    const normal = maps.normal ? copyOf(maps.normal, raw) : this.normal;
+    const specular = maps.specular ? copyOf(maps.specular, raw) : this.white;
     this.setTexture('color_texture', color);
-    this.setTexture('normal_texture', maps.normal ? copyOf(maps.normal, raw) : this.normal);
-    this.setTexture('specular_texture', maps.specular ? copyOf(maps.specular, raw) : this.white);
+    this.setTexture('normal_texture', normal);
+    this.setTexture('specular_texture', specular);
+    this.bound = [color, normal, specular];
     const size = texture ? sizeOf(color) : DEFAULT_TEXTURE_SIZE;
     writeBindings(TEXTURE_BINDINGS, this.draw.uniforms, { ...size, maps });
     for (const copies of this.copies.values()) copies.release(kept.get(copies) ?? []);
     // Nothing, not the default's size: a record with no texture reads the whole default texture.
     return texture ? { x: 1 / size.width, y: 1 / size.height } : undefined;
+  }
+
+  /** The color, normal and specular textures the last `bind` bound. */
+  get boundTextures(): readonly THREE.Texture[] {
+    return this.bound;
   }
 
   /** Frees the copies and the default textures it binds. */

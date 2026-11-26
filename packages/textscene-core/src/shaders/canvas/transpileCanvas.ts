@@ -37,9 +37,6 @@ import type { ProjectSampling } from '../uniforms/samplerState.js';
 import type { TranspiledUniform } from '../uniforms/transpiledUniform.js';
 import { canvasBlendState } from './canvasBlend.js';
 
-/** Godot's default canvas shader, a version with empty slots (`renderer_canvas_render_rd.cpp:1762`). */
-export const DEFAULT_CANVAS_SHADER = 'shader_type canvas_item;\n';
-
 /** In Godot's order (`renderer_canvas_render_rd.cpp:1750-1755`). */
 export const CANVAS_VARIANTS = [
   'quad',

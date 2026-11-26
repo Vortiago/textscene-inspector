@@ -1,0 +1,158 @@
+[gd_scene format=3]
+
+; One variable: the canvas item form, switched to translated, so each item draws Godot's default canvas
+; shader or the text Godot writes for its CanvasItemMaterial. Each blend mode and light mode sits over a
+; vertex-coloured backdrop, on a Sprite2D, Polygon2D, Line2D, MeshInstance2D, AnimatedSprite2D and tiles.
+; The particle animation flag shrinks a sprite as Godot's vertex() does with INSTANCE_CUSTOM at 0.
+; No other golden captures with the switch on, so none shows a regression in the translated form.
+
+[ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
+[ext_resource type="Texture2D" path="res://textures/dodge-up1.png" id="2_dodge"]
+
+[sub_resource type="CanvasItemMaterial" id="Material_add"]
+blend_mode = 1
+
+[sub_resource type="CanvasItemMaterial" id="Material_sub"]
+blend_mode = 2
+
+[sub_resource type="CanvasItemMaterial" id="Material_mul"]
+blend_mode = 3
+
+[sub_resource type="CanvasItemMaterial" id="Material_premul"]
+blend_mode = 4
+
+[sub_resource type="CanvasItemMaterial" id="Material_unshaded"]
+light_mode = 1
+
+[sub_resource type="CanvasItemMaterial" id="Material_light_only"]
+light_mode = 2
+
+[sub_resource type="CanvasItemMaterial" id="Material_particles"]
+particles_animation = true
+particles_anim_h_frames = 2
+particles_anim_v_frames = 2
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_marker"]
+texture = ExtResource("1_marker")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+0:1/0/material = SubResource("Material_mul")
+1:1/0 = 0
+1:1/0/modulate = Color(1, 0.6, 0.6, 1)
+
+[sub_resource type="TileSet" id="TileSet_marker"]
+tile_size = Vector2i(32, 32)
+sources/0 = SubResource("TileSetAtlasSource_marker")
+
+[sub_resource type="QuadMesh" id="QuadMesh_square"]
+size = Vector2(96, 64)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_dodge"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("2_dodge")
+}],
+"loop": true,
+"name": &"default",
+"speed": 5.0
+}]
+
+[node name="World" type="Node2D"]
+
+[node name="Tint" type="CanvasModulate" parent="."]
+color = Color(0.85, 0.9, 1, 1)
+
+[node name="Backdrop" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(20, 20, 1132, 20, 1132, 628, 20, 628)
+vertex_colors = PackedColorArray(0.9, 0.3, 0.2, 1, 0.2, 0.7, 0.9, 1, 0.3, 0.9, 0.4, 1, 0.6, 0.5, 0.8, 1)
+
+[node name="Mix" type="Sprite2D" parent="."]
+modulate = Color(1, 1, 1, 0.6)
+position = Vector2(100, 110)
+texture = ExtResource("1_marker")
+
+[node name="Add" type="Sprite2D" parent="."]
+material = SubResource("Material_add")
+position = Vector2(240, 110)
+texture = ExtResource("1_marker")
+
+[node name="Sub" type="Sprite2D" parent="."]
+material = SubResource("Material_sub")
+position = Vector2(380, 110)
+texture = ExtResource("1_marker")
+
+[node name="Mul" type="Sprite2D" parent="."]
+material = SubResource("Material_mul")
+position = Vector2(520, 110)
+texture = ExtResource("1_marker")
+
+[node name="Premul" type="Sprite2D" parent="."]
+material = SubResource("Material_premul")
+self_modulate = Color(1, 1, 1, 0.5)
+position = Vector2(660, 110)
+texture = ExtResource("2_dodge")
+
+[node name="Unshaded" type="Sprite2D" parent="."]
+material = SubResource("Material_unshaded")
+position = Vector2(800, 110)
+texture = ExtResource("1_marker")
+flip_h = true
+
+[node name="LightOnly" type="Sprite2D" parent="."]
+material = SubResource("Material_light_only")
+position = Vector2(940, 110)
+texture = ExtResource("1_marker")
+
+[node name="Particles" type="Sprite2D" parent="."]
+material = SubResource("Material_particles")
+position = Vector2(1060, 110)
+texture = ExtResource("1_marker")
+
+[node name="Region" type="Sprite2D" parent="."]
+z_index = 1
+position = Vector2(100, 300)
+rotation = 0.4
+scale = Vector2(1.5, 1.2)
+texture = ExtResource("1_marker")
+region_enabled = true
+region_rect = Rect2(16, 8, 48, 64)
+flip_v = true
+
+[node name="Polygon" type="Polygon2D" parent="."]
+material = SubResource("Material_mul")
+position = Vector2(200, 230)
+texture = ExtResource("1_marker")
+polygon = PackedVector2Array(0, 0, 160, 20, 140, 150, 10, 120)
+vertex_colors = PackedColorArray(1, 1, 1, 1, 1, 0.5, 0.5, 1, 0.5, 1, 0.5, 1, 0.5, 0.5, 1, 1)
+
+[node name="Line" type="Line2D" parent="."]
+material = SubResource("Material_add")
+position = Vector2(420, 250)
+points = PackedVector2Array(0, 0, 120, 40, 160, 140)
+width = 24.0
+default_color = Color(0.4, 0.3, 0.6, 1)
+
+[node name="Mesh" type="MeshInstance2D" parent="."]
+material = SubResource("Material_premul")
+modulate = Color(1, 0.8, 0.6, 0.7)
+position = Vector2(720, 310)
+rotation = 0.3
+mesh = SubResource("QuadMesh_square")
+texture = ExtResource("1_marker")
+
+[node name="Animated" type="AnimatedSprite2D" parent="."]
+material = SubResource("Material_sub")
+position = Vector2(900, 310)
+scale = Vector2(2, 2)
+sprite_frames = SubResource("SpriteFrames_dodge")
+flip_h = true
+
+[node name="Tiles" type="TileMapLayer" parent="."]
+material = SubResource("Material_add")
+position = Vector2(80, 440)
+scale = Vector2(2, 2)
+tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 1, 0, 0, 16, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 64, 2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0)
+tile_set = SubResource("TileSet_marker")

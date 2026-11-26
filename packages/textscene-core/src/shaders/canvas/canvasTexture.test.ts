@@ -3,7 +3,8 @@ import type { UniformNode } from 'three/webgpu';
 import { describe, expect, it } from 'vitest';
 import { CanvasTextureBinding, GODOT_CANVAS_TEXTURE_STATE } from './canvasTexture.js';
 import { WHITE } from './canvasInstance.js';
-import { DEFAULT_CANVAS_SHADER, transpileCanvasItem } from './transpileCanvas.js';
+import { DEFAULT_CANVAS_SHADER } from './defaultCanvasShader.js';
+import { transpileCanvasItem } from './transpileCanvas.js';
 
 function bound() {
   const draw = transpileCanvasItem(DEFAULT_CANVAS_SHADER).draw('quad');

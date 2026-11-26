@@ -73,15 +73,20 @@ export function useViewportAnisotropy(texture: THREE.Texture | null): void {
   const renderer = useContext(context)?.getState().gl;
   useEffect(() => {
     if (!texture || !renderer) return;
-    // Hold even a texture that samples one tap now, as its filter may change later.
-    const releaseDrawn = holdDrawn(texture, renderer);
-    const releaseUpload = holdUploadWriter(texture, () => writeTaps(renderer, texture, true));
-    writeTaps(renderer, texture, false);
-    return () => {
-      releaseUpload();
-      releaseDrawn();
-    };
+    return holdViewportAnisotropy(renderer, texture);
   }, [texture, renderer]);
+}
+
+/** For a texture its caller binds outside React, such as a translated shader's copy. Returns the release. */
+export function holdViewportAnisotropy(renderer: THREE.WebGLRenderer, texture: THREE.Texture): () => void {
+  // Hold even a texture that samples one tap now, as its filter may change later.
+  const releaseDrawn = holdDrawn(texture, renderer);
+  const releaseUpload = holdUploadWriter(texture, () => writeTaps(renderer, texture, true));
+  writeTaps(renderer, texture, false);
+  return () => {
+    releaseUpload();
+    releaseDrawn();
+  };
 }
 
 function holdDrawn(texture: THREE.Texture, renderer: THREE.WebGLRenderer): () => void {

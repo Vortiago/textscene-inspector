@@ -89,6 +89,7 @@ function QuadrantLayer({ node, model, status, sceneTiles, children }: QuadrantLa
               selfTint={state.tint.self}
               material={state.material}
               shader={state.shader}
+              materialShader={state.materialShader}
               lightMask={state.lightMask}
               zFinal={state.zFinal}
               sampler={state.sampler}

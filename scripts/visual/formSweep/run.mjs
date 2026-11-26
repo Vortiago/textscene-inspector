@@ -1,12 +1,4 @@
 #!/usr/bin/env node
-/**
- * The lit surface sweep: every 3D golden of the visual gate, captured as the gate captures it with
- * the node lit surface switched on (`?litSurface=nodes`), and compared with its baseline.
- *   pnpm test:visual:lit-surface --out <file.jsonl> [--match <text>]
- * It writes one JSON row per scene and skips each scene `--out` already holds, so a stopped run
- * goes on where it stopped. After the rows it prints the four counts over the whole file.
- */
-
 import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { compareImages } from '../imageDelta.mjs';
@@ -17,7 +9,15 @@ import { captureScene } from '../run/sceneCapture.mjs';
 import { GOLDEN_SCENES } from '../scenes.mjs';
 import { sweepCounts } from './sweepCounts.mjs';
 
-function parseArgs(argv) {
+/** Each switch: the goldens it reaches, and the scene option that turns it on. */
+const FORMS = {
+  'lit-surface': { reaches: (scene) => scene.mode !== '2d', option: { litSurface: 'nodes' } },
+  'canvas-item': { reaches: (scene) => scene.mode !== undefined, option: { canvasItem: 'translated' } },
+};
+
+function parseArgs([formName, ...argv]) {
+  const form = Object.hasOwn(FORMS, formName) ? FORMS[formName] : null;
+  if (!form) throw new Error(`expected a form, one of ${Object.keys(FORMS).join(', ')}, got ${formName}`);
   const args = { out: null, match: '' };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -25,10 +25,14 @@ function parseArgs(argv) {
     else if (arg === '--match') args.match = argv[++i];
     else throw new Error(`expected --out <file> or --match <text>, got ${arg}`);
   }
-  if (!args.out) throw new Error('expected --out <file>, got none');
-  return { out: resolve(args.out), match: args.match };
+  if (!args.out)
+    throw new Error(
+      `expected --out <file.jsonl>, got none: pnpm test:visual:${formName} --out <file.jsonl> [--match <text>]`
+    );
+  return { formName, form, out: resolve(args.out), match: args.match };
 }
 
+/** A stopped run goes on where it stopped: a scene `out` already holds is not captured again. */
 function readRows(out) {
   if (!existsSync(out)) return [];
   return readFileSync(out, 'utf8')
@@ -50,12 +54,12 @@ function deltaOf(scene, buffer) {
   return sizeMismatch ? { sizeMismatch } : { changedPixels, maxChannelDelta, meanChannelError };
 }
 
-/** The 3D goldens `match` names that `rows` hold no row for, each with the switch on. */
-function scenesToSweep(rows, match) {
+/** The goldens `form` reaches and `match` names that `rows` hold no row for, each with the switch on. */
+function scenesToSweep(form, rows, match) {
   const swept = new Set(rows.map((row) => row.name));
-  return GOLDEN_SCENES.filter((scene) => scene.mode !== '2d' && scene.name.includes(match))
+  return GOLDEN_SCENES.filter((scene) => form.reaches(scene) && scene.name.includes(match))
     .filter((scene) => !swept.has(scene.name))
-    .map((scene) => ({ ...scene, litSurface: 'nodes' }));
+    .map((scene) => ({ ...scene, ...form.option }));
 }
 
 /** Captures each scene, and appends its row to `out` and to `rows`. */
@@ -80,13 +84,13 @@ async function sweep(out, scenes, rows) {
 }
 
 async function main() {
-  const { out, match } = parseArgs(process.argv.slice(2));
+  const { formName, form, out, match } = parseArgs(process.argv.slice(2));
   const rows = readRows(out);
-  const scenes = scenesToSweep(rows, match);
+  const scenes = scenesToSweep(form, rows, match);
   if (scenes.length > 0) await sweep(out, scenes, rows);
   const { identical, withinOneStep, aboveOneStep, failed } = sweepCounts(rows);
   console.log(
-    `[lit-surface] identical ${identical}, within 1/255 ${withinOneStep}, above 1/255 ${aboveOneStep}, failed ${failed}`
+    `[${formName}] identical ${identical}, within 1/255 ${withinOneStep}, above 1/255 ${aboveOneStep}, failed ${failed}`
   );
   process.exit(0);
 }

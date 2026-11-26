@@ -72,6 +72,17 @@ describe('parseArgs', () => {
     expect(parseArgs(['a.tscn']).litSurface).toBeNull();
   });
 
+  it('reads the canvas item form our side opens the scene with, unset by default', () => {
+    expect(parseArgs(['a.tscn', '--canvas-item', 'translated']).canvasItem).toBe('translated');
+    expect(parseArgs(['a.tscn']).canvasItem).toBeNull();
+  });
+
+  it('rejects a canvas item form the previewer does not know (error path)', () => {
+    expect(() => parseArgs(['a.tscn', '--canvas-item', 'classic'])).toThrow(
+      '--canvas-item takes one of translated, got "classic"'
+    );
+  });
+
   it('takes a forced read of the stored depth', () => {
     expect(parseArgs(['a.tscn', '--stored-depth-read', 'fetched']).storedDepthRead).toBe('fetched');
     expect(() => parseArgs(['a.tscn', '--stored-depth-read', 'other'])).toThrow();
@@ -232,6 +243,11 @@ describe('diffOne', () => {
   it('opens our side with the lit surface form the run asks for', async () => {
     const asked = await askedCapture('3d', { frame: false, keep: false, litSurface: 'nodes' });
     expect(asked.litSurface).toBe('nodes');
+  });
+
+  it('opens our side with the canvas item form the run asks for', async () => {
+    const asked = await askedCapture('2d', { frame: false, keep: false, canvasItem: 'translated' });
+    expect(asked.canvasItem).toBe('translated');
   });
 
   it('captures our 2D canvas when the engine rendered the scene in 2D', async () => {

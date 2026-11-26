@@ -16,7 +16,13 @@ import {
   type CanvasLighting2D,
   type CanvasLightList,
 } from './lightPassContext';
-import { placementId, type ItemPlacement, type LitItemRead } from './itemLightList';
+import {
+  placementId,
+  type CanvasLightDeclaration,
+  type ItemPlacement,
+  type LitItemRead,
+} from './itemLightList';
+import { DEFAULT_LIGHT_CULL_KEY } from './lightCullKey';
 import type { ApartLightBuffers } from './lightPassContext';
 import type { CanvasItemSurface } from './normalMappedLighting';
 import type { CappedItem } from './itemLightCap';
@@ -341,5 +347,39 @@ describe('useLitSurface under the per-item cap', () => {
     expect(boundUniforms(result.current).uLit!.value).toBe(0);
     act(() => capped.take([1]));
     expect(boundUniforms(result.current).uLightList!.value).toBe(published.buffer);
+  });
+});
+
+describe('useLitItem isReachedByLight', () => {
+  /** A canvas with `light` on it and no list, as before any item at the placement reads one. */
+  function canvasWith(light: CanvasLightDeclaration) {
+    const value: CanvasLighting2D = { ...INERT_CANVAS_LIGHTING, lights: new Map([[0, light]]) };
+    return ({ children }: { children: ReactNode }) => (
+      <CanvasLighting2DContext.Provider value={value}>{children}</CanvasLighting2DContext.Provider>
+    );
+  }
+
+  const LIGHT: CanvasLightDeclaration = {
+    reach: DEFAULT_LIGHT_CULL_KEY,
+    sequence: 0,
+    shadowItemCullMask: null,
+    tintsShadow: false,
+    mixes: false,
+  };
+
+  it('is true for a light that reaches the placement, while no item reads its list', () => {
+    const { result } = renderHook(() => useLitItem({ material: null, zFinal: 0 }), {
+      wrapper: canvasWith(LIGHT),
+    });
+
+    expect([result.current.list, result.current.isReachedByLight]).toEqual([undefined, true]);
+  });
+
+  it("is false for a light whose item cull mask misses the item's light_mask", () => {
+    const { result } = renderHook(() => useLitItem({ material: null, lightMask: 2, zFinal: 0 }), {
+      wrapper: canvasWith(LIGHT),
+    });
+
+    expect(result.current.isReachedByLight).toBe(false);
   });
 });

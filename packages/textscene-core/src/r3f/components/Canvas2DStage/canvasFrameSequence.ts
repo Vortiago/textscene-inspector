@@ -1,4 +1,6 @@
 import { createContext, createElement, useContext, useLayoutEffect, type ReactNode } from 'react';
+import type * as THREE from 'three';
+import { withScenePose } from '../../sceneRenderCamera';
 
 /** The steps one canvas runs for one frame. Each canvas holds one, and its steps register in it. */
 export interface CanvasFrameSteps {
@@ -15,11 +17,16 @@ export function createCanvasFrameSteps(): CanvasFrameSteps {
 }
 
 /** Runs the shadow samplers, the light pass, the record writers, then draws (`renderer_viewport.cpp:688`). */
-export function runCanvasFrame(steps: CanvasFrameSteps, drawItems: () => void): void {
+export function runCanvasFrame(steps: CanvasFrameSteps, scene: THREE.Scene, drawItems: () => void): void {
   for (const sample of steps.shadowSamplers) sample();
   steps.lightPass?.();
-  for (const write of steps.recordWriters) write();
+  // A record reads the world matrix a pose writes only for the render, such as a posed Bone2D's.
+  if (steps.recordWriters.size > 0) withScenePose(scene, () => writeRecords(steps.recordWriters));
   drawItems();
+}
+
+function writeRecords(writers: Set<() => void>): void {
+  for (const write of writers) write();
 }
 
 /** The steps of the canvas around a component, or null outside one, where no canvas runs a step. */

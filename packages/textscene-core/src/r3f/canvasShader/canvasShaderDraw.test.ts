@@ -12,6 +12,7 @@ import {
   type CanvasShader,
 } from './canvasShaderDraw';
 import type { CanvasShaderCommand } from './canvasCommands';
+import { fakeCanvasRenderer, MAX_ANISOTROPY_PARAMETER } from '../testing/fakeCanvasRenderer';
 
 const VALID = 'shader_type canvas_item;\nvoid fragment() { COLOR = vec4(UV, 0.5, 1.0); }\n';
 const INVALID = 'shader_type canvas_item;\nvoid fragment() { COLOR = 1; }\n';
@@ -267,5 +268,45 @@ describe('warnOnTranslatorFault', () => {
     expect(warn).toHaveBeenCalledExactlyOnceWith(
       '[material] The previewer failed to draw this canvas_item shader: x'
     );
+  });
+});
+
+describe('canvasShaderDraw anisotropy', () => {
+  /** A texture with a mipmap chain, which the anisotropic filters sample. */
+  const mipmapped = () => {
+    const texture = new THREE.DataTexture(new Uint8Array(8 * 4 * 4), 8, 4);
+    texture.mipmaps = [
+      { data: new Uint8Array(8 * 4 * 4), width: 8, height: 4 },
+      { data: new Uint8Array(4 * 2 * 4), width: 4, height: 2 },
+    ];
+    return texture;
+  };
+
+  /** The taps the draw writes for its bound texture, with `filter` on a renderer that has stored it. */
+  function tapsWritten(filter: 'nearest_mipmap_anisotropic' | 'nearest_mipmap') {
+    const { gl: context, renderer } = fakeCanvasRenderer({ isAllocated: true });
+    const sampling = {
+      maps: DEFAULT_CANVAS_MAPS,
+      textureState: { ...GODOT_CANVAS_TEXTURE_STATE, filter },
+      sampling: GODOT_SAMPLING,
+    };
+    const draw = canvasShaderDraw(
+      { ...gl, ...renderer } as unknown as THREE.WebGLRenderer,
+      itemOf(),
+      sampling,
+      [RECT_COMMAND]
+    );
+    draw.setSource(mipmapped(), [RECT_COMMAND]);
+    return context.texParameterf.mock.calls
+      .filter(([, parameter]) => parameter === MAX_ANISOTROPY_PARAMETER)
+      .map(([, , taps]) => taps);
+  }
+
+  it("writes the 4 taps three skips for a nearest magnification, as the canvas's default sampler reads", () => {
+    expect(tapsWritten('nearest_mipmap_anisotropic')).toEqual([4]);
+  });
+
+  it('writes no taps for a filter that is not anisotropic', () => {
+    expect(tapsWritten('nearest_mipmap')).toEqual([]);
   });
 });

@@ -8,7 +8,8 @@ import {
   primitiveDraw,
   primitiveInstanceData,
 } from './canvasPrimitive.js';
-import { DEFAULT_CANVAS_SHADER, transpileCanvasItem } from './transpileCanvas.js';
+import { DEFAULT_CANVAS_SHADER } from './defaultCanvasShader.js';
+import { transpileCanvasItem } from './transpileCanvas.js';
 
 const ITEM = {
   transform: { a: 1, b: 0, c: 0, d: 1, tx: 5, ty: 7 },
