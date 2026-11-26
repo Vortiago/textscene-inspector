@@ -154,17 +154,7 @@ function settleSeconds(props: CPUParticles2DProperties): number {
   return props.one_shot ? lifetime * 0.5 : lifetime;
 }
 
-/**
- * Evaluate the emitter to a single pose, in the emitter node's local space and in the order
- * it must be drawn. No clock: a running emitter makes a golden unstable (ADR-0012), and the
- * editor animates on wall clock (`set_process_internal(emitting)`, `cpu_particles_2d.cpp:1262`,
- * no `is_editor_hint` guard), at an instant that no file or reference render can name.
- */
-export function simulateFrozenPose(authored: ParticleSimInput): RenderedParticle[] {
-  return simulateFrozenSlots(authored).filter(({ active }) => active);
-}
-
-/** Every particle slot of the frozen pose in draw order, as the multimesh holds them, inactive ones too. */
+/** Every particle slot in draw order, inactive ones too, at one instant with no clock (ADR-0012). */
 export function simulateFrozenSlots(authored: ParticleSimInput): RenderedParticle[] {
   const input = storedInput(authored);
   const { props } = input;
