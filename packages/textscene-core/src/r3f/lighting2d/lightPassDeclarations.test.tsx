@@ -65,6 +65,7 @@ const DECLARATION: CanvasLightDeclaration = {
   reach: DEFAULT_LIGHT_CULL_KEY,
   sequence: 0,
   shadowItemCullMask: null,
+  castsShadow: false,
   tintsShadow: false,
   mixes: false,
 };
@@ -187,19 +188,25 @@ describe('useCapItemLights', () => {
   const PLACEMENT: ItemPlacement = { lightMask: 1, z: 0, layer: 0, takenLights: null };
   const geometry = { current: null };
   const take = () => {};
+  const takeGodotLights = () => {};
 
   function mount() {
     const spies = spyLighting();
-    const hook = renderHook(({ placement }) => useCapItemLights(placement, geometry, take), {
+    const hook = renderHook(({ placement }) => useCapItemLights(placement, geometry, take, takeGodotLights), {
       wrapper: spies.Wrap,
       initialProps: { placement: PLACEMENT },
     });
     return { ...spies, ...hook };
   }
 
-  it('hands the cap the uncapped placement, the geometry and the receiver', () => {
+  it('hands the cap the uncapped placement, the geometry and both receivers', () => {
     const { registerCappedItem } = mount();
-    expect(registerCappedItem).toHaveBeenCalledWith({ placement: PLACEMENT, geometry, take });
+    expect(registerCappedItem).toHaveBeenCalledWith({
+      placement: PLACEMENT,
+      geometry,
+      take,
+      takeGodotLights,
+    });
   });
 
   it('stays registered while the cap hands it a light list', () => {

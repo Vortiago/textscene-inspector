@@ -26,6 +26,7 @@ function positional(sequence: number | null): CanvasLightDeclaration {
     reach: DEFAULT_LIGHT_CULL_KEY,
     sequence,
     shadowItemCullMask: null,
+    castsShadow: false,
     tintsShadow: false,
     mixes: false,
   };
@@ -51,7 +52,10 @@ function litQuads(count: number, x: (ordinal: number) => number = () => 0): Set<
   );
 }
 
-type SpiedItem = CappedItem & { take: ReturnType<typeof vi.fn<CappedItem['take']>> };
+type SpiedItem = CappedItem & {
+  take: ReturnType<typeof vi.fn<CappedItem['take']>>;
+  takeGodotLights: ReturnType<typeof vi.fn<CappedItem['takeGodotLights']>>;
+};
 
 function item(x = 0, layer = 0): SpiedItem {
   const geometry = new THREE.Object3D();
@@ -62,6 +66,7 @@ function item(x = 0, layer = 0): SpiedItem {
     placement: { ...PLACEMENT, layer },
     geometry: { current: geometry },
     take: vi.fn<CappedItem['take']>(),
+    takeGodotLights: vi.fn<CappedItem['takeGodotLights']>(),
   };
 }
 
@@ -266,5 +271,38 @@ describe('capItemLights, past the lights of one render', () => {
     const inView: Rect2 = { x: -50, y: -50, w: 200 * 100, h: 100 };
     step(lights(MAX_LIGHTS_PER_RENDER + 1), [lit], spread(MAX_LIGHTS_PER_RENDER + 1), inView);
     expect(lit.take).not.toHaveBeenCalled();
+  });
+});
+
+describe("capItemLights's list for the canvas template", () => {
+  it('hands the first 15 lights that meet the item while more reach its placement', () => {
+    // Lights 0 and 1 sit far from the item, so 15 of the 17 meet it.
+    const lit = item();
+    step(
+      lights(CAP + 2),
+      [lit],
+      litQuads(CAP + 2, (ordinal) => (ordinal < 2 ? 1000 : 0))
+    );
+    expect(lit.take).not.toHaveBeenCalled();
+    expect(lit.takeGodotLights).toHaveBeenCalledWith([...Array(CAP).keys()].map((n) => n + 2));
+  });
+
+  it('drops the meeting lights past the 15th, as Godot breaks out of its loop', () => {
+    const lit = item();
+    step(lights(CAP + 3), [lit], litQuads(CAP + 3));
+    expect(lit.takeGodotLights).toHaveBeenCalledWith([...Array(CAP).keys()]);
+  });
+
+  it('hands nothing while the placement holds 15 lights or fewer', () => {
+    const lit = item();
+    step(lights(CAP), [lit], litQuads(CAP));
+    expect(lit.takeGodotLights).not.toHaveBeenCalled();
+  });
+
+  it('hands null back once the placement is no longer crowded', () => {
+    const lit = item();
+    const again = step(lights(CAP + 1), [lit], litQuads(CAP + 1));
+    again(lights(CAP));
+    expect(lit.takeGodotLights).toHaveBeenLastCalledWith(null);
   });
 });

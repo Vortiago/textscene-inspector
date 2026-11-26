@@ -363,6 +363,7 @@ describe('useLitItem isReachedByLight', () => {
     reach: DEFAULT_LIGHT_CULL_KEY,
     sequence: 0,
     shadowItemCullMask: null,
+    castsShadow: false,
     tintsShadow: false,
     mixes: false,
   };

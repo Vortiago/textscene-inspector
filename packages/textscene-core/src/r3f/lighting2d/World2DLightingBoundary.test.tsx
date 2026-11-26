@@ -31,6 +31,7 @@ const SUN = {
   reach: directionalLightCullKey(0, 0),
   sequence: null,
   shadowItemCullMask: null,
+  castsShadow: false,
   tintsShadow: false,
   mixes: false,
 };

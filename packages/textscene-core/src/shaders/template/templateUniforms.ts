@@ -4,6 +4,7 @@ import type { Node, UniformNode } from 'three/webgpu';
 import type { ArrayValue, StructOf, StructValue, Value } from '../language/emitValue.js';
 import type { StructMember } from '../language/shaderTree.js';
 import { BlockArrays } from './blockArrays.js';
+import { CONSTRUCTORS } from '../language/emitConstant.js';
 import { glslShapeOf } from './glslTypes.js';
 import { Specialisation } from './specialisation.js';
 import type { InterfaceBlockNode } from './templateTree.js';
@@ -126,11 +127,53 @@ export class TemplateUniforms {
 
   /** The uniform `name` of `type`, which a block member of that name shares once a stage declares it. */
   uniformOf(name: string, type: string): Node {
-    const node =
-      (this.byName.get(name) as unknown as Node | undefined) ??
-      (uniform as unknown as (value: unknown, type: string) => Node)(initialValue(type), type);
+    const held = this.byName.get(name);
+    if (held instanceof IntegerVectorUniform) return held.node;
+    if (held) return held as unknown as Node;
+    const lanes = integerVectorLanes(type);
+    if (lanes) {
+      const vector = new IntegerVectorUniform(type, lanes);
+      this.byName.set(name, vector as unknown as UniformNode<unknown>);
+      return vector.node;
+    }
+    const node = (uniform as unknown as (value: unknown, type: string) => Node)(initialValue(type), type);
     this.byName.set(name, node as unknown as UniformNode<unknown>);
-    return node as unknown as Node;
+    return node;
+  }
+}
+
+interface IntegerLanes {
+  readonly scalar: 'int' | 'uint';
+  readonly count: number;
+}
+
+/** The scalar and lane count of an `ivec` or `uvec`, or null for any other type. */
+function integerVectorLanes(type: string): IntegerLanes | null {
+  const shape = glslShapeOf(type);
+  if (!shape || shape.columns !== 1 || shape.rows === 1) return null;
+  if (shape.scalar !== 'int' && shape.scalar !== 'uint') return null;
+  return { scalar: shape.scalar, count: shape.rows };
+}
+
+/** A scalar uniform per lane: three uploads vector lanes as floats (`WebGLUniformsGroups.js:307`). */
+class IntegerVectorUniform {
+  readonly node: Node;
+  private readonly lanes: UniformNode<number>[];
+
+  constructor(type: string, { scalar, count }: IntegerLanes) {
+    this.lanes = Array.from({ length: count }, () =>
+      (uniform as unknown as (value: number, type: string) => UniformNode<number>)(0, scalar)
+    );
+    this.node = CONSTRUCTORS[type]!(...(this.lanes as unknown as Node[]));
+  }
+
+  get value(): THREE.Vector2 | THREE.Vector3 | THREE.Vector4 {
+    const vector = VECTORS[this.lanes.length]!() as THREE.Vector4;
+    return vector.fromArray(this.lanes.map((lane) => lane.value as number));
+  }
+
+  set value(vector: { toArray(): number[] }) {
+    vector.toArray().forEach((lane, index) => (this.lanes[index]!.value = lane));
   }
 }
 

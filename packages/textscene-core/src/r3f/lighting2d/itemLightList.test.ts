@@ -32,6 +32,7 @@ function light(overrides: Partial<CanvasLightDeclaration> = {}): CanvasLightDecl
     reach: key(),
     sequence: 0,
     shadowItemCullMask: null,
+    castsShadow: false,
     tintsShadow: false,
     mixes: false,
     ...overrides,

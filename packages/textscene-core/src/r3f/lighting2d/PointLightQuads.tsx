@@ -16,6 +16,7 @@ import { DEFAULT_LIGHT_CULL_KEY, type LightCullKey } from './lightCullKey';
 import { useLightShadowCasters } from './ShadowCasterStage';
 import { useLightQuadMaterials } from './useLightQuadMaterials';
 import { placePositionalLight, useApartLightOrigin } from './apartLight';
+import { useLightRow } from './lightRows';
 import { Light2DBlendMode } from '../../godot/scene/light2d';
 
 export function PointLightQuads({ term }: { term: PointLightTerm }) {
@@ -46,6 +47,7 @@ export function PointLightQuads({ term }: { term: PointLightTerm }) {
     reach,
     sequence: lightDrawSequence(listed, null),
     shadowItemCullMask: casts ? shadow.itemCullMask : null,
+    castsShadow: casts,
     tintsShadow,
     mixes: term.blendMode === Light2DBlendMode.MIX,
   });
@@ -55,6 +57,7 @@ export function PointLightQuads({ term }: { term: PointLightTerm }) {
 
   // A normal-mapped item shades the light from where its node sits.
   const setOrigin = useApartLightOrigin(ordinal, placePositionalLight, term.height);
+  const setRowOrigin = useLightRow(ordinal, term);
 
   // A callback ref, not useRef, so the pose sampler starts once the quad is in
   // the tree: the world matrix it needs does not exist before that.
@@ -85,6 +88,7 @@ export function PointLightQuads({ term }: { term: PointLightTerm }) {
   return (
     <>
       <object3D ref={setOrigin} />
+      <object3D ref={setRowOrigin} />
       <LightQuad role="lit" onMesh={setQuad} material={materials.lit} {...shape} />
       {materials.unshadowed && <LightQuad role="unshadowed" material={materials.unshadowed} {...shape} />}
     </>

@@ -66,6 +66,12 @@ describe('emitTemplateStage', () => {
     expect(fragmentOf(block, body)).toMatch(/==\s*uint\(\s*1\s*\)|==\s*1u/);
   });
 
+  it('reads an integer vector of a block from one integer uniform per lane, as three uploads vector lanes as floats', () => {
+    const block = 'layout(set = 0, binding = 0, std140) uniform Params {\n\tuvec4 lights;\n} params;';
+    const fragment = fragmentOf(block, 'color = vec4(params.lights);');
+    expect([/uvec4 nodeUniform/.test(fragment), /uint nodeUniform/.test(fragment)]).toEqual([false, true]);
+  });
+
   it('reads a texture a function takes as an argument from the texture the call passes', () => {
     const globals = [
       'layout(set = 0, binding = 1) uniform texture2D shadow_atlas;',

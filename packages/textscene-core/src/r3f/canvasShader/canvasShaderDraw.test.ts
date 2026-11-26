@@ -13,6 +13,12 @@ import {
   type CanvasShader,
 } from './canvasShaderDraw';
 import type { CanvasShaderCommand } from './canvasCommands';
+import { directionalLightCullKey } from '../lighting2d/lightCullKey';
+import type { CanvasLightRows } from '../lighting2d/lightRows';
+import type { CanvasLightDeclaration } from '../lighting2d/itemLightList';
+import { LIGHT_ROW_WORDS, type CanvasLightRow } from '../../shaders/canvas/canvasLights';
+import type { RowBlock } from '../../shaders/template/rowBlock';
+import { FLAGS } from '../../shaders/canvas/canvasInstance';
 import { fakeCanvasRenderer, MAX_ANISOTROPY_PARAMETER } from '../testing/fakeCanvasRenderer';
 
 const VALID = 'shader_type canvas_item;\nvoid fragment() { COLOR = vec4(UV, 0.5, 1.0); }\n';
@@ -351,5 +357,111 @@ describe('canvasShaderDraw anisotropy', () => {
 
   it('writes no taps for a filter that is not anisotropic', () => {
     expect(tapsWritten('nearest_mipmap')).toEqual([]);
+  });
+});
+
+describe('canvasShaderDraw lighting', () => {
+  const SUN: CanvasLightDeclaration = {
+    reach: directionalLightCullKey(0, 0),
+    sequence: null,
+    slot: 0,
+    shadowItemCullMask: null,
+    castsShadow: false,
+    tintsShadow: false,
+    mixes: false,
+  };
+
+  const SUN_ROW: CanvasLightRow = {
+    textureMatrix: { a: 0, b: 0, c: 0, d: 0, tx: 0, ty: 0 },
+    color: { r: 0.5, g: 0.25, b: 1, a: 2 },
+    flags: 0,
+    height: 0,
+    position: { x: 0, y: -1 },
+    atlasRect: { x: 0, y: 0, w: 0, h: 0 },
+  };
+
+  const rows = (): CanvasLightRows => ({
+    lights: new Map([[0, SUN]]),
+    writers: new Map([[0, () => SUN_ROW]]),
+  });
+
+  const BITS = { flags: 2, lights: [3 | (4 << 8), 0, 0, 0] as const };
+
+  const lightingBit = (item: ReturnType<typeof itemOf>) =>
+    (item.draw('quad').specialisations.get('pso_sc_packed_0')!.value as number) & 1;
+
+  /** The first record's words: its float lanes lead one buffer, and its word lanes another. */
+  function recordWords(batch: THREE.Object3D): Uint32Array {
+    const buffers = Object.values((batch as THREE.Mesh).geometry.attributes).map(
+      (attribute) => (attribute as THREE.InterleavedBufferAttribute).data
+    );
+    const [floats, words] = [buffers[0]!, buffers.at(-1)!];
+    const record = new Uint32Array(floats.stride + words.stride);
+    record.set(new Uint32Array((floats.array as Float32Array).buffer, 0, floats.stride));
+    record.set((words.array as Uint32Array).subarray(0, words.stride), floats.stride);
+    return record;
+  }
+
+  it('draws the lit variant while lights reach the item, and the unlit one again without', () => {
+    const item = itemOf();
+    const draw = drawOf([RECT_COMMAND], item);
+
+    draw.setLighting({ rows: rows(), layer: 0, bits: BITS });
+    const lit = lightingBit(item);
+    draw.setLighting(null);
+
+    expect([lit, lightingBit(item)]).toEqual([1, 0]);
+  });
+
+  it("writes the item's light count and indices into each rect record", () => {
+    const draw = drawOf();
+    draw.setColors({ finalModulate: WHITE, canvasModulate: WHITE });
+
+    draw.setLighting({ rows: rows(), layer: 0, bits: BITS });
+
+    const words = recordWords(draw.object.children[0]!);
+    expect([words[FLAGS]! & 15, ...words.slice(28, 32)]).toEqual([2, 3 | (4 << 8), 0, 0, 0]);
+  });
+
+  it("hands a mesh the item's light indices", () => {
+    const draw = drawOf([meshCommand()]);
+    draw.setColors({ finalModulate: WHITE, canvasModulate: WHITE });
+
+    draw.setLighting({ rows: rows(), layer: 0, bits: BITS });
+
+    expect(draw.object.children[0]!.userData.attributesConstants.lights).toEqual(BITS);
+  });
+
+  it("binds the light atlas to a lit draw's atlas texture", () => {
+    const item = itemOf();
+    const draw = drawOf([RECT_COMMAND], item);
+    const placeholder = item.draw('quad').textures.get('atlas_texture')?.value;
+
+    draw.setLighting({ rows: rows(), layer: 0, bits: BITS });
+
+    expect(item.draw('quad').textures.get('atlas_texture')!.value).not.toBe(placeholder);
+  });
+
+  it("writes the canvas layer's light rows and directional count before a lit draw", () => {
+    const item = itemOf();
+    const draw = drawOf([RECT_COMMAND], item);
+    draw.setLighting({ rows: rows(), layer: 0, bits: BITS });
+    const quad = item.draw('quad');
+    const block = quad.buffers.get('light_array') as RowBlock;
+    const camera = new THREE.OrthographicCamera();
+
+    block['store'].node.update({
+      renderer: {},
+      renderId: 1,
+      frameId: 1,
+      object: draw.object,
+      camera,
+    } as never);
+
+    const firstWord = block['placed']!.firstRow.value * 1024 * 4;
+    const data = new Float32Array((block.texture.image as { data: Uint32Array }).data.buffer);
+    const color = Array.from(data.slice(firstWord + 16, firstWord + 20));
+    const count = (quad.uniforms.get('canvas_data.directional_light_count') as { value: number }).value;
+    expect([count, color, LIGHT_ROW_WORDS]).toEqual([1, [0.5, 0.25, 1, 2], 32]);
   });
 });

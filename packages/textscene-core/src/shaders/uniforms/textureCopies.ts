@@ -1,11 +1,11 @@
-import { Source, type Texture } from 'three';
+import { Source, Texture } from 'three';
 
 interface Follower {
   readonly source: Texture;
   version: number;
 }
 
-/** Written only by `TextureCopies`: the material texture each copy follows and the version it last read. */
+/** Written only by `followingCopy` and its holders: each copy's texture and the version it last read. */
 // eslint-disable-next-line no-restricted-syntax -- a registry that `TextureCopies` writes and frees, not a cache.
 const FOLLOWERS = new WeakMap<Texture, Follower>();
 
@@ -14,14 +14,30 @@ export function followSource(copy: Texture): void {
   const follower = FOLLOWERS.get(copy);
   if (follower === undefined || follower.version === follower.source.version) return;
   follower.version = follower.source.version;
+  // three allocates a texture's storage once, so a new size takes new storage.
+  if (!sameSize(copy.image as Sized, follower.source.image as Sized)) copy.dispose();
   copy.image = follower.source.image;
   copy.mipmaps = follower.source.mipmaps;
   copy.needsUpdate = true;
 }
 
+type Sized = { readonly width?: number; readonly height?: number } | null | undefined;
+
+const sameSize = (a: Sized, b: Sized) => a?.width === b?.width && a?.height === b?.height;
+
+/** A copy of `source` that `configure` sets up, which follows the source's updates before each draw. */
+function followingCopy(source: Texture, configure: (copy: Texture) => void): Texture {
+  const copy = cloneOf(source);
+  configure(copy);
+  copy.needsUpdate = true;
+  FOLLOWERS.set(copy, { source, version: source.version });
+  return copy;
+}
+
 /** Its own `Source`: three keeps one upload version per `Source` (`WebGLTextures.js:976`), not per state. */
 function cloneOf(source: Texture): Texture {
-  const copy = source.clone();
+  // Texture's own clone: a shared texture clones to itself (`sharedTexture`), and this copy needs its own.
+  const copy = Texture.prototype.clone.call(source);
   copy.source = new Source(source.image);
   return copy;
 }
@@ -70,10 +86,7 @@ export class TextureCopies {
     const configure = (copy: Texture) => this.configure(copy, source);
     const target = source.isRenderTargetTexture ? copyTarget?.(source, configure) : null;
     if (target) return target;
-    const copy = cloneOf(source);
-    configure(copy);
-    copy.needsUpdate = true;
-    FOLLOWERS.set(copy, { source, version: source.version });
+    const copy = followingCopy(source, configure);
     return { copy, release: () => copy.dispose() };
   }
 
@@ -89,5 +102,35 @@ export class TextureCopies {
     this.held.delete(source);
     FOLLOWERS.delete(copy);
     release();
+  }
+}
+
+/**
+ * One following copy of each texture, shared by its holders and freed with the last. A source's
+ * dispose leaves the copy: a long-lived source such as an atlas drops its storage to resize.
+ */
+export class SharedCopies {
+  /** Written only by `hold` and `release`: each texture's copy and its holders. */
+  private readonly held = new Map<Texture, { readonly copy: Texture; holders: number }>();
+
+  constructor(private readonly configure: (copy: Texture, source: Texture) => void) {}
+
+  hold(source: Texture): Texture {
+    let held = this.held.get(source);
+    if (!held) {
+      const copy = followingCopy(source, (made) => this.configure(made, source));
+      this.held.set(source, (held = { copy, holders: 0 }));
+    }
+    held.holders++;
+    return held.copy;
+  }
+
+  release(source: Texture): void {
+    const held = this.held.get(source);
+    if (!held) throw new Error('expected a held texture to release, got one no holder holds');
+    if (--held.holders > 0) return;
+    this.held.delete(source);
+    FOLLOWERS.delete(held.copy);
+    held.copy.dispose();
   }
 }

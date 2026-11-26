@@ -11,6 +11,7 @@ import { reachesCanvasLayer } from './lightCullKey.js';
 import {
   directionalListOrder,
   itemPositionalLights,
+  meetingLights,
   MAX_POSITIONAL_LIGHTS_PER_ITEM,
   positionalListOrder,
   placementId,
@@ -31,6 +32,11 @@ export interface CappedItem {
   readonly geometry: { readonly current: THREE.Object3D | null };
   /** Hands the item its whole light list (`ItemPlacement.takenLights`), or null for its placement's. */
   take(takenLights: readonly number[] | null): void;
+  /**
+   * Hands a canvas template item the positional lights Godot's loop takes for it: the first 15
+   * that meet its rect. Null while every light that reaches its placement fits.
+   */
+  takeGodotLights?(godotLights: readonly number[] | null): void;
 }
 
 interface ItemLightCap {
@@ -170,11 +176,17 @@ function layerBudget(
   return { directional, dropsDirectional, overBudget };
 }
 
-/** The light list an item takes, and the world rect it covers. */
+/** The light lists an item takes, and the world rect it covers. */
 interface CappedList {
-  readonly list: readonly number[];
+  /** The classic list, or null for its placement's. */
+  readonly list: readonly number[] | null;
+  /** The positional lights the template takes, at most 15. */
+  readonly godotLights: readonly number[];
   readonly itemRect: Rect2;
 }
+
+/** Written only by `capItemLights`: the template list each item was last handed. */
+const handedGodotLights = perObject((_item: CappedItem) => ({ lights: null as readonly number[] | null }));
 
 /**
  * What one frame works out once and shares between its items: the rect of each light, the budget
@@ -202,10 +214,11 @@ class FrameBudget {
     const dropsLight = taken !== candidates || dropsDirectional;
     if (!dropsLight && candidates.length <= MAX_POSITIONAL_LIGHTS_PER_ITEM) return null;
     const itemRect = worldRect(item.geometry.current);
+    const godotLights = meetingLights(taken, itemRect, this.rects);
     const positional = itemPositionalLights(taken, itemRect, this.rects) ?? (dropsLight ? taken : null);
-    if (!positional) return null;
+    if (!positional) return { list: null, godotLights, itemRect };
     const list = positional === taken ? this.wholeList(taken, directional) : [...positional, ...directional];
-    return { list, itemRect };
+    return { list, godotLights, itemRect };
   }
 
   private budgetAt(layer: number): LayerBudget {
@@ -253,18 +266,28 @@ export function capItemLights({ lights, items, passMeshes, viewport, windows }: 
   for (const [item, handed] of items) {
     const candidates = isCrowded ? crowdedCandidates(lights, crowding, item.placement) : null;
     let list: readonly number[] | null = null;
+    let godotLights: readonly number[] | null = null;
     if (candidates) {
       frame ??= new FrameBudget(lights, crowding, lightRects(passMeshes, viewport));
       const capped = frame.listOf(item, candidates);
       if (capped) {
-        list = capped.list;
-        recordWindow(windows, placementId({ ...item.placement, takenLights: list }), capped.itemRect);
+        ({ list, godotLights } = capped);
+        if (list)
+          recordWindow(windows, placementId({ ...item.placement, takenLights: list }), capped.itemRect);
       }
     }
+    handGodotLights(item, godotLights);
     if (sameLights(list, handed)) continue;
     items.set(item, list);
     item.take(list);
   }
+}
+
+function handGodotLights(item: CappedItem, godotLights: readonly number[] | null): void {
+  const handed = handedGodotLights(item);
+  if (!item.takeGodotLights || sameLights(godotLights, handed.lights)) return;
+  handed.lights = godotLights;
+  item.takeGodotLights(godotLights);
 }
 
 function recordWindow(windows: Map<string, Rect2>, id: string, itemRect: Rect2): void {

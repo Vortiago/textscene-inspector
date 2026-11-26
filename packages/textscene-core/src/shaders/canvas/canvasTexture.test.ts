@@ -1,10 +1,10 @@
 import * as THREE from 'three';
-import type { UniformNode } from 'three/webgpu';
+import type { NodeFrame, UniformNode } from 'three/webgpu';
 import { describe, expect, it } from 'vitest';
 import { CanvasTextureBinding, GODOT_CANVAS_TEXTURE_STATE } from './canvasTexture.js';
 import { WHITE } from './canvasInstance.js';
 import { DEFAULT_CANVAS_SHADER } from './defaultCanvasShader.js';
-import { transpileCanvasItem } from './transpileCanvas.js';
+import { specialiseCanvasDraw, transpileCanvasItem } from './transpileCanvas.js';
 
 function bound() {
   const draw = transpileCanvasItem(DEFAULT_CANVAS_SHADER).draw('quad');
@@ -96,6 +96,19 @@ describe('CanvasTextureBinding', () => {
     expect([texture('color_texture').magFilter, isFreed]).toEqual([THREE.LinearFilter, true]);
   });
 
+  it('brings the bound copy up to date with its source before a draw', () => {
+    const draw = transpileCanvasItem(DEFAULT_CANVAS_SHADER).draw('quad');
+    const source = texture8x4();
+    new CanvasTextureBinding(draw).bind(source, GODOT_CANVAS_TEXTURE_STATE);
+    const node = draw.textures.get('color_texture')!;
+    source.image = { data: new Uint8Array(4 * 4 * 4), width: 4, height: 4 };
+    source.needsUpdate = true;
+
+    node.update({ renderer: {} } as NodeFrame);
+
+    expect((node.value as THREE.Texture).image).toBe(source.image);
+  });
+
   it("binds Godot's default normal and white specular textures and the white specular colour", () => {
     const { binding, texture, param } = bound();
 
@@ -156,5 +169,74 @@ describe('CanvasTextureBinding', () => {
     binding.bind(texture8x4(), GODOT_CANVAS_TEXTURE_STATE, { specular: null, ...maps });
 
     expect(param('batch_flags')).toBe(flags);
+  });
+});
+
+describe('CanvasTextureBinding light atlas', () => {
+  function litBound() {
+    const draw = transpileCanvasItem(DEFAULT_CANVAS_SHADER).draw('quad');
+    specialiseCanvasDraw(draw, { useLighting: true });
+    const binding = new CanvasTextureBinding(draw);
+    const atlasBound = () => draw.textures.get('atlas_texture')!.value as THREE.Texture;
+    return { binding, atlasBound };
+  }
+
+  const srgbAtlas = () => {
+    const atlas = texture8x4();
+    atlas.colorSpace = THREE.SRGBColorSpace;
+    return atlas;
+  };
+
+  it("binds a copy of the light atlas raw, with the item's sampler", () => {
+    const { binding, atlasBound } = litBound();
+    const atlas = srgbAtlas();
+
+    binding.bind(
+      undefined,
+      { filter: 'nearest', repeat: 'mirror', usesLinearColors: true },
+      undefined,
+      atlas
+    );
+
+    const copy = atlasBound();
+    expect([copy === atlas, copy.magFilter, copy.wrapS, copy.colorSpace]).toEqual([
+      false,
+      THREE.NearestFilter,
+      THREE.MirroredRepeatWrapping,
+      THREE.NoColorSpace,
+    ]);
+  });
+
+  it('shares one copy of the light atlas between the bindings of one sampler state', () => {
+    const [first, second] = [litBound(), litBound()];
+    const atlas = srgbAtlas();
+
+    first.binding.bind(undefined, GODOT_CANVAS_TEXTURE_STATE, undefined, atlas);
+    second.binding.bind(undefined, GODOT_CANVAS_TEXTURE_STATE, undefined, atlas);
+
+    expect(first.atlasBound()).toBe(second.atlasBound());
+  });
+
+  it('binds no light atlas for a bind with none', () => {
+    const { binding } = litBound();
+
+    binding.bind(undefined, GODOT_CANVAS_TEXTURE_STATE);
+
+    expect(binding.boundTextures).toHaveLength(3);
+  });
+
+  it('frees the shared copy with the last binding that holds it', () => {
+    const [first, second] = [litBound(), litBound()];
+    const atlas = srgbAtlas();
+    first.binding.bind(undefined, GODOT_CANVAS_TEXTURE_STATE, undefined, atlas);
+    second.binding.bind(undefined, GODOT_CANVAS_TEXTURE_STATE, undefined, atlas);
+    let disposals = 0;
+    first.atlasBound().addEventListener('dispose', () => disposals++);
+
+    first.binding.bind(undefined, GODOT_CANVAS_TEXTURE_STATE);
+    const whileHeld = disposals;
+    second.binding.dispose();
+
+    expect([whileHeld, disposals]).toEqual([0, 1]);
   });
 });

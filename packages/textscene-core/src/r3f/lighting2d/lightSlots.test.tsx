@@ -20,6 +20,7 @@ function Light({ reach = DEFAULT_LIGHT_CULL_KEY, seen }: { reach?: LightCullKey;
       reach,
       sequence: 0,
       shadowItemCullMask: null,
+      castsShadow: false,
       tintsShadow: false,
       mixes: false,
     })

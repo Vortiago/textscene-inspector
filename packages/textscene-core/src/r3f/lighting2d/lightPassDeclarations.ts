@@ -22,7 +22,7 @@ export function useRegisterCanvasLight2D(
   const { registerLight } = useCanvasLighting2D();
   const [ordinal, setOrdinal] = useState<number | null>(null);
   const { itemCullMask, zMin, zMax, layerMin, layerMax } = declaration.reach;
-  const { sequence, slot, shadowItemCullMask, tintsShadow, mixes } = declaration;
+  const { sequence, slot, shadowItemCullMask, castsShadow, tintsShadow, mixes } = declaration;
   useEffect(() => {
     if (!enabled) {
       setOrdinal(null);
@@ -33,6 +33,7 @@ export function useRegisterCanvasLight2D(
       sequence,
       slot,
       shadowItemCullMask,
+      castsShadow,
       tintsShadow,
       mixes,
     });
@@ -49,6 +50,7 @@ export function useRegisterCanvasLight2D(
     sequence,
     slot,
     shadowItemCullMask,
+    castsShadow,
     tintsShadow,
     mixes,
   ]);
@@ -71,14 +73,16 @@ export function useRegisterLitItem(placement: ItemPlacement, read: LitItemRead |
 
 /**
  * Hands the per-item cap an item at `placement`, uncapped, whose own geometry `geometry` holds.
- * `take` receives the item's light list while more than 15 lights meet it or the render
- * budget drops one. The cap records a new entry as handed nothing, so each release hands the item
- * null to match: else an item that moves to a placement that fits every light keeps the old list.
+ * `take` receives the item's light list while more than 15 lights meet it or the render budget
+ * drops one, and `takeGodotLights` the lights a template draw takes while more reach it. The cap
+ * records a new entry as handed nothing, so each release hands the item null to match: else an
+ * item that moves to a placement that fits every light keeps the old list.
  */
 export function useCapItemLights(
   placement: ItemPlacement,
   geometry: RefObject<THREE.Object3D | null>,
-  take: (takenLights: readonly number[] | null) => void
+  take: (takenLights: readonly number[] | null) => void,
+  takeGodotLights: (godotLights: readonly number[] | null) => void
 ): void {
   const { registerCappedItem } = useCanvasLighting2D();
   const { lightMask, z, layer } = placement;
@@ -87,12 +91,14 @@ export function useCapItemLights(
       placement: { lightMask, z, layer, takenLights: null },
       geometry,
       take,
+      takeGodotLights,
     });
     return () => {
       release();
       take(null);
+      takeGodotLights(null);
     };
-  }, [registerCappedItem, lightMask, z, layer, geometry, take]);
+  }, [registerCappedItem, lightMask, z, layer, geometry, take, takeGodotLights]);
 }
 
 /**

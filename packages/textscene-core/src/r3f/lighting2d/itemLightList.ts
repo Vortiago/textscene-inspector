@@ -33,6 +33,8 @@ export interface CanvasLightDeclaration {
    * directional light's shadow reaches every item, so it declares null.
    */
   readonly shadowItemCullMask: number | null;
+  /** Whether the light has occluders to cast from: a positional one also sets `shadowItemCullMask`. */
+  readonly castsShadow: boolean;
   /** Whether the light adds a `shadow_color` where it is blocked. */
   readonly tintsShadow: boolean;
   /** Whether the light blends by MIX, which a normal-mapped item reads to shade it. */
@@ -106,13 +108,29 @@ export function itemPositionalLights(
   itemRect: Rect2,
   lightRects: ReadonlyMap<number, Rect2>
 ): number[] | null {
-  const meeting = candidates.filter((ordinal) => {
-    const lightRect = lightRects.get(ordinal);
-    return lightRect !== undefined && rect2Intersects(itemRect, lightRect);
-  });
+  const meeting = candidates.filter((ordinal) => meetsItem(ordinal, itemRect, lightRects));
   if (meeting.length <= MAX_POSITIONAL_LIGHTS_PER_ITEM) return null;
   const dropped = new Set(meeting.slice(MAX_POSITIONAL_LIGHTS_PER_ITEM));
   return candidates.filter((ordinal) => !dropped.has(ordinal));
+}
+
+/** The first 15 of `candidates` whose rect meets the item's: the lights Godot's per-item loop takes. */
+export function meetingLights(
+  candidates: readonly number[],
+  itemRect: Rect2,
+  lightRects: ReadonlyMap<number, Rect2>
+): number[] {
+  const meeting: number[] = [];
+  for (const ordinal of candidates) {
+    if (!meetsItem(ordinal, itemRect, lightRects)) continue;
+    if (meeting.push(ordinal) === MAX_POSITIONAL_LIGHTS_PER_ITEM) break;
+  }
+  return meeting;
+}
+
+function meetsItem(ordinal: number, itemRect: Rect2, lightRects: ReadonlyMap<number, Rect2>): boolean {
+  const lightRect = lightRects.get(ordinal);
+  return lightRect !== undefined && rect2Intersects(itemRect, lightRect);
 }
 
 /** One light on an item's list. */

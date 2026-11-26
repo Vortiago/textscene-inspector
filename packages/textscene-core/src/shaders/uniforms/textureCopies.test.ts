@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DataTexture, WebGLRenderTarget, type Texture } from 'three';
-import { followSource, installTargetCopies, TextureCopies } from './textureCopies.js';
+import { followSource, installTargetCopies, SharedCopies, TextureCopies } from './textureCopies.js';
 
 const imageTexture = () => new DataTexture(new Uint8Array(16), 2, 2);
 
@@ -20,6 +20,15 @@ describe('TextureCopies', () => {
     const source = imageTexture();
     const copy = new TextureCopies(nearest).copyOf(source);
     expect([copy.source === source.source, copy.image === source.image]).toEqual([false, true]);
+  });
+
+  it('copies a shared texture, whose clone is itself, into a texture of its own', () => {
+    const shared = imageTexture();
+    shared.clone = () => shared as never;
+    shared.flipY = true;
+    const source = shared.source;
+    const copy = new TextureCopies(nearest).copyOf(shared);
+    expect([copy === shared, shared.source === source, shared.flipY]).toEqual([false, true, true]);
   });
 
   it('keeps one copy while the material texture stays the same', () => {
@@ -70,6 +79,46 @@ describe('TextureCopies', () => {
   });
 });
 
+describe('SharedCopies', () => {
+  it('hands every holder of a texture one copy', () => {
+    const shared = new SharedCopies(nearest);
+    const source = imageTexture();
+    expect(shared.hold(source)).toBe(shared.hold(source));
+  });
+
+  it('keeps the copy while a holder is left', () => {
+    const shared = new SharedCopies(nearest);
+    const source = imageTexture();
+    const copy = shared.hold(source);
+    shared.hold(source);
+    const count = disposals(copy);
+    shared.release(source);
+    expect(count.value).toBe(0);
+  });
+
+  it('frees the copy with its last holder, and leaves the copies of other textures', () => {
+    const shared = new SharedCopies(nearest);
+    const [released, kept] = [imageTexture(), imageTexture()];
+    const counts = [disposals(shared.hold(released)), disposals(shared.hold(kept))];
+    shared.release(released);
+    expect(counts.map((count) => count.value)).toEqual([1, 0]);
+  });
+
+  it('keeps the copy when the texture drops its storage to resize, as an atlas does', () => {
+    const shared = new SharedCopies(nearest);
+    const source = imageTexture();
+    const copy = shared.hold(source);
+    source.dispose();
+    expect(shared.hold(source)).toBe(copy);
+  });
+
+  it('refuses a release of a texture it does not hold', () => {
+    expect(() => new SharedCopies(nearest).release(imageTexture())).toThrow(
+      'expected a held texture to release, got one no holder holds'
+    );
+  });
+});
+
 describe('followSource', () => {
   it('updates the copy once after each update of the material texture', () => {
     const source = imageTexture();
@@ -89,6 +138,26 @@ describe('followSource', () => {
     source.needsUpdate = true;
     followSource(copy);
     expect([copy.image, copy.mipmaps]).toEqual([source.image, source.mipmaps]);
+  });
+
+  it("drops the copy's storage when the material texture changes size: three allocates it once", () => {
+    const source = imageTexture();
+    const copy = new TextureCopies(nearest).copyOf(source);
+    const count = disposals(copy);
+    source.image = { data: new Uint8Array(64), width: 4, height: 4 };
+    source.needsUpdate = true;
+    followSource(copy);
+    expect(count.value).toBe(1);
+  });
+
+  it("keeps the copy's storage for new pixels of the same size", () => {
+    const source = imageTexture();
+    const copy = new TextureCopies(nearest).copyOf(source);
+    const count = disposals(copy);
+    source.image = { data: new Uint8Array(16), width: 2, height: 2 };
+    source.needsUpdate = true;
+    followSource(copy);
+    expect(count.value).toBe(0);
   });
 
   it('leaves a texture that is no copy as it is', () => {

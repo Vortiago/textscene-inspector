@@ -5,7 +5,7 @@ import { defaultTexture } from '../uniforms/defaultTextures.js';
 import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
 import { applySamplerState, GODOT_SAMPLING, type ProjectSampling } from '../uniforms/samplerState.js';
 import type { SamplerSettings } from '../uniforms/samplerTextures.js';
-import { TextureCopies } from '../uniforms/textureCopies.js';
+import { SharedCopies, TextureCopies } from '../uniforms/textureCopies.js';
 import type { CanvasDraw } from './transpileCanvas.js';
 
 /** A texture's `texpixel_size`: one over its size in texels. */
@@ -129,16 +129,23 @@ export class CanvasTextureBinding {
   private readonly white = defaultTexture('flat', 'white');
   private readonly normal = defaultTexture('flat', 'normal');
 
+  /** Written only by `bind`: the light atlas the binding holds a shared copy of, and that copy's state. */
+  private atlas: { readonly source: THREE.Texture; readonly copies: SharedCopies } | null = null;
+
   constructor(
     private readonly draw: CanvasDraw,
     private readonly sampling: ProjectSampling = GODOT_SAMPLING
   ) {}
 
-  /** Binds `texture`, or white for none, and `maps` raw with its sampler (`texture_storage.cpp:767, 780`). */
+  /**
+   * Binds `texture`, or white for none, and `maps` and a lit draw's `lightAtlas` raw with its sampler
+   * (`texture_storage.cpp:767, 780`, `canvas.glsl:782`).
+   */
   bind(
     texture: THREE.Texture | undefined,
     state: CanvasTextureState,
-    maps: CanvasMaps = DEFAULT_CANVAS_MAPS
+    maps: CanvasMaps = DEFAULT_CANVAS_MAPS,
+    lightAtlas: THREE.Texture | null = null
   ): TexelSize | undefined {
     const kept = new Map<TextureCopies, THREE.Texture[]>();
     const copyOf = (source: THREE.Texture, copyState: CanvasTextureState) => {
@@ -155,6 +162,8 @@ export class CanvasTextureBinding {
     this.setTexture('normal_texture', normal);
     this.setTexture('specular_texture', specular);
     this.bound = [color, normal, specular];
+    if (lightAtlas) this.bound = [...this.bound, this.bindLightAtlas(lightAtlas, raw)];
+    else this.releaseLightAtlas();
     const size = texture ? sizeOf(color) : DEFAULT_TEXTURE_SIZE;
     writeBindings(TEXTURE_BINDINGS, this.draw.uniforms, { ...size, maps });
     for (const copies of this.copies.values()) copies.release(kept.get(copies) ?? []);
@@ -162,13 +171,14 @@ export class CanvasTextureBinding {
     return texture ? { x: 1 / size.width, y: 1 / size.height } : undefined;
   }
 
-  /** The color, normal and specular textures the last `bind` bound. */
+  /** The color, normal, specular and light atlas textures the last `bind` bound. */
   get boundTextures(): readonly THREE.Texture[] {
     return this.bound;
   }
 
   /** Frees the copies and the default textures it binds. */
   dispose(): void {
+    this.releaseLightAtlas();
     for (const copies of this.copies.values()) copies.release([]);
     this.white.dispose();
     this.normal.dispose();
@@ -178,15 +188,24 @@ export class CanvasTextureBinding {
     const key = stateKey(state);
     const held = this.copies.get(key);
     if (held) return held;
-    const settings = settingsOf(state);
-    // An sRGB render target reads the texels as they are stored, and a linear one decodes them.
-    const colorSpace = state.usesLinearColors ? THREE.SRGBColorSpace : THREE.NoColorSpace;
-    const copies = new TextureCopies((copy, source) => {
-      applySamplerState(copy, source, settings, this.sampling);
-      copy.colorSpace = colorSpace;
-    });
+    const copies = new TextureCopies(stateConfiguration(state, this.sampling));
     this.copies.set(key, copies);
     return copies;
+  }
+
+  /** The new copy is held before the old one goes, so a copy bound again never drops to no holder. */
+  private bindLightAtlas(source: THREE.Texture, state: CanvasTextureState): THREE.Texture {
+    const copies = sharedAtlasCopiesOf(this.sampling, state);
+    const copy = copies.hold(source);
+    this.releaseLightAtlas();
+    this.atlas = { source, copies };
+    this.setTexture('atlas_texture', copy);
+    return copy;
+  }
+
+  private releaseLightAtlas(): void {
+    this.atlas?.copies.release(this.atlas.source);
+    this.atlas = null;
   }
 
   private setTexture(name: string, texture: THREE.Texture): void {
@@ -197,3 +216,30 @@ export class CanvasTextureBinding {
 
 const stateKey = ({ filter, repeat, usesLinearColors = false }: CanvasTextureState) =>
   `${filter} ${repeat} ${usesLinearColors}`;
+
+/** What a copy of a texture read through `state`'s sampler takes. */
+function stateConfiguration(
+  state: CanvasTextureState,
+  sampling: ProjectSampling
+): (copy: THREE.Texture, source: THREE.Texture) => void {
+  const settings = settingsOf(state);
+  // An sRGB render target reads the texels as they are stored, and a linear one decodes them.
+  const colorSpace = state.usesLinearColors ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+  return (copy, source) => {
+    applySamplerState(copy, source, settings, sampling);
+    copy.colorSpace = colorSpace;
+  };
+}
+
+/** Written only by `sharedAtlasCopiesOf`: one atlas copy per sampler state, not an upload per item. */
+// eslint-disable-next-line no-restricted-syntax -- perObject is outside the shader module, which imports only its own files (ADR-0072).
+const sharedAtlasCopies = new WeakMap<ProjectSampling, Map<string, SharedCopies>>();
+
+function sharedAtlasCopiesOf(sampling: ProjectSampling, state: CanvasTextureState): SharedCopies {
+  let byState = sharedAtlasCopies.get(sampling);
+  if (!byState) sharedAtlasCopies.set(sampling, (byState = new Map()));
+  const key = stateKey(state);
+  let copies = byState.get(key);
+  if (!copies) byState.set(key, (copies = new SharedCopies(stateConfiguration(state, sampling))));
+  return copies;
+}

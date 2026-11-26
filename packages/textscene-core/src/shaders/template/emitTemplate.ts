@@ -18,6 +18,7 @@ import { withSquareMatrices } from './squareMatrices.js';
 import { StageVaryings } from './stageVaryings.js';
 import { TemplateBuffers } from './templateBuffers.js';
 import { TemplateUniforms } from './templateUniforms.js';
+import { samplerNodeOf } from '../uniforms/samplerNodes.js';
 import type { GlobalNode, InterfaceBlockNode, TemplateStageNode } from './templateTree.js';
 
 /** Each `in` global, built-in and material uniform a stage reads, and each varying the next stage reads. */
@@ -306,6 +307,7 @@ function textureNode(declared: string, name: string): TextureNode {
   if (type === 'texture2DArray')
     return texture(new THREE.DataArrayTexture(new Uint8Array(4), 1, 1, 1)) as TextureNode;
   if (type === 'textureCube') return cubeTexture(new THREE.CubeTexture()) as unknown as TextureNode;
-  if (type === 'texture2D') return texture(new THREE.DataTexture(new Uint8Array(4), 1, 1)) as TextureNode;
+  // A following node: a bound copy takes its source's new pixels before each draw.
+  if (type === 'texture2D') return samplerNodeOf('flat', new THREE.DataTexture(new Uint8Array(4), 1, 1));
   throw new Error(`expected a texture type the emitter has a node for, got ${declared} ${name}`);
 }
