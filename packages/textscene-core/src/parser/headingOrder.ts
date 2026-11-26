@@ -1,4 +1,4 @@
-import type { ParseErrorCode } from '../godot/variant/strToVar.js';
+import type { ParseErrorCode } from '../godot/variant/parseError.js';
 
 /** Why the loader refuses a heading, each with the error Godot prints for it. */
 export type MisplacedReason = 'unknown tag' | 'extra tag' | 'resource in scene' | 'node in resource';
@@ -58,7 +58,7 @@ export function headingOrder(): {
   refuse(unparsed: Omit<UnparsedHeading, 'readBy'>): void;
   /** The first heading the loader stops at. */
   stop(): HeadingStop | null;
-  /** True past a heading that does not parse. */
+  /** True past a heading that stops the parse, so Godot reads no value after it. */
   isStopped(): boolean;
 } {
   let previous: string | null = null;
@@ -87,6 +87,6 @@ export function headingOrder(): {
         stop = { ...unparsed, readBy: readerAfter(previous) };
     },
     stop: () => stop,
-    isStopped: () => isUnparsed,
+    isStopped: () => isUnparsed || stop !== null,
   };
 }

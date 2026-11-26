@@ -2,7 +2,7 @@ import type { SceneFailure, SceneFile } from '../../scene/sceneFiles.js';
 import { resourceFilePath } from '../subResourcePath.js';
 import type { FailingFileRead, ParseStop } from './fileReads.js';
 import type { MisplacedHeading, UnparsedHeading } from '../../parser/headingOrder.js';
-import type { ParseErrorCode } from '../../godot/variant/strToVar.js';
+import { ERROR_NAMES } from '../../godot/variant/parseError.js';
 
 /** The root scene, its reads that fail the whole scene in file order, and the read that stops its parse. */
 export interface SceneFailingReads {
@@ -70,12 +70,6 @@ function godotStopLine(scenePath: string, stop: ParseStop): string {
     return `${at} - Parse Error: Can't load cached ext-resource id: ${read.id}.`;
   return `${at} - Parse Error: .`;
 }
-
-/** `Error`'s names as `error_names` prints them (core/error/error_list.cpp:53, :80). */
-const ERROR_NAMES: Readonly<Record<ParseErrorCode, string>> = {
-  ERR_PARSE_ERROR: 'Parse error',
-  ERR_FILE_CORRUPT: 'File corrupt',
-};
 
 /** The line the opening tag's reader prints for any fault in it (resource_format_text.cpp:1185). */
 function unexpectedEndOfFile(at: string): string {

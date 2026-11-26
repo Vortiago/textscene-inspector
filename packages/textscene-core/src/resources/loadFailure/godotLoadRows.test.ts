@@ -2059,6 +2059,56 @@ position = Vector2(5, 5)
     failing: [],
     stop: 'Parse Error: Parse error. [Resource file res://row140.tscn:7]',
   },
+  {
+    row: 141,
+    reads: 'a misplaced heading has a body value after its ], which Godot never reads',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node"]
+
+[sub_resource type="Resource" id="a"] m = ExtResource("9")
+`,
+    failing: [],
+    stop: "res://row141.tscn:5 - Parse Error: Unknown tag 'sub_resource' in file.",
+  },
+  {
+    row: 142,
+    reads: 'a value on the line after its key is a value, not a heading',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+metadata/a =
+[1, 2]
+
+[node name="B" parent="." type=]
+`,
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row142.tscn:7]',
+  },
+  {
+    row: 143,
+    reads: 'a read after a newline a string escapes inside one value stays on its line',
+    file: 'tscn',
+    text: '[gd_scene format=3]\n\n[node name="Root" type="Node"]\nmetadata/a = ["x\\\ny", Resource("res://missing.tres")]\n',
+    failing: [{ path: 'res://missing.tres', kind: 'node Resource', line: 4 }],
+    stop: null,
+  },
+  {
+    row: 144,
+    reads: 'a value on the line after its key loads',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+position =
+Vector2(5, 5)
+`,
+    failing: [],
+    stop: null,
+    tree: 'Root(5.0, 5.0)',
+  },
 ];
 
 /** The path Godot loaded the row under, which its stop line names. */

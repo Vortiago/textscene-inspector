@@ -281,7 +281,11 @@ export class TscnParserCore {
       if (pendingMultiline) {
         if (isSectionHeading(line)) {
           storePending();
+        } else if (pendingMultiline.lines.length === 0 && isEmpty(line)) {
+          continue;
         } else {
+          // Godot reads the value from the token after the `=`, so a value on a later line starts there.
+          if (pendingMultiline.lines.length === 0) pendingMultiline.godotStartLine = godotLine;
           // Scan only this chunk: a `\n` separator affects neither `inString` nor
           // `depth`, so scanning `line` alone yields the state the joined string
           // would.
@@ -351,10 +355,11 @@ export class TscnParserCore {
 
       if (currentHeading) {
         const scanState = scanValueChunk(property.value, INITIAL_SCAN_STATE);
-        if (isIncompleteState(scanState)) {
+        const awaitsValue = property.value === '';
+        if (awaitsValue || isIncompleteState(scanState)) {
           pendingMultiline = {
             key: property.key,
-            lines: [property.value],
+            lines: awaitsValue ? [] : [property.value],
             startLine: lineNumber,
             godotStartLine: godotLine,
             scanState,

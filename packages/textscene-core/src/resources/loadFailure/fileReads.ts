@@ -196,14 +196,22 @@ function orderedReadsOf(externalResources: readonly TscnExternalResource[], valu
   }));
 }
 
-/** The line of each offset, asked in rising order, so the text is scanned once. */
+/** Godot's line of each offset, asked in rising order, so the text is scanned once. */
 function lineCounter(text: string, firstLine: number): (offset: number) => number {
   let line = firstLine;
   let next = text.indexOf('\n');
   return (offset) => {
-    for (; next >= 0 && next < offset; next = text.indexOf('\n', next + 1)) line++;
+    for (; next >= 0 && next < offset; next = text.indexOf('\n', next + 1))
+      if (!isEscaped(text, next)) line++;
     return line;
   };
+}
+
+/** A newline after an odd run of backslashes is one a string escapes, which Godot's counter skips. */
+function isEscaped(text: string, at: number): boolean {
+  let backslashes = 0;
+  while (text[at - 1 - backslashes] === '\\') backslashes++;
+  return backslashes % 2 === 1;
 }
 
 /** Measured: a binds `ExtResource` prints the section line, and a binds literal the `Parse error.` line. */

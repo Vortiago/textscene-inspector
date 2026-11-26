@@ -1,4 +1,5 @@
-import { ParseError, Tokens, ValueReader, type ParseErrorCode } from './strToVar.js';
+import { GodotError, ParseError, type ParseErrorCode } from './parseError.js';
+import { Tokens, ValueReader } from './strToVar.js';
 
 /** A field value as written: its source span, and the line Godot's counter stands on at its first token. */
 export interface TagField {
@@ -67,7 +68,7 @@ function readBody(tokens: Tokens, tag: TagDraft): void {
   let isNaming = true;
   for (;;) {
     if (tokens.isEof)
-      throw new ParseError(`Unexpected EOF while parsing tag '${tag.name}'`, 'ERR_FILE_CORRUPT');
+      throw new ParseError(`Unexpected EOF while parsing tag '${tag.name}'`, GodotError.FileCorrupt);
     let token = tokens.next();
     if (token.kind === 'bracketClose') return;
     if (isNaming && (token.kind === 'period' || token.kind === 'colon')) {

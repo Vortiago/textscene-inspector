@@ -9,6 +9,7 @@ import {
   type VariantValue,
 } from './variantValue.js';
 import { DEFAULT_COLOR, htmlColor } from '../math/color.js';
+import { GodotError, ParseError } from './parseError.js';
 
 const T = VARIANT_TYPE;
 
@@ -20,19 +21,6 @@ export type Token =
   | { kind: 'number'; value: number; isFloat: boolean }
   | { kind: 'color'; value: readonly number[] }
   | { kind: 'error'; message: string };
-
-/** The `Error` a parse stops with: `ERR_FILE_CORRUPT` where the text ends inside a container or a tag. */
-export type ParseErrorCode = 'ERR_PARSE_ERROR' | 'ERR_FILE_CORRUPT';
-
-/** A parse error, with Godot's own message and code. */
-export class ParseError extends Error {
-  constructor(
-    message: string,
-    readonly code: ParseErrorCode = 'ERR_PARSE_ERROR'
-  ) {
-    super(message);
-  }
-}
 
 /** A token `get_token` refuses: the reader sees a `TK_ERROR` token, and the message stays beside it. */
 class TokenError extends Error {}
@@ -699,7 +687,7 @@ export class ValueReader {
   /** `is_eof` before the read (variant_parser.cpp:1647): `[1, "a"` ends on a missing `,`, `[1, 2` on EOF. */
   private containerToken(container: string): Token {
     if (this.tokens.isEof)
-      throw new ParseError(`Unexpected EOF while parsing ${container}`, 'ERR_FILE_CORRUPT');
+      throw new ParseError(`Unexpected EOF while parsing ${container}`, GodotError.FileCorrupt);
     return this.checkedToken();
   }
 
