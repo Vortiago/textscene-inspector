@@ -117,35 +117,41 @@ function growItemBox(box: THREE.Box3, command: CanvasShaderCommand): void {
   }
   const { transform = TRANSFORM2D_IDENTITY } = command;
   if (command.kind === 'mesh') {
-    for (const point of command.arrays.points) growByPoint(box, transform, point);
+    for (const { x, y } of command.arrays.points) growByPoint(box, transform, x, y);
     return;
   }
   // The mesh's rect at each instance, as `multimesh_get_aabb` bounds it.
-  const local = pointsBox(command.arrays.points);
-  if (local.isEmpty()) return;
+  const rect = pointsBox(meshRect, command.arrays.points);
+  if (rect.isEmpty()) return;
+  const { min, max } = rect;
   const { count, words } = command.instances;
   const floats = new Float32Array(words.buffer, words.byteOffset, words.length);
   const stride = floats.length / count;
   for (let instance = 0; instance < count; instance++) {
     const placed = instanceTransformInto(instancePlacement, floats, instance * stride);
     multiplyTransform2DInto(placed, transform, placed);
-    for (const x of [local.min.x, local.max.x])
-      for (const y of [local.min.y, local.max.y]) growByPoint(box, placed, { x, y });
+    growByPoint(box, placed, min.x, min.y);
+    growByPoint(box, placed, min.x, max.y);
+    growByPoint(box, placed, max.x, min.y);
+    growByPoint(box, placed, max.x, max.y);
   }
 }
+
+/** Scratch of the mesh rect of one multimesh command, overwritten by the next. */
+const meshRect = new THREE.Box2();
 
 /** Scratch of one instance's placement, overwritten by the next. */
 const instancePlacement = mutableTransform2D();
 
-/** Grows `box` by `point` of Godot's frame, placed by `transform`, in three's y. */
-function growByPoint(box: THREE.Box3, transform: Transform2DColumns, { x, y }: Vector2): void {
+/** Grows `box` by the point `x`, `y` of Godot's frame, placed by `transform`, in three's y. */
+function growByPoint(box: THREE.Box3, transform: Transform2DColumns, x: number, y: number): void {
   const { a, b, c, d, tx, ty } = transform;
   box.expandByPoint(corner.set(a * x + c * y + tx, 0 - (b * x + d * y + ty), 0));
 }
 
-/** The box of `points` in Godot's frame. */
-function pointsBox(points: readonly Vector2[]): THREE.Box2 {
-  const box = new THREE.Box2();
+/** Writes the box of `points` in Godot's frame to `box`, which the caller owns. */
+function pointsBox(box: THREE.Box2, points: readonly Vector2[]): THREE.Box2 {
+  box.makeEmpty();
   for (const { x, y } of points) box.expandByPoint(point.set(x, y));
   return box;
 }

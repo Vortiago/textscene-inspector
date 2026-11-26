@@ -37,4 +37,13 @@ describe('writeSkinnedPoints', () => {
       true,
     ]);
   });
+
+  it('makes no box for a template geometry that has none', () => {
+    const arrays = { primitive: 'triangles' as const, points: POINTS, colors: [], uvs: [] };
+    const geometry = attributesGeometry(arrays, { customsRead: [], emulatesPoints: false });
+    geometry.boundingBox = null;
+    writeSkinnedPoints(geometry, MOVED);
+
+    expect(geometry.boundingBox).toBeNull();
+  });
 });
