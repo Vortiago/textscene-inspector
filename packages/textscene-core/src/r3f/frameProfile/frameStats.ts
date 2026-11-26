@@ -58,6 +58,8 @@ export interface FrameTimings {
   gpuMs: number | null;
   /** False when the context offers no timer query, so every GPU time stays null. */
   hasGpuTimer: boolean;
+  /** The mean React renders of the scene tree, which a frame's own CPU time leaves out. At rest it is 0. */
+  sceneRendersPerFrame: number;
   /**
    * The steps that ran in the window or had a GPU result arrive in it, in `RENDER_STEPS` order,
    * then Other.

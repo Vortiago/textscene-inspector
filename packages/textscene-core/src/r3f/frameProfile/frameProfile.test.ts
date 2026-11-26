@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
-import { beginStep, endStep, innermostStep } from './frameProfile';
+import { beginStep, countSceneRender, endStep, innermostStep } from './frameProfile';
 import type { FrameStats } from './frameStats';
+import { startFrameCount } from './frameProfile';
 import {
   cpuOnlyRenderer,
   profiledRendererMembers,
@@ -210,6 +211,44 @@ describe('startFrameProfile', () => {
       clock.advance(1);
     });
     expect(timingsOf(stats).steps.find((s) => s.step === 'Fog')!.cpuMs).toBe(1);
+  });
+});
+
+describe('countSceneRender', () => {
+  it('counts the scene renders between frames, per frame', () => {
+    const renderer = cpuOnlyRenderer();
+    let window: FrameStats | null = null;
+    const profile = startFrameProfile(
+      renderer,
+      (stats) => (window ??= stats),
+      () => 0
+    );
+    for (let index = 0; index < FRAMES_PER_WINDOW; index++) {
+      profile.beginFrame(index * FRAME_INTERVAL_MS);
+      profile.endFrame();
+      if (index % 2 === 0) countSceneRender(renderer);
+    }
+    expect(timingsOf(window).sceneRendersPerFrame).toBe(0.5);
+  });
+
+  it('counts none while the timings are off, as the overlay shows no count', () => {
+    const renderer = cpuOnlyRenderer();
+    let window: FrameStats | null = null;
+    const profile = startFrameCount(
+      renderer,
+      (stats) => (window ??= stats),
+      () => 0
+    );
+    for (let index = 0; index < FRAMES_PER_WINDOW; index++) {
+      countSceneRender(renderer);
+      profile.beginFrame(index * FRAME_INTERVAL_MS);
+      profile.endFrame();
+    }
+    expect(window!.timings).toBeUndefined();
+  });
+
+  it('does nothing on a renderer with no profile (edge case)', () => {
+    expect(() => countSceneRender(cpuOnlyRenderer())).not.toThrow();
   });
 });
 

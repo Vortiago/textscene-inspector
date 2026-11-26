@@ -1,21 +1,16 @@
-/**
- * A scene's work per frame, as the Performance overlay shows it: the frame's draw calls, and each
- * render step's draw calls and runs. Its budget is the committed work of the same scene.
- */
-
-/**
- * Parses an overlay snapshot: the draws total, and each step row's cells in the overlay's column
- * order (step, CPU ms, GPU ms, draws, runs). A row with no runs holds only a late GPU result, which
- * comes and goes between windows, so it is left out.
- */
-export function parseWorkCounts({ drawCalls, rows }) {
+/** Cells: step, CPU ms, GPU ms, draws, runs. A row with no runs holds only a late GPU result. */
+export function parseWorkCounts({ drawCalls, sceneRenders, rows }) {
   const steps = {};
   for (const [step, , , stepDrawCalls, runsText] of rows) {
     const runs = parseCount(runsText, `${step} runs`);
     if (runs === 0) continue;
     steps[step] = { drawCalls: parseCount(stepDrawCalls, `${step} draws`), runs };
   }
-  return { drawCalls: parseCount(drawCalls, 'draws total'), steps };
+  return {
+    drawCalls: parseCount(drawCalls, 'draws total'),
+    sceneRenders: parseCount(sceneRenders, 'scene renders'),
+    steps,
+  };
 }
 
 function parseCount(text, cell) {
@@ -46,8 +41,11 @@ export function compareToBudget(measured, budget) {
 }
 
 /** Every count of `work` under the label a report names it by. */
-function labelledCounts({ drawCalls, steps }) {
-  const counts = new Map([['draw calls', drawCalls]]);
+function labelledCounts({ drawCalls, sceneRenders, steps }) {
+  const counts = new Map([
+    ['draw calls', drawCalls],
+    ['scene renders', sceneRenders],
+  ]);
   for (const [step, { drawCalls: stepDrawCalls, runs }] of Object.entries(steps)) {
     counts.set(`${step} draw calls`, stepDrawCalls);
     counts.set(`${step} runs`, runs);

@@ -15,6 +15,7 @@ const COUNTS: FrameStats = {
 const TIMINGS: FrameTimings = {
   gpuMs: 8.125,
   hasGpuTimer: true,
+  sceneRendersPerFrame: 0.5,
   steps: [
     { step: 'Shadows', cpuMs: 0.5, gpuMs: 4.25, runsPerFrame: 2, drawCallsPerFrame: 12 },
     { step: 'Fog', cpuMs: 0.25, gpuMs: 3, runsPerFrame: 1, drawCallsPerFrame: 0.5 },
@@ -46,6 +47,11 @@ describe('PerformancePanel', () => {
     render(<PerformancePanel stats={STATS} />);
     expect(screen.getByTestId('performance-objects').textContent).toBe('9 objects');
     expect(screen.getByTestId('performance-primitives').textContent).toBe('4248.5 primitives');
+  });
+
+  it('shows the scene renders per frame, the React work outside the frame', () => {
+    render(<PerformancePanel stats={STATS} />);
+    expect(screen.getByTestId('performance-scene-renders').textContent).toBe('0.5 scene renders');
   });
 
   it('shows no GPU time and no step table for a window without timings (edge case)', () => {

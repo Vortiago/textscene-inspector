@@ -1,6 +1,6 @@
 /**
  * @type {Array<{ name: string, file: string, inGameFrame?: { width: number, height: number },
- *   writesEachFrame?: { parent: string, count: number } }>}
+ *   writesEachFrame?: { parent: string, count: number }, pansCamera?: boolean }>}
  */
 export const BUDGET_SCENES = [
   { name: 'depth-fog', file: 'unit-depth-fog.tscn' },
@@ -16,6 +16,7 @@ export const BUDGET_SCENES = [
     writesEachFrame: { parent: 'Coins', count: 1 },
   },
   { name: 'demo-2d-lights-and-shadows', file: 'demos/2d/lights_and_shadows/light_shadows.tscn' },
+  { name: 'dungeon-pan', file: 'dungeon.tscn', pansCamera: true },
   {
     name: 'in-game-camera3d',
     file: 'in-game/unit-in-game-camera3d.tscn',

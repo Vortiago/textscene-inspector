@@ -25,6 +25,7 @@ import {
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import { useViewportSelection } from './hooks/useViewportSelection.js';
 import { useCanvasPickListeners } from './hooks/useCanvasPickListeners.js';
+import { useSceneRenderCount } from './frameProfile/FrameProfiler.js';
 import { useCanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
 import { drawsInWorkspace } from './nodeWorkspaceVisibility.js';
 import { useAnimatedValueAt } from './contexts/AnimatedValueContext.js';
@@ -102,6 +103,7 @@ function hidesSubtree(node: TscnNode, animatedVisible: boolean | null): boolean 
 }
 
 export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
+  useSceneRenderCount();
   const { handlers } = useViewportSelection();
   // The running game picks no node.
   const pointerHandlers = useIsEditorHint() ? handlers : null;

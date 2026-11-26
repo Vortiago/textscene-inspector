@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { addAfterEffect, addEffect, useFrame, useThree } from '@react-three/fiber';
 import { useViewShow } from '../viewShow/ViewShowContext.js';
-import { beginStep, endStep, startFrameCount, type FrameProfile } from './frameProfile.js';
+import { beginStep, countSceneRender, endStep, startFrameCount, type FrameProfile } from './frameProfile.js';
 import { useViewStatusStore } from '../viewStatus/ViewStatusContext.js';
 import { timeSceneDraws } from './sceneDrawStep.js';
 import { VIEW_DRAW_COUNTER } from './viewDraw.js';
@@ -60,4 +60,11 @@ function SubscriberStepMarkers({ step, priority }: { step: RenderStep; priority:
   useFrame(({ gl }) => beginStep(gl, step), priority - 0.5);
   useFrame(({ gl }) => endStep(gl, step), priority + 0.5);
   return null;
+}
+
+/** Counts each commit of the caller, the root of a scene tree, as a scene render. */
+export function useSceneRenderCount(): void {
+  const gl = useThree((state) => state.gl);
+  // No dependencies: the effect runs on every commit, which is what it counts.
+  useLayoutEffect(() => countSceneRender(gl));
 }

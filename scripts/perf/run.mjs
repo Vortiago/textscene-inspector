@@ -11,12 +11,13 @@
  *   node scripts/perf/run.mjs --scene glow
  */
 
-/* global document, window, requestAnimationFrame */
+/* global document, window, requestAnimationFrame, PointerEvent */
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   attachDiagnostics,
+  CANVAS_2D_TESTIDS,
   clearDiagnostics,
   createCaptureContext,
   errorReport,
@@ -117,6 +118,7 @@ async function measureScene({ page, diagnostics }, baseUrl, scene) {
   const loading = await sceneStillLoading(page);
   if (loading) return { work: null, reason: loading };
   if (scene.writesEachFrame) await startWritesEachFrame(page, scene.writesEachFrame);
+  if (scene.pansCamera) await startPanning(page);
   const { work, reason: unsteady } = await steadyWork(page);
   if (loggedErrors(diagnostics).length > 0) {
     return { work: null, reason: `console error(s): ${errorReport(diagnostics)}` };
@@ -149,6 +151,37 @@ async function startWritesEachFrame(page, { parent, count }) {
   );
 }
 
+/** One pixel right and back each frame: every item stays on screen, so the draws stay steady. */
+async function startPanning(page) {
+  await page.evaluate((stageTestId) => {
+    const stage = document.querySelector(`[data-testid="${stageTestId}"]`);
+    const { left, top, width, height } = stage.getBoundingClientRect();
+    const y = top + height / 2;
+    const pointer = (type, x) =>
+      stage.dispatchEvent(
+        new PointerEvent(type, {
+          bubbles: true,
+          clientX: x,
+          clientY: y,
+          button: 0,
+          buttons: 1,
+          pointerId: 1,
+          pointerType: 'mouse',
+          isPrimary: true,
+        })
+      );
+    const x = left + width / 2;
+    pointer('pointerdown', x);
+    let frame = 0;
+    const move = () => {
+      frame += 1;
+      pointer('pointermove', x + (frame % 2));
+      requestAnimationFrame(move);
+    };
+    requestAnimationFrame(move);
+  }, CANVAS_2D_TESTIDS.stage);
+}
+
 /** The scene's work once it is steady, or a reason it never was. */
 async function steadyWork(page) {
   const steady = new SteadyWork();
@@ -174,16 +207,14 @@ async function steadyWork(page) {
   };
 }
 
-/**
- * The overlay's frame interval, draws total and each step row's cells. The capture paints the
- * overlay out, so this reads its text.
- */
+/** Reads the overlay's text, since the capture paints the overlay out. */
 function readOverlay(page) {
-  return page.evaluate(({ overlay, frameMs, drawCalls }) => {
+  return page.evaluate(({ overlay, frameMs, drawCalls, sceneRenders }) => {
     const panel = document.querySelector(`[data-testid="${overlay}"]`);
     return {
       frameMs: panel?.querySelector(`[data-testid="${frameMs}"]`)?.textContent ?? '',
       drawCalls: panel?.querySelector(`[data-testid="${drawCalls}"]`)?.textContent ?? '',
+      sceneRenders: panel?.querySelector(`[data-testid="${sceneRenders}"]`)?.textContent ?? '',
       rows: [...(panel?.querySelectorAll('tbody tr') ?? [])].map((row) =>
         [...row.children].map((cell) => cell.textContent ?? '')
       ),

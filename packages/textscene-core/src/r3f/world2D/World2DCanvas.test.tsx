@@ -8,6 +8,9 @@ import { Canvas, type CanvasProps } from '@react-three/fiber';
 import { World2DCanvas } from './World2DCanvas';
 import { World2DCamera } from './world2DCamera';
 import { PreviewVisibilityProvider } from '../contexts/PreviewVisibilityContext';
+import { StageViewStore } from './stageView';
+
+const VIEW = new StageViewStore({ pan: { x: 0, y: 0 }, zoom: 1 });
 
 vi.mock('@react-three/fiber', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@react-three/fiber')>()),
@@ -17,9 +20,7 @@ vi.mock('@react-three/fiber', async (importOriginal) => ({
 /** The props of the one `<Canvas>` a fresh `World2DCanvas` renders. */
 function canvasProps(): CanvasProps {
   vi.mocked(Canvas).mockClear();
-  render(
-    <World2DCanvas nodes={[]} internalResources={[]} externalResources={[]} pan={{ x: 0, y: 0 }} zoom={1} />
-  );
+  render(<World2DCanvas nodes={[]} internalResources={[]} externalResources={[]} view={VIEW} />);
   expect(Canvas).toHaveBeenCalledTimes(1);
   return vi.mocked(Canvas).mock.calls[0]![0];
 }
@@ -31,11 +32,16 @@ describe('World2DCanvas', () => {
 
   it('hands R3F one camera across renders: a new one would replace the store camera (edge case)', () => {
     const { rerender } = render(
-      <World2DCanvas nodes={[]} internalResources={[]} externalResources={[]} pan={{ x: 0, y: 0 }} zoom={1} />
+      <World2DCanvas nodes={[]} internalResources={[]} externalResources={[]} view={VIEW} />
     );
     const first = vi.mocked(Canvas).mock.calls.at(-1)![0].camera;
     rerender(
-      <World2DCanvas nodes={[]} internalResources={[]} externalResources={[]} pan={{ x: 5, y: 0 }} zoom={2} />
+      <World2DCanvas
+        nodes={[]}
+        internalResources={[]}
+        externalResources={[]}
+        view={new StageViewStore({ pan: { x: 5, y: 0 }, zoom: 2 })}
+      />
     );
     expect(vi.mocked(Canvas).mock.calls.at(-1)![0].camera).toBe(first);
   });
@@ -60,13 +66,7 @@ describe('World2DCanvas', () => {
       vi.mocked(Canvas).mockClear();
       render(
         <PreviewVisibilityProvider isVisible={isVisible}>
-          <World2DCanvas
-            nodes={[]}
-            internalResources={[]}
-            externalResources={[]}
-            pan={{ x: 0, y: 0 }}
-            zoom={1}
-          />
+          <World2DCanvas nodes={[]} internalResources={[]} externalResources={[]} view={VIEW} />
         </PreviewVisibilityProvider>
       );
       return vi.mocked(Canvas).mock.calls.at(-1)![0].frameloop;

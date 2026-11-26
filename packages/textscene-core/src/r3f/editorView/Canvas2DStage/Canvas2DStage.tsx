@@ -35,7 +35,7 @@ import { useProjectSettings } from '../../contexts/ProjectSettingsContext.js';
 import { createEditRects, EditRectsProvider } from '../../editRect/editRects.js';
 import { useViewFocus } from '../viewFocus.js';
 import { FocusSelection2D, Stage2DProvider, type Stage2D } from './FocusSelection2D.js';
-import type { StageView } from './selectionFrame2D.js';
+import { StageViewStore, type StageView } from '../../world2D/stageView.js';
 import type { Rect2 } from '../../../godot/math/rect2.js';
 import styles from './Canvas2DStage.module.css';
 
@@ -67,6 +67,11 @@ function zoomViewAround(view: StageView, px: number, py: number, factor: number)
   const cy = (py - view.pan.y) / view.zoom;
   return { pan: { x: px - cx * zoom, y: py - cy * zoom }, zoom };
 }
+
+const OPENING_VIEW: StageView = { pan: { x: 0, y: 0 }, zoom: 1 };
+
+/** One element for the stage's life, so a pan leaves the memoised world canvas alone. */
+const EDITOR_PARTS = <FocusSelection2D />;
 
 interface Canvas2DStageProps {
   /** The root scene's nodes. The native canvas lays out their Control subtrees. */
@@ -100,27 +105,27 @@ export function Canvas2DStage({
   }, []);
   useViewFocus(stageElement);
   const [editRects] = useState(createEditRects);
-  const [view, setView] = useState<StageView>({ pan: { x: 0, y: 0 }, zoom: 1 });
+  const [view, setView] = useState<StageView>(OPENING_VIEW);
   const { pan, zoom } = view;
   // `display/window/size/viewport_*`, or Godot's 1152x648 for a scene with no
   // project around it. A root Control resolves its anchors to this rect.
   const { width: canvasWidth, height: canvasHeight } = useProjectSettings().viewportSize;
 
-  /**
-   * The view as of now, written ahead of the re-render. A wheel burst or a pinch
-   * fires several events per frame, and React state would be stale after the first.
-   */
-  const viewRef = useRef(view);
+  // Ahead of React state, which goes stale after a wheel burst's first event. The world camera follows it.
+  const [viewStore] = useState(() => new StageViewStore(OPENING_VIEW));
 
-  const applyView = useCallback((next: StageView) => {
-    const current = viewRef.current;
-    // An identical view still re-renders the stage and the Control overlay.
-    if (next.zoom === current.zoom && next.pan.x === current.pan.x && next.pan.y === current.pan.y) {
-      return;
-    }
-    viewRef.current = next;
-    setView(next);
-  }, []);
+  const applyView = useCallback(
+    (next: StageView) => {
+      const current = viewStore.current();
+      // An identical view still re-renders the stage and the Control overlay.
+      if (next.zoom === current.zoom && next.pan.x === current.pan.x && next.pan.y === current.pan.y) {
+        return;
+      }
+      viewStore.set(next);
+      setView(next);
+    },
+    [viewStore]
+  );
 
   const fit = useCallback(() => {
     const el = stageRef.current;
@@ -178,7 +183,7 @@ export function Canvas2DStage({
     useMemo(
       () => ({
         size: () => stageRef.current?.getBoundingClientRect() ?? { width: 0, height: 0 },
-        view: () => viewRef.current,
+        view: viewStore.current,
         moveView,
         restoreView: applyView,
         clampZoom,
@@ -187,7 +192,7 @@ export function Canvas2DStage({
         reset: () => openView.current(),
         scenePath: () => openScenePath.current,
       }),
-      [moveView, applyView, cameraViewOf]
+      [moveView, applyView, cameraViewOf, viewStore]
     )
   );
 
@@ -205,12 +210,12 @@ export function Canvas2DStage({
       if (notches === 0) return;
       const r = el.getBoundingClientRect();
       moveView(
-        zoomViewAround(viewRef.current, e.clientX - r.left, e.clientY - r.top, ZOOM_PER_NOTCH ** -notches)
+        zoomViewAround(viewStore.current(), e.clientX - r.left, e.clientY - r.top, ZOOM_PER_NOTCH ** -notches)
       );
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
-  }, [moveView]);
+  }, [moveView, viewStore]);
 
   // Drag-to-pan through pointer capture, not window listeners, so an unmount
   // mid-drag cannot set state on an unmounted component.
@@ -257,9 +262,8 @@ export function Canvas2DStage({
       return;
     }
     if (e.button !== 0) return;
-    // From the ref: a wheel or pinch earlier in this frame has written `viewRef`,
-    // and the rendered `pan` is one commit behind it.
-    const origin = viewRef.current.pan;
+    // The rendered `pan` is one commit behind a wheel or pinch earlier in this frame.
+    const origin = viewStore.current().pan;
     pan2dDrag.current = {
       startX: e.clientX,
       startY: e.clientY,
@@ -290,7 +294,7 @@ export function Canvas2DStage({
     const centroid = touchCentroid(active);
     const span = touchSpan(active);
     const origin = touchOrigin.current;
-    const view = viewRef.current;
+    const view = viewStore.current();
     // The first move of a gesture only establishes what it started from.
     if (!origin) {
       touchOrigin.current = { centroid, span, startSpan: span, startZoom: view.zoom };
@@ -324,7 +328,7 @@ export function Canvas2DStage({
     if (!d.active) return;
     moveView({
       pan: { x: d.ox + (e.clientX - d.startX), y: d.oy + (e.clientY - d.startY) },
-      zoom: viewRef.current.zoom,
+      zoom: viewStore.current().zoom,
     });
   };
 
@@ -354,7 +358,7 @@ export function Canvas2DStage({
     const el = stageRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
-    moveView(zoomViewAround(viewRef.current, r.width / 2, r.height / 2, factor));
+    moveView(zoomViewAround(viewStore.current(), r.width / 2, r.height / 2, factor));
   }
 
   return (
@@ -412,10 +416,9 @@ export function Canvas2DStage({
             internalResources={internalResources}
             externalResources={externalResources}
             editableInstances={editableInstances}
-            pan={pan}
-            zoom={zoom}
+            view={viewStore}
           >
-            <FocusSelection2D />
+            {EDITOR_PARTS}
           </World2DCanvas>
         </EditRectsProvider>
       </Stage2DProvider>

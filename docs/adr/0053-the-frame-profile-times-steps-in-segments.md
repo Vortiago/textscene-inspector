@@ -46,10 +46,16 @@ Fog. The Fog step times the fog's own passes, which a static scene skips once it
 
 The timer queries add a little GPU work per segment while the profile runs.
 
+A React render of the scene tree runs between frames, so no step and no frame time holds it. The
+profile counts it as a scene render instead, at each commit of `NodeDispatcher`, and the overlay
+shows the count per frame. The 2D stage's camera follows a view store outside React state, so a
+pan or zoom makes no scene render.
+
 The work budget check (`pnpm test:perf`, `scripts/perf/`) holds the counts in CI, not the times.
 It opens each budget scene in headless Chromium with the overlay on, waits until the scene has
-loaded, waits until the counts stay the same over 30 frames, and fails when a scene's draw calls or a step's runs or draw calls per frame
-go over `scripts/perf/budgets.json`. Software GL on a shared runner gives times that change from run
+loaded, waits until the counts stay the same over 30 frames, and fails when a scene's draw calls or scene renders, or a step's runs or draw calls, per frame
+go over `scripts/perf/budgets.json`. A budget scene can drag the 2D stage on every frame
+(`pansCamera`), so a pan that rebuilds the scene's React tree fails the check. Software GL on a shared runner gives times that change from run
 to run, and the counts do not change. A step that runs more often, or a draw that goes uncached,
 shows in the counts as well as in the times.
 

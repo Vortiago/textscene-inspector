@@ -1,42 +1,37 @@
-/**
- * Canvas2DStage behavior: frame chrome (dimension badge), the zoom
- * HUD (in/out/fit + clamping), wheel-to-zoom, and pointer-capture
- * drag-to-pan. The native Control canvas mounts inside `<World2DCanvas>`,
- * which has its own suites; this one only covers the stage chrome around it.
- */
 import { useState, type ReactNode } from 'react';
 import { sizeEveryElement } from '../../testing/sizeEveryElement';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, type RenderResult } from '@testing-library/react';
 
-/**
- * Renders of the stubbed world canvas. A delta of 0 across an event shows the
- * event committed no state update. It is never reset, so compare deltas.
- */
+/** Renders of the scene stub under the canvas and of its view reader, never reset: compare deltas. */
 const worldRenders = vi.hoisted(() => ({ count: 0 }));
+const viewRenders = vi.hoisted(() => ({ count: 0 }));
 
-// The 2D-world canvas needs WebGL, so a stub records the pan and zoom it receives.
-vi.mock('../../world2D/World2DCanvas', () => ({
-  World2DCanvas: ({
-    pan,
-    zoom,
-    nodes,
-  }: {
-    pan: { x: number; y: number };
-    zoom: number;
-    nodes: readonly unknown[];
-  }) => {
-    worldRenders.count += 1;
-    return (
-      <div
-        data-testid="world-canvas-stub"
-        data-pan={`${pan.x},${pan.y}`}
-        data-zoom={zoom}
-        data-node-count={nodes.length}
-      />
-    );
-  },
+// R3F's canvas needs WebGL, so it renders its children bare, over a scene stub that shows the view.
+vi.mock('@react-three/fiber', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@react-three/fiber')>()),
+  Canvas: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
+vi.mock('../../viewStatus/CanvasViewReport', () => ({ CanvasViewReport: () => null }));
+vi.mock('../../world2D/World2DContents', async () => {
+  const { useSyncExternalStore } = await import('react');
+  type Source = import('../../world2D/stageView').StageViewSource;
+  function ViewReader({ view }: { view: Source }) {
+    viewRenders.count += 1;
+    const { pan, zoom } = useSyncExternalStore(view.subscribe, view.current);
+    return <div data-testid="world-view" data-pan={`${pan.x},${pan.y}`} data-zoom={zoom} />;
+  }
+  return {
+    World2DContents: ({ view, nodes }: { view: Source; nodes: readonly unknown[] }) => {
+      worldRenders.count += 1;
+      return (
+        <div data-testid="world-canvas-stub" data-node-count={nodes.length}>
+          <ViewReader view={view} />
+        </div>
+      );
+    },
+  };
+});
 
 /**
  * The project viewport the stage reads, Godot's default until a test moves it. A move
@@ -155,12 +150,33 @@ describe('<Canvas2DStage>', () => {
 
   it('mounts the 2D world canvas with the stage pan/zoom kept in sync', () => {
     renderStage([makeNode('A')]);
-    const world = screen.getByTestId('world-canvas-stub');
-    expect(world.getAttribute('data-node-count')).toBe('1');
-    expect(world.getAttribute('data-zoom')).toBe('1');
+    expect(screen.getByTestId('world-canvas-stub').getAttribute('data-node-count')).toBe('1');
+    expect(screen.getByTestId('world-view').getAttribute('data-zoom')).toBe('1');
 
     fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
-    expect(screen.getByTestId('world-canvas-stub').getAttribute('data-zoom')).toBe('1.2');
+    expect(screen.getByTestId('world-view').getAttribute('data-zoom')).toBe('1.2');
+  });
+
+  it('moves the world view on a drag pan without re-rendering the scene under the canvas', () => {
+    const { stage } = renderStage([makeNode('A')]);
+    const renders = worldRenders.count;
+
+    fireEvent.pointerDown(stage, { button: 0, clientX: 10, clientY: 10, pointerId: 1 });
+    fireEvent.pointerMove(stage, { clientX: 60, clientY: 40, pointerId: 1 });
+    fireEvent.pointerMove(stage, { clientX: 70, clientY: 45, pointerId: 1 });
+
+    expect(screen.getByTestId('world-view').getAttribute('data-pan')).toBe('60,35');
+    expect(worldRenders.count - renders).toBe(0);
+  });
+
+  it('moves the world view on a wheel zoom without re-rendering the scene under the canvas', () => {
+    const { stage } = renderStage([makeNode('A')]);
+    const renders = worldRenders.count;
+
+    wheelAt(stage, { deltaY: -100 });
+
+    expect(screen.getByTestId('world-view').getAttribute('data-zoom')).not.toBe('1');
+    expect(worldRenders.count - renders).toBe(0);
   });
 
   it('zooms in and out around the centre via the HUD buttons', () => {
@@ -343,7 +359,7 @@ describe('<Canvas2DStage>', () => {
     touch(stage, 'move', 1, 100, 300);
     touch(stage, 'move', 2, 200, 300);
     const settled = frame.style.transform;
-    const renders = worldRenders.count;
+    const renders = viewRenders.count;
 
     // One pointermove per pointer: a two-finger gesture delivers events in which
     // nothing moved, and a re-render re-renders the Control overlay too.
@@ -351,7 +367,7 @@ describe('<Canvas2DStage>', () => {
     touch(stage, 'move', 2, 200, 300);
 
     expect(frame.style.transform).toBe(settled);
-    expect(worldRenders.count - renders).toBe(0);
+    expect(viewRenders.count - renders).toBe(0);
   });
 
   it('ignores a zero-delta mouse move rather than committing a no-op update', () => {
@@ -359,12 +375,12 @@ describe('<Canvas2DStage>', () => {
     fireEvent.pointerDown(stage, { button: 0, clientX: 10, clientY: 10, pointerId: 1 });
     fireEvent.pointerMove(stage, { clientX: 60, clientY: 40, pointerId: 1 });
     const settled = frame.style.transform;
-    const renders = worldRenders.count;
+    const renders = viewRenders.count;
 
     fireEvent.pointerMove(stage, { clientX: 60, clientY: 40, pointerId: 1 });
 
     expect(frame.style.transform).toBe(settled);
-    expect(worldRenders.count - renders).toBe(0);
+    expect(viewRenders.count - renders).toBe(0);
   });
 
   it('drops the gesture on window blur, so the next drag pans from its own start', () => {
