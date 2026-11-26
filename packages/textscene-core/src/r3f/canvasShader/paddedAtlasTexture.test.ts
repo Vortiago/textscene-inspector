@@ -7,7 +7,7 @@ import { texture2DPlaceholder } from '../../resources/textures/texture2DPlacehol
 import type { AtlasSourceModel } from '../../resources/tileset/types';
 import { inThreadJobRunner } from '../../workers/WorkerJobRunner';
 import { topDownTexture } from '../../resources/textures/topDownTexture';
-import { useRuntimeAtlasTexture } from './paddedAtlasTexture';
+import { useRuntimeAtlasTexture, type RuntimeAtlas } from './paddedAtlasTexture';
 
 const SOURCE: AtlasSourceModel = {
   texture: null,
@@ -29,8 +29,15 @@ const flushMicrotasks = () => Promise.resolve();
 
 async function builtCopy(texture: THREE.Texture, source = SOURCE) {
   const hook = renderHook(() => useRuntimeAtlasTexture(slotOf(texture), source));
-  await vi.waitFor(() => expect(hook.result.current).not.toBeNull());
+  await vi.waitFor(() => expect(hook.result.current).not.toBe('building'));
   return hook;
+}
+
+/** The texture a built hook gives, which a test that expects one reads. */
+function textureIn(result: { current: RuntimeAtlas }): THREE.Texture {
+  if (!(result.current instanceof THREE.Texture))
+    throw new Error(`expected a texture, got ${result.current}`);
+  return result.current;
 }
 
 afterEach(() => {
@@ -43,19 +50,19 @@ describe('useRuntimeAtlasTexture', () => {
 
     const { result } = renderHook(() => useRuntimeAtlasTexture(slotOf(textureOf()), SOURCE));
 
-    expect([result.current, read.mock.calls.length]).toEqual([null, 0]);
+    expect([result.current, read.mock.calls.length]).toEqual(['building', 0]);
   });
 
   it('gives the padded copy once it is built, one texel of border around each tile', async () => {
     const { result } = await builtCopy(textureOf());
 
-    expect(imageSize(result.current!.image)).toEqual({ width: 4, height: 4 });
+    expect(imageSize(textureIn(result).image)).toEqual({ width: 4, height: 4 });
   });
 
   it('gives the padded copy top row first, so the shader samples it without a turned copy', async () => {
     const { result } = await builtCopy(textureOf());
 
-    expect(topDownTexture(result.current!)).toBe(result.current);
+    expect(topDownTexture(textureIn(result))).toBe(result.current);
   });
 
   it('gives the texture itself for a source with no padding', () => {
@@ -76,12 +83,23 @@ describe('useRuntimeAtlasTexture', () => {
     expect(result.current).toBe(texture2DPlaceholder());
   });
 
-  it('gives the placeholder for a texture whose pixels cannot be read', async () => {
+  it('gives no atlas for a texture whose pixels cannot be read', async () => {
     vi.spyOn(imagePixels, 'readImagePixels').mockReturnValue(undefined);
 
     const { result } = await builtCopy(textureOf());
 
-    expect(result.current).toBe(texture2DPlaceholder());
+    expect(result.current).toBe('unreadable');
+  });
+
+  it('pads a texture whose pixels become readable at its next version', async () => {
+    const texture = textureOf();
+    vi.spyOn(imagePixels, 'readImagePixels').mockReturnValueOnce(undefined);
+    const hook = await builtCopy(texture);
+
+    texture.needsUpdate = true;
+    hook.rerender();
+
+    await vi.waitFor(() => expect(hook.result.current).toBeInstanceOf(THREE.DataTexture));
   });
 
   it('shares one padded copy between the runs of a source', async () => {
@@ -98,7 +116,7 @@ describe('useRuntimeAtlasTexture', () => {
     const first = await builtCopy(texture);
     const second = await builtCopy(texture);
     const onDispose = vi.fn();
-    first.result.current!.addEventListener('dispose', onDispose);
+    textureIn(first.result).addEventListener('dispose', onDispose);
 
     first.unmount();
     await flushMicrotasks();

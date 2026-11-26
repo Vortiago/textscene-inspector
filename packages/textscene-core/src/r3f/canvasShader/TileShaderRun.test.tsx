@@ -165,14 +165,15 @@ describe('TileShaderRun', () => {
     );
   });
 
-  it('draws the slot from the placeholder for a padded source whose pixels it cannot read', async () => {
+  it('draws the fallback, not the slot, for a padded source whose pixels it cannot read', async () => {
     sampled.texture = new THREE.DataTexture(new Uint8Array(32 * 16 * 4), 32, 16);
     vi.spyOn(imagePixels, 'readImagePixels').mockReturnValue(undefined);
     const renderer = await run(undefined, undefined, { ...SOURCE, usesTexturePadding: true });
 
     await vi.waitFor(() =>
-      expect(renderer.scene.findAll((node) => node.props.name === 'slot')).toHaveLength(1)
+      expect(renderer.scene.findAll((node) => node.props.name === 'fallback')).toHaveLength(1)
     );
+    expect(renderer.scene.findAll((node) => node.props.name === 'slot')).toHaveLength(0);
   });
 
   it("draws an unpadded AtlasTexture's cells from its whole atlas, shifted by its region", async () => {
