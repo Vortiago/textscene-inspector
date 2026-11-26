@@ -38,7 +38,7 @@ export interface Light2DValues {
   readonly height: number;
 }
 
-/** A PointLight2D as `canvas_render_items` reads it for one canvas (`renderer_canvas_render_rd.cpp:586-660`). */
+/** A PointLight2D as `canvas_render_items` reads it (`renderer_canvas_render_rd.cpp:586-660`). */
 export interface PointLightPlacement extends Light2DValues {
   /** The light's global transform on its own canvas, `xform_curr`. */
   readonly global: Transform2DColumns;
@@ -66,7 +66,7 @@ const LIGHT_FLAGS_FILTER_SHIFT = 22;
 const ZERO_TRANSFORM: Transform2DColumns = Object.freeze({ a: 0, b: 0, c: 0, d: 0, tx: 0, ty: 0 });
 const NO_ATLAS_RECT: Rect2 = Object.freeze({ x: 0, y: 0, w: 0, h: 0 });
 
-/** The shadow of a light stays classic until the occlusion pass, so a row never sets `LIGHT_FLAGS_HAS_SHADOW`. */
+/** Shadows stay on the classic pass, so a row never sets `LIGHT_FLAGS_HAS_SHADOW`. */
 function lightFlags({ blendMode, shadowFilter }: Light2DValues): number {
   return (blendMode << LIGHT_FLAGS_BLEND_SHIFT) | (shadowFilter << LIGHT_FLAGS_FILTER_SHIFT);
 }
@@ -80,10 +80,7 @@ function axisScale({ a, b, c, d }: Transform2DColumns): number {
   return (Math.hypot(a, b) + Math.hypot(c, d)) * 0.5;
 }
 
-/**
- * The texture's rect around the light, `Rect2(-tsize / 2 + texture_offset, tsize)`, as the scale
- * that maps 0 to 1 onto it (`renderer_viewport.cpp:452-476`).
- */
+/** Maps `Rect2(-tsize / 2 + texture_offset, tsize)` onto 0 to 1 (`renderer_viewport.cpp:452-476`). */
 function textureRectTransform({ textureSize, textureScale, textureOffset }: PointLightPlacement) {
   const width = textureSize.width * textureScale;
   const height = textureSize.height * textureScale;
@@ -211,10 +208,7 @@ const LIGHT_BINDINGS: readonly Binding<CanvasLightsFrame>[] = [
 /** The light frame of a draw, or null for one that reads no light. */
 export type LightsFrameOf = (frame: NodeFrame) => CanvasLightsFrame | null;
 
-/**
- * Writes `light_array` and the directional count of `draw` before each of its draws, from the frame
- * `framesOf` gives. A frame's words are uploaded only when another array replaces them.
- */
+/** Writes `draw`'s `light_array` before each draw, uploading only when another array replaces it. */
 export function bindCanvasLightsEachDraw(draw: CanvasDraw, framesOf: LightsFrameOf): void {
   let written: Uint32Array | null = null;
   draw.buffers.get('light_array')?.writeEachDraw((_object, nodeFrame) => {

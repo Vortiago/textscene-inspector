@@ -32,10 +32,7 @@ export interface CappedItem {
   readonly geometry: { readonly current: THREE.Object3D | null };
   /** Hands the item its whole light list (`ItemPlacement.takenLights`), or null for its placement's. */
   take(takenLights: readonly number[] | null): void;
-  /**
-   * Hands a canvas template item the positional lights Godot's loop takes for it: the first 15
-   * that meet its rect. Null while every light that reaches its placement fits.
-   */
+  /** Hands a template item the first 15 positional lights that meet its rect, or null while all fit. */
   takeGodotLights?(godotLights: readonly number[] | null): void;
 }
 

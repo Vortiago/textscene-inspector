@@ -51,7 +51,7 @@ export function instanceRecord(item: CanvasItemDraw): InstanceRecord {
   return { bytes, floats, words };
 }
 
-/** Adds the item's lights to `record`, over the flags its command wrote (`renderer_canvas_render_rd.cpp:2385`). */
+/** Adds the item's lights to the flags its command wrote (`renderer_canvas_render_rd.cpp:2385`). */
 export function writeItemLights({ words }: InstanceRecord, { flags, lights }: ItemLightBits): void {
   words[FLAGS] = (words[FLAGS]! | flags) >>> 0;
   words.set(lights, LIGHTS);

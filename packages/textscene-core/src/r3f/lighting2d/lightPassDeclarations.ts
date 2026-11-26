@@ -71,13 +71,7 @@ export function useRegisterLitItem(placement: ItemPlacement, read: LitItemRead |
   );
 }
 
-/**
- * Hands the per-item cap an item at `placement`, uncapped, whose own geometry `geometry` holds.
- * `take` receives the item's light list while more than 15 lights meet it or the render budget
- * drops one, and `takeGodotLights` the lights a template draw takes while more reach it. The cap
- * records a new entry as handed nothing, so each release hands the item null to match: else an
- * item that moves to a placement that fits every light keeps the old list.
- */
+/** Hands the per-item cap an uncapped item at `placement`, and hands the item null again on release. */
 export function useCapItemLights(
   placement: ItemPlacement,
   geometry: RefObject<THREE.Object3D | null>,

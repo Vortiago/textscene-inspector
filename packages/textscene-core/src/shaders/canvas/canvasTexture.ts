@@ -137,10 +137,7 @@ export class CanvasTextureBinding {
     private readonly sampling: ProjectSampling = GODOT_SAMPLING
   ) {}
 
-  /**
-   * Binds `texture`, or white for none, and `maps` and a lit draw's `lightAtlas` raw with its sampler
-   * (`texture_storage.cpp:767, 780`, `canvas.glsl:782`).
-   */
+  /** Binds `texture` (white for none), `maps` and `lightAtlas` (`texture_storage.cpp:767, 780`). */
   bind(
     texture: THREE.Texture | undefined,
     state: CanvasTextureState,

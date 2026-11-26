@@ -105,10 +105,7 @@ export class TextureCopies {
   }
 }
 
-/**
- * One following copy of each texture, shared by its holders and freed with the last. A source's
- * dispose leaves the copy: a long-lived source such as an atlas drops its storage to resize.
- */
+/** One shared copy per texture, freed with its last holder: an atlas disposes itself to resize. */
 export class SharedCopies {
   /** Written only by `hold` and `release`: each texture's copy and its holders. */
   private readonly held = new Map<Texture, { readonly copy: Texture; holders: number }>();

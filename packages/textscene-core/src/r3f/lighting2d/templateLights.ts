@@ -1,8 +1,3 @@
-/**
- * The lights of a canvas item that draws through Godot's canvas template: the rows of its layer's
- * `light_array` (`renderer_canvas_render_rd.cpp:519-660`) and the indices it takes (`:2366-2386`).
- */
-
 import { MAX_LIGHTS_PER_RENDER } from '../../godot/rendering/rendering.js';
 import {
   itemLightBits,
@@ -52,10 +47,7 @@ export function layerLightOrder(
   return order;
 }
 
-/**
- * The light bits of an item at `placement`. `godotLights` is the cap's list of the positional
- * lights that meet the item's rect, or null where every light that reaches the placement fits.
- */
+/** The light bits at `placement`. `godotLights` is null where every reaching light fits (`:2366-2386`). */
 export function itemTemplateLights(
   lights: ReadonlyMap<number, CanvasLightDeclaration>,
   placement: ItemPlacement,
@@ -71,10 +63,7 @@ export function itemTemplateLights(
   return itemLightBits(indices.slice(0, MAX_POSITIONAL_LIGHTS));
 }
 
-/**
- * Whether a light that reaches `placement` shadows it: a directional light that casts, or a
- * positional one whose `shadow_item_cull_mask` meets the item's mask (`canvas.glsl:747, 807`).
- */
+/** Whether a light that reaches `placement` casts a shadow on it (`canvas.glsl:747, 807`). */
 export function isShadowedByLight(
   lights: ReadonlyMap<number, CanvasLightDeclaration>,
   placement: ItemPlacement

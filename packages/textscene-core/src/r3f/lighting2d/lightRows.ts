@@ -1,8 +1,3 @@
-/**
- * The light side of the canvas template: each light hands its canvas a writer of its row of
- * `light_array`, which a lit template draw runs for the canvas layer it draws on.
- */
-
 import { useEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
 import { mutableTransform2D } from '../../godot/math/transform2d.js';
@@ -68,11 +63,7 @@ function rowOf(origin: THREE.Object3D, term: LightTerm, view: CanvasLightView): 
   return term.kind === 'point' ? pointRow(origin, term, view) : directionalRow(origin, term, view);
 }
 
-/**
- * Hands the canvas light `ordinal`'s row writer while it is declared and the origin this returns a
- * ref for is mounted. A PointLight2D holds its texture in the light atlas meanwhile
- * (`texture_add_to_decal_atlas`, `renderer_canvas_cull.cpp:2134`).
- */
+/** Registers light `ordinal`'s row while its origin is mounted (`renderer_canvas_cull.cpp:2134`). */
 export function useLightRow(
   ordinal: number | null,
   term: LightTerm

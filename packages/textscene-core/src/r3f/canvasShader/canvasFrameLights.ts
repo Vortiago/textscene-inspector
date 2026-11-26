@@ -24,7 +24,7 @@ export interface CanvasLightView {
   readonly canvasTransform: Transform2DColumns;
 }
 
-/** Writes `object`'s local frame into `out` as a transform into Godot's viewport pixels, as the camera sees it. */
+/** Writes `object`'s local frame into `out` as the camera's transform into Godot's viewport pixels. */
 export function onScreenInto(
   out: ReturnType<typeof mutableTransform2D>,
   view: CanvasLightView,
