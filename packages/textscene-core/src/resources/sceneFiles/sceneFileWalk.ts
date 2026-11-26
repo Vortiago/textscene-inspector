@@ -163,8 +163,9 @@ export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void
     for (let next = 0; next < queue.length; next++) {
       const file = queue[next]!;
       if (!entries.get(file)!.isListed) continue;
-      if (isGltfPath(file))
+      if (isGltfPath(file)) {
         for (const path of remapsOf(file)) visit(file, { path, type: null }, false, !isFailedLoad(path));
+      }
       if (!isGodotTextResourcePath(file)) continue;
       for (const read of textFile(file)?.reads ?? []) visit(file, read);
     }

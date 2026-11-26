@@ -47,7 +47,7 @@ const listOf = (paths) => `[${paths?.join(', ')}]`;
 
 function checkSelection(gate, what, found, expected) {
   gate.check(
-    found?.length === expected.length && expected.every((path, i) => found[i] === path),
+    JSON.stringify(found) === JSON.stringify(expected),
     `[click travel] ${what} selects ${listOf(found)}, expected ${listOf(expected)}`
   );
 }

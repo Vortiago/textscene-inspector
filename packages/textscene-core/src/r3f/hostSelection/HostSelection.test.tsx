@@ -54,6 +54,9 @@ function registeredAt({ result }: Setup, path: string): THREE.Object3D {
   return object;
 }
 
+// One past the 8 px a press and release may travel and stay a click (node_3d_editor_plugin.cpp:2342).
+const PAST_CLICK_TRAVEL_PX = 9;
+
 function click({ result }: Setup, on: THREE.Object3D, button = LEFT) {
   act(() => clickWith(result.current.picker.handlers, { on, button }));
 }
@@ -127,7 +130,7 @@ describe('the host’s click picking', () => {
     act(() =>
       clickWith(view.result.current.picker.handlers, {
         on: registeredAt(view, 'Root/Cube'),
-        travel: 9,
+        travel: PAST_CLICK_TRAVEL_PX,
       })
     );
 
