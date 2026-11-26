@@ -78,12 +78,23 @@ function joinPaddedCopy(texture: THREE.Texture, source: AtlasSourceModel, runner
   // Registered before any holder's, so a holder that hears the build land reads `built`.
   settled
     .then(
-      (built) => (copy.built = built),
+      (built) => keepBuiltCopy(copies, source, copy, built),
       () => dropPaddedCopy(copies, source, copy)
     )
     .finally(endWork);
   copies.set(source, copy);
   return copy;
+}
+
+/** A build that lands after its last holder let go is out of the map, so nothing else disposes it. */
+function keepBuiltCopy(
+  copies: Map<AtlasSourceModel, PaddedCopy>,
+  source: AtlasSourceModel,
+  copy: PaddedCopy,
+  built: THREE.Texture | null
+): void {
+  if (copies.get(source) === copy) copy.built = built;
+  else built?.dispose();
 }
 
 /** A released copy's abort lands after a new holder may have built the source's next copy. */

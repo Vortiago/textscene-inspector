@@ -1,4 +1,5 @@
 /** What the 2D-world canvas mounts, rendered through @react-three/test-renderer. */
+import type * as THREE from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import { waitFor } from '@testing-library/react';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -128,5 +129,30 @@ describe('World2DContents renderer', () => {
     );
 
     expect(hasShadowPass(state().gl)).toBe(true);
+  });
+});
+
+describe('World2DContents camera rig', () => {
+  it("gives the camera the project's viewport size, which the screen built-ins count", async () => {
+    const ProjectFixture = withProject(
+      '[display]\nwindow/size/viewport_width=640\nwindow/size/viewport_height=360\n'
+    );
+    const { Probe, state } = r3fStateProbe();
+
+    await ReactThreeTestRenderer.create(
+      <ProjectFixture>
+        <SelectionProvider>
+          <World2DContents {...baseProps} />
+          <Probe />
+        </SelectionProvider>
+      </ProjectFixture>
+    );
+
+    await waitFor(() =>
+      expect((state().camera as THREE.Camera & { viewportSize?: unknown }).viewportSize).toEqual({
+        x: 640,
+        y: 360,
+      })
+    );
   });
 });

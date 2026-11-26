@@ -128,4 +128,22 @@ describe('useRuntimeAtlasTexture', () => {
 
     expect(next.result.current).toBeInstanceOf(THREE.DataTexture);
   });
+
+  it('disposes a copy whose build lands after its last run released it', async () => {
+    const texture = textureOf();
+    let land: (padded: imagePixels.ImagePixels) => void = () => {};
+    const run = vi
+      .spyOn(inThreadJobRunner, 'run')
+      .mockImplementationOnce(() => new Promise((resolve) => (land = resolve)));
+    const disposed = vi.spyOn(THREE.DataTexture.prototype, 'dispose');
+    const released = renderHook(() => useRuntimeAtlasTexture(slotOf(texture), SOURCE));
+    await vi.waitFor(() => expect(run).toHaveBeenCalledTimes(1));
+    released.unmount();
+    await flushMicrotasks();
+
+    land({ data: new Uint8Array(4 * 4 * 4), width: 4, height: 4 });
+    await new Promise((settle) => setTimeout(settle));
+
+    expect(disposed).toHaveBeenCalledTimes(1);
+  });
 });

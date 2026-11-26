@@ -37,7 +37,8 @@ function unrenderedSnapshot(target: THREE.Texture, source: AtlasSourceModel): TH
   const width = Math.max(padded.width, 1);
   const height = Math.max(padded.height, 1);
   const texels = new Uint8Array(width * height * 4);
-  for (let offset = 0; offset < texels.length; offset += 4) texels.set(unrenderedTexel(target), offset);
+  // One 32-bit fill, not a texel at a time: a padded atlas can hold a million texels.
+  new Uint32Array(texels.buffer).fill(new Uint32Array(Uint8Array.from(unrenderedTexel(target)).buffer)[0]!);
   const snapshot = colourDataTexture(texels, width, height, 'RGBA8');
   snapshot.name = `${target.name}::unrendered`;
   return snapshot;

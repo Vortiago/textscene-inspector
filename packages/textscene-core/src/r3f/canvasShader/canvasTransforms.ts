@@ -28,13 +28,19 @@ export function canvasDataTransformInto(
   return out;
 }
 
-/** Where `camera` shows Godot's viewport in a target of `size`, or undefined where it is the whole target. */
-export function targetViewportOf(
+/** Writes where `camera` shows the viewport in a `size` target into `out`. Undefined: the whole target. */
+export function targetViewportInto(
+  out: TargetViewport,
   camera: THREE.Camera,
   size: { readonly width: number; readonly height: number }
 ): TargetViewport | undefined {
   if (!(camera instanceof World2DCamera) || !camera.viewportSize) return undefined;
   // The stage's camera neither turns nor stretches, so one scale holds for both axes.
   const { a: scale, tx: x, ty: y } = canvasDataTransformInto(worldInTarget, camera, null, size);
-  return { x, y, width: camera.viewportSize.x, height: camera.viewportSize.y, scale };
+  out.x = x;
+  out.y = y;
+  out.width = camera.viewportSize.x;
+  out.height = camera.viewportSize.y;
+  out.scale = scale;
+  return out;
 }

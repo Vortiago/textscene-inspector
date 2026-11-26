@@ -8,12 +8,12 @@ import type { CanvasDraw } from './transpileCanvas.js';
 
 /** Where Godot's viewport lies in a target: its top-left in target pixels, and its size in its own pixels. */
 export interface TargetViewport {
-  readonly x: number;
-  readonly y: number;
-  readonly width: number;
-  readonly height: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
   /** Target pixels per viewport pixel. */
-  readonly scale: number;
+  scale: number;
 }
 
 /** What a canvas draw reads from its viewport, with no light. */

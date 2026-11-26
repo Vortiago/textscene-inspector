@@ -47,10 +47,13 @@ export interface World2DCanvasProps {
 function CameraRig({ pan, zoom }: { pan: Vector2; zoom: number }) {
   const camera = useThree((s) => s.camera) as World2DCamera;
   const size = useThree((s) => s.size);
+  const invalidate = useThree((s) => s.invalidate);
   const { width: viewportWidth, height: viewportHeight } = useProjectSettings().viewportSize;
   useLayoutEffect(() => {
     camera.viewportSize = { x: viewportWidth, y: viewportHeight };
-  }, [camera, viewportWidth, viewportHeight]);
+    // A demand frameloop draws only when asked, and the screen built-ins read this size.
+    invalidate();
+  }, [camera, viewportWidth, viewportHeight, invalidate]);
   const { x: panX, y: panY } = pan;
   useLayoutEffect(() => {
     const pose = world2DCameraPose({ x: panX, y: panY }, zoom, size.width, size.height);
