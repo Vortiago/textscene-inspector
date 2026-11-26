@@ -12,7 +12,11 @@ import type { LazyImport, LazyState } from './memoisedImport';
  * @canonical A component's lazily loaded module
  */
 export function useLazyModule<T>(load: LazyImport<T>): T | null {
-  const state = useLazyModuleState(load, true);
+  return moduleOf(useLazyModuleState(load, true));
+}
+
+/** The module a load state holds, or null while it loads, after it failed, or with no import. */
+export function moduleOf<T>(state: LazyState<T> | null): T | null {
   return typeof state === 'object' && state !== null ? state.module : null;
 }
 

@@ -107,16 +107,14 @@ export interface RenderedParticle {
   transform: Transform2DColumns;
   /** Godot's `p.color`: sRGB, alpha included, curve, ramp and hue applied. */
   color: Rgba;
-  /**
-   * Godot's `p.custom[2]`, reaching the canvas shader as `INSTANCE_CUSTOM.z`:
-   * `anim_offset + age × anim_speed`. A `CanvasItemMaterial` with
-   * `particles_animation` turns it into a flipbook cell index.
-   */
-  anim: number;
+  /** Godot's `p.custom`, read as `INSTANCE_CUSTOM`: y the phase, z the flipbook frame, w the life ratio. */
+  custom: readonly [number, number, number, number];
   /** `p.time`, in seconds. The `draw_order = Lifetime` sort key. */
   age: number;
   /** The particle's index in the emitter, which is its `draw_order = Index` order. */
   index: number;
+  /** False for a slot Godot draws with a zero transform (`cpu_particles_2d.cpp:1205-1207`). */
+  active: boolean;
 }
 
 /** Godot's private `Particle` struct, only the fields the process loop reads. */
@@ -156,13 +154,8 @@ function settleSeconds(props: CPUParticles2DProperties): number {
   return props.one_shot ? lifetime * 0.5 : lifetime;
 }
 
-/**
- * Evaluate the emitter to a single pose, in the emitter node's local space and in the order
- * it must be drawn. No clock: a running emitter makes a golden unstable (ADR-0012), and the
- * editor animates on wall clock (`set_process_internal(emitting)`, `cpu_particles_2d.cpp:1262`,
- * no `is_editor_hint` guard), at an instant that no file or reference render can name.
- */
-export function simulateFrozenPose(authored: ParticleSimInput): RenderedParticle[] {
+/** Every particle slot in draw order, inactive ones too, at one instant with no clock (ADR-0012). */
+export function simulateFrozenSlots(authored: ParticleSimInput): RenderedParticle[] {
   const input = storedInput(authored);
   const { props } = input;
   // `_update_internal` bails before touching the buffer when the emitter is
@@ -651,11 +644,7 @@ function sampledScale(input: ParticleSimInput, tv: number): { x: number; y: numb
   return { x: scale, y: scale };
 }
 
-/**
- * `_update_particle_data_buffer`: the live particles in draw order. A global-coords pose stays in
- * canvas space: the `inv_emission_transform` it applies is never assigned, so it is the identity
- * (`cpu_particles_2d.cpp:1192-1194`, `cpu_particles_2d.h:142`).
- */
+/** Global coords stay in canvas space: `inv_emission_transform` is never set (`cpu_particles_2d.h:142`). */
 function collectPose(state: SimState, props: CPUParticles2DProperties): RenderedParticle[] {
   const order = state.particles.map((_, index) => index);
   if (props.draw_order === CPUParticles2DDrawOrder.LIFETIME) {
@@ -666,15 +655,13 @@ function collectPose(state: SimState, props: CPUParticles2DProperties): Rendered
   const pose: RenderedParticle[] = [];
   for (const index of order) {
     const p = state.particles[index]!;
-    // Godot zeroes an inactive particle's transform, collapsing its quad to a
-    // point. Omitting it draws the same nothing for a fraction of the vertices.
-    if (!p.active) continue;
     pose.push({
       transform: p.transform,
       color: p.color,
-      anim: p.custom[2],
+      custom: [p.custom[0], p.custom[1], p.custom[2], p.custom[3]],
       age: p.time,
       index,
+      active: p.active,
     });
   }
   return pose;

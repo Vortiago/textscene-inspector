@@ -15,7 +15,7 @@ import { parsedShader, shaderSource, type ShaderOptions } from '../language/pars
 import type { ShaderNode } from '../language/shaderTree.js';
 import { builtInsNamed } from '../language/treeWalk.js';
 import { CANVAS_CUSTOM_ARRAYS } from '../../godot/rendering/meshArrayFormat.js';
-import { VERTEX_ID_ATTRIBUTE } from '../template/surfaceAttributes.js';
+import { INSTANCE_ID_ATTRIBUTE, VERTEX_ID_ATTRIBUTE } from '../template/surfaceAttributes.js';
 import { devicePoints, sizesPoints, type DevicePoints } from '../template/devicePoints.js';
 import { emitTemplateStage, programResources, type WrittenBuiltIn } from '../template/emitTemplate.js';
 import { linkedProgram, type LinkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
@@ -287,5 +287,8 @@ function drawIndices({ variant, points }: PointSizeUse): [string, Node][] {
   if (!points) return indices(int(vertexIndex), int(instanceIndex));
   // An emulated point is an instance: a primitive's point is its one vertex, a mesh's point its vertex id.
   if (variant === 'primitive_points') return indices(int(0), int(instanceIndex));
-  return indices(int(attribute(VERTEX_ID_ATTRIBUTE, 'float')), int(0));
+  return indices(
+    int(attribute(VERTEX_ID_ATTRIBUTE, 'float')),
+    int(attribute(INSTANCE_ID_ATTRIBUTE, 'float'))
+  );
 }

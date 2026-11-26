@@ -198,8 +198,7 @@ sprite_frames = SubResource("frames")
 [node name="Particles" type="CPUParticles2D" parent="."]
 material = SubResource("1")
 `);
-    // A particle field names its own group after the emitter.
-    for (const name of ['Sprite', 'Line', 'Poly', 'Animated', 'Particles_Particles']) {
+    for (const name of ['Sprite', 'Line', 'Poly', 'Animated', 'Particles']) {
       const mat = mats.get(name);
       expect(mat, `${name} should render a mesh`).toBeDefined();
       expect(mat!.blending, `${name} should blend additively`).toBe(THREE.CustomBlending);

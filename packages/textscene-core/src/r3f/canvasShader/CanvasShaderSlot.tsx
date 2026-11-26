@@ -94,6 +94,8 @@ export function CanvasShaderSlot({
     [module, gl, item, maps, textureState, sampling, layout]
   );
   useEffect(() => (draw ? draw.dispose : undefined), [draw]);
+  // After the commit that detaches the fallback's meshes, so a receiver ends on the draw's.
+  useLayoutEffect(() => draw?.handOver(), [draw]);
   useLayoutEffect(() => {
     draw?.setFirstOrder(firstOrder);
     invalidate();

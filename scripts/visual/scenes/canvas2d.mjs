@@ -69,10 +69,15 @@ export const CANVAS_2D_SCENES = [
   { name: 'canvas-shader-polygons', file: 'unit-canvas-shader-polygons.tscn' },
   { name: 'canvas-shader-lines-meshes', file: 'unit-canvas-shader-lines-meshes.tscn' },
   { name: 'canvas-shader-tiles', file: 'unit-canvas-shader-tiles.tscn' },
-  // Captured with the switch on, the only golden that is.
+  // Captured with the switch on, as only these two are.
   {
     name: 'canvas-item-translated-materials',
     file: 'unit-canvas-item-translated-materials.tscn',
+    canvasItem: 'translated',
+  },
+  {
+    name: 'canvas-item-translated-instances',
+    file: 'unit-canvas-item-translated-instances.tscn',
     canvasItem: 'translated',
   },
   // The one variable: `texture_filter` on the Node2D parent. A Nearest parent keeps a magnified

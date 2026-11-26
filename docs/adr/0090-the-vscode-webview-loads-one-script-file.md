@@ -27,7 +27,7 @@ ended at its 30 s load deadline (#2075).
 
 `pnpm check:bundle-size` fails when the build writes a script beside `webview.js`, and when the
 script is over its gzipped ceiling (`scripts/check-bundle-size/webviewBudget.mjs`). The ceiling
-is 2,335,624 B, 2,626 B over the measured 2,332,998 B. It replaces ADR-0055's 1,150,000 B, which
+is 2,337,047 B, 1,418 B over the measured 2,335,629 B. It replaces ADR-0055's 1,150,000 B, which
 held only the canvas-paint closure of the split build. The bake of a sky's layers through Godot's
 octmap compute stages (`shaders/template/compute`, `resources/sky/octmapPasses.ts`) adds 5,479 B of
 the measure. The other 4,818 B over the measure before it are the shader branch's growth that no
@@ -45,6 +45,9 @@ add 4,489 B. A StandardMaterial3D or ORMMaterial3D drawn through the shader Godo
 (`shaders/material`, `r3f/spatialShader/surfaceShader.ts`) adds 10,065 B. The texture states that end its wait and draw
 the missing-texture placeholder for a shader's map (`r3f/shaderTextures`) add 2,069 B. The setter casts, the program
 key's texture formats and the shared-program refusal (`shaders/material`, `shaders/uniforms`) add 2,335 B.
+A canvas item without a shader of its own drawn through the canvas template behind its switch
+(`r3f/canvasShader`, `shaders/canvas`) adds 1,208 B. CPUParticles2D, MultiMeshInstance2D and a skinned Polygon2D drawn through the canvas template
+(`shaders/canvas/canvasMultiMesh.ts`, `r3f/canvasShader`) add 1,423 B.
 
 The shader translator adds about 464,000 B to the script. The groups below gzip alone, so they are shares
 of that growth, not exact bytes:

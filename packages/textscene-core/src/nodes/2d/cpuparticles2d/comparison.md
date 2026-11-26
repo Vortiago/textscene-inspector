@@ -68,6 +68,11 @@ so the instant is the same at any `speed_scale`.
 Godot draws nothing for an emitter that is neither active nor emitting, and neither does
 the previewer. An empty frame here is the correct frame.
 
+## Canvas template
+
+With `?canvasItem=translated`, the emitter draws its particles as one multimesh through the canvas template,
+as Godot does (`cpu_particles_2d.cpp:1293`). Each particle's custom data picks its flipbook cell in the shader.
+
 ## Linting
 
 <!-- lint:begin CPUParticles2D -->
