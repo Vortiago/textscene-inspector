@@ -31,7 +31,8 @@ import {
 } from './utils.js';
 import type { ParsedHeading, ValueScanState } from './utils.js';
 import { HEADER_READING, readTag, SECTION_READING, type TagField } from '../godot/variant/tagReader.js';
-import { isEscapedNewline } from '../godot/variant/strToVar.js';
+import { isEscapedNewline, strToVar } from '../godot/variant/strToVar.js';
+import { VARIANT_TYPE } from '../godot/variant/variantType.js';
 import { parseExternalResource, parseInternalResource } from './resourceParsers.js';
 import { seatScene, type SceneSeating } from './sceneTreeBuilder.js';
 import { refusesToInstantiate } from './instantiateRefusal.js';
@@ -208,20 +209,24 @@ export class TscnParserCore {
     };
 
     // The value as written, not as stored: the loader parses the text the file holds.
-    const addFileValue = (value: Omit<FileValue, 'subResourcesBefore' | 'extResourcesBefore'>) => {
+    const addFileValue = (
+      value: Omit<FileValue, 'subResourcesNamed' | 'extResourcesBefore'>,
+      subResourcesNamed: number
+    ) => {
       // Every read names `Resource`, so a value without it holds no read and costs no object.
       if (headings.isStopped() || !value.text.includes('Resource')) return;
-      const before = {
-        subResourcesBefore: internalResources.length,
-        extResourcesBefore: externalResources.length,
-      };
-      fileValues.push({ ...value, ...before });
+      fileValues.push({ ...value, subResourcesNamed, extResourcesBefore: externalResources.length });
     };
     // A body is read after the file opens, so no body value sits in the opening tag.
     const addBodyValue = (text: string, line: number, skippedNewlines: readonly number[] = []) => {
       const place = currentSection === 'node' ? 'node' : 'section';
+      // The loader names a `[sub_resource]` before it reads the body (resource_format_text.cpp:629).
+      const ownSection = currentSection === 'sub_resource' ? 1 : 0;
       if (currentSection === 'node' || currentSection === 'sub_resource' || currentSection === 'resource')
-        addFileValue({ text, line, place, isOpeningTag: false, skippedNewlines });
+        addFileValue(
+          { text, line, place, isOpeningTag: false, skippedNewlines },
+          internalResources.length + ownSection
+        );
     };
 
     const storePending = () => {
@@ -260,7 +265,8 @@ export class TscnParserCore {
         // A field is one value, so one that opens with a quote is a string and holds no read.
         if (content[start] !== '"') {
           const text = withoutComments(content.slice(start, end));
-          addFileValue({ text, line, place, isOpeningTag, skippedNewlines: escapedNewlinesIn(text) });
+          const skippedNewlines = escapedNewlinesIn(text);
+          addFileValue({ text, line, place, isOpeningTag, skippedNewlines }, internalResources.length);
         }
       }
     };
@@ -356,6 +362,9 @@ export class TscnParserCore {
           column: 1,
           code: 'INVALID_HEADING_FORMAT',
         });
+        // A header refused past its line still names its type, so the file reads as a resource.
+        if (tag?.name === 'gd_resource' && !isHeading(line))
+          headerResourceType = typeField(content, tag.fields);
         // The lenient path draws what it can of a heading Godot refuses.
         if (isHeading(line)) {
           openSection(parseHeading(line)!, lineNumber, godotLine, []);
@@ -465,6 +474,13 @@ export class TscnParserCore {
 }
 
 /** True when line `at` ends on an odd run of backslashes with nothing, not even `\r`, before its `\n`. */
+/** The `type=` string a tag read before it stopped, or undefined where it read none. */
+function typeField(content: string, fields: readonly TagField[]): string | undefined {
+  const field = fields.find(({ key }) => key === 'type');
+  const value = field && strToVar(content.slice(field.start, field.end));
+  return value?.type === VARIANT_TYPE.STRING ? value.value : undefined;
+}
+
 function escapesItsNewline(content: string, lineStarts: readonly number[], at: number): boolean {
   const next = lineStarts[at + 1];
   return next !== undefined && isEscapedNewline(content, next - 1);

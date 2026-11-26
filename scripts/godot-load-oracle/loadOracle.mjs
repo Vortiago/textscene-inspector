@@ -8,18 +8,20 @@ import { fileURLToPath } from 'node:url';
 const LOAD_SCRIPT = fileURLToPath(new URL('load.gd', import.meta.url));
 const run = promisify(execFile);
 
-/** The first parse error, else the first error: a missing file prints `Cannot open file` before it. */
-export function firstError(output) {
+/** The first parse error, else the first error, and the tree where Godot loads the file all the same. */
+export function loadResult(output) {
   const lines = output.split('\n');
   const errors = lines
     .filter((line) => line.startsWith('ERROR: '))
     .map((line) => line.slice('ERROR: '.length));
-  const error = errors.find((line) => line.includes('Parse Error')) ?? errors[0];
-  if (error !== undefined) return error;
   const loaded = lines.find((line) => line.startsWith('LOADED:'))?.slice('LOADED:'.length);
-  if (loaded === 'true') return 'loads';
-  if (loaded !== undefined && loaded !== 'false') return `loads ${loaded}`;
-  throw new Error(`expected an ERROR line or a LOADED line from Godot, got:\n${output}`);
+  if (loaded === undefined && errors.length === 0)
+    throw new Error(`expected an ERROR line or a LOADED line from Godot, got:\n${output}`);
+  const loads = loaded === 'true' ? 'loads' : loaded && loaded !== 'false' ? `loads ${loaded}` : null;
+  // A missing file prints `Cannot open file` before the parse error that names it.
+  const error = errors.find((line) => line.includes('Parse Error')) ?? errors[0];
+  if (error !== undefined) return loads ? `${error} | ${loads}` : error;
+  return loads ?? 'loads false';
 }
 
 async function loadOne(project, name) {
@@ -27,7 +29,7 @@ async function loadOne(project, name) {
   // A refused load still exits 0, so only a crash rejects.
   try {
     const { stdout, stderr } = await run('godot', args, { encoding: 'utf8' });
-    return firstError(`${stdout}\n${stderr}`);
+    return loadResult(`${stdout}\n${stderr}`);
   } catch (error) {
     if (error.signal) return `crashes (${error.signal})`;
     throw error;

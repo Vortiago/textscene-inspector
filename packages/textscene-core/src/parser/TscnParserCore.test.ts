@@ -836,7 +836,7 @@ describe('the file values and heading order of a scan', () => {
         text: 'ExtResource("1")',
         line: 3,
         place: 'section',
-        subResourcesBefore: 0,
+        subResourcesNamed: 0,
         extResourcesBefore: 0,
         isOpeningTag: true,
         skippedNewlines: [],
@@ -845,7 +845,7 @@ describe('the file values and heading order of a scan', () => {
         text: '[Resource("res://a.tres")]',
         line: 5,
         place: 'binds',
-        subResourcesBefore: 0,
+        subResourcesNamed: 0,
         extResourcesBefore: 0,
         isOpeningTag: false,
         skippedNewlines: [],
@@ -869,7 +869,7 @@ texture = ExtResource("2")
     ]);
   });
 
-  it('counts the [sub_resource] sections before a value, its own section inside one', () => {
+  it('counts the [sub_resource] ids a value can name, its own section inside one', () => {
     const { scene } = new TscnParserCore().parse(
       `[sub_resource type="Resource" id="a"]
 x = SubResource("b")
@@ -883,7 +883,7 @@ texture = SubResource("a")
       () => null
     );
 
-    expect(scene.fileValues?.map(({ subResourcesBefore }) => subResourcesBefore)).toEqual([0, 1, 2]);
+    expect(scene.fileValues?.map(({ subResourcesNamed }) => subResourcesNamed)).toEqual([1, 2, 2]);
   });
 
   it('records no value that names no resource, as it holds no read', () => {
@@ -909,7 +909,7 @@ Resource("res://a.tres")]
         text: '[1,\nResource("res://a.tres")]',
         line: 2,
         place: 'node',
-        subResourcesBefore: 0,
+        subResourcesNamed: 0,
         extResourcesBefore: 0,
         isOpeningTag: false,
         skippedNewlines: [],

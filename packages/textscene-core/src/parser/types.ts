@@ -270,8 +270,8 @@ export interface FileValue {
   /** Godot's line at the value's start: its counter skips a newline a string escapes. */
   readonly line: number;
   readonly place: FileValuePlace;
-  /** The `[sub_resource]` sections built before it, so its own section's index inside one. */
-  readonly subResourcesBefore: number;
+  /** The `[sub_resource]` ids it can name in file order: those before it, and its own in a body. */
+  readonly subResourcesNamed: number;
   /** The `[ext_resource]` headings before it, the only ids it can name (resource_format_text.cpp:930). */
   readonly extResourcesBefore: number;
   /** True for a value of the first heading after the header, which the loader reads as it opens the file. */

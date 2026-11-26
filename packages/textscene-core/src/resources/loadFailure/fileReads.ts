@@ -240,7 +240,7 @@ function failsParse(
   if (read.kind === 'ExtResource') return !findExtResource(declared, read.id);
   if (read.kind !== 'SubResource') return false;
   const at = declaredAt.get(read.id);
-  return at === undefined || at > value.subResourcesBefore;
+  return at === undefined || at >= value.subResourcesNamed;
 }
 
 function extFailingRead({ file, externalResources, line }: ReadAt, read: ValueRead): FailingFileRead | null {
