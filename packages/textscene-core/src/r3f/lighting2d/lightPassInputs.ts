@@ -76,23 +76,30 @@ function readPassMesh({ mesh, ordinal, role }: PassMesh, out: number[]): boolean
   // The pass sets the mesh's own flag each draw, so only its ancestors' count.
   const isShown = mesh.parent === null || visibleInTree(mesh.parent);
   out.push(mesh.id, ordinal, role === 'lit' ? 1 : 0, isShown ? 1 : 0, mesh.renderOrder, mesh.layers.mask);
+  out.push(mesh.frustumCulled ? 1 : 0);
   pushAll(out, mesh.matrixWorld.elements);
   const { geometry, material } = mesh as THREE.Object3D & {
     geometry?: THREE.BufferGeometry;
     material?: THREE.Material | THREE.Material[];
   };
-  if (geometry) readGeometry(geometry, out);
+  if (geometry && !readGeometry(geometry, out)) return false;
   if (Array.isArray(material)) return false;
   return material ? readMaterial(material, out) : true;
 }
 
-function readGeometry(geometry: THREE.BufferGeometry, out: number[]): void {
-  const { drawRange } = geometry;
-  out.push(geometry.id, geometry.index?.version ?? -1, drawRange.start, drawRange.count);
+/** An attribute swapped in starts at version 0 again, so each one reads as its id and version. */
+function readGeometry(geometry: THREE.BufferGeometry, out: number[]): boolean {
+  const { drawRange, index } = geometry;
+  out.push(geometry.id, drawRange.start, drawRange.count);
+  if (index) out.push(index.id, index.version);
+  else out.push(NaN);
   for (const name in geometry.attributes) {
     const attribute = geometry.attributes[name]!;
-    out.push('isInterleavedBufferAttribute' in attribute ? attribute.data.version : attribute.version);
+    // An interleaved attribute has no id of its own, so its swap shows in no number.
+    if ('isInterleavedBufferAttribute' in attribute) return false;
+    out.push(attribute.id, attribute.version);
   }
+  return true;
 }
 
 function readMaterial(material: THREE.Material, out: number[]): boolean {
@@ -113,8 +120,11 @@ function readValue(value: unknown, out: number[]): boolean {
   if (typeof value === 'number') out.push(value);
   else if (typeof value === 'boolean') out.push(value ? 1 : 0);
   else if (value === null || value === undefined) out.push(NaN);
-  else if (Array.isArray(value)) return value.every((item) => readValue(item, out));
-  else if ((value as THREE.Texture).isTexture) {
+  else if (Array.isArray(value)) {
+    // The length first, so an array that shrinks beside one that grows reads as a change.
+    out.push(value.length);
+    return value.every((item) => readValue(item, out));
+  } else if ((value as THREE.Texture).isTexture) {
     const texture = value as THREE.Texture;
     if (texture.isRenderTargetTexture) return false;
     out.push(texture.id, texture.version);

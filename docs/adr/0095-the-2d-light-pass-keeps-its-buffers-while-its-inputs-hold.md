@@ -52,8 +52,9 @@ uniform value that is not a number, a vector, a colour, a matrix or a texture.
 
 At rest, the dungeon view draws no light quad: the pass's 146 draws per frame fall to 0, which
 `pnpm test:perf` budgets in its `dungeon-zoomed-in` row. A frame that moves the camera or a light
-still draws every list, as `dungeon-zoomed-in-pan` budgets. Reading the inputs costs one walk over
-the light meshes and their uniforms each frame, on the CPU.
+still draws every list, as `dungeon-zoomed-in-pan` budgets. Reading the inputs costs, each frame on the
+CPU, one walk over the light meshes and their uniforms, and for each light mesh a walk up its
+ancestors: a parent a write moved this frame has not yet updated its world matrix.
 
 A new kind of input to the pass needs a line in `lightPassInputs.ts`. The golden
 `pointlight2d-writes-after-load` writes eight inputs after load, and fails when the pass misses one.

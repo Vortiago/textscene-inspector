@@ -79,7 +79,7 @@ export async function zoomStageIn(page, notches) {
   return isZoomed ? null : `expected ${selector} to zoom in, found none`;
 }
 
-/** Runs in the page, and resolves once the last notch has landed. */
+/** Runs in the page, and resolves a frame after the last notch, once the view has drawn it. */
 async function wheelEachFrame({ selector, notches, deltaY }) {
   const target = document.querySelector(selector);
   if (!target) return false;
@@ -89,5 +89,6 @@ async function wheelEachFrame({ selector, notches, deltaY }) {
     await new Promise((resolve) => requestAnimationFrame(resolve));
     target.dispatchEvent(new WheelEvent('wheel', { ...at, deltaY }));
   }
+  await new Promise((resolve) => requestAnimationFrame(resolve));
   return true;
 }

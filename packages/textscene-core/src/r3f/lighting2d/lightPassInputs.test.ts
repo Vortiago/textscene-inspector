@@ -59,6 +59,40 @@ describe('LightPassInputs.drawIfChanged', () => {
     expect(drawsAfter(frameOf(mesh), () => mesh.geometry.setDrawRange(0, 3))).toBe(true);
   });
 
+  it("draws again when a mesh's position attribute is swapped for a new one", () => {
+    const mesh = lightMesh();
+    const swapped = mesh.geometry.getAttribute('position').clone();
+    expect(drawsAfter(frameOf(mesh), () => mesh.geometry.setAttribute('position', swapped))).toBe(true);
+  });
+
+  it("draws again when a mesh's index is swapped for a new one", () => {
+    const mesh = lightMesh();
+    const swapped = mesh.geometry.getIndex()!.clone();
+    expect(drawsAfter(frameOf(mesh), () => mesh.geometry.setIndex(swapped))).toBe(true);
+  });
+
+  it('draws every frame for a mesh with an interleaved attribute', () => {
+    const geometry = new THREE.BufferGeometry();
+    const buffer = new THREE.InterleavedBuffer(new Float32Array(9), 3);
+    geometry.setAttribute('position', new THREE.InterleavedBufferAttribute(buffer, 3, 0));
+    const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial());
+    expect(drawsAfter(frameOf(mesh), () => {})).toBe(true);
+  });
+
+  it('draws again when a uniform array shrinks as the next one grows', () => {
+    const mesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(),
+      new THREE.ShaderMaterial({ uniforms: { uA: { value: [1, 2] }, uB: { value: [3] } } })
+    );
+    const { uA, uB } = mesh.material.uniforms;
+    expect(drawsAfter(frameOf(mesh), () => ((uA!.value = [1]), (uB!.value = [2, 3])))).toBe(true);
+  });
+
+  it('draws again when a mesh stops being frustum culled', () => {
+    const mesh = lightMesh();
+    expect(drawsAfter(frameOf(mesh), () => (mesh.frustumCulled = false))).toBe(true);
+  });
+
   it('draws again when a mesh leaves the light pass layer', () => {
     const mesh = lightMesh();
     expect(drawsAfter(frameOf(mesh), () => mesh.layers.set(2))).toBe(true);
