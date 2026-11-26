@@ -197,7 +197,7 @@ export function materialConstructorLines(source: string): number[] {
  */
 const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
   'packages/textscene-core/src/r3f/directionalShadow/twoByteFilterProbe.ts':
-    'the filter probe: one pixel drawn offscreen once per renderer and disposed in the same call, never added to a scene',
+    'the filter probe: one pixel drawn offscreen once per renderer in a throwaway scene, disposed in the same call',
   'packages/textscene-core/src/r3f/gameView/presentRootTarget.ts':
     'the two present materials of a renderer, built once and never drawn through React; a frame moves only their `map`',
   'packages/textscene-core/src/r3f/fullScreenPass.ts':
@@ -301,7 +301,7 @@ const CONSTRUCTED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
   'packages/textscene-core/src/r3f/canvasShader/canvasShaderDraw.ts':
     "the rect of a user's canvas_item shader: built once per material and texture, mounted as a primitive, and disposed on replacement",
   'packages/textscene-core/src/r3f/directionalShadow/twoByteFilterProbe.ts':
-    'the filter probe: one pixel drawn offscreen once per renderer and disposed in the same call, never added to a scene',
+    'the filter probe: one pixel drawn offscreen once per renderer in a throwaway scene, disposed in the same call',
   'packages/textscene-core/src/r3f/gameView/presentRootTarget.ts':
     'the present quad: built once per renderer and drawn outside React, so the material never passes through it',
   'packages/textscene-core/src/shaders/pipeline/opaqueSentinel.ts':

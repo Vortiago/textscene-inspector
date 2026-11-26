@@ -42,7 +42,7 @@ function readOf(renderer: THREE.WebGLRenderer): StoredDepthRead {
   if (FORCED_READ !== 'float' || filtersFloatColour(renderer)) return FORCED_READ;
   const probed = probedRead(renderer);
   logger.warn(
-    `storedDepthRead=float needs a filtered float colour this GPU lacks, so the page reads ${probed}`
+    `[Shadow] storedDepthRead=float needs a filtered float colour this GPU lacks, so the page reads ${probed}`
   );
   return probed;
 }
