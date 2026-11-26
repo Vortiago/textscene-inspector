@@ -3,7 +3,8 @@
 ; One variable: the built-ins a canvas_item shader reads or writes through Godot's canvas template, which no
 ; other golden draws. A points mesh writes POINT_SIZE and reads POINT_COORD. A mesh reads CUSTOM0 as four
 ; floats and CUSTOM1 as two, so its missing lanes show. Five sprites follow: world_vertex_coords, NORMAL with
-; NORMAL_MAP, light_only, a uniform at its default, and POINT_SIZE written by a sprite's shader. One scene holds
+; NORMAL_MAP, light_only, a uniform at its default, POINT_SIZE written by a sprite's shader, and SCREEN_UV,
+; SCREEN_PIXEL_SIZE and FRAGCOORD, which Godot measures over its viewport, not the whole target. One scene holds
 ; them because each is one define of the same template link, and each sits at its own place, so a diff
 ; names the built-in that moved.
 
@@ -101,6 +102,28 @@ void fragment() {
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_default"]
 shader = SubResource("Shader_default")
 
+[sub_resource type="Shader" id="Shader_screen"]
+code = "shader_type canvas_item;
+
+void fragment() {
+	COLOR = vec4(SCREEN_UV, SCREEN_PIXEL_SIZE.x * 1000.0, 1.0);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_screen"]
+shader = SubResource("Shader_screen")
+
+[sub_resource type="Shader" id="Shader_fragcoord"]
+code = "shader_type canvas_item;
+
+void fragment() {
+	COLOR = vec4(fract(FRAGCOORD.xy / 64.0), SCREEN_PIXEL_SIZE.y * 500.0, 1.0);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_fragcoord"]
+shader = SubResource("Shader_fragcoord")
+
 [sub_resource type="ArrayMesh" id="ArrayMesh_points"]
 _surfaces = [{
 "2d": true,
@@ -165,5 +188,17 @@ texture = ExtResource("1_marker")
 [node name="PointSizeOnSprite" type="Sprite2D" parent="."]
 material = SubResource("ShaderMaterial_point_size")
 position = Vector2(700, 330)
+scale = Vector2(0.75, 0.75)
+texture = ExtResource("1_marker")
+
+[node name="ScreenUV" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_screen")
+position = Vector2(850, 330)
+scale = Vector2(0.75, 0.75)
+texture = ExtResource("1_marker")
+
+[node name="FragCoord" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_fragcoord")
+position = Vector2(1000, 520)
 scale = Vector2(0.75, 0.75)
 texture = ExtResource("1_marker")

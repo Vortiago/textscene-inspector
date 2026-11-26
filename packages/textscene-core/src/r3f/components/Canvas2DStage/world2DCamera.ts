@@ -19,6 +19,9 @@ export const FLIP_Y = new THREE.Matrix4().makeScale(1, -1, 1);
  * (`canvasItemFacing`), so the reversed winding culls nothing.
  */
 export class World2DCamera extends THREE.OrthographicCamera {
+  /** The size of Godot's viewport, which this camera shows from world (0, 0). Null: the whole target. */
+  viewportSize: Vector2 | null = null;
+
   constructor() {
     super(0, 0, 0, 0, 0.1, 4000);
     this.position.z = 1000;

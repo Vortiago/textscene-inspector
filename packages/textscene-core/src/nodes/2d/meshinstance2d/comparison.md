@@ -31,7 +31,8 @@ A user's `canvas_item` shader on a MeshInstance2D reads the mesh's `CUSTOM0` and
 array format lacks reads 0, and a missing alpha reads 1, as in Godot. A PRIMITIVE_POINTS mesh whose shader
 writes `POINT_SIZE` draws each point as a square of that many pixels, with `POINT_COORD` across it. Sprite2D
 rows beside them draw `world_vertex_coords`, `NORMAL`, `NORMAL_MAP`, `light_only`, a uniform at its default
-and a shader that writes `POINT_SIZE` on a sprite.
+and a shader that writes `POINT_SIZE` on a sprite. `SCREEN_UV`, `SCREEN_PIXEL_SIZE` and `FRAGCOORD` count the
+pixels of Godot's viewport, the project window, not the previewer's canvas around it.
 
 ## Linting
 

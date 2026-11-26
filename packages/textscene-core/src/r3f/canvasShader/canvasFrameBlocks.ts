@@ -1,13 +1,18 @@
 import * as THREE from 'three';
 import { rgbaEquals, type Rgba } from '../../godot/math/math';
 import { mutableTransform2D } from '../../godot/math/transform2d';
-import { canvasDataBlock, writeCanvasData, type CanvasDataBlock } from '../../shaders/canvas/canvasBindings';
+import {
+  canvasDataBlock,
+  writeCanvasData,
+  type CanvasDataBlock,
+  type TargetViewport,
+} from '../../shaders/canvas/canvasBindings';
 import { WHITE } from '../../shaders/canvas/canvasInstance';
 import { canvasFrameOf } from '../canvasFrame';
 import { perObject } from '../../utils/perObject';
 import { renderTargetSize } from '../renderTargetSize';
 import { canvasShaderTime } from '../shaderTime/canvasShaderTime';
-import { canvasDataTransformInto } from './canvasTransforms';
+import { canvasDataTransformInto, targetViewportInto } from './canvasTransforms';
 
 /** One draw of a shaded item: the render it belongs to, and the object and camera it draws with. */
 export interface CanvasItemFrame {
@@ -35,9 +40,11 @@ interface WrittenBlock {
 const writtenBlocksOf = perObject((): WrittenBlock[] => []);
 
 /** Scratch of one write, overwritten by the next. */
+const viewport: TargetViewport = { x: 0, y: 0, width: 0, height: 0, scale: 1 };
 const frame = {
   width: 0,
   height: 0,
+  viewport: undefined as TargetViewport | undefined,
   canvasTransform: mutableTransform2D(),
   canvasModulate: { r: 1, g: 1, b: 1, a: 1 } as Rgba,
   time: 0,
@@ -69,6 +76,7 @@ export function canvasDataOf(
   const { x: width, y: height } = renderTargetSize(gl, targetSize);
   frame.width = width;
   frame.height = height;
+  frame.viewport = targetViewportInto(viewport, drawn.camera, frame);
   canvasDataTransformInto(frame.canvasTransform, drawn.camera, canvas, frame);
   frame.canvasModulate = colors.canvasModulate;
   frame.time = canvasShaderTime(gl).time;

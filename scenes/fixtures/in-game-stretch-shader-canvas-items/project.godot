@@ -1,0 +1,17 @@
+; A res:// root of its own, because the window size and its stretch are PROJECT settings, which no
+; .tscn can carry. The 320 x 180 window shows the 160 x 90 base under the canvas_items stretch.
+
+config_version=5
+
+[application]
+
+config/name="In-game stretch shader canvas_items"
+config/features=PackedStringArray("4.6")
+
+[display]
+
+window/size/viewport_width=160
+window/size/viewport_height=90
+window/size/window_width_override=320
+window/size/window_height_override=180
+window/stretch/mode="canvas_items"

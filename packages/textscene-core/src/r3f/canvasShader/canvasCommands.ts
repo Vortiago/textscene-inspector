@@ -28,7 +28,7 @@ export interface CanvasRectRegion {
 
 /** `AtlasTexture::get_rect_region` (`atlas_texture.cpp:193-224`): the rect on the atlas, or null for none. */
 export function atlasRectRegion(
-  { rect, source }: CanvasRectRegion,
+  { rect, source, transpose }: CanvasRectRegion,
   atlas: AtlasCellRects
 ): CanvasRectRegion | null {
   const { cell, region } = atlas;
@@ -52,6 +52,7 @@ export function atlasRectRegion(
     },
     source: clipped,
     clipUv: atlas.filterClip,
+    ...(transpose && { transpose }),
   };
 }
 

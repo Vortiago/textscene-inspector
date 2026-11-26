@@ -99,6 +99,7 @@ export type {
   SkyVolumetricFog,
   SpatialOptions,
   SpatialScene,
+  TargetViewport,
   TexelSize,
   TranspiledCanvasItem,
   TranspiledFunction,

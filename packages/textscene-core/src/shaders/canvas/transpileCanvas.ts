@@ -1,6 +1,15 @@
 import * as THREE from 'three';
-import { attribute, instanceIndex, int, screenSize, varyingProperty, vertexIndex } from 'three/tsl';
-import type { Node, TextureNode } from 'three/webgpu';
+import {
+  attribute,
+  instanceIndex,
+  int,
+  screenSize,
+  uniform,
+  varyingProperty,
+  vec4,
+  vertexIndex,
+} from 'three/tsl';
+import type { Node, TextureNode, UniformNode } from 'three/webgpu';
 import type { MaterialBlendState } from '../pipeline/blendState.js';
 import { parsedShader, shaderSource, type ShaderOptions } from '../language/parseShader.js';
 import type { ShaderNode } from '../language/shaderTree.js';
@@ -79,6 +88,8 @@ export interface CanvasDraw {
   readonly emulatesPoints: boolean;
   /** The custom arrays the shader reads, which `CUSTOMn_USED` binds (`canvas.glsl:12-18`). */
   readonly customsRead: readonly number[];
+  /** Godot's viewport in the target: its top-left, and viewport pixels per target pixel. */
+  readonly viewportInTarget: UniformNode<'vec4', THREE.Vector4>;
 }
 
 export interface TranspiledCanvasItem {
@@ -177,6 +188,7 @@ interface PointSizeUse {
   readonly variant: CanvasVariant;
   readonly points: DevicePoints | null;
   readonly usesPointSize: boolean;
+  readonly viewportInTarget: UniformNode<'vec4', THREE.Vector4>;
 }
 
 /** The material of `variant`, with resources of its own and the program's parameters. */
@@ -186,6 +198,7 @@ function canvasDraw(
 ): CanvasDraw {
   const emulatesPoints = usesPointSize && writesPointSize(target.variant);
   const resources = programResources();
+  const viewportInTarget = uniform(new THREE.Vector4(0, 0, 1, 1));
   const specialisations = resources.uniforms.specialisations;
   const material = new BoundNodeMaterial({ ...shader, specialisations });
   // Godot's canvas pipeline: no cull and no depth (`renderer_canvas_render_rd.cpp:1535`).
@@ -205,6 +218,7 @@ function canvasDraw(
         variant: target.variant,
         points: emulatesPoints ? devicePoints() : null,
         usesPointSize,
+        viewportInTarget,
       })
     )
   );
@@ -216,6 +230,7 @@ function canvasDraw(
     specialisations,
     textures: resources.textures,
     buffers: resources.buffers.byName,
+    viewportInTarget,
   };
 }
 
@@ -224,7 +239,8 @@ function stages(
   rows: TargetRows,
   pointSizeUse: PointSizeUse
 ) {
-  const { variant, points } = pointSizeUse;
+  const { variant, points, viewportInTarget } = pointSizeUse;
+  const viewport = viewportInTarget as unknown as Vec4;
   const defines = CANVAS_VARIANT_DEFINES[variant];
   const vertexStage = linked('vertex', defines);
   const vulkanClip = varyingProperty('vec4', 'godot_clip_position') as unknown as Vec4;
@@ -238,17 +254,24 @@ function stages(
     linked('fragment', defines),
     new Map([
       ...parameterValues,
-      ['gl_FragCoord', vulkanFragCoord(vulkanClip, rows)],
+      ['gl_FragCoord', viewportFragCoord(vulkanFragCoord(vulkanClip, rows) as unknown as Vec4, viewport)],
       ['gl_PointCoord', points?.coord ?? vulkanPointCoord()],
     ]),
     { name: 'frag_color', type: 'vec4' },
     resources
   );
-  const step = points ? (clip: Vec4) => points.expand(clip, screenSize as unknown as Node) : undefined;
+  // POINT_SIZE counts viewport pixels: the target's size in them turns a size into clip space.
+  const viewportPixels = screenSize.mul(viewport.zw) as unknown as Node;
+  const step = points ? (clip: Vec4) => points.expand(clip, viewportPixels) : undefined;
   return {
     vertexNode: glClipPosition(vertex.result, vulkanClip, { rows, step }),
     fragmentNode: fragment.result,
   };
+}
+
+/** `gl_FragCoord` in the pixels of Godot's viewport, whose render target is the viewport alone. */
+function viewportFragCoord(fragCoord: Vec4, viewport: Vec4): Node {
+  return vec4(fragCoord.xy.sub(viewport.xy).mul(viewport.zw), fragCoord.zw) as unknown as Node;
 }
 
 /** The template's `gl_PointSize` write: the shader's size where points are emulated, else three's 1. */

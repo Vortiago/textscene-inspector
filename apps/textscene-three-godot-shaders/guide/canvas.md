@@ -2,7 +2,7 @@
 
 A shader of `shader_type canvas_item` draws a 2D item. Godot links it into its canvas template, `canvas.glsl`, in the variant of the item's draw: a rect, a nine-patch, a primitive or a mesh with attributes, and the primitive and the mesh again as points. `transpileCanvasItem(text)` links the shader once, and `draw(variant)` gives the material of each variant, with its own uniforms and textures. Godot's default canvas shader, `DEFAULT_CANVAS_SHADER`, is the text with empty slots that draws an item with no material.
 
-Each draw reads the item's transform, its final modulate and the render target's colour mode as a `CanvasItemDraw`. `writeCanvasBindings(draw, frame)` writes the template's `CanvasData` block from the render target's size, the canvas transform, the CanvasModulate colour, the time, the pixel snap and the colour mode. `CANVAS_BINDINGS` names the line of Godot's C++ behind each one. `CanvasTextureBinding` binds the item's texture with the item's filter and repeat, or Godot's white default texture, and returns the texel size it writes. Each draw is one pass with Godot's mix blend, no cull and no depth.
+Each draw reads the item's transform, its final modulate and the render target's colour mode as a `CanvasItemDraw`. `writeCanvasBindings(draw, frame)` writes the template's `CanvasData` block from the render target's size, the canvas transform, the CanvasModulate colour, the time, the pixel snap and the colour mode. When the target shows Godot's viewport inside a larger area, `frame.viewport`, a `TargetViewport`, gives the viewport's top-left in target pixels, its size in viewport pixels, and target pixels per viewport pixel. `SCREEN_UV`, `SCREEN_PIXEL_SIZE`, `FRAGCOORD` and `POINT_SIZE` then count the viewport. Without it they count the whole target. `CANVAS_BINDINGS` names the line of Godot's C++ behind each one. `CanvasTextureBinding` binds the item's texture with the item's filter and repeat, or Godot's white default texture, and returns the texel size it writes. Each draw is one pass with Godot's mix blend, no cull and no depth.
 
 A rect and a nine-patch draw as Godot's quad batch does. `textureRectRegion(rect, source, modulate, { transpose, clipUv })` is the rect command of `draw_texture_rect_region`: a negative size flips that axis. `rectInstanceData(command, item, texelSize)` and `ninePatchInstanceData(command, item, texelSize)` write Godot's 128-byte `InstanceData` record. `quadBatchGeometry(records)` gives the instanced quad that reads each record as the attributes `attrib_A` to `attrib_H`.
 
@@ -1263,7 +1263,7 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 
 `FRAGCOORD` is the pixel's window coordinate, with y down from the render target's top row, as Godot's Vulkan frame counts it (`renderer_canvas_render_rd.cpp:1799`).
 
-The transpiler emits `screenCoordinate`, counted from the top row for a target of Godot's rows. Rows: `canvas_item.fragment.FRAGCOORD`. Godot source: `servers/rendering/shader_types.cpp:290`.
+The transpiler emits `screenCoordinate`, counted from the top row for a target of Godot's rows. It subtracts the viewport's top-left in the target and divides by the viewport's pixel scale, since a previewer draws Godot's viewport inside a larger target. Rows: `canvas_item.fragment.FRAGCOORD`. Godot source: `servers/rendering/shader_types.cpp:290`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
@@ -1272,7 +1272,7 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 
 `SCREEN_PIXEL_SIZE` is one over the render target's size in pixels. `SCREEN_UV` is `FRAGCOORD.xy` times it, from 0 to 1 across the target (`canvas.glsl:684-688`).
 
-The transpiler emits the template's local `screen_uv` and the block member `canvas_data.screen_pixel_size`. Rows: `canvas_item.fragment.SCREEN_UV`, `canvas_item.fragment.SCREEN_PIXEL_SIZE`. Godot source: `servers/rendering/shader_types.cpp:301`.
+The transpiler emits the template's local `screen_uv` and the block member `canvas_data.screen_pixel_size`, which holds one over the viewport's size, not the WebGL target's. Rows: `canvas_item.fragment.SCREEN_UV`, `canvas_item.fragment.SCREEN_PIXEL_SIZE`. Godot source: `servers/rendering/shader_types.cpp:301`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 

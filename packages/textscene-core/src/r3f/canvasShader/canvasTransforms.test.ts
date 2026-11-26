@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { World2DCamera, world2DCameraPose } from '../components/Canvas2DStage/world2DCamera';
 import type { Transform2DColumns } from '../../godot/math/transform2d';
 import { mutableTransform2D } from '../../godot/math/transform2d';
-import { canvasDataTransformInto } from './canvasTransforms';
+import { canvasDataTransformInto, targetViewportInto } from './canvasTransforms';
+import type { TargetViewport } from '../../shaders/canvas/canvasBindings';
 
 const STAGE = { width: 200, height: 100 };
 
@@ -20,9 +21,9 @@ function stageCamera(pan: { x: number; y: number }, zoom: number): World2DCamera
   return camera;
 }
 
-const rounded = (transform: Transform2DColumns) =>
+const rounded = (values: Transform2DColumns | TargetViewport) =>
   Object.fromEntries(
-    Object.entries(transform).map(([key, value]) => [key, Math.round(value * 1e6) / 1e6 + 0])
+    Object.entries(values).map(([key, value]: [string, number]) => [key, Math.round(value * 1e6) / 1e6 + 0])
   );
 
 describe('canvasDataTransformInto', () => {
@@ -63,5 +64,32 @@ describe('canvasDataTransformInto', () => {
       tx: 30,
       ty: 40,
     });
+  });
+});
+
+describe('targetViewportInto', () => {
+  const scratch = (): TargetViewport => ({ x: 0, y: 0, width: 0, height: 0, scale: 0 });
+
+  it("places Godot's viewport where the stage camera shows world (0, 0), at the zoom", () => {
+    const camera = stageCamera({ x: 10, y: 20 }, 2);
+    camera.viewportSize = { x: 1152, y: 648 };
+
+    expect(rounded(targetViewportInto(scratch(), camera, STAGE)!)).toEqual({
+      x: 10,
+      y: 20,
+      width: 1152,
+      height: 648,
+      scale: 2,
+    });
+  });
+
+  it("gives the whole target for a pass camera, which shows no viewport of Godot's", () => {
+    expect(targetViewportInto(scratch(), stageCamera({ x: 10, y: 20 }, 2), STAGE)).toBeUndefined();
+  });
+
+  it('gives the whole target for a camera that is not the 2D world camera', () => {
+    const camera = new THREE.OrthographicCamera();
+
+    expect(targetViewportInto(scratch(), camera, STAGE)).toBeUndefined();
   });
 });

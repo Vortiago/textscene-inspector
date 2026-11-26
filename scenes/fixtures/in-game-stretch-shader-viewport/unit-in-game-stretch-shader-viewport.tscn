@@ -1,0 +1,24 @@
+[gd_scene format=3]
+
+; The variable is the window's stretch under a canvas_item shader's screen built-ins. They count the
+; root window's render target (`renderer_canvas_render_rd.cpp:701-702`): the window under canvas_items,
+; the base under viewport. Red is SCREEN_UV.x, green FRAGCOORD.y over the window height, and blue
+; SCREEN_PIXEL_SIZE.x times the base width: half under canvas_items, whole under viewport.
+; Every other shader golden opens the default window, whose target is its design size, so none shows it.
+
+[sub_resource type="Shader" id="Shader_screen"]
+code = "shader_type canvas_item;
+
+void fragment() {
+	COLOR = vec4(SCREEN_UV.x, FRAGCOORD.y / 180.0, SCREEN_PIXEL_SIZE.x * 160.0, 1.0);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_screen"]
+shader = SubResource("Shader_screen")
+
+[node name="Root" type="Node2D"]
+
+[node name="Screen" type="Polygon2D" parent="."]
+material = SubResource("ShaderMaterial_screen")
+polygon = PackedVector2Array(10, 10, 150, 10, 150, 80, 10, 80)
