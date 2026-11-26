@@ -42,7 +42,7 @@ export const MATERIAL_SCENES = [
   { name: 'material-spatial-shader-lit-sky-metal', file: 'unit-spatial-shader-lit-sky-metal.tscn' },
   // A lit shader with a split sun shadow. Godot 4.6.3: 4 px over 2/255. No shadow: 15,151 px, max 199.
   { name: 'material-spatial-shader-lit-sun-shadow', file: 'unit-spatial-shader-lit-sun-shadow.tscn' },
-  // Two suns' split modes, blend, distance, fade and biases in one atlas. Godot 4.6.3: 3 px over 2/255, max 13.
+  // Two suns' split modes, blend, distance, fade and biases in one atlas. Godot 4.6.3: 3 px, max 13.
   {
     name: 'material-spatial-shader-lit-sun-shadow-splits',
     file: 'unit-spatial-shader-lit-sun-shadow-splits.tscn',
