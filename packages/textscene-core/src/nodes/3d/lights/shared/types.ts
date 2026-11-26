@@ -38,9 +38,6 @@ export interface BaseLightProperties {
 
   /** How dark the shadow is, 0-1 (optional). */
   shadow_opacity?: number;
-
-  /** How far a transmittance read steps inside the surface, in percent of the shadow's depth range. */
-  shadow_transmittance_bias?: number;
 }
 
 /** The base plus normal bias, for the light types whose shadow reads it. */

@@ -180,8 +180,11 @@ function cubeArrayReader(
   return (texture) => new CubeArrayReadNode(texture, held, level) as unknown as Node;
 }
 
-/** The filtered reads: a gather reads one channel of four texels, which no layer scale fits. */
-const LAYER_SCALED_CALLS: ReadonlySet<string> = new Set(['texture', 'textureLod', 'textureGrad']);
+/**
+ * The filtered reads, which a layer scale and a stored depth fit. A gather reads one channel of four
+ * texels, and a fetch reads one texel at an integer coordinate.
+ */
+const FILTERED_CALLS: ReadonlySet<string> = new Set(['texture', 'textureLod', 'textureGrad']);
 
 function sampledCall(name: string, row: InstructionRow, operands: readonly Node[]): Node {
   const [texture, coordinate, ...rest] = operands as [TextureNode, Node, ...Node[]];
@@ -191,11 +194,13 @@ function sampledCall(name: string, row: InstructionRow, operands: readonly Node[
     projectedCall === undefined
       ? coordinateOf(sampler!, coordinate)
       : projected(sampler!, coordinate, coordinateType!);
+  const call = projectedCall ?? name;
+  const isFiltered = FILTERED_CALLS.has(call);
   const stored = storedDepthOf(texture);
   // A stored depth filters its own texels, so the call's level, bias or gradients have nothing to pick.
-  if (stored && placed.reference === undefined) return storedDepthRead(stored, placed.uv);
-  const read = CALLS[projectedCall ?? name]!(texture, placed, rest, sampler!);
-  return placed.layer && LAYER_SCALED_CALLS.has(name) ? layerScaledRead(texture, read, placed.layer) : read;
+  if (stored && isFiltered && placed.reference === undefined) return storedDepthRead(stored, placed.uv);
+  const read = CALLS[call]!(texture, placed, rest, sampler!);
+  return placed.layer && isFiltered ? layerScaledRead(texture, read, placed.layer) : read;
 }
 
 const INTEGER_TYPES: ReadonlySet<number> = new Set([IntType, UnsignedIntType]);

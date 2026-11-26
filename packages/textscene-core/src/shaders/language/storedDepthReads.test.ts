@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DataTexture, DepthTexture, LessEqualCompare } from 'three';
-import { float, texture, vec2, vec3, vec4 } from 'three/tsl';
+import { float, int, ivec2, texture, vec2, vec3, vec4 } from 'three/tsl';
 import type { Node, TextureNode } from 'three/webgpu';
 import { generatedFragmentShader } from '../generatedShader.testkit.js';
 import { builtInCall } from './emitBuiltIn.js';
@@ -44,6 +44,15 @@ describe('readStoredDepth', () => {
       vec3(0.25, 0.75, 0.5) as unknown as Node,
     ]);
     expect(glsl).toMatch(/texture\( nodeUniform\d+, vec3\( .*0\.125.* \) \)/);
+  });
+
+  it('leaves a fetch at an integer coordinate to the texture, which a stored read takes as a UV (edge case)', () => {
+    const glsl = glslOf('texelFetch(sampler2D,ivec2,int)', [
+      stored(),
+      ivec2(1, 2) as unknown as Node,
+      int(0) as unknown as Node,
+    ]);
+    expect([glsl.includes('0.375'), /texelFetch\( nodeUniform/.test(glsl)]).toEqual([false, true]);
   });
 
   it('leaves a texture with no stored depth to its own reads (edge case)', () => {

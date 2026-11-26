@@ -228,7 +228,7 @@ export const DIRECTIONAL_LIGHT_BINDINGS: readonly Binding<SpatialFrame>[] = [
 
 const DIRECTIONAL_SHADOW_PIXEL_SIZE = new THREE.Vector2(1, 1).divideScalar(DIRECTIONAL_SHADOW_SIZE_DEFAULT);
 
-/** A kernel of Soft Low's `count` taps first, as `store_soft_shadow_kernel` writes it. */
+/** The first `count` lanes of a kernel: the Vogel disk taps that `store_soft_shadow_kernel` writes. */
 const kernelOf = (count: number) => vogelDisk(count).map(([x, y]) => new THREE.Vector4(x, y, 0, 0));
 
 /** `vec4 directional_soft_shadow_kernel[32]` (`render_scene_data_rd.cpp:124`). */
