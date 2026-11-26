@@ -6,6 +6,7 @@ import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
 const LOAD_SCRIPT = fileURLToPath(new URL('load.gd', import.meta.url));
+const run = promisify(execFile);
 
 /** The first parse error, else the first error: a missing file prints `Cannot open file` before it. */
 export function firstError(output) {
@@ -22,7 +23,6 @@ export function firstError(output) {
 }
 
 async function loadOne(project, name) {
-  const run = promisify(execFile);
   const args = ['--headless', '--path', project, '--script', LOAD_SCRIPT, '--', `res://${name}`];
   // A refused load still exits 0, so only a crash rejects.
   try {
@@ -42,8 +42,8 @@ async function main(folder) {
       .filter((name) => /\.(tscn|tres)$/.test(name))
       .sort();
     for (const name of names) copyFileSync(join(folder, name), join(project, name));
-    const errors = await Promise.all(names.map((name) => loadOne(project, name)));
-    names.forEach((name, at) => console.log(`${name}\t${errors[at]}`));
+    // One load at a time: each run writes the project's `.godot/` folder, which parallel runs share.
+    for (const name of names) console.log(`${name}\t${await loadOne(project, name)}`);
   } finally {
     rmSync(project, { recursive: true, force: true });
   }

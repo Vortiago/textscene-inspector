@@ -267,7 +267,7 @@ export type FileValuePlace = 'section' | 'node' | 'binds';
 /** One value of a section or heading that the loader parses, as written. */
 export interface FileValue {
   readonly text: string;
-  /** The line the value starts on. */
+  /** Godot's line at the value's start: its counter skips a newline a string escapes. */
   readonly line: number;
   readonly place: FileValuePlace;
   /** The `[sub_resource]` sections built before it, so its own section's index inside one. */

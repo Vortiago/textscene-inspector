@@ -1961,6 +1961,37 @@ type="Resource" id="a"]
     failing: [],
     stop: 'res://row133.tscn:3 - Parse Error: Unexpected end of file.',
   },
+  {
+    row: 134,
+    reads: 'a heading string escapes a newline, and a later heading line counts one short',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[sub_resource type="Resource" id="a\\
+b"]
+
+[node name="Root" type="Node"]
+
+[node name="B" parent="." type=]
+`,
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row134.tscn:7]',
+  },
+  {
+    row: 135,
+    reads: 'a body string escapes a newline, and a later heading line counts one short',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[node name="Root" type="Node"]
+editor_description = "x\\
+y"
+
+[node name="B" parent="." type=]
+`,
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row135.tscn:6]',
+  },
 ];
 
 /** The path Godot loaded the row under, which its stop line names. */

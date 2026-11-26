@@ -783,6 +783,25 @@ describe('the file values and heading order of a scan', () => {
     expect(new TscnParserCore().parse(broken, () => null).scene).not.toHaveProperty('fileValues');
   });
 
+  it('reads an old-style number id in a heading, as `ext_func` reads it', () => {
+    const oldStyle =
+      '[gd_scene format=2]\n\n[ext_resource path="res://a.tscn" type="PackedScene" id=1]\n\n' +
+      '[node name="Root" type="Node2D"]\n\n[node name="A" parent="." instance=ExtResource( 1 )]\n';
+
+    expect(new TscnParserCore().parse(oldStyle, () => null).scene).not.toHaveProperty('headingStop');
+  });
+
+  it('keeps only the error, code and line of a heading that does not parse', () => {
+    const broken = '[gd_scene format=3]\n\n[node name="Root" type=]\n';
+
+    expect(new TscnParserCore().parse(broken, () => null).scene.headingStop).toEqual({
+      error: "Expected value, got '']''",
+      code: 'ERR_PARSE_ERROR',
+      line: 3,
+      readBy: 'opening tag',
+    });
+  });
+
   it('records no misplaced heading where each heading is in its place', () => {
     expect(new TscnParserCore().parse(content, () => null).scene).not.toHaveProperty('headingStop');
   });

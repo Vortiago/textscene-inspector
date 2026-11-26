@@ -729,8 +729,11 @@ export type VariantRead = { readonly value: VariantValue } | { readonly error: s
 /** `VariantParser::parse`: the first value, the rest unread. */
 export function readVariant(text: string, reading: VariantReading = {}): VariantRead {
   const tokens = new Tokens(text);
+  const first = tokens.next();
+  // `parse` returns `get_token`'s own error, so `"abc` stops with `Unterminated string`.
+  if (first.kind === 'error') return { error: first.message };
   try {
-    return { value: new ValueReader(tokens, reading).value(tokens.next()) };
+    return { value: new ValueReader(tokens, reading).value(first) };
   } catch (error) {
     if (error instanceof ParseError) return { error: error.message };
     throw error;

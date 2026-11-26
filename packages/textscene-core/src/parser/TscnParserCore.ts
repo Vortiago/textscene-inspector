@@ -140,6 +140,8 @@ export class TscnParserCore {
     let currentHeadingLine = 0;
     // Where the next pass starts on its line: past a heading's `]`, Godot reads the rest of the line as body.
     let resumeColumn = 0;
+    // The newlines a string escapes so far, which Godot's line counter skips (variant_parser.cpp:386).
+    let skippedLines = 0;
     // The type a `.tres` header declares. Its `[resource]` body has no type:
     // `res_type` comes from the header (resource_format_text.cpp:1166) and
     // `ClassDB::instantiate(res_type)` builds it when the tag opens (:741). A `.tscn`
@@ -154,6 +156,7 @@ export class TscnParserCore {
       key: string;
       lines: string[];
       startLine: number;
+      godotStartLine: number;
       scanState: ValueScanState;
     } | null = null;
 
@@ -219,7 +222,7 @@ export class TscnParserCore {
         const value = pendingMultiline.lines.join('\n');
         const resolved = resolveDeprecatedProperty(currentOwnerType(), pendingMultiline.key, value);
         currentProperties[resolved.key] = resolved.value;
-        addBodyValue(value, pendingMultiline.startLine);
+        addBodyValue(value, pendingMultiline.godotStartLine);
         observer?.onProperty?.({
           section: currentSection,
           ownerType: currentOwnerType(),
@@ -269,6 +272,7 @@ export class TscnParserCore {
       resumeColumn = 0;
       const line = stripLineComment(lines[i]!.slice(column), pendingMultiline?.scanState.inString ?? false);
       const lineNumber = i + 1;
+      const godotLine = lineNumber - skippedLines;
 
       // Inside an open string, append raw lines, blank ones included. Only a real
       // section heading means the string never closed: salvage it and process the
@@ -283,6 +287,7 @@ export class TscnParserCore {
           // would.
           pendingMultiline.lines.push(line);
           pendingMultiline.scanState = scanValueChunk(line, pendingMultiline.scanState);
+          if (escapesItsNewline(line, pendingMultiline.scanState)) skippedLines++;
           if (!isIncompleteState(pendingMultiline.scanState)) storePending();
           continue;
         }
@@ -297,16 +302,12 @@ export class TscnParserCore {
       const indent = line.search(/\S/);
       const opensTag = line[indent] === '[';
       if (opensTag) {
-        const tag = readTag(content, lineStarts[i]! + column + indent, lineNumber);
+        const tag = readTag(content, lineStarts[i]! + column + indent, godotLine);
         if (tag && !('error' in tag)) {
           const end = lineAndColumnOf(lineStarts, tag.end, i);
           finalizeSection();
-          openSection(
-            parseHeading(headingText(lines, i, column, end))!,
-            lineNumber,
-            end.line + 1,
-            tag.fields
-          );
+          skippedLines = end.line + 1 - tag.endLine;
+          openSection(parseHeading(headingText(lines, i, column, end))!, lineNumber, tag.endLine, tag.fields);
           // Text after the `]` is the section's body, so the next pass reads the rest of that line.
           const hasRest = !isEmpty(lines[end.line]!.slice(end.column));
           resumeColumn = hasRest ? end.column : 0;
@@ -315,7 +316,7 @@ export class TscnParserCore {
         }
         if (tag) {
           addFieldValues(tag.fields, tag.name ?? '', headings.previous());
-          headings.refuse(tag);
+          headings.refuse({ error: tag.error, code: tag.code, line: tag.line });
         }
         observer?.onError?.({
           message: `Invalid heading format: "${line.trim()}"`,
@@ -326,7 +327,7 @@ export class TscnParserCore {
         // The lenient path draws what it can of a heading Godot refuses.
         if (isHeading(line)) {
           finalizeSection();
-          openSection(parseHeading(line)!, lineNumber, lineNumber, []);
+          openSection(parseHeading(line)!, lineNumber, godotLine, []);
           continue;
         }
       }
@@ -350,13 +351,15 @@ export class TscnParserCore {
             key: property.key,
             lines: [property.value],
             startLine: lineNumber,
+            godotStartLine: godotLine,
             scanState,
           };
+          if (escapesItsNewline(property.value, scanState)) skippedLines++;
         } else {
           // Stored as the setter takes it, `frames` as `sprite_frames`. A diagnostic names the text.
           const resolved = resolveDeprecatedProperty(currentOwnerType(), property.key, property.value);
           currentProperties[resolved.key] = resolved.value;
-          addBodyValue(property.value, lineNumber);
+          addBodyValue(property.value, godotLine);
           observer?.onProperty?.({
             section: currentSection,
             ownerType: currentOwnerType(),
@@ -411,6 +414,13 @@ export class TscnParserCore {
 
     return 'none';
   }
+}
+
+/** True when `chunk` ends inside a string on a `\\`, which escapes the newline after it. */
+function escapesItsNewline(chunk: string, state: ValueScanState): boolean {
+  let backslashes = 0;
+  while (chunk[chunk.length - 1 - backslashes] === '\\') backslashes++;
+  return state.inString && backslashes % 2 === 1;
 }
 
 /** The offset each line of `content` starts at, as `splitLines` splits it. */

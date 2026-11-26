@@ -7,6 +7,10 @@ import { VARIANT_TYPE as T } from './variantType';
 const roundTrip = (input: string) => varToStr(strToVar(input));
 
 describe('strToVar', () => {
+  it("stops a value that opens with a refused token with the token's own message", () => {
+    expect(readVariant('"abc')).toEqual({ error: 'Unterminated string' });
+  });
+
   it('reads a vector and writes its components in the canonical spelling', () => {
     expect(roundTrip('Vector3(0.1, -0, 1e20)')).toBe('Vector3(0.1, 0, 1e+20)');
   });

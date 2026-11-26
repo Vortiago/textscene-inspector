@@ -8,11 +8,12 @@ export interface TagField {
   readonly line: number;
 }
 
-/** A tag that reads: its name, its fields in order, and the offset just past its `]`. */
+/** A tag that reads: its name, its fields in order, the offset just past its `]`, and Godot's line there. */
 export interface ReadTag {
   readonly name: string;
   readonly fields: readonly TagField[];
   readonly end: number;
+  readonly endLine: number;
 }
 
 /** A tag that stops: Godot's message, its code and line, and the name and fields read before it. */
@@ -39,7 +40,7 @@ export function readTag(text: string, start: number, line: number): ReadTag | Re
     if (open.kind === 'eof') return null;
     if (open.kind !== 'bracketOpen') throw new ParseError("Expected '['");
     readBody(tokens, tag);
-    return { name: tag.name!, fields: tag.fields, end: tokens.offset };
+    return { name: tag.name!, fields: tag.fields, end: tokens.offset, endLine: tokens.line };
   } catch (error) {
     if (!(error instanceof ParseError)) throw error;
     return { name: tag.name, error: error.message, code: error.code, line: tokens.line, fields: tag.fields };
@@ -48,7 +49,8 @@ export function readTag(text: string, start: number, line: number): ReadTag | Re
 
 /** `_parse_tag` after its `[`, writing the name and each field into `tag` as it reads them. */
 function readBody(tokens: Tokens, tag: TagDraft): void {
-  const values = new ValueReader(tokens, {});
+  // An id reads as `ext_func` reads it, a string or an old-style number: `ExtResource( 1 )` parses.
+  const values = new ValueReader(tokens, { resourceOf: () => null });
   const first = tokens.next();
   if (first.kind !== 'identifier') throw new ParseError('Expected identifier (tag name)');
   tag.name = first.text;
