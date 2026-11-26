@@ -14,7 +14,9 @@ import {
 /** The fragment GLSL of one raw read of the atlas at a fixed UV. */
 function rawReadGlsl(read: StoredDepthRead): string {
   const stored = storedDepthOf(directionalShadowAtlasNode(read))!;
-  return generatedFragmentShader(vec4(stored.read(vec2(0.25, 0.75) as unknown as Node)) as unknown as Node);
+  return generatedFragmentShader(
+    vec4(stored.read(vec2(0.25, 0.75) as unknown as Node) as never) as unknown as Node
+  );
 }
 
 /** The colour texture node that `atlas`'s raw read samples. */
@@ -74,9 +76,8 @@ describe('bindDirectionalShadowColour', () => {
 
 describe('unboundDirectionalShadowColour', () => {
   it('is one texel, which a light with no shadow never reads', () => {
-    expect([
-      unboundDirectionalShadowColour().image.width,
-      unboundDirectionalShadowColour().image.height,
-    ]).toEqual([1, 1]);
+    const { width, height } = unboundDirectionalShadowColour().image as { width: number; height: number };
+
+    expect([width, height]).toEqual([1, 1]);
   });
 });
