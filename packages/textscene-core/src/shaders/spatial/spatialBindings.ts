@@ -181,7 +181,7 @@ export function writeSpatialBindings(spatial: TranspiledSpatial, scene: SpatialS
   writeBindings(DIRECTIONAL_SHADOW_SCENE_BINDINGS, spatial.uniforms, frame);
   writeBindings(SCENE_SKY_BINDINGS, spatial.uniforms, frame);
   bindSkyLayers(spatial.textures, scene.sky);
-  bindDirectionalShadowAtlas(spatial.textures, scene.directionalShadowAtlas, scene.directionalLights);
+  bindDirectionalShadowAtlas(spatial.textures, scene.directionalShadowAtlas);
 }
 
 /** Writes the specialisation constants of `spatial`, which pick the colour pass's program. */

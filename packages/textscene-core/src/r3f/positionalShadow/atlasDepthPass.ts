@@ -9,8 +9,12 @@
 import type * as THREE from 'three';
 import type { AreaShadowLight } from './atlasAreaShadow.js';
 import type { AtlasSpotShadow } from './atlasSpotShadow.js';
-import type { SplitSunLight } from '../directionalShadow/splitSun.js';
-import { AtlasDepthMaterial, ParaboloidDepthMaterial } from './atlasDepthMaterials.js';
+import { isSplitSun, type SplitSunLight } from '../directionalShadow/splitSun.js';
+import {
+  AtlasDepthMaterial,
+  FlattenedAtlasDepthMaterial,
+  ParaboloidDepthMaterial,
+} from './atlasDepthMaterials.js';
 
 /** three's shadow pass as three wrote it, and the shadow map it draws for. */
 export interface ThreeShadowPass {
@@ -26,6 +30,9 @@ export type ProjectedShadowLight = SpotShadowLight | SplitSunLight;
 /** The one depth material every spot light's and split sun's casters draw with. */
 const atlasDepth = new AtlasDepthMaterial();
 
+/** The one depth material the casters of a split sun with a pancake size draw with. */
+const flattenedDepth = new FlattenedAtlasDepthMaterial();
+
 /** The one depth material every area light's casters draw with: each vertex bent onto its paraboloid. */
 const areaDepth = new ParaboloidDepthMaterial();
 
@@ -39,7 +46,18 @@ export function drawProjectedShadows(
   scene: THREE.Scene,
   camera: THREE.Camera
 ): void {
-  drawWearing(pass, lights, atlasDepth, scene, camera);
+  drawWearing(pass, lights.filter(flattensNearCasters), flattenedDepth, scene, camera);
+  drawWearing(
+    pass,
+    lights.filter((light) => !flattensNearCasters(light)),
+    atlasDepth,
+    scene,
+    camera
+  );
+}
+
+function flattensNearCasters(light: ProjectedShadowLight): boolean {
+  return isSplitSun(light) && light.shadow.flattensNearCasters;
 }
 
 /** Draws `lights` as `drawProjectedShadows` does, each caster bent onto the light's paraboloid. */

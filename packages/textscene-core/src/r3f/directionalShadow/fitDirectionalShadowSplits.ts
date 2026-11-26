@@ -65,8 +65,6 @@ export interface DirectionalShadowSplits {
   godotRangeBegins: number[];
   /** Always four: each slot box's depth from its light side to its far side, Godot's `farplane`. */
   zRanges: number[];
-  /** Always four: the `scale` of `scale * (1 - stored)`, which maps a slot's stored depth to Godot's. */
-  depthScales: number[];
 }
 
 /** Null when a split gets no finite box. The caller then leaves the light's shadow as it is. */
@@ -104,7 +102,6 @@ export function fitDirectionalShadowSplits(
     depthBiases: slotBoxes.map(godotDepthBias),
     godotRangeBegins: slotBoxes.map((box) => box.rangeBegin),
     zRanges: slotBoxes.map((box) => box.zRange),
-    depthScales: slotBoxes.map((box) => (box.far - box.near) / box.zRange),
   };
 }
 

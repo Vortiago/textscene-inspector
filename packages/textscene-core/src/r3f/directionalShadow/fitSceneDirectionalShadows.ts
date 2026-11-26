@@ -6,7 +6,10 @@
  */
 
 import * as THREE from 'three';
-import type { DirectionalShadowAtlasRect } from '../../godot/rendering/lights/directionalShadow.js';
+import {
+  pancakesCasters,
+  type DirectionalShadowAtlasRect,
+} from '../../godot/rendering/lights/directionalShadow.js';
 import type { DirectionalShadowDeclaration } from './declaration.js';
 import { dropLight, isDropped, restoreDroppedLight } from './droppedLight.js';
 import { isViewingCamera, type DirectionalShadowBox, type ViewingCamera } from './fitDirectionalShadowBox.js';
@@ -164,6 +167,7 @@ function fitSplitLight({ light, declaration, lightRect }: SharingLight, camera: 
   const sun = attachSplitSun(light);
   followDeclaredLight(sun, light, placement.lightPosition, placement.targetPosition);
   sun.shadow.setSplits(declaration.splitCount, lightRect);
+  sun.shadow.flattensNearCasters = pancakesCasters(declaration.pancakeSize);
   applySplits(sun, placement, splits);
 }
 
@@ -180,7 +184,6 @@ function applySplits(sun: SplitSunLight, placement: LightPlacement, splits: Dire
   sun.shadow.depthBiases.fromArray(splits.depthBiases);
   sun.shadow.godotRangeBegins.fromArray(splits.godotRangeBegins);
   sun.shadow.zRanges.fromArray(splits.zRanges);
-  sun.shadow.depthScales.fromArray(splits.depthScales);
   sun.shadow.fade = splits.fade;
   sun.shadow.placeSplitFrusta();
 }

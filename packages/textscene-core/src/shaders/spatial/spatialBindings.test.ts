@@ -333,11 +333,6 @@ const SHADOW: DirectionalShadow = {
   transmittanceBiases: [0.5, 0.6, 0.7, 0.8],
   rangeBegins: [12, 14, 16, 18],
   zRanges: [30, 40, 50, 60],
-  atlasShare: {
-    rect: { x: 2048, y: 0, width: 2048, height: 4096 },
-    splitCount: 4,
-    depthScales: [1, 1.5, 2, 4],
-  },
   splitMatrix,
 };
 
@@ -371,7 +366,7 @@ describe('the directional shadow bindings', () => {
     expect(lanes).toEqual([SHADOW.splitEnds, SHADOW.depthBiases, SHADOW.normalBiases]);
   });
 
-  it("maps a view-space point where each split's matrix maps its world position", () => {
+  it("maps a view-space point where each split's matrix maps it, with Godot's depth 1 - t", () => {
     const { light, camera } = shadowed();
     const world = new THREE.Vector3(1, 2, -3);
     const view = world.clone().applyMatrix4(camera.matrixWorldInverse);
@@ -385,7 +380,7 @@ describe('the directional shadow bindings', () => {
     });
     const expected = [0, 1, 2, 3].map((split) => {
       const stored = world.clone().applyMatrix4(splitMatrix(split));
-      stored.z = SHADOW.atlasShare.depthScales[split]! * (1 - stored.z);
+      stored.z = 1 - stored.z;
       return stored.toArray().map((lane) => +lane.toFixed(6));
     });
     expect(reads).toEqual(expected);

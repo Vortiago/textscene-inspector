@@ -76,11 +76,6 @@ function shadowOf(light: THREE.DirectionalLight): DirectionalShadow | null {
     transmittanceBiases: zRanges.map((zRange) => zRange * declaration.transmittanceBias),
     rangeBegins: shadow.godotRangeBegins.toArray(),
     zRanges,
-    atlasShare: {
-      rect: shadow.atlasRect,
-      splitCount: shadow.splitCount,
-      depthScales: shadow.depthScales.toArray(),
-    },
     splitMatrix: (split) => shadow.getMatrix(split),
   };
 }

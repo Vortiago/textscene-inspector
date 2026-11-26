@@ -138,6 +138,10 @@ _Avoid_: "lightmap texture" for the whole stack: a bake can save several.
 The second atlas a bake saves, one byte per texel: how much of a sun's light reaches that texel. A LightmapGI's shadowmask mode sets how it meets the sun's real-time shadow. Replace puts it in the place of the real-time shadow where that fades out, Overlay multiplies it with the real-time shadow, and Only uses it alone.
 _Avoid_: "shadow map", which is the real-time depth map of a light.
 
+**Stored depth** (`shaders/language/storedDepthReads.ts`):
+The depth three writes in a texture, where Godot's shader expects its own depth. A program that reads such a texture maps each read: a compare takes the reference in three's depth, and a raw read decodes the depth and maps it to Godot's (ADR-0094). The directional shadow atlas is the one stored depth, read as `g = 1 - t`.
+_Avoid_: "shadow depth" for the stored value, which is three's depth, not Godot's.
+
 **Lightmap assignment** (`r3f/lightmap/sceneLightmaps.ts`):
 The LightmapGI a node takes its light from, with the node's entry in that bake: its UV scale and slice. It is the last LightmapGI in ready order whose data names the node (ADR-0054). The instance holds it, not a surface: `instanceLightmap` (`r3f/lightmap/instanceLightmap.ts`) reads it for a GeometryInstance3D base and for a mesh of a GLB clone.
 

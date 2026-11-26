@@ -13,8 +13,7 @@ import {
   vogelDisk,
 } from '../../godot/rendering/lights/softShadowKernel.js';
 import { SCENE_DATA } from './sceneDataBlock.js';
-import { bindDirectionalShadowLayout, directionalShadowAtlasNode } from './directionalShadowDepth.js';
-import type { DirectionalShadowAtlasShare } from './directionalShadowAtlasCells.js';
+import { bindDirectionalShadowColour, directionalShadowAtlasNode } from './directionalShadowDepth.js';
 
 /** A sun's shadow in the directional shadow atlas, as its row reads it (`light_storage.cpp:694-756`). */
 export interface DirectionalShadow {
@@ -40,8 +39,6 @@ export interface DirectionalShadow {
   readonly rangeBegins: ArrayLike<number>;
   /** Each split box's depth in world units, from its light side to its far side: Godot's `farplane`. */
   readonly zRanges: ArrayLike<number>;
-  /** Where the splits lie in the atlas, and how their stored depth maps to Godot's. */
-  readonly atlasShare: DirectionalShadowAtlasShare;
   /** World space to split `split`'s atlas UV in x and y, and the stored depth its compare reads in z. */
   splitMatrix(split: number): THREE.Matrix4;
 }
@@ -148,8 +145,25 @@ function splitLanesMember(
 
 const NO_MATRIX: Readonly<THREE.Matrix4> = new THREE.Matrix4().makeScale(0, 0, 0);
 
-/** Scratch for the map from a split's stored depth to Godot's, overwritten by the next. */
-const godotDepth = new THREE.Matrix4();
+/** The map from the stored depth `t` to Godot's `1 - t`: a split box's near side is Godot's. */
+const GODOT_DEPTH: Readonly<THREE.Matrix4> = new THREE.Matrix4().set(
+  1,
+  0,
+  0,
+  0,
+  0,
+  1,
+  0,
+  0,
+  0,
+  0,
+  -1,
+  1,
+  0,
+  0,
+  0,
+  1
+);
 
 /** `shadow_matrix1` to `4` take a view-space vertex to Godot's depth, which the atlas reads map back. */
 function splitMatrixMember(split: number): Binding<SpatialFrame> {
@@ -158,9 +172,7 @@ function splitMatrixMember(split: number): Binding<SpatialFrame> {
     `shadow_matrix${split + 1}`,
     'light_storage.cpp:706-728',
     (shadow, slot, frame) => {
-      const scale = shadow.atlasShare.depthScales[split]!;
-      godotDepth.set(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, -scale, scale, 0, 0, 0, 1);
-      return matrices[slot]!.multiplyMatrices(godotDepth, shadow.splitMatrix(split)).multiply(
+      return matrices[slot]!.multiplyMatrices(GODOT_DEPTH, shadow.splitMatrix(split)).multiply(
         frame.camera.matrixWorld
       );
     },
@@ -275,15 +287,13 @@ export interface DirectionalShadowAtlasTextures {
   readonly colour: THREE.Texture;
 }
 
-/** Binds the atlas to the template's reads, laid out for `lights`. With none, a compare reads one texel. */
+/** Binds the atlas to the template's reads. With none, a compare reads one texel. */
 export function bindDirectionalShadowAtlas(
   textures: ReadonlyMap<string, TextureNode>,
-  atlas: DirectionalShadowAtlasTextures | undefined,
-  lights: readonly DirectionalLight[]
+  atlas: DirectionalShadowAtlasTextures | undefined
 ): void {
   const node = textures.get(DIRECTIONAL_SHADOW_ATLAS);
   if (!node) return;
   comparedTextureOf(node).value = atlas?.depth ?? UNBOUND_DEPTH;
-  const shares = lights.flatMap((light) => (light.shadow ? [light.shadow.atlasShare] : []));
-  bindDirectionalShadowLayout(node, atlas?.colour, shares);
+  bindDirectionalShadowColour(node, atlas?.colour);
 }

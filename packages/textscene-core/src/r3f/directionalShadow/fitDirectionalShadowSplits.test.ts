@@ -136,22 +136,7 @@ describe('fitDirectionalShadowSplits', () => {
     boxes.forEach((box) => expect(box.normalBias / 2).toBeCloseTo(boxWidth(box) / 2048, 2));
   });
 
-  it('reaches every split as far towards the light as the whole view', () => {
-    const nears = fit(fitInput()).boxes.map((box) => box.near);
-    for (const near of nears) expect(near).toBeCloseTo(nears[3]!, 6);
-  });
-
-  it('keeps a caster far towards the light inside the nearest split’s map', () => {
-    const input = fitInput();
-    const { boxes } = fit(input);
-    const nearSlice = cameraSliceCorners(input.camera, 0.05, SPLIT_ENDS[0]!);
-    const centre = nearSlice.reduce((sum, corner) => sum.add(corner), new THREE.Vector3()).divideScalar(8);
-    // Further towards the light than one diameter of the nearest split's own sphere.
-    const caster = centre.clone().addScaledVector(SUN_DIRECTION, -100);
-    expect(isInsideMap(shadowMatrix(input, boxes[0]!), caster)).toBe(true);
-  });
-
-  it('spends the declared bias over each split’s own depth range', () => {
+  it('gives each split a depth range of its own diameter plus the pancake', () => {
     const { boxes } = fit(fitInput());
     for (const box of boxes) {
       // Godot's range is the split's diameter plus the pancake. The snapped width is that

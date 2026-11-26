@@ -38,7 +38,11 @@ import { pixelDitherFade } from '../materials/godotPixelDitherFade';
 import { billboardInjections } from '../surfaceBillboard';
 import { surfaceAlphaProps } from '../materials/surfaceAlphaPatch';
 import { surfaceDepthMaterial } from '../materials/surfaceDepthMaterial';
-import { AtlasDepthMaterial, ParaboloidDepthMaterial } from '../positionalShadow/atlasDepthMaterials';
+import {
+  AtlasDepthMaterial,
+  FlattenedAtlasDepthMaterial,
+  ParaboloidDepthMaterial,
+} from '../positionalShadow/atlasDepthMaterials';
 import { createClipMask } from '../canvasGroup/clipMask';
 import { canvasItemLightingProps } from '../lighting2d/canvasItemLighting';
 import { LIGHTMAP_PROGRAM } from '../lightmap/lightmapProgram';
@@ -226,6 +230,12 @@ const INJECTIONS: readonly InjectionCase[] = [
     'atlas depth',
     ['depth'],
     () => new AtlasDepthMaterial()
+  ),
+  compiledBy(
+    'positionalShadow/atlasDepthMaterials.ts',
+    'flattened depth',
+    ['depth'],
+    () => new FlattenedAtlasDepthMaterial()
   ),
   compiledBy(
     'positionalShadow/atlasDepthMaterials.ts',

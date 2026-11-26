@@ -41,6 +41,25 @@ const ATLAS_DEPTH: ProgramInjection = {
   },
 };
 
+/** Godot's reversed depth stops at 0.9999 (`scene_forward_clustered.glsl:679-682`), three's `t` at 0.0001. */
+const FLATTENED_VERTEX = /* glsl */ `#include <project_vertex>
+#ifdef USE_REVERSED_DEPTH_BUFFER
+gl_Position.z = min( gl_Position.z, 0.9999 * gl_Position.w );
+#else
+gl_Position.z = max( gl_Position.z, -0.9998 * gl_Position.w );
+#endif`;
+
+const FLATTEN_NEAR_CASTERS: ProgramInjection = {
+  cacheKey: 'godot-flattened-depth',
+  onBeforeCompile(shader) {
+    editedProgram(
+      shader,
+      { vertex: [{ three: '#include <project_vertex>', godot: FLATTENED_VERTEX }] },
+      'flattened depth'
+    );
+  },
+};
+
 /**
  * Godot's bend, in the light's view space. `paraboloidSide` keeps the unbent z, so a triangle
  * behind the light draws nothing. The camera's projection then maps the distance to the light onto
@@ -86,6 +105,12 @@ abstract class InjectedDepthMaterial extends THREE.MeshDepthMaterial {
 export class AtlasDepthMaterial extends InjectedDepthMaterial {
   constructor() {
     super(ATLAS_DEPTH);
+  }
+}
+
+export class FlattenedAtlasDepthMaterial extends InjectedDepthMaterial {
+  constructor() {
+    super(composeInjections([FLATTEN_NEAR_CASTERS, ATLAS_DEPTH])!);
   }
 }
 

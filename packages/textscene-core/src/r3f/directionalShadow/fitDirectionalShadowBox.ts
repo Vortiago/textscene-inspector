@@ -11,7 +11,6 @@ import {
   directionalShadowSlice,
   directionalShadowSnapStep,
   directionalShadowTexelSize,
-  pancakesCasters,
   texelPaddedRadius,
   type DirectionalShadowSlice,
 } from '../../godot/rendering/lights/directionalShadow.js';
@@ -54,14 +53,11 @@ export interface DirectionalShadowBox {
   bottom: number;
   near: number;
   far: number;
-  /** The declared depth bias, rescaled to this box's depth range. */
+  /** The declared depth bias. */
   bias: number;
   /** The declared normal bias in world units, for this box's texel size. */
   normalBias: number;
-  /**
-   * Godot's `range_begin` (`renderer_scene_cull.cpp:2327`, `:2349`): the box's light side along the
-   * light's +Z, in world units, unmoved by the caster reach. The blocker search measures from it.
-   */
+  /** Godot's `range_begin` (`renderer_scene_cull.cpp:2349`): the box's light side along the light's +Z. */
   rangeBegin: number;
   /** Godot's `farplane` (`renderer_scene_cull.cpp:2340`): the depth from `rangeBegin` to the far side. */
   zRange: number;
@@ -74,14 +70,6 @@ interface LightAxes {
   z: THREE.Vector3;
 }
 
-/**
- * Godot flattens a caster nearer the light than the near plane onto it
- * (`scene_forward_clustered.glsl:679-682`), so every such caster casts. three has no pancaking,
- * so the near plane moves this many diameters of the whole view slice's sphere further towards
- * the light. Every split takes the same reach, so a caster casts into all of them or none.
- */
-const CASTER_REACH_IN_DIAMETERS = 1;
-
 const NDC_CORNERS: readonly (readonly [number, number])[] = [
   [-1, -1],
   [1, -1],
@@ -91,10 +79,7 @@ const NDC_CORNERS: readonly (readonly [number, number])[] = [
 
 const CORNER_COUNT = 2 * NDC_CORNERS.length;
 
-/**
- * Scratch for the fit, which runs on every render, so it allocates no vector per box. Each value
- * lasts until the next box or reach is fitted. No fitted box keeps one.
- */
+/** Scratch for the fit on every render, valid until the next box is fitted. No fitted box keeps one. */
 const scratchCorners = Array.from({ length: CORNER_COUNT }, () => new THREE.Vector3());
 const scratchOnNearPlane = new THREE.Vector3();
 const scratchOnFarPlane = new THREE.Vector3();
@@ -118,28 +103,15 @@ export function viewSlice(
 /** A box over a depth range of the view, or null when the inputs give no finite box. */
 type DirectionalShadowBoxFit = (depths: DirectionalShadowSlice) => DirectionalShadowBox | null;
 
-/**
- * Fits boxes for one light and one render. The light's axes and its caster reach hold for every
- * split, so this computes them once, and each split passes only its own depths. A box is null when
- * the inputs give no finite one, such as a camera with a non-invertible projection. The caller then
- * leaves the light's shadow as it is.
- */
+/** Fits each split's box on the light's axes, or null for no finite box, as a non-invertible camera gives. */
 export function directionalShadowBoxFitter(input: DirectionalShadowFitInput): DirectionalShadowBoxFit {
   const axes = lightAxes(input.lightPosition, input.targetPosition, input.up);
-  const reach = pancakesCasters(input.declaration.pancakeSize) ? casterReach(input, axes) : null;
-  const frame: LightFrame = { input, axes, reach };
-  return (depths) => fitBox(frame, depths);
-}
-
-/** What every box of one light and one render shares. Null `reach` keeps three's near clip. */
-interface LightFrame {
-  input: DirectionalShadowFitInput;
-  axes: LightAxes;
-  reach: number | null;
+  return (depths) => fitBox(input, axes, depths);
 }
 
 function fitBox(
-  { input, axes, reach }: LightFrame,
+  input: DirectionalShadowFitInput,
+  axes: LightAxes,
   depths: DirectionalShadowSlice
 ): DirectionalShadowBox | null {
   const { camera, declaration, shadowMapSize } = input;
@@ -161,22 +133,18 @@ function fitBox(
   const xMax = snapped(centreX + halfWidth, step);
   const yMin = snapped(centreY - halfWidth, step);
   const yMax = snapped(centreY + halfWidth, step);
-  const zNearCovered = reach === null ? zNear : Math.max(zNear, reach);
 
   const eyeX = axes.x.dot(input.lightPosition);
   const eyeY = axes.y.dot(input.lightPosition);
   const eyeZ = axes.z.dot(input.lightPosition);
-  const near = eyeZ - zNearCovered;
-  const far = eyeZ - zFar;
   const box: DirectionalShadowBox = {
     left: xMin - eyeX,
     right: xMax - eyeX,
     bottom: yMin - eyeY,
     top: yMax - eyeY,
-    near,
-    far,
-    // `renderer_scene_cull.cpp:2348` spends the bias over Godot's own depth range.
-    bias: declaration.depthBias * ((zNear - zFar) / (far - near)),
+    near: eyeZ - zNear,
+    far: eyeZ - zFar,
+    bias: declaration.depthBias,
     normalBias: declaration.normalBias * directionalShadowTexelSize(radius, shadowMapSize),
     rangeBegin: zNear,
     zRange: zNear - zFar,
@@ -208,20 +176,6 @@ function paddedSphere(corners: THREE.Vector3[], shadowMapSize: number): THREE.Sp
   const sphere = meanCentredSphere(corners);
   sphere.radius = texelPaddedRadius(sphere.radius, shadowMapSize);
   return sphere;
-}
-
-/**
- * How far towards the light, along `axes.z`, the near plane reaches: one diameter past the whole
- * view slice's own near face, whatever depths the box itself covers.
- */
-function casterReach(input: DirectionalShadowFitInput, axes: LightAxes): number {
-  const slice = viewSlice(input);
-  const { center: centre, radius } = paddedSphere(
-    writeCameraSliceCorners(input.camera, slice.near, slice.far, scratchCorners),
-    input.shadowMapSize
-  );
-  const sliceNearFace = axes.z.dot(centre) + radius + input.declaration.pancakeSize;
-  return sliceNearFace + CASTER_REACH_IN_DIAMETERS * 2 * radius;
 }
 
 /**

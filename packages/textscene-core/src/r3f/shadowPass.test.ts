@@ -13,7 +13,11 @@ import { OmniShadowCopy } from './positionalShadow/omniShadowCopy';
 import { installShadowPass, readShadowMaps } from './shadowPass';
 import { holdPositionalShadowAtlas, positionalShadowAtlas } from './positionalShadow/shadowAtlasTarget';
 import { AtlasAreaShadow, type AreaShadowLight } from './positionalShadow/atlasAreaShadow';
-import { AtlasDepthMaterial, ParaboloidDepthMaterial } from './positionalShadow/atlasDepthMaterials';
+import {
+  AtlasDepthMaterial,
+  FlattenedAtlasDepthMaterial,
+  ParaboloidDepthMaterial,
+} from './positionalShadow/atlasDepthMaterials';
 import { AtlasSpotShadow } from './positionalShadow/atlasSpotShadow';
 import { SplitSunLight } from './directionalShadow/splitSun';
 import {
@@ -190,16 +194,23 @@ describe('installShadowPass', () => {
     expect(threePass.mock.calls.map(([lights]) => lights)).toEqual([[held, unheld, area], [held], [area]]);
   });
 
-  it('draws each split sun with the spot lights in one pass again, before the area lights', () => {
+  it('draws the flattening split suns, then the other projected lights, before the area lights', () => {
     const { renderer, threePass } = fakeRenderer();
     installShadowPass(renderer);
     const [spot, sun, area] = [spotLight(), new SplitSunLight(), areaLight()];
-    runPass(renderer, [sun, spot, area]);
-    expect(threePass.mock.calls.map(([lights]) => lights)).toEqual([[sun, spot, area], [sun, spot], [area]]);
+    const unflattened = new SplitSunLight();
+    unflattened.shadow.flattensNearCasters = false;
+    runPass(renderer, [sun, spot, unflattened, area]);
+    expect(threePass.mock.calls.map(([lights]) => lights)).toEqual([
+      [sun, spot, unflattened, area],
+      [sun],
+      [spot, unflattened],
+      [area],
+    ]);
     expect(sun.shadow.needsUpdate).toBe(true);
   });
 
-  it('draws a split sun’s casters with the atlas’s depth, which writes the colour (edge case)', () => {
+  it('draws a split sun’s casters flattened onto the box, as a pancake size does (edge case)', () => {
     const { renderer, threePass } = fakeRenderer();
     const scene = new THREE.Scene();
     const caster = new THREE.Mesh();
@@ -209,6 +220,22 @@ describe('installShadowPass', () => {
     threePass.mockImplementation(() => worn.push(caster.customDepthMaterial));
     installShadowPass(renderer);
     runPass(renderer, [new SplitSunLight()], scene);
+    expect(worn[1]).toBeInstanceOf(FlattenedAtlasDepthMaterial);
+  });
+
+  it('draws the casters of a split sun with no pancake size unflattened (edge case)', () => {
+    const { renderer, threePass } = fakeRenderer();
+    const scene = new THREE.Scene();
+    const caster = new THREE.Mesh();
+    caster.castShadow = true;
+    scene.add(caster);
+    const worn: unknown[] = [];
+    threePass.mockImplementation(() => worn.push(caster.customDepthMaterial));
+    installShadowPass(renderer);
+    const sun = new SplitSunLight();
+    sun.shadow.flattensNearCasters = false;
+    runPass(renderer, [sun], scene);
+    expect(worn[1]).not.toBeInstanceOf(FlattenedAtlasDepthMaterial);
     expect(worn[1]).toBeInstanceOf(AtlasDepthMaterial);
   });
 

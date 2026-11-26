@@ -5,6 +5,7 @@
 export const BUDGET_SCENES = [
   { name: 'depth-fog', file: 'unit-depth-fog.tscn' },
   { name: 'fog-volume', file: 'unit-fog-volume.tscn' },
+  { name: 'sun-soft-shadow', file: 'sun-soft-shadow/unit-spatial-shader-lit-sun-soft-shadow.tscn' },
   { name: 'glow', file: 'unit-glow-strength.tscn' },
   { name: 'reflection-probe', file: 'unit-reflection-probe.tscn' },
   { name: 'pointlight2d', file: 'unit-pointlight2d-blend.tscn' },

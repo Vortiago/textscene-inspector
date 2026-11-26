@@ -173,31 +173,19 @@ describe('fitDirectionalShadowBox', () => {
     }
   });
 
-  it('reaches one slice diameter past the near face towards the light', () => {
-    const input = fitInput();
-    const box = fit(input);
-    const centre = new THREE.Vector3();
-    sliceCorners(input, 80).forEach((corner) => centre.add(corner));
-    centre.divideScalar(8);
-    const radius = (box.right - box.left) / 2;
-    // Just inside the reach: the near face sits one radius plus the pancake from the centre.
-    const reached = centre.clone().addScaledVector(SUN_DIRECTION, -(3 * radius + 20 - 1));
-    expect(isInsideMap(inMap(shadowMatrix(input, box), reached))).toBe(true);
-  });
-
-  it('spends the declared bias over Godot’s depth range, not the lengthened one', () => {
+  it('puts the near side at Godot’s range start, one radius plus the pancake from the centre', () => {
     const box = fit();
-    // Godot's range is 2r + pancake. The reach adds 2r more, so three's range is 4r + pancake.
-    const threeDepth = box.far - box.near;
-    const godotDepth = (threeDepth - 20) / 2 + 20;
-    expect(box.bias).toBeCloseTo((-0.0003 * godotDepth) / threeDepth, 15);
+    // The box is one diameter wide, so its depth is the diameter and the pancake.
+    expect([box.far - box.near, box.zRange]).toEqual([box.right - box.left + 20, box.far - box.near]);
   });
 
-  it('does not reach past the near face when the pancake size is zero (edge case)', () => {
+  it('keeps the declared bias, as its depth range is Godot’s', () => {
+    expect(fit().bias).toBe(-0.0003);
+  });
+
+  it('spans the sphere’s diameter alone when the pancake size is zero (edge case)', () => {
     const box = fit({ declaration: { ...declaring(80, 0), depthBias: -0.0003 } });
-    // Godot's own depth range is the sphere's diameter, and nothing lengthens it.
     expect(box.far - box.near).toBeCloseTo(box.right - box.left, 0);
-    expect(box.bias).toBeCloseTo(-0.0003, 15);
   });
 
   it('turns the normal bias from texels into world units', () => {
@@ -258,11 +246,6 @@ describe('directionalShadowBoxFitter', () => {
     for (const depths of [viewSlice(input), { near: 0.05, far: 8 }, { near: 20, far: 40 }]) {
       expect(fitter(depths)).toEqual(fitDirectionalShadowBox(input, depths));
     }
-  });
-
-  it('gives every depth range the whole view’s caster reach (edge case)', () => {
-    const fitter = directionalShadowBoxFitter(fitInput());
-    expect(fitter({ near: 0.05, far: 8 })!.near).toBeCloseTo(fitter({ near: 20, far: 40 })!.near, 9);
   });
 
   it('answers null for every range of a camera whose projection cannot be inverted (error case)', () => {
