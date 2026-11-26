@@ -73,6 +73,11 @@ export class SamplerBinding implements TranspiledUniform {
     return { kind: 'array', count: this.nodes.length, element: (index) => this.element(index) } as ArrayValue;
   }
 
+  /** The texture node of each element, which the program key reads. */
+  get textureNodes(): readonly TextureNode[] {
+    return this.nodes;
+  }
+
   set(value: ParameterValue | undefined): void {
     const chosen = samplerTextures<Texture>(this.declaration, texturesOf(value));
     chosen.forEach((texture, index) => (this.nodes[index]!.value = this.textureOf(texture)));

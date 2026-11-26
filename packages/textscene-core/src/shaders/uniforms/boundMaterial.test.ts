@@ -110,3 +110,23 @@ describe('BoundNodeMaterial', () => {
     expect(faults).toEqual([fault]);
   });
 });
+
+describe('the program two BoundNodeMaterials of equal code share', () => {
+  const keyed = (source: string) => {
+    const material = materialOf([]);
+    material.codeKey = { source, textures: () => [] };
+    return material;
+  };
+
+  it('is one program key for equal code', () => {
+    expect(keyed('colour|equal').customProgramCacheKey()).toBe(keyed('colour|equal').customProgramCacheKey());
+  });
+
+  it('is no longer shared once the GPU refuses it, so a later material compiles and reports its own', () => {
+    const refused = keyed('colour|refused');
+    const shared = refused.customProgramCacheKey();
+    refused.refuseSharedProgram();
+
+    expect(keyed('colour|refused').customProgramCacheKey()).not.toBe(shared);
+  });
+});

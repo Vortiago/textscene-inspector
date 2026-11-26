@@ -42,6 +42,48 @@ export const MATERIAL_SCENES = [
   { name: 'material-spatial-shader-lit-sky-metal', file: 'unit-spatial-shader-lit-sky-metal.tscn' },
   // A lit shader receiving a split sun shadow. Godot 4.6.3: 4 px over 2/255. No shadow: 15,151 px, max 199/255.
   { name: 'material-spatial-shader-lit-sun-shadow', file: 'unit-spatial-shader-lit-sun-shadow.tscn' },
+  // A StandardMaterial3D through Godot's generated shader. Godot 4.6.3: 10 px over 2/255, max 9.
+  {
+    name: 'material-standard-material-lit',
+    file: 'unit-standard-material-lit.tscn',
+    litSurface: 'nodes',
+  },
+  // Toon diffuse, clearcoat, rim, emission, AO, unshaded. Godot 4.6.3: 0 px over 2/255. Classic: 33,291 px.
+  {
+    name: 'material-standard-material-shading-lit',
+    file: 'unit-standard-material-shading-lit.tscn',
+    litSurface: 'nodes',
+  },
+  // A normal map and anisotropy under the project's roughness limiter. Godot 4.6.3: 2 px. Classic: 25,121 px.
+  {
+    name: 'material-standard-material-limiter-lit',
+    file: 'standard-material-limiter-lit/unit-standard-material-limiter-lit.tscn',
+    litSurface: 'nodes',
+  },
+  // An ORM map with toon specular, and alpha with no specular. Godot 4.6.3: 0 px. Classic: 11,806 px.
+  {
+    name: 'material-standard-material-orm-alpha-lit',
+    file: 'unit-standard-material-orm-alpha-lit.tscn',
+    litSurface: 'nodes',
+  },
+  // A missing and an absent material and two fades, all default. Godot 4.6.3: 4 px over 2/255. Classic: 8 px.
+  {
+    name: 'material-standard-material-default-fade-lit',
+    file: 'unit-standard-material-default-fade-lit.tscn',
+    litSurface: 'nodes',
+  },
+  // A missing albedo file on three material classes. Godot refuses the scene, so there is no Godot number.
+  {
+    name: 'material-missing-map-placeholder-lit',
+    file: 'unit-material-missing-map-placeholder-lit.tscn',
+    litSurface: 'nodes',
+  },
+  // An AtlasTexture albedo's size under MSDF, on the generated shader. Godot 4.6.3: 156 px, max 46.
+  {
+    name: 'material-albedo-atlas-msdf',
+    file: 'unit-material-albedo-atlas-msdf.tscn',
+    litSurface: 'nodes',
+  },
   // Spatial shaders with render_mode wireframe, drawn as the edges left after cull_back and cull_disabled.
   { name: 'material-spatial-shader-wireframe', file: 'unit-spatial-shader-wireframe.tscn' },
   // Spatial shaders with cull_back, cull_front and cull_disabled, on quads that face the camera and away.

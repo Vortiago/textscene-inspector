@@ -1,4 +1,5 @@
 import type { Node, NodeMaterial } from 'three/webgpu';
+import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { uniform, vec4 } from 'three/tsl';
 import { generatedProgram, oneBackendBuilds } from '../generatedShader.testkit';
@@ -42,6 +43,13 @@ function program(source = DEFAULT_UNSHADED) {
 }
 
 describe('transpileSpatial', () => {
+  it('casts no shadow from a surface that draws only in the alpha pass', () => {
+    const alpha = 'shader_type spatial;\nrender_mode unshaded;\nvoid fragment() {\n\tALPHA = 0.5;\n}\n';
+
+    expect(transpileSpatial('shader_type spatial;\nrender_mode unshaded;\n').castsShadow).toBe(true);
+    expect(transpileSpatial(alpha).castsShadow).toBe(false);
+  });
+
   it('refuses a shader of another type, at its first line', () => {
     expect(errorOf('shader_type sky;\n').position).toEqual({ file: 'user.gdshader', line: 1, column: 1 });
   });
@@ -132,5 +140,46 @@ describe('a transpiled spatial material built into two programs', () => {
     const colour = material.fragmentNode as unknown as ReturnType<typeof vec4>;
     material.fragmentNode = vec4(uniform(0.5).add(colour.xyz), colour.w) as unknown as Node;
     expect(undeclaredUniforms(build(material).fragment)).toEqual([]);
+  });
+});
+
+describe('the program key of a transpiled spatial material', () => {
+  const LIT = 'shader_type spatial;\nvoid fragment() {\n\tALBEDO = vec3(0.6);\n}\n';
+  const SAMPLED =
+    'shader_type spatial;\nuniform sampler2D tex;\nvoid fragment() {\n\tALBEDO = texture(tex, UV).rgb;\n}\n';
+  const keyOf = (spatial: ReturnType<typeof transpileSpatial>) => spatial.material.customProgramCacheKey();
+
+  it('is one key for two translations of one text, so their meshes share one compiled program', () => {
+    expect(keyOf(transpileSpatial(LIT))).toBe(keyOf(transpileSpatial(LIT)));
+  });
+
+  it('is one key for one text in two files, as the file names only a fault position', () => {
+    const [first, second] = [{ file: 'res://a.tres' }, { file: 'res://b.tres' }];
+    expect(keyOf(transpileSpatial(LIT, first))).toBe(keyOf(transpileSpatial(LIT, second)));
+  });
+
+  it('differs for another text', () => {
+    expect(keyOf(transpileSpatial(LIT))).not.toBe(keyOf(transpileSpatial(LIT.replace('0.6', '0.5'))));
+  });
+
+  it('differs under another rendering method, whose defines change the code', () => {
+    const mobile = transpileSpatial(LIT, { renderingMethod: 'mobile' });
+    expect(keyOf(transpileSpatial(LIT))).not.toBe(keyOf(mobile));
+  });
+
+  it('differs when a sampler reads a texture of another type, as three keys a texture node', () => {
+    const [bytes, floats] = [transpileSpatial(SAMPLED), transpileSpatial(SAMPLED)];
+    floats.parameters
+      .get('tex')!
+      .set(new THREE.DataTexture(new Float32Array(4), 1, 1, THREE.RGBAFormat, THREE.FloatType));
+    bytes.parameters.get('tex')!.set(new THREE.DataTexture(new Uint8Array(4), 1, 1));
+    expect(keyOf(bytes)).not.toBe(keyOf(floats));
+  });
+
+  it('is one key when both samplers read textures of one type', () => {
+    const [first, second] = [transpileSpatial(SAMPLED), transpileSpatial(SAMPLED)];
+    first.parameters.get('tex')!.set(new THREE.DataTexture(new Uint8Array(4), 1, 1));
+    second.parameters.get('tex')!.set(new THREE.DataTexture(new Uint8Array(4), 1, 1));
+    expect(keyOf(first)).toBe(keyOf(second));
   });
 });

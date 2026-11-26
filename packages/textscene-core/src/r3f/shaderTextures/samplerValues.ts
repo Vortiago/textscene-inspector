@@ -32,3 +32,16 @@ export function samplerValues(
   }
   return values;
 }
+
+/** Where a shader's texture slots stand: one still arriving, one that never draws, or all settled. */
+export type TexturesOutcome = 'arriving' | 'missing' | 'settled';
+
+/** Where the slots of `keys` stand; a slot that has not reported is still arriving. */
+export function texturesOutcome(
+  keys: readonly string[],
+  states: ReadonlyMap<string, { readonly isArriving: boolean; readonly isMissing: boolean }>
+): TexturesOutcome {
+  const reported = keys.map((key) => states.get(key));
+  if (reported.some((state) => state === undefined || state.isArriving)) return 'arriving';
+  return reported.some((state) => state!.isMissing) ? 'missing' : 'settled';
+}

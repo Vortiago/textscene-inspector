@@ -104,3 +104,76 @@ describe('materialLanes', () => {
     expect(materialLanes(uniformOf('uniform float u[2];'), textToVariant('null'), false)).toEqual([0, 0]);
   });
 });
+
+/** Each uniform type a ShaderMaterial can declare, and the lanes Godot's block gives it, padding aside. */
+const UNIFORM_TYPES: readonly (readonly [declaration: string, lanes: number])[] = [
+  ['uniform bool u;', 1],
+  ['uniform bvec3 u;', 3],
+  ['uniform int u;', 1],
+  ['uniform ivec2 u;', 2],
+  ['uniform uint u;', 1],
+  ['uniform uvec4 u;', 4],
+  ['uniform float u;', 1],
+  ['uniform vec2 u;', 2],
+  ['uniform vec3 u : source_color;', 3],
+  ['uniform vec4 u;', 4],
+  ['uniform mat3 u;', 9],
+  ['uniform mat4 u;', 16],
+  ['uniform float u[3];', 3],
+  ['uniform vec3 u[2];', 6],
+];
+
+/** Each odd value a file can write, as `set_shader_parameter` stores it with no setter cast. */
+const ODD_VALUES = [
+  'nan',
+  'inf',
+  'inf_neg',
+  '-1',
+  '1e10',
+  'true',
+  '"0.5"',
+  '"x"',
+  'Vector3(1, 2, 3)',
+  'Vector3i(2, 3, 4)',
+  'Color(1, 0.5, 0, 1)',
+  '[1, "x", null]',
+  'PackedFloat32Array(nan, inf)',
+];
+
+// `_fill_std140_variant_ubo_value` (`material_storage.cpp:45`) casts any Variant to the uniform's type.
+describe('materialLanes of a value of any Variant type', () => {
+  const rows = UNIFORM_TYPES.flatMap(([declaration, lanes]) =>
+    ODD_VALUES.map((value) => ({ declaration, lanes, value }))
+  );
+
+  it.each(rows)('gives $declaration its $lanes lanes for $value', ({ declaration, lanes, value }) => {
+    expect(materialLanes(uniformOf(declaration), textToVariant(value), false)).toHaveLength(lanes);
+  });
+
+  it.each([
+    ['nan', Number.NaN],
+    ['inf', Infinity],
+    ['"0.5"', 0.5],
+    ['"x"', 0],
+    ['Vector3(1, 2, 3)', 0],
+    ['true', 1],
+  ])('gives a float %s the lane `float v = value` gives', (value, lane) => {
+    expect(materialLanes(uniformOf('uniform float u;'), textToVariant(value), false)).toEqual([lane]);
+  });
+
+  it.each([
+    ['nan', -2147483648],
+    ['1e10', -2147483648],
+    ['"7"', 7],
+    ['Color(1, 0.5, 0, 1)', 0],
+  ])('gives an int %s the lane `int v = value` gives', (value, lane) => {
+    expect(materialLanes(uniformOf('uniform int u;'), textToVariant(value), false)).toEqual([lane]);
+  });
+
+  it('gives a vec3 the first three lanes of a Color and zeros for a String', () => {
+    const uniform = uniformOf('uniform vec3 u;');
+
+    expect(materialLanes(uniform, textToVariant('Color(1, 0.5, 0, 1)'), false)).toEqual([1, 0.5, 0]);
+    expect(materialLanes(uniform, textToVariant('"x"'), false)).toEqual([0, 0, 0]);
+  });
+});

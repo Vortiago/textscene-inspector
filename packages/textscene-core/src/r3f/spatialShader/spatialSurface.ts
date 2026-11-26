@@ -1,5 +1,10 @@
 import * as THREE from 'three';
-import { unDrawnMessage } from '../../shaders/fault/shaderRefusal.js';
+import {
+  generatedUnDrawnMessage,
+  spatialShaderName,
+  unDrawnMessage,
+  type ShaderUnDrawn,
+} from '../../shaders/fault/shaderRefusal.js';
 import { compileSpatial } from '../../shaders/spatial/compileSpatial.js';
 import { isEmulatedPoints } from './pointSurface.js';
 import { withGodotSurface } from './godotSurfaceWrite.js';
@@ -12,7 +17,7 @@ import {
 } from '../../shaders/spatial/spatialBindings.js';
 import type { SpatialOptions, TranspiledSpatial } from '../../shaders/spatial/transpileSpatial.js';
 import type { ShaderSampler } from '../../shaders/uniforms/shaderSamplers.js';
-import type { ShaderText } from '../../resources/materials/shadermaterial/types.js';
+import type { SurfaceShader } from './surfaceShader.js';
 import { warnOnce } from '../../utils/warnOnce.js';
 import { canvasShaderTime } from '../shaderTime/canvasShaderTime.js';
 import { renderTargetSize } from '../renderTargetSize.js';
@@ -25,9 +30,11 @@ import { EMISSION_EXPOSURE } from '../exposure/emissionExposure.js';
 import { visualLayersOf } from '../visualLayers.js';
 import { releasedOnUnmount } from '../sharedTexture.js';
 import { dfgTexture } from '../../shaders/spatial/dfgTexture.js';
+import { recordCastsShadow } from '../materials/recordedOnMaterial.js';
 import type { RoughnessLimiter } from '../../godot/rendering/roughnessLimiter.js';
 
-export { setMaterialParameters } from '../../shaders/uniforms/materialParameters.js';
+export { setParameterValues } from '../../shaders/uniforms/materialParameters.js';
+export { surfaceShaderOf } from './surfaceShader.js';
 export { drawPoints } from './pointSurface.js';
 export { withGodotSurface } from './godotSurfaceWrite.js';
 
@@ -44,7 +51,7 @@ export interface SurfaceOptions extends SpatialOptions {
 /** The material of `shader` for a surface `gl` draws, which writes the scene of each draw's camera. */
 export function spatialSurfaceOf(
   gl: THREE.WebGLRenderer,
-  shader: ShaderText,
+  shader: SurfaceShader,
   { roughnessLimiter, ...options }: SurfaceOptions
 ): SpatialSurface {
   const compile = compileSpatial(shader.code, {
@@ -52,9 +59,9 @@ export function spatialSurfaceOf(
     file: shader.file,
     instanceLayers: visualLayersOf,
   });
-  if (!('spatial' in compile))
-    return { refusal: `[material] ${unDrawnMessage(compile, 'spatial', '3D surface')}` };
+  if (!('spatial' in compile)) return { refusal: refusalOf(shader, compile) };
   const { spatial } = compile;
+  recordCastsShadow(spatial.material, spatial.castsShadow);
   releasedOnUnmount(dfgTexture());
   const specialise = () => specialiseSpatial(spatial, renderedEnvironmentFog());
   spatial.material.onBeforeProgram = specialise;
@@ -67,14 +74,14 @@ export function spatialSurfaceOf(
     });
   } catch (failure) {
     disposeSpatial(spatial);
-    return { refusal: `[material] ${unDrawnMessage({ failure }, 'spatial', '3D surface')}` };
+    return { refusal: refusalOf(shader, { failure }) };
   }
   for (const error of spatial.printedErrors) warnOnce(shader, error, `[material] ${error}`);
   spatial.material.onTranslatorFault = (fault) =>
     warnOnce(
       shader,
       'translator fault',
-      `[material] The previewer failed to draw this spatial shader: ${fault.message}`
+      `[material] The previewer failed to draw ${spatialShaderName(shader.generatedFor)}: ${fault.message}`
     );
   return compile;
 }
@@ -122,4 +129,12 @@ function sceneOf(
     }),
     roughnessLimiter,
   };
+}
+
+/** The warning for a surface that draws its fallback, named for the kind of its source. */
+function refusalOf({ generatedFor }: SurfaceShader, compile: ShaderUnDrawn): string {
+  const message = generatedFor
+    ? generatedUnDrawnMessage(compile, generatedFor)
+    : unDrawnMessage(compile, 'spatial', '3D surface');
+  return `[material] ${message}`;
 }

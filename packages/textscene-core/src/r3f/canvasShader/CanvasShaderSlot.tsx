@@ -58,7 +58,7 @@ export function CanvasShaderSlot({
 }: CanvasShaderSlotProps) {
   const gl = useThree((state) => state.gl);
   const invalidate = useThree((state) => state.invalidate);
-  const translator = useShaderTranslator(loadCanvasShaderDraw, shader, LOAD_FAILURE);
+  const translator = useShaderTranslator(loadCanvasShaderDraw, shader.code, LOAD_FAILURE);
   const module = translator?.module ?? null;
   const sampling = translator?.sampling;
   const usesLinearColors = useCanvasColorSpace().isLinear;

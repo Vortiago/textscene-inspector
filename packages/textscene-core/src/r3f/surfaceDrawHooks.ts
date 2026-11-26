@@ -8,7 +8,8 @@
 
 import * as THREE from 'three';
 import { BillboardMode } from '../godot/rendering/materials/billboardMode';
-import { billboardOf, castsShadowOf } from '../resources/materials/standardmaterial3d/materialBag';
+import { billboardOf } from '../resources/materials/standardmaterial3d/materialBag';
+import { castsShadowOf } from './materials/recordedOnMaterial';
 import { aimBillboards } from './surfaceBillboard';
 import { restoreInstanceLayers, showInstanceLayers } from './instanceLayers/instanceLayers';
 import { alignNodePose } from './materials/nodePose';

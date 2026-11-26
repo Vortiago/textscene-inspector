@@ -16,6 +16,7 @@ import type { Material } from './types';
  */
 function summary(material: Material): unknown {
   if (material.form === 'declined' || material.form === 'spatial-shader') return material;
+  if (material.form === 'orm') return { form: 'orm', properties: material.baseMaterial.properties };
   if (material.form === 'sky') {
     const panorama = material.properties.textures.source_panorama;
     return { type: material.type, panorama: panorama && 'ref' in panorama ? panorama.ref : undefined };
@@ -43,7 +44,8 @@ describeKindFromEveryOrigin([
     kind: MATERIAL,
     className: 'ORMMaterial3D',
     body: 'albedo_color = Color(0.1, 0.3, 0.9, 1)',
-    expected: { form: 'declined', type: 'ORMMaterial3D' },
+    expected: { form: 'orm', properties: { albedo_color: 'Color(0.1, 0.3, 0.9, 1)' } },
+    summarise: summary,
   },
   {
     kind: MATERIAL,
@@ -70,6 +72,14 @@ describe('MATERIAL of a StandardMaterial3D', () => {
     if (material.form !== 'standard') throw new Error(`expected the standard form, got ${material.form}`);
     return material;
   };
+
+  it("hands on every property for Godot's generated shader, the resources apart", () => {
+    const { baseMaterial } = materialAt('roughness = 0.25\nnormal_texture = SubResource("map")');
+
+    expect(baseMaterial.materialClass).toBe('StandardMaterial3D');
+    expect(baseMaterial.properties).toEqual({ roughness: '0.25' });
+    expect(baseMaterial.resources.normal_texture?.ref).toBe('SubResource("map")');
+  });
 
   it('hands on no slot whose feature gate is off, as Godot samples none', () => {
     expect(materialAt('normal_texture = SubResource("map")').textures).toEqual({});

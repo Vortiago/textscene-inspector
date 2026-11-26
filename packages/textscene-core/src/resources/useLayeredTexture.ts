@@ -14,20 +14,45 @@ export interface LayeredTextureSlot<Source extends { form: string }, Built exten
   readonly isBuilt: (texture: unknown) => texture is Built;
 }
 
+/** A layered slot's texture, null while it loads, for none, and for a form it cannot build. */
+export interface LayeredTextureState<Built extends THREE.Texture> {
+  readonly texture: Built | null;
+  /** True while the resource, its image file or its procedural build is on its way. */
+  readonly isArriving: boolean;
+  /** True when the slot never draws: the resource or its image file cannot load. */
+  readonly isMissing: boolean;
+}
+
 /**
- * The texture a layered slot reads, or null while it loads, for none, and for a form it cannot build.
+ * What a layered slot reads, and whether more is on its way or never will be.
  *
  * @canonical A layered texture slot's GPU texture
  */
-export function useLayeredTexture<
+export function useLayeredTextureState<
   Source extends { form: string; path?: string },
   Built extends THREE.Texture,
->(reference: ScopedReference | null, slot: LayeredTextureSlot<Source, Built>): Built | null {
-  const decoded = useReferencedResource(reference, slot.kind).value ?? null;
+>(reference: ScopedReference | null, slot: LayeredTextureSlot<Source, Built>): LayeredTextureState<Built> {
+  const read = useReferencedResource(reference, slot.kind);
+  const decoded = read.value ?? null;
   const lookup = useMemo(() => slot.procedural(decoded), [slot, decoded]);
   const procedural = useProceduralTexture(lookup);
   const imagePath = decoded?.form === 'file' ? (decoded.path ?? null) : null;
   const loaded = useResource<Built>(imagePath ?? '', slot.busType);
   const texture = procedural.claimed ? procedural.texture : loaded.value;
-  return slot.isBuilt(texture) ? texture : null;
+  const isFileArriving = !procedural.claimed && imagePath !== null && loaded.status === 'pending';
+  const isFileMissing = !procedural.claimed && imagePath !== null && loaded.status === 'unavailable';
+  const built = slot.isBuilt(texture) ? texture : null;
+  const isArriving =
+    read.status === 'pending' || (procedural.claimed && procedural.building) || isFileArriving;
+  const isMissing = read.status === 'unavailable' || isFileMissing;
+  // Kept while its fields hold, so a consumer's effect on it runs only on a change.
+  return useMemo(() => ({ texture: built, isArriving, isMissing }), [built, isArriving, isMissing]);
+}
+
+/** The texture a layered slot reads, or null while it loads, for none, and for a form it cannot build. */
+export function useLayeredTexture<
+  Source extends { form: string; path?: string },
+  Built extends THREE.Texture,
+>(reference: ScopedReference | null, slot: LayeredTextureSlot<Source, Built>): Built | null {
+  return useLayeredTextureState(reference, slot).texture;
 }

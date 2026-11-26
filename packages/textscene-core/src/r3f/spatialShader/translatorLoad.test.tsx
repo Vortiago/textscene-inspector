@@ -15,9 +15,10 @@ const loads = vi.hoisted(() => ({ translator: 0, nodesHandler: 0 }));
 vi.mock('./spatialSurface', () => {
   loads.translator += 1;
   return {
+    surfaceShaderOf: () => ({ code: '', file: '', textures: {}, parametersWith: () => ({}) }),
     spatialSurfaceOf: () => ({ refusal: { message: 'stub' } }),
     disposeSpatial: () => {},
-    setMaterialParameters: () => {},
+    setParameterValues: () => {},
     withGodotSurface: () => {},
   };
 });

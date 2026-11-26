@@ -1,4 +1,4 @@
-import { NIL, type Variant } from '../../godot/variant/value/variant.js';
+import { NIL, variant, type Variant } from '../../godot/variant/value/variant.js';
 import type { Value } from '../language/emitValue.js';
 import type { ShaderNode, UniformNode } from '../language/shaderTree.js';
 import { ShadingLanguageError } from '../language/shadingLanguageError.js';
@@ -31,6 +31,9 @@ export interface BindingContext {
   readonly sampling: ProjectSampling;
 }
 
+/** A texture on a value uniform: `float v = value` and its kin read it as an Object (`variant.cpp:1658`). */
+const AN_OBJECT = variant('OBJECT', null);
+
 /** A uniform's node, holding Godot's value for a material that sets none. */
 class UniformBinding implements TranspiledUniform {
   readonly isDrawable = true;
@@ -49,9 +52,8 @@ class UniformBinding implements TranspiledUniform {
   }
 
   set(value: ParameterValue | undefined): void {
-    if (isSamplerValue(value))
-      throw new Error(`expected a Variant for ${this.declaration.name}, got a texture`);
-    this.node.write(materialLanes(this.declaration, value ?? NIL, this.usesLinearColors));
+    const godotValue = isSamplerValue(value) ? AN_OBJECT : (value ?? NIL);
+    this.node.write(materialLanes(this.declaration, godotValue, this.usesLinearColors));
   }
 }
 

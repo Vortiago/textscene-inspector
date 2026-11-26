@@ -54,8 +54,8 @@ function colorFromHex(value: number): ColorValue {
   return { r: byte(24), g: byte(16), b: byte(8), a: byte(0) };
 }
 
-// _to_int<T> and _to_float<T> (variant.h:361): Nil is 0, a String reads its text, and other types 0.
-function toInt64(value: Variant): bigint {
+/** `_to_int<T>` and `_to_float<T>` (variant.h:361): Nil is 0, a String reads its text, and other types 0. */
+export function toInt64(value: Variant): bigint {
   switch (value.type) {
     case 'BOOL':
       return value.value ? 1n : 0n;

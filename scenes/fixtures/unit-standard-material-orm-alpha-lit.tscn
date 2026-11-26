@@ -1,0 +1,54 @@
+[gd_scene format=3 uid="uid://unit_standard_material_orm_alpha_lit"]
+
+; What it holds: an ORMMaterial3D with toon specular, drawn on a split ORM map (left half metal, right half dielectric), and a
+; StandardMaterial3D with alpha 0.5 and specular disabled, over a ground with no material. A shadowed sun and a colour ambient
+; light light them. They draw through Godot's generated shader and the lit scene template (?litSurface=nodes). The glass casts no shadow.
+; Every other material golden draws the classic path, so only this one shows a regression in these features on the node path.
+
+[ext_resource type="Texture2D" path="res://textures/orm-split.png" id="1_orm_split"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_glass"]
+transparency = 1
+albedo_color = Color(0.3, 0.6, 0.9, 0.5)
+roughness = 0.3
+specular_mode = 2
+
+[sub_resource type="ORMMaterial3D" id="ORMMaterial3D_split"]
+albedo_color = Color(0.85, 0.85, 0.9, 1)
+specular_mode = 1
+orm_texture = ExtResource("1_orm_split")
+
+[sub_resource type="SphereMesh" id="SphereMesh_ball"]
+radius = 0.5
+height = 1.0
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(4, 4)
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.1, 0.12, 0.16, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.25, 0.3, 0.4, 1)
+
+[node name="StandardMaterialOrmAlphaLitRoot" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.8660254, -0.3830222, 0.3213938, 0, 0.6427876, 0.7660444, -0.5, -0.6634139, 0.5566704, 0, 3, 0)
+shadow_enabled = true
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_ground")
+
+[node name="Glass" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 0.5, -0.5)
+mesh = SubResource("SphereMesh_ball")
+surface_material_override/0 = SubResource("StandardMaterial3D_glass")
+
+[node name="Orm" type="MeshInstance3D" parent="."]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -0.8, 0.5, -0.5)
+mesh = SubResource("SphereMesh_ball")
+surface_material_override/0 = SubResource("ORMMaterial3D_split")

@@ -7,7 +7,11 @@
 import { useEffect, useMemo } from 'react';
 import { warn } from '../../logger';
 import { MATERIAL } from '../../resources/materials/material/kind';
-import type { Material, StandardMaterial } from '../../resources/materials/material/types';
+import type {
+  BaseMaterialProperties,
+  Material,
+  StandardMaterial,
+} from '../../resources/materials/material/types';
 import type { ShaderText } from '../../resources/materials/shadermaterial/types';
 import { warnOnce } from '../../utils/warnOnce';
 import { useReferencedResource, type Read, type ScopedReference } from '../../resources/reading';
@@ -16,15 +20,21 @@ import { useReferencedResource, type Read, type ScopedReference } from '../../re
 export type LoadedMaterial =
   /** A StandardMaterial3D to draw. */
   | { status: 'ready'; material: StandardMaterial }
-  /** A spatial ShaderMaterial, which the node lit surface draws. */
+  /** A spatial ShaderMaterial, which a mesh surface draws through the Shader module. */
   | { status: 'spatial-shader'; shader: ShaderText }
+  /** An ORMMaterial3D, which only the node lit surface draws, through Godot's generated shader. */
+  | { status: 'base-material'; baseMaterial: BaseMaterialProperties }
   /** A material type this previewer does not build: Godot's default 3D surface (ADR-0041). */
   | { status: 'declined'; type: string }
-  /** No reference, a file still loading or a missing one: nothing replaces what the surface had. */
+  /** A file that cannot load: a mesh surface draws Godot's default material, any other slot as `absent`. */
+  | { status: 'unavailable' }
+  /** No reference or a file still loading: nothing replaces what the surface had. */
   | { status: 'absent' };
 
 const ABSENT: LoadedMaterial = { status: 'absent' };
+const UNAVAILABLE: LoadedMaterial = { status: 'unavailable' };
 const DECLINED_SHADER: LoadedMaterial = { status: 'declined', type: 'ShaderMaterial' };
+const DECLINED_ORM: LoadedMaterial = { status: 'declined', type: 'ORMMaterial3D' };
 
 /** The material to draw, or null for Godot's default surface. */
 export function readyMaterial(loaded: LoadedMaterial): StandardMaterial | null {
@@ -62,7 +72,9 @@ export function useMaterial(
   useEffect(() => {
     if (shader) warnUndrawnShader(shader, surface);
   }, [shader, surface]);
-  return shader ? DECLINED_SHADER : loaded;
+  if (shader) return DECLINED_SHADER;
+  if (loaded.status === 'unavailable') return ABSENT;
+  return loaded.status === 'base-material' ? DECLINED_ORM : loaded;
 }
 
 /** What `reference` loads to for a mesh surface, which draws a spatial shader. */
@@ -80,9 +92,11 @@ function useLoadedMaterial(reference: ScopedReference | undefined): LoadedMateri
 }
 
 function loadedOf(read: Read<Material>): LoadedMaterial {
+  if (read.status === 'unavailable') return UNAVAILABLE;
   if (read.status !== 'loaded') return ABSENT;
   const material = read.value;
   if (material.form === 'standard') return { status: 'ready', material };
   if (material.form === 'spatial-shader') return { status: 'spatial-shader', shader: material.shader };
+  if (material.form === 'orm') return { status: 'base-material', baseMaterial: material.baseMaterial };
   return { status: 'declined', type: material.type };
 }
