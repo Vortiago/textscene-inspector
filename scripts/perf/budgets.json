@@ -112,11 +112,11 @@
     }
   },
   "pointlight2d": {
-    "drawCalls": 6,
+    "drawCalls": 2,
     "sceneRenders": 0,
     "steps": {
       "2D lights": {
-        "drawCalls": 4,
+        "drawCalls": 0,
         "runs": 1
       },
       "Scene draw": {
@@ -212,11 +212,11 @@
     }
   },
   "demo-2d-lights-and-shadows": {
-    "drawCalls": 46,
+    "drawCalls": 36,
     "sceneRenders": 0,
     "steps": {
       "2D lights": {
-        "drawCalls": 10,
+        "drawCalls": 0,
         "runs": 1
       },
       "Scene draw": {

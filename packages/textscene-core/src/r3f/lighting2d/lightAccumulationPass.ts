@@ -123,7 +123,7 @@ function renderLightsApart(apart: ApartAccumulation, passMeshes: ReadonlySet<Pas
   });
 }
 
-/** Draws every list's buffers once: a frame's work. */
+/** Draws every list's buffers, or nothing on a frame whose inputs match the last drawn frame's. */
 export function renderLightLists({
   gl,
   scene,

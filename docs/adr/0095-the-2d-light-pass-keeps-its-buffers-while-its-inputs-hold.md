@@ -24,17 +24,18 @@ million light fragments, and the pass fills 11.7 million. The fill is not where 
 
 Each frame, before it draws, the pass reads its inputs as numbers (`lightPassInputs.ts`): the
 camera's projection and view, the buffer size, the canvas modulate, the lists and each list's
-window, and for every light mesh its world matrix, whether its ancestors show it, its geometry, its
-material, its blend state and every uniform value. A texture reads as its identity and its version,
-which a refill bumps. When the numbers equal those of the last frame the pass drew, the buffers
+window, and for every light mesh its world matrix, whether its ancestors show it, its layers, its
+geometry and draw range, its material, its blend and draw state and every uniform value. A texture
+reads as its identity and its version, which a refill bumps: a shadow map is a data texture that
+each rebuild refills. When the numbers equal those of the last frame the pass drew, the buffers
 already hold this frame, and the pass draws nothing.
 
 The pass keeps a frame's numbers only once its draws have finished. A draw that throws, and a
 restored WebGL context, forget them, since the buffers then hold part of a frame or nothing.
 
-A uniform the reader cannot see change makes every frame draw: a render target's texture, such as a
-directional shadow map or a `ViewportTexture` cookie, and any value that is not a number, a vector, a
-colour, a matrix or a texture.
+A value the reader cannot see change makes every frame draw: a render target's texture, such as a
+`ViewportTexture` cookie or a live copy of one, a light mesh with more than one material, and any
+uniform value that is not a number, a vector, a colour, a matrix or a texture.
 
 ## Considered Options
 

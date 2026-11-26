@@ -31,7 +31,9 @@ export class LightPassInputs {
     draw();
     if (!isReadable) return;
     this.keptLists = frame.lists;
-    [this.kept, this.read] = [this.read, this.kept];
+    const kept = this.read;
+    this.read = this.kept;
+    this.kept = kept;
   }
 
   /** Forgets the kept frame: the buffers no longer hold it. */
@@ -73,18 +75,20 @@ function readPassMesh({ mesh, ordinal, role }: PassMesh, out: number[]): boolean
   mesh.updateWorldMatrix(true, false);
   // The pass sets the mesh's own flag each draw, so only its ancestors' count.
   const isShown = mesh.parent === null || visibleInTree(mesh.parent);
-  out.push(mesh.id, ordinal, role === 'lit' ? 1 : 0, isShown ? 1 : 0, mesh.renderOrder);
+  out.push(mesh.id, ordinal, role === 'lit' ? 1 : 0, isShown ? 1 : 0, mesh.renderOrder, mesh.layers.mask);
   pushAll(out, mesh.matrixWorld.elements);
   const { geometry, material } = mesh as THREE.Object3D & {
     geometry?: THREE.BufferGeometry;
-    material?: THREE.Material;
+    material?: THREE.Material | THREE.Material[];
   };
   if (geometry) readGeometry(geometry, out);
+  if (Array.isArray(material)) return false;
   return material ? readMaterial(material, out) : true;
 }
 
 function readGeometry(geometry: THREE.BufferGeometry, out: number[]): void {
-  out.push(geometry.id, geometry.index?.version ?? -1);
+  const { drawRange } = geometry;
+  out.push(geometry.id, geometry.index?.version ?? -1, drawRange.start, drawRange.count);
   for (const name in geometry.attributes) {
     const attribute = geometry.attributes[name]!;
     out.push('isInterleavedBufferAttribute' in attribute ? attribute.data.version : attribute.version);
@@ -94,7 +98,10 @@ function readGeometry(geometry: THREE.BufferGeometry, out: number[]): void {
 function readMaterial(material: THREE.Material, out: number[]): boolean {
   out.push(material.id, material.version, material.blending, material.blendEquation, material.blendSrc);
   out.push(material.blendDst, material.blendEquationAlpha ?? -1, material.blendSrcAlpha ?? -1);
-  out.push(material.blendDstAlpha ?? -1);
+  out.push(material.blendDstAlpha ?? -1, material.blendAlpha, material.visible ? 1 : 0, material.side);
+  out.push(material.transparent ? 1 : 0, material.premultipliedAlpha ? 1 : 0, material.colorWrite ? 1 : 0);
+  out.push(material.depthTest ? 1 : 0, material.depthWrite ? 1 : 0);
+  material.blendColor.toArray(out, out.length);
   const { uniforms } = material as THREE.Material & { uniforms?: Record<string, THREE.IUniform> };
   if (!uniforms) return true;
   for (const name in uniforms) if (!readValue(uniforms[name]!.value, out)) return false;
@@ -112,7 +119,7 @@ function readValue(value: unknown, out: number[]): boolean {
     if (texture.isRenderTargetTexture) return false;
     out.push(texture.id, texture.version);
   } else if (typeof (value as { toArray?: unknown }).toArray === 'function') {
-    pushAll(out, (value as { toArray(): ArrayLike<number> }).toArray());
+    (value as { toArray(array: number[], offset: number): unknown }).toArray(out, out.length);
   } else return false;
   return true;
 }

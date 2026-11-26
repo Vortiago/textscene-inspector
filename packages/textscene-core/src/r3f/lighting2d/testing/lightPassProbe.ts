@@ -31,11 +31,13 @@ export function drawnMeshes(scene: THREE.Object3D, camera: THREE.Camera): THREE.
   return drawn;
 }
 
-/** Runs one frame and records each draw into an accumulation buffer, every list drawn from fresh. */
+/** The draws of each renderer's last frame that drew: a frame on unchanged inputs keeps its buffers. */
+// eslint-disable-next-line no-restricted-syntax -- each recorded frame rewrites its renderer's entry
+const lastDraws = new WeakMap<THREE.WebGLRenderer, RecordedDraw[]>();
+
+/** Runs one frame and answers the draws that fill the accumulation buffers after it. */
 export async function recordLightPass(renderer: Rendered): Promise<RecordedDraw[]> {
   const gl = rendererOf(renderer);
-  // The pass draws only on changed inputs, and a restored context's blank targets count as one.
-  gl.domElement.dispatchEvent(new Event('webglcontextrestored'));
   const draws: RecordedDraw[] = [];
   let target: THREE.WebGLRenderTarget | null = null;
   const spies = [
@@ -53,7 +55,8 @@ export async function recordLightPass(renderer: Rendered): Promise<RecordedDraw[
   } finally {
     spies.forEach((spy) => spy.mockRestore());
   }
-  return draws;
+  if (draws.length > 0) lastDraws.set(gl, draws);
+  return lastDraws.get(gl) ?? draws;
 }
 
 /** The uniforms the item named `name` bound, read back through its `onBeforeCompile`. */
