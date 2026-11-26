@@ -1,7 +1,8 @@
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useLayoutEffect, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import type { ItemPlacement, LitItemRead } from '../lighting2d/itemLightList';
+import type { CanvasLightDeclaration, ItemPlacement, LitItemRead } from '../lighting2d/itemLightList';
+import { directionalLightCullKey } from '../lighting2d/lightCullKey';
 import {
   CanvasLighting2DContext,
   INERT_CANVAS_LIGHTING,
@@ -10,13 +11,24 @@ import {
 import { LitCanvasItemPixels, useTemplateDrawClaim } from './LitCanvasItemPixels';
 
 /** The reads the item declares now: each registration not yet released. */
-function spyReads() {
+/** A DirectionalLight2D that casts a shadow on every lit item of layer 0. */
+const SHADOWING_SUN: CanvasLightDeclaration = {
+  reach: directionalLightCullKey(0, 0),
+  sequence: null,
+  slot: 0,
+  shadowItemCullMask: null,
+  castsShadow: true,
+  tintsShadow: false,
+  mixes: false,
+};
+
+function spyReads(lights: ReadonlyMap<number, CanvasLightDeclaration> = new Map()) {
   const reads = new Set<LitItemRead>();
   const registerItem = vi.fn((_placement: ItemPlacement, read: LitItemRead) => {
     reads.add(read);
     return () => reads.delete(read);
   });
-  const value: CanvasLighting2D = { ...INERT_CANVAS_LIGHTING, registerItem };
+  const value: CanvasLighting2D = { ...INERT_CANVAS_LIGHTING, lights, registerItem };
   const Wrap = ({ children }: { children: ReactNode }) => (
     <CanvasLighting2DContext.Provider value={value}>{children}</CanvasLighting2DContext.Provider>
   );
@@ -30,8 +42,8 @@ function TemplateDraw() {
   return null;
 }
 
-async function itemWith(children: ReactNode) {
-  const { Wrap, reads } = spyReads();
+async function itemWith(children: ReactNode, lights?: ReadonlyMap<number, CanvasLightDeclaration>) {
+  const { Wrap, reads } = spyReads(lights);
   const tree = (inside: ReactNode) => (
     <Wrap>
       <LitCanvasItemPixels material={null} lightMask={undefined} zFinal={0}>
@@ -52,6 +64,11 @@ describe('LitCanvasItemPixels', () => {
   it('declares no light read while a template draw holds its pixels, as the template lights them', async () => {
     const { reads } = await itemWith(<TemplateDraw />);
     expect([...reads]).toEqual([]);
+  });
+
+  it('keeps the plain light read under a shadowing light, as the template draws no 2D shadow yet', async () => {
+    const { reads } = await itemWith(<TemplateDraw />, new Map([[0, SHADOWING_SUN]]));
+    expect([...reads]).toEqual(['plain']);
   });
 
   it('declares the read again once the template draw lets the pixels go', async () => {

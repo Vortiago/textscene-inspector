@@ -1,6 +1,12 @@
 import type * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { FLAGS, instanceRecord, writeBatchRecords, writeBatchWorld } from './canvasInstance.js';
+import {
+  FLAGS,
+  instanceRecord,
+  writeBatchRecords,
+  writeBatchWorld,
+  writeItemLights,
+} from './canvasInstance.js';
 import { quadBatchGeometry } from './canvasRect.js';
 
 const IDENTITY = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
@@ -78,5 +84,23 @@ describe('writeBatchRecords', () => {
     writeBatchRecords(geometry, { transform: IDENTITY, finalModulate: WHITE }, 2, () => {});
 
     expect(buffers.map(({ version }) => version)).toEqual(versions.map((version) => version + 1));
+  });
+});
+
+describe('writeItemLights', () => {
+  const WHITE = { r: 1, g: 1, b: 1, a: 1 };
+  const LIGHTS = 28;
+
+  it('adds the light count to the flags the command wrote', () => {
+    const record = instanceRecord({ transform: IDENTITY, finalModulate: WHITE });
+    record.words[FLAGS] = 1 << 4;
+    writeItemLights(record, { flags: 3, lights: [0, 0, 0, 0] });
+    expect(record.words[FLAGS]).toBe((1 << 4) | 3);
+  });
+
+  it('writes the four words of light indices after the flags', () => {
+    const record = instanceRecord({ transform: IDENTITY, finalModulate: WHITE });
+    writeItemLights(record, { flags: 2, lights: [0x0201, 0, 0, 0] });
+    expect([...record.words.slice(LIGHTS, LIGHTS + 4)]).toEqual([0x0201, 0, 0, 0]);
   });
 });

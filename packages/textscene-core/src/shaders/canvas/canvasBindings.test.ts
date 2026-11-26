@@ -6,6 +6,7 @@ import {
   bindCanvasData,
   type CanvasFrame,
   canvasDataBlock,
+  transformInViewportInto,
   writeCanvasBindings,
   writeCanvasData,
 } from './canvasBindings.js';
@@ -160,5 +161,23 @@ describe('the canvas transform matrix', () => {
     const value = written({ ...FRAME, canvasTransform: { a: 0, b: 1, c: -1, d: 0, tx: 4, ty: 2 } });
 
     expect(through(value('canvas_transform'), 3, 5)).toEqual([-1, 5]);
+  });
+});
+
+describe('transformInViewportInto', () => {
+  it("moves a target transform into Godot's viewport: less its top-left, over its scale", () => {
+    const out = { a: 0, b: 0, c: 0, d: 0, tx: 0, ty: 0 };
+    transformInViewportInto(
+      out,
+      { a: 2, b: 0, c: 0, d: 2, tx: 30, ty: 20 },
+      { x: 10, y: 4, width: 64, height: 32, scale: 2 }
+    );
+    expect(out).toEqual({ a: 1, b: 0, c: 0, d: 1, tx: 10, ty: 8 });
+  });
+
+  it('may write into the transform it reads', () => {
+    const inTarget = { a: 1, b: 0, c: 0, d: 1, tx: 5, ty: 5 };
+    transformInViewportInto(inTarget, inTarget, { x: 5, y: 5, width: 8, height: 8, scale: 1 });
+    expect(inTarget).toEqual({ a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 });
   });
 });

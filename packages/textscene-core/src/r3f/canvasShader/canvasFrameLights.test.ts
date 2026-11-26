@@ -5,7 +5,9 @@ import { DEFAULT_LIGHT_CULL_KEY } from '../lighting2d/lightCullKey';
 import type { CanvasLightDeclaration } from '../lighting2d/itemLightList';
 import type { CanvasLightRows, LightRowWriter } from '../lighting2d/lightRows';
 import { markCanvasFrame } from '../canvasFrame';
-import { canvasLightsOf } from './canvasFrameLights';
+import { mutableTransform2D } from '../../godot/math/transform2d';
+import { transformInViewportInto } from '../../shaders/canvas/canvasBindings';
+import { canvasLightsOf, onScreenInto } from './canvasFrameLights';
 
 const gl = {
   getRenderTarget: () => null,
@@ -127,5 +129,25 @@ describe('canvasLightsOf', () => {
     const second = canvasLightsOf(gl, drawn(2), rows, 0);
 
     expect([second.words === first.words, redOf(second.words, 0)]).toEqual([false, 0.5]);
+  });
+});
+
+describe('onScreenInto', () => {
+  const size = { width: 64, height: 32 };
+  const object = new THREE.Object3D();
+  object.position.set(4, -2, 0);
+  object.updateMatrixWorld();
+
+  it("ends an object's frame in Godot's viewport inside the target", () => {
+    const viewport = { x: 8, y: 4, width: 32, height: 16, scale: 2 };
+    const inTarget = onScreenInto(mutableTransform2D(), { camera, size, viewport: undefined }, object);
+    const expected = transformInViewportInto(mutableTransform2D(), inTarget, viewport);
+    expect(onScreenInto(mutableTransform2D(), { camera, size, viewport }, object)).toEqual(expected);
+  });
+
+  it("places an object at the camera's centre at the target's centre, with no viewport", () => {
+    const centred = new THREE.Object3D();
+    const onScreen = onScreenInto(mutableTransform2D(), { camera, size, viewport: undefined }, centred);
+    expect([onScreen.tx, onScreen.ty]).toEqual([32, 16]);
   });
 });

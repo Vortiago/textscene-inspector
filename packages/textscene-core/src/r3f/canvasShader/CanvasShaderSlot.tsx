@@ -114,7 +114,7 @@ export function CanvasShaderSlot({
   useLayoutEffect(() => (draw ? claimTemplateDraw?.() : undefined), [draw, claimTemplateDraw]);
   const lighting = useTemplateLighting();
   useLayoutEffect(() => {
-    draw?.setLighting(lighting?.isLit ? lighting : null);
+    draw?.setLighting(lighting?.isLit && !lighting.isShadowed ? lighting : null);
     invalidate();
   }, [draw, lighting, invalidate]);
   useRecordWriter(draw?.writeRecords ?? null);

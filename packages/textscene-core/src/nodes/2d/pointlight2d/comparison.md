@@ -219,8 +219,7 @@ shades each one by its normal, then blends them in Godot's order.
 With `?canvasItem=translated`, a lit item draws once through the canvas template's lit variant, as
 Godot does (`canvas.glsl:727-850`). The light's row in `light_array` holds its colour, blend mode,
 height and its texture's rect in the light atlas, and the item takes the first 15 positional lights
-that meet its rect. On the 62 lit fixtures the template's frame matches the classic one, within
-1/255 of Godot. An item a shadowed light reaches stays on the classic draw.
+that meet its rect. An item a shadowed light reaches stays on the classic draw.
 
 ## Linting
 

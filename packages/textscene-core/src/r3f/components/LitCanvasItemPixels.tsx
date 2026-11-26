@@ -191,7 +191,8 @@ export function LitCanvasItemPixels({
     <object3D ref={item.geometryRef} userData={LIT_ITEM_USER_DATA}>
       <ItemZFinalContext.Provider value={zFinal}>
         <TemplateLightingContext.Provider value={item.template}>
-          <TemplateDrawContext.Provider value={claimTemplateDraw}>
+          {/* The template draws no 2D shadow yet, so a shadowed item's own pixels stay classic. */}
+          <TemplateDrawContext.Provider value={item.template.isShadowed ? null : claimTemplateDraw}>
             <CanvasItemPixelMaterialContext.Provider value={pixelMaterial}>
               {typeof children === 'function' ? children(pixelMaterial) : children}
             </CanvasItemPixelMaterialContext.Provider>
