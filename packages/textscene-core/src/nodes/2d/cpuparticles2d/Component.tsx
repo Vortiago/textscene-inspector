@@ -7,11 +7,11 @@
 
 import { useMemo, useState } from 'react';
 import type * as THREE from 'three';
-import { affineInverseTransform2D, type Transform2DColumns } from '../../../godot/math/transform2d';
+import type { Transform2DColumns } from '../../../godot/math/transform2d';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useNodeReference } from '../../../resources/reading';
-import { threeMatrixFromTransform2D } from '../../../r3f/node2dTransform';
+import { threeMatrixFromTransform2D, transform2DFromThreeMatrix } from '../../../r3f/node2dTransform';
 import type { CanvasItemMaterialProperties } from '../../../resources/materials/canvasitemmaterial/types';
 import { CanvasMeshBody } from '../../../r3f/canvasMesh/CanvasMeshBody';
 import { CanvasItemGroup } from '../../../r3f/components/CanvasItemGroup';
@@ -98,8 +98,8 @@ function useFrozenPose(props: CPUParticles2DProperties, anchor: THREE.Object3D |
           colorInitialRamp,
           emissionTransform,
         }),
-        // Godot draws the canvas-space pose at the canvas transform (`renderer_canvas_cull.cpp:267`).
-        placement: affineInverseTransform2D(emissionTransform),
+        // At the canvas transform (`renderer_canvas_cull.cpp:267`), by three's inverse as the classic draw.
+        placement: transform2DFromThreeMatrix(threeMatrixFromTransform2D(emissionTransform).invert()),
       },
     [simulate, props, curves, scaleCurves, colorRamp, colorInitialRamp, emissionTransform]
   );
