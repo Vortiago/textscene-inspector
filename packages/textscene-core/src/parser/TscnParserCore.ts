@@ -421,7 +421,7 @@ export class TscnParserCore {
   }
 }
 
-/** True when line `at` ends on an odd run of `\\` right before its `\n`, with no `\r` or space between. */
+/** True when line `at` ends on an odd run of backslashes with nothing, not even `\r`, before its `\n`. */
 function escapesItsNewline(content: string, lineStarts: readonly number[], at: number): boolean {
   const newline = lineStarts[at + 1];
   if (newline === undefined) return false;
