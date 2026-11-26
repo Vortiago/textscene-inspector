@@ -38,13 +38,13 @@ export class Recording {
     return this.sums.frames >= this.frames;
   }
 
-  finish(hasGpuTimer: boolean, gpu: string | null): void {
+  finish(hasGpuTimer: boolean, renderer: Pick<FrameRecording, 'gpu' | 'storedDepthRead'>): void {
     const stats = statsOf(this.sums, { hasGpuTimer });
     this.resolve({
       ...stats,
       timings: stats.timings!,
       frames: this.sums.frames,
-      gpu,
+      ...renderer,
       ...(this.timesDraws && { draws: this.drawStats() }),
     });
   }

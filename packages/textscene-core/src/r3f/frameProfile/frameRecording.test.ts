@@ -85,6 +85,14 @@ describe('recordFrames', () => {
     ]);
   });
 
+  it("names the page's read of the sun's stored depth, which decides a soft shadow's cost", async () => {
+    const profile = timed(cpuOnlyRenderer());
+    const recorded = recordFrames({ frames: 2 });
+    runFrames(profile, 0, 2);
+    const [recording] = await recorded;
+    expect(recording!.storedDepthRead).toBe('fetched');
+  });
+
   it('records each timed renderer on the page', async () => {
     const first = timed(cpuOnlyRenderer());
     const second = timed(cpuOnlyRenderer());

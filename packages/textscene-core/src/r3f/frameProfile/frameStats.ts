@@ -1,5 +1,7 @@
 /** What a frame profile publishes: one window's frames, averaged per frame. */
 
+import type { StoredDepthRead } from '../../shaders/spatial/directionalShadowDepth.js';
+
 /** The render steps a frame profile times, in the order the overlay lists them. */
 export const RENDER_STEPS = [
   'SubViewports',
@@ -85,6 +87,8 @@ export interface FrameRecording extends FrameStats {
   frames: number;
   /** The GPU the browser names, or null when it names none. */
   gpu: string | null;
+  /** The read of the sun's stored depth the page picked for that GPU. */
+  storedDepthRead: StoredDepthRead;
   timings: FrameTimings;
   /** Present when the recording timed each draw, slowest first. Each draw costs its own GPU query. */
   draws?: readonly DrawStats[];

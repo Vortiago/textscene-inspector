@@ -16,6 +16,7 @@ import {
 } from './frameStats.js';
 import { add, statsOf, WindowSums } from './windowSums.js';
 import { glRendererName } from '../../shaders/pipeline/glRendererName.js';
+import { storedDepthRead } from '../directionalShadow/storedDepthRead.js';
 import {
   addDrawGpuTime,
   countDraw,
@@ -295,8 +296,11 @@ class Profile implements FrameProfile {
     const complete = this.recordings.filter((recording) => recording.isComplete());
     if (complete.length === 0) return;
     this.recordings = this.recordings.filter((recording) => !recording.isComplete());
-    const gpu = glRendererName(this.renderer.getContext() as WebGL2RenderingContext);
-    for (const recording of complete) recording.finish(this.gpu !== null, gpu);
+    const renderer = {
+      gpu: glRendererName(this.renderer.getContext() as WebGL2RenderingContext),
+      storedDepthRead: storedDepthRead(),
+    };
+    for (const recording of complete) recording.finish(this.gpu !== null, renderer);
     this.isTimingDraws = this.recordings.some((recording) => recording.timesDraws);
   }
 
