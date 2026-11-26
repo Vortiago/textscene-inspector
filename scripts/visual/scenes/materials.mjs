@@ -72,6 +72,12 @@ export const MATERIAL_SCENES = [
     file: 'unit-standard-material-default-fade-lit.tscn',
     litSurface: 'nodes',
   },
+  // A missing albedo file on three material classes. Godot refuses the scene, so there is no Godot number.
+  {
+    name: 'material-missing-map-placeholder-lit',
+    file: 'unit-material-missing-map-placeholder-lit.tscn',
+    litSurface: 'nodes',
+  },
   // An AtlasTexture albedo's size under MSDF, on the generated shader. Godot 4.6.3: 156 px, max 46.
   {
     name: 'material-albedo-atlas-msdf',
