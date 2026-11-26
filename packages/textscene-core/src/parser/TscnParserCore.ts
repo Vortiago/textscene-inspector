@@ -78,8 +78,10 @@ export interface ParsedProperty {
   value: string;
   /** The line the key sits on. */
   line: number;
-  /** The column the property's text is read from: just past a heading's `]` where it follows one, else 0. */
+  /** The 0-based column the key starts at, past a heading's `]` where it follows one. */
   column: number;
+  /** Where the value's text starts, 0-based, present only when it starts on a line after its key's. */
+  valueStart?: { line: number; column: number };
   /** The line the value ends on, a later line where the value starts after its key's line. */
   endLine: number;
   isMultiline: boolean;
@@ -167,6 +169,7 @@ export class TscnParserCore {
       skippedNewlines: number[];
       startLine: number;
       startColumn: number;
+      valueStart?: { line: number; column: number };
       endLine: number;
       godotStartLine: number;
       scanState: ValueScanState;
@@ -246,6 +249,7 @@ export class TscnParserCore {
           value,
           line: pendingMultiline.startLine,
           column: pendingMultiline.startColumn,
+          ...(pendingMultiline.valueStart ? { valueStart: pendingMultiline.valueStart } : {}),
           endLine: pendingMultiline.endLine,
           isMultiline: pendingMultiline.endLine > pendingMultiline.startLine,
           stored: resolved,
@@ -318,7 +322,10 @@ export class TscnParserCore {
           continue;
         } else {
           // Godot reads the value from the token after the `=`, so a value on a later line starts there.
-          if (awaitsValue) pendingMultiline.godotStartLine = godotLine;
+          if (awaitsValue) {
+            pendingMultiline.godotStartLine = godotLine;
+            pendingMultiline.valueStart = { line: lineNumber, column: column + leadingSpace(line) };
+          }
           // Scan only this chunk: a `\n` separator affects neither `inString` nor
           // `depth`, so scanning `line` alone yields the state the joined string
           // would.
@@ -366,7 +373,7 @@ export class TscnParserCore {
         observer?.onError?.({
           message: `Invalid heading format: "${line.trim()}"`,
           line: lineNumber,
-          column: column + 1,
+          column: column + leadingSpace(line) + 1,
           code: 'INVALID_HEADING_FORMAT',
         });
         // A header refused past its line still names its type, so the file reads as a resource.
@@ -392,7 +399,7 @@ export class TscnParserCore {
         observer?.onError?.({
           message: `Invalid property format: "${line.trim()}"`,
           line: lineNumber,
-          column: column + 1,
+          column: column + leadingSpace(line) + 1,
           code: 'INVALID_PROPERTY_FORMAT',
         });
         continue;
@@ -408,7 +415,7 @@ export class TscnParserCore {
             joinedLength: property.value.length,
             skippedNewlines: [],
             startLine: lineNumber,
-            startColumn: column,
+            startColumn: column + leadingSpace(line),
             endLine: lineNumber,
             godotStartLine: godotLine,
             scanState,
@@ -428,7 +435,7 @@ export class TscnParserCore {
             key: property.key,
             value: property.value,
             line: lineNumber,
-            column,
+            column: column + leadingSpace(line),
             endLine: lineNumber,
             isMultiline: false,
             stored: resolved,
@@ -532,6 +539,11 @@ function lineStartsOf(content: string): number[] {
   const starts = [0];
   for (let at = content.indexOf('\n'); at !== -1; at = content.indexOf('\n', at + 1)) starts.push(at + 1);
   return starts;
+}
+
+/** The white space before a line's text, as `parseProperty` trims it. */
+function leadingSpace(line: string): number {
+  return line.length - line.trimStart().length;
 }
 
 /** The 0-based line and column of `offset`, searched forward from line `from`. */

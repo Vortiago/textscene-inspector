@@ -21,7 +21,7 @@ export interface PropertySlot {
   readonly value: string;
   /** One-based line the value starts on. */
   readonly startLine: number;
-  /** The column its text is read from: just past a heading's `]` where it follows one, else 0. */
+  /** The 0-based column its key starts at, past a heading's `]` where it follows one. */
   readonly startColumn: number;
   /** One-based line the value ends on, the same line unless the value is multiline. */
   readonly endLine: number;
@@ -172,7 +172,7 @@ export class LanguageDocument {
   headingText(section: DocumentSection): string {
     const line = this.lines[section.headingLine - 1] ?? '';
     const property = this.propertyByLine.get(section.headingLine)?.property;
-    return property?.startLine === section.headingLine ? line.slice(0, property.startColumn) : line;
+    return property?.startLine === section.headingLine ? line.slice(0, property.startColumn).trimEnd() : line;
   }
 
   /** Whether a one-based line and a zero-based column fall in a heading, not in a property after its `]`. */

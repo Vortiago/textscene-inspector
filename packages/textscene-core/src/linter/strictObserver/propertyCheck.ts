@@ -16,12 +16,11 @@ export function propertyRefusal({
   value,
   line,
   column,
-  isMultiline,
+  valueStart,
   stored,
 }: ParsedProperty): ParseError | null {
-  // Multi-line values (shader code, label text) and properties without a typed owner (index=/instance= nodes,
-  // ext_resource/gd_scene sections) go unvalidated.
-  if (isMultiline || !ownerType) return null;
+  // A value over several lines (shader code, label text) or with no typed owner goes unvalidated.
+  if (value.includes('\n') || !ownerType) return null;
 
   // The key as written first. Where nothing claims that spelling, the pair the engine applies
   // (`godot/classdb/deprecated.ts` resolves the alias and transforms the value), and the diagnostic names both,
@@ -37,19 +36,17 @@ export function propertyRefusal({
     lookupValue = stored.value;
   }
 
-  const validated = validator(lookupKey, lookupValue, line);
+  const validated = validator(lookupKey, lookupValue, valueStart?.line ?? line);
   if (!validated) return null;
-  // The validator counts from the property's text, which starts past a heading's `]` where it follows one.
-  const found: ParseError = { ...validated, column: validated.column + column };
+  // The validator counts `key.length + 3` from column 0, so this counts from where the key or value starts.
+  const valueColumn = valueStart ? valueStart.column : column + key.length + 3;
+  const found: ParseError = { ...validated, column: validated.column - lookupKey.length - 3 + valueColumn };
   const keyed: ParseError = { ...found, propertyKey: key };
   const error: ParseError =
     lookupKey === key
       ? keyed
       : {
           ...keyed,
-          // The validator's `propertyError` anchors the column on the key it was handed. The rebase
-          // lands it on the value after the key as written.
-          column: found.column - lookupKey.length + key.length,
           message: `Property '${key}' is applied as '${lookupKey} = ${lookupValue}': ${found.message}`,
         };
   return isNilLiteral(value) && !ownsNilMessage(error) ? nilConversion(error, key, value) : error;

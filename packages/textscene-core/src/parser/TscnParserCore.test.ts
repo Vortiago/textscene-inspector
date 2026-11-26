@@ -474,6 +474,15 @@ visible = true
       });
     });
 
+    it('gives the key column past a heading and the start of a value on a later line', () => {
+      const content = '[node name="R" type="Node2D"] visible =\n  false\n';
+      const onProperty = vi.fn<NonNullable<ParseObserver['onProperty']>>();
+
+      parser.parse(content, simpleCreator, { onProperty });
+
+      expect(onProperty.mock.calls[0]![0]).toMatchObject({ column: 30, valueStart: { line: 2, column: 2 } });
+    });
+
     it('passes ownerType=undefined where the section names no type', () => {
       const content = `[gd_scene format=3]
 config = 1

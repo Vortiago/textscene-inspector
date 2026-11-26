@@ -3,12 +3,7 @@ import { propertyRefusal } from './propertyCheck.js';
 import type { ParsedProperty } from '../../parser/TscnParserCore.js';
 import '../index.js';
 
-function property(
-  ownerType: string | undefined,
-  key: string,
-  value: string,
-  isMultiline = false
-): ParsedProperty {
+function property(ownerType: string | undefined, key: string, value: string): ParsedProperty {
   return {
     section: 'node',
     ownerType,
@@ -17,7 +12,7 @@ function property(
     line: 4,
     column: 0,
     endLine: 4,
-    isMultiline,
+    isMultiline: value.includes('\n'),
     stored: { key, value },
   };
 }
@@ -39,7 +34,21 @@ describe('propertyRefusal', () => {
   });
 
   it('skips a multi-line value', () => {
-    expect(propertyRefusal(property('Node3D', 'visible', '"yes"', true))).toBeNull();
+    expect(propertyRefusal(property('Node3D', 'visible', '"yes\nno"'))).toBeNull();
+  });
+
+  it('refuses a one-line value on the line after its key, at the value', () => {
+    const later = { ...property('Node3D', 'visible', '"yes"'), endLine: 5, isMultiline: true };
+    expect(propertyRefusal({ ...later, valueStart: { line: 5, column: 2 } })).toMatchObject({
+      line: 5,
+      column: 2,
+    });
+  });
+
+  it('places the value past a key that starts after a heading', () => {
+    expect(propertyRefusal({ ...property('Node3D', 'visible', '"yes"'), column: 20 })).toMatchObject({
+      column: 20 + 'visible'.length + 3,
+    });
   });
 
   it('skips a property with no typed owner', () => {
