@@ -72,7 +72,7 @@ function zoomViewAround(view: StageView, px: number, py: number, factor: number)
 
 const OPENING_VIEW: StageView = { pan: { x: 0, y: 0 }, zoom: 1 };
 
-/** One element for the stage's life, so a pan leaves the memoised world canvas alone. */
+/** One element for every stage, so a pan leaves the memoised world canvas alone. */
 const EDITOR_PARTS = <FocusSelection2D />;
 
 interface Canvas2DStageProps {
@@ -217,8 +217,7 @@ export function Canvas2DStage({
     return () => el.removeEventListener('wheel', onWheel);
   }, [moveView, viewStore]);
 
-  // Drag-to-pan through pointer capture, not window listeners, so an unmount
-  // mid-drag cannot set state on an unmounted component.
+  // Drag-to-pan through pointer capture, not window listeners: the stage keeps a drag that leaves its edge.
   const pan2dDrag = useRef({ startX: 0, startY: 0, ox: 0, oy: 0, active: false });
 
   // Touch takes its own path: one finger pans, and two pan and pinch together.

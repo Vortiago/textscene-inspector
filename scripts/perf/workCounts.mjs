@@ -16,7 +16,7 @@ export function parseWorkCounts({ drawCalls, sceneRenders, rows }) {
 function parseCount(text, cell) {
   const count = Number.parseFloat(text);
   if (!Number.isFinite(count)) {
-    throw new Error(`expected a count such as "12 draws" in the ${cell}, got "${text}"`);
+    throw new Error(`expected a number in the ${cell}, got "${text}"`);
   }
   return count;
 }

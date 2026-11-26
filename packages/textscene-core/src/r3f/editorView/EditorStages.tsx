@@ -23,7 +23,7 @@ const Canvas2DStage = lazy(() =>
   import('./Canvas2DStage/Canvas2DStage.js').then((m) => ({ default: m.Canvas2DStage }))
 );
 
-// One array for the stage's life: a new one each render would re-render the memoised world canvas.
+// One array for every render: a new one each render would re-render the memoised world canvas.
 const NO_ENTRIES: readonly never[] = [];
 
 /** The root scene as the editor's 2D view lays it out, over the scene the view reads. */

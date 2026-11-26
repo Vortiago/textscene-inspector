@@ -41,7 +41,7 @@ describe('parseWorkCounts', () => {
 
   it('refuses a snapshot taken before the first window, with no count to read (error case)', () => {
     expect(() => parseWorkCounts({ drawCalls: '', sceneRenders: '', rows: [] })).toThrow(
-      'expected a count such as "12 draws" in the draws total, got ""'
+      'expected a number in the draws total, got ""'
     );
   });
 });
