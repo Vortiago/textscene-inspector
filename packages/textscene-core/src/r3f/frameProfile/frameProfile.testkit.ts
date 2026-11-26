@@ -25,7 +25,7 @@ export function manualClock(): { now: () => number; advance: (ms: number) => voi
   return { now: () => time, advance: (ms) => (time += ms) };
 }
 
-/** What a profile reads of a renderer: no timer query or GPU name, a draw count a test moves, a list. */
+/** What a profile reads of a renderer: no timer query, GPU name or extension, a moved draw count, a list. */
 export function profiledRendererMembers() {
   const info = {
     autoReset: true,
@@ -33,8 +33,15 @@ export function profiledRendererMembers() {
     reset: () => (info.render.calls = 0),
   };
   const list = { opaque: [], transmissive: [], transparent: [] } as unknown as THREE.WebGLRenderList;
-  const context = { getExtension: () => null, getParameter: () => null };
-  return { getContext: () => context, info, renderLists: { get: () => list } };
+  const context = { getExtension: () => null, getParameter: () => null, getSupportedExtensions: () => [] };
+  const domElement = { width: 0, height: 0 };
+  return {
+    getContext: () => context,
+    info,
+    renderLists: { get: () => list },
+    domElement,
+    getPixelRatio: () => 1,
+  };
 }
 
 /** A renderer with only the members a profile reads. */
@@ -117,6 +124,7 @@ export function timerContext() {
       return pname === context.QUERY_RESULT_AVAILABLE ? query.isAvailable : query.elapsedNs;
     },
     getParameter: (pname: number) => (pname === ext.GPU_DISJOINT_EXT ? state.isDisjoint : null),
+    getSupportedExtensions: () => ['EXT_disjoint_timer_query_webgl2'],
   };
   return {
     renderer: { ...profiledRendererMembers(), getContext: () => context } as unknown as THREE.WebGLRenderer,

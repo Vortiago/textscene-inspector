@@ -1,6 +1,6 @@
 /** What a frame profile publishes: one window's frames, averaged per frame. */
 
-import type { StoredDepthRead } from '../../shaders/spatial/directionalShadowDepth.js';
+import type { RecordedDevice } from './recordedDevice.js';
 
 /** The render steps a frame profile times, in the order the overlay lists them. */
 export const RENDER_STEPS = [
@@ -76,20 +76,28 @@ export interface DrawSource {
   material: string;
 }
 
+/** A GPU time over a recording's frames: the median and the 10th and 90th percentiles, in ms. */
+export interface GpuSpread {
+  medianMs: number;
+  lowMs: number;
+  highMs: number;
+}
+
 export interface DrawStats extends DrawSource {
   /** The GPU time per frame of every call from this source, or null while no GPU result has arrived. */
   gpuMs: number | null;
+  /** Over the frames that drew this source, or null while no GPU result has arrived. */
+  gpuSpread: GpuSpread | null;
   callsPerFrame: number;
 }
 
 /** What a recording of one canvas answers: the overlay's numbers, averaged over its own frames. */
 export interface FrameRecording extends FrameStats {
   frames: number;
-  /** The GPU the browser names, or null when it names none. */
-  gpu: string | null;
-  /** The read of the sun's stored depth the page picked for that GPU. */
-  storedDepthRead: StoredDepthRead;
+  device: RecordedDevice;
   timings: FrameTimings;
+  /** The whole frame's GPU time, or null while no GPU result has arrived. */
+  gpuSpread: GpuSpread | null;
   /** Present when the recording timed each draw, slowest first. Each draw costs its own GPU query. */
   draws?: readonly DrawStats[];
 }

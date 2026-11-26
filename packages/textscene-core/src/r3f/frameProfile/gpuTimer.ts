@@ -60,18 +60,15 @@ export class GpuTimer<K> {
     if (this.pending.length > MAX_PENDING_FRAMES) this.delete(this.pending.shift()!);
   }
 
-  /**
-   * Hands each segment of every frame whose results have all arrived to `onSegment`, oldest first,
-   * and answers how many frames that was. A disjoint operation, such as a clock change, voids every
-   * result in flight, so those frames are dropped. A lost context voids every query it made, so
-   * the pool empties too and a restored context gets new queries.
-   */
-  collect(onSegment: (key: K, ns: number) => void): number {
+  /** Hands each arrived frame's segments to `onSegment`, oldest first, then `onFrame`. Answers the count. */
+  collect(onSegment: (key: K, ns: number) => void, onFrame: () => void = () => {}): number {
+    // A lost context voids every query it made, so the pool empties and a restored context gets new ones.
     if (this.gl.isContextLost()) {
       this.pending.length = 0;
       this.pool.length = 0;
       return 0;
     }
+    // A disjoint operation, such as a clock change, voids every result in flight.
     if (this.gl.getParameter(this.ext.GPU_DISJOINT_EXT)) {
       for (const frame of this.pending.splice(0)) this.recycle(frame);
       return 0;
@@ -83,6 +80,7 @@ export class GpuTimer<K> {
         onSegment(key, this.gl.getQueryParameter(query, this.gl.QUERY_RESULT) as number);
       }
       this.recycle(frame);
+      onFrame();
       frames += 1;
     }
     return frames;

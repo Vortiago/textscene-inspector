@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { beginStep, endStep, recordFrames, startFrameCount, type FrameProfile } from './frameProfile';
 import type { FrameRecording } from './frameStats';
-import { timeEachDraw } from './frameRecording';
+import { spreadOf, timeEachDraw } from './frameRecording';
 import {
   cpuOnlyRenderer,
   FRAME_INTERVAL_MS,
@@ -55,6 +55,10 @@ function draw(renderer: THREE.WebGLRenderer, object: THREE.Object3D, material: T
   );
 }
 
+function steady(ms: number) {
+  return { medianMs: ms, lowMs: ms, highMs: ms };
+}
+
 function named<T extends THREE.Object3D | THREE.Material>(thing: T, name: string): T {
   thing.name = name;
   return thing;
@@ -90,7 +94,7 @@ describe('recordFrames', () => {
     const recorded = recordFrames({ frames: 2 });
     runFrames(profile, 0, 2);
     const [recording] = await recorded;
-    expect(recording!.storedDepthRead).toBe('fetched');
+    expect(recording!.device.storedDepthRead).toBe('fetched');
   });
 
   it('records each timed renderer on the page', async () => {
@@ -153,9 +157,30 @@ describe('recordFrames with draws', () => {
   it('gives each step, object and material its GPU time and calls per frame, slowest first', async () => {
     const { draws } = await recordedDraws();
     expect(draws).toEqual([
-      { step: 'Scene draw', object: 'Floor', material: 'ground.gdshader', gpuMs: 4, callsPerFrame: 2 },
-      { step: 'Scene draw', object: 'Wall', material: 'ground.gdshader', gpuMs: 2, callsPerFrame: 1 },
-      { step: 'Shadows', object: 'Wall', material: 'MeshDepthMaterial', gpuMs: 2, callsPerFrame: 1 },
+      {
+        step: 'Scene draw',
+        object: 'Floor',
+        material: 'ground.gdshader',
+        gpuMs: 4,
+        gpuSpread: steady(4),
+        callsPerFrame: 2,
+      },
+      {
+        step: 'Scene draw',
+        object: 'Wall',
+        material: 'ground.gdshader',
+        gpuMs: 2,
+        gpuSpread: steady(2),
+        callsPerFrame: 1,
+      },
+      {
+        step: 'Shadows',
+        object: 'Wall',
+        material: 'MeshDepthMaterial',
+        gpuMs: 2,
+        gpuSpread: steady(2),
+        callsPerFrame: 1,
+      },
     ]);
   });
 
@@ -170,6 +195,33 @@ describe('recordFrames with draws', () => {
   });
 });
 
+describe('the spread of a recording', () => {
+  it("gives each draw's 10th and 90th percentile over the frames, so a paste shows its noise", async () => {
+    const { gpu, renderer } = drawingRenderer(0);
+    const profile = timed(renderer);
+    const floor = named(new THREE.Mesh(), 'Floor');
+    let frame = 0;
+    renderer.renderBufferDirect = () => gpu.advanceGpu(frame % 2 === 0 ? 1 : 3);
+    const recorded = recordFrames({ frames: 10, draws: true });
+    runFrames(profile, 0, 11, () => {
+      frame += 1;
+      draw(renderer, floor, new THREE.MeshBasicMaterial());
+      gpu.resolve();
+    });
+    const [recording] = await recorded;
+    expect(recording!.draws![0]!.gpuSpread).toMatchObject({ lowMs: 1, highMs: 3 });
+    expect(recording!.gpuSpread).toMatchObject({ lowMs: 1, highMs: 3 });
+  });
+
+  it('takes the median and the percentiles of the frame times', () => {
+    expect(spreadOf([5e6, 1e6, 3e6, 2e6, 4e6])).toEqual({ medianMs: 3, lowMs: 1, highMs: 5 });
+  });
+
+  it('is null with no GPU frame (edge case)', () => {
+    expect(spreadOf([])).toBeNull();
+  });
+});
+
 describe('recordFrames with draws and no timer query', () => {
   it('still counts the calls of each draw, with no GPU time', async () => {
     const renderer = cpuOnlyRenderer();
@@ -181,7 +233,14 @@ describe('recordFrames with draws and no timer query', () => {
     );
     const [recording] = await recorded;
     expect(recording!.draws).toEqual([
-      { step: 'Other', object: 'Floor', material: 'MeshBasicMaterial', gpuMs: null, callsPerFrame: 1 },
+      {
+        step: 'Other',
+        object: 'Floor',
+        material: 'MeshBasicMaterial',
+        gpuMs: null,
+        gpuSpread: null,
+        callsPerFrame: 1,
+      },
     ]);
   });
 });

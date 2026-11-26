@@ -15,8 +15,7 @@ import {
   type StepKey,
 } from './frameStats.js';
 import { add, statsOf, WindowSums } from './windowSums.js';
-import { glRendererName } from '../../shaders/pipeline/glRendererName.js';
-import { storedDepthRead } from '../directionalShadow/storedDepthRead.js';
+import { recordedDevice } from './recordedDevice.js';
 import {
   addDrawGpuTime,
   countDraw,
@@ -146,6 +145,9 @@ class Profile implements FrameProfile {
   private segmentDrawCalls = 0;
   /** Written only by `startTimings` and `stopTimings`. */
   private gpu: GpuTimer<Segment> | null = null;
+  /** The GPU frame `collect` hands over: written by `addGpuTime`, cleared by `endGpuFrame`. */
+  private gpuFrameNs = 0;
+  private readonly gpuFrameDrawNs = new Map<DrawSource, number>();
   /** Written only by `startTimings` and `stopTimings`: `recordFrames` reads it. */
   isTimed = false;
   private readonly wasAutoReset: boolean;
@@ -172,7 +174,7 @@ class Profile implements FrameProfile {
       });
     }
     if (this.gpu) {
-      const frames = this.gpu.collect(this.addGpuTime);
+      const frames = this.gpu.collect(this.addGpuTime, this.endGpuFrame);
       this.addToEach((sums) => (sums.gpuFrames += frames));
     }
     this.recordings.push(...this.starting.splice(0));
@@ -296,11 +298,8 @@ class Profile implements FrameProfile {
     const complete = this.recordings.filter((recording) => recording.isComplete());
     if (complete.length === 0) return;
     this.recordings = this.recordings.filter((recording) => !recording.isComplete());
-    const renderer = {
-      gpu: glRendererName(this.renderer.getContext() as WebGL2RenderingContext),
-      storedDepthRead: storedDepthRead(),
-    };
-    for (const recording of complete) recording.finish(this.gpu !== null, renderer);
+    const device = recordedDevice(this.renderer);
+    for (const recording of complete) recording.finish(this.gpu !== null, device);
     this.isTimingDraws = this.recordings.some((recording) => recording.timesDraws);
   }
 
@@ -338,7 +337,16 @@ class Profile implements FrameProfile {
       sums.gpuNs += ns;
       add(sums.stepGpuNs, step, ns);
     });
-    if (draw) addDrawGpuTime(this.recordings, draw, ns);
+    this.gpuFrameNs += ns;
+    if (!draw) return;
+    addDrawGpuTime(this.recordings, draw, ns);
+    add(this.gpuFrameDrawNs, draw, ns);
+  };
+
+  private readonly endGpuFrame = (): void => {
+    for (const recording of this.recordings) recording.addGpuFrame(this.gpuFrameNs, this.gpuFrameDrawNs);
+    this.gpuFrameNs = 0;
+    this.gpuFrameDrawNs.clear();
   };
 
   private publishWindow(): void {

@@ -26,10 +26,21 @@ export function isFullPrecisionByte(byte: number): boolean {
   return Math.abs(byte - FULL_PRECISION_BYTE) <= TOLERANCE_BYTES;
 }
 
+/** Written only by `filtersTwoBytesExactly`: each renderer's byte, which a frame recording reports. */
+// eslint-disable-next-line no-restricted-syntax -- a renderer is an object key with no use in perObject's stamp.
+const probedBytes = new WeakMap<THREE.WebGLRenderer, number>();
+
 /** Whether the GPU's linear filter mixes two texels' byte pairs into their depths' mix, once per renderer. */
-export const filtersTwoBytesExactly = perObject((renderer: THREE.WebGLRenderer) =>
-  isFullPrecisionByte(probeByte(renderer))
-);
+export const filtersTwoBytesExactly = perObject((renderer: THREE.WebGLRenderer) => {
+  const byte = probeByte(renderer);
+  probedBytes.set(renderer, byte);
+  return isFullPrecisionByte(byte);
+});
+
+/** The byte the probe read on `renderer`, or null where it has not run, as on a page that forces a read. */
+export function measuredProbeByte(renderer: THREE.WebGLRenderer): number | null {
+  return probedBytes.get(renderer) ?? null;
+}
 
 function probeByte(renderer: THREE.WebGLRenderer): number {
   const texels = new THREE.DataTexture(PROBE_TEXELS, 2, 1, THREE.RGFormat, THREE.UnsignedByteType);

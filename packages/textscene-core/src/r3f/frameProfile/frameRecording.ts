@@ -1,5 +1,6 @@
 import type * as THREE from 'three';
-import type { DrawSource, DrawStats, FrameRecording, StepKey } from './frameStats.js';
+import type { DrawSource, DrawStats, FrameRecording, GpuSpread, StepKey } from './frameStats.js';
+import type { RecordedDevice } from './recordedDevice.js';
 import { add, statsOf, WindowSums } from './windowSums.js';
 
 export interface RecordOptions {
@@ -16,6 +17,9 @@ export class Recording {
   readonly sums = new WindowSums();
   readonly drawGpuNs = new Map<DrawSource, number>();
   readonly drawCalls = new Map<DrawSource, number>();
+  /** Each GPU frame's time, and each draw source's time in the frames that drew it, in ns. */
+  private readonly frameGpuNs: number[] = [];
+  private readonly drawFrameGpuNs = new Map<DrawSource, number[]>();
   readonly frames: number;
   readonly timesDraws: boolean;
   readonly result: Promise<FrameRecording>;
@@ -38,13 +42,25 @@ export class Recording {
     return this.sums.frames >= this.frames;
   }
 
-  finish(hasGpuTimer: boolean, renderer: Pick<FrameRecording, 'gpu' | 'storedDepthRead'>): void {
+  /** Adds one GPU frame: its whole time, and each draw source's time in it. */
+  addGpuFrame(frameNs: number, drawNs: ReadonlyMap<DrawSource, number>): void {
+    this.frameGpuNs.push(frameNs);
+    if (!this.timesDraws) return;
+    for (const [source, ns] of drawNs) {
+      const frames = this.drawFrameGpuNs.get(source);
+      if (frames) frames.push(ns);
+      else this.drawFrameGpuNs.set(source, [ns]);
+    }
+  }
+
+  finish(hasGpuTimer: boolean, device: RecordedDevice): void {
     const stats = statsOf(this.sums, { hasGpuTimer });
     this.resolve({
       ...stats,
       timings: stats.timings!,
+      gpuSpread: spreadOf(this.frameGpuNs),
       frames: this.sums.frames,
-      ...renderer,
+      device,
       ...(this.timesDraws && { draws: this.drawStats() }),
     });
   }
@@ -57,10 +73,21 @@ export class Recording {
     const draws = [...this.drawCalls].map(([source, calls]) => ({
       ...source,
       gpuMs: this.sums.gpuMsPerFrame(this.drawGpuNs.get(source) ?? 0),
+      gpuSpread: spreadOf(this.drawFrameGpuNs.get(source) ?? []),
       callsPerFrame: calls / this.sums.frames,
     }));
     return draws.sort((a, b) => (b.gpuMs ?? 0) - (a.gpuMs ?? 0));
   }
+}
+
+const NS_PER_MS = 1e6;
+
+/** The median and the 10th and 90th percentiles of `ns`, in ms, or null for no frames. */
+export function spreadOf(ns: readonly number[]): GpuSpread | null {
+  if (ns.length === 0) return null;
+  const sorted = [...ns].sort((a, b) => a - b);
+  const at = (fraction: number) => sorted[Math.round(fraction * (sorted.length - 1))]! / NS_PER_MS;
+  return { medianMs: at(0.5), lowMs: at(0.1), highMs: at(0.9) };
 }
 
 /** One draw source per step, object and material, so a recording's sums key on identity. */
