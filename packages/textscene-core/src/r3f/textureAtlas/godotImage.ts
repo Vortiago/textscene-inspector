@@ -1,11 +1,10 @@
-/** A held texture's pixels as Godot's image holds them: RGBA8 sRGB bytes, the top row first. */
-
 import * as THREE from 'three';
-import { readImagePixels, type ImagePixels } from '../../resources/formats/image/imagePixels.js';
+import { imageSize, readImagePixels } from '../../resources/formats/image/imagePixels.js';
 import { isLiveTarget, liveTargetPixels } from '../liveTargets.js';
 import { perObject } from '../../utils/perObject.js';
 import { isBottomUp, reverseRowsInPlace, reversedRows } from '../../utils/reversedRows.js';
 
+/** Pixels as Godot's image holds them: RGBA8 sRGB bytes, the top row first. */
 export interface GodotImage {
   width: number;
   height: number;
@@ -27,6 +26,23 @@ export function readGodotImage(texture: THREE.Texture): GodotImage | undefined {
   return isBottomUp(texture) ? topRowFirst(pixels) : pixels;
 }
 
+/** An image as Godot pads it, in its own format (`tile_set.cpp:5637`): half floats stay half floats. */
+export interface OwnFormatImage {
+  width: number;
+  height: number;
+  data: GodotImage['data'] | Uint16Array;
+}
+
+/** A fresh read of `texture`'s pixels in their own format, top row first. Undefined: unreadable. */
+export function readOwnFormatImage(texture: THREE.Texture): OwnFormatImage | undefined {
+  if (!readsAsBytes(texture)) return undefined;
+  const { data } = (texture.image ?? {}) as { data?: unknown };
+  if (texture.type !== THREE.HalfFloatType || !(data instanceof Uint16Array)) return readGodotImage(texture);
+  const size = imageSize(texture.image);
+  if (!size) return undefined;
+  return isBottomUp(texture) ? topRowFirst({ ...size, data }) : { ...size, data };
+}
+
 /**
  * A live target's pixels now, read at each call, as Godot copies the target's texels into an atlas
  * at each rebuild (`texture_storage.cpp:3216`). Its version never moves, so a cached read would
@@ -40,8 +56,8 @@ function readLiveTargetImage(texture: THREE.Texture): GodotImage | undefined {
   return pixels;
 }
 
-function topRowFirst({ width, height, data }: ImagePixels): GodotImage {
-  return { width, height, data: reversedRows(data, width, height) };
+function topRowFirst<Image extends OwnFormatImage>(image: Image): Image {
+  return { ...image, data: reversedRows(image.data, image.width, image.height) };
 }
 
 /**

@@ -70,6 +70,15 @@ describe('useRuntimeAtlasTexture', () => {
     expect([padded.type, (padded.image.data as Uint16Array)[0]]).toEqual([THREE.HalfFloatType, two]);
   });
 
+  it('gives no atlas for a half-float texture of fewer than four channels', async () => {
+    const texels = new Uint16Array(2 * 2 * 4).fill(0x4000);
+    const red = new THREE.DataTexture(texels, 2, 2, THREE.RedFormat, THREE.HalfFloatType);
+
+    const { result } = await builtCopy(red);
+
+    expect(result.current).toBe('unreadable');
+  });
+
   it('gives the padded copy top row first, so the shader samples it without a turned copy', async () => {
     const { result } = await builtCopy(textureOf());
 
@@ -194,6 +203,7 @@ describe('useRuntimeAtlasTexture', () => {
 
     expect(read).toHaveBeenCalledTimes(2);
   });
+
   it('keeps the copy it showed while the next version builds, and disposes it once that lands', async () => {
     const texture = textureOf();
     const hook = await builtCopy(texture);

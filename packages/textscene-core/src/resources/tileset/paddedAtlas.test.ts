@@ -4,7 +4,14 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { ImagePixels } from '../formats/image/imagePixels';
-import { atlasGridSize, paddedAtlasPixels, paddedTileRegion, type AtlasPixels } from './paddedAtlas';
+import {
+  atlasGridSize,
+  paddedAtlasLayout,
+  paddedAtlasPixels,
+  paddedAtlasSize,
+  paddedTileRegion,
+  type AtlasPixels,
+} from './paddedAtlas';
 import type { AtlasSourceModel } from './types';
 
 const source = {
@@ -48,6 +55,26 @@ describe('atlasGridSize', () => {
       textureSize
     );
     expect(grid).toEqual({ x: 0, y: 0 });
+  });
+});
+
+describe('paddedAtlasSize', () => {
+  const textureSize = { width: 20, height: 14 };
+
+  it('gives each cell of the grid its region and one texel on each side', () => {
+    const size = paddedAtlasSize(
+      { margins: { x: 2, y: 1 }, separation: { x: 1, y: 1 }, textureRegionSize: { x: 4, y: 4 } },
+      textureSize
+    );
+    expect(size).toEqual({ width: 18, height: 12 });
+  });
+
+  it('is empty for a texture smaller than one region', () => {
+    const size = paddedAtlasSize(
+      { margins: { x: 0, y: 0 }, separation: { x: 0, y: 0 }, textureRegionSize: { x: 32, y: 4 } },
+      textureSize
+    );
+    expect(size).toEqual({ width: 0, height: 0 });
   });
 });
 
@@ -149,5 +176,24 @@ describe('paddedAtlasPixels', () => {
       [4, 4, 5, 6],
       [4, 4, 5, 6],
     ]);
+  });
+});
+
+describe('paddedAtlasLayout', () => {
+  it("keeps the grid and each tile's size in the atlas", () => {
+    const layout = paddedAtlasLayout(atlasOf([['1:0', { x: 2, y: 1 }]], 8));
+
+    expect(layout).toEqual({
+      margins: { x: 0, y: 0 },
+      separation: { x: 0, y: 0 },
+      textureRegionSize: { x: 8, y: 8 },
+      tiles: new Map([['1:0', { sizeInAtlas: { x: 2, y: 1 } }]]),
+    });
+  });
+
+  it("leaves out the tiles' alternatives, which the worker job does not read", () => {
+    const layout = paddedAtlasLayout(atlasOf([['0:0', { x: 1, y: 1 }]], 8));
+
+    expect(layout.tiles.get('0:0')).not.toHaveProperty('alternatives');
   });
 });

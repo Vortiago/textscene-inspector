@@ -70,6 +70,17 @@ describe('canvasDataOf', () => {
     expect(block.viewportInTarget.toArray()).toEqual([0, 0, 1, 1]);
   });
 
+  it("measures a pass's whole target, as a window's or a SubViewport's own render counts it", () => {
+    const passCamera = new World2DCamera();
+    Object.assign(passCamera, { left: -32, right: 32, top: 16, bottom: -16 });
+    passCamera.updateProjectionMatrix();
+    passCamera.updateMatrixWorld();
+    const block = blockOf({ canvasModulate: RED }, 1, passCamera);
+
+    expect(block.screenPixelSize.toArray()).toEqual([1 / 64, 1 / 32]);
+    expect(block.viewportInTarget.toArray()).toEqual([0, 0, 1, 1]);
+  });
+
   it("measures the screen over Godot's viewport where the camera shows it", () => {
     const block = blockOf({ canvasModulate: RED }, 1, stageCamera({ x: 10, y: 20 }, 2));
 

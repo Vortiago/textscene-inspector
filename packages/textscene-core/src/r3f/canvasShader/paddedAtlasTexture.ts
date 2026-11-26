@@ -1,7 +1,6 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { useTextureWorkWhile } from '../../resources/textures/textureWork';
-import { imageSize } from '../../resources/formats/image/imagePixels';
 import { paddedAtlasLayout, type AtlasPixels } from '../../resources/tileset/paddedAtlas';
 import type { AtlasSourceModel } from '../../resources/tileset/types';
 import type { Texture2DResult } from '../../resources/useTexture2D';
@@ -9,10 +8,9 @@ import { usePendingWhile } from '../../resources/usePendingWhile';
 import { useResourceLoader } from '../../resources/useResource';
 import { vector2Equals } from '../../godot/math/vector';
 import { perObject } from '../../utils/perObject';
-import { isBottomUp, reversedRows } from '../../utils/reversedRows';
 import { inThreadJobRunner, type WorkerJobRunner } from '../../workers/WorkerJobRunner';
 import { usePaddedAtlasStandIn } from '../paddedAtlasStandIn';
-import { readGodotImage } from '../textureAtlas/godotImage';
+import { readOwnFormatImage } from '../textureAtlas/godotImage';
 
 type JobRunner = Pick<WorkerJobRunner, 'run'>;
 
@@ -89,7 +87,6 @@ function usePaddedCopy(texture: THREE.Texture | null, source: AtlasSourceModel):
   return shown?.built ?? 'building';
 }
 
-/** Holds the shown copy until a later commit shows another, so its texture is never disposed in view. */
 /** A copy of the same texture whose cells sit where the new source's do, so the draw samples them. */
 function placesCellsAlike(copy: PaddedCopy, texture: THREE.Texture, source: AtlasSourceModel): boolean {
   const { margins, separation, textureRegionSize } = copy.source;
@@ -101,6 +98,7 @@ function placesCellsAlike(copy: PaddedCopy, texture: THREE.Texture, source: Atla
   );
 }
 
+/** Holds the shown copy until a later commit shows another, so its texture is never disposed in view. */
 function useHeldCopy(copy: PaddedCopy | undefined): void {
   useEffect(() => {
     if (!copy) return undefined;
@@ -194,14 +192,6 @@ function paddedTexture(padded: AtlasPixels, texture: THREE.Texture): THREE.DataT
   return atlas;
 }
 
-/** A half-float texture's bits, top row first: Godot pads in the image's own format (`tile_set.cpp:5637`). */
-function halfFloatImage(texture: THREE.Texture): AtlasPixels | undefined {
-  const { data } = (texture.image ?? {}) as { data?: unknown };
-  const size = imageSize(texture.image);
-  if (texture.type !== THREE.HalfFloatType || !(data instanceof Uint16Array) || !size) return undefined;
-  return { ...size, data: isBottomUp(texture) ? reversedRows(data, size.width, size.height) : data };
-}
-
 interface PixelsInFlight {
   builds: number;
   version: number;
@@ -229,7 +219,7 @@ function holdPixels(texture: THREE.Texture): () => void {
 function pixelsOf(texture: THREE.Texture): AtlasPixels | null {
   const read = pixelsInFlight(texture);
   if (read.pixels === undefined || read.version !== texture.version) {
-    read.pixels = halfFloatImage(texture) ?? readGodotImage(texture) ?? null;
+    read.pixels = readOwnFormatImage(texture) ?? null;
     read.version = texture.version;
   }
   return read.pixels;
