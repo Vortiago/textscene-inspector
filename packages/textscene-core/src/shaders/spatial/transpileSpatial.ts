@@ -15,7 +15,12 @@ import {
   vec2,
 } from 'three/tsl';
 import type { Node, TextureNode } from 'three/webgpu';
-import { parsedShader, shaderSource, type ShaderOptions } from '../language/parseShader.js';
+import {
+  parsedShader,
+  shaderSource,
+  type ParsedShader,
+  type ShaderOptions,
+} from '../language/parseShader.js';
 import {
   emitTemplateStage,
   type ProgramResources,
@@ -59,6 +64,8 @@ import { PACKED_SPECIALISATION_DEFAULTS } from './packedSpecialisation.js';
 import { radianceOctmapNode } from './sceneSky.js';
 import { rendererOf } from '../preprocessor/renderingMethod.js';
 import { BoundNodeMaterial } from '../uniforms/boundMaterial.js';
+import { textHash, type CodeKey } from '../uniforms/programKey.js';
+import { SamplerBinding } from '../uniforms/samplerUniform.js';
 import type { Specialisation } from '../template/specialisation.js';
 import type { ProjectSampling } from '../uniforms/samplerState.js';
 import type { TranspiledUniform } from '../uniforms/transpiledUniform.js';
@@ -122,6 +129,7 @@ export function transpileSpatial(source: string, options: SpatialOptions = {}): 
     specialisations: resources.uniforms.specialisations,
   };
   const material = new BoundNodeMaterial(shader);
+  material.codeKey = codeKeyOf(parsed, options, resources.textures, parameters);
   // Godot's default specialisation before the first emit (`render_forward_clustered.cpp:4968-4987`).
   for (const [name, value] of PACKED_SPECIALISATION_DEFAULTS)
     resources.uniforms.presetSpecialisation(name, value);
@@ -150,6 +158,23 @@ export function transpileSpatial(source: string, options: SpatialOptions = {}): 
     printedErrors: queueError === undefined ? [] : [queueError],
     pointDraw: pipeline.pointDraw,
     castsShadow: castsShadow(pipeline),
+  };
+}
+
+/** The colour pass's code key: the text, each option that changes the code, and the textures it samples. */
+function codeKeyOf(
+  { code }: ParsedShader,
+  { file, renderingMethod, glVaryings, sampling }: SpatialOptions,
+  templateTextures: ReadonlyMap<string, TextureNode>,
+  parameters: ReadonlyMap<string, TranspiledUniform>
+): CodeKey {
+  return {
+    source: `colour|${textHash(JSON.stringify([code, file, renderingMethod, glVaryings, sampling]))}`,
+    textures: function* () {
+      yield* templateTextures.values();
+      for (const parameter of parameters.values())
+        if (parameter instanceof SamplerBinding) yield* parameter.textureNodes;
+    },
   };
 }
 

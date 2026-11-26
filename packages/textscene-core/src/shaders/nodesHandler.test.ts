@@ -180,3 +180,42 @@ describe('installNodesHandler', () => {
     vi.restoreAllMocks();
   });
 });
+
+/** The handler parts three reads to key a program: the frame of the draw and the renderer. */
+type KeyedHandler = {
+  renderStack: { sceneContext: { getCacheKey(): string } }[];
+  renderer: { getCacheKey(): string };
+  setObject(object: THREE.Object3D, material: THREE.Material): void;
+};
+
+/** The program key of `material` drawn on a mesh of `geometry`, as three computes it in a frame. */
+function programKeyOn(geometry: THREE.BufferGeometry, material: BoundNodeMaterial): string {
+  const recording = recordingRenderer();
+  installNodesHandler(recording.renderer);
+  const handler = recording.setNodesHandler.mock.calls[0]![0] as KeyedHandler;
+  handler.renderStack.push({ sceneContext: { getCacheKey: () => 'scene' } });
+  handler.renderer = { getCacheKey: () => 'renderer' };
+  handler.setObject(new THREE.Mesh(geometry, material), material);
+  return material.customProgramCacheKey();
+}
+
+describe('the program key of the installed handler', () => {
+  const materialOfOneCode = () => {
+    const material = new BoundNodeMaterial();
+    material.codeKey = { source: 'one text', textures: () => [] };
+    return material;
+  };
+
+  it('differs for a geometry with another attribute, as a missing attribute reads a constant', () => {
+    const plain = new THREE.BoxGeometry();
+    const coloured = new THREE.BoxGeometry();
+    coloured.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array(72 * 4), 4));
+    expect(programKeyOn(plain, materialOfOneCode())).not.toBe(programKeyOn(coloured, materialOfOneCode()));
+  });
+
+  it('is one key for two geometries of the same attributes', () => {
+    expect(programKeyOn(new THREE.BoxGeometry(), materialOfOneCode())).toBe(
+      programKeyOn(new THREE.SphereGeometry(), materialOfOneCode())
+    );
+  });
+});

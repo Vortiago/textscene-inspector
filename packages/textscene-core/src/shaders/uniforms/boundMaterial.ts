@@ -2,6 +2,7 @@ import { NodeMaterial } from 'three/webgpu';
 import type { ShaderSource, TranslatorFault } from '../fault/translatorFault.js';
 import type { Specialisation } from '../template/specialisation.js';
 import type { TranspiledUniform } from './transpiledUniform.js';
+import { programKeyOf, type CodeKey } from './programKey.js';
 
 /** The shader a transpiled material draws: its uniforms and the Godot text it comes from. */
 export interface MaterialShader {
@@ -37,6 +38,9 @@ export class BoundNodeMaterial extends NodeMaterial {
 
   /** Takes each program the GPU refuses for this material. Null logs the fault to the console. */
   onTranslatorFault: ((fault: TranslatorFault) => void) | null = null;
+
+  /** What decides the code, so materials of equal code share a program. Null keys on the node graph. */
+  codeKey: CodeKey | null = null;
 
   /** Runs before three keys a program, so the first program folds the specialisation values of its draw. */
   onBeforeProgram: (() => void) | null = null;
@@ -86,7 +90,9 @@ export class BoundNodeMaterial extends NodeMaterial {
   override customProgramCacheKey(): string {
     this.onBeforeProgram?.();
     const values = [...this.specialisations].map((constant) => constant.value);
-    return `${super.customProgramCacheKey()}|${values.join(',')}`;
+    // three keys a node graph on each node's id, so two graphs of equal code would compile twice.
+    const code = this.codeKey ? programKeyOf(this.codeKey) : super.customProgramCacheKey();
+    return `${code}|${values.join(',')}`;
   }
 
   override dispose(): void {
@@ -100,6 +106,7 @@ export class BoundNodeMaterial extends NodeMaterial {
     this.shader = source.shader;
     this.isShown = source.isShown;
     this.onTranslatorFault = source.onTranslatorFault;
+    this.codeKey = source.codeKey;
     return this;
   }
 }

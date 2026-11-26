@@ -137,3 +137,20 @@ describe('spatialPrepassDraw', () => {
     expect(prepassDrawsOf(material)).toEqual([]);
   });
 });
+
+describe("the depth variant's program key", () => {
+  it('differs from the colour variant of the same text', () => {
+    const { material } = spatialOf('void fragment() {\n\tDEPTH = 0.5;\n}\n');
+    expect(prepassDrawOf(material).material.customProgramCacheKey()).not.toBe(
+      material.customProgramCacheKey()
+    );
+  });
+
+  it('is one key for the depth variants of two translations of one text', () => {
+    const body = 'void fragment() {\n\tDEPTH = 0.5;\n}\n';
+    const [first, second] = [spatialOf(body).material, spatialOf(body).material];
+    expect(prepassDrawOf(first).material.customProgramCacheKey()).toBe(
+      prepassDrawOf(second).material.customProgramCacheKey()
+    );
+  });
+});
