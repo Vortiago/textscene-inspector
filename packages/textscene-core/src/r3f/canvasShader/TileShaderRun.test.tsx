@@ -187,8 +187,8 @@ describe('TileShaderRun', () => {
     };
     await run();
 
-    const [command] = slotCommands.last!;
+    const command = slotCommands.last![0]!;
     expect(slotCommands.texture).toBe(sheet);
-    expect(command!.kind === 'rect' && command.region.source).toEqual({ x: 8, y: 4, w: 16, h: 16 });
+    expect(command.kind === 'rect' && command.region.source).toEqual({ x: 8, y: 4, w: 16, h: 16 });
   });
 });
