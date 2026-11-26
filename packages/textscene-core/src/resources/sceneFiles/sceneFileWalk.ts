@@ -216,11 +216,18 @@ export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void
     for (const file of modelRemaps.keys()) if (!files.has(file)) modelRemaps.delete(file);
   }
 
+  // An invalidation drops the load in flight, and a pinned key asks for no other.
+  function requestPinnedAgain(busType: ResourceType, key: string): void {
+    if (busType === 'loadoutcome' && pinnedOutcomes.has(key)) loader.loadOutcomes.request(key);
+    else if (busType === 'glb' && pinnedModels.has(key)) loader.glbMeshes.request(key);
+    else if (busType !== 'loadoutcome' && busType !== 'glb' && pinnedParses.has(key))
+      processorOf(key).request(key);
+  }
+
   const stopWatching = loader.eventBus.onChange(WATCHED, ({ busType, event, key }) => {
     if (busType === 'glb' && event === 'invalidated') modelRemaps.delete(key);
     else if (busType !== 'loadoutcome' && event === 'invalidated') textFiles.delete(key);
-    if (busType === 'loadoutcome' && event === 'invalidated' && pinnedOutcomes.has(key))
-      loader.loadOutcomes.request(key);
+    if (event === 'invalidated') requestPinnedAgain(busType, key);
     if (!walkedPaths.has(key) && !textFiles.has(key)) return;
     walkedInput = null;
     onChange();

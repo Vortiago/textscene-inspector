@@ -2,7 +2,7 @@ import { createContext, useContext, type ReactNode } from 'react';
 import { projectSnaps2DTransformsToPixel } from '../../parser/projectSettingsParser.js';
 import { useProjectSettings } from './ProjectSettingsContext.js';
 
-/** A SubViewport's own `snap_2d_transforms_to_pixel`, or null in the root viewport. */
+/** The enclosing viewport node's own `snap_2d_transforms_to_pixel`, or null in the editor's scene root. */
 const PixelSnapContext = createContext<boolean | null>(null);
 PixelSnapContext.displayName = 'PixelSnapContext';
 
