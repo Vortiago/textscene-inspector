@@ -53,20 +53,24 @@ export function drawProjectedShadows(
   scene: THREE.Scene,
   camera: THREE.Camera
 ): void {
-  for (const depth of PROJECTED_DEPTHS)
-    drawWearing(
-      pass,
-      lights.filter((light) => depthOf(light) === depth),
-      depth,
-      scene,
-      camera
-    );
+  const isFloatRead = storedDepthRead() === 'float';
+  for (const light of lights) lightsWearing.get(depthOf(light, isFloatRead))!.push(light);
+  try {
+    for (const [depth, group] of lightsWearing) drawWearing(pass, group, depth, scene, camera);
+  } finally {
+    for (const group of lightsWearing.values()) group.length = 0;
+  }
 }
 
 const PROJECTED_DEPTHS = [flattenedFloatDepth, floatDepth, flattenedDepth, atlasDepth];
 
-function depthOf(light: ProjectedShadowLight): THREE.MeshDepthMaterial {
-  const isFloat = isSplitSun(light) && storedDepthRead() === 'float';
+/** Written only by `drawProjectedShadows`, which empties each group once drawn: no array per frame. */
+const lightsWearing = new Map<THREE.MeshDepthMaterial, ProjectedShadowLight[]>(
+  PROJECTED_DEPTHS.map((depth) => [depth, []])
+);
+
+function depthOf(light: ProjectedShadowLight, isFloatRead: boolean): THREE.MeshDepthMaterial {
+  const isFloat = isSplitSun(light) && isFloatRead;
   if (isSplitSun(light) && light.shadow.flattensNearCasters)
     return isFloat ? flattenedFloatDepth : flattenedDepth;
   return isFloat ? floatDepth : atlasDepth;

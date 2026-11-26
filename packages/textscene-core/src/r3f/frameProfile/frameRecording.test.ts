@@ -1,8 +1,8 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { beginStep, endStep, recordFrames, startFrameCount, type FrameProfile } from './frameProfile';
 import type { FrameRecording } from './frameStats';
-import { timeEachDraw } from './frameRecording';
+import { STALLED_RECORDING_MS, timeEachDraw } from './frameRecording';
 import {
   cpuOnlyRenderer,
   FRAME_INTERVAL_MS,
@@ -114,6 +114,19 @@ describe('recordFrames', () => {
     await expect(recorded).rejects.toThrow('expected 10 recorded frames, got 3: Performance turned off');
   });
 
+  it('rejects a recording once its view stops drawing, as a hidden view does (error case)', async () => {
+    vi.useFakeTimers();
+    try {
+      const profile = timed(cpuOnlyRenderer());
+      const recorded = recordFrames({ frames: 10 });
+      runFrames(profile, 0, 3);
+      vi.advanceTimersByTime(STALLED_RECORDING_MS);
+      await expect(recorded).rejects.toThrow(`got 3: no frame in ${STALLED_RECORDING_MS} ms`);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('refuses a count of frames it cannot average an interval over (error case)', () => {
     timed(cpuOnlyRenderer());
     expect(() => recordFrames({ frames: 1 })).toThrow('expected a whole count of 2 frames or more, got 1');
@@ -182,6 +195,20 @@ describe('recordFrames with draws', () => {
         callsPerFrame: 1,
       },
     ]);
+  });
+
+  it("leaves the frames drawn before the recording, whose GPU times arrive late, out of each draw's time", async () => {
+    const { gpu, renderer } = drawingRenderer(2);
+    const profile = timed(renderer);
+    const floor = named(new THREE.Mesh(), 'Floor');
+    runFrames(profile, 0, 3, () => draw(renderer, floor, new THREE.MeshBasicMaterial()));
+    const recorded = recordFrames({ frames: 4, draws: true });
+    runFrames(profile, 3, 5, () => {
+      draw(renderer, floor, new THREE.MeshBasicMaterial());
+      gpu.resolve();
+    });
+    const [recording] = await recorded;
+    expect(recording!.draws![0]!.gpuMs).toBe(2);
   });
 
   it('keeps the steps summing to the frame GPU time while it times each draw', async () => {

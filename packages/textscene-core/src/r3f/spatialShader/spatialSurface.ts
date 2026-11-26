@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { storedDepthRead } from '../directionalShadow/storedDepthRead.js';
+import { decideStoredDepthRead } from '../directionalShadow/storedDepthRead.js';
 import {
   generatedUnDrawnMessage,
   spatialShaderName,
@@ -64,7 +64,7 @@ export function spatialSurfaceOf(
     ...options,
     file: shader.file,
     instanceLayers: visualLayersOf,
-    storedDepthRead: storedDepthRead(),
+    storedDepthRead: decideStoredDepthRead(gl),
   });
   if (!('spatial' in compile)) return { refusal: refusalOf(shader, compile) };
   const { spatial } = compile;

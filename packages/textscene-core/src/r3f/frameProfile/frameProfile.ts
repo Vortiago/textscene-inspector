@@ -206,6 +206,7 @@ class Profile implements FrameProfile {
     });
     if (this.lastTimestamp! - this.windowStart! >= STATS_WINDOW_MS) this.publishWindow();
     this.finishCompleteRecordings();
+    for (const recording of this.recordings) recording.restartStallTimer();
   }
 
   beginStep(step: RenderStep): void {

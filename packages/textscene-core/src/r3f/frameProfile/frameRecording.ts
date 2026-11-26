@@ -12,6 +12,9 @@ export interface RecordOptions {
 
 const DEFAULT_FRAMES = 120;
 
+/** A recording with no frame for this long fails: a hidden view or a background tab draws none. */
+export const STALLED_RECORDING_MS = 5000;
+
 /** The frames and draw sums of one recording, which a profile fills and finishes. */
 export class Recording {
   readonly sums = new WindowSums();
@@ -20,6 +23,10 @@ export class Recording {
   /** Each GPU frame's time, and each draw source's time in the frames that drew it, in ns. */
   private readonly frameGpuNs: number[] = [];
   private readonly drawFrameGpuNs = new Map<DrawSource, number[]>();
+  /** GPU frames whose draws were timed: a frame drawn before the recording started carries none. */
+  private drawTimedGpuFrames = 0;
+  /** Written only by `restartStallTimer`, `finish` and `fail`. */
+  private stallTimer: ReturnType<typeof setTimeout> | undefined;
   readonly frames: number;
   readonly timesDraws: boolean;
   readonly result: Promise<FrameRecording>;
@@ -36,6 +43,16 @@ export class Recording {
       this.resolve = resolve;
       this.reject = reject;
     });
+    this.restartStallTimer();
+  }
+
+  /** Fails the recording unless another frame arrives within `STALLED_RECORDING_MS`. */
+  restartStallTimer(): void {
+    clearTimeout(this.stallTimer);
+    this.stallTimer = setTimeout(
+      () => this.fail(`no frame in ${STALLED_RECORDING_MS} ms, so the view stopped drawing`),
+      STALLED_RECORDING_MS
+    );
   }
 
   isComplete(): boolean {
@@ -45,7 +62,8 @@ export class Recording {
   /** Adds one GPU frame: its whole time, and each draw source's time in it. */
   addGpuFrame(frameNs: number, drawNs: ReadonlyMap<DrawSource, number>): void {
     this.frameGpuNs.push(frameNs);
-    if (!this.timesDraws) return;
+    if (!this.timesDraws || drawNs.size === 0) return;
+    this.drawTimedGpuFrames += 1;
     for (const [source, ns] of drawNs) {
       const frames = this.drawFrameGpuNs.get(source);
       if (frames) frames.push(ns);
@@ -54,6 +72,7 @@ export class Recording {
   }
 
   finish(hasGpuTimer: boolean, device: RecordedDevice): void {
+    clearTimeout(this.stallTimer);
     const stats = statsOf(this.sums, { hasGpuTimer });
     this.resolve({
       ...stats,
@@ -66,17 +85,22 @@ export class Recording {
   }
 
   fail(reason: string): void {
+    clearTimeout(this.stallTimer);
     this.reject(new Error(`expected ${this.frames} recorded frames, got ${this.sums.frames}: ${reason}`));
   }
 
   private drawStats(): DrawStats[] {
     const draws = [...this.drawCalls].map(([source, calls]) => ({
       ...source,
-      gpuMs: this.sums.gpuMsPerFrame(this.drawGpuNs.get(source) ?? 0),
+      gpuMs: this.drawGpuMsPerFrame(this.drawGpuNs.get(source) ?? 0),
       gpuSpread: spreadOf(this.drawFrameGpuNs.get(source) ?? []),
       callsPerFrame: calls / this.sums.frames,
     }));
     return draws.sort((a, b) => (b.gpuMs ?? 0) - (a.gpuMs ?? 0));
+  }
+
+  private drawGpuMsPerFrame(ns: number): number | null {
+    return this.drawTimedGpuFrames > 0 ? ns / NS_PER_MS / this.drawTimedGpuFrames : null;
   }
 }
 
