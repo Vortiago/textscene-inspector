@@ -291,7 +291,9 @@ describe('renderLightLists on a frame whose inputs match the last drawn frame', 
   });
 
   it('draws again when the camera moves', () => {
-    expect(secondFrameDraws(({ camera }) => camera.position.set(0.25, 0, 0))).toBe(1);
+    expect(
+      secondFrameDraws(({ camera }) => (camera.position.set(0.25, 0, 0), camera.updateMatrixWorld()))
+    ).toBe(1);
   });
 
   it('draws again when a light moves', () => {

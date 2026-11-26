@@ -163,7 +163,11 @@ const KEYED_INPUTS: ReadonlyArray<readonly [string, (rig: Rig) => void, () => Ri
     ),
     rigOf,
   ],
-  ['the camera transform', ({ frame }) => (frame.camera.position.x = 3), rigOf],
+  [
+    'the camera transform',
+    ({ frame }) => ((frame.camera.position.x = 3), frame.camera.updateMatrixWorld()),
+    rigOf,
+  ],
   [
     'the list a window is on',
     ({ frame }) => (frame.windows = new Map([['other', frame.windows.get('item')!]])),

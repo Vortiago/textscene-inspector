@@ -55,9 +55,8 @@ function pushAll(out: number[], numbers: ArrayLike<number>): void {
   for (let i = 0; i < numbers.length; i += 1) out.push(numbers[i]!);
 }
 
-/** A write this frame moves a node before any render has refreshed the world matrices the read takes. */
-function refreshWorldMatrices({ camera, passMeshes }: LightPassFrame): void {
-  camera.updateWorldMatrix(true, false);
+/** A write this frame moves a light mesh before a render refreshes it. The host refreshes the camera. */
+function refreshWorldMatrices({ passMeshes }: LightPassFrame): void {
   for (const { mesh } of passMeshes) mesh.updateWorldMatrix(true, false);
 }
 

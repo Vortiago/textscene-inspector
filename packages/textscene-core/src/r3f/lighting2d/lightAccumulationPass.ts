@@ -55,6 +55,7 @@ export interface AccumulationList {
 export interface LightAccumulationPass {
   gl: THREE.WebGLRenderer;
   scene: THREE.Scene;
+  /** Its world matrix current: the host refreshes it before the pass reads it. */
   camera: THREE.Camera;
   lists: readonly AccumulationList[];
   /** Every registered light mesh. Read each frame, so a mesh mounted since the last render counts. */

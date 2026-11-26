@@ -232,7 +232,7 @@ export function CanvasLightPass({ host, canvasModulate, space, children }: Canva
   const run = useCallback(() => {
     // A host that moves its camera this frame leaves `matrixWorldInverse` a frame old, and the
     // list windows project through it before the first draw refreshes it.
-    camera.updateMatrixWorld();
+    camera.updateWorldMatrix(true, false);
     const clip = readClip();
     for (const step of passSteps) step(camera, clip);
     capItemLights({ lights, items: cappedItems, passMeshes, viewport: clip.rect, windows });

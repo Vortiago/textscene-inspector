@@ -100,9 +100,12 @@ async function recordSettledFrameDraws(renderer: Rendered) {
   return draws;
 }
 
+/** The first frame draws with nothing kept, and the second draws the lists the cap commits from it. */
+const SETTLING_FRAMES = 2;
+
 /** Runs frames until the pass keeps its buffers, so a test starts from a settled frame. */
 async function settleLightPass(renderer: Rendered): Promise<void> {
-  for (let frame = 0; frame < 4; frame += 1) await recordSettledFrameDraws(renderer);
+  for (let frame = 0; frame < SETTLING_FRAMES; frame += 1) await recordSettledFrameDraws(renderer);
   expect(await recordSettledFrameDraws(renderer)).toEqual([]);
 }
 
