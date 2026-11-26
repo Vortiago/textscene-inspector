@@ -17,7 +17,7 @@ export interface GodotImage {
  * a read of a decoded image is a GPU readback. Undefined when the pixels cannot be read, as before
  * the image decodes.
  */
-export const godotImage = perObject(readGodotImage, { stamp: ({ version }) => version });
+const godotImage = perObject(readGodotImage, { stamp: ({ version }) => version });
 
 /** A fresh read of `texture`'s pixels, which no cache keeps. */
 export function readGodotImage(texture: THREE.Texture): GodotImage | undefined {
