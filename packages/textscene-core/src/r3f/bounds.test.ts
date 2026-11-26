@@ -8,6 +8,7 @@ import { describe, it, expect } from 'vitest';
 import {
   boxlessUserData,
   computeWorldBoundingBox,
+  drawsInstances,
   setGeometryBoxBound,
   godotAabbUserData,
 } from './bounds.js';
@@ -205,5 +206,19 @@ describe('computeWorldBoundingBox: an explicit Godot AABB', () => {
     aabb.userData = godotAabbUserData({ position: { x: 0, y: 0, z: 0 }, size: { x: 0, y: 0, z: 0 } });
 
     expect(computeWorldBoundingBox(new THREE.Group().add(aabb)).isEmpty()).toBe(true);
+  });
+});
+
+describe('drawsInstances', () => {
+  const instancedGeometry = () => new THREE.InstancedBufferGeometry();
+  it.each<[string, () => THREE.Object3D, boolean]>([
+    ['a mesh', () => new THREE.Mesh(new THREE.BoxGeometry()), false],
+    ['an instanced mesh', () => new THREE.InstancedMesh(new THREE.BoxGeometry(), undefined, 2), true],
+    ['a batched mesh', () => new THREE.BatchedMesh(1, 8), true],
+    ['a mesh over instanced geometry', () => new THREE.Mesh(instancedGeometry()), true],
+    ['points over instanced geometry', () => new THREE.Points(instancedGeometry()), true],
+    ['an object with no geometry', () => new THREE.Group(), false],
+  ])('%s', (_, object, expected) => {
+    expect(drawsInstances(object())).toBe(expected);
   });
 });
