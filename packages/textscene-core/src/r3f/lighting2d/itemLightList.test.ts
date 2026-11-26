@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { DEFAULT_LIGHT_CULL_KEY, directionalLightCullKey, type LightCullKey } from './lightCullKey';
-import { MAX_LIGHTS_PER_ITEM } from '../../godot/rendering/rendering';
+import { MAX_POSITIONAL_LIGHTS_PER_ITEM } from '../../godot/rendering/rendering';
 import {
   itemPositionalLights,
   positionalCandidates,
@@ -128,11 +128,7 @@ describe('the light list of an item under the per-item cap', () => {
   });
 });
 
-/**
- * Godot's per-item limit on positional lights: the loop breaks at `MAX_LIGHTS_PER_ITEM - 1`
- * (`renderer_canvas_render_rd.cpp:2380`).
- */
-const CAP = MAX_LIGHTS_PER_ITEM - 1;
+const CAP = MAX_POSITIONAL_LIGHTS_PER_ITEM;
 
 const ITEM_RECT: Rect2 = { x: 0, y: 0, w: 10, h: 10 };
 const OVER_ITEM: Rect2 = { x: -5, y: -5, w: 10, h: 10 };
