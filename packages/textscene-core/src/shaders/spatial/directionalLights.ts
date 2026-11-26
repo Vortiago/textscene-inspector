@@ -13,11 +13,8 @@ import {
   vogelDisk,
 } from '../../godot/rendering/lights/softShadowKernel.js';
 import { SCENE_DATA } from './sceneDataBlock.js';
-import {
-  bindDirectionalShadowLayout,
-  directionalShadowAtlasNode,
-  type DirectionalShadowAtlasShare,
-} from './directionalShadowDepth.js';
+import { bindDirectionalShadowLayout, directionalShadowAtlasNode } from './directionalShadowDepth.js';
+import type { DirectionalShadowAtlasShare } from './directionalShadowAtlasCells.js';
 
 /** A sun's shadow in the directional shadow atlas, as its row reads it (`light_storage.cpp:694-756`). */
 export interface DirectionalShadow {

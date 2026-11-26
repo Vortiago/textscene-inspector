@@ -34,6 +34,7 @@ import { EMISSION_EXPOSURE } from '../exposure/emissionExposure.js';
 import { visualLayersOf } from '../visualLayers.js';
 import { releasedOnUnmount } from '../sharedTexture.js';
 import { dfgTexture } from '../../shaders/spatial/dfgTexture.js';
+import { unboundDirectionalShadowColour } from '../../shaders/spatial/directionalShadowDepth.js';
 import { recordCastsShadow } from '../materials/recordedOnMaterial.js';
 import type { RoughnessLimiter } from '../../godot/rendering/roughnessLimiter.js';
 
@@ -67,6 +68,7 @@ export function spatialSurfaceOf(
   const { spatial } = compile;
   recordCastsShadow(spatial.material, spatial.castsShadow);
   releasedOnUnmount(dfgTexture());
+  releasedOnUnmount(unboundDirectionalShadowColour());
   // Written by each colour draw, so a program built between draws keeps the last one's soft shadows.
   let drawsSoftShadows = false;
   const specialise = () =>

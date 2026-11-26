@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { atlasCellsOf, type DirectionalShadowAtlasShare } from './directionalShadowDepth.js';
+import { atlasCellsOf, type DirectionalShadowAtlasShare } from './directionalShadowAtlasCells.js';
 
 const share = (
   rect: DirectionalShadowAtlasShare['rect'],
