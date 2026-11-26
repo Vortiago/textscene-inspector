@@ -2501,6 +2501,22 @@ Vector2(5, 5)
     failing: [],
     stop: 'Parse Error: Parse error. [Resource file res://row192.tscn:6]',
   },
+  {
+    row: 193,
+    reads: 'a backslash before CRLF inside a body value escapes the CR, so the LF is counted',
+    file: 'tscn',
+    text: '[gd_scene format=3]\r\n\r\n[node name="Root" type="Node2D"]\r\nmetadata/a = ["a\\\r\nb", ExtResource("9")]\r\n',
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row193.tscn:5]',
+  },
+  {
+    row: 194,
+    reads: 'a backslash before a space inside a body value escapes the space, so the newline is counted',
+    file: 'tscn',
+    text: '[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\nmetadata/a = ["a\\ \nb", ExtResource("9")]\n',
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row194.tscn:5]',
+  },
 ];
 
 /** The path Godot loaded the row under, which its stop line names. */

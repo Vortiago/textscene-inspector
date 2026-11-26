@@ -100,13 +100,12 @@ function scanHeadings(text: string): ScannedHeading[] {
       });
     },
     onProperty(property) {
-      const continuations = property.value.split('\n').length - 1;
       headings.at(-1)?.properties.push({
         key: property.key,
         storedKey: property.stored.key,
         value: property.value,
         startLine: property.line,
-        endLine: property.line + continuations,
+        endLine: property.endLine,
         isMultiline: property.isMultiline,
       });
     },

@@ -276,6 +276,8 @@ export interface FileValue {
   readonly extResourcesBefore: number;
   /** True for a value of the first heading after the header, which the loader reads as it opens the file. */
   readonly isOpeningTag: boolean;
+  /** The offset in `text` of each newline a string escapes, which Godot's counter skips. */
+  readonly skippedNewlines: readonly number[];
 }
 
 /** The **Raw view** of a scene: the tree a **Lint rule** reads. */

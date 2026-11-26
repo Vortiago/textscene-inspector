@@ -17,6 +17,12 @@ describe('TscnParserCore', () => {
     children: [],
   });
 
+  it('keeps an empty value empty and reads the key on the next line', () => {
+    const content = '[node name="Root" type="Node2D"]\ntexture =\nposition = Vector2(1, 2)\n';
+    const { scene } = parser.parse(content, simpleCreator);
+    expect(scene.nodes[0]?.rawProperties).toEqual({ texture: '', position: 'Vector2(1, 2)' });
+  });
+
   describe('callback pattern', () => {
     it('should call node creator for each node heading', () => {
       const content = `
@@ -431,6 +437,7 @@ visible = true
         key: 'size',
         value: 'Vector3(1, 2, 3)',
         line: 4,
+        endLine: 4,
         isMultiline: false,
         stored: { key: 'size', value: 'Vector3(1, 2, 3)' },
       });
@@ -441,6 +448,7 @@ visible = true
         key: 'text',
         value: '"first\nsecond"',
         line: 7,
+        endLine: 8,
         isMultiline: true,
         stored: { key: 'text', value: '"first\nsecond"' },
       });
@@ -451,6 +459,7 @@ visible = true
         key: 'visible',
         value: 'true',
         line: 9,
+        endLine: 9,
         isMultiline: false,
         stored: { key: 'visible', value: 'true' },
       });
@@ -475,6 +484,7 @@ visible = true
         key: 'config',
         value: '1',
         line: 2,
+        endLine: 2,
         isMultiline: false,
         stored: { key: 'config', value: '1' },
       });
@@ -485,6 +495,7 @@ visible = true
         key: 'visible',
         value: 'true',
         line: 5,
+        endLine: 5,
         isMultiline: false,
         stored: { key: 'visible', value: 'true' },
       });
@@ -509,6 +520,7 @@ background_mode = 1
         key: 'radiance_size',
         value: '2',
         line: 4,
+        endLine: 4,
         isMultiline: false,
         stored: { key: 'radiance_size', value: '2' },
       });
@@ -518,6 +530,7 @@ background_mode = 1
         key: 'background_mode',
         value: '1',
         line: 7,
+        endLine: 7,
         isMultiline: false,
         stored: { key: 'background_mode', value: '1' },
       });
@@ -554,6 +567,7 @@ background_mode = 1
         key: 'background_mode',
         value: '1',
         line: 4,
+        endLine: 4,
         isMultiline: false,
         stored: { key: 'background_mode', value: '1' },
       });
@@ -573,6 +587,7 @@ background_mode = 1
         key: 'background_mode',
         value: '1',
         line: 2,
+        endLine: 2,
         isMultiline: false,
         stored: { key: 'background_mode', value: '1' },
       });
@@ -594,6 +609,7 @@ frames = SubResource("sf")
         key: 'frames',
         value: 'SubResource("sf")',
         line: 4,
+        endLine: 4,
         isMultiline: false,
         stored: { key: 'sprite_frames', value: 'SubResource("sf")' },
       });
@@ -817,6 +833,7 @@ describe('the file values and heading order of a scan', () => {
         subResourcesBefore: 0,
         extResourcesBefore: 0,
         isOpeningTag: true,
+        skippedNewlines: [],
       },
       {
         text: '[Resource("res://a.tres")]',
@@ -825,6 +842,7 @@ describe('the file values and heading order of a scan', () => {
         subResourcesBefore: 0,
         extResourcesBefore: 0,
         isOpeningTag: false,
+        skippedNewlines: [],
       },
     ]);
   });
@@ -888,6 +906,7 @@ Resource("res://a.tres")]
         subResourcesBefore: 0,
         extResourcesBefore: 0,
         isOpeningTag: false,
+        skippedNewlines: [],
       },
     ]);
   });

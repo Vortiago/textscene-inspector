@@ -54,6 +54,13 @@ describe('LanguageDocument', () => {
     expect(property?.endLine).toBe(6);
   });
 
+  it('spans a value that starts on the line after its key', () => {
+    const text = ['[node name="Root" type="Node2D"]', 'position =', '', 'Vector2(1, 2)', ''].join('\n');
+    const property = new LanguageDocument(text).propertyAt(2)?.property;
+    expect(property?.startLine).toBe(2);
+    expect(property?.endLine).toBe(4);
+  });
+
   it('ends a fold on the last line with content', () => {
     const document = new LanguageDocument(SCENE);
     // The two nodes are one blank line apart, and the file ends with a newline.

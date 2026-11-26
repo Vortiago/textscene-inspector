@@ -9,7 +9,7 @@ function property(
   value: string,
   isMultiline = false
 ): ParsedProperty {
-  return { section: 'node', ownerType, key, value, line: 4, isMultiline, stored: { key, value } };
+  return { section: 'node', ownerType, key, value, line: 4, endLine: 4, isMultiline, stored: { key, value } };
 }
 
 describe('propertyRefusal', () => {

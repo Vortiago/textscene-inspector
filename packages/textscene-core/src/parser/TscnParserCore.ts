@@ -74,8 +74,10 @@ export interface ParsedProperty {
   key: string;
   /** The value as written. */
   value: string;
-  /** The line the value starts on. */
+  /** The line the key sits on. */
   line: number;
+  /** The line the value ends on, a later line where the value starts after its key's line. */
+  endLine: number;
   isMultiline: boolean;
   /** The pair the section's bag holds, a deprecated spelling resolved, so no observer derives it again. */
   stored: ResolvedProperty;
@@ -155,7 +157,12 @@ export class TscnParserCore {
     let pendingMultiline: {
       key: string;
       lines: string[];
+      /** The length of `lines` joined, so the offset of the newline after the last line. */
+      joinedLength: number;
+      /** The offset of each newline in the joined value that a string escapes. */
+      skippedNewlines: number[];
       startLine: number;
+      endLine: number;
       godotStartLine: number;
       scanState: ValueScanState;
     } | null = null;
@@ -210,10 +217,10 @@ export class TscnParserCore {
       fileValues.push({ ...value, ...before });
     };
     // A body is read after the file opens, so no body value sits in the opening tag.
-    const addBodyValue = (text: string, line: number) => {
-      if (currentSection === 'node') addFileValue({ text, line, place: 'node', isOpeningTag: false });
-      else if (currentSection === 'sub_resource' || currentSection === 'resource')
-        addFileValue({ text, line, place: 'section', isOpeningTag: false });
+    const addBodyValue = (text: string, line: number, skippedNewlines: readonly number[] = []) => {
+      const place = currentSection === 'node' ? 'node' : 'section';
+      if (currentSection === 'node' || currentSection === 'sub_resource' || currentSection === 'resource')
+        addFileValue({ text, line, place, isOpeningTag: false, skippedNewlines });
     };
 
     const storePending = () => {
@@ -222,13 +229,14 @@ export class TscnParserCore {
         const value = pendingMultiline.lines.join('\n');
         const resolved = resolveDeprecatedProperty(currentOwnerType(), pendingMultiline.key, value);
         currentProperties[resolved.key] = resolved.value;
-        addBodyValue(value, pendingMultiline.godotStartLine);
+        addBodyValue(value, pendingMultiline.godotStartLine, pendingMultiline.skippedNewlines);
         observer?.onProperty?.({
           section: currentSection,
           ownerType: currentOwnerType(),
           key: pendingMultiline.key,
           value,
           line: pendingMultiline.startLine,
+          endLine: pendingMultiline.endLine,
           isMultiline: pendingMultiline.lines.length > 1,
           stored: resolved,
         });
@@ -242,8 +250,10 @@ export class TscnParserCore {
       const place = type === 'connection' ? 'binds' : previous === 'node' ? 'node' : 'section';
       for (const { start, end, line } of fields) {
         // A field is one value, so one that opens with a quote is a string and holds no read.
-        if (content[start] !== '"')
-          addFileValue({ text: content.slice(start, end), line, place, isOpeningTag });
+        if (content[start] !== '"') {
+          const text = content.slice(start, end);
+          addFileValue({ text, line, place, isOpeningTag, skippedNewlines: escapedNewlinesIn(text) });
+        }
       }
     };
 
@@ -279,20 +289,26 @@ export class TscnParserCore {
       // heading. BBCode tags and bracketed content are string content, so
       // `isSectionHeading`, not `isHeading`, decides.
       if (pendingMultiline) {
-        if (isSectionHeading(line)) {
+        const awaitsValue = pendingMultiline.lines.length === 0;
+        if (isSectionHeading(line) || (awaitsValue && parseProperty(line))) {
+          // The lenient path keeps the next key, so an empty value stays empty.
           storePending();
-        } else if (pendingMultiline.lines.length === 0 && isEmpty(line)) {
+        } else if (awaitsValue && isEmpty(line)) {
           continue;
         } else {
           // Godot reads the value from the token after the `=`, so a value on a later line starts there.
-          if (pendingMultiline.lines.length === 0) pendingMultiline.godotStartLine = godotLine;
+          if (awaitsValue) pendingMultiline.godotStartLine = godotLine;
           // Scan only this chunk: a `\n` separator affects neither `inString` nor
           // `depth`, so scanning `line` alone yields the state the joined string
           // would.
+          pendingMultiline.joinedLength += (awaitsValue ? 0 : 1) + line.length;
           pendingMultiline.lines.push(line);
+          pendingMultiline.endLine = lineNumber;
           pendingMultiline.scanState = scanValueChunk(line, pendingMultiline.scanState);
-          if (pendingMultiline.scanState.inString && escapesItsNewline(content, lineStarts, i))
+          if (pendingMultiline.scanState.inString && escapesItsNewline(content, lineStarts, i)) {
+            pendingMultiline.skippedNewlines.push(pendingMultiline.joinedLength);
             skippedLines++;
+          }
           if (!isIncompleteState(pendingMultiline.scanState)) storePending();
           continue;
         }
@@ -360,11 +376,17 @@ export class TscnParserCore {
           pendingMultiline = {
             key: property.key,
             lines: awaitsValue ? [] : [property.value],
+            joinedLength: property.value.length,
+            skippedNewlines: [],
             startLine: lineNumber,
+            endLine: lineNumber,
             godotStartLine: godotLine,
             scanState,
           };
-          if (scanState.inString && escapesItsNewline(content, lineStarts, i)) skippedLines++;
+          if (scanState.inString && escapesItsNewline(content, lineStarts, i)) {
+            pendingMultiline.skippedNewlines.push(property.value.length);
+            skippedLines++;
+          }
         } else {
           // Stored as the setter takes it, `frames` as `sprite_frames`. A diagnostic names the text.
           const resolved = resolveDeprecatedProperty(currentOwnerType(), property.key, property.value);
@@ -376,6 +398,7 @@ export class TscnParserCore {
             key: property.key,
             value: property.value,
             line: lineNumber,
+            endLine: lineNumber,
             isMultiline: false,
             stored: resolved,
           });
@@ -433,6 +456,17 @@ function escapesItsNewline(content: string, lineStarts: readonly number[], at: n
   let backslashes = 0;
   while (content[newline - 2 - backslashes] === '\\') backslashes++;
   return backslashes % 2 === 1;
+}
+
+/** The offset of each newline in raw `text` after an odd run of backslashes, which Godot's counter skips. */
+function escapedNewlinesIn(text: string): number[] {
+  const skipped: number[] = [];
+  for (let at = text.indexOf('\n'); at >= 0; at = text.indexOf('\n', at + 1)) {
+    let backslashes = 0;
+    while (text[at - 1 - backslashes] === '\\') backslashes++;
+    if (backslashes % 2 === 1) skipped.push(at);
+  }
+  return skipped;
 }
 
 /** The offset each line of `content` starts at, as `splitLines` splits it. */

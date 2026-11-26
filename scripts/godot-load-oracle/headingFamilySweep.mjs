@@ -1,6 +1,9 @@
-import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
+
 const out = process.argv[2];
-rmSync(out, { recursive: true, force: true });
+if (!out) throw new Error('expected a folder to write the cases to, got no argument');
+// The cases go into a new or empty folder, so no file of the caller's is overwritten.
+if (existsSync(out) && readdirSync(out).length > 0) throw new Error(`expected an empty folder, got ${out}`);
 mkdirSync(out, { recursive: true });
 const H = '[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\n';
 const A = '\n[node name="A" type="Node2D" parent="."]\n';

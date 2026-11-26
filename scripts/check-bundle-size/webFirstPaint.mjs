@@ -11,7 +11,7 @@ export const WEB_DIST = join(REPO_ROOT, 'apps/textscene-web/dist');
 const CEILINGS = {
   // None: the dev first paint holds the fixture manifest, which grows with each fixture.
   dev: null,
-  public: { measured: 1_300_747, budget: 1_300_747 },
+  public: { measured: 1_300_851, budget: 1_300_851 },
 };
 
 /** The chunks a first paint loads: each entry and its static imports. */
