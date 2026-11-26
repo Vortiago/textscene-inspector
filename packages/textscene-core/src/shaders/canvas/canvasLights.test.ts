@@ -4,7 +4,6 @@ import { Light2DBlendMode, Light2DShadowFilter } from '../../godot/scene/light2d
 import {
   directionalLightRow,
   itemLightBits,
-  LIGHT_ROW_WORDS,
   lightArrayWords,
   pointLightRow,
   type PointLightPlacement,
@@ -75,7 +74,7 @@ describe('lightArrayWords', () => {
   it("writes each row at Godot's std430 offsets, 32 words apart", () => {
     const words = lightArrayWords([pointLightRow(LIGHT), pointLightRow(LIGHT)]);
     const floats = new Float32Array(words.buffer);
-    const second = LIGHT_ROW_WORDS;
+    const second = 32;
     expect(words.length).toBe(64);
     expect([...floats.subarray(second + 16, second + 20)]).toEqual([1, 0.5, 0.25, 1.5]);
     expect(words[second + 21]).toBe((2 << 16) | (1 << 22));

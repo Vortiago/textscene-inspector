@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { describe, expect, it, vi } from 'vitest';
-import { LIGHT_ROW_WORDS, type CanvasLightRow } from '../../shaders/canvas/canvasLights';
+import { type CanvasLightRow } from '../../shaders/canvas/canvasLights';
 import { DEFAULT_LIGHT_CULL_KEY } from '../lighting2d/lightCullKey';
 import type { CanvasLightDeclaration } from '../lighting2d/itemLightList';
 import type { CanvasLightRows, LightRowWriter } from '../lighting2d/lightRows';
@@ -45,8 +45,10 @@ function rowsOf(writers: Record<number, LightRowWriter>): CanvasLightRows {
 
 const drawn = (frameId: number) => ({ frameId, object: new THREE.Object3D(), camera });
 
-const redOf = (words: Uint32Array, index: number) =>
-  new Float32Array(words.buffer)[index * LIGHT_ROW_WORDS + 16];
+/** `sizeof(LightUniform)` in 32-bit words (`renderer_canvas_render_rd.h:443-457`). */
+const ROW_WORDS = 32;
+
+const redOf = (words: Uint32Array, index: number) => new Float32Array(words.buffer)[index * ROW_WORDS + 16];
 
 describe('canvasLightsOf', () => {
   it("writes each listed light's row at its index of the layer's order", () => {

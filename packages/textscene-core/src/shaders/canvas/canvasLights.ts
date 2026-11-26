@@ -122,7 +122,7 @@ export function directionalLightRow(light: DirectionalLightPlacement): CanvasLig
 }
 
 /** `sizeof(LightUniform)` in 32-bit words (`renderer_canvas_render_rd.h:443-457`). */
-export const LIGHT_ROW_WORDS = 32;
+const LIGHT_ROW_WORDS = 32;
 
 /** Word offsets of the members of `Light` at std430. */
 const TEXTURE_MATRIX = 0;

@@ -16,7 +16,7 @@ import type { CanvasShaderCommand } from './canvasCommands';
 import { directionalLightCullKey } from '../lighting2d/lightCullKey';
 import type { CanvasLightRows } from '../lighting2d/lightRows';
 import type { CanvasLightDeclaration } from '../lighting2d/itemLightList';
-import { LIGHT_ROW_WORDS, type CanvasLightRow } from '../../shaders/canvas/canvasLights';
+import { type CanvasLightRow } from '../../shaders/canvas/canvasLights';
 import type { RowBlock } from '../../shaders/template/rowBlock';
 import { FLAGS } from '../../shaders/canvas/canvasInstance';
 import { fakeCanvasRenderer, MAX_ANISOTROPY_PARAMETER } from '../testing/fakeCanvasRenderer';
@@ -462,6 +462,6 @@ describe('canvasShaderDraw lighting', () => {
     const data = new Float32Array((block.texture.image as { data: Uint32Array }).data.buffer);
     const color = Array.from(data.slice(firstWord + 16, firstWord + 20));
     const count = (quad.uniforms.get('canvas_data.directional_light_count') as { value: number }).value;
-    expect([count, color, LIGHT_ROW_WORDS]).toEqual([1, [0.5, 0.25, 1, 2], 32]);
+    expect([count, color]).toEqual([1, [0.5, 0.25, 1, 2]]);
   });
 });
