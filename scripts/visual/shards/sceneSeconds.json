@@ -505,6 +505,7 @@
   "material-mipmap-bias": 24.4,
   "material-mipmap-bias-normal": 14.8,
   "material-mipmap-import": 13.2,
+  "material-missing-map-placeholder-lit": 29,
   "material-next-pass": 24,
   "material-normal-map": 19.6,
   "material-normal-map-blue": 14.5,
