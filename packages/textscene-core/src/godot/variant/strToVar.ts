@@ -73,6 +73,17 @@ function int64Of(text: string): number {
   return Number(value > max ? max : value < min ? min : value);
 }
 
+/**
+ * True when a string escapes the newline at `at`, so Godot's counter skips it (variant_parser.cpp:386).
+ *
+ * @canonical Whether a string escapes a newline
+ */
+export function isEscapedNewline(text: string, at: number): boolean {
+  let backslashes = 0;
+  while (text[at - 1 - backslashes] === '\\') backslashes++;
+  return backslashes % 2 === 1;
+}
+
 /** One token at a time over `text` from `at`, as `get_token` reads a stream, counting lines as it does. */
 export class Tokens {
   constructor(

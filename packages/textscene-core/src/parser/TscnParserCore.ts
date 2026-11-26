@@ -31,6 +31,7 @@ import {
 } from './utils.js';
 import type { ParsedHeading, ValueScanState } from './utils.js';
 import { readTag, type TagField } from '../godot/variant/tagReader.js';
+import { isEscapedNewline } from '../godot/variant/strToVar.js';
 import { parseExternalResource, parseInternalResource } from './resourceParsers.js';
 import { seatScene, type SceneSeating } from './sceneTreeBuilder.js';
 import { refusesToInstantiate } from './instantiateRefusal.js';
@@ -451,21 +452,15 @@ export class TscnParserCore {
 
 /** True when line `at` ends on an odd run of backslashes with nothing, not even `\r`, before its `\n`. */
 function escapesItsNewline(content: string, lineStarts: readonly number[], at: number): boolean {
-  const newline = lineStarts[at + 1];
-  if (newline === undefined) return false;
-  let backslashes = 0;
-  while (content[newline - 2 - backslashes] === '\\') backslashes++;
-  return backslashes % 2 === 1;
+  const next = lineStarts[at + 1];
+  return next !== undefined && isEscapedNewline(content, next - 1);
 }
 
-/** The offset of each newline in raw `text` after an odd run of backslashes, which Godot's counter skips. */
+/** The offset of each newline in raw `text` that Godot's counter skips. */
 function escapedNewlinesIn(text: string): number[] {
   const skipped: number[] = [];
-  for (let at = text.indexOf('\n'); at >= 0; at = text.indexOf('\n', at + 1)) {
-    let backslashes = 0;
-    while (text[at - 1 - backslashes] === '\\') backslashes++;
-    if (backslashes % 2 === 1) skipped.push(at);
-  }
+  for (let at = text.indexOf('\n'); at >= 0; at = text.indexOf('\n', at + 1))
+    if (isEscapedNewline(text, at)) skipped.push(at);
   return skipped;
 }
 

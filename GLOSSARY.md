@@ -11,7 +11,7 @@ Godot's text scene file format: a sequence of `[heading key=value]` sections of 
 _Avoid_: "scene file", "godot file".
 
 **Heading** (`godot/variant/tagReader.ts`):
-A `[name field=value …]` tag that opens a section, read as `VariantParser::parse_tag` reads it: across lines up to its `]`, with comments skipped and any text after the `]` read as the section's body. The core scan reads each one this way, and draws what it can of one Godot refuses.
+A `[name field=value …]` tag that opens a section, read as `VariantParser::parse_tag` reads it. The tag runs across lines up to its `]`, with comments skipped, and any text after the `]` is the section's body. The core scan reads each one this way, and draws what it can of one Godot refuses.
 _Avoid_: reading a heading as one line.
 
 **Node**:

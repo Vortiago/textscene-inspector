@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readVariant, strToVar } from './strToVar';
+import { readVariant, strToVar, Tokens } from './strToVar';
 import { varToStr } from './varToStr';
 import { VARIANT_TYPE as T } from './variantType';
 
@@ -79,5 +79,38 @@ describe('strToVar', () => {
 
   it('refuses an object of a class that does not exist', () => {
     expect(readVariant('Object(NoSuchClass,"a":1)', { classExists: () => false })).toHaveProperty('error');
+  });
+});
+
+describe('Tokens', () => {
+  const lineOfSecondToken = (text: string) => {
+    const tokens = new Tokens(text);
+    tokens.next();
+    tokens.next();
+    return tokens.tokenStart.line;
+  };
+
+  it('counts a newline read as white space', () => {
+    expect(lineOfSecondToken('a\n\nb')).toBe(3);
+  });
+
+  it('counts the newline that ends a comment', () => {
+    expect(lineOfSecondToken('a ; note\nb')).toBe(2);
+  });
+
+  it('skips a newline a string escapes, as the string counter does', () => {
+    expect(lineOfSecondToken('"x\\\ny" b')).toBe(1);
+  });
+
+  it('counts a newline inside a string that no backslash escapes', () => {
+    expect(lineOfSecondToken('"x\ny" b')).toBe(2);
+  });
+
+  it('is not at the end before a read finds it', () => {
+    const tokens = new Tokens('a');
+    expect(tokens.isEof).toBe(false);
+    tokens.next();
+    expect(tokens.next()).toEqual({ kind: 'eof' });
+    expect(tokens.isEof).toBe(true);
   });
 });
