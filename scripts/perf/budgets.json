@@ -203,6 +203,40 @@
       }
     }
   },
+  "canvas-item-instances": {
+    "drawCalls": 7,
+    "steps": {
+      "Scene draw": {
+        "drawCalls": 6,
+        "runs": 1
+      },
+      "Canvas copy": {
+        "drawCalls": 1,
+        "runs": 1
+      },
+      "Other": {
+        "drawCalls": 0,
+        "runs": 1
+      }
+    }
+  },
+  "canvas-item-instances-translated": {
+    "drawCalls": 7,
+    "steps": {
+      "Scene draw": {
+        "drawCalls": 6,
+        "runs": 1
+      },
+      "Canvas copy": {
+        "drawCalls": 1,
+        "runs": 1
+      },
+      "Other": {
+        "drawCalls": 0,
+        "runs": 1
+      }
+    }
+  },
   "demo-2d-lights-and-shadows": {
     "drawCalls": 46,
     "steps": {

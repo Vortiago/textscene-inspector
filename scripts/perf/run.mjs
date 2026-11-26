@@ -111,6 +111,7 @@ class ProfiledPages {
 async function measureScene({ page, diagnostics }, baseUrl, scene) {
   clearDiagnostics(diagnostics);
   const { target, reason } = await openScene(page, baseUrl, scene.file, {
+    canvasItem: scene.canvasItem,
     onSlow: (ms) => console.log(`[perf]   ${scene.name}: no network idle within ${ms}ms`),
   });
   if (!target) return { work: null, reason };

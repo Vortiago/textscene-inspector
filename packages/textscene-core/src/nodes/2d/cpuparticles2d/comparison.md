@@ -51,11 +51,6 @@ particle's own `angle` does not turn the normal. With `local_coords = false`, th
 draws the particles at the canvas transform (`renderer_canvas_cull.cpp:267`). So the emitter's
 rotation does not turn the normal either, and Global stays lit from the right. Local turns it with the emitter.
 
-## Canvas template
-
-With `?canvasItem=translated`, the emitter draws its particles as one multimesh through the canvas template,
-as Godot does (`cpu_particles_2d.cpp:1293`). Each particle's custom data picks its flipbook cell in the shader.
-
 
 ## No preprocess
 <!-- compare: image=unit-cpuparticles2d-unpreprocessed status=done fixture=unit-cpuparticles2d-unpreprocessed.tscn particles=0.95 -->
@@ -72,6 +67,11 @@ so the instant is the same at any `speed_scale`.
 
 Godot draws nothing for an emitter that is neither active nor emitting, and neither does
 the previewer. An empty frame here is the correct frame.
+
+## Canvas template
+
+With `?canvasItem=translated`, the emitter draws its particles as one multimesh through the canvas template,
+as Godot does (`cpu_particles_2d.cpp:1293`). Each particle's custom data picks its flipbook cell in the shader.
 
 ## Linting
 
