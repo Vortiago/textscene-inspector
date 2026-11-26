@@ -12,6 +12,9 @@ import { inThreadJobRunner } from '../../workers/WorkerJobRunner';
 import { TileShaderRun } from './TileShaderRun';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import type { AtlasPixels } from '../../resources/tileset/paddedAtlas';
+import { canvasColorSpaceOf } from '../canvasColorSpace';
+import { publishLiveTargets } from '../liveTargets';
+import { createCanvasTarget } from '../offscreen/targets';
 
 /** What the mocked texture hook returns, set by each test and reset after it. */
 const sampled = vi.hoisted(() => ({
@@ -186,8 +189,19 @@ type CopyState =
   | 'texture swapped'
   | 'pixels unreadable'
   | 'build throws'
-  | 'released mid-build';
-type Drawn = 'nothing' | 'padded copy' | 'previous padded copy' | 'texture' | 'whole atlas' | 'error';
+  | 'released mid-build'
+  | 'aborted while still asked'
+  | 'rebuilt at another image size'
+  | 'target made transparent before its first render';
+type Drawn =
+  | 'nothing'
+  | 'padded copy'
+  | 'previous padded copy'
+  | 'texture'
+  | 'whole atlas'
+  | 'error'
+  | 'opaque stand-in'
+  | 'transparent stand-in';
 
 interface CopyStateRow {
   kind: SourceKind;
@@ -229,6 +243,27 @@ const COPY_STATES: readonly CopyStateRow[] = [
   { kind: 'padded', state: 'pixels unreadable', during: 'texture', after: 'texture', godot: GODOT_PADS },
   { kind: 'padded', state: 'build throws', during: 'nothing', after: 'error', godot: GODOT_PADS },
   { kind: 'padded', state: 'released mid-build', during: 'nothing', after: 'nothing', godot: 'nothing' },
+  {
+    kind: 'padded',
+    state: 'aborted while still asked',
+    during: 'nothing',
+    after: 'padded copy',
+    godot: GODOT_PADS,
+  },
+  {
+    kind: 'padded',
+    state: 'rebuilt at another image size',
+    during: 'nothing',
+    after: 'padded copy',
+    godot: GODOT_PADS,
+  },
+  {
+    kind: 'padded',
+    state: 'target made transparent before its first render',
+    during: 'opaque stand-in',
+    after: 'transparent stand-in',
+    godot: 'the padded cleared image (tile_set.cpp:5625, rendering_device.cpp:1949-1973)',
+  },
   ...(
     ['first build pending', 'rebuilt after a re-parse', 'pixels unreadable', 'build throws'] as const
   ).flatMap((state): CopyStateRow[] => [
@@ -254,6 +289,7 @@ function heldJobs() {
   return {
     land: () => held.shift()?.resolve({ data: new Uint8Array(36 * 18 * 4), width: 36, height: 18 }),
     fail: () => held.shift()?.reject(new Error('expected the padded-atlas job to fail')),
+    abort: () => held.shift()?.reject(new DOMException('The worker job was aborted', 'AbortError')),
   };
 }
 
@@ -285,13 +321,38 @@ function drawnIn(
   const named = (name: string) => renderer.scene.findAll((node) => node.props.name === name).length > 0;
   if (named('error')) return 'error';
   if (!named('slot')) return 'nothing';
+  const { image } = slotCommands.texture ?? {};
+  if (slotCommands.texture?.name.endsWith('::unrendered'))
+    return (image as { data: Uint8Array }).data[3] === 0 ? 'transparent stand-in' : 'opaque stand-in';
   if (slotCommands.texture === sampled.atlasCell?.sheet) return 'whole atlas';
   if (slotCommands.texture === sampled.texture) return 'texture';
   return slotCommands.texture === previous ? 'previous padded copy' : 'padded copy';
 }
 
+/** An unrendered SubViewport target turns transparent: a run pads its cleared image anew. */
+async function drawnAcrossTransparency(): Promise<[Drawn, Drawn]> {
+  const target = createCanvasTarget(32, 16, 'SubViewport', canvasColorSpaceOf(false));
+  sampled.texture = target.texture;
+  const withdrawOpaque = publishLiveTargets([target.texture], null, false);
+  const padded = { ...SOURCE, usesTexturePadding: true };
+  const renderer = await ReactThreeTestRenderer.create(shadedRun(padded));
+  await settle();
+  const during = drawnIn(renderer);
+  withdrawOpaque();
+  const withdrawTransparent = publishLiveTargets([target.texture], null, true);
+  // A second run of the same source mounts while the first still holds its stand-in.
+  const second = await ReactThreeTestRenderer.create(shadedRun(padded));
+  await settle();
+  const after = drawnIn(second);
+  await second.unmount();
+  await renderer.unmount();
+  withdrawTransparent();
+  return [during, after];
+}
+
 /** Drives `state` and gives what the run draws while it holds and once it settles. */
 async function drawnAcross(kind: SourceKind, state: CopyState): Promise<[Drawn, Drawn]> {
+  if (state === 'target made transparent before its first render') return drawnAcrossTransparency();
   sampled.texture = new THREE.DataTexture(new Uint8Array(32 * 16 * 4), 32, 16);
   if (kind === 'unpadded AtlasTexture') {
     const sheet = new THREE.DataTexture(new Uint8Array(64 * 64 * 4), 64, 64);
@@ -312,13 +373,18 @@ async function drawnAcross(kind: SourceKind, state: CopyState): Promise<[Drawn, 
   if (
     state === 'rebuilt after a re-parse' ||
     state === 'cells moved by a re-parse' ||
-    state === 'texture swapped'
+    state === 'texture swapped' ||
+    state === 'rebuilt at another image size'
   ) {
     jobs.land();
     await settle();
     const previous = slotCommands.texture ?? undefined;
     if (state === 'texture swapped')
       sampled.texture = new THREE.DataTexture(new Uint8Array(32 * 16 * 4), 32, 16);
+    if (state === 'rebuilt at another image size') {
+      sampled.texture.image = { data: new Uint8Array(64 * 16 * 4), width: 64, height: 16 };
+      sampled.texture.needsUpdate = true;
+    }
     const moved = { ...source, margins: { x: 1, y: 0 } };
     await renderer.update(shadedRun(state === 'cells moved by a re-parse' ? moved : { ...source }));
     await settle();
@@ -330,7 +396,13 @@ async function drawnAcross(kind: SourceKind, state: CopyState): Promise<[Drawn, 
   const during = drawnIn(renderer);
   if (state === 'released mid-build') await renderer.unmount();
   if (state === 'build throws') jobs.fail();
-  else jobs.land();
+  if (state === 'aborted while still asked') {
+    jobs.abort();
+    // The rejoined build waits a task before it asks for its job.
+    await settle();
+    await settle();
+  }
+  if (state !== 'build throws') jobs.land();
   await settle();
   return [during, drawnIn(renderer)];
 }
