@@ -34,7 +34,7 @@ async function itemWith(children: ReactNode) {
   const { Wrap, reads } = spyReads();
   const tree = (inside: ReactNode) => (
     <Wrap>
-      <LitCanvasItemPixels material={null} zFinal={0}>
+      <LitCanvasItemPixels material={null} lightMask={undefined} zFinal={0}>
         {inside}
       </LitCanvasItemPixels>
     </Wrap>

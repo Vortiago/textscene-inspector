@@ -54,7 +54,7 @@ function litQuads(count: number, x: (ordinal: number) => number = () => 0): Set<
 
 type SpiedItem = CappedItem & {
   take: ReturnType<typeof vi.fn<CappedItem['take']>>;
-  takeGodotLights: ReturnType<typeof vi.fn<CappedItem['takeGodotLights']>>;
+  takeGodotLights: ReturnType<typeof vi.fn<NonNullable<CappedItem['takeGodotLights']>>>;
 };
 
 function item(x = 0, layer = 0): SpiedItem {
@@ -66,7 +66,7 @@ function item(x = 0, layer = 0): SpiedItem {
     placement: { ...PLACEMENT, layer },
     geometry: { current: geometry },
     take: vi.fn<CappedItem['take']>(),
-    takeGodotLights: vi.fn<CappedItem['takeGodotLights']>(),
+    takeGodotLights: vi.fn<NonNullable<CappedItem['takeGodotLights']>>(),
   };
 }
 
