@@ -6,7 +6,6 @@
 
 import { lazy, useLayoutEffect, useState } from 'react';
 import { useThree } from '@react-three/fiber';
-import type { OrthographicCamera } from 'three';
 import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../../../parser/types.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
 import { CanvasWorkspaceProvider } from '../../contexts/CanvasWorkspaceContext.js';
@@ -14,7 +13,8 @@ import { EditedRootProvider } from '../../contexts/InstanceOwnersContext.js';
 import { SceneResourcesProvider } from '../../SceneResourcesContext.js';
 import { NodeDispatcher } from '../../NodeDispatcher.js';
 import { CanvasWorldScope } from '../../environment/WorldEnvironmentScope.js';
-import { world2DCameraPose } from './world2DCamera.js';
+import { useProjectSettings } from '../../contexts/ProjectSettingsContext.js';
+import { world2DCameraPose, type World2DCamera } from './world2DCamera.js';
 import { CanvasLighting2DProvider } from '../../lighting2d/CanvasLighting2D.js';
 import { useCanvasModulateColor } from '../../canvasModulate.js';
 import { ControlRasterLayer } from '../../../nodes/viewport/subviewport/ControlRasterLayer.js';
@@ -43,10 +43,14 @@ export interface World2DCanvasProps {
   zoom: number;
 }
 
-/** Keeps the ortho camera glued to the stage's pan/zoom transform. */
+/** Keeps the ortho camera glued to the stage's pan and zoom, with the project's viewport at its origin. */
 function CameraRig({ pan, zoom }: { pan: Vector2; zoom: number }) {
-  const camera = useThree((s) => s.camera) as OrthographicCamera;
+  const camera = useThree((s) => s.camera) as World2DCamera;
   const size = useThree((s) => s.size);
+  const { width: viewportWidth, height: viewportHeight } = useProjectSettings().viewportSize;
+  useLayoutEffect(() => {
+    camera.viewportSize = { x: viewportWidth, y: viewportHeight };
+  }, [camera, viewportWidth, viewportHeight]);
   const { x: panX, y: panY } = pan;
   useLayoutEffect(() => {
     const pose = world2DCameraPose({ x: panX, y: panY }, zoom, size.width, size.height);

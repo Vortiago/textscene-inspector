@@ -1,9 +1,11 @@
 import * as THREE from 'three';
-import type { MutableTransform2D } from '../../godot/math/transform2d';
-import { FLIP_Y } from '../components/Canvas2DStage/world2DCamera';
+import { mutableTransform2D, type MutableTransform2D } from '../../godot/math/transform2d';
+import type { TargetViewport } from '../../shaders/canvas/canvasBindings';
+import { FLIP_Y, World2DCamera } from '../components/Canvas2DStage/world2DCamera';
 
 /** Scratch for one transform, overwritten by the next call. */
 const clip = new THREE.Matrix4();
+const worldInTarget = mutableTransform2D();
 
 /** Writes `canvas_data.canvas_transform` into `out`: `frame` in target pixels, as the camera sees it. */
 export function canvasDataTransformInto(
@@ -24,4 +26,15 @@ export function canvasDataTransformInto(
   out.tx = (e[12]! + 1) * halfWidth;
   out.ty = (e[13]! + 1) * halfHeight;
   return out;
+}
+
+/** Where `camera` shows Godot's viewport in a target of `size`, or undefined where it is the whole target. */
+export function targetViewportOf(
+  camera: THREE.Camera,
+  size: { readonly width: number; readonly height: number }
+): TargetViewport | undefined {
+  if (!(camera instanceof World2DCamera) || !camera.viewportSize) return undefined;
+  // The stage's camera neither turns nor stretches, so one scale holds for both axes.
+  const { a: scale, tx: x, ty: y } = canvasDataTransformInto(worldInTarget, camera, null, size);
+  return { x, y, width: camera.viewportSize.x, height: camera.viewportSize.y, scale };
 }

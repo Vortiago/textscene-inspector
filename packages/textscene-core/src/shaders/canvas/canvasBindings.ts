@@ -6,11 +6,23 @@ import { normalizedVector2 } from '../../godot/math/vector.js';
 import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
 import type { CanvasDraw } from './transpileCanvas.js';
 
+/** Where Godot's viewport lies in a target: its top-left in target pixels, and its size in its own pixels. */
+export interface TargetViewport {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+  /** Target pixels per viewport pixel. */
+  readonly scale: number;
+}
+
 /** What a canvas draw reads from its viewport, with no light. */
 export interface CanvasFrame {
   /** The size of the render target in pixels. */
   readonly width: number;
   readonly height: number;
+  /** Godot's viewport inside the target, or the whole target when left out. */
+  readonly viewport?: TargetViewport;
   /** The canvas layer's transform, a Camera2D's view of it included. */
   readonly canvasTransform: Transform2DColumns;
   /** The CanvasModulate colour, or white with none. */
@@ -35,6 +47,8 @@ export interface CanvasDataBlock {
   readonly canvasNormalTransform: THREE.Matrix4;
   readonly canvasModulation: THREE.Vector4;
   readonly screenPixelSize: THREE.Vector2;
+  /** Godot's viewport in the target: its top-left, and viewport pixels per target pixel. */
+  readonly viewportInTarget: THREE.Vector4;
   time: number;
   usesPixelSnap: boolean;
   flags: number;
@@ -47,6 +61,7 @@ export function canvasDataBlock(): CanvasDataBlock {
     canvasNormalTransform: new THREE.Matrix4(),
     canvasModulation: new THREE.Vector4(),
     screenPixelSize: new THREE.Vector2(),
+    viewportInTarget: new THREE.Vector4(0, 0, 1, 1),
     time: 0,
     usesPixelSnap: false,
     flags: 0,
@@ -62,7 +77,10 @@ export function writeCanvasData(block: CanvasDataBlock, frame: CanvasFrame): voi
   transform2DMatrixInto(block.canvasNormalTransform, normalTransform(canvasTransform));
   const { r, g, b, a } = usesLinearColors ? srgbToLinearColor(canvasModulate) : canvasModulate;
   block.canvasModulation.set(r, g, b, a);
-  block.screenPixelSize.set(1 / width, 1 / height);
+  const viewport = frame.viewport ?? { x: 0, y: 0, width, height, scale: 1 };
+  // Godot's render target is its viewport (`renderer_canvas_render_rd.cpp:701-702`).
+  block.screenPixelSize.set(1 / viewport.width, 1 / viewport.height);
+  block.viewportInTarget.set(viewport.x, viewport.y, 1 / viewport.scale, 1 / viewport.scale);
   block.time = frame.time;
   block.usesPixelSnap = frame.snapVerticesToPixel;
   block.flags = usesLinearColors ? CONVERT_ATTRIBUTES_TO_LINEAR : 0;
@@ -108,6 +126,7 @@ export const CANVAS_BINDINGS: readonly Binding<CanvasDataBlock>[] = [
 /** Points the `CanvasData` uniforms of `draw` at `block`. Numbers are copied: bind before each draw. */
 export function bindCanvasData(draw: CanvasDraw, block: CanvasDataBlock): void {
   writeBindings(CANVAS_BINDINGS, draw.uniforms, block);
+  draw.viewportInTarget.value = block.viewportInTarget;
 }
 
 /** Written only by `writeCanvasBindings`: the block of each draw it writes, built on its first write. */
