@@ -45,7 +45,8 @@ add 4,489 B. A StandardMaterial3D or ORMMaterial3D drawn through the shader Godo
 (`shaders/material`, `r3f/spatialShader/surfaceShader.ts`) adds 10,065 B. The texture states that end its wait and draw
 the missing-texture placeholder for a shader's map (`r3f/shaderTextures`) add 2,069 B. The setter casts, the program
 key's texture formats and the shared-program refusal (`shaders/material`, `shaders/uniforms`) add 2,335 B.
-CPUParticles2D, MultiMeshInstance2D and a skinned Polygon2D drawn through the canvas template
+A canvas item without a shader of its own drawn through the canvas template behind its switch
+(`r3f/canvasShader`, `shaders/canvas`) adds 1,208 B. CPUParticles2D, MultiMeshInstance2D and a skinned Polygon2D drawn through the canvas template
 (`shaders/canvas/canvasMultiMesh.ts`, `r3f/canvasShader`) add 1,423 B.
 
 The shader translator adds about 464,000 B to the script. The groups below gzip alone, so they are shares

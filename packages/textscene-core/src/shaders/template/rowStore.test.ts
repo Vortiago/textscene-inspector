@@ -31,6 +31,16 @@ describe('RowStore', () => {
     expect([second.firstRow.value, data[2 * ROW_WORDS]]).toEqual([2, 9]);
   });
 
+  it('keeps the rows of its longest write, so draws of other lengths lay nothing out between them', () => {
+    const store = new RowStore();
+    const region = store.region();
+    store.write(region, new Uint32Array(ROW_WORDS + 1));
+    const texture = store.texture.image;
+    store.write(region, Uint32Array.of(7));
+    const data = (store.texture.image as { data: Uint32Array }).data;
+    expect([region.rows, store.texture.image === texture, data[0], data[ROW_WORDS]]).toEqual([2, true, 7, 0]);
+  });
+
   it('clears the words a shorter write leaves', () => {
     const store = new RowStore();
     const region = store.region();

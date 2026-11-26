@@ -66,7 +66,8 @@ export class RowStore {
 
   /** Writes a region's words from its first row, and moves the regions after it when it grows. */
   write(region: RowRegion, words: Uint32Array): void {
-    const rows = Math.max(1, Math.ceil(words.length / ROW_WORDS));
+    // Never shrinks: draws of other lengths in one render would each lay out and drop the uploaded texture.
+    const rows = Math.max(region.rows, Math.ceil(words.length / ROW_WORDS));
     region.words = words;
     if (rows === region.rows) this.copy(region);
     else {
