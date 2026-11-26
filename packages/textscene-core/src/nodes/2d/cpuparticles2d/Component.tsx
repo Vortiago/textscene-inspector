@@ -126,7 +126,11 @@ const sizeOf = (size: ImageSize | undefined): [number, number] => {
 /** `canvas_item_add_multimesh` of the pose, a particle an instance (`cpu_particles_2d.cpp:1293`). */
 function particleCommands({ pose, size }: ParticleInput): CanvasShaderCommand[] {
   if (!pose) return [];
-  return multiMeshCommands([particleQuad(...sizeOf(size))], poseInstances(pose.slots), pose.placement);
+  const quad = particleQuad(...sizeOf(size));
+  // The commands copy the quad's arrays, and the template draws geometry of its own.
+  const commands = multiMeshCommands([quad], poseInstances(pose.slots), pose.placement);
+  quad.dispose();
+  return commands;
 }
 
 /** The texture quad copied for each particle in pose order, or null until the pose exists and for none. */

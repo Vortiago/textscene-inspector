@@ -121,18 +121,23 @@ function growItemBox(box: THREE.Box3, command: CanvasShaderCommand): void {
     return;
   }
   // The mesh's rect at each instance, as `multimesh_get_aabb` bounds it.
-  const local = pointsBox(command.arrays.points);
-  if (local.isEmpty()) return;
+  const { min, max } = pointsBox(meshRect, command.arrays.points);
+  if (meshRect.isEmpty()) return;
   const { count, words } = command.instances;
   const floats = new Float32Array(words.buffer, words.byteOffset, words.length);
   const stride = floats.length / count;
   for (let instance = 0; instance < count; instance++) {
     const placed = instanceTransformInto(instancePlacement, floats, instance * stride);
     multiplyTransform2DInto(placed, transform, placed);
-    for (const x of [local.min.x, local.max.x])
-      for (const y of [local.min.y, local.max.y]) growByPoint(box, placed, { x, y });
+    growByPoint(box, placed, min);
+    growByPoint(box, placed, max);
+    growByPoint(box, placed, point.set(min.x, max.y));
+    growByPoint(box, placed, point.set(max.x, min.y));
   }
 }
+
+/** Scratch of the mesh rect of one multimesh command, overwritten by the next. */
+const meshRect = new THREE.Box2();
 
 /** Scratch of one instance's placement, overwritten by the next. */
 const instancePlacement = mutableTransform2D();
@@ -143,14 +148,14 @@ function growByPoint(box: THREE.Box3, transform: Transform2DColumns, { x, y }: V
   box.expandByPoint(corner.set(a * x + c * y + tx, 0 - (b * x + d * y + ty), 0));
 }
 
-/** The box of `points` in Godot's frame. */
-function pointsBox(points: readonly Vector2[]): THREE.Box2 {
-  const box = new THREE.Box2();
+/** Writes the box of `points` in Godot's frame to `box`, which the caller owns. */
+function pointsBox(box: THREE.Box2, points: readonly Vector2[]): THREE.Box2 {
+  box.makeEmpty();
   for (const { x, y } of points) box.expandByPoint(point.set(x, y));
   return box;
 }
 
-/** Scratch of one point of `pointsBox`, overwritten by the next. */
+/** Scratch of one point, overwritten by the next. */
 const point = new THREE.Vector2();
 
 /** The `TRANSFORM_2D` rows at `offset` (`mesh_storage.cpp:1927-1934`) as a transform, written into `out`. */

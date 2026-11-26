@@ -295,12 +295,8 @@ function meshBatch(variantOf: (variant: CanvasVariant) => BoundVariant, command:
   boundByItem(object, [command]);
   return {
     object,
-    // The layout holds the mesh's arrays and instance count, so only the instance buffer can change.
-    setRun: (run) => {
-      if (run.kind !== 'mesh' || run.command.kind !== 'multimesh') return;
-      constants.instances = run.command.instances;
-      itemBox(object.geometry.boundingBox!, [run.command]);
-    },
+    // Each command list builds its arrays anew, so a mesh layout never matches a later list.
+    setRun: () => undefined,
     // `canvas_item_add_mesh`'s white modulate times the item's (`renderer_canvas_render_rd.cpp:2764-2855`).
     writeColors: (item) => (constants.modulation = modulated(WHITE, item)),
     writeWorld: (world) => multiplyTransform2DInto(constants.world, world, transform),

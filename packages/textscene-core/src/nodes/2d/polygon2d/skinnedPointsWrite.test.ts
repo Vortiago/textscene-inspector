@@ -37,4 +37,16 @@ describe('writeSkinnedPoints', () => {
       true,
     ]);
   });
+
+  it('writes the template vertex array of a geometry with no box, and makes none', () => {
+    const arrays = { primitive: 'triangles' as const, points: POINTS, colors: [], uvs: [] };
+    const geometry = attributesGeometry(arrays, { customsRead: [], emulatesPoints: false });
+    geometry.boundingBox = null;
+    writeSkinnedPoints(geometry, MOVED);
+
+    expect([[...geometry.getAttribute('vertex_attrib').array], geometry.boundingBox]).toEqual([
+      [1, 2, 3, 4, 5, 6],
+      null,
+    ]);
+  });
 });
