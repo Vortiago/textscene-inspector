@@ -1,7 +1,8 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { useTextureWorkWhile } from '../../resources/textures/textureWork';
-import { paddedAtlasLayout, type AtlasPixels } from '../../resources/tileset/paddedAtlas';
+import { paddedAtlasLayout, paddedAtlasSize, type AtlasPixels } from '../../resources/tileset/paddedAtlas';
+import { imageSize } from '../../resources/formats/image/imagePixels';
 import type { AtlasSourceModel } from '../../resources/tileset/types';
 import type { Texture2DResult } from '../../resources/useTexture2D';
 import { usePendingWhile } from '../../resources/usePendingWhile';
@@ -59,6 +60,8 @@ function usePaddedCopy(texture: THREE.Texture | null, source: AtlasSourceModel):
   const runner = useResourceLoader()?.jobRunner ?? inThreadJobRunner;
   const [, landed] = useReducer((count: number) => count + 1, 0);
   const [failure, setFailure] = useState<Failure | null>(null);
+  // A runner's release aborts the jobs it holds, so a run that still asks joins a new build.
+  const [rejoins, rejoin] = useReducer((count: number) => count + 1, 0);
   // A new version is a new image, which an unreadable one may have become readable as.
   const version = texture?.version;
   if (failure && isFailureOf(failure, texture, source)) throw failure.error;
@@ -69,15 +72,16 @@ function usePaddedCopy(texture: THREE.Texture | null, source: AtlasSourceModel):
     copy.settled.then(
       () => current && landed(),
       (error: unknown) => {
-        // An abort ends a build nobody waits for, such as a runner's release, and is no fault to show.
-        if (current && !isAbort(error)) setFailure({ error, texture, version: copy.version, source });
+        if (!current) return;
+        if (isAbort(error)) rejoin();
+        else setFailure({ error, texture, version: copy.version, source });
       }
     );
     return () => {
       current = false;
       release();
     };
-  }, [texture, version, source, runner]);
+  }, [texture, version, source, runner, rejoins]);
   const wanted = texture ? paddedCopiesOf(texture).get(source) : undefined;
   const isBuilt = wanted?.version === version && wanted?.built !== undefined;
   /** Written after each commit: the copy the run showed, held until the next one shows. */
@@ -106,8 +110,22 @@ function placesCellsAlike(copy: PaddedCopy, texture: THREE.Texture, source: Atla
     copy.texture === texture &&
     vector2Equals(margins, source.margins) &&
     vector2Equals(separation, source.separation) &&
-    vector2Equals(textureRegionSize, source.textureRegionSize)
+    vector2Equals(textureRegionSize, source.textureRegionSize) &&
+    hasPaddedSizeOf(copy.built, texture, source)
   );
+}
+
+/** Whether `built` has the padded size of `texture`'s image, so the cells' UVs count the same atlas. */
+function hasPaddedSizeOf(
+  built: PaddedCopy['built'],
+  texture: THREE.Texture,
+  source: AtlasSourceModel
+): boolean {
+  // The unreadable draw samples the texture itself, at its own size.
+  if (!(built instanceof THREE.Texture)) return true;
+  const padded = paddedAtlasSize(source, imageSize(texture.image) ?? { width: 0, height: 0 });
+  const size = imageSize(built.image);
+  return size?.width === padded.width && size?.height === padded.height;
 }
 
 function isFailureOf(failure: Failure, texture: THREE.Texture | null, source: AtlasSourceModel): boolean {

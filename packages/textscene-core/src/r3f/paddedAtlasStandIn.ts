@@ -41,14 +41,25 @@ function sharedSnapshot(target: THREE.Texture, source: AtlasSourceModel): THREE.
   const snapshots = snapshotsOf(target);
   const size = standInSize(target, source);
   const held = snapshots.get(source);
-  // A target resized before its first render pads to the new size, as Godot reads its image then.
-  if (held && held.image.width === size.width && held.image.height === size.height) return held;
+  // A target resized or made transparent before its first render pads anew, as Godot reads its image then.
+  if (held && padsAlike(held, size, unrenderedTexel(target))) return held;
   const snapshot = unrenderedSnapshot(target, size);
   snapshot.addEventListener('dispose', () => {
     if (snapshots.get(source) === snapshot) snapshots.delete(source);
   });
   snapshots.set(source, snapshot);
   return snapshot;
+}
+
+function padsAlike(
+  snapshot: THREE.DataTexture,
+  { width, height }: { width: number; height: number },
+  texel: readonly number[]
+): boolean {
+  const { image } = snapshot;
+  return (
+    image.width === width && image.height === height && texel.every((byte, i) => image.data![i] === byte)
+  );
 }
 
 /** The size of the padded atlas of `target`'s image: one texel at least, as GL holds no empty texture. */

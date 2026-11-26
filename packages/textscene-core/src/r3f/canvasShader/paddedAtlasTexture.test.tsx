@@ -179,7 +179,7 @@ describe('useRuntimeAtlasTexture', () => {
     expect(next.result.current).toBeInstanceOf(THREE.DataTexture);
   });
 
-  it('shows no fault for a build its runner aborts while the run still asks for it', async () => {
+  it('builds again after its runner aborts the build while the run still asks for it', async () => {
     vi.spyOn(inThreadJobRunner, 'run').mockRejectedValueOnce(
       new DOMException('The worker job was aborted', 'AbortError')
     );
@@ -192,10 +192,20 @@ describe('useRuntimeAtlasTexture', () => {
     const texture = textureOf();
     const hook = renderHook(() => useRuntimeAtlasTexture(slotOf(texture), SOURCE), { wrapper });
 
-    await new Promise((settle) => setTimeout(settle, 10));
+    await vi.waitFor(() => expect(hook.result.current).toBeInstanceOf(THREE.DataTexture));
+    expect(faults).toEqual([]);
+  });
+
+  it('shows no copy of another image size while the next version builds', async () => {
+    const texture = textureOf();
+    const hook = await builtCopy(texture);
+    vi.spyOn(inThreadJobRunner, 'run').mockImplementationOnce(() => new Promise(() => {}));
+
+    texture.image = { data: new Uint8Array(4 * 2 * 4).fill(255), width: 4, height: 2 };
+    texture.needsUpdate = true;
     hook.rerender();
 
-    expect(faults).toEqual([]);
+    expect(hook.result.current).toBe('building');
   });
 
   it('disposes a copy whose build lands after its last run released it', async () => {

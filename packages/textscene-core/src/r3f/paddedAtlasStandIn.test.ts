@@ -52,6 +52,19 @@ describe('usePaddedAtlasStandIn', () => {
     expect(imageSize(hook.result.current!.image)).toEqual({ width: 72, height: 18 });
   });
 
+  it('pads a target in its own unrendered colour when its transparency changes', () => {
+    const target = createCanvasTarget(32, 16, 'SubViewport', canvasColorSpaceOf(false));
+    const withdrawOpaque = publishLiveTargets([target.texture], null, false);
+    const slot = { texture: target.texture as THREE.Texture };
+    const opaque = renderHook(() => usePaddedAtlasStandIn(slot, SOURCE));
+    withdrawOpaque();
+    withdrawals.push(publishLiveTargets([target.texture], null, true));
+
+    const transparent = renderHook(() => usePaddedAtlasStandIn(slot, SOURCE));
+
+    expect(transparent.result.current).not.toBe(opaque.result.current);
+  });
+
   it('marks the stand-in top row first, so the shader path samples it with no turned copy', () => {
     const { result } = renderHook(() => usePaddedAtlasStandIn(unrenderedTarget(), SOURCE));
 
