@@ -34,6 +34,8 @@ export interface Macro {
   readonly body: readonly PpToken[];
   /** Set while the macro's expansion is read: glslang expands no macro inside its own expansion. */
   busy: boolean;
+  /** A macro the previewer fixes: the template's own `#define` of the name leaves it as it is. */
+  readonly isPinned?: boolean;
 }
 
 /** The preprocessed text of `lines`, under `macros` defined before its first line. */
@@ -42,6 +44,14 @@ export function preprocess(
   macros: ReadonlyMap<string, Macro> = new Map()
 ): Preprocessed {
   return new Preprocessor(scanLines(lines), macros).run();
+}
+
+/** The macros `#define` lines in `text` make, pinned, so a fold the previewer needs holds over the template's. */
+export function pinnedMacros(text: string): ReadonlyMap<string, Macro> {
+  const lines = text.split('\n').map((line, index) => ({ text: line, file: '<pinned>', line: index + 1 }));
+  const preprocessor = new Preprocessor(scanLines(lines), new Map());
+  preprocessor.run();
+  return new Map([...preprocessor.macros].map(([name, macro]) => [name, { ...macro, isPinned: true }]));
 }
 
 /** An input the preprocessor reads tokens from: the text, a macro's expansion or a macro argument. */
@@ -217,6 +227,7 @@ class Preprocessor {
       body = rest.slice(close + 1);
     }
     const existing = this.macros.get(name.text);
+    if (existing?.isPinned) return;
     const macro: Macro = { name: name.text, ...(parameters ? { parameters } : {}), body, busy: false };
     if (existing && !isSameMacro(existing, macro))
       this.fail(`'#define' : Macro redefined; different substitutions: ${name.text}`, name.position);

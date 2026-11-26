@@ -24,6 +24,7 @@ import { INSTANCE_ID_ATTRIBUTE, VERTEX_ID_ATTRIBUTE } from '../template/surfaceA
 import { devicePoints, sizesPoints, type DevicePoints } from '../template/devicePoints.js';
 import { emitTemplateStage, programResources, type WrittenBuiltIn } from '../template/emitTemplate.js';
 import { linkedProgram, type LinkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
+import { pinnedMacros } from '../template/preprocess.js';
 import type { RowBlock } from '../template/rowBlock.js';
 import type { Specialisation } from '../template/specialisation.js';
 import type { TemplateUniform } from '../template/templateUniforms.js';
@@ -69,12 +70,19 @@ export const CANVAS_VARIANT_DEFINES: Readonly<Record<CanvasVariant, string>> = {
 const writesPointSize = (variant: CanvasVariant) =>
   CANVAS_VARIANT_DEFINES[variant].includes('USE_POINT_SIZE');
 
+/**
+ * A lit draw reads no 2D shadow: an item a shadowed light reaches stays classic until the occlusion
+ * pass is ported (#1785). Folded, the flag drops both shadow branches, which take SwiftShader minutes.
+ */
+const NO_CANVAS_SHADOWS = pinnedMacros('#define LIGHT_FLAGS_HAS_SHADOW 0');
+
 /** One template for every variant: the defines key each stage in the memo, which lives with the page. */
 const CANVAS: ProgramTemplate = {
   shaderType: 'canvas_item',
   template: 'canvas.glsl',
   defines: CANVAS_VARIANT_DEFINES.quad,
   memo: new TreeMemo(),
+  pinnedMacros: NO_CANVAS_SHADOWS,
 };
 
 /** One variant of a canvas item's material. */

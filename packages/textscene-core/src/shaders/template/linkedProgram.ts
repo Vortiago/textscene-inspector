@@ -10,6 +10,7 @@ import { programResources, type ProgramResources } from './emitTemplate.js';
 import { godotId } from './godotIds.js';
 import { compileMaterial, linkTemplateStage, type CompiledMaterial } from './link.js';
 import { MODE_TABLES } from './modeTables.generated.js';
+import type { Macro } from './preprocess.js';
 import type { StageName } from './stages.js';
 import type { TemplateStageNode } from './templateTree.js';
 import { TRANSPILER_VERSION, type TreeMemo } from './treeMemo.js';
@@ -22,6 +23,8 @@ export interface ProgramTemplate {
   readonly memo: TreeMemo;
   /** The block members the previewer holds for a whole frame, each folded as a specialisation constant. */
   readonly specialisedMembers?: ReadonlySet<string>;
+  /** The template macros the previewer fixes for every program of the template. */
+  readonly pinnedMacros?: ReadonlyMap<string, Macro>;
 }
 
 /** A user's shader linked into its template, before either stage is emitted. */
@@ -75,7 +78,7 @@ export function linkedProgram(
       },
       () => {
         material ??= compileMaterial(withGlslTypes(tree), MODE_TABLES[program.shaderType]!);
-        return linkTemplateStage(program.template, stage, defines, material);
+        return linkTemplateStage(program.template, stage, defines, material, program.pinnedMacros);
       }
     );
   // Sky and spatial targets are linear: `sky.cpp:193`, `scene_shader_forward_clustered.cpp:595`.

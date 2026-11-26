@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { preprocess } from './preprocess.js';
+import { pinnedMacros, preprocess } from './preprocess.js';
 import type { VariantLine } from './variant.js';
 
 const linesOf = (text: string): VariantLine[] =>
@@ -69,6 +69,14 @@ describe('preprocess', () => {
     expect(() => tokensOf('#define A 1\n#define A 2')).toThrow(
       "'#define' : Macro redefined; different substitutions: A"
     );
+  });
+
+  it("keeps a pinned macro over the template's own define of the name", () => {
+    const pinned = pinnedMacros('#define FLAG 0');
+    const text = preprocess(linesOf('#define FLAG (1 << 20)\nuint a = FLAG;'), pinned)
+      .tokens.map((token) => token.text)
+      .join(' ');
+    expect(text).toBe('uint a = 0 ;');
   });
 
   it('refuses a name that starts with GL_', () => {
