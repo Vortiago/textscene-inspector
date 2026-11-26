@@ -3,8 +3,9 @@
 ; One variable: the runtime atlas a tile layer's canvas_item shader samples, which Godot pads once at load
 ; (tile_set.cpp:5622). The left layer's ViewportTexture is never set up, so its padded atlas is the
 ; placeholder. The middle layer's is the opaque target before its first render. The right layer pads a
-; file texture. tile-atlas-viewport-padding draws these sources with the default shader, so only this
-; golden shows the shaded draw sample each kind of runtime atlas.
+; file texture. The lower layers turn padding off, so the shader samples each AtlasTexture's whole atlas:
+; a cut of the file texture, and the placeholder. tile-atlas-viewport-padding draws these sources with
+; the default shader, so only this golden shows the shaded draw sample each kind of runtime atlas.
 
 [ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
 
@@ -67,6 +68,33 @@ texture_region_size = Vector2i(16, 16)
 [sub_resource type="TileSet" id="TileSet_file"]
 sources/0 = SubResource("TileSetAtlasSource_file")
 
+[sub_resource type="AtlasTexture" id="AtlasTexture_cut"]
+atlas = ExtResource("1_marker")
+region = Rect2(8, 8, 32, 32)
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_cut"]
+texture = SubResource("AtlasTexture_cut")
+texture_region_size = Vector2i(16, 16)
+use_texture_padding = false
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_cut"]
+sources/0 = SubResource("TileSetAtlasSource_cut")
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_unpadded"]
+texture = SubResource("AtlasTexture_shared")
+use_texture_padding = false
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_unpadded"]
+sources/0 = SubResource("TileSetAtlasSource_unpadded")
+
 [node name="Root" type="Node2D"]
 
 [node name="SubViewport" type="SubViewport" parent="."]
@@ -104,3 +132,17 @@ position = Vector2(700, 100)
 scale = Vector2(4, 4)
 tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0)
 tile_set = SubResource("TileSet_file")
+
+[node name="Cut" type="TileMapLayer" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(100, 400)
+scale = Vector2(4, 4)
+tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0)
+tile_set = SubResource("TileSet_cut")
+
+[node name="Unpadded" type="TileMapLayer" parent="."]
+material = SubResource("ShaderMaterial_mix")
+position = Vector2(400, 400)
+scale = Vector2(4, 4)
+tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0)
+tile_set = SubResource("TileSet_unpadded")

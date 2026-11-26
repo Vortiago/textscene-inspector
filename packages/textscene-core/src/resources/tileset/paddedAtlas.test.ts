@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ImagePixels } from '../formats/image/imagePixels';
 import { reversedRows } from '../../utils/reversedRows';
-import { atlasGridSize, bottomUpPaddedAtlasPixels, paddedAtlasPixels, paddedTileRegion } from './paddedAtlas';
+import { atlasGridSize, topDownPaddedAtlasPixels, paddedAtlasPixels, paddedTileRegion } from './paddedAtlas';
 import type { AtlasSourceModel } from './types';
 
 const source = {
@@ -133,17 +133,17 @@ describe('paddedAtlasPixels', () => {
   });
 });
 
-describe('bottomUpPaddedAtlasPixels', () => {
+describe('topDownPaddedAtlasPixels', () => {
   const twoByOne = redImage(4, [1, 2, 5, 6, 3, 4, 7, 8]);
   const layout = atlasOf([['0:0', { x: 1, y: 1 }]], 2);
 
-  it('gives the padded atlas with its bottom row first', () => {
-    const padded = bottomUpPaddedAtlasPixels(twoByOne, false, layout);
+  it('gives the padded atlas with its top row first', () => {
+    const padded = topDownPaddedAtlasPixels(twoByOne, false, layout);
     expect(redRows(padded).map((row) => row.slice(0, 4))).toEqual([
-      [3, 3, 4, 4],
-      [3, 3, 4, 4],
       [1, 1, 2, 2],
       [1, 1, 2, 2],
+      [3, 3, 4, 4],
+      [3, 3, 4, 4],
     ]);
   });
 
@@ -151,8 +151,8 @@ describe('bottomUpPaddedAtlasPixels', () => {
     const { width, height } = twoByOne;
     const bottomUp = { data: reversedRows(twoByOne.data, width, height), width, height };
 
-    expect(bottomUpPaddedAtlasPixels(bottomUp, true, layout)).toEqual(
-      bottomUpPaddedAtlasPixels(twoByOne, false, layout)
+    expect(topDownPaddedAtlasPixels(bottomUp, true, layout)).toEqual(
+      topDownPaddedAtlasPixels(twoByOne, false, layout)
     );
   });
 });

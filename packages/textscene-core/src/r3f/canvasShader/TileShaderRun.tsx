@@ -7,6 +7,8 @@ import type { AtlasSourceModel } from '../../resources/tileset/types';
 import { imageSize } from '../../resources/formats/image/imagePixels';
 import { useCanvasItemTextureSampledBy } from '../canvasItemTexture';
 import type { CanvasItemTextureSampler } from '../canvasItemTextureSampler';
+import type { AtlasCell } from '../../resources/useTexture2D';
+import { atlasRectRegion, type CanvasShaderCommand } from './canvasCommands';
 import { CanvasShaderSlot } from './CanvasShaderSlot';
 import { useRuntimeAtlasTexture } from './paddedAtlasTexture';
 import { tileRectCommands, type TileSetDraw } from './tileCommands';
@@ -39,17 +41,24 @@ export function TileShaderRun({
   fallback,
 }: TileShaderRunProps) {
   const drawn = useCanvasItemTextureSampledBy(sampler, source.texture);
-  const texture = useRuntimeAtlasTexture(drawn, source);
+  const runtimeTexture = useRuntimeAtlasTexture(drawn, source);
+  // An unpadded AtlasTexture draws its region from its whole atlas (`atlas_texture.cpp:180-191`).
+  const atlasCell = source.usesTexturePadding ? undefined : drawn.atlasCell;
+  const texture = atlasCell?.sheet ?? runtimeTexture;
   const { x: originX, y: originY } = itemOrigin;
   const commands = useMemo(() => {
     const textureSize = drawn.texture && imageSize(drawn.texture.image);
-    const origin = { x: originX, y: originY };
-    return textureSize && tileRectCommands(cellsInAtlasGrid(cells, source, textureSize), tileSet, origin);
-  }, [cells, source, drawn.texture, tileSet, originX, originY]);
+    if (!textureSize) return null;
+    const placed = cellsInAtlasGrid(cells, source, textureSize);
+    const rects = tileRectCommands(placed, tileSet, { x: originX, y: originY });
+    return atlasCell ? rectsOnAtlas(rects, atlasCell) : rects;
+  }, [cells, source, drawn.texture, atlasCell, tileSet, originX, originY]);
   // A source with no texture, a pending one or a failed one draws nothing (`tile_map_layer.cpp:2676-2677`).
   if (!source.texture || drawn.missing || !drawn.texture) return null;
   // Nothing while the padded copy builds: the pending load holds the frame a capture waits for.
-  if (!texture || !commands) return null;
+  if (!runtimeTexture) return null;
+  // No size to place the cells by: Godot's default shader draws the run.
+  if (!commands) return <>{fallback}</>;
   // Object3Ds keep the layer's canvas key. The fallback draws in layer pixels, so it undoes the item's place.
   return (
     <object3D position={[itemOrigin.x, -itemOrigin.y, 0]}>
@@ -65,4 +74,12 @@ export function TileShaderRun({
       />
     </object3D>
   );
+}
+
+function rectsOnAtlas(rects: readonly CanvasShaderCommand[], atlasCell: AtlasCell): CanvasShaderCommand[] {
+  return rects.flatMap((command): CanvasShaderCommand[] => {
+    if (command.kind !== 'rect') return [command];
+    const region = atlasRectRegion(command.region, atlasCell);
+    return region ? [{ ...command, region }] : [];
+  });
 }

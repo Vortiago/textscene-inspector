@@ -79,11 +79,20 @@ function joinPaddedCopy(texture: THREE.Texture, source: AtlasSourceModel, runner
   settled
     .then(
       (built) => (copy.built = built),
-      () => copies.delete(source)
+      () => dropPaddedCopy(copies, source, copy)
     )
     .finally(endWork);
   copies.set(source, copy);
   return copy;
+}
+
+/** A released copy's abort lands after a new holder may have built the source's next copy. */
+function dropPaddedCopy(
+  copies: Map<AtlasSourceModel, PaddedCopy>,
+  source: AtlasSourceModel,
+  copy: PaddedCopy
+): void {
+  if (copies.get(source) === copy) copies.delete(source);
 }
 
 /** A microtask, not now: StrictMode and a re-render release and take a copy again in one task. */
@@ -111,6 +120,8 @@ async function buildPaddedCopy(
   const input = { pixels, isBottomUp: isBottomUp(texture), layout: paddedAtlasLayout(source) };
   const padded = await runner.run('padded-atlas', input, signal);
   const atlas = new THREE.DataTexture(padded.data, padded.width, padded.height);
+  // Top row first, as Godot's image: `flipY` marks it so, and the shader samples it with no copy.
+  atlas.flipY = true;
   atlas.colorSpace = texture.colorSpace;
   atlas.needsUpdate = true;
   return atlas;

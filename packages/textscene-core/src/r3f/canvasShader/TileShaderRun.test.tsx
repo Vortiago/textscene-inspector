@@ -5,35 +5,47 @@ import type { DrawableCell } from '../../resources/tileset/drawableCell';
 import { tileTextureAt } from '../../resources/tileset/testing/tileTexture';
 import { defaultTileData, type AtlasSourceModel, type TileGrid } from '../../resources/tileset/types';
 import type { ShaderText } from '../../resources/materials/shadermaterial/types';
+import type { AtlasCell } from '../../resources/useTexture2D';
 import type { CanvasShaderCommand } from './canvasCommands';
 import * as imagePixels from '../../resources/formats/image/imagePixels';
 import { inThreadJobRunner } from '../../workers/WorkerJobRunner';
 import { TileShaderRun } from './TileShaderRun';
 
 /** What the mocked texture hook returns, set by each test and reset after it. */
-const sampled = vi.hoisted(() => ({ texture: null as THREE.Texture | null, missing: false }));
+const sampled = vi.hoisted(() => ({
+  texture: null as THREE.Texture | null,
+  missing: false,
+  atlasCell: undefined as AtlasCell | undefined,
+}));
 
 vi.mock('../canvasItemTexture', () => ({
   useCanvasItemTextureSampledBy: () => ({
     texture: sampled.texture,
     missing: sampled.missing,
+    atlasCell: sampled.atlasCell,
     canvasTexture: null,
     sampler: { filter: 0, repeat: 0 },
   }),
 }));
 
 /** Written by the mocked slot on each render, cleared after each test. */
-const slotCommands = vi.hoisted(() => ({ last: null as readonly CanvasShaderCommand[] | null }));
+const slotCommands = vi.hoisted(() => ({
+  last: null as readonly CanvasShaderCommand[] | null,
+  texture: null as THREE.Texture | null,
+}));
 
 vi.mock('./CanvasShaderSlot', () => ({
   CanvasShaderSlot: ({
     commands,
+    texture,
     fallback,
   }: {
     commands: readonly CanvasShaderCommand[];
+    texture: THREE.Texture;
     fallback: unknown;
   }) => {
     slotCommands.last = commands;
+    slotCommands.texture = texture;
     return <group name="slot">{fallback as never}</group>;
   },
 }));
@@ -92,7 +104,9 @@ afterEach(() => {
   vi.restoreAllMocks();
   sampled.texture = null;
   sampled.missing = false;
+  sampled.atlasCell = undefined;
   slotCommands.last = null;
+  slotCommands.texture = null;
 });
 
 describe('TileShaderRun', () => {
@@ -159,5 +173,22 @@ describe('TileShaderRun', () => {
     await vi.waitFor(() =>
       expect(renderer.scene.findAll((node) => node.props.name === 'slot')).toHaveLength(1)
     );
+  });
+
+  it("draws an unpadded AtlasTexture's cells from its whole atlas, shifted by its region", async () => {
+    sampled.texture = new THREE.DataTexture(new Uint8Array(32 * 16 * 4), 32, 16);
+    const sheet = new THREE.DataTexture(new Uint8Array(64 * 64 * 4), 64, 64);
+    sampled.atlasCell = {
+      sheet,
+      sheetSize: { width: 64, height: 64 },
+      cell: { x: 8, y: 4, w: 32, h: 16 },
+      region: { x: 0, y: 0, w: 32, h: 16 },
+      filterClip: false,
+    };
+    await run();
+
+    const [command] = slotCommands.last!;
+    expect(slotCommands.texture).toBe(sheet);
+    expect(command!.kind === 'rect' && command.region.source).toEqual({ x: 8, y: 4, w: 16, h: 16 });
   });
 });

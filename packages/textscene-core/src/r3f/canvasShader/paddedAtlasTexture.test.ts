@@ -5,6 +5,8 @@ import * as imagePixels from '../../resources/formats/image/imagePixels';
 import { imageSize } from '../../resources/formats/image/imagePixels';
 import { texture2DPlaceholder } from '../../resources/textures/texture2DPlaceholder';
 import type { AtlasSourceModel } from '../../resources/tileset/types';
+import { inThreadJobRunner } from '../../workers/WorkerJobRunner';
+import { topDownTexture } from '../../resources/textures/topDownTexture';
 import { useRuntimeAtlasTexture } from './paddedAtlasTexture';
 
 const SOURCE: AtlasSourceModel = {
@@ -48,6 +50,12 @@ describe('useRuntimeAtlasTexture', () => {
     const { result } = await builtCopy(textureOf());
 
     expect(imageSize(result.current!.image)).toEqual({ width: 4, height: 4 });
+  });
+
+  it('gives the padded copy top row first, so the shader samples it without a turned copy', async () => {
+    const { result } = await builtCopy(textureOf());
+
+    expect(topDownTexture(result.current!)).toBe(result.current);
   });
 
   it('gives the texture itself for a source with no padding', () => {
@@ -100,5 +108,24 @@ describe('useRuntimeAtlasTexture', () => {
 
     expect(disposedWhileHeld).toBe(0);
     expect(onDispose).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the next copy of a source when a released copy aborts after it is built', async () => {
+    const texture = textureOf();
+    let abortReleased: (error: unknown) => void = () => {};
+    const run = vi
+      .spyOn(inThreadJobRunner, 'run')
+      .mockImplementationOnce(() => new Promise((_resolve, reject) => (abortReleased = reject)));
+    const released = renderHook(() => useRuntimeAtlasTexture(slotOf(texture), SOURCE));
+    await vi.waitFor(() => expect(run).toHaveBeenCalledTimes(1));
+    released.unmount();
+    await flushMicrotasks();
+    const next = await builtCopy(texture);
+
+    abortReleased(new DOMException('The worker job was aborted', 'AbortError'));
+    await new Promise((settle) => setTimeout(settle));
+    next.rerender();
+
+    expect(next.result.current).toBeInstanceOf(THREE.DataTexture);
   });
 });
