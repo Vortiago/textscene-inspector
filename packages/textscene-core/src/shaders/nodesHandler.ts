@@ -18,9 +18,14 @@ import { hasNodesHandler, registerNodesHandler } from './pipeline/nodeObject.js'
  */
 export type NodeOutput = 'linear' | 'display';
 
-/** The hook three's types leave out of the handler. */
+/** The hooks three's types leave out of the handler. */
 interface OutputHook {
   getOutputCallback: (outputNode: Node) => Node;
+}
+
+interface ProgramKeyHook {
+  customProgramCacheKeyCallback: (this: THREE.Material) => string;
+  nodeFrame: { object: THREE.Object3D | null };
 }
 
 /**
@@ -31,9 +36,31 @@ export function installNodesHandler(renderer: THREE.WebGLRenderer, output: NodeO
   if (hasNodesHandler(renderer)) return;
   const handler = new WebGLNodesHandler();
   if (output === 'linear') (handler as unknown as OutputHook).getOutputCallback = (outputNode) => outputNode;
+  keyProgramsOnAttributes(handler as unknown as ProgramKeyHook);
   renderer.setNodesHandler(handler);
   reportTranslatorFaults(renderer);
   registerNodesHandler(renderer, handler);
+}
+
+/** Keys each program on the drawn attributes too: a node reads a missing attribute as a constant. */
+function keyProgramsOnAttributes(handler: ProgramKeyHook): void {
+  const keyOfDraw = handler.customProgramCacheKeyCallback;
+  handler.customProgramCacheKeyCallback = function (this: THREE.Material) {
+    return `${keyOfDraw.call(this)}|${attributesKeyOf(handler.nodeFrame.object)}`;
+  };
+}
+
+/** The name, size, type and normalisation of each attribute `object` draws, which its code reads. */
+function attributesKeyOf(object: THREE.Object3D | null): string {
+  const geometry = (object as Partial<THREE.Mesh> | null)?.geometry;
+  if (!geometry) return '';
+  return Object.entries(geometry.attributes)
+    .map(
+      ([name, { itemSize, array, normalized }]) =>
+        `${name}:${itemSize}:${array.constructor.name}:${normalized}`
+    )
+    .sort()
+    .join(',');
 }
 
 type ShaderErrorHook = (
@@ -55,7 +82,10 @@ function reportTranslatorFaults(renderer: THREE.WebGLRenderer): void {
     try {
       const faulty = [...boundMaterials()].filter((material) => drawsWith(renderer, material, program));
       const log = driverLog(gl, program, vertexShader, fragmentShader);
-      for (const material of faulty) material.reportFault(new TranslatorFault(material.source, log));
+      for (const material of faulty) {
+        material.refuseSharedProgram();
+        material.reportFault(new TranslatorFault(material.source, log));
+      }
       if (callerHook) callerHook(gl, program, vertexShader, fragmentShader);
       else if (faulty.length === 0)
         console.error(

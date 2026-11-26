@@ -5,13 +5,8 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import {
-  billboardOf,
-  castsShadowOf,
-  isAnisotropic,
-  standardMaterialBags,
-  surfaceBillboard,
-} from './materialBag';
+import { billboardOf, isAnisotropic, standardMaterialBags, surfaceBillboard } from './materialBag';
+import { castsShadowOf } from '../../../r3f/materials/recordedOnMaterial';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import { alphaAntialiasingOf } from '../../../r3f/materials/godotAlphaAntialiasing';
 import { ambientOcclusionUserData } from '../../../r3f/materials/godotAmbientOcclusion';

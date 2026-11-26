@@ -1,3 +1,4 @@
+import type { EnumValue } from '../../godot/classdb/enumNames.js';
 import {
   StencilCompare,
   StencilFlag,
@@ -8,14 +9,8 @@ import { TextureChannel } from '../../godot/rendering/materials/textureChannel.j
 import { MaterialFeature, MaterialFlag } from '../../godot/rendering/materials/materialFeatures.js';
 import { defaultKey, type Feature, type Flag, type MaterialKey } from './materialKey.js';
 
-/** A texture a material property holds: Godot sets `albedo_texture_size` from the albedo's size. */
-export interface MaterialTexture {
-  readonly width: number;
-  readonly height: number;
-}
-
-/** A property value: a bool, an enum index or a number, a colour or vector as lanes, or a texture. */
-export type MaterialValue = boolean | number | readonly number[] | MaterialTexture;
+/** A property value as its setter takes it (`materialSettingsOf`): a bool, an int, a float, or lanes. */
+export type MaterialValue = boolean | number | readonly number[];
 
 /** A material's properties under Godot's names, in the order Godot's setters ran. */
 export type MaterialSettings = Readonly<Record<string, MaterialValue>>;
@@ -123,10 +118,13 @@ function setStencilMode(key: MaterialKey, mode: MaterialKey['stencilMode']): voi
   key.stencilCompare = StencilCompare.ALWAYS;
 }
 
+/** Whether a channel setter takes `channel`: `ERR_FAIL_INDEX` refuses any other (`material.cpp:2964`). */
+export const isTextureChannel = (channel: number): channel is EnumValue<typeof TextureChannel> =>
+  Object.values(TextureChannel).includes(channel as never);
+
 /** `set_roughness_texture_channel` (`material.cpp:2973`) ignores a value that is not a channel. */
 function setRoughnessTextureChannel(key: MaterialKey, channel: number): void {
-  if (Object.values(TextureChannel).includes(channel as never))
-    key.roughnessTextureChannel = channel as never;
+  if (isTextureChannel(channel)) key.roughnessTextureChannel = channel;
 }
 
 /** Each property the shader text reads, by name, with the setter that writes it into the key. */

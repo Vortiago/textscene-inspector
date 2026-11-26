@@ -160,7 +160,7 @@ function useReportedSize(
   );
 }
 
-/** No `size`: a slot read by RID samples the texture and lays nothing out by it. */
+/** No `size`: a slot read by RID lays nothing out by it, and a shader reads `reportedSize`. */
 export interface Texture2DRidResult extends Omit<Texture2DResult, 'size'> {
   /**
    * False when the RID names a CanvasTexture, a canvas object no texture owner holds
@@ -168,6 +168,8 @@ export interface Texture2DRidResult extends Omit<Texture2DResult, 'size'> {
    * (`material_storage.cpp:1094-1096`).
    */
   namesTexture: boolean;
+  /** What `get_width` and `get_height` report: an AtlasTexture's region, and none for a CanvasTexture. */
+  reportedSize: ImageSize | undefined;
 }
 
 /**
@@ -178,8 +180,9 @@ export function useTexture2DRid(
   reference: ScopedReference | null,
   view: ViewportTextureView
 ): Texture2DRidResult {
-  const { result, namesCanvasTexture } = useTexture2DSlot(reference, view);
-  return namesCanvasTexture ? CANVAS_TEXTURE_RID : { ...result, namesTexture: true };
+  const { atlas, result, namesCanvasTexture } = useTexture2DSlot(reference, view);
+  const reportedSize = useReportedSize(result.texture, atlas, result);
+  return namesCanvasTexture ? CANVAS_TEXTURE_RID : { ...result, namesTexture: true, reportedSize };
 }
 
 const NOTHING: Texture2DResult = { texture: null, missing: false, isArriving: false };
@@ -187,7 +190,7 @@ const NOTHING: Texture2DResult = { texture: null, missing: false, isArriving: fa
 /** `ViewportTexture::get_size` while no viewport is set (`viewport.cpp:150-166`). */
 const NO_AREA: ImageSize = { width: 0, height: 0 };
 
-const CANVAS_TEXTURE_RID: Texture2DRidResult = { ...NOTHING, namesTexture: false };
+const CANVAS_TEXTURE_RID: Texture2DRidResult = { ...NOTHING, namesTexture: false, reportedSize: undefined };
 
 interface Texture2DSlot {
   /** The AtlasTexture the slot names, or null for any other form. */

@@ -514,11 +514,19 @@ describe('decodeStandardMaterial3D — texture-slot enumeration', () => {
   it('carries the reference verbatim, whatever kind it is', () => {
     const data = decodeStandardMaterial3D({
       albedo_texture: 'SubResource("NoiseTexture2D_a")',
-      roughness_texture: 'res://plain/path.png',
+      roughness_texture: 'ExtResource("2_rough")',
     });
     expect(data.textureSlots.albedo_texture).toBe('SubResource("NoiseTexture2D_a")');
-    expect(data.textureSlots.roughness_texture).toBe('res://plain/path.png');
+    expect(data.textureSlots.roughness_texture).toBe('ExtResource("2_rough")');
   });
+
+  // Godot 4.6.3 loads `roughness_texture = "res://tex.png"` in a .tres as a null texture.
+  it.each(['"res://plain/path.png"', 'res://plain/path.png'])(
+    'leaves the slot of a path string %s empty',
+    (path) => {
+      expect(decodeStandardMaterial3D({ roughness_texture: path }).textureSlots).toEqual({});
+    }
+  );
 
   it('does not invent a slot the material never authored', () => {
     expect(decodeStandardMaterial3D({ normal_enabled: 'true' }).textureSlots).toEqual({});

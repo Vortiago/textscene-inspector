@@ -1,12 +1,20 @@
-import type { EnumValue } from '../../godot/classdb/enumNames.js';
-import { clamp } from '../../godot/math/math.js';
+import { clamp, cMax } from '../../godot/math/math.js';
 import { TextureChannel, textureChannelMask } from '../../godot/rendering/materials/textureChannel.js';
 import {
   BASE_MATERIAL_3D_DEFAULTS as D,
   PROXIMITY_FADE_DISTANCE_MIN,
   TRIPLANAR_SHARPNESS_RANGE,
 } from '../../godot/scene/baseMaterial3D.js';
-import type { MaterialState, MaterialTexture, MaterialValue } from './materialProperties.js';
+import {
+  bool,
+  int,
+  real,
+  variant,
+  vector2,
+  vector3,
+  type Variant,
+} from '../../godot/variant/value/variant.js';
+import { isTextureChannel, type MaterialState, type MaterialValue } from './materialProperties.js';
 
 /** The value of each property the constructor sets (`material.cpp:3936`), under the property's name. */
 const DEFAULTS: Readonly<Record<string, MaterialValue>> = {
@@ -111,7 +119,7 @@ const RENAMED: readonly (readonly [string, string])[] = Object.entries({
 const COPIED = [...SAME_NAME.map((name) => [name, name] as const), ...RENAMED];
 
 /** The texture parameters (`material.cpp:645`), by the property that holds each texture. */
-const TEXTURES: readonly (readonly [string, string])[] = Object.entries({
+const TEXTURE_PARAMETERS: Readonly<Record<string, string>> = {
   albedo_texture: 'texture_albedo',
   metallic_texture: 'texture_metallic',
   roughness_texture: 'texture_roughness',
@@ -131,42 +139,81 @@ const TEXTURES: readonly (readonly [string, string])[] = Object.entries({
   detail_albedo: 'texture_detail_albedo',
   detail_normal: 'texture_detail_normal',
   orm_texture: 'texture_orm',
-});
+};
+
+/** The sampler parameter of the texture property `property`, or nothing for any other property. */
+export const textureParameterOf = (property: string): string | undefined =>
+  Object.hasOwn(TEXTURE_PARAMETERS, property) ? TEXTURE_PARAMETERS[property] : undefined;
+
+/** The parameter `set_texture` gives the albedo texture's size (`material.cpp:2545`). */
+export const ALBEDO_TEXTURE_SIZE = 'albedo_texture_size';
+
+/** The parameters Godot's setters write as a `Color` (`material.cpp:2151-2328`). */
+const COLOR_PARAMETERS: ReadonlySet<string> = new Set([
+  'albedo',
+  'emission',
+  'backlight',
+  'transmittance_color',
+]);
+
+/** The parameters Godot's setters write as an `int` (`material.cpp:2832-2848,2869-2885`). */
+const INT_PARAMETERS: ReadonlySet<string> = new Set([
+  'heightmap_min_layers',
+  'heightmap_max_layers',
+  'particles_anim_h_frames',
+  'particles_anim_v_frames',
+]);
+
+/** The Variant a setter passes for parameter `name`: a lane list is a vector, or a colour. */
+function parameterVariant(name: string, value: MaterialValue): Variant {
+  if (typeof value === 'boolean') return bool(value);
+  if (typeof value === 'number') return INT_PARAMETERS.has(name) ? int(value) : real(value);
+  const [x = 0, y = 0, z = 0, w = 0] = value;
+  if (value.length === 2) return vector2({ x, y });
+  if (value.length === 3) return vector3({ x, y, z });
+  if (COLOR_PARAMETERS.has(name)) return variant('COLOR', { r: x, g: y, b: z, a: w });
+  return variant('VECTOR4', { x, y, z, w });
+}
 
 /** The channel mask of the enum property `name`, as `_get_texture_mask` (`material.cpp:2950`) gives it. */
-const maskOf = (state: MaterialState, name: string) =>
-  textureChannelMask(Number(valueOf(state, name)) as EnumValue<typeof TextureChannel>);
+function maskOf(state: MaterialState, name: string) {
+  const channel = Number(valueOf(state, name));
+  // `ERR_FAIL_INDEX(p_channel, 5)` keeps the channel the constructor set (`material.cpp:2964`).
+  return textureChannelMask(isTextureChannel(channel) ? channel : TextureChannel.TEXTURE_CHANNEL_RED);
+}
 
 const valueOf = (state: MaterialState, name: string): MaterialValue => state.values[name] ?? DEFAULTS[name]!;
 
 /**
- * The value of each shader parameter Godot's setters give a material in state `state`.
+ * The Variant Godot's setters give each parameter but the textures, which `textureParameterOf` names.
  * @canonical Fill a BaseMaterial3D shader's parameters from the material's properties.
  */
-export function materialParameters(state: MaterialState): Record<string, MaterialValue> {
-  const number = (name: string) => Number(valueOf(state, name));
-  const parameters: Record<string, MaterialValue> = {};
-  for (const [parameter, property] of COPIED) parameters[parameter] = valueOf(state, property);
-  for (const [property, parameter] of TEXTURES) {
-    const texture = state.values[property];
-    if (texture !== undefined) parameters[parameter] = texture;
-  }
-  const albedo = state.values.albedo_texture as MaterialTexture | undefined;
-  if (albedo) parameters.albedo_texture_size = [albedo.width, albedo.height];
-  parameters.metallic_texture_channel = maskOf(state, 'metallic_texture_channel');
-  parameters.ao_texture_channel = maskOf(state, 'ao_texture_channel');
-  parameters.refraction_texture_channel = maskOf(state, 'refraction_texture_channel');
-  // A sharpness out of range gives NaN weights.
-  const { min, max } = TRIPLANAR_SHARPNESS_RANGE;
-  parameters.uv1_blend_sharpness = clamp(number('uv1_triplanar_sharpness'), min, max);
-  parameters.uv2_blend_sharpness = clamp(number('uv2_triplanar_sharpness'), min, max);
-  parameters.proximity_fade_distance = Math.max(
-    number('proximity_fade_distance'),
-    PROXIMITY_FADE_DISTANCE_MIN
-  );
-  parameters.heightmap_flip = [
+export function materialParameters(state: MaterialState): Record<string, Variant> {
+  const values: Record<string, MaterialValue> = {};
+  for (const [parameter, property] of COPIED) values[parameter] = valueOf(state, property);
+  values.metallic_texture_channel = maskOf(state, 'metallic_texture_channel');
+  values.ao_texture_channel = maskOf(state, 'ao_texture_channel');
+  values.refraction_texture_channel = maskOf(state, 'refraction_texture_channel');
+  Object.assign(values, clampedParameters(state));
+  values.heightmap_flip = [
     valueOf(state, 'heightmap_flip_tangent') ? -1 : 1,
     valueOf(state, 'heightmap_flip_binormal') ? -1 : 1,
   ];
-  return parameters;
+  return Object.fromEntries(
+    Object.entries(values).map(([name, value]) => [name, parameterVariant(name, value)])
+  );
+}
+
+/** The parameters whose setter clamps the property: `MAX` gives 0.01 for a NaN (`material.cpp:3087`). */
+function clampedParameters(state: MaterialState): Record<string, number> {
+  const number = (name: string) => Number(valueOf(state, name));
+  const { min, max } = TRIPLANAR_SHARPNESS_RANGE;
+  return {
+    uv1_blend_sharpness: clamp(number('uv1_triplanar_sharpness'), min, max),
+    uv2_blend_sharpness: clamp(number('uv2_triplanar_sharpness'), min, max),
+    // The member is a `float`, so the bound it keeps is 0.01 in float32.
+    proximity_fade_distance: Math.fround(
+      cMax(number('proximity_fade_distance'), PROXIMITY_FADE_DISTANCE_MIN)
+    ),
+  };
 }

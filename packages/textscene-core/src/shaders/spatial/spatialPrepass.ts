@@ -6,6 +6,7 @@ import { colourDepthOf, type PrepassDraw } from '../pipeline/depthPrepass.js';
 import { copyPolygonMode } from '../pipeline/polygonMode.js';
 import type { Renderer } from '../preprocessor/renderingMethod.js';
 import type { TemplateUniform } from '../template/templateUniforms.js';
+import { inPass } from '../uniforms/programKey.js';
 import { BoundNodeMaterial, type MaterialShader } from '../uniforms/boundMaterial.js';
 import { DEPTH_FLAGS, spatialPassMembership, type SpatialPipeline } from './spatialPipeline.js';
 import { setPosition, type EmittedStages } from './emittedStages.js';
@@ -70,7 +71,7 @@ function builtAtFirstDraw(build: () => THREE.Material): PrepassDraw {
 
 /** Godot's default material in the depth variant: the surface's vertex stage, and back faces culled. */
 function defaultDepthMaterial(material: BoundNodeMaterial, program: PrepassProgram): BoundNodeMaterial {
-  const depth = depthMaterial(material, program.shader);
+  const depth = depthMaterial(material, program.shader, 'depth-default');
   depth.stageWith(() => setPosition(depth, program.depthStages()));
   depth.fragmentNode = vec4(0) as unknown as Node;
   depth.side = THREE.FrontSide;
@@ -79,7 +80,7 @@ function defaultDepthMaterial(material: BoundNodeMaterial, program: PrepassProgr
 
 /** The surface's depth variant: alpha cut at the threshold (`scene_forward_clustered.glsl:1426`). */
 function ownDepthMaterial(material: BoundNodeMaterial, program: PrepassProgram): BoundNodeMaterial {
-  const depth = depthMaterial(material, program.shader);
+  const depth = depthMaterial(material, program.shader, 'depth-own');
   depth.stageWith(() => {
     const stages = program.depthStages();
     setPosition(depth, stages);
@@ -92,9 +93,10 @@ function ownDepthMaterial(material: BoundNodeMaterial, program: PrepassProgram):
   return depth;
 }
 
-/** A material that writes depth and no colour, with `material`'s depth test, gone with it. */
-function depthMaterial(material: BoundNodeMaterial, shader: MaterialShader): BoundNodeMaterial {
+/** A material of `pass` that writes depth and no colour, with `material`'s depth test, gone with it. */
+function depthMaterial(material: BoundNodeMaterial, shader: MaterialShader, pass: string): BoundNodeMaterial {
   const depth = new BoundNodeMaterial(shader);
+  depth.codeKey = material.codeKey && inPass(material.codeKey, pass);
   Object.assign(depth, {
     colorWrite: false,
     depthWrite: true,

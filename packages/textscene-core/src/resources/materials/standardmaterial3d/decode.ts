@@ -9,6 +9,7 @@ import { parseColorOrUndefined } from '../../../utils/colorParser';
 import { sRGBToLinearRGB } from '../../../utils/colorSpace';
 import { boolOr, enumOr, floatOr, intOr, vec3Or } from '../../../parser/valueParsers';
 import { parseVector3 } from '../../../parser/vectors';
+import { resourceRef } from '../../../godot/variant/resourceRef';
 import { drawsInShadowPass } from '../../../godot/rendering/shadowPass';
 import { passMembership, usesBlendAlpha } from '../../../godot/rendering/materials/alphaPass';
 import { TEXTURE_CHANNELS, TextureChannel } from '../../../godot/rendering/materials/textureChannel';
@@ -394,7 +395,8 @@ function decodeTextureSlots(properties: Record<string, string>): TextureSlotRefe
   const slots: Partial<Record<TextureSlot, string>> = {};
   for (const slot of TEXTURE_SLOTS) {
     const reference = properties[slot];
-    if (reference === undefined) continue;
+    // A value that names no resource, a path string too, is a null texture (`binder_common.h:175`).
+    if (reference === undefined || resourceRef(reference) === null) continue;
     const gate = SLOT_GATES[slot];
     if (gate !== null && !boolOr(properties[gate], false, CONTEXT)) continue;
     slots[slot] = reference;

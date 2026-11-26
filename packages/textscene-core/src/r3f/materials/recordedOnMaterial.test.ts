@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { recordedOn, recordedUniform } from './recordedOnMaterial';
+import { castsShadowOf, recordCastsShadow, recordedOn, recordedUniform } from './recordedOnMaterial';
 
 describe('recordedOn', () => {
   it('reads the value a material records', () => {
@@ -33,5 +33,15 @@ describe('recordedUniform', () => {
 
   it('falls back for a material that records nothing (error case)', () => {
     expect(recordedUniform(new THREE.MeshBasicMaterial(), 'scale', 1).value).toBe(1);
+  });
+});
+
+describe('castsShadowOf', () => {
+  it('reads the shadow pass a material records for itself', () => {
+    const material = new THREE.MeshBasicMaterial();
+
+    recordCastsShadow(material, false);
+
+    expect(castsShadowOf(material)).toBe(false);
   });
 });

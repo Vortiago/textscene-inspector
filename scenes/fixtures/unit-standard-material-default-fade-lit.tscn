@@ -1,0 +1,58 @@
+[gd_scene format=3 uid="uid://unit_standard_material_default_fade_lit"]
+
+; What it holds: four meshes that draw Godot's default material, on a ground with no material: a sphere whose material file
+; cannot load, a box with no material, and two spheres that fade, one by GeometryInstance3D transparency and one by visibility
+; range with fade mode self. A shadowed sun and a colour ambient light light them. They draw through Godot's generated shader and
+; the lit scene template (?litSurface=nodes). Every other material golden draws the classic path, so only this one shows a
+; regression in these surfaces on the node path.
+
+[ext_resource type="Material" path="res://missing-material.tres" id="1_missing_material"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_crate"]
+size = Vector3(0.8, 0.8, 0.8)
+
+[sub_resource type="SphereMesh" id="SphereMesh_ball"]
+radius = 0.5
+height = 1.0
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(4, 4)
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.1, 0.12, 0.16, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.25, 0.3, 0.4, 1)
+
+[node name="StandardMaterialDefaultFadeLitRoot" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.8660254, -0.3830222, 0.3213938, 0, 0.6427876, 0.7660444, -0.5, -0.6634139, 0.5566704, 0, 3, 0)
+shadow_enabled = true
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_ground")
+
+[node name="MissingMaterial" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 0.5, -0.5)
+mesh = SubResource("SphereMesh_ball")
+surface_material_override/0 = ExtResource("1_missing_material")
+
+[node name="NoMaterial" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 0.4, -0.5)
+mesh = SubResource("BoxMesh_crate")
+
+[node name="TransparencyFade" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 0.5, 0.8)
+transparency = 0.5
+mesh = SubResource("SphereMesh_ball")
+
+[node name="VisibilityFade" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 0.5, 0.8)
+visibility_range_end = 3.4
+visibility_range_end_margin = 1.0
+visibility_range_fade_mode = 1
+mesh = SubResource("SphereMesh_ball")

@@ -22,7 +22,7 @@ import {
   alphaAntialiasingProps,
   alphaAntialiasingUserData,
 } from '../../../r3f/materials/godotAlphaAntialiasing';
-import { recordedOn } from '../../../r3f/materials/recordedOnMaterial';
+import { castsShadowUserData, recordedOn } from '../../../r3f/materials/recordedOnMaterial';
 import {
   emissionTextureAddInjection,
   emissionTextureAddUserData,
@@ -213,7 +213,6 @@ function materialBlendProps(scalars: StandardMaterial3DScalars): MaterialBlendSt
 
 /** Where a derived material records the surface state the draw hooks read per draw group. */
 const BILLBOARD_KEY = 'godotBillboard';
-const CASTS_SHADOW_KEY = 'godotCastsShadow';
 
 /**
  * Surface state on `userData`, not as material props: the draw hooks apply billboard, shadow and
@@ -224,7 +223,7 @@ function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unk
   const billboard = surfaceBillboard(scalars);
   const userData = {
     [BILLBOARD_KEY]: billboard,
-    [CASTS_SHADOW_KEY]: scalars.castsShadow,
+    ...castsShadowUserData(scalars.castsShadow),
     ...alphaHashScaleUserData(scalars.alphaHashScale),
     ...alphaAntialiasingUserData(scalars.alphaAntialiasing),
     ...ambientOcclusionUserData(scalars.aoLightAffect, scalars.aoTextureChannelMask),
@@ -322,14 +321,6 @@ function billboardInjection(scalars: StandardMaterial3DScalars): ProgramInjectio
 /** The billboard a material was derived with. */
 export function billboardOf(material: THREE.Material): SurfaceBillboard {
   return recordedOn(material, BILLBOARD_KEY, NO_BILLBOARD);
-}
-
-/**
- * Whether a material's surface joins Godot's shadow pass. True for Godot's default
- * surface, which is opaque, and for any material this derivation did not build.
- */
-export function castsShadowOf(material: THREE.Material): boolean {
-  return recordedOn(material, CASTS_SHADOW_KEY, true);
 }
 
 /**

@@ -12,29 +12,53 @@ import { skyMaterialText } from '../../sky/skyMaterialText';
 import { decodeShaderText } from '../shadermaterial/decode';
 import { decodeStandardMaterial3D } from '../standardmaterial3d/decode';
 import type { TextureSlot } from '../standardmaterial3d/types';
-import type { Material, SkyMaterial, StandardMaterial } from './types';
+import type { BaseMaterialProperties, Material, SkyMaterial, StandardMaterial } from './types';
 
 export const MATERIAL: ResourceKind<Material> = {
   name: 'Material',
   accepts: (type) => descendsFromClass(type, 'Material'),
   decode: (held, follow) => {
     if (held.type === 'StandardMaterial3D') return standardMaterial(held, follow);
+    if (held.type === 'ORMMaterial3D')
+      return { form: 'orm', baseMaterial: baseMaterialProperties('ORMMaterial3D', held, follow) };
     if (held.type === 'ShaderMaterial') return shaderMaterial(held.properties, follow);
     return skyMaterial(held, follow) ?? { form: 'declined', type: held.type };
   },
 };
 
-function standardMaterial({ properties }: HeldResource, follow: Follow): StandardMaterial {
-  const data = decodeStandardMaterial3D(properties);
+function standardMaterial(held: HeldResource, follow: Follow): StandardMaterial {
+  const data = decodeStandardMaterial3D(held.properties);
+  const baseMaterial = baseMaterialProperties('StandardMaterial3D', held, follow);
   // The decode's gated table, never the raw property bag: Godot samples a gated slot only inside
   // its `if (features[…])` branch (`scene/resources/material.cpp:1090,1745`).
   const slots = Object.entries(data.textureSlots) as [TextureSlot, string][];
   return {
     form: 'standard',
     data,
+    baseMaterial,
     textures: Object.fromEntries(slots.map(([slot, ref]) => [slot, follow.reference(ref)])),
     nextPass: optionalReference(follow, data.nextPass),
   };
+}
+
+/** The properties of a BaseMaterial3D, split into Variant text and resources. */
+function baseMaterialProperties(
+  materialClass: BaseMaterialProperties['materialClass'],
+  { address, properties }: HeldResource,
+  follow: Follow
+): BaseMaterialProperties {
+  return { materialClass, address, ...splitResources(properties, follow) };
+}
+
+/** A property bag split into its Variant text and the resources it names. */
+function splitResources(held: Readonly<Record<string, string>>, follow: Follow) {
+  const properties: Record<string, string> = {};
+  const resources: Record<string, ScopedReference> = {};
+  for (const [name, value] of Object.entries(held)) {
+    if (resourceRef(value)) resources[name] = follow.reference(value);
+    else properties[name] = value;
+  }
+  return { properties, resources };
 }
 
 /** A ShaderMaterial as its shader's type draws it: a sky, a spatial surface, or declined for any other. */
@@ -49,9 +73,6 @@ function shaderMaterial(properties: Readonly<Record<string, string>>, follow: Fo
 
 /** The sky material of a class whose shader Godot generates, or null for any other class. */
 function skyMaterial({ type, properties }: HeldResource, follow: Follow): SkyMaterial | null {
-  const textures: Record<string, ScopedReference> = {};
-  for (const [name, value] of Object.entries(properties))
-    if (resourceRef(value)) textures[name] = follow.reference(value);
-  const shader = skyMaterialText(type, properties, textures);
+  const shader = skyMaterialText(type, properties, splitResources(properties, follow).resources);
   return shader && { form: 'sky', type, properties: shader };
 }

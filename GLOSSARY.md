@@ -1070,7 +1070,7 @@ Godot's shaders for a three.js `WebGLRenderer`, with no React: the scene shader 
 _Avoid_: "TSL spike", "node materials folder". A node file under `r3f/`.
 
 **Lit surface form** (`LitSurfaceForm`, `r3f/litSurface/litSurfaceForm.ts`):
-Which materials draw a lit surface: `patched`, the classic materials with their shader patches, or `nodes`, the **Shader module**. One switch picks it, the page's `?litSurface=` parameter, read once.
+Which materials draw a lit surface: `patched`, the classic materials with their shader patches, or `nodes`, the **Shader module**. With `nodes`, a StandardMaterial3D or an ORMMaterial3D draws the shader text Godot generates for it (ADR-0076). A ShaderMaterial draws through the **Shader module** in both forms. One switch picks it, the page's `?litSurface=` parameter, read once.
 _Avoid_: "renderer mode", "TSL mode". A prop or a context that carries the form.
 
 **Surface outputs** (ADR-0072, ADR-0076):

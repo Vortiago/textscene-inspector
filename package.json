@@ -42,6 +42,7 @@
     "godot:probes": "node scripts/godot-probes/run.mjs",
     "godot:shader-language": "node scripts/godot-shader-language/run.mjs",
     "godot:sky-materials": "node scripts/godot-probes/skyMaterials.mjs",
+    "godot:material-setters": "node scripts/godot-probes/materialSetters.mjs",
     "godot:variant": "node scripts/godot-variant/run.mjs",
     "godot:templates": "node scripts/godot-templates/run.mjs",
     "godot:ltc": "node scripts/godot-ltc/bake-ltc.mjs",

@@ -57,6 +57,10 @@ chain as text, as Godot's own materials do.
   nodes when a scene gains an environment or a light changes, and it reuses a layout function's
   first code, with that build's uniform names, for every later program (r187
   `NodeBuilder.js:2759-2790`). So `CalledFunctions` keeps one map of functions for each node builder.
+- **A BaseMaterial3D draws as the shader Godot writes for it.** With the switch on, a
+  StandardMaterial3D or an ORMMaterial3D draws the text of `baseMaterialSurface` through the same
+  transpiler as a ShaderMaterial. Its parameters are the Variants Godot's setters pass, and each
+  texture binds to its sampler parameter. The text cache keeps the 256 keys read last.
 
 The switch, the golden rule and the bundle ceiling of ADR-0055 stay until the transpiled materials
 are the default. The anchor checks of the shader patches stay until the last patch goes.

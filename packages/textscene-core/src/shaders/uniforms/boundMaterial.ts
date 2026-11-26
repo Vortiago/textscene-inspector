@@ -2,6 +2,7 @@ import { NodeMaterial } from 'three/webgpu';
 import type { ShaderSource, TranslatorFault } from '../fault/translatorFault.js';
 import type { Specialisation } from '../template/specialisation.js';
 import type { TranspiledUniform } from './transpiledUniform.js';
+import { programKeyOf, type CodeKey } from './programKey.js';
 
 /** The shader a transpiled material draws: its uniforms and the Godot text it comes from. */
 export interface MaterialShader {
@@ -15,6 +16,9 @@ const NO_SHADER: MaterialShader = { parameters: [], source: { text: '', file: ''
 
 /** Written by the constructor and `dispose`: each transpiled material a refused program is matched to. */
 const liveMaterials = new Set<WeakRef<BoundNodeMaterial>>();
+
+/** Written only by `refuseSharedProgram`, never cleared: the code keys of programs the GPU refused. */
+const refusedCodes = new Set<string>();
 
 /** Each transpiled material not yet disposed or collected. */
 export function* boundMaterials(): Generator<BoundNodeMaterial> {
@@ -38,8 +42,14 @@ export class BoundNodeMaterial extends NodeMaterial {
   /** Takes each program the GPU refuses for this material. Null logs the fault to the console. */
   onTranslatorFault: ((fault: TranslatorFault) => void) | null = null;
 
+  /** What decides the code, so materials of equal code share a program. Null keys on the node graph. */
+  codeKey: CodeKey | null = null;
+
   /** Runs before three keys a program, so the first program folds the specialisation values of its draw. */
   onBeforeProgram: (() => void) | null = null;
+
+  /** Written only by `customProgramCacheKey`: the shared code key of the material's last program. */
+  private sharedCode: string | null = null;
 
   /** Written only by `stageWith`: emits the stages again, as three keeps a function's first build. */
   private stage: (() => void) | null = null;
@@ -82,11 +92,20 @@ export class BoundNodeMaterial extends NodeMaterial {
     else console.error(fault);
   }
 
+  /** Stops sharing this refused program: three checks a program once (`WebGLProgram.js:822`). */
+  refuseSharedProgram(): void {
+    if (this.sharedCode) refusedCodes.add(this.sharedCode);
+  }
+
   /** three keeps one program for each key, so a draw with other specialisation values gets its own. */
   override customProgramCacheKey(): string {
     this.onBeforeProgram?.();
     const values = [...this.specialisations].map((constant) => constant.value);
-    return `${super.customProgramCacheKey()}|${values.join(',')}`;
+    const shared = this.codeKey && programKeyOf(this.codeKey);
+    this.sharedCode = shared && !refusedCodes.has(shared) ? shared : null;
+    // three keys a node graph on each node's id, so two graphs of equal code would compile twice.
+    const code = this.sharedCode ?? super.customProgramCacheKey();
+    return `${code}|${values.join(',')}`;
   }
 
   override dispose(): void {
@@ -100,6 +119,7 @@ export class BoundNodeMaterial extends NodeMaterial {
     this.shader = source.shader;
     this.isShown = source.isShown;
     this.onTranslatorFault = source.onTranslatorFault;
+    this.codeKey = source.codeKey;
     return this;
   }
 }

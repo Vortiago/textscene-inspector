@@ -57,9 +57,11 @@ describe('bindParameters', () => {
     ]);
   });
 
-  it('refuses a texture on a uniform of a value type', () => {
-    const binding = parametersOf('uniform float u;').get('u')!;
-    expect(() => binding.set(new DataTexture())).toThrow('expected a Variant for u, got a texture');
+  it.each([
+    ['a texture', new DataTexture()],
+    ['a list of textures', [new DataTexture(), null]],
+  ])('takes %s on a uniform of a value type as an Object, which Godot reads as zero', (_, value) => {
+    expect(() => parametersOf('uniform float u;').get('u')!.set(value)).not.toThrow();
   });
 
   it.each([

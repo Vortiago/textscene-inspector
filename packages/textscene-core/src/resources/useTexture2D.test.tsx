@@ -743,6 +743,52 @@ describe('useTexture2D — inline AtlasTexture', () => {
     expect(result.current.missing).toBe(false);
   });
 
+  it("reports the region and margin size Godot's getters give, not the sheet's", () => {
+    const margined: TscnInternalResource[] = [
+      ...resources,
+      {
+        id: 'AtlasTexture_margined',
+        type: 'AtlasTexture',
+        data: {
+          atlas: 'ExtResource("1_sheet")',
+          region: 'Rect2(96, 0, 32.5, 32)',
+          margin: 'Rect2(8, 6, 16, 20)',
+        },
+      },
+    ];
+    const { result } = renderHook(
+      () =>
+        useTexture2DRid(
+          referenceIn('SubResource("AtlasTexture_margined")', externalResources, margined),
+          'plain'
+        ).reportedSize,
+      { wrapper: withLoader({ path: 'res://sheet.png', texture: sheet() }) }
+    );
+
+    expect(result.current).toEqual({ width: 48, height: 52 });
+  });
+
+  it('reports the sheet size on an axis whose region is zero', () => {
+    const zeroWidth: TscnInternalResource[] = [
+      ...resources,
+      {
+        id: 'AtlasTexture_zero',
+        type: 'AtlasTexture',
+        data: { atlas: 'ExtResource("1_sheet")', region: 'Rect2(0, 0, 0, 16)' },
+      },
+    ];
+    const { result } = renderHook(
+      () =>
+        useTexture2DRid(
+          referenceIn('SubResource("AtlasTexture_zero")', externalResources, zeroWidth),
+          'plain'
+        ).reportedSize,
+      { wrapper: withLoader({ path: 'res://sheet.png', texture: sheet() }) }
+    );
+
+    expect(result.current).toEqual({ width: 128, height: 16 });
+  });
+
   it('shares ONE crop between consumers of the same cell', () => {
     const wrapper = withLoader({ path: 'res://sheet.png', texture: sheet() });
     const first = renderHook(
@@ -784,7 +830,7 @@ describe('useTexture2D — inline AtlasTexture', () => {
     expect(orphan.result.current.missing).toBe(true);
   });
 
-  it("gives a slot read by RID the AtlasTexture's whole sheet, uncropped", () => {
+  it("gives a slot read by RID the AtlasTexture's whole sheet, uncropped, and the cell's reported size", () => {
     const whole = sheet();
     const { result } = renderHook(
       () =>
@@ -800,6 +846,7 @@ describe('useTexture2D — inline AtlasTexture', () => {
       missing: false,
       isArriving: false,
       namesTexture: true,
+      reportedSize: { width: 64, height: 64 },
     });
   });
 
@@ -817,6 +864,7 @@ describe('useTexture2D — inline AtlasTexture', () => {
       missing: false,
       isArriving: false,
       namesTexture: true,
+      reportedSize: { width: 128, height: 128 },
     });
   });
 

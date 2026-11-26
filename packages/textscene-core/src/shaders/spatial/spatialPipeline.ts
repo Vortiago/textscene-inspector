@@ -6,7 +6,7 @@ import {
   type AlphaToCoverageMode,
 } from '../../godot/rendering/materials/alphaAntialiasing.js';
 import { passMembership, usesBlendAlpha } from '../../godot/rendering/materials/alphaPass.js';
-import type { PassMembership } from '../../godot/rendering/shadowPass.js';
+import { drawsInShadowPass, type PassMembership } from '../../godot/rendering/shadowPass.js';
 import { BlendMode } from '../../godot/rendering/materials/blendMode.js';
 import { CullMode } from '../../godot/rendering/materials/cullMode.js';
 import { DepthDrawMode } from '../../godot/rendering/materials/depthDrawMode.js';
@@ -228,6 +228,9 @@ export function spatialPassMembership(pipeline: SpatialPipeline): PassMembership
 }
 
 const usesAlphaPass = (pipeline: SpatialPipeline): boolean => spatialPassMembership(pipeline).alphaPass;
+
+export const castsShadow = (pipeline: SpatialPipeline): boolean =>
+  drawsInShadowPass(spatialPassMembership(pipeline));
 
 /** Alpha to coverage: on in the transparent colour pass only (`scene_shader_forward_clustered.cpp:431`). */
 export const drawsAlphaToCoverage = (

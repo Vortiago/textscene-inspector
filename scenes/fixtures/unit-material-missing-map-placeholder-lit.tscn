@@ -1,0 +1,65 @@
+[gd_scene format=3 uid="uid://unit_material_missing_map_placeholder_lit"]
+
+; What it holds: three spheres whose albedo map names a file that does not exist: a StandardMaterial3D, an ORMMaterial3D and a
+; ShaderMaterial. Each draws the magenta missing-texture placeholder on the node lit surface (?litSurface=nodes). Godot refuses
+; this scene at run time for its missing dependency, and the editor loads the map as null. Every other golden loads its maps, so
+; only this one shows a regression in the placeholder of a material drawn through a shader.
+
+[ext_resource type="Texture2D" path="res://missing-map.png" id="1_missing_map"]
+
+[sub_resource type="Shader" id="Shader_sampled"]
+code = "shader_type spatial;
+uniform sampler2D albedo_map : source_color;
+void fragment() {
+	ALBEDO = texture(albedo_map, UV).rgb;
+}
+"
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_missing"]
+albedo_texture = ExtResource("1_missing_map")
+
+[sub_resource type="ORMMaterial3D" id="ORMMaterial3D_missing"]
+albedo_texture = ExtResource("1_missing_map")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_missing"]
+shader = SubResource("Shader_sampled")
+shader_parameter/albedo_map = ExtResource("1_missing_map")
+
+[sub_resource type="SphereMesh" id="SphereMesh_ball"]
+radius = 0.5
+height = 1.0
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(4, 4)
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.1, 0.12, 0.16, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.25, 0.3, 0.4, 1)
+
+[node name="MaterialMissingMapPlaceholderLitRoot" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.8660254, -0.3830222, 0.3213938, 0, 0.6427876, 0.7660444, -0.5, -0.6634139, 0.5566704, 0, 3, 0)
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_ground")
+
+[node name="Standard" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 0.5, 0)
+mesh = SubResource("SphereMesh_ball")
+surface_material_override/0 = SubResource("StandardMaterial3D_missing")
+
+[node name="Orm" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+mesh = SubResource("SphereMesh_ball")
+surface_material_override/0 = SubResource("ORMMaterial3D_missing")
+
+[node name="Shader" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, 0.5, 0)
+mesh = SubResource("SphereMesh_ball")
+surface_material_override/0 = SubResource("ShaderMaterial_missing")

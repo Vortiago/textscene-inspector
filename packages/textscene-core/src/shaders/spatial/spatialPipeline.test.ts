@@ -7,7 +7,13 @@ import { CullMode } from '../../godot/rendering/materials/cullMode.js';
 import { DepthDrawMode } from '../../godot/rendering/materials/depthDrawMode.js';
 import { StencilCompare, StencilFlag } from '../../godot/rendering/materials/stencil.js';
 import { parsedShader } from '../language/parseShader.js';
-import { drawsAlphaToCoverage, drawsLines, spatialPipeline, stencilQueueError } from './spatialPipeline.js';
+import {
+  castsShadow,
+  drawsAlphaToCoverage,
+  drawsLines,
+  spatialPipeline,
+  stencilQueueError,
+} from './spatialPipeline.js';
 import type { Renderer } from '../preprocessor/renderingMethod.js';
 import { transpileSpatial } from './transpileSpatial.js';
 
@@ -138,6 +144,21 @@ describe('spatialPipeline', () => {
     spatialPipeline(
       parsedShader(`shader_type spatial;\n${globals}void fragment() {\n\t${fragment}\n}\n`).tree
     );
+
+  it('casts a shadow from the opaque pass, and from the alpha pass only with its depth', () => {
+    expect(castsShadow(fragmentPipeline('ALBEDO = vec3(1.0);'))).toBe(true);
+    expect(castsShadow(fragmentPipeline('ALPHA = 0.5;'))).toBe(false);
+    expect(
+      castsShadow(
+        spatialPipeline(
+          parsedShader(
+            'shader_type spatial;\nrender_mode depth_prepass_alpha;\nvoid fragment() {\n\tALPHA = 0.5;\n}\n'
+          ).tree
+        )
+      )
+    ).toBe(true);
+    expect(castsShadow(pipelineOf('depth_draw_never'))).toBe(false);
+  });
 
   it('reads one mode of each group', () => {
     const modes = 'blend_sub, depth_draw_always, depth_test_inverted, cull_front, alpha_to_coverage_and_one';
