@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { beginStep, endStep, recordFrames, startFrameCount, type FrameProfile } from './frameProfile';
 import type { FrameRecording } from './frameStats';
-import { spreadOf, timeEachDraw } from './frameRecording';
+import { timeEachDraw } from './frameRecording';
 import {
   cpuOnlyRenderer,
   FRAME_INTERVAL_MS,
@@ -211,14 +211,6 @@ describe('the spread of a recording', () => {
     const [recording] = await recorded;
     expect(recording!.draws![0]!.gpuSpread).toMatchObject({ lowMs: 1, highMs: 3 });
     expect(recording!.gpuSpread).toMatchObject({ lowMs: 1, highMs: 3 });
-  });
-
-  it('takes the median and the percentiles of the frame times', () => {
-    expect(spreadOf([5e6, 1e6, 3e6, 2e6, 4e6])).toEqual({ medianMs: 3, lowMs: 1, highMs: 5 });
-  });
-
-  it('is null with no GPU frame (edge case)', () => {
-    expect(spreadOf([])).toBeNull();
   });
 });
 

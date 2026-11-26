@@ -83,7 +83,7 @@ export class Recording {
 const NS_PER_MS = 1e6;
 
 /** The median and the 10th and 90th percentiles of `ns`, in ms, or null for no frames. */
-export function spreadOf(ns: readonly number[]): GpuSpread | null {
+function spreadOf(ns: readonly number[]): GpuSpread | null {
   if (ns.length === 0) return null;
   const sorted = [...ns].sort((a, b) => a - b);
   const at = (fraction: number) => sorted[Math.round(fraction * (sorted.length - 1))]! / NS_PER_MS;
