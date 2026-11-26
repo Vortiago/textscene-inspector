@@ -23,6 +23,7 @@ export class LightPassInputs {
   /** Runs `draw` unless `frame` reads as the kept frame, and keeps `frame` once `draw` returns. */
   drawIfChanged(frame: LightPassFrame, draw: () => void): void {
     this.read.length = 0;
+    refreshWorldMatrices(frame);
     const isReadable = readFrame(frame, this.read);
     if (isReadable && this.keptLists === frame.lists && sameNumbers(this.kept, this.read)) return;
     // A draw that throws leaves part of a frame in the buffers, so nothing stays kept.
@@ -52,10 +53,15 @@ function pushAll(out: number[], numbers: ArrayLike<number>): void {
   for (let i = 0; i < numbers.length; i += 1) out.push(numbers[i]!);
 }
 
+/** A write this frame moves a node before any render has refreshed the world matrices the read takes. */
+function refreshWorldMatrices({ camera, passMeshes }: LightPassFrame): void {
+  camera.updateWorldMatrix(true, false);
+  for (const { mesh } of passMeshes) mesh.updateWorldMatrix(true, false);
+}
+
 /** False when the frame holds a value whose change its numbers cannot show. */
 function readFrame(frame: LightPassFrame, out: number[]): boolean {
   const { camera, lists, passMeshes, canvasModulate, resolution, windows } = frame;
-  camera.updateWorldMatrix(true, false);
   out.push(resolution.x, resolution.y, canvasModulate.r, canvasModulate.g, canvasModulate.b);
   pushAll(out, camera.projectionMatrix.elements);
   pushAll(out, camera.matrixWorldInverse.elements);
@@ -71,7 +77,6 @@ function readWindow(window: Rect2 | null, out: number[]): void {
 }
 
 function readPassMesh({ mesh, ordinal, role }: PassMesh, out: number[]): boolean {
-  mesh.updateWorldMatrix(true, false);
   out.push(mesh.id, ordinal, role === 'lit' ? 1 : 0, mesh.renderOrder, mesh.layers.mask);
   out.push(mesh.frustumCulled ? 1 : 0);
   readAncestors(mesh, out);
