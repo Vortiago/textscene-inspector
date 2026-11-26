@@ -214,6 +214,14 @@ shades each one by its normal, then blends them in Godot's order.
 `specular_shininess` below 1 adds Godot's Blinn highlight, scaled by `specular_color` and the
 `specular_texture`. Godot shades specular only with a normal map. The highlight lands on Godot.
 
+## Canvas template
+
+With `?canvasItem=translated`, a lit item draws once through the canvas template's lit variant, as
+Godot does (`canvas.glsl:727-850`). The light's row in `light_array` holds its colour, blend mode,
+height and its texture's rect in the light atlas, and the item takes the first 15 positional lights
+that meet its rect. On the 62 lit fixtures the template's frame matches the classic one, within
+1/255 of Godot. An item a shadowed light reaches stays on the classic draw.
+
 ## Linting
 
 <!-- lint:begin PointLight2D -->

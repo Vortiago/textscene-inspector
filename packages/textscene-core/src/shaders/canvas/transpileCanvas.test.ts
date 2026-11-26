@@ -146,3 +146,34 @@ describe('transpileCanvasItem', () => {
     });
   });
 });
+
+describe('the program key of a canvas item material', () => {
+  const keyOf = (draw: ReturnType<ReturnType<typeof transpileCanvasItem>['draw']>) =>
+    draw.material.customProgramCacheKey();
+  const quadOf = (source = DEFAULT_CANVAS_SHADER, options = {}) =>
+    transpileCanvasItem(source, options).draw('quad');
+
+  it('is one key for two items of one shader, so their draws share one compiled program', () => {
+    expect(keyOf(quadOf())).toBe(keyOf(quadOf()));
+  });
+
+  it('differs for another variant, whose defines change the code', () => {
+    const item = transpileCanvasItem(DEFAULT_CANVAS_SHADER);
+    expect(keyOf(item.draw('quad'))).not.toBe(keyOf(item.draw('attributes')));
+  });
+
+  it('differs for another text', () => {
+    const tinted = 'shader_type canvas_item;\nvoid fragment() {\n\tCOLOR.r = 0.5;\n}\n';
+    expect(keyOf(quadOf())).not.toBe(keyOf(quadOf(tinted)));
+  });
+
+  it('differs for a target of linear colours, whose uniforms convert', () => {
+    expect(keyOf(quadOf())).not.toBe(keyOf(quadOf(DEFAULT_CANVAS_SHADER, { usesLinearColors: true })));
+  });
+
+  it('differs once one of two items is lit, as the lit variant reads the lights', () => {
+    const lit = quadOf();
+    specialiseCanvasDraw(lit, { useLighting: true });
+    expect(keyOf(lit)).not.toBe(keyOf(quadOf()));
+  });
+});

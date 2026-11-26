@@ -81,6 +81,12 @@ head-on whatever the height. Two normal-mapped ones take it by their normals: Fl
 Dome sweeps from -x to +x. Each lands on Godot. A Polygon2D, Line2D, AnimatedSprite2D,
 CPUParticles2D, MeshInstance2D, TileMapLayer or TileMap takes a normal map the same way.
 
+## Canvas template
+
+With `?canvasItem=translated`, a lit item draws once through the canvas template's lit variant, as
+Godot does (`canvas.glsl:727-850`). Directional rows come first in `light_array`, and every lit item
+reads them. An item a shadow-casting DirectionalLight2D reaches stays on the classic draw.
+
 ## Linting
 
 <!-- lint:begin DirectionalLight2D -->

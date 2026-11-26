@@ -128,6 +128,23 @@
       }
     }
   },
+  "pointlight2d-translated": {
+    "drawCalls": 2,
+    "steps": {
+      "Scene draw": {
+        "drawCalls": 1,
+        "runs": 1
+      },
+      "Canvas copy": {
+        "drawCalls": 1,
+        "runs": 1
+      },
+      "Other": {
+        "drawCalls": 0,
+        "runs": 1
+      }
+    }
+  },
   "modulate-200-sprites": {
     "drawCalls": 201,
     "steps": {
@@ -246,6 +263,48 @@
       },
       "Scene draw": {
         "drawCalls": 35,
+        "runs": 1
+      },
+      "Canvas copy": {
+        "drawCalls": 1,
+        "runs": 1
+      },
+      "Other": {
+        "drawCalls": 0,
+        "runs": 1
+      }
+    }
+  },
+  "dungeon": {
+    "drawCalls": 607,
+    "steps": {
+      "2D lights": {
+        "drawCalls": 298,
+        "runs": 1
+      },
+      "Scene draw": {
+        "drawCalls": 308,
+        "runs": 1
+      },
+      "Canvas copy": {
+        "drawCalls": 1,
+        "runs": 1
+      },
+      "Other": {
+        "drawCalls": 0,
+        "runs": 1
+      }
+    }
+  },
+  "dungeon-translated": {
+    "drawCalls": 632,
+    "steps": {
+      "2D lights": {
+        "drawCalls": 289,
+        "runs": 1
+      },
+      "Scene draw": {
+        "drawCalls": 342,
         "runs": 1
       },
       "Canvas copy": {

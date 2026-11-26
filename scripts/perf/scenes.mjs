@@ -8,6 +8,7 @@ export const BUDGET_SCENES = [
   { name: 'glow', file: 'unit-glow-strength.tscn' },
   { name: 'reflection-probe', file: 'unit-reflection-probe.tscn' },
   { name: 'pointlight2d', file: 'unit-pointlight2d-blend.tscn' },
+  { name: 'pointlight2d-translated', file: 'unit-pointlight2d-blend.tscn', canvasItem: 'translated' },
   { name: 'modulate-200-sprites', file: 'perf-modulate-200-sprites.tscn' },
   { name: 'demo-3d-platformer', file: 'demos/3d/platformer/game.tscn' },
   {
@@ -22,6 +23,8 @@ export const BUDGET_SCENES = [
     canvasItem: 'translated',
   },
   { name: 'demo-2d-lights-and-shadows', file: 'demos/2d/lights_and_shadows/light_shadows.tscn' },
+  { name: 'dungeon', file: 'dungeon.tscn' },
+  { name: 'dungeon-translated', file: 'dungeon.tscn', canvasItem: 'translated' },
   {
     name: 'in-game-camera3d',
     file: 'in-game/unit-in-game-camera3d.tscn',
