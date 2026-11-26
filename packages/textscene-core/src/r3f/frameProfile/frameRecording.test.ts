@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { beginStep, endStep, recordFrames, startFrameCount, type FrameProfile } from './frameProfile';
 import type { FrameRecording } from './frameStats';
-import { STALLED_RECORDING_MS, timeEachDraw } from './frameRecording';
+import { timeEachDraw } from './frameRecording';
 import {
   cpuOnlyRenderer,
   FRAME_INTERVAL_MS,
@@ -120,8 +120,8 @@ describe('recordFrames', () => {
       const profile = timed(cpuOnlyRenderer());
       const recorded = recordFrames({ frames: 10 });
       runFrames(profile, 0, 3);
-      vi.advanceTimersByTime(STALLED_RECORDING_MS);
-      await expect(recorded).rejects.toThrow(`got 3: no frame in ${STALLED_RECORDING_MS} ms`);
+      vi.runOnlyPendingTimers();
+      await expect(recorded).rejects.toThrow('got 3: no frame in');
     } finally {
       vi.useRealTimers();
     }

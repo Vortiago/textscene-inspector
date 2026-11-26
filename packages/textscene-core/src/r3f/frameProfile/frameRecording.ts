@@ -13,7 +13,7 @@ export interface RecordOptions {
 const DEFAULT_FRAMES = 120;
 
 /** A recording with no frame for this long fails: a hidden view or a background tab draws none. */
-export const STALLED_RECORDING_MS = 5000;
+const STALLED_RECORDING_MS = 5000;
 
 /** The frames and draw sums of one recording, which a profile fills and finishes. */
 export class Recording {
