@@ -51,7 +51,7 @@ function emitter(raw: Record<string, string>): TscnNode {
   };
 }
 
-async function shadedCommandsOf(node: TscnNode) {
+async function renderEmitter(node: TscnNode) {
   const fake = createFakeResourceLoader();
   const texture = new THREE.Texture();
   (texture as unknown as { image: { width: number; height: number } }).image = { width: 8, height: 4 };
@@ -69,6 +69,10 @@ async function shadedCommandsOf(node: TscnNode) {
     </CanvasWorkspaceProvider>
   );
   await ReactThreeTestRenderer.act(async () => {});
+}
+
+async function shadedCommandsOf(node: TscnNode) {
+  await renderEmitter(node);
   return asked.shadedCommands.at(-1)!()!.commands;
 }
 
@@ -104,7 +108,7 @@ describe('CPUParticles2D through the canvas template', () => {
   });
 
   it('draws nothing while it is not emitting', async () => {
-    await shadedCommandsOf(emitter({ emitting: 'false' })).catch(() => null);
+    await renderEmitter(emitter({ emitting: 'false' }));
 
     expect(asked.shadedCommands).toEqual([]);
   });

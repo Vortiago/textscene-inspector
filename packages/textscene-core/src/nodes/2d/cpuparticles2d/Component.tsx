@@ -27,7 +27,7 @@ import { loadSimulate } from './simulateModule';
 import type { RenderedParticle } from './simulate';
 import type { CPUParticles2DProperties } from './types';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
-import { useLazyModuleState } from '../../../resources/useLazyModule';
+import { moduleOf, useLazyModuleState } from '../../../resources/useLazyModule';
 
 /** The quad of an emitter with no texture (`cpu_particles_2d.cpp:186-192`). */
 const UNTEXTURED_QUAD: ImageSize = { width: 1, height: 1 };
@@ -85,8 +85,7 @@ function useFrozenPose(props: CPUParticles2DProperties, anchor: THREE.Object3D |
     colorRamp: props.color_ramp,
     colorInitialRamp: props.color_initial_ramp,
   });
-  const loaded = useLazyModuleState(loadSimulate, props.emitting);
-  const simulate = loaded && typeof loaded === 'object' ? loaded.module : null;
+  const simulate = moduleOf(useLazyModuleState(loadSimulate, props.emitting));
   return useMemo(
     () =>
       simulate && {

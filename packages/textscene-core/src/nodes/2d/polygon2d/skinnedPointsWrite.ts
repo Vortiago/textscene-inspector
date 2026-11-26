@@ -26,10 +26,12 @@ function writeTemplateVertices(
   vertices: THREE.BufferAttribute,
   points: readonly Vector2[]
 ): void {
-  geometry.boundingBox?.makeEmpty();
-  points.forEach(({ x, y }, i) => {
+  // Indexed, not `forEach`: no closure per skin per frame.
+  const box = geometry.boundingBox?.makeEmpty();
+  for (let i = 0; i < points.length; i++) {
+    const { x, y } = points[i]!;
     vertices.setXY(i, x, y);
-    geometry.boundingBox?.expandByPoint(corner.set(x, -y, 0));
-  });
+    box?.expandByPoint(corner.set(x, -y, 0));
+  }
   vertices.needsUpdate = true;
 }

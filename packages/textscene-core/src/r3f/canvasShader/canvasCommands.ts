@@ -150,18 +150,15 @@ const GODOT_FRAME_Y = 1;
 
 /** Scratch of one placement, overwritten by the next. */
 const placement = new THREE.Matrix4();
-const NO_TURN = new THREE.Quaternion();
+const UNSCALED: [number, number, number] = [1, 1, 1];
+const ORIGIN: [number, number, number] = [0, 0, 0];
 
 /** A surface's placement in three's frame as Godot's transform, and its skin's receiver. */
 function placedCommand({ position, scale, matrix, meshRef }: CanvasSurface): Partial<CanvasMeshCommand> {
   const placed =
     matrix ??
     (position || scale
-      ? placement.compose(
-          corner.fromArray(position ?? [0, 0, 0]),
-          NO_TURN,
-          new THREE.Vector3().fromArray(scale ?? [1, 1, 1])
-        )
+      ? placement.makeScale(...(scale ?? UNSCALED)).setPosition(...(position ?? ORIGIN))
       : null);
   return {
     ...(placed && { transform: transform2DFromThreeMatrix(placed) }),
@@ -234,7 +231,12 @@ export function sameCommandLayout(
       const other = b[index]!;
       if (command.kind === 'rect') return other.kind === 'rect';
       if (other.kind !== command.kind || other.arrays !== command.arrays) return false;
-      return command.kind === 'mesh' || command.instances.count === (other as typeof command).instances.count;
+      return instanceCountOf(command) === instanceCountOf(other);
     })
   );
+}
+
+/** How many times a command draws its arrays: once for a mesh or a rect. */
+function instanceCountOf(command: CanvasShaderCommand): number {
+  return command.kind === 'multimesh' ? command.instances.count : 1;
 }

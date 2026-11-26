@@ -40,9 +40,9 @@ const RECT_COMMAND: CanvasShaderCommand = {
   modulate: { r: 1, g: 1, b: 1, a: 1 },
 };
 
-type MeshCommand = Extract<CanvasShaderCommand, { kind: 'mesh' }>;
+type SingleMeshCommand = Extract<CanvasShaderCommand, { kind: 'mesh' }>;
 
-function meshCommand(primitive: 'triangles' | 'points' = 'triangles'): MeshCommand {
+function meshCommand(primitive: 'triangles' | 'points' = 'triangles'): SingleMeshCommand {
   return {
     kind: 'mesh',
     arrays: {
