@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { attributesGeometry } from '../../../shaders/canvas/canvasAttributes';
 import { canvasSurfaceGeometry } from '../../../r3f/canvasMesh/canvasSurface';
-import { writeSkinnedPoints } from './useSkeletonSkin';
+import { writeSkinnedPoints } from './skinnedPointsWrite';
 
 const POINTS = [
   { x: 0, y: 0 },

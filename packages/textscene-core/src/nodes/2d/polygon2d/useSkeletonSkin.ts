@@ -7,7 +7,7 @@
 
 import { useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
-import * as THREE from 'three';
+import type * as THREE from 'three';
 import {
   affineInverseTransform2DInto,
   multiplyTransform2DInto,
@@ -15,13 +15,14 @@ import {
 } from '../../../godot/math/transform2d.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext.js';
-import { canvasTransformInto, writeGodotPointAsThree } from '../../../r3f/node2dTransform.js';
+import { canvasTransformInto } from '../../../r3f/node2dTransform.js';
 import { observeSceneCamera } from '../../../r3f/sceneRenderCamera.js';
 import { WorldMatrixWatch } from '../../../r3f/worldMatrixWatch.js';
 import type { DrawnSkeletonPose } from '../skeleton2d/skeletonPose.js';
 import { skeleton2DPoseAt } from '../skeleton2d/skeletonPoses.js';
 import { skinnedPointsInto } from './polygonSkin.js';
 import type { PolygonSkeletonBinding } from './skeletonBinding.js';
+import { writeSkinnedPoints } from './skinnedPointsWrite.js';
 
 /** Skins `mesh`, classic or the template's, while `binding` and the node registry with the pose exist. */
 export function useSkeletonSkin(
@@ -101,38 +102,6 @@ class MeshSkin {
   private write(points: readonly Vector2[]): void {
     writeSkinnedPoints(this.drawnGeometry, points);
   }
-}
-
-/** The canvas template's vertex array, which holds Godot's points as they are. */
-const TEMPLATE_VERTICES = 'vertex_attrib';
-
-/** Scratch of one point, overwritten by the next. */
-const corner = new THREE.Vector3();
-
-/** Writes `points` to the template's vertex array, which the skeleton pass feeds, or to three's positions. */
-export function writeSkinnedPoints(geometry: THREE.BufferGeometry, points: readonly Vector2[]): void {
-  const vertices = geometry.getAttribute(TEMPLATE_VERTICES) as THREE.BufferAttribute | undefined;
-  if (vertices) return writeTemplateVertices(geometry, vertices, points);
-  const position = geometry.getAttribute('position') as THREE.BufferAttribute;
-  const array = position.array as Float32Array;
-  for (let i = 0; i < points.length; i++) writeGodotPointAsThree(array, i * 3, points[i]!.x, points[i]!.y);
-  position.needsUpdate = true;
-  geometry.computeBoundingSphere();
-  if (geometry.boundingBox) geometry.computeBoundingBox();
-}
-
-/** The template places each vertex itself, so only a canvas group's box, in three's y, follows the skin. */
-function writeTemplateVertices(
-  geometry: THREE.BufferGeometry,
-  vertices: THREE.BufferAttribute,
-  points: readonly Vector2[]
-): void {
-  geometry.boundingBox?.makeEmpty();
-  points.forEach(({ x, y }, i) => {
-    vertices.setXY(i, x, y);
-    geometry.boundingBox?.expandByPoint(corner.set(x, -y, 0));
-  });
-  vertices.needsUpdate = true;
 }
 
 /** The first `count` points of `geometry`, back in Godot's +Y-down pixels. */
