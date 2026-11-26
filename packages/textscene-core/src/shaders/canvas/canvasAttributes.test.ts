@@ -11,6 +11,7 @@ import {
   primitiveObject,
   triangleArrayCommand,
 } from './canvasAttributes.js';
+import { canvasInstances, instancingFlags } from './canvasMultiMesh.js';
 import { DEFAULT_CANVAS_SHADER } from './defaultCanvasShader.js';
 import { transpileCanvasItem } from './transpileCanvas.js';
 
@@ -205,6 +206,57 @@ describe('attributesObject', () => {
     expect((draw.uniforms.get('params.world_ofs') as UniformNode<unknown>).value).toEqual(
       new THREE.Vector2(5, 7)
     );
+  });
+
+  const INSTANCES = canvasInstances([
+    { transform: new Float32Array([1, 0, 0, 3, 0, 1, 0, 4]), color: null, customData: new Float32Array(4) },
+    { transform: new Float32Array([1, 0, 0, 5, 0, 1, 0, 6]), color: null, customData: new Float32Array(4) },
+  ]);
+
+  type ObjectHook = UniformNode<unknown> & { update(frame: { object: THREE.Object3D }): void };
+
+  function multiMeshObject(texturesFlags: number) {
+    const draw = transpileCanvasItem(DEFAULT_CANVAS_SHADER).draw('attributes');
+    const geometry = attributesGeometry(polygonCommand(SQUARE, [], []), PLAIN_DRAW);
+    const object = attributesObject(draw, geometry, 'triangles', {
+      ...polygonConstants(ITEM),
+      instances: INSTANCES,
+    });
+    const flags = draw.uniforms.get('params.batch_flags') as UniformNode<unknown>;
+    flags.value = texturesFlags;
+    (draw.uniforms.get('params.world_x') as ObjectHook).update({ object });
+    return { draw, object, flags };
+  }
+
+  it('draws a multimesh object once for each instance', () => {
+    const { object } = multiMeshObject(0);
+
+    expect((object.geometry as THREE.InstancedBufferGeometry).instanceCount).toBe(2);
+  });
+
+  it("writes a multimesh's instancing bits beside the texture's bits of batch_flags", () => {
+    const DEFAULT_NORMAL_MAP_USED = 1 << 9;
+
+    expect(multiMeshObject(DEFAULT_NORMAL_MAP_USED).flags.value).toBe(
+      DEFAULT_NORMAL_MAP_USED | instancingFlags(INSTANCES)
+    );
+  });
+
+  it('clears the instancing bits for a mesh drawn once after a multimesh', () => {
+    const { draw, flags } = multiMeshObject(0);
+    const mesh = attributesObject(
+      draw,
+      attributesGeometry(polygonCommand(SQUARE, [], []), PLAIN_DRAW),
+      'triangles',
+      polygonConstants(ITEM)
+    );
+    (draw.uniforms.get('params.world_x') as ObjectHook).update({ object: mesh });
+
+    expect(flags.value).toBe(0);
+  });
+
+  it("reads the transforms buffer of a multimesh's draw", () => {
+    expect(multiMeshObject(0).draw.buffers.has('transforms')).toBe(true);
   });
 
   it('throws for a draw that emulates points over arrays of another primitive', () => {

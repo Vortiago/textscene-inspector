@@ -7,7 +7,7 @@
 
 import { useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
-import * as THREE from 'three';
+import type * as THREE from 'three';
 import {
   affineInverseTransform2DInto,
   multiplyTransform2DInto,
@@ -15,19 +15,16 @@ import {
 } from '../../../godot/math/transform2d.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext.js';
-import { canvasTransformInto, writeGodotPointAsThree } from '../../../r3f/node2dTransform.js';
+import { canvasTransformInto } from '../../../r3f/node2dTransform.js';
 import { observeSceneCamera } from '../../../r3f/sceneRenderCamera.js';
 import { WorldMatrixWatch } from '../../../r3f/worldMatrixWatch.js';
 import type { DrawnSkeletonPose } from '../skeleton2d/skeletonPose.js';
 import { skeleton2DPoseAt } from '../skeleton2d/skeletonPoses.js';
 import { skinnedPointsInto } from './polygonSkin.js';
 import type { PolygonSkeletonBinding } from './skeletonBinding.js';
+import { writeSkinnedPoints } from './skinnedPointsWrite.js';
 
-/**
- * Skins `mesh`, whose `geometry` holds the undeformed points, while `binding` is set, and writes
- * those points back once it is not. Without the registry of node objects, which holds the pose of
- * the skeleton, the mesh stays undeformed.
- */
+/** Skins `mesh`, classic or the template's, while `binding` and the node registry with the pose exist. */
 export function useSkeletonSkin(
   mesh: THREE.Mesh | null,
   geometry: THREE.BufferGeometry | null,
@@ -56,14 +53,17 @@ class MeshSkin {
   private readonly skeletonToMesh = mutableTransform2D();
   /** Written only by `skinned`, and read by `write` in the same render. */
   private readonly skinnedBuffer: Vector2[];
+  /** Held from the start: R3F gives a mesh a bare geometry once its own detaches, before `release`. */
+  private readonly drawnGeometry: THREE.BufferGeometry;
 
   constructor(
     private readonly mesh: THREE.Mesh,
-    private readonly geometry: THREE.BufferGeometry,
+    restGeometry: THREE.BufferGeometry,
     private readonly binding: PolygonSkeletonBinding,
     private readonly nodeObjects: ReadonlyMap<string, THREE.Object3D>
   ) {
-    this.restPoints = godotPointsOf(geometry, binding.influences.vertexCount);
+    this.restPoints = godotPointsOf(restGeometry, binding.influences.vertexCount);
+    this.drawnGeometry = mesh.geometry;
     this.skinnedBuffer = this.restPoints.map(() => ({ x: 0, y: 0 }));
   }
 
@@ -100,12 +100,7 @@ class MeshSkin {
   }
 
   private write(points: readonly Vector2[]): void {
-    const position = this.geometry.getAttribute('position') as THREE.BufferAttribute;
-    const array = position.array as Float32Array;
-    for (let i = 0; i < points.length; i++) writeGodotPointAsThree(array, i * 3, points[i]!.x, points[i]!.y);
-    position.needsUpdate = true;
-    this.geometry.computeBoundingSphere();
-    if (this.geometry.boundingBox) this.geometry.computeBoundingBox();
+    writeSkinnedPoints(this.drawnGeometry, points);
   }
 }
 

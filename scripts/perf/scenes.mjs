@@ -1,6 +1,6 @@
 /**
  * @type {Array<{ name: string, file: string, inGameFrame?: { width: number, height: number },
- *   writesEachFrame?: { parent: string, count: number } }>}
+ *   writesEachFrame?: { parent: string, count: number }, canvasItem?: 'translated' }>}
  */
 export const BUDGET_SCENES = [
   { name: 'depth-fog', file: 'unit-depth-fog.tscn' },
@@ -19,6 +19,12 @@ export const BUDGET_SCENES = [
     name: 'demo-3d-platformer-write-each-frame',
     file: 'demos/3d/platformer/game.tscn',
     writesEachFrame: { parent: 'Coins', count: 1 },
+  },
+  { name: 'canvas-item-instances', file: 'unit-canvas-item-translated-instances.tscn' },
+  {
+    name: 'canvas-item-instances-translated',
+    file: 'unit-canvas-item-translated-instances.tscn',
+    canvasItem: 'translated',
   },
   { name: 'demo-2d-lights-and-shadows', file: 'demos/2d/lights_and_shadows/light_shadows.tscn' },
   {

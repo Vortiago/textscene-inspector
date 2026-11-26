@@ -23,31 +23,31 @@ afterEach(() => {
 });
 
 describe('useSkeletonBinding', () => {
-  it('counts a polygon as skinned while the live tree has not resolved its skeleton', () => {
+  it('gives no binding while the live tree has not resolved the skeleton', () => {
     const { result } = renderHook(() => useSkeletonBinding(NAMES_SKELETON, '/Root/Strip'));
 
-    expect(result.current).toEqual({ binding: undefined, isSkinned: true });
+    expect(result.current).toBeUndefined();
   });
 
-  it('draws unskinned when the resolved path finds no Skeleton2D', () => {
+  it('gives no binding when the resolved path finds no Skeleton2D', () => {
     live.selected = null;
     const { result } = renderHook(() => useSkeletonBinding(NAMES_SKELETON, '/Root/Strip'));
 
-    expect(result.current).toEqual({ binding: undefined, isSkinned: false });
+    expect(result.current).toBeUndefined();
   });
 
-  it('draws skinned with the binding the live tree resolves', () => {
+  it('gives the binding the live tree resolves', () => {
     live.selected = BINDING;
     const { result } = renderHook(() => useSkeletonBinding(NAMES_SKELETON, '/Root/Strip'));
 
-    expect(result.current).toEqual({ binding: BINDING, isSkinned: true });
+    expect(result.current).toBe(BINDING);
   });
 
-  it('is unskinned for a polygon that names no skeleton', () => {
+  it('gives no binding for a polygon that names no skeleton', () => {
     live.selected = BINDING;
     const props = { ...NAMES_SKELETON, skeleton: undefined } as Polygon2DProperties;
     const { result } = renderHook(() => useSkeletonBinding(props, '/Root/Strip'));
 
-    expect(result.current).toEqual({ binding: undefined, isSkinned: false });
+    expect(result.current).toBeUndefined();
   });
 });

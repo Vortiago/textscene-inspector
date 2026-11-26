@@ -9,7 +9,18 @@ import type { Drawable } from '../pipeline/drawable.js';
 import { type CanvasItemDraw, modulated, NO_INSTANCE_UNIFORMS, WHITE, worldOf } from './canvasInstance.js';
 import { emulatedPointGeometry } from '../template/emulatedPoints.js';
 import { CUSTOM_ARRAY_LANES } from '../../godot/rendering/meshArrayFormat.js';
-import { customArrayTemplateAttribute, VERTEX_ID_ATTRIBUTE } from '../template/surfaceAttributes.js';
+import {
+  customArrayTemplateAttribute,
+  INSTANCE_ID_ATTRIBUTE,
+  VERTEX_ID_ATTRIBUTE,
+} from '../template/surfaceAttributes.js';
+import {
+  type CanvasInstances,
+  instancedGeometry,
+  instancedPoints,
+  INSTANCING_BITS,
+  instancingFlags,
+} from './canvasMultiMesh.js';
 import type { CanvasDraw, CanvasVariant } from './transpileCanvas.js';
 
 /** The vertex arrays of `Item::CommandPolygon`, or of one surface of a mesh. */
@@ -97,12 +108,14 @@ export function attributesGeometry(
       new THREE.BufferAttribute(values, CUSTOM_ARRAY_LANES)
     );
   });
-  // Only an emulated point reads its vertex's index from an attribute: three's own points read `vertexIndex`.
-  if (emulatesPoints)
+  // Only an emulated point reads its indices from attributes: three's own points read `vertexIndex`.
+  if (emulatesPoints) {
     geometry.setAttribute(
       VERTEX_ID_ATTRIBUTE,
       new THREE.BufferAttribute(Float32Array.from(points.keys()), 1)
     );
+    geometry.setAttribute(INSTANCE_ID_ATTRIBUTE, new THREE.BufferAttribute(new Float32Array(count), 1));
+  }
   geometry.setAttribute('bone_attrib', new THREE.BufferAttribute(new Uint32Array(count * 4), 4));
   geometry.setAttribute('weight_attrib', new THREE.BufferAttribute(new Float32Array(count * 4), 4));
   // In order without indices: three counts the vertices of an unindexed draw from `position` alone.
@@ -135,6 +148,8 @@ const repeated = (value: readonly number[], count: number) =>
 export interface AttributesConstants {
   readonly world: Transform2DColumns;
   readonly modulation: Rgba;
+  /** A multimesh batch's instances, which its `batch_flags` and the `transforms` buffer carry. */
+  readonly instances?: CanvasInstances;
 }
 
 /** The item's transform and modulate (`renderer_canvas_render_rd.cpp:2643-2654`). */
@@ -156,12 +171,14 @@ export function meshConstants(item: CanvasItemDraw, mesh: CanvasMeshPlacement): 
   };
 }
 
-/** The vector members of `Params`, one set for each draw, which each object's hook sets in place. */
+/** The members of `Params`, one set for each draw, which each object's hook sets in place. */
 interface AttributesParams {
   readonly worldX: THREE.Vector2;
   readonly worldY: THREE.Vector2;
   readonly worldOfs: THREE.Vector2;
   readonly modulation: THREE.Vector4;
+  /** The texture's bits, which its binding writes, with this batch's instancing bits. */
+  batchFlags: number;
 }
 
 const newParams = (): AttributesParams => ({
@@ -169,20 +186,26 @@ const newParams = (): AttributesParams => ({
   worldY: new THREE.Vector2(),
   worldOfs: new THREE.Vector2(),
   modulation: new THREE.Vector4(),
+  batchFlags: 0,
 });
 
 function setParams(
   params: AttributesParams,
-  { world, modulation: { r, g, b, a } }: AttributesConstants
+  { world, modulation: { r, g, b, a }, instances }: AttributesConstants,
+  textureFlags: number
 ): void {
   const [xx, xy, yx, yy, ox, oy] = worldOf(world);
   params.worldX.set(xx!, xy!);
   params.worldY.set(yx!, yy!);
   params.worldOfs.set(ox!, oy!);
   params.modulation.set(r, g, b, a);
+  // `tex_info->flags | flags` (`renderer_canvas_render_rd.h:557`).
+  params.batchFlags = (textureFlags & ~INSTANCING_BITS) | (instances ? instancingFlags(instances) : 0);
 }
 
 const NO_LIGHTS = new THREE.Vector4();
+
+const BATCH_FLAGS = 'params.batch_flags';
 
 /** Each member of `Params` an attributes draw writes (`renderer_canvas_render_rd.cpp:567`). */
 const ATTRIBUTES_BINDINGS: readonly Binding<AttributesParams>[] = [
@@ -206,6 +229,11 @@ const ATTRIBUTES_BINDINGS: readonly Binding<AttributesParams>[] = [
     godot: 'renderer_canvas_render_rd.cpp:574',
     value: () => NO_INSTANCE_UNIFORMS,
   },
+  {
+    uniform: BATCH_FLAGS,
+    godot: 'renderer_canvas_render_rd.cpp:2792-2799',
+    value: ({ batchFlags }) => batchFlags,
+  },
 ];
 
 /** The uniform every attributes vertex stage reads, so its object update runs before each draw. */
@@ -224,7 +252,7 @@ function constantsOf(object: THREE.Object3D): AttributesConstants {
 /** Written only by `writeEachDraw`: the draws whose hook writes each object's constants. */
 const hookedDraws = new WeakSet<CanvasDraw>();
 
-/** An object that draws `geometry` as `primitive` with `draw`. The caller disposes `object.geometry` too. */
+/** An object that draws `geometry` with `draw`, once an instance. The caller disposes `object.geometry`. */
 export function attributesObject(
   draw: CanvasDraw,
   geometry: THREE.BufferGeometry,
@@ -234,14 +262,23 @@ export function attributesObject(
   writeEachDraw(draw);
   if (draw.emulatesPoints && primitive !== 'points')
     throw new Error(`expected points for a draw that emulates points, got ${primitive}`);
+  const count = constants.instances?.count;
   const object = draw.emulatesPoints
-    ? primitiveObject('triangles', emulatedPointGeometry(geometry), draw.material)
-    : primitiveObject(primitive, geometry, draw.material);
+    ? primitiveObject(
+        'triangles',
+        instancedPoints(emulatedPointGeometry(geometry), count ?? 1),
+        draw.material
+      )
+    : primitiveObject(
+        primitive,
+        count === undefined ? geometry : instancedGeometry(geometry, count),
+        draw.material
+      );
   object.userData[CONSTANTS_KEY] = constants;
   return object;
 }
 
-/** Writes the push constants of each object before it draws: a polygon is a batch of its own. */
+/** Writes each object's push constants and instances before it draws: a mesh is a batch of its own. */
 function writeEachDraw(draw: CanvasDraw): void {
   if (hookedDraws.has(draw)) return;
   const hook = draw.uniforms.get(DRAW_HOOK);
@@ -251,9 +288,18 @@ function writeEachDraw(draw: CanvasDraw): void {
     );
   hookedDraws.add(draw);
   const params = newParams();
+  const batchFlags = draw.uniforms.get(BATCH_FLAGS);
   hook.onObjectUpdate(({ object }) => {
-    setParams(params, constantsOf(object!));
+    const textureFlags = batchFlags && 'value' in batchFlags ? (batchFlags.value as number) : 0;
+    setParams(params, constantsOf(object!), textureFlags);
     writeBindings(ATTRIBUTES_BINDINGS, draw.uniforms, params);
+  });
+  // The batch's instance buffer (`mesh_storage.h:750`), written only when it changes.
+  let written: Uint32Array | null = null;
+  draw.buffers.get('transforms')?.writeEachDraw((object) => {
+    const words = constantsOf(object).instances?.words ?? null;
+    if (!words || words === written) return null;
+    return (written = words);
   });
 }
 

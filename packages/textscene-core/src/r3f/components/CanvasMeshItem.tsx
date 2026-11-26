@@ -23,7 +23,7 @@ import type { CanvasItemMaterialProperties } from '../../resources/materials/can
 import { CanvasMeshBody } from '../canvasMesh/CanvasMeshBody';
 import { useCanvasMeshTexture } from '../canvasMesh/useCanvasMeshTexture';
 import type { CanvasSurface } from '../canvasMesh/canvasSurface';
-import { meshCommands } from '../canvasShader/canvasCommands';
+import { meshCommands, multiMeshCommands } from '../canvasShader/canvasCommands';
 
 interface CanvasMeshItemProps {
   node: TscnNode;
@@ -44,8 +44,10 @@ export function CanvasMeshItem({ node, props, mesh, instances, children }: Canva
       mesh && {
         input: { mesh, instances },
         useSurfaces: useMeshSurfaces,
-        // A MultiMesh draws instances, which the canvas_item shader's draw does not instance yet.
-        shadedCommands: instances ? null : () => meshCommands(mesh.parts.map(({ geometry }) => geometry)),
+        shadedCommands: () => {
+          const geometries = mesh.parts.map(({ geometry }) => geometry);
+          return instances ? multiMeshCommands(geometries, instances) : meshCommands(geometries);
+        },
       },
     [mesh, instances]
   );

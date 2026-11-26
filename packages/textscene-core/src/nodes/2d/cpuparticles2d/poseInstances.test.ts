@@ -14,9 +14,10 @@ function particle(overrides: Partial<RenderedParticle> = {}): RenderedParticle {
   return {
     transform: { ...TRANSFORM2D_IDENTITY, tx: 12, ty: -7 },
     color: { r: 1, g: 0.5, b: 0.25, a: 1 },
-    anim: 0,
+    custom: [0, 0, 0, 1],
     age: 0,
     index: 0,
+    active: true,
     ...overrides,
   };
 }
@@ -54,8 +55,8 @@ function expectedQuads(
   const position: number[] = [];
   const uv: number[] = [];
   const color: number[] = [];
-  for (const { transform: t, color: c, anim } of pose) {
-    const cell = flipbookCell(flipbook, anim);
+  for (const { transform: t, color: c, custom } of pose) {
+    const cell = flipbookCell(flipbook, custom[2]);
     for (const corner of CORNERS) {
       const x = (corner.x * width) / cell.hFrames;
       const y = (corner.y * height) / cell.vFrames;
@@ -79,10 +80,19 @@ describe('poseInstances', () => {
     expect(Array.from(instance!.transform)).toEqual([0, -1, 0, 30, 1, 0, 0, 40]);
   });
 
-  it('carries the colour as stored and anim in the z of the custom data', () => {
-    const [instance] = poseInstances([particle({ color: { r: 0.2, g: 0.4, b: 0.6, a: 0.5 }, anim: 0.75 })]);
+  it('carries the colour as stored', () => {
+    const [instance] = poseInstances([particle({ color: { r: 0.2, g: 0.4, b: 0.6, a: 0.5 } })]);
     expectClose(Array.from(instance!.color!), [0.2, 0.4, 0.6, 0.5]);
-    expectClose(Array.from(instance!.customData!), [0, 0, 0.75, 0]);
+  });
+
+  it('carries all four of the custom data, as `_update_internal` writes them (cpu_particles_2d.cpp:1217-1220)', () => {
+    const [instance] = poseInstances([particle({ custom: [0, 0.25, 0.75, 0.875] })]);
+    expectClose(Array.from(instance!.customData!), [0, 0.25, 0.75, 0.875]);
+  });
+
+  it('writes a zero transform for an inactive slot, as Godot zeroes it (cpu_particles_2d.cpp:1205-1207)', () => {
+    const [instance] = poseInstances([particle({ transform: ROTATED_90, active: false })]);
+    expect(Array.from(instance!.transform)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
   });
 
   it('gives no instance for an empty pose', () => {
@@ -98,7 +108,7 @@ describe('the merged particle geometry', () => {
     ['a particle with alpha 0.5', [particle({ color: { r: 1, g: 1, b: 1, a: 0.5 } })], 8, 8, null],
     [
       'a 2 by 2 flipbook at anim 0 and 0.75',
-      [particle(), particle({ anim: 0.75, transform: MIRRORED })],
+      [particle(), particle({ custom: [0, 0, 0.75, 1], transform: MIRRORED })],
       16,
       16,
       SHEET,

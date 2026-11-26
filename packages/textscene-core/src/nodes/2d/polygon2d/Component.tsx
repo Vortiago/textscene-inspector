@@ -58,7 +58,7 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
   useDisposeOnRelease(geometry);
   const [mesh, setMesh] = useState<THREE.Mesh | null>(null);
   const nodePath = useNodePath();
-  const { binding, isSkinned } = useSkeletonBinding(props, nodePath);
+  const binding = useSkeletonBinding(props, nodePath);
   useSkeletonSkin(mesh, geometry, binding);
 
   const surfaces = useMemo((): readonly CanvasSurface[] | null => {
@@ -68,10 +68,10 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
     // `canvas_item_add_mesh` gets a bare `Color(1, 1, 1)` (`polygon_2d.cpp:401`). `color` is
     // quantized first, as Godot's 8-bit mesh upload stores it (`vertexColorQuantize.ts`).
     const arrayColor = geometry.hasAttribute('color') ? undefined : quantizeVertexColor(props.color);
-    // A polygon's geometry draws triangles, so its object is a mesh.
+    // A polygon's geometry draws triangles, so its object is a mesh, classic or the template's.
     const meshRef = (drawn: THREE.Object3D | null) => setMesh(drawn instanceof THREE.Mesh ? drawn : null);
-    return [{ geometry, arrayColor, meshRef, isSkinned }];
-  }, [geometry, props.color, isSkinned]);
+    return [{ geometry, arrayColor, meshRef }];
+  }, [geometry, props.color]);
 
   return (
     <CanvasMeshBody node={node} props={props} texture={texture} withoutTexture="white" surfaces={surfaces}>

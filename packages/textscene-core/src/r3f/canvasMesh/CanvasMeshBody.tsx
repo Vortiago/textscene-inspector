@@ -14,7 +14,6 @@ import { geometryPrimitive } from '../../resources/meshes/godotSurface';
 import { drawnTag } from '../meshes/meshContent';
 import { useArrayColorOf, type CanvasItemTint } from '../canvasItemModulate';
 import { CanvasItem2D } from '../components/CanvasItem2D';
-import { CanvasItemGroup } from '../components/CanvasItemGroup';
 import type { CanvasItemPixelMaterial } from '../components/LitCanvasItemPixels';
 import { MissingResourcePlaceholder } from '../components/MissingResourcePlaceholder';
 import { CanvasSurfaceMaterial } from './CanvasSurfaceMaterial';
@@ -42,14 +41,8 @@ type CanvasSurfaces = readonly CanvasSurface[] | null;
 export interface MaterialSurfaces<Input> {
   readonly input: Input;
   readonly useSurfaces: (input: Input, material: CanvasItemMaterialProperties | null) => CanvasSurfaces;
-  /** What a canvas_item shader draws, asked only while one is in force. None for a multimesh. */
-  readonly shadedCommands?: (() => readonly CanvasShaderCommand[]) | null;
-}
-
-/** A named group around the drawn surfaces, which the drawer receives once it is in the tree. */
-export interface CanvasMeshBodyGroup {
-  name: string;
-  ref: (group: THREE.Group | null) => void;
+  /** What a canvas_item shader draws, asked only while one is in force. */
+  readonly shadedCommands?: () => readonly CanvasShaderCommand[];
 }
 
 interface CanvasMeshBodyProps<Input> {
@@ -65,11 +58,6 @@ interface CanvasMeshBodyProps<Input> {
   withoutTexture: 'white' | 'nothing';
   /** The surfaces in draw order, or null to draw nothing and load no maps. Its children still draw. */
   surfaces: CanvasSurfaces | MaterialSurfaces<Input>;
-  /**
-   * Wraps the surfaces in a group, as CPUParticles2D samples its emission transform from one. The
-   * group mounts while the item draws, before a surface hook returns its first surfaces.
-   */
-  bodyGroup?: CanvasMeshBodyGroup;
   /** The rect Godot draws the texture with, which a canvas_item shader draws through the template. */
   shaderRegion?: CanvasRectRegion;
   children?: ReactNode;
@@ -82,7 +70,6 @@ export function CanvasMeshBody<Input>({
   texture,
   withoutTexture,
   surfaces,
-  bodyGroup,
   shaderRegion,
   children,
 }: CanvasMeshBodyProps<Input>) {
@@ -111,17 +98,10 @@ export function CanvasMeshBody<Input>({
         if (isCyclic) return <MissingResourcePlaceholder shape="plane" name={node.name} />;
         if (!isDrawn) return null;
         const drawn = { map: view, tint, pixelMaterial };
-        const meshes = isMaterialSurfaces(surfaces) ? (
+        return isMaterialSurfaces(surfaces) ? (
           <SurfacesOfMaterial surfaces={surfaces} material={material} {...drawn} />
         ) : (
           <SurfaceMeshes surfaces={surfaces} {...drawn} />
-        );
-        return bodyGroup ? (
-          <CanvasItemGroup ref={bodyGroup.ref} name={bodyGroup.name}>
-            {meshes}
-          </CanvasItemGroup>
-        ) : (
-          meshes
         );
       }}
     >

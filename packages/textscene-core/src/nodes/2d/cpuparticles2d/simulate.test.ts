@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { heading } from '../../../parser/testing/parserKit';
 import { parseCPUParticles2D } from './parser';
-import { simulateFrozenPose, type ParticleSimInput } from './simulate';
+import { simulateFrozenSlots, type ParticleSimInput } from './simulate';
 import { type CPUParticles2DProperties } from './types';
 import { TRANSFORM2D_IDENTITY } from '../../../godot/math/transform2d.js';
 import type { Gradient } from '../../../resources/textures/gradienttexture2d/types';
@@ -10,6 +10,9 @@ import { CPUParticlesParameter } from '../../../godot/scene/cpuParticles';
 import { storedReal } from '../../../godot/math/real.js';
 import { GradientColorSpace, GradientInterpolationMode } from '../../../godot/scene/gradientTexture';
 import { CurveTangentMode } from '../../../godot/scene/curve';
+
+const simulateFrozenPose = (input: ParticleSimInput) =>
+  simulateFrozenSlots(input).filter(({ active }) => active);
 
 const NO_CURVES: (Curve | null)[] = Array.from({ length: 12 }, () => null);
 
