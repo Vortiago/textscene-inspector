@@ -276,7 +276,15 @@ function layeredShader(uniforms: string, reads: string): TscnInternalResource {
 }
 
 /** A ShaderMaterial row on a map other than a flat texture: the kind, its file and its processor. */
-const LAYERED_ROWS = [
+interface LayeredRow {
+  readonly kind: string;
+  readonly shader: TscnInternalResource;
+  readonly parameter: Readonly<Record<string, string>>;
+  readonly settleLate: (fake: FakeResourceLoader) => void;
+  readonly settleMissing: (fake: FakeResourceLoader) => void;
+}
+
+const LAYERED_ROWS: readonly LayeredRow[] = [
   {
     kind: 'a samplerCube',
     shader: layeredShader('uniform samplerCube sky;', 'texture(sky, NORMAL).rgb'),
@@ -296,7 +304,7 @@ const LAYERED_ROWS = [
 
 // A user's shader draws while it waits, and a missing map file takes the placeholder, as a flat one does.
 describe('what a ShaderMaterial draws for each load outcome of a cube or volume map', () => {
-  async function renderShaded(row: (typeof LAYERED_ROWS)[number]) {
+  async function renderShaded(row: LayeredRow) {
     vi.spyOn(logger, 'warn').mockImplementation(() => {});
     const material: TscnInternalResource = {
       id: 'Paint',
