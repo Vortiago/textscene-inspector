@@ -42,10 +42,10 @@ describe('the directional shadow atlas', () => {
     ]);
   });
 
-  it('holds depth as three holds a PCF shadow map', () => {
+  it('holds 16-bit depth as Godot’s default atlas, compared as three compares a PCF shadow map', () => {
     const depth = atlasModule.directionalShadowAtlasDepth();
     expect(depth.format).toBe(THREE.DepthFormat);
-    expect(depth.type).toBe(THREE.UnsignedIntType);
+    expect(depth.type).toBe(THREE.UnsignedShortType);
     expect(depth.compareFunction).toBe(THREE.LessEqualCompare);
     expect([depth.minFilter, depth.magFilter]).toEqual([THREE.LinearFilter, THREE.LinearFilter]);
   });

@@ -50,7 +50,7 @@ A shadowed light with a `light_angular_distance` and a `shadow_blur` above zero 
 
 A user's lit spatial shader receives the shadow through Godot's own scene shader. It reads the same split rows, bias, taps, blend and fade from the same atlas. Its soft shadow searches the split for blockers, and the light passes through a surface that writes `SSS_TRANSMITTANCE_DEPTH`, as in Godot.
 
-A caster nearer the sun than a split's box casts into it, as Godot's depth pass flattens it onto the box when `directional_shadow_pancake_size` is above 0. At a pancake size of 0 the box clips it, as in Godot.
+A caster nearer the sun than a split's box casts into it. The depth pass flattens it onto the box when `directional_shadow_pancake_size` is above 0, as Godot's does. At a pancake size of 0 the box clips it, as in Godot.
 
 Godot draws the first eight visible directional lights in the scene and stops. A light past the eighth neither lights nor casts, here as in Godot. So at most eight directional lights cast a shadow.
 

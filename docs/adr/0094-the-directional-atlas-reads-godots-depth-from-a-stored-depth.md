@@ -21,6 +21,6 @@ The depth in the atlas also runs the other way. Godot's depth is 1 at the near s
 
 ## Consequences
 
-- The colour holds 16 bits of depth, as Godot's default 16-bit atlas does. The depth texture holds 24.
+- The colour and the depth texture hold 16 bits of depth, as Godot's default atlas does (`rendering_server.cpp:3708`). A project that sets `directional_shadow/16_bits` to false still gets 16 bits.
 - Each program binds one more texture, the atlas's colour.
 - A raw read costs four texel loads, where Godot's costs one sample. A compare costs one sample, as in Godot.

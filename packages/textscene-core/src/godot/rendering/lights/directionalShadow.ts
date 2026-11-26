@@ -21,6 +21,9 @@ export const MAX_DIRECTIONAL_LIGHTS = 8;
  */
 export const DIRECTIONAL_SHADOW_SIZE_DEFAULT = 4096;
 
+/** `directional_shadow/16_bits` defaults to true (`rendering_server.cpp:3708`, `light_storage.cpp:2544`). */
+export const DIRECTIONAL_SHADOW_ATLAS_DEPTH_BITS = 16;
+
 /** The camera depths, from the eye, that one orthogonal shadow map covers. */
 export interface DirectionalShadowSlice {
   near: number;

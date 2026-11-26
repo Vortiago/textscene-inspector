@@ -253,9 +253,9 @@ binding (`light_storage.cpp:2572-2621`, `scene_forward_clustered_inc.glsl:374`).
   (r187 `WebGLUniforms.js:586-598`).
 - A shadow lets go of the atlas when its sun is removed. The last holder frees the atlas's GPU
   memory, and three builds it again at the next shadow pass that draws into it.
-- The atlas holds three's PCF map: a 24-bit depth texture that compares less-or-equal
-  with linear filtering (r187 `WebGLShadowMap.js:253-266`). `TscnCanvas` asks for that type with
-  `shadows="percentage"`, and it never reverses the depth buffer.
+- The atlas holds a 16-bit depth texture, as Godot's default `directional_shadow/16_bits` does
+  (`rendering_server.cpp:3708`), that compares less-or-equal with linear filtering, as three's PCF
+  map does (r187 `WebGLShadowMap.js:253-266`). `TscnCanvas` never reverses the depth buffer.
 - `splitShadow.test.ts` reads three's shadow pass and `setRenderTarget`, and fails on a release
   that changes what the atlas relies on.
 
@@ -301,9 +301,9 @@ at no size. The fit costs microseconds in every mode, far below the draw. Most o
 walk of the scene that finds the lights.
 
 The atlas is one 4096 target, as three builds a shadow map: an RG colour attachment of two bytes
-that holds the depth again for the soft shadow, beside a 24-bit depth texture, so it takes about
-96 MiB. Godot's atlas takes 32 MiB, since it stores 16-bit
-depth and nothing else (`rendering_server.cpp:3708`). A change in how many lights share the atlas
+that holds the depth again for the soft shadow, beside a 16-bit depth texture, so it takes about
+64 MiB. Godot's atlas takes 32 MiB, since it stores 16-bit depth and nothing else
+(`rendering_server.cpp:3708`). A change in how many lights share the atlas
 moves each light's share and keeps the atlas.
 
 ### Fragment uniforms

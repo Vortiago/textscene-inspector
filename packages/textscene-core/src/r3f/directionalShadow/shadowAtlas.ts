@@ -5,7 +5,10 @@
  */
 
 import * as THREE from 'three';
-import { DIRECTIONAL_SHADOW_SIZE_DEFAULT } from '../../godot/rendering/lights/directionalShadow.js';
+import {
+  DIRECTIONAL_SHADOW_ATLAS_DEPTH_BITS,
+  DIRECTIONAL_SHADOW_SIZE_DEFAULT,
+} from '../../godot/rendering/lights/directionalShadow.js';
 import { atlasTargetOf, createShadowAtlas } from '../shadowFilter/atlasTarget.js';
 import { installedUniformValue } from '../shaderPatch/litUniform.js';
 
@@ -15,12 +18,12 @@ export const DIRECTIONAL_SHADOW_ATLAS_UNIFORM = 'directionalShadowAtlas';
 /** The uniform every lit material reads the atlas's raw depth through, from its colour. */
 export const DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM = 'directionalShadowAtlasColour';
 
-/** The atlas in the depth type `TscnCanvas` asks for. */
+/** The atlas in Godot's default depth bits, which the raw depth in its colour also holds. */
 function createAtlas(): THREE.WebGLRenderTarget {
   return createShadowAtlas({
     name: 'DirectionalShadowAtlas',
     size: DIRECTIONAL_SHADOW_SIZE_DEFAULT,
-    type: THREE.UnsignedIntType,
+    type: DIRECTIONAL_SHADOW_ATLAS_DEPTH_BITS === 16 ? THREE.UnsignedShortType : THREE.UnsignedIntType,
     compare: THREE.LessEqualCompare,
   });
 }
