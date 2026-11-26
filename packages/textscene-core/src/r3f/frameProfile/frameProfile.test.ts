@@ -238,12 +238,14 @@ describe('countSceneRender', () => {
       (stats) => (window ??= stats),
       () => 0
     );
+    const halfWindow = FRAMES_PER_WINDOW / 2;
     for (let index = 0; index < FRAMES_PER_WINDOW; index++) {
-      countSceneRender(renderer);
+      if (index === halfWindow) profile.startTimings();
+      else if (index < halfWindow) countSceneRender(renderer);
       profile.beginFrame(index * FRAME_INTERVAL_MS);
       profile.endFrame();
     }
-    expect(window!.timings).toBeUndefined();
+    expect(timingsOf(window).sceneRendersPerFrame).toBe(0);
   });
 
   it('does nothing on a renderer with no profile (edge case)', () => {

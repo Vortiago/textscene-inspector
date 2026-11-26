@@ -1,4 +1,4 @@
-import { settleCanvas } from '../visual/previewServer.mjs';
+import { CANVAS_2D_TESTIDS, settleCanvas } from '../visual/previewServer.mjs';
 import { openFixture } from './openFixture.mjs';
 import { checkDiagnostics } from './diagnostics.mjs';
 import { FIXTURE_2D } from './editorViewScenarios.mjs';
@@ -10,7 +10,7 @@ const STEPS_PER_DRAG = 8;
 
 /** The 2D frame's translate, which is the stage pan. */
 const panOf = (page) =>
-  page.getByTestId('canvas-2d-frame').evaluate((frame) => {
+  page.getByTestId(CANVAS_2D_TESTIDS.frame).evaluate((frame) => {
     const [, x, y] = /translate\(([-\d.]+)px, ([-\d.]+)px\)/.exec(frame.style.transform) ?? [];
     return { x: Number(x), y: Number(y) };
   });
@@ -22,7 +22,7 @@ export async function runDragPan2DScenario(browser, baseUrl) {
     label: 'drag pan 2D',
   });
   await settleCanvas(page, canvas);
-  const stage = await page.getByTestId('canvas-2d-stage').boundingBox();
+  const stage = await page.getByTestId(CANVAS_2D_TESTIDS.stage).boundingBox();
   const x = stage.x + stage.width / 2;
   const y = stage.y + stage.height / 2;
   const travels = [];

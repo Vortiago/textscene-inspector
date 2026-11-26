@@ -8,6 +8,8 @@
   background-color: var(--tsi-bg-canvas);
   cursor: grab;
   touch-action: none;
+  /* A browser that keeps a cancelled pointerdown's default must still start no selection to drag. */
+  user-select: none;
 }
 
 .canvasStage:active {
