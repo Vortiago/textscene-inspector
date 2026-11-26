@@ -40,7 +40,7 @@ interface WrittenBlock {
 const writtenBlocksOf = perObject((): WrittenBlock[] => []);
 
 /** Scratch of one write, overwritten by the next. */
-const viewport: TargetViewport = { x: 0, y: 0, width: 0, height: 0, scale: 1 };
+const viewport: TargetViewport = { x: 0, y: 0, width: 0, height: 0, scaleX: 1, scaleY: 1 };
 const frame = {
   width: 0,
   height: 0,

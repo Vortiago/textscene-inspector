@@ -76,6 +76,15 @@ describe('canvasDataOf', () => {
     expect(block.screenPixelSize.toArray()).toEqual([1 / 1152, 1 / 648]);
     expect(block.viewportInTarget.toArray()).toEqual([10, 20, 0.5, 0.5]);
   });
+
+  it("counts the root's target pixels where the window stretches its canvas", () => {
+    const camera = stageCamera({ x: 10, y: 20 }, 2);
+    camera.rootViewport = { targetSize: { x: 2304, y: 1296 }, pixelsPerCanvasPixel: { x: 2, y: 2 } };
+    const block = blockOf({ canvasModulate: RED }, 1, camera);
+
+    expect(block.screenPixelSize.toArray()).toEqual([1 / 2304, 1 / 1296]);
+    expect(block.viewportInTarget.toArray()).toEqual([10, 20, 1, 1]);
+  });
 });
 
 /** The 2D stage's camera over a 64x32 target, with a 1152x648 viewport at `pan`. */
@@ -85,7 +94,7 @@ function stageCamera(pan: { x: number; y: number }, zoom: number): World2DCamera
   const pose = world2DCameraPose(pan, zoom, 64, 32);
   camera.position.set(pose.x, pose.y, 1000);
   camera.zoom = pose.zoom;
-  camera.viewportSize = { x: 1152, y: 648 };
+  camera.rootViewport = { targetSize: { x: 1152, y: 648 }, pixelsPerCanvasPixel: { x: 1, y: 1 } };
   camera.updateProjectionMatrix();
   camera.updateMatrixWorld();
   return camera;

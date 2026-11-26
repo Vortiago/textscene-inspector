@@ -182,6 +182,8 @@ type SourceKind = 'padded' | 'unpadded AtlasTexture' | 'plain atlas';
 type CopyState =
   | 'first build pending'
   | 'rebuilt after a re-parse'
+  | 'cells moved by a re-parse'
+  | 'texture swapped'
   | 'pixels unreadable'
   | 'build throws'
   | 'released mid-build';
@@ -216,6 +218,14 @@ const COPY_STATES: readonly CopyStateRow[] = [
     after: 'padded copy',
     godot: GODOT_PADS,
   },
+  {
+    kind: 'padded',
+    state: 'cells moved by a re-parse',
+    during: 'nothing',
+    after: 'padded copy',
+    godot: GODOT_PADS,
+  },
+  { kind: 'padded', state: 'texture swapped', during: 'nothing', after: 'padded copy', godot: GODOT_PADS },
   { kind: 'padded', state: 'pixels unreadable', during: 'texture', after: 'texture', godot: GODOT_PADS },
   { kind: 'padded', state: 'build throws', during: 'nothing', after: 'error', godot: GODOT_PADS },
   { kind: 'padded', state: 'released mid-build', during: 'nothing', after: 'nothing', godot: 'nothing' },
@@ -299,11 +309,18 @@ async function drawnAcross(kind: SourceKind, state: CopyState): Promise<[Drawn, 
   const source = { ...SOURCE, usesTexturePadding: kind === 'padded' };
   const renderer = await ReactThreeTestRenderer.create(shadedRun(source));
   await settle();
-  if (state === 'rebuilt after a re-parse') {
+  if (
+    state === 'rebuilt after a re-parse' ||
+    state === 'cells moved by a re-parse' ||
+    state === 'texture swapped'
+  ) {
     jobs.land();
     await settle();
     const previous = slotCommands.texture ?? undefined;
-    await renderer.update(shadedRun({ ...source }));
+    if (state === 'texture swapped')
+      sampled.texture = new THREE.DataTexture(new Uint8Array(32 * 16 * 4), 32, 16);
+    const moved = { ...source, margins: { x: 1, y: 0 } };
+    await renderer.update(shadedRun(state === 'cells moved by a re-parse' ? moved : { ...source }));
     await settle();
     const during = drawnIn(renderer, previous);
     jobs.land();

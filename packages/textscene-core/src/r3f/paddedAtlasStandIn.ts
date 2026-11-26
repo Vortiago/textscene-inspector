@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type * as THREE from 'three';
 import { isLiveTarget, unrenderedTexel } from './liveTargets';
 import { useDisposeOnRelease } from './useDisposeOnRelease';
+import { perObject } from '../utils/perObject';
 import type { AtlasSourceModel } from '../resources/tileset/types';
 import { imageSize } from '../resources/formats/image/imagePixels';
 import { paddedAtlasSize } from '../resources/tileset/paddedAtlas';
@@ -21,12 +22,28 @@ export function usePaddedAtlasStandIn(
   const isPadded = source.usesTexturePadding && texture !== null;
   const isUnrenderedTarget = isPadded && isLiveTarget(texture);
   const snapshot = useMemo(
-    () => (isUnrenderedTarget && texture ? unrenderedSnapshot(texture, source) : null),
+    () => (isUnrenderedTarget && texture ? sharedSnapshot(texture, source) : null),
     [isUnrenderedTarget, texture, source]
   );
   useDisposeOnRelease(snapshot);
   // Godot pads no image, so the draw samples the empty texture's placeholder (`tile_set.cpp:5626-5629`).
   if (isPadded && slot.hasNoImage) return texture2DPlaceholder();
+  return snapshot;
+}
+
+/** Written only by `sharedSnapshot`: one stand-in per target and source, dropped when it is disposed. */
+const snapshotsOf = perObject((_target: THREE.Texture) => new Map<AtlasSourceModel, THREE.DataTexture>());
+
+/** Every run of a source shares the stand-in, which its last holder's release disposes. */
+function sharedSnapshot(target: THREE.Texture, source: AtlasSourceModel): THREE.DataTexture {
+  const snapshots = snapshotsOf(target);
+  const held = snapshots.get(source);
+  if (held) return held;
+  const snapshot = unrenderedSnapshot(target, source);
+  snapshot.addEventListener('dispose', () => {
+    if (snapshots.get(source) === snapshot) snapshots.delete(source);
+  });
+  snapshots.set(source, snapshot);
   return snapshot;
 }
 

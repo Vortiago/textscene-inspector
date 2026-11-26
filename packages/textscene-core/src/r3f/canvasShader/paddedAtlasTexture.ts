@@ -1,17 +1,18 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { textureWork } from '../../resources/textures/textureWork';
+import { useTextureWorkWhile } from '../../resources/textures/textureWork';
 import { imageSize } from '../../resources/formats/image/imagePixels';
 import { paddedAtlasLayout, type AtlasPixels } from '../../resources/tileset/paddedAtlas';
 import type { AtlasSourceModel } from '../../resources/tileset/types';
 import type { Texture2DResult } from '../../resources/useTexture2D';
 import { usePendingWhile } from '../../resources/usePendingWhile';
 import { useResourceLoader } from '../../resources/useResource';
+import { vector2Equals } from '../../godot/math/vector';
 import { perObject } from '../../utils/perObject';
 import { isBottomUp, reversedRows } from '../../utils/reversedRows';
 import { inThreadJobRunner, type WorkerJobRunner } from '../../workers/WorkerJobRunner';
 import { usePaddedAtlasStandIn } from '../paddedAtlasStandIn';
-import { godotImage } from '../textureAtlas/godotImage';
+import { readGodotImage } from '../textureAtlas/godotImage';
 
 type JobRunner = Pick<WorkerJobRunner, 'run'>;
 
@@ -72,7 +73,12 @@ function usePaddedCopy(texture: THREE.Texture | null, source: AtlasSourceModel):
   const isBuilt = wanted?.version === version && wanted?.built !== undefined;
   /** Written after each commit: the copy the run showed, held until the next one shows. */
   const lastShown = useRef<PaddedCopy | undefined>(undefined);
-  const shown = !texture ? undefined : isBuilt ? wanted : lastShown.current;
+  const held = lastShown.current;
+  const shown = isBuilt
+    ? wanted
+    : texture && held && placesCellsAlike(held, texture, source)
+      ? held
+      : undefined;
   useEffect(() => {
     lastShown.current = shown;
   });
@@ -84,17 +90,23 @@ function usePaddedCopy(texture: THREE.Texture | null, source: AtlasSourceModel):
 }
 
 /** Holds the shown copy until a later commit shows another, so its texture is never disposed in view. */
+/** A copy of the same texture whose cells sit where the new source's do, so the draw samples them. */
+function placesCellsAlike(copy: PaddedCopy, texture: THREE.Texture, source: AtlasSourceModel): boolean {
+  const { margins, separation, textureRegionSize } = copy.source;
+  return (
+    copy.texture === texture &&
+    vector2Equals(margins, source.margins) &&
+    vector2Equals(separation, source.separation) &&
+    vector2Equals(textureRegionSize, source.textureRegionSize)
+  );
+}
+
 function useHeldCopy(copy: PaddedCopy | undefined): void {
   useEffect(() => {
     if (!copy) return undefined;
     copy.holders += 1;
     return () => releasePaddedCopy(copy);
   }, [copy]);
-}
-
-/** Counts texture work in the commits before the copy shows, so a capture never reads zero between them. */
-function useTextureWorkWhile(isWorking: boolean): void {
-  useEffect(() => (isWorking ? textureWork.begin() : undefined), [isWorking]);
 }
 
 function joinPaddedCopy(texture: THREE.Texture, source: AtlasSourceModel, runner: JobRunner): PaddedCopy {
@@ -153,7 +165,7 @@ function disposeBuilt(built: PaddedCopy['built']): void {
   if (built instanceof THREE.Texture) built.dispose();
 }
 
-/** Reads the pixels once per texture, after the commit that asked: no React render waits on the readback. */
+/** Reads the pixels after the commit that asked: no React render waits on the readback. */
 async function buildPaddedCopy(
   texture: THREE.Texture,
   source: AtlasSourceModel,
@@ -161,10 +173,18 @@ async function buildPaddedCopy(
   signal: AbortSignal
 ): Promise<THREE.Texture | typeof UNREADABLE> {
   await Promise.resolve();
-  const pixels = halfFloatImage(texture) ?? godotImage(texture);
-  if (!pixels) return UNREADABLE;
-  const input = { pixels, layout: paddedAtlasLayout(source) };
-  const padded = await runner.run('padded-atlas', input, signal);
+  const release = holdPixels(texture);
+  try {
+    const pixels = pixelsOf(texture);
+    if (!pixels) return UNREADABLE;
+    const padded = await runner.run('padded-atlas', { pixels, layout: paddedAtlasLayout(source) }, signal);
+    return paddedTexture(padded, texture);
+  } finally {
+    release();
+  }
+}
+
+function paddedTexture(padded: AtlasPixels, texture: THREE.Texture): THREE.DataTexture {
   const atlas = new THREE.DataTexture(padded.data, padded.width, padded.height);
   atlas.type = padded.data instanceof Uint16Array ? THREE.HalfFloatType : THREE.UnsignedByteType;
   // Top row first, as Godot's image: `flipY` marks it so, and the shader samples it with no copy.
@@ -180,4 +200,37 @@ function halfFloatImage(texture: THREE.Texture): AtlasPixels | undefined {
   const size = imageSize(texture.image);
   if (texture.type !== THREE.HalfFloatType || !(data instanceof Uint16Array) || !size) return undefined;
   return { ...size, data: isBottomUp(texture) ? reversedRows(data, size.width, size.height) : data };
+}
+
+interface PixelsInFlight {
+  builds: number;
+  version: number;
+  pixels: AtlasPixels | null | undefined;
+}
+
+/** Written only by `holdPixels` and `pixelsOf`: a texture's read while a build of it runs, dropped after. */
+const pixelsInFlight = perObject((_texture: THREE.Texture): PixelsInFlight => ({
+  builds: 0,
+  version: -1,
+  pixels: undefined,
+}));
+
+/** Keeps the read for the builds in flight, so two sources of a texture read it once and none keeps it. */
+function holdPixels(texture: THREE.Texture): () => void {
+  const read = pixelsInFlight(texture);
+  read.builds += 1;
+  return () => {
+    read.builds -= 1;
+    if (read.builds === 0) read.pixels = undefined;
+  };
+}
+
+/** Null for pixels it cannot read. */
+function pixelsOf(texture: THREE.Texture): AtlasPixels | null {
+  const read = pixelsInFlight(texture);
+  if (read.pixels === undefined || read.version !== texture.version) {
+    read.pixels = halfFloatImage(texture) ?? readGodotImage(texture) ?? null;
+    read.version = texture.version;
+  }
+  return read.pixels;
 }

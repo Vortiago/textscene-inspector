@@ -176,14 +176,23 @@ describe('useRuntimeAtlasTexture', () => {
     expect(disposed).toHaveBeenCalledTimes(1);
   });
 
-  it('reads the pixels once for two padded sources of one texture', async () => {
+  it('reads the pixels once for two padded sources of one texture that build together', async () => {
+    const texture = textureOf();
+    const read = vi.spyOn(imagePixels, 'readImagePixels');
+
+    await Promise.all([builtCopy(texture), builtCopy(texture, { ...SOURCE, margins: { x: 1, y: 1 } })]);
+
+    expect(read).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps no read of the pixels once its builds land', async () => {
     const texture = textureOf();
     const read = vi.spyOn(imagePixels, 'readImagePixels');
 
     await builtCopy(texture);
     await builtCopy(texture, { ...SOURCE, margins: { x: 1, y: 1 } });
 
-    expect(read).toHaveBeenCalledTimes(1);
+    expect(read).toHaveBeenCalledTimes(2);
   });
   it('keeps the copy it showed while the next version builds, and disposes it once that lands', async () => {
     const texture = textureOf();

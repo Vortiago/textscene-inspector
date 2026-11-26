@@ -19,7 +19,8 @@ export interface GodotImage {
  */
 export const godotImage = perObject(readGodotImage, { stamp: ({ version }) => version });
 
-function readGodotImage(texture: THREE.Texture): GodotImage | undefined {
+/** A fresh read of `texture`'s pixels, which no cache keeps. */
+export function readGodotImage(texture: THREE.Texture): GodotImage | undefined {
   if (!readsAsBytes(texture)) return undefined;
   const pixels = readImagePixels(texture.image);
   if (!pixels) return undefined;

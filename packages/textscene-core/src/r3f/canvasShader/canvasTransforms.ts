@@ -34,13 +34,15 @@ export function targetViewportInto(
   camera: THREE.Camera,
   size: { readonly width: number; readonly height: number }
 ): TargetViewport | undefined {
-  if (!(camera instanceof World2DCamera) || !camera.viewportSize) return undefined;
-  // The stage's camera neither turns nor stretches, so one scale holds for both axes.
-  const { a: scale, tx: x, ty: y } = canvasDataTransformInto(worldInTarget, camera, null, size);
+  const root = camera instanceof World2DCamera ? camera.rootViewport : null;
+  if (!root) return undefined;
+  // The stage's camera neither turns nor stretches, so one stage scale holds for both axes.
+  const { a: stageScale, tx: x, ty: y } = canvasDataTransformInto(worldInTarget, camera, null, size);
   out.x = x;
   out.y = y;
-  out.width = camera.viewportSize.x;
-  out.height = camera.viewportSize.y;
-  out.scale = scale;
+  out.width = root.targetSize.x;
+  out.height = root.targetSize.y;
+  out.scaleX = stageScale / root.pixelsPerCanvasPixel.x;
+  out.scaleY = stageScale / root.pixelsPerCanvasPixel.y;
   return out;
 }

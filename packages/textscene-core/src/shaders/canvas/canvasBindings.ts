@@ -12,8 +12,9 @@ export interface TargetViewport {
   y: number;
   width: number;
   height: number;
-  /** Target pixels per viewport pixel. */
-  scale: number;
+  /** Target pixels per viewport pixel on each axis. */
+  scaleX: number;
+  scaleY: number;
 }
 
 /** What a canvas draw reads from its viewport, with no light. */
@@ -91,7 +92,7 @@ function writeViewport(block: CanvasDataBlock, { width, height, viewport }: Canv
     return;
   }
   block.screenPixelSize.set(1 / viewport.width, 1 / viewport.height);
-  block.viewportInTarget.set(viewport.x, viewport.y, 1 / viewport.scale, 1 / viewport.scale);
+  block.viewportInTarget.set(viewport.x, viewport.y, 1 / viewport.scaleX, 1 / viewport.scaleY);
 }
 
 /** Each member of `CanvasData` the unlit variants read, by where Godot writes it. */
