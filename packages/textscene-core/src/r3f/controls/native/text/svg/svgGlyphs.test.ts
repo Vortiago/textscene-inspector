@@ -3,7 +3,7 @@ import { ByteWriter } from '../sfntOutlines.testkit';
 import { sfntFileOfTables } from '../sfntTables';
 import { svgBytes, svgTable } from './svg.testkit';
 import type { SvgPictureDrawer } from './browserSvgPicture';
-import { svgGlyphsOf } from './svgGlyphs';
+import { glyphDrawsOf, svgGlyphsOf } from './svgGlyphs';
 
 const RED_GLYPH = 1;
 const PLAIN_GLYPH = 3;
@@ -154,5 +154,39 @@ describe('svgGlyphsOf', () => {
 
   it('gives no SVG form to a glyph no document covers', async () => {
     expect((await landed(squareDrawer([255, 0, 0, 255]), PLAIN_GLYPH)).bitmap).toBeUndefined();
+  });
+});
+
+describe('glyphDrawsOf', () => {
+  async function redReader() {
+    const svg = (await svgGlyphsOf(svgFace(), squareDrawer([255, 0, 0, 255])))!;
+    return svg.readerAt(svg.sizeAt(16));
+  }
+
+  it('answers the draw a read starts, so a reader can wait for the glyph to land', async () => {
+    const read = await redReader();
+
+    expect(glyphDrawsOf(() => read(RED_GLYPH)).draws.size).toBe(1);
+  });
+
+  it('answers the draw still in flight to a second read of the glyph', async () => {
+    const read = await redReader();
+    const [started] = glyphDrawsOf(() => read(RED_GLYPH)).draws;
+
+    expect([...glyphDrawsOf(() => read(RED_GLYPH)).draws]).toEqual([started]);
+  });
+
+  it('answers no draw once the glyph has landed', async () => {
+    const read = await redReader();
+    const { draws } = glyphDrawsOf(() => read(RED_GLYPH));
+    await Promise.all(draws);
+
+    expect(glyphDrawsOf(() => read(RED_GLYPH)).draws.size).toBe(0);
+  });
+
+  it('answers no draw for a glyph no document covers', async () => {
+    const read = await redReader();
+
+    expect(glyphDrawsOf(() => read(PLAIN_GLYPH)).draws.size).toBe(0);
   });
 });

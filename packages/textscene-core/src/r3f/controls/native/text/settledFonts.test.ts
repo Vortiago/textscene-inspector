@@ -230,6 +230,29 @@ describe('SettledFonts loads of the page', () => {
     expect(read).toHaveBeenCalledTimes(1);
   });
 
+  it('answers a face the page has settled at once, in a preview that peeks it for the first time', async () => {
+    const bytes = new ArrayBuffer(4);
+    const load = () => Promise.resolve(FACE);
+    const first = createSettledFonts(load);
+    first.peekFace(bytes, 'Label');
+    await vi.waitFor(() => expect(first.peekFace(bytes, 'Label')).toBe(FACE));
+
+    const remounted = createSettledFonts(load);
+
+    expect(remounted.peekFace(bytes, 'Label')).toBe(FACE);
+    expect(remounted.work.pending()).toBe(0);
+  });
+
+  it('answers outlines the page has settled at once, in a preview that peeks them for the first time', async () => {
+    const loadKey = {};
+    const read = () => Promise.resolve(null);
+    const first = createSettledFonts(loader.load);
+    first.peekOutlines(loadKey, read);
+    await vi.waitFor(() => expect(first.peekOutlines(loadKey, read)).toBeNull());
+
+    expect(createSettledFonts(loader.load).peekOutlines(loadKey, read)).toBeNull();
+  });
+
   it('wakes the readers of each preview that awaited the shared load', async () => {
     const bytes = new ArrayBuffer(4);
     const font = fontFile(bytes);

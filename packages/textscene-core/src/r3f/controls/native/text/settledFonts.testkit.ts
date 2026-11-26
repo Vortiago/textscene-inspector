@@ -18,7 +18,7 @@ export function handLoader(): HandLoader {
       const resolve = pending.get(bytes);
       if (!resolve) throw new Error(`expected a pending face load of ${bytes.byteLength} bytes, got none`);
       resolve(face);
-      // A macrotask, not `settleFontWork`: a load another test left pending holds the page-wide count.
+      // A macrotask, not `settleFontWork`: the face loader knows no settled fonts to wait on.
       await new Promise((done) => setTimeout(done, 0));
     },
   };

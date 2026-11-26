@@ -38,10 +38,10 @@ async function freshTextModules() {
     ]);
   /** Hands the outlines over, and waits until the load has woken the runs that read it. */
   const loader = new ResourceLoader();
-  const { Probe, pending } = probes.createPendingProbe();
+  const { Probe, pending, work } = probes.createPendingProbe();
   const loadOutlines = () => {
     deliverOutlines(TRIANGLE_OUTLINES);
-    return settleFontWork();
+    return settleFontWork(work().fonts);
   };
   const mount = (fontMetrics?: ReturnType<typeof runtime.createRuntimeFontMetrics>) => {
     const layout = shapeText('AB', {

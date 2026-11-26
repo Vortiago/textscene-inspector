@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useOptionalHierarchy } from '../contexts/HierarchyContext.js';
-import { usePendingLoads } from '../../resources/ResourceLoaderContext.js';
+import { useViewWork } from '../../resources/ResourceLoaderContext.js';
 import type { Scene } from '../../scene/openScene.js';
 import * as logger from '../../logger.js';
 import { subscribeToNothing } from '../../utils/subscribeToNothing.js';
-import { hasPendingWork, pendingSceneWork } from '../sceneWork.js';
-import type { WorkCount } from '../../resources/workCount.js';
-import { textureWork } from '../../resources/textures/textureWork.js';
-import { fontWork } from '../controls/native/text/settledChannel.js';
+import { hasPendingWork, pendingSceneWork, subscribeSceneWork } from '../sceneWork.js';
+import type { ViewWork } from '../../resources/viewWork.js';
 import { useGameStartFacts } from '../gameView/gameStartFacts.js';
 import { useViewStatusStore } from './ViewStatusContext.js';
 import type { DrawnFrame, ViewSettled, ViewStatusStore } from './viewStatus.js';
@@ -54,7 +52,7 @@ function useAttachedView(scene: Scene | undefined): { readonly current: boolean 
 export function useViewReport(): (isFullSize: boolean, awaitedCamera?: string | null) => void {
   const store = useViewStatusStore();
   const scene = useOptionalHierarchy()?.scene;
-  const loads = usePendingLoads();
+  const work = useViewWork();
   const { scriptedNodeCount, hasCurrentCamera } = useGameStartFacts();
   const facts = useMemo<ViewSettled>(
     () => ({ scriptedNodeCount, hasCurrentCamera }),
@@ -70,13 +68,13 @@ export function useViewReport(): (isFullSize: boolean, awaitedCamera?: string | 
     work: { resources: 0, textures: 0, fonts: 0 },
     facts,
   }));
-  useReportStartedWork(store, isAttached, loads, frame);
+  useReportStartedWork(store, isAttached, work, frame);
   return (isFullSize, awaitedCamera = null) => {
     if (!store || !isAttached.current) return;
     frame.revision = revision;
     frame.isFullSize = isFullSize;
     frame.awaitedCamera = awaitedCamera;
-    pendingSceneWork(loads, frame.work);
+    pendingSceneWork(work, frame.work);
     frame.facts = facts;
     store.frameDrawn(frame);
   };
@@ -86,24 +84,19 @@ export function useViewReport(): (isFullSize: boolean, awaitedCamera?: string | 
 function useReportStartedWork(
   store: ViewStatusStore | null,
   isAttached: { readonly current: boolean },
-  loads: WorkCount | null,
+  work: ViewWork | null,
   frame: DrawnFrame
 ): void {
   useEffect(() => {
     if (!store) return undefined;
     const onWorkChange = () => {
       if (!isAttached.current) return;
-      const work = pendingSceneWork(loads);
+      const pending = pendingSceneWork(work);
       // The status reads the last frame in place, so the record changes only to report started work.
-      if (!hasPendingWork(work)) return store.workChanged(work);
-      frame.work = work;
+      if (!hasPendingWork(pending)) return store.workChanged(pending);
+      frame.work = pending;
       store.frameDrawn(frame);
     };
-    const stops = [
-      loads?.subscribe(onWorkChange),
-      textureWork.subscribe(onWorkChange),
-      fontWork.subscribe(onWorkChange),
-    ];
-    return () => stops.forEach((stop) => stop?.());
-  }, [store, isAttached, loads, frame]);
+    return subscribeSceneWork(work, onWorkChange);
+  }, [store, isAttached, work, frame]);
 }

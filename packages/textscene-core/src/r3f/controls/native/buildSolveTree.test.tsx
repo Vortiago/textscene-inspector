@@ -34,6 +34,8 @@ import { nativeTheme } from './nativeTheme';
 import { themeResource } from './testing/themeResource';
 import { CAPTION_PATH, HOST_LEAF_PATH, hostScene, scenesByPath } from '../../testing/graftedScopeFixture';
 import type { Rect2 } from '../../../godot/math/rect2';
+import { useSettledFonts } from './text/useSettledFont';
+import type { SettledFonts } from './text/settledFonts';
 import { INSTANTIABLE_SCENE } from '../../../parser/sceneDefaults.testkit';
 // Side-effect imports: the node parsers that turn the `.tscn` text below into
 // typed Control properties, and the solvers/minimum-size functions the solved
@@ -1396,12 +1398,17 @@ describe('useBuildSolveTree — theme resolution', () => {
 
   it('keeps the generation for a font that settles in the preview but that no node read', async () => {
     const loader = createFakeResourceLoader();
-    const { result } = renderHook(() => useBuildSolveTree([label('Title')], [], []), {
-      wrapper: wrapperFor(loader.loader),
-    });
+    let viewFonts: SettledFonts | null = null;
+    const { result } = renderHook(
+      () => {
+        viewFonts = useSettledFonts();
+        return useBuildSolveTree([label('Title')], [], []);
+      },
+      { wrapper: wrapperFor(loader.loader) }
+    );
     const initialGeneration = result.current.generation;
 
-    peekSceneFontMetrics(loader.loader.settledFonts, loadingFont(), 'Root/Elsewhere');
+    peekSceneFontMetrics(viewFonts!, loadingFont(), 'Root/Elsewhere');
     await settleLoads();
 
     expect(result.current.generation).toBe(initialGeneration);

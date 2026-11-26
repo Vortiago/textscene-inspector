@@ -24,7 +24,7 @@ import type { DirectoryListing } from '../directoryListing';
 import { isGodotSceneRoot } from '../formats/glb/godotNodes';
 import { tagAsLoadedGlb } from '../formats/glb/testing/loadedGlbTags';
 import { WorkerJobRunner } from '../../workers/WorkerJobRunner';
-import { createSettledFonts, type FaceLoader } from '../../r3f/controls/native/text/settledFonts';
+import type { FaceLoader } from '../../r3f/controls/native/text/settledFonts';
 
 export interface FakeProcessor<T> {
   /** Backing cache: `undefined` = never requested, `null` = failed or sentinel miss, value = loaded. */
@@ -193,8 +193,7 @@ export function createFakeResourceLoader({ loadFace }: { loadFace?: FaceLoader }
     themes,
     directories,
     loadOutcomes,
-    // A preview of its own, with the real face loader, as `ResourceLoader` builds one.
-    settledFonts: createSettledFonts(loadFace),
+    loadFace,
     // Mirrors ResourceLoader.register and records the call, so a test asserts
     // registration without a vitest spy.
     register(resource: ExtResource): void {

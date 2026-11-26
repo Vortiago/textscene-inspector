@@ -41,11 +41,7 @@ import { resourceFilePath } from './subResourcePath';
 import { fileExtension } from './fileExtension';
 import * as logger from '../logger';
 import { WorkerJobRunner, type CreateJobWorker } from '../workers/WorkerJobRunner';
-import {
-  createSettledFonts,
-  type FaceLoader,
-  type SettledFonts,
-} from '../r3f/controls/native/text/settledFonts';
+import type { FaceLoader } from '../r3f/controls/native/text/settledFonts';
 
 export interface ResourceLoaderOptions {
   /** Which glTF extensions a GLB loads with. Absent means `createGLBMesh`'s default. */
@@ -83,8 +79,8 @@ export class ResourceLoader {
   readonly arrayMeshes: ResourceProcessor<ArrayMeshResource>;
   /** FontFile/SystemFont/FontVariation, recursively resolved (base_font, fallbacks). */
   readonly fonts: ResourceProcessor<FontResource>;
-  /** The faces of the fonts this preview draws, once each loads: the second stage after `fonts`. */
-  readonly settledFonts: SettledFonts;
+  /** Turns a font file's bytes into a face for each view's settled fonts, the second stage after `fonts`. */
+  readonly loadFace: FaceLoader | undefined;
   /** Theme .tres, font-relevant fields resolved (default_font, <Type>/fonts/<name>); everything else raw. */
   readonly themes: ResourceProcessor<ThemeResource>;
   /** The entries of each `res://` folder a Control lists, such as a FileDialog's file list. */
@@ -252,7 +248,7 @@ export class ResourceLoader {
   constructor(fileEventBus?: FileEventBus, options: ResourceLoaderOptions = {}) {
     this._fileEventBus = fileEventBus || null;
     this.jobRunner = new WorkerJobRunner({ createWorker: options.createWorker });
-    this.settledFonts = createSettledFonts(options.loadFace);
+    this.loadFace = options.loadFace;
     this.eventBus = new ResourceEventBus();
     this.metadata = new MetadataStore();
 
