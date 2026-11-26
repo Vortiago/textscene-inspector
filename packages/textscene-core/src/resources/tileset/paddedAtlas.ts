@@ -5,7 +5,7 @@
  */
 
 import type { Vector2 } from '../../godot/math/vector';
-import type { ImagePixels } from '../formats/image/imagePixels';
+import { emptyLike, type Pixels } from '../../utils/emptyLike';
 import { atlasTileRegion, type AtlasSourceModel, type AtlasTileModel } from './types';
 
 /** What the padded copy reads of a source: its grid, and each tile's size, without the tiles' data. */
@@ -31,7 +31,14 @@ export function paddedTileRegion(
   };
 }
 
-const BYTES_PER_TEXEL = 4;
+/** RGBA texels, the top row first: bytes, or half-float bits that keep a value above 1 as Godot does. */
+export interface AtlasPixels {
+  width: number;
+  height: number;
+  data: Pixels;
+}
+
+const CHANNELS_PER_TEXEL = 4;
 
 interface Rect {
   x: number;
@@ -73,10 +80,10 @@ function paddedCellSize({ textureRegionSize: region }: Pick<AtlasSourceModel, 't
 }
 
 /** `tile_set.cpp:5622`, frame 0 only: the model holds no animation frames. */
-export function paddedAtlasPixels(pixels: ImagePixels, source: PaddedAtlasLayout): ImagePixels {
+export function paddedAtlasPixels(pixels: AtlasPixels, source: PaddedAtlasLayout): AtlasPixels {
   const cell = paddedCellSize(source);
   const { width, height } = paddedAtlasSize(source, pixels);
-  const padded: ImagePixels = { width, height, data: new Uint8Array(width * height * BYTES_PER_TEXEL) };
+  const padded = { width, height, data: emptyLike(pixels.data, width * height * CHANNELS_PER_TEXEL) };
   for (const [key, tile] of source.tiles) {
     const [atlasX, atlasY] = key.split(':').map(Number) as [number, number];
     const region = atlasTileRegion(source, { x: atlasX, y: atlasY }, tile.sizeInAtlas);
@@ -87,7 +94,7 @@ export function paddedAtlasPixels(pixels: ImagePixels, source: PaddedAtlasLayout
 }
 
 /** The tile, then its four sides and four corners, in Godot's order (`tile_set.cpp:5640`). */
-function copyTileWithEdges(target: ImagePixels, source: ImagePixels, region: Rect, base: Vector2): void {
+function copyTileWithEdges(target: AtlasPixels, source: AtlasPixels, region: Rect, base: Vector2): void {
   const { x, y, width, height } = region;
   const right = x + width - 1;
   const bottom = y + height - 1;
@@ -104,7 +111,7 @@ function copyTileWithEdges(target: ImagePixels, source: ImagePixels, region: Rec
 }
 
 /** `image.cpp:3106`: the source rect and the destination clip to both images. */
-function blitRect(target: ImagePixels, source: ImagePixels, from: Rect, toX: number, toY: number): void {
+function blitRect(target: AtlasPixels, source: AtlasPixels, from: Rect, toX: number, toY: number): void {
   let { x: fromX, y: fromY, width, height } = from;
   if (fromX < 0) [toX, width, fromX] = [toX - fromX, width + fromX, 0];
   if (fromY < 0) [toY, height, fromY] = [toY - fromY, height + fromY, 0];
@@ -114,9 +121,12 @@ function blitRect(target: ImagePixels, source: ImagePixels, from: Rect, toX: num
   height = Math.max(0, Math.min(height, source.height - fromY, target.height - toY));
   if (width === 0 || height === 0) return;
   for (let row = 0; row < height; row++) {
-    const start = ((fromY + row) * source.width + fromX) * BYTES_PER_TEXEL;
-    const end = start + width * BYTES_PER_TEXEL;
-    target.data.set(source.data.subarray(start, end), ((toY + row) * target.width + toX) * BYTES_PER_TEXEL);
+    const start = ((fromY + row) * source.width + fromX) * CHANNELS_PER_TEXEL;
+    const end = start + width * CHANNELS_PER_TEXEL;
+    target.data.set(
+      source.data.subarray(start, end),
+      ((toY + row) * target.width + toX) * CHANNELS_PER_TEXEL
+    );
   }
 }
 

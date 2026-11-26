@@ -60,6 +60,16 @@ describe('useRuntimeAtlasTexture', () => {
     expect(imageSize(textureIn(result).image)).toEqual({ width: 4, height: 4 });
   });
 
+  it('pads a half-float texture in half floats, keeping a value above 1', async () => {
+    const two = 0x4000;
+    const texels = new Uint16Array(2 * 2 * 4).fill(two);
+    const halfFloats = new THREE.DataTexture(texels, 2, 2, THREE.RGBAFormat, THREE.HalfFloatType);
+    const { result } = await builtCopy(halfFloats);
+
+    const padded = textureIn(result) as THREE.DataTexture;
+    expect([padded.type, (padded.image.data as Uint16Array)[0]]).toEqual([THREE.HalfFloatType, two]);
+  });
+
   it('gives the padded copy top row first, so the shader samples it without a turned copy', async () => {
     const { result } = await builtCopy(textureOf());
 

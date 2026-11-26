@@ -1,12 +1,14 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { textureWork } from '../../resources/textures/textureWork';
-import { paddedAtlasLayout } from '../../resources/tileset/paddedAtlas';
+import { imageSize } from '../../resources/formats/image/imagePixels';
+import { paddedAtlasLayout, type AtlasPixels } from '../../resources/tileset/paddedAtlas';
 import type { AtlasSourceModel } from '../../resources/tileset/types';
 import type { Texture2DResult } from '../../resources/useTexture2D';
 import { usePendingWhile } from '../../resources/usePendingWhile';
 import { useResourceLoader } from '../../resources/useResource';
 import { perObject } from '../../utils/perObject';
+import { isBottomUp, reversedRows } from '../../utils/reversedRows';
 import { inThreadJobRunner, type WorkerJobRunner } from '../../workers/WorkerJobRunner';
 import { usePaddedAtlasStandIn } from '../paddedAtlasStandIn';
 import { godotImage } from '../textureAtlas/godotImage';
@@ -159,14 +161,23 @@ async function buildPaddedCopy(
   signal: AbortSignal
 ): Promise<THREE.Texture | typeof UNREADABLE> {
   await Promise.resolve();
-  const pixels = godotImage(texture);
+  const pixels = halfFloatImage(texture) ?? godotImage(texture);
   if (!pixels) return UNREADABLE;
   const input = { pixels, layout: paddedAtlasLayout(source) };
   const padded = await runner.run('padded-atlas', input, signal);
   const atlas = new THREE.DataTexture(padded.data, padded.width, padded.height);
+  atlas.type = padded.data instanceof Uint16Array ? THREE.HalfFloatType : THREE.UnsignedByteType;
   // Top row first, as Godot's image: `flipY` marks it so, and the shader samples it with no copy.
   atlas.flipY = true;
   atlas.colorSpace = texture.colorSpace;
   atlas.needsUpdate = true;
   return atlas;
+}
+
+/** A half-float texture's bits, top row first: Godot pads in the image's own format (`tile_set.cpp:5637`). */
+function halfFloatImage(texture: THREE.Texture): AtlasPixels | undefined {
+  const { data } = (texture.image ?? {}) as { data?: unknown };
+  const size = imageSize(texture.image);
+  if (texture.type !== THREE.HalfFloatType || !(data instanceof Uint16Array) || !size) return undefined;
+  return { ...size, data: isBottomUp(texture) ? reversedRows(data, size.width, size.height) : data };
 }

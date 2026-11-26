@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { ImagePixels } from '../formats/image/imagePixels';
-import { atlasGridSize, paddedAtlasPixels, paddedTileRegion } from './paddedAtlas';
+import { atlasGridSize, paddedAtlasPixels, paddedTileRegion, type AtlasPixels } from './paddedAtlas';
 import type { AtlasSourceModel } from './types';
 
 const source = {
@@ -58,7 +58,7 @@ function redImage(width: number, values: number[]): ImagePixels {
   return { width, height: values.length / width, data };
 }
 
-function redRows(image: ImagePixels): number[][] {
+function redRows(image: AtlasPixels): number[][] {
   const rows: number[][] = [];
   for (let y = 0; y < image.height; y++) {
     rows.push(Array.from({ length: image.width }, (_, x) => image.data[(y * image.width + x) * 4]!));
@@ -118,6 +118,26 @@ describe('paddedAtlasPixels', () => {
   it('starts every texel zero', () => {
     const padded = paddedAtlasPixels(twoByOne, atlasOf([], 2));
     expect(padded.data.every((byte) => byte === 0)).toBe(true);
+  });
+
+  it('keeps half-float bits in their own type, as Godot pads an image in its own format', () => {
+    const halfFloats = {
+      width: 2,
+      height: 1,
+      data: new Uint16Array([0x4000, 0, 0, 0x3c00, 0x4200, 0, 0, 0x3c00]),
+    };
+    const tiles = atlasOf(
+      [
+        ['0:0', { x: 1, y: 1 }],
+        ['1:0', { x: 1, y: 1 }],
+      ],
+      1
+    );
+    const padded = paddedAtlasPixels(halfFloats, tiles);
+    expect([padded.data instanceof Uint16Array, redRows(padded)[1]]).toEqual([
+      true,
+      [0x4000, 0x4000, 0x4000, 0x4200, 0x4200, 0x4200],
+    ]);
   });
 
   it('clips a region that runs past the source image as blit_rect does', () => {

@@ -7,8 +7,11 @@
 import { noiseTexture2DLevels, type NoiseTexture2DInput } from '../resources/textures/noisetexture2d/pixels';
 import type { MipLevel } from '../resources/processing/mipChain';
 import { noiseTexture3DTexels, type NoiseTexture3DInput } from '../resources/textures/noisetexture3d/texels';
-import type { ImagePixels } from '../resources/formats/image/imagePixels';
-import { paddedAtlasPixels, type PaddedAtlasLayout } from '../resources/tileset/paddedAtlas';
+import {
+  paddedAtlasPixels,
+  type AtlasPixels,
+  type PaddedAtlasLayout,
+} from '../resources/tileset/paddedAtlas';
 
 export interface WorkerJob<Input, Output> {
   run(input: Input): Output;
@@ -25,8 +28,7 @@ interface TexelsOutput {
 }
 
 interface PaddedAtlasInput {
-  /** Top row first, as Godot's image. */
-  pixels: ImagePixels;
+  pixels: AtlasPixels;
   layout: PaddedAtlasLayout;
 }
 
@@ -40,8 +42,8 @@ export const WORKER_JOBS = {
     transfer: (output: TexelsOutput) => [output.texels.buffer],
   },
   'padded-atlas': {
-    run: ({ pixels, layout }: PaddedAtlasInput): ImagePixels => paddedAtlasPixels(pixels, layout),
-    transfer: (output: ImagePixels) => [output.data.buffer],
+    run: ({ pixels, layout }: PaddedAtlasInput): AtlasPixels => paddedAtlasPixels(pixels, layout),
+    transfer: (output: AtlasPixels) => [output.data.buffer],
   },
 } satisfies Record<string, WorkerJob<never, unknown>>;
 
