@@ -27,7 +27,7 @@ import {
   sceneStillLoading,
   withPreviewBrowser,
 } from '../visual/previewServer.mjs';
-import { startCameraGesture } from './cameraGestures.mjs';
+import { startCameraGesture, zoomStageIn } from './cameraGestures.mjs';
 import { BUDGET_SCENES } from './scenes.mjs';
 import { SteadyWork } from './steadyWork.mjs';
 import { compareToBudget, parseWorkCounts } from './workCounts.mjs';
@@ -118,6 +118,10 @@ async function measureScene({ page, diagnostics }, baseUrl, scene) {
   const loading = await sceneStillLoading(page);
   if (loading) return { work: null, reason: loading };
   if (scene.writesEachFrame) await startWritesEachFrame(page, scene.writesEachFrame);
+  if (scene.zoomNotches) {
+    const noStage = await zoomStageIn(page, scene.zoomNotches);
+    if (noStage) return { work: null, reason: noStage };
+  }
   if (scene.gesture) {
     const noTarget = await startCameraGesture(page, scene.gesture);
     if (noTarget) return { work: null, reason: noTarget };

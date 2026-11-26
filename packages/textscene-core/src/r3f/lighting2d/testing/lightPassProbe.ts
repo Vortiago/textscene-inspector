@@ -31,9 +31,11 @@ export function drawnMeshes(scene: THREE.Object3D, camera: THREE.Camera): THREE.
   return drawn;
 }
 
-/** Runs one frame and records each draw into an accumulation buffer. */
+/** Runs one frame and records each draw into an accumulation buffer, every list drawn from fresh. */
 export async function recordLightPass(renderer: Rendered): Promise<RecordedDraw[]> {
   const gl = rendererOf(renderer);
+  // The pass draws only on changed inputs, and a restored context's blank targets count as one.
+  gl.domElement.dispatchEvent(new Event('webglcontextrestored'));
   const draws: RecordedDraw[] = [];
   let target: THREE.WebGLRenderTarget | null = null;
   const spies = [

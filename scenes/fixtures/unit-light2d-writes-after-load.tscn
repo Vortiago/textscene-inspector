@@ -1,0 +1,53 @@
+; Moves one variable: a write after the scene has drawn. The golden's host calls change each input
+; the 2D light pass reads, after the first frames have filled its buffers: a point light's energy,
+; colour, position and blend mode, an occluder's position, a directional light's energy, the canvas
+; modulate and a lit item's position. The capture must show the written values, not the authored ones.
+; Every other light golden captures its authored values only, so a pass that keeps stale buffers
+; after a write passes them all.
+
+[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://textures/light2d.png" id="1_light"]
+
+[sub_resource type="OccluderPolygon2D" id="1"]
+closed = false
+polygon = PackedVector2Array(0, 0, 0, 200)
+
+[node name="Root" type="Node2D"]
+
+[node name="Tint" type="CanvasModulate" parent="."]
+color = Color(0.8, 0.8, 0.8, 1)
+
+[node name="Surface" type="Polygon2D" parent="."]
+color = Color(0.5, 0.5, 0.5, 1)
+polygon = PackedVector2Array(0, 0, 1152, 0, 1152, 648, 0, 648)
+
+[node name="Panel" type="Polygon2D" parent="."]
+light_mask = 2
+color = Color(0.7, 0.7, 0.7, 1)
+polygon = PackedVector2Array(800, 100, 1000, 100, 1000, 300, 800, 300)
+
+[node name="Lamp" type="PointLight2D" parent="."]
+position = Vector2(400, 324)
+range_item_cull_mask = 3
+texture = ExtResource("1_light")
+texture_scale = 2.0
+energy = 2.0
+shadow_enabled = true
+shadow_filter = 1
+shadow_filter_smooth = 8.0
+
+[node name="Mixer" type="PointLight2D" parent="."]
+position = Vector2(800, 400)
+color = Color(0.2, 0.4, 1, 1)
+blend_mode = 2
+texture = ExtResource("1_light")
+texture_scale = 1.5
+
+[node name="Sun" type="DirectionalLight2D" parent="."]
+color = Color(1, 0.6, 0.3, 1)
+energy = 0.3
+
+[node name="Caster" type="LightOccluder2D" parent="."]
+position = Vector2(576, 324)
+occluder = SubResource("1")

@@ -45,6 +45,7 @@ import {
   type SummedAccumulation,
 } from './lightAccumulationPass.js';
 import { capItemLights, type CappedItem } from './itemLightCap.js';
+import { LightPassInputs } from './lightPassInputs.js';
 import type { Rect2 } from '../../godot/math/rect2.js';
 import type { Rgba } from '../../godot/math/math.js';
 import { useDisposeOnRelease } from '../useDisposeOnRelease.js';
@@ -218,6 +219,14 @@ export function CanvasLightPass({ host, canvasModulate, space, children }: Canva
 
   const resolution = useRef(new THREE.Vector2(1, 1)).current;
 
+  const inputs = useRef(new LightPassInputs()).current;
+  // A restored context holds blank targets, which the kept inputs would not draw again.
+  useEffect(() => {
+    const forget = () => inputs.forget();
+    gl.domElement.addEventListener('webglcontextrestored', forget);
+    return () => gl.domElement.removeEventListener('webglcontextrestored', forget);
+  }, [gl, inputs]);
+
   // Each frame, the steps and the cap measure first, so the lists follow the rects of the frame
   // before, and the accumulation draws after.
   const run = useCallback(() => {
@@ -239,6 +248,7 @@ export function CanvasLightPass({ host, canvasModulate, space, children }: Canva
       resolution,
       readBufferSize,
       windows,
+      inputs,
     });
   }, [
     gl,
@@ -258,6 +268,7 @@ export function CanvasLightPass({ host, canvasModulate, space, children }: Canva
     seedMaterial,
     seedModulate,
     resolution,
+    inputs,
   ]);
   useEffect(() => {
     host.run.current = run;

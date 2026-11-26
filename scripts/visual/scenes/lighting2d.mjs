@@ -6,6 +6,21 @@ export const LIGHTING_2D_SCENES = [
   // Lights with no texture add nothing and draw no placeholder (measured with `pnpm ref:godot`).
   { name: 'pointlight2d-untextured', file: 'unit-pointlight2d-untextured.tscn' },
   { name: 'pointlight2d-blend', file: 'unit-pointlight2d-blend.tscn' },
+  // The light pass keeps its buffers while its inputs hold, so each write after load must reach them.
+  {
+    name: 'light2d-writes-after-load',
+    file: 'unit-light2d-writes-after-load.tscn',
+    hostCalls: [
+      { path: 'Lamp', property: 'energy', text: '1.2' },
+      { path: 'Lamp', property: 'color', text: 'Color(1, 0.8, 0.5, 1)' },
+      { path: 'Lamp', property: 'position', text: 'Vector2(300, 300)' },
+      { path: 'Mixer', property: 'blend_mode', text: '1' },
+      { path: 'Caster', property: 'position', text: 'Vector2(500, 250)' },
+      { path: 'Sun', property: 'energy', text: '0.6' },
+      { path: 'Tint', property: 'color', text: 'Color(0.9, 0.85, 1, 1)' },
+      { path: 'Panel', property: 'position', text: 'Vector2(-100, 150)' },
+    ],
+  },
   { name: 'pointlight2d-gradient', file: 'unit-pointlight2d-gradient.tscn' },
   // Opaque cookie edges with fractional quad edges: the outer half texel fades, as Godot's atlas does.
   { name: 'pointlight2d-cookie-edge', file: 'unit-pointlight2d-cookie-edge.tscn' },

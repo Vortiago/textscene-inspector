@@ -15,6 +15,7 @@ import {
 } from './itemLightList.js';
 import { listWindow, windowScissor } from './lightListWindow.js';
 import { beginStep, endStep } from '../frameProfile/frameProfile.js';
+import type { LightPassInputs } from './lightPassInputs.js';
 import type { Rect2 } from '../../godot/math/rect2.js';
 
 /** One light mesh the pass shows or hides per list. */
@@ -68,6 +69,8 @@ export interface LightAccumulationPass {
   readBufferSize: (out: THREE.Vector2) => void;
   /** The world rect each capped placement's items cover (`ItemLightCap.windows`). */
   windows: ReadonlyMap<string, Rect2>;
+  /** The inputs of the last drawn frame: a frame that matches them keeps the buffers. */
+  inputs: LightPassInputs;
 }
 
 /**
@@ -132,6 +135,7 @@ export function renderLightLists({
   resolution,
   readBufferSize,
   windows,
+  inputs,
 }: LightAccumulationPass): void {
   if (lists.length === 0) return;
   // The targets and the lookup are all in device pixels, because that is what `gl_FragCoord` is
@@ -155,6 +159,10 @@ export function renderLightLists({
   // context) would leave the renderer on an accumulation buffer with most layers masked, and
   // r3f's main render would draw the scene into it: a black canvas, not one broken light.
   beginStep(gl, '2D lights');
+  if (inputs.matches({ camera, lists, passMeshes, canvasModulate, resolution, windows })) {
+    endStep(gl, '2D lights');
+    return;
+  }
   try {
     camera.layers.set(LIGHT_PASS_LAYER);
     for (const list of lists) {
@@ -171,6 +179,10 @@ export function renderLightLists({
       }
       if (list.apart) renderLightsApart(list.apart, passMeshes, render);
     }
+    inputs.keep();
+  } catch (error) {
+    inputs.forget();
+    throw error;
   } finally {
     gl.setRenderTarget(previousTarget);
     camera.layers.mask = previousMask;
