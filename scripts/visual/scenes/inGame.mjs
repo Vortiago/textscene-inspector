@@ -19,7 +19,7 @@ export const IN_GAME_SCENES = [
     mode: 'in-game',
     canvas: { width: 240, height: 240 },
   },
-  // A canvas_item shader's screen built-ins count the window's target: the window under canvas_items, the base under viewport.
+  // A shader's screen built-ins count the window's target: the window, or the base under viewport.
   {
     name: 'in-game-stretch-shader-canvas-items',
     file: 'in-game-stretch-shader-canvas-items/unit-in-game-stretch-shader-canvas-items.tscn',

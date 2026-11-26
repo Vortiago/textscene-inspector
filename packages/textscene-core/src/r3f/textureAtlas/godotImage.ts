@@ -19,7 +19,7 @@ export interface GodotImage {
 const godotImage = perObject(readGodotImage, { stamp: ({ version }) => version });
 
 /** A fresh read of `texture`'s pixels, which no cache keeps. */
-export function readGodotImage(texture: THREE.Texture): GodotImage | undefined {
+function readGodotImage(texture: THREE.Texture): GodotImage | undefined {
   if (!readsAsBytes(texture)) return undefined;
   const pixels = readImagePixels(texture.image);
   if (!pixels) return undefined;
@@ -34,13 +34,44 @@ export interface OwnFormatImage {
 }
 
 /** A fresh read of `texture`'s pixels in their own format, top row first. Undefined: unreadable. */
-export function readOwnFormatImage(texture: THREE.Texture): OwnFormatImage | undefined {
+function readOwnFormatImage(texture: THREE.Texture): OwnFormatImage | undefined {
   if (!readsAsBytes(texture)) return undefined;
   const { data } = (texture.image ?? {}) as { data?: unknown };
   if (texture.type !== THREE.HalfFloatType || !(data instanceof Uint16Array)) return readGodotImage(texture);
   const size = imageSize(texture.image);
   if (!size) return undefined;
   return isBottomUp(texture) ? topRowFirst({ ...size, data }) : { ...size, data };
+}
+
+interface HeldRead {
+  holds: number;
+  version: number;
+  image: OwnFormatImage | undefined;
+}
+
+/** Written only by `holdOwnFormatImage`: a texture's read while a hold of it lasts, dropped with the last. */
+const heldReads = perObject((_texture: THREE.Texture): HeldRead => ({
+  holds: 0,
+  version: -1,
+  image: undefined,
+}));
+
+/** `texture`'s pixels in their own format, read once for overlapping holds. The caller calls `release`. */
+export function holdOwnFormatImage(texture: THREE.Texture): {
+  image: OwnFormatImage | undefined;
+  release: () => void;
+} {
+  const read = heldReads(texture);
+  if (read.holds === 0 || read.version !== texture.version) {
+    read.image = readOwnFormatImage(texture);
+    read.version = texture.version;
+  }
+  read.holds += 1;
+  const release = () => {
+    read.holds -= 1;
+    if (read.holds === 0) read.image = undefined;
+  };
+  return { image: read.image, release };
 }
 
 /**

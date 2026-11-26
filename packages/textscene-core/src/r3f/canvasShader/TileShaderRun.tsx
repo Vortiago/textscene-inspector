@@ -42,7 +42,7 @@ export function TileShaderRun({
 }: TileShaderRunProps) {
   const drawn = useCanvasItemTextureSampledBy(sampler, source.texture);
   const runtimeAtlas = useRuntimeAtlasTexture(drawn, source);
-  const isUnpadded = runtimeAtlas === 'unreadable';
+  const isUnreadable = runtimeAtlas === 'unreadable';
   // An unpadded AtlasTexture draws its region from its whole atlas (`atlas_texture.cpp:180-191`).
   const atlasCell = source.usesTexturePadding ? undefined : drawn.atlasCell;
   const { x: originX, y: originY } = itemOrigin;
@@ -50,10 +50,10 @@ export function TileShaderRun({
     const textureSize = drawn.texture && imageSize(drawn.texture.image);
     if (!textureSize) return null;
     const placed = cellsInAtlasGrid(cells, source, textureSize);
-    const sampled = isUnpadded ? placed.map(withoutPadding) : placed;
+    const sampled = isUnreadable ? placed.map(withoutPadding) : placed;
     const rects = tileRectCommands(sampled, tileSet, { x: originX, y: originY });
     return atlasCell ? rectsOnAtlas(rects, atlasCell) : rects;
-  }, [cells, source, drawn.texture, isUnpadded, atlasCell, tileSet, originX, originY]);
+  }, [cells, source, drawn.texture, isUnreadable, atlasCell, tileSet, originX, originY]);
   // A source with no texture, a pending one or a failed one draws nothing (`tile_map_layer.cpp:2676-2677`).
   if (!source.texture || drawn.missing || !drawn.texture) return null;
   // Nothing while the first padded copy builds: the pending load holds the frame a capture waits for.
@@ -61,7 +61,7 @@ export function TileShaderRun({
   // No size to place the cells by: Godot's default shader draws the run.
   if (!commands) return <>{fallback}</>;
   // Pixels it cannot read keep the user's shader over the texture itself: only the padding texels differ.
-  const texture = atlasCell?.sheet ?? (isUnpadded ? drawn.texture : runtimeAtlas);
+  const texture = atlasCell?.sheet ?? (isUnreadable ? drawn.texture : runtimeAtlas);
   // Object3Ds keep the layer's canvas key. The fallback draws in layer pixels, so it undoes the item's place.
   return (
     <object3D position={[itemOrigin.x, -itemOrigin.y, 0]}>

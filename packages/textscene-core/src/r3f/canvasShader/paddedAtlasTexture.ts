@@ -10,14 +10,14 @@ import { vector2Equals } from '../../godot/math/vector';
 import { perObject } from '../../utils/perObject';
 import { inThreadJobRunner, type WorkerJobRunner } from '../../workers/WorkerJobRunner';
 import { usePaddedAtlasStandIn } from '../paddedAtlasStandIn';
-import { readOwnFormatImage } from '../textureAtlas/godotImage';
+import { holdOwnFormatImage } from '../textureAtlas/godotImage';
 
 type JobRunner = Pick<WorkerJobRunner, 'run'>;
 
 /** What a padded run samples: the atlas, nothing while its copy builds, or nothing it can read. */
 export type RuntimeAtlas = THREE.Texture | 'building' | 'unreadable';
 
-/** A texture whose pixels this previewer cannot read: the run draws Godot's default shader instead. */
+/** A texture whose pixels this previewer cannot read: the run samples it at its unpadded regions. */
 const UNREADABLE = 'unreadable';
 
 /** One padded copy of one version of a texture, and the runs that hold it. */
@@ -170,12 +170,17 @@ async function buildPaddedCopy(
   runner: JobRunner,
   signal: AbortSignal
 ): Promise<THREE.Texture | typeof UNREADABLE> {
-  await Promise.resolve();
-  const release = holdPixels(texture);
+  // A task, not a microtask: a copy released in the commit's task aborts first and reads nothing.
+  await new Promise((resume) => setTimeout(resume));
+  if (signal.aborted) throw signal.reason;
+  const { image, release } = holdOwnFormatImage(texture);
   try {
-    const pixels = pixelsOf(texture);
-    if (!pixels) return UNREADABLE;
-    const padded = await runner.run('padded-atlas', { pixels, layout: paddedAtlasLayout(source) }, signal);
+    if (!image) return UNREADABLE;
+    const padded = await runner.run(
+      'padded-atlas',
+      { pixels: image, layout: paddedAtlasLayout(source) },
+      signal
+    );
     return paddedTexture(padded, texture);
   } finally {
     release();
@@ -190,37 +195,4 @@ function paddedTexture(padded: AtlasPixels, texture: THREE.Texture): THREE.DataT
   atlas.colorSpace = texture.colorSpace;
   atlas.needsUpdate = true;
   return atlas;
-}
-
-interface PixelsInFlight {
-  builds: number;
-  version: number;
-  pixels: AtlasPixels | null | undefined;
-}
-
-/** Written only by `holdPixels` and `pixelsOf`: a texture's read while a build of it runs, dropped after. */
-const pixelsInFlight = perObject((_texture: THREE.Texture): PixelsInFlight => ({
-  builds: 0,
-  version: -1,
-  pixels: undefined,
-}));
-
-/** Keeps the read for the builds in flight, so two sources of a texture read it once and none keeps it. */
-function holdPixels(texture: THREE.Texture): () => void {
-  const read = pixelsInFlight(texture);
-  read.builds += 1;
-  return () => {
-    read.builds -= 1;
-    if (read.builds === 0) read.pixels = undefined;
-  };
-}
-
-/** Null for pixels it cannot read. */
-function pixelsOf(texture: THREE.Texture): AtlasPixels | null {
-  const read = pixelsInFlight(texture);
-  if (read.pixels === undefined || read.version !== texture.version) {
-    read.pixels = readOwnFormatImage(texture) ?? null;
-    read.version = texture.version;
-  }
-  return read.pixels;
 }

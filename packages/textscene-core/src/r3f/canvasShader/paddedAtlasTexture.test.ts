@@ -54,6 +54,16 @@ describe('useRuntimeAtlasTexture', () => {
     expect([result.current, read.mock.calls.length]).toEqual(['building', 0]);
   });
 
+  it('reads no pixels for a copy released before its build starts', async () => {
+    const read = vi.spyOn(imagePixels, 'readImagePixels');
+    const hook = renderHook(() => useRuntimeAtlasTexture(slotOf(textureOf()), SOURCE));
+
+    hook.unmount();
+    await new Promise((settle) => setTimeout(settle));
+
+    expect(read).not.toHaveBeenCalled();
+  });
+
   it('gives the padded copy once it is built, one texel of border around each tile', async () => {
     const { result } = await builtCopy(textureOf());
 

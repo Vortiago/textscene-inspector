@@ -58,7 +58,7 @@ export const CANVAS_2D_SCENES = [
   { name: 'canvas-shader-items', file: 'unit-canvas-shader-items.tscn' },
   { name: 'canvas-shader-clip', file: 'unit-canvas-shader-clip.tscn' },
   { name: 'canvas-shader-builtins', file: 'unit-canvas-shader-builtins.tscn' },
-  // The stage counts the design size under a window stretch, as Godot's 2D reference renders it. Godot 4.6.3: 0 px over 2/255.
+  // The stage counts the design size under a stretched window, as Godot's 2D reference does: 0 px over 2/255.
   {
     name: 'canvas-shader-stretch-stage',
     file: 'in-game-stretch-shader-canvas-items/unit-in-game-stretch-shader-canvas-items.tscn',
