@@ -225,8 +225,11 @@ describe('sameCommandLayout', () => {
     region: { rect: { x, y: 0, w: 1, h: 1 }, source: { x: 0, y: 0, w: 1, h: 1 }, clipUv: false },
     modulate: { r: 1, g: 1, b: 1, a: 1 },
   });
-  const mesh = (): CanvasShaderCommand =>
-    surfaceCommands([{ geometry: canvasSurfaceGeometry(TRIANGLE) }])![0]!;
+  const mesh = () =>
+    surfaceCommands([{ geometry: canvasSurfaceGeometry(TRIANGLE) }])![0] as Extract<
+      CanvasShaderCommand,
+      { kind: 'mesh' }
+    >;
 
   it('holds two lists of rects in the same places alike, whatever their regions', () => {
     expect(sameCommandLayout([rect(0)], [rect(4)])).toBe(true);
@@ -265,6 +268,19 @@ describe('sameCommandLayout', () => {
     const shared = mesh();
 
     expect(sameCommandLayout([shared], [multimesh(shared, 1)])).toBe(false);
+  });
+
+  it('tells a mesh of the same arrays at another place apart', () => {
+    const shared = mesh();
+    const moved = { ...shared, transform: { a: 1, b: 0, c: 0, d: 1, tx: 5, ty: 0 } };
+
+    expect(sameCommandLayout([shared], [moved])).toBe(false);
+  });
+
+  it('tells a mesh of the same arrays with another receiver apart', () => {
+    const shared = mesh();
+
+    expect(sameCommandLayout([shared], [{ ...shared, meshRef: () => undefined }])).toBe(false);
   });
 });
 

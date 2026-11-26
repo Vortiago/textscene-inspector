@@ -3,6 +3,7 @@ import type { Rgba } from '../../godot/math/math';
 import { rect2Intersection, type Rect2 } from '../../godot/math/rect2';
 import { bottomUpV } from '../../godot/math/uv';
 import {
+  equalTransform2D,
   multiplyTransform2DInto,
   mutableTransform2D,
   TRANSFORM2D_IDENTITY,
@@ -273,7 +274,7 @@ const isFourFloatLanes = (
   attribute.array instanceof Float32Array &&
   attribute.array.length === attribute.count * CUSTOM_ARRAY_LANES;
 
-/** Whether two command lists draw the same batches: the same kinds, mesh arrays and instance counts. */
+/** Whether two command lists draw the same batches: the kinds, mesh arrays, places, receivers and counts. */
 export function sameCommandLayout(
   a: readonly CanvasShaderCommand[],
   b: readonly CanvasShaderCommand[]
@@ -284,9 +285,15 @@ export function sameCommandLayout(
       const other = b[index]!;
       if (command.kind === 'rect') return other.kind === 'rect';
       if (other.kind !== command.kind || other.arrays !== command.arrays) return false;
+      if (other.meshRef !== command.meshRef) return false;
+      if (!samePlace(command.transform, other.transform)) return false;
       return instanceCountOf(command) === instanceCountOf(other);
     })
   );
+}
+
+function samePlace(p: Transform2DColumns | undefined, q: Transform2DColumns | undefined): boolean {
+  return p === q || (p !== undefined && q !== undefined && equalTransform2D(p, q));
 }
 
 /** How many times a command draws its arrays: once for a mesh or a rect. */

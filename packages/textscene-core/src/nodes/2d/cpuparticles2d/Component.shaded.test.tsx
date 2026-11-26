@@ -95,6 +95,14 @@ describe('CPUParticles2D through the canvas template', () => {
     ).toEqual([true, true]);
   });
 
+  it("writes each particle's lifetime phase and lifetime ratio in y and w of its custom data", async () => {
+    const [command] = await shadedCommandsOf(emitter({ amount: '1', explosiveness: '1' }));
+    const words = command?.kind === 'multimesh' ? command.instances.words : new Uint32Array(16);
+    const [, phase, , ratio] = new Float32Array(words.buffer).slice(12, 16);
+
+    expect([phase! > 0 && phase! < 1, ratio]).toEqual([true, 1]);
+  });
+
   it("draws the texture's quad centred on the origin (cpu_particles_2d.cpp:184-229)", async () => {
     const [command] = await shadedCommandsOf(emitter({ amount: '1' }));
     const xs = command?.kind === 'multimesh' ? command.arrays.points.map(({ x, y }) => [x, y]) : [];

@@ -108,11 +108,11 @@ export interface RenderedParticle {
   /** Godot's `p.color`: sRGB, alpha included, curve, ramp and hue applied. */
   color: Rgba;
   /**
-   * Godot's `p.custom[2]`, reaching the canvas shader as `INSTANCE_CUSTOM.z`:
-   * `anim_offset + age × anim_speed`. A `CanvasItemMaterial` with
-   * `particles_animation` turns it into a flipbook cell index.
+   * Godot's `p.custom`, reaching the canvas shader as `INSTANCE_CUSTOM`: y the lifetime phase, z
+   * `anim_offset + age × anim_speed`, w the lifetime ratio. A `CanvasItemMaterial` with
+   * `particles_animation` turns z into a flipbook cell index.
    */
-  anim: number;
+  custom: readonly [number, number, number, number];
   /** `p.time`, in seconds. The `draw_order = Lifetime` sort key. */
   age: number;
   /** The particle's index in the emitter, which is its `draw_order = Index` order. */
@@ -672,7 +672,7 @@ function collectPose(state: SimState, props: CPUParticles2DProperties): Rendered
     pose.push({
       transform: p.transform,
       color: p.color,
-      anim: p.custom[2],
+      custom: [p.custom[0], p.custom[1], p.custom[2], p.custom[3]],
       age: p.time,
       index,
     });
