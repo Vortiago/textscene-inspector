@@ -459,7 +459,11 @@ describe('the shadow quality specialisation', () => {
 
 describe('the directional shadow atlas', () => {
   it("gives the atlas to the template's compared reads of directional_shadow_atlas", () => {
-    const atlas = { depth: new THREE.DepthTexture(4096, 4096), colour: new THREE.Texture() };
+    const atlas = {
+      depth: new THREE.DepthTexture(4096, 4096),
+      colour: new THREE.Texture(),
+      isColourFilteredExactly: false,
+    };
     const { spatial } = written({ source: LIT, directionalShadowAtlas: atlas });
     expect(comparedTextureOf(spatial.textures.get('directional_shadow_atlas')!).value).toBe(atlas.depth);
   });

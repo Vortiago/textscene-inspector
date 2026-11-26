@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { filtersTwoBytesExactly } from '../directionalShadow/twoByteFilterProbe.js';
 import {
   generatedUnDrawnMessage,
   spatialShaderName,
@@ -69,6 +70,8 @@ export function spatialSurfaceOf(
   recordCastsShadow(spatial.material, spatial.castsShadow);
   releasedOnUnmount(dfgTexture());
   releasedOnUnmount(unboundDirectionalShadowColour());
+  // Probed here, outside a render: the probe renders a pixel of its own.
+  const filtersColourExactly = filtersTwoBytesExactly(gl);
   // Written by each colour draw, so a program built between draws keeps the last one's soft shadows.
   let drawsSoftShadows = false;
   const specialise = () =>
@@ -80,7 +83,7 @@ export function spatialSurfaceOf(
   try {
     beforeEachDraw(spatial, (drawn) => {
       prepareDrawnSurface(drawn.object);
-      const scene = sceneOf(gl, drawn, roughnessLimiter);
+      const scene = sceneOf(gl, drawn, roughnessLimiter, filtersColourExactly);
       writeSpatialBindings(spatial, scene);
       // A shadow or depth draw runs before the frame's fog, and folds none: only the colour draw picks it.
       if (drawn.material !== spatial.material) return;
@@ -122,7 +125,8 @@ const targetSize = new THREE.Vector2();
 function sceneOf(
   gl: THREE.WebGLRenderer,
   { camera, scene, renderId }: SpatialDraw,
-  roughnessLimiter: RoughnessLimiter
+  roughnessLimiter: RoughnessLimiter,
+  filtersColourExactly: boolean
 ): SpatialScene {
   const { x: width, y: height } = renderTargetSize(gl, targetSize);
   const sky = sceneSkyLight();
@@ -143,6 +147,7 @@ function sceneOf(
       directionalShadowAtlas: {
         depth: directionalShadowAtlasDepth(),
         colour: directionalShadowAtlasColour(),
+        isColourFilteredExactly: filtersColourExactly,
       },
     }),
     roughnessLimiter,

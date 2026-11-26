@@ -20,12 +20,16 @@ export const DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM = 'directionalShadowAtlasCo
 
 /** The atlas in Godot's default depth bits, which the raw depth in its colour also holds. */
 function createAtlas(): THREE.WebGLRenderTarget {
-  return createShadowAtlas({
+  const atlas = createShadowAtlas({
     name: 'DirectionalShadowAtlas',
     size: DIRECTIONAL_SHADOW_SIZE_DEFAULT,
     type: DIRECTIONAL_SHADOW_ATLAS_DEPTH_BITS === 16 ? THREE.UnsignedShortType : THREE.UnsignedIntType,
     compare: THREE.LessEqualCompare,
   });
+  // A translated lit surface samples the colour filtered, as Godot samples its depth.
+  atlas.texture.minFilter = THREE.LinearFilter;
+  atlas.texture.magFilter = THREE.LinearFilter;
+  return atlas;
 }
 
 /**

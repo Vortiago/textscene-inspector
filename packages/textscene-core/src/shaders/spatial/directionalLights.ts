@@ -285,6 +285,8 @@ export function readDirectionalShadowAtlas(textures: Map<string, TextureNode>): 
 export interface DirectionalShadowAtlasTextures {
   readonly depth: THREE.DepthTexture;
   readonly colour: THREE.Texture;
+  /** The GPU filters the colour's two bytes exactly, so a raw read takes one filtered sample. */
+  readonly isColourFilteredExactly: boolean;
 }
 
 /** Binds the atlas to the template's reads. With none, a compare reads one texel. */
@@ -295,5 +297,5 @@ export function bindDirectionalShadowAtlas(
   const node = textures.get(DIRECTIONAL_SHADOW_ATLAS);
   if (!node) return;
   comparedTextureOf(node).value = atlas?.depth ?? UNBOUND_DEPTH;
-  bindDirectionalShadowColour(node, atlas?.colour);
+  bindDirectionalShadowColour(node, atlas?.colour, atlas?.isColourFilteredExactly ?? false);
 }
