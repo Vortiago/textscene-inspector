@@ -189,15 +189,5 @@ describe('the shader a mesh surface draws', () => {
 
       expect(mesh.material).toBe(translatedMaterial);
     });
-
-    it('draws the shader once a texture fails, as nothing more arrives for it', async () => {
-      vi.spyOn(logger, 'warn').mockImplementation(() => {});
-      const fake = createFakeResourceLoader();
-      const mesh = await renderSampling(fake);
-
-      await act(async () => fake.textures._fail(ALBEDO_PATH, 'not found'));
-
-      expect(mesh.material).toBe(translatedMaterial);
-    });
   });
 });

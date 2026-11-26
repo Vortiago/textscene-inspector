@@ -16,7 +16,7 @@ import { OTHER_DRAWS_SURFACE } from '../materials/useOneSurfaceStartingMaterial'
 import { useShaderTextures } from '../shaderTextures/shaderTextures';
 import { useShaderRefusalWarning, useShaderTranslator } from '../shaderTranslator/useShaderTranslator';
 import type { SurfaceShaderSource } from './surfaceShader';
-import { isEverySampledTextureSettled } from '../shaderTextures/samplerValues';
+import { sampledTexturesOutcome } from '../shaderTextures/samplerValues';
 
 /** Imported by the first spatial shader only: it holds the shader parser and three's TSL. */
 const loadSpatialSurface = memoisedImport(() => import('./spatialSurface'));
@@ -34,9 +34,11 @@ interface SpatialShaderSlotProps {
   attach?: string | MaterialAttach;
   /** What the surface draws while the translator loads, and for a shader it refuses. */
   fallback: ReactNode;
+  /** What a generated shader draws for a texture that never draws, the classic rule's placeholder. */
+  placeholder?: ReactNode;
 }
 
-export function SpatialShaderSlot({ source, attach, fallback }: SpatialShaderSlotProps) {
+export function SpatialShaderSlot({ source, attach, fallback, placeholder }: SpatialShaderSlotProps) {
   const gl = useThree((state) => state.gl);
   const invalidate = useThree((state) => state.invalidate);
   const scene = useThree((state) => state.scene);
@@ -79,10 +81,13 @@ export function SpatialShaderSlot({ source, attach, fallback }: SpatialShaderSlo
   );
   if (!spatial || !surfaceAttach) return <>{fallback}</>;
   // A generated shader waits for its textures, so the classic material that already draws them stays.
-  if (isGenerated && !isEverySampledTextureSettled(shader!.textures, samplers!, slotStates)) {
+  const textureOutcome = isGenerated
+    ? sampledTexturesOutcome(shader!.textures, samplers!, slotStates)
+    : 'settled';
+  if (textureOutcome !== 'settled') {
     return (
       <>
-        {fallback}
+        {textureOutcome === 'missing' ? (placeholder ?? fallback) : fallback}
         {textureSlots}
       </>
     );

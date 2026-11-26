@@ -49,7 +49,10 @@ describe('surfaceShaderOf', () => {
     const sheet = new THREE.Texture({ width: 128, height: 128 });
 
     const slots = new Map([
-      ['texture_albedo', { texture: sheet, isArriving: false, reportedSize: { width: 64, height: 32 } }],
+      [
+        'texture_albedo',
+        { texture: sheet, isArriving: false, isMissing: false, reportedSize: { width: 64, height: 32 } },
+      ],
     ]);
 
     const parameters = baseMaterial({}).parametersWith({ texture_albedo: sheet }, slots);

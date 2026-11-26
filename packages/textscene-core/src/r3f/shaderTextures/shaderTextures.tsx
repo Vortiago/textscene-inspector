@@ -17,6 +17,8 @@ export interface SlotState {
   readonly texture: THREE.Texture | null;
   /** False once the texture loads, or once nothing more arrives: a missing file or a CanvasTexture. */
   readonly isArriving: boolean;
+  /** True when the texture never draws: its file, or a sheet it cuts from, cannot load. */
+  readonly isMissing: boolean;
   /** The size `get_width` and `get_height` report, for a flat texture that has loaded. */
   readonly reportedSize?: ImageSize;
 }
@@ -77,11 +79,14 @@ interface ShaderTextureSlotProps {
 
 /** A shader samples a texture by RID, so an AtlasTexture names its whole sheet (`atlas_texture.cpp:55`). */
 function FlatTextureSlot({ name, reference, isColor, onState }: ShaderTextureSlotProps): null {
-  const { texture, isArriving, reportedSize } = useTexture2DRid(reference, isColor ? 'decoding' : 'plain');
+  const { texture, isArriving, missing, reportedSize } = useTexture2DRid(
+    reference,
+    isColor ? 'decoding' : 'plain'
+  );
   const drawn = texture && topDownTexture(texture);
   const state = useMemo(
-    () => ({ texture: drawn, isArriving, reportedSize }),
-    [drawn, isArriving, reportedSize]
+    () => ({ texture: drawn, isArriving, isMissing: missing, reportedSize }),
+    [drawn, isArriving, missing, reportedSize]
   );
   useReportedState(name, state, onState);
   return null;
@@ -92,7 +97,7 @@ function CubemapSlot({ name, reference, onState }: ShaderTextureSlotProps): null
   const texture = useCubemap(reference);
   useReportedState(
     name,
-    useMemo(() => ({ texture, isArriving: false }), [texture]),
+    useMemo(() => ({ texture, isArriving: false, isMissing: false }), [texture]),
     onState
   );
   return null;
@@ -102,7 +107,7 @@ function Texture3DSlot({ name, reference, onState }: ShaderTextureSlotProps): nu
   const texture = useTexture3D(reference);
   useReportedState(
     name,
-    useMemo(() => ({ texture, isArriving: false }), [texture]),
+    useMemo(() => ({ texture, isArriving: false, isMissing: false }), [texture]),
     onState
   );
   return null;
