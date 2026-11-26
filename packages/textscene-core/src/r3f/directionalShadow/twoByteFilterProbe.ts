@@ -19,6 +19,7 @@ void main() {
 
 /** Halfway between the depths 255 and 256: full precision gives 0.5, stored as 128; an 8-bit filter 0. */
 const FULL_PRECISION_BYTE = 128;
+/** A filter within 1/16 of a depth step of the exact mix passes. An 8-bit filter misses by half a step. */
 const TOLERANCE_BYTES = 16;
 
 /** Whether the probe's read-back byte shows a full-precision filter. */

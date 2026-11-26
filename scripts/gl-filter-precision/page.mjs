@@ -1,6 +1,6 @@
 /* global document */
 
-/** Each format's worst linear-filter error in depth steps, or null without its extension. */
+/** Each format's worst linear-filter error as a share of its pair's gap, or null without its extension. */
 // Playwright sends only this function to the page, so every helper nests inside it.
 export function filterPrecision() {
   /** Depth pairs in 16-bit steps. 255 and 256 differ only in the low byte. */
@@ -125,7 +125,7 @@ export function filterPrecision() {
     return pixel[0];
   }
 
-  /** The largest error of `format` over every pair and weight, in depth steps of its pair. */
+  /** The largest error of `format` over every pair and weight, as a share of the pair's depth gap. */
   function worstError(gl, format) {
     const linked = program(gl, fragmentFor(format.decode));
     gl.useProgram(linked);

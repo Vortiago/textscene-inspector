@@ -3,14 +3,9 @@ import {
   SOFT_LOW_PENUMBRA_SAMPLES,
   SOFT_LOW_SHADOW_SAMPLES,
 } from '../../godot/rendering/lights/softShadowKernel.js';
+import { PackedSpecialisationBit } from '../../godot/rendering/sceneSpecialisation.js';
 import type { Binding } from '../uniforms/bindingTable.js';
 import type { SpatialFrame } from './spatialBindings.js';
-
-/** `use_directional_soft_shadows` (`scene_forward_clustered_inc.glsl:89-91`). */
-const USE_DIRECTIONAL_SOFT_SHADOWS = 1 << 3;
-
-/** `use_depth_fog` (`scene_forward_clustered_inc.glsl:101-103`). */
-const USE_DEPTH_FOG = 1 << 6;
 
 /** Soft Low taps for both shadow kinds (`render_forward_clustered.cpp:4980-4983`, `_inc.glsl:109-123`). */
 const SHADOW_QUALITY =
@@ -39,8 +34,8 @@ export const PACKED_SPECIALISATIONS: readonly Binding<SpecialisedRender>[] = [
     godot: 'render_forward_clustered.cpp:428, 2084, 4980-4983',
     value: ({ fog, drawsDirectionalSoftShadows }) =>
       (SHADOW_QUALITY |
-        (drawsDirectionalSoftShadows ? USE_DIRECTIONAL_SOFT_SHADOWS : 0) |
-        (fog?.mode === FogMode.DEPTH ? USE_DEPTH_FOG : 0)) >>>
+        (drawsDirectionalSoftShadows ? PackedSpecialisationBit.USE_DIRECTIONAL_SOFT_SHADOWS : 0) |
+        (fog?.mode === FogMode.DEPTH ? PackedSpecialisationBit.USE_DEPTH_FOG : 0)) >>>
       0,
   },
 ];

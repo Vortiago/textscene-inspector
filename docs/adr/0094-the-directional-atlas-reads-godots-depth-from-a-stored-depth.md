@@ -26,7 +26,7 @@ The depth in the atlas also runs the other way. Godot's depth is 1 at the near s
 
 ### How each format filters
 
-`node scripts/gl-filter-precision/run.mjs` takes linear samples between two texels and gives the worst error in 16-bit depth steps. The pair 255 and 256 tests the low byte.
+`node scripts/gl-filter-precision/run.mjs` takes linear samples between two texels and gives the worst error as a share of the gap between their depths. The pair 255 and 256 tests the low byte.
 
 | Colour format | SwiftShader (the goldens) | lavapipe (`pnpm ref:diff`) |
 | --- | --- | --- |

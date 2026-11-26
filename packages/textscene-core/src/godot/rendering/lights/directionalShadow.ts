@@ -27,6 +27,9 @@ export const DIRECTIONAL_SHADOW_ATLAS_DEPTH_BITS = 16;
 /** How far past a split box's light side Godot culls casters (`renderer_scene_cull.cpp:2322`). */
 export const DIRECTIONAL_SHADOW_CASTER_CULL_REACH = 1e6;
 
+/** The reversed depth a pancaked caster stops at (`scene_forward_clustered.glsl:679-682`). */
+export const DIRECTIONAL_SHADOW_PANCAKE_DEPTH = 0.9999;
+
 /** The camera depths, from the eye, that one orthogonal shadow map covers. */
 export interface DirectionalShadowSlice {
   near: number;

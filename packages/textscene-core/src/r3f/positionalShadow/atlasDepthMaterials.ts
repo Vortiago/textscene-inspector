@@ -6,6 +6,10 @@
  */
 
 import * as THREE from 'three';
+import {
+  DIRECTIONAL_SHADOW_ATLAS_DEPTH_BITS,
+  DIRECTIONAL_SHADOW_PANCAKE_DEPTH,
+} from '../../godot/rendering/lights/directionalShadow.js';
 import { composeInjections, injectProgram, type ProgramInjection } from '../materialProgramInputs.js';
 import { editedProgram } from '../shaderPatch/chunkPatch.js';
 
@@ -47,19 +51,24 @@ const ATLAS_DEPTH = atlasDepthInjection(
   'vec4( packAtlasDepth( gl_FragCoord.z ), 0.0, 1.0 )'
 );
 
-/** The 16-bit depth as a float in red, for an atlas whose float colour the GPU filters exactly. */
+const DIRECTIONAL_DEPTH_STEPS = (2 ** DIRECTIONAL_SHADOW_ATLAS_DEPTH_BITS - 1).toFixed(1);
+
+/** The atlas's depth, rounded to its bits, as a float in red, for a GPU that filters the float exactly. */
 const FLOAT_ATLAS_DEPTH = atlasDepthInjection(
   'godot-float-atlas-depth',
   '',
-  'vec4( floor( clamp( gl_FragCoord.z, 0.0, 1.0 ) * 65535.0 + 0.5 ) / 65535.0, 0.0, 0.0, 1.0 )'
+  `vec4( floor( clamp( gl_FragCoord.z, 0.0, 1.0 ) * ${DIRECTIONAL_DEPTH_STEPS} + 0.5 ) / ${DIRECTIONAL_DEPTH_STEPS}, 0.0, 0.0, 1.0 )`
 );
 
-/** Godot's reversed depth stops at 0.9999 (`scene_forward_clustered.glsl:679-682`), three's `t` at 0.0001. */
+/** Godot's reversed pancake depth, and the same stop in three's forward clip space. */
+const PANCAKE_REVERSED_Z = DIRECTIONAL_SHADOW_PANCAKE_DEPTH.toFixed(4);
+const PANCAKE_FORWARD_Z = (1 - 2 * DIRECTIONAL_SHADOW_PANCAKE_DEPTH).toFixed(4);
+
 const FLATTENED_VERTEX = /* glsl */ `#include <project_vertex>
 #ifdef USE_REVERSED_DEPTH_BUFFER
-gl_Position.z = min( gl_Position.z, 0.9999 * gl_Position.w );
+gl_Position.z = min( gl_Position.z, ${PANCAKE_REVERSED_Z} * gl_Position.w );
 #else
-gl_Position.z = max( gl_Position.z, -0.9998 * gl_Position.w );
+gl_Position.z = max( gl_Position.z, ${PANCAKE_FORWARD_Z} * gl_Position.w );
 #endif`;
 
 const FLATTEN_NEAR_CASTERS: ProgramInjection = {
