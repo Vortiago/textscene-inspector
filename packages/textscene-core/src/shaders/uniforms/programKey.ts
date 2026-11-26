@@ -24,7 +24,12 @@ function textureKeyOf({ value }: TextureNode): string {
   return `${type},${minFilter},${magFilter},${colorSpace},${isDepthTexture === true},${compareFunction ?? ''}`;
 }
 
-/** A 53-bit hash (cyrb53) and the length of `text`: two texts collide with a chance near 2^-53. */
+/**
+ * A 53-bit hash (cyrb53) and the length of `text`: two texts collide with a chance near 2^-53.
+ *
+ * @canonical A key for a long text, where a collision shares one program between two codes
+ *   Not Godot's `stringHash`, which has 32 bits and stops at the first NUL.
+ */
 export function textHash(text: string): string {
   let h1 = 0xdeadbeef;
   let h2 = 0x41c6ce57;

@@ -2,7 +2,7 @@ import { act } from 'react';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as logger from '../../logger';
-import { memoisedImport } from '../../resources/memoisedImport';
+import { memoisedImport, type LazyImport } from '../../resources/memoisedImport';
 import type { ShaderText } from '../../resources/materials/shadermaterial/types';
 import type { ProjectShaderOptions } from '../../shaders/rendererShaderOptions';
 import { useShaderRefusalWarning, useShaderTranslator, type ShaderTranslator } from './useShaderTranslator';
@@ -26,14 +26,24 @@ async function settle() {
 }
 
 async function renderTranslator(load: () => Promise<unknown>) {
-  const lazy = memoisedImport(load);
+  return renderTranslators(memoisedImport(load), [LOAD_FAILURE]);
+}
+
+/** One probe for each of `loadFailures`, all over one `lazy` import. */
+async function renderTranslators(lazy: LazyImport<unknown>, loadFailures: readonly string[]) {
   const shader = shaderOf();
   const seen: (ShaderTranslator<unknown> | null)[] = [];
-  function Probe() {
-    seen.push(useShaderTranslator(lazy, shader.code, LOAD_FAILURE));
+  function Probe({ loadFailure }: { loadFailure: string }) {
+    seen.push(useShaderTranslator(lazy, shader.code, loadFailure));
     return null;
   }
-  await ReactThreeTestRenderer.create(<Probe />);
+  await ReactThreeTestRenderer.create(
+    <>
+      {loadFailures.map((loadFailure, index) => (
+        <Probe key={index} loadFailure={loadFailure} />
+      ))}
+    </>
+  );
   await settle();
   return seen;
 }
@@ -78,6 +88,15 @@ describe('useShaderTranslator', () => {
 
     expect(seen.at(-1)).toBeNull();
     expect(warn).toHaveBeenCalledExactlyOnceWith(LOAD_FAILURE);
+  });
+
+  it('warns each load failure message once, as callers name different fallbacks', async () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    const lazy = memoisedImport(() => Promise.reject(new Error('x')));
+
+    await renderTranslators(lazy, ['draws the default', 'draws the classic material', 'draws the default']);
+
+    expect(warn.mock.calls).toEqual([['draws the default'], ['draws the classic material']]);
   });
 
   it('gives null while the project options load', async () => {

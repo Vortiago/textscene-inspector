@@ -153,6 +153,11 @@ describe('the program key of a transpiled spatial material', () => {
     expect(keyOf(transpileSpatial(LIT))).toBe(keyOf(transpileSpatial(LIT)));
   });
 
+  it('is one key for one text in two files, as the file names only a fault position', () => {
+    const [first, second] = [{ file: 'res://a.tres' }, { file: 'res://b.tres' }];
+    expect(keyOf(transpileSpatial(LIT, first))).toBe(keyOf(transpileSpatial(LIT, second)));
+  });
+
   it('differs for another text', () => {
     expect(keyOf(transpileSpatial(LIT))).not.toBe(keyOf(transpileSpatial(LIT.replace('0.6', '0.5'))));
   });

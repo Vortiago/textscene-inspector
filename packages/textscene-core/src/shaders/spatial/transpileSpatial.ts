@@ -164,12 +164,13 @@ export function transpileSpatial(source: string, options: SpatialOptions = {}): 
 /** The colour pass's code key: the text, each option that changes the code, and the textures it samples. */
 function codeKeyOf(
   { code }: ParsedShader,
-  { file, renderingMethod, glVaryings, sampling }: SpatialOptions,
+  { renderingMethod, glVaryings, sampling }: SpatialOptions,
   templateTextures: ReadonlyMap<string, TextureNode>,
   parameters: ReadonlyMap<string, TranspiledUniform>
 ): CodeKey {
   return {
-    source: `colour|${textHash(JSON.stringify([code, file, renderingMethod, glVaryings, sampling]))}`,
+    // No `file`: it names a fault's position only, so two files of one text share a program.
+    source: `colour|${textHash(JSON.stringify([code, renderingMethod, glVaryings, sampling]))}`,
     textures: function* () {
       yield* templateTextures.values();
       for (const parameter of parameters.values())

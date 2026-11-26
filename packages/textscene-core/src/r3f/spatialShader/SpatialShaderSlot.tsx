@@ -14,12 +14,9 @@ import {
 } from '../materials/swappedMaterials';
 import { OTHER_DRAWS_SURFACE } from '../materials/useOneSurfaceStartingMaterial';
 import { useShaderTextures } from '../shaderTextures/shaderTextures';
-import { useTexture2DSize } from '../../resources/useTexture2D';
 import { useShaderRefusalWarning, useShaderTranslator } from '../shaderTranslator/useShaderTranslator';
-import type { SurfaceShader, SurfaceShaderSource } from './surfaceShader';
-import type { SamplerValue } from '../../shaders/uniforms/samplerUniform';
-import type { ImageSize } from '../../resources/formats/image/imagePixels';
-import { hasEverySampledTexture } from '../shaderTextures/samplerValues';
+import type { SurfaceShaderSource } from './surfaceShader';
+import { isEverySampledTextureSettled } from '../shaderTextures/samplerValues';
 
 /** Imported by the first spatial shader only: it holds the shader parser and three's TSL. */
 const loadSpatialSurface = memoisedImport(() => import('./spatialSurface'));
@@ -43,10 +40,8 @@ export function SpatialShaderSlot({ source, attach, fallback }: SpatialShaderSlo
   const gl = useThree((state) => state.gl);
   const invalidate = useThree((state) => state.invalidate);
   const scene = useThree((state) => state.scene);
-  // The material, not its wrapper, so the surfaces that share it warn once.
-  const material = materialOf(source);
-  const fileCode = 'shader' in source ? source.shader.code : null;
-  const loadFailure = 'shader' in source ? LOAD_FAILURE : GENERATED_LOAD_FAILURE;
+  const { material, fileCode, isGenerated } = sourceOf(source);
+  const loadFailure = isGenerated ? GENERATED_LOAD_FAILURE : LOAD_FAILURE;
   const translator = useShaderTranslator(loadSpatialSurface, fileCode, loadFailure);
   const module = translator?.module ?? null;
   const shader = useMemo(() => module?.surfaceShaderOf(source) ?? null, [module, source]);
@@ -69,15 +64,14 @@ export function SpatialShaderSlot({ source, attach, fallback }: SpatialShaderSlo
   useShaderRefusalWarning(material, surface && 'refusal' in surface ? surface.refusal : null);
 
   const samplers = drawn?.samplers ?? null;
-  const [textures, textureSlots] = useShaderTextures(
+  const [textures, textureSlots, slotStates] = useShaderTextures(
     useMemo(() => samplers && shader && { references: shader.textures, samplers }, [samplers, shader])
   );
-  const albedoSize = useTexture2DSize(shader?.albedoTexture ?? null);
   useLayoutEffect(() => {
     if (!spatial || !shader) return;
-    module!.setParameterValues(spatial.parameters, shader.parametersWith(textures, albedoSize));
+    module!.setParameterValues(spatial.parameters, shader.parametersWith(textures, slotStates));
     invalidate();
-  }, [module, spatial, shader, textures, albedoSize, invalidate]);
+  }, [module, spatial, shader, textures, slotStates, invalidate]);
 
   const surfaceAttach = useMemo(
     () => module && spatial && godotSurfaceAttach(attach, module, spatial.pointDraw, scene),
@@ -85,7 +79,7 @@ export function SpatialShaderSlot({ source, attach, fallback }: SpatialShaderSlo
   );
   if (!spatial || !surfaceAttach) return <>{fallback}</>;
   // A generated shader waits for its textures, so the classic material that already draws them stays.
-  if (!('shader' in source) && !isLoaded(shader!, samplers!, textures, albedoSize)) {
+  if (isGenerated && !isEverySampledTextureSettled(shader!.textures, samplers!, slotStates)) {
     return (
       <>
         {fallback}
@@ -138,19 +132,10 @@ const placedAt =
     };
   };
 
-/** The material `source` names. */
-function materialOf(source: SurfaceShaderSource): object {
-  if ('shader' in source) return source.shader;
-  return 'baseMaterial' in source ? source.baseMaterial : source.defaultMaterial;
-}
-
-/** True once `shader`'s sampled textures, and the albedo's reported size it reads, have loaded. */
-function isLoaded(
-  shader: SurfaceShader,
-  samplers: Readonly<Record<string, unknown>>,
-  textures: Readonly<Record<string, SamplerValue>>,
-  albedoSize: ImageSize | undefined
-): boolean {
-  const hasAlbedoSize = shader.albedoTexture === null || albedoSize !== undefined;
-  return hasAlbedoSize && hasEverySampledTexture(shader.textures, samplers, textures);
+/** The material its surfaces warn once for, the text decoders read, and whether Godot writes the text. */
+function sourceOf(source: SurfaceShaderSource) {
+  if ('shader' in source)
+    return { material: source.shader, fileCode: source.shader.code, isGenerated: false };
+  const material = 'baseMaterial' in source ? source.baseMaterial : source.defaultMaterial;
+  return { material, fileCode: null, isGenerated: true };
 }

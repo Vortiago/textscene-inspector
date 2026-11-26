@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { useTexture2D, useTexture2DRid, useTexture2DSize } from './useTexture2D';
+import { useTexture2D, useTexture2DRid } from './useTexture2D';
 import { referenceIn } from './reading/scopedReference.testkit';
 import { extResourceTexture2DSize, inlineTexture2DSize } from './texture2DSize';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
@@ -758,7 +758,10 @@ describe('useTexture2D — inline AtlasTexture', () => {
     ];
     const { result } = renderHook(
       () =>
-        useTexture2DSize(referenceIn('SubResource("AtlasTexture_margined")', externalResources, margined)),
+        useTexture2DRid(
+          referenceIn('SubResource("AtlasTexture_margined")', externalResources, margined),
+          'plain'
+        ).reportedSize,
       { wrapper: withLoader({ path: 'res://sheet.png', texture: sheet() }) }
     );
 
@@ -775,7 +778,11 @@ describe('useTexture2D — inline AtlasTexture', () => {
       },
     ];
     const { result } = renderHook(
-      () => useTexture2DSize(referenceIn('SubResource("AtlasTexture_zero")', externalResources, zeroWidth)),
+      () =>
+        useTexture2DRid(
+          referenceIn('SubResource("AtlasTexture_zero")', externalResources, zeroWidth),
+          'plain'
+        ).reportedSize,
       { wrapper: withLoader({ path: 'res://sheet.png', texture: sheet() }) }
     );
 
@@ -823,7 +830,7 @@ describe('useTexture2D — inline AtlasTexture', () => {
     expect(orphan.result.current.missing).toBe(true);
   });
 
-  it("gives a slot read by RID the AtlasTexture's whole sheet, uncropped", () => {
+  it("gives a slot read by RID the AtlasTexture's whole sheet, uncropped, and the cell's reported size", () => {
     const whole = sheet();
     const { result } = renderHook(
       () =>
@@ -839,6 +846,7 @@ describe('useTexture2D — inline AtlasTexture', () => {
       missing: false,
       isArriving: false,
       namesTexture: true,
+      reportedSize: { width: 64, height: 64 },
     });
   });
 
@@ -856,6 +864,7 @@ describe('useTexture2D — inline AtlasTexture', () => {
       missing: false,
       isArriving: false,
       namesTexture: true,
+      reportedSize: { width: 128, height: 128 },
     });
   });
 

@@ -33,7 +33,7 @@ export function useShaderTranslator<Module>(
   const sampling = useMemo(() => projectSampling(settings), [settings]);
   const isLoadFailed = loaded === 'failed' || nodesHandler === 'failed';
   useEffect(() => {
-    if (isLoadFailed) warnOnce(load, 'failed', loadFailure);
+    if (isLoadFailed) warnOnce(load, loadFailure, loadFailure);
   }, [load, isLoadFailed, loadFailure]);
   const isReady = module !== null && options !== null && nodesHandler === 'ready';
   return useMemo(

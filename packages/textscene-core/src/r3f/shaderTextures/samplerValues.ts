@@ -33,11 +33,18 @@ export function samplerValues(
   return values;
 }
 
-/** True once every texture a declared sampler reads has loaded: Godot ignores an undeclared one. */
-export function hasEverySampledTexture(
+/** True once each declared sampler's texture loaded or never will: Godot ignores an undeclared one. */
+export function isEverySampledTextureSettled(
   references: Readonly<Record<string, ShaderTextureReference>>,
   samplers: Readonly<Record<string, unknown>>,
-  textures: Readonly<Record<string, SamplerValue>>
+  states: ReadonlyMap<string, { readonly isArriving: boolean }>
 ): boolean {
-  return Object.keys(references).every((name) => !(name in samplers) || textures[name] !== undefined);
+  return Object.entries(references).every(
+    ([name, reference]) =>
+      !(name in samplers) ||
+      elementsOf(name, reference).every(([key, element]) => element === null || isSettled(states.get(key)))
+  );
 }
+
+const isSettled = (state: { readonly isArriving: boolean } | undefined): boolean =>
+  state !== undefined && !state.isArriving;
