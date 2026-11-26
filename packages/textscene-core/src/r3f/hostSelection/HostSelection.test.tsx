@@ -4,7 +4,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { ReactNode } from 'react';
 import * as THREE from 'three';
 import { HostSelection, type HostSelectionProps } from './HostSelection';
-import { CLICK_TRAVEL_PX, useViewportSelection } from '../hooks/useViewportSelection';
+import { useViewportSelection } from '../hooks/useViewportSelection';
 import { clickWith, LEFT, RIGHT } from '../hooks/viewportClicks.testkit';
 import { useSelectedNodePath, useSelection } from '../contexts/SelectionContext';
 import { CanvasWorkspaceProvider, type CanvasWorkspace } from '../contexts/CanvasWorkspaceContext';
@@ -127,7 +127,7 @@ describe('the host’s click picking', () => {
     act(() =>
       clickWith(view.result.current.picker.handlers, {
         on: registeredAt(view, 'Root/Cube'),
-        travel: CLICK_TRAVEL_PX + 1,
+        travel: 9,
       })
     );
 

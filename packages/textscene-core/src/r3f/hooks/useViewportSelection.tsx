@@ -20,7 +20,7 @@ export interface UseViewportSelectionResult {
 }
 
 /** Pixels of pointer travel up to which a press and release is a click (`node_3d_editor_plugin.cpp:2342`). */
-export const CLICK_TRAVEL_PX = 8;
+const CLICK_TRAVEL_PX = 8;
 
 interface Point {
   readonly clientX: number;

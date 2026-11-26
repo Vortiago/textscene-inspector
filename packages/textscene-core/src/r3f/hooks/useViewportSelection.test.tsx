@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import * as THREE from 'three';
-import { CLICK_TRAVEL_PX, useViewportSelection } from './useViewportSelection';
+import { useViewportSelection } from './useViewportSelection';
 import { clickWith, type Click } from './viewportClicks.testkit';
 import { HierarchyProvider } from '../contexts/HierarchyContext';
 import { SelectionProvider, useSelectedNodePath, useSelection } from '../contexts/SelectionContext';
@@ -34,6 +34,9 @@ function registerObjectAt({ result }: View, path: string): THREE.Object3D {
 function click({ result }: View, how: Click) {
   act(() => clickWith(result.current.vp.handlers, how));
 }
+
+// A press and release at most 8 px apart is a click (node_3d_editor_plugin.cpp:2342).
+const CLICK_TRAVEL_PX = 8;
 
 describe('useViewportSelection', () => {
   it('selects the node a click lands on', () => {
