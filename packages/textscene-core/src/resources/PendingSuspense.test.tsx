@@ -6,8 +6,9 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 import { act, render } from '@testing-library/react';
 import { lazy, type ComponentType } from 'react';
 import { ResourceLoader } from './ResourceLoader';
-import { ResourceLoaderContext } from './ResourceLoaderContext';
+import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import { PendingSuspense } from './PendingSuspense';
+import { createPendingProbe, type PendingProbe } from './testing/pendingProbe';
 
 /**
  * A lazy component and the resolver that lands its chunk. The chunk lands when the test finishes at
@@ -25,48 +26,49 @@ function deferredChunk(): { Chunk: ComponentType; land: () => Promise<void> } {
   return { Chunk, land };
 }
 
-function mount(loader: ResourceLoader, Chunk: ComponentType) {
+function mount(probe: PendingProbe, Chunk: ComponentType) {
   return render(
-    <ResourceLoaderContext.Provider value={loader}>
+    <ResourceLoaderProvider loader={new ResourceLoader()}>
+      <probe.Probe />
       <PendingSuspense>
         <Chunk />
       </PendingSuspense>
-    </ResourceLoaderContext.Provider>
+    </ResourceLoaderProvider>
   );
 }
 
 describe('PendingSuspense', () => {
   it('counts one pending load while its children suspend', () => {
-    const loader = new ResourceLoader();
-    mount(loader, deferredChunk().Chunk);
+    const probe = createPendingProbe();
+    mount(probe, deferredChunk().Chunk);
 
-    expect(loader.pendingResourceCount).toBe(1);
+    expect(probe.pending()).toBe(1);
   });
 
   it('releases the load and renders the children once the chunk lands', async () => {
-    const loader = new ResourceLoader();
+    const probe = createPendingProbe();
     const { Chunk, land } = deferredChunk();
-    const view = mount(loader, Chunk);
+    const view = mount(probe, Chunk);
 
     await act(land);
 
-    expect(loader.pendingResourceCount).toBe(0);
+    expect(probe.pending()).toBe(0);
     expect(view.getByTestId('landed')).toBeTruthy();
   });
 
   it('counts nothing for children that never suspend (edge case)', () => {
-    const loader = new ResourceLoader();
-    mount(loader, () => null);
+    const probe = createPendingProbe();
+    mount(probe, () => null);
 
-    expect(loader.pendingResourceCount).toBe(0);
+    expect(probe.pending()).toBe(0);
   });
 
   it('releases the load when it unmounts while suspended (error path)', () => {
-    const loader = new ResourceLoader();
-    const view = mount(loader, deferredChunk().Chunk);
+    const probe = createPendingProbe();
+    const view = mount(probe, deferredChunk().Chunk);
 
     view.unmount();
 
-    expect(loader.pendingResourceCount).toBe(0);
+    expect(probe.pending()).toBe(0);
   });
 });

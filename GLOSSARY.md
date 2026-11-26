@@ -1168,6 +1168,10 @@ _Avoid_: "broken scene", "load error".
 One `res://` file a scene loads, as a row of Godot's Load Errors dialog: its path, type, state (`loading`, `loaded` or `missing`), the files that name it, the reason it fails and the **Sub-resource path**s asked inside it. `scene.files()` gives them by path. The loader's parses and **Load outcome**s fill them, so no view needs to draw.
 The walk starts at the values of the scene after the host's writes, and follows each text file to the files its values read. A file that a heading declares and no value reads is in no list, as in Godot. `res://project.godot` and the files its settings name for every scene are rows too.
 
+**Scene failure** (`resources/loadFailure/sceneFailure.ts`):
+The failure through which the game refuses to load the whole scene: Godot's error line with its number, the chain from the file the scene reads, and the cause. `scene.sceneFailure()` gives it for the scene, not for a **Scene file**: it is the first failure in the scene's read order. A `[sub_resource]` read, a `Resource("…")` literal, a `[connection]` `binds=` and the base scene of an inherited scene fail the scene. An `ExtResource` read of any other `[node]` does not (resource_format_text.cpp:647-650). A value at which the parse fails, such as an id no heading before it declares, fails it with an empty chain. So does a heading out of the loader's order: `[ext_resource]`, then `[sub_resource]`, then the `[node]` or `[resource]` tags. The failure is judged on the file's text, so a host write does not change it. The load banner shows it.
+_Avoid_: "load error" for the whole scene.
+
 ### Animation
 
 **GodotAnimation**:

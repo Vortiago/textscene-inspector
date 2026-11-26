@@ -5,7 +5,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
-import { useResourceLoader } from '../resources/useResource.js';
+import { useResourceLoader } from '../resources/ResourceLoaderContext.js';
 import {
   collectLiveNodes,
   liveTreeOf,

@@ -6,7 +6,7 @@
 import * as THREE from 'three';
 import { useOptionalSelection, useSelectedNodePath } from '../contexts/SelectionContext.js';
 import { useHelperTickUpdate, useSceneHelper } from '../hooks/useTHREEHelper.js';
-import { useResourceLoader } from '../../resources/useResource.js';
+import { useResourceLoader } from '../../resources/ResourceLoaderContext.js';
 import { useDrawnContentVersion } from '../../resources/useCacheVersion';
 import { WorldBoxHelper } from './WorldBoxHelper.js';
 

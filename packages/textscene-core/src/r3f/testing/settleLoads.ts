@@ -1,7 +1,6 @@
 /** Test-only: lets the loads a render started finish, so the scene a test reads holds what they bring. */
 
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import type { ResourceLoader } from '../../resources/ResourceLoader';
 
 /**
  * The fake loader answers from its seeded cache through promises alone, and a timer fires only after
@@ -19,13 +18,11 @@ export async function settleLoads(): Promise<void> {
 }
 
 /**
- * Settles until `loader` counts no pending load. A lazy chunk (`useLazyModule`) counts as pending
- * until it lands, and a file read can outlast any timer tick. Each pass settles inside `act`, which
- * holds a state update back until its callback returns, so the count is read between passes.
+ * Settles until the view counts no pending load. The count is read between passes: `act` holds updates.
  *
  * @canonical In tests, the lazy chunks a render started
  */
-export async function settlePendingLoads(loader: ResourceLoader): Promise<void> {
+export async function settlePendingLoads(view: { pending(): number }): Promise<void> {
   do await settleLoads();
-  while (loader.pendingResourceCount > 0);
+  while (view.pending() > 0);
 }

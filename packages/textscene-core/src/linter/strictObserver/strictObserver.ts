@@ -1,8 +1,3 @@
-/**
- * The strict parser's `ParseObserver`: it collects every syntax and format error as a `ParseError`, checks each
- * `[node]` heading, runs the registered property validators and records the lines and heading reads the linter needs.
- */
-
 import type { ParseObserver } from '../../parser/TscnParserCore.js';
 import type { BuiltSection } from '../../parser/types.js';
 import type { ParseError, SectionLines } from '../types.js';

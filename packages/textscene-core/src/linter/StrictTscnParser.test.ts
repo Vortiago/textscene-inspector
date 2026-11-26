@@ -144,7 +144,6 @@ visible = true
         refusesToInstantiate: false,
         idRecoveries: new Map(),
         connections: [],
-        instancesOutsideNodeBody: [],
       });
     });
   });

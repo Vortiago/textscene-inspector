@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describePendingWork, hasPendingWork, totalPendingWork } from './sceneWork';
+import { describePendingWork, hasPendingWork, isSamePendingWork, totalPendingWork } from './sceneWork';
 
 const NO_WORK = { resources: 0, textures: 0, fonts: 0 };
 
@@ -18,6 +18,11 @@ describe('pending scene work', () => {
     expect(describePendingWork({ resources: 1, textures: 2, fonts: 1 })).toBe(
       '1 resource, 2 textures and 1 font'
     );
+  });
+
+  it('is the same work only where every kind has the same count', () => {
+    expect(isSamePendingWork({ ...NO_WORK }, NO_WORK)).toBe(true);
+    expect(isSamePendingWork({ ...NO_WORK, resources: 1 }, NO_WORK)).toBe(false);
   });
 
   it('describes no work as an empty text', () => {

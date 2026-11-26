@@ -70,7 +70,7 @@ describe('strictObserver', () => {
 
   it('collects the heading reads', () => {
     const { headingReads } = observe(
-      '[gd_scene format=3]\n\n[node name="Root" instance=ExtResource("1")]\n\n' +
+      '[gd_scene format=3]\n\n[node name="Root" type="Node"]\n\n' +
         '[connection signal="ready" from="." to="." method="go" binds=[1]]\n'
     );
     expect(headingReads).toEqual({
@@ -87,7 +87,6 @@ describe('strictObserver', () => {
         },
       ],
       pathlessEditableLines: [],
-      instancesOutsideNodeBody: ['ExtResource("1")'],
     });
   });
 });

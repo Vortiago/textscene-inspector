@@ -54,6 +54,7 @@ export const RENDERER_ENTRY_NAMES = [
   'NodeHandle',
   'ResourceProvider',
   'Scene',
+  'SceneFailure',
   'SceneFile',
   'SceneFileFailure',
   'SceneFileState',

@@ -3,7 +3,7 @@
  * Once created, never modified; buildSceneGraph assembles a fresh graph per parse.
  */
 
-import type { TscnNode, ExtResource, SubResource } from '../parser/types.js';
+import type { TscnNode, ExtResource, SubResource, TscnScene } from '../parser/types.js';
 
 /** Immutable scene graph for one authored root scene. */
 export interface SceneGraph {
@@ -30,6 +30,8 @@ export interface ParsedScene {
   readonly externalResources: ReadonlyArray<ExtResource>;
   /** The `[editable]` paths of this scene's file, root-relative. Absent where it has none. */
   readonly editableInstances?: ReadonlyArray<string>;
+  readonly fileValues?: TscnScene['fileValues'];
+  readonly misplacedHeading?: TscnScene['misplacedHeading'];
 }
 
 /**
@@ -49,19 +51,17 @@ export interface SceneNode {
 }
 
 /** Wrap a TscnScene's parts in a ParsedScene, without copying them. */
-export function tscnSceneToParsedScene(
-  path: string,
-  nodes: TscnNode[],
-  externalResources: readonly ExtResource[],
-  internalResources: readonly SubResource[],
-  editableInstances?: readonly string[]
-): ParsedScene {
+export function tscnSceneToParsedScene(path: string, scene: TscnScene): ParsedScene {
+  const { nodes, internalResources, externalResources } = scene;
+  const { editableInstances, fileValues, misplacedHeading } = scene;
   return {
     path,
     nodes,
     internalResources,
     externalResources,
     ...(editableInstances ? { editableInstances } : {}),
+    ...(fileValues ? { fileValues } : {}),
+    ...(misplacedHeading ? { misplacedHeading } : {}),
   };
 }
 

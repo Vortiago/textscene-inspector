@@ -1,6 +1,5 @@
-import { useContext, useEffect, useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useViewportMode } from '../ViewportMode/ViewportModeContext.js';
-import { ResourceLoaderContext } from '../../../resources/ResourceLoaderContext.js';
 import type { SceneValue } from '../../../scene/variant.js';
 import { warnOfCameraFailure, type EditorViewAnswers } from '../../editorView/editorCamera/editorCameras.js';
 import type { HeardStatusStore } from './previewViewStatus.js';
@@ -19,9 +18,12 @@ interface FrameOnOpenProps {
 /** Opt-in: Godot opens each scene at a fixed orbit and frames only on F (node_3d_editor_plugin.h:420-426). */
 export function FrameOnOpen({ rootScenePath, hasScene, view, heard }: FrameOnOpenProps) {
   const { mode, frameOnOpen } = useViewportMode();
-  const loader = useContext(ResourceLoaderContext);
   // A return to the 3D mode finds the camera where it was left, as in Godot, so it frames no scene twice.
   const framedRoot = useRef<string | null>(null);
+  // The pose the last fit of `framedRoot` left, so a later run stands down once the user has moved.
+  const framedRootPose = useRef<SceneValue | null>(null);
+  // The heard status outlives a scene, so a new root's view may have loaded before it first settles.
+  const settleFitRoot = useRef<string | null>(null);
   // A ref, not a dependency: an ended preview starts no fit.
   const previewed = usePreviewCamera()?.camera ?? null;
   const isPreviewing = useRef(previewed !== null);
@@ -42,21 +44,20 @@ export function FrameOnOpen({ rootScenePath, hasScene, view, heard }: FrameOnOpe
       // A call waits for a stage, so a fit while none is bound would land on a later one.
       if (isCancelled || !camera.isInsideTree()) return;
       await camera.call('focus');
+      const pose = await camera.get('transform');
+      if (isCancelled) return;
+      framedPose = pose;
       // A focus through a previewed Camera3D frames nothing, so the next return to the 3D mode frames.
-      if (!isPreviewing.current) framedRoot.current = rootScenePath;
-      framedPose = await camera.get('transform');
+      if (isPreviewing.current) return;
+      framedRoot.current = rootScenePath;
+      framedRootPose.current = pose;
     };
     const fitUnlessMoved = async () => {
       const pose = await camera.get('transform');
       if (framedPose === null || samePose(pose, framedPose)) await fit();
     };
     const isFramed = framedRoot.current === rootScenePath;
-    if (isFramed) {
-      camera
-        .get('transform')
-        .then((pose) => (framedPose ??= pose))
-        .catch(warnOfCameraFailure);
-    }
+    if (isFramed) framedPose = framedRootPose.current;
     const fitLogged = () => void fit().catch(warnOfCameraFailure);
     // The delays count from the stage's bind, which a hidden or slow canvas makes after the view mounts.
     const timers: ReturnType<typeof setTimeout>[] = [];
@@ -69,15 +70,19 @@ export function FrameOnOpen({ rootScenePath, hasScene, view, heard }: FrameOnOpe
     }
 
     // Each settle that ends a load fits, as one can precede an instanced `.glb` load. A write never does.
-    let hasLoadedSinceSettle = (loader?.pendingResourceCount ?? 0) > 0;
-    const stopWatchingLoads = loader?.subscribePending(() => {
-      if (loader.pendingResourceCount > 0) hasLoadedSinceSettle = true;
-    });
+    const mayHaveLoaded = () => {
+      const status = heard.get().status;
+      // A view that has not reported may have loaded already, unless it shows a scene framed before.
+      return status === null ? !isFramed : status.pending.resources > 0;
+    };
+    let hasLoadedSinceSettle = settleFitRoot.current !== rootScenePath || mayHaveLoaded();
     let wasSettled = false;
     const fitOnSettle = () => {
+      if (mayHaveLoaded()) hasLoadedSinceSettle = true;
       const isSettled = heard.get().status?.settled != null;
       if (isSettled && !wasSettled && hasLoadedSinceSettle) {
         hasLoadedSinceSettle = false;
+        settleFitRoot.current = rootScenePath;
         fitUnlessMoved().catch(warnOfCameraFailure);
       }
       wasSettled = isSettled;
@@ -87,10 +92,9 @@ export function FrameOnOpen({ rootScenePath, hasScene, view, heard }: FrameOnOpe
     return () => {
       isCancelled = true;
       timers.forEach(clearTimeout);
-      stopWatchingLoads?.();
       stopHearing();
     };
-  }, [rootScenePath, isFraming, view, heard, loader]);
+  }, [rootScenePath, isFraming, view, heard]);
 
   return null;
 }

@@ -10,6 +10,7 @@ import { useResource } from './useResource';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import type { ResourceLoader } from './ResourceLoader';
 import { createFakeResourceLoader, type FakeProcessor } from './testing/createFakeResourceLoader';
+import { createPendingProbe } from './testing/pendingProbe';
 import { parseTresFile } from '../parser/parsedResource';
 
 /**
@@ -546,7 +547,7 @@ describe('useResource', () => {
     });
   });
 
-  describe("the loader's pending count", () => {
+  describe("the view's pending count", () => {
     /** A consumer whose loaded texture mounts a child that records its passive effect. */
     function Consumer({ path, onChildEffect }: { path: string; onChildEffect: () => void }) {
       const { status } = useResource<THREE.Texture>(path, 'texture');
@@ -559,8 +560,15 @@ describe('useResource', () => {
 
     it('counts a pending path from its commit', () => {
       loader.textures.setRequestImpl(() => {});
-      render(<Consumer path="res://t.png" onChildEffect={() => {}} />, { wrapper: withLoader(loader) });
-      expect(loader.pendingResourceCount).toBe(1);
+      const probe = createPendingProbe();
+      render(
+        <>
+          <probe.Probe />
+          <Consumer path="res://t.png" onChildEffect={() => {}} />
+        </>,
+        { wrapper: withLoader(loader) }
+      );
+      expect(probe.pending()).toBe(1);
     });
 
     it('releases a loaded path after the passive effects of the content it mounts', () => {
@@ -569,10 +577,17 @@ describe('useResource', () => {
       const onChildEffect = () => {
         hasChildEffectRun = true;
       };
-      render(<Consumer path="res://t.png" onChildEffect={onChildEffect} />, { wrapper: withLoader(loader) });
+      const probe = createPendingProbe();
+      render(
+        <>
+          <probe.Probe />
+          <Consumer path="res://t.png" onChildEffect={onChildEffect} />
+        </>,
+        { wrapper: withLoader(loader) }
+      );
       const seenAtZero: boolean[] = [];
-      loader.subscribePending(() => {
-        if (loader.pendingResourceCount === 0) seenAtZero.push(hasChildEffectRun);
+      probe.subscribe(() => {
+        if (probe.pending() === 0) seenAtZero.push(hasChildEffectRun);
       });
       act(() => loader.textures._resolve('res://t.png', textureA));
       expect(seenAtZero).toEqual([true]);
@@ -580,11 +595,16 @@ describe('useResource', () => {
 
     it('releases a pending path on unmount', () => {
       loader.textures.setRequestImpl(() => {});
-      const { unmount } = render(<Consumer path="res://t.png" onChildEffect={() => {}} />, {
-        wrapper: withLoader(loader),
-      });
+      const probe = createPendingProbe();
+      const { unmount } = render(
+        <>
+          <probe.Probe />
+          <Consumer path="res://t.png" onChildEffect={() => {}} />
+        </>,
+        { wrapper: withLoader(loader) }
+      );
       unmount();
-      expect(loader.pendingResourceCount).toBe(0);
+      expect(probe.pending()).toBe(0);
     });
   });
 });

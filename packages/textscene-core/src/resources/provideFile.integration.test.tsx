@@ -6,6 +6,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
+import type { ReactNode } from 'react';
 import type { TscnScene } from '../parser/types';
 import type { ParsedResource } from '../parser/parsedResource';
 import type { ResourceType } from './ResourceEventBus';
@@ -15,6 +16,7 @@ import type { ThemeResource } from './styles/theme/types';
 import { createTextureFromBuffer } from './formats/image/textureProcessing';
 import { triangleGlb } from './formats/glb/testing/triangleGlb';
 import { wallQuadSurfaces } from './testing/arrayMeshSurfaces';
+import { createPendingProbe } from './testing/pendingProbe';
 import { createHotReloadHarness, expectShown, mountProbe, provide } from './testing/hotReloadHarness';
 
 vi.mock('./formats/image/textureProcessing', async (importOriginal) => {
@@ -129,8 +131,8 @@ const ROWS: BusRow[] = [
 ];
 
 describe.each(ROWS)('provideFile on the $bus bus', (row) => {
-  const mount = (loader: ReturnType<typeof createHotReloadHarness>['loader']) =>
-    mountProbe(loader, { path: row.path, type: row.bus, read: row.read });
+  const mount = (loader: ReturnType<typeof createHotReloadHarness>['loader'], beside?: ReactNode) =>
+    mountProbe(loader, { path: row.path, type: row.bus, read: row.read }, beside);
 
   it('shows the new value when the file changes', async () => {
     const { provider, loader } = createHotReloadHarness();
@@ -150,11 +152,12 @@ describe.each(ROWS)('provideFile on the $bus bus', (row) => {
     // states again. A count that never moved left a host's reset unanswered.
     const { provider, loader } = createHotReloadHarness();
     provider.write(row.path, row.before);
-    const shown = mount(loader);
+    const { Probe, pending, subscribe } = createPendingProbe();
+    const shown = mount(loader, <Probe />);
     await expectShown(shown, row.beforeShown);
 
     const moving: number[] = [];
-    const stopTracing = loader.subscribePending(() => moving.push(loader.pendingResourceCount));
+    const stopTracing = subscribe(() => moving.push(pending()));
     provider.write(row.path, row.after);
     provide(loader, row.path);
     await expectShown(shown, row.afterShown);

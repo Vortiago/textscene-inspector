@@ -13,6 +13,7 @@ import { CollisionGizmo } from './CollisionGizmo';
 import type { Shape3DResource } from '../../../../resources/shapes/shape3d';
 import { settlePendingLoads } from '../../../../r3f/testing/settleLoads';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
+import { createPendingProbe } from '../../../../resources/testing/pendingProbe';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 
 type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
@@ -26,8 +27,10 @@ vi.mock('three/addons/geometries/ConvexGeometry.js', async (importOriginal) => {
   return importOriginal();
 });
 
-/** Counts the gizmo's lazy chunk. Every test unmounts, so it counts nothing between tests. */
 const { loader } = createFakeResourceLoader();
+
+/** Counts the gizmo's lazy chunk. Every test unmounts, so it counts nothing between tests. */
+const { Probe, pending } = createPendingProbe();
 
 /** Written only by `mount`, emptied after each test. */
 const mounted: Renderer[] = [];
@@ -54,6 +57,7 @@ function concave(data: string): Shape3DResource {
 function gizmo(shape: Shape3DResource): ReactElement {
   return (
     <ResourceLoaderProvider loader={loader}>
+      <Probe />
       <CollisionGizmo shape={shape} color={new THREE.Color(0x00ff88)} />
     </ResourceLoaderProvider>
   );
@@ -67,7 +71,7 @@ async function mount(element: ReactElement): Promise<Renderer> {
 
 /** Lets the gizmo's lazy chunk land, then re-flushes so the test renderer's snapshot sees the commit. */
 async function settle(renderer: Renderer, element: ReactElement): Promise<void> {
-  await settlePendingLoads(loader);
+  await settlePendingLoads({ pending });
   await renderer.update(element);
 }
 
@@ -135,10 +139,10 @@ describe('<CollisionGizmo> ConvexPolygonShape3D hull lifecycle', () => {
   it('counts as a pending load until its hull draws, so a capture waits for it', async () => {
     const shape = convex(CUBE_POINTS);
     const renderer = await mount(gizmo(shape));
-    expect([drawnGeometry(renderer), loader.pendingResourceCount]).toEqual([null, 1]);
+    expect([drawnGeometry(renderer), pending()]).toEqual([null, 1]);
 
     await settle(renderer, gizmo(shape));
-    expect(loader.pendingResourceCount).toBe(0);
+    expect(pending()).toBe(0);
     requireGeometry(renderer);
   });
 

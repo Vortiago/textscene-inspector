@@ -40,12 +40,6 @@ export function parseTscnContent(content: string, rootScenePath: string): ParseR
 }
 
 function toParseResult(rootScenePath: string, tscnScene: TscnScene): ParseResult {
-  const parsedScene = tscnSceneToParsedScene(
-    rootScenePath,
-    tscnScene.nodes,
-    tscnScene.externalResources,
-    tscnScene.internalResources,
-    tscnScene.editableInstances
-  );
+  const parsedScene = tscnSceneToParsedScene(rootScenePath, tscnScene);
   return { sceneGraph: buildSceneGraph(parsedScene), error: null };
 }

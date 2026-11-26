@@ -12,7 +12,7 @@ import type { ResourceType } from './ResourceEventBus';
 import type { LoadedFile } from './scopedResource';
 import { useCacheVersion } from './useCacheVersion';
 import { usePendingWhile } from './usePendingWhile';
-import { useResourceLoader } from './useResource';
+import { useResourceLoader } from './ResourceLoaderContext';
 import { sameEntries } from '../utils/sameEntries';
 
 /** A file's cache entry, read: undefined while it loads, null once it has failed. */

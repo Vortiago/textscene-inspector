@@ -5,6 +5,7 @@
  * the lenient skip-and-continue recovery.
  */
 
+import { headingOrder } from './headingOrder.js';
 import { resolveDeprecatedProperty, type ResolvedProperty } from '../godot/classdb/deprecated.js';
 import type {
   TscnScene,
@@ -14,6 +15,7 @@ import type {
   TscnMainResource,
   NodeOrigin,
   BuiltSection,
+  FileValue,
 } from './types.js';
 import {
   parseHeading,
@@ -128,6 +130,8 @@ export class TscnParserCore {
     // (`resource_format_text.cpp:837-841`), so a later one is a corrupt file, and the last one read stays.
     let mainResource: TscnMainResource | undefined;
     const editableInstances: string[] = [];
+    const headings = headingOrder();
+    const fileValues: FileValue[] = [];
 
     let currentSection: SectionType = 'none';
     let currentHeading: ParsedHeading | null = null;
@@ -188,12 +192,30 @@ export class TscnParserCore {
       return currentSection === 'resource' ? headerResourceType : undefined;
     };
 
+    // The value as written, not as stored: the loader parses the text the file holds.
+    const addFileValue = (value: Omit<FileValue, 'subResourcesBefore' | 'extResourcesBefore'>) => {
+      // Every read names `Resource`, so a value without it holds no read and costs no object.
+      if (headings.isStopped() || !value.text.includes('Resource')) return;
+      const before = {
+        subResourcesBefore: internalResources.length,
+        extResourcesBefore: externalResources.length,
+      };
+      fileValues.push({ ...value, ...before });
+    };
+    // A body is read after the file opens, so no body value sits in the opening tag.
+    const addBodyValue = (text: string, line: number) => {
+      if (currentSection === 'node') addFileValue({ text, line, place: 'node', isOpeningTag: false });
+      else if (currentSection === 'sub_resource' || currentSection === 'resource')
+        addFileValue({ text, line, place: 'section', isOpeningTag: false });
+    };
+
     const storePending = () => {
       if (pendingMultiline && currentHeading) {
         // The one join per value: O(total length), not one per appended line.
         const value = pendingMultiline.lines.join('\n');
         const resolved = resolveDeprecatedProperty(currentOwnerType(), pendingMultiline.key, value);
         currentProperties[resolved.key] = resolved.value;
+        addBodyValue(value, pendingMultiline.startLine);
         observer?.onProperty?.({
           section: currentSection,
           ownerType: currentOwnerType(),
@@ -250,6 +272,14 @@ export class TscnParserCore {
           const editablePath =
             currentHeading.type === 'editable' ? currentHeading.attributes.path : undefined;
           if (editablePath !== undefined) editableInstances.push(simplifiedNodePath(editablePath));
+          const previous = headings.read(currentHeading.type, lineNumber);
+          const isOpeningTag = previous === 'gd_scene' || previous === 'gd_resource';
+          const { instance, binds } = currentHeading.attributes;
+          const place = previous === 'node' ? 'node' : 'section';
+          if (currentHeading.type === 'node' && instance !== undefined)
+            addFileValue({ text: instance, line: lineNumber, place, isOpeningTag });
+          if (currentHeading.type === 'connection' && binds !== undefined)
+            addFileValue({ text: binds, line: lineNumber, place: 'binds', isOpeningTag });
           observer?.onSectionStart?.(currentHeading, currentSection, lineNumber);
         } else {
           observer?.onError?.({
@@ -258,6 +288,7 @@ export class TscnParserCore {
             column: 1,
             code: 'INVALID_HEADING_FORMAT',
           });
+          headings.stop();
         }
       } else {
         // A line that opens a bracket but never parses as a heading is malformed,
@@ -271,6 +302,7 @@ export class TscnParserCore {
             column: 1,
             code: 'INVALID_HEADING_FORMAT',
           });
+          headings.stop();
         }
 
         const property = parseProperty(line);
@@ -302,6 +334,7 @@ export class TscnParserCore {
             // since a diagnostic names what is in the file, and the stored pair beside them.
             const resolved = resolveDeprecatedProperty(currentOwnerType(), property.key, property.value);
             currentProperties[resolved.key] = resolved.value;
+            addBodyValue(property.value, lineNumber);
             observer?.onProperty?.({
               section: currentSection,
               ownerType: currentOwnerType(),
@@ -321,6 +354,7 @@ export class TscnParserCore {
 
     // Each lookup by id indexes a table once (`utils/keyedLookup.ts`), so a table never changes after the scan.
     Object.freeze(origins);
+    const misplacedHeading = headings.misplaced();
     Object.freeze(externalResources);
     Object.freeze(internalResources);
     const seating = seatScene(origins);
@@ -337,6 +371,8 @@ export class TscnParserCore {
         refusesToInstantiate: refusesToInstantiate(origins),
         ...(headerResourceType !== undefined ? { resourceType: headerResourceType } : {}),
         ...(editableInstances.length > 0 ? { editableInstances } : {}),
+        ...(fileValues.length > 0 ? { fileValues } : {}),
+        ...(misplacedHeading ? { misplacedHeading } : {}),
         ...(mainResource ? { mainResource } : {}),
       },
       origins,

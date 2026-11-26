@@ -24,7 +24,7 @@ import type { PageImage } from '../formats/bmfont/pageFill';
 import { decodeImagePixels, getMimeType } from '../formats/image/textureProcessing';
 import { imageSourceFormat } from '../../godot/import/imageSourceFormat';
 import type { FontFileResource, FontResource } from '../fonts/font/types';
-import { pathResourcePathsIn } from '../../godot/variant/resourceRef';
+import { literalReadsIn } from '../../godot/variant/resourceRef';
 import type { SectionLoaderFn } from '../resourceSection';
 import { FONT_SUB_RESOURCE_TYPES } from '../fonts/font/decode';
 import { readImportSidecar } from './readImportSidecar';
@@ -114,7 +114,9 @@ export function createFontProcessor(
     const { fallbacks: fallbacksParam, ...properties } = font.properties;
     if (fallbacksParam === undefined) return font;
     const loaded = await Promise.all(
-      pathResourcePathsIn(fallbacksParam).map((address) => loadFont(path, address))
+      literalReadsIn(fallbacksParam).flatMap(({ path: address }) =>
+        address ? [loadFont(path, address)] : []
+      )
     );
     return { ...font, fallbacks: loaded.filter((fallback) => fallback !== null), properties };
   };

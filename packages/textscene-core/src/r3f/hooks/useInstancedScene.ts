@@ -4,7 +4,8 @@
  */
 import { useEffect } from 'react';
 import type { TscnExternalResource, TscnScene } from '../../parser/types.js';
-import { useResource, useResourceLoader, type ResourceResult } from '../../resources/useResource.js';
+import { useResource, type ResourceResult } from '../../resources/useResource.js';
+import { useResourceLoader } from '../../resources/ResourceLoaderContext.js';
 import { registerInstanceResource } from '../../resources/registerInstanceResource.js';
 import { useLoadFailure } from '../../resources/loadFailure/useLoadFailure.js';
 

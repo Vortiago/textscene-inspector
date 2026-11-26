@@ -1,11 +1,10 @@
-import { useContext } from 'react';
 import * as THREE from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, render } from '@testing-library/react';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { PROJECT_FILE_PATH } from '../godot/project/project';
 import type { ResourceProvider } from '../resources/ResourceProvider';
-import { ResourceLoaderContext } from '../resources/ResourceLoaderContext';
+import { useResourceLoader } from '../resources/ResourceLoaderContext';
 import { TscnSceneProvider } from './TscnSceneProvider';
 import { TscnSceneContents } from './SceneContents';
 import { useSelection, useSelectedNodePath } from './contexts/SelectionContext';
@@ -53,7 +52,7 @@ const emptyProvider = (): ResourceProvider => ({ loadResource: vi.fn(async () =>
 /** A child that records each resource loader it reads. */
 function loaderProbe(loaders: Set<unknown>) {
   return function LoaderProbe() {
-    loaders.add(useContext(ResourceLoaderContext));
+    loaders.add(useResourceLoader());
     return null;
   };
 }
@@ -194,7 +193,7 @@ describe('<TscnSceneProvider>', () => {
     function contextProbe(seen: { graphs: Set<unknown>; loaders: Set<unknown> }) {
       return function ContextProbe() {
         seen.graphs.add(useHierarchy().sceneGraph);
-        seen.loaders.add(useContext(ResourceLoaderContext));
+        seen.loaders.add(useResourceLoader());
         return null;
       };
     }

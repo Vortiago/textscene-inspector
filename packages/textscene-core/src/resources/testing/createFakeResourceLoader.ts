@@ -212,27 +212,6 @@ export function createFakeResourceLoader({ loadFace }: { loadFace?: FaceLoader }
       eventBus.clear();
       metadata.clear();
     },
-    // Mirrored, not stubbed: every mounted `useResource` registers here, so a dropped count hides a leak.
-    pendingCount: 0,
-    pendingListeners: new Set<() => void>(),
-    beginPending(): () => void {
-      this.pendingCount += 1;
-      for (const l of this.pendingListeners) l();
-      let released = false;
-      return () => {
-        if (released) return;
-        released = true;
-        this.pendingCount -= 1;
-        for (const l of this.pendingListeners) l();
-      };
-    },
-    get pendingResourceCount(): number {
-      return this.pendingCount;
-    },
-    subscribePending(listener: () => void): () => void {
-      this.pendingListeners.add(listener);
-      return () => this.pendingListeners.delete(listener);
-    },
   };
 
   return {

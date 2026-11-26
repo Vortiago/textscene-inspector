@@ -100,41 +100,6 @@ export class ResourceLoader {
   private _fileEventBus: FileEventBus | null;
 
   /**
-   * How many mounted `useResource` consumers are still waiting: the signal that
-   * loading has finished, which a timer can only guess at. It lives here, not in a
-   * context of its own, so no host mounts another provider.
-   */
-  private pendingResources = 0;
-  private readonly pendingListeners = new Set<() => void>();
-
-  /** Called by `useResource` while a consumer is pending; returns the release. */
-  beginPending(): () => void {
-    this.pendingResources += 1;
-    this.notifyPending();
-    let released = false;
-    return () => {
-      if (released) return;
-      released = true;
-      this.pendingResources -= 1;
-      this.notifyPending();
-    };
-  }
-
-  get pendingResourceCount(): number {
-    return this.pendingResources;
-  }
-
-  /** Subscribe to pending-count changes; returns the unsubscribe. */
-  subscribePending(listener: () => void): () => void {
-    this.pendingListeners.add(listener);
-    return () => this.pendingListeners.delete(listener);
-  }
-
-  private notifyPending(): void {
-    for (const listener of this.pendingListeners) listener();
-  }
-
-  /**
    * Await a peer processor's resource for `dependent`: answer from cache, else request
    * it and wait on that processor's bus slot. Rejects with the peer's failure. Bounded,
    * far above any real fetch: an unbounded await would leave a GLB whose peer never settles
@@ -188,12 +153,15 @@ export class ResourceLoader {
     return {
       failingReads: async (file) => {
         try {
-          if (fileExtension(file) === '.tscn')
-            return sceneFailingReads(file, await this.peerRequire(dependent, this.scenes, 'scene', file));
-          return resourceFailingReads(
-            file,
-            await this.peerRequire(dependent, this.resources, 'resource', file)
-          );
+          const { failing, parseStop } =
+            fileExtension(file) === '.tscn'
+              ? sceneFailingReads(file, await this.peerRequire(dependent, this.scenes, 'scene', file))
+              : resourceFailingReads(
+                  file,
+                  await this.peerRequire(dependent, this.resources, 'resource', file)
+                );
+          const paths = failing.map((read) => read.path);
+          return parseStop ? { unparsedAfter: paths } : paths;
         } catch (error) {
           return error instanceof UnparsedTextError ? 'unparsed' : 'unread';
         }

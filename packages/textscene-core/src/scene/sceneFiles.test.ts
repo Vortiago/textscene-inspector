@@ -15,15 +15,16 @@ function filesOf(files: Record<string, string | ArrayBuffer>): ResourceProvider 
 }
 
 /** The files once none is loading. A notice of a change comes in a frame. */
-function whenFilesLoaded(scene: Scene): Promise<readonly SceneFile[]> {
+function whenFiles(
+  scene: Scene,
+  isReady: (files: readonly SceneFile[]) => boolean,
+  label: string
+): Promise<readonly SceneFile[]> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(
-      () => reject(new Error(`still loading: ${JSON.stringify(scene.files())}`)),
-      2000
-    );
+    const timer = setTimeout(() => reject(new Error(`${label}: ${JSON.stringify(scene.files())}`)), 2000);
     const check = () => {
       const files = scene.files();
-      if (files.some((file) => file.state === 'loading')) return;
+      if (!isReady(files)) return;
       clearTimeout(timer);
       stop();
       resolve(files);
@@ -31,6 +32,10 @@ function whenFilesLoaded(scene: Scene): Promise<readonly SceneFile[]> {
     const stop = scene.subscribe(check);
     check();
   });
+}
+
+function whenFilesLoaded(scene: Scene): Promise<readonly SceneFile[]> {
+  return whenFiles(scene, (files) => !files.some((file) => file.state === 'loading'), 'still loading');
 }
 
 const SPRITE = `[gd_scene format=3]
@@ -332,3 +337,219 @@ texture = ExtResource("1")
     expect(asked).toEqual([]);
   });
 });
+
+const READS_ATLAS = `[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://atlas.tres" id="1"]
+
+[sub_resource type="AtlasTexture" id="a"]
+atlas = ExtResource("1")
+
+[node name="Main" type="Node2D"]
+`;
+
+const ATLAS_READS_GONE = `[gd_resource type="AtlasTexture" format=3]
+
+[ext_resource type="Texture2D" path="res://gone.png" id="1"]
+
+[resource]
+atlas = ExtResource("1")
+`;
+
+const EMPTY_MATERIAL = '[gd_resource type="StandardMaterial3D" format=3]\n\n[resource]\n';
+
+/** The failure of the whole scene once no file is loading. */
+async function sceneFailureOf(source: string, files: Record<string, string>) {
+  const scene = openScene({ source, provider: filesOf(files), rootScenePath: MAIN });
+  await whenFilesLoaded(scene);
+  return scene.sceneFailure();
+}
+
+describe('the failure through which the game refuses the scene', () => {
+  it('sits on the file a section reads, with Godot error line and the chain from that file', async () => {
+    expect(await sceneFailureOf(READS_ATLAS, { 'res://atlas.tres': ATLAS_READS_GONE })).toEqual({
+      line: 'res://main.tscn:6 - Parse Error: [ext_resource] referenced non-existent resource at: res://atlas.tres.',
+      chain: ['res://atlas.tres', 'res://gone.png'],
+      cause: 'missing',
+    });
+  });
+
+  it('sits on a file the scene reads that fails its parse at an undeclared ExtResource id', async () => {
+    const atlas = ATLAS_READS_GONE.replace(
+      '[resource]',
+      '[sub_resource type="AtlasTexture" id="u"]\natlas = ExtResource("9")\n\n[resource]'
+    );
+    expect(await sceneFailureOf(READS_ATLAS, { 'res://atlas.tres': atlas })).toEqual({
+      line: 'res://main.tscn:6 - Parse Error: [ext_resource] referenced non-existent resource at: res://atlas.tres.',
+      chain: ['res://atlas.tres'],
+      cause: 'unparsed',
+    });
+  });
+
+  it('sits on the missing file a nested file reads before its undeclared ExtResource id', async () => {
+    const atlas = ATLAS_READS_GONE.replace(
+      '[resource]',
+      '[sub_resource type="AtlasTexture" id="g"]\natlas = ExtResource("1")\n\n' +
+        '[sub_resource type="AtlasTexture" id="u"]\natlas = ExtResource("9")\n\n[resource]'
+    );
+    expect(await sceneFailureOf(READS_ATLAS, { 'res://atlas.tres': atlas })).toEqual({
+      line: 'res://main.tscn:6 - Parse Error: [ext_resource] referenced non-existent resource at: res://atlas.tres.',
+      chain: ['res://atlas.tres', 'res://gone.png'],
+      cause: 'missing',
+    });
+  });
+
+  it('sits on a nested file whose reads all load before its undeclared ExtResource id', async () => {
+    const atlas = ATLAS_READS_GONE.replace(
+      '[resource]',
+      '[sub_resource type="AtlasTexture" id="g"]\natlas = ExtResource("1")\n\n' +
+        '[sub_resource type="AtlasTexture" id="u"]\natlas = ExtResource("9")\n\n[resource]'
+    );
+    expect(
+      await sceneFailureOf(READS_ATLAS, { 'res://atlas.tres': atlas, 'res://gone.png': 'bytes' })
+    ).toEqual({
+      line: 'res://main.tscn:6 - Parse Error: [ext_resource] referenced non-existent resource at: res://atlas.tres.',
+      chain: ['res://atlas.tres'],
+      cause: 'unparsed',
+    });
+  });
+
+  it('sits on the missing base scene of an inherited scene, as Godot fails its load', async () => {
+    const source = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://base.tscn" id="1"]
+
+[node name="Main" instance=ExtResource("1")]
+`;
+    expect(await sceneFailureOf(source, {})).toEqual({
+      line: 'res://main.tscn:5 - Parse Error: [ext_resource] referenced non-existent resource at: res://base.tscn.',
+      chain: ['res://base.tscn'],
+      cause: 'missing',
+    });
+  });
+
+  it('sits on the missing file a connection binds, as Godot fails its load', async () => {
+    const source = `[gd_scene format=3]
+
+[ext_resource type="Resource" path="res://gone.tres" id="1"]
+
+[node name="Main" type="Node2D"]
+
+[connection signal="ready" from="." to="." method="queue_free" binds=[ExtResource("1")]]
+`;
+    expect(await sceneFailureOf(source, {})).toEqual({
+      line: 'res://main.tscn:7 - Parse Error: [ext_resource] referenced non-existent resource at: res://gone.tres.',
+      chain: ['res://gone.tres'],
+      cause: 'missing',
+    });
+  });
+
+  it('is null once each file the scene reads loads', async () => {
+    const files = { 'res://atlas.tres': ATLAS_READS_GONE, 'res://gone.png': 'bytes' };
+    expect(await sceneFailureOf(READS_ATLAS, files)).toBeNull();
+  });
+
+  it('is null where only a node reads a failing file (resource_format_text.cpp:647-650)', async () => {
+    const source = `[gd_scene format=3]
+
+[ext_resource type="Material" path="res://wood.tres::Absent" id="1"]
+
+[node name="Main" type="MeshInstance3D"]
+material_override = ExtResource("1")
+`;
+    expect(await sceneFailureOf(source, { 'res://wood.tres': EMPTY_MATERIAL })).toBeNull();
+  });
+
+  it('names the undeclared address of a Resource() literal, as Godot fails its parse', async () => {
+    const source = `[gd_scene format=3]
+
+[ext_resource type="Material" path="res://wood.tres::A" id="1"]
+
+[node name="Main" type="MeshInstance3D"]
+material_override = ExtResource("1")
+material_overlay = Resource("res://wood.tres::B")
+`;
+    expect(await sceneFailureOf(source, { 'res://wood.tres': EMPTY_MATERIAL })).toEqual({
+      line: 'Parse Error: Parse error. [Resource file res://main.tscn:7]',
+      chain: ['res://wood.tres::B'],
+      cause: 'missing',
+    });
+  });
+
+  it('sits only on the first failing file in the order the scene reads', async () => {
+    const source = `[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://second.png" id="2"]
+[ext_resource type="Texture2D" path="res://first.png" id="1"]
+
+[sub_resource type="AtlasTexture" id="a"]
+atlas = ExtResource("1")
+
+[sub_resource type="AtlasTexture" id="b"]
+atlas = ExtResource("2")
+
+[node name="Main" type="Node2D"]
+`;
+    expect((await sceneFailureOf(source, {}))?.chain[0]).toBe('res://first.png');
+  });
+
+  it('gives the line Godot prints for a Resource() literal of a section', async () => {
+    const source = `[gd_scene format=3]
+
+[sub_resource type="Resource" id="x"]
+m = Resource("res://gone.tres")
+
+[node name="Main" type="Node2D"]
+`;
+    expect(await sceneFailureOf(source, {})).toEqual({
+      line: "res://main.tscn:4 - Parse Error: Can't load resource at path: res://gone.tres with uid: .",
+      chain: ['res://gone.tres'],
+      cause: 'missing',
+    });
+  });
+
+  it('follows the file order across an ExtResource read and a Resource() literal', async () => {
+    const source = `[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://b.png" id="1"]
+
+[sub_resource type="AtlasTexture" id="x"]
+atlas = Resource("res://a.tres")
+
+[sub_resource type="AtlasTexture" id="y"]
+atlas = ExtResource("1")
+
+[node name="Main" type="Node2D"]
+`;
+    expect((await sceneFailureOf(source, {}))?.chain[0]).toBe('res://a.tres');
+  });
+
+  it('is null while an earlier read still loads, though a later one fails', async () => {
+    const source = `[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://slow.tres" id="1"]
+[ext_resource type="Texture2D" path="res://gone.png" id="2"]
+
+[sub_resource type="AtlasTexture" id="a"]
+atlas = ExtResource("1")
+
+[sub_resource type="AtlasTexture" id="b"]
+atlas = ExtResource("2")
+
+[node name="Main" type="Node2D"]
+`;
+    const provider: ResourceProvider = {
+      loadResource: (path) => (path === 'res://slow.tres' ? new Promise(() => {}) : Promise.resolve(null)),
+    };
+    const scene = openScene({ source, provider, rootScenePath: MAIN });
+    await whenFileMissing(scene, 'res://gone.png');
+    expect(scene.sceneFailure()).toBeNull();
+  });
+});
+
+/** The files once `path` is missing. A notice of a change comes in a frame. */
+function whenFileMissing(scene: Scene, path: string): Promise<readonly SceneFile[]> {
+  const isMissing = (files: readonly SceneFile[]) =>
+    files.some((file) => file.path === path && file.state === 'missing');
+  return whenFiles(scene, isMissing, 'not missing');
+}

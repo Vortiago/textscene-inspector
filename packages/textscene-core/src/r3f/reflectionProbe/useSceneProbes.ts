@@ -7,7 +7,7 @@ import { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import type * as THREE from 'three';
 import type { ViewportDescription } from '../viewportRender/viewportDescription.js';
-import { useResourceLoader } from '../../resources/useResource.js';
+import { usePendingLoads } from '../../resources/ResourceLoaderContext.js';
 import { pendingSceneWork, totalPendingWork } from '../sceneWork.js';
 import { SceneHolding } from '../sceneHolding.js';
 import { useSceneHolder } from '../useSceneHolder.js';
@@ -20,7 +20,7 @@ const probesOfScenes = new SceneHolding((scene, renderer) => new SceneProbes(ren
 export function useSceneProbes(): void {
   const scene = useThree((state) => state.scene);
   const invalidate = useThree((state) => state.invalidate);
-  const loader = useResourceLoader();
+  const loads = usePendingLoads();
   const clearColor = useRef<THREE.Color>(null!);
   clearColor.current = useProjectClearColor();
   const viewport = useRef<ViewportDescription>(null!);
@@ -30,7 +30,7 @@ export function useSceneProbes(): void {
   useFrame(() => {
     const probes = probesOfScenes.drivenBy(scene, holder);
     if (!probes) return;
-    const pending = totalPendingWork(pendingSceneWork(loader));
+    const pending = totalPendingWork(pendingSceneWork(loads));
     if (probes.update(pending, clearColor.current, viewport.current)) invalidate();
   });
 }

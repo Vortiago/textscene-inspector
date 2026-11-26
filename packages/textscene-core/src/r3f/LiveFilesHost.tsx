@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { useResourceLoader } from '../resources/useResource.js';
+import { useResourceLoader } from '../resources/ResourceLoaderContext.js';
 import { hasUnsettledFile } from '../resources/useLoadedFiles.js';
 import { usePendingWhile } from '../resources/usePendingWhile.js';
 import { liveFilesOf } from './liveFiles.js';

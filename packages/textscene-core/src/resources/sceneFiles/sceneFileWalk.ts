@@ -1,7 +1,8 @@
 import { isGodotTextResourcePath } from '../../godot/project/resourceFormats.js';
-import type { SceneFile } from '../../scene/sceneFiles.js';
-import { resourceReads, sceneReads, type FileRead } from '../loadFailure/fileReads.js';
+import type { SceneFailure, SceneFile } from '../../scene/sceneFiles.js';
+import { resourceFileReads, sceneFileReads, type FileRead } from '../loadFailure/fileReads.js';
 import type { LoadOutcome } from '../loadFailure/loadOutcome.js';
+import { sceneFailureOf, type SceneFailingReads } from '../loadFailure/sceneFailure.js';
 import type { ParsedResource } from '../../parser/parsedResource.js';
 import type { TscnScene } from '../../parser/types.js';
 import type { ResourceLoader } from '../ResourceLoader.js';
@@ -15,11 +16,25 @@ export interface WalkStart {
   readonly reads: readonly FileRead[];
   /** True while the owner still reads the files, so each stays `loading` whatever its outcome. */
   readonly isReading?: boolean;
+  /** True for reads the failure is judged on and no value makes: their files are not listed or followed. */
+  readonly isJudgedOnly?: boolean;
+}
+
+/** What the walk reads from, one object so the starts and the failing reads cannot drift apart. */
+export interface WalkInput {
+  readonly starts: readonly WalkStart[];
+  readonly failing: SceneFailingReads | null;
+}
+
+/** The files, and the failure through which the game refuses the scene. */
+export interface WalkedFiles {
+  readonly files: readonly SceneFile[];
+  readonly failure: SceneFailure | null;
 }
 
 export interface SceneFileWalk {
-  /** The same array while no file moves. The caller passes the same starts while none moves. */
-  files(starts: readonly WalkStart[]): readonly SceneFile[];
+  /** The same object while no file moves. The caller passes the same input while none moves. */
+  files(input: WalkInput): WalkedFiles;
   dispose(): void;
 }
 
@@ -32,11 +47,14 @@ interface TextFile {
 interface Entry {
   type: string | null;
   isReading: boolean;
+  isListed: boolean;
   readonly owners: string[];
   readonly addresses: string[];
 }
 
 const WATCHED: ResourceType[] = ['scene', 'resource', 'loadoutcome'];
+
+const NO_FILES: WalkedFiles = { files: [], failure: null };
 
 /** `onChange` runs when a load answers for a file of the last walk. */
 export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void): SceneFileWalk {
@@ -46,9 +64,9 @@ export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void
   const pinnedParses = new Set<string>();
   /** Written only by `outcome` and `releaseOutside`: held in the loader's cache. */
   const pinnedOutcomes = new Set<string>();
-  /** Written only by `files`: the starts of the last walk, which a load answer makes stale. */
-  let walkedStarts: readonly WalkStart[] | null = null;
-  let walked: readonly SceneFile[] = [];
+  /** Written by `files` and cleared by the change listener: the input of the last walk. */
+  let walkedInput: WalkInput | null = null;
+  let walked: WalkedFiles = NO_FILES;
   let walkedPaths: ReadonlySet<string> = new Set();
   let walkedKey = '';
 
@@ -92,23 +110,29 @@ export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void
     );
     const entries = new Map<string, Entry>();
     const queue: string[] = [];
-    const visit = (owner: string | null, { path, type }: FileRead, isReading = false) => {
+    const visit = (owner: string | null, { path, type }: FileRead, isReading = false, isListed = true) => {
       const file = resourceFilePath(path);
       if (roots.has(file)) return;
       let entry = entries.get(file);
       if (!entry) {
-        entry = { type, isReading, owners: [], addresses: [] };
+        entry = { type, isReading, isListed, owners: [], addresses: [] };
         entries.set(file, entry);
+        queue.push(file);
+      } else if (isListed && !entry.isListed) {
+        // The queue may have passed a judged-only file, so the read that lists it queues it again.
+        entry.isListed = true;
         queue.push(file);
       }
       entry.type ??= type;
-      if (owner !== null && !entry.owners.includes(owner)) entry.owners.push(owner);
+      // A judged-only read is one no value makes, so its owner does not read the file.
+      if (isListed && owner !== null && !entry.owners.includes(owner)) entry.owners.push(owner);
       if (path !== file && !entry.addresses.includes(path)) entry.addresses.push(path);
     };
-    for (const start of starts) for (const read of start.reads) visit(start.owner, read, start.isReading);
+    for (const { owner, reads, isReading, isJudgedOnly } of starts)
+      for (const read of reads) visit(owner, read, isReading, !isJudgedOnly);
     for (let next = 0; next < queue.length; next++) {
       const file = queue[next]!;
-      if (!isGodotTextResourcePath(file)) continue;
+      if (!isGodotTextResourcePath(file) || !entries.get(file)!.isListed) continue;
       for (const read of textFile(file)?.reads ?? []) visit(file, read);
     }
     return entries;
@@ -116,7 +140,8 @@ export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void
 
   function sceneFileOf(path: string, entry: Entry): SceneFile {
     const { state, reason } = stateOf(path, entry);
-    return { path, type: entry.type, state, owners: entry.owners, reason, addresses: entry.addresses };
+    const { type, owners, addresses } = entry;
+    return { path, type, state, owners, reason, addresses };
   }
 
   function stateOf(path: string, { isReading, addresses }: Entry): Pick<SceneFile, 'state' | 'reason'> {
@@ -155,20 +180,29 @@ export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void
     if (busType === 'loadoutcome' && event === 'invalidated' && pinnedOutcomes.has(key))
       loader.loadOutcomes.request(key);
     if (!walkedPaths.has(key) && !textFiles.has(key)) return;
-    walkedStarts = null;
+    walkedInput = null;
     onChange();
   });
 
   return {
-    files(starts) {
-      if (starts === walkedStarts) return walked;
-      walkedStarts = starts;
+    files(input) {
+      if (input === walkedInput) return walked;
+      walkedInput = input;
+      const { starts, failing } = input;
       const entries = entriesFrom(starts);
       releaseOutside(entries);
       walkedPaths = new Set(entries.keys());
-      const files = [...entries]
+      const judged = [...entries]
         .sort(([a], [b]) => (a < b ? -1 : 1))
-        .map(([path, entry]) => sceneFileOf(path, entry));
+        .map(([path, entry]) => ({ row: sceneFileOf(path, entry), isListed: entry.isListed }));
+      const rows = judged.flatMap(({ row, isListed }) => (isListed ? [row] : []));
+      const failure = failing
+        ? sceneFailureOf(
+            judged.map(({ row }) => row),
+            failing
+          )
+        : null;
+      const files = { files: rows, failure };
       const key = JSON.stringify(files);
       if (key !== walkedKey) {
         walked = files;
@@ -185,8 +219,8 @@ export function createSceneFileWalk(loader: ResourceLoader, onChange: () => void
 
 function textFileOf(file: string, parsed: TscnScene | ParsedResource): TextFile {
   return 'internalResources' in parsed
-    ? { reads: sceneReads(file, parsed), subResourceIds: idsOf(parsed.internalResources) }
-    : { reads: resourceReads(file, parsed), subResourceIds: idsOf(parsed.subResources) };
+    ? { reads: sceneFileReads(file, parsed), subResourceIds: idsOf(parsed.internalResources) }
+    : { reads: resourceFileReads(file, parsed), subResourceIds: idsOf(parsed.subResources) };
 }
 
 function idsOf(sections: readonly { readonly id: string }[]): ReadonlySet<string> {

@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import type { ResourceLoader } from '../../../../resources/ResourceLoader';
-import { useResourceLoader } from '../../../../resources/useResource';
+import { useResourceLoader } from '../../../../resources/ResourceLoaderContext';
 import { subscribeToNothing } from '../../../../utils/subscribeToNothing';
 import { readSettledFont } from './sceneFontLoader';
 import { createSettledFonts, type AwaitedFonts, type SettledFont, type SettledFonts } from './settledFonts';

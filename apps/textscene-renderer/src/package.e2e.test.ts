@@ -27,6 +27,7 @@ const PUBLIC_TYPE_EXPORTS = [
   'NodeHandle',
   'ResourceProvider',
   'Scene',
+  'SceneFailure',
   'SceneFile',
   'SceneFileFailure',
   'SceneFileState',

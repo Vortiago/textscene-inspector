@@ -1,4 +1,4 @@
-import type { ResourceLoader } from '../resources/ResourceLoader.js';
+import type { WorkCount } from '../resources/workCount.js';
 import { textureWork } from '../resources/textures/textureWork.js';
 import { fontWork } from './controls/native/text/settledChannel.js';
 
@@ -10,10 +10,10 @@ export interface PendingSceneWork {
 
 /** Fills `into` when given, so a per-frame caller allocates nothing. */
 export function pendingSceneWork(
-  loader: ResourceLoader | null,
+  loads: WorkCount | null,
   into: PendingSceneWork = { resources: 0, textures: 0, fonts: 0 }
 ): PendingSceneWork {
-  into.resources = loader?.pendingResourceCount ?? 0;
+  into.resources = loads?.pending() ?? 0;
   into.textures = textureWork.pending();
   into.fonts = fontWork.pending();
   return into;
@@ -21,6 +21,10 @@ export function pendingSceneWork(
 
 export function totalPendingWork({ resources, textures, fonts }: PendingSceneWork): number {
   return resources + textures + fonts;
+}
+
+export function isSamePendingWork(a: PendingSceneWork, b: PendingSceneWork): boolean {
+  return a.resources === b.resources && a.textures === b.textures && a.fonts === b.fonts;
 }
 
 export function hasPendingWork(work: PendingSceneWork): boolean {

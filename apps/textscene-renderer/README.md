@@ -238,8 +238,10 @@ Each read of `settled` gives a new promise, which rejects once the view unmounts
 `view.status()` gives what the view reports of itself now, as one object:
 
 - `settled`: the settled value, or `null` while the view is pending.
-- `pending`: `{ textures, fonts }`, the textures and fonts still building on the page. Two views
-  on one page count each other's. The files that still load are in `scene.files()`.
+- `pending`: `{ resources, textures, fonts }`. `resources` counts the resources this view still
+  waits for. Two views on one provider share the loads but not the count. `textures` and `fonts`
+  count the textures and fonts still building on the page, and two views on one page count each
+  other's. The state of each file is in `scene.files()`.
 - `frame`: the last window of frame numbers, or `null` before the first window. A window lands
   twice a second and holds `fps`, `frameMs`, `cpuMs`, `drawCallsPerFrame`, `objectsPerFrame` and
   `primitivesPerFrame`. The objects and primitives are those of Godot's editor monitor: each
@@ -283,6 +285,25 @@ const view = mountScene(element, scene, {
   file that is not missing.
 - `addresses`: each sub-resource address inside the file that the scene reads, such as
   `res://wood.tres::Material_1`.
+
+`scene.sceneFailure()` gives `{ line, chain, cause }`: why the game refuses to load the whole
+scene, or null where it loads. It is the first failure in the order the scene reads, and null
+while an earlier read still loads. `subscribe` tells a change.
+
+- A read whose file fails: `chain` holds the file the scene reads and each file through which it
+  fails, or the sub-resource address the file does not declare. `cause` is the `cause` of the
+  file's `reason`.
+- A value at which the parse fails with no file: an `ExtResource` id that no earlier heading
+  declares, a `SubResource` id that no earlier section declares, or a `Resource()` literal with two
+  paths or two uids. `chain` is empty and `cause` is `unparsed`.
+- A heading out of the order Godot reads: `[ext_resource]` headings, then `[sub_resource]`
+  headings, then the `[node]` headings or the one `[resource]`. `chain` is empty and `cause` is
+  `unparsed`.
+
+`line` is the error line Godot 4.6.3 prints, with the number of the line that holds the read. A
+declared `ExtResource` that only a node reads does not refuse the scene, as in Godot. The base
+scene of an inherited scene and a `[connection]` heading's `binds=` do refuse it. The failure
+comes from the scene's text, so a `set` on a node does not change it.
 
 The list follows each file the scene's values read, as Godot's Load Errors dialog does: a
 sub-scene and a `.tres` add the files that they read. A file that a heading declares and no value

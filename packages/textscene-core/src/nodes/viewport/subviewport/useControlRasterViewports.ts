@@ -6,7 +6,7 @@
 import { useMemo } from 'react';
 
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types.js';
-import { useResourceLoader } from '../../../resources/useResource.js';
+import { useResourceLoader } from '../../../resources/ResourceLoaderContext.js';
 import { useLayoutDirectionEnv } from '../../../r3f/contexts/useLayoutDirectionEnv.js';
 import { treeScenesOf, useLiveTreeVersion, useProjectTreeSettings } from '../../../r3f/useLiveSceneTree.js';
 import { collectControlRasterViewports, type ControlRasterViewport } from './controlRasterViewports.js';

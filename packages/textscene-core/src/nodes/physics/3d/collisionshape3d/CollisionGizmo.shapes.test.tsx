@@ -11,19 +11,22 @@ import type { Shape3DClass, Shape3DResource } from '../../../../resources/shapes
 import { linePositions } from '../../../../r3f/testing/GizmoScene';
 import { settlePendingLoads } from '../../../../r3f/testing/settleLoads';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
+import { createPendingProbe } from '../../../../resources/testing/pendingProbe';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import { godotDebugLinesFor, undirectedEdges } from '../../shared/godotDebugLines.testkit';
 
 /** Mounts the gizmo, lets its lazy hull chunk land, and returns the lines drawn, none when it draws none. */
 async function drawn(shape: Shape3DResource) {
   const { loader } = createFakeResourceLoader();
+  const probe = createPendingProbe();
   const gizmo = (
     <ResourceLoaderProvider loader={loader}>
+      <probe.Probe />
       <CollisionGizmo shape={shape} color={new THREE.Color(0x00ff88)} />
     </ResourceLoaderProvider>
   );
   const renderer = await ReactThreeTestRenderer.create(gizmo);
-  await settlePendingLoads(loader);
+  await settlePendingLoads(probe);
   await renderer.update(gizmo);
   const hasLines = renderer.scene.findAllByType('LineSegments').length > 0;
   const positions = hasLines ? linePositions(renderer) : new Float32Array(0);

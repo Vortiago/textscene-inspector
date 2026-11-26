@@ -1,4 +1,4 @@
-import type { SceneGraph } from '../core/SceneGraph.js';
+import type { ParsedScene, SceneGraph } from '../core/SceneGraph.js';
 import { isGltfPath } from '../godot/import/gltf.js';
 import { isEditableInstanceAt } from './editableInstance.js';
 import { GLB_SCENE_ROOT_TYPE, glbPathOf, loneGlbRootPath } from '../resources/glbSceneRoot.js';
@@ -18,8 +18,13 @@ import { PROJECT_FILE_PATH } from '../godot/project/project.js';
 import { readProjectSettings } from '../resources/projectSettingsFile.js';
 import { registerInstanceResource } from '../resources/registerInstanceResource.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
-import { sceneReads, type FileRead } from '../resources/loadFailure/fileReads.js';
-import { createSceneFileWalk, type WalkStart } from '../resources/sceneFiles/sceneFileWalk.js';
+import {
+  sceneFailingReads,
+  sceneFileReads,
+  type FailingReads,
+  type FileRead,
+} from '../resources/loadFailure/fileReads.js';
+import { createSceneFileWalk, type WalkInput } from '../resources/sceneFiles/sceneFileWalk.js';
 import type { ResourceLoader } from '../resources/ResourceLoader.js';
 import type { Scene } from '../scene/openScene.js';
 import {
@@ -297,16 +302,47 @@ function projectReads(settings: ProjectSettings | null): FileRead[] {
 /** Undefined while the engine reads the project settings, null where the project has none. */
 type ProjectRead = ProjectSettings | null | undefined;
 
-function walkStarts(graph: SceneGraph | null, settings: ProjectRead): WalkStart[] {
-  const root = graph?.scenes.get(graph.rootScene);
-  const scene = root ? [{ owner: root.path, reads: sceneReads(root.path, root) }] : [];
-  if (settings === null) return scene;
+/** The root's failing reads, judged on its text: the same while the text stays, however the nodes move. */
+type FailingOf = (root: ParsedScene) => FailingReads;
+
+function rootInput(root: ParsedScene | undefined, failingOf: FailingOf): WalkInput {
+  if (!root) return { starts: [], failing: null };
+  const { failing, parseStop } = failingOf(root);
+  // A write can drop a read the file on disk still makes, so each failing read's file is judged too.
+  const reads = sceneFileReads(root.path, root);
+  const read = new Set(reads.map(({ path }) => path));
+  const unwritten = failing.flatMap(({ path }) => (read.has(path) ? [] : [{ path, type: null }]));
+  return {
+    starts: [
+      { owner: root.path, reads },
+      { owner: root.path, reads: unwritten, isJudgedOnly: true },
+    ],
+    failing: { scene: root.path, reads: failing, parseStop },
+  };
+}
+
+function walkInput(graph: SceneGraph | null, settings: ProjectRead, failingOf: FailingOf): WalkInput {
+  const { starts: scene, failing } = rootInput(graph?.scenes.get(graph.rootScene), failingOf);
+  if (settings === null) return { starts: scene, failing };
   const engine = {
     owner: null,
     reads: [{ path: PROJECT_FILE_PATH, type: 'ProjectSettings' }],
     isReading: settings === undefined,
   };
-  return [...scene, engine, { owner: PROJECT_FILE_PATH, reads: projectReads(settings ?? null) }];
+  const project = { owner: PROJECT_FILE_PATH, reads: projectReads(settings ?? null) };
+  return { starts: [...scene, engine, project], failing };
+}
+
+/** One entry: a write keeps the root's `fileValues`, so a drag judges the text once. */
+function lastFailingReads(): FailingOf {
+  let last: { values: ParsedScene['fileValues']; path: string; reads: FailingReads } | null = null;
+  return (root) => {
+    if (last && root.fileValues && last.values === root.fileValues && last.path === root.path)
+      return last.reads;
+    const reads = sceneFailingReads(root.path, root);
+    last = { values: root.fileValues, path: root.path, reads };
+    return reads;
+  };
 }
 
 /** The Live scene tree of `scene`, over the loader every view of it shares. */
@@ -321,9 +357,10 @@ function sceneRuntimeOf(scene: Scene): SceneRuntime {
     for (const listener of [...fileListeners]) listener();
   };
   const fileWalk = createSceneFileWalk(loader, notifyFiles);
+  const failingOf = lastFailingReads();
   let settings: ProjectRead;
-  /** Written only by `files`. A write moves the graph on each drag frame, so equal reads keep the starts. */
-  let starts: { graph: SceneGraph | null; settings: ProjectRead; key: string; starts: WalkStart[] } | null =
+  /** Written only by `files`. A write moves the graph on each drag frame, so equal reads keep the input. */
+  let walked: { graph: SceneGraph | null; settings: ProjectRead; key: string; input: WalkInput } | null =
     null;
   let project: ProjectTreeSettings = projectTreeSettings(null);
   let contentScaleSize = projectViewportSize(null);
@@ -358,12 +395,12 @@ function sceneRuntimeOf(scene: Scene): SceneRuntime {
       return () => listeners.delete(listener);
     },
     files(graph) {
-      if (starts?.graph !== graph || starts.settings !== settings) {
-        const next = walkStarts(graph, settings);
+      if (walked?.graph !== graph || walked.settings !== settings) {
+        const next = walkInput(graph, settings, failingOf);
         const key = JSON.stringify(next);
-        starts = { graph, settings, key, starts: key === starts?.key ? starts.starts : next };
+        walked = { graph, settings, key, input: key === walked?.key ? walked.input : next };
       }
-      return fileWalk.files(starts.starts);
+      return fileWalk.files(walked.input);
     },
     subscribeFiles(listener) {
       fileListeners.add(listener);

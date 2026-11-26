@@ -2,8 +2,6 @@ import { act, render, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ViewportModeProvider, useViewportMode } from '../ViewportMode/ViewportModeContext';
 import type { ViewportMode } from '../../viewportMode';
-import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
-import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { createEditorCameras } from '../../editorView/editorCamera/editorCameras';
 import { variant, type SceneValue } from '../../../scene/variant';
 import type { ViewStatus } from '../../viewStatus/viewStatus';
@@ -20,14 +18,28 @@ const SETTLED: ViewStatus = {
   ...EMPTY_VIEW_STATUS,
   settled: { scriptedNodeCount: 0, hasCurrentCamera: false },
 };
+const LOADING_A_RESOURCE: ViewStatus = {
+  ...EMPTY_VIEW_STATUS,
+  pending: { ...EMPTY_VIEW_STATUS.pending, resources: 1 },
+};
 
 /** A 3D editor camera whose pose a focus moves to `FRAMED`, and the user's moves to anything else. */
-function fakeCamera({ isBound }: { isBound: boolean }) {
+function fakeCamera({ isBound, isFocusDeferred }: { isBound: boolean; isFocusDeferred: boolean }) {
   const cameras = createEditorCameras();
   let pose: SceneValue = variant('Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4)');
+  // A deferred focus answers only on `answerFocus`, so a second run can start while a fit waits.
+  let answerFocus = () => {};
   const focus = vi.fn(() => {
-    pose = FRAMED;
-    return null;
+    if (!isFocusDeferred) {
+      pose = FRAMED;
+      return null;
+    }
+    return new Promise<null>((resolve) => {
+      answerFocus = () => {
+        pose = FRAMED;
+        resolve(null);
+      };
+    });
   });
   const bind = () =>
     cameras.slot('Camera3D').bind({
@@ -42,6 +54,7 @@ function fakeCamera({ isBound }: { isBound: boolean }) {
   return {
     view: { editorCamera: cameras.of('3D') },
     focus,
+    answerFocus: () => answerFocus(),
     bindLate: () => (unbind = bind()),
     unbind: () => unbind(),
     moveByUser: () => (pose = variant('Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 9)')),
@@ -50,10 +63,14 @@ function fakeCamera({ isBound }: { isBound: boolean }) {
 
 const NO_SCENE_WATCH = { getNodeOrNull: () => null, observe: () => () => {} };
 
-async function mount({ frameOnOpen = true, mode = '3D' as ViewportMode, isStageBound = true } = {}) {
-  const camera = fakeCamera({ isBound: isStageBound });
+async function mount({
+  frameOnOpen = true,
+  mode = '3D' as ViewportMode,
+  isStageBound = true,
+  isFocusDeferred = false,
+} = {}) {
+  const camera = fakeCamera({ isBound: isStageBound, isFocusDeferred });
   const heard = renderHook(useHeardStatus).result.current;
-  const fake = createFakeResourceLoader();
   let preview: PreviewCamera | null = null;
   let setMode: (mode: ViewportMode) => void = () => {};
   function PreviewProbe() {
@@ -61,34 +78,33 @@ async function mount({ frameOnOpen = true, mode = '3D' as ViewportMode, isStageB
     setMode = useViewportMode().setMode;
     return null;
   }
+  const shell = (rootScenePath: string) => (
+    <ViewportModeProvider initialFrameOnOpen={frameOnOpen} initialMode={mode}>
+      <PreviewCameraProvider scene={NO_SCENE_WATCH}>
+        <PreviewProbe />
+        <FrameOnOpen rootScenePath={rootScenePath} hasScene view={camera.view} heard={heard} />
+      </PreviewCameraProvider>
+    </ViewportModeProvider>
+  );
+  let rerender: (ui: ReturnType<typeof shell>) => void = () => {};
   await act(async () => {
-    render(
-      <ResourceLoaderProvider loader={fake.loader}>
-        <ViewportModeProvider initialFrameOnOpen={frameOnOpen} initialMode={mode}>
-          <PreviewCameraProvider scene={NO_SCENE_WATCH}>
-            <PreviewProbe />
-            <FrameOnOpen rootScenePath="res://main.tscn" hasScene view={camera.view} heard={heard} />
-          </PreviewCameraProvider>
-        </ViewportModeProvider>
-      </ResourceLoaderProvider>
-    );
+    rerender = render(shell('res://main.tscn')).rerender;
   });
   const runTimers = () => act(async () => void vi.advanceTimersByTime(PAST_LAST_TIMER_MS));
   const switchTo = (next: ViewportMode) => act(async () => setMode(next));
-  return { ...camera, heard, loader: fake.loader, preview: () => preview!, runTimers, switchTo };
+  const open = (rootScenePath: string) => act(async () => rerender(shell(rootScenePath)));
+  return { ...camera, heard, preview: () => preview!, runTimers, switchTo, open };
 }
 
 /** A view that settled once, then started a `.glb` load, with every fit timer run out. */
 async function mountWithLateLoad() {
   const mounted = await mount();
   heardSettle(mounted.heard);
-  const releaseLateLoad = mounted.loader.beginPending();
-  mounted.heard.onStatusChange(EMPTY_VIEW_STATUS);
+  mounted.heard.onStatusChange(LOADING_A_RESOURCE);
   await mounted.runTimers();
   mounted.focus.mockClear();
   const settleLoad = () =>
     act(async () => {
-      releaseLateLoad();
       heardSettle(mounted.heard);
     });
   return { ...mounted, settleLoad };
@@ -183,6 +199,70 @@ describe('FrameOnOpen', () => {
     await runTimers();
 
     expect(focus).toHaveBeenCalledWith('focus', []);
+  });
+
+  it('frames on the first settle when the view reports nothing before it, as its loads may be over', async () => {
+    const { focus, heard, runTimers } = await mount();
+    await runTimers();
+    focus.mockClear();
+
+    await act(async () => heardSettle(heard));
+
+    expect(focus).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves an orbit made before a switch to 2D and back when the view first reports a settle', async () => {
+    const { focus, heard, moveByUser, runTimers, switchTo } = await mount();
+    await runTimers();
+    moveByUser();
+    await switchTo('2D');
+    await switchTo('3D');
+    focus.mockClear();
+
+    await act(async () => heardSettle(heard));
+
+    expect(focus).not.toHaveBeenCalled();
+  });
+
+  it("frames a new scene's first settle though the last status heard is the old scene's", async () => {
+    const { focus, heard, open, runTimers } = await mount();
+    heardSettle(heard);
+    await runTimers();
+    await open('res://other.tscn');
+    await runTimers();
+    focus.mockClear();
+
+    await act(async () => heardSettle(heard));
+
+    expect(focus).toHaveBeenCalledTimes(1);
+  });
+
+  it("frames a new scene's first settle after a switch to 2D and back before it", async () => {
+    const { focus, heard, open, runTimers, switchTo } = await mount();
+    heardSettle(heard);
+    await runTimers();
+    await open('res://other.tscn');
+    await switchTo('2D');
+    await switchTo('3D');
+    await runTimers();
+    focus.mockClear();
+
+    await act(async () => heardSettle(heard));
+
+    expect(focus).toHaveBeenCalledTimes(1);
+  });
+
+  it('frames the scene again when the run whose fit was waiting ended before the fit answered', async () => {
+    const { focus, answerFocus, runTimers, switchTo } = await mount({ isFocusDeferred: true });
+    await runTimers();
+    await switchTo('2D');
+    await act(async () => answerFocus());
+    focus.mockClear();
+
+    await switchTo('3D');
+    await runTimers();
+
+    expect(focus).toHaveBeenCalled();
   });
 
   it('frames a load that finishes after an earlier settle and after every timer', async () => {

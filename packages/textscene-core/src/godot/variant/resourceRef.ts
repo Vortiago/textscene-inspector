@@ -38,9 +38,6 @@ const DICT_SUB_RESOURCE_ENTRY_RE = new RegExp(`"([^"]*)"${WS}:${WS}${SUB_RESOURC
  */
 export const EXT_RESOURCE_CALL_ANYWHERE_RE = new RegExp(`ExtResource${WS}\\(`);
 
-/** The token every `ExtResource(…)` call spells, so a value without it names no id. */
-const EXT_RESOURCE_TOKEN = 'ExtResource';
-
 /** The token both reference kinds spell, so a value without it names no resource. */
 const RESOURCE_TOKEN = 'Resource';
 
@@ -57,15 +54,13 @@ interface ResourceRefSpan extends ResourceRef {
 }
 
 /**
- * Every reference the loader resolves in `text`, in order, pushed onto `spans`. It resolves each
- * one as it tokenises (`resource_format_text.cpp:125-151`), but never text inside a string or a
- * `StringName`, whose quotes `get_token` reads with `\\` escapes and across lines
- * (`variant_parser.cpp:265-300`), nor a `;` comment to the end of its line (`:214`).
+ * Each reference the loader resolves, past strings and `;` comments (variant_parser.cpp:214, :265).
  *
  * @param inString whether `text` starts inside a string an earlier line opened
  * @returns whether `text` ends inside a string
  */
-function scanLoadedRefs(text: string, inString: boolean, spans: ResourceRefSpan[]): boolean {
+function scanLoadedRefs(text: string, inString: boolean, sink: ScanSink): boolean {
+  const { refs, literals } = sink;
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
     if (inString) {
@@ -83,22 +78,34 @@ function scanLoadedRefs(text: string, inString: boolean, spans: ResourceRefSpan[
       i = lineEnd;
       continue;
     }
-    if ((char !== 'E' && char !== 'S') || (i > 0 && IDENTIFIER_CHAR_RE.test(text[i - 1]!))) continue;
+    if ((char !== 'E' && char !== 'S' && char !== 'R') || (i > 0 && IDENTIFIER_CHAR_RE.test(text[i - 1]!)))
+      continue;
+    if (char === 'R') {
+      if (literals) i = readLiteralAt(text, i, literals);
+      continue;
+    }
+    if (!refs) continue;
     RESOURCE_REF_AT_RE.lastIndex = i;
     const match = RESOURCE_REF_AT_RE.exec(text);
     if (!match) continue;
     const end = RESOURCE_REF_AT_RE.lastIndex;
-    spans.push({ kind: match[1] as ResourceRef['kind'], id: refId(match[2], match[3]), start: i, end });
+    refs.push({ kind: match[1] as ResourceRef['kind'], id: refId(match[2], match[3]), start: i, end });
     i = end - 1;
   }
   return inString;
 }
 
+/** Where {@link scanLoadedRefs} puts what it reads, null to skip a kind. */
+interface ScanSink {
+  refs: ResourceRefSpan[] | null;
+  literals: LiteralSpan[] | null;
+}
+
 /** Every reference the loader resolves in one value, as {@link scanLoadedRefs} reads it. */
 function loadedRefSpans(text: string): ResourceRefSpan[] {
-  const spans: ResourceRefSpan[] = [];
-  scanLoadedRefs(text, false, spans);
-  return spans;
+  const refs: ResourceRefSpan[] = [];
+  scanLoadedRefs(text, false, { refs, literals: null });
+  return refs;
 }
 
 /**
@@ -108,19 +115,10 @@ function loadedRefSpans(text: string): ResourceRefSpan[] {
 export function resourceRefSpansByLine(lines: readonly string[]): ResourceRefSpan[][] {
   let inString = false;
   return lines.map((line) => {
-    const spans: ResourceRefSpan[] = [];
-    inString = scanLoadedRefs(line, inString, spans);
-    return spans;
+    const refs: ResourceRefSpan[] = [];
+    inString = scanLoadedRefs(line, inString, { refs, literals: null });
+    return refs;
   });
-}
-
-/** The id of every `ExtResource(…)` in a value, in order, as {@link loadedRefSpans} reads them. */
-export function extResourceIdsIn(text: string): string[] {
-  // Most values name no resource, and the walk reads every character of a multi-megabyte array.
-  if (!text.includes(EXT_RESOURCE_TOKEN)) return [];
-  return loadedRefSpans(text)
-    .filter((span) => span.kind === 'ExtResource')
-    .map((span) => span.id);
 }
 
 /**
@@ -187,21 +185,86 @@ export function isPathResourceLiteral(raw: string): boolean {
   return match[1]!.startsWith('uid://') !== second.startsWith('uid://');
 }
 
-/**
- * Every `Resource(…)` literal in a text, `[1]` and `[2]` its arguments. The word boundary keeps the
- * tail of an `ExtResource(…)` or a `SubResource(…)` out, whose argument is an id, not a path.
- */
-const PATH_RESOURCE_ANYWHERE_RE = new RegExp(`\\b${PATH_RESOURCE_RE.source.slice(1, -1)}`, 'g');
+/** A native pre-check for a literal, as the scan reads each character. `\b` keeps out `SubResource(`. */
+const PATH_RESOURCE_SOMEWHERE_RE = new RegExp(`\\b${PATH_RESOURCE_RE.source.slice(1, -1)}`);
 
-/**
- * The `res://` path of each `Resource(…)` literal in `text`, in order, as an import parameter such as
- * `fallbacks=[Resource("uid://…", "res://a.ttf")]` holds them. A literal with only a `uid://` is
- * skipped: nothing here resolves one.
- */
-export function pathResourcePathsIn(text: string): string[] {
-  return [...text.matchAll(PATH_RESOURCE_ANYWHERE_RE)].flatMap(([, first, second]) =>
-    [first!, second].filter((arg): arg is string => arg !== undefined && !arg.startsWith('uid://'))
-  );
+/** One `Resource(…)` literal, read in place by {@link scanLoadedRefs}. */
+const PATH_RESOURCE_AT_RE = new RegExp(PATH_RESOURCE_RE.source.slice(1, -1), 'y');
+
+/** A literal's read and where it starts and ends in the text it was read from, `end` exclusive. */
+interface LiteralSpan {
+  start: number;
+  end: number;
+  read: LiteralRead | RefusedRead;
+}
+
+/** The index of the literal's last character at `start`, its read pushed onto `literals`, or `start`. */
+function readLiteralAt(text: string, start: number, literals: LiteralSpan[]): number {
+  PATH_RESOURCE_AT_RE.lastIndex = start;
+  const match = PATH_RESOURCE_AT_RE.exec(text);
+  if (!match) return start;
+  const args = [match[1]!, match[2]].filter((arg): arg is string => arg !== undefined);
+  const uids = args.filter((arg) => arg.startsWith('uid://'));
+  const paths = args.filter((arg) => !arg.startsWith('uid://'));
+  const read: LiteralRead | RefusedRead =
+    paths.length > 1
+      ? { kind: 'Refused', twice: 'paths' }
+      : uids.length > 1
+        ? { kind: 'Refused', twice: 'uids' }
+        : { kind: 'Resource', path: paths[0] ?? null, uid: uids[0] ?? '' };
+  literals.push({ start, end: PATH_RESOURCE_AT_RE.lastIndex, read });
+  return PATH_RESOURCE_AT_RE.lastIndex - 1;
+}
+
+/** A reference's id, a `Resource(…)` literal's path and its `uid://`, or a literal Godot refuses. */
+export type ValueRead = ResourceRef | LiteralRead | RefusedRead;
+
+/** A null path is a literal with only a `uid://`, which nothing here resolves. */
+export type LiteralRead = { kind: 'Resource'; path: string | null; uid: string };
+
+/** A literal with two paths or two `uid://`, at which the parse fails (`variant_parser.cpp:1141-1152`). */
+export type RefusedRead = { kind: 'Refused'; twice: 'paths' | 'uids' };
+
+/** A read and the offset whose line Godot prints for it: a reference's id, or a literal's closing `)`. */
+export interface ValueReadAt {
+  readonly read: ValueRead;
+  readonly printedAt: number;
+}
+
+/** Each reference and `Resource(…)` literal of `text`, in the order the loader meets them. */
+export function valueReadsIn(text: string): ValueRead[] {
+  return valueReadsAt(text).map(({ read }) => read);
+}
+
+/** {@link valueReadsIn}, each read with the offset whose line Godot prints when it fails. */
+export function valueReadsAt(text: string): ValueReadAt[] {
+  // Each of the three spellings holds this word.
+  if (!text.includes('Resource')) return [];
+  const hasLiteral = PATH_RESOURCE_SOMEWHERE_RE.test(text);
+  const refs: ResourceRefSpan[] = [];
+  const literals: LiteralSpan[] = [];
+  scanLoadedRefs(text, false, { refs, literals: hasLiteral ? literals : null });
+  const refReads = refs.map((span) => ({
+    start: span.start,
+    read: { kind: span.kind, id: span.id },
+    printedAt: argumentAt(text, span.start),
+  }));
+  const literalReads = literals.map(({ start, end, read }) => ({ start, read, printedAt: end - 1 }));
+  return [...refReads, ...literalReads]
+    .sort((a, b) => a.start - b.start)
+    .map(({ read, printedAt }) => ({ read, printedAt }));
+}
+
+/** The offset of the first token after the `(` of the call at `start`, as `get_token` skips `<= 32`. */
+function argumentAt(text: string, start: number): number {
+  let at = text.indexOf('(', start) + 1;
+  while (at < text.length && text.charCodeAt(at) <= 32) at++;
+  return at;
+}
+
+/** The read of each `Resource(…)` literal of `text` that Godot parses, in order, each with its `uid://`. */
+export function literalReadsIn(text: string): LiteralRead[] {
+  return valueReadsIn(text).filter((read): read is LiteralRead => read.kind === 'Resource');
 }
 
 /** The id of the first `SubResource(…)` anywhere in `text`, or null. */
