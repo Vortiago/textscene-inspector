@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as logger from '../../logger';
 import type { ShaderText } from '../../resources/materials/shadermaterial/types';
 import { DEFAULT_CANVAS_MAPS, GODOT_CANVAS_TEXTURE_STATE } from '../../shaders/canvas/canvasTexture';
+import { canvasInstances } from '../../shaders/canvas/canvasMultiMesh';
 import { GODOT_SAMPLING } from '../../shaders/uniforms/samplerState';
 import {
   canvasShaderOf,
@@ -202,6 +203,46 @@ describe('canvasShaderDraw', () => {
 
     const { world } = draw.object.children[0]!.userData.attributesConstants;
     expect([world.tx, world.ty]).toEqual([5, -7]);
+  });
+
+  it('draws a multimesh command as one batch of its instances', () => {
+    const mesh = meshCommand();
+    const instances = canvasInstances([
+      { transform: new Float32Array([1, 0, 0, 0, 0, 1, 0, 0]), color: null, customData: null },
+      { transform: new Float32Array([1, 0, 0, 9, 0, 1, 0, 0]), color: null, customData: null },
+    ]);
+    const { object } = drawOf([{ ...mesh, kind: 'multimesh', instances } as CanvasShaderCommand]);
+    const [batch] = object.children as THREE.Mesh[];
+
+    expect([
+      object.children.length,
+      (batch!.geometry as THREE.InstancedBufferGeometry).instanceCount,
+    ]).toEqual([1, 2]);
+  });
+
+  it("places a mesh by its command's transform inside the item", () => {
+    const draw = drawOf([{ ...meshCommand(), transform: { a: 1, b: 0, c: 0, d: 1, tx: 3, ty: 4 } }]);
+    draw.object.position.set(5, 7, 0);
+
+    draw.writeRecords();
+
+    const { world } = draw.object.children[0]!.userData.attributesConstants;
+    expect([world.tx, world.ty]).toEqual([8, -3]);
+  });
+
+  it("hands a mesh's object to the command's receiver, and takes it back", () => {
+    const meshRef = vi.fn();
+    const draw = drawOf([{ ...meshCommand(), meshRef }]);
+    draw.handOver()();
+
+    expect(meshRef.mock.calls).toEqual([[draw.object.children[0]], [null]]);
+  });
+
+  it('hands nothing over before it is asked, as a render may build a draw it never commits', () => {
+    const meshRef = vi.fn();
+    drawOf([{ ...meshCommand(), meshRef }]);
+
+    expect(meshRef).not.toHaveBeenCalled();
   });
 
   it('disposes the geometry of each batch', () => {

@@ -9,6 +9,7 @@ import {
   boundByItem,
   itemBox,
   meshCommands,
+  multiMeshCommands,
   sameCommandLayout,
   surfaceCommands,
   type CanvasShaderCommand,
@@ -120,16 +121,77 @@ describe('surfaceCommands', () => {
     expect(command?.kind === 'mesh' && command.arrays.primitive).toBe('points');
   });
 
-  it('gives no commands for a surface a skeleton bends', () => {
-    expect(surfaceCommands([{ geometry: canvasSurfaceGeometry(TRIANGLE), isSkinned: true }])).toBeNull();
+  it('hands the object that draws a surface to its receiver, which a skin deforms', () => {
+    const meshRef = () => {};
+    const [command] = surfaceCommands([{ geometry: canvasSurfaceGeometry(TRIANGLE), meshRef }]);
+
+    expect(command?.kind === 'mesh' && command.meshRef).toBe(meshRef);
   });
 
+  it('places a surface by no transform when it has no placement', () => {
+    const [command] = surfaceCommands([{ geometry: canvasSurfaceGeometry(TRIANGLE) }]);
+
+    expect(command).not.toHaveProperty('transform');
+  });
+
+  type Triple = [number, number, number];
+
   it.each([
-    ['a position', { position: [1, 0, 0] as [number, number, number] }],
-    ['a scale', { scale: [2, 2, 1] as [number, number, number] }],
-    ['a matrix', { matrix: new THREE.Matrix4() }],
-  ])('gives no commands for a surface placed by %s', (_, placement) => {
-    expect(surfaceCommands([{ geometry: canvasSurfaceGeometry(TRIANGLE), ...placement }])).toBeNull();
+    ['a position', { position: [3, -5, 0] as Triple }, { a: 1, b: 0, c: 0, d: 1, tx: 3, ty: 5 }],
+    ['a scale', { scale: [-1, 2, 1] as Triple }, { a: -1, b: 0, c: 0, d: 2, tx: 0, ty: 0 }],
+    [
+      'a matrix',
+      { matrix: new THREE.Matrix4().makeTranslation(4, 6, 0) },
+      { a: 1, b: 0, c: 0, d: 1, tx: 4, ty: -6 },
+    ],
+  ])("places a surface placed by %s at its transform in Godot's frame", (_, placement, transform) => {
+    const [command] = surfaceCommands([{ geometry: canvasSurfaceGeometry(TRIANGLE), ...placement }]);
+
+    expect(command?.kind === 'mesh' && roundedTransform(command.transform)).toEqual(transform);
+  });
+});
+
+/** A transform with -0 read as 0, as a placement's flip of y writes it. */
+function roundedTransform(transform: object | undefined) {
+  return (
+    transform &&
+    Object.fromEntries(Object.entries(transform).map(([key, value]) => [key, (value as number) + 0]))
+  );
+}
+
+describe('multiMeshCommands', () => {
+  const INSTANCE = {
+    transform: new Float32Array([1, 0, 0, 7, 0, 1, 0, 9]),
+    color: new Float32Array([1, 0.5, 0.25, 1]),
+    customData: null,
+  };
+
+  it('gives a multimesh command for each surface, every one with all the instances', () => {
+    const geometries = [canvasSurfaceGeometry(TRIANGLE), canvasSurfaceGeometry(TRIANGLE)];
+    const commands = multiMeshCommands(geometries, [INSTANCE, INSTANCE]);
+
+    expect(commands.map((command) => command.kind === 'multimesh' && command.instances.count)).toEqual([
+      2, 2,
+    ]);
+  });
+
+  it('gives no command for no instance, as a batch of no instance draws nothing', () => {
+    expect(multiMeshCommands([canvasSurfaceGeometry(TRIANGLE)], [])).toEqual([]);
+  });
+
+  it("reads the mesh's vertices as meshCommands reads them", () => {
+    const geometry = canvasSurfaceGeometry(TRIANGLE);
+    const [multi] = multiMeshCommands([geometry], [INSTANCE]);
+    const [mesh] = meshCommands([geometry]);
+
+    expect(multi?.kind === 'multimesh' && multi.arrays).toEqual(mesh?.kind === 'mesh' && mesh.arrays);
+  });
+
+  it('carries the transform it is given', () => {
+    const transform = { a: 1, b: 0, c: 0, d: 1, tx: -3, ty: -4 };
+    const [command] = multiMeshCommands([canvasSurfaceGeometry(TRIANGLE)], [INSTANCE], transform);
+
+    expect(command?.kind === 'multimesh' && command.transform).toBe(transform);
   });
 });
 
@@ -175,6 +237,33 @@ describe('sameCommandLayout', () => {
 
   it('tells a mesh of other arrays apart', () => {
     expect(sameCommandLayout([mesh()], [mesh()])).toBe(false);
+  });
+
+  const multimesh = (command: CanvasShaderCommand, count: number): CanvasShaderCommand =>
+    command.kind === 'rect'
+      ? command
+      : {
+          kind: 'multimesh',
+          arrays: command.arrays,
+          instances: { count, words: new Uint32Array(count * 8), usesColors: false, usesCustomData: false },
+        };
+
+  it('holds two multimeshes of the same arrays and count alike, whatever their instances hold', () => {
+    const shared = mesh();
+
+    expect(sameCommandLayout([multimesh(shared, 2)], [multimesh(shared, 2)])).toBe(true);
+  });
+
+  it('tells a multimesh of another instance count apart', () => {
+    const shared = mesh();
+
+    expect(sameCommandLayout([multimesh(shared, 2)], [multimesh(shared, 3)])).toBe(false);
+  });
+
+  it('tells a multimesh from a mesh of the same arrays apart', () => {
+    const shared = mesh();
+
+    expect(sameCommandLayout([shared], [multimesh(shared, 1)])).toBe(false);
   });
 });
 

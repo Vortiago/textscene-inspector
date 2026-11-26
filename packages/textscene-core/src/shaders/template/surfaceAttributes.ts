@@ -12,3 +12,6 @@ export const customArrayTemplateAttribute = (custom: number) => `${customArrayAt
 
 /** The attribute that holds each vertex's index in its own surface, which `gl_VertexIndex` reads. */
 export const VERTEX_ID_ATTRIBUTE = 'vertex_id_attrib';
+
+/** The attribute of an emulated point that holds its multimesh instance, which `gl_InstanceIndex` reads. */
+export const INSTANCE_ID_ATTRIBUTE = 'instance_id_attrib';

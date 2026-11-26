@@ -1,6 +1,11 @@
 import * as THREE from 'three';
 import type { Rgba } from '../../godot/math/math';
-import { mutableTransform2D, type MutableTransform2D } from '../../godot/math/transform2d';
+import {
+  multiplyTransform2DInto,
+  mutableTransform2D,
+  TRANSFORM2D_IDENTITY,
+  type MutableTransform2D,
+} from '../../godot/math/transform2d';
 import type { ShaderText } from '../../resources/materials/shadermaterial/types';
 import { holdViewportAnisotropy } from '../viewportAnisotropy';
 import {
@@ -117,6 +122,8 @@ export interface CanvasShaderDraw {
   /** Writes the records and the colours the next frames read, with no new geometry. */
   readonly setColors: (colors: ItemColors) => void;
   readonly writeRecords: () => void;
+  /** Hands each mesh's object to its command's receiver, and returns the step that takes them back. */
+  readonly handOver: () => () => void;
   readonly dispose: () => void;
 }
 
@@ -126,6 +133,7 @@ interface Batch {
   readonly setRun: (run: CommandRun) => void;
   readonly writeColors: (item: CanvasItemDraw) => void;
   readonly writeWorld: (world: MutableTransform2D) => void;
+  readonly handOver: () => () => void;
   readonly dispose: () => void;
 }
 
@@ -202,6 +210,10 @@ export function canvasShaderDraw(
       canvasTransformInto(world, object);
       for (const batch of batches) batch.writeWorld(world);
     },
+    handOver: () => {
+      const takeBacks = batches.map((batch) => batch.handOver());
+      return () => takeBacks.forEach((takeBack) => takeBack());
+    },
     dispose: () => {
       for (const release of releaseAnisotropy) release();
       for (const batch of batches) batch.dispose();
@@ -212,16 +224,18 @@ export function canvasShaderDraw(
 
 type RectCommand = Extract<CanvasShaderCommand, { kind: 'rect' }>;
 
+type MeshCommand = Exclude<CanvasShaderCommand, RectCommand>;
+
 type CommandRun =
   | { readonly kind: 'rect'; readonly commands: readonly RectCommand[] }
-  | { readonly kind: 'mesh'; readonly command: Extract<CanvasShaderCommand, { kind: 'mesh' }> };
+  | { readonly kind: 'mesh'; readonly command: MeshCommand };
 
-/** Consecutive rects as one batch (`renderer_canvas_render_rd.cpp:2406`). */
+/** Consecutive rects as one batch, and each mesh as its own (`renderer_canvas_render_rd.cpp:2406, 2743`). */
 function commandRuns(commands: readonly CanvasShaderCommand[]): CommandRun[] {
   const runs: CommandRun[] = [];
   let rects: RectCommand[] | null = null;
   for (const command of commands) {
-    if (command.kind === 'mesh') {
+    if (command.kind !== 'rect') {
       runs.push({ kind: 'mesh', command });
       rects = null;
     } else if (rects) rects.push(command);
@@ -229,6 +243,8 @@ function commandRuns(commands: readonly CanvasShaderCommand[]): CommandRun[] {
   }
   return runs;
 }
+
+const NOTHING_TO_TAKE_BACK = () => {};
 
 function rectBatch(variant: BoundVariant, layout: readonly RectCommand[]): Batch {
   const count = layout.length;
@@ -253,6 +269,7 @@ function rectBatch(variant: BoundVariant, layout: readonly RectCommand[]): Batch
     writeWorld: (world) => {
       for (let index = 0; index < count; index++) writeBatchWorld(geometry, index, world);
     },
+    handOver: () => NOTHING_TO_TAKE_BACK,
     dispose: () => geometry.dispose(),
   };
 }
@@ -264,27 +281,36 @@ function rectRegionOf({
   return textureRectRegion(rect, source, modulate, { clipUv, transpose });
 }
 
-function meshBatch(
-  variantOf: (variant: CanvasVariant) => BoundVariant,
-  command: Extract<CanvasShaderCommand, { kind: 'mesh' }>
-): Batch {
-  const { arrays } = command;
+function meshBatch(variantOf: (variant: CanvasVariant) => BoundVariant, command: MeshCommand): Batch {
+  const { arrays, transform = TRANSFORM2D_IDENTITY, meshRef } = command;
   const { draw } = variantOf(attributesVariant(arrays.primitive));
   const geometry = attributesGeometry(arrays, draw);
   // Written in place by this batch, and read by the attributes draw before each draw.
-  const constants = { world: mutableTransform2D(), modulation: WHITE };
+  const constants = {
+    world: mutableTransform2D(),
+    modulation: WHITE,
+    instances: command.kind === 'multimesh' ? command.instances : undefined,
+  };
   const object = attributesObject(draw, geometry, arrays.primitive, constants);
   boundByItem(object, [command]);
   return {
     object,
-    // The layout holds the mesh's arrays, so a command of the same layout gives the same ones.
-    setRun: () => {},
+    // The layout holds the mesh's arrays and instance count, so only the instance buffer can change.
+    setRun: (run) => {
+      if (run.kind === 'mesh' && run.command.kind === 'multimesh')
+        constants.instances = run.command.instances;
+    },
     // `canvas_item_add_mesh`'s white modulate times the item's (`renderer_canvas_render_rd.cpp:2764-2855`).
     writeColors: (item) => (constants.modulation = modulated(WHITE, item)),
-    writeWorld: (world) => Object.assign(constants.world, world),
+    writeWorld: (world) => multiplyTransform2DInto(constants.world, world, transform),
+    handOver: () => {
+      if (!meshRef) return NOTHING_TO_TAKE_BACK;
+      meshRef(object);
+      return () => meshRef(null);
+    },
     dispose: () => {
       geometry.dispose();
-      // An emulated points draw holds quads of its own beside the arrays.
+      // An emulated points or a multimesh draw holds geometry of its own beside the arrays.
       if (object.geometry !== geometry) object.geometry.dispose();
     },
   };

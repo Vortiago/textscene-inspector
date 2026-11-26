@@ -3,11 +3,11 @@ import { useLiveScenePassSelection } from '../../../r3f/liveScenePass';
 import { bindPolygonsToSkeletons, namesSkeletonToBind, type PolygonSkeletonBinding } from './skeletonBinding';
 import type { Polygon2DProperties } from './types';
 
-/** The Skeleton2D binding: skinned until resolved, unskinned with no Skeleton2D (`polygon_2d.cpp:127`). */
+/** The Skeleton2D binding, undefined until resolved and with no Skeleton2D (`polygon_2d.cpp:127`). */
 export function useSkeletonBinding(
   props: Polygon2DProperties,
   path: string | null
-): { binding: PolygonSkeletonBinding | undefined; isSkinned: boolean } {
+): PolygonSkeletonBinding | undefined {
   const namesSkeleton = namesSkeletonToBind(props);
   const select = useMemo(
     () =>
@@ -17,5 +17,5 @@ export function useSkeletonBinding(
     [namesSkeleton, path]
   );
   const resolved = useLiveScenePassSelection(bindPolygonsToSkeletons, select, Object.is);
-  return { binding: resolved ?? undefined, isSkinned: namesSkeleton && resolved !== null };
+  return resolved ?? undefined;
 }

@@ -77,14 +77,17 @@ export class RowStore {
   }
 
   /** Writes each drawn object's words: the node handler owns onBeforeRender (`WebGLNodesHandler.js:455`). */
-  writeEachDraw(region: RowRegion, wordsOf: (object: THREE.Object3D) => Uint32Array): void {
-    let writtenFor: number | undefined;
+  writeEachDraw(region: RowRegion, wordsOf: (object: THREE.Object3D) => Uint32Array | null): void {
+    // The render of the last draw that read the store, whether or not it wrote words.
+    let seenFor: number | undefined;
     this.node.drawWrites.push((frame) => {
-      if (frame.renderId === writtenFor) return;
+      if (frame.renderId === seenFor) return;
       // The handler counts one render for each draw of a node material (`WebGLNodesHandler.js:598`).
-      const followsOwnDraw = frame.renderId === (writtenFor ?? Number.NaN) + 1;
-      writtenFor = frame.renderId;
-      this.write(region, wordsOf(frame.object!));
+      const followsOwnDraw = frame.renderId === (seenFor ?? Number.NaN) + 1;
+      seenFor = frame.renderId;
+      const words = wordsOf(frame.object!);
+      if (!words) return;
+      this.write(region, words);
       if (followsOwnDraw) uploadBetweenDraws(frame.renderer as unknown as THREE.WebGLRenderer, this.texture);
     });
   }

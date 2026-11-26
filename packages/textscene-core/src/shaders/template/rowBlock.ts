@@ -57,8 +57,8 @@ export class RowBlock {
     this.store.write(this.region, words);
   }
 
-  /** Writes each drawn object's words before its draw. */
-  writeEachDraw(wordsOf: (object: THREE.Object3D) => Uint32Array): void {
+  /** Writes each drawn object's words before its draw, and leaves the last ones for a null. */
+  writeEachDraw(wordsOf: (object: THREE.Object3D) => Uint32Array | null): void {
     this.store.writeEachDraw(this.region, wordsOf);
   }
 
