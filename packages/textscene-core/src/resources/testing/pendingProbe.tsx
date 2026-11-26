@@ -30,7 +30,11 @@ export function createPendingProbe(): PendingProbe {
   };
 }
 
-/** A wrapper that renders its children in a view of their own, on a loader that serves nothing. */
+/**
+ * A wrapper that renders its children in a view of their own, on a loader that serves nothing.
+ *
+ * @canonical A test wrapper that mounts a hook in a view of its own
+ */
 export function viewWrapper(): { wrapper: (props: { children: ReactNode }) => ReactNode; work(): ViewWork } {
   const { Probe, work } = createPendingProbe();
   const loader = new ResourceLoader();

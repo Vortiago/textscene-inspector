@@ -5,8 +5,12 @@ import { useGlyphDrawWork } from './useGlyphDrawWork';
 
 function heldDraw() {
   let land = () => {};
-  const draw = new Promise<void>((resolve) => (land = resolve));
-  return { draw, land };
+  let fail = () => {};
+  const draw = new Promise<void>((resolve, reject) => {
+    land = resolve;
+    fail = () => reject(new Error('expected a glyph bitmap, got a failed draw'));
+  });
+  return { draw, land, fail };
 }
 
 function renderInView(draws: ReadonlySet<Promise<void>>) {
@@ -33,5 +37,23 @@ describe('useGlyphDrawWork', () => {
     unmount();
 
     expect(fonts().pending()).toBe(0);
+  });
+
+  it('stops counting a draw that fails', async () => {
+    const failing = heldDraw();
+    const { fonts } = renderInView(new Set([failing.draw]));
+
+    await act(async () => {
+      failing.fail();
+      await failing.draw.catch(() => {});
+    });
+
+    expect(fonts().pending()).toBe(0);
+  });
+
+  it('counts nothing outside a view', () => {
+    const draws = new Set([heldDraw().draw]);
+
+    expect(() => renderHook(() => useGlyphDrawWork(draws))).not.toThrow();
   });
 });

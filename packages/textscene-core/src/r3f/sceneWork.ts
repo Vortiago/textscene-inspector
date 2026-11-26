@@ -18,12 +18,20 @@ export function pendingSceneWork(
   return into;
 }
 
-/** Reads the counts in place, so a snapshot that runs on every render allocates nothing. */
+/**
+ * Reads the counts in place, so a snapshot that runs on every render allocates nothing.
+ *
+ * @canonical Whether a view has work in flight
+ */
 export function isViewWorking(work: ViewWork | null): boolean {
   return work !== null && work.resources.pending() + work.textures.pending() + work.fonts.pending() > 0;
 }
 
-/** Subscribes `onChange` to each count of `work`. Returns the unsubscribe. */
+/**
+ * Subscribes `onChange` to each count of `work`. Returns the unsubscribe.
+ *
+ * @canonical Subscribing to every work count of a view
+ */
 export function subscribeSceneWork(work: ViewWork | null, onChange: () => void): () => void {
   if (!work) return subscribeToNothing();
   const stops = [work.resources, work.textures, work.fonts].map((count) => count.subscribe(onChange));

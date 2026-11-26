@@ -84,6 +84,8 @@ export interface SettledFonts {
 /** A load on the page, shared by every preview that peeks its key: the first peek starts it. */
 interface PageLoad<T> {
   promise?: Promise<T>;
+  /** Set once the load resolves, so a preview that peeks the key later answers at once. */
+  settled?: { readonly value: T };
 }
 
 /**
@@ -99,7 +101,10 @@ const pageFaceLoads = perObject((_loadFace: FaceLoader) =>
 
 /** The promise of `shared`, which `load` starts on the first call. */
 function pageLoad<T>(shared: PageLoad<T>, load: () => Promise<T>): Promise<T> {
-  return (shared.promise ??= load());
+  return (shared.promise ??= load().then((value) => {
+    shared.settled = { value };
+    return value;
+  }));
 }
 
 /** `answer`, after it marks the load `key` as awaited through `fonts` while the load is in flight. */
@@ -161,9 +166,16 @@ export function createSettledFonts(
 
   const fonts: SettledFonts = {
     work,
-    peekFace: (bytes, nodePath) =>
-      peekFaceOf(bytes, () => pageLoad(pageFaceLoads(loadFace)(bytes), () => loadFace(bytes, nodePath))),
-    peekOutlines: (loadKey, read) => peekOutlinesOf(loadKey, () => pageLoad(pageOutlineLoads(loadKey), read)),
+    peekFace(bytes, nodePath) {
+      const shared = pageFaceLoads(loadFace)(bytes);
+      if (shared.settled) return shared.settled.value;
+      return peekFaceOf(bytes, () => pageLoad(shared, () => loadFace(bytes, nodePath)));
+    },
+    peekOutlines(loadKey, read) {
+      const shared = pageOutlineLoads(loadKey);
+      if (shared.settled) return shared.settled.value;
+      return peekOutlinesOf(loadKey, () => pageLoad(shared, read));
+    },
     keep(font, compose) {
       const kept = composed.get(font);
       if (kept) return kept;

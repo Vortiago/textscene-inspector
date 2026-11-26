@@ -1,8 +1,9 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
 import type { ResourceLoader } from './ResourceLoader';
 import type { WorkCount } from './workCount';
 import { createViewWork, type ViewWork } from './viewWork';
 import { createSettledFonts, type SettledFonts } from '../r3f/controls/native/text/settledFonts';
+import { perObject } from '../utils/perObject';
 
 /**
  * Frames a load's consumers take to commit after the loader settles. They commit within a render
@@ -29,7 +30,11 @@ SettledFontsContext.displayName = 'SettledFontsContext';
 /** Two views on one loader neither wait on each other's work nor wake on each other's font settles. */
 export function ResourceLoaderProvider({ loader, children }: ResourceLoaderProviderProps) {
   const [work] = useState(createViewWork);
-  const fonts = useMemo(() => createSettledFonts(loader.loadFace, work.fonts), [loader, work]);
+  // In state, not a memo: React may drop a memo, and a new store wakes no reader of the old one.
+  const [fontsOf] = useState(() =>
+    perObject((l: ResourceLoader) => createSettledFonts(l.loadFace, work.fonts))
+  );
+  const fonts = fontsOf(loader);
   return (
     <ResourceLoaderContext.Provider value={loader}>
       <ViewWorkContext.Provider value={work}>
