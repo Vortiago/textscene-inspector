@@ -5,6 +5,7 @@ import * as imagePixels from '../../resources/formats/image/imagePixels';
 import { imageSize } from '../../resources/formats/image/imagePixels';
 import { texture2DPlaceholder } from '../../resources/textures/texture2DPlaceholder';
 import type { AtlasSourceModel } from '../../resources/tileset/types';
+import { textureWork } from '../../resources/textures/textureWork';
 import { inThreadJobRunner } from '../../workers/WorkerJobRunner';
 import { topDownTexture } from '../../resources/textures/topDownTexture';
 import { useRuntimeAtlasTexture, type RuntimeAtlas } from './paddedAtlasTexture';
@@ -173,5 +174,45 @@ describe('useRuntimeAtlasTexture', () => {
     await builtCopy(texture, { ...SOURCE, margins: { x: 1, y: 1 } });
 
     expect(read).toHaveBeenCalledTimes(1);
+  });
+  it('keeps the copy it showed while the next version builds, and disposes it once that lands', async () => {
+    const texture = textureOf();
+    const hook = await builtCopy(texture);
+    const shown = textureIn(hook.result);
+    const onDispose = vi.fn();
+    shown.addEventListener('dispose', onDispose);
+    let land: (padded: imagePixels.ImagePixels) => void = () => {};
+    const run = vi
+      .spyOn(inThreadJobRunner, 'run')
+      .mockImplementationOnce(() => new Promise((resolve) => (land = resolve)));
+
+    texture.needsUpdate = true;
+    hook.rerender();
+    await vi.waitFor(() => expect(run).toHaveBeenCalledTimes(1));
+    const whileBuilding = [hook.result.current, onDispose.mock.calls.length];
+    land({ data: new Uint8Array(4 * 4 * 4), width: 4, height: 4 });
+    await vi.waitFor(() => expect(hook.result.current).not.toBe(shown));
+    await flushMicrotasks();
+
+    expect(whileBuilding).toEqual([shown, 0]);
+    expect(onDispose).toHaveBeenCalledTimes(1);
+  });
+
+  it('counts texture work until the commit that shows the copy', async () => {
+    let land: (padded: imagePixels.ImagePixels) => void = () => {};
+    const run = vi
+      .spyOn(inThreadJobRunner, 'run')
+      .mockImplementationOnce(() => new Promise((resolve) => (land = resolve)));
+    const texture = textureOf();
+    const hook = renderHook(() => useRuntimeAtlasTexture(slotOf(texture), SOURCE));
+    await vi.waitFor(() => expect(run).toHaveBeenCalledTimes(1));
+    const whileBuilding = textureWork.pending();
+
+    land({ data: new Uint8Array(4 * 4 * 4), width: 4, height: 4 });
+    await flushMicrotasks();
+    const landedNotShown = [hook.result.current, textureWork.pending()];
+    await vi.waitFor(() => expect(hook.result.current).toBeInstanceOf(THREE.DataTexture));
+
+    expect([whileBuilding, landedNotShown, textureWork.pending()]).toEqual([1, ['building', 1], 0]);
   });
 });

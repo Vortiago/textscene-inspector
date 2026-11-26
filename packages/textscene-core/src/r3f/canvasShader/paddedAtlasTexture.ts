@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useState } from 'react';
+import { useEffect, useReducer, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { textureWork } from '../../resources/textures/textureWork';
 import { paddedAtlasLayout } from '../../resources/tileset/paddedAtlas';
@@ -21,6 +21,8 @@ const UNREADABLE = 'unreadable';
 
 /** One padded copy of one version of a texture, and the runs that hold it. */
 interface PaddedCopy {
+  readonly texture: THREE.Texture;
+  readonly source: AtlasSourceModel;
   holders: number;
   readonly version: number;
   built: THREE.Texture | typeof UNREADABLE | undefined;
@@ -43,7 +45,7 @@ export function useRuntimeAtlasTexture(
   return standIn ?? copied;
 }
 
-/** The padded copy of `texture` that every run of `source` shares, built off the render as a worker job. */
+/** The padded copy every run of `source` shares, built as a worker job, the last one shown until it lands. */
 function usePaddedCopy(texture: THREE.Texture | null, source: AtlasSourceModel): RuntimeAtlas {
   const runner = useResourceLoader()?.jobRunner ?? inThreadJobRunner;
   const [, landed] = useReducer((count: number) => count + 1, 0);
@@ -61,13 +63,36 @@ function usePaddedCopy(texture: THREE.Texture | null, source: AtlasSourceModel):
     );
     return () => {
       current = false;
-      releasePaddedCopy(texture, source, copy);
+      releasePaddedCopy(copy);
     };
   }, [texture, version, source, runner]);
-  const copy = texture ? paddedCopiesOf(texture).get(source) : undefined;
-  const built = copy?.version === version ? copy?.built : undefined;
-  usePendingWhile(texture !== null && built === undefined);
-  return built ?? 'building';
+  const wanted = texture ? paddedCopiesOf(texture).get(source) : undefined;
+  const isBuilt = wanted?.version === version && wanted?.built !== undefined;
+  /** Written after each commit: the copy the run showed, held until the next one shows. */
+  const lastShown = useRef<PaddedCopy | undefined>(undefined);
+  const shown = !texture ? undefined : isBuilt ? wanted : lastShown.current;
+  useEffect(() => {
+    lastShown.current = shown;
+  });
+  useHeldCopy(shown);
+  const isBuilding = texture !== null && !isBuilt;
+  usePendingWhile(isBuilding);
+  useTextureWorkWhile(isBuilding);
+  return shown?.built ?? 'building';
+}
+
+/** Holds the shown copy until a later commit shows another, so its texture is never disposed in view. */
+function useHeldCopy(copy: PaddedCopy | undefined): void {
+  useEffect(() => {
+    if (!copy) return undefined;
+    copy.holders += 1;
+    return () => releasePaddedCopy(copy);
+  }, [copy]);
+}
+
+/** Counts texture work in the commits before the copy shows, so a capture never reads zero between them. */
+function useTextureWorkWhile(isWorking: boolean): void {
+  useEffect(() => (isWorking ? textureWork.begin() : undefined), [isWorking]);
 }
 
 function joinPaddedCopy(texture: THREE.Texture, source: AtlasSourceModel, runner: JobRunner): PaddedCopy {
@@ -78,16 +103,21 @@ function joinPaddedCopy(texture: THREE.Texture, source: AtlasSourceModel, runner
     return held;
   }
   const controller = new AbortController();
-  const endWork = textureWork.begin();
   const settled = buildPaddedCopy(texture, source, runner, controller.signal);
-  const copy: PaddedCopy = { holders: 1, version: texture.version, built: undefined, settled, controller };
+  const copy: PaddedCopy = {
+    texture,
+    source,
+    holders: 1,
+    version: texture.version,
+    built: undefined,
+    settled,
+    controller,
+  };
   // Registered before any holder's, so a holder that hears the build land reads `built`.
-  settled
-    .then(
-      (built) => keepBuiltCopy(copy, built),
-      () => dropPaddedCopy(copies, source, copy)
-    )
-    .finally(endWork);
+  settled.then(
+    (built) => keepBuiltCopy(copy, built),
+    () => dropPaddedCopy(copy)
+  );
   copies.set(source, copy);
   return copy;
 }
@@ -99,22 +129,21 @@ function keepBuiltCopy(copy: PaddedCopy, built: THREE.Texture | typeof UNREADABL
 }
 
 /** A released copy's abort lands after a new holder may have built the source's next copy. */
-function dropPaddedCopy(
-  copies: Map<AtlasSourceModel, PaddedCopy>,
-  source: AtlasSourceModel,
-  copy: PaddedCopy
-): void {
-  if (copies.get(source) === copy) copies.delete(source);
+function dropPaddedCopy(copy: PaddedCopy): void {
+  const copies = paddedCopiesOf(copy.texture);
+  if (copies.get(copy.source) === copy) copies.delete(copy.source);
 }
 
 /** A microtask, not now: StrictMode and a re-render release and take a copy again in one task. */
-function releasePaddedCopy(texture: THREE.Texture, source: AtlasSourceModel, copy: PaddedCopy): void {
+function releasePaddedCopy(copy: PaddedCopy): void {
   copy.holders -= 1;
   queueMicrotask(() => {
     if (copy.holders > 0) return;
-    dropPaddedCopy(paddedCopiesOf(texture), source, copy);
+    dropPaddedCopy(copy);
     copy.controller.abort();
     disposeBuilt(copy.built);
+    // A run releases a copy it both wants and shows twice, so the second release finds nothing to dispose.
+    copy.built = undefined;
   });
 }
 
