@@ -11,17 +11,14 @@ import {
   CanvasItemMaterialLightMode,
 } from '../../../godot/scene/canvasItemMaterial';
 
-/**
- * The authorable blend modes. `BLEND_MODE_DISABLED` (5) is in the C++ enum
- * (canvas_item_material.h:45) but bound to neither the script API
- * (`BIND_ENUM_CONSTANT`, cpp:268-272) nor the inspector hint (cpp:260), so it reads as MIX.
- */
+/** The blend modes `_update_shader` writes a render mode for (`canvas_item_material.cpp:84-104`). */
 const BLEND_MODES = [
   CanvasItemMaterialBlendMode.MIX,
   CanvasItemMaterialBlendMode.ADD,
   CanvasItemMaterialBlendMode.SUB,
   CanvasItemMaterialBlendMode.MUL,
   CanvasItemMaterialBlendMode.PREMULT_ALPHA,
+  CanvasItemMaterialBlendMode.DISABLED,
 ] as const;
 
 const LIGHT_MODES = [

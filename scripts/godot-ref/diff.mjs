@@ -26,12 +26,14 @@ const OUT_DIR = join(import.meta.dirname, 'output');
 const RESIDUE_MAX_DELTA = 2;
 /** The one lit surface form beside the default that the previewer opens with `?litSurface=`. */
 const LIT_SURFACE_NODES = 'nodes';
+/** The one canvas item form beside the default that the previewer opens with `?canvasItem=`. */
+const CANVAS_ITEM_TRANSLATED = 'translated';
 /** The trees the catalog lists from their own `res://` root, so a name drops the prefix. */
 const FLATTENED_ROOTS = ['fixtures', ...FLATTENED_CORPUS_ROOTS].map((root) => `${root}/`);
 
 function usage() {
   console.error(
-    'Usage: pnpm ref:diff <fixture.tscn> [more.tscn ...] [--max-mean <n>] [--frame] [--keep] [--collisions] [--mode in-game] [--set path:property=text] [--lit-surface nodes] [--table <file.md>]\n' +
+    'Usage: pnpm ref:diff <fixture.tscn> [more.tscn ...] [--max-mean <n>] [--frame] [--keep] [--collisions] [--mode in-game] [--set path:property=text] [--lit-surface nodes] [--canvas-item translated] [--table <file.md>]\n' +
       '\n' +
       '  <fixture.tscn>   fixture filename as listed in apps/textscene-web/src/fixtures.ts,\n' +
       '                   or a path to a .tscn under scenes/\n' +
@@ -43,6 +45,7 @@ function usage() {
       '  --mode in-game   measure the scene as the game starts it, against our In-game mode\n' +
       '  --set p:prop=v   on both sides, get_node(p).set(prop, str_to_var(v)) before the capture\n' +
       '  --lit-surface nodes  open our side with the node lit surface (?litSurface=nodes)\n' +
+      "  --canvas-item translated  open our side with canvas items through Godot's template (?canvasItem=translated)\n" +
       '  --table <file>   also write the results as a Markdown table, one row per scene'
   );
 }
@@ -55,6 +58,7 @@ export function parseArgs(argv) {
     keep: false,
     collisions: false,
     litSurface: null,
+    canvasItem: null,
     mode: null,
     table: null,
     hostCalls: [],
@@ -73,6 +77,8 @@ export function parseArgs(argv) {
       }
     } else if (arg === '--lit-surface') {
       args.litSurface = oneOf('--lit-surface', [LIT_SURFACE_NODES], argv[++i]);
+    } else if (arg === '--canvas-item') {
+      args.canvasItem = oneOf('--canvas-item', [CANVAS_ITEM_TRANSLATED], argv[++i]);
     } else if (arg === '--set') {
       args.hostCalls.push(parseSet(argv[++i]));
     } else if (arg === '--call') {
@@ -156,7 +162,15 @@ export function comparePngs(godotBuffer, oursBuffer) {
  */
 export async function diffOne(
   { scenePath, fixtureName, label },
-  { frame, keep, collisions = false, mode: pickedMode = null, hostCalls = [], litSurface = null },
+  {
+    frame,
+    keep,
+    collisions = false,
+    mode: pickedMode = null,
+    hostCalls = [],
+    litSurface = null,
+    canvasItem = null,
+  },
   { render = renderReference, capture = captureOurs, outDir = OUT_DIR } = {}
 ) {
   const renderAs = async (renderMode) =>
@@ -188,6 +202,7 @@ export async function diffOne(
     inGameFrame: pickedMode === IN_GAME_MODE ? referenceFrame : null,
     showCollisions: collisions,
     litSurface,
+    canvasItem,
     hostCalls,
   });
   if (keep) await writeFile(join(outDir, `${label}.ours.png`), oursBuffer);

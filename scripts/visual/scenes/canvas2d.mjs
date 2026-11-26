@@ -69,6 +69,12 @@ export const CANVAS_2D_SCENES = [
   { name: 'canvas-shader-polygons', file: 'unit-canvas-shader-polygons.tscn' },
   { name: 'canvas-shader-lines-meshes', file: 'unit-canvas-shader-lines-meshes.tscn' },
   { name: 'canvas-shader-tiles', file: 'unit-canvas-shader-tiles.tscn' },
+  // The translated canvas item form: Godot 4.6.3 is 0 px over 2/255 from it, and 7,862 px from the classic form.
+  {
+    name: 'canvas-item-translated-materials',
+    file: 'unit-canvas-item-translated-materials.tscn',
+    canvasItem: 'translated',
+  },
   // The one variable: `texture_filter` on the Node2D parent. A Nearest parent keeps a magnified
   // Sprite2D's edge a hard step, and the project's Linear default blends it over one texel.
   {

@@ -16,7 +16,7 @@ import {
   type CanvasItemLightingProps,
   type CanvasItemLightingUniforms,
 } from './canvasItemLighting.js';
-import { placementId, type ItemPlacement, type LitItemRead } from './itemLightList.js';
+import { isReachedByAnyLight, placementId, type ItemPlacement, type LitItemRead } from './itemLightList.js';
 import { releasedOnUnmount } from '../sharedTexture.js';
 import { useCanvasLayerIndex } from './canvasItemPlacement.js';
 import { CanvasItemMaterialLightMode } from '../../godot/scene/canvasItemMaterial.js';
@@ -135,6 +135,8 @@ export interface LitItem {
   readonly lightMode: CanvasItemMaterialProperties['lightMode'];
   /** Undefined while no light reaches the item. */
   readonly list: CanvasLightList | undefined;
+  /** Whether a light on the canvas reaches the placement, whether or not an item reads its list. */
+  readonly isReachedByLight: boolean;
   readonly plain: CanvasItemLightingUniforms;
   /** The material props of a surface that has no normal map, which never change once mounted. */
   readonly plainProps: CanvasItemLightingProps;
@@ -146,7 +148,7 @@ export interface LitItem {
 }
 
 export function useLitItem({ material, lightMask = 1, zFinal }: LitItemOptions): LitItem {
-  const { lists, resolution } = useCanvasLighting2D();
+  const { lists, lights, resolution } = useCanvasLighting2D();
   const canvasLayer = useCanvasLayerIndex();
   // The raw canvas tint, not the light-mode-gated one: the shader divides out
   // exactly what the CPU folded in, and the floor is applied on both sides.
@@ -168,6 +170,7 @@ export function useLitItem({ material, lightMask = 1, zFinal }: LitItemOptions):
   );
   useCapItemLights(placement, geometryRef, setTakenLights);
   const list = lists.get(placementId(placement));
+  const isReachedByLight = useMemo(() => isReachedByAnyLight(lights, placement), [lights, placement]);
 
   const uniforms = useRef<CanvasItemLightingUniforms | null>(null);
   uniforms.current ??= createUniforms(resolution);
@@ -191,8 +194,8 @@ export function useLitItem({ material, lightMask = 1, zFinal }: LitItemOptions):
   const { isLinear: isLinearCanvas } = canvasSpace;
   const plainProps = useMemo(() => canvasItemLightingProps(bound, isLinearCanvas), [bound, isLinearCanvas]);
   return useMemo(
-    () => ({ placement, lightMode, list, plain: bound, plainProps, geometryRef }),
-    [placement, lightMode, list, bound, plainProps]
+    () => ({ placement, lightMode, list, isReachedByLight, plain: bound, plainProps, geometryRef }),
+    [placement, lightMode, list, isReachedByLight, bound, plainProps]
   );
 }
 

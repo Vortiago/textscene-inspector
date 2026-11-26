@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { Rgba } from '../../godot/math/math';
 import { mutableTransform2D, type MutableTransform2D } from '../../godot/math/transform2d';
 import type { ShaderText } from '../../resources/materials/shadermaterial/types';
+import { holdViewportAnisotropy } from '../viewportAnisotropy';
 import {
   attributesGeometry,
   attributesObject,
@@ -161,6 +162,14 @@ export function canvasShaderDraw(
     run.kind === 'rect' ? rectBatch(variantOf('quad'), run.commands) : meshBatch(variantOf, run.command)
   );
   for (const batch of batches) object.add(batch.object);
+  // Written by `setSource`: three writes no taps for a nearest magnification, so the draw holds its copies.
+  let releaseAnisotropy: readonly (() => void)[] = [];
+  const holdAnisotropy = () => {
+    for (const release of releaseAnisotropy) release();
+    releaseAnisotropy = [...variants.values()].flatMap(({ binding }) =>
+      binding.boundTextures.map((texture) => holdViewportAnisotropy(gl, texture))
+    );
+  };
   const world = mutableTransform2D();
   // Written by `setColors`, and read again by `setSource`: new rects or texel sizes need new records.
   let finalModulate: Rgba | null = null;
@@ -174,6 +183,7 @@ export function canvasShaderDraw(
     setSource: (texture, commands) => {
       for (const variant of variants.values())
         variant.texelSize = variant.binding.bind(texture ?? undefined, bound.textureState, bound.maps);
+      holdAnisotropy();
       commandRuns(commands).forEach((run, index) => batches[index]!.setRun(run));
       writeColors();
     },
@@ -191,6 +201,7 @@ export function canvasShaderDraw(
       for (const batch of batches) batch.writeWorld(world);
     },
     dispose: () => {
+      for (const release of releaseAnisotropy) release();
       for (const batch of batches) batch.dispose();
       for (const { binding } of variants.values()) binding.dispose();
     },

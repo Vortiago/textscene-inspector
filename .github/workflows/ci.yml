@@ -269,6 +269,7 @@ jobs:
           include-hidden-files: true
       - run: pnpm godot:shader-language --check
       - run: pnpm godot:sky-materials --check
+      - run: pnpm godot:canvas-item-materials --check
       - run: pnpm godot:variant --check
       - run: pnpm godot:templates --check
       - run: pnpm test:shaders:templates

@@ -34,6 +34,7 @@ const in2dMode = (scenes) => scenes.map((scene) => ({ mode: '2d', ...scene }));
  *   the tree does not list
  * @property {number} [animationTime] the seconds to seek the AnimationPlayer `select` names to
  * @property {'nodes'} [litSurface] capture a branch only the node lit surface draws, with the switch on
+ * @property {'translated'} [canvasItem] capture a branch only the translated canvas item draws, with the switch on
  * @property {({ path: string, property: string, text: string } | { path: string, method: string, args: string[] })[]} [hostCalls]
  *   host writes and calls through the open scene, each value a Variant text or `Resource("res://…")`,
  *   applied in order before the settle
@@ -54,6 +55,7 @@ export const SCENE_OPTIONS = [
   'settleTimeout',
   'animationTime',
   'litSurface',
+  'canvasItem',
   'hostCalls',
 ];
 

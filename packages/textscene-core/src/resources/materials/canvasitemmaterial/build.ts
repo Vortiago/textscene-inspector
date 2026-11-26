@@ -24,17 +24,13 @@ export interface CanvasItemBlendState {
   premultipliedAlpha: boolean;
 }
 
-/**
- * BLEND_MODE_MIX is colour `SRC_ALPHA / ONE_MINUS_SRC_ALPHA` over alpha
- * `ONE / ONE_MINUS_SRC_ALPHA`, both ADD: the pair three's `NormalBlending` sets for a
- * straight-alpha material. Also the fallback for DISABLED, which no scene can author.
- */
+/** Godot's MIX factors (material_storage.cpp:655-662) are the pair three's `NormalBlending` sets. */
 const MIX: CanvasItemBlendState = {
   blending: THREE.NormalBlending,
   premultipliedAlpha: false,
 };
 
-/** Godot's per-mode factors, colour pair then alpha pair. Three has no preset for these. */
+/** Godot's per-mode factors, colour pair then alpha pair, or no blending for DISABLED. */
 const CUSTOM: Partial<Record<EnumValue<typeof CanvasItemMaterialBlendMode>, CanvasItemBlendState>> = {
   [CanvasItemMaterialBlendMode.ADD]: {
     blending: THREE.CustomBlending,
@@ -66,6 +62,7 @@ const CUSTOM: Partial<Record<EnumValue<typeof CanvasItemMaterialBlendMode>, Canv
     blendDstAlpha: THREE.ZeroFactor,
     premultipliedAlpha: false,
   },
+  [CanvasItemMaterialBlendMode.DISABLED]: { blending: THREE.NoBlending, premultipliedAlpha: false },
   [CanvasItemMaterialBlendMode.PREMULT_ALPHA]: {
     blending: THREE.CustomBlending,
     blendEquation: THREE.AddEquation,

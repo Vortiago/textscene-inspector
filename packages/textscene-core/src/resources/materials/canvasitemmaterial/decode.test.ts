@@ -45,7 +45,12 @@ describe('the CanvasItemMaterial canvasItemMaterialOf decodes', () => {
     expect(m.particlesAnimLoop).toBe(true);
   });
 
+  it('reads blend_mode 5 as DISABLED, which Godot 4.6.3 draws opaque though its hint lists five modes', () => {
+    expect(decode({ blend_mode: '5' }).blendMode).toBe(CanvasItemMaterialBlendMode.DISABLED);
+  });
+
   it('falls back to the default for an out-of-range or unparseable enum', () => {
+    expect(decode({ blend_mode: '6' }).blendMode).toBe(CanvasItemMaterialBlendMode.MIX);
     expect(decode({ blend_mode: '9' }).blendMode).toBe(CanvasItemMaterialBlendMode.MIX);
     expect(decode({ blend_mode: '-1' }).blendMode).toBe(CanvasItemMaterialBlendMode.MIX);
     expect(decode({ light_mode: 'nope' }).lightMode).toBe(CanvasItemMaterialLightMode.NORMAL);

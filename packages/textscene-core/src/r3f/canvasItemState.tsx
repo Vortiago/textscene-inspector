@@ -9,6 +9,7 @@ import type { Rgba } from '../godot/math/math';
 import type { CanvasItemMaterialSlot } from '../resources/materials/canvasitemmaterial/kind';
 import type { CanvasItemMaterialProperties } from '../resources/materials/canvasitemmaterial/types';
 import type { ShaderText } from '../resources/materials/shadermaterial/types';
+import { materialShaderOf } from './canvasShader/materialShader';
 import { useCanvasItemTint, type CanvasItemTint } from './canvasItemModulate';
 import { useCanvasModulateFor } from './canvasModulate';
 import type { CanvasItemTextureSampler } from './canvasItemTextureSampler';
@@ -61,8 +62,10 @@ export interface CanvasItemState {
   tint: CanvasItemTint;
   /** The `CanvasItemMaterial` in force, or null for plain canvas blending or a shader. */
   material: CanvasItemMaterialProperties | null;
-  /** The canvas_item shader in force, which draws the item's own pixels through the translator. */
+  /** The item's own canvas_item shader, which draws its own pixels through the translator. */
   shader: ShaderText | null;
+  /** The shader Godot gives an item with no shader of its own, drawn in the translated form only. */
+  materialShader: ShaderText | null;
   sampler: CanvasItemTextureSampler;
   lightMask: number | undefined;
 }
@@ -86,6 +89,7 @@ export function useCanvasItemState(fields: CanvasItemFields): CanvasItemState {
     tint,
     material: fields.material.properties,
     shader: fields.material.shader,
+    materialShader: materialShaderOf(fields.material),
     sampler: fields.sampler,
     lightMask: fields.lightMask,
   };

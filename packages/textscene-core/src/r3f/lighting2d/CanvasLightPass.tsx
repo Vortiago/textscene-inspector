@@ -286,6 +286,7 @@ export function CanvasLightPass({ host, canvasModulate, space, children }: Canva
     });
     return {
       lists,
+      lights,
       resolution,
       registerLight,
       registerItem,

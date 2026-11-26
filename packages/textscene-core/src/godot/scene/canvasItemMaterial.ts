@@ -1,16 +1,13 @@
 /** Godot 4.6.3's CanvasItemMaterial facts a scene's properties carry. */
 
-/**
- * `CanvasItemMaterial::BlendMode` (`scene/resources/canvas_item_material.h:39-46`), each member
- * without `BLEND_MODE_`. `BLEND_MODE_DISABLED` (5) is left out: it is bound to no script API and
- * the `blend_mode` hint lists five entries (`canvas_item_material.cpp:260`), so no scene authors it.
- */
+/** `canvas_item_material.h:39-46`: DISABLED is in no hint (cpp:260), yet Godot draws a stored 5 opaque. */
 export const CanvasItemMaterialBlendMode = {
   MIX: 0,
   ADD: 1,
   SUB: 2,
   MUL: 3,
   PREMULT_ALPHA: 4,
+  DISABLED: 5,
 } as const;
 
 /**

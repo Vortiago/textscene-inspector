@@ -11,7 +11,8 @@ import {
   primitiveObject,
   triangleArrayCommand,
 } from './canvasAttributes.js';
-import { DEFAULT_CANVAS_SHADER, transpileCanvasItem } from './transpileCanvas.js';
+import { DEFAULT_CANVAS_SHADER } from './defaultCanvasShader.js';
+import { transpileCanvasItem } from './transpileCanvas.js';
 
 const ITEM = {
   transform: { a: 2, b: 0, c: 0, d: 2, tx: 5, ty: 7 },

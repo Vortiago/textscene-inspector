@@ -3,12 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { generatedMaterialProgram } from '../generatedShader.testkit.js';
 import { ShadingLanguageError } from '../language/shadingLanguageError.js';
 import { samplersOf } from '../template/programLimits.testkit.js';
-import {
-  CANVAS_VARIANTS,
-  DEFAULT_CANVAS_SHADER,
-  specialiseCanvasDraw,
-  transpileCanvasItem,
-} from './transpileCanvas.js';
+import { DEFAULT_CANVAS_SHADER } from './defaultCanvasShader.js';
+import { CANVAS_VARIANTS, specialiseCanvasDraw, transpileCanvasItem } from './transpileCanvas.js';
 
 describe('transpileCanvasItem', () => {
   it.each(CANVAS_VARIANTS)("links Godot's default canvas shader into the %s variant", (variant) => {

@@ -66,6 +66,14 @@ interface LitItemScope {
 const LitItemScopeContext = createContext<LitItemScope | undefined>(undefined);
 LitItemScopeContext.displayName = 'LitItemScopeContext';
 
+/** Whether a light reaches the lit item around a component, false outside one. */
+const ReachedByLightContext = createContext(false);
+ReachedByLightContext.displayName = 'ReachedByLightContext';
+
+export function useIsReachedByLight(): boolean {
+  return useContext(ReachedByLightContext);
+}
+
 /** The `z_final` of the lit item around a mesh, 0 outside one. */
 const ItemZFinalContext = createContext(0);
 ItemZFinalContext.displayName = 'ItemZFinalContext';
@@ -109,7 +117,9 @@ export function LitCanvasItem({ material, lightMask, zFinal, children }: LitCanv
   return (
     <object3D ref={item.geometryRef} userData={LIT_ITEM_USER_DATA}>
       <ItemZFinalContext.Provider value={zFinal}>
-        <LitItemScopeContext.Provider value={scope}>{children}</LitItemScopeContext.Provider>
+        <ReachedByLightContext.Provider value={item.isReachedByLight}>
+          <LitItemScopeContext.Provider value={scope}>{children}</LitItemScopeContext.Provider>
+        </ReachedByLightContext.Provider>
       </ItemZFinalContext.Provider>
     </object3D>
   );
@@ -151,9 +161,11 @@ export function LitCanvasItemPixels({
   return (
     <object3D ref={item.geometryRef} userData={LIT_ITEM_USER_DATA}>
       <ItemZFinalContext.Provider value={zFinal}>
-        <CanvasItemPixelMaterialContext.Provider value={pixelMaterial}>
-          {typeof children === 'function' ? children(pixelMaterial) : children}
-        </CanvasItemPixelMaterialContext.Provider>
+        <ReachedByLightContext.Provider value={item.isReachedByLight}>
+          <CanvasItemPixelMaterialContext.Provider value={pixelMaterial}>
+            {typeof children === 'function' ? children(pixelMaterial) : children}
+          </CanvasItemPixelMaterialContext.Provider>
+        </ReachedByLightContext.Provider>
       </ItemZFinalContext.Provider>
     </object3D>
   );
