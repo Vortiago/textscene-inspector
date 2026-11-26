@@ -7,6 +7,7 @@ import { defaultTileData, type AtlasSourceModel, type TileGrid } from '../../res
 import type { ShaderText } from '../../resources/materials/shadermaterial/types';
 import type { CanvasShaderCommand } from './canvasCommands';
 import * as imagePixels from '../../resources/formats/image/imagePixels';
+import { inThreadJobRunner } from '../../workers/WorkerJobRunner';
 import { TileShaderRun } from './TileShaderRun';
 
 /** What the mocked texture hook returns, set by each test and reset after it. */
@@ -135,6 +136,7 @@ describe('TileShaderRun', () => {
 
   it('draws nothing while the padded copy builds, and never the fallback', async () => {
     sampled.texture = new THREE.DataTexture(new Uint8Array(32 * 16 * 4), 32, 16);
+    vi.spyOn(inThreadJobRunner, 'run').mockReturnValue(new Promise(() => {}));
     const renderer = await run(undefined, undefined, { ...SOURCE, usesTexturePadding: true });
 
     expect(renderer.scene.children).toHaveLength(0);

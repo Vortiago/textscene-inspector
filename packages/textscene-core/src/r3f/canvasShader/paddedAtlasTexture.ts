@@ -9,7 +9,7 @@ import type { Texture2DResult } from '../../resources/useTexture2D';
 import { usePendingWhile } from '../../resources/usePendingWhile';
 import { useResourceLoader } from '../../resources/useResource';
 import { perObject } from '../../utils/perObject';
-import { isBottomUp, reversedRows, reverseRowsInPlace } from '../../utils/reversedRows';
+import { isBottomUp } from '../../utils/reversedRows';
 import { inThreadJobRunner, type WorkerJobRunner } from '../../workers/WorkerJobRunner';
 import { usePaddedAtlasStandIn } from '../paddedAtlasStandIn';
 
@@ -33,8 +33,9 @@ export function useRuntimeAtlasTexture(
   source: AtlasSourceModel
 ): THREE.Texture | null {
   const standIn = usePaddedAtlasStandIn(slot, source);
-  const copied = usePaddedCopy(source.usesTexturePadding && !standIn ? slot.texture : null, source);
-  if (!source.usesTexturePadding) return slot.texture;
+  const pads = source.usesTexturePadding;
+  const copied = usePaddedCopy(pads && !standIn ? slot.texture : null, source);
+  if (!pads) return slot.texture;
   return standIn ?? copied;
 }
 
@@ -75,11 +76,12 @@ function joinPaddedCopy(texture: THREE.Texture, source: AtlasSourceModel, runner
   const settled = buildPaddedCopy(texture, source, runner, controller.signal);
   const copy: PaddedCopy = { holders: 1, built: undefined, settled, controller };
   // Registered before any holder's, so a holder that hears the build land reads `built`.
-  settled.then(
-    (built) => (copy.built = built),
-    () => copies.delete(source)
-  );
-  settled.then(endWork, endWork);
+  settled
+    .then(
+      (built) => (copy.built = built),
+      () => copies.delete(source)
+    )
+    .finally(endWork);
   copies.set(source, copy);
   return copy;
 }
@@ -106,12 +108,8 @@ async function buildPaddedCopy(
   await Promise.resolve();
   const pixels = readImagePixels(texture.image);
   if (!pixels) return null;
-  const { width, height } = pixels;
-  const data = isBottomUp(texture) ? reversedRows(pixels.data, width, height) : pixels.data;
-  const layout = paddedAtlasLayout(source);
-  const padded = await runner.run('padded-atlas', { pixels: { data, width, height }, layout }, signal);
-  // Bottom-up, as every typed-array texture here runs (`utils/reversedRows.ts`).
-  reverseRowsInPlace(padded.data, padded.width, padded.height);
+  const input = { pixels, isBottomUp: isBottomUp(texture), layout: paddedAtlasLayout(source) };
+  const padded = await runner.run('padded-atlas', input, signal);
   const atlas = new THREE.DataTexture(padded.data, padded.width, padded.height);
   atlas.colorSpace = texture.colorSpace;
   atlas.needsUpdate = true;

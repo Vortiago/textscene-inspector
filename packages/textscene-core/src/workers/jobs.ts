@@ -8,7 +8,7 @@ import { noiseTexture2DLevels, type NoiseTexture2DInput } from '../resources/tex
 import type { MipLevel } from '../resources/processing/mipChain';
 import { noiseTexture3DTexels, type NoiseTexture3DInput } from '../resources/textures/noisetexture3d/texels';
 import type { ImagePixels } from '../resources/formats/image/imagePixels';
-import { paddedAtlasPixels, type PaddedAtlasLayout } from '../resources/tileset/paddedAtlas';
+import { bottomUpPaddedAtlasPixels, type PaddedAtlasLayout } from '../resources/tileset/paddedAtlas';
 
 export interface WorkerJob<Input, Output> {
   run(input: Input): Output;
@@ -26,6 +26,7 @@ interface TexelsOutput {
 
 interface PaddedAtlasInput {
   pixels: ImagePixels;
+  isBottomUp: boolean;
   layout: PaddedAtlasLayout;
 }
 
@@ -39,7 +40,8 @@ export const WORKER_JOBS = {
     transfer: (output: TexelsOutput) => [output.texels.buffer],
   },
   'padded-atlas': {
-    run: ({ pixels, layout }: PaddedAtlasInput): ImagePixels => paddedAtlasPixels(pixels, layout),
+    run: ({ pixels, isBottomUp, layout }: PaddedAtlasInput): ImagePixels =>
+      bottomUpPaddedAtlasPixels(pixels, isBottomUp, layout),
     transfer: (output: ImagePixels) => [output.data.buffer],
   },
 } satisfies Record<string, WorkerJob<never, unknown>>;

@@ -5,6 +5,7 @@
  */
 
 import type { Vector2 } from '../../godot/math/vector';
+import { reversedRows, reverseRowsInPlace } from '../../utils/reversedRows';
 import type { ImagePixels } from '../formats/image/imagePixels';
 import { atlasTileRegion, type AtlasSourceModel, type AtlasTileModel } from './types';
 
@@ -63,13 +64,31 @@ export function paddedAtlasSize(
   textureSize: { width: number; height: number }
 ): { width: number; height: number } {
   const grid = atlasGridSize(source, textureSize);
-  const { textureRegionSize: region } = source;
-  return { width: grid.x * (region.x + 2 * PADDING), height: grid.y * (region.y + 2 * PADDING) };
+  const cell = paddedCellSize(source);
+  return { width: grid.x * cell.x, height: grid.y * cell.y };
+}
+
+/** A tile's cell in the padded atlas: its region with the padding on each side. */
+function paddedCellSize({ textureRegionSize: region }: Pick<AtlasSourceModel, 'textureRegionSize'>): Vector2 {
+  return { x: region.x + 2 * PADDING, y: region.y + 2 * PADDING };
+}
+
+/** `paddedAtlasPixels` of pixels bottom-up when `isBottomUp`, given bottom-up as the textures here run. */
+export function bottomUpPaddedAtlasPixels(
+  pixels: ImagePixels,
+  isBottomUp: boolean,
+  layout: PaddedAtlasLayout
+): ImagePixels {
+  const { width, height } = pixels;
+  const topDown = isBottomUp ? { data: reversedRows(pixels.data, width, height), width, height } : pixels;
+  const padded = paddedAtlasPixels(topDown, layout);
+  reverseRowsInPlace(padded.data, padded.width, padded.height);
+  return padded;
 }
 
 /** `tile_set.cpp:5622`, frame 0 only: the model holds no animation frames. */
 export function paddedAtlasPixels(pixels: ImagePixels, source: PaddedAtlasLayout): ImagePixels {
-  const cell = { x: source.textureRegionSize.x + 2 * PADDING, y: source.textureRegionSize.y + 2 * PADDING };
+  const cell = paddedCellSize(source);
   const { width, height } = paddedAtlasSize(source, pixels);
   const padded: ImagePixels = { width, height, data: new Uint8Array(width * height * BYTES_PER_TEXEL) };
   for (const [key, tile] of source.tiles) {

@@ -77,13 +77,21 @@ export function writeCanvasData(block: CanvasDataBlock, frame: CanvasFrame): voi
   transform2DMatrixInto(block.canvasNormalTransform, normalTransform(canvasTransform));
   const { r, g, b, a } = usesLinearColors ? srgbToLinearColor(canvasModulate) : canvasModulate;
   block.canvasModulation.set(r, g, b, a);
-  const viewport = frame.viewport ?? { x: 0, y: 0, width, height, scale: 1 };
-  // Godot's render target is its viewport (`renderer_canvas_render_rd.cpp:701-702`).
-  block.screenPixelSize.set(1 / viewport.width, 1 / viewport.height);
-  block.viewportInTarget.set(viewport.x, viewport.y, 1 / viewport.scale, 1 / viewport.scale);
+  writeViewport(block, frame);
   block.time = frame.time;
   block.usesPixelSnap = frame.snapVerticesToPixel;
   block.flags = usesLinearColors ? CONVERT_ATTRIBUTES_TO_LINEAR : 0;
+}
+
+/** Godot's render target is its viewport (`renderer_canvas_render_rd.cpp:701-702`), or the whole target. */
+function writeViewport(block: CanvasDataBlock, { width, height, viewport }: CanvasFrame): void {
+  if (!viewport) {
+    block.screenPixelSize.set(1 / width, 1 / height);
+    block.viewportInTarget.set(0, 0, 1, 1);
+    return;
+  }
+  block.screenPixelSize.set(1 / viewport.width, 1 / viewport.height);
+  block.viewportInTarget.set(viewport.x, viewport.y, 1 / viewport.scale, 1 / viewport.scale);
 }
 
 /** Each member of `CanvasData` the unlit variants read, by where Godot writes it. */
