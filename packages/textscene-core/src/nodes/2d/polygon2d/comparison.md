@@ -34,7 +34,8 @@ below, as in Godot.
 
 A Polygon2D can have a ShaderMaterial of `shader_type canvas_item` as its `material`. It then draws its
 triangles through Godot's canvas template with the user's shader, with its vertex colours and `uv`. A skinned
-Polygon2D still draws with Godot's default canvas shader. A 2D light does not shade it yet.
+Polygon2D draws its deformed points through the template too, as Godot's skeleton pass feeds them to the canvas
+shader. A 2D light does not shade it yet.
 
 ## Linting
 

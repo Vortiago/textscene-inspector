@@ -67,7 +67,9 @@ are the default. The anchor checks of the shader patches stay until the last pat
 
 Canvas items have a switch of their own, `canvasItemForm()` in `r3f/canvasShader/`, under the same
 golden rule. `?canvasItem=translated` draws each item without a shader of its own through the canvas
-template, with the text Godot writes for its CanvasItemMaterial or the default canvas shader. Until
+template, with the text Godot writes for its CanvasItemMaterial or the default canvas shader. A
+CPUParticles2D and a MultiMeshInstance2D draw as one instanced multimesh, and a skinned Polygon2D draws
+the points its skeleton deforms. Until
 the template draws 2D lights and clip masks (#1785), an item a light reaches and a `clip_children` owner keep
 the classic materials. `pnpm test:visual:canvas-item` captures the 2D and in-game goldens with the switch on.
 

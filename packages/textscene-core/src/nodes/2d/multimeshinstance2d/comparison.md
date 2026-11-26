@@ -15,6 +15,10 @@ the instance colour and the modulate. A texture that is set but fails to load dr
 leaves a property that names a missing file null (`resource_format_text.cpp:146-154`, `:288-289`). With a CanvasItemMaterial that sets `particles_animation`,
 each instance shows the cell its custom data picks. It draws nothing for a 3D transform format.
 
+With `?canvasItem=translated`, the canvas template draws every instance in one call, as Godot does. It reads
+each instance's transform, colour and custom data from the instance buffer, so a user's shader reads
+`INSTANCE_ID` and `INSTANCE_CUSTOM` (`renderer_canvas_render_rd.cpp:2792-2799`).
+
 ## Linting
 
 <!-- lint:begin MultiMeshInstance2D -->
