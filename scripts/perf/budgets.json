@@ -204,10 +204,10 @@
     }
   },
   "canvas-item-instances": {
-    "drawCalls": 7,
+    "drawCalls": 8,
     "steps": {
       "Scene draw": {
-        "drawCalls": 6,
+        "drawCalls": 7,
         "runs": 1
       },
       "Canvas copy": {
@@ -221,10 +221,10 @@
     }
   },
   "canvas-item-instances-translated": {
-    "drawCalls": 7,
+    "drawCalls": 8,
     "steps": {
       "Scene draw": {
-        "drawCalls": 6,
+        "drawCalls": 7,
         "runs": 1
       },
       "Canvas copy": {
