@@ -34,7 +34,7 @@ interface SpatialShaderSlotProps {
   attach?: string | MaterialAttach;
   /** What the surface draws while the translator loads, and for a shader it refuses. */
   fallback: ReactNode;
-  /** What a generated shader draws for a texture that never draws, the classic rule's placeholder. */
+  /** What the surface draws for a sampled texture that never draws: the missing-texture placeholder. */
   placeholder?: ReactNode;
 }
 
@@ -80,14 +80,15 @@ export function SpatialShaderSlot({ source, attach, fallback, placeholder }: Spa
     [module, attach, spatial, scene]
   );
   if (!spatial || !surfaceAttach) return <>{fallback}</>;
+  const textureOutcome = sampledTexturesOutcome(shader!.textures, samplers!, slotStates);
+  // A texture that never draws takes the placeholder, the mark the classic material gives it.
+  const held = textureOutcome === 'missing' && placeholder ? placeholder : null;
   // A generated shader waits for its textures, so the classic material that already draws them stays.
-  const textureOutcome = isGenerated
-    ? sampledTexturesOutcome(shader!.textures, samplers!, slotStates)
-    : 'settled';
-  if (textureOutcome !== 'settled') {
+  const waiting = isGenerated && textureOutcome !== 'settled' ? fallback : null;
+  if (held ?? waiting) {
     return (
       <>
-        {textureOutcome === 'missing' ? (placeholder ?? fallback) : fallback}
+        {held ?? waiting}
         {textureSlots}
       </>
     );

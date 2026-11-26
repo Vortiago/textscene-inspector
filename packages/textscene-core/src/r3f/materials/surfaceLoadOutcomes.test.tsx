@@ -117,10 +117,24 @@ const OUTCOMES: readonly Outcome[] = [
   },
 ];
 
-/** A material class, and the albedo and one other map, each with the flags that make Godot read it. */
+const SHADER_CODE: TscnInternalResource = {
+  id: 'Code',
+  type: 'Shader',
+  data: {
+    code: JSON.stringify(
+      'shader_type spatial;\nuniform sampler2D albedo_map;\nuniform sampler2D roughness_map;\n' +
+        'void fragment() {\n\tALBEDO = texture(albedo_map, UV).rgb;\n\tROUGHNESS = texture(roughness_map, UV).g;\n}\n'
+    ),
+  },
+};
+
+const USER_SHADER = { shader: 'SubResource("Code")' };
+
+/** Each class with the albedo and one other map, and the flags that make Godot read the map. */
 const MATERIALS = [
   {
     materialClass: 'StandardMaterial3D',
+    waitsInClassic: true,
     maps: [
       { property: 'albedo_texture', flags: {} },
       { property: 'normal_texture', flags: { normal_enabled: 'true' } },
@@ -128,16 +142,32 @@ const MATERIALS = [
   },
   {
     materialClass: 'ORMMaterial3D',
+    waitsInClassic: true,
     maps: [
       { property: 'albedo_texture', flags: {} },
       { property: 'orm_texture', flags: {} },
     ],
   },
+  {
+    materialClass: 'ShaderMaterial',
+    // A user's shader keeps no classic material while it waits: it draws the sampler's default.
+    waitsInClassic: false,
+    maps: [
+      { property: 'shader_parameter/albedo_map', flags: USER_SHADER },
+      { property: 'shader_parameter/roughness_map', flags: USER_SHADER },
+    ],
+  },
 ] as const;
 
-const ROWS = MATERIALS.flatMap(({ materialClass, maps }) =>
+const ROWS = MATERIALS.flatMap(({ materialClass, waitsInClassic, maps }) =>
   maps.flatMap(({ property, flags }) =>
-    OUTCOMES.map((outcome) => ({ materialClass, property, flags, outcome }))
+    OUTCOMES.map((outcome) => ({
+      materialClass,
+      property,
+      flags,
+      outcome,
+      waiting: waitsInClassic ? outcome.waiting : ('node path' as const),
+    }))
   )
 );
 
@@ -179,14 +209,14 @@ afterEach(() => vi.restoreAllMocks());
 describe('what a surface draws on the node lit surface for each load outcome of a map', () => {
   it.each(ROWS)(
     '$materialClass $property that $outcome.name',
-    async ({ materialClass, property, flags, outcome }) => {
+    async ({ materialClass, property, flags, outcome, waiting: whileWaiting }) => {
       vi.spyOn(logger, 'warn').mockImplementation(() => {});
       const material: TscnInternalResource = {
         id: 'Paint',
         type: materialClass,
         data: { ...flags, [property]: outcome.map },
       };
-      const resources = [material, ...outcome.resources];
+      const resources = [material, SHADER_CODE, ...outcome.resources];
       const { fake, drawn } = await renderSurface(
         referenceIn('SubResource("Paint")', EXTERNAL, resources),
         resources
@@ -197,7 +227,7 @@ describe('what a surface draws on the node lit surface for each load outcome of 
       await settleEffects();
       await vi.waitFor(() => expect(drawn()).toBe(outcome.after));
 
-      expect({ waiting, after: drawn() }).toEqual({ waiting: outcome.waiting, after: outcome.after });
+      expect({ waiting, after: drawn() }).toEqual({ waiting: whileWaiting, after: outcome.after });
     }
   );
 });
