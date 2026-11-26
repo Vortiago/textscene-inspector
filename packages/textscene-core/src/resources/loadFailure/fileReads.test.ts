@@ -235,6 +235,27 @@ albedo_texture = ExtResource("1")
     ]);
   });
 
+  it('lists the file a .tres header field names, read as a path', () => {
+    const reads = resourceFilesRead(
+      MAIN_TRES,
+      parseTresFile('[gd_resource type="Curve" format=3 x=ExtResource("res://a.tres")]\n[resource]\n')
+    );
+
+    expect(reads).toEqual([{ path: 'res://a.tres', type: null }]);
+  });
+
+  it('lists the file a [sub_resource] heading field reads', () => {
+    const reads = sceneFilesRead(
+      MAIN,
+      scene(`[gd_scene format=3]
+[sub_resource type="Resource" id="a" x=Resource("res://b.tres")]
+[node name="Root" type="Node2D"]
+`)
+    );
+
+    expect(reads).toEqual([{ path: 'res://b.tres', type: null }]);
+  });
+
   it('lists nothing for a .tres that reads no file', () => {
     const reads = resourceFilesRead(
       MAIN_TRES,

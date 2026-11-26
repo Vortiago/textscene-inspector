@@ -26,29 +26,31 @@ export function headingAttribute(
   return { span, value };
 }
 
-/** Where the first `=` sits, or -1. A property's key is left of it, its value right. */
-function equalsIndex(line: string): number {
-  return line.indexOf('=');
+/** Where the first `=` from `column` on sits, or -1. A property's key is left of it, its value right. */
+function equalsIndex(line: string, column: number): number {
+  return line.indexOf('=', column);
 }
 
-/** The trimmed key of a property line and its span, or undefined when the line has no `=`. */
+/** The trimmed key of a property from `column` on, and its span, or undefined when no `=` follows. */
 export function propertyKeySpan(
-  line: string
+  line: string,
+  column = 0
 ): { readonly span: ValueSpan; readonly key: string } | undefined {
-  const equals = equalsIndex(line);
+  const equals = equalsIndex(line, column);
   if (equals === -1) return undefined;
-  const rawKey = line.slice(0, equals);
+  const rawKey = line.slice(column, equals);
   const key = rawKey.trim();
   if (key.length === 0) return undefined;
-  const start = rawKey.length - rawKey.trimStart().length;
+  const start = column + rawKey.length - rawKey.trimStart().length;
   return { span: { start, end: start + key.length }, key };
 }
 
-/** The trimmed value of a property line and its span, or undefined when the line has no `=`. */
+/** The trimmed value of a property from `column` on, and its span, or undefined when no `=` follows. */
 export function propertyValueSpan(
-  line: string
+  line: string,
+  column = 0
 ): { readonly span: ValueSpan; readonly value: string } | undefined {
-  const equals = equalsIndex(line);
+  const equals = equalsIndex(line, column);
   if (equals === -1) return undefined;
   const rawValue = line.slice(equals + 1);
   const value = rawValue.trim();

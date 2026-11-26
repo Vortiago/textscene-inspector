@@ -78,6 +78,8 @@ export interface ParsedProperty {
   value: string;
   /** The line the key sits on. */
   line: number;
+  /** The column the key's text starts at: past a heading's `]` where the property follows it, else 0. */
+  column: number;
   /** The line the value ends on, a later line where the value starts after its key's line. */
   endLine: number;
   isMultiline: boolean;
@@ -164,6 +166,7 @@ export class TscnParserCore {
       /** The offset of each newline in the joined value that a string escapes. */
       skippedNewlines: number[];
       startLine: number;
+      startColumn: number;
       endLine: number;
       godotStartLine: number;
       scanState: ValueScanState;
@@ -224,7 +227,7 @@ export class TscnParserCore {
       const ownSection = currentSection === 'sub_resource' ? 1 : 0;
       if (currentSection === 'node' || currentSection === 'sub_resource' || currentSection === 'resource')
         addFileValue(
-          { text, line, place, isOpeningTag: false, skippedNewlines },
+          { text, line, place, isOpeningTag: false, isHeadingField: false, skippedNewlines },
           internalResources.length + ownSection
         );
     };
@@ -242,6 +245,7 @@ export class TscnParserCore {
           key: pendingMultiline.key,
           value,
           line: pendingMultiline.startLine,
+          column: pendingMultiline.startColumn,
           endLine: pendingMultiline.endLine,
           isMultiline: pendingMultiline.endLine > pendingMultiline.startLine,
           stored: resolved,
@@ -266,7 +270,10 @@ export class TscnParserCore {
         if (content[start] !== '"') {
           const text = withoutComments(content.slice(start, end));
           const skippedNewlines = escapedNewlinesIn(text);
-          addFileValue({ text, line, place, isOpeningTag, skippedNewlines }, internalResources.length);
+          addFileValue(
+            { text, line, place, isOpeningTag, isHeadingField: true, skippedNewlines },
+            internalResources.length
+          );
         }
       }
     };
@@ -382,14 +389,12 @@ export class TscnParserCore {
       }
       const property = parseProperty(line);
       if (!property) {
-        if (!opensTag) {
-          observer?.onError?.({
-            message: `Invalid property format: "${line.trim()}"`,
-            line: lineNumber,
-            column: 1,
-            code: 'INVALID_PROPERTY_FORMAT',
-          });
-        }
+        observer?.onError?.({
+          message: `Invalid property format: "${line.trim()}"`,
+          line: lineNumber,
+          column: 1,
+          code: 'INVALID_PROPERTY_FORMAT',
+        });
         continue;
       }
 
@@ -403,6 +408,7 @@ export class TscnParserCore {
             joinedLength: property.value.length,
             skippedNewlines: [],
             startLine: lineNumber,
+            startColumn: column,
             endLine: lineNumber,
             godotStartLine: godotLine,
             scanState,
@@ -422,6 +428,7 @@ export class TscnParserCore {
             key: property.key,
             value: property.value,
             line: lineNumber,
+            column,
             endLine: lineNumber,
             isMultiline: false,
             stored: resolved,
@@ -473,7 +480,6 @@ export class TscnParserCore {
   }
 }
 
-/** True when line `at` ends on an odd run of backslashes with nothing, not even `\r`, before its `\n`. */
 /** The `type=` string a tag read before it stopped, or undefined where it read none. */
 function typeField(content: string, fields: readonly TagField[]): string | undefined {
   const field = fields.find(({ key }) => key === 'type');
@@ -481,6 +487,7 @@ function typeField(content: string, fields: readonly TagField[]): string | undef
   return value?.type === VARIANT_TYPE.STRING ? value.value : undefined;
 }
 
+/** True when line `at` ends on an odd run of backslashes with nothing, not even `\r`, before its `\n`. */
 function escapesItsNewline(content: string, lineStarts: readonly number[], at: number): boolean {
   const next = lineStarts[at + 1];
   return next !== undefined && isEscapedNewline(content, next - 1);

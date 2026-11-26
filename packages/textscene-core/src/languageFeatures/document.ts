@@ -21,6 +21,8 @@ export interface PropertySlot {
   readonly value: string;
   /** One-based line the value starts on. */
   readonly startLine: number;
+  /** The column its key's text starts at on that line: past a heading's `]` where it follows one, else 0. */
+  readonly startColumn: number;
   /** One-based line the value ends on, the same line unless the value is multiline. */
   readonly endLine: number;
   readonly isMultiline: boolean;
@@ -105,6 +107,7 @@ function scanHeadings(text: string): ScannedHeading[] {
         storedKey: property.stored.key,
         value: property.value,
         startLine: property.line,
+        startColumn: property.column,
         endLine: property.endLine,
         isMultiline: property.isMultiline,
       });

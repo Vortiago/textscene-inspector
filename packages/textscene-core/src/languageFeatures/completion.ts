@@ -255,7 +255,7 @@ export async function completionsAt(
   if (!location) return partialKeyItems(section, line, position);
 
   const isOnFirstLine = location.property.startLine === documentLine;
-  const key = propertyKeySpan(line);
+  const key = propertyKeySpan(line, isOnFirstLine ? location.property.startColumn : 0);
   if (isOnFirstLine && key && position.character <= key.span.end) {
     return replacing(keyItems(location.section), position, key.span.start);
   }

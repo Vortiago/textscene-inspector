@@ -62,23 +62,30 @@ export interface ReadStop {
 /** A read the parse stops at, or a heading the loader stops at. */
 export type ParseStop = ReadStop | HeadingStop;
 
-/** A `.tscn`'s files, read from the written nodes, as the live tree reads them. */
+/** A `.tscn`'s files: the written nodes as the live tree reads them, and each heading field. */
 export function sceneFileReads(file: string, scene: SceneSections): FileRead[] {
-  const binds = (scene.fileValues ?? []).flatMap(({ text, place }) =>
-    place === 'binds' ? valueReadsIn(text) : place === 'header' ? valueReadsIn(text).map(headerRead) : []
-  );
   const sections = scene.internalResources.map((section) => section.data);
   return filesRead(file, scene.externalResources, [
     ...readsOf(sections),
     ...readsOf(nodeValues(scene.nodes)),
-    binds,
+    ...headingFieldReadsOf(scene.fileValues),
   ]);
 }
 
-/** A `.tres`'s files: its `[sub_resource]` sections and its `[resource]` section. */
+/** A `.tres`'s files: its `[sub_resource]` sections, its `[resource]` section and each heading field. */
 export function resourceFileReads(file: string, parsed: ParsedResource): FileRead[] {
   const sections = [...parsed.subResources.map((section) => section.data), parsed.properties];
-  return filesRead(file, parsed.extResources, readsOf(sections));
+  return filesRead(file, parsed.extResources, [
+    ...readsOf(sections),
+    ...headingFieldReadsOf(parsed.fileValues),
+  ]);
+}
+
+/** The reads of each heading field, a header's read as a path. A body value is the live tree's to read. */
+function headingFieldReadsOf(values: readonly FileValue[] = []): ValueRead[][] {
+  return values
+    .filter(({ isHeadingField }) => isHeadingField)
+    .map(({ text, place }) => (place === 'header' ? valueReadsIn(text).map(headerRead) : valueReadsIn(text)));
 }
 
 /** A `.tscn`'s failing reads, from its text in file order. */

@@ -35,6 +35,28 @@ describe('codeActions', () => {
     expect(titles(text)).toEqual(["Change 'mash' to 'mesh'"]);
   });
 
+  it('repairs a key that follows the heading on its line, not the heading', () => {
+    const text = '[node name="M" type="MeshInstance3D"] mash = ExtResource("1")';
+    const start = text.indexOf('mash');
+    expect(allFixes(text)[0]!.edit).toEqual([
+      {
+        range: { start: { line: 0, character: start }, end: { line: 0, character: start + 4 } },
+        newText: 'mesh',
+      },
+    ]);
+  });
+
+  it('repairs a key that follows a heading over several lines, on its last line', () => {
+    const text = ['[node name="M"', 'type="MeshInstance3D"] mash = ExtResource("1")'].join('\n');
+    const start = 'type="MeshInstance3D"] '.length;
+    expect(allFixes(text)[0]!.edit).toEqual([
+      {
+        range: { start: { line: 1, character: start }, end: { line: 1, character: start + 4 } },
+        newText: 'mesh',
+      },
+    ]);
+  });
+
   it('repairs a node type that no class matches', () => {
     const text = '[node name="M" type="MeshInstnce3D"]';
     expect(titles(text)).toEqual(["Change 'MeshInstnce3D' to 'MeshInstance3D'"]);

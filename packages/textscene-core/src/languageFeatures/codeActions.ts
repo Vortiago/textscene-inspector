@@ -67,7 +67,7 @@ function propertyActions(document: LanguageDocument, section: DocumentSection, r
   for (const property of section.properties) {
     if (!coversLine(range, property.startLine)) continue;
     const line = document.lines[property.startLine - 1];
-    const key = line === undefined ? undefined : propertyKeySpan(line);
+    const key = line === undefined ? undefined : propertyKeySpan(line, property.startColumn);
     if (!key) continue;
     const keyRange = lineRange(property.startLine - 1, key.span);
     // A deprecated key is a spelling the engine reads, so it is never a typo.

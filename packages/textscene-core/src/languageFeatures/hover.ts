@@ -142,12 +142,12 @@ export function hoverAt(document: LanguageDocument, position: Position): Hover |
   // A property's key sits on its first line, so a continuation line of a multiline value
   // must not read as a new property.
   const isOnFirstLine = location.property.startLine === documentLine;
-  const key = propertyKeySpan(line);
+  const key = propertyKeySpan(line, isOnFirstLine ? location.property.startColumn : 0);
   if (isOnFirstLine && key && spanContains(key.span, position.character)) {
     return propertyHover(location.section, location.property, lineRange(position.line, key.span));
   }
   if (location.property.isMultiline) return undefined;
-  const value = propertyValueSpan(line);
+  const value = propertyValueSpan(line, location.property.startColumn);
   if (!value || !spanContains(value.span, position.character)) return undefined;
   return valueHover(document, location, lineRange(position.line, value.span));
 }
