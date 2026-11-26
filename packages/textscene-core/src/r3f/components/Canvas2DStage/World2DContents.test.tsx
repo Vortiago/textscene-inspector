@@ -1,4 +1,5 @@
 /** What the 2D-world canvas mounts, rendered through @react-three/test-renderer. */
+import type * as THREE from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import { waitFor } from '@testing-library/react';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -30,7 +31,6 @@ vi.mock('./CanvasFrameRender.js', () => ({
 }));
 
 import { World2DContents } from './World2DContents';
-import type { RootViewportPixels, World2DCamera } from './world2DCamera';
 import { withProject } from '../../testing/ProjectFixture';
 import { TiledUploadQueue } from '../../tiledUpload/TiledUploadQueue';
 import { r3fStateProbe } from '../../testing/R3FStateProbe';
@@ -134,50 +134,50 @@ describe('World2DContents renderer', () => {
 
 describe('World2DContents camera rig', () => {
   it("gives the camera the project's viewport size, which the screen built-ins count", async () => {
-    await expectRootViewport('[display]\nwindow/size/viewport_width=640\nwindow/size/viewport_height=360\n', {
-      targetSize: { x: 640, y: 360 },
-      pixelsPerCanvasPixel: { x: 1, y: 1 },
-    });
-  });
+    const ProjectFixture = withProject(
+      '[display]\nwindow/size/viewport_width=640\nwindow/size/viewport_height=360\n'
+    );
+    const { Probe, state } = r3fStateProbe();
 
-  it('gives the camera the window override and the stretch of a canvas_items window', async () => {
-    await expectRootViewport(
-      '[display]\nwindow/size/viewport_width=640\nwindow/size/viewport_height=360\n' +
-        'window/size/window_width_override=1280\nwindow/size/window_height_override=720\n' +
-        'window/stretch/mode="canvas_items"\n',
-      { targetSize: { x: 1280, y: 720 }, pixelsPerCanvasPixel: { x: 2, y: 2 } }
+    await ReactThreeTestRenderer.create(
+      <ProjectFixture>
+        <SelectionProvider>
+          <World2DContents {...baseProps} />
+          <Probe />
+        </SelectionProvider>
+      </ProjectFixture>
+    );
+
+    await waitFor(() =>
+      expect((state().camera as THREE.Camera & { viewportSize?: unknown }).viewportSize).toEqual({
+        x: 640,
+        y: 360,
+      })
     );
   });
 
-  it('gives the camera the window override unstretched for a window that does not stretch', async () => {
-    await expectRootViewport(
-      '[display]\nwindow/size/viewport_width=640\nwindow/size/viewport_height=360\n' +
-        'window/size/window_width_override=1280\nwindow/size/window_height_override=720\n',
-      { targetSize: { x: 1280, y: 720 }, pixelsPerCanvasPixel: { x: 1, y: 1 } }
-    );
-  });
-
-  it('gives the camera the design size for a viewport-mode window', async () => {
-    await expectRootViewport(
+  it("gives the camera the design size under a stretched window, as Godot's 2D reference renders it", async () => {
+    const ProjectFixture = withProject(
       '[display]\nwindow/size/viewport_width=640\nwindow/size/viewport_height=360\n' +
         'window/size/window_width_override=1280\nwindow/size/window_height_override=720\n' +
-        'window/stretch/mode="viewport"\n',
-      { targetSize: { x: 640, y: 360 }, pixelsPerCanvasPixel: { x: 1, y: 1 } }
+        'window/stretch/mode="canvas_items"\n'
+    );
+    const { Probe, state } = r3fStateProbe();
+
+    await ReactThreeTestRenderer.create(
+      <ProjectFixture>
+        <SelectionProvider>
+          <World2DContents {...baseProps} />
+          <Probe />
+        </SelectionProvider>
+      </ProjectFixture>
+    );
+
+    await waitFor(() =>
+      expect((state().camera as THREE.Camera & { viewportSize?: unknown }).viewportSize).toEqual({
+        x: 640,
+        y: 360,
+      })
     );
   });
 });
-
-/** Waits for the camera rig to give the camera `expected` for a project of `projectText`. */
-async function expectRootViewport(projectText: string, expected: RootViewportPixels): Promise<void> {
-  const ProjectFixture = withProject(projectText);
-  const { Probe, state } = r3fStateProbe();
-  await ReactThreeTestRenderer.create(
-    <ProjectFixture>
-      <SelectionProvider>
-        <World2DContents {...baseProps} />
-        <Probe />
-      </SelectionProvider>
-    </ProjectFixture>
-  );
-  await waitFor(() => expect((state().camera as World2DCamera).rootViewport).toEqual(expected));
-}

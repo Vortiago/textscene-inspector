@@ -13,8 +13,7 @@ import { EditedRootProvider } from '../../contexts/InstanceOwnersContext.js';
 import { SceneResourcesProvider } from '../../SceneResourcesContext.js';
 import { NodeDispatcher } from '../../NodeDispatcher.js';
 import { CanvasWorldScope } from '../../environment/WorldEnvironmentScope.js';
-import { useProjectRootWindow } from '../../gameView/useDrawnRootWindow.js';
-import { rootCanvasStretch } from '../../gameView/rootWindow.js';
+import { useProjectSettings } from '../../contexts/ProjectSettingsContext.js';
 import { world2DCameraPose, type World2DCamera } from './world2DCamera.js';
 import { CanvasLighting2DProvider } from '../../lighting2d/CanvasLighting2D.js';
 import { useCanvasModulateColor } from '../../canvasModulate.js';
@@ -49,13 +48,13 @@ function CameraRig({ pan, zoom }: { pan: Vector2; zoom: number }) {
   const camera = useThree((s) => s.camera) as World2DCamera;
   const size = useThree((s) => s.size);
   const invalidate = useThree((s) => s.invalidate);
-  const root = useProjectRootWindow();
+  const { width: viewportWidth, height: viewportHeight } = useProjectSettings().viewportSize;
   useLayoutEffect(() => {
-    // Screen built-ins count the window's target, not the design size (`renderer_canvas_render_rd.cpp:701`).
-    camera.rootViewport = { targetSize: root.targetSize, pixelsPerCanvasPixel: rootCanvasStretch(root) };
-    // A demand frameloop draws only when asked.
+    // The design size under any window stretch: the stage is Godot's 2D reference, not the window.
+    camera.viewportSize = { x: viewportWidth, y: viewportHeight };
+    // A demand frameloop draws only when asked, and the screen built-ins read this size.
     invalidate();
-  }, [camera, root, invalidate]);
+  }, [camera, viewportWidth, viewportHeight, invalidate]);
   const { x: panX, y: panY } = pan;
   useLayoutEffect(() => {
     const pose = world2DCameraPose({ x: panX, y: panY }, zoom, size.width, size.height);

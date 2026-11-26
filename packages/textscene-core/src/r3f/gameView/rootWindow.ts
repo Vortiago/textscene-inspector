@@ -29,12 +29,6 @@ export function rootWindow(settings: ProjectSettings | null): RootWindow {
   return { size, targetSize: renderSize, size2dOverride: sizeOverride, drawRect };
 }
 
-/** Target pixels per canvas pixel on each axis: one where the canvas lays out in the target itself. */
-export function rootCanvasStretch({ targetSize, size2dOverride }: RootWindow): Vector2 {
-  if (size2dOverride.x <= 0 || size2dOverride.y <= 0) return { x: 1, y: 1 };
-  return { x: targetSize.x / size2dOverride.x, y: targetSize.y / size2dOverride.y };
-}
-
 /** The smaller axis of the root's stretch transform, which its windows render at (`window.cpp:1363`). */
 export function rootWindowStretch({ targetSize, size2dOverride }: RootWindow): number {
   return smallerStretchAxis(targetSize, size2dOverride);

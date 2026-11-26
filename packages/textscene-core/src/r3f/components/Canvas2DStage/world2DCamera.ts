@@ -7,12 +7,6 @@
 import * as THREE from 'three';
 import type { Vector2 } from '../../../godot/math/vector.js';
 
-/** The root viewport's render target, and its pixels per canvas pixel on each axis. */
-export interface RootViewportPixels {
-  targetSize: Vector2;
-  pixelsPerCanvasPixel: Vector2;
-}
-
 /** Negates NDC y. */
 export const FLIP_Y = new THREE.Matrix4().makeScale(1, -1, 1);
 
@@ -25,8 +19,8 @@ export const FLIP_Y = new THREE.Matrix4().makeScale(1, -1, 1);
  * (`canvasItemFacing`), so the reversed winding culls nothing.
  */
 export class World2DCamera extends THREE.OrthographicCamera {
-  /** Godot's root viewport, whose canvas this camera shows from world (0, 0). Null: the whole target. */
-  rootViewport: RootViewportPixels | null = null;
+  /** The size of Godot's viewport, which this camera shows from world (0, 0). Null: the whole target. */
+  viewportSize: Vector2 | null = null;
 
   constructor() {
     super(0, 0, 0, 0, 0.1, 4000);
