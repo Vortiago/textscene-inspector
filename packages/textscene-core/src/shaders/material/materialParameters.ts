@@ -1,5 +1,6 @@
 import type { EnumValue } from '../../godot/classdb/enumNames.js';
 import { clamp } from '../../godot/math/math.js';
+import { doubleToInt32 } from '../../godot/variant/cInteger.js';
 import { TextureChannel, textureChannelMask } from '../../godot/rendering/materials/textureChannel.js';
 import {
   BASE_MATERIAL_3D_DEFAULTS as D,
@@ -168,7 +169,8 @@ const INT_PARAMETERS: ReadonlySet<string> = new Set([
 /** The Variant a setter passes for parameter `name`: a lane list is a vector, or a colour. */
 function parameterVariant(name: string, value: MaterialValue): Variant {
   if (typeof value === 'boolean') return bool(value);
-  if (typeof value === 'number') return INT_PARAMETERS.has(name) ? int(Math.trunc(value)) : real(value);
+  // The setters take an `int`, so the Variant casts the float to int32 (`variant.h:370`).
+  if (typeof value === 'number') return INT_PARAMETERS.has(name) ? int(doubleToInt32(value)) : real(value);
   const [x = 0, y = 0, z = 0, w = 0] = value;
   if (value.length === 2) return vector2({ x, y });
   if (value.length === 3) return vector3({ x, y, z });

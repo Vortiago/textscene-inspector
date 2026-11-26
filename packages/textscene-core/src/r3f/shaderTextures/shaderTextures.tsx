@@ -6,11 +6,11 @@ import type { ShaderTextureReference } from '../../resources/materials/shadermat
 import type { SamplerValue } from '../../shaders/uniforms/samplerUniform';
 import type { ShaderSampler } from '../../shaders/uniforms/shaderSamplers';
 import { useTexture2DRid } from '../../resources/useTexture2D';
-import { useTexture3D } from '../../resources/useTexture3D';
-import { useCubemap } from '../../resources/useCubemap';
+import { useTexture3DState } from '../../resources/useTexture3D';
+import { useCubemapState } from '../../resources/useCubemap';
 import { topDownTexture } from '../../resources/textures/topDownTexture';
 import { withEntry } from '../../utils/withEntry';
-import { elementsOf, samplerValues } from './samplerValues';
+import { elementsOf, samplerValues, texturesOutcome, type TexturesOutcome } from './samplerValues';
 
 /** What a slot reports for its texture: the texture once it loads, and whether more is on its way. */
 export interface SlotState {
@@ -34,10 +34,18 @@ export interface ShaderTextures {
   readonly samplers: Readonly<Record<string, ShaderSampler>>;
 }
 
-/** The loaded textures by uniform name, the slots the caller renders, and each slot's state by its key. */
+/** Each slot's state by its key, `name` or `name[index]`, and where the slots stand together. */
+export interface SlotStates {
+  readonly byKey: ReadonlyMap<string, SlotState>;
+  readonly outcome: TexturesOutcome;
+}
+
+const NO_SLOT_STATES: SlotStates = { byKey: NO_STATES, outcome: 'settled' };
+
+/** The loaded textures by uniform name, the slots the caller renders, and the slots' states. */
 export function useShaderTextures(
   shader: ShaderTextures | null
-): [Readonly<Record<string, SamplerValue>>, ReactNode, ReadonlyMap<string, SlotState>] {
+): [Readonly<Record<string, SamplerValue>>, ReactNode, SlotStates] {
   const [states, setStates] = useState<ReadonlyMap<string, SlotState>>(NO_STATES);
   const report = useCallback<SlotReport>((key, state) => {
     setStates((current) => withEntry(current, key, state));
@@ -47,20 +55,44 @@ export function useShaderTextures(
     () => (references ? samplerValues(references, loadedTextures(states)) : NO_TEXTURES),
     [references, states]
   );
-  if (!shader) return [NO_TEXTURES, null, NO_STATES];
-  const slots = Object.entries(shader.references).flatMap(([name, reference]) => {
-    // Godot ignores a value no sampler declares.
-    const sampler = shader.samplers[name];
+  const mounted = useMemo(() => shader && mountedSlots(shader), [shader]);
+  const slotStates = useMemo(
+    () =>
+      mounted
+        ? {
+            byKey: states,
+            outcome: texturesOutcome(
+              mounted.map(({ key }) => key),
+              states
+            ),
+          }
+        : NO_SLOT_STATES,
+    [mounted, states]
+  );
+  if (!mounted) return [NO_TEXTURES, null, NO_SLOT_STATES];
+  const slots = mounted.map(({ key, Slot, reference, isColor }) => (
+    <Slot key={key} name={key} reference={reference} isColor={isColor} onState={report} />
+  ));
+  return [textures, slots, slotStates];
+}
+
+interface MountedSlot {
+  readonly key: string;
+  readonly Slot: ComponentType<ShaderTextureSlotProps>;
+  readonly reference: ScopedReference;
+  readonly isColor: boolean;
+}
+
+/** A slot for each texture a declared sampler reads: Godot ignores a value no sampler declares. */
+function mountedSlots({ references, samplers }: ShaderTextures): MountedSlot[] {
+  return Object.entries(references).flatMap(([name, reference]) => {
+    const sampler = Object.hasOwn(samplers, name) ? samplers[name] : undefined;
     const Slot = sampler && SLOT_OF_KIND[sampler.kind];
     if (!Slot) return [];
-    return elementsOf(name, reference).map(
-      ([key, element]) =>
-        element && (
-          <Slot key={key} name={key} reference={element} isColor={sampler.isColor} onState={report} />
-        )
+    return elementsOf(name, reference).flatMap(([key, element]) =>
+      element ? [{ key, Slot, reference: element, isColor: sampler.isColor }] : []
     );
   });
-  return [textures, slots, states];
 }
 
 function loadedTextures(states: ReadonlyMap<string, SlotState>): ReadonlyMap<string, THREE.Texture> {
@@ -92,24 +124,13 @@ function FlatTextureSlot({ name, reference, isColor, onState }: ShaderTextureSlo
   return null;
 }
 
-// A layered slot reports no arrival: only a generated shader waits on its textures, all flat.
 function CubemapSlot({ name, reference, onState }: ShaderTextureSlotProps): null {
-  const texture = useCubemap(reference);
-  useReportedState(
-    name,
-    useMemo(() => ({ texture, isArriving: false, isMissing: false }), [texture]),
-    onState
-  );
+  useReportedState(name, useCubemapState(reference), onState);
   return null;
 }
 
 function Texture3DSlot({ name, reference, onState }: ShaderTextureSlotProps): null {
-  const texture = useTexture3D(reference);
-  useReportedState(
-    name,
-    useMemo(() => ({ texture, isArriving: false, isMissing: false }), [texture]),
-    onState
-  );
+  useReportedState(name, useTexture3DState(reference), onState);
   return null;
 }
 

@@ -33,23 +33,15 @@ export function samplerValues(
   return values;
 }
 
-/** What a slot says of its texture: whether more is on its way, and whether it never draws. */
-interface SlotOutcome {
-  readonly isArriving: boolean;
-  readonly isMissing: boolean;
-}
+/** Where a shader's texture slots stand: one still arriving, one that never draws, or all settled. */
+export type TexturesOutcome = 'arriving' | 'missing' | 'settled';
 
-/** Where the declared samplers' textures stand: Godot ignores an undeclared sampler's texture. */
-export function sampledTexturesOutcome(
-  references: Readonly<Record<string, ShaderTextureReference>>,
-  samplers: Readonly<Record<string, unknown>>,
-  states: ReadonlyMap<string, SlotOutcome>
-): 'arriving' | 'missing' | 'settled' {
-  const sampled = Object.entries(references)
-    .filter(([name]) => name in samplers)
-    .flatMap(([name, reference]) => elementsOf(name, reference))
-    .filter(([, element]) => element !== null)
-    .map(([key]) => states.get(key));
-  if (sampled.some((state) => state === undefined || state.isArriving)) return 'arriving';
-  return sampled.some((state) => state!.isMissing) ? 'missing' : 'settled';
+/** Where the slots of `keys` stand; a slot that has not reported is still arriving. */
+export function texturesOutcome(
+  keys: readonly string[],
+  states: ReadonlyMap<string, { readonly isArriving: boolean; readonly isMissing: boolean }>
+): TexturesOutcome {
+  const reported = keys.map((key) => states.get(key));
+  if (reported.some((state) => state === undefined || state.isArriving)) return 'arriving';
+  return reported.some((state) => state!.isMissing) ? 'missing' : 'settled';
 }

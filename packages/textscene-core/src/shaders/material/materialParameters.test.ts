@@ -30,6 +30,13 @@ describe('materialParameters', () => {
     });
   });
 
+  it('casts a non-finite float to the lowest int32, as the Variant cast to the setter does', () => {
+    expect(parametersOf({ heightmap_min_layers: Number.NaN, heightmap_max_layers: Infinity })).toMatchObject({
+      heightmap_min_layers: int(-2147483648),
+      heightmap_max_layers: int(-2147483648),
+    });
+  });
+
   it('copies a property into the parameter Godot names after it', () => {
     const parameters = parametersOf({
       albedo_color: [0.2, 0.4, 0.6, 0.8],

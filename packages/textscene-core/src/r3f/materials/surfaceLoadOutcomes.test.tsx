@@ -30,7 +30,7 @@ vi.mock('../spatialShader/spatialSurface', async () => {
     surfaceShaderOf,
     spatialSurfaceOf: (_gl: unknown, shader: SurfaceShader) => ({
       spatial: { material: TRANSLATED, parameters: {}, pointDraw: null },
-      samplers: Object.fromEntries(declaredSamplers(shader.code).map((name) => [name, { kind: 'flat' }])),
+      samplers: Object.fromEntries(declaredSamplers(shader.code)),
     }),
     disposeSpatial: () => {},
     setParameterValues: () => {},
@@ -42,12 +42,31 @@ vi.mock('../spatialShader/spatialSurface', async () => {
 const SETTLING_TICKS = 10;
 const MAP_PATH = 'res://map.png';
 
-/** The samplers a generated text declares: Godot declares one only for a map the material reads. */
-function declaredSamplers(text: string): string[] {
-  return [...text.matchAll(/uniform sampler2D (\w+)/g)].map((match) => match[1]!);
+/** The sampler kind of each GLSL sampler type a row's text declares. */
+const KIND_OF_TYPE: Readonly<Record<string, string>> = {
+  sampler2D: 'flat',
+  samplerCube: 'cube',
+  sampler3D: 'volume',
+  sampler2DArray: 'layers',
+};
+
+/** The samplers a text declares, with their kinds: Godot declares one only for a map the material reads. */
+function declaredSamplers(text: string): [string, { kind: string }][] {
+  return [...text.matchAll(/uniform (sampler\w+) (\w+)/g)].map(([, type, name]) => [
+    name!,
+    { kind: KIND_OF_TYPE[type!]! },
+  ]);
 }
 const MATERIAL_PATH = 'res://paint.tres';
-const EXTERNAL: TscnExternalResource[] = [{ id: '1_map', type: 'Texture2D', path: MAP_PATH }];
+const CUBE_PATH = 'res://sky.webp';
+const VOLUME_PATH = 'res://volume.png';
+const LAYERS_PATH = 'res://layers.png';
+const EXTERNAL: TscnExternalResource[] = [
+  { id: '1_map', type: 'Texture2D', path: MAP_PATH },
+  { id: '2_cube', type: 'CompressedCubemap', path: CUBE_PATH },
+  { id: '3_volume', type: 'CompressedTexture3D', path: VOLUME_PATH },
+  { id: '4_layers', type: 'CompressedTexture2DArray', path: LAYERS_PATH },
+];
 
 /** What the surface draws: the translated shader, the missing-texture placeholder, or a classic material. */
 type Drawn = 'node path' | 'placeholder' | 'classic';
@@ -242,5 +261,92 @@ describe('what a surface draws on the node lit surface for a material file', () 
 
     // Godot draws a surface with no material through its default (`render_forward_clustered.cpp:4222`).
     expect(drawn()).toBe('node path');
+  });
+});
+
+/** A user's spatial shader that samples `uniforms`, each line a declaration, and writes their sum. */
+function layeredShader(uniforms: string, reads: string): TscnInternalResource {
+  return {
+    id: 'Code',
+    type: 'Shader',
+    data: {
+      code: JSON.stringify(`shader_type spatial;\n${uniforms}\nvoid fragment() {\n\tALBEDO = ${reads};\n}\n`),
+    },
+  };
+}
+
+/** A ShaderMaterial row on a map other than a flat texture: the kind, its file and its processor. */
+const LAYERED_ROWS = [
+  {
+    kind: 'a samplerCube',
+    shader: layeredShader('uniform samplerCube sky;', 'texture(sky, NORMAL).rgb'),
+    parameter: { 'shader_parameter/sky': 'ExtResource("2_cube")' },
+    settleLate: (fake: FakeResourceLoader) => fake.cubemaps._resolve(CUBE_PATH, new THREE.CubeTexture()),
+    settleMissing: (fake: FakeResourceLoader) => fake.cubemaps._fail(CUBE_PATH, 'not found'),
+  },
+  {
+    kind: 'a sampler3D',
+    shader: layeredShader('uniform sampler3D volume;', 'texture(volume, vec3(UV, 0.5)).rgb'),
+    parameter: { 'shader_parameter/volume': 'ExtResource("3_volume")' },
+    settleLate: (fake: FakeResourceLoader) =>
+      fake.textures3D._resolve(VOLUME_PATH, new THREE.Data3DTexture()),
+    settleMissing: (fake: FakeResourceLoader) => fake.textures3D._fail(VOLUME_PATH, 'not found'),
+  },
+];
+
+// A user's shader draws while it waits, and a missing map file takes the placeholder, as a flat one does.
+describe('what a ShaderMaterial draws for each load outcome of a cube or volume map', () => {
+  async function renderShaded(row: (typeof LAYERED_ROWS)[number]) {
+    vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    const material: TscnInternalResource = {
+      id: 'Paint',
+      type: 'ShaderMaterial',
+      data: { shader: 'SubResource("Code")', ...row.parameter },
+    };
+    const resources = [material, row.shader];
+    return renderSurface(referenceIn('SubResource("Paint")', EXTERNAL, resources), resources);
+  }
+
+  it.each(LAYERED_ROWS)('draws the shader once $kind map loads', async (row) => {
+    const { fake, drawn } = await renderShaded(row);
+
+    await act(async () => row.settleLate(fake));
+    await settleEffects();
+
+    expect(drawn()).toBe('node path');
+  });
+
+  it.each(LAYERED_ROWS)('draws the placeholder once $kind map file is missing', async (row) => {
+    const { fake, drawn } = await renderShaded(row);
+
+    await act(async () => row.settleMissing(fake));
+    await settleEffects();
+    await vi.waitFor(() => expect(drawn()).toBe('placeholder'));
+  });
+
+  it('draws the placeholder for a missing flat map beside a sampler2DArray, which has no slot', async () => {
+    vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    const shader = layeredShader(
+      'uniform sampler2D albedo_map;\nuniform sampler2DArray layers;',
+      'texture(albedo_map, UV).rgb + texture(layers, vec3(UV, 0.0)).rgb'
+    );
+    const material: TscnInternalResource = {
+      id: 'Paint',
+      type: 'ShaderMaterial',
+      data: {
+        shader: 'SubResource("Code")',
+        'shader_parameter/albedo_map': 'ExtResource("1_map")',
+        'shader_parameter/layers': 'ExtResource("4_layers")',
+      },
+    };
+    const resources = [material, shader];
+    const { fake, drawn } = await renderSurface(
+      referenceIn('SubResource("Paint")', EXTERNAL, resources),
+      resources
+    );
+
+    await act(async () => fake.textures._fail(MAP_PATH, 'not found'));
+    await settleEffects();
+    await vi.waitFor(() => expect(drawn()).toBe('placeholder'));
   });
 });

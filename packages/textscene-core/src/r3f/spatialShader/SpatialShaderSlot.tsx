@@ -16,7 +16,6 @@ import { OTHER_DRAWS_SURFACE } from '../materials/useOneSurfaceStartingMaterial'
 import { useShaderTextures } from '../shaderTextures/shaderTextures';
 import { useShaderRefusalWarning, useShaderTranslator } from '../shaderTranslator/useShaderTranslator';
 import type { SurfaceShaderSource } from './surfaceShader';
-import { sampledTexturesOutcome } from '../shaderTextures/samplerValues';
 
 /** Imported by the first spatial shader only: it holds the shader parser and three's TSL. */
 const loadSpatialSurface = memoisedImport(() => import('./spatialSurface'));
@@ -71,7 +70,7 @@ export function SpatialShaderSlot({ source, attach, fallback, placeholder }: Spa
   );
   useLayoutEffect(() => {
     if (!spatial || !shader) return;
-    module!.setParameterValues(spatial.parameters, shader.parametersWith(textures, slotStates));
+    module!.setParameterValues(spatial.parameters, shader.parametersWith(textures, slotStates.byKey));
     invalidate();
   }, [module, spatial, shader, textures, slotStates, invalidate]);
 
@@ -80,11 +79,10 @@ export function SpatialShaderSlot({ source, attach, fallback, placeholder }: Spa
     [module, attach, spatial, scene]
   );
   if (!spatial || !surfaceAttach) return <>{fallback}</>;
-  const textureOutcome = sampledTexturesOutcome(shader!.textures, samplers!, slotStates);
   // A texture that never draws takes the placeholder, the mark the classic material gives it.
-  const held = textureOutcome === 'missing' && placeholder ? placeholder : null;
+  const held = slotStates.outcome === 'missing' && placeholder ? placeholder : null;
   // A generated shader waits for its textures, so the classic material that already draws them stays.
-  const waiting = isGenerated && textureOutcome !== 'settled' ? fallback : null;
+  const waiting = isGenerated && slotStates.outcome !== 'settled' ? fallback : null;
   if (held ?? waiting) {
     return (
       <>

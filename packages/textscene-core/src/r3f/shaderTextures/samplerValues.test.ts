@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import type { ScopedReference } from '../../resources/reading';
-import { elementsOf, sampledTexturesOutcome, samplerValues } from './samplerValues';
+import { elementsOf, samplerValues, texturesOutcome } from './samplerValues';
 
 const reference = (ref: string) => ({ ref }) as unknown as ScopedReference;
 
@@ -33,41 +33,31 @@ describe('samplerValues', () => {
   });
 });
 
-describe('sampledTexturesOutcome', () => {
-  const albedo = reference('ExtResource("1")');
-  const normal = reference('ExtResource("2")');
-  const samplers = { texture_albedo: {} };
+describe('texturesOutcome', () => {
   const loaded = { isArriving: false, isMissing: false };
   const missing = { isArriving: false, isMissing: true };
 
   it('is arriving for a slot that has not reported', () => {
-    expect(sampledTexturesOutcome({ texture_albedo: albedo }, samplers, new Map())).toBe('arriving');
+    expect(texturesOutcome(['texture_albedo'], new Map())).toBe('arriving');
   });
 
-  it('is arriving for a texture still on its way', () => {
-    const states = new Map([['texture_albedo', { isArriving: true, isMissing: false }]]);
-    expect(sampledTexturesOutcome({ texture_albedo: albedo }, samplers, states)).toBe('arriving');
+  it('is arriving for a texture still on its way, even beside one that never draws', () => {
+    const states = new Map([
+      ['texture_albedo', { isArriving: true, isMissing: false }],
+      ['texture_normal', missing],
+    ]);
+    expect(texturesOutcome(['texture_albedo', 'texture_normal'], states)).toBe('arriving');
   });
 
-  it('is settled once each declared sampler has its texture', () => {
-    const states = new Map([['texture_albedo', loaded]]);
-    expect(sampledTexturesOutcome({ texture_albedo: albedo }, samplers, states)).toBe('settled');
+  it('is settled once each slot has its texture', () => {
+    expect(texturesOutcome(['texture_albedo'], new Map([['texture_albedo', loaded]]))).toBe('settled');
   });
 
-  it('is missing once a declared sampler settles on a texture that never draws', () => {
-    const states = new Map([['texture_albedo', missing]]);
-    expect(sampledTexturesOutcome({ texture_albedo: albedo }, samplers, states)).toBe('missing');
+  it('is missing once a slot settles on a texture that never draws', () => {
+    expect(texturesOutcome(['texture_albedo'], new Map([['texture_albedo', missing]]))).toBe('missing');
   });
 
-  it('ignores a texture no sampler declares, which never reports', () => {
-    const states = new Map([['texture_albedo', loaded]]);
-    const references = { texture_albedo: albedo, texture_normal: normal };
-    expect(sampledTexturesOutcome(references, samplers, states)).toBe('settled');
-  });
-
-  it('waits for each element of a sampler array by its own key', () => {
-    const references = { texture_albedo: [albedo, null, normal] };
-    const states = new Map([['texture_albedo[0]', loaded]]);
-    expect(sampledTexturesOutcome(references, samplers, states)).toBe('arriving');
+  it('is settled for a shader with no slot', () => {
+    expect(texturesOutcome([], new Map())).toBe('settled');
   });
 });

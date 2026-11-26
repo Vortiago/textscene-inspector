@@ -73,8 +73,9 @@ export function SurfaceMaterialSlot({
   const drawsShader = shaded !== null && !undrawnOn && !(listed && !shader);
   const placeholder = materialBagElement(drawnBag(MISSING_TEXTURE_MATERIAL, draws), attach, null);
   const standard = bags ? <StandardMaterialSlot bags={bags} attach={attach} draws={draws} /> : placeholder;
-  if (!drawsShader) return standard;
-  if (!bags || !drawsClassicVariants(shaded, shader)) {
+  // No bags means a texture that never draws, so the placeholder stands before any shader.
+  if (!drawsShader || !bags) return standard;
+  if (!drawsClassicVariants(shaded, shader)) {
     return (
       <SpatialShaderSlot source={shaded} attach={attach} fallback={standard} placeholder={placeholder} />
     );
