@@ -81,7 +81,7 @@ function hitThrough(probe: Probe, mesh: THREE.Mesh, ndc: [number, number]): THRE
 /** A press on the canvas, and a release R3F reports on `object`. */
 async function click({ renderer, probe }: Awaited<ReturnType<typeof renderScene>>, object: THREE.Object3D) {
   const root = renderer.scene.find((instance) => typeof instance.props.onPointerUp === 'function');
-  const at = { button: 0, clientX: 10, clientY: 10 };
+  const at = { pointerId: 1, button: 0, clientX: 10, clientY: 10 };
   probe.canvas!.dispatchEvent(new PointerEvent('pointerdown', at));
   await renderer.fireEvent(root, 'onPointerUp', { ...at, object });
 }
