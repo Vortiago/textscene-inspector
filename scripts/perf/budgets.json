@@ -234,7 +234,7 @@
     }
   },
   "dungeon-pan": {
-    "drawCalls": 606.5,
+    "drawCalls": 607,
     "sceneRenders": 0,
     "steps": {
       "2D lights": {
@@ -242,7 +242,7 @@
         "runs": 1
       },
       "Scene draw": {
-        "drawCalls": 307.5,
+        "drawCalls": 308,
         "runs": 1
       },
       "Canvas copy": {
@@ -256,15 +256,15 @@
     }
   },
   "dungeon-zoom": {
-    "drawCalls": 586,
+    "drawCalls": 607,
     "sceneRenders": 0,
     "steps": {
       "2D lights": {
-        "drawCalls": 289,
+        "drawCalls": 298,
         "runs": 1
       },
       "Scene draw": {
-        "drawCalls": 296,
+        "drawCalls": 308,
         "runs": 1
       },
       "Canvas copy": {

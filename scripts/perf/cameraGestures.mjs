@@ -2,14 +2,17 @@
 
 import { CANVAS_2D_TESTIDS } from '../visual/previewServer.mjs';
 
+// A 2D step under a pixel moves no item across the view edge, so a window of an odd frame count stays steady.
+const STAGE_STEP = 1 / 1024;
+
 /** The buttons and modifiers are those `resolveNavMode` reads, in godotEditorCursor.ts. */
 export const CAMERA_GESTURES = {
-  'pan-2d': { target: 'stage', button: 0, moves: true },
-  'zoom-2d': { target: 'stage', wheels: true },
-  'orbit-3d': { target: 'canvas', button: 1, moves: true },
-  'pan-3d': { target: 'canvas', button: 1, shiftKey: true, moves: true },
-  'zoom-3d': { target: 'canvas', wheels: true },
-  'freelook-3d': { target: 'canvas', button: 2, moves: true, keys: ['KeyW', 'KeyS'] },
+  'pan-2d': { target: 'stage', step: STAGE_STEP, button: 0, moves: true },
+  'zoom-2d': { target: 'stage', step: STAGE_STEP, wheels: true },
+  'orbit-3d': { target: 'canvas', step: 1, button: 1, moves: true },
+  'pan-3d': { target: 'canvas', step: 1, button: 1, shiftKey: true, moves: true },
+  'zoom-3d': { target: 'canvas', step: 1, wheels: true },
+  'freelook-3d': { target: 'canvas', step: 1, button: 2, moves: true, keys: ['KeyW', 'KeyS'] },
 };
 
 /** One step there and one back each frame keeps each window's mean steady. Null, or why it cannot start. */
@@ -49,11 +52,11 @@ function driveEachFrame({ gesture, selector }) {
   let frame = 0;
   const step = () => {
     frame += 1;
-    const sign = frame % 2 === 0 ? 1 : -1;
-    if (gesture.moves) pointer('pointermove', sign);
+    const offset = frame % 2 === 0 ? gesture.step : -gesture.step;
+    if (gesture.moves) pointer('pointermove', offset);
     if (gesture.wheels) {
       target.dispatchEvent(
-        new WheelEvent('wheel', { ...mouse, clientX: x, deltaY: 100 * sign, cancelable: true })
+        new WheelEvent('wheel', { ...mouse, clientX: x, deltaY: 100 * offset, cancelable: true })
       );
     }
     if (gesture.keys) {
