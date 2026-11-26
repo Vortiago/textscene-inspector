@@ -224,7 +224,7 @@ export class Tokens {
     let code = 0;
     for (let i = 0; i < (next === 'U' ? 6 : 4); i++) {
       const digit = this.char();
-      if (digit === '') throw new TokenError('Unterminated string');
+      if (digit === '' || digit === '\0') throw new TokenError('Unterminated string');
       if (!isHexDigit(digit)) throw new TokenError('Malformed hex constant in string');
       code = code * 16 + Number.parseInt(digit, 16);
     }

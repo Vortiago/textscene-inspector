@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readVariant, strToVar, Tokens } from './strToVar';
+import { isEscapedNewline, readVariant, strToVar, Tokens } from './strToVar';
 import { varToStr } from './varToStr';
 import { VARIANT_TYPE as T } from './variantType';
 
@@ -115,11 +115,33 @@ describe('Tokens', () => {
     expect(new Tokens('"a\\\0b"').next()).toEqual({ kind: 'error', message: 'Unterminated string' });
   });
 
+  it('refuses a hex escape a NUL cuts as an unterminated string (variant_parser.cpp:321)', () => {
+    expect(new Tokens('"\\u00\0a"').next()).toEqual({ kind: 'error', message: 'Unterminated string' });
+  });
+
   it('is not at the end before a read finds it', () => {
     const tokens = new Tokens('a');
     expect(tokens.isEof).toBe(false);
     tokens.next();
     expect(tokens.next()).toEqual({ kind: 'eof' });
     expect(tokens.isEof).toBe(true);
+  });
+});
+
+describe('isEscapedNewline', () => {
+  it('is true after an odd run of backslashes', () => {
+    expect(isEscapedNewline('"a\\\\\\\n', 5)).toBe(true);
+  });
+
+  it('is false after an even run of backslashes', () => {
+    expect(isEscapedNewline('"a\\\\\n', 4)).toBe(false);
+  });
+
+  it('counts a run that starts the text', () => {
+    expect(isEscapedNewline('\\\n', 1)).toBe(true);
+  });
+
+  it('is false where a carriage return sits between the backslash and the newline', () => {
+    expect(isEscapedNewline('"a\\\r\n', 4)).toBe(false);
   });
 });
