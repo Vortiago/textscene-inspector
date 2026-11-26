@@ -287,7 +287,8 @@ export class TscnParserCore {
           // would.
           pendingMultiline.lines.push(line);
           pendingMultiline.scanState = scanValueChunk(line, pendingMultiline.scanState);
-          if (escapesItsNewline(line, pendingMultiline.scanState)) skippedLines++;
+          if (pendingMultiline.scanState.inString && escapesItsNewline(content, lineStarts, i))
+            skippedLines++;
           if (!isIncompleteState(pendingMultiline.scanState)) storePending();
           continue;
         }
@@ -314,6 +315,8 @@ export class TscnParserCore {
           i = hasRest ? end.line - 1 : end.line;
           continue;
         }
+        // The section before closes as the tag opens, so a field reads what it declared.
+        finalizeSection();
         if (tag) {
           addFieldValues(tag.fields, tag.name ?? '', headings.previous());
           headings.refuse({ error: tag.error, code: tag.code, line: tag.line });
@@ -326,12 +329,10 @@ export class TscnParserCore {
         });
         // The lenient path draws what it can of a heading Godot refuses.
         if (isHeading(line)) {
-          finalizeSection();
           openSection(parseHeading(line)!, lineNumber, godotLine, []);
           continue;
         }
         // An unclosed heading draws nothing, and the lines its tag read are no section's body.
-        finalizeSection();
         if (tag) i = Math.max(i, lineAndColumnOf(lineStarts, tag.stop, i).line - 1);
         continue;
       }
@@ -358,7 +359,7 @@ export class TscnParserCore {
             godotStartLine: godotLine,
             scanState,
           };
-          if (escapesItsNewline(property.value, scanState)) skippedLines++;
+          if (scanState.inString && escapesItsNewline(content, lineStarts, i)) skippedLines++;
         } else {
           // Stored as the setter takes it, `frames` as `sprite_frames`. A diagnostic names the text.
           const resolved = resolveDeprecatedProperty(currentOwnerType(), property.key, property.value);
@@ -420,11 +421,13 @@ export class TscnParserCore {
   }
 }
 
-/** True when `chunk` ends inside a string on a `\\`, which escapes the newline after it. */
-function escapesItsNewline(chunk: string, state: ValueScanState): boolean {
+/** True when line `at` ends on an odd run of `\\` right before its `\n`, with no `\r` or space between. */
+function escapesItsNewline(content: string, lineStarts: readonly number[], at: number): boolean {
+  const newline = lineStarts[at + 1];
+  if (newline === undefined) return false;
   let backslashes = 0;
-  while (chunk[chunk.length - 1 - backslashes] === '\\') backslashes++;
-  return state.inString && backslashes % 2 === 1;
+  while (content[newline - 2 - backslashes] === '\\') backslashes++;
+  return backslashes % 2 === 1;
 }
 
 /** The offset each line of `content` starts at, as `splitLines` splits it. */

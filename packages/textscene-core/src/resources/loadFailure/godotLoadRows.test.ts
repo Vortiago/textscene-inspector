@@ -2030,6 +2030,35 @@ position = Vector2(5, 5)
     stop: 'Parse Error: Parse error. [Resource file res://row137.tscn:10]',
     lenientTree: 'Root[A, C]',
   },
+  {
+    row: 138,
+    reads: 'a refused heading reads an ExtResource the [ext_resource] just before it declares',
+    file: 'tscn',
+    text: `[gd_scene format=3]
+
+[ext_resource type="Resource" path="res://other.tres" id="1"]
+
+[node name="Root" type="Node2D" x=ExtResource("1") 5]
+`,
+    failing: [{ path: 'res://other.tres', kind: 'section ExtResource', line: 5 }],
+    stop: 'res://row138.tscn:5 - Parse Error: Expected identifier.',
+  },
+  {
+    row: 139,
+    reads: 'CRLF: a backslash before the \\r escapes the \\r, and the newline still counts',
+    file: 'tscn',
+    text: '[gd_scene format=3]\r\n\r\n[node name="Root" type="Node"]\r\neditor_description = "a\\\r\nb"\r\n\r\n[node name="B" parent="." type=]\r\n',
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row139.tscn:7]',
+  },
+  {
+    row: 140,
+    reads: 'a backslash before a space escapes the space, and the newline still counts',
+    file: 'tscn',
+    text: '[gd_scene format=3]\n\n[node name="Root" type="Node"]\neditor_description = "a\\ \nb"\n\n[node name="B" parent="." type=]\n',
+    failing: [],
+    stop: 'Parse Error: Parse error. [Resource file res://row140.tscn:7]',
+  },
 ];
 
 /** The path Godot loaded the row under, which its stop line names. */
