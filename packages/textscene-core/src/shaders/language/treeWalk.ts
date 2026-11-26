@@ -130,6 +130,14 @@ export function variablesRead(shader: ShaderNode, keeps: (variable: VariableNode
   return names;
 }
 
+/**
+ * The name of each built-in a function of `shader` reads or writes, in the order of the text.
+ * @canonical The built-ins a shader names
+ */
+export function builtInsNamed(shader: ShaderNode): Set<string> {
+  return variablesRead(shader, (variable) => variable.builtIn !== undefined);
+}
+
 /** Every expression of `expression`, itself first. */
 export function* everyExpression(expression: Expression): Generator<Expression> {
   yield expression;

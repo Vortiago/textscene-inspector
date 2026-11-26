@@ -85,8 +85,12 @@ func mesh_node(surface: Dictionary, texture: Texture2D, is_textured: bool) -> Me
 		arrays[Mesh.ARRAY_TEX_UV] = vector2s(surface.uvs)
 	if surface.indices != null:
 		arrays[Mesh.ARRAY_INDEX] = PackedInt32Array(surface.indices)
+	var flags := 0
+	for custom in surface.customs.size():
+		arrays[Mesh.ARRAY_CUSTOM0 + custom] = PackedFloat32Array(surface.customs[custom])
+		flags |= Mesh.ARRAY_CUSTOM_RGBA_FLOAT << (Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT + custom * Mesh.ARRAY_FORMAT_CUSTOM_BITS)
 	var mesh := ArrayMesh.new()
-	mesh.add_surface_from_arrays(PRIMITIVES[surface.primitive], arrays)
+	mesh.add_surface_from_arrays(PRIMITIVES[surface.primitive], arrays, [], {}, flags)
 	var node := MeshInstance2D.new()
 	node.mesh = mesh
 	if is_textured:

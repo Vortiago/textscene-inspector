@@ -2,8 +2,12 @@ import { attributesVariant } from '../../../../packages/textscene-core/src/shade
 import { primitiveDraw } from '../../../../packages/textscene-core/src/shaders/canvas/canvasPrimitive.ts';
 import { CANVAS_VARIANT_DEFINES } from '../../../../packages/textscene-core/src/shaders/canvas/transpileCanvas.ts';
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
+import { parsedShader } from '../../../../packages/textscene-core/src/shaders/language/parseShader.ts';
 import { GENERAL_DEFINES } from '../../../../packages/textscene-core/src/shaders/template/generalDefines.ts';
-import { usageDefineOf } from '../../../../packages/textscene-core/src/shaders/template/link.ts';
+import {
+  compileMaterial,
+  usageDefineOf,
+} from '../../../../packages/textscene-core/src/shaders/template/link.ts';
 import { MODE_TABLES } from '../../../../packages/textscene-core/src/shaders/template/modeTables.generated.ts';
 import { preprocess } from '../../../../packages/textscene-core/src/shaders/template/preprocess.ts';
 import { splitStages } from '../../../../packages/textscene-core/src/shaders/template/stages.ts';
@@ -12,7 +16,7 @@ import { variantLines } from '../../../../packages/textscene-core/src/shaders/te
 
 const CANVAS_FILE = 'canvas.glsl';
 
-/** The state of a branch that Godot's default canvas shader takes in a variant a scene draws. */
+/** The state of a branch that a scene's shader, or the default one, takes in a variant the scene draws. */
 export const DRAWN = 'drawn against Godot';
 
 /** The state of a branch a user's shader takes and no scene takes yet, with the rows that take it. */
@@ -83,35 +87,48 @@ function definedMaterials() {
 }
 
 /** The variant of each draw of a canvas scene, as the page picks it. */
-export function drawnVariants(scenes) {
-  return new Set(
-    scenes.flatMap((scene) => {
-      switch (scene.kind) {
-        case 'rect':
-          return ['quad'];
-        case 'ninepatch':
-          return ['ninepatch'];
-        case 'primitive':
-          return scene.primitives.map(({ points }) => primitiveDraw(points.length).variant);
-        case 'polygon':
-        case 'drawPolygon':
-          return ['attributes'];
-        case 'mesh':
-          return [attributesVariant(scene.surface.primitive)];
-        default:
-          throw new Error(`expected a canvas scene kind, got ${scene.kind}`);
-      }
-    })
-  );
+function drawnVariants(scene) {
+  switch (scene.kind) {
+    case 'rect':
+      return ['quad'];
+    case 'ninepatch':
+      return ['ninepatch'];
+    case 'primitive':
+      return scene.primitives.map(({ points }) => primitiveDraw(points.length).variant);
+    case 'polygon':
+    case 'drawPolygon':
+      return ['attributes'];
+    case 'mesh':
+      return [attributesVariant(scene.surface.primitive)];
+    default:
+      throw new Error(`expected a canvas scene kind, got ${scene.kind}`);
+  }
 }
 
-/** The branches of `stage` the default shader takes in each of `variants`. */
-const drawnBranches = (stage, variants) =>
+/** The defines of a scene's shader, Godot's default one included, as `transpileCanvasItem` compiles it. */
+export function sceneMaterial(scene) {
+  const { tree } = parsedShader(scene.source, { file: 'scene.gdshader' });
+  const material = compileMaterial(tree, MODE_TABLES.canvas_item);
+  return {
+    custom: material.custom,
+    hasUniforms: material.hasUniforms,
+    codeSections: [...material.code.keys()],
+  };
+}
+
+/** Each scene's material with the variants the scene draws, compiled once for both stages. */
+const sceneDraws = (scenes) =>
+  scenes.map((scene) => ({ material: sceneMaterial(scene), variants: drawnVariants(scene) }));
+
+/** The branches of `stage` each scene's material takes in each variant the scene draws. */
+const drawnBranches = (stage, draws) =>
   new Set(
-    [...variants].flatMap((variant) =>
-      decidedBranches(stage, variant, NO_MATERIAL)
-        .filter((branch) => branch.isTaken)
-        .map((branch) => branch.key)
+    draws.flatMap(({ material, variants }) =>
+      variants.flatMap((variant) =>
+        decidedBranches(stage, variant, material)
+          .filter((branch) => branch.isTaken)
+          .map((branch) => branch.key)
+      )
     )
   );
 
@@ -137,11 +154,11 @@ const openState = (rows) =>
  * @canonical The state of each branch of the canvas template
  */
 export function canvasBranchStates(scenes) {
-  const variants = drawnVariants(scenes);
   const materials = [DEFAULT_SHADER, ...definedMaterials()];
+  const draws = sceneDraws(scenes);
   return Object.fromEntries(
     STAGES.map((stage) => {
-      const drawn = drawnBranches(stage, variants);
+      const drawn = drawnBranches(stage, draws);
       const { takenBy, decided } = materialBranches(stage, materials);
       const states = [...decided].map((key) => {
         if (drawn.has(key)) return [key, DRAWN];

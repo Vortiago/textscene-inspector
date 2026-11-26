@@ -47,6 +47,7 @@ const PUBLIC_VALUE_EXPORTS = [
   'polygonCommand',
   'polygonConstants',
   'primitiveBatchGeometry',
+  'primitiveBatchObject',
   'primitiveCommand',
   'primitiveDraw',
   'primitiveInstanceData',

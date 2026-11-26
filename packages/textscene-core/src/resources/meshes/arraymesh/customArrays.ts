@@ -1,11 +1,12 @@
 import { halfToFloat } from '../../../godot/math/halfFloat.js';
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
-import { ArrayCustomFormat, CUSTOM_FORMAT_LANES } from '../../../godot/rendering/meshArrayFormat.js';
+import {
+  ArrayCustomFormat,
+  CUSTOM_FORMAT_LANES,
+  fourCustomLanes,
+} from '../../../godot/rendering/meshArrayFormat.js';
 import type { CustomArraySlot, SurfaceLayout } from './surfaceFormat.js';
 import type { AttributeRecords } from './vertexBuffers.js';
-
-/** A vertex format with fewer lanes than four reads 0 for a missing lane and 1 for a missing alpha. */
-const MISSING_LANES = [0, 0, 0, 1] as const;
 
 const readUnorm8 = (view: DataView, offset: number) => view.getUint8(offset) / 255;
 const readSnorm8 = (view: DataView, offset: number) => Math.max(view.getInt8(offset) / 127, -1);
@@ -40,12 +41,7 @@ function customValues(
 ): Float32Array {
   const { lanes, laneBytes } = CUSTOM_FORMAT_LANES[slot.format]!;
   const lane = LANE_READS[slot.format];
-  const values = new Float32Array(vertexCount * 4);
-  for (let vertex = 0; vertex < vertexCount; vertex++) {
-    const record = vertex * attributeStride + slot.offset;
-    for (let index = 0; index < lanes; index++)
-      values[vertex * 4 + index] = lane(view, record + index * laneBytes);
-    for (let index = lanes; index < 4; index++) values[vertex * 4 + index] = MISSING_LANES[index]!;
-  }
-  return values;
+  return fourCustomLanes(vertexCount, lanes, (vertex, index) =>
+    lane(view, vertex * attributeStride + slot.offset + index * laneBytes)
+  );
 }

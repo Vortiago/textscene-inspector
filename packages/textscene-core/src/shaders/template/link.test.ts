@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parse } from '../language/parse.js';
 import { tokenize } from '../language/tokenizer.js';
-import { compileMaterial, linkTemplateStage } from './link.js';
+import { compileMaterial, linkTemplateStage, templateVariant } from './link.js';
 import { MODE_TABLES } from './modeTables.generated.js';
 import { printTemplateStage } from './printTemplate.js';
 import { DEFAULT_SKY } from '../sky/defaultSky.testkit';
@@ -49,6 +49,45 @@ describe('compileMaterial', () => {
     const table = { ...MODE_TABLES.sky!, usage_defines: usage };
     const source = 'shader_type sky;\nvoid sky() {\n\tCOLOR = HALF_RES_COLOR.rgb;\n}\n';
     expect(compileMaterial(materialOf(source), table).custom).toEqual(['#define USES_QUARTER_RES_COLOR\n']);
+  });
+});
+
+describe('compileMaterial uniforms', () => {
+  const hasUniforms = (uniforms: string) =>
+    compileMaterial(materialOf(`shader_type canvas_item;\n${uniforms}\n`), MODE_TABLES.canvas_item!)
+      .hasUniforms;
+
+  it('makes the MaterialUniforms block for a uniform of the material and a global one', () => {
+    expect([hasUniforms('uniform float amount;'), hasUniforms('global uniform vec4 tint;')]).toEqual([
+      true,
+      true,
+    ]);
+  });
+
+  it('makes no block for a sampler or an instance uniform, which Godot binds apart', () => {
+    expect([
+      hasUniforms('uniform sampler2D noise;'),
+      hasUniforms('instance uniform float amount;'),
+      hasUniforms(''),
+    ]).toEqual([false, false, false]);
+  });
+
+  it('defines MATERIAL_UNIFORMS_USED in the stage of a material with a uniform', () => {
+    const material = compileMaterial(
+      materialOf('shader_type canvas_item;\nuniform float amount;\n'),
+      MODE_TABLES.canvas_item!
+    );
+    const lines = templateVariant('canvas.glsl', 'fragment', '', material);
+    expect(lines.some((line) => 'text' in line && line.text === '#define MATERIAL_UNIFORMS_USED')).toBe(true);
+  });
+
+  it('defines MATERIAL_UNIFORMS_USED in a spatial stage too, as one compiler serves both', () => {
+    const material = compileMaterial(
+      materialOf('shader_type spatial;\nuniform float amount;\n'),
+      MODE_TABLES.spatial!
+    );
+    const lines = templateVariant('forward_clustered/scene_forward_clustered.glsl', 'fragment', '', material);
+    expect(lines.some((line) => 'text' in line && line.text === '#define MATERIAL_UNIFORMS_USED')).toBe(true);
   });
 });
 

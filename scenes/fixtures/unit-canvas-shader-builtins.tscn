@@ -1,0 +1,169 @@
+[gd_scene format=3]
+
+; One variable: the built-ins a canvas_item shader reads or writes through Godot's canvas template, which no
+; other golden draws. A points mesh writes POINT_SIZE and reads POINT_COORD. A mesh reads CUSTOM0 as four
+; floats and CUSTOM1 as two, so its missing lanes show. Five sprites follow: world_vertex_coords, NORMAL with
+; NORMAL_MAP, light_only, a uniform at its default, and POINT_SIZE written by a sprite's shader. One scene holds
+; them because each is one define of the same template link, and each sits at its own place, so a diff
+; names the built-in that moved.
+
+[ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
+
+[sub_resource type="Shader" id="Shader_points"]
+code = "shader_type canvas_item;
+
+void vertex() {
+	POINT_SIZE = 11.0 + float(VERTEX_ID) * 4.0;
+}
+
+void fragment() {
+	COLOR = vec4(POINT_COORD, 0.5, 1.0);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_points"]
+shader = SubResource("Shader_points")
+
+[sub_resource type="Shader" id="Shader_customs"]
+code = "shader_type canvas_item;
+
+void vertex() {
+	COLOR = vec4(CUSTOM0.xy, CUSTOM1.y, CUSTOM0.w * 0.5 + CUSTOM1.w * 0.5);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_customs"]
+shader = SubResource("Shader_customs")
+
+[sub_resource type="Shader" id="Shader_world"]
+code = "shader_type canvas_item;
+render_mode world_vertex_coords;
+
+void vertex() {
+	VERTEX = (VERTEX - vec2(100.0, 330.0)) * 0.6 + vec2(100.0, 330.0);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_world"]
+shader = SubResource("Shader_world")
+
+[sub_resource type="Shader" id="Shader_normal"]
+code = "shader_type canvas_item;
+
+void fragment() {
+	NORMAL = vec3(0.6, -0.4, 0.7);
+	NORMAL_MAP = vec3(UV, 1.0);
+	COLOR = vec4(NORMAL.xy * 0.5 + 0.5, UV.y, SPECULAR_SHININESS.a * 0.8);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_normal"]
+shader = SubResource("Shader_normal")
+
+[sub_resource type="Shader" id="Shader_light_only"]
+code = "shader_type canvas_item;
+render_mode light_only;
+
+void fragment() {
+	COLOR = vec4(1.0, 0.2, 0.2, 1.0);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_light_only"]
+shader = SubResource("Shader_light_only")
+
+[sub_resource type="Shader" id="Shader_point_size"]
+code = "shader_type canvas_item;
+
+void vertex() {
+	POINT_SIZE = 4.0;
+}
+
+void fragment() {
+	COLOR = vec4(UV, 0.3, 1.0);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_point_size"]
+shader = SubResource("Shader_point_size")
+
+[sub_resource type="Shader" id="Shader_default"]
+code = "shader_type canvas_item;
+
+uniform vec4 tint : source_color = vec4(0.2, 0.8, 0.4, 1.0);
+uniform float strength = 0.7;
+
+void fragment() {
+	COLOR = mix(texture(TEXTURE, UV), tint, strength);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_default"]
+shader = SubResource("Shader_default")
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_points"]
+_surfaces = [{
+"2d": true,
+"aabb": AABB(-60, 0, 0, 145, 1e-05, 0),
+"format": 34393292801,
+"primitive": 0,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray(0, 0, 112, 194, 0, 0, 0, 0, 0, 0, 160, 193, 0, 0, 0, 0, 0, 0, 240, 65, 0, 0, 0, 0, 0, 0, 170, 66, 0, 0, 0, 0)
+}]
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_customs"]
+_surfaces = [{
+"2d": true,
+"aabb": AABB(-60, -50, 0, 120, 100, 0),
+"attribute_data": PackedByteArray("AACAPwAAAAAAAAAAzcxMPmZmZj/NzMw9AAAAAAAAgD8AAAAAmpkZP83MTD4AAAA/AAAAAAAAAAAAAIA/AACAP83MzD4AAIA/AACAPwAAgD8AAAAAzczMPgAAAAAzMzM/"),
+"format": 34393682113,
+"index_count": 6,
+"index_data": PackedByteArray("AAABAAIAAAACAAMA"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("AABwwgAASMIAAHBCAABIwgAAcEIAAEhCAABwwgAASEI=")
+}]
+
+[node name="Root" type="Node2D"]
+
+[node name="Points" type="MeshInstance2D" parent="."]
+material = SubResource("ShaderMaterial_points")
+position = Vector2(200, 130)
+mesh = SubResource("ArrayMesh_points")
+
+[node name="Customs" type="MeshInstance2D" parent="."]
+material = SubResource("ShaderMaterial_customs")
+position = Vector2(560, 130)
+mesh = SubResource("ArrayMesh_customs")
+
+[node name="WorldVertexCoords" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_world")
+position = Vector2(100, 330)
+scale = Vector2(0.75, 0.75)
+texture = ExtResource("1_marker")
+
+[node name="Normal" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_normal")
+position = Vector2(250, 330)
+scale = Vector2(0.75, 0.75)
+texture = ExtResource("1_marker")
+
+[node name="LightOnly" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_light_only")
+position = Vector2(400, 330)
+scale = Vector2(0.75, 0.75)
+texture = ExtResource("1_marker")
+
+[node name="DefaultUniform" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_default")
+position = Vector2(550, 330)
+scale = Vector2(0.75, 0.75)
+texture = ExtResource("1_marker")
+
+[node name="PointSizeOnSprite" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_point_size")
+position = Vector2(700, 330)
+scale = Vector2(0.75, 0.75)
+texture = ExtResource("1_marker")

@@ -64,6 +64,7 @@ export {
 } from './canvas/canvasRect.js';
 export {
   primitiveBatchGeometry,
+  primitiveBatchObject,
   primitiveCommand,
   primitiveDraw,
   primitiveInstanceData,
@@ -94,12 +95,8 @@ export {
 export type { PointDraw } from './spatial/spatialPipeline.js';
 export type { DirectionalLight } from './spatial/directionalLights.js';
 export type { SceneSky } from './spatial/sceneSky.js';
-export {
-  emulatedPointGeometry,
-  withGodotAttributes,
-  withSurfaceStarts,
-  type GodotPrimitive,
-} from './spatial/meshAttributes.js';
+export { withGodotAttributes, withSurfaceStarts, type GodotPrimitive } from './spatial/meshAttributes.js';
+export { emulatedPointGeometry } from './template/emulatedPoints.js';
 export { createDepthPrepass, type DepthPrepass, type DepthPrepassOptions } from './pipeline/depthPrepass.js';
 export {
   SCENE_BINDINGS,

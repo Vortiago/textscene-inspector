@@ -6,9 +6,9 @@ Each draw reads the item's transform, its final modulate and the render target's
 
 A rect and a nine-patch draw as Godot's quad batch does. `textureRectRegion(rect, source, modulate, { transpose, clipUv })` is the rect command of `draw_texture_rect_region`: a negative size flips that axis. `rectInstanceData(command, item, texelSize)` and `ninePatchInstanceData(command, item, texelSize)` write Godot's 128-byte `InstanceData` record. `quadBatchGeometry(records)` gives the instanced quad that reads each record as the attributes `attrib_A` to `attrib_H`.
 
-A primitive of `draw_primitive` draws as Godot's primitive batch does. `primitiveCommand(points, colors, uvs)` repeats the first colour for a point with none. `primitiveInstanceData(command, item)` writes one record for a point, a line or a triangle, and two for a quad, with each colour in half floats. `primitiveDraw(pointCount)` names the variant and the primitive, and `primitiveBatchGeometry(records, pointCount)` gives the geometry. `primitiveObject(primitive, geometry, material)` gives the three.js object that draws it: points, lines, a line strip, triangles or a triangle strip.
+A primitive of `draw_primitive` draws as Godot's primitive batch does. `primitiveCommand(points, colors, uvs)` repeats the first colour for a point with none. `primitiveInstanceData(command, item)` writes one record for a point, a line or a triangle, and two for a quad, with each colour in half floats. `primitiveDraw(pointCount)` names the variant and the primitive, and `primitiveBatchGeometry(records, pointCount)` gives the geometry. `primitiveObject(primitive, geometry, material)` gives the three.js object that draws it: points, lines, a line strip, triangles or a triangle strip. `primitiveBatchObject(draw, records, pointCount)` gives the object of the draw's variant in one call.
 
-A polygon and a mesh surface draw through the attributes variant, one draw each. `polygonCommand(points, colors, uvs)` cuts an outline into triangles, as `draw_polygon` does, and `triangleArrayCommand(indices, points, colors, uvs)` takes the triangles of a Polygon2D. `attributesGeometry(arrays)` writes the vertex arrays, with Godot's default white colour and zero UV for a missing array. `polygonConstants(item)` and `meshConstants(item, { transform, modulate })` give the push constants, and `attributesObject(draw, geometry, primitive, constants)` writes them before each draw of the object.
+A polygon and a mesh surface draw through the attributes variant, one draw each. `polygonCommand(points, colors, uvs)` cuts an outline into triangles, as `draw_polygon` does, and `triangleArrayCommand(indices, points, colors, uvs)` takes the triangles of a Polygon2D. `attributesGeometry(arrays, draw)` writes the vertex arrays, with Godot's default white colour and zero UV for a missing array. `polygonConstants(item)` and `meshConstants(item, { transform, modulate })` give the push constants, and `attributesObject(draw, geometry, primitive, constants)` writes them before each draw of the object.
 
 A viewport with `use_hdr_2d` keeps colours linear. Set `usesLinearColors` on the frame, the item and the texture state: the template then turns the vertex colours linear, Godot's C++ turns the modulate colours linear, and the texture reads through its sRGB view. Without it, the texels and the colours reach the frame as they are stored. 2D lights do not draw yet, and their rows stay open with their issues.
 
@@ -1032,6 +1032,62 @@ render_mode light_only;
 | --- | --- |
 | <img src="showcase/canvas-shader-light-only-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-light-only-three.png" width="256" alt="Transpilation"> |
 
+## Showcase `canvas-shader-mesh-customs`
+
+Godot draws an ArrayMesh of 2D vertices on a MeshInstance2D of a 2D view, with a ShaderMaterial of this shader (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+
+void vertex() {
+	COLOR = vec4(CUSTOM0.xy, CUSTOM1.z, CUSTOM0.w + CUSTOM1.w * 0.5);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-shader-mesh-customs-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-mesh-customs-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-shader-point-size-mesh`
+
+Godot draws an ArrayMesh of 2D vertices on a MeshInstance2D of a 2D view, with a ShaderMaterial of this shader (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+
+void vertex() {
+	POINT_SIZE = 2.0 + float(VERTEX_ID) * 1.5;
+}
+
+void fragment() {
+	COLOR = vec4(POINT_COORD, COLOR.b, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-shader-point-size-mesh-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-point-size-mesh-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `canvas-shader-point-size-primitive`
+
+Godot draws the scene's `draw_primitive` calls on a Node2D of a 2D view, with a ShaderMaterial of this shader (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type canvas_item;
+
+void vertex() {
+	POINT_SIZE = 3.0 + float(INSTANCE_ID) * 2.0;
+}
+
+void fragment() {
+	COLOR = vec4(POINT_COORD.x, COLOR.g, POINT_COORD.y, 1.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/canvas-shader-point-size-primitive-godot.png" width="256" alt="Godot"> | <img src="showcase/canvas-shader-point-size-primitive-three.png" width="256" alt="Transpilation"> |
+
 ## Showcase `canvas-shader-blend-mix`
 
 Godot draws the scene's rects on a Node2D of a 2D view, with a ShaderMaterial of this shader (`tests/e2e/canvasScenes.mjs`). A plain three.js page draws the same commands through the transpiled canvas template with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
@@ -1286,9 +1342,18 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 
 ## `VERTEX_ID`, `INSTANCE_ID`, `INSTANCE_CUSTOM`, `CUSTOM0`, `CUSTOM1` and `TEXTURE_PIXEL_SIZE` in `vertex()`
 
-`VERTEX_ID` and `INSTANCE_ID` are the draw's vertex and instance index: a quad batch draws one instance for each rect. `INSTANCE_CUSTOM` is a MultiMesh instance's custom data, and `CUSTOM0` and `CUSTOM1` a mesh's custom arrays, each zero with none (`canvas.glsl:139-188`).
+`VERTEX_ID` and `INSTANCE_ID` are the draw's vertex and instance index: a quad batch draws one instance for each rect. `INSTANCE_CUSTOM` is a MultiMesh instance's custom data, and `CUSTOM0` and `CUSTOM1` a mesh's custom arrays, each zero with none (`canvas.glsl:139-188`). `attributesGeometry` takes them as `customs`, four lanes a vertex. It binds only those in the draw's `customsRead`, as `canvas.glsl:12-18` declares no other.
 
 The transpiler emits `vertexIndex`, `instanceIndex` and the template's locals `instance_custom`, `custom0` and `custom1`. Rows: `canvas_item.vertex.INSTANCE_CUSTOM`, `canvas_item.vertex.INSTANCE_ID`, `canvas_item.vertex.VERTEX_ID`, `canvas_item.vertex.TEXTURE_PIXEL_SIZE`, `canvas_item.vertex.CUSTOM0`, `canvas_item.vertex.CUSTOM1`. Godot source: `servers/rendering/shader_types.cpp:277`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `POINT_SIZE` and `POINT_COORD`
+
+A point of a one-point primitive or of a mesh of `PRIMITIVE_POINTS` draws in a points variant, which writes `POINT_SIZE` as the point's size in pixels, 1 when `vertex()` leaves it (`canvas.glsl:268, 300-302`). `POINT_COORD` runs from 0 to 1 across the point, with y down (`renderer_canvas_render_rd.cpp:1800`). three's node shaders write a size of 1 to every point, so a shader that names `POINT_SIZE` draws each point as an instance of six vertices, at the corners of a square of `POINT_SIZE` pixels: `CanvasDraw.emulatesPoints` is then true. `attributesObject` and `primitiveBatchObject` build that draw. A size below 1, 0 or a negative size draws as 1 pixel, as Vulkan draws it.
+
+The transpiler emits `devicePoints`: the square's corner of `vertexIndex` and a varying of it for `gl_PointCoord`, or three's `pointUV` turned for a point of 1 pixel. Rows: `canvas_item.vertex.POINT_SIZE`, `canvas_item.fragment.POINT_COORD`. Godot source: `servers/rendering/shader_types.cpp:272`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 

@@ -1,5 +1,5 @@
 import type { ShaderNode } from '../language/shaderTree.js';
-import { variablesRead } from '../language/treeWalk.js';
+import { builtInsNamed } from '../language/treeWalk.js';
 import { SKY_LIGHT_BUILT_IN } from '../../godot/rendering/environment/skyShader.js';
 import { isSamplerType } from '../language/types.js';
 import { shaderSamplers, type ShaderSampler } from '../uniforms/shaderSamplers.js';
@@ -35,7 +35,7 @@ const PASS_COLORS = [
 /** What `tree` reads, as Godot's compiler flags it, or nothing for a sky that draws Godot's default sky. */
 export function skyUsage(tree: ShaderNode | null): SkyUsage {
   if (tree === null) return NO_USAGE;
-  const names = variablesRead(tree, (variable) => variable.builtIn !== undefined);
+  const names = builtInsNamed(tree);
   return {
     light: [...names].some((name) => SKY_LIGHT_BUILT_IN.test(name)),
     time: names.has('TIME'),

@@ -9,7 +9,10 @@ import {
   modulated,
   WHITE,
 } from './canvasInstance.js';
-import type { CanvasVariant } from './transpileCanvas.js';
+import { QUAD_VERTICES } from '../../godot/rendering/emulatedPoints.js';
+import { primitiveObject } from './canvasAttributes.js';
+import type { Drawable } from '../pipeline/drawable.js';
+import type { CanvasDraw, CanvasVariant } from './transpileCanvas.js';
 
 /** `Item::CommandPrimitive`: each point with its UV and colour. */
 export interface CanvasPrimitiveCommand {
@@ -102,4 +105,22 @@ export function primitiveBatchGeometry(
     throw new Error(`expected a batch of primitives of 1 to 4 points, got ${pointCount}`);
   const indices = PRIMITIVE_INDICES[Math.min(3, pointCount) - 1]!;
   return instanceBatchGeometry(records, PRIMITIVE_FLOAT_ATTRIBUTES, indices);
+}
+
+/** The index of each of the six corners of a point's two triangles, which `devicePoints` places. */
+const POINT_QUAD_INDICES = [...Array(QUAD_VERTICES).keys()];
+
+/** A batch of primitives of `pointCount` points, each point two triangles where `draw` emulates points. */
+export function primitiveBatchObject(
+  draw: CanvasDraw,
+  records: readonly ArrayBuffer[],
+  pointCount: number
+): Drawable {
+  if (draw.emulatesPoints && pointCount !== 1)
+    throw new Error(`expected a batch of one-point primitives for a points draw, got ${pointCount} points`);
+  const geometry = primitiveBatchGeometry(records, pointCount);
+  if (!draw.emulatesPoints)
+    return primitiveObject(primitiveDraw(pointCount).primitive, geometry, draw.material);
+  geometry.setIndex(POINT_QUAD_INDICES);
+  return primitiveObject('triangles', geometry, draw.material);
 }

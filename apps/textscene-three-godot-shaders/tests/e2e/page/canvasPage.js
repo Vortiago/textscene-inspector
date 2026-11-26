@@ -10,7 +10,7 @@ import {
   ninePatchInstanceData,
   polygonCommand,
   polygonConstants,
-  primitiveBatchGeometry,
+  primitiveBatchObject,
   primitiveCommand,
   primitiveDraw,
   primitiveInstanceData,
@@ -175,9 +175,8 @@ function primitiveObjects(draws, { primitives, isTextured }) {
     else runs.push({ count: points.length, records });
   }
   return runs.map(({ count, records }) => {
-    const { variant, primitive } = primitiveDraw(count);
-    const { draw } = draws.draw(variant, isTextured);
-    return primitiveObject(primitive, primitiveBatchGeometry(records, count), draw.material);
+    const { draw } = draws.draw(primitiveDraw(count).variant, isTextured);
+    return primitiveBatchObject(draw, records, count);
   });
 }
 
@@ -205,7 +204,8 @@ function drawnPolygonObjects(draws, { polygon }) {
 /** One polygon command through the attributes variant, with the item's push constants. */
 function polygonObject(draws, command, isTextured) {
   const { draw } = draws.draw('attributes', isTextured);
-  return attributesObject(draw, attributesGeometry(command), 'triangles', polygonConstants(draws.itemDraw));
+  const geometry = attributesGeometry(command, draw);
+  return attributesObject(draw, geometry, 'triangles', polygonConstants(draws.itemDraw));
 }
 
 /** `Geometry2D::triangulate_polygon`, which `polygonCommand` runs. */
@@ -219,10 +219,11 @@ function meshObjects(draws, { surface, isTextured }) {
     points: surface.vertices.map(vector2),
     colors: surface.colors.map(rgba),
     uvs: surface.uvs.map(vector2),
+    customs: surface.customs.map((lanes) => Float32Array.from(lanes)),
   };
   const { draw } = draws.draw(attributesVariant(surface.primitive), isTextured);
   const constants = meshConstants(draws.itemDraw, { transform: IDENTITY, modulate: WHITE });
-  return [attributesObject(draw, attributesGeometry(arrays), surface.primitive, constants)];
+  return [attributesObject(draw, attributesGeometry(arrays, draw), surface.primitive, constants)];
 }
 
 /** The quad batch of the scene's one nine-patch. */

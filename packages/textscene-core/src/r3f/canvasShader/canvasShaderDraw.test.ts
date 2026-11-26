@@ -124,6 +124,15 @@ describe('canvasShaderDraw', () => {
     expect(object.children[0]).toBeInstanceOf(THREE.Points);
   });
 
+  it('keeps one box across the sources of a rect batch', () => {
+    const draw = drawOf();
+    const geometry = (draw.object.children[0] as THREE.Mesh).geometry;
+    const box = geometry.boundingBox;
+    draw.setSource(TEXTURE, [RECT_COMMAND]);
+
+    expect(geometry.boundingBox).toBe(box);
+  });
+
   it('draws batches that frustum culling never skips', () => {
     const { object } = drawOf([RECT_COMMAND, meshCommand()]);
 

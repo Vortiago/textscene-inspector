@@ -5,7 +5,11 @@ import { multiplyTransform2D, type Transform2DColumns } from '../../godot/math/t
 import type { Vector2 } from '../../godot/math/vector.js';
 import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
 import type { CanvasPrimitive } from './canvasPrimitive.js';
+import type { Drawable } from '../pipeline/drawable.js';
 import { type CanvasItemDraw, modulated, NO_INSTANCE_UNIFORMS, WHITE, worldOf } from './canvasInstance.js';
+import { emulatedPointGeometry } from '../template/emulatedPoints.js';
+import { CUSTOM_ARRAY_LANES } from '../../godot/rendering/meshArrayFormat.js';
+import { customArrayTemplateAttribute, VERTEX_ID_ATTRIBUTE } from '../template/surfaceAttributes.js';
 import type { CanvasDraw, CanvasVariant } from './transpileCanvas.js';
 
 /** The vertex arrays of `Item::CommandPolygon`, or of one surface of a mesh. */
@@ -18,6 +22,8 @@ export interface CanvasVertexArrays {
   readonly colors: readonly Rgba[];
   /** One UV for each point, or none for zero. */
   readonly uvs: readonly Vector2[];
+  /** CUSTOM0 and CUSTOM1 as the vertex stage reads them, four lanes per point, each undefined when absent. */
+  readonly customs?: readonly (Float32Array | undefined)[];
 }
 
 /** `canvas_item_add_polygon` (`renderer_canvas_cull.cpp:1715`): the outline cut into triangles. */
@@ -62,10 +68,13 @@ const DEFAULT_COLOR = [1, 1, 1, 1];
 const DEFAULT_UV = [0, 0];
 
 /**
- * `request_polygon` (`renderer_canvas_render_rd.cpp:104-300`), a missing array as its default buffer.
+ * `request_polygon` (`renderer_canvas_render_rd.cpp:104-300`): default buffers, and the custom arrays read.
  * @canonical The vertex attributes of a canvas polygon or mesh surface
  */
-export function attributesGeometry(arrays: CanvasVertexArrays): THREE.BufferGeometry {
+export function attributesGeometry(
+  arrays: CanvasVertexArrays,
+  { customsRead, emulatesPoints }: Pick<CanvasDraw, 'customsRead' | 'emulatesPoints'>
+): THREE.BufferGeometry {
   const { points, colors, uvs, indices } = checkedArrays(arrays);
   const count = points.length;
   const geometry = new THREE.BufferGeometry();
@@ -81,6 +90,19 @@ export function attributesGeometry(arrays: CanvasVertexArrays): THREE.BufferGeom
   geometry.setAttribute('color_attrib', floats(colorValues ?? repeated(DEFAULT_COLOR, count), 4));
   const uvValues = uvs.length === count ? uvs.flatMap(({ x, y }) => [x, y]) : repeated(DEFAULT_UV, count);
   geometry.setAttribute('uv_attrib', floats(uvValues, 2));
+  customsRead.forEach((custom) => {
+    const values = customLanesRead(arrays, custom);
+    geometry.setAttribute(
+      customArrayTemplateAttribute(custom),
+      new THREE.BufferAttribute(values, CUSTOM_ARRAY_LANES)
+    );
+  });
+  // Only an emulated point reads its vertex's index from an attribute: three's own points read `vertexIndex`.
+  if (emulatesPoints)
+    geometry.setAttribute(
+      VERTEX_ID_ATTRIBUTE,
+      new THREE.BufferAttribute(Float32Array.from(points.keys()), 1)
+    );
   geometry.setAttribute('bone_attrib', new THREE.BufferAttribute(new Uint32Array(count * 4), 4));
   geometry.setAttribute('weight_attrib', new THREE.BufferAttribute(new Float32Array(count * 4), 4));
   // In order without indices: three counts the vertices of an unindexed draw from `position` alone.
@@ -90,6 +112,18 @@ export function attributesGeometry(arrays: CanvasVertexArrays): THREE.BufferGeom
   // The template places each vertex through the push constants, so `position` bounds nothing.
   geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), Infinity);
   return geometry;
+}
+
+/** The lanes of the custom array `custom`, checked only when the shader reads it. */
+function customLanesRead({ customs, points }: CanvasVertexArrays, custom: number): Float32Array {
+  const lanes = customs?.[custom];
+  // A missing custom array reads zero (`mesh_storage.cpp:120-131`).
+  if (!lanes) return new Float32Array(points.length * CUSTOM_ARRAY_LANES);
+  if (lanes.length !== points.length * CUSTOM_ARRAY_LANES)
+    throw new Error(
+      `expected ${points.length * CUSTOM_ARRAY_LANES} lanes in CUSTOM${custom}, got ${lanes.length}`
+    );
+  return lanes;
 }
 
 const floats = (values: number[], size: number) => new THREE.BufferAttribute(new Float32Array(values), size);
@@ -190,15 +224,19 @@ function constantsOf(object: THREE.Object3D): AttributesConstants {
 /** Written only by `writeEachDraw`: the draws whose hook writes each object's constants. */
 const hookedDraws = new WeakSet<CanvasDraw>();
 
-/** An object that draws `geometry` as `primitive` with `draw`, which writes `constants` before it draws. */
+/** An object that draws `geometry` as `primitive` with `draw`. The caller disposes `object.geometry` too. */
 export function attributesObject(
   draw: CanvasDraw,
   geometry: THREE.BufferGeometry,
   primitive: CanvasPrimitive,
   constants: AttributesConstants
-): THREE.Object3D {
+): Drawable {
   writeEachDraw(draw);
-  const object = primitiveObject(primitive, geometry, draw.material);
+  if (draw.emulatesPoints && primitive !== 'points')
+    throw new Error(`expected points for a draw that emulates points, got ${primitive}`);
+  const object = draw.emulatesPoints
+    ? primitiveObject('triangles', emulatedPointGeometry(geometry), draw.material)
+    : primitiveObject(primitive, geometry, draw.material);
   object.userData[CONSTANTS_KEY] = constants;
   return object;
 }
@@ -227,13 +265,17 @@ export function primitiveObject(
   primitive: CanvasPrimitive,
   geometry: THREE.BufferGeometry,
   material: THREE.Material
-): THREE.Object3D {
+): Drawable {
   const object = objectOf(primitive, geometry, material);
   object.frustumCulled = false;
   return object;
 }
 
-function objectOf(primitive: CanvasPrimitive, geometry: THREE.BufferGeometry, material: THREE.Material) {
+function objectOf(
+  primitive: CanvasPrimitive,
+  geometry: THREE.BufferGeometry,
+  material: THREE.Material
+): Drawable {
   switch (primitive) {
     case 'points':
       return new THREE.Points(geometry, material);
