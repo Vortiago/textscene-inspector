@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { isEscapedNewline, readVariant, strToVar, Tokens } from './strToVar';
+import { isEscapedNewline, readVariant, strToVar, Tokens, ValueReader } from './strToVar';
+import { ParseError } from './parseError';
 import { varToStr } from './varToStr';
 import { VARIANT_TYPE as T } from './variantType';
 
@@ -155,5 +156,26 @@ describe('isEscapedNewline', () => {
 
   it('is false where a carriage return sits between the backslash and the newline', () => {
     expect(isEscapedNewline('"a\\\r\n', 4)).toBe(false);
+  });
+});
+
+describe('ValueReader', () => {
+  const valueOf = (text: string) => {
+    const tokens = new Tokens(text);
+    return new ValueReader(tokens, {}).value(tokens.next());
+  };
+
+  it('reads a value from the token it is given', () => {
+    expect(valueOf('5')).toEqual(strToVar('5'));
+  });
+
+  it('throws a ParseError for a value Godot refuses', () => {
+    expect(() => valueOf('[1 2]')).toThrow(ParseError);
+  });
+
+  it('leaves the tokens just past the value it read', () => {
+    const tokens = new Tokens('[1] x');
+    new ValueReader(tokens, {}).value(tokens.next());
+    expect(tokens.next()).toEqual({ kind: 'identifier', text: 'x' });
   });
 });
