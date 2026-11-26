@@ -11,8 +11,6 @@ import { useViewWork } from '../../resources/ResourceLoaderContext';
 import { useViewportAnisotropy } from '../viewportAnisotropy';
 import { TiledUploadContext } from './TiledUploadContext';
 
-const NO_WORK = () => {};
-
 /**
  * `texture` once it is on the GPU, else the texture shown before it, else null. The caller frees
  * what it passed in: a texture on screen may be an earlier input.
@@ -29,16 +27,16 @@ export function useTiledUpload<T extends THREE.Texture>(texture: T | null): T | 
   useEffect(() => {
     if (!isTiled || !texture || !queue) return undefined;
     const upload = queue.enqueue(texture);
-    const endWork = textures?.begin() ?? NO_WORK;
+    const endWork = textures?.begin();
     let current = true;
     void upload.done.then((isUploaded) => {
-      endWork();
+      endWork?.();
       if (current && isUploaded) setUploaded(texture);
     });
     return () => {
       current = false;
       upload.cancel();
-      endWork();
+      endWork?.();
     };
   }, [texture, queue, isTiled, textures]);
 

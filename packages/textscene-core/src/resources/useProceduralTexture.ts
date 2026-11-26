@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
 import { inThreadJobRunner } from '../workers/WorkerJobRunner.js';
 import { usePendingWhile } from './usePendingWhile.js';
-import { useResourceLoader, useViewWork } from './ResourceLoaderContext.js';
+import { useResourceLoader } from './ResourceLoaderContext.js';
 import { withKey } from '../utils/keySet.js';
 import type { ProceduralTextureLookup } from './textures/proceduralBuilds.js';
 import {
@@ -85,7 +85,8 @@ export function useProceduralTexture(lookup: ProceduralTextureLookup | null): Pr
   }, [build, runner]);
 
   usePendingWhile(build !== null);
-  useTextureWorkWhile(build !== null);
+  // Ends in the commit that shows the texture, where its upload begins, so the count never reads zero.
+  usePendingWhile(build !== null, 'textures');
   useProceduralTexturePins([...(shown ? [shown.key] : []), ...(build ? [build.key] : [])]);
 
   return { texture: shown?.texture ?? null, claimed: lookup !== null, building: build !== null };
@@ -101,12 +102,6 @@ function shownTexture(
   if (lookup === null || hasFailed) return null;
   if (lookup.status === 'ready') return { texture: lookup.texture, key: lookup.key };
   return landedTexture ? { texture: landedTexture, key: lookup.key } : lastShown;
-}
-
-/** Ends in the commit that shows the texture, where its upload begins, so the count never reads zero. */
-function useTextureWorkWhile(isWorking: boolean): void {
-  const textures = useViewWork()?.textures;
-  useEffect(() => (textures && isWorking ? textures.begin() : undefined), [textures, isWorking]);
 }
 
 interface Landed {

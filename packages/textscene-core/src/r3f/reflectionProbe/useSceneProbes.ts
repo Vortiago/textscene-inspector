@@ -3,7 +3,7 @@
  * frame. The first holder drives, so a scene with several probes updates them once.
  */
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import type * as THREE from 'three';
 import type { ViewportDescription } from '../viewportRender/viewportDescription.js';
@@ -21,6 +21,7 @@ export function useSceneProbes(): void {
   const scene = useThree((state) => state.scene);
   const invalidate = useThree((state) => state.invalidate);
   const work = useViewWork();
+  const [pendingWork] = useState(() => pendingSceneWork(null));
   const clearColor = useRef<THREE.Color>(null!);
   clearColor.current = useProjectClearColor();
   const viewport = useRef<ViewportDescription>(null!);
@@ -30,7 +31,7 @@ export function useSceneProbes(): void {
   useFrame(() => {
     const probes = probesOfScenes.drivenBy(scene, holder);
     if (!probes) return;
-    const pending = totalPendingWork(pendingSceneWork(work));
+    const pending = totalPendingWork(pendingSceneWork(work, pendingWork));
     if (probes.update(pending, clearColor.current, viewport.current)) invalidate();
   });
 }

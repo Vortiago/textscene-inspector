@@ -4,11 +4,11 @@
  */
 import { useCallback, useSyncExternalStore } from 'react';
 import { useViewWork } from '../resources/ResourceLoaderContext.js';
-import { hasPendingWork, pendingSceneWork, subscribeSceneWork } from './sceneWork.js';
+import { isViewWorking, subscribeSceneWork } from './sceneWork.js';
 
 export function useSceneAssetsSettled(): boolean {
   const work = useViewWork();
   const subscribe = useCallback((onChange: () => void) => subscribeSceneWork(work, onChange), [work]);
-  const isSettled = () => !hasPendingWork(pendingSceneWork(work));
+  const isSettled = () => !isViewWorking(work);
   return useSyncExternalStore(subscribe, isSettled, isSettled);
 }

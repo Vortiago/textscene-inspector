@@ -6,9 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { ResourceLoader } from '../../resources/ResourceLoader';
-import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
-import { createPendingProbe } from '../../resources/testing/pendingProbe';
+import { viewWrapper } from '../../resources/testing/pendingProbe';
 import { fakeTiledUploads, type FakeUpload } from './fakeTiledUploads.testkit';
 import { useTiledUpload } from './useTiledUpload';
 
@@ -28,15 +26,13 @@ async function finish(entry: FakeUpload | undefined): Promise<void> {
 /** The fake uploads in a view of their own, whose texture work `textures` reads. */
 function uploadsInView() {
   const uploads = fakeTiledUploads();
-  const { Probe, work } = createPendingProbe();
-  const loader = new ResourceLoader();
+  const view = viewWrapper();
   const wrapper = ({ children }: { children: ReactNode }) => (
-    <ResourceLoaderProvider loader={loader}>
-      <Probe />
+    <view.wrapper>
       <uploads.wrapper>{children}</uploads.wrapper>
-    </ResourceLoaderProvider>
+    </view.wrapper>
   );
-  return { pending: uploads.pending, wrapper, textures: () => work().textures };
+  return { pending: uploads.pending, wrapper, textures: () => view.work().textures };
 }
 
 afterEach(() => {

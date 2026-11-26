@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
-import type { ReactNode } from 'react';
-import { ResourceLoader } from '../../../../../resources/ResourceLoader';
-import { ResourceLoaderProvider } from '../../../../../resources/ResourceLoaderContext';
-import { createPendingProbe } from '../../../../../resources/testing/pendingProbe';
+import { viewWrapper } from '../../../../../resources/testing/pendingProbe';
 import { useGlyphDrawWork } from './useGlyphDrawWork';
 
 function heldDraw() {
@@ -13,14 +10,7 @@ function heldDraw() {
 }
 
 function renderInView(draws: ReadonlySet<Promise<void>>) {
-  const { Probe, work } = createPendingProbe();
-  const loader = new ResourceLoader();
-  const wrapper = ({ children }: { children: ReactNode }) => (
-    <ResourceLoaderProvider loader={loader}>
-      <Probe />
-      {children}
-    </ResourceLoaderProvider>
-  );
+  const { wrapper, work } = viewWrapper();
   const { unmount } = renderHook(() => useGlyphDrawWork(draws), { wrapper });
   return { fonts: () => work().fonts, unmount };
 }

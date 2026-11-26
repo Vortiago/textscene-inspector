@@ -1,4 +1,6 @@
-import { useViewWork } from '../ResourceLoaderContext';
+import type { ReactNode } from 'react';
+import { ResourceLoader } from '../ResourceLoader';
+import { ResourceLoaderProvider, useViewWork } from '../ResourceLoaderContext';
 import type { ViewWork } from '../viewWork';
 import type { WorkCount } from '../workCount';
 
@@ -26,4 +28,17 @@ export function createPendingProbe(): PendingProbe {
     subscribe: (listener) => rendered().resources.subscribe(listener),
     work: rendered,
   };
+}
+
+/** A wrapper that renders its children in a view of their own, on a loader that serves nothing. */
+export function viewWrapper(): { wrapper: (props: { children: ReactNode }) => ReactNode; work(): ViewWork } {
+  const { Probe, work } = createPendingProbe();
+  const loader = new ResourceLoader();
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <ResourceLoaderProvider loader={loader}>
+      <Probe />
+      {children}
+    </ResourceLoaderProvider>
+  );
+  return { wrapper, work };
 }

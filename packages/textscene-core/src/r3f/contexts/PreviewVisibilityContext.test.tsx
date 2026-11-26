@@ -5,9 +5,7 @@
 import type { ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
-import { ResourceLoader } from '../../resources/ResourceLoader';
-import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
-import { createPendingProbe } from '../../resources/testing/pendingProbe';
+import { viewWrapper } from '../../resources/testing/pendingProbe';
 import { PreviewVisibilityProvider, usePreviewFrameloop } from './PreviewVisibilityContext';
 import { ViewStatusProvider } from '../viewStatus/ViewStatusContext';
 import { createViewStatusStore } from '../viewStatus/viewStatus';
@@ -15,18 +13,16 @@ import { createViewStatusStore } from '../viewStatus/viewStatus';
 /** Renders the hook in a view, under a host whose visibility `setVisible` changes. */
 function renderUnderHost(initiallyVisible: boolean) {
   let isVisible = initiallyVisible;
-  const { Probe, work } = createPendingProbe();
-  const loader = new ResourceLoader();
+  const view = viewWrapper();
   const wrapper = ({ children }: { children: ReactNode }) => (
-    <ResourceLoaderProvider loader={loader}>
-      <Probe />
+    <view.wrapper>
       <PreviewVisibilityProvider isVisible={isVisible}>{children}</PreviewVisibilityProvider>
-    </ResourceLoaderProvider>
+    </view.wrapper>
   );
   const { result, rerender } = renderHook(() => usePreviewFrameloop(), { wrapper });
   return {
     result,
-    work,
+    work: view.work,
     setVisible(next: boolean) {
       isVisible = next;
       rerender();

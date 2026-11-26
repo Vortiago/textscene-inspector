@@ -5,11 +5,10 @@
 
 import { createContext, useCallback, useContext, useSyncExternalStore, type ReactNode } from 'react';
 import { useViewWork } from '../../resources/ResourceLoaderContext.js';
-import { hasPendingWork, pendingSceneWork, subscribeSceneWork } from '../sceneWork.js';
+import { isViewWorking, subscribeSceneWork } from '../sceneWork.js';
+import { subscribeToNothing } from '../../utils/subscribeToNothing.js';
 import { useViewStatusStore } from '../viewStatus/ViewStatusContext.js';
 import type { ViewStatusStore } from '../viewStatus/viewStatus.js';
-
-const NO_UNSUBSCRIBE = () => {};
 
 /** The one default: a host with no visibility signal shows its preview, so every other embedder renders as before. */
 const PreviewVisibilityContext = createContext(true);
@@ -40,7 +39,7 @@ export function usePreviewFrameloop(): 'always' | 'never' {
   // of a load, and rebuild its whole tree, for a `frameloop` that stays 'always'.
   const subscribe = useCallback(
     (onChange: () => void) => {
-      if (isVisible) return NO_UNSUBSCRIBE;
+      if (isVisible) return subscribeToNothing();
       const unsubscribes = [subscribeSceneWork(work, onChange), view?.subscribe(onChange)];
       return () => unsubscribes.forEach((unsubscribe) => unsubscribe?.());
     },
@@ -48,7 +47,7 @@ export function usePreviewFrameloop(): 'always' | 'never' {
   );
   const isLoading = useSyncExternalStore(
     subscribe,
-    () => !isVisible && (hasPendingWork(pendingSceneWork(work)) || isViewWaiting(view))
+    () => !isVisible && (isViewWorking(work) || isViewWaiting(view))
   );
   return isVisible || isLoading ? 'always' : 'never';
 }

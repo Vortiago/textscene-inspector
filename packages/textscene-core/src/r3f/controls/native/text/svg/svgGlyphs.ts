@@ -45,6 +45,8 @@ export interface SvgGlyphs {
   readonly version: number;
 }
 
+const NO_DRAWS: ReadonlySet<Promise<void>> = new Set();
+
 /** Written only by `glyphDrawsOf`, for the length of its read: the draws in flight that it read. */
 let drawsRead: Set<Promise<void>> | null = null;
 
@@ -54,7 +56,7 @@ export function glyphDrawsOf<T>(read: () => T): { value: T; draws: ReadonlySet<P
   const draws = new Set<Promise<void>>();
   drawsRead = draws;
   try {
-    return { value: read(), draws };
+    return { value: read(), draws: draws.size > 0 ? draws : NO_DRAWS };
   } finally {
     drawsRead = outer;
     for (const draw of draws) outer?.add(draw);
@@ -111,9 +113,12 @@ export async function svgGlyphsOf(
       const { drawn, inFlight } = drawsAt(key, () => ({ drawn: new Map(), inFlight: new Map() }));
       return (glyph) => {
         if (drawn.has(glyph)) {
-          const draw = inFlight.get(glyph);
-          if (draw) drawsRead?.add(draw);
-          return drawn.get(glyph);
+          const bitmap = drawn.get(glyph);
+          if (drawsRead && bitmap === null) {
+            const draw = inFlight.get(glyph);
+            if (draw) drawsRead.add(draw);
+          }
+          return bitmap;
         }
         const picture = pictureOf(glyph);
         drawn.set(glyph, picture === undefined ? undefined : null);

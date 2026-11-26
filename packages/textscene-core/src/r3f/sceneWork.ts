@@ -1,4 +1,5 @@
 import type { ViewWork } from '../resources/viewWork.js';
+import { subscribeToNothing } from '../utils/subscribeToNothing.js';
 
 export interface PendingSceneWork {
   resources: number;
@@ -17,14 +18,17 @@ export function pendingSceneWork(
   return into;
 }
 
+/** Reads the counts in place, so a snapshot that runs on every render allocates nothing. */
+export function isViewWorking(work: ViewWork | null): boolean {
+  return work !== null && work.resources.pending() + work.textures.pending() + work.fonts.pending() > 0;
+}
+
 /** Subscribes `onChange` to each count of `work`. Returns the unsubscribe. */
 export function subscribeSceneWork(work: ViewWork | null, onChange: () => void): () => void {
-  if (!work) return NO_UNSUBSCRIBE;
+  if (!work) return subscribeToNothing();
   const stops = [work.resources, work.textures, work.fonts].map((count) => count.subscribe(onChange));
   return () => stops.forEach((stop) => stop());
 }
-
-const NO_UNSUBSCRIBE = () => {};
 
 export function totalPendingWork({ resources, textures, fonts }: PendingSceneWork): number {
   return resources + textures + fonts;
