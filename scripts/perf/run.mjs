@@ -118,7 +118,11 @@ async function measureScene({ page, diagnostics }, baseUrl, scene) {
   const loading = await sceneStillLoading(page);
   if (loading) return { work: null, reason: loading };
   if (scene.writesEachFrame) await startWritesEachFrame(page, scene.writesEachFrame);
-  if (scene.pansCamera) await startPanning(page);
+  if (scene.pansCamera) {
+    const isPanning = await startPanning(page);
+    const noStage = `expected the 2D stage to pan, found no ${CANVAS_2D_TESTIDS.stage}`;
+    if (!isPanning) return { work: null, reason: noStage };
+  }
   const { work, reason: unsteady } = await steadyWork(page);
   if (loggedErrors(diagnostics).length > 0) {
     return { work: null, reason: `console error(s): ${errorReport(diagnostics)}` };
@@ -151,10 +155,11 @@ async function startWritesEachFrame(page, { parent, count }) {
   );
 }
 
-/** One pixel right and back each frame: every item stays on screen, so the draws stay steady. */
+/** One pixel right and back each frame, so each window's mean work stays steady. False with no 2D stage. */
 async function startPanning(page) {
-  await page.evaluate((stageTestId) => {
+  return page.evaluate((stageTestId) => {
     const stage = document.querySelector(`[data-testid="${stageTestId}"]`);
+    if (!stage) return false;
     const { left, top, width, height } = stage.getBoundingClientRect();
     const y = top + height / 2;
     const pointer = (type, x) =>
@@ -179,6 +184,7 @@ async function startPanning(page) {
       requestAnimationFrame(move);
     };
     requestAnimationFrame(move);
+    return true;
   }, CANVAS_2D_TESTIDS.stage);
 }
 

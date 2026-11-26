@@ -1,4 +1,4 @@
-/** Cells: step, CPU ms, GPU ms, draws, runs. A row with no runs holds only a late GPU result. */
+/** Cells: step, CPU ms, GPU ms, draws, runs. A row with no runs holds only a late GPU result, so it goes. */
 export function parseWorkCounts({ drawCalls, sceneRenders, rows }) {
   const steps = {};
   for (const [step, , , stepDrawCalls, runsText] of rows) {

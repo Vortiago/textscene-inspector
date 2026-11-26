@@ -363,8 +363,7 @@ describe('<Canvas2DStage>', () => {
     const settled = frame.style.transform;
     const renders = viewRenders.count;
 
-    // One pointermove per pointer: a two-finger gesture delivers events in which
-    // nothing moved, and a re-render re-renders the Control overlay too.
+    // One pointermove per pointer: a two-finger gesture delivers events in which nothing moved.
     touch(stage, 'move', 1, 100, 300);
     touch(stage, 'move', 2, 200, 300);
 

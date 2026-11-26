@@ -118,7 +118,7 @@ export function Canvas2DStage({
   const applyView = useCallback(
     (next: StageView) => {
       const current = viewStore.get();
-      // An identical view still re-renders the stage and the Control overlay.
+      // The store compares by identity, so an equal new view would still re-render the stage chrome.
       if (next.zoom === current.zoom && next.pan.x === current.pan.x && next.pan.y === current.pan.y) {
         return;
       }
@@ -175,7 +175,7 @@ export function Canvas2DStage({
   const openView = useRef(() => {});
   const openScenePath = useRef(scenePath);
   useLayoutEffect(() => {
-    openView.current = () => (fitOnOpen ? fit() : applyView({ pan: { x: 0, y: 0 }, zoom: 1 }));
+    openView.current = () => (fitOnOpen ? fit() : applyView(OPENING_VIEW));
     openScenePath.current = scenePath;
   }, [fit, fitOnOpen, applyView, scenePath]);
   // Declared after the fit on open, so a write made before the mount lands on the fitted view.
