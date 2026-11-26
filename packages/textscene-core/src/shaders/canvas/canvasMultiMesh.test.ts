@@ -59,6 +59,13 @@ describe('instancedGeometry', () => {
       geometry.getIndex(),
     ]);
   });
+
+  it('draws an unindexed geometry with no index', () => {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('vertex_attrib', new THREE.BufferAttribute(new Float32Array(6), 2));
+
+    expect(instancedGeometry(geometry, 2).getIndex()).toBeNull();
+  });
 });
 
 describe('instancedPoints', () => {
