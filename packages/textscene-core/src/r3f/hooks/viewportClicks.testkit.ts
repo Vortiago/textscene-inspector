@@ -36,7 +36,7 @@ export function clickWith(
   if (otherPointer) moveOtherPointer(handlers, { ...press, pointerId: OTHER_POINTER_ID }, otherPointer);
   if (on) handlers.onPointerUp({ ...release, object: on, stopPropagation: () => {} } as never);
   handlers.onWindowPointerEnd({ ...release, type: 'pointerup' } as PointerEvent);
-  if (button === LEFT) handlers.onCanvasClick(release as MouseEvent);
+  if (button === LEFT) handlers.onCanvasClick(release as PointerEvent);
 }
 
 function moveOtherPointer(
