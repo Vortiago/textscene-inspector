@@ -1,7 +1,13 @@
 import * as THREE from 'three';
 import { uniform } from 'three/tsl';
 import type { Node, UniformNode } from 'three/webgpu';
-import type { ArrayValue, StructOf, StructValue, Value } from '../language/emitValue.js';
+import {
+  uniformView,
+  type ArrayValue,
+  type StructOf,
+  type StructValue,
+  type Value,
+} from '../language/emitValue.js';
 import type { StructMember } from '../language/shaderTree.js';
 import { BlockArrays } from './blockArrays.js';
 import { glslShapeOf } from './glslTypes.js';
@@ -47,7 +53,7 @@ export class TemplateUniforms {
       members.set(member.name, this.member(`${name}.${member.name}`, member, structOf, arrays));
     }
     arrays.seal();
-    return { kind: 'struct', members };
+    return uniformView({ kind: 'struct', members });
   }
 
   private member(name: string, member: StructMember, structOf: StructOf, arrays: BlockArrays): Value {
@@ -68,7 +74,7 @@ export class TemplateUniforms {
     structOf: StructOf,
     arrays: BlockArrays
   ): StructValue {
-    return {
+    return uniformView({
       kind: 'struct',
       members: new Map(
         members.map((member) => [
@@ -76,7 +82,7 @@ export class TemplateUniforms {
           this.member(`${name}.${member.name}`, member, structOf, arrays),
         ])
       ),
-    };
+    });
   }
 
   /** An array of structs as one array per member: `directional_lights.data.enabled`. */
@@ -89,14 +95,21 @@ export class TemplateUniforms {
     const memberArrays = members.map(
       (member) => [member.name, this.array(`${name}.${member.name}`, member.type, count, arrays)] as const
     );
-    return {
+    const element = (index: Node | number): StructValue => ({
+      kind: 'struct',
+      members: new Map(memberArrays.map(([member, array]) => [member, array.element(index)])),
+    });
+    const constantElements = new Map<number, StructValue>();
+    const constantElement = (index: number): StructValue => {
+      if (!constantElements.has(index)) constantElements.set(index, uniformView(element(index)));
+      return constantElements.get(index)!;
+    };
+    // An element at a computed index reads the caller's index, so only a constant one is a uniform view.
+    return uniformView({
       kind: 'array',
       count,
-      element: (index) => ({
-        kind: 'struct',
-        members: new Map(memberArrays.map(([member, array]) => [member, array.element(index)])),
-      }),
-    };
+      element: (index) => (typeof index === 'number' ? constantElement(index) : element(index)),
+    });
   }
 
   /** An array of the block's buffer, the same one at a second stage's declaration of the block. */
