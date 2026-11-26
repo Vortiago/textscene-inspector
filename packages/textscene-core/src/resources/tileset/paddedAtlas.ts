@@ -5,7 +5,6 @@
  */
 
 import type { Vector2 } from '../../godot/math/vector';
-import { reversedRows } from '../../utils/reversedRows';
 import type { ImagePixels } from '../formats/image/imagePixels';
 import { atlasTileRegion, type AtlasSourceModel, type AtlasTileModel } from './types';
 
@@ -73,19 +72,8 @@ function paddedCellSize({ textureRegionSize: region }: Pick<AtlasSourceModel, 't
   return { x: region.x + 2 * PADDING, y: region.y + 2 * PADDING };
 }
 
-/** `paddedAtlasPixels` of pixels bottom-up when `isBottomUp`, given top row first as Godot's image. */
-export function topDownPaddedAtlasPixels(
-  pixels: ImagePixels,
-  isBottomUp: boolean,
-  layout: PaddedAtlasLayout
-): ImagePixels {
-  const { width, height } = pixels;
-  const topDown = isBottomUp ? { data: reversedRows(pixels.data, width, height), width, height } : pixels;
-  return paddedAtlasPixels(topDown, layout);
-}
-
 /** `tile_set.cpp:5622`, frame 0 only: the model holds no animation frames. */
-function paddedAtlasPixels(pixels: ImagePixels, source: PaddedAtlasLayout): ImagePixels {
+export function paddedAtlasPixels(pixels: ImagePixels, source: PaddedAtlasLayout): ImagePixels {
   const cell = paddedCellSize(source);
   const { width, height } = paddedAtlasSize(source, pixels);
   const padded: ImagePixels = { width, height, data: new Uint8Array(width * height * BYTES_PER_TEXEL) };

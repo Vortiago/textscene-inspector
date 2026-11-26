@@ -115,6 +115,7 @@ const PUBLIC_TYPE_EXPORTS = [
   'SkyVolumetricFog',
   'SpatialOptions',
   'SpatialScene',
+  'TargetViewport',
   'TexelSize',
   'TranspileOptions',
   'TranspiledCanvasItem',

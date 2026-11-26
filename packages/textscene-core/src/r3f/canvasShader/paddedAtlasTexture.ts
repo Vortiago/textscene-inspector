@@ -1,6 +1,5 @@
 import { useEffect, useReducer, useState } from 'react';
 import * as THREE from 'three';
-import { readImagePixels } from '../../resources/formats/image/imagePixels';
 import { texture2DPlaceholder } from '../../resources/textures/texture2DPlaceholder';
 import { textureWork } from '../../resources/textures/textureWork';
 import { paddedAtlasLayout } from '../../resources/tileset/paddedAtlas';
@@ -9,9 +8,9 @@ import type { Texture2DResult } from '../../resources/useTexture2D';
 import { usePendingWhile } from '../../resources/usePendingWhile';
 import { useResourceLoader } from '../../resources/useResource';
 import { perObject } from '../../utils/perObject';
-import { isBottomUp } from '../../utils/reversedRows';
 import { inThreadJobRunner, type WorkerJobRunner } from '../../workers/WorkerJobRunner';
 import { usePaddedAtlasStandIn } from '../paddedAtlasStandIn';
+import { godotImage } from '../textureAtlas/godotImage';
 
 type JobRunner = Pick<WorkerJobRunner, 'run'>;
 
@@ -118,7 +117,7 @@ function releasePaddedCopy(texture: THREE.Texture, source: AtlasSourceModel, cop
   });
 }
 
-/** Reads the pixels after the commit that asked, so neither a React render nor a frame waits on them. */
+/** Reads the pixels once per texture, after the commit that asked: no React render waits on the readback. */
 async function buildPaddedCopy(
   texture: THREE.Texture,
   source: AtlasSourceModel,
@@ -126,9 +125,9 @@ async function buildPaddedCopy(
   signal: AbortSignal
 ): Promise<THREE.Texture | null> {
   await Promise.resolve();
-  const pixels = readImagePixels(texture.image);
+  const pixels = godotImage(texture);
   if (!pixels) return null;
-  const input = { pixels, isBottomUp: isBottomUp(texture), layout: paddedAtlasLayout(source) };
+  const input = { pixels, layout: paddedAtlasLayout(source) };
   const padded = await runner.run('padded-atlas', input, signal);
   const atlas = new THREE.DataTexture(padded.data, padded.width, padded.height);
   // Top row first, as Godot's image: `flipY` marks it so, and the shader samples it with no copy.

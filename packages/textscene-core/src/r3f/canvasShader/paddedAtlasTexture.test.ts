@@ -146,4 +146,14 @@ describe('useRuntimeAtlasTexture', () => {
 
     expect(disposed).toHaveBeenCalledTimes(1);
   });
+
+  it('reads the pixels once for two padded sources of one texture', async () => {
+    const texture = textureOf();
+    const read = vi.spyOn(imagePixels, 'readImagePixels');
+
+    await builtCopy(texture);
+    await builtCopy(texture, { ...SOURCE, margins: { x: 1, y: 1 } });
+
+    expect(read).toHaveBeenCalledTimes(1);
+  });
 });

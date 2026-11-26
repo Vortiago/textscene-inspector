@@ -50,7 +50,12 @@ export {
   type CanvasVariant,
   type TranspiledCanvasItem,
 } from './canvas/transpileCanvas.js';
-export { CANVAS_BINDINGS, writeCanvasBindings, type CanvasFrame } from './canvas/canvasBindings.js';
+export {
+  CANVAS_BINDINGS,
+  writeCanvasBindings,
+  type CanvasFrame,
+  type TargetViewport,
+} from './canvas/canvasBindings.js';
 export type { CanvasItemDraw } from './canvas/canvasInstance.js';
 export {
   NINE_PATCH_AXIS_MODES,
