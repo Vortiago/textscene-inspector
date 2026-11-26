@@ -4,6 +4,7 @@ import type { ShaderText } from '../../resources/materials/shadermaterial/types'
 import { canvasItemMaterialShader } from '../../shaders/canvas/canvasItemMaterialShader';
 import { DEFAULT_CANVAS_SHADER } from '../../shaders/canvas/defaultCanvasShader';
 import { canvasItemForm } from './canvasItemForm';
+import { perObject } from '../../utils/perObject';
 
 const DEFAULT_SHADER: ShaderText = Object.freeze({
   code: DEFAULT_CANVAS_SHADER,
@@ -21,7 +22,8 @@ export function materialShaderOf(slot: CanvasItemMaterialSlot): ShaderText | nul
   return slot.properties ? generatedShader(slot.properties) : DEFAULT_SHADER;
 }
 
-function generatedShader(material: CanvasItemMaterialProperties): ShaderText {
+// Per decoded material, so a render builds no text: the text key finds the shader a material shares.
+const generatedShader = perObject((material: CanvasItemMaterialProperties): ShaderText => {
   const { code, parameters } = canvasItemMaterialShader(material);
   const key = JSON.stringify([code, parameters]);
   let shader = generatedByKey.get(key);
@@ -30,4 +32,4 @@ function generatedShader(material: CanvasItemMaterialProperties): ShaderText {
     generatedByKey.set(key, shader);
   }
   return shader;
-}
+});

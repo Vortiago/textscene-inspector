@@ -21,10 +21,12 @@ export function runCanvasFrame(steps: CanvasFrameSteps, scene: THREE.Scene, draw
   for (const sample of steps.shadowSamplers) sample();
   steps.lightPass?.();
   // A record reads the world matrix a pose writes only for the render, such as a posed Bone2D's.
-  withScenePose(scene, () => {
-    for (const write of steps.recordWriters) write();
-  });
+  if (steps.recordWriters.size > 0) withScenePose(scene, () => writeRecords(steps.recordWriters));
   drawItems();
+}
+
+function writeRecords(writers: Set<() => void>): void {
+  for (const write of writers) write();
 }
 
 /** The steps of the canvas around a component, or null outside one, where no canvas runs a step. */

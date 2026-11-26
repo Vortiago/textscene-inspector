@@ -164,11 +164,13 @@ export function canvasShaderDraw(
   for (const batch of batches) object.add(batch.object);
   // Written by `setSource`: three writes no taps for a nearest magnification, so the draw holds its copies.
   let releaseAnisotropy: readonly (() => void)[] = [];
+  // The new holds come first, so a texture bound again never drops to no hold between two binds.
   const holdAnisotropy = () => {
-    for (const release of releaseAnisotropy) release();
+    const released = releaseAnisotropy;
     releaseAnisotropy = [...variants.values()].flatMap(({ binding }) =>
       binding.boundTextures.map((texture) => holdViewportAnisotropy(gl, texture))
     );
+    for (const release of released) release();
   };
   const world = mutableTransform2D();
   // Written by `setColors`, and read again by `setSource`: new rects or texel sizes need new records.
