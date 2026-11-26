@@ -16,12 +16,12 @@ catalog:
   # TypeScript 6 API, which the ESLint parser, dts-bundle-generator and our syntax scripts import.
   '@typescript/native': npm:typescript@^7.0.2
   typescript: npm:@typescript/typescript6@^6.0.2
-  vitest: ^5.1.0
+  vitest: ^5.1.1
   rimraf: ^6.1.4
   '@vscode/test-electron': ^3.1.0
   '@vscode/test-web': ^0.0.81
-  '@vitest/ui': ^5.1.0
-  '@vitest/coverage-v8': ^5.1.0
+  '@vitest/ui': ^5.1.1
+  '@vitest/coverage-v8': ^5.1.1
   '@types/node': ^26.6.6
   vite: ^8.3.6
   esbuild: ^0.28.2
@@ -36,7 +36,7 @@ catalog:
 
   # Language Server Protocol (tscn-lsp). The VS Code extension uses the editor's
   # own API, so only the standalone server depends on these.
-  vscode-languageserver: ^11.0.0
+  vscode-languageserver: ^11.0.1
   vscode-languageserver-textdocument: ^1.0.16
 
   # R3F migration (Phase 14, WI-R3F-1) — spike-validated pins
@@ -75,7 +75,7 @@ catalog:
   '@types/pngjs': ^6.0.5
 
   # The PR labeler test reads .github/labeler.yml and matches its globs as actions/labeler does.
-  minimatch: ^11.0.5
+  minimatch: ^11.0.9
   yaml: ^2.9.1
 
   # Real CSG boolean evaluation (ADR-0026). three-bvh-csg is used DIRECTLY rather
