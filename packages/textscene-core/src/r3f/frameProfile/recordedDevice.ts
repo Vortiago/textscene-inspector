@@ -12,7 +12,7 @@ export interface StoredDepthFeatures {
   floatRender: boolean;
   /** `EXT_texture_norm16`: a 16-bit normalised colour exists. */
   norm16: boolean;
-  /** The probe's filtered byte, 128 on an exact filter and 0 on an 8-bit one, or null before it ran. */
+  /** The probe's filtered byte, 102 on an exact filter and 0 on an 8-bit one, or null before it ran. */
   probeByte: number | null;
 }
 

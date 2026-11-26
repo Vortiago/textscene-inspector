@@ -444,6 +444,14 @@ describe('the soft split shadow', () => {
     );
   });
 
+  it('reads a blocker with one filtered sample of two bytes on a page whose GPU filters them exactly', () => {
+    page.read = 'sampled';
+
+    expect(functionBody(chunk(), 'godotSunRawDepth')).toContain(
+      `dot( textureLod( ${DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM}, uv, 0.0 ).rg * 255.0, vec2( 256.0, 1.0 ) ) / 65535.0`
+    );
+  });
+
   it('keeps the receiver lit without a blocker (edge case)', () => {
     expect(chunk()).toContain('if ( blockerCount == 0.0 ) return 1.0;');
   });

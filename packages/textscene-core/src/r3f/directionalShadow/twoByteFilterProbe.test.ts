@@ -13,8 +13,12 @@ function rendererReading(byte: number): THREE.WebGLRenderer {
 }
 
 describe('the two-byte filter probe', () => {
-  it('reads half a depth step as a full-precision filter', () => {
-    expect(isFullPrecisionByte(128)).toBe(true);
+  it('reads the fraction of a depth step at the probe weight as a full-precision filter', () => {
+    expect(isFullPrecisionByte(102)).toBe(true);
+  });
+
+  it('reads half a depth step as a filter with only a few extra bits', () => {
+    expect(isFullPrecisionByte(128)).toBe(false);
   });
 
   it('reads a whole depth as a filter that rounds each byte to 8 bits', () => {

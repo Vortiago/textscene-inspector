@@ -93,12 +93,15 @@ const GODOT_SUN_PCF = `
 \t\t}
 `;
 
-/** The blocker search's raw depth: one sample of a float colour, else `godotRawDepth`'s four texels. */
+/** The blocker search's raw depth: one sample of two bytes or a float, or `godotRawDepth`'s four texels. */
+const SUN_RAW_DEPTHS: Record<StoredDepthRead, string> = {
+  sampled: `dot( textureLod( ${DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM}, uv, 0.0 ).rg * 255.0, vec2( 256.0, 1.0 ) ) / 65535.0`,
+  float: `textureLod( ${DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM}, uv, 0.0 ).r`,
+  fetched: `godotRawDepth( ${DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM}, uv )`,
+};
+
 function sunRawDepth(read: StoredDepthRead): string {
-  const depth =
-    read === 'float'
-      ? `textureLod( ${DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM}, uv, 0.0 ).r`
-      : `godotRawDepth( ${DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM}, uv )`;
+  const depth = SUN_RAW_DEPTHS[read];
   return `\t\tfloat godotSunRawDepth( vec2 uv ) {\n\t\t\treturn ${depth};\n\t\t}\n`;
 }
 

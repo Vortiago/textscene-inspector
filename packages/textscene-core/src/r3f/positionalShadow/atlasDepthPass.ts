@@ -30,7 +30,7 @@ type SpotShadowLight = THREE.SpotLight & { shadow: AtlasSpotShadow };
 /** A light whose casters three projects as it projects them for its own pass. */
 export type ProjectedShadowLight = SpotShadowLight | SplitSunLight;
 
-/** The one depth material every spot light's and split sun's casters draw with. */
+/** The depth material of every spot light, and of an unflattened split sun on a page with a byte colour. */
 const atlasDepth = new AtlasDepthMaterial();
 
 /** The one depth material the casters of a split sun with a pancake size draw with. */

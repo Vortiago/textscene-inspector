@@ -4,11 +4,14 @@ import { perObject } from '../../utils/perObject.js';
 /** The two texels' bytes, high then low: the depths 255 and 256. */
 const PROBE_TEXELS = new Uint8Array([0, 255, 1, 0]);
 
+/** The second texel's weight. A weight with no short binary fraction fails a filter with few extra bits. */
+const PROBE_WEIGHT = 0.4;
+
 const PROBE_FRAGMENT = /* glsl */ `
 uniform sampler2D probe;
 out vec4 fragColour;
 void main() {
-	vec2 bytes = textureLod( probe, vec2( 0.5 ), 0.0 ).rg * 255.0;
+	vec2 bytes = textureLod( probe, vec2( ${(0.5 + PROBE_WEIGHT) / 2}, 0.5 ), 0.0 ).rg * 255.0;
 	fragColour = vec4( fract( dot( bytes, vec2( 256.0, 1.0 ) ) ), 0.0, 0.0, 1.0 );
 }`;
 
@@ -17,8 +20,8 @@ void main() {
 	gl_Position = vec4( position.xy, 0.0, 1.0 );
 }`;
 
-/** Halfway between the depths 255 and 256: full precision gives 0.5, stored as 128; an 8-bit filter 0. */
-const FULL_PRECISION_BYTE = 128;
+/** The depth between 255 and 256 at the probe weight: full precision keeps its fraction, 8 bits drop it. */
+const FULL_PRECISION_BYTE = Math.round(PROBE_WEIGHT * 255);
 /** A filter within 1/16 of a depth step of the exact mix passes. An 8-bit filter misses by half a step. */
 const TOLERANCE_BYTES = 16;
 
