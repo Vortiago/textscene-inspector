@@ -41,8 +41,18 @@ function drawingRenderer(drawMs: number) {
   return { gpu, renderer };
 }
 
+const WHOLE_GEOMETRY: THREE.GeometryGroup = { start: 0, count: Infinity };
+
 function draw(renderer: THREE.WebGLRenderer, object: THREE.Object3D, material: THREE.Material): void {
-  renderer.renderBufferDirect(new THREE.Camera(), null, new THREE.BufferGeometry(), material, object, null);
+  const camera = new THREE.Camera();
+  renderer.renderBufferDirect(
+    camera,
+    new THREE.Scene(),
+    new THREE.BufferGeometry(),
+    material,
+    object,
+    WHOLE_GEOMETRY
+  );
 }
 
 function named<T extends THREE.Object3D | THREE.Material>(thing: T, name: string): T {
