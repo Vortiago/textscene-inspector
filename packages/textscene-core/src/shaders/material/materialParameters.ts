@@ -1,6 +1,5 @@
 import type { EnumValue } from '../../godot/classdb/enumNames.js';
-import { clamp } from '../../godot/math/math.js';
-import { doubleToInt32 } from '../../godot/variant/cInteger.js';
+import { clamp, cMax } from '../../godot/math/math.js';
 import { TextureChannel, textureChannelMask } from '../../godot/rendering/materials/textureChannel.js';
 import {
   BASE_MATERIAL_3D_DEFAULTS as D,
@@ -16,7 +15,7 @@ import {
   vector3,
   type Variant,
 } from '../../godot/variant/value/variant.js';
-import type { MaterialState, MaterialValue } from './materialProperties.js';
+import { setterBool, setterInt, type MaterialState, type MaterialValue } from './materialProperties.js';
 
 /** The value of each property the constructor sets (`material.cpp:3936`), under the property's name. */
 const DEFAULTS: Readonly<Record<string, MaterialValue>> = {
@@ -166,11 +165,15 @@ const INT_PARAMETERS: ReadonlySet<string> = new Set([
   'particles_anim_v_frames',
 ]);
 
+/** The parameter Godot's setter writes as a `bool` (`material.cpp:2850`). */
+const BOOL_PARAMETERS: ReadonlySet<string> = new Set(['particles_anim_loop']);
+
 /** The Variant a setter passes for parameter `name`: a lane list is a vector, or a colour. */
 function parameterVariant(name: string, value: MaterialValue): Variant {
+  if (BOOL_PARAMETERS.has(name)) return bool(setterBool(value));
+  if (INT_PARAMETERS.has(name)) return int(setterInt(value));
   if (typeof value === 'boolean') return bool(value);
-  // The setters take an `int`, so the Variant casts the float to int32 (`variant.h:370`).
-  if (typeof value === 'number') return INT_PARAMETERS.has(name) ? int(doubleToInt32(value)) : real(value);
+  if (typeof value === 'number') return real(value);
   const [x = 0, y = 0, z = 0, w = 0] = value;
   if (value.length === 2) return vector2({ x, y });
   if (value.length === 3) return vector3({ x, y, z });
@@ -196,21 +199,21 @@ export function materialParameters(state: MaterialState): Record<string, Variant
   values.refraction_texture_channel = maskOf(state, 'refraction_texture_channel');
   Object.assign(values, clampedParameters(state));
   values.heightmap_flip = [
-    valueOf(state, 'heightmap_flip_tangent') ? -1 : 1,
-    valueOf(state, 'heightmap_flip_binormal') ? -1 : 1,
+    setterBool(valueOf(state, 'heightmap_flip_tangent')) ? -1 : 1,
+    setterBool(valueOf(state, 'heightmap_flip_binormal')) ? -1 : 1,
   ];
   return Object.fromEntries(
     Object.entries(values).map(([name, value]) => [name, parameterVariant(name, value)])
   );
 }
 
-/** The parameters whose setter clamps the property: a sharpness out of range gives NaN weights. */
+/** The parameters whose setter clamps the property: `MAX` gives 0.01 for a NaN (`material.cpp:3087`). */
 function clampedParameters(state: MaterialState): Record<string, number> {
   const number = (name: string) => Number(valueOf(state, name));
   const { min, max } = TRIPLANAR_SHARPNESS_RANGE;
   return {
     uv1_blend_sharpness: clamp(number('uv1_triplanar_sharpness'), min, max),
     uv2_blend_sharpness: clamp(number('uv2_triplanar_sharpness'), min, max),
-    proximity_fade_distance: Math.max(number('proximity_fade_distance'), PROXIMITY_FADE_DISTANCE_MIN),
+    proximity_fade_distance: cMax(number('proximity_fade_distance'), PROXIMITY_FADE_DISTANCE_MIN),
   };
 }

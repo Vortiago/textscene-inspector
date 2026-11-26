@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { bool, int, real, variant, vector2, vector3 } from '../../godot/variant/value/variant.js';
+import {
+  bool,
+  int,
+  real,
+  variant,
+  vector2,
+  vector3,
+  type Variant,
+} from '../../godot/variant/value/variant.js';
 import { materialParameters, textureParameterOf } from './materialParameters.js';
 import { materialStateOf, type MaterialSettings } from './materialProperties.js';
 
@@ -30,11 +38,39 @@ describe('materialParameters', () => {
     });
   });
 
-  it('casts a non-finite float to the lowest int32, as the Variant cast to the setter does', () => {
-    expect(parametersOf({ heightmap_min_layers: Number.NaN, heightmap_max_layers: Infinity })).toMatchObject({
-      heightmap_min_layers: int(-2147483648),
-      heightmap_max_layers: int(-2147483648),
-    });
+  const INT32_MIN = int(-2147483648);
+  const NON_FINITE_ROWS: readonly (readonly [string, number, string, Variant])[] = [
+    ['roughness', Number.NaN, 'roughness', real(Number.NaN)],
+    ['roughness', Infinity, 'roughness', real(Infinity)],
+    ['roughness', -Infinity, 'roughness', real(-Infinity)],
+    ['heightmap_min_layers', Number.NaN, 'heightmap_min_layers', INT32_MIN],
+    ['heightmap_min_layers', Infinity, 'heightmap_min_layers', INT32_MIN],
+    ['heightmap_min_layers', -Infinity, 'heightmap_min_layers', INT32_MIN],
+    ['particles_anim_loop', Number.NaN, 'particles_anim_loop', bool(true)],
+    ['particles_anim_loop', Infinity, 'particles_anim_loop', bool(true)],
+    ['particles_anim_loop', -Infinity, 'particles_anim_loop', bool(true)],
+    ['uv1_triplanar_sharpness', Number.NaN, 'uv1_blend_sharpness', real(Number.NaN)],
+    ['uv1_triplanar_sharpness', Infinity, 'uv1_blend_sharpness', real(150)],
+    ['uv1_triplanar_sharpness', -Infinity, 'uv1_blend_sharpness', real(0)],
+    ['proximity_fade_distance', Number.NaN, 'proximity_fade_distance', real(0.01)],
+    ['proximity_fade_distance', Infinity, 'proximity_fade_distance', real(Infinity)],
+    ['proximity_fade_distance', -Infinity, 'proximity_fade_distance', real(0.01)],
+    ['heightmap_flip_tangent', Number.NaN, 'heightmap_flip', vector2({ x: -1, y: 1 })],
+  ];
+
+  it.each(NON_FINITE_ROWS)(
+    "gives %s = %s the %s Godot's setter casts it to",
+    (property, value, parameter, expected) => {
+      expect(parametersOf({ [property]: value })[parameter]).toEqual(expected);
+    }
+  );
+
+  it('keeps each non-finite lane of a vector and a colour, as the setters store them', () => {
+    const lanes = [Number.NaN, Infinity, -Infinity];
+    const parameters = parametersOf({ uv1_scale: lanes, albedo_color: [...lanes, 1] });
+
+    expect(parameters.uv1_scale).toEqual(vector3({ x: Number.NaN, y: Infinity, z: -Infinity }));
+    expect(parameters.albedo).toEqual(variant('COLOR', { r: Number.NaN, g: Infinity, b: -Infinity, a: 1 }));
   });
 
   it('copies a property into the parameter Godot names after it', () => {

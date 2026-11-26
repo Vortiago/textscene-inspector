@@ -6,6 +6,7 @@ import {
 } from '../../godot/rendering/materials/stencil.js';
 import { TextureChannel } from '../../godot/rendering/materials/textureChannel.js';
 import { MaterialFeature, MaterialFlag } from '../../godot/rendering/materials/materialFeatures.js';
+import { doubleToInt32 } from '../../godot/variant/cInteger.js';
 import { defaultKey, type Feature, type Flag, type MaterialKey } from './materialKey.js';
 
 /** A property value: a bool, an enum index or a number, or a colour or vector as lanes. */
@@ -24,6 +25,13 @@ export interface MaterialState {
 }
 
 type KeySetter = (key: MaterialKey, value: MaterialValue) => void;
+
+/** A setter's `bool`: `booleanize` is true for any number but zero, NaN too (`variant_op.cpp:1120`). */
+export const setterBool = (value: MaterialValue): boolean =>
+  typeof value === 'number' ? value !== 0 : Boolean(value);
+
+/** A setter's `int` or enum: the Variant casts a float to int32 (`variant.h:370`). */
+export const setterInt = (value: MaterialValue): number => doubleToInt32(Number(value));
 
 const FEATURES: Readonly<Record<string, Feature>> = {
   emission_enabled: MaterialFeature.EMISSION,
@@ -127,23 +135,23 @@ function setRoughnessTextureChannel(key: MaterialKey, channel: number): void {
 const KEY_SETTERS = new Map<string, KeySetter>([
   ...Object.entries(FEATURES).map(([name, feature]): [string, KeySetter] => [
     name,
-    (key, value) => void (value ? key.features.add(feature) : key.features.delete(feature)),
+    (key, value) => void (setterBool(value) ? key.features.add(feature) : key.features.delete(feature)),
   ]),
   ...Object.entries(FLAGS).map(([name, flag]): [string, KeySetter] => [
     name,
-    (key, value) => void (value ? key.flags.add(flag) : key.flags.delete(flag)),
+    (key, value) => void (setterBool(value) ? key.flags.add(flag) : key.flags.delete(flag)),
   ]),
   ...Object.entries(NUMBERS).map(([name, member]): [string, KeySetter] => [
     name,
-    (key, value) => void (key[member] = Number(value) as never),
+    (key, value) => void (key[member] = setterInt(value) as never),
   ]),
   ...Object.entries(BOOLEANS).map(([name, member]): [string, KeySetter] => [
     name,
-    (key, value) => void (key[member] = Boolean(value)),
+    (key, value) => void (key[member] = setterBool(value)),
   ]),
-  ['stencil_mode', (key, value) => setStencilMode(key, Number(value) as MaterialKey['stencilMode'])],
-  ['stencil_flags', (key, value) => setStencilFlags(key, Number(value))],
-  ['roughness_texture_channel', (key, value) => setRoughnessTextureChannel(key, Number(value))],
+  ['stencil_mode', (key, value) => setStencilMode(key, setterInt(value) as MaterialKey['stencilMode'])],
+  ['stencil_flags', (key, value) => setStencilFlags(key, setterInt(value))],
+  ['roughness_texture_channel', (key, value) => setRoughnessTextureChannel(key, setterInt(value))],
 ]);
 
 /**
