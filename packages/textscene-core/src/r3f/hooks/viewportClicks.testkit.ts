@@ -18,5 +18,6 @@ export function clickWith(handlers: ViewportPointerHandlers, { on, travel = 0, b
   const release = { ...press, clientX: press.clientX + travel };
   handlers.onCanvasPointerDown(press as PointerEvent);
   if (on) handlers.onPointerUp({ ...release, object: on, stopPropagation: () => {} } as never);
+  handlers.onWindowPointerEnd({ ...release, type: 'pointerup' } as PointerEvent);
   if (button === LEFT) handlers.onCanvasClick(release as MouseEvent);
 }

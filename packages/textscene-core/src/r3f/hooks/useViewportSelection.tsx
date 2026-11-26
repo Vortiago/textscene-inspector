@@ -13,6 +13,8 @@ export interface ViewportPointerHandlers {
   onCanvasClick: (e: MouseEvent) => void;
   /** Bind to the one root group wrapping the dispatched scene tree. */
   onPointerUp: (e: ThreeEvent<PointerEvent>) => void;
+  /** Bind to the window for `pointerup` and `pointercancel`, which it hears after R3F's release. */
+  onWindowPointerEnd: (e: PointerEvent) => void;
 }
 
 export interface UseViewportSelectionResult {
@@ -27,6 +29,11 @@ interface Point {
   readonly clientY: number;
 }
 
+/** A left press on the canvas. Once released, only the click that follows may still read it. */
+interface Press extends Point {
+  isReleased: boolean;
+}
+
 const isClick = (press: Point, release: Point) =>
   Math.hypot(release.clientX - press.clientX, release.clientY - press.clientY) <= CLICK_TRAVEL_PX;
 
@@ -36,8 +43,8 @@ export function useViewportSelection(): UseViewportSelectionResult {
   // The 2D workspace picks no node yet, so a click on a sprite there would read as a click on nothing.
   const clearsOnNothing = useCanvasWorkspace() === '3d';
 
-  /** Written by the canvas press, and cleared by the pick or the click that ends it. */
-  const pressRef = useRef<Point | null>(null);
+  /** Written by the canvas press, and cleared by the pick, the click or the cancel that ends it. */
+  const pressRef = useRef<Press | null>(null);
   const pick = useCallback(
     (nodePath: string | null) => {
       host.picked(nodePath);
@@ -50,11 +57,12 @@ export function useViewportSelection(): UseViewportSelectionResult {
     () => ({
       onCanvasPointerDown(e) {
         // Only the left button selects (`node_3d_editor_plugin.cpp:1978`): the others orbit and look.
-        pressRef.current = e.button === 0 ? { clientX: e.clientX, clientY: e.clientY } : null;
+        pressRef.current =
+          e.button === 0 ? { clientX: e.clientX, clientY: e.clientY, isReleased: false } : null;
       },
       onPointerUp(e) {
         const press = pressRef.current;
-        if (!press || !isClick(press, e)) return;
+        if (!press || press.isReleased || !isClick(press, e)) return;
         const path = resolvePathFromObject(e.object, objectPathMap);
         if (!path) return;
         e.stopPropagation();
@@ -66,6 +74,10 @@ export function useViewportSelection(): UseViewportSelectionResult {
         const press = pressRef.current;
         pressRef.current = null;
         if (press && isClick(press, e) && clearsOnNothing) pick(null);
+      },
+      onWindowPointerEnd(e) {
+        if (e.type === 'pointercancel') pressRef.current = null;
+        else if (pressRef.current) pressRef.current.isReleased = true;
       },
     }),
     [pick, objectPathMap, clearsOnNothing]

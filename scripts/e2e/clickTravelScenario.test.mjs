@@ -8,7 +8,7 @@ const PASSING = {
   onBox: [OPEN_PICK],
   onNothing: [],
   onOtherBox: [LOCKED_PICK],
-  orbitOnNothing: [LOCKED_PICK],
+  dragOnNothing: [LOCKED_PICK],
 };
 
 function failuresOf(run) {
@@ -18,7 +18,7 @@ function failuresOf(run) {
 }
 
 describe('checkClickTravel', () => {
-  it('passes picks and clears within the click travel, and an orbit that keeps the selection', () => {
+  it('passes picks and clears within the click travel, and a drag that keeps the selection', () => {
     expect(failuresOf({})).toEqual([]);
   });
 
@@ -34,9 +34,9 @@ describe('checkClickTravel', () => {
     ]);
   });
 
-  it('fails an orbit that clears the selection', () => {
-    expect(failuresOf({ orbitOnNothing: [] })).toEqual([
-      `[click travel] an orbit of 20 px from nothing selects [], expected [${LOCKED_PICK}]`,
+  it('fails a drag that clears the selection', () => {
+    expect(failuresOf({ dragOnNothing: [] })).toEqual([
+      `[click travel] a drag of 20 px from nothing selects [], expected [${LOCKED_PICK}]`,
     ]);
   });
 

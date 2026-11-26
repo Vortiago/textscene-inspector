@@ -55,7 +55,7 @@ describe('useViewportSelection', () => {
     expect(view.result.current.selected).toBe('Root/Mesh');
   });
 
-  it('selects nothing for a press and release past the click travel, which orbits', () => {
+  it('selects nothing for a press and release past the click travel, which is a drag', () => {
     const view = setup();
 
     click(view, { on: registerObjectAt(view, 'Root/Mesh'), travel: CLICK_TRAVEL_PX + 1 });
@@ -72,7 +72,7 @@ describe('useViewportSelection', () => {
     expect(view.result.current.selected).toBeNull();
   });
 
-  it('keeps the selection through an orbit that starts on nothing', () => {
+  it('keeps the selection through a drag that starts on nothing', () => {
     const view = setup();
     click(view, { on: registerObjectAt(view, 'Root/Mesh') });
 
@@ -98,6 +98,34 @@ describe('useViewportSelection', () => {
     click(view, { on: mesh });
 
     expect(view.result.current.selected).toBe('Root/MeshInstance3D');
+  });
+
+  it('picks nothing on a release whose press an earlier release off the canvas ended', () => {
+    const view = setup();
+    const mesh = registerObjectAt(view, 'Root/Mesh');
+    const { handlers } = view.result.current.vp;
+
+    act(() => {
+      handlers.onCanvasPointerDown({ button: 0, clientX: 10, clientY: 10 } as PointerEvent);
+      handlers.onWindowPointerEnd({ type: 'pointerup', clientX: 10, clientY: 10 } as PointerEvent);
+      handlers.onPointerUp({ clientX: 10, clientY: 10, object: mesh, stopPropagation: () => {} } as never);
+    });
+
+    expect(view.result.current.selected).toBeNull();
+  });
+
+  it('clears nothing on a click whose press a cancel ended', () => {
+    const view = setup();
+    click(view, { on: registerObjectAt(view, 'Root/Mesh') });
+    const { handlers } = view.result.current.vp;
+
+    act(() => {
+      handlers.onCanvasPointerDown({ button: 0, clientX: 10, clientY: 10 } as PointerEvent);
+      handlers.onWindowPointerEnd({ type: 'pointercancel', clientX: 10, clientY: 10 } as PointerEvent);
+      handlers.onCanvasClick({ clientX: 10, clientY: 10 } as MouseEvent);
+    });
+
+    expect(view.result.current.selected).toBe('Root/Mesh');
   });
 
   it('returns the same handlers object across renders, for one delegated root', () => {

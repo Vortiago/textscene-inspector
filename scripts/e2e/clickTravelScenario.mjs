@@ -7,8 +7,8 @@ import { INSTANCE_CLICK_FIXTURE, LOCKED_PICK, OPEN_PICK, redBoxCentres } from '.
 export const CLICK_TRAVEL_FIXTURE = INSTANCE_CLICK_FIXTURE;
 // A press and release at most 8 px apart is a click (node_3d_editor_plugin.cpp:2342).
 export const CLICK_TRAVEL_PX = 8;
-// Past the click travel a left drag orbits the previewer's camera, so it picks and clears nothing.
-const ORBIT_TRAVEL_PX = 20;
+// Past the click travel a left press and release is a drag, which picks and clears nothing.
+const DRAG_TRAVEL_PX = 20;
 // The fixture's boxes sit in the middle, so a corner of the canvas shows only the background.
 const EMPTY_SPOT = { x: 12, y: 12 };
 
@@ -37,7 +37,7 @@ export async function runClickTravelScenario(browser, baseUrl) {
     run.onBox = await dragBy(page, canvas, centres.right, 0);
     run.onNothing = await dragBy(page, canvas, EMPTY_SPOT, CLICK_TRAVEL_PX);
     run.onOtherBox = await dragBy(page, canvas, centres.left, CLICK_TRAVEL_PX);
-    run.orbitOnNothing = await dragBy(page, canvas, EMPTY_SPOT, ORBIT_TRAVEL_PX);
+    run.dragOnNothing = await dragBy(page, canvas, EMPTY_SPOT, DRAG_TRAVEL_PX);
   }
   await context.close();
   return run;
@@ -54,7 +54,7 @@ function checkSelection(gate, what, found, expected) {
 
 export function checkClickTravel(
   gate,
-  { centres, onBox, onNothing, onOtherBox, orbitOnNothing, diagnostics }
+  { centres, onBox, onNothing, onOtherBox, dragOnNothing, diagnostics }
 ) {
   checkDiagnostics(gate, '[click travel]', diagnostics);
   gate.check(!!centres, '[click travel] the view draws no red box, so no click was made');
@@ -62,9 +62,9 @@ export function checkClickTravel(
   checkSelection(gate, 'a click on a box', onBox, [OPEN_PICK]);
   checkSelection(gate, `a click on nothing that moves ${CLICK_TRAVEL_PX} px`, onNothing, []);
   checkSelection(gate, `a click on a box that moves ${CLICK_TRAVEL_PX} px`, onOtherBox, [LOCKED_PICK]);
-  checkSelection(gate, `an orbit of ${ORBIT_TRAVEL_PX} px from nothing`, orbitOnNothing, [LOCKED_PICK]);
+  checkSelection(gate, `a drag of ${DRAG_TRAVEL_PX} px from nothing`, dragOnNothing, [LOCKED_PICK]);
 }
 
-export const measureClickTravel = ({ onBox, onNothing, onOtherBox, orbitOnNothing }) =>
+export const measureClickTravel = ({ onBox, onNothing, onOtherBox, dragOnNothing }) =>
   `click travel  box: ${listOf(onBox)} | nothing ${CLICK_TRAVEL_PX} px: ${listOf(onNothing)} | ` +
-  `box ${CLICK_TRAVEL_PX} px: ${listOf(onOtherBox)} | orbit: ${listOf(orbitOnNothing)}`;
+  `box ${CLICK_TRAVEL_PX} px: ${listOf(onOtherBox)} | drag: ${listOf(dragOnNothing)}`;

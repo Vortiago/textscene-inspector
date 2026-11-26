@@ -1,4 +1,3 @@
-/** Where the build writes its chunk graph, under `dist/`, beside Vite's own manifest. */
 export const CHUNK_GRAPH_FILE = '.vite/chunk-graph.json';
 
 /**

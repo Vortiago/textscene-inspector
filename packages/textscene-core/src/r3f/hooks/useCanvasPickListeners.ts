@@ -7,12 +7,17 @@ export function useCanvasPickListeners(handlers: ViewportPointerHandlers | null)
   const canvas = useThree((state) => state.gl.domElement);
   useEffect(() => {
     if (!handlers) return;
-    const { onCanvasPointerDown, onCanvasClick } = handlers;
+    const { onCanvasPointerDown, onCanvasClick, onWindowPointerEnd } = handlers;
+    const view = canvas.ownerDocument.defaultView;
     canvas.addEventListener('pointerdown', onCanvasPointerDown);
     canvas.addEventListener('click', onCanvasClick);
+    view?.addEventListener('pointerup', onWindowPointerEnd);
+    view?.addEventListener('pointercancel', onWindowPointerEnd);
     return () => {
       canvas.removeEventListener('pointerdown', onCanvasPointerDown);
       canvas.removeEventListener('click', onCanvasClick);
+      view?.removeEventListener('pointerup', onWindowPointerEnd);
+      view?.removeEventListener('pointercancel', onWindowPointerEnd);
     };
   }, [canvas, handlers]);
 }

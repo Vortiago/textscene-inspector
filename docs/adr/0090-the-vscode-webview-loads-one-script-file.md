@@ -55,5 +55,5 @@ of a file only the text reads with its review fixes added 142 B.
 - The web previewer keeps its chunks, so `pnpm check:bundle-size:web` guards its first paint
   (`scripts/check-bundle-size/webFirstPaint.mjs`): the entry scripts and their static imports. It
   fails when a module loaded only on demand is in them, and when they are over their gzipped
-  ceiling of 1,324,801 B, which a change raises by its measured growth as above. The three.js chunk
+  ceiling of 1,325,394 B, which a change raises by its measured growth as above. The three.js chunk
   holds only the three.js build, so the addons a dynamic `import()` reaches stay out of it.

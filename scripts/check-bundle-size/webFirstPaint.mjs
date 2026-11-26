@@ -7,9 +7,9 @@ import { CHUNK_GRAPH_FILE } from '../../apps/textscene-web/scripts/chunkGraph.mj
 const WEB_DIST = join(REPO_ROOT, 'apps/textscene-web/dist');
 
 // Growth inside the ceiling is invisible in a PASS line, so the report reads it against the last measure.
-const MEASURED_GZ = 1_324_801;
+const MEASURED_GZ = 1_325_394;
 // A change that outgrows it, with no shrink found, raises it by its measured growth (ADR-0090).
-const BUDGET_GZ = 1_324_801;
+const BUDGET_GZ = 1_325_394;
 
 // The LTC tables and `fastnoise-lite` load on demand, though no dynamic import() names them.
 const LAZY_LEAF_RE = /\/ltcTable\.generated\.js$|\/node_modules\/fastnoise-lite\//;
