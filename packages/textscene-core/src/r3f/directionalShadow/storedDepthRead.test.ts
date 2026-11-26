@@ -61,10 +61,15 @@ describe('decideStoredDepthRead', () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('so the page reads fetched'));
   });
 
-  it('follows the probe for a value that names no read (error case)', async () => {
+  it('follows the probe, and warns, for a value that names no read (error case)', async () => {
     gpu.filtersFloat = true;
+    window.history.replaceState(null, '', '/?storedDepthRead=other');
+    vi.resetModules();
+    const warn = vi.spyOn(await import('../../logger.js'), 'warn').mockImplementation(() => {});
+    const { decideStoredDepthRead } = await import('./storedDepthRead.js');
 
-    expect(await decidedOnPageAt('/?storedDepthRead=other')).toBe('float');
+    expect(decideStoredDepthRead(renderer)).toBe('float');
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('got other: the probe picks'));
   });
 
   it('keeps the first renderer’s read for the page', async () => {

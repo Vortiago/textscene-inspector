@@ -17,6 +17,7 @@ import { DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM } from './shadowAtlas.js';
 import { storedDepthRead } from './storedDepthRead.js';
 import type { StoredDepthRead } from '../../shaders/spatial/directionalShadowDepth.js';
 import { DIRECTIONAL_SOFT_SHADOWS } from '../shadowFilter/softShadowSearch.js';
+import { DIRECTIONAL_SHADOW_PANCAKE_DEPTH } from '../../godot/rendering/lights/directionalShadow.js';
 import {
   installSunShadowUniforms,
   SLOT_MATRIX_ROWS,
@@ -28,6 +29,9 @@ import {
 } from './sunShadowUniforms.js';
 
 const CHUNK = 'shadowmap_pars_fragment';
+
+/** Godot's pancake stop as the light side's depth from 0, as the blocker search reads it. */
+const SUN_PANCAKE_T = (1 - DIRECTIONAL_SHADOW_PANCAKE_DEPTH).toExponential(0);
 
 const THREE_SLOT_COUNT = '#define SUN_LIGHT_CASCADES 2';
 
@@ -112,7 +116,7 @@ const godotSunSoftShadow = (read: StoredDepthRead) => `
 \t\tuniform sampler2D ${DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM};
 ${sunRawDepth(read)}\t\tuniform vec4 ${SUN_SOFT_SHADOWS}[ NUM_SUN_LIGHT_SHADOWS ];
 \t\tuniform vec4 ${SUN_RANGE_BEGINS}[ NUM_SUN_LIGHT_SHADOWS ];
-\t\tconst float GODOT_SUN_PANCAKE = 1e-4;
+\t\tconst float GODOT_SUN_PANCAKE = ${SUN_PANCAKE_T};
 \t\tfloat godotSunBlockerShadow( sampler2DShadow atlas, vec3 coord, vec2 texScale, float lightSide ) {
 \t\t\tmat2 rotation = godotDiskRotation();
 \t\t\tfloat blockerSum = 0.0;

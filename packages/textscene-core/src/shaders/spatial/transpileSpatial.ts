@@ -174,7 +174,7 @@ function codeKeyOf(
 ): CodeKey {
   return {
     // No `file`: it names a fault's position only, so two files of one text share a program.
-    source: `colour|${textHash(JSON.stringify([code, renderingMethod, glVaryings, sampling, storedDepthRead]))}`,
+    source: `colour|${textHash(JSON.stringify([code, renderingMethod, glVaryings, sampling, storedDepthRead ?? 'fetched']))}`,
     textures: function* () {
       yield* templateTextures.values();
       for (const parameter of parameters.values())

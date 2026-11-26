@@ -8,7 +8,11 @@ const FORCED_READS: readonly StoredDepthRead[] = ['sampled', 'float', 'fetched']
 
 function forcedReadOf(search: string): StoredDepthRead | null {
   const named = new URLSearchParams(search).get('storedDepthRead');
-  return FORCED_READS.find((read) => read === named) ?? null;
+  if (named === null) return null;
+  const forced = FORCED_READS.find((read) => read === named);
+  if (!forced)
+    logger.warn(`[Shadow] expected storedDepthRead=${FORCED_READS.join('|')}, got ${named}: the probe picks`);
+  return forced ?? null;
 }
 
 /** Read once, when the module loads. */
