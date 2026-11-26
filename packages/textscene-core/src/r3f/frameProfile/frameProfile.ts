@@ -112,11 +112,9 @@ export interface FrameProfile {
 }
 
 /** The overlay's numbers over `options.frames` frames, per view with Performance on. Rejects with none on. */
-export function recordFrames(options: RecordOptions = {}): Promise<FrameRecording[]> {
+export async function recordFrames(options: RecordOptions = {}): Promise<FrameRecording[]> {
   const timed = [...profiles.values()].filter((profile) => profile.isTimed);
-  if (timed.length === 0) {
-    return Promise.reject(new Error('expected a view with Performance on in its View menu, got none'));
-  }
+  if (timed.length === 0) throw new Error('expected a view with Performance on in its View menu, got none');
   return Promise.all(timed.map((profile) => profile.record(options)));
 }
 
@@ -124,7 +122,7 @@ class Profile implements FrameProfile {
   private sums = new WindowSums();
   /** Written only by `record`: recordings that start at the next frame. */
   private readonly starting: Recording[] = [];
-  /** Filled from `starting` at each frame's start, and emptied as each recording finishes or fails. */
+  /** Filled from `starting` at each frame's start: a finished recording leaves at once, a failed one then. */
   private recordings: Recording[] = [];
   private readonly drawSources = new DrawSources();
   /** Hooked at the first recording that times draws, and unhooked at `stop`. */
@@ -177,7 +175,9 @@ class Profile implements FrameProfile {
       const frames = this.gpu.collect(this.addGpuTime, this.endGpuFrame);
       this.addToEach((sums) => (sums.gpuFrames += frames));
     }
-    this.recordings.push(...this.starting.splice(0));
+    this.recordings = [...this.recordings, ...this.starting.splice(0)].filter(
+      (recording) => !recording.isSettled
+    );
     this.isTimingDraws = this.recordings.some((recording) => recording.timesDraws);
     this.windowStart ??= timestamp;
     this.lastTimestamp = timestamp;

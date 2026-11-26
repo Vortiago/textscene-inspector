@@ -127,9 +127,26 @@ describe('recordFrames', () => {
     }
   });
 
-  it('refuses a count of frames it cannot average an interval over (error case)', () => {
+  it('drops a stalled recording, so it arms no stall timer once its view draws again (edge case)', async () => {
+    vi.useFakeTimers();
+    try {
+      const profile = timed(cpuOnlyRenderer());
+      const recorded = recordFrames({ frames: 10 });
+      runFrames(profile, 0, 3);
+      vi.runOnlyPendingTimers();
+      await expect(recorded).rejects.toThrow('got 3: no frame in');
+      runFrames(profile, 3, 2);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('rejects a count of frames it cannot average an interval over (error case)', async () => {
     timed(cpuOnlyRenderer());
-    expect(() => recordFrames({ frames: 1 })).toThrow('expected a whole count of 2 frames or more, got 1');
+    await expect(recordFrames({ frames: 1 })).rejects.toThrow(
+      'expected a whole count of 2 frames or more, got 1'
+    );
   });
 
   it('leaves out the draws unless asked for', async () => {

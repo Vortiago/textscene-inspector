@@ -98,7 +98,8 @@ export {
   type TexelSize,
 } from './canvas/canvasTexture.js';
 export type { PointDraw } from './spatial/spatialPipeline.js';
-export type { DirectionalLight } from './spatial/directionalLights.js';
+export { hasDirectionalSoftShadowAngle, type DirectionalLight } from './spatial/directionalLights.js';
+export type { SpecialisedRender } from './spatial/packedSpecialisation.js';
 export type { SceneSky } from './spatial/sceneSky.js';
 export { withGodotAttributes, withSurfaceStarts, type GodotPrimitive } from './spatial/meshAttributes.js';
 export { emulatedPointGeometry } from './template/emulatedPoints.js';

@@ -3,6 +3,7 @@ import { glslFn } from 'three/tsl';
 import {
   createDepthPrepass,
   emulatedPointGeometry,
+  hasDirectionalSoftShadowAngle,
   specialiseSpatial,
   transpileSpatial,
   withGodotAttributes,
@@ -162,6 +163,8 @@ function drawMesh(spec) {
   const { width, height } = spec;
   const camera = godotCamera(spec);
   const fog = environmentFog(spec.fog);
+  const lights = directionalLights(spec.lights);
+  const drawsDirectionalSoftShadows = hasDirectionalSoftShadowAngle(lights);
   for (const spatial of transpiled.values()) {
     writeSpatialBindings(spatial, {
       camera,
@@ -171,9 +174,9 @@ function drawMesh(spec) {
       ambientLight: GODOT_CLEAR_COLOR,
       emissiveExposure: 1,
       fog,
-      directionalLights: directionalLights(spec.lights),
+      directionalLights: lights,
     });
-    specialiseSpatial(spatial, { fog, drawsDirectionalSoftShadows: false });
+    specialiseSpatial(spatial, { fog, drawsDirectionalSoftShadows });
   }
   const primitive = spec.primitive ?? 'triangles';
   const geometry = geometryOf(spec.mesh, primitive);

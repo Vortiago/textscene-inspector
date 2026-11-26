@@ -39,7 +39,7 @@ No format WebGL 2 filters without an extension mixes 16-bit depths exactly on bo
 
 ## Consequences
 
-- The colour and the depth texture hold 16 bits of depth, as Godot's default atlas does (`rendering_server.cpp:3708`). A project that sets `directional_shadow/16_bits` to false still gets 16 bits.
+- The colour and the depth texture hold 16 bits of depth, as Godot's default atlas does (`rendering_server.cpp:3708`). A project that sets `directional_shadow/16_bits` to false still gets 16 bits (#1661).
 - Each program binds one more texture, the atlas's colour.
 - A raw read costs one sample, as in Godot, on a GPU that filters bytes in floating point or filters R32F. Only a GPU with neither pays four texel loads. On SwiftShader the sampled and fetched reads differ by 35 px, at most 1/255. On lavapipe the float read draws the fetched read's pixels against Godot 4.6.3, within 1 px, on the soft golden and 14 sun scenes. A compare costs one sample, as in Godot.
 - The float colour of Godot's default 4096 atlas takes 64 MB, 32 MB more than RG8.

@@ -22,6 +22,7 @@ async function decidedOnPageAt(url: string) {
 }
 
 afterEach(() => {
+  vi.restoreAllMocks();
   gpu.filtersBytesExactly = false;
   gpu.filtersFloat = false;
   window.history.replaceState(null, '', '/');
@@ -47,8 +48,17 @@ describe('decideStoredDepthRead', () => {
 
   it.each(['sampled', 'float', 'fetched'] as const)('takes %s on a page that forces it', async (read) => {
     gpu.filtersBytesExactly = read !== 'sampled';
+    gpu.filtersFloat = read === 'float';
 
     expect(await decidedOnPageAt(`/?storedDepthRead=${read}`)).toBe(read);
+  });
+
+  it('follows the probe, and warns, where a forced float colour cannot draw (error case)', async () => {
+    const { decideStoredDepthRead } = await moduleOnPageAt('/?storedDepthRead=float');
+    const warn = vi.spyOn(await import('../../logger.js'), 'warn').mockImplementation(() => {});
+
+    expect(decideStoredDepthRead(renderer)).toBe('fetched');
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('so the page reads fetched'));
   });
 
   it('follows the probe for a value that names no read (error case)', async () => {

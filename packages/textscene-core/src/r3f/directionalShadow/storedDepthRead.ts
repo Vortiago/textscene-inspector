@@ -1,4 +1,5 @@
 import type * as THREE from 'three';
+import * as logger from '../../logger.js';
 import type { StoredDepthRead } from '../../shaders/spatial/directionalShadowDepth.js';
 import { filtersTwoBytesExactly } from './twoByteFilterProbe.js';
 
@@ -31,9 +32,20 @@ function probedRead(renderer: THREE.WebGLRenderer): StoredDepthRead {
 /** Written once per page by `decideStoredDepthRead`: every canvas shares one sun atlas and its read. */
 let pageRead: StoredDepthRead | null = null;
 
+/** The forced read, or the probe's where the GPU cannot draw a forced float colour. */
+function readOf(renderer: THREE.WebGLRenderer): StoredDepthRead {
+  if (FORCED_READ === null) return probedRead(renderer);
+  if (FORCED_READ !== 'float' || filtersFloatColour(renderer)) return FORCED_READ;
+  const probed = probedRead(renderer);
+  logger.warn(
+    `storedDepthRead=float needs a filtered float colour this GPU lacks, so the page reads ${probed}`
+  );
+  return probed;
+}
+
 /** Picks the page's read on the first canvas's renderer, before any shadow or lit program draws. */
 export function decideStoredDepthRead(renderer: THREE.WebGLRenderer): StoredDepthRead {
-  pageRead ??= FORCED_READ ?? probedRead(renderer);
+  pageRead ??= readOf(renderer);
   return pageRead;
 }
 

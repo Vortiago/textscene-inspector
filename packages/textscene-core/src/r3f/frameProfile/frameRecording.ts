@@ -23,13 +23,15 @@ export class Recording {
   /** Each GPU frame's time, and each draw source's time in the frames that drew it, in ns. */
   private readonly frameGpuNs: number[] = [];
   private readonly drawFrameGpuNs = new Map<DrawSource, number[]>();
-  /** GPU frames whose draws were timed: a frame drawn before the recording started carries none. */
+  /** GPU frames that timed draws: a frame drawn while no recording timed draws carries none. */
   private drawTimedGpuFrames = 0;
   /** Written only by `restartStallTimer`, `finish` and `fail`. */
   private stallTimer: ReturnType<typeof setTimeout> | undefined;
   readonly frames: number;
   readonly timesDraws: boolean;
   readonly result: Promise<FrameRecording>;
+  /** Written only by `finish` and `fail`: the profile drops a settled recording at the next frame. */
+  isSettled = false;
   private resolve!: (recording: FrameRecording) => void;
   private reject!: (error: Error) => void;
 
@@ -72,7 +74,7 @@ export class Recording {
   }
 
   finish(hasGpuTimer: boolean, device: RecordedDevice): void {
-    clearTimeout(this.stallTimer);
+    this.settle();
     const stats = statsOf(this.sums, { hasGpuTimer });
     this.resolve({
       ...stats,
@@ -85,8 +87,13 @@ export class Recording {
   }
 
   fail(reason: string): void {
-    clearTimeout(this.stallTimer);
+    this.settle();
     this.reject(new Error(`expected ${this.frames} recorded frames, got ${this.sums.frames}: ${reason}`));
+  }
+
+  private settle(): void {
+    clearTimeout(this.stallTimer);
+    this.isSettled = true;
   }
 
   private drawStats(): DrawStats[] {
