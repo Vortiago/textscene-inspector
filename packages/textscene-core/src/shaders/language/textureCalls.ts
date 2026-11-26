@@ -180,10 +180,7 @@ function cubeArrayReader(
   return (texture) => new CubeArrayReadNode(texture, held, level) as unknown as Node;
 }
 
-/**
- * The filtered reads, which a layer scale and a stored depth fit. A gather reads one channel of four
- * texels, and a fetch reads one texel at an integer coordinate.
- */
+/** The filtered reads, which a layer scale and a stored depth fit, unlike a gather or a fetch. */
 const FILTERED_CALLS: ReadonlySet<string> = new Set(['texture', 'textureLod', 'textureGrad']);
 
 function sampledCall(name: string, row: InstructionRow, operands: readonly Node[]): Node {
