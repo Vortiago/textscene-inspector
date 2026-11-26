@@ -52,5 +52,8 @@ of a file only the text reads with its review fixes added 142 B.
 - `check:bundle-size` is the guard, not an integration test. A test that fails on the split build
   needs about 10 previews closed during their load, and these hold places that the suites around
   it need for 30 s.
-- No check gates the web previewer's first-paint bundle size, and no check keeps modules loaded
-  only on demand out of a first paint (#2078).
+- The web previewer keeps its chunks, so `pnpm check:bundle-size:web` guards its first paint
+  (`scripts/check-bundle-size/webFirstPaint.mjs`): the entry scripts and their static imports. It
+  fails when a module loaded only on demand is in them, and when they are over their gzipped
+  ceiling of 1,324,801 B, which a change raises by its measured growth as above. The three.js chunk
+  holds only the three.js build, so the addons a dynamic `import()` reaches stay out of it.
