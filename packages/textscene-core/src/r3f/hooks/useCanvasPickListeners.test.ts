@@ -13,7 +13,6 @@ vi.mock('@react-three/fiber', () => ({
 function spyHandlers(): ViewportPointerHandlers {
   return {
     onCanvasPointerDown: vi.fn(),
-    onCanvasClick: vi.fn(),
     onPointerDown: vi.fn(),
     onWindowPointerEnd: vi.fn(),
     onWindowPointerMove: vi.fn(),
@@ -25,16 +24,14 @@ const pointer = (type: string) => new Event(type);
 describe('useCanvasPickListeners', () => {
   afterEach(() => vi.clearAllMocks());
 
-  it('hears the press and the click on the canvas', () => {
+  it('hears the press on the canvas', () => {
     const handlers = spyHandlers();
     const { unmount } = renderHook(() => useCanvasPickListeners(handlers));
 
     canvas.dispatchEvent(pointer('pointerdown'));
-    canvas.dispatchEvent(pointer('click'));
     unmount();
 
     expect(handlers.onCanvasPointerDown).toHaveBeenCalledOnce();
-    expect(handlers.onCanvasClick).toHaveBeenCalledOnce();
   });
 
   it('hears the release, the cancel and the move on the window, off the canvas too', () => {

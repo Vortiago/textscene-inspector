@@ -10,16 +10,14 @@ export function useCanvasPickListeners(handlers: ViewportPointerHandlers | null)
 
 /** Adds the listeners to `canvas` and to its window. The caller owns the returned remover. */
 function bindCanvasPickListeners(canvas: HTMLCanvasElement, handlers: ViewportPointerHandlers): () => void {
-  const { onCanvasPointerDown, onCanvasClick, onWindowPointerEnd, onWindowPointerMove } = handlers;
+  const { onCanvasPointerDown, onWindowPointerEnd, onWindowPointerMove } = handlers;
   const view = canvas.ownerDocument.defaultView;
   canvas.addEventListener('pointerdown', onCanvasPointerDown);
-  canvas.addEventListener('click', onCanvasClick);
   view?.addEventListener('pointerup', onWindowPointerEnd);
   view?.addEventListener('pointercancel', onWindowPointerEnd);
   view?.addEventListener('pointermove', onWindowPointerMove);
   return () => {
     canvas.removeEventListener('pointerdown', onCanvasPointerDown);
-    canvas.removeEventListener('click', onCanvasClick);
     view?.removeEventListener('pointerup', onWindowPointerEnd);
     view?.removeEventListener('pointercancel', onWindowPointerEnd);
     view?.removeEventListener('pointermove', onWindowPointerMove);

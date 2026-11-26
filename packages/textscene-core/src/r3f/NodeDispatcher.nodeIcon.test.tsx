@@ -78,14 +78,14 @@ function hitThrough(probe: Probe, mesh: THREE.Mesh, ndc: [number, number]): THRE
   return raycaster.intersectObject(mesh)[0]?.object ?? null;
 }
 
-/** A press on the canvas that R3F reports on `object`, and the click after its release. */
+/** A press on the canvas that R3F reports on `object`, and its release. */
 async function click({ renderer, probe }: Awaited<ReturnType<typeof renderScene>>, object: THREE.Object3D) {
   const root = renderer.scene.find((instance) => typeof instance.props.onPointerDown === 'function');
-  const at = { pointerId: 1, button: 0, clientX: 10, clientY: 10 };
+  const at = { pointerId: 1, isPrimary: true, button: 0, clientX: 10, clientY: 10 };
   const press = new PointerEvent('pointerdown', at);
   probe.canvas!.dispatchEvent(press);
   await renderer.fireEvent(root, 'onPointerDown', { ...at, nativeEvent: press, object });
-  probe.canvas!.dispatchEvent(new PointerEvent('click', at));
+  window.dispatchEvent(new PointerEvent('pointerup', at));
 }
 
 describe('NodeDispatcher: node icons', () => {
